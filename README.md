@@ -2,7 +2,7 @@
 
 Aplicación web instalable (PWA) para el equipo de soporte y mantenimiento de TI: base de conocimiento por categorías, inventario de dispositivos, bóveda de IP y credenciales, y búsqueda global, todo con funcionamiento offline.
 
-Ver [ARQUITECTURA.md](ARQUITECTURA.md) para el detalle técnico y [TAREAS.md](TAREAS.md) para el estado del desarrollo.
+Ver [ARQUITECTURA.md](ARQUITECTURA.md) para el detalle técnico, [TAREAS.md](TAREAS.md) para el estado del desarrollo, e [INSTALACION.md](INSTALACION.md) para instalarla en el teléfono o la PC.
 
 ## Requisitos
 

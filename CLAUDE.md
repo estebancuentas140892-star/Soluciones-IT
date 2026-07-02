@@ -8,6 +8,7 @@ Aplicación móvil (PWA) para el equipo de soporte y mantenimiento de TI: base d
 - [TAREAS.md](TAREAS.md): tablero Kanban con el trabajo pendiente y en desarrollo.
 - [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md): historial de tareas finalizadas.
 - [REGLAS.md](REGLAS.md): reglas de trabajo acordadas. Leerlas y aplicarlas siempre.
+- [INSTALACION.md](INSTALACION.md): guía para el equipo, cómo instalar la app en el teléfono o la PC.
 
 ## Metodología obligatoria en cada sesión
 
