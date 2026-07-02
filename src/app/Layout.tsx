@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import { BottomNav } from '../components/BottomNav'
 import { Cargando } from '../components/Cargando'
+import { IndicadorSync } from '../components/IndicadorSync'
 import { useAuth } from '../features/autenticacion/authContext'
 
 export function Layout() {
@@ -10,6 +11,7 @@ export function Layout() {
   return (
     <div className="mx-auto flex min-h-svh max-w-md flex-col bg-slate-950 text-slate-100">
       <header className="flex items-center justify-end gap-2 px-4 pt-3">
+        <IndicadorSync />
         {perfil?.nombre && <span className="text-xs text-slate-400">{perfil.nombre}</span>}
         <button
           type="button"

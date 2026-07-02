@@ -111,6 +111,15 @@ export interface SyncMeta {
   valor: string
 }
 
+// Ultimos articulos y dispositivos abiertos en este telefono. Solo
+// vive en el dispositivo: no se sincroniza con el resto del equipo.
+export interface Reciente {
+  clave: string
+  tipo: 'articulo' | 'dispositivo'
+  entidadId: string
+  visitadoEn: string
+}
+
 class SolucionesItDatabase extends Dexie {
   perfiles!: EntityTable<Perfil, 'id'>
   categorias!: EntityTable<Categoria, 'id'>
@@ -121,6 +130,7 @@ class SolucionesItDatabase extends Dexie {
   adjuntos!: EntityTable<Adjunto, 'id'>
   cambiosPendientes!: EntityTable<CambioPendiente, 'id'>
   syncMeta!: EntityTable<SyncMeta, 'clave'>
+  recientes!: EntityTable<Reciente, 'clave'>
 
   constructor() {
     super('soluciones-it')
@@ -135,6 +145,12 @@ class SolucionesItDatabase extends Dexie {
       adjuntos: 'id, [entidadTipo+entidadId]',
       cambiosPendientes: 'id, tabla, [tabla+entidadId], creadoEn',
       syncMeta: 'clave',
+    })
+
+    // La version 1 ya esta instalada en los telefonos del equipo:
+    // los cambios de esquema nuevos van siempre en una version nueva.
+    this.version(2).stores({
+      recientes: 'clave, visitadoEn',
     })
   }
 }

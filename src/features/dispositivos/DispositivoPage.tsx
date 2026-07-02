@@ -1,8 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useEffect } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { eliminarRegistro } from '../../lib/repositorio'
+import { registrarVisita } from '../../lib/recientes'
 import { Adjuntos } from '../../components/Adjuntos'
+import { BotonCompartir } from '../../components/BotonCompartir'
+import { ValorCopiable } from '../../components/ValorCopiable'
 import { Historial } from '../historial/Historial'
 
 export function DispositivoPage() {
@@ -14,6 +18,11 @@ export function DispositivoPage() {
     () => (dispositivo ? db.categorias.get(dispositivo.categoriaId) : undefined),
     [dispositivo],
   )
+
+  const idVisitado = dispositivo && !dispositivo.eliminadoEn ? dispositivo.id : null
+  useEffect(() => {
+    if (idVisitado) void registrarVisita('dispositivo', idVisitado)
+  }, [idVisitado])
 
   if (dispositivo === null) return <Navigate to="/dispositivos" replace />
   if (!dispositivo) return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
@@ -37,30 +46,36 @@ export function DispositivoPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
-      <header className="flex items-start justify-between gap-2">
-        <div>
-          <Link to="/dispositivos" className="text-xs text-slate-400">
-            ← Dispositivos
-          </Link>
-          <h1 className="text-xl font-semibold">{dispositivo.nombre}</h1>
-          {categoria && <p className="text-xs text-slate-500">{categoria.nombre}</p>}
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <Link
-            to={`/dispositivos/${dispositivoId}/editar`}
-            className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-          >
-            Editar
-          </Link>
-          <button
-            type="button"
-            onClick={() => void eliminar()}
-            className="rounded-lg border border-red-900 px-3 py-1.5 text-xs text-red-400"
-          >
-            Eliminar
-          </button>
-        </div>
+      <header>
+        <Link to="/dispositivos" className="text-xs text-slate-400">
+          ← Dispositivos
+        </Link>
+        <h1 className="text-xl font-semibold">{dispositivo.nombre}</h1>
+        {categoria && <p className="text-xs text-slate-500">{categoria.nombre}</p>}
       </header>
+
+      <div className="flex flex-wrap gap-2">
+        <BotonCompartir titulo={dispositivo.nombre} />
+        <Link
+          to={`/dispositivos/nuevo?copiarDe=${dispositivoId}`}
+          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+        >
+          Duplicar
+        </Link>
+        <Link
+          to={`/dispositivos/${dispositivoId}/editar`}
+          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+        >
+          Editar
+        </Link>
+        <button
+          type="button"
+          onClick={() => void eliminar()}
+          className="rounded-lg border border-red-900 px-3 py-1.5 text-xs text-red-400"
+        >
+          Eliminar
+        </button>
+      </div>
 
       {dispositivo.estado && (
         <span className="w-fit rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">
@@ -73,13 +88,17 @@ export function DispositivoPage() {
           {campos.map((campo) => (
             <div key={campo.etiqueta}>
               <dt className="text-xs text-slate-500">{campo.etiqueta}</dt>
-              <dd className="text-sm text-slate-100">{campo.valor}</dd>
+              <dd>
+                <ValorCopiable valor={campo.valor} esIp={campo.etiqueta === 'Dirección IP'} />
+              </dd>
             </div>
           ))}
           {detalles.map(([clave, valor]) => (
             <div key={clave}>
               <dt className="text-xs text-slate-500">{clave}</dt>
-              <dd className="text-sm text-slate-100">{valor}</dd>
+              <dd>
+                <ValorCopiable valor={valor} />
+              </dd>
             </div>
           ))}
         </dl>

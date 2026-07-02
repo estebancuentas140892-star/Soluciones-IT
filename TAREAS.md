@@ -4,7 +4,11 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-### 10. Pulido móvil y puesta en marcha
+(ninguna: las tareas restantes están bloqueadas por pasos del usuario)
+
+## Por hacer
+
+### 10. Pulido móvil y puesta en marcha (solo quedan pasos del usuario)
 - Descripción: optimización de rendimiento (dividir el bundle, que hoy supera los 700 kB por supabase-js + react-markdown + minisearch), compresión de fotos al subirlas, botón "Descargar todo para offline", icono definitivo de la app, pruebas en los teléfonos reales del equipo y guía de instalación de la PWA.
 - Prioridad: Media
 - Ubicación: general
@@ -14,10 +18,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - Avance: guía de instalación HECHA. [INSTALACION.md](INSTALACION.md) nuevo, en la raíz del proyecto: pasos de instalación para Android (Chrome), iPhone/iPad (Safari, con la advertencia de que solo funciona desde Safari) y PC (Chrome/Edge); nota sobre el borrado de datos de iOS tras semanas sin abrir la app (ya documentado en ARQUITECTURA.md, aquí en lenguaje para el usuario final); recordatorio de usar "Descargar todo para offline" antes de salir a un mantenimiento; cómo se actualiza la app; problemas comunes. Enlazada desde `README.md` y `CLAUDE.md`.
 - Avance: ícono definitivo HECHO. `public/icon.svg` rediseñado: escudo en degradado azul (`#38bdf8` a `#0284c7`) con un checkmark "recortado" en el mismo tono del fondo oscuro (`#0f172a`), sin texto (se lee bien incluso muy chico), sobre el cuadrado redondeado de siempre. Todo el arte cabe dentro de la "zona segura" de los íconos maskable (círculo del 80% central del lienzo), algo que el placeholder anterior (letras "IT" a todo el ancho) no respetaba y que Android podía recortar mal al aplicar su máscara. Verificado por muestreo de píxeles sobre un canvas real (esquinas transparentes, escudo sin tocar los bordes, checkmark visible cerca del centro) porque la herramienta de captura de pantalla falló por un problema del entorno, no del código. Se agregó además `public/apple-touch-icon.png` (180×180, sin transparencia ni esquinas redondeadas propias, seguiendo la convención de Apple de que iOS aplica su propio recorte) generado con `sharp` instalado temporalmente (`npm install --no-save`, desinstalado después; no quedó como dependencia). `index.html` y `vite.config.ts` actualizados para usarlo. Sigue siendo una sola pieza de arte SVG (liviano, no afecta la fluidez ni el peso de la app: el PNG nuevo pesa ~3.8 KB). Build, lint, bundle-splitting y 56 pruebas sin cambios.
 - Avance: despliegue en Vercel OPERATIVO EN PARTE. El usuario montó el proyecto en Vercel (https://soluciones-it-psi.vercel.app, desplegado desde GitHub). Se detectó y corrigió: (1) GitHub estaba 6 commits atrás del repo local, por eso producción tenía un build viejo; ya se subió todo. (2) Las rutas internas daban 404 al abrirlas directo; se agregó `vercel.json` con la reescritura SPA a `index.html`. (3) Verificado por HTTP: el esquema de Supabase SÍ está aplicado (la tabla `categorias` responde y RLS oculta filas a usuarios sin sesión). (4) El usuario agregó `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Settings > Environment Variables, pestaña "Project" (confirmado en pantalla que quedaron guardadas), pero el botón "Redeploy" del panel de Vercel dio "Unexpected error (500)" de forma repetida y no llegó a crear un despliegue nuevo (verificado: la lista de Deployments no muestra un intento adicional, y el build en producción seguía sin la URL de Supabase). Se disparó un despliegue nuevo por la vía de Git (commit a `main`) como alternativa al botón del panel, que sí dispara el build automático de Vercel con las variables ya guardadas.
-- Pendiente: confirmar que el despliegue disparado por Git terminó "Ready" y que ahora sí incluye las variables de Supabase (verificar). Confirmar también que los 5 usuarios del equipo estén creados en Supabase Authentication.
-- Pendiente: (e) pruebas en los teléfonos reales del equipo (las hace el usuario, con la guía de INSTALACION.md ya lista, que ahora incluye la dirección real).
-
-## Por hacer
+- Avance: despliegue por Git VERIFICADO. El build de producción ya incluye la URL de Supabase; probado en navegador real contra el dominio: redirige a /login, sin aviso de "no conectado", y un intento de login llegó hasta Supabase y devolvió el error esperado en español. Producción conectada de punta a punta.
+- Bloqueada por (usuario): (1) confirmar que los 5 usuarios del equipo estén creados en Supabase Authentication; (2) pruebas en los teléfonos reales del equipo con la guía de INSTALACION.md, que ya incluye la dirección real.
 
 ### 2. Backend en Supabase (pasos del usuario)
 - Descripción: aplicar el esquema y dar de alta al equipo en el proyecto de Supabase.

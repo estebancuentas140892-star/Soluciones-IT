@@ -1,13 +1,17 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { DescargarOffline } from '../../components/DescargarOffline'
+import { obtenerRecientes } from '../../lib/recientes'
 
 export function InicioPage() {
   const [consulta, setConsulta] = useState('')
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, consulta), [indice, consulta])
   const buscando = consulta.trim().length > 0
+  const recientes = useLiveQuery(() => obtenerRecientes(), [], [])
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
@@ -34,9 +38,25 @@ export function InicioPage() {
           <DescargarOffline />
           <section>
             <h2 className="mb-2 text-sm font-medium text-slate-400">Recientes</h2>
-            <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
-              Aún no hay elementos recientes
-            </p>
+            {recientes.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
+                Aún no hay elementos recientes
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {recientes.map((reciente) => (
+                  <li key={reciente.clave}>
+                    <Link
+                      to={reciente.ruta}
+                      className="block rounded-xl border border-slate-800 bg-slate-900 px-4 py-3"
+                    >
+                      <p className="text-sm font-medium text-slate-100">{reciente.titulo}</p>
+                      <p className="text-xs text-slate-400">{reciente.subtitulo}</p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </>
       )}

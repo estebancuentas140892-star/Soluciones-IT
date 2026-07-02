@@ -25,14 +25,17 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
     [],
   )
 
-  const [subiendo, setSubiendo] = useState(false)
+  const [progreso, setProgreso] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const subiendo = progreso !== null
 
-  async function manejarSeleccion(evento: ChangeEvent<HTMLInputElement>) {
-    const archivo = evento.target.files?.[0]
+  function manejarSeleccion(evento: ChangeEvent<HTMLInputElement>) {
+    const archivos = Array.from(evento.target.files ?? [])
     evento.target.value = ''
-    if (!archivo) return
+    if (archivos.length > 0) void subirArchivos(archivos)
+  }
 
+  async function subirArchivos(archivos: File[]) {
     setError(null)
 
     if (!supabase || !supabaseConfigured) {
@@ -44,31 +47,35 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
       return
     }
 
-    setSubiendo(true)
-    try {
-      // Las fotos pesadas se redimensionan y recomprimen en el propio
-      // telefono antes de subirlas (ver src/lib/comprimirImagen.ts).
-      // Si algo falla se sube el archivo original sin tocar.
-      const archivoFinal = await comprimirImagen(archivo)
-      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
-      const referencia = `${entidadTipo}s/${entidadId}/${Date.now()}-${nombreLimpio}`
+    const fallidos: string[] = []
+    for (let i = 0; i < archivos.length; i++) {
+      setProgreso(archivos.length > 1 ? `Subiendo ${i + 1} de ${archivos.length}...` : 'Subiendo...')
+      try {
+        // Las fotos pesadas se redimensionan y recomprimen en el propio
+        // telefono antes de subirlas (ver src/lib/comprimirImagen.ts).
+        // Si algo falla se sube el archivo original sin tocar.
+        const archivoFinal = await comprimirImagen(archivos[i])
+        const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+        const referencia = `${entidadTipo}s/${entidadId}/${Date.now()}-${nombreLimpio}`
 
-      const { error: errorSubida } = await supabase.storage.from('adjuntos').upload(referencia, archivoFinal)
-      if (errorSubida) throw errorSubida
+        const { error: errorSubida } = await supabase.storage.from('adjuntos').upload(referencia, archivoFinal)
+        if (errorSubida) throw errorSubida
 
-      await guardarRegistro('adjuntos', {
-        id: nuevoId(),
-        entidadTipo,
-        entidadId,
-        nombre: archivoFinal.name,
-        tipo: archivoFinal.type,
-        referencia,
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo subir el archivo.')
-    } finally {
-      setSubiendo(false)
+        await guardarRegistro('adjuntos', {
+          id: nuevoId(),
+          entidadTipo,
+          entidadId,
+          nombre: archivoFinal.name,
+          tipo: archivoFinal.type,
+          referencia,
+        })
+      } catch {
+        fallidos.push(archivos[i].name)
+      }
     }
+
+    if (fallidos.length > 0) setError(`No se pudo subir: ${fallidos.join(', ')}`)
+    setProgreso(null)
   }
 
   async function eliminar(adjunto: Adjunto) {
@@ -79,18 +86,34 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-medium text-slate-400">Adjuntos</h2>
-        <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
-          {subiendo ? 'Subiendo...' : '+ Agregar'}
-          <input
-            type="file"
-            accept="image/*,application/pdf"
-            className="hidden"
-            disabled={subiendo}
-            onChange={manejarSeleccion}
-          />
-        </label>
+        <div className="flex gap-2">
+          <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+            {subiendo ? progreso : 'Cámara'}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              disabled={subiendo}
+              onChange={manejarSeleccion}
+            />
+          </label>
+          {!subiendo && (
+            <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+              + Archivos
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                multiple
+                className="hidden"
+                disabled={subiendo}
+                onChange={manejarSeleccion}
+              />
+            </label>
+          )}
+        </div>
       </div>
 
       {error && <p className="text-xs text-red-400">{error}</p>}

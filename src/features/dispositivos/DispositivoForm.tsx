@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 
@@ -13,13 +13,23 @@ const ESTADOS_SUGERIDOS = ['Operativo', 'En mantenimiento', 'Fuera de servicio',
 
 export function DispositivoForm() {
   const { dispositivoId } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const esEdicion = Boolean(dispositivoId)
+  // Modo duplicar: /dispositivos/nuevo?copiarDe=<id> precarga la ficha
+  // de otro dispositivo, dejando en blanco lo que identifica al equipo
+  // (serial, placa, IP).
+  const copiarDe = esEdicion ? null : searchParams.get('copiarDe')
 
   const dispositivo = useLiveQuery(
     () => (dispositivoId ? db.dispositivos.get(dispositivoId) : undefined),
     [dispositivoId],
   )
+  // null significa "no existe" (distinto de undefined, "cargando").
+  const original = useLiveQuery(async () => {
+    if (!copiarDe) return undefined
+    return (await db.dispositivos.get(copiarDe)) ?? null
+  }, [copiarDe])
   const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
 
   const [categoriaId, setCategoriaId] = useState('')
@@ -34,7 +44,7 @@ export function DispositivoForm() {
   const [observaciones, setObservaciones] = useState('')
   const [detalles, setDetalles] = useState<CampoDetalle[]>([])
   const [motivo, setMotivo] = useState('')
-  const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
+  const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe)
   const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
@@ -52,6 +62,27 @@ export function DispositivoForm() {
     setDetalles(Object.entries(dispositivo.detalles).map(([clave, valor]) => ({ clave, valor })))
     setCargadoInicial(true)
   }, [dispositivo, cargadoInicial])
+
+  useEffect(() => {
+    if (esEdicion || original === undefined || cargadoInicial) return
+    if (original === null) {
+      // La ficha a copiar ya no existe: se sigue con el formulario vacío.
+      setCargadoInicial(true)
+      return
+    }
+    setCategoriaId(original.categoriaId)
+    setNombre(`${original.nombre} (copia)`)
+    setMarca(original.marca)
+    setModelo(original.modelo)
+    setSerial('')
+    setPlacaInventario('')
+    setUbicacion(original.ubicacion)
+    setIp('')
+    setEstado(original.estado)
+    setObservaciones(original.observaciones)
+    setDetalles(Object.entries(original.detalles).map(([clave, valor]) => ({ clave, valor })))
+    setCargadoInicial(true)
+  }, [esEdicion, original, cargadoInicial])
 
   useEffect(() => {
     if (!esEdicion && !categoriaId && categorias && categorias.length > 0) {
@@ -100,7 +131,7 @@ export function DispositivoForm() {
     navigate(`/dispositivos/${id}`)
   }
 
-  if (esEdicion && !cargadoInicial) {
+  if ((esEdicion || copiarDe) && !cargadoInicial) {
     return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
   }
 
