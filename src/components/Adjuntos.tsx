@@ -3,6 +3,7 @@ import { useEffect, useState, type ChangeEvent } from 'react'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import { db, type Adjunto } from '../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../lib/repositorio'
+import { comprimirImagen } from '../lib/comprimirImagen'
 
 interface Props {
   entidadTipo: Adjunto['entidadTipo']
@@ -44,18 +45,22 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
 
     setSubiendo(true)
     try {
-      const nombreLimpio = archivo.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+      // Las fotos pesadas se redimensionan y recomprimen en el propio
+      // telefono antes de subirlas (ver src/lib/comprimirImagen.ts).
+      // Si algo falla se sube el archivo original sin tocar.
+      const archivoFinal = await comprimirImagen(archivo)
+      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
       const referencia = `${entidadTipo}s/${entidadId}/${Date.now()}-${nombreLimpio}`
 
-      const { error: errorSubida } = await supabase.storage.from('adjuntos').upload(referencia, archivo)
+      const { error: errorSubida } = await supabase.storage.from('adjuntos').upload(referencia, archivoFinal)
       if (errorSubida) throw errorSubida
 
       await guardarRegistro('adjuntos', {
         id: nuevoId(),
         entidadTipo,
         entidadId,
-        nombre: archivo.name,
-        tipo: archivo.type,
+        nombre: archivoFinal.name,
+        tipo: archivoFinal.type,
         referencia,
       })
     } catch (err) {
