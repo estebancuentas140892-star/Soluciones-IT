@@ -9,7 +9,7 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 
 ## Metodología
 
-3. Al final de cada respuesta se recomienda el modelo de Claude y el nivel de esfuerzo para la siguiente tarea.
+3. Al final de cada respuesta se recomiendan SIEMPRE, de forma explícita, dos cosas para la siguiente tarea: (a) el modelo de Claude y (b) el nivel de esfuerzo. Nunca indicar solo el modelo. Niveles de esfuerzo: "bajo" para explorar, leer, buscar y cambios mecánicos; "medio" para desarrollo e implementación habitual; "alto" para arquitectura, depuración compleja o decisiones con muchas piezas. Si dentro de una misma tarea conviven partes de distinto nivel, indicarlo (por ejemplo, medio en general y alto para la parte crítica).
 4. Solo puede existir una tarea "En proceso" a la vez en TAREAS.md.
 5. Cada tarea registra su ubicación exacta: ruta completa, archivo y líneas aproximadas cuando aplique.
 6. Las tareas finalizadas se archivan en TAREAS_ARCHIVO.md; el tablero activo solo muestra trabajo pendiente y en desarrollo.
