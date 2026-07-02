@@ -1,0 +1,295 @@
+-- ================================================================
+-- Soluciones IT: esquema de base de datos y politicas de seguridad
+--
+-- Como aplicarlo: Supabase Dashboard > SQL Editor > New query,
+-- pegar este archivo completo y presionar Run.
+-- Se puede ejecutar varias veces sin causar errores.
+-- ================================================================
+
+-- ----------------------------------------------------------------
+-- 1. Tablas
+-- ----------------------------------------------------------------
+
+-- Perfil de cada tecnico. Se crea automaticamente al dar de alta
+-- un usuario en Authentication. El permiso puede_ver_boveda solo
+-- se cambia desde el panel de Supabase o el SQL Editor.
+create table if not exists public.perfiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  nombre text not null default '',
+  correo text not null default '',
+  puede_ver_boveda boolean not null default false,
+  creado_en timestamptz not null default now()
+);
+
+create table if not exists public.categorias (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null unique,
+  icono text not null default '',
+  orden integer not null default 0,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+create table if not exists public.articulos (
+  id uuid primary key default gen_random_uuid(),
+  categoria_id uuid not null references public.categorias (id),
+  titulo text not null,
+  tipo text not null check (tipo in ('instalacion', 'configuracion', 'conexion', 'problema_frecuente', 'mantenimiento', 'manual')),
+  contenido text not null default '',
+  etiquetas text[] not null default '{}',
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+create table if not exists public.dispositivos (
+  id uuid primary key default gen_random_uuid(),
+  categoria_id uuid not null references public.categorias (id),
+  nombre text not null,
+  marca text not null default '',
+  modelo text not null default '',
+  serial text not null default '',
+  placa_inventario text not null default '',
+  ubicacion text not null default '',
+  ip text not null default '',
+  estado text not null default '',
+  observaciones text not null default '',
+  detalles jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+-- datos_cifrados llega siempre cifrado con AES-256-GCM desde la app.
+-- El servidor nunca ve contrasenas en texto plano.
+create table if not exists public.credenciales (
+  id uuid primary key default gen_random_uuid(),
+  titulo text not null,
+  categoria text not null default '',
+  datos_cifrados text not null,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+-- Historial inmutable: solo se insertan filas, nunca se editan ni
+-- se borran. Para credenciales, valor_anterior y valor_nuevo llegan
+-- cifrados desde la app.
+create table if not exists public.historial (
+  id uuid primary key default gen_random_uuid(),
+  entidad_tipo text not null check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial')),
+  entidad_id uuid not null,
+  usuario uuid references auth.users (id),
+  usuario_nombre text not null default '',
+  fecha_hora timestamptz not null default now(),
+  campo text not null,
+  valor_anterior text not null default '',
+  valor_nuevo text not null default '',
+  motivo text not null default ''
+);
+
+create table if not exists public.adjuntos (
+  id uuid primary key default gen_random_uuid(),
+  entidad_tipo text not null check (entidad_tipo in ('articulo', 'dispositivo')),
+  entidad_id uuid not null,
+  nombre text not null,
+  tipo text not null default '',
+  referencia text not null,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+-- Indices para la sincronizacion (consultas por updated_at) y las
+-- consultas mas frecuentes.
+create index if not exists idx_categorias_updated on public.categorias (updated_at);
+create index if not exists idx_articulos_updated on public.articulos (updated_at);
+create index if not exists idx_articulos_categoria on public.articulos (categoria_id);
+create index if not exists idx_dispositivos_updated on public.dispositivos (updated_at);
+create index if not exists idx_dispositivos_categoria on public.dispositivos (categoria_id);
+create index if not exists idx_credenciales_updated on public.credenciales (updated_at);
+create index if not exists idx_historial_entidad on public.historial (entidad_tipo, entidad_id);
+create index if not exists idx_historial_fecha on public.historial (fecha_hora);
+create index if not exists idx_adjuntos_updated on public.adjuntos (updated_at);
+create index if not exists idx_adjuntos_entidad on public.adjuntos (entidad_tipo, entidad_id);
+
+-- ----------------------------------------------------------------
+-- 2. Funciones y triggers
+-- ----------------------------------------------------------------
+
+-- Mantiene updated_at y updated_by al dia en cada insercion o
+-- edicion. El sello de tiempo lo pone siempre el servidor para que
+-- la sincronizacion no dependa del reloj de cada telefono.
+create or replace function public.registrar_modificacion()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  if auth.uid() is not null then
+    new.updated_by = auth.uid();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_categorias_modificacion on public.categorias;
+create trigger trg_categorias_modificacion
+  before insert or update on public.categorias
+  for each row execute function public.registrar_modificacion();
+
+drop trigger if exists trg_articulos_modificacion on public.articulos;
+create trigger trg_articulos_modificacion
+  before insert or update on public.articulos
+  for each row execute function public.registrar_modificacion();
+
+drop trigger if exists trg_dispositivos_modificacion on public.dispositivos;
+create trigger trg_dispositivos_modificacion
+  before insert or update on public.dispositivos
+  for each row execute function public.registrar_modificacion();
+
+drop trigger if exists trg_credenciales_modificacion on public.credenciales;
+create trigger trg_credenciales_modificacion
+  before insert or update on public.credenciales
+  for each row execute function public.registrar_modificacion();
+
+drop trigger if exists trg_adjuntos_modificacion on public.adjuntos;
+create trigger trg_adjuntos_modificacion
+  before insert or update on public.adjuntos
+  for each row execute function public.registrar_modificacion();
+
+-- Crea el perfil automaticamente cuando se da de alta un usuario
+-- en Authentication.
+create or replace function public.crear_perfil()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.perfiles (id, nombre, correo)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'nombre', split_part(coalesce(new.email, ''), '@', 1)),
+    coalesce(new.email, '')
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_crear_perfil on auth.users;
+create trigger trg_crear_perfil
+  after insert on auth.users
+  for each row execute function public.crear_perfil();
+
+-- Indica si el usuario autenticado tiene acceso a la boveda.
+create or replace function public.puede_ver_boveda()
+returns boolean
+language sql
+stable
+security definer set search_path = public
+as $$
+  select coalesce(
+    (select p.puede_ver_boveda from public.perfiles p where p.id = auth.uid()),
+    false
+  );
+$$;
+
+-- ----------------------------------------------------------------
+-- 3. Seguridad por filas (RLS)
+-- ----------------------------------------------------------------
+
+alter table public.perfiles enable row level security;
+alter table public.categorias enable row level security;
+alter table public.articulos enable row level security;
+alter table public.dispositivos enable row level security;
+alter table public.credenciales enable row level security;
+alter table public.historial enable row level security;
+alter table public.adjuntos enable row level security;
+
+-- Perfiles: todos los tecnicos autenticados pueden ver los nombres
+-- del equipo. Nadie puede editar perfiles desde la app; el permiso
+-- de la boveda se administra desde el panel de Supabase.
+drop policy if exists perfiles_lectura on public.perfiles;
+create policy perfiles_lectura on public.perfiles
+  for select to authenticated using (true);
+
+-- Contenido general: acceso completo para cualquier tecnico
+-- autenticado. Los usuarios anonimos no ven nada.
+drop policy if exists categorias_acceso on public.categorias;
+create policy categorias_acceso on public.categorias
+  for all to authenticated using (true) with check (true);
+
+drop policy if exists articulos_acceso on public.articulos;
+create policy articulos_acceso on public.articulos
+  for all to authenticated using (true) with check (true);
+
+drop policy if exists dispositivos_acceso on public.dispositivos;
+create policy dispositivos_acceso on public.dispositivos
+  for all to authenticated using (true) with check (true);
+
+drop policy if exists adjuntos_acceso on public.adjuntos;
+create policy adjuntos_acceso on public.adjuntos
+  for all to authenticated using (true) with check (true);
+
+-- Credenciales: solo los perfiles con puede_ver_boveda pueden
+-- siquiera descargar los bloques cifrados.
+drop policy if exists credenciales_acceso on public.credenciales;
+create policy credenciales_acceso on public.credenciales
+  for all to authenticated
+  using (public.puede_ver_boveda())
+  with check (public.puede_ver_boveda());
+
+-- Historial: se puede leer y agregar, nunca editar ni borrar.
+-- Las entradas de credenciales solo las ven los usuarios con
+-- acceso a la boveda.
+drop policy if exists historial_lectura on public.historial;
+create policy historial_lectura on public.historial
+  for select to authenticated
+  using (entidad_tipo <> 'credencial' or public.puede_ver_boveda());
+
+drop policy if exists historial_insercion on public.historial;
+create policy historial_insercion on public.historial
+  for insert to authenticated with check (true);
+
+-- ----------------------------------------------------------------
+-- 4. Almacenamiento de archivos (fotos, manuales, diagramas)
+-- ----------------------------------------------------------------
+
+insert into storage.buckets (id, name, public)
+values ('adjuntos', 'adjuntos', false)
+on conflict (id) do nothing;
+
+drop policy if exists adjuntos_storage_lectura on storage.objects;
+create policy adjuntos_storage_lectura on storage.objects
+  for select to authenticated using (bucket_id = 'adjuntos');
+
+drop policy if exists adjuntos_storage_subida on storage.objects;
+create policy adjuntos_storage_subida on storage.objects
+  for insert to authenticated with check (bucket_id = 'adjuntos');
+
+drop policy if exists adjuntos_storage_edicion on storage.objects;
+create policy adjuntos_storage_edicion on storage.objects
+  for update to authenticated
+  using (bucket_id = 'adjuntos') with check (bucket_id = 'adjuntos');
+
+drop policy if exists adjuntos_storage_borrado on storage.objects;
+create policy adjuntos_storage_borrado on storage.objects
+  for delete to authenticated using (bucket_id = 'adjuntos');
+
+-- ----------------------------------------------------------------
+-- 5. Datos iniciales
+-- ----------------------------------------------------------------
+
+insert into public.categorias (nombre, orden) values
+  ('POS', 1),
+  ('Impresoras', 2),
+  ('Cámaras', 3),
+  ('Computadores', 4),
+  ('Redes', 5),
+  ('Switches', 6),
+  ('Access Points', 7),
+  ('CCTV', 8),
+  ('Servidores', 9)
+on conflict (nombre) do nothing;
