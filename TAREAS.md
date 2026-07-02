@@ -4,24 +4,19 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+### 5. Módulo Soluciones
+- Descripción: gestión de categorías y artículos con contenido Markdown, imágenes y adjuntos; vista de categoría con los procedimientos agrupados por tipo (instalación, configuración, problemas frecuentes, mantenimiento, manuales). Toda escritura pasa por `src/lib/repositorio.ts`.
+- Prioridad: Alta
+- Ubicación: `src/features/soluciones/`
+
+## Por hacer
+
 ### 2. Backend en Supabase (pasos del usuario)
 - Descripción: aplicar el esquema y dar de alta al equipo en el proyecto de Supabase.
 - Prioridad: Alta
 - Ubicación: `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`
 - Avance: esquema completo escrito (tablas, historial inmutable con `recibido_en`, triggers de updated_at, RLS con permiso especial para la bóveda, bucket de adjuntos y categorías iniciales). Credenciales configuradas en `.env` local.
-- Pendiente: el usuario debe ejecutar `supabase/schema.sql` en el SQL Editor, crear los 5 usuarios, autorizar la bóveda y desactivar el registro público, siguiendo `supabase/INSTRUCCIONES.md`. Importante: si ya se había ejecutado una versión anterior del esquema, volver a ejecutarlo completo (es idempotente y agrega la columna `recibido_en` al historial).
-
-## Por hacer
-
-### 4. Autenticación en la app
-- Descripción: pantalla de inicio de sesión con correo y contraseña (Supabase Auth), persistencia de la sesión, protección de rutas cuando no hay sesión y botón de cerrar sesión. Sin sesión no se sincroniza ni se muestra contenido.
-- Prioridad: Alta
-- Ubicación: `src/features/autenticacion/`, `src/app/Layout.tsx` (protección de rutas)
-
-### 5. Módulo Soluciones
-- Descripción: gestión de categorías y artículos con contenido Markdown, imágenes y adjuntos; vista de categoría con los procedimientos agrupados por tipo (instalación, configuración, problemas frecuentes, mantenimiento, manuales). Toda escritura pasa por `src/lib/repositorio.ts`.
-- Prioridad: Alta
-- Ubicación: `src/features/soluciones/`
+- Bloqueada por: el usuario debe ejecutar `supabase/schema.sql` en el SQL Editor, crear los 5 usuarios, autorizar la bóveda y desactivar el registro público, siguiendo `supabase/INSTRUCCIONES.md`. Importante: si ya se había ejecutado una versión anterior del esquema, volver a ejecutarlo completo (es idempotente y agrega la columna `recibido_en` al historial). Necesaria para probar el login (tarea 4) con usuarios reales.
 
 ### 6. Búsqueda global
 - Descripción: índice MiniSearch sobre artículos y dispositivos, pantalla de Inicio con el buscador y resultados agrupados por tipo.

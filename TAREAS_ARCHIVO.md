@@ -8,6 +8,10 @@
 - Finalizada: 2026-07-02
 - Resultado: usuario aprobó la propuesta sin cambios.
 
+### 4. Autenticación en la app
+- Finalizada: 2026-07-02
+- Resultado: contexto de sesión en `src/features/autenticacion/authContext.ts` y `AuthProvider.tsx` (sesión persistente vía Supabase Auth, perfil local, sincronización automática al iniciar sesión). Pantalla de login en `LoginPage.tsx` con validación y mensajes de error traducidos al español; redirige a Inicio si ya hay sesión. Protección de rutas en `RequireAuth.tsx`: las 4 pantallas internas redirigen a `/login` sin sesión (verificado en navegador). Botón "Cerrar sesión" y nombre del perfil en `src/app/Layout.tsx`. No se borra la base local al cerrar sesión para no perder cambios sin sincronizar. Probado en navegador contra el proyecto real de Supabase (login con credenciales inválidas devolvió el error esperado en español). Login con usuario real queda pendiente de que se complete la tarea 2. 14 pruebas existentes siguen pasando; build y lint sin errores ni warnings.
+
 ### 3. Capa de datos local y sincronización
 - Finalizada: 2026-07-02
 - Resultado: base local Dexie completa (`src/lib/db.ts`) con perfiles, borrado suave, cola de cambios y metadatos de sync. Mapeo local/remoto en `src/lib/tablas.ts`. Punto único de escritura en `src/lib/repositorio.ts`: guarda en local, registra historial automático por campo (con motivo y usuario) y encola la subida agrupando ediciones repetidas. Motor de sincronización en `src/lib/sync.ts`: subida de la cola en orden con manejo de errores por cambio, descarga incremental por cursor con margen de 5 minutos, protección de cambios locales pendientes al aplicar filas remotas y estado observable para la interfaz. Se agregó la columna `recibido_en` al historial en `supabase/schema.sql` para que los cambios hechos offline se propaguen bien. 14 pruebas unitarias con Vitest (una detectó y permitió corregir un error real: los cambios de credenciales no quedaban en el historial por comparar valores enmascarados). Verificado en navegador real: creación, edición con historial por campo y cola agrupada.

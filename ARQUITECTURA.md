@@ -100,6 +100,7 @@ Además:
 src/
   app/            configuración, rutas y layout con barra inferior
   features/
+    autenticacion/ sesión, login y protección de rutas
     inicio/       pantalla principal, buscador y recientes
     busqueda/     índice y resultados de búsqueda
     soluciones/   categorías y artículos
