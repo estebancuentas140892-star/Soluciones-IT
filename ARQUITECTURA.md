@@ -103,7 +103,7 @@ src/
   features/
     autenticacion/ sesión, login y protección de rutas
     inicio/       pantalla principal, buscador y recientes
-    busqueda/     índice y resultados de búsqueda
+    busqueda/     índice MiniSearch (artículos y dispositivos) y resultados agrupados
     soluciones/   categorías, artículos en Markdown y su formulario
     dispositivos/ inventario y fichas técnicas
     boveda/       credenciales cifradas

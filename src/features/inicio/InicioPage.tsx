@@ -1,4 +1,13 @@
+import { useMemo, useState } from 'react'
+import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
+import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
+
 export function InicioPage() {
+  const [consulta, setConsulta] = useState('')
+  const indice = useIndiceBusqueda()
+  const resultados = useMemo(() => buscar(indice, consulta), [indice, consulta])
+  const buscando = consulta.trim().length > 0
+
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
       <header>
@@ -10,17 +19,23 @@ export function InicioPage() {
         <SearchIcon className="h-5 w-5 text-slate-400" />
         <input
           type="search"
+          value={consulta}
+          onChange={(evento) => setConsulta(evento.target.value)}
           placeholder="Buscar impresora, POS, cámara, Zebra..."
           className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
         />
       </label>
 
-      <section>
-        <h2 className="mb-2 text-sm font-medium text-slate-400">Recientes</h2>
-        <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
-          Aún no hay elementos recientes
-        </p>
-      </section>
+      {buscando ? (
+        <ResultadosBusqueda resultados={resultados} />
+      ) : (
+        <section>
+          <h2 className="mb-2 text-sm font-medium text-slate-400">Recientes</h2>
+          <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
+            Aún no hay elementos recientes
+          </p>
+        </section>
+      )}
     </div>
   )
 }
