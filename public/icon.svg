@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="marca" x1="156" y1="146" x2="356" y2="376" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
   <rect width="512" height="512" rx="96" fill="#0f172a"/>
-  <text x="256" y="300" font-family="Arial, sans-serif" font-size="200" font-weight="700" fill="#38bdf8" text-anchor="middle">IT</text>
+  <path d="M256,146 C296,146 332,158 356,168 L356,230 C356,298 318,344 256,374 C194,344 156,298 156,230 L156,168 C180,158 216,146 256,146 Z" fill="url(#marca)"/>
+  <path d="M204,258 L240,296 L318,208" fill="none" stroke="#0f172a" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

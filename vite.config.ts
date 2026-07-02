@@ -11,7 +11,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Soluciones IT',
         short_name: 'Soluciones IT',
@@ -21,6 +21,11 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
+          // SVG unico: liviano y escala perfecto en cualquier tamano.
+          // El arte respeta la "zona segura" de los iconos maskable
+          // (todo el contenido cabe dentro del circulo central del
+          // 80% del lienzo) para que Android no lo recorte mal al
+          // aplicar su propia mascara.
           {
             src: 'icon.svg',
             sizes: 'any',
