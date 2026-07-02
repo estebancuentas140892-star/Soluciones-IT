@@ -1,10 +1,20 @@
 import Dexie, { type EntityTable } from 'dexie'
 
+export interface Perfil {
+  id: string
+  nombre: string
+  correo: string
+  puedeVerBoveda: boolean
+}
+
 export interface Categoria {
   id: string
   nombre: string
   icono: string
   orden: number
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
 }
 
 export type TipoArticulo =
@@ -23,7 +33,8 @@ export interface Articulo {
   contenido: string
   etiquetas: string[]
   updatedAt: string
-  updatedBy: string
+  updatedBy: string | null
+  eliminadoEn: string | null
 }
 
 export interface Dispositivo {
@@ -40,7 +51,8 @@ export interface Dispositivo {
   observaciones: string
   detalles: Record<string, string>
   updatedAt: string
-  updatedBy: string
+  updatedBy: string | null
+  eliminadoEn: string | null
 }
 
 export interface Credencial {
@@ -49,14 +61,18 @@ export interface Credencial {
   categoria: string
   datosCifrados: string
   updatedAt: string
-  updatedBy: string
+  updatedBy: string | null
+  eliminadoEn: string | null
 }
+
+export type TipoEntidadHistorial = 'categoria' | 'articulo' | 'dispositivo' | 'credencial'
 
 export interface HistorialEntrada {
   id: string
-  entidadTipo: 'articulo' | 'dispositivo' | 'credencial'
+  entidadTipo: TipoEntidadHistorial
   entidadId: string
-  usuario: string
+  usuario: string | null
+  usuarioNombre: string
   fechaHora: string
   campo: string
   valorAnterior: string
@@ -71,37 +87,54 @@ export interface Adjunto {
   nombre: string
   tipo: string
   referencia: string
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
 }
 
-export interface PendingChange {
+// Cola de cambios hechos en el telefono que aun no llegan al
+// servidor. Se procesa en orden de creacion al recuperar internet.
+export interface CambioPendiente {
   id: string
-  entidadTipo: 'articulo' | 'dispositivo' | 'credencial'
+  tabla: string
   entidadId: string
-  operacion: 'crear' | 'actualizar' | 'eliminar'
   payload: unknown
   creadoEn: string
+  error: string | null
+  intentos: number
+}
+
+// Datos internos de la sincronizacion, como el cursor de la ultima
+// descarga de cada tabla.
+export interface SyncMeta {
+  clave: string
+  valor: string
 }
 
 class SolucionesItDatabase extends Dexie {
+  perfiles!: EntityTable<Perfil, 'id'>
   categorias!: EntityTable<Categoria, 'id'>
   articulos!: EntityTable<Articulo, 'id'>
   dispositivos!: EntityTable<Dispositivo, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
   historial!: EntityTable<HistorialEntrada, 'id'>
   adjuntos!: EntityTable<Adjunto, 'id'>
-  pendingChanges!: EntityTable<PendingChange, 'id'>
+  cambiosPendientes!: EntityTable<CambioPendiente, 'id'>
+  syncMeta!: EntityTable<SyncMeta, 'clave'>
 
   constructor() {
     super('soluciones-it')
 
     this.version(1).stores({
+      perfiles: 'id',
       categorias: 'id, orden',
       articulos: 'id, categoriaId, tipo, updatedAt',
       dispositivos: 'id, categoriaId, ubicacion, estado, updatedAt',
       credenciales: 'id, categoria, updatedAt',
-      historial: 'id, entidadTipo, entidadId, fechaHora',
-      adjuntos: 'id, entidadTipo, entidadId',
-      pendingChanges: 'id, entidadTipo, creadoEn',
+      historial: 'id, [entidadTipo+entidadId], fechaHora',
+      adjuntos: 'id, [entidadTipo+entidadId]',
+      cambiosPendientes: 'id, tabla, [tabla+entidadId], creadoEn',
+      syncMeta: 'clave',
     })
   }
 }

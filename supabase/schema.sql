@@ -75,7 +75,10 @@ create table if not exists public.credenciales (
 
 -- Historial inmutable: solo se insertan filas, nunca se editan ni
 -- se borran. Para credenciales, valor_anterior y valor_nuevo llegan
--- cifrados desde la app.
+-- cifrados desde la app. fecha_hora es el momento real del cambio
+-- (puede ser antiguo si se hizo sin internet); recibido_en es el
+-- momento en que llego al servidor y es la columna que usa la
+-- sincronizacion para saber que hay de nuevo.
 create table if not exists public.historial (
   id uuid primary key default gen_random_uuid(),
   entidad_tipo text not null check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial')),
@@ -83,11 +86,15 @@ create table if not exists public.historial (
   usuario uuid references auth.users (id),
   usuario_nombre text not null default '',
   fecha_hora timestamptz not null default now(),
+  recibido_en timestamptz not null default now(),
   campo text not null,
   valor_anterior text not null default '',
   valor_nuevo text not null default '',
   motivo text not null default ''
 );
+
+-- Por si la tabla ya existia de una version anterior del esquema.
+alter table public.historial add column if not exists recibido_en timestamptz not null default now();
 
 create table if not exists public.adjuntos (
   id uuid primary key default gen_random_uuid(),
@@ -111,6 +118,7 @@ create index if not exists idx_dispositivos_categoria on public.dispositivos (ca
 create index if not exists idx_credenciales_updated on public.credenciales (updated_at);
 create index if not exists idx_historial_entidad on public.historial (entidad_tipo, entidad_id);
 create index if not exists idx_historial_fecha on public.historial (fecha_hora);
+create index if not exists idx_historial_recibido on public.historial (recibido_en);
 create index if not exists idx_adjuntos_updated on public.adjuntos (updated_at);
 create index if not exists idx_adjuntos_entidad on public.adjuntos (entidad_tipo, entidad_id);
 

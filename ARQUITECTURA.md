@@ -107,10 +107,12 @@ src/
     boveda/       credenciales cifradas
     historial/    registro y visor de cambios
   lib/
-    db.ts         base de datos local (Dexie)
-    supabase.ts   cliente del backend
-    sync.ts       sincronización y cola offline
-    crypto.ts     cifrado de la bóveda
+    db.ts           base de datos local (Dexie)
+    supabase.ts     cliente del backend
+    tablas.ts       mapeo entre la base local y las columnas remotas
+    repositorio.ts  punto único de escritura: guarda, registra historial y encola
+    sync.ts         motor de sincronización (subida de cola y descarga por cursor)
+    crypto.ts       cifrado de la bóveda
   components/     componentes de interfaz compartidos
 supabase/
   schema.sql      esquema de tablas y políticas RLS
