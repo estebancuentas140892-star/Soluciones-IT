@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { eliminarRegistro } from '../../lib/repositorio'
+import { Historial } from '../historial/Historial'
 import { descifrarCredencial, type DatosCredencial } from './sesionBoveda'
 
 export function CredencialPage() {
@@ -105,6 +106,8 @@ export function CredencialPage() {
           <p className="whitespace-pre-wrap text-sm text-slate-300">{datos.notas}</p>
         </div>
       )}
+
+      <Historial entidadTipo="credencial" entidadId={credencialId} />
     </div>
   )
 }

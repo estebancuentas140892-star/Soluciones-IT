@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { Adjuntos } from '../../components/Adjuntos'
+import { Historial } from '../historial/Historial'
 
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
@@ -101,6 +102,8 @@ export function DispositivoPage() {
       )}
 
       <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} />
+
+      <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
     </div>
   )
 }

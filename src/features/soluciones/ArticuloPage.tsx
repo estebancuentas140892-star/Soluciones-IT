@@ -5,6 +5,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { Adjuntos } from '../../components/Adjuntos'
+import { Historial } from '../historial/Historial'
 import { etiquetaDeTipo } from './tiposArticulo'
 
 export function ArticuloPage() {
@@ -65,6 +66,8 @@ export function ArticuloPage() {
       </article>
 
       <Adjuntos entidadTipo="articulo" entidadId={articuloId} />
+
+      <Historial entidadTipo="articulo" entidadId={articuloId} />
     </div>
   )
 }
