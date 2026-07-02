@@ -1,27 +1,69 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/autenticacion/AuthProvider'
 import { RequireAuth } from './features/autenticacion/RequireAuth'
-import { LoginPage } from './features/autenticacion/LoginPage'
 import { Layout } from './app/Layout'
-import { InicioPage } from './features/inicio/InicioPage'
-import { SolucionesPage } from './features/soluciones/SolucionesPage'
-import { CategoriaPage } from './features/soluciones/CategoriaPage'
-import { ArticuloPage } from './features/soluciones/ArticuloPage'
-import { ArticuloForm } from './features/soluciones/ArticuloForm'
-import { DispositivosPage } from './features/dispositivos/DispositivosPage'
-import { DispositivoPage } from './features/dispositivos/DispositivoPage'
-import { DispositivoForm } from './features/dispositivos/DispositivoForm'
-import { BovedaGuard } from './features/boveda/BovedaGuard'
-import { BovedaPage } from './features/boveda/BovedaPage'
-import { CredencialPage } from './features/boveda/CredencialPage'
-import { CredencialForm } from './features/boveda/CredencialForm'
+import { Cargando } from './components/Cargando'
+
+// Cada pantalla se carga en su propio trozo (chunk) bajo demanda. Asi
+// la primera carga (la pantalla de login) no arrastra react-markdown
+// (solo lo usa la vista de articulo) ni minisearch (solo la pantalla
+// de inicio). Todos los trozos los precachea el service worker, por
+// lo que siguen disponibles sin conexion. Los componentes usan
+// exportaciones con nombre, de ahi el mapeo a `default`.
+const LoginPage = lazy(() =>
+  import('./features/autenticacion/LoginPage').then((m) => ({ default: m.LoginPage })),
+)
+const InicioPage = lazy(() =>
+  import('./features/inicio/InicioPage').then((m) => ({ default: m.InicioPage })),
+)
+const SolucionesPage = lazy(() =>
+  import('./features/soluciones/SolucionesPage').then((m) => ({ default: m.SolucionesPage })),
+)
+const CategoriaPage = lazy(() =>
+  import('./features/soluciones/CategoriaPage').then((m) => ({ default: m.CategoriaPage })),
+)
+const ArticuloPage = lazy(() =>
+  import('./features/soluciones/ArticuloPage').then((m) => ({ default: m.ArticuloPage })),
+)
+const ArticuloForm = lazy(() =>
+  import('./features/soluciones/ArticuloForm').then((m) => ({ default: m.ArticuloForm })),
+)
+const DispositivosPage = lazy(() =>
+  import('./features/dispositivos/DispositivosPage').then((m) => ({ default: m.DispositivosPage })),
+)
+const DispositivoPage = lazy(() =>
+  import('./features/dispositivos/DispositivoPage').then((m) => ({ default: m.DispositivoPage })),
+)
+const DispositivoForm = lazy(() =>
+  import('./features/dispositivos/DispositivoForm').then((m) => ({ default: m.DispositivoForm })),
+)
+const BovedaGuard = lazy(() =>
+  import('./features/boveda/BovedaGuard').then((m) => ({ default: m.BovedaGuard })),
+)
+const BovedaPage = lazy(() =>
+  import('./features/boveda/BovedaPage').then((m) => ({ default: m.BovedaPage })),
+)
+const CredencialPage = lazy(() =>
+  import('./features/boveda/CredencialPage').then((m) => ({ default: m.CredencialPage })),
+)
+const CredencialForm = lazy(() =>
+  import('./features/boveda/CredencialForm').then((m) => ({ default: m.CredencialForm })),
+)
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="login" element={<LoginPage />} />
+          <Route
+            path="login"
+            element={
+              <Suspense fallback={<Cargando />}>
+                <LoginPage />
+              </Suspense>
+            }
+          />
           <Route element={<RequireAuth />}>
             <Route element={<Layout />}>
               <Route index element={<InicioPage />} />

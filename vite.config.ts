@@ -30,10 +30,44 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Todos los trozos JS que produce la division del bundle
+        // quedan precacheados, asi las pantallas cargadas bajo demanda
+        // tambien funcionan sin conexion.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Vendors pesados que se cargan al arranque (autenticacion y
+        // sincronizacion) en trozos propios y estables: se cachean
+        // aparte del codigo de la app, que cambia con mas frecuencia.
+        // react-markdown y minisearch no aparecen aqui a proposito:
+        // los aisla la carga diferida por ruta (solo la vista de
+        // articulo y la de inicio, respectivamente).
+        advancedChunks: {
+          groups: [
+            {
+              name: 'supabase',
+              test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+              priority: 20,
+            },
+            {
+              name: 'react-vendor',
+              test: /[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/,
+              priority: 10,
+            },
+            {
+              name: 'dexie',
+              test: /[\\/]node_modules[\\/]dexie[\\/]/,
+              priority: 15,
+            },
+          ],
+        },
+      },
+    },
+  },
   test: {
     environment: 'node',
     setupFiles: ['./src/pruebas/setup.ts'],

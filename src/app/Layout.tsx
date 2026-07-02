@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import { BottomNav } from '../components/BottomNav'
+import { Cargando } from '../components/Cargando'
 import { useAuth } from '../features/autenticacion/authContext'
 
 export function Layout() {
@@ -18,7 +20,9 @@ export function Layout() {
         </button>
       </header>
       <main className="flex-1 overflow-y-auto pb-20">
-        <Outlet />
+        <Suspense fallback={<Cargando />}>
+          <Outlet />
+        </Suspense>
       </main>
       <BottomNav />
     </div>
