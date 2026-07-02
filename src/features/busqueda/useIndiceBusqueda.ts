@@ -55,9 +55,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
         tipo: 'dispositivo',
         titulo: dispositivo.nombre,
         subtitulo: [dispositivo.marca, dispositivo.modelo, dispositivo.ubicacion].filter(Boolean).join(' · '),
-        // Todavía no existe una ficha individual (llega en la tarea 7);
-        // por ahora se enlaza a la lista de dispositivos.
-        ruta: '/dispositivos',
+        ruta: `/dispositivos/${dispositivo.id}`,
         texto: [
           dispositivo.nombre,
           dispositivo.marca,

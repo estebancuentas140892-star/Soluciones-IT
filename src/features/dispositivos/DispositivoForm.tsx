@@ -1,0 +1,303 @@
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { db } from '../../lib/db'
+import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+
+interface CampoDetalle {
+  clave: string
+  valor: string
+}
+
+const ESTADOS_SUGERIDOS = ['Operativo', 'En mantenimiento', 'Fuera de servicio', 'De baja']
+
+export function DispositivoForm() {
+  const { dispositivoId } = useParams()
+  const navigate = useNavigate()
+  const esEdicion = Boolean(dispositivoId)
+
+  const dispositivo = useLiveQuery(
+    () => (dispositivoId ? db.dispositivos.get(dispositivoId) : undefined),
+    [dispositivoId],
+  )
+  const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
+
+  const [categoriaId, setCategoriaId] = useState('')
+  const [nombre, setNombre] = useState('')
+  const [marca, setMarca] = useState('')
+  const [modelo, setModelo] = useState('')
+  const [serial, setSerial] = useState('')
+  const [placaInventario, setPlacaInventario] = useState('')
+  const [ubicacion, setUbicacion] = useState('')
+  const [ip, setIp] = useState('')
+  const [estado, setEstado] = useState('')
+  const [observaciones, setObservaciones] = useState('')
+  const [detalles, setDetalles] = useState<CampoDetalle[]>([])
+  const [motivo, setMotivo] = useState('')
+  const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
+  const [guardando, setGuardando] = useState(false)
+
+  useEffect(() => {
+    if (!dispositivo || cargadoInicial) return
+    setCategoriaId(dispositivo.categoriaId)
+    setNombre(dispositivo.nombre)
+    setMarca(dispositivo.marca)
+    setModelo(dispositivo.modelo)
+    setSerial(dispositivo.serial)
+    setPlacaInventario(dispositivo.placaInventario)
+    setUbicacion(dispositivo.ubicacion)
+    setIp(dispositivo.ip)
+    setEstado(dispositivo.estado)
+    setObservaciones(dispositivo.observaciones)
+    setDetalles(Object.entries(dispositivo.detalles).map(([clave, valor]) => ({ clave, valor })))
+    setCargadoInicial(true)
+  }, [dispositivo, cargadoInicial])
+
+  useEffect(() => {
+    if (!esEdicion && !categoriaId && categorias && categorias.length > 0) {
+      setCategoriaId(categorias[0].id)
+    }
+  }, [esEdicion, categoriaId, categorias])
+
+  if (esEdicion && dispositivo === null) return <Navigate to="/dispositivos" replace />
+
+  function actualizarDetalle(indice: number, campo: keyof CampoDetalle, valor: string) {
+    setDetalles((actuales) => actuales.map((d, i) => (i === indice ? { ...d, [campo]: valor } : d)))
+  }
+
+  function quitarDetalle(indice: number) {
+    setDetalles((actuales) => actuales.filter((_, i) => i !== indice))
+  }
+
+  async function manejarEnvio(evento: FormEvent) {
+    evento.preventDefault()
+    setGuardando(true)
+
+    const id = dispositivoId ?? nuevoId()
+    const detallesObjeto = Object.fromEntries(
+      detalles.filter((d) => d.clave.trim()).map((d) => [d.clave.trim(), d.valor.trim()]),
+    )
+
+    await guardarRegistro(
+      'dispositivos',
+      {
+        id,
+        categoriaId,
+        nombre: nombre.trim(),
+        marca: marca.trim(),
+        modelo: modelo.trim(),
+        serial: serial.trim(),
+        placaInventario: placaInventario.trim(),
+        ubicacion: ubicacion.trim(),
+        ip: ip.trim(),
+        estado: estado.trim(),
+        observaciones: observaciones.trim(),
+        detalles: detallesObjeto,
+      },
+      motivo.trim(),
+    )
+
+    navigate(`/dispositivos/${id}`)
+  }
+
+  if (esEdicion && !cargadoInicial) {
+    return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
+  }
+
+  const volverA = esEdicion ? `/dispositivos/${dispositivoId}` : '/dispositivos'
+
+  return (
+    <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
+      <header>
+        <Link to={volverA} className="text-xs text-slate-400">
+          ← Volver
+        </Link>
+        <h1 className="text-xl font-semibold">{esEdicion ? 'Editar dispositivo' : 'Nuevo dispositivo'}</h1>
+      </header>
+
+      <form onSubmit={manejarEnvio} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Nombre
+          <input
+            type="text"
+            required
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Categoría
+          <select
+            required
+            value={categoriaId}
+            onChange={(e) => setCategoriaId(e.target.value)}
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          >
+            {categorias?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Marca
+            <input
+              type="text"
+              value={marca}
+              onChange={(e) => setMarca(e.target.value)}
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Modelo
+            <input
+              type="text"
+              value={modelo}
+              onChange={(e) => setModelo(e.target.value)}
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Número de serie
+            <input
+              type="text"
+              value={serial}
+              onChange={(e) => setSerial(e.target.value)}
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Placa de inventario
+            <input
+              type="text"
+              value={placaInventario}
+              onChange={(e) => setPlacaInventario(e.target.value)}
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </label>
+        </div>
+
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Ubicación
+          <input
+            type="text"
+            value={ubicacion}
+            onChange={(e) => setUbicacion(e.target.value)}
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Dirección IP
+            <input
+              type="text"
+              value={ip}
+              onChange={(e) => setIp(e.target.value)}
+              placeholder="192.168.1.10"
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Estado
+            <input
+              type="text"
+              list="estados-sugeridos"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+            <datalist id="estados-sugeridos">
+              {ESTADOS_SUGERIDOS.map((valor) => (
+                <option key={valor} value={valor} />
+              ))}
+            </datalist>
+          </label>
+        </div>
+
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Observaciones
+          <textarea
+            rows={3}
+            value={observaciones}
+            onChange={(e) => setObservaciones(e.target.value)}
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+        </label>
+
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-300">Campos adicionales</span>
+            <button
+              type="button"
+              onClick={() => setDetalles((actuales) => [...actuales, { clave: '', valor: '' }])}
+              className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+            >
+              + Agregar campo
+            </button>
+          </div>
+          <p className="text-xs text-slate-500">
+            Para datos propios de este tipo de dispositivo, por ejemplo puerto, switch, usuario asignado o sistema
+            operativo.
+          </p>
+
+          {detalles.map((campo, indice) => (
+            <div key={indice} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Campo"
+                value={campo.clave}
+                onChange={(e) => actualizarDetalle(indice, 'clave', e.target.value)}
+                className="w-2/5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+              <input
+                type="text"
+                placeholder="Valor"
+                value={campo.valor}
+                onChange={(e) => actualizarDetalle(indice, 'valor', e.target.value)}
+                className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+              <button
+                type="button"
+                onClick={() => quitarDetalle(indice)}
+                aria-label="Quitar campo"
+                className="shrink-0 rounded-lg border border-slate-800 px-2.5 text-slate-400"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {esEdicion && (
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Motivo del cambio (opcional)
+            <input
+              type="text"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="¿Por qué se actualizó esta ficha?"
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </label>
+        )}
+
+        <button
+          type="submit"
+          disabled={guardando || !categoriaId}
+          className="mt-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950 disabled:opacity-50"
+        >
+          {guardando ? 'Guardando...' : 'Guardar'}
+        </button>
+      </form>
+    </div>
+  )
+}

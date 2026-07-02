@@ -32,7 +32,7 @@ const documentos: DocumentoBusqueda[] = [
     tipo: 'dispositivo',
     titulo: 'Cámara bodega norte',
     subtitulo: 'Hikvision · DS-2CD1023 · Bodega norte',
-    ruta: '/dispositivos',
+    ruta: '/dispositivos/1',
     texto: 'Cámara bodega norte Hikvision DS-2CD1023 Bodega norte 192.168.1.50',
   },
 ]

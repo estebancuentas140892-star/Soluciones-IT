@@ -9,6 +9,8 @@ import { CategoriaPage } from './features/soluciones/CategoriaPage'
 import { ArticuloPage } from './features/soluciones/ArticuloPage'
 import { ArticuloForm } from './features/soluciones/ArticuloForm'
 import { DispositivosPage } from './features/dispositivos/DispositivosPage'
+import { DispositivoPage } from './features/dispositivos/DispositivoPage'
+import { DispositivoForm } from './features/dispositivos/DispositivoForm'
 import { BovedaPage } from './features/boveda/BovedaPage'
 
 function App() {
@@ -26,6 +28,9 @@ function App() {
               <Route path="soluciones/:categoriaId/:articuloId" element={<ArticuloPage />} />
               <Route path="soluciones/:categoriaId/:articuloId/editar" element={<ArticuloForm />} />
               <Route path="dispositivos" element={<DispositivosPage />} />
+              <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
+              <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
+              <Route path="dispositivos/:dispositivoId/editar" element={<DispositivoForm />} />
               <Route path="boveda" element={<BovedaPage />} />
             </Route>
           </Route>

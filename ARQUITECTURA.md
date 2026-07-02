@@ -49,7 +49,7 @@ Notas de navegación:
 
 - **categorias**: id, nombre, icono, orden.
 - **articulos**: id, categoria_id, titulo, tipo (instalación, configuración, conexión, problema frecuente, mantenimiento, manual), contenido en Markdown, etiquetas, adjuntos, updated_at, updated_by.
-- **dispositivos**: id, categoria_id, nombre, marca, modelo, serial, placa_inventario, ubicacion, ip, estado, observaciones, detalles (campos JSON según el tipo: una cámara guarda puerto y switch al que se conecta; un computador guarda usuario asignado, área y sistema operativo), updated_at, updated_by. Los formularios se generan dinámicamente con una plantilla de campos por tipo de dispositivo.
+- **dispositivos**: id, categoria_id, nombre, marca, modelo, serial, placa_inventario, ubicacion, ip, estado, observaciones, detalles (pares clave/valor libres, por ejemplo puerto y switch en una cámara, o usuario asignado y sistema operativo en un computador), updated_at, updated_by. En vez de una plantilla fija por categoría, el formulario deja agregar y quitar campos libremente ("Campos adicionales"): es más simple de mantener y no se rompe si el equipo agrega una categoría nueva o un campo que no se anticipó.
 - **credenciales**: id, titulo, categoria, datos_cifrados (bloque AES-256-GCM), updated_at, updated_by. Nunca hay texto plano.
 - **historial**: id, entidad_tipo, entidad_id, usuario, fecha_hora, campo, valor_anterior, valor_nuevo, motivo.
 - **adjuntos**: id, entidad_tipo, entidad_id, nombre, tipo, referencia en Supabase Storage.
@@ -105,7 +105,7 @@ src/
     inicio/       pantalla principal, buscador y recientes
     busqueda/     índice MiniSearch (artículos y dispositivos) y resultados agrupados
     soluciones/   categorías, artículos en Markdown y su formulario
-    dispositivos/ inventario y fichas técnicas
+    dispositivos/ inventario con filtros, ficha con campos dinámicos y su formulario
     boveda/       credenciales cifradas
     historial/    registro y visor de cambios
   lib/
