@@ -29,7 +29,7 @@ Cuatro pilares: base de conocimiento por categorías, inventario de dispositivos
 | Offline | vite-plugin-pwa (service worker) | App instalable y funcional sin internet |
 | Backend | Supabase (plan gratuito) | Base de datos Postgres, autenticación, archivos y sincronización |
 | Cifrado de bóveda | WebCrypto (AES-256-GCM + PBKDF2) | Credenciales cifradas en el propio dispositivo |
-| Hosting | Cloudflare Pages o Vercel (gratis) | Publicación de la aplicación |
+| Hosting | Vercel (plan gratuito) | Publicación en https://soluciones-it-psi.vercel.app, desplegado automáticamente desde GitHub. `vercel.json` reescribe todas las rutas a `index.html` (necesario para React Router) |
 
 Todo es gratuito para un equipo de 5 personas. Supabase además es código abierto: si algún día su plan gratuito cambia, se puede autoalojar sin reescribir la aplicación.
 

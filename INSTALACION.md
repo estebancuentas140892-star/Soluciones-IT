@@ -1,5 +1,7 @@
 # Instalar Soluciones IT en el teléfono
 
+Dirección de la app: **https://soluciones-it-psi.vercel.app**
+
 Guía para el equipo de soporte: cómo instalar la app en el celular o la PC para
 que abra como una app normal, con ícono propio, y funcione sin internet.
 
