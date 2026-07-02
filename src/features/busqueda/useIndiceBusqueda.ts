@@ -3,8 +3,9 @@ import { useMemo } from 'react'
 import MiniSearch from 'minisearch'
 import { db } from '../../lib/db'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
+import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 
-export type TipoResultado = 'articulo' | 'dispositivo'
+export type TipoResultado = 'articulo' | 'dispositivo' | 'credencial'
 
 export interface DocumentoBusqueda {
   id: string
@@ -30,6 +31,8 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
   const articulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
+  const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  const bovedaDesbloqueada = useBovedaDesbloqueada()
 
   return useMemo(() => {
     const nombreCategoria = new Map((categorias ?? []).map((c) => [c.id, c.nombre]))
@@ -70,8 +73,24 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
       })
     }
 
+    // La boveda solo entra al indice cuando esta desbloqueada, y
+    // unicamente por titulo y categoria: el contenido cifrado de las
+    // credenciales nunca se indexa.
+    if (bovedaDesbloqueada) {
+      for (const credencial of credenciales ?? []) {
+        documentos.push({
+          id: `credencial:${credencial.id}`,
+          tipo: 'credencial',
+          titulo: credencial.titulo,
+          subtitulo: credencial.categoria,
+          ruta: `/boveda/${credencial.id}`,
+          texto: credencial.titulo,
+        })
+      }
+    }
+
     return crearIndiceDesdeDocumentos(documentos)
-  }, [articulos, dispositivos, categorias])
+  }, [articulos, dispositivos, categorias, credenciales, bovedaDesbloqueada])
 }
 
 // Separado del hook para poder probarlo sin depender de React ni de

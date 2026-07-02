@@ -4,10 +4,10 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-### 9. Bóveda de IP y credenciales
-- Descripción: sección protegida con contraseña maestra, cifrado AES-256-GCM en el dispositivo, autobloqueo por inactividad y acceso restringido a usuarios autorizados (perfil.puedeVerBoveda).
-- Prioridad: Alta
-- Ubicación: `src/features/boveda/`, `src/lib/crypto.ts`
+### 8. Visor de historial de cambios
+- Descripción: el registro automático (quién, cuándo, qué cambió y motivo) ya está implementado en `src/lib/repositorio.ts` y en uso en artículos, dispositivos y credenciales; falta el visor de historial dentro de cada ficha (`ArticuloPage.tsx`, `DispositivoPage.tsx` y `CredencialPage.tsx`).
+- Prioridad: Media
+- Ubicación: `src/features/historial/`
 
 ## Por hacer
 
@@ -16,12 +16,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - Prioridad: Alta
 - Ubicación: `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`
 - Avance: esquema completo escrito (tablas, historial inmutable con `recibido_en`, triggers de updated_at, RLS con permiso especial para la bóveda, bucket de adjuntos y categorías iniciales). Credenciales configuradas en `.env` local.
-- Bloqueada por: el usuario debe ejecutar `supabase/schema.sql` en el SQL Editor, crear los 5 usuarios, autorizar la bóveda y desactivar el registro público, siguiendo `supabase/INSTRUCCIONES.md`. Importante: si ya se había ejecutado una versión anterior del esquema, volver a ejecutarlo completo (es idempotente y agrega la columna `recibido_en` al historial). Necesaria para probar el login (tarea 4) con usuarios reales y para probar la sincronización real de los módulos ya construidos.
-
-### 8. Visor de historial de cambios
-- Descripción: el registro automático (quién, cuándo, qué cambió y motivo) ya está implementado en `src/lib/repositorio.ts` y en uso en artículos y dispositivos; falta el visor de historial dentro de cada ficha (artículos, dispositivos y credenciales).
-- Prioridad: Media
-- Ubicación: `src/features/historial/`
+- Bloqueada por: el usuario debe ejecutar `supabase/schema.sql` en el SQL Editor, crear los 5 usuarios, autorizar la bóveda y desactivar el registro público, siguiendo `supabase/INSTRUCCIONES.md`. Importante: si ya se había ejecutado una versión anterior del esquema, volver a ejecutarlo completo (es idempotente y agrega la columna `recibido_en` al historial). Necesaria para probar el login (tarea 4) con usuarios reales, la sincronización real de los módulos ya construidos y la política RLS de la bóveda (tarea 9).
 
 ### 10. Pulido móvil y puesta en marcha
 - Descripción: optimización de rendimiento (dividir el bundle, que hoy supera los 700 kB por supabase-js + react-markdown + minisearch), compresión de fotos al subirlas, botón "Descargar todo para offline", icono definitivo de la app, pruebas en los teléfonos reales del equipo y guía de instalación de la PWA.

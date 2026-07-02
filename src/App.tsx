@@ -11,7 +11,10 @@ import { ArticuloForm } from './features/soluciones/ArticuloForm'
 import { DispositivosPage } from './features/dispositivos/DispositivosPage'
 import { DispositivoPage } from './features/dispositivos/DispositivoPage'
 import { DispositivoForm } from './features/dispositivos/DispositivoForm'
+import { BovedaGuard } from './features/boveda/BovedaGuard'
 import { BovedaPage } from './features/boveda/BovedaPage'
+import { CredencialPage } from './features/boveda/CredencialPage'
+import { CredencialForm } from './features/boveda/CredencialForm'
 
 function App() {
   return (
@@ -31,7 +34,12 @@ function App() {
               <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
               <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
               <Route path="dispositivos/:dispositivoId/editar" element={<DispositivoForm />} />
-              <Route path="boveda" element={<BovedaPage />} />
+              <Route path="boveda" element={<BovedaGuard />}>
+                <Route index element={<BovedaPage />} />
+                <Route path="nueva" element={<CredencialForm />} />
+                <Route path=":credencialId" element={<CredencialPage />} />
+                <Route path=":credencialId/editar" element={<CredencialForm />} />
+              </Route>
             </Route>
           </Route>
         </Routes>
