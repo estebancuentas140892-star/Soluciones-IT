@@ -91,8 +91,9 @@ Además:
 ## 10. Limitaciones y riesgos conocidos
 
 - Supabase pausa los proyectos gratuitos tras 7 días sin uso. Con uso diario del equipo no ocurre; como respaldo se puede programar un ping semanal automático.
-- El almacenamiento gratuito de archivos es de 1 GB. La app comprimirá las fotos automáticamente al subirlas para aprovecharlo.
+- El almacenamiento gratuito de archivos es de 1 GB. La app comprimirá las fotos automáticamente al subirlas para aprovecharlo (pendiente, ver tarea 10).
 - En iPhone, iOS puede borrar los datos locales de una PWA que lleve semanas sin abrirse. La sincronización los restaura al volver a abrir la app.
+- Subir un adjunto (foto, manual en PDF) requiere conexión a internet en ese momento; a diferencia del resto de la app, esa subida no se encola para reintentarse sola. El resto del artículo (título, contenido, etiquetas) sí funciona sin conexión con normalidad.
 
 ## 11. Estructura de carpetas prevista
 
@@ -103,7 +104,7 @@ src/
     autenticacion/ sesión, login y protección de rutas
     inicio/       pantalla principal, buscador y recientes
     busqueda/     índice y resultados de búsqueda
-    soluciones/   categorías y artículos
+    soluciones/   categorías, artículos en Markdown y su formulario
     dispositivos/ inventario y fichas técnicas
     boveda/       credenciales cifradas
     historial/    registro y visor de cambios
@@ -114,7 +115,7 @@ src/
     repositorio.ts  punto único de escritura: guarda, registra historial y encola
     sync.ts         motor de sincronización (subida de cola y descarga por cursor)
     crypto.ts       cifrado de la bóveda
-  components/     componentes de interfaz compartidos
+  components/     componentes de interfaz compartidos (incluye Adjuntos.tsx, reutilizable en dispositivos)
 supabase/
   schema.sql      esquema de tablas y políticas RLS
 ```
