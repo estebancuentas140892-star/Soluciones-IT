@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
+import { DescargarOffline } from '../../components/DescargarOffline'
 
 export function InicioPage() {
   const [consulta, setConsulta] = useState('')
@@ -29,12 +30,15 @@ export function InicioPage() {
       {buscando ? (
         <ResultadosBusqueda resultados={resultados} />
       ) : (
-        <section>
-          <h2 className="mb-2 text-sm font-medium text-slate-400">Recientes</h2>
-          <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
-            Aún no hay elementos recientes
-          </p>
-        </section>
+        <>
+          <DescargarOffline />
+          <section>
+            <h2 className="mb-2 text-sm font-medium text-slate-400">Recientes</h2>
+            <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
+              Aún no hay elementos recientes
+            </p>
+          </section>
+        </>
       )}
     </div>
   )

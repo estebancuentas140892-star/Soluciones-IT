@@ -4,6 +4,7 @@ import { supabase, supabaseConfigured } from '../lib/supabase'
 import { db, type Adjunto } from '../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../lib/repositorio'
 import { comprimirImagen } from '../lib/comprimirImagen'
+import { cachearSiHaceFalta, obtenerUrlOffline } from '../lib/adjuntosOffline'
 
 interface Props {
   entidadTipo: Adjunto['entidadTipo']
@@ -110,15 +111,32 @@ function AdjuntoItem({ adjunto, onEliminar }: { adjunto: Adjunto; onEliminar: ()
 
   useEffect(() => {
     let vigente = true
-    if (!supabase) return
-    supabase.storage
-      .from('adjuntos')
-      .createSignedUrl(adjunto.referencia, UNA_HORA)
-      .then(({ data }) => {
-        if (vigente && data) setUrl(data.signedUrl)
-      })
+    let urlLocal: string | null = null
+
+    async function cargar() {
+      // Si ya se descargo para offline, se muestra desde el telefono
+      // sin tocar la red. Si no, se pide una URL firmada (requiere
+      // conexion) y de paso se guarda para la proxima vez.
+      const offline = await obtenerUrlOffline(adjunto.referencia)
+      if (!vigente) return
+      if (offline) {
+        urlLocal = offline
+        setUrl(offline)
+        return
+      }
+      if (!supabase) return
+      const { data } = await supabase.storage.from('adjuntos').createSignedUrl(adjunto.referencia, UNA_HORA)
+      if (!vigente) return
+      if (data) {
+        setUrl(data.signedUrl)
+        void cachearSiHaceFalta(adjunto.referencia, data.signedUrl)
+      }
+    }
+    void cargar()
+
     return () => {
       vigente = false
+      if (urlLocal) URL.revokeObjectURL(urlLocal)
     }
   }, [adjunto.referencia])
 
