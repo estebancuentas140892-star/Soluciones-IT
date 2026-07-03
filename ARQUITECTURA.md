@@ -106,7 +106,7 @@ src/
     inicio/       pantalla principal, buscador y recientes
     busqueda/     índice MiniSearch (artículos y dispositivos) y resultados agrupados
     soluciones/   categorías, artículos en Markdown y su formulario
-    dispositivos/ inventario con filtros, ficha con campos dinámicos, formulario y etiquetas QR imprimibles
+    dispositivos/ inventario con filtros, ficha con campos dinámicos, formulario, etiquetas QR imprimibles e importación masiva desde Excel/CSV
     escaner/      escaneo de códigos QR y de barras con la cámara para abrir fichas
     boveda/       credenciales cifradas
     historial/    registro y visor de cambios

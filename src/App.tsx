@@ -56,6 +56,11 @@ const EscanerPage = lazy(() =>
 const EtiquetasPage = lazy(() =>
   import('./features/dispositivos/EtiquetasPage').then((m) => ({ default: m.EtiquetasPage })),
 )
+const ImportarDispositivosPage = lazy(() =>
+  import('./features/dispositivos/importar/ImportarDispositivosPage').then((m) => ({
+    default: m.ImportarDispositivosPage,
+  })),
+)
 
 function App() {
   return (
@@ -99,6 +104,7 @@ function App() {
               <Route path="soluciones/:categoriaId/:articuloId/editar" element={<ArticuloForm />} />
               <Route path="dispositivos" element={<DispositivosPage />} />
               <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
+              <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
               <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
               <Route path="dispositivos/:dispositivoId/editar" element={<DispositivoForm />} />
               <Route path="boveda" element={<BovedaGuard />}>

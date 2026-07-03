@@ -62,6 +62,12 @@ export function DispositivosPage() {
         >
           Etiquetas QR
         </Link>
+        <Link
+          to="/dispositivos/importar"
+          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+        >
+          Importar
+        </Link>
       </div>
 
       <div className="flex flex-col gap-2">
