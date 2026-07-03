@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { BottomNav } from '../components/BottomNav'
 import { Cargando } from '../components/Cargando'
 import { IndicadorSync } from '../components/IndicadorSync'
@@ -12,7 +12,12 @@ export function Layout() {
     <div className="mx-auto flex min-h-svh max-w-md flex-col bg-slate-950 text-slate-100">
       <header className="flex items-center justify-end gap-2 px-4 pt-3">
         <IndicadorSync />
-        {perfil?.nombre && <span className="text-xs text-slate-400">{perfil.nombre}</span>}
+        <Link
+          to="/cuenta"
+          className="text-xs text-slate-400 underline decoration-dotted decoration-slate-600 underline-offset-2"
+        >
+          {perfil?.nombre || 'Mi cuenta'}
+        </Link>
         <button
           type="button"
           onClick={() => void cerrarSesion()}

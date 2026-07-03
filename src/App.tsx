@@ -17,6 +17,9 @@ const LoginPage = lazy(() =>
 const InicioPage = lazy(() =>
   import('./features/inicio/InicioPage').then((m) => ({ default: m.InicioPage })),
 )
+const CuentaPage = lazy(() =>
+  import('./features/autenticacion/CuentaPage').then((m) => ({ default: m.CuentaPage })),
+)
 const SolucionesPage = lazy(() =>
   import('./features/soluciones/SolucionesPage').then((m) => ({ default: m.SolucionesPage })),
 )
@@ -97,6 +100,7 @@ function App() {
             />
             <Route element={<Layout />}>
               <Route index element={<InicioPage />} />
+              <Route path="cuenta" element={<CuentaPage />} />
               <Route path="soluciones" element={<SolucionesPage />} />
               <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
               <Route path="soluciones/:categoriaId/nuevo" element={<ArticuloForm />} />

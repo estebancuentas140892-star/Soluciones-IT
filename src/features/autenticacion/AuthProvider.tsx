@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { db, type Perfil } from '../../lib/db'
 import { sincronizar } from '../../lib/sync'
 import { AuthContext } from './authContext'
+import { traducirErrorAuth } from './erroresAuth'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true)
@@ -48,7 +49,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function iniciarSesion(correo: string, contrasena: string): Promise<string | null> {
     if (!supabase) return 'La aplicación aún no está conectada al servidor.'
     const { error } = await supabase.auth.signInWithPassword({ email: correo, password: contrasena })
-    return error ? traducirError(error.message) : null
+    return error ? traducirErrorAuth(error.message) : null
+  }
+
+  async function cambiarContrasena(actual: string, nueva: string): Promise<string | null> {
+    if (!supabase) return 'La aplicación aún no está conectada al servidor.'
+    const correo = session?.user?.email
+    if (!correo) return 'No hay una sesión activa. Vuelve a iniciar sesión.'
+
+    // Verifica la contraseña actual antes de cambiarla: evita que
+    // alguien que tome un teléfono con la sesión abierta la cambie
+    // sin conocerla.
+    const verificacion = await supabase.auth.signInWithPassword({
+      email: correo,
+      password: actual,
+    })
+    if (verificacion.error) {
+      return /invalid login credentials/i.test(verificacion.error.message)
+        ? 'La contraseña actual no es correcta.'
+        : traducirErrorAuth(verificacion.error.message)
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: nueva })
+    return error ? traducirErrorAuth(error.message) : null
   }
 
   async function cerrarSesion(): Promise<void> {
@@ -59,15 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ cargando, session, perfil, iniciarSesion, cerrarSesion }}>
+    <AuthContext.Provider
+      value={{ cargando, session, perfil, iniciarSesion, cambiarContrasena, cerrarSesion }}
+    >
       {children}
     </AuthContext.Provider>
   )
-}
-
-function traducirError(mensaje: string): string {
-  if (/invalid login credentials/i.test(mensaje)) return 'Correo o contraseña incorrectos.'
-  if (/email not confirmed/i.test(mensaje)) return 'La cuenta aún no fue confirmada.'
-  if (/fetch|network/i.test(mensaje)) return 'Sin conexión con el servidor. Intenta de nuevo.'
-  return mensaje
 }

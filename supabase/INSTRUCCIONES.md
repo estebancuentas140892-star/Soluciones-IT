@@ -26,6 +26,10 @@ El perfil de cada usuario se crea solo. Para ponerles su nombre visible, ejecuta
 update public.perfiles set nombre = 'Nombre Apellido' where correo = 'tecnico@empresa.com';
 ```
 
+La contraseña que se asigna aquí es solo la inicial: cada técnico puede
+cambiarla después desde la app, tocando su nombre en la parte superior
+(página "Mi cuenta").
+
 ## 3. Autorizar el acceso a la bóveda
 
 Solo los usuarios autorizados podrán ver la sección de IP y credenciales. Ejecutar en el SQL Editor con los correos de los autorizados:

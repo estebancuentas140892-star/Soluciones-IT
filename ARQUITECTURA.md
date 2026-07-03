@@ -74,7 +74,7 @@ Notas de navegación:
 
 Doble capa de protección:
 
-1. **Autenticación de usuario** con Supabase Auth (correo y contraseña de cada técnico). Las políticas de seguridad por fila (RLS) hacen que solo los usuarios autorizados puedan siquiera descargar las credenciales cifradas.
+1. **Autenticación de usuario** con Supabase Auth (correo y contraseña de cada técnico). Las políticas de seguridad por fila (RLS) hacen que solo los usuarios autorizados puedan siquiera descargar las credenciales cifradas. La contraseña inicial la asigna el administrador al crear la cuenta; cada técnico puede cambiarla desde la app (página "Mi cuenta", previa verificación de la contraseña actual contra el servidor).
 2. **Contraseña maestra de la bóveda**: al abrir la sección se pide una contraseña adicional que deriva la clave de cifrado (PBKDF2 + AES-256-GCM) en el propio teléfono. Las credenciales viven siempre cifradas, tanto en Supabase como en el dispositivo. El servidor nunca ve una contraseña en texto plano.
 
 Además:

@@ -7,6 +7,9 @@ export interface AuthContextValue {
   session: Session | null
   perfil: Perfil | null
   iniciarSesion: (correo: string, contrasena: string) => Promise<string | null>
+  // Cambia la contraseña de inicio de sesión del técnico con sesión
+  // activa. Devuelve null si se cambió, o el mensaje para mostrar.
+  cambiarContrasena: (actual: string, nueva: string) => Promise<string | null>
   cerrarSesion: () => Promise<void>
 }
 

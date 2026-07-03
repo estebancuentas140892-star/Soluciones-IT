@@ -55,6 +55,18 @@ Antes de salir: abrir la pestaña **Inicio** y tocar **"Descargar"** en
 "Descargar todo para offline". Deja todas las fotos y manuales guardados en
 el teléfono, listos para consultar sin señal.
 
+## Cambiar tu contraseña
+
+La primera contraseña la asigna el administrador. Para cambiarla por una
+propia:
+
+1. Tocar tu nombre en la parte superior de la app (o "Mi cuenta").
+2. Escribir la contraseña actual, la nueva y su confirmación.
+3. Tocar **"Cambiar contraseña"**.
+
+Se necesita conexión a internet. La sesión del teléfono sigue abierta; la
+nueva contraseña se usa la próxima vez que la app pida iniciar sesión.
+
 ## Actualizaciones
 
 La app se actualiza sola cuando hay internet: no hace falta desinstalar ni
