@@ -4,9 +4,22 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(ninguna: las tareas restantes están bloqueadas por pasos del usuario)
+### 14. Ping automático para mantener Supabase activo
+- Descripción: workflow de GitHub Actions que consulta la API de Supabase dos veces por semana (lunes y jueves, 13:00 UTC) para que el proyecto gratuito nunca se pause por 7 días de inactividad. Usa solo la clave publishable (pública por diseño, protegida por RLS). Incluye disparo manual (workflow_dispatch) y autoverificación al cambiar el propio archivo (push con filtro de ruta). Si el ping falla, el workflow falla y GitHub notifica por correo.
+- Prioridad: Media
+- Ubicación: `.github/workflows/ping-supabase.yml`; nota en `ARQUITECTURA.md` sección 10.
+- Avance: workflow escrito; falta subirlo a GitHub y verificar la ejecución real.
 
 ## Por hacer
+
+### 2. Backend en Supabase (pasos del usuario, guiados)
+- Descripción: aplicar el esquema y dar de alta al equipo en el proyecto de Supabase.
+- Prioridad: Alta
+- Ubicación: `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`
+- Avance: esquema completo escrito (tablas, historial inmutable con `recibido_en`, triggers de updated_at, RLS con permiso especial para la bóveda, bucket de adjuntos y categorías iniciales). Credenciales configuradas en `.env` local.
+- Avance: paso 1 HECHO. Verificado por REST (2026-07-03) que `articulos.procedimiento` ya existe (antes daba error 42703); el esquema actualizado quedó aplicado en Supabase.
+- Avance: paso 2 EN PARTE. 1 de los 5 usuarios creado (2026-07-03); el usuario creará los otros 4 más adelante.
+- Pendiente (usuario, guiado en sesión): (2) crear los 4 usuarios restantes con Auto Confirm; (3) autorizar la bóveda con `puede_ver_boveda`; (4) desactivar el registro público. Al terminar cada paso se verifica desde aquí lo que sea posible.
 
 ### 10. Pulido móvil y puesta en marcha (solo quedan pasos del usuario)
 - Descripción: optimización de rendimiento (dividir el bundle, que hoy supera los 700 kB por supabase-js + react-markdown + minisearch), compresión de fotos al subirlas, botón "Descargar todo para offline", icono definitivo de la app, pruebas en los teléfonos reales del equipo y guía de instalación de la PWA.
@@ -20,10 +33,3 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - Avance: despliegue en Vercel OPERATIVO EN PARTE. El usuario montó el proyecto en Vercel (https://soluciones-it-psi.vercel.app, desplegado desde GitHub). Se detectó y corrigió: (1) GitHub estaba 6 commits atrás del repo local, por eso producción tenía un build viejo; ya se subió todo. (2) Las rutas internas daban 404 al abrirlas directo; se agregó `vercel.json` con la reescritura SPA a `index.html`. (3) Verificado por HTTP: el esquema de Supabase SÍ está aplicado (la tabla `categorias` responde y RLS oculta filas a usuarios sin sesión). (4) El usuario agregó `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Settings > Environment Variables, pestaña "Project" (confirmado en pantalla que quedaron guardadas), pero el botón "Redeploy" del panel de Vercel dio "Unexpected error (500)" de forma repetida y no llegó a crear un despliegue nuevo (verificado: la lista de Deployments no muestra un intento adicional, y el build en producción seguía sin la URL de Supabase). Se disparó un despliegue nuevo por la vía de Git (commit a `main`) como alternativa al botón del panel, que sí dispara el build automático de Vercel con las variables ya guardadas.
 - Avance: despliegue por Git VERIFICADO. El build de producción ya incluye la URL de Supabase; probado en navegador real contra el dominio: redirige a /login, sin aviso de "no conectado", y un intento de login llegó hasta Supabase y devolvió el error esperado en español. Producción conectada de punta a punta.
 - Bloqueada por (usuario): (1) confirmar que los 5 usuarios del equipo estén creados en Supabase Authentication; (2) pruebas en los teléfonos reales del equipo con la guía de INSTALACION.md, que ya incluye la dirección real.
-
-### 2. Backend en Supabase (pasos del usuario)
-- Descripción: aplicar el esquema y dar de alta al equipo en el proyecto de Supabase.
-- Prioridad: Alta
-- Ubicación: `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`
-- Avance: esquema completo escrito (tablas, historial inmutable con `recibido_en`, triggers de updated_at, RLS con permiso especial para la bóveda, bucket de adjuntos y categorías iniciales). Credenciales configuradas en `.env` local.
-- Bloqueada por: el usuario debe ejecutar `supabase/schema.sql` en el SQL Editor, crear los 5 usuarios, autorizar la bóveda y desactivar el registro público, siguiendo `supabase/INSTRUCCIONES.md`. Importante: si ya se había ejecutado una versión anterior del esquema, volver a ejecutarlo completo (es idempotente; agrega la columna `recibido_en` al historial y la columna `procedimiento` a los artículos, necesaria para los procedimientos paso a paso de la tarea 13). Necesaria para probar el login (tarea 4) con usuarios reales, la sincronización real de los módulos ya construidos y la política RLS de la bóveda (tarea 9).

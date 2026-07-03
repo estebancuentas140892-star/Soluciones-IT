@@ -1,0 +1,38 @@
+# Mantiene activo el proyecto gratuito de Supabase, que se pausa tras 7 días sin uso.
+#
+# La clave usada es la "publishable", pública por diseño (viaja en el bundle de la app
+# desplegada); las políticas RLS impiden leer datos sin sesión. Las claves secret y
+# service_role nunca deben ir en este archivo ni en el repositorio (ver supabase/INSTRUCCIONES.md).
+#
+# Aviso: en repositorios públicos, GitHub desactiva los workflows programados tras 60 días
+# sin actividad en el repositorio. Avisa por correo y se reactivan con un clic en la
+# pestaña Actions. Con el desarrollo activo del proyecto no ocurre.
+
+name: Mantener Supabase activo
+
+on:
+  schedule:
+    # Lunes y jueves a las 13:00 UTC (8:00 en Colombia): dos consultas por semana,
+    # con margen amplio sobre el límite de 7 días de inactividad de Supabase.
+    - cron: "0 13 * * 1,4"
+  # Permite ejecutarlo a mano desde la pestaña Actions de GitHub.
+  workflow_dispatch:
+  # Se ejecuta solo cuando cambia este archivo, para verificar que sigue funcionando.
+  push:
+    paths:
+      - ".github/workflows/ping-supabase.yml"
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar la API de Supabase
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://kwwxnmlprdivckqcgjws.supabase.co/rest/v1/categorias?select=id&limit=1" \
+            -H "apikey: sb_publishable_yHHdmM4xeo34Eq0-FVVo9A_hh33nemO")
+          echo "Respuesta HTTP: $status"
+          if [ "$status" != "200" ]; then
+            echo "El ping a Supabase falló (se esperaba 200). Revisar el estado del proyecto en https://supabase.com/dashboard"
+            exit 1
+          fi
