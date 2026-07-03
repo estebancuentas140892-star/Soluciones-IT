@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(ninguna: las tareas restantes están bloqueadas por pasos del usuario)
+(Vacío. Las tareas restantes están bloqueadas por pasos que debe hacer el usuario; ver cada tarea.)
 
 ## Por hacer
 

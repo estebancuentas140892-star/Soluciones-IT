@@ -118,6 +118,7 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
         <ul className="mt-2 flex flex-col gap-1 text-xs text-slate-500">
           <li>• Una sola acción y un solo lugar por paso.</li>
           <li>• Empieza cada paso con un verbo: "Abrir...", "Seleccionar...".</li>
+          <li>• Desglosa el paso en instrucciones con casilla: al marcar la última, la app completa el paso y avanza sola al siguiente.</li>
           <li>• Máximo ~12 pasos; si hay más, divide el procedimiento.</li>
           <li>• Anota la versión del software en los requisitos.</li>
           <li>• Agrega captura solo cuando la pantalla pueda confundir.</li>
@@ -175,6 +176,17 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
             placeholder="Detalle del paso (opcional)"
             className={CLASE_INPUT}
           />
+
+          <label className="flex flex-col gap-1 text-xs text-slate-400">
+            Instrucciones con casilla (una por línea, opcional)
+            <textarea
+              rows={3}
+              value={paso.instrucciones.join('\n')}
+              onChange={(e) => actualizarPaso(indice, { instrucciones: e.target.value.split('\n') })}
+              placeholder={'Presionar Windows + R\nEscribir \\\\10.10.5.32\nEjecutar el instalador'}
+              className={CLASE_INPUT}
+            />
+          </label>
 
           <ImagenPasoEditor
             paso={paso}

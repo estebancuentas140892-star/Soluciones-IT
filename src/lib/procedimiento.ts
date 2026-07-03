@@ -10,6 +10,7 @@ export function crearPaso(): PasoProcedimiento {
     id: crypto.randomUUID(),
     titulo: '',
     detalle: '',
+    instrucciones: [],
     imagen: null,
     nota: '',
     advertencia: '',
@@ -52,6 +53,9 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
     titulo: texto(origen.titulo),
     detalle: texto(origen.detalle),
+    instrucciones: Array.isArray(origen.instrucciones)
+      ? origen.instrucciones.filter((i): i is string => typeof i === 'string' && i.trim() !== '')
+      : [],
     imagen: typeof origen.imagen === 'string' && origen.imagen !== '' ? origen.imagen : null,
     nota: texto(origen.nota),
     advertencia: texto(origen.advertencia),
@@ -100,6 +104,7 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
   const partes = [...procedimiento.requisitos]
   for (const paso of procedimiento.pasos) {
     partes.push(paso.titulo, paso.detalle, paso.nota, paso.advertencia, paso.consejo)
+    partes.push(...paso.instrucciones)
     if (paso.decision) partes.push(paso.decision.pregunta)
     // El titulo del subprocedimiento vinculado si se indexa (no es
     // informacion protegida): buscar "impresora" encuentra tambien
@@ -107,6 +112,24 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
     partes.push(paso.subArticuloTitulo)
   }
   return partes.filter(Boolean).join(' ')
+}
+
+// A que paso avanzar automaticamente despues de completar el del
+// indice dado: el siguiente pendiente hacia adelante o, si no hay,
+// el primero pendiente desde el inicio (por si el tecnico salto
+// alguno). Devuelve el indice destino o null si no queda ninguno.
+export function siguientePasoPendiente(
+  idsEnOrden: string[],
+  hechos: ReadonlySet<string>,
+  desdeIndice: number,
+): number | null {
+  for (let i = desdeIndice + 1; i < idsEnOrden.length; i++) {
+    if (!hechos.has(idsEnOrden[i])) return i
+  }
+  for (let i = 0; i < desdeIndice; i++) {
+    if (!hechos.has(idsEnOrden[i])) return i
+  }
+  return null
 }
 
 // Prepara el procedimiento que se va a guardar: limpia espacios,
@@ -125,6 +148,7 @@ export function prepararProcedimientoParaGuardar(
       ...paso,
       titulo: paso.titulo.trim(),
       detalle: paso.detalle.trim(),
+      instrucciones: paso.instrucciones.map((i) => i.trim()).filter(Boolean),
       nota: paso.nota.trim(),
       advertencia: paso.advertencia.trim(),
       consejo: paso.consejo.trim(),
@@ -138,6 +162,7 @@ export function prepararProcedimientoParaGuardar(
       (paso) =>
         paso.titulo !== '' ||
         paso.detalle !== '' ||
+        paso.instrucciones.length > 0 ||
         paso.imagen !== null ||
         paso.credencialId !== null ||
         paso.subArticuloId !== null,

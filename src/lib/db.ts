@@ -39,6 +39,10 @@ export interface PasoProcedimiento {
   id: string
   titulo: string
   detalle: string
+  // Instrucciones con casilla de verificacion dentro del paso, una
+  // por linea. Al marcar la ultima, el paso se completa solo y la
+  // vista avanza al siguiente pendiente.
+  instrucciones: string[]
   // Referencia en Supabase Storage de la captura del paso, o null.
   imagen: string | null
   nota: string
@@ -175,6 +179,10 @@ export interface ArchivoPendiente {
 export interface ProgresoPasos {
   articuloId: string
   pasosHechos: string[]
+  // Instrucciones marcadas dentro de cada paso, con clave
+  // "<pasoId>:<indice>". Opcional porque las filas guardadas antes
+  // de esta funcion no lo traen.
+  instruccionesHechas?: string[]
   actualizadoEn: string
 }
 

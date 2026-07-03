@@ -4,6 +4,7 @@ import {
   crearPaso,
   normalizarProcedimiento,
   prepararProcedimientoParaGuardar,
+  siguientePasoPendiente,
   textoDeProcedimiento,
 } from './procedimiento'
 
@@ -12,6 +13,7 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
     id: 'paso-1',
     titulo: 'Abrir SQL Server Management Studio',
     detalle: 'Está en el escritorio del servidor',
+    instrucciones: [],
     imagen: null,
     nota: '',
     advertencia: '',
@@ -51,6 +53,7 @@ describe('normalizarProcedimiento', () => {
     expect(resultado?.pasos[0]).toMatchObject({
       titulo: 'Solo título',
       detalle: '',
+      instrucciones: [],
       imagen: null,
       nota: '',
       advertencia: '',
@@ -92,6 +95,17 @@ describe('normalizarProcedimiento', () => {
     })
     expect(sinId?.pasos[0].credencialId).toBeNull()
     expect(sinId?.pasos[0].credencialTitulo).toBe('')
+  })
+
+  it('conserva las instrucciones y descarta las vacías o que no son texto', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        pasoCompleto({
+          instrucciones: ['Presionar Windows + R', '', '   ', 42, null] as never,
+        }),
+      ],
+    })
+    expect(resultado?.pasos[0].instrucciones).toEqual(['Presionar Windows + R'])
   })
 
   it('descarta requisitos vacíos o que no son texto', () => {
@@ -144,6 +158,14 @@ describe('textoDeProcedimiento', () => {
     expect(texto).not.toContain('SQL Server producción')
   })
 
+  it('incluye las instrucciones de los pasos', () => {
+    const texto = textoDeProcedimiento({
+      requisitos: [],
+      pasos: [pasoCompleto({ instrucciones: ['Imprimir una página de prueba'] })],
+    })
+    expect(texto).toContain('Imprimir una página de prueba')
+  })
+
   it('incluye el título del subprocedimiento vinculado', () => {
     const texto = textoDeProcedimiento({
       requisitos: [],
@@ -169,6 +191,19 @@ describe('prepararProcedimientoParaGuardar', () => {
     const resultado = prepararProcedimientoParaGuardar('', [vacio, pasoCompleto()])
     expect(resultado?.pasos).toHaveLength(1)
     expect(resultado?.pasos[0].titulo).toBe('Abrir SQL Server Management Studio')
+  })
+
+  it('limpia espacios en las instrucciones y descarta las que quedan vacías', () => {
+    const resultado = prepararProcedimientoParaGuardar('', [
+      pasoCompleto({ instrucciones: ['  Presionar Windows + R  ', '', '   '] }),
+    ])
+    expect(resultado?.pasos[0].instrucciones).toEqual(['Presionar Windows + R'])
+  })
+
+  it('conserva un paso que solo tiene instrucciones', () => {
+    const paso = crearPaso()
+    paso.instrucciones = ['Imprimir una página de prueba']
+    expect(prepararProcedimientoParaGuardar('', [paso])?.pasos).toHaveLength(1)
   })
 
   it('conserva un paso que solo tiene captura', () => {
@@ -212,5 +247,27 @@ describe('prepararProcedimientoParaGuardar', () => {
       pasoCompleto({ decision: { pregunta: '   ', pasoSi: 2, pasoNo: null } }),
     ])
     expect(resultado?.pasos[0].decision).toBeNull()
+  })
+})
+
+describe('siguientePasoPendiente', () => {
+  const ids = ['a', 'b', 'c', 'd']
+
+  it('devuelve el siguiente pendiente hacia adelante', () => {
+    expect(siguientePasoPendiente(ids, new Set(['a']), 0)).toBe(1)
+    expect(siguientePasoPendiente(ids, new Set(['a', 'b', 'c']), 2)).toBe(3)
+  })
+
+  it('salta los pasos ya hechos que están en medio', () => {
+    expect(siguientePasoPendiente(ids, new Set(['a', 'b', 'c']), 0)).toBe(3)
+  })
+
+  it('vuelve al inicio si hacia adelante no queda ninguno (pasos saltados)', () => {
+    expect(siguientePasoPendiente(ids, new Set(['b', 'c', 'd']), 3)).toBe(0)
+  })
+
+  it('devuelve null cuando no queda ningún pendiente', () => {
+    expect(siguientePasoPendiente(ids, new Set(ids), 1)).toBeNull()
+    expect(siguientePasoPendiente([], new Set(), 0)).toBeNull()
   })
 })
