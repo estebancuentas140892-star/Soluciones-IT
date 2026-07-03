@@ -1,17 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import { db, type Adjunto } from '../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../lib/repositorio'
 import { comprimirImagen } from '../lib/comprimirImagen'
-import { cachearSiHaceFalta, obtenerUrlOffline } from '../lib/adjuntosOffline'
+import { useUrlAdjunto } from './useUrlAdjunto'
 
 interface Props {
   entidadTipo: Adjunto['entidadTipo']
   entidadId: string
 }
-
-const UNA_HORA = 60 * 60
 
 export function Adjuntos({ entidadTipo, entidadId }: Props) {
   const adjuntos = useLiveQuery(
@@ -130,39 +128,7 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
 }
 
 function AdjuntoItem({ adjunto, onEliminar }: { adjunto: Adjunto; onEliminar: () => void }) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    let vigente = true
-    let urlLocal: string | null = null
-
-    async function cargar() {
-      // Si ya se descargo para offline, se muestra desde el telefono
-      // sin tocar la red. Si no, se pide una URL firmada (requiere
-      // conexion) y de paso se guarda para la proxima vez.
-      const offline = await obtenerUrlOffline(adjunto.referencia)
-      if (!vigente) return
-      if (offline) {
-        urlLocal = offline
-        setUrl(offline)
-        return
-      }
-      if (!supabase) return
-      const { data } = await supabase.storage.from('adjuntos').createSignedUrl(adjunto.referencia, UNA_HORA)
-      if (!vigente) return
-      if (data) {
-        setUrl(data.signedUrl)
-        void cachearSiHaceFalta(adjunto.referencia, data.signedUrl)
-      }
-    }
-    void cargar()
-
-    return () => {
-      vigente = false
-      if (urlLocal) URL.revokeObjectURL(urlLocal)
-    }
-  }, [adjunto.referencia])
-
+  const url = useUrlAdjunto(adjunto.referencia)
   const esImagen = adjunto.tipo.startsWith('image/')
 
   return (

@@ -68,6 +68,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       tipo: 'tipo',
       contenido: 'contenido',
       etiquetas: 'etiquetas',
+      procedimiento: 'procedimiento',
     },
   },
   dispositivos: {

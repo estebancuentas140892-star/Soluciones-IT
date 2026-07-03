@@ -16,6 +16,7 @@ function filaRemotaDeArticulo(id: string, titulo: string): Record<string, unknow
     tipo: 'problema_frecuente',
     contenido: 'Pasos para resolverlo',
     etiquetas: ['zebra', 'impresora'],
+    procedimiento: null,
     updated_at: '2026-07-02T15:00:00+00:00',
     updated_by: null,
     eliminado_en: null,
@@ -41,6 +42,7 @@ describe('mapeo entre columnas locales y remotas', () => {
       tipo: 'manual',
       contenido: '',
       etiquetas: [],
+      procedimiento: null,
       updatedAt: '2026-07-02T15:00:00Z',
       updatedBy: 'alguien',
       eliminadoEn: null,
@@ -50,6 +52,31 @@ describe('mapeo entre columnas locales y remotas', () => {
     expect(fila).not.toHaveProperty('updated_by')
     expect(fila).toHaveProperty('eliminado_en', null)
     expect(fila).toHaveProperty('categoria_id')
+  })
+
+  it('el procedimiento viaja completo en ambas direcciones', () => {
+    const procedimiento = {
+      requisitos: ['Credenciales del SQL Server'],
+      pasos: [
+        {
+          id: 'paso-1',
+          titulo: 'Abrir SQL Server Management Studio',
+          detalle: '',
+          imagen: null,
+          nota: '',
+          advertencia: 'Verificar el espacio en disco',
+          consejo: '',
+          decision: { pregunta: '¿La base está en línea?', pasoSi: null, pasoNo: 2 },
+        },
+      ],
+    }
+
+    const fila = filaRemotaDeArticulo(nuevoId(), 'Copia de seguridad')
+    fila.procedimiento = procedimiento
+    expect(aEntidadLocal('articulos', fila).procedimiento).toEqual(procedimiento)
+
+    const subida = aFilaRemota('articulos', { ...aEntidadLocal('articulos', fila) })
+    expect(subida.procedimiento).toEqual(procedimiento)
   })
 })
 
@@ -72,6 +99,7 @@ describe('aplicarFilasRemotas', () => {
       tipo: 'manual',
       contenido: '',
       etiquetas: [],
+      procedimiento: null,
     })
 
     await aplicarFilasRemotas('articulos', [filaRemotaDeArticulo(id, 'Versión vieja del servidor')])

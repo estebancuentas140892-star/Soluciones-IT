@@ -1,14 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonCompartir } from '../../components/BotonCompartir'
 import { Historial } from '../historial/Historial'
+import { ProcedimientoVista } from './ProcedimientoVista'
 import { etiquetaDeTipo } from './tiposArticulo'
 
 export function ArticuloPage() {
@@ -17,6 +19,10 @@ export function ArticuloPage() {
 
   const articulo = useLiveQuery(() => db.articulos.get(articuloId), [articuloId])
   const categoria = useLiveQuery(() => db.categorias.get(categoriaId), [categoriaId])
+
+  // Memorizado para que los ids generados al normalizar datos viejos
+  // sean estables entre renders (el progreso local depende de ellos).
+  const procedimiento = useMemo(() => normalizarProcedimiento(articulo?.procedimiento), [articulo])
 
   const idVisitado = articulo && !articulo.eliminadoEn ? articulo.id : null
   useEffect(() => {
@@ -69,9 +75,13 @@ export function ArticuloPage() {
         </div>
       )}
 
-      <article className="prose prose-invert prose-sm max-w-none prose-headings:text-slate-100 prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-slate-100 prose-a:text-sky-400">
-        <Markdown remarkPlugins={[remarkGfm]}>{articulo.contenido}</Markdown>
-      </article>
+      {procedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
+
+      {articulo.contenido.trim() !== '' && (
+        <article className="prose prose-invert prose-sm max-w-none prose-headings:text-slate-100 prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-slate-100 prose-a:text-sky-400">
+          <Markdown remarkPlugins={[remarkGfm]}>{articulo.contenido}</Markdown>
+        </article>
+      )}
 
       <Adjuntos entidadTipo="articulo" entidadId={articuloId} />
 

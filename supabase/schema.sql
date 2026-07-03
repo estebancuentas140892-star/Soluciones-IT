@@ -31,6 +31,9 @@ create table if not exists public.categorias (
   eliminado_en timestamptz
 );
 
+-- procedimiento guarda el modo "paso a paso" opcional de un articulo:
+-- un objeto JSON con requisitos previos y pasos numerados (cada paso
+-- con titulo, detalle, captura, nota, advertencia, consejo y decision).
 create table if not exists public.articulos (
   id uuid primary key default gen_random_uuid(),
   categoria_id uuid not null references public.categorias (id),
@@ -38,10 +41,14 @@ create table if not exists public.articulos (
   tipo text not null check (tipo in ('instalacion', 'configuracion', 'conexion', 'problema_frecuente', 'mantenimiento', 'manual')),
   contenido text not null default '',
   etiquetas text[] not null default '{}',
+  procedimiento jsonb,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
 );
+
+-- Por si la tabla ya existia de una version anterior del esquema.
+alter table public.articulos add column if not exists procedimiento jsonb;
 
 create table if not exists public.dispositivos (
   id uuid primary key default gen_random_uuid(),

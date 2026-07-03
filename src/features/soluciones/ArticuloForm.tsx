@@ -1,14 +1,21 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { db, type TipoArticulo } from '../../lib/db'
+import { db, type PasoProcedimiento, type TipoArticulo } from '../../lib/db'
+import { normalizarProcedimiento, prepararProcedimientoParaGuardar } from '../../lib/procedimiento'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { PasosEditor } from './PasosEditor'
 import { TIPOS_ARTICULO } from './tiposArticulo'
 
 export function ArticuloForm() {
   const { categoriaId = '', articuloId } = useParams()
   const navigate = useNavigate()
   const esEdicion = Boolean(articuloId)
+
+  // El id se decide desde el inicio (no al guardar) para que las
+  // capturas de los pasos puedan subirse a su carpeta definitiva de
+  // Storage antes de que el articulo exista.
+  const [id] = useState(() => articuloId ?? nuevoId())
 
   const articulo = useLiveQuery(
     () => (articuloId ? db.articulos.get(articuloId) : undefined),
@@ -19,6 +26,8 @@ export function ArticuloForm() {
   const [tipo, setTipo] = useState<TipoArticulo>('manual')
   const [etiquetas, setEtiquetas] = useState('')
   const [contenido, setContenido] = useState('')
+  const [requisitos, setRequisitos] = useState('')
+  const [pasos, setPasos] = useState<PasoProcedimiento[]>([])
   const [motivo, setMotivo] = useState('')
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
   const [guardando, setGuardando] = useState(false)
@@ -29,6 +38,9 @@ export function ArticuloForm() {
     setTipo(articulo.tipo)
     setEtiquetas(articulo.etiquetas.join(', '))
     setContenido(articulo.contenido)
+    const procedimiento = normalizarProcedimiento(articulo.procedimiento)
+    setRequisitos(procedimiento?.requisitos.join('\n') ?? '')
+    setPasos(procedimiento?.pasos ?? [])
     setCargadoInicial(true)
   }, [articulo, cargadoInicial])
 
@@ -38,7 +50,6 @@ export function ArticuloForm() {
     evento.preventDefault()
     setGuardando(true)
 
-    const id = articuloId ?? nuevoId()
     await guardarRegistro(
       'articulos',
       {
@@ -51,6 +62,7 @@ export function ArticuloForm() {
           .split(',')
           .map((e) => e.trim())
           .filter(Boolean),
+        procedimiento: prepararProcedimientoParaGuardar(requisitos, pasos),
       },
       motivo.trim(),
     )
@@ -109,11 +121,19 @@ export function ArticuloForm() {
           />
         </label>
 
+        <PasosEditor
+          articuloId={id}
+          requisitos={requisitos}
+          onRequisitosChange={setRequisitos}
+          pasos={pasos}
+          onPasosChange={setPasos}
+        />
+
         <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Contenido (admite Markdown)
+          {pasos.length > 0 ? 'Notas adicionales (opcional, admite Markdown)' : 'Contenido (admite Markdown)'}
           <textarea
-            required
-            rows={10}
+            required={pasos.length === 0}
+            rows={pasos.length > 0 ? 4 : 10}
             value={contenido}
             onChange={(e) => setContenido(e.target.value)}
             className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 font-mono text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"

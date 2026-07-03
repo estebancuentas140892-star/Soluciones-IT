@@ -11,6 +11,7 @@ function articuloDePrueba(id: string, titulo: string): Articulo {
     tipo: 'manual',
     contenido: '',
     etiquetas: [],
+    procedimiento: null,
     updatedAt: new Date().toISOString(),
     updatedBy: null,
     eliminadoEn: null,

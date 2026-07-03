@@ -48,7 +48,7 @@ Notas de navegación:
 ## 5. Modelo de datos
 
 - **categorias**: id, nombre, icono, orden.
-- **articulos**: id, categoria_id, titulo, tipo (instalación, configuración, conexión, problema frecuente, mantenimiento, manual), contenido en Markdown, etiquetas, adjuntos, updated_at, updated_by.
+- **articulos**: id, categoria_id, titulo, tipo (instalación, configuración, conexión, problema frecuente, mantenimiento, manual), contenido en Markdown, etiquetas, procedimiento (JSON opcional: requisitos previos y pasos numerados, cada uno con título, detalle, captura, nota, advertencia, consejo y decisión de ramificación; si existe, el artículo se muestra como una lista de pasos expandibles con progreso local por técnico), adjuntos, updated_at, updated_by.
 - **dispositivos**: id, categoria_id, nombre, marca, modelo, serial, placa_inventario, ubicacion, ip, estado, observaciones, detalles (pares clave/valor libres, por ejemplo puerto y switch en una cámara, o usuario asignado y sistema operativo en un computador), updated_at, updated_by. En vez de una plantilla fija por categoría, el formulario deja agregar y quitar campos libremente ("Campos adicionales"): es más simple de mantener y no se rompe si el equipo agrega una categoría nueva o un campo que no se anticipó.
 - **credenciales**: id, titulo, categoria, datos_cifrados (bloque AES-256-GCM), updated_at, updated_by. Nunca hay texto plano.
 - **historial**: id, entidad_tipo, entidad_id, usuario, fecha_hora, campo, valor_anterior, valor_nuevo, motivo.

@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import MiniSearch from 'minisearch'
 import { db } from '../../lib/db'
+import { normalizarProcedimiento, textoDeProcedimiento } from '../../lib/procedimiento'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 
@@ -48,7 +49,12 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           .filter(Boolean)
           .join(' · '),
         ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}`,
-        texto: [articulo.titulo, articulo.contenido, articulo.etiquetas.join(' ')].join(' '),
+        texto: [
+          articulo.titulo,
+          articulo.contenido,
+          articulo.etiquetas.join(' '),
+          textoDeProcedimiento(normalizarProcedimiento(articulo.procedimiento)),
+        ].join(' '),
       })
     }
 

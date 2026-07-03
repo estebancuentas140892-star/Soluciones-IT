@@ -25,6 +25,35 @@ export type TipoArticulo =
   | 'mantenimiento'
   | 'manual'
 
+// Ramificacion opcional de un paso: segun la respuesta se salta a
+// otro paso (numero 1 en adelante) o se continua con el siguiente
+// (null). Los saltos usan la posicion del paso, no su id, para que
+// el autor pueda escribirlos y leerlos tal cual ("ir al paso 6").
+export interface DecisionPaso {
+  pregunta: string
+  pasoSi: number | null
+  pasoNo: number | null
+}
+
+export interface PasoProcedimiento {
+  id: string
+  titulo: string
+  detalle: string
+  // Referencia en Supabase Storage de la captura del paso, o null.
+  imagen: string | null
+  nota: string
+  advertencia: string
+  consejo: string
+  decision: DecisionPaso | null
+}
+
+// Un articulo con procedimiento se muestra como una lista de pasos
+// numerados y expandibles, con un bloque "Antes de empezar".
+export interface Procedimiento {
+  requisitos: string[]
+  pasos: PasoProcedimiento[]
+}
+
 export interface Articulo {
   id: string
   categoriaId: string
@@ -32,6 +61,7 @@ export interface Articulo {
   tipo: TipoArticulo
   contenido: string
   etiquetas: string[]
+  procedimiento: Procedimiento | null
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -111,6 +141,15 @@ export interface SyncMeta {
   valor: string
 }
 
+// Pasos marcados como hechos por este tecnico en cada procedimiento.
+// Solo vive en el dispositivo: no se sincroniza, cada tecnico lleva
+// su propio avance (por ejemplo al retomar tras una interrupcion).
+export interface ProgresoPasos {
+  articuloId: string
+  pasosHechos: string[]
+  actualizadoEn: string
+}
+
 // Ultimos articulos y dispositivos abiertos en este telefono. Solo
 // vive en el dispositivo: no se sincroniza con el resto del equipo.
 export interface Reciente {
@@ -131,6 +170,7 @@ class SolucionesItDatabase extends Dexie {
   cambiosPendientes!: EntityTable<CambioPendiente, 'id'>
   syncMeta!: EntityTable<SyncMeta, 'clave'>
   recientes!: EntityTable<Reciente, 'clave'>
+  progresoPasos!: EntityTable<ProgresoPasos, 'articuloId'>
 
   constructor() {
     super('soluciones-it')
@@ -151,6 +191,10 @@ class SolucionesItDatabase extends Dexie {
     // los cambios de esquema nuevos van siempre en una version nueva.
     this.version(2).stores({
       recientes: 'clave, visitadoEn',
+    })
+
+    this.version(3).stores({
+      progresoPasos: 'articuloId',
     })
   }
 }

@@ -1,4 +1,5 @@
-import { db, type Adjunto } from './db'
+import { db } from './db'
+import { normalizarProcedimiento } from './procedimiento'
 import { supabase } from './supabase'
 
 // Contenido real de los adjuntos (fotos, manuales) guardado en Cache
@@ -54,11 +55,32 @@ export async function cachearSiHaceFalta(referencia: string, urlFirmada: string)
   }
 }
 
-async function descargarUno(adjunto: Adjunto): Promise<void> {
+async function descargarUno(referencia: string): Promise<void> {
   if (!supabase) throw new Error('La aplicación aún no está conectada al servidor.')
-  const { data, error } = await supabase.storage.from('adjuntos').createSignedUrl(adjunto.referencia, UNA_HORA)
+  const { data, error } = await supabase.storage.from('adjuntos').createSignedUrl(referencia, UNA_HORA)
   if (error || !data) throw new Error(error?.message ?? 'No se pudo obtener el enlace del adjunto.')
-  await fetchYGuardar(adjunto.referencia, data.signedUrl)
+  await fetchYGuardar(referencia, data.signedUrl)
+}
+
+// Todo lo que debe quedar disponible sin conexion: los adjuntos de
+// las fichas y las capturas de los pasos de los procedimientos (que
+// no son filas de adjuntos: viven como referencia dentro del paso).
+async function referenciasParaOffline(): Promise<string[]> {
+  const referencias = new Set<string>()
+
+  const adjuntos = await db.adjuntos.filter((a) => !a.eliminadoEn).toArray()
+  for (const adjunto of adjuntos) referencias.add(adjunto.referencia)
+
+  const articulos = await db.articulos.filter((a) => !a.eliminadoEn).toArray()
+  for (const articulo of articulos) {
+    const procedimiento = normalizarProcedimiento(articulo.procedimiento)
+    if (!procedimiento) continue
+    for (const paso of procedimiento.pasos) {
+      if (paso.imagen) referencias.add(paso.imagen)
+    }
+  }
+
+  return [...referencias]
 }
 
 // ----------------------------------------------------------------
@@ -103,10 +125,10 @@ function actualizarProgreso(cambios: Partial<ProgresoDescarga>): void {
 export async function descargarTodoOffline(): Promise<void> {
   if (progreso.enCurso) return
 
-  const adjuntos = await db.adjuntos.filter((a) => !a.eliminadoEn).toArray()
-  const pendientes: Adjunto[] = []
-  for (const adjunto of adjuntos) {
-    if (!(await estaDisponibleOffline(adjunto.referencia))) pendientes.push(adjunto)
+  const referencias = await referenciasParaOffline()
+  const pendientes: string[] = []
+  for (const referencia of referencias) {
+    if (!(await estaDisponibleOffline(referencia))) pendientes.push(referencia)
   }
 
   if (pendientes.length === 0) {
@@ -118,9 +140,9 @@ export async function descargarTodoOffline(): Promise<void> {
 
   let completados = 0
   let fallidos = 0
-  for (const adjunto of pendientes) {
+  for (const referencia of pendientes) {
     try {
-      await descargarUno(adjunto)
+      await descargarUno(referencia)
       completados += 1
     } catch {
       fallidos += 1
