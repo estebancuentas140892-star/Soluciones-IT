@@ -1,0 +1,43 @@
+# Respaldo semanal de los datos de Supabase (el plan gratuito no incluye
+# copias de seguridad). Exporta las tablas con un usuario dedicado de
+# respaldo (nunca la clave service_role), cifra el resultado con AES-256
+# y lo guarda como artefacto del workflow por 90 días.
+#
+# Requiere tres secretos en Settings > Secrets and variables > Actions:
+# RESPALDO_CORREO, RESPALDO_CONTRASENA y RESPALDO_CLAVE_CIFRADO.
+# Sin ellos, el workflow falla con un mensaje claro y GitHub avisa por
+# correo. Guía completa: supabase/RESPALDO.md
+#
+# El cifrado es obligatorio: este repositorio es público y sus artefactos
+# pueden ser descargados por cualquier usuario de GitHub con sesión.
+
+name: Respaldo de Supabase
+
+on:
+  schedule:
+    # Domingos a las 13:00 UTC (8:00 en Colombia).
+    - cron: "0 13 * * 0"
+  # Permite ejecutarlo a mano desde la pestaña Actions de GitHub.
+  workflow_dispatch:
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Exportar y cifrar los datos
+        env:
+          RESPALDO_CORREO: ${{ secrets.RESPALDO_CORREO }}
+          RESPALDO_CONTRASENA: ${{ secrets.RESPALDO_CONTRASENA }}
+          RESPALDO_CLAVE_CIFRADO: ${{ secrets.RESPALDO_CLAVE_CIFRADO }}
+        run: bash scripts/respaldo-supabase.sh
+
+      - name: Guardar el respaldo como artefacto (90 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-supabase-${{ github.run_number }}
+          path: respaldo-supabase-*.tar.gz.enc
+          retention-days: 90
+          if-no-files-found: error

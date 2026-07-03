@@ -92,6 +92,7 @@ Además:
 
 - Supabase pausa los proyectos gratuitos tras 7 días sin uso. Con uso diario del equipo no ocurre; como respaldo, un workflow de GitHub Actions (`.github/workflows/ping-supabase.yml`) consulta la API los lunes y jueves. Aviso: GitHub desactiva los workflows programados de repos públicos tras 60 días sin actividad en el repositorio; avisa por correo y se reactivan con un clic en la pestaña Actions.
 - El almacenamiento gratuito de archivos es de 1 GB. La app comprimirá las fotos automáticamente al subirlas para aprovecharlo (pendiente, ver tarea 10).
+- El plan gratuito de Supabase no incluye copias de seguridad. Como mitigación, un workflow de GitHub Actions (`.github/workflows/respaldo-supabase.yml`) exporta todas las tablas cada domingo, las cifra con AES-256 y las guarda 90 días como artefacto; configuración y restauración en `supabase/RESPALDO.md`. No cubre los archivos del bucket de Storage, solo sus referencias.
 - En iPhone, iOS puede borrar los datos locales de una PWA que lleve semanas sin abrirse. La sincronización los restaura al volver a abrir la app.
 - Subir un adjunto (foto, manual en PDF) requiere conexión a internet en ese momento; a diferencia del resto de la app, esa subida no se encola para reintentarse sola. El resto del artículo (título, contenido, etiquetas) sí funciona sin conexión con normalidad.
 

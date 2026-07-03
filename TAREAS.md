@@ -4,11 +4,15 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(ninguna: las tareas restantes están bloqueadas por pasos del usuario)
+### 15. Respaldo automático de datos
+- Descripción: workflow de GitHub Actions que cada domingo exporta las 7 tablas de Supabase (el plan gratuito no tiene copias de seguridad), cifra el resultado con AES-256 y lo guarda como artefacto del workflow por 90 días. Lee los datos con un usuario dedicado de respaldo (respetando RLS, sin usar jamás la clave service_role, prohibida por REGLAS.md) cuyas credenciales viven en los secretos de GitHub Actions. El cifrado es obligatorio porque el repositorio es público y sus artefactos son descargables por cualquier usuario de GitHub.
+- Prioridad: Media
+- Ubicación: `scripts/respaldo-supabase.sh`, `.github/workflows/respaldo-supabase.yml`, guía en `supabase/RESPALDO.md`, nota en `ARQUITECTURA.md` sección 10.
+- Avance: en desarrollo (2026-07-03).
 
 ## Por hacer
 
-Propuestas presentadas al usuario el 2026-07-03, pendientes de que elija cuáles convertir en tareas: respaldo automático de datos (exportación periódica), importación masiva de inventario desde Excel/CSV, cola de subida para adjuntos offline, recordatorios de mantenimiento preventivo por dispositivo y reporte mensual de actividad desde el historial.
+Propuestas presentadas al usuario el 2026-07-03, pendientes de que elija cuáles convertir en tareas: importación masiva de inventario desde Excel/CSV, cola de subida para adjuntos offline, recordatorios de mantenimiento preventivo por dispositivo y reporte mensual de actividad desde el historial.
 
 ### 2. Backend en Supabase (pasos del usuario, guiados)
 - Descripción: aplicar el esquema y dar de alta al equipo en el proyecto de Supabase.
