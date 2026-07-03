@@ -8,7 +8,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - Descripción: workflow de GitHub Actions que cada domingo exporta las 7 tablas de Supabase (el plan gratuito no tiene copias de seguridad), cifra el resultado con AES-256 y lo guarda como artefacto del workflow por 90 días. Lee los datos con un usuario dedicado de respaldo (respetando RLS, sin usar jamás la clave service_role, prohibida por REGLAS.md) cuyas credenciales viven en los secretos de GitHub Actions. El cifrado es obligatorio porque el repositorio es público y sus artefactos son descargables por cualquier usuario de GitHub.
 - Prioridad: Media
 - Ubicación: `scripts/respaldo-supabase.sh`, `.github/workflows/respaldo-supabase.yml`, guía en `supabase/RESPALDO.md`, nota en `ARQUITECTURA.md` sección 10.
-- Avance: en desarrollo (2026-07-03).
+- Avance: código completo y subido a GitHub (2026-07-03). Script `scripts/respaldo-supabase.sh` (inicio de sesión por la API de auth, exportación paginada de las 7 tablas ordenadas por id, manifiesto con conteos, tar.gz cifrado con AES-256-CBC + PBKDF2 600k iteraciones; aviso si credenciales sale vacía por falta de puede_ver_boveda). Workflow con cron dominical, disparo manual y artefacto con retención de 90 días. Verificado localmente: sintaxis, fallo limpio sin variables, fallo limpio con credenciales falsas (HTTP 400 real contra Supabase), fusión de páginas, manifiesto, y ciclo completo de cifrado/descifrado con rechazo de clave equivocada (jq descargado temporalmente al scratchpad, no quedó en el proyecto).
+- Bloqueada por (usuario): crear el usuario de respaldo en Supabase, darle puede_ver_boveda, cargar los 3 secretos en GitHub y disparar la primera ejecución manual, siguiendo `supabase/RESPALDO.md`. Al hacerlo, verificar desde aquí la ejecución real por la API de GitHub y archivar la tarea.
 
 ## Por hacer
 
