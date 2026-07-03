@@ -4,13 +4,11 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-### 14. Ping automático para mantener Supabase activo
-- Descripción: workflow de GitHub Actions que consulta la API de Supabase dos veces por semana (lunes y jueves, 13:00 UTC) para que el proyecto gratuito nunca se pause por 7 días de inactividad. Usa solo la clave publishable (pública por diseño, protegida por RLS). Incluye disparo manual (workflow_dispatch) y autoverificación al cambiar el propio archivo (push con filtro de ruta). Si el ping falla, el workflow falla y GitHub notifica por correo.
-- Prioridad: Media
-- Ubicación: `.github/workflows/ping-supabase.yml`; nota en `ARQUITECTURA.md` sección 10.
-- Avance: workflow escrito; falta subirlo a GitHub y verificar la ejecución real.
+(ninguna: las tareas restantes están bloqueadas por pasos del usuario)
 
 ## Por hacer
+
+Propuestas presentadas al usuario el 2026-07-03, pendientes de que elija cuáles convertir en tareas: respaldo automático de datos (exportación periódica), importación masiva de inventario desde Excel/CSV, cola de subida para adjuntos offline, recordatorios de mantenimiento preventivo por dispositivo y reporte mensual de actividad desde el historial.
 
 ### 2. Backend en Supabase (pasos del usuario, guiados)
 - Descripción: aplicar el esquema y dar de alta al equipo en el proyecto de Supabase.
