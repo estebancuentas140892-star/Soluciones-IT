@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState, type ChangeEvent } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
-import { db, type Credencial, type PasoProcedimiento } from '../../lib/db'
-import { crearPaso } from '../../lib/procedimiento'
+import { db, type Articulo, type Credencial, type PasoProcedimiento } from '../../lib/db'
+import { crearPaso, normalizarProcedimiento } from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
@@ -33,6 +33,25 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
   const credencialesOrdenadas = useMemo(
     () => [...credenciales].sort((a, b) => a.titulo.localeCompare(b.titulo)),
     [credenciales],
+  )
+
+  // Articulos con procedimiento que se pueden vincular como tarea de
+  // un paso. Se excluye el articulo en edicion (un procedimiento no
+  // puede vincularse a si mismo).
+  const subProcedimientos = useLiveQuery(
+    () =>
+      db.articulos
+        .filter(
+          (a) =>
+            !a.eliminadoEn && a.id !== articuloId && normalizarProcedimiento(a.procedimiento) !== null,
+        )
+        .toArray(),
+    [articuloId],
+    [],
+  )
+  const subProcedimientosOrdenados = useMemo(
+    () => [...subProcedimientos].sort((a, b) => a.titulo.localeCompare(b.titulo)),
+    [subProcedimientos],
   )
 
   function actualizarPaso(indice: number, cambios: Partial<PasoProcedimiento>) {
@@ -103,6 +122,7 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
           <li>• Anota la versión del software en los requisitos.</li>
           <li>• Agrega captura solo cuando la pantalla pueda confundir.</li>
           <li>• Si un paso requiere iniciar sesión, vincula la credencial de la bóveda en vez de escribirla.</li>
+          <li>• Una tarea grande (correo, impresora) va en su propio artículo y se vincula al paso como procedimiento: se reutiliza y se actualiza en un solo lugar.</li>
           <li>• Cierra siempre con un paso que verifique el resultado.</li>
         </ul>
       </details>
@@ -195,6 +215,22 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
               })
             }
             onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
+          />
+
+          <SubProcedimientoSelector
+            paso={paso}
+            articulos={subProcedimientosOrdenados}
+            onVincular={(articulo) =>
+              actualizarPaso(indice, {
+                subArticuloId: articulo.id,
+                subArticuloTitulo: articulo.titulo,
+                // Si el paso aun no tiene titulo, toma el de la tarea
+                // vinculada: asi la lista de pasos se lee como lista
+                // de tareas sin escribir dos veces lo mismo.
+                titulo: paso.titulo.trim() === '' ? articulo.titulo : paso.titulo,
+              })
+            }
+            onQuitar={() => actualizarPaso(indice, { subArticuloId: null, subArticuloTitulo: '' })}
           />
 
           {paso.decision ? (
@@ -366,6 +402,61 @@ function CredencialSelector({
         <option key={c.id} value={c.id}>
           {c.titulo}
           {c.categoria ? ` (${c.categoria})` : ''}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+// Vinculo del paso con otro articulo que tiene procedimiento: la
+// "tarea" del paso. En el paso solo quedan el id y una copia del
+// titulo; el paso a paso vive en el articulo vinculado, se reutiliza
+// desde cualquier procedimiento y se actualiza en un solo lugar.
+function SubProcedimientoSelector({
+  paso,
+  articulos,
+  onVincular,
+  onQuitar,
+}: {
+  paso: PasoProcedimiento
+  articulos: Articulo[]
+  onVincular: (articulo: Articulo) => void
+  onQuitar: () => void
+}) {
+  if (paso.subArticuloId) {
+    const vinculado = articulos.find((a) => a.id === paso.subArticuloId)
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2">
+        <p className="min-w-0 truncate text-xs text-sky-200">
+          Procedimiento vinculado: {vinculado?.titulo ?? paso.subArticuloTitulo}
+        </p>
+        <button
+          type="button"
+          onClick={onQuitar}
+          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+  }
+
+  if (articulos.length === 0) return null
+
+  return (
+    <select
+      value=""
+      aria-label="Vincular otro procedimiento como tarea de este paso"
+      onChange={(e) => {
+        const articulo = articulos.find((a) => a.id === e.target.value)
+        if (articulo) onVincular(articulo)
+      }}
+      className={`${CLASE_INPUT} text-slate-400`}
+    >
+      <option value="">+ Vincular otro procedimiento como tarea (opcional)</option>
+      {articulos.map((a) => (
+        <option key={a.id} value={a.id}>
+          {a.titulo}
         </option>
       ))}
     </select>

@@ -51,6 +51,13 @@ export interface PasoProcedimiento {
   // las filas de credenciales). Los secretos nunca viajan aqui.
   credencialId: string | null
   credencialTitulo: string
+  // Otro articulo con procedimiento vinculado como subprocedimiento
+  // del paso, o null: convierte el paso en una "tarea" cuyo paso a
+  // paso vive en su propio articulo, reutilizable desde varios
+  // procedimientos y siempre al dia. El titulo es una copia de
+  // referencia por si el articulo aun no sincronizo o fue eliminado.
+  subArticuloId: string | null
+  subArticuloTitulo: string
 }
 
 // Un articulo con procedimiento se muestra como una lista de pasos

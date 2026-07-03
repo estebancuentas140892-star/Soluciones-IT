@@ -1,6 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { db, type DecisionPaso, type Procedimiento } from '../../lib/db'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { alternarPasoHecho, contarHechos, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
@@ -8,12 +10,19 @@ import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 interface Props {
   articuloId: string
   procedimiento: Procedimiento
+  // 0 = procedimiento principal; 1 = subprocedimiento expandido
+  // dentro de un paso. Mas alla del nivel 1 los vinculos se muestran
+  // solo como enlace, sin expandirse.
+  nivel?: number
 }
 
 // Vista de lectura de un procedimiento: la lista de pasos colapsados
 // es el "mapa" del proceso (se ve completo de un vistazo) y cada paso
 // se expande al tocarlo para ver el detalle, la captura y los avisos.
-export function ProcedimientoVista({ articuloId, procedimiento }: Props) {
+// Un paso con subprocedimiento vinculado despliega el paso a paso de
+// ese otro articulo ahi mismo, con su propio progreso (compartido con
+// el articulo original).
+export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0 }: Props) {
   const progreso = useLiveQuery(() => db.progresoPasos.get(articuloId), [articuloId])
   const [expandido, setExpandido] = useState<string | null>(null)
   const refsPasos = useRef<(HTMLLIElement | null)[]>([])
@@ -84,9 +93,12 @@ export function ProcedimientoVista({ articuloId, procedimiento }: Props) {
                     hechos.has(paso.id) ? 'text-slate-500' : 'text-slate-200'
                   } ${expandido === paso.id ? 'font-medium' : ''}`}
                 >
-                  {paso.titulo || `Paso ${indice + 1}`}
+                  {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
                 </span>
-                <span className="text-xs text-slate-500">{expandido === paso.id ? '▲' : '▼'}</span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {paso.subArticuloId && <ContadorSubProgreso subArticuloId={paso.subArticuloId} />}
+                  <span className="text-xs text-slate-500">{expandido === paso.id ? '▲' : '▼'}</span>
+                </span>
               </button>
             </div>
 
@@ -110,6 +122,14 @@ export function ProcedimientoVista({ articuloId, procedimiento }: Props) {
                   <Aviso etiqueta="Advertencia" texto={paso.advertencia} estilo="advertencia" />
                 )}
                 {paso.consejo && <Aviso etiqueta="Consejo" texto={paso.consejo} estilo="consejo" />}
+
+                {paso.subArticuloId && (
+                  <SubProcedimientoEnPaso
+                    subArticuloId={paso.subArticuloId}
+                    tituloReferencia={paso.subArticuloTitulo}
+                    nivel={nivel}
+                  />
+                )}
 
                 {paso.decision && (
                   <Decision
@@ -221,6 +241,110 @@ function BotonDecision({
     >
       {etiqueta}
     </button>
+  )
+}
+
+// Avance del subprocedimiento vinculado, visible en la fila colapsada
+// del paso: el procedimiento principal funciona como lista de tareas
+// y de un vistazo se ve cuales van completas.
+function ContadorSubProgreso({ subArticuloId }: { subArticuloId: string }) {
+  const articulo = useLiveQuery(
+    async () => (await db.articulos.get(subArticuloId)) ?? null,
+    [subArticuloId],
+  )
+  const progreso = useLiveQuery(() => db.progresoPasos.get(subArticuloId), [subArticuloId])
+  const procedimiento = useMemo(
+    () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
+    [articulo],
+  )
+
+  if (!procedimiento) return null
+  const total = procedimiento.pasos.length
+  const hechos = contarHechos(
+    progreso?.pasosHechos ?? [],
+    procedimiento.pasos.map((p) => p.id),
+  )
+
+  return (
+    <span
+      className={`rounded-full border px-1.5 py-0.5 text-[10px] ${
+        hechos === total
+          ? 'border-emerald-800 bg-emerald-950/40 text-emerald-400'
+          : 'border-slate-700 bg-slate-800/60 text-slate-400'
+      }`}
+    >
+      {hechos}/{total}
+    </span>
+  )
+}
+
+// Subprocedimiento vinculado a un paso: el paso a paso de otro
+// articulo, desplegado dentro del procedimiento principal. El
+// progreso usa el id del articulo vinculado, asi que es el mismo se
+// abra desde aqui o desde el articulo original.
+function SubProcedimientoEnPaso({
+  subArticuloId,
+  tituloReferencia,
+  nivel,
+}: {
+  subArticuloId: string
+  tituloReferencia: string
+  nivel: number
+}) {
+  const articulo = useLiveQuery(
+    async () => (await db.articulos.get(subArticuloId)) ?? null,
+    [subArticuloId],
+  )
+  const procedimiento = useMemo(
+    () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
+    [articulo],
+  )
+
+  if (articulo === undefined) return null
+
+  if (articulo === null || articulo.eliminadoEn) {
+    return (
+      <div className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2">
+        <p className="text-xs text-amber-300">
+          El procedimiento vinculado{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
+          disponible. Edita el artículo para quitar el vínculo o vincular otro.
+        </p>
+      </div>
+    )
+  }
+
+  const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
+
+  // Mas alla del primer nivel de anidamiento solo se enlaza, sin
+  // expandir: evita la expansion infinita y corta cualquier ciclo
+  // (A vincula a B y B a A). Tambien cubre el caso de un articulo
+  // vinculado que ya no tiene pasos.
+  if (nivel >= 1 || !procedimiento) {
+    return (
+      <Link
+        to={ruta}
+        className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2"
+      >
+        <p className="min-w-0 truncate text-xs font-medium text-sky-200">
+          Procedimiento: {articulo.titulo}
+        </p>
+        <span className="shrink-0 text-xs text-sky-300 underline underline-offset-2">Abrir</span>
+      </Link>
+    )
+  }
+
+  return (
+    <div className="rounded-lg border border-sky-900/60 bg-sky-950/20 p-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-xs font-medium text-sky-200">
+          Procedimiento: {articulo.titulo}
+        </p>
+        <Link to={ruta} className="shrink-0 text-xs text-sky-300 underline underline-offset-2">
+          Abrir
+        </Link>
+      </div>
+      <ProcedimientoVista articuloId={articulo.id} procedimiento={procedimiento} nivel={nivel + 1} />
+    </div>
   )
 }
 

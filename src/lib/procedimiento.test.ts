@@ -19,6 +19,8 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
     decision: null,
     credencialId: null,
     credencialTitulo: '',
+    subArticuloId: null,
+    subArticuloTitulo: '',
     ...cambios,
   }
 }
@@ -56,9 +58,25 @@ describe('normalizarProcedimiento', () => {
       decision: null,
       credencialId: null,
       credencialTitulo: '',
+      subArticuloId: null,
+      subArticuloTitulo: '',
     })
     expect(resultado?.pasos[0].id).not.toBe('')
     expect(resultado?.requisitos).toEqual([])
+  })
+
+  it('conserva el vínculo de subprocedimiento y descarta uno mal formado', () => {
+    const conVinculo = normalizarProcedimiento({
+      pasos: [pasoCompleto({ subArticuloId: 'art-2', subArticuloTitulo: 'Configurar impresora' })],
+    })
+    expect(conVinculo?.pasos[0].subArticuloId).toBe('art-2')
+    expect(conVinculo?.pasos[0].subArticuloTitulo).toBe('Configurar impresora')
+
+    const sinId = normalizarProcedimiento({
+      pasos: [pasoCompleto({ subArticuloId: 7, subArticuloTitulo: 'huérfano' } as never)],
+    })
+    expect(sinId?.pasos[0].subArticuloId).toBeNull()
+    expect(sinId?.pasos[0].subArticuloTitulo).toBe('')
   })
 
   it('conserva el vínculo de credencial y descarta uno mal formado', () => {
@@ -125,6 +143,14 @@ describe('textoDeProcedimiento', () => {
     })
     expect(texto).not.toContain('SQL Server producción')
   })
+
+  it('incluye el título del subprocedimiento vinculado', () => {
+    const texto = textoDeProcedimiento({
+      requisitos: [],
+      pasos: [pasoCompleto({ subArticuloId: 'art-2', subArticuloTitulo: 'Configurar impresora' })],
+    })
+    expect(texto).toContain('Configurar impresora')
+  })
 })
 
 describe('prepararProcedimientoParaGuardar', () => {
@@ -165,6 +191,20 @@ describe('prepararProcedimientoParaGuardar', () => {
       pasoCompleto({ credencialId: null, credencialTitulo: 'huérfano' }),
     ])
     expect(resultado?.pasos[0].credencialTitulo).toBe('')
+  })
+
+  it('conserva un paso que solo tiene subprocedimiento y limpia su título de referencia', () => {
+    const paso = crearPaso()
+    paso.subArticuloId = 'art-2'
+    paso.subArticuloTitulo = '  Configurar impresora  '
+    const resultado = prepararProcedimientoParaGuardar('', [paso])
+    expect(resultado?.pasos).toHaveLength(1)
+    expect(resultado?.pasos[0].subArticuloTitulo).toBe('Configurar impresora')
+
+    const huerfano = prepararProcedimientoParaGuardar('', [
+      pasoCompleto({ subArticuloId: null, subArticuloTitulo: 'huérfano' }),
+    ])
+    expect(huerfano?.pasos[0].subArticuloTitulo).toBe('')
   })
 
   it('descarta una decisión cuya pregunta quedó vacía', () => {

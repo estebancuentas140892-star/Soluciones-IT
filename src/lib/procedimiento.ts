@@ -17,6 +17,8 @@ export function crearPaso(): PasoProcedimiento {
     decision: null,
     credencialId: null,
     credencialTitulo: '',
+    subArticuloId: null,
+    subArticuloTitulo: '',
   }
 }
 
@@ -44,6 +46,8 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
 function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
   const credencialId =
     typeof origen.credencialId === 'string' && origen.credencialId !== '' ? origen.credencialId : null
+  const subArticuloId =
+    typeof origen.subArticuloId === 'string' && origen.subArticuloId !== '' ? origen.subArticuloId : null
   return {
     id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
     titulo: texto(origen.titulo),
@@ -54,8 +58,10 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     consejo: texto(origen.consejo),
     decision: normalizarDecision(origen.decision),
     credencialId,
-    // El titulo de referencia solo tiene sentido junto a su id.
+    // Los titulos de referencia solo tienen sentido junto a su id.
     credencialTitulo: credencialId ? texto(origen.credencialTitulo) : '',
+    subArticuloId,
+    subArticuloTitulo: subArticuloId ? texto(origen.subArticuloTitulo) : '',
   }
 }
 
@@ -95,6 +101,10 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
   for (const paso of procedimiento.pasos) {
     partes.push(paso.titulo, paso.detalle, paso.nota, paso.advertencia, paso.consejo)
     if (paso.decision) partes.push(paso.decision.pregunta)
+    // El titulo del subprocedimiento vinculado si se indexa (no es
+    // informacion protegida): buscar "impresora" encuentra tambien
+    // los procedimientos que incluyen esa tarea.
+    partes.push(paso.subArticuloTitulo)
   }
   return partes.filter(Boolean).join(' ')
 }
@@ -122,10 +132,15 @@ export function prepararProcedimientoParaGuardar(
         ? { ...paso.decision, pregunta: paso.decision.pregunta.trim() }
         : null,
       credencialTitulo: paso.credencialId ? paso.credencialTitulo.trim() : '',
+      subArticuloTitulo: paso.subArticuloId ? paso.subArticuloTitulo.trim() : '',
     }))
     .filter(
       (paso) =>
-        paso.titulo !== '' || paso.detalle !== '' || paso.imagen !== null || paso.credencialId !== null,
+        paso.titulo !== '' ||
+        paso.detalle !== '' ||
+        paso.imagen !== null ||
+        paso.credencialId !== null ||
+        paso.subArticuloId !== null,
     )
 
   if (pasosLimpios.length === 0) return null
