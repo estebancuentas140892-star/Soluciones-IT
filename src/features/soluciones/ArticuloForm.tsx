@@ -24,8 +24,11 @@ export function ArticuloForm() {
 
   const [titulo, setTitulo] = useState('')
   const [tipo, setTipo] = useState<TipoArticulo>('manual')
-  const [etiquetas, setEtiquetas] = useState('')
   const [contenido, setContenido] = useState('')
+  // Etiquetas y requisitos ya no se editan (rediseño del 2026-07-03),
+  // pero los articulos guardados antes los conservan: se cargan y se
+  // devuelven tal cual al guardar para no borrar datos existentes.
+  const [etiquetas, setEtiquetas] = useState('')
   const [requisitos, setRequisitos] = useState('')
   const [pasos, setPasos] = useState<PasoProcedimiento[]>([])
   const [motivo, setMotivo] = useState('')
@@ -110,24 +113,7 @@ export function ArticuloForm() {
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Etiquetas (separadas por coma)
-          <input
-            type="text"
-            value={etiquetas}
-            onChange={(e) => setEtiquetas(e.target.value)}
-            placeholder="zebra, impresora, térmica"
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        <PasosEditor
-          articuloId={id}
-          requisitos={requisitos}
-          onRequisitosChange={setRequisitos}
-          pasos={pasos}
-          onPasosChange={setPasos}
-        />
+        <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           {pasos.length > 0 ? 'Notas adicionales (opcional, admite Markdown)' : 'Contenido (admite Markdown)'}

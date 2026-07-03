@@ -65,16 +65,6 @@ export function ArticuloPage() {
         </button>
       </div>
 
-      {articulo.etiquetas.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {articulo.etiquetas.map((etiqueta) => (
-            <span key={etiqueta} className="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs text-slate-300">
-              {etiqueta}
-            </span>
-          ))}
-        </div>
-      )}
-
       {procedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
 
       {articulo.contenido.trim() !== '' && (

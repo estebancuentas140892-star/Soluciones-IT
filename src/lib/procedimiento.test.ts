@@ -12,17 +12,14 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
   return {
     id: 'paso-1',
     titulo: 'Abrir SQL Server Management Studio',
-    detalle: 'Está en el escritorio del servidor',
     instrucciones: [],
     imagen: null,
-    nota: '',
-    advertencia: '',
-    consejo: '',
-    decision: null,
     credencialId: null,
     credencialTitulo: '',
     subArticuloId: null,
     subArticuloTitulo: '',
+    solucionArticuloId: null,
+    solucionArticuloTitulo: '',
     ...cambios,
   }
 }
@@ -52,20 +49,37 @@ describe('normalizarProcedimiento', () => {
     const resultado = normalizarProcedimiento({ pasos: [{ titulo: 'Solo título' }] })
     expect(resultado?.pasos[0]).toMatchObject({
       titulo: 'Solo título',
-      detalle: '',
       instrucciones: [],
       imagen: null,
-      nota: '',
-      advertencia: '',
-      consejo: '',
-      decision: null,
       credencialId: null,
       credencialTitulo: '',
       subArticuloId: null,
       subArticuloTitulo: '',
+      solucionArticuloId: null,
+      solucionArticuloTitulo: '',
     })
     expect(resultado?.pasos[0].id).not.toBe('')
     expect(resultado?.requisitos).toEqual([])
+  })
+
+  it('descarta los campos retirados en el rediseño (detalle, nota, advertencia, consejo y decisión)', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'Paso viejo',
+          detalle: 'texto de detalle',
+          nota: 'una nota',
+          advertencia: 'una advertencia',
+          consejo: 'un consejo',
+          decision: { pregunta: '¿Está en línea?', pasoSi: 3, pasoNo: null },
+        },
+      ],
+    })
+    expect(resultado?.pasos[0]).not.toHaveProperty('detalle')
+    expect(resultado?.pasos[0]).not.toHaveProperty('nota')
+    expect(resultado?.pasos[0]).not.toHaveProperty('advertencia')
+    expect(resultado?.pasos[0]).not.toHaveProperty('consejo')
+    expect(resultado?.pasos[0]).not.toHaveProperty('decision')
   })
 
   it('conserva el vínculo de subprocedimiento y descarta uno mal formado', () => {
@@ -80,6 +94,22 @@ describe('normalizarProcedimiento', () => {
     })
     expect(sinId?.pasos[0].subArticuloId).toBeNull()
     expect(sinId?.pasos[0].subArticuloTitulo).toBe('')
+  })
+
+  it('conserva el vínculo de solución y descarta uno mal formado', () => {
+    const conVinculo = normalizarProcedimiento({
+      pasos: [
+        pasoCompleto({ solucionArticuloId: 'art-3', solucionArticuloTitulo: 'Reparar el spooler' }),
+      ],
+    })
+    expect(conVinculo?.pasos[0].solucionArticuloId).toBe('art-3')
+    expect(conVinculo?.pasos[0].solucionArticuloTitulo).toBe('Reparar el spooler')
+
+    const sinId = normalizarProcedimiento({
+      pasos: [pasoCompleto({ solucionArticuloId: 7, solucionArticuloTitulo: 'huérfano' } as never)],
+    })
+    expect(sinId?.pasos[0].solucionArticuloId).toBeNull()
+    expect(sinId?.pasos[0].solucionArticuloTitulo).toBe('')
   })
 
   it('conserva el vínculo de credencial y descarta uno mal formado', () => {
@@ -115,35 +145,17 @@ describe('normalizarProcedimiento', () => {
     })
     expect(resultado?.requisitos).toEqual(['Acceso al servidor'])
   })
-
-  it('descarta una decisión sin pregunta y normaliza los saltos', () => {
-    const sinPregunta = normalizarProcedimiento({
-      pasos: [pasoCompleto({ decision: { pregunta: '  ', pasoSi: 3, pasoNo: null } })],
-    })
-    expect(sinPregunta?.pasos[0].decision).toBeNull()
-
-    const conSaltos = normalizarProcedimiento({
-      pasos: [pasoCompleto({ decision: { pregunta: '¿Está en línea?', pasoSi: '4', pasoNo: 0 } as never })],
-    })
-    expect(conSaltos?.pasos[0].decision).toEqual({ pregunta: '¿Está en línea?', pasoSi: 4, pasoNo: null })
-  })
 })
 
 describe('textoDeProcedimiento', () => {
-  it('junta requisitos, pasos, avisos y preguntas para el índice de búsqueda', () => {
+  it('junta requisitos, títulos e instrucciones para el índice de búsqueda', () => {
     const texto = textoDeProcedimiento({
       requisitos: ['Credenciales del SQL Server'],
-      pasos: [
-        pasoCompleto({
-          advertencia: 'Verificar el espacio en disco',
-          decision: { pregunta: '¿La base está en línea?', pasoSi: null, pasoNo: 2 },
-        }),
-      ],
+      pasos: [pasoCompleto({ instrucciones: ['Verificar el espacio en disco'] })],
     })
     expect(texto).toContain('Credenciales del SQL Server')
     expect(texto).toContain('Abrir SQL Server Management Studio')
     expect(texto).toContain('Verificar el espacio en disco')
-    expect(texto).toContain('¿La base está en línea?')
   })
 
   it('devuelve texto vacío cuando no hay procedimiento', () => {
@@ -158,20 +170,20 @@ describe('textoDeProcedimiento', () => {
     expect(texto).not.toContain('SQL Server producción')
   })
 
-  it('incluye las instrucciones de los pasos', () => {
+  it('incluye los títulos del subprocedimiento y de la solución vinculados', () => {
     const texto = textoDeProcedimiento({
       requisitos: [],
-      pasos: [pasoCompleto({ instrucciones: ['Imprimir una página de prueba'] })],
-    })
-    expect(texto).toContain('Imprimir una página de prueba')
-  })
-
-  it('incluye el título del subprocedimiento vinculado', () => {
-    const texto = textoDeProcedimiento({
-      requisitos: [],
-      pasos: [pasoCompleto({ subArticuloId: 'art-2', subArticuloTitulo: 'Configurar impresora' })],
+      pasos: [
+        pasoCompleto({
+          subArticuloId: 'art-2',
+          subArticuloTitulo: 'Configurar impresora',
+          solucionArticuloId: 'art-3',
+          solucionArticuloTitulo: 'Reparar el spooler',
+        }),
+      ],
     })
     expect(texto).toContain('Configurar impresora')
+    expect(texto).toContain('Reparar el spooler')
   })
 })
 
@@ -242,11 +254,18 @@ describe('prepararProcedimientoParaGuardar', () => {
     expect(huerfano?.pasos[0].subArticuloTitulo).toBe('')
   })
 
-  it('descarta una decisión cuya pregunta quedó vacía', () => {
-    const resultado = prepararProcedimientoParaGuardar('', [
-      pasoCompleto({ decision: { pregunta: '   ', pasoSi: 2, pasoNo: null } }),
+  it('conserva un paso que solo tiene solución vinculada y limpia su título de referencia', () => {
+    const paso = crearPaso()
+    paso.solucionArticuloId = 'art-3'
+    paso.solucionArticuloTitulo = '  Reparar el spooler  '
+    const resultado = prepararProcedimientoParaGuardar('', [paso])
+    expect(resultado?.pasos).toHaveLength(1)
+    expect(resultado?.pasos[0].solucionArticuloTitulo).toBe('Reparar el spooler')
+
+    const huerfano = prepararProcedimientoParaGuardar('', [
+      pasoCompleto({ solucionArticuloId: null, solucionArticuloTitulo: 'huérfano' }),
     ])
-    expect(resultado?.pasos[0].decision).toBeNull()
+    expect(huerfano?.pasos[0].solucionArticuloTitulo).toBe('')
   })
 })
 

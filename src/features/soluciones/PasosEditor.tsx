@@ -9,8 +9,6 @@ import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 
 interface Props {
   articuloId: string
-  requisitos: string
-  onRequisitosChange: (valor: string) => void
   pasos: PasoProcedimiento[]
   onPasosChange: (pasos: PasoProcedimiento[]) => void
 }
@@ -20,8 +18,10 @@ const CLASE_INPUT =
 
 // Editor del procedimiento paso a paso dentro del formulario de
 // articulo. Es un componente controlado: el estado vive en el
-// formulario y aqui solo se edita.
-export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos, onPasosChange }: Props) {
+// formulario y aqui solo se edita. Cada paso ofrece solo lo esencial:
+// titulo, instrucciones con casilla, captura y los tres vinculos
+// (credencial, tarea reutilizable y solucion por si el paso falla).
+export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [subiendoPasoId, setSubiendoPasoId] = useState<string | null>(null)
@@ -35,10 +35,11 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
     [credenciales],
   )
 
-  // Articulos con procedimiento que se pueden vincular como tarea de
-  // un paso. Se excluye el articulo en edicion (un procedimiento no
-  // puede vincularse a si mismo).
-  const subProcedimientos = useLiveQuery(
+  // Articulos con procedimiento que se pueden vincular a un paso,
+  // como tarea reutilizable o como solucion por si el paso falla. Se
+  // excluye el articulo en edicion (un procedimiento no puede
+  // vincularse a si mismo).
+  const vinculables = useLiveQuery(
     () =>
       db.articulos
         .filter(
@@ -49,9 +50,9 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
     [articuloId],
     [],
   )
-  const subProcedimientosOrdenados = useMemo(
-    () => [...subProcedimientos].sort((a, b) => a.titulo.localeCompare(b.titulo)),
-    [subProcedimientos],
+  const vinculablesOrdenados = useMemo(
+    () => [...vinculables].sort((a, b) => a.titulo.localeCompare(b.titulo)),
+    [vinculables],
   )
 
   function actualizarPaso(indice: number, cambios: Partial<PasoProcedimiento>) {
@@ -105,40 +106,7 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <div>
-        <h2 className="text-sm font-medium text-slate-200">Procedimiento paso a paso</h2>
-        <p className="mt-0.5 text-xs text-slate-500">
-          Opcional: si agregas pasos, el artículo se mostrará como un procedimiento guiado.
-        </p>
-      </div>
-
-      <details className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
-        <summary className="cursor-pointer text-xs text-slate-400">Guía para redactar buenos pasos</summary>
-        <ul className="mt-2 flex flex-col gap-1 text-xs text-slate-500">
-          <li>• Una sola acción y un solo lugar por paso.</li>
-          <li>• Empieza cada paso con un verbo: "Abrir...", "Seleccionar...".</li>
-          <li>• Desglosa el paso en instrucciones con casilla: al marcar la última, la app completa el paso y avanza sola al siguiente.</li>
-          <li>• Máximo ~12 pasos; si hay más, divide el procedimiento.</li>
-          <li>• Anota la versión del software en los requisitos.</li>
-          <li>• Agrega captura solo cuando la pantalla pueda confundir.</li>
-          <li>• Si un paso requiere iniciar sesión, vincula la credencial de la bóveda en vez de escribirla.</li>
-          <li>• Una tarea grande (correo, impresora) va en su propio artículo y se vincula al paso como procedimiento: se reutiliza y se actualiza en un solo lugar.</li>
-          <li>• Cierra siempre con un paso que verifique el resultado.</li>
-        </ul>
-      </details>
-
-      <label className="flex flex-col gap-1 text-sm text-slate-300">
-        Antes de empezar (un requisito por línea)
-        <textarea
-          rows={3}
-          value={requisitos}
-          onChange={(e) => onRequisitosChange(e.target.value)}
-          placeholder={'Usuario y contraseña del SQL Server (ver Bóveda)\nAcceso al servidor'}
-          className={CLASE_INPUT}
-        />
-      </label>
-
+    <div className="flex flex-col gap-4">
       {pasos.map((paso, indice) => (
         <div key={paso.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
           <div className="flex items-center justify-between gap-2">
@@ -165,15 +133,7 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
             required
             value={paso.titulo}
             onChange={(e) => actualizarPaso(indice, { titulo: e.target.value })}
-            placeholder="Qué hacer (por ejemplo: Abrir SQL Server Management Studio)"
-            className={CLASE_INPUT}
-          />
-
-          <textarea
-            rows={2}
-            value={paso.detalle}
-            onChange={(e) => actualizarPaso(indice, { detalle: e.target.value })}
-            placeholder="Detalle del paso (opcional)"
+            placeholder="Qué hacer (por ejemplo: Conectar impresora)"
             className={CLASE_INPUT}
           />
 
@@ -195,28 +155,6 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
             onQuitar={() => actualizarPaso(indice, { imagen: null })}
           />
 
-          <input
-            type="text"
-            value={paso.nota}
-            onChange={(e) => actualizarPaso(indice, { nota: e.target.value })}
-            placeholder="Nota (opcional)"
-            className={CLASE_INPUT}
-          />
-          <input
-            type="text"
-            value={paso.advertencia}
-            onChange={(e) => actualizarPaso(indice, { advertencia: e.target.value })}
-            placeholder="Advertencia (opcional)"
-            className={CLASE_INPUT}
-          />
-          <input
-            type="text"
-            value={paso.consejo}
-            onChange={(e) => actualizarPaso(indice, { consejo: e.target.value })}
-            placeholder="Consejo (opcional)"
-            className={CLASE_INPUT}
-          />
-
           <CredencialSelector
             paso={paso}
             credenciales={credencialesOrdenadas}
@@ -231,7 +169,7 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
 
           <SubProcedimientoSelector
             paso={paso}
-            articulos={subProcedimientosOrdenados}
+            articulos={vinculablesOrdenados}
             onVincular={(articulo) =>
               actualizarPaso(indice, {
                 subArticuloId: articulo.id,
@@ -245,52 +183,19 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
             onQuitar={() => actualizarPaso(indice, { subArticuloId: null, subArticuloTitulo: '' })}
           />
 
-          {paso.decision ? (
-            <div className="flex flex-col gap-2 rounded-lg border border-sky-900/60 bg-sky-950/30 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-sky-300">Decisión (ramificación)</span>
-                <button
-                  type="button"
-                  onClick={() => actualizarPaso(indice, { decision: null })}
-                  className="text-xs text-slate-400 underline underline-offset-2"
-                >
-                  Quitar
-                </button>
-              </div>
-              <input
-                type="text"
-                required
-                value={paso.decision.pregunta}
-                onChange={(e) =>
-                  actualizarPaso(indice, { decision: { ...paso.decision!, pregunta: e.target.value } })
-                }
-                placeholder="Pregunta (por ejemplo: ¿La base está en línea?)"
-                className={CLASE_INPUT}
-              />
-              <CampoSalto
-                etiqueta="Si la respuesta es sí, ir al paso"
-                valor={paso.decision.pasoSi}
-                maximo={pasos.length}
-                onChange={(pasoSi) => actualizarPaso(indice, { decision: { ...paso.decision!, pasoSi } })}
-              />
-              <CampoSalto
-                etiqueta="Si la respuesta es no, ir al paso"
-                valor={paso.decision.pasoNo}
-                maximo={pasos.length}
-                onChange={(pasoNo) => actualizarPaso(indice, { decision: { ...paso.decision!, pasoNo } })}
-              />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() =>
-                actualizarPaso(indice, { decision: { pregunta: '', pasoSi: null, pasoNo: null } })
-              }
-              className="self-start text-xs text-sky-400 underline underline-offset-2"
-            >
-              + Agregar decisión (ramificación)
-            </button>
-          )}
+          <SolucionSelector
+            paso={paso}
+            articulos={vinculablesOrdenados}
+            onVincular={(articulo) =>
+              actualizarPaso(indice, {
+                solucionArticuloId: articulo.id,
+                solucionArticuloTitulo: articulo.titulo,
+              })
+            }
+            onQuitar={() =>
+              actualizarPaso(indice, { solucionArticuloId: null, solucionArticuloTitulo: '' })
+            }
+          />
         </div>
       ))}
 
@@ -329,36 +234,6 @@ function BotonPaso({
     >
       {children}
     </button>
-  )
-}
-
-function CampoSalto({
-  etiqueta,
-  valor,
-  maximo,
-  onChange,
-}: {
-  etiqueta: string
-  valor: number | null
-  maximo: number
-  onChange: (valor: number | null) => void
-}) {
-  return (
-    <label className="flex items-center justify-between gap-2 text-xs text-slate-400">
-      {etiqueta}
-      <input
-        type="number"
-        min={1}
-        max={maximo}
-        value={valor ?? ''}
-        onChange={(e) => {
-          const numero = Number(e.target.value)
-          onChange(e.target.value === '' || !Number.isFinite(numero) || numero < 1 ? null : Math.trunc(numero))
-        }}
-        placeholder="siguiente"
-        className={`w-24 ${CLASE_INPUT}`}
-      />
-    </label>
   )
 }
 
@@ -466,6 +341,60 @@ function SubProcedimientoSelector({
       className={`${CLASE_INPUT} text-slate-400`}
     >
       <option value="">+ Vincular otro procedimiento como tarea (opcional)</option>
+      {articulos.map((a) => (
+        <option key={a.id} value={a.id}>
+          {a.titulo}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+// Vinculo del paso con su procedimiento de solucion, el que se
+// despliega cuando el tecnico responde que si ocurrio un error en
+// este paso. Mismo patron de referencia que la tarea vinculada.
+function SolucionSelector({
+  paso,
+  articulos,
+  onVincular,
+  onQuitar,
+}: {
+  paso: PasoProcedimiento
+  articulos: Articulo[]
+  onVincular: (articulo: Articulo) => void
+  onQuitar: () => void
+}) {
+  if (paso.solucionArticuloId) {
+    const vinculado = articulos.find((a) => a.id === paso.solucionArticuloId)
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2">
+        <p className="min-w-0 truncate text-xs text-amber-200">
+          Solución si el paso falla: {vinculado?.titulo ?? paso.solucionArticuloTitulo}
+        </p>
+        <button
+          type="button"
+          onClick={onQuitar}
+          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+  }
+
+  if (articulos.length === 0) return null
+
+  return (
+    <select
+      value=""
+      aria-label="Vincular una solución por si este paso falla"
+      onChange={(e) => {
+        const articulo = articulos.find((a) => a.id === e.target.value)
+        if (articulo) onVincular(articulo)
+      }}
+      className={`${CLASE_INPUT} text-slate-400`}
+    >
+      <option value="">+ Vincular solución por si este paso falla (opcional)</option>
       {articulos.map((a) => (
         <option key={a.id} value={a.id}>
           {a.titulo}

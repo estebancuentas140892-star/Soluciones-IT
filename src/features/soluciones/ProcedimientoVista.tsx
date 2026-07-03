@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type DecisionPaso, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
+import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, siguientePasoPendiente } from '../../lib/procedimiento'
 import {
   alternarInstruccionHecha,
@@ -18,19 +18,19 @@ import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 interface Props {
   articuloId: string
   procedimiento: Procedimiento
-  // 0 = procedimiento principal; 1 = subprocedimiento expandido
-  // dentro de un paso. Mas alla del nivel 1 los vinculos se muestran
-  // solo como enlace, sin expandirse.
+  // 0 = procedimiento principal; 1 = subprocedimiento o solucion
+  // expandidos dentro de un paso. Mas alla del nivel 1 los vinculos
+  // se muestran solo como enlace, sin expandirse.
   nivel?: number
   // Aviso hacia arriba cuando una accion completa el ultimo paso
-  // pendiente: asi un subprocedimiento que termina completa tambien
-  // la tarea del paso que lo vincula.
+  // pendiente: asi un subprocedimiento o una solucion que terminan
+  // completan tambien la tarea del paso que los vincula.
   onCompletado?: () => void
 }
 
 // Vista de lectura de un procedimiento: la lista de pasos colapsados
 // es el "mapa" del proceso (se ve completo de un vistazo) y cada paso
-// se expande al tocarlo para ver el detalle, la captura y los avisos.
+// se expande al tocarlo para ver sus instrucciones y su captura.
 // Cada paso muestra su estado: pendiente (gris), en progreso (ambar,
 // con contador) o completado (verde). Al marcar la ultima instruccion
 // de un paso, este se completa, se contrae y se expande solo el
@@ -46,19 +46,9 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
   const completados = contarHechos(progreso?.pasosHechos ?? [], pasos.map((p) => p.id))
   const todoCompletado = pasos.length > 0 && completados === pasos.length
 
-  // Salta al paso indicado por una decision (numero 1 en adelante) o
-  // al siguiente cuando la decision dice "continuar" (null).
-  function irAPaso(numero: number | null, desdeIndice: number) {
-    const indice = numero === null ? desdeIndice + 1 : numero - 1
-    if (indice < 0 || indice >= pasos.length) return
-    setExpandido(pasos[indice].id)
-    refsPasos.current[indice]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-
   // Avance automatico despues de completar el paso del indice dado:
   // se contrae y se expande el siguiente pendiente. Si no queda
-  // ninguno, el procedimiento termino y se avisa al padre. Un paso
-  // con decision no avanza solo: la decision elige el destino.
+  // ninguno, el procedimiento termino y se avisa al padre.
   function avanzarDespuesDe(indice: number, hechosNuevos: ReadonlySet<string>) {
     const ids = pasos.map((p) => p.id)
     const destino = siguientePasoPendiente(ids, hechosNuevos, indice)
@@ -67,7 +57,6 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
       onCompletado?.()
       return
     }
-    if (pasos[indice].decision) return
     setExpandido(ids[destino])
     refsPasos.current[destino]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
@@ -88,9 +77,10 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
     if (completo) avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
   }
 
-  // Un subprocedimiento vinculado que termina completa tambien la
-  // tarea del paso que lo contiene, y el avance sigue de largo.
-  async function completarPorSubprocedimiento(indice: number, paso: PasoProcedimiento) {
+  // Completa el paso y sigue de largo: lo usan el subprocedimiento
+  // vinculado que termina, la respuesta "No" a la pregunta de error y
+  // la solucion que se completa despues de un error.
+  async function completarPasoYAvanzar(indice: number, paso: PasoProcedimiento) {
     if (hechos.has(paso.id)) return
     await establecerPasoHecho(
       articuloId,
@@ -180,10 +170,6 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
                 <div className="flex flex-col gap-3 border-t border-slate-800 px-4 py-3">
                   {paso.imagen && <ImagenPaso referencia={paso.imagen} titulo={paso.titulo} />}
 
-                  {paso.detalle && (
-                    <p className="whitespace-pre-line text-sm text-slate-300">{paso.detalle}</p>
-                  )}
-
                   {paso.instrucciones.length > 0 && (
                     <ul className="flex flex-col gap-0.5">
                       {paso.instrucciones.map((instruccion, i) => {
@@ -229,27 +215,21 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
                     />
                   )}
 
-                  {paso.nota && <Aviso etiqueta="Nota" texto={paso.nota} estilo="nota" />}
-                  {paso.advertencia && (
-                    <Aviso etiqueta="Advertencia" texto={paso.advertencia} estilo="advertencia" />
-                  )}
-                  {paso.consejo && <Aviso etiqueta="Consejo" texto={paso.consejo} estilo="consejo" />}
-
                   {paso.subArticuloId && (
                     <SubProcedimientoEnPaso
                       subArticuloId={paso.subArticuloId}
                       tituloReferencia={paso.subArticuloTitulo}
                       nivel={nivel}
-                      onCompletado={() => void completarPorSubprocedimiento(indice, paso)}
+                      onCompletado={() => void completarPasoYAvanzar(indice, paso)}
                     />
                   )}
 
-                  {paso.decision && (
-                    <Decision
-                      decision={paso.decision}
-                      indice={indice}
-                      totalPasos={pasos.length}
-                      onIr={irAPaso}
+                  {paso.solucionArticuloId && !hecho && (
+                    <SolucionEnPaso
+                      solucionArticuloId={paso.solucionArticuloId}
+                      tituloReferencia={paso.solucionArticuloTitulo}
+                      nivel={nivel}
+                      onContinuar={() => void completarPasoYAvanzar(indice, paso)}
                     />
                   )}
                 </div>
@@ -295,79 +275,6 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
         </div>
       </div>
     </section>
-  )
-}
-
-const ESTILOS_AVISO = {
-  nota: { caja: 'border-slate-700 bg-slate-800/60', texto: 'text-slate-300' },
-  advertencia: { caja: 'border-amber-900/60 bg-amber-950/40', texto: 'text-amber-200' },
-  consejo: { caja: 'border-emerald-900/60 bg-emerald-950/40', texto: 'text-emerald-200' },
-} as const
-
-function Aviso({
-  etiqueta,
-  texto,
-  estilo,
-}: {
-  etiqueta: string
-  texto: string
-  estilo: keyof typeof ESTILOS_AVISO
-}) {
-  const clases = ESTILOS_AVISO[estilo]
-  return (
-    <div className={`rounded-lg border px-3 py-2 ${clases.caja}`}>
-      <p className={`text-xs font-medium ${clases.texto}`}>{etiqueta}</p>
-      <p className={`mt-0.5 whitespace-pre-line text-xs ${clases.texto}`}>{texto}</p>
-    </div>
-  )
-}
-
-function Decision({
-  decision,
-  indice,
-  totalPasos,
-  onIr,
-}: {
-  decision: DecisionPaso
-  indice: number
-  totalPasos: number
-  onIr: (numero: number | null, desdeIndice: number) => void
-}) {
-  return (
-    <div className="rounded-lg border border-sky-900/60 bg-sky-950/40 px-3 py-2">
-      <p className="text-xs font-medium text-sky-200">{decision.pregunta}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <BotonDecision respuesta="Sí" numero={decision.pasoSi} indice={indice} totalPasos={totalPasos} onIr={onIr} />
-        <BotonDecision respuesta="No" numero={decision.pasoNo} indice={indice} totalPasos={totalPasos} onIr={onIr} />
-      </div>
-    </div>
-  )
-}
-
-function BotonDecision({
-  respuesta,
-  numero,
-  indice,
-  totalPasos,
-  onIr,
-}: {
-  respuesta: string
-  numero: number | null
-  indice: number
-  totalPasos: number
-  onIr: (numero: number | null, desdeIndice: number) => void
-}) {
-  const destino = numero === null ? indice + 2 : numero
-  const etiqueta =
-    destino > totalPasos ? `${respuesta}: fin del procedimiento` : `${respuesta}: ir al paso ${destino}`
-  return (
-    <button
-      type="button"
-      onClick={() => onIr(numero, indice)}
-      className="rounded-lg border border-sky-800 px-3 py-1.5 text-xs text-sky-300"
-    >
-      {etiqueta}
-    </button>
   )
 }
 
@@ -481,6 +388,138 @@ function SubProcedimientoEnPaso({
         procedimiento={procedimiento}
         nivel={nivel + 1}
         onCompletado={onCompletado}
+      />
+    </div>
+  )
+}
+
+// Pregunta de error del paso, visible solo cuando el editor vinculo
+// una solucion. "No" completa el paso y el flujo sigue solo; "Sí"
+// despliega la solucion ahi mismo y, al completarla, el paso se
+// completa, el avance continua desde ese punto y el progreso de la
+// solucion se reinicia para que quede lista para el proximo error
+// (aqui o en cualquier otro procedimiento que la reutilice).
+function SolucionEnPaso({
+  solucionArticuloId,
+  tituloReferencia,
+  nivel,
+  onContinuar,
+}: {
+  solucionArticuloId: string
+  tituloReferencia: string
+  nivel: number
+  onContinuar: () => void
+}) {
+  const articulo = useLiveQuery(
+    async () => (await db.articulos.get(solucionArticuloId)) ?? null,
+    [solucionArticuloId],
+  )
+  const progreso = useLiveQuery(() => db.progresoPasos.get(solucionArticuloId), [solucionArticuloId])
+  const procedimiento = useMemo(
+    () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
+    [articulo],
+  )
+  // null = sin responder: en ese caso la solucion se muestra abierta
+  // solo si quedo a medias (por ejemplo tras salir y volver a entrar
+  // a mitad de un error).
+  const [mostrarSolucion, setMostrarSolucion] = useState<boolean | null>(null)
+
+  if (articulo === undefined) return null
+
+  if (articulo === null || articulo.eliminadoEn) {
+    return (
+      <div className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2">
+        <p className="text-xs text-amber-300">
+          La solución vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
+          disponible. Edita el artículo para quitar el vínculo o vincular otra.
+        </p>
+      </div>
+    )
+  }
+
+  const total = procedimiento?.pasos.length ?? 0
+  const hechos = procedimiento
+    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((p) => p.id))
+    : 0
+  const aMedias = hechos > 0 && hechos < total
+  const abierta = mostrarSolucion ?? aMedias
+
+  if (!abierta) {
+    return (
+      <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2.5">
+        <p className="text-xs font-medium text-slate-300">¿Ocurrió algún error durante este paso?</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onContinuar}
+            className="rounded-lg border border-emerald-800 px-3 py-1.5 text-xs text-emerald-300"
+          >
+            No, continuar
+          </button>
+          <button
+            type="button"
+            onClick={() => setMostrarSolucion(true)}
+            className="rounded-lg border border-amber-800 px-3 py-1.5 text-xs text-amber-300"
+          >
+            Sí, ver la solución
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
+
+  // Dentro de un subprocedimiento ya expandido (o si la solucion se
+  // quedo sin pasos) solo se enlaza: misma regla de un solo nivel que
+  // corta ciclos en los subprocedimientos.
+  if (nivel >= 1 || !procedimiento) {
+    return (
+      <Link
+        to={ruta}
+        className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2"
+      >
+        <p className="min-w-0 truncate text-xs font-medium text-amber-200">
+          Solución: {articulo.titulo}
+        </p>
+        <span className="shrink-0 text-xs text-amber-300 underline underline-offset-2">Abrir</span>
+      </Link>
+    )
+  }
+
+  // La solucion completada vuelve sola al flujo principal: completa
+  // el paso donde ocurrio el error, el avance sigue de largo y su
+  // progreso se reinicia para el proximo uso.
+  async function resuelta() {
+    await reiniciarProgreso(solucionArticuloId)
+    setMostrarSolucion(null)
+    onContinuar()
+  }
+
+  return (
+    <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-xs font-medium text-amber-200">
+          Solución: {articulo.titulo}
+        </p>
+        <span className="flex shrink-0 items-center gap-2">
+          <Link to={ruta} className="text-xs text-amber-300 underline underline-offset-2">
+            Abrir
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMostrarSolucion(false)}
+            className="text-xs text-slate-400 underline underline-offset-2"
+          >
+            Ocultar
+          </button>
+        </span>
+      </div>
+      <ProcedimientoVista
+        articuloId={articulo.id}
+        procedimiento={procedimiento}
+        nivel={nivel + 1}
+        onCompletado={() => void resuelta()}
       />
     </div>
   )

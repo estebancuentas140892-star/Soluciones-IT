@@ -25,30 +25,15 @@ export type TipoArticulo =
   | 'mantenimiento'
   | 'manual'
 
-// Ramificacion opcional de un paso: segun la respuesta se salta a
-// otro paso (numero 1 en adelante) o se continua con el siguiente
-// (null). Los saltos usan la posicion del paso, no su id, para que
-// el autor pueda escribirlos y leerlos tal cual ("ir al paso 6").
-export interface DecisionPaso {
-  pregunta: string
-  pasoSi: number | null
-  pasoNo: number | null
-}
-
 export interface PasoProcedimiento {
   id: string
   titulo: string
-  detalle: string
   // Instrucciones con casilla de verificacion dentro del paso, una
   // por linea. Al marcar la ultima, el paso se completa solo y la
   // vista avanza al siguiente pendiente.
   instrucciones: string[]
   // Referencia en Supabase Storage de la captura del paso, o null.
   imagen: string | null
-  nota: string
-  advertencia: string
-  consejo: string
-  decision: DecisionPaso | null
   // Credencial de la boveda vinculada al paso, o null. El titulo es
   // una copia de referencia: permite mostrar "Credencial: SQL Server"
   // incluso a tecnicos sin acceso a la boveda (RLS no les descarga
@@ -62,6 +47,13 @@ export interface PasoProcedimiento {
   // referencia por si el articulo aun no sincronizo o fue eliminado.
   subArticuloId: string | null
   subArticuloTitulo: string
+  // Procedimiento de solucion por si el paso falla, o null. En la
+  // vista, el paso pregunta "¿Ocurrio algun error durante este
+  // paso?": responder que si despliega la solucion ahi mismo y, al
+  // completarla, el flujo principal continua solo desde ese punto.
+  // Mismo patron de referencia que subArticuloId.
+  solucionArticuloId: string | null
+  solucionArticuloTitulo: string
 }
 
 // Un articulo con procedimiento se muestra como una lista de pasos

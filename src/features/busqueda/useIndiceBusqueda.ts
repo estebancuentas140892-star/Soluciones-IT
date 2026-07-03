@@ -52,7 +52,6 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
         texto: [
           articulo.titulo,
           articulo.contenido,
-          articulo.etiquetas.join(' '),
           textoDeProcedimiento(normalizarProcedimiento(articulo.procedimiento)),
         ].join(' '),
       })
