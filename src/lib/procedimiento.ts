@@ -15,6 +15,8 @@ export function crearPaso(): PasoProcedimiento {
     advertencia: '',
     consejo: '',
     decision: null,
+    credencialId: null,
+    credencialTitulo: '',
   }
 }
 
@@ -40,6 +42,8 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
 }
 
 function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
+  const credencialId =
+    typeof origen.credencialId === 'string' && origen.credencialId !== '' ? origen.credencialId : null
   return {
     id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
     titulo: texto(origen.titulo),
@@ -49,6 +53,9 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     advertencia: texto(origen.advertencia),
     consejo: texto(origen.consejo),
     decision: normalizarDecision(origen.decision),
+    credencialId,
+    // El titulo de referencia solo tiene sentido junto a su id.
+    credencialTitulo: credencialId ? texto(origen.credencialTitulo) : '',
   }
 }
 
@@ -79,6 +86,9 @@ function texto(valor: unknown): string {
 
 // Texto plano de un procedimiento para el indice de busqueda: asi
 // "back up" encuentra el articulo aunque solo aparezca en un paso.
+// El titulo de la credencial vinculada queda fuera a proposito: los
+// titulos de la boveda solo aparecen en la busqueda cuando esta
+// desbloqueada (ARQUITECTURA.md, seccion 6).
 export function textoDeProcedimiento(procedimiento: Procedimiento | null): string {
   if (!procedimiento) return ''
   const partes = [...procedimiento.requisitos]
@@ -111,8 +121,12 @@ export function prepararProcedimientoParaGuardar(
       decision: paso.decision && paso.decision.pregunta.trim() !== ''
         ? { ...paso.decision, pregunta: paso.decision.pregunta.trim() }
         : null,
+      credencialTitulo: paso.credencialId ? paso.credencialTitulo.trim() : '',
     }))
-    .filter((paso) => paso.titulo !== '' || paso.detalle !== '' || paso.imagen !== null)
+    .filter(
+      (paso) =>
+        paso.titulo !== '' || paso.detalle !== '' || paso.imagen !== null || paso.credencialId !== null,
+    )
 
   if (pasosLimpios.length === 0) return null
   return { requisitos, pasos: pasosLimpios }

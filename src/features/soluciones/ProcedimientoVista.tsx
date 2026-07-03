@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { db, type DecisionPaso, type Procedimiento } from '../../lib/db'
 import { alternarPasoHecho, contarHechos, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 
 interface Props {
   articuloId: string
@@ -95,6 +96,13 @@ export function ProcedimientoVista({ articuloId, procedimiento }: Props) {
 
                 {paso.detalle && (
                   <p className="whitespace-pre-line text-sm text-slate-300">{paso.detalle}</p>
+                )}
+
+                {paso.credencialId && (
+                  <CredencialEnPaso
+                    credencialId={paso.credencialId}
+                    tituloReferencia={paso.credencialTitulo}
+                  />
                 )}
 
                 {paso.nota && <Aviso etiqueta="Nota" texto={paso.nota} estilo="nota" />}

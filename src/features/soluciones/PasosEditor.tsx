@@ -1,6 +1,7 @@
-import { useState, type ChangeEvent } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
-import type { PasoProcedimiento } from '../../lib/db'
+import { db, type Credencial, type PasoProcedimiento } from '../../lib/db'
 import { crearPaso } from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
@@ -24,6 +25,15 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [subiendoPasoId, setSubiendoPasoId] = useState<string | null>(null)
+
+  // Credenciales de la boveda para vincular a un paso. Solo llegan a
+  // este dispositivo las de usuarios con permiso de boveda (RLS); el
+  // titulo es visible sin desbloquear, los secretos no.
+  const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  const credencialesOrdenadas = useMemo(
+    () => [...credenciales].sort((a, b) => a.titulo.localeCompare(b.titulo)),
+    [credenciales],
+  )
 
   function actualizarPaso(indice: number, cambios: Partial<PasoProcedimiento>) {
     onPasosChange(pasos.map((paso, i) => (i === indice ? { ...paso, ...cambios } : paso)))
@@ -92,6 +102,7 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
           <li>• Máximo ~12 pasos; si hay más, divide el procedimiento.</li>
           <li>• Anota la versión del software en los requisitos.</li>
           <li>• Agrega captura solo cuando la pantalla pueda confundir.</li>
+          <li>• Si un paso requiere iniciar sesión, vincula la credencial de la bóveda en vez de escribirla.</li>
           <li>• Cierra siempre con un paso que verifique el resultado.</li>
         </ul>
       </details>
@@ -172,6 +183,18 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
             onChange={(e) => actualizarPaso(indice, { consejo: e.target.value })}
             placeholder="Consejo (opcional)"
             className={CLASE_INPUT}
+          />
+
+          <CredencialSelector
+            paso={paso}
+            credenciales={credencialesOrdenadas}
+            onVincular={(credencial) =>
+              actualizarPaso(indice, {
+                credencialId: credencial.id,
+                credencialTitulo: credencial.titulo,
+              })
+            }
+            onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
           />
 
           {paso.decision ? (
@@ -288,6 +311,64 @@ function CampoSalto({
         className={`w-24 ${CLASE_INPUT}`}
       />
     </label>
+  )
+}
+
+// Vinculo del paso con una credencial de la boveda. En el paso solo
+// se guarda el id y una copia del titulo como referencia: el usuario
+// y la contrasena se consultan cifrados en la boveda al leer el
+// procedimiento, asi nunca se duplican y siempre estan al dia.
+function CredencialSelector({
+  paso,
+  credenciales,
+  onVincular,
+  onQuitar,
+}: {
+  paso: PasoProcedimiento
+  credenciales: Credencial[]
+  onVincular: (credencial: Credencial) => void
+  onQuitar: () => void
+}) {
+  if (paso.credencialId) {
+    const vinculada = credenciales.find((c) => c.id === paso.credencialId)
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2">
+        <p className="min-w-0 truncate text-xs text-violet-200">
+          Credencial vinculada: {vinculada?.titulo ?? paso.credencialTitulo}
+        </p>
+        <button
+          type="button"
+          onClick={onQuitar}
+          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+  }
+
+  // Sin credenciales locales no hay nada que vincular: usuarios sin
+  // permiso de boveda no ven este control (RLS no les baja las filas).
+  if (credenciales.length === 0) return null
+
+  return (
+    <select
+      value=""
+      aria-label="Vincular credencial de la bóveda"
+      onChange={(e) => {
+        const credencial = credenciales.find((c) => c.id === e.target.value)
+        if (credencial) onVincular(credencial)
+      }}
+      className={`${CLASE_INPUT} text-slate-400`}
+    >
+      <option value="">+ Vincular credencial de la bóveda (opcional)</option>
+      {credenciales.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.titulo}
+          {c.categoria ? ` (${c.categoria})` : ''}
+        </option>
+      ))}
+    </select>
   )
 }
 

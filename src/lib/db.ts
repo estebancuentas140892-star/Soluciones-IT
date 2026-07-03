@@ -45,6 +45,12 @@ export interface PasoProcedimiento {
   advertencia: string
   consejo: string
   decision: DecisionPaso | null
+  // Credencial de la boveda vinculada al paso, o null. El titulo es
+  // una copia de referencia: permite mostrar "Credencial: SQL Server"
+  // incluso a tecnicos sin acceso a la boveda (RLS no les descarga
+  // las filas de credenciales). Los secretos nunca viajan aqui.
+  credencialId: string | null
+  credencialTitulo: string
 }
 
 // Un articulo con procedimiento se muestra como una lista de pasos

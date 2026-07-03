@@ -17,6 +17,8 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
     advertencia: '',
     consejo: '',
     decision: null,
+    credencialId: null,
+    credencialTitulo: '',
     ...cambios,
   }
 }
@@ -52,9 +54,26 @@ describe('normalizarProcedimiento', () => {
       advertencia: '',
       consejo: '',
       decision: null,
+      credencialId: null,
+      credencialTitulo: '',
     })
     expect(resultado?.pasos[0].id).not.toBe('')
     expect(resultado?.requisitos).toEqual([])
+  })
+
+  it('conserva el vínculo de credencial y descarta uno mal formado', () => {
+    const conVinculo = normalizarProcedimiento({
+      pasos: [pasoCompleto({ credencialId: 'cred-1', credencialTitulo: 'SQL Server' })],
+    })
+    expect(conVinculo?.pasos[0].credencialId).toBe('cred-1')
+    expect(conVinculo?.pasos[0].credencialTitulo).toBe('SQL Server')
+
+    // Sin id valido no hay vinculo, y el titulo suelto se descarta.
+    const sinId = normalizarProcedimiento({
+      pasos: [pasoCompleto({ credencialId: 42, credencialTitulo: 'SQL Server' } as never)],
+    })
+    expect(sinId?.pasos[0].credencialId).toBeNull()
+    expect(sinId?.pasos[0].credencialTitulo).toBe('')
   })
 
   it('descarta requisitos vacíos o que no son texto', () => {
@@ -98,6 +117,14 @@ describe('textoDeProcedimiento', () => {
   it('devuelve texto vacío cuando no hay procedimiento', () => {
     expect(textoDeProcedimiento(null)).toBe('')
   })
+
+  it('no incluye el título de la credencial vinculada (la bóveda solo se busca desbloqueada)', () => {
+    const texto = textoDeProcedimiento({
+      requisitos: [],
+      pasos: [pasoCompleto({ credencialId: 'cred-1', credencialTitulo: 'SQL Server producción' })],
+    })
+    expect(texto).not.toContain('SQL Server producción')
+  })
 })
 
 describe('prepararProcedimientoParaGuardar', () => {
@@ -122,6 +149,22 @@ describe('prepararProcedimientoParaGuardar', () => {
     const paso = crearPaso()
     paso.imagen = 'articulos/a1/pasos/captura.jpg'
     expect(prepararProcedimientoParaGuardar('', [paso])?.pasos).toHaveLength(1)
+  })
+
+  it('conserva un paso que solo tiene credencial vinculada y limpia el título de referencia', () => {
+    const paso = crearPaso()
+    paso.credencialId = 'cred-1'
+    paso.credencialTitulo = '  SQL Server  '
+    const resultado = prepararProcedimientoParaGuardar('', [paso])
+    expect(resultado?.pasos).toHaveLength(1)
+    expect(resultado?.pasos[0].credencialTitulo).toBe('SQL Server')
+  })
+
+  it('descarta el título de referencia si el paso quedó sin credencial', () => {
+    const resultado = prepararProcedimientoParaGuardar('', [
+      pasoCompleto({ credencialId: null, credencialTitulo: 'huérfano' }),
+    ])
+    expect(resultado?.pasos[0].credencialTitulo).toBe('')
   })
 
   it('descarta una decisión cuya pregunta quedó vacía', () => {
