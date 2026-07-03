@@ -141,6 +141,21 @@ export interface SyncMeta {
   valor: string
 }
 
+// Archivos (fotos, manuales) adjuntados sin conexion: el contenido
+// queda guardado en el telefono y el motor de sincronizacion lo sube
+// a Storage al recuperar internet. La clave es la referencia de
+// Storage, que ya quedo escrita en la fila del adjunto o en el paso
+// del procedimiento que lo usa.
+export interface ArchivoPendiente {
+  referencia: string
+  contenido: Blob
+  tipo: string
+  nombre: string
+  creadoEn: string
+  error: string | null
+  intentos: number
+}
+
 // Pasos marcados como hechos por este tecnico en cada procedimiento.
 // Solo vive en el dispositivo: no se sincroniza, cada tecnico lleva
 // su propio avance (por ejemplo al retomar tras una interrupcion).
@@ -171,6 +186,7 @@ class SolucionesItDatabase extends Dexie {
   syncMeta!: EntityTable<SyncMeta, 'clave'>
   recientes!: EntityTable<Reciente, 'clave'>
   progresoPasos!: EntityTable<ProgresoPasos, 'articuloId'>
+  archivosPendientes!: EntityTable<ArchivoPendiente, 'referencia'>
 
   constructor() {
     super('soluciones-it')
@@ -195,6 +211,10 @@ class SolucionesItDatabase extends Dexie {
 
     this.version(3).stores({
       progresoPasos: 'articuloId',
+    })
+
+    this.version(4).stores({
+      archivosPendientes: 'referencia, creadoEn',
     })
   }
 }

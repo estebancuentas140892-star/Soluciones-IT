@@ -1,5 +1,6 @@
 import { db, type CambioPendiente, type Perfil } from './db'
 import { supabase } from './supabase'
+import { contarArchivosPendientes, esErrorDeRed, procesarArchivosPendientes } from './archivosPendientes'
 import {
   aEntidadLocal,
   aFilaRemota,
@@ -58,9 +59,12 @@ function actualizarEstado(cambios: Partial<EstadoSync>): void {
 
 async function actualizarContadores(): Promise<void> {
   const pendientes = await db.cambiosPendientes.toArray()
+  // Los archivos en cola tambien son "cambios por subir" a los ojos
+  // del tecnico: entran al mismo contador del indicador.
+  const archivos = await contarArchivosPendientes()
   actualizarEstado({
-    cambiosPendientes: pendientes.length,
-    cambiosConError: pendientes.filter((c) => c.error !== null).length,
+    cambiosPendientes: pendientes.length + archivos.total,
+    cambiosConError: pendientes.filter((c) => c.error !== null).length + archivos.conError,
   })
 }
 
@@ -125,6 +129,10 @@ async function ejecutarSync(): Promise<void> {
 
   actualizarEstado({ enCurso: true, ultimoError: null })
   try {
+    // Los archivos van antes que las filas: asi un adjunto creado sin
+    // conexion ya existe en Storage cuando su fila llega al servidor
+    // y el resto del equipo puede verlo de inmediato.
+    await procesarArchivosPendientes()
     await subirCambiosPendientes()
     await descargarPerfiles()
     for (const tabla of TABLAS_SINCRONIZADAS) {
@@ -175,11 +183,6 @@ async function subirCambiosPendientes(): Promise<void> {
 // de exito, no de fallo.
 function esDuplicado(codigo: string | undefined): boolean {
   return codigo === '23505'
-}
-
-function esErrorDeRed(mensaje: string): boolean {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return true
-  return /fetch|network|conexi/i.test(mensaje)
 }
 
 async function registrarErrorDeCambio(cambio: CambioPendiente, mensaje: string): Promise<void> {

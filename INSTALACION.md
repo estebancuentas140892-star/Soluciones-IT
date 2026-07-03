@@ -69,5 +69,8 @@ abrirla suele bastar.
 - **La app no carga la primera vez**: se necesita conexión a internet solo la
   primera vez, para descargar la app y los datos del equipo. Después funciona
   sin señal.
+- **Adjunté una foto sin señal**: no hay que hacer nada. La foto queda
+  guardada en el teléfono, se ve normal en la ficha y se sube sola al
+  recuperar conexión.
 - **Pide iniciar sesión de nuevo**: la sesión no se cierra sola; si pide login
   de nuevo revisar con el resto del equipo si algo cambió en los accesos.

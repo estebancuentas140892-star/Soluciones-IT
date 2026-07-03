@@ -41,6 +41,22 @@ async function fetchYGuardar(referencia: string, urlFirmada: string): Promise<vo
   await cache.put(claveDe(referencia), respuesta)
 }
 
+// Deja disponible offline un archivo que ya esta en el telefono (por
+// ejemplo, una foto adjuntada sin conexion que espera en la cola de
+// subida): asi la ficha lo muestra al instante sin tocar la red.
+export async function guardarEnCacheOffline(referencia: string, contenido: Blob): Promise<void> {
+  if (typeof caches === 'undefined') return
+  const cache = await caches.open(NOMBRE_CACHE)
+  await cache.put(claveDe(referencia), new Response(contenido, { headers: { 'Content-Type': contenido.type || 'application/octet-stream' } }))
+}
+
+// Al eliminar un adjunto se libera tambien su copia offline.
+export async function eliminarDeCacheOffline(referencia: string): Promise<void> {
+  if (typeof caches === 'undefined') return
+  const cache = await caches.open(NOMBRE_CACHE)
+  await cache.delete(claveDe(referencia))
+}
+
 // Guarda un adjunto en el cache durable la primera vez que se ve, sin
 // bloquear la vista previa (que ya se muestra con la URL firmada).
 // Si ya estaba descargado o algo falla, no hace nada: se reintenta

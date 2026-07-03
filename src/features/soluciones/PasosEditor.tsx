@@ -3,6 +3,7 @@ import { supabase, supabaseConfigured } from '../../lib/supabase'
 import type { PasoProcedimiento } from '../../lib/db'
 import { crearPaso } from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
+import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 
 interface Props {
@@ -21,6 +22,7 @@ const CLASE_INPUT =
 // formulario y aqui solo se edita.
 export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos, onPasosChange }: Props) {
   const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
   const [subiendoPasoId, setSubiendoPasoId] = useState<string | null>(null)
 
   function actualizarPaso(indice: number, cambios: Partial<PasoProcedimiento>) {
@@ -46,12 +48,9 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
     if (!archivo) return
 
     setError(null)
+    setAviso(null)
     if (!supabase || !supabaseConfigured) {
       setError('La aplicación aún no está conectada al servidor.')
-      return
-    }
-    if (!navigator.onLine) {
-      setError('Necesitas conexión a internet para subir capturas. Vuelve a intentarlo con señal.')
       return
     }
 
@@ -61,8 +60,12 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
       const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
       const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
 
-      const { error: errorSubida } = await supabase.storage.from('adjuntos').upload(referencia, archivoFinal)
-      if (errorSubida) throw errorSubida
+      // Sin conexion, la captura queda guardada en el telefono y la
+      // cola de sincronizacion la sube sola al recuperar señal.
+      const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+      if (resultado === 'encolado') {
+        setAviso('Sin conexión: la captura quedó guardada en este dispositivo y se subirá sola al recuperar señal.')
+      }
 
       actualizarPaso(indice, { imagen: referencia })
     } catch {
@@ -221,6 +224,7 @@ export function PasosEditor({ articuloId, requisitos, onRequisitosChange, pasos,
       ))}
 
       {error && <p className="text-xs text-red-400">{error}</p>}
+      {aviso && <p className="text-xs text-amber-300">{aviso}</p>}
 
       <button
         type="button"

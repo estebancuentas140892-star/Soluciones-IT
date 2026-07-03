@@ -68,7 +68,7 @@ Notas de navegación:
 - Cola de cambios pendientes (outbox): cada edición hecha sin internet se guarda y se envía automáticamente al reconectar.
 - Sincronización bidireccional: se envían los cambios pendientes y se descargan las novedades del resto del equipo usando updated_at.
 - Conflictos: gana la última escritura, pero el historial conserva ambos cambios para poder recuperar cualquier dato.
-- Adjuntos: se guardan en caché al verlos por primera vez. Habrá un botón "Descargar todo para offline" para dejar el contenido completo en el teléfono antes de salir a un mantenimiento.
+- Adjuntos: se guardan en caché al verlos por primera vez, y el botón "Descargar todo para offline" (en Inicio) deja el contenido completo en el teléfono antes de salir a un mantenimiento. Las subidas también funcionan sin conexión: el archivo queda en una cola local (tabla `archivosPendientes`), se muestra al instante desde el caché y el motor de sincronización lo sube solo al recuperar señal, antes de procesar la cola de cambios.
 
 ## 8. Seguridad de la bóveda
 
@@ -94,7 +94,7 @@ Además:
 - El almacenamiento gratuito de archivos es de 1 GB. La app comprimirá las fotos automáticamente al subirlas para aprovecharlo (pendiente, ver tarea 10).
 - El plan gratuito de Supabase no incluye copias de seguridad. Como mitigación, un workflow de GitHub Actions (`.github/workflows/respaldo-supabase.yml`) exporta todas las tablas cada domingo, las cifra con AES-256 y las guarda 90 días como artefacto; configuración y restauración en `supabase/RESPALDO.md`. No cubre los archivos del bucket de Storage, solo sus referencias.
 - En iPhone, iOS puede borrar los datos locales de una PWA que lleve semanas sin abrirse. La sincronización los restaura al volver a abrir la app.
-- Subir un adjunto (foto, manual en PDF) requiere conexión a internet en ese momento; a diferencia del resto de la app, esa subida no se encola para reintentarse sola. El resto del artículo (título, contenido, etiquetas) sí funciona sin conexión con normalidad.
+- Un adjunto subido sin conexión queda visible de inmediato solo en el teléfono que lo adjuntó; el resto del equipo lo ve cuando ese teléfono recupera señal y la cola de subida lo envía (los archivos suben antes que las filas para que nadie reciba un adjunto sin su archivo).
 
 ## 11. Estructura de carpetas prevista
 

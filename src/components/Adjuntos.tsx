@@ -4,6 +4,7 @@ import { supabase, supabaseConfigured } from '../lib/supabase'
 import { db, type Adjunto } from '../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../lib/repositorio'
 import { comprimirImagen } from '../lib/comprimirImagen'
+import { eliminarArchivoPendiente, subirOEncolarArchivo } from '../lib/archivosPendientes'
 import { useUrlAdjunto } from './useUrlAdjunto'
 
 interface Props {
@@ -25,6 +26,7 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
 
   const [progreso, setProgreso] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
   const subiendo = progreso !== null
 
   function manejarSeleccion(evento: ChangeEvent<HTMLInputElement>) {
@@ -35,17 +37,15 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
 
   async function subirArchivos(archivos: File[]) {
     setError(null)
+    setAviso(null)
 
     if (!supabase || !supabaseConfigured) {
       setError('La aplicación aún no está conectada al servidor.')
       return
     }
-    if (!navigator.onLine) {
-      setError('Necesitas conexión a internet para adjuntar archivos. Vuelve a intentarlo con señal.')
-      return
-    }
 
     const fallidos: string[] = []
+    let encolados = 0
     for (let i = 0; i < archivos.length; i++) {
       setProgreso(archivos.length > 1 ? `Subiendo ${i + 1} de ${archivos.length}...` : 'Subiendo...')
       try {
@@ -56,8 +56,10 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
         const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
         const referencia = `${entidadTipo}s/${entidadId}/${Date.now()}-${nombreLimpio}`
 
-        const { error: errorSubida } = await supabase.storage.from('adjuntos').upload(referencia, archivoFinal)
-        if (errorSubida) throw errorSubida
+        // Sin conexion, el archivo queda en el telefono y la cola de
+        // sincronizacion lo sube sola al recuperar señal.
+        const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+        if (resultado === 'encolado') encolados += 1
 
         await guardarRegistro('adjuntos', {
           id: nuevoId(),
@@ -73,13 +75,25 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
     }
 
     if (fallidos.length > 0) setError(`No se pudo subir: ${fallidos.join(', ')}`)
+    if (encolados > 0) {
+      setAviso(
+        encolados === 1
+          ? 'Sin conexión: el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal.'
+          : `Sin conexión: ${encolados} archivos quedaron guardados en este dispositivo y se subirán solos al recuperar señal.`,
+      )
+    }
     setProgreso(null)
   }
 
   async function eliminar(adjunto: Adjunto) {
     if (!window.confirm(`¿Eliminar "${adjunto.nombre}"?`)) return
     await eliminarRegistro('adjuntos', adjunto.id)
-    if (supabase) await supabase.storage.from('adjuntos').remove([adjunto.referencia])
+    // Si el archivo seguia en la cola de subida, ya no hay que subirlo;
+    // tambien se libera su copia offline.
+    await eliminarArchivoPendiente(adjunto.referencia)
+    if (supabase && navigator.onLine) {
+      await supabase.storage.from('adjuntos').remove([adjunto.referencia])
+    }
   }
 
   return (
@@ -115,6 +129,7 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
       </div>
 
       {error && <p className="text-xs text-red-400">{error}</p>}
+      {aviso && <p className="text-xs text-amber-300">{aviso}</p>}
 
       {adjuntos && adjuntos.length === 0 && <p className="text-xs text-slate-500">Sin adjuntos todavía</p>}
 
