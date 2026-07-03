@@ -11,3 +11,16 @@ body {
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Impresion (pagina de etiquetas QR): hoja blanca con margenes
+   razonables. Lo demas lo resuelven las utilidades print: de
+   Tailwind en la propia pagina. */
+@page {
+  margin: 12mm;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+}

@@ -48,6 +48,22 @@ export function DispositivosPage() {
         </Link>
       </header>
 
+      <div className="flex gap-2">
+        <Link
+          to="/escaner"
+          className="flex items-center gap-1.5 rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+        >
+          <IconoEscanear className="h-3.5 w-3.5" />
+          Escanear código
+        </Link>
+        <Link
+          to="/dispositivos/etiquetas"
+          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+        >
+          Etiquetas QR
+        </Link>
+      </div>
+
       <div className="flex flex-col gap-2">
         <div className="flex gap-2">
           <select
@@ -115,5 +131,17 @@ export function DispositivosPage() {
         ))}
       </ul>
     </div>
+  )
+}
+
+function IconoEscanear(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path d="M4 8V6a2 2 0 0 1 2-2h2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 16v2a2 2 0 0 1-2 2h-2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 20H6a2 2 0 0 1-2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 12h10" strokeLinecap="round" />
+    </svg>
   )
 }

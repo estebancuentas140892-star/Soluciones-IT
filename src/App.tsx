@@ -50,6 +50,12 @@ const CredencialPage = lazy(() =>
 const CredencialForm = lazy(() =>
   import('./features/boveda/CredencialForm').then((m) => ({ default: m.CredencialForm })),
 )
+const EscanerPage = lazy(() =>
+  import('./features/escaner/EscanerPage').then((m) => ({ default: m.EscanerPage })),
+)
+const EtiquetasPage = lazy(() =>
+  import('./features/dispositivos/EtiquetasPage').then((m) => ({ default: m.EtiquetasPage })),
+)
 
 function App() {
   return (
@@ -65,6 +71,25 @@ function App() {
             }
           />
           <Route element={<RequireAuth />}>
+            {/* Pantallas fuera del Layout (sin barra inferior): el
+                escaner usa la camara a pantalla completa y las
+                etiquetas se imprimen sin el shell de la app. */}
+            <Route
+              path="escaner"
+              element={
+                <Suspense fallback={<Cargando />}>
+                  <EscanerPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="dispositivos/etiquetas"
+              element={
+                <Suspense fallback={<Cargando />}>
+                  <EtiquetasPage />
+                </Suspense>
+              }
+            />
             <Route element={<Layout />}>
               <Route index element={<InicioPage />} />
               <Route path="soluciones" element={<SolucionesPage />} />

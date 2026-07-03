@@ -35,6 +35,13 @@ export function InicioPage() {
         <ResultadosBusqueda resultados={resultados} />
       ) : (
         <>
+          <Link
+            to="/escaner"
+            className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
+          >
+            <IconoEscanear className="h-5 w-5 text-slate-400" />
+            Escanear código de un equipo
+          </Link>
           <DescargarOffline />
           <section>
             <h2 className="mb-2 text-sm font-medium text-slate-400">Recientes</h2>
@@ -61,6 +68,18 @@ export function InicioPage() {
         </>
       )}
     </div>
+  )
+}
+
+function IconoEscanear(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path d="M4 8V6a2 2 0 0 1 2-2h2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 16v2a2 2 0 0 1-2 2h-2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 20H6a2 2 0 0 1-2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 12h10" strokeLinecap="round" />
+    </svg>
   )
 }
 
