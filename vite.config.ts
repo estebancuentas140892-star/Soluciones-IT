@@ -10,7 +10,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' (en vez de 'autoUpdate'): la version nueva queda en
+      // espera y el aviso ActualizacionDisponible deja que el tecnico
+      // actualice cuando quiera, sin recargar en medio de un paso. El
+      // registro y la recarga los maneja el hook useRegisterSW, por lo
+      // que ya no se autoinyecta el registerSW.js minimo (que no
+      // comprobaba actualizaciones ni recargaba, y dejaba a los
+      // clientes en la version vieja).
+      registerType: 'prompt',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Soluciones IT',

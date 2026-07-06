@@ -4,6 +4,7 @@ import { AuthProvider } from './features/autenticacion/AuthProvider'
 import { RequireAuth } from './features/autenticacion/RequireAuth'
 import { Layout } from './app/Layout'
 import { Cargando } from './components/Cargando'
+import { ActualizacionDisponible } from './components/ActualizacionDisponible'
 
 // Cada pantalla se carga en su propio trozo (chunk) bajo demanda. Asi
 // la primera carga (la pantalla de login) no arrastra react-markdown
@@ -72,6 +73,7 @@ const TopologiaPage = lazy(() =>
 function App() {
   return (
     <AuthProvider>
+      <ActualizacionDisponible />
       <BrowserRouter>
         <Routes>
           <Route
