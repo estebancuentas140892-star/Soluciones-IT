@@ -20,7 +20,8 @@ const CLASE_INPUT =
 // articulo. Es un componente controlado: el estado vive en el
 // formulario y aqui solo se edita. Cada paso ofrece solo lo esencial:
 // titulo, instrucciones con casilla, captura y los tres vinculos
-// (credencial, tarea reutilizable y solucion por si el paso falla).
+// (datos de la boveda, tarea reutilizable y solucion por si el paso
+// falla).
 export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -237,10 +238,11 @@ function BotonPaso({
   )
 }
 
-// Vinculo del paso con una credencial de la boveda. En el paso solo
-// se guarda el id y una copia del titulo como referencia: el usuario
-// y la contrasena se consultan cifrados en la boveda al leer el
-// procedimiento, asi nunca se duplican y siempre estan al dia.
+// Apartado "Datos" del paso: el vinculo con una credencial de la
+// boveda. En el paso solo se guarda el id y una copia del titulo como
+// referencia: el usuario y la contrasena se consultan cifrados en la
+// boveda al leer el procedimiento, asi nunca se duplican y siempre
+// estan al dia.
 function CredencialSelector({
   paso,
   credenciales,
@@ -257,7 +259,7 @@ function CredencialSelector({
     return (
       <div className="flex items-center justify-between gap-2 rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2">
         <p className="min-w-0 truncate text-xs text-violet-200">
-          Credencial vinculada: {vinculada?.titulo ?? paso.credencialTitulo}
+          Datos vinculados: {vinculada?.titulo ?? paso.credencialTitulo}
         </p>
         <button
           type="button"
@@ -277,14 +279,14 @@ function CredencialSelector({
   return (
     <select
       value=""
-      aria-label="Vincular credencial"
+      aria-label="Vincular datos de la bóveda al paso"
       onChange={(e) => {
         const credencial = credenciales.find((c) => c.id === e.target.value)
         if (credencial) onVincular(credencial)
       }}
       className={`${CLASE_INPUT} text-slate-400`}
     >
-      <option value="">+ Vincular credencial (opcional)</option>
+      <option value="">+ Vincular datos de la bóveda (opcional)</option>
       {credenciales.map((c) => (
         <option key={c.id} value={c.id}>
           {c.titulo}

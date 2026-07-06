@@ -39,10 +39,11 @@ export interface PasoProcedimiento {
   instrucciones: string[]
   // Referencia en Supabase Storage de la captura del paso, o null.
   imagen: string | null
-  // Credencial de la boveda vinculada al paso, o null. El titulo es
-  // una copia de referencia: permite mostrar "Credencial: SQL Server"
-  // incluso a tecnicos sin acceso a la boveda (RLS no les descarga
-  // las filas de credenciales). Los secretos nunca viajan aqui.
+  // Credencial de la boveda vinculada al paso (su apartado "Datos"),
+  // o null. El titulo es una copia de referencia: permite mostrar
+  // "Datos: SQL Server" incluso a tecnicos sin acceso a la boveda
+  // (RLS no les descarga las filas de credenciales). Los secretos
+  // nunca viajan aqui.
   credencialId: string | null
   credencialTitulo: string
   // Otro articulo con procedimiento vinculado como subprocedimiento

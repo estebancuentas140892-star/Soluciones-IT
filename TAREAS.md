@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. La tarea 24 tiene su código completo y verificado; solo queda un paso del usuario en Supabase. Ver la tarea.)
+(Vacío. Las tareas pendientes están bloqueadas por pasos del usuario; ver cada una.)
 
 ## Por hacer
 

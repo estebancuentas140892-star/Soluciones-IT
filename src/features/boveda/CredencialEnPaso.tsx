@@ -15,14 +15,18 @@ interface Props {
   tituloReferencia: string
 }
 
-// Credencial de la boveda vinculada a un paso de procedimiento. El
-// secreto nunca vive en el articulo: aqui se consulta la boveda con
-// las mismas protecciones que en su propia seccion (permiso
-// puedeVerBoveda del perfil, contrasena maestra y autobloqueo). Quien
-// no este autorizado solo ve el titulo de referencia.
+// Apartado "Datos" de un paso de procedimiento: la credencial de la
+// boveda vinculada al paso. Se muestra contraido y sin secretos; solo
+// al tocarlo se consulta la boveda, con las mismas protecciones que
+// en su propia seccion (permiso puedeVerBoveda del perfil, contrasena
+// maestra y autobloqueo). El secreto nunca vive en el articulo y
+// quien no este autorizado solo ve el titulo de referencia.
 export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
   const { session } = useAuth()
   const desbloqueada = useBovedaDesbloqueada()
+  // Contraido por defecto: los secretos no entran a la pantalla hasta
+  // que el tecnico los pide, aunque la boveda ya este desbloqueada.
+  const [abierto, setAbierto] = useState(false)
 
   const perfil = useLiveQuery(
     async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
@@ -37,38 +41,49 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
 
   const autorizado = Boolean(perfil?.puedeVerBoveda)
   const eliminada = Boolean(credencial?.eliminadoEn)
-  const disponible = autorizado && credencial !== null && !eliminada
   const titulo = (credencial && !eliminada ? credencial.titulo : '') || tituloReferencia
 
   return (
     <div className="rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2.5">
-      <div className="flex items-center justify-between gap-2">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
         <p className="min-w-0 truncate text-xs font-medium text-violet-200">
-          Credencial{titulo ? `: ${titulo}` : ''}
+          Datos{titulo ? `: ${titulo}` : ''}
         </p>
-        {disponible && desbloqueada && (
-          <Link
-            to={`/notas/${credencialId}`}
-            className="shrink-0 text-xs text-violet-300 underline underline-offset-2"
-          >
-            Abrir
-          </Link>
-        )}
-      </div>
+        <span className="shrink-0 text-xs text-violet-300 underline underline-offset-2">
+          {abierto ? 'Ocultar' : 'Ver'}
+        </span>
+      </button>
 
-      {!autorizado || credencial === null ? (
-        <p className="mt-1 text-xs text-violet-300/80">
-          Solo los usuarios autorizados pueden consultar los datos de esta credencial.
-        </p>
-      ) : eliminada ? (
-        <p className="mt-1 text-xs text-amber-300">
-          Esta credencial fue eliminada. Edita el artículo para quitar el vínculo o vincular otra.
-        </p>
-      ) : !desbloqueada ? (
-        <FormularioDesbloqueo />
-      ) : (
-        <DatosDescifrados datosCifrados={credencial.datosCifrados} />
-      )}
+      {abierto &&
+        (!autorizado || credencial === null ? (
+          <p className="mt-2 text-xs text-violet-300/80">
+            Solo los usuarios autorizados pueden consultar los datos de este paso.
+          </p>
+        ) : eliminada ? (
+          <p className="mt-2 text-xs text-amber-300">
+            Los datos vinculados fueron eliminados de la bóveda. Edita el artículo para quitar el
+            vínculo o vincular otros.
+          </p>
+        ) : !desbloqueada ? (
+          <FormularioDesbloqueo />
+        ) : (
+          <>
+            <DatosDescifrados datosCifrados={credencial.datosCifrados} />
+            <div className="mt-2.5">
+              <Link
+                to={`/notas/${credencialId}`}
+                className="text-xs text-violet-300 underline underline-offset-2"
+              >
+                Abrir en Notas
+              </Link>
+            </div>
+          </>
+        ))}
     </div>
   )
 }
