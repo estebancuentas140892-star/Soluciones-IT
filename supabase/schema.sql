@@ -21,15 +21,22 @@ create table if not exists public.perfiles (
   creado_en timestamptz not null default now()
 );
 
+-- es_red marca las categorias de infraestructura de red (racks,
+-- puntos de red, switches, access points, camaras): sus dispositivos
+-- se muestran en la seccion Red en vez de Dispositivos.
 create table if not exists public.categorias (
   id uuid primary key default gen_random_uuid(),
   nombre text not null unique,
   icono text not null default '',
   orden integer not null default 0,
+  es_red boolean not null default false,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
 );
+
+-- Por si la tabla ya existia de una version anterior del esquema.
+alter table public.categorias add column if not exists es_red boolean not null default false;
 
 -- procedimiento guarda el modo "paso a paso" opcional de un articulo:
 -- un objeto JSON con requisitos previos y pasos numerados (cada paso
@@ -63,6 +70,30 @@ create table if not exists public.dispositivos (
   estado text not null default '',
   observaciones text not null default '',
   detalles jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+-- Relacion documentada entre dos dispositivos (el mapa de la red).
+-- - 'enlace': cable o señal de origen a destino. El origen es el lado
+--   que da servicio (switch, router) y el destino el que lo recibe.
+-- - 'instalacion': el origen esta instalado dentro del destino (un
+--   switch dentro de un rack).
+-- origen_nombre y destino_nombre son copias de referencia del nombre
+-- del dispositivo para poder mostrar la conexion aunque la ficha del
+-- otro extremo aun no haya sincronizado.
+create table if not exists public.conexiones (
+  id uuid primary key default gen_random_uuid(),
+  tipo text not null check (tipo in ('enlace', 'instalacion')),
+  origen_id uuid not null references public.dispositivos (id),
+  origen_nombre text not null default '',
+  origen_puerto text not null default '',
+  destino_id uuid not null references public.dispositivos (id),
+  destino_nombre text not null default '',
+  destino_puerto text not null default '',
+  medio text not null default '',
+  notas text not null default '',
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
@@ -122,6 +153,9 @@ create index if not exists idx_articulos_updated on public.articulos (updated_at
 create index if not exists idx_articulos_categoria on public.articulos (categoria_id);
 create index if not exists idx_dispositivos_updated on public.dispositivos (updated_at);
 create index if not exists idx_dispositivos_categoria on public.dispositivos (categoria_id);
+create index if not exists idx_conexiones_updated on public.conexiones (updated_at);
+create index if not exists idx_conexiones_origen on public.conexiones (origen_id);
+create index if not exists idx_conexiones_destino on public.conexiones (destino_id);
 create index if not exists idx_credenciales_updated on public.credenciales (updated_at);
 create index if not exists idx_historial_entidad on public.historial (entidad_tipo, entidad_id);
 create index if not exists idx_historial_fecha on public.historial (fecha_hora);
@@ -162,6 +196,11 @@ create trigger trg_articulos_modificacion
 drop trigger if exists trg_dispositivos_modificacion on public.dispositivos;
 create trigger trg_dispositivos_modificacion
   before insert or update on public.dispositivos
+  for each row execute function public.registrar_modificacion();
+
+drop trigger if exists trg_conexiones_modificacion on public.conexiones;
+create trigger trg_conexiones_modificacion
+  before insert or update on public.conexiones
   for each row execute function public.registrar_modificacion();
 
 drop trigger if exists trg_credenciales_modificacion on public.credenciales;
@@ -219,6 +258,7 @@ alter table public.perfiles enable row level security;
 alter table public.categorias enable row level security;
 alter table public.articulos enable row level security;
 alter table public.dispositivos enable row level security;
+alter table public.conexiones enable row level security;
 alter table public.credenciales enable row level security;
 alter table public.historial enable row level security;
 alter table public.adjuntos enable row level security;
@@ -242,6 +282,10 @@ create policy articulos_acceso on public.articulos
 
 drop policy if exists dispositivos_acceso on public.dispositivos;
 create policy dispositivos_acceso on public.dispositivos
+  for all to authenticated using (true) with check (true);
+
+drop policy if exists conexiones_acceso on public.conexiones;
+create policy conexiones_acceso on public.conexiones
   for all to authenticated using (true) with check (true);
 
 drop policy if exists adjuntos_acceso on public.adjuntos;
@@ -297,14 +341,22 @@ create policy adjuntos_storage_borrado on storage.objects
 -- 5. Datos iniciales
 -- ----------------------------------------------------------------
 
-insert into public.categorias (nombre, orden) values
-  ('POS', 1),
-  ('Impresoras', 2),
-  ('Cámaras', 3),
-  ('Computadores', 4),
-  ('Redes', 5),
-  ('Switches', 6),
-  ('Access Points', 7),
-  ('CCTV', 8),
-  ('Servidores', 9)
+insert into public.categorias (nombre, orden, es_red) values
+  ('POS', 1, false),
+  ('Impresoras', 2, false),
+  ('Cámaras', 3, true),
+  ('Computadores', 4, false),
+  ('Redes', 5, true),
+  ('Switches', 6, true),
+  ('Access Points', 7, true),
+  ('CCTV', 8, true),
+  ('Servidores', 9, false),
+  ('Racks', 10, true),
+  ('Puntos de red', 11, true)
 on conflict (nombre) do nothing;
+
+-- Marca como de red las categorias que ya existian antes de agregar
+-- es_red (el insert de arriba no las toca por el conflicto de nombre).
+update public.categorias set es_red = true
+  where nombre in ('Cámaras', 'Redes', 'Switches', 'Access Points', 'CCTV', 'Racks', 'Puntos de red')
+    and es_red = false;

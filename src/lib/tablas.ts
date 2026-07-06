@@ -4,6 +4,7 @@ import {
   type Adjunto,
   type Articulo,
   type Categoria,
+  type Conexion,
   type Credencial,
   type Dispositivo,
   type HistorialEntrada,
@@ -11,6 +12,9 @@ import {
 
 // Tablas que se sincronizan con Supabase, en el orden en que deben
 // descargarse (las categorias primero porque el resto depende de ellas).
+// conexiones va al final a proposito: es la tabla mas nueva y, si el
+// esquema todavia no se aplico en el servidor, su fallo no impide
+// descargar las demas.
 export const TABLAS_SINCRONIZADAS = [
   'categorias',
   'articulos',
@@ -18,6 +22,7 @@ export const TABLAS_SINCRONIZADAS = [
   'credenciales',
   'adjuntos',
   'historial',
+  'conexiones',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
@@ -30,6 +35,7 @@ export interface EntidadPorTabla {
   categorias: Categoria
   articulos: Articulo
   dispositivos: Dispositivo
+  conexiones: Conexion
   credenciales: Credencial
   adjuntos: Adjunto
   historial: HistorialEntrada
@@ -56,7 +62,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
   categorias: {
     columnaCursor: 'updated_at',
     soloInsercion: false,
-    campos: { ...camposComunes, nombre: 'nombre', icono: 'icono', orden: 'orden' },
+    campos: { ...camposComunes, nombre: 'nombre', icono: 'icono', orden: 'orden', esRed: 'es_red' },
   },
   articulos: {
     columnaCursor: 'updated_at',
@@ -87,6 +93,22 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       estado: 'estado',
       observaciones: 'observaciones',
       detalles: 'detalles',
+    },
+  },
+  conexiones: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: {
+      ...camposComunes,
+      tipo: 'tipo',
+      origenId: 'origen_id',
+      origenNombre: 'origen_nombre',
+      origenPuerto: 'origen_puerto',
+      destinoId: 'destino_id',
+      destinoNombre: 'destino_nombre',
+      destinoPuerto: 'destino_puerto',
+      medio: 'medio',
+      notas: 'notas',
     },
   },
   credenciales: {

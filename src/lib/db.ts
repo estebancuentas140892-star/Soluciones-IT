@@ -12,6 +12,11 @@ export interface Categoria {
   nombre: string
   icono: string
   orden: number
+  // true para las categorias de infraestructura de red (racks, puntos
+  // de red, switches...): sus dispositivos se muestran en la seccion
+  // Red en vez de Dispositivos. Puede llegar null de una base que aun
+  // no tiene la columna, por eso siempre se lee con Boolean().
+  esRed: boolean
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -89,6 +94,35 @@ export interface Dispositivo {
   estado: string
   observaciones: string
   detalles: Record<string, string>
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
+// Relacion documentada entre dos dispositivos del inventario.
+// - 'enlace': cable o señal de origen a destino. El origen es el lado
+//   que da el servicio (el switch, el router) y el destino el que lo
+//   recibe (AP, camara, punto de red, otro switch). Asi el arbol de
+//   topologia puede responder "¿que depende de este equipo?".
+// - 'instalacion': el origen esta instalado dentro del destino (un
+//   switch dentro de un rack). Sin puertos ni medio.
+// Los nombres de ambos extremos se guardan como copia de referencia
+// (mismo patron que credencialTitulo en los pasos): permiten mostrar
+// la conexion aunque la ficha del otro extremo aun no sincronice.
+export type TipoConexion = 'enlace' | 'instalacion'
+
+export interface Conexion {
+  id: string
+  tipo: TipoConexion
+  origenId: string
+  origenNombre: string
+  origenPuerto: string
+  destinoId: string
+  destinoNombre: string
+  destinoPuerto: string
+  // Medio fisico del enlace: UTP, fibra optica, inalambrico...
+  medio: string
+  notas: string
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -192,6 +226,7 @@ class SolucionesItDatabase extends Dexie {
   categorias!: EntityTable<Categoria, 'id'>
   articulos!: EntityTable<Articulo, 'id'>
   dispositivos!: EntityTable<Dispositivo, 'id'>
+  conexiones!: EntityTable<Conexion, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
   historial!: EntityTable<HistorialEntrada, 'id'>
   adjuntos!: EntityTable<Adjunto, 'id'>
@@ -228,6 +263,10 @@ class SolucionesItDatabase extends Dexie {
 
     this.version(4).stores({
       archivosPendientes: 'referencia, creadoEn',
+    })
+
+    this.version(5).stores({
+      conexiones: 'id, origenId, destinoId, updatedAt',
     })
   }
 }

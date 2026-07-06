@@ -44,11 +44,11 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
     <div className="rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
         <p className="min-w-0 truncate text-xs font-medium text-violet-200">
-          Credencial de la bóveda{titulo ? `: ${titulo}` : ''}
+          Credencial{titulo ? `: ${titulo}` : ''}
         </p>
         {disponible && desbloqueada && (
           <Link
-            to={`/boveda/${credencialId}`}
+            to={`/notas/${credencialId}`}
             className="shrink-0 text-xs text-violet-300 underline underline-offset-2"
           >
             Abrir
@@ -58,13 +58,11 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
 
       {!autorizado || credencial === null ? (
         <p className="mt-1 text-xs text-violet-300/80">
-          El usuario y la contraseña se consultan en la bóveda. Solo los usuarios autorizados
-          pueden verlos.
+          Solo los usuarios autorizados pueden consultar los datos de esta credencial.
         </p>
       ) : eliminada ? (
         <p className="mt-1 text-xs text-amber-300">
-          Esta credencial fue eliminada de la bóveda. Edita el artículo para quitar el vínculo o
-          vincular otra.
+          Esta credencial fue eliminada. Edita el artículo para quitar el vínculo o vincular otra.
         </p>
       ) : !desbloqueada ? (
         <FormularioDesbloqueo />
@@ -144,8 +142,8 @@ function DatosDescifrados({ datosCifrados }: { datosCifrados: string }) {
   if (datos === null) {
     return (
       <p className="mt-1 text-xs text-amber-300">
-        No se pudo descifrar esta credencial con la contraseña maestra actual. Ábrela en la bóveda
-        para ver los detalles.
+        No se pudo descifrar esta credencial con la contraseña maestra actual. Ábrela en la sección
+        Notas para ver los detalles.
       </p>
     )
   }

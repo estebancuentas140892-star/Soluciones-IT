@@ -1,4 +1,5 @@
-import { db, type HistorialEntrada, type TipoEntidadHistorial } from './db'
+import { db, type Conexion, type HistorialEntrada, type TipoEntidadHistorial } from './db'
+import { resumenConexion } from './conexiones'
 import { supabase } from './supabase'
 import { programarSync } from './sync'
 import { storeDe, type EntidadPorTabla, type TablaEditable } from './tablas'
@@ -66,17 +67,12 @@ export async function eliminarRegistro(
     if (!anterior || anterior.eliminadoEn) return
 
     const eliminada = { ...anterior, eliminadoEn: ahora, updatedAt: ahora, updatedBy: usuario.id }
-    const destino = destinoHistorial(tabla, eliminada)
-    const entrada = crearEntrada(destino, usuario, ahora, motivo, {
-      campo: tabla === 'adjuntos' ? 'adjunto' : 'eliminacion',
-      valorAnterior: resumenDe(eliminada),
-      valorNuevo: '',
-    })
+    const entradas = entradasEliminacion(tabla, eliminada, usuario, ahora, motivo)
 
     await store.put(eliminada)
-    await db.historial.add(entrada)
+    await db.historial.bulkAdd(entradas)
     await encolarCambioDeEntidad(tabla, eliminada, ahora)
-    await encolarEntradasDeHistorial([entrada])
+    await encolarEntradasDeHistorial(entradas)
   })
 
   sincronizarPronto()
@@ -96,6 +92,23 @@ function construirHistorial(
   ahora: string,
   motivo: string,
 ): HistorialEntrada[] {
+  // Una conexion se registra en el historial de sus dos extremos: al
+  // abrir la ficha de cualquiera de los dos dispositivos se ve el
+  // cambio de cableado. Las conexiones solo se crean o se eliminan
+  // (para corregir un puerto se quita y se vuelve a agregar).
+  if (tabla === 'conexiones') {
+    if (anterior) return []
+    const conexion = nueva as unknown as Conexion
+    const resumen = resumenConexion(conexion)
+    return extremosDispositivo(conexion).map((dispositivoId) =>
+      crearEntrada({ tipo: 'dispositivo', id: dispositivoId }, usuario, ahora, motivo, {
+        campo: 'conexion',
+        valorAnterior: '',
+        valorNuevo: resumen,
+      }),
+    )
+  }
+
   const destino = destinoHistorial(tabla, nueva)
 
   // Los adjuntos se registran sobre la ficha a la que pertenecen,
@@ -161,15 +174,16 @@ function crearEntrada(
   }
 }
 
-const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos'>, TipoEntidadHistorial> = {
-  categorias: 'categoria',
-  articulos: 'articulo',
-  dispositivos: 'dispositivo',
-  credenciales: 'credencial',
-}
+const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, TipoEntidadHistorial> =
+  {
+    categorias: 'categoria',
+    articulos: 'articulo',
+    dispositivos: 'dispositivo',
+    credenciales: 'credencial',
+  }
 
 function destinoHistorial(
-  tabla: TablaEditable,
+  tabla: Exclude<TablaEditable, 'conexiones'>,
   entidad: EntidadPorTabla[TablaEditable],
 ): { tipo: TipoEntidadHistorial; id: string } {
   if (tabla === 'adjuntos') {
@@ -177,6 +191,44 @@ function destinoHistorial(
     return { tipo: adjunto.entidadTipo, id: adjunto.entidadId }
   }
   return { tipo: TIPO_POR_TABLA[tabla], id: entidad.id }
+}
+
+// Los dos dispositivos que toca una conexion (uno solo si por error
+// apunta a si mismo). Cada uno recibe su entrada de historial.
+function extremosDispositivo(conexion: Conexion): string[] {
+  return conexion.origenId === conexion.destinoId
+    ? [conexion.origenId]
+    : [conexion.origenId, conexion.destinoId]
+}
+
+// Entradas de historial al eliminar: una por dispositivo en las
+// conexiones (ambos extremos), una sola para el resto de tablas.
+function entradasEliminacion(
+  tabla: TablaEditable,
+  eliminada: EntidadPorTabla[TablaEditable],
+  usuario: UsuarioActual,
+  ahora: string,
+  motivo: string,
+): HistorialEntrada[] {
+  if (tabla === 'conexiones') {
+    const conexion = eliminada as unknown as Conexion
+    const resumen = resumenConexion(conexion)
+    return extremosDispositivo(conexion).map((dispositivoId) =>
+      crearEntrada({ tipo: 'dispositivo', id: dispositivoId }, usuario, ahora, motivo, {
+        campo: 'conexion',
+        valorAnterior: resumen,
+        valorNuevo: '',
+      }),
+    )
+  }
+  const destino = destinoHistorial(tabla, eliminada)
+  return [
+    crearEntrada(destino, usuario, ahora, motivo, {
+      campo: tabla === 'adjuntos' ? 'adjunto' : 'eliminacion',
+      valorAnterior: resumenDe(eliminada),
+      valorNuevo: '',
+    }),
+  ]
 }
 
 function valorComparable(valor: unknown): string {

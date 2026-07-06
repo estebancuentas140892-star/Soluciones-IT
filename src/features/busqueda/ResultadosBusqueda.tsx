@@ -4,7 +4,7 @@ import type { ResultadoBusqueda } from './useIndiceBusqueda'
 const GRUPOS: { tipo: ResultadoBusqueda['tipo']; etiqueta: string }[] = [
   { tipo: 'articulo', etiqueta: 'Soluciones' },
   { tipo: 'dispositivo', etiqueta: 'Dispositivos' },
-  { tipo: 'credencial', etiqueta: 'Bóveda' },
+  { tipo: 'credencial', etiqueta: 'Notas' },
 ]
 
 export function ResultadosBusqueda({ resultados }: { resultados: ResultadoBusqueda[] }) {

@@ -1,16 +1,42 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { NavLink } from 'react-router-dom'
+import { db } from '../lib/db'
+import { useAuth } from '../features/autenticacion/authContext'
 
-const tabs = [
+interface Tab {
+  to: string
+  label: string
+  icon: (props: React.SVGProps<SVGSVGElement>) => React.JSX.Element
+  end: boolean
+}
+
+const TABS_BASE: Tab[] = [
   { to: '/', label: 'Inicio', icon: HomeIcon, end: true },
   { to: '/soluciones', label: 'Soluciones', icon: BookIcon, end: false },
   { to: '/dispositivos', label: 'Dispositivos', icon: DeviceIcon, end: false },
-  { to: '/boveda', label: 'Bóveda', icon: LockIcon, end: false },
+  { to: '/red', label: 'Red', icon: RedIcon, end: false },
 ]
 
+// La seccion de credenciales (antigua "Boveda") se presenta con un
+// nombre e icono neutros y solo aparece a los usuarios con permiso:
+// el resto ni siquiera sabe que existe (minima exposicion). La
+// proteccion real sigue siendo RLS + contrasena maestra.
+const TAB_NOTAS: Tab = { to: '/notas', label: 'Notas', icon: NoteIcon, end: false }
+
 export function BottomNav() {
+  const { session } = useAuth()
+  // El perfil se lee en vivo de la base local para que la pestaña
+  // aparezca apenas la primera sincronizacion lo descargue.
+  const perfil = useLiveQuery(
+    async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
+    [session],
+  )
+
+  const tabs = perfil?.puedeVerBoveda ? [...TABS_BASE, TAB_NOTAS] : TABS_BASE
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-800 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <ul className="mx-auto grid max-w-md grid-cols-4">
+      <ul className={`mx-auto grid max-w-md ${tabs.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
         {tabs.map(({ to, label, icon: Icon, end }) => (
           <li key={to}>
             <NavLink
@@ -59,11 +85,22 @@ function DeviceIcon(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
-function LockIcon(props: React.SVGProps<SVGSVGElement>) {
+function RedIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
-      <rect x="5" y="11" width="14" height="9" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 11V7.5a4 4 0 0 1 8 0V11" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="9" y="3" width="6" height="5" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3" y="16" width="6" height="5" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="15" y="16" width="6" height="5" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 8v4M12 12H6v4M12 12h6v4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function NoteIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path d="M6 3.5h12a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 8h6M9 12h6M9 16h3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

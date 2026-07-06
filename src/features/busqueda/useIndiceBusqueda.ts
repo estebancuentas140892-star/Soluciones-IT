@@ -88,7 +88,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           tipo: 'credencial',
           titulo: credencial.titulo,
           subtitulo: credencial.categoria,
-          ruta: `/boveda/${credencial.id}`,
+          ruta: `/notas/${credencial.id}`,
           texto: credencial.titulo,
         })
       }

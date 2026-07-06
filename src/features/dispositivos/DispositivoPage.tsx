@@ -7,6 +7,7 @@ import { registrarVisita } from '../../lib/recientes'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonCompartir } from '../../components/BotonCompartir'
 import { ValorCopiable } from '../../components/ValorCopiable'
+import { ConexionesFicha } from '../red/ConexionesFicha'
 import { Historial } from '../historial/Historial'
 
 export function DispositivoPage() {
@@ -27,10 +28,15 @@ export function DispositivoPage() {
   if (dispositivo === null) return <Navigate to="/dispositivos" replace />
   if (!dispositivo) return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
 
+  // Los dispositivos de red se listan en la seccion Red: la navegacion
+  // de vuelta y la eliminacion regresan alli.
+  const esRed = Boolean(categoria?.esRed)
+  const volverA = esRed ? '/red' : '/dispositivos'
+
   async function eliminar() {
     if (!window.confirm(`¿Eliminar "${dispositivo!.nombre}"?`)) return
     await eliminarRegistro('dispositivos', dispositivoId)
-    navigate('/dispositivos')
+    navigate(volverA)
   }
 
   const campos: { etiqueta: string; valor: string }[] = [
@@ -47,8 +53,8 @@ export function DispositivoPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header>
-        <Link to="/dispositivos" className="text-xs text-slate-400">
-          ← Dispositivos
+        <Link to={volverA} className="text-xs text-slate-400">
+          ← {esRed ? 'Red' : 'Dispositivos'}
         </Link>
         <h1 className="text-xl font-semibold">{dispositivo.nombre}</h1>
         {categoria && <p className="text-xs text-slate-500">{categoria.nombre}</p>}
@@ -119,6 +125,8 @@ export function DispositivoPage() {
           Ver procedimientos de {categoria.nombre} →
         </Link>
       )}
+
+      <ConexionesFicha dispositivo={dispositivo} />
 
       <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} />
 

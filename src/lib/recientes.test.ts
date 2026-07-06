@@ -45,6 +45,7 @@ beforeEach(async () => {
     nombre: 'Cámaras',
     icono: '',
     orden: 1,
+    esRed: true,
     updatedAt: new Date().toISOString(),
     updatedBy: null,
     eliminadoEn: null,

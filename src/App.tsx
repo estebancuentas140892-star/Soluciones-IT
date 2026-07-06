@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/autenticacion/AuthProvider'
 import { RequireAuth } from './features/autenticacion/RequireAuth'
 import { Layout } from './app/Layout'
@@ -64,6 +64,10 @@ const ImportarDispositivosPage = lazy(() =>
     default: m.ImportarDispositivosPage,
   })),
 )
+const RedPage = lazy(() => import('./features/red/RedPage').then((m) => ({ default: m.RedPage })))
+const TopologiaPage = lazy(() =>
+  import('./features/red/TopologiaPage').then((m) => ({ default: m.TopologiaPage })),
+)
 
 function App() {
   return (
@@ -111,7 +115,14 @@ function App() {
               <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
               <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
               <Route path="dispositivos/:dispositivoId/editar" element={<DispositivoForm />} />
-              <Route path="boveda" element={<BovedaGuard />}>
+              <Route path="red" element={<RedPage />} />
+              <Route path="red/topologia" element={<TopologiaPage />} />
+              <Route path="red/topologia/:dispositivoId" element={<TopologiaPage />} />
+              {/* La seccion de credenciales vive en /notas con nombre
+                  neutro (minima exposicion). La ruta vieja redirige
+                  por si quedo algun enlace guardado. */}
+              <Route path="boveda/*" element={<Navigate to="/notas" replace />} />
+              <Route path="notas" element={<BovedaGuard />}>
                 <Route index element={<BovedaPage />} />
                 <Route path="nueva" element={<CredencialForm />} />
                 <Route path=":credencialId" element={<CredencialPage />} />

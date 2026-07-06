@@ -64,7 +64,7 @@ export function CredencialForm() {
     }
   }, [credencial, cargadoInicial])
 
-  if (esEdicion && credencial === null) return <Navigate to="/boveda" replace />
+  if (esEdicion && credencial === null) return <Navigate to="/notas" replace />
   if (esEdicion && !cargadoInicial) {
     return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
   }
@@ -100,15 +100,15 @@ export function CredencialForm() {
         { id, titulo: titulo.trim(), categoria: categoria.trim(), datosCifrados },
         motivo.trim(),
       )
-      navigate(`/boveda/${id}`)
+      navigate(`/notas/${id}`)
     } catch {
       // Ocurre si el autobloqueo cerro la boveda durante la edicion.
-      setError('La bóveda se bloqueó. Desbloquéala de nuevo para guardar.')
+      setError('La sección se bloqueó por inactividad. Desbloquéala de nuevo para guardar.')
       setGuardando(false)
     }
   }
 
-  const volverA = esEdicion ? `/boveda/${credencialId}` : '/boveda'
+  const volverA = esEdicion ? `/notas/${credencialId}` : '/notas'
   const claseCampo =
     'rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500'
 

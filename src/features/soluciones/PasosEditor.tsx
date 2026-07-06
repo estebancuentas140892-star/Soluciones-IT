@@ -277,14 +277,14 @@ function CredencialSelector({
   return (
     <select
       value=""
-      aria-label="Vincular credencial de la bóveda"
+      aria-label="Vincular credencial"
       onChange={(e) => {
         const credencial = credenciales.find((c) => c.id === e.target.value)
         if (credencial) onVincular(credencial)
       }}
       className={`${CLASE_INPUT} text-slate-400`}
     >
-      <option value="">+ Vincular credencial de la bóveda (opcional)</option>
+      <option value="">+ Vincular credencial (opcional)</option>
       {credenciales.map((c) => (
         <option key={c.id} value={c.id}>
           {c.titulo}

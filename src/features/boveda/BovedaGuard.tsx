@@ -27,15 +27,17 @@ export function BovedaGuard() {
   return <Outlet />
 }
 
+// Sin revelar que es lo que se protege: quien llega aqui sin permiso
+// solo ve una seccion restringida generica (minima exposicion).
 function AccesoRestringido() {
   return (
     <div className="flex flex-col items-center gap-4 px-4 pt-16 text-center">
       <IconoCandado />
       <div>
-        <h1 className="text-xl font-semibold">Bóveda</h1>
+        <h1 className="text-xl font-semibold">Notas</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Tu usuario no tiene acceso a la bóveda. Un administrador puede habilitarlo desde Supabase
-          activando el permiso de bóveda en tu perfil.
+          Tu usuario no tiene acceso a esta sección. Un administrador puede habilitarlo desde el
+          panel de Supabase.
         </p>
       </div>
     </div>
@@ -70,9 +72,9 @@ function PantallaDesbloqueo() {
     <div className="flex flex-col items-center gap-4 px-4 pt-16 text-center">
       <IconoCandado />
       <div>
-        <h1 className="text-xl font-semibold">Bóveda</h1>
+        <h1 className="text-xl font-semibold">Notas</h1>
         <p className="mt-1 text-sm text-slate-400">
-          IP, usuarios y contraseñas. Ingresa la contraseña maestra para desbloquear.
+          Sección protegida del equipo. Ingresa la contraseña maestra para continuar.
         </p>
       </div>
 
@@ -100,9 +102,8 @@ function PantallaDesbloqueo() {
               className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
             <p className="text-xs text-slate-500">
-              La bóveda está vacía. Esta contraseña quedará como la contraseña maestra del equipo:
-              acuérdenla entre todos y guárdenla bien, sin ella no se pueden recuperar las
-              credenciales.
+              La sección está vacía. Esta contraseña quedará como la contraseña maestra del equipo:
+              acuérdenla entre todos y guárdenla bien, sin ella no se puede recuperar el contenido.
             </p>
           </>
         )}

@@ -34,6 +34,10 @@ export function descripcionEntrada(entrada: EntradaDescriptible): string {
   if (entrada.campo === 'creacion') return `Se creó: ${entrada.valorNuevo}`
   if (entrada.campo === 'eliminacion') return `Se eliminó: ${entrada.valorAnterior}`
   if (entrada.campo === 'adjunto') return `Se agregó el adjunto: ${entrada.valorNuevo}`
+  if (entrada.campo === 'conexion') {
+    if (!entrada.valorNuevo) return `Se quitó la conexión: ${entrada.valorAnterior}`
+    return `Se agregó la conexión: ${entrada.valorNuevo}`
+  }
 
   const etiqueta = etiquetaDeCampo(entrada.campo)
   if (!entrada.valorAnterior) return `${etiqueta}: se definió como "${entrada.valorNuevo}"`

@@ -31,7 +31,7 @@ export function CredencialPage() {
     }
   }, [credencial])
 
-  if (credencial === null || credencial?.eliminadoEn) return <Navigate to="/boveda" replace />
+  if (credencial === null || credencial?.eliminadoEn) return <Navigate to="/notas" replace />
   if (!credencial || datos === undefined) {
     return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
   }
@@ -39,22 +39,22 @@ export function CredencialPage() {
   async function eliminar() {
     if (!window.confirm(`¿Eliminar "${credencial!.titulo}"?`)) return
     await eliminarRegistro('credenciales', credencialId)
-    navigate('/boveda')
+    navigate('/notas')
   }
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex items-start justify-between gap-2">
         <div>
-          <Link to="/boveda" className="text-xs text-slate-400">
-            ← Bóveda
+          <Link to="/notas" className="text-xs text-slate-400">
+            ← Notas
           </Link>
           <h1 className="text-xl font-semibold">{credencial.titulo}</h1>
           {credencial.categoria && <p className="text-xs text-slate-500">{credencial.categoria}</p>}
         </div>
         <div className="flex shrink-0 gap-2">
           <Link
-            to={`/boveda/${credencialId}/editar`}
+            to={`/notas/${credencialId}/editar`}
             className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
           >
             Editar

@@ -11,25 +11,37 @@ export function DispositivosPage() {
   const [estado, setEstado] = useState('')
   const [ubicacion, setUbicacion] = useState('')
 
+  // Las categorias de red se muestran en la seccion Red, no aqui.
+  const categoriasGenerales = useMemo(() => (categorias ?? []).filter((c) => !c.esRed), [categorias])
+  const idsRed = useMemo(
+    () => new Set((categorias ?? []).filter((c) => c.esRed).map((c) => c.id)),
+    [categorias],
+  )
+
   const nombreCategoria = useMemo(
     () => new Map((categorias ?? []).map((c) => [c.id, c.nombre])),
     [categorias],
   )
 
+  const generales = useMemo(
+    () => (dispositivos ?? []).filter((d) => !idsRed.has(d.categoriaId)),
+    [dispositivos, idsRed],
+  )
+
   const estados = useMemo(
-    () => [...new Set((dispositivos ?? []).map((d) => d.estado).filter(Boolean))].sort(),
-    [dispositivos],
+    () => [...new Set(generales.map((d) => d.estado).filter(Boolean))].sort(),
+    [generales],
   )
 
   const filtrados = useMemo(() => {
     const ubicacionBuscada = ubicacion.trim().toLowerCase()
-    return (dispositivos ?? []).filter((d) => {
+    return generales.filter((d) => {
       if (categoriaId && d.categoriaId !== categoriaId) return false
       if (estado && d.estado !== estado) return false
       if (ubicacionBuscada && !d.ubicacion.toLowerCase().includes(ubicacionBuscada)) return false
       return true
     })
-  }, [dispositivos, categoriaId, estado, ubicacion])
+  }, [generales, categoriaId, estado, ubicacion])
 
   const hayFiltrosActivos = Boolean(categoriaId || estado || ubicacion)
 
@@ -78,7 +90,7 @@ export function DispositivosPage() {
             className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
           >
             <option value="">Todas las categorías</option>
-            {categorias?.map((c) => (
+            {categoriasGenerales.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nombre}
               </option>
