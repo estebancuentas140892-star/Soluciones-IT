@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Outlet } from 'react-router-dom'
-import { db } from '../../lib/db'
+import { db, ID_VERIFICADOR } from '../../lib/db'
 import { useAuth } from '../autenticacion/authContext'
-import { desbloquear } from './sesionBoveda'
+import { desbloquear, estadoInicialBoveda, type EstadoInicialBoveda } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
 
 // Envuelve todas las rutas de la boveda: exige el permiso
@@ -45,10 +45,31 @@ function AccesoRestringido() {
 }
 
 function PantallaDesbloqueo() {
-  // Si la boveda esta vacia, la contrasena que se escriba aqui queda
-  // como contrasena maestra: se pide confirmarla para evitar erratas.
-  const cantidad = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).count(), [])
-  const bovedaVacia = cantidad === 0
+  // El formulario depende del estado CONFIRMADO de la contrasena
+  // maestra, nunca del conteo local de credenciales: definir una
+  // contrasena nueva solo se ofrece cuando el servidor confirma que
+  // no existe ninguna (ver estadoInicialBoveda). Asi, borrar la cache
+  // o estrenar un telefono jamas reabre el flujo de "primera vez".
+  const [modo, setModo] = useState<'cargando' | EstadoInicialBoveda>('cargando')
+  const [intento, setIntento] = useState(0)
+
+  useEffect(() => {
+    let vigente = true
+    setModo('cargando')
+    void estadoInicialBoveda().then((estado) => {
+      if (vigente) setModo(estado)
+    })
+    return () => {
+      vigente = false
+    }
+  }, [intento])
+
+  // Si la sincronizacion trae el verificador mientras la pantalla
+  // espera, se pasa solo al modo de verificacion.
+  const verificadorLocal = useLiveQuery(() => db.bovedaMeta.get(ID_VERIFICADOR), [])
+  useEffect(() => {
+    if (verificadorLocal) setModo('verificar')
+  }, [verificadorLocal])
 
   const [contrasena, setContrasena] = useState('')
   const [confirmacion, setConfirmacion] = useState('')
@@ -57,7 +78,7 @@ function PantallaDesbloqueo() {
 
   async function manejarEnvio(evento: FormEvent) {
     evento.preventDefault()
-    if (bovedaVacia && contrasena !== confirmacion) {
+    if (modo === 'crear' && contrasena !== confirmacion) {
       setError('Las contraseñas no coinciden.')
       return
     }
@@ -74,50 +95,73 @@ function PantallaDesbloqueo() {
       <div>
         <h1 className="text-xl font-semibold">Notas</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Sección protegida del equipo. Ingresa la contraseña maestra para continuar.
+          {modo === 'crear'
+            ? 'Sección protegida del equipo. Aún no tiene contraseña maestra.'
+            : 'Sección protegida del equipo. Ingresa la contraseña maestra para continuar.'}
         </p>
       </div>
 
-      <form onSubmit={manejarEnvio} className="flex w-full max-w-xs flex-col gap-3">
-        <input
-          type="password"
-          required
-          autoFocus
-          value={contrasena}
-          onChange={(e) => setContrasena(e.target.value)}
-          placeholder="Contraseña maestra"
-          autoComplete="off"
-          className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-        />
+      {modo === 'cargando' && <p className="text-sm text-slate-400">Comprobando...</p>}
 
-        {bovedaVacia && (
-          <>
-            <input
-              type="password"
-              required
-              value={confirmacion}
-              onChange={(e) => setConfirmacion(e.target.value)}
-              placeholder="Confirma la contraseña"
-              autoComplete="off"
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-            <p className="text-xs text-slate-500">
-              La sección está vacía. Esta contraseña quedará como la contraseña maestra del equipo:
-              acuérdenla entre todos y guárdenla bien, sin ella no se puede recuperar el contenido.
-            </p>
-          </>
-        )}
+      {modo === 'sin-confirmar' && (
+        <div className="flex w-full max-w-xs flex-col gap-3">
+          <p className="text-sm text-slate-400">
+            No se pudo comprobar la configuración de esta sección. Conéctate a internet, espera a
+            que la aplicación sincronice y vuelve a intentar.
+          </p>
+          <button
+            type="button"
+            onClick={() => setIntento((n) => n + 1)}
+            className="rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-medium text-slate-950"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+      {(modo === 'verificar' || modo === 'crear') && (
+        <form onSubmit={manejarEnvio} className="flex w-full max-w-xs flex-col gap-3">
+          <input
+            type="password"
+            required
+            autoFocus
+            value={contrasena}
+            onChange={(e) => setContrasena(e.target.value)}
+            placeholder="Contraseña maestra"
+            autoComplete="off"
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
 
-        <button
-          type="submit"
-          disabled={abriendo}
-          className="rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-medium text-slate-950 disabled:opacity-50"
-        >
-          {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
-        </button>
-      </form>
+          {modo === 'crear' && (
+            <>
+              <input
+                type="password"
+                required
+                value={confirmacion}
+                onChange={(e) => setConfirmacion(e.target.value)}
+                placeholder="Confirma la contraseña"
+                autoComplete="off"
+                className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+              <p className="text-xs text-slate-500">
+                Esta contraseña quedará registrada como la contraseña maestra del equipo, asociada
+                a la cuenta y válida en todos los dispositivos: acuérdenla entre todos y guárdenla
+                bien, sin ella no se puede recuperar el contenido.
+              </p>
+            </>
+          )}
+
+          {error && <p className="text-sm text-red-400">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={abriendo}
+            className="rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-medium text-slate-950 disabled:opacity-50"
+          >
+            {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
+          </button>
+        </form>
+      )}
     </div>
   )
 }

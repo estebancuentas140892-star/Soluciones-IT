@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { db } from '../../lib/db'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { db, ID_VERIFICADOR } from '../../lib/db'
 import { cifrarTexto, derivarClave, ITERACIONES_PBKDF2, nuevaSal } from '../../lib/crypto'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import {
@@ -8,8 +8,22 @@ import {
   cifrarCredencial,
   descifrarCredencial,
   desbloquear,
+  estadoInicialBoveda,
+  TEXTO_VERIFICADOR,
   type DatosCredencial,
 } from './sesionBoveda'
+import { consultarVerificadorRemoto, subirVerificadorRemoto } from './verificadorRemoto'
+
+// El servidor se simula por completo: cada prueba decide que responde
+// la consulta del verificador y su creacion. El comportamiento por
+// defecto es "sin respuesta" (como sin conexion), el caso mas
+// restrictivo.
+vi.mock('./verificadorRemoto', () => ({
+  consultarVerificadorRemoto: vi.fn(),
+  subirVerificadorRemoto: vi.fn(),
+}))
+const consultarMock = vi.mocked(consultarVerificadorRemoto)
+const subirMock = vi.mocked(subirVerificadorRemoto)
 
 const datos: DatosCredencial = {
   usuario: 'admin',
@@ -24,22 +38,164 @@ async function guardarCredencial(titulo: string, datosCifrados: string): Promise
   await guardarRegistro('credenciales', { id: nuevoId(), titulo, categoria: 'Redes', datosCifrados })
 }
 
+// Bloque cifrado con una contrasena dada, como el que produciria otro
+// telefono (salt propio).
+async function bloqueConContrasena(contrasena: string, texto: string): Promise<string> {
+  const salt = nuevaSal()
+  const clave = await derivarClave(contrasena, salt, ITERACIONES_PBKDF2)
+  return cifrarTexto(clave, salt, ITERACIONES_PBKDF2, texto)
+}
+
+// Deja un verificador en la base local, como si la sincronizacion ya
+// lo hubiera descargado.
+async function sembrarVerificador(contrasena: string): Promise<string> {
+  const verificador = await bloqueConContrasena(contrasena, TEXTO_VERIFICADOR)
+  await db.bovedaMeta.put({ id: ID_VERIFICADOR, verificador, updatedAt: new Date().toISOString() })
+  return verificador
+}
+
 beforeEach(async () => {
   bloquear()
   await Promise.all(db.tables.map((tabla) => tabla.clear()))
+  consultarMock.mockReset().mockResolvedValue({ tipo: 'error' })
+  subirMock.mockReset().mockResolvedValue('error')
 })
 
-describe('sesion de la boveda', () => {
-  it('con la boveda vacia cualquier contraseña la abre y define la maestra', async () => {
+describe('desbloqueo con verificador (contraseña anclada al servidor)', () => {
+  it('verifica contra el verificador local: rechaza la incorrecta y acepta la correcta', async () => {
+    await sembrarVerificador('maestra')
+
+    expect(await desbloquear('otra-contrasena')).toBe('Contraseña incorrecta.')
+    expect(bovedaDesbloqueada()).toBe(false)
+
     expect(await desbloquear('maestra')).toBeNull()
     expect(bovedaDesbloqueada()).toBe(true)
-
     const bloque = await cifrarCredencial(datos)
-    expect(bloque.startsWith('v1.')).toBe(true)
     expect(await descifrarCredencial(bloque)).toEqual(datos)
   })
 
+  it('tras borrar la cache NO permite crear una contraseña nueva si el servidor tiene verificador', async () => {
+    // Base local vacia (cache borrada); el servidor si responde.
+    const verificador = await bloqueConContrasena('maestra', TEXTO_VERIFICADOR)
+    consultarMock.mockResolvedValue({ tipo: 'ok', verificador, hayCredenciales: true })
+
+    expect(await desbloquear('contrasena-del-atacante')).toBe('Contraseña incorrecta.')
+    expect(bovedaDesbloqueada()).toBe(false)
+
+    // La correcta si abre, y el verificador queda guardado localmente
+    // para poder desbloquear sin conexion la proxima vez.
+    expect(await desbloquear('maestra')).toBeNull()
+    expect((await db.bovedaMeta.get(ID_VERIFICADOR))?.verificador).toBe(verificador)
+  })
+
+  it('con verificador tambien abre bloques de credenciales con otro salt y misma contraseña', async () => {
+    await sembrarVerificador('maestra')
+    const bloqueAjeno = await bloqueConContrasena('maestra', JSON.stringify(datos))
+    await guardarCredencial('Switch bodega', bloqueAjeno)
+
+    expect(await desbloquear('maestra')).toBeNull()
+    expect(await descifrarCredencial(bloqueAjeno)).toEqual(datos)
+  })
+})
+
+describe('primera vez: solo con confirmacion explicita del servidor', () => {
+  it('sin nada local y sin respuesta del servidor NO desbloquea ni crea', async () => {
+    const resultado = await desbloquear('lo-que-sea')
+    expect(resultado).toContain('No se pudo comprobar')
+    expect(bovedaDesbloqueada()).toBe(false)
+    expect(await db.bovedaMeta.get(ID_VERIFICADOR)).toBeUndefined()
+  })
+
+  it('si el servidor confirma vacio, crea la maestra y la ancla antes de desbloquear', async () => {
+    consultarMock.mockResolvedValue({ tipo: 'ok', verificador: null, hayCredenciales: false })
+    subirMock.mockResolvedValue('creado')
+
+    expect(await desbloquear('maestra-nueva')).toBeNull()
+    expect(bovedaDesbloqueada()).toBe(true)
+    expect(subirMock).toHaveBeenCalledTimes(1)
+    expect(await db.bovedaMeta.get(ID_VERIFICADOR)).toBeDefined()
+
+    // La proxima sesion verifica contra el verificador creado.
+    bloquear()
+    expect(await desbloquear('otra')).toBe('Contraseña incorrecta.')
+    expect(await desbloquear('maestra-nueva')).toBeNull()
+  })
+
+  it('si el registro en el servidor falla, NO desbloquea', async () => {
+    consultarMock.mockResolvedValue({ tipo: 'ok', verificador: null, hayCredenciales: false })
+    subirMock.mockResolvedValue('error')
+
+    const resultado = await desbloquear('maestra-nueva')
+    expect(resultado).toContain('No se pudo registrar')
+    expect(bovedaDesbloqueada()).toBe(false)
+  })
+
+  it('si otro tecnico gano la carrera, verifica contra el verificador de el', async () => {
+    const verificadorAjeno = await bloqueConContrasena('maestra-del-otro', TEXTO_VERIFICADOR)
+    consultarMock
+      .mockResolvedValueOnce({ tipo: 'ok', verificador: null, hayCredenciales: false })
+      .mockResolvedValue({ tipo: 'ok', verificador: verificadorAjeno, hayCredenciales: true })
+    subirMock.mockResolvedValue('conflicto')
+
+    // Con una contrasena distinta a la del otro tecnico: rechazada.
+    const resultado = await desbloquear('maestra-nueva')
+    expect(resultado).toContain('no coincide')
+    expect(bovedaDesbloqueada()).toBe(false)
+
+    // Con la misma contrasena que registro el otro: abre.
+    consultarMock
+      .mockResolvedValueOnce({ tipo: 'ok', verificador: verificadorAjeno, hayCredenciales: true })
+    expect(await desbloquear('maestra-del-otro')).toBeNull()
+  })
+})
+
+describe('migracion: credenciales cifradas sin verificador', () => {
+  it('valida contra las credenciales y ancla el verificador al servidor', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+    await guardarCredencial('Router principal', await cifrarCredencial(datos))
+    // Se simula el estado anterior a esta version: hay credenciales
+    // pero no existe verificador (ni local ni en el servidor).
+    await db.bovedaMeta.clear()
+    bloquear()
+
+    subirMock.mockResolvedValue('creado')
+    expect(await desbloquear('otra-contrasena')).toBe('Contraseña incorrecta.')
+    expect(await desbloquear('maestra')).toBeNull()
+
+    // El desbloqueo correcto subio el verificador y guardo la copia.
+    expect(subirMock).toHaveBeenCalledTimes(1)
+    expect(await db.bovedaMeta.get(ID_VERIFICADOR)).toBeDefined()
+    const guardada = (await db.credenciales.toArray())[0]
+    expect(await descifrarCredencial(guardada.datosCifrados)).toEqual(datos)
+  })
+
+  it('sin conexion sigue desbloqueando con las credenciales; el anclaje queda para despues', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+    await guardarCredencial('Router principal', await cifrarCredencial(datos))
+    await db.bovedaMeta.clear()
+    bloquear()
+
+    // consultar y subir fallan (sin conexion): el equipo no se queda
+    // por fuera de su boveda.
+    expect(await desbloquear('maestra')).toBeNull()
+    expect(bovedaDesbloqueada()).toBe(true)
+    expect(await db.bovedaMeta.get(ID_VERIFICADOR)).toBeUndefined()
+  })
+
+  it('vaciar las credenciales ya NO permite definir una contraseña nueva', async () => {
+    // El verificador existe: aunque no quede ninguna credencial, la
+    // unica via sigue siendo la contraseña original.
+    await sembrarVerificador('maestra')
+    expect(await desbloquear('contrasena-nueva')).toBe('Contraseña incorrecta.')
+    expect(bovedaDesbloqueada()).toBe(false)
+  })
+})
+
+describe('sesion y descifrado', () => {
   it('bloquear borra las claves: no se puede cifrar ni descifrar', async () => {
+    await sembrarVerificador('maestra')
     await desbloquear('maestra')
     const bloque = await cifrarCredencial(datos)
 
@@ -50,59 +206,55 @@ describe('sesion de la boveda', () => {
     await expect(cifrarCredencial(datos)).rejects.toThrow()
   })
 
-  it('con credenciales guardadas rechaza la contraseña incorrecta y acepta la correcta', async () => {
-    await desbloquear('maestra')
-    await guardarCredencial('Router principal', await cifrarCredencial(datos))
-    bloquear()
-
-    expect(await desbloquear('otra-contrasena')).toBe('Contraseña incorrecta.')
-    expect(bovedaDesbloqueada()).toBe(false)
-
-    expect(await desbloquear('maestra')).toBeNull()
-    const guardada = (await db.credenciales.toArray())[0]
-    expect(await descifrarCredencial(guardada.datosCifrados)).toEqual(datos)
-  })
-
-  it('descifra bloques con salt distinto si usan la misma contraseña', async () => {
-    await desbloquear('maestra')
-    await guardarCredencial('Router principal', await cifrarCredencial(datos))
-
-    // Simula la primera credencial creada en otro telefono sin
-    // conexion: misma contraseña maestra pero otro salt.
-    const otroSalt = nuevaSal()
-    const otraClave = await derivarClave('maestra', otroSalt, ITERACIONES_PBKDF2)
-    const bloqueAjeno = await cifrarTexto(otraClave, otroSalt, ITERACIONES_PBKDF2, JSON.stringify(datos))
-    await guardarCredencial('Switch bodega', bloqueAjeno)
-    bloquear()
-
-    expect(await desbloquear('maestra')).toBeNull()
-    for (const credencial of await db.credenciales.toArray()) {
-      expect(await descifrarCredencial(credencial.datosCifrados)).toEqual(datos)
-    }
-  })
-
   it('un bloque cifrado con otra contraseña queda ilegible pero no impide desbloquear', async () => {
-    await desbloquear('maestra')
-    await guardarCredencial('Router principal', await cifrarCredencial(datos))
-
-    const saltAjeno = nuevaSal()
-    const claveAjena = await derivarClave('contrasena-vieja', saltAjeno, ITERACIONES_PBKDF2)
-    const bloqueAjeno = await cifrarTexto(claveAjena, saltAjeno, ITERACIONES_PBKDF2, JSON.stringify(datos))
+    await sembrarVerificador('maestra')
+    const bloqueAjeno = await bloqueConContrasena('contrasena-vieja', JSON.stringify(datos))
     await guardarCredencial('Credencial vieja', bloqueAjeno)
-    bloquear()
 
     expect(await desbloquear('maestra')).toBeNull()
     expect(await descifrarCredencial(bloqueAjeno)).toBeNull()
-
-    const router = (await db.credenciales.toArray()).find((c) => c.titulo === 'Router principal')
-    expect(await descifrarCredencial(router!.datosCifrados)).toEqual(datos)
   })
 
   it('ignora bloques con formato invalido al desbloquear', async () => {
+    await sembrarVerificador('maestra')
     await guardarCredencial('Corrupta', 'esto-no-es-un-bloque-cifrado')
 
     expect(await desbloquear('maestra')).toBeNull()
     expect(bovedaDesbloqueada()).toBe(true)
     expect(await descifrarCredencial('esto-no-es-un-bloque-cifrado')).toBeNull()
+  })
+})
+
+describe('estadoInicialBoveda (que formulario ver)', () => {
+  it("con verificador local: 'verificar'", async () => {
+    await sembrarVerificador('maestra')
+    expect(await estadoInicialBoveda()).toBe('verificar')
+  })
+
+  it("con credenciales locales sin verificador: 'verificar' (migracion)", async () => {
+    await guardarCredencial('Router', await bloqueConContrasena('maestra', JSON.stringify(datos)))
+    expect(await estadoInicialBoveda()).toBe('verificar')
+  })
+
+  it("sin nada local y sin respuesta del servidor: 'sin-confirmar'", async () => {
+    expect(await estadoInicialBoveda()).toBe('sin-confirmar')
+  })
+
+  it("sin nada local y servidor con verificador: lo guarda y devuelve 'verificar'", async () => {
+    const verificador = await bloqueConContrasena('maestra', TEXTO_VERIFICADOR)
+    consultarMock.mockResolvedValue({ tipo: 'ok', verificador, hayCredenciales: true })
+
+    expect(await estadoInicialBoveda()).toBe('verificar')
+    expect((await db.bovedaMeta.get(ID_VERIFICADOR))?.verificador).toBe(verificador)
+  })
+
+  it("sin nada local y servidor vacio confirmado: 'crear'", async () => {
+    consultarMock.mockResolvedValue({ tipo: 'ok', verificador: null, hayCredenciales: false })
+    expect(await estadoInicialBoveda()).toBe('crear')
+  })
+
+  it("servidor sin verificador pero con credenciales: 'sin-confirmar' (esperar sincronizacion)", async () => {
+    consultarMock.mockResolvedValue({ tipo: 'ok', verificador: null, hayCredenciales: true })
+    expect(await estadoInicialBoveda()).toBe('sin-confirmar')
   })
 })

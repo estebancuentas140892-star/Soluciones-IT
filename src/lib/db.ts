@@ -139,6 +139,21 @@ export interface Credencial {
   eliminadoEn: string | null
 }
 
+// Id de la unica fila del verificador de la contrasena maestra.
+export const ID_VERIFICADOR = 'principal'
+
+// Copia local del verificador de la contrasena maestra (tabla
+// boveda_meta en Supabase): un texto fijo cifrado con la clave
+// maestra. Permite comprobar la contrasena en cualquier dispositivo
+// sin que la contrasena viaje ni se guarde jamas. Mientras exista
+// (aqui o en el servidor), la app nunca ofrece crear una contrasena
+// maestra nueva: borrar cache o cambiar de telefono no la resetea.
+export interface BovedaMeta {
+  id: string
+  verificador: string
+  updatedAt: string
+}
+
 export type TipoEntidadHistorial = 'categoria' | 'articulo' | 'dispositivo' | 'credencial'
 
 export interface HistorialEntrada {
@@ -229,6 +244,7 @@ class SolucionesItDatabase extends Dexie {
   dispositivos!: EntityTable<Dispositivo, 'id'>
   conexiones!: EntityTable<Conexion, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
+  bovedaMeta!: EntityTable<BovedaMeta, 'id'>
   historial!: EntityTable<HistorialEntrada, 'id'>
   adjuntos!: EntityTable<Adjunto, 'id'>
   cambiosPendientes!: EntityTable<CambioPendiente, 'id'>
@@ -268,6 +284,10 @@ class SolucionesItDatabase extends Dexie {
 
     this.version(5).stores({
       conexiones: 'id, origenId, destinoId, updatedAt',
+    })
+
+    this.version(6).stores({
+      bovedaMeta: 'id',
     })
   }
 }

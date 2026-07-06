@@ -111,6 +111,22 @@ create table if not exists public.credenciales (
   eliminado_en timestamptz
 );
 
+-- Verificador de la contrasena maestra de la boveda. Guarda UN solo
+-- registro: un texto fijo cifrado con la clave derivada de la
+-- contrasena maestra (AES-256-GCM). La contrasena en si nunca llega
+-- al servidor; el verificador solo permite comprobar, en cualquier
+-- dispositivo, si la contrasena escrita es la correcta. Mientras esta
+-- fila exista, la app jamas ofrece crear una contrasena maestra nueva
+-- (borrar cache, cambiar de telefono o vaciar las credenciales no la
+-- resetean). Restablecerla exige borrar esta fila desde este panel:
+-- ver supabase/INSTRUCCIONES.md.
+create table if not exists public.boveda_meta (
+  id text primary key check (id = 'principal'),
+  verificador text not null,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id)
+);
+
 -- Historial inmutable: solo se insertan filas, nunca se editan ni
 -- se borran. Para credenciales, valor_anterior y valor_nuevo llegan
 -- cifrados desde la app. fecha_hora es el momento real del cambio
@@ -208,6 +224,11 @@ create trigger trg_credenciales_modificacion
   before insert or update on public.credenciales
   for each row execute function public.registrar_modificacion();
 
+drop trigger if exists trg_boveda_meta_modificacion on public.boveda_meta;
+create trigger trg_boveda_meta_modificacion
+  before insert or update on public.boveda_meta
+  for each row execute function public.registrar_modificacion();
+
 drop trigger if exists trg_adjuntos_modificacion on public.adjuntos;
 create trigger trg_adjuntos_modificacion
   before insert or update on public.adjuntos
@@ -260,6 +281,7 @@ alter table public.articulos enable row level security;
 alter table public.dispositivos enable row level security;
 alter table public.conexiones enable row level security;
 alter table public.credenciales enable row level security;
+alter table public.boveda_meta enable row level security;
 alter table public.historial enable row level security;
 alter table public.adjuntos enable row level security;
 
@@ -299,6 +321,20 @@ create policy credenciales_acceso on public.credenciales
   for all to authenticated
   using (public.puede_ver_boveda())
   with check (public.puede_ver_boveda());
+
+-- Verificador de la contrasena maestra: se puede leer y crear UNA
+-- sola vez (la clave primaria fija impide una segunda fila), siempre
+-- con permiso de boveda. A proposito NO hay politicas de UPDATE ni
+-- DELETE: desde la app nadie puede reemplazarlo ni borrarlo, asi que
+-- restablecer la contrasena maestra exige entrar a este panel con la
+-- cuenta de administrador (validacion de identidad real).
+drop policy if exists boveda_meta_lectura on public.boveda_meta;
+create policy boveda_meta_lectura on public.boveda_meta
+  for select to authenticated using (public.puede_ver_boveda());
+
+drop policy if exists boveda_meta_creacion on public.boveda_meta;
+create policy boveda_meta_creacion on public.boveda_meta
+  for insert to authenticated with check (public.puede_ver_boveda());
 
 -- Historial: se puede leer y agregar, nunca editar ni borrar.
 -- Las entradas de credenciales solo las ven los usuarios con

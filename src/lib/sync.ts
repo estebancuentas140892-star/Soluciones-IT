@@ -138,6 +138,7 @@ async function ejecutarSync(): Promise<void> {
     for (const tabla of TABLAS_SINCRONIZADAS) {
       await descargarTabla(tabla)
     }
+    await descargarBovedaMeta()
     actualizarEstado({ ultimaSync: new Date().toISOString() })
   } catch (err) {
     actualizarEstado({ ultimoError: err instanceof Error ? err.message : String(err) })
@@ -254,6 +255,31 @@ export async function aplicarFilasRemotas(
       await store.put(entidad)
     }
   })
+}
+
+// Copia local del verificador de la contrasena maestra. Best effort a
+// proposito: la tabla puede no existir todavia en el servidor
+// (esquema sin aplicar) o el usuario puede no tener permiso de boveda
+// (RLS devuelve vacio); nada de eso debe frenar la sincronizacion.
+// Nunca se borra la copia local: el verificador solo se reemplaza por
+// lo que diga el servidor.
+async function descargarBovedaMeta(): Promise<void> {
+  if (!supabase) return
+  try {
+    const { data, error } = await supabase.from('boveda_meta').select('*')
+    if (error || !data) return
+    for (const fila of data) {
+      const verificador = typeof fila.verificador === 'string' ? fila.verificador : ''
+      if (!verificador) continue
+      await db.bovedaMeta.put({
+        id: String(fila.id),
+        verificador,
+        updatedAt: String(fila.updated_at ?? new Date().toISOString()),
+      })
+    }
+  } catch {
+    // Sin conexion o esquema sin aplicar: se reintenta en la proxima.
+  }
 }
 
 async function descargarPerfiles(): Promise<void> {
