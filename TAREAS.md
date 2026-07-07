@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. Las tareas 28, 36 y 37 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase (y, en la 37, que el equipo cure el contenido). Ver cada tarea en el archivo.)
+(Vacío. Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase (y, en la 37, que el equipo cure el contenido). Ver cada tarea en el archivo.)
 
 ## Por hacer
 
@@ -38,12 +38,6 @@ Propuestas presentadas al usuario el 2026-07-03, pendientes de que elija cuáles
 - Avance: despliegue en Vercel OPERATIVO EN PARTE. El usuario montó el proyecto en Vercel (https://soluciones-it-psi.vercel.app, desplegado desde GitHub). Se detectó y corrigió: (1) GitHub estaba 6 commits atrás del repo local, por eso producción tenía un build viejo; ya se subió todo. (2) Las rutas internas daban 404 al abrirlas directo; se agregó `vercel.json` con la reescritura SPA a `index.html`. (3) Verificado por HTTP: el esquema de Supabase SÍ está aplicado (la tabla `categorias` responde y RLS oculta filas a usuarios sin sesión). (4) El usuario agregó `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Settings > Environment Variables, pestaña "Project" (confirmado en pantalla que quedaron guardadas), pero el botón "Redeploy" del panel de Vercel dio "Unexpected error (500)" de forma repetida y no llegó a crear un despliegue nuevo (verificado: la lista de Deployments no muestra un intento adicional, y el build en producción seguía sin la URL de Supabase). Se disparó un despliegue nuevo por la vía de Git (commit a `main`) como alternativa al botón del panel, que sí dispara el build automático de Vercel con las variables ya guardadas.
 - Avance: despliegue por Git VERIFICADO. El build de producción ya incluye la URL de Supabase; probado en navegador real contra el dominio: redirige a /login, sin aviso de "no conectado", y un intento de login llegó hasta Supabase y devolvió el error esperado en español. Producción conectada de punta a punta.
 - Bloqueada por (usuario): (1) confirmar que los 5 usuarios del equipo estén creados en Supabase Authentication; (2) pruebas en los teléfonos reales del equipo con la guía de INSTALACION.md, que ya incluye la dirección real.
-
-### 38. Enriquecer "Problemas frecuentes" (base de incidencias)
-- Descripción: convertir el tipo de artículo `problema_frecuente` (ya existente) en una verdadera base de incidencias con estructura fija: síntomas, posibles causas, solución (el procedimiento actual) y vínculo a los dispositivos afectados. Hoy toda esa información va suelta en el Markdown. Cubre la idea #1 del análisis del 2026-07-07 y sienta la base para la tarea 39.
-- Prioridad: Media
-- Ubicación (probable, ajustar al diseñar): tipo ya definido en `src/features/soluciones/tiposArticulo.ts`; ampliar el modelo `articulos` en `src/lib/db.ts` (campos síntomas/causas y relación con dispositivos afectados) y su mapeo remoto en `src/lib/tablas.ts` y `supabase/schema.sql`; formulario en `src/features/soluciones/ArticuloForm.tsx`; vista en `src/features/soluciones/ArticuloPage.tsx`. Reutilizar el patrón de "vínculo por id + copia del nombre" ya usado en pasos y conexiones para los dispositivos afectados.
-- Nota: diseño pendiente. Solo aplica al tipo `problema_frecuente`, no a los demás tipos de artículo.
 
 ### 39. Dependencias por equipo (información conectada)
 - Descripción: al abrir un dispositivo puntual, ver conectado todo lo suyo: procedimientos, credenciales autorizadas, ubicación, dispositivos conectados, historial y problemas frecuentes de ese equipo (no solo de su categoría). Para red ya existe gran parte (conexiones + topología); lo nuevo es vincular un equipo concreto a procedimientos, credenciales y problemas frecuentes específicos. La más ambiciosa; conviene hacerla por fases y apoyada en las tareas 36 y 38. Cubre la idea #7 del análisis del 2026-07-07.

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { db, type Dispositivo } from './db'
+import { db, type Articulo, type Dispositivo } from './db'
 import { eliminarRegistro, guardarRegistro, nuevoId, registrarIntervencion } from './repositorio'
 
 function dispositivoDePrueba(id: string): Omit<Dispositivo, 'updatedAt' | 'updatedBy' | 'eliminadoEn'> {
@@ -16,6 +16,22 @@ function dispositivoDePrueba(id: string): Omit<Dispositivo, 'updatedAt' | 'updat
     estado: 'Operativa',
     observaciones: '',
     detalles: { puerto: '12', switch: 'SW-Bodega' },
+  }
+}
+
+function articuloDePrueba(id: string): Omit<Articulo, 'updatedAt' | 'updatedBy' | 'eliminadoEn'> {
+  return {
+    id,
+    categoriaId: nuevoId(),
+    titulo: 'La impresora no imprime',
+    tipo: 'problema_frecuente',
+    contenido: '',
+    etiquetas: [],
+    procedimiento: null,
+    sintomas: [],
+    causas: [],
+    dispositivosAfectados: [],
+    esRutaInicio: false,
   }
 }
 
@@ -167,6 +183,45 @@ describe('registrarIntervencion', () => {
   it('no exige un dispositivo previamente guardado', async () => {
     const dispositivoId = nuevoId()
     await expect(registrarIntervencion(dispositivoId, 'Configuración de nuevo usuario')).resolves.toBeTruthy()
+  })
+})
+
+describe('campo dispositivosAfectados (lista de objetos)', () => {
+  it('detecta el cambio aunque la lista tenga la misma cantidad de elementos', async () => {
+    // Antes de la corrección, un array de objetos se comparaba con
+    // Array.prototype.join, que vuelve cualquier objeto el texto fijo
+    // "[object Object]": cambiar de dispositivo sin cambiar la
+    // cantidad de vínculos no generaba ninguna entrada de historial.
+    const id = nuevoId()
+    const original = articuloDePrueba(id)
+    await guardarRegistro('articulos', {
+      ...original,
+      dispositivosAfectados: [{ id: 'd1', nombre: 'Impresora recepción' }],
+    })
+
+    await guardarRegistro('articulos', {
+      ...original,
+      dispositivosAfectados: [{ id: 'd2', nombre: 'Impresora bodega' }],
+    })
+
+    const cambio = (await db.historial.toArray()).find((c) => c.campo === 'dispositivosAfectados')
+    expect(cambio).toBeDefined()
+    expect(cambio?.valorAnterior).toBe('Impresora recepción')
+    expect(cambio?.valorNuevo).toBe('Impresora bodega')
+  })
+
+  it('no registra nada si la lista de dispositivos afectados no cambió', async () => {
+    const id = nuevoId()
+    const original = {
+      ...articuloDePrueba(id),
+      dispositivosAfectados: [{ id: 'd1', nombre: 'Impresora recepción' }],
+    }
+    await guardarRegistro('articulos', original)
+    const historialAntes = await db.historial.count()
+
+    await guardarRegistro('articulos', original)
+
+    expect(await db.historial.count()).toBe(historialAntes)
   })
 })
 

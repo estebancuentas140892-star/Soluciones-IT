@@ -53,6 +53,9 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           articulo.titulo,
           articulo.contenido,
           textoDeProcedimiento(normalizarProcedimiento(articulo.procedimiento)),
+          ...(articulo.sintomas ?? []),
+          ...(articulo.causas ?? []),
+          ...(articulo.dispositivosAfectados ?? []).map((d) => d.nombre),
         ].join(' '),
       })
     }

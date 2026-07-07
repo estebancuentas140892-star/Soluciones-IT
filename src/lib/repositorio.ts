@@ -280,7 +280,13 @@ function entradasEliminacion(
 
 function valorComparable(valor: unknown): string {
   if (valor === null || valor === undefined) return ''
-  if (Array.isArray(valor)) return valor.join(', ')
+  // Un array de objetos (por ejemplo dispositivosAfectados) no puede
+  // unirse con join: todo objeto se vuelve el texto "[object Object]"
+  // sin importar su contenido, así que dos listas distintas
+  // parecerían iguales y el cambio no quedaría registrado.
+  if (Array.isArray(valor)) {
+    return valor.map((v) => (v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v))).join(', ')
+  }
   if (typeof valor === 'object') return JSON.stringify(valor)
   return String(valor)
 }
@@ -289,7 +295,21 @@ function formatearValor(campo: string, valor: unknown): string {
   // Las credenciales viajan y se guardan cifradas; en el historial
   // no tiene sentido mostrar el bloque cifrado completo.
   if (campo === 'datosCifrados') return valor ? '(cifrado)' : ''
+  // Los nombres de los dispositivos afectados (no el JSON con sus
+  // id) son lo legible para un humano en el historial.
+  if (campo === 'dispositivosAfectados') return nombresDispositivosAfectados(valor)
   return valorComparable(valor)
+}
+
+function nombresDispositivosAfectados(valor: unknown): string {
+  if (!Array.isArray(valor)) return ''
+  return valor
+    .map((v) => {
+      const nombre = (v as { nombre?: unknown } | null)?.nombre
+      return typeof nombre === 'string' ? nombre : ''
+    })
+    .filter(Boolean)
+    .join(', ')
 }
 
 function resumenDe(entidad: unknown): string {

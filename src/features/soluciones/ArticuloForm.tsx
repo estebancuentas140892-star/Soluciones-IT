@@ -1,7 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { db, type PasoProcedimiento, type TipoArticulo } from '../../lib/db'
+import {
+  db,
+  type Dispositivo,
+  type DispositivoAfectado,
+  type PasoProcedimiento,
+  type TipoArticulo,
+} from '../../lib/db'
 import { normalizarProcedimiento, prepararProcedimientoParaGuardar } from '../../lib/procedimiento'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { BotonVolver } from '../../components/BotonVolver'
@@ -32,10 +38,22 @@ export function ArticuloForm() {
   const [etiquetas, setEtiquetas] = useState('')
   const [requisitos, setRequisitos] = useState('')
   const [pasos, setPasos] = useState<PasoProcedimiento[]>([])
+  // Estructura de una incidencia (solo se muestra con tipo
+  // 'problema_frecuente'). El `?? []` defiende contra una base que
+  // aun no tiene estas columnas (schema.sql pendiente de aplicar).
+  const [sintomas, setSintomas] = useState('')
+  const [causas, setCausas] = useState('')
+  const [dispositivosAfectados, setDispositivosAfectados] = useState<DispositivoAfectado[]>([])
   const [esRutaInicio, setEsRutaInicio] = useState(false)
   const [motivo, setMotivo] = useState('')
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
   const [guardando, setGuardando] = useState(false)
+
+  const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
+  const dispositivosOrdenados = useMemo(
+    () => [...dispositivos].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    [dispositivos],
+  )
 
   useEffect(() => {
     if (!articulo || cargadoInicial) return
@@ -46,6 +64,9 @@ export function ArticuloForm() {
     const procedimiento = normalizarProcedimiento(articulo.procedimiento)
     setRequisitos(procedimiento?.requisitos.join('\n') ?? '')
     setPasos(procedimiento?.pasos ?? [])
+    setSintomas((articulo.sintomas ?? []).join('\n'))
+    setCausas((articulo.causas ?? []).join('\n'))
+    setDispositivosAfectados(articulo.dispositivosAfectados ?? [])
     setEsRutaInicio(articulo.esRutaInicio)
     setCargadoInicial(true)
   }, [articulo, cargadoInicial])
@@ -69,6 +90,15 @@ export function ArticuloForm() {
           .map((e) => e.trim())
           .filter(Boolean),
         procedimiento: prepararProcedimientoParaGuardar(requisitos, pasos),
+        sintomas: sintomas
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        causas: causas
+          .split('\n')
+          .map((c) => c.trim())
+          .filter(Boolean),
+        dispositivosAfectados,
         esRutaInicio,
       },
       motivo.trim(),
@@ -132,6 +162,46 @@ export function ArticuloForm() {
           </span>
         </label>
 
+        {tipo === 'problema_frecuente' && (
+          <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Síntomas (uno por línea)
+              <textarea
+                rows={3}
+                value={sintomas}
+                onChange={(e) => setSintomas(e.target.value)}
+                placeholder={'No imprime nada\nLuz roja parpadeando\nAtasco de papel frecuente'}
+                className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Posibles causas (una por línea)
+              <textarea
+                rows={3}
+                value={causas}
+                onChange={(e) => setCausas(e.target.value)}
+                placeholder={'Cable de red suelto\nTóner agotado\nSpooler de impresión caído'}
+                className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </label>
+
+            <DispositivosAfectadosEditor
+              vinculados={dispositivosAfectados}
+              dispositivos={dispositivosOrdenados}
+              onVincular={(dispositivo) =>
+                setDispositivosAfectados((actuales) => [
+                  ...actuales,
+                  { id: dispositivo.id, nombre: dispositivo.nombre },
+                ])
+              }
+              onQuitar={(id) =>
+                setDispositivosAfectados((actuales) => actuales.filter((d) => d.id !== id))
+              }
+            />
+          </div>
+        )}
+
         <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
@@ -166,6 +236,70 @@ export function ArticuloForm() {
           {guardando ? 'Guardando...' : 'Guardar'}
         </button>
       </form>
+    </div>
+  )
+}
+
+// Vinculo de una incidencia con los dispositivos que la sufren: mismo
+// patron que CredencialSelector en PasosEditor.tsx (id real mas copia
+// del nombre), pero con varios elementos en vez de uno solo.
+function DispositivosAfectadosEditor({
+  vinculados,
+  dispositivos,
+  onVincular,
+  onQuitar,
+}: {
+  vinculados: DispositivoAfectado[]
+  dispositivos: Dispositivo[]
+  onVincular: (dispositivo: Dispositivo) => void
+  onQuitar: (id: string) => void
+}) {
+  const disponibles = dispositivos.filter((d) => !vinculados.some((v) => v.id === d.id))
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm text-slate-300">Dispositivos afectados</span>
+
+      {vinculados.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {vinculados.map((vinculo) => (
+            <li
+              key={vinculo.id}
+              className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-200"
+            >
+              {vinculo.nombre}
+              <button
+                type="button"
+                onClick={() => onQuitar(vinculo.id)}
+                aria-label={`Quitar ${vinculo.nombre} de dispositivos afectados`}
+                className="text-slate-400"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {disponibles.length > 0 && (
+        <select
+          value=""
+          aria-label="Agregar dispositivo afectado"
+          onChange={(e) => {
+            const dispositivo = disponibles.find((d) => d.id === e.target.value)
+            if (dispositivo) onVincular(dispositivo)
+          }}
+          className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        >
+          <option value="">+ Agregar dispositivo afectado (opcional)</option>
+          {disponibles.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.nombre}
+              {d.ubicacion ? ` (${d.ubicacion})` : ''}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   )
 }

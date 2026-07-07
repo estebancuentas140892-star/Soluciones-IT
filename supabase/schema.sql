@@ -50,6 +50,13 @@ create table if not exists public.articulos (
   etiquetas text[] not null default '{}',
   procedimiento jsonb,
   es_ruta_inicio boolean not null default false,
+  -- Estructura de una incidencia (tarea 38): solo tiene sentido con
+  -- tipo 'problema_frecuente'. dispositivos_afectados guarda
+  -- {id, nombre} por dispositivo (mismo patron de copia de referencia
+  -- que origen_nombre/destino_nombre en conexiones).
+  sintomas text[] not null default '{}',
+  causas text[] not null default '{}',
+  dispositivos_afectados jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
@@ -61,6 +68,10 @@ alter table public.articulos add column if not exists procedimiento jsonb;
 -- recien llega al equipo (tarea 37). El equipo lo marca a mano desde
 -- el editor; no crea una seccion nueva.
 alter table public.articulos add column if not exists es_ruta_inicio boolean not null default false;
+-- Estructura de una incidencia (tarea 38).
+alter table public.articulos add column if not exists sintomas text[] not null default '{}';
+alter table public.articulos add column if not exists causas text[] not null default '{}';
+alter table public.articulos add column if not exists dispositivos_afectados jsonb not null default '[]'::jsonb;
 
 create table if not exists public.dispositivos (
   id uuid primary key default gen_random_uuid(),

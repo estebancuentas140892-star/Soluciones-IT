@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { db } from '../../lib/db'
+import { db, type Articulo } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
@@ -84,6 +84,8 @@ export function ArticuloPage() {
         onConfirmar={eliminar}
       />
 
+      {articulo.tipo === 'problema_frecuente' && <IncidenciaResumen articulo={articulo} />}
+
       {procedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
 
       {articulo.contenido.trim() !== '' && (
@@ -99,6 +101,66 @@ export function ArticuloPage() {
       {!procedimiento && <Adjuntos entidadTipo="articulo" entidadId={articuloId} />}
 
       <Historial entidadTipo="articulo" entidadId={articuloId} />
+    </div>
+  )
+}
+
+// Estructura de una incidencia: sintomas, posibles causas y los
+// dispositivos que la sufren. La solucion en si es el procedimiento
+// del articulo (ProcedimientoVista), que se muestra aparte. `?? []`
+// defiende contra una base que aun no tiene estas columnas.
+function IncidenciaResumen({ articulo }: { articulo: Articulo }) {
+  const sintomas = articulo.sintomas ?? []
+  const causas = articulo.causas ?? []
+  const dispositivosAfectados = articulo.dispositivosAfectados ?? []
+
+  if (sintomas.length === 0 && causas.length === 0 && dispositivosAfectados.length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
+      {sintomas.length > 0 && (
+        <div>
+          <h2 className="mb-1 text-sm font-medium text-slate-400">Síntomas</h2>
+          <ul className="flex flex-col gap-1">
+            {sintomas.map((sintoma, indice) => (
+              <li key={indice} className="text-sm text-slate-200">
+                • {sintoma}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {causas.length > 0 && (
+        <div>
+          <h2 className="mb-1 text-sm font-medium text-slate-400">Posibles causas</h2>
+          <ul className="flex flex-col gap-1">
+            {causas.map((causa, indice) => (
+              <li key={indice} className="text-sm text-slate-200">
+                • {causa}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {dispositivosAfectados.length > 0 && (
+        <div>
+          <h2 className="mb-1 text-sm font-medium text-slate-400">Dispositivos afectados</h2>
+          <ul className="flex flex-wrap gap-2">
+            {dispositivosAfectados.map((dispositivo) => (
+              <li key={dispositivo.id}>
+                <Link
+                  to={`/dispositivos/${dispositivo.id}`}
+                  className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-sky-400"
+                >
+                  {dispositivo.nombre}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

@@ -100,6 +100,9 @@ describe('aplicarFilasRemotas', () => {
       contenido: '',
       etiquetas: [],
       procedimiento: null,
+      sintomas: [],
+      causas: [],
+      dispositivosAfectados: [],
       esRutaInicio: false,
     })
 

@@ -81,6 +81,16 @@ export interface Procedimiento {
   pasos: PasoProcedimiento[]
 }
 
+// Vinculo de un articulo de tipo 'problema_frecuente' con un
+// dispositivo que sufre ese problema. Mismo patron que los vinculos
+// de los pasos (credencialId/credencialTitulo, subArticuloId/Titulo):
+// id real mas una copia del nombre para poder mostrarlo aunque la
+// ficha del dispositivo aun no haya sincronizado.
+export interface DispositivoAfectado {
+  id: string
+  nombre: string
+}
+
 export interface Articulo {
   id: string
   categoriaId: string
@@ -89,6 +99,15 @@ export interface Articulo {
   contenido: string
   etiquetas: string[]
   procedimiento: Procedimiento | null
+  // Estructura de una incidencia (solo tiene sentido con tipo
+  // 'problema_frecuente', pero cualquier articulo puede tener datos
+  // aqui sin que rompa nada): sintomas y posibles causas como listas
+  // cortas de texto libre, y los dispositivos que sufren el problema.
+  // La solucion en si sigue siendo el procedimiento del articulo (no
+  // se duplica).
+  sintomas: string[]
+  causas: string[]
+  dispositivosAfectados: DispositivoAfectado[]
   // Lo destaca en Inicio como puerta de entrada para quien recien
   // llega al equipo ("ruta de inicio"). No crea una seccion nueva: es
   // un articulo normal (tipicamente con procedimiento y
