@@ -96,6 +96,8 @@ Además:
 - Cada creación, edición o eliminación registra automáticamente: usuario, fecha y hora, entidad afectada, campo modificado, valor anterior, valor nuevo y motivo (campo opcional al guardar).
 - Visible en cada ficha con "Ver historial" y sincronizado entre todo el equipo.
 - Los cambios hechos offline también generan su registro y se suben al reconectar.
+- Los cambios de procedimiento no se muestran como JSON: la vista compara la versión anterior con la nueva y genera un resumen en lenguaje natural (qué paso cambió y cómo: pasos agregados, eliminados o reordenados; título, instrucciones, imagen, credencial, subprocedimiento o solución de un paso; requisitos previos), con un contexto breve del estado anterior ("Antes: N pasos, M instrucciones"). El registro guarda igualmente el JSON completo (para no perder detalle ni exigir migración): la vista lo deja plegado en "Detalle técnico" para depuración, pero el historial diario queda limpio y legible. La comparación es lógica pura y probada (`src/features/historial/resumenProcedimiento.ts`), separada del componente (`Historial.tsx`).
+- Mismo tratamiento para los "Campos adicionales" (`detalles`) de un dispositivo: la vista compara el objeto clave/valor de antes y de después y describe qué campo se agregó, se quitó o cambió (`src/features/historial/resumenDetalles.ts`), con el JSON también disponible en "Detalle técnico".
 
 ## 10. Limitaciones y riesgos conocidos
 

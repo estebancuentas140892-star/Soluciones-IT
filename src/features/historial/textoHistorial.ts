@@ -20,6 +20,7 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
   observaciones: 'Observaciones',
   detalles: 'Campos adicionales',
   datosCifrados: 'Datos protegidos',
+  procedimiento: 'Procedimiento',
 }
 
 export function etiquetaDeCampo(campo: string): string {
@@ -34,6 +35,11 @@ export function descripcionEntrada(entrada: EntradaDescriptible): string {
   if (entrada.campo === 'creacion') return `Se creó: ${entrada.valorNuevo}`
   if (entrada.campo === 'eliminacion') return `Se eliminó: ${entrada.valorAnterior}`
   if (entrada.campo === 'adjunto') return `Se agregó el adjunto: ${entrada.valorNuevo}`
+  // El procedimiento y los campos adicionales tienen su propia vista de
+  // resumen (ver Historial.tsx); estos textos son solo un respaldo para
+  // no volcar nunca el JSON crudo.
+  if (entrada.campo === 'procedimiento') return 'Se actualizó el procedimiento'
+  if (entrada.campo === 'detalles') return 'Se actualizaron los campos adicionales'
   if (entrada.campo === 'conexion') {
     if (!entrada.valorNuevo) return `Se quitó la conexión: ${entrada.valorAnterior}`
     return `Se agregó la conexión: ${entrada.valorNuevo}`
