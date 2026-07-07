@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { CampoContrasena } from '../../components/CampoContrasena'
 import { useAuth } from '../autenticacion/authContext'
 import { CampoSecreto } from './CampoSecreto'
 import { desbloquear, descifrarCredencial, type DatosCredencial } from './sesionBoveda'
@@ -113,13 +114,11 @@ function FormularioDesbloqueo() {
         Los datos están cifrados. Ingresa la contraseña maestra para verlos aquí.
       </p>
       <div className="flex gap-2">
-        <input
-          type="password"
+        <CampoContrasena
           required
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
           placeholder="Contraseña maestra"
-          autoComplete="off"
           className="min-w-0 flex-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
         />
         <button

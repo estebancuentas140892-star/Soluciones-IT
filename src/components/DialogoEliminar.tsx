@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../features/autenticacion/authContext'
 import { estadoInicialBoveda, verificarContrasenaMaestra } from '../features/boveda/sesionBoveda'
+import { CampoContrasena } from './CampoContrasena'
 import { Modal } from './Modal'
 
 interface Props {
@@ -119,11 +120,9 @@ export function DialogoEliminar({
             <label htmlFor="contrasena-eliminar" className="text-xs text-slate-400">
               Para continuar, ingresa la contraseña maestra.
             </label>
-            <input
+            <CampoContrasena
               id="contrasena-eliminar"
-              type="password"
               autoFocus
-              autoComplete="off"
               value={contrasena}
               onChange={(e) => setContrasena(e.target.value)}
               placeholder="Contraseña maestra"

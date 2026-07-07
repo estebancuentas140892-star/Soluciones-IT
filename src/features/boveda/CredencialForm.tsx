@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
+import { CampoContrasena } from '../../components/CampoContrasena'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { cifrarCredencial, descifrarCredencial } from './sesionBoveda'
@@ -171,11 +172,10 @@ export function CredencialForm() {
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           Contraseña
           <div className="flex gap-2">
-            <input
-              type={verContrasena ? 'text' : 'password'}
+            <CampoContrasena
+              revelado={verContrasena}
               value={contrasena}
               onChange={(e) => setContrasena(e.target.value)}
-              autoComplete="off"
               className={`flex-1 ${claseCampo}`}
             />
             <button

@@ -12,6 +12,16 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Campos de secreto (contraseña de login, contraseña maestra,
+   contraseña de una credencial, bloqueo de la app): se escriben en un
+   input type="text" enmascarado con esto, en vez de type="password".
+   Asi el gestor de contraseñas del sistema operativo NO los reconoce
+   como campos de login y no ofrece guardarlos ni autocompletarlos (la
+   fuga principal en movil). Ver src/components/CampoContrasena.tsx. */
+.enmascarado {
+  -webkit-text-security: disc;
+}
+
 /* Impresion (pagina de etiquetas QR): hoja blanca con margenes
    razonables. Lo demas lo resuelven las utilidades print: de
    Tailwind en la propia pagina. */

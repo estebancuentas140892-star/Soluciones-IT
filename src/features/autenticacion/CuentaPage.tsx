@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
+import { CampoContrasena } from '../../components/CampoContrasena'
 import { useAuth } from './authContext'
 import { validarCambioContrasena } from './erroresAuth'
 
@@ -75,10 +76,8 @@ export function CuentaPage() {
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           Contraseña actual
-          <input
-            type="password"
+          <CampoContrasena
             required
-            autoComplete="off"
             value={actual}
             onChange={(e) => setActual(e.target.value)}
             className={CLASE_INPUT}
@@ -87,10 +86,8 @@ export function CuentaPage() {
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           Nueva contraseña
-          <input
-            type="password"
+          <CampoContrasena
             required
-            autoComplete="off"
             value={nueva}
             onChange={(e) => setNueva(e.target.value)}
             className={CLASE_INPUT}
@@ -99,10 +96,8 @@ export function CuentaPage() {
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           Confirmar la nueva contraseña
-          <input
-            type="password"
+          <CampoContrasena
             required
-            autoComplete="off"
             value={confirmacion}
             onChange={(e) => setConfirmacion(e.target.value)}
             className={CLASE_INPUT}

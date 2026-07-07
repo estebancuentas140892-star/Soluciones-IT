@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Outlet } from 'react-router-dom'
 import { db, ID_BLOQUEO_APP, type MetodoBloqueoApp } from '../../lib/db'
 import { Cargando } from '../../components/Cargando'
+import { CampoContrasena } from '../../components/CampoContrasena'
 import { useAuth } from '../autenticacion/authContext'
 import { desbloquearApp, restablecerBloqueoApp } from './bloqueoApp'
 import { serializarPatron } from './patron'
@@ -81,11 +82,9 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
         </div>
       ) : (
         <form onSubmit={manejarEnvioContrasena} className="flex w-full max-w-xs flex-col gap-3">
-          <input
-            type="password"
+          <CampoContrasena
             required
             autoFocus
-            autoComplete="off"
             value={contrasena}
             onChange={(e) => setContrasena(e.target.value)}
             placeholder="Contraseña de desbloqueo"

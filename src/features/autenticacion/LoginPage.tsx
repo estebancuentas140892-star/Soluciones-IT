@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from './authContext'
 import { supabaseConfigured } from '../../lib/supabase'
+import { CampoContrasena } from '../../components/CampoContrasena'
 
 export function LoginPage() {
   const { iniciarSesion, session, cargando } = useAuth()
@@ -54,10 +55,8 @@ export function LoginPage() {
         </label>
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           Contraseña
-          <input
-            type="password"
+          <CampoContrasena
             required
-            autoComplete="off"
             value={contrasena}
             onChange={(evento) => setContrasena(evento.target.value)}
             className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"

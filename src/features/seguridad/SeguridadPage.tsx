@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, type FormEvent } from 'react'
 import { BotonVolver } from '../../components/BotonVolver'
+import { CampoContrasena } from '../../components/CampoContrasena'
 import { db, ID_BLOQUEO_APP, type MetodoBloqueoApp } from '../../lib/db'
 import {
   bloquearApp,
@@ -300,10 +301,8 @@ function EntradaSecreto({
   return (
     <form onSubmit={enviar} className="flex w-full max-w-xs flex-col gap-2 self-center">
       <p className="text-center text-xs text-slate-400">{etiqueta}</p>
-      <input
-        type="password"
+      <CampoContrasena
         required
-        autoComplete="off"
         value={contrasena}
         onChange={(e) => setContrasena(e.target.value)}
         placeholder="Contraseña"

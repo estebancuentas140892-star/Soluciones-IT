@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Outlet } from 'react-router-dom'
 import { db, ID_VERIFICADOR } from '../../lib/db'
+import { CampoContrasena } from '../../components/CampoContrasena'
 import { useAuth } from '../autenticacion/authContext'
 import { desbloquear, estadoInicialBoveda, type EstadoInicialBoveda } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
@@ -121,26 +122,22 @@ function PantallaDesbloqueo() {
 
       {(modo === 'verificar' || modo === 'crear') && (
         <form onSubmit={manejarEnvio} className="flex w-full max-w-xs flex-col gap-3">
-          <input
-            type="password"
+          <CampoContrasena
             required
             autoFocus
             value={contrasena}
             onChange={(e) => setContrasena(e.target.value)}
             placeholder="Contraseña maestra"
-            autoComplete="off"
             className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
 
           {modo === 'crear' && (
             <>
-              <input
-                type="password"
+              <CampoContrasena
                 required
                 value={confirmacion}
                 onChange={(e) => setConfirmacion(e.target.value)}
                 placeholder="Confirma la contraseña"
-                autoComplete="off"
                 className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
               <p className="text-xs text-slate-500">
