@@ -68,12 +68,15 @@ describe('alternarInstruccionHecha', () => {
     expect(fila?.instruccionesHechas).toEqual([])
   })
 
-  it('devuelve true y completa el paso al marcar la última instrucción', async () => {
+  it('devuelve true al marcar la última instrucción, pero NO marca el paso (lo decide la vista)', async () => {
+    // El paso es un contenedor: completar las instrucciones no basta,
+    // aun puede quedar un subprocedimiento o una solución. Por eso aquí
+    // no se agrega a pasosHechos; la señal (true) la usa la vista.
     await alternarInstruccionHecha('articulo-1', 'paso-a', 0, 2)
     const quedaCompleto = await alternarInstruccionHecha('articulo-1', 'paso-a', 1, 2)
 
     expect(quedaCompleto).toBe(true)
-    expect((await db.progresoPasos.get('articulo-1'))?.pasosHechos).toEqual(['paso-a'])
+    expect((await db.progresoPasos.get('articulo-1'))?.pasosHechos).toEqual([])
   })
 
   it('desmarcar una instrucción vuelve pendiente un paso completado', async () => {

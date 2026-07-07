@@ -6,9 +6,12 @@ import { db } from './db'
 // lleva su propio avance y puede retomarlo si lo interrumpen a mitad
 // de un mantenimiento.
 //
-// Consistencia entre niveles: marcar la ultima instruccion completa
-// el paso; desmarcar una instruccion lo vuelve pendiente; marcar o
-// desmarcar el paso entero arrastra todas sus instrucciones.
+// Consistencia entre niveles: completar todas las instrucciones deja
+// el paso LISTO para completarse, pero quien decide marcarlo hecho es
+// la vista (ProcedimientoVista), que tambien exige el subprocedimiento
+// vinculado y la solucion de error del paso; desmarcar una instruccion
+// vuelve el paso pendiente; marcar o desmarcar el paso entero arrastra
+// todas sus instrucciones.
 
 // Clave de una instruccion dentro del avance. Usa el indice porque
 // las instrucciones no tienen id propio (se editan como lineas de
@@ -50,9 +53,14 @@ export async function establecerPasoHecho(
   })
 }
 
-// Alterna una instruccion y mantiene el estado del paso en sintonia.
-// Devuelve true si con este cambio el paso quedo completo (todas sus
-// instrucciones marcadas): la señal para el avance automatico.
+// Alterna una instruccion. Devuelve true si con este cambio TODAS las
+// instrucciones del paso quedaron marcadas: es la señal para que la
+// vista intente completar el paso (que ademas revisara el
+// subprocedimiento y la solucion antes de avanzar). Aqui NO se marca
+// el paso como hecho al completar las instrucciones, para no saltarse
+// el resto del contenido del paso; pero si al desmarcar una
+// instruccion el paso deja de estar completo, se retira de los hechos
+// (desmarcar vuelve el paso pendiente).
 export async function alternarInstruccionHecha(
   articuloId: string,
   pasoId: string,
@@ -73,9 +81,7 @@ export async function alternarInstruccionHecha(
   const completo =
     totalInstrucciones > 0 &&
     clavesDeInstrucciones(pasoId, totalInstrucciones).every((c) => instrucciones.has(c))
-  if (completo) {
-    pasos.add(pasoId)
-  } else {
+  if (!completo) {
     pasos.delete(pasoId)
   }
 

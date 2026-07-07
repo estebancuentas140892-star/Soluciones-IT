@@ -3,6 +3,8 @@ import type { PasoProcedimiento } from './db'
 import {
   crearPaso,
   normalizarProcedimiento,
+  pasoSeCompletaSolo,
+  pasoTrabajoPrevioCompleto,
   prepararProcedimientoParaGuardar,
   siguientePasoPendiente,
   textoDeProcedimiento,
@@ -340,5 +342,35 @@ describe('siguientePasoPendiente', () => {
   it('devuelve null cuando no queda ningún pendiente', () => {
     expect(siguientePasoPendiente(ids, new Set(ids), 1)).toBeNull()
     expect(siguientePasoPendiente([], new Set(), 0)).toBeNull()
+  })
+})
+
+describe('pasoTrabajoPrevioCompleto', () => {
+  it('un paso sin instrucciones y sin subprocedimiento tiene el trabajo previo completo', () => {
+    expect(pasoTrabajoPrevioCompleto(0, 0, true)).toBe(true)
+  })
+
+  it('exige todas las instrucciones marcadas', () => {
+    expect(pasoTrabajoPrevioCompleto(2, 1, true)).toBe(false)
+    expect(pasoTrabajoPrevioCompleto(2, 2, true)).toBe(true)
+  })
+
+  it('exige el subprocedimiento vinculado satisfecho aunque las instrucciones estén listas', () => {
+    expect(pasoTrabajoPrevioCompleto(2, 2, false)).toBe(false)
+    expect(pasoTrabajoPrevioCompleto(0, 0, false)).toBe(false)
+  })
+})
+
+describe('pasoSeCompletaSolo', () => {
+  it('se completa solo cuando el trabajo previo está listo y no hay solución vinculada', () => {
+    expect(pasoSeCompletaSolo(true, false)).toBe(true)
+  })
+
+  it('no se completa solo si el trabajo previo no está listo', () => {
+    expect(pasoSeCompletaSolo(false, false)).toBe(false)
+  })
+
+  it('no se completa solo si hay una solución vinculada (la completa la pregunta de error)', () => {
+    expect(pasoSeCompletaSolo(true, true)).toBe(false)
   })
 })

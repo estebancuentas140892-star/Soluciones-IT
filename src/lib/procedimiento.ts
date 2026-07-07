@@ -173,6 +173,33 @@ export function siguientePasoPendiente(
   return null
 }
 
+// Un paso es un contenedor de tareas, no una sola instruccion. Su
+// "trabajo previo" son las instrucciones propias del paso y su
+// subprocedimiento vinculado: ambos deben terminarse antes de dar el
+// paso por completado. `subProcedimientoSatisfecho` ya viene resuelto
+// por quien llama (es true cuando el paso no tiene subprocedimiento
+// que ejecutar aqui, o cuando el vinculado ya quedo completo).
+export function pasoTrabajoPrevioCompleto(
+  totalInstrucciones: number,
+  instruccionesHechas: number,
+  subProcedimientoSatisfecho: boolean,
+): boolean {
+  const instruccionesOk = totalInstrucciones === 0 || instruccionesHechas >= totalInstrucciones
+  return instruccionesOk && subProcedimientoSatisfecho
+}
+
+// ¿El paso puede completarse y avanzar por si solo? Solo cuando su
+// trabajo previo esta completo y NO tiene una solucion de error
+// vinculada. Si la tiene, el paso no avanza automaticamente: primero
+// aparece la pregunta "¿Ocurrio algun error?" y el paso se completa al
+// responderla (asi no se salta la validacion de errores del paso).
+export function pasoSeCompletaSolo(
+  trabajoPrevioCompleto: boolean,
+  tieneSolucionVinculada: boolean,
+): boolean {
+  return trabajoPrevioCompleto && !tieneSolucionVinculada
+}
+
 // Prepara el procedimiento que se va a guardar: limpia espacios,
 // descarta pasos totalmente vacios y devuelve null si no queda nada.
 // Los requisitos ya no se editan, pero los articulos guardados antes

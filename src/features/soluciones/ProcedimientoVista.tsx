@@ -2,7 +2,12 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type PasoAdjunto, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
-import { normalizarProcedimiento, siguientePasoPendiente } from '../../lib/procedimiento'
+import {
+  normalizarProcedimiento,
+  pasoSeCompletaSolo,
+  pasoTrabajoPrevioCompleto,
+  siguientePasoPendiente,
+} from '../../lib/procedimiento'
 import {
   alternarInstruccionHecha,
   claveInstruccion,
@@ -46,6 +51,55 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
   const completados = contarHechos(progreso?.pasosHechos ?? [], pasos.map((p) => p.id))
   const todoCompletado = pasos.length > 0 && completados === pasos.length
 
+  // Ids de los subprocedimientos vinculados de este nivel: se
+  // consultan en vivo para saber cuales estan completos, porque un
+  // paso no se da por terminado mientras su subprocedimiento siga
+  // pendiente. Solo el nivel 0 los ejecuta inline; mas profundo se
+  // muestran como enlace y no cuentan como trabajo del paso.
+  const subIds = useMemo(
+    () =>
+      nivel === 0
+        ? [...new Set(pasos.map((p) => p.subArticuloId).filter((id): id is string => Boolean(id)))]
+        : [],
+    [pasos, nivel],
+  )
+  const subArticulos = useLiveQuery(() => db.articulos.bulkGet(subIds), [subIds])
+  const subProgresos = useLiveQuery(() => db.progresoPasos.bulkGet(subIds), [subIds])
+
+  // ¿El subprocedimiento vinculado del paso ya no impone trabajo
+  // pendiente? True cuando no hay subprocedimiento que ejecutar aqui
+  // (sin vinculo, nivel profundo, vinculo roto o sin pasos) o cuando el
+  // vinculado quedo completo. Version reactiva (live query) para decidir
+  // que se muestra; mientras cargan los datos devuelve false para no
+  // dar el paso por terminado antes de tiempo.
+  function subSatisfechoReactivo(paso: PasoProcedimiento): boolean {
+    if (!paso.subArticuloId || nivel >= 1) return true
+    if (subArticulos === undefined || subProgresos === undefined) return false
+    const idx = subIds.indexOf(paso.subArticuloId)
+    const articulo = idx >= 0 ? subArticulos[idx] : undefined
+    if (!articulo || articulo.eliminadoEn) return true
+    const proc = normalizarProcedimiento(articulo.procedimiento)
+    if (!proc) return true
+    const prog = idx >= 0 ? subProgresos[idx] : undefined
+    const hechosSub = contarHechos(prog?.pasosHechos ?? [], proc.pasos.map((p) => p.id))
+    return hechosSub === proc.pasos.length
+  }
+
+  // Misma pregunta pero con lecturas frescas de la base, para decidir
+  // el completado sin depender del momento en que refrescan las live
+  // queries (por ejemplo, justo cuando el subprocedimiento termina y
+  // avisa hacia arriba).
+  async function subSatisfechoFresco(paso: PasoProcedimiento): Promise<boolean> {
+    if (!paso.subArticuloId || nivel >= 1) return true
+    const articulo = await db.articulos.get(paso.subArticuloId)
+    if (!articulo || articulo.eliminadoEn) return true
+    const proc = normalizarProcedimiento(articulo.procedimiento)
+    if (!proc) return true
+    const prog = await db.progresoPasos.get(paso.subArticuloId)
+    const hechosSub = contarHechos(prog?.pasosHechos ?? [], proc.pasos.map((p) => p.id))
+    return hechosSub === proc.pasos.length
+  }
+
   // Avance automatico despues de completar el paso del indice dado:
   // se contrae y se expande el siguiente pendiente. Si no queda
   // ninguno, el procedimiento termino y se avisa al padre.
@@ -73,13 +127,54 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
   }
 
   async function alternarInstruccion(indice: number, paso: PasoProcedimiento, i: number) {
-    const completo = await alternarInstruccionHecha(articuloId, paso.id, i, paso.instrucciones.length)
-    if (completo) avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
+    const instruccionesCompletas = await alternarInstruccionHecha(
+      articuloId,
+      paso.id,
+      i,
+      paso.instrucciones.length,
+    )
+    // Completar las instrucciones no avanza por si solo: el paso es un
+    // contenedor y aun puede quedar un subprocedimiento o una pregunta
+    // de error pendientes. intentarCompletarPaso decide.
+    if (instruccionesCompletas) await intentarCompletarPaso(indice, paso)
   }
 
-  // Completa el paso y sigue de largo: lo usan el subprocedimiento
-  // vinculado que termina, la respuesta "No" a la pregunta de error y
-  // la solucion que se completa despues de un error.
+  // Intenta completar el paso tratandolo como un contenedor de tareas:
+  // solo lo marca hecho y avanza cuando su trabajo previo
+  // (instrucciones propias + subprocedimiento vinculado) esta completo
+  // y no tiene una solucion de error vinculada. Si tiene solucion, no
+  // avanza aqui: aparece la pregunta "¿Ocurrio algun error?" y el paso
+  // se completa al responderla. Usa lecturas frescas de la base.
+  async function intentarCompletarPaso(indice: number, paso: PasoProcedimiento) {
+    const progActual = await db.progresoPasos.get(articuloId)
+    const hechosActuales = progActual?.pasosHechos ?? []
+    if (hechosActuales.includes(paso.id)) return
+
+    const instruccionesMarcadas = contarInstruccionesHechas(
+      progActual?.instruccionesHechas,
+      paso.id,
+      paso.instrucciones.length,
+    )
+    const trabajoPrevio = pasoTrabajoPrevioCompleto(
+      paso.instrucciones.length,
+      instruccionesMarcadas,
+      await subSatisfechoFresco(paso),
+    )
+    if (!pasoSeCompletaSolo(trabajoPrevio, Boolean(paso.solucionArticuloId))) return
+
+    await establecerPasoHecho(
+      articuloId,
+      paso.id,
+      true,
+      clavesDeInstrucciones(paso.id, paso.instrucciones.length),
+    )
+    avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]))
+  }
+
+  // Completa el paso y sigue de largo, sin la validacion previa: lo
+  // usan la respuesta "No" a la pregunta de error y la solucion que se
+  // completa despues de un error (la pregunta solo aparece cuando el
+  // trabajo previo del paso ya esta completo).
   async function completarPasoYAvanzar(indice: number, paso: PasoProcedimiento) {
     if (hechos.has(paso.id)) return
     await establecerPasoHecho(
@@ -115,6 +210,12 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
             paso.instrucciones.length,
           )
           const enProgreso = !hecho && marcadas > 0
+          const subSatisfecho = subSatisfechoReactivo(paso)
+          const trabajoPrevio = pasoTrabajoPrevioCompleto(
+            paso.instrucciones.length,
+            marcadas,
+            subSatisfecho,
+          )
           return (
             <li
               key={paso.id}
@@ -220,11 +321,20 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
                       subArticuloId={paso.subArticuloId}
                       tituloReferencia={paso.subArticuloTitulo}
                       nivel={nivel}
-                      onCompletado={() => void completarPasoYAvanzar(indice, paso)}
+                      onCompletado={() => void intentarCompletarPaso(indice, paso)}
                     />
                   )}
 
-                  {paso.solucionArticuloId && !hecho && (
+                  {paso.subArticuloId && nivel === 0 && !hecho && !subSatisfecho && (
+                    <p className="text-xs text-amber-400/80">
+                      Termina el procedimiento vinculado para completar este paso.
+                    </p>
+                  )}
+
+                  {/* La pregunta de error solo aparece cuando el trabajo
+                      previo del paso (instrucciones y subprocedimiento) ya
+                      esta completo: asi el paso no avanza saltandose nada. */}
+                  {paso.solucionArticuloId && !hecho && trabajoPrevio && (
                     <SolucionEnPaso
                       solucionArticuloId={paso.solucionArticuloId}
                       tituloReferencia={paso.solucionArticuloTitulo}
