@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db, type PasoProcedimiento, type TipoArticulo } from '../../lib/db'
 import { normalizarProcedimiento, prepararProcedimientoParaGuardar } from '../../lib/procedimiento'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { BotonVolver } from '../../components/BotonVolver'
 import { PasosEditor } from './PasosEditor'
 import { TIPOS_ARTICULO } from './tiposArticulo'
 
@@ -79,10 +80,10 @@ export function ArticuloForm() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
-      <header>
-        <Link to={esEdicion ? `/soluciones/${categoriaId}/${articuloId}` : `/soluciones/${categoriaId}`} className="text-xs text-slate-400">
-          ← Volver
-        </Link>
+      <header className="flex flex-col gap-2">
+        <BotonVolver to={esEdicion ? `/soluciones/${categoriaId}/${articuloId}` : `/soluciones/${categoriaId}`}>
+          Volver
+        </BotonVolver>
         <h1 className="text-xl font-semibold">{esEdicion ? 'Editar artículo' : 'Nuevo artículo'}</h1>
       </header>
 

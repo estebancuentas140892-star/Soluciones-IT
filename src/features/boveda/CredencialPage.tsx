@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { eliminarRegistro } from '../../lib/repositorio'
+import { BotonVolver } from '../../components/BotonVolver'
+import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { Historial } from '../historial/Historial'
 import { CampoSecreto } from './CampoSecreto'
 import { descifrarCredencial, type DatosCredencial } from './sesionBoveda'
@@ -19,6 +21,7 @@ export function CredencialPage() {
   // undefined: descifrando; null: no se pudo descifrar.
   const [datos, setDatos] = useState<DatosCredencial | null | undefined>(undefined)
   const [verContrasena, setVerContrasena] = useState(false)
+  const [mostrarEliminar, setMostrarEliminar] = useState(false)
 
   useEffect(() => {
     if (!credencial) return
@@ -37,18 +40,16 @@ export function CredencialPage() {
   }
 
   async function eliminar() {
-    if (!window.confirm(`¿Eliminar "${credencial!.titulo}"?`)) return
     await eliminarRegistro('credenciales', credencialId)
     navigate('/notas')
   }
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
+      <BotonVolver to="/notas">Notas</BotonVolver>
+
       <header className="flex items-start justify-between gap-2">
         <div>
-          <Link to="/notas" className="text-xs text-slate-400">
-            ← Notas
-          </Link>
           <h1 className="text-xl font-semibold">{credencial.titulo}</h1>
           {credencial.categoria && <p className="text-xs text-slate-500">{credencial.categoria}</p>}
         </div>
@@ -61,13 +62,22 @@ export function CredencialPage() {
           </Link>
           <button
             type="button"
-            onClick={() => void eliminar()}
+            onClick={() => setMostrarEliminar(true)}
             className="rounded-lg border border-red-900 px-3 py-1.5 text-xs text-red-400"
           >
             Eliminar
           </button>
         </div>
       </header>
+
+      <DialogoEliminar
+        abierto={mostrarEliminar}
+        sensible
+        titulo={`¿Eliminar "${credencial.titulo}"?`}
+        descripcion="Esta acción eliminará esta credencial de la bóveda."
+        onCerrar={() => setMostrarEliminar(false)}
+        onConfirmar={eliminar}
+      />
 
       {datos === null ? (
         <p className="rounded-xl border border-amber-900 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">

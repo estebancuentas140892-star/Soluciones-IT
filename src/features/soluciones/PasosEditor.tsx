@@ -5,6 +5,7 @@ import { db, type Articulo, type Credencial, type PasoAdjunto, type PasoProcedim
 import { crearPaso, normalizarProcedimiento } from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
+import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 
 interface Props {
@@ -26,6 +27,7 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [subiendoPasoId, setSubiendoPasoId] = useState<string | null>(null)
+  const [pasoAEliminar, setPasoAEliminar] = useState<number | null>(null)
 
   // Credenciales de la boveda para vincular a un paso. Solo llegan a
   // este dispositivo las de usuarios con permiso de boveda (RLS); el
@@ -68,9 +70,10 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
     onPasosChange(copia)
   }
 
-  function eliminarPaso(indice: number) {
-    if (!window.confirm(`¿Eliminar el paso ${indice + 1}?`)) return
-    onPasosChange(pasos.filter((_, i) => i !== indice))
+  function confirmarEliminarPaso() {
+    if (pasoAEliminar === null) return
+    onPasosChange(pasos.filter((_, i) => i !== pasoAEliminar))
+    setPasoAEliminar(null)
   }
 
   async function subirAdjuntos(indice: number, evento: ChangeEvent<HTMLInputElement>) {
@@ -148,7 +151,7 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
               >
                 ↓
               </BotonPaso>
-              <BotonPaso etiqueta={`Eliminar el paso ${indice + 1}`} onClick={() => eliminarPaso(indice)}>
+              <BotonPaso etiqueta={`Eliminar el paso ${indice + 1}`} onClick={() => setPasoAEliminar(indice)}>
                 ✕
               </BotonPaso>
             </div>
@@ -235,6 +238,15 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
       >
         + Agregar paso
       </button>
+
+      <DialogoEliminar
+        abierto={pasoAEliminar !== null}
+        titulo={`¿Eliminar el paso ${(pasoAEliminar ?? 0) + 1}?`}
+        descripcion="Se quitará el paso del procedimiento. El cambio se aplica al guardar el artículo."
+        textoConfirmar="Eliminar paso"
+        onCerrar={() => setPasoAEliminar(null)}
+        onConfirmar={confirmarEliminarPaso}
+      />
     </div>
   )
 }

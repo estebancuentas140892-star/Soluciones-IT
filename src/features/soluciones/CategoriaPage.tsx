@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { BotonVolver } from '../../components/BotonVolver'
 import { TIPOS_ARTICULO } from './tiposArticulo'
 
 export function CategoriaPage() {
@@ -17,11 +18,9 @@ export function CategoriaPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
-      <header className="flex items-center justify-between gap-2">
-        <div>
-          <Link to="/soluciones" className="text-xs text-slate-400">
-            ← Soluciones
-          </Link>
+      <header className="flex items-end justify-between gap-2">
+        <div className="flex flex-col gap-2">
+          <BotonVolver to="/soluciones">Soluciones</BotonVolver>
           <h1 className="text-xl font-semibold">{categoria?.nombre ?? '...'}</h1>
         </div>
         <Link

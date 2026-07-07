@@ -5,6 +5,7 @@ import { db, type Adjunto } from '../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../lib/repositorio'
 import { comprimirImagen } from '../lib/comprimirImagen'
 import { eliminarArchivoPendiente, subirOEncolarArchivo } from '../lib/archivosPendientes'
+import { DialogoEliminar } from './DialogoEliminar'
 import { useUrlAdjunto } from './useUrlAdjunto'
 
 interface Props {
@@ -27,6 +28,7 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
   const [progreso, setProgreso] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [aEliminar, setAEliminar] = useState<Adjunto | null>(null)
   const subiendo = progreso !== null
 
   function manejarSeleccion(evento: ChangeEvent<HTMLInputElement>) {
@@ -85,8 +87,9 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
     setProgreso(null)
   }
 
-  async function eliminar(adjunto: Adjunto) {
-    if (!window.confirm(`¿Eliminar "${adjunto.nombre}"?`)) return
+  async function confirmarEliminar() {
+    const adjunto = aEliminar
+    if (!adjunto) return
     await eliminarRegistro('adjuntos', adjunto.id)
     // Si el archivo seguia en la cola de subida, ya no hay que subirlo;
     // tambien se libera su copia offline.
@@ -94,6 +97,7 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
     if (supabase && navigator.onLine) {
       await supabase.storage.from('adjuntos').remove([adjunto.referencia])
     }
+    setAEliminar(null)
   }
 
   return (
@@ -135,9 +139,17 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
 
       <div className="grid grid-cols-2 gap-2">
         {adjuntos?.map((adjunto) => (
-          <AdjuntoItem key={adjunto.id} adjunto={adjunto} onEliminar={() => void eliminar(adjunto)} />
+          <AdjuntoItem key={adjunto.id} adjunto={adjunto} onEliminar={() => setAEliminar(adjunto)} />
         ))}
       </div>
+
+      <DialogoEliminar
+        abierto={aEliminar !== null}
+        titulo={`¿Eliminar "${aEliminar?.nombre ?? ''}"?`}
+        descripcion="El archivo se quitará de esta ficha."
+        onCerrar={() => setAEliminar(null)}
+        onConfirmar={confirmarEliminar}
+      />
     </div>
   )
 }

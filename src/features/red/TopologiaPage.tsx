@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { BotonVolver } from '../../components/BotonVolver'
 import { construirArbol, construirBosque, type NodoTopologia } from './arbol'
 
 // Vista visual de la topologia: un arbol de nodos expandibles. Sin la
@@ -30,10 +31,8 @@ export function TopologiaPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pt-6 pb-8">
-      <header>
-        <Link to={volverA} className="text-xs text-slate-400">
-          ← {dispositivoId ? 'Volver a la ficha' : 'Red'}
-        </Link>
+      <header className="flex flex-col gap-2">
+        <BotonVolver to={volverA}>{dispositivoId ? 'Volver a la ficha' : 'Red'}</BotonVolver>
         <h1 className="text-xl font-semibold">
           {raiz ? `Topología desde ${raiz.nombre}` : 'Topología de la red'}
         </h1>

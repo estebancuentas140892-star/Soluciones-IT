@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { BotonVolver } from '../../components/BotonVolver'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { cifrarCredencial, descifrarCredencial } from './sesionBoveda'
@@ -114,10 +115,8 @@ export function CredencialForm() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
-      <header>
-        <Link to={volverA} className="text-xs text-slate-400">
-          ← Volver
-        </Link>
+      <header className="flex flex-col gap-2">
+        <BotonVolver to={volverA}>Volver</BotonVolver>
         <h1 className="text-xl font-semibold">{esEdicion ? 'Editar credencial' : 'Nueva credencial'}</h1>
       </header>
 

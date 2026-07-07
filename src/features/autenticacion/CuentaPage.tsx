@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { BotonVolver } from '../../components/BotonVolver'
 import { useAuth } from './authContext'
 import { validarCambioContrasena } from './erroresAuth'
 
@@ -47,17 +47,17 @@ export function CuentaPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
-      <header>
-        <Link to="/" className="text-xs text-slate-400">
-          ← Inicio
-        </Link>
-        <h1 className="text-xl font-semibold">Mi cuenta</h1>
-        {(perfil?.nombre || session?.user?.email) && (
-          <p className="text-xs text-slate-500">
-            {perfil?.nombre ? `${perfil.nombre} · ` : ''}
-            {session?.user?.email}
-          </p>
-        )}
+      <header className="flex flex-col gap-2">
+        <BotonVolver to="/">Inicio</BotonVolver>
+        <div>
+          <h1 className="text-xl font-semibold">Mi cuenta</h1>
+          {(perfil?.nombre || session?.user?.email) && (
+            <p className="text-xs text-slate-500">
+              {perfil?.nombre ? `${perfil.nombre} · ` : ''}
+              {session?.user?.email}
+            </p>
+          )}
+        </div>
       </header>
 
       <form

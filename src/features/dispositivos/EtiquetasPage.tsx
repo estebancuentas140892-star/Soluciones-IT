@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { BotonVolver } from '../../components/BotonVolver'
 import QRCode from 'qrcode'
 import { db, type Dispositivo } from '../../lib/db'
 
@@ -32,15 +32,15 @@ export function EtiquetasPage() {
 
   return (
     <div className="mx-auto flex min-h-svh max-w-md flex-col gap-4 bg-slate-950 px-4 pt-6 pb-8 text-slate-100 print:block print:min-h-0 print:max-w-none print:bg-white print:p-0 print:text-black">
-      <header className="print:hidden">
-        <Link to="/dispositivos" className="text-xs text-slate-400">
-          ← Dispositivos
-        </Link>
-        <h1 className="text-xl font-semibold">Etiquetas QR</h1>
-        <p className="text-sm text-slate-400">
-          Imprime las etiquetas y pégalas en los equipos: al escanearlas se abre la ficha del
-          dispositivo
-        </p>
+      <header className="flex flex-col gap-2 print:hidden">
+        <BotonVolver to="/dispositivos">Dispositivos</BotonVolver>
+        <div>
+          <h1 className="text-xl font-semibold">Etiquetas QR</h1>
+          <p className="text-sm text-slate-400">
+            Imprime las etiquetas y pégalas en los equipos: al escanearlas se abre la ficha del
+            dispositivo
+          </p>
+        </div>
       </header>
 
       <div className="flex gap-2 print:hidden">

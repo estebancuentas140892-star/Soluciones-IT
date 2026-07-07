@@ -1,11 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonCompartir } from '../../components/BotonCompartir'
+import { BotonVolver } from '../../components/BotonVolver'
+import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { ValorCopiable } from '../../components/ValorCopiable'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { Historial } from '../historial/Historial'
@@ -13,6 +15,7 @@ import { Historial } from '../historial/Historial'
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
   const navigate = useNavigate()
+  const [mostrarEliminar, setMostrarEliminar] = useState(false)
 
   const dispositivo = useLiveQuery(() => db.dispositivos.get(dispositivoId), [dispositivoId])
   const categoria = useLiveQuery(
@@ -34,7 +37,6 @@ export function DispositivoPage() {
   const volverA = esRed ? '/red' : '/dispositivos'
 
   async function eliminar() {
-    if (!window.confirm(`¿Eliminar "${dispositivo!.nombre}"?`)) return
     await eliminarRegistro('dispositivos', dispositivoId)
     navigate(volverA)
   }
@@ -52,12 +54,12 @@ export function DispositivoPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
-      <header>
-        <Link to={volverA} className="text-xs text-slate-400">
-          ← {esRed ? 'Red' : 'Dispositivos'}
-        </Link>
-        <h1 className="text-xl font-semibold">{dispositivo.nombre}</h1>
-        {categoria && <p className="text-xs text-slate-500">{categoria.nombre}</p>}
+      <header className="flex flex-col gap-2">
+        <BotonVolver to={volverA}>{esRed ? 'Red' : 'Dispositivos'}</BotonVolver>
+        <div>
+          <h1 className="text-xl font-semibold">{dispositivo.nombre}</h1>
+          {categoria && <p className="text-xs text-slate-500">{categoria.nombre}</p>}
+        </div>
       </header>
 
       <div className="flex flex-wrap gap-2">
@@ -76,12 +78,21 @@ export function DispositivoPage() {
         </Link>
         <button
           type="button"
-          onClick={() => void eliminar()}
+          onClick={() => setMostrarEliminar(true)}
           className="rounded-lg border border-red-900 px-3 py-1.5 text-xs text-red-400"
         >
           Eliminar
         </button>
       </div>
+
+      <DialogoEliminar
+        abierto={mostrarEliminar}
+        sensible
+        titulo={`¿Eliminar el dispositivo "${dispositivo.nombre}"?`}
+        descripcion="Esta acción eliminará la ficha del dispositivo, sus campos y sus conexiones registradas."
+        onCerrar={() => setMostrarEliminar(false)}
+        onConfirmar={eliminar}
+      />
 
       {dispositivo.estado && (
         <span className="w-fit rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">

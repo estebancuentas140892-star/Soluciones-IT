@@ -218,6 +218,44 @@ export async function desbloquear(contrasena: string): Promise<string | null> {
   return null
 }
 
+// Resultado de comprobar la contrasena maestra para una accion
+// puntual (por ejemplo, confirmar una eliminacion sensible):
+// - 'correcta': coincide con el verificador del equipo.
+// - 'incorrecta': hay verificador pero la contrasena no coincide.
+// - 'sin-verificar': no hay contra que comprobar (sin verificador
+//   local y el servidor no respondio); la accion debe negarse.
+export type ResultadoVerificacion = 'correcta' | 'incorrecta' | 'sin-verificar'
+
+// Comprueba la contrasena maestra SIN abrir la sesion de la boveda ni
+// tocar ningun estado (ni desbloquear, ni autobloqueo, ni claves en
+// memoria). Es una comprobacion de un solo uso para autorizar acciones
+// sensibles. Funciona sin conexion si el verificador ya esta local.
+export async function verificarContrasenaMaestra(
+  contrasena: string,
+): Promise<ResultadoVerificacion> {
+  if (!contrasena) return 'incorrecta'
+
+  let verificador = (await db.bovedaMeta.get(ID_VERIFICADOR))?.verificador ?? null
+  if (!verificador) {
+    const remoto = await consultarVerificadorRemoto()
+    if (remoto.tipo === 'ok' && remoto.verificador) {
+      verificador = remoto.verificador
+      await guardarVerificadorLocal(remoto.verificador)
+    }
+  }
+
+  const bloque = verificador ? analizarBloque(verificador) : null
+  if (!bloque) return 'sin-verificar'
+
+  const clave = await derivarClave(contrasena, bloque.salt, bloque.iteraciones)
+  try {
+    await descifrarTexto(clave, bloque)
+    return 'correcta'
+  } catch {
+    return 'incorrecta'
+  }
+}
+
 // Bloques cifrados de las credenciales locales, del mas reciente al
 // mas antiguo (las credenciales nuevas se cifran con el salt del
 // bloque verificado mas reciente cuando no hay verificador).

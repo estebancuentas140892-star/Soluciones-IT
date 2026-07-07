@@ -10,6 +10,7 @@ import {
   desbloquear,
   estadoInicialBoveda,
   TEXTO_VERIFICADOR,
+  verificarContrasenaMaestra,
   type DatosCredencial,
 } from './sesionBoveda'
 import { consultarVerificadorRemoto, subirVerificadorRemoto } from './verificadorRemoto'
@@ -222,6 +223,32 @@ describe('sesion y descifrado', () => {
     expect(await desbloquear('maestra')).toBeNull()
     expect(bovedaDesbloqueada()).toBe(true)
     expect(await descifrarCredencial('esto-no-es-un-bloque-cifrado')).toBeNull()
+  })
+})
+
+describe('verificarContrasenaMaestra (comprobacion puntual para acciones sensibles)', () => {
+  it('acepta la correcta y rechaza la incorrecta contra el verificador local', async () => {
+    await sembrarVerificador('maestra')
+    expect(await verificarContrasenaMaestra('maestra')).toBe('correcta')
+    expect(await verificarContrasenaMaestra('otra')).toBe('incorrecta')
+    expect(await verificarContrasenaMaestra('')).toBe('incorrecta')
+  })
+
+  it('NO abre la sesion de la boveda al verificar', async () => {
+    await sembrarVerificador('maestra')
+    expect(await verificarContrasenaMaestra('maestra')).toBe('correcta')
+    expect(bovedaDesbloqueada()).toBe(false)
+  })
+
+  it('sin verificador local lo trae del servidor y lo guarda', async () => {
+    const verificador = await bloqueConContrasena('maestra', TEXTO_VERIFICADOR)
+    consultarMock.mockResolvedValue({ tipo: 'ok', verificador, hayCredenciales: true })
+    expect(await verificarContrasenaMaestra('maestra')).toBe('correcta')
+    expect((await db.bovedaMeta.get(ID_VERIFICADOR))?.verificador).toBe(verificador)
+  })
+
+  it('sin nada local y sin respuesta del servidor devuelve sin-verificar', async () => {
+    expect(await verificarContrasenaMaestra('maestra')).toBe('sin-verificar')
   })
 })
 
