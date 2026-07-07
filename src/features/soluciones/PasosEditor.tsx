@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState, type ChangeEvent } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
-import { db, type Articulo, type Credencial, type PasoProcedimiento } from '../../lib/db'
+import { db, type Articulo, type Credencial, type PasoAdjunto, type PasoProcedimiento } from '../../lib/db'
 import { crearPaso, normalizarProcedimiento } from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
@@ -73,10 +73,10 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
     onPasosChange(pasos.filter((_, i) => i !== indice))
   }
 
-  async function subirImagen(indice: number, evento: ChangeEvent<HTMLInputElement>) {
-    const archivo = evento.target.files?.[0]
+  async function subirAdjuntos(indice: number, evento: ChangeEvent<HTMLInputElement>) {
+    const archivos = Array.from(evento.target.files ?? [])
     evento.target.value = ''
-    if (!archivo) return
+    if (archivos.length === 0) return
 
     setError(null)
     setAviso(null)
@@ -85,25 +85,50 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
       return
     }
 
-    setSubiendoPasoId(pasos[indice].id)
-    try {
-      const archivoFinal = await comprimirImagen(archivo)
-      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
-      const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
+    const paso = pasos[indice]
+    setSubiendoPasoId(paso.id)
+    const nuevos: PasoAdjunto[] = []
+    const fallidos: string[] = []
+    let encolados = 0
 
-      // Sin conexion, la captura queda guardada en el telefono y la
-      // cola de sincronizacion la sube sola al recuperar señal.
-      const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
-      if (resultado === 'encolado') {
-        setAviso('Sin conexión: la captura quedó guardada en este dispositivo y se subirá sola al recuperar señal.')
+    for (const archivo of archivos) {
+      try {
+        // Las fotos pesadas se redimensionan y recomprimen en el
+        // telefono antes de subir; los PDF y demas pasan sin tocar.
+        const archivoFinal = await comprimirImagen(archivo)
+        const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+        const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
+
+        // Sin conexion, el adjunto queda guardado en el telefono y la
+        // cola de sincronizacion lo sube sola al recuperar señal.
+        const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+        if (resultado === 'encolado') encolados += 1
+        nuevos.push({ referencia, nombre: archivoFinal.name, tipo: archivoFinal.type })
+      } catch {
+        fallidos.push(archivo.name)
       }
-
-      actualizarPaso(indice, { imagen: referencia })
-    } catch {
-      setError(`No se pudo subir la captura del paso ${indice + 1}.`)
-    } finally {
-      setSubiendoPasoId(null)
     }
+
+    // Se agregan sobre los adjuntos que el paso tenia al empezar la
+    // subida (una sola escritura al terminar todo el lote).
+    if (nuevos.length > 0) actualizarPaso(indice, { adjuntos: [...paso.adjuntos, ...nuevos] })
+    if (fallidos.length > 0) setError(`No se pudo subir: ${fallidos.join(', ')}`)
+    if (encolados > 0) {
+      setAviso(
+        encolados === 1
+          ? 'Sin conexión: el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal.'
+          : `Sin conexión: ${encolados} archivos quedaron guardados en este dispositivo y se subirán solos al recuperar señal.`,
+      )
+    }
+    setSubiendoPasoId(null)
+  }
+
+  function quitarAdjunto(indice: number, referencia: string) {
+    // Solo se quita la referencia del paso: el archivo queda en Storage
+    // por si una version ya guardada del articulo lo usa.
+    actualizarPaso(indice, {
+      adjuntos: pasos[indice].adjuntos.filter((a) => a.referencia !== referencia),
+    })
   }
 
   return (
@@ -149,11 +174,11 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             />
           </label>
 
-          <ImagenPasoEditor
+          <AdjuntosPasoEditor
             paso={paso}
             subiendo={subiendoPasoId === paso.id}
-            onSubir={(evento) => void subirImagen(indice, evento)}
-            onQuitar={() => actualizarPaso(indice, { imagen: null })}
+            onSubir={(evento) => void subirAdjuntos(indice, evento)}
+            onQuitar={(referencia) => quitarAdjunto(indice, referencia)}
           />
 
           <CredencialSelector
@@ -406,7 +431,11 @@ function SolucionSelector({
   )
 }
 
-function ImagenPasoEditor({
+// Adjuntos del paso en el editor: imagenes y archivos (varios). Dos
+// formas de agregar: "Cámara" toma una foto en el sitio (util desde el
+// celular en un mantenimiento) y "+ Archivos" sube capturas, manuales
+// o PDF ya guardados. Cada adjunto se puede quitar.
+function AdjuntosPasoEditor({
   paso,
   subiendo,
   onSubir,
@@ -415,32 +444,83 @@ function ImagenPasoEditor({
   paso: PasoProcedimiento
   subiendo: boolean
   onSubir: (evento: ChangeEvent<HTMLInputElement>) => void
-  onQuitar: () => void
+  onQuitar: (referencia: string) => void
 }) {
-  const url = useUrlAdjunto(paso.imagen)
-
   return (
     <div className="flex flex-col gap-2">
-      {paso.imagen && url && (
-        <img
-          src={url}
-          alt={`Captura del paso: ${paso.titulo}`}
-          className="max-h-40 w-full rounded-lg border border-slate-800 object-contain"
-        />
-      )}
-      <div className="flex items-center gap-2">
-        <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
-          {subiendo ? 'Subiendo...' : paso.imagen ? 'Cambiar captura' : '+ Captura'}
-          <input type="file" accept="image/*" className="hidden" disabled={subiendo} onChange={onSubir} />
-        </label>
-        {paso.imagen && !subiendo && (
-          // Solo se quita la referencia: el archivo queda en Storage
-          // por si una version ya guardada del articulo lo usa.
-          <button type="button" onClick={onQuitar} className="text-xs text-slate-400 underline underline-offset-2">
-            Quitar captura
-          </button>
-        )}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-slate-400">Adjuntos del paso</span>
+        <div className="flex gap-2">
+          <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+            {subiendo ? 'Subiendo...' : '📷 Cámara'}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              disabled={subiendo}
+              onChange={onSubir}
+            />
+          </label>
+          {!subiendo && (
+            <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+              📁 Archivos
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                multiple
+                className="hidden"
+                onChange={onSubir}
+              />
+            </label>
+          )}
+        </div>
       </div>
+
+      {paso.adjuntos.length === 0 ? (
+        <p className="text-xs text-slate-500">Sin adjuntos todavía</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {paso.adjuntos.map((adjunto) => (
+            <AdjuntoPasoMiniatura
+              key={adjunto.referencia}
+              adjunto={adjunto}
+              onQuitar={() => onQuitar(adjunto.referencia)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AdjuntoPasoMiniatura({
+  adjunto,
+  onQuitar,
+}: {
+  adjunto: PasoAdjunto
+  onQuitar: () => void
+}) {
+  const url = useUrlAdjunto(adjunto.referencia)
+  const esImagen = adjunto.tipo.startsWith('image/')
+
+  return (
+    <div className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
+      <button
+        type="button"
+        onClick={onQuitar}
+        aria-label={`Quitar ${adjunto.nombre}`}
+        className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/80 text-xs text-slate-300"
+      >
+        ×
+      </button>
+      {esImagen && url ? (
+        <img src={url} alt={adjunto.nombre} className="h-24 w-full object-cover" />
+      ) : (
+        <div className="flex h-24 items-center justify-center px-2 text-center text-xs text-slate-400">
+          {adjunto.nombre}
+        </div>
+      )}
     </div>
   )
 }

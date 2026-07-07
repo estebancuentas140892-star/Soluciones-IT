@@ -13,7 +13,7 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
     id: 'paso-1',
     titulo: 'Abrir SQL Server Management Studio',
     instrucciones: [],
-    imagen: null,
+    adjuntos: [],
     credencialId: null,
     credencialTitulo: '',
     subArticuloId: null,
@@ -50,7 +50,7 @@ describe('normalizarProcedimiento', () => {
     expect(resultado?.pasos[0]).toMatchObject({
       titulo: 'Solo título',
       instrucciones: [],
-      imagen: null,
+      adjuntos: [],
       credencialId: null,
       credencialTitulo: '',
       subArticuloId: null,
@@ -145,6 +145,58 @@ describe('normalizarProcedimiento', () => {
     })
     expect(resultado?.requisitos).toEqual(['Acceso al servidor'])
   })
+
+  it('conserva los adjuntos válidos y descarta los que no tienen referencia', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'Con adjuntos',
+          adjuntos: [
+            { referencia: 'a/1.jpg', nombre: 'foto.jpg', tipo: 'image/jpeg' },
+            { referencia: '', nombre: 'sin ref', tipo: 'image/jpeg' },
+            { nombre: 'sin referencia' },
+            'no es objeto',
+          ],
+        },
+      ],
+    })
+    expect(resultado?.pasos[0].adjuntos).toEqual([
+      { referencia: 'a/1.jpg', nombre: 'foto.jpg', tipo: 'image/jpeg' },
+    ])
+  })
+
+  it('completa nombre y tipo faltantes de un adjunto a partir de la referencia', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [{ titulo: 'x', adjuntos: [{ referencia: 'articulos/a1/pasos/1699999999-manual.pdf' }] }],
+    })
+    expect(resultado?.pasos[0].adjuntos).toEqual([
+      { referencia: 'articulos/a1/pasos/1699999999-manual.pdf', nombre: 'manual.pdf', tipo: 'application/pdf' },
+    ])
+  })
+
+  it('migra el campo viejo "imagen" (una sola captura) a un adjunto', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [{ titulo: 'Paso con captura vieja', imagen: 'articulos/a1/pasos/1699999999-captura.png' }],
+    })
+    expect(resultado?.pasos[0].adjuntos).toEqual([
+      { referencia: 'articulos/a1/pasos/1699999999-captura.png', nombre: 'captura.png', tipo: 'image/png' },
+    ])
+  })
+
+  it('prefiere la lista nueva de adjuntos por encima del campo viejo "imagen"', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          imagen: 'vieja.jpg',
+          adjuntos: [{ referencia: 'nueva.jpg', nombre: 'nueva.jpg', tipo: 'image/jpeg' }],
+        },
+      ],
+    })
+    expect(resultado?.pasos[0].adjuntos).toEqual([
+      { referencia: 'nueva.jpg', nombre: 'nueva.jpg', tipo: 'image/jpeg' },
+    ])
+  })
 })
 
 describe('textoDeProcedimiento', () => {
@@ -218,9 +270,9 @@ describe('prepararProcedimientoParaGuardar', () => {
     expect(prepararProcedimientoParaGuardar('', [paso])?.pasos).toHaveLength(1)
   })
 
-  it('conserva un paso que solo tiene captura', () => {
+  it('conserva un paso que solo tiene adjuntos', () => {
     const paso = crearPaso()
-    paso.imagen = 'articulos/a1/pasos/captura.jpg'
+    paso.adjuntos = [{ referencia: 'articulos/a1/pasos/captura.jpg', nombre: 'captura.jpg', tipo: 'image/jpeg' }]
     expect(prepararProcedimientoParaGuardar('', [paso])?.pasos).toHaveLength(1)
   })
 

@@ -30,6 +30,16 @@ export type TipoArticulo =
   | 'mantenimiento'
   | 'manual'
 
+// Un archivo o imagen adjunto a un paso del procedimiento (foto de
+// la camara, captura, manual, PDF). Vive inline en el JSON del paso,
+// no en la tabla `adjuntos`. Solo se guarda la referencia en Storage
+// mas su nombre y tipo; el contenido viaja por la cola de subida.
+export interface PasoAdjunto {
+  referencia: string
+  nombre: string
+  tipo: string
+}
+
 export interface PasoProcedimiento {
   id: string
   titulo: string
@@ -37,8 +47,10 @@ export interface PasoProcedimiento {
   // por linea. Al marcar la ultima, el paso se completa solo y la
   // vista avanza al siguiente pendiente.
   instrucciones: string[]
-  // Referencia en Supabase Storage de la captura del paso, o null.
-  imagen: string | null
+  // Imagenes y archivos del paso (varios): fotos tomadas en el sitio,
+  // capturas, manuales o PDF. Antes era un solo `imagen`; al
+  // normalizar, ese valor viejo se migra al primer adjunto.
+  adjuntos: PasoAdjunto[]
   // Credencial de la boveda vinculada al paso (su apartado "Datos"),
   // o null. El titulo es una copia de referencia: permite mostrar
   // "Datos: SQL Server" incluso a tecnicos sin acceso a la boveda

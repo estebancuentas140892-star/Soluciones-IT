@@ -92,7 +92,7 @@ async function referenciasParaOffline(): Promise<string[]> {
     const procedimiento = normalizarProcedimiento(articulo.procedimiento)
     if (!procedimiento) continue
     for (const paso of procedimiento.pasos) {
-      if (paso.imagen) referencias.add(paso.imagen)
+      for (const adjunto of paso.adjuntos) referencias.add(adjunto.referencia)
     }
   }
 

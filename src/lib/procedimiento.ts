@@ -1,4 +1,4 @@
-import type { PasoProcedimiento, Procedimiento } from './db'
+import type { PasoAdjunto, PasoProcedimiento, Procedimiento } from './db'
 
 // Logica pura de los procedimientos paso a paso, separada de los
 // componentes para poder probarla sin navegador. El dato viaja como
@@ -10,7 +10,7 @@ export function crearPaso(): PasoProcedimiento {
     id: crypto.randomUUID(),
     titulo: '',
     instrucciones: [],
-    imagen: null,
+    adjuntos: [],
     credencialId: null,
     credencialTitulo: '',
     subArticuloId: null,
@@ -60,7 +60,7 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     instrucciones: Array.isArray(origen.instrucciones)
       ? origen.instrucciones.filter((i): i is string => typeof i === 'string' && i.trim() !== '')
       : [],
-    imagen: typeof origen.imagen === 'string' && origen.imagen !== '' ? origen.imagen : null,
+    adjuntos: normalizarAdjuntos(origen),
     credencialId,
     // Los titulos de referencia solo tienen sentido junto a su id.
     credencialTitulo: credencialId ? texto(origen.credencialTitulo) : '',
@@ -69,6 +69,67 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     solucionArticuloId,
     solucionArticuloTitulo: solucionArticuloId ? texto(origen.solucionArticuloTitulo) : '',
   }
+}
+
+// Adjuntos del paso, tolerando datos viejos: si el paso trae la lista
+// nueva `adjuntos` se valida entrada por entrada; si en cambio trae el
+// campo viejo `imagen` (una sola captura, string), se migra a un unico
+// adjunto para no perder la imagen de los procedimientos ya guardados.
+function normalizarAdjuntos(origen: Record<string, unknown>): PasoAdjunto[] {
+  if (Array.isArray(origen.adjuntos)) {
+    return origen.adjuntos
+      .filter((a): a is Record<string, unknown> => Boolean(a) && typeof a === 'object')
+      .map((a) => ({
+        referencia: texto(a.referencia),
+        nombre: texto(a.nombre),
+        tipo: texto(a.tipo),
+      }))
+      .filter((a) => a.referencia !== '')
+      .map((a) => ({
+        referencia: a.referencia,
+        nombre: a.nombre || nombreDeReferencia(a.referencia),
+        tipo: a.tipo || tipoDeReferencia(a.referencia),
+      }))
+  }
+
+  if (typeof origen.imagen === 'string' && origen.imagen !== '') {
+    return [
+      {
+        referencia: origen.imagen,
+        nombre: nombreDeReferencia(origen.imagen),
+        tipo: tipoDeReferencia(origen.imagen),
+      },
+    ]
+  }
+
+  return []
+}
+
+// Nombre legible a partir de la referencia de Storage. Las referencias
+// tienen forma ".../pasos/<timestamp>-<nombre>"; se recupera el nombre
+// quitando el prefijo del timestamp.
+function nombreDeReferencia(referencia: string): string {
+  const ultimo = referencia.split('/').pop() ?? referencia
+  const sinTimestamp = ultimo.replace(/^\d+-/, '')
+  return sinTimestamp || 'Adjunto'
+}
+
+// Tipo MIME aproximado segun la extension, solo para datos viejos que
+// no lo guardaban (los adjuntos nuevos traen su tipo real). Sirve para
+// decidir si se muestra como imagen o como archivo.
+function tipoDeReferencia(referencia: string): string {
+  const extension = referencia.split('.').pop()?.toLowerCase() ?? ''
+  const porExtension: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    pdf: 'application/pdf',
+  }
+  // Sin extension reconocida se asume imagen: el campo viejo `imagen`
+  // solo aceptaba imagenes.
+  return porExtension[extension] ?? 'image/*'
 }
 
 function texto(valor: unknown): string {
@@ -138,7 +199,7 @@ export function prepararProcedimientoParaGuardar(
       (paso) =>
         paso.titulo !== '' ||
         paso.instrucciones.length > 0 ||
-        paso.imagen !== null ||
+        paso.adjuntos.length > 0 ||
         paso.credencialId !== null ||
         paso.subArticuloId !== null ||
         paso.solucionArticuloId !== null,

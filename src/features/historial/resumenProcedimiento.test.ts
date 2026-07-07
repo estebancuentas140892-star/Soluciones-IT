@@ -6,7 +6,7 @@ function paso(parcial: Partial<PasoProcedimiento> & { id: string }): PasoProcedi
   return {
     titulo: '',
     instrucciones: [],
-    imagen: null,
+    adjuntos: [],
     credencialId: null,
     credencialTitulo: '',
     subArticuloId: null,
@@ -118,20 +118,38 @@ describe('resumenProcedimiento', () => {
     ])
   })
 
-  it('detecta imagen agregada, actualizada y eliminada', () => {
+  it('detecta imágenes y archivos agregados y eliminados en un paso', () => {
+    const img = (ref: string) => ({ referencia: ref, nombre: 'f.jpg', tipo: 'image/jpeg' })
+    const pdf = (ref: string) => ({ referencia: ref, nombre: 'm.pdf', tipo: 'application/pdf' })
     const base = paso({ id: 'p4', titulo: 'Foto', instrucciones: ['a'] })
-    const conImg = paso({ ...base, imagen: 'ruta/1.jpg' })
-    const otraImg = paso({ ...base, imagen: 'ruta/2.jpg' })
 
-    expect(resumenProcedimiento(json(proc([base])), json(proc([conImg]))).cambios).toEqual([
-      'Se agregó una imagen al Paso 1: Foto.',
-    ])
-    expect(resumenProcedimiento(json(proc([conImg])), json(proc([otraImg]))).cambios).toEqual([
-      'Se actualizó la imagen del Paso 1: Foto.',
-    ])
-    expect(resumenProcedimiento(json(proc([conImg])), json(proc([base]))).cambios).toEqual([
-      'Se eliminó la imagen del Paso 1: Foto.',
-    ])
+    // Una imagen agregada.
+    expect(
+      resumenProcedimiento(json(proc([base])), json(proc([paso({ ...base, adjuntos: [img('r/1.jpg')] })])))
+        .cambios,
+    ).toEqual(['Se agregó una imagen al Paso 1: Foto.'])
+
+    // Reemplazo (quitar una y agregar otra) se ve como alta y baja.
+    expect(
+      resumenProcedimiento(
+        json(proc([paso({ ...base, adjuntos: [img('r/1.jpg')] })])),
+        json(proc([paso({ ...base, adjuntos: [img('r/2.jpg')] })])),
+      ).cambios,
+    ).toEqual(['Se agregó una imagen al Paso 1: Foto.', 'Se eliminó una imagen del Paso 1: Foto.'])
+
+    // Un archivo (no imagen) eliminado.
+    expect(
+      resumenProcedimiento(json(proc([paso({ ...base, adjuntos: [pdf('r/m.pdf')] })])), json(proc([base])))
+        .cambios,
+    ).toEqual(['Se eliminó un archivo del Paso 1: Foto.'])
+
+    // Varias imágenes agregadas se pluralizan.
+    expect(
+      resumenProcedimiento(
+        json(proc([base])),
+        json(proc([paso({ ...base, adjuntos: [img('r/1.jpg'), img('r/2.jpg')] })])),
+      ).cambios,
+    ).toEqual(['Se agregaron 2 imágenes al Paso 1: Foto.'])
   })
 
   it('describe un paso nuevo por su título', () => {

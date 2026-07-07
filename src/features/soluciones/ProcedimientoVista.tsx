@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
+import { db, type PasoAdjunto, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, siguientePasoPendiente } from '../../lib/procedimiento'
 import {
   alternarInstruccionHecha,
@@ -168,7 +168,7 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
 
               {expandido === paso.id && (
                 <div className="flex flex-col gap-3 border-t border-slate-800 px-4 py-3">
-                  {paso.imagen && <ImagenPaso referencia={paso.imagen} titulo={paso.titulo} />}
+                  {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
                   {paso.instrucciones.length > 0 && (
                     <ul className="flex flex-col gap-0.5">
@@ -525,16 +525,47 @@ function SolucionEnPaso({
   )
 }
 
-function ImagenPaso({ referencia, titulo }: { referencia: string; titulo: string }) {
-  const url = useUrlAdjunto(referencia)
+// Adjuntos del paso en la vista de lectura: las imagenes acompañan la
+// accion que el tecnico esta ejecutando; los demas archivos (manuales,
+// PDF) se abren en una pestaña nueva. Una sola imagen ocupa el ancho
+// completo; con varias se acomodan en dos columnas.
+function AdjuntosPaso({ adjuntos, titulo }: { adjuntos: PasoAdjunto[]; titulo: string }) {
+  const unaSolaImagen = adjuntos.length === 1 && adjuntos[0].tipo.startsWith('image/')
+
+  return (
+    <div className={unaSolaImagen ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2'}>
+      {adjuntos.map((adjunto) => (
+        <AdjuntoPaso key={adjunto.referencia} adjunto={adjunto} titulo={titulo} />
+      ))}
+    </div>
+  )
+}
+
+function AdjuntoPaso({ adjunto, titulo }: { adjunto: PasoAdjunto; titulo: string }) {
+  const url = useUrlAdjunto(adjunto.referencia)
+  const esImagen = adjunto.tipo.startsWith('image/')
 
   if (!url) {
     return (
       <div className="flex h-24 items-center justify-center rounded-lg border border-slate-800 bg-slate-950">
         <p className="px-3 text-center text-xs text-slate-500">
-          Captura no disponible. Si estás sin conexión, usa "Descargar todo para offline" con señal.
+          Adjunto no disponible. Si estás sin conexión, usa "Descargar todo para offline" con señal.
         </p>
       </div>
+    )
+  }
+
+  if (!esImagen) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs text-sky-300"
+      >
+        <span aria-hidden>📄</span>
+        <span className="min-w-0 truncate underline underline-offset-2">{adjunto.nombre}</span>
+      </a>
     )
   }
 
@@ -542,7 +573,7 @@ function ImagenPaso({ referencia, titulo }: { referencia: string; titulo: string
     <a href={url} target="_blank" rel="noreferrer" className="block">
       <img
         src={url}
-        alt={`Captura del paso: ${titulo}`}
+        alt={`Adjunto del paso: ${titulo}`}
         className="max-h-72 w-full rounded-lg border border-slate-800 object-contain"
       />
     </a>

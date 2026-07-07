@@ -73,7 +73,11 @@ export function ArticuloPage() {
         </article>
       )}
 
-      <Adjuntos entidadTipo="articulo" entidadId={articuloId} />
+      {/* En los procedimientos, los adjuntos viven en cada paso (donde
+          se usan). El apartado del articulo solo se muestra para
+          articulos sin procedimiento (manuales en Markdown), que no
+          tienen pasos donde anclar el archivo. */}
+      {!procedimiento && <Adjuntos entidadTipo="articulo" entidadId={articuloId} />}
 
       <Historial entidadTipo="articulo" entidadId={articuloId} />
     </div>

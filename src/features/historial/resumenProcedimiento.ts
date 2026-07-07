@@ -1,4 +1,4 @@
-import type { PasoProcedimiento, Procedimiento } from '../../lib/db'
+import type { PasoAdjunto, PasoProcedimiento, Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 
 // Convierte el cambio de un procedimiento (guardado en el historial
@@ -113,11 +113,7 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
   const instrucciones = diffLista(previo.instrucciones, actual.instrucciones)
   agregarLineasInstrucciones(cambios, instrucciones, etiqueta)
 
-  if (previo.imagen !== actual.imagen) {
-    if (!previo.imagen) cambios.push(`Se agregó una imagen al ${etiqueta}.`)
-    else if (!actual.imagen) cambios.push(`Se eliminó la imagen del ${etiqueta}.`)
-    else cambios.push(`Se actualizó la imagen del ${etiqueta}.`)
-  }
+  agregarLineasAdjuntos(cambios, previo.adjuntos, actual.adjuntos, etiqueta)
 
   if (previo.credencialId !== actual.credencialId) {
     if (!previo.credencialId) cambios.push(`Se agregó una credencial al ${etiqueta}.`)
@@ -185,6 +181,42 @@ function agregarLineasRequisitos(cambios: string[], diff: DiffLista): void {
   else if (diff.agregadas > 1) cambios.push(`Se agregaron ${diff.agregadas} requisitos ${donde}.`)
   if (diff.eliminadas === 1) cambios.push(`Se eliminó un requisito ${donde}.`)
   else if (diff.eliminadas > 1) cambios.push(`Se eliminaron ${diff.eliminadas} requisitos ${donde}.`)
+}
+
+// Diff de los adjuntos de un paso. Se comparan por referencia (cada
+// subida genera una referencia unica), asi que un reemplazo se ve como
+// una baja y un alta, no como una edicion. Se dice "imagen" cuando
+// todos los afectados son imagenes y "archivo" en caso contrario.
+function agregarLineasAdjuntos(
+  cambios: string[],
+  previos: PasoAdjunto[],
+  actuales: PasoAdjunto[],
+  etiqueta: string,
+): void {
+  const refsPrevias = new Set(previos.map((a) => a.referencia))
+  const refsActuales = new Set(actuales.map((a) => a.referencia))
+  const agregados = actuales.filter((a) => !refsPrevias.has(a.referencia))
+  const eliminados = previos.filter((a) => !refsActuales.has(a.referencia))
+
+  if (agregados.length === 1) cambios.push(`Se agregó ${sustantivoAdjunto(agregados)} al ${etiqueta}.`)
+  else if (agregados.length > 1)
+    cambios.push(`Se agregaron ${agregados.length} ${pluralAdjunto(agregados)} al ${etiqueta}.`)
+
+  if (eliminados.length === 1) cambios.push(`Se eliminó ${sustantivoAdjunto(eliminados)} del ${etiqueta}.`)
+  else if (eliminados.length > 1)
+    cambios.push(`Se eliminaron ${eliminados.length} ${pluralAdjunto(eliminados)} del ${etiqueta}.`)
+}
+
+function sonImagenes(adjuntos: PasoAdjunto[]): boolean {
+  return adjuntos.every((a) => a.tipo.startsWith('image/'))
+}
+
+function sustantivoAdjunto(adjuntos: PasoAdjunto[]): string {
+  return sonImagenes(adjuntos) ? 'una imagen' : 'un archivo'
+}
+
+function pluralAdjunto(adjuntos: PasoAdjunto[]): string {
+  return sonImagenes(adjuntos) ? 'imágenes' : 'archivos'
 }
 
 // Hubo reordenamiento si los pasos comunes a ambas versiones aparecen
