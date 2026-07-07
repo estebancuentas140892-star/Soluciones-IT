@@ -100,6 +100,7 @@ describe('aplicarFilasRemotas', () => {
       contenido: '',
       etiquetas: [],
       procedimiento: null,
+      esRutaInicio: false,
     })
 
     await aplicarFilasRemotas('articulos', [filaRemotaDeArticulo(id, 'Versión vieja del servidor')])

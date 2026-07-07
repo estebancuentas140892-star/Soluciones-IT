@@ -75,6 +75,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       contenido: 'contenido',
       etiquetas: 'etiquetas',
       procedimiento: 'procedimiento',
+      esRutaInicio: 'es_ruta_inicio',
     },
   },
   dispositivos: {

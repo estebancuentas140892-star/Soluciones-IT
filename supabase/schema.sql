@@ -49,6 +49,7 @@ create table if not exists public.articulos (
   contenido text not null default '',
   etiquetas text[] not null default '{}',
   procedimiento jsonb,
+  es_ruta_inicio boolean not null default false,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
@@ -56,6 +57,10 @@ create table if not exists public.articulos (
 
 -- Por si la tabla ya existia de una version anterior del esquema.
 alter table public.articulos add column if not exists procedimiento jsonb;
+-- Destaca el articulo en Inicio como "ruta de inicio" para quien
+-- recien llega al equipo (tarea 37). El equipo lo marca a mano desde
+-- el editor; no crea una seccion nueva.
+alter table public.articulos add column if not exists es_ruta_inicio boolean not null default false;
 
 create table if not exists public.dispositivos (
   id uuid primary key default gen_random_uuid(),

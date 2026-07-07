@@ -12,6 +12,7 @@ function articuloDePrueba(id: string, titulo: string): Articulo {
     contenido: '',
     etiquetas: [],
     procedimiento: null,
+    esRutaInicio: false,
     updatedAt: new Date().toISOString(),
     updatedBy: null,
     eliminadoEn: null,

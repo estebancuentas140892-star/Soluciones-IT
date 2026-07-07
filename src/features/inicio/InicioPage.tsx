@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { db } from '../../lib/db'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { DescargarOffline } from '../../components/DescargarOffline'
@@ -12,6 +13,14 @@ export function InicioPage() {
   const resultados = useMemo(() => buscar(indice, consulta), [indice, consulta])
   const buscando = consulta.trim().length > 0
   const recientes = useLiveQuery(() => obtenerRecientes(), [], [])
+  // Articulos marcados por el equipo como "ruta de inicio" (ver
+  // ArticuloForm): puerta de entrada para quien recien llega, sin
+  // crear una seccion nueva.
+  const rutasInicio = useLiveQuery(
+    () => db.articulos.filter((a) => a.esRutaInicio && !a.eliminadoEn).toArray(),
+    [],
+    [],
+  )
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
@@ -43,6 +52,24 @@ export function InicioPage() {
             Escanear código de un equipo
           </Link>
           <DescargarOffline />
+          {rutasInicio.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-sm font-medium text-slate-400">Para empezar</h2>
+              <ul className="flex flex-col gap-2">
+                {rutasInicio.map((articulo) => (
+                  <li key={articulo.id}>
+                    <Link
+                      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+                      className="flex items-center gap-2 rounded-xl border border-sky-900 bg-sky-950/40 px-4 py-3 text-sm font-medium text-sky-100"
+                    >
+                      <IconoRuta className="h-5 w-5 text-sky-400" />
+                      {articulo.titulo}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <section>
             <h2 className="mb-2 text-sm font-medium text-slate-400">Recientes</h2>
             {recientes.length === 0 ? (
@@ -68,6 +95,16 @@ export function InicioPage() {
         </>
       )}
     </div>
+  )
+}
+
+function IconoRuta(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 4v4a1 1 0 0 0 1 1h4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 13h8M8 17h5" strokeLinecap="round" />
+    </svg>
   )
 }
 

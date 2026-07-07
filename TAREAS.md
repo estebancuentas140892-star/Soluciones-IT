@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. Las tareas 28 y 36 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase. Ver cada tarea en el archivo.)
+(Vacío. Las tareas 28, 36 y 37 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase (y, en la 37, que el equipo cure el contenido). Ver cada tarea en el archivo.)
 
 ## Por hacer
 
@@ -38,12 +38,6 @@ Propuestas presentadas al usuario el 2026-07-03, pendientes de que elija cuáles
 - Avance: despliegue en Vercel OPERATIVO EN PARTE. El usuario montó el proyecto en Vercel (https://soluciones-it-psi.vercel.app, desplegado desde GitHub). Se detectó y corrigió: (1) GitHub estaba 6 commits atrás del repo local, por eso producción tenía un build viejo; ya se subió todo. (2) Las rutas internas daban 404 al abrirlas directo; se agregó `vercel.json` con la reescritura SPA a `index.html`. (3) Verificado por HTTP: el esquema de Supabase SÍ está aplicado (la tabla `categorias` responde y RLS oculta filas a usuarios sin sesión). (4) El usuario agregó `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Settings > Environment Variables, pestaña "Project" (confirmado en pantalla que quedaron guardadas), pero el botón "Redeploy" del panel de Vercel dio "Unexpected error (500)" de forma repetida y no llegó a crear un despliegue nuevo (verificado: la lista de Deployments no muestra un intento adicional, y el build en producción seguía sin la URL de Supabase). Se disparó un despliegue nuevo por la vía de Git (commit a `main`) como alternativa al botón del panel, que sí dispara el build automático de Vercel con las variables ya guardadas.
 - Avance: despliegue por Git VERIFICADO. El build de producción ya incluye la URL de Supabase; probado en navegador real contra el dominio: redirige a /login, sin aviso de "no conectado", y un intento de login llegó hasta Supabase y devolvió el error esperado en español. Producción conectada de punta a punta.
 - Bloqueada por (usuario): (1) confirmar que los 5 usuarios del equipo estén creados en Supabase Authentication; (2) pruebas en los teléfonos reales del equipo con la guía de INSTALACION.md, que ya incluye la dirección real.
-
-### 37. Ruta de inicio (modo aprendizaje para nuevos integrantes)
-- Descripción: puerta de entrada para quien recién llega al área, objetivo central de la app. No es un módulo nuevo: un procedimiento guiado "Primer día en TI" que, con los subprocedimientos vinculados que ya soporta la app, enlaza lo que ya está documentado (conocer la infraestructura, identificar los equipos principales, procedimientos básicos, herramientas y protocolos internos). Reutiliza el sistema de procedimientos jerárquicos existente; el trabajo real es la curaduría y un acceso destacado. Cubre la idea #4 del análisis del 2026-07-07.
-- Prioridad: Media
-- Ubicación (probable, ajustar al diseñar): acceso destacado en `src/features/inicio/InicioPage.tsx`; contenido como artículo con procedimiento en el módulo Soluciones (`src/features/soluciones/`). Decidir cómo marcar ese artículo como "ruta de inicio" (categoría dedicada, bandera o simplemente un enlace fijo) sin ensuciar la rejilla de categorías.
-- Nota: diseño pendiente. Mantener el principio "menos pero mejor": una sola ruta curada, no un módulo de formación.
 
 ### 38. Enriquecer "Problemas frecuentes" (base de incidencias)
 - Descripción: convertir el tipo de artículo `problema_frecuente` (ya existente) en una verdadera base de incidencias con estructura fija: síntomas, posibles causas, solución (el procedimiento actual) y vínculo a los dispositivos afectados. Hoy toda esa información va suelta en el Markdown. Cubre la idea #1 del análisis del 2026-07-07 y sienta la base para la tarea 39.

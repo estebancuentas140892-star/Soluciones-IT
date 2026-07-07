@@ -1,5 +1,19 @@
 # Historial de tareas finalizadas
 
+### 37. Ruta de inicio (modo aprendizaje para nuevos integrantes)
+- Finalizada (código): 2026-07-07. Pendiente de un paso del usuario en Supabase (aplicar schema.sql) y de que el equipo cure el contenido real.
+- Descripción: registrada tras el análisis de nuevas funcionalidades del 2026-07-07 (idea #4). Puerta de entrada para quien recién llega al equipo. Deliberadamente no se creó una sección ni una categoría nueva ni contenido inventado (el asistente no conoce los procedimientos reales del equipo): el trabajo de código es el mecanismo para que el equipo destaque, con el editor que ya usa a diario, la guía que decida escribir.
+- Solución:
+  - `src/lib/db.ts`: nuevo campo `Articulo.esRutaInicio: boolean`. Cualquier artículo (típicamente uno con procedimiento y subprocedimientos vinculados a lo ya documentado, por ejemplo "Primer día en TI") puede marcarse así; puede haber varios marcados a la vez.
+  - `src/lib/tablas.ts`: mapeo `esRutaInicio` → `es_ruta_inicio`.
+  - `supabase/schema.sql`: columna `es_ruta_inicio boolean not null default false` en `articulos` (en la creación de la tabla y con `alter table ... add column if not exists` para las bases ya desplegadas).
+  - `src/features/soluciones/ArticuloForm.tsx`: casilla "Destacar en Inicio como ruta de aprendizaje" bajo el campo Tipo, con su explicación breve.
+  - `src/features/inicio/InicioPage.tsx`: sección "Para empezar" (antes de "Recientes") que lista, con un ícono propio (`IconoRuta`), todos los artículos con `esRutaInicio`; no aparece si no hay ninguno marcado.
+  - `src/features/historial/textoHistorial.ts`: etiqueta "Ruta de inicio" para el campo en el historial de cambios del artículo.
+- Pruebas: 245 en verde (sin nuevas: es un campo de datos simple sobre lógica ya probada; el proyecto no tiene pruebas de componentes React, solo de lógica pura), lint y build en verde. Se actualizaron dos fábricas de artículos de prueba (`recientes.test.ts`, `sync.test.ts`) que construían un `Articulo` completo, para incluir el campo nuevo.
+- Verificado en navegador real (sesión simulada + categoría y dos artículos sembrados en Dexie, uno con `esRutaInicio: true` y otro sin marcar): (1) Inicio muestra "Para empezar" solo con el artículo marcado, el clic navega a su ficha; (2) al editar el artículo sin marcar y tildar la casilla (clic simulado con secuencia completa de eventos de puntero, igual que en la tarea 36) y guardar, el campo queda en `true` en Dexie; (3) al volver a Inicio, ambos artículos aparecen en "Para empezar". Datos de prueba y sesión simulada limpiados al terminar (`cambiosPendientes` en 0).
+- Pendiente (usuario): (1) aplicar el `supabase/schema.sql` actualizado en Supabase (agrega `es_ruta_inicio`); (2) curar el contenido real: crear (o elegir) el artículo "Primer día en TI" con sus subprocedimientos vinculados a lo que el equipo ya documentó, y marcar la casilla nueva en su editor.
+
 ### 36. Bitácora de intervenciones por dispositivo
 - Finalizada (código): 2026-07-07. Pendiente de un paso del usuario en Supabase (aplicar schema.sql).
 - Descripción: registrada tras el análisis de nuevas funcionalidades del 2026-07-07 (ideas #2 y #5). El historial automático de una ficha solo captura cambios de campos; no había forma de anotar a mano lo que se le hizo a un equipo (cambio de disco, reinstalación de Windows, configuración de un usuario nuevo).

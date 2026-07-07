@@ -21,6 +21,7 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
   detalles: 'Campos adicionales',
   datosCifrados: 'Datos protegidos',
   procedimiento: 'Procedimiento',
+  esRutaInicio: 'Ruta de inicio',
 }
 
 export function etiquetaDeCampo(campo: string): string {

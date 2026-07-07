@@ -89,6 +89,13 @@ export interface Articulo {
   contenido: string
   etiquetas: string[]
   procedimiento: Procedimiento | null
+  // Lo destaca en Inicio como puerta de entrada para quien recien
+  // llega al equipo ("ruta de inicio"). No crea una seccion nueva: es
+  // un articulo normal (tipicamente con procedimiento y
+  // subprocedimientos vinculados a lo ya documentado) que el equipo
+  // marca a mano desde el editor. Puede haber varios marcados; Inicio
+  // los muestra todos.
+  esRutaInicio: boolean
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null

@@ -32,6 +32,7 @@ export function ArticuloForm() {
   const [etiquetas, setEtiquetas] = useState('')
   const [requisitos, setRequisitos] = useState('')
   const [pasos, setPasos] = useState<PasoProcedimiento[]>([])
+  const [esRutaInicio, setEsRutaInicio] = useState(false)
   const [motivo, setMotivo] = useState('')
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
   const [guardando, setGuardando] = useState(false)
@@ -45,6 +46,7 @@ export function ArticuloForm() {
     const procedimiento = normalizarProcedimiento(articulo.procedimiento)
     setRequisitos(procedimiento?.requisitos.join('\n') ?? '')
     setPasos(procedimiento?.pasos ?? [])
+    setEsRutaInicio(articulo.esRutaInicio)
     setCargadoInicial(true)
   }, [articulo, cargadoInicial])
 
@@ -67,6 +69,7 @@ export function ArticuloForm() {
           .map((e) => e.trim())
           .filter(Boolean),
         procedimiento: prepararProcedimientoParaGuardar(requisitos, pasos),
+        esRutaInicio,
       },
       motivo.trim(),
     )
@@ -112,6 +115,21 @@ export function ArticuloForm() {
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex items-start gap-2 text-sm text-slate-300">
+          <input
+            type="checkbox"
+            checked={esRutaInicio}
+            onChange={(e) => setEsRutaInicio(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Destacar en Inicio como ruta de aprendizaje
+            <span className="block text-xs text-slate-500">
+              Para guías como "Primer día en TI": aparece en un acceso destacado en la pantalla de Inicio.
+            </span>
+          </span>
         </label>
 
         <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
