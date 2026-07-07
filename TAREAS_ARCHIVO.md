@@ -1,7 +1,7 @@
 # Historial de tareas finalizadas
 
 ### 36. Bitácora de intervenciones por dispositivo
-- Finalizada: 2026-07-07
+- Finalizada (código): 2026-07-07. Pendiente de un paso del usuario en Supabase (aplicar schema.sql).
 - Descripción: registrada tras el análisis de nuevas funcionalidades del 2026-07-07 (ideas #2 y #5). El historial automático de una ficha solo captura cambios de campos; no había forma de anotar a mano lo que se le hizo a un equipo (cambio de disco, reinstalación de Windows, configuración de un usuario nuevo).
 - Solución:
   - `src/lib/repositorio.ts`: nueva función `registrarIntervencion(dispositivoId, descripcion, motivo?)`, que crea directamente una entrada de historial con `campo: 'intervencion'` (usa `crearEntrada`, no pasa por `guardarRegistro` porque no hay una ficha que editar) y la encola para subir igual que el resto del historial. Devuelve el id de la entrada para poder adjuntarle una foto.
@@ -12,6 +12,7 @@
   - `src/features/historial/Historial.tsx`: cada entrada con `campo === 'intervencion'` muestra debajo su propio bloque `Adjuntos` (mismo componente, `entidadTipo="historial"`, `entidadId` = id de la entrada), permitiendo ver o agregar la foto después.
 - Pruebas: 245 en verde (2 nuevas: `registrarIntervencion` en `repositorio.test.ts`, descripción de `'intervencion'` en `textoHistorial.test.ts`), lint y build en verde.
 - Verificado en navegador real (sesión simulada + dispositivo y categoría sembrados en Dexie, ver memoria "Verificación en navegador con sesión simulada"): el botón abre el formulario, el envío real (clic con secuencia completa de eventos de puntero, ya que el clic sintético del entorno de pruebas no disparaba el submit) crea la entrada, muestra "Intervención registrada" con su bloque de adjuntos ("Sin adjuntos todavía"), y al abrir "Ver historial" la entrada aparece con la descripción, el usuario, la fecha, el motivo ("Motivo: ...") y su propio bloque de adjuntos anidado. Datos de prueba y sesión simulada limpiados al terminar (`cambiosPendientes` en 0).
+- Pendiente (usuario): aplicar el `supabase/schema.sql` actualizado en el SQL Editor de Supabase (amplía la restricción `check` de `adjuntos.entidad_tipo` para admitir `'historial'`). Sin este paso, subir una foto adjunta a una intervención fallará en el servidor (la app la deja igualmente disponible en el teléfono que la subió, por la cola de subida). Al aplicarlo, verificar desde aquí que la restricción quedó actualizada.
 
 ### 35. Evitar que el dispositivo guarde y autocomplete los secretos (campos enmascarados sin type=password)
 - Finalizada: 2026-07-07

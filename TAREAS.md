@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. La tarea 28 tiene su código completo y verificado; solo queda que el usuario aplique el schema.sql en Supabase. Ver la tarea en el archivo.)
+(Vacío. Las tareas 28 y 36 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase. Ver cada tarea en el archivo.)
 
 ## Por hacer
 
