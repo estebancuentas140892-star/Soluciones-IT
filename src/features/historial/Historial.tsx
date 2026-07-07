@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { db, type HistorialEntrada, type TipoEntidadHistorial } from '../../lib/db'
+import { Adjuntos } from '../../components/Adjuntos'
 import { resumenDetalles } from './resumenDetalles'
 import { resumenProcedimiento, textoContexto } from './resumenProcedimiento'
 import { descripcionEntrada } from './textoHistorial'
@@ -64,6 +65,11 @@ function EntradaItem({ entrada }: { entrada: HistorialEntrada }) {
         <CambioDetalles entrada={entrada} />
       ) : (
         <p className="mt-1 text-sm text-slate-200">{descripcionEntrada(entrada)}</p>
+      )}
+      {entrada.campo === 'intervencion' && (
+        <div className="mt-2">
+          <Adjuntos entidadTipo="historial" entidadId={entrada.id} />
+        </div>
       )}
       {entrada.motivo && <p className="mt-1 text-xs text-slate-400">Motivo: {entrada.motivo}</p>}
     </li>

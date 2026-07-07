@@ -208,7 +208,10 @@ export interface HistorialEntrada {
 
 export interface Adjunto {
   id: string
-  entidadTipo: 'articulo' | 'dispositivo'
+  // 'historial' es la foto opcional de una intervencion manual (ver
+  // HistorialEntrada, campo 'intervencion'): entidadId apunta al id
+  // de esa entrada, no a un articulo ni a un dispositivo.
+  entidadTipo: 'articulo' | 'dispositivo' | 'historial'
   entidadId: string
   nombre: string
   tipo: string

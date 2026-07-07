@@ -26,6 +26,12 @@ describe('descripcionEntrada', () => {
     ).toBe('Se eliminó: Router principal')
   })
 
+  it('describe una intervención manual con su propio texto', () => {
+    expect(
+      descripcionEntrada({ campo: 'intervencion', valorAnterior: '', valorNuevo: 'Cambio de disco duro' }),
+    ).toBe('Cambio de disco duro')
+  })
+
   it('describe un adjunto agregado', () => {
     expect(descripcionEntrada({ campo: 'adjunto', valorAnterior: '', valorNuevo: 'manual.pdf' })).toBe(
       'Se agregó el adjunto: manual.pdf',

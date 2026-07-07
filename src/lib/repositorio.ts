@@ -1,4 +1,4 @@
-import { db, type Conexion, type HistorialEntrada, type TipoEntidadHistorial } from './db'
+import { db, type Adjunto, type Conexion, type HistorialEntrada, type TipoEntidadHistorial } from './db'
 import { resumenConexion } from './conexiones'
 import { supabase } from './supabase'
 import { programarSync } from './sync'
@@ -78,6 +78,35 @@ export async function eliminarRegistro(
   sincronizarPronto()
 }
 
+// Nota manual de una intervencion sobre un dispositivo (ejemplo:
+// "cambio de disco", "reinstalacion de Windows"), para lo que el
+// historial automatico no captura porque no proviene de editar un
+// campo de la ficha. Se mezcla en el mismo "Ver historial" del
+// dispositivo (campo 'intervencion'). Devuelve el id de la entrada
+// para que la interfaz pueda adjuntarle una foto opcional (tabla
+// `adjuntos` con entidadTipo 'historial').
+export async function registrarIntervencion(
+  dispositivoId: string,
+  descripcion: string,
+  motivo = '',
+): Promise<string> {
+  const usuario = await obtenerUsuarioActual()
+  const ahora = new Date().toISOString()
+  const entrada = crearEntrada({ tipo: 'dispositivo', id: dispositivoId }, usuario, ahora, motivo, {
+    campo: 'intervencion',
+    valorAnterior: '',
+    valorNuevo: descripcion,
+  })
+
+  await db.transaction('rw', [db.historial, db.cambiosPendientes], async () => {
+    await db.historial.add(entrada)
+    await encolarEntradasDeHistorial([entrada])
+  })
+
+  sincronizarPronto()
+  return entrada.id
+}
+
 // ----------------------------------------------------------------
 // Historial
 // ----------------------------------------------------------------
@@ -109,20 +138,25 @@ function construirHistorial(
     )
   }
 
-  const destino = destinoHistorial(tabla, nueva)
-
   // Los adjuntos se registran sobre la ficha a la que pertenecen,
-  // como una sola entrada (se agregan o se quitan, no se editan).
+  // como una sola entrada (se agregan o se quitan, no se editan). Una
+  // foto colgada de una intervencion manual (entidadTipo 'historial')
+  // no genera su propia entrada: seria historial sobre el historial,
+  // y la intervencion ya quedo registrada al crearla.
   if (tabla === 'adjuntos') {
     if (anterior) return []
+    const adjunto = nueva as unknown as Adjunto
+    if (adjunto.entidadTipo === 'historial') return []
     return [
-      crearEntrada(destino, usuario, ahora, motivo, {
+      crearEntrada({ tipo: adjunto.entidadTipo, id: adjunto.entidadId }, usuario, ahora, motivo, {
         campo: 'adjunto',
         valorAnterior: '',
         valorNuevo: resumenDe(nueva),
       }),
     ]
   }
+
+  const destino = destinoHistorial(tabla, nueva)
 
   if (!anterior) {
     return [
@@ -182,14 +216,13 @@ const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, 
     credenciales: 'credencial',
   }
 
+// No incluye 'adjuntos': el destino de un adjunto se resuelve aparte
+// (ver ambas llamadas) porque puede apuntar a 'historial', que no es
+// un TipoEntidadHistorial valido y ahi no genera entrada propia.
 function destinoHistorial(
-  tabla: Exclude<TablaEditable, 'conexiones'>,
+  tabla: Exclude<TablaEditable, 'conexiones' | 'adjuntos'>,
   entidad: EntidadPorTabla[TablaEditable],
 ): { tipo: TipoEntidadHistorial; id: string } {
-  if (tabla === 'adjuntos') {
-    const adjunto = entidad as EntidadPorTabla['adjuntos']
-    return { tipo: adjunto.entidadTipo, id: adjunto.entidadId }
-  }
   return { tipo: TIPO_POR_TABLA[tabla], id: entidad.id }
 }
 
@@ -221,10 +254,24 @@ function entradasEliminacion(
       }),
     )
   }
+  // Mismo criterio que al crear: una foto colgada de una intervencion
+  // (entidadTipo 'historial') no deja su propia entrada al borrarse.
+  if (tabla === 'adjuntos') {
+    const adjunto = eliminada as unknown as Adjunto
+    if (adjunto.entidadTipo === 'historial') return []
+    return [
+      crearEntrada({ tipo: adjunto.entidadTipo, id: adjunto.entidadId }, usuario, ahora, motivo, {
+        campo: 'adjunto',
+        valorAnterior: resumenDe(eliminada),
+        valorNuevo: '',
+      }),
+    ]
+  }
+
   const destino = destinoHistorial(tabla, eliminada)
   return [
     crearEntrada(destino, usuario, ahora, motivo, {
-      campo: tabla === 'adjuntos' ? 'adjunto' : 'eliminacion',
+      campo: 'eliminacion',
       valorAnterior: resumenDe(eliminada),
       valorNuevo: '',
     }),

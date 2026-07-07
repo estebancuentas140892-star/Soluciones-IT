@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db, type Dispositivo } from './db'
-import { eliminarRegistro, guardarRegistro, nuevoId } from './repositorio'
+import { eliminarRegistro, guardarRegistro, nuevoId, registrarIntervencion } from './repositorio'
 
 function dispositivoDePrueba(id: string): Omit<Dispositivo, 'updatedAt' | 'updatedBy' | 'eliminadoEn'> {
   return {
@@ -139,6 +139,34 @@ describe('eliminarRegistro', () => {
     await eliminarRegistro('dispositivos', id)
 
     expect(await db.historial.count()).toBe(historialAntes)
+  })
+})
+
+describe('registrarIntervencion', () => {
+  it('crea una entrada de historial manual y la encola para subir', async () => {
+    const dispositivoId = nuevoId()
+    const entradaId = await registrarIntervencion(
+      dispositivoId,
+      'Cambio de disco duro',
+      'Disco original con sectores dañados',
+    )
+
+    const entrada = await db.historial.get(entradaId)
+    expect(entrada).toMatchObject({
+      entidadTipo: 'dispositivo',
+      entidadId: dispositivoId,
+      campo: 'intervencion',
+      valorNuevo: 'Cambio de disco duro',
+      motivo: 'Disco original con sectores dañados',
+    })
+
+    const pendientes = await db.cambiosPendientes.where('tabla').equals('historial').toArray()
+    expect(pendientes.some((c) => c.entidadId === entradaId)).toBe(true)
+  })
+
+  it('no exige un dispositivo previamente guardado', async () => {
+    const dispositivoId = nuevoId()
+    await expect(registrarIntervencion(dispositivoId, 'Configuración de nuevo usuario')).resolves.toBeTruthy()
   })
 })
 

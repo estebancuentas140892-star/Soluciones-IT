@@ -32,6 +32,7 @@ type EntradaDescriptible = Pick<HistorialEntrada, 'campo' | 'valorAnterior' | 'v
 // Separada del componente para poder probarla sin depender de React
 // ni de la base local.
 export function descripcionEntrada(entrada: EntradaDescriptible): string {
+  if (entrada.campo === 'intervencion') return entrada.valorNuevo
   if (entrada.campo === 'creacion') return `Se creó: ${entrada.valorNuevo}`
   if (entrada.campo === 'eliminacion') return `Se eliminó: ${entrada.valorAnterior}`
   if (entrada.campo === 'adjunto') return `Se agregó el adjunto: ${entrada.valorNuevo}`

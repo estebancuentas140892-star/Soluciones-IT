@@ -11,6 +11,7 @@ import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { ValorCopiable } from '../../components/ValorCopiable'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { Historial } from '../historial/Historial'
+import { RegistrarIntervencion } from './RegistrarIntervencion'
 
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
@@ -140,6 +141,8 @@ export function DispositivoPage() {
       <ConexionesFicha dispositivo={dispositivo} />
 
       <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} />
+
+      <RegistrarIntervencion dispositivoId={dispositivoId} />
 
       <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
     </div>

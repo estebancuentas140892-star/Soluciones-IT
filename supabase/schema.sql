@@ -152,7 +152,7 @@ alter table public.historial add column if not exists recibido_en timestamptz no
 
 create table if not exists public.adjuntos (
   id uuid primary key default gen_random_uuid(),
-  entidad_tipo text not null check (entidad_tipo in ('articulo', 'dispositivo')),
+  entidad_tipo text not null check (entidad_tipo in ('articulo', 'dispositivo', 'historial')),
   entidad_id uuid not null,
   nombre text not null,
   tipo text not null default '',
@@ -161,6 +161,13 @@ create table if not exists public.adjuntos (
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
 );
+
+-- Por si la tabla ya existia con la restriccion anterior: 'historial'
+-- es la foto opcional de una intervencion manual (tarea 36), donde
+-- entidad_id apunta al id de la entrada de historial.
+alter table public.adjuntos drop constraint if exists adjuntos_entidad_tipo_check;
+alter table public.adjuntos add constraint adjuntos_entidad_tipo_check
+  check (entidad_tipo in ('articulo', 'dispositivo', 'historial'));
 
 -- Indices para la sincronizacion (consultas por updated_at) y las
 -- consultas mas frecuentes.
