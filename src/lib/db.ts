@@ -166,6 +166,31 @@ export interface BovedaMeta {
   updatedAt: string
 }
 
+// Metodo con el que el tecnico desbloquea la app en su dispositivo:
+// un patron de puntos (estilo movil) o una contrasena. Nunca se usa
+// biometria (dato personal sensible que no todos quieren entregar).
+export type MetodoBloqueoApp = 'patron' | 'contrasena'
+
+// Id de la unica fila de configuracion del bloqueo de la app.
+export const ID_BLOQUEO_APP = 'principal'
+
+// Bloqueo de la aplicacion en ESTE dispositivo (capa de acceso que se
+// suma a la sesion de inicio y a la contrasena maestra de la boveda).
+// Es local y no se sincroniza: cada tecnico lo configura en su propio
+// telefono. Nunca guarda el patron ni la contrasena en claro, solo un
+// "verificador" (un texto fijo cifrado con la clave derivada del
+// secreto): descifrarlo con exito demuestra que el secreto es
+// correcto. `bloqueadoHasta` frena los intentos por fuerza bruta desde
+// la interfaz tras varios fallos.
+export interface ConfigBloqueoApp {
+  id: string
+  metodo: MetodoBloqueoApp
+  verificador: string
+  minutosAutobloqueo: number
+  bloqueadoHasta: string | null
+  updatedAt: string
+}
+
 export type TipoEntidadHistorial = 'categoria' | 'articulo' | 'dispositivo' | 'credencial'
 
 export interface HistorialEntrada {
@@ -257,6 +282,7 @@ class SolucionesItDatabase extends Dexie {
   conexiones!: EntityTable<Conexion, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
   bovedaMeta!: EntityTable<BovedaMeta, 'id'>
+  seguridadApp!: EntityTable<ConfigBloqueoApp, 'id'>
   historial!: EntityTable<HistorialEntrada, 'id'>
   adjuntos!: EntityTable<Adjunto, 'id'>
   cambiosPendientes!: EntityTable<CambioPendiente, 'id'>
@@ -300,6 +326,12 @@ class SolucionesItDatabase extends Dexie {
 
     this.version(6).stores({
       bovedaMeta: 'id',
+    })
+
+    // Configuracion del bloqueo de la app (patron o contrasena). Local
+    // a cada dispositivo, no se sincroniza.
+    this.version(7).stores({
+      seguridadApp: 'id',
     })
   }
 }

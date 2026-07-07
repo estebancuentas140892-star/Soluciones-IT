@@ -20,3 +20,7 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 
 9. Identificadores de código en inglés; textos visibles para el usuario en español.
 10. TypeScript estricto en todo el proyecto.
+
+## Control de versiones
+
+11. Todo cambio realizado se commitea y se hace push siempre, sin esperar a que el usuario lo indique. Se hace al terminar cada cambio o tarea, una vez que las pruebas, el lint y el build estén en verde. Los commits van a `main` (la rama desde la que despliega Vercel) con mensaje claro en español.

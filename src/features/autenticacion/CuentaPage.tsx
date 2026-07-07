@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
 import { useAuth } from './authContext'
 import { validarCambioContrasena } from './erroresAuth'
@@ -77,7 +78,7 @@ export function CuentaPage() {
           <input
             type="password"
             required
-            autoComplete="current-password"
+            autoComplete="off"
             value={actual}
             onChange={(e) => setActual(e.target.value)}
             className={CLASE_INPUT}
@@ -89,7 +90,7 @@ export function CuentaPage() {
           <input
             type="password"
             required
-            autoComplete="new-password"
+            autoComplete="off"
             value={nueva}
             onChange={(e) => setNueva(e.target.value)}
             className={CLASE_INPUT}
@@ -101,7 +102,7 @@ export function CuentaPage() {
           <input
             type="password"
             required
-            autoComplete="new-password"
+            autoComplete="off"
             value={confirmacion}
             onChange={(e) => setConfirmacion(e.target.value)}
             className={CLASE_INPUT}
@@ -127,6 +128,22 @@ export function CuentaPage() {
           {guardando ? 'Cambiando...' : 'Cambiar contraseña'}
         </button>
       </form>
+
+      <Link
+        to="/cuenta/seguridad"
+        className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4"
+      >
+        <div>
+          <h2 className="text-sm font-medium text-slate-200">Seguridad de la aplicación</h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Bloqueo de este dispositivo con patrón o contraseña, para que nadie entre con solo tomar
+            el teléfono.
+          </p>
+        </div>
+        <span className="shrink-0 text-slate-500" aria-hidden>
+          ›
+        </span>
+      </Link>
     </div>
   )
 }

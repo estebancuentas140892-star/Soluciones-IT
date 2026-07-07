@@ -148,3 +148,24 @@ Objetivo: un mapa inteligente de la infraestructura donde cualquier técnico loc
 ## 13. Fases de desarrollo
 
 El plan de trabajo detallado, con prioridades y ubicaciones, está en [TAREAS.md](TAREAS.md).
+
+## 14. Bloqueo de la aplicación en el dispositivo (patrón o contraseña)
+
+Además de la sesión de inicio y de la contraseña maestra de la bóveda, cada técnico puede activar un **bloqueo de la aplicación en su propio dispositivo**. Cierra el riesgo de que alguien que tome el teléfono, con la sesión ya iniciada, abra la app y navegue por las secciones. Son tres capas de acceso independientes:
+
+1. **Sesión de inicio** (Supabase Auth): persiste para no volver a escribir usuario y contraseña en cada apertura y para funcionar offline. No cambia.
+2. **Bloqueo de la app** (esta sección): se pide al abrir la app y tras inactividad, para el uso diario.
+3. **Contraseña maestra**: sigue rigiendo solo lo crítico (ver credenciales de la bóveda y autorizar eliminaciones sensibles). No la reemplaza el bloqueo de la app.
+
+Características:
+
+- **Método a elección del técnico: patrón o contraseña. Nunca biometría** (huella o rostro), por decisión de diseño: es un dato personal sensible que no todos quieren entregar. El patrón es una cuadrícula 3x3 (mínimo 4 puntos); la contraseña, mínimo 4 caracteres.
+- **Local a cada dispositivo y no se sincroniza**: cada quien configura el suyo. La configuración vive en la tabla local `seguridadApp` (Dexie, versión 7 del esquema), que **solo guarda un verificador** (un texto fijo cifrado con la clave derivada del secreto, mismo mecanismo que la contraseña maestra: `crypto.ts`). El patrón o la contraseña **nunca se guardan**; comprobarlos es descifrar el verificador, y funciona sin conexión.
+- **Estado en memoria**: mientras está desbloqueada, solo lo sabe la memoria. Al recargar o reabrir la app (arranque en frío) siempre vuelve a pedir el desbloqueo. Se re-bloquea también por inactividad (configurable: 1, 5, 15, 30 min) y al volver de segundo plano si estuvo oculta más que ese tiempo.
+- **Freno a la fuerza bruta**: tras varios intentos fallidos desde la interfaz se impone una espera (persistida, sobrevive a una recarga).
+- **Salida de emergencia por olvido**: la pantalla de bloqueo ofrece "Cerrar sesión y quitar el bloqueo". No es un atajo de acceso: quita el bloqueo pero a la vez cierra la sesión, así para volver a entrar hay que autenticarse con la contraseña de la cuenta. La información local no se pierde (se recupera al iniciar sesión de nuevo por la sincronización).
+- **Alcance honesto**: el bloqueo es una capa de ACCESO, no de cifrado. Los datos generales (base de conocimiento, dispositivos, red) siguen en IndexedDB en texto legible; el bloqueo impide abrirlos desde la interfaz, pero no cifra la base. Lo verdaderamente secreto (las credenciales de la bóveda) permanece cifrado aparte con la contraseña maestra, que este bloqueo no toca. Un patrón o una contraseña corta son de baja entropía: no pretenden resistir un ataque offline sobre una base extraída, sino impedir el acceso casual con el teléfono en mano.
+
+Endurecimiento del login: el formulario de inicio de sesión pide al navegador **no guardar ni autocompletar** la cuenta y la contraseña (`autoComplete="off"` en el formulario y los campos), para que nadie que tome el teléfono vea una cuenta guardada y entre de un toque. Los navegadores pueden ofrecer guardar igualmente (es una función del sistema operativo), pero esto lo desalienta y quita el autocompletado en la mayoría.
+
+Ubicación: `src/features/seguridad/` (`bloqueoApp.ts` sesión y verificador; `patron.ts` lógica pura del patrón; `PatronInput.tsx` cuadrícula táctil; `BloqueoAppGuard.tsx` guard y pantalla de bloqueo, que envuelve toda la zona autenticada en `src/App.tsx`; `SeguridadPage.tsx` alta, cambio y baja; `useBloqueoApp.ts` estado observable). Enlace desde "Mi cuenta" (`/cuenta/seguridad`) y botón de candado en la cabecera (`src/app/Layout.tsx`). Tabla `seguridadApp` en `src/lib/db.ts`.

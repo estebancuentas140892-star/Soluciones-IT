@@ -21,6 +21,12 @@ const InicioPage = lazy(() =>
 const CuentaPage = lazy(() =>
   import('./features/autenticacion/CuentaPage').then((m) => ({ default: m.CuentaPage })),
 )
+const BloqueoAppGuard = lazy(() =>
+  import('./features/seguridad/BloqueoAppGuard').then((m) => ({ default: m.BloqueoAppGuard })),
+)
+const SeguridadPage = lazy(() =>
+  import('./features/seguridad/SeguridadPage').then((m) => ({ default: m.SeguridadPage })),
+)
 const SolucionesPage = lazy(() =>
   import('./features/soluciones/SolucionesPage').then((m) => ({ default: m.SolucionesPage })),
 )
@@ -85,50 +91,62 @@ function App() {
             }
           />
           <Route element={<RequireAuth />}>
-            {/* Pantallas fuera del Layout (sin barra inferior): el
-                escaner usa la camara a pantalla completa y las
-                etiquetas se imprimen sin el shell de la app. */}
+            {/* Bloqueo de la app (patron o contrasena) sobre toda la
+                zona autenticada: si este dispositivo lo tiene activo,
+                pide desbloquear antes de mostrar cualquier pantalla. */}
             <Route
-              path="escaner"
               element={
                 <Suspense fallback={<Cargando />}>
-                  <EscanerPage />
+                  <BloqueoAppGuard />
                 </Suspense>
               }
-            />
-            <Route
-              path="dispositivos/etiquetas"
-              element={
-                <Suspense fallback={<Cargando />}>
-                  <EtiquetasPage />
-                </Suspense>
-              }
-            />
-            <Route element={<Layout />}>
-              <Route index element={<InicioPage />} />
-              <Route path="cuenta" element={<CuentaPage />} />
-              <Route path="soluciones" element={<SolucionesPage />} />
-              <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
-              <Route path="soluciones/:categoriaId/nuevo" element={<ArticuloForm />} />
-              <Route path="soluciones/:categoriaId/:articuloId" element={<ArticuloPage />} />
-              <Route path="soluciones/:categoriaId/:articuloId/editar" element={<ArticuloForm />} />
-              <Route path="dispositivos" element={<DispositivosPage />} />
-              <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
-              <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
-              <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
-              <Route path="dispositivos/:dispositivoId/editar" element={<DispositivoForm />} />
-              <Route path="red" element={<RedPage />} />
-              <Route path="red/topologia" element={<TopologiaPage />} />
-              <Route path="red/topologia/:dispositivoId" element={<TopologiaPage />} />
-              {/* La seccion de credenciales vive en /notas con nombre
-                  neutro (minima exposicion). La ruta vieja redirige
-                  por si quedo algun enlace guardado. */}
-              <Route path="boveda/*" element={<Navigate to="/notas" replace />} />
-              <Route path="notas" element={<BovedaGuard />}>
-                <Route index element={<BovedaPage />} />
-                <Route path="nueva" element={<CredencialForm />} />
-                <Route path=":credencialId" element={<CredencialPage />} />
-                <Route path=":credencialId/editar" element={<CredencialForm />} />
+            >
+              {/* Pantallas fuera del Layout (sin barra inferior): el
+                  escaner usa la camara a pantalla completa y las
+                  etiquetas se imprimen sin el shell de la app. */}
+              <Route
+                path="escaner"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <EscanerPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="dispositivos/etiquetas"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <EtiquetasPage />
+                  </Suspense>
+                }
+              />
+              <Route element={<Layout />}>
+                <Route index element={<InicioPage />} />
+                <Route path="cuenta" element={<CuentaPage />} />
+                <Route path="cuenta/seguridad" element={<SeguridadPage />} />
+                <Route path="soluciones" element={<SolucionesPage />} />
+                <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
+                <Route path="soluciones/:categoriaId/nuevo" element={<ArticuloForm />} />
+                <Route path="soluciones/:categoriaId/:articuloId" element={<ArticuloPage />} />
+                <Route path="soluciones/:categoriaId/:articuloId/editar" element={<ArticuloForm />} />
+                <Route path="dispositivos" element={<DispositivosPage />} />
+                <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
+                <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
+                <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
+                <Route path="dispositivos/:dispositivoId/editar" element={<DispositivoForm />} />
+                <Route path="red" element={<RedPage />} />
+                <Route path="red/topologia" element={<TopologiaPage />} />
+                <Route path="red/topologia/:dispositivoId" element={<TopologiaPage />} />
+                {/* La seccion de credenciales vive en /notas con nombre
+                    neutro (minima exposicion). La ruta vieja redirige
+                    por si quedo algun enlace guardado. */}
+                <Route path="boveda/*" element={<Navigate to="/notas" replace />} />
+                <Route path="notas" element={<BovedaGuard />}>
+                  <Route index element={<BovedaPage />} />
+                  <Route path="nueva" element={<CredencialForm />} />
+                  <Route path=":credencialId" element={<CredencialPage />} />
+                  <Route path=":credencialId/editar" element={<CredencialForm />} />
+                </Route>
               </Route>
             </Route>
           </Route>

@@ -34,13 +34,19 @@ export function LoginPage() {
         </p>
       )}
 
-      <form onSubmit={manejarEnvio} className="flex w-full max-w-sm flex-col gap-3">
+      {/* autoComplete="off" en el formulario y en los campos para
+          pedirle al navegador que NO guarde ni autocomplete la cuenta
+          y la contraseña: asi nadie que tome el telefono ve una cuenta
+          guardada para entrar de un toque. Los navegadores pueden
+          ofrecer guardar igualmente (es una funcion del sistema), pero
+          esto lo desalienta y quita el autocompletado en la mayoria. */}
+      <form onSubmit={manejarEnvio} autoComplete="off" className="flex w-full max-w-sm flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           Correo
           <input
             type="email"
             required
-            autoComplete="username"
+            autoComplete="off"
             value={correo}
             onChange={(evento) => setCorreo(evento.target.value)}
             className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -51,7 +57,7 @@ export function LoginPage() {
           <input
             type="password"
             required
-            autoComplete="current-password"
+            autoComplete="off"
             value={contrasena}
             onChange={(evento) => setContrasena(evento.target.value)}
             className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
