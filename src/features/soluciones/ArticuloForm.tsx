@@ -5,6 +5,7 @@ import {
   db,
   type Dispositivo,
   type DispositivoAfectado,
+  type NivelDificultad,
   type PasoProcedimiento,
   type TipoArticulo,
 } from '../../lib/db'
@@ -32,12 +33,16 @@ export function ArticuloForm() {
   const [titulo, setTitulo] = useState('')
   const [tipo, setTipo] = useState<TipoArticulo>('manual')
   const [contenido, setContenido] = useState('')
-  // Etiquetas y requisitos ya no se editan (rediseño del 2026-07-03),
-  // pero los articulos guardados antes los conservan: se cargan y se
-  // devuelven tal cual al guardar para no borrar datos existentes.
+  // Etiquetas ya no se editan (rediseño del 2026-07-03), pero los
+  // articulos guardados antes las conservan: se cargan y se devuelven
+  // tal cual al guardar para no borrar datos existentes.
   const [etiquetas, setEtiquetas] = useState('')
+  const [objetivoGeneral, setObjetivoGeneral] = useState('')
   const [requisitos, setRequisitos] = useState('')
   const [pasos, setPasos] = useState<PasoProcedimiento[]>([])
+  const [verificacionFinal, setVerificacionFinal] = useState('')
+  const [tiempoEstimadoMin, setTiempoEstimadoMin] = useState('')
+  const [dificultad, setDificultad] = useState<NivelDificultad | ''>('')
   // Estructura de una incidencia (solo se muestra con tipo
   // 'problema_frecuente'). El `?? []` defiende contra una base que
   // aun no tiene estas columnas (schema.sql pendiente de aplicar).
@@ -62,8 +67,12 @@ export function ArticuloForm() {
     setEtiquetas(articulo.etiquetas.join(', '))
     setContenido(articulo.contenido)
     const procedimiento = normalizarProcedimiento(articulo.procedimiento)
+    setObjetivoGeneral(procedimiento?.objetivoGeneral ?? '')
     setRequisitos(procedimiento?.requisitos.join('\n') ?? '')
     setPasos(procedimiento?.pasos ?? [])
+    setVerificacionFinal(procedimiento?.verificacionFinal.join('\n') ?? '')
+    setTiempoEstimadoMin(procedimiento?.tiempoEstimadoMin ? String(procedimiento.tiempoEstimadoMin) : '')
+    setDificultad(procedimiento?.dificultad ?? '')
     setSintomas((articulo.sintomas ?? []).join('\n'))
     setCausas((articulo.causas ?? []).join('\n'))
     setDispositivosAfectados(articulo.dispositivosAfectados ?? [])
@@ -89,7 +98,14 @@ export function ArticuloForm() {
           .split(',')
           .map((e) => e.trim())
           .filter(Boolean),
-        procedimiento: prepararProcedimientoParaGuardar(requisitos, pasos),
+        procedimiento: prepararProcedimientoParaGuardar({
+          objetivoGeneral,
+          requisitosTexto: requisitos,
+          pasos,
+          verificacionFinalTexto: verificacionFinal,
+          tiempoEstimadoMin: tiempoEstimadoMin.trim() === '' ? null : Number(tiempoEstimadoMin),
+          dificultad: dificultad === '' ? null : dificultad,
+        }),
         sintomas: sintomas
           .split('\n')
           .map((s) => s.trim())
@@ -202,7 +218,67 @@ export function ArticuloForm() {
           </div>
         )}
 
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Objetivo general del procedimiento (opcional, 1 línea)
+          <input
+            type="text"
+            value={objetivoGeneral}
+            onChange={(e) => setObjetivoGeneral(e.target.value)}
+            placeholder="Qué se logra al completar todo el procedimiento"
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+        </label>
+
+        <div className="flex gap-3">
+          <label className="flex flex-1 flex-col gap-1 text-sm text-slate-300">
+            Tiempo estimado (minutos, opcional)
+            <input
+              type="number"
+              min={1}
+              value={tiempoEstimadoMin}
+              onChange={(e) => setTiempoEstimadoMin(e.target.value)}
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </label>
+
+          <label className="flex flex-1 flex-col gap-1 text-sm text-slate-300">
+            Dificultad (opcional)
+            <select
+              value={dificultad}
+              onChange={(e) => setDificultad(e.target.value as NivelDificultad | '')}
+              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              <option value="">Sin definir</option>
+              <option value="principiante">Principiante</option>
+              <option value="intermedio">Intermedio</option>
+              <option value="avanzado">Avanzado</option>
+            </select>
+          </label>
+        </div>
+
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Requisitos, "Antes de empezar" (uno por línea, opcional)
+          <textarea
+            rows={3}
+            value={requisitos}
+            onChange={(e) => setRequisitos(e.target.value)}
+            placeholder={'Acceso a la red\nPermisos de administrador\nConexión VPN activa'}
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+        </label>
+
         <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
+
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Verificación final (uno por línea, opcional)
+          <textarea
+            rows={3}
+            value={verificacionFinal}
+            onChange={(e) => setVerificacionFinal(e.target.value)}
+            placeholder={'La impresora aparece instalada\nLa impresión de prueba fue exitosa'}
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+        </label>
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           {pasos.length > 0 ? 'Notas adicionales (opcional, admite Markdown)' : 'Contenido (admite Markdown)'}

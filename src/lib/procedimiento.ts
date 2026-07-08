@@ -1,4 +1,4 @@
-import type { PasoAdjunto, PasoProcedimiento, Procedimiento } from './db'
+import type { NivelDificultad, PasoAdjunto, PasoProcedimiento, Procedimiento } from './db'
 
 // Logica pura de los procedimientos paso a paso, separada de los
 // componentes para poder probarla sin navegador. El dato viaja como
@@ -9,6 +9,7 @@ export function crearPaso(): PasoProcedimiento {
   return {
     id: crypto.randomUUID(),
     titulo: '',
+    objetivo: '',
     instrucciones: [],
     adjuntos: [],
     credencialId: null,
@@ -31,6 +32,10 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
     ? origen.requisitos.filter((r): r is string => typeof r === 'string' && r.trim() !== '')
     : []
 
+  const verificacionFinal = Array.isArray(origen.verificacionFinal)
+    ? origen.verificacionFinal.filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+    : []
+
   const pasos = Array.isArray(origen.pasos)
     ? origen.pasos
         .filter((p): p is Record<string, unknown> => Boolean(p) && typeof p === 'object')
@@ -38,7 +43,26 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
     : []
 
   if (pasos.length === 0) return null
-  return { requisitos, pasos }
+  return {
+    objetivoGeneral: texto(origen.objetivoGeneral),
+    requisitos,
+    pasos,
+    verificacionFinal,
+    tiempoEstimadoMin: numeroPositivo(origen.tiempoEstimadoMin),
+    dificultad: dificultadValida(origen.dificultad),
+  }
+}
+
+function numeroPositivo(valor: unknown): number | null {
+  return typeof valor === 'number' && Number.isFinite(valor) && valor > 0 ? valor : null
+}
+
+const DIFICULTADES_VALIDAS: NivelDificultad[] = ['principiante', 'intermedio', 'avanzado']
+
+function dificultadValida(valor: unknown): NivelDificultad | null {
+  return typeof valor === 'string' && (DIFICULTADES_VALIDAS as string[]).includes(valor)
+    ? (valor as NivelDificultad)
+    : null
 }
 
 // Los campos que el editor dejo de ofrecer (detalle, nota,
@@ -57,6 +81,7 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
   return {
     id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
     titulo: texto(origen.titulo),
+    objetivo: texto(origen.objetivo),
     instrucciones: Array.isArray(origen.instrucciones)
       ? origen.instrucciones.filter((i): i is string => typeof i === 'string' && i.trim() !== '')
       : [],
@@ -143,9 +168,10 @@ function texto(valor: unknown): string {
 // desbloqueada (ARQUITECTURA.md, seccion 6).
 export function textoDeProcedimiento(procedimiento: Procedimiento | null): string {
   if (!procedimiento) return ''
-  const partes = [...procedimiento.requisitos]
+  const partes = [procedimiento.objetivoGeneral, ...procedimiento.requisitos, ...procedimiento.verificacionFinal]
   for (const paso of procedimiento.pasos) {
     partes.push(paso.titulo)
+    partes.push(paso.objetivo)
     partes.push(...paso.instrucciones)
     // Los titulos del subprocedimiento y de la solucion vinculados si
     // se indexan (no son informacion protegida): buscar "impresora"
@@ -200,15 +226,33 @@ export function pasoSeCompletaSolo(
   return trabajoPrevioCompleto && !tieneSolucionVinculada
 }
 
+export interface DatosProcedimientoParaGuardar {
+  objetivoGeneral: string
+  requisitosTexto: string
+  pasos: PasoProcedimiento[]
+  verificacionFinalTexto: string
+  tiempoEstimadoMin: number | null
+  dificultad: NivelDificultad | null
+}
+
 // Prepara el procedimiento que se va a guardar: limpia espacios,
 // descarta pasos totalmente vacios y devuelve null si no queda nada.
-// Los requisitos ya no se editan, pero los articulos guardados antes
-// del rediseño los conservan: llegan como texto y pasan de largo.
-export function prepararProcedimientoParaGuardar(
-  requisitosTexto: string,
-  pasos: PasoProcedimiento[],
-): Procedimiento | null {
+// Los requisitos volvieron a editarse (antes del 2026-07-03 no se
+// podian); los articulos guardados desde entonces igual los conservan.
+export function prepararProcedimientoParaGuardar({
+  objetivoGeneral,
+  requisitosTexto,
+  pasos,
+  verificacionFinalTexto,
+  tiempoEstimadoMin,
+  dificultad,
+}: DatosProcedimientoParaGuardar): Procedimiento | null {
   const requisitos = requisitosTexto
+    .split('\n')
+    .map((linea) => linea.trim())
+    .filter(Boolean)
+
+  const verificacionFinal = verificacionFinalTexto
     .split('\n')
     .map((linea) => linea.trim())
     .filter(Boolean)
@@ -217,6 +261,7 @@ export function prepararProcedimientoParaGuardar(
     .map((paso) => ({
       ...paso,
       titulo: paso.titulo.trim(),
+      objetivo: paso.objetivo.trim(),
       instrucciones: paso.instrucciones.map((i) => i.trim()).filter(Boolean),
       credencialTitulo: paso.credencialId ? paso.credencialTitulo.trim() : '',
       subArticuloTitulo: paso.subArticuloId ? paso.subArticuloTitulo.trim() : '',
@@ -233,5 +278,12 @@ export function prepararProcedimientoParaGuardar(
     )
 
   if (pasosLimpios.length === 0) return null
-  return { requisitos, pasos: pasosLimpios }
+  return {
+    objetivoGeneral: objetivoGeneral.trim(),
+    requisitos,
+    pasos: pasosLimpios,
+    verificacionFinal,
+    tiempoEstimadoMin,
+    dificultad,
+  }
 }

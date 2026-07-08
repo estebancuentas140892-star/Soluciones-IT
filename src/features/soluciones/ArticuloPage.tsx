@@ -15,6 +15,8 @@ import { Historial } from '../historial/Historial'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { etiquetaDeTipo } from './tiposArticulo'
 
+const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' })
+
 export function ArticuloPage() {
   const { categoriaId = '', articuloId = '' } = useParams()
   const navigate = useNavigate()
@@ -22,6 +24,10 @@ export function ArticuloPage() {
 
   const articulo = useLiveQuery(() => db.articulos.get(articuloId), [articuloId])
   const categoria = useLiveQuery(() => db.categorias.get(categoriaId), [categoriaId])
+  const autor = useLiveQuery(
+    () => (articulo?.updatedBy ? db.perfiles.get(articulo.updatedBy) : undefined),
+    [articulo?.updatedBy],
+  )
 
   // Memorizado para que los ids generados al normalizar datos viejos
   // sean estables entre renders (el progreso local depende de ellos).
@@ -47,6 +53,10 @@ export function ArticuloPage() {
         <div>
           <h1 className="text-xl font-semibold">{articulo.titulo}</h1>
           <p className="text-xs text-slate-500">{etiquetaDeTipo(articulo.tipo)}</p>
+          <p className="text-xs text-slate-600">
+            Última modificación: {formateadorFecha.format(new Date(articulo.updatedAt))}
+            {autor?.nombre ? `, por ${autor.nombre}` : ''}
+          </p>
         </div>
       </header>
 

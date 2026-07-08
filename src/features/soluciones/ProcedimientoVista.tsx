@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type PasoAdjunto, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
+import { db, type NivelDificultad, type PasoAdjunto, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
   normalizarProcedimiento,
   pasoSeCompletaSolo,
@@ -10,15 +10,23 @@ import {
 } from '../../lib/procedimiento'
 import {
   alternarInstruccionHecha,
+  alternarVerificacionFinal,
   claveInstruccion,
   clavesDeInstrucciones,
   contarHechos,
   contarInstruccionesHechas,
   establecerPasoHecho,
   reiniciarProgreso,
+  verificacionFinalCompleta,
 } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
+
+const ETIQUETA_DIFICULTAD: Record<NivelDificultad, string> = {
+  principiante: 'Principiante',
+  intermedio: 'Intermedio',
+  avanzado: 'Avanzado',
+}
 
 interface Props {
   articuloId: string
@@ -45,11 +53,13 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
   const [expandido, setExpandido] = useState<string | null>(null)
   const refsPasos = useRef<(HTMLLIElement | null)[]>([])
 
-  const { requisitos, pasos } = procedimiento
+  const { objetivoGeneral, requisitos, pasos, verificacionFinal, tiempoEstimadoMin, dificultad } = procedimiento
   const hechos = new Set(progreso?.pasosHechos ?? [])
   const instruccionesHechas = new Set(progreso?.instruccionesHechas ?? [])
   const completados = contarHechos(progreso?.pasosHechos ?? [], pasos.map((p) => p.id))
-  const todoCompletado = pasos.length > 0 && completados === pasos.length
+  const pasosCompletados = pasos.length > 0 && completados === pasos.length
+  const verificacionCompleta = verificacionFinalCompleta(progreso?.verificacionHecha, verificacionFinal.length)
+  const todoCompletado = pasosCompletados && verificacionCompleta
 
   // Ids de los subprocedimientos vinculados de este nivel: se
   // consultan en vivo para saber cuales estan completos, porque un
@@ -188,6 +198,26 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
 
   return (
     <section className="flex flex-col gap-3">
+      {(objetivoGeneral || tiempoEstimadoMin || dificultad) && (
+        <div className="flex flex-col gap-2">
+          {objetivoGeneral && <p className="text-sm text-slate-400">{objetivoGeneral}</p>}
+          {(tiempoEstimadoMin || dificultad) && (
+            <div className="flex flex-wrap gap-2">
+              {tiempoEstimadoMin && (
+                <span className="rounded-full border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-400">
+                  ⏱ {tiempoEstimadoMin} min
+                </span>
+              )}
+              {dificultad && (
+                <span className="rounded-full border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-400">
+                  {ETIQUETA_DIFICULTAD[dificultad]}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {requisitos.length > 0 && (
         <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
           <h2 className="text-sm font-medium text-slate-200">Antes de empezar</h2>
@@ -269,6 +299,8 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
 
               {expandido === paso.id && (
                 <div className="flex flex-col gap-3 border-t border-slate-800 px-4 py-3">
+                  {paso.objetivo && <p className="text-xs text-slate-400">{paso.objetivo}</p>}
+
                   {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
                   {paso.instrucciones.length > 0 && (
@@ -348,6 +380,45 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
           )
         })}
       </ol>
+
+      {pasosCompletados && verificacionFinal.length > 0 && !verificacionCompleta && (
+        <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3">
+          <h2 className="text-sm font-medium text-amber-200">Verificación final</h2>
+          <p className="mt-0.5 text-xs text-amber-400/80">
+            Confirma que el objetivo realmente se cumplió antes de dar por terminado el procedimiento.
+          </p>
+          <ul className="mt-2 flex flex-col gap-0.5">
+            {verificacionFinal.map((item, indice) => {
+              const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
+              return (
+                <li key={indice}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={marcada}
+                    onClick={() => void alternarVerificacionFinal(articuloId, indice)}
+                    className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
+                  >
+                    <span
+                      aria-hidden
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+                        marcada
+                          ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
+                          : 'border-slate-600 text-transparent'
+                      }`}
+                    >
+                      ✓
+                    </span>
+                    <span className={`text-sm ${marcada ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                      {item}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {todoCompletado && (
         <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-800 bg-emerald-950/40 px-4 py-3">

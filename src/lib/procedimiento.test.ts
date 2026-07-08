@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PasoProcedimiento } from './db'
+import type { PasoProcedimiento, Procedimiento } from './db'
 import {
   crearPaso,
   normalizarProcedimiento,
@@ -8,12 +8,14 @@ import {
   prepararProcedimientoParaGuardar,
   siguientePasoPendiente,
   textoDeProcedimiento,
+  type DatosProcedimientoParaGuardar,
 } from './procedimiento'
 
 function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimiento {
   return {
     id: 'paso-1',
     titulo: 'Abrir SQL Server Management Studio',
+    objetivo: '',
     instrucciones: [],
     adjuntos: [],
     credencialId: null,
@@ -22,6 +24,18 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
     subArticuloTitulo: '',
     solucionArticuloId: null,
     solucionArticuloTitulo: '',
+    ...cambios,
+  }
+}
+
+function procedimientoCompleto(cambios: Partial<Procedimiento> = {}): Procedimiento {
+  return {
+    objetivoGeneral: '',
+    requisitos: [],
+    pasos: [pasoCompleto()],
+    verificacionFinal: [],
+    tiempoEstimadoMin: null,
+    dificultad: null,
     ...cambios,
   }
 }
@@ -41,8 +55,12 @@ describe('normalizarProcedimiento', () => {
 
   it('conserva un procedimiento bien formado tal cual', () => {
     const procedimiento = {
+      objetivoGeneral: 'Dejar el SQL Server operativo',
       requisitos: ['Credenciales del SQL Server'],
       pasos: [pasoCompleto()],
+      verificacionFinal: ['El servicio quedó en marcha'],
+      tiempoEstimadoMin: 15,
+      dificultad: 'intermedio' as const,
     }
     expect(normalizarProcedimiento(procedimiento)).toEqual(procedimiento)
   })
@@ -51,6 +69,7 @@ describe('normalizarProcedimiento', () => {
     const resultado = normalizarProcedimiento({ pasos: [{ titulo: 'Solo título' }] })
     expect(resultado?.pasos[0]).toMatchObject({
       titulo: 'Solo título',
+      objetivo: '',
       instrucciones: [],
       adjuntos: [],
       credencialId: null,
@@ -61,7 +80,21 @@ describe('normalizarProcedimiento', () => {
       solucionArticuloTitulo: '',
     })
     expect(resultado?.pasos[0].id).not.toBe('')
+    expect(resultado?.objetivoGeneral).toBe('')
     expect(resultado?.requisitos).toEqual([])
+    expect(resultado?.verificacionFinal).toEqual([])
+    expect(resultado?.tiempoEstimadoMin).toBeNull()
+    expect(resultado?.dificultad).toBeNull()
+  })
+
+  it('descarta tiempoEstimadoMin y dificultad invalidos', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [pasoCompleto()],
+      tiempoEstimadoMin: -5,
+      dificultad: 'experto',
+    })
+    expect(resultado?.tiempoEstimadoMin).toBeNull()
+    expect(resultado?.dificultad).toBeNull()
   })
 
   it('descarta los campos retirados en el rediseño (detalle, nota, advertencia, consejo y decisión)', () => {
@@ -203,10 +236,12 @@ describe('normalizarProcedimiento', () => {
 
 describe('textoDeProcedimiento', () => {
   it('junta requisitos, títulos e instrucciones para el índice de búsqueda', () => {
-    const texto = textoDeProcedimiento({
-      requisitos: ['Credenciales del SQL Server'],
-      pasos: [pasoCompleto({ instrucciones: ['Verificar el espacio en disco'] })],
-    })
+    const texto = textoDeProcedimiento(
+      procedimientoCompleto({
+        requisitos: ['Credenciales del SQL Server'],
+        pasos: [pasoCompleto({ instrucciones: ['Verificar el espacio en disco'] })],
+      }),
+    )
     expect(texto).toContain('Credenciales del SQL Server')
     expect(texto).toContain('Abrir SQL Server Management Studio')
     expect(texto).toContain('Verificar el espacio en disco')
@@ -217,80 +252,103 @@ describe('textoDeProcedimiento', () => {
   })
 
   it('no incluye el título de la credencial vinculada (la bóveda solo se busca desbloqueada)', () => {
-    const texto = textoDeProcedimiento({
-      requisitos: [],
-      pasos: [pasoCompleto({ credencialId: 'cred-1', credencialTitulo: 'SQL Server producción' })],
-    })
+    const texto = textoDeProcedimiento(
+      procedimientoCompleto({
+        pasos: [pasoCompleto({ credencialId: 'cred-1', credencialTitulo: 'SQL Server producción' })],
+      }),
+    )
     expect(texto).not.toContain('SQL Server producción')
   })
 
   it('incluye los títulos del subprocedimiento y de la solución vinculados', () => {
-    const texto = textoDeProcedimiento({
-      requisitos: [],
-      pasos: [
-        pasoCompleto({
-          subArticuloId: 'art-2',
-          subArticuloTitulo: 'Configurar impresora',
-          solucionArticuloId: 'art-3',
-          solucionArticuloTitulo: 'Reparar el spooler',
-        }),
-      ],
-    })
+    const texto = textoDeProcedimiento(
+      procedimientoCompleto({
+        pasos: [
+          pasoCompleto({
+            subArticuloId: 'art-2',
+            subArticuloTitulo: 'Configurar impresora',
+            solucionArticuloId: 'art-3',
+            solucionArticuloTitulo: 'Reparar el spooler',
+          }),
+        ],
+      }),
+    )
     expect(texto).toContain('Configurar impresora')
     expect(texto).toContain('Reparar el spooler')
   })
 })
 
+function preparar(pasos: PasoProcedimiento[], cambios: Partial<DatosProcedimientoParaGuardar> = {}) {
+  return prepararProcedimientoParaGuardar({
+    objetivoGeneral: '',
+    requisitosTexto: '',
+    pasos,
+    verificacionFinalTexto: '',
+    tiempoEstimadoMin: null,
+    dificultad: null,
+    ...cambios,
+  })
+}
+
 describe('prepararProcedimientoParaGuardar', () => {
-  it('limpia espacios y separa los requisitos por línea', () => {
-    const resultado = prepararProcedimientoParaGuardar('  Acceso al servidor  \n\n VPN activa ', [
-      pasoCompleto({ titulo: '  Abrir la consola  ' }),
-    ])
+  it('limpia espacios y separa los requisitos y la verificación final por línea', () => {
+    const resultado = preparar([pasoCompleto({ titulo: '  Abrir la consola  ' })], {
+      requisitosTexto: '  Acceso al servidor  \n\n VPN activa ',
+      verificacionFinalTexto: '  Todo funciona  \n\n Sin errores ',
+    })
     expect(resultado?.requisitos).toEqual(['Acceso al servidor', 'VPN activa'])
+    expect(resultado?.verificacionFinal).toEqual(['Todo funciona', 'Sin errores'])
     expect(resultado?.pasos[0].titulo).toBe('Abrir la consola')
+  })
+
+  it('limpia espacios en el objetivo general y conserva tiempo y dificultad', () => {
+    const resultado = preparar([pasoCompleto()], {
+      objetivoGeneral: '  Dejar todo operativo  ',
+      tiempoEstimadoMin: 30,
+      dificultad: 'avanzado',
+    })
+    expect(resultado?.objetivoGeneral).toBe('Dejar todo operativo')
+    expect(resultado?.tiempoEstimadoMin).toBe(30)
+    expect(resultado?.dificultad).toBe('avanzado')
   })
 
   it('descarta pasos totalmente vacíos y devuelve null si no queda nada', () => {
     const vacio = crearPaso()
-    expect(prepararProcedimientoParaGuardar('', [vacio])).toBeNull()
+    expect(preparar([vacio])).toBeNull()
 
-    const resultado = prepararProcedimientoParaGuardar('', [vacio, pasoCompleto()])
+    const resultado = preparar([vacio, pasoCompleto()])
     expect(resultado?.pasos).toHaveLength(1)
     expect(resultado?.pasos[0].titulo).toBe('Abrir SQL Server Management Studio')
   })
 
   it('limpia espacios en las instrucciones y descarta las que quedan vacías', () => {
-    const resultado = prepararProcedimientoParaGuardar('', [
-      pasoCompleto({ instrucciones: ['  Presionar Windows + R  ', '', '   '] }),
-    ])
+    const resultado = preparar([pasoCompleto({ instrucciones: ['  Presionar Windows + R  ', '', '   '] })])
     expect(resultado?.pasos[0].instrucciones).toEqual(['Presionar Windows + R'])
   })
 
   it('conserva un paso que solo tiene instrucciones', () => {
     const paso = crearPaso()
     paso.instrucciones = ['Imprimir una página de prueba']
-    expect(prepararProcedimientoParaGuardar('', [paso])?.pasos).toHaveLength(1)
+    expect(preparar([paso])?.pasos).toHaveLength(1)
   })
 
   it('conserva un paso que solo tiene adjuntos', () => {
     const paso = crearPaso()
     paso.adjuntos = [{ referencia: 'articulos/a1/pasos/captura.jpg', nombre: 'captura.jpg', tipo: 'image/jpeg' }]
-    expect(prepararProcedimientoParaGuardar('', [paso])?.pasos).toHaveLength(1)
+    expect(preparar([paso])?.pasos).toHaveLength(1)
   })
 
   it('conserva un paso que solo tiene credencial vinculada y limpia el título de referencia', () => {
     const paso = crearPaso()
     paso.credencialId = 'cred-1'
     paso.credencialTitulo = '  SQL Server  '
-    const resultado = prepararProcedimientoParaGuardar('', [paso])
+    const resultado = preparar([paso])
     expect(resultado?.pasos).toHaveLength(1)
     expect(resultado?.pasos[0].credencialTitulo).toBe('SQL Server')
   })
 
   it('descarta el título de referencia si el paso quedó sin credencial', () => {
-    const resultado = prepararProcedimientoParaGuardar('', [
-      pasoCompleto({ credencialId: null, credencialTitulo: 'huérfano' }),
-    ])
+    const resultado = preparar([pasoCompleto({ credencialId: null, credencialTitulo: 'huérfano' })])
     expect(resultado?.pasos[0].credencialTitulo).toBe('')
   })
 
@@ -298,13 +356,11 @@ describe('prepararProcedimientoParaGuardar', () => {
     const paso = crearPaso()
     paso.subArticuloId = 'art-2'
     paso.subArticuloTitulo = '  Configurar impresora  '
-    const resultado = prepararProcedimientoParaGuardar('', [paso])
+    const resultado = preparar([paso])
     expect(resultado?.pasos).toHaveLength(1)
     expect(resultado?.pasos[0].subArticuloTitulo).toBe('Configurar impresora')
 
-    const huerfano = prepararProcedimientoParaGuardar('', [
-      pasoCompleto({ subArticuloId: null, subArticuloTitulo: 'huérfano' }),
-    ])
+    const huerfano = preparar([pasoCompleto({ subArticuloId: null, subArticuloTitulo: 'huérfano' })])
     expect(huerfano?.pasos[0].subArticuloTitulo).toBe('')
   })
 
@@ -312,13 +368,11 @@ describe('prepararProcedimientoParaGuardar', () => {
     const paso = crearPaso()
     paso.solucionArticuloId = 'art-3'
     paso.solucionArticuloTitulo = '  Reparar el spooler  '
-    const resultado = prepararProcedimientoParaGuardar('', [paso])
+    const resultado = preparar([paso])
     expect(resultado?.pasos).toHaveLength(1)
     expect(resultado?.pasos[0].solucionArticuloTitulo).toBe('Reparar el spooler')
 
-    const huerfano = prepararProcedimientoParaGuardar('', [
-      pasoCompleto({ solucionArticuloId: null, solucionArticuloTitulo: 'huérfano' }),
-    ])
+    const huerfano = preparar([pasoCompleto({ solucionArticuloId: null, solucionArticuloTitulo: 'huérfano' })])
     expect(huerfano?.pasos[0].solucionArticuloTitulo).toBe('')
   })
 })

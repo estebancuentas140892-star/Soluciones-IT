@@ -5,6 +5,7 @@ import { resumenProcedimiento, textoContexto } from './resumenProcedimiento'
 function paso(parcial: Partial<PasoProcedimiento> & { id: string }): PasoProcedimiento {
   return {
     titulo: '',
+    objetivo: '',
     instrucciones: [],
     adjuntos: [],
     credencialId: null,
@@ -18,7 +19,14 @@ function paso(parcial: Partial<PasoProcedimiento> & { id: string }): PasoProcedi
 }
 
 function proc(pasos: PasoProcedimiento[], requisitos: string[] = []): Procedimiento {
-  return { requisitos, pasos }
+  return {
+    objetivoGeneral: '',
+    requisitos,
+    pasos,
+    verificacionFinal: [],
+    tiempoEstimadoMin: null,
+    dificultad: null,
+  }
 }
 
 // El historial guarda el procedimiento como JSON; las pruebas simulan
@@ -209,6 +217,50 @@ describe('resumenProcedimiento', () => {
     expect(cambios).toEqual([
       'Se modificó el título del Paso 1: "Uno" → "Uno editado".',
       'Se agregó una nueva instrucción al Paso 2: Databases.',
+    ])
+  })
+
+  it('detecta el objetivo de un paso definido, modificado y quitado', () => {
+    const sinObjetivo = paso({ id: 'p1', titulo: 'Uno', instrucciones: ['a'] })
+    const conObjetivo = paso({ ...sinObjetivo, objetivo: 'Dejarlo listo' })
+    const otroObjetivo = paso({ ...sinObjetivo, objetivo: 'Otro objetivo' })
+
+    expect(resumenProcedimiento(json(proc([sinObjetivo])), json(proc([conObjetivo]))).cambios).toEqual([
+      'Se definió el objetivo del Paso 1: Uno.',
+    ])
+    expect(resumenProcedimiento(json(proc([conObjetivo])), json(proc([otroObjetivo]))).cambios).toEqual([
+      'Se actualizó el objetivo del Paso 1: Uno.',
+    ])
+    expect(resumenProcedimiento(json(proc([conObjetivo])), json(proc([sinObjetivo]))).cambios).toEqual([
+      'Se quitó el objetivo del Paso 1: Uno.',
+    ])
+  })
+
+  it('detecta el objetivo general, el tiempo estimado y la dificultad del procedimiento', () => {
+    const base = proc([paso({ id: 'p1', instrucciones: ['a'] })])
+    const conMetadatos: Procedimiento = {
+      ...base,
+      objetivoGeneral: 'Dejar todo operativo',
+      tiempoEstimadoMin: 15,
+      dificultad: 'intermedio',
+    }
+    expect(resumenProcedimiento(json(base), json(conMetadatos)).cambios).toEqual([
+      'Se definió el objetivo general del procedimiento.',
+      'Se actualizó el tiempo estimado a 15 min.',
+      'Se actualizó la dificultad a "intermedio".',
+    ])
+    expect(resumenProcedimiento(json(conMetadatos), json(base)).cambios).toEqual([
+      'Se quitó el objetivo general del procedimiento.',
+      'Se quitó el tiempo estimado del procedimiento.',
+      'Se quitó la dificultad del procedimiento.',
+    ])
+  })
+
+  it('detecta un ítem agregado a la verificación final', () => {
+    const antes: Procedimiento = { ...proc([paso({ id: 'p1', instrucciones: ['a'] })]) }
+    const despues: Procedimiento = { ...antes, verificacionFinal: ['La impresora imprime'] }
+    expect(resumenProcedimiento(json(antes), json(despues)).cambios).toEqual([
+      'Se agregó un ítem de la verificación final.',
     ])
   })
 

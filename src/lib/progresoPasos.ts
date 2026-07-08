@@ -115,3 +115,36 @@ export function contarInstruccionesHechas(
   const hechas = new Set(instruccionesHechas ?? [])
   return clavesDeInstrucciones(pasoId, total).filter((clave) => hechas.has(clave)).length
 }
+
+// Alterna una casilla de "Verificacion final" (por indice, igual que
+// las instrucciones de un paso: no tienen id propio).
+export async function alternarVerificacionFinal(
+  articuloId: string,
+  indice: number,
+): Promise<void> {
+  const actual = await db.progresoPasos.get(articuloId)
+  const marcadas = new Set(actual?.verificacionHecha ?? [])
+  if (marcadas.has(indice)) {
+    marcadas.delete(indice)
+  } else {
+    marcadas.add(indice)
+  }
+  await db.progresoPasos.put({
+    articuloId,
+    pasosHechos: actual?.pasosHechos ?? [],
+    instruccionesHechas: actual?.instruccionesHechas ?? [],
+    verificacionHecha: [...marcadas],
+    actualizadoEn: new Date().toISOString(),
+  })
+}
+
+// La verificacion final cuenta como completa cuando no hay items (no
+// se definio) o cuando todos estan marcados.
+export function verificacionFinalCompleta(
+  verificacionHecha: number[] | undefined,
+  total: number,
+): boolean {
+  if (total === 0) return true
+  const marcadas = new Set(verificacionHecha ?? [])
+  return Array.from({ length: total }, (_, i) => i).every((i) => marcadas.has(i))
+}

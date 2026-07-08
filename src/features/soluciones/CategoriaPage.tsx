@@ -1,6 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { db } from '../../lib/db'
+import { db, type Articulo } from '../../lib/db'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { contarHechos } from '../../lib/progresoPasos'
 import { BotonVolver } from '../../components/BotonVolver'
 import { TIPOS_ARTICULO } from './tiposArticulo'
 
@@ -48,9 +50,10 @@ export function CategoriaPage() {
                 <li key={articulo.id}>
                   <Link
                     to={`/soluciones/${categoriaId}/${articulo.id}`}
-                    className="block rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
+                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
                   >
-                    {articulo.titulo}
+                    <span className="min-w-0 truncate">{articulo.titulo}</span>
+                    <AvanceArticulo articulo={articulo} />
                   </Link>
                 </li>
               ))}
@@ -59,5 +62,30 @@ export function CategoriaPage() {
         )
       })}
     </div>
+  )
+}
+
+// Chip "X/Y pasos" para retomar de un vistazo un procedimiento a
+// medias, sin tener que abrirlo. Solo se muestra en artículos con
+// procedimiento y avance previo (evita ruido en el resto de la lista).
+function AvanceArticulo({ articulo }: { articulo: Articulo }) {
+  const procedimiento = normalizarProcedimiento(articulo.procedimiento)
+  const progreso = useLiveQuery(() => db.progresoPasos.get(articulo.id), [articulo.id])
+
+  if (!procedimiento) return null
+  const total = procedimiento.pasos.length
+  const hechos = contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((p) => p.id))
+  if (hechos === 0) return null
+
+  return (
+    <span
+      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${
+        hechos === total
+          ? 'border-emerald-800 bg-emerald-950/40 text-emerald-400'
+          : 'border-amber-800 bg-amber-950/40 text-amber-400'
+      }`}
+    >
+      {hechos}/{total}
+    </span>
   )
 }

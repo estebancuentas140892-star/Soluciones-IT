@@ -43,6 +43,10 @@ export interface PasoAdjunto {
 export interface PasoProcedimiento {
   id: string
   titulo: string
+  // Descripcion muy corta (1 linea) de que se logra al terminar el
+  // paso. Ayuda a entender el proposito antes de empezar; opcional,
+  // no se muestra si esta vacio.
+  objetivo: string
   // Instrucciones con casilla de verificacion dentro del paso, una
   // por linea. Al marcar la ultima, el paso se completa solo y la
   // vista avanza al siguiente pendiente.
@@ -74,11 +78,27 @@ export interface PasoProcedimiento {
   solucionArticuloTitulo: string
 }
 
+// Nivel de dificultad del procedimiento completo: ayuda al tecnico a
+// saber que esperar antes de empezar. null si no se definio.
+export type NivelDificultad = 'principiante' | 'intermedio' | 'avanzado'
+
 // Un articulo con procedimiento se muestra como una lista de pasos
 // numerados y expandibles, con un bloque "Antes de empezar".
 export interface Procedimiento {
+  // Descripcion muy corta de que se logra al completar TODO el
+  // procedimiento (distinto del objetivo de cada paso). Opcional.
+  objetivoGeneral: string
   requisitos: string[]
   pasos: PasoProcedimiento[]
+  // Checklist final para confirmar que el objetivo general realmente
+  // se cumplio, mas alla de haber marcado todos los pasos. Se muestra
+  // junto al banner de "Procedimiento completado" y debe marcarse
+  // entera antes de darlo por terminado.
+  verificacionFinal: string[]
+  // Cuanto toma en minutos, para que el tecnico organice su trabajo.
+  // null si no se definio.
+  tiempoEstimadoMin: number | null
+  dificultad: NivelDificultad | null
 }
 
 // Vinculo de un articulo de tipo 'problema_frecuente' con un
@@ -291,6 +311,9 @@ export interface ProgresoPasos {
   // "<pasoId>:<indice>". Opcional porque las filas guardadas antes
   // de esta funcion no lo traen.
   instruccionesHechas?: string[]
+  // Casillas marcadas de "Verificacion final" (indice dentro de
+  // Procedimiento.verificacionFinal). Opcional por el mismo motivo.
+  verificacionHecha?: number[]
   actualizadoEn: string
 }
 

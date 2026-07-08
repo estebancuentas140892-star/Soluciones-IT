@@ -17,7 +17,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 Propuestas presentadas al usuario el 2026-07-03, pendientes de que elija cuáles convertir en tareas: recordatorios de mantenimiento preventivo por dispositivo y reporte mensual de actividad desde el historial. (La tercera propuesta, cola de subida para adjuntos offline, ya se hizo: tarea 17 en el archivo.)
 
-Propuesta presentada al usuario el 2026-07-08, pendiente de que apruebe fases y prioridades: mejoras de UX de procedimientos (18 puntos del usuario) y Modo Diagnóstico Inteligente, analizadas contra el código real en [PROPUESTA_UX_DIAGNOSTICO.md](PROPUESTA_UX_DIAGNOSTICO.md). Resumen: 5 puntos ya existen; fase A (metadatos opcionales del procedimiento, solo JSON), fase B (bloques tipados dentro del paso, absorbe la tarea 40), fases C (visor de imágenes), D (modo asistente), E (sinónimos y anti duplicados) y F (diagnóstico por árbol de decisiones con registro de ejecuciones). Al aprobarse, cada fase entra como tarea en "Por hacer".
+Propuesta presentada al usuario el 2026-07-08, aprobada para ejecutarse por fases: mejoras de UX de procedimientos (18 puntos del usuario) y Modo Diagnóstico Inteligente, analizadas contra el código real en [PROPUESTA_UX_DIAGNOSTICO.md](PROPUESTA_UX_DIAGNOSTICO.md). Fase A terminada (tarea 41 en el archivo). Quedan pendientes: fase B (bloques tipados dentro del paso, absorbe la tarea 40), fase C (visor de imágenes), D (modo asistente), E (sinónimos y anti duplicados) y F (diagnóstico por árbol de decisiones con registro de ejecuciones).
 
 ### 2. Backend en Supabase (pasos del usuario, guiados)
 - Descripción: aplicar el esquema y dar de alta al equipo en el proyecto de Supabase.

@@ -96,6 +96,26 @@ function diffProcedimiento(anterior: Procedimiento, nueva: Procedimiento): strin
   const requisitos = diffLista(anterior.requisitos, nueva.requisitos)
   agregarLineasRequisitos(cambios, requisitos)
 
+  // Verificación final del procedimiento.
+  const verificacion = diffLista(anterior.verificacionFinal, nueva.verificacionFinal)
+  agregarLineasVerificacion(cambios, verificacion)
+
+  if (anterior.objetivoGeneral !== nueva.objetivoGeneral) {
+    if (!anterior.objetivoGeneral) cambios.push('Se definió el objetivo general del procedimiento.')
+    else if (!nueva.objetivoGeneral) cambios.push('Se quitó el objetivo general del procedimiento.')
+    else cambios.push('Se actualizó el objetivo general del procedimiento.')
+  }
+
+  if (anterior.tiempoEstimadoMin !== nueva.tiempoEstimadoMin) {
+    if (nueva.tiempoEstimadoMin === null) cambios.push('Se quitó el tiempo estimado del procedimiento.')
+    else cambios.push(`Se actualizó el tiempo estimado a ${nueva.tiempoEstimadoMin} min.`)
+  }
+
+  if (anterior.dificultad !== nueva.dificultad) {
+    if (nueva.dificultad === null) cambios.push('Se quitó la dificultad del procedimiento.')
+    else cambios.push(`Se actualizó la dificultad a "${nueva.dificultad}".`)
+  }
+
   return cambios
 }
 
@@ -108,6 +128,12 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
     if (!previo.titulo) cambios.push(`Se definió el título del Paso ${numero} como "${actual.titulo}".`)
     else if (!actual.titulo) cambios.push(`Se quitó el título del Paso ${numero}.`)
     else cambios.push(`Se modificó el título del Paso ${numero}: "${previo.titulo}" → "${actual.titulo}".`)
+  }
+
+  if (previo.objetivo !== actual.objetivo) {
+    if (!previo.objetivo) cambios.push(`Se definió el objetivo del ${etiqueta}.`)
+    else if (!actual.objetivo) cambios.push(`Se quitó el objetivo del ${etiqueta}.`)
+    else cambios.push(`Se actualizó el objetivo del ${etiqueta}.`)
   }
 
   const instrucciones = diffLista(previo.instrucciones, actual.instrucciones)
@@ -181,6 +207,16 @@ function agregarLineasRequisitos(cambios: string[], diff: DiffLista): void {
   else if (diff.agregadas > 1) cambios.push(`Se agregaron ${diff.agregadas} requisitos ${donde}.`)
   if (diff.eliminadas === 1) cambios.push(`Se eliminó un requisito ${donde}.`)
   else if (diff.eliminadas > 1) cambios.push(`Se eliminaron ${diff.eliminadas} requisitos ${donde}.`)
+}
+
+function agregarLineasVerificacion(cambios: string[], diff: DiffLista): void {
+  const donde = 'de la verificación final'
+  if (diff.editadas === 1) cambios.push(`Se actualizó un ítem ${donde}.`)
+  else if (diff.editadas > 1) cambios.push(`Se actualizaron ${diff.editadas} ítems ${donde}.`)
+  if (diff.agregadas === 1) cambios.push(`Se agregó un ítem ${donde}.`)
+  else if (diff.agregadas > 1) cambios.push(`Se agregaron ${diff.agregadas} ítems ${donde}.`)
+  if (diff.eliminadas === 1) cambios.push(`Se eliminó un ítem ${donde}.`)
+  else if (diff.eliminadas > 1) cambios.push(`Se eliminaron ${diff.eliminadas} ítems ${donde}.`)
 }
 
 // Diff de los adjuntos de un paso. Se comparan por referencia (cada

@@ -166,6 +166,14 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             className={CLASE_INPUT}
           />
 
+          <input
+            type="text"
+            value={paso.objetivo}
+            onChange={(e) => actualizarPaso(indice, { objetivo: e.target.value })}
+            placeholder="Objetivo del paso (opcional, 1 línea): qué se logra al terminarlo"
+            className={`${CLASE_INPUT} text-sm`}
+          />
+
           <label className="flex flex-col gap-1 text-xs text-slate-400">
             Instrucciones con casilla (una por línea, opcional)
             <textarea
