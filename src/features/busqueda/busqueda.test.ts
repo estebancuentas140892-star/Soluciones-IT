@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buscar, crearIndiceDesdeDocumentos, type DocumentoBusqueda } from './useIndiceBusqueda'
+import {
+  buscar,
+  buscarArticulosSimilares,
+  crearIndiceDesdeDocumentos,
+  type DocumentoBusqueda,
+} from './useIndiceBusqueda'
 
 const documentos: DocumentoBusqueda[] = [
   {
@@ -34,6 +39,14 @@ const documentos: DocumentoBusqueda[] = [
     subtitulo: 'Hikvision · DS-2CD1023 · Bodega norte',
     ruta: '/dispositivos/1',
     texto: 'Cámara bodega norte Hikvision DS-2CD1023 Bodega norte 192.168.1.50',
+  },
+  {
+    id: 'articulo:5',
+    tipo: 'articulo',
+    titulo: 'Crear copia de seguridad del SQL Server',
+    subtitulo: 'Servidores · Mantenimiento',
+    ruta: '/soluciones/cat-3/5',
+    texto: 'Crear copia de seguridad del SQL Server con SQL Server Management Studio',
   },
 ]
 
@@ -81,5 +94,37 @@ describe('buscar', () => {
   it('no mezcla resultados de una categoría con otra sin relación', () => {
     const resultados = buscar(indice, 'switch')
     expect(resultados.map((r) => r.id)).toEqual(['articulo:3'])
+  })
+
+  it('encuentra por sinónimo: "backup" halla la copia de seguridad', () => {
+    const resultados = buscar(indice, 'backup')
+    expect(resultados.map((r) => r.id)).toContain('articulo:5')
+  })
+
+  it('encuentra por sinónimo: "internet" halla los artículos de red', () => {
+    const resultados = buscar(indice, 'internet')
+    expect(resultados.map((r) => r.id)).toContain('articulo:3')
+  })
+})
+
+describe('buscarArticulosSimilares', () => {
+  it('sugiere artículos con título parecido, excluyendo el propio', () => {
+    const similares = buscarArticulosSimilares(indice, 'Configurar impresora Epson', 'nuevo-id')
+    expect(similares.map((r) => r.id)).toContain('articulo:2')
+
+    const sinElPropio = buscarArticulosSimilares(indice, 'Configurar impresora Epson', '2')
+    expect(sinElPropio.map((r) => r.id)).not.toContain('articulo:2')
+  })
+
+  it('ignora coincidencias que solo están en el contenido, no en el título', () => {
+    // "zebra" y "flojo" solo aparecen en el texto del articulo:1.
+    const similares = buscarArticulosSimilares(indice, 'zebra flojo', 'nuevo-id')
+    expect(similares.map((r) => r.id)).not.toContain('articulo:1')
+  })
+
+  it('no sugiere nada con títulos muy cortos ni devuelve dispositivos', () => {
+    expect(buscarArticulosSimilares(indice, 'cá', 'nuevo-id')).toEqual([])
+    const similares = buscarArticulosSimilares(indice, 'Cámara bodega', 'nuevo-id')
+    expect(similares.every((r) => r.tipo === 'articulo')).toBe(true)
   })
 })

@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   db,
   type Dispositivo,
@@ -12,6 +12,7 @@ import {
 import { normalizarProcedimiento, prepararProcedimientoParaGuardar } from '../../lib/procedimiento'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { BotonVolver } from '../../components/BotonVolver'
+import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { PasosEditor } from './PasosEditor'
 import { TIPOS_ARTICULO } from './tiposArticulo'
 
@@ -58,6 +59,20 @@ export function ArticuloForm() {
   const dispositivosOrdenados = useMemo(
     () => [...dispositivos].sort((a, b) => a.nombre.localeCompare(b.nombre)),
     [dispositivos],
+  )
+
+  // Anti duplicados: al escribir el titulo de un articulo NUEVO se
+  // buscan articulos con titulo parecido y se ofrece abrirlos en lugar
+  // de crear otro. Con rebote de 300 ms para no buscar en cada tecla.
+  const indice = useIndiceBusqueda()
+  const [tituloConRebote, setTituloConRebote] = useState('')
+  useEffect(() => {
+    const temporizador = setTimeout(() => setTituloConRebote(titulo), 300)
+    return () => clearTimeout(temporizador)
+  }, [titulo])
+  const similares = useMemo(
+    () => (esEdicion ? [] : buscarArticulosSimilares(indice, tituloConRebote, id)),
+    [indice, tituloConRebote, esEdicion, id],
   )
 
   useEffect(() => {
@@ -147,6 +162,27 @@ export function ArticuloForm() {
             className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
         </label>
+
+        {similares.length > 0 && (
+          <div className="rounded-xl border border-sky-900/60 bg-sky-950/20 px-4 py-3">
+            <p className="text-xs font-medium text-sky-200">
+              Ya existen artículos parecidos. ¿Es alguno de estos? Ábrelo en lugar de crear uno nuevo.
+            </p>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {similares.map((similar) => (
+                <li key={similar.id} className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-sm text-slate-200">{similar.titulo}</span>
+                  <Link
+                    to={similar.ruta}
+                    className="shrink-0 text-xs text-sky-300 underline underline-offset-2"
+                  >
+                    Abrir
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           Tipo

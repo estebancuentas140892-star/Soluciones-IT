@@ -5,6 +5,7 @@ import { db } from '../../lib/db'
 import { normalizarProcedimiento, textoDeProcedimiento } from '../../lib/procedimiento'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
+import { expandirConsulta } from './sinonimos'
 
 export type TipoResultado = 'articulo' | 'dispositivo' | 'credencial'
 
@@ -121,11 +122,48 @@ export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): Min
 export function buscar(indice: MiniSearch<DocumentoBusqueda>, consulta: string): ResultadoBusqueda[] {
   const texto = consulta.trim()
   if (!texto) return []
-  return indice.search(texto).map((resultado) => ({
+  // La consulta se expande con sinonimos ("backup" agrega "respaldo",
+  // "copia", "seguridad"). MiniSearch combina los terminos con OR, asi
+  // que la expansion solo AGREGA resultados.
+  return indice.search(expandirConsulta(texto)).map((resultado) => ({
     id: String(resultado.id),
     tipo: resultado.tipo as TipoResultado,
     titulo: resultado.titulo as string,
     subtitulo: resultado.subtitulo as string,
     ruta: resultado.ruta as string,
   }))
+}
+
+// Articulos con titulo parecido al texto dado, para avisar antes de
+// crear un duplicado ("Ya existe 'Conectar impresora'... ¿abrirlo en
+// lugar de crear uno nuevo?"). Solo cuenta las coincidencias en el
+// TITULO (no en el contenido): es lo que define que dos articulos
+// traten de lo mismo. Devuelve como maximo `limite` resultados.
+export function buscarArticulosSimilares(
+  indice: MiniSearch<DocumentoBusqueda>,
+  titulo: string,
+  excluirArticuloId: string,
+  limite = 3,
+): ResultadoBusqueda[] {
+  const texto = titulo.trim()
+  if (texto.length < 4) return []
+  return indice
+    .search(expandirConsulta(texto))
+    .filter(
+      (resultado) =>
+        resultado.tipo === 'articulo' &&
+        String(resultado.id) !== `articulo:${excluirArticuloId}` &&
+        // `match` mapea cada termino encontrado a los campos donde
+        // aparecio: exigir el titulo descarta coincidencias que solo
+        // estan en el cuerpo del articulo.
+        Object.values(resultado.match).some((campos) => campos.includes('titulo')),
+    )
+    .slice(0, limite)
+    .map((resultado) => ({
+      id: String(resultado.id),
+      tipo: resultado.tipo as TipoResultado,
+      titulo: resultado.titulo as string,
+      subtitulo: resultado.subtitulo as string,
+      ruta: resultado.ruta as string,
+    }))
 }

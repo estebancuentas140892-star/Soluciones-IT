@@ -21,6 +21,7 @@ import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import { buscarArticulosSimilares, crearIndiceDesdeDocumentos } from '../busqueda/useIndiceBusqueda'
 import { TONOS_AVISO } from './tonos'
 
 interface Props {
@@ -73,6 +74,39 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
     () => [...vinculables].sort((a, b) => a.titulo.localeCompare(b.titulo)),
     [vinculables],
   )
+
+  // Reutilizacion proactiva: al escribir el titulo de un paso se busca
+  // entre los procedimientos vinculables uno de titulo parecido y se
+  // ofrece vincularlo como tarea (el selector manual ya existia; esto
+  // solo lo vuelve visible en el momento justo). Cada sugerencia se
+  // puede descartar por paso.
+  const indiceVinculables = useMemo(
+    () =>
+      crearIndiceDesdeDocumentos(
+        vinculablesOrdenados.map((a) => ({
+          id: `articulo:${a.id}`,
+          tipo: 'articulo' as const,
+          titulo: a.titulo,
+          subtitulo: '',
+          ruta: '',
+          texto: a.titulo,
+        })),
+      ),
+    [vinculablesOrdenados],
+  )
+  const [sugerenciasOcultas, setSugerenciasOcultas] = useState<ReadonlySet<string>>(new Set())
+
+  function sugerenciaPara(paso: PasoProcedimiento): Articulo | null {
+    if (paso.subArticuloId || sugerenciasOcultas.has(paso.id)) return null
+    const similar = buscarArticulosSimilares(indiceVinculables, paso.titulo, '', 1)[0]
+    if (!similar) return null
+    const articuloId = String(similar.id).replace(/^articulo:/, '')
+    return vinculablesOrdenados.find((a) => a.id === articuloId) ?? null
+  }
+
+  function descartarSugerencia(pasoId: string) {
+    setSugerenciasOcultas((actuales) => new Set([...actuales, pasoId]))
+  }
 
   function actualizarPaso(indice: number, cambios: Partial<PasoProcedimiento>) {
     onPasosChange(pasos.map((paso, i) => (i === indice ? { ...paso, ...cambios } : paso)))
@@ -232,6 +266,17 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             className={`${CLASE_INPUT} text-sm`}
           />
 
+          <SugerenciaVinculo
+            articulo={sugerenciaPara(paso)}
+            onVincular={(articulo) =>
+              actualizarPaso(indice, {
+                subArticuloId: articulo.id,
+                subArticuloTitulo: articulo.titulo,
+              })
+            }
+            onDescartar={() => descartarSugerencia(paso.id)}
+          />
+
           <ContenidoEditor
             bloques={paso.bloques}
             onChange={(bloques) => actualizarPaso(indice, { bloques })}
@@ -334,6 +379,45 @@ function BotonPaso({
     >
       {children}
     </button>
+  )
+}
+
+// Aviso de reutilizacion bajo el titulo de un paso: ya existe un
+// procedimiento con titulo parecido y puede vincularse como tarea en
+// vez de escribirlo de nuevo. "✕" lo descarta para ese paso.
+function SugerenciaVinculo({
+  articulo,
+  onVincular,
+  onDescartar,
+}: {
+  articulo: Articulo | null
+  onVincular: (articulo: Articulo) => void
+  onDescartar: () => void
+}) {
+  if (!articulo) return null
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2">
+      <p className="min-w-0 truncate text-xs text-sky-200">
+        Ya existe el procedimiento "{articulo.titulo}".
+      </p>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onVincular(articulo)}
+          className="rounded-lg border border-sky-800 px-2.5 py-1 text-xs text-sky-300"
+        >
+          Vincular
+        </button>
+        <button
+          type="button"
+          onClick={onDescartar}
+          aria-label="Descartar sugerencia"
+          className="text-xs text-slate-500"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
   )
 }
 
