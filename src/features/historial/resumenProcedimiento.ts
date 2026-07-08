@@ -1,5 +1,5 @@
-import type { PasoAdjunto, PasoProcedimiento, Procedimiento } from '../../lib/db'
-import { normalizarProcedimiento } from '../../lib/procedimiento'
+import type { PasoAdjunto, PasoProcedimiento, Procedimiento, TipoBloque } from '../../lib/db'
+import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
 
 // Convierte el cambio de un procedimiento (guardado en el historial
 // como el JSON de antes y despues) en un resumen legible: que cambio,
@@ -136,10 +136,16 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
     else cambios.push(`Se actualizó el objetivo del ${etiqueta}.`)
   }
 
-  const instrucciones = diffLista(previo.instrucciones, actual.instrucciones)
-  agregarLineasInstrucciones(cambios, instrucciones, etiqueta)
+  const tareas = diffLista(textosDeBloque(previo, 'tarea'), textosDeBloque(actual, 'tarea'))
+  agregarLineasInstrucciones(cambios, tareas, etiqueta)
 
-  agregarLineasAdjuntos(cambios, previo.adjuntos, actual.adjuntos, etiqueta)
+  const avisos = diffLista(textosDeBloque(previo, 'aviso'), textosDeBloque(actual, 'aviso'))
+  agregarLineasAvisos(cambios, avisos, etiqueta)
+
+  // Imagenes: las de la galeria del paso y las intercaladas en el
+  // cuerpo se cuentan juntas (para el usuario, todas son "imagenes del
+  // paso"; da igual donde vivan en el JSON).
+  agregarLineasAdjuntos(cambios, imagenesDe(previo), imagenesDe(actual), etiqueta)
 
   if (previo.credencialId !== actual.credencialId) {
     if (!previo.credencialId) cambios.push(`Se agregó una credencial al ${etiqueta}.`)
@@ -197,6 +203,30 @@ function agregarLineasInstrucciones(cambios: string[], diff: DiffLista, etiqueta
   else if (diff.agregadas > 1) cambios.push(`Se agregaron ${diff.agregadas} instrucciones al ${etiqueta}.`)
   if (diff.eliminadas === 1) cambios.push(`Se eliminó una instrucción del ${etiqueta}.`)
   else if (diff.eliminadas > 1) cambios.push(`Se eliminaron ${diff.eliminadas} instrucciones del ${etiqueta}.`)
+}
+
+function agregarLineasAvisos(cambios: string[], diff: DiffLista, etiqueta: string): void {
+  if (diff.editadas === 1) cambios.push(`Se editó un aviso del ${etiqueta}.`)
+  else if (diff.editadas > 1) cambios.push(`Se editaron ${diff.editadas} avisos del ${etiqueta}.`)
+  if (diff.agregadas === 1) cambios.push(`Se agregó un aviso al ${etiqueta}.`)
+  else if (diff.agregadas > 1) cambios.push(`Se agregaron ${diff.agregadas} avisos al ${etiqueta}.`)
+  if (diff.eliminadas === 1) cambios.push(`Se eliminó un aviso del ${etiqueta}.`)
+  else if (diff.eliminadas > 1) cambios.push(`Se eliminaron ${diff.eliminadas} avisos del ${etiqueta}.`)
+}
+
+// Textos de los bloques de un tipo dado (tareas o avisos), para
+// compararlos por valor como se hacia con las viejas instrucciones.
+function textosDeBloque(paso: PasoProcedimiento, tipo: TipoBloque): string[] {
+  return paso.bloques.filter((b) => b.tipo === tipo).map((b) => b.texto)
+}
+
+// Todas las imagenes del paso: la galeria (`adjuntos`) mas las
+// intercaladas en el cuerpo (bloques 'imagen').
+function imagenesDe(paso: PasoProcedimiento): PasoAdjunto[] {
+  const inline = paso.bloques
+    .filter((b) => b.tipo === 'imagen' && b.adjunto !== null)
+    .map((b) => b.adjunto as PasoAdjunto)
+  return [...paso.adjuntos, ...inline]
 }
 
 function agregarLineasRequisitos(cambios: string[], diff: DiffLista): void {
@@ -281,7 +311,7 @@ function nombrePasoNuevo(indice: number, paso: PasoProcedimiento): string {
 function tamano(procedimiento: Procedimiento): TamanoProcedimiento {
   return {
     pasos: procedimiento.pasos.length,
-    instrucciones: procedimiento.pasos.reduce((total, paso) => total + paso.instrucciones.length, 0),
+    instrucciones: procedimiento.pasos.reduce((total, paso) => total + tareasDe(paso.bloques).length, 0),
   }
 }
 

@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import {
   alternarInstruccionHecha,
-  claveInstruccion,
-  clavesDeInstrucciones,
+  alternarVerificacionFinal,
   contarHechos,
   contarInstruccionesHechas,
   establecerPasoHecho,
   reiniciarProgreso,
+  verificacionFinalCompleta,
 } from './progresoPasos'
 
 beforeEach(async () => {
@@ -23,26 +23,32 @@ describe('establecerPasoHecho', () => {
     expect((await db.progresoPasos.get('articulo-1'))?.pasosHechos).toEqual([])
   })
 
-  it('arrastra las instrucciones del paso al marcarlo y desmarcarlo', async () => {
-    const claves = clavesDeInstrucciones('paso-a', 3)
+  it('arrastra las tareas del paso al marcarlo y desmarcarlo', async () => {
+    const tareas = ['t1', 't2', 't3']
 
-    await establecerPasoHecho('articulo-1', 'paso-a', true, claves)
+    await establecerPasoHecho('articulo-1', 'paso-a', true, tareas)
     let fila = await db.progresoPasos.get('articulo-1')
-    expect(fila?.instruccionesHechas).toEqual(claves)
+    expect(fila?.instruccionesHechas).toEqual(tareas)
 
-    await establecerPasoHecho('articulo-1', 'paso-a', false, claves)
+    await establecerPasoHecho('articulo-1', 'paso-a', false, tareas)
     fila = await db.progresoPasos.get('articulo-1')
     expect(fila?.pasosHechos).toEqual([])
     expect(fila?.instruccionesHechas).toEqual([])
   })
 
-  it('no toca las instrucciones de otros pasos', async () => {
-    await alternarInstruccionHecha('articulo-1', 'paso-b', 0, 2)
-    await establecerPasoHecho('articulo-1', 'paso-a', true, clavesDeInstrucciones('paso-a', 2))
-    await establecerPasoHecho('articulo-1', 'paso-a', false, clavesDeInstrucciones('paso-a', 2))
+  it('no toca las tareas de otros pasos', async () => {
+    await alternarInstruccionHecha('articulo-1', 'paso-b', 'tb1', ['tb1', 'tb2'])
+    await establecerPasoHecho('articulo-1', 'paso-a', true, ['ta1', 'ta2'])
+    await establecerPasoHecho('articulo-1', 'paso-a', false, ['ta1', 'ta2'])
 
     const fila = await db.progresoPasos.get('articulo-1')
-    expect(fila?.instruccionesHechas).toEqual([claveInstruccion('paso-b', 0)])
+    expect(fila?.instruccionesHechas).toEqual(['tb1'])
+  })
+
+  it('conserva la verificación final al marcar un paso', async () => {
+    await alternarVerificacionFinal('articulo-1', 0)
+    await establecerPasoHecho('articulo-1', 'paso-a', true, ['ta1'])
+    expect((await db.progresoPasos.get('articulo-1'))?.verificacionHecha).toEqual([0])
   })
 
   it('lleva el avance por artículo, sin mezclarlos', async () => {
@@ -55,44 +61,60 @@ describe('establecerPasoHecho', () => {
 })
 
 describe('alternarInstruccionHecha', () => {
-  it('marca y desmarca una instrucción sin completar el paso', async () => {
-    const quedaCompleto = await alternarInstruccionHecha('articulo-1', 'paso-a', 0, 3)
+  it('marca y desmarca una tarea sin completar el paso', async () => {
+    const quedaCompleto = await alternarInstruccionHecha('articulo-1', 'paso-a', 't1', ['t1', 't2', 't3'])
     expect(quedaCompleto).toBe(false)
 
     let fila = await db.progresoPasos.get('articulo-1')
-    expect(fila?.instruccionesHechas).toEqual([claveInstruccion('paso-a', 0)])
+    expect(fila?.instruccionesHechas).toEqual(['t1'])
     expect(fila?.pasosHechos).toEqual([])
 
-    await alternarInstruccionHecha('articulo-1', 'paso-a', 0, 3)
+    await alternarInstruccionHecha('articulo-1', 'paso-a', 't1', ['t1', 't2', 't3'])
     fila = await db.progresoPasos.get('articulo-1')
     expect(fila?.instruccionesHechas).toEqual([])
   })
 
-  it('devuelve true al marcar la última instrucción, pero NO marca el paso (lo decide la vista)', async () => {
-    // El paso es un contenedor: completar las instrucciones no basta,
-    // aun puede quedar un subprocedimiento o una solución. Por eso aquí
-    // no se agrega a pasosHechos; la señal (true) la usa la vista.
-    await alternarInstruccionHecha('articulo-1', 'paso-a', 0, 2)
-    const quedaCompleto = await alternarInstruccionHecha('articulo-1', 'paso-a', 1, 2)
+  it('devuelve true al marcar la última tarea, pero NO marca el paso (lo decide la vista)', async () => {
+    // El paso es un contenedor: completar las tareas no basta, aun puede
+    // quedar un subprocedimiento o una solución. Por eso aquí no se
+    // agrega a pasosHechos; la señal (true) la usa la vista.
+    await alternarInstruccionHecha('articulo-1', 'paso-a', 't1', ['t1', 't2'])
+    const quedaCompleto = await alternarInstruccionHecha('articulo-1', 'paso-a', 't2', ['t1', 't2'])
 
     expect(quedaCompleto).toBe(true)
     expect((await db.progresoPasos.get('articulo-1'))?.pasosHechos).toEqual([])
   })
 
-  it('desmarcar una instrucción vuelve pendiente un paso completado', async () => {
-    await establecerPasoHecho('articulo-1', 'paso-a', true, clavesDeInstrucciones('paso-a', 2))
+  it('desmarcar una tarea vuelve pendiente un paso completado', async () => {
+    await establecerPasoHecho('articulo-1', 'paso-a', true, ['t1', 't2'])
 
-    const quedaCompleto = await alternarInstruccionHecha('articulo-1', 'paso-a', 1, 2)
+    const quedaCompleto = await alternarInstruccionHecha('articulo-1', 'paso-a', 't2', ['t1', 't2'])
     expect(quedaCompleto).toBe(false)
     expect((await db.progresoPasos.get('articulo-1'))?.pasosHechos).toEqual([])
   })
 })
 
 describe('reiniciarProgreso', () => {
-  it('borra el avance del artículo, incluidas las instrucciones', async () => {
-    await establecerPasoHecho('articulo-1', 'paso-a', true, clavesDeInstrucciones('paso-a', 2))
+  it('borra el avance del artículo, incluidas las tareas', async () => {
+    await establecerPasoHecho('articulo-1', 'paso-a', true, ['t1', 't2'])
     await reiniciarProgreso('articulo-1')
     expect(await db.progresoPasos.get('articulo-1')).toBeUndefined()
+  })
+})
+
+describe('verificación final', () => {
+  it('alterna casillas por índice y decide si está completa', async () => {
+    expect(verificacionFinalCompleta(undefined, 0)).toBe(true) // sin items
+    expect(verificacionFinalCompleta(undefined, 2)).toBe(false)
+
+    await alternarVerificacionFinal('articulo-1', 0)
+    await alternarVerificacionFinal('articulo-1', 1)
+    const fila = await db.progresoPasos.get('articulo-1')
+    expect(new Set(fila?.verificacionHecha)).toEqual(new Set([0, 1]))
+    expect(verificacionFinalCompleta(fila?.verificacionHecha, 2)).toBe(true)
+
+    await alternarVerificacionFinal('articulo-1', 1)
+    expect(verificacionFinalCompleta((await db.progresoPasos.get('articulo-1'))?.verificacionHecha, 2)).toBe(false)
   })
 })
 
@@ -102,10 +124,10 @@ describe('contadores', () => {
     expect(contarHechos([], ['paso-a'])).toBe(0)
   })
 
-  it('cuenta solo las instrucciones marcadas del paso indicado', () => {
-    const hechas = [claveInstruccion('paso-a', 0), claveInstruccion('paso-a', 2), claveInstruccion('paso-b', 0)]
-    expect(contarInstruccionesHechas(hechas, 'paso-a', 3)).toBe(2)
-    expect(contarInstruccionesHechas(hechas, 'paso-c', 3)).toBe(0)
-    expect(contarInstruccionesHechas(undefined, 'paso-a', 3)).toBe(0)
+  it('cuenta solo las tareas marcadas de la lista indicada', () => {
+    const hechas = ['t1', 't3', 'otro-paso-t1']
+    expect(contarInstruccionesHechas(hechas, ['t1', 't2', 't3'])).toBe(2)
+    expect(contarInstruccionesHechas(hechas, ['tx', 'ty'])).toBe(0)
+    expect(contarInstruccionesHechas(undefined, ['t1', 't2'])).toBe(0)
   })
 })

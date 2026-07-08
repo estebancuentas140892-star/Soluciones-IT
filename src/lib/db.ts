@@ -40,6 +40,37 @@ export interface PasoAdjunto {
   tipo: string
 }
 
+// Tono visual de un bloque de aviso: cada uno se pinta con su icono y
+// color propios para que el tecnico distinga de un vistazo un dato
+// util (info, consejo) de un riesgo (precaucion, importante).
+export type TonoAviso = 'info' | 'precaucion' | 'importante' | 'consejo' | 'dato'
+
+// Tipo de un bloque dentro de un paso:
+// - 'tarea': una accion con casilla de verificacion (lo que la
+//   interfaz y el progreso llaman "instruccion con casilla"). Solo
+//   los bloques 'tarea' cuentan para completar el paso.
+// - 'aviso': texto informativo o de advertencia, sin casilla. Va
+//   justo donde el autor lo coloca (por ejemplo, una precaucion
+//   inmediatamente antes de la tarea peligrosa).
+// - 'imagen': una imagen intercalada en el flujo (una captura
+//   despues de una tarea concreta), con pie de foto opcional.
+export type TipoBloque = 'tarea' | 'aviso' | 'imagen'
+
+// Un bloque del contenido de un paso. Reemplaza a las viejas
+// `instrucciones: string[]`: ahora el cuerpo del paso es una lista
+// ordenada y heterogenea (tareas, avisos e imagenes intercalados).
+// Cada bloque tiene un id estable (el progreso local de las tareas se
+// lleva por ese id, no por posicion, asi reordenar no desalinea el
+// avance). `tono` solo aplica a 'aviso'; `adjunto` solo a 'imagen';
+// `texto` es la tarea, el aviso o el pie de la imagen.
+export interface BloquePaso {
+  id: string
+  tipo: TipoBloque
+  texto: string
+  tono: TonoAviso | null
+  adjunto: PasoAdjunto | null
+}
+
 export interface PasoProcedimiento {
   id: string
   titulo: string
@@ -47,13 +78,16 @@ export interface PasoProcedimiento {
   // paso. Ayuda a entender el proposito antes de empezar; opcional,
   // no se muestra si esta vacio.
   objetivo: string
-  // Instrucciones con casilla de verificacion dentro del paso, una
-  // por linea. Al marcar la ultima, el paso se completa solo y la
-  // vista avanza al siguiente pendiente.
-  instrucciones: string[]
-  // Imagenes y archivos del paso (varios): fotos tomadas en el sitio,
-  // capturas, manuales o PDF. Antes era un solo `imagen`; al
-  // normalizar, ese valor viejo se migra al primer adjunto.
+  // Cuerpo del paso: tareas con casilla, avisos e imagenes en el orden
+  // que definio el autor. Antes era `instrucciones: string[]`; al
+  // normalizar, cada instruccion vieja se migra a un bloque 'tarea'.
+  bloques: BloquePaso[]
+  // Imagenes y archivos del paso como galeria al inicio (varios):
+  // fotos tomadas en el sitio, capturas, manuales o PDF. Se conserva
+  // junto a las imagenes intercaladas en `bloques`: la galeria es para
+  // adjuntos del paso completo (un manual, un PDF), los bloques imagen
+  // para capturas ancladas a una tarea concreta. Antes era un solo
+  // `imagen`; al normalizar, ese valor viejo se migra al primer adjunto.
   adjuntos: PasoAdjunto[]
   // Credencial de la boveda vinculada al paso (su apartado "Datos"),
   // o null. El titulo es una copia de referencia: permite mostrar
@@ -307,9 +341,12 @@ export interface ArchivoPendiente {
 export interface ProgresoPasos {
   articuloId: string
   pasosHechos: string[]
-  // Instrucciones marcadas dentro de cada paso, con clave
-  // "<pasoId>:<indice>". Opcional porque las filas guardadas antes
-  // de esta funcion no lo traen.
+  // Ids de los bloques 'tarea' marcados como hechos (las tareas con
+  // casilla de cualquier paso). El id de cada bloque es unico, asi que
+  // no hace falta prefijarlo con el paso. Opcional porque las filas
+  // guardadas antes de esta funcion no lo traen; las guardadas con el
+  // modelo viejo (claves "pasoId:indice") ya no coinciden y se ignoran
+  // (el avance a medias se reinicia una sola vez, dato local y efimero).
   instruccionesHechas?: string[]
   // Casillas marcadas de "Verificacion final" (indice dentro de
   // Procedimiento.verificacionFinal). Opcional por el mismo motivo.

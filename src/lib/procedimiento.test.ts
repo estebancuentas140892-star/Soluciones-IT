@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PasoProcedimiento, Procedimiento } from './db'
+import type { BloquePaso, PasoProcedimiento, Procedimiento } from './db'
 import {
   crearPaso,
   normalizarProcedimiento,
@@ -7,16 +7,22 @@ import {
   pasoTrabajoPrevioCompleto,
   prepararProcedimientoParaGuardar,
   siguientePasoPendiente,
+  tareasDe,
   textoDeProcedimiento,
   type DatosProcedimientoParaGuardar,
 } from './procedimiento'
+
+// Bloque 'tarea' de prueba con id fijo por texto (para asserts estables).
+function tarea(texto: string): BloquePaso {
+  return { id: `tarea-${texto}`, tipo: 'tarea', texto, tono: null, adjunto: null }
+}
 
 function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimiento {
   return {
     id: 'paso-1',
     titulo: 'Abrir SQL Server Management Studio',
     objetivo: '',
-    instrucciones: [],
+    bloques: [],
     adjuntos: [],
     credencialId: null,
     credencialTitulo: '',
@@ -70,7 +76,7 @@ describe('normalizarProcedimiento', () => {
     expect(resultado?.pasos[0]).toMatchObject({
       titulo: 'Solo título',
       objetivo: '',
-      instrucciones: [],
+      bloques: [],
       adjuntos: [],
       credencialId: null,
       credencialTitulo: '',
@@ -162,15 +168,71 @@ describe('normalizarProcedimiento', () => {
     expect(sinId?.pasos[0].credencialTitulo).toBe('')
   })
 
-  it('conserva las instrucciones y descarta las vacías o que no son texto', () => {
+  it('migra las viejas instrucciones a bloques de tarea, descartando las vacías', () => {
     const resultado = normalizarProcedimiento({
       pasos: [
-        pasoCompleto({
-          instrucciones: ['Presionar Windows + R', '', '   ', 42, null] as never,
-        }),
+        {
+          titulo: 'Paso viejo',
+          instrucciones: ['Presionar Windows + R', '', '   ', 42, null],
+        },
       ],
     })
-    expect(resultado?.pasos[0].instrucciones).toEqual(['Presionar Windows + R'])
+    const bloques = resultado?.pasos[0].bloques ?? []
+    expect(bloques).toHaveLength(1)
+    expect(bloques[0]).toMatchObject({ tipo: 'tarea', texto: 'Presionar Windows + R', tono: null, adjunto: null })
+    expect(bloques[0].id).not.toBe('')
+  })
+
+  it('conserva los bloques nuevos (tarea, aviso, imagen) y descarta los inválidos', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'Paso con bloques',
+          bloques: [
+            { id: 'b1', tipo: 'tarea', texto: 'Encender la impresora', tono: null, adjunto: null },
+            { id: 'b2', tipo: 'tarea', texto: '   ' }, // vacia: se descarta
+            { id: 'b3', tipo: 'aviso', texto: 'Verifica el nombre', tono: 'precaucion', adjunto: null },
+            { id: 'b4', tipo: 'aviso', texto: 'Sin tono válido', tono: 'raro' }, // tono cae a 'info'
+            {
+              id: 'b5',
+              tipo: 'imagen',
+              texto: 'Pantalla de inicio',
+              adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' },
+            },
+            { id: 'b6', tipo: 'imagen', texto: 'sin adjunto' }, // sin adjunto: se descarta
+            'no es objeto',
+          ],
+        },
+      ],
+    })
+    const bloques = resultado?.pasos[0].bloques ?? []
+    expect(bloques).toEqual([
+      { id: 'b1', tipo: 'tarea', texto: 'Encender la impresora', tono: null, adjunto: null },
+      { id: 'b3', tipo: 'aviso', texto: 'Verifica el nombre', tono: 'precaucion', adjunto: null },
+      { id: 'b4', tipo: 'aviso', texto: 'Sin tono válido', tono: 'info', adjunto: null },
+      {
+        id: 'b5',
+        tipo: 'imagen',
+        texto: 'Pantalla de inicio',
+        tono: null,
+        adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' },
+      },
+    ])
+  })
+
+  it('prefiere la lista nueva de bloques por encima de las viejas instrucciones', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          instrucciones: ['vieja'],
+          bloques: [{ id: 'b1', tipo: 'tarea', texto: 'nueva', tono: null, adjunto: null }],
+        },
+      ],
+    })
+    expect(resultado?.pasos[0].bloques).toEqual([
+      { id: 'b1', tipo: 'tarea', texto: 'nueva', tono: null, adjunto: null },
+    ])
   })
 
   it('descarta requisitos vacíos o que no son texto', () => {
@@ -234,17 +296,37 @@ describe('normalizarProcedimiento', () => {
   })
 })
 
+describe('tareasDe', () => {
+  it('devuelve solo los bloques de tipo tarea, en orden', () => {
+    const bloques: BloquePaso[] = [
+      tarea('Uno'),
+      { id: 'av', tipo: 'aviso', texto: 'Cuidado', tono: 'precaucion', adjunto: null },
+      tarea('Dos'),
+      { id: 'img', tipo: 'imagen', texto: '', tono: null, adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' } },
+    ]
+    expect(tareasDe(bloques).map((t) => t.texto)).toEqual(['Uno', 'Dos'])
+  })
+})
+
 describe('textoDeProcedimiento', () => {
-  it('junta requisitos, títulos e instrucciones para el índice de búsqueda', () => {
+  it('junta requisitos, títulos y textos de los bloques para el índice de búsqueda', () => {
     const texto = textoDeProcedimiento(
       procedimientoCompleto({
         requisitos: ['Credenciales del SQL Server'],
-        pasos: [pasoCompleto({ instrucciones: ['Verificar el espacio en disco'] })],
+        pasos: [
+          pasoCompleto({
+            bloques: [
+              tarea('Verificar el espacio en disco'),
+              { id: 'av', tipo: 'aviso', texto: 'No apagar el servidor', tono: 'importante', adjunto: null },
+            ],
+          }),
+        ],
       }),
     )
     expect(texto).toContain('Credenciales del SQL Server')
     expect(texto).toContain('Abrir SQL Server Management Studio')
     expect(texto).toContain('Verificar el espacio en disco')
+    expect(texto).toContain('No apagar el servidor')
   })
 
   it('devuelve texto vacío cuando no hay procedimiento', () => {
@@ -321,14 +403,34 @@ describe('prepararProcedimientoParaGuardar', () => {
     expect(resultado?.pasos[0].titulo).toBe('Abrir SQL Server Management Studio')
   })
 
-  it('limpia espacios en las instrucciones y descarta las que quedan vacías', () => {
-    const resultado = preparar([pasoCompleto({ instrucciones: ['  Presionar Windows + R  ', '', '   '] })])
-    expect(resultado?.pasos[0].instrucciones).toEqual(['Presionar Windows + R'])
+  it('limpia espacios en los bloques y descarta tareas y avisos vacíos', () => {
+    const resultado = preparar([
+      pasoCompleto({
+        bloques: [
+          { id: 'b1', tipo: 'tarea', texto: '  Presionar Windows + R  ', tono: null, adjunto: null },
+          { id: 'b2', tipo: 'tarea', texto: '   ', tono: null, adjunto: null },
+          { id: 'b3', tipo: 'aviso', texto: '', tono: 'info', adjunto: null },
+        ],
+      }),
+    ])
+    expect(resultado?.pasos[0].bloques).toEqual([
+      { id: 'b1', tipo: 'tarea', texto: 'Presionar Windows + R', tono: null, adjunto: null },
+    ])
   })
 
-  it('conserva un paso que solo tiene instrucciones', () => {
+  it('conserva una imagen aunque su pie esté vacío', () => {
     const paso = crearPaso()
-    paso.instrucciones = ['Imprimir una página de prueba']
+    paso.bloques = [
+      { id: 'img', tipo: 'imagen', texto: '  ', tono: null, adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' } },
+    ]
+    const resultado = preparar([paso])
+    expect(resultado?.pasos[0].bloques).toHaveLength(1)
+    expect(resultado?.pasos[0].bloques[0].texto).toBe('')
+  })
+
+  it('conserva un paso que solo tiene bloques', () => {
+    const paso = crearPaso()
+    paso.bloques = [tarea('Imprimir una página de prueba')]
     expect(preparar([paso])?.pasos).toHaveLength(1)
   })
 

@@ -1,18 +1,24 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type NivelDificultad, type PasoAdjunto, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
+import {
+  db,
+  type BloquePaso,
+  type NivelDificultad,
+  type PasoAdjunto,
+  type PasoProcedimiento,
+  type Procedimiento,
+} from '../../lib/db'
 import {
   normalizarProcedimiento,
   pasoSeCompletaSolo,
   pasoTrabajoPrevioCompleto,
   siguientePasoPendiente,
+  tareasDe,
 } from '../../lib/procedimiento'
 import {
   alternarInstruccionHecha,
   alternarVerificacionFinal,
-  claveInstruccion,
-  clavesDeInstrucciones,
   contarHechos,
   contarInstruccionesHechas,
   establecerPasoHecho,
@@ -21,6 +27,7 @@ import {
 } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
+import { TONOS_AVISO } from './tonos'
 
 const ETIQUETA_DIFICULTAD: Record<NivelDificultad, string> = {
   principiante: 'Principiante',
@@ -43,11 +50,11 @@ interface Props {
 
 // Vista de lectura de un procedimiento: la lista de pasos colapsados
 // es el "mapa" del proceso (se ve completo de un vistazo) y cada paso
-// se expande al tocarlo para ver sus instrucciones y su captura.
-// Cada paso muestra su estado: pendiente (gris), en progreso (ambar,
-// con contador) o completado (verde). Al marcar la ultima instruccion
-// de un paso, este se completa, se contrae y se expande solo el
-// siguiente pendiente, para avanzar sin buscarlo a mano.
+// se expande al tocarlo para ver su cuerpo (tareas con casilla, avisos
+// e imagenes) y su galeria. Cada paso muestra su estado: pendiente
+// (gris), en progreso (ambar, con contador) o completado (verde). Al
+// marcar la ultima tarea de un paso, este se completa, se contrae y se
+// expande solo el siguiente pendiente, para avanzar sin buscarlo a mano.
 export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCompletado }: Props) {
   const progreso = useLiveQuery(() => db.progresoPasos.get(articuloId), [articuloId])
   const [expandido, setExpandido] = useState<string | null>(null)
@@ -131,53 +138,45 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
       articuloId,
       paso.id,
       !hecho,
-      clavesDeInstrucciones(paso.id, paso.instrucciones.length),
+      tareasDe(paso.bloques).map((t) => t.id),
     )
     if (!hecho) avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
   }
 
-  async function alternarInstruccion(indice: number, paso: PasoProcedimiento, i: number) {
-    const instruccionesCompletas = await alternarInstruccionHecha(
+  async function alternarTarea(indice: number, paso: PasoProcedimiento, tareaId: string) {
+    const tareasCompletas = await alternarInstruccionHecha(
       articuloId,
       paso.id,
-      i,
-      paso.instrucciones.length,
+      tareaId,
+      tareasDe(paso.bloques).map((t) => t.id),
     )
-    // Completar las instrucciones no avanza por si solo: el paso es un
+    // Completar las tareas no avanza por si solo: el paso es un
     // contenedor y aun puede quedar un subprocedimiento o una pregunta
     // de error pendientes. intentarCompletarPaso decide.
-    if (instruccionesCompletas) await intentarCompletarPaso(indice, paso)
+    if (tareasCompletas) await intentarCompletarPaso(indice, paso)
   }
 
   // Intenta completar el paso tratandolo como un contenedor de tareas:
-  // solo lo marca hecho y avanza cuando su trabajo previo
-  // (instrucciones propias + subprocedimiento vinculado) esta completo
-  // y no tiene una solucion de error vinculada. Si tiene solucion, no
-  // avanza aqui: aparece la pregunta "¿Ocurrio algun error?" y el paso
-  // se completa al responderla. Usa lecturas frescas de la base.
+  // solo lo marca hecho y avanza cuando su trabajo previo (tareas
+  // propias + subprocedimiento vinculado) esta completo y no tiene una
+  // solucion de error vinculada. Si tiene solucion, no avanza aqui:
+  // aparece la pregunta "¿Ocurrio algun error?" y el paso se completa
+  // al responderla. Usa lecturas frescas de la base.
   async function intentarCompletarPaso(indice: number, paso: PasoProcedimiento) {
     const progActual = await db.progresoPasos.get(articuloId)
     const hechosActuales = progActual?.pasosHechos ?? []
     if (hechosActuales.includes(paso.id)) return
 
-    const instruccionesMarcadas = contarInstruccionesHechas(
-      progActual?.instruccionesHechas,
-      paso.id,
-      paso.instrucciones.length,
-    )
+    const idsTareas = tareasDe(paso.bloques).map((t) => t.id)
+    const tareasMarcadas = contarInstruccionesHechas(progActual?.instruccionesHechas, idsTareas)
     const trabajoPrevio = pasoTrabajoPrevioCompleto(
-      paso.instrucciones.length,
-      instruccionesMarcadas,
+      idsTareas.length,
+      tareasMarcadas,
       await subSatisfechoFresco(paso),
     )
     if (!pasoSeCompletaSolo(trabajoPrevio, Boolean(paso.solucionArticuloId))) return
 
-    await establecerPasoHecho(
-      articuloId,
-      paso.id,
-      true,
-      clavesDeInstrucciones(paso.id, paso.instrucciones.length),
-    )
+    await establecerPasoHecho(articuloId, paso.id, true, idsTareas)
     avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]))
   }
 
@@ -191,7 +190,7 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
       articuloId,
       paso.id,
       true,
-      clavesDeInstrucciones(paso.id, paso.instrucciones.length),
+      tareasDe(paso.bloques).map((t) => t.id),
     )
     avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
   }
@@ -234,18 +233,11 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
       <ol className="flex flex-col gap-2">
         {pasos.map((paso, indice) => {
           const hecho = hechos.has(paso.id)
-          const marcadas = contarInstruccionesHechas(
-            progreso?.instruccionesHechas,
-            paso.id,
-            paso.instrucciones.length,
-          )
+          const idsTareas = tareasDe(paso.bloques).map((t) => t.id)
+          const marcadas = contarInstruccionesHechas(progreso?.instruccionesHechas, idsTareas)
           const enProgreso = !hecho && marcadas > 0
           const subSatisfecho = subSatisfechoReactivo(paso)
-          const trabajoPrevio = pasoTrabajoPrevioCompleto(
-            paso.instrucciones.length,
-            marcadas,
-            subSatisfecho,
-          )
+          const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
           return (
             <li
               key={paso.id}
@@ -286,9 +278,9 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
                     {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
-                    {enProgreso && paso.instrucciones.length > 0 && (
+                    {enProgreso && idsTareas.length > 0 && (
                       <span className="rounded-full border border-amber-800 bg-amber-950/40 px-1.5 py-0.5 text-[10px] text-amber-400">
-                        {marcadas}/{paso.instrucciones.length}
+                        {marcadas}/{idsTareas.length}
                       </span>
                     )}
                     {paso.subArticuloId && <ContadorSubProgreso subArticuloId={paso.subArticuloId} />}
@@ -303,41 +295,17 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
 
                   {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
-                  {paso.instrucciones.length > 0 && (
-                    <ul className="flex flex-col gap-0.5">
-                      {paso.instrucciones.map((instruccion, i) => {
-                        const marcada = instruccionesHechas.has(claveInstruccion(paso.id, i))
-                        return (
-                          <li key={claveInstruccion(paso.id, i)}>
-                            <button
-                              type="button"
-                              role="checkbox"
-                              aria-checked={marcada}
-                              aria-label={`Instrucción: ${instruccion}`}
-                              onClick={() => void alternarInstruccion(indice, paso, i)}
-                              className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
-                            >
-                              <span
-                                aria-hidden
-                                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
-                                  marcada
-                                    ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
-                                    : 'border-slate-600 text-transparent'
-                                }`}
-                              >
-                                ✓
-                              </span>
-                              <span
-                                className={`text-sm ${
-                                  marcada ? 'text-slate-500 line-through' : 'text-slate-300'
-                                }`}
-                              >
-                                {instruccion}
-                              </span>
-                            </button>
-                          </li>
-                        )
-                      })}
+                  {paso.bloques.length > 0 && (
+                    <ul className="flex flex-col gap-1.5">
+                      {paso.bloques.map((bloque) => (
+                        <li key={bloque.id}>
+                          <BloqueVista
+                            bloque={bloque}
+                            marcada={instruccionesHechas.has(bloque.id)}
+                            onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
+                          />
+                        </li>
+                      ))}
                     </ul>
                   )}
 
@@ -364,8 +332,8 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
                   )}
 
                   {/* La pregunta de error solo aparece cuando el trabajo
-                      previo del paso (instrucciones y subprocedimiento) ya
-                      esta completo: asi el paso no avanza saltandose nada. */}
+                      previo del paso (tareas y subprocedimiento) ya esta
+                      completo: asi el paso no avanza saltandose nada. */}
                   {paso.solucionArticuloId && !hecho && trabajoPrevio && (
                     <SolucionEnPaso
                       solucionArticuloId={paso.solucionArticuloId}
@@ -703,6 +671,68 @@ function SolucionEnPaso({
         onCompletado={() => void resuelta()}
       />
     </div>
+  )
+}
+
+// Un bloque del cuerpo del paso en la vista de lectura. Segun su tipo:
+// una tarea con casilla (la unica que cuenta para completar el paso),
+// un aviso con su color e icono, o una imagen intercalada con pie.
+function BloqueVista({
+  bloque,
+  marcada,
+  onAlternar,
+}: {
+  bloque: BloquePaso
+  marcada: boolean
+  onAlternar: () => void
+}) {
+  if (bloque.tipo === 'aviso') {
+    const tono = TONOS_AVISO.find((t) => t.valor === bloque.tono) ?? TONOS_AVISO[0]
+    return (
+      <div className={`flex gap-2 rounded-lg border px-3 py-2 ${tono.clases}`}>
+        <span aria-hidden className="shrink-0">
+          {tono.icono}
+        </span>
+        <p className="text-sm">{bloque.texto}</p>
+      </div>
+    )
+  }
+
+  if (bloque.tipo === 'imagen') {
+    if (!bloque.adjunto) return null
+    return (
+      <figure className="flex flex-col gap-1">
+        <AdjuntoPaso adjunto={bloque.adjunto} titulo={bloque.texto} />
+        {bloque.texto && (
+          <figcaption className="text-xs text-slate-500">{bloque.texto}</figcaption>
+        )}
+      </figure>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={marcada}
+      aria-label={`Tarea: ${bloque.texto}`}
+      onClick={onAlternar}
+      className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
+    >
+      <span
+        aria-hidden
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+          marcada
+            ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
+            : 'border-slate-600 text-transparent'
+        }`}
+      >
+        ✓
+      </span>
+      <span className={`text-sm ${marcada ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+        {bloque.texto}
+      </span>
+    </button>
   )
 }
 

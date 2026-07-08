@@ -1,4 +1,12 @@
-import type { NivelDificultad, PasoAdjunto, PasoProcedimiento, Procedimiento } from './db'
+import type {
+  BloquePaso,
+  NivelDificultad,
+  PasoAdjunto,
+  PasoProcedimiento,
+  Procedimiento,
+  TipoBloque,
+  TonoAviso,
+} from './db'
 
 // Logica pura de los procedimientos paso a paso, separada de los
 // componentes para poder probarla sin navegador. El dato viaja como
@@ -10,7 +18,7 @@ export function crearPaso(): PasoProcedimiento {
     id: crypto.randomUUID(),
     titulo: '',
     objetivo: '',
-    instrucciones: [],
+    bloques: [],
     adjuntos: [],
     credencialId: null,
     credencialTitulo: '',
@@ -19,6 +27,24 @@ export function crearPaso(): PasoProcedimiento {
     solucionArticuloId: null,
     solucionArticuloTitulo: '',
   }
+}
+
+export function crearBloqueTarea(): BloquePaso {
+  return { id: crypto.randomUUID(), tipo: 'tarea', texto: '', tono: null, adjunto: null }
+}
+
+export function crearBloqueAviso(): BloquePaso {
+  return { id: crypto.randomUUID(), tipo: 'aviso', texto: '', tono: 'info', adjunto: null }
+}
+
+export function crearBloqueImagen(adjunto: PasoAdjunto): BloquePaso {
+  return { id: crypto.randomUUID(), tipo: 'imagen', texto: '', tono: null, adjunto }
+}
+
+// Las tareas (bloques con casilla) de un paso, en orden. Son las que
+// cuentan para completarlo; avisos e imagenes son contenido de lectura.
+export function tareasDe(bloques: BloquePaso[]): BloquePaso[] {
+  return bloques.filter((b) => b.tipo === 'tarea')
 }
 
 // Devuelve un procedimiento bien formado o null si no hay pasos (un
@@ -82,9 +108,7 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
     titulo: texto(origen.titulo),
     objetivo: texto(origen.objetivo),
-    instrucciones: Array.isArray(origen.instrucciones)
-      ? origen.instrucciones.filter((i): i is string => typeof i === 'string' && i.trim() !== '')
-      : [],
+    bloques: normalizarBloques(origen),
     adjuntos: normalizarAdjuntos(origen),
     credencialId,
     // Los titulos de referencia solo tienen sentido junto a su id.
@@ -96,25 +120,75 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
   }
 }
 
-// Adjuntos del paso, tolerando datos viejos: si el paso trae la lista
-// nueva `adjuntos` se valida entrada por entrada; si en cambio trae el
-// campo viejo `imagen` (una sola captura, string), se migra a un unico
-// adjunto para no perder la imagen de los procedimientos ya guardados.
+// Bloques del cuerpo del paso, tolerando datos de tres epocas:
+// - si trae la lista nueva `bloques`, se valida bloque por bloque;
+// - si trae las viejas `instrucciones` (array de texto), cada una se
+//   migra a un bloque 'tarea' con id nuevo (mismo patron que la
+//   migracion de `imagen` a `adjuntos`);
+// - si no trae ninguna, queda vacio.
+function normalizarBloques(origen: Record<string, unknown>): BloquePaso[] {
+  if (Array.isArray(origen.bloques)) {
+    return origen.bloques
+      .map(normalizarBloque)
+      .filter((b): b is BloquePaso => b !== null)
+  }
+
+  if (Array.isArray(origen.instrucciones)) {
+    return origen.instrucciones
+      .filter((i): i is string => typeof i === 'string' && i.trim() !== '')
+      .map((textoTarea) => ({
+        id: crypto.randomUUID(),
+        tipo: 'tarea' as const,
+        texto: textoTarea,
+        tono: null,
+        adjunto: null,
+      }))
+  }
+
+  return []
+}
+
+const TIPOS_BLOQUE: TipoBloque[] = ['tarea', 'aviso', 'imagen']
+const TONOS_AVISO_VALIDOS: TonoAviso[] = ['info', 'precaucion', 'importante', 'consejo', 'dato']
+
+// Un bloque valido o null (para descartarlo): una tarea o un aviso sin
+// texto no aporta nada, y una imagen sin adjunto valido tampoco.
+function normalizarBloque(valor: unknown): BloquePaso | null {
+  if (!valor || typeof valor !== 'object') return null
+  const origen = valor as Record<string, unknown>
+  const id = typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID()
+  const tipo = (TIPOS_BLOQUE as string[]).includes(origen.tipo as string)
+    ? (origen.tipo as TipoBloque)
+    : 'tarea'
+  const textoBloque = texto(origen.texto)
+
+  if (tipo === 'imagen') {
+    const adjunto = normalizarUnAdjunto(origen.adjunto)
+    if (!adjunto) return null
+    return { id, tipo, texto: textoBloque, tono: null, adjunto }
+  }
+
+  if (textoBloque.trim() === '') return null
+
+  if (tipo === 'aviso') {
+    const tono = (TONOS_AVISO_VALIDOS as string[]).includes(origen.tono as string)
+      ? (origen.tono as TonoAviso)
+      : 'info'
+    return { id, tipo, texto: textoBloque, tono, adjunto: null }
+  }
+
+  return { id, tipo: 'tarea', texto: textoBloque, tono: null, adjunto: null }
+}
+
+// Adjuntos del paso (galeria), tolerando datos viejos: si el paso trae
+// la lista `adjuntos` se valida entrada por entrada; si en cambio trae
+// el campo viejo `imagen` (una sola captura, string), se migra a un
+// unico adjunto para no perder la imagen de los procedimientos guardados.
 function normalizarAdjuntos(origen: Record<string, unknown>): PasoAdjunto[] {
   if (Array.isArray(origen.adjuntos)) {
     return origen.adjuntos
-      .filter((a): a is Record<string, unknown> => Boolean(a) && typeof a === 'object')
-      .map((a) => ({
-        referencia: texto(a.referencia),
-        nombre: texto(a.nombre),
-        tipo: texto(a.tipo),
-      }))
-      .filter((a) => a.referencia !== '')
-      .map((a) => ({
-        referencia: a.referencia,
-        nombre: a.nombre || nombreDeReferencia(a.referencia),
-        tipo: a.tipo || tipoDeReferencia(a.referencia),
-      }))
+      .map(normalizarUnAdjunto)
+      .filter((a): a is PasoAdjunto => a !== null)
   }
 
   if (typeof origen.imagen === 'string' && origen.imagen !== '') {
@@ -128,6 +202,20 @@ function normalizarAdjuntos(origen: Record<string, unknown>): PasoAdjunto[] {
   }
 
   return []
+}
+
+// Un adjunto valido (referencia no vacia) o null. Completa nombre y
+// tipo a partir de la referencia cuando faltan (datos viejos).
+function normalizarUnAdjunto(valor: unknown): PasoAdjunto | null {
+  if (!valor || typeof valor !== 'object') return null
+  const origen = valor as Record<string, unknown>
+  const referencia = texto(origen.referencia)
+  if (referencia === '') return null
+  return {
+    referencia,
+    nombre: texto(origen.nombre) || nombreDeReferencia(referencia),
+    tipo: texto(origen.tipo) || tipoDeReferencia(referencia),
+  }
 }
 
 // Nombre legible a partir de la referencia de Storage. Las referencias
@@ -172,7 +260,9 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
   for (const paso of procedimiento.pasos) {
     partes.push(paso.titulo)
     partes.push(paso.objetivo)
-    partes.push(...paso.instrucciones)
+    // Textos de tareas, avisos y pies de imagen (todo el cuerpo del
+    // paso entra al indice para que "back up" encuentre el articulo).
+    partes.push(...paso.bloques.map((b) => b.texto))
     // Los titulos del subprocedimiento y de la solucion vinculados si
     // se indexan (no son informacion protegida): buscar "impresora"
     // encuentra tambien los procedimientos que incluyen esa tarea.
@@ -262,7 +352,7 @@ export function prepararProcedimientoParaGuardar({
       ...paso,
       titulo: paso.titulo.trim(),
       objetivo: paso.objetivo.trim(),
-      instrucciones: paso.instrucciones.map((i) => i.trim()).filter(Boolean),
+      bloques: limpiarBloques(paso.bloques),
       credencialTitulo: paso.credencialId ? paso.credencialTitulo.trim() : '',
       subArticuloTitulo: paso.subArticuloId ? paso.subArticuloTitulo.trim() : '',
       solucionArticuloTitulo: paso.solucionArticuloId ? paso.solucionArticuloTitulo.trim() : '',
@@ -270,7 +360,7 @@ export function prepararProcedimientoParaGuardar({
     .filter(
       (paso) =>
         paso.titulo !== '' ||
-        paso.instrucciones.length > 0 ||
+        paso.bloques.length > 0 ||
         paso.adjuntos.length > 0 ||
         paso.credencialId !== null ||
         paso.subArticuloId !== null ||
@@ -286,4 +376,17 @@ export function prepararProcedimientoParaGuardar({
     tiempoEstimadoMin,
     dificultad,
   }
+}
+
+// Limpia los bloques de un paso al guardar: recorta el texto y descarta
+// tareas y avisos vacios (una imagen sin texto es valida, es el pie que
+// es opcional). Una imagen sin adjunto no deberia existir, pero se
+// descarta por seguridad.
+function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
+  return bloques
+    .map((bloque) => ({ ...bloque, texto: bloque.texto.trim() }))
+    .filter((bloque) => {
+      if (bloque.tipo === 'imagen') return bloque.adjunto !== null
+      return bloque.texto !== ''
+    })
 }

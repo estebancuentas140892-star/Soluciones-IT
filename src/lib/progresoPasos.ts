@@ -13,25 +13,13 @@ import { db } from './db'
 // vuelve el paso pendiente; marcar o desmarcar el paso entero arrastra
 // todas sus instrucciones.
 
-// Clave de una instruccion dentro del avance. Usa el indice porque
-// las instrucciones no tienen id propio (se editan como lineas de
-// texto); si el procedimiento se edita a mitad de ejecucion, el
-// avance de ese paso puede quedar desfasado, algo aceptable para un
-// dato local y efimero.
-export function claveInstruccion(pasoId: string, indice: number): string {
-  return `${pasoId}:${indice}`
-}
-
-export function clavesDeInstrucciones(pasoId: string, total: number): string[] {
-  return Array.from({ length: total }, (_, i) => claveInstruccion(pasoId, i))
-}
-
-// Marca o desmarca un paso completo, arrastrando sus instrucciones.
+// Marca o desmarca un paso completo, arrastrando sus tareas (los
+// bloques con casilla). `tareaIds` son los ids de esos bloques.
 export async function establecerPasoHecho(
   articuloId: string,
   pasoId: string,
   hecho: boolean,
-  clavesInstrucciones: string[] = [],
+  tareaIds: string[] = [],
 ): Promise<void> {
   const actual = await db.progresoPasos.get(articuloId)
   const pasos = new Set(actual?.pasosHechos ?? [])
@@ -39,48 +27,47 @@ export async function establecerPasoHecho(
 
   if (hecho) {
     pasos.add(pasoId)
-    for (const clave of clavesInstrucciones) instrucciones.add(clave)
+    for (const tareaId of tareaIds) instrucciones.add(tareaId)
   } else {
     pasos.delete(pasoId)
-    for (const clave of clavesInstrucciones) instrucciones.delete(clave)
+    for (const tareaId of tareaIds) instrucciones.delete(tareaId)
   }
 
   await db.progresoPasos.put({
     articuloId,
     pasosHechos: [...pasos],
     instruccionesHechas: [...instrucciones],
+    verificacionHecha: actual?.verificacionHecha ?? [],
     actualizadoEn: new Date().toISOString(),
   })
 }
 
-// Alterna una instruccion. Devuelve true si con este cambio TODAS las
-// instrucciones del paso quedaron marcadas: es la señal para que la
-// vista intente completar el paso (que ademas revisara el
-// subprocedimiento y la solucion antes de avanzar). Aqui NO se marca
-// el paso como hecho al completar las instrucciones, para no saltarse
-// el resto del contenido del paso; pero si al desmarcar una
-// instruccion el paso deja de estar completo, se retira de los hechos
-// (desmarcar vuelve el paso pendiente).
+// Alterna una tarea (bloque con casilla) por su id. Devuelve true si
+// con este cambio TODAS las tareas del paso quedaron marcadas: es la
+// señal para que la vista intente completar el paso (que ademas
+// revisara el subprocedimiento y la solucion antes de avanzar). Aqui NO
+// se marca el paso como hecho al completar las tareas, para no saltarse
+// el resto del contenido del paso; pero si al desmarcar una tarea el
+// paso deja de estar completo, se retira de los hechos (desmarcar
+// vuelve el paso pendiente). `tareaIds` son todos los ids de tareas del
+// paso, para saber si quedaron todas marcadas.
 export async function alternarInstruccionHecha(
   articuloId: string,
   pasoId: string,
-  indice: number,
-  totalInstrucciones: number,
+  tareaId: string,
+  tareaIds: string[],
 ): Promise<boolean> {
   const actual = await db.progresoPasos.get(articuloId)
   const pasos = new Set(actual?.pasosHechos ?? [])
   const instrucciones = new Set(actual?.instruccionesHechas ?? [])
 
-  const clave = claveInstruccion(pasoId, indice)
-  if (instrucciones.has(clave)) {
-    instrucciones.delete(clave)
+  if (instrucciones.has(tareaId)) {
+    instrucciones.delete(tareaId)
   } else {
-    instrucciones.add(clave)
+    instrucciones.add(tareaId)
   }
 
-  const completo =
-    totalInstrucciones > 0 &&
-    clavesDeInstrucciones(pasoId, totalInstrucciones).every((c) => instrucciones.has(c))
+  const completo = tareaIds.length > 0 && tareaIds.every((id) => instrucciones.has(id))
   if (!completo) {
     pasos.delete(pasoId)
   }
@@ -89,6 +76,7 @@ export async function alternarInstruccionHecha(
     articuloId,
     pasosHechos: [...pasos],
     instruccionesHechas: [...instrucciones],
+    verificacionHecha: actual?.verificacionHecha ?? [],
     actualizadoEn: new Date().toISOString(),
   })
   return completo
@@ -106,14 +94,13 @@ export function contarHechos(pasosHechos: string[], idsVigentes: string[]): numb
   return idsVigentes.filter((id) => hechos.has(id)).length
 }
 
-// Cuantas instrucciones de un paso estan marcadas.
+// Cuantas de las tareas dadas (por id) estan marcadas.
 export function contarInstruccionesHechas(
   instruccionesHechas: string[] | undefined,
-  pasoId: string,
-  total: number,
+  tareaIds: string[],
 ): number {
   const hechas = new Set(instruccionesHechas ?? [])
-  return clavesDeInstrucciones(pasoId, total).filter((clave) => hechas.has(clave)).length
+  return tareaIds.filter((id) => hechas.has(id)).length
 }
 
 // Alterna una casilla de "Verificacion final" (por indice, igual que

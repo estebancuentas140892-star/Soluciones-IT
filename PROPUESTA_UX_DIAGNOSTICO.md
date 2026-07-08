@@ -1,7 +1,7 @@
 # Propuesta: UX de procedimientos y Modo Diagnóstico Inteligente
 
 Fecha: 2026-07-08
-Estado: pendiente de aprobación del usuario (fases y prioridades)
+Estado: aprobada, en ejecución por fases. Fase A hecha (tarea 41 del archivo), fase B hecha (tarea 42). Pendientes: C, D, E, F.
 
 Origen: documento de mejoras entregado por el usuario el 2026-07-08 con 18 puntos de UX para procedimientos más la nueva funcionalidad "Modo Diagnóstico Inteligente". Esta propuesta analiza cada punto contra el código real, señala lo que ya existe, agrupa lo nuevo en fases ejecutables y define el diseño técnico de cada fase.
 

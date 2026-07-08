@@ -1,12 +1,27 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState, type ChangeEvent } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
-import { db, type Articulo, type Credencial, type PasoAdjunto, type PasoProcedimiento } from '../../lib/db'
-import { crearPaso, normalizarProcedimiento } from '../../lib/procedimiento'
+import {
+  db,
+  type Articulo,
+  type BloquePaso,
+  type Credencial,
+  type PasoAdjunto,
+  type PasoProcedimiento,
+  type TonoAviso,
+} from '../../lib/db'
+import {
+  crearBloqueAviso,
+  crearBloqueImagen,
+  crearBloqueTarea,
+  crearPaso,
+  normalizarProcedimiento,
+} from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import { TONOS_AVISO } from './tonos'
 
 interface Props {
   articuloId: string
@@ -19,14 +34,15 @@ const CLASE_INPUT =
 
 // Editor del procedimiento paso a paso dentro del formulario de
 // articulo. Es un componente controlado: el estado vive en el
-// formulario y aqui solo se edita. Cada paso ofrece solo lo esencial:
-// titulo, instrucciones con casilla, captura y los tres vinculos
-// (datos de la boveda, tarea reutilizable y solucion por si el paso
-// falla).
+// formulario y aqui solo se edita. Cada paso ofrece: titulo, objetivo,
+// un cuerpo de bloques intercalados (tareas con casilla, avisos e
+// imagenes), una galeria de adjuntos y los tres vinculos (datos de la
+// boveda, tarea reutilizable y solucion por si el paso falla).
 export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [subiendoPasoId, setSubiendoPasoId] = useState<string | null>(null)
+  const [subiendoImagenPasoId, setSubiendoImagenPasoId] = useState<string | null>(null)
   const [pasoAEliminar, setPasoAEliminar] = useState<number | null>(null)
 
   // Credenciales de la boveda para vincular a un paso. Solo llegan a
@@ -76,20 +92,12 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
     setPasoAEliminar(null)
   }
 
-  async function subirAdjuntos(indice: number, evento: ChangeEvent<HTMLInputElement>) {
-    const archivos = Array.from(evento.target.files ?? [])
-    evento.target.value = ''
-    if (archivos.length === 0) return
-
-    setError(null)
-    setAviso(null)
-    if (!supabase || !supabaseConfigured) {
-      setError('La aplicación aún no está conectada al servidor.')
-      return
-    }
-
-    const paso = pasos[indice]
-    setSubiendoPasoId(paso.id)
+  // Sube (o encola offline) un lote de archivos y devuelve los adjuntos
+  // creados. Compartido por la galeria del paso y por las imagenes
+  // intercaladas en el cuerpo, para no duplicar la logica de subida.
+  async function subirArchivos(
+    archivos: File[],
+  ): Promise<{ nuevos: PasoAdjunto[]; fallidos: string[]; encolados: number }> {
     const nuevos: PasoAdjunto[] = []
     const fallidos: string[] = []
     let encolados = 0
@@ -112,9 +120,10 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
       }
     }
 
-    // Se agregan sobre los adjuntos que el paso tenia al empezar la
-    // subida (una sola escritura al terminar todo el lote).
-    if (nuevos.length > 0) actualizarPaso(indice, { adjuntos: [...paso.adjuntos, ...nuevos] })
+    return { nuevos, fallidos, encolados }
+  }
+
+  function reportarSubida(fallidos: string[], encolados: number) {
     if (fallidos.length > 0) setError(`No se pudo subir: ${fallidos.join(', ')}`)
     if (encolados > 0) {
       setAviso(
@@ -123,7 +132,56 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
           : `Sin conexión: ${encolados} archivos quedaron guardados en este dispositivo y se subirán solos al recuperar señal.`,
       )
     }
+  }
+
+  // ¿Hay servidor configurado para subir? Deja el error listo si no.
+  function servidorListo(): boolean {
+    if (!supabase || !supabaseConfigured) {
+      setError('La aplicación aún no está conectada al servidor.')
+      return false
+    }
+    return true
+  }
+
+  async function subirAdjuntos(indice: number, evento: ChangeEvent<HTMLInputElement>) {
+    const archivos = Array.from(evento.target.files ?? [])
+    evento.target.value = ''
+    if (archivos.length === 0) return
+
+    setError(null)
+    setAviso(null)
+    if (!servidorListo()) return
+
+    const paso = pasos[indice]
+    setSubiendoPasoId(paso.id)
+    const { nuevos, fallidos, encolados } = await subirArchivos(archivos)
+    // Se agregan sobre los adjuntos que el paso tenia al empezar la
+    // subida (una sola escritura al terminar todo el lote).
+    if (nuevos.length > 0) actualizarPaso(indice, { adjuntos: [...paso.adjuntos, ...nuevos] })
+    reportarSubida(fallidos, encolados)
     setSubiendoPasoId(null)
+  }
+
+  // Sube imagenes y las agrega como bloques 'imagen' al final del cuerpo
+  // del paso (el tecnico las reordena con las flechas hasta la posicion
+  // deseada, por ejemplo justo despues de una tarea).
+  async function subirImagenBloque(indice: number, evento: ChangeEvent<HTMLInputElement>) {
+    const archivos = Array.from(evento.target.files ?? [])
+    evento.target.value = ''
+    if (archivos.length === 0) return
+
+    setError(null)
+    setAviso(null)
+    if (!servidorListo()) return
+
+    const paso = pasos[indice]
+    setSubiendoImagenPasoId(paso.id)
+    const { nuevos, fallidos, encolados } = await subirArchivos(archivos)
+    if (nuevos.length > 0) {
+      actualizarPaso(indice, { bloques: [...paso.bloques, ...nuevos.map(crearBloqueImagen)] })
+    }
+    reportarSubida(fallidos, encolados)
+    setSubiendoImagenPasoId(null)
   }
 
   function quitarAdjunto(indice: number, referencia: string) {
@@ -174,16 +232,12 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             className={`${CLASE_INPUT} text-sm`}
           />
 
-          <label className="flex flex-col gap-1 text-xs text-slate-400">
-            Instrucciones con casilla (una por línea, opcional)
-            <textarea
-              rows={3}
-              value={paso.instrucciones.join('\n')}
-              onChange={(e) => actualizarPaso(indice, { instrucciones: e.target.value.split('\n') })}
-              placeholder={'Presionar Windows + R\nEscribir \\\\10.10.5.32\nEjecutar el instalador'}
-              className={CLASE_INPUT}
-            />
-          </label>
+          <ContenidoEditor
+            bloques={paso.bloques}
+            onChange={(bloques) => actualizarPaso(indice, { bloques })}
+            onSubirImagen={(evento) => void subirImagenBloque(indice, evento)}
+            subiendoImagen={subiendoImagenPasoId === paso.id}
+          />
 
           <AdjuntosPasoEditor
             paso={paso}
@@ -280,6 +334,273 @@ function BotonPaso({
     >
       {children}
     </button>
+  )
+}
+
+// Editor del cuerpo del paso: la lista ordenada de bloques (tareas con
+// casilla, avisos e imagenes). El caso comun (solo tareas) se mantiene
+// rapido: al pulsar Enter en una tarea se crea otra debajo y se enfoca,
+// y pegar varias lineas las reparte en tareas seguidas. Los avisos y
+// las imagenes se intercalan con sus botones y se reordenan con las
+// flechas para colocarlos en la posicion exacta (por ejemplo, una
+// precaucion justo antes de la tarea peligrosa).
+function ContenidoEditor({
+  bloques,
+  onChange,
+  onSubirImagen,
+  subiendoImagen,
+}: {
+  bloques: BloquePaso[]
+  onChange: (bloques: BloquePaso[]) => void
+  onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
+  subiendoImagen: boolean
+}) {
+  // Id del bloque a enfocar tras crearlo (Enter o boton "+ Tarea"),
+  // consumido por la fila cuando monta su input.
+  const [focoId, setFocoId] = useState<string | null>(null)
+
+  function actualizar(id: string, cambios: Partial<BloquePaso>) {
+    onChange(bloques.map((b) => (b.id === id ? { ...b, ...cambios } : b)))
+  }
+
+  function quitar(id: string) {
+    onChange(bloques.filter((b) => b.id !== id))
+  }
+
+  function mover(indice: number, direccion: -1 | 1) {
+    const destino = indice + direccion
+    if (destino < 0 || destino >= bloques.length) return
+    const copia = [...bloques]
+    ;[copia[indice], copia[destino]] = [copia[destino], copia[indice]]
+    onChange(copia)
+  }
+
+  function agregarAlFinal(bloque: BloquePaso) {
+    onChange([...bloques, bloque])
+    setFocoId(bloque.id)
+  }
+
+  function insertarTareaDespues(indice: number) {
+    const nueva = crearBloqueTarea()
+    const copia = [...bloques]
+    copia.splice(indice + 1, 0, nueva)
+    onChange(copia)
+    setFocoId(nueva.id)
+  }
+
+  // Pegar varias lineas en una tarea las convierte en tareas seguidas
+  // (recupera la comodidad de la vieja edicion "una por linea").
+  function pegarLineas(indice: number, texto: string, evento: { preventDefault: () => void }) {
+    const lineas = texto
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+    if (lineas.length <= 1) return
+    evento.preventDefault()
+    const copia = [...bloques]
+    copia[indice] = { ...copia[indice], texto: lineas[0] }
+    const extra = lineas.slice(1).map((linea) => ({ ...crearBloqueTarea(), texto: linea }))
+    copia.splice(indice + 1, 0, ...extra)
+    onChange(copia)
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs text-slate-400">Contenido del paso</span>
+
+      {bloques.length === 0 && (
+        <p className="text-xs text-slate-500">
+          Sin contenido todavía. Agrega tareas con casilla, avisos o imágenes.
+        </p>
+      )}
+
+      {bloques.map((bloque, indice) => (
+        <FilaBloque
+          key={bloque.id}
+          bloque={bloque}
+          primero={indice === 0}
+          ultimo={indice === bloques.length - 1}
+          enfocar={focoId === bloque.id}
+          onEnfocado={() => setFocoId(null)}
+          onCambiar={(cambios) => actualizar(bloque.id, cambios)}
+          onEnter={() => insertarTareaDespues(indice)}
+          onPegar={(texto, evento) => pegarLineas(indice, texto, evento)}
+          onMover={(dir) => mover(indice, dir)}
+          onQuitar={() => quitar(bloque.id)}
+        />
+      ))}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => agregarAlFinal(crearBloqueTarea())}
+          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+        >
+          + Tarea
+        </button>
+        <button
+          type="button"
+          onClick={() => agregarAlFinal(crearBloqueAviso())}
+          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+        >
+          + Aviso
+        </button>
+        <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+          {subiendoImagen ? 'Subiendo...' : '+ Imagen'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={subiendoImagen}
+            onChange={onSubirImagen}
+          />
+        </label>
+      </div>
+    </div>
+  )
+}
+
+// Una fila del editor de contenido: el editor del bloque segun su tipo,
+// mas los controles de reordenar y eliminar comunes a todos.
+function FilaBloque({
+  bloque,
+  primero,
+  ultimo,
+  enfocar,
+  onEnfocado,
+  onCambiar,
+  onEnter,
+  onPegar,
+  onMover,
+  onQuitar,
+}: {
+  bloque: BloquePaso
+  primero: boolean
+  ultimo: boolean
+  enfocar: boolean
+  onEnfocado: () => void
+  onCambiar: (cambios: Partial<BloquePaso>) => void
+  onEnter: () => void
+  onPegar: (texto: string, evento: { preventDefault: () => void }) => void
+  onMover: (direccion: -1 | 1) => void
+  onQuitar: () => void
+}) {
+  return (
+    <div className="flex items-start gap-1.5">
+      <div className="flex-1">
+        {bloque.tipo === 'tarea' && (
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="text-slate-600">
+              ☐
+            </span>
+            <input
+              type="text"
+              value={bloque.texto}
+              ref={(el) => {
+                if (el && enfocar) {
+                  el.focus()
+                  onEnfocado()
+                }
+              }}
+              onChange={(e) => onCambiar({ texto: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  onEnter()
+                }
+              }}
+              onPaste={(e) => onPegar(e.clipboardData.getData('text'), e)}
+              placeholder="Tarea con casilla (por ejemplo: Encender la impresora)"
+              className={`${CLASE_INPUT} w-full`}
+            />
+          </div>
+        )}
+
+        {bloque.tipo === 'aviso' && (
+          <div className="flex flex-col gap-1">
+            <select
+              value={bloque.tono ?? 'info'}
+              aria-label="Tono del aviso"
+              onChange={(e) => onCambiar({ tono: e.target.value as TonoAviso })}
+              className={`${CLASE_INPUT} text-slate-300`}
+            >
+              {TONOS_AVISO.map((t) => (
+                <option key={t.valor} value={t.valor}>
+                  {t.icono} {t.etiqueta}
+                </option>
+              ))}
+            </select>
+            <textarea
+              rows={2}
+              value={bloque.texto}
+              ref={(el) => {
+                if (el && enfocar) {
+                  el.focus()
+                  onEnfocado()
+                }
+              }}
+              onChange={(e) => onCambiar({ texto: e.target.value })}
+              placeholder="Texto del aviso (por ejemplo: Verifica el nombre del archivo antes de borrarlo)"
+              className={CLASE_INPUT}
+            />
+          </div>
+        )}
+
+        {bloque.tipo === 'imagen' && (
+          <ImagenBloqueEditor bloque={bloque} onCambiarTexto={(texto) => onCambiar({ texto })} />
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <BotonPaso etiqueta="Subir el bloque" onClick={() => onMover(-1)} deshabilitado={primero}>
+          ↑
+        </BotonPaso>
+        <BotonPaso etiqueta="Bajar el bloque" onClick={() => onMover(1)} deshabilitado={ultimo}>
+          ↓
+        </BotonPaso>
+        <BotonPaso etiqueta="Eliminar el bloque" onClick={onQuitar}>
+          ✕
+        </BotonPaso>
+      </div>
+    </div>
+  )
+}
+
+// Editor de un bloque de imagen: miniatura mas el pie de foto opcional.
+// La imagen ya se subio al crear el bloque; aqui solo se ve y se puede
+// escribir su descripcion o quitar el bloque (con las flechas/✕ de la
+// fila).
+function ImagenBloqueEditor({
+  bloque,
+  onCambiarTexto,
+}: {
+  bloque: BloquePaso
+  onCambiarTexto: (texto: string) => void
+}) {
+  const url = useUrlAdjunto(bloque.adjunto?.referencia ?? null)
+  const esImagen = bloque.adjunto?.tipo.startsWith('image/') ?? false
+
+  return (
+    <div className="flex items-center gap-2">
+      {esImagen && url ? (
+        <img
+          src={url}
+          alt={bloque.adjunto?.nombre ?? 'Imagen'}
+          className="h-16 w-16 shrink-0 rounded-lg border border-slate-800 object-cover"
+        />
+      ) : (
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-500">
+          🖼
+        </div>
+      )}
+      <input
+        type="text"
+        value={bloque.texto}
+        onChange={(e) => onCambiarTexto(e.target.value)}
+        placeholder="Pie de imagen (opcional)"
+        className={`${CLASE_INPUT} w-full`}
+      />
+    </div>
   )
 }
 
@@ -469,7 +790,7 @@ function AdjuntosPasoEditor({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-slate-400">Adjuntos del paso</span>
+        <span className="text-xs text-slate-400">Adjuntos del paso (manuales, PDF)</span>
         <div className="flex gap-2">
           <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
             {subiendo ? 'Subiendo...' : '📷 Cámara'}
