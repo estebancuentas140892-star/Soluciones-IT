@@ -42,6 +42,15 @@ const ArticuloForm = lazy(() =>
 const AsistentePage = lazy(() =>
   import('./features/soluciones/AsistentePage').then((m) => ({ default: m.AsistentePage })),
 )
+const DiagnosticosPage = lazy(() =>
+  import('./features/diagnostico/DiagnosticosPage').then((m) => ({ default: m.DiagnosticosPage })),
+)
+const DiagnosticoForm = lazy(() =>
+  import('./features/diagnostico/DiagnosticoForm').then((m) => ({ default: m.DiagnosticoForm })),
+)
+const DiagnosticoRunPage = lazy(() =>
+  import('./features/diagnostico/DiagnosticoRunPage').then((m) => ({ default: m.DiagnosticoRunPage })),
+)
 const DispositivosPage = lazy(() =>
   import('./features/dispositivos/DispositivosPage').then((m) => ({ default: m.DispositivosPage })),
 )
@@ -133,10 +142,23 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* El asistente del diagnostico tambien va sin barra
+                  inferior: una pregunta a la vez, sin distracciones. */}
+              <Route
+                path="diagnostico/:diagnosticoId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <DiagnosticoRunPage />
+                  </Suspense>
+                }
+              />
               <Route element={<Layout />}>
                 <Route index element={<InicioPage />} />
                 <Route path="cuenta" element={<CuentaPage />} />
                 <Route path="cuenta/seguridad" element={<SeguridadPage />} />
+                <Route path="diagnostico" element={<DiagnosticosPage />} />
+                <Route path="diagnostico/nuevo" element={<DiagnosticoForm />} />
+                <Route path="diagnostico/:diagnosticoId/editar" element={<DiagnosticoForm />} />
                 <Route path="soluciones" element={<SolucionesPage />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
                 <Route path="soluciones/:categoriaId/nuevo" element={<ArticuloForm />} />

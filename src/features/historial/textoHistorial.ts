@@ -25,6 +25,8 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
   sintomas: 'Síntomas',
   causas: 'Posibles causas',
   dispositivosAfectados: 'Dispositivos afectados',
+  descripcion: 'Descripción',
+  nodos: 'Preguntas del diagnóstico',
 }
 
 export function etiquetaDeCampo(campo: string): string {

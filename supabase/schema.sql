@@ -185,6 +185,49 @@ alter table public.adjuntos drop constraint if exists adjuntos_entidad_tipo_chec
 alter table public.adjuntos add constraint adjuntos_entidad_tipo_check
   check (entidad_tipo in ('articulo', 'dispositivo', 'historial'));
 
+-- Modo Diagnostico Inteligente (tarea 46): arboles de decision que
+-- parten del problema ("La impresora no imprime") y guian al tecnico
+-- con preguntas simples hasta la solucion, reutilizando los articulos
+-- con procedimiento como bloques. `nodos` guarda el arbol como JSON
+-- (cada nodo: pregunta, descripcion y opciones; cada opcion puede
+-- continuar en otro nodo, ejecutar un articulo por referencia o
+-- terminar con un mensaje). El primer nodo de la lista es el inicial.
+create table if not exists public.diagnosticos (
+  id uuid primary key default gen_random_uuid(),
+  categoria_id uuid not null references public.categorias (id),
+  titulo text not null,
+  descripcion text not null default '',
+  nodos jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+-- Registro inmutable de diagnosticos terminados o abandonados (solo
+-- se insertan filas, como el historial): problema, camino de
+-- respuestas, procedimientos ejecutados, si quedo resuelto, duracion
+-- y quien lo hizo. Base de las estadisticas futuras. Sin FK a
+-- diagnosticos a proposito (mismo criterio que historial.entidad_id):
+-- el registro nunca debe rechazarse por el estado de otra tabla.
+create table if not exists public.ejecuciones_diagnostico (
+  id uuid primary key default gen_random_uuid(),
+  diagnostico_id uuid not null,
+  diagnostico_titulo text not null default '',
+  usuario uuid references auth.users (id),
+  usuario_nombre text not null default '',
+  camino jsonb not null default '[]'::jsonb,
+  articulos_ejecutados jsonb not null default '[]'::jsonb,
+  resuelto text not null check (resuelto in ('si', 'no', 'abandonado')),
+  duracion_segundos integer not null default 0,
+  fecha_hora timestamptz not null default now(),
+  recibido_en timestamptz not null default now()
+);
+
+-- El historial ahora tambien registra cambios de diagnosticos.
+alter table public.historial drop constraint if exists historial_entidad_tipo_check;
+alter table public.historial add constraint historial_entidad_tipo_check
+  check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico'));
+
 -- Indices para la sincronizacion (consultas por updated_at) y las
 -- consultas mas frecuentes.
 create index if not exists idx_categorias_updated on public.categorias (updated_at);
@@ -201,6 +244,10 @@ create index if not exists idx_historial_fecha on public.historial (fecha_hora);
 create index if not exists idx_historial_recibido on public.historial (recibido_en);
 create index if not exists idx_adjuntos_updated on public.adjuntos (updated_at);
 create index if not exists idx_adjuntos_entidad on public.adjuntos (entidad_tipo, entidad_id);
+create index if not exists idx_diagnosticos_updated on public.diagnosticos (updated_at);
+create index if not exists idx_diagnosticos_categoria on public.diagnosticos (categoria_id);
+create index if not exists idx_ejecuciones_recibido on public.ejecuciones_diagnostico (recibido_en);
+create index if not exists idx_ejecuciones_diagnostico on public.ejecuciones_diagnostico (diagnostico_id);
 
 -- ----------------------------------------------------------------
 -- 2. Funciones y triggers
@@ -257,6 +304,11 @@ create trigger trg_adjuntos_modificacion
   before insert or update on public.adjuntos
   for each row execute function public.registrar_modificacion();
 
+drop trigger if exists trg_diagnosticos_modificacion on public.diagnosticos;
+create trigger trg_diagnosticos_modificacion
+  before insert or update on public.diagnosticos
+  for each row execute function public.registrar_modificacion();
+
 -- Crea el perfil automaticamente cuando se da de alta un usuario
 -- en Authentication.
 create or replace function public.crear_perfil()
@@ -307,6 +359,8 @@ alter table public.credenciales enable row level security;
 alter table public.boveda_meta enable row level security;
 alter table public.historial enable row level security;
 alter table public.adjuntos enable row level security;
+alter table public.diagnosticos enable row level security;
+alter table public.ejecuciones_diagnostico enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -369,6 +423,22 @@ create policy historial_lectura on public.historial
 
 drop policy if exists historial_insercion on public.historial;
 create policy historial_insercion on public.historial
+  for insert to authenticated with check (true);
+
+-- Diagnosticos: acceso completo para cualquier tecnico autenticado,
+-- como el resto del contenido general.
+drop policy if exists diagnosticos_acceso on public.diagnosticos;
+create policy diagnosticos_acceso on public.diagnosticos
+  for all to authenticated using (true) with check (true);
+
+-- Ejecuciones de diagnostico: se pueden leer y agregar, nunca editar
+-- ni borrar (registro inmutable, como el historial).
+drop policy if exists ejecuciones_lectura on public.ejecuciones_diagnostico;
+create policy ejecuciones_lectura on public.ejecuciones_diagnostico
+  for select to authenticated using (true);
+
+drop policy if exists ejecuciones_insercion on public.ejecuciones_diagnostico;
+create policy ejecuciones_insercion on public.ejecuciones_diagnostico
   for insert to authenticated with check (true);
 
 -- ----------------------------------------------------------------

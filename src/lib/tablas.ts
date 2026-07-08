@@ -6,15 +6,16 @@ import {
   type Categoria,
   type Conexion,
   type Credencial,
+  type Diagnostico,
   type Dispositivo,
+  type EjecucionDiagnostico,
   type HistorialEntrada,
 } from './db'
 
 // Tablas que se sincronizan con Supabase, en el orden en que deben
 // descargarse (las categorias primero porque el resto depende de ellas).
-// conexiones va al final a proposito: es la tabla mas nueva y, si el
-// esquema todavia no se aplico en el servidor, su fallo no impide
-// descargar las demas.
+// Las mas nuevas van al final a proposito: si su esquema todavia no se
+// aplico en el servidor, su fallo no impide descargar las demas.
 export const TABLAS_SINCRONIZADAS = [
   'categorias',
   'articulos',
@@ -23,13 +24,16 @@ export const TABLAS_SINCRONIZADAS = [
   'adjuntos',
   'historial',
   'conexiones',
+  'diagnosticos',
+  'ejecuciones_diagnostico',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
 
-// Tablas que se editan desde la app (el historial solo se agrega
-// mediante el repositorio, nunca directamente).
-export type TablaEditable = Exclude<TablaSincronizada, 'historial'>
+// Tablas que se editan desde la app. El historial y las ejecuciones de
+// diagnostico solo se agregan mediante el repositorio (registro
+// inmutable), nunca se editan directamente.
+export type TablaEditable = Exclude<TablaSincronizada, 'historial' | 'ejecuciones_diagnostico'>
 
 export interface EntidadPorTabla {
   categorias: Categoria
@@ -39,6 +43,8 @@ export interface EntidadPorTabla {
   credenciales: Credencial
   adjuntos: Adjunto
   historial: HistorialEntrada
+  diagnosticos: Diagnostico
+  ejecuciones_diagnostico: EjecucionDiagnostico
 }
 
 interface ConfigTabla {
@@ -151,6 +157,36 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       valorAnterior: 'valor_anterior',
       valorNuevo: 'valor_nuevo',
       motivo: 'motivo',
+    },
+  },
+  diagnosticos: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: {
+      ...camposComunes,
+      categoriaId: 'categoria_id',
+      titulo: 'titulo',
+      descripcion: 'descripcion',
+      nodos: 'nodos',
+    },
+  },
+  // Registro inmutable de diagnosticos terminados o abandonados, con
+  // el mismo patron que el historial: solo insercion y cursor sobre
+  // recibido_en (el sello que pone el servidor al recibir la fila).
+  ejecuciones_diagnostico: {
+    columnaCursor: 'recibido_en',
+    soloInsercion: true,
+    campos: {
+      id: 'id',
+      diagnosticoId: 'diagnostico_id',
+      diagnosticoTitulo: 'diagnostico_titulo',
+      usuario: 'usuario',
+      usuarioNombre: 'usuario_nombre',
+      camino: 'camino',
+      articulosEjecutados: 'articulos_ejecutados',
+      resuelto: 'resuelto',
+      duracionSegundos: 'duracion_segundos',
+      fechaHora: 'fecha_hora',
     },
   },
 }

@@ -135,10 +135,13 @@ async function ejecutarSync(): Promise<void> {
     await procesarArchivosPendientes()
     await subirCambiosPendientes()
     await descargarPerfiles()
+    // El verificador de la boveda va ANTES del resto de tablas: es
+    // best effort y no debe quedarse sin descargar porque una tabla
+    // nueva (al final de la lista) falle por esquema sin aplicar.
+    await descargarBovedaMeta()
     for (const tabla of TABLAS_SINCRONIZADAS) {
       await descargarTabla(tabla)
     }
-    await descargarBovedaMeta()
     actualizarEstado({ ultimaSync: new Date().toISOString() })
   } catch (err) {
     actualizarEstado({ ultimoError: err instanceof Error ? err.message : String(err) })

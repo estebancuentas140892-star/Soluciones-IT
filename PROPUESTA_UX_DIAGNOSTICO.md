@@ -1,7 +1,7 @@
 # Propuesta: UX de procedimientos y Modo Diagnóstico Inteligente
 
 Fecha: 2026-07-08
-Estado: aprobada, en ejecución por fases. Fase A hecha (tarea 41 del archivo), fase B hecha (tarea 42), fase C1 hecha (tarea 43), fase D hecha (tarea 44), fase E hecha (tarea 45). Pendientes: C2 (decidir si se hace), F.
+Estado: COMPLETADA en sus fases principales (2026-07-08). Fase A (tarea 41 del archivo), B (tarea 42), C1 (tarea 43), D (tarea 44), E (tarea 45) y F (tarea 46, F1 + F2; requiere aplicar schema.sql en Supabase). Quedan como opcionales a decidir: C2 (anotación de imágenes) y F3 (estadísticas de ejecuciones).
 
 Origen: documento de mejoras entregado por el usuario el 2026-07-08 con 18 puntos de UX para procedimientos más la nueva funcionalidad "Modo Diagnóstico Inteligente". Esta propuesta analiza cada punto contra el código real, señala lo que ya existe, agrupa lo nuevo en fases ejecutables y define el diseño técnico de cada fase.
 

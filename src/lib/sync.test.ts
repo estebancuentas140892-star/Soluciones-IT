@@ -78,6 +78,54 @@ describe('mapeo entre columnas locales y remotas', () => {
     const subida = aFilaRemota('articulos', { ...aEntidadLocal('articulos', fila) })
     expect(subida.procedimiento).toEqual(procedimiento)
   })
+
+  it('mapea los diagnósticos con sus nodos en ambas direcciones', () => {
+    const nodos = [
+      {
+        id: 'n1',
+        pregunta: '¿Está encendida?',
+        descripcion: '',
+        opciones: [{ id: 'o1', etiqueta: 'Sí', siguienteNodoId: null, articuloId: null, articuloTitulo: '', mensajeFinal: 'Listo' }],
+      },
+    ]
+    const fila = {
+      id: nuevoId(),
+      categoria_id: nuevoId(),
+      titulo: 'La impresora no imprime',
+      descripcion: 'Cualquier impresora térmica',
+      nodos,
+      updated_at: '2026-07-08T15:00:00+00:00',
+      updated_by: null,
+      eliminado_en: null,
+    }
+    const diagnostico = aEntidadLocal('diagnosticos', fila)
+    expect(diagnostico.categoriaId).toBe(fila.categoria_id)
+    expect(diagnostico.nodos).toEqual(nodos)
+
+    const subida = aFilaRemota('diagnosticos', diagnostico)
+    expect(subida.nodos).toEqual(nodos)
+    expect(subida).not.toHaveProperty('updated_at')
+  })
+
+  it('mapea las ejecuciones de diagnóstico (registro inmutable)', () => {
+    const fila = aFilaRemota('ejecuciones_diagnostico', {
+      id: nuevoId(),
+      diagnosticoId: 'diag-1',
+      diagnosticoTitulo: 'La impresora no imprime',
+      usuario: null,
+      usuarioNombre: 'Técnico',
+      camino: [{ nodoId: 'n1', pregunta: '¿Encendida?', opcionId: 'o1', etiqueta: 'No' }],
+      articulosEjecutados: [{ id: 'art-1', titulo: 'Conectar impresora' }],
+      resuelto: 'si',
+      duracionSegundos: 120,
+      fechaHora: '2026-07-08T15:00:00+00:00',
+    })
+    expect(fila.diagnostico_id).toBe('diag-1')
+    expect(fila.resuelto).toBe('si')
+    expect(fila.duracion_segundos).toBe(120)
+    expect(fila.fecha_hora).toBe('2026-07-08T15:00:00+00:00')
+    expect(fila.articulos_ejecutados).toEqual([{ id: 'art-1', titulo: 'Conectar impresora' }])
+  })
 })
 
 describe('aplicarFilasRemotas', () => {

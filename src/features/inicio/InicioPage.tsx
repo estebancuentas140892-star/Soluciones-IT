@@ -45,6 +45,18 @@ export function InicioPage() {
       ) : (
         <>
           <Link
+            to="/diagnostico"
+            className="flex items-center gap-2 rounded-xl border border-sky-900 bg-sky-950/40 px-4 py-3 text-sm font-medium text-sky-100"
+          >
+            <IconoDiagnostico className="h-5 w-5 text-sky-400" />
+            <span>
+              Diagnóstico Inteligente
+              <span className="block text-xs font-normal text-sky-300/80">
+                Empieza por el problema, llega a la solución
+              </span>
+            </span>
+          </Link>
+          <Link
             to="/escaner"
             className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
           >
@@ -95,6 +107,17 @@ export function InicioPage() {
         </>
       )}
     </div>
+  )
+}
+
+function IconoDiagnostico(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <circle cx="12" cy="5" r="2.2" />
+      <circle cx="6" cy="19" r="2.2" />
+      <circle cx="18" cy="19" r="2.2" />
+      <path d="M12 7.2v4M12 11.2l-4.7 5.9M12 11.2l4.7 5.9" strokeLinecap="round" />
+    </svg>
   )
 }
 

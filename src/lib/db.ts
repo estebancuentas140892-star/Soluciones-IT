@@ -271,7 +271,112 @@ export interface ConfigBloqueoApp {
   updatedAt: string
 }
 
-export type TipoEntidadHistorial = 'categoria' | 'articulo' | 'dispositivo' | 'credencial'
+// ----------------------------------------------------------------
+// Modo Diagnostico Inteligente
+// ----------------------------------------------------------------
+
+// Una respuesta posible de un nodo del diagnostico. Cada opcion puede
+// (todo opcional y combinable):
+// - continuar en otra pregunta (siguienteNodoId),
+// - ejecutar un articulo con procedimiento en modo asistente
+//   (articuloId + copia de referencia del titulo, mismo patron que
+//   los vinculos de los pasos: el paso a paso nunca se duplica),
+// - terminar el diagnostico con un mensaje (mensajeFinal, solo tiene
+//   sentido cuando siguienteNodoId es null).
+// Una opcion terminal debe tener mensaje o articulo (lo exige la
+// validacion al guardar): ninguna rama queda sin salida.
+export interface OpcionDiagnostico {
+  id: string
+  etiqueta: string
+  siguienteNodoId: string | null
+  articuloId: string | null
+  articuloTitulo: string
+  mensajeFinal: string
+}
+
+// Una pregunta del arbol de decisiones. En esta version las
+// respuestas son una lista de opciones (Si/No es una lista de 2);
+// texto, numero o codigo QR quedan para versiones futuras sin romper
+// el modelo (serian tipos de nodo nuevos).
+export interface NodoDiagnostico {
+  id: string
+  pregunta: string
+  descripcion: string
+  opciones: OpcionDiagnostico[]
+}
+
+// Un diagnostico guiado: parte de un problema en palabras del tecnico
+// ("La impresora no imprime") y llega a la solucion mediante
+// preguntas simples, reutilizando los procedimientos existentes como
+// bloques. Los nodos viajan como JSON (igual que `procedimiento` en
+// articulos) y el PRIMERO de la lista es el nodo inicial.
+export interface Diagnostico {
+  id: string
+  categoriaId: string
+  titulo: string
+  descripcion: string
+  nodos: NodoDiagnostico[]
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
+// Un paso ya respondido del diagnostico en curso. Guarda copias del
+// texto (pregunta y etiqueta) para que el registro de la ejecucion
+// sea legible aunque el diagnostico se edite despues.
+export interface PasoCamino {
+  nodoId: string
+  pregunta: string
+  opcionId: string
+  etiqueta: string
+}
+
+// Donde esta parado el tecnico dentro del diagnostico en curso:
+// respondiendo una pregunta, ejecutando un procedimiento vinculado
+// (con la informacion para continuar al terminarlo) o en el resultado
+// final.
+export type EstadoDiagnostico =
+  | { tipo: 'pregunta'; nodoId: string }
+  | {
+      tipo: 'articulo'
+      articuloId: string
+      articuloTitulo: string
+      siguienteNodoId: string | null
+      mensajeFinal: string
+    }
+  | { tipo: 'final'; mensajeFinal: string; articuloId: string | null; articuloTitulo: string }
+
+// Avance local de un diagnostico en curso. Solo vive en el
+// dispositivo (como progresoPasos): cerrar la app y volver retoma en
+// el punto exacto, y nunca se pierde el progreso al ejecutar un
+// procedimiento vinculado.
+export interface ProgresoDiagnostico {
+  diagnosticoId: string
+  camino: PasoCamino[]
+  estado: EstadoDiagnostico
+  articulosEjecutados: { id: string; titulo: string }[]
+  iniciadoEn: string
+  actualizadoEn: string
+}
+
+// Registro de un diagnostico terminado (o abandonado), sincronizado
+// con el equipo. Solo se insertan filas, nunca se editan (como el
+// historial): es la base de las estadisticas futuras (problemas mas
+// frecuentes, soluciones con mayor tasa de exito).
+export interface EjecucionDiagnostico {
+  id: string
+  diagnosticoId: string
+  diagnosticoTitulo: string
+  usuario: string | null
+  usuarioNombre: string
+  camino: PasoCamino[]
+  articulosEjecutados: { id: string; titulo: string }[]
+  resuelto: 'si' | 'no' | 'abandonado'
+  duracionSegundos: number
+  fechaHora: string
+}
+
+export type TipoEntidadHistorial = 'categoria' | 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico'
 
 export interface HistorialEntrada {
   id: string
@@ -374,6 +479,12 @@ class SolucionesItDatabase extends Dexie {
   seguridadApp!: EntityTable<ConfigBloqueoApp, 'id'>
   historial!: EntityTable<HistorialEntrada, 'id'>
   adjuntos!: EntityTable<Adjunto, 'id'>
+  diagnosticos!: EntityTable<Diagnostico, 'id'>
+  // Nombre con guion bajo a proposito: el motor de sincronizacion usa
+  // el MISMO nombre para la tabla local y la remota (snake_case en
+  // Postgres), igual que el resto de tablas sincronizadas.
+  ejecuciones_diagnostico!: EntityTable<EjecucionDiagnostico, 'id'>
+  progresoDiagnostico!: EntityTable<ProgresoDiagnostico, 'diagnosticoId'>
   cambiosPendientes!: EntityTable<CambioPendiente, 'id'>
   syncMeta!: EntityTable<SyncMeta, 'clave'>
   recientes!: EntityTable<Reciente, 'clave'>
@@ -421,6 +532,15 @@ class SolucionesItDatabase extends Dexie {
     // a cada dispositivo, no se sincroniza.
     this.version(7).stores({
       seguridadApp: 'id',
+    })
+
+    // Modo Diagnostico Inteligente: arboles de decision sincronizados,
+    // registro de ejecuciones (solo insercion, como el historial) y
+    // avance local del diagnostico en curso (no se sincroniza).
+    this.version(8).stores({
+      diagnosticos: 'id, categoriaId, updatedAt',
+      ejecuciones_diagnostico: 'id, diagnosticoId',
+      progresoDiagnostico: 'diagnosticoId',
     })
   }
 }

@@ -3,11 +3,12 @@ import { useMemo } from 'react'
 import MiniSearch from 'minisearch'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento, textoDeProcedimiento } from '../../lib/procedimiento'
+import { textoDeNodos } from '../../lib/diagnostico'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { expandirConsulta } from './sinonimos'
 
-export type TipoResultado = 'articulo' | 'dispositivo' | 'credencial'
+export type TipoResultado = 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico'
 
 export interface DocumentoBusqueda {
   id: string
@@ -34,6 +35,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const bovedaDesbloqueada = useBovedaDesbloqueada()
 
   return useMemo(() => {
@@ -82,6 +84,19 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
       })
     }
 
+    // Los diagnosticos se encuentran por el problema ("la impresora
+    // no imprime"), por sus preguntas o por sus respuestas.
+    for (const diagnostico of diagnosticos ?? []) {
+      documentos.push({
+        id: `diagnostico:${diagnostico.id}`,
+        tipo: 'diagnostico',
+        titulo: diagnostico.titulo,
+        subtitulo: [nombreCategoria.get(diagnostico.categoriaId), 'Diagnóstico'].filter(Boolean).join(' · '),
+        ruta: `/diagnostico/${diagnostico.id}`,
+        texto: [diagnostico.titulo, diagnostico.descripcion, textoDeNodos(diagnostico.nodos ?? [])].join(' '),
+      })
+    }
+
     // La boveda solo entra al indice cuando esta desbloqueada, y
     // unicamente por titulo y categoria: el contenido cifrado de las
     // credenciales nunca se indexa.
@@ -99,7 +114,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
     }
 
     return crearIndiceDesdeDocumentos(documentos)
-  }, [articulos, dispositivos, categorias, credenciales, bovedaDesbloqueada])
+  }, [articulos, dispositivos, categorias, credenciales, diagnosticos, bovedaDesbloqueada])
 }
 
 // Separado del hook para poder probarlo sin depender de React ni de

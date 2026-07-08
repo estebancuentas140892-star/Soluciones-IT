@@ -1,4 +1,11 @@
-import { db, type Adjunto, type Conexion, type HistorialEntrada, type TipoEntidadHistorial } from './db'
+import {
+  db,
+  type Adjunto,
+  type Conexion,
+  type EjecucionDiagnostico,
+  type HistorialEntrada,
+  type TipoEntidadHistorial,
+} from './db'
 import { resumenConexion } from './conexiones'
 import { supabase } from './supabase'
 import { programarSync } from './sync'
@@ -105,6 +112,38 @@ export async function registrarIntervencion(
 
   sincronizarPronto()
   return entrada.id
+}
+
+// Registro inmutable de un diagnostico terminado o abandonado (Modo
+// Diagnostico Inteligente). Mismo patron que las entradas de
+// historial: se agrega localmente y se encola para subir; nunca se
+// edita. Es la base de las estadisticas futuras.
+export async function registrarEjecucionDiagnostico(
+  datos: Omit<EjecucionDiagnostico, 'id' | 'usuario' | 'usuarioNombre' | 'fechaHora'>,
+): Promise<void> {
+  const usuario = await obtenerUsuarioActual()
+  const ejecucion: EjecucionDiagnostico = {
+    ...datos,
+    id: nuevoId(),
+    usuario: usuario.id,
+    usuarioNombre: usuario.nombre,
+    fechaHora: new Date().toISOString(),
+  }
+
+  await db.transaction('rw', [db.ejecuciones_diagnostico, db.cambiosPendientes], async () => {
+    await db.ejecuciones_diagnostico.add(ejecucion)
+    await db.cambiosPendientes.add({
+      id: nuevoId(),
+      tabla: 'ejecuciones_diagnostico',
+      entidadId: ejecucion.id,
+      payload: ejecucion,
+      creadoEn: ejecucion.fechaHora,
+      error: null,
+      intentos: 0,
+    })
+  })
+
+  sincronizarPronto()
 }
 
 // ----------------------------------------------------------------
@@ -214,6 +253,7 @@ const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, 
     articulos: 'articulo',
     dispositivos: 'dispositivo',
     credenciales: 'credencial',
+    diagnosticos: 'diagnostico',
   }
 
 // No incluye 'adjuntos': el destino de un adjunto se resuelve aparte
@@ -298,6 +338,12 @@ function formatearValor(campo: string, valor: unknown): string {
   // Los nombres de los dispositivos afectados (no el JSON con sus
   // id) son lo legible para un humano en el historial.
   if (campo === 'dispositivosAfectados') return nombresDispositivosAfectados(valor)
+  // Los nodos de un diagnostico son un arbol JSON: en el historial
+  // basta un resumen del tamano, no el volcado completo.
+  if (campo === 'nodos') {
+    if (!Array.isArray(valor) || valor.length === 0) return ''
+    return valor.length === 1 ? '1 pregunta' : `${valor.length} preguntas`
+  }
   return valorComparable(valor)
 }
 
