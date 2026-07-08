@@ -131,7 +131,7 @@ src/
     conexiones.ts   lógica pura de las conexiones de la ficha (agrupar, resumir, ordenar)
     sync.ts         motor de sincronización (subida de cola y descarga por cursor)
     crypto.ts       cifrado de la bóveda
-  components/     componentes de interfaz compartidos (incluye Adjuntos.tsx, reutilizable en dispositivos)
+  components/     componentes de interfaz compartidos (incluye Adjuntos.tsx, reutilizable en dispositivos, y VisorImagen.tsx: visor de imagen a pantalla completa con zoom por pellizco o doble toque y arrastre, usado por Adjuntos.tsx y por los adjuntos de un paso en ProcedimientoVista.tsx)
 supabase/
   schema.sql      esquema de tablas y políticas RLS
 ```

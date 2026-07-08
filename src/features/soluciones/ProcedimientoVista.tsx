@@ -26,6 +26,7 @@ import {
   verificacionFinalCompleta,
 } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import { VisorImagen } from '../../components/VisorImagen'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { TONOS_AVISO } from './tonos'
 
@@ -755,6 +756,7 @@ function AdjuntosPaso({ adjuntos, titulo }: { adjuntos: PasoAdjunto[]; titulo: s
 function AdjuntoPaso({ adjunto, titulo }: { adjunto: PasoAdjunto; titulo: string }) {
   const url = useUrlAdjunto(adjunto.referencia)
   const esImagen = adjunto.tipo.startsWith('image/')
+  const [visorAbierto, setVisorAbierto] = useState(false)
 
   if (!url) {
     return (
@@ -781,12 +783,21 @@ function AdjuntoPaso({ adjunto, titulo }: { adjunto: PasoAdjunto; titulo: string
   }
 
   return (
-    <a href={url} target="_blank" rel="noreferrer" className="block">
-      <img
-        src={url}
-        alt={`Adjunto del paso: ${titulo}`}
-        className="max-h-72 w-full rounded-lg border border-slate-800 object-contain"
-      />
-    </a>
+    <>
+      <button type="button" onClick={() => setVisorAbierto(true)} className="block">
+        <img
+          src={url}
+          alt={`Adjunto del paso: ${titulo}`}
+          className="max-h-72 w-full rounded-lg border border-slate-800 object-contain"
+        />
+      </button>
+      {visorAbierto && (
+        <VisorImagen
+          url={url}
+          alt={`Adjunto del paso: ${titulo}`}
+          onCerrar={() => setVisorAbierto(false)}
+        />
+      )}
+    </>
   )
 }
