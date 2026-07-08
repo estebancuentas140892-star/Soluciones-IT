@@ -117,7 +117,7 @@ src/
     autenticacion/ sesión, login y protección de rutas
     inicio/       pantalla principal, buscador y recientes
     busqueda/     índice MiniSearch (artículos y dispositivos) y resultados agrupados
-    soluciones/   categorías, artículos en Markdown y su formulario
+    soluciones/   categorías, artículos en Markdown y su formulario. La lógica de ejecución de un procedimiento (marcar tareas, avanzar de paso, subprocedimientos y soluciones vinculados) vive en el hook compartido `useProcedimientoEjecucion.ts`, usado tanto por `ProcedimientoVista.tsx` (el "mapa": todos los pasos como lista expandible) como por `AsistenteVista.tsx` + `AsistentePage.tsx` (modo asistente, ruta `/soluciones/:categoriaId/:articuloId/ejecutar`, fuera del Layout: un paso a la vez con objetivo, checklist y botón "Siguiente", pensado para reducir la carga cognitiva durante la ejecución real; subprocedimientos y soluciones anidados se ejecutan ahí mismo con su propio AsistenteVista, apilado dentro del paso que los vincula)
     dispositivos/ inventario general con filtros, ficha con campos dinámicos, formulario, etiquetas QR imprimibles e importación masiva desde Excel/CSV
     red/          sección Red: lista de infraestructura (RedPage), topología en árbol (TopologiaPage + arbol.ts) y bloque de conexiones de la ficha (ConexionesFicha.tsx)
     escaner/      escaneo de códigos QR y de barras con la cámara para abrir fichas

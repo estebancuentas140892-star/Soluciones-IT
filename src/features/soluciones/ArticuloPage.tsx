@@ -60,6 +60,15 @@ export function ArticuloPage() {
         </div>
       </header>
 
+      {procedimiento && (
+        <Link
+          to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
+          className="flex items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950"
+        >
+          ▶ Modo asistente
+        </Link>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <BotonCompartir titulo={articulo.titulo} />
         <Link

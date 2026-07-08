@@ -39,6 +39,9 @@ const ArticuloPage = lazy(() =>
 const ArticuloForm = lazy(() =>
   import('./features/soluciones/ArticuloForm').then((m) => ({ default: m.ArticuloForm })),
 )
+const AsistentePage = lazy(() =>
+  import('./features/soluciones/AsistentePage').then((m) => ({ default: m.AsistentePage })),
+)
 const DispositivosPage = lazy(() =>
   import('./features/dispositivos/DispositivosPage').then((m) => ({ default: m.DispositivosPage })),
 )
@@ -102,8 +105,10 @@ function App() {
               }
             >
               {/* Pantallas fuera del Layout (sin barra inferior): el
-                  escaner usa la camara a pantalla completa y las
-                  etiquetas se imprimen sin el shell de la app. */}
+                  escaner usa la camara a pantalla completa, las
+                  etiquetas se imprimen sin el shell de la app y el
+                  modo asistente evita distraer al tecnico con el
+                  resto de la interfaz mientras ejecuta un paso. */}
               <Route
                 path="escaner"
                 element={
@@ -117,6 +122,14 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <EtiquetasPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="soluciones/:categoriaId/:articuloId/ejecutar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <AsistentePage />
                   </Suspense>
                 }
               />
