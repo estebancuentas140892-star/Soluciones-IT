@@ -46,15 +46,30 @@ export interface PasoAdjunto {
 export type TonoAviso = 'info' | 'precaucion' | 'importante' | 'consejo' | 'dato'
 
 // Tipo de un bloque dentro de un paso:
-// - 'tarea': una accion con casilla de verificacion (lo que la
-//   interfaz y el progreso llaman "instruccion con casilla"). Solo
-//   los bloques 'tarea' cuentan para completar el paso.
+// - 'tarea': un elemento del checklist con casilla. Solo los bloques
+//   'tarea' cuentan para completar el paso. Se subdivide por
+//   `tipoTarea` (accion, verificacion o decision).
 // - 'aviso': texto informativo o de advertencia, sin casilla. Va
-//   justo donde el autor lo coloca (por ejemplo, una precaucion
+//   justo donde el autor lo coloca (por ejemplo, una advertencia
 //   inmediatamente antes de la tarea peligrosa).
 // - 'imagen': una imagen intercalada en el flujo (una captura
 //   despues de una tarea concreta), con pie de foto opcional.
 export type TipoBloque = 'tarea' | 'aviso' | 'imagen'
+
+// Clasificacion de una tarea del checklist (solo bloques 'tarea'):
+// - 'accion': algo que el tecnico ejecuta ("Abrir SQL Server"). Es el
+//   tipo por defecto y el de todas las tareas guardadas antes de que
+//   existiera esta clasificacion.
+// - 'verificacion': una comprobacion antes de continuar ("Verificar
+//   que la base de datos aparece correctamente").
+// - 'decision': una pregunta de Si/No ("¿La impresora aparece
+//   instalada?"). "Si" marca la tarea y continua; "No" despliega en
+//   linea la solucion o el procedimiento vinculado (decisionArticuloId)
+//   y, al completarlo, la tarea queda hecha y el flujo regresa al
+//   punto exacto donde iba. Mismo mecanismo que usa el Diagnostico
+//   Inteligente, asi que las decisiones funcionan igual dentro de un
+//   procedimiento ejecutado desde un diagnostico.
+export type TipoTarea = 'accion' | 'verificacion' | 'decision'
 
 // Un bloque del contenido de un paso. Reemplaza a las viejas
 // `instrucciones: string[]`: ahora el cuerpo del paso es una lista
@@ -62,13 +77,19 @@ export type TipoBloque = 'tarea' | 'aviso' | 'imagen'
 // Cada bloque tiene un id estable (el progreso local de las tareas se
 // lleva por ese id, no por posicion, asi reordenar no desalinea el
 // avance). `tono` solo aplica a 'aviso'; `adjunto` solo a 'imagen';
-// `texto` es la tarea, el aviso o el pie de la imagen.
+// `texto` es la tarea, el aviso o el pie de la imagen. `tipoTarea`
+// solo aplica a 'tarea', y el vinculo de decision (id + copia del
+// titulo, mismo patron que los vinculos del paso) solo a las tareas
+// de tipo 'decision'.
 export interface BloquePaso {
   id: string
   tipo: TipoBloque
   texto: string
   tono: TonoAviso | null
   adjunto: PasoAdjunto | null
+  tipoTarea: TipoTarea | null
+  decisionArticuloId: string | null
+  decisionArticuloTitulo: string
 }
 
 export interface PasoProcedimiento {

@@ -5,6 +5,7 @@ import type {
   PasoProcedimiento,
   Procedimiento,
   TipoBloque,
+  TipoTarea,
   TonoAviso,
 } from './db'
 
@@ -29,19 +30,46 @@ export function crearPaso(): PasoProcedimiento {
   }
 }
 
-export function crearBloqueTarea(): BloquePaso {
-  return { id: crypto.randomUUID(), tipo: 'tarea', texto: '', tono: null, adjunto: null }
+export function crearBloqueTarea(tipoTarea: TipoTarea = 'accion'): BloquePaso {
+  return {
+    id: crypto.randomUUID(),
+    tipo: 'tarea',
+    texto: '',
+    tono: null,
+    adjunto: null,
+    tipoTarea,
+    decisionArticuloId: null,
+    decisionArticuloTitulo: '',
+  }
 }
 
 // El boton del editor se llama "+ Advertencia", asi que el bloque
 // nuevo nace con el tono 'precaucion' (icono y color de advertencia);
 // el selector de tono permite suavizarlo a informacion o consejo.
 export function crearBloqueAviso(): BloquePaso {
-  return { id: crypto.randomUUID(), tipo: 'aviso', texto: '', tono: 'precaucion', adjunto: null }
+  return {
+    id: crypto.randomUUID(),
+    tipo: 'aviso',
+    texto: '',
+    tono: 'precaucion',
+    adjunto: null,
+    tipoTarea: null,
+    decisionArticuloId: null,
+    decisionArticuloTitulo: '',
+  }
 }
 
 export function crearBloqueImagen(adjunto: PasoAdjunto): BloquePaso {
-  return { id: crypto.randomUUID(), tipo: 'imagen', texto: '', tono: null, adjunto }
+  return {
+    id: crypto.randomUUID(),
+    tipo: 'imagen',
+    texto: '',
+    tono: null,
+    adjunto,
+    tipoTarea: null,
+    decisionArticuloId: null,
+    decisionArticuloTitulo: '',
+  }
 }
 
 // Las tareas (bloques con casilla) de un paso, en orden. Son las que
@@ -147,6 +175,9 @@ function normalizarBloques(origen: Record<string, unknown>): BloquePaso[] {
         texto: textoTarea,
         tono: null,
         adjunto: null,
+        tipoTarea: 'accion' as const,
+        decisionArticuloId: null,
+        decisionArticuloTitulo: '',
       }))
   }
 
@@ -155,6 +186,7 @@ function normalizarBloques(origen: Record<string, unknown>): BloquePaso[] {
 
 const TIPOS_BLOQUE: TipoBloque[] = ['tarea', 'aviso', 'imagen']
 const TONOS_AVISO_VALIDOS: TonoAviso[] = ['info', 'precaucion', 'importante', 'consejo', 'dato']
+const TIPOS_TAREA_VALIDOS: TipoTarea[] = ['accion', 'verificacion', 'decision']
 
 // Un bloque valido o null (para descartarlo): una tarea o un aviso sin
 // texto no aporta nada, y una imagen sin adjunto valido tampoco.
@@ -166,11 +198,12 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     ? (origen.tipo as TipoBloque)
     : 'tarea'
   const textoBloque = texto(origen.texto)
+  const sinTarea = { tipoTarea: null, decisionArticuloId: null, decisionArticuloTitulo: '' }
 
   if (tipo === 'imagen') {
     const adjunto = normalizarUnAdjunto(origen.adjunto)
     if (!adjunto) return null
-    return { id, tipo, texto: textoBloque, tono: null, adjunto }
+    return { id, tipo, texto: textoBloque, tono: null, adjunto, ...sinTarea }
   }
 
   if (textoBloque.trim() === '') return null
@@ -179,10 +212,31 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     const tono = (TONOS_AVISO_VALIDOS as string[]).includes(origen.tono as string)
       ? (origen.tono as TonoAviso)
       : 'info'
-    return { id, tipo, texto: textoBloque, tono, adjunto: null }
+    return { id, tipo, texto: textoBloque, tono, adjunto: null, ...sinTarea }
   }
 
-  return { id, tipo: 'tarea', texto: textoBloque, tono: null, adjunto: null }
+  // Tareas guardadas antes de la clasificacion (o con un tipo invalido)
+  // caen a 'accion'. El vinculo de decision solo tiene sentido en las
+  // tareas 'decision' y con un id valido; el titulo, solo junto al id.
+  const tipoTarea = (TIPOS_TAREA_VALIDOS as string[]).includes(origen.tipoTarea as string)
+    ? (origen.tipoTarea as TipoTarea)
+    : 'accion'
+  const decisionArticuloId =
+    tipoTarea === 'decision' &&
+    typeof origen.decisionArticuloId === 'string' &&
+    origen.decisionArticuloId !== ''
+      ? origen.decisionArticuloId
+      : null
+  return {
+    id,
+    tipo: 'tarea',
+    texto: textoBloque,
+    tono: null,
+    adjunto: null,
+    tipoTarea,
+    decisionArticuloId,
+    decisionArticuloTitulo: decisionArticuloId ? texto(origen.decisionArticuloTitulo) : '',
+  }
 }
 
 // Adjuntos del paso (galeria), tolerando datos viejos: si el paso trae
@@ -275,10 +329,12 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
     // Textos de tareas, avisos y pies de imagen (todo el cuerpo del
     // paso entra al indice para que "back up" encuentre el articulo).
     partes.push(...paso.bloques.map((b) => b.texto))
-    // Los titulos del subprocedimiento y de la solucion vinculados si
-    // se indexan (no son informacion protegida): buscar "impresora"
-    // encuentra tambien los procedimientos que incluyen esa tarea.
+    // Los titulos del subprocedimiento, de la solucion y de los
+    // vinculos de decision si se indexan (no son informacion
+    // protegida): buscar "impresora" encuentra tambien los
+    // procedimientos que incluyen esa tarea.
     partes.push(paso.subArticuloTitulo, paso.solucionArticuloTitulo)
+    partes.push(...paso.bloques.map((b) => b.decisionArticuloTitulo))
   }
   return partes.filter(Boolean).join(' ')
 }
@@ -399,10 +455,15 @@ export function prepararProcedimientoParaGuardar({
 // Limpia los bloques de un paso al guardar: recorta el texto y descarta
 // tareas y avisos vacios (una imagen sin texto es valida, es el pie que
 // es opcional). Una imagen sin adjunto no deberia existir, pero se
-// descarta por seguridad.
+// descarta por seguridad. El titulo de referencia del vinculo de
+// decision solo se conserva junto a su id.
 function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
   return bloques
-    .map((bloque) => ({ ...bloque, texto: bloque.texto.trim() }))
+    .map((bloque) => ({
+      ...bloque,
+      texto: bloque.texto.trim(),
+      decisionArticuloTitulo: bloque.decisionArticuloId ? bloque.decisionArticuloTitulo.trim() : '',
+    }))
     .filter((bloque) => {
       if (bloque.tipo === 'imagen') return bloque.adjunto !== null
       return bloque.texto !== ''

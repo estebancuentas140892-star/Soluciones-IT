@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type NivelDificultad, type PasoAdjunto, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
@@ -181,6 +181,15 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
                             bloque={bloque}
                             marcada={instruccionesHechas.has(bloque.id)}
                             onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
+                            nivel={nivel}
+                            ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
+                              <ProcedimientoVista
+                                articuloId={vinculadoId}
+                                procedimiento={vinculado}
+                                nivel={nivel + 1}
+                                onCompletado={onCompletado}
+                              />
+                            )}
                           />
                         </li>
                       ))}
@@ -552,18 +561,33 @@ function SolucionEnPaso({
   )
 }
 
+// Como ejecutar un articulo vinculado en linea dentro de una tarea de
+// decision: la vista de lista anida ProcedimientoVista y el asistente
+// anida AsistenteVista. Se recibe como funcion para que DecisionEnTarea
+// sirva a ambos sin acoplarse a ninguno.
+export type EjecutarArticuloInline = (opciones: {
+  articuloId: string
+  procedimiento: Procedimiento
+  onCompletado: () => void
+}) => ReactNode
+
 // Un bloque del cuerpo del paso en la vista de lectura. Segun su tipo:
-// una tarea con casilla (la unica que cuenta para completar el paso),
-// un aviso con su color e icono, o una imagen intercalada con pie.
-// Exportado: lo reutiliza tambien el modo asistente (AsistenteVista).
+// una tarea con casilla (la unica que cuenta para completar el paso;
+// las de tipo decision se responden con Si/No), un aviso con su color
+// e icono, o una imagen intercalada con pie. Exportado: lo reutiliza
+// tambien el modo asistente (AsistenteVista).
 export function BloqueVista({
   bloque,
   marcada,
   onAlternar,
+  nivel = 0,
+  ejecutarInline,
 }: {
   bloque: BloquePaso
   marcada: boolean
   onAlternar: () => void
+  nivel?: number
+  ejecutarInline?: EjecutarArticuloInline
 }) {
   if (bloque.tipo === 'aviso') {
     const tono = TONOS_AVISO.find((t) => t.valor === bloque.tono) ?? TONOS_AVISO[0]
@@ -589,21 +613,39 @@ export function BloqueVista({
     )
   }
 
+  if (bloque.tipoTarea === 'decision') {
+    return (
+      <DecisionEnTarea
+        bloque={bloque}
+        marcada={marcada}
+        onAlternar={onAlternar}
+        nivel={nivel}
+        ejecutarInline={ejecutarInline}
+      />
+    )
+  }
+
+  const esVerificacion = bloque.tipoTarea === 'verificacion'
   return (
     <button
       type="button"
       role="checkbox"
       aria-checked={marcada}
-      aria-label={`Tarea: ${bloque.texto}`}
+      aria-label={`${esVerificacion ? 'Verificación' : 'Tarea'}: ${bloque.texto}`}
       onClick={onAlternar}
       className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
     >
+      {/* Las verificaciones muestran la casilla en azul con el ✓
+          insinuado: se distinguen de las acciones sin dejar de ser
+          casillas normales. */}
       <span
         aria-hidden
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
           marcada
             ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
-            : 'border-slate-600 text-transparent'
+            : esVerificacion
+              ? 'border-sky-800 bg-sky-950/40 text-sky-700'
+              : 'border-slate-600 text-transparent'
         }`}
       >
         ✓
@@ -612,6 +654,184 @@ export function BloqueVista({
         {bloque.texto}
       </span>
     </button>
+  )
+}
+
+// Tarea de decision en la vista de lectura: una pregunta de Si/No.
+// "Si" marca la tarea y el flujo continua. "No" despliega en linea la
+// solucion o el procedimiento vinculado (si lo hay) y, al completarlo,
+// la tarea queda marcada y el tecnico regresa exactamente al punto
+// donde iba, con todo su progreso intacto (el avance del procedimiento
+// principal se lleva por id de bloque y no se toca). Sin vinculo,
+// ambas respuestas marcan la tarea y el flujo sigue.
+function DecisionEnTarea({
+  bloque,
+  marcada,
+  onAlternar,
+  nivel,
+  ejecutarInline,
+}: {
+  bloque: BloquePaso
+  marcada: boolean
+  onAlternar: () => void
+  nivel: number
+  ejecutarInline?: EjecutarArticuloInline
+}) {
+  const vinculoId = bloque.decisionArticuloId
+  const articulo = useLiveQuery(
+    async () => (vinculoId ? ((await db.articulos.get(vinculoId)) ?? null) : null),
+    [vinculoId],
+  )
+  const progreso = useLiveQuery(
+    () => (vinculoId ? db.progresoPasos.get(vinculoId) : undefined),
+    [vinculoId],
+  )
+  const procedimiento = useMemo(
+    () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
+    [articulo],
+  )
+  // null = sin responder: la solucion se muestra abierta solo si quedo
+  // a medias (por ejemplo tras salir y volver a mitad de un "No").
+  const [mostrarVinculo, setMostrarVinculo] = useState<boolean | null>(null)
+
+  // Ya respondida: se ve como una casilla marcada con la pregunta;
+  // tocarla la desmarca para volver a responder.
+  if (marcada) {
+    return (
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked
+        aria-label={`Decisión respondida: ${bloque.texto}`}
+        onClick={onAlternar}
+        className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
+      >
+        <span
+          aria-hidden
+          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-emerald-700 bg-emerald-500/15 text-xs text-emerald-400"
+        >
+          ✓
+        </span>
+        <span className="text-sm text-slate-500 line-through">{bloque.texto}</span>
+      </button>
+    )
+  }
+
+  const total = procedimiento?.pasos.length ?? 0
+  const hechos = procedimiento
+    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((p) => p.id))
+    : 0
+  const aMedias = hechos > 0 && hechos < total
+  const abierta = mostrarVinculo ?? aMedias
+
+  if (!abierta) {
+    return (
+      <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2.5">
+        <p className="flex gap-2 text-sm font-medium text-slate-200">
+          <span aria-hidden className="shrink-0">
+            ❓
+          </span>
+          {bloque.texto}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onAlternar}
+            className="rounded-lg border border-emerald-800 px-3 py-1.5 text-xs text-emerald-300"
+          >
+            Sí, continuar
+          </button>
+          <button
+            type="button"
+            onClick={() => (vinculoId ? setMostrarVinculo(true) : onAlternar())}
+            className="rounded-lg border border-amber-800 px-3 py-1.5 text-xs text-amber-300"
+          >
+            {vinculoId ? `No, abrir "${bloque.decisionArticuloTitulo || 'la solución'}"` : 'No, continuar'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (articulo === undefined) return null
+
+  if (articulo === null || articulo.eliminadoEn) {
+    return (
+      <div className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2">
+        <p className="text-xs text-amber-300">
+          El artículo vinculado a esta decisión
+          {bloque.decisionArticuloTitulo ? ` "${bloque.decisionArticuloTitulo}"` : ''} ya no está
+          disponible. Edita el artículo para quitar el vínculo o vincular otro.
+        </p>
+        <button
+          type="button"
+          onClick={onAlternar}
+          className="mt-2 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300"
+        >
+          Marcar la decisión y continuar
+        </button>
+      </div>
+    )
+  }
+
+  const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
+
+  // Misma regla de un solo nivel de anidamiento que los
+  // subprocedimientos y las soluciones: mas profundo solo se enlaza
+  // (corta ciclos), y el tecnico marca la decision al volver.
+  if (nivel >= 1 || !procedimiento || !ejecutarInline) {
+    return (
+      <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="min-w-0 truncate text-xs font-medium text-amber-200">🛠 {articulo.titulo}</p>
+          <Link to={ruta} className="shrink-0 text-xs text-amber-300 underline underline-offset-2">
+            Abrir
+          </Link>
+        </div>
+        <button
+          type="button"
+          onClick={onAlternar}
+          className="mt-2 rounded-lg border border-emerald-800 px-3 py-1.5 text-xs text-emerald-300"
+        >
+          Ya quedó resuelto, continuar
+        </button>
+      </div>
+    )
+  }
+
+  // El vinculo completado marca la decision, el flujo del
+  // procedimiento principal sigue desde este punto exacto y el
+  // progreso del vinculado se reinicia para su proximo uso (aqui o en
+  // cualquier otro procedimiento que lo reutilice).
+  async function resuelta() {
+    if (vinculoId) await reiniciarProgreso(vinculoId)
+    setMostrarVinculo(null)
+    onAlternar()
+  }
+
+  return (
+    <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-xs font-medium text-amber-200">🛠 {articulo.titulo}</p>
+        <span className="flex shrink-0 items-center gap-2">
+          <Link to={ruta} className="text-xs text-amber-300 underline underline-offset-2">
+            Abrir
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMostrarVinculo(false)}
+            className="text-xs text-slate-400 underline underline-offset-2"
+          >
+            Ocultar
+          </button>
+        </span>
+      </div>
+      {ejecutarInline({
+        articuloId: articulo.id,
+        procedimiento,
+        onCompletado: () => void resuelta(),
+      })}
+    </div>
   )
 }
 

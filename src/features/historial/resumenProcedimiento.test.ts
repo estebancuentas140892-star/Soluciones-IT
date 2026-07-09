@@ -3,11 +3,29 @@ import type { BloquePaso, PasoProcedimiento, Procedimiento } from '../../lib/db'
 import { resumenProcedimiento, textoContexto } from './resumenProcedimiento'
 
 function tarea(texto: string): BloquePaso {
-  return { id: `t-${texto}`, tipo: 'tarea', texto, tono: null, adjunto: null }
+  return {
+    id: `t-${texto}`,
+    tipo: 'tarea',
+    texto,
+    tono: null,
+    adjunto: null,
+    tipoTarea: 'accion',
+    decisionArticuloId: null,
+    decisionArticuloTitulo: '',
+  }
 }
 
 function aviso(texto: string, tono: BloquePaso['tono'] = 'info'): BloquePaso {
-  return { id: `a-${texto}`, tipo: 'aviso', texto, tono, adjunto: null }
+  return {
+    id: `a-${texto}`,
+    tipo: 'aviso',
+    texto,
+    tono,
+    adjunto: null,
+    tipoTarea: null,
+    decisionArticuloId: null,
+    decisionArticuloTitulo: '',
+  }
 }
 
 // Atajo `tareas: [...]` para construir bloques de tarea a partir de sus
@@ -298,7 +316,16 @@ describe('resumenProcedimiento', () => {
       ...base,
       bloques: [
         ...base.bloques,
-        { id: 'img', tipo: 'imagen', texto: '', tono: null, adjunto: { referencia: 'r/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' } },
+        {
+          id: 'img',
+          tipo: 'imagen',
+          texto: '',
+          tono: null,
+          adjunto: { referencia: 'r/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' },
+          tipoTarea: null,
+          decisionArticuloId: null,
+          decisionArticuloTitulo: '',
+        },
       ],
     })
     expect(resumenProcedimiento(json(proc([base])), json(proc([conImagenInline]))).cambios).toEqual([

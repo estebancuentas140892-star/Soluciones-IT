@@ -182,6 +182,15 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
                 bloque={bloque}
                 marcada={instruccionesHechas.has(bloque.id)}
                 onAlternar={() => void alternarTarea(indiceActual, paso, bloque.id)}
+                nivel={nivel}
+                ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
+                  <AsistenteVista
+                    articuloId={vinculadoId}
+                    procedimiento={vinculado}
+                    nivel={nivel + 1}
+                    onCompletado={onCompletado}
+                  />
+                )}
               />
             </li>
           ))}

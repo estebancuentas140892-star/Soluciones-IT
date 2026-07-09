@@ -12,9 +12,14 @@ import {
   type DatosProcedimientoParaGuardar,
 } from './procedimiento'
 
+// Campos de clasificacion de tarea con sus valores por defecto, para
+// no repetirlos en cada bloque literal de las pruebas.
+const TAREA_ACCION = { tipoTarea: 'accion', decisionArticuloId: null, decisionArticuloTitulo: '' } as const
+const SIN_TAREA = { tipoTarea: null, decisionArticuloId: null, decisionArticuloTitulo: '' } as const
+
 // Bloque 'tarea' de prueba con id fijo por texto (para asserts estables).
 function tarea(texto: string): BloquePaso {
-  return { id: `tarea-${texto}`, tipo: 'tarea', texto, tono: null, adjunto: null }
+  return { id: `tarea-${texto}`, tipo: 'tarea', texto, tono: null, adjunto: null, ...TAREA_ACCION }
 }
 
 function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimiento {
@@ -197,7 +202,13 @@ describe('normalizarProcedimiento', () => {
     })
     const bloques = resultado?.pasos[0].bloques ?? []
     expect(bloques).toHaveLength(1)
-    expect(bloques[0]).toMatchObject({ tipo: 'tarea', texto: 'Presionar Windows + R', tono: null, adjunto: null })
+    expect(bloques[0]).toMatchObject({
+      tipo: 'tarea',
+      texto: 'Presionar Windows + R',
+      tono: null,
+      adjunto: null,
+      ...TAREA_ACCION,
+    })
     expect(bloques[0].id).not.toBe('')
   })
 
@@ -225,17 +236,95 @@ describe('normalizarProcedimiento', () => {
     })
     const bloques = resultado?.pasos[0].bloques ?? []
     expect(bloques).toEqual([
-      { id: 'b1', tipo: 'tarea', texto: 'Encender la impresora', tono: null, adjunto: null },
-      { id: 'b3', tipo: 'aviso', texto: 'Verifica el nombre', tono: 'precaucion', adjunto: null },
-      { id: 'b4', tipo: 'aviso', texto: 'Sin tono válido', tono: 'info', adjunto: null },
+      { id: 'b1', tipo: 'tarea', texto: 'Encender la impresora', tono: null, adjunto: null, ...TAREA_ACCION },
+      { id: 'b3', tipo: 'aviso', texto: 'Verifica el nombre', tono: 'precaucion', adjunto: null, ...SIN_TAREA },
+      { id: 'b4', tipo: 'aviso', texto: 'Sin tono válido', tono: 'info', adjunto: null, ...SIN_TAREA },
       {
         id: 'b5',
         tipo: 'imagen',
         texto: 'Pantalla de inicio',
         tono: null,
         adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' },
+        ...SIN_TAREA,
       },
     ])
+  })
+
+  it('clasifica como acción las tareas guardadas antes de los tipos de tarea (o con tipo inválido)', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [
+            { id: 'b1', tipo: 'tarea', texto: 'Sin tipo' },
+            { id: 'b2', tipo: 'tarea', texto: 'Tipo raro', tipoTarea: 'pregunta' },
+          ],
+        },
+      ],
+    })
+    expect(resultado?.pasos[0].bloques.map((b) => b.tipoTarea)).toEqual(['accion', 'accion'])
+  })
+
+  it('conserva los tipos de tarea verificación y decisión, con el vínculo de la decisión', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [
+            { id: 'b1', tipo: 'tarea', texto: 'Verificar que la base aparece', tipoTarea: 'verificacion' },
+            {
+              id: 'b2',
+              tipo: 'tarea',
+              texto: '¿La impresora aparece instalada?',
+              tipoTarea: 'decision',
+              decisionArticuloId: 'art-9',
+              decisionArticuloTitulo: 'Instalar impresora',
+            },
+          ],
+        },
+      ],
+    })
+    expect(resultado?.pasos[0].bloques).toEqual([
+      {
+        id: 'b1',
+        tipo: 'tarea',
+        texto: 'Verificar que la base aparece',
+        tono: null,
+        adjunto: null,
+        tipoTarea: 'verificacion',
+        decisionArticuloId: null,
+        decisionArticuloTitulo: '',
+      },
+      {
+        id: 'b2',
+        tipo: 'tarea',
+        texto: '¿La impresora aparece instalada?',
+        tono: null,
+        adjunto: null,
+        tipoTarea: 'decision',
+        decisionArticuloId: 'art-9',
+        decisionArticuloTitulo: 'Instalar impresora',
+      },
+    ])
+  })
+
+  it('descarta el vínculo de decisión si la tarea no es de tipo decisión o el id es inválido', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [
+            // Vinculo colgado de una accion: se descarta entero.
+            { id: 'b1', tipo: 'tarea', texto: 'Accion', decisionArticuloId: 'art-9', decisionArticuloTitulo: 'X' },
+            // Decision con id invalido: queda sin vinculo y sin titulo.
+            { id: 'b2', tipo: 'tarea', texto: '¿Si?', tipoTarea: 'decision', decisionArticuloId: 7, decisionArticuloTitulo: 'X' },
+          ],
+        },
+      ],
+    })
+    const bloques = resultado?.pasos[0].bloques ?? []
+    expect(bloques[0]).toMatchObject({ tipoTarea: 'accion', decisionArticuloId: null, decisionArticuloTitulo: '' })
+    expect(bloques[1]).toMatchObject({ tipoTarea: 'decision', decisionArticuloId: null, decisionArticuloTitulo: '' })
   })
 
   it('prefiere la lista nueva de bloques por encima de las viejas instrucciones', () => {
@@ -249,7 +338,7 @@ describe('normalizarProcedimiento', () => {
       ],
     })
     expect(resultado?.pasos[0].bloques).toEqual([
-      { id: 'b1', tipo: 'tarea', texto: 'nueva', tono: null, adjunto: null },
+      { id: 'b1', tipo: 'tarea', texto: 'nueva', tono: null, adjunto: null, ...TAREA_ACCION },
     ])
   })
 
@@ -318,9 +407,16 @@ describe('tareasDe', () => {
   it('devuelve solo los bloques de tipo tarea, en orden', () => {
     const bloques: BloquePaso[] = [
       tarea('Uno'),
-      { id: 'av', tipo: 'aviso', texto: 'Cuidado', tono: 'precaucion', adjunto: null },
+      { id: 'av', tipo: 'aviso', texto: 'Cuidado', tono: 'precaucion', adjunto: null, ...SIN_TAREA },
       tarea('Dos'),
-      { id: 'img', tipo: 'imagen', texto: '', tono: null, adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' } },
+      {
+        id: 'img',
+        tipo: 'imagen',
+        texto: '',
+        tono: null,
+        adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' },
+        ...SIN_TAREA,
+      },
     ]
     expect(tareasDe(bloques).map((t) => t.texto)).toEqual(['Uno', 'Dos'])
   })
@@ -336,7 +432,7 @@ describe('textoDeProcedimiento', () => {
           pasoCompleto({
             bloques: [
               tarea('Verificar el espacio en disco'),
-              { id: 'av', tipo: 'aviso', texto: 'No apagar el servidor', tono: 'importante', adjunto: null },
+              { id: 'av', tipo: 'aviso', texto: 'No apagar el servidor', tono: 'importante', adjunto: null, ...SIN_TAREA },
             ],
           }),
         ],
@@ -360,6 +456,26 @@ describe('textoDeProcedimiento', () => {
       }),
     )
     expect(texto).not.toContain('SQL Server producción')
+  })
+
+  it('incluye el título del artículo vinculado a una tarea de decisión', () => {
+    const texto = textoDeProcedimiento(
+      procedimientoCompleto({
+        pasos: [
+          pasoCompleto({
+            bloques: [
+              {
+                ...tarea('¿La impresora aparece instalada?'),
+                tipoTarea: 'decision',
+                decisionArticuloId: 'art-9',
+                decisionArticuloTitulo: 'Instalar impresora de red',
+              },
+            ],
+          }),
+        ],
+      }),
+    )
+    expect(texto).toContain('Instalar impresora de red')
   })
 
   it('incluye los títulos del subprocedimiento y de la solución vinculados', () => {
@@ -439,21 +555,28 @@ describe('prepararProcedimientoParaGuardar', () => {
     const resultado = preparar([
       pasoCompleto({
         bloques: [
-          { id: 'b1', tipo: 'tarea', texto: '  Presionar Windows + R  ', tono: null, adjunto: null },
-          { id: 'b2', tipo: 'tarea', texto: '   ', tono: null, adjunto: null },
-          { id: 'b3', tipo: 'aviso', texto: '', tono: 'info', adjunto: null },
+          { id: 'b1', tipo: 'tarea', texto: '  Presionar Windows + R  ', tono: null, adjunto: null, ...TAREA_ACCION },
+          { id: 'b2', tipo: 'tarea', texto: '   ', tono: null, adjunto: null, ...TAREA_ACCION },
+          { id: 'b3', tipo: 'aviso', texto: '', tono: 'info', adjunto: null, ...SIN_TAREA },
         ],
       }),
     ])
     expect(resultado?.pasos[0].bloques).toEqual([
-      { id: 'b1', tipo: 'tarea', texto: 'Presionar Windows + R', tono: null, adjunto: null },
+      { id: 'b1', tipo: 'tarea', texto: 'Presionar Windows + R', tono: null, adjunto: null, ...TAREA_ACCION },
     ])
   })
 
   it('conserva una imagen aunque su pie esté vacío', () => {
     const paso = crearPaso()
     paso.bloques = [
-      { id: 'img', tipo: 'imagen', texto: '  ', tono: null, adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' } },
+      {
+        id: 'img',
+        tipo: 'imagen',
+        texto: '  ',
+        tono: null,
+        adjunto: { referencia: 'a/1.jpg', nombre: 'a.jpg', tipo: 'image/jpeg' },
+        ...SIN_TAREA,
+      },
     ]
     const resultado = preparar([paso])
     expect(resultado?.pasos[0].bloques).toHaveLength(1)
@@ -464,6 +587,29 @@ describe('prepararProcedimientoParaGuardar', () => {
     const paso = crearPaso()
     paso.bloques = [tarea('Imprimir una página de prueba')]
     expect(preparar([paso])?.pasos).toHaveLength(1)
+  })
+
+  it('limpia el título del vínculo de decisión y lo descarta si quedó huérfano', () => {
+    const conVinculo = preparar([
+      pasoCompleto({
+        bloques: [
+          {
+            ...tarea('¿Aparece instalada?'),
+            tipoTarea: 'decision',
+            decisionArticuloId: 'art-9',
+            decisionArticuloTitulo: '  Instalar impresora  ',
+          },
+        ],
+      }),
+    ])
+    expect(conVinculo?.pasos[0].bloques[0].decisionArticuloTitulo).toBe('Instalar impresora')
+
+    const huerfano = preparar([
+      pasoCompleto({
+        bloques: [{ ...tarea('¿Aparece instalada?'), tipoTarea: 'decision', decisionArticuloTitulo: 'huérfano' }],
+      }),
+    ])
+    expect(huerfano?.pasos[0].bloques[0].decisionArticuloTitulo).toBe('')
   })
 
   it('conserva un paso que solo tiene adjuntos', () => {

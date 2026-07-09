@@ -8,6 +8,7 @@ import {
   type Credencial,
   type PasoAdjunto,
   type PasoProcedimiento,
+  type TipoTarea,
   type TonoAviso,
 } from '../../lib/db'
 import {
@@ -287,6 +288,7 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
           <div className="border-t border-slate-800/70 pt-3">
             <ContenidoEditor
               bloques={paso.bloques}
+              vinculables={vinculablesOrdenados}
               onChange={(bloques) => actualizarPaso(indice, { bloques })}
               onSubirImagen={(evento) => void subirImagenBloque(indice, evento)}
               subiendoImagen={subiendoImagenPasoId === paso.id}
@@ -444,11 +446,16 @@ function SugerenciaVinculo({
 // antes de la tarea peligrosa).
 function ContenidoEditor({
   bloques,
+  vinculables,
   onChange,
   onSubirImagen,
   subiendoImagen,
 }: {
   bloques: BloquePaso[]
+  // Articulos con procedimiento que una tarea de decision puede
+  // vincular como respuesta "No" (la misma lista de los selectores
+  // de procedimiento y solucion del paso).
+  vinculables: Articulo[]
   onChange: (bloques: BloquePaso[]) => void
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
   subiendoImagen: boolean
@@ -517,6 +524,7 @@ function ContenidoEditor({
         <FilaBloque
           key={bloque.id}
           bloque={bloque}
+          vinculables={vinculables}
           primero={indice === 0}
           ultimo={indice === bloques.length - 1}
           enfocar={focoId === bloque.id}
@@ -563,10 +571,31 @@ function ContenidoEditor({
   )
 }
 
+// Metadatos de los tipos de tarea del checklist: icono para el
+// selector y placeholder de ejemplo para el texto.
+const TIPOS_TAREA: { valor: TipoTarea; etiqueta: string; placeholder: string }[] = [
+  {
+    valor: 'accion',
+    etiqueta: '☐ Acción',
+    placeholder: 'Tarea con casilla (por ejemplo: Encender la impresora)',
+  },
+  {
+    valor: 'verificacion',
+    etiqueta: '☑ Verificación',
+    placeholder: 'Comprobación (por ejemplo: Verificar que la base de datos aparece)',
+  },
+  {
+    valor: 'decision',
+    etiqueta: '❓ Decisión',
+    placeholder: 'Pregunta de Sí/No (por ejemplo: ¿La impresora aparece instalada?)',
+  },
+]
+
 // Una fila del editor de contenido: el editor del bloque segun su tipo,
 // mas los controles de reordenar y eliminar comunes a todos.
 function FilaBloque({
   bloque,
+  vinculables,
   primero,
   ultimo,
   enfocar,
@@ -578,6 +607,7 @@ function FilaBloque({
   onQuitar,
 }: {
   bloque: BloquePaso
+  vinculables: Articulo[]
   primero: boolean
   ultimo: boolean
   enfocar: boolean
@@ -588,34 +618,60 @@ function FilaBloque({
   onMover: (direccion: -1 | 1) => void
   onQuitar: () => void
 }) {
+  const tipoTarea = bloque.tipoTarea ?? 'accion'
+  const infoTipo = TIPOS_TAREA.find((t) => t.valor === tipoTarea) ?? TIPOS_TAREA[0]
+
   return (
     <div className="flex items-start gap-1.5">
       <div className="flex-1">
         {bloque.tipo === 'tarea' && (
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="text-slate-600">
-              ☐
-            </span>
-            <input
-              type="text"
-              value={bloque.texto}
-              ref={(el) => {
-                if (el && enfocar) {
-                  el.focus()
-                  onEnfocado()
-                }
-              }}
-              onChange={(e) => onCambiar({ texto: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  onEnter()
-                }
-              }}
-              onPaste={(e) => onPegar(e.clipboardData.getData('text'), e)}
-              placeholder="Tarea con casilla (por ejemplo: Encender la impresora)"
-              className={`${CLASE_INPUT} w-full`}
-            />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              {/* Clasificacion de la tarea. Al salir del tipo decision
+                  se limpia su vinculo, que solo tiene sentido ahi. */}
+              <select
+                value={tipoTarea}
+                aria-label="Tipo de tarea"
+                onChange={(e) => {
+                  const nuevo = e.target.value as TipoTarea
+                  onCambiar(
+                    nuevo === 'decision'
+                      ? { tipoTarea: nuevo }
+                      : { tipoTarea: nuevo, decisionArticuloId: null, decisionArticuloTitulo: '' },
+                  )
+                }}
+                className="shrink-0 rounded-lg border border-slate-800 bg-slate-950 py-2 pl-1 pr-0.5 text-xs text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                {TIPOS_TAREA.map((t) => (
+                  <option key={t.valor} value={t.valor}>
+                    {t.etiqueta}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={bloque.texto}
+                ref={(el) => {
+                  if (el && enfocar) {
+                    el.focus()
+                    onEnfocado()
+                  }
+                }}
+                onChange={(e) => onCambiar({ texto: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    onEnter()
+                  }
+                }}
+                onPaste={(e) => onPegar(e.clipboardData.getData('text'), e)}
+                placeholder={infoTipo.placeholder}
+                className={`${CLASE_INPUT} w-full`}
+              />
+            </div>
+            {tipoTarea === 'decision' && (
+              <DecisionVinculoSelector bloque={bloque} articulos={vinculables} onCambiar={onCambiar} />
+            )}
           </div>
         )}
 
@@ -666,6 +722,61 @@ function FilaBloque({
         </BotonPaso>
       </div>
     </div>
+  )
+}
+
+// Vinculo de una tarea de decision: la solucion o el procedimiento
+// que se ejecuta cuando el tecnico responde "No" a la pregunta. Sin
+// vinculo, las dos respuestas simplemente continuan. Mismo patron de
+// referencia (id + copia del titulo) que los vinculos del paso.
+function DecisionVinculoSelector({
+  bloque,
+  articulos,
+  onCambiar,
+}: {
+  bloque: BloquePaso
+  articulos: Articulo[]
+  onCambiar: (cambios: Partial<BloquePaso>) => void
+}) {
+  if (bloque.decisionArticuloId) {
+    const vinculado = articulos.find((a) => a.id === bloque.decisionArticuloId)
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2">
+        <p className="min-w-0 truncate text-xs text-amber-200">
+          🛠 Si responde No: {vinculado?.titulo ?? bloque.decisionArticuloTitulo}
+        </p>
+        <button
+          type="button"
+          onClick={() => onCambiar({ decisionArticuloId: null, decisionArticuloTitulo: '' })}
+          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+  }
+
+  if (articulos.length === 0) return null
+
+  return (
+    <select
+      value=""
+      aria-label="Vincular qué abrir si la respuesta es No"
+      onChange={(e) => {
+        const articulo = articulos.find((a) => a.id === e.target.value)
+        if (articulo) {
+          onCambiar({ decisionArticuloId: articulo.id, decisionArticuloTitulo: articulo.titulo })
+        }
+      }}
+      className={`${CLASE_INPUT} text-slate-400`}
+    >
+      <option value="">+ Si responde No, abrir esta solución o procedimiento (opcional)</option>
+      {articulos.map((a) => (
+        <option key={a.id} value={a.id}>
+          {a.titulo}
+        </option>
+      ))}
+    </select>
   )
 }
 
@@ -804,7 +915,7 @@ function SubProcedimientoSelector({
   return (
     <select
       value=""
-      aria-label="Vincular otro procedimiento como tarea de este paso"
+      aria-label="Vincular procedimiento relacionado como tarea de este paso"
       onChange={(e) => {
         const articulo = articulos.find((a) => a.id === e.target.value)
         if (articulo) onVincular(articulo)
@@ -858,7 +969,7 @@ function SolucionSelector({
   return (
     <select
       value=""
-      aria-label="Vincular una solución por si este paso falla"
+      aria-label="Vincular solución relacionada por si este paso falla"
       onChange={(e) => {
         const articulo = articulos.find((a) => a.id === e.target.value)
         if (articulo) onVincular(articulo)
