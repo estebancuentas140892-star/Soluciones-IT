@@ -4,6 +4,7 @@ import { db, type Articulo } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { contarHechos } from '../../lib/progresoPasos'
 import { BotonVolver } from '../../components/BotonVolver'
+import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { TIPOS_ARTICULO } from './tiposArticulo'
 
 export function CategoriaPage() {
@@ -46,17 +47,23 @@ export function CategoriaPage() {
           <section key={valor}>
             <h2 className="mb-2 text-sm font-medium text-slate-400">{etiqueta}</h2>
             <ul className="flex flex-col gap-2">
-              {delTipo.map((articulo) => (
-                <li key={articulo.id}>
-                  <Link
-                    to={`/soluciones/${categoriaId}/${articulo.id}`}
-                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
-                  >
-                    <span className="min-w-0 truncate">{articulo.titulo}</span>
-                    <AvanceArticulo articulo={articulo} />
-                  </Link>
-                </li>
-              ))}
+              {delTipo.map((articulo) => {
+                const portada = normalizarProcedimiento(articulo.procedimiento)?.portada
+                return (
+                  <li key={articulo.id}>
+                    <Link
+                      to={`/soluciones/${categoriaId}/${articulo.id}`}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
+                    >
+                      <span className="flex min-w-0 items-center gap-3">
+                        {portada && <MiniaturaPortada referencia={portada.referencia} />}
+                        <span className="min-w-0 truncate">{articulo.titulo}</span>
+                      </span>
+                      <AvanceArticulo articulo={articulo} />
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </section>
         )

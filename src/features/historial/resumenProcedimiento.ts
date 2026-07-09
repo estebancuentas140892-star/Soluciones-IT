@@ -106,6 +106,22 @@ function diffProcedimiento(anterior: Procedimiento, nueva: Procedimiento): strin
     else cambios.push('Se actualizó el objetivo general del procedimiento.')
   }
 
+  if (anterior.descripcion !== nueva.descripcion) {
+    if (!anterior.descripcion) cambios.push('Se definió la descripción del procedimiento.')
+    else if (!nueva.descripcion) cambios.push('Se quitó la descripción del procedimiento.')
+    else cambios.push('Se actualizó la descripción del procedimiento.')
+  }
+
+  // La portada se compara por referencia de Storage: cada subida
+  // genera una referencia unica, asi que cambiarla es un reemplazo.
+  const portadaAnterior = anterior.portada?.referencia ?? null
+  const portadaNueva = nueva.portada?.referencia ?? null
+  if (portadaAnterior !== portadaNueva) {
+    if (!portadaAnterior) cambios.push('Se agregó la imagen de portada del procedimiento.')
+    else if (!portadaNueva) cambios.push('Se quitó la imagen de portada del procedimiento.')
+    else cambios.push('Se reemplazó la imagen de portada del procedimiento.')
+  }
+
   if (anterior.tiempoEstimadoMin !== nueva.tiempoEstimadoMin) {
     if (nueva.tiempoEstimadoMin === null) cambios.push('Se quitó el tiempo estimado del procedimiento.')
     else cambios.push(`Se actualizó el tiempo estimado a ${nueva.tiempoEstimadoMin} min.`)

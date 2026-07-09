@@ -79,8 +79,9 @@ async function descargarUno(referencia: string): Promise<void> {
 }
 
 // Todo lo que debe quedar disponible sin conexion: los adjuntos de
-// las fichas y las capturas de los pasos de los procedimientos (que
-// no son filas de adjuntos: viven como referencia dentro del paso).
+// las fichas y todo lo que vive como referencia dentro del JSON del
+// procedimiento (archivos del paso, imagenes intercaladas en los
+// bloques y la imagen de portada).
 async function referenciasParaOffline(): Promise<string[]> {
   const referencias = new Set<string>()
 
@@ -91,8 +92,12 @@ async function referenciasParaOffline(): Promise<string[]> {
   for (const articulo of articulos) {
     const procedimiento = normalizarProcedimiento(articulo.procedimiento)
     if (!procedimiento) continue
+    if (procedimiento.portada) referencias.add(procedimiento.portada.referencia)
     for (const paso of procedimiento.pasos) {
       for (const adjunto of paso.adjuntos) referencias.add(adjunto.referencia)
+      for (const bloque of paso.bloques) {
+        if (bloque.adjunto) referencias.add(bloque.adjunto.referencia)
+      }
     }
   }
 

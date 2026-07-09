@@ -33,6 +33,8 @@ function paso(
 
 function proc(pasos: PasoProcedimiento[], requisitos: string[] = []): Procedimiento {
   return {
+    descripcion: '',
+    portada: null,
     objetivoGeneral: '',
     requisitos,
     pasos,

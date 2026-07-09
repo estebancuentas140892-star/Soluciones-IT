@@ -73,6 +73,8 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
 
   if (pasos.length === 0) return null
   return {
+    descripcion: texto(origen.descripcion),
+    portada: normalizarUnAdjunto(origen.portada),
     objetivoGeneral: texto(origen.objetivoGeneral),
     requisitos,
     pasos,
@@ -259,7 +261,14 @@ function texto(valor: unknown): string {
 // desbloqueada (ARQUITECTURA.md, seccion 6).
 export function textoDeProcedimiento(procedimiento: Procedimiento | null): string {
   if (!procedimiento) return ''
-  const partes = [procedimiento.objetivoGeneral, ...procedimiento.requisitos, ...procedimiento.verificacionFinal]
+  // La descripcion ("cuando usar este procedimiento") entra al indice:
+  // buscar por la situacion ("impresora de red") encuentra el articulo.
+  const partes = [
+    procedimiento.descripcion,
+    procedimiento.objetivoGeneral,
+    ...procedimiento.requisitos,
+    ...procedimiento.verificacionFinal,
+  ]
   for (const paso of procedimiento.pasos) {
     partes.push(paso.titulo)
     partes.push(paso.objetivo)
@@ -320,6 +329,8 @@ export function pasoSeCompletaSolo(
 }
 
 export interface DatosProcedimientoParaGuardar {
+  descripcion: string
+  portada: PasoAdjunto | null
   objetivoGeneral: string
   requisitosTexto: string
   pasos: PasoProcedimiento[]
@@ -333,6 +344,8 @@ export interface DatosProcedimientoParaGuardar {
 // Los requisitos volvieron a editarse (antes del 2026-07-03 no se
 // podian); los articulos guardados desde entonces igual los conservan.
 export function prepararProcedimientoParaGuardar({
+  descripcion,
+  portada,
   objetivoGeneral,
   requisitosTexto,
   pasos,
@@ -372,6 +385,8 @@ export function prepararProcedimientoParaGuardar({
 
   if (pasosLimpios.length === 0) return null
   return {
+    descripcion: descripcion.trim(),
+    portada,
     objetivoGeneral: objetivoGeneral.trim(),
     requisitos,
     pasos: pasosLimpios,

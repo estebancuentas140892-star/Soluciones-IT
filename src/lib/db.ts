@@ -119,6 +119,18 @@ export type NivelDificultad = 'principiante' | 'intermedio' | 'avanzado'
 // Un articulo con procedimiento se muestra como una lista de pasos
 // numerados y expandibles, con un bloque "Antes de empezar".
 export interface Procedimiento {
+  // ¿En que situaciones usar este procedimiento? (por ejemplo:
+  // "Utiliza este procedimiento cuando necesites conectar una
+  // impresora de red a un computador con Windows"). Es distinta del
+  // objetivo general, que dice que se LOGRA al completarlo; ambos
+  // conviven y no se reemplazan. Opcional.
+  descripcion: string
+  // Imagen de portada opcional para identificar el procedimiento de
+  // un vistazo en el listado, el buscador, las rutas de aprendizaje y
+  // las recomendaciones. Mismo formato que los adjuntos de paso (solo
+  // referencia de Storage mas nombre y tipo). Vive en el JSON del
+  // procedimiento, asi que no requiere columna nueva en Supabase.
+  portada: PasoAdjunto | null
   // Descripcion muy corta de que se logra al completar TODO el
   // procedimiento (distinto del objetivo de cada paso). Opcional.
   objetivoGeneral: string

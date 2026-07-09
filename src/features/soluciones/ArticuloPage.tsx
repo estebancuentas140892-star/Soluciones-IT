@@ -11,6 +11,7 @@ import { Adjuntos } from '../../components/Adjuntos'
 import { BotonCompartir } from '../../components/BotonCompartir'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { Historial } from '../historial/Historial'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { etiquetaDeTipo } from './tiposArticulo'
@@ -50,6 +51,7 @@ export function ArticuloPage() {
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
         <BotonVolver to={`/soluciones/${categoriaId}`}>{categoria?.nombre ?? 'Categoría'}</BotonVolver>
+        {procedimiento?.portada && <PortadaArticulo portada={procedimiento.portada} titulo={articulo.titulo} />}
         <div>
           <h1 className="text-xl font-semibold">{articulo.titulo}</h1>
           <p className="text-xs text-slate-500">{etiquetaDeTipo(articulo.tipo)}</p>
@@ -58,6 +60,11 @@ export function ArticuloPage() {
             {autor?.nombre ? `, por ${autor.nombre}` : ''}
           </p>
         </div>
+        {procedimiento?.descripcion && (
+          <p className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-300">
+            {procedimiento.descripcion}
+          </p>
+        )}
       </header>
 
       {procedimiento && (
@@ -121,6 +128,21 @@ export function ArticuloPage() {
 
       <Historial entidadTipo="articulo" entidadId={articuloId} />
     </div>
+  )
+}
+
+// Imagen de portada del procedimiento como banner sobre el titulo.
+// Si la imagen aun no esta disponible (offline sin cache) no se
+// muestra nada: la pagina queda como la de un articulo sin portada.
+function PortadaArticulo({ portada, titulo }: { portada: { referencia: string }; titulo: string }) {
+  const url = useUrlAdjunto(portada.referencia)
+  if (!url) return null
+  return (
+    <img
+      src={url}
+      alt={`Portada: ${titulo}`}
+      className="max-h-44 w-full rounded-xl border border-slate-800 object-cover"
+    />
   )
 }
 

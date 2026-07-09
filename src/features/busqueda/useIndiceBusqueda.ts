@@ -17,6 +17,10 @@ export interface DocumentoBusqueda {
   subtitulo: string
   ruta: string
   texto: string
+  // Referencia de Storage de la imagen de portada del procedimiento
+  // (opcional, '' si no tiene): permite mostrar la miniatura en los
+  // resultados sin volver a consultar la base local.
+  portadaRef?: string
 }
 
 export interface ResultadoBusqueda {
@@ -25,6 +29,7 @@ export interface ResultadoBusqueda {
   titulo: string
   subtitulo: string
   ruta: string
+  portadaRef: string
 }
 
 // Indice en memoria: se reconstruye cuando cambian los datos locales
@@ -44,6 +49,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
     const documentos: DocumentoBusqueda[] = []
 
     for (const articulo of articulos ?? []) {
+      const procedimiento = normalizarProcedimiento(articulo.procedimiento)
       documentos.push({
         id: `articulo:${articulo.id}`,
         tipo: 'articulo',
@@ -55,11 +61,12 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
         texto: [
           articulo.titulo,
           articulo.contenido,
-          textoDeProcedimiento(normalizarProcedimiento(articulo.procedimiento)),
+          textoDeProcedimiento(procedimiento),
           ...(articulo.sintomas ?? []),
           ...(articulo.causas ?? []),
           ...(articulo.dispositivosAfectados ?? []).map((d) => d.nombre),
         ].join(' '),
+        portadaRef: procedimiento?.portada?.referencia ?? '',
       })
     }
 
@@ -81,6 +88,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           dispositivo.estado,
           dispositivo.observaciones,
         ].join(' '),
+        portadaRef: '',
       })
     }
 
@@ -94,6 +102,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
         subtitulo: [nombreCategoria.get(diagnostico.categoriaId), 'Diagnóstico'].filter(Boolean).join(' · '),
         ruta: `/diagnostico/${diagnostico.id}`,
         texto: [diagnostico.titulo, diagnostico.descripcion, textoDeNodos(diagnostico.nodos ?? [])].join(' '),
+        portadaRef: '',
       })
     }
 
@@ -109,6 +118,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           subtitulo: credencial.categoria,
           ruta: `/notas/${credencial.id}`,
           texto: credencial.titulo,
+          portadaRef: '',
         })
       }
     }
@@ -123,7 +133,7 @@ export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): Min
   const indice = new MiniSearch<DocumentoBusqueda>({
     idField: 'id',
     fields: ['titulo', 'subtitulo', 'texto'],
-    storeFields: ['tipo', 'titulo', 'subtitulo', 'ruta'],
+    storeFields: ['tipo', 'titulo', 'subtitulo', 'ruta', 'portadaRef'],
     searchOptions: {
       boost: { titulo: 3, subtitulo: 1.5 },
       fuzzy: 0.2,
@@ -146,6 +156,7 @@ export function buscar(indice: MiniSearch<DocumentoBusqueda>, consulta: string):
     titulo: resultado.titulo as string,
     subtitulo: resultado.subtitulo as string,
     ruta: resultado.ruta as string,
+    portadaRef: (resultado.portadaRef as string) ?? '',
   }))
 }
 
@@ -180,5 +191,6 @@ export function buscarArticulosSimilares(
       titulo: resultado.titulo as string,
       subtitulo: resultado.subtitulo as string,
       ruta: resultado.ruta as string,
+      portadaRef: (resultado.portadaRef as string) ?? '',
     }))
 }

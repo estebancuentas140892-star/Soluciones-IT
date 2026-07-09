@@ -2,9 +2,11 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { DescargarOffline } from '../../components/DescargarOffline'
+import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { obtenerRecientes } from '../../lib/recientes'
 
 export function InicioPage() {
@@ -68,17 +70,24 @@ export function InicioPage() {
             <section>
               <h2 className="mb-2 text-sm font-medium text-slate-400">Para empezar</h2>
               <ul className="flex flex-col gap-2">
-                {rutasInicio.map((articulo) => (
-                  <li key={articulo.id}>
-                    <Link
-                      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
-                      className="flex items-center gap-2 rounded-xl border border-sky-900 bg-sky-950/40 px-4 py-3 text-sm font-medium text-sky-100"
-                    >
-                      <IconoRuta className="h-5 w-5 text-sky-400" />
-                      {articulo.titulo}
-                    </Link>
-                  </li>
-                ))}
+                {rutasInicio.map((articulo) => {
+                  const portada = normalizarProcedimiento(articulo.procedimiento)?.portada
+                  return (
+                    <li key={articulo.id}>
+                      <Link
+                        to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+                        className="flex items-center gap-2 rounded-xl border border-sky-900 bg-sky-950/40 px-4 py-3 text-sm font-medium text-sky-100"
+                      >
+                        {portada ? (
+                          <MiniaturaPortada referencia={portada.referencia} />
+                        ) : (
+                          <IconoRuta className="h-5 w-5 text-sky-400" />
+                        )}
+                        {articulo.titulo}
+                      </Link>
+                    </li>
+                  )
+                })}
               </ul>
             </section>
           )}

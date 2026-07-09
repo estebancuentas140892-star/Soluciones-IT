@@ -36,6 +36,8 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
 
 function procedimientoCompleto(cambios: Partial<Procedimiento> = {}): Procedimiento {
   return {
+    descripcion: '',
+    portada: null,
     objetivoGeneral: '',
     requisitos: [],
     pasos: [pasoCompleto()],
@@ -61,6 +63,8 @@ describe('normalizarProcedimiento', () => {
 
   it('conserva un procedimiento bien formado tal cual', () => {
     const procedimiento = {
+      descripcion: 'Usar cuando el respaldo nocturno falla',
+      portada: { referencia: 'articulos/a1/portada/1-portada.jpg', nombre: 'portada.jpg', tipo: 'image/jpeg' },
       objetivoGeneral: 'Dejar el SQL Server operativo',
       requisitos: ['Credenciales del SQL Server'],
       pasos: [pasoCompleto()],
@@ -69,6 +73,20 @@ describe('normalizarProcedimiento', () => {
       dificultad: 'intermedio' as const,
     }
     expect(normalizarProcedimiento(procedimiento)).toEqual(procedimiento)
+  })
+
+  it('completa descripción vacía y portada nula cuando faltan (datos anteriores a estos campos)', () => {
+    const resultado = normalizarProcedimiento({ pasos: [pasoCompleto()] })
+    expect(resultado?.descripcion).toBe('')
+    expect(resultado?.portada).toBeNull()
+  })
+
+  it('descarta una portada sin referencia válida', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [pasoCompleto()],
+      portada: { referencia: '', nombre: 'rota.jpg', tipo: 'image/jpeg' },
+    })
+    expect(resultado?.portada).toBeNull()
   })
 
   it('completa los campos faltantes de un paso incompleto', () => {
@@ -309,9 +327,10 @@ describe('tareasDe', () => {
 })
 
 describe('textoDeProcedimiento', () => {
-  it('junta requisitos, títulos y textos de los bloques para el índice de búsqueda', () => {
+  it('junta descripción, requisitos, títulos y textos de los bloques para el índice de búsqueda', () => {
     const texto = textoDeProcedimiento(
       procedimientoCompleto({
+        descripcion: 'Usar cuando el respaldo nocturno falla',
         requisitos: ['Credenciales del SQL Server'],
         pasos: [
           pasoCompleto({
@@ -323,6 +342,7 @@ describe('textoDeProcedimiento', () => {
         ],
       }),
     )
+    expect(texto).toContain('Usar cuando el respaldo nocturno falla')
     expect(texto).toContain('Credenciales del SQL Server')
     expect(texto).toContain('Abrir SQL Server Management Studio')
     expect(texto).toContain('Verificar el espacio en disco')
@@ -362,6 +382,8 @@ describe('textoDeProcedimiento', () => {
 
 function preparar(pasos: PasoProcedimiento[], cambios: Partial<DatosProcedimientoParaGuardar> = {}) {
   return prepararProcedimientoParaGuardar({
+    descripcion: '',
+    portada: null,
     objetivoGeneral: '',
     requisitosTexto: '',
     pasos,
@@ -392,6 +414,16 @@ describe('prepararProcedimientoParaGuardar', () => {
     expect(resultado?.objetivoGeneral).toBe('Dejar todo operativo')
     expect(resultado?.tiempoEstimadoMin).toBe(30)
     expect(resultado?.dificultad).toBe('avanzado')
+  })
+
+  it('limpia espacios en la descripción y conserva la portada', () => {
+    const portada = { referencia: 'articulos/a1/portada/1-p.jpg', nombre: 'p.jpg', tipo: 'image/jpeg' }
+    const resultado = preparar([pasoCompleto()], {
+      descripcion: '  Usar cuando la impresora de red no aparece en Windows  ',
+      portada,
+    })
+    expect(resultado?.descripcion).toBe('Usar cuando la impresora de red no aparece en Windows')
+    expect(resultado?.portada).toEqual(portada)
   })
 
   it('descarta pasos totalmente vacíos y devuelve null si no queda nada', () => {

@@ -1,17 +1,23 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   db,
   type Dispositivo,
   type DispositivoAfectado,
   type NivelDificultad,
+  type PasoAdjunto,
   type PasoProcedimiento,
   type TipoArticulo,
 } from '../../lib/db'
 import { normalizarProcedimiento, prepararProcedimientoParaGuardar } from '../../lib/procedimiento'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { comprimirImagen } from '../../lib/comprimirImagen'
+import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
+import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { BotonVolver } from '../../components/BotonVolver'
+import { MiniaturaPortada } from '../../components/MiniaturaPortada'
+import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { PasosEditor } from './PasosEditor'
 import { TIPOS_ARTICULO } from './tiposArticulo'
@@ -38,6 +44,11 @@ export function ArticuloForm() {
   // articulos guardados antes las conservan: se cargan y se devuelven
   // tal cual al guardar para no borrar datos existentes.
   const [etiquetas, setEtiquetas] = useState('')
+  // Descripcion ("¿cuando usar este procedimiento?") y objetivo
+  // general ("¿que se logra al completarlo?") conviven: responden
+  // preguntas distintas y no se reemplazan entre si.
+  const [descripcion, setDescripcion] = useState('')
+  const [portada, setPortada] = useState<PasoAdjunto | null>(null)
   const [objetivoGeneral, setObjetivoGeneral] = useState('')
   const [requisitos, setRequisitos] = useState('')
   const [pasos, setPasos] = useState<PasoProcedimiento[]>([])
@@ -82,6 +93,8 @@ export function ArticuloForm() {
     setEtiquetas(articulo.etiquetas.join(', '))
     setContenido(articulo.contenido)
     const procedimiento = normalizarProcedimiento(articulo.procedimiento)
+    setDescripcion(procedimiento?.descripcion ?? '')
+    setPortada(procedimiento?.portada ?? null)
     setObjetivoGeneral(procedimiento?.objetivoGeneral ?? '')
     setRequisitos(procedimiento?.requisitos.join('\n') ?? '')
     setPasos(procedimiento?.pasos ?? [])
@@ -114,6 +127,8 @@ export function ArticuloForm() {
           .map((e) => e.trim())
           .filter(Boolean),
         procedimiento: prepararProcedimientoParaGuardar({
+          descripcion,
+          portada,
           objetivoGeneral,
           requisitosTexto: requisitos,
           pasos,
@@ -171,7 +186,10 @@ export function ArticuloForm() {
             <ul className="mt-2 flex flex-col gap-1.5">
               {similares.map((similar) => (
                 <li key={similar.id} className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-sm text-slate-200">{similar.titulo}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    {similar.portadaRef && <MiniaturaPortada referencia={similar.portadaRef} />}
+                    <span className="min-w-0 truncate text-sm text-slate-200">{similar.titulo}</span>
+                  </span>
                   <Link
                     to={similar.ruta}
                     className="shrink-0 text-xs text-sky-300 underline underline-offset-2"
@@ -253,6 +271,19 @@ export function ArticuloForm() {
             />
           </div>
         )}
+
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Descripción (opcional): ¿cuándo usar este procedimiento?
+          <textarea
+            rows={2}
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Utiliza este procedimiento cuando necesites conectar una impresora de red a un computador con Windows"
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+        </label>
+
+        <PortadaEditor articuloId={id} portada={portada} onChange={setPortada} />
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
           🎯 Objetivo general del procedimiento (opcional, 1 línea)
@@ -350,6 +381,100 @@ export function ArticuloForm() {
           {guardando ? 'Guardando...' : pasos.length > 0 ? 'Guardar procedimiento' : 'Guardar artículo'}
         </button>
       </form>
+    </div>
+  )
+}
+
+// Imagen de portada opcional del procedimiento: identifica el
+// articulo de un vistazo en el listado, el buscador, las rutas de
+// aprendizaje y las recomendaciones. Se sube igual que los adjuntos
+// de paso (comprimida en el telefono, encolada si no hay señal) y en
+// el articulo solo queda la referencia de Storage. Solo se guarda si
+// el articulo termina teniendo pasos (vive en el JSON `procedimiento`).
+function PortadaEditor({
+  articuloId,
+  portada,
+  onChange,
+}: {
+  articuloId: string
+  portada: PasoAdjunto | null
+  onChange: (portada: PasoAdjunto | null) => void
+}) {
+  const [subiendo, setSubiendo] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const url = useUrlAdjunto(portada?.referencia ?? null)
+
+  async function subir(evento: ChangeEvent<HTMLInputElement>) {
+    const archivo = evento.target.files?.[0]
+    evento.target.value = ''
+    if (!archivo) return
+
+    setError(null)
+    setAviso(null)
+    if (!supabase || !supabaseConfigured) {
+      setError('La aplicación aún no está conectada al servidor.')
+      return
+    }
+
+    setSubiendo(true)
+    try {
+      const archivoFinal = await comprimirImagen(archivo)
+      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+      const referencia = `articulos/${articuloId}/portada/${Date.now()}-${nombreLimpio}`
+      const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+      if (resultado === 'encolado') {
+        setAviso('Sin conexión: la portada quedó guardada en este dispositivo y se subirá sola al recuperar señal.')
+      }
+      onChange({ referencia, nombre: archivoFinal.name, tipo: archivoFinal.type })
+    } catch {
+      setError(`No se pudo subir la portada: ${archivo.name}`)
+    }
+    setSubiendo(false)
+  }
+
+  return (
+    <div className="flex flex-col gap-2 text-sm text-slate-300">
+      <span>🖼 Imagen de portada (opcional)</span>
+      <div className="flex items-center gap-3">
+        {portada &&
+          (url ? (
+            <img
+              src={url}
+              alt="Portada del procedimiento"
+              className="h-16 w-24 shrink-0 rounded-lg border border-slate-800 object-cover"
+            />
+          ) : (
+            <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-500">
+              🖼
+            </div>
+          ))}
+        <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+          {subiendo ? 'Subiendo...' : portada ? 'Cambiar imagen' : '+ Elegir imagen'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={subiendo}
+            onChange={(evento) => void subir(evento)}
+          />
+        </label>
+        {portada && !subiendo && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-xs text-slate-400 underline underline-offset-2"
+          >
+            Quitar
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-slate-500">
+        Se muestra en el listado, el buscador y las rutas de aprendizaje para identificar el
+        procedimiento de un vistazo.
+      </p>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      {aviso && <p className="text-xs text-amber-300">{aviso}</p>}
     </div>
   )
 }

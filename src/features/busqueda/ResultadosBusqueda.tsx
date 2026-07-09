@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import type { ResultadoBusqueda } from './useIndiceBusqueda'
 
 const GRUPOS: { tipo: ResultadoBusqueda['tipo']; etiqueta: string }[] = [
@@ -30,10 +31,13 @@ export function ResultadosBusqueda({ resultados }: { resultados: ResultadoBusque
                 <li key={resultado.id}>
                   <Link
                     to={resultado.ruta}
-                    className="block rounded-xl border border-slate-800 bg-slate-900 px-4 py-3"
+                    className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3"
                   >
-                    <p className="text-sm font-medium text-slate-100">{resultado.titulo}</p>
-                    {resultado.subtitulo && <p className="text-xs text-slate-400">{resultado.subtitulo}</p>}
+                    {resultado.portadaRef && <MiniaturaPortada referencia={resultado.portadaRef} />}
+                    <span className="min-w-0">
+                      <p className="text-sm font-medium text-slate-100">{resultado.titulo}</p>
+                      {resultado.subtitulo && <p className="text-xs text-slate-400">{resultado.subtitulo}</p>}
+                    </span>
                   </Link>
                 </li>
               ))}
