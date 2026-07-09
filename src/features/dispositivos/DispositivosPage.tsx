@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { IndicadorEstado } from './IndicadorEstado'
 
 export function DispositivosPage() {
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
@@ -139,11 +140,7 @@ export function DispositivosPage() {
                     .join(' · ')}
                 </p>
               </div>
-              {dispositivo.estado && (
-                <span className="shrink-0 rounded-full bg-slate-800 px-2.5 py-0.5 text-xs text-slate-300">
-                  {dispositivo.estado}
-                </span>
-              )}
+              <IndicadorEstado estado={dispositivo.estado} />
             </Link>
           </li>
         ))}

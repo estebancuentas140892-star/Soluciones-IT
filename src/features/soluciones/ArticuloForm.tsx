@@ -1,14 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import {
-  lazy,
-  Suspense,
-  useEffect,
-  useMemo,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-  type ReactNode,
-} from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   db,
@@ -31,6 +22,7 @@ import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { BotonVolver } from '../../components/BotonVolver'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
+import { Seccion } from '../../components/Seccion'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { PasosEditor } from './PasosEditor'
@@ -556,28 +548,6 @@ export function ArticuloForm() {
         </Suspense>
       )}
     </div>
-  )
-}
-
-// Un bloque del formulario con nombre y proposito: separa visualmente
-// las cinco etapas del constructor sin cambiar ningun dato.
-function Seccion({
-  titulo,
-  descripcion,
-  children,
-}: {
-  titulo: string
-  descripcion: string
-  children: ReactNode
-}) {
-  return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
-      <div>
-        <h2 className="text-sm font-semibold text-slate-200">{titulo}</h2>
-        <p className="text-xs text-slate-500">{descripcion}</p>
-      </div>
-      {children}
-    </section>
   )
 }
 

@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. La siguiente fase aprobada de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) es Dis1+B1 (renombres y estados con color de Dispositivos y Bóveda). Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase. Ver cada tarea en el archivo.)
+(Vacío. La siguiente fase aprobada de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) es R1 (árbol de red enriquecido: estados, impacto de falla, "depende de", filtros, búsqueda). Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase. Ver cada tarea en el archivo.)
 
 ## Por hacer
 

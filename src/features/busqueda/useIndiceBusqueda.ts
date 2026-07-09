@@ -90,6 +90,10 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           dispositivo.ip,
           dispositivo.estado,
           dispositivo.observaciones,
+          // Propiedades personalizadas (fase Dis1, punto 9): un
+          // tecnico que solo recuerda un dato propio del equipo
+          // (por ejemplo el usuario asignado) tambien lo encuentra.
+          ...Object.values(dispositivo.detalles),
         ].join(' '),
         portadaRef: '',
       })
@@ -119,7 +123,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           tipo: 'credencial',
           titulo: credencial.titulo,
           subtitulo: credencial.categoria,
-          ruta: `/notas/${credencial.id}`,
+          ruta: `/boveda/${credencial.id}`,
           texto: credencial.titulo,
           portadaRef: '',
         })

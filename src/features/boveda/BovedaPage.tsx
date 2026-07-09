@@ -37,7 +37,7 @@ export function BovedaPage() {
     <div className="flex flex-col gap-4 px-4 pt-6 pb-8">
       <header className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-semibold">Notas</h1>
+          <h1 className="text-xl font-semibold">Bóveda</h1>
           <p className="text-sm text-slate-400">IP, usuarios y contraseñas del equipo</p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -49,7 +49,7 @@ export function BovedaPage() {
             Bloquear
           </button>
           <Link
-            to="/notas/nueva"
+            to="/boveda/nueva"
             className="rounded-xl bg-sky-500 px-3 py-2 text-xs font-medium text-slate-950"
           >
             + Credencial
@@ -98,7 +98,7 @@ export function BovedaPage() {
         {filtradas.map((credencial) => (
           <li key={credencial.id}>
             <Link
-              to={`/notas/${credencial.id}`}
+              to={`/boveda/${credencial.id}`}
               className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3"
             >
               <p className="text-sm font-medium text-slate-100">{credencial.titulo}</p>

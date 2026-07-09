@@ -1,5 +1,21 @@
 # Historial de tareas finalizadas
 
+### 50. Fase Dis1+B1 de la propuesta por módulos: Dispositivos y Bóveda
+- Finalizada: 2026-07-09. Sin cambios de esquema en Supabase.
+- Descripción: tercera fase de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) (puntos 1, 2, 4 y 9 de Dispositivos; puntos 1, 2, 3 y 10 parcial de Bóveda). Incluye la decisión del usuario de renombrar completamente "Notas" a "Bóveda" (pestaña, rutas y textos), revirtiendo la discreción del nombre neutro decidida antes.
+- Solución (Dispositivos):
+  - Formulario en 5 bloques con nombre (`src/features/dispositivos/DispositivoForm.tsx`, componente `Seccion` compartido): Información general, Identificación, Ubicación, Conectividad, Información adicional. "Campos adicionales" → "Propiedades personalizadas".
+  - Estados con color (`src/features/dispositivos/estados.ts`, nuevo): mapea los 4 estados sugeridos a icono/color (🟢 Operativo, 🟡 En mantenimiento, 🔴 Fuera de servicio, ⚫ De baja; comparación insensible a mayúsculas) y cualquier otro texto libre cae a un neutro gris sin romper nada. `IndicadorEstado` (nuevo) reutilizado en la ficha (`DispositivoPage.tsx`) y el listado (`DispositivosPage.tsx`).
+  - Las propiedades personalizadas (`detalles`) se indexan en el buscador global (`src/features/busqueda/useIndiceBusqueda.ts`): un técnico que solo recuerda un dato propio del equipo (por ejemplo el usuario asignado) también lo encuentra.
+- Solución (Bóveda, con la decisión de renombre):
+  - Ruta interna `/notas` → `/boveda` en `src/App.tsx` (redirección inversa a la que existía: antes `/boveda` redirigía a `/notas`, ahora `/notas/*` redirige a `/boveda`). Pestaña, títulos y enlaces internos actualizados en `BottomNav.tsx`, `BovedaPage.tsx`, `BovedaGuard.tsx` (2 pantallas), `CredencialPage.tsx`, `CredencialForm.tsx`, `CredencialEnPaso.tsx`, `useIndiceBusqueda.ts` y `ResultadosBusqueda.tsx`. El campo de notas libres dentro de una credencial (`datos.notas`, texto sin relación con el nombre de la sección) se dejó intacto a propósito.
+  - Formulario en 4 bloques (`src/features/boveda/CredencialForm.tsx`, mismo `Seccion` compartido): Información general, Credenciales (usuario, contraseña, notas), Ubicación (IP, URL), Propiedades protegidas (antes "Campos adicionales").
+  - "Última modificación" (updated_at) visible en la ficha de la credencial (`CredencialPage.tsx`), mismo patrón que la ficha de artículo.
+- Solución (compartida): `src/components/Seccion.tsx` (nuevo) extraído de la fase S1 (tarea 48) para no duplicar el patrón de bloques en tres formularios largos (artículos, dispositivos, credenciales); `ArticuloForm.tsx` se refactorizó para reutilizarlo.
+- Pruebas: 323 en verde (sin pruebas nuevas: todo el cambio es de presentación y rutas, ya cubierto por la suite existente). Typecheck, lint y build en verde.
+- Verificado en navegador real (sesión simulada + perfil con `puedeVerBoveda`, datos sembrados y luego limpiados con `cambiosPendientes` en 0): la pestaña dice "Bóveda" y apunta a `/boveda`; `/notas` redirige a `/boveda` con el título correcto; el indicador de estado con color se ve en la ficha y en el listado; la búsqueda global encontró un dispositivo por una propiedad personalizada única; los formularios de dispositivo y credencial muestran sus 5 y 4 bloques respectivamente con los nombres correctos ("Propiedades personalizadas", "Propiedades protegidas"); la ficha de una credencial muestra "Última modificación" con la fecha real.
+- Documentación: ARQUITECTURA.md secciones 4, 5, 6 y 8, y el árbol de carpetas.
+
 ### 49. Fase D1 de la propuesta por módulos: pulido del editor de diagnósticos
 - Finalizada: 2026-07-09. Sin cambios de esquema en Supabase.
 - Descripción: segunda fase de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) (puntos 1, 4, 5 y 13 del documento de Diagnóstico Inteligente). El resto de puntos del documento (respuestas dinámicas, destinos flexibles, integración con procedimientos y soluciones, "¿Quedó resuelto?", validación al guardar) ya estaban resueltos por la tarea 46; este análisis lo confirmó y quedó documentado en la propuesta.

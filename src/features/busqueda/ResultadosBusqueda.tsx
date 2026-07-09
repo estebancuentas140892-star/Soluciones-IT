@@ -6,7 +6,7 @@ const GRUPOS: { tipo: ResultadoBusqueda['tipo']; etiqueta: string }[] = [
   { tipo: 'diagnostico', etiqueta: 'Diagnósticos' },
   { tipo: 'articulo', etiqueta: 'Soluciones' },
   { tipo: 'dispositivo', etiqueta: 'Dispositivos' },
-  { tipo: 'credencial', etiqueta: 'Notas' },
+  { tipo: 'credencial', etiqueta: 'Bóveda' },
 ]
 
 export function ResultadosBusqueda({ resultados }: { resultados: ResultadoBusqueda[] }) {

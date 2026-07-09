@@ -172,11 +172,12 @@ function App() {
                 <Route path="red" element={<RedPage />} />
                 <Route path="red/topologia" element={<TopologiaPage />} />
                 <Route path="red/topologia/:dispositivoId" element={<TopologiaPage />} />
-                {/* La seccion de credenciales vive en /notas con nombre
-                    neutro (minima exposicion). La ruta vieja redirige
-                    por si quedo algun enlace guardado. */}
-                <Route path="boveda/*" element={<Navigate to="/notas" replace />} />
-                <Route path="notas" element={<BovedaGuard />}>
+                {/* La seccion de credenciales se llamo "Notas" (nombre
+                    neutro de discrecion) hasta el 2026-07-09, cuando el
+                    usuario decidio volver a llamarla Boveda. La ruta
+                    vieja redirige por si quedo algun enlace guardado. */}
+                <Route path="notas/*" element={<Navigate to="/boveda" replace />} />
+                <Route path="boveda" element={<BovedaGuard />}>
                   <Route index element={<BovedaPage />} />
                   <Route path="nueva" element={<CredencialForm />} />
                   <Route path=":credencialId" element={<CredencialPage />} />

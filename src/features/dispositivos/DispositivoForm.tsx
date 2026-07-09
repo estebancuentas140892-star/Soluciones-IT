@@ -2,15 +2,18 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
+import { Seccion } from '../../components/Seccion'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { ESTADOS_SUGERIDOS } from './estados'
 
 interface CampoDetalle {
   clave: string
   valor: string
 }
 
-const ESTADOS_SUGERIDOS = ['Operativo', 'En mantenimiento', 'Fuera de servicio', 'De baja']
+const CLASE_INPUT =
+  'rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500'
 
 export function DispositivoForm() {
   const { dispositivoId } = useParams()
@@ -145,180 +148,180 @@ export function DispositivoForm() {
         <h1 className="text-xl font-semibold">{esEdicion ? 'Editar dispositivo' : 'Nuevo dispositivo'}</h1>
       </header>
 
-      <form onSubmit={manejarEnvio} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Nombre
-          <input
-            type="text"
-            required
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Categoría
-          <select
-            required
-            value={categoriaId}
-            onChange={(e) => setCategoriaId(e.target.value)}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            {categorias?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={manejarEnvio} className="flex flex-col gap-5">
+        <Seccion titulo="Información general" descripcion="Qué es el equipo y a qué categoría pertenece.">
           <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Marca
+            Nombre
             <input
               type="text"
-              value={marca}
-              onChange={(e) => setMarca(e.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              required
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className={CLASE_INPUT}
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Modelo
-            <input
-              type="text"
-              value={modelo}
-              onChange={(e) => setModelo(e.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </label>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Número de serie
-            <input
-              type="text"
-              value={serial}
-              onChange={(e) => setSerial(e.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Placa de inventario
-            <input
-              type="text"
-              value={placaInventario}
-              onChange={(e) => setPlacaInventario(e.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </label>
-        </div>
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Ubicación
-          <input
-            type="text"
-            value={ubicacion}
-            onChange={(e) => setUbicacion(e.target.value)}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Dirección IP
-            <input
-              type="text"
-              value={ip}
-              onChange={(e) => setIp(e.target.value)}
-              placeholder="192.168.1.10"
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Estado
-            <input
-              type="text"
-              list="estados-sugeridos"
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-            <datalist id="estados-sugeridos">
-              {ESTADOS_SUGERIDOS.map((valor) => (
-                <option key={valor} value={valor} />
-              ))}
-            </datalist>
-          </label>
-        </div>
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Observaciones
-          <textarea
-            rows={3}
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-300">Campos adicionales</span>
-            <button
-              type="button"
-              onClick={() => setDetalles((actuales) => [...actuales, { clave: '', valor: '' }])}
-              className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+            Categoría
+            <select
+              required
+              value={categoriaId}
+              onChange={(e) => setCategoriaId(e.target.value)}
+              className={CLASE_INPUT}
             >
-              + Agregar campo
-            </button>
-          </div>
-          <p className="text-xs text-slate-500">
-            Para datos propios de este tipo de dispositivo, por ejemplo puerto, switch, usuario asignado o sistema
-            operativo.
-          </p>
+              {categorias?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
 
-          {detalles.map((campo, indice) => (
-            <div key={indice} className="flex gap-2">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Marca
+              <input type="text" value={marca} onChange={(e) => setMarca(e.target.value)} className={CLASE_INPUT} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Modelo
+              <input type="text" value={modelo} onChange={(e) => setModelo(e.target.value)} className={CLASE_INPUT} />
+            </label>
+          </div>
+        </Seccion>
+
+        <Seccion titulo="Identificación" descripcion="Cómo distinguir físicamente este equipo de otro igual.">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Número de serie
               <input
                 type="text"
-                placeholder="Campo"
-                value={campo.clave}
-                onChange={(e) => actualizarDetalle(indice, 'clave', e.target.value)}
-                className="w-2/5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                value={serial}
+                onChange={(e) => setSerial(e.target.value)}
+                className={CLASE_INPUT}
               />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Placa de inventario
               <input
                 type="text"
-                placeholder="Valor"
-                value={campo.valor}
-                onChange={(e) => actualizarDetalle(indice, 'valor', e.target.value)}
-                className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                value={placaInventario}
+                onChange={(e) => setPlacaInventario(e.target.value)}
+                className={CLASE_INPUT}
               />
+            </label>
+          </div>
+        </Seccion>
+
+        <Seccion titulo="Ubicación" descripcion="Dónde encontrar físicamente el equipo.">
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Ubicación
+            <input
+              type="text"
+              value={ubicacion}
+              onChange={(e) => setUbicacion(e.target.value)}
+              className={CLASE_INPUT}
+            />
+          </label>
+        </Seccion>
+
+        <Seccion titulo="Conectividad" descripcion="Cómo se accede a este equipo en la red y en qué estado está.">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Dirección IP
+              <input
+                type="text"
+                value={ip}
+                onChange={(e) => setIp(e.target.value)}
+                placeholder="192.168.1.10"
+                className={CLASE_INPUT}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Estado
+              <input
+                type="text"
+                list="estados-sugeridos"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                className={CLASE_INPUT}
+              />
+              <datalist id="estados-sugeridos">
+                {ESTADOS_SUGERIDOS.map((valor) => (
+                  <option key={valor} value={valor} />
+                ))}
+              </datalist>
+            </label>
+          </div>
+        </Seccion>
+
+        <Seccion titulo="Información adicional" descripcion="Observaciones y datos propios de este tipo de equipo.">
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Observaciones
+            <textarea
+              rows={3}
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              className={CLASE_INPUT}
+            />
+          </label>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-300">Propiedades personalizadas</span>
               <button
                 type="button"
-                onClick={() => quitarDetalle(indice)}
-                aria-label="Quitar campo"
-                className="shrink-0 rounded-lg border border-slate-800 px-2.5 text-slate-400"
+                onClick={() => setDetalles((actuales) => [...actuales, { clave: '', valor: '' }])}
+                className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
               >
-                ×
+                + Agregar campo
               </button>
             </div>
-          ))}
-        </div>
+            <p className="text-xs text-slate-500">
+              Para datos propios de este tipo de dispositivo, por ejemplo puerto, switch, usuario asignado o
+              sistema operativo.
+            </p>
 
-        {esEdicion && (
-          <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Motivo del cambio (opcional)
-            <input
-              type="text"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="¿Por qué se actualizó esta ficha?"
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </label>
-        )}
+            {detalles.map((campo, indice) => (
+              <div key={indice} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Campo"
+                  value={campo.clave}
+                  onChange={(e) => actualizarDetalle(indice, 'clave', e.target.value)}
+                  className="w-2/5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Valor"
+                  value={campo.valor}
+                  onChange={(e) => actualizarDetalle(indice, 'valor', e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => quitarDetalle(indice)}
+                  aria-label="Quitar campo"
+                  className="shrink-0 rounded-lg border border-slate-800 px-2.5 text-slate-400"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {esEdicion && (
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Motivo del cambio (opcional)
+              <input
+                type="text"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="¿Por qué se actualizó esta ficha?"
+                className={CLASE_INPUT}
+              />
+            </label>
+          )}
+        </Seccion>
 
         <button
           type="submit"

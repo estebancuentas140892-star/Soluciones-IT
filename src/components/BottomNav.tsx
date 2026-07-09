@@ -17,11 +17,12 @@ const TABS_BASE: Tab[] = [
   { to: '/red', label: 'Red', icon: RedIcon, end: false },
 ]
 
-// La seccion de credenciales (antigua "Boveda") se presenta con un
-// nombre e icono neutros y solo aparece a los usuarios con permiso:
-// el resto ni siquiera sabe que existe (minima exposicion). La
-// proteccion real sigue siendo RLS + contrasena maestra.
-const TAB_NOTAS: Tab = { to: '/notas', label: 'Notas', icon: NoteIcon, end: false }
+// La seccion de credenciales solo aparece a los usuarios con permiso:
+// el resto ni siquiera sabe que existe. Se llamo "Notas" (nombre
+// neutro de discrecion) hasta el 2026-07-09; el usuario decidio
+// volver a llamarla Boveda. La proteccion real sigue siendo RLS +
+// contrasena maestra, no el nombre de la pestaña.
+const TAB_BOVEDA: Tab = { to: '/boveda', label: 'Bóveda', icon: NoteIcon, end: false }
 
 export function BottomNav() {
   const { session } = useAuth()
@@ -32,7 +33,7 @@ export function BottomNav() {
     [session],
   )
 
-  const tabs = perfil?.puedeVerBoveda ? [...TABS_BASE, TAB_NOTAS] : TABS_BASE
+  const tabs = perfil?.puedeVerBoveda ? [...TABS_BASE, TAB_BOVEDA] : TABS_BASE
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-800 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">

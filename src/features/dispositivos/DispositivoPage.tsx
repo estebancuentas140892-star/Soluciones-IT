@@ -11,6 +11,7 @@ import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { ValorCopiable } from '../../components/ValorCopiable'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { Historial } from '../historial/Historial'
+import { IndicadorEstado } from './IndicadorEstado'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
 
 export function DispositivoPage() {
@@ -95,11 +96,7 @@ export function DispositivoPage() {
         onConfirmar={eliminar}
       />
 
-      {dispositivo.estado && (
-        <span className="w-fit rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">
-          {dispositivo.estado}
-        </span>
-      )}
+      <IndicadorEstado estado={dispositivo.estado} />
 
       {(campos.length > 0 || detalles.length > 0) && (
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">

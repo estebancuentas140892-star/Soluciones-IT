@@ -77,7 +77,7 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
             <DatosDescifrados datosCifrados={credencial.datosCifrados} />
             <div className="mt-2.5">
               <Link
-                to={`/notas/${credencialId}`}
+                to={`/boveda/${credencialId}`}
                 className="text-xs text-violet-300 underline underline-offset-2"
               >
                 Abrir en Notas

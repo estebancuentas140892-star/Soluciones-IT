@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
+import { Seccion } from '../../components/Seccion'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { cifrarCredencial, descifrarCredencial } from './sesionBoveda'
@@ -66,7 +67,7 @@ export function CredencialForm() {
     }
   }, [credencial, cargadoInicial])
 
-  if (esEdicion && credencial === null) return <Navigate to="/notas" replace />
+  if (esEdicion && credencial === null) return <Navigate to="/boveda" replace />
   if (esEdicion && !cargadoInicial) {
     return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
   }
@@ -102,7 +103,7 @@ export function CredencialForm() {
         { id, titulo: titulo.trim(), categoria: categoria.trim(), datosCifrados },
         motivo.trim(),
       )
-      navigate(`/notas/${id}`)
+      navigate(`/boveda/${id}`)
     } catch {
       // Ocurre si el autobloqueo cerro la boveda durante la edicion.
       setError('La sección se bloqueó por inactividad. Desbloquéala de nuevo para guardar.')
@@ -110,7 +111,7 @@ export function CredencialForm() {
     }
   }
 
-  const volverA = esEdicion ? `/notas/${credencialId}` : '/notas'
+  const volverA = esEdicion ? `/boveda/${credencialId}` : '/boveda'
   const claseCampo =
     'rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500'
 
@@ -128,160 +129,168 @@ export function CredencialForm() {
         </p>
       )}
 
-      <form onSubmit={manejarEnvio} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Título
-          <input
-            type="text"
-            required
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-            placeholder="Router principal, cámara bodega, servidor..."
-            className={claseCampo}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Categoría
-          <input
-            type="text"
-            list="categorias-boveda"
-            value={categoria}
-            onChange={(e) => setCategoria(e.target.value)}
-            placeholder="Redes, Servidores, CCTV..."
-            className={claseCampo}
-          />
-          <datalist id="categorias-boveda">
-            {categorias.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Usuario
-          <input
-            type="text"
-            value={usuario}
-            onChange={(e) => setUsuario(e.target.value)}
-            autoComplete="off"
-            className={claseCampo}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Contraseña
-          <div className="flex gap-2">
-            <CampoContrasena
-              revelado={verContrasena}
-              value={contrasena}
-              onChange={(e) => setContrasena(e.target.value)}
-              className={`flex-1 ${claseCampo}`}
-            />
-            <button
-              type="button"
-              onClick={() => setVerContrasena((v) => !v)}
-              className="shrink-0 rounded-xl border border-slate-800 px-3 text-xs text-slate-300"
-            >
-              {verContrasena ? 'Ocultar' : 'Mostrar'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setContrasena(generarContrasena())
-                setVerContrasena(true)
-              }}
-              className="shrink-0 rounded-xl border border-slate-800 px-3 text-xs text-slate-300"
-            >
-              Generar
-            </button>
-          </div>
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={manejarEnvio} className="flex flex-col gap-5">
+        <Seccion titulo="Información general" descripcion="Qué protege esta credencial y cómo encontrarla.">
           <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Dirección IP
+            Título
             <input
               type="text"
-              value={ip}
-              onChange={(e) => setIp(e.target.value)}
-              placeholder="192.168.1.1"
+              required
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Router principal, cámara bodega, servidor..."
               className={claseCampo}
             />
           </label>
+
           <label className="flex flex-col gap-1 text-sm text-slate-300">
-            URL
+            Categoría
             <input
               type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://..."
+              list="categorias-boveda"
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              placeholder="Redes, Servidores, CCTV..."
+              className={claseCampo}
+            />
+            <datalist id="categorias-boveda">
+              {categorias.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </label>
+        </Seccion>
+
+        <Seccion titulo="Credenciales" descripcion="El usuario, la contraseña y cualquier nota sobre su uso.">
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Usuario
+            <input
+              type="text"
+              value={usuario}
+              onChange={(e) => setUsuario(e.target.value)}
+              autoComplete="off"
               className={claseCampo}
             />
           </label>
-        </div>
 
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Notas
-          <textarea rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} className={claseCampo} />
-        </label>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-300">Campos adicionales</span>
-            <button
-              type="button"
-              onClick={() => setExtras((actuales) => [...actuales, { clave: '', valor: '' }])}
-              className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-            >
-              + Agregar campo
-            </button>
-          </div>
-          <p className="text-xs text-slate-500">
-            Para otros datos protegidos, por ejemplo puerto, PIN, clave WiFi o usuario de respaldo.
-          </p>
-
-          {extras.map((campo, indice) => (
-            <div key={indice} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Campo"
-                value={campo.clave}
-                onChange={(e) => actualizarExtra(indice, 'clave', e.target.value)}
-                className="w-2/5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-              <input
-                type="text"
-                placeholder="Valor"
-                value={campo.valor}
-                onChange={(e) => actualizarExtra(indice, 'valor', e.target.value)}
-                autoComplete="off"
-                className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Contraseña
+            <div className="flex gap-2">
+              <CampoContrasena
+                revelado={verContrasena}
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
+                className={`flex-1 ${claseCampo}`}
               />
               <button
                 type="button"
-                onClick={() => quitarExtra(indice)}
-                aria-label="Quitar campo"
-                className="shrink-0 rounded-lg border border-slate-800 px-2.5 text-slate-400"
+                onClick={() => setVerContrasena((v) => !v)}
+                className="shrink-0 rounded-xl border border-slate-800 px-3 text-xs text-slate-300"
               >
-                ×
+                {verContrasena ? 'Ocultar' : 'Mostrar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setContrasena(generarContrasena())
+                  setVerContrasena(true)
+                }}
+                className="shrink-0 rounded-xl border border-slate-800 px-3 text-xs text-slate-300"
+              >
+                Generar
               </button>
             </div>
-          ))}
-        </div>
-
-        {esEdicion && (
-          <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Motivo del cambio (opcional)
-            <input
-              type="text"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="¿Por qué se actualizó esta credencial?"
-              className={claseCampo}
-            />
           </label>
-        )}
+
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Notas
+            <textarea rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} className={claseCampo} />
+          </label>
+        </Seccion>
+
+        <Seccion titulo="Ubicación" descripcion="Dónde se usa esta credencial en la red.">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Dirección IP
+              <input
+                type="text"
+                value={ip}
+                onChange={(e) => setIp(e.target.value)}
+                placeholder="192.168.1.1"
+                className={claseCampo}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              URL
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+                className={claseCampo}
+              />
+            </label>
+          </div>
+        </Seccion>
+
+        <Seccion titulo="Propiedades protegidas" descripcion="Cualquier otro dato confidencial que necesites guardar cifrado.">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-300">Propiedades protegidas</span>
+              <button
+                type="button"
+                onClick={() => setExtras((actuales) => [...actuales, { clave: '', valor: '' }])}
+                className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+              >
+                + Agregar campo
+              </button>
+            </div>
+            <p className="text-xs text-slate-500">
+              Para otros datos protegidos, por ejemplo puerto, PIN, clave WiFi o usuario de respaldo.
+            </p>
+
+            {extras.map((campo, indice) => (
+              <div key={indice} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Campo"
+                  value={campo.clave}
+                  onChange={(e) => actualizarExtra(indice, 'clave', e.target.value)}
+                  className="w-2/5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Valor"
+                  value={campo.valor}
+                  onChange={(e) => actualizarExtra(indice, 'valor', e.target.value)}
+                  autoComplete="off"
+                  className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => quitarExtra(indice)}
+                  aria-label="Quitar campo"
+                  className="shrink-0 rounded-lg border border-slate-800 px-2.5 text-slate-400"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {esEdicion && (
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Motivo del cambio (opcional)
+              <input
+                type="text"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="¿Por qué se actualizó esta credencial?"
+                className={claseCampo}
+              />
+            </label>
+          )}
+        </Seccion>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 

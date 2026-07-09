@@ -35,7 +35,7 @@ function AccesoRestringido() {
     <div className="flex flex-col items-center gap-4 px-4 pt-16 text-center">
       <IconoCandado />
       <div>
-        <h1 className="text-xl font-semibold">Notas</h1>
+        <h1 className="text-xl font-semibold">Bóveda</h1>
         <p className="mt-1 text-sm text-slate-400">
           Tu usuario no tiene acceso a esta sección. Un administrador puede habilitarlo desde el
           panel de Supabase.
@@ -94,7 +94,7 @@ function PantallaDesbloqueo() {
     <div className="flex flex-col items-center gap-4 px-4 pt-16 text-center">
       <IconoCandado />
       <div>
-        <h1 className="text-xl font-semibold">Notas</h1>
+        <h1 className="text-xl font-semibold">Bóveda</h1>
         <p className="mt-1 text-sm text-slate-400">
           {modo === 'crear'
             ? 'Sección protegida del equipo. Aún no tiene contraseña maestra.'
