@@ -340,6 +340,11 @@ export interface OpcionDiagnostico {
 // el modelo (serian tipos de nodo nuevos).
 export interface NodoDiagnostico {
   id: string
+  // Nombre corto para organizar y reconocer la pregunta en el editor
+  // (fase D1, 2026-07-09): se ve en la tarjeta y en los selectores de
+  // destino en vez de recortar la pregunta a 40 caracteres. Opcional;
+  // nunca se muestra al tecnico que ejecuta el diagnostico.
+  tituloInterno: string
   pregunta: string
   descripcion: string
   opciones: OpcionDiagnostico[]

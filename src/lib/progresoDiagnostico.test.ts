@@ -15,6 +15,7 @@ function opcion(cambios: Partial<OpcionDiagnostico> & { id: string; etiqueta: st
 
 const nodo1: NodoDiagnostico = {
   id: 'n1',
+  tituloInterno: '',
   pregunta: '¿Está encendida?',
   descripcion: '',
   opciones: [
@@ -25,6 +26,7 @@ const nodo1: NodoDiagnostico = {
 
 const nodo2: NodoDiagnostico = {
   id: 'n2',
+  tituloInterno: '',
   pregunta: '¿Aparece instalada?',
   descripcion: '',
   opciones: [

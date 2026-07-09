@@ -57,7 +57,7 @@ export function DiagnosticosPage() {
           to="/diagnostico/nuevo"
           className="shrink-0 rounded-xl bg-sky-500 px-3 py-2 text-xs font-medium text-slate-950"
         >
-          + Diagnóstico
+          + Crear diagnóstico
         </Link>
       </header>
 
@@ -71,8 +71,8 @@ export function DiagnosticosPage() {
 
       {diagnosticos.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
-          Todavía no hay diagnósticos. Crea el primero con "+ Diagnóstico": un problema frecuente y
-          las preguntas que llevan a su solución.
+          Todavía no hay diagnósticos. Crea el primero con "+ Crear diagnóstico": un problema
+          frecuente y las preguntas que llevan a su solución.
         </p>
       )}
 

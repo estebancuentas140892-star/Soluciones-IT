@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { NodoDiagnostico, OpcionDiagnostico } from './db'
 import {
   crearNodo,
+  duplicarNodo,
   normalizarNodos,
   porcentajeDiagnostico,
   prepararNodosParaGuardar,
@@ -21,7 +22,7 @@ function opcion(cambios: Partial<OpcionDiagnostico> & { id: string; etiqueta: st
 }
 
 function nodo(cambios: Partial<NodoDiagnostico> & { id: string; pregunta: string }): NodoDiagnostico {
-  return { descripcion: '', opciones: [], ...cambios }
+  return { tituloInterno: '', descripcion: '', opciones: [], ...cambios }
 }
 
 // Arbol de los ejemplos del usuario: ¿encendida? -> ¿instalada? -> fin.
@@ -66,6 +67,36 @@ describe('crearNodo', () => {
     expect(nuevo.opciones.map((o) => o.etiqueta)).toEqual(['Sí', 'No'])
     expect(nuevo.opciones[0].id).not.toBe(nuevo.opciones[1].id)
   })
+
+  it('arranca sin título interno', () => {
+    expect(crearNodo().tituloInterno).toBe('')
+  })
+})
+
+describe('duplicarNodo', () => {
+  it('copia el nodo y sus opciones con ids nuevos, conservando el contenido', () => {
+    const [original] = arbolImpresora()
+    const copia = duplicarNodo(original)
+
+    expect(copia.id).not.toBe(original.id)
+    expect(copia.pregunta).toBe(original.pregunta)
+    expect(copia.opciones).toHaveLength(original.opciones.length)
+    copia.opciones.forEach((opcionCopiada, i) => {
+      expect(opcionCopiada.id).not.toBe(original.opciones[i].id)
+      expect(opcionCopiada.etiqueta).toBe(original.opciones[i].etiqueta)
+      // Los destinos SALIENTES se conservan: siguen siendo la
+      // continuacion logica correcta del arbol.
+      expect(opcionCopiada.siguienteNodoId).toBe(original.opciones[i].siguienteNodoId)
+    })
+  })
+
+  it('agrega "(copia)" al título interno si tenía uno, y lo deja vacío si no', () => {
+    const conTitulo = duplicarNodo({ ...crearNodo(), tituloInterno: 'Verificar alimentación' })
+    expect(conTitulo.tituloInterno).toBe('Verificar alimentación (copia)')
+
+    const sinTitulo = duplicarNodo(crearNodo())
+    expect(sinTitulo.tituloInterno).toBe('')
+  })
 })
 
 describe('normalizarNodos', () => {
@@ -77,6 +108,14 @@ describe('normalizarNodos', () => {
 
   it('conserva un árbol bien formado tal cual', () => {
     expect(normalizarNodos(arbolImpresora())).toEqual(arbolImpresora())
+  })
+
+  it('conserva el título interno y lo completa vacío cuando falta', () => {
+    const conTitulo = normalizarNodos([{ id: 'n1', pregunta: 'x', tituloInterno: 'Verificar alimentación' }])
+    expect(conTitulo[0].tituloInterno).toBe('Verificar alimentación')
+
+    const sinTitulo = normalizarNodos([{ id: 'n1', pregunta: 'x' }])
+    expect(sinTitulo[0].tituloInterno).toBe('')
   })
 
   it('completa los campos faltantes y descarta basura', () => {
@@ -182,6 +221,13 @@ describe('prepararNodosParaGuardar', () => {
     expect(preparados[0].pregunta).toBe('¿Está encendida?')
     expect(preparados[0].opciones).toHaveLength(1)
     expect(preparados[0].opciones[0].mensajeFinal).toBe('listo')
+  })
+
+  it('recorta espacios del título interno', () => {
+    const preparados = prepararNodosParaGuardar([
+      nodo({ id: 'n1', pregunta: 'x', tituloInterno: '  Verificar alimentación  ' }),
+    ])
+    expect(preparados[0].tituloInterno).toBe('Verificar alimentación')
   })
 })
 

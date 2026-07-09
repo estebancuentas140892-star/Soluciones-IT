@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 49. Fase D1 de la propuesta por módulos: pulido del editor de diagnósticos
+- Finalizada: 2026-07-09. Sin cambios de esquema en Supabase.
+- Descripción: segunda fase de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) (puntos 1, 4, 5 y 13 del documento de Diagnóstico Inteligente). El resto de puntos del documento (respuestas dinámicas, destinos flexibles, integración con procedimientos y soluciones, "¿Quedó resuelto?", validación al guardar) ya estaban resueltos por la tarea 46; este análisis lo confirmó y quedó documentado en la propuesta.
+- Solución:
+  - "+ Diagnóstico" → "+ Crear diagnóstico" (`DiagnosticosPage.tsx`, botón y texto vacío).
+  - `NodoDiagnostico` (`src/lib/db.ts`) gana `tituloInterno` opcional: organiza el editor y reemplaza el recorte a 40 caracteres de la pregunta en los selectores de destino y en la cabecera de la tarjeta; nunca se muestra al técnico que ejecuta el diagnóstico. Normalización y limpieza en `src/lib/diagnostico.ts` (`crearNodo`, `normalizarNodos`, `prepararNodosParaGuardar`).
+  - "Termina aquí (mensaje o procedimiento final)" → "Destino: termina aquí (mensaje final o procedimiento)"; las opciones del selector ahora dicen "Destino: pregunta N (título interno o pregunta recortada)".
+  - `duplicarNodo` (nuevo, puro, probado): copia el nodo con id nuevo y los ids de sus opciones también nuevos (nace sin destinos entrantes, por ser un id nuevo); sus destinos salientes se conservan porque siguen siendo la continuación lógica correcta; el título interno gana el sufijo " (copia)". Botón "⧉ Duplicar la pregunta N" en la tarjeta, inserta la copia justo después del original.
+- Pruebas: 323 en verde (7 nuevas: `duplicarNodo` con y sin título interno, normalización y limpieza de `tituloInterno`, `crearNodo` sin título). Typecheck, lint y build en verde.
+- Verificado en navegador real (sesión simulada + categoría sembrada, luego limpiada con `cambiosPendientes` en 0): "+ Crear diagnóstico" en la lista; título interno visible en la cabecera de la pregunta ("Pregunta 1 (inicio): Verificar alimentación") y en el selector de destino de la otra pregunta; "Destino: termina aquí" en el selector; Duplicar insertó la copia justo después con "(copia)" en el título, numeración recalculada y sin heredar "(inicio)"; guardado real de punta a punta con los títulos internos persistidos correctamente en `db.diagnosticos`.
+- Documentación: ARQUITECTURA.md sección 5 (modelo de diagnósticos).
+
 ### 48. Fase S1 de la propuesta por módulos: constructor de Soluciones
 - Finalizada: 2026-07-09. Sin cambios de esquema en Supabase.
 - Descripción: primera fase de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) (puntos 1, 2, 3, 6, 7, 8 y 10 del documento de Soluciones), aprobada por el usuario el 2026-07-09 junto con la decisión de reactivar las etiquetas.

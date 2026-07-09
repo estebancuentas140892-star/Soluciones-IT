@@ -5,6 +5,7 @@ import { db, type Articulo, type NodoDiagnostico } from '../../lib/db'
 import {
   crearNodo,
   crearOpcion,
+  duplicarNodo,
   normalizarNodos,
   prepararNodosParaGuardar,
   validarNodos,
@@ -248,6 +249,23 @@ function NodosEditor({
     )
   }
 
+  // Duplica la pregunta justo despues de si misma: mismo texto,
+  // respuestas y destinos salientes, con ids nuevos (fase D1).
+  function duplicarNodoEn(indice: number) {
+    const copia = duplicarNodo(nodos[indice])
+    const copiaConArreglo = [...nodos]
+    copiaConArreglo.splice(indice + 1, 0, copia)
+    onChange(copiaConArreglo)
+  }
+
+  // Etiqueta de una pregunta en los selectores de destino: el titulo
+  // interno si existe (mas legible que un recorte de la pregunta),
+  // si no la pregunta recortada.
+  function etiquetaDestino(destino: NodoDiagnostico, indiceDestino: number): string {
+    if (destino.tituloInterno) return destino.tituloInterno
+    return destino.pregunta ? destino.pregunta.slice(0, 40) : `Pregunta ${indiceDestino + 1}`
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {nodos.map((nodo, indice) => (
@@ -256,6 +274,7 @@ function NodosEditor({
             <span className="text-xs font-medium text-slate-400">
               Pregunta {indice + 1}
               {indice === 0 ? ' (inicio)' : ''}
+              {nodo.tituloInterno ? `: ${nodo.tituloInterno}` : ''}
             </span>
             <div className="flex gap-1.5">
               <BotonMini etiqueta={`Subir la pregunta ${indice + 1}`} deshabilitado={indice === 0} onClick={() => moverNodo(indice, -1)}>
@@ -268,6 +287,9 @@ function NodosEditor({
               >
                 ↓
               </BotonMini>
+              <BotonMini etiqueta={`Duplicar la pregunta ${indice + 1}`} onClick={() => duplicarNodoEn(indice)}>
+                ⧉
+              </BotonMini>
               <BotonMini
                 etiqueta={`Eliminar la pregunta ${indice + 1}`}
                 deshabilitado={nodos.length === 1}
@@ -277,6 +299,14 @@ function NodosEditor({
               </BotonMini>
             </div>
           </div>
+
+          <input
+            type="text"
+            value={nodo.tituloInterno}
+            onChange={(e) => actualizarNodo(indice, { tituloInterno: e.target.value })}
+            placeholder="Título interno (opcional): para organizar, por ejemplo Verificar alimentación"
+            className={`${CLASE_INPUT} text-sm`}
+          />
 
           <input
             type="text"
@@ -325,7 +355,7 @@ function NodosEditor({
 
                 <select
                   value={opcion.siguienteNodoId ?? ''}
-                  aria-label="A dónde lleva esta respuesta"
+                  aria-label="Destino de esta respuesta"
                   onChange={(e) =>
                     actualizarNodo(indice, {
                       opciones: nodo.opciones.map((o, i) =>
@@ -335,13 +365,12 @@ function NodosEditor({
                   }
                   className={`${CLASE_INPUT} text-slate-300`}
                 >
-                  <option value="">Termina aquí (mensaje o procedimiento final)</option>
+                  <option value="">Destino: termina aquí (mensaje final o procedimiento)</option>
                   {nodos.map(
                     (destino, indiceDestino) =>
                       destino.id !== nodo.id && (
                         <option key={destino.id} value={destino.id}>
-                          Continúa en la pregunta {indiceDestino + 1}
-                          {destino.pregunta ? `: ${destino.pregunta.slice(0, 40)}` : ''}
+                          Destino: pregunta {indiceDestino + 1} ({etiquetaDestino(destino, indiceDestino)})
                         </option>
                       ),
                   )}

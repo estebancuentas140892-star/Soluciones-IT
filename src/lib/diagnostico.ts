@@ -23,9 +23,25 @@ export function crearOpcion(etiqueta = ''): OpcionDiagnostico {
 export function crearNodo(): NodoDiagnostico {
   return {
     id: crypto.randomUUID(),
+    tituloInterno: '',
     pregunta: '',
     descripcion: '',
     opciones: [crearOpcion('Sí'), crearOpcion('No')],
+  }
+}
+
+// Copia un nodo con id nuevo (y los ids de sus opciones tambien
+// nuevos, para que la edicion no los confunda con los originales).
+// Nace sin destinos ENTRANTES (ninguna otra pregunta apunta todavia
+// a la copia, por ser un id nuevo); sus propios destinos SALIENTES se
+// conservan tal cual, porque siguen siendo la continuacion logica
+// correcta del arbol.
+export function duplicarNodo(nodo: NodoDiagnostico): NodoDiagnostico {
+  return {
+    ...nodo,
+    id: crypto.randomUUID(),
+    tituloInterno: nodo.tituloInterno ? `${nodo.tituloInterno} (copia)` : '',
+    opciones: nodo.opciones.map((opcion) => ({ ...opcion, id: crypto.randomUUID() })),
   }
 }
 
@@ -37,6 +53,7 @@ export function normalizarNodos(valor: unknown): NodoDiagnostico[] {
     .filter((n): n is Record<string, unknown> => Boolean(n) && typeof n === 'object')
     .map((origen) => ({
       id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
+      tituloInterno: texto(origen.tituloInterno),
       pregunta: texto(origen.pregunta),
       descripcion: texto(origen.descripcion),
       opciones: normalizarOpciones(origen.opciones),
@@ -77,6 +94,7 @@ function texto(valor: unknown): string {
 export function prepararNodosParaGuardar(nodos: NodoDiagnostico[]): NodoDiagnostico[] {
   return nodos.map((nodo) => ({
     ...nodo,
+    tituloInterno: nodo.tituloInterno.trim(),
     pregunta: nodo.pregunta.trim(),
     descripcion: nodo.descripcion.trim(),
     opciones: nodo.opciones
