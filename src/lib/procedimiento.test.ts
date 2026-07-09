@@ -14,8 +14,20 @@ import {
 
 // Campos de clasificacion de tarea con sus valores por defecto, para
 // no repetirlos en cada bloque literal de las pruebas.
-const TAREA_ACCION = { tipoTarea: 'accion', decisionArticuloId: null, decisionArticuloTitulo: '' } as const
-const SIN_TAREA = { tipoTarea: null, decisionArticuloId: null, decisionArticuloTitulo: '' } as const
+const TAREA_ACCION = {
+  tipoTarea: 'accion',
+  decisionArticuloId: null,
+  decisionArticuloTitulo: '',
+  credencialId: null,
+  credencialTitulo: '',
+} as const
+const SIN_TAREA = {
+  tipoTarea: null,
+  decisionArticuloId: null,
+  decisionArticuloTitulo: '',
+  credencialId: null,
+  credencialTitulo: '',
+} as const
 
 // Bloque 'tarea' de prueba con id fijo por texto (para asserts estables).
 function tarea(texto: string): BloquePaso {
@@ -294,6 +306,8 @@ describe('normalizarProcedimiento', () => {
         tipoTarea: 'verificacion',
         decisionArticuloId: null,
         decisionArticuloTitulo: '',
+        credencialId: null,
+        credencialTitulo: '',
       },
       {
         id: 'b2',
@@ -304,6 +318,8 @@ describe('normalizarProcedimiento', () => {
         tipoTarea: 'decision',
         decisionArticuloId: 'art-9',
         decisionArticuloTitulo: 'Instalar impresora',
+        credencialId: null,
+        credencialTitulo: '',
       },
     ])
   })
@@ -325,6 +341,59 @@ describe('normalizarProcedimiento', () => {
     const bloques = resultado?.pasos[0].bloques ?? []
     expect(bloques[0]).toMatchObject({ tipoTarea: 'accion', decisionArticuloId: null, decisionArticuloTitulo: '' })
     expect(bloques[1]).toMatchObject({ tipoTarea: 'decision', decisionArticuloId: null, decisionArticuloTitulo: '' })
+  })
+
+  it('conserva el vínculo de credencial de una tarea y descarta uno mal formado', () => {
+    const conVinculo = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [
+            { id: 'b1', tipo: 'tarea', texto: 'Ingresar usuario y contraseña', credencialId: 'cred-1', credencialTitulo: 'SQL Server' },
+          ],
+        },
+      ],
+    })
+    expect(conVinculo?.pasos[0].bloques[0]).toMatchObject({ credencialId: 'cred-1', credencialTitulo: 'SQL Server' })
+
+    // Sin id valido no hay vinculo, y el titulo suelto se descarta.
+    const sinId = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [{ id: 'b1', tipo: 'tarea', texto: 'Ingresar usuario', credencialId: 42, credencialTitulo: 'SQL Server' }],
+        },
+      ],
+    })
+    expect(sinId?.pasos[0].bloques[0]).toMatchObject({ credencialId: null, credencialTitulo: '' })
+  })
+
+  it('el vínculo de credencial de una tarea es independiente de su tipoTarea (accion, verificacion o decision)', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [
+            {
+              id: 'b1',
+              tipo: 'tarea',
+              texto: '¿La impresora aparece instalada?',
+              tipoTarea: 'decision',
+              decisionArticuloId: 'art-9',
+              decisionArticuloTitulo: 'Instalar impresora',
+              credencialId: 'cred-1',
+              credencialTitulo: 'SQL Server',
+            },
+          ],
+        },
+      ],
+    })
+    expect(resultado?.pasos[0].bloques[0]).toMatchObject({
+      tipoTarea: 'decision',
+      decisionArticuloId: 'art-9',
+      credencialId: 'cred-1',
+      credencialTitulo: 'SQL Server',
+    })
   })
 
   it('prefiere la lista nueva de bloques por encima de las viejas instrucciones', () => {
@@ -610,6 +679,24 @@ describe('prepararProcedimientoParaGuardar', () => {
       }),
     ])
     expect(huerfano?.pasos[0].bloques[0].decisionArticuloTitulo).toBe('')
+  })
+
+  it('limpia el título del vínculo de credencial de una tarea y lo descarta si quedó huérfano', () => {
+    const conVinculo = preparar([
+      pasoCompleto({
+        bloques: [
+          { ...tarea('Ingresar usuario y contraseña'), credencialId: 'cred-1', credencialTitulo: '  SQL Server  ' },
+        ],
+      }),
+    ])
+    expect(conVinculo?.pasos[0].bloques[0].credencialTitulo).toBe('SQL Server')
+
+    const huerfano = preparar([
+      pasoCompleto({
+        bloques: [{ ...tarea('Ingresar usuario y contraseña'), credencialTitulo: 'huérfano' }],
+      }),
+    ])
+    expect(huerfano?.pasos[0].bloques[0].credencialTitulo).toBe('')
   })
 
   it('conserva un paso que solo tiene adjuntos', () => {

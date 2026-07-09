@@ -613,47 +613,61 @@ export function BloqueVista({
     )
   }
 
+  // El vinculo de credencial (tarea 40) es independiente del tipo de
+  // tarea: se muestra debajo del checkbox o de la pregunta, con el
+  // mismo apartado "Datos" contraido por defecto que ya protege la
+  // credencial vinculada a un paso completo.
+  const credencialInline = bloque.credencialId && (
+    <CredencialEnPaso credencialId={bloque.credencialId} tituloReferencia={bloque.credencialTitulo} />
+  )
+
   if (bloque.tipoTarea === 'decision') {
     return (
-      <DecisionEnTarea
-        bloque={bloque}
-        marcada={marcada}
-        onAlternar={onAlternar}
-        nivel={nivel}
-        ejecutarInline={ejecutarInline}
-      />
+      <div className="flex flex-col gap-1.5">
+        <DecisionEnTarea
+          bloque={bloque}
+          marcada={marcada}
+          onAlternar={onAlternar}
+          nivel={nivel}
+          ejecutarInline={ejecutarInline}
+        />
+        {credencialInline}
+      </div>
     )
   }
 
   const esVerificacion = bloque.tipoTarea === 'verificacion'
   return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={marcada}
-      aria-label={`${esVerificacion ? 'Verificación' : 'Tarea'}: ${bloque.texto}`}
-      onClick={onAlternar}
-      className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
-    >
-      {/* Las verificaciones muestran la casilla en azul con el ✓
-          insinuado: se distinguen de las acciones sin dejar de ser
-          casillas normales. */}
-      <span
-        aria-hidden
-        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
-          marcada
-            ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
-            : esVerificacion
-              ? 'border-sky-800 bg-sky-950/40 text-sky-700'
-              : 'border-slate-600 text-transparent'
-        }`}
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={marcada}
+        aria-label={`${esVerificacion ? 'Verificación' : 'Tarea'}: ${bloque.texto}`}
+        onClick={onAlternar}
+        className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
       >
-        ✓
-      </span>
-      <span className={`text-sm ${marcada ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
-        {bloque.texto}
-      </span>
-    </button>
+        {/* Las verificaciones muestran la casilla en azul con el ✓
+            insinuado: se distinguen de las acciones sin dejar de ser
+            casillas normales. */}
+        <span
+          aria-hidden
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+            marcada
+              ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
+              : esVerificacion
+                ? 'border-sky-800 bg-sky-950/40 text-sky-700'
+                : 'border-slate-600 text-transparent'
+          }`}
+        >
+          ✓
+        </span>
+        <span className={`text-sm ${marcada ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+          {bloque.texto}
+        </span>
+      </button>
+      {credencialInline}
+    </div>
   )
 }
 

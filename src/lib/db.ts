@@ -80,7 +80,12 @@ export type TipoTarea = 'accion' | 'verificacion' | 'decision'
 // `texto` es la tarea, el aviso o el pie de la imagen. `tipoTarea`
 // solo aplica a 'tarea', y el vinculo de decision (id + copia del
 // titulo, mismo patron que los vinculos del paso) solo a las tareas
-// de tipo 'decision'.
+// de tipo 'decision'. `credencialId`/`credencialTitulo` (tarea 40,
+// 2026-07-09) es el mismo vinculo con la boveda que ya existe a nivel
+// de paso completo (`PasoProcedimiento.credencialId`), pero anclado a
+// una tarea puntual: solo aplica a bloques 'tarea', para el caso de
+// un paso con varias instrucciones donde solo una necesita mostrar
+// una credencial (por ejemplo "Ingresar usuario y contraseña").
 export interface BloquePaso {
   id: string
   tipo: TipoBloque
@@ -90,6 +95,8 @@ export interface BloquePaso {
   tipoTarea: TipoTarea | null
   decisionArticuloId: string | null
   decisionArticuloTitulo: string
+  credencialId: string | null
+  credencialTitulo: string
 }
 
 export interface PasoProcedimiento {

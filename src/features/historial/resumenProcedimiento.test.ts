@@ -12,6 +12,8 @@ function tarea(texto: string): BloquePaso {
     tipoTarea: 'accion',
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
+    credencialId: null,
+    credencialTitulo: '',
   }
 }
 
@@ -25,6 +27,8 @@ function aviso(texto: string, tono: BloquePaso['tono'] = 'info'): BloquePaso {
     tipoTarea: null,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
+    credencialId: null,
+    credencialTitulo: '',
   }
 }
 
@@ -325,6 +329,8 @@ describe('resumenProcedimiento', () => {
           tipoTarea: null,
           decisionArticuloId: null,
           decisionArticuloTitulo: '',
+          credencialId: null,
+          credencialTitulo: '',
         },
       ],
     })

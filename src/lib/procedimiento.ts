@@ -40,6 +40,8 @@ export function crearBloqueTarea(tipoTarea: TipoTarea = 'accion'): BloquePaso {
     tipoTarea,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
+    credencialId: null,
+    credencialTitulo: '',
   }
 }
 
@@ -56,6 +58,8 @@ export function crearBloqueAviso(): BloquePaso {
     tipoTarea: null,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
+    credencialId: null,
+    credencialTitulo: '',
   }
 }
 
@@ -69,6 +73,8 @@ export function crearBloqueImagen(adjunto: PasoAdjunto): BloquePaso {
     tipoTarea: null,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
+    credencialId: null,
+    credencialTitulo: '',
   }
 }
 
@@ -178,6 +184,8 @@ function normalizarBloques(origen: Record<string, unknown>): BloquePaso[] {
         tipoTarea: 'accion' as const,
         decisionArticuloId: null,
         decisionArticuloTitulo: '',
+        credencialId: null,
+        credencialTitulo: '',
       }))
   }
 
@@ -198,7 +206,13 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     ? (origen.tipo as TipoBloque)
     : 'tarea'
   const textoBloque = texto(origen.texto)
-  const sinTarea = { tipoTarea: null, decisionArticuloId: null, decisionArticuloTitulo: '' }
+  const sinTarea = {
+    tipoTarea: null,
+    decisionArticuloId: null,
+    decisionArticuloTitulo: '',
+    credencialId: null,
+    credencialTitulo: '',
+  }
 
   if (tipo === 'imagen') {
     const adjunto = normalizarUnAdjunto(origen.adjunto)
@@ -227,6 +241,11 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     origen.decisionArticuloId !== ''
       ? origen.decisionArticuloId
       : null
+  // Vinculo de credencial (tarea 40): opcional en cualquier tarea,
+  // sin depender del tipoTarea. El titulo de referencia solo tiene
+  // sentido junto a su id, mismo patron que el resto de vinculos.
+  const credencialId =
+    typeof origen.credencialId === 'string' && origen.credencialId !== '' ? origen.credencialId : null
   return {
     id,
     tipo: 'tarea',
@@ -236,6 +255,8 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     tipoTarea,
     decisionArticuloId,
     decisionArticuloTitulo: decisionArticuloId ? texto(origen.decisionArticuloTitulo) : '',
+    credencialId,
+    credencialTitulo: credencialId ? texto(origen.credencialTitulo) : '',
   }
 }
 
@@ -455,14 +476,15 @@ export function prepararProcedimientoParaGuardar({
 // Limpia los bloques de un paso al guardar: recorta el texto y descarta
 // tareas y avisos vacios (una imagen sin texto es valida, es el pie que
 // es opcional). Una imagen sin adjunto no deberia existir, pero se
-// descarta por seguridad. El titulo de referencia del vinculo de
-// decision solo se conserva junto a su id.
+// descarta por seguridad. Los titulos de referencia de los vinculos de
+// decision y de credencial (tarea 40) solo se conservan junto a su id.
 function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
   return bloques
     .map((bloque) => ({
       ...bloque,
       texto: bloque.texto.trim(),
       decisionArticuloTitulo: bloque.decisionArticuloId ? bloque.decisionArticuloTitulo.trim() : '',
+      credencialTitulo: bloque.credencialId ? bloque.credencialTitulo.trim() : '',
     }))
     .filter((bloque) => {
       if (bloque.tipo === 'imagen') return bloque.adjunto !== null

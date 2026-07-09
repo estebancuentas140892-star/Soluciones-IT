@@ -289,6 +289,7 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             <ContenidoEditor
               bloques={paso.bloques}
               vinculables={vinculablesOrdenados}
+              credenciales={credencialesOrdenadas}
               onChange={(bloques) => actualizarPaso(indice, { bloques })}
               onSubirImagen={(evento) => void subirImagenBloque(indice, evento)}
               subiendoImagen={subiendoImagenPasoId === paso.id}
@@ -447,6 +448,7 @@ function SugerenciaVinculo({
 function ContenidoEditor({
   bloques,
   vinculables,
+  credenciales,
   onChange,
   onSubirImagen,
   subiendoImagen,
@@ -456,6 +458,10 @@ function ContenidoEditor({
   // vincular como respuesta "No" (la misma lista de los selectores
   // de procedimiento y solucion del paso).
   vinculables: Articulo[]
+  // Credenciales de la boveda que una tarea puede vincular (tarea 40),
+  // igual que el apartado "Datos" del paso pero anclado a una sola
+  // instruccion.
+  credenciales: Credencial[]
   onChange: (bloques: BloquePaso[]) => void
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
   subiendoImagen: boolean
@@ -525,6 +531,7 @@ function ContenidoEditor({
           key={bloque.id}
           bloque={bloque}
           vinculables={vinculables}
+          credenciales={credenciales}
           primero={indice === 0}
           ultimo={indice === bloques.length - 1}
           enfocar={focoId === bloque.id}
@@ -596,6 +603,7 @@ const TIPOS_TAREA: { valor: TipoTarea; etiqueta: string; placeholder: string }[]
 function FilaBloque({
   bloque,
   vinculables,
+  credenciales,
   primero,
   ultimo,
   enfocar,
@@ -608,6 +616,7 @@ function FilaBloque({
 }: {
   bloque: BloquePaso
   vinculables: Articulo[]
+  credenciales: Credencial[]
   primero: boolean
   ultimo: boolean
   enfocar: boolean
@@ -672,6 +681,9 @@ function FilaBloque({
             {tipoTarea === 'decision' && (
               <DecisionVinculoSelector bloque={bloque} articulos={vinculables} onCambiar={onCambiar} />
             )}
+            {/* Vinculo de credencial (tarea 40): opcional en cualquier
+                tarea, independiente de su clasificacion. */}
+            <CredencialTareaSelector bloque={bloque} credenciales={credenciales} onCambiar={onCambiar} />
           </div>
         )}
 
@@ -774,6 +786,64 @@ function DecisionVinculoSelector({
       {articulos.map((a) => (
         <option key={a.id} value={a.id}>
           {a.titulo}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+// Vinculo de credencial de una tarea puntual (tarea 40): para el caso
+// de un paso con varias instrucciones donde solo una necesita mostrar
+// datos de la boveda (por ejemplo "Ingresar usuario y contraseña"),
+// sin tener que vincular la credencial a todo el paso. Mismo patron de
+// referencia (id + copia del titulo) que el apartado "Datos" del paso
+// (`CredencialSelector`), pero compacto y anclado a la tarea.
+function CredencialTareaSelector({
+  bloque,
+  credenciales,
+  onCambiar,
+}: {
+  bloque: BloquePaso
+  credenciales: Credencial[]
+  onCambiar: (cambios: Partial<BloquePaso>) => void
+}) {
+  if (bloque.credencialId) {
+    const vinculada = credenciales.find((c) => c.id === bloque.credencialId)
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2">
+        <p className="min-w-0 truncate text-xs text-violet-200">
+          🔐 Datos de la bóveda: {vinculada?.titulo ?? bloque.credencialTitulo}
+        </p>
+        <button
+          type="button"
+          onClick={() => onCambiar({ credencialId: null, credencialTitulo: '' })}
+          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+  }
+
+  // Sin credenciales locales no hay nada que vincular: usuarios sin
+  // permiso de boveda no ven este control (RLS no les baja las filas).
+  if (credenciales.length === 0) return null
+
+  return (
+    <select
+      value=""
+      aria-label="Vincular datos de la bóveda a esta tarea"
+      onChange={(e) => {
+        const credencial = credenciales.find((c) => c.id === e.target.value)
+        if (credencial) onCambiar({ credencialId: credencial.id, credencialTitulo: credencial.titulo })
+      }}
+      className={`${CLASE_INPUT} text-slate-400`}
+    >
+      <option value="">+ 🔐 Datos de la bóveda para esta tarea (opcional)</option>
+      {credenciales.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.titulo}
+          {c.categoria ? ` (${c.categoria})` : ''}
         </option>
       ))}
     </select>
