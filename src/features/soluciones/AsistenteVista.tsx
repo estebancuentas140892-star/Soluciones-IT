@@ -89,7 +89,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
       <div className="flex flex-col gap-4">
         <BarraProgreso porcentaje={porcentaje} completado={false} />
         <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3">
-          <h2 className="text-sm font-medium text-amber-200">Verificación final</h2>
+          <h2 className="text-sm font-medium text-amber-200">✅ Verificación final</h2>
           <p className="mt-0.5 text-xs text-amber-400/80">
             Confirma que el objetivo realmente se cumplió antes de dar por terminado el procedimiento.
           </p>
@@ -278,7 +278,7 @@ function SubProcedimientoEnAsistente({
         to={ruta}
         className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2"
       >
-        <p className="min-w-0 truncate text-xs font-medium text-sky-200">Procedimiento: {articulo.titulo}</p>
+        <p className="min-w-0 truncate text-xs font-medium text-sky-200">🔗 Procedimiento: {articulo.titulo}</p>
         <span className="shrink-0 text-xs text-sky-300 underline underline-offset-2">Abrir</span>
       </Link>
     )
@@ -287,7 +287,7 @@ function SubProcedimientoEnAsistente({
   return (
     <div className="rounded-lg border border-sky-900/60 bg-sky-950/20 p-3">
       <p className="mb-3 min-w-0 truncate text-xs font-medium text-sky-200">
-        Procedimiento: {articulo.titulo}
+        🔗 Procedimiento: {articulo.titulo}
       </p>
       <AsistenteVista
         articuloId={articulo.id}
@@ -373,7 +373,7 @@ function SolucionEnAsistente({
         to={ruta}
         className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2"
       >
-        <p className="min-w-0 truncate text-xs font-medium text-amber-200">Solución: {articulo.titulo}</p>
+        <p className="min-w-0 truncate text-xs font-medium text-amber-200">🛠 Solución: {articulo.titulo}</p>
         <span className="shrink-0 text-xs text-amber-300 underline underline-offset-2">Abrir</span>
       </Link>
     )
@@ -388,7 +388,7 @@ function SolucionEnAsistente({
   return (
     <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3">
       <p className="mb-3 min-w-0 truncate text-xs font-medium text-amber-200">
-        Solución: {articulo.titulo}
+        🛠 Solución: {articulo.titulo}
       </p>
       <AsistenteVista
         articuloId={articulo.id}

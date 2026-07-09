@@ -53,7 +53,7 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
         className="flex w-full items-center justify-between gap-2 text-left"
       >
         <p className="min-w-0 truncate text-xs font-medium text-violet-200">
-          Datos{titulo ? `: ${titulo}` : ''}
+          🔐 Datos{titulo ? `: ${titulo}` : ''}
         </p>
         <span className="shrink-0 text-xs text-violet-300 underline underline-offset-2">
           {abierto ? 'Ocultar' : 'Ver'}

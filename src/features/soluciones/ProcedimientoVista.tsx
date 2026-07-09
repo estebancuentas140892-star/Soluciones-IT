@@ -229,7 +229,7 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
 
       {pasosCompletados && verificacionFinal.length > 0 && !verificacionCompleta && (
         <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3">
-          <h2 className="text-sm font-medium text-amber-200">Verificación final</h2>
+          <h2 className="text-sm font-medium text-amber-200">✅ Verificación final</h2>
           <p className="mt-0.5 text-xs text-amber-400/80">
             Confirma que el objetivo realmente se cumplió antes de dar por terminado el procedimiento.
           </p>
@@ -393,7 +393,7 @@ function SubProcedimientoEnPaso({
         className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2"
       >
         <p className="min-w-0 truncate text-xs font-medium text-sky-200">
-          Procedimiento: {articulo.titulo}
+          🔗 Procedimiento: {articulo.titulo}
         </p>
         <span className="shrink-0 text-xs text-sky-300 underline underline-offset-2">Abrir</span>
       </Link>
@@ -404,7 +404,7 @@ function SubProcedimientoEnPaso({
     <div className="rounded-lg border border-sky-900/60 bg-sky-950/20 p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="min-w-0 truncate text-xs font-medium text-sky-200">
-          Procedimiento: {articulo.titulo}
+          🔗 Procedimiento: {articulo.titulo}
         </p>
         <Link to={ruta} className="shrink-0 text-xs text-sky-300 underline underline-offset-2">
           Abrir
@@ -507,7 +507,7 @@ function SolucionEnPaso({
         className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2"
       >
         <p className="min-w-0 truncate text-xs font-medium text-amber-200">
-          Solución: {articulo.titulo}
+          🛠 Solución: {articulo.titulo}
         </p>
         <span className="shrink-0 text-xs text-amber-300 underline underline-offset-2">Abrir</span>
       </Link>
@@ -527,7 +527,7 @@ function SolucionEnPaso({
     <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="min-w-0 truncate text-xs font-medium text-amber-200">
-          Solución: {articulo.titulo}
+          🛠 Solución: {articulo.titulo}
         </p>
         <span className="flex shrink-0 items-center gap-2">
           <Link to={ruta} className="text-xs text-amber-300 underline underline-offset-2">

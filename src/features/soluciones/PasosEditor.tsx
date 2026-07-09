@@ -35,10 +35,11 @@ const CLASE_INPUT =
 
 // Editor del procedimiento paso a paso dentro del formulario de
 // articulo. Es un componente controlado: el estado vive en el
-// formulario y aqui solo se edita. Cada paso ofrece: titulo, objetivo,
-// un cuerpo de bloques intercalados (tareas con casilla, avisos e
-// imagenes), una galeria de adjuntos y los tres vinculos (datos de la
-// boveda, tarea reutilizable y solucion por si el paso falla).
+// formulario y aqui solo se edita. Cada paso sigue siempre la misma
+// estructura: nombre, objetivo, tareas (bloques intercalados de
+// tareas con casilla, advertencias e imagenes explicativas), archivos
+// relacionados y los tres vinculos (datos de la boveda, procedimiento
+// relacionado y solucion por si el paso falla).
 export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -249,22 +250,28 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             </div>
           </div>
 
-          <input
-            type="text"
-            required
-            value={paso.titulo}
-            onChange={(e) => actualizarPaso(indice, { titulo: e.target.value })}
-            placeholder="Qué hacer (por ejemplo: Conectar impresora)"
-            className={CLASE_INPUT}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-400">Nombre</span>
+            <input
+              type="text"
+              required
+              value={paso.titulo}
+              onChange={(e) => actualizarPaso(indice, { titulo: e.target.value })}
+              placeholder="Qué hacer (por ejemplo: Conectar impresora)"
+              className={CLASE_INPUT}
+            />
+          </label>
 
-          <input
-            type="text"
-            value={paso.objetivo}
-            onChange={(e) => actualizarPaso(indice, { objetivo: e.target.value })}
-            placeholder="Objetivo del paso (opcional, 1 línea): qué se logra al terminarlo"
-            className={`${CLASE_INPUT} text-sm`}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-400">🎯 Objetivo</span>
+            <input
+              type="text"
+              value={paso.objetivo}
+              onChange={(e) => actualizarPaso(indice, { objetivo: e.target.value })}
+              placeholder="Opcional, 1 línea: qué se logra al terminar el paso"
+              className={`${CLASE_INPUT} text-sm`}
+            />
+          </label>
 
           <SugerenciaVinculo
             articulo={sugerenciaPara(paso)}
@@ -277,61 +284,67 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             onDescartar={() => descartarSugerencia(paso.id)}
           />
 
-          <ContenidoEditor
-            bloques={paso.bloques}
-            onChange={(bloques) => actualizarPaso(indice, { bloques })}
-            onSubirImagen={(evento) => void subirImagenBloque(indice, evento)}
-            subiendoImagen={subiendoImagenPasoId === paso.id}
-          />
+          <div className="border-t border-slate-800/70 pt-3">
+            <ContenidoEditor
+              bloques={paso.bloques}
+              onChange={(bloques) => actualizarPaso(indice, { bloques })}
+              onSubirImagen={(evento) => void subirImagenBloque(indice, evento)}
+              subiendoImagen={subiendoImagenPasoId === paso.id}
+            />
+          </div>
 
-          <AdjuntosPasoEditor
-            paso={paso}
-            subiendo={subiendoPasoId === paso.id}
-            onSubir={(evento) => void subirAdjuntos(indice, evento)}
-            onQuitar={(referencia) => quitarAdjunto(indice, referencia)}
-          />
+          <div className="border-t border-slate-800/70 pt-3">
+            <AdjuntosPasoEditor
+              paso={paso}
+              subiendo={subiendoPasoId === paso.id}
+              onSubir={(evento) => void subirAdjuntos(indice, evento)}
+              onQuitar={(referencia) => quitarAdjunto(indice, referencia)}
+            />
+          </div>
 
-          <CredencialSelector
-            paso={paso}
-            credenciales={credencialesOrdenadas}
-            onVincular={(credencial) =>
-              actualizarPaso(indice, {
-                credencialId: credencial.id,
-                credencialTitulo: credencial.titulo,
-              })
-            }
-            onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
-          />
+          <div className="flex flex-col gap-3 border-t border-slate-800/70 pt-3">
+            <CredencialSelector
+              paso={paso}
+              credenciales={credencialesOrdenadas}
+              onVincular={(credencial) =>
+                actualizarPaso(indice, {
+                  credencialId: credencial.id,
+                  credencialTitulo: credencial.titulo,
+                })
+              }
+              onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
+            />
 
-          <SubProcedimientoSelector
-            paso={paso}
-            articulos={vinculablesOrdenados}
-            onVincular={(articulo) =>
-              actualizarPaso(indice, {
-                subArticuloId: articulo.id,
-                subArticuloTitulo: articulo.titulo,
-                // Si el paso aun no tiene titulo, toma el de la tarea
-                // vinculada: asi la lista de pasos se lee como lista
-                // de tareas sin escribir dos veces lo mismo.
-                titulo: paso.titulo.trim() === '' ? articulo.titulo : paso.titulo,
-              })
-            }
-            onQuitar={() => actualizarPaso(indice, { subArticuloId: null, subArticuloTitulo: '' })}
-          />
+            <SubProcedimientoSelector
+              paso={paso}
+              articulos={vinculablesOrdenados}
+              onVincular={(articulo) =>
+                actualizarPaso(indice, {
+                  subArticuloId: articulo.id,
+                  subArticuloTitulo: articulo.titulo,
+                  // Si el paso aun no tiene titulo, toma el de la tarea
+                  // vinculada: asi la lista de pasos se lee como lista
+                  // de tareas sin escribir dos veces lo mismo.
+                  titulo: paso.titulo.trim() === '' ? articulo.titulo : paso.titulo,
+                })
+              }
+              onQuitar={() => actualizarPaso(indice, { subArticuloId: null, subArticuloTitulo: '' })}
+            />
 
-          <SolucionSelector
-            paso={paso}
-            articulos={vinculablesOrdenados}
-            onVincular={(articulo) =>
-              actualizarPaso(indice, {
-                solucionArticuloId: articulo.id,
-                solucionArticuloTitulo: articulo.titulo,
-              })
-            }
-            onQuitar={() =>
-              actualizarPaso(indice, { solucionArticuloId: null, solucionArticuloTitulo: '' })
-            }
-          />
+            <SolucionSelector
+              paso={paso}
+              articulos={vinculablesOrdenados}
+              onVincular={(articulo) =>
+                actualizarPaso(indice, {
+                  solucionArticuloId: articulo.id,
+                  solucionArticuloTitulo: articulo.titulo,
+                })
+              }
+              onQuitar={() =>
+                actualizarPaso(indice, { solucionArticuloId: null, solucionArticuloTitulo: '' })
+              }
+            />
+          </div>
         </div>
       ))}
 
@@ -421,13 +434,14 @@ function SugerenciaVinculo({
   )
 }
 
-// Editor del cuerpo del paso: la lista ordenada de bloques (tareas con
-// casilla, avisos e imagenes). El caso comun (solo tareas) se mantiene
-// rapido: al pulsar Enter en una tarea se crea otra debajo y se enfoca,
-// y pegar varias lineas las reparte en tareas seguidas. Los avisos y
-// las imagenes se intercalan con sus botones y se reordenan con las
-// flechas para colocarlos en la posicion exacta (por ejemplo, una
-// precaucion justo antes de la tarea peligrosa).
+// Editor del apartado "Tareas" del paso: la lista ordenada de bloques
+// (tareas con casilla, advertencias e imagenes explicativas). El caso
+// comun (solo tareas) se mantiene rapido: al pulsar Enter en una tarea
+// se crea otra debajo y se enfoca, y pegar varias lineas las reparte
+// en tareas seguidas. Las advertencias y las imagenes se intercalan
+// desde la barra "Agregar" y se reordenan con las flechas para
+// colocarlas en la posicion exacta (por ejemplo, una advertencia justo
+// antes de la tarea peligrosa).
 function ContenidoEditor({
   bloques,
   onChange,
@@ -490,11 +504,12 @@ function ContenidoEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs text-slate-400">Contenido del paso</span>
+      <span className="text-xs text-slate-400">☑ Tareas</span>
 
       {bloques.length === 0 && (
         <p className="text-xs text-slate-500">
-          Sin contenido todavía. Agrega tareas con casilla, avisos o imágenes.
+          Sin tareas todavía. Cada tarea es una única acción con casilla; usa la barra Agregar para
+          sumar tareas, advertencias o imágenes explicativas.
         </p>
       )}
 
@@ -514,23 +529,27 @@ function ContenidoEditor({
         />
       ))}
 
-      <div className="flex flex-wrap gap-2">
+      {/* Barra "Agregar": las tres formas de sumar contenido al paso,
+          agrupadas para que el editor se lea como un constructor y no
+          como botones sueltos. */}
+      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-900/70 px-2.5 py-2">
+        <span className="text-xs font-medium text-slate-500">Agregar</span>
         <button
           type="button"
           onClick={() => agregarAlFinal(crearBloqueTarea())}
           className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
         >
-          + Tarea
+          + ☑ Tarea
         </button>
         <button
           type="button"
           onClick={() => agregarAlFinal(crearBloqueAviso())}
           className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
         >
-          + Aviso
+          + ⚠ Advertencia
         </button>
         <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
-          {subiendoImagen ? 'Subiendo...' : '+ Imagen'}
+          {subiendoImagen ? 'Subiendo...' : '+ 🖼 Imagen explicativa'}
           <input
             type="file"
             accept="image/*"
@@ -604,7 +623,7 @@ function FilaBloque({
           <div className="flex flex-col gap-1">
             <select
               value={bloque.tono ?? 'info'}
-              aria-label="Tono del aviso"
+              aria-label="Tono de la advertencia"
               onChange={(e) => onCambiar({ tono: e.target.value as TonoAviso })}
               className={`${CLASE_INPUT} text-slate-300`}
             >
@@ -624,7 +643,7 @@ function FilaBloque({
                 }
               }}
               onChange={(e) => onCambiar({ texto: e.target.value })}
-              placeholder="Texto del aviso (por ejemplo: Verifica el nombre del archivo antes de borrarlo)"
+              placeholder="Texto de la advertencia (por ejemplo: Verifica el nombre del archivo antes de eliminar el backup)"
               className={CLASE_INPUT}
             />
           </div>
@@ -709,7 +728,7 @@ function CredencialSelector({
     return (
       <div className="flex items-center justify-between gap-2 rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2">
         <p className="min-w-0 truncate text-xs text-violet-200">
-          Datos vinculados: {vinculada?.titulo ?? paso.credencialTitulo}
+          🔐 Datos de la bóveda: {vinculada?.titulo ?? paso.credencialTitulo}
         </p>
         <button
           type="button"
@@ -736,7 +755,7 @@ function CredencialSelector({
       }}
       className={`${CLASE_INPUT} text-slate-400`}
     >
-      <option value="">+ Vincular datos de la bóveda (opcional)</option>
+      <option value="">+ 🔐 Datos de la bóveda (opcional)</option>
       {credenciales.map((c) => (
         <option key={c.id} value={c.id}>
           {c.titulo}
@@ -767,7 +786,7 @@ function SubProcedimientoSelector({
     return (
       <div className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2">
         <p className="min-w-0 truncate text-xs text-sky-200">
-          Procedimiento vinculado: {vinculado?.titulo ?? paso.subArticuloTitulo}
+          🔗 Procedimiento relacionado: {vinculado?.titulo ?? paso.subArticuloTitulo}
         </p>
         <button
           type="button"
@@ -792,7 +811,7 @@ function SubProcedimientoSelector({
       }}
       className={`${CLASE_INPUT} text-slate-400`}
     >
-      <option value="">+ Vincular otro procedimiento como tarea (opcional)</option>
+      <option value="">+ 🔗 Procedimiento relacionado como tarea (opcional)</option>
       {articulos.map((a) => (
         <option key={a.id} value={a.id}>
           {a.titulo}
@@ -821,7 +840,7 @@ function SolucionSelector({
     return (
       <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2">
         <p className="min-w-0 truncate text-xs text-amber-200">
-          Solución si el paso falla: {vinculado?.titulo ?? paso.solucionArticuloTitulo}
+          🛠 Solución relacionada: {vinculado?.titulo ?? paso.solucionArticuloTitulo}
         </p>
         <button
           type="button"
@@ -846,7 +865,7 @@ function SolucionSelector({
       }}
       className={`${CLASE_INPUT} text-slate-400`}
     >
-      <option value="">+ Vincular solución por si este paso falla (opcional)</option>
+      <option value="">+ 🛠 Solución relacionada por si este paso falla (opcional)</option>
       {articulos.map((a) => (
         <option key={a.id} value={a.id}>
           {a.titulo}
@@ -856,10 +875,14 @@ function SolucionSelector({
   )
 }
 
-// Adjuntos del paso en el editor: imagenes y archivos (varios). Dos
-// formas de agregar: "Cámara" toma una foto en el sitio (util desde el
-// celular en un mantenimiento) y "+ Archivos" sube capturas, manuales
-// o PDF ya guardados. Cada adjunto se puede quitar.
+// "Archivos relacionados" del paso en el editor: manuales, PDF, Word,
+// Excel, presentaciones y fotos (varios). Dos formas de agregar:
+// "Tomar fotografía" usa la camara en el sitio (util desde el celular
+// en un mantenimiento) y "Seleccionar archivos" sube documentos ya
+// guardados. Cada archivo se puede quitar.
+const TIPOS_ARCHIVO_ACEPTADOS =
+  'image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv'
+
 function AdjuntosPasoEditor({
   paso,
   subiendo,
@@ -873,37 +896,38 @@ function AdjuntosPasoEditor({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-slate-400">Adjuntos del paso (manuales, PDF)</span>
-        <div className="flex gap-2">
+      <span className="text-xs text-slate-400">📎 Archivos relacionados</span>
+      <div className="flex flex-wrap gap-2">
+        <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+          {subiendo ? 'Subiendo...' : '📷 Tomar fotografía'}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            disabled={subiendo}
+            onChange={onSubir}
+          />
+        </label>
+        {!subiendo && (
           <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
-            {subiendo ? 'Subiendo...' : '📷 Cámara'}
+            📎 Seleccionar archivos
             <input
               type="file"
-              accept="image/*"
-              capture="environment"
+              accept={TIPOS_ARCHIVO_ACEPTADOS}
+              multiple
               className="hidden"
-              disabled={subiendo}
               onChange={onSubir}
             />
           </label>
-          {!subiendo && (
-            <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
-              📁 Archivos
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                multiple
-                className="hidden"
-                onChange={onSubir}
-              />
-            </label>
-          )}
-        </div>
+        )}
       </div>
 
       {paso.adjuntos.length === 0 ? (
-        <p className="text-xs text-slate-500">Sin adjuntos todavía</p>
+        <p className="text-xs text-slate-500">
+          Sin archivos todavía. Agrega manuales, PDF, Word, Excel o presentaciones que se necesiten
+          en este paso.
+        </p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {paso.adjuntos.map((adjunto) => (

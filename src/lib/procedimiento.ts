@@ -33,8 +33,11 @@ export function crearBloqueTarea(): BloquePaso {
   return { id: crypto.randomUUID(), tipo: 'tarea', texto: '', tono: null, adjunto: null }
 }
 
+// El boton del editor se llama "+ Advertencia", asi que el bloque
+// nuevo nace con el tono 'precaucion' (icono y color de advertencia);
+// el selector de tono permite suavizarlo a informacion o consejo.
 export function crearBloqueAviso(): BloquePaso {
-  return { id: crypto.randomUUID(), tipo: 'aviso', texto: '', tono: 'info', adjunto: null }
+  return { id: crypto.randomUUID(), tipo: 'aviso', texto: '', tono: 'precaucion', adjunto: null }
 }
 
 export function crearBloqueImagen(adjunto: PasoAdjunto): BloquePaso {

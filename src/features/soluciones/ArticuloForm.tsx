@@ -255,7 +255,7 @@ export function ArticuloForm() {
         )}
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Objetivo general del procedimiento (opcional, 1 línea)
+          🎯 Objetivo general del procedimiento (opcional, 1 línea)
           <input
             type="text"
             value={objetivoGeneral}
@@ -306,7 +306,7 @@ export function ArticuloForm() {
         <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Verificación final (uno por línea, opcional)
+          ✅ Verificación final (una por línea, opcional)
           <textarea
             rows={3}
             value={verificacionFinal}
@@ -317,7 +317,7 @@ export function ArticuloForm() {
         </label>
 
         <label className="flex flex-col gap-1 text-sm text-slate-300">
-          {pasos.length > 0 ? 'Notas adicionales (opcional, admite Markdown)' : 'Contenido (admite Markdown)'}
+          {pasos.length > 0 ? '📝 Notas adicionales (opcional, admite Markdown)' : 'Contenido (admite Markdown)'}
           <textarea
             required={pasos.length === 0}
             rows={pasos.length > 0 ? 4 : 10}
@@ -329,7 +329,7 @@ export function ArticuloForm() {
 
         {esEdicion && (
           <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Motivo del cambio (opcional)
+            📖 Motivo del cambio (opcional)
             <input
               type="text"
               value={motivo}
@@ -345,7 +345,9 @@ export function ArticuloForm() {
           disabled={guardando}
           className="mt-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950 disabled:opacity-50"
         >
-          {guardando ? 'Guardando...' : 'Guardar'}
+          {/* El nombre completo aclara QUE se guarda, ahora que el
+              formulario convive con mas acciones (volver, eliminar). */}
+          {guardando ? 'Guardando...' : pasos.length > 0 ? 'Guardar procedimiento' : 'Guardar artículo'}
         </button>
       </form>
     </div>

@@ -4,7 +4,13 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase (y, en la 37, que el equipo cure el contenido). Ver cada tarea en el archivo.)
+### 47. Mejoras de UX del editor de procedimientos (12 puntos del usuario, 2026-07-09)
+- Descripción: segunda tanda de mejoras de UX pedida por el usuario para que el editor se sienta como un constructor guiado y no como un formulario. Se ejecuta en 3 fases, con commit por fase:
+  - Fase A (puntos 1 a 8): renombres ("Contenido del paso" pasa a "Tareas", "+ Aviso" a "+ Advertencia", "+ Imagen" a "+ Imagen explicativa", "Adjuntos del paso" a "Archivos relacionados", botón "Guardar" a "Guardar procedimiento"), barra "Agregar" que agrupa los botones de bloques, iconografía consistente (🎯 ☑ ⚠ 🖼 📎 🔐 🔗 🛠 ✅ 📝 📖) y separadores visuales dentro de cada paso. También ampliar los tipos de archivo aceptados en "Archivos relacionados" (Word, Excel, presentaciones).
+  - Fase B (puntos 9 y 10): campo nuevo "Descripción" (cuándo usar el procedimiento, distinto del Objetivo) e imagen de portada opcional, ambos dentro del JSON `procedimiento` (sin cambio de schema en Supabase). La portada se muestra en el listado de la categoría, los resultados del buscador, las rutas de aprendizaje ("Para empezar" en Inicio) y las recomendaciones de artículos similares.
+  - Fase C (puntos 11 y 12): tipos de tarea en el checklist (Acción, Verificación, Decisión). La Decisión es una pregunta con Sí/No: Sí continúa; No despliega en línea la solución o el procedimiento vinculado y, al completarlo, regresa exactamente al punto donde iba (mismo patrón que la pregunta de error del paso). Funciona igual en la vista de lista, en el modo asistente y por lo tanto en los procedimientos que ejecuta el Diagnóstico Inteligente.
+- Prioridad: Alta
+- Ubicación: `src/features/soluciones/PasosEditor.tsx`, `src/features/soluciones/ArticuloForm.tsx`, `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/lib/db.ts` (tipos `Procedimiento` y `BloquePaso`), `src/lib/procedimiento.ts` (+ pruebas), `src/features/busqueda/useIndiceBusqueda.ts`, `src/features/busqueda/ResultadosBusqueda.tsx`, `src/features/soluciones/CategoriaPage.tsx`, `src/features/inicio/InicioPage.tsx`, `src/features/soluciones/ArticuloPage.tsx`.
 
 ## Por hacer
 
