@@ -1,6 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   db,
   type Dispositivo,
@@ -10,7 +19,12 @@ import {
   type PasoProcedimiento,
   type TipoArticulo,
 } from '../../lib/db'
-import { normalizarProcedimiento, prepararProcedimientoParaGuardar } from '../../lib/procedimiento'
+import {
+  duplicarProcedimiento,
+  normalizarProcedimiento,
+  prepararProcedimientoParaGuardar,
+} from '../../lib/procedimiento'
+import { evaluarCompletitud } from '../../lib/completitud'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
@@ -20,12 +34,33 @@ import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { PasosEditor } from './PasosEditor'
-import { TIPOS_ARTICULO } from './tiposArticulo'
+import { hayPlantilla, pasosDePlantilla, plantillaDe } from './plantillas'
+import { TIPOS_ARTICULO, tituloEditar, tituloNuevo } from './tiposArticulo'
 
+// La vista previa carga react-markdown, que pesa: se difiere hasta que
+// el usuario la pida para no encarecer la apertura del editor.
+const VistaPreviaArticulo = lazy(() =>
+  import('./VistaPreviaArticulo').then((m) => ({ default: m.VistaPreviaArticulo })),
+)
+
+const CLASE_INPUT =
+  'rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500'
+
+// Editor de articulos, organizado como un constructor guiado (fase S1
+// de PROPUESTA_MODULOS.md): cinco bloques con nombre (Informacion
+// general, Configuracion, Antes de comenzar, Desarrollo y
+// Finalizacion), titulo dinamico segun el tipo, plantillas que
+// precargan la estructura recomendada, vista previa antes de guardar,
+// duplicado por ?copiarDe=<id> e indicador de completitud.
 export function ArticuloForm() {
   const { categoriaId = '', articuloId } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const esEdicion = Boolean(articuloId)
+
+  // Modo duplicar: /soluciones/:categoriaId/nuevo?copiarDe=<id>
+  // precarga todo el articulo original con ids internos nuevos.
+  const copiarDe = esEdicion ? null : searchParams.get('copiarDe')
 
   // El id se decide desde el inicio (no al guardar) para que las
   // capturas de los pasos puedan subirse a su carpeta definitiva de
@@ -36,14 +71,18 @@ export function ArticuloForm() {
     () => (articuloId ? db.articulos.get(articuloId) : undefined),
     [articuloId],
   )
+  const original = useLiveQuery(
+    async () => (copiarDe ? ((await db.articulos.get(copiarDe)) ?? null) : null),
+    [copiarDe],
+  )
 
   const [titulo, setTitulo] = useState('')
   const [tipo, setTipo] = useState<TipoArticulo>('manual')
   const [contenido, setContenido] = useState('')
-  // Etiquetas ya no se editan (rediseño del 2026-07-03), pero los
-  // articulos guardados antes las conservan: se cargan y se devuelven
-  // tal cual al guardar para no borrar datos existentes.
-  const [etiquetas, setEtiquetas] = useState('')
+  // Etiquetas: retiradas el 2026-07-03 y reactivadas el 2026-07-09 por
+  // decision del usuario (fase S1). Se editan como chips y vuelven a
+  // indexarse en el buscador.
+  const [etiquetas, setEtiquetas] = useState<string[]>([])
   // Descripcion ("¿cuando usar este procedimiento?") y objetivo
   // general ("¿que se logra al completarlo?") conviven: responden
   // preguntas distintas y no se reemplazan entre si.
@@ -63,8 +102,14 @@ export function ArticuloForm() {
   const [dispositivosAfectados, setDispositivosAfectados] = useState<DispositivoAfectado[]>([])
   const [esRutaInicio, setEsRutaInicio] = useState(false)
   const [motivo, setMotivo] = useState('')
-  const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
+  const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe)
   const [guardando, setGuardando] = useState(false)
+  const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false)
+  // Tipos cuya oferta de plantilla ya fue descartada en esta sesion
+  // del formulario (no volver a insistir al cambiar de tipo y volver).
+  const [plantillasDescartadas, setPlantillasDescartadas] = useState<ReadonlySet<TipoArticulo>>(
+    new Set(),
+  )
 
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const dispositivosOrdenados = useMemo(
@@ -82,15 +127,15 @@ export function ArticuloForm() {
     return () => clearTimeout(temporizador)
   }, [titulo])
   const similares = useMemo(
-    () => (esEdicion ? [] : buscarArticulosSimilares(indice, tituloConRebote, id)),
-    [indice, tituloConRebote, esEdicion, id],
+    () => (esEdicion || copiarDe ? [] : buscarArticulosSimilares(indice, tituloConRebote, id)),
+    [indice, tituloConRebote, esEdicion, copiarDe, id],
   )
 
   useEffect(() => {
     if (!articulo || cargadoInicial) return
     setTitulo(articulo.titulo)
     setTipo(articulo.tipo)
-    setEtiquetas(articulo.etiquetas.join(', '))
+    setEtiquetas(articulo.etiquetas ?? [])
     setContenido(articulo.contenido)
     const procedimiento = normalizarProcedimiento(articulo.procedimiento)
     setDescripcion(procedimiento?.descripcion ?? '')
@@ -108,6 +153,82 @@ export function ArticuloForm() {
     setCargadoInicial(true)
   }, [articulo, cargadoInicial])
 
+  // Precarga del modo duplicar: todo el contenido del original con ids
+  // internos regenerados (duplicarProcedimiento) para que el progreso
+  // local jamas se cruce entre el original y la copia. Los adjuntos
+  // comparten referencia de Storage (los archivos no se copian) y la
+  // marca de ruta de inicio NO se copia para no duplicar destacados.
+  useEffect(() => {
+    if (!copiarDe || cargadoInicial || original === undefined) return
+    if (original === null || original.eliminadoEn) {
+      setCargadoInicial(true)
+      return
+    }
+    setTitulo(`Copia de ${original.titulo}`)
+    setTipo(original.tipo)
+    setEtiquetas(original.etiquetas ?? [])
+    setContenido(original.contenido)
+    const procedimiento = normalizarProcedimiento(original.procedimiento)
+    const copia = procedimiento ? duplicarProcedimiento(procedimiento) : null
+    setDescripcion(copia?.descripcion ?? '')
+    setPortada(copia?.portada ?? null)
+    setObjetivoGeneral(copia?.objetivoGeneral ?? '')
+    setRequisitos(copia?.requisitos.join('\n') ?? '')
+    setPasos(copia?.pasos ?? [])
+    setVerificacionFinal(copia?.verificacionFinal.join('\n') ?? '')
+    setTiempoEstimadoMin(copia?.tiempoEstimadoMin ? String(copia.tiempoEstimadoMin) : '')
+    setDificultad(copia?.dificultad ?? '')
+    setSintomas((original.sintomas ?? []).join('\n'))
+    setCausas((original.causas ?? []).join('\n'))
+    setDispositivosAfectados(original.dispositivosAfectados ?? [])
+    setCargadoInicial(true)
+  }, [copiarDe, original, cargadoInicial])
+
+  // El procedimiento tal cual quedaria guardado con lo escrito hasta
+  // ahora: lo comparten la vista previa y el indicador de completitud.
+  const procedimientoPreparado = useMemo(
+    () =>
+      prepararProcedimientoParaGuardar({
+        descripcion,
+        portada,
+        objetivoGeneral,
+        requisitosTexto: requisitos,
+        pasos,
+        verificacionFinalTexto: verificacionFinal,
+        tiempoEstimadoMin: tiempoEstimadoMin.trim() === '' ? null : Number(tiempoEstimadoMin),
+        dificultad: dificultad === '' ? null : dificultad,
+      }),
+    [descripcion, portada, objetivoGeneral, requisitos, pasos, verificacionFinal, tiempoEstimadoMin, dificultad],
+  )
+
+  const completitud = useMemo(
+    () => evaluarCompletitud(procedimientoPreparado, etiquetas),
+    [procedimientoPreparado, etiquetas],
+  )
+
+  // Oferta de plantilla: solo en un articulo nuevo (no edicion ni
+  // copia), con el desarrollo aun vacio y si el tipo tiene estructura
+  // recomendada que aportar.
+  const plantilla = plantillaDe(tipo)
+  const ofrecerPlantilla =
+    !esEdicion &&
+    !copiarDe &&
+    hayPlantilla(tipo) &&
+    !plantillasDescartadas.has(tipo) &&
+    pasos.length === 0 &&
+    (plantilla.contenido === '' || contenido.trim() === '')
+
+  function aplicarPlantilla() {
+    if (pasos.length === 0 && plantilla.pasos.length > 0) setPasos(pasosDePlantilla(plantilla))
+    if (requisitos.trim() === '' && plantilla.requisitos.length > 0) {
+      setRequisitos(plantilla.requisitos.join('\n'))
+    }
+    if (verificacionFinal.trim() === '' && plantilla.verificacionFinal.length > 0) {
+      setVerificacionFinal(plantilla.verificacionFinal.join('\n'))
+    }
+    if (contenido.trim() === '' && plantilla.contenido !== '') setContenido(plantilla.contenido)
+  }
+
   if (esEdicion && articulo === null) return <Navigate to={`/soluciones/${categoriaId}`} replace />
 
   async function manejarEnvio(evento: FormEvent) {
@@ -122,20 +243,8 @@ export function ArticuloForm() {
         titulo: titulo.trim(),
         tipo,
         contenido,
-        etiquetas: etiquetas
-          .split(',')
-          .map((e) => e.trim())
-          .filter(Boolean),
-        procedimiento: prepararProcedimientoParaGuardar({
-          descripcion,
-          portada,
-          objetivoGeneral,
-          requisitosTexto: requisitos,
-          pasos,
-          verificacionFinalTexto: verificacionFinal,
-          tiempoEstimadoMin: tiempoEstimadoMin.trim() === '' ? null : Number(tiempoEstimadoMin),
-          dificultad: dificultad === '' ? null : dificultad,
-        }),
+        etiquetas,
+        procedimiento: procedimientoPreparado,
         sintomas: sintomas
           .split('\n')
           .map((s) => s.trim())
@@ -153,234 +262,428 @@ export function ArticuloForm() {
     navigate(`/soluciones/${categoriaId}/${id}`)
   }
 
-  if (esEdicion && !cargadoInicial) {
+  if (!cargadoInicial) {
     return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-6">
+    <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
         <BotonVolver to={esEdicion ? `/soluciones/${categoriaId}/${articuloId}` : `/soluciones/${categoriaId}`}>
           Volver
         </BotonVolver>
-        <h1 className="text-xl font-semibold">{esEdicion ? 'Editar artículo' : 'Nuevo artículo'}</h1>
+        {/* El titulo dice QUE se esta creando segun el tipo elegido. */}
+        <h1 className="text-xl font-semibold">
+          {esEdicion ? tituloEditar(tipo) : tituloNuevo(tipo)}
+        </h1>
       </header>
 
-      <form onSubmit={manejarEnvio} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Título
-          <input
-            type="text"
-            required
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        {similares.length > 0 && (
-          <div className="rounded-xl border border-sky-900/60 bg-sky-950/20 px-4 py-3">
-            <p className="text-xs font-medium text-sky-200">
-              Ya existen artículos parecidos. ¿Es alguno de estos? Ábrelo en lugar de crear uno nuevo.
-            </p>
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {similares.map((similar) => (
-                <li key={similar.id} className="flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-2">
-                    {similar.portadaRef && <MiniaturaPortada referencia={similar.portadaRef} />}
-                    <span className="min-w-0 truncate text-sm text-slate-200">{similar.titulo}</span>
-                  </span>
-                  <Link
-                    to={similar.ruta}
-                    className="shrink-0 text-xs text-sky-300 underline underline-offset-2"
-                  >
-                    Abrir
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Tipo
-          <select
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value as TipoArticulo)}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            {TIPOS_ARTICULO.map(({ valor, etiqueta }) => (
-              <option key={valor} value={valor}>
-                {etiqueta}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex items-start gap-2 text-sm text-slate-300">
-          <input
-            type="checkbox"
-            checked={esRutaInicio}
-            onChange={(e) => setEsRutaInicio(e.target.checked)}
-            className="mt-0.5"
-          />
-          <span>
-            Destacar en Inicio como ruta de aprendizaje
-            <span className="block text-xs text-slate-500">
-              Para guías como "Primer día en TI": aparece en un acceso destacado en la pantalla de Inicio.
-            </span>
-          </span>
-        </label>
-
-        {tipo === 'problema_frecuente' && (
-          <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-950 p-3">
-            <label className="flex flex-col gap-1 text-sm text-slate-300">
-              Síntomas (uno por línea)
-              <textarea
-                rows={3}
-                value={sintomas}
-                onChange={(e) => setSintomas(e.target.value)}
-                placeholder={'No imprime nada\nLuz roja parpadeando\nAtasco de papel frecuente'}
-                className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm text-slate-300">
-              Posibles causas (una por línea)
-              <textarea
-                rows={3}
-                value={causas}
-                onChange={(e) => setCausas(e.target.value)}
-                placeholder={'Cable de red suelto\nTóner agotado\nSpooler de impresión caído'}
-                className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-            </label>
-
-            <DispositivosAfectadosEditor
-              vinculados={dispositivosAfectados}
-              dispositivos={dispositivosOrdenados}
-              onVincular={(dispositivo) =>
-                setDispositivosAfectados((actuales) => [
-                  ...actuales,
-                  { id: dispositivo.id, nombre: dispositivo.nombre },
-                ])
-              }
-              onQuitar={(id) =>
-                setDispositivosAfectados((actuales) => actuales.filter((d) => d.id !== id))
-              }
-            />
-          </div>
-        )}
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Descripción (opcional): ¿cuándo usar este procedimiento?
-          <textarea
-            rows={2}
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Utiliza este procedimiento cuando necesites conectar una impresora de red a un computador con Windows"
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        <PortadaEditor articuloId={id} portada={portada} onChange={setPortada} />
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          🎯 Objetivo general del procedimiento (opcional, 1 línea)
-          <input
-            type="text"
-            value={objetivoGeneral}
-            onChange={(e) => setObjetivoGeneral(e.target.value)}
-            placeholder="Qué se logra al completar todo el procedimiento"
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        <div className="flex gap-3">
-          <label className="flex flex-1 flex-col gap-1 text-sm text-slate-300">
-            Tiempo estimado (minutos, opcional)
-            <input
-              type="number"
-              min={1}
-              value={tiempoEstimadoMin}
-              onChange={(e) => setTiempoEstimadoMin(e.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </label>
-
-          <label className="flex flex-1 flex-col gap-1 text-sm text-slate-300">
-            Dificultad (opcional)
-            <select
-              value={dificultad}
-              onChange={(e) => setDificultad(e.target.value as NivelDificultad | '')}
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="">Sin definir</option>
-              <option value="principiante">Principiante</option>
-              <option value="intermedio">Intermedio</option>
-              <option value="avanzado">Avanzado</option>
-            </select>
-          </label>
-        </div>
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Requisitos, "Antes de empezar" (uno por línea, opcional)
-          <textarea
-            rows={3}
-            value={requisitos}
-            onChange={(e) => setRequisitos(e.target.value)}
-            placeholder={'Acceso a la red\nPermisos de administrador\nConexión VPN activa'}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          ✅ Verificación final (una por línea, opcional)
-          <textarea
-            rows={3}
-            value={verificacionFinal}
-            onChange={(e) => setVerificacionFinal(e.target.value)}
-            placeholder={'La impresora aparece instalada\nLa impresión de prueba fue exitosa'}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
-          {pasos.length > 0 ? '📝 Notas adicionales (opcional, admite Markdown)' : 'Contenido (admite Markdown)'}
-          <textarea
-            required={pasos.length === 0}
-            rows={pasos.length > 0 ? 4 : 10}
-            value={contenido}
-            onChange={(e) => setContenido(e.target.value)}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 font-mono text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </label>
-
-        {esEdicion && (
+      <form onSubmit={manejarEnvio} className="flex flex-col gap-5">
+        <Seccion titulo="Información general" descripcion="Qué es este documento y cómo identificarlo.">
           <label className="flex flex-col gap-1 text-sm text-slate-300">
-            📖 Motivo del cambio (opcional)
+            Título
             <input
               type="text"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="¿Por qué se actualizó este artículo?"
-              className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              required
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              className={CLASE_INPUT}
             />
           </label>
-        )}
 
-        <button
-          type="submit"
-          disabled={guardando}
-          className="mt-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950 disabled:opacity-50"
-        >
-          {/* El nombre completo aclara QUE se guarda, ahora que el
-              formulario convive con mas acciones (volver, eliminar). */}
-          {guardando ? 'Guardando...' : pasos.length > 0 ? 'Guardar procedimiento' : 'Guardar artículo'}
-        </button>
+          {similares.length > 0 && (
+            <div className="rounded-xl border border-sky-900/60 bg-sky-950/20 px-4 py-3">
+              <p className="text-xs font-medium text-sky-200">
+                Ya existen artículos parecidos. ¿Es alguno de estos? Ábrelo en lugar de crear uno nuevo.
+              </p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {similares.map((similar) => (
+                  <li key={similar.id} className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
+                      {similar.portadaRef && <MiniaturaPortada referencia={similar.portadaRef} />}
+                      <span className="min-w-0 truncate text-sm text-slate-200">{similar.titulo}</span>
+                    </span>
+                    <Link
+                      to={similar.ruta}
+                      className="shrink-0 text-xs text-sky-300 underline underline-offset-2"
+                    >
+                      Abrir
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Tipo
+            <select
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value as TipoArticulo)}
+              className={CLASE_INPUT}
+            >
+              {TIPOS_ARTICULO.map(({ valor, etiqueta }) => (
+                <option key={valor} value={valor}>
+                  {etiqueta}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {ofrecerPlantilla && (
+            <div className="flex flex-col gap-2 rounded-xl border border-sky-900/60 bg-sky-950/20 px-4 py-3">
+              <p className="text-xs text-sky-200">
+                ¿Empezar con la estructura recomendada para {tituloNuevo(tipo).toLowerCase().replace(/^nuev[oa] /, '')}?
+                Precarga pasos y campos de ejemplo que solo tienes que editar.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={aplicarPlantilla}
+                  className="rounded-lg border border-sky-800 px-3 py-1.5 text-xs text-sky-300"
+                >
+                  Usar plantilla
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlantillasDescartadas((actuales) => new Set([...actuales, tipo]))}
+                  className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400"
+                >
+                  Empezar en blanco
+                </button>
+              </div>
+            </div>
+          )}
+
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Descripción (opcional): ¿cuándo usar este procedimiento?
+            <textarea
+              rows={2}
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Utiliza este procedimiento cuando necesites conectar una impresora de red a un computador con Windows"
+              className={CLASE_INPUT}
+            />
+          </label>
+
+          <PortadaEditor articuloId={id} portada={portada} onChange={setPortada} />
+
+          <EtiquetasEditor etiquetas={etiquetas} onChange={setEtiquetas} />
+        </Seccion>
+
+        <Seccion titulo="Configuración" descripcion="Cómo se presenta y qué esperar de él.">
+          <label className="flex items-start gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={esRutaInicio}
+              onChange={(e) => setEsRutaInicio(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              Destacar en Inicio como ruta de aprendizaje
+              <span className="block text-xs text-slate-500">
+                Para guías como "Primer día en TI": aparece en un acceso destacado en la pantalla de Inicio.
+              </span>
+            </span>
+          </label>
+
+          <div className="flex gap-3">
+            <label className="flex flex-1 flex-col gap-1 text-sm text-slate-300">
+              Tiempo estimado (minutos, opcional)
+              <input
+                type="number"
+                min={1}
+                value={tiempoEstimadoMin}
+                onChange={(e) => setTiempoEstimadoMin(e.target.value)}
+                className={CLASE_INPUT}
+              />
+            </label>
+
+            <label className="flex flex-1 flex-col gap-1 text-sm text-slate-300">
+              Dificultad (opcional)
+              <select
+                value={dificultad}
+                onChange={(e) => setDificultad(e.target.value as NivelDificultad | '')}
+                className={CLASE_INPUT}
+              >
+                <option value="">Sin definir</option>
+                <option value="principiante">Principiante</option>
+                <option value="intermedio">Intermedio</option>
+                <option value="avanzado">Avanzado</option>
+              </select>
+            </label>
+          </div>
+        </Seccion>
+
+        <Seccion titulo="Antes de comenzar" descripcion="El contexto que el técnico necesita antes del primer paso.">
+          {tipo === 'problema_frecuente' && (
+            <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-950 p-3">
+              <label className="flex flex-col gap-1 text-sm text-slate-300">
+                Síntomas (uno por línea)
+                <textarea
+                  rows={3}
+                  value={sintomas}
+                  onChange={(e) => setSintomas(e.target.value)}
+                  placeholder={'No imprime nada\nLuz roja parpadeando\nAtasco de papel frecuente'}
+                  className={CLASE_INPUT}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 text-sm text-slate-300">
+                Posibles causas (una por línea)
+                <textarea
+                  rows={3}
+                  value={causas}
+                  onChange={(e) => setCausas(e.target.value)}
+                  placeholder={'Cable de red suelto\nTóner agotado\nSpooler de impresión caído'}
+                  className={CLASE_INPUT}
+                />
+              </label>
+
+              <DispositivosAfectadosEditor
+                vinculados={dispositivosAfectados}
+                dispositivos={dispositivosOrdenados}
+                onVincular={(dispositivo) =>
+                  setDispositivosAfectados((actuales) => [
+                    ...actuales,
+                    { id: dispositivo.id, nombre: dispositivo.nombre },
+                  ])
+                }
+                onQuitar={(id) =>
+                  setDispositivosAfectados((actuales) => actuales.filter((d) => d.id !== id))
+                }
+              />
+            </div>
+          )}
+
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            🎯 Objetivo general del procedimiento (opcional, 1 línea)
+            <input
+              type="text"
+              value={objetivoGeneral}
+              onChange={(e) => setObjetivoGeneral(e.target.value)}
+              placeholder="Qué se logra al completar todo el procedimiento"
+              className={CLASE_INPUT}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Requisitos, "Antes de empezar" (uno por línea, opcional)
+            <textarea
+              rows={3}
+              value={requisitos}
+              onChange={(e) => setRequisitos(e.target.value)}
+              placeholder={'Acceso a la red\nPermisos de administrador\nConexión VPN activa'}
+              className={CLASE_INPUT}
+            />
+          </label>
+        </Seccion>
+
+        <Seccion titulo="Desarrollo" descripcion="Los pasos del procedimiento, con sus tareas, advertencias e imágenes.">
+          <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
+        </Seccion>
+
+        <Seccion titulo="Finalización" descripcion="Cómo confirmar que quedó bien y las notas de cierre.">
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            ✅ Verificación final (una por línea, opcional)
+            <textarea
+              rows={3}
+              value={verificacionFinal}
+              onChange={(e) => setVerificacionFinal(e.target.value)}
+              placeholder={'La impresora aparece instalada\nLa impresión de prueba fue exitosa'}
+              className={CLASE_INPUT}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            {pasos.length > 0 ? '📝 Notas adicionales (opcional, admite Markdown)' : 'Contenido (admite Markdown)'}
+            <textarea
+              required={pasos.length === 0}
+              rows={pasos.length > 0 ? 4 : 10}
+              value={contenido}
+              onChange={(e) => setContenido(e.target.value)}
+              className={`${CLASE_INPUT} font-mono`}
+            />
+          </label>
+
+          {esEdicion && (
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              📖 Motivo del cambio (opcional)
+              <input
+                type="text"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="¿Por qué se actualizó este artículo?"
+                className={CLASE_INPUT}
+              />
+            </label>
+          )}
+        </Seccion>
+
+        {pasos.length > 0 && <IndicadorCompletitud completitud={completitud} />}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setMostrarVistaPrevia(true)}
+            className="rounded-xl border border-slate-700 px-5 py-3 text-sm text-slate-300"
+          >
+            Vista previa
+          </button>
+          <button
+            type="submit"
+            disabled={guardando}
+            className="flex-1 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950 disabled:opacity-50"
+          >
+            {/* El nombre completo aclara QUE se guarda, ahora que el
+                formulario convive con mas acciones (volver, eliminar). */}
+            {guardando ? 'Guardando...' : pasos.length > 0 ? 'Guardar procedimiento' : 'Guardar artículo'}
+          </button>
+        </div>
       </form>
+
+      {mostrarVistaPrevia && (
+        <Suspense fallback={<p className="text-sm text-slate-400">Preparando la vista previa...</p>}>
+          <VistaPreviaArticulo
+            articuloId={id}
+            titulo={titulo}
+            tipo={tipo}
+            etiquetas={etiquetas}
+            procedimiento={procedimientoPreparado}
+            contenido={contenido}
+            onCerrar={() => setMostrarVistaPrevia(false)}
+          />
+        </Suspense>
+      )}
+    </div>
+  )
+}
+
+// Un bloque del formulario con nombre y proposito: separa visualmente
+// las cinco etapas del constructor sin cambiar ningun dato.
+function Seccion({
+  titulo,
+  descripcion,
+  children,
+}: {
+  titulo: string
+  descripcion: string
+  children: ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-200">{titulo}</h2>
+        <p className="text-xs text-slate-500">{descripcion}</p>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+// Barra de completitud del procedimiento: una guia de que agregar para
+// que la documentacion quede completa. Nunca bloquea el guardado.
+function IndicadorCompletitud({
+  completitud,
+}: {
+  completitud: { porcentaje: number; sugerencias: string[] }
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const completo = completitud.porcentaje === 100
+
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-slate-300">
+          Completitud: <span className="font-semibold">{completitud.porcentaje} %</span>
+        </p>
+        {!completo && (
+          <button
+            type="button"
+            onClick={() => setAbierto((v) => !v)}
+            aria-expanded={abierto}
+            className="text-xs text-sky-400 underline underline-offset-2"
+          >
+            {abierto ? 'Ocultar sugerencias' : `Ver sugerencias (${completitud.sugerencias.length})`}
+          </button>
+        )}
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+        <div
+          className={`h-full rounded-full transition-all ${completo ? 'bg-emerald-500' : 'bg-sky-500'}`}
+          style={{ width: `${completitud.porcentaje}%` }}
+        />
+      </div>
+      {abierto && !completo && (
+        <ul className="flex flex-col gap-1">
+          {completitud.sugerencias.map((sugerencia) => (
+            <li key={sugerencia} className="text-xs text-slate-400">
+              • {sugerencia}
+            </li>
+          ))}
+        </ul>
+      )}
+      {completo && <p className="text-xs text-emerald-400">Documentación completa. ✓</p>}
+    </div>
+  )
+}
+
+// Editor de etiquetas como chips: Enter o coma agregan, ✕ quita. Se
+// guardan como lista y alimentan el indice de busqueda.
+function EtiquetasEditor({
+  etiquetas,
+  onChange,
+}: {
+  etiquetas: string[]
+  onChange: (etiquetas: string[]) => void
+}) {
+  const [texto, setTexto] = useState('')
+
+  function agregar() {
+    const limpia = texto.trim().replace(/,+$/, '').trim()
+    setTexto('')
+    if (limpia === '') return
+    if (etiquetas.some((e) => e.toLowerCase() === limpia.toLowerCase())) return
+    onChange([...etiquetas, limpia])
+  }
+
+  return (
+    <div className="flex flex-col gap-2 text-sm text-slate-300">
+      <span>Etiquetas (opcional): mejoran los resultados del buscador</span>
+      {etiquetas.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {etiquetas.map((etiqueta) => (
+            <li
+              key={etiqueta}
+              className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-200"
+            >
+              {etiqueta}
+              <button
+                type="button"
+                onClick={() => onChange(etiquetas.filter((e) => e !== etiqueta))}
+                aria-label={`Quitar la etiqueta ${etiqueta}`}
+                className="text-slate-400"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <input
+        type="text"
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault()
+            agregar()
+          }
+        }}
+        onBlur={agregar}
+        placeholder="Escribe una etiqueta y presiona Enter (SQL, Backup, POS, Impresora...)"
+        className={CLASE_INPUT}
+      />
     </div>
   )
 }

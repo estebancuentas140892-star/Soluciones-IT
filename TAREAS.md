@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase (y, en la 37, que el equipo cure el contenido). Ver cada tarea en el archivo.)
+(Vacío. La siguiente fase aprobada de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) es la D1: pulido del editor de diagnósticos. Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql actualizado en Supabase. Ver cada tarea en el archivo.)
 
 ## Por hacer
 

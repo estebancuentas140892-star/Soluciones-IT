@@ -329,6 +329,29 @@ function texto(valor: unknown): string {
   return typeof valor === 'string' ? valor : ''
 }
 
+// Copia profunda de un procedimiento para "Duplicar": regenera los
+// ids internos de pasos y bloques (el progreso local y las claves de
+// la interfaz asumen ids unicos; compartirlos entre el original y la
+// copia seria buscarse problemas). Los adjuntos y la portada CONSERVAN
+// su referencia de Storage a proposito: los archivos se comparten sin
+// copiarse (nunca se borran de Storage) y los vinculos a otros
+// articulos (credencial, subprocedimiento, solucion, decision) siguen
+// apuntando a los mismos, que es lo correcto en una copia.
+export function duplicarProcedimiento(procedimiento: Procedimiento): Procedimiento {
+  return {
+    ...procedimiento,
+    pasos: procedimiento.pasos.map((paso) => ({
+      ...paso,
+      id: crypto.randomUUID(),
+      adjuntos: paso.adjuntos.map((adjunto) => ({ ...adjunto })),
+      bloques: paso.bloques.map((bloque) => ({ ...bloque, id: crypto.randomUUID() })),
+    })),
+    requisitos: [...procedimiento.requisitos],
+    verificacionFinal: [...procedimiento.verificacionFinal],
+    portada: procedimiento.portada ? { ...procedimiento.portada } : null,
+  }
+}
+
 // Texto plano de un procedimiento para el indice de busqueda: asi
 // "back up" encuentra el articulo aunque solo aparezca en un paso.
 // El titulo de la credencial vinculada queda fuera a proposito: los

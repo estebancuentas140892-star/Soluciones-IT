@@ -59,6 +59,18 @@ export function ArticuloPage() {
             Última modificación: {formateadorFecha.format(new Date(articulo.updatedAt))}
             {autor?.nombre ? `, por ${autor.nombre}` : ''}
           </p>
+          {(articulo.etiquetas ?? []).length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {articulo.etiquetas.map((etiqueta) => (
+                <li
+                  key={etiqueta}
+                  className="rounded-full border border-slate-800 bg-slate-900 px-2.5 py-0.5 text-[11px] text-slate-400"
+                >
+                  {etiqueta}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {procedimiento?.descripcion && (
           <p className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-300">
@@ -83,6 +95,12 @@ export function ArticuloPage() {
           className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
         >
           Editar
+        </Link>
+        <Link
+          to={`/soluciones/${categoriaId}/nuevo?copiarDe=${articuloId}`}
+          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+        >
+          Duplicar
         </Link>
         <button
           type="button"

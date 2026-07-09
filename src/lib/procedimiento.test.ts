@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { BloquePaso, PasoProcedimiento, Procedimiento } from './db'
 import {
   crearPaso,
+  duplicarProcedimiento,
   normalizarProcedimiento,
   pasoSeCompletaSolo,
   pasoTrabajoPrevioCompleto,
@@ -741,6 +742,51 @@ describe('prepararProcedimientoParaGuardar', () => {
 
     const huerfano = preparar([pasoCompleto({ solucionArticuloId: null, solucionArticuloTitulo: 'huérfano' })])
     expect(huerfano?.pasos[0].solucionArticuloTitulo).toBe('')
+  })
+})
+
+describe('duplicarProcedimiento', () => {
+  it('regenera los ids de pasos y bloques pero conserva el contenido y las referencias', () => {
+    const original = procedimientoCompleto({
+      descripcion: 'Cuándo usarlo',
+      portada: { referencia: 'a/portada.jpg', nombre: 'p.jpg', tipo: 'image/jpeg' },
+      requisitos: ['Acceso a la red'],
+      verificacionFinal: ['Funciona'],
+      pasos: [
+        pasoCompleto({
+          bloques: [tarea('Encender la impresora')],
+          adjuntos: [{ referencia: 'a/manual.pdf', nombre: 'manual.pdf', tipo: 'application/pdf' }],
+          credencialId: 'cred-1',
+          credencialTitulo: 'Impresora',
+          subArticuloId: 'art-2',
+          subArticuloTitulo: 'Configurar impresora',
+        }),
+      ],
+    })
+
+    const copia = duplicarProcedimiento(original)
+
+    // Ids nuevos en pasos y bloques (el progreso local no se cruza).
+    expect(copia.pasos[0].id).not.toBe(original.pasos[0].id)
+    expect(copia.pasos[0].bloques[0].id).not.toBe(original.pasos[0].bloques[0].id)
+
+    // El contenido y los vinculos se conservan tal cual.
+    expect(copia.descripcion).toBe('Cuándo usarlo')
+    expect(copia.pasos[0].titulo).toBe(original.pasos[0].titulo)
+    expect(copia.pasos[0].bloques[0].texto).toBe('Encender la impresora')
+    expect(copia.pasos[0].credencialId).toBe('cred-1')
+    expect(copia.pasos[0].subArticuloId).toBe('art-2')
+
+    // Adjuntos y portada comparten la referencia de Storage (los
+    // archivos no se copian).
+    expect(copia.pasos[0].adjuntos[0].referencia).toBe('a/manual.pdf')
+    expect(copia.portada?.referencia).toBe('a/portada.jpg')
+
+    // Es una copia profunda: mutarla no toca el original.
+    copia.pasos[0].bloques[0].texto = 'Otra cosa'
+    copia.requisitos.push('extra')
+    expect(original.pasos[0].bloques[0].texto).toBe('Encender la impresora')
+    expect(original.requisitos).toEqual(['Acceso a la red'])
   })
 })
 

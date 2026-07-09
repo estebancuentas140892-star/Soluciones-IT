@@ -62,6 +62,9 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           articulo.titulo,
           articulo.contenido,
           textoDeProcedimiento(procedimiento),
+          // Etiquetas reactivadas el 2026-07-09 (fase S1): vuelven a
+          // alimentar el indice para mejorar los resultados.
+          ...(articulo.etiquetas ?? []),
           ...(articulo.sintomas ?? []),
           ...(articulo.causas ?? []),
           ...(articulo.dispositivosAfectados ?? []).map((d) => d.nombre),
