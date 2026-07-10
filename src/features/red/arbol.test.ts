@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Conexion, Dispositivo } from '../../lib/db'
-import { construirArbol, construirBosque, type NodoTopologia } from './arbol'
+import {
+  caminoAscendente,
+  construirArbol,
+  construirBosque,
+  contarImpacto,
+  infoDeDispositivos,
+  type InfoDispositivo,
+  type NodoTopologia,
+} from './arbol'
 
 function dispositivo(id: string, nombre: string, categoriaId: string, eliminadoEn: string | null = null): Dispositivo {
   return {
@@ -44,8 +52,8 @@ function instalacion(id: string, equipoId: string, rackId: string): Conexion {
   return { ...enlace(id, equipoId, '', rackId), tipo: 'instalacion' }
 }
 
-function nombresDe(...ids: string[]): Map<string, string> {
-  return new Map(ids.map((id) => [id, id]))
+function nombresDe(...ids: string[]): Map<string, InfoDispositivo> {
+  return new Map(ids.map((id) => [id, { nombre: id, estado: '', categoriaId: '' }]))
 }
 
 function hijos(nodo: NodoTopologia): string[] {
@@ -117,5 +125,65 @@ describe('construirBosque', () => {
     const bosque = construirBosque(dispositivos, conexiones, esRed)
     expect(bosque.map((n) => n.dispositivoId)).toEqual(['sw'])
     expect(hijos(bosque[0])).toEqual(['pc'])
+  })
+})
+
+describe('contarImpacto', () => {
+  it('cuenta todos los descendientes agrupados por categoria, no solo los hijos directos', () => {
+    const dispositivos = [
+      dispositivo('rack', 'Rack A01', 'red'),
+      dispositivo('sw', 'Switch D32', 'red'),
+      dispositivo('pos1', 'POS Caja 1', 'pos'),
+      dispositivo('pos2', 'POS Caja 2', 'pos'),
+      dispositivo('imp', 'Impresora Caja 1', 'impresoras'),
+    ]
+    const conexiones = [
+      instalacion('i', 'sw', 'rack'),
+      enlace('a', 'sw', '1', 'pos1'),
+      enlace('b', 'sw', '2', 'pos2'),
+      enlace('c', 'pos1', '', 'imp'),
+    ]
+    const infoPorId = infoDeDispositivos(dispositivos)
+    const arbolDesdeRack = construirArbol('rack', conexiones, infoPorId)
+    const impacto = contarImpacto(arbolDesdeRack)
+    expect(impacto.get('red')).toBe(1) // el switch
+    expect(impacto.get('pos')).toBe(2)
+    expect(impacto.get('impresoras')).toBe(1)
+  })
+
+  it('no cuenta nada para un nodo sin hijos', () => {
+    const infoPorId = infoDeDispositivos([dispositivo('sw', 'Switch', 'red')])
+    const arbol = construirArbol('sw', [], infoPorId)
+    expect(contarImpacto(arbol).size).toBe(0)
+  })
+})
+
+describe('caminoAscendente', () => {
+  it('devuelve la cadena de dependencia del padre inmediato hasta la raíz', () => {
+    const dispositivos = [
+      dispositivo('rack', 'Rack A01', 'red'),
+      dispositivo('sw', 'Switch Oficina', 'red'),
+      dispositivo('pos1', 'POS Caja 1', 'pos'),
+    ]
+    const conexiones = [instalacion('i', 'sw', 'rack'), enlace('a', 'sw', '12', 'pos1')]
+    const infoPorId = infoDeDispositivos(dispositivos)
+    const camino = caminoAscendente('pos1', conexiones, infoPorId)
+    expect(camino.map((p) => p.dispositivoId)).toEqual(['sw', 'rack'])
+    expect(camino[0].via).toBe('Puerto 12')
+    expect(camino[0].nombre).toBe('Switch Oficina')
+    expect(camino[1].via).toBe('Instalado')
+  })
+
+  it('devuelve una lista vacía si el dispositivo no depende de nada', () => {
+    const infoPorId = infoDeDispositivos([dispositivo('rack', 'Rack A01', 'red')])
+    expect(caminoAscendente('rack', [], infoPorId)).toEqual([])
+  })
+
+  it('se detiene ante un ciclo sin colgarse', () => {
+    const dispositivos = [dispositivo('sw1', 'Switch 1', 'red'), dispositivo('sw2', 'Switch 2', 'red')]
+    const conexiones = [enlace('a', 'sw1', '1', 'sw2'), enlace('b', 'sw2', '1', 'sw1')]
+    const infoPorId = infoDeDispositivos(dispositivos)
+    const camino = caminoAscendente('sw1', conexiones, infoPorId)
+    expect(camino.map((p) => p.dispositivoId)).toEqual(['sw2'])
   })
 })

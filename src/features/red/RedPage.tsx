@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { IndicadorEstado } from '../dispositivos/IndicadorEstado'
 
 // Seccion Red: inventario de la infraestructura de red (racks, puntos
 // de red, switches, access points, camaras). Reune los dispositivos de
@@ -11,6 +12,7 @@ export function RedPage() {
   const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
 
   const [categoriaId, setCategoriaId] = useState('')
+  const [estado, setEstado] = useState('')
   const [texto, setTexto] = useState('')
 
   const categoriasRed = useMemo(() => (categorias ?? []).filter((c) => c.esRed), [categorias])
@@ -20,11 +22,22 @@ export function RedPage() {
     [categorias],
   )
 
+  // Estados con datos reales en los equipos de red, para no ofrecer un
+  // filtro vacio (mismo patron que Dispositivos).
+  const estadosDeRed = useMemo(
+    () =>
+      [...new Set((dispositivos ?? []).filter((d) => idsRed.has(d.categoriaId)).map((d) => d.estado))]
+        .filter(Boolean)
+        .sort(),
+    [dispositivos, idsRed],
+  )
+
   const filtrados = useMemo(() => {
     const buscado = texto.trim().toLowerCase()
     return (dispositivos ?? [])
       .filter((d) => idsRed.has(d.categoriaId))
       .filter((d) => !categoriaId || d.categoriaId === categoriaId)
+      .filter((d) => !estado || d.estado === estado)
       .filter((d) => {
         if (!buscado) return true
         return [d.nombre, d.ubicacion, d.ip, d.marca, d.modelo]
@@ -33,7 +46,7 @@ export function RedPage() {
           .includes(buscado)
       })
       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true }))
-  }, [dispositivos, idsRed, categoriaId, texto])
+  }, [dispositivos, idsRed, categoriaId, estado, texto])
 
   return (
     <div className="flex flex-col gap-4 px-4 pt-6 pb-8">
@@ -63,18 +76,34 @@ export function RedPage() {
       </Link>
 
       <div className="flex flex-col gap-2">
-        <select
-          value={categoriaId}
-          onChange={(e) => setCategoriaId(e.target.value)}
-          className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-        >
-          <option value="">Todas las categorías de red</option>
-          {categoriasRed.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={categoriaId}
+            onChange={(e) => setCategoriaId(e.target.value)}
+            className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          >
+            <option value="">Todas las categorías de red</option>
+            {categoriasRed.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+          {estadosDeRed.length > 0 && (
+            <select
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              <option value="">Todos los estados</option>
+              {estadosDeRed.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
         <input
           type="search"
           value={texto}
@@ -86,7 +115,7 @@ export function RedPage() {
 
       {filtrados.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
-          {texto || categoriaId
+          {texto || categoriaId || estado
             ? 'Ningún equipo de red coincide con el filtro'
             : 'Aún no hay equipos de red registrados'}
         </p>
@@ -107,11 +136,7 @@ export function RedPage() {
                     .join(' · ')}
                 </p>
               </div>
-              {dispositivo.estado && (
-                <span className="shrink-0 rounded-full bg-slate-800 px-2.5 py-0.5 text-xs text-slate-300">
-                  {dispositivo.estado}
-                </span>
-              )}
+              <IndicadorEstado estado={dispositivo.estado} />
             </Link>
           </li>
         ))}

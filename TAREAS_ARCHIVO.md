@@ -1,5 +1,23 @@
 # Historial de tareas finalizadas
 
+### 51. Fase R1 de la propuesta por módulos: árbol de red enriquecido
+- Finalizada: 2026-07-09. Sin cambios de esquema en Supabase.
+- Descripción: cuarta fase de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) (puntos 5, 6, 7, 8, 9, 10 y 12 del documento de Red). Enriquece el árbol de topología ya existente sin cambiar su arquitectura; deja pendiente el mapa interactivo (R2, mucho más costoso) para decidir después de usar esto.
+- Solución (modelo, `src/features/red/arbol.ts`, lógica pura y probada):
+  - `NodoTopologia` gana `estado`, `categoriaId`, `tipoConexion` (null en la raíz) y `medio`; `construirArbol`/`construirBosque` ahora reciben un `Map<string, InfoDispositivo>` (`infoDeDispositivos`, nuevo) en vez de solo nombres.
+  - `contarImpacto(nodo)`: cuenta TODOS los descendientes del árbol ya construido, agrupados por categoría (no solo los hijos directos), para "si este equipo falla también quedan sin servicio: N POS...".
+  - `caminoAscendente(id, conexiones, infoPorId)`: cadena de dependencia hacia arriba desde un dispositivo hasta la raíz (padre inmediato primero), vía la función simétrica `padreDirecto` (mismo patrón que `hijosDirectos` pero en sentido inverso); corta ante un ciclo.
+  - `src/features/red/medios.ts` (nuevo): `iconoDeVia(tipoConexion, medio)` mapea el medio de una conexión a un icono (🗄 instalación, 🟣 fibra, 📶 inalámbrico, 🔌 UTP/cable, 🔗 genérico), insensible a mayúsculas.
+- Solución (interfaz):
+  - `TopologiaPage.tsx`: cada nodo muestra el icono de estado (reutilizando `infoDeEstado` de Dis1) y el icono del medio en el badge "via". Buscador propio (`busqueda`) que expande automáticamente las ramas ancestras de cualquier coincidencia, resalta los nodos encontrados (borde y anillo sky) y hace scroll suave al primero.
+  - `RedPage.tsx`: filtro de estado (solo con los estados presentes en equipos de red) junto al de categoría ya existente; el badge de estado del listado pasó a usar `IndicadorEstado` (mismo componente de Dis1).
+  - `ImpactoYDependencias.tsx` (nuevo, en `features/red`): construye el árbol con el dispositivo de la ficha como raíz y muestra "⚠ Impacto si este equipo falla" y "Depende de" (con enlaces a cada ancestro); se oculta solo si el equipo no participa de ninguna conexión. Integrado en `DispositivoPage.tsx`, que también gana "Última modificación" (mismo patrón que artículos y credenciales).
+  - `IniciarDiagnosticoBoton.tsx` (nuevo, en `features/dispositivos`): enlaza a `/diagnostico?categoria=<id>`; se oculta si no hay ningún diagnóstico para esa categoría. `DiagnosticosPage.tsx` lee el parámetro `categoria` y preselecciona esa categoría con un aviso "Mostrando solo: ..." y "Ver todos" para quitar el filtro.
+  - Historial resumido (punto 11): ya estaba resuelto por el componente `Historial` existente (colapsado, ordenado del más reciente al más antiguo); no requirió cambios.
+- Pruebas: 331 en verde (8 nuevas: `contarImpacto` con descendientes anidados y sin hijos, `caminoAscendente` con cadena, sin dependencias y cortando un ciclo, `iconoDeVia` con sus 3 pruebas). Typecheck, lint y build en verde.
+- Verificado en navegador real (sesión simulada + rack/switch/2 POS con conexiones de fibra y UTP, un diagnóstico de la categoría del POS, luego todo limpiado con `cambiosPendientes` en 0): iconos de estado (🟡🟢) y de medio (🗄🟣) correctos en el árbol; buscar "Caja 2" resaltó y expandió automáticamente la rama; la ficha del switch mostró "2 POS prueba R1" de impacto; la ficha del POS mostró "Depende de" con el switch y el botón "Iniciar diagnóstico" con el enlace correcto; `/diagnostico?categoria=...` preseleccionó la categoría con el diagnóstico visible; el filtro de estado en Red mostró solo el switch al elegir "En mantenimiento".
+- Documentación: ARQUITECTURA.md sección 12.
+
 ### 50. Fase Dis1+B1 de la propuesta por módulos: Dispositivos y Bóveda
 - Finalizada: 2026-07-09. Sin cambios de esquema en Supabase.
 - Descripción: tercera fase de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) (puntos 1, 2, 4 y 9 de Dispositivos; puntos 1, 2, 3 y 10 parcial de Bóveda). Incluye la decisión del usuario de renombrar completamente "Notas" a "Bóveda" (pestaña, rutas y textos), revirtiendo la discreción del nombre neutro decidida antes.

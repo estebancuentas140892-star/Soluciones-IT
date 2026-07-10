@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { BotonVolver } from '../../components/BotonVolver'
 
@@ -11,6 +11,13 @@ import { BotonVolver } from '../../components/BotonVolver'
 // imprime") y tocarla inicia el diagnostico guiado.
 export function DiagnosticosPage() {
   const [filtro, setFiltro] = useState('')
+  const [searchParams] = useSearchParams()
+  // Llegar con ?categoria=<id> (por ejemplo desde "Iniciar diagnóstico"
+  // en la ficha de un equipo, fase R1) preselecciona esa categoria en
+  // vez de mostrar todas: el tecnico ve directo los problemas de SU
+  // equipo. El desplegable sigue permitiendo cambiarla.
+  const categoriaInicial = searchParams.get('categoria') ?? ''
+  const [categoriaId, setCategoriaId] = useState(categoriaInicial)
 
   const diagnosticos = useLiveQuery(
     () => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(),
@@ -28,10 +35,10 @@ export function DiagnosticosPage() {
   const filtroLimpio = filtro.trim().toLowerCase()
   const visibles = useMemo(
     () =>
-      filtroLimpio === ''
-        ? diagnosticos
-        : diagnosticos.filter((d) => d.titulo.toLowerCase().includes(filtroLimpio)),
-    [diagnosticos, filtroLimpio],
+      diagnosticos
+        .filter((d) => !categoriaId || d.categoriaId === categoriaId)
+        .filter((d) => filtroLimpio === '' || d.titulo.toLowerCase().includes(filtroLimpio)),
+    [diagnosticos, categoriaId, filtroLimpio],
   )
 
   const grupos = useMemo(() => {
@@ -69,10 +76,31 @@ export function DiagnosticosPage() {
         className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
       />
 
+      {categoriaId && (
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-sky-900/60 bg-sky-950/20 px-4 py-2.5">
+          <p className="text-xs text-sky-200">
+            Mostrando solo: {categorias.find((c) => c.id === categoriaId)?.nombre ?? 'esta categoría'}
+          </p>
+          <button
+            type="button"
+            onClick={() => setCategoriaId('')}
+            className="shrink-0 text-xs text-sky-300 underline underline-offset-2"
+          >
+            Ver todos
+          </button>
+        </div>
+      )}
+
       {diagnosticos.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
           Todavía no hay diagnósticos. Crea el primero con "+ Crear diagnóstico": un problema
           frecuente y las preguntas que llevan a su solución.
+        </p>
+      )}
+
+      {diagnosticos.length > 0 && grupos.length === 0 && (
+        <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
+          Ningún diagnóstico coincide con el filtro.
         </p>
       )}
 

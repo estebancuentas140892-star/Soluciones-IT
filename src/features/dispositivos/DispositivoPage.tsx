@@ -9,10 +9,14 @@ import { BotonCompartir } from '../../components/BotonCompartir'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { ValorCopiable } from '../../components/ValorCopiable'
+import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { Historial } from '../historial/Historial'
 import { IndicadorEstado } from './IndicadorEstado'
+import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
+
+const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' })
 
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
@@ -61,6 +65,9 @@ export function DispositivoPage() {
         <div>
           <h1 className="text-xl font-semibold">{dispositivo.nombre}</h1>
           {categoria && <p className="text-xs text-slate-500">{categoria.nombre}</p>}
+          <p className="text-xs text-slate-600">
+            Última modificación: {formateadorFecha.format(new Date(dispositivo.updatedAt))}
+          </p>
         </div>
       </header>
 
@@ -134,6 +141,10 @@ export function DispositivoPage() {
           Ver procedimientos de {categoria.nombre} →
         </Link>
       )}
+
+      <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} />
+
+      <ImpactoYDependencias dispositivo={dispositivo} />
 
       <ConexionesFicha dispositivo={dispositivo} />
 

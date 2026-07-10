@@ -1,7 +1,7 @@
 # Propuesta: mejoras por módulos (Soluciones, Diagnóstico, Dispositivos, Red y Bóveda)
 
 Fecha: 2026-07-09
-Estado: APROBADA para ejecutarse por fases (2026-07-09). Decisiones del usuario: empezar por S1; reactivar etiquetas (SÍ, se adelanta a S1 porque no requiere esquema); renombrar "Notas" a "Bóveda" completo (entra en B1); el nombre sigue siendo Soluciones IT ("IT Brain" queda informal). S1 (tarea 48), D1 (tarea 49) y Dis1+B1 (tarea 50) ya están HECHAS y archivadas. Siguiente fase: R1. Pendientes de decidir sobre la marcha: estados del artículo (4 o versión mínima), nodos compartidos entre diagnósticos (recomendado NO) y si R2 se hace tras probar R1.
+Estado: APROBADA para ejecutarse por fases (2026-07-09). Decisiones del usuario: empezar por S1; reactivar etiquetas (SÍ, se adelanta a S1 porque no requiere esquema); renombrar "Notas" a "Bóveda" completo (entra en B1); el nombre sigue siendo Soluciones IT ("IT Brain" queda informal). S1 (tarea 48), D1 (tarea 49), Dis1+B1 (tarea 50) y R1 (tarea 51) ya están HECHAS y archivadas. Pendientes de decidir: si se aprueba R2 (mapa interactivo, mucho más costoso) o si el árbol enriquecido de R1 alcanza por ahora; estados del artículo (4 o versión mínima); nodos compartidos entre diagnósticos (recomendado NO).
 
 Origen: cinco documentos entregados por el usuario el 2026-07-09, uno por módulo, con 71 puntos en total. Esta propuesta analiza cada punto contra el código real, señala lo que ya existe (que es mucho: las tareas 38 a 47 ya cubrieron buena parte), agrupa lo nuevo en fases ejecutables, marca las contradicciones con decisiones anteriores del propio usuario y recomienda un orden.
 
