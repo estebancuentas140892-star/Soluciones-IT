@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { NodoDiagnostico, OpcionDiagnostico } from './db'
 import {
+  avanceAlResponder,
+  avanceAlRetroceder,
+  avanceInicial,
+  avanceTrasArticulo,
   crearNodo,
   duplicarNodo,
   normalizarNodos,
   porcentajeDiagnostico,
   prepararNodosParaGuardar,
+  procedimientosVinculadosRotos,
   profundidadRestante,
   textoDeNodos,
   validarNodos,
@@ -284,5 +289,82 @@ describe('textoDeNodos', () => {
     expect(texto).toContain('¿La impresora está encendida?')
     expect(texto).toContain('Conectar impresora a computadora')
     expect(texto).toContain('Enciéndela y prueba de nuevo.')
+  })
+})
+
+describe('transiciones del recorrido', () => {
+  const [n1, n2] = arbolImpresora()
+
+  it('avanceInicial arranca en la primera pregunta, sin camino ni ejecutados', () => {
+    const inicio = avanceInicial('n1')
+    expect(inicio).toEqual({
+      camino: [],
+      estado: { tipo: 'pregunta', nodoId: 'n1' },
+      articulosEjecutados: [],
+    })
+  })
+
+  it('avanceAlResponder con siguiente pregunta guarda el paso y avanza', () => {
+    const inicio = avanceInicial('n1')
+    const tras = avanceAlResponder(inicio, n1, n1.opciones[0]) // Sí -> n2
+    expect(tras.estado).toEqual({ tipo: 'pregunta', nodoId: 'n2' })
+    expect(tras.camino).toHaveLength(1)
+    expect(tras.camino[0]).toMatchObject({ nodoId: 'n1', etiqueta: 'Sí' })
+  })
+
+  it('avanceAlResponder con opción terminal sin destino llega al final', () => {
+    const inicio = avanceInicial('n1')
+    const tras = avanceAlResponder(inicio, n1, n1.opciones[1]) // No -> mensaje final
+    expect(tras.estado).toMatchObject({ tipo: 'final', mensajeFinal: 'Enciéndela y prueba de nuevo.' })
+  })
+
+  it('avanceAlResponder con procedimiento entra en estado articulo (sin ejecutarlo aún)', () => {
+    const inicio = avanceInicial('n2')
+    const tras = avanceAlResponder(inicio, n2, n2.opciones[1]) // art-1 + sigue en n3
+    expect(tras.estado).toMatchObject({
+      tipo: 'articulo',
+      articuloId: 'art-1',
+      siguienteNodoId: 'n3',
+    })
+    // El articulo se anota como ejecutado solo al terminarlo, no aquí.
+    expect(tras.articulosEjecutados).toEqual([])
+  })
+
+  it('avanceTrasArticulo anota el ejecutado y sigue en la pregunta siguiente', () => {
+    const enArticulo = avanceAlResponder(avanceInicial('n2'), n2, n2.opciones[1])
+    const tras = avanceTrasArticulo(enArticulo)
+    expect(tras.estado).toEqual({ tipo: 'pregunta', nodoId: 'n3' })
+    expect(tras.articulosEjecutados).toEqual([{ id: 'art-1', titulo: 'Conectar impresora a computadora' }])
+  })
+
+  it('avanceTrasArticulo no cambia nada si el estado no es articulo', () => {
+    const enPregunta = avanceInicial('n1')
+    expect(avanceTrasArticulo(enPregunta)).toBe(enPregunta)
+  })
+
+  it('avanceAlRetroceder deshace la última respuesta y vuelve a su pregunta', () => {
+    const tras = avanceAlResponder(avanceInicial('n1'), n1, n1.opciones[0])
+    const atras = avanceAlRetroceder(tras)
+    expect(atras.estado).toEqual({ tipo: 'pregunta', nodoId: 'n1' })
+    expect(atras.camino).toHaveLength(0)
+  })
+
+  it('avanceAlRetroceder sin camino no hace nada', () => {
+    const inicio = avanceInicial('n1')
+    expect(avanceAlRetroceder(inicio)).toBe(inicio)
+  })
+})
+
+describe('procedimientosVinculadosRotos', () => {
+  it('lista las respuestas cuyo procedimiento ya no está disponible', () => {
+    const nodos = arbolImpresora() // referencia art-1 y art-2
+    const soloArt1 = procedimientosVinculadosRotos(nodos, (id) => id === 'art-1')
+    expect(soloArt1).toHaveLength(1)
+    expect(soloArt1[0]).toContain('Revisar el spooler')
+  })
+
+  it('devuelve vacío cuando todos los procedimientos existen', () => {
+    const nodos = arbolImpresora()
+    expect(procedimientosVinculadosRotos(nodos, () => true)).toEqual([])
   })
 })

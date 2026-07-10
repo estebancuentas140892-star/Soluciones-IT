@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. El grupo de cambios de esquema (tarea 52) quedó terminado y archivado; falta que el usuario aplique el `schema.sql` actualizado en Supabase (agrega columnas a `articulos`, `dispositivos`, `credenciales` y `ejecuciones_diagnostico`, más la tabla nueva `accesos_boveda`) para que sincronice con el resto del equipo. Falta también decidir si se aprueba R2 (mapa interactivo de red, mucho más costoso) o si el árbol enriquecido de R1 alcanza por ahora. Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql. Ver cada tarea en el archivo.)
+(Vacío. La fase D2 "Probar diagnóstico" (tarea 53) quedó terminada y archivada; ver una nota de verificación pendiente en el archivo (no se pudo probar en navegador real por un cambio de herramientas a media sesión). El grupo de cambios de esquema (tarea 52) quedó terminado; falta que el usuario aplique el `schema.sql` actualizado en Supabase para que sincronice con el resto del equipo. Quedan fases de código sin depender del usuario: S2 (formulario de Soluciones adaptable por tipo), D4+F3 (problemas frecuentes en Inicio + tablero de estadísticas) y la tarea 39 (vista 360° del dispositivo). Falta decidir R2 (mapa interactivo de red). Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql. Ver cada tarea en el archivo.)
 
 ## Por hacer
 

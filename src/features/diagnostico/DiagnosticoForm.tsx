@@ -8,6 +8,7 @@ import {
   duplicarNodo,
   normalizarNodos,
   prepararNodosParaGuardar,
+  procedimientosVinculadosRotos,
   validarNodos,
 } from '../../lib/diagnostico'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
@@ -15,6 +16,7 @@ import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositori
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { Historial } from '../historial/Historial'
+import { PruebaDiagnostico } from './PruebaDiagnostico'
 
 const CLASE_INPUT =
   'rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500'
@@ -44,9 +46,24 @@ export function DiagnosticoForm() {
   const [problemas, setProblemas] = useState<string[]>([])
   const [guardando, setGuardando] = useState(false)
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
+  const [mostrarPrueba, setMostrarPrueba] = useState(false)
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
 
   const categorias = useLiveQuery(() => db.categorias.orderBy('orden').toArray(), [], [])
+
+  // Ids de articulos ejecutables en tiempo de ejecucion (existen, no
+  // eliminados y con procedimiento), sin importar su estado: el
+  // asistente los ejecuta aunque sean borrador. Sirve para detectar
+  // vinculos rotos (fase D2), un conjunto mas amplio que `vinculables`
+  // (que solo ofrece los publicados para elegir uno nuevo).
+  const idsEjecutables = useLiveQuery(
+    async () => {
+      const todos = await db.articulos.filter((a) => !a.eliminadoEn).toArray()
+      return new Set(todos.filter((a) => normalizarProcedimiento(a.procedimiento) !== null).map((a) => a.id))
+    },
+    [],
+    new Set<string>(),
+  )
 
   // Articulos con procedimiento: los bloques reutilizables que una
   // respuesta puede ejecutar. El diagnostico nunca duplica pasos.
@@ -66,6 +83,17 @@ export function DiagnosticoForm() {
   const vinculablesOrdenados = useMemo(
     () => [...vinculables].sort((a, b) => a.titulo.localeCompare(b.titulo)),
     [vinculables],
+  )
+
+  // Nodos preparados (recortados) para el modo prueba, y advertencias
+  // por respuestas que ejecutan un procedimiento ya no disponible
+  // (fase D2). Las advertencias NO bloquean el guardado: en una app
+  // local primero, un articulo puede estar solo sin sincronizar, no
+  // realmente borrado; se muestran como aviso, no como error.
+  const nodosPreparados = useMemo(() => prepararNodosParaGuardar(nodos), [nodos])
+  const advertenciasVinculos = useMemo(
+    () => procedimientosVinculadosRotos(nodosPreparados, (id) => idsEjecutables.has(id)),
+    [nodosPreparados, idsEjecutables],
   )
 
   useEffect(() => {
@@ -168,6 +196,23 @@ export function DiagnosticoForm() {
           </div>
         )}
 
+        {advertenciasVinculos.length > 0 && (
+          <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3">
+            <p className="text-xs font-medium text-amber-300">Procedimientos vinculados sin disponibilidad:</p>
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {advertenciasVinculos.map((advertencia, indice) => (
+                <li key={indice} className="text-xs text-amber-200">
+                  • {advertencia}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-[11px] text-amber-400/70">
+              No impide guardar (puede ser un artículo que aún no sincronizó), pero en el diagnóstico real
+              esa rama quedaría sin el procedimiento.
+            </p>
+          </div>
+        )}
+
         {esEdicion && (
           <label className="flex flex-col gap-1 text-sm text-slate-300">
             Motivo del cambio (opcional)
@@ -181,13 +226,22 @@ export function DiagnosticoForm() {
           </label>
         )}
 
-        <button
-          type="submit"
-          disabled={guardando}
-          className="mt-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950 disabled:opacity-50"
-        >
-          {guardando ? 'Guardando...' : 'Guardar'}
-        </button>
+        <div className="mt-2 flex gap-3">
+          <button
+            type="button"
+            onClick={() => setMostrarPrueba(true)}
+            className="rounded-xl border border-slate-700 px-5 py-3 text-sm text-slate-300"
+          >
+            Probar
+          </button>
+          <button
+            type="submit"
+            disabled={guardando}
+            className="flex-1 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950 disabled:opacity-50"
+          >
+            {guardando ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
 
         {esEdicion && (
           <button
@@ -210,6 +264,15 @@ export function DiagnosticoForm() {
       />
 
       {esEdicion && <Historial entidadTipo="diagnostico" entidadId={id} />}
+
+      {mostrarPrueba && (
+        <PruebaDiagnostico
+          nodos={nodosPreparados}
+          titulo={titulo}
+          ejecutables={idsEjecutables}
+          onCerrar={() => setMostrarPrueba(false)}
+        />
+      )}
     </div>
   )
 }

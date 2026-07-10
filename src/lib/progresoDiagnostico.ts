@@ -1,4 +1,5 @@
-import { db, type EstadoDiagnostico, type NodoDiagnostico, type OpcionDiagnostico, type ProgresoDiagnostico } from './db'
+import { db, type NodoDiagnostico, type OpcionDiagnostico, type ProgresoDiagnostico } from './db'
+import { avanceAlResponder, avanceAlRetroceder, avanceTrasArticulo } from './diagnostico'
 import { reiniciarProgreso } from './progresoPasos'
 
 // Avance local de un diagnostico en curso (tabla progresoDiagnostico,
@@ -37,32 +38,20 @@ export async function responderOpcion(
   const actual = await db.progresoDiagnostico.get(diagnosticoId)
   if (!actual) return
 
-  const paso = { nodoId: nodo.id, pregunta: nodo.pregunta, opcionId: opcion.id, etiqueta: opcion.etiqueta }
+  const siguiente = avanceAlResponder(actual, nodo, opcion)
 
-  let estado: EstadoDiagnostico
   if (opcion.articuloId) {
-    estado = {
-      tipo: 'articulo',
-      articuloId: opcion.articuloId,
-      articuloTitulo: opcion.articuloTitulo,
-      siguienteNodoId: opcion.siguienteNodoId,
-      mensajeFinal: opcion.mensajeFinal,
-    }
     // El procedimiento arranca SIEMPRE de cero dentro del diagnostico:
     // un avance viejo (por ejemplo, de haberlo ejecutado suelto la
     // semana pasada) haria que el asistente lo diera por completado y
     // se lo saltara sin ejecutarlo.
     await reiniciarProgreso(opcion.articuloId)
-  } else if (opcion.siguienteNodoId) {
-    estado = { tipo: 'pregunta', nodoId: opcion.siguienteNodoId }
-  } else {
-    estado = { tipo: 'final', mensajeFinal: opcion.mensajeFinal, articuloId: null, articuloTitulo: '' }
   }
 
   await db.progresoDiagnostico.put({
     ...actual,
-    camino: [...actual.camino, paso],
-    estado,
+    camino: siguiente.camino,
+    estado: siguiente.estado,
     actualizadoEn: new Date().toISOString(),
   })
 }
@@ -75,18 +64,14 @@ export async function responderOpcion(
 export async function terminarEjecucionArticulo(diagnosticoId: string): Promise<void> {
   const actual = await db.progresoDiagnostico.get(diagnosticoId)
   if (!actual || actual.estado.tipo !== 'articulo') return
-  const { articuloId, articuloTitulo, siguienteNodoId, mensajeFinal } = actual.estado
 
-  await reiniciarProgreso(articuloId)
+  await reiniciarProgreso(actual.estado.articuloId)
 
-  const estado: EstadoDiagnostico = siguienteNodoId
-    ? { tipo: 'pregunta', nodoId: siguienteNodoId }
-    : { tipo: 'final', mensajeFinal, articuloId, articuloTitulo }
-
+  const siguiente = avanceTrasArticulo(actual)
   await db.progresoDiagnostico.put({
     ...actual,
-    estado,
-    articulosEjecutados: [...actual.articulosEjecutados, { id: articuloId, titulo: articuloTitulo }],
+    estado: siguiente.estado,
+    articulosEjecutados: siguiente.articulosEjecutados,
     actualizadoEn: new Date().toISOString(),
   })
 }
@@ -99,11 +84,11 @@ export async function volverAtras(diagnosticoId: string): Promise<void> {
   const actual = await db.progresoDiagnostico.get(diagnosticoId)
   if (!actual || actual.camino.length === 0) return
 
-  const ultimo = actual.camino[actual.camino.length - 1]
+  const siguiente = avanceAlRetroceder(actual)
   await db.progresoDiagnostico.put({
     ...actual,
-    camino: actual.camino.slice(0, -1),
-    estado: { tipo: 'pregunta', nodoId: ultimo.nodoId },
+    camino: siguiente.camino,
+    estado: siguiente.estado,
     actualizadoEn: new Date().toISOString(),
   })
 }

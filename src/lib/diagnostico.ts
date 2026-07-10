@@ -229,6 +229,112 @@ export function porcentajeDiagnostico(
   return Math.min(95, Math.round((respondidas / (respondidas + restante)) * 100))
 }
 
+// ----------------------------------------------------------------
+// Transiciones del recorrido (compartidas por el asistente real y el
+// modo prueba del editor)
+// ----------------------------------------------------------------
+
+// Las tres piezas que cambian al recorrer un diagnostico: el camino
+// respondido, el estado actual y los procedimientos ya ejecutados. La
+// version real (progresoDiagnostico.ts) las persiste en la base y
+// reinicia el progreso de los procedimientos vinculados; el modo
+// prueba las mantiene en memoria. Ambas usan estas transiciones puras,
+// asi que "que respuesta lleva a donde" es identico en los dos.
+export interface AvanceDiagnostico {
+  camino: PasoCamino[]
+  estado: EstadoDiagnostico
+  articulosEjecutados: { id: string; titulo: string }[]
+}
+
+export function avanceInicial(primerNodoId: string): AvanceDiagnostico {
+  return { camino: [], estado: { tipo: 'pregunta', nodoId: primerNodoId }, articulosEjecutados: [] }
+}
+
+// Responde la pregunta actual con una opcion: guarda el paso (con
+// copias de los textos) y calcula el estado siguiente (ejecutar un
+// procedimiento, otra pregunta o el final).
+export function avanceAlResponder(
+  actual: AvanceDiagnostico,
+  nodo: NodoDiagnostico,
+  opcion: OpcionDiagnostico,
+): AvanceDiagnostico {
+  const paso: PasoCamino = {
+    nodoId: nodo.id,
+    pregunta: nodo.pregunta,
+    opcionId: opcion.id,
+    etiqueta: opcion.etiqueta,
+  }
+
+  let estado: EstadoDiagnostico
+  if (opcion.articuloId) {
+    estado = {
+      tipo: 'articulo',
+      articuloId: opcion.articuloId,
+      articuloTitulo: opcion.articuloTitulo,
+      siguienteNodoId: opcion.siguienteNodoId,
+      mensajeFinal: opcion.mensajeFinal,
+    }
+  } else if (opcion.siguienteNodoId) {
+    estado = { tipo: 'pregunta', nodoId: opcion.siguienteNodoId }
+  } else {
+    estado = { tipo: 'final', mensajeFinal: opcion.mensajeFinal, articuloId: null, articuloTitulo: '' }
+  }
+
+  return { ...actual, camino: [...actual.camino, paso], estado }
+}
+
+// El procedimiento vinculado termino: lo anota como ejecutado y sigue
+// desde la pregunta siguiente, o pasa al resultado final si la rama
+// terminaba ahi. Si el estado no es 'articulo', no cambia nada.
+export function avanceTrasArticulo(actual: AvanceDiagnostico): AvanceDiagnostico {
+  if (actual.estado.tipo !== 'articulo') return actual
+  const { articuloId, articuloTitulo, siguienteNodoId, mensajeFinal } = actual.estado
+  const estado: EstadoDiagnostico = siguienteNodoId
+    ? { tipo: 'pregunta', nodoId: siguienteNodoId }
+    : { tipo: 'final', mensajeFinal, articuloId, articuloTitulo }
+  return {
+    ...actual,
+    estado,
+    articulosEjecutados: [...actual.articulosEjecutados, { id: articuloId, titulo: articuloTitulo }],
+  }
+}
+
+// Deshace la ultima respuesta: vuelve a la pregunta que la origino. Sin
+// camino que deshacer, no cambia nada.
+export function avanceAlRetroceder(actual: AvanceDiagnostico): AvanceDiagnostico {
+  if (actual.camino.length === 0) return actual
+  const ultimo = actual.camino[actual.camino.length - 1]
+  return {
+    ...actual,
+    camino: actual.camino.slice(0, -1),
+    estado: { tipo: 'pregunta', nodoId: ultimo.nodoId },
+  }
+}
+
+// Problemas por respuestas que ejecutan un procedimiento que ya no esta
+// disponible (eliminado, sin procedimiento o inexistente). `disponible`
+// responde si un articuloId sigue siendo ejecutable; se calcula aparte
+// (consulta asincrona a la base) porque validarNodos es sincrono y
+// puro. Es el chequeo nuevo del modo prueba (fase D2).
+export function procedimientosVinculadosRotos(
+  nodos: NodoDiagnostico[],
+  disponible: (articuloId: string) => boolean,
+): string[] {
+  const problemas: string[] = []
+  nodos.forEach((nodo, indice) => {
+    for (const opcion of nodo.opciones) {
+      if (opcion.articuloId && !disponible(opcion.articuloId)) {
+        const nombre = opcion.etiqueta || '(sin texto)'
+        const titulo = opcion.articuloTitulo || 'un procedimiento'
+        problemas.push(
+          `La respuesta "${nombre}" de la pregunta ${indice + 1} ejecuta «${titulo}», que ya no está disponible.`,
+        )
+      }
+    }
+  })
+  return problemas
+}
+
 // Texto plano de un diagnostico para el indice de busqueda: el
 // problema se encuentra por su titulo, sus preguntas o sus respuestas.
 export function textoDeNodos(nodos: NodoDiagnostico[]): string {
