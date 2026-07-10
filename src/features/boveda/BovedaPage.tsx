@@ -8,6 +8,7 @@ import {
   obtenerMinutosAutobloqueo,
   OPCIONES_AUTOBLOQUEO_MIN,
 } from './sesionBoveda'
+import { IndicadorVencimiento } from './IndicadorVencimiento'
 
 export function BovedaPage() {
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
@@ -101,12 +102,15 @@ export function BovedaPage() {
               to={`/boveda/${credencial.id}`}
               className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3"
             >
-              <p className="text-sm font-medium text-slate-100">{credencial.titulo}</p>
-              {credencial.categoria && (
-                <span className="shrink-0 rounded-full bg-slate-800 px-2.5 py-0.5 text-xs text-slate-300">
-                  {credencial.categoria}
-                </span>
-              )}
+              <p className="min-w-0 truncate text-sm font-medium text-slate-100">{credencial.titulo}</p>
+              <div className="flex shrink-0 items-center gap-2">
+                <IndicadorVencimiento venceEn={credencial.venceEn ?? null} />
+                {credencial.categoria && (
+                  <span className="shrink-0 rounded-full bg-slate-800 px-2.5 py-0.5 text-xs text-slate-300">
+                    {credencial.categoria}
+                  </span>
+                )}
+              </div>
             </Link>
           </li>
         ))}

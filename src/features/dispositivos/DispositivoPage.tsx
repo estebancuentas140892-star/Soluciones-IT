@@ -8,6 +8,7 @@ import { Adjuntos } from '../../components/Adjuntos'
 import { BotonCompartir } from '../../components/BotonCompartir'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { ValorCopiable } from '../../components/ValorCopiable'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { ConexionesFicha } from '../red/ConexionesFicha'
@@ -62,6 +63,7 @@ export function DispositivoPage() {
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
         <BotonVolver to={volverA}>{esRed ? 'Red' : 'Dispositivos'}</BotonVolver>
+        {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}
         <div>
           <h1 className="text-xl font-semibold">{dispositivo.nombre}</h1>
           {categoria && <p className="text-xs text-slate-500">{categoria.nombre}</p>}
@@ -154,5 +156,19 @@ export function DispositivoPage() {
 
       <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
     </div>
+  )
+}
+
+// Fotografia principal del equipo como banner sobre el titulo. Si aun
+// no esta disponible (offline sin cache) no se muestra nada.
+function FotoDispositivo({ referencia, nombre }: { referencia: string; nombre: string }) {
+  const url = useUrlAdjunto(referencia)
+  if (!url) return null
+  return (
+    <img
+      src={url}
+      alt={`Fotografía: ${nombre}`}
+      className="max-h-44 w-full rounded-xl border border-slate-800 object-cover"
+    />
   )
 }

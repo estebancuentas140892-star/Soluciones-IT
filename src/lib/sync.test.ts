@@ -152,6 +152,9 @@ describe('aplicarFilasRemotas', () => {
       causas: [],
       dispositivosAfectados: [],
       esRutaInicio: false,
+      estado: 'publicado',
+      version: '1.0',
+      relacionados: [],
     })
 
     await aplicarFilasRemotas('articulos', [filaRemotaDeArticulo(id, 'Versión vieja del servidor')])

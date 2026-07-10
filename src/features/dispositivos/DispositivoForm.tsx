@@ -1,10 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
 import { Seccion } from '../../components/Seccion'
-import { db } from '../../lib/db'
+import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import { db, type PasoAdjunto } from '../../lib/db'
+import { comprimirImagen } from '../../lib/comprimirImagen'
+import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { ESTADOS_SUGERIDOS } from './estados'
 
 interface CampoDetalle {
@@ -24,6 +28,10 @@ export function DispositivoForm() {
   // de otro dispositivo, dejando en blanco lo que identifica al equipo
   // (serial, placa, IP).
   const copiarDe = esEdicion ? null : searchParams.get('copiarDe')
+  // El id se decide desde el inicio (no al guardar) para que la foto
+  // pueda subirse a su carpeta definitiva de Storage antes de que el
+  // dispositivo exista (mismo patron que la portada de un articulo).
+  const [id] = useState(() => dispositivoId ?? nuevoId())
 
   const dispositivo = useLiveQuery(
     () => (dispositivoId ? db.dispositivos.get(dispositivoId) : undefined),
@@ -47,6 +55,7 @@ export function DispositivoForm() {
   const [estado, setEstado] = useState('')
   const [observaciones, setObservaciones] = useState('')
   const [detalles, setDetalles] = useState<CampoDetalle[]>([])
+  const [foto, setFoto] = useState<PasoAdjunto | null>(null)
   const [motivo, setMotivo] = useState('')
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe)
   const [guardando, setGuardando] = useState(false)
@@ -64,6 +73,7 @@ export function DispositivoForm() {
     setEstado(dispositivo.estado)
     setObservaciones(dispositivo.observaciones)
     setDetalles(Object.entries(dispositivo.detalles).map(([clave, valor]) => ({ clave, valor })))
+    setFoto(dispositivo.foto ?? null)
     setCargadoInicial(true)
   }, [dispositivo, cargadoInicial])
 
@@ -85,6 +95,9 @@ export function DispositivoForm() {
     setEstado(original.estado)
     setObservaciones(original.observaciones)
     setDetalles(Object.entries(original.detalles).map(([clave, valor]) => ({ clave, valor })))
+    // La foto NO se copia: es un equipo fisico distinto, con su propia
+    // imagen (mismo criterio que serial, placa e IP, que tampoco se
+    // copian).
     setCargadoInicial(true)
   }, [esEdicion, original, cargadoInicial])
 
@@ -108,7 +121,6 @@ export function DispositivoForm() {
     evento.preventDefault()
     setGuardando(true)
 
-    const id = dispositivoId ?? nuevoId()
     const detallesObjeto = Object.fromEntries(
       detalles.filter((d) => d.clave.trim()).map((d) => [d.clave.trim(), d.valor.trim()]),
     )
@@ -128,6 +140,7 @@ export function DispositivoForm() {
         estado: estado.trim(),
         observaciones: observaciones.trim(),
         detalles: detallesObjeto,
+        foto,
       },
       motivo.trim(),
     )
@@ -187,6 +200,8 @@ export function DispositivoForm() {
               <input type="text" value={modelo} onChange={(e) => setModelo(e.target.value)} className={CLASE_INPUT} />
             </label>
           </div>
+
+          <FotoEditor dispositivoId={id} foto={foto} onChange={setFoto} />
         </Seccion>
 
         <Seccion titulo="Identificación" descripcion="Cómo distinguir físicamente este equipo de otro igual.">
@@ -331,6 +346,98 @@ export function DispositivoForm() {
           {guardando ? 'Guardando...' : 'Guardar'}
         </button>
       </form>
+    </div>
+  )
+}
+
+// Fotografia principal del equipo (fase Dis2): identifica el
+// dispositivo de un vistazo en la ficha, el listado, el buscador y al
+// escanear su codigo QR. Mismo patron que la portada de un
+// procedimiento (comprimida en el telefono, encolada si no hay señal;
+// solo queda la referencia de Storage en el dispositivo).
+function FotoEditor({
+  dispositivoId,
+  foto,
+  onChange,
+}: {
+  dispositivoId: string
+  foto: PasoAdjunto | null
+  onChange: (foto: PasoAdjunto | null) => void
+}) {
+  const [subiendo, setSubiendo] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const url = useUrlAdjunto(foto?.referencia ?? null)
+
+  async function subir(evento: ChangeEvent<HTMLInputElement>) {
+    const archivo = evento.target.files?.[0]
+    evento.target.value = ''
+    if (!archivo) return
+
+    setError(null)
+    setAviso(null)
+    if (!supabase || !supabaseConfigured) {
+      setError('La aplicación aún no está conectada al servidor.')
+      return
+    }
+
+    setSubiendo(true)
+    try {
+      const archivoFinal = await comprimirImagen(archivo)
+      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+      const referencia = `dispositivos/${dispositivoId}/foto/${Date.now()}-${nombreLimpio}`
+      const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+      if (resultado === 'encolado') {
+        setAviso('Sin conexión: la foto quedó guardada en este dispositivo y se subirá sola al recuperar señal.')
+      }
+      onChange({ referencia, nombre: archivoFinal.name, tipo: archivoFinal.type })
+    } catch {
+      setError(`No se pudo subir la foto: ${archivo.name}`)
+    }
+    setSubiendo(false)
+  }
+
+  return (
+    <div className="flex flex-col gap-2 text-sm text-slate-300">
+      <span>📷 Fotografía principal (opcional)</span>
+      <div className="flex items-center gap-3">
+        {foto &&
+          (url ? (
+            <img
+              src={url}
+              alt="Fotografía del equipo"
+              className="h-16 w-24 shrink-0 rounded-lg border border-slate-800 object-cover"
+            />
+          ) : (
+            <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-500">
+              📷
+            </div>
+          ))}
+        <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+          {subiendo ? 'Subiendo...' : foto ? 'Cambiar foto' : '+ Elegir foto'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={subiendo}
+            onChange={(evento) => void subir(evento)}
+          />
+        </label>
+        {foto && !subiendo && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-xs text-slate-400 underline underline-offset-2"
+          >
+            Quitar
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-slate-500">
+        Se muestra en la ficha, el listado, el buscador y al escanear el código QR del equipo.
+      </p>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      {aviso && <p className="text-xs text-amber-300">{aviso}</p>}
     </div>
   )
 }

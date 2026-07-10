@@ -22,7 +22,7 @@ set -euo pipefail
 SUPABASE_URL="${SUPABASE_URL:-https://kwwxnmlprdivckqcgjws.supabase.co}"
 SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-sb_publishable_yHHdmM4xeo34Eq0-FVVo9A_hh33nemO}"
 
-TABLAS=(categorias perfiles articulos dispositivos credenciales historial adjuntos)
+TABLAS=(categorias perfiles articulos dispositivos conexiones credenciales historial adjuntos diagnosticos ejecuciones_diagnostico accesos_boveda)
 FILAS_POR_PAGINA=1000
 
 for herramienta in curl jq tar openssl; do

@@ -53,7 +53,12 @@ export function DiagnosticoForm() {
   const vinculables = useLiveQuery(
     () =>
       db.articulos
-        .filter((a) => !a.eliminadoEn && normalizarProcedimiento(a.procedimiento) !== null)
+        .filter(
+          (a) =>
+            !a.eliminadoEn &&
+            (a.estado ?? 'publicado') === 'publicado' &&
+            normalizarProcedimiento(a.procedimiento) !== null,
+        )
         .toArray(),
     [],
     [],

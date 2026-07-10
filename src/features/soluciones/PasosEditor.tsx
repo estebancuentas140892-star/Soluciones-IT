@@ -66,7 +66,10 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
       db.articulos
         .filter(
           (a) =>
-            !a.eliminadoEn && a.id !== articuloId && normalizarProcedimiento(a.procedimiento) !== null,
+            !a.eliminadoEn &&
+            a.id !== articuloId &&
+            (a.estado ?? 'publicado') === 'publicado' &&
+            normalizarProcedimiento(a.procedimiento) !== null,
         )
         .toArray(),
     [articuloId],

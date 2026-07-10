@@ -59,6 +59,12 @@ export function DiagnosticosPage() {
             <h1 className="text-xl font-semibold">Diagnóstico Inteligente</h1>
             <p className="text-sm text-slate-400">Empieza por el problema, llega a la solución</p>
           </div>
+          <Link
+            to="/diagnostico/sugerencias"
+            className="w-fit text-xs text-slate-400 underline underline-offset-2"
+          >
+            Sugerencias del equipo
+          </Link>
         </div>
         <Link
           to="/diagnostico/nuevo"

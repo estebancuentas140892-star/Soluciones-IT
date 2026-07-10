@@ -16,6 +16,7 @@ function dispositivoDePrueba(id: string): Omit<Dispositivo, 'updatedAt' | 'updat
     estado: 'Operativa',
     observaciones: '',
     detalles: { puerto: '12', switch: 'SW-Bodega' },
+    foto: null,
   }
 }
 
@@ -32,6 +33,9 @@ function articuloDePrueba(id: string): Omit<Articulo, 'updatedAt' | 'updatedBy' 
     causas: [],
     dispositivosAfectados: [],
     esRutaInicio: false,
+    estado: 'publicado',
+    version: '1.0',
+    relacionados: [],
   }
 }
 
@@ -117,12 +121,14 @@ describe('guardarRegistro', () => {
       titulo: 'Router principal',
       categoria: 'Redes',
       datosCifrados: 'bloque-cifrado-original',
+      venceEn: null,
     })
     await guardarRegistro('credenciales', {
       id,
       titulo: 'Router principal',
       categoria: 'Redes',
       datosCifrados: 'bloque-cifrado-nuevo',
+      venceEn: null,
     })
 
     const cambio = (await db.historial.toArray()).find((c) => c.campo === 'datosCifrados')

@@ -187,6 +187,7 @@ export function mapearFilas(filas: string[][], opciones: OpcionesMapeo): Resulta
       estado: '',
       observaciones: '',
       detalles: {},
+      foto: null,
     }
     let textoCategoria = ''
 

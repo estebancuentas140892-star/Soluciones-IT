@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { IndicadorEstado } from './IndicadorEstado'
 
 export function DispositivosPage() {
@@ -132,13 +133,18 @@ export function DispositivosPage() {
               to={`/dispositivos/${dispositivo.id}`}
               className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3"
             >
-              <div>
-                <p className="text-sm font-medium text-slate-100">{dispositivo.nombre}</p>
-                <p className="text-xs text-slate-400">
-                  {[nombreCategoria.get(dispositivo.categoriaId), dispositivo.marca, dispositivo.ubicacion]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                {dispositivo.foto && (
+                  <MiniaturaPortada referencia={dispositivo.foto.referencia} alt={dispositivo.nombre} />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-100">{dispositivo.nombre}</p>
+                  <p className="truncate text-xs text-slate-400">
+                    {[nombreCategoria.get(dispositivo.categoriaId), dispositivo.marca, dispositivo.ubicacion]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
               </div>
               <IndicadorEstado estado={dispositivo.estado} />
             </Link>

@@ -2,9 +2,11 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { useAuth } from '../autenticacion/authContext'
 import { CampoSecreto } from './CampoSecreto'
+import { IndicadorVencimiento } from './IndicadorVencimiento'
 import { desbloquear, descifrarCredencial, type DatosCredencial } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
 
@@ -48,16 +50,27 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
     <div className="rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2.5">
       <button
         type="button"
-        onClick={() => setAbierto((v) => !v)}
+        onClick={() => {
+          setAbierto((v) => {
+            const nuevoValor = !v
+            if (nuevoValor && autorizado && credencial && !eliminada) {
+              void registrarAccesoBoveda({ credencialId, credencialTitulo: titulo, accion: 'consulto' })
+            }
+            return nuevoValor
+          })
+        }}
         aria-expanded={abierto}
         className="flex w-full items-center justify-between gap-2 text-left"
       >
         <p className="min-w-0 truncate text-xs font-medium text-violet-200">
           🔐 Datos{titulo ? `: ${titulo}` : ''}
         </p>
-        <span className="shrink-0 text-xs text-violet-300 underline underline-offset-2">
-          {abierto ? 'Ocultar' : 'Ver'}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {credencial && !eliminada && <IndicadorVencimiento venceEn={credencial.venceEn ?? null} />}
+          <span className="text-xs text-violet-300 underline underline-offset-2">
+            {abierto ? 'Ocultar' : 'Ver'}
+          </span>
+        </div>
       </button>
 
       {abierto &&
@@ -74,13 +87,13 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
           <FormularioDesbloqueo />
         ) : (
           <>
-            <DatosDescifrados datosCifrados={credencial.datosCifrados} />
+            <DatosDescifrados datosCifrados={credencial.datosCifrados} credencialId={credencialId} credencialTitulo={titulo} />
             <div className="mt-2.5">
               <Link
                 to={`/boveda/${credencialId}`}
                 className="text-xs text-violet-300 underline underline-offset-2"
               >
-                Abrir en Notas
+                Abrir en Bóveda
               </Link>
             </div>
           </>
@@ -134,7 +147,15 @@ function FormularioDesbloqueo() {
   )
 }
 
-function DatosDescifrados({ datosCifrados }: { datosCifrados: string }) {
+function DatosDescifrados({
+  datosCifrados,
+  credencialId,
+  credencialTitulo,
+}: {
+  datosCifrados: string
+  credencialId: string
+  credencialTitulo: string
+}) {
   // undefined: descifrando; null: no se pudo descifrar.
   const [datos, setDatos] = useState<DatosCredencial | null | undefined>(undefined)
   const [verContrasena, setVerContrasena] = useState(false)
@@ -157,7 +178,7 @@ function DatosDescifrados({ datosCifrados }: { datosCifrados: string }) {
     return (
       <p className="mt-1 text-xs text-amber-300">
         No se pudo descifrar esta credencial con la contraseña maestra actual. Ábrela en la sección
-        Notas para ver los detalles.
+        Bóveda para ver los detalles.
       </p>
     )
   }
@@ -173,13 +194,28 @@ function DatosDescifrados({ datosCifrados }: { datosCifrados: string }) {
     <div className="mt-2 flex flex-col gap-2.5">
       {!sinCampos && (
         <dl className="flex flex-col gap-2.5">
-          {datos.usuario && <CampoSecreto etiqueta="Usuario" valor={datos.usuario} />}
+          {datos.usuario && (
+            <CampoSecreto
+              etiqueta="Usuario"
+              valor={datos.usuario}
+              onCopiado={() => void registrarAccesoBoveda({ credencialId, credencialTitulo, accion: 'copio_usuario' })}
+            />
+          )}
           {datos.contrasena && (
             <CampoSecreto
               etiqueta="Contraseña"
               valor={datos.contrasena}
               oculto={!verContrasena}
-              alternarOculto={() => setVerContrasena((v) => !v)}
+              alternarOculto={() =>
+                setVerContrasena((v) => {
+                  const nuevoValor = !v
+                  if (nuevoValor) void registrarAccesoBoveda({ credencialId, credencialTitulo, accion: 'mostro' })
+                  return nuevoValor
+                })
+              }
+              onCopiado={() =>
+                void registrarAccesoBoveda({ credencialId, credencialTitulo, accion: 'copio_contrasena' })
+              }
             />
           )}
           {datos.ip && <CampoSecreto etiqueta="Dirección IP" valor={datos.ip} />}

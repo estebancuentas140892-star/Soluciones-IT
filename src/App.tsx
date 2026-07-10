@@ -51,6 +51,9 @@ const DiagnosticoForm = lazy(() =>
 const DiagnosticoRunPage = lazy(() =>
   import('./features/diagnostico/DiagnosticoRunPage').then((m) => ({ default: m.DiagnosticoRunPage })),
 )
+const SugerenciasEquipoPage = lazy(() =>
+  import('./features/diagnostico/SugerenciasEquipoPage').then((m) => ({ default: m.SugerenciasEquipoPage })),
+)
 const DispositivosPage = lazy(() =>
   import('./features/dispositivos/DispositivosPage').then((m) => ({ default: m.DispositivosPage })),
 )
@@ -158,6 +161,7 @@ function App() {
                 <Route path="cuenta/seguridad" element={<SeguridadPage />} />
                 <Route path="diagnostico" element={<DiagnosticosPage />} />
                 <Route path="diagnostico/nuevo" element={<DiagnosticoForm />} />
+                <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
                 <Route path="diagnostico/:diagnosticoId/editar" element={<DiagnosticoForm />} />
                 <Route path="soluciones" element={<SolucionesPage />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />

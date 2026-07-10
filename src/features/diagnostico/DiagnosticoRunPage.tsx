@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { db, type NodoDiagnostico, type ProgresoDiagnostico } from '../../lib/db'
+import { db, type MotivoNoResuelto, type NodoDiagnostico, type ProgresoDiagnostico } from '../../lib/db'
 import { normalizarNodos, porcentajeDiagnostico } from '../../lib/diagnostico'
 import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
 import {
@@ -49,7 +49,14 @@ export function DiagnosticoRunPage() {
 
   // Cierra la sesion registrando la ejecucion. El registro es la base
   // de las estadisticas: problemas frecuentes, tasa de exito, tiempo.
-  async function cerrar(resuelto: 'si' | 'no' | 'abandonado', sesion: ProgresoDiagnostico) {
+  // motivo y solucionPropuesta (fase D3) solo tienen sentido cuando
+  // resuelto es 'no': se piden en la pantalla de resultado.
+  async function cerrar(
+    resuelto: 'si' | 'no' | 'abandonado',
+    sesion: ProgresoDiagnostico,
+    motivo: MotivoNoResuelto = '',
+    solucionPropuesta = '',
+  ) {
     if (cerrando) return
     setCerrando(true)
     // Un abandono sin ninguna respuesta no aporta nada a las
@@ -62,6 +69,8 @@ export function DiagnosticoRunPage() {
         articulosEjecutados: sesion.articulosEjecutados,
         resuelto,
         duracionSegundos: duracionSegundos(sesion),
+        motivo,
+        solucionPropuesta,
       })
     }
     await eliminarProgresoDiagnostico(diagnosticoId)
@@ -98,7 +107,9 @@ export function DiagnosticoRunPage() {
           diagnosticoId={diagnosticoId}
           confirmandoCancelar={confirmandoCancelar}
           onConfirmarCancelar={setConfirmandoCancelar}
-          onCerrar={(resuelto) => void cerrar(resuelto, progreso)}
+          onCerrar={(resuelto, motivo, solucionPropuesta) =>
+            void cerrar(resuelto, progreso, motivo, solucionPropuesta)
+          }
         />
       )}
     </div>
@@ -167,7 +178,7 @@ function Sesion({
   diagnosticoId: string
   confirmandoCancelar: boolean
   onConfirmarCancelar: (valor: boolean) => void
-  onCerrar: (resuelto: 'si' | 'no' | 'abandonado') => void
+  onCerrar: (resuelto: 'si' | 'no' | 'abandonado', motivo?: MotivoNoResuelto, solucionPropuesta?: string) => void
 }) {
   const { estado, camino } = progreso
   const porcentaje = porcentajeDiagnostico(nodos, camino, estado)
@@ -377,16 +388,30 @@ function ArticuloEnDiagnostico({
   )
 }
 
+const MOTIVOS_NO_RESUELTO: { valor: Exclude<MotivoNoResuelto, ''>; etiqueta: string }[] = [
+  { valor: 'no_funciono', etiqueta: 'La solución no funcionó' },
+  { valor: 'no_encontro_problema', etiqueta: 'No encontré mi problema' },
+  { valor: 'faltan_pasos', etiqueta: 'Faltan pasos' },
+  { valor: 'encontro_otra_solucion', etiqueta: 'Encontré otra solución' },
+  { valor: 'otro', etiqueta: 'Otro' },
+]
+
 // Resultado del diagnostico: que se encontro, que se ejecuto y la
-// pregunta que alimenta las estadisticas: ¿quedo resuelto?
+// pregunta que alimenta las estadisticas: ¿quedo resuelto? Si "No",
+// pide el motivo (fase D3) antes de cerrar: alimenta las sugerencias
+// del equipo cuando el motivo es "encontré otra solución".
 function Resultado({
   progreso,
   onCerrar,
 }: {
   progreso: ProgresoDiagnostico
-  onCerrar: (resuelto: 'si' | 'no') => void
+  onCerrar: (resuelto: 'si' | 'no', motivo?: MotivoNoResuelto, solucionPropuesta?: string) => void
 }) {
   const { estado, camino, articulosEjecutados } = progreso
+  const [pidiendoMotivo, setPidiendoMotivo] = useState(false)
+  const [motivo, setMotivo] = useState<MotivoNoResuelto>('')
+  const [solucionPropuesta, setSolucionPropuesta] = useState('')
+
   if (estado.tipo !== 'final') return null
 
   return (
@@ -421,22 +446,75 @@ function Resultado({
 
       <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
         <p className="text-sm font-medium text-slate-200">¿Quedó resuelto el problema?</p>
-        <div className="mt-2 flex gap-2">
-          <button
-            type="button"
-            onClick={() => onCerrar('si')}
-            className="rounded-xl border border-emerald-800 px-4 py-2 text-sm text-emerald-300"
-          >
-            Sí, resuelto
-          </button>
-          <button
-            type="button"
-            onClick={() => onCerrar('no')}
-            className="rounded-xl border border-amber-800 px-4 py-2 text-sm text-amber-300"
-          >
-            No
-          </button>
-        </div>
+
+        {!pidiendoMotivo ? (
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => onCerrar('si')}
+              className="rounded-xl border border-emerald-800 px-4 py-2 text-sm text-emerald-300"
+            >
+              Sí, resuelto
+            </button>
+            <button
+              type="button"
+              onClick={() => setPidiendoMotivo(true)}
+              className="rounded-xl border border-amber-800 px-4 py-2 text-sm text-amber-300"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <div className="mt-2 flex flex-col gap-2">
+            <p className="text-xs text-slate-400">¿Por qué no quedó resuelto? (opcional)</p>
+            <div className="flex flex-col gap-1.5">
+              {MOTIVOS_NO_RESUELTO.map((opcion) => (
+                <label key={opcion.valor} className="flex items-center gap-2 text-sm text-slate-200">
+                  <input
+                    type="radio"
+                    name="motivo-no-resuelto"
+                    checked={motivo === opcion.valor}
+                    onChange={() => setMotivo(opcion.valor)}
+                  />
+                  {opcion.etiqueta}
+                </label>
+              ))}
+            </div>
+
+            {motivo === 'encontro_otra_solucion' && (
+              <textarea
+                rows={3}
+                value={solucionPropuesta}
+                onChange={(e) => setSolucionPropuesta(e.target.value)}
+                placeholder="Cuéntanos qué funcionó, para revisarlo e incorporarlo a la base de conocimiento"
+                className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            )}
+
+            <div className="mt-1 flex gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  onCerrar(
+                    'no',
+                    motivo,
+                    motivo === 'encontro_otra_solucion' ? solucionPropuesta.trim() : '',
+                  )
+                }
+                className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950"
+              >
+                Confirmar
+              </button>
+              <button
+                type="button"
+                onClick={() => setPidiendoMotivo(false)}
+                className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300"
+              >
+                Volver
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

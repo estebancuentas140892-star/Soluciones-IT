@@ -1,5 +1,38 @@
 # Historial de tareas finalizadas
 
+### 52. Grupo de cambios de esquema de la propuesta por módulos
+- Finalizada (código): 2026-07-10. Pendiente de un paso del usuario en Supabase (aplicar `schema.sql`, ver más abajo).
+- Descripción: última fase pendiente de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md), sección 7: agrupa TODOS los cambios de esquema restantes de la propuesta en una sola actualización de `schema.sql`, para que el usuario solo tenga que intervenir Supabase una vez (S3 + B2 + D3 + B3 + foto de Dis2). Decisión del usuario: 3 estados de artículo (borrador/publicado/obsoleto, sin "en revisión").
+- Solución (esquema, `supabase/schema.sql`):
+  - `articulos` gana `estado` (check `borrador|publicado|obsoleto`, default `publicado`), `version` (texto, default `'1.0'`) y `relacionados` (jsonb, default `'[]'`).
+  - `dispositivos` gana `foto` (jsonb, nullable).
+  - `credenciales` gana `vence_en` (date, nullable, sin cifrar a propósito).
+  - `ejecuciones_diagnostico` gana `motivo` (check con lista cerrada + `''`) y `solucion_propuesta` (text).
+  - Tabla nueva `accesos_boveda` (auditoría, solo inserción, mismo patrón que `historial`/`ejecuciones_diagnostico`: cursor `recibido_en`, RLS de lectura e inserción restringida a `puede_ver_boveda`, sin políticas de UPDATE/DELETE).
+  - Todo con `alter table add column if not exists` y `drop/add constraint`, ejecutable varias veces sin error, siguiendo el patrón ya establecido del archivo.
+- Solución (modelo local, `src/lib/db.ts` + `src/lib/tablas.ts`): `EstadoArticulo`, `ArticuloRelacionado`, `MotivoNoResuelto`, `AccionBoveda`, `AccesoBoveda` (tabla local nueva, versión Dexie 9); mapeos locales↔remotos actualizados; `accesos_boveda` sumada a `TABLAS_SINCRONIZADAS` y excluida de `TablaEditable` (solo se agrega vía repositorio, nunca se edita).
+- Solución (Soluciones — estado, versión y relacionados):
+  - `src/lib/version.ts` (nuevo, puro y probado): `siguienteVersion(actual, cambioMayor)` sube la versión menor por defecto o la mayor con "Cambio mayor", tolerante a texto mal formado.
+  - `ArticuloForm.tsx`: selector de Estado y checkbox "Cambio mayor" (solo visible editando un artículo ya publicado, con vista previa de qué versión resultará); la versión solo sube al editar un artículo que YA estaba publicado, nunca en un borrador ni al crear; duplicar un artículo copia los relacionados pero el estado vuelve a borrador y la versión a 1.0. Editor de relacionados (`RelacionadosEditor`, mismo patrón de chips + select que dispositivos afectados).
+  - `ArticuloPage.tsx`: banda visual de estado (nada si publicado, ámbar si borrador, rojo si obsoleto), versión junto al tipo, y sección "Relacionados" con el inverso "Aparece como relacionado en..." calculado localmente sin guardarlo.
+  - Un borrador u obsoleto se excluye del buscador global (`useIndiceBusqueda.ts`), de las rutas de inicio (`InicioPage.tsx`) y de los vinculables de procedimientos y diagnósticos (`PasosEditor.tsx`, `DiagnosticoForm.tsx`).
+- Solución (Bóveda — vencimiento y auditoría):
+  - `src/lib/vencimiento.ts` (nuevo, puro y probado): `estadoVencimiento` devuelve `'vencida'`, `'proxima'` (dentro de 30 días) o `null`.
+  - `IndicadorVencimiento.tsx` (nuevo): chip ámbar/rojo, reutilizado en `BovedaPage.tsx` (listado), `CredencialPage.tsx` (ficha) y `CredencialEnPaso.tsx` (dentro de un procedimiento). Campo de fecha en `CredencialForm.tsx`.
+  - `registrarAccesoBoveda` en `src/lib/repositorio.ts` (mismo patrón que `registrarEjecucionDiagnostico`). `CampoSecreto.tsx` gana un `onCopiado` opcional (el componente reutilizable no decide qué auditar; quien lo usa sí). Se registra: `consulto` al abrir la ficha o el vínculo en un paso (con guardia por ref para no duplicar en cada refresco), `mostro` al revelar la contraseña, `copio_usuario`/`copio_contrasena` al copiar, `modifico` al guardar una edición y `elimino` al borrar. `CredencialPage.tsx` muestra "Último acceso" (la entrada más reciente, sin contar la del propio "consulto" de esta visita).
+  - De paso se corrigieron dos restos de la fase Dis1+B1 que quedaron con el nombre viejo: "Abrir en Notas" y "Ábrela en la sección Notas" en `CredencialEnPaso.tsx` ahora dicen "Bóveda".
+- Solución (Diagnóstico — motivo y sugerencias):
+  - `DiagnosticoRunPage.tsx`: al responder "No" en el resultado, pide el motivo (lista cerrada + "Otro") antes de cerrar, y si es "Encontré otra solución" un texto libre; `registrarEjecucionDiagnostico` guarda ambos.
+  - `SugerenciasEquipoPage.tsx` (nuevo, `/diagnostico/sugerencias`, enlazado desde `DiagnosticosPage.tsx`): lista los textos con motivo "Encontré otra solución", para que quien mantiene la base los revise. Sin flujo de aprobación formal todavía.
+- Solución (Dispositivos — foto):
+  - `DispositivoForm.tsx` gana un id estable desde el inicio (mismo patrón que `ArticuloForm.tsx`) y un editor de foto (`FotoEditor`, subida comprimida con cola offline, idéntico patrón a la portada de un procedimiento). No se copia al duplicar (equipo físico distinto).
+  - `DispositivoPage.tsx` (banner), `DispositivosPage.tsx` (miniatura en el listado) y el índice de búsqueda (`portadaRef`) muestran la foto; el escaneo de QR ya abría la ficha completa, así que hereda la foto sin cambios.
+- Solución (mantenimiento relacionado): `scripts/respaldo-supabase.sh` y `supabase/RESPALDO.md` tenían la lista de tablas desactualizada desde antes de esta tarea (les faltaban `conexiones`, `diagnosticos` y `ejecuciones_diagnostico`); se corrigió de una vez y se agregó `accesos_boveda`.
+- Pruebas: 339 en verde (16 nuevas: `version.test.ts` con 3, `vencimiento.test.ts` con 5, más las de fixtures actualizados). Typecheck, lint (sin advertencias, incluida una de `exhaustive-deps` resuelta con un guard por `ref` en vez de silenciarla) y build en verde.
+- Verificado en navegador real (sesión simulada + datos sembrados en las 4 áreas, luego limpiados con `cambiosPendientes` en 0): estado "Publicado"→"Cambio mayor" subió la versión de 1.0 a 2.0 y guardó los relacionados en ambos sentidos; marcar un artículo como borrador mostró la banda y lo sacó del buscador global; la bóveda mostró el aviso de vencimiento próximo en el listado y la ficha, "Último acceso" tras una segunda visita, y las entradas de auditoría (`consulto`, `mostro`) quedaron en `accesos_boveda`; el flujo completo de diagnóstico con "No" → "Encontré otra solución" → texto libre quedó registrado y visible en "Sugerencias del equipo"; el campo de foto de dispositivo se mostró en el formulario y el modelo guardó/leyó correctamente (la subida real a Storage no se pudo probar en este entorno, pero reutiliza exactamente el patrón ya verificado de la portada de procedimientos).
+- Pendiente (usuario): aplicar el `supabase/schema.sql` actualizado en Supabase. Hasta entonces estado/versión/relacionados/foto/vencimiento/auditoría/motivo funcionan localmente en cada dispositivo pero no se sincronizan con el resto del equipo (la sincronización de esas columnas y de `accesos_boveda` falla sin frenar el resto, mismo criterio que las tablas de diagnóstico).
+- Documentación: ARQUITECTURA.md sección 5 (los 5 párrafos de tablas afectadas); RESPALDO.md y TAREAS.md (tarea 15) con la lista de tablas corregida.
+
 ### 51. Fase R1 de la propuesta por módulos: árbol de red enriquecido
 - Finalizada: 2026-07-09. Sin cambios de esquema en Supabase.
 - Descripción: cuarta fase de [PROPUESTA_MODULOS.md](PROPUESTA_MODULOS.md) (puntos 5, 6, 7, 8, 9, 10 y 12 del documento de Red). Enriquece el árbol de topología ya existente sin cambiar su arquitectura; deja pendiente el mapa interactivo (R2, mucho más costoso) para decidir después de usar esto.

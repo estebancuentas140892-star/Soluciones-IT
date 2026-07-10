@@ -1,12 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { eliminarRegistro } from '../../lib/repositorio'
+import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { Historial } from '../historial/Historial'
 import { CampoSecreto } from './CampoSecreto'
+import { IndicadorVencimiento } from './IndicadorVencimiento'
 import { descifrarCredencial, type DatosCredencial } from './sesionBoveda'
 
 const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' })
@@ -17,6 +18,18 @@ export function CredencialPage() {
 
   const credencial = useLiveQuery(
     async () => (await db.credenciales.get(credencialId)) ?? null,
+    [credencialId],
+  )
+
+  // Ultimo acceso (fase B3): la entrada de auditoria mas reciente de
+  // esta credencial, sin contar la que se acaba de registrar por
+  // abrir esta misma ficha (esa es "ahora mismo", no aporta nada
+  // mostrarla como "ultimo acceso" de otra persona).
+  const ultimoAcceso = useLiveQuery(
+    async () => {
+      const accesos = await db.accesos_boveda.where('credencialId').equals(credencialId).toArray()
+      return accesos.sort((a, b) => (a.fechaHora < b.fechaHora ? 1 : -1))[1] ?? null
+    },
     [credencialId],
   )
 
@@ -36,14 +49,43 @@ export function CredencialPage() {
     }
   }, [credencial])
 
+  // Auditoria de la boveda (fase B3): una entrada de "consulto" por
+  // apertura de la ficha, una vez que la credencial ya cargo. El ref
+  // evita registrar de nuevo si `credencial` se refresca (por ejemplo
+  // al sincronizar) sin que el tecnico haya vuelto a abrir la ficha.
+  const yaRegistrado = useRef<string | null>(null)
+  useEffect(() => {
+    if (!credencial || yaRegistrado.current === credencial.id) return
+    yaRegistrado.current = credencial.id
+    void registrarAccesoBoveda({
+      credencialId: credencial.id,
+      credencialTitulo: credencial.titulo,
+      accion: 'consulto',
+    })
+  }, [credencial])
+
   if (credencial === null || credencial?.eliminadoEn) return <Navigate to="/boveda" replace />
   if (!credencial || datos === undefined) {
     return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
   }
+  // Copia local: TypeScript no conserva el descarte de null/undefined
+  // de arriba dentro de las funciones declaradas mas abajo.
+  const tituloActual = credencial.titulo
 
   async function eliminar() {
+    await registrarAccesoBoveda({ credencialId, credencialTitulo: tituloActual, accion: 'elimino' })
     await eliminarRegistro('credenciales', credencialId)
     navigate('/boveda')
+  }
+
+  function alternarVerContrasena() {
+    setVerContrasena((v) => {
+      const nuevoValor = !v
+      if (nuevoValor) {
+        void registrarAccesoBoveda({ credencialId, credencialTitulo: tituloActual, accion: 'mostro' })
+      }
+      return nuevoValor
+    })
   }
 
   return (
@@ -57,6 +99,15 @@ export function CredencialPage() {
           <p className="text-xs text-slate-600">
             Última modificación: {formateadorFecha.format(new Date(credencial.updatedAt))}
           </p>
+          {ultimoAcceso && (
+            <p className="text-xs text-slate-600">
+              Último acceso: {formateadorFecha.format(new Date(ultimoAcceso.fechaHora))}
+              {ultimoAcceso.usuarioNombre ? `, ${ultimoAcceso.usuarioNombre}` : ''}
+            </p>
+          )}
+          <div className="mt-1">
+            <IndicadorVencimiento venceEn={credencial.venceEn ?? null} />
+          </div>
         </div>
         <div className="flex shrink-0 gap-2">
           <Link
@@ -92,13 +143,24 @@ export function CredencialPage() {
         </p>
       ) : (
         <dl className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
-          {datos.usuario && <CampoSecreto etiqueta="Usuario" valor={datos.usuario} />}
+          {datos.usuario && (
+            <CampoSecreto
+              etiqueta="Usuario"
+              valor={datos.usuario}
+              onCopiado={() =>
+                void registrarAccesoBoveda({ credencialId, credencialTitulo: credencial.titulo, accion: 'copio_usuario' })
+              }
+            />
+          )}
           {datos.contrasena && (
             <CampoSecreto
               etiqueta="Contraseña"
               valor={datos.contrasena}
               oculto={!verContrasena}
-              alternarOculto={() => setVerContrasena((v) => !v)}
+              alternarOculto={alternarVerContrasena}
+              onCopiado={() =>
+                void registrarAccesoBoveda({ credencialId, credencialTitulo: credencial.titulo, accion: 'copio_contrasena' })
+              }
             />
           )}
           {datos.ip && <CampoSecreto etiqueta="Dirección IP" valor={datos.ip} />}

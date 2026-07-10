@@ -2,7 +2,7 @@
 
 Cada domingo, un workflow de GitHub Actions exporta todas las tablas de Supabase, cifra el resultado y lo guarda por 90 días. Existe porque el plan gratuito de Supabase no incluye copias de seguridad: si algo se borra por error más allá de lo que cubre el historial, este respaldo es la única vuelta atrás.
 
-Qué incluye: las 7 tablas (`categorias`, `perfiles`, `articulos`, `dispositivos`, `credenciales`, `historial`, `adjuntos`) en formato JSON, más un manifiesto con la fecha y el número de filas por tabla. Las credenciales de la bóveda van tal como viven en el servidor: cifradas; el respaldo nunca contiene contraseñas legibles.
+Qué incluye: las 11 tablas (`categorias`, `perfiles`, `articulos`, `dispositivos`, `conexiones`, `credenciales`, `historial`, `adjuntos`, `diagnosticos`, `ejecuciones_diagnostico`, `accesos_boveda`) en formato JSON, más un manifiesto con la fecha y el número de filas por tabla. Las credenciales de la bóveda van tal como viven en el servidor: cifradas; el respaldo nunca contiene contraseñas legibles.
 
 Qué NO incluye: los archivos del bucket de Storage (fotos, manuales en PDF). Solo se respaldan sus referencias en la tabla `adjuntos`.
 

@@ -5,7 +5,7 @@ import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { Seccion } from '../../components/Seccion'
 import { db } from '../../lib/db'
-import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
 import { cifrarCredencial, descifrarCredencial } from './sesionBoveda'
 
 interface CampoExtra {
@@ -37,6 +37,10 @@ export function CredencialForm() {
   const [url, setUrl] = useState('')
   const [notas, setNotas] = useState('')
   const [extras, setExtras] = useState<CampoExtra[]>([])
+  // Fecha de vencimiento (fase B2), "YYYY-MM-DD" o ''. A diferencia
+  // del resto del formulario NO viaja cifrada: se carga directo del
+  // registro, sin esperar el descifrado.
+  const [venceEn, setVenceEn] = useState('')
   const [motivo, setMotivo] = useState('')
   const [sinDescifrar, setSinDescifrar] = useState(false)
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
@@ -48,6 +52,7 @@ export function CredencialForm() {
     let vigente = true
     setTitulo(credencial.titulo)
     setCategoria(credencial.categoria)
+    setVenceEn(credencial.venceEn ?? '')
     void descifrarCredencial(credencial.datosCifrados).then((datos) => {
       if (!vigente) return
       if (datos) {
@@ -98,11 +103,23 @@ export function CredencialForm() {
         ),
       })
 
+      const tituloFinal = titulo.trim()
       await guardarRegistro(
         'credenciales',
-        { id, titulo: titulo.trim(), categoria: categoria.trim(), datosCifrados },
+        {
+          id,
+          titulo: tituloFinal,
+          categoria: categoria.trim(),
+          datosCifrados,
+          venceEn: venceEn.trim() === '' ? null : venceEn.trim(),
+        },
         motivo.trim(),
       )
+      // Auditoria de la boveda (fase B3): solo al editar una credencial
+      // existente; la creacion ya queda registrada en el historial.
+      if (esEdicion) {
+        await registrarAccesoBoveda({ credencialId: id, credencialTitulo: tituloFinal, accion: 'modifico' })
+      }
       navigate(`/boveda/${id}`)
     } catch {
       // Ocurre si el autobloqueo cerro la boveda durante la edicion.
@@ -158,6 +175,14 @@ export function CredencialForm() {
                 <option key={c} value={c} />
               ))}
             </datalist>
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Vencimiento (opcional)
+            <input type="date" value={venceEn} onChange={(e) => setVenceEn(e.target.value)} className={claseCampo} />
+            <span className="text-xs text-slate-500">
+              Esta fecha NO se cifra: permite avisar antes de vencer sin desbloquear la bóveda.
+            </span>
           </label>
         </Seccion>
 

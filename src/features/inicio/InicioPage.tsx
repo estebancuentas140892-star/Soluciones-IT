@@ -19,7 +19,10 @@ export function InicioPage() {
   // ArticuloForm): puerta de entrada para quien recien llega, sin
   // crear una seccion nueva.
   const rutasInicio = useLiveQuery(
-    () => db.articulos.filter((a) => a.esRutaInicio && !a.eliminadoEn).toArray(),
+    () =>
+      db.articulos
+        .filter((a) => a.esRutaInicio && !a.eliminadoEn && (a.estado ?? 'publicado') === 'publicado')
+        .toArray(),
     [],
     [],
   )

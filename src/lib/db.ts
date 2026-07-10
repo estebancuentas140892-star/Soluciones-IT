@@ -185,6 +185,24 @@ export interface DispositivoAfectado {
   nombre: string
 }
 
+// Vinculo generico a otro articulo (mismo patron de copia de
+// referencia: id real + copia del titulo). Se usa tanto para
+// "Articulos relacionados" (Articulo.relacionados) como para
+// cualquier lista futura del mismo tipo.
+export interface ArticuloRelacionado {
+  id: string
+  titulo: string
+}
+
+// Estado del documento (grupo de esquema, 2026-07-09): 'publicado' es
+// el estado de todo lo existente antes de este campo (nunca deja algo
+// oficial fuera de golpe). Un borrador u obsoleto se excluye del
+// buscador global, las rutas de inicio, los vinculables y el
+// Diagnostico Inteligente, salvo para quien esta editando ese mismo
+// articulo. Se decidieron 3 estados (sin "en revision"): un equipo de
+// 5 no tiene hoy un flujo de aprobacion real detras de ese paso.
+export type EstadoArticulo = 'borrador' | 'publicado' | 'obsoleto'
+
 export interface Articulo {
   id: string
   categoriaId: string
@@ -209,6 +227,17 @@ export interface Articulo {
   // marca a mano desde el editor. Puede haber varios marcados; Inicio
   // los muestra todos.
   esRutaInicio: boolean
+  estado: EstadoArticulo
+  // Version legible ("1.0", "1.1", "2.0"): sube la menor en cada
+  // guardado sobre un articulo publicado, o la mayor si se marca
+  // "Cambio mayor" (ver src/lib/version.ts). El historial ya conserva
+  // el contenido completo de cada version; esto es solo la etiqueta.
+  version: string
+  // Otros articulos relacionados (punto 11 de la propuesta): mismo
+  // patron de copia de referencia que dispositivosAfectados. La ficha
+  // tambien muestra el inverso ("aparece como relacionado en..."),
+  // calculado localmente sin guardarlo aqui.
+  relacionados: ArticuloRelacionado[]
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -227,6 +256,11 @@ export interface Dispositivo {
   estado: string
   observaciones: string
   detalles: Record<string, string>
+  // Fotografia principal del equipo (fase Dis2), o null: identifica el
+  // dispositivo de un vistazo en la ficha, el listado, el buscador y
+  // al escanear su codigo QR. Mismo formato que la portada de un
+  // procedimiento (solo referencia de Storage, nombre y tipo).
+  foto: PasoAdjunto | null
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -266,6 +300,10 @@ export interface Credencial {
   titulo: string
   categoria: string
   datosCifrados: string
+  // Fecha de vencimiento opcional (fase B2, "YYYY-MM-DD"), o null. A
+  // proposito NO viaja cifrada: permite avisar (ambar cerca de vencer,
+  // rojo si ya vencio) sin tener que desbloquear la boveda.
+  venceEn: string | null
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -404,6 +442,19 @@ export interface ProgresoDiagnostico {
   actualizadoEn: string
 }
 
+// Motivo de la retroalimentacion cuando el diagnostico NO quedo
+// resuelto (fase D3): '' cuando resuelto es 'si' o 'abandonado' (la
+// pregunta de motivo solo aparece tras responder "No"). Si el motivo
+// es 'encontro_otra_solucion', solucionPropuesta trae el texto libre
+// del tecnico para que quien mantiene la base lo revise.
+export type MotivoNoResuelto =
+  | ''
+  | 'no_funciono'
+  | 'no_encontro_problema'
+  | 'faltan_pasos'
+  | 'encontro_otra_solucion'
+  | 'otro'
+
 // Registro de un diagnostico terminado (o abandonado), sincronizado
 // con el equipo. Solo se insertan filas, nunca se editan (como el
 // historial): es la base de las estadisticas futuras (problemas mas
@@ -419,6 +470,8 @@ export interface EjecucionDiagnostico {
   resuelto: 'si' | 'no' | 'abandonado'
   duracionSegundos: number
   fechaHora: string
+  motivo: MotivoNoResuelto
+  solucionPropuesta: string
 }
 
 export type TipoEntidadHistorial = 'categoria' | 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico'
@@ -434,6 +487,26 @@ export interface HistorialEntrada {
   valorAnterior: string
   valorNuevo: string
   motivo: string
+}
+
+// Que hizo el tecnico con una credencial (fase B3, auditoria de la
+// boveda): consulto la ficha, mostro la contrasena oculta, copio el
+// usuario o la contrasena, o la modifico/elimino.
+export type AccionBoveda = 'consulto' | 'mostro' | 'copio_usuario' | 'copio_contrasena' | 'modifico' | 'elimino'
+
+// Registro inmutable de accesos a la boveda, sincronizado con el
+// equipo (solo se insertan filas, como el historial). credencialTitulo
+// es copia de referencia (se ve aunque la credencial ya se haya
+// eliminado). Es trazabilidad de buena fe: se registra desde el
+// cliente al momento de la accion, no impide nada por si solo.
+export interface AccesoBoveda {
+  id: string
+  credencialId: string
+  credencialTitulo: string
+  usuario: string | null
+  usuarioNombre: string
+  accion: AccionBoveda
+  fechaHora: string
 }
 
 export interface Adjunto {
@@ -530,6 +603,9 @@ class SolucionesItDatabase extends Dexie {
   // Postgres), igual que el resto de tablas sincronizadas.
   ejecuciones_diagnostico!: EntityTable<EjecucionDiagnostico, 'id'>
   progresoDiagnostico!: EntityTable<ProgresoDiagnostico, 'diagnosticoId'>
+  // Mismo criterio de nombre que ejecuciones_diagnostico: igual en
+  // local y remoto.
+  accesos_boveda!: EntityTable<AccesoBoveda, 'id'>
   cambiosPendientes!: EntityTable<CambioPendiente, 'id'>
   syncMeta!: EntityTable<SyncMeta, 'clave'>
   recientes!: EntityTable<Reciente, 'clave'>
@@ -586,6 +662,15 @@ class SolucionesItDatabase extends Dexie {
       diagnosticos: 'id, categoriaId, updatedAt',
       ejecuciones_diagnostico: 'id, diagnosticoId',
       progresoDiagnostico: 'diagnosticoId',
+    })
+
+    // Grupo de cambios de esquema (2026-07-09): estado/version/
+    // relacionados de articulos, foto de dispositivo y vence_en de
+    // credencial son columnas existentes (Dexie no las declara, viven
+    // dentro del objeto igual que el resto de campos); lo unico que
+    // necesita una tabla nueva es la auditoria de la boveda.
+    this.version(9).stores({
+      accesos_boveda: 'id, credencialId',
     })
   }
 }

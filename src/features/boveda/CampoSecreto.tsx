@@ -10,11 +10,16 @@ export function CampoSecreto({
   valor,
   oculto = false,
   alternarOculto,
+  onCopiado,
 }: {
   etiqueta: string
   valor: string
   oculto?: boolean
   alternarOculto?: () => void
+  // Auditoria de la boveda (fase B3): el componente no sabe si esto es
+  // un usuario, una contrasena u otro dato, asi que deja la decision
+  // de que registrar a quien lo use.
+  onCopiado?: () => void
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -32,18 +37,27 @@ export function CampoSecreto({
             {oculto ? 'Mostrar' : 'Ocultar'}
           </button>
         )}
-        <BotonCopiar etiqueta={etiqueta} valor={valor} />
+        <BotonCopiar etiqueta={etiqueta} valor={valor} onCopiado={onCopiado} />
       </div>
     </div>
   )
 }
 
-function BotonCopiar({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+function BotonCopiar({
+  etiqueta,
+  valor,
+  onCopiado,
+}: {
+  etiqueta: string
+  valor: string
+  onCopiado?: () => void
+}) {
   const [copiado, setCopiado] = useState(false)
 
   async function copiar() {
     if (await copiarAlPortapapeles(valor)) {
       setCopiado(true)
+      onCopiado?.()
       setTimeout(() => setCopiado(false), 1500)
     }
   }

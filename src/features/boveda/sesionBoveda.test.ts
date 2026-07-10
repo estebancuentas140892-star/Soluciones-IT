@@ -36,7 +36,7 @@ const datos: DatosCredencial = {
 }
 
 async function guardarCredencial(titulo: string, datosCifrados: string): Promise<void> {
-  await guardarRegistro('credenciales', { id: nuevoId(), titulo, categoria: 'Redes', datosCifrados })
+  await guardarRegistro('credenciales', { id: nuevoId(), titulo, categoria: 'Redes', datosCifrados, venceEn: null })
 }
 
 // Bloque cifrado con una contrasena dada, como el que produciria otro

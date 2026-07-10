@@ -36,7 +36,15 @@ export interface ResultadoBusqueda {
 // (creación, edición o sincronización). Con el tamaño de datos de un
 // equipo de 5 técnicos esto es instantáneo.
 export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
-  const articulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
+  // Un borrador u obsoleto no aparece en el buscador global (grupo de
+  // esquema, 2026-07-09): no es contenido oficial que se le deba
+  // sugerir al resto del equipo. `?? 'publicado'` cubre las filas
+  // guardadas antes de que existiera el campo.
+  const articulos = useLiveQuery(
+    () => db.articulos.filter((a) => !a.eliminadoEn && (a.estado ?? 'publicado') === 'publicado').toArray(),
+    [],
+    [],
+  )
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
@@ -95,7 +103,10 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           // (por ejemplo el usuario asignado) tambien lo encuentra.
           ...Object.values(dispositivo.detalles),
         ].join(' '),
-        portadaRef: '',
+        // Fotografia principal (fase Dis2): identifica el equipo de
+        // un vistazo en los resultados, igual que la portada de un
+        // procedimiento.
+        portadaRef: dispositivo.foto?.referencia ?? '',
       })
     }
 

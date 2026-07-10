@@ -24,6 +24,7 @@ function dispositivo(id: string, nombre: string, categoriaId: string, eliminadoE
     estado: '',
     observaciones: '',
     detalles: {},
+    foto: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn,

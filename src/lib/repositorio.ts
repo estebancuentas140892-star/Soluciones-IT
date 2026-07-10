@@ -1,5 +1,6 @@
 import {
   db,
+  type AccesoBoveda,
   type Adjunto,
   type Conexion,
   type EjecucionDiagnostico,
@@ -138,6 +139,39 @@ export async function registrarEjecucionDiagnostico(
       entidadId: ejecucion.id,
       payload: ejecucion,
       creadoEn: ejecucion.fechaHora,
+      error: null,
+      intentos: 0,
+    })
+  })
+
+  sincronizarPronto()
+}
+
+// Auditoria de la boveda (fase B3): registro inmutable de que hizo el
+// tecnico con una credencial. Mismo patron que registrarEjecucionDiagnostico
+// (se agrega localmente y se encola para subir; nunca se edita). Es
+// trazabilidad de buena fe: se registra desde el cliente al momento
+// de la accion, no impide nada por si sola.
+export async function registrarAccesoBoveda(
+  datos: Omit<AccesoBoveda, 'id' | 'usuario' | 'usuarioNombre' | 'fechaHora'>,
+): Promise<void> {
+  const usuario = await obtenerUsuarioActual()
+  const acceso: AccesoBoveda = {
+    ...datos,
+    id: nuevoId(),
+    usuario: usuario.id,
+    usuarioNombre: usuario.nombre,
+    fechaHora: new Date().toISOString(),
+  }
+
+  await db.transaction('rw', [db.accesos_boveda, db.cambiosPendientes], async () => {
+    await db.accesos_boveda.add(acceso)
+    await db.cambiosPendientes.add({
+      id: nuevoId(),
+      tabla: 'accesos_boveda',
+      entidadId: acceso.id,
+      payload: acceso,
+      creadoEn: acceso.fechaHora,
       error: null,
       intentos: 0,
     })

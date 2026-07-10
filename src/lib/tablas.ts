@@ -1,6 +1,7 @@
 import type { Table } from 'dexie'
 import {
   db,
+  type AccesoBoveda,
   type Adjunto,
   type Articulo,
   type Categoria,
@@ -26,14 +27,18 @@ export const TABLAS_SINCRONIZADAS = [
   'conexiones',
   'diagnosticos',
   'ejecuciones_diagnostico',
+  'accesos_boveda',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
 
-// Tablas que se editan desde la app. El historial y las ejecuciones de
-// diagnostico solo se agregan mediante el repositorio (registro
-// inmutable), nunca se editan directamente.
-export type TablaEditable = Exclude<TablaSincronizada, 'historial' | 'ejecuciones_diagnostico'>
+// Tablas que se editan desde la app. El historial, las ejecuciones de
+// diagnostico y los accesos a la boveda solo se agregan mediante el
+// repositorio (registro inmutable), nunca se editan directamente.
+export type TablaEditable = Exclude<
+  TablaSincronizada,
+  'historial' | 'ejecuciones_diagnostico' | 'accesos_boveda'
+>
 
 export interface EntidadPorTabla {
   categorias: Categoria
@@ -45,6 +50,7 @@ export interface EntidadPorTabla {
   historial: HistorialEntrada
   diagnosticos: Diagnostico
   ejecuciones_diagnostico: EjecucionDiagnostico
+  accesos_boveda: AccesoBoveda
 }
 
 interface ConfigTabla {
@@ -85,6 +91,9 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       causas: 'causas',
       dispositivosAfectados: 'dispositivos_afectados',
       esRutaInicio: 'es_ruta_inicio',
+      estado: 'estado',
+      version: 'version',
+      relacionados: 'relacionados',
     },
   },
   dispositivos: {
@@ -103,6 +112,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       estado: 'estado',
       observaciones: 'observaciones',
       detalles: 'detalles',
+      foto: 'foto',
     },
   },
   conexiones: {
@@ -129,6 +139,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       titulo: 'titulo',
       categoria: 'categoria',
       datosCifrados: 'datos_cifrados',
+      venceEn: 'vence_en',
     },
   },
   adjuntos: {
@@ -186,6 +197,23 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       articulosEjecutados: 'articulos_ejecutados',
       resuelto: 'resuelto',
       duracionSegundos: 'duracion_segundos',
+      fechaHora: 'fecha_hora',
+      motivo: 'motivo',
+      solucionPropuesta: 'solucion_propuesta',
+    },
+  },
+  // Auditoria de la boveda: mismo patron que historial y ejecuciones
+  // de diagnostico, solo insercion con cursor sobre recibido_en.
+  accesos_boveda: {
+    columnaCursor: 'recibido_en',
+    soloInsercion: true,
+    campos: {
+      id: 'id',
+      credencialId: 'credencial_id',
+      credencialTitulo: 'credencial_titulo',
+      usuario: 'usuario',
+      usuarioNombre: 'usuario_nombre',
+      accion: 'accion',
       fechaHora: 'fecha_hora',
     },
   },

@@ -3,8 +3,10 @@ import { lazy, Suspense, useEffect, useMemo, useState, type ChangeEvent, type Fo
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   db,
+  type ArticuloRelacionado,
   type Dispositivo,
   type DispositivoAfectado,
+  type EstadoArticulo,
   type NivelDificultad,
   type PasoAdjunto,
   type PasoProcedimiento,
@@ -17,6 +19,7 @@ import {
 } from '../../lib/procedimiento'
 import { evaluarCompletitud } from '../../lib/completitud'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { siguienteVersion } from '../../lib/version'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
@@ -93,6 +96,9 @@ export function ArticuloForm() {
   const [causas, setCausas] = useState('')
   const [dispositivosAfectados, setDispositivosAfectados] = useState<DispositivoAfectado[]>([])
   const [esRutaInicio, setEsRutaInicio] = useState(false)
+  const [estado, setEstado] = useState<EstadoArticulo>('publicado')
+  const [cambioMayor, setCambioMayor] = useState(false)
+  const [relacionados, setRelacionados] = useState<ArticuloRelacionado[]>([])
   const [motivo, setMotivo] = useState('')
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe)
   const [guardando, setGuardando] = useState(false)
@@ -142,6 +148,8 @@ export function ArticuloForm() {
     setCausas((articulo.causas ?? []).join('\n'))
     setDispositivosAfectados(articulo.dispositivosAfectados ?? [])
     setEsRutaInicio(articulo.esRutaInicio)
+    setEstado(articulo.estado ?? 'publicado')
+    setRelacionados(articulo.relacionados ?? [])
     setCargadoInicial(true)
   }, [articulo, cargadoInicial])
 
@@ -173,6 +181,11 @@ export function ArticuloForm() {
     setSintomas((original.sintomas ?? []).join('\n'))
     setCausas((original.causas ?? []).join('\n'))
     setDispositivosAfectados(original.dispositivosAfectados ?? [])
+    setRelacionados(original.relacionados ?? [])
+    // La copia nace en borrador (no se copia el estado del original):
+    // es contenido nuevo que aun no paso por revision, aunque el
+    // original ya estuviera publicado.
+    setEstado('borrador')
     setCargadoInicial(true)
   }, [copiarDe, original, cargadoInicial])
 
@@ -227,6 +240,15 @@ export function ArticuloForm() {
     evento.preventDefault()
     setGuardando(true)
 
+    // La version solo sube al editar un articulo que YA estaba
+    // publicado (comparado con lo que habia en el servidor antes de
+    // este guardado): editar un borrador repetidamente no mueve la
+    // version hasta que se publique por primera vez.
+    const version =
+      esEdicion && articulo && articulo.estado === 'publicado'
+        ? siguienteVersion(articulo.version ?? '1.0', cambioMayor)
+        : (articulo?.version ?? '1.0')
+
     await guardarRegistro(
       'articulos',
       {
@@ -247,6 +269,9 @@ export function ArticuloForm() {
           .filter(Boolean),
         dispositivosAfectados,
         esRutaInicio,
+        estado,
+        version,
+        relacionados,
       },
       motivo.trim(),
     )
@@ -364,6 +389,37 @@ export function ArticuloForm() {
         </Seccion>
 
         <Seccion titulo="Configuración" descripcion="Cómo se presenta y qué esperar de él.">
+          <label className="flex flex-col gap-1 text-sm text-slate-300">
+            Estado
+            <select value={estado} onChange={(e) => setEstado(e.target.value as EstadoArticulo)} className={CLASE_INPUT}>
+              <option value="borrador">Borrador</option>
+              <option value="publicado">Publicado</option>
+              <option value="obsoleto">Obsoleto</option>
+            </select>
+            <span className="text-xs text-slate-500">
+              Un borrador u obsoleto no aparece en el buscador, las rutas de inicio, los vínculos de otros
+              procedimientos ni el Diagnóstico Inteligente.
+            </span>
+          </label>
+
+          {esEdicion && articulo?.estado === 'publicado' && (
+            <label className="flex items-start gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={cambioMayor}
+                onChange={(e) => setCambioMayor(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Cambio mayor
+                <span className="block text-xs text-slate-500">
+                  Este guardado subirá la versión {siguienteVersion(articulo.version ?? '1.0', cambioMayor)}
+                  {' '}(en vez de {siguienteVersion(articulo.version ?? '1.0', false)}).
+                </span>
+              </span>
+            </label>
+          )}
+
           <label className="flex items-start gap-2 text-sm text-slate-300">
             <input
               type="checkbox"
@@ -510,6 +566,19 @@ export function ArticuloForm() {
               />
             </label>
           )}
+        </Seccion>
+
+        <Seccion titulo="Relacionados" descripcion="Otros artículos conectados con este, para no duplicar información.">
+          <RelacionadosEditor
+            articuloId={id}
+            vinculados={relacionados}
+            onVincular={(articuloVinculado) =>
+              setRelacionados((actuales) => [...actuales, articuloVinculado])
+            }
+            onQuitar={(idQuitar) =>
+              setRelacionados((actuales) => actuales.filter((r) => r.id !== idQuitar))
+            }
+          />
         </Seccion>
 
         {pasos.length > 0 && <IndicadorCompletitud completitud={completitud} />}
@@ -808,6 +877,78 @@ function DispositivosAfectadosEditor({
             <option key={d.id} value={d.id}>
               {d.nombre}
               {d.ubicacion ? ` (${d.ubicacion})` : ''}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  )
+}
+
+// Otros articulos relacionados (grupo de esquema, punto 11): mismo
+// patron de chips + select que DispositivosAfectadosEditor, con
+// copia de referencia (id + titulo). La ficha del articulo muestra
+// ademas el inverso ("aparece como relacionado en..."), calculado
+// localmente sin guardarlo aqui.
+function RelacionadosEditor({
+  articuloId,
+  vinculados,
+  onVincular,
+  onQuitar,
+}: {
+  articuloId: string
+  vinculados: ArticuloRelacionado[]
+  onVincular: (articulo: ArticuloRelacionado) => void
+  onQuitar: (id: string) => void
+}) {
+  const candidatos = useLiveQuery(
+    () => db.articulos.filter((a) => !a.eliminadoEn && a.id !== articuloId).toArray(),
+    [articuloId],
+    [],
+  )
+  const candidatosOrdenados = useMemo(
+    () => [...candidatos].sort((a, b) => a.titulo.localeCompare(b.titulo)),
+    [candidatos],
+  )
+  const disponibles = candidatosOrdenados.filter((a) => !vinculados.some((v) => v.id === a.id))
+
+  return (
+    <div className="flex flex-col gap-2">
+      {vinculados.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {vinculados.map((vinculo) => (
+            <li
+              key={vinculo.id}
+              className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-200"
+            >
+              {vinculo.titulo}
+              <button
+                type="button"
+                onClick={() => onQuitar(vinculo.id)}
+                aria-label={`Quitar ${vinculo.titulo} de relacionados`}
+                className="text-slate-400"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {disponibles.length > 0 && (
+        <select
+          value=""
+          aria-label="Agregar artículo relacionado"
+          onChange={(e) => {
+            const articulo = disponibles.find((a) => a.id === e.target.value)
+            if (articulo) onVincular({ id: articulo.id, titulo: articulo.titulo })
+          }}
+          className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        >
+          <option value="">+ Agregar artículo relacionado (opcional)</option>
+          {disponibles.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.titulo}
             </option>
           ))}
         </select>

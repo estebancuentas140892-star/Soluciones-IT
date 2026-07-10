@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { db, type Articulo } from '../../lib/db'
+import { db, type Articulo, type ArticuloRelacionado, type EstadoArticulo } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
@@ -52,9 +52,12 @@ export function ArticuloPage() {
       <header className="flex flex-col gap-2">
         <BotonVolver to={`/soluciones/${categoriaId}`}>{categoria?.nombre ?? 'Categoría'}</BotonVolver>
         {procedimiento?.portada && <PortadaArticulo portada={procedimiento.portada} titulo={articulo.titulo} />}
+        <EstadoArticuloBanda estado={articulo.estado ?? 'publicado'} />
         <div>
           <h1 className="text-xl font-semibold">{articulo.titulo}</h1>
-          <p className="text-xs text-slate-500">{etiquetaDeTipo(articulo.tipo)}</p>
+          <p className="text-xs text-slate-500">
+            {etiquetaDeTipo(articulo.tipo)} · v{articulo.version ?? '1.0'}
+          </p>
           <p className="text-xs text-slate-600">
             Última modificación: {formateadorFecha.format(new Date(articulo.updatedAt))}
             {autor?.nombre ? `, por ${autor.nombre}` : ''}
@@ -130,6 +133,8 @@ export function ArticuloPage() {
 
       {articulo.tipo === 'problema_frecuente' && <IncidenciaResumen articulo={articulo} />}
 
+      <ArticulosRelacionados articuloId={articuloId} relacionados={articulo.relacionados ?? []} />
+
       {procedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
 
       {articulo.contenido.trim() !== '' && (
@@ -145,6 +150,97 @@ export function ArticuloPage() {
       {!procedimiento && <Adjuntos entidadTipo="articulo" entidadId={articuloId} />}
 
       <Historial entidadTipo="articulo" entidadId={articuloId} />
+    </div>
+  )
+}
+
+// Banda de estado (grupo de esquema): 'publicado' no se muestra (es
+// el estado normal, no necesita aviso); borrador u obsoleto se
+// destacan para que quien lo abre sepa que no es contenido oficial.
+function EstadoArticuloBanda({ estado }: { estado: EstadoArticulo }) {
+  if (estado === 'publicado') return null
+  const info =
+    estado === 'borrador'
+      ? { texto: '📝 Borrador: sin publicar todavía', clases: 'border-amber-800 bg-amber-950/40 text-amber-300' }
+      : { texto: '⚠ Obsoleto: puede estar desactualizado', clases: 'border-red-900 bg-red-950/40 text-red-300' }
+  return (
+    <p className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${info.clases}`}>{info.texto}</p>
+  )
+}
+
+// Articulos relacionados (grupo de esquema, punto 11): los que este
+// articulo vincula, mas el inverso ("aparece como relacionado en..."),
+// calculado localmente sobre el resto de articulos sin guardarlo aqui
+// (bonus barato de la propuesta: nadie tiene que vincular en las dos
+// direcciones a mano).
+function ArticulosRelacionados({
+  articuloId,
+  relacionados,
+}: {
+  articuloId: string
+  relacionados: ArticuloRelacionado[]
+}) {
+  // Se necesita la categoria de cada articulo relacionado para poder
+  // enlazarlo (la ruta es /soluciones/:categoriaId/:articuloId): se
+  // trae la lista completa una sola vez y se arma un mapa id -> ruta.
+  const todos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
+  const rutaPorId = useMemo(
+    () => new Map(todos.map((a) => [a.id, `/soluciones/${a.categoriaId}/${a.id}`])),
+    [todos],
+  )
+  const inversos = useMemo(
+    () =>
+      todos
+        .filter((a) => a.id !== articuloId && (a.relacionados ?? []).some((r) => r.id === articuloId))
+        .map((a) => ({ id: a.id, titulo: a.titulo })),
+    [todos, articuloId],
+  )
+
+  if (relacionados.length === 0 && inversos.length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
+      {relacionados.length > 0 && (
+        <div>
+          <h2 className="mb-1 text-sm font-medium text-slate-400">Relacionados</h2>
+          <ul className="flex flex-wrap gap-2">
+            {relacionados.map((articulo) => (
+              <li key={articulo.id}>
+                {rutaPorId.has(articulo.id) ? (
+                  <Link
+                    to={rutaPorId.get(articulo.id) ?? ''}
+                    className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-sky-400"
+                  >
+                    {articulo.titulo}
+                  </Link>
+                ) : (
+                  <span className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-500">
+                    {articulo.titulo} (eliminado)
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {inversos.length > 0 && (
+        <div>
+          <h2 className="mb-1 text-sm font-medium text-slate-400">Aparece como relacionado en</h2>
+          <ul className="flex flex-wrap gap-2">
+            {inversos.map((articulo) => (
+              <li key={articulo.id}>
+                <Link
+                  to={rutaPorId.get(articulo.id) ?? ''}
+                  className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-sky-400"
+                >
+                  {articulo.titulo}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

@@ -57,6 +57,22 @@ create table if not exists public.articulos (
   sintomas text[] not null default '{}',
   causas text[] not null default '{}',
   dispositivos_afectados jsonb not null default '[]'::jsonb,
+  -- Estado del documento (fase de esquema agrupado, 2026-07-09):
+  -- 'publicado' por defecto para que todo lo existente quede oficial
+  -- sin migracion. Un borrador u obsoleto no se ofrece en el buscador
+  -- global, las rutas de inicio, los vinculables ni el Diagnostico
+  -- (salvo para quien lo edita). Se decidieron 3 estados (sin "en
+  -- revision"): un equipo de 5 no tiene hoy un flujo de aprobacion
+  -- real detras de ese paso.
+  estado text not null default 'publicado' check (estado in ('borrador', 'publicado', 'obsoleto')),
+  -- Version legible ("1.0", "1.1", "2.0"): sube la menor en cada
+  -- guardado sobre un articulo ya publicado, o la mayor si el usuario
+  -- marca "Cambio mayor". El historial de cada guardado YA conserva el
+  -- contenido completo de cada version; esto es solo la etiqueta.
+  version text not null default '1.0',
+  -- Otros articulos relacionados (punto 11): lista {id, titulo}, mismo
+  -- patron de copia de referencia que dispositivos_afectados.
+  relacionados jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
@@ -72,6 +88,13 @@ alter table public.articulos add column if not exists es_ruta_inicio boolean not
 alter table public.articulos add column if not exists sintomas text[] not null default '{}';
 alter table public.articulos add column if not exists causas text[] not null default '{}';
 alter table public.articulos add column if not exists dispositivos_afectados jsonb not null default '[]'::jsonb;
+-- Estado, version y relacionados (grupo de esquema, 2026-07-09).
+alter table public.articulos add column if not exists estado text not null default 'publicado';
+alter table public.articulos drop constraint if exists articulos_estado_check;
+alter table public.articulos add constraint articulos_estado_check
+  check (estado in ('borrador', 'publicado', 'obsoleto'));
+alter table public.articulos add column if not exists version text not null default '1.0';
+alter table public.articulos add column if not exists relacionados jsonb not null default '[]'::jsonb;
 
 create table if not exists public.dispositivos (
   id uuid primary key default gen_random_uuid(),
@@ -86,10 +109,17 @@ create table if not exists public.dispositivos (
   estado text not null default '',
   observaciones text not null default '',
   detalles jsonb not null default '{}'::jsonb,
+  -- Fotografia principal del equipo (fase Dis2, mismo formato que la
+  -- portada de un procedimiento: solo referencia de Storage, nombre y
+  -- tipo; el contenido viaja por la cola de subida de adjuntos).
+  foto jsonb,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
 );
+
+-- Por si la tabla ya existia de una version anterior del esquema.
+alter table public.dispositivos add column if not exists foto jsonb;
 
 -- Relacion documentada entre dos dispositivos (el mapa de la red).
 -- - 'enlace': cable o señal de origen a destino. El origen es el lado
@@ -122,10 +152,17 @@ create table if not exists public.credenciales (
   titulo text not null,
   categoria text not null default '',
   datos_cifrados text not null,
+  -- Fecha de vencimiento opcional (fase B2): a proposito NO va cifrada,
+  -- para poder avisar antes de vencer o alertar al vencer sin
+  -- necesidad de desbloquear la boveda.
+  vence_en date,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
 );
+
+-- Por si la tabla ya existia de una version anterior del esquema.
+alter table public.credenciales add column if not exists vence_en date;
 
 -- Verificador de la contrasena maestra de la boveda. Guarda UN solo
 -- registro: un texto fijo cifrado con la clave derivada de la
@@ -220,13 +257,48 @@ create table if not exists public.ejecuciones_diagnostico (
   resuelto text not null check (resuelto in ('si', 'no', 'abandonado')),
   duracion_segundos integer not null default 0,
   fecha_hora timestamptz not null default now(),
-  recibido_en timestamptz not null default now()
+  recibido_en timestamptz not null default now(),
+  -- Motivo de la retroalimentacion cuando "no" quedo resuelto (fase
+  -- D3): lista corta + libre. solucion_propuesta solo tiene contenido
+  -- cuando motivo es 'encontro_otra_solucion': texto libre del tecnico
+  -- para que quien mantiene la base lo revise y lo convierta en un
+  -- articulo si aplica. Sin FK ni tabla de sugerencias aparte: se
+  -- consulta filtrando esta misma tabla.
+  motivo text not null default '' check (motivo in ('', 'no_funciono', 'no_encontro_problema', 'faltan_pasos', 'encontro_otra_solucion', 'otro')),
+  solucion_propuesta text not null default ''
 );
+
+-- Por si la tabla ya existia de una version anterior del esquema.
+alter table public.ejecuciones_diagnostico add column if not exists motivo text not null default '';
+alter table public.ejecuciones_diagnostico drop constraint if exists ejecuciones_diagnostico_motivo_check;
+alter table public.ejecuciones_diagnostico add constraint ejecuciones_diagnostico_motivo_check
+  check (motivo in ('', 'no_funciono', 'no_encontro_problema', 'faltan_pasos', 'encontro_otra_solucion', 'otro'));
+alter table public.ejecuciones_diagnostico add column if not exists solucion_propuesta text not null default '';
 
 -- El historial ahora tambien registra cambios de diagnosticos.
 alter table public.historial drop constraint if exists historial_entidad_tipo_check;
 alter table public.historial add constraint historial_entidad_tipo_check
   check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico'));
+
+-- Auditoria de la boveda (fase B3): registro inmutable (solo
+-- insercion, mismo patron que historial/ejecuciones_diagnostico) de
+-- quien consulto, mostro o copio una credencial, y de cuando se
+-- modifico o elimino. Es trazabilidad de buena fe del equipo (se
+-- registra desde el cliente al momento de la accion; no detiene a
+-- quien ya tiene la contrasena maestra), y asi se presenta en la app.
+-- Sin FK a credenciales a proposito (mismo criterio que
+-- historial.entidad_id): el registro nunca debe rechazarse por el
+-- estado de otra tabla.
+create table if not exists public.accesos_boveda (
+  id uuid primary key default gen_random_uuid(),
+  credencial_id uuid not null,
+  credencial_titulo text not null default '',
+  usuario uuid references auth.users (id),
+  usuario_nombre text not null default '',
+  accion text not null check (accion in ('consulto', 'mostro', 'copio_usuario', 'copio_contrasena', 'modifico', 'elimino')),
+  fecha_hora timestamptz not null default now(),
+  recibido_en timestamptz not null default now()
+);
 
 -- Indices para la sincronizacion (consultas por updated_at) y las
 -- consultas mas frecuentes.
@@ -248,6 +320,8 @@ create index if not exists idx_diagnosticos_updated on public.diagnosticos (upda
 create index if not exists idx_diagnosticos_categoria on public.diagnosticos (categoria_id);
 create index if not exists idx_ejecuciones_recibido on public.ejecuciones_diagnostico (recibido_en);
 create index if not exists idx_ejecuciones_diagnostico on public.ejecuciones_diagnostico (diagnostico_id);
+create index if not exists idx_accesos_boveda_recibido on public.accesos_boveda (recibido_en);
+create index if not exists idx_accesos_boveda_credencial on public.accesos_boveda (credencial_id);
 
 -- ----------------------------------------------------------------
 -- 2. Funciones y triggers
@@ -361,6 +435,7 @@ alter table public.historial enable row level security;
 alter table public.adjuntos enable row level security;
 alter table public.diagnosticos enable row level security;
 alter table public.ejecuciones_diagnostico enable row level security;
+alter table public.accesos_boveda enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -440,6 +515,18 @@ create policy ejecuciones_lectura on public.ejecuciones_diagnostico
 drop policy if exists ejecuciones_insercion on public.ejecuciones_diagnostico;
 create policy ejecuciones_insercion on public.ejecuciones_diagnostico
   for insert to authenticated with check (true);
+
+-- Accesos a la boveda: se pueden leer y agregar, nunca editar ni
+-- borrar (registro inmutable, como el historial). Solo para quien
+-- tiene permiso de boveda: es informacion sobre el uso de las
+-- credenciales, tan sensible como ellas.
+drop policy if exists accesos_boveda_lectura on public.accesos_boveda;
+create policy accesos_boveda_lectura on public.accesos_boveda
+  for select to authenticated using (public.puede_ver_boveda());
+
+drop policy if exists accesos_boveda_insercion on public.accesos_boveda;
+create policy accesos_boveda_insercion on public.accesos_boveda
+  for insert to authenticated with check (public.puede_ver_boveda());
 
 -- ----------------------------------------------------------------
 -- 4. Almacenamiento de archivos (fotos, manuales, diagramas)
