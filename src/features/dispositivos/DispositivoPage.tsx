@@ -15,6 +15,7 @@ import { ConexionesFicha } from '../red/ConexionesFicha'
 import { Historial } from '../historial/Historial'
 import { IndicadorEstado } from './IndicadorEstado'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
+import { ProblemasDelEquipo } from './ProblemasDelEquipo'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
 
 const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' })
@@ -105,46 +106,54 @@ export function DispositivoPage() {
         onConfirmar={eliminar}
       />
 
-      <IndicadorEstado estado={dispositivo.estado} />
-
-      {(campos.length > 0 || detalles.length > 0) && (
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
-          {campos.map((campo) => (
-            <div key={campo.etiqueta}>
-              <dt className="text-xs text-slate-500">{campo.etiqueta}</dt>
-              <dd>
-                <ValorCopiable valor={campo.valor} esIp={campo.etiqueta === 'Dirección IP'} />
-              </dd>
-            </div>
-          ))}
-          {detalles.map(([clave, valor]) => (
-            <div key={clave}>
-              <dt className="text-xs text-slate-500">{clave}</dt>
-              <dd>
-                <ValorCopiable valor={valor} />
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {dispositivo.observaciones && (
-        <div>
-          <h2 className="mb-1 text-sm font-medium text-slate-400">Observaciones</h2>
-          <p className="whitespace-pre-wrap text-sm text-slate-300">{dispositivo.observaciones}</p>
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-medium text-slate-400">Información</h2>
+          <IndicadorEstado estado={dispositivo.estado} />
         </div>
-      )}
 
-      {categoria && (
-        <Link
-          to={`/soluciones/${categoria.id}`}
-          className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-sky-400"
-        >
-          Ver procedimientos de {categoria.nombre} →
-        </Link>
-      )}
+        {(campos.length > 0 || detalles.length > 0) && (
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
+            {campos.map((campo) => (
+              <div key={campo.etiqueta}>
+                <dt className="text-xs text-slate-500">{campo.etiqueta}</dt>
+                <dd>
+                  <ValorCopiable valor={campo.valor} esIp={campo.etiqueta === 'Dirección IP'} />
+                </dd>
+              </div>
+            ))}
+            {detalles.map(([clave, valor]) => (
+              <div key={clave}>
+                <dt className="text-xs text-slate-500">{clave}</dt>
+                <dd>
+                  <ValorCopiable valor={valor} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
 
-      <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} />
+        {dispositivo.observaciones && (
+          <div>
+            <h3 className="mb-1 text-xs font-medium text-slate-500">Observaciones</h3>
+            <p className="whitespace-pre-wrap text-sm text-slate-300">{dispositivo.observaciones}</p>
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-medium text-slate-400">Procedimientos y diagnóstico</h2>
+        {categoria && (
+          <Link
+            to={`/soluciones/${categoria.id}`}
+            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-sky-400"
+          >
+            Ver procedimientos de {categoria.nombre} →
+          </Link>
+        )}
+        <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} />
+        <ProblemasDelEquipo dispositivoId={dispositivoId} />
+      </section>
 
       <ImpactoYDependencias dispositivo={dispositivo} />
 
