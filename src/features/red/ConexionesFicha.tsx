@@ -8,6 +8,7 @@ import {
   MEDIOS_SUGERIDOS,
   type ExtremoConexion,
 } from '../../lib/conexiones'
+import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 
 // Relacion nueva vista desde la ficha actual: define quien es origen y
 // quien destino segun lo que el tecnico quiere documentar.
@@ -27,6 +28,18 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
         .toArray(),
     [dispositivo.id],
     [],
+  )
+
+  // Nombres vivos de los demás equipos (fase N1, regla de referencia
+  // viva): la conexión guarda el nombre del otro extremo como copia de
+  // referencia, pero si el equipo existe local se muestra su nombre
+  // actual, así renombrar un switch se refleja en todas sus conexiones
+  // sin reescribir nada. La copia solo se usa si el equipo no sincronizó
+  // o fue eliminado.
+  const nombrePorId = useLiveQuery(
+    async () => mapaDeTextos(await db.dispositivos.toArray(), (d) => d.nombre),
+    [],
+    new Map<string, string>(),
   )
 
   const grupos = useMemo(() => agruparConexiones(conexiones ?? [], dispositivo.id), [conexiones, dispositivo.id])
@@ -59,7 +72,7 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
       {grupos.instaladoEn.length > 0 && (
         <GrupoConexiones titulo="Instalado en">
           {grupos.instaladoEn.map((extremo) => (
-            <FilaConexion key={extremo.conexion.id} extremo={extremo} onQuitar={quitar} />
+            <FilaConexion key={extremo.conexion.id} extremo={extremo} nombrePorId={nombrePorId} onQuitar={quitar} />
           ))}
         </GrupoConexiones>
       )}
@@ -67,7 +80,7 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
       {grupos.contiene.length > 0 && (
         <GrupoConexiones titulo="Contiene">
           {grupos.contiene.map((extremo) => (
-            <FilaConexion key={extremo.conexion.id} extremo={extremo} onQuitar={quitar} />
+            <FilaConexion key={extremo.conexion.id} extremo={extremo} nombrePorId={nombrePorId} onQuitar={quitar} />
           ))}
         </GrupoConexiones>
       )}
@@ -75,7 +88,7 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
       {grupos.enlaces.length > 0 && (
         <GrupoConexiones titulo="Enlaces">
           {grupos.enlaces.map((extremo) => (
-            <FilaConexion key={extremo.conexion.id} extremo={extremo} onQuitar={quitar} />
+            <FilaConexion key={extremo.conexion.id} extremo={extremo} nombrePorId={nombrePorId} onQuitar={quitar} />
           ))}
         </GrupoConexiones>
       )}
@@ -106,12 +119,15 @@ function GrupoConexiones({ titulo, children }: { titulo: string; children: React
 
 function FilaConexion({
   extremo,
+  nombrePorId,
   onQuitar,
 }: {
   extremo: ExtremoConexion
+  nombrePorId: Map<string, string>
   onQuitar: (conexion: Conexion) => Promise<void>
 }) {
   const { conexion, otroId, otroNombre, puertoLocal, puertoRemoto } = extremo
+  const nombre = nombreVivo(nombrePorId, otroId, otroNombre)
   const detalle = [
     puertoLocal && `Puerto ${puertoLocal}`,
     puertoRemoto && `→ puerto ${puertoRemoto}`,
@@ -123,7 +139,7 @@ function FilaConexion({
   return (
     <li className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5">
       <Link to={`/dispositivos/${otroId}`} className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-slate-100">{otroNombre}</p>
+        <p className="truncate text-sm font-medium text-slate-100">{nombre}</p>
         {(detalle || conexion.notas) && (
           <p className="truncate text-xs text-slate-400">{detalle || conexion.notas}</p>
         )}

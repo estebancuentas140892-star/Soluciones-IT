@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
 import { Seccion } from '../../components/Seccion'
@@ -14,6 +14,21 @@ import { ESTADOS_SUGERIDOS } from './estados'
 interface CampoDetalle {
   clave: string
   valor: string
+}
+
+// Valores distintos, sin vacíos y ordenados, para un datalist de
+// autocompletar. Deduplica sin distinguir mayúsculas (conserva la
+// primera forma vista) para no ofrecer "POS" y "pos" como opciones
+// separadas.
+function valoresUnicos(valores: string[]): string[] {
+  const porClave = new Map<string, string>()
+  for (const valor of valores) {
+    const limpio = valor.trim()
+    if (limpio === '') continue
+    const clave = limpio.toLowerCase()
+    if (!porClave.has(clave)) porClave.set(clave, limpio)
+  }
+  return [...porClave.values()].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
 }
 
 const CLASE_INPUT =
@@ -43,6 +58,20 @@ export function DispositivoForm() {
     return (await db.dispositivos.get(copiarDe)) ?? null
   }, [copiarDe])
   const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
+
+  // Vocabularios derivados (fase N0): las ubicaciones y marcas ya usadas
+  // por otros equipos se ofrecen como autocompletar. Frena la duplicación
+  // por variantes de escritura ("Taquilla Norte" vs "taq. norte") sin
+  // convertir todavía la ubicación en una entidad (eso es la fase N3).
+  const todosDispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
+  const ubicacionesSugeridas = useMemo(
+    () => valoresUnicos(todosDispositivos.map((d) => d.ubicacion)),
+    [todosDispositivos],
+  )
+  const marcasSugeridas = useMemo(
+    () => valoresUnicos(todosDispositivos.map((d) => d.marca)),
+    [todosDispositivos],
+  )
 
   const [categoriaId, setCategoriaId] = useState('')
   const [nombre, setNombre] = useState('')
@@ -193,7 +222,18 @@ export function DispositivoForm() {
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm text-slate-300">
               Marca
-              <input type="text" value={marca} onChange={(e) => setMarca(e.target.value)} className={CLASE_INPUT} />
+              <input
+                type="text"
+                list="marcas-sugeridas"
+                value={marca}
+                onChange={(e) => setMarca(e.target.value)}
+                className={CLASE_INPUT}
+              />
+              <datalist id="marcas-sugeridas">
+                {marcasSugeridas.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
             </label>
             <label className="flex flex-col gap-1 text-sm text-slate-300">
               Modelo
@@ -232,10 +272,19 @@ export function DispositivoForm() {
             Ubicación
             <input
               type="text"
+              list="ubicaciones-sugeridas"
               value={ubicacion}
               onChange={(e) => setUbicacion(e.target.value)}
               className={CLASE_INPUT}
             />
+            <datalist id="ubicaciones-sugeridas">
+              {ubicacionesSugeridas.map((u) => (
+                <option key={u} value={u} />
+              ))}
+            </datalist>
+            <span className="text-xs text-slate-500">
+              Se sugieren las ubicaciones ya usadas para no crear variantes del mismo lugar.
+            </span>
           </label>
         </Seccion>
 

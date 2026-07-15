@@ -5,6 +5,9 @@ import { db } from '../../lib/db'
 import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { ReferenciadoPor } from '../../components/ReferenciadoPor'
+import { useGrafo } from '../../components/useGrafo'
+import { resumenImpacto } from '../../lib/grafo'
 import { Historial } from '../historial/Historial'
 import { CampoSecreto } from './CampoSecreto'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
@@ -37,6 +40,11 @@ export function CredencialPage() {
   const [datos, setDatos] = useState<DatosCredencial | null | undefined>(undefined)
   const [verContrasena, setVerContrasena] = useState(false)
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
+
+  // Impacto antes de eliminar (fase N1): procedimientos que muestran
+  // esta credencial en alguno de sus pasos o tareas y quedarían sin ella.
+  const grafo = useGrafo()
+  const impacto = resumenImpacto(grafo, 'credencial', credencialId)
 
   useEffect(() => {
     if (!credencial) return
@@ -131,6 +139,7 @@ export function CredencialPage() {
         sensible
         titulo={`¿Eliminar "${credencial.titulo}"?`}
         descripcion="Esta acción eliminará esta credencial de la bóveda."
+        advertencia={impacto ? `${impacto} Esos pasos quedarán sin la credencial vinculada.` : null}
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
@@ -184,6 +193,15 @@ export function CredencialPage() {
           <p className="whitespace-pre-wrap text-sm text-slate-300">{datos.notas}</p>
         </div>
       )}
+
+      {/* Inverso universal: en qué procedimientos se usa esta credencial.
+          Antes no había forma de saberlo desde la bóveda. */}
+      <ReferenciadoPor
+        tipo="credencial"
+        id={credencialId}
+        titulo="Usada en"
+        relaciones={['credencial_paso', 'credencial_tarea']}
+      />
 
       <Historial entidadTipo="credencial" entidadId={credencialId} />
     </div>

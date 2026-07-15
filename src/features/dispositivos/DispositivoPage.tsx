@@ -8,6 +8,8 @@ import { Adjuntos } from '../../components/Adjuntos'
 import { BotonCompartir } from '../../components/BotonCompartir'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { useGrafo } from '../../components/useGrafo'
+import { resumenImpacto } from '../../lib/grafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { ValorCopiable } from '../../components/ValorCopiable'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
@@ -35,6 +37,13 @@ export function DispositivoPage() {
   useEffect(() => {
     if (idVisitado) void registrarVisita('dispositivo', idVisitado)
   }, [idVisitado])
+
+  // Impacto antes de eliminar (fase N1): incidencias que lo mencionan y
+  // conexiones que lo tocan y quedarían huérfanas. Las relaciones ya se
+  // muestran en la ficha (Problemas del equipo, Conexiones), así que aquí
+  // el grafo solo alimenta el aviso del diálogo.
+  const grafo = useGrafo()
+  const impacto = resumenImpacto(grafo, 'dispositivo', dispositivoId)
 
   if (dispositivo === null) return <Navigate to="/dispositivos" replace />
   if (!dispositivo) return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
@@ -102,6 +111,7 @@ export function DispositivoPage() {
         sensible
         titulo={`¿Eliminar el dispositivo "${dispositivo.nombre}"?`}
         descripcion="Esta acción eliminará la ficha del dispositivo, sus campos y sus conexiones registradas."
+        advertencia={impacto ? `${impacto} Esas referencias quedarán rotas.` : null}
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />

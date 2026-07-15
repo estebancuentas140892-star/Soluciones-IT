@@ -11,6 +11,9 @@ import { Adjuntos } from '../../components/Adjuntos'
 import { BotonCompartir } from '../../components/BotonCompartir'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { ReferenciadoPor } from '../../components/ReferenciadoPor'
+import { useGrafo } from '../../components/useGrafo'
+import { resumenImpacto } from '../../lib/grafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { Historial } from '../historial/Historial'
 import { ProcedimientoVista } from './ProcedimientoVista'
@@ -33,6 +36,12 @@ export function ArticuloPage() {
   // Memorizado para que los ids generados al normalizar datos viejos
   // sean estables entre renders (el progreso local depende de ellos).
   const procedimiento = useMemo(() => normalizarProcedimiento(articulo?.procedimiento), [articulo])
+
+  // Impacto antes de eliminar (fase N1): otros procedimientos o
+  // diagnósticos que referencian este artículo y quedarían con el
+  // vínculo roto. null si nadie lo usa.
+  const grafo = useGrafo()
+  const impacto = useMemo(() => resumenImpacto(grafo, 'articulo', articuloId), [grafo, articuloId])
 
   const idVisitado = articulo && !articulo.eliminadoEn ? articulo.id : null
   useEffect(() => {
@@ -127,6 +136,7 @@ export function ArticuloPage() {
             ? 'Esta acción eliminará todo el procedimiento y sus pasos asociados.'
             : 'Esta acción eliminará el artículo por completo.'
         }
+        advertencia={impacto ? `${impacto} Al eliminarlo, esos vínculos quedarán rotos.` : null}
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
@@ -134,6 +144,15 @@ export function ArticuloPage() {
       {articulo.tipo === 'problema_frecuente' && <IncidenciaResumen articulo={articulo} />}
 
       <ArticulosRelacionados articuloId={articuloId} relacionados={articulo.relacionados ?? []} />
+
+      {/* Inverso universal: qué procedimientos y diagnósticos usan este
+          artículo. Se excluye 'relacionado', que ya tiene su propio
+          bloque ("Aparece como relacionado en") arriba. */}
+      <ReferenciadoPor
+        tipo="articulo"
+        id={articuloId}
+        relaciones={['subprocedimiento', 'solucion', 'decision', 'diagnostico_articulo']}
+      />
 
       {procedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
 

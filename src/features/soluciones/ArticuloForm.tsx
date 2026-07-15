@@ -678,6 +678,25 @@ function EtiquetasEditor({
 }) {
   const [texto, setTexto] = useState('')
 
+  // Vocabulario derivado (fase N0): las etiquetas ya usadas en otros
+  // artículos se ofrecen como autocompletar, para reutilizar la misma
+  // ("Impresora") en vez de fragmentarla ("impresora", "impresoras").
+  // Se excluyen las ya puestas en este artículo.
+  const todas = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
+  const sugeridas = useMemo(() => {
+    const puestas = new Set(etiquetas.map((e) => e.toLowerCase()))
+    const porClave = new Map<string, string>()
+    for (const articulo of todas) {
+      for (const etiqueta of articulo.etiquetas ?? []) {
+        const limpia = etiqueta.trim()
+        const clave = limpia.toLowerCase()
+        if (limpia === '' || puestas.has(clave) || porClave.has(clave)) continue
+        porClave.set(clave, limpia)
+      }
+    }
+    return [...porClave.values()].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+  }, [todas, etiquetas])
+
   function agregar() {
     const limpia = texto.trim().replace(/,+$/, '').trim()
     setTexto('')
@@ -711,6 +730,7 @@ function EtiquetasEditor({
       )}
       <input
         type="text"
+        list="etiquetas-sugeridas"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         onKeyDown={(e) => {
@@ -723,6 +743,11 @@ function EtiquetasEditor({
         placeholder="Escribe una etiqueta y presiona Enter (SQL, Backup, POS, Impresora...)"
         className={CLASE_INPUT}
       />
+      <datalist id="etiquetas-sugeridas">
+        {sugeridas.map((e) => (
+          <option key={e} value={e} />
+        ))}
+      </datalist>
     </div>
   )
 }

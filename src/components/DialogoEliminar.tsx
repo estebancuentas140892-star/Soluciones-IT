@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../features/autenticacion/authContext'
 import { estadoInicialBoveda, verificarContrasenaMaestra } from '../features/boveda/sesionBoveda'
 import { CampoContrasena } from './CampoContrasena'
@@ -11,6 +11,11 @@ interface Props {
   // true para las eliminaciones sensibles (procedimientos, credenciales,
   // dispositivos): exigen la contrasena maestra antes de continuar.
   sensible?: boolean
+  // Aviso de impacto (fase N1): qué otras entidades referencian a esta,
+  // calculado por la página desde el grafo. Se muestra antes de confirmar
+  // para que eliminar no rompa vínculos a ciegas. null u omitido: sin
+  // referencias, no se muestra nada.
+  advertencia?: ReactNode
   textoConfirmar?: string
   onCerrar: () => void
   // Ejecuta la eliminacion. Suele navegar; si no, el padre cierra el
@@ -34,6 +39,7 @@ export function DialogoEliminar({
   titulo,
   descripcion,
   sensible = false,
+  advertencia,
   textoConfirmar = 'Eliminar',
   onCerrar,
   onConfirmar,
@@ -106,6 +112,12 @@ export function DialogoEliminar({
           </h2>
           <p className="text-sm text-slate-400">{descripcion}</p>
         </div>
+
+        {advertencia && (
+          <div className="rounded-lg border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-200">
+            {advertencia}
+          </div>
+        )}
 
         {modo === 'cargando' && <p className="text-sm text-slate-500">Comprobando...</p>}
 
