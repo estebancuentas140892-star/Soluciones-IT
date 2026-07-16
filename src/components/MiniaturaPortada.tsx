@@ -5,14 +5,16 @@ import { useUrlAdjunto } from './useUrlAdjunto'
 // y recomendaciones): ayuda a identificar el procedimiento de un
 // vistazo. Si la imagen aun no esta disponible (por ejemplo offline
 // sin cache) no se muestra nada y la fila queda como siempre.
-export function MiniaturaPortada({ referencia, alt = '' }: { referencia: string; alt?: string }) {
+export function MiniaturaPortada({
+  referencia,
+  alt = '',
+  className = 'h-10 w-10 shrink-0 rounded-lg border border-slate-800 object-cover',
+}: {
+  referencia: string
+  alt?: string
+  className?: string
+}) {
   const url = useUrlAdjunto(referencia)
   if (!url) return null
-  return (
-    <img
-      src={url}
-      alt={alt}
-      className="h-10 w-10 shrink-0 rounded-lg border border-slate-800 object-cover"
-    />
-  )
+  return <img src={url} alt={alt} className={className} />
 }

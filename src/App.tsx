@@ -155,12 +155,23 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* Red y Topologia son las primeras pantallas del
-                  rediseño en tema claro (tareas 55 y 56): traen su
-                  propio AppShell (sidebar en escritorio, pestañas
-                  inferiores en movil), por eso van fuera del Layout
-                  oscuro. Cada pantalla rediseñada ira saliendo del
-                  Layout al implementarse su diseño. */}
+              {/* Red, Topologia y Dispositivos son las primeras
+                  pantallas del rediseño en tema claro (tareas 55, 56
+                  y 57): traen su propio AppShell (sidebar en
+                  escritorio, pestañas inferiores en movil), por eso
+                  van fuera del Layout oscuro. Cada pantalla
+                  rediseñada ira saliendo del Layout al implementarse
+                  su diseño. La ficha, el formulario y el importador
+                  de dispositivos siguen en el Layout oscuro hasta que
+                  se rediseñen. */}
+              <Route
+                path="dispositivos"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <DispositivosPage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="red"
                 element={
@@ -198,7 +209,6 @@ function App() {
                 <Route path="soluciones/:categoriaId/nuevo" element={<ArticuloForm />} />
                 <Route path="soluciones/:categoriaId/:articuloId" element={<ArticuloPage />} />
                 <Route path="soluciones/:categoriaId/:articuloId/editar" element={<ArticuloForm />} />
-                <Route path="dispositivos" element={<DispositivosPage />} />
                 <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
                 <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
                 <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
