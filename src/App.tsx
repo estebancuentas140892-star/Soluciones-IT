@@ -155,15 +155,29 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* La ficha de articulo es la primera pantalla del
+                  rediseño Nocturne (tarea 58, handoff "Herramienta IT
+                  para técnicos"): trae su propio ShellNocturne, por
+                  eso va fuera del Layout oscuro. */}
+              <Route
+                path="soluciones/:categoriaId/:articuloId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ArticuloPage />
+                  </Suspense>
+                }
+              />
               {/* Red, Topologia y Dispositivos son las primeras
                   pantallas del rediseño en tema claro (tareas 55, 56
                   y 57): traen su propio AppShell (sidebar en
                   escritorio, pestañas inferiores en movil), por eso
                   van fuera del Layout oscuro. Cada pantalla
                   rediseñada ira saliendo del Layout al implementarse
-                  su diseño. La ficha, el formulario y el importador
-                  de dispositivos siguen en el Layout oscuro hasta que
-                  se rediseñen. */}
+                  su diseño (el tema claro sera reemplazado por
+                  Nocturne al re-autorizarse cada una, decision D-006
+                  del proyecto de diseño). La ficha, el formulario y el
+                  importador de dispositivos siguen en el Layout oscuro
+                  hasta que se rediseñen. */}
               <Route
                 path="dispositivos"
                 element={
@@ -207,7 +221,6 @@ function App() {
                 <Route path="soluciones" element={<SolucionesPage />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
                 <Route path="soluciones/:categoriaId/nuevo" element={<ArticuloForm />} />
-                <Route path="soluciones/:categoriaId/:articuloId" element={<ArticuloPage />} />
                 <Route path="soluciones/:categoriaId/:articuloId/editar" element={<ArticuloForm />} />
                 <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
                 <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />

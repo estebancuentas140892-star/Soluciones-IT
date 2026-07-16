@@ -33,7 +33,15 @@ Cuatro pilares: base de conocimiento por categorías, inventario de dispositivos
 
 Todo es gratuito para un equipo de 5 personas. Supabase además es código abierto: si algún día su plan gratuito cambia, se puede autoalojar sin reescribir la aplicación.
 
-## 4. Estructura de navegación (pestañas inferiores)
+### Sistema visual Nocturne (rediseño IT Brain, en curso)
+
+Desde la tarea 58 (2026-07-16) las pantallas se re-autorizan una por una con el sistema de diseño Nocturne del handoff "Herramienta IT para técnicos" (tema oscuro: fondo `#161826`, un solo acento `#9184d9` siempre delineado, rampas tonales, densidad alta), que reemplaza la dirección de tema claro del handoff anterior (pantallas de las tareas 55 a 57, pendientes de re-autoría). Piezas del sistema en el código:
+
+- Tokens en `src/index.css` (`@theme` de Tailwind v4, prefijo `noct-`): colores base, rampas neutral y acento, y los tres colores de estado en OKLCH (éxito/consejo, precaución, error/importante). Regla: en pantallas Nocturne nunca hex sueltos, todo sale de los tokens.
+- Tipografía Inter variable servida desde el bundle (`src/assets/inter-latin-wght-normal.woff2`, subconjunto latino, entra al precache del service worker): nada de Google Fonts, que rompería el offline. Se aplica con la clase `font-inter` solo dentro del shell Nocturne.
+- Iconos Phosphor inlineados como componentes propios en `src/components/iconos.tsx` (solo los trazados usados, sin CDN ni dependencia; regenerable con `@phosphor-icons/core` instalado temporalmente).
+- Shell móvil en `src/app/ShellNocturne.tsx` (columna centrada de 448px + 5 pestañas inferiores fijas con blur; Bóveda solo con permiso) y primitivas compartidas en `src/components/nocturne.tsx` (rótulos de grupo, etiquetas, clases de botón).
+- Cada pantalla re-autorizada sale del `Layout` oscuro viejo en `src/App.tsx` y monta su propio shell (mismo patrón que el AppShell claro de las tareas 55 a 57).
 
 1. **Inicio**: barra de búsqueda global en grande, elementos recientes y accesos rápidos a las categorías más usadas. Abrir la app y buscar toma dos toques. El primer acceso destacado es el **Diagnóstico Inteligente** (`/diagnostico`): el técnico no piensa en el nombre de un procedimiento sino en el problema que tiene delante ("la impresora no imprime"), elige el problema de una lista por categorías y un asistente de preguntas simples lo lleva hasta la solución, ejecutando los procedimientos vinculados en el camino (ver sección 5, tablas diagnosticos y ejecuciones_diagnostico). Si el equipo marcó algún artículo como ruta de inicio (ver sección 5), aparece antes que los recientes en un bloque destacado "Para empezar": la puerta de entrada para quien recién llega al área.
 2. **Soluciones**: rejilla de categorías (POS, Impresoras, Cámaras, Computadores, Redes, Switches, Access Points, CCTV, Servidores, etc.). Dentro de cada categoría, todos los procedimientos agrupados por tipo: instalación, configuración, conexión, problemas frecuentes, mantenimiento y manuales, con imágenes y diagramas.

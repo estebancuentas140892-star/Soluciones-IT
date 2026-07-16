@@ -103,7 +103,9 @@ export function VistaPreviaArticulo({
           </p>
         )}
 
-        {procedimiento && <ProcedimientoVista articuloId={idEfimero} procedimiento={procedimiento} />}
+        {procedimiento && (
+          <ProcedimientoVista articuloId={idEfimero} procedimiento={procedimiento} progresoPegajoso={false} />
+        )}
 
         {contenido.trim() !== '' && (
           <article className="prose prose-invert prose-sm max-w-none prose-headings:text-slate-100 prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-slate-100 prose-a:text-sky-400">

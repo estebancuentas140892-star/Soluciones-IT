@@ -700,7 +700,7 @@ function FilaBloque({
             >
               {TONOS_AVISO.map((t) => (
                 <option key={t.valor} value={t.valor}>
-                  {t.icono} {t.etiqueta}
+                  {t.etiqueta}
                 </option>
               ))}
             </select>

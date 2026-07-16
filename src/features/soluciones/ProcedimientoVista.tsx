@@ -1,20 +1,28 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type BloquePaso, type NivelDificultad, type PasoAdjunto, type Procedimiento } from '../../lib/db'
+import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
+import { ArrowSquareOut, CaretRight, Check, CheckCircleFill, Circle } from '../../components/iconos'
+import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
-import { TONOS_AVISO } from './tonos'
+import { tonoInfo } from './tonos'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 
-const ETIQUETA_DIFICULTAD: Record<NivelDificultad, string> = {
-  principiante: 'Principiante',
-  intermedio: 'Intermedio',
-  avanzado: 'Avanzado',
-}
+// Botones pequeños con tono de estado (respuestas Si/No de las
+// preguntas de error y decisiones): delineados como todo boton
+// Nocturne, en el color del estado que representan.
+const BTN_EXITO =
+  'cursor-pointer rounded-lg border border-noct-exito/40 px-3 py-1.5 text-xs font-medium text-noct-exito hover:bg-noct-exito/10 active:bg-noct-exito/20'
+const BTN_PRECAUCION =
+  'cursor-pointer rounded-lg border border-noct-precaucion/40 px-3 py-1.5 text-xs font-medium text-noct-precaucion hover:bg-noct-precaucion/10 active:bg-noct-precaucion/20'
+
+// Panel de aviso reutilizado para vinculos rotos o no disponibles.
+const PANEL_PRECAUCION =
+  'rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-3 py-2.5 text-[13px] leading-normal'
 
 interface Props {
   articuloId: string
@@ -27,21 +35,31 @@ interface Props {
   // pendiente: asi un subprocedimiento o una solucion que terminan
   // completan tambien la tarea del paso que los vincula.
   onCompletado?: () => void
+  // La ficha (nivel 0) muestra el progreso en una barra pegajosa con
+  // blur. La vista previa del formulario lo apaga: su overlay ya tiene
+  // una cabecera pegajosa propia y ambas chocarian en top 0.
+  progresoPegajoso?: boolean
 }
 
-// Vista de lectura de un procedimiento: la lista de pasos colapsados
-// es el "mapa" del proceso (se ve completo de un vistazo) y cada paso
-// se expande al tocarlo para ver su cuerpo (tareas con casilla, avisos
-// e imagenes) y su galeria. Cada paso muestra su estado: pendiente
-// (gris), en progreso (ambar, con contador) o completado (verde). Al
-// marcar la ultima tarea de un paso, este se completa, se contrae y se
-// expande solo el siguiente pendiente, para avanzar sin buscarlo a mano.
-export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCompletado }: Props) {
-  const [expandido, setExpandido] = useState<string | null>(null)
+// Vista de lectura de un procedimiento en el sistema Nocturne (handoff
+// "Ficha de Procedimiento.dc.html"): stepper vertical con todos los
+// pasos visibles de un vistazo, insignia de paso (completo: tinte del
+// acento con check; actual: numero con glow; pendiente: divisor) unida
+// por una linea conectora, y el cuerpo de cada paso (tareas con
+// casilla, avisos por tono, imagenes, credenciales y vinculos) siempre
+// desplegado. El progreso vive en una barra pegajosa arriba (nivel 0)
+// para no perderse nunca. Al completar un paso, el scroll avanza solo
+// hasta el siguiente pendiente.
+export function ProcedimientoVista({
+  articuloId,
+  procedimiento,
+  nivel = 0,
+  onCompletado,
+  progresoPegajoso = true,
+}: Props) {
   const refsPasos = useRef<(HTMLLIElement | null)[]>([])
 
-  const { objetivoGeneral, requisitos, pasos, verificacionFinal, tiempoEstimadoMin, dificultad } = procedimiento
-  const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
+  const { objetivoGeneral, requisitos, pasos, verificacionFinal } = procedimiento
 
   const {
     progreso,
@@ -49,7 +67,6 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
     instruccionesHechas,
     completados,
     pasosCompletados,
-    verificacionCompleta,
     todoCompletado,
     subSatisfechoReactivo,
     alternarPaso,
@@ -61,263 +78,275 @@ export function ProcedimientoVista({ articuloId, procedimiento, nivel = 0, onCom
     procedimiento,
     nivel,
     onCompletado,
-    // La lista avanza expandiendo el siguiente paso pendiente y
-    // llevando el scroll hasta el; sin pendientes se contrae todo.
+    // Sin acordeon que expandir: avanzar es llevar el scroll hasta el
+    // siguiente paso pendiente (su insignia ya lo señala como actual).
     onAvanzar: (destino) => {
-      if (destino === null) {
-        setExpandido(null)
-        return
-      }
-      setExpandido(idsPasos[destino])
+      if (destino === null) return
       refsPasos.current[destino]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     },
   })
 
+  const progresoPct = pasos.length === 0 ? 0 : Math.round((completados / pasos.length) * 100)
+  // La insignia "actual" (numero con glow) es el primer paso sin
+  // completar; los siguientes pendientes van con el borde divisor.
+  const indiceActual = pasos.findIndex((p) => !hechos.has(p.id))
+
   return (
-    <section className="flex flex-col gap-3">
-      {(objetivoGeneral || tiempoEstimadoMin || dificultad) && (
-        <div className="flex flex-col gap-2">
-          {objetivoGeneral && <p className="text-sm text-slate-400">{objetivoGeneral}</p>}
-          {(tiempoEstimadoMin || dificultad) && (
-            <div className="flex flex-wrap gap-2">
-              {tiempoEstimadoMin && (
-                <span className="rounded-full border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-400">
-                  ⏱ {tiempoEstimadoMin} min
-                </span>
-              )}
-              {dificultad && (
-                <span className="rounded-full border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-400">
-                  {ETIQUETA_DIFICULTAD[dificultad]}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+    <section className="flex flex-col gap-[22px]">
+      {objetivoGeneral && (
+        <section>
+          <TituloSeccion className="mb-2">Objetivo</TituloSeccion>
+          <p className="text-sm leading-[1.55]">{objetivoGeneral}</p>
+        </section>
       )}
 
       {requisitos.length > 0 && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-          <h2 className="text-sm font-medium text-slate-200">Antes de empezar</h2>
-          <ul className="mt-1.5 flex flex-col gap-1">
+        <section>
+          <TituloSeccion className="mb-2">Antes de empezar</TituloSeccion>
+          <div className="flex flex-col gap-2.5 rounded-lg bg-noct-surface p-3.5">
             {requisitos.map((requisito) => (
-              <li key={requisito} className="text-sm text-slate-400">
-                • {requisito}
-              </li>
+              <div key={requisito} className="flex items-start gap-2.5">
+                <Circle size={14} className="mt-[3px] shrink-0 text-noct-neutral-600" />
+                <span className="text-[13.5px] leading-normal">{requisito}</span>
+              </div>
             ))}
-          </ul>
+          </div>
+        </section>
+      )}
+
+      {/* Barra de progreso pegajosa (solo el procedimiento principal):
+          el -mx-4 compensa el padding lateral de 16px del main de la
+          ficha para que el fondo con blur llegue borde a borde. */}
+      {nivel === 0 && pasos.length > 0 && (
+        <div
+          className={
+            progresoPegajoso ? 'sticky top-0 z-10 -mx-4 bg-noct-bg/90 px-4 py-2.5 backdrop-blur-[10px]' : ''
+          }
+        >
+          <div className="mb-[7px] flex items-center justify-between">
+            <span className="text-[12.5px] font-medium">Progreso</span>
+            <span className="text-[12.5px] text-noct-neutral-400">
+              {completados} de {pasos.length} pasos
+            </span>
+          </div>
+          <div className="h-1 overflow-hidden rounded-full bg-noct-neutral-900">
+            <div
+              className="h-full rounded-full bg-noct-accent shadow-[0_0_8px_color-mix(in_srgb,var(--color-noct-accent)_60%,transparent)] transition-[width] duration-150 ease-out"
+              style={{ width: `${progresoPct}%` }}
+            />
+          </div>
         </div>
       )}
 
-      <ol className="flex flex-col gap-2">
-        {pasos.map((paso, indice) => {
-          const hecho = hechos.has(paso.id)
-          const idsTareas = tareasDe(paso.bloques).map((t) => t.id)
-          const marcadas = contarInstruccionesHechas(progreso?.instruccionesHechas, idsTareas)
-          const enProgreso = !hecho && marcadas > 0
-          const subSatisfecho = subSatisfechoReactivo(paso)
-          const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
-          return (
-            <li
-              key={paso.id}
-              ref={(elemento) => {
-                refsPasos.current[indice] = elemento
-              }}
-              className={`rounded-xl border ${
-                expandido === paso.id ? 'border-sky-700' : hecho ? 'border-emerald-900/60' : 'border-slate-800'
-              } bg-slate-900`}
-            >
-              <div className="flex items-center gap-3 px-3 py-2.5">
-                <button
-                  type="button"
-                  onClick={() => void alternarPaso(indice, paso)}
-                  aria-label={
-                    hecho ? `Desmarcar paso ${indice + 1}` : `Marcar paso ${indice + 1} como hecho`
-                  }
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs ${
-                    hecho
-                      ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
-                      : enProgreso
-                        ? 'border-amber-700 bg-amber-500/10 text-amber-400'
-                        : 'border-slate-700 text-slate-400'
-                  }`}
-                >
-                  {hecho ? '✓' : indice + 1}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpandido(expandido === paso.id ? null : paso.id)}
-                  className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
-                >
-                  <span
-                    className={`text-sm ${hecho ? 'text-slate-500' : 'text-slate-200'} ${
-                      expandido === paso.id ? 'font-medium' : ''
-                    }`}
-                  >
-                    {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1.5">
-                    {enProgreso && idsTareas.length > 0 && (
-                      <span className="rounded-full border border-amber-800 bg-amber-950/40 px-1.5 py-0.5 text-[10px] text-amber-400">
-                        {marcadas}/{idsTareas.length}
-                      </span>
-                    )}
-                    {paso.subArticuloId && <ContadorSubProgreso subArticuloId={paso.subArticuloId} />}
-                    <span className="text-xs text-slate-500">{expandido === paso.id ? '▲' : '▼'}</span>
-                  </span>
-                </button>
-              </div>
-
-              {expandido === paso.id && (
-                <div className="flex flex-col gap-3 border-t border-slate-800 px-4 py-3">
-                  {paso.objetivo && <p className="text-xs text-slate-400">{paso.objetivo}</p>}
-
-                  {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
-
-                  {paso.bloques.length > 0 && (
-                    <ul className="flex flex-col gap-1.5">
-                      {paso.bloques.map((bloque) => (
-                        <li key={bloque.id}>
-                          <BloqueVista
-                            bloque={bloque}
-                            marcada={instruccionesHechas.has(bloque.id)}
-                            onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
-                            nivel={nivel}
-                            ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
-                              <ProcedimientoVista
-                                articuloId={vinculadoId}
-                                procedimiento={vinculado}
-                                nivel={nivel + 1}
-                                onCompletado={onCompletado}
-                              />
-                            )}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {paso.credencialId && (
-                    <CredencialEnPaso
-                      credencialId={paso.credencialId}
-                      tituloReferencia={paso.credencialTitulo}
-                    />
-                  )}
-
-                  {paso.subArticuloId && (
-                    <SubProcedimientoEnPaso
-                      subArticuloId={paso.subArticuloId}
-                      tituloReferencia={paso.subArticuloTitulo}
-                      nivel={nivel}
-                      onCompletado={() => void intentarCompletarPaso(indice, paso)}
-                    />
-                  )}
-
-                  {paso.subArticuloId && nivel === 0 && !hecho && !subSatisfecho && (
-                    <p className="text-xs text-amber-400/80">
-                      Termina el procedimiento vinculado para completar este paso.
-                    </p>
-                  )}
-
-                  {/* La pregunta de error solo aparece cuando el trabajo
-                      previo del paso (tareas y subprocedimiento) ya esta
-                      completo: asi el paso no avanza saltandose nada. */}
-                  {paso.solucionArticuloId && !hecho && trabajoPrevio && (
-                    <SolucionEnPaso
-                      solucionArticuloId={paso.solucionArticuloId}
-                      tituloReferencia={paso.solucionArticuloTitulo}
-                      nivel={nivel}
-                      onContinuar={() => void completarPasoYAvanzar(indice, paso)}
-                    />
-                  )}
-                </div>
-              )}
-            </li>
-          )
-        })}
-      </ol>
-
-      {pasosCompletados && verificacionFinal.length > 0 && !verificacionCompleta && (
-        <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3">
-          <h2 className="text-sm font-medium text-amber-200">✅ Verificación final</h2>
-          <p className="mt-0.5 text-xs text-amber-400/80">
-            Confirma que el objetivo realmente se cumplió antes de dar por terminado el procedimiento.
-          </p>
-          <ul className="mt-2 flex flex-col gap-0.5">
-            {verificacionFinal.map((item, indice) => {
-              const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
+      {pasos.length > 0 && (
+        <section>
+          <TituloSeccion className="mb-3">Pasos</TituloSeccion>
+          <ol>
+            {pasos.map((paso, indice) => {
+              const hecho = hechos.has(paso.id)
+              const idsTareas = tareasDe(paso.bloques).map((t) => t.id)
+              const marcadas = contarInstruccionesHechas(progreso?.instruccionesHechas, idsTareas)
+              const subSatisfecho = subSatisfechoReactivo(paso)
+              const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
+              const esUltimo = indice === pasos.length - 1
               return (
-                <li key={indice}>
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={marcada}
-                    onClick={() => void alternarVerificacionFinal(articuloId, indice)}
-                    className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
-                  >
-                    <span
-                      aria-hidden
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
-                        marcada
-                          ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
-                          : 'border-slate-600 text-transparent'
+                <li
+                  key={paso.id}
+                  ref={(elemento) => {
+                    refsPasos.current[indice] = elemento
+                  }}
+                  className="flex gap-3.5"
+                >
+                  <div className="flex w-7 shrink-0 flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={() => void alternarPaso(indice, paso)}
+                      aria-label={
+                        hecho ? `Desmarcar paso ${indice + 1}` : `Marcar paso ${indice + 1} como hecho`
+                      }
+                      className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border text-[12.5px] font-medium ${
+                        hecho
+                          ? 'border-noct-accent bg-noct-accent/15 text-noct-accent-300'
+                          : indice === indiceActual
+                            ? 'border-noct-accent text-noct-accent-300 shadow-[0_0_10px_color-mix(in_srgb,var(--color-noct-accent)_35%,transparent)]'
+                            : 'border-noct-divider text-noct-neutral-600'
                       }`}
                     >
-                      ✓
-                    </span>
-                    <span className={`text-sm ${marcada ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
-                      {item}
-                    </span>
-                  </button>
+                      {hecho ? <Check size={14} /> : indice + 1}
+                    </button>
+                    {!esUltimo && <div className="my-1.5 w-px flex-1 bg-noct-divider" />}
+                  </div>
+
+                  <div className={`min-w-0 flex-1 ${esUltimo ? '' : 'pb-[26px]'}`}>
+                    <div className="mb-3">
+                      <p className="text-sm font-medium">
+                        {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
+                      </p>
+                      {paso.objetivo && (
+                        <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{paso.objetivo}</p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-2.5">
+                      {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
+
+                      {paso.bloques.map((bloque) => (
+                        <BloqueVista
+                          key={bloque.id}
+                          bloque={bloque}
+                          marcada={instruccionesHechas.has(bloque.id)}
+                          onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
+                          nivel={nivel}
+                          ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
+                            <ProcedimientoVista
+                              articuloId={vinculadoId}
+                              procedimiento={vinculado}
+                              nivel={nivel + 1}
+                              onCompletado={onCompletado}
+                            />
+                          )}
+                        />
+                      ))}
+
+                      {paso.credencialId && (
+                        <CredencialEnPaso
+                          credencialId={paso.credencialId}
+                          tituloReferencia={paso.credencialTitulo}
+                        />
+                      )}
+
+                      {paso.subArticuloId && (
+                        <SubProcedimientoEnPaso
+                          subArticuloId={paso.subArticuloId}
+                          tituloReferencia={paso.subArticuloTitulo}
+                          nivel={nivel}
+                          onCompletado={() => void intentarCompletarPaso(indice, paso)}
+                        />
+                      )}
+
+                      {paso.subArticuloId && nivel === 0 && !hecho && !subSatisfecho && (
+                        <p className="text-xs text-noct-precaucion/85">
+                          Termina el procedimiento vinculado para completar este paso.
+                        </p>
+                      )}
+
+                      {/* La pregunta de error solo aparece cuando el trabajo
+                          previo del paso (tareas y subprocedimiento) ya esta
+                          completo: asi el paso no avanza saltandose nada. */}
+                      {paso.solucionArticuloId && !hecho && trabajoPrevio && (
+                        <SolucionEnPaso
+                          solucionArticuloId={paso.solucionArticuloId}
+                          tituloReferencia={paso.solucionArticuloTitulo}
+                          nivel={nivel}
+                          onContinuar={() => void completarPasoYAvanzar(indice, paso)}
+                        />
+                      )}
+                    </div>
+                  </div>
                 </li>
               )
             })}
-          </ul>
-        </div>
+          </ol>
+        </section>
+      )}
+
+      {/* Verificacion final: visible desde el principio en el
+          procedimiento principal (el diseño la anuncia deshabilitada
+          hasta completar los pasos); en los niveles anidados solo
+          cuando ya se puede marcar, para no recargar la tarjeta. */}
+      {verificacionFinal.length > 0 && (nivel === 0 || pasosCompletados) && (
+        <section className="rounded-lg border border-noct-accent/30 bg-noct-accent/[.08] p-3.5">
+          <h2 className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-accent-300">
+            Verificación final
+          </h2>
+          {!pasosCompletados && (
+            <p className="mb-2.5 text-xs text-noct-neutral-400">
+              Se habilita al completar {pasos.length === 1 ? 'el paso' : `los ${pasos.length} pasos`}.
+            </p>
+          )}
+          <div className="flex flex-col gap-[9px]">
+            {verificacionFinal.map((item, indice) => {
+              const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
+              return (
+                <button
+                  key={indice}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={marcada}
+                  disabled={!pasosCompletados}
+                  onClick={() => void alternarVerificacionFinal(articuloId, indice)}
+                  className="flex w-full cursor-pointer items-start gap-2.5 text-left disabled:cursor-not-allowed"
+                >
+                  {marcada ? (
+                    <CheckCircleFill size={15} className="mt-0.5 shrink-0 text-noct-accent" aria-hidden />
+                  ) : (
+                    <Circle
+                      size={15}
+                      className={`mt-0.5 shrink-0 ${pasosCompletados ? 'text-noct-accent-400' : 'text-noct-accent-600'}`}
+                      aria-hidden
+                    />
+                  )}
+                  <span
+                    className={`text-[13.5px] leading-normal ${marcada ? 'text-noct-neutral-500 line-through' : ''}`}
+                  >
+                    {item}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
       )}
 
       {todoCompletado && (
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-800 bg-emerald-950/40 px-4 py-3">
-          <p className="text-sm font-medium text-emerald-300">✓ Procedimiento completado</p>
+        <div className="flex items-center justify-between gap-2.5 rounded-lg border border-noct-exito/30 bg-noct-exito/10 px-3.5 py-3">
+          <p className="flex min-w-0 items-center gap-2.5 text-[13.5px] font-medium">
+            <CheckCircleFill size={16} className="shrink-0 text-noct-exito" aria-hidden />
+            Procedimiento completado
+          </p>
           <button
             type="button"
             onClick={() => void reiniciarProgreso(articuloId)}
-            className="shrink-0 text-xs text-emerald-400 underline underline-offset-2"
+            className={`shrink-0 ${BTN_EXITO}`}
           >
             Reiniciar
           </button>
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
-          <div
-            className={`h-full rounded-full transition-all ${todoCompletado ? 'bg-emerald-500' : 'bg-sky-500'}`}
-            style={{ width: `${pasos.length === 0 ? 0 : Math.round((completados / pasos.length) * 100)}%` }}
-          />
+      {/* En los niveles anidados no hay barra pegajosa: el avance vive
+          en una barra compacta al pie de la tarjeta, con su reinicio. */}
+      {nivel >= 1 && pasos.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <div className="h-1 overflow-hidden rounded-full bg-noct-neutral-900">
+            <div
+              className="h-full rounded-full bg-noct-accent transition-[width] duration-150 ease-out"
+              style={{ width: `${progresoPct}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-noct-neutral-500">
+              {completados} de {pasos.length} pasos completados
+            </p>
+            {completados > 0 && !todoCompletado && (
+              <button
+                type="button"
+                onClick={() => void reiniciarProgreso(articuloId)}
+                className="cursor-pointer text-xs text-noct-neutral-400 underline underline-offset-2"
+              >
+                Reiniciar progreso
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-slate-500">
-            {completados} de {pasos.length} pasos completados
-          </p>
-          {completados > 0 && !todoCompletado && (
-            <button
-              type="button"
-              onClick={() => void reiniciarProgreso(articuloId)}
-              className="text-xs text-slate-400 underline underline-offset-2"
-            >
-              Reiniciar progreso
-            </button>
-          )}
-        </div>
-      </div>
+      )}
     </section>
   )
 }
 
-// Avance del subprocedimiento vinculado, visible en la fila colapsada
-// del paso: el procedimiento principal funciona como lista de tareas
-// y de un vistazo se ve cuales van completas (verde), cuales van a
-// medias (ambar) y cuales no han empezado (gris).
+// Avance del subprocedimiento vinculado, visible en la tarjeta de
+// vinculo: de un vistazo se ve si va completo (verde), a medias
+// (ambar) o sin empezar (neutro).
 function ContadorSubProgreso({ subArticuloId }: { subArticuloId: string }) {
   const articulo = useLiveQuery(
     async () => (await db.articulos.get(subArticuloId)) ?? null,
@@ -338,15 +367,36 @@ function ContadorSubProgreso({ subArticuloId }: { subArticuloId: string }) {
 
   return (
     <span
-      className={`rounded-full border px-1.5 py-0.5 text-[10px] ${
+      className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-medium ${
         hechos === total
-          ? 'border-emerald-800 bg-emerald-950/40 text-emerald-400'
+          ? 'bg-noct-exito/15 text-noct-exito'
           : hechos > 0
-            ? 'border-amber-800 bg-amber-950/40 text-amber-400'
-            : 'border-slate-700 bg-slate-800/60 text-slate-400'
+            ? 'bg-noct-precaucion/15 text-noct-precaucion'
+            : 'bg-noct-neutral-800 text-noct-neutral-400'
       }`}
     >
       {hechos}/{total}
+    </span>
+  )
+}
+
+// Encabezado de una tarjeta de vinculo a otra entidad (patron del
+// diseño): kicker en mayusculas + titulo truncable.
+function EncabezadoVinculo({
+  kicker,
+  titulo,
+  claseKicker,
+}: {
+  kicker: string
+  titulo: string
+  claseKicker: string
+}) {
+  return (
+    <span className="min-w-0 flex-1">
+      <span className={`block text-[10px] font-medium uppercase tracking-[0.08em] ${claseKicker}`}>
+        {kicker}
+      </span>
+      <span className="block truncate text-[13.5px] font-medium text-noct-text">{titulo}</span>
     </span>
   )
 }
@@ -380,11 +430,9 @@ function SubProcedimientoEnPaso({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2">
-        <p className="text-xs text-amber-300">
-          El procedimiento vinculado{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
-          disponible. Edita el artículo para quitar el vínculo o vincular otro.
-        </p>
+      <div className={PANEL_PRECAUCION}>
+        El procedimiento vinculado{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
+        disponible. Edita el artículo para quitar el vínculo o vincular otro.
       </div>
     )
   }
@@ -399,32 +447,34 @@ function SubProcedimientoEnPaso({
     return (
       <Link
         to={ruta}
-        className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2"
+        className="flex min-h-11 items-center gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] px-3 py-[11px] hover:bg-noct-accent/[.14]"
       >
-        <p className="min-w-0 truncate text-xs font-medium text-sky-200">
-          🔗 Procedimiento: {articulo.titulo}
-        </p>
-        <span className="shrink-0 text-xs text-sky-300 underline underline-offset-2">Abrir</span>
+        <ArrowSquareOut size={17} className="shrink-0 text-noct-accent" aria-hidden />
+        <EncabezadoVinculo kicker="Continúa en" titulo={articulo.titulo} claseKicker="text-noct-accent" />
+        {procedimiento && <ContadorSubProgreso subArticuloId={subArticuloId} />}
+        <CaretRight size={14} className="shrink-0 text-noct-accent" aria-hidden />
       </Link>
     )
   }
 
   return (
-    <div className="rounded-lg border border-sky-900/60 bg-sky-950/20 p-3">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-xs font-medium text-sky-200">
-          🔗 Procedimiento: {articulo.titulo}
-        </p>
-        <Link to={ruta} className="shrink-0 text-xs text-sky-300 underline underline-offset-2">
+    <div className="rounded-lg border border-noct-accent/35 bg-noct-accent/[.08]">
+      <div className="flex min-h-11 items-center gap-2.5 px-3 py-[11px]">
+        <ArrowSquareOut size={17} className="shrink-0 text-noct-accent" aria-hidden />
+        <EncabezadoVinculo kicker="Continúa en" titulo={articulo.titulo} claseKicker="text-noct-accent" />
+        <ContadorSubProgreso subArticuloId={subArticuloId} />
+        <Link to={ruta} className="shrink-0 text-xs font-medium text-noct-accent">
           Abrir
         </Link>
       </div>
-      <ProcedimientoVista
-        articuloId={articulo.id}
-        procedimiento={procedimiento}
-        nivel={nivel + 1}
-        onCompletado={onCompletado}
-      />
+      <div className="border-t border-noct-accent/20 p-3">
+        <ProcedimientoVista
+          articuloId={articulo.id}
+          procedimiento={procedimiento}
+          nivel={nivel + 1}
+          onCompletado={onCompletado}
+        />
+      </div>
     </div>
   )
 }
@@ -464,11 +514,9 @@ function SolucionEnPaso({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2">
-        <p className="text-xs text-amber-300">
-          La solución vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
-          disponible. Edita el artículo para quitar el vínculo o vincular otra.
-        </p>
+      <div className={PANEL_PRECAUCION}>
+        La solución vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
+        disponible. Edita el artículo para quitar el vínculo o vincular otra.
       </div>
     )
   }
@@ -482,21 +530,15 @@ function SolucionEnPaso({
 
   if (!abierta) {
     return (
-      <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2.5">
-        <p className="text-xs font-medium text-slate-300">¿Ocurrió algún error durante este paso?</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onContinuar}
-            className="rounded-lg border border-emerald-800 px-3 py-1.5 text-xs text-emerald-300"
-          >
+      <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
+        <p className="text-[13.5px] font-medium leading-normal">
+          ¿Ocurrió algún error durante este paso?
+        </p>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <button type="button" onClick={onContinuar} className={BTN_EXITO}>
             No, continuar
           </button>
-          <button
-            type="button"
-            onClick={() => setMostrarSolucion(true)}
-            className="rounded-lg border border-amber-800 px-3 py-1.5 text-xs text-amber-300"
-          >
+          <button type="button" onClick={() => setMostrarSolucion(true)} className={BTN_PRECAUCION}>
             Sí, ver la solución
           </button>
         </div>
@@ -513,12 +555,11 @@ function SolucionEnPaso({
     return (
       <Link
         to={ruta}
-        className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2"
+        className="flex min-h-11 items-center gap-2.5 rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-3 py-[11px] hover:bg-noct-precaucion/[.14]"
       >
-        <p className="min-w-0 truncate text-xs font-medium text-amber-200">
-          🛠 Solución: {articulo.titulo}
-        </p>
-        <span className="shrink-0 text-xs text-amber-300 underline underline-offset-2">Abrir</span>
+        <ArrowSquareOut size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+        <EncabezadoVinculo kicker="Solución" titulo={articulo.titulo} claseKicker="text-noct-precaucion" />
+        <CaretRight size={14} className="shrink-0 text-noct-precaucion" aria-hidden />
       </Link>
     )
   }
@@ -533,30 +574,29 @@ function SolucionEnPaso({
   }
 
   return (
-    <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-xs font-medium text-amber-200">
-          🛠 Solución: {articulo.titulo}
-        </p>
-        <span className="flex shrink-0 items-center gap-2">
-          <Link to={ruta} className="text-xs text-amber-300 underline underline-offset-2">
-            Abrir
-          </Link>
-          <button
-            type="button"
-            onClick={() => setMostrarSolucion(false)}
-            className="text-xs text-slate-400 underline underline-offset-2"
-          >
-            Ocultar
-          </button>
-        </span>
+    <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08]">
+      <div className="flex min-h-11 items-center gap-2.5 px-3 py-[11px]">
+        <ArrowSquareOut size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+        <EncabezadoVinculo kicker="Solución" titulo={articulo.titulo} claseKicker="text-noct-precaucion" />
+        <Link to={ruta} className="shrink-0 text-xs font-medium text-noct-precaucion">
+          Abrir
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMostrarSolucion(false)}
+          className="shrink-0 cursor-pointer text-xs text-noct-neutral-400 underline underline-offset-2"
+        >
+          Ocultar
+        </button>
       </div>
-      <ProcedimientoVista
-        articuloId={articulo.id}
-        procedimiento={procedimiento}
-        nivel={nivel + 1}
-        onCompletado={() => void resuelta()}
-      />
+      <div className="border-t border-noct-precaucion/20 p-3">
+        <ProcedimientoVista
+          articuloId={articulo.id}
+          procedimiento={procedimiento}
+          nivel={nivel + 1}
+          onCompletado={() => void resuelta()}
+        />
+      </div>
     </div>
   )
 }
@@ -571,10 +611,62 @@ export type EjecutarArticuloInline = (opciones: {
   onCompletado: () => void
 }) => ReactNode
 
+// Fila de tarea con casilla (accion o verificacion): casilla de 18px
+// (marcada: relleno del acento con check en el color del fondo; las
+// verificaciones llevan su etiqueta a la derecha) y texto tachado al
+// completar. La comparten las tareas normales y las decisiones ya
+// respondidas.
+function FilaTarea({
+  marcada,
+  esVerificacion,
+  texto,
+  onAlternar,
+  ariaLabel,
+}: {
+  marcada: boolean
+  esVerificacion?: boolean
+  texto: string
+  onAlternar: () => void
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={marcada}
+      aria-label={ariaLabel}
+      onClick={onAlternar}
+      className="flex w-full cursor-pointer items-start gap-2.5 text-left"
+    >
+      {marcada ? (
+        <span
+          aria-hidden
+          className="mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded bg-noct-accent"
+        >
+          <Check size={13} className="text-noct-bg" />
+        </span>
+      ) : (
+        <span
+          aria-hidden
+          className="mt-px h-[18px] w-[18px] shrink-0 rounded border-[1.5px] border-noct-neutral-700"
+        />
+      )}
+      <span
+        className={`min-w-0 flex-1 text-sm leading-normal ${
+          marcada ? 'text-noct-neutral-600 line-through' : ''
+        }`}
+      >
+        {texto}
+      </span>
+      {esVerificacion && <TagNeutral className="shrink-0">Verificación</TagNeutral>}
+    </button>
+  )
+}
+
 // Un bloque del cuerpo del paso en la vista de lectura. Segun su tipo:
 // una tarea con casilla (la unica que cuenta para completar el paso;
-// las de tipo decision se responden con Si/No), un aviso con su color
-// e icono, o una imagen intercalada con pie. Exportado: lo reutiliza
+// las de tipo decision se responden con Si/No), un aviso con su tono
+// Nocturne, o una imagen intercalada con pie. Exportado: lo reutiliza
 // tambien el modo asistente (AsistenteVista).
 export function BloqueVista({
   bloque,
@@ -590,13 +682,11 @@ export function BloqueVista({
   ejecutarInline?: EjecutarArticuloInline
 }) {
   if (bloque.tipo === 'aviso') {
-    const tono = TONOS_AVISO.find((t) => t.valor === bloque.tono) ?? TONOS_AVISO[0]
+    const tono = tonoInfo(bloque.tono)
     return (
-      <div className={`flex gap-2 rounded-lg border px-3 py-2 ${tono.clases}`}>
-        <span aria-hidden className="shrink-0">
-          {tono.icono}
-        </span>
-        <p className="text-sm">{bloque.texto}</p>
+      <div className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 ${tono.clasesPanel}`}>
+        <tono.Icono size={16} className={`mt-px shrink-0 ${tono.claseIcono}`} aria-hidden />
+        <p className="min-w-0 text-[13px] leading-normal">{bloque.texto}</p>
       </div>
     )
   }
@@ -604,18 +694,18 @@ export function BloqueVista({
   if (bloque.tipo === 'imagen') {
     if (!bloque.adjunto) return null
     return (
-      <figure className="flex flex-col gap-1">
+      <figure className="flex flex-col gap-1.5">
         <AdjuntoPaso adjunto={bloque.adjunto} titulo={bloque.texto} />
         {bloque.texto && (
-          <figcaption className="text-xs text-slate-500">{bloque.texto}</figcaption>
+          <figcaption className="text-xs text-noct-neutral-500">{bloque.texto}</figcaption>
         )}
       </figure>
     )
   }
 
   // El vinculo de credencial (tarea 40) es independiente del tipo de
-  // tarea: se muestra debajo del checkbox o de la pregunta, con el
-  // mismo apartado "Datos" contraido por defecto que ya protege la
+  // tarea: se muestra debajo de la casilla o de la pregunta, con el
+  // mismo bloque protegido contraido por defecto que ya protege la
   // credencial vinculada a un paso completo.
   const credencialInline = bloque.credencialId && (
     <CredencialEnPaso credencialId={bloque.credencialId} tituloReferencia={bloque.credencialTitulo} />
@@ -639,33 +729,13 @@ export function BloqueVista({
   const esVerificacion = bloque.tipoTarea === 'verificacion'
   return (
     <div className="flex flex-col gap-1.5">
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={marcada}
-        aria-label={`${esVerificacion ? 'Verificación' : 'Tarea'}: ${bloque.texto}`}
-        onClick={onAlternar}
-        className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
-      >
-        {/* Las verificaciones muestran la casilla en azul con el ✓
-            insinuado: se distinguen de las acciones sin dejar de ser
-            casillas normales. */}
-        <span
-          aria-hidden
-          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
-            marcada
-              ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
-              : esVerificacion
-                ? 'border-sky-800 bg-sky-950/40 text-sky-700'
-                : 'border-slate-600 text-transparent'
-          }`}
-        >
-          ✓
-        </span>
-        <span className={`text-sm ${marcada ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
-          {bloque.texto}
-        </span>
-      </button>
+      <FilaTarea
+        marcada={marcada}
+        esVerificacion={esVerificacion}
+        texto={bloque.texto}
+        onAlternar={onAlternar}
+        ariaLabel={`${esVerificacion ? 'Verificación' : 'Tarea'}: ${bloque.texto}`}
+      />
       {credencialInline}
     </div>
   )
@@ -712,22 +782,12 @@ function DecisionEnTarea({
   // tocarla la desmarca para volver a responder.
   if (marcada) {
     return (
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked
-        aria-label={`Decisión respondida: ${bloque.texto}`}
-        onClick={onAlternar}
-        className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
-      >
-        <span
-          aria-hidden
-          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-emerald-700 bg-emerald-500/15 text-xs text-emerald-400"
-        >
-          ✓
-        </span>
-        <span className="text-sm text-slate-500 line-through">{bloque.texto}</span>
-      </button>
+      <FilaTarea
+        marcada
+        texto={bloque.texto}
+        onAlternar={onAlternar}
+        ariaLabel={`Decisión respondida: ${bloque.texto}`}
+      />
     )
   }
 
@@ -740,25 +800,16 @@ function DecisionEnTarea({
 
   if (!abierta) {
     return (
-      <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2.5">
-        <p className="flex gap-2 text-sm font-medium text-slate-200">
-          <span aria-hidden className="shrink-0">
-            ❓
-          </span>
-          {bloque.texto}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onAlternar}
-            className="rounded-lg border border-emerald-800 px-3 py-1.5 text-xs text-emerald-300"
-          >
+      <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
+        <p className="text-[13.5px] font-medium leading-normal">{bloque.texto}</p>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <button type="button" onClick={onAlternar} className={BTN_EXITO}>
             Sí, continuar
           </button>
           <button
             type="button"
             onClick={() => (vinculoId ? setMostrarVinculo(true) : onAlternar())}
-            className="rounded-lg border border-amber-800 px-3 py-1.5 text-xs text-amber-300"
+            className={BTN_PRECAUCION}
           >
             {vinculoId ? `No, abrir "${bloque.decisionArticuloTitulo || 'la solución'}"` : 'No, continuar'}
           </button>
@@ -771,17 +822,13 @@ function DecisionEnTarea({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2">
-        <p className="text-xs text-amber-300">
+      <div className={PANEL_PRECAUCION}>
+        <p className="m-0">
           El artículo vinculado a esta decisión
           {bloque.decisionArticuloTitulo ? ` "${bloque.decisionArticuloTitulo}"` : ''} ya no está
           disponible. Edita el artículo para quitar el vínculo o vincular otro.
         </p>
-        <button
-          type="button"
-          onClick={onAlternar}
-          className="mt-2 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300"
-        >
+        <button type="button" onClick={onAlternar} className={`mt-2.5 ${BTN_EXITO}`}>
           Marcar la decisión y continuar
         </button>
       </div>
@@ -795,18 +842,15 @@ function DecisionEnTarea({
   // (corta ciclos), y el tecnico marca la decision al volver.
   if (nivel >= 1 || !procedimiento || !ejecutarInline) {
     return (
-      <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="min-w-0 truncate text-xs font-medium text-amber-200">🛠 {articulo.titulo}</p>
-          <Link to={ruta} className="shrink-0 text-xs text-amber-300 underline underline-offset-2">
+      <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-3 py-[11px]">
+        <div className="flex items-center gap-2.5">
+          <ArrowSquareOut size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+          <EncabezadoVinculo kicker="Solución" titulo={articulo.titulo} claseKicker="text-noct-precaucion" />
+          <Link to={ruta} className="shrink-0 text-xs font-medium text-noct-precaucion">
             Abrir
           </Link>
         </div>
-        <button
-          type="button"
-          onClick={onAlternar}
-          className="mt-2 rounded-lg border border-emerald-800 px-3 py-1.5 text-xs text-emerald-300"
-        >
+        <button type="button" onClick={onAlternar} className={`mt-2.5 ${BTN_EXITO}`}>
           Ya quedó resuelto, continuar
         </button>
       </div>
@@ -824,27 +868,28 @@ function DecisionEnTarea({
   }
 
   return (
-    <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-xs font-medium text-amber-200">🛠 {articulo.titulo}</p>
-        <span className="flex shrink-0 items-center gap-2">
-          <Link to={ruta} className="text-xs text-amber-300 underline underline-offset-2">
-            Abrir
-          </Link>
-          <button
-            type="button"
-            onClick={() => setMostrarVinculo(false)}
-            className="text-xs text-slate-400 underline underline-offset-2"
-          >
-            Ocultar
-          </button>
-        </span>
+    <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08]">
+      <div className="flex min-h-11 items-center gap-2.5 px-3 py-[11px]">
+        <ArrowSquareOut size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+        <EncabezadoVinculo kicker="Solución" titulo={articulo.titulo} claseKicker="text-noct-precaucion" />
+        <Link to={ruta} className="shrink-0 text-xs font-medium text-noct-precaucion">
+          Abrir
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMostrarVinculo(false)}
+          className="shrink-0 cursor-pointer text-xs text-noct-neutral-400 underline underline-offset-2"
+        >
+          Ocultar
+        </button>
       </div>
-      {ejecutarInline({
-        articuloId: articulo.id,
-        procedimiento,
-        onCompletado: () => void resuelta(),
-      })}
+      <div className="border-t border-noct-precaucion/20 p-3">
+        {ejecutarInline({
+          articuloId: articulo.id,
+          procedimiento,
+          onCompletado: () => void resuelta(),
+        })}
+      </div>
     </div>
   )
 }
@@ -873,8 +918,8 @@ function AdjuntoPaso({ adjunto, titulo }: { adjunto: PasoAdjunto; titulo: string
 
   if (!url) {
     return (
-      <div className="flex h-24 items-center justify-center rounded-lg border border-slate-800 bg-slate-950">
-        <p className="px-3 text-center text-xs text-slate-500">
+      <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-noct-neutral-700">
+        <p className="px-3 text-center text-xs text-noct-neutral-500">
           Adjunto no disponible. Si estás sin conexión, usa "Descargar todo para offline" con señal.
         </p>
       </div>
@@ -887,21 +932,21 @@ function AdjuntoPaso({ adjunto, titulo }: { adjunto: PasoAdjunto; titulo: string
         href={url}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs text-sky-300"
+        className="flex items-center gap-2.5 rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5 text-xs font-medium text-noct-accent-400 hover:bg-noct-text/[.04]"
       >
-        <span aria-hidden>📄</span>
-        <span className="min-w-0 truncate underline underline-offset-2">{adjunto.nombre}</span>
+        <ArrowSquareOut size={15} className="shrink-0" aria-hidden />
+        <span className="min-w-0 truncate">{adjunto.nombre}</span>
       </a>
     )
   }
 
   return (
     <>
-      <button type="button" onClick={() => setVisorAbierto(true)} className="block">
+      <button type="button" onClick={() => setVisorAbierto(true)} className="block w-full cursor-zoom-in">
         <img
           src={url}
           alt={`Adjunto del paso: ${titulo}`}
-          className="max-h-72 w-full rounded-lg border border-slate-800 object-contain"
+          className="max-h-72 w-full rounded-lg border border-noct-divider bg-noct-surface object-contain"
         />
       </button>
       {visorAbierto && (

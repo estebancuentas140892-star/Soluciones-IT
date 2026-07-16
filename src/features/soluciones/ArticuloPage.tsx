@@ -1,26 +1,65 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { db, type Articulo, type ArticuloRelacionado, type EstadoArticulo } from '../../lib/db'
+import { db, type Articulo, type ArticuloRelacionado, type NivelDificultad } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { reiniciarProgreso } from '../../lib/progresoPasos'
+import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
+import { ShellNocturne } from '../../app/ShellNocturne'
 import { Adjuntos } from '../../components/Adjuntos'
-import { BotonCompartir } from '../../components/BotonCompartir'
-import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { ReferenciadoPor } from '../../components/ReferenciadoPor'
 import { useGrafo } from '../../components/useGrafo'
 import { resumenImpacto } from '../../lib/grafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import {
+  BookOpen,
+  CaretLeft,
+  CaretRight,
+  Circle,
+  Clock,
+  ClockCounterClockwise,
+  Copy,
+  DotsThreeBold,
+  PencilSimple,
+  Play,
+  ShareNetwork,
+  TrashSimple,
+  Warning,
+  WarningOctagon,
+} from '../../components/iconos'
+import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { etiquetaDeTipo } from './tiposArticulo'
 
-const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' })
+const ETIQUETA_DIFICULTAD: Record<NivelDificultad, string> = {
+  principiante: 'Principiante',
+  intermedio: 'Intermedio',
+  avanzado: 'Avanzado',
+}
 
+// Fecha corta al estilo del diseño ("12 jul"); con el año solo cuando
+// no es el actual, para no perder informacion en articulos viejos.
+function fechaCorta(iso: string): string {
+  const fecha = new Date(iso)
+  const opciones: Intl.DateTimeFormatOptions =
+    fecha.getFullYear() === new Date().getFullYear()
+      ? { day: 'numeric', month: 'short' }
+      : { day: 'numeric', month: 'short', year: 'numeric' }
+  return new Intl.DateTimeFormat('es', opciones).format(fecha)
+}
+
+// Ficha de un articulo en el sistema Nocturne (handoff "Ficha de
+// Procedimiento.dc.html"): cabecera compacta con regreso contextual y
+// acciones (Asistente, Editar y el menu "···" con el resto, regla 4 de
+// 08_ESTILO.md), etiquetas de metadatos, titulo, y el procedimiento
+// como stepper con barra de progreso pegajosa (ProcedimientoVista).
+// Primera pantalla que estrena el shell movil Nocturne.
 export function ArticuloPage() {
   const { categoriaId = '', articuloId = '' } = useParams()
   const navigate = useNavigate()
@@ -49,141 +88,271 @@ export function ArticuloPage() {
   }, [idVisitado])
 
   if (articulo === null) return <Navigate to={`/soluciones/${categoriaId}`} replace />
-  if (!articulo) return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
+  if (!articulo) {
+    return (
+      <ShellNocturne>
+        <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+      </ShellNocturne>
+    )
+  }
 
   async function eliminar() {
     await eliminarRegistro('articulos', articuloId)
     navigate(`/soluciones/${categoriaId}`)
   }
 
+  const estado = articulo.estado ?? 'publicado'
+  const metaLinea = [
+    etiquetaDeTipo(articulo.tipo),
+    `v${articulo.version ?? '1.0'}`,
+    `Actualizado el ${fechaCorta(articulo.updatedAt)}${autor?.nombre ? ` por ${autor.nombre}` : ''}`,
+  ].join(' · ')
+
   return (
-    <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
-      <header className="flex flex-col gap-2">
-        <BotonVolver to={`/soluciones/${categoriaId}`}>{categoria?.nombre ?? 'Categoría'}</BotonVolver>
-        {procedimiento?.portada && <PortadaArticulo portada={procedimiento.portada} titulo={articulo.titulo} />}
-        <EstadoArticuloBanda estado={articulo.estado ?? 'publicado'} />
-        <div>
-          <h1 className="text-xl font-semibold">{articulo.titulo}</h1>
-          <p className="text-xs text-slate-500">
-            {etiquetaDeTipo(articulo.tipo)} · v{articulo.version ?? '1.0'}
-          </p>
-          <p className="text-xs text-slate-600">
-            Última modificación: {formateadorFecha.format(new Date(articulo.updatedAt))}
-            {autor?.nombre ? `, por ${autor.nombre}` : ''}
-          </p>
-          {(articulo.etiquetas ?? []).length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-1.5">
-              {articulo.etiquetas.map((etiqueta) => (
-                <li
-                  key={etiqueta}
-                  className="rounded-full border border-slate-800 bg-slate-900 px-2.5 py-0.5 text-[11px] text-slate-400"
-                >
-                  {etiqueta}
-                </li>
-              ))}
-            </ul>
+    <ShellNocturne>
+      <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5">
+        <Link
+          to={`/soluciones/${categoriaId}`}
+          className="inline-flex min-w-0 items-center gap-1 rounded-lg py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 hover:bg-noct-text/5 hover:text-noct-text"
+        >
+          <CaretLeft size={16} className="shrink-0" aria-hidden />
+          <span className="truncate">{categoria?.nombre ?? 'Soluciones'}</span>
+        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {procedimiento && (
+            <Link to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`} className={BTN_PRIMARIO}>
+              <Play size={14} aria-hidden />
+              Asistente
+            </Link>
           )}
+          <Link to={`/soluciones/${categoriaId}/${articuloId}/editar`} className={BTN_SECUNDARIO}>
+            <PencilSimple size={15} aria-hidden />
+            Editar
+          </Link>
+          <MenuAcciones
+            articulo={articulo}
+            categoriaId={categoriaId}
+            conProcedimiento={Boolean(procedimiento)}
+            onEliminar={() => setMostrarEliminar(true)}
+          />
         </div>
-        {procedimiento?.descripcion && (
-          <p className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-300">
-            {procedimiento.descripcion}
-          </p>
-        )}
       </header>
 
-      {procedimiento && (
-        <Link
-          to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
-          className="flex items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950"
-        >
-          ▶ Modo asistente
-        </Link>
-      )}
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-[116px] pt-1">
+        {estado === 'borrador' && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-3 py-2.5">
+            <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+            <p className="text-[13px] leading-normal">
+              Borrador. No aparece en el buscador, las rutas de inicio ni el diagnóstico.
+            </p>
+          </div>
+        )}
+        {estado === 'obsoleto' && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-noct-error/30 bg-noct-error/10 px-3 py-2.5">
+            <WarningOctagon size={16} className="mt-px shrink-0 text-noct-error" aria-hidden />
+            <p className="text-[13px] leading-normal">
+              Obsoleto. Se conserva solo como referencia; usar el procedimiento vigente.
+            </p>
+          </div>
+        )}
 
-      <div className="flex flex-wrap gap-2">
-        <BotonCompartir titulo={articulo.titulo} />
-        <Link
-          to={`/soluciones/${categoriaId}/${articuloId}/editar`}
-          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-        >
-          Editar
-        </Link>
-        <Link
-          to={`/soluciones/${categoriaId}/nuevo?copiarDe=${articuloId}`}
-          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-        >
-          Duplicar
-        </Link>
-        <button
-          type="button"
-          onClick={() => setMostrarEliminar(true)}
-          className="rounded-lg border border-red-900 px-3 py-1.5 text-xs text-red-400"
-        >
-          Eliminar
-        </button>
-      </div>
+        {procedimiento?.portada && <PortadaArticulo portada={procedimiento.portada} titulo={articulo.titulo} />}
 
-      <DialogoEliminar
-        abierto={mostrarEliminar}
-        sensible
-        titulo={
-          procedimiento
-            ? `¿Eliminar procedimiento "${articulo.titulo}"?`
-            : `¿Eliminar artículo "${articulo.titulo}"?`
-        }
-        descripcion={
-          procedimiento
-            ? 'Esta acción eliminará todo el procedimiento y sus pasos asociados.'
-            : 'Esta acción eliminará el artículo por completo.'
-        }
-        advertencia={impacto ? `${impacto} Al eliminarlo, esos vínculos quedarán rotos.` : null}
-        onCerrar={() => setMostrarEliminar(false)}
-        onConfirmar={eliminar}
-      />
+        <header className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            {categoria?.nombre && <TagNeutral>{categoria.nombre}</TagNeutral>}
+            {procedimiento?.dificultad && (
+              <TagNeutral>{ETIQUETA_DIFICULTAD[procedimiento.dificultad]}</TagNeutral>
+            )}
+            {procedimiento?.tiempoEstimadoMin && (
+              <TagNeutral>
+                <Clock size={12} aria-hidden />
+                {procedimiento.tiempoEstimadoMin} min
+              </TagNeutral>
+            )}
+            {estado === 'borrador' && (
+              <span className="inline-flex items-center rounded-md bg-noct-precaucion/15 px-2.5 py-[3px] text-[11px] font-medium text-noct-precaucion">
+                Borrador
+              </span>
+            )}
+            {estado === 'obsoleto' && (
+              <span className="inline-flex items-center rounded-md bg-noct-error/15 px-2.5 py-[3px] text-[11px] font-medium text-noct-error">
+                Obsoleto
+              </span>
+            )}
+          </div>
+          <h1 className="text-pretty text-[22px] font-medium leading-[1.25]">{articulo.titulo}</h1>
+          {procedimiento?.descripcion && (
+            <p className="text-pretty text-[13.5px] leading-normal text-noct-neutral-400">
+              {procedimiento.descripcion}
+            </p>
+          )}
+          <p className="text-xs text-noct-neutral-500">{metaLinea}</p>
+        </header>
 
-      {articulo.tipo === 'problema_frecuente' && <IncidenciaResumen articulo={articulo} />}
+        <DialogoEliminar
+          abierto={mostrarEliminar}
+          sensible
+          titulo={
+            procedimiento
+              ? `¿Eliminar procedimiento "${articulo.titulo}"?`
+              : `¿Eliminar artículo "${articulo.titulo}"?`
+          }
+          descripcion={
+            procedimiento
+              ? 'Esta acción eliminará todo el procedimiento y sus pasos asociados.'
+              : 'Esta acción eliminará el artículo por completo.'
+          }
+          advertencia={impacto ? `${impacto} Al eliminarlo, esos vínculos quedarán rotos.` : null}
+          onCerrar={() => setMostrarEliminar(false)}
+          onConfirmar={eliminar}
+        />
 
-      <ArticulosRelacionados articuloId={articuloId} relacionados={articulo.relacionados ?? []} />
+        {articulo.tipo === 'problema_frecuente' && <IncidenciaResumen articulo={articulo} />}
 
-      {/* Inverso universal: qué procedimientos y diagnósticos usan este
-          artículo. Se excluye 'relacionado', que ya tiene su propio
-          bloque ("Aparece como relacionado en") arriba. */}
-      <ReferenciadoPor
-        tipo="articulo"
-        id={articuloId}
-        relaciones={['subprocedimiento', 'solucion', 'decision', 'diagnostico_articulo']}
-      />
+        {procedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
 
-      {procedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
+        {articulo.contenido.trim() !== '' && (
+          <article className="prose prose-invert prose-sm max-w-none prose-headings:font-medium prose-headings:text-noct-text prose-p:text-noct-neutral-200 prose-li:text-noct-neutral-200 prose-strong:text-noct-text prose-a:text-noct-accent-400">
+            <Markdown remarkPlugins={[remarkGfm]}>{articulo.contenido}</Markdown>
+          </article>
+        )}
 
-      {articulo.contenido.trim() !== '' && (
-        <article className="prose prose-invert prose-sm max-w-none prose-headings:text-slate-100 prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-slate-100 prose-a:text-sky-400">
-          <Markdown remarkPlugins={[remarkGfm]}>{articulo.contenido}</Markdown>
-        </article>
-      )}
+        {/* En los procedimientos, los adjuntos viven en cada paso (donde
+            se usan). El apartado del articulo solo se muestra para
+            articulos sin procedimiento (manuales en Markdown), que no
+            tienen pasos donde anclar el archivo. */}
+        {!procedimiento && <Adjuntos entidadTipo="articulo" entidadId={articuloId} />}
 
-      {/* En los procedimientos, los adjuntos viven en cada paso (donde
-          se usan). El apartado del articulo solo se muestra para
-          articulos sin procedimiento (manuales en Markdown), que no
-          tienen pasos donde anclar el archivo. */}
-      {!procedimiento && <Adjuntos entidadTipo="articulo" entidadId={articuloId} />}
+        <ArticulosRelacionados articuloId={articuloId} relacionados={articulo.relacionados ?? []} />
 
-      <Historial entidadTipo="articulo" entidadId={articuloId} />
-    </div>
+        {/* Inverso universal: qué procedimientos y diagnósticos usan este
+            artículo. Se excluye 'relacionado', que ya tiene su propio
+            bloque ("Aparece como relacionado en") arriba. */}
+        <ReferenciadoPor
+          tipo="articulo"
+          id={articuloId}
+          relaciones={['subprocedimiento', 'solucion', 'decision', 'diagnostico_articulo']}
+        />
+
+        {(articulo.etiquetas ?? []).length > 0 && (
+          <footer className="flex flex-wrap gap-1.5">
+            {articulo.etiquetas.map((etiqueta) => (
+              <TagNeutral key={etiqueta}>{etiqueta}</TagNeutral>
+            ))}
+          </footer>
+        )}
+
+        <Historial entidadTipo="articulo" entidadId={articuloId} />
+      </main>
+    </ShellNocturne>
   )
 }
 
-// Banda de estado (grupo de esquema): 'publicado' no se muestra (es
-// el estado normal, no necesita aviso); borrador u obsoleto se
-// destacan para que quien lo abre sepa que no es contenido oficial.
-function EstadoArticuloBanda({ estado }: { estado: EstadoArticulo }) {
-  if (estado === 'publicado') return null
-  const info =
-    estado === 'borrador'
-      ? { texto: '📝 Borrador: sin publicar todavía', clases: 'border-amber-800 bg-amber-950/40 text-amber-300' }
-      : { texto: '⚠ Obsoleto: puede estar desactualizado', clases: 'border-red-900 bg-red-950/40 text-red-300' }
+// Menu "···" de la cabecera: las acciones que existen pero no son las
+// principales (regla 4 de 08_ESTILO.md): compartir, duplicar,
+// reiniciar el progreso del procedimiento y eliminar.
+function MenuAcciones({
+  articulo,
+  categoriaId,
+  conProcedimiento,
+  onEliminar,
+}: {
+  articulo: Articulo
+  categoriaId: string
+  conProcedimiento: boolean
+  onEliminar: () => void
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const contenedorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!abierto) return
+    function alClicFuera(e: MouseEvent) {
+      if (contenedorRef.current && !contenedorRef.current.contains(e.target as Node)) setAbierto(false)
+    }
+    document.addEventListener('mousedown', alClicFuera)
+    return () => document.removeEventListener('mousedown', alClicFuera)
+  }, [abierto])
+
+  // Igual que BotonCompartir: dialogo nativo si existe; si no, copia
+  // el enlace y avisa en el propio item antes de cerrar el menu.
+  async function compartir() {
+    const url = window.location.href
+    if (navigator.share) {
+      setAbierto(false)
+      try {
+        await navigator.share({ title: articulo.titulo, url })
+      } catch {
+        // El usuario cancelo el dialogo de compartir: no es un error.
+      }
+      return
+    }
+    if (await copiarAlPortapapeles(url)) {
+      setAviso('Enlace copiado')
+      setTimeout(() => {
+        setAviso(null)
+        setAbierto(false)
+      }, 1200)
+    }
+  }
+
+  const claseItem =
+    'flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left text-[13.5px] font-medium hover:bg-noct-text/[.07]'
+
   return (
-    <p className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${info.clases}`}>{info.texto}</p>
+    <div ref={contenedorRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-label="Más acciones: compartir, duplicar, eliminar"
+        aria-expanded={abierto}
+        className={BTN_ICONO_SECUNDARIO}
+      >
+        <DotsThreeBold size={18} aria-hidden />
+      </button>
+      {abierto && (
+        <div className="absolute right-0 top-full z-30 mt-1 flex w-56 flex-col overflow-hidden rounded-lg border border-noct-divider bg-noct-surface py-1 shadow-[0_6px_18px_rgba(0,0,0,0.55)]">
+          <button type="button" onClick={() => void compartir()} className={claseItem}>
+            <ShareNetwork size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+            {aviso ?? 'Compartir'}
+          </button>
+          <Link
+            to={`/soluciones/${categoriaId}/nuevo?copiarDe=${articulo.id}`}
+            onClick={() => setAbierto(false)}
+            className={claseItem}
+          >
+            <Copy size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+            Duplicar
+          </Link>
+          {conProcedimiento && (
+            <button
+              type="button"
+              onClick={() => {
+                void reiniciarProgreso(articulo.id)
+                setAbierto(false)
+              }}
+              className={claseItem}
+            >
+              <ClockCounterClockwise size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+              Reiniciar progreso
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setAbierto(false)
+              onEliminar()
+            }}
+            className={`${claseItem} text-noct-error`}
+          >
+            <TrashSimple size={15} className="shrink-0" aria-hidden />
+            Eliminar
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -191,7 +360,8 @@ function EstadoArticuloBanda({ estado }: { estado: EstadoArticulo }) {
 // articulo vincula, mas el inverso ("aparece como relacionado en..."),
 // calculado localmente sobre el resto de articulos sin guardarlo aqui
 // (bonus barato de la propuesta: nadie tiene que vincular en las dos
-// direcciones a mano).
+// direcciones a mano). Filas al estilo del diseño: icono de libro,
+// titulo y caret, separadas por la regla fundida de Nocturne.
 function ArticulosRelacionados({
   articuloId,
   relacionados,
@@ -218,49 +388,54 @@ function ArticulosRelacionados({
   if (relacionados.length === 0 && inversos.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
+    <section>
       {relacionados.length > 0 && (
-        <div>
-          <h2 className="mb-1 text-sm font-medium text-slate-400">Relacionados</h2>
-          <ul className="flex flex-wrap gap-2">
-            {relacionados.map((articulo) => (
-              <li key={articulo.id}>
-                {rutaPorId.has(articulo.id) ? (
-                  <Link
-                    to={rutaPorId.get(articulo.id) ?? ''}
-                    className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-sky-400"
-                  >
-                    {articulo.titulo}
-                  </Link>
-                ) : (
-                  <span className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-500">
-                    {articulo.titulo} (eliminado)
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <>
+          <TituloSeccion className="mb-1">Relacionados</TituloSeccion>
+          <div className="flex flex-col">
+            {relacionados.map((articulo) =>
+              rutaPorId.has(articulo.id) ? (
+                <FilaRelacionado key={articulo.id} to={rutaPorId.get(articulo.id) ?? ''} titulo={articulo.titulo} />
+              ) : (
+                <span
+                  key={articulo.id}
+                  className="fila-fundida flex min-h-12 items-center gap-3 px-1 py-3 text-sm text-noct-neutral-500"
+                >
+                  <BookOpen size={17} className="shrink-0 text-noct-neutral-600" aria-hidden />
+                  {articulo.titulo} (eliminado)
+                </span>
+              ),
+            )}
+          </div>
+        </>
       )}
 
       {inversos.length > 0 && (
-        <div>
-          <h2 className="mb-1 text-sm font-medium text-slate-400">Aparece como relacionado en</h2>
-          <ul className="flex flex-wrap gap-2">
+        <>
+          <TituloSeccion className={`mb-1 ${relacionados.length > 0 ? 'mt-5' : ''}`}>
+            Aparece como relacionado en
+          </TituloSeccion>
+          <div className="flex flex-col">
             {inversos.map((articulo) => (
-              <li key={articulo.id}>
-                <Link
-                  to={rutaPorId.get(articulo.id) ?? ''}
-                  className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-sky-400"
-                >
-                  {articulo.titulo}
-                </Link>
-              </li>
+              <FilaRelacionado key={articulo.id} to={rutaPorId.get(articulo.id) ?? ''} titulo={articulo.titulo} />
             ))}
-          </ul>
-        </div>
+          </div>
+        </>
       )}
-    </div>
+    </section>
+  )
+}
+
+function FilaRelacionado({ to, titulo }: { to: string; titulo: string }) {
+  return (
+    <Link
+      to={to}
+      className="fila-fundida flex min-h-12 items-center gap-3 px-1 py-3 text-sm hover:bg-noct-text/[.04]"
+    >
+      <BookOpen size={17} className="shrink-0 text-noct-neutral-500" aria-hidden />
+      <span className="min-w-0 flex-1">{titulo}</span>
+      <CaretRight size={14} className="shrink-0 text-noct-neutral-600" aria-hidden />
+    </Link>
   )
 }
 
@@ -274,7 +449,7 @@ function PortadaArticulo({ portada, titulo }: { portada: { referencia: string };
     <img
       src={url}
       alt={`Portada: ${titulo}`}
-      className="max-h-44 w-full rounded-xl border border-slate-800 object-cover"
+      className="max-h-44 w-full rounded-lg border border-noct-divider object-cover"
     />
   )
 }
@@ -291,50 +466,41 @@ function IncidenciaResumen({ articulo }: { articulo: Articulo }) {
   if (sintomas.length === 0 && causas.length === 0 && dispositivosAfectados.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
-      {sintomas.length > 0 && (
-        <div>
-          <h2 className="mb-1 text-sm font-medium text-slate-400">Síntomas</h2>
-          <ul className="flex flex-col gap-1">
-            {sintomas.map((sintoma, indice) => (
-              <li key={indice} className="text-sm text-slate-200">
-                • {sintoma}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {causas.length > 0 && (
-        <div>
-          <h2 className="mb-1 text-sm font-medium text-slate-400">Posibles causas</h2>
-          <ul className="flex flex-col gap-1">
-            {causas.map((causa, indice) => (
-              <li key={indice} className="text-sm text-slate-200">
-                • {causa}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
+    <>
+      {sintomas.length > 0 && <ListaIncidencia titulo="Síntomas" items={sintomas} />}
+      {causas.length > 0 && <ListaIncidencia titulo="Posibles causas" items={causas} />}
       {dispositivosAfectados.length > 0 && (
-        <div>
-          <h2 className="mb-1 text-sm font-medium text-slate-400">Dispositivos afectados</h2>
-          <ul className="flex flex-wrap gap-2">
+        <section>
+          <TituloSeccion className="mb-2">Dispositivos afectados</TituloSeccion>
+          <div className="flex flex-wrap gap-1.5">
             {dispositivosAfectados.map((dispositivo) => (
-              <li key={dispositivo.id}>
-                <Link
-                  to={`/dispositivos/${dispositivo.id}`}
-                  className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-sky-400"
-                >
-                  {dispositivo.nombre}
-                </Link>
-              </li>
+              <Link
+                key={dispositivo.id}
+                to={`/dispositivos/${dispositivo.id}`}
+                className="inline-flex items-center rounded-md border border-noct-accent/30 bg-noct-accent/10 px-2.5 py-1 text-xs font-medium text-noct-accent-300 hover:bg-noct-accent/[.16]"
+              >
+                {dispositivo.nombre}
+              </Link>
             ))}
-          </ul>
-        </div>
+          </div>
+        </section>
       )}
-    </div>
+    </>
+  )
+}
+
+function ListaIncidencia({ titulo, items }: { titulo: string; items: string[] }) {
+  return (
+    <section>
+      <TituloSeccion className="mb-2">{titulo}</TituloSeccion>
+      <ul className="flex flex-col gap-1.5">
+        {items.map((item, indice) => (
+          <li key={indice} className="flex items-start gap-2.5">
+            <Circle size={14} className="mt-[3px] shrink-0 text-noct-neutral-600" aria-hidden />
+            <span className="text-sm leading-normal">{item}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

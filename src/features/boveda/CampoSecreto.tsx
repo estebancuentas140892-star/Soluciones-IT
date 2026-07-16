@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
+import { Check, Copy, Eye, EyeSlash } from '../../components/iconos'
 
-// Campo de una credencial descifrada (usuario, contrasena, IP...)
-// con boton de copiar y, si aplica, mostrar/ocultar. Se usa en la
-// ficha de la boveda y en los pasos de procedimiento que vinculan
-// una credencial.
+// Campo de una credencial descifrada (usuario, contrasena, IP...) con
+// boton de copiar y, si aplica, mostrar/ocultar, en el patron Nocturne
+// del rediseño: fila con etiqueta a la izquierda, valor en
+// monoespaciado y acciones de icono a la derecha. Se usa en la ficha
+// de la boveda y en los pasos de procedimiento que vinculan una
+// credencial.
 export function CampoSecreto({
   etiqueta,
   valor,
@@ -22,23 +25,24 @@ export function CampoSecreto({
   onCopiado?: () => void
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <dt className="text-xs text-slate-500">{etiqueta}</dt>
-        <dd className="truncate font-mono text-sm text-slate-100">{oculto ? '••••••••' : valor}</dd>
-      </div>
-      <div className="flex shrink-0 gap-2">
+    <div className="flex items-center justify-between gap-2 rounded border border-noct-divider bg-noct-surface px-2.5 py-[7px]">
+      <dt className="shrink-0 text-xs text-noct-neutral-400">{etiqueta}</dt>
+      <dd className="flex min-w-0 items-center gap-1">
+        <span className={`truncate font-mono text-[13px] ${oculto ? 'tracking-[2px]' : ''}`}>
+          {oculto ? '••••••••' : valor}
+        </span>
         {alternarOculto && (
           <button
             type="button"
             onClick={alternarOculto}
-            className="rounded-lg border border-slate-800 px-2.5 py-1.5 text-xs text-slate-300"
+            aria-label={oculto ? `Mostrar ${etiqueta}` : `Ocultar ${etiqueta}`}
+            className="flex shrink-0 cursor-pointer p-1 text-noct-neutral-400 hover:text-noct-accent"
           >
-            {oculto ? 'Mostrar' : 'Ocultar'}
+            {oculto ? <Eye size={15} aria-hidden /> : <EyeSlash size={15} aria-hidden />}
           </button>
         )}
         <BotonCopiar etiqueta={etiqueta} valor={valor} onCopiado={onCopiado} />
-      </div>
+      </dd>
     </div>
   )
 }
@@ -67,9 +71,9 @@ function BotonCopiar({
       type="button"
       onClick={() => void copiar()}
       aria-label={`Copiar ${etiqueta}`}
-      className="rounded-lg border border-slate-800 px-2.5 py-1.5 text-xs text-slate-300"
+      className="flex shrink-0 cursor-pointer p-1 text-noct-neutral-400 hover:text-noct-accent"
     >
-      {copiado ? 'Copiado' : 'Copiar'}
+      {copiado ? <Check size={15} className="text-noct-exito" aria-hidden /> : <Copy size={15} aria-hidden />}
     </button>
   )
 }

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
+import { CaretDown, CaretUp, Key, LockSimple } from '../../components/iconos'
+import { BTN_PRIMARIO } from '../../components/nocturne'
 import { useAuth } from '../autenticacion/authContext'
 import { CampoSecreto } from './CampoSecreto'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
@@ -18,12 +20,14 @@ interface Props {
   tituloReferencia: string
 }
 
-// Apartado "Datos" de un paso de procedimiento: la credencial de la
-// boveda vinculada al paso. Se muestra contraido y sin secretos; solo
-// al tocarlo se consulta la boveda, con las mismas protecciones que
-// en su propia seccion (permiso puedeVerBoveda del perfil, contrasena
-// maestra y autobloqueo). El secreto nunca vive en el articulo y
-// quien no este autorizado solo ve el titulo de referencia.
+// Bloque protegido de un paso de procedimiento: la credencial de la
+// boveda vinculada al paso, con el patron Nocturne de "lo protegido se
+// diferencia de lo publico" (borde discontinuo, candado y kicker
+// "Datos protegidos"). Se muestra contraido y sin secretos; solo al
+// tocarlo se consulta la boveda, con las mismas protecciones que en su
+// propia seccion (permiso puedeVerBoveda del perfil, contrasena
+// maestra y autobloqueo). El secreto nunca vive en el articulo y quien
+// no este autorizado solo ve el titulo de referencia.
 export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
   const { session } = useAuth()
   const desbloqueada = useBovedaDesbloqueada()
@@ -47,7 +51,7 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
   const titulo = (credencial && !eliminada ? credencial.titulo : '') || tituloReferencia
 
   return (
-    <div className="rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2.5">
+    <div className="rounded-lg border border-dashed border-noct-neutral-700 bg-noct-surface/55">
       <button
         type="button"
         onClick={() => {
@@ -60,44 +64,53 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
           })
         }}
         aria-expanded={abierto}
-        className="flex w-full items-center justify-between gap-2 text-left"
+        className="flex min-h-11 w-full cursor-pointer items-center gap-2.5 px-3 py-[11px] text-left"
       >
-        <p className="min-w-0 truncate text-xs font-medium text-violet-200">
-          🔐 Datos{titulo ? `: ${titulo}` : ''}
-        </p>
-        <div className="flex shrink-0 items-center gap-2">
-          {credencial && !eliminada && <IndicadorVencimiento venceEn={credencial.venceEn ?? null} />}
-          <span className="text-xs text-violet-300 underline underline-offset-2">
-            {abierto ? 'Ocultar' : 'Ver'}
+        <LockSimple size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[10px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
+            Datos protegidos
           </span>
-        </div>
+          <span className="block truncate text-[13.5px] font-medium">{titulo || 'Credencial'}</span>
+        </span>
+        {credencial && !eliminada && <IndicadorVencimiento venceEn={credencial.venceEn ?? null} />}
+        {abierto ? (
+          <CaretUp size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+        ) : (
+          <CaretDown size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+        )}
       </button>
 
-      {abierto &&
-        (!autorizado || credencial === null ? (
-          <p className="mt-2 text-xs text-violet-300/80">
-            Solo los usuarios autorizados pueden consultar los datos de este paso.
-          </p>
-        ) : eliminada ? (
-          <p className="mt-2 text-xs text-amber-300">
-            Los datos vinculados fueron eliminados de la bóveda. Edita el artículo para quitar el
-            vínculo o vincular otros.
-          </p>
-        ) : !desbloqueada ? (
-          <FormularioDesbloqueo />
-        ) : (
-          <>
-            <DatosDescifrados datosCifrados={credencial.datosCifrados} credencialId={credencialId} credencialTitulo={titulo} />
-            <div className="mt-2.5">
+      {abierto && (
+        <div className="flex flex-col gap-2.5 border-t border-noct-divider p-3">
+          {!autorizado || credencial === null ? (
+            <p className="text-[13px] leading-normal text-noct-neutral-400">
+              Solo los usuarios autorizados pueden consultar los datos de este paso.
+            </p>
+          ) : eliminada ? (
+            <p className="text-[13px] leading-normal text-noct-precaucion">
+              Los datos vinculados fueron eliminados de la bóveda. Edita el artículo para quitar el
+              vínculo o vincular otros.
+            </p>
+          ) : !desbloqueada ? (
+            <FormularioDesbloqueo />
+          ) : (
+            <>
+              <DatosDescifrados
+                datosCifrados={credencial.datosCifrados}
+                credencialId={credencialId}
+                credencialTitulo={titulo}
+              />
               <Link
                 to={`/boveda/${credencialId}`}
-                className="text-xs text-violet-300 underline underline-offset-2"
+                className="mt-0.5 text-[12.5px] font-medium text-noct-accent"
               >
-                Abrir en Bóveda
+                Ver ficha completa en Bóveda →
               </Link>
-            </div>
-          </>
-        ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -122,9 +135,10 @@ function FormularioDesbloqueo() {
   }
 
   return (
-    <form onSubmit={manejarEnvio} className="mt-2 flex flex-col gap-2">
-      <p className="text-xs text-violet-300/80">
-        Los datos están cifrados. Ingresa la contraseña maestra para verlos aquí.
+    <form onSubmit={manejarEnvio} className="flex flex-col gap-2.5">
+      <p className="text-[13px] leading-normal text-noct-neutral-400">
+        La bóveda está bloqueada. Los datos no entran a la pantalla hasta desbloquearla con la
+        contraseña maestra.
       </p>
       <div className="flex gap-2">
         <CampoContrasena
@@ -132,17 +146,14 @@ function FormularioDesbloqueo() {
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
           placeholder="Contraseña maestra"
-          className="min-w-0 flex-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          className="min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
-        <button
-          type="submit"
-          disabled={abriendo}
-          className="shrink-0 rounded-lg bg-violet-500 px-3 py-2 text-xs font-medium text-slate-950 disabled:opacity-50"
-        >
+        <button type="submit" disabled={abriendo} className={`shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
+          <Key size={14} aria-hidden />
           {abriendo ? 'Abriendo...' : 'Desbloquear'}
         </button>
       </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-noct-error">{error}</p>}
     </form>
   )
 }
@@ -172,11 +183,11 @@ function DatosDescifrados({
   }, [datosCifrados])
 
   if (datos === undefined) {
-    return <p className="mt-1 text-xs text-slate-400">Descifrando...</p>
+    return <p className="text-xs text-noct-neutral-400">Descifrando...</p>
   }
   if (datos === null) {
     return (
-      <p className="mt-1 text-xs text-amber-300">
+      <p className="text-[13px] leading-normal text-noct-precaucion">
         No se pudo descifrar esta credencial con la contraseña maestra actual. Ábrela en la sección
         Bóveda para ver los detalles.
       </p>
@@ -191,9 +202,9 @@ function DatosDescifrados({
     Object.keys(datos.extras).length === 0
 
   return (
-    <div className="mt-2 flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2">
       {!sinCampos && (
-        <dl className="flex flex-col gap-2.5">
+        <dl className="flex flex-col gap-2">
           {datos.usuario && (
             <CampoSecreto
               etiqueta="Usuario"
@@ -225,9 +236,11 @@ function DatosDescifrados({
           ))}
         </dl>
       )}
-      {datos.notas && <p className="whitespace-pre-wrap text-xs text-slate-400">{datos.notas}</p>}
+      {datos.notas && (
+        <p className="whitespace-pre-wrap text-xs leading-normal text-noct-neutral-400">{datos.notas}</p>
+      )}
       {sinCampos && !datos.notas && (
-        <p className="text-xs text-slate-500">Esta credencial no tiene datos guardados.</p>
+        <p className="text-xs text-noct-neutral-500">Esta credencial no tiene datos guardados.</p>
       )}
     </div>
   )

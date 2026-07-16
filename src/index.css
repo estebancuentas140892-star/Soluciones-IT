@@ -1,10 +1,96 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Inter variable (subconjunto latino, cubre el español completo),
+   servida desde el propio bundle: nada de Google Fonts, que romperia
+   el modo offline. El woff2 entra al precache del service worker por
+   el patron woff2 de vite.config.ts. Es la tipografia del sistema
+   Nocturne (rediseño IT Brain); el resto de la app conserva la pila
+   del sistema hasta que cada pantalla se re-autorice. */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Tokens del sistema de diseño Nocturne (rediseño IT Brain, handoff
+   "Herramienta IT para técnicos", 08_ESTILO.md). Declarados en @theme
+   para que Tailwind genere las utilidades (bg-noct-bg, text-noct-accent,
+   border-noct-divider...). Regla del sistema: todo valor sale de estos
+   tokens; nunca hex sueltos en las pantallas Nocturne. El acento se usa
+   delineado (borde y texto), nunca como relleno grande. */
+@theme {
+  --font-inter: 'Inter Variable', system-ui, -apple-system, sans-serif;
+
+  --color-noct-bg: #161826;
+  --color-noct-surface: #232532;
+  --color-noct-text: #e9e9ed;
+  /* color-mix(in srgb, #e9e9ed 16%, transparent) del sistema original */
+  --color-noct-divider: rgb(233 233 237 / 0.16);
+
+  --color-noct-neutral-100: #f3f5fe;
+  --color-noct-neutral-200: #e4e7f5;
+  --color-noct-neutral-300: #cfd3e5;
+  --color-noct-neutral-400: #b2b6ca;
+  --color-noct-neutral-500: #9397ab;
+  --color-noct-neutral-600: #75798c;
+  --color-noct-neutral-700: #595d6c;
+  --color-noct-neutral-800: #3f424d;
+  --color-noct-neutral-900: #292b31;
+
+  --color-noct-accent: #9184d9;
+  --color-noct-accent-100: #f5f4ff;
+  --color-noct-accent-200: #e7e5fe;
+  --color-noct-accent-300: #d2cefd;
+  --color-noct-accent-400: #b5abfc;
+  --color-noct-accent-500: #968ae0;
+  --color-noct-accent-600: #796cbf;
+  --color-noct-accent-700: #5d5294;
+  --color-noct-accent-800: #423a6a;
+  --color-noct-accent-900: #2b2741;
+
+  /* Estados (literales exactos de 08_ESTILO.md, identicos en todas
+     las pantallas): exito/consejo, precaucion, error/importante. El
+     tono "dato tecnico" usa noct-neutral-500 y "informacion" el acento. */
+  --color-noct-exito: oklch(0.78 0.1 156);
+  --color-noct-precaucion: oklch(0.8 0.1 84);
+  --color-noct-error: oklch(0.71 0.13 26);
+}
+
 html,
 body,
 #root {
   height: 100%;
+}
+
+/* Interacción base del sistema Nocturne, acotada a su shell: anillo de
+   foco y selección en el acento (styles.css del sistema de diseño). */
+.nocturne :focus-visible {
+  outline: 2px solid var(--color-noct-accent);
+  outline-offset: 2px;
+}
+.nocturne ::selection {
+  background: color-mix(in srgb, var(--color-noct-accent) 30%, transparent);
+}
+/* Firma de Nocturne: las reglas sueltas se desvanecen en los extremos
+   (48px por lado). Pintada como imagen de fondo al pie de la fila para
+   que conviva con el tinte de hover (que es background-color). */
+.nocturne .fila-fundida:not(:last-child) {
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    var(--color-noct-divider) 48px,
+    var(--color-noct-divider) calc(100% - 48px),
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100% 1px;
 }
 
 body {
