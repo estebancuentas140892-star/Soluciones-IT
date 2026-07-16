@@ -155,12 +155,20 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* La topologia es la primera pantalla del rediseño en
-                  tema claro (tarea 55): trae su propio AppShell
-                  (sidebar en escritorio, pestañas inferiores en
-                  movil), por eso va fuera del Layout oscuro. Cada
-                  pantalla rediseñada ira saliendo del Layout al
-                  implementarse su diseño. */}
+              {/* Red y Topologia son las primeras pantallas del
+                  rediseño en tema claro (tareas 55 y 56): traen su
+                  propio AppShell (sidebar en escritorio, pestañas
+                  inferiores en movil), por eso van fuera del Layout
+                  oscuro. Cada pantalla rediseñada ira saliendo del
+                  Layout al implementarse su diseño. */}
+              <Route
+                path="red"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <RedPage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="red/topologia"
                 element={
@@ -195,7 +203,6 @@ function App() {
                 <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
                 <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
                 <Route path="dispositivos/:dispositivoId/editar" element={<DispositivoForm />} />
-                <Route path="red" element={<RedPage />} />
                 {/* La seccion de credenciales se llamo "Notas" (nombre
                     neutro de discrecion) hasta el 2026-07-09, cuando el
                     usuario decidio volver a llamarla Boveda. La ruta

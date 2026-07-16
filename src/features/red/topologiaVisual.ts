@@ -18,6 +18,7 @@ export type TipoNodoVisual =
   | 'rack'
   | 'camara'
   | 'servidor'
+  | 'ups'
   | 'generico'
 
 // Minúsculas y sin acentos (se quitan las marcas diacríticas
@@ -34,6 +35,7 @@ function normalizar(texto: string): string {
 export function tipoDeNodoVisual(nombreCategoria: string): TipoNodoVisual {
   const texto = normalizar(nombreCategoria)
   if (texto.includes('rack')) return 'rack'
+  if (texto.includes('ups') || texto.includes('regulador')) return 'ups'
   if (texto.includes('switch')) return 'switch'
   if (texto.includes('camara') || texto.includes('cctv')) return 'camara'
   if (texto.includes('impresora')) return 'impresora'
@@ -64,12 +66,29 @@ export interface PuntoEstado {
 }
 
 export function puntoDeEstado(estado: string): PuntoEstado {
+  const info = estadoConEtiqueta(estado)
+  return { clase: info.clase, titulo: info.etiqueta }
+}
+
+// Igual que puntoDeEstado, pero con la clase de texto a juego (fila de
+// Red.dc.html: punto + etiqueta de color, no solo el punto).
+export interface EstadoConEtiqueta {
+  clase: string
+  textoClase: string
+  etiqueta: string
+}
+
+export function estadoConEtiqueta(estado: string): EstadoConEtiqueta {
   const texto = normalizar(estado)
-  if (texto === 'operativo') return { clase: 'bg-green-600', titulo: 'Operativo' }
-  if (texto === 'en mantenimiento') return { clase: 'bg-amber-600', titulo: 'En mantenimiento' }
-  if (texto === 'fuera de servicio') return { clase: 'bg-red-600', titulo: 'Fuera de servicio' }
-  if (texto === 'de baja') return { clase: 'bg-zinc-500', titulo: 'De baja' }
-  return { clase: 'bg-zinc-300', titulo: estado.trim() || 'Sin estado' }
+  if (texto === 'operativo') return { clase: 'bg-green-600', textoClase: 'text-green-700', etiqueta: 'Operativo' }
+  if (texto === 'en mantenimiento') {
+    return { clase: 'bg-amber-600', textoClase: 'text-amber-700', etiqueta: 'En mantenimiento' }
+  }
+  if (texto === 'fuera de servicio') {
+    return { clase: 'bg-red-600', textoClase: 'text-red-700', etiqueta: 'Fuera de servicio' }
+  }
+  if (texto === 'de baja') return { clase: 'bg-zinc-500', textoClase: 'text-zinc-600', etiqueta: 'De baja' }
+  return { clase: 'bg-zinc-300', textoClase: 'text-zinc-500', etiqueta: estado.trim() || 'Sin estado' }
 }
 
 // Línea de detalle de la fila, estilo "Switch 8 puertos · Puerto 02 ·

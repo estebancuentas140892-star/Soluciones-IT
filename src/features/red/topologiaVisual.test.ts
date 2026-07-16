@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detalleDeNodo, puntoDeEstado, tipoDeNodoVisual } from './topologiaVisual'
+import { detalleDeNodo, estadoConEtiqueta, puntoDeEstado, tipoDeNodoVisual } from './topologiaVisual'
 
 describe('tipoDeNodoVisual', () => {
   it('reconoce las categorías iniciales reales del esquema', () => {
@@ -14,6 +14,11 @@ describe('tipoDeNodoVisual', () => {
     expect(tipoDeNodoVisual('Puntos de red')).toBe('punto')
     expect(tipoDeNodoVisual('Computadores')).toBe('pc')
     expect(tipoDeNodoVisual('Redes')).toBe('router')
+  })
+
+  it('reconoce UPS (categoría del diseño de Red, no está en el esquema por defecto)', () => {
+    expect(tipoDeNodoVisual('UPS')).toBe('ups')
+    expect(tipoDeNodoVisual('Reguladores')).toBe('ups')
   })
 
   it('no confunde substrings: "Puntos de red" no es POS ni router', () => {
@@ -55,6 +60,28 @@ describe('puntoDeEstado', () => {
   it('marca "Sin estado" cuando el estado viene vacío', () => {
     expect(puntoDeEstado('').titulo).toBe('Sin estado')
     expect(puntoDeEstado('').clase).toBe('bg-zinc-300')
+  })
+})
+
+describe('estadoConEtiqueta', () => {
+  it('da el mismo color de punto que puntoDeEstado, más la clase de texto a juego', () => {
+    expect(estadoConEtiqueta('Operativo')).toEqual({
+      clase: 'bg-green-600',
+      textoClase: 'text-green-700',
+      etiqueta: 'Operativo',
+    })
+    expect(estadoConEtiqueta('Fuera de servicio').textoClase).toBe('text-red-700')
+    expect(estadoConEtiqueta('En mantenimiento').textoClase).toBe('text-amber-700')
+    expect(estadoConEtiqueta('De baja').textoClase).toBe('text-zinc-600')
+  })
+
+  it('coincide con puntoDeEstado en la clase y el título/etiqueta para el mismo estado', () => {
+    for (const estado of ['Operativo', 'En mantenimiento', 'Fuera de servicio', 'De baja', 'Desconocido', '']) {
+      const punto = puntoDeEstado(estado)
+      const conEtiqueta = estadoConEtiqueta(estado)
+      expect(conEtiqueta.clase).toBe(punto.clase)
+      expect(conEtiqueta.etiqueta).toBe(punto.titulo)
+    }
   })
 })
 
