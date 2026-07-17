@@ -15,6 +15,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Bundles de handoff de Claude Design (prototipos, no se versionan; se recrean en React)
+*-handoff.zip
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
