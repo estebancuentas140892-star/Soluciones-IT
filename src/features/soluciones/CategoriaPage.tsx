@@ -5,8 +5,16 @@ import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { contarHechos } from '../../lib/progresoPasos'
 import { BotonVolver } from '../../components/BotonVolver'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
+import { IndicadorEstado } from '../dispositivos/IndicadorEstado'
+import { Historial } from '../historial/Historial'
 import { TIPOS_ARTICULO } from './tiposArticulo'
 
+// Ficha de categoria (fase N4, sin esquema): esqueleto estandar
+// aplicado a una entidad que hasta ahora ni siquiera tenia ficha
+// propia (seccion 8 de PROPUESTA_BASE_CONOCIMIENTO.md). Reune todo lo
+// que pertenece a la categoria (articulos, dispositivos, diagnosticos)
+// mas su historial, sin tocar el esquema: dispositivos y diagnosticos
+// ya llevan categoria_id, solo faltaba mostrarlos juntos aqui.
 export function CategoriaPage() {
   const { categoriaId = '' } = useParams()
 
@@ -16,15 +24,44 @@ export function CategoriaPage() {
     [categoriaId],
     [],
   )
+  const dispositivos = useLiveQuery(
+    () => db.dispositivos.where('categoriaId').equals(categoriaId).filter((d) => !d.eliminadoEn).toArray(),
+    [categoriaId],
+    [],
+  )
+  const diagnosticos = useLiveQuery(
+    () => db.diagnosticos.where('categoriaId').equals(categoriaId).filter((d) => !d.eliminadoEn).toArray(),
+    [categoriaId],
+    [],
+  )
 
   if (categoria === null) return <Navigate to="/soluciones" replace />
 
+  const vacia = articulos.length === 0 && dispositivos.length === 0 && diagnosticos.length === 0
+
   return (
-    <div className="flex flex-col gap-5 px-4 pt-6">
+    <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex items-end justify-between gap-2">
         <div className="flex flex-col gap-2">
           <BotonVolver to="/soluciones">Soluciones</BotonVolver>
-          <h1 className="text-xl font-semibold">{categoria?.nombre ?? '...'}</h1>
+          <div>
+            <h1 className="text-xl font-semibold">{categoria?.nombre ?? '...'}</h1>
+            {!vacia && (
+              <p className="text-xs text-slate-500">
+                {[
+                  articulos.length > 0 ? `${articulos.length} ${articulos.length === 1 ? 'artículo' : 'artículos'}` : null,
+                  dispositivos.length > 0
+                    ? `${dispositivos.length} ${dispositivos.length === 1 ? 'equipo' : 'equipos'}`
+                    : null,
+                  diagnosticos.length > 0
+                    ? `${diagnosticos.length} ${diagnosticos.length === 1 ? 'diagnóstico' : 'diagnósticos'}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+            )}
+          </div>
         </div>
         <Link
           to={`/soluciones/${categoriaId}/nuevo`}
@@ -34,9 +71,9 @@ export function CategoriaPage() {
         </Link>
       </header>
 
-      {articulos && articulos.length === 0 && (
+      {vacia && (
         <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
-          Todavía no hay artículos en esta categoría
+          Todavía no hay nada en esta categoría
         </p>
       )}
 
@@ -68,6 +105,45 @@ export function CategoriaPage() {
           </section>
         )
       })}
+
+      {dispositivos.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-medium text-slate-400">Dispositivos de esta categoría</h2>
+          <ul className="flex flex-col gap-2">
+            {dispositivos.map((dispositivo) => (
+              <li key={dispositivo.id}>
+                <Link
+                  to={`/dispositivos/${dispositivo.id}`}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
+                >
+                  <span className="min-w-0 truncate">{dispositivo.nombre}</span>
+                  <IndicadorEstado estado={dispositivo.estado} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {diagnosticos.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-medium text-slate-400">Diagnósticos de esta categoría</h2>
+          <ul className="flex flex-col gap-2">
+            {diagnosticos.map((diagnostico) => (
+              <li key={diagnostico.id}>
+                <Link
+                  to={`/diagnostico/${diagnostico.id}`}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
+                >
+                  <span className="min-w-0 truncate">{diagnostico.titulo}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <Historial entidadTipo="categoria" entidadId={categoriaId} />
     </div>
   )
 }
