@@ -110,7 +110,7 @@ export function ArticuloPage() {
 
   return (
     <ShellNocturne>
-      <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5">
+      <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5 lg:px-10 lg:pt-4">
         <Link
           to={`/soluciones/${categoriaId}`}
           className="inline-flex min-w-0 items-center gap-1 rounded-lg py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 hover:bg-noct-text/5 hover:text-noct-text"
@@ -138,7 +138,7 @@ export function ArticuloPage() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-[116px] pt-1">
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-[116px] pt-1 lg:px-12 lg:pb-16">
         {estado === 'borrador' && (
           <div className="flex items-start gap-2.5 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-3 py-2.5">
             <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
