@@ -41,6 +41,24 @@ export function iconoDeTipo(tipo: TipoArticulo): ComponentType<IconoProps> {
   return ICONO_POR_TIPO[tipo] ?? BookOpen
 }
 
+// Tono (color) del icono de cada tipo en la lista unificada, trasladado
+// del handoff: los procedimientos operativos (instalar, configurar,
+// conectar) toman el acento; una incidencia se pinta ambar (precaucion),
+// un mantenimiento verde (exito) y un manual queda neutro. Devuelve las
+// clases de texto y fondo tenue (12 %) del recuadro del icono.
+const TONO_POR_TIPO: Record<TipoArticulo, string> = {
+  instalacion: 'text-noct-accent bg-noct-accent/[.12]',
+  configuracion: 'text-noct-accent bg-noct-accent/[.12]',
+  conexion: 'text-noct-accent bg-noct-accent/[.12]',
+  problema_frecuente: 'text-noct-precaucion bg-noct-precaucion/[.12]',
+  mantenimiento: 'text-noct-exito bg-noct-exito/[.12]',
+  manual: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]',
+}
+
+export function claseTonoDeTipo(tipo: TipoArticulo): string {
+  return TONO_POR_TIPO[tipo] ?? TONO_POR_TIPO.manual
+}
+
 // Icono por categoria. Las categorias son dinamicas (las crea el
 // equipo) y su columna `icono` llega vacia del seed, asi que se resuelve
 // por palabras clave del nombre, con BookOpen como respaldo neutro. El
