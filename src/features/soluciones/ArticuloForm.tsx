@@ -57,6 +57,16 @@ export function ArticuloForm() {
   // precarga todo el articulo original con ids internos nuevos.
   const copiarDe = esEdicion ? null : searchParams.get('copiarDe')
 
+  // Creacion contextual (fase N2, punto 1): "+ Incidencia" desde la
+  // ficha de un equipo llega con /soluciones/:categoriaId/nuevo
+  // ?tipo=problema_frecuente&dispositivoAfectado=<id>&dispositivoNombre=<nombre>,
+  // asi ningun dato visible en el origen se vuelve a escribir a mano.
+  // Solo aplica al crear desde cero (nunca pisa una edicion ni un
+  // duplicado, que ya traen sus propios datos).
+  const tipoContextual = !esEdicion && !copiarDe ? searchParams.get('tipo') : null
+  const dispositivoContextualId = !esEdicion && !copiarDe ? searchParams.get('dispositivoAfectado') : null
+  const dispositivoContextualNombre = searchParams.get('dispositivoNombre') ?? ''
+
   // El id se decide desde el inicio (no al guardar) para que las
   // capturas de los pasos puedan subirse a su carpeta definitiva de
   // Storage antes de que el articulo exista.
@@ -72,7 +82,10 @@ export function ArticuloForm() {
   )
 
   const [titulo, setTitulo] = useState('')
-  const [tipo, setTipo] = useState<TipoArticulo>('manual')
+  const [tipo, setTipo] = useState<TipoArticulo>(() => {
+    const valido = TIPOS_ARTICULO.some((t) => t.valor === tipoContextual)
+    return valido ? (tipoContextual as TipoArticulo) : 'manual'
+  })
   const [contenido, setContenido] = useState('')
   // Etiquetas: retiradas el 2026-07-03 y reactivadas el 2026-07-09 por
   // decision del usuario (fase S1). Se editan como chips y vuelven a
@@ -94,7 +107,11 @@ export function ArticuloForm() {
   // aun no tiene estas columnas (schema.sql pendiente de aplicar).
   const [sintomas, setSintomas] = useState('')
   const [causas, setCausas] = useState('')
-  const [dispositivosAfectados, setDispositivosAfectados] = useState<DispositivoAfectado[]>([])
+  const [dispositivosAfectados, setDispositivosAfectados] = useState<DispositivoAfectado[]>(() =>
+    dispositivoContextualId
+      ? [{ id: dispositivoContextualId, nombre: dispositivoContextualNombre }]
+      : [],
+  )
   const [esRutaInicio, setEsRutaInicio] = useState(false)
   const [estado, setEstado] = useState<EstadoArticulo>('publicado')
   const [cambioMayor, setCambioMayor] = useState(false)
@@ -488,21 +505,24 @@ export function ArticuloForm() {
                 />
               </label>
 
-              <DispositivosAfectadosEditor
-                vinculados={dispositivosAfectados}
-                dispositivos={dispositivosOrdenados}
-                onVincular={(dispositivo) =>
-                  setDispositivosAfectados((actuales) => [
-                    ...actuales,
-                    { id: dispositivo.id, nombre: dispositivo.nombre },
-                  ])
-                }
-                onQuitar={(id) =>
-                  setDispositivosAfectados((actuales) => actuales.filter((d) => d.id !== id))
-                }
-              />
             </div>
           )}
+
+          {/* Vinculo articulo <-> dispositivo concreto (fase N2, sin
+              esquema): generalizado a todos los tipos, no solo a las
+              incidencias, con la etiqueta segun corresponda. */}
+          <DispositivosAfectadosEditor
+            etiqueta={tipo === 'problema_frecuente' ? 'Dispositivos afectados' : 'Equipos donde aplica'}
+            vinculados={dispositivosAfectados}
+            dispositivos={dispositivosOrdenados}
+            onVincular={(dispositivo) =>
+              setDispositivosAfectados((actuales) => [
+                ...actuales,
+                { id: dispositivo.id, nombre: dispositivo.nombre },
+              ])
+            }
+            onQuitar={(id) => setDispositivosAfectados((actuales) => actuales.filter((d) => d.id !== id))}
+          />
 
           <label className="flex flex-col gap-1 text-sm text-slate-300">
             🎯 Objetivo general del procedimiento (opcional, 1 línea)
@@ -849,12 +869,17 @@ function PortadaEditor({
 // Vinculo de una incidencia con los dispositivos que la sufren: mismo
 // patron que CredencialSelector en PasosEditor.tsx (id real mas copia
 // del nombre), pero con varios elementos en vez de uno solo.
+// Etiqueta segun el tipo de articulo (fase N2, sin esquema): en una
+// incidencia son los equipos que la sufren; en el resto, los equipos
+// donde aplica el procedimiento (por ejemplo una instalacion concreta).
 function DispositivosAfectadosEditor({
+  etiqueta,
   vinculados,
   dispositivos,
   onVincular,
   onQuitar,
 }: {
+  etiqueta: string
   vinculados: DispositivoAfectado[]
   dispositivos: Dispositivo[]
   onVincular: (dispositivo: Dispositivo) => void
@@ -864,7 +889,7 @@ function DispositivosAfectadosEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-sm text-slate-300">Dispositivos afectados</span>
+      <span className="text-sm text-slate-300">{etiqueta} (opcional)</span>
 
       {vinculados.length > 0 && (
         <ul className="flex flex-wrap gap-2">
@@ -877,7 +902,7 @@ function DispositivosAfectadosEditor({
               <button
                 type="button"
                 onClick={() => onQuitar(vinculo.id)}
-                aria-label={`Quitar ${vinculo.nombre} de dispositivos afectados`}
+                aria-label={`Quitar ${vinculo.nombre} de ${etiqueta.toLowerCase()}`}
                 className="text-slate-400"
               >
                 ×
@@ -890,14 +915,14 @@ function DispositivosAfectadosEditor({
       {disponibles.length > 0 && (
         <select
           value=""
-          aria-label="Agregar dispositivo afectado"
+          aria-label={`Agregar a ${etiqueta.toLowerCase()}`}
           onChange={(e) => {
             const dispositivo = disponibles.find((d) => d.id === e.target.value)
             if (dispositivo) onVincular(dispositivo)
           }}
           className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
         >
-          <option value="">+ Agregar dispositivo afectado (opcional)</option>
+          <option value="">+ Agregar equipo</option>
           {disponibles.map((d) => (
             <option key={d.id} value={d.id}>
               {d.nombre}

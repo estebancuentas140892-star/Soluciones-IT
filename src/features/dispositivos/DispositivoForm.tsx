@@ -74,6 +74,20 @@ export function DispositivoForm() {
   )
 
   const [categoriaId, setCategoriaId] = useState('')
+
+  // Propiedades sugeridas por categoria (fase N2, punto 3): al agregar
+  // un campo personalizado, se ofrecen las CLAVES que ya usan otros
+  // equipos de la MISMA categoria (si 30 camaras tienen "puerto" y
+  // "switch", la 31 las recibe como sugerencia). Es la plantilla por
+  // categoria que se pidio, pero aprendida del uso real en vez de
+  // configurada: no exige mantenimiento con una categoria nueva.
+  const propiedadesSugeridas = useMemo(
+    () =>
+      valoresUnicos(
+        todosDispositivos.filter((d) => d.categoriaId === categoriaId).flatMap((d) => Object.keys(d.detalles)),
+      ),
+    [todosDispositivos, categoriaId],
+  )
   const [nombre, setNombre] = useState('')
   const [marca, setMarca] = useState('')
   const [modelo, setModelo] = useState('')
@@ -345,6 +359,14 @@ export function DispositivoForm() {
               sistema operativo.
             </p>
 
+            {propiedadesSugeridas.length > 0 && (
+              <datalist id="propiedades-sugeridas">
+                {propiedadesSugeridas.map((clave) => (
+                  <option key={clave} value={clave} />
+                ))}
+              </datalist>
+            )}
+
             {detalles.map((campo, indice) => (
               <div key={indice} className="flex gap-2">
                 <input
@@ -352,6 +374,7 @@ export function DispositivoForm() {
                   placeholder="Campo"
                   value={campo.clave}
                   onChange={(e) => actualizarDetalle(indice, 'clave', e.target.value)}
+                  list="propiedades-sugeridas"
                   className="w-2/5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
                 <input

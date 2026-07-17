@@ -158,7 +158,17 @@ function App() {
               {/* La ficha de articulo es la primera pantalla del
                   rediseño Nocturne (tarea 58, handoff "Herramienta IT
                   para técnicos"): trae su propio ShellNocturne, por
-                  eso va fuera del Layout oscuro. */}
+                  eso va fuera del Layout oscuro. La lista de Soluciones
+                  (tarea 59, handoff de Soluciones trasladado a Nocturne)
+                  tambien trae su ShellNocturne y sale del Layout. */}
+              <Route
+                path="soluciones"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <SolucionesPage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="soluciones/:categoriaId/:articuloId"
                 element={
@@ -218,7 +228,6 @@ function App() {
                 <Route path="diagnostico/nuevo" element={<DiagnosticoForm />} />
                 <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
                 <Route path="diagnostico/:diagnosticoId/editar" element={<DiagnosticoForm />} />
-                <Route path="soluciones" element={<SolucionesPage />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
                 <Route path="soluciones/:categoriaId/nuevo" element={<ArticuloForm />} />
                 <Route path="soluciones/:categoriaId/:articuloId/editar" element={<ArticuloForm />} />

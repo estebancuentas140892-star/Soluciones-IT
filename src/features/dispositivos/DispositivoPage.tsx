@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
+import { useAuth } from '../autenticacion/authContext'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonCompartir } from '../../components/BotonCompartir'
 import { BotonVolver } from '../../components/BotonVolver'
@@ -18,6 +19,7 @@ import { Historial } from '../historial/Historial'
 import { IndicadorEstado } from './IndicadorEstado'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
 import { ProblemasDelEquipo } from './ProblemasDelEquipo'
+import { ProcedimientosDelEquipo } from './ProcedimientosDelEquipo'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
 
 const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' })
@@ -26,11 +28,16 @@ export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
   const navigate = useNavigate()
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
+  const { session } = useAuth()
 
   const dispositivo = useLiveQuery(() => db.dispositivos.get(dispositivoId), [dispositivoId])
   const categoria = useLiveQuery(
     () => (dispositivo ? db.categorias.get(dispositivo.categoriaId) : undefined),
     [dispositivo],
+  )
+  const perfil = useLiveQuery(
+    async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
+    [session],
   )
 
   const idVisitado = dispositivo && !dispositivo.eliminadoEn ? dispositivo.id : null
@@ -162,7 +169,25 @@ export function DispositivoPage() {
           </Link>
         )}
         <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} />
+        {/* Creacion contextual (fase N2, punto 1): precarga la
+            categoria y el equipo afectado, asi ningun dato visible
+            aqui se vuelve a escribir a mano en el formulario. */}
+        <Link
+          to={`/soluciones/${dispositivo.categoriaId}/nuevo?tipo=problema_frecuente&dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
+          className="rounded-xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-300"
+        >
+          + Reportar incidencia de este equipo
+        </Link>
+        {perfil?.puedeVerBoveda && (
+          <Link
+            to={`/boveda/nueva?titulo=${encodeURIComponent(`Acceso ${dispositivo.nombre}`)}&categoria=${encodeURIComponent(categoria?.nombre ?? '')}`}
+            className="rounded-xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-300"
+          >
+            + Guardar credencial de este equipo
+          </Link>
+        )}
         <ProblemasDelEquipo dispositivoId={dispositivoId} />
+        <ProcedimientosDelEquipo dispositivoId={dispositivoId} />
       </section>
 
       <ImpactoYDependencias dispositivo={dispositivo} />

@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { Seccion } from '../../components/Seccion'
@@ -16,7 +16,17 @@ interface CampoExtra {
 export function CredencialForm() {
   const { credencialId } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const esEdicion = Boolean(credencialId)
+
+  // Creacion contextual (fase N2, punto 1): "+ Credencial" desde la
+  // ficha de un equipo llega con /boveda/nueva?titulo=<sugerido>
+  // &categoria=<categoria del equipo>. Sin esquema de vinculo
+  // credencial<->dispositivo todavia (eso es la fase N3), asi que solo
+  // se precargan estos dos campos de texto; el tecnico puede editarlos
+  // o borrarlos sin problema.
+  const tituloContextual = esEdicion ? '' : (searchParams.get('titulo') ?? '')
+  const categoriaContextual = esEdicion ? '' : (searchParams.get('categoria') ?? '')
 
   const credencial = useLiveQuery(
     async () => (credencialId ? ((await db.credenciales.get(credencialId)) ?? null) : undefined),
@@ -28,8 +38,8 @@ export function CredencialForm() {
     [credenciales],
   )
 
-  const [titulo, setTitulo] = useState('')
-  const [categoria, setCategoria] = useState('')
+  const [titulo, setTitulo] = useState(tituloContextual)
+  const [categoria, setCategoria] = useState(categoriaContextual)
   const [usuario, setUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [verContrasena, setVerContrasena] = useState(false)

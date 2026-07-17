@@ -8,7 +8,7 @@ import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { expandirConsulta } from './sinonimos'
 
-export type TipoResultado = 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico'
+export type TipoResultado = 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico' | 'categoria' | 'adjunto'
 
 export interface DocumentoBusqueda {
   id: string
@@ -49,12 +49,31 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
   const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
   const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(), [], [])
+  // Adjuntos del articulo/dispositivo completo (fase N2, punto 2): la
+  // galeria por paso de un procedimiento se indexa aparte, mas abajo,
+  // porque vive inline en el JSON y no en esta tabla.
+  const adjuntosTabla = useLiveQuery(() => db.adjuntos.filter((a) => !a.eliminadoEn).toArray(), [], [])
   const bovedaDesbloqueada = useBovedaDesbloqueada()
 
   return useMemo(() => {
     const nombreCategoria = new Map((categorias ?? []).map((c) => [c.id, c.nombre]))
 
     const documentos: DocumentoBusqueda[] = []
+
+    // Categorias como resultado propio (fase N2, punto 1): buscar
+    // "impresoras" debe ofrecer la categoria ademas de sus articulos.
+    for (const categoria of categorias ?? []) {
+      if (categoria.eliminadoEn) continue
+      documentos.push({
+        id: `categoria:${categoria.id}`,
+        tipo: 'categoria',
+        titulo: categoria.nombre,
+        subtitulo: 'Categoría',
+        ruta: `/soluciones/${categoria.id}`,
+        texto: categoria.nombre,
+        portadaRef: '',
+      })
+    }
 
     for (const articulo of articulos ?? []) {
       const procedimiento = normalizarProcedimiento(articulo.procedimiento)
@@ -78,6 +97,25 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           ...(articulo.dispositivosAfectados ?? []).map((d) => d.nombre),
         ].join(' '),
         portadaRef: procedimiento?.portada?.referencia ?? '',
+      })
+
+      // Galeria de adjuntos de cada paso (fase N2, punto 2): un manual
+      // o una captura se encuentra hoy solo si el texto del articulo
+      // los menciona; con esto "manual_zebra.pdf" tambien aparece,
+      // apuntando al articulo que lo contiene (no hay ancla por paso
+      // en la ficha, asi que la ruta es la del articulo completo).
+      ;(procedimiento?.pasos ?? []).forEach((paso, indice) => {
+        for (const adjunto of paso.adjuntos) {
+          documentos.push({
+            id: `adjunto:${adjunto.referencia}`,
+            tipo: 'adjunto',
+            titulo: adjunto.nombre,
+            subtitulo: `${articulo.titulo} · ${paso.titulo || `Paso ${indice + 1}`}`,
+            ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}`,
+            texto: adjunto.nombre,
+            portadaRef: adjunto.tipo.startsWith('image/') ? adjunto.referencia : '',
+          })
+        }
       })
     }
 
@@ -107,6 +145,35 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
         // un vistazo en los resultados, igual que la portada de un
         // procedimiento.
         portadaRef: dispositivo.foto?.referencia ?? '',
+      })
+    }
+
+    // Adjuntos del articulo o dispositivo completo (fase N2, punto 2):
+    // manuales y PDF que hoy solo se encontraban si el texto del
+    // articulo los mencionaba. El dueno puede haberse eliminado sin
+    // que el adjunto lo refleje todavia (offline); se omite en ese caso.
+    const rutaArticulo = new Map(
+      (articulos ?? []).map((a) => [a.id, { titulo: a.titulo, ruta: `/soluciones/${a.categoriaId}/${a.id}` }]),
+    )
+    const rutaDispositivo = new Map(
+      (dispositivos ?? []).map((d) => [d.id, { titulo: d.nombre, ruta: `/dispositivos/${d.id}` }]),
+    )
+    for (const adjunto of adjuntosTabla ?? []) {
+      const dueno =
+        adjunto.entidadTipo === 'articulo'
+          ? rutaArticulo.get(adjunto.entidadId)
+          : adjunto.entidadTipo === 'dispositivo'
+            ? rutaDispositivo.get(adjunto.entidadId)
+            : undefined
+      if (!dueno) continue
+      documentos.push({
+        id: `adjunto:${adjunto.referencia}`,
+        tipo: 'adjunto',
+        titulo: adjunto.nombre,
+        subtitulo: dueno.titulo,
+        ruta: dueno.ruta,
+        texto: adjunto.nombre,
+        portadaRef: adjunto.tipo.startsWith('image/') ? adjunto.referencia : '',
       })
     }
 
@@ -142,7 +209,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
     }
 
     return crearIndiceDesdeDocumentos(documentos)
-  }, [articulos, dispositivos, categorias, credenciales, diagnosticos, bovedaDesbloqueada])
+  }, [articulos, dispositivos, categorias, credenciales, diagnosticos, adjuntosTabla, bovedaDesbloqueada])
 }
 
 // Separado del hook para poder probarlo sin depender de React ni de

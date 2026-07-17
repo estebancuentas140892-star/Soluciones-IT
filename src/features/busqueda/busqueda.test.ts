@@ -48,6 +48,22 @@ const documentos: DocumentoBusqueda[] = [
     ruta: '/soluciones/cat-3/5',
     texto: 'Crear copia de seguridad del SQL Server con SQL Server Management Studio',
   },
+  {
+    id: 'categoria:cat-1',
+    tipo: 'categoria',
+    titulo: 'Impresoras',
+    subtitulo: 'Categoría',
+    ruta: '/soluciones/cat-1',
+    texto: 'Impresoras',
+  },
+  {
+    id: 'adjunto:manual-zebra',
+    tipo: 'adjunto',
+    titulo: 'manual_zebra.pdf',
+    subtitulo: 'Configurar impresora Epson TM-T88 · Paso 1',
+    ruta: '/soluciones/cat-1/2',
+    texto: 'manual_zebra.pdf',
+  },
 ]
 
 const indice = crearIndiceDesdeDocumentos(documentos)
@@ -104,6 +120,19 @@ describe('buscar', () => {
   it('encuentra por sinónimo: "internet" halla los artículos de red', () => {
     const resultados = buscar(indice, 'internet')
     expect(resultados.map((r) => r.id)).toContain('articulo:3')
+  })
+
+  it('ofrece la categoría además de sus artículos (fase N2)', () => {
+    const resultados = buscar(indice, 'impresoras')
+    const categoria = resultados.find((r) => r.id === 'categoria:cat-1')
+    expect(categoria).toBeDefined()
+    expect(categoria?.tipo).toBe('categoria')
+  })
+
+  it('encuentra un adjunto por su nombre de archivo (fase N2)', () => {
+    const resultados = buscar(indice, 'manual_zebra')
+    expect(resultados.map((r) => r.id)).toContain('adjunto:manual-zebra')
+    expect(resultados.find((r) => r.id === 'adjunto:manual-zebra')?.tipo).toBe('adjunto')
   })
 })
 
