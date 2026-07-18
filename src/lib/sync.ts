@@ -258,6 +258,44 @@ async function registrarErrorDeCambio(cambio: CambioPendiente, mensaje: string):
   await db.cambiosPendientes.update(cambio.id, { error: mensaje, intentos: cambio.intentos + 1 })
 }
 
+// Descarta un cambio atascado de la cola (panel de sincronizacion,
+// tarea 68). Es la salida de emergencia cuando el servidor rechaza un
+// cambio de forma permanente: sin esto, la ficha queda para siempre
+// con el punto rojo y ademas deja de recibir las novedades del equipo
+// (la regla anti pisado de aplicarFilasRemotas la salta mientras tenga
+// un cambio pendiente). Tras quitarlo de la cola se intenta, con la
+// mejor voluntad, restaurar la version del servidor de esa ficha para
+// que este dispositivo no siga mostrando el cambio descartado; sin
+// conexion se queda la version local hasta la proxima sincronizacion.
+export async function descartarCambioPendiente(id: string): Promise<void> {
+  const cambio = await db.cambiosPendientes.get(id)
+  if (!cambio) return
+  await db.cambiosPendientes.delete(id)
+
+  try {
+    const tabla = cambio.tabla as TablaSincronizada
+    if (supabase && configTablas[tabla] && !configTablas[tabla].soloInsercion) {
+      const { data, error } = await supabase.from(tabla).select('*').eq('id', cambio.entidadId)
+      if (!error && data) {
+        if (data.length > 0) {
+          await aplicarFilasRemotas(tabla, data as Record<string, unknown>[])
+        } else {
+          // La fila nunca llego al servidor (era una creacion que
+          // fallo): se retira tambien la copia local para que ambos
+          // lados queden iguales.
+          await db.table(tabla).delete(cambio.entidadId)
+        }
+      }
+    }
+  } catch {
+    // Sin conexion o sin servidor: el descarte de la cola ya vale por
+    // si mismo; la ficha convergera en la proxima sincronizacion en la
+    // que otro companiero la toque.
+  }
+
+  await actualizarContadores()
+}
+
 // ----------------------------------------------------------------
 // Descarga (pull)
 // ----------------------------------------------------------------

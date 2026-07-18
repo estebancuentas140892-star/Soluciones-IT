@@ -6,7 +6,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 (Vacío.)
 
-La tarea 67 (sincronización en tiempo real con Supabase Realtime) quedó terminada y verificada en local (typecheck, lint, 402 pruebas, build y app en navegador sin errores). Falta un paso del usuario: aplicar el `schema.sql` actualizado en Supabase para crear la publicación `supabase_realtime` (sección 6), sin la cual el canal no recibe eventos y la app cae al sondeo de 2 minutos (comportamiento correcto, no rompe nada). Verificación de la propagación real entre dos dispositivos: pendiente del usuario tras aplicar el esquema. Archivada el 2026-07-17.
+La tarea 68 (panel de sincronización: ver y recuperar cambios con error desde la app) quedó terminada, verificada en navegador y archivada el 2026-07-17. Origen: al usuario le quedó un cambio atascado en la PC (punto rojo tras eliminar una solución, por el esquema atrasado del servidor) y el celular seguía mostrando la solución; el punto rojo no explicaba nada y la única vía de diagnóstico era la consola del desarrollador.
+
+Antes, la tarea 67 (sincronización en tiempo real con Supabase Realtime) quedó terminada y verificada en local (typecheck, lint, 402 pruebas, build y app en navegador sin errores). Falta un paso del usuario: aplicar el `schema.sql` actualizado en Supabase para crear la publicación `supabase_realtime` (sección 6), sin la cual el canal no recibe eventos y la app cae al sondeo de 2 minutos (comportamiento correcto, no rompe nada). Verificación de la propagación real entre dos dispositivos: pendiente del usuario tras aplicar el esquema. Archivada el 2026-07-17.
 
 Antes, la tarea 66 (entrada rápida de tareas dentro de los pasos) quedó terminada, verificada en navegador y archivada el 2026-07-17.
 

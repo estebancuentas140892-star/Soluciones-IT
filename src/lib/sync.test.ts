@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { guardarRegistro, nuevoId } from './repositorio'
-import { aplicarFilasRemotas } from './sync'
+import { aplicarFilasRemotas, descartarCambioPendiente } from './sync'
 import { aEntidadLocal, aFilaRemota } from './tablas'
 
 beforeEach(async () => {
@@ -182,5 +182,50 @@ describe('aplicarFilasRemotas', () => {
 
     const articulo = await db.articulos.get(id)
     expect(articulo?.eliminadoEn).toBe('2026-07-02T16:00:00+00:00')
+  })
+})
+
+describe('descartarCambioPendiente', () => {
+  it('quita el cambio de la cola y desbloquea la ficha para recibir novedades', async () => {
+    const id = nuevoId()
+    const categoriaId = nuevoId()
+    // Un guardado local encola el cambio (y bloquea la descarga de esa ficha).
+    await guardarRegistro('articulos', {
+      id,
+      categoriaId,
+      titulo: 'Cambio que el servidor rechaza',
+      tipo: 'manual',
+      contenido: '',
+      etiquetas: [],
+      procedimiento: null,
+      sintomas: [],
+      causas: [],
+      dispositivosAfectados: [],
+      esRutaInicio: false,
+      estado: 'publicado',
+      version: '1.0',
+      relacionados: [],
+    })
+    const cola = await db.cambiosPendientes.where('[tabla+entidadId]').equals(['articulos', id]).toArray()
+    expect(cola.length).toBeGreaterThan(0)
+
+    for (const cambio of cola) {
+      await descartarCambioPendiente(cambio.id)
+    }
+
+    const colaDespues = await db.cambiosPendientes
+      .where('[tabla+entidadId]')
+      .equals(['articulos', id])
+      .count()
+    expect(colaDespues).toBe(0)
+
+    // Sin el cambio pendiente, la version del servidor vuelve a aplicar.
+    await aplicarFilasRemotas('articulos', [filaRemotaDeArticulo(id, 'Versión del servidor')])
+    const articulo = await db.articulos.get(id)
+    expect(articulo?.titulo).toBe('Versión del servidor')
+  })
+
+  it('descartar un id inexistente no hace nada', async () => {
+    await expect(descartarCambioPendiente('no-existe')).resolves.toBeUndefined()
   })
 })

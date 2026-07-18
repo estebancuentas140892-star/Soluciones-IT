@@ -1,8 +1,15 @@
-import { useSyncExternalStore } from 'react'
+import { lazy, Suspense, useState, useSyncExternalStore } from 'react'
 import { obtenerEstadoSync, sincronizar, suscribirSync } from '../lib/sync'
 
+// El panel solo carga si el usuario lo abre (no pesa en el arranque).
+const PanelSync = lazy(() =>
+  import('./PanelSync').then((m) => ({ default: m.PanelSync })),
+)
+
 // Punto de estado en la cabecera: responde de un vistazo la pregunta
-// "¿ya se subió lo que cambié?". Tocarlo fuerza una sincronización.
+// "¿ya se subió lo que cambié?". Tocarlo fuerza una sincronización y
+// abre el panel de sincronización (tarea 68), que explica el estado y
+// los cambios rechazados en lenguaje claro.
 
 function suscribirRed(escucha: () => void): () => void {
   window.addEventListener('online', escucha)
@@ -16,6 +23,7 @@ function suscribirRed(escucha: () => void): () => void {
 export function IndicadorSync() {
   const estado = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
   const enLinea = useSyncExternalStore(suscribirRed, () => navigator.onLine)
+  const [panelAbierto, setPanelAbierto] = useState(false)
 
   let color = 'bg-emerald-400'
   let texto = estado.tiempoReal ? 'Sincronizado en tiempo real' : 'Sincronizado'
@@ -36,17 +44,27 @@ export function IndicadorSync() {
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => void sincronizar()}
-      title={`${texto}. Tocar para sincronizar ahora.`}
-      aria-label={texto}
-      className="flex items-center gap-1.5 rounded-lg px-1 py-1"
-    >
-      <span className={`h-2.5 w-2.5 rounded-full ${color} ${estado.enCurso ? 'animate-pulse' : ''}`} />
-      {estado.cambiosPendientes > 0 && (
-        <span className="text-[10px] text-slate-400">{estado.cambiosPendientes}</span>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          void sincronizar()
+          setPanelAbierto(true)
+        }}
+        title={`${texto}. Tocar para ver el detalle y sincronizar ahora.`}
+        aria-label={texto}
+        className="flex items-center gap-1.5 rounded-lg px-1 py-1"
+      >
+        <span className={`h-2.5 w-2.5 rounded-full ${color} ${estado.enCurso ? 'animate-pulse' : ''}`} />
+        {estado.cambiosPendientes > 0 && (
+          <span className="text-[10px] text-slate-400">{estado.cambiosPendientes}</span>
+        )}
+      </button>
+      {panelAbierto && (
+        <Suspense fallback={null}>
+          <PanelSync abierto={panelAbierto} onCerrar={() => setPanelAbierto(false)} />
+        </Suspense>
       )}
-    </button>
+    </>
   )
 }
