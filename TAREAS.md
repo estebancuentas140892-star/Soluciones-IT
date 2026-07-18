@@ -4,7 +4,15 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-(Vacío. La tarea 64 (etiquetas más ágiles: pegar o escribir varias etiquetas separadas por coma o salto de línea) quedó terminada, verificada en navegador real y archivada el 2026-07-17.
+### 66. Entrada rápida de tareas dentro de los pasos (alternativa B del análisis)
+- Descripción: reducir la fricción para documentar procedimientos largos. El editor de pasos YA soporta Enter para crear la siguiente tarea y pegar varias líneas para repartirlas en tareas (`PasosEditor.tsx`), pero no arranca con foco automático ni permite intercalar una advertencia/imagen/contraseña sin salir del flujo de escritura. Cambios propuestos: (1) al crear un paso, auto-crear una tarea vacía y enfocarla; (2) un control de inserción en línea (botón "+" al final de la tarea o menú tipo "/") para soltar advertencia/contraseña/imagen sin ir a la barra "Agregar" y volver; (3) adelgazar el "chrome" del paso (credencial/subprocedimiento/solución) detrás de un único "+ Añadir al paso". Sin cambios de esquema. Punto 1 del análisis del 2026-07-17.
+- Prioridad: Media
+- Ubicación: `src/features/soluciones/PasosEditor.tsx` (`ContenidoEditor`, `FilaBloque`, `insertarTareaDespues`), `src/lib/procedimiento.ts` (`crearBloque*`).
+- Avance: en curso.
+
+La tarea 65 (nueva categoría "Software") quedó terminada, verificada en navegador y archivada el 2026-07-17.
+
+Antes, la tarea 64 (etiquetas más ágiles: pegar o escribir varias etiquetas separadas por coma o salto de línea) quedó terminada, verificada en navegador real y archivada el 2026-07-17.
 
 Antes, la tarea 63 (rediseño IT Brain: pantalla Soluciones re-autorizada) quedó terminada, verificada en navegador y archivada el 2026-07-17. Llegó un handoff Nocturne nuevo ("Herramienta IT para técnicos-handoff.zip", mismo tipo que el de la tarea 58, ya en tema oscuro) cuyo README apuntaba a `Soluciones.dc.html`: una re-autoría refinada de la pantalla Soluciones que ya existía en Nocturne (tarea 59), así que se ACTUALIZÓ `SolucionesPage.tsx`. Cambios: chips de categoría con conteo en vez de rejilla, subfiltros por tipo dentro de una categoría, icono de tipo coloreado por tono (acento/ámbar/verde/neutro), resultados de búsqueda agrupados por categoría con el término resaltado, y búsqueda que ahora coincide también por etiqueta y por tipo. Se añadió el icono `XCircleFill` y el helper `claseTonoDeTipo`. El botón "Crear" conserva el gating por categoría de la tarea 59 (el prototipo es estático y no resuelve que crear necesita una categoría), con estilo secundario como pide el diseño. Este handoff Nocturne SÍ es la línea vigente (a diferencia del zip de tema claro descartado de la tarea 62).
 
@@ -25,12 +33,6 @@ Fundaciones reutilizables ya construidas: tokens `noct-*` en `src/index.css`, ic
 La tarea 54 (base de conocimiento inteligente, fases N0 y N1) quedó terminada y archivada, sin cambios de esquema. Siguientes fases de la propuesta [PROPUESTA_BASE_CONOCIMIENTO.md](PROPUESTA_BASE_CONOCIMIENTO.md), sin depender del usuario: N2 (categorías y adjuntos en el buscador, filtros por tipo, creación contextual, propiedades sugeridas por categoría, generalizar dispositivosAfectados) y N4 (fichas 360° de categoría y ubicación, línea de tiempo unificada). N3 (tabla `ubicaciones`, vínculo credencial↔dispositivo, tipo 'relacionado' en conexiones) es el único grupo con esquema y depende de 4 decisiones abiertas del usuario (sección 12 de la propuesta). Notas de estado previas: la fase 2 de la tarea 39 queda absorbida por N2/N3. El grupo de esquema (tarea 52) quedó terminado; falta que el usuario aplique el `schema.sql` en Supabase. Otras fases de código sin depender del usuario: S2 y D4+F3. Falta decidir R2. Las tareas 28, 36, 37 y 38 tienen su código completo y verificado; solo queda que el usuario aplique el schema.sql.)
 
 ## Por hacer
-
-### 65. Nueva categoría "Software"
-- Descripción: agrupar los procedimientos de software, plataformas y aplicaciones corporativas (Intranet, GLPI, SIPRO, Office 365, Active Directory, Antivirus, herramientas web) hoy sin categoría propia. Nombre recomendado "Software" (más amplio y escalable que "Plataformas" o "Sistemas", ver análisis del 2026-07-17); las categorías son planas, sin jerarquía, así que conviene un nombre paraguas. Requiere alta manual: hoy no existe UI para crear categorías, se siembran por SQL.
-- Prioridad: Media
-- Ubicación: `supabase/schema.sql` (bloque `insert into public.categorias`, línea ~560) o alta directa desde el panel de Supabase; ícono nuevo en `src/features/soluciones/iconosSoluciones.ts`.
-- Avance: pendiente de iniciar.
 
 ### 66. Entrada rápida de tareas dentro de los pasos (alternativa B del análisis)
 - Descripción: reducir la fricción para documentar procedimientos largos. El editor de pasos YA soporta Enter para crear la siguiente tarea y pegar varias líneas para repartirlas en tareas (`PasosEditor.tsx`), pero no arranca con foco automático ni permite intercalar una advertencia/imagen/contraseña sin salir del flujo de escritura. Cambios propuestos: (1) al crear un paso, auto-crear una tarea vacía y enfocarla; (2) un control de inserción en línea (botón "+" al final de la tarea o menú tipo "/") para soltar advertencia/contraseña/imagen sin ir a la barra "Agregar" y volver; (3) adelgazar el "chrome" del paso (credencial/subprocedimiento/solución) detrás de un único "+ Añadir al paso". Sin cambios de esquema. Punto 1 del análisis del 2026-07-17.

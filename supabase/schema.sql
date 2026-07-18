@@ -568,7 +568,8 @@ insert into public.categorias (nombre, orden, es_red) values
   ('CCTV', 8, true),
   ('Servidores', 9, false),
   ('Racks', 10, true),
-  ('Puntos de red', 11, true)
+  ('Puntos de red', 11, true),
+  ('Software', 12, false)
 on conflict (nombre) do nothing;
 
 -- Marca como de red las categorias que ya existian antes de agregar
