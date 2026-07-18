@@ -137,6 +137,21 @@ export function ArticuloForm() {
   const [ordenRutaInicio, setOrdenRutaInicio] = useState(0)
   const [relacionados, setRelacionados] = useState<{ id: string; titulo: string }[]>([])
 
+  // Candidatos para "Artículos relacionados": todos los articulos vivos
+  // salvo este mismo (mismo criterio que el editor anterior, sin
+  // exigir que tengan procedimiento).
+  const candidatosRelacionados = useLiveQuery(
+    () => db.articulos.filter((a) => !a.eliminadoEn && a.id !== id).toArray(),
+    [id],
+    [],
+  )
+  const relacionadosDisponibles = useMemo(() => {
+    const yaVinculados = new Set(relacionados.map((r) => r.id))
+    return [...candidatosRelacionados]
+      .filter((a) => !yaVinculados.has(a.id))
+      .sort((a, b) => a.titulo.localeCompare(b.titulo))
+  }, [candidatosRelacionados, relacionados])
+
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe)
   const [guardando, setGuardando] = useState(false)
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false)
@@ -668,13 +683,49 @@ export function ArticuloForm() {
 
                 <div className="flex flex-col gap-2">
                   <span className={CLASE_ETIQUETA}>Artículos relacionados</span>
-                  <button
-                    type="button"
-                    className="flex min-h-11 items-center gap-2.5 rounded-md border border-dashed border-noct-neutral-700 px-3 text-left text-[13px] text-noct-neutral-400 hover:border-noct-neutral-500 hover:text-noct-text"
-                  >
-                    <LinkSimple size={15} />
-                    Vincular artículo relacionado
-                  </button>
+                  {relacionados.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {relacionados.map((r) => (
+                        <TagNeutral key={r.id} className="gap-1.5">
+                          {r.titulo}
+                          <button
+                            type="button"
+                            onClick={() => setRelacionados((actuales) => actuales.filter((x) => x.id !== r.id))}
+                            aria-label={`Quitar ${r.titulo} de relacionados`}
+                            className="flex p-0.5 text-noct-neutral-500 hover:text-noct-text"
+                          >
+                            <X size={11} />
+                          </button>
+                        </TagNeutral>
+                      ))}
+                    </div>
+                  )}
+                  {relacionadosDisponibles.length > 0 && (
+                    <div className="relative">
+                      <LinkSimple
+                        size={15}
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400"
+                      />
+                      <select
+                        value=""
+                        aria-label="Agregar artículo relacionado"
+                        onChange={(e) => {
+                          const articulo = relacionadosDisponibles.find((a) => a.id === e.target.value)
+                          if (articulo) {
+                            setRelacionados((actuales) => [...actuales, { id: articulo.id, titulo: articulo.titulo }])
+                          }
+                        }}
+                        className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+                      >
+                        <option value="">Vincular artículo relacionado (opcional)</option>
+                        {relacionadosDisponibles.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.titulo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

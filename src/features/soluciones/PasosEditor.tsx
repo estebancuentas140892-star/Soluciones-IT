@@ -1,7 +1,16 @@
-import { useState, type ChangeEvent, type ComponentType } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useMemo, useState, type ChangeEvent, type ComponentType } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
-import type { BloquePaso, PasoAdjunto, PasoProcedimiento, TipoTarea, TonoAviso } from '../../lib/db'
-import { crearBloqueAviso, crearBloqueTarea, crearPaso } from '../../lib/procedimiento'
+import {
+  db,
+  type Articulo,
+  type BloquePaso,
+  type PasoAdjunto,
+  type PasoProcedimiento,
+  type TipoTarea,
+  type TonoAviso,
+} from '../../lib/db'
+import { crearBloqueAviso, crearBloqueTarea, crearPaso, normalizarProcedimiento } from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
@@ -120,6 +129,38 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [pasoAEliminar, setPasoAEliminar] = useState<number | null>(null)
   const [subiendoBloqueId, setSubiendoBloqueId] = useState<string | null>(null)
   const [focoBloqueId, setFocoBloqueId] = useState<string | null>(null)
+
+  // Credenciales de la boveda para vincular a un paso. Solo llegan a
+  // este dispositivo las de usuarios con permiso de boveda (RLS); el
+  // titulo es visible sin desbloquear, los secretos no.
+  const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  const credencialesOrdenadas = useMemo(
+    () => [...credenciales].sort((a, b) => a.titulo.localeCompare(b.titulo)),
+    [credenciales],
+  )
+
+  // Articulos con procedimiento que se pueden vincular a un paso, como
+  // subprocedimiento o como solucion por si el paso falla (y como
+  // vinculo "Si responde No" de una tarea de decision). Se excluye el
+  // articulo en edicion.
+  const vinculables = useLiveQuery(
+    () =>
+      db.articulos
+        .filter(
+          (a) =>
+            !a.eliminadoEn &&
+            a.id !== articuloId &&
+            (a.estado ?? 'publicado') === 'publicado' &&
+            normalizarProcedimiento(a.procedimiento) !== null,
+        )
+        .toArray(),
+    [articuloId],
+    [],
+  )
+  const vinculablesOrdenados = useMemo(
+    () => [...vinculables].sort((a, b) => a.titulo.localeCompare(b.titulo)),
+    [vinculables],
+  )
 
   function actualizarPaso(indice: number, cambios: Partial<PasoProcedimiento>) {
     onPasosChange(pasos.map((paso, i) => (i === indice ? { ...paso, ...cambios } : paso)))
@@ -285,6 +326,7 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
                 onEnter={() => insertarTareaDespues(indice, bloque.id)}
                 onPegar={(texto, evento) => pegarLineas(indice, bloque.id, texto, evento)}
                 onSubirImagen={(evento) => void subirImagen(indice, bloque.id, evento)}
+                vinculables={vinculablesOrdenados}
               />
             ))}
 
@@ -314,11 +356,54 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
                   Vínculos del paso
                   <CaretUp size={12} className="ml-auto" />
                 </button>
-                <VinculoPlaceholder Icono={LockSimple}>Datos de la bóveda</VinculoPlaceholder>
-                <VinculoPlaceholder Icono={BookOpen}>
-                  Procedimiento que se ejecuta en este paso
-                </VinculoPlaceholder>
-                <VinculoPlaceholder Icono={Wrench}>Solución por si el paso falla</VinculoPlaceholder>
+                <VinculoDelPaso
+                  Icono={LockSimple}
+                  etiqueta="Datos de la bóveda"
+                  vinculado={paso.credencialId ? paso.credencialTitulo : null}
+                  opciones={credencialesOrdenadas.map((c) => ({
+                    id: c.id,
+                    titulo: c.categoria ? `${c.titulo} (${c.categoria})` : c.titulo,
+                  }))}
+                  onElegir={(id) => {
+                    const credencial = credencialesOrdenadas.find((c) => c.id === id)
+                    if (credencial) actualizarPaso(indice, { credencialId: credencial.id, credencialTitulo: credencial.titulo })
+                  }}
+                  onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
+                  placeholderVacio="Vincular datos de la bóveda (opcional)"
+                />
+                <VinculoDelPaso
+                  Icono={BookOpen}
+                  etiqueta="Procedimiento relacionado"
+                  vinculado={paso.subArticuloId ? paso.subArticuloTitulo : null}
+                  opciones={vinculablesOrdenados.map((a) => ({ id: a.id, titulo: a.titulo }))}
+                  onElegir={(id) => {
+                    const articulo = vinculablesOrdenados.find((a) => a.id === id)
+                    if (articulo) {
+                      actualizarPaso(indice, {
+                        subArticuloId: articulo.id,
+                        subArticuloTitulo: articulo.titulo,
+                        // Si el paso aun no tiene titulo, toma el de la
+                        // tarea vinculada: asi la lista de pasos se lee
+                        // como lista de tareas sin escribir dos veces lo mismo.
+                        titulo: paso.titulo.trim() === '' ? articulo.titulo : paso.titulo,
+                      })
+                    }
+                  }}
+                  onQuitar={() => actualizarPaso(indice, { subArticuloId: null, subArticuloTitulo: '' })}
+                  placeholderVacio="Vincular procedimiento que se ejecuta en este paso (opcional)"
+                />
+                <VinculoDelPaso
+                  Icono={Wrench}
+                  etiqueta="Solución si el paso falla"
+                  vinculado={paso.solucionArticuloId ? paso.solucionArticuloTitulo : null}
+                  opciones={vinculablesOrdenados.map((a) => ({ id: a.id, titulo: a.titulo }))}
+                  onElegir={(id) => {
+                    const articulo = vinculablesOrdenados.find((a) => a.id === id)
+                    if (articulo) actualizarPaso(indice, { solucionArticuloId: articulo.id, solucionArticuloTitulo: articulo.titulo })
+                  }}
+                  onQuitar={() => actualizarPaso(indice, { solucionArticuloId: null, solucionArticuloTitulo: '' })}
+                  placeholderVacio="Vincular solución por si el paso falla (opcional)"
+                />
               </div>
             ) : (
               <button
@@ -415,24 +500,69 @@ function BotonAgregar({
   )
 }
 
-// Fila de vinculo del paso: mismo aspecto que el mockup (recuadro
-// punteado con icono). Los vinculos reales del paso (credencial,
-// procedimiento y solución) quedan pendientes de cablear.
-function VinculoPlaceholder({
+// Un vinculo del paso (credencial, subprocedimiento o solucion): sin
+// vinculo, un recuadro punteado con icono que en realidad es un select
+// (mismo aspecto que el mockup); vinculado, una fila solida con el
+// titulo de referencia y un botón para quitar. Sin candidatos para
+// elegir, no se muestra nada (nunca deja un select vacio).
+function VinculoDelPaso({
   Icono,
-  children,
+  etiqueta,
+  vinculado,
+  opciones,
+  onElegir,
+  onQuitar,
+  placeholderVacio,
 }: {
   Icono: ComponentType<IconoProps>
-  children: string
+  etiqueta: string
+  vinculado: string | null
+  opciones: { id: string; titulo: string }[]
+  onElegir: (id: string) => void
+  onQuitar: () => void
+  placeholderVacio: string
 }) {
+  if (vinculado) {
+    return (
+      <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-noct-divider bg-noct-surface px-3">
+        <p className="flex min-w-0 items-center gap-2.5 truncate text-[13px] text-noct-text">
+          <Icono size={15} className="shrink-0 text-noct-neutral-400" />
+          <span className="min-w-0 truncate">
+            {etiqueta}: {vinculado}
+          </span>
+        </p>
+        <button
+          type="button"
+          onClick={onQuitar}
+          className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+  }
+
+  if (opciones.length === 0) return null
+
   return (
-    <button
-      type="button"
-      className="flex min-h-11 items-center gap-2.5 rounded-md border border-dashed border-noct-neutral-700 px-3 text-left text-[13px] text-noct-neutral-400 hover:border-noct-neutral-500 hover:text-noct-text"
-    >
-      <Icono size={15} />
-      {children}
-    </button>
+    <div className="relative">
+      <Icono size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400" />
+      <select
+        value=""
+        aria-label={placeholderVacio}
+        onChange={(e) => {
+          if (e.target.value) onElegir(e.target.value)
+        }}
+        className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+      >
+        <option value="">{placeholderVacio}</option>
+        {opciones.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.titulo}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }
 
@@ -449,6 +579,7 @@ function BloqueEditor({
   onEnter,
   onPegar,
   onSubirImagen,
+  vinculables,
 }: {
   bloque: BloquePaso
   enfocar: boolean
@@ -459,6 +590,7 @@ function BloqueEditor({
   onEnter: () => void
   onPegar: (texto: string, evento: { preventDefault: () => void }) => void
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
+  vinculables: Articulo[]
 }) {
   if (bloque.tipo === 'tarea') {
     const info = infoTipoTarea(bloque.tipoTarea)
@@ -506,21 +638,47 @@ function BloqueEditor({
           />
           <BotonQuitar onClick={onQuitar} etiqueta="Quitar esta línea" />
         </div>
-        {bloque.decisionArticuloId && (
-          <div className="ml-10 flex items-center justify-between gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/10 px-2.5 py-2">
-            <p className="min-w-0 truncate text-[12.5px] leading-[1.45]">
-              <ArrowElbowDownRight size={13} className="mr-1 inline-block align-[-2px] text-noct-precaucion" />
-              Si responde No: {bloque.decisionArticuloTitulo}
-            </p>
-            <button
-              type="button"
-              onClick={() => onCambiar({ decisionArticuloId: null, decisionArticuloTitulo: '' })}
-              className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
-            >
-              Quitar
-            </button>
-          </div>
-        )}
+        {bloque.tipoTarea === 'decision' &&
+          (bloque.decisionArticuloId ? (
+            <div className="ml-10 flex items-center justify-between gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/10 px-2.5 py-2">
+              <p className="min-w-0 truncate text-[12.5px] leading-[1.45]">
+                <ArrowElbowDownRight size={13} className="mr-1 inline-block align-[-2px] text-noct-precaucion" />
+                Si responde No: {bloque.decisionArticuloTitulo}
+              </p>
+              <button
+                type="button"
+                onClick={() => onCambiar({ decisionArticuloId: null, decisionArticuloTitulo: '' })}
+                className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
+              >
+                Quitar
+              </button>
+            </div>
+          ) : (
+            vinculables.length > 0 && (
+              <div className="relative ml-10">
+                <ArrowElbowDownRight
+                  size={13}
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-noct-neutral-500"
+                />
+                <select
+                  value=""
+                  aria-label="Vincular qué abrir si la respuesta es No"
+                  onChange={(e) => {
+                    const articulo = vinculables.find((a) => a.id === e.target.value)
+                    if (articulo) onCambiar({ decisionArticuloId: articulo.id, decisionArticuloTitulo: articulo.titulo })
+                  }}
+                  className="flex min-h-9 w-[calc(100%-0px)] appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent py-1 pl-8 pr-3 text-[12.5px] text-noct-neutral-500 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+                >
+                  <option value="">Si responde No, vincular una solución o procedimiento (opcional)</option>
+                  {vinculables.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.titulo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )
+          ))}
       </div>
     )
   }
