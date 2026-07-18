@@ -60,6 +60,19 @@
   --color-noct-exito: oklch(0.78 0.1 156);
   --color-noct-precaucion: oklch(0.8 0.1 84);
   --color-noct-error: oklch(0.71 0.13 26);
+
+  /* Color de identidad de cada tipo de documento (Soluciones): antes
+     instalacion, configuracion y conexion compartian el acento (todo se
+     veia morado). Ahora los tres tipos operativos llevan su propio color
+     para distinguirlos de un vistazo en la lista y el buscador. Problema
+     frecuente, mantenimiento y manual reutilizan los estados (precaucion
+     ambar, exito verde) y el neutro, que ya los distinguian. Los tres
+     colores nuevos comparten la banda de luminosidad/chroma de los
+     estados (L ~0.7-0.8, C ~0.1-0.14) para convivir sin desentonar, con
+     matices bien separados en el circulo (rosa 330, cian 195, azul 255). */
+  --color-noct-tipo-instalacion: oklch(0.72 0.14 330);
+  --color-noct-tipo-configuracion: oklch(0.78 0.1 195);
+  --color-noct-tipo-conexion: oklch(0.7 0.13 255);
 }
 
 html,

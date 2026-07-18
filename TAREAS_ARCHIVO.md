@@ -1,5 +1,14 @@
 # Historial de tareas finalizadas
 
+### 73. Color propio por tipo de documento en Soluciones
+- Finalizada: 2026-07-18. Sin cambios de esquema.
+- Contexto: el usuario reportó que en Soluciones los tipos Instalación, Configuración y Conexión "siguen con color morado" y no se distinguen entre sí. Venía de la tarea 63, donde los tres tipos operativos compartían el acento (morado) mientras que Problema frecuente (ámbar), Mantenimiento (verde) y Manual (neutro) sí tenían color propio. El icono ya diferenciaba cada tipo, pero el color no.
+- `src/index.css`: tres tokens nuevos en `@theme`, en la misma banda de luminosidad/chroma que los estados para convivir sin desentonar y con matices bien separados en el círculo: `--color-noct-tipo-instalacion: oklch(0.72 0.14 330)` (rosa/magenta), `--color-noct-tipo-configuracion: oklch(0.78 0.1 195)` (cian), `--color-noct-tipo-conexion: oklch(0.7 0.13 255)` (azul).
+- `src/features/soluciones/iconosSoluciones.ts`: `TONO_POR_TIPO` (recuadro de icono en la lista y el buscador) pasó a usar los tokens nuevos para los tres tipos operativos; Problema sigue en `precaucion`, Mantenimiento en `exito` y Manual en `neutral-400`. Nuevo helper `colorIconoDeTipo` que devuelve solo el color del icono (sin fondo tenue) para donde el tipo se muestra como icono suelto; las clases van completas y literales porque Tailwind no detecta nombres construidos dinámicamente (por eso hay dos records paralelos, sincronizados por comentario).
+- `src/features/soluciones/ArticuloForm.tsx`: la rejilla de tipos del editor dejó de fijar el acento en su `claseIcono` y ahora usa `colorIconoDeTipo(t.valor)`; el tipo activo sigue mostrándose en `accent-300`. Se quitó el campo `claseIcono` de `TIPOS_GRID`.
+- Pruebas: 430 en verde, oxlint y `npm run build` en verde.
+- Verificación en navegador real (dev server, sesión simulada, 6 artículos sembrados, uno por tipo): por estilos computados, los 6 recuadros de la lista de la categoría muestran matices distintos (instalación 330, configuración 195, conexión 255, problema 84, mantenimiento 156, manual neutro) y su fondo al 12 %; la rejilla del editor muestra los mismos colores y el tipo activo en acento. Sin errores de consola. Sesión y datos de prueba eliminados. La captura de pantalla del panel volvió a agotar el tiempo (flakiness del entorno), así que la verificación fue por getComputedStyle.
+
 ### 72. Cablear los placeholders del Editor de Artículo
 - Finalizada: 2026-07-18. Sin cambios de esquema.
 - Contexto: el rediseño Nocturne del editor (tarea 71) dejó, fiel al mockup, tres selectores de vínculo del paso (bóveda, procedimiento y solución) y el editor de artículos relacionados como placeholders visuales sin cablear. El usuario decidió el alcance de esta tarea: cablear solo estos dos puntos; las 4 funciones que el mockup no muestra (equipos donde aplica, adjuntos de paso, orden en ruta de inicio, cambio mayor) quedan tal cual por ahora (tarea 73).

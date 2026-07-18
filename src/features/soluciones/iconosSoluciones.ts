@@ -41,15 +41,18 @@ export function iconoDeTipo(tipo: TipoArticulo): ComponentType<IconoProps> {
   return ICONO_POR_TIPO[tipo] ?? BookOpen
 }
 
-// Tono (color) del icono de cada tipo en la lista unificada, trasladado
-// del handoff: los procedimientos operativos (instalar, configurar,
-// conectar) toman el acento; una incidencia se pinta ambar (precaucion),
-// un mantenimiento verde (exito) y un manual queda neutro. Devuelve las
-// clases de texto y fondo tenue (12 %) del recuadro del icono.
+// Color de identidad de cada tipo: los tres tipos operativos (instalar,
+// configurar, conectar) llevan cada uno su propio color (rosa, cian,
+// azul; tokens noct-tipo-* en index.css) para distinguirse entre si;
+// antes compartian el acento y todo se veia morado. Una incidencia se
+// pinta ambar (precaucion), un mantenimiento verde (exito) y un manual
+// neutro, colores que ya los diferenciaban. Devuelve las clases de texto
+// y fondo tenue (12 %) del recuadro del icono. Debe seguir en sincronia
+// con COLOR_ICONO_POR_TIPO (mismo matiz por tipo, distinta forma de uso).
 const TONO_POR_TIPO: Record<TipoArticulo, string> = {
-  instalacion: 'text-noct-accent bg-noct-accent/[.12]',
-  configuracion: 'text-noct-accent bg-noct-accent/[.12]',
-  conexion: 'text-noct-accent bg-noct-accent/[.12]',
+  instalacion: 'text-noct-tipo-instalacion bg-noct-tipo-instalacion/[.12]',
+  configuracion: 'text-noct-tipo-configuracion bg-noct-tipo-configuracion/[.12]',
+  conexion: 'text-noct-tipo-conexion bg-noct-tipo-conexion/[.12]',
   problema_frecuente: 'text-noct-precaucion bg-noct-precaucion/[.12]',
   mantenimiento: 'text-noct-exito bg-noct-exito/[.12]',
   manual: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]',
@@ -57,6 +60,23 @@ const TONO_POR_TIPO: Record<TipoArticulo, string> = {
 
 export function claseTonoDeTipo(tipo: TipoArticulo): string {
   return TONO_POR_TIPO[tipo] ?? TONO_POR_TIPO.manual
+}
+
+// Solo el color del icono (sin el fondo tenue), para donde el tipo se
+// muestra como icono suelto: la rejilla de tipos del editor. Mismos
+// matices que TONO_POR_TIPO. Las clases van completas y literales porque
+// Tailwind no detecta nombres de clase construidos dinamicamente.
+const COLOR_ICONO_POR_TIPO: Record<TipoArticulo, string> = {
+  instalacion: 'text-noct-tipo-instalacion',
+  configuracion: 'text-noct-tipo-configuracion',
+  conexion: 'text-noct-tipo-conexion',
+  problema_frecuente: 'text-noct-precaucion',
+  mantenimiento: 'text-noct-exito',
+  manual: 'text-noct-neutral-400',
+}
+
+export function colorIconoDeTipo(tipo: TipoArticulo): string {
+  return COLOR_ICONO_POR_TIPO[tipo] ?? COLOR_ICONO_POR_TIPO.manual
 }
 
 // Icono por categoria. Las categorias son dinamicas (las crea el

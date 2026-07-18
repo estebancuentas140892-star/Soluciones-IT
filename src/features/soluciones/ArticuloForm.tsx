@@ -37,7 +37,7 @@ import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { PasosEditor } from './PasosEditor'
 import { hayPlantilla, pasosDePlantilla, plantillaDe } from './plantillas'
-import { iconoDeTipo } from './iconosSoluciones'
+import { colorIconoDeTipo, iconoDeTipo } from './iconosSoluciones'
 import { tituloEditar, tituloNuevo } from './tiposArticulo'
 
 // La vista previa carga react-markdown, que pesa: se difiere hasta que
@@ -48,15 +48,16 @@ const VistaPreviaArticulo = lazy(() =>
 
 // Los seis tipos de documento como rejilla (handoff "Editor de
 // Artículo"): etiqueta singular, icono de dominio y color del icono
-// segun el tono del tipo (operativos en acento, incidencia en
-// precaución, mantenimiento en éxito, manual neutro).
-const TIPOS_GRID: { valor: TipoArticulo; etiqueta: string; claseIcono: string }[] = [
-  { valor: 'instalacion', etiqueta: 'Instalación', claseIcono: 'text-noct-accent' },
-  { valor: 'configuracion', etiqueta: 'Configuración', claseIcono: 'text-noct-accent' },
-  { valor: 'conexion', etiqueta: 'Conexión', claseIcono: 'text-noct-accent' },
-  { valor: 'problema_frecuente', etiqueta: 'Problema frecuente', claseIcono: 'text-noct-precaucion' },
-  { valor: 'mantenimiento', etiqueta: 'Mantenimiento', claseIcono: 'text-noct-exito' },
-  { valor: 'manual', etiqueta: 'Manual', claseIcono: 'text-noct-neutral-400' },
+// segun el color de identidad del tipo (colorIconoDeTipo): cada tipo
+// operativo con su propio color, la incidencia en precaución, el
+// mantenimiento en éxito y el manual neutro.
+const TIPOS_GRID: { valor: TipoArticulo; etiqueta: string }[] = [
+  { valor: 'instalacion', etiqueta: 'Instalación' },
+  { valor: 'configuracion', etiqueta: 'Configuración' },
+  { valor: 'conexion', etiqueta: 'Conexión' },
+  { valor: 'problema_frecuente', etiqueta: 'Problema frecuente' },
+  { valor: 'mantenimiento', etiqueta: 'Mantenimiento' },
+  { valor: 'manual', etiqueta: 'Manual' },
 ]
 
 const ESTADOS: { valor: EstadoArticulo; etiqueta: string }[] = [
@@ -411,7 +412,7 @@ export function ArticuloForm() {
                         : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/5'
                     }`}
                   >
-                    <Icono size={17} className={`shrink-0 ${activo ? 'text-noct-accent-300' : t.claseIcono}`} />
+                    <Icono size={17} className={`shrink-0 ${activo ? 'text-noct-accent-300' : colorIconoDeTipo(t.valor)}`} />
                     {t.etiqueta}
                   </button>
                 )
