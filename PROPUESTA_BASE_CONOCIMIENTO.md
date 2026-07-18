@@ -275,9 +275,13 @@ Con eso, agregar categorías, tipos de equipo o propiedades nuevas ya no toca la
 
 Las fases pendientes anteriores (S2, D4+F3, R2 y las tareas 2, 10, 15) no cambian; D4+F3 encaja natural después de N1. La tarea 39 fase 2 queda absorbida: su parte sin esquema en N2, su parte con esquema en N3.
 
-### Decisiones abiertas para el usuario
+### Decisiones RESUELTAS por el usuario (2026-07-17)
 
-1. **¿Ubicaciones con jerarquía (padre opcional) o lista plana?** Recomendación: con padre opcional; cuesta una columna y evita rediseñar cuando pidan "todo lo de la Sede Norte".
-2. **¿El vínculo credencial→dispositivo sin cifrar** (como `vence_en`, para que la ficha del equipo pueda listarlo sin desbloquear)? Recomendación: sí, el título del vínculo no es el secreto.
-3. **Orden de las rutas de inicio**: ¿campo en el JSON `procedimiento` (sin esquema, solo aplica a artículos con procedimiento) o columna en `articulos` (entra a N3)? Recomendación: columna en N3, es más general.
-4. **Prioridad**: ¿empezar por N0+N1 (el núcleo del principio) o intercalar primero S2/D4 pendientes? Recomendación: N0+N1 primero; todo lo demás se apoya en el grafo.
+Las cuatro se resolvieron a favor de la recomendación. Fijan la forma del único grupo de esquema pendiente (N3).
+
+1. **Ubicaciones: CON jerarquía**, `padre_id` opcional (Sede > Área > Punto, sin obligación de usarla). Cuesta una columna y evita rediseñar cuando pidan "todo lo de la Sede Norte".
+2. **Vínculo credencial↔dispositivo: SIN cifrar** (como `vence_en`). La lista `{id, nombre}` va en claro dentro de `credenciales`, ya protegida por la RLS de bóveda (`puede_ver_boveda`), así que solo la ve quien tiene acceso a la bóveda; el contenido secreto sigue cifrado. Permite que la ficha del equipo liste "credenciales de este equipo" sin desbloquear.
+3. **Orden de las rutas de inicio: COLUMNA en `articulos`** (no en el JSON `procedimiento`), porque `es_ruta_inicio` aplica a cualquier artículo, incluidos los manuales sin pasos. Entra en el lote de N3.
+4. **Equipos no-red: SÍ incluir el tipo `'relacionado'` en `conexiones`** dentro de N3 (relacionar un POS con su impresora; aparece en ambas fichas, no en la topología). Cambio mínimo (un valor en el check de `conexiones`).
+
+Nota sobre la "decisión 4" original (prioridad N0+N1 vs S2/D4): quedó resuelta de hecho al construirse N0/N1 (tarea 54), N2 (tarea 60) y N4 (tarea 61). El único grupo con esquema que resta es N3, ahora DESBLOQUEADO con la forma de arriba. El color de categoría de [PROPUESTA_REVISION_ARQUITECTURA.md](PROPUESTA_REVISION_ARQUITECTURA.md) arranca derivado del `orden` sin esquema; su columna `color` (para overrides manuales) se suma al mismo lote de N3.

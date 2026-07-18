@@ -63,11 +63,16 @@ Sin esquema; sale de datos que ya se guardan.
 - Anti-duplicados de inventario (serial/IP), como ya hace Soluciones con títulos.
 - Avisos proactivos: procedimientos vinculados rotos en las listas; vencimientos de credenciales en Inicio.
 
-### Fase 3 — Evoluciones de esquema (una sola intervención, gated por el usuario)
-Agrupar TODO lo de esquema en una aplicación del `schema.sql`.
-- Columna `color` en `categorias` (único toque de la Fase 0).
-- N3: ubicación como entidad (resuelve los grupos partidos de Red), vínculo credencial↔dispositivo por id (unifica el vocabulario de categoría de la bóveda), tipo 'relacionado' en conexiones.
-- Depende de las 4 decisiones abiertas (sección 12 de PROPUESTA_BASE_CONOCIMIENTO.md).
+### Fase 3 — Evoluciones de esquema (una sola intervención)
+Agrupar TODO lo de esquema en una aplicación del `schema.sql`. **Decisiones de forma resueltas el 2026-07-17** (ya no hay nada abierto que bloquee N3):
+- Columna `color` en `categorias` (para overrides; el color arranca derivado del `orden` sin esquema en la Fase 0).
+- Tabla `ubicaciones` **con jerarquía** (`padre_id` opcional) + `dispositivos.ubicacion_id` + migración asistida de textos (resuelve los grupos partidos de Red).
+- `credenciales.dispositivos` (lista `{id, nombre}`) **sin cifrar**: la ficha del equipo lista sus credenciales sin desbloquear; el vínculo solo lo ve quien tiene acceso a la bóveda (RLS).
+- Columna de **orden de rutas de inicio en `articulos`** (aplica también a manuales sin procedimiento).
+- Tipo **`'relacionado'` en `conexiones`** (relacionar equipos no-red; no entra en la topología).
+- `entidad_tipo` 'ubicacion' en `historial`.
+
+Detalle de las decisiones en la sección 12 de [PROPUESTA_BASE_CONOCIMIENTO.md](PROPUESTA_BASE_CONOCIMIENTO.md). Falta solo agendar e implementar N3 como un único grupo de esquema.
 
 ## 5. Qué NO hacer (defender decisiones actuales)
 
