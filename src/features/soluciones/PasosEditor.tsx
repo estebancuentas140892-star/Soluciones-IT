@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState, type ChangeEvent } from 'react'
+import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import {
   db,
@@ -47,6 +47,11 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [subiendoPasoId, setSubiendoPasoId] = useState<string | null>(null)
   const [subiendoImagenPasoId, setSubiendoImagenPasoId] = useState<string | null>(null)
   const [pasoAEliminar, setPasoAEliminar] = useState<number | null>(null)
+  // Id del paso recien creado con "+ Agregar paso": arranca con una
+  // tarea vacia ya puesta y enfocada, para escribir de inmediato sin
+  // pasar primero por la barra "Agregar". Se limpia apenas esa tarea
+  // recibe el foco (ContenidoEditor via onFocoInicialConsumido).
+  const [pasoRecienCreadoId, setPasoRecienCreadoId] = useState<string | null>(null)
 
   // Credenciales de la boveda para vincular a un paso. Solo llegan a
   // este dispositivo las de usuarios con permiso de boveda (RLS); el
@@ -296,6 +301,8 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
               onChange={(bloques) => actualizarPaso(indice, { bloques })}
               onSubirImagen={(evento) => void subirImagenBloque(indice, evento)}
               subiendoImagen={subiendoImagenPasoId === paso.id}
+              focoInicialId={pasoRecienCreadoId === paso.id ? (paso.bloques[0]?.id ?? null) : null}
+              onFocoInicialConsumido={() => setPasoRecienCreadoId(null)}
             />
           </div>
 
@@ -308,48 +315,50 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             />
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-slate-800/70 pt-3">
-            <CredencialSelector
-              paso={paso}
-              credenciales={credencialesOrdenadas}
-              onVincular={(credencial) =>
-                actualizarPaso(indice, {
-                  credencialId: credencial.id,
-                  credencialTitulo: credencial.titulo,
-                })
-              }
-              onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
-            />
+          <div className="border-t border-slate-800/70 pt-3">
+            <MasOpcionesPaso paso={paso}>
+              <CredencialSelector
+                paso={paso}
+                credenciales={credencialesOrdenadas}
+                onVincular={(credencial) =>
+                  actualizarPaso(indice, {
+                    credencialId: credencial.id,
+                    credencialTitulo: credencial.titulo,
+                  })
+                }
+                onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
+              />
 
-            <SubProcedimientoSelector
-              paso={paso}
-              articulos={vinculablesOrdenados}
-              onVincular={(articulo) =>
-                actualizarPaso(indice, {
-                  subArticuloId: articulo.id,
-                  subArticuloTitulo: articulo.titulo,
-                  // Si el paso aun no tiene titulo, toma el de la tarea
-                  // vinculada: asi la lista de pasos se lee como lista
-                  // de tareas sin escribir dos veces lo mismo.
-                  titulo: paso.titulo.trim() === '' ? articulo.titulo : paso.titulo,
-                })
-              }
-              onQuitar={() => actualizarPaso(indice, { subArticuloId: null, subArticuloTitulo: '' })}
-            />
+              <SubProcedimientoSelector
+                paso={paso}
+                articulos={vinculablesOrdenados}
+                onVincular={(articulo) =>
+                  actualizarPaso(indice, {
+                    subArticuloId: articulo.id,
+                    subArticuloTitulo: articulo.titulo,
+                    // Si el paso aun no tiene titulo, toma el de la tarea
+                    // vinculada: asi la lista de pasos se lee como lista
+                    // de tareas sin escribir dos veces lo mismo.
+                    titulo: paso.titulo.trim() === '' ? articulo.titulo : paso.titulo,
+                  })
+                }
+                onQuitar={() => actualizarPaso(indice, { subArticuloId: null, subArticuloTitulo: '' })}
+              />
 
-            <SolucionSelector
-              paso={paso}
-              articulos={vinculablesOrdenados}
-              onVincular={(articulo) =>
-                actualizarPaso(indice, {
-                  solucionArticuloId: articulo.id,
-                  solucionArticuloTitulo: articulo.titulo,
-                })
-              }
-              onQuitar={() =>
-                actualizarPaso(indice, { solucionArticuloId: null, solucionArticuloTitulo: '' })
-              }
-            />
+              <SolucionSelector
+                paso={paso}
+                articulos={vinculablesOrdenados}
+                onVincular={(articulo) =>
+                  actualizarPaso(indice, {
+                    solucionArticuloId: articulo.id,
+                    solucionArticuloTitulo: articulo.titulo,
+                  })
+                }
+                onQuitar={() =>
+                  actualizarPaso(indice, { solucionArticuloId: null, solucionArticuloTitulo: '' })
+                }
+              />
+            </MasOpcionesPaso>
           </div>
         </div>
       ))}
@@ -359,7 +368,13 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
 
       <button
         type="button"
-        onClick={() => onPasosChange([...pasos, crearPaso()])}
+        onClick={() => {
+          // El paso nace con una tarea vacia ya puesta: se puede
+          // empezar a escribir de inmediato (ver focoInicialId arriba).
+          const nuevo = { ...crearPaso(), bloques: [crearBloqueTarea()] }
+          onPasosChange([...pasos, nuevo])
+          setPasoRecienCreadoId(nuevo.id)
+        }}
         className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm text-slate-300"
       >
         + Agregar paso
@@ -455,6 +470,8 @@ function ContenidoEditor({
   onChange,
   onSubirImagen,
   subiendoImagen,
+  focoInicialId = null,
+  onFocoInicialConsumido,
 }: {
   bloques: BloquePaso[]
   // Articulos con procedimiento que una tarea de decision puede
@@ -468,10 +485,19 @@ function ContenidoEditor({
   onChange: (bloques: BloquePaso[]) => void
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
   subiendoImagen: boolean
+  // Bloque a enfocar apenas monta el editor (el paso recien creado
+  // trae su primera tarea vacia lista para escribir de inmediato).
+  focoInicialId?: string | null
+  onFocoInicialConsumido?: () => void
 }) {
-  // Id del bloque a enfocar tras crearlo (Enter o boton "+ Tarea"),
-  // consumido por la fila cuando monta su input.
-  const [focoId, setFocoId] = useState<string | null>(null)
+  // Id del bloque a enfocar tras crearlo (Enter, boton "+ Tarea" o el
+  // foco inicial del paso), consumido por la fila cuando monta su input.
+  const [focoId, setFocoId] = useState<string | null>(focoInicialId)
+
+  function consumirFoco() {
+    setFocoId(null)
+    onFocoInicialConsumido?.()
+  }
 
   function actualizar(id: string, cambios: Partial<BloquePaso>) {
     onChange(bloques.map((b) => (b.id === id ? { ...b, ...cambios } : b)))
@@ -494,12 +520,23 @@ function ContenidoEditor({
     setFocoId(bloque.id)
   }
 
-  function insertarTareaDespues(indice: number) {
-    const nueva = crearBloqueTarea()
+  // Inserta un bloque justo despues de uno existente y lo enfoca: es
+  // el mecanismo detras de Enter (tarea) y del boton "+" de cada fila
+  // (tarea o advertencia), pensado para no salir nunca del flujo de
+  // escritura ni bajar hasta la barra "Agregar".
+  function insertarDespues(indice: number, bloque: BloquePaso) {
     const copia = [...bloques]
-    copia.splice(indice + 1, 0, nueva)
+    copia.splice(indice + 1, 0, bloque)
     onChange(copia)
-    setFocoId(nueva.id)
+    setFocoId(bloque.id)
+  }
+
+  function insertarTareaDespues(indice: number) {
+    insertarDespues(indice, crearBloqueTarea())
+  }
+
+  function insertarAvisoDespues(indice: number) {
+    insertarDespues(indice, crearBloqueAviso())
   }
 
   // Pegar varias lineas en una tarea las convierte en tareas seguidas
@@ -538,12 +575,14 @@ function ContenidoEditor({
           primero={indice === 0}
           ultimo={indice === bloques.length - 1}
           enfocar={focoId === bloque.id}
-          onEnfocado={() => setFocoId(null)}
+          onEnfocado={consumirFoco}
           onCambiar={(cambios) => actualizar(bloque.id, cambios)}
           onEnter={() => insertarTareaDespues(indice)}
           onPegar={(texto, evento) => pegarLineas(indice, texto, evento)}
           onMover={(dir) => mover(indice, dir)}
           onQuitar={() => quitar(bloque.id)}
+          onInsertarTareaAqui={() => insertarTareaDespues(indice)}
+          onInsertarAvisoAqui={() => insertarAvisoDespues(indice)}
         />
       ))}
 
@@ -616,6 +655,8 @@ function FilaBloque({
   onPegar,
   onMover,
   onQuitar,
+  onInsertarTareaAqui,
+  onInsertarAvisoAqui,
 }: {
   bloque: BloquePaso
   vinculables: Articulo[]
@@ -629,11 +670,18 @@ function FilaBloque({
   onPegar: (texto: string, evento: { preventDefault: () => void }) => void
   onMover: (direccion: -1 | 1) => void
   onQuitar: () => void
+  // Inserta una tarea o una advertencia justo debajo de esta fila: el
+  // atajo para intercalar contenido sin bajar hasta la barra "Agregar"
+  // y perder el punto donde se estaba escribiendo.
+  onInsertarTareaAqui: () => void
+  onInsertarAvisoAqui: () => void
 }) {
   const tipoTarea = bloque.tipoTarea ?? 'accion'
   const infoTipo = TIPOS_TAREA.find((t) => t.valor === tipoTarea) ?? TIPOS_TAREA[0]
+  const [menuInsertarAbierto, setMenuInsertarAbierto] = useState(false)
 
   return (
+    <div className="flex flex-col gap-1.5">
     <div className="flex items-start gap-1.5">
       <div className="flex-1">
         {bloque.tipo === 'tarea' && (
@@ -726,6 +774,12 @@ function FilaBloque({
       </div>
 
       <div className="flex flex-col gap-1">
+        <BotonPaso
+          etiqueta="Insertar tarea o advertencia aquí debajo"
+          onClick={() => setMenuInsertarAbierto((v) => !v)}
+        >
+          +
+        </BotonPaso>
         <BotonPaso etiqueta="Subir el bloque" onClick={() => onMover(-1)} deshabilitado={primero}>
           ↑
         </BotonPaso>
@@ -736,6 +790,32 @@ function FilaBloque({
           ✕
         </BotonPaso>
       </div>
+    </div>
+
+    {menuInsertarAbierto && (
+      <div className="flex flex-wrap gap-2 rounded-lg bg-slate-900/70 px-2.5 py-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            setMenuInsertarAbierto(false)
+            onInsertarTareaAqui()
+          }}
+          className="rounded-lg border border-slate-800 px-2.5 py-1 text-xs text-slate-300"
+        >
+          + ☑ Tarea aquí debajo
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMenuInsertarAbierto(false)
+            onInsertarAvisoAqui()
+          }}
+          className="rounded-lg border border-slate-800 px-2.5 py-1 text-xs text-slate-300"
+        >
+          + ⚠ Advertencia aquí debajo
+        </button>
+      </div>
+    )}
     </div>
   )
 }
@@ -889,6 +969,30 @@ function ImagenBloqueEditor({
       />
     </div>
   )
+}
+
+// Adelgaza el paso: los tres vinculos (credencial, subprocedimiento y
+// solucion) son minoritarios frente a las tareas del dia a dia, asi
+// que quedan colapsados detras de un boton salvo que el paso ya tenga
+// alguno puesto (entonces arrancan visibles, para no esconder datos
+// ya cargados).
+function MasOpcionesPaso({ paso, children }: { paso: PasoProcedimiento; children: ReactNode }) {
+  const tieneAlgo = paso.credencialId !== null || paso.subArticuloId !== null || paso.solucionArticuloId !== null
+  const [abierto, setAbierto] = useState(tieneAlgo)
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="rounded-xl border border-slate-800 px-3 py-2 text-left text-xs text-slate-400"
+      >
+        + Más opciones del paso (datos de la bóveda, procedimiento o solución relacionados)
+      </button>
+    )
+  }
+
+  return <div className="flex flex-col gap-3">{children}</div>
 }
 
 // Apartado "Datos" del paso: el vinculo con una credencial de la

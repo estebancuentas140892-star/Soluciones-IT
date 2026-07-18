@@ -4,13 +4,11 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-### 66. Entrada rápida de tareas dentro de los pasos (alternativa B del análisis)
-- Descripción: reducir la fricción para documentar procedimientos largos. El editor de pasos YA soporta Enter para crear la siguiente tarea y pegar varias líneas para repartirlas en tareas (`PasosEditor.tsx`), pero no arranca con foco automático ni permite intercalar una advertencia/imagen/contraseña sin salir del flujo de escritura. Cambios propuestos: (1) al crear un paso, auto-crear una tarea vacía y enfocarla; (2) un control de inserción en línea (botón "+" al final de la tarea o menú tipo "/") para soltar advertencia/contraseña/imagen sin ir a la barra "Agregar" y volver; (3) adelgazar el "chrome" del paso (credencial/subprocedimiento/solución) detrás de un único "+ Añadir al paso". Sin cambios de esquema. Punto 1 del análisis del 2026-07-17.
-- Prioridad: Media
-- Ubicación: `src/features/soluciones/PasosEditor.tsx` (`ContenidoEditor`, `FilaBloque`, `insertarTareaDespues`), `src/lib/procedimiento.ts` (`crearBloque*`).
-- Avance: en curso.
+(Vacío.)
 
-La tarea 65 (nueva categoría "Software") quedó terminada, verificada en navegador y archivada el 2026-07-17.
+La tarea 66 (entrada rápida de tareas dentro de los pasos) quedó terminada, verificada en navegador y archivada el 2026-07-17.
+
+Antes, la tarea 65 (nueva categoría "Software") quedó terminada, verificada en navegador y archivada el 2026-07-17.
 
 Antes, la tarea 64 (etiquetas más ágiles: pegar o escribir varias etiquetas separadas por coma o salto de línea) quedó terminada, verificada en navegador real y archivada el 2026-07-17.
 
