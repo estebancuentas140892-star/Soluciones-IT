@@ -50,7 +50,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // Cronometro de la sesion de ejecucion (solo nivel 0): tiempo desde
   // que se abrio el asistente, para contrastar con el estimado. Es
   // efimero (no se persiste): mide "cuanto llevo en esta sesion".
-  const [inicio] = useState(() => Date.now())
+  const [inicio, setInicio] = useState(() => Date.now())
   const [ahora, setAhora] = useState(() => Date.now())
   useEffect(() => {
     if (nivel !== 0) return
@@ -102,6 +102,17 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     onCompletado,
     onAvanzar: setIndiceActual,
   })
+
+  // Reiniciar desde la pantalla de "completado": borra el progreso
+  // guardado Y reposiciona la vista en el primer paso (con el cronometro
+  // a cero). Sin lo segundo, indiceActual seguiria en null y la pantalla
+  // de cierre no cambiaria: el boton "no hacia nada".
+  async function reiniciarYVolver() {
+    await reiniciarProgreso(articuloId)
+    setInicio(Date.now())
+    setAhora(Date.now())
+    setIndiceActual(siguientePasoPendiente(idsPasos, new Set<string>(), -1))
+  }
 
   if (!listo) return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
 
@@ -175,7 +186,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           </p>
           <button
             type="button"
-            onClick={() => void reiniciarProgreso(articuloId)}
+            onClick={() => void reiniciarYVolver()}
             className={`mt-2 ${BTN_SECUNDARIO}`}
           >
             <ClockCounterClockwise size={15} aria-hidden />
