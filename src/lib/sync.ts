@@ -1,3 +1,4 @@
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { db, type CambioPendiente, type Perfil } from './db'
 import { supabase } from './supabase'
 import { contarArchivosPendientes, esErrorDeRed, procesarArchivosPendientes } from './archivosPendientes'
@@ -31,6 +32,9 @@ export interface EstadoSync {
   cambiosPendientes: number
   cambiosConError: number
   ultimoError: string | null
+  // El canal de tiempo real esta conectado: los cambios del resto del
+  // equipo llegan en el momento, no solo por el sondeo cada 2 minutos.
+  tiempoReal: boolean
 }
 
 let estado: EstadoSync = {
@@ -39,6 +43,7 @@ let estado: EstadoSync = {
   cambiosPendientes: 0,
   cambiosConError: 0,
   ultimoError: null,
+  tiempoReal: false,
 }
 
 const suscriptores = new Set<() => void>()
@@ -102,6 +107,53 @@ export function programarSync(retrasoMs = 800): void {
   }, retrasoMs)
 }
 
+// ----------------------------------------------------------------
+// Tiempo real (Supabase Realtime)
+// ----------------------------------------------------------------
+//
+// El canal de Realtime se usa solo como SEÑAL: cuando un compañero
+// cambia algo, se dispara una descarga (programarSync, agrupada) en
+// vez de aplicar el payload del evento. Asi la descarga sigue el mismo
+// camino de siempre, que respeta RLS por consulta: nunca llega a este
+// dispositivo un dato que no deberia ver (por ejemplo una credencial
+// sin permiso de boveda), aunque el evento de Realtime lo mencione.
+// Reduce el retraso entre dispositivos de hasta 2 minutos (el sondeo)
+// a uno o dos segundos, y el sondeo queda como red de seguridad por si
+// el canal se cae.
+
+let canalRealtime: RealtimeChannel | null = null
+
+function suscribirRealtime(): void {
+  if (!supabase || canalRealtime) return
+  canalRealtime = supabase
+    .channel('cambios-equipo')
+    // Sin `table`: se escuchan todos los cambios del esquema public que
+    // esten en la publicacion supabase_realtime (ver schema.sql). Un
+    // solo canal para todas las tablas mantiene bajo el numero de
+    // conexiones (relevante en el plan gratuito).
+    .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+      // Alguien del equipo cambio algo: se descarga en la proxima
+      // pasada. programarSync agrupa una rafaga de eventos (guardar un
+      // articulo escribe el articulo y su historial) en una sola sync.
+      programarSync()
+    })
+    .subscribe((estadoCanal) => {
+      const conectado = estadoCanal === 'SUBSCRIBED'
+      actualizarEstado({ tiempoReal: conectado })
+      // Al (re)conectar, una sincronizacion para recuperar lo que haya
+      // cambiado mientras el canal estuvo caido (una desconexion breve
+      // no debe dejar datos viejos hasta el proximo sondeo).
+      if (conectado) void sincronizar()
+    })
+}
+
+function desuscribirRealtime(): void {
+  if (!canalRealtime) return
+  void supabase?.removeChannel(canalRealtime)
+  canalRealtime = null
+  actualizarEstado({ tiempoReal: false })
+}
+
 // Se llama una vez al arrancar la app.
 export function iniciarSync(): void {
   window.addEventListener('online', () => void sincronizar())
@@ -111,6 +163,19 @@ export function iniciarSync(): void {
   setInterval(() => {
     if (navigator.onLine) void sincronizar()
   }, 2 * 60 * 1000)
+
+  // El canal de tiempo real vive atado a la sesion: se suscribe cuando
+  // hay usuario y se corta al cerrar sesion. onAuthStateChange emite un
+  // evento inicial con la sesion existente al arrancar, asi que cubre
+  // tambien el caso de abrir la app ya autenticado. supabase-js renueva
+  // solo el token del canal al refrescar la sesion.
+  if (supabase) {
+    supabase.auth.onAuthStateChange((_evento, sesion) => {
+      if (sesion) suscribirRealtime()
+      else desuscribirRealtime()
+    })
+  }
+
   void sincronizar()
 }
 

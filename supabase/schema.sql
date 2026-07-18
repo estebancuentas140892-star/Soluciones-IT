@@ -577,3 +577,38 @@ on conflict (nombre) do nothing;
 update public.categorias set es_red = true
   where nombre in ('Cámaras', 'Redes', 'Switches', 'Access Points', 'CCTV', 'Racks', 'Puntos de red')
     and es_red = false;
+
+-- ----------------------------------------------------------------
+-- 6. Tiempo real (Supabase Realtime)
+-- ----------------------------------------------------------------
+
+-- Publica los cambios de las tablas sincronizadas para que el resto
+-- del equipo los reciba en el momento en vez de esperar al sondeo de
+-- 2 minutos. La app usa estos eventos SOLO como señal para descargar
+-- (ver src/lib/sync.ts): la descarga sigue respetando RLS, asi que
+-- publicar aqui una tabla protegida (credenciales) no expone su
+-- contenido a quien no tiene permiso. Idempotente: crea la publicacion
+-- si falta y agrega solo las tablas que aun no esten. Las eliminaciones
+-- de contenido son borrados suaves (update de eliminado_en), asi que se
+-- propagan como UPDATE sin necesitar REPLICA IDENTITY FULL.
+do $$
+declare
+  t text;
+  tablas text[] := array[
+    'categorias', 'articulos', 'dispositivos', 'credenciales', 'adjuntos',
+    'historial', 'conexiones', 'diagnosticos', 'ejecuciones_diagnostico',
+    'accesos_boveda', 'perfiles', 'boveda_meta'
+  ];
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+  foreach t in array tablas loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;

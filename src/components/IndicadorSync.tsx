@@ -18,7 +18,7 @@ export function IndicadorSync() {
   const enLinea = useSyncExternalStore(suscribirRed, () => navigator.onLine)
 
   let color = 'bg-emerald-400'
-  let texto = 'Sincronizado'
+  let texto = estado.tiempoReal ? 'Sincronizado en tiempo real' : 'Sincronizado'
   if (!enLinea) {
     color = 'bg-slate-500'
     texto = estado.cambiosPendientes > 0

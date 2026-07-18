@@ -6,7 +6,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 (Vacío.)
 
-La tarea 66 (entrada rápida de tareas dentro de los pasos) quedó terminada, verificada en navegador y archivada el 2026-07-17.
+La tarea 67 (sincronización en tiempo real con Supabase Realtime) quedó terminada y verificada en local (typecheck, lint, 402 pruebas, build y app en navegador sin errores). Falta un paso del usuario: aplicar el `schema.sql` actualizado en Supabase para crear la publicación `supabase_realtime` (sección 6), sin la cual el canal no recibe eventos y la app cae al sondeo de 2 minutos (comportamiento correcto, no rompe nada). Verificación de la propagación real entre dos dispositivos: pendiente del usuario tras aplicar el esquema. Archivada el 2026-07-17.
+
+Antes, la tarea 66 (entrada rápida de tareas dentro de los pasos) quedó terminada, verificada en navegador y archivada el 2026-07-17.
 
 Antes, la tarea 65 (nueva categoría "Software") quedó terminada, verificada en navegador y archivada el 2026-07-17.
 
@@ -37,12 +39,6 @@ La tarea 54 (base de conocimiento inteligente, fases N0 y N1) quedó terminada y
 - Prioridad: Media
 - Ubicación: `src/features/soluciones/PasosEditor.tsx` (`ContenidoEditor`, `FilaBloque`, `insertarTareaDespues`), `src/lib/procedimiento.ts` (`crearBloque*`).
 - Avance: pendiente de iniciar.
-
-### 67. Sincronización en tiempo real (Supabase Realtime)
-- Descripción: hoy la sincronización entre dispositivos es por sondeo (evento `online`, `visibilitychange` y un intervalo de 2 minutos en primer plano; `src/lib/sync.ts:106`), sin Supabase Realtime. Por eso un cambio hecho en un dispositivo puede tardar hasta 2 minutos (o hasta que el otro dispositivo vuelva a primer plano) en aparecer en otro. `updated_at` ya lo estampa el servidor por trigger (`registrar_modificacion`, `supabase/schema.sql:333`), así que no hay problema de reloj: es puramente de propagación. Propuesta: suscribirse a `postgres_changes` de las tablas sincronizadas para disparar `sincronizar()` casi al instante, manteniendo el sondeo actual como respaldo. Punto 2 del análisis del 2026-07-17.
-- Prioridad: Media
-- Ubicación: `src/lib/sync.ts` (nueva función de suscripción Realtime, arranque en `iniciarSync`); en Supabase, habilitar Realtime sobre las tablas de `TABLAS_SINCRONIZADAS` (`alter publication supabase_realtime add table ...`).
-- Avance: pendiente de iniciar. Requiere decisión/aplicación del usuario en el panel de Supabase (habilitar Realtime por tabla).
 
 ### 15. Respaldo automático de datos
 - Descripción: workflow de GitHub Actions que cada domingo exporta las tablas de Supabase (el plan gratuito no tiene copias de seguridad), cifra el resultado con AES-256 y lo guarda como artefacto del workflow por 90 días. Lee los datos con un usuario dedicado de respaldo (respetando RLS, sin usar jamás la clave service_role, prohibida por REGLAS.md) cuyas credenciales viven en los secretos de GitHub Actions. El cifrado es obligatorio porque el repositorio es público y sus artefactos son descargables por cualquier usuario de GitHub.
