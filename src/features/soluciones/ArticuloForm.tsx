@@ -717,12 +717,26 @@ function EtiquetasEditor({
     return [...porClave.values()].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
   }, [todas, etiquetas])
 
+  // Agrega una o varias etiquetas de una sola vez: separa por coma o
+  // salto de línea (Shift+Enter incluido, porque el textarea lo
+  // inserta como '\n'), descarta vacías y ya puestas.
+  function agregarTexto(bruto: string) {
+    const nuevas: string[] = []
+    const puestas = new Set(etiquetas.map((e) => e.toLowerCase()))
+    for (const parte of bruto.split(/[,\n]/)) {
+      const limpia = parte.trim()
+      if (limpia === '') continue
+      const clave = limpia.toLowerCase()
+      if (puestas.has(clave)) continue
+      puestas.add(clave)
+      nuevas.push(limpia)
+    }
+    if (nuevas.length > 0) onChange([...etiquetas, ...nuevas])
+  }
+
   function agregar() {
-    const limpia = texto.trim().replace(/,+$/, '').trim()
+    agregarTexto(texto)
     setTexto('')
-    if (limpia === '') return
-    if (etiquetas.some((e) => e.toLowerCase() === limpia.toLowerCase())) return
-    onChange([...etiquetas, limpia])
   }
 
   return (
@@ -757,10 +771,22 @@ function EtiquetasEditor({
           if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault()
             agregar()
+          } else if (e.key === 'Backspace' && texto === '' && etiquetas.length > 0) {
+            // Campo vacio: Backspace borra la ultima etiqueta puesta
+            // (mismo atajo que GitHub, Notion y Gmail).
+            onChange(etiquetas.slice(0, -1))
           }
         }}
+        onPaste={(e) => {
+          const pegado = e.clipboardData.getData('text')
+          if (!/[,\n]/.test(pegado)) return
+          // Pegado con varias etiquetas: se reparten todas de una vez
+          // en vez de crear una sola etiqueta con el texto completo.
+          e.preventDefault()
+          agregarTexto(pegado)
+        }}
         onBlur={agregar}
-        placeholder="Escribe una etiqueta y presiona Enter (SQL, Backup, POS, Impresora...)"
+        placeholder="Escribe etiquetas separadas por coma y presiona Enter (SQL, Backup, POS, Impresora...)"
         className={CLASE_INPUT}
       />
       <datalist id="etiquetas-sugeridas">
