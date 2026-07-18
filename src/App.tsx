@@ -189,6 +189,26 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* El editor de articulo (tarea del handoff "Editor de
+                  Artículo") trae su propio shell Nocturne a pantalla
+                  completa (cabecera pegajosa y barra de acciones fija),
+                  por eso sale del Layout oscuro como la ficha y la lista. */}
+              <Route
+                path="soluciones/:categoriaId/nuevo"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ArticuloForm />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="soluciones/:categoriaId/:articuloId/editar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ArticuloForm />
+                  </Suspense>
+                }
+              />
               {/* Red, Topologia y Dispositivos son las primeras
                   pantallas del rediseño en tema claro (tareas 55, 56
                   y 57): traen su propio AppShell (sidebar en
@@ -241,8 +261,6 @@ function App() {
                 <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
                 <Route path="diagnostico/:diagnosticoId/editar" element={<DiagnosticoForm />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
-                <Route path="soluciones/:categoriaId/nuevo" element={<ArticuloForm />} />
-                <Route path="soluciones/:categoriaId/:articuloId/editar" element={<ArticuloForm />} />
                 <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
                 <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
                 <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />

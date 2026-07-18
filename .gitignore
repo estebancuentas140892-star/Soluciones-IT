@@ -17,6 +17,7 @@ dist-ssr
 
 # Bundles de handoff de Claude Design (prototipos, no se versionan; se recrean en React)
 *-handoff.zip
+diseno/
 
 # Editor directories and files
 .vscode/*

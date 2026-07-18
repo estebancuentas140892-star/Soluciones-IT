@@ -1,28 +1,32 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useState, type ChangeEvent, type ComponentType } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
-import {
-  db,
-  type Articulo,
-  type BloquePaso,
-  type Credencial,
-  type PasoAdjunto,
-  type PasoProcedimiento,
-  type TipoTarea,
-  type TonoAviso,
-} from '../../lib/db'
-import {
-  crearBloqueAviso,
-  crearBloqueImagen,
-  crearBloqueTarea,
-  crearPaso,
-  normalizarProcedimiento,
-} from '../../lib/procedimiento'
+import type { BloquePaso, PasoAdjunto, PasoProcedimiento, TipoTarea, TonoAviso } from '../../lib/db'
+import { crearBloqueAviso, crearBloqueTarea, crearPaso } from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
-import { buscarArticulosSimilares, crearIndiceDesdeDocumentos } from '../busqueda/useIndiceBusqueda'
+import {
+  ArrowDown,
+  ArrowElbowDownRight,
+  ArrowUp,
+  BookOpen,
+  Camera,
+  CaretDown,
+  CaretUp,
+  DotsThreeOutline,
+  type IconoProps,
+  LinkSimple,
+  LockSimple,
+  Plus,
+  Question,
+  SealCheck,
+  Square,
+  TrashSimple,
+  Warning,
+  Wrench,
+  X,
+} from '../../components/iconos'
 import { TONOS_AVISO } from './tonos'
 
 interface Props {
@@ -31,95 +35,137 @@ interface Props {
   onPasosChange: (pasos: PasoProcedimiento[]) => void
 }
 
-const CLASE_INPUT =
-  'rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500'
+// Metadatos visuales de cada clasificacion de tarea (handoff "Editor de
+// Artículo": el icono se toca para ciclar entre los tipos). Icono,
+// color y placeholder calcan el mockup.
+interface TipoTareaInfo {
+  valor: TipoTarea
+  Icono: ComponentType<IconoProps>
+  claseIcono: string
+  titulo: string
+  placeholder: string
+}
 
-// Editor del procedimiento paso a paso dentro del formulario de
-// articulo. Es un componente controlado: el estado vive en el
-// formulario y aqui solo se edita. Cada paso sigue siempre la misma
-// estructura: nombre, objetivo, tareas (bloques intercalados de
-// tareas con casilla, advertencias e imagenes explicativas), archivos
-// relacionados y los tres vinculos (datos de la boveda, procedimiento
-// relacionado y solucion por si el paso falla).
+const TIPOS_TAREA: TipoTareaInfo[] = [
+  {
+    valor: 'accion',
+    Icono: Square,
+    claseIcono: 'text-noct-neutral-500',
+    titulo: 'Acción con casilla. Tocar para cambiar el tipo',
+    placeholder: 'Tarea (por ejemplo: Encender la impresora)',
+  },
+  {
+    valor: 'verificacion',
+    Icono: SealCheck,
+    claseIcono: 'text-noct-accent-300',
+    titulo: 'Verificación. Tocar para cambiar el tipo',
+    placeholder: 'Comprobación (por ejemplo: Verificar que aparece)',
+  },
+  {
+    valor: 'decision',
+    Icono: Question,
+    claseIcono: 'text-noct-precaucion',
+    titulo: 'Decisión Sí/No. Tocar para cambiar el tipo',
+    placeholder: 'Pregunta de Sí/No',
+  },
+]
+
+const CICLO_TIPO_TAREA: Record<TipoTarea, TipoTarea> = {
+  accion: 'verificacion',
+  verificacion: 'decision',
+  decision: 'accion',
+}
+
+function infoTipoTarea(tipo: TipoTarea | null): TipoTareaInfo {
+  return TIPOS_TAREA.find((t) => t.valor === (tipo ?? 'accion')) ?? TIPOS_TAREA[0]
+}
+
+// El icono de la advertencia cicla entre los cinco tonos del sistema
+// (mismo orden que TONOS_AVISO), un tono por toque.
+function tonoSiguiente(tono: TonoAviso | null): TonoAviso {
+  const indice = TONOS_AVISO.findIndex((t) => t.valor === (tono ?? 'info'))
+  return TONOS_AVISO[(indice + 1) % TONOS_AVISO.length].valor
+}
+
+// Bloque de imagen recien creado, sin adjunto todavia: el slot del
+// bloque permite subir la foto (a diferencia de tareas y avisos, que
+// nacen con su contenido en blanco listo para escribir). Se descarta al
+// guardar si no llega a tener imagen (limpiarBloques en procedimiento.ts).
+function crearBloqueImagenVacio(): BloquePaso {
+  return {
+    id: crypto.randomUUID(),
+    tipo: 'imagen',
+    texto: '',
+    tono: null,
+    adjunto: null,
+    tipoTarea: null,
+    decisionArticuloId: null,
+    decisionArticuloTitulo: '',
+    credencialId: null,
+    credencialTitulo: '',
+  }
+}
+
+// Editor del procedimiento paso a paso (handoff "Editor de Artículo",
+// sistema Nocturne). Componente controlado: el estado vive en el
+// formulario. Cada paso es una tarjeta con numero, titulo, objetivo y un
+// cuerpo de bloques (tareas con casilla, advertencias e imagenes), mas un
+// menu de reordenar/eliminar y los vinculos del paso (bóveda,
+// procedimiento y solución).
 export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
-  const [subiendoPasoId, setSubiendoPasoId] = useState<string | null>(null)
-  const [subiendoImagenPasoId, setSubiendoImagenPasoId] = useState<string | null>(null)
+  const [menuPasoId, setMenuPasoId] = useState<string | null>(null)
+  const [vinculosPasoId, setVinculosPasoId] = useState<string | null>(null)
   const [pasoAEliminar, setPasoAEliminar] = useState<number | null>(null)
-  // Id del paso recien creado con "+ Agregar paso": arranca con una
-  // tarea vacia ya puesta y enfocada, para escribir de inmediato sin
-  // pasar primero por la barra "Agregar". Se limpia apenas esa tarea
-  // recibe el foco (ContenidoEditor via onFocoInicialConsumido).
-  const [pasoRecienCreadoId, setPasoRecienCreadoId] = useState<string | null>(null)
-
-  // Credenciales de la boveda para vincular a un paso. Solo llegan a
-  // este dispositivo las de usuarios con permiso de boveda (RLS); el
-  // titulo es visible sin desbloquear, los secretos no.
-  const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
-  const credencialesOrdenadas = useMemo(
-    () => [...credenciales].sort((a, b) => a.titulo.localeCompare(b.titulo)),
-    [credenciales],
-  )
-
-  // Articulos con procedimiento que se pueden vincular a un paso,
-  // como tarea reutilizable o como solucion por si el paso falla. Se
-  // excluye el articulo en edicion (un procedimiento no puede
-  // vincularse a si mismo).
-  const vinculables = useLiveQuery(
-    () =>
-      db.articulos
-        .filter(
-          (a) =>
-            !a.eliminadoEn &&
-            a.id !== articuloId &&
-            (a.estado ?? 'publicado') === 'publicado' &&
-            normalizarProcedimiento(a.procedimiento) !== null,
-        )
-        .toArray(),
-    [articuloId],
-    [],
-  )
-  const vinculablesOrdenados = useMemo(
-    () => [...vinculables].sort((a, b) => a.titulo.localeCompare(b.titulo)),
-    [vinculables],
-  )
-
-  // Reutilizacion proactiva: al escribir el titulo de un paso se busca
-  // entre los procedimientos vinculables uno de titulo parecido y se
-  // ofrece vincularlo como tarea (el selector manual ya existia; esto
-  // solo lo vuelve visible en el momento justo). Cada sugerencia se
-  // puede descartar por paso.
-  const indiceVinculables = useMemo(
-    () =>
-      crearIndiceDesdeDocumentos(
-        vinculablesOrdenados.map((a) => ({
-          id: `articulo:${a.id}`,
-          tipo: 'articulo' as const,
-          titulo: a.titulo,
-          subtitulo: '',
-          ruta: '',
-          texto: a.titulo,
-        })),
-      ),
-    [vinculablesOrdenados],
-  )
-  const [sugerenciasOcultas, setSugerenciasOcultas] = useState<ReadonlySet<string>>(new Set())
-
-  function sugerenciaPara(paso: PasoProcedimiento): Articulo | null {
-    if (paso.subArticuloId || sugerenciasOcultas.has(paso.id)) return null
-    const similar = buscarArticulosSimilares(indiceVinculables, paso.titulo, '', 1)[0]
-    if (!similar) return null
-    const articuloId = String(similar.id).replace(/^articulo:/, '')
-    return vinculablesOrdenados.find((a) => a.id === articuloId) ?? null
-  }
-
-  function descartarSugerencia(pasoId: string) {
-    setSugerenciasOcultas((actuales) => new Set([...actuales, pasoId]))
-  }
+  const [subiendoBloqueId, setSubiendoBloqueId] = useState<string | null>(null)
+  const [focoBloqueId, setFocoBloqueId] = useState<string | null>(null)
 
   function actualizarPaso(indice: number, cambios: Partial<PasoProcedimiento>) {
     onPasosChange(pasos.map((paso, i) => (i === indice ? { ...paso, ...cambios } : paso)))
+  }
+
+  function actualizarBloque(indice: number, bloqueId: string, cambios: Partial<BloquePaso>) {
+    actualizarPaso(indice, {
+      bloques: pasos[indice].bloques.map((b) => (b.id === bloqueId ? { ...b, ...cambios } : b)),
+    })
+  }
+
+  function quitarBloque(indice: number, bloqueId: string) {
+    actualizarPaso(indice, { bloques: pasos[indice].bloques.filter((b) => b.id !== bloqueId) })
+  }
+
+  function agregarBloque(indice: number, bloque: BloquePaso) {
+    actualizarPaso(indice, { bloques: [...pasos[indice].bloques, bloque] })
+    if (bloque.tipo !== 'imagen') setFocoBloqueId(bloque.id)
+  }
+
+  // Enter en una tarea inserta otra debajo y la enfoca; pegar varias
+  // lineas las reparte en tareas seguidas. Son atajos de teclado que un
+  // mockup estatico no puede mostrar, pero que el editor conserva.
+  function insertarTareaDespues(indice: number, bloqueId: string) {
+    const bloques = pasos[indice].bloques
+    const pos = bloques.findIndex((b) => b.id === bloqueId)
+    const nueva = crearBloqueTarea()
+    const copia = [...bloques]
+    copia.splice(pos + 1, 0, nueva)
+    actualizarPaso(indice, { bloques: copia })
+    setFocoBloqueId(nueva.id)
+  }
+
+  function pegarLineas(indice: number, bloqueId: string, texto: string, evento: { preventDefault: () => void }) {
+    const lineas = texto
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+    if (lineas.length <= 1) return
+    evento.preventDefault()
+    const bloques = [...pasos[indice].bloques]
+    const pos = bloques.findIndex((b) => b.id === bloqueId)
+    bloques[pos] = { ...bloques[pos], texto: lineas[0] }
+    const extra = lineas.slice(1).map((linea) => ({ ...crearBloqueTarea(), texto: linea }))
+    bloques.splice(pos + 1, 0, ...extra)
+    actualizarPaso(indice, { bloques })
   }
 
   function moverPaso(indice: number, direccion: -1 | 1) {
@@ -134,250 +180,175 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
     if (pasoAEliminar === null) return
     onPasosChange(pasos.filter((_, i) => i !== pasoAEliminar))
     setPasoAEliminar(null)
+    setMenuPasoId(null)
   }
 
-  // Sube (o encola offline) un lote de archivos y devuelve los adjuntos
-  // creados. Compartido por la galeria del paso y por las imagenes
-  // intercaladas en el cuerpo, para no duplicar la logica de subida.
-  async function subirArchivos(
-    archivos: File[],
-  ): Promise<{ nuevos: PasoAdjunto[]; fallidos: string[]; encolados: number }> {
-    const nuevos: PasoAdjunto[] = []
-    const fallidos: string[] = []
-    let encolados = 0
+  // Sube (o encola sin conexion) una imagen y la deja como adjunto del
+  // bloque. Las fotos pesadas se recomprimen en el telefono antes de subir.
+  async function subirImagen(indice: number, bloqueId: string, evento: ChangeEvent<HTMLInputElement>) {
+    const archivo = evento.target.files?.[0]
+    evento.target.value = ''
+    if (!archivo) return
 
-    for (const archivo of archivos) {
-      try {
-        // Las fotos pesadas se redimensionan y recomprimen en el
-        // telefono antes de subir; los PDF y demas pasan sin tocar.
-        const archivoFinal = await comprimirImagen(archivo)
-        const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
-        const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
-
-        // Sin conexion, el adjunto queda guardado en el telefono y la
-        // cola de sincronizacion lo sube sola al recuperar señal.
-        const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
-        if (resultado === 'encolado') encolados += 1
-        nuevos.push({ referencia, nombre: archivoFinal.name, tipo: archivoFinal.type })
-      } catch {
-        fallidos.push(archivo.name)
-      }
-    }
-
-    return { nuevos, fallidos, encolados }
-  }
-
-  function reportarSubida(fallidos: string[], encolados: number) {
-    if (fallidos.length > 0) setError(`No se pudo subir: ${fallidos.join(', ')}`)
-    if (encolados > 0) {
-      setAviso(
-        encolados === 1
-          ? 'Sin conexión: el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal.'
-          : `Sin conexión: ${encolados} archivos quedaron guardados en este dispositivo y se subirán solos al recuperar señal.`,
-      )
-    }
-  }
-
-  // ¿Hay servidor configurado para subir? Deja el error listo si no.
-  function servidorListo(): boolean {
+    setError(null)
+    setAviso(null)
     if (!supabase || !supabaseConfigured) {
       setError('La aplicación aún no está conectada al servidor.')
-      return false
+      return
     }
-    return true
-  }
 
-  async function subirAdjuntos(indice: number, evento: ChangeEvent<HTMLInputElement>) {
-    const archivos = Array.from(evento.target.files ?? [])
-    evento.target.value = ''
-    if (archivos.length === 0) return
-
-    setError(null)
-    setAviso(null)
-    if (!servidorListo()) return
-
-    const paso = pasos[indice]
-    setSubiendoPasoId(paso.id)
-    const { nuevos, fallidos, encolados } = await subirArchivos(archivos)
-    // Se agregan sobre los adjuntos que el paso tenia al empezar la
-    // subida (una sola escritura al terminar todo el lote).
-    if (nuevos.length > 0) actualizarPaso(indice, { adjuntos: [...paso.adjuntos, ...nuevos] })
-    reportarSubida(fallidos, encolados)
-    setSubiendoPasoId(null)
-  }
-
-  // Sube imagenes y las agrega como bloques 'imagen' al final del cuerpo
-  // del paso (el tecnico las reordena con las flechas hasta la posicion
-  // deseada, por ejemplo justo despues de una tarea).
-  async function subirImagenBloque(indice: number, evento: ChangeEvent<HTMLInputElement>) {
-    const archivos = Array.from(evento.target.files ?? [])
-    evento.target.value = ''
-    if (archivos.length === 0) return
-
-    setError(null)
-    setAviso(null)
-    if (!servidorListo()) return
-
-    const paso = pasos[indice]
-    setSubiendoImagenPasoId(paso.id)
-    const { nuevos, fallidos, encolados } = await subirArchivos(archivos)
-    if (nuevos.length > 0) {
-      actualizarPaso(indice, { bloques: [...paso.bloques, ...nuevos.map(crearBloqueImagen)] })
+    setSubiendoBloqueId(bloqueId)
+    try {
+      const archivoFinal = await comprimirImagen(archivo)
+      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+      const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
+      const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+      if (resultado === 'encolado') {
+        setAviso('Sin conexión: la imagen quedó guardada en este dispositivo y se subirá sola al recuperar señal.')
+      }
+      const adjunto: PasoAdjunto = { referencia, nombre: archivoFinal.name, tipo: archivoFinal.type }
+      actualizarBloque(indice, bloqueId, { adjunto })
+    } catch {
+      setError(`No se pudo subir la imagen: ${archivo.name}`)
     }
-    reportarSubida(fallidos, encolados)
-    setSubiendoImagenPasoId(null)
-  }
-
-  function quitarAdjunto(indice: number, referencia: string) {
-    // Solo se quita la referencia del paso: el archivo queda en Storage
-    // por si una version ya guardada del articulo lo usa.
-    actualizarPaso(indice, {
-      adjuntos: pasos[indice].adjuntos.filter((a) => a.referencia !== referencia),
-    })
+    setSubiendoBloqueId(null)
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3.5">
+      {pasos.length === 0 && (
+        <div className="mb-1 rounded-md border border-dashed border-noct-neutral-700 px-4 py-[22px] text-center">
+          <p className="text-sm font-medium">Aún no hay pasos</p>
+          <p className="mt-1 text-[13px] leading-[1.5] text-noct-neutral-400">
+            Cada paso agrupa tareas con casilla, advertencias e imágenes.
+          </p>
+        </div>
+      )}
+
       {pasos.map((paso, indice) => (
-        <div key={paso.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-slate-400">Paso {indice + 1}</span>
-            <div className="flex gap-1.5">
-              <BotonPaso etiqueta={`Subir el paso ${indice + 1}`} onClick={() => moverPaso(indice, -1)} deshabilitado={indice === 0}>
-                ↑
-              </BotonPaso>
-              <BotonPaso
-                etiqueta={`Bajar el paso ${indice + 1}`}
-                onClick={() => moverPaso(indice, 1)}
-                deshabilitado={indice === pasos.length - 1}
-              >
-                ↓
-              </BotonPaso>
-              <BotonPaso etiqueta={`Eliminar el paso ${indice + 1}`} onClick={() => setPasoAEliminar(indice)}>
-                ✕
-              </BotonPaso>
+        <div key={paso.id} className="flex flex-col rounded-md bg-noct-surface p-3">
+          {/* Cabecera: numero, titulo editable y menu de opciones. */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-noct-accent text-[12.5px] font-medium text-noct-accent-300">
+              {indice + 1}
+            </div>
+            <input
+              type="text"
+              value={paso.titulo}
+              onChange={(e) => actualizarPaso(indice, { titulo: e.target.value })}
+              placeholder="Qué hacer en este paso"
+              className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2.5 py-2 text-[14.5px] font-medium text-noct-text outline-none focus:border-noct-accent focus:bg-noct-surface"
+            />
+            <button
+              type="button"
+              onClick={() => setMenuPasoId((actual) => (actual === paso.id ? null : paso.id))}
+              aria-label="Opciones del paso: mover o eliminar"
+              className="flex min-h-11 w-10 shrink-0 items-center justify-center rounded-md text-noct-neutral-500 hover:bg-noct-text/[.05] hover:text-noct-text"
+            >
+              <DotsThreeOutline size={18} />
+            </button>
+          </div>
+
+          {menuPasoId === paso.id && (
+            <div className="flex gap-2 py-2 pl-[38px]">
+              <BotonMenu Icono={ArrowUp} onClick={() => moverPaso(indice, -1)}>
+                Subir
+              </BotonMenu>
+              <BotonMenu Icono={ArrowDown} onClick={() => moverPaso(indice, 1)}>
+                Bajar
+              </BotonMenu>
+              <BotonMenu Icono={TrashSimple} onClick={() => setPasoAEliminar(indice)} destructivo>
+                Eliminar
+              </BotonMenu>
+            </div>
+          )}
+
+          <input
+            type="text"
+            value={paso.objetivo}
+            onChange={(e) => actualizarPaso(indice, { objetivo: e.target.value })}
+            placeholder="Objetivo: qué se logra al terminar (opcional)"
+            className="mb-2.5 ml-[38px] mt-0.5 min-h-8 max-w-[calc(100%-38px)] border-none bg-transparent px-2.5 py-1 text-[12.5px] text-noct-neutral-400 outline-none"
+          />
+
+          {/* Cuerpo del paso: tareas, advertencias e imagenes. */}
+          <div className="flex flex-col gap-2 border-t border-noct-divider pt-2.5">
+            {paso.bloques.map((bloque) => (
+              <BloqueEditor
+                key={bloque.id}
+                bloque={bloque}
+                enfocar={focoBloqueId === bloque.id}
+                onEnfocado={() => setFocoBloqueId(null)}
+                subiendoImagen={subiendoBloqueId === bloque.id}
+                onCambiar={(cambios) => actualizarBloque(indice, bloque.id, cambios)}
+                onQuitar={() => quitarBloque(indice, bloque.id)}
+                onEnter={() => insertarTareaDespues(indice, bloque.id)}
+                onPegar={(texto, evento) => pegarLineas(indice, bloque.id, texto, evento)}
+                onSubirImagen={(evento) => void subirImagen(indice, bloque.id, evento)}
+              />
+            ))}
+
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <BotonAgregar Icono={Plus} onClick={() => agregarBloque(indice, crearBloqueTarea())}>
+                Tarea
+              </BotonAgregar>
+              <BotonAgregar Icono={Warning} onClick={() => agregarBloque(indice, crearBloqueAviso())}>
+                Advertencia
+              </BotonAgregar>
+              <BotonAgregar Icono={Camera} onClick={() => agregarBloque(indice, crearBloqueImagenVacio())}>
+                Imagen
+              </BotonAgregar>
             </div>
           </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-xs text-slate-400">Nombre</span>
-            <input
-              type="text"
-              required
-              value={paso.titulo}
-              onChange={(e) => actualizarPaso(indice, { titulo: e.target.value })}
-              placeholder="Qué hacer (por ejemplo: Conectar impresora)"
-              className={CLASE_INPUT}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-xs text-slate-400">🎯 Objetivo</span>
-            <input
-              type="text"
-              value={paso.objetivo}
-              onChange={(e) => actualizarPaso(indice, { objetivo: e.target.value })}
-              placeholder="Opcional, 1 línea: qué se logra al terminar el paso"
-              className={`${CLASE_INPUT} text-sm`}
-            />
-          </label>
-
-          <SugerenciaVinculo
-            articulo={sugerenciaPara(paso)}
-            onVincular={(articulo) =>
-              actualizarPaso(indice, {
-                subArticuloId: articulo.id,
-                subArticuloTitulo: articulo.titulo,
-              })
-            }
-            onDescartar={() => descartarSugerencia(paso.id)}
-          />
-
-          <div className="border-t border-slate-800/70 pt-3">
-            <ContenidoEditor
-              bloques={paso.bloques}
-              vinculables={vinculablesOrdenados}
-              credenciales={credencialesOrdenadas}
-              onChange={(bloques) => actualizarPaso(indice, { bloques })}
-              onSubirImagen={(evento) => void subirImagenBloque(indice, evento)}
-              subiendoImagen={subiendoImagenPasoId === paso.id}
-              focoInicialId={pasoRecienCreadoId === paso.id ? (paso.bloques[0]?.id ?? null) : null}
-              onFocoInicialConsumido={() => setPasoRecienCreadoId(null)}
-            />
-          </div>
-
-          <div className="border-t border-slate-800/70 pt-3">
-            <AdjuntosPasoEditor
-              paso={paso}
-              subiendo={subiendoPasoId === paso.id}
-              onSubir={(evento) => void subirAdjuntos(indice, evento)}
-              onQuitar={(referencia) => quitarAdjunto(indice, referencia)}
-            />
-          </div>
-
-          <div className="border-t border-slate-800/70 pt-3">
-            <MasOpcionesPaso paso={paso}>
-              <CredencialSelector
-                paso={paso}
-                credenciales={credencialesOrdenadas}
-                onVincular={(credencial) =>
-                  actualizarPaso(indice, {
-                    credencialId: credencial.id,
-                    credencialTitulo: credencial.titulo,
-                  })
-                }
-                onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
-              />
-
-              <SubProcedimientoSelector
-                paso={paso}
-                articulos={vinculablesOrdenados}
-                onVincular={(articulo) =>
-                  actualizarPaso(indice, {
-                    subArticuloId: articulo.id,
-                    subArticuloTitulo: articulo.titulo,
-                    // Si el paso aun no tiene titulo, toma el de la tarea
-                    // vinculada: asi la lista de pasos se lee como lista
-                    // de tareas sin escribir dos veces lo mismo.
-                    titulo: paso.titulo.trim() === '' ? articulo.titulo : paso.titulo,
-                  })
-                }
-                onQuitar={() => actualizarPaso(indice, { subArticuloId: null, subArticuloTitulo: '' })}
-              />
-
-              <SolucionSelector
-                paso={paso}
-                articulos={vinculablesOrdenados}
-                onVincular={(articulo) =>
-                  actualizarPaso(indice, {
-                    solucionArticuloId: articulo.id,
-                    solucionArticuloTitulo: articulo.titulo,
-                  })
-                }
-                onQuitar={() =>
-                  actualizarPaso(indice, { solucionArticuloId: null, solucionArticuloTitulo: '' })
-                }
-              />
-            </MasOpcionesPaso>
+          {/* Vinculos del paso: bóveda, procedimiento o solución. */}
+          <div className="mt-2.5 border-t border-noct-divider pt-2">
+            {vinculosPasoId === paso.id ? (
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setVinculosPasoId(null)}
+                  className="flex min-h-10 w-full items-center gap-2 px-0.5 py-1 text-left text-[12.5px] text-noct-neutral-400"
+                >
+                  <LinkSimple size={15} />
+                  Vínculos del paso
+                  <CaretUp size={12} className="ml-auto" />
+                </button>
+                <VinculoPlaceholder Icono={LockSimple}>Datos de la bóveda</VinculoPlaceholder>
+                <VinculoPlaceholder Icono={BookOpen}>
+                  Procedimiento que se ejecuta en este paso
+                </VinculoPlaceholder>
+                <VinculoPlaceholder Icono={Wrench}>Solución por si el paso falla</VinculoPlaceholder>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setVinculosPasoId(paso.id)}
+                className="flex min-h-10 w-full items-center gap-2 rounded-md px-0.5 py-1 text-left text-[12.5px] text-noct-neutral-500 hover:text-noct-text"
+              >
+                <LinkSimple size={15} />
+                Vínculos del paso: bóveda, procedimiento o solución
+                <CaretDown size={12} className="ml-auto" />
+              </button>
+            )}
           </div>
         </div>
       ))}
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      {aviso && <p className="text-xs text-amber-300">{aviso}</p>}
+      {error && <p className="text-xs text-noct-error">{error}</p>}
+      {aviso && <p className="text-xs text-noct-precaucion">{aviso}</p>}
 
       <button
         type="button"
         onClick={() => {
-          // El paso nace con una tarea vacia ya puesta: se puede
-          // empezar a escribir de inmediato (ver focoInicialId arriba).
           const nuevo = { ...crearPaso(), bloques: [crearBloqueTarea()] }
           onPasosChange([...pasos, nuevo])
-          setPasoRecienCreadoId(nuevo.id)
+          setFocoBloqueId(nuevo.bloques[0].id)
         }}
-        className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm text-slate-300"
+        className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-dashed border-noct-neutral-700 text-sm font-medium text-noct-neutral-300 hover:border-noct-accent hover:text-noct-accent-300"
       >
-        + Agregar paso
+        <Plus size={16} />
+        Agregar paso
       </button>
 
       <DialogoEliminar
@@ -392,872 +363,272 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   )
 }
 
-function BotonPaso({
-  etiqueta,
+// Boton del menu del paso (subir, bajar, eliminar).
+function BotonMenu({
+  Icono,
   onClick,
-  deshabilitado = false,
+  destructivo = false,
   children,
 }: {
-  etiqueta: string
+  Icono: ComponentType<IconoProps>
   onClick: () => void
-  deshabilitado?: boolean
+  destructivo?: boolean
+  children: string
+}) {
+  const base =
+    'inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-[7px] text-[13px] font-medium leading-tight'
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        destructivo
+          ? `${base} border-transparent px-1 text-noct-error hover:bg-noct-error/10`
+          : `${base} border-noct-divider text-noct-text hover:bg-noct-text/[.07]`
+      }
+    >
+      <Icono size={14} />
+      {children}
+    </button>
+  )
+}
+
+// Boton fantasma de la barra "Agregar" (tarea, advertencia, imagen).
+function BotonAgregar({
+  Icono,
+  onClick,
+  children,
+}: {
+  Icono: ComponentType<IconoProps>
+  onClick: () => void
   children: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={deshabilitado}
-      aria-label={etiqueta}
-      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-800 text-xs text-slate-400 disabled:opacity-30"
+      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-transparent px-1 py-[7px] text-[13px] font-medium leading-tight text-noct-accent hover:bg-noct-accent/10"
     >
+      <Icono size={13} />
       {children}
     </button>
   )
 }
 
-// Aviso de reutilizacion bajo el titulo de un paso: ya existe un
-// procedimiento con titulo parecido y puede vincularse como tarea en
-// vez de escribirlo de nuevo. "✕" lo descarta para ese paso.
-function SugerenciaVinculo({
-  articulo,
-  onVincular,
-  onDescartar,
+// Fila de vinculo del paso: mismo aspecto que el mockup (recuadro
+// punteado con icono). Los vinculos reales del paso (credencial,
+// procedimiento y solución) quedan pendientes de cablear.
+function VinculoPlaceholder({
+  Icono,
+  children,
 }: {
-  articulo: Articulo | null
-  onVincular: (articulo: Articulo) => void
-  onDescartar: () => void
+  Icono: ComponentType<IconoProps>
+  children: string
 }) {
-  if (!articulo) return null
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2">
-      <p className="min-w-0 truncate text-xs text-sky-200">
-        Ya existe el procedimiento "{articulo.titulo}".
-      </p>
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onVincular(articulo)}
-          className="rounded-lg border border-sky-800 px-2.5 py-1 text-xs text-sky-300"
-        >
-          Vincular
-        </button>
-        <button
-          type="button"
-          onClick={onDescartar}
-          aria-label="Descartar sugerencia"
-          className="text-xs text-slate-500"
-        >
-          ✕
-        </button>
-      </div>
-    </div>
+    <button
+      type="button"
+      className="flex min-h-11 items-center gap-2.5 rounded-md border border-dashed border-noct-neutral-700 px-3 text-left text-[13px] text-noct-neutral-400 hover:border-noct-neutral-500 hover:text-noct-text"
+    >
+      <Icono size={15} />
+      {children}
+    </button>
   )
 }
 
-// Editor del apartado "Tareas" del paso: la lista ordenada de bloques
-// (tareas con casilla, advertencias e imagenes explicativas). El caso
-// comun (solo tareas) se mantiene rapido: al pulsar Enter en una tarea
-// se crea otra debajo y se enfoca, y pegar varias lineas las reparte
-// en tareas seguidas. Las advertencias y las imagenes se intercalan
-// desde la barra "Agregar" y se reordenan con las flechas para
-// colocarlas en la posicion exacta (por ejemplo, una advertencia justo
-// antes de la tarea peligrosa).
-function ContenidoEditor({
-  bloques,
-  vinculables,
-  credenciales,
-  onChange,
-  onSubirImagen,
-  subiendoImagen,
-  focoInicialId = null,
-  onFocoInicialConsumido,
-}: {
-  bloques: BloquePaso[]
-  // Articulos con procedimiento que una tarea de decision puede
-  // vincular como respuesta "No" (la misma lista de los selectores
-  // de procedimiento y solucion del paso).
-  vinculables: Articulo[]
-  // Credenciales de la boveda que una tarea puede vincular (tarea 40),
-  // igual que el apartado "Datos" del paso pero anclado a una sola
-  // instruccion.
-  credenciales: Credencial[]
-  onChange: (bloques: BloquePaso[]) => void
-  onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
-  subiendoImagen: boolean
-  // Bloque a enfocar apenas monta el editor (el paso recien creado
-  // trae su primera tarea vacia lista para escribir de inmediato).
-  focoInicialId?: string | null
-  onFocoInicialConsumido?: () => void
-}) {
-  // Id del bloque a enfocar tras crearlo (Enter, boton "+ Tarea" o el
-  // foco inicial del paso), consumido por la fila cuando monta su input.
-  const [focoId, setFocoId] = useState<string | null>(focoInicialId)
-
-  function consumirFoco() {
-    setFocoId(null)
-    onFocoInicialConsumido?.()
-  }
-
-  function actualizar(id: string, cambios: Partial<BloquePaso>) {
-    onChange(bloques.map((b) => (b.id === id ? { ...b, ...cambios } : b)))
-  }
-
-  function quitar(id: string) {
-    onChange(bloques.filter((b) => b.id !== id))
-  }
-
-  function mover(indice: number, direccion: -1 | 1) {
-    const destino = indice + direccion
-    if (destino < 0 || destino >= bloques.length) return
-    const copia = [...bloques]
-    ;[copia[indice], copia[destino]] = [copia[destino], copia[indice]]
-    onChange(copia)
-  }
-
-  function agregarAlFinal(bloque: BloquePaso) {
-    onChange([...bloques, bloque])
-    setFocoId(bloque.id)
-  }
-
-  // Inserta un bloque justo despues de uno existente y lo enfoca: es
-  // el mecanismo detras de Enter (tarea) y del boton "+" de cada fila
-  // (tarea o advertencia), pensado para no salir nunca del flujo de
-  // escritura ni bajar hasta la barra "Agregar".
-  function insertarDespues(indice: number, bloque: BloquePaso) {
-    const copia = [...bloques]
-    copia.splice(indice + 1, 0, bloque)
-    onChange(copia)
-    setFocoId(bloque.id)
-  }
-
-  function insertarTareaDespues(indice: number) {
-    insertarDespues(indice, crearBloqueTarea())
-  }
-
-  function insertarAvisoDespues(indice: number) {
-    insertarDespues(indice, crearBloqueAviso())
-  }
-
-  // Pegar varias lineas en una tarea las convierte en tareas seguidas
-  // (recupera la comodidad de la vieja edicion "una por linea").
-  function pegarLineas(indice: number, texto: string, evento: { preventDefault: () => void }) {
-    const lineas = texto
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)
-    if (lineas.length <= 1) return
-    evento.preventDefault()
-    const copia = [...bloques]
-    copia[indice] = { ...copia[indice], texto: lineas[0] }
-    const extra = lineas.slice(1).map((linea) => ({ ...crearBloqueTarea(), texto: linea }))
-    copia.splice(indice + 1, 0, ...extra)
-    onChange(copia)
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs text-slate-400">☑ Tareas</span>
-
-      {bloques.length === 0 && (
-        <p className="text-xs text-slate-500">
-          Sin tareas todavía. Cada tarea es una única acción con casilla; usa la barra Agregar para
-          sumar tareas, advertencias o imágenes explicativas.
-        </p>
-      )}
-
-      {bloques.map((bloque, indice) => (
-        <FilaBloque
-          key={bloque.id}
-          bloque={bloque}
-          vinculables={vinculables}
-          credenciales={credenciales}
-          primero={indice === 0}
-          ultimo={indice === bloques.length - 1}
-          enfocar={focoId === bloque.id}
-          onEnfocado={consumirFoco}
-          onCambiar={(cambios) => actualizar(bloque.id, cambios)}
-          onEnter={() => insertarTareaDespues(indice)}
-          onPegar={(texto, evento) => pegarLineas(indice, texto, evento)}
-          onMover={(dir) => mover(indice, dir)}
-          onQuitar={() => quitar(bloque.id)}
-          onInsertarTareaAqui={() => insertarTareaDespues(indice)}
-          onInsertarAvisoAqui={() => insertarAvisoDespues(indice)}
-        />
-      ))}
-
-      {/* Barra "Agregar": las tres formas de sumar contenido al paso,
-          agrupadas para que el editor se lea como un constructor y no
-          como botones sueltos. */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-900/70 px-2.5 py-2">
-        <span className="text-xs font-medium text-slate-500">Agregar</span>
-        <button
-          type="button"
-          onClick={() => agregarAlFinal(crearBloqueTarea())}
-          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-        >
-          + ☑ Tarea
-        </button>
-        <button
-          type="button"
-          onClick={() => agregarAlFinal(crearBloqueAviso())}
-          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-        >
-          + ⚠ Advertencia
-        </button>
-        <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
-          {subiendoImagen ? 'Subiendo...' : '+ 🖼 Imagen explicativa'}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            disabled={subiendoImagen}
-            onChange={onSubirImagen}
-          />
-        </label>
-      </div>
-    </div>
-  )
-}
-
-// Metadatos de los tipos de tarea del checklist: icono para el
-// selector y placeholder de ejemplo para el texto.
-const TIPOS_TAREA: { valor: TipoTarea; etiqueta: string; placeholder: string }[] = [
-  {
-    valor: 'accion',
-    etiqueta: '☐ Acción',
-    placeholder: 'Tarea con casilla (por ejemplo: Encender la impresora)',
-  },
-  {
-    valor: 'verificacion',
-    etiqueta: '☑ Verificación',
-    placeholder: 'Comprobación (por ejemplo: Verificar que la base de datos aparece)',
-  },
-  {
-    valor: 'decision',
-    etiqueta: '❓ Decisión',
-    placeholder: 'Pregunta de Sí/No (por ejemplo: ¿La impresora aparece instalada?)',
-  },
-]
-
-// Una fila del editor de contenido: el editor del bloque segun su tipo,
-// mas los controles de reordenar y eliminar comunes a todos.
-function FilaBloque({
+// Un bloque del cuerpo de un paso, segun su tipo: tarea, advertencia o
+// imagen. Cada uno lleva el mismo patron del mockup (un control a la
+// izquierda que cicla el tipo/tono, el contenido, y la X para quitar).
+function BloqueEditor({
   bloque,
-  vinculables,
-  credenciales,
-  primero,
-  ultimo,
   enfocar,
   onEnfocado,
+  subiendoImagen,
   onCambiar,
+  onQuitar,
   onEnter,
   onPegar,
-  onMover,
-  onQuitar,
-  onInsertarTareaAqui,
-  onInsertarAvisoAqui,
+  onSubirImagen,
 }: {
   bloque: BloquePaso
-  vinculables: Articulo[]
-  credenciales: Credencial[]
-  primero: boolean
-  ultimo: boolean
   enfocar: boolean
   onEnfocado: () => void
+  subiendoImagen: boolean
   onCambiar: (cambios: Partial<BloquePaso>) => void
+  onQuitar: () => void
   onEnter: () => void
   onPegar: (texto: string, evento: { preventDefault: () => void }) => void
-  onMover: (direccion: -1 | 1) => void
-  onQuitar: () => void
-  // Inserta una tarea o una advertencia justo debajo de esta fila: el
-  // atajo para intercalar contenido sin bajar hasta la barra "Agregar"
-  // y perder el punto donde se estaba escribiendo.
-  onInsertarTareaAqui: () => void
-  onInsertarAvisoAqui: () => void
+  onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
 }) {
-  const tipoTarea = bloque.tipoTarea ?? 'accion'
-  const infoTipo = TIPOS_TAREA.find((t) => t.valor === tipoTarea) ?? TIPOS_TAREA[0]
-  const [menuInsertarAbierto, setMenuInsertarAbierto] = useState(false)
-
-  return (
-    <div className="flex flex-col gap-1.5">
-    <div className="flex items-start gap-1.5">
-      <div className="flex-1">
-        {bloque.tipo === 'tarea' && (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1.5">
-              {/* Clasificacion de la tarea. Al salir del tipo decision
-                  se limpia su vinculo, que solo tiene sentido ahi. */}
-              <select
-                value={tipoTarea}
-                aria-label="Tipo de tarea"
-                onChange={(e) => {
-                  const nuevo = e.target.value as TipoTarea
-                  onCambiar(
-                    nuevo === 'decision'
-                      ? { tipoTarea: nuevo }
-                      : { tipoTarea: nuevo, decisionArticuloId: null, decisionArticuloTitulo: '' },
-                  )
-                }}
-                className="shrink-0 rounded-lg border border-slate-800 bg-slate-950 py-2 pl-1 pr-0.5 text-xs text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                {TIPOS_TAREA.map((t) => (
-                  <option key={t.valor} value={t.valor}>
-                    {t.etiqueta}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={bloque.texto}
-                ref={(el) => {
-                  if (el && enfocar) {
-                    el.focus()
-                    onEnfocado()
-                  }
-                }}
-                onChange={(e) => onCambiar({ texto: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    onEnter()
-                  }
-                }}
-                onPaste={(e) => onPegar(e.clipboardData.getData('text'), e)}
-                placeholder={infoTipo.placeholder}
-                className={`${CLASE_INPUT} w-full`}
-              />
-            </div>
-            {tipoTarea === 'decision' && (
-              <DecisionVinculoSelector bloque={bloque} articulos={vinculables} onCambiar={onCambiar} />
-            )}
-            {/* Vinculo de credencial (tarea 40): opcional en cualquier
-                tarea, independiente de su clasificacion. */}
-            <CredencialTareaSelector bloque={bloque} credenciales={credenciales} onCambiar={onCambiar} />
-          </div>
-        )}
-
-        {bloque.tipo === 'aviso' && (
-          <div className="flex flex-col gap-1">
-            <select
-              value={bloque.tono ?? 'info'}
-              aria-label="Tono de la advertencia"
-              onChange={(e) => onCambiar({ tono: e.target.value as TonoAviso })}
-              className={`${CLASE_INPUT} text-slate-300`}
+  if (bloque.tipo === 'tarea') {
+    const info = infoTipoTarea(bloque.tipoTarea)
+    return (
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            title={info.titulo}
+            aria-label={info.titulo}
+            onClick={() =>
+              onCambiar(
+                CICLO_TIPO_TAREA[bloque.tipoTarea ?? 'accion'] === 'decision'
+                  ? { tipoTarea: CICLO_TIPO_TAREA[bloque.tipoTarea ?? 'accion'] }
+                  : {
+                      tipoTarea: CICLO_TIPO_TAREA[bloque.tipoTarea ?? 'accion'],
+                      decisionArticuloId: null,
+                      decisionArticuloTitulo: '',
+                    },
+              )
+            }
+            className={`flex min-h-11 w-9 shrink-0 items-center justify-center rounded-md hover:bg-noct-text/[.05] ${info.claseIcono}`}
+          >
+            <info.Icono size={18} />
+          </button>
+          <input
+            type="text"
+            value={bloque.texto}
+            ref={(el) => {
+              if (el && enfocar) {
+                el.focus()
+                onEnfocado()
+              }
+            }}
+            onChange={(e) => onCambiar({ texto: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                onEnter()
+              }
+            }}
+            onPaste={(e) => onPegar(e.clipboardData.getData('text'), e)}
+            placeholder={info.placeholder}
+            className="min-h-11 min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent"
+          />
+          <BotonQuitar onClick={onQuitar} etiqueta="Quitar esta línea" />
+        </div>
+        {bloque.decisionArticuloId && (
+          <div className="ml-10 flex items-center justify-between gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/10 px-2.5 py-2">
+            <p className="min-w-0 truncate text-[12.5px] leading-[1.45]">
+              <ArrowElbowDownRight size={13} className="mr-1 inline-block align-[-2px] text-noct-precaucion" />
+              Si responde No: {bloque.decisionArticuloTitulo}
+            </p>
+            <button
+              type="button"
+              onClick={() => onCambiar({ decisionArticuloId: null, decisionArticuloTitulo: '' })}
+              className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
             >
-              {TONOS_AVISO.map((t) => (
-                <option key={t.valor} value={t.valor}>
-                  {t.etiqueta}
-                </option>
-              ))}
-            </select>
-            <textarea
-              rows={2}
-              value={bloque.texto}
-              ref={(el) => {
-                if (el && enfocar) {
-                  el.focus()
-                  onEnfocado()
-                }
-              }}
-              onChange={(e) => onCambiar({ texto: e.target.value })}
-              placeholder="Texto de la advertencia (por ejemplo: Verifica el nombre del archivo antes de eliminar el backup)"
-              className={CLASE_INPUT}
-            />
+              Quitar
+            </button>
           </div>
         )}
-
-        {bloque.tipo === 'imagen' && (
-          <ImagenBloqueEditor bloque={bloque} onCambiarTexto={(texto) => onCambiar({ texto })} />
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <BotonPaso
-          etiqueta="Insertar tarea o advertencia aquí debajo"
-          onClick={() => setMenuInsertarAbierto((v) => !v)}
-        >
-          +
-        </BotonPaso>
-        <BotonPaso etiqueta="Subir el bloque" onClick={() => onMover(-1)} deshabilitado={primero}>
-          ↑
-        </BotonPaso>
-        <BotonPaso etiqueta="Bajar el bloque" onClick={() => onMover(1)} deshabilitado={ultimo}>
-          ↓
-        </BotonPaso>
-        <BotonPaso etiqueta="Eliminar el bloque" onClick={onQuitar}>
-          ✕
-        </BotonPaso>
-      </div>
-    </div>
-
-    {menuInsertarAbierto && (
-      <div className="flex flex-wrap gap-2 rounded-lg bg-slate-900/70 px-2.5 py-1.5">
-        <button
-          type="button"
-          onClick={() => {
-            setMenuInsertarAbierto(false)
-            onInsertarTareaAqui()
-          }}
-          className="rounded-lg border border-slate-800 px-2.5 py-1 text-xs text-slate-300"
-        >
-          + ☑ Tarea aquí debajo
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMenuInsertarAbierto(false)
-            onInsertarAvisoAqui()
-          }}
-          className="rounded-lg border border-slate-800 px-2.5 py-1 text-xs text-slate-300"
-        >
-          + ⚠ Advertencia aquí debajo
-        </button>
-      </div>
-    )}
-    </div>
-  )
-}
-
-// Vinculo de una tarea de decision: la solucion o el procedimiento
-// que se ejecuta cuando el tecnico responde "No" a la pregunta. Sin
-// vinculo, las dos respuestas simplemente continuan. Mismo patron de
-// referencia (id + copia del titulo) que los vinculos del paso.
-function DecisionVinculoSelector({
-  bloque,
-  articulos,
-  onCambiar,
-}: {
-  bloque: BloquePaso
-  articulos: Articulo[]
-  onCambiar: (cambios: Partial<BloquePaso>) => void
-}) {
-  if (bloque.decisionArticuloId) {
-    const vinculado = articulos.find((a) => a.id === bloque.decisionArticuloId)
-    return (
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2">
-        <p className="min-w-0 truncate text-xs text-amber-200">
-          🛠 Si responde No: {vinculado?.titulo ?? bloque.decisionArticuloTitulo}
-        </p>
-        <button
-          type="button"
-          onClick={() => onCambiar({ decisionArticuloId: null, decisionArticuloTitulo: '' })}
-          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
-        >
-          Quitar
-        </button>
       </div>
     )
   }
 
-  if (articulos.length === 0) return null
-
-  return (
-    <select
-      value=""
-      aria-label="Vincular qué abrir si la respuesta es No"
-      onChange={(e) => {
-        const articulo = articulos.find((a) => a.id === e.target.value)
-        if (articulo) {
-          onCambiar({ decisionArticuloId: articulo.id, decisionArticuloTitulo: articulo.titulo })
-        }
-      }}
-      className={`${CLASE_INPUT} text-slate-400`}
-    >
-      <option value="">+ Si responde No, abrir esta solución o procedimiento (opcional)</option>
-      {articulos.map((a) => (
-        <option key={a.id} value={a.id}>
-          {a.titulo}
-        </option>
-      ))}
-    </select>
-  )
-}
-
-// Vinculo de credencial de una tarea puntual (tarea 40): para el caso
-// de un paso con varias instrucciones donde solo una necesita mostrar
-// datos de la boveda (por ejemplo "Ingresar usuario y contraseña"),
-// sin tener que vincular la credencial a todo el paso. Mismo patron de
-// referencia (id + copia del titulo) que el apartado "Datos" del paso
-// (`CredencialSelector`), pero compacto y anclado a la tarea.
-function CredencialTareaSelector({
-  bloque,
-  credenciales,
-  onCambiar,
-}: {
-  bloque: BloquePaso
-  credenciales: Credencial[]
-  onCambiar: (cambios: Partial<BloquePaso>) => void
-}) {
-  if (bloque.credencialId) {
-    const vinculada = credenciales.find((c) => c.id === bloque.credencialId)
+  if (bloque.tipo === 'aviso') {
+    const tono = TONOS_AVISO.find((t) => t.valor === (bloque.tono ?? 'info')) ?? TONOS_AVISO[0]
     return (
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2">
-        <p className="min-w-0 truncate text-xs text-violet-200">
-          🔐 Datos de la bóveda: {vinculada?.titulo ?? bloque.credencialTitulo}
-        </p>
+      <div className="flex items-start gap-1">
         <button
           type="button"
-          onClick={() => onCambiar({ credencialId: null, credencialTitulo: '' })}
-          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
+          title={`${tono.etiqueta}. Tocar para cambiar el tono`}
+          aria-label={`${tono.etiqueta}. Tocar para cambiar el tono`}
+          onClick={() => onCambiar({ tono: tonoSiguiente(bloque.tono) })}
+          className={`flex min-h-11 w-9 shrink-0 items-center justify-center rounded-md hover:bg-noct-text/[.05] ${tono.claseIcono}`}
         >
-          Quitar
+          <tono.Icono size={18} />
         </button>
+        <div className={`min-w-0 flex-1 rounded-md border ${tono.clasesPanel}`}>
+          <textarea
+            rows={2}
+            value={bloque.texto}
+            ref={(el) => {
+              if (el && enfocar) {
+                el.focus()
+                onEnfocado()
+              }
+            }}
+            onChange={(e) => onCambiar({ texto: e.target.value })}
+            placeholder="Texto de la advertencia"
+            className="block w-full resize-y border-none bg-transparent px-3 py-2.5 text-[13px] leading-[1.5] text-noct-text outline-none"
+          />
+        </div>
+        <BotonQuitar onClick={onQuitar} etiqueta="Quitar la advertencia" />
       </div>
     )
   }
 
-  // Sin credenciales locales no hay nada que vincular: usuarios sin
-  // permiso de boveda no ven este control (RLS no les baja las filas).
-  if (credenciales.length === 0) return null
-
   return (
-    <select
-      value=""
-      aria-label="Vincular datos de la bóveda a esta tarea"
-      onChange={(e) => {
-        const credencial = credenciales.find((c) => c.id === e.target.value)
-        if (credencial) onCambiar({ credencialId: credencial.id, credencialTitulo: credencial.titulo })
-      }}
-      className={`${CLASE_INPUT} text-slate-400`}
-    >
-      <option value="">+ 🔐 Datos de la bóveda para esta tarea (opcional)</option>
-      {credenciales.map((c) => (
-        <option key={c.id} value={c.id}>
-          {c.titulo}
-          {c.categoria ? ` (${c.categoria})` : ''}
-        </option>
-      ))}
-    </select>
+    <ImagenBloque
+      bloque={bloque}
+      subiendo={subiendoImagen}
+      onCambiarPie={(texto) => onCambiar({ texto })}
+      onQuitar={onQuitar}
+      onSubir={onSubirImagen}
+    />
   )
 }
 
-// Editor de un bloque de imagen: miniatura mas el pie de foto opcional.
-// La imagen ya se subio al crear el bloque; aqui solo se ve y se puede
-// escribir su descripcion o quitar el bloque (con las flechas/✕ de la
-// fila).
-function ImagenBloqueEditor({
+// Boton de quitar (la X) comun a tareas y advertencias.
+function BotonQuitar({ onClick, etiqueta }: { onClick: () => void; etiqueta: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={etiqueta}
+      className="flex min-h-11 w-8 shrink-0 items-center justify-center rounded-md text-noct-neutral-600 hover:text-noct-text"
+    >
+      <X size={14} />
+    </button>
+  )
+}
+
+// Bloque de imagen: el slot sube (o muestra) la captura y debajo va el
+// pie de foto opcional. Sin imagen todavia, el slot es un area para
+// elegirla; con imagen, la muestra.
+function ImagenBloque({
   bloque,
-  onCambiarTexto,
+  subiendo,
+  onCambiarPie,
+  onQuitar,
+  onSubir,
 }: {
   bloque: BloquePaso
-  onCambiarTexto: (texto: string) => void
+  subiendo: boolean
+  onCambiarPie: (texto: string) => void
+  onQuitar: () => void
+  onSubir: (evento: ChangeEvent<HTMLInputElement>) => void
 }) {
   const url = useUrlAdjunto(bloque.adjunto?.referencia ?? null)
   const esImagen = bloque.adjunto?.tipo.startsWith('image/') ?? false
 
   return (
-    <div className="flex items-center gap-2">
-      {esImagen && url ? (
-        <img
-          src={url}
-          alt={bloque.adjunto?.nombre ?? 'Imagen'}
-          className="h-16 w-16 shrink-0 rounded-lg border border-slate-800 object-cover"
-        />
-      ) : (
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-500">
-          🖼
-        </div>
-      )}
-      <input
-        type="text"
-        value={bloque.texto}
-        onChange={(e) => onCambiarTexto(e.target.value)}
-        placeholder="Pie de imagen (opcional)"
-        className={`${CLASE_INPUT} w-full`}
-      />
-    </div>
-  )
-}
-
-// Adelgaza el paso: los tres vinculos (credencial, subprocedimiento y
-// solucion) son minoritarios frente a las tareas del dia a dia, asi
-// que quedan colapsados detras de un boton salvo que el paso ya tenga
-// alguno puesto (entonces arrancan visibles, para no esconder datos
-// ya cargados).
-function MasOpcionesPaso({ paso, children }: { paso: PasoProcedimiento; children: ReactNode }) {
-  const tieneAlgo = paso.credencialId !== null || paso.subArticuloId !== null || paso.solucionArticuloId !== null
-  const [abierto, setAbierto] = useState(tieneAlgo)
-
-  if (!abierto) {
-    return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="rounded-xl border border-slate-800 px-3 py-2 text-left text-xs text-slate-400"
-      >
-        + Más opciones del paso (datos de la bóveda, procedimiento o solución relacionados)
-      </button>
-    )
-  }
-
-  return <div className="flex flex-col gap-3">{children}</div>
-}
-
-// Apartado "Datos" del paso: el vinculo con una credencial de la
-// boveda. En el paso solo se guarda el id y una copia del titulo como
-// referencia: el usuario y la contrasena se consultan cifrados en la
-// boveda al leer el procedimiento, asi nunca se duplican y siempre
-// estan al dia.
-function CredencialSelector({
-  paso,
-  credenciales,
-  onVincular,
-  onQuitar,
-}: {
-  paso: PasoProcedimiento
-  credenciales: Credencial[]
-  onVincular: (credencial: Credencial) => void
-  onQuitar: () => void
-}) {
-  if (paso.credencialId) {
-    const vinculada = credenciales.find((c) => c.id === paso.credencialId)
-    return (
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-violet-900/60 bg-violet-950/30 px-3 py-2">
-        <p className="min-w-0 truncate text-xs text-violet-200">
-          🔐 Datos de la bóveda: {vinculada?.titulo ?? paso.credencialTitulo}
-        </p>
-        <button
-          type="button"
-          onClick={onQuitar}
-          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
-        >
-          Quitar
-        </button>
-      </div>
-    )
-  }
-
-  // Sin credenciales locales no hay nada que vincular: usuarios sin
-  // permiso de boveda no ven este control (RLS no les baja las filas).
-  if (credenciales.length === 0) return null
-
-  return (
-    <select
-      value=""
-      aria-label="Vincular datos de la bóveda al paso"
-      onChange={(e) => {
-        const credencial = credenciales.find((c) => c.id === e.target.value)
-        if (credencial) onVincular(credencial)
-      }}
-      className={`${CLASE_INPUT} text-slate-400`}
-    >
-      <option value="">+ 🔐 Datos de la bóveda (opcional)</option>
-      {credenciales.map((c) => (
-        <option key={c.id} value={c.id}>
-          {c.titulo}
-          {c.categoria ? ` (${c.categoria})` : ''}
-        </option>
-      ))}
-    </select>
-  )
-}
-
-// Vinculo del paso con otro articulo que tiene procedimiento: la
-// "tarea" del paso. En el paso solo quedan el id y una copia del
-// titulo; el paso a paso vive en el articulo vinculado, se reutiliza
-// desde cualquier procedimiento y se actualiza en un solo lugar.
-function SubProcedimientoSelector({
-  paso,
-  articulos,
-  onVincular,
-  onQuitar,
-}: {
-  paso: PasoProcedimiento
-  articulos: Articulo[]
-  onVincular: (articulo: Articulo) => void
-  onQuitar: () => void
-}) {
-  if (paso.subArticuloId) {
-    const vinculado = articulos.find((a) => a.id === paso.subArticuloId)
-    return (
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2">
-        <p className="min-w-0 truncate text-xs text-sky-200">
-          🔗 Procedimiento relacionado: {vinculado?.titulo ?? paso.subArticuloTitulo}
-        </p>
-        <button
-          type="button"
-          onClick={onQuitar}
-          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
-        >
-          Quitar
-        </button>
-      </div>
-    )
-  }
-
-  if (articulos.length === 0) return null
-
-  return (
-    <select
-      value=""
-      aria-label="Vincular procedimiento relacionado como tarea de este paso"
-      onChange={(e) => {
-        const articulo = articulos.find((a) => a.id === e.target.value)
-        if (articulo) onVincular(articulo)
-      }}
-      className={`${CLASE_INPUT} text-slate-400`}
-    >
-      <option value="">+ 🔗 Procedimiento relacionado como tarea (opcional)</option>
-      {articulos.map((a) => (
-        <option key={a.id} value={a.id}>
-          {a.titulo}
-        </option>
-      ))}
-    </select>
-  )
-}
-
-// Vinculo del paso con su procedimiento de solucion, el que se
-// despliega cuando el tecnico responde que si ocurrio un error en
-// este paso. Mismo patron de referencia que la tarea vinculada.
-function SolucionSelector({
-  paso,
-  articulos,
-  onVincular,
-  onQuitar,
-}: {
-  paso: PasoProcedimiento
-  articulos: Articulo[]
-  onVincular: (articulo: Articulo) => void
-  onQuitar: () => void
-}) {
-  if (paso.solucionArticuloId) {
-    const vinculado = articulos.find((a) => a.id === paso.solucionArticuloId)
-    return (
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2">
-        <p className="min-w-0 truncate text-xs text-amber-200">
-          🛠 Solución relacionada: {vinculado?.titulo ?? paso.solucionArticuloTitulo}
-        </p>
-        <button
-          type="button"
-          onClick={onQuitar}
-          className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
-        >
-          Quitar
-        </button>
-      </div>
-    )
-  }
-
-  if (articulos.length === 0) return null
-
-  return (
-    <select
-      value=""
-      aria-label="Vincular solución relacionada por si este paso falla"
-      onChange={(e) => {
-        const articulo = articulos.find((a) => a.id === e.target.value)
-        if (articulo) onVincular(articulo)
-      }}
-      className={`${CLASE_INPUT} text-slate-400`}
-    >
-      <option value="">+ 🛠 Solución relacionada por si este paso falla (opcional)</option>
-      {articulos.map((a) => (
-        <option key={a.id} value={a.id}>
-          {a.titulo}
-        </option>
-      ))}
-    </select>
-  )
-}
-
-// "Archivos relacionados" del paso en el editor: manuales, PDF, Word,
-// Excel, presentaciones y fotos (varios). Dos formas de agregar:
-// "Tomar fotografía" usa la camara en el sitio (util desde el celular
-// en un mantenimiento) y "Seleccionar archivos" sube documentos ya
-// guardados. Cada archivo se puede quitar.
-const TIPOS_ARCHIVO_ACEPTADOS =
-  'image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv'
-
-function AdjuntosPasoEditor({
-  paso,
-  subiendo,
-  onSubir,
-  onQuitar,
-}: {
-  paso: PasoProcedimiento
-  subiendo: boolean
-  onSubir: (evento: ChangeEvent<HTMLInputElement>) => void
-  onQuitar: (referencia: string) => void
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs text-slate-400">📎 Archivos relacionados</span>
-      <div className="flex flex-wrap gap-2">
-        <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
-          {subiendo ? 'Subiendo...' : '📷 Tomar fotografía'}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            disabled={subiendo}
-            onChange={onSubir}
-          />
-        </label>
-        {!subiendo && (
-          <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
-            📎 Seleccionar archivos
-            <input
-              type="file"
-              accept={TIPOS_ARCHIVO_ACEPTADOS}
-              multiple
-              className="hidden"
-              onChange={onSubir}
-            />
-          </label>
+    <div className="ml-10 flex flex-col gap-1.5">
+      <label className="flex h-[140px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-noct-neutral-700 text-center text-[12.5px] text-noct-neutral-400 hover:border-noct-neutral-500 hover:text-noct-text">
+        {esImagen && url ? (
+          <img src={url} alt={bloque.adjunto?.nombre ?? 'Imagen'} className="h-full w-full object-cover" />
+        ) : (
+          <span className="px-4">{subiendo ? 'Subiendo...' : 'Imagen explicativa del paso'}</span>
         )}
+        <input type="file" accept="image/*" className="hidden" disabled={subiendo} onChange={onSubir} />
+      </label>
+      <div className="flex items-center gap-1">
+        <input
+          type="text"
+          value={bloque.texto}
+          onChange={(e) => onCambiarPie(e.target.value)}
+          placeholder="Pie de imagen (opcional)"
+          className="min-h-8 min-w-0 flex-1 border-none bg-transparent px-0.5 py-1 text-xs text-noct-neutral-400 outline-none"
+        />
+        <button
+          type="button"
+          onClick={onQuitar}
+          aria-label="Quitar la imagen"
+          className="px-1.5 py-1 text-xs text-noct-neutral-600 hover:text-noct-text"
+        >
+          Quitar
+        </button>
       </div>
-
-      {paso.adjuntos.length === 0 ? (
-        <p className="text-xs text-slate-500">
-          Sin archivos todavía. Agrega manuales, PDF, Word, Excel o presentaciones que se necesiten
-          en este paso.
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {paso.adjuntos.map((adjunto) => (
-            <AdjuntoPasoMiniatura
-              key={adjunto.referencia}
-              adjunto={adjunto}
-              onQuitar={() => onQuitar(adjunto.referencia)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AdjuntoPasoMiniatura({
-  adjunto,
-  onQuitar,
-}: {
-  adjunto: PasoAdjunto
-  onQuitar: () => void
-}) {
-  const url = useUrlAdjunto(adjunto.referencia)
-  const esImagen = adjunto.tipo.startsWith('image/')
-
-  return (
-    <div className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
-      <button
-        type="button"
-        onClick={onQuitar}
-        aria-label={`Quitar ${adjunto.nombre}`}
-        className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/80 text-xs text-slate-300"
-      >
-        ×
-      </button>
-      {esImagen && url ? (
-        <img src={url} alt={adjunto.nombre} className="h-24 w-full object-cover" />
-      ) : (
-        <div className="flex h-24 items-center justify-center px-2 text-center text-xs text-slate-400">
-          {adjunto.nombre}
-        </div>
-      )}
     </div>
   )
 }
