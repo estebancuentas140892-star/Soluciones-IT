@@ -106,6 +106,12 @@ describe('padreDe', () => {
     })
   })
 
+  describe('Escáner (se alcanza desde Inicio)', () => {
+    it('sube a Inicio', () => {
+      expect(padreDe('/escaner')).toEqual({ to: '/', etiqueta: 'Inicio' })
+    })
+  })
+
   describe('Red', () => {
     it('la topología vuelve a Red', () => {
       expect(padreDe('/red/topologia')).toEqual({ to: '/red', etiqueta: 'Red' })

@@ -111,6 +111,30 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Linea de escaneo del lector de codigos (EscanerPage, handoff
+   "Rediseño de aplicación empresarial", Escanear Equipo.dc.html): barrido
+   vertical dentro del marco mientras la camara busca un codigo. */
+@keyframes esc-linea {
+  0% {
+    top: 8%;
+  }
+  50% {
+    top: 88%;
+  }
+  100% {
+    top: 8%;
+  }
+}
+.esc-linea {
+  animation: esc-linea 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .esc-linea {
+    animation: none;
+    top: 50%;
+  }
+}
+
 /* Campos de secreto (contraseña de login, contraseña maestra,
    contraseña de una credencial, bloqueo de la app): se escriben en un
    input type="text" enmascarado con esto, en vez de type="password".

@@ -31,6 +31,8 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 
 ## Diseño
 
+15. Alcance de un handoff de diseño (regla acordada 2026-07-18): cuando se autoriza implementar un handoff de Claude Design, no se implementa solo el archivo `.dc.html` que señala el README, sino TODAS las pantallas (`.dc.html`) que estén dentro de la carpeta del proyecto del handoff (por ejemplo `.../project/`). El README apunta a la pantalla que el usuario tenía abierta, pero el encargo es dejar re-autorizada toda la carpeta. Cada pantalla se implementa como su propia tarea (una "En proceso" a la vez, regla 4), verificada y archivada, hasta agotar la carpeta. Antes de empezar se revisa qué pantallas de la carpeta ya están hechas (para no repetirlas) y se listan las que faltan.
+
 12. La aplicación es de tema oscuro únicamente (decisión del usuario, 2026-07-17). No se ofrece modo claro ni conmutador de tema. El sistema de diseño vigente es Nocturne (oscuro, fondo `#161826`); las pantallas que aún queden en el tema claro heredado (Dispositivos, Red, Topología) se migran a Nocturne oscuro, no se conservan en claro. Si un handoff de diseño llega en tema claro, se traduce a Nocturne oscuro antes de implementarlo (mismo criterio que ya se aplicó con Soluciones).
 
 ## Navegación

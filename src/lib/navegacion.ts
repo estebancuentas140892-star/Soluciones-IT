@@ -27,6 +27,7 @@ const TABS = new Set(['/', '/soluciones', '/dispositivos', '/red', '/boveda'])
 // "Volver" sube a esa sección de origen.
 const RAICES_NO_TAB: Record<string, Padre> = {
   '/diagnostico': { to: '/', etiqueta: 'Inicio' },
+  '/escaner': { to: '/', etiqueta: 'Inicio' },
   '/ubicaciones': { to: '/dispositivos', etiqueta: 'Dispositivos' },
   '/cuenta': { to: '/', etiqueta: 'Inicio' },
 }

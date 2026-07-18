@@ -2,17 +2,31 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
+import { BotonVolver } from '../../components/BotonVolver'
+import {
+  ArrowRight,
+  CameraSlash,
+  Check,
+  Flashlight,
+  FlashlightFill,
+  Monitor,
+  Question,
+} from '../../components/iconos'
+import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { resolverCodigo } from './resolverCodigo'
 
-// Pantalla de escaneo a pantalla completa (sin la barra inferior):
-// enciende la camara trasera, lee codigos QR y de barras y abre la
-// ficha del dispositivo. Usa el detector nativo del navegador
-// (BarcodeDetector, disponible en Android) y cae a jsQR (solo QR,
-// importado bajo demanda) donde no exista, como en iPhone.
+// Pantalla de escaneo a pantalla completa (sin la barra inferior),
+// re-autorizada en Nocturne (handoff "Rediseño de aplicación
+// empresarial", Escanear Equipo.dc.html; tarea 82). Enciende la camara
+// trasera, lee codigos QR y de barras y abre la ficha del dispositivo.
+// Usa el detector nativo del navegador (BarcodeDetector, disponible en
+// Android) y cae a jsQR (solo QR, importado bajo demanda) donde no
+// exista, como en iPhone.
 
 type EstadoCamara = 'iniciando' | 'lista' | 'sin_permiso' | 'sin_camara' | 'no_soportado'
 
 type Aviso =
+  | { tipo: 'encontrado'; dispositivo: Dispositivo }
   | { tipo: 'no_encontrado'; codigo: string }
   | { tipo: 'varios'; codigo: string; dispositivos: Dispositivo[] }
 
@@ -97,25 +111,30 @@ export function EscanerPage() {
   const avisoRef = useRef(aviso)
   avisoRef.current = aviso
 
-  // Devuelve true si navego a una ficha (la pantalla se desmonta).
-  function manejarCodigo(codigo: string): boolean {
+  // Resuelve un codigo (escaneado o escrito) a un aviso. Un unico
+  // equipo ya no salta directo a su ficha: se confirma con la tarjeta
+  // "Equipo identificado" (fiel al diseño), para dar acuse de lo leido
+  // y poder seguir escaneando varios equipos seguidos.
+  function manejarCodigo(codigo: string) {
     const resultado = resolverCodigo(codigo, dispositivosRef.current)
+    const porId = new Map(dispositivosRef.current.map((d) => [d.id, d]))
     if (resultado.tipo === 'dispositivo') {
-      navigator.vibrate?.(60)
-      navigate(`/dispositivos/${resultado.dispositivoId}`, { replace: true })
-      return true
+      const dispositivo = porId.get(resultado.dispositivoId)
+      if (dispositivo) {
+        navigator.vibrate?.(60)
+        setAviso({ tipo: 'encontrado', dispositivo })
+        return
+      }
     }
     if (resultado.tipo === 'varios') {
       navigator.vibrate?.(60)
-      const porId = new Map(dispositivosRef.current.map((d) => [d.id, d]))
       const encontrados = resultado.dispositivoIds
         .map((id) => porId.get(id))
         .filter((d): d is Dispositivo => Boolean(d))
       setAviso({ tipo: 'varios', codigo, dispositivos: encontrados })
-      return false
+      return
     }
     setAviso({ tipo: 'no_encontrado', codigo })
-    return false
   }
 
   const manejarCodigoRef = useRef(manejarCodigo)
@@ -187,7 +206,7 @@ export function EscanerPage() {
             // Un cuadro ilegible no detiene el escaneo.
           }
           if (cancelado) return
-          if (codigo && manejarCodigoRef.current(codigo)) return
+          if (codigo) manejarCodigoRef.current(codigo)
         }
         temporizador = setTimeout(() => void bucle(), 200)
       }
@@ -218,13 +237,19 @@ export function EscanerPage() {
 
   function buscarManual(evento: React.FormEvent) {
     evento.preventDefault()
-    if (codigoManual.trim()) manejarCodigo(codigoManual)
+    if (codigoManual.trim()) manejarCodigo(codigoManual.trim())
   }
 
   const fallo = camara === 'sin_permiso' || camara === 'sin_camara' || camara === 'no_soportado'
+  const mensajeFallo =
+    camara === 'sin_permiso'
+      ? 'La aplicación no tiene permiso para usar la cámara. Actívalo en los ajustes del navegador y vuelve a entrar. Mientras tanto puedes buscar el equipo escribiendo su placa o serial.'
+      : camara === 'sin_camara'
+        ? 'No se encontró una cámara en este equipo. Busca el equipo escribiendo su placa de inventario o el serial.'
+        : 'Este navegador no permite usar la cámara aquí. Busca el equipo escribiendo su placa de inventario o el serial.'
 
   return (
-    <div className="relative mx-auto flex min-h-svh max-w-md flex-col overflow-hidden bg-slate-950 text-slate-100">
+    <div className="nocturne relative mx-auto flex min-h-svh max-w-md flex-col overflow-hidden bg-noct-bg font-inter text-[15px] text-noct-text">
       <video
         ref={videoRef}
         playsInline
@@ -232,121 +257,185 @@ export function EscanerPage() {
         className="absolute inset-0 h-full w-full object-cover"
       />
 
-      <header className="relative z-10 flex items-center justify-between gap-2 px-4 pt-4">
-        <Link
-          to="/dispositivos"
-          className="rounded-lg bg-slate-950/70 px-3 py-1.5 text-xs text-slate-200"
-        >
-          ← Volver
-        </Link>
-        <h1 className="text-sm font-medium drop-shadow">Escanear código</h1>
+      {/* Fondo con degradado radial: cubre el video vacío mientras la
+          cámara arranca o cuando falla, para no dejar un rectángulo negro. */}
+      {!(camara === 'lista') && (
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(120% 90% at 50% 30%, oklch(0.24 0.015 260) 0%, oklch(0.17 0.012 260) 55%, oklch(0.13 0.01 260) 100%)',
+          }}
+        />
+      )}
+
+      {/* Velo superior: mantiene legible la cabecera sobre el video en vivo. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-28 bg-gradient-to-b from-noct-bg/85 to-transparent" />
+
+      <header className="relative z-10 flex items-center justify-between gap-2 px-2 pt-2.5">
+        <BotonVolver variante="nocturne">Volver</BotonVolver>
+        <h1 className="text-sm font-medium">Escanear equipo</h1>
         {linterna.disponible ? (
           <button
             type="button"
             onClick={() => void alternarLinterna()}
-            className={`rounded-lg px-3 py-1.5 text-xs ${
-              linterna.encendida ? 'bg-amber-400 text-slate-950' : 'bg-slate-950/70 text-slate-200'
+            aria-pressed={linterna.encendida}
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium backdrop-blur-[8px] ${
+              linterna.encendida
+                ? 'border-noct-precaucion/50 bg-noct-precaucion/[.12] text-noct-precaucion'
+                : 'border-noct-divider bg-noct-bg/65 text-noct-neutral-300'
             }`}
           >
+            {linterna.encendida ? <FlashlightFill size={15} aria-hidden /> : <Flashlight size={15} aria-hidden />}
             Linterna
           </button>
         ) : (
-          <span className="w-16" />
+          <span className="w-[92px]" />
         )}
       </header>
 
-      {camara === 'iniciando' && (
-        <p className="relative z-10 flex flex-1 items-center justify-center text-sm text-slate-400">
-          Iniciando cámara...
-        </p>
-      )}
-
-      {camara === 'lista' && (
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-3 px-8">
-          <div className="aspect-square w-full max-w-xs rounded-2xl border-2 border-white/60" />
-          <p className="text-center text-xs drop-shadow">
-            Apunta al código QR de la etiqueta o al código de barras del equipo
-          </p>
-        </div>
-      )}
-
-      {fallo && (
-        <div className="relative z-10 mx-4 my-auto flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-5">
-          <p className="text-sm text-slate-200">
-            {camara === 'sin_permiso' &&
-              'La app no tiene permiso para usar la cámara. Actívalo en los ajustes del navegador y vuelve a entrar.'}
-            {camara === 'sin_camara' && 'No se encontró una cámara en este equipo.'}
-            {camara === 'no_soportado' && 'Este navegador no permite usar la cámara aquí.'}
-          </p>
-          <form onSubmit={buscarManual} className="flex flex-col gap-2">
-            <p className="text-xs text-slate-400">
-              También puedes escribir la placa de inventario o el serial:
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={codigoManual}
-                onChange={(evento) => setCodigoManual(evento.target.value)}
-                placeholder="Placa o serial..."
-                className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-              <button
-                type="submit"
-                className="shrink-0 rounded-xl bg-sky-500 px-3 py-2 text-xs font-medium text-slate-950"
-              >
-                Buscar
-              </button>
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center gap-[18px] px-8 pb-32 pt-6">
+        {fallo ? (
+          <div className="flex w-full flex-col gap-3 rounded-lg border border-noct-divider bg-noct-surface p-4">
+            <div className="flex items-start gap-[11px]">
+              <CameraSlash size={20} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+              <p className="text-[13.5px] leading-[1.55]">{mensajeFallo}</p>
             </div>
-          </form>
-        </div>
-      )}
+          </div>
+        ) : (
+          <>
+            <div className="relative aspect-square w-full max-w-[280px]">
+              <span className="absolute left-0 top-0 block h-[34px] w-[34px] rounded-tl-xl border-l-[2.5px] border-t-[2.5px] border-noct-accent" />
+              <span className="absolute right-0 top-0 block h-[34px] w-[34px] rounded-tr-xl border-r-[2.5px] border-t-[2.5px] border-noct-accent" />
+              <span className="absolute bottom-0 left-0 block h-[34px] w-[34px] rounded-bl-xl border-b-[2.5px] border-l-[2.5px] border-noct-accent" />
+              <span className="absolute bottom-0 right-0 block h-[34px] w-[34px] rounded-br-xl border-b-[2.5px] border-r-[2.5px] border-noct-accent" />
+              <span
+                className="esc-linea absolute left-[6%] right-[6%] block h-0.5 rounded-full bg-gradient-to-r from-transparent via-noct-accent to-transparent"
+                style={{ boxShadow: '0 0 14px color-mix(in srgb, var(--color-noct-accent) 60%, transparent)' }}
+              />
+            </div>
+            <p className="max-w-[260px] text-center text-[13px] leading-[1.5] text-noct-neutral-300">
+              {camara === 'iniciando'
+                ? 'Iniciando la cámara...'
+                : 'Apunta al código QR de la etiqueta o al código de barras del equipo'}
+            </p>
+          </>
+        )}
+      </main>
 
-      {aviso && (
-        <div className="absolute inset-x-4 bottom-6 z-20 flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
-          {aviso.tipo === 'no_encontrado' ? (
-            <>
-              <p className="text-sm text-slate-200">Ningún dispositivo coincide con este código:</p>
-              <p className="break-all font-mono text-xs text-slate-400">{aviso.codigo}</p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-slate-200">Varios dispositivos comparten este código:</p>
-              <ul className="flex flex-col gap-1.5">
-                {aviso.dispositivos.map((dispositivo) => (
-                  <li key={dispositivo.id}>
-                    <Link
-                      to={`/dispositivos/${dispositivo.id}`}
-                      className="block rounded-lg border border-slate-800 bg-slate-950 px-3 py-2"
-                    >
-                      <span className="text-sm text-slate-100">{dispositivo.nombre}</span>
-                      {dispositivo.ubicacion && (
-                        <span className="text-xs text-slate-400"> · {dispositivo.ubicacion}</span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          <div className="flex gap-2">
+      {/* Barra inferior fija: búsqueda manual siempre visible; una tarjeta
+          de aviso la reemplaza cuando hay un resultado que confirmar. */}
+      <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-b from-transparent via-noct-bg/85 to-noct-bg px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3.5">
+        {!aviso && (
+          <form onSubmit={buscarManual} className="flex items-center gap-2.5">
+            <input
+              type="text"
+              value={codigoManual}
+              onChange={(evento) => setCodigoManual(evento.target.value)}
+              placeholder="O escribir la placa o el serial"
+              aria-label="Buscar por placa o serial"
+              className="min-h-[46px] min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-surface px-3.5 text-[14px] text-noct-text outline-none placeholder:text-noct-neutral-600 focus:border-noct-accent"
+            />
+            <button type="submit" className={`min-h-[46px] px-4 ${BTN_PRIMARIO}`}>
+              Buscar
+            </button>
+          </form>
+        )}
+
+        {aviso?.tipo === 'no_encontrado' && (
+          <div className="flex flex-col gap-[11px] rounded-lg border border-noct-divider bg-noct-surface p-3.5 shadow-lg">
+            <div className="flex items-start gap-[11px]">
+              <Question size={19} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Ningún equipo coincide con este código</p>
+                <p className="mt-1 break-all font-mono text-[12px] text-noct-neutral-400">
+                  {aviso.codigo}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setAviso(null)}
+                className={`flex-1 justify-center ${BTN_PRIMARIO}`}
+              >
+                {fallo ? 'Cerrar' : 'Seguir escaneando'}
+              </button>
+              <Link to="/dispositivos/nuevo" className={BTN_SECUNDARIO}>
+                Registrar equipo
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {aviso?.tipo === 'varios' && (
+          <div className="flex flex-col gap-[11px] rounded-lg border border-noct-divider bg-noct-surface p-3.5 shadow-lg">
+            <p className="text-sm font-medium">Varios equipos comparten este código</p>
+            <div className="flex flex-col gap-[7px]">
+              {aviso.dispositivos.map((dispositivo) => (
+                <Link
+                  key={dispositivo.id}
+                  to={`/dispositivos/${dispositivo.id}`}
+                  className="flex min-h-[50px] items-center gap-[11px] rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-noct-text hover:border-noct-accent"
+                >
+                  <Monitor size={17} className="shrink-0 text-noct-exito" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-[13.5px] font-medium leading-[1.3]">
+                      {dispositivo.nombre}
+                    </span>
+                    {dispositivo.ubicacion && (
+                      <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">
+                        {dispositivo.ubicacion}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => setAviso(null)}
-              className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-medium text-slate-950"
+              className={`justify-center ${BTN_PRIMARIO}`}
             >
-              {fallo ? 'Cerrar' : 'Seguir escaneando'}
+              Seguir escaneando
             </button>
-            {aviso.tipo === 'no_encontrado' && (
-              <Link
-                to="/dispositivos/nuevo"
-                className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-              >
-                Registrar dispositivo
-              </Link>
-            )}
           </div>
-        </div>
-      )}
+        )}
+
+        {aviso?.tipo === 'encontrado' && (
+          <div className="flex flex-col gap-[11px] rounded-lg border border-noct-exito/40 bg-noct-surface p-3.5 shadow-lg">
+            <div className="flex items-center gap-[11px]">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-exito/[.14] text-noct-exito">
+                <Check size={18} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-noct-exito">
+                  Equipo identificado
+                </p>
+                <p className="mt-[3px] truncate text-[14.5px] font-medium leading-[1.3]">
+                  {aviso.dispositivo.nombre}
+                  {aviso.dispositivo.ubicacion && (
+                    <span className="text-noct-neutral-400"> · {aviso.dispositivo.ubicacion}</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => navigate(`/dispositivos/${aviso.dispositivo.id}`, { replace: true })}
+                className={`flex-1 justify-center ${BTN_PRIMARIO}`}
+              >
+                <ArrowRight size={14} aria-hidden />
+                Abrir la ficha
+              </button>
+              <button type="button" onClick={() => setAviso(null)} className={BTN_GHOST}>
+                Seguir
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
