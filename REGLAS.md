@@ -23,7 +23,11 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 
 ## Control de versiones
 
-11. Todo cambio realizado se commitea y se hace push siempre, sin esperar a que el usuario lo indique. Se hace al terminar cada cambio o tarea, una vez que las pruebas, el lint y el build estén en verde. Los commits van a `main` (la rama desde la que despliega Vercel) con mensaje claro en español.
+11. Todo cambio realizado se commitea y se hace push siempre, sin esperar a que el usuario lo indique. Se hace al terminar cada cambio o tarea, una vez que las pruebas, el lint y el build estén en verde. Los commits van a `main` (la rama desde la que despliega Vercel) con mensaje claro en español. NUNCA se deja trabajo verificado sin commitear ni sin subir: si al empezar una sesión se encuentran cambios sin commitear en el árbol de trabajo, se revisan y se suben antes de seguir (un cambio local no llega a Vercel).
+
+14. Verificación de despliegue en Vercel (regla acordada 2026-07-18, tras notar que los cambios "no se veían" en producción). Un cambio NO se da por entregado hasta confirmar que llegó al enlace de producción: **https://soluciones-it-psi.vercel.app** (proyecto Vercel `soluciones-it`, despliega automáticamente en cada push a `main`). Tras cada push se comprueba SIEMPRE:
+    - Que Vercel generó un despliegue nuevo para ese commit y terminó en estado "Ready" (verificable con `gh api repos/<owner>/<repo>/commits/<sha>/status` y `.../deployments`, o esperando ~1-2 min y confirmando por HTTP que el sitio sirve el build nuevo).
+    - Se le avisa al usuario que la app es una PWA con `registerType: 'prompt'` (ver `vite.config.ts`): en un dispositivo que ya la tiene instalada, la versión nueva NO se activa sola. Aparece el aviso "Actualización disponible" (`src/components/ActualizacionDisponible.tsx`) y hay que aceptarlo; en escritorio, una recarga forzada. Si el usuario dice que "no ve el cambio", lo más probable es (a) que faltó el push, o (b) que el service worker está sirviendo la versión anterior en su dispositivo y falta aceptar la actualización.
 
 ## Diseño
 
