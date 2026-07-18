@@ -18,7 +18,6 @@ import { resumenImpacto } from '../../lib/grafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
   BookOpen,
-  CaretLeft,
   CaretRight,
   Circle,
   Clock,
@@ -32,6 +31,7 @@ import {
   Warning,
   WarningOctagon,
 } from '../../components/iconos'
+import { BotonVolver } from '../../components/BotonVolver'
 import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
 import { ProcedimientoVista } from './ProcedimientoVista'
@@ -87,7 +87,7 @@ export function ArticuloPage() {
     if (idVisitado) void registrarVisita('articulo', idVisitado)
   }, [idVisitado])
 
-  if (articulo === null) return <Navigate to={`/soluciones/${categoriaId}`} replace />
+  if (articulo === null) return <Navigate to={`/soluciones?categoria=${categoriaId}`} replace />
   if (!articulo) {
     return (
       <ShellNocturne>
@@ -98,7 +98,7 @@ export function ArticuloPage() {
 
   async function eliminar() {
     await eliminarRegistro('articulos', articuloId)
-    navigate(`/soluciones/${categoriaId}`)
+    navigate(`/soluciones?categoria=${categoriaId}`)
   }
 
   const estado = articulo.estado ?? 'publicado'
@@ -111,13 +111,10 @@ export function ArticuloPage() {
   return (
     <ShellNocturne>
       <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5 lg:px-10 lg:pt-4">
-        <Link
-          to={`/soluciones/${categoriaId}`}
-          className="inline-flex min-w-0 items-center gap-1 rounded-lg py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 hover:bg-noct-text/5 hover:text-noct-text"
-        >
-          <CaretLeft size={16} className="shrink-0" aria-hidden />
-          <span className="truncate">{categoria?.nombre ?? 'Soluciones'}</span>
-        </Link>
+        {/* Destino derivado de la jerarquía central (padreDe): la ficha
+            de artículo sube a la lista de Soluciones con el chip de su
+            categoría. La etiqueta muestra el nombre de la categoría. */}
+        <BotonVolver variante="nocturne">{categoria?.nombre ?? 'Soluciones'}</BotonVolver>
         <div className="flex shrink-0 items-center gap-2">
           {procedimiento && (
             <Link to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`} className={BTN_PRIMARIO}>

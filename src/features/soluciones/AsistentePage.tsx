@@ -18,7 +18,7 @@ export function AsistentePage() {
   const articulo = useLiveQuery(() => db.articulos.get(articuloId), [articuloId])
   const procedimiento = useMemo(() => normalizarProcedimiento(articulo?.procedimiento), [articulo])
 
-  if (articulo === null) return <Navigate to={`/soluciones/${categoriaId}`} replace />
+  if (articulo === null) return <Navigate to="/soluciones" replace />
   if (!articulo) return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
   // Un articulo sin procedimiento no tiene modo asistente que ofrecer.
   if (!procedimiento) return <Navigate to={`/soluciones/${categoriaId}/${articuloId}`} replace />
@@ -26,7 +26,7 @@ export function AsistentePage() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 px-4 pb-10 pt-6">
       <header className="flex items-center justify-between gap-2">
-        <BotonVolver to={`/soluciones/${categoriaId}/${articuloId}`}>Salir</BotonVolver>
+        <BotonVolver>Salir</BotonVolver>
         <p className="min-w-0 flex-1 truncate text-right text-xs text-slate-500">{articulo.titulo}</p>
       </header>
 

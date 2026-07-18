@@ -54,7 +54,7 @@ export function DiagnosticosPage() {
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex items-end justify-between gap-2">
         <div className="flex flex-col gap-2">
-          <BotonVolver to="/">Inicio</BotonVolver>
+          <BotonVolver />
           <div>
             <h1 className="text-xl font-semibold">Diagnóstico Inteligente</h1>
             <p className="text-sm text-slate-400">Empieza por el problema, llega a la solución</p>

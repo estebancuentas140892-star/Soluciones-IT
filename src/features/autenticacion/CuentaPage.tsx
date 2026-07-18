@@ -50,7 +50,7 @@ export function CuentaPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to="/">Inicio</BotonVolver>
+        <BotonVolver />
         <div>
           <h1 className="text-xl font-semibold">Mi cuenta</h1>
           {(perfil?.nombre || session?.user?.email) && (

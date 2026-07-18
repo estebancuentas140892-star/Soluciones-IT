@@ -160,14 +160,13 @@ export function CredencialForm() {
     }
   }
 
-  const volverA = esEdicion ? `/boveda/${credencialId}` : '/boveda'
   const claseCampo =
     'rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500'
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to={volverA}>Volver</BotonVolver>
+        <BotonVolver />
         <h1 className="text-xl font-semibold">{esEdicion ? 'Editar credencial' : 'Nueva credencial'}</h1>
       </header>
 

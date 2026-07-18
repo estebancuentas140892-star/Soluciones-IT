@@ -136,7 +136,7 @@ export function DiagnosticoForm() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to="/diagnostico">Diagnósticos</BotonVolver>
+        <BotonVolver />
         <h1 className="text-xl font-semibold">{esEdicion ? 'Editar diagnóstico' : 'Nuevo diagnóstico'}</h1>
       </header>
 

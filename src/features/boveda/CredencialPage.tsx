@@ -98,7 +98,7 @@ export function CredencialPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
-      <BotonVolver to="/boveda">Bóveda</BotonVolver>
+      <BotonVolver />
 
       <header className="flex items-start justify-between gap-2">
         <div>

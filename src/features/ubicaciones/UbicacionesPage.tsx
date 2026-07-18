@@ -29,7 +29,7 @@ export function UbicacionesPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to="/dispositivos">Dispositivos</BotonVolver>
+        <BotonVolver />
         <h1 className="text-xl font-semibold">Ubicaciones</h1>
         <p className="text-sm text-slate-400">Los lugares físicos donde viven los equipos.</p>
       </header>

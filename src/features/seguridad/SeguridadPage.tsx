@@ -31,7 +31,7 @@ export function SeguridadPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to="/cuenta">Mi cuenta</BotonVolver>
+        <BotonVolver />
         <div>
           <h1 className="text-xl font-semibold">Seguridad de la aplicación</h1>
           <p className="mt-0.5 text-xs text-slate-500">

@@ -31,8 +31,9 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 
 ## Navegación
 
-13. Comportamiento unificado de "Cancelar" y "Volver" en los formularios (regla registrada al corregir la tarea 75, 2026-07-18):
-    - Desde un formulario de CREACIÓN, Cancelar/Volver regresa siempre a la pantalla-lista de la sección (`/soluciones`, `/dispositivos`, `/boveda`, `/ubicaciones`, `/diagnostico`), nunca a una pantalla intermedia o derivada (por ejemplo la ficha de categoría) por la que el flujo de creación no pasó.
-    - Desde un formulario de EDICIÓN, Cancelar/Volver regresa a la ficha de la entidad que se editaba (`/seccion/:id`).
-    - El destino se declara como un `to={destino}` fijo y determinista, no con `navigate(-1)`: así el regreso es a prueba de enlaces profundos y de recargas (no depende de la pila de historial, que puede estar vacía o venir de otra sección).
-    - Cuando la pantalla de origen tenía un filtro o estado que importa reponer, se lleva por la URL (por ejemplo `/soluciones?categoria=<id>` repone el chip activo) para volver "exactamente como estaba".
+13. Comportamiento unificado de "Cancelar" y "Volver" (regla registrada al corregir la tarea 75 y consolidada en la tarea 76, 2026-07-18):
+    - Fuente única de la jerarquía: `src/lib/navegacion.ts` (`padreDe(pathname)`) define, en un solo lugar y con pruebas, cuál es la pantalla lógica superior ("Up") de cada ruta y su etiqueta. Ninguna pantalla cablea su destino de regreso a mano. Al agregar una pantalla nueva se declara su padre ahí; así un rediseño no puede volver a dejar un "Volver" apuntando a una pantalla obsoleta.
+    - Componente único: `src/components/BotonVolver.tsx` deriva destino y etiqueta de `padreDe` (variantes `claro` y `nocturne`). Solo se pasa un override (`to`/`children`) cuando el destino depende de datos en runtime (la ficha de un equipo de red vuelve a Red) o cuando la etiqueta es especial ("Salir", "Cancelar").
+    - Es navegación "Up" (padre lógico declarado), NO `navigate(-1)`/`history.back()`: hay flujos hacia adelante (guardar -> ficha nueva) donde retroceder en el historial caería en el formulario recién enviado. El padre lógico es determinista y a prueba de enlaces profundos y recargas.
+    - Regla de la jerarquía: CREACIÓN y las fichas de contenido suben a la pantalla-lista de su sección; EDICIÓN y el asistente suben a la ficha de la entidad. Nunca a una pantalla intermedia o derivada por la que el flujo no pasó.
+    - Estado por URL: cuando la pantalla de origen tenía un filtro que importa reponer, viaja en la URL (`/soluciones?categoria=<id>` repone el chip) para volver "exactamente como estaba". En Soluciones la categoría es un FILTRO de la lista, no una pantalla propia (decisión del usuario, 2026-07-18).

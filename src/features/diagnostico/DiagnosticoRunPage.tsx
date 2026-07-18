@@ -80,7 +80,7 @@ export function DiagnosticoRunPage() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 px-4 pb-10 pt-6">
       <header className="flex items-center justify-between gap-2">
-        <BotonVolver to="/diagnostico">Salir</BotonVolver>
+        <BotonVolver>Salir</BotonVolver>
         <div className="flex min-w-0 items-center gap-3">
           <p className="min-w-0 truncate text-xs text-slate-500">{diagnostico.titulo}</p>
           <Link

@@ -43,7 +43,7 @@ export function CategoriaPage() {
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex items-end justify-between gap-2">
         <div className="flex flex-col gap-2">
-          <BotonVolver to="/soluciones">Soluciones</BotonVolver>
+          <BotonVolver />
           <div>
             <h1 className="text-xl font-semibold">{categoria?.nombre ?? '...'}</h1>
             {!vacia && (

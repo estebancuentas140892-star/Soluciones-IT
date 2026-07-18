@@ -23,7 +23,7 @@ export function SugerenciasEquipoPage() {
   return (
     <div className="flex flex-col gap-4 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to="/diagnostico">Diagnósticos</BotonVolver>
+        <BotonVolver />
         <div>
           <h1 className="text-xl font-semibold">Sugerencias del equipo</h1>
           <p className="text-sm text-slate-400">

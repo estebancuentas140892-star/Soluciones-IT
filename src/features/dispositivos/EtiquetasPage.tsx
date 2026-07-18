@@ -33,7 +33,7 @@ export function EtiquetasPage() {
   return (
     <div className="mx-auto flex min-h-svh max-w-md flex-col gap-4 bg-slate-950 px-4 pt-6 pb-8 text-slate-100 print:block print:min-h-0 print:max-w-none print:bg-white print:p-0 print:text-black">
       <header className="flex flex-col gap-2 print:hidden">
-        <BotonVolver to="/dispositivos">Dispositivos</BotonVolver>
+        <BotonVolver />
         <div>
           <h1 className="text-xl font-semibold">Etiquetas QR</h1>
           <p className="text-sm text-slate-400">

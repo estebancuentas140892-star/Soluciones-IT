@@ -149,11 +149,16 @@ src/
     sync.ts         motor de sincronización (subida de cola y descarga por cursor)
     diagnostico.ts  lógica pura del diagnóstico (normalizar, validar el árbol, profundidad y porcentaje)
     progresoDiagnostico.ts  transiciones de la sesión de diagnóstico en curso (responder, volver, terminar ejecución)
+    navegacion.ts   fuente única de la jerarquía de "Volver" (padre lógico de cada ruta), ver abajo
     crypto.ts       cifrado de la bóveda
   components/     componentes de interfaz compartidos (incluye Adjuntos.tsx, reutilizable en dispositivos, y VisorImagen.tsx: visor de imagen a pantalla completa con zoom por pellizco o doble toque y arrastre, usado por Adjuntos.tsx y por los adjuntos de un paso en ProcedimientoVista.tsx)
 supabase/
   schema.sql      esquema de tablas y políticas RLS
 ```
+
+### Navegación "Volver" (fuente única de la jerarquía, tarea 76, 2026-07-18)
+
+La app usa React Router; su pila es el historial del navegador. Los botones "Volver"/"Cancelar" son navegación "Up" (padre lógico declarado), no `history.back()`: en esta app hay flujos hacia adelante (guardar -> ficha nueva) donde retroceder en el historial caería en el formulario recién enviado. `src/lib/navegacion.ts` (`padreDe(pathname)`, pura y con pruebas) es la ÚNICA fuente de verdad de qué pantalla es superior a cuál y con qué etiqueta; `src/components/BotonVolver.tsx` (variantes `claro` y `nocturne`) deriva su destino de ahí. Ninguna pantalla cablea su destino a mano, así un rediseño no puede volver a dejar un "Volver" apuntando a una pantalla obsoleta (era la causa de las tareas 75 y 76: la ficha de artículo y el editor volvían a `/soluciones/:categoriaId`, la `CategoriaPage` de tema claro heredado, en vez de a la lista Nocturne). Regla de la jerarquía: la creación y las fichas de contenido suben a la pantalla-lista de su sección; la edición y el asistente suben a la ficha de la entidad. En Soluciones la categoría es un FILTRO de la lista (chips), no una pantalla propia (decisión del usuario), así que "Volver" desde una solución regresa a `/soluciones?categoria=<id>` (la lista con su chip activo), no a la ficha de categoría. La `CategoriaPage` (`/soluciones/:categoriaId`) se conserva como ficha 360° accesible desde el buscador y desde la ficha de un dispositivo; pendiente de migrar a Nocturne (sigue en tema claro). Overrides puntuales del padre derivado: la ficha de un equipo de red vuelve a Red (dato en runtime `es_red`) y el asistente/diagnóstico usan la etiqueta "Salir".
 
 ## 12. Módulo de Red (infraestructura y topología)
 

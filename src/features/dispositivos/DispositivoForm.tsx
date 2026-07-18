@@ -198,12 +198,10 @@ export function DispositivoForm() {
     return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
   }
 
-  const volverA = esEdicion ? `/dispositivos/${dispositivoId}` : '/dispositivos'
-
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to={volverA}>Volver</BotonVolver>
+        <BotonVolver />
         <h1 className="text-xl font-semibold">{esEdicion ? 'Editar dispositivo' : 'Nuevo dispositivo'}</h1>
       </header>
 

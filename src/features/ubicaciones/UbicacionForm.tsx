@@ -66,12 +66,10 @@ export function UbicacionForm() {
     navigate(`/ubicaciones/${id}`)
   }
 
-  const volverA = esEdicion ? `/ubicaciones/${ubicacionId}` : '/ubicaciones'
-
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to={volverA}>Volver</BotonVolver>
+        <BotonVolver />
         <h1 className="text-xl font-semibold">{esEdicion ? 'Editar ubicación' : 'Nueva ubicación'}</h1>
       </header>
 

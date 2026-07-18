@@ -53,7 +53,7 @@ export function UbicacionPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to="/ubicaciones">Ubicaciones</BotonVolver>
+        <BotonVolver />
         {ancestros.length > 0 && (
           <nav className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
             {ancestros.map((a) => (

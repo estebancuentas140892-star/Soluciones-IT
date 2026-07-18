@@ -22,7 +22,6 @@ import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
   CaretDown,
-  CaretLeft,
   CaretUp,
   Check,
   Circle,
@@ -33,6 +32,7 @@ import {
   Sparkle,
   X,
 } from '../../components/iconos'
+import { BotonVolver } from '../../components/BotonVolver'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { PasosEditor } from './PasosEditor'
@@ -313,7 +313,7 @@ export function ArticuloForm() {
       ? 'Completo'
       : `${completitud.sugerencias.length} ${completitud.sugerencias.length === 1 ? 'sugerencia' : 'sugerencias'}`
 
-  if (esEdicion && articulo === null) return <Navigate to={`/soluciones/${categoriaId}`} replace />
+  if (esEdicion && articulo === null) return <Navigate to="/soluciones" replace />
 
   async function manejarEnvio() {
     setGuardando(true)
@@ -355,16 +355,6 @@ export function ArticuloForm() {
     navigate(`/soluciones/${categoriaId}/${id}`)
   }
 
-  // Al Cancelar: en edición se regresa a la ficha del artículo que se
-  // estaba editando; en creación, a la lista principal de Soluciones (no
-  // a la ficha de categoría /soluciones/:categoriaId, una pantalla
-  // heredada que el rediseño Nocturne reemplazó por la lista con chips).
-  // Se pasa ?categoria para reabrir la lista con el mismo filtro activo,
-  // de modo que regrese "exactamente como estaba" antes de crear.
-  const destinoCancelar = esEdicion
-    ? `/soluciones/${categoriaId}/${articuloId}`
-    : `/soluciones?categoria=${categoriaId}`
-
   if (!cargadoInicial) {
     return (
       <div className="nocturne min-h-svh bg-noct-bg font-inter text-noct-text">
@@ -379,13 +369,10 @@ export function ArticuloForm() {
         {/* Cabecera pegajosa con blur: cancelar, estado y titulo dinamico. */}
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <Link
-              to={destinoCancelar}
-              className="inline-flex items-center gap-1 rounded-md py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 hover:bg-noct-text/5 hover:text-noct-text"
-            >
-              <CaretLeft size={16} />
-              Cancelar
-            </Link>
+            {/* Destino derivado de la jerarquía central (padreDe): en
+                creación vuelve a la lista con el chip de la categoría; en
+                edición, a la ficha del artículo. */}
+            <BotonVolver variante="nocturne">Cancelar</BotonVolver>
             <TagNeutral className="shrink-0">{estadoEtiqueta}</TagNeutral>
           </header>
           <div className="px-4 pb-3 pt-0.5">

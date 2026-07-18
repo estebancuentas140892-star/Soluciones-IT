@@ -81,7 +81,7 @@ export function MigracionUbicaciones() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
       <header className="flex flex-col gap-2">
-        <BotonVolver to="/ubicaciones">Ubicaciones</BotonVolver>
+        <BotonVolver />
         <h1 className="text-xl font-semibold">Migrar ubicaciones de texto</h1>
         <p className="text-sm text-slate-400">
           Convierte los lugares escritos a mano en ubicaciones con ficha propia. Renombra para unir
