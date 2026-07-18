@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
@@ -49,8 +49,15 @@ interface Chip {
 }
 
 export function SolucionesPage() {
+  // El parámetro ?categoria siembra el chip activo al volver desde el
+  // editor tras Cancelar/Guardar (ArticuloForm), para reabrir la lista
+  // con el mismo filtro. Es una semilla inicial: los cambios de chip
+  // posteriores solo tocan el estado local, no la URL.
+  const [searchParams] = useSearchParams()
   const [query, setQuery] = useState('')
-  const [categoriaSel, setCategoriaSel] = useState<string | null>(null)
+  const [categoriaSel, setCategoriaSel] = useState<string | null>(
+    () => searchParams.get('categoria'),
+  )
   const [tipoSel, setTipoSel] = useState<TipoArticulo | null>(null)
 
   const categorias = useLiveQuery(

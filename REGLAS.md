@@ -28,3 +28,11 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 ## Diseño
 
 12. La aplicación es de tema oscuro únicamente (decisión del usuario, 2026-07-17). No se ofrece modo claro ni conmutador de tema. El sistema de diseño vigente es Nocturne (oscuro, fondo `#161826`); las pantallas que aún queden en el tema claro heredado (Dispositivos, Red, Topología) se migran a Nocturne oscuro, no se conservan en claro. Si un handoff de diseño llega en tema claro, se traduce a Nocturne oscuro antes de implementarlo (mismo criterio que ya se aplicó con Soluciones).
+
+## Navegación
+
+13. Comportamiento unificado de "Cancelar" y "Volver" en los formularios (regla registrada al corregir la tarea 75, 2026-07-18):
+    - Desde un formulario de CREACIÓN, Cancelar/Volver regresa siempre a la pantalla-lista de la sección (`/soluciones`, `/dispositivos`, `/boveda`, `/ubicaciones`, `/diagnostico`), nunca a una pantalla intermedia o derivada (por ejemplo la ficha de categoría) por la que el flujo de creación no pasó.
+    - Desde un formulario de EDICIÓN, Cancelar/Volver regresa a la ficha de la entidad que se editaba (`/seccion/:id`).
+    - El destino se declara como un `to={destino}` fijo y determinista, no con `navigate(-1)`: así el regreso es a prueba de enlaces profundos y de recargas (no depende de la pila de historial, que puede estar vacía o venir de otra sección).
+    - Cuando la pantalla de origen tenía un filtro o estado que importa reponer, se lleva por la URL (por ejemplo `/soluciones?categoria=<id>` repone el chip activo) para volver "exactamente como estaba".

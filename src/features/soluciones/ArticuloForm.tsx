@@ -355,9 +355,15 @@ export function ArticuloForm() {
     navigate(`/soluciones/${categoriaId}/${id}`)
   }
 
+  // Al Cancelar: en edición se regresa a la ficha del artículo que se
+  // estaba editando; en creación, a la lista principal de Soluciones (no
+  // a la ficha de categoría /soluciones/:categoriaId, una pantalla
+  // heredada que el rediseño Nocturne reemplazó por la lista con chips).
+  // Se pasa ?categoria para reabrir la lista con el mismo filtro activo,
+  // de modo que regrese "exactamente como estaba" antes de crear.
   const destinoCancelar = esEdicion
     ? `/soluciones/${categoriaId}/${articuloId}`
-    : `/soluciones/${categoriaId}`
+    : `/soluciones?categoria=${categoriaId}`
 
   if (!cargadoInicial) {
     return (
