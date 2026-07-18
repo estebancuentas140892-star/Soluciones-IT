@@ -1,7 +1,7 @@
 # Propuesta: base de conocimiento inteligente (de 9.5 a 10)
 
 Fecha: 2026-07-15
-Estado: PRESENTADA, pendiente de que el usuario decida fases y resuelva las decisiones abiertas (sección 12).
+Estado: EJECUTADA. Todas las fases están construidas: N0/N1 (tarea 54), N2 (tarea 60), N4 (tarea 61) y N3, el único grupo con esquema (tarea 70, 2026-07-17). Las 4 decisiones abiertas de la sección 12 quedaron resueltas por el usuario el 2026-07-17 y aplicadas en N3. Solo restan adornos opcionales de N4/N5 sin esquema. Pendiente de que el usuario aplique el `schema.sql` de N3 en Supabase.
 
 Origen: solicitud del usuario del 2026-07-15 (13 puntos de análisis: modelo de datos, relaciones, automatización, navegación, buscador, entidades, escalabilidad, UX, aprendizaje, infraestructura, mantenimiento, historial y vista 360°). Todo el análisis está hecho contra el código real, no contra suposiciones.
 
@@ -269,7 +269,7 @@ Con eso, agregar categorías, tipos de equipo o propiedades nuevas ya no toca la
 | N0 | Vocabularios derivados | Datalist de ubicación y marca en dispositivos; etiquetas con autocompletar | Bajo | No |
 | N1 | Grafo de referencias | `lib/grafo.ts` puro + "Referenciado por" en fichas de artículo, credencial y dispositivo + impacto antes de eliminar + regla de referencia viva (corregir conexiones, títulos de paso, opciones de diagnóstico) | Medio-alto | No |
 | N2 | Buscador y contexto | Categorías y adjuntos en el buscador + filtros por tipo + creación contextual + propiedades sugeridas por categoría + generalizar dispositivosAfectados | Medio | No |
-| N3 | GRUPO ESQUEMA 2 | Tabla `ubicaciones` + `dispositivos.ubicacion_id` + migración asistida de textos + `credenciales.dispositivos` + tipo 'relacionado' en conexiones + entidad_tipo 'ubicacion' en historial. UNA sola intervención en Supabase | Alto (repartido) | Sí, una vez |
+| N3 | GRUPO ESQUEMA 2 (HECHA, tarea 70, 2026-07-17) | Tabla `ubicaciones` + `dispositivos.ubicacion_id` + migración asistida de textos + `credenciales.dispositivos` + tipo 'relacionado' en conexiones + entidad_tipo 'ubicacion' en historial + columna `color` en categorías. UNA sola intervención en Supabase (pendiente de que el usuario aplique el `schema.sql`) | Alto (repartido) | Sí, una vez |
 | N4 | Fichas 360° restantes | Ficha de categoría y de ubicación con el esqueleto estándar + línea de tiempo unificada | Medio | No |
 | N5 | Aprendizaje ligero | Rutas de inicio ordenadas + progreso por categoría + prerequisitos desde el grafo | Bajo-medio | Depende del orden |
 

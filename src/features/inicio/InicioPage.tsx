@@ -19,10 +19,18 @@ export function InicioPage() {
   // ArticuloForm): puerta de entrada para quien recien llega, sin
   // crear una seccion nueva.
   const rutasInicio = useLiveQuery(
-    () =>
-      db.articulos
+    async () => {
+      const articulos = await db.articulos
         .filter((a) => a.esRutaInicio && !a.eliminadoEn && (a.estado ?? 'publicado') === 'publicado')
-        .toArray(),
+        .toArray()
+      // Orden de la ruta de aprendizaje (grupo N3): menor primero; a
+      // igualdad de orden, por titulo para una lista estable.
+      return articulos.sort(
+        (a, b) =>
+          (a.ordenRutaInicio ?? 0) - (b.ordenRutaInicio ?? 0) ||
+          a.titulo.localeCompare(b.titulo, 'es', { numeric: true }),
+      )
+    },
     [],
     [],
   )

@@ -29,6 +29,7 @@ export type TipoRelacion =
   | 'dispositivo_afectado' // artículo -> dispositivo por "dispositivos afectados"
   | 'diagnostico_articulo' // una opción de un diagnóstico ejecuta un artículo
   | 'conexion' // dispositivo <-> dispositivo (cableado/instalación)
+  | 'credencial_dispositivo' // credencial -> dispositivo al que da acceso (grupo N3)
 
 // Referencia navegable a una entidad: lo justo para pintar un enlace sin
 // volver a consultar la base. `titulo` y `ruta` se calculan al construir
@@ -101,6 +102,30 @@ export function construirGrafo(datos: DatosGrafo): Arista[] {
     }
     for (const dispositivo of articulo.dispositivosAfectados ?? []) {
       agregar('dispositivo', dispositivo.id, 'dispositivo_afectado')
+    }
+  }
+
+  // Credencial -> dispositivos a los que da acceso (grupo N3). El
+  // vínculo se guarda en `credenciales.dispositivos` (lista {id, nombre},
+  // sin cifrar) y aquí produce el inverso "credenciales de este equipo"
+  // que se muestra en la ficha del dispositivo (protegido igual que el
+  // resto de la bóveda). El título de la credencial es vivo por
+  // construcción (se toma de la fila local).
+  for (const credencial of datos.credenciales) {
+    if (credencial.eliminadoEn) continue
+    const origen: NodoRef = {
+      tipo: 'credencial',
+      id: credencial.id,
+      titulo: credencial.titulo,
+      ruta: `/boveda/${credencial.id}`,
+    }
+    for (const dispositivo of credencial.dispositivos ?? []) {
+      aristas.push({
+        origen,
+        destinoTipo: 'dispositivo',
+        destinoId: dispositivo.id,
+        relacion: 'credencial_dispositivo',
+      })
     }
   }
 
@@ -202,6 +227,7 @@ export function resumenImpacto(aristas: Arista[], tipo: TipoEntidad, id: string)
     { clave: 'procedimiento', singular: 'procedimiento', plural: 'procedimientos', ids: new Set() },
     { clave: 'diagnostico', singular: 'diagnóstico', plural: 'diagnósticos', ids: new Set() },
     { clave: 'articulo', singular: 'artículo', plural: 'artículos', ids: new Set() },
+    { clave: 'credencial', singular: 'credencial', plural: 'credenciales', ids: new Set() },
     { clave: 'conexion', singular: 'conexión', plural: 'conexiones', ids: new Set() },
   ]
   const porClave = Object.fromEntries(grupos.map((g) => [g.clave, g]))
@@ -226,6 +252,8 @@ function categoriaImpacto(relacion: TipoRelacion): string {
       return 'diagnostico'
     case 'conexion':
       return 'conexion'
+    case 'credencial_dispositivo':
+      return 'credencial'
     case 'subprocedimiento':
     case 'solucion':
     case 'decision':

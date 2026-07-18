@@ -16,8 +16,10 @@ import { ValorCopiable } from '../../components/ValorCopiable'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { Historial } from '../historial/Historial'
+import { textoVivo } from '../../lib/referencia'
 import { IndicadorEstado } from './IndicadorEstado'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
+import { CredencialesDelEquipo } from './CredencialesDelEquipo'
 import { ProblemasDelEquipo } from './ProblemasDelEquipo'
 import { ProcedimientosDelEquipo } from './ProcedimientosDelEquipo'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
@@ -38,6 +40,14 @@ export function DispositivoPage() {
   const perfil = useLiveQuery(
     async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
     [session],
+  )
+  // Ubicacion como entidad (grupo N3): el dato canonico es `ubicacionId`;
+  // `dispositivo.ubicacion` es solo la copia de referencia. Se resuelve
+  // en vivo contra la tabla `ubicaciones` (regla de referencia viva), asi
+  // renombrar el lugar se refleja aqui sin reescribir el dispositivo.
+  const ubicacionVinculada = useLiveQuery(
+    () => (dispositivo?.ubicacionId ? db.ubicaciones.get(dispositivo.ubicacionId) : undefined),
+    [dispositivo?.ubicacionId],
   )
 
   const idVisitado = dispositivo && !dispositivo.eliminadoEn ? dispositivo.id : null
@@ -70,9 +80,13 @@ export function DispositivoPage() {
     { etiqueta: 'Modelo', valor: dispositivo.modelo },
     { etiqueta: 'Número de serie', valor: dispositivo.serial },
     { etiqueta: 'Placa de inventario', valor: dispositivo.placaInventario },
-    { etiqueta: 'Ubicación', valor: dispositivo.ubicacion },
     { etiqueta: 'Dirección IP', valor: dispositivo.ip },
   ].filter((c) => c.valor)
+
+  // Nombre a mostrar de la ubicacion: el vivo de la fila enlazada si
+  // existe y no esta eliminada; si no, la copia de referencia guardada.
+  const ubicacionViva = ubicacionVinculada && !ubicacionVinculada.eliminadoEn ? ubicacionVinculada : null
+  const ubicacionNombre = textoVivo(ubicacionViva?.nombre, dispositivo.ubicacion)
 
   const detalles = Object.entries(dispositivo.detalles).filter(([, valor]) => valor)
 
@@ -129,7 +143,7 @@ export function DispositivoPage() {
           <IndicadorEstado estado={dispositivo.estado} />
         </div>
 
-        {(campos.length > 0 || detalles.length > 0) && (
+        {(campos.length > 0 || ubicacionNombre || detalles.length > 0) && (
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
             {campos.map((campo) => (
               <div key={campo.etiqueta}>
@@ -139,6 +153,23 @@ export function DispositivoPage() {
                 </dd>
               </div>
             ))}
+            {ubicacionNombre && (
+              <div>
+                <dt className="text-xs text-slate-500">Ubicación</dt>
+                <dd>
+                  {ubicacionViva ? (
+                    <Link
+                      to={`/ubicaciones/${ubicacionViva.id}`}
+                      className="text-sm text-sky-400 underline decoration-dotted underline-offset-2"
+                    >
+                      {ubicacionNombre}
+                    </Link>
+                  ) : (
+                    <ValorCopiable valor={ubicacionNombre} />
+                  )}
+                </dd>
+              </div>
+            )}
             {detalles.map(([clave, valor]) => (
               <div key={clave}>
                 <dt className="text-xs text-slate-500">{clave}</dt>
@@ -180,7 +211,7 @@ export function DispositivoPage() {
         </Link>
         {perfil?.puedeVerBoveda && (
           <Link
-            to={`/boveda/nueva?titulo=${encodeURIComponent(`Acceso ${dispositivo.nombre}`)}&categoria=${encodeURIComponent(categoria?.nombre ?? '')}`}
+            to={`/boveda/nueva?titulo=${encodeURIComponent(`Acceso ${dispositivo.nombre}`)}&categoria=${encodeURIComponent(categoria?.nombre ?? '')}&dispositivoId=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
             className="rounded-xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-300"
           >
             + Guardar credencial de este equipo
@@ -188,6 +219,7 @@ export function DispositivoPage() {
         )}
         <ProblemasDelEquipo dispositivoId={dispositivoId} />
         <ProcedimientosDelEquipo dispositivoId={dispositivoId} />
+        <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)} />
       </section>
 
       <ImpactoYDependencias dispositivo={dispositivo} />

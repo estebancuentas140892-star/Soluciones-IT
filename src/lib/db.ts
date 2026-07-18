@@ -17,6 +17,25 @@ export interface Categoria {
   // Red en vez de Dispositivos. Puede llegar null de una base que aun
   // no tiene la columna, por eso siempre se lee con Boolean().
   esRed: boolean
+  // Color de identidad de la categoria (override manual, grupo N3), o
+  // null para derivarlo del `orden`. Es una clave de token del sistema
+  // (ver src/features/soluciones/coloresCategoria.ts), nunca un hex
+  // suelto. Puede llegar null de una base sin la columna todavia.
+  color: string | null
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
+// Un lugar fisico como entidad (grupo N3): reemplaza el texto libre de
+// `Dispositivo.ubicacion`, que se conserva como copia de referencia.
+// `padreId` da una jerarquia opcional (Sede > Area > Punto), sin
+// obligacion de usarla. Puede llegar null de una base sin la columna.
+export interface Ubicacion {
+  id: string
+  nombre: string
+  padreId: string | null
+  notas: string
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -238,6 +257,11 @@ export interface Articulo {
   // tambien muestra el inverso ("aparece como relacionado en..."),
   // calculado localmente sin guardarlo aqui.
   relacionados: ArticuloRelacionado[]
+  // Orden dentro de "Para empezar" cuando esRutaInicio es true (grupo
+  // N3): entero, menor primero; 0 por defecto y para todo lo existente.
+  // Vive en columna (no en el JSON) porque las rutas de inicio pueden
+  // ser cualquier articulo, incluidos manuales sin procedimiento.
+  ordenRutaInicio: number
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -251,7 +275,13 @@ export interface Dispositivo {
   modelo: string
   serial: string
   placaInventario: string
+  // Copia de referencia del nombre de la ubicacion (grupo N3): permite
+  // mostrar el lugar aunque la fila de `ubicaciones` aun no sincronice.
+  // El dato canonico es `ubicacionId`; se resuelve en vivo contra la
+  // tabla `ubicaciones` y esta copia es solo el respaldo.
   ubicacion: string
+  // Id de la ubicacion (entidad), o null. Dato canonico del lugar.
+  ubicacionId: string | null
   ip: string
   estado: string
   observaciones: string
@@ -276,7 +306,11 @@ export interface Dispositivo {
 // Los nombres de ambos extremos se guardan como copia de referencia
 // (mismo patron que credencialTitulo en los pasos): permiten mostrar
 // la conexion aunque la ficha del otro extremo aun no sincronice.
-export type TipoConexion = 'enlace' | 'instalacion'
+// - 'relacionado' (grupo N3): relaciona dos equipos que no son de red
+//   (por ejemplo un POS con su impresora), sin puertos ni medio. Aparece
+//   en las fichas de ambos, NO en la topologia (no es dependencia de
+//   servicio, asi que el arbol de topologia lo ignora).
+export type TipoConexion = 'enlace' | 'instalacion' | 'relacionado'
 
 export interface Conexion {
   id: string
@@ -304,6 +338,13 @@ export interface Credencial {
   // proposito NO viaja cifrada: permite avisar (ambar cerca de vencer,
   // rojo si ya vencio) sin tener que desbloquear la boveda.
   venceEn: string | null
+  // Dispositivos a los que da acceso esta credencial (grupo N3): lista
+  // {id, nombre} como copia de referencia, mismo patron que
+  // dispositivosAfectados. A proposito NO va cifrada (como venceEn): que
+  // credencial pertenece a que equipo no es el secreto; el contenido
+  // sigue en datosCifrados. Habilita el inverso "credenciales de este
+  // equipo" en la ficha del dispositivo sin desbloquear la boveda.
+  dispositivos: DispositivoAfectado[]
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -474,7 +515,13 @@ export interface EjecucionDiagnostico {
   solucionPropuesta: string
 }
 
-export type TipoEntidadHistorial = 'categoria' | 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico'
+export type TipoEntidadHistorial =
+  | 'categoria'
+  | 'articulo'
+  | 'dispositivo'
+  | 'credencial'
+  | 'diagnostico'
+  | 'ubicacion'
 
 export interface HistorialEntrada {
   id: string
@@ -591,6 +638,7 @@ class SolucionesItDatabase extends Dexie {
   categorias!: EntityTable<Categoria, 'id'>
   articulos!: EntityTable<Articulo, 'id'>
   dispositivos!: EntityTable<Dispositivo, 'id'>
+  ubicaciones!: EntityTable<Ubicacion, 'id'>
   conexiones!: EntityTable<Conexion, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
   bovedaMeta!: EntityTable<BovedaMeta, 'id'>
@@ -671,6 +719,17 @@ class SolucionesItDatabase extends Dexie {
     // necesita una tabla nueva es la auditoria de la boveda.
     this.version(9).stores({
       accesos_boveda: 'id, credencialId',
+    })
+
+    // Grupo de esquema N3 (2026-07-17): la ubicacion pasa a ser una
+    // entidad propia. Las columnas nuevas de tablas existentes
+    // (dispositivos.ubicacionId, credenciales.dispositivos,
+    // articulos.ordenRutaInicio, categorias.color) no se declaran aqui:
+    // Dexie solo necesita los indices, y esos campos viven dentro del
+    // objeto igual que el resto. Lo unico que exige tabla nueva es
+    // `ubicaciones`.
+    this.version(10).stores({
+      ubicaciones: 'id, updatedAt',
     })
   }
 }

@@ -86,6 +86,18 @@ const ImportarDispositivosPage = lazy(() =>
     default: m.ImportarDispositivosPage,
   })),
 )
+const UbicacionesPage = lazy(() =>
+  import('./features/ubicaciones/UbicacionesPage').then((m) => ({ default: m.UbicacionesPage })),
+)
+const UbicacionPage = lazy(() =>
+  import('./features/ubicaciones/UbicacionPage').then((m) => ({ default: m.UbicacionPage })),
+)
+const UbicacionForm = lazy(() =>
+  import('./features/ubicaciones/UbicacionForm').then((m) => ({ default: m.UbicacionForm })),
+)
+const MigracionUbicaciones = lazy(() =>
+  import('./features/ubicaciones/MigracionUbicaciones').then((m) => ({ default: m.MigracionUbicaciones })),
+)
 const RedPage = lazy(() => import('./features/red/RedPage').then((m) => ({ default: m.RedPage })))
 const TopologiaPage = lazy(() =>
   import('./features/red/TopologiaPage').then((m) => ({ default: m.TopologiaPage })),
@@ -235,6 +247,15 @@ function App() {
                 <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
                 <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
                 <Route path="dispositivos/:dispositivoId/editar" element={<DispositivoForm />} />
+                {/* Ubicaciones como entidad (grupo N3): lista, migracion
+                    asistida de textos, ficha 360 y formulario. Van dentro
+                    del Layout oscuro como el resto de fichas y formularios
+                    de dispositivos aun sin re-autorizar a Nocturne. */}
+                <Route path="ubicaciones" element={<UbicacionesPage />} />
+                <Route path="ubicaciones/nueva" element={<UbicacionForm />} />
+                <Route path="ubicaciones/migrar" element={<MigracionUbicaciones />} />
+                <Route path="ubicaciones/:ubicacionId" element={<UbicacionPage />} />
+                <Route path="ubicaciones/:ubicacionId/editar" element={<UbicacionForm />} />
                 {/* La seccion de credenciales se llamo "Notas" (nombre
                     neutro de discrecion) hasta el 2026-07-09, cuando el
                     usuario decidio volver a llamarla Boveda. La ruta

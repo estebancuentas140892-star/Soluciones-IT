@@ -11,6 +11,7 @@ import {
   type Dispositivo,
   type EjecucionDiagnostico,
   type HistorialEntrada,
+  type Ubicacion,
 } from './db'
 
 // Tablas que se sincronizan con Supabase, en el orden en que deben
@@ -28,6 +29,7 @@ export const TABLAS_SINCRONIZADAS = [
   'diagnosticos',
   'ejecuciones_diagnostico',
   'accesos_boveda',
+  'ubicaciones',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
@@ -51,6 +53,7 @@ export interface EntidadPorTabla {
   diagnosticos: Diagnostico
   ejecuciones_diagnostico: EjecucionDiagnostico
   accesos_boveda: AccesoBoveda
+  ubicaciones: Ubicacion
 }
 
 interface ConfigTabla {
@@ -74,7 +77,14 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
   categorias: {
     columnaCursor: 'updated_at',
     soloInsercion: false,
-    campos: { ...camposComunes, nombre: 'nombre', icono: 'icono', orden: 'orden', esRed: 'es_red' },
+    campos: {
+      ...camposComunes,
+      nombre: 'nombre',
+      icono: 'icono',
+      orden: 'orden',
+      esRed: 'es_red',
+      color: 'color',
+    },
   },
   articulos: {
     columnaCursor: 'updated_at',
@@ -94,6 +104,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       estado: 'estado',
       version: 'version',
       relacionados: 'relacionados',
+      ordenRutaInicio: 'orden_ruta_inicio',
     },
   },
   dispositivos: {
@@ -108,6 +119,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       serial: 'serial',
       placaInventario: 'placa_inventario',
       ubicacion: 'ubicacion',
+      ubicacionId: 'ubicacion_id',
       ip: 'ip',
       estado: 'estado',
       observaciones: 'observaciones',
@@ -140,6 +152,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       categoria: 'categoria',
       datosCifrados: 'datos_cifrados',
       venceEn: 'vence_en',
+      dispositivos: 'dispositivos',
     },
   },
   adjuntos: {
@@ -216,6 +229,14 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       accion: 'accion',
       fechaHora: 'fecha_hora',
     },
+  },
+  // Ubicacion como entidad (grupo N3). Va al final de la lista de tablas
+  // sincronizadas: si el esquema aun no se aplico en el servidor, su
+  // fallo no impide descargar las demas.
+  ubicaciones: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: { ...camposComunes, nombre: 'nombre', padreId: 'padre_id', notas: 'notas' },
   },
 }
 

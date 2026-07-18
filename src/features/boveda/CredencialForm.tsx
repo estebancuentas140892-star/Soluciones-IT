@@ -4,7 +4,7 @@ import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-
 import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { Seccion } from '../../components/Seccion'
-import { db } from '../../lib/db'
+import { db, type Dispositivo, type DispositivoAfectado } from '../../lib/db'
 import { guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
 import { cifrarCredencial, descifrarCredencial } from './sesionBoveda'
 
@@ -19,20 +19,32 @@ export function CredencialForm() {
   const [searchParams] = useSearchParams()
   const esEdicion = Boolean(credencialId)
 
-  // Creacion contextual (fase N2, punto 1): "+ Credencial" desde la
+  // Creacion contextual (fase N2/N3, punto 1): "+ Credencial" desde la
   // ficha de un equipo llega con /boveda/nueva?titulo=<sugerido>
-  // &categoria=<categoria del equipo>. Sin esquema de vinculo
-  // credencial<->dispositivo todavia (eso es la fase N3), asi que solo
-  // se precargan estos dos campos de texto; el tecnico puede editarlos
-  // o borrarlos sin problema.
+  // &categoria=<categoria del equipo>&dispositivoId=<id>&dispositivoNombre=<n>.
+  // Con el vinculo credencial<->dispositivo de N3, ademas de los dos
+  // textos ahora tambien se precarga el equipo vinculado; el tecnico
+  // puede editarlo o quitarlo sin problema.
   const tituloContextual = esEdicion ? '' : (searchParams.get('titulo') ?? '')
   const categoriaContextual = esEdicion ? '' : (searchParams.get('categoria') ?? '')
+  const dispositivoContextualId = esEdicion ? '' : (searchParams.get('dispositivoId') ?? '')
+  const dispositivoContextualNombre = esEdicion ? '' : (searchParams.get('dispositivoNombre') ?? '')
 
   const credencial = useLiveQuery(
     async () => (credencialId ? ((await db.credenciales.get(credencialId)) ?? null) : undefined),
     [credencialId],
   )
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  // Dispositivos para el selector de "Equipos con acceso" (grupo N3).
+  const dispositivosDisponibles = useLiveQuery(
+    () => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(),
+    [],
+    [],
+  )
+  const dispositivosOrdenados = useMemo(
+    () => [...dispositivosDisponibles].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true })),
+    [dispositivosDisponibles],
+  )
   const categorias = useMemo(
     () => [...new Set((credenciales ?? []).map((c) => c.categoria).filter(Boolean))].sort(),
     [credenciales],
@@ -47,6 +59,14 @@ export function CredencialForm() {
   const [url, setUrl] = useState('')
   const [notas, setNotas] = useState('')
   const [extras, setExtras] = useState<CampoExtra[]>([])
+  // Equipos a los que da acceso esta credencial (grupo N3): lista
+  // {id, nombre} como copia de referencia. NO se cifra (como venceEn):
+  // que credencial pertenece a que equipo no es el secreto.
+  const [dispositivos, setDispositivos] = useState<DispositivoAfectado[]>(() =>
+    dispositivoContextualId
+      ? [{ id: dispositivoContextualId, nombre: dispositivoContextualNombre }]
+      : [],
+  )
   // Fecha de vencimiento (fase B2), "YYYY-MM-DD" o ''. A diferencia
   // del resto del formulario NO viaja cifrada: se carga directo del
   // registro, sin esperar el descifrado.
@@ -63,6 +83,7 @@ export function CredencialForm() {
     setTitulo(credencial.titulo)
     setCategoria(credencial.categoria)
     setVenceEn(credencial.venceEn ?? '')
+    setDispositivos(credencial.dispositivos ?? [])
     void descifrarCredencial(credencial.datosCifrados).then((datos) => {
       if (!vigente) return
       if (datos) {
@@ -122,6 +143,7 @@ export function CredencialForm() {
           categoria: categoria.trim(),
           datosCifrados,
           venceEn: venceEn.trim() === '' ? null : venceEn.trim(),
+          dispositivos,
         },
         motivo.trim(),
       )
@@ -268,6 +290,18 @@ export function CredencialForm() {
           </div>
         </Seccion>
 
+        <Seccion
+          titulo="Equipos con acceso"
+          descripcion="A qué dispositivos da acceso esta credencial. El vínculo no se cifra: permite verlo desde la ficha del equipo sin desbloquear la bóveda."
+        >
+          <EquiposVinculadosEditor
+            vinculados={dispositivos}
+            dispositivos={dispositivosOrdenados}
+            onVincular={(d) => setDispositivos((actuales) => [...actuales, { id: d.id, nombre: d.nombre }])}
+            onQuitar={(id) => setDispositivos((actuales) => actuales.filter((d) => d.id !== id))}
+          />
+        </Seccion>
+
         <Seccion titulo="Propiedades protegidas" descripcion="Cualquier otro dato confidencial que necesites guardar cifrado.">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -337,6 +371,72 @@ export function CredencialForm() {
           {guardando ? 'Guardando...' : 'Guardar'}
         </button>
       </form>
+    </div>
+  )
+}
+
+// Equipos a los que da acceso la credencial (grupo N3): mismo patron de
+// chips + select que el editor de "Dispositivos afectados" de un
+// articulo, con copia de referencia (id + nombre).
+function EquiposVinculadosEditor({
+  vinculados,
+  dispositivos,
+  onVincular,
+  onQuitar,
+}: {
+  vinculados: DispositivoAfectado[]
+  dispositivos: Dispositivo[]
+  onVincular: (dispositivo: Dispositivo) => void
+  onQuitar: (id: string) => void
+}) {
+  const disponibles = dispositivos.filter((d) => !vinculados.some((v) => v.id === d.id))
+
+  return (
+    <div className="flex flex-col gap-2">
+      {vinculados.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {vinculados.map((vinculo) => (
+            <li
+              key={vinculo.id}
+              className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-200"
+            >
+              {vinculo.nombre || '(equipo sin nombre)'}
+              <button
+                type="button"
+                onClick={() => onQuitar(vinculo.id)}
+                aria-label={`Quitar ${vinculo.nombre}`}
+                className="text-slate-400"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {disponibles.length > 0 ? (
+        <select
+          value=""
+          aria-label="Agregar equipo con acceso"
+          onChange={(e) => {
+            const dispositivo = disponibles.find((d) => d.id === e.target.value)
+            if (dispositivo) onVincular(dispositivo)
+          }}
+          className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        >
+          <option value="">+ Agregar equipo</option>
+          {disponibles.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.nombre}
+              {d.ubicacion ? ` (${d.ubicacion})` : ''}
+            </option>
+          ))}
+        </select>
+      ) : (
+        vinculados.length === 0 && (
+          <p className="text-xs text-slate-500">No hay dispositivos registrados todavía.</p>
+        )
+      )}
     </div>
   )
 }

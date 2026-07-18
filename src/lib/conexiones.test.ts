@@ -39,6 +39,13 @@ describe('resumenConexion', () => {
     )
     expect(texto).toBe('Switch D32 instalado en Rack A01')
   })
+
+  it('describe una relación entre equipos no de red', () => {
+    const texto = resumenConexion(
+      conexion({ tipo: 'relacionado', origenNombre: 'POS Caja 1', destinoNombre: 'Impresora tickets' }),
+    )
+    expect(texto).toBe('POS Caja 1 relacionado con Impresora tickets')
+  })
 })
 
 describe('desdeExtremo', () => {
@@ -86,5 +93,17 @@ describe('agruparConexiones', () => {
     const grupos = agruparConexiones(conexiones, 'rack')
     expect(grupos.contiene.map((e) => e.otroNombre)).toEqual(['Switch D32'])
     expect(grupos.instaladoEn).toHaveLength(0)
+  })
+
+  it('agrupa las relaciones entre equipos no de red aparte de los enlaces', () => {
+    const posId = 'pos'
+    const conexiones: Conexion[] = [
+      conexion({ id: 'r1', tipo: 'relacionado', origenId: posId, origenNombre: 'POS Caja 1', destinoId: 'imp', destinoNombre: 'Impresora' }),
+      conexion({ id: 'r2', tipo: 'relacionado', origenId: 'lector', origenNombre: 'Lector', destinoId: posId }),
+    ]
+    const grupos = agruparConexiones(conexiones, posId)
+    expect(grupos.enlaces).toHaveLength(0)
+    // Ordenados por el nombre del otro extremo (vivo se resuelve en la UI).
+    expect(grupos.relacionados.map((e) => e.otroNombre)).toEqual(['Impresora', 'Lector'])
   })
 })

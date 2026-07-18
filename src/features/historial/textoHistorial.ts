@@ -22,11 +22,17 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
   datosCifrados: 'Datos protegidos',
   procedimiento: 'Procedimiento',
   esRutaInicio: 'Ruta de inicio',
+  ordenRutaInicio: 'Orden en Para empezar',
   sintomas: 'Síntomas',
   causas: 'Posibles causas',
   dispositivosAfectados: 'Dispositivos afectados',
+  dispositivos: 'Equipos con acceso',
   descripcion: 'Descripción',
   nodos: 'Preguntas del diagnóstico',
+  // Ubicaciones (grupo N3).
+  padreId: 'Ubicación superior',
+  notas: 'Notas',
+  color: 'Color',
 }
 
 export function etiquetaDeCampo(campo: string): string {

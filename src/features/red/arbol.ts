@@ -164,8 +164,10 @@ function tienenPadre(conexiones: Conexion[]): Set<string> {
 }
 
 // Solo entran a la topologia los dispositivos de red y los que
-// participan en alguna conexion: asi un computador o una impresora
-// suelta no llena el arbol.
+// participan en alguna conexion de red (enlace o instalacion): asi un
+// computador o una impresora suelta no llena el arbol. Las conexiones
+// 'relacionado' (grupo N3) NO cuentan: relacionar un POS con su impresora
+// no es una dependencia de servicio y no debe aparecer en la topologia.
 function idsRelevantes(
   dispositivos: Dispositivo[],
   esCategoriaRed: (categoriaId: string) => boolean,
@@ -178,7 +180,7 @@ function idsRelevantes(
     }
   }
   for (const conexion of conexiones) {
-    if (conexion.eliminadoEn) continue
+    if (conexion.eliminadoEn || conexion.tipo === 'relacionado') continue
     relevantes.add(conexion.origenId)
     relevantes.add(conexion.destinoId)
   }

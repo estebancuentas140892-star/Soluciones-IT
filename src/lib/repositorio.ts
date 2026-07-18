@@ -50,7 +50,14 @@ export async function guardarRegistro<T extends TablaEditable>(
     } as EntidadPorTabla[T]
 
     const entradas = construirHistorial(tabla, anterior, guardada, usuario, ahora, motivo)
-    if (anterior && entradas.length === 0) return
+    // Guardar si la entidad realmente cambio, aunque el cambio no genere
+    // historial (por ejemplo ubicacionId, que se registra a traves de su
+    // copia legible `ubicacion`). Antes se usaba `entradas.length === 0`
+    // como proxy de "sin cambios", pero eso saltaba el guardado cuando lo
+    // unico que cambiaba era un campo suprimido del historial (el vinculo
+    // de ubicacion durante la migracion N3, cuando el texto ya coincidia
+    // con el nombre de la ubicacion).
+    if (anterior && !huboCambios(anterior, guardada)) return
 
     await store.put(guardada)
     await db.historial.bulkAdd(entradas)
@@ -184,7 +191,31 @@ export async function registrarAccesoBoveda(
 // Historial
 // ----------------------------------------------------------------
 
-const CAMPOS_SIN_HISTORIAL = new Set(['id', 'updatedAt', 'updatedBy', 'eliminadoEn'])
+// `ubicacionId` (grupo N3) no genera su propia entrada: su companero
+// legible `ubicacion` (la copia del nombre) ya registra el cambio de
+// lugar de forma entendible, sin volcar un UUID en el historial.
+const CAMPOS_SIN_HISTORIAL = new Set(['id', 'updatedAt', 'updatedBy', 'eliminadoEn', 'ubicacionId'])
+
+// Campos que el servidor reescribe en cada guardado: no cuentan como un
+// cambio real de la ficha (a diferencia de un campo suprimido del
+// historial como ubicacionId, que si es un cambio aunque no se registre).
+const CAMPOS_META = new Set(['updatedAt', 'updatedBy'])
+
+// Si la entidad cambio de verdad respecto a la anterior, ignorando solo
+// los campos meta que siempre se reescriben. Decide si vale la pena
+// guardar, con independencia de si el cambio genera historial.
+function huboCambios(
+  anterior: EntidadPorTabla[TablaEditable],
+  nueva: EntidadPorTabla[TablaEditable],
+): boolean {
+  const a = anterior as unknown as Record<string, unknown>
+  const b = nueva as unknown as Record<string, unknown>
+  for (const campo of Object.keys(b)) {
+    if (CAMPOS_META.has(campo)) continue
+    if (valorComparable(a[campo]) !== valorComparable(b[campo])) return true
+  }
+  return false
+}
 
 function construirHistorial(
   tabla: TablaEditable,
@@ -288,6 +319,7 @@ const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, 
     dispositivos: 'dispositivo',
     credenciales: 'credencial',
     diagnosticos: 'diagnostico',
+    ubicaciones: 'ubicacion',
   }
 
 // No incluye 'adjuntos': el destino de un adjunto se resuelve aparte
@@ -369,9 +401,12 @@ function formatearValor(campo: string, valor: unknown): string {
   // Las credenciales viajan y se guardan cifradas; en el historial
   // no tiene sentido mostrar el bloque cifrado completo.
   if (campo === 'datosCifrados') return valor ? '(cifrado)' : ''
-  // Los nombres de los dispositivos afectados (no el JSON con sus
-  // id) son lo legible para un humano en el historial.
-  if (campo === 'dispositivosAfectados') return nombresDispositivosAfectados(valor)
+  // Los nombres de los dispositivos afectados y de los equipos con
+  // acceso a una credencial (grupo N3) son lo legible para un humano en
+  // el historial, no el JSON con sus id.
+  if (campo === 'dispositivosAfectados' || campo === 'dispositivos') {
+    return nombresDispositivosAfectados(valor)
+  }
   // Los nodos de un diagnostico son un arbol JSON: en el historial
   // basta un resumen del tamano, no el volcado completo.
   if (campo === 'nodos') {

@@ -9,6 +9,7 @@ import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
+import { SelectorUbicacion } from '../ubicaciones/SelectorUbicacion'
 import { ESTADOS_SUGERIDOS } from './estados'
 
 interface CampoDetalle {
@@ -59,15 +60,11 @@ export function DispositivoForm() {
   }, [copiarDe])
   const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
 
-  // Vocabularios derivados (fase N0): las ubicaciones y marcas ya usadas
-  // por otros equipos se ofrecen como autocompletar. Frena la duplicación
-  // por variantes de escritura ("Taquilla Norte" vs "taq. norte") sin
-  // convertir todavía la ubicación en una entidad (eso es la fase N3).
+  // Vocabulario derivado (fase N0): las marcas ya usadas por otros
+  // equipos se ofrecen como autocompletar. La ubicación dejó de ser texto
+  // libre con datalist: ahora es una entidad propia (grupo N3), elegida
+  // con SelectorUbicacion.
   const todosDispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
-  const ubicacionesSugeridas = useMemo(
-    () => valoresUnicos(todosDispositivos.map((d) => d.ubicacion)),
-    [todosDispositivos],
-  )
   const marcasSugeridas = useMemo(
     () => valoresUnicos(todosDispositivos.map((d) => d.marca)),
     [todosDispositivos],
@@ -94,6 +91,8 @@ export function DispositivoForm() {
   const [serial, setSerial] = useState('')
   const [placaInventario, setPlacaInventario] = useState('')
   const [ubicacion, setUbicacion] = useState('')
+  // Id de la ubicacion (entidad, grupo N3), o null si es texto libre.
+  const [ubicacionId, setUbicacionId] = useState<string | null>(null)
   const [ip, setIp] = useState('')
   const [estado, setEstado] = useState('')
   const [observaciones, setObservaciones] = useState('')
@@ -112,6 +111,7 @@ export function DispositivoForm() {
     setSerial(dispositivo.serial)
     setPlacaInventario(dispositivo.placaInventario)
     setUbicacion(dispositivo.ubicacion)
+    setUbicacionId(dispositivo.ubicacionId ?? null)
     setIp(dispositivo.ip)
     setEstado(dispositivo.estado)
     setObservaciones(dispositivo.observaciones)
@@ -134,6 +134,7 @@ export function DispositivoForm() {
     setSerial('')
     setPlacaInventario('')
     setUbicacion(original.ubicacion)
+    setUbicacionId(original.ubicacionId ?? null)
     setIp('')
     setEstado(original.estado)
     setObservaciones(original.observaciones)
@@ -179,6 +180,8 @@ export function DispositivoForm() {
         serial: serial.trim(),
         placaInventario: placaInventario.trim(),
         ubicacion: ubicacion.trim(),
+        // Solo se conserva el id si la ubicacion no quedo en blanco.
+        ubicacionId: ubicacion.trim() === '' ? null : ubicacionId,
         ip: ip.trim(),
         estado: estado.trim(),
         observaciones: observaciones.trim(),
@@ -284,21 +287,14 @@ export function DispositivoForm() {
         <Seccion titulo="Ubicación" descripcion="Dónde encontrar físicamente el equipo.">
           <label className="flex flex-col gap-1 text-sm text-slate-300">
             Ubicación
-            <input
-              type="text"
-              list="ubicaciones-sugeridas"
-              value={ubicacion}
-              onChange={(e) => setUbicacion(e.target.value)}
-              className={CLASE_INPUT}
+            <SelectorUbicacion
+              ubicacionId={ubicacionId}
+              ubicacion={ubicacion}
+              onChange={(id, texto) => {
+                setUbicacionId(id)
+                setUbicacion(texto)
+              }}
             />
-            <datalist id="ubicaciones-sugeridas">
-              {ubicacionesSugeridas.map((u) => (
-                <option key={u} value={u} />
-              ))}
-            </datalist>
-            <span className="text-xs text-slate-500">
-              Se sugieren las ubicaciones ya usadas para no crear variantes del mismo lugar.
-            </span>
           </label>
         </Seccion>
 

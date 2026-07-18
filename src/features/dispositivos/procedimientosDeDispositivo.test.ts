@@ -13,6 +13,7 @@ function articulo(cambios: Partial<Articulo> & { id: string; titulo: string }): 
     causas: [],
     dispositivosAfectados: [] as DispositivoAfectado[],
     esRutaInicio: false,
+    ordenRutaInicio: 0,
     estado: 'publicado',
     version: '1.0',
     relacionados: [],

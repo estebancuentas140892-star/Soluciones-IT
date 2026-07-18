@@ -20,6 +20,7 @@ function dispositivo(id: string, nombre: string, categoriaId: string, eliminadoE
     serial: '',
     placaInventario: '',
     ubicacion: '',
+    ubicacionId: null,
     ip: '',
     estado: '',
     observaciones: '',
@@ -126,6 +127,18 @@ describe('construirBosque', () => {
     const bosque = construirBosque(dispositivos, conexiones, esRed)
     expect(bosque.map((n) => n.dispositivoId)).toEqual(['sw'])
     expect(hijos(bosque[0])).toEqual(['pc'])
+  })
+
+  it('ignora las conexiones relacionado: no entran en la topología', () => {
+    // Grupo N3: relacionar un POS con su impresora (equipos no de red) no
+    // es una dependencia de servicio y no debe aparecer en el árbol.
+    const dispositivos = [
+      dispositivo('pos', 'POS Caja 1', 'pos'),
+      dispositivo('imp', 'Impresora', 'pos'),
+    ]
+    const relacionado: Conexion = { ...enlace('r', 'pos', '', 'imp'), tipo: 'relacionado' }
+    const bosque = construirBosque(dispositivos, [relacionado], esRed)
+    expect(bosque).toHaveLength(0)
   })
 })
 

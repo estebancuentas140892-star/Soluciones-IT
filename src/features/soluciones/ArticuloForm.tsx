@@ -113,6 +113,10 @@ export function ArticuloForm() {
       : [],
   )
   const [esRutaInicio, setEsRutaInicio] = useState(false)
+  // Orden dentro de "Para empezar" (grupo N3): menor primero. Se guarda
+  // como texto en el estado del formulario y se convierte a entero al
+  // guardar; solo importa cuando esRutaInicio esta marcado.
+  const [ordenRutaInicio, setOrdenRutaInicio] = useState('0')
   const [estado, setEstado] = useState<EstadoArticulo>('publicado')
   const [cambioMayor, setCambioMayor] = useState(false)
   const [relacionados, setRelacionados] = useState<ArticuloRelacionado[]>([])
@@ -165,6 +169,7 @@ export function ArticuloForm() {
     setCausas((articulo.causas ?? []).join('\n'))
     setDispositivosAfectados(articulo.dispositivosAfectados ?? [])
     setEsRutaInicio(articulo.esRutaInicio)
+    setOrdenRutaInicio(String(articulo.ordenRutaInicio ?? 0))
     setEstado(articulo.estado ?? 'publicado')
     setRelacionados(articulo.relacionados ?? [])
     setCargadoInicial(true)
@@ -286,6 +291,8 @@ export function ArticuloForm() {
           .filter(Boolean),
         dispositivosAfectados,
         esRutaInicio,
+        // Entero >= 0; si el campo quedo vacio o no numerico, 0.
+        ordenRutaInicio: esRutaInicio ? Math.max(0, Math.trunc(Number(ordenRutaInicio) || 0)) : 0,
         estado,
         version,
         relacionados,
@@ -451,6 +458,22 @@ export function ArticuloForm() {
               </span>
             </span>
           </label>
+
+          {esRutaInicio && (
+            <label className="flex flex-col gap-1 text-sm text-slate-300">
+              Orden en "Para empezar"
+              <input
+                type="number"
+                min={0}
+                value={ordenRutaInicio}
+                onChange={(e) => setOrdenRutaInicio(e.target.value)}
+                className={CLASE_INPUT}
+              />
+              <span className="text-xs text-slate-500">
+                Menor primero. Ordena la ruta de aprendizaje (1° conocer la red, 2° instalar un POS...).
+              </span>
+            </label>
+          )}
 
           <div className="flex gap-3">
             <label className="flex flex-1 flex-col gap-1 text-sm text-slate-300">

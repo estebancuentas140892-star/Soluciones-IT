@@ -21,6 +21,10 @@ const ETIQUETA_RELACION: Record<TipoRelacion, string> = {
   dispositivo_afectado: 'Aparece en',
   diagnostico_articulo: 'Ejecutado por el diagnóstico',
   conexion: 'Conectado con',
+  // La ficha del dispositivo muestra sus credenciales con un componente
+  // propio que aplica el permiso de bóveda; esta etiqueta es solo el
+  // respaldo del Record exhaustivo, redactada desde el equipo.
+  credencial_dispositivo: 'Credencial de acceso',
 }
 
 // Orden estable de los grupos en la ficha.
@@ -34,6 +38,7 @@ const ORDEN_RELACION: TipoRelacion[] = [
   'dispositivo_afectado',
   'relacionado',
   'conexion',
+  'credencial_dispositivo',
 ]
 
 interface Props {

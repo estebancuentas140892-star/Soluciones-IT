@@ -11,8 +11,10 @@ import {
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 
 // Relacion nueva vista desde la ficha actual: define quien es origen y
-// quien destino segun lo que el tecnico quiere documentar.
-type Modo = 'enlace' | 'instalado' | 'contiene'
+// quien destino segun lo que el tecnico quiere documentar. 'relacionado'
+// (grupo N3) vincula dos equipos que no son de red (un POS con su
+// impresora), sin puertos ni medio y sin entrar en la topologia.
+type Modo = 'enlace' | 'instalado' | 'contiene' | 'relacionado'
 
 // Seccion Conexiones de la ficha de un dispositivo: lista sus enlaces
 // e instalaciones (navegables a la ficha del otro extremo) y permite
@@ -45,7 +47,8 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
   const grupos = useMemo(() => agruparConexiones(conexiones ?? [], dispositivo.id), [conexiones, dispositivo.id])
   const [agregando, setAgregando] = useState(false)
 
-  const total = grupos.instaladoEn.length + grupos.contiene.length + grupos.enlaces.length
+  const total =
+    grupos.instaladoEn.length + grupos.contiene.length + grupos.enlaces.length + grupos.relacionados.length
 
   async function quitar(conexion: Conexion) {
     await eliminarRegistro('conexiones', conexion.id)
@@ -88,6 +91,14 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
       {grupos.enlaces.length > 0 && (
         <GrupoConexiones titulo="Enlaces">
           {grupos.enlaces.map((extremo) => (
+            <FilaConexion key={extremo.conexion.id} extremo={extremo} nombrePorId={nombrePorId} onQuitar={quitar} />
+          ))}
+        </GrupoConexiones>
+      )}
+
+      {grupos.relacionados.length > 0 && (
+        <GrupoConexiones titulo="Relacionados">
+          {grupos.relacionados.map((extremo) => (
             <FilaConexion key={extremo.conexion.id} extremo={extremo} nombrePorId={nombrePorId} onQuitar={quitar} />
           ))}
         </GrupoConexiones>
@@ -193,8 +204,10 @@ function FormularioConexion({
     if (!otro) return
     setGuardando(true)
 
-    const esInstalacion = modo !== 'enlace'
-    const tipo: TipoConexion = esInstalacion ? 'instalacion' : 'enlace'
+    const tipo: TipoConexion =
+      modo === 'enlace' ? 'enlace' : modo === 'relacionado' ? 'relacionado' : 'instalacion'
+    // Solo un enlace lleva puertos y medio; instalacion y relacionado no.
+    const conPuertos = modo === 'enlace'
     // En 'contiene' el equipo seleccionado es el que se instala en
     // este (este es el rack); en el resto, este es el origen.
     const origenEsteDispositivo = modo !== 'contiene'
@@ -206,11 +219,11 @@ function FormularioConexion({
       tipo,
       origenId: origen.id,
       origenNombre: origen.nombre,
-      origenPuerto: esInstalacion ? '' : puertoLocal.trim(),
+      origenPuerto: conPuertos ? puertoLocal.trim() : '',
       destinoId: destino.id,
       destinoNombre: destino.nombre,
-      destinoPuerto: esInstalacion ? '' : puertoRemoto.trim(),
-      medio: esInstalacion ? '' : medio.trim(),
+      destinoPuerto: conPuertos ? puertoRemoto.trim() : '',
+      medio: conPuertos ? medio.trim() : '',
       notas: notas.trim(),
     })
 
@@ -232,6 +245,7 @@ function FormularioConexion({
           <option value="enlace">Enlace hacia otro equipo</option>
           <option value="instalado">Está instalado en (rack)</option>
           <option value="contiene">Contiene el equipo (este es un rack)</option>
+          <option value="relacionado">Relacionado con (equipo no de red)</option>
         </select>
       </label>
 
@@ -325,6 +339,13 @@ function FormularioConexion({
             </datalist>
           </label>
         </div>
+      )}
+
+      {modo === 'relacionado' && (
+        <p className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-400">
+          Relaciona dos equipos que no son de red (por ejemplo un POS con su impresora). Aparece en
+          la ficha de ambos, sin puertos ni medio, y no entra en la topología.
+        </p>
       )}
 
       <label className="flex flex-col gap-1 text-xs text-slate-400">

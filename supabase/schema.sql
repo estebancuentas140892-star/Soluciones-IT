@@ -278,7 +278,7 @@ alter table public.ejecuciones_diagnostico add column if not exists solucion_pro
 -- El historial ahora tambien registra cambios de diagnosticos.
 alter table public.historial drop constraint if exists historial_entidad_tipo_check;
 alter table public.historial add constraint historial_entidad_tipo_check
-  check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico'));
+  check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico', 'ubicacion'));
 
 -- Auditoria de la boveda (fase B3): registro inmutable (solo
 -- insercion, mismo patron que historial/ejecuciones_diagnostico) de
@@ -322,6 +322,58 @@ create index if not exists idx_ejecuciones_recibido on public.ejecuciones_diagno
 create index if not exists idx_ejecuciones_diagnostico on public.ejecuciones_diagnostico (diagnostico_id);
 create index if not exists idx_accesos_boveda_recibido on public.accesos_boveda (recibido_en);
 create index if not exists idx_accesos_boveda_credencial on public.accesos_boveda (credencial_id);
+
+-- ----------------------------------------------------------------
+-- 1b. Grupo de esquema N3 (2026-07-17): ubicacion como entidad,
+--     vinculo credencial<->dispositivo, orden de rutas de inicio,
+--     color de categoria y relaciones entre equipos no-red.
+--     Decisiones en PROPUESTA_BASE_CONOCIMIENTO.md seccion 12.
+-- ----------------------------------------------------------------
+
+-- Ubicacion como entidad (antes era texto libre en dispositivos): con
+-- jerarquia opcional por padre_id (Sede > Area > Punto), sin obligacion
+-- de usarla. dispositivos.ubicacion (texto) se conserva como copia de
+-- referencia, misma regla que el resto de vinculos del sistema.
+create table if not exists public.ubicaciones (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null,
+  padre_id uuid references public.ubicaciones (id),
+  notas text not null default '',
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+alter table public.dispositivos add column if not exists ubicacion_id uuid references public.ubicaciones (id);
+
+-- Vinculo credencial -> dispositivos a los que da acceso (lista
+-- {id, nombre} como copia de referencia). NO cifrado a proposito (como
+-- vence_en): que credencial pertenece a que equipo no es el secreto; el
+-- contenido sigue cifrado y la tabla credenciales ya esta protegida por
+-- la RLS de boveda. Permite el inverso "credenciales de este equipo"
+-- sin desbloquear la boveda.
+alter table public.credenciales add column if not exists dispositivos jsonb not null default '[]'::jsonb;
+
+-- Orden de las rutas de inicio ("Para empezar"): columna, no JSON,
+-- porque es_ruta_inicio aplica a cualquier articulo (incluidos los
+-- manuales sin procedimiento).
+alter table public.articulos add column if not exists orden_ruta_inicio integer not null default 0;
+
+-- Color de identidad de la categoria (override manual, opcional). Si es
+-- null, la app lo deriva del orden (ver PROPUESTA_REVISION_ARQUITECTURA.md).
+alter table public.categorias add column if not exists color text;
+
+-- Conexiones: sumar el tipo 'relacionado' (relacionar dos equipos que
+-- no son de red, por ejemplo un POS con su impresora). Sin puertos ni
+-- medio; aparece en ambas fichas, no en la topologia (no es dependencia
+-- de servicio).
+alter table public.conexiones drop constraint if exists conexiones_tipo_check;
+alter table public.conexiones add constraint conexiones_tipo_check
+  check (tipo in ('enlace', 'instalacion', 'relacionado'));
+
+create index if not exists idx_ubicaciones_updated on public.ubicaciones (updated_at);
+create index if not exists idx_ubicaciones_padre on public.ubicaciones (padre_id);
+create index if not exists idx_dispositivos_ubicacion on public.dispositivos (ubicacion_id);
 
 -- ----------------------------------------------------------------
 -- 2. Funciones y triggers
@@ -383,6 +435,11 @@ create trigger trg_diagnosticos_modificacion
   before insert or update on public.diagnosticos
   for each row execute function public.registrar_modificacion();
 
+drop trigger if exists trg_ubicaciones_modificacion on public.ubicaciones;
+create trigger trg_ubicaciones_modificacion
+  before insert or update on public.ubicaciones
+  for each row execute function public.registrar_modificacion();
+
 -- Crea el perfil automaticamente cuando se da de alta un usuario
 -- en Authentication.
 create or replace function public.crear_perfil()
@@ -436,6 +493,7 @@ alter table public.adjuntos enable row level security;
 alter table public.diagnosticos enable row level security;
 alter table public.ejecuciones_diagnostico enable row level security;
 alter table public.accesos_boveda enable row level security;
+alter table public.ubicaciones enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -511,6 +569,12 @@ create policy historial_insercion on public.historial
 -- como el resto del contenido general.
 drop policy if exists diagnosticos_acceso on public.diagnosticos;
 create policy diagnosticos_acceso on public.diagnosticos
+  for all to authenticated using (true) with check (true);
+
+-- Ubicaciones: acceso completo para cualquier tecnico autenticado, como
+-- el resto del contenido general (categorias, dispositivos...).
+drop policy if exists ubicaciones_acceso on public.ubicaciones;
+create policy ubicaciones_acceso on public.ubicaciones
   for all to authenticated using (true) with check (true);
 
 -- Ejecuciones de diagnostico: se pueden leer y agregar, nunca editar
@@ -604,7 +668,7 @@ declare
   tablas text[] := array[
     'categorias', 'articulos', 'dispositivos', 'credenciales', 'adjuntos',
     'historial', 'conexiones', 'diagnosticos', 'ejecuciones_diagnostico',
-    'accesos_boveda', 'perfiles', 'boveda_meta'
+    'accesos_boveda', 'perfiles', 'boveda_meta', 'ubicaciones'
   ];
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then

@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
-import { caminoAscendente, construirArbol, contarImpacto, infoDeDispositivos } from './arbol'
+import { caminoAscendente, construirArbol, contarImpacto, infoDeDispositivos, type PasoAscendente } from './arbol'
 import { iconoDeVia } from './medios'
 
 // Impacto de una falla y cadena de dependencia de un equipo (fase R1,
@@ -72,7 +72,7 @@ function ImpactoFalla({
 function DependeDe({
   camino,
 }: {
-  camino: { dispositivoId: string; nombre: string; via: string; tipoConexion: 'enlace' | 'instalacion'; medio: string }[]
+  camino: PasoAscendente[]
 }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">

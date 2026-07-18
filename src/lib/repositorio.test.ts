@@ -12,6 +12,7 @@ function dispositivoDePrueba(id: string): Omit<Dispositivo, 'updatedAt' | 'updat
     serial: 'SN-001',
     placaInventario: 'INV-100',
     ubicacion: 'Bodega norte',
+    ubicacionId: null,
     ip: '192.168.1.50',
     estado: 'Operativa',
     observaciones: '',
@@ -33,6 +34,7 @@ function articuloDePrueba(id: string): Omit<Articulo, 'updatedAt' | 'updatedBy' 
     causas: [],
     dispositivosAfectados: [],
     esRutaInicio: false,
+    ordenRutaInicio: 0,
     estado: 'publicado',
     version: '1.0',
     relacionados: [],
@@ -114,6 +116,27 @@ describe('guardarRegistro', () => {
     expect(await db.cambiosPendientes.count()).toBe(pendientesAntes)
   })
 
+  it('guarda un cambio que solo toca un campo sin historial (ubicacionId)', async () => {
+    // Grupo N3: vincular una ubicacion cuando el texto ya coincidia con
+    // su nombre cambia solo ubicacionId (suprimido del historial). El
+    // guardado debe persistir igual, aunque no genere entradas.
+    const id = nuevoId()
+    const original = dispositivoDePrueba(id)
+    await guardarRegistro('dispositivos', original)
+    const historialAntes = await db.historial.count()
+
+    await guardarRegistro('dispositivos', { ...original, ubicacionId: 'ubi-1' })
+
+    const guardado = await db.dispositivos.get(id)
+    expect(guardado?.ubicacionId).toBe('ubi-1')
+    // No genera historial (el vinculo se registra via la copia legible),
+    // pero si encola la subida del cambio real.
+    expect(await db.historial.count()).toBe(historialAntes)
+    const pendientes = await db.cambiosPendientes.where('[tabla+entidadId]').equals(['dispositivos', id]).toArray()
+    expect(pendientes).toHaveLength(1)
+    expect((pendientes[0].payload as Dispositivo).ubicacionId).toBe('ubi-1')
+  })
+
   it('nunca deja valores de credenciales legibles en el historial', async () => {
     const id = nuevoId()
     await guardarRegistro('credenciales', {
@@ -122,6 +145,7 @@ describe('guardarRegistro', () => {
       categoria: 'Redes',
       datosCifrados: 'bloque-cifrado-original',
       venceEn: null,
+      dispositivos: [],
     })
     await guardarRegistro('credenciales', {
       id,
@@ -129,6 +153,7 @@ describe('guardarRegistro', () => {
       categoria: 'Redes',
       datosCifrados: 'bloque-cifrado-nuevo',
       venceEn: null,
+      dispositivos: [],
     })
 
     const cambio = (await db.historial.toArray()).find((c) => c.campo === 'datosCifrados')

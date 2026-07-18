@@ -183,6 +183,10 @@ export function mapearFilas(filas: string[][], opciones: OpcionesMapeo): Resulta
       serial: '',
       placaInventario: '',
       ubicacion: '',
+      // La importacion masiva trae la ubicacion solo como texto; queda
+      // sin vincular a una entidad (grupo N3), migrable despues desde la
+      // pantalla de migracion asistida.
+      ubicacionId: null,
       ip: '',
       estado: '',
       observaciones: '',

@@ -21,6 +21,11 @@ export function resumenConexion(conexion: Conexion): string {
   if (conexion.tipo === 'instalacion') {
     return `${conexion.origenNombre} instalado en ${conexion.destinoNombre}`
   }
+  // Relacion entre dos equipos que no son de red (grupo N3): sin puertos
+  // ni medio, solo el vinculo entre ambos.
+  if (conexion.tipo === 'relacionado') {
+    return `${conexion.origenNombre} relacionado con ${conexion.destinoNombre}`
+  }
   return `${conPuerto(conexion.origenNombre, conexion.origenPuerto)} → ${conPuerto(
     conexion.destinoNombre,
     conexion.destinoPuerto,
@@ -59,13 +64,16 @@ export interface ConexionesAgrupadas {
   contiene: ExtremoConexion[]
   // Enlaces de red, ordenados por el puerto de este dispositivo.
   enlaces: ExtremoConexion[]
+  // Equipos relacionados que no son de red (grupo N3): un POS con su
+  // impresora, sin puertos ni medio. No entran en la topologia.
+  relacionados: ExtremoConexion[]
 }
 
 export function agruparConexiones(
   conexiones: Conexion[],
   dispositivoId: string,
 ): ConexionesAgrupadas {
-  const grupos: ConexionesAgrupadas = { instaladoEn: [], contiene: [], enlaces: [] }
+  const grupos: ConexionesAgrupadas = { instaladoEn: [], contiene: [], enlaces: [], relacionados: [] }
   for (const conexion of conexiones) {
     if (conexion.eliminadoEn) continue
     if (conexion.origenId !== dispositivoId && conexion.destinoId !== dispositivoId) continue
@@ -73,11 +81,14 @@ export function agruparConexiones(
     if (conexion.tipo === 'instalacion') {
       if (extremo.esOrigen) grupos.instaladoEn.push(extremo)
       else grupos.contiene.push(extremo)
+    } else if (conexion.tipo === 'relacionado') {
+      grupos.relacionados.push(extremo)
     } else {
       grupos.enlaces.push(extremo)
     }
   }
   grupos.contiene.sort((a, b) => compararNatural(a.otroNombre, b.otroNombre))
+  grupos.relacionados.sort((a, b) => compararNatural(a.otroNombre, b.otroNombre))
   grupos.enlaces.sort(
     (a, b) =>
       compararNatural(a.puertoLocal, b.puertoLocal) || compararNatural(a.otroNombre, b.otroNombre),

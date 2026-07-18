@@ -105,6 +105,13 @@ export function DispositivosPage() {
               {menuAbierto && (
                 <div className="absolute right-0 z-10 mt-1 flex w-48 flex-col overflow-hidden rounded-md border border-zinc-200 bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,.08)]">
                   <Link
+                    to="/ubicaciones"
+                    onClick={() => setMenuAbierto(false)}
+                    className="px-3.5 py-2 text-[13.5px] font-medium text-zinc-700 hover:bg-zinc-100"
+                  >
+                    Ubicaciones
+                  </Link>
+                  <Link
                     to="/dispositivos/etiquetas"
                     onClick={() => setMenuAbierto(false)}
                     className="px-3.5 py-2 text-[13.5px] font-medium text-zinc-700 hover:bg-zinc-100"
