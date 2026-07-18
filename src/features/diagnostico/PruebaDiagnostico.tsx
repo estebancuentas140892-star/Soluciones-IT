@@ -21,13 +21,14 @@ interface Props {
   onCerrar: () => void
 }
 
-// Modo prueba del editor de diagnósticos (fase D2): recorre el árbol
-// EN MEMORIA, sin guardar, sin registrar la ejecución y sin ejecutar
-// de verdad los procedimientos vinculados (los representa con una
-// tarjeta). Comparte las transiciones puras con el asistente real
-// (src/lib/diagnostico.ts), así que "qué respuesta lleva a dónde" es
-// idéntico a lo que verá el técnico. Se muestra como capa sobre el
-// formulario para conservar el estado sin editar y sin navegar.
+// Modo prueba del editor de diagnósticos (fase D2, recoloreado a
+// Nocturne en la tarea 83): recorre el árbol EN MEMORIA, sin guardar,
+// sin registrar la ejecución y sin ejecutar de verdad los
+// procedimientos vinculados (los representa con una tarjeta). Comparte
+// las transiciones puras con el asistente real (src/lib/diagnostico.ts),
+// así que "qué respuesta lleva a dónde" es idéntico a lo que verá el
+// técnico. Se muestra como capa sobre el formulario para conservar el
+// estado sin editar y sin navegar.
 export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Props) {
   const porId = useMemo(() => new Map(nodos.map((n) => [n.id, n])), [nodos])
   const [avance, setAvance] = useState<AvanceDiagnostico>(() =>
@@ -43,54 +44,54 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
   const nodoActual = estado.tipo === 'pregunta' ? porId.get(estado.nodoId) ?? null : null
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-950/95 px-4 py-3 backdrop-blur">
-        <p className="text-sm font-medium text-slate-200">
+    <div className="nocturne fixed inset-0 z-[70] overflow-y-auto bg-noct-bg font-inter text-noct-text">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-noct-divider bg-noct-bg/[.92] px-4 py-3 backdrop-blur-[12px]">
+        <p className="flex items-center gap-2 text-sm font-medium text-noct-text">
           Probar diagnóstico
-          <span className="ml-2 rounded-full border border-amber-800 bg-amber-950/40 px-2 py-0.5 text-[10px] text-amber-400">
+          <span className="rounded-full border border-noct-precaucion/50 bg-noct-precaucion/[.14] px-2 py-0.5 text-[10px] text-noct-precaucion">
             Modo prueba
           </span>
         </p>
         <button
           type="button"
           onClick={onCerrar}
-          className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300"
+          className="rounded-md border border-noct-divider px-3 py-1.5 text-xs text-noct-neutral-300 hover:bg-noct-text/5 hover:text-noct-text"
         >
           Cerrar
         </button>
       </div>
 
-      <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pt-5 pb-10">
-        <p className="text-xs text-slate-500">{titulo || 'Diagnóstico sin título'}</p>
+      <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pb-10 pt-5">
+        <p className="text-xs text-noct-neutral-500">{titulo || 'Diagnóstico sin título'}</p>
 
-        <p className="rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-300/90">
-          Es un recorrido de prueba: no se guarda nada y los procedimientos vinculados no se ejecutan de
-          verdad. Sirve para revisar que cada respuesta lleve a donde debe.
+        <p className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/[.09] px-3 py-2 text-xs text-noct-precaucion">
+          Es un recorrido de prueba: no se guarda nada y los procedimientos vinculados no se ejecutan de verdad.
+          Sirve para revisar que cada respuesta lleve a donde debe.
         </p>
 
-        <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+        <div className="h-1.5 overflow-hidden rounded-full bg-noct-neutral-800">
           <div
-            className={`h-full rounded-full transition-all ${estado.tipo === 'final' ? 'bg-emerald-500' : 'bg-sky-500'}`}
+            className={`h-full rounded-full transition-all ${estado.tipo === 'final' ? 'bg-noct-exito' : 'bg-noct-accent'}`}
             style={{ width: `${porcentaje}%` }}
           />
         </div>
 
         {nodos.length === 0 && (
-          <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
+          <p className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-6 text-center text-sm text-noct-neutral-500">
             Agrega al menos una pregunta para probar el diagnóstico.
           </p>
         )}
 
         {estado.tipo === 'pregunta' && !nodoActual && (
-          <div className="flex flex-col gap-3 rounded-xl border border-amber-900/60 bg-amber-950/40 px-4 py-3">
-            <p className="text-sm text-amber-200">
-              Esta respuesta apunta a una pregunta que ya no existe. En el diagnóstico real dejaría al
-              técnico sin salida: revisa el destino de esa respuesta.
+          <div className="flex flex-col gap-3 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/[.12] px-4 py-3">
+            <p className="text-sm text-noct-precaucion">
+              Esta respuesta apunta a una pregunta que ya no existe. En el diagnóstico real dejaría al técnico sin
+              salida: revisa el destino de esa respuesta.
             </p>
             <button
               type="button"
               onClick={reiniciar}
-              className="self-start rounded-lg border border-amber-800 px-3 py-1.5 text-xs text-amber-300"
+              className="self-start rounded-md border border-noct-precaucion/50 px-3 py-1.5 text-xs text-noct-precaucion hover:bg-noct-precaucion/10"
             >
               Empezar de nuevo
             </button>
@@ -100,12 +101,12 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
         {estado.tipo === 'pregunta' && nodoActual && (
           <div className="flex flex-col gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-slate-100">{nodoActual.pregunta || '(pregunta sin texto)'}</h2>
-              {nodoActual.descripcion && <p className="mt-1 text-sm text-slate-400">{nodoActual.descripcion}</p>}
+              <h2 className="text-lg font-semibold text-noct-text">{nodoActual.pregunta || '(pregunta sin texto)'}</h2>
+              {nodoActual.descripcion && <p className="mt-1 text-sm text-noct-neutral-400">{nodoActual.descripcion}</p>}
             </div>
 
             {nodoActual.opciones.length === 0 ? (
-              <p className="rounded-xl border border-amber-900/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">
+              <p className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/[.12] px-4 py-3 text-sm text-noct-precaucion">
                 Esta pregunta no tiene respuestas: agrégalas para que el técnico pueda continuar.
               </p>
             ) : (
@@ -115,11 +116,11 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
                     key={opcion.id}
                     type="button"
                     onClick={() => setAvance(avanceAlResponder(avance, nodoActual, opcion))}
-                    className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-left text-sm font-medium text-slate-100 active:bg-slate-800"
+                    className="rounded-lg border border-noct-divider bg-noct-surface px-4 py-3 text-left text-sm font-medium text-noct-text hover:border-noct-accent"
                   >
                     {opcion.etiqueta || '(respuesta sin texto)'}
                     {opcion.articuloId && (
-                      <span className="mt-0.5 block text-xs font-normal text-sky-300">
+                      <span className="mt-0.5 block text-xs font-normal text-noct-accent-300">
                         Ejecuta: {opcion.articuloTitulo || 'un procedimiento'}
                       </span>
                     )}
@@ -132,32 +133,32 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
 
         {estado.tipo === 'articulo' &&
           (ejecutables.has(estado.articuloId) ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-sky-900/60 bg-sky-950/30 px-4 py-3">
+            <div className="flex flex-col gap-3 rounded-lg border border-noct-accent/40 bg-noct-accent/10 px-4 py-3">
               <div>
-                <p className="text-xs text-sky-300">Aquí se ejecutaría el procedimiento</p>
-                <p className="text-sm font-medium text-sky-100">{estado.articuloTitulo || 'Procedimiento vinculado'}</p>
+                <p className="text-xs text-noct-accent-300">Aquí se ejecutaría el procedimiento</p>
+                <p className="text-sm font-medium text-noct-text">{estado.articuloTitulo || 'Procedimiento vinculado'}</p>
               </div>
-              <p className="text-xs text-sky-300/80">
+              <p className="text-xs text-noct-neutral-400">
                 En el diagnóstico real, el técnico completa el procedimiento y luego el diagnóstico continúa.
               </p>
               <button
                 type="button"
                 onClick={() => setAvance(avanceTrasArticulo(avance))}
-                className="self-start rounded-lg bg-sky-500 px-4 py-2 text-xs font-medium text-slate-950"
+                className="self-start rounded-md border border-noct-accent px-4 py-2 text-xs font-medium text-noct-accent hover:bg-noct-accent/10"
               >
                 Continuar (como si estuviera completo)
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 rounded-xl border border-red-900/60 bg-red-950/30 px-4 py-3">
-              <p className="text-sm text-red-200">
-                ⚠ El procedimiento «{estado.articuloTitulo || 'vinculado'}» ya no está disponible (se eliminó o
-                perdió sus pasos). Revisa el vínculo de esa respuesta.
+            <div className="flex flex-col gap-3 rounded-lg border border-noct-error/40 bg-noct-error/[.12] px-4 py-3">
+              <p className="text-sm text-noct-error">
+                El procedimiento «{estado.articuloTitulo || 'vinculado'}» ya no está disponible (se eliminó o perdió
+                sus pasos). Revisa el vínculo de esa respuesta.
               </p>
               <button
                 type="button"
                 onClick={() => setAvance(avanceTrasArticulo(avance))}
-                className="self-start rounded-lg border border-red-800 px-3 py-1.5 text-xs text-red-300"
+                className="self-start rounded-md border border-noct-error/50 px-3 py-1.5 text-xs text-noct-error hover:bg-noct-error/10"
               >
                 Continuar de todos modos
               </button>
@@ -166,9 +167,9 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
 
         {estado.tipo === 'final' && nodos.length > 0 && (
           <div className="flex flex-col gap-3">
-            <div className="rounded-xl border border-emerald-800 bg-emerald-950/40 px-4 py-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-emerald-400">Fin del recorrido</p>
-              <p className="mt-1 text-sm text-emerald-100">
+            <div className="rounded-lg border border-noct-exito/50 bg-noct-exito/10 px-4 py-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-noct-exito">Fin del recorrido</p>
+              <p className="mt-1 text-sm text-noct-text">
                 {estado.mensajeFinal ||
                   (estado.articuloTitulo
                     ? `Se ejecutó "${estado.articuloTitulo}".`
@@ -177,12 +178,12 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
             </div>
 
             {camino.length > 0 && (
-              <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-                <h3 className="text-xs font-medium text-slate-400">Camino recorrido</h3>
+              <div className="rounded-lg border border-noct-divider bg-noct-surface px-4 py-3">
+                <h3 className="text-xs font-medium text-noct-neutral-400">Camino recorrido</h3>
                 <ul className="mt-1.5 flex flex-col gap-1">
                   {camino.map((paso, indice) => (
-                    <li key={indice} className="text-xs text-slate-300">
-                      {paso.pregunta} <span className="text-sky-300">→ {paso.etiqueta}</span>
+                    <li key={indice} className="text-xs text-noct-neutral-300">
+                      {paso.pregunta} <span className="text-noct-accent-300">→ {paso.etiqueta}</span>
                     </li>
                   ))}
                 </ul>
@@ -192,7 +193,7 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
             <button
               type="button"
               onClick={reiniciar}
-              className="self-start rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-medium text-slate-950"
+              className="self-start rounded-md border border-noct-accent px-6 py-2.5 text-sm font-medium text-noct-accent hover:bg-noct-accent/10"
             >
               Volver a empezar
             </button>
@@ -205,7 +206,7 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
               <button
                 type="button"
                 onClick={() => setAvance(avanceAlRetroceder(avance))}
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300"
+                className="rounded-md border border-noct-divider px-3 py-1.5 text-xs text-noct-neutral-300 hover:bg-noct-text/5 hover:text-noct-text"
               >
                 ← Volver
               </button>
@@ -216,7 +217,7 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
               <button
                 type="button"
                 onClick={reiniciar}
-                className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-400"
+                className="rounded-md border border-noct-divider px-3 py-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
               >
                 Reiniciar
               </button>

@@ -181,6 +181,26 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* El editor de diagnóstico (tarea 83, mismo handoff,
+                  Editor de Diagnóstico.dc.html) trae su propio shell
+                  Nocturne a pantalla completa (cabecera pegajosa y barra
+                  de acciones fija), por eso sale del Layout oscuro. */}
+              <Route
+                path="diagnostico/nuevo"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <DiagnosticoForm />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="diagnostico/:diagnosticoId/editar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <DiagnosticoForm />
+                  </Suspense>
+                }
+              />
               {/* La ficha de articulo es la primera pantalla del
                   rediseño Nocturne (tarea 58, handoff "Herramienta IT
                   para técnicos"): trae su propio ShellNocturne, por
@@ -283,9 +303,7 @@ function App() {
               <Route element={<Layout />}>
                 <Route path="cuenta" element={<CuentaPage />} />
                 <Route path="cuenta/seguridad" element={<SeguridadPage />} />
-                <Route path="diagnostico/nuevo" element={<DiagnosticoForm />} />
                 <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
-                <Route path="diagnostico/:diagnosticoId/editar" element={<DiagnosticoForm />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
                 <Route path="dispositivos/nuevo" element={<DispositivoForm />} />
                 <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
