@@ -14,15 +14,30 @@ import {
 } from '../../lib/progresoDiagnostico'
 import { contarHechos, verificacionFinalCompleta } from '../../lib/progresoPasos'
 import { registrarEjecucionDiagnostico } from '../../lib/repositorio'
-import { BotonVolver } from '../../components/BotonVolver'
+import {
+  ArrowLeft,
+  BookOpen,
+  CaretLeft,
+  DotsThreeCircle,
+  Lightbulb,
+  ListPlus,
+  MagnifyingGlass,
+  PencilSimple,
+  XCircle,
+  type IconoProps,
+} from '../../components/iconos'
+import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import { AsistenteVista } from '../soluciones/AsistenteVista'
 
-// Asistente del Modo Diagnostico Inteligente: guia al tecnico desde el
-// problema hasta la solucion con una pregunta a la vez. Vive fuera del
-// Layout (sin barra inferior), como el modo asistente de los
-// procedimientos, para mostrar solo lo necesario en el momento exacto.
-// El avance vive en la base local (progresoDiagnostico): salir, quedar
-// sin señal o ejecutar un procedimiento vinculado nunca lo pierde.
+// Asistente del Modo Diagnóstico Inteligente re-autorizado en Nocturne
+// (handoff "Rediseño de aplicación empresarial", Diagnóstico.dc.html;
+// tarea 81). Guía al técnico del problema a la solución con una pregunta
+// a la vez. Vive fuera del Layout (sin barra inferior), como el modo
+// asistente de los procedimientos: solo lo necesario en el momento
+// exacto. El avance vive en la base local (progresoDiagnostico): salir,
+// quedar sin señal o ejecutar un procedimiento vinculado nunca lo pierde.
+// El diagnóstico arranca directo en la primera pregunta (decisión del
+// usuario, 2026-07-18): tocar el problema en la lista entra de una.
 export function DiagnosticoRunPage() {
   const { diagnosticoId = '' } = useParams()
   const navigate = useNavigate()
@@ -30,9 +45,8 @@ export function DiagnosticoRunPage() {
   const [cerrando, setCerrando] = useState(false)
 
   const diagnostico = useLiveQuery(() => db.diagnosticos.get(diagnosticoId), [diagnosticoId])
-  // `?? null` distingue "todavia cargando" (undefined) de "no hay
-  // sesion en curso" (null): sin esto la pantalla de inicio del
-  // diagnostico jamas apareceria.
+  // `?? null` distingue "todavía cargando" (undefined) de "no hay sesión
+  // en curso" (null): sin esto el auto-inicio jamás dispararía.
   const progreso = useLiveQuery(
     async () => (await db.progresoDiagnostico.get(diagnosticoId)) ?? null,
     [diagnosticoId],
@@ -42,15 +56,33 @@ export function DiagnosticoRunPage() {
     [diagnostico],
   )
 
+  // Auto-inicio: al abrir un problema sin sesión previa se arranca en la
+  // primera pregunta (sin pantalla intermedia). El ref evita un doble
+  // disparo mientras la escritura se propaga por las live queries.
+  const iniciando = useRef(false)
+  useEffect(() => {
+    if (progreso === null && nodos.length > 0 && !iniciando.current) {
+      iniciando.current = true
+      void iniciarDiagnostico(diagnosticoId, nodos[0].id)
+    }
+  }, [progreso, nodos, diagnosticoId])
+
   if (diagnostico === null || diagnostico?.eliminadoEn) return <Navigate to="/diagnostico" replace />
-  if (diagnostico === undefined || progreso === undefined) {
-    return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
+
+  // Salir descarta una sesión recién iniciada sin responder nada (no deja
+  // un "en curso" fantasma tras el auto-inicio); si ya hay avance, se
+  // conserva para retomarlo desde la lista.
+  async function salir() {
+    if (progreso && progreso.camino.length === 0) {
+      await eliminarProgresoDiagnostico(diagnosticoId)
+    }
+    navigate('/diagnostico')
   }
 
-  // Cierra la sesion registrando la ejecucion. El registro es la base
-  // de las estadisticas: problemas frecuentes, tasa de exito, tiempo.
-  // motivo y solucionPropuesta (fase D3) solo tienen sentido cuando
-  // resuelto es 'no': se piden en la pantalla de resultado.
+  // Cierra la sesión registrando la ejecución. El registro es la base de
+  // las estadísticas: problemas frecuentes, tasa de éxito, tiempo. motivo
+  // y solucionPropuesta (fase D3) solo tienen sentido cuando resuelto es
+  // 'no': se piden en la pantalla de resultado.
   async function cerrar(
     resuelto: 'si' | 'no' | 'abandonado',
     sesion: ProgresoDiagnostico,
@@ -59,8 +91,8 @@ export function DiagnosticoRunPage() {
   ) {
     if (cerrando) return
     setCerrando(true)
-    // Un abandono sin ninguna respuesta no aporta nada a las
-    // estadisticas: se descarta sin registrar.
+    // Un abandono sin ninguna respuesta no aporta nada a las estadísticas:
+    // se descarta sin registrar.
     if (resuelto !== 'abandonado' || sesion.camino.length > 0) {
       await registrarEjecucionDiagnostico({
         diagnosticoId,
@@ -77,90 +109,85 @@ export function DiagnosticoRunPage() {
     navigate('/diagnostico')
   }
 
+  const titulo = diagnostico?.titulo ?? ''
+  const cargando = diagnostico === undefined || progreso === undefined
+  const sinPreguntas = !cargando && progreso === null && nodos.length === 0
+  const esFinal = progreso?.estado.tipo === 'final'
+  const porcentaje = progreso ? porcentajeDiagnostico(nodos, progreso.camino, progreso.estado) : 0
+  const etiquetaProgreso = esFinal ? 'Completado' : `Pregunta ${(progreso?.camino.length ?? 0) + 1}`
+
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 px-4 pb-10 pt-6">
-      <header className="flex items-center justify-between gap-2">
-        <BotonVolver>Salir</BotonVolver>
-        <div className="flex min-w-0 items-center gap-3">
-          <p className="min-w-0 truncate text-xs text-slate-500">{diagnostico.titulo}</p>
-          <Link
-            to={`/diagnostico/${diagnosticoId}/editar`}
-            className="shrink-0 text-xs text-slate-400 underline underline-offset-2"
-          >
-            Editar
-          </Link>
+    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
+      <div className="mx-auto flex min-h-svh w-full max-w-md flex-col">
+        {/* Cabecera fija con desenfoque: salir, título y barra de
+            progreso (pegajosa, como pide 08_ESTILO). */}
+        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
+          <header className="flex items-center justify-between gap-2 px-2 pb-1 pt-2.5">
+            <button
+              type="button"
+              onClick={() => void salir()}
+              className="inline-flex min-w-0 items-center gap-1 rounded-lg py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 transition-colors hover:bg-noct-text/5 hover:text-noct-text"
+            >
+              <CaretLeft size={16} className="shrink-0" aria-hidden />
+              Salir
+            </button>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="min-w-0 truncate text-[12px] text-noct-neutral-500">{titulo}</p>
+              <Link
+                to={`/diagnostico/${diagnosticoId}/editar`}
+                aria-label="Editar diagnóstico"
+                className="flex shrink-0 rounded-md p-1.5 text-noct-neutral-500 hover:bg-noct-text/5 hover:text-noct-text"
+              >
+                <PencilSimple size={15} aria-hidden />
+              </Link>
+            </div>
+          </header>
+          {progreso && (
+            <div className="flex items-center gap-2.5 px-4 pb-3">
+              <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-neutral-900">
+                <span
+                  className={`block h-full rounded-full transition-[width] duration-200 ease-out ${
+                    esFinal ? 'bg-noct-exito' : 'bg-noct-accent'
+                  }`}
+                  style={{ width: `${porcentaje}%` }}
+                />
+              </span>
+              <span className="shrink-0 text-[11.5px] text-noct-neutral-500">{etiquetaProgreso}</span>
+            </div>
+          )}
         </div>
-      </header>
 
-      {!progreso ? (
-        <Intro
-          titulo={diagnostico.titulo}
-          descripcion={diagnostico.descripcion}
-          sinPreguntas={nodos.length === 0}
-          diagnosticoId={diagnosticoId}
-          onComenzar={() => void iniciarDiagnostico(diagnosticoId, nodos[0].id)}
-        />
-      ) : (
-        <Sesion
-          nodos={nodos}
-          progreso={progreso}
-          diagnosticoId={diagnosticoId}
-          confirmandoCancelar={confirmandoCancelar}
-          onConfirmarCancelar={setConfirmandoCancelar}
-          onCerrar={(resuelto, motivo, solucionPropuesta) =>
-            void cerrar(resuelto, progreso, motivo, solucionPropuesta)
-          }
-        />
-      )}
-    </div>
-  )
-}
+        <main className="flex flex-1 flex-col gap-[18px] px-4 pb-10 pt-[22px]">
+          {cargando && <p className="text-sm text-noct-neutral-400">Cargando...</p>}
 
-function Intro({
-  titulo,
-  descripcion,
-  sinPreguntas,
-  diagnosticoId,
-  onComenzar,
-}: {
-  titulo: string
-  descripcion: string
-  sinPreguntas: boolean
-  diagnosticoId: string
-  onComenzar: () => void
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-xl font-semibold">{titulo}</h1>
-        {descripcion && <p className="mt-1 text-sm text-slate-400">{descripcion}</p>}
+          {sinPreguntas && (
+            <div className="flex flex-col gap-3 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-4 py-3.5">
+              <p className="text-[13px] leading-relaxed text-noct-text">
+                Este diagnóstico todavía no tiene preguntas.
+              </p>
+              <Link
+                to={`/diagnostico/${diagnosticoId}/editar`}
+                className="self-start rounded-lg border border-noct-precaucion/45 px-3 py-1.5 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
+              >
+                Editar para agregarlas
+              </Link>
+            </div>
+          )}
+
+          {progreso && (
+            <Sesion
+              nodos={nodos}
+              progreso={progreso}
+              diagnosticoId={diagnosticoId}
+              confirmandoCancelar={confirmandoCancelar}
+              onConfirmarCancelar={setConfirmandoCancelar}
+              onCerrar={(resuelto, motivo, solucionPropuesta) =>
+                void cerrar(resuelto, progreso, motivo, solucionPropuesta)
+              }
+            />
+          )}
+        </main>
       </div>
-
-      {sinPreguntas ? (
-        <div className="rounded-xl border border-amber-900/60 bg-amber-950/40 px-4 py-3">
-          <p className="text-sm text-amber-200">
-            Este diagnóstico todavía no tiene preguntas.{' '}
-            <Link to={`/diagnostico/${diagnosticoId}/editar`} className="underline underline-offset-2">
-              Edítalo
-            </Link>{' '}
-            para agregarlas.
-          </p>
-        </div>
-      ) : (
-        <>
-          <p className="text-sm text-slate-400">
-            Responde las preguntas y el diagnóstico te llevará a la solución más probable, ejecutando
-            los procedimientos necesarios en el camino.
-          </p>
-          <button
-            type="button"
-            onClick={onComenzar}
-            className="rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950"
-          >
-            Comenzar
-          </button>
-        </>
-      )}
     </div>
   )
 }
@@ -181,31 +208,23 @@ function Sesion({
   onCerrar: (resuelto: 'si' | 'no' | 'abandonado', motivo?: MotivoNoResuelto, solucionPropuesta?: string) => void
 }) {
   const { estado, camino } = progreso
-  const porcentaje = porcentajeDiagnostico(nodos, camino, estado)
 
   const nodoActual =
     estado.tipo === 'pregunta' ? nodos.find((n) => n.id === estado.nodoId) ?? null : null
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
-        <div
-          className={`h-full rounded-full transition-all ${estado.tipo === 'final' ? 'bg-emerald-500' : 'bg-sky-500'}`}
-          style={{ width: `${porcentaje}%` }}
-        />
-      </div>
-
+    <div className="flex flex-col gap-[18px]">
       {estado.tipo === 'pregunta' && !nodoActual && (
-        // El diagnostico se edito a mitad de una sesion y la pregunta
+        // El diagnóstico se editó a mitad de una sesión y la pregunta
         // actual ya no existe: no hay forma segura de continuar.
-        <div className="flex flex-col gap-3 rounded-xl border border-amber-900/60 bg-amber-950/40 px-4 py-3">
-          <p className="text-sm text-amber-200">
+        <div className="flex flex-col gap-3 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-4 py-3.5">
+          <p className="text-[13px] leading-relaxed text-noct-text">
             El diagnóstico cambió y la pregunta actual ya no existe. Hay que empezar de nuevo.
           </p>
           <button
             type="button"
             onClick={() => void eliminarProgresoDiagnostico(diagnosticoId)}
-            className="self-start rounded-lg border border-amber-800 px-3 py-1.5 text-xs text-amber-300"
+            className="self-start rounded-lg border border-noct-precaucion/45 px-3 py-1.5 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
           >
             Empezar de nuevo
           </button>
@@ -215,23 +234,27 @@ function Sesion({
       {estado.tipo === 'pregunta' && nodoActual && (
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">{nodoActual.pregunta}</h2>
+            <h1 className="text-[20px] font-medium leading-[1.3] [text-wrap:pretty]">
+              {nodoActual.pregunta}
+            </h1>
             {nodoActual.descripcion && (
-              <p className="mt-1 text-sm text-slate-400">{nodoActual.descripcion}</p>
+              <p className="mt-1.5 text-[13.5px] leading-[1.55] text-noct-neutral-400">
+                {nodoActual.descripcion}
+              </p>
             )}
           </div>
-
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-[9px]">
             {nodoActual.opciones.map((opcion) => (
               <button
                 key={opcion.id}
                 type="button"
                 onClick={() => void responderOpcion(diagnosticoId, nodoActual, opcion)}
-                className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-left text-sm font-medium text-slate-100 active:bg-slate-800"
+                className="flex min-h-[52px] flex-col justify-center gap-[3px] rounded-lg border border-noct-divider bg-noct-surface px-3.5 py-3 text-left transition-colors hover:border-noct-accent hover:bg-noct-accent/[.07]"
               >
-                {opcion.etiqueta}
+                <span className="text-[14.5px] font-medium leading-[1.35]">{opcion.etiqueta}</span>
                 {opcion.articuloId && (
-                  <span className="mt-0.5 block text-xs font-normal text-sky-300">
+                  <span className="flex items-center gap-1.5 text-[12px] text-noct-accent-300">
+                    <BookOpen size={13} aria-hidden />
                     Ejecuta: {opcion.articuloTitulo}
                   </span>
                 )}
@@ -249,19 +272,14 @@ function Sesion({
         />
       )}
 
-      {estado.tipo === 'final' && (
-        <Resultado progreso={progreso} onCerrar={onCerrar} />
-      )}
+      {estado.tipo === 'final' && <Resultado progreso={progreso} onCerrar={onCerrar} />}
 
-      {estado.tipo !== 'final' && (
-        <div className="mt-2 flex items-center justify-between gap-2">
+      {estado.tipo !== 'final' && !confirmandoCancelar && (
+        <div className="mt-1 flex items-center justify-between gap-2.5">
           {camino.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => void volverAtras(diagnosticoId)}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300"
-            >
-              ← Volver
+            <button type="button" onClick={() => void volverAtras(diagnosticoId)} className={BTN_GHOST}>
+              <ArrowLeft size={14} aria-hidden />
+              Volver
             </button>
           ) : (
             <span />
@@ -269,7 +287,7 @@ function Sesion({
           <button
             type="button"
             onClick={() => onConfirmarCancelar(true)}
-            className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-400"
+            className={`${BTN_GHOST} text-noct-neutral-500`}
           >
             Cancelar
           </button>
@@ -277,24 +295,22 @@ function Sesion({
       )}
 
       {confirmandoCancelar && (
-        <div className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3">
-          <p className="text-sm text-slate-200">¿Cancelar el diagnóstico?</p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            El avance se descarta y quedará registrado como abandonado.
-          </p>
-          <div className="mt-2 flex gap-2">
+        <div className="flex flex-col gap-2.5 rounded-lg border border-noct-divider bg-noct-surface p-3.5">
+          <div>
+            <p className="text-sm font-medium">¿Cancelar el diagnóstico?</p>
+            <p className="mt-[3px] text-[12.5px] leading-[1.5] text-noct-neutral-500">
+              El avance se descarta y queda registrado como abandonado.
+            </p>
+          </div>
+          <div className="flex gap-2.5">
             <button
               type="button"
               onClick={() => onCerrar('abandonado')}
-              className="rounded-lg border border-red-900 px-3 py-1.5 text-xs text-red-400"
+              className="min-h-11 rounded-lg border border-noct-error/45 px-3.5 text-[13px] font-medium text-noct-error hover:bg-noct-error/10"
             >
               Sí, cancelar
             </button>
-            <button
-              type="button"
-              onClick={() => onConfirmarCancelar(false)}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300"
-            >
+            <button type="button" onClick={() => onConfirmarCancelar(false)} className={BTN_GHOST}>
               Seguir con el diagnóstico
             </button>
           </div>
@@ -304,10 +320,10 @@ function Sesion({
   )
 }
 
-// Un procedimiento vinculado ejecutandose dentro del diagnostico, en
-// modo asistente. Cuando queda completo (todos los pasos y su
-// verificacion final), avisa y el diagnostico continua solo desde la
-// siguiente pregunta: el tecnico nunca pierde el punto donde estaba.
+// Un procedimiento vinculado ejecutándose dentro del diagnóstico, en modo
+// asistente. Cuando queda completo (todos los pasos y su verificación
+// final), avisa y el diagnóstico continúa solo desde la siguiente
+// pregunta: el técnico nunca pierde el punto donde estaba.
 function ArticuloEnDiagnostico({
   articuloId,
   articuloTitulo,
@@ -337,7 +353,7 @@ function ArticuloEnDiagnostico({
     )
   }, [procedimiento, progresoPasos])
 
-  // Aviso una sola vez: al completarse, el diagnostico avanza y este
+  // Aviso una sola vez: al completarse, el diagnóstico avanza y este
   // componente se desmonta; el guardia evita un doble disparo mientras
   // tanto (por ejemplo, por un refresco extra de las live queries).
   const avisado = useRef(false)
@@ -350,19 +366,19 @@ function ArticuloEnDiagnostico({
 
   if (articulo === undefined) return null
 
-  // El articulo vinculado ya no existe o quedo sin procedimiento: no
-  // hay nada que ejecutar. Se avisa y se deja continuar a mano.
+  // El artículo vinculado ya no existe o quedó sin procedimiento: no hay
+  // nada que ejecutar. Se avisa y se deja continuar a mano.
   if (articulo === null || articulo.eliminadoEn || !procedimiento) {
     return (
-      <div className="flex flex-col gap-3 rounded-xl border border-amber-900/60 bg-amber-950/40 px-4 py-3">
-        <p className="text-sm text-amber-200">
+      <div className="flex flex-col gap-3 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-4 py-3.5">
+        <p className="text-[13px] leading-relaxed text-noct-text">
           El procedimiento{articuloTitulo ? ` "${articuloTitulo}"` : ''} ya no está disponible. Edita
           el diagnóstico para actualizar el vínculo.
         </p>
         <button
           type="button"
           onClick={onCompletado}
-          className="self-start rounded-lg border border-amber-800 px-3 py-1.5 text-xs text-amber-300"
+          className="self-start rounded-lg border border-noct-precaucion/45 px-3 py-1.5 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
         >
           Continuar con el diagnóstico
         </button>
@@ -373,12 +389,14 @@ function ArticuloEnDiagnostico({
   const tieneTareas = procedimiento.pasos.some((p) => tareasDe(p.bloques).length > 0)
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="rounded-xl border border-sky-900/60 bg-sky-950/30 px-4 py-2.5">
-        <p className="text-xs text-sky-300">Ejecutando el procedimiento</p>
-        <p className="text-sm font-medium text-sky-100">{articulo.titulo}</p>
+    <div className="flex flex-col gap-3.5">
+      <div className="rounded-lg border border-noct-accent/30 bg-noct-accent/10 px-3.5 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
+          Ejecutando el procedimiento
+        </p>
+        <p className="mt-[3px] text-[14.5px] font-medium">{articulo.titulo}</p>
         {!tieneTareas && (
-          <p className="mt-0.5 text-xs text-sky-300/80">
+          <p className="mt-0.5 text-[12px] text-noct-accent-300/80">
             Marca cada paso con su número al completarlo.
           </p>
         )}
@@ -388,18 +406,22 @@ function ArticuloEnDiagnostico({
   )
 }
 
-const MOTIVOS_NO_RESUELTO: { valor: Exclude<MotivoNoResuelto, ''>; etiqueta: string }[] = [
-  { valor: 'no_funciono', etiqueta: 'La solución no funcionó' },
-  { valor: 'no_encontro_problema', etiqueta: 'No encontré mi problema' },
-  { valor: 'faltan_pasos', etiqueta: 'Faltan pasos' },
-  { valor: 'encontro_otra_solucion', etiqueta: 'Encontré otra solución' },
-  { valor: 'otro', etiqueta: 'Otro' },
+const MOTIVOS_NO_RESUELTO: {
+  valor: Exclude<MotivoNoResuelto, ''>
+  etiqueta: string
+  Icono: (props: IconoProps) => React.JSX.Element
+}[] = [
+  { valor: 'no_funciono', etiqueta: 'La solución no funcionó', Icono: XCircle },
+  { valor: 'no_encontro_problema', etiqueta: 'No encontré mi problema', Icono: MagnifyingGlass },
+  { valor: 'faltan_pasos', etiqueta: 'Faltan pasos', Icono: ListPlus },
+  { valor: 'encontro_otra_solucion', etiqueta: 'Encontré otra solución', Icono: Lightbulb },
+  { valor: 'otro', etiqueta: 'Otro', Icono: DotsThreeCircle },
 ]
 
-// Resultado del diagnostico: que se encontro, que se ejecuto y la
-// pregunta que alimenta las estadisticas: ¿quedo resuelto? Si "No",
-// pide el motivo (fase D3) antes de cerrar: alimenta las sugerencias
-// del equipo cuando el motivo es "encontré otra solución".
+// Resultado del diagnóstico: qué se encontró, qué se ejecutó y la
+// pregunta que alimenta las estadísticas: ¿quedó resuelto? Si "No", pide
+// el motivo (fase D3) antes de cerrar: alimenta las sugerencias del
+// equipo cuando el motivo es "encontré otra solución".
 function Resultado({
   progreso,
   onCerrar,
@@ -414,71 +436,89 @@ function Resultado({
 
   if (estado.tipo !== 'final') return null
 
+  const mensajeFinal =
+    estado.mensajeFinal ||
+    (estado.articuloTitulo
+      ? `Se ejecutó "${estado.articuloTitulo}".`
+      : 'Se recorrieron todas las preguntas.')
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-emerald-800 bg-emerald-950/40 px-4 py-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-emerald-400">Diagnóstico completado</p>
-        <p className="mt-1 text-sm text-emerald-100">
-          {estado.mensajeFinal ||
-            (estado.articuloTitulo
-              ? `Se ejecutó "${estado.articuloTitulo}".`
-              : 'Se recorrieron todas las preguntas.')}
+      <div className="rounded-lg border border-noct-exito/35 bg-noct-exito/[.09] p-3.5">
+        <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-noct-exito">
+          Diagnóstico completado
         </p>
+        <p className="mt-[5px] text-[14.5px] leading-[1.5]">{mensajeFinal}</p>
       </div>
 
       {camino.length > 0 && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-          <h2 className="text-xs font-medium text-slate-400">Camino recorrido</h2>
-          <ul className="mt-1.5 flex flex-col gap-1">
+        <section>
+          <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
+            Camino recorrido
+          </h2>
+          <div className="flex flex-col gap-[7px]">
             {camino.map((paso, indice) => (
-              <li key={indice} className="text-xs text-slate-300">
-                {paso.pregunta} <span className="text-sky-300">→ {paso.etiqueta}</span>
-              </li>
+              <p key={indice} className="text-[13px] leading-[1.5] text-noct-neutral-300">
+                {paso.pregunta} <span className="text-noct-accent-300">→ {paso.etiqueta}</span>
+              </p>
             ))}
-          </ul>
+          </div>
           {articulosEjecutados.length > 0 && (
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2.5 text-[12.5px] text-noct-neutral-400">
               Procedimientos ejecutados: {articulosEjecutados.map((a) => a.titulo).join(', ')}
             </p>
           )}
-        </div>
+        </section>
       )}
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-        <p className="text-sm font-medium text-slate-200">¿Quedó resuelto el problema?</p>
+      <div className="flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-surface p-3.5">
+        <p className="text-[14.5px] font-medium">¿Quedó resuelto el problema?</p>
 
         {!pidiendoMotivo ? (
-          <div className="mt-2 flex gap-2">
+          <div className="flex gap-2.5">
             <button
               type="button"
               onClick={() => onCerrar('si')}
-              className="rounded-xl border border-emerald-800 px-4 py-2 text-sm text-emerald-300"
+              className="min-h-12 flex-1 rounded-lg border border-noct-exito/45 text-[14px] font-medium text-noct-exito hover:bg-noct-exito/10"
             >
               Sí, resuelto
             </button>
             <button
               type="button"
               onClick={() => setPidiendoMotivo(true)}
-              className="rounded-xl border border-amber-800 px-4 py-2 text-sm text-amber-300"
+              className="min-h-12 flex-1 rounded-lg border border-noct-precaucion/45 text-[14px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
             >
               No
             </button>
           </div>
         ) : (
-          <div className="mt-2 flex flex-col gap-2">
-            <p className="text-xs text-slate-400">¿Por qué no quedó resuelto? (opcional)</p>
-            <div className="flex flex-col gap-1.5">
-              {MOTIVOS_NO_RESUELTO.map((opcion) => (
-                <label key={opcion.valor} className="flex items-center gap-2 text-sm text-slate-200">
-                  <input
-                    type="radio"
-                    name="motivo-no-resuelto"
-                    checked={motivo === opcion.valor}
-                    onChange={() => setMotivo(opcion.valor)}
-                  />
-                  {opcion.etiqueta}
-                </label>
-              ))}
+          <div className="flex flex-col gap-2.5">
+            <p className="text-[12.5px] text-noct-neutral-400">
+              ¿Por qué no quedó resuelto? Ayuda a mejorar la base.
+            </p>
+            <div className="flex flex-col gap-1">
+              {MOTIVOS_NO_RESUELTO.map(({ valor, etiqueta, Icono }) => {
+                const activo = motivo === valor
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    onClick={() => setMotivo(valor)}
+                    className={`flex min-h-11 items-center gap-2.5 rounded-lg border px-2.5 text-left text-[13.5px] transition-colors ${
+                      activo
+                        ? 'border-noct-accent bg-noct-accent/10'
+                        : 'border-noct-divider hover:bg-noct-text/[.04]'
+                    }`}
+                  >
+                    <Icono
+                      size={16}
+                      className={`shrink-0 ${activo ? 'text-noct-accent-300' : 'text-noct-neutral-500'}`}
+                      aria-hidden
+                    />
+                    {etiqueta}
+                  </button>
+                )
+              })}
             </div>
 
             {motivo === 'encontro_otra_solucion' && (
@@ -486,12 +526,12 @@ function Resultado({
                 rows={3}
                 value={solucionPropuesta}
                 onChange={(e) => setSolucionPropuesta(e.target.value)}
-                placeholder="Cuéntanos qué funcionó, para revisarlo e incorporarlo a la base de conocimiento"
-                className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                placeholder="Qué funcionó, para revisarlo e incorporarlo a la base de conocimiento"
+                className="w-full resize-y rounded-lg border border-noct-divider bg-noct-bg px-3 py-2.5 text-[13.5px] leading-[1.5] text-noct-text outline-none placeholder:text-noct-neutral-500 focus:border-noct-accent"
               />
             )}
 
-            <div className="mt-1 flex gap-2">
+            <div className="flex gap-2.5">
               <button
                 type="button"
                 onClick={() =>
@@ -501,15 +541,11 @@ function Resultado({
                     motivo === 'encontro_otra_solucion' ? solucionPropuesta.trim() : '',
                   )
                 }
-                className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950"
+                className={`flex-1 ${BTN_PRIMARIO}`}
               >
                 Confirmar
               </button>
-              <button
-                type="button"
-                onClick={() => setPidiendoMotivo(false)}
-                className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300"
-              >
+              <button type="button" onClick={() => setPidiendoMotivo(false)} className={BTN_GHOST}>
                 Volver
               </button>
             </div>

@@ -10,6 +10,7 @@ const salida = process.argv[3]
 const ICONOS = {
   ArrowDown: ['regular', 'arrow-down'],
   ArrowElbowDownRight: ['regular', 'arrow-elbow-down-right'],
+  ArrowLeft: ['regular', 'arrow-left'],
   ArrowSquareOut: ['regular', 'arrow-square-out'],
   ArrowUp: ['regular', 'arrow-up'],
   BookOpen: ['regular', 'book-open'],
@@ -31,6 +32,7 @@ const ICONOS = {
   Code: ['regular', 'code'],
   Copy: ['regular', 'copy'],
   DotsThreeBold: ['bold', 'dots-three'],
+  DotsThreeCircle: ['regular', 'dots-three-circle'],
   DotsThreeOutline: ['regular', 'dots-three-outline'],
   DownloadSimple: ['regular', 'download-simple'],
   Eye: ['regular', 'eye'],
@@ -43,6 +45,7 @@ const ICONOS = {
   Key: ['regular', 'key'],
   Lightbulb: ['regular', 'lightbulb'],
   LinkSimple: ['regular', 'link-simple'],
+  ListPlus: ['regular', 'list-plus'],
   LockSimple: ['regular', 'lock-simple'],
   MagnifyingGlass: ['regular', 'magnifying-glass'],
   Monitor: ['regular', 'monitor'],
@@ -71,6 +74,7 @@ const ICONOS = {
   WarningOctagon: ['regular', 'warning-octagon'],
   Wrench: ['regular', 'wrench'],
   X: ['regular', 'x'],
+  XCircle: ['regular', 'x-circle'],
   XCircleFill: ['fill', 'x-circle'],
 }
 

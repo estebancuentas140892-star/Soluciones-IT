@@ -34,6 +34,10 @@ const BTN_BASE =
   'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border text-[13px] font-medium leading-tight'
 export const BTN_PRIMARIO = `${BTN_BASE} border-noct-accent px-2.5 py-[7px] text-noct-accent hover:bg-noct-accent/10 active:bg-noct-accent/20`
 export const BTN_SECUNDARIO = `${BTN_BASE} border-noct-divider px-2.5 py-[7px] text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
+// Botón fantasma (.btn-ghost): sin borde, solo tinte al pasar por
+// encima. Para acciones ligeras de cabecera y pie (Crear, Volver,
+// Cancelar) donde un borde competiría con la acción principal.
+export const BTN_GHOST = `${BTN_BASE} border-transparent px-2.5 py-[7px] text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
 // Variante cuadrada de solo icono (.btn-icon), completa en si misma
 // para no depender del orden de las clases de padding.
 export const BTN_ICONO_SECUNDARIO = `${BTN_BASE} h-[34px] w-[34px] shrink-0 border-noct-divider p-0 text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`

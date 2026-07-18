@@ -167,6 +167,20 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* Lista del Modo Diagnostico re-autorizada en Nocturne
+                  (tarea 81, handoff "Rediseño de aplicación empresarial",
+                  Diagnóstico.dc.html): pantalla enfocada a la que se llega
+                  desde Inicio (no es pestaña), trae su propio shell
+                  centrado con "Volver a Inicio", por eso sale del Layout
+                  oscuro heredado como el resto del rediseño. */}
+              <Route
+                path="diagnostico"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <DiagnosticosPage />
+                  </Suspense>
+                }
+              />
               {/* La ficha de articulo es la primera pantalla del
                   rediseño Nocturne (tarea 58, handoff "Herramienta IT
                   para técnicos"): trae su propio ShellNocturne, por
@@ -269,7 +283,6 @@ function App() {
               <Route element={<Layout />}>
                 <Route path="cuenta" element={<CuentaPage />} />
                 <Route path="cuenta/seguridad" element={<SeguridadPage />} />
-                <Route path="diagnostico" element={<DiagnosticosPage />} />
                 <Route path="diagnostico/nuevo" element={<DiagnosticoForm />} />
                 <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
                 <Route path="diagnostico/:diagnosticoId/editar" element={<DiagnosticoForm />} />

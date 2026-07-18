@@ -37,6 +37,14 @@ export function ArrowElbowDownRight(props: IconoProps) {
   )
 }
 
+export function ArrowLeft(props: IconoProps) {
+  return (
+    <IconoBase {...props}>
+      <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" />
+    </IconoBase>
+  )
+}
+
 export function ArrowSquareOut(props: IconoProps) {
   return (
     <IconoBase {...props}>
@@ -205,6 +213,14 @@ export function DotsThreeBold(props: IconoProps) {
   )
 }
 
+export function DotsThreeCircle(props: IconoProps) {
+  return (
+    <IconoBase {...props}>
+      <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm12-88a12,12,0,1,1-12-12A12,12,0,0,1,140,128Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,128Zm-88,0a12,12,0,1,1-12-12A12,12,0,0,1,96,128Z" />
+    </IconoBase>
+  )
+}
+
 export function DotsThreeOutline(props: IconoProps) {
   return (
     <IconoBase {...props}>
@@ -297,6 +313,14 @@ export function LinkSimple(props: IconoProps) {
   return (
     <IconoBase {...props}>
       <path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z" />
+    </IconoBase>
+  )
+}
+
+export function ListPlus(props: IconoProps) {
+  return (
+    <IconoBase {...props}>
+      <path d="M32,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H40A8,8,0,0,1,32,64Zm8,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16Zm104,48H40a8,8,0,0,0,0,16H144a8,8,0,0,0,0-16Zm88,0H216V168a8,8,0,0,0-16,0v16H184a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V200h16a8,8,0,0,0,0-16Z" />
     </IconoBase>
   )
 }
@@ -521,6 +545,14 @@ export function X(props: IconoProps) {
   return (
     <IconoBase {...props}>
       <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
+    </IconoBase>
+  )
+}
+
+export function XCircle(props: IconoProps) {
+  return (
+    <IconoBase {...props}>
+      <path d="M165.66,101.66,139.31,128l26.35,26.34a8,8,0,0,1-11.32,11.32L128,139.31l-26.34,26.35a8,8,0,0,1-11.32-11.32L116.69,128,90.34,101.66a8,8,0,0,1,11.32-11.32L128,116.69l26.34-26.35a8,8,0,0,1,11.32,11.32ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
     </IconoBase>
   )
 }
