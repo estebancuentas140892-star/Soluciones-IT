@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { db, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, siguientePasoPendiente, tareasDe } from '../../lib/procedimiento'
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
+import { CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning } from '../../components/iconos'
+import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
@@ -18,19 +20,44 @@ interface Props {
   onCompletado?: () => void
 }
 
-// Modo asistente: en vez del "mapa" completo (ProcedimientoVista), esta
-// vista muestra un paso a la vez con su objetivo y su checklist, para
-// que el tecnico no se distraiga con el resto del procedimiento. Al
-// completar el ultimo bloque pendiente del paso, avanza solo al
-// siguiente; con una barra de progreso siempre visible. Reutiliza el
-// mismo avance de useProcedimientoEjecucion que la vista de lista, asi
-// que entrar y salir del asistente nunca pierde ni duplica progreso.
+// Formatea segundos como MM:SS (o H:MM:SS si pasa de una hora).
+function formatoCronometro(segundos: number): string {
+  const s = Math.max(0, Math.floor(segundos))
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const seg = s % 60
+  const dd = (n: number) => String(n).padStart(2, '0')
+  return h > 0 ? `${h}:${dd(m)}:${dd(seg)}` : `${m}:${dd(seg)}`
+}
+
+// Modo ejecucion (asistente): en vez del "mapa" completo
+// (ProcedimientoVista), esta vista muestra un paso a la vez con su
+// objetivo y su checklist, para que el tecnico ejecute en el sitio sin
+// distraerse con el resto del procedimiento. Rediseño Nocturne (tarea
+// 78): antes vivia fuera del Layout con estilos de tema claro y se veia
+// "en blanco" (texto claro sobre fondo blanco). Ahora: shell oscuro,
+// cronometro contra el tiempo estimado, navegacion Atras/Siguiente
+// explicita y resumen final. Reutiliza el mismo avance de
+// useProcedimientoEjecucion que la vista de lista, asi que entrar y
+// salir nunca pierde ni duplica progreso.
 export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado }: Props) {
-  const { pasos, verificacionFinal } = procedimiento
+  const { pasos, verificacionFinal, tiempoEstimadoMin } = procedimiento
   const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
 
   const [indiceActual, setIndiceActual] = useState<number | null>(null)
   const [listo, setListo] = useState(false)
+
+  // Cronometro de la sesion de ejecucion (solo nivel 0): tiempo desde
+  // que se abrio el asistente, para contrastar con el estimado. Es
+  // efimero (no se persiste): mide "cuanto llevo en esta sesion".
+  const [inicio] = useState(() => Date.now())
+  const [ahora, setAhora] = useState(() => Date.now())
+  useEffect(() => {
+    if (nivel !== 0) return
+    const t = setInterval(() => setAhora(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [nivel])
+  const transcurridoSeg = Math.floor((ahora - inicio) / 1000)
 
   // La posicion inicial se resuelve una sola vez con una lectura
   // directa (no en vivo) del avance guardado: asi, si el tecnico ya
@@ -58,6 +85,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
 
   const {
     progreso,
+    hechos,
     instruccionesHechas,
     completados,
     pasosCompletados,
@@ -75,7 +103,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     onAvanzar: setIndiceActual,
   })
 
-  if (!listo) return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
+  if (!listo) return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
 
   // Anidado (subprocedimiento o solucion de un paso de nivel 0): el
   // padre deja de renderizar este componente en cuanto queda
@@ -83,14 +111,18 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   if (indiceActual === null && nivel >= 1) return null
 
   const porcentaje = pasos.length === 0 ? 0 : Math.round((completados / pasos.length) * 100)
+  const cronometro = nivel === 0 ? formatoCronometro(transcurridoSeg) : null
 
   if (indiceActual === null && pasosCompletados && verificacionFinal.length > 0 && !verificacionCompleta) {
     return (
       <div className="flex flex-col gap-4">
-        <BarraProgreso porcentaje={porcentaje} completado={false} />
-        <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3">
-          <h2 className="text-sm font-medium text-amber-200">✅ Verificación final</h2>
-          <p className="mt-0.5 text-xs text-amber-400/80">
+        <Encabezado porcentaje={porcentaje} completado={false} cronometro={cronometro} estimado={tiempoEstimadoMin} />
+        <div className="rounded-xl border border-noct-precaucion/40 bg-noct-precaucion/10 px-4 py-3">
+          <h2 className="flex items-center gap-2 text-sm font-medium text-noct-precaucion">
+            <SealCheck size={16} aria-hidden />
+            Verificación final
+          </h2>
+          <p className="mt-0.5 text-xs text-noct-precaucion/80">
             Confirma que el objetivo realmente se cumplió antes de dar por terminado el procedimiento.
           </p>
           <ul className="mt-2 flex flex-col gap-0.5">
@@ -107,15 +139,15 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
                   >
                     <span
                       aria-hidden
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
                         marcada
-                          ? 'border-emerald-700 bg-emerald-500/15 text-emerald-400'
-                          : 'border-slate-600 text-transparent'
+                          ? 'border-noct-exito bg-noct-exito/15 text-noct-exito'
+                          : 'border-noct-neutral-700 text-transparent'
                       }`}
                     >
-                      ✓
+                      <Check size={12} />
                     </span>
-                    <span className={`text-sm ${marcada ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                    <span className={`text-sm ${marcada ? 'text-noct-neutral-500 line-through' : 'text-noct-neutral-300'}`}>
                       {item}
                     </span>
                   </button>
@@ -131,15 +163,22 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   if (indiceActual === null || todoCompletado) {
     return (
       <div className="flex flex-col gap-4">
-        <BarraProgreso porcentaje={100} completado />
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-emerald-800 bg-emerald-950/40 px-4 py-8 text-center">
-          <span aria-hidden className="text-3xl">✓</span>
-          <p className="text-base font-medium text-emerald-300">Procedimiento completado</p>
+        <Encabezado porcentaje={100} completado cronometro={cronometro} estimado={tiempoEstimadoMin} />
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-noct-exito/50 bg-noct-exito/10 px-4 py-8 text-center">
+          <span aria-hidden className="flex h-12 w-12 items-center justify-center rounded-full border border-noct-exito/60 text-noct-exito">
+            <Check size={26} />
+          </span>
+          <p className="text-base font-medium text-noct-exito">Procedimiento completado</p>
+          <p className="text-xs text-noct-neutral-400">
+            {pasos.length} {pasos.length === 1 ? 'paso' : 'pasos'}
+            {cronometro ? ` · ${cronometro} en esta sesión` : ''}
+          </p>
           <button
             type="button"
             onClick={() => void reiniciarProgreso(articuloId)}
-            className="mt-2 text-xs text-emerald-400 underline underline-offset-2"
+            className={`mt-2 ${BTN_SECUNDARIO}`}
           >
+            <ClockCounterClockwise size={15} aria-hidden />
             Reiniciar y volver a empezar
           </button>
         </div>
@@ -152,24 +191,43 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   const marcadas = contarInstruccionesHechas(progreso?.instruccionesHechas, idsTareas)
   const subSatisfecho = subSatisfechoReactivo(paso)
   const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
+  const pasoActualHecho = hechos.has(paso.id)
   // La pregunta de error ocupa el lugar del boton "Siguiente" mientras
-  // no se responda; una vez respondida (o si no hay solucion
-  // vinculada), el boton vuelve a decidir el avance.
-  const mostrandoPreguntaError = Boolean(paso.solucionArticuloId) && trabajoPrevio
+  // no se responda; una vez respondida (o si no hay solucion vinculada,
+  // o si se esta revisando un paso ya completo), el boton vuelve a
+  // decidir el avance.
+  const mostrandoPreguntaError = !pasoActualHecho && Boolean(paso.solucionArticuloId) && trabajoPrevio
+
+  // Avance del boton principal. En un paso pendiente: intenta completarlo
+  // (valida el trabajo previo y avanza al siguiente pendiente). En un
+  // paso ya completo (al que se llego con "Atrás" para revisar): navega
+  // linealmente hacia adelante, o al primer pendiente / al cierre.
+  function avanzar() {
+    if (indiceActual === null) return
+    if (pasoActualHecho) {
+      setIndiceActual(
+        indiceActual + 1 < pasos.length ? indiceActual + 1 : siguientePasoPendiente(idsPasos, hechos, -1),
+      )
+    } else {
+      void intentarCompletarPaso(indiceActual, paso)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <BarraProgreso porcentaje={porcentaje} completado={false} />
-
-      <p className="text-xs text-slate-500">
-        Paso {indiceActual + 1} de {pasos.length}
-      </p>
+      <Encabezado
+        porcentaje={porcentaje}
+        completado={false}
+        cronometro={cronometro}
+        estimado={tiempoEstimadoMin}
+        contador={`Paso ${indiceActual + 1} de ${pasos.length}`}
+      />
 
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-slate-100">
+        <h2 className="text-lg font-semibold text-noct-text">
           {paso.titulo || paso.subArticuloTitulo || `Paso ${indiceActual + 1}`}
         </h2>
-        {paso.objetivo && <p className="text-sm text-slate-400">{paso.objetivo}</p>}
+        {paso.objetivo && <p className="text-sm text-noct-neutral-400">{paso.objetivo}</p>}
       </div>
 
       {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
@@ -210,7 +268,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         />
       )}
 
-      {paso.solucionArticuloId && trabajoPrevio && (
+      {paso.solucionArticuloId && trabajoPrevio && !pasoActualHecho && (
         <SolucionEnAsistente
           solucionArticuloId={paso.solucionArticuloId}
           tituloReferencia={paso.solucionArticuloTitulo}
@@ -219,27 +277,83 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         />
       )}
 
-      {!mostrandoPreguntaError && (
+      {/* Navegacion explicita en el modo ejecucion (nivel 0): Atrás para
+          revisar el paso anterior y Siguiente para avanzar. Los pasos
+          anidados conservan su boton unico (su avance lo decide el paso
+          que los contiene). */}
+      {!mostrandoPreguntaError && nivel === 0 && (
+        <div className="mt-2 flex items-center gap-2.5">
+          <button
+            type="button"
+            disabled={indiceActual === 0}
+            onClick={() => setIndiceActual(Math.max(0, indiceActual - 1))}
+            className={`${BTN_SECUNDARIO} px-4 py-3 disabled:opacity-30`}
+          >
+            <CaretLeft size={15} aria-hidden />
+            Atrás
+          </button>
+          <button
+            type="button"
+            disabled={!pasoActualHecho && !trabajoPrevio}
+            onClick={avanzar}
+            className={`flex-1 ${BTN_PRIMARIO} py-3 text-sm disabled:opacity-30`}
+          >
+            {pasoActualHecho ? 'Siguiente paso' : 'Siguiente'}
+            <CaretRight size={15} aria-hidden />
+          </button>
+        </div>
+      )}
+
+      {!mostrandoPreguntaError && nivel >= 1 && (
         <button
           type="button"
           disabled={!trabajoPrevio}
           onClick={() => void intentarCompletarPaso(indiceActual, paso)}
-          className="mt-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-medium text-slate-950 disabled:opacity-30"
+          className={`mt-2 ${BTN_PRIMARIO} py-3 text-sm disabled:opacity-30`}
         >
           Siguiente
+          <CaretRight size={15} aria-hidden />
         </button>
       )}
     </div>
   )
 }
 
-function BarraProgreso({ porcentaje, completado }: { porcentaje: number; completado: boolean }) {
+// Encabezado del asistente: barra de progreso, contador de paso y, en el
+// nivel 0, cronometro de la sesion contra el tiempo estimado.
+function Encabezado({
+  porcentaje,
+  completado,
+  cronometro,
+  estimado,
+  contador,
+}: {
+  porcentaje: number
+  completado: boolean
+  cronometro: string | null
+  estimado: number | null
+  contador?: string
+}) {
   return (
-    <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
-      <div
-        className={`h-full rounded-full transition-all ${completado ? 'bg-emerald-500' : 'bg-sky-500'}`}
-        style={{ width: `${porcentaje}%` }}
-      />
+    <div className="flex flex-col gap-2">
+      <div className="h-1.5 overflow-hidden rounded-full bg-noct-neutral-800">
+        <div
+          className={`h-full rounded-full transition-all ${completado ? 'bg-noct-exito' : 'bg-noct-accent'}`}
+          style={{ width: `${porcentaje}%` }}
+        />
+      </div>
+      {(contador || cronometro) && (
+        <div className="flex items-center justify-between text-xs text-noct-neutral-500">
+          <span>{contador}</span>
+          {cronometro && (
+            <span className="inline-flex items-center gap-1.5 tabular-nums">
+              <ClockCounterClockwise size={13} aria-hidden />
+              {cronometro}
+              {estimado ? <span className="text-noct-neutral-600">/ ~{estimado} min</span> : null}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -268,8 +382,8 @@ function SubProcedimientoEnAsistente({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2">
-        <p className="text-xs text-amber-300">
+      <div className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2">
+        <p className="text-xs text-noct-precaucion">
           El procedimiento vinculado{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
           disponible. Edita el artículo para quitar el vínculo o vincular otro.
         </p>
@@ -285,18 +399,22 @@ function SubProcedimientoEnAsistente({
     return (
       <Link
         to={ruta}
-        className="flex items-center justify-between gap-2 rounded-lg border border-sky-900/60 bg-sky-950/20 px-3 py-2"
+        className="flex items-center justify-between gap-2 rounded-lg border border-noct-accent/30 bg-noct-accent/10 px-3 py-2"
       >
-        <p className="min-w-0 truncate text-xs font-medium text-sky-200">🔗 Procedimiento: {articulo.titulo}</p>
-        <span className="shrink-0 text-xs text-sky-300 underline underline-offset-2">Abrir</span>
+        <p className="inline-flex min-w-0 items-center gap-1.5 truncate text-xs font-medium text-noct-accent-300">
+          <LinkSimple size={13} aria-hidden />
+          Procedimiento: {articulo.titulo}
+        </p>
+        <span className="shrink-0 text-xs text-noct-accent-400 underline underline-offset-2">Abrir</span>
       </Link>
     )
   }
 
   return (
-    <div className="rounded-lg border border-sky-900/60 bg-sky-950/20 p-3">
-      <p className="mb-3 min-w-0 truncate text-xs font-medium text-sky-200">
-        🔗 Procedimiento: {articulo.titulo}
+    <div className="rounded-lg border border-noct-accent/30 bg-noct-accent/[.07] p-3">
+      <p className="mb-3 inline-flex min-w-0 items-center gap-1.5 truncate text-xs font-medium text-noct-accent-300">
+        <LinkSimple size={13} aria-hidden />
+        Procedimiento: {articulo.titulo}
       </p>
       <AsistenteVista
         articuloId={articulo.id}
@@ -334,8 +452,8 @@ function SolucionEnAsistente({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2">
-        <p className="text-xs text-amber-300">
+      <div className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2">
+        <p className="text-xs text-noct-precaucion">
           La solución vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
           disponible. Edita el artículo para quitar el vínculo o vincular otra.
         </p>
@@ -352,20 +470,23 @@ function SolucionEnAsistente({
 
   if (!abierta) {
     return (
-      <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2.5">
-        <p className="text-xs font-medium text-slate-300">¿Ocurrió algún error durante este paso?</p>
+      <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
+        <p className="flex items-center gap-2 text-xs font-medium text-noct-neutral-300">
+          <Warning size={14} className="text-noct-precaucion" aria-hidden />
+          ¿Ocurrió algún error durante este paso?
+        </p>
         <div className="mt-2 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={onContinuar}
-            className="rounded-lg border border-emerald-800 px-3 py-1.5 text-xs text-emerald-300"
+            className="rounded-lg border border-noct-exito/60 px-3 py-1.5 text-xs text-noct-exito hover:bg-noct-exito/10"
           >
             No, continuar
           </button>
           <button
             type="button"
             onClick={() => setMostrarSolucion(true)}
-            className="rounded-lg border border-amber-800 px-3 py-1.5 text-xs text-amber-300"
+            className="rounded-lg border border-noct-precaucion/60 px-3 py-1.5 text-xs text-noct-precaucion hover:bg-noct-precaucion/10"
           >
             Sí, ver la solución
           </button>
@@ -380,10 +501,10 @@ function SolucionEnAsistente({
     return (
       <Link
         to={ruta}
-        className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2"
+        className="flex items-center justify-between gap-2 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2"
       >
-        <p className="min-w-0 truncate text-xs font-medium text-amber-200">🛠 Solución: {articulo.titulo}</p>
-        <span className="shrink-0 text-xs text-amber-300 underline underline-offset-2">Abrir</span>
+        <p className="min-w-0 truncate text-xs font-medium text-noct-precaucion">Solución: {articulo.titulo}</p>
+        <span className="shrink-0 text-xs text-noct-precaucion underline underline-offset-2">Abrir</span>
       </Link>
     )
   }
@@ -395,9 +516,9 @@ function SolucionEnAsistente({
   }
 
   return (
-    <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-3">
-      <p className="mb-3 min-w-0 truncate text-xs font-medium text-amber-200">
-        🛠 Solución: {articulo.titulo}
+    <div className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/[.07] p-3">
+      <p className="mb-3 min-w-0 truncate text-xs font-medium text-noct-precaucion">
+        Solución: {articulo.titulo}
       </p>
       <AsistenteVista
         articuloId={articulo.id}

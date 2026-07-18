@@ -117,9 +117,13 @@ export function ArticuloPage() {
         <BotonVolver variante="nocturne">{categoria?.nombre ?? 'Soluciones'}</BotonVolver>
         <div className="flex shrink-0 items-center gap-2">
           {procedimiento && (
-            <Link to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`} className={BTN_PRIMARIO}>
+            <Link
+              to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
+              className={BTN_PRIMARIO}
+              title="Ejecutar paso a paso, sin distracciones"
+            >
               <Play size={14} aria-hidden />
-              Asistente
+              Ejecutar
             </Link>
           )}
           <Link to={`/soluciones/${categoriaId}/${articuloId}/editar`} className={BTN_SECUNDARIO}>
