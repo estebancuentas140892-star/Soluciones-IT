@@ -238,7 +238,7 @@ export function SolucionesPage() {
         </div>
 
         {!buscando && (
-          <div className="flex gap-2 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-2 overflow-x-auto px-4 pb-3 xl:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {chips.map((chip) => {
               const activo = chip.id === categoriaSel
               const Icono = chip.Icono
@@ -268,7 +268,7 @@ export function SolucionesPage() {
         )}
 
         {!buscando && categoriaSel && tiposEnCategoria.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-2 overflow-x-auto px-4 pb-3 xl:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {tiposEnCategoria.map((t) => {
               const activo = t.valor === tipoSel
               const Icono = iconoDeTipo(t.valor)
@@ -294,12 +294,74 @@ export function SolucionesPage() {
       </div>
 
       <main className="flex-1 px-4 pb-[116px] pt-3.5 lg:pb-16">
-        {buscando && (
-          <p className="mb-3 text-[12.5px] text-noct-neutral-400">{etiquetaResultados}</p>
-        )}
+        {/* En escritorio (xl), las categorías pasan a un rail de filtros
+            siempre visible a la izquierda y los resultados a una rejilla
+            a la derecha; en móvil/tablet, chips arriba + rejilla. El rail
+            no aparece al buscar (los resultados se agrupan por categoría). */}
+        <div className={!buscando ? 'xl:grid xl:grid-cols-[220px_minmax(0,1fr)] xl:items-start xl:gap-6' : ''}>
+          {!buscando && (
+            <aside className="hidden min-w-0 xl:block">
+              <div className="sticky top-[104px] flex flex-col gap-1">
+                {chips.map((chip) => {
+                  const activo = chip.id === categoriaSel
+                  const Icono = chip.Icono
+                  return (
+                    <button
+                      key={chip.id ?? '__todos'}
+                      type="button"
+                      aria-pressed={activo}
+                      onClick={() => setCategoria(chip.id)}
+                      className={`flex w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[13px] font-medium transition-colors ${
+                        activo
+                          ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
+                          : 'border-transparent text-noct-neutral-300 hover:bg-noct-text/[.05]'
+                      }`}
+                    >
+                      {Icono && <Icono size={15} className="shrink-0" aria-hidden />}
+                      <span className="min-w-0 flex-1 truncate">{chip.nombre}</span>
+                      <span
+                        className={`shrink-0 text-[11.5px] ${activo ? 'text-noct-accent-400' : 'text-noct-neutral-600'}`}
+                      >
+                        {chip.count}
+                      </span>
+                    </button>
+                  )
+                })}
+                {categoriaSel && tiposEnCategoria.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 border-t border-noct-divider pt-3">
+                    {tiposEnCategoria.map((t) => {
+                      const activo = t.valor === tipoSel
+                      const Icono = iconoDeTipo(t.valor)
+                      return (
+                        <button
+                          key={t.valor}
+                          type="button"
+                          aria-pressed={activo}
+                          onClick={() => setTipoSel((actual) => (actual === t.valor ? null : t.valor))}
+                          className={`inline-flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded border px-[11px] text-[12px] font-medium transition-colors ${
+                            activo
+                              ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
+                              : 'border-noct-divider text-noct-neutral-400 hover:bg-noct-text/[.05]'
+                          }`}
+                        >
+                          <Icono size={13} aria-hidden />
+                          {t.etiqueta}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </aside>
+          )}
 
-        {total > 0 ? (
-          <div className="flex flex-col gap-[22px]">
+          <div className="@container min-w-0">
+            {buscando && (
+              <p className="mb-3 text-[12.5px] text-noct-neutral-400">{etiquetaResultados}</p>
+            )}
+
+            {total > 0 ? (
+              <div className="flex flex-col gap-[22px]">
             {grupos.map((grupo) => {
               const IconoGrupo = grupo.Icono
               return (
@@ -311,7 +373,7 @@ export function SolucionesPage() {
                       <span className="text-[11px] text-noct-neutral-600">{grupo.count}</span>
                     </div>
                   )}
-                  <div className="flex flex-col">
+                  <div className="grid grid-cols-1 gap-x-3 @lg:grid-cols-2 @4xl:grid-cols-3">
                     {grupo.articulos.map((articulo) => {
                       const Icono = iconoDeTipo(articulo.tipo)
                       const tiempo = normalizarProcedimiento(articulo.procedimiento)?.tiempoEstimadoMin
@@ -392,6 +454,8 @@ export function SolucionesPage() {
             </button>
           </div>
         )}
+          </div>
+        </div>
       </main>
     </ShellNocturne>
   )

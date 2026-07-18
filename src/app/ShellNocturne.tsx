@@ -102,10 +102,14 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Columna de contenido: 448px centrada en móvil, hasta 816px
-          (720 de contenido + 48 de margen a cada lado) en escritorio. */}
+      {/* Columna de contenido con ancho progresivo (tarea 84): antes
+          saltaba de 448px directo a 816px en 1024px, así que las tablets
+          recibían la interfaz de teléfono. Ahora crece por tramos
+          (móvil 448 -> tablet -> laptop -> monitor) para aprovechar el
+          espacio sin perder la lectura cómoda. Las pantallas dentro
+          reflujan a varias columnas con container queries. */}
       <div className="flex min-h-svh min-w-0 flex-1 flex-col">
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col lg:max-w-[816px]">
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col sm:max-w-xl md:max-w-3xl lg:max-w-[1040px] 2xl:max-w-[1240px]">
           {children}
         </div>
       </div>

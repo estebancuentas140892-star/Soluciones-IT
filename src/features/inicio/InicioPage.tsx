@@ -212,7 +212,7 @@ export function InicioPage() {
       <main className="flex-1 px-4 pb-[116px] pt-4 lg:pb-16">
         {buscando ? (
           gruposResultado.length > 0 ? (
-            <div className="flex flex-col gap-5">
+            <div className="@container flex flex-col gap-5">
               {gruposResultado.map((grupo) => (
                 <section key={grupo.id}>
                   <div className="mb-1.5 flex items-center gap-2 px-0.5">
@@ -220,7 +220,7 @@ export function InicioPage() {
                     <TituloSeccion>{grupo.nombre}</TituloSeccion>
                     <span className="text-[11px] text-noct-neutral-600">{grupo.items.length}</span>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="grid grid-cols-1 @2xl:grid-cols-2">
                     {grupo.items.map((item) => (
                       <FilaResultado key={item.id} resultado={item} consulta={consulta} />
                     ))}
@@ -243,7 +243,7 @@ export function InicioPage() {
             </div>
           )
         ) : (
-          <div className="flex flex-col gap-[22px]">
+          <div className="@container flex flex-col gap-[22px]">
             {enCurso && (
               <Link
                 to={enCurso.ruta}
@@ -290,6 +290,9 @@ export function InicioPage() {
               />
             </div>
 
+            {/* En ancho, Recientes y Para empezar se reparten en dos
+                columnas (container query); en móvil quedan apiladas. */}
+            <div className={`grid gap-[22px] @2xl:items-start ${rutas.length > 0 ? '@2xl:grid-cols-2' : ''}`}>
             <section>
               <div className="mb-1.5 flex items-center gap-2 px-0.5">
                 <ClockCounterClockwise size={14} className="text-noct-neutral-400" aria-hidden />
@@ -357,6 +360,7 @@ export function InicioPage() {
                 </div>
               </section>
             )}
+            </div>
           </div>
         )}
       </main>
