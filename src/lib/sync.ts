@@ -363,12 +363,14 @@ export async function aplicarFilasRemotas(
   })
 }
 
-// Copia local del verificador de la contrasena maestra. Best effort a
-// proposito: la tabla puede no existir todavia en el servidor
-// (esquema sin aplicar) o el usuario puede no tener permiso de boveda
-// (RLS devuelve vacio); nada de eso debe frenar la sincronizacion.
-// Nunca se borra la copia local: el verificador solo se reemplaza por
-// lo que diga el servidor.
+// Copia local del verificador de la contrasena maestra. Se descarga
+// para TODOS los tecnicos autenticados (desde el 2026-07-17 la RLS de
+// boveda_meta permite leerlo sin permiso de boveda, porque tambien
+// autoriza las eliminaciones sensibles). Best effort a proposito: la
+// tabla puede no existir todavia en el servidor o la RLS vieja puede
+// devolver vacio (esquema sin aplicar); nada de eso debe frenar la
+// sincronizacion. Nunca se borra la copia local: el verificador solo
+// se reemplaza por lo que diga el servidor.
 async function descargarBovedaMeta(): Promise<void> {
   if (!supabase) return
   try {

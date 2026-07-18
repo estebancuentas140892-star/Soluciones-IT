@@ -474,15 +474,22 @@ create policy credenciales_acceso on public.credenciales
   using (public.puede_ver_boveda())
   with check (public.puede_ver_boveda());
 
--- Verificador de la contrasena maestra: se puede leer y crear UNA
--- sola vez (la clave primaria fija impide una segunda fila), siempre
--- con permiso de boveda. A proposito NO hay politicas de UPDATE ni
--- DELETE: desde la app nadie puede reemplazarlo ni borrarlo, asi que
--- restablecer la contrasena maestra exige entrar a este panel con la
--- cuenta de administrador (validacion de identidad real).
+-- Verificador de la contrasena maestra: lo LEE cualquier tecnico
+-- autenticado (decision del 2026-07-17), porque ademas de abrir la
+-- boveda autoriza las eliminaciones sensibles en toda la app y esas
+-- no exigen permiso de boveda. El verificador no revela ningun
+-- secreto: es un texto fijo cifrado que solo permite comprobar si la
+-- contrasena escrita es la correcta; las credenciales siguen
+-- restringidas por su propia politica. Crear el verificador sigue
+-- exigiendo permiso de boveda y solo es posible UNA vez (la clave
+-- primaria fija impide una segunda fila). A proposito NO hay
+-- politicas de UPDATE ni DELETE: desde la app nadie puede
+-- reemplazarlo ni borrarlo, asi que restablecer la contrasena maestra
+-- exige entrar a este panel con la cuenta de administrador
+-- (validacion de identidad real).
 drop policy if exists boveda_meta_lectura on public.boveda_meta;
 create policy boveda_meta_lectura on public.boveda_meta
-  for select to authenticated using (public.puede_ver_boveda());
+  for select to authenticated using (true);
 
 drop policy if exists boveda_meta_creacion on public.boveda_meta;
 create policy boveda_meta_creacion on public.boveda_meta

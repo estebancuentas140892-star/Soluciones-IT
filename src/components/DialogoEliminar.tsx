@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { useAuth } from '../features/autenticacion/authContext'
 import { estadoInicialBoveda, verificarContrasenaMaestra } from '../features/boveda/sesionBoveda'
 import { CampoContrasena } from './CampoContrasena'
 import { Modal } from './Modal'
@@ -26,14 +25,20 @@ interface Props {
 // - 'cargando': comprobando si el equipo tiene contrasena maestra.
 // - 'simple': confirmacion normal, sin contrasena.
 // - 'contrasena': pide y verifica la contrasena maestra.
-// - 'bloqueado': el usuario no tiene acceso a la boveda y no puede
-//   comprobar la contrasena; la eliminacion sensible se niega.
-type Modo = 'cargando' | 'simple' | 'contrasena' | 'bloqueado'
+// - 'sin-comprobar': hay dudas de si existe contrasena maestra (sin
+//   verificador local y el servidor no respondio); por seguridad la
+//   eliminacion sensible se niega hasta poder comprobar.
+type Modo = 'cargando' | 'simple' | 'contrasena' | 'sin-comprobar'
 
 // Dialogo moderno para confirmar una eliminacion. En las acciones
 // sensibles agrega una capa de seguridad: pide la contrasena maestra
-// (la misma de la boveda) y solo elimina si es correcta. Quien no tiene
-// acceso a la boveda no puede eliminar informacion sensible.
+// (la misma de la boveda) y solo elimina si es correcta. Cualquier
+// tecnico autenticado puede autorizarla (decision del 2026-07-17: ya
+// no se exige el permiso puede_ver_boveda, que ademas bloqueaba al
+// resto del equipo); ver credenciales de la boveda sigue exigiendo el
+// permiso, eso no cambia. Si el equipo aun no definio la contrasena
+// maestra, se cae a confirmacion normal (no se puede exigir algo que
+// no existe).
 export function DialogoEliminar({
   abierto,
   titulo,
@@ -44,7 +49,6 @@ export function DialogoEliminar({
   onCerrar,
   onConfirmar,
 }: Props) {
-  const { perfil } = useAuth()
   const [modo, setModo] = useState<Modo>('cargando')
   const [contrasena, setContrasena] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -60,24 +64,24 @@ export function DialogoEliminar({
       setModo('simple')
       return
     }
-    // Sin permiso de boveda no se puede comprobar la contrasena maestra
-    // (el servidor no entrega el verificador): la accion se bloquea.
-    if (!perfil?.puedeVerBoveda) {
-      setModo('bloqueado')
-      return
-    }
 
-    // Con permiso: solo se exige la contrasena si el equipo ya tiene una
-    // definida. Si todavia no existe, se permite con confirmacion normal.
+    // Solo se exige la contrasena maestra si el equipo ya tiene una
+    // definida ('verificar'). Si el servidor confirma que no existe
+    // ('crear'), confirmacion normal. Si no se puede saber (sin
+    // conexion y sin verificador local), la eliminacion se niega en
+    // vez de asumir que no hay contrasena.
     setModo('cargando')
     let vigente = true
     void estadoInicialBoveda().then((estado) => {
-      if (vigente) setModo(estado === 'verificar' ? 'contrasena' : 'simple')
+      if (!vigente) return
+      if (estado === 'verificar') setModo('contrasena')
+      else if (estado === 'crear') setModo('simple')
+      else setModo('sin-comprobar')
     })
     return () => {
       vigente = false
     }
-  }, [abierto, sensible, perfil])
+  }, [abierto, sensible])
 
   async function confirmar(evento?: FormEvent) {
     evento?.preventDefault()
@@ -121,9 +125,10 @@ export function DialogoEliminar({
 
         {modo === 'cargando' && <p className="text-sm text-slate-500">Comprobando...</p>}
 
-        {modo === 'bloqueado' && (
+        {modo === 'sin-comprobar' && (
           <p className="rounded-lg border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-200">
-            Solo el personal con acceso a la bóveda puede eliminar esta información.
+            No se pudo comprobar la contraseña maestra del equipo. Conéctate a internet, espera a
+            que la aplicación sincronice y vuelve a intentarlo.
           </p>
         )}
 
@@ -151,9 +156,9 @@ export function DialogoEliminar({
             onClick={onCerrar}
             className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300"
           >
-            {modo === 'bloqueado' ? 'Cerrar' : 'Cancelar'}
+            {modo === 'sin-comprobar' ? 'Cerrar' : 'Cancelar'}
           </button>
-          {modo !== 'bloqueado' && modo !== 'cargando' && (
+          {modo !== 'sin-comprobar' && modo !== 'cargando' && (
             <button
               type="button"
               onClick={() => void confirmar()}
