@@ -1,30 +1,114 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
-import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
-import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
-import { DescargarOffline } from '../../components/DescargarOffline'
-import { MiniaturaPortada } from '../../components/MiniaturaPortada'
+import { contarHechos } from '../../lib/progresoPasos'
 import { obtenerRecientes } from '../../lib/recientes'
+import { obtenerEstadoSync, sincronizar, suscribirSync } from '../../lib/sync'
+import { ShellNocturne } from '../../app/ShellNocturne'
+import {
+  BookOpen,
+  CaretRight,
+  ClockCounterClockwise,
+  CloudArrowUp,
+  CloudCheck,
+  CloudSlash,
+  FlagBanner,
+  type IconoProps,
+  LockSimple,
+  MagnifyingGlass,
+  Monitor,
+  Play,
+  QrCode,
+  TreeStructure,
+  Vault,
+  XCircleFill,
+} from '../../components/iconos'
+import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import {
+  buscar,
+  type ResultadoBusqueda,
+  type TipoResultado,
+  useIndiceBusqueda,
+} from '../busqueda/useIndiceBusqueda'
+import { normalizarTexto } from '../soluciones/iconosSoluciones'
+
+// Pantalla de Inicio en el sistema Nocturne (re-autoria del handoff
+// "Rediseño de aplicación empresarial", Inicio.dc.html). Un solo punto
+// de entrada al conocimiento del equipo: un buscador global que atraviesa
+// soluciones, dispositivos y boveda, y, cuando no se busca, los atajos de
+// trabajo (retomar un procedimiento a medias, diagnostico, escaner), lo
+// reciente y la ruta de aprendizaje. Trae su propio ShellNocturne (sidebar
+// en escritorio, pestañas en movil), por eso su ruta vive fuera del Layout
+// oscuro heredado, como el resto de pantallas ya re-autorizadas.
+
+// Icono y tono del recuadro por tipo de resultado, con el lenguaje de
+// color del sistema: articulos/diagnosticos/categorias en el acento, un
+// dispositivo en verde (exito), una credencial y los adjuntos en neutro.
+// Las clases van completas y literales porque Tailwind no detecta nombres
+// construidos dinamicamente.
+interface Visual {
+  Icono: (props: IconoProps) => React.JSX.Element
+  tono: string
+}
+const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
+  articulo: { Icono: BookOpen, tono: 'text-noct-accent bg-noct-accent/[.12]' },
+  categoria: { Icono: BookOpen, tono: 'text-noct-accent bg-noct-accent/[.12]' },
+  diagnostico: { Icono: TreeStructure, tono: 'text-noct-accent bg-noct-accent/[.12]' },
+  adjunto: { Icono: BookOpen, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
+  dispositivo: { Icono: Monitor, tono: 'text-noct-exito bg-noct-exito/[.12]' },
+  credencial: { Icono: LockSimple, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
+}
+
+// Los resultados se agrupan por fuente (los tres modulos con contenido
+// buscable), no por los 6 tipos internos: el tecnico piensa en "donde
+// esta", no en el tipo de dato. Cada tipo cae en su grupo.
+const GRUPOS_BUSQUEDA: {
+  id: string
+  nombre: string
+  Icono: (props: IconoProps) => React.JSX.Element
+  tipos: TipoResultado[]
+}[] = [
+  { id: 'soluciones', nombre: 'Soluciones', Icono: BookOpen, tipos: ['diagnostico', 'categoria', 'articulo', 'adjunto'] },
+  { id: 'dispositivos', nombre: 'Dispositivos', Icono: Monitor, tipos: ['dispositivo'] },
+  { id: 'boveda', nombre: 'Bóveda', Icono: Vault, tipos: ['credencial'] },
+]
+
+// Parte un titulo en tres tramos segun donde cae el termino buscado
+// (comparando normalizado, devolviendo el original). El resaltado usa
+// `match`; si no hay coincidencia literal (busqueda difusa o por sinonimo)
+// todo el titulo queda en `pre`, sin resaltar.
+function partirTitulo(titulo: string, consulta: string) {
+  if (!consulta) return { pre: titulo, match: '', post: '' }
+  const i = normalizarTexto(titulo).indexOf(consulta)
+  if (i < 0) return { pre: titulo, match: '', post: '' }
+  return {
+    pre: titulo.slice(0, i),
+    match: titulo.slice(i, i + consulta.length),
+    post: titulo.slice(i + consulta.length),
+  }
+}
 
 export function InicioPage() {
-  const [consulta, setConsulta] = useState('')
+  const [query, setQuery] = useState('')
+  const consultaCruda = query.trim()
+  const consulta = normalizarTexto(consultaCruda)
+  const buscando = consultaCruda.length > 0
+
   const indice = useIndiceBusqueda()
-  const resultados = useMemo(() => buscar(indice, consulta), [indice, consulta])
-  const buscando = consulta.trim().length > 0
+  const resultados = useMemo(() => buscar(indice, query), [indice, query])
+
   const recientes = useLiveQuery(() => obtenerRecientes(), [], [])
+
   // Articulos marcados por el equipo como "ruta de inicio" (ver
-  // ArticuloForm): puerta de entrada para quien recien llega, sin
-  // crear una seccion nueva.
-  const rutasInicio = useLiveQuery(
+  // ArticuloForm): puerta de entrada para quien recien llega. Menor
+  // orden primero; a igualdad, por titulo para una lista estable.
+  const rutas = useLiveQuery(
     async () => {
       const articulos = await db.articulos
         .filter((a) => a.esRutaInicio && !a.eliminadoEn && (a.estado ?? 'publicado') === 'publicado')
         .toArray()
-      // Orden de la ruta de aprendizaje (grupo N3): menor primero; a
-      // igualdad de orden, por titulo para una lista estable.
       return articulos.sort(
         (a, b) =>
           (a.ordenRutaInicio ?? 0) - (b.ordenRutaInicio ?? 0) ||
@@ -35,139 +119,374 @@ export function InicioPage() {
     [],
   )
 
+  // "Continuar donde quedaste": el procedimiento con avance a medias mas
+  // reciente. Se recorre progresoPasos (avance local por dispositivo) de
+  // mas nuevo a mas viejo y se toma el primero con al menos un paso hecho
+  // pero sin terminar. actualizadoEn no esta indexado, asi que el orden se
+  // hace en memoria (son pocas filas: el avance de un equipo de 5). Un
+  // articulo eliminado o sin pasos se salta.
+  const enCurso = useLiveQuery(async () => {
+    const progresos = (await db.progresoPasos.toArray()).sort((a, b) =>
+      b.actualizadoEn.localeCompare(a.actualizadoEn),
+    )
+    for (const progreso of progresos) {
+      const articulo = await db.articulos.get(progreso.articuloId)
+      if (!articulo || articulo.eliminadoEn) continue
+      const proc = normalizarProcedimiento(articulo.procedimiento)
+      if (!proc || proc.pasos.length === 0) continue
+      const total = proc.pasos.length
+      const hechos = contarHechos(
+        progreso.pasosHechos ?? [],
+        proc.pasos.map((p) => p.id),
+      )
+      if (hechos === 0 || hechos >= total) continue
+      return {
+        titulo: articulo.titulo,
+        ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}`,
+        pct: Math.round((hechos / total) * 100),
+        detalle: `Paso ${Math.min(hechos + 1, total)} de ${total}`,
+      }
+    }
+    return null
+  }, [])
+
+  const hora = new Date().getHours()
+  const saludo =
+    (hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches') +
+    '. Todo el conocimiento del equipo, al instante'
+
+  // Grupos con al menos un resultado, en el orden fijo de GRUPOS_BUSQUEDA.
+  const gruposResultado = useMemo(() => {
+    return GRUPOS_BUSQUEDA.map((grupo) => {
+      const items = resultados.filter((r) => grupo.tipos.includes(r.tipo))
+      return items.length ? { ...grupo, items } : null
+    }).filter((g): g is NonNullable<typeof g> => g !== null)
+  }, [resultados])
+
   return (
-    <div className="flex flex-col gap-6 px-4 pt-6">
-      <header>
-        <h1 className="text-xl font-semibold">Soluciones IT</h1>
-        <p className="text-sm text-slate-400">Todo el conocimiento del equipo, al instante</p>
-      </header>
+    <ShellNocturne>
+      {/* Cabecera fija con desenfoque: marca, saludo, estado de
+          sincronizacion y el buscador global. */}
+      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
+        <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-3">
+          <div>
+            <h1 className="text-[22px] font-medium leading-tight">IT Brain</h1>
+            <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{saludo}</p>
+          </div>
+          <PastillaSync />
+        </header>
 
-      <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-        <SearchIcon className="h-5 w-5 text-slate-400" />
-        <input
-          type="search"
-          value={consulta}
-          onChange={(evento) => setConsulta(evento.target.value)}
-          placeholder="Buscar impresora, POS, cámara, Zebra..."
-          className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
-        />
-      </label>
-
-      {buscando ? (
-        <ResultadosBusqueda resultados={resultados} />
-      ) : (
-        <>
-          <Link
-            to="/diagnostico"
-            className="flex items-center gap-2 rounded-xl border border-sky-900 bg-sky-950/40 px-4 py-3 text-sm font-medium text-sky-100"
+        <div className="px-4 pb-3 pt-2">
+          <label
+            className={`flex h-11 items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
+              buscando ? 'border-noct-accent' : 'border-noct-divider'
+            }`}
           >
-            <IconoDiagnostico className="h-5 w-5 text-sky-400" />
-            <span>
-              Diagnóstico Inteligente
-              <span className="block text-xs font-normal text-sky-300/80">
-                Empieza por el problema, llega a la solución
-              </span>
-            </span>
-          </Link>
-          <Link
-            to="/escaner"
-            className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
-          >
-            <IconoEscanear className="h-5 w-5 text-slate-400" />
-            Escanear código de un equipo
-          </Link>
-          <DescargarOffline />
-          {rutasInicio.length > 0 && (
-            <section>
-              <h2 className="mb-2 text-sm font-medium text-slate-400">Para empezar</h2>
-              <ul className="flex flex-col gap-2">
-                {rutasInicio.map((articulo) => {
-                  const portada = normalizarProcedimiento(articulo.procedimiento)?.portada
-                  return (
-                    <li key={articulo.id}>
-                      <Link
-                        to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
-                        className="flex items-center gap-2 rounded-xl border border-sky-900 bg-sky-950/40 px-4 py-3 text-sm font-medium text-sky-100"
-                      >
-                        {portada ? (
-                          <MiniaturaPortada referencia={portada.referencia} />
-                        ) : (
-                          <IconoRuta className="h-5 w-5 text-sky-400" />
-                        )}
-                        {articulo.titulo}
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            </section>
-          )}
-          <section>
-            <h2 className="mb-2 text-sm font-medium text-slate-400">Recientes</h2>
-            {recientes.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
-                Aún no hay elementos recientes
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {recientes.map((reciente) => (
-                  <li key={reciente.clave}>
-                    <Link
-                      to={reciente.ruta}
-                      className="block rounded-xl border border-slate-800 bg-slate-900 px-4 py-3"
-                    >
-                      <p className="text-sm font-medium text-slate-100">{reciente.titulo}</p>
-                      <p className="text-xs text-slate-400">{reciente.subtitulo}</p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+            <MagnifyingGlass
+              size={18}
+              className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar en todo: artículos, equipos, bóveda"
+              aria-label="Buscar en todo el conocimiento del equipo"
+              className="ini-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
+            />
+            {buscando && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                aria-label="Borrar búsqueda"
+                className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
+              >
+                <XCircleFill size={18} aria-hidden />
+              </button>
             )}
-          </section>
-        </>
+          </label>
+        </div>
+      </div>
+
+      <main className="flex-1 px-4 pb-[116px] pt-4 lg:pb-16">
+        {buscando ? (
+          gruposResultado.length > 0 ? (
+            <div className="flex flex-col gap-5">
+              {gruposResultado.map((grupo) => (
+                <section key={grupo.id}>
+                  <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                    <grupo.Icono size={14} className="text-noct-neutral-400" aria-hidden />
+                    <TituloSeccion>{grupo.nombre}</TituloSeccion>
+                    <span className="text-[11px] text-noct-neutral-600">{grupo.items.length}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    {grupo.items.map((item) => (
+                      <FilaResultado key={item.id} resultado={item} consulta={consulta} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
+              <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
+              <div>
+                <p className="text-[14.5px] font-medium">Sin coincidencias</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
+                  Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
+                </p>
+              </div>
+              <button type="button" onClick={() => setQuery('')} className={`mt-0.5 ${BTN_SECUNDARIO}`}>
+                Limpiar búsqueda
+              </button>
+            </div>
+          )
+        ) : (
+          <div className="flex flex-col gap-[22px]">
+            {enCurso && (
+              <Link
+                to={enCurso.ruta}
+                className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3.5 text-noct-text hover:bg-noct-accent/[.13]"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-accent/[.16] text-noct-accent-300">
+                    <Play size={18} aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
+                      Continuar donde quedaste
+                    </span>
+                    <span className="mt-[3px] block text-[14.5px] font-medium leading-[1.3] [text-wrap:pretty]">
+                      {enCurso.titulo}
+                    </span>
+                  </span>
+                  <CaretRight size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-accent/[.18]">
+                    <span
+                      className="block h-full rounded-full bg-noct-accent"
+                      style={{ width: `${enCurso.pct}%` }}
+                    />
+                  </span>
+                  <span className="shrink-0 text-[12px] text-noct-neutral-400">{enCurso.detalle}</span>
+                </div>
+              </Link>
+            )}
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <AtajoRapido
+                to="/diagnostico"
+                Icono={TreeStructure}
+                titulo="Diagnóstico inteligente"
+                detalle="Del problema a la solución"
+              />
+              <AtajoRapido
+                to="/escaner"
+                Icono={QrCode}
+                titulo="Escanear equipo"
+                detalle="Ficha por código QR"
+              />
+            </div>
+
+            <section>
+              <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                <ClockCounterClockwise size={14} className="text-noct-neutral-400" aria-hidden />
+                <TituloSeccion>Recientes</TituloSeccion>
+              </div>
+              {recientes.length > 0 ? (
+                <div className="flex flex-col">
+                  {recientes.map((reciente) => {
+                    const esDispositivo = reciente.clave.startsWith('dispositivo:')
+                    const { Icono, tono } = esDispositivo
+                      ? VISUAL_POR_TIPO.dispositivo
+                      : VISUAL_POR_TIPO.articulo
+                    return (
+                      <Link
+                        key={reciente.clave}
+                        to={reciente.ruta}
+                        className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+                      >
+                        <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
+                          <Icono size={17} aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="mb-0.5 block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
+                            {reciente.titulo}
+                          </span>
+                          <span className="block truncate text-[12px] text-noct-neutral-500">
+                            {reciente.subtitulo}
+                          </span>
+                        </span>
+                        <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+                      </Link>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-5 text-center text-[13px] leading-normal text-noct-neutral-500">
+                  Aún no hay elementos recientes. Lo que se consulte aparece aquí.
+                </p>
+              )}
+            </section>
+
+            {rutas.length > 0 && (
+              <section>
+                <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                  <FlagBanner size={14} className="text-noct-neutral-400" aria-hidden />
+                  <TituloSeccion>Para empezar</TituloSeccion>
+                  <span className="text-[11px] text-noct-neutral-600">ruta de aprendizaje</span>
+                </div>
+                <div className="flex flex-col">
+                  {rutas.map((articulo, indice) => (
+                    <Link
+                      key={articulo.id}
+                      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+                      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-noct-accent text-[12.5px] font-medium text-noct-accent-300">
+                        {indice + 1}
+                      </span>
+                      <span className="min-w-0 flex-1 text-sm font-medium leading-[1.3] [text-wrap:pretty]">
+                        {articulo.titulo}
+                      </span>
+                      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </main>
+    </ShellNocturne>
+  )
+}
+
+// Fila de un resultado de busqueda, con el termino resaltado.
+function FilaResultado({ resultado, consulta }: { resultado: ResultadoBusqueda; consulta: string }) {
+  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
+  const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
+  return (
+    <Link
+      to={resultado.ruta}
+      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+    >
+      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
+        <Icono size={17} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="mb-0.5 block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
+          {pre}
+          {match && <span className="rounded-[3px] bg-noct-accent/[.18] text-noct-accent-300">{match}</span>}
+          {post}
+        </span>
+        {resultado.subtitulo && (
+          <span className="block truncate text-[12px] text-noct-neutral-500">{resultado.subtitulo}</span>
+        )}
+      </span>
+      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+    </Link>
+  )
+}
+
+// Atajo de la rejilla superior (diagnostico, escaner): icono en el
+// acento, titulo y subtitulo, borde que reacciona al hover.
+function AtajoRapido({
+  to,
+  Icono,
+  titulo,
+  detalle,
+}: {
+  to: string
+  Icono: (props: IconoProps) => React.JSX.Element
+  titulo: string
+  detalle: string
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex min-h-11 flex-col gap-2 rounded-lg border border-noct-divider bg-noct-surface p-3.5 text-noct-text hover:border-noct-accent hover:bg-noct-accent/[.06]"
+    >
+      <Icono size={21} className="text-noct-accent" aria-hidden />
+      <span className="text-[13.5px] font-medium leading-[1.3]">
+        {titulo}
+        <span className="mt-0.5 block text-[11.5px] font-normal leading-[1.4] text-noct-neutral-500">
+          {detalle}
+        </span>
+      </span>
+    </Link>
+  )
+}
+
+// El panel de sincronizacion solo carga si el usuario lo abre.
+const PanelSync = lazy(() => import('../../components/PanelSync').then((m) => ({ default: m.PanelSync })))
+
+function suscribirRed(escucha: () => void): () => void {
+  window.addEventListener('online', escucha)
+  window.addEventListener('offline', escucha)
+  return () => {
+    window.removeEventListener('online', escucha)
+    window.removeEventListener('offline', escucha)
+  }
+}
+
+// Pastilla de estado de sincronizacion en la cabecera: responde de un
+// vistazo "¿ya se subio lo que cambie?" con icono, etiqueta y color.
+// Tocarla fuerza una sincronizacion y abre el panel (mismo comportamiento
+// que IndicadorSync, con el aspecto Nocturne del handoff). Cuatro estados:
+// al dia (neutro), sincronizando/pendiente (precaucion), con error (error)
+// y sin conexion (precaucion), siguiendo el lenguaje de estados de 08_ESTILO.
+function PastillaSync() {
+  const estado = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
+  const enLinea = useSyncExternalStore(suscribirRed, () => navigator.onLine)
+  const [panelAbierto, setPanelAbierto] = useState(false)
+
+  let Icono = CloudCheck
+  let etiqueta = 'Al día'
+  let titulo = 'Sincronizado y disponible sin conexión'
+  let clase = 'border-noct-divider text-noct-neutral-400'
+  if (!enLinea) {
+    Icono = CloudSlash
+    etiqueta = 'Sin conexión'
+    titulo =
+      estado.cambiosPendientes > 0
+        ? `Trabajando con la copia local. ${estado.cambiosPendientes} cambio(s) por subir.`
+        : 'Trabajando con la copia local'
+    clase = 'border-noct-precaucion/40 text-noct-precaucion'
+  } else if (estado.cambiosConError > 0) {
+    Icono = CloudSlash
+    etiqueta = 'Con error'
+    titulo = `${estado.cambiosConError} cambio(s) con error de sincronización`
+    clase = 'border-noct-error/40 text-noct-error'
+  } else if (estado.enCurso || estado.cambiosPendientes > 0) {
+    Icono = CloudArrowUp
+    etiqueta = 'Sincronizando'
+    titulo = estado.enCurso ? 'Subiendo los cambios' : 'Hay cambios pendientes de subir'
+    clase = 'border-noct-precaucion/40 text-noct-precaucion'
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          void sincronizar()
+          setPanelAbierto(true)
+        }}
+        title={`${titulo}. Tocar para ver el detalle y sincronizar ahora.`}
+        aria-label={titulo}
+        className={`inline-flex min-h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-[11px] text-[12px] font-medium ${clase}`}
+      >
+        <Icono size={14} className={estado.enCurso ? 'animate-pulse' : ''} aria-hidden />
+        {etiqueta}
+      </button>
+      {panelAbierto && (
+        <Suspense fallback={null}>
+          <PanelSync abierto={panelAbierto} onCerrar={() => setPanelAbierto(false)} />
+        </Suspense>
       )}
-    </div>
-  )
-}
-
-function IconoDiagnostico(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
-      <circle cx="12" cy="5" r="2.2" />
-      <circle cx="6" cy="19" r="2.2" />
-      <circle cx="18" cy="19" r="2.2" />
-      <path d="M12 7.2v4M12 11.2l-4.7 5.9M12 11.2l4.7 5.9" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function IconoRuta(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
-      <path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 4v4a1 1 0 0 0 1 1h4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 13h8M8 17h5" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function IconoEscanear(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
-      <path d="M4 8V6a2 2 0 0 1 2-2h2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M16 4h2a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20 16v2a2 2 0 0 1-2 2h-2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 20H6a2 2 0 0 1-2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M7 12h10" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
-      <circle cx="11" cy="11" r="7" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="m20 20-3.5-3.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    </>
   )
 }

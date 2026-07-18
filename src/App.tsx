@@ -252,8 +252,21 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* Inicio re-autorizada a Nocturne (handoff "Rediseño de
+                  aplicación empresarial", Inicio.dc.html): trae su propio
+                  ShellNocturne (cabecera con estado de sincronizacion,
+                  buscador global y pestañas/sidebar), por eso sale del
+                  Layout oscuro heredado como las demas pantallas del
+                  rediseño. */}
+              <Route
+                index
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <InicioPage />
+                  </Suspense>
+                }
+              />
               <Route element={<Layout />}>
-                <Route index element={<InicioPage />} />
                 <Route path="cuenta" element={<CuentaPage />} />
                 <Route path="cuenta/seguridad" element={<SeguridadPage />} />
                 <Route path="diagnostico" element={<DiagnosticosPage />} />
