@@ -261,11 +261,20 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* El editor de dispositivo (tarea 87, mismo handoff,
-                  Editor de Dispositivo.dc.html) trae su propio shell
-                  Nocturne a pantalla completa (cabecera pegajosa y barra
-                  de acciones fija), por eso `nuevo` y `:id/editar` salen
-                  del Layout oscuro como los demás editores. */}
+              {/* La ficha de dispositivo (tarea 86, Ficha de
+                  Dispositivo.dc.html) y el editor (tarea 87, Editor de
+                  Dispositivo.dc.html) traen su propio shell Nocturne, por
+                  eso salen del Layout oscuro. La ficha usa ShellNocturne
+                  (sidebar/pestañas) como la ficha de artículo; el editor
+                  va a pantalla completa como los demás editores. */}
+              <Route
+                path="dispositivos/:dispositivoId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <DispositivoPage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="dispositivos/nuevo"
                 element={
@@ -326,7 +335,6 @@ function App() {
                 <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
                 <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
-                <Route path="dispositivos/:dispositivoId" element={<DispositivoPage />} />
                 {/* Ubicaciones como entidad (grupo N3): lista, migracion
                     asistida de textos, ficha 360 y formulario. Van dentro
                     del Layout oscuro como el resto de fichas y formularios

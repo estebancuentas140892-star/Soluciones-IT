@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { CaretRight, LockSimple } from '../../components/iconos'
 import { useGrafo } from '../../components/useGrafo'
 import { origenesDistintos, referenciasHacia } from '../../lib/grafo'
 
@@ -10,6 +11,8 @@ import { origenesDistintos, referenciasHacia } from '../../lib/grafo'
 // enlace a la ficha de la credencial (donde, tras BovedaGuard y la
 // contraseña maestra, se ven los secretos). Sin permiso, la sección no
 // aparece: no revela siquiera que el equipo tiene credenciales.
+// Re-autorizado a Nocturne: filas de la lista "Resolver con este
+// equipo" (icono de candado neutro, "Bóveda · requiere desbloqueo").
 export function CredencialesDelEquipo({
   dispositivoId,
   puedeVerBoveda,
@@ -26,21 +29,25 @@ export function CredencialesDelEquipo({
   if (!puedeVerBoveda || credenciales.length === 0) return null
 
   return (
-    <div>
-      <h3 className="mb-1 text-xs font-medium text-slate-500">Credenciales de este equipo</h3>
-      <ul className="flex flex-col gap-2">
-        {credenciales.map((credencial) => (
-          <li key={credencial.id}>
-            <Link
-              to={credencial.ruta}
-              className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5"
-            >
-              <span className="min-w-0 truncate text-sm text-slate-100">🔒 {credencial.titulo}</span>
-              <span className="shrink-0 text-xs text-sky-400">Ver →</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      {credenciales.map((credencial) => (
+        <Link
+          key={credencial.id}
+          to={credencial.ruta}
+          className="flex min-h-[50px] items-center gap-[13px] rounded-md px-2 py-2.5 text-noct-text transition-colors hover:bg-noct-text/[.05]"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-noct-neutral-400/[.12] text-noct-neutral-400">
+            <LockSimple size={16} aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13.5px] font-medium leading-tight">{credencial.titulo}</span>
+            <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">
+              Bóveda · requiere desbloqueo
+            </span>
+          </span>
+          <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+        </Link>
+      ))}
+    </>
   )
 }

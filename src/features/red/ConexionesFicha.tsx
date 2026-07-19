@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type Conexion, type Dispositivo, type TipoConexion } from '../../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -9,6 +9,8 @@ import {
   type ExtremoConexion,
 } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
+import { CaretRight, Plus, X } from '../../components/iconos'
+import { BTN_GHOST, BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
 
 // Relacion nueva vista desde la ficha actual: define quien es origen y
 // quien destino segun lo que el tecnico quiere documentar. 'relacionado'
@@ -16,9 +18,16 @@ import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 // impresora), sin puertos ni medio y sin entrar en la topologia.
 type Modo = 'enlace' | 'instalado' | 'contiene' | 'relacionado'
 
+// Campo de texto compartido, re-autorizado a Nocturne.
+const CLASE_CAMPO =
+  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+const CLASE_ETIQUETA = 'flex flex-col gap-1.5 text-[12.5px] font-medium text-noct-neutral-400'
+
 // Seccion Conexiones de la ficha de un dispositivo: lista sus enlaces
 // e instalaciones (navegables a la ficha del otro extremo) y permite
-// agregar o quitar conexiones.
+// agregar o quitar conexiones. Re-autorizada al sistema Nocturne
+// (handoff "Rediseño de aplicación empresarial", Ficha de
+// Dispositivo.dc.html): la logica y los datos no cambian.
 export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
   const conexiones = useLiveQuery(
     () =>
@@ -57,17 +66,18 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-slate-400">Conexiones</h2>
+        <TituloSeccion>Conexiones</TituloSeccion>
         <Link
           to={`/red/topologia/${dispositivo.id}`}
-          className="text-xs text-sky-400 underline decoration-dotted underline-offset-2"
+          className="inline-flex items-center gap-1 text-[12px] text-noct-accent-300 hover:text-noct-accent-400"
         >
-          Ver en topología →
+          Ver en topología
+          <CaretRight size={12} aria-hidden />
         </Link>
       </div>
 
       {total === 0 && !agregando && (
-        <p className="rounded-xl border border-dashed border-slate-800 px-4 py-4 text-center text-sm text-slate-500">
+        <p className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-4 text-center text-sm text-noct-neutral-500">
           Sin conexiones registradas
         </p>
       )}
@@ -107,22 +117,19 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
       {agregando ? (
         <FormularioConexion dispositivo={dispositivo} onCerrar={() => setAgregando(false)} />
       ) : (
-        <button
-          type="button"
-          onClick={() => setAgregando(true)}
-          className="rounded-xl border border-slate-800 px-4 py-2.5 text-sm text-sky-400"
-        >
-          + Agregar conexión
+        <button type="button" onClick={() => setAgregando(true)} className={`${BTN_GHOST} self-start text-noct-accent`}>
+          <Plus size={13} aria-hidden />
+          Agregar conexión
         </button>
       )}
     </section>
   )
 }
 
-function GrupoConexiones({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function GrupoConexiones({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-xs text-slate-500">{titulo}</p>
+      <p className="text-[12px] text-noct-neutral-500">{titulo}</p>
       <ul className="flex flex-col gap-2">{children}</ul>
     </div>
   )
@@ -148,27 +155,24 @@ function FilaConexion({
     .join(' · ')
 
   return (
-    <li className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5">
+    <li className="flex items-center gap-2 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
       <Link to={`/dispositivos/${otroId}`} className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-slate-100">{nombre}</p>
+        <p className="truncate text-sm font-medium text-noct-text">{nombre}</p>
         {(detalle || conexion.notas) && (
-          <p className="truncate text-xs text-slate-400">{detalle || conexion.notas}</p>
+          <p className="truncate text-xs text-noct-neutral-400">{detalle || conexion.notas}</p>
         )}
       </Link>
       <button
         type="button"
         onClick={() => void onQuitar(conexion)}
         aria-label="Quitar conexión"
-        className="shrink-0 rounded-lg border border-slate-800 px-2 py-1 text-slate-400"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-noct-neutral-500 hover:bg-noct-text/[.05] hover:text-noct-text"
       >
-        ×
+        <X size={14} aria-hidden />
       </button>
     </li>
   )
 }
-
-const CLASE_CAMPO =
-  'rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500'
 
 function FormularioConexion({
   dispositivo,
@@ -231,17 +235,17 @@ function FormularioConexion({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-surface p-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-200">Nueva conexión</p>
-        <button type="button" onClick={onCerrar} className="text-xs text-slate-400">
+        <p className="text-sm font-medium text-noct-text">Nueva conexión</p>
+        <button type="button" onClick={onCerrar} className="text-xs text-noct-neutral-500 hover:text-noct-text">
           Cancelar
         </button>
       </div>
 
-      <label className="flex flex-col gap-1 text-xs text-slate-400">
+      <label className={CLASE_ETIQUETA}>
         Tipo de relación
-        <select value={modo} onChange={(e) => setModo(e.target.value as Modo)} className={CLASE_CAMPO}>
+        <select value={modo} onChange={(e) => setModo(e.target.value as Modo)} className={`min-h-11 ${CLASE_CAMPO}`}>
           <option value="enlace">Enlace hacia otro equipo</option>
           <option value="instalado">Está instalado en (rack)</option>
           <option value="contiene">Contiene el equipo (este es un rack)</option>
@@ -250,10 +254,10 @@ function FormularioConexion({
       </label>
 
       {otro ? (
-        <div className="flex items-center gap-2 rounded-xl border border-sky-900/60 bg-sky-950/30 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/[.08] px-3 py-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm text-slate-100">{otro.nombre}</p>
-            {otro.ubicacion && <p className="truncate text-xs text-slate-400">{otro.ubicacion}</p>}
+            <p className="truncate text-sm text-noct-text">{otro.nombre}</p>
+            {otro.ubicacion && <p className="truncate text-xs text-noct-neutral-400">{otro.ubicacion}</p>}
           </div>
           <button
             type="button"
@@ -261,7 +265,7 @@ function FormularioConexion({
               setOtro(null)
               setBusqueda('')
             }}
-            className="shrink-0 text-xs text-slate-400"
+            className="shrink-0 text-xs text-noct-neutral-500 hover:text-noct-text"
           >
             Cambiar
           </button>
@@ -273,7 +277,7 @@ function FormularioConexion({
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar el otro equipo por nombre, ubicación o IP..."
-            className={CLASE_CAMPO}
+            className={`min-h-11 ${CLASE_CAMPO}`}
           />
           {coincidencias.length > 0 && (
             <ul className="flex flex-col gap-1">
@@ -282,11 +286,11 @@ function FormularioConexion({
                   <button
                     type="button"
                     onClick={() => setOtro(d)}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left"
+                    className="w-full rounded-md border border-noct-divider bg-noct-bg px-3 py-2 text-left hover:border-noct-accent"
                   >
-                    <p className="text-sm text-slate-100">{d.nombre}</p>
+                    <p className="text-sm text-noct-text">{d.nombre}</p>
                     {(d.ubicacion || d.ip) && (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-noct-neutral-400">
                         {[d.ubicacion, d.ip].filter(Boolean).join(' · ')}
                       </p>
                     )}
@@ -301,28 +305,28 @@ function FormularioConexion({
       {modo === 'enlace' && (
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex flex-col gap-1 text-xs text-slate-400">
+            <label className={CLASE_ETIQUETA}>
               Puerto en {dispositivo.nombre || 'este equipo'}
               <input
                 type="text"
                 value={puertoLocal}
                 onChange={(e) => setPuertoLocal(e.target.value)}
                 placeholder="Ej. 18"
-                className={CLASE_CAMPO}
+                className={`min-h-11 ${CLASE_CAMPO}`}
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-slate-400">
+            <label className={CLASE_ETIQUETA}>
               Puerto en el otro
               <input
                 type="text"
                 value={puertoRemoto}
                 onChange={(e) => setPuertoRemoto(e.target.value)}
                 placeholder="Opcional"
-                className={CLASE_CAMPO}
+                className={`min-h-11 ${CLASE_CAMPO}`}
               />
             </label>
           </div>
-          <label className="flex flex-col gap-1 text-xs text-slate-400">
+          <label className={CLASE_ETIQUETA}>
             Medio
             <input
               type="text"
@@ -330,7 +334,7 @@ function FormularioConexion({
               value={medio}
               onChange={(e) => setMedio(e.target.value)}
               placeholder="UTP, fibra óptica..."
-              className={CLASE_CAMPO}
+              className={`min-h-11 ${CLASE_CAMPO}`}
             />
             <datalist id="medios-conexion">
               {MEDIOS_SUGERIDOS.map((m) => (
@@ -342,19 +346,19 @@ function FormularioConexion({
       )}
 
       {modo === 'relacionado' && (
-        <p className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-400">
-          Relaciona dos equipos que no son de red (por ejemplo un POS con su impresora). Aparece en
-          la ficha de ambos, sin puertos ni medio, y no entra en la topología.
+        <p className="rounded-md border border-noct-divider bg-noct-bg px-3 py-2 text-xs text-noct-neutral-400">
+          Relaciona dos equipos que no son de red (por ejemplo un POS con su impresora). Aparece en la ficha de
+          ambos, sin puertos ni medio, y no entra en la topología.
         </p>
       )}
 
-      <label className="flex flex-col gap-1 text-xs text-slate-400">
+      <label className={CLASE_ETIQUETA}>
         Notas (opcional)
         <input
           type="text"
           value={notas}
           onChange={(e) => setNotas(e.target.value)}
-          className={CLASE_CAMPO}
+          className={`min-h-11 ${CLASE_CAMPO}`}
         />
       </label>
 
@@ -362,7 +366,7 @@ function FormularioConexion({
         type="button"
         onClick={() => void guardar()}
         disabled={!otro || guardando}
-        className="rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-medium text-slate-950 disabled:opacity-50"
+        className={`${BTN_PRIMARIO} self-start px-4 py-2.5 disabled:opacity-50`}
       >
         {guardando ? 'Guardando...' : 'Guardar conexión'}
       </button>

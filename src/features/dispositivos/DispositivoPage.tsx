@@ -2,34 +2,81 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
+import { textoVivo } from '../../lib/referencia'
+import { resumenImpacto } from '../../lib/grafo'
+import { ShellNocturne } from '../../app/ShellNocturne'
 import { useAuth } from '../autenticacion/authContext'
 import { Adjuntos } from '../../components/Adjuntos'
-import { BotonCompartir } from '../../components/BotonCompartir'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useGrafo } from '../../components/useGrafo'
-import { resumenImpacto } from '../../lib/grafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
-import { ValorCopiable } from '../../components/ValorCopiable'
+import {
+  Check,
+  Copy,
+  DotsThreeOutline,
+  LockSimple,
+  MapPin,
+  PencilSimple,
+  Plus,
+  QrCode,
+  ShareNetwork,
+  TrashSimple,
+} from '../../components/iconos'
+import { BTN_GHOST, BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { ConexionesFicha } from '../red/ConexionesFicha'
+import { estadoConEtiqueta } from '../red/topologiaVisual'
 import { Historial } from '../historial/Historial'
-import { textoVivo } from '../../lib/referencia'
-import { IndicadorEstado } from './IndicadorEstado'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
 import { CredencialesDelEquipo } from './CredencialesDelEquipo'
 import { ProblemasDelEquipo } from './ProblemasDelEquipo'
 import { ProcedimientosDelEquipo } from './ProcedimientosDelEquipo'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
 
-const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' })
+// Fecha corta al estilo del diseño ("12 jul"), con el año solo cuando
+// no es el actual (mismo criterio que la ficha de artículo).
+function fechaCorta(iso: string): string {
+  const fecha = new Date(iso)
+  const opciones: Intl.DateTimeFormatOptions =
+    fecha.getFullYear() === new Date().getFullYear()
+      ? { day: 'numeric', month: 'short' }
+      : { day: 'numeric', month: 'short', year: 'numeric' }
+  return new Intl.DateTimeFormat('es', opciones).format(fecha)
+}
 
+// Pastilla de estado en Nocturne (mismo criterio de color que la lista,
+// tarea 85): operativo verde, mantenimiento ámbar, fuera de servicio
+// rojo, de baja/otro neutro. Se indexa por la etiqueta canónica.
+const PILL_ESTADO: Record<string, string> = {
+  operativo: 'border-noct-exito/40 bg-noct-exito/10 text-noct-exito',
+  'en mantenimiento': 'border-noct-precaucion/40 bg-noct-precaucion/10 text-noct-precaucion',
+  'fuera de servicio': 'border-noct-error/40 bg-noct-error/10 text-noct-error',
+  'de baja': 'border-noct-neutral-500/40 bg-noct-neutral-500/10 text-noct-neutral-400',
+}
+
+function pillEstado(etiqueta: string): string {
+  return PILL_ESTADO[etiqueta.toLowerCase()] ?? PILL_ESTADO['de baja']
+}
+
+// Ficha de un dispositivo re-autorizada al sistema Nocturne (handoff
+// "Rediseño de aplicación empresarial", Ficha de Dispositivo.dc.html):
+// cabecera con regreso contextual, compartir y menú "···" (duplicar,
+// editar, etiqueta QR, eliminar), foto banner, título + estado en
+// pastilla, tarjeta de Información con filas copiables y ubicación viva,
+// "Resolver con este equipo" (diagnóstico destacado + procedimientos,
+// problemas y credenciales vinculados + creación contextual), "Si este
+// equipo falla" (impacto y dependencias), conexiones e intervenciones.
+// Trae su propio ShellNocturne, por eso su ruta sale del Layout oscuro.
+// Conserva intacta toda la lógica y los datos de la vista 360°.
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
   const navigate = useNavigate()
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
+  const [menuAbierto, setMenuAbierto] = useState(false)
   const { session } = useAuth()
 
   const dispositivo = useLiveQuery(() => db.dispositivos.get(dispositivoId), [dispositivoId])
@@ -63,7 +110,13 @@ export function DispositivoPage() {
   const impacto = resumenImpacto(grafo, 'dispositivo', dispositivoId)
 
   if (dispositivo === null) return <Navigate to="/dispositivos" replace />
-  if (!dispositivo) return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
+  if (!dispositivo) {
+    return (
+      <ShellNocturne>
+        <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+      </ShellNocturne>
+    )
+  }
 
   // Los dispositivos de red se listan en la seccion Red: la navegacion
   // de vuelta y la eliminacion regresan alli.
@@ -75,12 +128,12 @@ export function DispositivoPage() {
     navigate(volverA)
   }
 
-  const campos: { etiqueta: string; valor: string }[] = [
+  const campos: { etiqueta: string; valor: string; mono?: boolean }[] = [
     { etiqueta: 'Marca', valor: dispositivo.marca },
     { etiqueta: 'Modelo', valor: dispositivo.modelo },
-    { etiqueta: 'Número de serie', valor: dispositivo.serial },
-    { etiqueta: 'Placa de inventario', valor: dispositivo.placaInventario },
-    { etiqueta: 'Dirección IP', valor: dispositivo.ip },
+    { etiqueta: 'Número de serie', valor: dispositivo.serial, mono: true },
+    { etiqueta: 'Placa de inventario', valor: dispositivo.placaInventario, mono: true },
+    { etiqueta: 'Dirección IP', valor: dispositivo.ip, mono: true },
   ].filter((c) => c.valor)
 
   // Nombre a mostrar de la ubicacion: el vivo de la fila enlazada si
@@ -89,43 +142,176 @@ export function DispositivoPage() {
   const ubicacionNombre = textoVivo(ubicacionViva?.nombre, dispositivo.ubicacion)
 
   const detalles = Object.entries(dispositivo.detalles).filter(([, valor]) => valor)
+  const estado = dispositivo.estado ? estadoConEtiqueta(dispositivo.estado) : null
+  const metaLinea = [categoria?.nombre, `actualizado ${fechaCorta(dispositivo.updatedAt)}`]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
-      <header className="flex flex-col gap-2">
-        <BotonVolver to={volverA}>{esRed ? 'Red' : 'Dispositivos'}</BotonVolver>
-        {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}
-        <div>
-          <h1 className="text-xl font-semibold">{dispositivo.nombre}</h1>
-          {categoria && <p className="text-xs text-slate-500">{categoria.nombre}</p>}
-          <p className="text-xs text-slate-600">
-            Última modificación: {formateadorFecha.format(new Date(dispositivo.updatedAt))}
-          </p>
+    <ShellNocturne>
+      {/* Cabecera: regreso contextual, compartir y menú de acciones. */}
+      <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5 lg:px-10 lg:pt-4">
+        <BotonVolver variante="nocturne" to={volverA}>
+          {esRed ? 'Red' : 'Dispositivos'}
+        </BotonVolver>
+        <div className="flex shrink-0 items-center gap-2">
+          <BotonCompartir titulo={dispositivo.nombre} />
+          <button
+            type="button"
+            onClick={() => setMenuAbierto((v) => !v)}
+            aria-label="Más acciones: duplicar, editar, etiqueta QR o eliminar"
+            aria-expanded={menuAbierto}
+            className={BTN_ICONO_SECUNDARIO}
+          >
+            <DotsThreeOutline size={17} aria-hidden />
+          </button>
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2">
-        <BotonCompartir titulo={dispositivo.nombre} />
-        <Link
-          to={`/dispositivos/nuevo?copiarDe=${dispositivoId}`}
-          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-        >
-          Duplicar
-        </Link>
-        <Link
-          to={`/dispositivos/${dispositivoId}/editar`}
-          className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
-        >
-          Editar
-        </Link>
-        <button
-          type="button"
-          onClick={() => setMostrarEliminar(true)}
-          className="rounded-lg border border-red-900 px-3 py-1.5 text-xs text-red-400"
-        >
-          Eliminar
-        </button>
-      </div>
+      {menuAbierto && (
+        <div className="flex flex-wrap gap-2 px-4 pb-2 lg:px-10">
+          <Link
+            to={`/dispositivos/nuevo?copiarDe=${dispositivoId}`}
+            onClick={() => setMenuAbierto(false)}
+            className={`shrink-0 ${BTN_SECUNDARIO}`}
+          >
+            <Copy size={14} aria-hidden />
+            Duplicar
+          </Link>
+          <Link
+            to={`/dispositivos/${dispositivoId}/editar`}
+            onClick={() => setMenuAbierto(false)}
+            className={`shrink-0 ${BTN_SECUNDARIO}`}
+          >
+            <PencilSimple size={14} aria-hidden />
+            Editar
+          </Link>
+          <Link to="/dispositivos/etiquetas" onClick={() => setMenuAbierto(false)} className={`shrink-0 ${BTN_SECUNDARIO}`}>
+            <QrCode size={14} aria-hidden />
+            Etiqueta QR
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setMenuAbierto(false)
+              setMostrarEliminar(true)
+            }}
+            className={`${BTN_GHOST} text-noct-error hover:bg-noct-error/10`}
+          >
+            <TrashSimple size={14} aria-hidden />
+            Eliminar
+          </button>
+        </div>
+      )}
+
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-[116px] pt-1 lg:px-12 lg:pb-16">
+        {/* Encabezado del equipo: foto, título, categoría/fecha y estado. */}
+        <header className="flex flex-col gap-3">
+          {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}
+          <div className="flex items-start justify-between gap-2.5">
+            <div className="min-w-0">
+              <h1 className="text-pretty text-[21px] font-medium leading-[1.25]">{dispositivo.nombre}</h1>
+              <p className="mt-1 text-[12.5px] text-noct-neutral-500">{metaLinea}</p>
+            </div>
+            {estado && (
+              <span
+                className={`inline-flex min-h-[28px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[12px] font-medium ${pillEstado(estado.etiqueta)}`}
+              >
+                <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
+                {estado.etiqueta}
+              </span>
+            )}
+          </div>
+        </header>
+
+        {/* Información: filas copiables y ubicación viva. */}
+        {(campos.length > 0 || ubicacionNombre || detalles.length > 0) && (
+          <section>
+            <TituloSeccion className="mb-2">Información</TituloSeccion>
+            <div className="divide-y divide-noct-divider rounded-lg border border-noct-divider bg-noct-surface px-3.5">
+              {campos.map((campo) => (
+                <FilaCampo key={campo.etiqueta} etiqueta={campo.etiqueta} valor={campo.valor} mono={campo.mono} />
+              ))}
+              {detalles.map(([clave, valor]) => (
+                <FilaCampo key={clave} etiqueta={clave} valor={valor} />
+              ))}
+              {ubicacionNombre && (
+                <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
+                  <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">Ubicación</span>
+                  {ubicacionViva ? (
+                    <Link
+                      to={`/ubicaciones/${ubicacionViva.id}`}
+                      className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
+                    >
+                      <MapPin size={14} className="shrink-0" aria-hidden />
+                      {ubicacionNombre}
+                    </Link>
+                  ) : (
+                    <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-neutral-200">
+                      <MapPin size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                      {ubicacionNombre}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            {dispositivo.observaciones && (
+              <p className="mt-2.5 whitespace-pre-wrap px-0.5 text-[13px] leading-[1.55] text-noct-neutral-300">
+                {dispositivo.observaciones}
+              </p>
+            )}
+          </section>
+        )}
+
+        {/* Resolver con este equipo: diagnóstico, vínculos y creación. */}
+        <section>
+          <TituloSeccion className="mb-2">Resolver con este equipo</TituloSeccion>
+          <div className="flex flex-col gap-2">
+            <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} categoriaNombre={categoria?.nombre} />
+            <div className="flex flex-col">
+              <ProcedimientosDelEquipo dispositivoId={dispositivoId} />
+              <ProblemasDelEquipo dispositivoId={dispositivoId} />
+              <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)} />
+            </div>
+            {/* Creacion contextual (fase N2, punto 1): precarga la
+                categoria y el equipo afectado, asi ningun dato visible
+                aqui se vuelve a escribir a mano en el formulario. */}
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={`/soluciones/${dispositivo.categoriaId}/nuevo?tipo=problema_frecuente&dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
+                className={`${BTN_GHOST} text-noct-accent`}
+              >
+                <Plus size={13} aria-hidden />
+                Reportar incidencia
+              </Link>
+              {perfil?.puedeVerBoveda && (
+                <Link
+                  to={`/boveda/nueva?titulo=${encodeURIComponent(`Acceso ${dispositivo.nombre}`)}&categoria=${encodeURIComponent(categoria?.nombre ?? '')}&dispositivoId=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
+                  className={BTN_GHOST}
+                >
+                  <LockSimple size={13} aria-hidden />
+                  Guardar credencial
+                </Link>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <ImpactoYDependencias dispositivo={dispositivo} />
+
+        <ConexionesFicha dispositivo={dispositivo} />
+
+        <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} />
+
+        {/* Intervenciones: registro manual + línea de tiempo (Historial). */}
+        <section className="flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <TituloSeccion>Intervenciones</TituloSeccion>
+          </div>
+          <RegistrarIntervencion dispositivoId={dispositivoId} />
+          <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
+        </section>
+      </main>
 
       <DialogoEliminar
         abierto={mostrarEliminar}
@@ -136,102 +322,73 @@ export function DispositivoPage() {
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
+    </ShellNocturne>
+  )
+}
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-medium text-slate-400">Información</h2>
-          <IndicadorEstado estado={dispositivo.estado} />
-        </div>
+// Fila de la tarjeta de Información: etiqueta, valor y botón de copiar
+// con confirmación breve (mismo gesto que ValorCopiable, adaptado al
+// diseño de fila del mockup).
+function FilaCampo({ etiqueta, valor, mono = false }: { etiqueta: string; valor: string; mono?: boolean }) {
+  const [copiado, setCopiado] = useState(false)
 
-        {(campos.length > 0 || ubicacionNombre || detalles.length > 0) && (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
-            {campos.map((campo) => (
-              <div key={campo.etiqueta}>
-                <dt className="text-xs text-slate-500">{campo.etiqueta}</dt>
-                <dd>
-                  <ValorCopiable valor={campo.valor} esIp={campo.etiqueta === 'Dirección IP'} />
-                </dd>
-              </div>
-            ))}
-            {ubicacionNombre && (
-              <div>
-                <dt className="text-xs text-slate-500">Ubicación</dt>
-                <dd>
-                  {ubicacionViva ? (
-                    <Link
-                      to={`/ubicaciones/${ubicacionViva.id}`}
-                      className="text-sm text-sky-400 underline decoration-dotted underline-offset-2"
-                    >
-                      {ubicacionNombre}
-                    </Link>
-                  ) : (
-                    <ValorCopiable valor={ubicacionNombre} />
-                  )}
-                </dd>
-              </div>
-            )}
-            {detalles.map(([clave, valor]) => (
-              <div key={clave}>
-                <dt className="text-xs text-slate-500">{clave}</dt>
-                <dd>
-                  <ValorCopiable valor={valor} />
-                </dd>
-              </div>
-            ))}
-          </dl>
+  async function copiar() {
+    if (await copiarAlPortapapeles(valor)) {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 1400)
+    }
+  }
+
+  return (
+    <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
+      <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">{etiqueta}</span>
+      <span className={`min-w-0 flex-1 truncate text-[13.5px] text-noct-text ${mono ? 'font-mono' : ''}`}>{valor}</span>
+      <button
+        type="button"
+        onClick={() => void copiar()}
+        aria-label={copiado ? 'Copiado' : `Copiar ${etiqueta.toLowerCase()}`}
+        className="flex min-h-11 w-9 shrink-0 items-center justify-center rounded-md hover:bg-noct-text/[.05]"
+      >
+        {copiado ? (
+          <Check size={16} className="text-noct-exito" aria-hidden />
+        ) : (
+          <Copy size={16} className="text-noct-neutral-500" aria-hidden />
         )}
-
-        {dispositivo.observaciones && (
-          <div>
-            <h3 className="mb-1 text-xs font-medium text-slate-500">Observaciones</h3>
-            <p className="whitespace-pre-wrap text-sm text-slate-300">{dispositivo.observaciones}</p>
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-slate-400">Procedimientos y diagnóstico</h2>
-        {categoria && (
-          <Link
-            to={`/soluciones/${categoria.id}`}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-sky-400"
-          >
-            Ver procedimientos de {categoria.nombre} →
-          </Link>
-        )}
-        <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} />
-        {/* Creacion contextual (fase N2, punto 1): precarga la
-            categoria y el equipo afectado, asi ningun dato visible
-            aqui se vuelve a escribir a mano en el formulario. */}
-        <Link
-          to={`/soluciones/${dispositivo.categoriaId}/nuevo?tipo=problema_frecuente&dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
-          className="rounded-xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-300"
-        >
-          + Reportar incidencia de este equipo
-        </Link>
-        {perfil?.puedeVerBoveda && (
-          <Link
-            to={`/boveda/nueva?titulo=${encodeURIComponent(`Acceso ${dispositivo.nombre}`)}&categoria=${encodeURIComponent(categoria?.nombre ?? '')}&dispositivoId=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
-            className="rounded-xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-300"
-          >
-            + Guardar credencial de este equipo
-          </Link>
-        )}
-        <ProblemasDelEquipo dispositivoId={dispositivoId} />
-        <ProcedimientosDelEquipo dispositivoId={dispositivoId} />
-        <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)} />
-      </section>
-
-      <ImpactoYDependencias dispositivo={dispositivo} />
-
-      <ConexionesFicha dispositivo={dispositivo} />
-
-      <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} />
-
-      <RegistrarIntervencion dispositivoId={dispositivoId} />
-
-      <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
+      </button>
     </div>
+  )
+}
+
+// Compartir el enlace de la ficha con el diálogo nativo del teléfono, o
+// copiarlo al portapapeles donde no exista. Botón de icono en Nocturne.
+function BotonCompartir({ titulo }: { titulo: string }) {
+  const [copiado, setCopiado] = useState(false)
+
+  async function compartir() {
+    const url = window.location.href
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: titulo, url })
+      } catch {
+        // El usuario canceló el diálogo de compartir: no es un error.
+      }
+      return
+    }
+    if (await copiarAlPortapapeles(url)) {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 1500)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void compartir()}
+      aria-label={copiado ? 'Enlace copiado' : 'Compartir la ficha'}
+      className={BTN_ICONO_SECUNDARIO}
+    >
+      {copiado ? <Check size={16} className="text-noct-exito" aria-hidden /> : <ShareNetwork size={17} aria-hidden />}
+    </button>
   )
 }
 
@@ -244,7 +401,7 @@ function FotoDispositivo({ referencia, nombre }: { referencia: string; nombre: s
     <img
       src={url}
       alt={`Fotografía: ${nombre}`}
-      className="max-h-44 w-full rounded-xl border border-slate-800 object-cover"
+      className="h-[150px] w-full rounded-md border border-noct-divider object-cover"
     />
   )
 }

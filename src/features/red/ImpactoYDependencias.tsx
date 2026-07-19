@@ -2,6 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
+import { Warning } from '../../components/iconos'
+import { TituloSeccion } from '../../components/nocturne'
 import { caminoAscendente, construirArbol, contarImpacto, infoDeDispositivos, type PasoAscendente } from './arbol'
 import { iconoDeVia } from './medios'
 
@@ -36,10 +38,11 @@ export function ImpactoYDependencias({ dispositivo }: { dispositivo: Dispositivo
   if (impacto.size === 0 && camino.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-3">
+    <section className="flex flex-col gap-2">
+      <TituloSeccion className="mb-1">Si este equipo falla</TituloSeccion>
       {impacto.size > 0 && <ImpactoFalla impacto={impacto} nombreCategoria={nombreCategoria} />}
       {camino.length > 0 && <DependeDe camino={camino} />}
-    </div>
+    </section>
   )
 }
 
@@ -55,12 +58,14 @@ function ImpactoFalla({
     .sort((a, b) => b.cantidad - a.cantidad)
 
   return (
-    <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3">
-      <h2 className="text-sm font-medium text-amber-200">⚠ Impacto si este equipo falla</h2>
-      <p className="mt-0.5 text-xs text-amber-400/80">También quedarían sin servicio:</p>
-      <ul className="mt-1.5 flex flex-col gap-0.5">
+    <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-[13px] py-3">
+      <p className="flex items-center gap-2 text-[13px] text-noct-neutral-200">
+        <Warning size={15} className="shrink-0 text-noct-precaucion" aria-hidden />
+        También quedarían sin servicio:
+      </p>
+      <ul className="ml-[23px] mt-1.5 flex flex-col gap-0.5">
         {filas.map((fila) => (
-          <li key={fila.nombre} className="text-sm text-amber-100">
+          <li key={fila.nombre} className="text-[13px] text-noct-neutral-200">
             • {fila.cantidad} {fila.nombre}
           </li>
         ))}
@@ -75,19 +80,21 @@ function DependeDe({
   camino: PasoAscendente[]
 }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-      <h2 className="text-sm font-medium text-slate-400">Depende de</h2>
-      <ul className="mt-1.5 flex flex-col gap-1">
+    <div className="rounded-lg border border-noct-divider bg-noct-surface px-[13px] py-3">
+      <h3 className="text-[13px] font-medium text-noct-neutral-400">Depende de</h3>
+      <ul className="mt-1.5 flex flex-col gap-1.5">
         {camino.map((paso) => (
           <li key={paso.dispositivoId}>
             <Link
               to={`/dispositivos/${paso.dispositivoId}`}
-              className="flex items-center gap-2 text-sm text-sky-400"
+              className="flex items-center gap-2 text-[13px] text-noct-accent-300 hover:text-noct-accent-400"
             >
-              <span aria-hidden>{iconoDeVia(paso.tipoConexion, paso.medio)}</span>
-              <span className="text-slate-500">{paso.via}</span>
-              <span>→</span>
-              <span className="truncate underline decoration-dotted underline-offset-2">{paso.nombre}</span>
+              <span className="shrink-0" aria-hidden>
+                {iconoDeVia(paso.tipoConexion, paso.medio)}
+              </span>
+              <span className="shrink-0 text-noct-neutral-500">{paso.via}</span>
+              <span className="shrink-0 text-noct-neutral-600">→</span>
+              <span className="truncate">{paso.nombre}</span>
             </Link>
           </li>
         ))}
