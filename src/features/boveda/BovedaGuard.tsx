@@ -1,49 +1,90 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Outlet } from 'react-router-dom'
 import { db, ID_VERIFICADOR } from '../../lib/db'
+import { ShellNocturne } from '../../app/ShellNocturne'
 import { CampoContrasena } from '../../components/CampoContrasena'
+import { LockSimple } from '../../components/iconos'
+import { BTN_PRIMARIO } from '../../components/nocturne'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
-import { desbloquear, estadoInicialBoveda, type EstadoInicialBoveda } from './sesionBoveda'
+import {
+  desbloquear,
+  estadoInicialBoveda,
+  obtenerMinutosAutobloqueo,
+  type EstadoInicialBoveda,
+} from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
 
-// Envuelve todas las rutas de la boveda: exige el permiso
-// puedeVerBoveda del perfil y que la boveda este desbloqueada.
+// Envuelve todas las rutas de la bóveda: exige el permiso
+// puedeVerBoveda del perfil y que la bóveda esté desbloqueada. Es la
+// pantalla "bloqueada" del handoff Bóveda.dc.html (tarea 97):
+// re-autorizada al sistema Nocturne, trae su propio ShellNocturne
+// (pestañas/sidebar visibles como en el mockup) mientras la lista y la
+// ficha van tras el Outlet. La lógica de seguridad (verificar/crear/
+// sin-confirmar contra el servidor) no cambia: solo el aspecto.
 export function BovedaGuard() {
   const desbloqueada = useBovedaDesbloqueada()
   const perfil = usePerfilVivo()
 
   if (perfil === undefined) {
-    return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>
+    return (
+      <PantallaBoveda descripcion="Sección protegida del equipo. La contraseña maestra descifra el contenido en este teléfono; nunca sale de aquí.">
+        <p className="text-[13px] text-noct-neutral-400">Comprobando acceso...</p>
+      </PantallaBoveda>
+    )
   }
   if (!perfil?.puedeVerBoveda) return <AccesoRestringido />
   if (!desbloqueada) return <PantallaDesbloqueo />
   return <Outlet />
 }
 
-// Sin revelar que es lo que se protege: quien llega aqui sin permiso
-// solo ve una seccion restringida generica (minima exposicion).
-function AccesoRestringido() {
+// Envoltorio común de las pantallas de bloqueo: columna centrada con el
+// candado, el título y una descripción, dentro del ShellNocturne (las
+// pestañas siguen visibles, como en el mockup).
+function PantallaBoveda({
+  descripcion,
+  children,
+}: {
+  descripcion: string
+  children: ReactNode
+}) {
   return (
-    <div className="flex flex-col items-center gap-4 px-4 pt-16 text-center">
-      <IconoCandado />
-      <div>
-        <h1 className="text-xl font-semibold">Bóveda</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Tu usuario no tiene acceso a esta sección. Un administrador puede habilitarlo desde el
-          panel de Supabase.
-        </p>
+    <ShellNocturne>
+      <div className="flex flex-1 flex-col items-center justify-center gap-[18px] px-6 pb-[120px] pt-8 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-noct-divider bg-noct-surface text-noct-accent-300">
+          <LockSimple size={28} aria-hidden />
+        </div>
+        <div>
+          <h1 className="text-[22px] font-medium leading-tight">Bóveda</h1>
+          <p className="mx-auto mt-1.5 max-w-[300px] text-[13.5px] leading-relaxed text-noct-neutral-400">
+            {descripcion}
+          </p>
+        </div>
+        {children}
       </div>
-    </div>
+    </ShellNocturne>
   )
 }
 
+// Sin revelar qué es lo que se protege: quien llega aquí sin permiso
+// solo ve una sección restringida genérica (mínima exposición).
+function AccesoRestringido() {
+  return (
+    <PantallaBoveda descripcion="Tu usuario no tiene acceso a esta sección. Un administrador puede habilitarlo desde el panel de Supabase.">
+      {null}
+    </PantallaBoveda>
+  )
+}
+
+const CAMPO_PASS =
+  'min-h-12 w-full rounded-md border bg-noct-surface px-3.5 py-3 text-center text-[15px] text-noct-text outline-none transition-colors placeholder:text-noct-neutral-600 focus:border-noct-accent'
+
 function PantallaDesbloqueo() {
-  // El formulario depende del estado CONFIRMADO de la contrasena
+  // El formulario depende del estado CONFIRMADO de la contraseña
   // maestra, nunca del conteo local de credenciales: definir una
-  // contrasena nueva solo se ofrece cuando el servidor confirma que
-  // no existe ninguna (ver estadoInicialBoveda). Asi, borrar la cache
-  // o estrenar un telefono jamas reabre el flujo de "primera vez".
+  // contraseña nueva solo se ofrece cuando el servidor confirma que
+  // no existe ninguna (ver estadoInicialBoveda). Así, borrar la cache
+  // o estrenar un teléfono jamás reabre el flujo de "primera vez".
   const [modo, setModo] = useState<'cargando' | EstadoInicialBoveda>('cargando')
   const [intento, setIntento] = useState(0)
 
@@ -58,8 +99,8 @@ function PantallaDesbloqueo() {
     }
   }, [intento])
 
-  // Si la sincronizacion trae el verificador mientras la pantalla
-  // espera, se pasa solo al modo de verificacion.
+  // Si la sincronización trae el verificador mientras la pantalla
+  // espera, se pasa solo al modo de verificación.
   const verificadorLocal = useLiveQuery(() => db.bovedaMeta.get(ID_VERIFICADOR), [])
   useEffect(() => {
     if (verificadorLocal) setModo('verificar')
@@ -83,30 +124,25 @@ function PantallaDesbloqueo() {
     if (resultado) setError(resultado)
   }
 
-  return (
-    <div className="flex flex-col items-center gap-4 px-4 pt-16 text-center">
-      <IconoCandado />
-      <div>
-        <h1 className="text-xl font-semibold">Bóveda</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          {modo === 'crear'
-            ? 'Sección protegida del equipo. Aún no tiene contraseña maestra.'
-            : 'Sección protegida del equipo. Ingresa la contraseña maestra para continuar.'}
-        </p>
-      </div>
+  const descripcion =
+    modo === 'crear'
+      ? 'Sección protegida del equipo. Aún no tiene contraseña maestra.'
+      : 'Sección protegida del equipo. La contraseña maestra descifra el contenido en este teléfono; nunca sale de aquí.'
 
-      {modo === 'cargando' && <p className="text-sm text-slate-400">Comprobando...</p>}
+  return (
+    <PantallaBoveda descripcion={descripcion}>
+      {modo === 'cargando' && <p className="text-[13px] text-noct-neutral-400">Comprobando...</p>}
 
       {modo === 'sin-confirmar' && (
-        <div className="flex w-full max-w-xs flex-col gap-3">
-          <p className="text-sm text-slate-400">
-            No se pudo comprobar la configuración de esta sección. Conéctate a internet, espera a
-            que la aplicación sincronice y vuelve a intentar.
+        <div className="flex w-full max-w-[300px] flex-col gap-3">
+          <p className="text-[13px] leading-relaxed text-noct-neutral-400">
+            No se pudo comprobar la configuración de esta sección. Conéctate a internet, espera a que
+            la aplicación sincronice y vuelve a intentar.
           </p>
           <button
             type="button"
             onClick={() => setIntento((n) => n + 1)}
-            className="rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-medium text-slate-950"
+            className={`${BTN_PRIMARIO} min-h-12 justify-center`}
           >
             Reintentar
           </button>
@@ -114,14 +150,17 @@ function PantallaDesbloqueo() {
       )}
 
       {(modo === 'verificar' || modo === 'crear') && (
-        <form onSubmit={manejarEnvio} className="flex w-full max-w-xs flex-col gap-3">
+        <form onSubmit={manejarEnvio} className="flex w-full max-w-[300px] flex-col gap-2.5">
           <CampoContrasena
             required
             autoFocus
             value={contrasena}
-            onChange={(e) => setContrasena(e.target.value)}
+            onChange={(e) => {
+              setContrasena(e.target.value)
+              setError(null)
+            }}
             placeholder="Contraseña maestra"
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className={`${CAMPO_PASS} ${error ? 'border-noct-error/55' : 'border-noct-divider'}`}
           />
 
           {modo === 'crear' && (
@@ -131,44 +170,33 @@ function PantallaDesbloqueo() {
                 value={confirmacion}
                 onChange={(e) => setConfirmacion(e.target.value)}
                 placeholder="Confirma la contraseña"
-                className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className={`${CAMPO_PASS} ${error ? 'border-noct-error/55' : 'border-noct-divider'}`}
               />
-              <p className="text-xs text-slate-500">
-                Esta contraseña quedará registrada como la contraseña maestra del equipo, asociada
-                a la cuenta y válida en todos los dispositivos: acuérdenla entre todos y guárdenla
-                bien, sin ella no se puede recuperar el contenido.
+              <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                Esta contraseña quedará registrada como la contraseña maestra del equipo, asociada a
+                la cuenta y válida en todos los dispositivos: acuérdenla entre todos y guárdenla bien,
+                sin ella no se puede recuperar el contenido.
               </p>
             </>
           )}
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
 
           <button
             type="submit"
             disabled={abriendo}
-            className="rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-medium text-slate-950 disabled:opacity-50"
+            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
           >
             {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
           </button>
+
+          {modo === 'verificar' && (
+            <p className="mt-0.5 text-[11.5px] leading-relaxed text-noct-neutral-600">
+              Se vuelve a bloquear sola tras {obtenerMinutosAutobloqueo()} minutos sin actividad.
+            </p>
+          )}
         </form>
       )}
-    </div>
-  )
-}
-
-function IconoCandado() {
-  return (
-    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-slate-800 bg-slate-900">
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        className="h-6 w-6 text-slate-400"
-      >
-        <rect x="5" y="11" width="14" height="9" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M8 11V7.5a4 4 0 0 1 8 0V11" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </div>
+    </PantallaBoveda>
   )
 }

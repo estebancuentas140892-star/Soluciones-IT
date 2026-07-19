@@ -393,6 +393,22 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* Boveda re-autorizada a Nocturne (handoff "Rediseño de
+                  aplicación empresarial", Bóveda.dc.html, tarea 97): la
+                  lista (BovedaPage) y la pantalla de bloqueo (BovedaGuard)
+                  traen su propio ShellNocturne, por eso salen del Layout
+                  oscuro heredado como el resto del rediseño. La ficha y el
+                  editor de credencial (Ficha/Editor de Credencial, aun sin
+                  handoff propio) siguen en el Layout heredado mediante una
+                  ruta Layout anidada bajo el mismo guard. */}
+              <Route path="boveda" element={<BovedaGuard />}>
+                <Route index element={<BovedaPage />} />
+                <Route element={<Layout />}>
+                  <Route path="nueva" element={<CredencialForm />} />
+                  <Route path=":credencialId" element={<CredencialPage />} />
+                  <Route path=":credencialId/editar" element={<CredencialForm />} />
+                </Route>
+              </Route>
               <Route element={<Layout />}>
                 <Route path="cuenta" element={<CuentaPage />} />
                 <Route path="cuenta/seguridad" element={<SeguridadPage />} />
@@ -403,12 +419,6 @@ function App() {
                     usuario decidio volver a llamarla Boveda. La ruta
                     vieja redirige por si quedo algun enlace guardado. */}
                 <Route path="notas/*" element={<Navigate to="/boveda" replace />} />
-                <Route path="boveda" element={<BovedaGuard />}>
-                  <Route index element={<BovedaPage />} />
-                  <Route path="nueva" element={<CredencialForm />} />
-                  <Route path=":credencialId" element={<CredencialPage />} />
-                  <Route path=":credencialId/editar" element={<CredencialForm />} />
-                </Route>
               </Route>
             </Route>
           </Route>
