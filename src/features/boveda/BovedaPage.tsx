@@ -107,8 +107,8 @@ export function BovedaPage() {
       .filter((c) => {
         if (categoria && c.categoria !== categoria) return false
         if (!buscado) return true
-        const equipos = c.dispositivos.map((d) => d.nombre).join(' ')
-        return normalizar(`${c.titulo} ${c.categoria} ${equipos}`).includes(buscado)
+        const equipos = (c.dispositivos ?? []).map((d) => d.nombre).join(' ')
+        return normalizar(`${c.titulo} ${c.categoria ?? ''} ${equipos}`).includes(buscado)
       })
       .map((c) => ({ credencial: c, estado: estadoVencimiento(c.venceEn) }))
       .sort((a, b) => {
@@ -248,8 +248,8 @@ export function BovedaPage() {
         {hayResultados ? (
           <div className="flex flex-col">
             {filtradas.map(({ credencial: c, estado }) => {
-              const Icono = iconoDeCategoria(c.categoria)
-              const equipos = c.dispositivos.length
+              const Icono = iconoDeCategoria(c.categoria ?? '')
+              const equipos = (c.dispositivos ?? []).length
               const detalle = [
                 c.categoria || 'Sin categoría',
                 equipos > 0 && `${equipos} ${equipos === 1 ? 'equipo' : 'equipos'} con acceso`,
