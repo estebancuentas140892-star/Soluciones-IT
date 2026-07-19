@@ -394,19 +394,19 @@ function App() {
                 }
               />
               {/* Boveda re-autorizada a Nocturne (handoff "Rediseño de
-                  aplicación empresarial", Bóveda.dc.html, tarea 97): la
-                  lista (BovedaPage) y la pantalla de bloqueo (BovedaGuard)
-                  traen su propio ShellNocturne, por eso salen del Layout
-                  oscuro heredado como el resto del rediseño. La ficha y el
-                  editor de credencial (Ficha/Editor de Credencial, aun sin
-                  handoff propio) siguen en el Layout heredado mediante una
-                  ruta Layout anidada bajo el mismo guard. */}
+                  aplicación empresarial", tarea 97): la lista (BovedaPage),
+                  la pantalla de bloqueo (BovedaGuard) y el editor de
+                  credencial (CredencialForm, Editor de Credencial.dc.html,
+                  tarea 104) traen su propio shell Nocturne, por eso salen
+                  del Layout oscuro heredado. Solo la ficha de credencial
+                  (CredencialPage, aún sin re-autorizar) sigue en el Layout
+                  heredado mediante una ruta Layout anidada bajo el guard. */}
               <Route path="boveda" element={<BovedaGuard />}>
                 <Route index element={<BovedaPage />} />
+                <Route path="nueva" element={<CredencialForm />} />
+                <Route path=":credencialId/editar" element={<CredencialForm />} />
                 <Route element={<Layout />}>
-                  <Route path="nueva" element={<CredencialForm />} />
                   <Route path=":credencialId" element={<CredencialPage />} />
-                  <Route path=":credencialId/editar" element={<CredencialForm />} />
                 </Route>
               </Route>
               <Route element={<Layout />}>

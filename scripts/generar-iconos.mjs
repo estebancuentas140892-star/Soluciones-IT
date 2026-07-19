@@ -13,6 +13,7 @@ const ICONOS = {
   ArrowLeft: ['regular', 'arrow-left'],
   ArrowRight: ['regular', 'arrow-right'],
   ArrowSquareOut: ['regular', 'arrow-square-out'],
+  ArrowsClockwise: ['regular', 'arrows-clockwise'],
   ArrowUp: ['regular', 'arrow-up'],
   BookOpen: ['regular', 'book-open'],
   BookOpenFill: ['fill', 'book-open'],
