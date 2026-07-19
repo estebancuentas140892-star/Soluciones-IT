@@ -33,7 +33,13 @@ import {
   WarningOctagon,
   X,
 } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import {
+  BTN_GHOST_ACENTO,
+  BTN_GHOST_PELIGRO,
+  BTN_PRIMARIO,
+  BTN_SECUNDARIO,
+  TituloSeccion,
+} from '../../components/nocturne'
 import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
 import { Historial } from '../historial/Historial'
 import { PruebaDiagnostico } from './PruebaDiagnostico'
@@ -468,7 +474,7 @@ function NodosEditor({
                   type="button"
                   disabled={nodos.length === 1}
                   onClick={() => eliminarNodo(indice)}
-                  className={`${BTN_GHOST} text-noct-error hover:bg-noct-error/10 disabled:opacity-30`}
+                  className={`${BTN_GHOST_PELIGRO} disabled:opacity-30`}
                 >
                   <TrashSimple size={14} aria-hidden />
                   Eliminar
@@ -632,7 +638,7 @@ function NodosEditor({
               <button
                 type="button"
                 onClick={() => actualizarNodo(indice, { opciones: [...nodo.opciones, crearOpcion()] })}
-                className={`${BTN_GHOST} self-start text-noct-accent`}
+                className={`${BTN_GHOST_ACENTO} self-start`}
               >
                 <Plus size={13} aria-hidden />
                 Respuesta

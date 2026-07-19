@@ -26,7 +26,14 @@ import {
   ShareNetwork,
   TrashSimple,
 } from '../../components/iconos'
-import { BTN_GHOST, BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import {
+  BTN_GHOST,
+  BTN_GHOST_ACENTO,
+  BTN_GHOST_PELIGRO,
+  BTN_ICONO_SECUNDARIO,
+  BTN_SECUNDARIO,
+  TituloSeccion,
+} from '../../components/nocturne'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { estadoConEtiqueta } from '../red/topologiaVisual'
@@ -192,7 +199,7 @@ export function DispositivoPage() {
               setMenuAbierto(false)
               setMostrarEliminar(true)
             }}
-            className={`${BTN_GHOST} text-noct-error hover:bg-noct-error/10`}
+            className={BTN_GHOST_PELIGRO}
           >
             <TrashSimple size={14} aria-hidden />
             Eliminar
@@ -275,7 +282,7 @@ export function DispositivoPage() {
             <div className="flex flex-wrap gap-2">
               <Link
                 to={`/soluciones/${dispositivo.categoriaId}/nuevo?tipo=problema_frecuente&dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
-                className={`${BTN_GHOST} text-noct-accent`}
+                className={BTN_GHOST_ACENTO}
               >
                 <Plus size={13} aria-hidden />
                 Reportar incidencia

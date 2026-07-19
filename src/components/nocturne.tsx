@@ -38,6 +38,22 @@ export const BTN_SECUNDARIO = `${BTN_BASE} border-noct-divider px-2.5 py-[7px] t
 // encima. Para acciones ligeras de cabecera y pie (Crear, Volver,
 // Cancelar) donde un borde competiría con la acción principal.
 export const BTN_GHOST = `${BTN_BASE} border-transparent px-2.5 py-[7px] text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
+// Variantes de color del boton fantasma. Son constantes propias y NO
+// se arman como `${BTN_GHOST} text-noct-error`: escribir una clase de
+// color despues de la constante no cambia nada, porque BTN_GHOST ya
+// trae `text-noct-text` y ambas utilidades tienen la misma
+// especificidad. En ese empate gana la que Tailwind emite mas tarde en
+// la hoja, y Tailwind ordena las utilidades del mismo tipo por nombre:
+// `text-noct-text` sale despues de `text-noct-accent`,
+// `text-noct-error` y `text-noct-neutral-500`, asi que las tapa a todas
+// (lo mismo pasa con `hover:bg-noct-text/[.07]` frente a
+// `hover:bg-noct-error/10`). Por eso cada variante repite el juego
+// completo de color, tinte y estado activo.
+export const BTN_GHOST_PELIGRO = `${BTN_BASE} border-transparent px-2.5 py-[7px] text-noct-error hover:bg-noct-error/10 active:bg-noct-error/20`
+export const BTN_GHOST_ACENTO = `${BTN_BASE} border-transparent px-2.5 py-[7px] text-noct-accent hover:bg-noct-accent/10 active:bg-noct-accent/20`
+// Fantasma atenuado: para la accion de descarte que acompaña a una
+// principal (por ejemplo "Cancelar" junto a "Continuar").
+export const BTN_GHOST_TENUE = `${BTN_BASE} border-transparent px-2.5 py-[7px] text-noct-neutral-500 hover:bg-noct-text/[.07] active:bg-noct-text/15`
 // Variante cuadrada de solo icono (.btn-icon), completa en si misma
 // para no depender del orden de las clases de padding.
 export const BTN_ICONO_SECUNDARIO = `${BTN_BASE} h-[34px] w-[34px] shrink-0 border-noct-divider p-0 text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`

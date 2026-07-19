@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { Adjuntos } from '../../components/Adjuntos'
 import { Plus } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO } from '../../components/nocturne'
 
 interface Props {
   dispositivoId: string
@@ -43,7 +43,7 @@ export function RegistrarIntervencion({ dispositivoId }: Props) {
 
   if (!abierto) {
     return (
-      <button type="button" onClick={() => setAbierto(true)} className={`${BTN_GHOST} self-start text-noct-accent`}>
+      <button type="button" onClick={() => setAbierto(true)} className={`${BTN_GHOST_ACENTO} self-start`}>
         <Plus size={13} aria-hidden />
         Registrar
       </button>

@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { CaretRight, MapPin, PencilSimple, Plus, TrashSimple } from '../../components/iconos'
-import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { BTN_GHOST_PELIGRO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { Historial } from '../historial/Historial'
@@ -101,7 +101,7 @@ export function UbicacionPage() {
             <button
               type="button"
               onClick={() => setMostrarEliminar(true)}
-              className={`${BTN_GHOST} text-noct-error hover:bg-noct-error/10`}
+              className={BTN_GHOST_PELIGRO}
             >
               <TrashSimple size={14} aria-hidden />
               Eliminar

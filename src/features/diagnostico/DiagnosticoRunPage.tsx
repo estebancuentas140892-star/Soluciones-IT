@@ -26,7 +26,7 @@ import {
   XCircle,
   type IconoProps,
 } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_GHOST, BTN_GHOST_TENUE, BTN_PRIMARIO } from '../../components/nocturne'
 import { AsistenteVista } from '../soluciones/AsistenteVista'
 
 // Asistente del Modo Diagnóstico Inteligente re-autorizado en Nocturne
@@ -287,7 +287,7 @@ function Sesion({
           <button
             type="button"
             onClick={() => onConfirmarCancelar(true)}
-            className={`${BTN_GHOST} text-noct-neutral-500`}
+            className={BTN_GHOST_TENUE}
           >
             Cancelar
           </button>

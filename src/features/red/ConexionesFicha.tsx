@@ -10,7 +10,7 @@ import {
 } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, Plus, X } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { BTN_GHOST_ACENTO, BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
 
 // Relacion nueva vista desde la ficha actual: define quien es origen y
 // quien destino segun lo que el tecnico quiere documentar. 'relacionado'
@@ -117,7 +117,7 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
       {agregando ? (
         <FormularioConexion dispositivo={dispositivo} onCerrar={() => setAgregando(false)} />
       ) : (
-        <button type="button" onClick={() => setAgregando(true)} className={`${BTN_GHOST} self-start text-noct-accent`}>
+        <button type="button" onClick={() => setAgregando(true)} className={`${BTN_GHOST_ACENTO} self-start`}>
           <Plus size={13} aria-hidden />
           Agregar conexión
         </button>

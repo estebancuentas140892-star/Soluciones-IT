@@ -12,7 +12,7 @@ import {
   Warning,
   X,
 } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
+import { BTN_GHOST_ACENTO, BTN_PRIMARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { db, type PasoAdjunto } from '../../lib/db'
 import { comprimirImagen } from '../../lib/comprimirImagen'
@@ -512,7 +512,7 @@ export function DispositivoForm() {
                     <button
                       type="button"
                       onClick={() => setDetalles((actuales) => [...actuales, { clave: '', valor: '' }])}
-                      className={`${BTN_GHOST} text-noct-accent`}
+                      className={BTN_GHOST_ACENTO}
                     >
                       <Plus size={13} aria-hidden />
                       Campo
