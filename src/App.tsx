@@ -149,6 +149,19 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* Importar inventario re-autorizada en Nocturne (tarea 90,
+                  handoff "Rediseño de aplicación empresarial", Importar
+                  Dispositivos.dc.html): trae su propio shell a pantalla
+                  completa con cabecera pegajosa y barra inferior fija en la
+                  revisión, por eso sale del Layout oscuro como las demás. */}
+              <Route
+                path="dispositivos/importar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ImportarDispositivosPage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="soluciones/:categoriaId/:articuloId/ejecutar"
                 element={
@@ -379,7 +392,6 @@ function App() {
                 <Route path="cuenta/seguridad" element={<SeguridadPage />} />
                 <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
-                <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
                 {/* La seccion de credenciales se llamo "Notas" (nombre
                     neutro de discrecion) hasta el 2026-07-09, cuando el
                     usuario decidio volver a llamarla Boveda. La ruta
