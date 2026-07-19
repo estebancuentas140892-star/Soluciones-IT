@@ -2,6 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, type FormEvent } from 'react'
 import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
+import { LockSimple } from '../../components/iconos'
+import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { db, ID_BLOQUEO_APP, type MetodoBloqueoApp } from '../../lib/db'
 import {
   bloquearApp,
@@ -15,38 +17,44 @@ import {
 import { serializarPatron } from './patron'
 import { PatronInput } from './PatronInput'
 
-const CLASE_INPUT =
-  'rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500'
+const CLASE_CAMPO =
+  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-center text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
 
-const CLASE_BOTON = 'rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-medium text-slate-950 disabled:opacity-50'
-const CLASE_BOTON_SEC = 'rounded-xl border border-slate-700 px-4 py-2.5 text-sm text-slate-200'
-
-// "Seguridad de la aplicación": activa, cambia o quita el bloqueo de
-// este dispositivo (patron o contrasena, sin biometria). Es una capa
-// adicional a la sesion de inicio; para las credenciales de la boveda
-// sigue rigiendo la contrasena maestra.
+// "Seguridad de la aplicación" re-autorizada al sistema Nocturne
+// (tarea 97, sin mockup: se traduce el diseño heredado siguiendo el
+// patrón ya establecido, regla 12): activa, cambia o quita el bloqueo
+// de este dispositivo (patrón o contraseña, sin biometría). Es una
+// capa adicional a la sesión de inicio; para las credenciales de la
+// bóveda sigue rigiendo la contraseña maestra. Mismo shell centrado
+// "alcanzada desde Inicio" que CuentaPage y DiagnosticosPage.
 export function SeguridadPage() {
   const config = useLiveQuery(async () => (await db.seguridadApp.get(ID_BLOQUEO_APP)) ?? null, [])
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
-      <header className="flex flex-col gap-2">
-        <BotonVolver />
-        <div>
-          <h1 className="text-xl font-semibold">Seguridad de la aplicación</h1>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Bloqueo de este dispositivo. Se pide al abrir la app y tras un rato de inactividad.
-          </p>
+    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
+      <div className="mx-auto flex min-h-svh w-full max-w-md flex-col">
+        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
+          <header className="px-2 pt-2.5">
+            <BotonVolver variante="nocturne" />
+          </header>
+          <div className="px-4 pb-3 pt-0.5">
+            <h1 className="text-[22px] font-medium leading-[1.25]">Seguridad de la aplicación</h1>
+            <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
+              Bloqueo de este dispositivo. Se pide al abrir la app y tras un rato de inactividad.
+            </p>
+          </div>
         </div>
-      </header>
 
-      {config === undefined ? (
-        <p className="text-sm text-slate-400">Cargando...</p>
-      ) : config === null ? (
-        <PanelSinConfigurar />
-      ) : (
-        <PanelConfigurado metodo={config.metodo} minutos={config.minutosAutobloqueo} />
-      )}
+        <main className="flex flex-1 flex-col gap-4 px-4 pb-10 pt-4">
+          {config === undefined ? (
+            <p className="text-[13px] text-noct-neutral-400">Cargando...</p>
+          ) : config === null ? (
+            <PanelSinConfigurar />
+          ) : (
+            <PanelConfigurado metodo={config.metodo} minutos={config.minutosAutobloqueo} />
+          )}
+        </main>
+      </div>
     </div>
   )
 }
@@ -72,13 +80,13 @@ function PanelSinConfigurar() {
   if (!metodo) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <p className="text-sm text-slate-300">
+        <div className="rounded-lg border border-noct-divider bg-noct-surface p-4">
+          <p className="text-[13px] leading-relaxed text-noct-neutral-300">
             Este dispositivo no tiene bloqueo. Actívalo para que nadie pueda abrir la app y ver la
             información con solo tomar el teléfono, aunque la sesión siga iniciada.
           </p>
         </div>
-        <p className="text-sm font-medium text-slate-200">Elige el método</p>
+        <p className="text-sm font-medium text-noct-text">Elige el método</p>
         <SelectorMetodo onElegir={setMetodo} />
       </div>
     )
@@ -86,7 +94,7 @@ function PanelSinConfigurar() {
 
   return (
     <div className="flex flex-col gap-4">
-      <button type="button" onClick={() => setMetodo(null)} className="self-start text-xs text-slate-400 underline decoration-dotted underline-offset-2">
+      <button type="button" onClick={() => setMetodo(null)} className={`${BTN_GHOST} self-start`}>
         Cambiar método
       </button>
       <CrearSecreto metodo={metodo} onCreado={crear} error={error} onError={setError} procesando={procesando} />
@@ -116,24 +124,27 @@ function PanelConfigurado({ metodo, minutos }: { metodo: MetodoBloqueoApp; minut
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-4">
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-noct-divider bg-noct-surface p-4">
         <div>
-          <p className="text-sm font-medium text-emerald-400">Bloqueo activo</p>
-          <p className="text-xs text-slate-400">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-noct-exito">
+            <LockSimple size={14} aria-hidden />
+            Bloqueo activo
+          </p>
+          <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">
             Método: {metodo === 'patron' ? 'patrón' : 'contraseña'}
           </p>
         </div>
-        <button type="button" onClick={bloquearApp} className={CLASE_BOTON_SEC}>
+        <button type="button" onClick={bloquearApp} className={`shrink-0 ${BTN_SECUNDARIO}`}>
           Bloquear ahora
         </button>
       </div>
 
-      <label className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-300">
+      <label className="flex items-center justify-between gap-2 rounded-lg border border-noct-divider bg-noct-surface px-4 py-3 text-sm text-noct-neutral-300">
         Autobloqueo por inactividad
         <select
           value={minutosSel}
           onChange={(e) => cambiarMinutos(Number(e.target.value))}
-          className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          className="rounded-md border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text outline-none focus:border-noct-accent"
         >
           {OPCIONES_AUTOBLOQUEO_APP_MIN.map((m) => (
             <option key={m} value={m}>
@@ -144,13 +155,13 @@ function PanelConfigurado({ metodo, minutos }: { metodo: MetodoBloqueoApp; minut
       </label>
 
       <div className="flex gap-2">
-        <button type="button" onClick={() => setAccion('cambiar')} className={`flex-1 ${CLASE_BOTON_SEC}`}>
+        <button type="button" onClick={() => setAccion('cambiar')} className={`flex-1 justify-center ${BTN_SECUNDARIO}`}>
           Cambiar
         </button>
         <button
           type="button"
           onClick={() => setAccion('quitar')}
-          className="flex-1 rounded-xl border border-red-900 px-4 py-2.5 text-sm text-red-300"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-noct-error/45 px-2.5 py-[7px] text-[13px] font-medium text-noct-error hover:bg-noct-error/10"
         >
           Quitar bloqueo
         </button>
@@ -178,10 +189,10 @@ function FlujoCambiar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoAp
 
   return (
     <div className="flex flex-col gap-4">
-      <button type="button" onClick={onListo} className="self-start text-xs text-slate-400 underline decoration-dotted underline-offset-2">
+      <button type="button" onClick={onListo} className={`${BTN_GHOST} self-start`}>
         Cancelar
       </button>
-      <h2 className="text-sm font-medium text-slate-200">Cambiar el bloqueo</h2>
+      <h2 className="text-sm font-medium text-noct-text">Cambiar el bloqueo</h2>
 
       {actual === null ? (
         <EntradaSecreto
@@ -194,14 +205,14 @@ function FlujoCambiar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoAp
         />
       ) : !metodoNuevo ? (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-slate-300">Elige el método nuevo</p>
+          <p className="text-[13px] text-noct-neutral-300">Elige el método nuevo</p>
           <SelectorMetodo onElegir={setMetodoNuevo} />
         </div>
       ) : (
         <CrearSecreto metodo={metodoNuevo} onCreado={aplicar} error={error} onError={setError} procesando={procesando} />
       )}
 
-      {error && actual === null && <p className="text-sm text-red-400">{error}</p>}
+      {error && actual === null && <p className="text-[12.5px] text-noct-error">{error}</p>}
     </div>
   )
 }
@@ -223,11 +234,11 @@ function FlujoQuitar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoApp
 
   return (
     <div className="flex flex-col gap-4">
-      <button type="button" onClick={onListo} className="self-start text-xs text-slate-400 underline decoration-dotted underline-offset-2">
+      <button type="button" onClick={onListo} className={`${BTN_GHOST} self-start`}>
         Cancelar
       </button>
-      <h2 className="text-sm font-medium text-slate-200">Quitar el bloqueo</h2>
-      <p className="text-xs text-slate-400">
+      <h2 className="text-sm font-medium text-noct-text">Quitar el bloqueo</h2>
+      <p className="text-[12.5px] text-noct-neutral-500">
         Confirma con tu {metodoActual === 'patron' ? 'patrón' : 'contraseña'} actual. La app dejará
         de pedir desbloqueo en este dispositivo.
       </p>
@@ -237,7 +248,7 @@ function FlujoQuitar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoApp
         onCompletar={quitar}
         deshabilitado={procesando}
       />
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
     </div>
   )
 }
@@ -249,10 +260,10 @@ function FlujoQuitar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoApp
 function SelectorMetodo({ onElegir }: { onElegir: (metodo: MetodoBloqueoApp) => void }) {
   return (
     <div className="flex gap-2">
-      <button type="button" onClick={() => onElegir('patron')} className={`flex-1 ${CLASE_BOTON_SEC}`}>
+      <button type="button" onClick={() => onElegir('patron')} className={`flex-1 justify-center ${BTN_SECUNDARIO}`}>
         Patrón
       </button>
-      <button type="button" onClick={() => onElegir('contrasena')} className={`flex-1 ${CLASE_BOTON_SEC}`}>
+      <button type="button" onClick={() => onElegir('contrasena')} className={`flex-1 justify-center ${BTN_SECUNDARIO}`}>
         Contraseña
       </button>
     </div>
@@ -282,7 +293,7 @@ function EntradaSecreto({
   if (metodo === 'patron') {
     return (
       <div className="flex flex-col items-center gap-2">
-        <p className="text-xs text-slate-400">{etiqueta}</p>
+        <p className="text-[12.5px] text-noct-neutral-500">{etiqueta}</p>
         <PatronInput
           onCompletar={(s) => onCompletar(serializarPatron(s))}
           deshabilitado={deshabilitado}
@@ -300,15 +311,15 @@ function EntradaSecreto({
 
   return (
     <form onSubmit={enviar} className="flex w-full max-w-xs flex-col gap-2 self-center">
-      <p className="text-center text-xs text-slate-400">{etiqueta}</p>
+      <p className="text-center text-[12.5px] text-noct-neutral-500">{etiqueta}</p>
       <CampoContrasena
         required
         value={contrasena}
         onChange={(e) => setContrasena(e.target.value)}
         placeholder="Contraseña"
-        className={CLASE_INPUT}
+        className={`min-h-11 ${CLASE_CAMPO}`}
       />
-      <button type="submit" disabled={deshabilitado} className={CLASE_BOTON}>
+      <button type="submit" disabled={deshabilitado} className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}>
         {textoBoton}
       </button>
     </form>
@@ -375,7 +386,7 @@ function CrearSecreto({
         deshabilitado={procesando}
         reinicio={reinicio}
       />
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
       {enConfirmacion && (
         <button
           type="button"
@@ -384,7 +395,7 @@ function CrearSecreto({
             onError(null)
             setReinicio((n) => n + 1)
           }}
-          className="text-xs text-slate-400 underline decoration-dotted underline-offset-2"
+          className={BTN_GHOST}
         >
           Empezar de nuevo
         </button>

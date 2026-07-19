@@ -74,6 +74,7 @@ const ICONOS = {
   SealCheck: ['regular', 'seal-check'],
   ShareNetwork: ['regular', 'share-network'],
   Signpost: ['regular', 'signpost'],
+  SignOut: ['regular', 'sign-out'],
   Sliders: ['regular', 'sliders'],
   Sparkle: ['regular', 'sparkle'],
   Square: ['regular', 'square'],

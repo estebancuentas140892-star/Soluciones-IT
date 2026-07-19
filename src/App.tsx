@@ -407,10 +407,35 @@ function App() {
                 <Route path=":credencialId/editar" element={<CredencialForm />} />
                 <Route path=":credencialId" element={<CredencialPage />} />
               </Route>
+              {/* Cuenta, Seguridad y Sugerencias del equipo re-autorizadas a
+                  Nocturne (tarea 97, sin mockup: se tradujo el diseño
+                  heredado): traen su propio shell centrado (mismo patrón
+                  que DiagnosticosPage), por eso salen del Layout oscuro. */}
+              <Route
+                path="cuenta"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <CuentaPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="cuenta/seguridad"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <SeguridadPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="diagnostico/sugerencias"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <SugerenciasEquipoPage />
+                  </Suspense>
+                }
+              />
               <Route element={<Layout />}>
-                <Route path="cuenta" element={<CuentaPage />} />
-                <Route path="cuenta/seguridad" element={<SeguridadPage />} />
-                <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
                 {/* La seccion de credenciales se llamo "Notas" (nombre
                     neutro de discrecion) hasta el 2026-07-09, cuando el

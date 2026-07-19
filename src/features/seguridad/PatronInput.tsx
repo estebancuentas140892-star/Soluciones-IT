@@ -126,7 +126,7 @@ export function PatronInput({ onCompletar, deshabilitado, reiniciarToken }: Prop
           stroke="currentColor"
           strokeWidth={4}
           strokeLinecap="round"
-          className="text-sky-500"
+          className="text-noct-accent"
         />
       ))}
 
@@ -139,7 +139,7 @@ export function PatronInput({ onCompletar, deshabilitado, reiniciarToken }: Prop
           stroke="currentColor"
           strokeWidth={4}
           strokeLinecap="round"
-          className="text-sky-500/60"
+          className="text-noct-accent/60"
         />
       )}
 
@@ -158,7 +158,7 @@ export function PatronInput({ onCompletar, deshabilitado, reiniciarToken }: Prop
               cx={c.x}
               cy={c.y}
               r={activoNodo ? RADIO_NODO + 3 : RADIO_NODO}
-              className={activoNodo ? 'fill-sky-500' : 'fill-slate-700'}
+              className={activoNodo ? 'fill-noct-accent' : 'fill-noct-neutral-700'}
             />
           </g>
         )
