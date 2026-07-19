@@ -102,6 +102,9 @@ const RedPage = lazy(() => import('./features/red/RedPage').then((m) => ({ defau
 const TopologiaPage = lazy(() =>
   import('./features/red/TopologiaPage').then((m) => ({ default: m.TopologiaPage })),
 )
+const TopologiaEquipoPage = lazy(() =>
+  import('./features/red/TopologiaEquipoPage').then((m) => ({ default: m.TopologiaEquipoPage })),
+)
 
 function App() {
   return (
@@ -260,10 +263,11 @@ function App() {
                   de aplicación empresarial", Dispositivos.dc.html, tarea
                   85): trae su propio ShellNocturne, por eso sale del
                   Layout oscuro. Red ya está en Nocturne (tarea 91) con
-                  su propio ShellNocturne, también fuera del Layout;
-                  Topologia sigue en el tema claro heredado (tarea 56)
-                  con su propio AppShell hasta que se re-autorice a
-                  Nocturne (decision D-006). */}
+                  su propio ShellNocturne, también fuera del Layout. La
+                  topología de un equipo (/red/topologia/:dispositivoId)
+                  ya está en Nocturne (TopologiaEquipoPage); el bosque
+                  general (/red/topologia) sigue en tema claro heredado
+                  (tarea 56/92) con su propio AppShell. */}
               <Route
                 path="dispositivos"
                 element={
@@ -363,11 +367,17 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* Topología de un equipo re-autorizada a Nocturne (handoff
+                  "Rediseño de aplicación empresarial", Topología de
+                  Equipo.dc.html): pantalla propia con su ShellNocturne
+                  (fuera del Layout oscuro). El bosque general
+                  (/red/topologia, sin equipo) sigue en TopologiaPage con
+                  su AppShell claro hasta la tarea 92. */}
               <Route
                 path="red/topologia/:dispositivoId"
                 element={
                   <Suspense fallback={<Cargando />}>
-                    <TopologiaPage />
+                    <TopologiaEquipoPage />
                   </Suspense>
                 }
               />
