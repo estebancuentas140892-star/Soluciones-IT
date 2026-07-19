@@ -56,39 +56,25 @@ export function tipoDeNodoVisual(nombreCategoria: string): TipoNodoVisual {
   return 'generico'
 }
 
-// Punto de color del estado en el tema claro del rediseño (08_ESTILO:
-// operativo verde, mantenimiento ámbar, fuera de servicio rojo, de
-// baja gris; cualquier otro texto, gris claro neutro). Mismo criterio
+// Etiqueta canónica del estado del dispositivo (Operativo, En
+// mantenimiento, Fuera de servicio, De baja; cualquier otro texto se
+// conserva tal cual, o "Sin estado" si viene vacío). Mismo criterio
 // insensible a mayúsculas que infoDeEstado en dispositivos/estados.ts.
-export interface PuntoEstado {
-  clase: string
-  titulo: string
-}
-
-export function puntoDeEstado(estado: string): PuntoEstado {
-  const info = estadoConEtiqueta(estado)
-  return { clase: info.clase, titulo: info.etiqueta }
-}
-
-// Igual que puntoDeEstado, pero con la clase de texto a juego (fila de
-// Red.dc.html: punto + etiqueta de color, no solo el punto).
+// Las pantallas Nocturne mapean esta etiqueta a su clase de color con
+// un helper local `claseEstado` (Red, Dispositivos, Topología); las
+// clases de tema claro que este módulo devolvía antes se retiraron con
+// la última pantalla clara (tarea 92).
 export interface EstadoConEtiqueta {
-  clase: string
-  textoClase: string
   etiqueta: string
 }
 
 export function estadoConEtiqueta(estado: string): EstadoConEtiqueta {
   const texto = normalizar(estado)
-  if (texto === 'operativo') return { clase: 'bg-green-600', textoClase: 'text-green-700', etiqueta: 'Operativo' }
-  if (texto === 'en mantenimiento') {
-    return { clase: 'bg-amber-600', textoClase: 'text-amber-700', etiqueta: 'En mantenimiento' }
-  }
-  if (texto === 'fuera de servicio') {
-    return { clase: 'bg-red-600', textoClase: 'text-red-700', etiqueta: 'Fuera de servicio' }
-  }
-  if (texto === 'de baja') return { clase: 'bg-zinc-500', textoClase: 'text-zinc-600', etiqueta: 'De baja' }
-  return { clase: 'bg-zinc-300', textoClase: 'text-zinc-500', etiqueta: estado.trim() || 'Sin estado' }
+  if (texto === 'operativo') return { etiqueta: 'Operativo' }
+  if (texto === 'en mantenimiento') return { etiqueta: 'En mantenimiento' }
+  if (texto === 'fuera de servicio') return { etiqueta: 'Fuera de servicio' }
+  if (texto === 'de baja') return { etiqueta: 'De baja' }
+  return { etiqueta: estado.trim() || 'Sin estado' }
 }
 
 // Línea de detalle de la fila, estilo "Switch 8 puertos · Puerto 02 ·

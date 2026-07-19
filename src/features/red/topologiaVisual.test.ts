@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detalleDeNodo, estadoConEtiqueta, puntoDeEstado, tipoDeNodoVisual } from './topologiaVisual'
+import { detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
 
 describe('tipoDeNodoVisual', () => {
   it('reconoce las categorías iniciales reales del esquema', () => {
@@ -42,46 +42,23 @@ describe('tipoDeNodoVisual', () => {
   })
 })
 
-describe('puntoDeEstado', () => {
-  it('asigna el color de cada estado sugerido, sin importar mayúsculas', () => {
-    expect(puntoDeEstado('Operativo').clase).toBe('bg-green-600')
-    expect(puntoDeEstado('operativo').clase).toBe('bg-green-600')
-    expect(puntoDeEstado('En mantenimiento').clase).toBe('bg-amber-600')
-    expect(puntoDeEstado('Fuera de servicio').clase).toBe('bg-red-600')
-    expect(puntoDeEstado('De baja').clase).toBe('bg-zinc-500')
+describe('estadoConEtiqueta', () => {
+  it('normaliza los estados sugeridos a su etiqueta canónica, sin importar mayúsculas', () => {
+    expect(estadoConEtiqueta('Operativo').etiqueta).toBe('Operativo')
+    expect(estadoConEtiqueta('operativo').etiqueta).toBe('Operativo')
+    expect(estadoConEtiqueta('OPERATIVO').etiqueta).toBe('Operativo')
+    expect(estadoConEtiqueta('en mantenimiento').etiqueta).toBe('En mantenimiento')
+    expect(estadoConEtiqueta('fuera de servicio').etiqueta).toBe('Fuera de servicio')
+    expect(estadoConEtiqueta('de baja').etiqueta).toBe('De baja')
   })
 
-  it('usa gris neutro y conserva el texto en estados desconocidos', () => {
-    const punto = puntoDeEstado('Prestado a bodega')
-    expect(punto.clase).toBe('bg-zinc-300')
-    expect(punto.titulo).toBe('Prestado a bodega')
+  it('conserva tal cual un estado libre desconocido', () => {
+    expect(estadoConEtiqueta('Prestado a bodega').etiqueta).toBe('Prestado a bodega')
   })
 
   it('marca "Sin estado" cuando el estado viene vacío', () => {
-    expect(puntoDeEstado('').titulo).toBe('Sin estado')
-    expect(puntoDeEstado('').clase).toBe('bg-zinc-300')
-  })
-})
-
-describe('estadoConEtiqueta', () => {
-  it('da el mismo color de punto que puntoDeEstado, más la clase de texto a juego', () => {
-    expect(estadoConEtiqueta('Operativo')).toEqual({
-      clase: 'bg-green-600',
-      textoClase: 'text-green-700',
-      etiqueta: 'Operativo',
-    })
-    expect(estadoConEtiqueta('Fuera de servicio').textoClase).toBe('text-red-700')
-    expect(estadoConEtiqueta('En mantenimiento').textoClase).toBe('text-amber-700')
-    expect(estadoConEtiqueta('De baja').textoClase).toBe('text-zinc-600')
-  })
-
-  it('coincide con puntoDeEstado en la clase y el título/etiqueta para el mismo estado', () => {
-    for (const estado of ['Operativo', 'En mantenimiento', 'Fuera de servicio', 'De baja', 'Desconocido', '']) {
-      const punto = puntoDeEstado(estado)
-      const conEtiqueta = estadoConEtiqueta(estado)
-      expect(conEtiqueta.clase).toBe(punto.clase)
-      expect(conEtiqueta.etiqueta).toBe(punto.titulo)
-    }
+    expect(estadoConEtiqueta('').etiqueta).toBe('Sin estado')
+    expect(estadoConEtiqueta('   ').etiqueta).toBe('Sin estado')
   })
 })
 

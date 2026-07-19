@@ -1,19 +1,39 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { AppShell } from '../../app/AppShell'
-import { construirArbol, construirBosque, infoDeDispositivos, type NodoTopologia } from './arbol'
+import { ShellNocturne } from '../../app/ShellNocturne'
+import { BotonVolver } from '../../components/BotonVolver'
+import { CaretDown, CaretRight, MagnifyingGlass, TreeStructure, XCircleFill } from '../../components/iconos'
+import { BTN_GHOST } from '../../components/nocturne'
+import { construirBosque, contarDescendientes, type NodoTopologia } from './arbol'
 import { IconoNodo } from './IconoNodo'
-import { detalleDeNodo, puntoDeEstado, tipoDeNodoVisual } from './topologiaVisual'
+import { detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
 
-// Vista de la topología rediseñada en tema claro (handoff de Claude
-// Design, Topologia.dc.html): breadcrumb, leyenda de estados, botones
-// Expandir todo / Contraer y árbol de filas con icono por tipo de
-// equipo, línea de detalle y punto de estado. Sin la raíz en la URL
-// muestra todo el bosque (racks y switches de núcleo); con
-// :dispositivoId arranca desde ese equipo hacia abajo. Conserva el
-// buscador con expansión automática y resaltado (fase R1, punto 8).
+// Mapa general de la topología re-autorizado en el sistema Nocturne
+// (handoff "Rediseño de aplicación empresarial", Topología.dc.html,
+// tarea 92): el bosque completo de la red (racks y switches de núcleo
+// como raíces) en un árbol expandible. Conserva intacta la lógica de
+// la versión anterior en tema claro (construirBosque, expansión por
+// inversiones sobre una base, buscador con auto-expansión, resaltado y
+// scroll al primer resultado) y suma el enlace de impacto "+N" por
+// fila, que abre la topología centrada en ese equipo
+// (TopologiaEquipoPage). La vista por-equipo ya no vive aquí: la ruta
+// /red/topologia/:dispositivoId tiene su propia pantalla.
+
+// Color Nocturne del estado, indexado por la etiqueta canónica de
+// estadoConEtiqueta (mismo helper local que Red, Dispositivos y la
+// topología por equipo). El punto usa bg-current sobre esta clase.
+const CLASE_ESTADO: Record<string, string> = {
+  operativo: 'text-noct-exito',
+  'en mantenimiento': 'text-noct-precaucion',
+  'fuera de servicio': 'text-noct-error',
+  'de baja': 'text-noct-neutral-500',
+}
+
+function claseEstado(etiqueta: string): string {
+  return CLASE_ESTADO[etiqueta.toLowerCase()] ?? 'text-noct-neutral-500'
+}
 
 // Cómo arranca el árbol antes de tocar los botones: los dos primeros
 // niveles abiertos (rack y switches a la vista, el resto se expande a
@@ -23,30 +43,22 @@ import { detalleDeNodo, puntoDeEstado, tipoDeNodoVisual } from './topologiaVisua
 type ModoExpansion = 'inicial' | 'todo' | 'nada'
 
 export function TopologiaPage() {
-  const { dispositivoId } = useParams()
-
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const conexiones = useLiveQuery(() => db.conexiones.filter((c) => !c.eliminadoEn).toArray(), [], [])
   const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
 
-  const raiz = dispositivoId ? (dispositivos ?? []).find((d) => d.id === dispositivoId) : undefined
-
   const arboles = useMemo(() => {
     const idsRed = new Set((categorias ?? []).filter((c) => c.esRed).map((c) => c.id))
-    const infoPorId = infoDeDispositivos(dispositivos ?? [])
-    if (dispositivoId) {
-      return [construirArbol(dispositivoId, conexiones ?? [], infoPorId)]
-    }
     return construirBosque(dispositivos ?? [], conexiones ?? [], (categoriaId) => idsRed.has(categoriaId))
-  }, [dispositivoId, dispositivos, conexiones, categorias])
+  }, [dispositivos, conexiones, categorias])
 
-  const nombreCategoria = useMemo(
-    () => new Map((categorias ?? []).map((c) => [c.id, c.nombre])),
-    [categorias],
-  )
   const marcaModeloPorId = useMemo(
     () => new Map((dispositivos ?? []).map((d) => [d.id, `${d.marca} ${d.modelo}`.trim()])),
     [dispositivos],
+  )
+  const nombreCategoria = useMemo(
+    () => new Map((categorias ?? []).map((c) => [c.id, c.nombre])),
+    [categorias],
   )
 
   const hayContenido = arboles.some((a) => a.hijos.length > 0)
@@ -79,6 +91,7 @@ export function TopologiaPage() {
   // árbol vuelve a su apertura normal.
   const [busqueda, setBusqueda] = useState('')
   const textoBuscado = busqueda.trim().toLowerCase()
+  const buscando = textoBuscado.length > 0
 
   const { idsCoincidentes, idsAAbrir } = useMemo(() => {
     if (!textoBuscado) return { idsCoincidentes: new Set<string>(), idsAAbrir: new Set<string>() }
@@ -106,113 +119,116 @@ export function TopologiaPage() {
   }, [idsCoincidentes])
 
   return (
-    <AppShell>
-      <div className="mx-auto flex max-w-[760px] flex-col gap-5">
-        <nav className="flex flex-wrap items-center gap-1.5 text-[13px] text-zinc-500">
-          <Link to="/red" className="hover:underline">
-            Red
-          </Link>
-          <ChevronDerecha className="h-[13px] w-[13px] text-zinc-300" />
-          {raiz ? (
-            <>
-              <Link to="/red/topologia" className="hover:underline">
-                Topología
-              </Link>
-              <ChevronDerecha className="h-[13px] w-[13px] text-zinc-300" />
-              <span className="font-medium text-zinc-900">{raiz.nombre}</span>
-            </>
-          ) : (
-            <span className="font-medium text-zinc-900">Topología</span>
-          )}
-        </nav>
-
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="mb-1 text-2xl font-semibold">
-              {raiz ? `Topología desde ${raiz.nombre}` : 'Topología de red'}
-            </h1>
-            <p className="text-sm text-zinc-600">
-              {raiz
-                ? 'Sigue las conexiones desde este equipo hasta cada dependiente'
-                : 'Sigue las conexiones desde el enlace principal hasta cada equipo'}
-            </p>
-          </div>
+    <ShellNocturne>
+      {/* Cabecera fija con desenfoque: retorno a Red, botones de
+          expansión, título, buscador y leyenda de estados. */}
+      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
+        <header className="flex items-center justify-between gap-2 px-2 pt-2.5">
+          <BotonVolver variante="nocturne" />
           {hayContenido && (
-            <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                onClick={expandirTodo}
-                className="rounded-md border border-zinc-300 bg-white px-[13px] py-2 text-[12.5px] font-semibold text-zinc-900 hover:bg-zinc-100 cursor-pointer"
-              >
+            <div className="flex shrink-0 gap-1.5">
+              <button type="button" onClick={expandirTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>
                 Expandir todo
               </button>
-              <button
-                type="button"
-                onClick={contraerTodo}
-                className="rounded-md border border-zinc-300 bg-white px-[13px] py-2 text-[12.5px] font-semibold text-zinc-900 hover:bg-zinc-100 cursor-pointer"
-              >
+              <button type="button" onClick={contraerTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>
                 Contraer
               </button>
             </div>
           )}
         </header>
-
-        <div className="flex flex-wrap items-center gap-4">
-          <LeyendaEstado clase="bg-green-600" etiqueta="Operativo" />
-          <LeyendaEstado clase="bg-amber-600" etiqueta="Mantenimiento" />
-          <LeyendaEstado clase="bg-red-600" etiqueta="Fuera de servicio" />
-        </div>
-
-        {hayContenido && (
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar un equipo en el mapa..."
-            className="rounded-lg border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
-        )}
-
-        {textoBuscado && idsCoincidentes.size === 0 && (
-          <p className="text-xs text-zinc-500">Ningún equipo coincide con "{busqueda.trim()}".</p>
-        )}
-
-        {!hayContenido && arboles.length <= 1 && (arboles[0]?.hijos.length ?? 0) === 0 ? (
-          <p className="rounded-lg border border-dashed border-zinc-300 bg-white px-4 py-6 text-center text-sm text-zinc-500">
-            Aún no hay conexiones registradas. Agrégalas desde la ficha de cada equipo, en la sección
-            Conexiones.
+        <div className="px-4 pb-2 pt-0.5">
+          <h1 className="text-[22px] font-medium leading-tight">Topología de red</h1>
+          <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">
+            Al expandir un equipo se ve todo lo que depende de él
           </p>
+        </div>
+        {hayContenido && (
+          <div className="px-4 pb-2.5">
+            <label
+              className={`flex h-[42px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
+                buscando ? 'border-noct-accent' : 'border-noct-divider'
+              }`}
+            >
+              <MagnifyingGlass
+                size={17}
+                className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar un equipo en el mapa"
+                aria-label="Buscar un equipo en el mapa"
+                className="min-w-0 flex-1 bg-transparent text-[14.5px] text-noct-text outline-none placeholder:text-noct-neutral-500 [&::-webkit-search-cancel-button]:hidden"
+              />
+              {buscando && (
+                <button
+                  type="button"
+                  onClick={() => setBusqueda('')}
+                  aria-label="Borrar búsqueda"
+                  className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
+                >
+                  <XCircleFill size={17} aria-hidden />
+                </button>
+              )}
+            </label>
+          </div>
+        )}
+        <div className="flex items-center gap-3.5 px-4 pb-2.5">
+          <LeyendaEstado clase="text-noct-exito" etiqueta="Operativo" />
+          <LeyendaEstado clase="text-noct-precaucion" etiqueta="Mantenimiento" />
+          <LeyendaEstado clase="text-noct-error" etiqueta="Fuera de servicio" />
+        </div>
+      </div>
+
+      <main className="flex flex-1 flex-col gap-3 px-4 pb-[116px] pt-3 lg:pb-16">
+        {buscando && idsCoincidentes.size === 0 && (
+          <p className="px-0.5 text-[12.5px] text-noct-neutral-500">
+            Ningún equipo coincide con "{busqueda.trim()}".
+          </p>
+        )}
+
+        {!hayContenido ? (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-11 text-center">
+            <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
+            <div>
+              <p className="text-[14.5px] font-medium">Aún no hay conexiones registradas</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
+                Agregarlas desde la ficha de cada equipo, en la sección Conexiones.
+              </p>
+            </div>
+          </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white p-2">
-            <ul className="flex min-w-[480px] flex-col">
-              {arboles.map((arbol) => (
-                <NodoFila
-                  key={arbol.dispositivoId}
-                  nodo={arbol}
-                  nivel={0}
-                  clave={arbol.dispositivoId}
-                  modoExpansion={modoExpansion}
-                  invertidos={invertidos}
-                  alternar={alternar}
-                  idsAAbrir={idsAAbrir}
-                  idsResaltados={idsCoincidentes}
-                  nombreCategoria={nombreCategoria}
-                  marcaModeloPorId={marcaModeloPorId}
-                  registrarRef={(id, el) => {
-                    if (el) referencias.current.set(id, el)
-                    else referencias.current.delete(id)
-                  }}
-                />
-              ))}
-            </ul>
+          <div className="flex flex-col">
+            {arboles.map((arbol) => (
+              <NodoFila
+                key={arbol.dispositivoId}
+                nodo={arbol}
+                nivel={0}
+                clave={arbol.dispositivoId}
+                modoExpansion={modoExpansion}
+                invertidos={invertidos}
+                alternar={alternar}
+                idsAAbrir={idsAAbrir}
+                idsResaltados={idsCoincidentes}
+                nombreCategoria={nombreCategoria}
+                marcaModeloPorId={marcaModeloPorId}
+                registrarRef={(id, el) => {
+                  if (el) referencias.current.set(id, el)
+                  else referencias.current.delete(id)
+                }}
+              />
+            ))}
           </div>
         )}
 
-        <p className="text-[12.5px] text-zinc-400">
-          Haz clic en un equipo para abrir su ficha. Las flechas expanden lo que depende de él.
+        <p className="px-0.5 text-[12px] leading-relaxed text-noct-neutral-600">
+          Tocar un equipo abre su ficha. El número junto al estado indica cuántos equipos quedarían sin
+          servicio si falla.
         </p>
-      </div>
-    </AppShell>
+      </main>
+    </ShellNocturne>
   )
 }
 
@@ -252,109 +268,103 @@ function NodoFila({
   const resaltado = idsResaltados.has(nodo.dispositivoId)
 
   const categoria = nombreCategoria.get(nodo.categoriaId) ?? ''
-  const punto = puntoDeEstado(nodo.estado)
-  const detalle = detalleDeNodo({
-    categoria,
-    marcaModelo: marcaModeloPorId.get(nodo.dispositivoId) ?? '',
-    via: nodo.via,
-    medio: nodo.medio,
-  })
+  const estado = estadoConEtiqueta(nodo.estado)
+  // Detalle de la fila como en el mockup: cómo conecta con su padre
+  // (via · medio); una raíz no tiene via y muestra su marca y modelo.
+  const detalle = nodo.via
+    ? detalleDeNodo({ via: nodo.via, medio: nodo.medio })
+    : (marcaModeloPorId.get(nodo.dispositivoId) ?? '')
+  // Enlace de impacto "+N" hacia la topología de este equipo: solo
+  // cuando hay algo que ver ahí (2 o más dependientes, como el mockup).
+  const impacto = tieneHijos ? contarDescendientes(nodo) : 0
 
   return (
-    <li>
+    <>
       <div
-        className={`flex items-center gap-2 rounded-md px-2 py-[7px] ${
-          resaltado ? 'bg-blue-50' : 'hover:bg-zinc-100'
+        className={`flex min-h-[50px] items-center gap-2 rounded-md py-1.5 pr-1 ${
+          resaltado ? 'bg-noct-accent/[.12]' : ''
         }`}
-        style={{ marginLeft: `${nivel * 24}px` }}
+        style={{ paddingLeft: `${4 + nivel * 20}px` }}
       >
         {tieneHijos ? (
           <button
             type="button"
             onClick={() => alternar(clave)}
             aria-expanded={abierto}
-            aria-label={abierto ? 'Contraer' : 'Expandir'}
-            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center text-zinc-500"
+            aria-label={`${abierto ? 'Contraer' : 'Expandir'} ${nodo.nombre}`}
+            className="flex min-h-11 w-[34px] shrink-0 items-center justify-center rounded-md text-noct-neutral-400 hover:bg-noct-text/[.06] hover:text-noct-text"
           >
-            {abierto ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
-                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
-                <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
+            {abierto ? <CaretDown size={15} aria-hidden /> : <CaretRight size={15} aria-hidden />}
           </button>
         ) : (
-          <span aria-hidden className="flex w-6 shrink-0 justify-center">
-            <span className="h-[5px] w-[5px] rounded-full bg-zinc-300" />
+          <span className="flex w-[34px] shrink-0 justify-center" aria-hidden>
+            <span className="h-[5px] w-[5px] rounded-full bg-noct-neutral-700" />
           </span>
         )}
 
-        <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-600">
-          <IconoNodo tipo={tipoDeNodoVisual(categoria)} />
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-400">
+          <IconoNodo tipo={tipoDeNodoVisual(categoria)} className="h-4 w-4" />
         </span>
 
         <Link
           ref={(el) => registrarRef(nodo.dispositivoId, el)}
           to={`/dispositivos/${nodo.dispositivoId}`}
-          className="flex min-w-0 flex-1 items-baseline gap-2"
+          className="min-w-0 flex-1 text-noct-text"
         >
-          <span className="whitespace-nowrap text-[13.5px] font-semibold text-zinc-900">{nodo.nombre}</span>
-          {detalle && (
-            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-zinc-400">
-              {detalle}
-            </span>
-          )}
-          {nodo.truncado && (
-            <span className="shrink-0 text-xs text-amber-600" title="Ya aparece más arriba">
-              ↺
-            </span>
-          )}
+          <span className="block truncate text-[13.5px] font-medium leading-[1.3]">
+            {nodo.nombre}
+            {nodo.truncado && (
+              <span className="ml-1 text-noct-precaucion" title="Ya aparece más arriba">
+                ↺
+              </span>
+            )}
+          </span>
+          {detalle && <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">{detalle}</span>}
         </Link>
 
-        <span title={punto.titulo} className={`h-[7px] w-[7px] shrink-0 rounded-full ${punto.clase}`} />
-        <ChevronDerecha className="h-[15px] w-[15px] shrink-0 text-zinc-300" />
+        {impacto >= 2 && (
+          <Link
+            to={`/red/topologia/${nodo.dispositivoId}`}
+            title="Ver la topología desde este equipo"
+            className="inline-flex min-h-11 shrink-0 items-center px-1.5 text-[11px] text-noct-neutral-500 hover:text-noct-accent-300"
+          >
+            +{impacto}
+          </Link>
+        )}
+
+        <span
+          title={estado.etiqueta}
+          className={`h-[7px] w-[7px] shrink-0 rounded-full bg-current ${claseEstado(estado.etiqueta)}`}
+        />
       </div>
 
-      {tieneHijos && abierto && (
-        <ul className="flex flex-col">
-          {nodo.hijos.map((hijo) => (
-            <NodoFila
-              key={`${hijo.dispositivoId}-${hijo.via}`}
-              nodo={hijo}
-              nivel={nivel + 1}
-              clave={`${clave}/${hijo.dispositivoId}·${hijo.via}`}
-              modoExpansion={modoExpansion}
-              invertidos={invertidos}
-              alternar={alternar}
-              idsAAbrir={idsAAbrir}
-              idsResaltados={idsResaltados}
-              nombreCategoria={nombreCategoria}
-              marcaModeloPorId={marcaModeloPorId}
-              registrarRef={registrarRef}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
+      {tieneHijos &&
+        abierto &&
+        nodo.hijos.map((hijo) => (
+          <NodoFila
+            key={`${hijo.dispositivoId}-${hijo.via}`}
+            nodo={hijo}
+            nivel={nivel + 1}
+            clave={`${clave}/${hijo.dispositivoId}·${hijo.via}`}
+            modoExpansion={modoExpansion}
+            invertidos={invertidos}
+            alternar={alternar}
+            idsAAbrir={idsAAbrir}
+            idsResaltados={idsResaltados}
+            nombreCategoria={nombreCategoria}
+            marcaModeloPorId={marcaModeloPorId}
+            registrarRef={registrarRef}
+          />
+        ))}
+    </>
   )
 }
 
 function LeyendaEstado({ clase, etiqueta }: { clase: string; etiqueta: string }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span className={`h-[7px] w-[7px] rounded-full ${clase}`} />
-      <span className="text-[12.5px] text-zinc-600">{etiqueta}</span>
-    </div>
-  )
-}
-
-function ChevronDerecha(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
-      <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <span className="inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-400">
+      <span className={`h-[7px] w-[7px] rounded-full bg-current ${clase}`} />
+      {etiqueta}
+    </span>
   )
 }

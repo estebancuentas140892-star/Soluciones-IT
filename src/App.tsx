@@ -262,12 +262,11 @@ function App() {
               {/* Dispositivos re-autorizada a Nocturne (handoff "Rediseño
                   de aplicación empresarial", Dispositivos.dc.html, tarea
                   85): trae su propio ShellNocturne, por eso sale del
-                  Layout oscuro. Red ya está en Nocturne (tarea 91) con
-                  su propio ShellNocturne, también fuera del Layout. La
-                  topología de un equipo (/red/topologia/:dispositivoId)
-                  ya está en Nocturne (TopologiaEquipoPage); el bosque
-                  general (/red/topologia) sigue en tema claro heredado
-                  (tarea 56/92) con su propio AppShell. */}
+                  Layout oscuro. Red (tarea 91), la topología general
+                  (TopologiaPage, tarea 92) y la topología de un equipo
+                  (TopologiaEquipoPage, tarea 93) ya están en Nocturne,
+                  cada una con su propio ShellNocturne, también fuera
+                  del Layout. */}
               <Route
                 path="dispositivos"
                 element={
@@ -369,10 +368,9 @@ function App() {
               />
               {/* Topología de un equipo re-autorizada a Nocturne (handoff
                   "Rediseño de aplicación empresarial", Topología de
-                  Equipo.dc.html): pantalla propia con su ShellNocturne
-                  (fuera del Layout oscuro). El bosque general
-                  (/red/topologia, sin equipo) sigue en TopologiaPage con
-                  su AppShell claro hasta la tarea 92. */}
+                  Equipo.dc.html): pantalla propia con su ShellNocturne.
+                  El bosque general (/red/topologia, sin equipo) vive en
+                  TopologiaPage, también en Nocturne (tarea 92). */}
               <Route
                 path="red/topologia/:dispositivoId"
                 element={

@@ -6,10 +6,11 @@ import { ShellNocturne } from '../../app/ShellNocturne'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { agruparConexiones, MEDIOS_SUGERIDOS, type ExtremoConexion } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
-import { CaretLeft, CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
+import { CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { BotonVolver } from '../../components/BotonVolver'
 import { IconoNodo } from './IconoNodo'
-import { construirArbol, contarImpacto, infoDeDispositivos, type NodoTopologia } from './arbol'
+import { construirArbol, contarDescendientes, contarImpacto, infoDeDispositivos, type NodoTopologia } from './arbol'
 import { detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
 
 // Topología de un equipo re-autorizada en el sistema Nocturne (handoff
@@ -150,13 +151,7 @@ export function TopologiaEquipoPage() {
           identidad del equipo (nombre, estado con punto de color e IP). */}
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
         <header className="flex items-center justify-between gap-2 px-2 pb-1.5 pt-2.5">
-          <Link
-            to="/red/topologia"
-            className="inline-flex items-center gap-1 rounded-md py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 hover:bg-noct-text/[.05] hover:text-noct-text"
-          >
-            <CaretLeft size={16} aria-hidden />
-            Topología
-          </Link>
+          <BotonVolver variante="nocturne" />
           <Link to={`/dispositivos/${equipo.id}`} className={`shrink-0 ${BTN_GHOST}`}>
             <Monitor size={14} aria-hidden />
             Abrir la ficha
@@ -264,15 +259,6 @@ export function TopologiaEquipoPage() {
       </main>
     </ShellNocturne>
   )
-}
-
-// Cuenta todos los descendientes del árbol (sin contar la raíz): el
-// número de equipos que dependen de este. Camina el árbol ya
-// construido, así un nodo truncado por ciclo cuenta una sola vez.
-function contarDescendientes(nodo: NodoTopologia): number {
-  let total = 0
-  for (const hijo of nodo.hijos) total += 1 + contarDescendientes(hijo)
-  return total
 }
 
 // Árbol de descendientes: filas indentadas con caret para expandir o

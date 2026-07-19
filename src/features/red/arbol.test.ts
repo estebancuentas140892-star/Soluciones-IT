@@ -4,6 +4,7 @@ import {
   caminoAscendente,
   construirArbol,
   construirBosque,
+  contarDescendientes,
   contarImpacto,
   infoDeDispositivos,
   type InfoDispositivo,
@@ -169,6 +170,33 @@ describe('contarImpacto', () => {
     const infoPorId = infoDeDispositivos([dispositivo('sw', 'Switch', 'red')])
     const arbol = construirArbol('sw', [], infoPorId)
     expect(contarImpacto(arbol).size).toBe(0)
+  })
+})
+
+describe('contarDescendientes', () => {
+  it('suma todos los descendientes sin agrupar (el "+N" de la topología)', () => {
+    const dispositivos = [
+      dispositivo('rack', 'Rack A01', 'red'),
+      dispositivo('sw', 'Switch D32', 'red'),
+      dispositivo('pos1', 'POS Caja 1', 'pos'),
+      dispositivo('pos2', 'POS Caja 2', 'pos'),
+      dispositivo('imp', 'Impresora Caja 1', 'impresoras'),
+    ]
+    const conexiones = [
+      instalacion('i', 'sw', 'rack'),
+      enlace('a', 'sw', '1', 'pos1'),
+      enlace('b', 'sw', '2', 'pos2'),
+      enlace('c', 'pos1', '', 'imp'),
+    ]
+    const infoPorId = infoDeDispositivos(dispositivos)
+    const desdeRack = construirArbol('rack', conexiones, infoPorId)
+    expect(contarDescendientes(desdeRack)).toBe(4)
+    expect(contarDescendientes(desdeRack.hijos[0])).toBe(3) // desde el switch
+  })
+
+  it('devuelve 0 para una hoja', () => {
+    const infoPorId = infoDeDispositivos([dispositivo('sw', 'Switch', 'red')])
+    expect(contarDescendientes(construirArbol('sw', [], infoPorId))).toBe(0)
   })
 })
 

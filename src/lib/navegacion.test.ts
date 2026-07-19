@@ -113,9 +113,12 @@ describe('padreDe', () => {
   })
 
   describe('Red', () => {
-    it('la topología vuelve a Red', () => {
+    it('la topología general vuelve a Red', () => {
       expect(padreDe('/red/topologia')).toEqual({ to: '/red', etiqueta: 'Red' })
-      expect(padreDe('/red/topologia/sw-1')).toEqual({ to: '/red', etiqueta: 'Red' })
+    })
+
+    it('la topología de un equipo sube al mapa general', () => {
+      expect(padreDe('/red/topologia/sw-1')).toEqual({ to: '/red/topologia', etiqueta: 'Topología' })
     })
   })
 

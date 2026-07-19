@@ -82,7 +82,9 @@ export function padreDe(pathname: string): Padre | null {
       // nuevo, sugerencias, :id (asistente) y :id/editar vuelven a la lista.
       return { to: '/diagnostico', etiqueta: 'Diagnósticos' }
     case 'red':
-      // topologia y topologia/:id vuelven a Red.
+      // Jerarquía de los mockups Nocturne: la topología de un equipo
+      // (topologia/:id) sube al mapa general, y este a Red.
+      if (a === 'topologia' && b) return { to: '/red/topologia', etiqueta: 'Topología' }
       return { to: '/red', etiqueta: 'Red' }
     case 'cuenta':
       // /cuenta/seguridad -> Mi cuenta (/cuenta ya lo cubre RAICES_NO_TAB).

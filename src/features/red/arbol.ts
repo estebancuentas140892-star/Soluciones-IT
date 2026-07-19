@@ -229,6 +229,16 @@ export function contarImpacto(nodo: NodoTopologia): Map<string, number> {
   return conteo
 }
 
+// Total de descendientes del nodo (sin contar la raiz): cuantos
+// equipos dependen, directa o indirectamente, de este. Es la suma de
+// contarImpacto sin agrupar por categoria; camina el arbol ya
+// construido, asi un nodo truncado por ciclo cuenta una sola vez.
+export function contarDescendientes(nodo: NodoTopologia): number {
+  let total = 0
+  for (const hijo of nodo.hijos) total += 1 + contarDescendientes(hijo)
+  return total
+}
+
 export interface PasoAscendente {
   dispositivoId: string
   nombre: string
