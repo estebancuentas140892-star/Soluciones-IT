@@ -1,5 +1,13 @@
 # Historial de tareas finalizadas
 
+### 89. Rediseño IT Brain: Etiquetas QR re-autorizada en Nocturne
+- Finalizada: 2026-07-18. Sin cambios de esquema.
+- Origen: carpeta del handoff "Rediseño de aplicación empresarial-handoff.zip", archivo `Etiquetas QR.dc.html`. Tercera de las 4 pantallas del bloque de dispositivos (tras lista 85, ficha 86, editor 87, ubicaciones 88). El trabajo venía a medias sin commitear de una sesión previa; se revisó, se verificó y se cerró (regla 11).
+- Implementación: `src/features/dispositivos/EtiquetasPage.tsx` re-autorizada del tema slate heredado a Nocturne, fiel al mockup. La lógica de generación del QR (`QRCode.toDataURL`) y de impresión (`window.print`, hoja `print:grid` de 3 por fila en carta) no cambia. Aspecto nuevo: cabecera pegajosa con blur (`BotonVolver` a Dispositivos, título + subtítulo), chips de categoría deslizables (incluye "Todas") desde la BD, resumen "N de M seleccionadas" con "Seleccionar/Quitar todas", rejilla de 2 columnas de tarjetas seleccionables (casilla de acento, QR real, nombre, código placa/serial y ubicación), estado vacío, y barra inferior fija ("Formato: 3 por fila en hoja carta" + botón primario "Imprimir N" que imprime SOLO las marcadas).
+- Decisión de estado: se guarda el conjunto de DESeleccionadas (no las marcadas), de modo que todo equipo entra marcado por defecto sin sincronizar un Set con la carga asíncrona de Dexie. El mockup dibuja el QR como icono placeholder; la implementación renderiza el QR real (el prototipo no puede).
+- Rutas: `dispositivos/etiquetas` ya vivía fuera del `Layout` oscuro (bloque sin barra inferior); no cambió. Iconos: `Check`, `Printer`, `QrCode` ya existían en `iconos.tsx` y en el generador.
+- Verificación: oxlint, build (`tsc -b`) y 450 pruebas en verde. End-to-end en navegador con sesión simulada (3 categorías, 5 equipos): título/subtítulo y chips (Todas activa), 5 tarjetas ordenadas por nombre con código y ubicación y QR reales (10 `img data:image` = 5 en pantalla + 5 en la hoja de impresión oculta), fondo Nocturne `#161826`, tarjeta seleccionada y botón "Imprimir 5" con el acento exacto; filtrar por "Impresoras" deja 2 de 2; "Quitar todas" deja "Ninguna etiqueta seleccionada" y el botón "Imprimir" deshabilitado. Sin errores de consola. Con esto de la carpeta del handoff solo queda `Importar Dispositivos` (tarea 90).
+
 ### 88. Rediseño IT Brain: Ubicaciones re-autorizada en Nocturne
 - Finalizada: 2026-07-18. Sin cambios de esquema.
 - Origen: carpeta del handoff "Rediseño de aplicación empresarial-handoff.zip", archivo `Ubicaciones.dc.html`. Tercera pantalla re-autorizada del bloque de dispositivos (tras lista 85, ficha 86, editor 87).
