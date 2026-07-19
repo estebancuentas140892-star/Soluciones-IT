@@ -581,6 +581,14 @@ export interface CambioPendiente {
   creadoEn: string
   error: string | null
   intentos: number
+  // Version del servidor (updated_at) sobre la que partio este cambio,
+  // capturada al encolarlo por primera vez (ver encolarCambioDeEntidad
+  // en repositorio.ts). Permite detectar si un companiero edito la
+  // misma ficha mientras este cambio esperaba para subirse. Ausente en
+  // las tablas de solo insercion (historial, ejecuciones de diagnostico,
+  // accesos a la boveda) y en una creacion nueva: ninguna de las dos
+  // tiene una version previa con la que pueda haber conflicto.
+  baseActualizadoEn?: string | null
 }
 
 // Datos internos de la sincronizacion, como el cursor de la ultima

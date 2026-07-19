@@ -66,10 +66,38 @@ export function PanelSync({ abierto, onCerrar }: Props) {
           </div>
         </dl>
 
+        {estado.sinSesion && (
+          <p className="rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-200">
+            No se detecta una sesión activa: puede que debas volver a iniciar sesión.
+          </p>
+        )}
+
         {estado.ultimoError && (
           <p className="rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-200">
             Última pasada con problema: {estado.ultimoError}
           </p>
+        )}
+
+        {estado.conflictosRecientes.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium text-amber-300">
+              Ediciones de compañeros sobrescritas ({estado.conflictosRecientes.length})
+            </h3>
+            <ul className="flex flex-col gap-1.5">
+              {estado.conflictosRecientes.map((mensaje, indice) => (
+                <li
+                  key={indice}
+                  className="rounded-lg border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-200"
+                >
+                  {mensaje}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-slate-500">
+              Se subió el cambio de todas formas (gana la última escritura); revisa el historial de
+              esas fichas si algo no cuadra.
+            </p>
+          </div>
         )}
 
         {conError.length > 0 && (

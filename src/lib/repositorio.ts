@@ -61,7 +61,7 @@ export async function guardarRegistro<T extends TablaEditable>(
 
     await store.put(guardada)
     await db.historial.bulkAdd(entradas)
-    await encolarCambioDeEntidad(tabla, guardada, ahora)
+    await encolarCambioDeEntidad(tabla, guardada, ahora, anterior?.updatedAt ?? null)
     await encolarEntradasDeHistorial(entradas)
   })
 
@@ -86,7 +86,7 @@ export async function eliminarRegistro(
 
     await store.put(eliminada)
     await db.historial.bulkAdd(entradas)
-    await encolarCambioDeEntidad(tabla, eliminada, ahora)
+    await encolarCambioDeEntidad(tabla, eliminada, ahora, anterior.updatedAt ?? null)
     await encolarEntradasDeHistorial(entradas)
   })
 
@@ -442,6 +442,7 @@ async function encolarCambioDeEntidad(
   tabla: TablaEditable,
   entidad: EntidadPorTabla[TablaEditable],
   ahora: string,
+  baseActualizadoEn: string | null,
 ): Promise<void> {
   const existente = await db.cambiosPendientes
     .where('[tabla+entidadId]')
@@ -449,6 +450,9 @@ async function encolarCambioDeEntidad(
     .first()
 
   if (existente) {
+    // Se conserva el baseActualizadoEn original: sigue siendo la
+    // version del servidor de la que partio esta edicion, aunque la
+    // ficha se haya vuelto a tocar sin conexion antes de subirse.
     await db.cambiosPendientes.update(existente.id, { payload: entidad, error: null, intentos: 0 })
   } else {
     await db.cambiosPendientes.add({
@@ -459,6 +463,7 @@ async function encolarCambioDeEntidad(
       creadoEn: ahora,
       error: null,
       intentos: 0,
+      baseActualizadoEn,
     })
   }
 }

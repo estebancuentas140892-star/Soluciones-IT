@@ -68,6 +68,28 @@ describe('guardarRegistro', () => {
     const pendientes = await db.cambiosPendientes.toArray()
     expect(pendientes.filter((c) => c.tabla === 'dispositivos')).toHaveLength(1)
     expect(pendientes.filter((c) => c.tabla === 'historial')).toHaveLength(1)
+    // Una creacion no tiene ninguna version previa del servidor con la
+    // que pueda haber conflicto (detector de conflictos, sync.ts).
+    const pendienteDispositivo = pendientes.find((c) => c.tabla === 'dispositivos')
+    expect(pendienteDispositivo?.baseActualizadoEn).toBeNull()
+  })
+
+  it('al editar un equipo ya sincronizado, el cambio pendiente guarda su updated_at como base', async () => {
+    const id = nuevoId()
+    const original = dispositivoDePrueba(id)
+    await guardarRegistro('dispositivos', original)
+    const guardadoOriginal = await db.dispositivos.get(id)
+    // Simula que la creacion ya se subio y se quito de la cola (sync
+    // exitoso), como pasaria en la practica antes de la siguiente edicion.
+    await db.cambiosPendientes.where('[tabla+entidadId]').equals(['dispositivos', id]).delete()
+
+    await guardarRegistro('dispositivos', { ...original, ip: '192.168.1.60' })
+
+    const pendiente = await db.cambiosPendientes
+      .where('[tabla+entidadId]')
+      .equals(['dispositivos', id])
+      .first()
+    expect(pendiente?.baseActualizadoEn).toBe(guardadoOriginal?.updatedAt)
   })
 
   it('al editar registra una entrada por cada campo modificado', async () => {
@@ -101,6 +123,26 @@ describe('guardarRegistro', () => {
     const pendientes = await db.cambiosPendientes.where('tabla').equals('dispositivos').toArray()
     expect(pendientes).toHaveLength(1)
     expect((pendientes[0].payload as Dispositivo).ip).toBe('192.168.1.62')
+  })
+
+  it('conserva la base de la primera edición sin conexión de un equipo ya sincronizado', async () => {
+    const id = nuevoId()
+    const original = dispositivoDePrueba(id)
+    await guardarRegistro('dispositivos', original)
+    const guardadoOriginal = await db.dispositivos.get(id)
+    // Simula que la creacion ya se subio y se quito de la cola: la
+    // racha de ediciones sin conexion empieza desde un equipo sincronizado.
+    await db.cambiosPendientes.where('[tabla+entidadId]').equals(['dispositivos', id]).delete()
+
+    await guardarRegistro('dispositivos', { ...original, ip: '192.168.1.61' })
+    await guardarRegistro('dispositivos', { ...original, ip: '192.168.1.62' })
+
+    const pendientes = await db.cambiosPendientes.where('tabla').equals('dispositivos').toArray()
+    expect(pendientes).toHaveLength(1)
+    expect((pendientes[0].payload as Dispositivo).ip).toBe('192.168.1.62')
+    // La base sigue siendo la version del servidor de la que partio la
+    // PRIMERA edicion sin conexion, no se pisa con la segunda vuelta.
+    expect(pendientes[0].baseActualizadoEn).toBe(guardadoOriginal?.updatedAt)
   })
 
   it('si no cambió nada no registra historial ni encola subidas', async () => {

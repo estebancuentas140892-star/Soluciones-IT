@@ -35,6 +35,16 @@ export interface EstadoSync {
   // El canal de tiempo real esta conectado: los cambios del resto del
   // equipo llegan en el momento, no solo por el sondeo cada 2 minutos.
   tiempoReal: boolean
+  // No hay sesion iniciada en el momento de sincronizar: antes
+  // ejecutarSync retornaba en silencio y no habia forma de saberlo
+  // desde la interfaz sin abrir la consola del navegador.
+  sinSesion: boolean
+  // Mensajes de la ultima pasada de subida donde un companiero edito
+  // la misma ficha mientras el cambio local esperaba para subirse. Se
+  // sube igual (gana la ultima escritura, ver ARQUITECTURA.md), pero
+  // se avisa aqui en vez de pisarlo en silencio. Se reemplaza entero en
+  // cada pasada, igual que ultimoError.
+  conflictosRecientes: string[]
 }
 
 let estado: EstadoSync = {
@@ -44,6 +54,8 @@ let estado: EstadoSync = {
   cambiosConError: 0,
   ultimoError: null,
   tiempoReal: false,
+  sinSesion: false,
+  conflictosRecientes: [],
 }
 
 const suscriptores = new Set<() => void>()
@@ -188,32 +200,77 @@ async function ejecutarSync(): Promise<void> {
 
   const { data } = await supabase.auth.getSession()
   if (!data.session) {
+    actualizarEstado({ sinSesion: true })
     await actualizarContadores()
     return
   }
 
-  actualizarEstado({ enCurso: true, ultimoError: null })
+  actualizarEstado({ enCurso: true, ultimoError: null, sinSesion: false })
   try {
     // Los archivos van antes que las filas: asi un adjunto creado sin
     // conexion ya existe en Storage cuando su fila llega al servidor
     // y el resto del equipo puede verlo de inmediato.
     await procesarArchivosPendientes()
     await subirCambiosPendientes()
-    await descargarPerfiles()
-    // El verificador de la boveda va ANTES del resto de tablas: es
-    // best effort y no debe quedarse sin descargar porque una tabla
-    // nueva (al final de la lista) falle por esquema sin aplicar.
-    await descargarBovedaMeta()
-    for (const tabla of TABLAS_SINCRONIZADAS) {
-      await descargarTabla(tabla)
-    }
-    actualizarEstado({ ultimaSync: new Date().toISOString() })
+    const erroresDeTabla = await descargarTodasLasTablas()
+    actualizarEstado({
+      ultimaSync: new Date().toISOString(),
+      ultimoError: erroresDeTabla.length > 0 ? resumenErroresDeTabla(erroresDeTabla) : null,
+    })
   } catch (err) {
     actualizarEstado({ ultimoError: err instanceof Error ? err.message : String(err) })
   } finally {
     actualizarEstado({ enCurso: false })
     await actualizarContadores()
   }
+}
+
+// Descarga los perfiles y cada tabla de TABLAS_SINCRONIZADAS por
+// separado: si una falla (esquema sin aplicar, columna faltante, RLS),
+// no debe impedir que el resto del equipo reciba las demas (antes, la
+// primera tabla que fallaba abortaba todo el lote). Solo un error de
+// RED aborta el lote completo: reintentar de inmediato tabla por tabla
+// seria inutil, va a fallar igual hasta que vuelva la señal. Devuelve
+// los mensajes de las tablas que fallaron por otro motivo, para
+// mostrarlos en el panel de sincronizacion.
+async function descargarTodasLasTablas(): Promise<string[]> {
+  const errores: string[] = []
+  await intentarDescarga('perfiles', descargarPerfiles, errores)
+  // El verificador de la boveda va ANTES del resto de tablas: es
+  // best effort (nunca lanza) y no debe quedarse sin descargar porque
+  // una tabla nueva (al final de la lista) falle por esquema sin
+  // aplicar.
+  await descargarBovedaMeta()
+  for (const tabla of TABLAS_SINCRONIZADAS) {
+    await intentarDescarga(tabla, () => descargarTabla(tabla), errores)
+  }
+  return errores
+}
+
+// La clasificacion de red se hace sobre el mensaje CRUDO del error, sin
+// el nombre de la tabla ya antepuesto: "conexiones" contiene la
+// subcadena "conexi" que esErrorDeRed tambien busca (para "sin
+// conexión"), asi que anteponerlo ANTES de clasificar clasificaba mal
+// esa tabla en particular como error de red (encontrado verificando en
+// navegador contra el proyecto real de Supabase).
+export async function intentarDescarga(
+  etiqueta: string,
+  tarea: () => Promise<void>,
+  errores: string[],
+): Promise<void> {
+  try {
+    await tarea()
+  } catch (err) {
+    const mensaje = err instanceof Error ? err.message : String(err)
+    if (esErrorDeRed(mensaje)) throw err
+    errores.push(`${etiqueta}: ${mensaje}`)
+  }
+}
+
+function resumenErroresDeTabla(errores: string[]): string {
+  return errores.length === 1
+    ? errores[0]
+    : `${errores.length} tablas no se pudieron descargar: ${errores.join(' | ')}`
 }
 
 // ----------------------------------------------------------------
@@ -223,11 +280,17 @@ async function ejecutarSync(): Promise<void> {
 async function subirCambiosPendientes(): Promise<void> {
   if (!supabase) return
   const pendientes = await db.cambiosPendientes.orderBy('creadoEn').toArray()
+  const conflictos: string[] = []
 
   for (const cambio of pendientes) {
     const tabla = cambio.tabla as TablaSincronizada
     const config = configTablas[tabla]
     const fila = aFilaRemota(tabla, cambio.payload)
+
+    if (!config.soloInsercion && cambio.baseActualizadoEn) {
+      const mensaje = await mensajeSiHayConflicto(tabla, cambio)
+      if (mensaje) conflictos.push(mensaje)
+    }
 
     const { error } = config.soloInsercion
       ? await supabase.from(tabla).insert(fila)
@@ -245,6 +308,51 @@ async function subirCambiosPendientes(): Promise<void> {
       await registrarErrorDeCambio(cambio, error.message)
     }
   }
+
+  actualizarEstado({ conflictosRecientes: conflictos })
+}
+
+// Compara la version actual del servidor contra la version sobre la
+// que partio este cambio (capturada al encolarlo, ver
+// encolarCambioDeEntidad en repositorio.ts). Si el servidor ya tiene
+// algo mas nuevo, un companiero edito la misma ficha mientras este
+// cambio esperaba para subirse. No cambia la resolucion (gana la
+// ultima escritura de todas formas, ver ARQUITECTURA.md seccion 7):
+// solo evita que pase en silencio. Si la comprobacion misma falla (sin
+// conexion, tabla sin esquema aplicado), se sube igual sin avisar:
+// mejor eso que bloquear una subida por un chequeo que no es
+// indispensable.
+async function mensajeSiHayConflicto(
+  tabla: TablaSincronizada,
+  cambio: CambioPendiente,
+): Promise<string | null> {
+  if (!supabase || !cambio.baseActualizadoEn) return null
+  try {
+    const { data } = await supabase
+      .from(tabla)
+      .select('updated_at')
+      .eq('id', cambio.entidadId)
+      .maybeSingle()
+    const actualizadoEnRemoto = typeof data?.updated_at === 'string' ? data.updated_at : null
+    if (!esConflicto(cambio.baseActualizadoEn, actualizadoEnRemoto)) return null
+    return `Se sobrescribió una edición más reciente de un compañero en "${tituloDeCambio(cambio)}" (${tabla}).`
+  } catch {
+    return null
+  }
+}
+
+// Pura (sin red) para poder probarla sola: dos marcas de tiempo ISO
+// que vienen de la misma columna de Postgres (updated_at) se pueden
+// comparar como texto, igual que ya hace el cursor de descarga.
+export function esConflicto(baseActualizadoEn: string, actualizadoEnRemoto: string | null): boolean {
+  return actualizadoEnRemoto !== null && actualizadoEnRemoto > baseActualizadoEn
+}
+
+function tituloDeCambio(cambio: CambioPendiente): string {
+  const payload = cambio.payload as { titulo?: unknown; nombre?: unknown } | null
+  const titulo = typeof payload?.titulo === 'string' ? payload.titulo : undefined
+  const nombre = typeof payload?.nombre === 'string' ? payload.nombre : undefined
+  return titulo || nombre || cambio.entidadId
 }
 
 // Una entrada de historial que ya se habia subido (pero no se alcanzo
@@ -319,7 +427,7 @@ async function descargarTabla(tabla: TablaSincronizada): Promise<void> {
     if (desde) consulta = consulta.gte(config.columnaCursor, desde)
 
     const { data, error } = await consulta
-    if (error) throw new Error(`Error al descargar ${tabla}: ${error.message}`)
+    if (error) throw new Error(error.message)
 
     const filas = (data ?? []) as Record<string, unknown>[]
     if (filas.length > 0) {
@@ -393,7 +501,7 @@ async function descargarBovedaMeta(): Promise<void> {
 async function descargarPerfiles(): Promise<void> {
   if (!supabase) return
   const { data, error } = await supabase.from('perfiles').select('*')
-  if (error) throw new Error(`Error al descargar perfiles: ${error.message}`)
+  if (error) throw new Error(error.message)
 
   const perfiles: Perfil[] = (data ?? []).map((fila) => ({
     id: String(fila.id),

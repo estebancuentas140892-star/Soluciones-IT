@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { guardarRegistro, nuevoId } from './repositorio'
-import { aplicarFilasRemotas, descartarCambioPendiente } from './sync'
+import { aplicarFilasRemotas, descartarCambioPendiente, esConflicto, intentarDescarga } from './sync'
 import { aEntidadLocal, aFilaRemota } from './tablas'
 
 beforeEach(async () => {
@@ -183,6 +183,72 @@ describe('aplicarFilasRemotas', () => {
 
     const articulo = await db.articulos.get(id)
     expect(articulo?.eliminadoEn).toBe('2026-07-02T16:00:00+00:00')
+  })
+})
+
+describe('intentarDescarga', () => {
+  it('no acumula nada si la tarea no falla', async () => {
+    const errores: string[] = []
+    await intentarDescarga('categorias', async () => {}, errores)
+    expect(errores).toEqual([])
+  })
+
+  it('acumula el error con su etiqueta y sigue si no es un error de red', async () => {
+    const errores: string[] = []
+    await intentarDescarga(
+      'categorias',
+      async () => {
+        throw new Error('relation "categorias" does not exist')
+      },
+      errores,
+    )
+    expect(errores).toEqual(['categorias: relation "categorias" does not exist'])
+  })
+
+  it('relanza el error sin acumularlo cuando es un error de red', async () => {
+    const errores: string[] = []
+    await expect(
+      intentarDescarga(
+        'categorias',
+        async () => {
+          throw new Error('TypeError: Failed to fetch')
+        },
+        errores,
+      ),
+    ).rejects.toThrow('Failed to fetch')
+    expect(errores).toEqual([])
+  })
+
+  it('no confunde el nombre de una tabla (por ejemplo "conexiones") con un error de red', async () => {
+    // Encontrado verificando en navegador contra el proyecto real de
+    // Supabase: esErrorDeRed busca la subcadena "conexi" (de "sin
+    // conexión"), que "conexiones" tambien contiene. Clasificar sobre
+    // el mensaje YA prefijado con el nombre de la tabla hacia que esta
+    // tabla en particular se tratara como error de red y abortara el
+    // lote entero en vez de aislarse como las demas.
+    const errores: string[] = []
+    await intentarDescarga(
+      'conexiones',
+      async () => {
+        throw new Error('No suitable key or wrong key type')
+      },
+      errores,
+    )
+    expect(errores).toEqual(['conexiones: No suitable key or wrong key type'])
+  })
+})
+
+describe('esConflicto', () => {
+  it('detecta que el servidor tiene una version mas nueva que la base', () => {
+    expect(esConflicto('2026-07-18T10:00:00Z', '2026-07-18T11:00:00Z')).toBe(true)
+  })
+
+  it('no marca conflicto si el servidor sigue en la misma version base', () => {
+    expect(esConflicto('2026-07-18T10:00:00Z', '2026-07-18T10:00:00Z')).toBe(false)
+  })
+
+  it('no marca conflicto si no se pudo leer la version remota', () => {
+    expect(esConflicto('2026-07-18T10:00:00Z', null)).toBe(false)
   })
 })
 
