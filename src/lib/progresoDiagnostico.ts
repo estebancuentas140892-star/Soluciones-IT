@@ -8,12 +8,6 @@ import { reiniciarProgreso } from './progresoPasos'
 // señal y siempre retoma en el punto exacto. Las transiciones viven
 // aqui, separadas de la interfaz, para poder probarlas sin navegador.
 
-export async function obtenerProgresoDiagnostico(
-  diagnosticoId: string,
-): Promise<ProgresoDiagnostico | undefined> {
-  return db.progresoDiagnostico.get(diagnosticoId)
-}
-
 export async function iniciarDiagnostico(diagnosticoId: string, primerNodoId: string): Promise<void> {
   const ahora = new Date().toISOString()
   await db.progresoDiagnostico.put({

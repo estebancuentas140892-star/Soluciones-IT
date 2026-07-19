@@ -104,10 +104,6 @@ export function validarSecreto(metodo: MetodoBloqueo, secreto: string): string |
 // Configuracion, desbloqueo y bloqueo
 // ----------------------------------------------------------------
 
-export async function configuracionBloqueoApp(): Promise<ConfigBloqueoApp | null> {
-  return (await db.seguridadApp.get(ID_BLOQUEO_APP)) ?? null
-}
-
 export async function bloqueoAppConfigurado(): Promise<boolean> {
   return (await db.seguridadApp.get(ID_BLOQUEO_APP)) !== undefined
 }
@@ -250,10 +246,6 @@ export function bloquearApp(): void {
 const EVENTOS_ACTIVIDAD = ['pointerdown', 'keydown'] as const
 let temporizador: ReturnType<typeof setTimeout> | null = null
 let ocultadoEn: number | null = null
-
-export function obtenerMinutosAutobloqueoApp(): number {
-  return minutosCache
-}
 
 export async function definirMinutosAutobloqueoApp(minutos: number): Promise<void> {
   if (!OPCIONES_AUTOBLOQUEO_APP_MIN.includes(minutos)) return

@@ -63,21 +63,6 @@ export function crearBloqueAviso(): BloquePaso {
   }
 }
 
-export function crearBloqueImagen(adjunto: PasoAdjunto): BloquePaso {
-  return {
-    id: crypto.randomUUID(),
-    tipo: 'imagen',
-    texto: '',
-    tono: null,
-    adjunto,
-    tipoTarea: null,
-    decisionArticuloId: null,
-    decisionArticuloTitulo: '',
-    credencialId: null,
-    credencialTitulo: '',
-  }
-}
-
 // Las tareas (bloques con casilla) de un paso, en orden. Son las que
 // cuentan para completarlo; avisos e imagenes son contenido de lectura.
 export function tareasDe(bloques: BloquePaso[]): BloquePaso[] {
