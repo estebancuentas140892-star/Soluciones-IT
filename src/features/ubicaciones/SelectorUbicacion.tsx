@@ -4,8 +4,11 @@ import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { ordenarPorRuta, mapaPorId, rutaUbicacion } from './arbol'
 
+// Campo re-tematizado a Nocturne (el selector solo se usa en el Editor
+// de Dispositivo, ya en Nocturne): borde divisor, fondo de superficie y
+// foco en el acento, a juego con el resto del formulario.
 const CLASE_CAMPO =
-  'rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500'
+  'min-h-11 w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
 
 // Valores especiales del selector, distintos de cualquier id de ubicacion.
 const TEXTO_LIBRE = '__texto__'
@@ -104,7 +107,7 @@ export function SelectorUbicacion({
       )}
 
       {creando && (
-        <div className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-3">
+        <div className="flex flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface/60 px-3 py-3">
           <input
             type="text"
             value={nombreNueva}
@@ -113,7 +116,7 @@ export function SelectorUbicacion({
             className={CLASE_CAMPO}
             autoFocus
           />
-          <label className="flex flex-col gap-1 text-xs text-slate-400">
+          <label className="flex flex-col gap-1 text-xs text-noct-neutral-400">
             Dentro de (opcional)
             <select value={padreNueva} onChange={(e) => setPadreNueva(e.target.value)} className={CLASE_CAMPO}>
               <option value="">Ninguna (ubicación raíz)</option>
@@ -129,7 +132,7 @@ export function SelectorUbicacion({
               type="button"
               onClick={() => void crear()}
               disabled={guardandoNueva || nombreNueva.trim() === ''}
-              className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-medium text-slate-950 disabled:opacity-50"
+              className="rounded-md border border-noct-accent px-3 py-1.5 text-xs font-medium text-noct-accent hover:bg-noct-accent/10 disabled:opacity-50"
             >
               {guardandoNueva ? 'Creando...' : 'Crear y usar'}
             </button>
@@ -140,7 +143,7 @@ export function SelectorUbicacion({
                 setNombreNueva('')
                 setPadreNueva('')
               }}
-              className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300"
+              className="rounded-md border border-noct-divider px-3 py-1.5 text-xs text-noct-text hover:bg-noct-text/[.07]"
             >
               Cancelar
             </button>
@@ -148,7 +151,7 @@ export function SelectorUbicacion({
         </div>
       )}
 
-      <span className="text-xs text-slate-500">
+      <span className="text-[12px] text-noct-neutral-600">
         Elige un lugar registrado para conectarlo con su ficha, o escríbelo a mano.
       </span>
     </div>
