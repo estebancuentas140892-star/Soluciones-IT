@@ -283,6 +283,51 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* Ubicaciones como entidad (grupo N3, tarea 88, Ubicaciones.dc.html):
+                  lista con árbol y creación inline, ficha 360, formulario y
+                  migración asistida. Re-autorizadas a Nocturne, cada una trae
+                  su propio shell enfocado (bajo Dispositivos), por eso salen
+                  del Layout oscuro. */}
+              <Route
+                path="ubicaciones"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <UbicacionesPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="ubicaciones/nueva"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <UbicacionForm />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="ubicaciones/migrar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <MigracionUbicaciones />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="ubicaciones/:ubicacionId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <UbicacionPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="ubicaciones/:ubicacionId/editar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <UbicacionForm />
+                  </Suspense>
+                }
+              />
               <Route
                 path="dispositivos/:dispositivoId/editar"
                 element={
@@ -335,15 +380,6 @@ function App() {
                 <Route path="diagnostico/sugerencias" element={<SugerenciasEquipoPage />} />
                 <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
                 <Route path="dispositivos/importar" element={<ImportarDispositivosPage />} />
-                {/* Ubicaciones como entidad (grupo N3): lista, migracion
-                    asistida de textos, ficha 360 y formulario. Van dentro
-                    del Layout oscuro como el resto de fichas y formularios
-                    de dispositivos aun sin re-autorizar a Nocturne. */}
-                <Route path="ubicaciones" element={<UbicacionesPage />} />
-                <Route path="ubicaciones/nueva" element={<UbicacionForm />} />
-                <Route path="ubicaciones/migrar" element={<MigracionUbicaciones />} />
-                <Route path="ubicaciones/:ubicacionId" element={<UbicacionPage />} />
-                <Route path="ubicaciones/:ubicacionId/editar" element={<UbicacionForm />} />
                 {/* La seccion de credenciales se llamo "Notas" (nombre
                     neutro de discrecion) hasta el 2026-07-09, cuando el
                     usuario decidio volver a llamarla Boveda. La ruta
