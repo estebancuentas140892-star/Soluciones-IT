@@ -1,5 +1,12 @@
 # Historial de tareas finalizadas
 
+### 100. Auditoría técnica de limpieza, Fase 5: useDeferredValue en el buscador de Inicio
+- Finalizada: 2026-07-19. Sin cambios de esquema.
+- Origen: continuación de las tareas 94/95/96/98. La Fase 5 del informe original tenía 4 puntos opcionales independientes; consultado el usuario sobre cuáles ejecutar (uno requería su confirmación para borrar archivos, otro era un script nuevo, otro resultó mucho más grande de lo estimado al revisar el alcance real), eligió solo este.
+- Implementación: `src/features/inicio/InicioPage.tsx` usa `useDeferredValue` de React. El `<input>` de búsqueda sigue controlado por el estado `query` crudo (nunca se atrasa, lo que se escribe se ve al instante); todo lo derivado de una búsqueda potencialmente costosa (`consultaCruda`, `consulta` normalizada, `buscando`, y sobre todo la consulta a MiniSearch en `resultados` vía `useMemo`) pasa a depender de `queryDiferida = useDeferredValue(query)` en vez del valor crudo. React prioriza mantener el input respondiendo al tacleo y dejar que la búsqueda y el repintado de la lista de resultados quede un tic por detrás cuando hace falta, sin bloquear la escritura.
+- Verificación: 457 pruebas, oxlint y build en verde (cambio sin lógica nueva que testear, solo qué valor alimenta a los hooks existentes). En navegador real (sesión simulada, un artículo sembrado): escribir "zebra" en el buscador de Inicio muestra el resultado agrupado bajo "Soluciones" y el valor del input se lee "zebra" de inmediato (`input.value`); "Borrar búsqueda" vuelve a la vista normal de Inicio (atajos, recientes, descarga offline) sin errores de consola.
+- Ubicación: `src/features/inicio/InicioPage.tsx`.
+
 ### 98. Auditoría técnica de limpieza, Fase 4: endurecimiento del motor de sincronización
 - Finalizada: 2026-07-19. Sin cambios de esquema remoto (solo un campo local opcional en Dexie, sin bump de versión).
 - Origen: continuación de las tareas 94/95/96. Ejecuta los 3 primeros puntos de la propuesta de endurecimiento del motor de sincronización presentada al usuario el 2026-07-17 (el punto 4, protocolo de verificación entre PC y celular, es un paso del usuario y queda como tarea 99).

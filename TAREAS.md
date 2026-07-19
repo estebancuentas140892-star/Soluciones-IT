@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del motor de sincronización) quedó terminada, verificada y archivada el 2026-07-19.
+Sin tarea en desarrollo. La tarea 100 (auditoría técnica de limpieza, Fase 5: useDeferredValue en el buscador de Inicio) quedó terminada, verificada y archivada el 2026-07-19. De los 4 puntos opcionales de la Fase 5, el usuario eligió solo este; los otros 3 quedan en "Por hacer" (tarea 101).
+
+Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del motor de sincronización) quedó terminada, verificada y archivada el 2026-07-19.
 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
@@ -25,6 +27,11 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - Prioridad: Media
 - Ubicación: `src/features/boveda/BovedaGuard.tsx`, `BovedaPage.tsx`, `CredencialForm.tsx`, `CredencialPage.tsx`; `src/features/autenticacion/CuentaPage.tsx`; `src/features/seguridad/SeguridadPage.tsx`; `src/features/diagnostico/SugerenciasEquipoPage.tsx`; `src/app/Layout.tsx` (candidato a eliminar al final).
 - Nota aparte (pregunta abierta desde la tarea 62, nunca resuelta): decidir si el botón "Crear" de `src/features/red/RedPage.tsx` (hoy va a `/dispositivos/nuevo`, genérico) debería abrir en cambio un flujo dedicado a crear una conexión de red.
+
+### 101. Fase 5 de la auditoría de limpieza: opcionales restantes
+- Descripción: de los 4 puntos opcionales del informe de auditoría del 2026-07-19, el usuario eligió ejecutar solo `useDeferredValue` en el buscador de Inicio (tarea 100). Quedan sin hacer: (1) borrar del disco `diseno/` (1.5 MB) y `Rediseño de aplicación empresarial-handoff.zip` (2.9 MB): no están versionados (ya en `.gitignore`), pero son archivos que hay que confirmar con el usuario antes de borrar, no son recuperables si los quiere de referencia después. (2) Script de solo lectura que compare el bucket `adjuntos` de Supabase Storage contra las referencias reales (tabla `adjuntos` + referencias dentro del JSON `procedimiento` de cada artículo, mismo criterio que `referenciasParaOffline` en `src/lib/adjuntosOffline.ts`) y reporte archivos huérfanos sin ninguna fila que los use; no debe borrar nada por su cuenta. (3) Migrar los tamaños `text-[Npx]` a `rem`: al revisar el alcance real resultó mucho más grande de lo estimado en el informe original (344 ocurrencias en 42 archivos, no unas pocas), así que antes de encararla conviene decidir con el usuario si vale la pena el riesgo de regresión visual en casi toda la interfaz Nocturne a cambio de que el escalado de texto del sistema operativo funcione.
+- Prioridad: Baja
+- Ubicación: `diseno/`, `Rediseño de aplicación empresarial-handoff.zip` (raíz del proyecto, no versionados); nuevo script en `scripts/` o similar para huérfanos de Storage; los 42 archivos con `text-[Npx]` (`git grep -c "text-\[1[0-9.]*px\]" -- src` para listarlos).
 
 ### 74. Decidir si se resurgen las 4 funciones ocultas por el rediseño del Editor de Artículo
 - Descripción: el rediseño Nocturne (tarea 71) no muestra equipos donde aplica (`dispositivosAfectados`), adjuntos por paso (galería de PDF/Word), orden en la ruta de inicio (`ordenRutaInicio`) ni "cambio mayor" (salto de versión mayor al publicar). Sus datos se conservan al guardar pero no hay interfaz para editarlos desde el editor nuevo. El usuario decidió (2026-07-18) dejarlas así por ahora; esta tarea queda para cuando decida si las repone y en qué parte del editor Nocturne encajarían.

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { lazy, Suspense, useMemo, useState, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useDeferredValue, useMemo, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
@@ -93,12 +93,17 @@ function partirTitulo(titulo: string, consulta: string) {
 
 export function InicioPage() {
   const [query, setQuery] = useState('')
-  const consultaCruda = query.trim()
+  // El input usa `query` directo (nunca se atrasa); todo lo derivado de
+  // buscar y pintar resultados usa la version diferida, para que
+  // escribir se sienta instantaneo aunque la busqueda o la lista de
+  // resultados tarden un poco mas en ponerse al dia.
+  const queryDiferida = useDeferredValue(query)
+  const consultaCruda = queryDiferida.trim()
   const consulta = normalizarTexto(consultaCruda)
   const buscando = consultaCruda.length > 0
 
   const indice = useIndiceBusqueda()
-  const resultados = useMemo(() => buscar(indice, query), [indice, query])
+  const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
 
   const recientes = useLiveQuery(() => obtenerRecientes(), [], [])
 
