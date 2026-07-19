@@ -16,7 +16,7 @@ import {
 } from '../../components/iconos'
 import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { IconoNodo } from '../red/IconoNodo'
-import { estadoConEtiqueta, tipoDeNodoVisual } from '../red/topologiaVisual'
+import { claseEstado, estadoConEtiqueta, tipoDeNodoVisual } from '../red/topologiaVisual'
 
 // Pantalla Dispositivos re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Dispositivos.dc.html, entrada
@@ -29,21 +29,6 @@ import { estadoConEtiqueta, tipoDeNodoVisual } from '../red/topologiaVisual'
 // pestañas en móvil), por eso su ruta vive fuera del Layout oscuro
 // heredado. La lógica y los datos no cambian respecto de la versión de
 // tema claro: solo se re-autoriza el aspecto a Nocturne.
-
-// Color Nocturne del estado, a juego con el punto y la etiqueta de la
-// fila (08_ESTILO: operativo verde/éxito, mantenimiento ámbar,
-// fuera de servicio rojo, de baja/otro neutro). Se indexa por la
-// etiqueta canónica que devuelve estadoConEtiqueta.
-const CLASE_ESTADO: Record<string, string> = {
-  operativo: 'text-noct-exito',
-  'en mantenimiento': 'text-noct-precaucion',
-  'fuera de servicio': 'text-noct-error',
-  'de baja': 'text-noct-neutral-500',
-}
-
-function claseEstado(etiqueta: string): string {
-  return CLASE_ESTADO[etiqueta.toLowerCase()] ?? 'text-noct-neutral-500'
-}
 
 export function DispositivosPage() {
   const dispositivos = useLiveQuery(

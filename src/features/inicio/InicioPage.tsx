@@ -7,6 +7,7 @@ import { contarHechos } from '../../lib/progresoPasos'
 import { obtenerRecientes } from '../../lib/recientes'
 import { obtenerEstadoSync, sincronizar, suscribirSync } from '../../lib/sync'
 import { ShellNocturne } from '../../app/ShellNocturne'
+import { DescargarOffline } from '../../components/DescargarOffline'
 import {
   BookOpen,
   CaretRight,
@@ -361,6 +362,8 @@ export function InicioPage() {
               </section>
             )}
             </div>
+
+            <DescargarOffline />
           </div>
         )}
       </main>

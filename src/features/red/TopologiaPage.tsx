@@ -8,7 +8,7 @@ import { CaretDown, CaretRight, MagnifyingGlass, TreeStructure, XCircleFill } fr
 import { BTN_GHOST } from '../../components/nocturne'
 import { construirBosque, contarDescendientes, type NodoTopologia } from './arbol'
 import { IconoNodo } from './IconoNodo'
-import { detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
+import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
 
 // Mapa general de la topología re-autorizado en el sistema Nocturne
 // (handoff "Rediseño de aplicación empresarial", Topología.dc.html,
@@ -20,20 +20,6 @@ import { detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaV
 // fila, que abre la topología centrada en ese equipo
 // (TopologiaEquipoPage). La vista por-equipo ya no vive aquí: la ruta
 // /red/topologia/:dispositivoId tiene su propia pantalla.
-
-// Color Nocturne del estado, indexado por la etiqueta canónica de
-// estadoConEtiqueta (mismo helper local que Red, Dispositivos y la
-// topología por equipo). El punto usa bg-current sobre esta clase.
-const CLASE_ESTADO: Record<string, string> = {
-  operativo: 'text-noct-exito',
-  'en mantenimiento': 'text-noct-precaucion',
-  'fuera de servicio': 'text-noct-error',
-  'de baja': 'text-noct-neutral-500',
-}
-
-function claseEstado(etiqueta: string): string {
-  return CLASE_ESTADO[etiqueta.toLowerCase()] ?? 'text-noct-neutral-500'
-}
 
 // Cómo arranca el árbol antes de tocar los botones: los dos primeros
 // niveles abiertos (rack y switches a la vista, el resto se expande a

@@ -3,22 +3,15 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Outlet } from 'react-router-dom'
 import { db, ID_VERIFICADOR } from '../../lib/db'
 import { CampoContrasena } from '../../components/CampoContrasena'
-import { useAuth } from '../autenticacion/authContext'
+import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { desbloquear, estadoInicialBoveda, type EstadoInicialBoveda } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
 
 // Envuelve todas las rutas de la boveda: exige el permiso
 // puedeVerBoveda del perfil y que la boveda este desbloqueada.
 export function BovedaGuard() {
-  const { session } = useAuth()
   const desbloqueada = useBovedaDesbloqueada()
-
-  // El perfil se lee en vivo de la base local para reaccionar cuando
-  // la primera sincronizacion lo descarga.
-  const perfil = useLiveQuery(
-    async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
-    [session],
-  )
+  const perfil = usePerfilVivo()
 
   if (perfil === undefined) {
     return <p className="px-4 pt-6 text-sm text-slate-400">Cargando...</p>

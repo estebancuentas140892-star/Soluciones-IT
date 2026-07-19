@@ -2,13 +2,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { copiarAlPortapapeles } from '../../lib/portapapeles'
+import { compartirOCopiar, copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { textoVivo } from '../../lib/referencia'
 import { resumenImpacto } from '../../lib/grafo'
 import { ShellNocturne } from '../../app/ShellNocturne'
-import { useAuth } from '../autenticacion/authContext'
+import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
@@ -77,17 +77,13 @@ export function DispositivoPage() {
   const navigate = useNavigate()
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(false)
-  const { session } = useAuth()
 
   const dispositivo = useLiveQuery(() => db.dispositivos.get(dispositivoId), [dispositivoId])
   const categoria = useLiveQuery(
     () => (dispositivo ? db.categorias.get(dispositivo.categoriaId) : undefined),
     [dispositivo],
   )
-  const perfil = useLiveQuery(
-    async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
-    [session],
-  )
+  const perfil = usePerfilVivo()
   // Ubicacion como entidad (grupo N3): el dato canonico es `ubicacionId`;
   // `dispositivo.ubicacion` es solo la copia de referencia. Se resuelve
   // en vivo contra la tabla `ubicaciones` (regla de referencia viva), asi
@@ -365,16 +361,7 @@ function BotonCompartir({ titulo }: { titulo: string }) {
   const [copiado, setCopiado] = useState(false)
 
   async function compartir() {
-    const url = window.location.href
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: titulo, url })
-      } catch {
-        // El usuario canceló el diálogo de compartir: no es un error.
-      }
-      return
-    }
-    if (await copiarAlPortapapeles(url)) {
+    if ((await compartirOCopiar(titulo)) === 'copiado') {
       setCopiado(true)
       setTimeout(() => setCopiado(false), 1500)
     }

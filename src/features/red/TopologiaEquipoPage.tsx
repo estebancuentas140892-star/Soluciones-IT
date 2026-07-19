@@ -11,7 +11,7 @@ import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../co
 import { BotonVolver } from '../../components/BotonVolver'
 import { IconoNodo } from './IconoNodo'
 import { construirArbol, contarDescendientes, contarImpacto, infoDeDispositivos, type NodoTopologia } from './arbol'
-import { detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
+import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
 
 // Topología de un equipo re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Topología de Equipo.dc.html).
@@ -25,21 +25,6 @@ import { detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaV
 // (repositorio.ts); esta pantalla solo compone esas piezas con el
 // aspecto del mockup. El bosque general (/red/topologia, sin equipo)
 // sigue en TopologiaPage hasta su propia re-autoría (tarea 92).
-
-// Color Nocturne del estado, indexado por la etiqueta canónica de
-// estadoConEtiqueta, igual que en Red y Dispositivos (08_ESTILO:
-// operativo éxito, mantenimiento precaución, fuera de servicio error,
-// de baja/otro neutro). El punto usa bg-current sobre esta clase.
-const CLASE_ESTADO: Record<string, string> = {
-  operativo: 'text-noct-exito',
-  'en mantenimiento': 'text-noct-precaucion',
-  'fuera de servicio': 'text-noct-error',
-  'de baja': 'text-noct-neutral-500',
-}
-
-function claseEstado(etiqueta: string): string {
-  return CLASE_ESTADO[etiqueta.toLowerCase()] ?? 'text-noct-neutral-500'
-}
 
 // Tipo de relación del formulario de "Agregar conexión": define quién
 // es origen y quién destino según lo que el técnico quiere documentar.

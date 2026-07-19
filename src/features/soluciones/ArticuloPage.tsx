@@ -6,7 +6,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db, type Articulo, type ArticuloRelacionado, type NivelDificultad } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { reiniciarProgreso } from '../../lib/progresoPasos'
-import { copiarAlPortapapeles } from '../../lib/portapapeles'
+import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { ShellNocturne } from '../../app/ShellNocturne'
@@ -277,20 +277,15 @@ function MenuAcciones({
     return () => document.removeEventListener('mousedown', alClicFuera)
   }, [abierto])
 
-  // Igual que BotonCompartir: dialogo nativo si existe; si no, copia
-  // el enlace y avisa en el propio item antes de cerrar el menu.
+  // Dialogo nativo si existe; si no, copia el enlace y avisa en el
+  // propio item antes de cerrar el menu.
   async function compartir() {
-    const url = window.location.href
-    if (navigator.share) {
+    const resultado = await compartirOCopiar(articulo.titulo)
+    if (resultado === 'nativo') {
       setAbierto(false)
-      try {
-        await navigator.share({ title: articulo.titulo, url })
-      } catch {
-        // El usuario cancelo el dialogo de compartir: no es un error.
-      }
       return
     }
-    if (await copiarAlPortapapeles(url)) {
+    if (resultado === 'copiado') {
       setAviso('Enlace copiado')
       setTimeout(() => {
         setAviso(null)

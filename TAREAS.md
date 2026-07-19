@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 94 (auditoría técnica de limpieza, Fase 1: eliminaciones seguras) quedó terminada, verificada y archivada el 2026-07-19.
+Sin tarea en desarrollo. La tarea 95 (auditoría técnica de limpieza, Fase 2: refactorizaciones) quedó terminada, verificada y archivada el 2026-07-19.
+
+Antes, la tarea 94 (auditoría técnica de limpieza, Fase 1: eliminaciones seguras) quedó terminada, verificada y archivada el 2026-07-19.
 
 Antes, la tarea 92 (rediseño IT Brain: Topología re-autorizada en Nocturne) quedó terminada, verificada en navegador y archivada el 2026-07-19. Se adelantó porque el usuario reportó que "Topología de red" seguía mostrando la versión antigua: no era un problema de despliegue (el push de la tarea 93 sí llegó a Vercel, verificado contra los chunks de producción), sino esta pantalla aún pendiente en tema claro. `TopologiaPage.tsx` reescrita a Nocturne fiel a `Topología.dc.html` conservando toda la lógica (bosque de `construirBosque`, expansión por inversiones, buscador con auto-expansión/resaltado/scroll) y sumando el enlace de impacto "+N" por fila hacia la topología del equipo (tarea 93). Además: jerarquía de "Volver" corregida en `navegacion.ts` (equipo → Topología → Red, ambas pantallas con `BotonVolver`), `contarDescendientes` compartido en `arbol.ts`, `estadoConEtiqueta` adelgazado a solo la etiqueta canónica (sus clases de tema claro quedaron muertas), y `AppShell.tsx` (shell claro) eliminado por quedar sin consumidores. Con esto la carpeta del handoff "Rediseño de aplicación empresarial" queda COMPLETA y NINGUNA pantalla de la app sigue en el tema claro heredado salvo `CategoriaPage` (tarea 77). 451 pruebas, oxlint y build en verde; verificada end-to-end en navegador.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
+import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
 
 describe('tipoDeNodoVisual', () => {
   it('reconoce las categorías iniciales reales del esquema', () => {
@@ -59,6 +59,20 @@ describe('estadoConEtiqueta', () => {
   it('marca "Sin estado" cuando el estado viene vacío', () => {
     expect(estadoConEtiqueta('').etiqueta).toBe('Sin estado')
     expect(estadoConEtiqueta('   ').etiqueta).toBe('Sin estado')
+  })
+})
+
+describe('claseEstado', () => {
+  it('mapea cada etiqueta canónica a su color Nocturne', () => {
+    expect(claseEstado('Operativo')).toBe('text-noct-exito')
+    expect(claseEstado('En mantenimiento')).toBe('text-noct-precaucion')
+    expect(claseEstado('Fuera de servicio')).toBe('text-noct-error')
+    expect(claseEstado('De baja')).toBe('text-noct-neutral-500')
+  })
+
+  it('es insensible a mayúsculas y cae a neutro con un estado libre', () => {
+    expect(claseEstado('OPERATIVO')).toBe('text-noct-exito')
+    expect(claseEstado('Prestado a bodega')).toBe('text-noct-neutral-500')
   })
 })
 

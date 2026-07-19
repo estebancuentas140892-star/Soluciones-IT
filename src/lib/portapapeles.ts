@@ -21,3 +21,25 @@ export async function copiarAlPortapapeles(texto: string): Promise<boolean> {
     }
   }
 }
+
+export type ResultadoCompartir = 'nativo' | 'copiado' | 'fallo'
+
+// Comparte una URL con el dialogo nativo del telefono si existe
+// (cancelar no se trata como error); si no, la copia al portapapeles.
+// Quien llama decide que aviso mostrar segun el resultado (antes esta
+// misma logica estaba calcada en el boton de la ficha de dispositivo y
+// en el menu de la ficha de articulo).
+export async function compartirOCopiar(
+  titulo: string,
+  url = window.location.href,
+): Promise<ResultadoCompartir> {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: titulo, url })
+    } catch {
+      // El usuario canceló el diálogo de compartir: no es un error.
+    }
+    return 'nativo'
+  }
+  return (await copiarAlPortapapeles(url)) ? 'copiado' : 'fallo'
+}

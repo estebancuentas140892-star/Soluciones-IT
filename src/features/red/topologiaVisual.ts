@@ -60,10 +60,8 @@ export function tipoDeNodoVisual(nombreCategoria: string): TipoNodoVisual {
 // mantenimiento, Fuera de servicio, De baja; cualquier otro texto se
 // conserva tal cual, o "Sin estado" si viene vacío). Mismo criterio
 // insensible a mayúsculas que infoDeEstado en dispositivos/estados.ts.
-// Las pantallas Nocturne mapean esta etiqueta a su clase de color con
-// un helper local `claseEstado` (Red, Dispositivos, Topología); las
-// clases de tema claro que este módulo devolvía antes se retiraron con
-// la última pantalla clara (tarea 92).
+// Las clases de tema claro que este módulo devolvía antes se retiraron
+// con la última pantalla clara (tarea 92).
 export interface EstadoConEtiqueta {
   etiqueta: string
 }
@@ -75,6 +73,20 @@ export function estadoConEtiqueta(estado: string): EstadoConEtiqueta {
   if (texto === 'fuera de servicio') return { etiqueta: 'Fuera de servicio' }
   if (texto === 'de baja') return { etiqueta: 'De baja' }
   return { etiqueta: estado.trim() || 'Sin estado' }
+}
+
+const CLASE_ESTADO: Record<string, string> = {
+  operativo: 'text-noct-exito',
+  'en mantenimiento': 'text-noct-precaucion',
+  'fuera de servicio': 'text-noct-error',
+  'de baja': 'text-noct-neutral-500',
+}
+
+// Color Nocturne para la etiqueta canónica de arriba. Compartido por
+// Dispositivos, Red, Topología y Topología de Equipo (antes cada
+// pantalla lo definía por su cuenta, calcado; unificado aquí).
+export function claseEstado(etiqueta: string): string {
+  return CLASE_ESTADO[etiqueta.toLowerCase()] ?? 'text-noct-neutral-500'
 }
 
 // Línea de detalle de la fila, estilo "Switch 8 puertos · Puerto 02 ·

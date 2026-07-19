@@ -1,7 +1,5 @@
-import { useLiveQuery } from 'dexie-react-hooks'
 import { NavLink } from 'react-router-dom'
-import { db } from '../lib/db'
-import { useAuth } from '../features/autenticacion/authContext'
+import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 
 interface Tab {
   to: string
@@ -25,13 +23,9 @@ const TABS_BASE: Tab[] = [
 const TAB_BOVEDA: Tab = { to: '/boveda', label: 'Bóveda', icon: NoteIcon, end: false }
 
 export function BottomNav() {
-  const { session } = useAuth()
   // El perfil se lee en vivo de la base local para que la pestaña
   // aparezca apenas la primera sincronizacion lo descargue.
-  const perfil = useLiveQuery(
-    async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
-    [session],
-  )
+  const perfil = usePerfilVivo()
 
   const tabs = perfil?.puedeVerBoveda ? [...TABS_BASE, TAB_BOVEDA] : TABS_BASE
 

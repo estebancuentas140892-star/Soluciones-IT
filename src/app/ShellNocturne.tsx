@@ -1,7 +1,6 @@
-import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, NavLink } from 'react-router-dom'
-import { db } from '../lib/db'
 import { useAuth } from '../features/autenticacion/authContext'
+import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 import {
   BookOpen,
   BookOpenFill,
@@ -52,11 +51,8 @@ const DESTINO_BOVEDA: Destino = {
 }
 
 export function ShellNocturne({ children }: { children: React.ReactNode }) {
-  const { session, perfil } = useAuth()
-  const perfilVivo = useLiveQuery(
-    async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
-    [session],
-  )
+  const { perfil } = useAuth()
+  const perfilVivo = usePerfilVivo()
 
   const usuario = perfilVivo ?? perfil
   const destinos = usuario?.puedeVerBoveda ? [...DESTINOS_BASE, DESTINO_BOVEDA] : DESTINOS_BASE

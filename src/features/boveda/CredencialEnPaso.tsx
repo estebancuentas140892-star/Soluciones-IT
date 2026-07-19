@@ -6,7 +6,7 @@ import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { CaretDown, CaretUp, Key, LockSimple } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
-import { useAuth } from '../autenticacion/authContext'
+import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { CampoSecreto } from './CampoSecreto'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
 import { desbloquear, descifrarCredencial, type DatosCredencial } from './sesionBoveda'
@@ -29,16 +29,12 @@ interface Props {
 // maestra y autobloqueo). El secreto nunca vive en el articulo y quien
 // no este autorizado solo ve el titulo de referencia.
 export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
-  const { session } = useAuth()
   const desbloqueada = useBovedaDesbloqueada()
   // Contraido por defecto: los secretos no entran a la pantalla hasta
   // que el tecnico los pide, aunque la boveda ya este desbloqueada.
   const [abierto, setAbierto] = useState(false)
 
-  const perfil = useLiveQuery(
-    async () => (session?.user ? ((await db.perfiles.get(session.user.id)) ?? null) : null),
-    [session],
-  )
+  const perfil = usePerfilVivo()
   const credencial = useLiveQuery(
     async () => (await db.credenciales.get(credencialId)) ?? null,
     [credencialId],
