@@ -259,13 +259,11 @@ function App() {
               {/* Dispositivos re-autorizada a Nocturne (handoff "Rediseño
                   de aplicación empresarial", Dispositivos.dc.html, tarea
                   85): trae su propio ShellNocturne, por eso sale del
-                  Layout oscuro. Red y Topologia siguen en el tema claro
-                  heredado (tareas 55/56) con su propio AppShell, tambien
-                  fuera del Layout, hasta que se re-autoricen a Nocturne
-                  (decision D-006). La ficha y el importador de
-                  dispositivos siguen en el Layout oscuro hasta que se
-                  rediseñen (Ficha de Dispositivo es la siguiente, regla
-                  15). */}
+                  Layout oscuro. Red ya está en Nocturne (tarea 91) con
+                  su propio ShellNocturne, también fuera del Layout;
+                  Topologia sigue en el tema claro heredado (tarea 56)
+                  con su propio AppShell hasta que se re-autorice a
+                  Nocturne (decision D-006). */}
               <Route
                 path="dispositivos"
                 element={
