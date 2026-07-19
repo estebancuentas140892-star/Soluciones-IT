@@ -243,17 +243,16 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* Red, Topologia y Dispositivos son las primeras
-                  pantallas del rediseño en tema claro (tareas 55, 56
-                  y 57): traen su propio AppShell (sidebar en
-                  escritorio, pestañas inferiores en movil), por eso
-                  van fuera del Layout oscuro. Cada pantalla
-                  rediseñada ira saliendo del Layout al implementarse
-                  su diseño (el tema claro sera reemplazado por
-                  Nocturne al re-autorizarse cada una, decision D-006
-                  del proyecto de diseño). La ficha, el formulario y el
-                  importador de dispositivos siguen en el Layout oscuro
-                  hasta que se rediseñen. */}
+              {/* Dispositivos re-autorizada a Nocturne (handoff "Rediseño
+                  de aplicación empresarial", Dispositivos.dc.html, tarea
+                  85): trae su propio ShellNocturne, por eso sale del
+                  Layout oscuro. Red y Topologia siguen en el tema claro
+                  heredado (tareas 55/56) con su propio AppShell, tambien
+                  fuera del Layout, hasta que se re-autoricen a Nocturne
+                  (decision D-006). La ficha, el formulario y el importador
+                  de dispositivos siguen en el Layout oscuro hasta que se
+                  rediseñen (Ficha de Dispositivo es la siguiente, regla
+                  15). */}
               <Route
                 path="dispositivos"
                 element={
