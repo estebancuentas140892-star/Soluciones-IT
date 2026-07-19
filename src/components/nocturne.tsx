@@ -41,3 +41,9 @@ export const BTN_GHOST = `${BTN_BASE} border-transparent px-2.5 py-[7px] text-no
 // Variante cuadrada de solo icono (.btn-icon), completa en si misma
 // para no depender del orden de las clases de padding.
 export const BTN_ICONO_SECUNDARIO = `${BTN_BASE} h-[34px] w-[34px] shrink-0 border-noct-divider p-0 text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
+// La misma variante para la accion destructiva (eliminar): sin borde y
+// en rojo. Existe como constante propia porque añadir `text-noct-error`
+// sobre BTN_ICONO_SECUNDARIO NO funciona: las dos clases de color tienen
+// la misma especificidad y gana la que Tailwind emite despues, no la que
+// se escribe al final del atributo.
+export const BTN_ICONO_PELIGRO = `${BTN_BASE} h-[34px] w-[34px] shrink-0 border-transparent p-0 text-noct-error hover:bg-noct-error/10 active:bg-noct-error/20`
