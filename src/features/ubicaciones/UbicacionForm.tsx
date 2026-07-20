@@ -142,7 +142,7 @@ export function UbicacionForm() {
             <button
               type="submit"
               disabled={guardando || nombre.trim() === ''}
-              className={`mt-1 ${BTN_PRIMARIO} py-3 disabled:opacity-50`}
+              className={`mt-1 ${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}
             >
               <FloppyDisk size={15} aria-hidden />
               {guardando ? 'Guardando...' : 'Guardar ubicación'}

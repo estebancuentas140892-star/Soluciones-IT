@@ -181,11 +181,11 @@ export function UbicacionesPage() {
                   type="button"
                   onClick={() => void crear()}
                   disabled={guardando || nuevoNombre.trim() === ''}
-                  className={`${BTN_PRIMARIO} px-4 py-2.5 disabled:opacity-50`}
+                  className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
                 >
                   {guardando ? 'Creando...' : 'Crear ubicación'}
                 </button>
-                <button type="button" onClick={alternarCrear} className={`${BTN_GHOST} px-4 py-2.5`}>
+                <button type="button" onClick={alternarCrear} className={`${BTN_GHOST} min-h-11 px-4`}>
                   Cancelar
                 </button>
               </div>

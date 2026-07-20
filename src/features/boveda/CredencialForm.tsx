@@ -346,7 +346,7 @@ export function CredencialForm() {
                       type="button"
                       onClick={() => setVerContrasena((v) => !v)}
                       aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                      className={`${BTN_ICONO_SECUNDARIO} h-11 w-11`}
+                      className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
                     >
                       {verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
                     </button>

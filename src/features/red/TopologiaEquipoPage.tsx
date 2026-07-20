@@ -632,11 +632,11 @@ function FormularioConexion({ equipo, onCerrar }: { equipo: Dispositivo; onCerra
           type="button"
           onClick={() => void guardar()}
           disabled={!otro || guardando}
-          className={`${BTN_PRIMARIO} px-4 py-2.5 disabled:opacity-55`}
+          className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-55`}
         >
           {guardando ? 'Guardando...' : 'Guardar conexión'}
         </button>
-        <button type="button" onClick={onCerrar} className={`${BTN_GHOST} px-3 py-2.5`}>
+        <button type="button" onClick={onCerrar} className={`${BTN_GHOST} min-h-11 px-3`}>
           Cancelar
         </button>
       </div>

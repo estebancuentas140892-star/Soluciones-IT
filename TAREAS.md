@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 112 (Fase J5 de la jornada del técnico: editor de artículo en pestañas) quedó terminada, verificada y archivada el 2026-07-20. Con ella se cerró también la tarea 74, absorbida: sus 4 funciones ocultas quedaron repuestas. Las cinco fases J1 a J5 de [PROPUESTA_JORNADA_TECNICO.md](PROPUESTA_JORNADA_TECNICO.md) están implementadas; del documento quedan pendientes solo las decisiones D3 a D5 del usuario.
+Sin tarea en desarrollo. La tarea 107 (overrides de alto de botones, hallazgo de la tarea 106) quedó terminada, verificada y archivada el 2026-07-20: los 13 botones afectados quedaron altos de verdad (44px), la opción que el usuario eligió.
+
+Antes, la tarea 112 (Fase J5 de la jornada del técnico: editor de artículo en pestañas) quedó terminada, verificada y archivada el 2026-07-20. Con ella se cerró también la tarea 74, absorbida: sus 4 funciones ocultas quedaron repuestas. Las cinco fases J1 a J5 de [PROPUESTA_JORNADA_TECNICO.md](PROPUESTA_JORNADA_TECNICO.md) están implementadas; del documento quedan pendientes solo las decisiones D3 a D5 del usuario.
 
 Antes, la tarea 111 (Fase J4 de la jornada del técnico: Etiquetas reutilizables) quedó terminada, verificada y archivada el 2026-07-20.
 
@@ -29,12 +31,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 107. Botones más bajos de lo previsto: los overrides de alto tampoco se aplican
-- Descripción: hallazgo de la tarea 106. El mismo empate de especificidad que tapaba los colores tapa también el alto de los botones. `BTN_PRIMARIO`, `BTN_SECUNDARIO` y `BTN_GHOST` traen `py-[7px]`, y `BTN_ICONO_SECUNDARIO` trae `h-[34px] w-[34px]`. Medido en la hoja compilada (`npx vite build`): `py-[7px]` se emite en la posición 61149 y `py-2.5` en 60559 y `py-3` en 60609, así que `py-[7px]` gana a las dos; `h-[34px]` (31531) gana a `h-11` (31060) y `w-[34px]` (33282) a `w-11` (32795). Resultado: unos 13 botones que su pantalla escribió con alto de dedo (44 px aprox.) se dibujan con el alto compacto de la barra de herramientas (30 px aprox.), lo que importa en una app que el equipo usa en el teléfono. Lo que SÍ funciona y no hay que tocar: `px-3`/`px-4` (ganan a `px-2.5`), `py-[11px]` (gana a `py-[7px]`) y `min-h-*` (propiedad distinta, no compite).
-- Antes de tocar nada hay que decidir con el usuario si esos botones deben ser altos de verdad (la intención de quien los escribió) o si se dejan compactos y se borran los overrides muertos. Si se decide que sean altos, el arreglo es el mismo que en la tarea 106: constantes propias en `src/components/nocturne.tsx` (por ejemplo una variante "cómoda" del primario, secundario y fantasma, y un icono de 44 px), nunca clases sueltas ni `!py-...`.
-- Prioridad: Media
-- Ubicación (los `py-2.5`/`py-3` que hoy no se aplican): `src/features/ubicaciones/MigracionUbicaciones.tsx:149`, `src/features/ubicaciones/UbicacionForm.tsx:145`, `src/features/ubicaciones/UbicacionesPage.tsx:184` y `:188`, `src/features/dispositivos/RegistrarIntervencion.tsx:92` y `:96`, `src/features/red/TopologiaEquipoPage.tsx:635` y `:639`, `src/features/red/ConexionesFicha.tsx:369`, `src/features/soluciones/AsistenteVista.tsx:301`, `:310` y `:323`. El `h-11 w-11` que no se aplica: `src/features/boveda/CredencialForm.tsx:349`. Constantes de origen en `src/components/nocturne.tsx:33-59`.
 
 ### 79. Modo Asistente Fase 2: captura de evidencia por paso
 - Descripción: en el modo ejecución (`AsistenteVista`), permitir adjuntar una foto de "prueba de trabajo" al completar un paso (el técnico documenta lo que hizo en el sitio). Reutiliza la tubería de subida/compresión y cola offline existente (`comprimirImagen`, `subirOEncolarArchivo`, `Adjuntos`). Decisión pendiente del usuario: dónde vive la evidencia. Opciones sin/con esquema: (a) como adjunto del paso en el propio artículo (no ideal: la evidencia es por ejecución, no del contenido); (b) como intervención en el `historial` del dispositivo asociado (sin esquema, reutiliza `registrarIntervencion` + `adjuntos` entidad 'historial'); (c) un registro de ejecución compartido con evidencia (requeriría esquema, agrupable con otros cambios). Recomendado: empezar por (b) si el procedimiento tiene un dispositivo afectado; si no, diferir.

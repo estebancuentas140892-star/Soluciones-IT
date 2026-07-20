@@ -146,7 +146,7 @@ export function MigracionUbicaciones() {
                 type="button"
                 onClick={() => void aplicar()}
                 disabled={aplicando || resultado.ubicaciones.length === 0}
-                className={`${BTN_PRIMARIO} self-start px-4 py-3 disabled:opacity-50`}
+                className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
               >
                 {aplicando ? 'Aplicando...' : 'Crear ubicaciones y vincular equipos'}
               </button>

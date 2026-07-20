@@ -89,11 +89,11 @@ export function RegistrarIntervencion({ dispositivoId }: Props) {
         <button
           type="submit"
           disabled={guardando || !descripcion.trim()}
-          className={`${BTN_PRIMARIO} px-4 py-2.5 disabled:opacity-50`}
+          className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
         >
           {guardando ? 'Guardando...' : 'Guardar intervención'}
         </button>
-        <button type="button" onClick={cerrar} className={`${BTN_GHOST} px-4 py-2.5`}>
+        <button type="button" onClick={cerrar} className={`${BTN_GHOST} min-h-11 px-4`}>
           Cancelar
         </button>
       </div>

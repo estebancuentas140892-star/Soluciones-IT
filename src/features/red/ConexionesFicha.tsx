@@ -366,7 +366,7 @@ function FormularioConexion({
         type="button"
         onClick={() => void guardar()}
         disabled={!otro || guardando}
-        className={`${BTN_PRIMARIO} self-start px-4 py-2.5 disabled:opacity-50`}
+        className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
       >
         {guardando ? 'Guardando...' : 'Guardar conexión'}
       </button>

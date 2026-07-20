@@ -298,7 +298,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
             type="button"
             disabled={indiceActual === 0}
             onClick={() => setIndiceActual(Math.max(0, indiceActual - 1))}
-            className={`${BTN_SECUNDARIO} px-4 py-3 disabled:opacity-30`}
+            className={`${BTN_SECUNDARIO} min-h-11 px-4 disabled:opacity-30`}
           >
             <CaretLeft size={15} aria-hidden />
             Atrás
@@ -307,7 +307,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
             type="button"
             disabled={!pasoActualHecho && !trabajoPrevio}
             onClick={avanzar}
-            className={`flex-1 ${BTN_PRIMARIO} py-3 text-sm disabled:opacity-30`}
+            className={`flex-1 ${BTN_PRIMARIO} min-h-11 text-sm disabled:opacity-30`}
           >
             {pasoActualHecho ? 'Siguiente paso' : 'Siguiente'}
             <CaretRight size={15} aria-hidden />
@@ -320,7 +320,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           type="button"
           disabled={!trabajoPrevio}
           onClick={() => void intentarCompletarPaso(indiceActual, paso)}
-          className={`mt-2 ${BTN_PRIMARIO} py-3 text-sm disabled:opacity-30`}
+          className={`mt-2 ${BTN_PRIMARIO} min-h-11 text-sm disabled:opacity-30`}
         >
           Siguiente
           <CaretRight size={15} aria-hidden />
