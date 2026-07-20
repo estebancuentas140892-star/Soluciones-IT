@@ -21,21 +21,27 @@ import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
-  CaretDown,
-  CaretUp,
   Check,
   Circle,
   Eye,
   FloppyDisk,
   Info,
   LinkSimple,
+  Monitor,
   Plus,
   Sparkle,
+  Warning,
   X,
 } from '../../components/iconos'
 import { BotonVolver } from '../../components/BotonVolver'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
+import {
+  calcularCompletitud,
+  PESTANAS,
+  senalesDeArticulo,
+  type PestanaEditor,
+} from './completitudArticulo'
 import { etiquetasFrecuentes, normalizarEtiquetas, type GrafiaEtiqueta } from './etiquetas'
 import { PasosEditor } from './PasosEditor'
 import { hayPlantilla, pasosDePlantilla, plantillaDe } from './plantillas'
@@ -80,14 +86,22 @@ const CLASE_CAMPO =
   'w-full rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent'
 const CLASE_ETIQUETA = 'text-[12.5px] font-medium text-noct-neutral-400'
 
-// Editor de articulos rediseñado al sistema Nocturne (handoff "Editor de
-// Artículo"): cabecera pegajosa con el tipo dinamico, rejilla de tipos,
-// pasos, y las secciones "Detalles" y "Publicación" plegadas, mas una
-// barra inferior fija con la completitud y las acciones. Conserva la
-// carga (edicion, duplicado y creacion contextual) y el guardado del
-// editor previo; los campos que este diseño no muestra (equipos donde
-// aplica, adjuntos de paso, relacionados, orden en la ruta de inicio) se
-// conservan tal cual estaban al guardar, no se pierden.
+// Editor de articulos en el sistema Nocturne (handoff "Editor de
+// Artículo"): cabecera pegajosa con el tipo dinamico y, desde la fase
+// J5, cuatro pestañas fijas (General, Pasos, Detalles y Publicación) en
+// lugar de un unico scroll largo con secciones plegadas. Debajo, una
+// barra fija con la completitud y las acciones.
+//
+// El estado del formulario vive entero en este componente, asi que
+// cambiar de pestaña no pierde nada y el guardado sigue siendo uno
+// solo. Por lo mismo, la completitud y la validacion miran SIEMPRE todo
+// el formulario, no la pestaña visible: cada sugerencia sabe en que
+// pestaña se resuelve (completitudArticulo.ts) y al tocarla lleva ahi.
+//
+// La fase J5 repuso ademas las cuatro funciones que el rediseño habia
+// dejado sin interfaz (tarea 74): equipos donde aplica, orden en la
+// ruta de inicio y cambio mayor viven aqui; los adjuntos del paso, en
+// PasosEditor. Ya no queda ningun campo que se guarde a ciegas.
 export function ArticuloForm() {
   const { categoriaId = '', articuloId } = useParams()
   const navigate = useNavigate()
@@ -131,14 +145,16 @@ export function ArticuloForm() {
   const [esRutaInicio, setEsRutaInicio] = useState(false)
   const [estado, setEstado] = useState<EstadoArticulo>('borrador')
   const [motivo, setMotivo] = useState('')
-  // Campos que este diseño no ofrece pero que se conservan al guardar:
-  // el articulo original puede tenerlos y no deben perderse. Se cargan de
-  // la base y se reescriben tal cual (ver manejarEnvio).
   const [dispositivosAfectados, setDispositivosAfectados] = useState(
     dispositivoContextualId ? [{ id: dispositivoContextualId, nombre: dispositivoContextualNombre }] : [],
   )
   const [ordenRutaInicio, setOrdenRutaInicio] = useState(0)
   const [relacionados, setRelacionados] = useState<{ id: string; titulo: string }[]>([])
+  // Salto de version mayor (1.4 -> 2.0) en vez del menor por defecto:
+  // solo tiene sentido al editar un articulo YA publicado, que es el
+  // unico caso en que la version se mueve al guardar. No se carga de la
+  // base porque es una decision de ESTE guardado, no un dato del articulo.
+  const [cambioMayor, setCambioMayor] = useState(false)
 
   // Candidatos para "Artículos relacionados": todos los articulos vivos
   // salvo este mismo (mismo criterio que el editor anterior, sin
@@ -155,14 +171,38 @@ export function ArticuloForm() {
       .sort((a, b) => a.titulo.localeCompare(b.titulo))
   }, [candidatosRelacionados, relacionados])
 
+  // Equipos donde aplica el articulo (tarea 74, repuesto en J5): es el
+  // lado del vinculo que alimenta "Procedimientos de este equipo" y
+  // "Problemas frecuentes" en la ficha del dispositivo. Hasta ahora solo
+  // se podia llenar entrando al editor DESDE un dispositivo.
+  const candidatosDispositivos = useLiveQuery(
+    () => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(),
+    [],
+    [],
+  )
+  const dispositivosDisponibles = useMemo(() => {
+    const yaPuestos = new Set(dispositivosAfectados.map((d) => d.id))
+    return [...candidatosDispositivos]
+      .filter((d) => !yaPuestos.has(d.id))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }, [candidatosDispositivos, dispositivosAfectados])
+
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe)
   const [guardando, setGuardando] = useState(false)
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false)
   const [similaresDescartados, setSimilaresDescartados] = useState(false)
   const [plantillasDescartadas, setPlantillasDescartadas] = useState<ReadonlySet<TipoArticulo>>(new Set())
-  const [detallesAbierto, setDetallesAbierto] = useState(false)
-  const [publicacionAbierta, setPublicacionAbierta] = useState(false)
   const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState(false)
+  const [pestana, setPestana] = useState<PestanaEditor>('general')
+  // Error de validacion del envio (hoy solo el titulo obligatorio).
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
+
+  // Cambiar de pestaña lleva al principio del formulario: si no, se
+  // entra a la pestaña nueva a la altura del scroll de la anterior.
+  function irA(destino: PestanaEditor) {
+    setPestana(destino)
+    window.scrollTo({ top: 0 })
+  }
 
   // Anti duplicados: al escribir el titulo de un articulo nuevo se
   // buscan articulos parecidos y se ofrece abrirlos. Rebote de 300 ms.
@@ -260,28 +300,26 @@ export function ArticuloForm() {
   )
 
   // Completitud como en el handoff "Editor de Artículo": diez señales
-  // tomadas directamente de lo escrito (titulo, pasos, descripcion,
-  // etiquetas, requisitos, tiempo, dificultad, verificacion y objetivo),
-  // de modo que la barra reacciona aunque el articulo aun no tenga pasos.
-  // Las señales con sugerencia vacia suman al porcentaje pero no generan
-  // una linea en la lista de sugerencias.
-  const completitud = useMemo(() => {
-    const puntos: [boolean, string][] = [
-      [Boolean(titulo.trim()), ''],
-      [pasos.length > 0, 'Agregar al menos un paso'],
-      [pasos.length > 1, ''],
-      [Boolean(descripcion.trim()), 'Escribir cuándo usar este procedimiento'],
-      [etiquetas.length > 0, 'Agregar etiquetas para el buscador'],
-      [Boolean(requisitos.trim()), 'Anotar los requisitos previos'],
-      [Boolean(tiempoEstimadoMin.trim()), 'Indicar el tiempo estimado'],
-      [Boolean(dificultad), 'Indicar la dificultad'],
-      [Boolean(verificacionFinal.trim()), 'Escribir la verificación final'],
-      [Boolean(objetivoGeneral.trim()), 'Indicar el objetivo general'],
-    ]
-    const completos = puntos.filter(([ok]) => ok).length
-    const sugerencias = puntos.filter(([ok, texto]) => !ok && texto).map(([, texto]) => texto)
-    return { porcentaje: Math.round((completos / puntos.length) * 100), sugerencias }
-  }, [titulo, pasos, descripcion, etiquetas, requisitos, tiempoEstimadoMin, dificultad, verificacionFinal, objetivoGeneral])
+  // tomadas de lo escrito, con la pestaña donde se resuelve cada una
+  // (ver completitudArticulo.ts). Mira todo el formulario, no la
+  // pestaña visible.
+  const completitud = useMemo(
+    () =>
+      calcularCompletitud(
+        senalesDeArticulo({
+          titulo,
+          cantidadPasos: pasos.length,
+          descripcion,
+          cantidadEtiquetas: etiquetas.length,
+          requisitos,
+          tiempoEstimadoMin,
+          dificultad,
+          verificacionFinal,
+          objetivoGeneral,
+        }),
+      ),
+    [titulo, pasos, descripcion, etiquetas, requisitos, tiempoEstimadoMin, dificultad, verificacionFinal, objetivoGeneral],
+  )
 
   const plantilla = plantillaDe(tipo)
   const ofrecerPlantilla =
@@ -307,16 +345,6 @@ export function ArticuloForm() {
     !esEdicion && !copiarDe && !similaresDescartados && similares.length > 0 && titulo.trim().length > 0
 
   const esProblema = tipo === 'problema_frecuente'
-  const camposDetalle = [
-    descripcion.trim(),
-    objetivoGeneral.trim(),
-    requisitos.trim(),
-    etiquetas.length ? 'x' : '',
-    tiempoEstimadoMin.trim(),
-    dificultad,
-    verificacionFinal.trim(),
-  ].filter(Boolean).length
-
   const estadoEtiqueta = ESTADOS.find((e) => e.valor === estado)?.etiqueta ?? 'Borrador'
   const resumenPasos =
     pasos.length === 0 ? 'ninguno todavía' : pasos.length === 1 ? '1 paso' : `${pasos.length} pasos`
@@ -329,11 +357,20 @@ export function ArticuloForm() {
   if (esEdicion && articulo === null) return <Navigate to="/soluciones" replace />
 
   async function manejarEnvio() {
+    // La validacion mira todo el formulario y lleva a la pestaña del
+    // problema: si no, en un editor con pestañas el error queda fuera
+    // de la vista y el guardado parece no responder.
+    if (titulo.trim() === '') {
+      setErrorEnvio('Falta el título del artículo.')
+      irA('general')
+      return
+    }
+    setErrorEnvio(null)
     setGuardando(true)
 
     const version =
       esEdicion && articulo && articulo.estado === 'publicado'
-        ? siguienteVersion(articulo.version ?? '1.0', false)
+        ? siguienteVersion(articulo.version ?? '1.0', cambioMayor)
         : (articulo?.version ?? '1.0')
 
     await guardarRegistro(
@@ -354,7 +391,6 @@ export function ArticuloForm() {
           .split('\n')
           .map((c) => c.trim())
           .filter(Boolean),
-        // Campos que el editor conserva pero no muestra (ver arriba).
         dispositivosAfectados,
         esRutaInicio,
         ordenRutaInicio: esRutaInicio ? Math.max(0, Math.trunc(ordenRutaInicio || 0)) : 0,
@@ -388,7 +424,7 @@ export function ArticuloForm() {
             <BotonVolver variante="nocturne">Cancelar</BotonVolver>
             <TagNeutral className="shrink-0">{estadoEtiqueta}</TagNeutral>
           </header>
-          <div className="px-4 pb-3 pt-0.5">
+          <div className="px-4 pb-2.5 pt-0.5">
             <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
               {esEdicion ? tituloEditar(tipo) : tituloNuevo(tipo)}
             </h1>
@@ -396,362 +432,432 @@ export function ArticuloForm() {
               Se guarda en la categoría {categoria?.nombre ?? '...'}
             </p>
           </div>
+
+          {/* Pestañas del editor (J5). Van dentro del bloque pegajoso
+              para que sigan a mano al desplazarse dentro de una pestaña
+              larga, como la de Pasos. */}
+          <div role="tablist" aria-label="Secciones del editor" className="flex px-2">
+            {PESTANAS.map((p) => {
+              const activa = p.valor === pestana
+              const pendiente = completitud.pestanasPendientes.has(p.valor)
+              return (
+                <button
+                  key={p.valor}
+                  type="button"
+                  role="tab"
+                  aria-selected={activa}
+                  onClick={() => irA(p.valor)}
+                  className={`relative flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 px-1 text-[13px] font-medium transition-colors ${
+                    activa
+                      ? 'border-noct-accent text-noct-accent-300'
+                      : 'border-transparent text-noct-neutral-400 hover:text-noct-text'
+                  }`}
+                >
+                  {p.etiqueta}
+                  {/* Punto de "aquí queda algo por completar". Es una
+                      pista, no un error: por eso es neutro y no rojo. */}
+                  {pendiente && (
+                    <span
+                      aria-label="Tiene sugerencias pendientes"
+                      className={`h-[5px] w-[5px] shrink-0 rounded-full ${
+                        activa ? 'bg-noct-accent' : 'bg-noct-neutral-600'
+                      }`}
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <main className="flex flex-1 flex-col gap-6 px-4 pb-[190px] pt-[18px]">
-          {/* Tipo de documento */}
-          <section>
-            <TituloSeccion className="mb-2">Tipo de documento</TituloSeccion>
-            <div className="grid grid-cols-2 gap-2">
-              {TIPOS_GRID.map((t) => {
-                const Icono = iconoDeTipo(t.valor)
-                const activo = t.valor === tipo
-                return (
-                  <button
-                    key={t.valor}
-                    type="button"
-                    onClick={() => setTipo(t.valor)}
-                    aria-pressed={activo}
-                    className={`flex min-h-11 items-center gap-[9px] rounded-md border px-3 py-2 text-left text-[13px] font-medium transition-colors ${
-                      activo
-                        ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
-                        : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/5'
-                    }`}
-                  >
-                    <Icono size={17} className={`shrink-0 ${activo ? 'text-noct-accent-300' : colorIconoDeTipo(t.valor)}`} />
-                    {t.etiqueta}
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* Titulo + anti duplicados */}
-          <section className="flex flex-col gap-2.5">
-            <label className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>
-                Título <span className="text-noct-accent-300">*</span>
-              </span>
-              <input
-                type="text"
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                placeholder="Qué se hace y sobre qué equipo"
-                className={`min-h-11 ${CLASE_CAMPO}`}
-              />
-            </label>
-
-            {mostrarSimilares && (
-              <div className="flex flex-col gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/10 px-3 py-2.5">
-                <div className="flex items-start gap-2.5">
-                  <Info size={16} className="mt-px shrink-0 text-noct-accent" />
-                  <p className="text-[13px] leading-[1.5]">
-                    Ya existe un artículo parecido. Ábrelo en lugar de documentarlo dos veces.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1 pl-[26px]">
-                  {similares.map((similar) => (
-                    <div key={similar.id} className="flex items-center justify-between gap-2">
-                      <Link
-                        to={similar.ruta}
-                        className="min-w-0 truncate text-[13.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400"
-                      >
-                        {similar.titulo}
-                      </Link>
+          {/* PESTAÑA GENERAL: de qué trata el artículo y cómo se
+              encuentra (tipo, título, portada, etiquetas, equipos). */}
+          {pestana === 'general' && (
+            <>
+              <section>
+                <TituloSeccion className="mb-2">Tipo de documento</TituloSeccion>
+                <div className="grid grid-cols-2 gap-2">
+                  {TIPOS_GRID.map((t) => {
+                    const Icono = iconoDeTipo(t.valor)
+                    const activo = t.valor === tipo
+                    return (
                       <button
+                        key={t.valor}
                         type="button"
-                        onClick={() => setSimilaresDescartados(true)}
-                        className="shrink-0 p-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
+                        onClick={() => setTipo(t.valor)}
+                        aria-pressed={activo}
+                        className={`flex min-h-11 items-center gap-[9px] rounded-md border px-3 py-2 text-left text-[13px] font-medium transition-colors ${
+                          activo
+                            ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
+                            : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/5'
+                        }`}
                       >
-                        Descartar
+                        <Icono
+                          size={17}
+                          className={`shrink-0 ${activo ? 'text-noct-accent-300' : colorIconoDeTipo(t.valor)}`}
+                        />
+                        {t.etiqueta}
                       </button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
-              </div>
-            )}
-          </section>
+              </section>
 
-          {/* Oferta de plantilla */}
-          {ofrecerPlantilla && (
-            <div className="flex flex-col gap-2.5 rounded-md border border-noct-accent/30 bg-noct-accent/10 p-3">
-              <div className="flex items-start gap-2.5">
-                <Sparkle size={16} className="mt-px shrink-0 text-noct-accent" />
-                <p className="text-[13px] leading-[1.5]">
-                  Estructura recomendada para {TIPOS_GRID.find((t) => t.valor === tipo)?.etiqueta.toLowerCase()}:
-                  pasos con sus tareas, requisitos y verificación final. Solo hay que editar los textos.
-                </p>
-              </div>
-              <div className="flex gap-2 pl-[26px]">
-                <button
-                  type="button"
-                  onClick={aplicarPlantilla}
-                  className="inline-flex items-center rounded-lg border border-noct-accent px-2.5 py-[7px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10"
-                >
-                  Usar plantilla
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlantillasDescartadas((actuales) => new Set([...actuales, tipo]))}
-                  className="inline-flex items-center rounded-lg border border-transparent px-1 py-[7px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10"
-                >
-                  Empezar en blanco
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Pasos */}
-          <section>
-            <div className="mb-2.5 flex items-baseline justify-between">
-              <TituloSeccion>Pasos</TituloSeccion>
-              <span className="text-[11px] text-noct-neutral-600">{resumenPasos}</span>
-            </div>
-            <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
-          </section>
-
-          {/* Detalles (plegable) */}
-          <section className="border-t border-noct-divider">
-            <button
-              type="button"
-              onClick={() => setDetallesAbierto((v) => !v)}
-              aria-expanded={detallesAbierto}
-              className="flex min-h-[52px] w-full items-center gap-2.5 px-0.5 py-1.5 text-left"
-            >
-              <TituloSeccion>Detalles</TituloSeccion>
-              <span className="text-[11px] text-noct-neutral-600">
-                {camposDetalle} de 7 campos con contenido
-              </span>
-              <Caret abierto={detallesAbierto} />
-            </button>
-            {detallesAbierto && (
-              <div className="flex flex-col gap-4 px-0 pb-2 pt-1">
-                <Campo etiqueta="¿Cuándo usar este procedimiento?">
-                  <textarea
-                    rows={2}
-                    value={descripcion}
-                    onChange={(e) => setDescripcion(e.target.value)}
-                    placeholder="Usar cuando llega una impresora nueva a bodega o pierde su configuración"
-                    className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                  />
-                </Campo>
-
-                <Campo etiqueta="Objetivo general (1 línea)">
+              {/* Titulo + anti duplicados */}
+              <section className="flex flex-col gap-2.5">
+                <label className="flex flex-col gap-1.5">
+                  <span className={CLASE_ETIQUETA}>
+                    Título <span className="text-noct-accent-300">*</span>
+                  </span>
                   <input
                     type="text"
-                    value={objetivoGeneral}
-                    onChange={(e) => setObjetivoGeneral(e.target.value)}
-                    placeholder="Qué se logra al completar todo el procedimiento"
+                    value={titulo}
+                    onChange={(e) => {
+                      setTitulo(e.target.value)
+                      if (errorEnvio) setErrorEnvio(null)
+                    }}
+                    placeholder="Qué se hace y sobre qué equipo"
+                    aria-invalid={errorEnvio !== null}
+                    className={`min-h-11 ${CLASE_CAMPO} ${errorEnvio ? 'border-noct-error' : ''}`}
+                  />
+                </label>
+
+                {errorEnvio && (
+                  <p className="flex items-center gap-2 text-[12.5px] text-noct-error">
+                    <Warning size={14} className="shrink-0" />
+                    {errorEnvio}
+                  </p>
+                )}
+
+                {mostrarSimilares && (
+                  <div className="flex flex-col gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/10 px-3 py-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <Info size={16} className="mt-px shrink-0 text-noct-accent" />
+                      <p className="text-[13px] leading-[1.5]">
+                        Ya existe un artículo parecido. Ábrelo en lugar de documentarlo dos veces.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1 pl-[26px]">
+                      {similares.map((similar) => (
+                        <div key={similar.id} className="flex items-center justify-between gap-2">
+                          <Link
+                            to={similar.ruta}
+                            className="min-w-0 truncate text-[13.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400"
+                          >
+                            {similar.titulo}
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setSimilaresDescartados(true)}
+                            className="shrink-0 p-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
+                          >
+                            Descartar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Oferta de plantilla */}
+              {ofrecerPlantilla && (
+                <div className="flex flex-col gap-2.5 rounded-md border border-noct-accent/30 bg-noct-accent/10 p-3">
+                  <div className="flex items-start gap-2.5">
+                    <Sparkle size={16} className="mt-px shrink-0 text-noct-accent" />
+                    <p className="text-[13px] leading-[1.5]">
+                      Estructura recomendada para{' '}
+                      {TIPOS_GRID.find((t) => t.valor === tipo)?.etiqueta.toLowerCase()}: pasos con sus
+                      tareas, requisitos y verificación final. Solo hay que editar los textos.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 pl-[26px]">
+                    <button
+                      type="button"
+                      onClick={aplicarPlantilla}
+                      className="inline-flex items-center rounded-lg border border-noct-accent px-2.5 py-[7px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10"
+                    >
+                      Usar plantilla
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlantillasDescartadas((actuales) => new Set([...actuales, tipo]))}
+                      className="inline-flex items-center rounded-lg border border-transparent px-1 py-[7px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10"
+                    >
+                      Empezar en blanco
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <Campo etiqueta="¿Cuándo usar este procedimiento?">
+                <textarea
+                  rows={2}
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                  placeholder="Usar cuando llega una impresora nueva a bodega o pierde su configuración"
+                  className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                />
+              </Campo>
+
+              <Campo etiqueta="Objetivo general (1 línea)">
+                <input
+                  type="text"
+                  value={objetivoGeneral}
+                  onChange={(e) => setObjetivoGeneral(e.target.value)}
+                  placeholder="Qué se logra al completar todo el procedimiento"
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </Campo>
+
+              <EtiquetasEditor
+                etiquetas={etiquetas}
+                onChange={setEtiquetas}
+                sugerencias={vocabularioEtiquetas}
+              />
+
+              <PortadaEditor articuloId={id} portada={portada} onChange={setPortada} />
+
+              <EquiposDondeAplica
+                elegidos={dispositivosAfectados}
+                disponibles={dispositivosDisponibles}
+                onChange={setDispositivosAfectados}
+              />
+            </>
+          )}
+
+          {/* PESTAÑA PASOS: lo que el técnico ejecuta, de principio a
+              fin (requisitos previos, pasos y verificación final). */}
+          {pestana === 'pasos' && (
+            <>
+              <Campo etiqueta="Antes de empezar (un requisito por línea)">
+                <textarea
+                  rows={3}
+                  value={requisitos}
+                  onChange={(e) => setRequisitos(e.target.value)}
+                  placeholder={'Acceso a la red\nPermisos de administrador'}
+                  className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                />
+              </Campo>
+
+              <section>
+                <div className="mb-2.5 flex items-baseline justify-between">
+                  <TituloSeccion>Pasos</TituloSeccion>
+                  <span className="text-[11px] text-noct-neutral-600">{resumenPasos}</span>
+                </div>
+                <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
+              </section>
+
+              <Campo etiqueta="Verificación final (una comprobación por línea)">
+                <textarea
+                  rows={3}
+                  value={verificacionFinal}
+                  onChange={(e) => setVerificacionFinal(e.target.value)}
+                  placeholder={'La impresora aparece instalada\nLa impresión de prueba fue exitosa'}
+                  className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                />
+              </Campo>
+            </>
+          )}
+
+          {/* PESTAÑA DETALLES: lo que ayuda a decidir si este artículo
+              sirve (síntomas, esfuerzo, artículos vecinos y notas). */}
+          {pestana === 'detalles' && (
+            <>
+              {esProblema && (
+                <>
+                  <Campo etiqueta="Síntomas (uno por línea)">
+                    <textarea
+                      rows={3}
+                      value={sintomas}
+                      onChange={(e) => setSintomas(e.target.value)}
+                      placeholder={'No imprime nada\nLuz roja parpadeando'}
+                      className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                    />
+                  </Campo>
+                  <Campo etiqueta="Posibles causas (una por línea)">
+                    <textarea
+                      rows={3}
+                      value={causas}
+                      onChange={(e) => setCausas(e.target.value)}
+                      placeholder={'Cable de red suelto\nTóner agotado'}
+                      className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                    />
+                  </Campo>
+                </>
+              )}
+
+              <div className="flex gap-3">
+                <label className="flex flex-1 flex-col gap-1.5">
+                  <span className={CLASE_ETIQUETA}>Tiempo (min)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={tiempoEstimadoMin}
+                    onChange={(e) => setTiempoEstimadoMin(e.target.value)}
+                    className={`min-h-11 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${CLASE_CAMPO}`}
+                  />
+                </label>
+                <div className="flex flex-[2] flex-col gap-1.5">
+                  <span className={CLASE_ETIQUETA}>Dificultad</span>
+                  <Segmentado
+                    opciones={DIFICULTADES}
+                    valor={dificultad}
+                    onCambiar={(v) => setDificultad((actual) => (actual === v ? '' : v))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <span className={CLASE_ETIQUETA}>Artículos relacionados</span>
+                {relacionados.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {relacionados.map((r) => (
+                      <TagNeutral key={r.id} className="gap-1.5">
+                        {r.titulo}
+                        <button
+                          type="button"
+                          onClick={() => setRelacionados((actuales) => actuales.filter((x) => x.id !== r.id))}
+                          aria-label={`Quitar ${r.titulo} de relacionados`}
+                          className="flex p-0.5 text-noct-neutral-500 hover:text-noct-text"
+                        >
+                          <X size={11} />
+                        </button>
+                      </TagNeutral>
+                    ))}
+                  </div>
+                )}
+                {relacionadosDisponibles.length > 0 && (
+                  <div className="relative">
+                    <LinkSimple
+                      size={15}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400"
+                    />
+                    <select
+                      value=""
+                      aria-label="Agregar artículo relacionado"
+                      onChange={(e) => {
+                        const articulo = relacionadosDisponibles.find((a) => a.id === e.target.value)
+                        if (articulo) {
+                          setRelacionados((actuales) => [
+                            ...actuales,
+                            { id: articulo.id, titulo: articulo.titulo },
+                          ])
+                        }
+                      }}
+                      className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+                    >
+                      <option value="">Vincular artículo relacionado (opcional)</option>
+                      {relacionadosDisponibles.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.titulo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <Campo etiqueta="Notas adicionales (admite Markdown)">
+                <textarea
+                  rows={3}
+                  value={contenido}
+                  onChange={(e) => setContenido(e.target.value)}
+                  placeholder="Notas de cierre, enlaces del fabricante, aclaraciones"
+                  className={`resize-y font-mono text-[13px] leading-[1.55] ${CLASE_CAMPO}`}
+                />
+              </Campo>
+            </>
+          )}
+
+          {/* PESTAÑA PUBLICACIÓN: quién lo ve y cómo queda registrado
+              el cambio. */}
+          {pestana === 'publicacion' && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Estado</span>
+                <Segmentado opciones={ESTADOS} valor={estado} onCambiar={(v) => setEstado(v)} />
+                <p className="text-xs leading-[1.5] text-noct-neutral-500">
+                  Un borrador u obsoleto no aparece en el buscador ni en el diagnóstico.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Casilla
+                  marcada={esRutaInicio}
+                  onCambiar={() => setEsRutaInicio((v) => !v)}
+                  titulo="Destacar en Inicio como ruta de aprendizaje"
+                  ayuda='Para guías como "Primer día en TI".'
+                />
+                {/* Orden dentro de la ruta de inicio (tarea 74): solo
+                    tiene sentido si el artículo está destacado. */}
+                {esRutaInicio && (
+                  <label className="ml-[28px] flex flex-col gap-1.5">
+                    <span className={CLASE_ETIQUETA}>Orden en la ruta de Inicio</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={ordenRutaInicio}
+                      onChange={(e) => setOrdenRutaInicio(Number(e.target.value))}
+                      className={`min-h-11 w-24 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${CLASE_CAMPO}`}
+                    />
+                    <span className="text-xs leading-[1.5] text-noct-neutral-500">
+                      Los destacados se muestran de menor a mayor. El 0 va primero.
+                    </span>
+                  </label>
+                )}
+              </div>
+
+              {/* Cambio mayor (tarea 74): la versión solo se mueve al
+                  guardar un artículo YA publicado, así que fuera de ese
+                  caso la opción confundiría más de lo que ayuda. */}
+              {esEdicion && articulo?.estado === 'publicado' && (
+                <div className="flex flex-col gap-2">
+                  <Casilla
+                    marcada={cambioMayor}
+                    onCambiar={() => setCambioMayor((v) => !v)}
+                    titulo="Es un cambio mayor"
+                    ayuda={`La versión pasaría de ${articulo.version ?? '1.0'} a ${siguienteVersion(
+                      articulo.version ?? '1.0',
+                      true,
+                    )} en vez de ${siguienteVersion(articulo.version ?? '1.0', false)}.`}
+                  />
+                </div>
+              )}
+
+              {esEdicion && (
+                <Campo etiqueta="Motivo del cambio">
+                  <input
+                    type="text"
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Por qué se actualizó este artículo"
                     className={`min-h-11 ${CLASE_CAMPO}`}
                   />
                 </Campo>
-
-                <Campo etiqueta="Antes de empezar (un requisito por línea)">
-                  <textarea
-                    rows={3}
-                    value={requisitos}
-                    onChange={(e) => setRequisitos(e.target.value)}
-                    placeholder={'Acceso a la red\nPermisos de administrador'}
-                    className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                  />
-                </Campo>
-
-                {esProblema && (
-                  <>
-                    <Campo etiqueta="Síntomas (uno por línea)">
-                      <textarea
-                        rows={3}
-                        value={sintomas}
-                        onChange={(e) => setSintomas(e.target.value)}
-                        placeholder={'No imprime nada\nLuz roja parpadeando'}
-                        className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                      />
-                    </Campo>
-                    <Campo etiqueta="Posibles causas (una por línea)">
-                      <textarea
-                        rows={3}
-                        value={causas}
-                        onChange={(e) => setCausas(e.target.value)}
-                        placeholder={'Cable de red suelto\nTóner agotado'}
-                        className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                      />
-                    </Campo>
-                  </>
-                )}
-
-                <EtiquetasEditor
-                  etiquetas={etiquetas}
-                  onChange={setEtiquetas}
-                  sugerencias={vocabularioEtiquetas}
-                />
-
-                <PortadaEditor articuloId={id} portada={portada} onChange={setPortada} />
-
-                <div className="flex gap-3">
-                  <label className="flex flex-1 flex-col gap-1.5">
-                    <span className={CLASE_ETIQUETA}>Tiempo (min)</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={tiempoEstimadoMin}
-                      onChange={(e) => setTiempoEstimadoMin(e.target.value)}
-                      className={`min-h-11 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${CLASE_CAMPO}`}
-                    />
-                  </label>
-                  <div className="flex flex-[2] flex-col gap-1.5">
-                    <span className={CLASE_ETIQUETA}>Dificultad</span>
-                    <Segmentado
-                      opciones={DIFICULTADES}
-                      valor={dificultad}
-                      onCambiar={(v) => setDificultad((actual) => (actual === v ? '' : v))}
-                    />
-                  </div>
-                </div>
-
-                <Campo etiqueta="Verificación final (una comprobación por línea)">
-                  <textarea
-                    rows={3}
-                    value={verificacionFinal}
-                    onChange={(e) => setVerificacionFinal(e.target.value)}
-                    placeholder={'La impresora aparece instalada\nLa impresión de prueba fue exitosa'}
-                    className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                  />
-                </Campo>
-
-                <Campo etiqueta="Notas adicionales (admite Markdown)">
-                  <textarea
-                    rows={3}
-                    value={contenido}
-                    onChange={(e) => setContenido(e.target.value)}
-                    placeholder="Notas de cierre, enlaces del fabricante, aclaraciones"
-                    className={`resize-y font-mono text-[13px] leading-[1.55] ${CLASE_CAMPO}`}
-                  />
-                </Campo>
-              </div>
-            )}
-          </section>
-
-          {/* Publicación (plegable) */}
-          <section className="border-t border-noct-divider">
-            <button
-              type="button"
-              onClick={() => setPublicacionAbierta((v) => !v)}
-              aria-expanded={publicacionAbierta}
-              className="flex min-h-[52px] w-full items-center gap-2.5 px-0.5 py-1.5 text-left"
-            >
-              <TituloSeccion>Publicación</TituloSeccion>
-              <span className="text-[11px] text-noct-neutral-600">
-                {estadoEtiqueta}
-                {esRutaInicio ? ' · destacado en Inicio' : ''}
-              </span>
-              <Caret abierto={publicacionAbierta} />
-            </button>
-            {publicacionAbierta && (
-              <div className="flex flex-col gap-4 px-0 pb-2 pt-1">
-                <div className="flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>Estado</span>
-                  <Segmentado
-                    opciones={ESTADOS}
-                    valor={estado}
-                    onCambiar={(v) => setEstado(v)}
-                  />
-                  <p className="text-xs leading-[1.5] text-noct-neutral-500">
-                    Un borrador u obsoleto no aparece en el buscador ni en el diagnóstico.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setEsRutaInicio((v) => !v)}
-                  className="flex min-h-11 items-start gap-2.5 p-0.5 text-left"
-                >
-                  {esRutaInicio ? (
-                    <span className="mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded bg-noct-accent">
-                      <Check size={13} className="text-noct-bg" />
-                    </span>
-                  ) : (
-                    <span className="mt-px h-[18px] w-[18px] shrink-0 rounded border-[1.5px] border-noct-neutral-700" />
-                  )}
-                  <span className="text-sm leading-[1.4]">
-                    Destacar en Inicio como ruta de aprendizaje
-                    <span className="mt-0.5 block text-xs text-noct-neutral-500">
-                      Para guías como "Primer día en TI".
-                    </span>
-                  </span>
-                </button>
-
-                {esEdicion && (
-                  <Campo etiqueta="Motivo del cambio">
-                    <input
-                      type="text"
-                      value={motivo}
-                      onChange={(e) => setMotivo(e.target.value)}
-                      placeholder="Por qué se actualizó este artículo"
-                      className={`min-h-11 ${CLASE_CAMPO}`}
-                    />
-                  </Campo>
-                )}
-
-                <div className="flex flex-col gap-2">
-                  <span className={CLASE_ETIQUETA}>Artículos relacionados</span>
-                  {relacionados.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {relacionados.map((r) => (
-                        <TagNeutral key={r.id} className="gap-1.5">
-                          {r.titulo}
-                          <button
-                            type="button"
-                            onClick={() => setRelacionados((actuales) => actuales.filter((x) => x.id !== r.id))}
-                            aria-label={`Quitar ${r.titulo} de relacionados`}
-                            className="flex p-0.5 text-noct-neutral-500 hover:text-noct-text"
-                          >
-                            <X size={11} />
-                          </button>
-                        </TagNeutral>
-                      ))}
-                    </div>
-                  )}
-                  {relacionadosDisponibles.length > 0 && (
-                    <div className="relative">
-                      <LinkSimple
-                        size={15}
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400"
-                      />
-                      <select
-                        value=""
-                        aria-label="Agregar artículo relacionado"
-                        onChange={(e) => {
-                          const articulo = relacionadosDisponibles.find((a) => a.id === e.target.value)
-                          if (articulo) {
-                            setRelacionados((actuales) => [...actuales, { id: articulo.id, titulo: articulo.titulo }])
-                          }
-                        }}
-                        className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
-                      >
-                        <option value="">Vincular artículo relacionado (opcional)</option>
-                        {relacionadosDisponibles.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.titulo}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
+              )}
+            </>
+          )}
         </main>
 
         {/* Barra inferior fija: completitud, sugerencias y acciones. */}
         <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
           {sugerenciasAbiertas && completitud.sugerencias.length > 0 && (
             <div className="flex flex-col gap-[5px] pb-2.5 pt-0.5">
+              {/* Cada sugerencia lleva a la pestaña donde se resuelve:
+                  con pestañas, saber que falta algo no basta si hay que
+                  buscar donde. */}
               {completitud.sugerencias.map((sugerencia) => (
-                <p key={sugerencia} className="flex items-center gap-[7px] text-[12.5px] text-noct-neutral-400">
+                <button
+                  key={sugerencia.texto}
+                  type="button"
+                  onClick={() => irA(sugerencia.pestana)}
+                  className="flex items-center gap-[7px] py-0.5 text-left text-[12.5px] text-noct-neutral-400 hover:text-noct-text"
+                >
                   <Circle size={9} className="shrink-0 text-noct-neutral-600" />
-                  {sugerencia}
-                </p>
+                  {sugerencia.texto}
+                </button>
               ))}
             </div>
           )}
@@ -810,12 +916,104 @@ export function ArticuloForm() {
   )
 }
 
-// Caret que indica si una seccion plegable esta abierta.
-function Caret({ abierto }: { abierto: boolean }) {
-  return abierto ? (
-    <CaretUp size={14} className="ml-auto text-noct-neutral-500" />
-  ) : (
-    <CaretDown size={14} className="ml-auto text-noct-neutral-500" />
+// Casilla de verificacion con titulo y una linea de ayuda debajo, del
+// tamaño de un dedo. Usada por las opciones de la pestaña Publicación.
+function Casilla({
+  marcada,
+  onCambiar,
+  titulo,
+  ayuda,
+}: {
+  marcada: boolean
+  onCambiar: () => void
+  titulo: string
+  ayuda: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onCambiar}
+      aria-pressed={marcada}
+      className="flex min-h-11 items-start gap-2.5 p-0.5 text-left"
+    >
+      {marcada ? (
+        <span className="mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded bg-noct-accent">
+          <Check size={13} className="text-noct-bg" />
+        </span>
+      ) : (
+        <span className="mt-px h-[18px] w-[18px] shrink-0 rounded border-[1.5px] border-noct-neutral-700" />
+      )}
+      <span className="text-sm leading-[1.4]">
+        {titulo}
+        <span className="mt-0.5 block text-xs text-noct-neutral-500">{ayuda}</span>
+      </span>
+    </button>
+  )
+}
+
+// Equipos donde aplica el articulo (tarea 74, repuesto en J5). Guarda
+// una copia de referencia {id, nombre} igual que los relacionados: el
+// dato canonico es el dispositivo y el nombre es solo para poder
+// mostrarlo sin resolver el vinculo. Es el lado que alimenta
+// "Procedimientos de este equipo" y "Problemas frecuentes de este
+// equipo" en la ficha del dispositivo.
+function EquiposDondeAplica({
+  elegidos,
+  disponibles,
+  onChange,
+}: {
+  elegidos: { id: string; nombre: string }[]
+  disponibles: { id: string; nombre: string }[]
+  onChange: (equipos: { id: string; nombre: string }[]) => void
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className={CLASE_ETIQUETA}>Equipos donde aplica</span>
+      {elegidos.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {elegidos.map((equipo) => (
+            <TagNeutral key={equipo.id} className="gap-1.5">
+              {equipo.nombre || 'Equipo sin nombre'}
+              <button
+                type="button"
+                onClick={() => onChange(elegidos.filter((e) => e.id !== equipo.id))}
+                aria-label={`Quitar ${equipo.nombre} de los equipos donde aplica`}
+                className="flex p-0.5 text-noct-neutral-500 hover:text-noct-text"
+              >
+                <X size={11} />
+              </button>
+            </TagNeutral>
+          ))}
+        </div>
+      )}
+      {disponibles.length > 0 && (
+        <div className="relative">
+          <Monitor
+            size={15}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400"
+          />
+          <select
+            value=""
+            aria-label="Agregar equipo donde aplica"
+            onChange={(e) => {
+              const equipo = disponibles.find((d) => d.id === e.target.value)
+              if (equipo) onChange([...elegidos, { id: equipo.id, nombre: equipo.nombre }])
+            }}
+            className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+          >
+            <option value="">Vincular un equipo donde aplica (opcional)</option>
+            {disponibles.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <p className="text-xs leading-[1.5] text-noct-neutral-500">
+        El artículo aparecerá en la ficha de cada equipo vinculado.
+      </p>
+    </div>
   )
 }
 

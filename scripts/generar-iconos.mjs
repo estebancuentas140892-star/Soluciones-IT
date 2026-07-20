@@ -64,6 +64,7 @@ const ICONOS = {
   Monitor: ['regular', 'monitor'],
   MonitorFill: ['fill', 'monitor'],
   Note: ['regular', 'note'],
+  Paperclip: ['regular', 'paperclip'],
   PencilSimple: ['regular', 'pencil-simple'],
   Play: ['regular', 'play'],
   PlugsConnected: ['regular', 'plugs-connected'],

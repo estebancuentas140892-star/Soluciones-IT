@@ -27,6 +27,7 @@ import {
   type IconoProps,
   LinkSimple,
   LockSimple,
+  Paperclip,
   Plus,
   Question,
   SealCheck,
@@ -128,6 +129,7 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [vinculosPasoId, setVinculosPasoId] = useState<string | null>(null)
   const [pasoAEliminar, setPasoAEliminar] = useState<number | null>(null)
   const [subiendoBloqueId, setSubiendoBloqueId] = useState<string | null>(null)
+  const [subiendoAdjuntoPasoId, setSubiendoAdjuntoPasoId] = useState<string | null>(null)
   const [focoBloqueId, setFocoBloqueId] = useState<string | null>(null)
 
   // Credenciales de la boveda para vincular a un paso. Solo llegan a
@@ -255,6 +257,55 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
     setSubiendoBloqueId(null)
   }
 
+  // Adjuntos del paso completo (un manual, un PDF, una planilla), a
+  // diferencia de los bloques imagen, que son capturas ancladas a una
+  // tarea concreta. La fase J5 repone su edicion: el dato ya se
+  // guardaba y la ficha del articulo ya los mostraba, pero desde el
+  // rediseño del editor no habia forma de agregarlos ni quitarlos.
+  async function subirAdjuntosPaso(indice: number, evento: ChangeEvent<HTMLInputElement>) {
+    const archivos = Array.from(evento.target.files ?? [])
+    evento.target.value = ''
+    if (archivos.length === 0) return
+
+    setError(null)
+    setAviso(null)
+    if (!supabase || !supabaseConfigured) {
+      setError('La aplicación aún no está conectada al servidor.')
+      return
+    }
+
+    const paso = pasos[indice]
+    setSubiendoAdjuntoPasoId(paso.id)
+    const nuevos: PasoAdjunto[] = []
+    let algunoEncolado = false
+    for (const archivo of archivos) {
+      try {
+        // Las fotos se recomprimen; los PDF y documentos pasan intactos.
+        const archivoFinal = await comprimirImagen(archivo)
+        const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+        const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
+        const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+        if (resultado === 'encolado') algunoEncolado = true
+        nuevos.push({ referencia, nombre: archivoFinal.name, tipo: archivoFinal.type })
+      } catch {
+        setError(`No se pudo subir el archivo: ${archivo.name}`)
+      }
+    }
+    if (nuevos.length > 0) {
+      actualizarPaso(indice, { adjuntos: [...(paso.adjuntos ?? []), ...nuevos] })
+    }
+    if (algunoEncolado) {
+      setAviso('Sin conexión: los archivos quedaron guardados en este dispositivo y se subirán solos al recuperar señal.')
+    }
+    setSubiendoAdjuntoPasoId(null)
+  }
+
+  function quitarAdjuntoPaso(indice: number, referencia: string) {
+    actualizarPaso(indice, {
+      adjuntos: (pasos[indice].adjuntos ?? []).filter((a) => a.referencia !== referencia),
+    })
+  }
+
   return (
     <div className="flex flex-col gap-3.5">
       {pasos.length === 0 && (
@@ -342,6 +393,14 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
               </BotonAgregar>
             </div>
           </div>
+
+          {/* Archivos del paso completo (manual, PDF, planilla). */}
+          <AdjuntosDelPaso
+            adjuntos={paso.adjuntos ?? []}
+            subiendo={subiendoAdjuntoPasoId === paso.id}
+            onSubir={(evento) => void subirAdjuntosPaso(indice, evento)}
+            onQuitar={(referencia) => quitarAdjuntoPaso(indice, referencia)}
+          />
 
           {/* Vinculos del paso: bóveda, procedimiento o solución. */}
           <div className="mt-2.5 border-t border-noct-divider pt-2">
@@ -444,6 +503,52 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
         onCerrar={() => setPasoAEliminar(null)}
         onConfirmar={confirmarEliminarPaso}
       />
+    </div>
+  )
+}
+
+// Archivos del paso completo: el manual del fabricante, un PDF o una
+// planilla que acompaña a TODO el paso, no a una tarea suelta (para eso
+// estan los bloques imagen). La ficha del artículo ya los mostraba
+// (AdjuntosPaso en ProcedimientoVista); la fase J5 repone la forma de
+// agregarlos y quitarlos, que el rediseño del editor habia perdido.
+function AdjuntosDelPaso({
+  adjuntos,
+  subiendo,
+  onSubir,
+  onQuitar,
+}: {
+  adjuntos: PasoAdjunto[]
+  subiendo: boolean
+  onSubir: (evento: ChangeEvent<HTMLInputElement>) => void
+  onQuitar: (referencia: string) => void
+}) {
+  return (
+    <div className="mt-2.5 flex flex-col gap-1.5 border-t border-noct-divider pt-2">
+      {adjuntos.map((adjunto) => (
+        <div
+          key={adjunto.referencia}
+          className="flex min-h-10 items-center justify-between gap-2 rounded-md border border-noct-divider bg-noct-surface px-3"
+        >
+          <p className="flex min-w-0 items-center gap-2.5 truncate text-[13px] text-noct-text">
+            <Paperclip size={15} className="shrink-0 text-noct-neutral-400" />
+            <span className="min-w-0 truncate">{adjunto.nombre}</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => onQuitar(adjunto.referencia)}
+            aria-label={`Quitar el archivo ${adjunto.nombre}`}
+            className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
+          >
+            Quitar
+          </button>
+        </div>
+      ))}
+      <label className="flex min-h-10 cursor-pointer items-center gap-2 px-0.5 py-1 text-[12.5px] text-noct-neutral-500 hover:text-noct-text">
+        <Paperclip size={15} />
+        {subiendo ? 'Subiendo...' : 'Adjuntar archivo del paso: manual, PDF o planilla'}
+        <input type="file" multiple className="hidden" disabled={subiendo} onChange={onSubir} />
+      </label>
     </div>
   )
 }
