@@ -641,6 +641,20 @@ export interface Reciente {
   visitadoEn: string
 }
 
+// Fichas marcadas como favoritas por el tecnico en este telefono
+// (fase J1 de la jornada del tecnico): a diferencia de `recientes`,
+// que se desplaza solo con el uso, esto es una lista fija que el
+// tecnico arma a mano y que Inicio muestra siempre. Local y no
+// sincronizada (decision D1: los favoritos son habitos de trabajo
+// personales); solo se guarda la referencia, los datos se resuelven
+// en vivo contra su tabla.
+export interface Favorito {
+  clave: string
+  tipo: 'articulo' | 'dispositivo' | 'diagnostico'
+  entidadId: string
+  marcadoEn: string
+}
+
 class SolucionesItDatabase extends Dexie {
   perfiles!: EntityTable<Perfil, 'id'>
   categorias!: EntityTable<Categoria, 'id'>
@@ -665,6 +679,7 @@ class SolucionesItDatabase extends Dexie {
   cambiosPendientes!: EntityTable<CambioPendiente, 'id'>
   syncMeta!: EntityTable<SyncMeta, 'clave'>
   recientes!: EntityTable<Reciente, 'clave'>
+  favoritos!: EntityTable<Favorito, 'clave'>
   progresoPasos!: EntityTable<ProgresoPasos, 'articuloId'>
   archivosPendientes!: EntityTable<ArchivoPendiente, 'referencia'>
 
@@ -738,6 +753,12 @@ class SolucionesItDatabase extends Dexie {
     // `ubicaciones`.
     this.version(10).stores({
       ubicaciones: 'id, updatedAt',
+    })
+
+    // Favoritos del tecnico (fase J1): tabla local no sincronizada,
+    // mismo patron que `recientes`.
+    this.version(11).stores({
+      favoritos: 'clave, marcadoEn',
     })
   }
 }

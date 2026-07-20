@@ -78,6 +78,8 @@ const ICONOS = {
   Sliders: ['regular', 'sliders'],
   Sparkle: ['regular', 'sparkle'],
   Square: ['regular', 'square'],
+  Star: ['regular', 'star'],
+  StarFill: ['fill', 'star'],
   Storefront: ['regular', 'storefront'],
   TrashSimple: ['regular', 'trash-simple'],
   TreeStructure: ['regular', 'tree-structure'],

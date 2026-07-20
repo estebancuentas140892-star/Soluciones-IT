@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { BotonFavorito } from '../../components/BotonFavorito'
 import { BotonVolver } from '../../components/BotonVolver'
 import {
   CaretRight,
@@ -185,26 +186,36 @@ export function DiagnosticosPage() {
               </div>
               <div className="flex flex-col">
                 {delGrupo.map((diagnostico) => (
-                  <Link
+                  /* La estrella es hermana del enlace, no hija: un boton
+                     dentro de un enlace no es HTML valido y el toque se
+                     ambiguaria en movil. El resalte al pasar por encima
+                     queda en el contenedor para que la fila entera siga
+                     sintiendose una sola pieza. */
+                  <div
                     key={diagnostico.id}
-                    to={`/diagnostico/${diagnostico.id}`}
-                    className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+                    className="flex min-h-[52px] items-center gap-1 rounded px-2 hover:bg-noct-text/[.05]"
                   >
-                    <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">
-                      <WarningCircle size={17} aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-                        {diagnostico.titulo}
+                    <Link
+                      to={`/diagnostico/${diagnostico.id}`}
+                      className="flex min-w-0 flex-1 items-center gap-[13px] py-[11px] text-noct-text"
+                    >
+                      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">
+                        <WarningCircle size={17} aria-hidden />
                       </span>
-                      {diagnostico.descripcion && (
-                        <span className="mt-0.5 block truncate text-[12px] text-noct-neutral-500">
-                          {diagnostico.descripcion}
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
+                          {diagnostico.titulo}
                         </span>
-                      )}
-                    </span>
+                        {diagnostico.descripcion && (
+                          <span className="mt-0.5 block truncate text-[12px] text-noct-neutral-500">
+                            {diagnostico.descripcion}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                    <BotonFavorito tipo="diagnostico" entidadId={diagnostico.id} variante="fila" />
                     <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-                  </Link>
+                  </div>
                 ))}
               </div>
             </section>

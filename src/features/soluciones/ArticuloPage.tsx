@@ -31,6 +31,7 @@ import {
   Warning,
   WarningOctagon,
 } from '../../components/iconos'
+import { BotonFavorito } from '../../components/BotonFavorito'
 import { BotonVolver } from '../../components/BotonVolver'
 import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
@@ -116,6 +117,7 @@ export function ArticuloPage() {
             categoría. La etiqueta muestra el nombre de la categoría. */}
         <BotonVolver variante="nocturne">{categoria?.nombre ?? 'Soluciones'}</BotonVolver>
         <div className="flex shrink-0 items-center gap-2">
+          <BotonFavorito tipo="articulo" entidadId={articuloId} />
           {procedimiento && (
             <Link
               to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}

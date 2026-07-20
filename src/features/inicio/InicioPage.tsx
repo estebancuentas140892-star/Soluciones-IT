@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { contarHechos } from '../../lib/progresoPasos'
+import { obtenerFavoritos } from '../../lib/favoritos'
 import { obtenerRecientes } from '../../lib/recientes'
 import { obtenerEstadoSync, sincronizar, suscribirSync } from '../../lib/sync'
 import { ShellNocturne } from '../../app/ShellNocturne'
@@ -22,6 +23,7 @@ import {
   Monitor,
   Play,
   QrCode,
+  Star,
   TreeStructure,
   Vault,
   XCircleFill,
@@ -106,6 +108,7 @@ export function InicioPage() {
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
 
   const recientes = useLiveQuery(() => obtenerRecientes(), [], [])
+  const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
 
   // Articulos marcados por el equipo como "ruta de inicio" (ver
   // ArticuloForm): puerta de entrada para quien recien llega. Menor
@@ -295,6 +298,43 @@ export function InicioPage() {
                 detalle="Ficha por código QR"
               />
             </div>
+
+            {/* Favoritos: la lista fija que el tecnico arma a mano con la
+                estrella de cada ficha. Solo se muestra si hay alguno; el
+                bloque no se anuncia vacio para no ensuciar Inicio. */}
+            {favoritos.length > 0 && (
+              <section>
+                <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                  <Star size={14} className="text-noct-neutral-400" aria-hidden />
+                  <TituloSeccion>Favoritos</TituloSeccion>
+                </div>
+                <div className="grid grid-cols-1 @2xl:grid-cols-2">
+                  {favoritos.map((favorito) => {
+                    const { Icono, tono } = VISUAL_POR_TIPO[favorito.tipo]
+                    return (
+                      <Link
+                        key={favorito.clave}
+                        to={favorito.ruta}
+                        className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+                      >
+                        <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
+                          <Icono size={17} aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="mb-0.5 block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
+                            {favorito.titulo}
+                          </span>
+                          <span className="block truncate text-[12px] text-noct-neutral-500">
+                            {favorito.subtitulo}
+                          </span>
+                        </span>
+                        <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+                      </Link>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* En ancho, Recientes y Para empezar se reparten en dos
                 columnas (container query); en móvil quedan apiladas. */}

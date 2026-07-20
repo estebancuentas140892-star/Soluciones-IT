@@ -10,6 +10,7 @@ import { resumenImpacto } from '../../lib/grafo'
 import { ShellNocturne } from '../../app/ShellNocturne'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
+import { BotonFavorito } from '../../components/BotonFavorito'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useGrafo } from '../../components/useGrafo'
@@ -158,6 +159,7 @@ export function DispositivoPage() {
           {esRed ? 'Red' : 'Dispositivos'}
         </BotonVolver>
         <div className="flex shrink-0 items-center gap-2">
+          <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} />
           <BotonCompartir titulo={dispositivo.nombre} />
           <button
             type="button"
