@@ -1,7 +1,7 @@
 # Propuesta: optimizar la jornada del técnico (centro de operaciones, favoritos y actividad)
 
 Fecha: 2026-07-20
-Estado: la fase J1 (favoritos) quedó implementada, verificada y archivada como tarea 108 el 2026-07-20, aplicando la decisión D1 con su opción recomendada (personales, tabla local). Pendiente: que el usuario valide J1, apruebe las fases J2 a J5 y resuelva las decisiones D2 a D5 de la sección 5.
+Estado: las fases J1 (favoritos, tarea 108) y J2 (actividad reciente del equipo, tarea 109) quedaron implementadas, verificadas y archivadas el 2026-07-20, aplicando las decisiones D1 y D2 con sus opciones recomendadas (favoritos personales; solo bloque en Inicio, sin pantalla completa). Pendiente: que el usuario valide J1/J2, apruebe las fases J3 a J5 y resuelva las decisiones D3 a D5 de la sección 5.
 
 Origen: encargo del usuario del 2026-07-20 con 12 puntos de mejora ("IT Brain como cerebro operativo"). Este documento contrasta cada punto contra el código real y separa tres cosas: lo que YA existe (más de lo que el encargo asume), lo que falta de verdad (fases J1 a J5) y lo que se recomienda NO hacer con su justificación.
 

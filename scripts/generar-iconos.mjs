@@ -86,6 +86,7 @@ const ICONOS = {
   TreeStructureFill: ['fill', 'tree-structure'],
   UploadSimple: ['regular', 'upload-simple'],
   User: ['regular', 'user'],
+  UsersThree: ['regular', 'users-three'],
   Vault: ['regular', 'vault'],
   VaultFill: ['fill', 'vault'],
   VideoCamera: ['regular', 'video-camera'],

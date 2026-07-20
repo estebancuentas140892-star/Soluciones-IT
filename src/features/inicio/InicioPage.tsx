@@ -25,6 +25,7 @@ import {
   QrCode,
   Star,
   TreeStructure,
+  UsersThree,
   Vault,
   XCircleFill,
 } from '../../components/iconos'
@@ -36,6 +37,13 @@ import {
   useIndiceBusqueda,
 } from '../busqueda/useIndiceBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
+import {
+  ETIQUETA_ACCION_CAMBIO,
+  obtenerActividadReciente,
+  tiempoRelativo,
+  type FilaActividad,
+} from '../historial/actividadEquipo'
+import { etiquetaResuelto } from '../historial/lineaDeTiempo'
 
 // Pantalla de Inicio en el sistema Nocturne (re-autoria del handoff
 // "Rediseño de aplicación empresarial", Inicio.dc.html). Un solo punto
@@ -109,6 +117,7 @@ export function InicioPage() {
 
   const recientes = useLiveQuery(() => obtenerRecientes(), [], [])
   const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
+  const actividad = useLiveQuery(() => obtenerActividadReciente(), [], [])
 
   // Articulos marcados por el equipo como "ruta de inicio" (ver
   // ArticuloForm): puerta de entrada para quien recien llega. Menor
@@ -408,6 +417,25 @@ export function InicioPage() {
             )}
             </div>
 
+            {/* Actividad del equipo (fase J2): "¿que cambio hoy?" sin
+                abrir ficha por ficha. Vista compartida (a diferencia de
+                Favoritos y Recientes, que son personales), colapsada a 5
+                renglones; decision D2 aplicada con la opcion recomendada
+                (solo bloque en Inicio, sin pantalla completa todavia). */}
+            {actividad.length > 0 && (
+              <section>
+                <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                  <UsersThree size={14} className="text-noct-neutral-400" aria-hidden />
+                  <TituloSeccion>Actividad del equipo</TituloSeccion>
+                </div>
+                <div className="flex flex-col">
+                  {actividad.map((fila) => (
+                    <FilaActividadItem key={fila.clave} fila={fila} />
+                  ))}
+                </div>
+              </section>
+            )}
+
             <DescargarOffline />
           </div>
         )}
@@ -437,6 +465,47 @@ function FilaResultado({ resultado, consulta }: { resultado: ResultadoBusqueda; 
         {resultado.subtitulo && (
           <span className="block truncate text-[12px] text-noct-neutral-500">{resultado.subtitulo}</span>
         )}
+      </span>
+      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+    </Link>
+  )
+}
+
+// Fila del bloque "Actividad del equipo": quien hizo que, sobre que
+// ficha, hace cuanto. Un cambio de campo dice "Ana editó X (3
+// cambios)"; una ejecucion de diagnostico dice "Ana ejecutó el
+// diagnostico X (Resuelto)". El tono visual reutiliza VISUAL_POR_TIPO
+// (ejecucion se pinta igual que un diagnostico: mismo destino, misma
+// naturaleza de contenido).
+function FilaActividadItem({ fila }: { fila: FilaActividad }) {
+  const { Icono, tono } = VISUAL_POR_TIPO[fila.entidadTipo ?? 'diagnostico']
+  const accionTexto =
+    fila.tipo === 'ejecucion'
+      ? `ejecutó el diagnóstico`
+      : ETIQUETA_ACCION_CAMBIO[fila.accion ?? 'edito']
+  const detalle =
+    fila.tipo === 'ejecucion'
+      ? `(${etiquetaResuelto(fila.resuelto ?? 'abandonado')})`
+      : fila.accion === 'edito' && fila.cantidadCambios > 1
+        ? `(${fila.cantidadCambios} cambios)`
+        : ''
+
+  return (
+    <Link
+      to={fila.ruta}
+      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+    >
+      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
+        <Icono size={17} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="mb-0.5 block text-sm leading-[1.3] [text-wrap:pretty]">
+          <span className="font-medium">{fila.usuarioNombre}</span> {accionTexto}{' '}
+          <span className="font-medium">{fila.titulo}</span> {detalle}
+        </span>
+        <span className="block truncate text-[12px] text-noct-neutral-500">
+          {tiempoRelativo(fila.fechaHora)}
+        </span>
       </span>
       <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
     </Link>
