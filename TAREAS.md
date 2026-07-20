@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 101 (Fase 5 de la auditoría de limpieza: opcionales restantes) quedó terminada y archivada el 2026-07-20, con los 3 puntos resueltos según la decisión del usuario: (1) borrado de `diseno/` y el zip, dejado como paso del usuario (borrado permanente e irrecuperable, instrucciones exactas dadas); (2) script de huérfanos de Storage construido y verificado; (3) migración de `text-[Npx]` a `rem`, declinada por ahora. Del script salió un hallazgo nuevo: `src/lib/adjuntosOffline.ts` no incluye `dispositivos.foto` entre las referencias que cachea "Descargar todo para offline" (tarea 114, en "Por hacer").
+Sin tarea en desarrollo. La tarea 114 (`dispositivos.foto` faltaba en `adjuntosOffline.ts`) quedó terminada, verificada y archivada el 2026-07-20.
+
+Antes, la tarea 101 (Fase 5 de la auditoría de limpieza: opcionales restantes) quedó terminada y archivada el 2026-07-20, con los 3 puntos resueltos según la decisión del usuario: (1) borrado de `diseno/` y el zip, dejado como paso del usuario (borrado permanente e irrecuperable, instrucciones exactas dadas); (2) script de huérfanos de Storage construido y verificado; (3) migración de `text-[Npx]` a `rem`, declinada por ahora. Del script salió un hallazgo nuevo: `src/lib/adjuntosOffline.ts` no incluye `dispositivos.foto` entre las referencias que cachea "Descargar todo para offline" (tarea 114, en "Por hacer").
 
 Antes, la tarea 79 (Modo Asistente Fase 2: captura de evidencia por paso) quedó terminada, verificada y archivada el 2026-07-20, aplicando la opción recomendada (b): intervención en el historial del equipo afectado, sin esquema.
 
@@ -41,11 +43,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 ## Por hacer
 
 Pregunta abierta desde la tarea 62, nunca resuelta: decidir si el botón "Crear" de `src/features/red/RedPage.tsx` (hoy va a `/dispositivos/nuevo`, genérico) debería abrir en cambio un flujo dedicado a crear una conexión de red.
-
-### 114. adjuntosOffline.ts no cachea las fotos de dispositivo para uso offline
-- Descripción: hallazgo del script de huérfanos de Storage (tarea 101). `referenciasParaOffline()` en `src/lib/adjuntosOffline.ts` reúne las referencias de la tabla `adjuntos` y del JSON `procedimiento` de cada artículo (portada, adjuntos de paso, imágenes de bloque), pero NO incluye `dispositivos.foto`. Consecuencia real: la foto principal de un equipo (fase Dis2) nunca entra al cache de "Descargar todo para offline" ni se guarda la primera vez que se ve (`cachearSiHaceFalta` depende de que algo la pida primero); en un dispositivo sin señal, la foto de un equipo puede no estar disponible aunque el técnico ya la haya visto antes con conexión. Mismo tipo de hueco que la tarea 47 ya había encontrado y cerrado para las imágenes de bloque.
-- Prioridad: Media
-- Ubicación: `src/lib/adjuntosOffline.ts` (función `referenciasParaOffline`, agregar el recorrido de `db.dispositivos` no eliminados y su `foto?.referencia`).
 
 ### 15. Respaldo automático de datos
 - Descripción: workflow de GitHub Actions que cada domingo exporta las tablas de Supabase (el plan gratuito no tiene copias de seguridad), cifra el resultado con AES-256 y lo guarda como artefacto del workflow por 90 días. Lee los datos con un usuario dedicado de respaldo (respetando RLS, sin usar jamás la clave service_role, prohibida por REGLAS.md) cuyas credenciales viven en los secretos de GitHub Actions. El cifrado es obligatorio porque el repositorio es público y sus artefactos son descargables por cualquier usuario de GitHub.

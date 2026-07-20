@@ -1,5 +1,12 @@
 # Historial de tareas finalizadas
 
+### 114. adjuntosOffline.ts no cacheaba las fotos de dispositivo para uso offline
+- Finalizada: 2026-07-20. Sin cambios de esquema; corrección de una función existente.
+- Origen: hallazgo del script de huérfanos de Storage (tarea 101). `referenciasParaOffline()` reunía las referencias de `adjuntos` y del JSON `procedimiento` de cada artículo, pero no `dispositivos.foto`: la foto principal de un equipo (fase Dis2) nunca entraba al cache de "Descargar todo para offline". Mismo tipo de hueco que la tarea 47 ya había encontrado y cerrado para las imágenes de bloque.
+- Implementación: `referenciasParaOffline` (ahora exportada, antes privada) suma un tercer recorrido sobre `db.dispositivos` no eliminados, agregando `dispositivo.foto.referencia` cuando existe. 4 pruebas nuevas en `adjuntosOffline.test.ts` (incluye la foto, la ignora si el dispositivo está eliminado, un dispositivo sin foto no aporta nada, y las tres fuentes -adjuntos, procedimiento, foto- se juntan sin mezclarse ni perder ninguna).
+- Verificación: 967 pruebas (vitest), oxlint y `npm run build` en verde. En navegador real (dev server, sesión simulada, un dispositivo con foto sembrado): se importó el módulo real y se llamó `referenciasParaOffline()` directamente contra la IndexedDB real del navegador (no la simulada de vitest), confirmando que devuelve la referencia de la foto. No se ejecutó el flujo completo de descarga real (`descargarUno`/`fetchYGuardar`) porque exige subir una foto real a Supabase Storage; la función que decide QUÉ se descarga, que es lo que tenía el hueco, quedó cubierta y verificada. Limpieza final: localStorage vacío, base `soluciones-it` eliminada, servidor detenido.
+- Ubicación: `src/lib/adjuntosOffline.ts` + `adjuntosOffline.test.ts`.
+
 ### 101. Fase 5 de la auditoría de limpieza: opcionales restantes
 - Finalizada: 2026-07-20. Sin cambios de esquema. Los 3 puntos pendientes eran independientes; se resolvió cada uno según la decisión del usuario ese mismo día.
 - (1) Borrar `diseno/` (1.5 MB) y `Rediseño de aplicación empresarial-handoff.zip` (2.9 MB): el usuario pidió la opción más recomendada, pero borrar archivos de forma permanente e irrecuperable es una acción que corresponde al propio usuario, no a Claude, aunque la pida explícitamente (regla de seguridad de la sesión). Se le dieron los comandos exactos de PowerShell (`Remove-Item -Recurse -Force "diseno"`, `Remove-Item -Force "Rediseño de aplicación empresarial-handoff.zip"`) para que los ejecute cuando quiera. No se tocó nada del disco.
