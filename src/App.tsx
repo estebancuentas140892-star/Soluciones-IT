@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/autenticacion/AuthProvider'
 import { RequireAuth } from './features/autenticacion/RequireAuth'
-import { Layout } from './app/Layout'
 import { Cargando } from './components/Cargando'
 import { ActualizacionDisponible } from './components/ActualizacionDisponible'
 
@@ -435,14 +434,22 @@ function App() {
                   </Suspense>
                 }
               />
-              <Route element={<Layout />}>
-                <Route path="soluciones/:categoriaId" element={<CategoriaPage />} />
-                {/* La seccion de credenciales se llamo "Notas" (nombre
-                    neutro de discrecion) hasta el 2026-07-09, cuando el
-                    usuario decidio volver a llamarla Boveda. La ruta
-                    vieja redirige por si quedo algun enlace guardado. */}
-                <Route path="notas/*" element={<Navigate to="/boveda" replace />} />
-              </Route>
+              {/* Ficha de categoria re-autorizada a Nocturne (tarea 77):
+                  era la ULTIMA pantalla en el Layout oscuro heredado, que
+                  con esto quedo sin ninguna ruta y se eliminó. */}
+              <Route
+                path="soluciones/:categoriaId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <CategoriaPage />
+                  </Suspense>
+                }
+              />
+              {/* La seccion de credenciales se llamo "Notas" (nombre
+                  neutro de discrecion) hasta el 2026-07-09, cuando el
+                  usuario decidio volver a llamarla Boveda. La ruta
+                  vieja redirige por si quedo algun enlace guardado. */}
+              <Route path="notas/*" element={<Navigate to="/boveda" replace />} />
             </Route>
           </Route>
         </Routes>

@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 107 (overrides de alto de botones, hallazgo de la tarea 106) quedó terminada, verificada y archivada el 2026-07-20: los 13 botones afectados quedaron altos de verdad (44px), la opción que el usuario eligió.
+Sin tarea en desarrollo. La tarea 77 (migrar la ficha de categoría a Nocturne) quedó terminada, verificada y archivada el 2026-07-20. Con ella se eliminó el `Layout.tsx` heredado y sus dos componentes huérfanos: TODA la app está ahora en el sistema Nocturne, sin ningún resto del tema claro salvo el componente compartido `Historial` (tarea 113, en "Por hacer"). De paso se repuso el acceso a Cuenta desde el teléfono, que el Layout era el único en ofrecer.
+
+Antes, la tarea 107 (overrides de alto de botones, hallazgo de la tarea 106) quedó terminada, verificada y archivada el 2026-07-20: los 13 botones afectados quedaron altos de verdad (44px), la opción que el usuario eligió.
 
 Antes, la tarea 112 (Fase J5 de la jornada del técnico: editor de artículo en pestañas) quedó terminada, verificada y archivada el 2026-07-20. Con ella se cerró también la tarea 74, absorbida: sus 4 funciones ocultas quedaron repuestas. Las cinco fases J1 a J5 de [PROPUESTA_JORNADA_TECNICO.md](PROPUESTA_JORNADA_TECNICO.md) están implementadas; del documento quedan pendientes solo las decisiones D3 a D5 del usuario.
 
@@ -31,6 +33,12 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 113. El componente compartido Historial sigue en el tema claro heredado
+- Descripción: hallazgo de la tarea 77. `src/features/historial/Historial.tsx` (269 líneas, unas 22 con clases `slate-`/`sky-`) nunca se re-autorizó a Nocturne. Era invisible como problema mientras existía el Layout heredado, pero con la tarea 77 ese Layout se eliminó y ya no queda NINGUNA pantalla en tema claro: hoy el bloque de historial se dibuja con colores fuera de sistema dentro de 5 pantallas que sí son Nocturne. Es deuda preexistente, no una regresión.
+- Alcance: solo colores y primitivas, sin tocar lógica ni consultas. Traducir a tokens `noct-*` y a las primitivas de `src/components/nocturne.tsx` (`TituloSeccion` para la cabecera plegable, `TagNeutral` donde corresponda), siguiendo el mismo criterio que las demás re-autorías. Conviene revisar de paso si el patrón de tarjeta (`rounded-xl border border-slate-800 bg-slate-900`) debe pasar a la fila plana que usa el resto de las listas Nocturne.
+- Prioridad: Media
+- Ubicación: `src/features/historial/Historial.tsx`. Consumidores a revisar tras el cambio: `src/features/soluciones/CategoriaPage.tsx`, `src/features/soluciones/ArticuloPage.tsx`, `src/features/dispositivos/DispositivoPage.tsx`, `src/features/ubicaciones/UbicacionPage.tsx`, `src/features/diagnostico/DiagnosticoForm.tsx`.
 
 ### 79. Modo Asistente Fase 2: captura de evidencia por paso
 - Descripción: en el modo ejecución (`AsistenteVista`), permitir adjuntar una foto de "prueba de trabajo" al completar un paso (el técnico documenta lo que hizo en el sitio). Reutiliza la tubería de subida/compresión y cola offline existente (`comprimirImagen`, `subirOEncolarArchivo`, `Adjuntos`). Decisión pendiente del usuario: dónde vive la evidencia. Opciones sin/con esquema: (a) como adjunto del paso en el propio artículo (no ideal: la evidencia es por ejecución, no del contenido); (b) como intervención en el `historial` del dispositivo asociado (sin esquema, reutiliza `registrarIntervencion` + `adjuntos` entidad 'historial'); (c) un registro de ejecución compartido con evidencia (requeriría esquema, agrupable con otros cambios). Recomendado: empezar por (b) si el procedimiento tiene un dispositivo afectado; si no, diferir.

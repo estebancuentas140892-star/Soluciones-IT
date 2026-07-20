@@ -40,8 +40,8 @@ const DESTINOS_BASE: Destino[] = [
   { to: '/red', label: 'Red', icono: TreeStructure, iconoActivo: TreeStructureFill, end: false },
 ]
 
-// Igual que en BottomNav y AppShell: la Bóveda solo aparece a quien
-// tiene el permiso; el resto ni siquiera sabe que existe.
+// La Bóveda solo aparece a quien tiene el permiso; el resto ni
+// siquiera sabe que existe.
 const DESTINO_BOVEDA: Destino = {
   to: '/boveda',
   label: 'Bóveda',

@@ -25,6 +25,7 @@ import {
   QrCode,
   Star,
   TreeStructure,
+  User,
   UsersThree,
   Vault,
   XCircleFill,
@@ -184,14 +185,28 @@ export function InicioPage() {
   return (
     <ShellNocturne>
       {/* Cabecera fija con desenfoque: marca, saludo, estado de
-          sincronizacion y el buscador global. */}
+          sincronizacion, acceso a la cuenta y el buscador global. */}
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-3">
           <div>
             <h1 className="text-[22px] font-medium leading-tight">IT Brain</h1>
             <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{saludo}</p>
           </div>
-          <PastillaSync />
+          <div className="flex shrink-0 items-center gap-1">
+            <PastillaSync />
+            {/* Unica entrada a Cuenta, Seguridad y Cerrar sesion desde
+                el telefono: el sidebar de ShellNocturne que la ofrece
+                solo existe en escritorio (lg). Vive en Inicio por ser
+                la pestaña que todos abren primero. */}
+            <Link
+              to="/cuenta"
+              aria-label="Mi cuenta"
+              title="Mi cuenta"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-noct-neutral-400 hover:bg-noct-text/[.05] hover:text-noct-text lg:hidden"
+            >
+              <User size={20} aria-hidden />
+            </Link>
+          </div>
         </header>
 
         <div className="px-4 pb-3 pt-2">
