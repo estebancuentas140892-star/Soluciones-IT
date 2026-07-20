@@ -59,6 +59,13 @@ export function SolucionesPage() {
     () => searchParams.get('categoria'),
   )
   const [tipoSel, setTipoSel] = useState<TipoArticulo | null>(null)
+  // Filtro por etiqueta (fase J4): se llega aqui tocando una etiqueta en
+  // la ficha de un articulo (?etiqueta=<x>). Es un modo propio, como
+  // buscando: mientras esta activo ignora categoria/tipo, y se limpia
+  // al elegir una categoria o al volver a "Todos".
+  const [etiquetaSel, setEtiquetaSel] = useState<string | null>(
+    () => searchParams.get('etiqueta'),
+  )
 
   const categorias = useLiveQuery(
     () => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'),
@@ -122,12 +129,18 @@ export function SolucionesPage() {
     return TIPOS_ARTICULO.filter((t) => presentes.has(t.valor))
   }, [articulos, categoriaSel])
 
-  // Filtrado: al buscar manda el termino (ignora categoria y tipo); al
-  // navegar, la categoria y el subfiltro de tipo.
+  // Filtrado: al buscar manda el termino (ignora categoria, tipo y
+  // etiqueta); si hay una etiqueta activa (y no se esta buscando), es
+  // su propio modo y tambien ignora categoria/tipo; si no, categoria y
+  // el subfiltro de tipo.
   const filtrados = useMemo(() => {
     return articulos
       .filter((articulo) => {
         if (buscando) return coincide(articulo)
+        if (etiquetaSel) {
+          const clave = normalizarTexto(etiquetaSel)
+          return (articulo.etiquetas ?? []).some((e) => normalizarTexto(e) === clave)
+        }
         if (categoriaSel && articulo.categoriaId !== categoriaSel) return false
         if (tipoSel && articulo.tipo !== tipoSel) return false
         return true
@@ -138,7 +151,7 @@ export function SolucionesPage() {
         return oa - ob || a.titulo.localeCompare(b.titulo, 'es')
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articulos, buscando, consulta, categoriaSel, tipoSel, nombreCat, ordenCat])
+  }, [articulos, buscando, consulta, etiquetaSel, categoriaSel, tipoSel, nombreCat, ordenCat])
 
   // Agrupacion: al buscar, un grupo por categoria con encabezado; al
   // navegar, una sola lista plana sin encabezado.
@@ -169,6 +182,7 @@ export function SolucionesPage() {
   function setCategoria(id: string | null) {
     setCategoriaSel((actual) => (actual === id ? null : id))
     setTipoSel(null)
+    setEtiquetaSel(null)
   }
   function limpiarQuery() {
     setQuery('')
@@ -178,6 +192,7 @@ export function SolucionesPage() {
     setQuery('')
     setCategoriaSel(null)
     setTipoSel(null)
+    setEtiquetaSel(null)
   }
 
   return (
@@ -356,6 +371,22 @@ export function SolucionesPage() {
           )}
 
           <div className="@container min-w-0">
+            {/* Filtro por etiqueta activo (fase J4): llegado desde una
+                ficha de articulo, sin obligar a volver a buscar. */}
+            {etiquetaSel && !buscando && (
+              <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] px-3.5 py-2.5">
+                <p className="min-w-0 truncate text-[12.5px] text-noct-accent-300">
+                  Etiqueta: {etiquetaSel}
+                </p>
+                <Link
+                  to="/soluciones"
+                  onClick={() => setEtiquetaSel(null)}
+                  className="shrink-0 text-[12px] text-noct-accent-300 underline underline-offset-2"
+                >
+                  Ver todos
+                </Link>
+              </div>
+            )}
             {buscando && (
               <p className="mb-3 text-[12.5px] text-noct-neutral-400">{etiquetaResultados}</p>
             )}

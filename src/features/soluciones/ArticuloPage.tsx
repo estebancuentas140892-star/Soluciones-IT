@@ -240,8 +240,17 @@ export function ArticuloPage() {
 
         {(articulo.etiquetas ?? []).length > 0 && (
           <footer className="flex flex-wrap gap-1.5">
+            {/* Tocable (fase J4, hueco del punto 9): lleva al filtro por
+                esta etiqueta en Soluciones, sin obligar a volver a
+                buscar. */}
             {articulo.etiquetas.map((etiqueta) => (
-              <TagNeutral key={etiqueta}>{etiqueta}</TagNeutral>
+              <Link
+                key={etiqueta}
+                to={`/soluciones?etiqueta=${encodeURIComponent(etiqueta)}`}
+                className="hover:opacity-80"
+              >
+                <TagNeutral>{etiqueta}</TagNeutral>
+              </Link>
             ))}
           </footer>
         )}

@@ -29,15 +29,17 @@ import {
   FloppyDisk,
   Info,
   LinkSimple,
+  Plus,
   Sparkle,
   X,
 } from '../../components/iconos'
 import { BotonVolver } from '../../components/BotonVolver'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
+import { etiquetasFrecuentes, normalizarEtiquetas, type GrafiaEtiqueta } from './etiquetas'
 import { PasosEditor } from './PasosEditor'
 import { hayPlantilla, pasosDePlantilla, plantillaDe } from './plantillas'
-import { colorIconoDeTipo, iconoDeTipo } from './iconosSoluciones'
+import { colorIconoDeTipo, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
 import { tituloEditar, tituloNuevo } from './tiposArticulo'
 
 // La vista previa carga react-markdown, que pesa: se difiere hasta que
@@ -173,6 +175,17 @@ export function ArticuloForm() {
   const similares = useMemo(
     () => (esEdicion || copiarDe ? [] : buscarArticulosSimilares(indice, tituloConRebote, id)),
     [indice, tituloConRebote, esEdicion, copiarDe, id],
+  )
+
+  // Vocabulario de etiquetas derivado del uso real (fase J4): las
+  // etiquetas ya usadas en el resto de los articulos, mas frecuentes
+  // primero, para ofrecerlas como sugerencia y como grafia canonica al
+  // guardar. Nunca una tabla nueva, mismo criterio que las marcas
+  // sugeridas de dispositivos.
+  const todosArticulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
+  const vocabularioEtiquetas = useMemo(
+    () => etiquetasFrecuentes(todosArticulos.map((a) => a.etiquetas ?? [])),
+    [todosArticulos],
   )
 
   useEffect(() => {
@@ -331,7 +344,7 @@ export function ArticuloForm() {
         titulo: titulo.trim(),
         tipo,
         contenido,
-        etiquetas,
+        etiquetas: normalizarEtiquetas(etiquetas, vocabularioEtiquetas),
         procedimiento: procedimientoPreparado,
         sintomas: sintomas
           .split('\n')
@@ -566,7 +579,11 @@ export function ArticuloForm() {
                   </>
                 )}
 
-                <EtiquetasEditor etiquetas={etiquetas} onChange={setEtiquetas} />
+                <EtiquetasEditor
+                  etiquetas={etiquetas}
+                  onChange={setEtiquetas}
+                  sugerencias={vocabularioEtiquetas}
+                />
 
                 <PortadaEditor articuloId={id} portada={portada} onChange={setPortada} />
 
@@ -845,29 +862,47 @@ function Segmentado<T extends string>({
   )
 }
 
+// Cuantas sugerencias tocables se muestran como maximo: suficientes
+// para ser utiles sin ensuciar el formulario.
+const MAX_SUGERENCIAS_ETIQUETA = 8
+
 // Editor de etiquetas como chips: Enter o coma agregan, la X quita.
+// Desde la fase J4 ofrece ademas chips de sugerencia con las etiquetas
+// ya usadas en el resto de los articulos (repone la funcion que N0
+// habia puesto y el rediseño del editor perdio): tocarlas agrega sin
+// tener que escribir, reduciendo el riesgo de variantes como
+// "Impresora"/"impresora"/"Printer".
 function EtiquetasEditor({
   etiquetas,
   onChange,
+  sugerencias,
 }: {
   etiquetas: string[]
   onChange: (etiquetas: string[]) => void
+  sugerencias: GrafiaEtiqueta[]
 }) {
   const [texto, setTexto] = useState('')
 
   function agregar(bruto: string) {
     const nuevas: string[] = []
-    const puestas = new Set(etiquetas.map((e) => e.toLowerCase()))
+    // Clave normalizada (sin acentos ni mayusculas), no solo
+    // minusculas: "cafe" y "café" deben contar como la misma etiqueta.
+    const puestas = new Set(etiquetas.map((e) => normalizarTexto(e)))
     for (const parte of bruto.split(/[,\n]/)) {
       const limpia = parte.trim()
       if (limpia === '') continue
-      const clave = limpia.toLowerCase()
+      const clave = normalizarTexto(limpia)
       if (puestas.has(clave)) continue
       puestas.add(clave)
       nuevas.push(limpia)
     }
     if (nuevas.length > 0) onChange([...etiquetas, ...nuevas])
   }
+
+  const puestasClave = new Set(etiquetas.map((e) => normalizarTexto(e)))
+  const sugerenciasVisibles = sugerencias
+    .filter((s) => !puestasClave.has(normalizarTexto(s.texto)))
+    .slice(0, MAX_SUGERENCIAS_ETIQUETA)
 
   return (
     <div className="flex flex-col gap-2">
@@ -915,6 +950,21 @@ function EtiquetasEditor({
         placeholder="Escribir y presionar Enter (Impresora, POS, Backup...)"
         className={`min-h-11 ${CLASE_CAMPO}`}
       />
+      {sugerenciasVisibles.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {sugerenciasVisibles.map((sugerencia) => (
+            <button
+              key={sugerencia.texto}
+              type="button"
+              onClick={() => agregar(sugerencia.texto)}
+              className="inline-flex items-center gap-1 rounded-md border border-dashed border-noct-neutral-700 px-2.5 py-[3px] text-[11px] text-noct-neutral-400 hover:border-noct-accent hover:text-noct-accent-300"
+            >
+              <Plus size={10} aria-hidden />
+              {sugerencia.texto}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
