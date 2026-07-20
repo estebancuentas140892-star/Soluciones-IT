@@ -86,6 +86,27 @@ export async function reiniciarProgreso(articuloId: string): Promise<void> {
   await db.progresoPasos.delete(articuloId)
 }
 
+// Recuerda con que entrada de historial quedo asociada la evidencia
+// fotografica de un paso (tarea 79): la primera vez que el tecnico
+// adjunta algo para ese paso, no en cada revisita (si no, cada vez que
+// se reabre el paso se crearia una intervencion nueva y la evidencia
+// quedaria repartida en varias entradas del historial).
+export async function registrarEvidenciaPaso(
+  articuloId: string,
+  pasoId: string,
+  entradaId: string,
+): Promise<void> {
+  const actual = await db.progresoPasos.get(articuloId)
+  await db.progresoPasos.put({
+    articuloId,
+    pasosHechos: actual?.pasosHechos ?? [],
+    instruccionesHechas: actual?.instruccionesHechas ?? [],
+    verificacionHecha: actual?.verificacionHecha ?? [],
+    evidenciasPorPaso: { ...actual?.evidenciasPorPaso, [pasoId]: entradaId },
+    actualizadoEn: new Date().toISOString(),
+  })
+}
+
 // Cuantos de los pasos actuales estan hechos. Se cruza contra los
 // ids vigentes porque el procedimiento pudo editarse despues de
 // marcar avance (los pasos eliminados no deben contar).

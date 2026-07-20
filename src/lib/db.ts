@@ -629,6 +629,13 @@ export interface ProgresoPasos {
   // Casillas marcadas de "Verificacion final" (indice dentro de
   // Procedimiento.verificacionFinal). Opcional por el mismo motivo.
   verificacionHecha?: number[]
+  // Evidencia fotografica del trabajo (tarea 79, modo asistente): por
+  // paso, el id de la entrada de `historial` (campo 'intervencion')
+  // donde cuelga su galeria de fotos. Se crea la primera vez que el
+  // tecnico adjunta algo para ese paso y se reutiliza despues (nunca
+  // una entrada nueva por revisita); dato local como el resto de este
+  // avance, pero la entrada de historial y sus fotos SI se sincronizan.
+  evidenciasPorPaso?: Record<string, string>
   actualizadoEn: string
 }
 

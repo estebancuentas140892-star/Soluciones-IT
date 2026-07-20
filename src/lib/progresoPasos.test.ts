@@ -6,6 +6,7 @@ import {
   contarHechos,
   contarInstruccionesHechas,
   establecerPasoHecho,
+  registrarEvidenciaPaso,
   reiniciarProgreso,
   verificacionFinalCompleta,
 } from './progresoPasos'
@@ -115,6 +116,42 @@ describe('verificación final', () => {
 
     await alternarVerificacionFinal('articulo-1', 1)
     expect(verificacionFinalCompleta((await db.progresoPasos.get('articulo-1'))?.verificacionHecha, 2)).toBe(false)
+  })
+})
+
+describe('registrarEvidenciaPaso', () => {
+  it('guarda el id de la entrada de historial asociada al paso', async () => {
+    await registrarEvidenciaPaso('articulo-1', 'paso-a', 'entrada-1')
+    expect((await db.progresoPasos.get('articulo-1'))?.evidenciasPorPaso).toEqual({ 'paso-a': 'entrada-1' })
+  })
+
+  it('no pisa la evidencia de otros pasos del mismo artículo', async () => {
+    await registrarEvidenciaPaso('articulo-1', 'paso-a', 'entrada-1')
+    await registrarEvidenciaPaso('articulo-1', 'paso-b', 'entrada-2')
+    expect((await db.progresoPasos.get('articulo-1'))?.evidenciasPorPaso).toEqual({
+      'paso-a': 'entrada-1',
+      'paso-b': 'entrada-2',
+    })
+  })
+
+  it('conserva el resto del avance ya guardado (pasos, tareas, verificación)', async () => {
+    await establecerPasoHecho('articulo-1', 'paso-a', true, ['t1'])
+    await alternarVerificacionFinal('articulo-1', 0)
+    await registrarEvidenciaPaso('articulo-1', 'paso-a', 'entrada-1')
+
+    const fila = await db.progresoPasos.get('articulo-1')
+    expect(fila?.pasosHechos).toEqual(['paso-a'])
+    expect(fila?.instruccionesHechas).toEqual(['t1'])
+    expect(fila?.verificacionHecha).toEqual([0])
+    expect(fila?.evidenciasPorPaso).toEqual({ 'paso-a': 'entrada-1' })
+  })
+
+  it('lleva la evidencia por artículo, sin mezclarla entre procedimientos', async () => {
+    await registrarEvidenciaPaso('articulo-1', 'paso-a', 'entrada-1')
+    await registrarEvidenciaPaso('articulo-2', 'paso-a', 'entrada-2')
+
+    expect((await db.progresoPasos.get('articulo-1'))?.evidenciasPorPaso).toEqual({ 'paso-a': 'entrada-1' })
+    expect((await db.progresoPasos.get('articulo-2'))?.evidenciasPorPaso).toEqual({ 'paso-a': 'entrada-2' })
   })
 })
 

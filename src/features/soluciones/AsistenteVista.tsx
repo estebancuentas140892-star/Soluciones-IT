@@ -1,11 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type Procedimiento } from '../../lib/db'
+import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, siguientePasoPendiente, tareasDe } from '../../lib/procedimiento'
-import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
-import { CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning } from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import {
+  alternarVerificacionFinal,
+  contarHechos,
+  contarInstruccionesHechas,
+  registrarEvidenciaPaso,
+  reiniciarProgreso,
+} from '../../lib/progresoPasos'
+import { registrarIntervencion } from '../../lib/repositorio'
+import { Adjuntos } from '../../components/Adjuntos'
+import { Camera, CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning } from '../../components/iconos'
+import { BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
@@ -43,6 +51,14 @@ function formatoCronometro(segundos: number): string {
 export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado }: Props) {
   const { pasos, verificacionFinal, tiempoEstimadoMin } = procedimiento
   const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
+
+  // Equipo afectado por ESTE procedimiento (tarea 79, solo nivel 0):
+  // determina si la captura de evidencia tiene donde registrarse. Un
+  // subprocedimiento o solucion anidados ejecutan otro articulo, con
+  // su propio equipo o ninguno; se mantiene fuera para no sumar mas
+  // interfaz a paneles ya densos.
+  const articulo = useLiveQuery(() => (nivel === 0 ? db.articulos.get(articuloId) : undefined), [articuloId, nivel])
+  const dispositivoEvidencia = articulo?.dispositivosAfectados?.[0] ?? null
 
   const [indiceActual, setIndiceActual] = useState<number | null>(null)
   const [listo, setListo] = useState(false)
@@ -288,6 +304,18 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         />
       )}
 
+      {/* Evidencia fotografica del paso (tarea 79): solo si el
+          procedimiento tiene un equipo afectado donde registrarla. */}
+      {nivel === 0 && dispositivoEvidencia && (
+        <EvidenciaPaso
+          articuloId={articuloId}
+          articuloTitulo={articulo?.titulo ?? ''}
+          dispositivoId={dispositivoEvidencia.id}
+          paso={paso}
+          entradaId={progreso?.evidenciasPorPaso?.[paso.id] ?? null}
+        />
+      )}
+
       {/* Navegacion explicita en el modo ejecucion (nivel 0): Atrás para
           revisar el paso anterior y Siguiente para avanzar. Los pasos
           anidados conservan su boton unico (su avance lo decide el paso
@@ -365,6 +393,64 @@ function Encabezado({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// Evidencia fotografica del trabajo (tarea 79): "prueba de trabajo" que
+// el tecnico documenta en el sitio al completar un paso. Reutiliza la
+// misma bitacora que RegistrarIntervencion.tsx (una entrada de
+// `historial` sobre el equipo afectado, con su galeria de `Adjuntos`),
+// asi que la evidencia queda visible en el "Ver historial" normal del
+// dispositivo, no en un lugar aparte. La entrada se crea una sola vez
+// por paso (registrarEvidenciaPaso guarda el vinculo en el progreso
+// local): revisitar el paso reutiliza la misma galeria en vez de crear
+// intervenciones nuevas.
+function EvidenciaPaso({
+  articuloId,
+  articuloTitulo,
+  dispositivoId,
+  paso,
+  entradaId,
+}: {
+  articuloId: string
+  articuloTitulo: string
+  dispositivoId: string
+  paso: PasoProcedimiento
+  entradaId: string | null
+}) {
+  const [creando, setCreando] = useState(false)
+
+  async function adjuntarEvidencia() {
+    setCreando(true)
+    const tituloPaso = paso.titulo || paso.subArticuloTitulo || 'paso sin título'
+    const descripcion = `Evidencia del paso "${tituloPaso}" (${articuloTitulo})`
+    const id = await registrarIntervencion(dispositivoId, descripcion)
+    await registrarEvidenciaPaso(articuloId, paso.id, id)
+    setCreando(false)
+  }
+
+  if (!entradaId) {
+    return (
+      <button
+        type="button"
+        disabled={creando}
+        onClick={() => void adjuntarEvidencia()}
+        className={`self-start ${BTN_GHOST_ACENTO} disabled:opacity-50`}
+      >
+        <Camera size={14} aria-hidden />
+        {creando ? 'Preparando...' : 'Adjuntar evidencia de este paso'}
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-noct-divider bg-noct-surface p-3">
+      <p className="inline-flex items-center gap-1.5 text-xs font-medium text-noct-neutral-400">
+        <Camera size={13} aria-hidden />
+        Evidencia de este paso
+      </p>
+      <Adjuntos entidadTipo="historial" entidadId={entradaId} />
     </div>
   )
 }

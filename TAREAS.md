@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 113 (Historial al sistema Nocturne) quedó terminada, verificada y archivada el 2026-07-20. Con ella TODA la app, incluidos sus componentes compartidos, está en el sistema Nocturne: ya no queda ningún resto del tema claro heredado en todo el proyecto.
+Sin tarea en desarrollo. La tarea 79 (Modo Asistente Fase 2: captura de evidencia por paso) quedó terminada, verificada y archivada el 2026-07-20, aplicando la opción recomendada (b): intervención en el historial del equipo afectado, sin esquema.
+
+Antes, la tarea 113 (Historial al sistema Nocturne) quedó terminada, verificada y archivada el 2026-07-20. Con ella TODA la app, incluidos sus componentes compartidos, está en el sistema Nocturne: ya no queda ningún resto del tema claro heredado en todo el proyecto.
 
 Antes, la tarea 77 (migrar la ficha de categoría a Nocturne) quedó terminada, verificada y archivada el 2026-07-20. Con ella se eliminó el `Layout.tsx` heredado y sus dos componentes huérfanos. De paso se repuso el acceso a Cuenta desde el teléfono, que el Layout era el único en ofrecer.
 
@@ -35,17 +37,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 79. Modo Asistente Fase 2: captura de evidencia por paso
-- Descripción: en el modo ejecución (`AsistenteVista`), permitir adjuntar una foto de "prueba de trabajo" al completar un paso (el técnico documenta lo que hizo en el sitio). Reutiliza la tubería de subida/compresión y cola offline existente (`comprimirImagen`, `subirOEncolarArchivo`, `Adjuntos`). Decisión pendiente del usuario: dónde vive la evidencia. Opciones sin/con esquema: (a) como adjunto del paso en el propio artículo (no ideal: la evidencia es por ejecución, no del contenido); (b) como intervención en el `historial` del dispositivo asociado (sin esquema, reutiliza `registrarIntervencion` + `adjuntos` entidad 'historial'); (c) un registro de ejecución compartido con evidencia (requeriría esquema, agrupable con otros cambios). Recomendado: empezar por (b) si el procedimiento tiene un dispositivo afectado; si no, diferir.
-- Prioridad: Media
-- Ubicación: `src/features/soluciones/AsistenteVista.tsx` (+ posible `AsistentePage.tsx`); reutiliza `src/components/Adjuntos.tsx`, `src/lib/comprimirImagen.ts`, `src/lib/archivosPendientes.ts`, `src/lib/repositorio.ts` (`registrarIntervencion`).
-
-### 77. Migrar la ficha de categoría (CategoriaPage) al sistema Nocturne
-- Descripción: `src/features/soluciones/CategoriaPage.tsx` (`/soluciones/:categoriaId`) sigue en el tema claro heredado (`bg-sky-500`, `slate`). Desde la tarea 76 ya NO es el destino de "Volver" de las soluciones (eso ahora va a la lista con chip), pero sigue siendo la ficha 360° de la categoría, accesible desde el buscador ([useIndiceBusqueda.ts](src/features/busqueda/useIndiceBusqueda.ts) `tipo:'categoria'`) y desde la ficha de un dispositivo ([DispositivoPage.tsx:196](src/features/dispositivos/DispositivoPage.tsx)). Al abrirla se ve "vieja" respecto al resto de la app. Falta re-autorizarla en Nocturne (misma pauta que las demás pantallas: shell propio, tokens `noct-*`). Idealmente con un handoff Nocturne del usuario; si no llega, se traduce el diseño actual a Nocturne (regla 12).
-- Prioridad: Media
-- Ubicación: `src/features/soluciones/CategoriaPage.tsx`.
-- Nota: con la tarea 97 terminada, esta es la ÚLTIMA pantalla real que pasa por `src/app/Layout.tsx` (lo otro que queda ahí es solo la redirección de `/notas/*`). Al migrarla, evaluar si `Layout.tsx` puede eliminarse del todo (y si `IndicadorSync`, que solo usa ese Layout, queda huérfano).
 
 Pregunta abierta desde la tarea 62, nunca resuelta: decidir si el botón "Crear" de `src/features/red/RedPage.tsx` (hoy va a `/dispositivos/nuevo`, genérico) debería abrir en cambio un flujo dedicado a crear una conexión de red.
 
