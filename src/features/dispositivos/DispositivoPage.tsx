@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { completitudDispositivo } from './completitud'
 import { compartirOCopiar, copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
@@ -26,6 +27,7 @@ import {
   QrCode,
   ShareNetwork,
   TrashSimple,
+  Warning,
 } from '../../components/iconos'
 import {
   BTN_GHOST,
@@ -151,6 +153,10 @@ export function DispositivoPage() {
     .filter(Boolean)
     .join(' · ')
 
+  // Completitud de la ficha (fase J3): guia, nunca bloquea. Solo se
+  // muestra cuando falta algo.
+  const completitud = completitudDispositivo(dispositivo, esRed)
+
   return (
     <ShellNocturne>
       {/* Cabecera: regreso contextual, compartir y menú de acciones. */}
@@ -227,6 +233,22 @@ export function DispositivoPage() {
               </span>
             )}
           </div>
+
+          {/* Completitud de la ficha (fase J3): linea discreta dentro de
+              la propia cabecera, solo cuando falta algo, con enlace
+              directo a Editar. Nunca bloquea el uso de la ficha, solo lo
+              señala. */}
+          {completitud.faltantes.length > 0 && (
+            <Link
+              to={`/dispositivos/${dispositivoId}/editar`}
+              className="flex items-center gap-1.5 text-[12.5px] text-noct-precaucion hover:underline"
+            >
+              <Warning size={13} className="shrink-0" aria-hidden />
+              <span className="min-w-0 truncate">
+                Ficha al {completitud.porcentaje}%. Falta: {completitud.faltantes.join(', ')}.
+              </span>
+            </Link>
+          )}
         </header>
 
         {/* Información: filas copiables y ubicación viva. */}
