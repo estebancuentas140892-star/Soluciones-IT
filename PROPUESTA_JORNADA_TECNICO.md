@@ -1,7 +1,7 @@
 # Propuesta: optimizar la jornada del técnico (centro de operaciones, favoritos y actividad)
 
 Fecha: 2026-07-20
-Estado: TODAS las fases están implementadas, verificadas y archivadas (2026-07-20): J1 favoritos (tarea 108), J2 actividad reciente del equipo (tarea 109), J3 completitud de la ficha del dispositivo (tarea 110), J4 etiquetas reutilizables (tarea 111) y J5 editor de artículo en pestañas (tarea 112, que absorbió y cerró la tarea 74 reponiendo sus 4 funciones ocultas). Las decisiones D1 y D2 se aplicaron con sus opciones recomendadas. Pendiente: que el usuario valide las cinco fases en uso real y resuelva las decisiones D3 a D5 de la sección 5.
+Estado: TODAS las fases están implementadas, verificadas y archivadas (2026-07-20): J1 favoritos (tarea 108), J2 actividad reciente del equipo (tarea 109), J3 completitud de la ficha del dispositivo (tarea 110), J4 etiquetas reutilizables (tarea 111) y J5 editor de artículo en pestañas (tarea 112, que absorbió y cerró la tarea 74 reponiendo sus 4 funciones ocultas). Las cinco decisiones (D1 a D5) quedaron resueltas por el usuario, las cinco a favor de la opción recomendada: D1 y D2 el 2026-07-20 (favoritos personales, solo bloque de actividad en Inicio); D3, D4 y D5 el 2026-07-21 (anotar la deduplicación por hash como tarea futura sin agendar; mantener el nombre "Soluciones"; bloque "Pendientes" en Inicio con los tres contenidos propuestos, implementado en la tarea 122). Con esto la propuesta queda COMPLETA: no resta ninguna decisión ni fase. Pendiente: que el usuario valide el bloque "Pendientes" en uso real.
 
 Origen: encargo del usuario del 2026-07-20 con 12 puntos de mejora ("IT Brain como cerebro operativo"). Este documento contrasta cada punto contra el código real y separa tres cosas: lo que YA existe (más de lo que el encargo asume), lo que falta de verdad (fases J1 a J5) y lo que se recomienda NO hacer con su justificación.
 
@@ -101,13 +101,13 @@ Intervenciones manuales con foto, cambios automáticos de campos, cambios de cab
 
 Los tres tienen versión derivada o local que entrega el mismo valor sin esquema (secciones 3.J4, 3.J1, 3.J2). Si el uso real demuestra que se quedan cortos (por ejemplo, el equipo quiere favoritos compartidos), el salto a esquema se agrupa en un único lote como se hizo con N3.
 
-## 5. Decisiones abiertas (solo el usuario)
+## 5. Decisiones (RESUELTAS, las cinco a favor de la opción recomendada)
 
-- D1. Favoritos: ¿personales por dispositivo (recomendado, sin esquema) o compartidos por el equipo (requiere tabla en Supabase + RLS)?
-- D2. Actividad del equipo: ¿solo bloque en Inicio (recomendado para empezar) o también pantalla completa `/actividad` con filtros?
-- D3. ¿Anotar la deduplicación por hash de adjuntos como tarea futura (recomendado) o descartarla del todo?
-- D4. Nombre del módulo "Soluciones". Análisis: "Procedimientos" se queda corto (el módulo también tiene manuales, configuraciones e incidencias); "Base de conocimiento" es preciso pero largo y frío para una pestaña móvil; "Conocimiento" es el mejor alternativo (describe el contenido completo y cabe en la pestaña). A favor de mantener "Soluciones": es la promesa al técnico (entra buscando una solución, no "conocimiento"), lleva un año de hábito del equipo y combina con Diagnóstico ("del problema a la solución"). Recomendación: MANTENER "Soluciones"; si el usuario prefiere precisión sobre hábito, "Conocimiento". No se cambia nada sin su decisión.
-- D5. Bloque "Pendientes" en Inicio (punto 1 del encargo): el encargo lo pide pero no existe una entidad "pendiente" en el sistema, y crear un gestor de tareas es otro producto. Se propone un bloque DERIVADO con lo que ya significa "pendiente" en los datos reales: mis borradores (`articulos.estado = 'borrador'` del usuario actual), credenciales por vencer o vencidas (ya calculado en `src/lib/vencimiento.ts`, visible solo con permiso de bóveda) y sugerencias del equipo sin revisar (`SugerenciasEquipoPage`). ¿Se aprueba con ese contenido, se recorta, o se descarta el bloque?
+- D1. Favoritos: **personales por dispositivo**, sin esquema (tarea 108, 2026-07-20).
+- D2. Actividad del equipo: **solo bloque en Inicio**, sin pantalla completa por ahora (tarea 109, 2026-07-20).
+- D3. Deduplicación por hash de adjuntos: **anotada como tarea futura** (2026-07-21), sin construirla todavía; se agenda si algún día aparecen duplicados reales.
+- D4. Nombre del módulo: **se mantiene "Soluciones"** (2026-07-21). Es la promesa al técnico (entra buscando una solución, no "conocimiento"), lleva más de un año de hábito del equipo y combina con Diagnóstico ("del problema a la solución"). Ningún texto de la app cambia.
+- D5. Bloque "Pendientes" en Inicio: **aprobado tal cual, con los tres contenidos propuestos** (2026-07-21, tarea 122): mis borradores (`articulos.estado = 'borrador'` del usuario actual, por `updatedBy`), credenciales por vencer o vencidas (solo con permiso de bóveda) y sugerencias del equipo sin revisar (mismo dato que `SugerenciasEquipoPage`). Lógica pura en `src/features/inicio/pendientes.ts`; bloque visible en Inicio solo cuando hay al menos un pendiente, con un tope de 6 renglones (las credenciales vencidas pesan más que un borrador propio).
 
 ## 6. Orden recomendado
 

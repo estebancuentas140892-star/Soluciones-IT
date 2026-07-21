@@ -12,16 +12,19 @@ import { DescargarOffline } from '../../components/DescargarOffline'
 import {
   BookOpen,
   CaretRight,
+  CheckCircle,
   ClockCounterClockwise,
   CloudArrowUp,
   CloudCheck,
   CloudSlash,
   FlagBanner,
   type IconoProps,
+  Lightbulb,
   LockSimple,
   MagnifyingGlass,
   MapPin,
   Monitor,
+  PencilSimple,
   Play,
   QrCode,
   Star,
@@ -46,6 +49,8 @@ import {
   type FilaActividad,
 } from '../historial/actividadEquipo'
 import { etiquetaResuelto } from '../historial/lineaDeTiempo'
+import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
+import { calcularPendientes, type ItemPendiente } from './pendientes'
 
 // Pantalla de Inicio en el sistema Nocturne (re-autoria del handoff
 // "Rediseño de aplicación empresarial", Inicio.dc.html). Un solo punto
@@ -124,6 +129,40 @@ export function InicioPage() {
   const recientes = useLiveQuery(() => obtenerRecientes(), [], [])
   const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
   const actividad = useLiveQuery(() => obtenerActividadReciente(), [], [])
+
+  // Pendientes (fase J-D5 de PROPUESTA_JORNADA_TECNICO.md, decision
+  // aprobada por el usuario el 2026-07-21 con el contenido recomendado):
+  // bloque derivado de lo que ya significa "pendiente" en los datos
+  // reales, sin tabla ni esquema nuevos. Ver src/features/inicio/pendientes.ts.
+  const perfil = usePerfilVivo()
+  const borradores = useLiveQuery(
+    () => db.articulos.filter((a) => !a.eliminadoEn && a.estado === 'borrador').toArray(),
+    [],
+    [],
+  )
+  const credencialesConVencimiento = useLiveQuery(
+    () => db.credenciales.filter((c) => !c.eliminadoEn && Boolean(c.venceEn)).toArray(),
+    [],
+    [],
+  )
+  const ejecucionesConSugerencia = useLiveQuery(
+    () => db.ejecuciones_diagnostico.filter((e) => e.motivo === 'encontro_otra_solucion').toArray(),
+    [],
+    [],
+  )
+  const pendientes = useMemo(
+    () =>
+      perfil
+        ? calcularPendientes({
+            articulos: borradores,
+            credenciales: credencialesConVencimiento,
+            ejecuciones: ejecucionesConSugerencia,
+            usuarioId: perfil.id,
+            puedeVerBoveda: perfil.puedeVerBoveda,
+          })
+        : [],
+    [perfil, borradores, credencialesConVencimiento, ejecucionesConSugerencia],
+  )
 
   // Articulos marcados por el equipo como "ruta de inicio" (ver
   // ArticuloForm): puerta de entrada para quien recien llega. Menor
@@ -328,6 +367,24 @@ export function InicioPage() {
               />
             </div>
 
+            {/* Pendientes (decisión D5 de PROPUESTA_JORNADA_TECNICO.md):
+                mis borradores, credenciales por vencer/vencidas (solo con
+                permiso de bóveda) y sugerencias del equipo sin revisar.
+                Bloque derivado, sin tabla ni escrituras nuevas. */}
+            {pendientes.length > 0 && (
+              <section>
+                <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                  <CheckCircle size={14} className="text-noct-neutral-400" aria-hidden />
+                  <TituloSeccion>Pendientes</TituloSeccion>
+                </div>
+                <div className="flex flex-col">
+                  {pendientes.map((item) => (
+                    <FilaPendiente key={item.clave} item={item} />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Favoritos: la lista fija que el tecnico arma a mano con la
                 estrella de cada ficha. Solo se muestra si hay alguno; el
                 bloque no se anuncia vacio para no ensuciar Inicio. */}
@@ -526,6 +583,41 @@ function FilaActividadItem({ fila }: { fila: FilaActividad }) {
         <span className="block truncate text-[12px] text-noct-neutral-500">
           {tiempoRelativo(fila.fechaHora)}
         </span>
+      </span>
+      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+    </Link>
+  )
+}
+
+// Icono y tono de una fila de "Pendientes" según su categoría/urgencia:
+// una credencial vencida pesa distinto que un borrador propio, aunque
+// ambos sean "algo por resolver".
+const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) => React.JSX.Element> = {
+  borrador: PencilSimple,
+  credencial: LockSimple,
+  sugerencia: Lightbulb,
+}
+const TONO_PENDIENTE: Record<ItemPendiente['tono'], string> = {
+  neutro: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]',
+  precaucion: 'text-noct-precaucion bg-noct-precaucion/[.12]',
+  error: 'text-noct-error bg-noct-error/[.12]',
+}
+
+function FilaPendiente({ item }: { item: ItemPendiente }) {
+  const Icono = ICONO_PENDIENTE[item.categoria]
+  return (
+    <Link
+      to={item.ruta}
+      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+    >
+      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${TONO_PENDIENTE[item.tono]}`}>
+        <Icono size={17} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="mb-0.5 block truncate text-sm font-medium leading-[1.3] [text-wrap:pretty]">
+          {item.titulo}
+        </span>
+        <span className="block truncate text-[12px] text-noct-neutral-500">{item.detalle}</span>
       </span>
       <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
     </Link>

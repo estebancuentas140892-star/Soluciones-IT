@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 122. Bloque "Pendientes" en Inicio (decisión D5 de PROPUESTA_JORNADA_TECNICO.md)
+- Finalizada: 2026-07-21. Sin esquema.
+- El usuario resolvió las tres decisiones abiertas de la sección 5 de la propuesta, las tres a favor de la opción recomendada: D3 (anotar la deduplicación por hash de adjuntos como tarea futura, sin agendar, ver "Por hacer" en este mismo tablero), D4 (mantener el nombre "Soluciones", sin cambios de código) y D5 (bloque "Pendientes" en Inicio con los tres contenidos propuestos). Con esto `PROPUESTA_JORNADA_TECNICO.md` queda completa: no resta ninguna fase ni decisión. `PROPUESTA_BASE_CONOCIMIENTO.md` ya no tenía decisiones abiertas (revisada en la misma sesión): estado "EJECUTADA", solo pendiente el paso ya conocido del usuario de aplicar `schema.sql`.
+- Lógica pura en `src/features/inicio/pendientes.ts` (+ 7 pruebas), mismo patrón que `actividadEquipo.ts`: no existe una entidad "pendiente" en el sistema (crear una sería otro producto, un gestor de tareas), así que el bloque se deriva de lo que ya significa "pendiente" en los datos reales, sin tabla ni columna nueva.
+  - `borradoresPropios`: artículos con `estado === 'borrador'` cuyo `updatedBy` es el usuario actual (no existe un campo "creado por" aparte; "mío" se define por quién lo tocó por última vez).
+  - `credencialesPorVencer`: mismo cálculo que ya usa `BovedaPage` para su aviso de rotación (`estadoVencimiento` de `src/lib/vencimiento.ts`), pasado solo cuando el perfil tiene `puedeVerBoveda` (si no, no se le insinúa nada de la bóveda).
+  - `sugerenciasSinRevisar`: mismo dato que ya muestra `SugerenciasEquipoPage` (ejecuciones de diagnóstico con motivo `'encontro_otra_solucion'` y texto); sin flujo de "revisado" todavía, así que "sin revisar" es, hoy, "todas las que existen".
+  - `calcularPendientes` combina las tres, credenciales vencidas primero (más urgentes), con un tope de 6 renglones.
+- `InicioPage.tsx`: nueva sección "Pendientes" (icono `CheckCircle`), visible solo cuando hay al menos un pendiente, colocada después de los atajos rápidos y antes de "Favoritos". Cada fila (`FilaPendiente`) reutiliza el patrón visual ya establecido (icono cuadrado + título + detalle + flecha) con icono y tono según la categoría (borrador: `PencilSimple` neutro; credencial: `LockSimple` en ámbar si vence pronto o rojo si ya venció; sugerencia: `Lightbulb` neutro).
+- Verificación: 569 pruebas (7 nuevas), oxlint y build (`tsc -b && vite build`) en verde. **Pendiente**: no se pudo verificar por clic real en el navegador, mismo motivo que las fases P0-P5 (este entorno no tiene Supabase configurado y no se debe iniciar sesión con credenciales reales del usuario); falta que el usuario lo vea en su teléfono con al menos un borrador propio, una credencial por vencer o una sugerencia real.
+- Ubicación: `src/features/inicio/{pendientes,pendientes.test,InicioPage}.tsx`, `PROPUESTA_JORNADA_TECNICO.md` sección 5.
+
 ### 121. Fase P5 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md: cifrado de binarios para "Archivo seguro"
 - Finalizada: 2026-07-21. Con esquema (columna, CHECK y bucket de Storage nuevo). Última fase de la propuesta; con ella el "Archivo seguro" queda con cifrado real (antes solo guardaba notas y datos de texto).
 - Planificada primero con `EnterPlanMode` (fase señalada como "la más cara" del encargo original) y validada con un agente Plan antes de escribir código, dado que involucra una decisión de seguridad no trivial: ver más abajo.
