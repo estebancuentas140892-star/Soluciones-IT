@@ -40,7 +40,7 @@ export function Modal({ abierto, onCerrar, tituloId, children }: Props) {
         aria-modal="true"
         aria-labelledby={tituloId}
         onClick={(evento) => evento.stopPropagation()}
-        className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-slate-950/60"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-slate-950/60"
       >
         {children}
       </div>
