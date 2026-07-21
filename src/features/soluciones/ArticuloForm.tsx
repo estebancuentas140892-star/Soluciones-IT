@@ -416,7 +416,7 @@ export function ArticuloForm() {
             {/* Destino derivado de la jerarquía central (padreDe): en
                 creación vuelve a la lista con el chip de la categoría; en
                 edición, a la ficha del artículo. */}
-            <BotonVolver variante="nocturne">Cancelar</BotonVolver>
+            <BotonVolver>Cancelar</BotonVolver>
             <TagNeutral className="shrink-0">{estadoEtiqueta}</TagNeutral>
           </header>
           <div className="px-4 pb-2.5 pt-0.5">

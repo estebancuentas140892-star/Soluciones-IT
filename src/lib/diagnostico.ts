@@ -1,4 +1,5 @@
 import type { EstadoDiagnostico, NodoDiagnostico, OpcionDiagnostico, PasoCamino } from './db'
+import { texto } from './texto'
 
 // Logica pura del Modo Diagnostico Inteligente, separada de los
 // componentes para poder probarla sin navegador. Los nodos del arbol
@@ -82,10 +83,6 @@ function normalizarOpciones(valor: unknown): OpcionDiagnostico[] {
         mensajeFinal: siguienteNodoId ? '' : texto(origen.mensajeFinal),
       }
     })
-}
-
-function texto(valor: unknown): string {
-  return typeof valor === 'string' ? valor : ''
 }
 
 // Limpia los nodos antes de guardar: recorta espacios y descarta las

@@ -110,7 +110,7 @@ export function TopologiaPage() {
           expansión, título, buscador y leyenda de estados. */}
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
         <header className="flex items-center justify-between gap-2 px-2 pt-2.5">
-          <BotonVolver variante="nocturne" />
+          <BotonVolver />
           {hayContenido && (
             <div className="flex shrink-0 gap-1.5">
               <button type="button" onClick={expandirTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>

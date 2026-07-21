@@ -114,7 +114,7 @@ export function ImportarDispositivosPage() {
       <div className="mx-auto flex min-h-svh max-w-md flex-col">
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver variante="nocturne" to="/dispositivos">
+            <BotonVolver to="/dispositivos">
               Dispositivos
             </BotonVolver>
             <span className="shrink-0 text-[12px] text-noct-neutral-500">{PASO_ETIQUETA[fase.paso]}</span>

@@ -168,7 +168,7 @@ export function DispositivoPage() {
     <ShellNocturne>
       {/* Cabecera: regreso contextual, compartir y menú de acciones. */}
       <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5 lg:px-10 lg:pt-4">
-        <BotonVolver variante="nocturne" to={volverA}>
+        <BotonVolver to={volverA}>
           {esRed ? 'Red' : 'Dispositivos'}
         </BotonVolver>
         <div className="flex shrink-0 items-center gap-2">

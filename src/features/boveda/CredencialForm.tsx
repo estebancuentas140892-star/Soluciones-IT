@@ -347,7 +347,7 @@ export function CredencialForm() {
         {/* Cabecera pegajosa con blur: cancelar, nota de cifrado y título. */}
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pb-0 pl-2 pr-3">
-            <BotonVolver variante="nocturne">Cancelar</BotonVolver>
+            <BotonVolver>Cancelar</BotonVolver>
             <span className="inline-flex shrink-0 items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
               <LockSimple size={13} aria-hidden />
               Se guarda cifrada

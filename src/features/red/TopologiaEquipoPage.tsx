@@ -8,6 +8,7 @@ import { agruparConexiones, MEDIOS_SUGERIDOS, type ExtremoConexion } from '../..
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 import { BotonVolver } from '../../components/BotonVolver'
 import { IconoNodo } from './IconoNodo'
 import { construirArbol, contarDescendientes, contarImpacto, infoDeDispositivos, type NodoTopologia } from './arbol'
@@ -136,7 +137,7 @@ export function TopologiaEquipoPage() {
           identidad del equipo (nombre, estado con punto de color e IP). */}
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
         <header className="flex items-center justify-between gap-2 px-2 pb-1.5 pt-2.5">
-          <BotonVolver variante="nocturne" />
+          <BotonVolver />
           <Link to={`/dispositivos/${equipo.id}`} className={`shrink-0 ${BTN_GHOST}`}>
             <Monitor size={14} aria-hidden />
             Abrir la ficha
@@ -513,8 +514,7 @@ function FormularioConexion({ equipo, onCerrar }: { equipo: Dispositivo; onCerra
         : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
     }`
 
-  const claseCampo =
-    'w-full box-border min-h-11 rounded-md border border-noct-divider bg-noct-bg px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+  const claseCampo = `${CLASE_CAMPO_SOBRE_SUPERFICIE} min-h-11`
 
   return (
     <div className="mb-3 flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-surface p-3">

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
@@ -36,6 +36,7 @@ import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useGrafo } from '../../components/useGrafo'
 import { resumenImpacto } from '../../lib/grafo'
+import { iconoPorPalabraClave } from '../../lib/iconoPorPalabraClave'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
 import { estadoVencimiento, type EstadoVencimiento } from '../../lib/vencimiento'
@@ -80,7 +81,7 @@ function normalizar(texto: string): string {
 // credencial), así que el icono se deriva de la categoría por palabras
 // clave. Cae a la llave genérica cuando ninguna regla coincide: nunca
 // queda una fila sin icono.
-const REGLAS_ICONO: [RegExp, (props: IconoProps) => React.JSX.Element][] = [
+const REGLAS_ICONO: [RegExp, ComponentType<IconoProps>][] = [
   [/impres/, Printer],
   [/cctv|camara|video|grabador|dvr|nvr|vigilancia/, VideoCamera],
   [/servidor|nas|backup|respaldo|storage|almacen/, HardDrives],
@@ -89,10 +90,8 @@ const REGLAS_ICONO: [RegExp, (props: IconoProps) => React.JSX.Element][] = [
   [/red|wifi|wi-fi|internet|lan|vlan/, WifiHigh],
 ]
 
-function iconoDeCategoria(categoria: string): (props: IconoProps) => React.JSX.Element {
-  const n = normalizar(categoria)
-  for (const [regla, Icono] of REGLAS_ICONO) if (regla.test(n)) return Icono
-  return Key
+function iconoDeCategoria(categoria: string): ComponentType<IconoProps> {
+  return iconoPorPalabraClave(normalizar(categoria), REGLAS_ICONO, Key)
 }
 
 // Orden de severidad para llevar lo que urge rotar al principio de la

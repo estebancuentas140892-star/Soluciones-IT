@@ -90,7 +90,7 @@ export function DiagnosticosPage() {
             y buscador del problema. */}
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 px-2 pt-2.5">
-            <BotonVolver variante="nocturne" />
+            <BotonVolver />
             <Link to="/diagnostico/nuevo" className={`shrink-0 ${BTN_GHOST}`}>
               <Plus size={14} aria-hidden />
               Crear

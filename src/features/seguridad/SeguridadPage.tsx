@@ -37,7 +37,7 @@ export function SeguridadPage() {
       <div className="mx-auto flex min-h-svh w-full max-w-md flex-col">
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="px-2 pt-2.5">
-            <BotonVolver variante="nocturne" />
+            <BotonVolver />
           </header>
           <div className="px-4 pb-3 pt-0.5">
             <h1 className="text-[22px] font-medium leading-[1.25]">Seguridad de la aplicación</h1>

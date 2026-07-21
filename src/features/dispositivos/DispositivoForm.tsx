@@ -248,7 +248,7 @@ export function DispositivoForm() {
         {/* Cabecera pegajosa con blur: cancelar, tag de copia y título. */}
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver variante="nocturne">Cancelar</BotonVolver>
+            <BotonVolver>Cancelar</BotonVolver>
             {esDuplicado && <TagNeutral className="shrink-0">Copia de otro equipo</TagNeutral>}
           </header>
           <div className="px-4 pb-3 pt-0.5">

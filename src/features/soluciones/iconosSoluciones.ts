@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import type { TipoArticulo } from '../../lib/db'
+import { iconoPorPalabraClave } from '../../lib/iconoPorPalabraClave'
 import {
   BookOpen,
   Code,
@@ -84,20 +85,15 @@ export function colorIconoDeTipo(tipo: TipoArticulo): string {
 // por palabras clave del nombre, con BookOpen como respaldo neutro. El
 // orden importa: "Punto de venta" cae en tienda antes que en red por la
 // palabra "venta".
+const REGLAS_ICONO_CATEGORIA: [RegExp, ComponentType<IconoProps>][] = [
+  [/impres/, Printer],
+  [/pos|venta|caja/, Storefront],
+  [/camara|cctv|video/, VideoCamera],
+  [/red|switch|access|rack|punto/, TreeStructure],
+  [/comput|servidor|equipo/, Monitor],
+  [/software|licencia/, Code],
+]
+
 export function iconoDeCategoria(nombre: string): ComponentType<IconoProps> {
-  const n = normalizarTexto(nombre)
-  if (n.includes('impres')) return Printer
-  if (n.includes('pos') || n.includes('venta') || n.includes('caja')) return Storefront
-  if (n.includes('camara') || n.includes('cctv') || n.includes('video')) return VideoCamera
-  if (
-    n.includes('red') ||
-    n.includes('switch') ||
-    n.includes('access') ||
-    n.includes('rack') ||
-    n.includes('punto')
-  )
-    return TreeStructure
-  if (n.includes('comput') || n.includes('servidor') || n.includes('equipo')) return Monitor
-  if (n.includes('software') || n.includes('licencia')) return Code
-  return BookOpen
+  return iconoPorPalabraClave(normalizarTexto(nombre), REGLAS_ICONO_CATEGORIA, BookOpen)
 }

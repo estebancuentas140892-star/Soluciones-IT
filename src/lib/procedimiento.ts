@@ -10,6 +10,7 @@ import type {
   TonoAviso,
   VinculoProtegido,
 } from './db'
+import { texto } from './texto'
 
 // Logica pura de los procedimientos paso a paso, separada de los
 // componentes para poder probarla sin navegador. El dato viaja como
@@ -321,10 +322,6 @@ function tipoDeReferencia(referencia: string): string {
   // Sin extension reconocida se asume imagen: el campo viejo `imagen`
   // solo aceptaba imagenes.
   return porExtension[extension] ?? 'image/*'
-}
-
-function texto(valor: unknown): string {
-  return typeof valor === 'string' ? valor : ''
 }
 
 // Copia profunda de un procedimiento para "Duplicar": regenera los

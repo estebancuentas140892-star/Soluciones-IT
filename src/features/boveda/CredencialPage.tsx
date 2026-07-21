@@ -312,7 +312,7 @@ export function CredencialPage() {
           ficha. Eliminar va en rojo y de solo icono, como en el mockup. */}
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
         <header className="flex items-center justify-between gap-2 py-2 pl-2 pr-3 lg:px-10">
-          <BotonVolver variante="nocturne" />
+          <BotonVolver />
           <div className="flex shrink-0 gap-1.5">
             <Link to={`/boveda/${credencialId}/editar`} className={BTN_SECUNDARIO}>
               <PencilSimple size={14} aria-hidden />

@@ -38,7 +38,7 @@ export function AsistentePage() {
             del procedimiento en ejecucion. */}
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] px-2 pb-2 pt-2.5 backdrop-blur-[12px]">
           <div className="flex items-center justify-between gap-2">
-            <BotonVolver variante="nocturne">Salir</BotonVolver>
+            <BotonVolver>Salir</BotonVolver>
             <span className="shrink-0 pr-1 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
               Modo ejecución
             </span>

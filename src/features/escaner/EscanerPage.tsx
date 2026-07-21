@@ -273,7 +273,7 @@ export function EscanerPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-28 bg-gradient-to-b from-noct-bg/85 to-transparent" />
 
       <header className="relative z-10 flex items-center justify-between gap-2 px-2 pt-2.5">
-        <BotonVolver variante="nocturne">Volver</BotonVolver>
+        <BotonVolver>Volver</BotonVolver>
         <h1 className="text-sm font-medium">Escanear equipo</h1>
         {linterna.disponible ? (
           <button

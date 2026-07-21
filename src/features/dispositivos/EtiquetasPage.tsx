@@ -69,7 +69,7 @@ export function EtiquetasPage() {
       <div className="mx-auto flex min-h-svh max-w-md flex-col print:hidden">
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver variante="nocturne" to="/dispositivos">
+            <BotonVolver to="/dispositivos">
               Dispositivos
             </BotonVolver>
           </header>

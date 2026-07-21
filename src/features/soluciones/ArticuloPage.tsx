@@ -115,7 +115,7 @@ export function ArticuloPage() {
         {/* Destino derivado de la jerarquía central (padreDe): la ficha
             de artículo sube a la lista de Soluciones con el chip de su
             categoría. La etiqueta muestra el nombre de la categoría. */}
-        <BotonVolver variante="nocturne">{categoria?.nombre ?? 'Soluciones'}</BotonVolver>
+        <BotonVolver>{categoria?.nombre ?? 'Soluciones'}</BotonVolver>
         <div className="flex shrink-0 items-center gap-2">
           <BotonFavorito tipo="articulo" entidadId={articuloId} />
           {procedimiento && (

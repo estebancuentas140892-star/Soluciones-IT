@@ -56,37 +56,43 @@ export function tipoDeNodoVisual(nombreCategoria: string): TipoNodoVisual {
   return 'generico'
 }
 
-// Etiqueta canónica del estado del dispositivo (Operativo, En
-// mantenimiento, Fuera de servicio, De baja; cualquier otro texto se
-// conserva tal cual, o "Sin estado" si viene vacío). Mismo criterio
-// insensible a mayúsculas que infoDeEstado en dispositivos/estados.ts.
-// Las clases de tema claro que este módulo devolvía antes se retiraron
-// con la última pantalla clara (tarea 92).
+// Lista canónica de estados conocidos de un dispositivo (el campo
+// sigue siendo texto libre: un valor que no coincida cae a "Sin
+// estado" / gris neutro, sin romper nada). Única fuente para toda la
+// app: agregar, renombrar o recolorear un estado solo requiere tocar
+// esta lista. features/dispositivos/estados.ts reexporta
+// ESTADOS_SUGERIDOS desde aquí para el datalist del formulario.
+const ESTADOS_CONOCIDOS: { etiqueta: string; clase: string }[] = [
+  { etiqueta: 'Operativo', clase: 'text-noct-exito' },
+  { etiqueta: 'En mantenimiento', clase: 'text-noct-precaucion' },
+  { etiqueta: 'Fuera de servicio', clase: 'text-noct-error' },
+  { etiqueta: 'De baja', clase: 'text-noct-neutral-500' },
+]
+
+export const ESTADOS_SUGERIDOS = ESTADOS_CONOCIDOS.map((e) => e.etiqueta)
+
+// Etiqueta canónica del estado del dispositivo (una de ESTADOS_CONOCIDOS
+// arriba; cualquier otro texto se conserva tal cual, o "Sin estado" si
+// viene vacío). Comparación insensible a mayúsculas y acentos. Las
+// clases de tema claro que este módulo devolvía antes se retiraron con
+// la última pantalla clara (tarea 92).
 export interface EstadoConEtiqueta {
   etiqueta: string
 }
 
 export function estadoConEtiqueta(estado: string): EstadoConEtiqueta {
   const texto = normalizar(estado)
-  if (texto === 'operativo') return { etiqueta: 'Operativo' }
-  if (texto === 'en mantenimiento') return { etiqueta: 'En mantenimiento' }
-  if (texto === 'fuera de servicio') return { etiqueta: 'Fuera de servicio' }
-  if (texto === 'de baja') return { etiqueta: 'De baja' }
-  return { etiqueta: estado.trim() || 'Sin estado' }
-}
-
-const CLASE_ESTADO: Record<string, string> = {
-  operativo: 'text-noct-exito',
-  'en mantenimiento': 'text-noct-precaucion',
-  'fuera de servicio': 'text-noct-error',
-  'de baja': 'text-noct-neutral-500',
+  const conocido = ESTADOS_CONOCIDOS.find((e) => normalizar(e.etiqueta) === texto)
+  return { etiqueta: conocido ? conocido.etiqueta : estado.trim() || 'Sin estado' }
 }
 
 // Color Nocturne para la etiqueta canónica de arriba. Compartido por
 // Dispositivos, Red, Topología y Topología de Equipo (antes cada
 // pantalla lo definía por su cuenta, calcado; unificado aquí).
 export function claseEstado(etiqueta: string): string {
-  return CLASE_ESTADO[etiqueta.toLowerCase()] ?? 'text-noct-neutral-500'
+  const texto = normalizar(etiqueta)
+  const conocido = ESTADOS_CONOCIDOS.find((e) => normalizar(e.etiqueta) === texto)
+  return conocido ? conocido.clase : 'text-noct-neutral-500'
 }
 
 // Línea de detalle de la fila, estilo "Switch 8 puertos · Puerto 02 ·
