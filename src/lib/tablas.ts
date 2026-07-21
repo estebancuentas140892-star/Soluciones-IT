@@ -67,6 +67,28 @@ interface ConfigTabla {
   soloInsercion: boolean
   // Propiedad local (camelCase) -> columna remota (snake_case).
   campos: Record<string, string>
+  // Valor de las columnas declaradas NOT NULL DEFAULT en schema.sql,
+  // por nombre de propiedad LOCAL. Es el contrato de la tabla remota
+  // escrito de este lado, y sirve en las dos direcciones:
+  //
+  // - Al bajar: una columna agregada despues (todas las de
+  //   `alter table ... add column if not exists` de schema.sql) no
+  //   viene en las filas descargadas mientras el esquema no se aplica
+  //   en el servidor. Sin esto, `aEntidadLocal` la guardaba como null
+  //   y mentia sobre el tipo local (por ejemplo `esRutaInicio:
+  //   boolean` terminaba en null).
+  // - Al subir: ese null viajaba tal cual y el servidor rechazaba la
+  //   fila con "null value in column ... violates not-null
+  //   constraint". El cambio se quedaba en la cola reintentandose para
+  //   siempre (700 intentos en el caso real que destapo esto,
+  //   2026-07-21), porque ademas la regla anti pisado deja de
+  //   refrescar una ficha con cambios pendientes: el null local nunca
+  //   se corregia solo.
+  //
+  // Solo van las columnas con DEFAULT. Las NOT NULL sin default
+  // (titulo, categoria_id, valor_cifrado...) no llevan valor de
+  // relleno a proposito: si faltan es un error de verdad y debe verse.
+  porDefecto: Record<string, unknown>
 }
 
 const camposComunes = {
@@ -88,6 +110,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       esRed: 'es_red',
       color: 'color',
     },
+    porDefecto: { nombre: '', icono: '', orden: 0, esRed: false },
   },
   articulos: {
     columnaCursor: 'updated_at',
@@ -109,6 +132,18 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       relacionados: 'relacionados',
       ordenRutaInicio: 'orden_ruta_inicio',
     },
+    porDefecto: {
+      contenido: '',
+      etiquetas: [],
+      sintomas: [],
+      causas: [],
+      dispositivosAfectados: [],
+      esRutaInicio: false,
+      estado: 'publicado',
+      version: '1.0',
+      relacionados: [],
+      ordenRutaInicio: 0,
+    },
   },
   dispositivos: {
     columnaCursor: 'updated_at',
@@ -129,6 +164,17 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       detalles: 'detalles',
       foto: 'foto',
     },
+    porDefecto: {
+      marca: '',
+      modelo: '',
+      serial: '',
+      placaInventario: '',
+      ubicacion: '',
+      ip: '',
+      estado: '',
+      observaciones: '',
+      detalles: {},
+    },
   },
   conexiones: {
     columnaCursor: 'updated_at',
@@ -144,6 +190,14 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       destinoPuerto: 'destino_puerto',
       medio: 'medio',
       notas: 'notas',
+    },
+    porDefecto: {
+      origenNombre: '',
+      origenPuerto: '',
+      destinoNombre: '',
+      destinoPuerto: '',
+      medio: '',
+      notas: '',
     },
   },
   credenciales: {
@@ -162,6 +216,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       // real vive cifrado en el bucket archivos_boveda de Storage.
       archivo: 'archivo',
     },
+    porDefecto: { categoria: '', dispositivos: [], tipo: 'cuenta' },
   },
   adjuntos: {
     columnaCursor: 'updated_at',
@@ -174,6 +229,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       tipo: 'tipo',
       referencia: 'referencia',
     },
+    porDefecto: { tipo: '' },
   },
   historial: {
     columnaCursor: 'recibido_en',
@@ -190,6 +246,10 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       valorNuevo: 'valor_nuevo',
       motivo: 'motivo',
     },
+    // fechaHora tambien es NOT NULL, pero su default es now() y no hay
+    // constante equivalente de este lado: la pone siempre el
+    // repositorio al crear la entrada.
+    porDefecto: { usuarioNombre: '', valorAnterior: '', valorNuevo: '', motivo: '' },
   },
   diagnosticos: {
     columnaCursor: 'updated_at',
@@ -201,6 +261,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       descripcion: 'descripcion',
       nodos: 'nodos',
     },
+    porDefecto: { descripcion: '', nodos: [] },
   },
   // Registro inmutable de diagnosticos terminados o abandonados, con
   // el mismo patron que el historial: solo insercion y cursor sobre
@@ -222,6 +283,15 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       motivo: 'motivo',
       solucionPropuesta: 'solucion_propuesta',
     },
+    porDefecto: {
+      diagnosticoTitulo: '',
+      usuarioNombre: '',
+      camino: [],
+      articulosEjecutados: [],
+      duracionSegundos: 0,
+      motivo: '',
+      solucionPropuesta: '',
+    },
   },
   // Auditoria de la boveda: mismo patron que historial y ejecuciones
   // de diagnostico, solo insercion con cursor sobre recibido_en.
@@ -241,6 +311,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       accion: 'accion',
       fechaHora: 'fecha_hora',
     },
+    porDefecto: { entidadTipo: 'credencial', credencialTitulo: '', usuarioNombre: '' },
   },
   // Ubicacion como entidad (grupo N3). Va al final de la lista de tablas
   // sincronizadas: si el esquema aun no se aplico en el servidor, su
@@ -249,6 +320,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
     columnaCursor: 'updated_at',
     soloInsercion: false,
     campos: { ...camposComunes, nombre: 'nombre', padreId: 'padre_id', notas: 'notas' },
+    porDefecto: { notas: '' },
   },
   // Campos protegidos del dispositivo (grupo P1). Va al final de la
   // lista de tablas sincronizadas, como se hizo con `ubicaciones`: si el
@@ -266,6 +338,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       valorCifrado: 'valor_cifrado',
       orden: 'orden',
     },
+    porDefecto: { tipo: 'texto', orden: 0 },
   },
 }
 
@@ -274,25 +347,33 @@ export function storeDe<T extends TablaSincronizada>(tabla: T): Table<EntidadPor
 }
 
 // Convierte una entidad local en una fila para Supabase. No envia
-// updated_at ni updated_by porque los pone siempre el servidor.
+// updated_at ni updated_by porque los pone siempre el servidor. Una
+// entidad guardada por una version anterior de la app puede traer null
+// (o nada) donde el servidor exige NOT NULL: se rellena con el default
+// declarado, que es exactamente lo que Postgres habria puesto.
 export function aFilaRemota(tabla: TablaSincronizada, entidad: unknown): Record<string, unknown> {
   const origen = entidad as Record<string, unknown>
+  const config = configTablas[tabla]
   const fila: Record<string, unknown> = {}
-  for (const [local, remota] of Object.entries(configTablas[tabla].campos)) {
+  for (const [local, remota] of Object.entries(config.campos)) {
     if (local === 'updatedAt' || local === 'updatedBy') continue
-    fila[remota] = origen[local]
+    fila[remota] = origen[local] ?? config.porDefecto[local] ?? null
   }
   return fila
 }
 
-// Convierte una fila recibida de Supabase en una entidad local.
+// Convierte una fila recibida de Supabase en una entidad local. Una
+// columna que todavia no exista en el servidor (esquema sin aplicar)
+// no viene en la fila: se usa su default declarado antes que null,
+// para que la entidad local respete su propio tipo.
 export function aEntidadLocal<T extends TablaSincronizada>(
   tabla: T,
   fila: Record<string, unknown>,
 ): EntidadPorTabla[T] {
+  const config = configTablas[tabla]
   const entidad: Record<string, unknown> = {}
-  for (const [local, remota] of Object.entries(configTablas[tabla].campos)) {
-    entidad[local] = fila[remota] ?? null
+  for (const [local, remota] of Object.entries(config.campos)) {
+    entidad[local] = fila[remota] ?? config.porDefecto[local] ?? null
   }
   return entidad as unknown as EntidadPorTabla[T]
 }

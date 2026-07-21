@@ -54,6 +54,61 @@ describe('mapeo entre columnas locales y remotas', () => {
     expect(fila).toHaveProperty('categoria_id')
   })
 
+  // Regresion de la tarea 128: una fila descargada mientras la columna
+  // todavia no existia en el servidor dejaba la propiedad local en null,
+  // y ese null volvia al servidor rompiendo el NOT NULL de la columna.
+  it('una columna que el servidor todavía no tiene toma su valor por defecto, no null', () => {
+    const fila = filaRemotaDeArticulo(nuevoId(), 'Conectar impresora a computadora')
+    expect(fila).not.toHaveProperty('es_ruta_inicio')
+    expect(fila).not.toHaveProperty('orden_ruta_inicio')
+
+    const articulo = aEntidadLocal('articulos', fila)
+    expect(articulo.esRutaInicio).toBe(false)
+    expect(articulo.ordenRutaInicio).toBe(0)
+    expect(articulo.estado).toBe('publicado')
+    expect(articulo.version).toBe('1.0')
+    expect(articulo.relacionados).toEqual([])
+    // Las columnas que sí admiten null siguen viajando como null.
+    expect(articulo.procedimiento).toBeNull()
+  })
+
+  it('al subir rellena los null heredados de las columnas NOT NULL', () => {
+    // Payload tal como quedó guardado en la cola por una versión
+    // anterior de la app: la eliminación de un artículo con nulls.
+    const fila = aFilaRemota('articulos', {
+      id: nuevoId(),
+      categoriaId: nuevoId(),
+      titulo: 'Conectar impresora a computadora',
+      tipo: 'manual',
+      contenido: null,
+      etiquetas: null,
+      esRutaInicio: null,
+      ordenRutaInicio: null,
+      eliminadoEn: '2026-07-21T15:00:00Z',
+    })
+
+    expect(fila.es_ruta_inicio).toBe(false)
+    expect(fila.orden_ruta_inicio).toBe(0)
+    expect(fila.contenido).toBe('')
+    expect(fila.etiquetas).toEqual([])
+    expect(fila.eliminado_en).toBe('2026-07-21T15:00:00Z')
+  })
+
+  it('no confunde un valor falso legítimo con un valor ausente', () => {
+    const fila = aFilaRemota('articulos', {
+      id: nuevoId(),
+      esRutaInicio: false,
+      ordenRutaInicio: 0,
+      contenido: '',
+      estado: 'borrador',
+    })
+
+    expect(fila.es_ruta_inicio).toBe(false)
+    expect(fila.orden_ruta_inicio).toBe(0)
+    expect(fila.contenido).toBe('')
+    expect(fila.estado).toBe('borrador')
+  })
+
   it('el procedimiento viaja completo en ambas direcciones', () => {
     const procedimiento = {
       requisitos: ['Credenciales del SQL Server'],
