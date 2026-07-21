@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, useSyncExternalStore } from 'react'
 import { db } from '../lib/db'
-import { describirCambio } from '../lib/descripcionCambio'
+import { agruparPorError } from '../lib/descripcionCambio'
 import {
   descartarCambioPendiente,
   obtenerEstadoSync,
@@ -25,6 +25,7 @@ export function PanelSync({ abierto, onCerrar }: Props) {
   const estado = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
   const pendientes = useLiveQuery(() => db.cambiosPendientes.orderBy('creadoEn').toArray(), [], [])
   const conError = pendientes.filter((c) => c.error !== null)
+  const grupos = agruparPorError(conError)
   const [descartando, setDescartando] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
@@ -105,54 +106,64 @@ export function PanelSync({ abierto, onCerrar }: Props) {
             <h3 className="text-sm font-medium text-red-300">
               Cambios que el servidor rechazó ({conError.length})
             </h3>
-            <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-              {conError.map((cambio) => {
-                const d = describirCambio(cambio)
-                return (
-                  <li
-                    key={cambio.id}
-                    className="flex flex-col gap-1.5 rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2"
-                  >
-                    <p className="text-sm text-slate-100">{d.titulo}</p>
-                    <p className="text-xs text-red-200">{d.explicacion}</p>
-                    <p className="text-[10px] text-slate-500">Intentos: {d.intentos}</p>
-                    {descartando === cambio.id ? (
-                      <div className="flex flex-col gap-1.5">
-                        <p className="text-xs text-amber-200">
-                          ¿Descartar este cambio? Se perderá y la ficha volverá a como está en el
-                          servidor.
-                        </p>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={ocupado}
-                            onClick={() => void descartar(cambio.id)}
-                            className="rounded-lg border border-red-800 px-2.5 py-1 text-xs text-red-300 disabled:opacity-50"
-                          >
-                            {ocupado ? 'Descartando...' : 'Sí, descartar'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDescartando(null)}
-                            className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-300"
-                          >
-                            Cancelar
-                          </button>
+            {/* Agrupados por causa: casi siempre todos fallan por lo
+                mismo, así que la explicación va UNA vez por grupo y
+                debajo la lista de fichas afectadas. Antes se repetía el
+                párrafo completo por cada ficha y el panel se volvía
+                larguísimo justo cuando había más que leer. */}
+            {grupos.map((grupo) => (
+              <div
+                key={grupo.explicacion}
+                className="flex flex-col gap-2 rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2.5"
+              >
+                <p className="text-xs text-red-200">{grupo.explicacion}</p>
+                <p className="text-[11px] text-slate-400">
+                  {grupo.cambios.length === 1
+                    ? 'Afecta a 1 ficha:'
+                    : `Afecta a ${grupo.cambios.length} fichas:`}
+                </p>
+                <ul className="flex max-h-56 flex-col gap-1.5 overflow-y-auto">
+                  {grupo.cambios.map(({ cambio, descripcion }) => (
+                    <li key={cambio.id} className="flex flex-col gap-1 border-l border-red-900/50 pl-2.5">
+                      <p className="text-[13px] leading-snug text-slate-100">{descripcion.titulo}</p>
+                      {descartando === cambio.id ? (
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-xs text-amber-200">
+                            ¿Descartar este cambio? Se perderá y la ficha volverá a como está en el
+                            servidor.
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={ocupado}
+                              onClick={() => void descartar(cambio.id)}
+                              className="rounded-lg border border-red-800 px-2.5 py-1 text-xs text-red-300 disabled:opacity-50"
+                            >
+                              {ocupado ? 'Descartando...' : 'Sí, descartar'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDescartando(null)}
+                              className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-300"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setDescartando(cambio.id)}
-                        className="self-start text-xs text-slate-400 underline underline-offset-2"
-                      >
-                        Descartar este cambio
-                      </button>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setDescartando(cambio.id)}
+                          className="self-start text-[11px] text-slate-500 underline underline-offset-2"
+                        >
+                          Descartar ({descripcion.intentos} intentos)
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
             <p className="text-xs text-slate-500">
               Los cambios rechazados se reintentan solos en cada sincronización. Descartar es solo
               para cuando el error no se resuelve.

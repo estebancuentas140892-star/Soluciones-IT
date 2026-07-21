@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CambioPendiente } from './db'
-import { describirCambio, explicarErrorDeSync } from './descripcionCambio'
+import { agruparPorError, describirCambio, explicarErrorDeSync } from './descripcionCambio'
 
 function cambio(parcial: Partial<CambioPendiente>): CambioPendiente {
   return {
@@ -70,5 +70,49 @@ describe('explicarErrorDeSync', () => {
 
   it('un error desconocido se muestra tal cual', () => {
     expect(explicarErrorDeSync('algo raro pasó')).toBe('algo raro pasó')
+  })
+})
+
+// Agrupado por causa (2026-07-21): cuando la cola se atasca, casi todos
+// los cambios fallan por lo mismo y el panel repetia el mismo parrafo
+// una vez por ficha, alargandolo justo cuando hay mas que leer.
+describe('agruparPorError', () => {
+  it('junta en un solo grupo los cambios que fallan por lo mismo', () => {
+    const grupos = agruparPorError([
+      cambio({ id: 'a', error: 'relation "public.campos_protegidos" does not exist' }),
+      cambio({ id: 'b', error: 'relation "public.ubicaciones" does not exist' }),
+    ])
+    expect(grupos).toHaveLength(1)
+    expect(grupos[0].explicacion).toContain('schema.sql')
+    expect(grupos[0].cambios.map((c) => c.cambio.id)).toEqual(['a', 'b'])
+  })
+
+  it('separa causas distintas', () => {
+    const grupos = agruparPorError([
+      cambio({ id: 'a', error: 'relation "x" does not exist' }),
+      cambio({ id: 'b', error: 'JWT expired' }),
+    ])
+    expect(grupos).toHaveLength(2)
+  })
+
+  it('ordena primero la causa que afecta a más fichas', () => {
+    const grupos = agruparPorError([
+      cambio({ id: 'a', error: 'JWT expired' }),
+      cambio({ id: 'b', error: 'relation "x" does not exist' }),
+      cambio({ id: 'c', error: 'relation "y" does not exist' }),
+    ])
+    expect(grupos[0].cambios).toHaveLength(2)
+    expect(grupos[0].explicacion).toContain('schema.sql')
+  })
+
+  it('ignora los cambios que aún no han fallado', () => {
+    expect(agruparPorError([cambio({ id: 'a', error: null })])).toEqual([])
+  })
+
+  it('conserva la descripción de cada ficha dentro del grupo', () => {
+    const grupos = agruparPorError([
+      cambio({ id: 'a', tabla: 'campos_protegidos', payload: { nombre: 'PIN' }, error: 'x does not exist' }),
+    ])
+    expect(grupos[0].cambios[0].descripcion.titulo).toBe('Dato protegido: PIN')
   })
 })

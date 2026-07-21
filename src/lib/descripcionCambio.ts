@@ -15,6 +15,11 @@ const NOMBRE_TABLA: Record<string, string> = {
   diagnosticos: 'Diagnóstico',
   ejecuciones_diagnostico: 'Registro de diagnóstico',
   accesos_boveda: 'Registro de la bóveda',
+  // Tablas de los grupos N3 y P1, que faltaban aqui: sin su nombre, el
+  // panel mostraba el tecnico ("campos_protegidos: ...") justo en el
+  // momento en que el tecnico necesita entender que fallo.
+  ubicaciones: 'Ubicación',
+  campos_protegidos: 'Dato protegido',
 }
 
 // El titulo visible de la ficha, buscando en los campos que usan las
@@ -67,6 +72,32 @@ export interface DescripcionCambio {
   // Explicacion del error en lenguaje claro, o null si no ha fallado.
   explicacion: string | null
   intentos: number
+}
+
+// Cambios fallidos agrupados por su explicacion: casi siempre TODOS
+// fallan por lo mismo (tipicamente, que falta aplicar el schema.sql), y
+// repetir el mismo parrafo largo una vez por ficha alargaba el panel
+// hasta hacerlo inmanejable y escondia cual es EL problema. Se agrupa
+// por el texto ya traducido, no por el mensaje crudo del servidor, para
+// que dos errores distintos que significan lo mismo caigan juntos.
+export interface GrupoDeError {
+  explicacion: string
+  cambios: { cambio: CambioPendiente; descripcion: DescripcionCambio }[]
+}
+
+export function agruparPorError(cambios: CambioPendiente[]): GrupoDeError[] {
+  const grupos = new Map<string, GrupoDeError>()
+  for (const cambio of cambios) {
+    if (cambio.error === null) continue
+    const descripcion = describirCambio(cambio)
+    const explicacion = descripcion.explicacion ?? cambio.error
+    const grupo = grupos.get(explicacion) ?? { explicacion, cambios: [] }
+    grupo.cambios.push({ cambio, descripcion })
+    grupos.set(explicacion, grupo)
+  }
+  // Primero el problema que afecta a mas fichas: es el que hay que
+  // resolver para que la cola se destrabe.
+  return [...grupos.values()].sort((a, b) => b.cambios.length - a.cambios.length)
 }
 
 export function describirCambio(cambio: CambioPendiente): DescripcionCambio {
