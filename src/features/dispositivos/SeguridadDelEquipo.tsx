@@ -54,9 +54,15 @@ import {
 export function SeguridadDelEquipo({
   dispositivoId,
   puedeVerBoveda,
+  nombreSugerido,
 }: {
   dispositivoId: string
   puedeVerBoveda: boolean
+  // Nudge anti duplicidad de la Bóveda (fase P3): cuando llega no
+  // vacío, abre el editor de "nuevo dato protegido" ya mismo con este
+  // nombre precargado, en vez de esperar a que el técnico toque
+  // "Agregar dato protegido" y lo escriba de nuevo.
+  nombreSugerido?: string
 }) {
   const desbloqueada = useBovedaDesbloqueada()
   const todos = useLiveQuery(() => db.campos_protegidos.toArray(), [], [] as CampoProtegido[])
@@ -64,7 +70,7 @@ export function SeguridadDelEquipo({
 
   // Id del campo que se esta editando, 'nuevo' mientras se crea uno, o
   // null si el editor esta cerrado.
-  const [editando, setEditando] = useState<string | 'nuevo' | null>(null)
+  const [editando, setEditando] = useState<string | 'nuevo' | null>(() => (nombreSugerido ? 'nuevo' : null))
   const [aEliminar, setAEliminar] = useState<CampoProtegido | null>(null)
 
   // Impacto antes de eliminar (grupo P2): que procedimientos vinculan
@@ -120,6 +126,7 @@ export function SeguridadDelEquipo({
               dispositivoId={dispositivoId}
               campo={null}
               camposDelEquipo={campos}
+              nombreInicial={nombreSugerido}
               onCerrar={() => setEditando(null)}
             />
           </div>
@@ -345,15 +352,19 @@ function EditorCampo({
   dispositivoId,
   campo,
   camposDelEquipo,
+  nombreInicial,
   onCerrar,
 }: {
   dispositivoId: string
   campo: CampoProtegido | null
   camposDelEquipo: CampoProtegido[]
+  // Solo se usa al crear (campo null): nombre precargado desde el
+  // nudge anti duplicidad de la Bóveda (fase P3).
+  nombreInicial?: string
   onCerrar: () => void
 }) {
   const desbloqueada = useBovedaDesbloqueada()
-  const [nombre, setNombre] = useState(campo?.nombre ?? '')
+  const [nombre, setNombre] = useState(campo?.nombre ?? nombreInicial ?? '')
   const [tipo, setTipo] = useState<TipoCampoProtegido>(campo?.tipo ?? 'contrasena')
   const [valor, setValor] = useState('')
   const [verValor, setVerValor] = useState(false)

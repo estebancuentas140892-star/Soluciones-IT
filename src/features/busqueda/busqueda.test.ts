@@ -64,6 +64,14 @@ const documentos: DocumentoBusqueda[] = [
     ruta: '/soluciones/cat-1/2',
     texto: 'manual_zebra.pdf',
   },
+  {
+    id: 'ubicacion:sala-servidores',
+    tipo: 'ubicacion',
+    titulo: 'Sala de servidores',
+    subtitulo: 'Sede Norte',
+    ruta: '/ubicaciones/sala-servidores',
+    texto: 'Sala de servidores acceso restringido con llave',
+  },
 ]
 
 const indice = crearIndiceDesdeDocumentos(documentos)
@@ -133,6 +141,14 @@ describe('buscar', () => {
     const resultados = buscar(indice, 'manual_zebra')
     expect(resultados.map((r) => r.id)).toContain('adjunto:manual-zebra')
     expect(resultados.find((r) => r.id === 'adjunto:manual-zebra')?.tipo).toBe('adjunto')
+  })
+
+  it('encuentra una ubicación por su nombre (fase P3)', () => {
+    const resultados = buscar(indice, 'sala de servidores')
+    const ubicacion = resultados.find((r) => r.id === 'ubicacion:sala-servidores')
+    expect(ubicacion).toBeDefined()
+    expect(ubicacion?.tipo).toBe('ubicacion')
+    expect(ubicacion?.subtitulo).toBe('Sede Norte')
   })
 })
 

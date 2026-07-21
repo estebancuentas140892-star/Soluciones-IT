@@ -7,8 +7,16 @@ import { textoDeNodos } from '../../lib/diagnostico'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { expandirConsulta } from './sinonimos'
+import { cadenaNombres, mapaPorId } from '../ubicaciones/arbol'
 
-export type TipoResultado = 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico' | 'categoria' | 'adjunto'
+export type TipoResultado =
+  | 'articulo'
+  | 'dispositivo'
+  | 'credencial'
+  | 'diagnostico'
+  | 'categoria'
+  | 'adjunto'
+  | 'ubicacion'
 
 export interface DocumentoBusqueda {
   id: string
@@ -47,6 +55,9 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
   )
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
+  // Ubicaciones (grupo N3, fase P3 punto 4 del encargo): hoy faltaban
+  // del buscador global pese a ser una entidad propia desde hace tiempo.
+  const ubicaciones = useLiveQuery(() => db.ubicaciones.filter((u) => !u.eliminadoEn).toArray(), [], [])
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
   const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   // Adjuntos del articulo/dispositivo completo (fase N2, punto 2): la
@@ -79,6 +90,25 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
         subtitulo: 'Categoría',
         ruta: `/soluciones/${categoria.id}`,
         texto: categoria.nombre,
+        portadaRef: '',
+      })
+    }
+
+    // Ubicaciones como resultado propio (fase P3, punto 4 del encargo de
+    // PROPUESTA_SEGURIDAD_DISPOSITIVO.md): "¿dónde está la sala de
+    // servidores?" hoy solo se resolvía revisando cada dispositivo. El
+    // subtítulo muestra la ruta jerárquica completa (Sede Norte > Área
+    // caja) salvo el propio nombre, para dar contexto sin repetirlo.
+    const porIdUbicacion = mapaPorId(ubicaciones ?? [])
+    for (const ubicacion of ubicaciones ?? []) {
+      const ruta = cadenaNombres(ubicacion.id, porIdUbicacion)
+      documentos.push({
+        id: `ubicacion:${ubicacion.id}`,
+        tipo: 'ubicacion',
+        titulo: ubicacion.nombre,
+        subtitulo: ruta.slice(0, -1).join(' > ') || 'Ubicación',
+        ruta: `/ubicaciones/${ubicacion.id}`,
+        texto: [ubicacion.nombre, ubicacion.notas].join(' '),
         portadaRef: '',
       })
     }
@@ -242,6 +272,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
     articulos,
     dispositivos,
     categorias,
+    ubicaciones,
     credenciales,
     diagnosticos,
     adjuntosTabla,

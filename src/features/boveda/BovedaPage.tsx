@@ -17,6 +17,7 @@ import {
   LockSimple,
   MagnifyingGlass,
   Note,
+  Paperclip,
   PencilSimple,
   Plus,
   Printer,
@@ -99,25 +100,36 @@ function severidad(estado: EstadoVencimiento): number {
   return estado ? ORDEN_VENCIMIENTO[estado] : 2
 }
 
-// Atajos de la hoja "Crear": los tipos de secreto del handoff. Todos
-// abren el mismo editor; el `tipo` viaja en la URL para que deje listos
-// de una vez los campos que ese tipo suele tocar. El preset "Equipo o
-// servicio" se eliminó en la fase P0 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md
-// (2026-07-21): un secreto ya no puede representar un equipo entero (eso
-// duplicaba datos que ya viven en la ficha del dispositivo); un equipo se
-// sigue pudiendo VINCULAR a un secreto desde "Equipos con acceso".
+// Atajos de la hoja "Crear": los cinco tipos de secreto de la fase P3
+// de PROPUESTA_SEGURIDAD_DISPOSITIVO.md (sección 3.2). Todos abren el
+// mismo editor; el `tipo` viaja en la URL y de ahí pasa a ser la columna
+// guardada (`credenciales.tipo`, grupo P1), ya no solo un preset que
+// precarga campos. El preset "Equipo o servicio" se eliminó en la fase
+// P0 (2026-07-21): un secreto ya no puede representar un equipo entero
+// (eso duplicaba datos que ya viven en la ficha del dispositivo); un
+// equipo se sigue pudiendo VINCULAR a un secreto desde "Equipos con
+// acceso". "Archivo seguro" todavía no cifra binarios (eso es la fase
+// P5, deliberadamente fuera de este lote): por ahora solo guarda notas
+// y datos de referencia sobre dónde vive el archivo.
 const PRESETS: {
   tipo: string
   nombre: string
   descripcion: string
   Icono: (props: IconoProps) => React.JSX.Element
 }[] = [
-  { tipo: 'wifi', nombre: 'Red WiFi', descripcion: 'Nombre de la red y clave', Icono: WifiHigh },
   {
-    tipo: 'web',
-    nombre: 'Cuenta web',
-    descripcion: 'Acceso a un servicio en línea, con URL',
+    tipo: 'cuenta',
+    nombre: 'Cuenta de sistema',
+    descripcion: 'Usuario y contraseña de un servicio o aplicación',
     Icono: Globe,
+  },
+  { tipo: 'red', nombre: 'Red', descripcion: 'Clave de una red WiFi u otro acceso compartido', Icono: WifiHigh },
+  { tipo: 'llave', nombre: 'Llave digital', descripcion: 'Token, licencia o certificado', Icono: Key },
+  {
+    tipo: 'archivo',
+    nombre: 'Archivo seguro',
+    descripcion: 'Dónde vive un archivo protegido y su clave',
+    Icono: Paperclip,
   },
   {
     tipo: 'nota',

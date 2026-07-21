@@ -1,17 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { ArrowsClockwise, Eye, EyeSlash, LockSimple, Plus, X } from '../../components/iconos'
-import {
-  BTN_GHOST,
-  BTN_ICONO_SECUNDARIO,
-  BTN_PRIMARIO,
-  BTN_SECUNDARIO,
-  TagNeutral,
-  TituloSeccion,
-} from '../../components/nocturne'
+import { BTN_GHOST, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { db, type Dispositivo, type DispositivoAfectado, type TipoSecreto } from '../../lib/db'
 import { guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
 import { cifrarCredencial, descifrarCredencial } from './sesionBoveda'
@@ -21,21 +14,16 @@ interface CampoExtra {
   valor: string
 }
 
-// Presets de "Crear" (decisión de diseño D-018, handoff "Rediseño de
-// aplicación empresarial"): los tipos NO son entidades distintas, son
-// el mismo editor precargando qué campos del secreto aparecen, para
-// escribir menos. El tipo llega por la URL desde la hoja "Crear" de la
-// Bóveda (`/boveda/nueva?tipo=...`). 'completo' es el modo sin preset:
-// al editar, o al crear desde la ficha de un equipo, se muestran todos.
-// El preset 'equipo' (que guardaba usuario, contraseña e IP de un
-// dispositivo entero dentro del secreto) se eliminó en la fase P0 de
-// PROPUESTA_SEGURIDAD_DISPOSITIVO.md (2026-07-21): esa información es
-// la del propio equipo y ya no se duplica aquí. Un equipo se sigue
-// pudiendo vincular a un secreto (sección "Equipos con acceso" más
-// abajo), pero el secreto ya no puede REPRESENTAR al equipo.
-type TipoCredencial = 'wifi' | 'web' | 'nota' | 'completo'
-
-const TIPOS_VALIDOS = ['wifi', 'web', 'nota'] as const
+// Cinco tipos de secreto (fase P3 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md,
+// sección 3.2): el `tipo` ya no es solo un preset de URL que precarga
+// campos, es la columna real que se guarda (`credenciales.tipo`, grupo
+// P1) y se puede ver y cambiar tanto al crear como al editar. El preset
+// 'equipo' (que guardaba usuario, contraseña e IP de un dispositivo
+// entero dentro del secreto) se eliminó en la fase P0 (2026-07-21): esa
+// información es la del propio equipo y ya no se duplica aquí. Un
+// equipo se sigue pudiendo vincular a un secreto (sección "Equipos con
+// acceso" más abajo), pero el secreto ya no puede REPRESENTAR al equipo.
+const TIPOS_SECRETO_VALIDOS = ['cuenta', 'red', 'llave', 'archivo', 'nota'] as const
 
 interface CamposVisibles {
   usuario: boolean
@@ -44,40 +32,64 @@ interface CamposVisibles {
   extras: boolean
 }
 
-const CAMPOS_POR_TIPO: Record<TipoCredencial, CamposVisibles> = {
-  wifi: { usuario: false, contrasena: true, url: false, extras: true },
-  web: { usuario: true, contrasena: true, url: true, extras: true },
+const TODOS_LOS_CAMPOS: CamposVisibles = { usuario: true, contrasena: true, url: true, extras: true }
+
+const CAMPOS_POR_TIPO: Record<TipoSecreto, CamposVisibles> = {
+  cuenta: TODOS_LOS_CAMPOS,
+  red: { usuario: false, contrasena: true, url: false, extras: true },
+  llave: { usuario: false, contrasena: true, url: false, extras: true },
+  // Archivo seguro guarda por ahora solo notas y datos protegidos de
+  // referencia (dónde vive el archivo, su clave); cifrar el binario en
+  // sí es la fase P5, deliberadamente fuera de este lote (ver la
+  // advertencia de la propuesta).
+  archivo: { usuario: false, contrasena: false, url: false, extras: true },
   nota: { usuario: false, contrasena: false, url: false, extras: false },
-  completo: { usuario: true, contrasena: true, url: true, extras: true },
 }
 
-const NOMBRE_TIPO: Record<Exclude<TipoCredencial, 'completo'>, string> = {
-  wifi: 'Red WiFi',
-  web: 'Cuenta web',
+const NOMBRE_TIPO: Record<TipoSecreto, string> = {
+  cuenta: 'Cuenta de sistema',
+  red: 'Red',
+  llave: 'Llave digital',
+  archivo: 'Archivo seguro',
   nota: 'Nota segura',
 }
 
-const PLACEHOLDER_TITULO: Record<TipoCredencial, string> = {
-  wifi: 'Nombre de la red WiFi',
-  web: 'Servicio: Panel de Supabase, correo...',
-  nota: 'Título de la nota',
-  completo: 'Router principal, cámara bodega, servidor...',
+const DESCRIPCION_TIPO: Record<TipoSecreto, string> = {
+  cuenta: 'Usuario y contraseña de un servicio o aplicación',
+  red: 'Clave de una red WiFi u otro acceso compartido',
+  llave: 'Token, licencia o certificado',
+  archivo: 'Dónde vive un archivo protegido y su clave, sin adjuntarlo',
+  nota: 'Texto cifrado, sin usuario ni contraseña',
 }
 
-// Preset del editor -> tipo de secreto que se guarda en la columna
-// `tipo` (grupo P1). El preset 'completo' no dice nada del contenido,
-// asi que cae a 'cuenta', el default de la columna. La interfaz propia
-// de tipos (con "Llave digital" y "Archivo seguro") llega en la fase P3.
-function tipoSecretoDePreset(preset: TipoCredencial): TipoSecreto {
-  switch (preset) {
-    case 'wifi':
-      return 'red'
-    case 'nota':
-      return 'nota'
-    case 'web':
-    case 'completo':
-      return 'cuenta'
-  }
+const PLACEHOLDER_TITULO: Record<TipoSecreto, string> = {
+  cuenta: 'Servicio: Panel de Supabase, correo...',
+  red: 'Nombre de la red WiFi',
+  llave: 'Licencia de Windows, certificado SSL...',
+  archivo: 'Qué archivo protege esta clave',
+  nota: 'Título de la nota',
+}
+
+// Etiqueta del campo "contraseña": cada tipo llama distinto a lo mismo.
+const ETIQUETA_CONTRASENA: Record<TipoSecreto, string> = {
+  cuenta: 'Contraseña',
+  red: 'Clave',
+  llave: 'Clave o token',
+  archivo: '',
+  nota: '',
+}
+
+function esTipoSecretoValido(valor: string | null): valor is TipoSecreto {
+  return (TIPOS_SECRETO_VALIDOS as readonly string[]).includes(valor ?? '')
+}
+
+// Normaliza para comparar sin distinguir mayusculas ni acentos (mismo
+// criterio que el buscador de la Boveda, BovedaPage.tsx).
+function normalizar(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
 }
 
 const CLASE_CAMPO =
@@ -102,14 +114,16 @@ export function CredencialForm() {
   const dispositivoContextualId = esEdicion ? '' : (searchParams.get('dispositivoId') ?? '')
   const dispositivoContextualNombre = esEdicion ? '' : (searchParams.get('dispositivoNombre') ?? '')
 
-  // Tipo/preset del secreto (D-018). Al editar (o crear sin `?tipo=`
-  // válido, p. ej. desde la ficha de un equipo) se muestra el formulario
-  // completo; los presets solo aplican al crear desde la hoja "Crear".
+  // Tipo de secreto (fase P3): llega por la URL desde la hoja "Crear"
+  // de la Bóveda (`/boveda/nueva?tipo=...`); sin `?tipo=` válido (por
+  // ejemplo al crear desde la ficha de un equipo) cae a 'cuenta', el
+  // default de la columna. Al editar se ve y se puede cambiar con el
+  // selector de más abajo, cargado desde `credencial.tipo` una vez que
+  // llega (ver el efecto de carga).
   const tipoParam = searchParams.get('tipo')
-  const tipo: TipoCredencial =
-    !esEdicion && (TIPOS_VALIDOS as readonly string[]).includes(tipoParam ?? '')
-      ? (tipoParam as TipoCredencial)
-      : 'completo'
+  const [tipo, setTipo] = useState<TipoSecreto>(
+    !esEdicion && esTipoSecretoValido(tipoParam) ? tipoParam : 'cuenta',
+  )
 
   const credencial = useLiveQuery(
     async () => (credencialId ? ((await db.credenciales.get(credencialId)) ?? null) : undefined),
@@ -161,17 +175,29 @@ export function CredencialForm() {
   const [guardando, setGuardando] = useState(false)
   const [intentoGuardar, setIntentoGuardar] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // El preset oculta los campos que su tipo no suele tocar; este botón
-  // los revela sin perder nada (y siempre al editar, tipo 'completo').
+  // El tipo oculta los campos que no suele tocar; este botón los
+  // revela sin perder nada, en cualquier tipo.
   const [mostrarTodos, setMostrarTodos] = useState(false)
-  const visibles = mostrarTodos ? CAMPOS_POR_TIPO.completo : CAMPOS_POR_TIPO[tipo]
-  const hayCamposOcultos = tipo !== 'completo' && !mostrarTodos
+  const visibles = mostrarTodos ? TODOS_LOS_CAMPOS : CAMPOS_POR_TIPO[tipo]
+  const hayCamposOcultos = !mostrarTodos && Object.values(CAMPOS_POR_TIPO[tipo]).includes(false)
+
+  // Nudge anti duplicidad (fase P3, sección 3.2): si el título escrito
+  // coincide con el nombre de un equipo del inventario, ese secreto
+  // probablemente debería ser un campo protegido de esa ficha en vez de
+  // una entrada aparte en la Bóveda (la grieta que describe la
+  // propuesta). Se compara sin distinguir mayúsculas ni acentos.
+  const dispositivoCoincidente = useMemo(() => {
+    const buscado = normalizar(titulo.trim())
+    if (!buscado) return null
+    return dispositivosOrdenados.find((d) => normalizar(d.nombre) === buscado) ?? null
+  }, [titulo, dispositivosOrdenados])
 
   useEffect(() => {
     if (!credencial || cargadoInicial) return
     let vigente = true
     setTitulo(credencial.titulo)
     setCategoria(credencial.categoria)
+    setTipo(credencial.tipo ?? 'cuenta')
     setVenceEn(credencial.venceEn ?? '')
     setDispositivos(credencial.dispositivos ?? [])
     void descifrarCredencial(credencial.datosCifrados).then((datos) => {
@@ -239,10 +265,7 @@ export function CredencialForm() {
           id,
           titulo: tituloFinal,
           categoria: categoria.trim(),
-          // El tipo de secreto (grupo P1) se conserva al editar y, al
-          // crear, sale del preset. La interfaz completa de tipos llega
-          // en la fase P3; aqui solo se guarda para no perder el dato.
-          tipo: credencial?.tipo ?? tipoSecretoDePreset(tipo),
+          tipo,
           datosCifrados,
           venceEn: venceEn.trim() === '' ? null : venceEn.trim(),
           dispositivos,
@@ -263,11 +286,10 @@ export function CredencialForm() {
   }
 
   const valido = titulo.trim().length > 0
-  const nombreTipo = tipo === 'completo' ? null : NOMBRE_TIPO[tipo]
   // Aviso del pie: error de bloqueo primero, luego validación.
   const aviso = error ?? (intentoGuardar && !valido ? 'Falta el título' : '')
   const avisoEsError = Boolean(error) || (intentoGuardar && !valido)
-  const etiquetaContrasena = tipo === 'wifi' ? 'Clave' : 'Contraseña'
+  const etiquetaContrasena = ETIQUETA_CONTRASENA[tipo]
 
   return (
     <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
@@ -281,17 +303,14 @@ export function CredencialForm() {
               Se guarda cifrada
             </span>
           </header>
-          <div className="flex items-start justify-between gap-2 px-4 pb-3 pt-0.5">
-            <div className="min-w-0">
-              <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
-                {esEdicion ? 'Editar secreto' : 'Nuevo secreto'}
-              </h1>
-              <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
-                Solo el título es obligatorio; el vencimiento y los equipos no se cifran para poder
-                avisar sin desbloquear
-              </p>
-            </div>
-            {nombreTipo && <TagNeutral className="mt-1 shrink-0">{nombreTipo}</TagNeutral>}
+          <div className="px-4 pb-3 pt-0.5">
+            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
+              {esEdicion ? 'Editar secreto' : 'Nuevo secreto'}
+            </h1>
+            <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
+              Solo el título es obligatorio; el vencimiento y los equipos no se cifran para poder
+              avisar sin desbloquear
+            </p>
           </div>
         </div>
 
@@ -304,8 +323,26 @@ export function CredencialForm() {
 
         <form onSubmit={manejarEnvio} className="flex flex-1 flex-col">
           <main className="flex flex-1 flex-col gap-6 px-4 pb-[120px] pt-[18px]">
-            {/* Identificación: título + categoría. */}
+            {/* Identificación: tipo, título + categoría. */}
             <section className="flex flex-col gap-3.5">
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Tipo de secreto</span>
+                <select
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value as TipoSecreto)}
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                >
+                  {TIPOS_SECRETO_VALIDOS.map((t) => (
+                    <option key={t} value={t}>
+                      {NOMBRE_TIPO[t]}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                  {DESCRIPCION_TIPO[tipo]}
+                </span>
+              </label>
+
               <label className="flex flex-col gap-1.5">
                 <span className={CLASE_ETIQUETA}>
                   Título <span className="text-noct-accent-300">*</span>
@@ -318,6 +355,21 @@ export function CredencialForm() {
                   className={`min-h-11 ${CLASE_CAMPO}`}
                 />
               </label>
+
+              {dispositivoCoincidente && (
+                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                    &quot;{dispositivoCoincidente.nombre}&quot; ya es un equipo del inventario. ¿Esto
+                    pertenece a ese equipo? Guárdalo en su ficha en vez de un secreto aparte.
+                  </p>
+                  <Link
+                    to={`/dispositivos/${dispositivoCoincidente.id}?nuevoCampoProtegido=${encodeURIComponent(titulo.trim())}`}
+                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                  >
+                    Ir a la ficha
+                  </Link>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <span className={CLASE_ETIQUETA}>Categoría</span>
@@ -338,7 +390,7 @@ export function CredencialForm() {
             </section>
 
             {/* Secreto: todo lo que viaja cifrado en datosCifrados. El
-                preset (D-018) decide qué campos aparecen; "Mostrar todos"
+                tipo decide qué campos aparecen (fase P3); "Mostrar todos"
                 los revela sin perder nada. */}
             <section className="flex flex-col gap-3.5">
               <TituloSeccion>Secreto</TituloSeccion>

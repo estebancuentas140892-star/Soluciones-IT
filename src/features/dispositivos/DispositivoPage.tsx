@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { completitudDispositivo } from './completitud'
 import { compartirOCopiar, copiarAlPortapapeles } from '../../lib/portapapeles'
@@ -86,6 +86,12 @@ function pillEstado(etiqueta: string): string {
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Nudge anti duplicidad de la Bóveda (fase P3): "Ir a la ficha" desde
+  // un secreto cuyo título coincide con este equipo llega con
+  // ?nuevoCampoProtegido=<nombre sugerido>, para abrir directo el
+  // editor de "Seguridad" con el nombre precargado.
+  const nombreCampoSugerido = searchParams.get('nuevoCampoProtegido') ?? ''
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(false)
 
@@ -299,6 +305,7 @@ export function DispositivoPage() {
         <SeguridadDelEquipo
           dispositivoId={dispositivoId}
           puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
+          nombreSugerido={nombreCampoSugerido}
         />
 
         {/* Resolver con este equipo: diagnóstico, vínculos y creación. */}

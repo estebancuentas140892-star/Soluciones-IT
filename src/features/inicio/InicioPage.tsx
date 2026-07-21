@@ -20,6 +20,7 @@ import {
   type IconoProps,
   LockSimple,
   MagnifyingGlass,
+  MapPin,
   Monitor,
   Play,
   QrCode,
@@ -71,10 +72,11 @@ const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
   adjunto: { Icono: BookOpen, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
   dispositivo: { Icono: Monitor, tono: 'text-noct-exito bg-noct-exito/[.12]' },
   credencial: { Icono: LockSimple, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
+  ubicacion: { Icono: MapPin, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
 }
 
-// Los resultados se agrupan por fuente (los tres modulos con contenido
-// buscable), no por los 6 tipos internos: el tecnico piensa en "donde
+// Los resultados se agrupan por fuente (los modulos con contenido
+// buscable), no por los tipos internos: el tecnico piensa en "donde
 // esta", no en el tipo de dato. Cada tipo cae en su grupo.
 const GRUPOS_BUSQUEDA: {
   id: string
@@ -85,6 +87,9 @@ const GRUPOS_BUSQUEDA: {
   { id: 'soluciones', nombre: 'Soluciones', Icono: BookOpen, tipos: ['diagnostico', 'categoria', 'articulo', 'adjunto'] },
   { id: 'dispositivos', nombre: 'Dispositivos', Icono: Monitor, tipos: ['dispositivo'] },
   { id: 'boveda', nombre: 'Bóveda', Icono: Vault, tipos: ['credencial'] },
+  // Ubicaciones en el buscador (fase P3, punto 4 del encargo): hoy
+  // faltaban pese a ser entidad propia desde N3.
+  { id: 'ubicaciones', nombre: 'Ubicaciones', Icono: MapPin, tipos: ['ubicacion'] },
 ]
 
 // Parte un titulo en tres tramos segun donde cae el termino buscado
