@@ -14,6 +14,7 @@ import {
   iconoDeTipo,
   normalizarTexto,
 } from './iconosSoluciones'
+import { claseActivaDeCategoria, claseTextoDeCategoria } from './coloresCategoria'
 
 // Pantalla Soluciones en el sistema Nocturne (re-autoria del handoff
 // "Herramienta IT para técnicos", Soluciones.dc.html): un solo objetivo,
@@ -41,11 +42,15 @@ function partirTitulo(titulo: string, consulta: string) {
 }
 
 // Chip de la fila superior: "Todos" mas una entrada por categoria.
+// `clases` trae el color de identidad de la categoria (fase 0b), o null
+// en "Todos", que no representa a ninguna y conserva el acento generico.
 interface Chip {
   id: string | null
   nombre: string
   count: number
   Icono: ReturnType<typeof iconoDeCategoria> | null
+  claseActiva: string | null
+  claseTexto: string | null
 }
 
 export function SolucionesPage() {
@@ -108,12 +113,21 @@ export function SolucionesPage() {
 
   const chips = useMemo<Chip[]>(
     () => [
-      { id: null, nombre: 'Todos', count: articulos.length, Icono: null },
+      {
+        id: null,
+        nombre: 'Todos',
+        count: articulos.length,
+        Icono: null,
+        claseActiva: null,
+        claseTexto: null,
+      },
       ...categorias.map((c) => ({
         id: c.id,
         nombre: c.nombre,
         count: conteos.get(c.id) ?? 0,
         Icono: iconoDeCategoria(c.nombre),
+        claseActiva: claseActivaDeCategoria(c),
+        claseTexto: claseTextoDeCategoria(c),
       })),
     ],
     [articulos.length, categorias, conteos],
@@ -157,7 +171,9 @@ export function SolucionesPage() {
   // navegar, una sola lista plana sin encabezado.
   const grupos = useMemo(() => {
     if (!buscando) {
-      return [{ id: 'all', nombre: '', Icono: null, count: filtrados.length, articulos: filtrados }]
+      return [
+        { id: 'all', nombre: '', Icono: null, claseTexto: null, count: filtrados.length, articulos: filtrados },
+      ]
     }
     return categorias
       .map((c) => {
@@ -167,6 +183,7 @@ export function SolucionesPage() {
               id: c.id,
               nombre: c.nombre,
               Icono: iconoDeCategoria(c.nombre),
+              claseTexto: claseTextoDeCategoria(c),
               count: arts.length,
               articulos: arts,
             }
@@ -265,15 +282,22 @@ export function SolucionesPage() {
                   onClick={() => setCategoria(chip.id)}
                   className={`inline-flex h-[34px] shrink-0 items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
                     activo
-                      ? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300'
+                      ? (chip.claseActiva ?? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300')
                       : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
                   }`}
                 >
-                  {Icono && <Icono size={15} aria-hidden />}
+                  {/* En reposo el icono lleva el color de la categoría
+                      (identidad sin gritar); al activarse, el chip
+                      entero ya va en ese color y el icono lo hereda. */}
+                  {Icono && (
+                    <Icono
+                      size={15}
+                      className={activo ? undefined : (chip.claseTexto ?? undefined)}
+                      aria-hidden
+                    />
+                  )}
                   {chip.nombre}
-                  <span
-                    className={`text-[11.5px] ${activo ? 'text-noct-accent-400' : 'text-noct-neutral-600'}`}
-                  >
+                  <span className={`text-[11.5px] ${activo ? 'opacity-70' : 'text-noct-neutral-600'}`}>
                     {chip.count}
                   </span>
                 </button>
@@ -328,15 +352,22 @@ export function SolucionesPage() {
                       onClick={() => setCategoria(chip.id)}
                       className={`flex w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[13px] font-medium transition-colors ${
                         activo
-                          ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
+                          ? (chip.claseActiva ?? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300')
                           : 'border-transparent text-noct-neutral-300 hover:bg-noct-text/[.05]'
                       }`}
                     >
-                      {Icono && <Icono size={15} className="shrink-0" aria-hidden />}
+                      {/* Mismo criterio que los chips de móvil: en
+                          reposo el icono lleva el color de la categoría
+                          y al activarse lo hereda del rail entero. */}
+                      {Icono && (
+                        <Icono
+                          size={15}
+                          className={`shrink-0 ${activo ? '' : (chip.claseTexto ?? '')}`}
+                          aria-hidden
+                        />
+                      )}
                       <span className="min-w-0 flex-1 truncate">{chip.nombre}</span>
-                      <span
-                        className={`shrink-0 text-[11.5px] ${activo ? 'text-noct-accent-400' : 'text-noct-neutral-600'}`}
-                      >
+                      <span className={`shrink-0 text-[11.5px] ${activo ? 'opacity-70' : 'text-noct-neutral-600'}`}>
                         {chip.count}
                       </span>
                     </button>
@@ -399,7 +430,11 @@ export function SolucionesPage() {
                 <section key={grupo.id}>
                   {buscando && IconoGrupo && (
                     <div className="mb-2 flex items-center gap-2 px-0.5">
-                      <IconoGrupo size={14} className="text-noct-neutral-400" aria-hidden />
+                      <IconoGrupo
+                        size={14}
+                        className={grupo.claseTexto ?? 'text-noct-neutral-400'}
+                        aria-hidden
+                      />
                       <TituloSeccion>{grupo.nombre}</TituloSeccion>
                       <span className="text-[11px] text-noct-neutral-600">{grupo.count}</span>
                     </div>

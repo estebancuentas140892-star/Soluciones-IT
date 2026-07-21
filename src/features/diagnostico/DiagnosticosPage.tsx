@@ -15,6 +15,7 @@ import {
 } from '../../components/iconos'
 import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
+import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 
 // Modo Diagnóstico Inteligente re-autorizado en Nocturne (handoff
 // "Rediseño de aplicación empresarial", Diagnóstico.dc.html; tarea 81).
@@ -181,7 +182,7 @@ export function DiagnosticosPage() {
           {grupos.map(({ categoria, Icono, delGrupo }) => (
             <section key={categoria.id}>
               <div className="mb-1.5 flex items-center gap-2 px-0.5">
-                <Icono size={14} className="text-noct-neutral-400" aria-hidden />
+                <Icono size={14} className={claseTextoDeCategoria(categoria)} aria-hidden />
                 <TituloSeccion>{categoria.nombre}</TituloSeccion>
               </div>
               <div className="flex flex-col">

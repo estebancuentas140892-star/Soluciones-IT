@@ -11,7 +11,8 @@ import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { claseEstado, estadoConEtiqueta, tipoDeNodoVisual } from '../red/topologiaVisual'
 import { IconoNodo } from '../red/IconoNodo'
 import { Historial } from '../historial/Historial'
-import { claseTonoDeTipo, iconoDeTipo } from './iconosSoluciones'
+import { claseTonoDeTipo, iconoDeCategoria, iconoDeTipo } from './iconosSoluciones'
+import { claseTonoDeCategoria } from './coloresCategoria'
 import { TIPOS_ARTICULO } from './tiposArticulo'
 
 // Ficha de categoria en el sistema Nocturne (fase N4, sin esquema;
@@ -47,6 +48,7 @@ export function CategoriaPage() {
   if (categoria === null) return <Navigate to="/soluciones" replace />
 
   const vacia = articulos.length === 0 && dispositivos.length === 0 && diagnosticos.length === 0
+  const IconoCategoria = iconoDeCategoria(categoria?.nombre ?? '')
 
   return (
     <ShellNocturne>
@@ -59,7 +61,20 @@ export function CategoriaPage() {
           </Link>
         </header>
         <div className="px-4 pb-3 pt-0.5">
-          <h1 className="m-0 text-[22px] font-medium leading-[1.25]">{categoria?.nombre ?? '...'}</h1>
+          {/* La ficha de la categoría es donde su identidad debe leerse
+              más: el icono va en un recuadro con su color propio (fase
+              0b), el mismo tratamiento que ya recibe el tipo en cada
+              fila de artículo. */}
+          <div className="flex items-center gap-2.5">
+            {categoria && (
+              <span
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded ${claseTonoDeCategoria(categoria)}`}
+              >
+                <IconoCategoria size={18} aria-hidden />
+              </span>
+            )}
+            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">{categoria?.nombre ?? '...'}</h1>
+          </div>
           {!vacia && (
             <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
               {[

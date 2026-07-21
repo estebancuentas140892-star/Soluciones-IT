@@ -41,6 +41,7 @@ import {
   TituloSeccion,
 } from '../../components/nocturne'
 import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
+import { claseActivaDeCategoria, claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { Historial } from '../historial/Historial'
 import { PruebaDiagnostico } from './PruebaDiagnostico'
 
@@ -223,11 +224,15 @@ export function DiagnosticoForm() {
                       onClick={() => setCategoriaId(c.id)}
                       className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
                         activa
-                          ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
+                          ? claseActivaDeCategoria(c)
                           : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
                       }`}
                     >
-                      <Icono size={15} aria-hidden />
+                      <Icono
+                        size={15}
+                        className={activa ? undefined : claseTextoDeCategoria(c)}
+                        aria-hidden
+                      />
                       {c.nombre}
                     </button>
                   )

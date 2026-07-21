@@ -73,6 +73,33 @@
   --color-noct-tipo-instalacion: oklch(0.72 0.14 330);
   --color-noct-tipo-configuracion: oklch(0.78 0.1 195);
   --color-noct-tipo-conexion: oklch(0.7 0.13 255);
+
+  /* Color de IDENTIDAD de cada categoria (fase 0b de
+     PROPUESTA_REVISION_ARQUITECTURA.md). Diez matices repartidos por el
+     circulo, todos en la misma banda de luminosidad y chroma
+     (L 0.75 / C 0.11) para que se lean como una familia y ninguno
+     "grite" mas que otro sobre el fondo oscuro. Se eligen diez porque
+     las categorias las crea el equipo y no se sabe cuantas habra: mas
+     alla de diez el ciclo se repite, que es preferible a inventar
+     matices cada vez mas parecidos entre si.
+
+     Convive a proposito con los colores por TIPO de arriba y con los de
+     ESTADO: son tres lenguajes distintos sobre superficies distintas
+     (la categoria tiñe chips y cabeceras de grupo, el tipo el recuadro
+     del icono de cada articulo, el estado el punto de un equipo). La
+     propuesta original sugeria retirar el color por tipo para dejar el
+     color solo a la categoria; el usuario decidio el 2026-07-21
+     conservarlo, porque justamente lo habia pedido en la tarea 73. */
+  --color-noct-cat-1: oklch(0.75 0.11 25);
+  --color-noct-cat-2: oklch(0.75 0.11 60);
+  --color-noct-cat-3: oklch(0.75 0.11 95);
+  --color-noct-cat-4: oklch(0.75 0.11 140);
+  --color-noct-cat-5: oklch(0.75 0.11 170);
+  --color-noct-cat-6: oklch(0.75 0.11 200);
+  --color-noct-cat-7: oklch(0.75 0.11 235);
+  --color-noct-cat-8: oklch(0.75 0.11 270);
+  --color-noct-cat-9: oklch(0.75 0.11 300);
+  --color-noct-cat-10: oklch(0.75 0.11 335);
 }
 
 html,

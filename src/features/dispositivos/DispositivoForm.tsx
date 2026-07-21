@@ -20,6 +20,7 @@ import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { valoresUnicos } from '../../lib/vocabulario'
 import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
+import { claseActivaDeCategoria, claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { SelectorUbicacion } from '../ubicaciones/SelectorUbicacion'
 import { ESTADOS_SUGERIDOS } from './estados'
 
@@ -292,11 +293,15 @@ export function DispositivoForm() {
                       onClick={() => setCategoriaId(c.id)}
                       className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
                         activa
-                          ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
+                          ? claseActivaDeCategoria(c)
                           : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
                       }`}
                     >
-                      <Icono size={15} aria-hidden />
+                      <Icono
+                        size={15}
+                        className={activa ? undefined : claseTextoDeCategoria(c)}
+                        aria-hidden
+                      />
                       {c.nombre}
                     </button>
                   )
