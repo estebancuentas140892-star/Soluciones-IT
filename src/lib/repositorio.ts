@@ -160,11 +160,17 @@ export async function registrarEjecucionDiagnostico(
 // trazabilidad de buena fe: se registra desde el cliente al momento
 // de la accion, no impide nada por si sola.
 export async function registrarAccesoBoveda(
-  datos: Omit<AccesoBoveda, 'id' | 'usuario' | 'usuarioNombre' | 'fechaHora'>,
+  // `entidadTipo` es opcional y cae a 'credencial' (grupo P1): la
+  // inmensa mayoria de las llamadas son sobre una credencial y no
+  // tienen por que nombrarlo. Los campos protegidos lo pasan explicito.
+  datos: Omit<AccesoBoveda, 'id' | 'usuario' | 'usuarioNombre' | 'fechaHora' | 'entidadTipo'> & {
+    entidadTipo?: AccesoBoveda['entidadTipo']
+  },
 ): Promise<void> {
   const usuario = await obtenerUsuarioActual()
   const acceso: AccesoBoveda = {
     ...datos,
+    entidadTipo: datos.entidadTipo ?? 'credencial',
     id: nuevoId(),
     usuario: usuario.id,
     usuarioNombre: usuario.nombre,
@@ -312,6 +318,13 @@ function crearEntrada(
   }
 }
 
+// El historial de un campo protegido cuelga del PROPIO campo
+// ('campo_protegido' + su id), nunca del dispositivo. No es una
+// preferencia: la RLS restringe la lectura de las entradas
+// 'campo_protegido' a quien tiene permiso de boveda, mientras que las
+// de 'dispositivo' las lee cualquier tecnico. Colgarlas del equipo
+// filtraria el nombre del dato protegido y quien lo cambio en el "Ver
+// historial" normal de la ficha, que es publico para el equipo.
 const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, TipoEntidadHistorial> =
   {
     categorias: 'categoria',
@@ -320,6 +333,7 @@ const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, 
     credenciales: 'credencial',
     diagnosticos: 'diagnostico',
     ubicaciones: 'ubicacion',
+    campos_protegidos: 'campo_protegido',
   }
 
 // No incluye 'adjuntos': el destino de un adjunto se resuelve aparte
@@ -398,9 +412,11 @@ function valorComparable(valor: unknown): string {
 }
 
 function formatearValor(campo: string, valor: unknown): string {
-  // Las credenciales viajan y se guardan cifradas; en el historial
-  // no tiene sentido mostrar el bloque cifrado completo.
-  if (campo === 'datosCifrados') return valor ? '(cifrado)' : ''
+  // Las credenciales y los campos protegidos viajan y se guardan
+  // cifrados; en el historial no tiene sentido mostrar el bloque
+  // cifrado completo, y volcarlo ahi lo sacaria del unico lugar donde
+  // el secreto esta protegido de verdad.
+  if (campo === 'datosCifrados' || campo === 'valorCifrado') return valor ? '(cifrado)' : ''
   // Los nombres de los dispositivos afectados y de los equipos con
   // acceso a una credencial (grupo N3) son lo legible para un humano en
   // el historial, no el JSON con sus id.

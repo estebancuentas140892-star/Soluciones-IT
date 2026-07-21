@@ -92,6 +92,7 @@ function dispositivo(cambios: Partial<Dispositivo> & { id: string; nombre: strin
 function credencial(cambios: Partial<Credencial> & { id: string; titulo: string }): Credencial {
   return {
     categoria: '',
+    tipo: 'cuenta',
     datosCifrados: '',
     venceEn: null,
     dispositivos: [],

@@ -5,7 +5,7 @@ import { db, type AccesoBoveda, type EjecucionDiagnostico, type HistorialEntrada
 import { Adjuntos } from '../../components/Adjuntos'
 import { CaretDown, CaretUp } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
-import { combinarEventos, ETIQUETA_ACCION_BOVEDA, etiquetaResuelto, formatearDuracion, type EventoLinea } from './lineaDeTiempo'
+import { combinarEventos, etiquetaAccesoBoveda, etiquetaResuelto, formatearDuracion, type EventoLinea } from './lineaDeTiempo'
 import { resumenDetalles } from './resumenDetalles'
 import { resumenProcedimiento, textoContexto } from './resumenProcedimiento'
 import { descripcionEntrada } from './textoHistorial'
@@ -47,10 +47,18 @@ export function Historial({ entidadTipo, entidadId }: Props) {
     [entidadTipo, entidadId],
     [] as EjecucionDiagnostico[],
   )
+  // Auditoria de la boveda: aplica a una credencial y, desde el grupo
+  // P1, tambien a un campo protegido. `credencialId` es el id del
+  // objetivo en ambos casos, asi que se filtra ademas por entidadTipo
+  // (las filas anteriores a P1 no lo traen y se leen como 'credencial').
   const accesos = useLiveQuery(
     (): Promise<AccesoBoveda[]> =>
-      entidadTipo === 'credencial'
-        ? db.accesos_boveda.where('credencialId').equals(entidadId).toArray()
+      entidadTipo === 'credencial' || entidadTipo === 'campo_protegido'
+        ? db.accesos_boveda
+            .where('credencialId')
+            .equals(entidadId)
+            .filter((a) => (a.entidadTipo ?? 'credencial') === entidadTipo)
+            .toArray()
         : Promise.resolve([]),
     [entidadTipo, entidadId],
     [] as AccesoBoveda[],
@@ -146,7 +154,7 @@ function AccesoItem({ acceso }: { acceso: AccesoBoveda }) {
         <span>{acceso.usuarioNombre || 'Usuario desconocido'}</span>
         <span>{formateadorFecha.format(new Date(acceso.fechaHora))}</span>
       </div>
-      <p className="mt-1 text-sm text-noct-text">{ETIQUETA_ACCION_BOVEDA[acceso.accion]}</p>
+      <p className="mt-1 text-sm text-noct-text">{etiquetaAccesoBoveda(acceso)}</p>
     </li>
   )
 }

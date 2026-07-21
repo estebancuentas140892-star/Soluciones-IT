@@ -34,6 +34,7 @@ function ejecucion(cambios: Partial<EjecucionDiagnostico> & { id: string; fechaH
 
 function acceso(cambios: Partial<AccesoBoveda> & { id: string; fechaHora: string }): AccesoBoveda {
   return {
+    entidadTipo: 'credencial',
     credencialId: 'c1',
     credencialTitulo: 'Admin router',
     usuario: 'u1',

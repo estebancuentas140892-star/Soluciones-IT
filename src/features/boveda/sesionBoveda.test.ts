@@ -6,7 +6,9 @@ import {
   bloquear,
   bovedaDesbloqueada,
   cifrarCredencial,
+  cifrarValor,
   descifrarCredencial,
+  descifrarValor,
   desbloquear,
   estadoInicialBoveda,
   TEXTO_VERIFICADOR,
@@ -40,6 +42,7 @@ async function guardarCredencial(titulo: string, datosCifrados: string): Promise
     id: nuevoId(),
     titulo,
     categoria: 'Redes',
+    tipo: 'cuenta',
     datosCifrados,
     venceEn: null,
     dispositivos: [],
@@ -230,6 +233,54 @@ describe('sesion y descifrado', () => {
     expect(await desbloquear('maestra')).toBeNull()
     expect(bovedaDesbloqueada()).toBe(true)
     expect(await descifrarCredencial('esto-no-es-un-bloque-cifrado')).toBeNull()
+  })
+})
+
+// Valor suelto (grupo P1): el cifrado de un campo protegido de un
+// dispositivo. Usa la misma clave y el mismo formato de bloque que una
+// credencial, asi que hereda sus garantias; estas pruebas fijan que
+// asi sea y que no se pueda leer con la boveda cerrada.
+describe('cifrarValor / descifrarValor (campos protegidos del dispositivo)', () => {
+  it('ida y vuelta con la boveda abierta', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+
+    const bloque = await cifrarValor('PIN-4821')
+    expect(bloque).not.toContain('PIN-4821')
+    expect(await descifrarValor(bloque)).toBe('PIN-4821')
+  })
+
+  it('un valor vacio devuelve cadena vacia, no null (distinto de "no se pudo abrir")', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+
+    expect(await descifrarValor(await cifrarValor(''))).toBe('')
+  })
+
+  it('con la boveda bloqueada no se puede cifrar ni descifrar', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+    const bloque = await cifrarValor('secreto')
+
+    bloquear()
+
+    expect(await descifrarValor(bloque)).toBeNull()
+    await expect(cifrarValor('otro')).rejects.toThrow()
+  })
+
+  it('un bloque cifrado con otra contraseña maestra queda ilegible', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+    const bloqueAjeno = await bloqueConContrasena('otra-contrasena', 'secreto-ajeno')
+
+    expect(await descifrarValor(bloqueAjeno)).toBeNull()
+  })
+
+  it('un bloque con formato invalido devuelve null en vez de romper', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+
+    expect(await descifrarValor('esto-no-es-un-bloque')).toBeNull()
   })
 })
 

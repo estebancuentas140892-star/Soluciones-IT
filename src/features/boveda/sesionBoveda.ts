@@ -350,6 +350,33 @@ export async function cifrarCredencial(datos: DatosCredencial): Promise<string> 
   return cifrarTexto(principal.clave, principal.salt, principal.iteraciones, JSON.stringify(datos))
 }
 
+// Cifra UN valor suelto (grupo P1: el valor de un campo protegido de
+// un dispositivo). Misma clave y mismo formato de bloque que una
+// credencial; lo unico que cambia es que el contenido es una cadena
+// plana en vez de un JSON con varios campos.
+export async function cifrarValor(valor: string): Promise<string> {
+  if (!desbloqueada || !principal) throw new Error('La bóveda está bloqueada.')
+  return cifrarTexto(principal.clave, principal.salt, principal.iteraciones, valor)
+}
+
+// Devuelve null si la boveda esta bloqueada, el bloque es invalido o
+// se cifro con una contrasena distinta a la actual (mismos casos que
+// descifrarCredencial). Un valor vacio guardado devuelve '' , que es
+// distinto de null: hay que distinguir "no se pudo abrir" de "esta
+// vacio".
+export async function descifrarValor(valorCifrado: string): Promise<string | null> {
+  if (!desbloqueada) return null
+  const bloque = analizarBloque(valorCifrado)
+  if (!bloque) return null
+  const clave = clavesPorSal.get(bloque.saltBase64)
+  if (!clave) return null
+  try {
+    return await descifrarTexto(clave, bloque)
+  } catch {
+    return null
+  }
+}
+
 // Devuelve null si la boveda esta bloqueada, el bloque es invalido o
 // se cifro con una contrasena distinta a la actual.
 export async function descifrarCredencial(datosCifrados: string): Promise<DatosCredencial | null> {

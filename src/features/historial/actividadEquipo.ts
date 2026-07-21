@@ -14,12 +14,15 @@ const MAX_HISTORIAL_A_REVISAR = 60
 
 // Tipos de entidad que entran al feed: lo que un tecnico documenta
 // como trabajo real. Quedan fuera 'categoria'/'ubicacion'
-// (housekeeping, no trabajo de campo) y 'credencial': mostrar que
-// credencial se edito filtraria su titulo a tecnicos sin permiso de
-// boveda, el mismo riesgo que ya evita accesos_boveda (ver
-// ARQUITECTURA.md seccion 8). Inicio no tiene lectura condicional por
-// permiso, asi que se excluye siempre, no solo para quien no puede ver
-// la boveda.
+// (housekeeping, no trabajo de campo) y, por el mismo motivo de
+// seguridad, 'credencial' y 'campo_protegido' (grupo P1): mostrar que
+// secreto o que dato protegido se edito filtraria su titulo a tecnicos
+// sin permiso de boveda, el mismo riesgo que ya evita accesos_boveda
+// (ver ARQUITECTURA.md seccion 8). Inicio no tiene lectura condicional
+// por permiso, asi que se excluyen siempre, no solo para quien no puede
+// ver la boveda. Es una lista BLANCA a proposito: un tipo de entidad
+// nuevo queda fuera del feed hasta que alguien lo agregue a mano, que
+// es el lado seguro por el que equivocarse.
 const TIPOS_VISIBLES: TipoEntidadHistorial[] = ['articulo', 'dispositivo', 'diagnostico']
 
 export type EntidadActividad = 'articulo' | 'dispositivo' | 'diagnostico'

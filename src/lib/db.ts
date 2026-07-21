@@ -329,10 +329,19 @@ export interface Conexion {
   eliminadoEn: string | null
 }
 
+// Clase de secreto INDEPENDIENTE de la boveda (grupo P1, se usa en la
+// interfaz desde la fase P3). No existe un tipo "equipo" a proposito:
+// un equipo es un dispositivo, y sus datos sensibles son campos
+// protegidos de su ficha (ver CampoProtegido), no un secreto suelto.
+// Puede llegar null de una base que aun no tiene la columna, por eso
+// siempre se lee con `?? 'cuenta'`.
+export type TipoSecreto = 'cuenta' | 'red' | 'llave' | 'archivo' | 'nota'
+
 export interface Credencial {
   id: string
   titulo: string
   categoria: string
+  tipo: TipoSecreto
   datosCifrados: string
   // Fecha de vencimiento opcional (fase B2, "YYYY-MM-DD"), o null. A
   // proposito NO viaja cifrada: permite avisar (ambar cerca de vencer,
@@ -345,6 +354,42 @@ export interface Credencial {
   // sigue en datosCifrados. Habilita el inverso "credenciales de este
   // equipo" en la ficha del dispositivo sin desbloquear la boveda.
   dispositivos: DispositivoAfectado[]
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
+// Que clase de dato protegido es, para elegir su icono y si arranca
+// oculto tras el ojo. 'texto' es el comodin y el valor por defecto.
+export type TipoCampoProtegido = 'usuario' | 'contrasena' | 'pin' | 'llave' | 'token' | 'texto'
+
+// Un dato sensible que pertenece a UN equipo concreto (grupo P1): el
+// usuario administrador de una impresora, su PIN de impresion, la clave
+// del panel de una camara. Antes esto se guardaba como una credencial
+// suelta en la boveda que ademas repetia la identidad del equipo
+// (titulo, categoria, IP), lo que duplicaba datos que ya viven en la
+// ficha del dispositivo; ahora cuelga del equipo y no se duplica nada.
+//
+// Una fila por campo (y no un bloque por equipo) para que cada dato
+// tenga su propio historial y pueda vincularse por separado desde un
+// paso de procedimiento (fase P2).
+//
+// `nombre` y `tipo` NO van cifrados a proposito, igual que
+// `Credencial.venceEn` y `Credencial.dispositivos`: saber que un equipo
+// tiene un "PIN de impresion" no es el secreto, y permite listarlo y
+// vincularlo sin desbloquear la boveda. Solo `valorCifrado` es secreto.
+// La tabla remota lleva la MISMA RLS que credenciales (permiso
+// puede_ver_boveda), asi que un tecnico sin permiso no descarga estas
+// filas y la ficha del equipo no le insinua que existan.
+export interface CampoProtegido {
+  id: string
+  // Equipo al que pertenece, o null para un campo protegido sin equipo.
+  dispositivoId: string | null
+  nombre: string
+  tipo: TipoCampoProtegido
+  // Bloque AES-256-GCM (mismo formato que Credencial.datosCifrados).
+  valorCifrado: string
+  orden: number
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -522,6 +567,10 @@ export type TipoEntidadHistorial =
   | 'credencial'
   | 'diagnostico'
   | 'ubicacion'
+  // Grupo P1: el historial de un campo protegido se lee con permiso de
+  // boveda (misma restriccion que 'credencial' en la RLS). El valor
+  // nunca entra al historial, se registra como "(cifrado)".
+  | 'campo_protegido'
 
 export interface HistorialEntrada {
   id: string
@@ -546,8 +595,18 @@ export type AccionBoveda = 'consulto' | 'mostro' | 'copio_usuario' | 'copio_cont
 // es copia de referencia (se ve aunque la credencial ya se haya
 // eliminado). Es trazabilidad de buena fe: se registra desde el
 // cliente al momento de la accion, no impide nada por si solo.
+//
+// Desde el grupo P1 la auditoria cubre dos clases de objetivo
+// (`entidadTipo`): las credenciales de la boveda y los campos
+// protegidos de un dispositivo. `credencialId`/`credencialTitulo` se
+// REUTILIZAN como id y titulo del objetivo en ambos casos, en vez de
+// sumar dos columnas nuevas a un registro inmutable: es compatible con
+// las filas ya guardadas (que no traen entidadTipo y se leen como
+// 'credencial'). El nombre de esos dos campos queda algo impreciso; se
+// documenta aqui y se acepta a cambio de no migrar la tabla.
 export interface AccesoBoveda {
   id: string
+  entidadTipo: 'credencial' | 'campo_protegido'
   credencialId: string
   credencialTitulo: string
   usuario: string | null
@@ -670,6 +729,10 @@ class SolucionesItDatabase extends Dexie {
   ubicaciones!: EntityTable<Ubicacion, 'id'>
   conexiones!: EntityTable<Conexion, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
+  // Nombre con guion bajo a proposito, como ejecuciones_diagnostico y
+  // accesos_boveda: el motor de sincronizacion usa el MISMO nombre en
+  // la tabla local y en la remota (snake_case en Postgres).
+  campos_protegidos!: EntityTable<CampoProtegido, 'id'>
   bovedaMeta!: EntityTable<BovedaMeta, 'id'>
   seguridadApp!: EntityTable<ConfigBloqueoApp, 'id'>
   historial!: EntityTable<HistorialEntrada, 'id'>
@@ -766,6 +829,17 @@ class SolucionesItDatabase extends Dexie {
     // mismo patron que `recientes`.
     this.version(11).stores({
       favoritos: 'clave, marcadoEn',
+    })
+
+    // Grupo de esquema P1 (2026-07-21): campos protegidos del
+    // dispositivo. Las columnas nuevas de tablas existentes
+    // (accesos_boveda.entidadTipo, credenciales.tipo) no se declaran
+    // aqui: Dexie solo necesita los indices y esos campos viven dentro
+    // del objeto igual que el resto. Lo unico que exige tabla nueva es
+    // `campos_protegidos`, indexada por dispositivoId para poder listar
+    // los de un equipo sin recorrer la tabla entera.
+    this.version(12).stores({
+      campos_protegidos: 'id, dispositivoId, updatedAt',
     })
   }
 }

@@ -37,6 +37,26 @@ export const ETIQUETA_ACCION_BOVEDA: Record<AccesoBoveda['accion'], string> = {
   elimino: 'Eliminó el secreto',
 }
 
+// Las mismas acciones, contadas sobre un campo protegido de un equipo
+// (grupo P1): ahi no se consulta "la ficha" ni se modifica "el
+// secreto" de la boveda, sino un dato concreto del dispositivo.
+const ETIQUETA_ACCION_CAMPO: Record<AccesoBoveda['accion'], string> = {
+  consulto: 'Consultó el dato protegido',
+  mostro: 'Mostró el valor',
+  copio_usuario: 'Copió el valor',
+  copio_contrasena: 'Copió el valor',
+  modifico: 'Modificó el dato protegido',
+  elimino: 'Eliminó el dato protegido',
+}
+
+// Etiqueta de una entrada de auditoria segun sobre que se hizo. Las
+// filas guardadas antes del grupo P1 no traen entidadTipo y se leen
+// como 'credencial', que es lo que eran.
+export function etiquetaAccesoBoveda(acceso: AccesoBoveda): string {
+  const mapa = acceso.entidadTipo === 'campo_protegido' ? ETIQUETA_ACCION_CAMPO : ETIQUETA_ACCION_BOVEDA
+  return mapa[acceso.accion]
+}
+
 export function etiquetaResuelto(resuelto: EjecucionDiagnostico['resuelto']): string {
   switch (resuelto) {
     case 'si':

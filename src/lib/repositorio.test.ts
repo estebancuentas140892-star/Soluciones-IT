@@ -185,6 +185,7 @@ describe('guardarRegistro', () => {
       id,
       titulo: 'Router principal',
       categoria: 'Redes',
+      tipo: 'cuenta',
       datosCifrados: 'bloque-cifrado-original',
       venceEn: null,
       dispositivos: [],
@@ -193,6 +194,7 @@ describe('guardarRegistro', () => {
       id,
       titulo: 'Router principal',
       categoria: 'Redes',
+      tipo: 'cuenta',
       datosCifrados: 'bloque-cifrado-nuevo',
       venceEn: null,
       dispositivos: [],
@@ -201,6 +203,52 @@ describe('guardarRegistro', () => {
     const cambio = (await db.historial.toArray()).find((c) => c.campo === 'datosCifrados')
     expect(cambio?.valorAnterior).toBe('(cifrado)')
     expect(cambio?.valorNuevo).toBe('(cifrado)')
+  })
+
+  it('nunca deja el valor de un campo protegido legible en el historial', async () => {
+    const id = nuevoId()
+    await guardarRegistro('campos_protegidos', {
+      id,
+      dispositivoId: 'd1',
+      nombre: 'PIN de impresión',
+      tipo: 'pin',
+      valorCifrado: 'v1.600000.sal.iv.bloque-original',
+      orden: 0,
+    })
+    await guardarRegistro('campos_protegidos', {
+      id,
+      dispositivoId: 'd1',
+      nombre: 'PIN de impresión',
+      tipo: 'pin',
+      valorCifrado: 'v1.600000.sal.iv.bloque-nuevo',
+      orden: 0,
+    })
+
+    const cambio = (await db.historial.toArray()).find((c) => c.campo === 'valorCifrado')
+    expect(cambio?.valorAnterior).toBe('(cifrado)')
+    expect(cambio?.valorNuevo).toBe('(cifrado)')
+  })
+
+  it('el historial de un campo protegido cuelga del campo, nunca del dispositivo', async () => {
+    // Es la garantia que hace cumplible la RLS: las entradas de
+    // 'dispositivo' las lee cualquier tecnico, las de 'campo_protegido'
+    // solo quien tiene permiso de boveda. Colgarlas del equipo
+    // filtraria el nombre del dato protegido y quien lo cambio.
+    const id = nuevoId()
+    await guardarRegistro('campos_protegidos', {
+      id,
+      dispositivoId: 'd1',
+      nombre: 'Contraseña administrador',
+      tipo: 'contrasena',
+      valorCifrado: 'v1.600000.sal.iv.bloque',
+      orden: 0,
+    })
+
+    const entradas = await db.historial.toArray()
+    expect(entradas).toHaveLength(1)
+    expect(entradas[0].entidadTipo).toBe('campo_protegido')
+    expect(entradas[0].entidadId).toBe(id)
+    expect(entradas.some((e) => e.entidadTipo === 'dispositivo')).toBe(false)
   })
 })
 

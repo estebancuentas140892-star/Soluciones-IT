@@ -12,6 +12,18 @@ Pasos que se hacen una sola vez desde el panel de Supabase: https://supabase.com
 
 Para verificar: en **Table Editor** deben aparecer las tablas `perfiles`, `categorias`, `articulos`, `dispositivos`, `conexiones`, `credenciales`, `boveda_meta`, `historial` y `adjuntos`, y la tabla `categorias` debe tener las categorías iniciales.
 
+### Actualización del 2026-07-21 (grupo de esquema P1: campos protegidos)
+
+Si el esquema ya estaba aplicado de antes, hay que volver a ejecutar `schema.sql` completo (es idempotente) para incorporar el grupo P1. Agrega:
+
+- La tabla nueva **`campos_protegidos`**: los datos sensibles propios de un equipo (usuario administrador, contraseña, PIN), que antes obligaban a crear una credencial aparte en la Bóveda duplicando la identidad del equipo.
+- La columna `entidad_tipo` en `accesos_boveda` y la columna `tipo` en `credenciales`.
+- La política de lectura de `historial`, ampliada para restringir también las entradas de campos protegidos.
+
+Punto importante de seguridad: `campos_protegidos` lleva **la misma RLS que `credenciales`** (exige `puede_ver_boveda`). Es la razón de que sea una tabla propia y no una columna dentro de `dispositivos`: esa tabla la puede leer cualquier técnico autenticado, así que un bloque cifrado ahí quedaría al alcance de quien no debe verlo.
+
+Para verificar: en **Table Editor** debe aparecer `campos_protegidos`, y en **Authentication > Policies** debe tener la política `campos_protegidos_acceso`.
+
 ## 2. Crear los 5 usuarios del equipo
 
 1. En el menú lateral, abrir **Authentication**, pestaña **Users**.

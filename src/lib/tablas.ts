@@ -4,6 +4,7 @@ import {
   type AccesoBoveda,
   type Adjunto,
   type Articulo,
+  type CampoProtegido,
   type Categoria,
   type Conexion,
   type Credencial,
@@ -30,6 +31,7 @@ export const TABLAS_SINCRONIZADAS = [
   'ejecuciones_diagnostico',
   'accesos_boveda',
   'ubicaciones',
+  'campos_protegidos',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
@@ -54,6 +56,7 @@ export interface EntidadPorTabla {
   ejecuciones_diagnostico: EjecucionDiagnostico
   accesos_boveda: AccesoBoveda
   ubicaciones: Ubicacion
+  campos_protegidos: CampoProtegido
 }
 
 interface ConfigTabla {
@@ -153,6 +156,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       datosCifrados: 'datos_cifrados',
       venceEn: 'vence_en',
       dispositivos: 'dispositivos',
+      tipo: 'tipo',
     },
   },
   adjuntos: {
@@ -222,6 +226,10 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
     soloInsercion: true,
     campos: {
       id: 'id',
+      // Grupo P1: el objetivo de la auditoria puede ser una credencial
+      // o un campo protegido; credencial_id/credencial_titulo se
+      // reutilizan como id y titulo del objetivo en ambos casos.
+      entidadTipo: 'entidad_tipo',
       credencialId: 'credencial_id',
       credencialTitulo: 'credencial_titulo',
       usuario: 'usuario',
@@ -237,6 +245,23 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
     columnaCursor: 'updated_at',
     soloInsercion: false,
     campos: { ...camposComunes, nombre: 'nombre', padreId: 'padre_id', notas: 'notas' },
+  },
+  // Campos protegidos del dispositivo (grupo P1). Va al final de la
+  // lista de tablas sincronizadas, como se hizo con `ubicaciones`: si el
+  // esquema aun no se aplico en el servidor, su fallo no impide
+  // descargar las demas. Solo `valorCifrado` es secreto; `nombre` y
+  // `tipo` viajan en claro a proposito (ver CampoProtegido en db.ts).
+  campos_protegidos: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: {
+      ...camposComunes,
+      dispositivoId: 'dispositivo_id',
+      nombre: 'nombre',
+      tipo: 'tipo',
+      valorCifrado: 'valor_cifrado',
+      orden: 'orden',
+    },
   },
 }
 

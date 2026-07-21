@@ -376,6 +376,90 @@ create index if not exists idx_ubicaciones_padre on public.ubicaciones (padre_id
 create index if not exists idx_dispositivos_ubicacion on public.dispositivos (ubicacion_id);
 
 -- ----------------------------------------------------------------
+-- 1c. Grupo de esquema P1 (2026-07-21): campos protegidos del
+--     dispositivo. Corrige la duplicidad Dispositivos/Boveda: los
+--     datos sensibles PROPIOS de un equipo (usuario administrador,
+--     contrasena, PIN) dejan de guardarse como una credencial aparte
+--     que replica la identidad del equipo, y pasan a colgar del
+--     dispositivo. Decisiones en PROPUESTA_SEGURIDAD_DISPOSITIVO.md
+--     seccion 6.
+-- ----------------------------------------------------------------
+
+-- Un campo protegido por fila (decision 1 del usuario): asi cada dato
+-- tiene su propio historial de cambios y puede vincularse por separado
+-- desde un paso de procedimiento ("Contrasena administrador de este
+-- equipo"), cosa que un unico bloque cifrado por equipo no permitiria.
+--
+-- POR QUE UNA TABLA PROPIA Y NO UNA COLUMNA EN dispositivos:
+-- la tabla dispositivos la puede leer cualquier tecnico autenticado
+-- (politica dispositivos_acceso). Como desde el 2026-07-17 la
+-- contrasena maestra la conoce todo el equipo (autoriza las
+-- eliminaciones sensibles y boveda_meta entrega el verificador a
+-- cualquier autenticado), la RLS es hoy la UNICA barrera real entre un
+-- tecnico sin permiso de boveda y un secreto. Un bloque cifrado dentro
+-- de dispositivos seria descargable por quien no debe verlo y abrible
+-- con una contrasena que puede conocer legitimamente. Por eso esta
+-- tabla lleva la misma RLS que credenciales.
+--
+-- nombre y tipo van SIN cifrar a proposito (mismo criterio que
+-- credenciales.vence_en y credenciales.dispositivos): saber que un
+-- equipo tiene un campo "PIN de impresion" no es el secreto, y permite
+-- listar, buscar y vincular sin desbloquear la boveda. Solo
+-- valor_cifrado es el secreto, y llega siempre cifrado con AES-256-GCM
+-- desde la app (mismo formato v1.<iter>.<salt>.<iv>.<datos> que
+-- credenciales.datos_cifrados).
+--
+-- Sin FK a dispositivos a proposito (mismo criterio que
+-- historial.entidad_id y accesos_boveda.credencial_id): la app es
+-- offline primero y las filas pueden llegar en cualquier orden.
+-- dispositivo_id admite null para un campo protegido sin equipo.
+create table if not exists public.campos_protegidos (
+  id uuid primary key default gen_random_uuid(),
+  dispositivo_id uuid,
+  nombre text not null,
+  tipo text not null default 'texto' check (tipo in ('usuario', 'contrasena', 'pin', 'llave', 'token', 'texto')),
+  valor_cifrado text not null,
+  orden integer not null default 0,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+create index if not exists idx_campos_protegidos_updated on public.campos_protegidos (updated_at);
+create index if not exists idx_campos_protegidos_dispositivo on public.campos_protegidos (dispositivo_id);
+
+-- El historial ahora tambien registra cambios de campos protegidos.
+-- Su lectura queda restringida a la boveda (ver historial_lectura mas
+-- abajo): sin esto, los cambios de un campo protegido se filtrarian a
+-- tecnicos sin permiso, que es justo lo que la tabla evita.
+alter table public.historial drop constraint if exists historial_entidad_tipo_check;
+alter table public.historial add constraint historial_entidad_tipo_check
+  check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico', 'ubicacion', 'campo_protegido'));
+
+-- La auditoria de la boveda pasa a cubrir dos clases de objetivo. Se
+-- agrega entidad_tipo y se REUTILIZAN credencial_id/credencial_titulo
+-- como id y titulo del objetivo, en vez de sumar dos columnas nuevas:
+-- es compatible con las filas ya existentes (default 'credencial') y
+-- no exige renombrar nada. El nombre de esas dos columnas queda algo
+-- impreciso; se documenta aqui y se acepta a cambio de no migrar un
+-- registro inmutable.
+alter table public.accesos_boveda add column if not exists entidad_tipo text not null default 'credencial';
+alter table public.accesos_boveda drop constraint if exists accesos_boveda_entidad_tipo_check;
+alter table public.accesos_boveda add constraint accesos_boveda_entidad_tipo_check
+  check (entidad_tipo in ('credencial', 'campo_protegido'));
+
+-- Tipo de secreto de la boveda (fase P3: cuenta de sistema, red, llave
+-- digital, archivo seguro, nota segura). La columna se agrega en este
+-- mismo grupo para no exigir otra intervencion de esquema; su uso en la
+-- interfaz llega en P3. Default 'cuenta' para que lo ya guardado quede
+-- clasificado sin migracion. NO existe un tipo "equipo" a proposito:
+-- los equipos son dispositivos, no secretos (validacion 2 del encargo).
+alter table public.credenciales add column if not exists tipo text not null default 'cuenta';
+alter table public.credenciales drop constraint if exists credenciales_tipo_check;
+alter table public.credenciales add constraint credenciales_tipo_check
+  check (tipo in ('cuenta', 'red', 'llave', 'archivo', 'nota'));
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 
@@ -440,6 +524,11 @@ create trigger trg_ubicaciones_modificacion
   before insert or update on public.ubicaciones
   for each row execute function public.registrar_modificacion();
 
+drop trigger if exists trg_campos_protegidos_modificacion on public.campos_protegidos;
+create trigger trg_campos_protegidos_modificacion
+  before insert or update on public.campos_protegidos
+  for each row execute function public.registrar_modificacion();
+
 -- Crea el perfil automaticamente cuando se da de alta un usuario
 -- en Authentication.
 create or replace function public.crear_perfil()
@@ -494,6 +583,7 @@ alter table public.diagnosticos enable row level security;
 alter table public.ejecuciones_diagnostico enable row level security;
 alter table public.accesos_boveda enable row level security;
 alter table public.ubicaciones enable row level security;
+alter table public.campos_protegidos enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -532,6 +622,18 @@ create policy credenciales_acceso on public.credenciales
   using (public.puede_ver_boveda())
   with check (public.puede_ver_boveda());
 
+-- Campos protegidos de un dispositivo (grupo P1): EXACTAMENTE la misma
+-- proteccion que credenciales. Es el motivo de que sean una tabla
+-- propia y no una columna de dispositivos: aqui la RLS si puede exigir
+-- el permiso de boveda. Un tecnico sin ese permiso no descarga ni
+-- siquiera el nombre del campo, asi que la ficha del equipo ni le
+-- insinua que existan datos protegidos.
+drop policy if exists campos_protegidos_acceso on public.campos_protegidos;
+create policy campos_protegidos_acceso on public.campos_protegidos
+  for all to authenticated
+  using (public.puede_ver_boveda())
+  with check (public.puede_ver_boveda());
+
 -- Verificador de la contrasena maestra: lo LEE cualquier tecnico
 -- autenticado (decision del 2026-07-17), porque ademas de abrir la
 -- boveda autoriza las eliminaciones sensibles en toda la app y esas
@@ -554,12 +656,15 @@ create policy boveda_meta_creacion on public.boveda_meta
   for insert to authenticated with check (public.puede_ver_boveda());
 
 -- Historial: se puede leer y agregar, nunca editar ni borrar.
--- Las entradas de credenciales solo las ven los usuarios con
--- acceso a la boveda.
+-- Las entradas de credenciales y de campos protegidos solo las ven
+-- los usuarios con acceso a la boveda: el historial de un campo
+-- protegido nombra el dato ("PIN de impresion") y quien lo cambio, y
+-- eso ya es informacion de la boveda aunque el valor nunca se guarde
+-- aqui (el repositorio escribe "(cifrado)").
 drop policy if exists historial_lectura on public.historial;
 create policy historial_lectura on public.historial
   for select to authenticated
-  using (entidad_tipo <> 'credencial' or public.puede_ver_boveda());
+  using (entidad_tipo not in ('credencial', 'campo_protegido') or public.puede_ver_boveda());
 
 drop policy if exists historial_insercion on public.historial;
 create policy historial_insercion on public.historial
@@ -668,7 +773,8 @@ declare
   tablas text[] := array[
     'categorias', 'articulos', 'dispositivos', 'credenciales', 'adjuntos',
     'historial', 'conexiones', 'diagnosticos', 'ejecuciones_diagnostico',
-    'accesos_boveda', 'perfiles', 'boveda_meta', 'ubicaciones'
+    'accesos_boveda', 'perfiles', 'boveda_meta', 'ubicaciones',
+    'campos_protegidos'
   ];
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then

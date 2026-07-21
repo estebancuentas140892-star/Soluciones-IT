@@ -25,7 +25,7 @@ import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/g
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { textoVivo } from '../../lib/referencia'
 import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
-import { combinarEventos, ETIQUETA_ACCION_BOVEDA, type EventoLinea } from '../historial/lineaDeTiempo'
+import { combinarEventos, etiquetaAccesoBoveda, type EventoLinea } from '../historial/lineaDeTiempo'
 import { descripcionEntrada } from '../historial/textoHistorial'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
 import { descifrarCredencial, type DatosCredencial } from './sesionBoveda'
@@ -585,7 +585,7 @@ function describirEvento(evento: EventoLinea): {
     const { acceso } = evento
     return {
       Icono: ICONO_ACCION[acceso.accion],
-      texto: ETIQUETA_ACCION_BOVEDA[acceso.accion],
+      texto: etiquetaAccesoBoveda(acceso),
       quien: acceso.usuarioNombre || 'Usuario desconocido',
       fechaHora: acceso.fechaHora,
       motivo: '',

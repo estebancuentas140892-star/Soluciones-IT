@@ -12,7 +12,7 @@ import {
   TagNeutral,
   TituloSeccion,
 } from '../../components/nocturne'
-import { db, type Dispositivo, type DispositivoAfectado } from '../../lib/db'
+import { db, type Dispositivo, type DispositivoAfectado, type TipoSecreto } from '../../lib/db'
 import { guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
 import { cifrarCredencial, descifrarCredencial } from './sesionBoveda'
 
@@ -62,6 +62,22 @@ const PLACEHOLDER_TITULO: Record<TipoCredencial, string> = {
   web: 'Servicio: Panel de Supabase, correo...',
   nota: 'Título de la nota',
   completo: 'Router principal, cámara bodega, servidor...',
+}
+
+// Preset del editor -> tipo de secreto que se guarda en la columna
+// `tipo` (grupo P1). El preset 'completo' no dice nada del contenido,
+// asi que cae a 'cuenta', el default de la columna. La interfaz propia
+// de tipos (con "Llave digital" y "Archivo seguro") llega en la fase P3.
+function tipoSecretoDePreset(preset: TipoCredencial): TipoSecreto {
+  switch (preset) {
+    case 'wifi':
+      return 'red'
+    case 'nota':
+      return 'nota'
+    case 'web':
+    case 'completo':
+      return 'cuenta'
+  }
 }
 
 const CLASE_CAMPO =
@@ -223,6 +239,10 @@ export function CredencialForm() {
           id,
           titulo: tituloFinal,
           categoria: categoria.trim(),
+          // El tipo de secreto (grupo P1) se conserva al editar y, al
+          // crear, sale del preset. La interfaz completa de tipos llega
+          // en la fase P3; aqui solo se guarda para no perder el dato.
+          tipo: credencial?.tipo ?? tipoSecretoDePreset(tipo),
           datosCifrados,
           venceEn: venceEn.trim() === '' ? null : venceEn.trim(),
           dispositivos,

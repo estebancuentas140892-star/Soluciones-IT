@@ -53,10 +53,18 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
   // galeria por paso de un procedimiento se indexa aparte, mas abajo,
   // porque vive inline en el JSON y no en esta tabla.
   const adjuntosTabla = useLiveQuery(() => db.adjuntos.filter((a) => !a.eliminadoEn).toArray(), [], [])
+  // Campos protegidos (grupo P1): solo llegan aqui si la RLS los
+  // descargo, es decir si el perfil tiene permiso de boveda.
+  const camposProtegidos = useLiveQuery(
+    () => db.campos_protegidos.filter((c) => !c.eliminadoEn).toArray(),
+    [],
+    [],
+  )
   const bovedaDesbloqueada = useBovedaDesbloqueada()
 
   return useMemo(() => {
     const nombreCategoria = new Map((categorias ?? []).map((c) => [c.id, c.nombre]))
+    const nombreDispositivo = new Map((dispositivos ?? []).map((d) => [d.id, d.nombre]))
 
     const documentos: DocumentoBusqueda[] = []
 
@@ -206,10 +214,40 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           portadaRef: '',
         })
       }
+
+      // Campos protegidos de un equipo (grupo P1): se indexa el NOMBRE
+      // del dato y el equipo al que pertenece, JAMAS su valor (que ni
+      // siquiera esta descifrado aqui). Sirve para "¿dónde está el PIN
+      // de la impresora?"; el resultado lleva a la ficha del equipo,
+      // que es donde el dato se consulta con su propia auditoria.
+      // Igual que las credenciales, solo con la boveda abierta; y sin
+      // permiso de boveda la RLS ni siquiera descarga estas filas.
+      for (const campo of camposProtegidos ?? []) {
+        const equipo = campo.dispositivoId ? nombreDispositivo.get(campo.dispositivoId) : null
+        if (!equipo) continue
+        documentos.push({
+          id: `campo:${campo.id}`,
+          tipo: 'dispositivo',
+          titulo: `${campo.nombre} · ${equipo}`,
+          subtitulo: 'Dato protegido del equipo',
+          ruta: `/dispositivos/${campo.dispositivoId}`,
+          texto: `${campo.nombre} ${equipo}`,
+          portadaRef: '',
+        })
+      }
     }
 
     return crearIndiceDesdeDocumentos(documentos)
-  }, [articulos, dispositivos, categorias, credenciales, diagnosticos, adjuntosTabla, bovedaDesbloqueada])
+  }, [
+    articulos,
+    dispositivos,
+    categorias,
+    credenciales,
+    diagnosticos,
+    adjuntosTabla,
+    camposProtegidos,
+    bovedaDesbloqueada,
+  ])
 }
 
 // Separado del hook para poder probarlo sin depender de React ni de

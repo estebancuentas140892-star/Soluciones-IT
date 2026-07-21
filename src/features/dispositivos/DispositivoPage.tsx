@@ -46,6 +46,7 @@ import { CredencialesDelEquipo } from './CredencialesDelEquipo'
 import { ProblemasDelEquipo } from './ProblemasDelEquipo'
 import { ProcedimientosDelEquipo } from './ProcedimientosDelEquipo'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
+import { SeguridadDelEquipo } from './SeguridadDelEquipo'
 
 // Fecha corta al estilo del diseño ("12 jul"), con el año solo cuando
 // no es el actual (mismo criterio que la ficha de artículo).
@@ -289,6 +290,16 @@ export function DispositivoPage() {
             )}
           </section>
         )}
+
+        {/* Seguridad (grupo P1): los datos sensibles PROPIOS de este
+            equipo, cifrados y con la misma protección que la Bóveda.
+            Va justo después de Información porque es más información
+            del equipo, no una acción. Sin permiso de bóveda no se
+            renderiza nada (el componente devuelve null). */}
+        <SeguridadDelEquipo
+          dispositivoId={dispositivoId}
+          puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
+        />
 
         {/* Resolver con este equipo: diagnóstico, vínculos y creación. */}
         <section>
