@@ -1,7 +1,7 @@
 # Propuesta: Seguridad del dispositivo y Bóveda de secretos independientes
 
 Fecha: 2026-07-21
-Estado: PRESENTADA, pendiente de confirmación del usuario. Sin código escrito todavía.
+Estado: COMPLETA (2026-07-21). Las seis fases están implementadas, verificadas y archivadas: P0 quitar el preset de equipo y la IP editable (tarea 115), P1 tabla `campos_protegidos` y sección "Seguridad" del dispositivo (tarea 116, único grupo con esquema junto a P5), P2 vínculo polimórfico "Vincular información protegida" más el grafo (tarea 117), P3 los cinco tipos de secreto y el aviso anti duplicidad (tarea 119), P4 migración asistida de credenciales de equipo (tarea 120) y P5 cifrado de binarios para "Archivo seguro" con bucket propio `archivos_boveda` (tarea 121). Las cuatro decisiones abiertas quedaron resueltas por el usuario el 2026-07-21, las cuatro con la opción recomendada. Sin código pendiente. Pendiente: que el usuario aplique en Supabase el `schema.sql` acumulado de P1 y P5 y pruebe el flujo completo en su teléfono.
 
 Encargo del usuario: corregir la duplicidad entre Dispositivos y Bóveda. Los dispositivos pasan a ser la entidad principal y sus datos sensibles viven dentro de su propia ficha; la Bóveda queda solo para secretos independientes.
 
