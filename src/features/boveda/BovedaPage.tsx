@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
 import {
+  ArrowElbowDownRight,
   ArrowSquareOut,
   Broadcast,
   CaretRight,
@@ -38,6 +39,7 @@ import { resumenImpacto } from '../../lib/grafo'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
 import { estadoVencimiento, type EstadoVencimiento } from '../../lib/vencimiento'
+import { detectarCandidatos } from './migracionSecretos'
 import {
   bloquear,
   definirMinutosAutobloqueo,
@@ -189,6 +191,16 @@ export function BovedaPage() {
     () => db.credenciales.filter((c) => !c.eliminadoEn).toArray(),
     [],
     [],
+  )
+  // Solo para el aviso de migración de abajo: cuenta cuántas cifras
+  // podrían ser de un equipo, SIN descifrar nada (detectarCandidatos con
+  // un mapa de IPs vacío solo encuentra el motivo 'vinculo', que no
+  // necesita abrir la bóveda). El resto del análisis, incluida la
+  // coincidencia por IP heredada, vive en la pantalla dedicada.
+  const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
+  const porMigrar = useMemo(
+    () => detectarCandidatos(credenciales, dispositivos, new Map()).length,
+    [credenciales, dispositivos],
   )
 
   const [categoria, setCategoria] = useState('')
@@ -449,6 +461,24 @@ export function BovedaPage() {
                 : `${porRotar} secretos necesitan rotarse pronto. Aparecen primero en la lista.`}
             </p>
           </div>
+        )}
+
+        {/* Migración asistida (fase P4): aviso barato (sin descifrar
+            nada) de que hay secretos que probablemente son de un equipo.
+            El análisis completo, incluida la coincidencia por IP, vive
+            en /boveda/migrar. */}
+        {porMigrar > 0 && !hayFiltrosActivos && (
+          <Link
+            to="/boveda/migrar"
+            className="flex w-full items-center gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5 text-left text-noct-text"
+          >
+            <ArrowElbowDownRight size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+            <span className="min-w-0 flex-1 text-[13px] leading-[1.45]">
+              {porMigrar} {porMigrar === 1 ? 'secreto parece ser' : 'secretos parecen ser'} de un solo
+              equipo. Muévelos a su ficha.
+            </span>
+            <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+          </Link>
         )}
 
         {hayResultados ? (

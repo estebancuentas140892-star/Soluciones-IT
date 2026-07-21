@@ -74,6 +74,9 @@ const CredencialPage = lazy(() =>
 const CredencialForm = lazy(() =>
   import('./features/boveda/CredencialForm').then((m) => ({ default: m.CredencialForm })),
 )
+const MigracionCredenciales = lazy(() =>
+  import('./features/boveda/MigracionCredenciales').then((m) => ({ default: m.MigracionCredenciales })),
+)
 const EscanerPage = lazy(() =>
   import('./features/escaner/EscanerPage').then((m) => ({ default: m.EscanerPage })),
 )
@@ -403,6 +406,9 @@ function App() {
               <Route path="boveda" element={<BovedaGuard />}>
                 <Route index element={<BovedaPage />} />
                 <Route path="nueva" element={<CredencialForm />} />
+                {/* Migracion asistida (fase P4): detecta secretos que en
+                    realidad son de un equipo y los mueve a su ficha. */}
+                <Route path="migrar" element={<MigracionCredenciales />} />
                 <Route path=":credencialId/editar" element={<CredencialForm />} />
                 <Route path=":credencialId" element={<CredencialPage />} />
               </Route>
