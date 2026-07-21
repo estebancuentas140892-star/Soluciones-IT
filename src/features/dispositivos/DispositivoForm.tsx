@@ -16,7 +16,7 @@ import { BTN_GHOST_ACENTO, BTN_PRIMARIO, TagNeutral, TituloSeccion } from '../..
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { db, type PasoAdjunto } from '../../lib/db'
 import { comprimirImagen } from '../../lib/comprimirImagen'
-import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
+import { subirConDeduplicacion } from '../../lib/archivosPendientes'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
@@ -76,10 +76,11 @@ const RE_IP = /^\d{1,3}(\.\d{1,3}){3}$/
 // cambio. Trae su propio shell a pantalla completa, por eso su ruta
 // sale del Layout oscuro como los demás editores. Conserva intactos el
 // modelo de datos y toda la lógica del editor previo: id decidido al
-// inicio (para subir la foto a su carpeta antes de que el equipo
-// exista), modo duplicar por `?copiarDe`, subida/encolado de la foto,
-// marcas y propiedades sugeridas aprendidas del uso real, ubicación
-// como entidad y guardado con motivo.
+// inicio (estable para excluirse a sí mismo del chequeo de serial
+// duplicado y para navegar a la ficha tras guardar), modo duplicar por
+// `?copiarDe`, subida/encolado de la foto, marcas y propiedades
+// sugeridas aprendidas del uso real, ubicación como entidad y guardado
+// con motivo.
 export function DispositivoForm() {
   const { dispositivoId } = useParams()
   const [searchParams] = useSearchParams()
@@ -90,9 +91,9 @@ export function DispositivoForm() {
   // (serial, placa, IP).
   const copiarDe = esEdicion ? null : searchParams.get('copiarDe')
   const esDuplicado = Boolean(copiarDe)
-  // El id se decide desde el inicio (no al guardar) para que la foto
-  // pueda subirse a su carpeta definitiva de Storage antes de que el
-  // dispositivo exista (mismo patron que la portada de un articulo).
+  // El id se decide desde el inicio (no al guardar): estable para
+  // excluirse a si mismo del chequeo de serial duplicado mientras se
+  // edita y para poder navegar a la ficha en cuanto se guarda.
   const [id] = useState(() => dispositivoId ?? nuevoId())
 
   const dispositivo = useLiveQuery(
@@ -367,7 +368,7 @@ export function DispositivoForm() {
               </label>
             </div>
 
-            <FotoEditor dispositivoId={id} foto={foto} onChange={setFoto} />
+            <FotoEditor foto={foto} onChange={setFoto} />
           </section>
 
           {/* Identificación física: serial y placa, con aviso de serial
@@ -605,11 +606,9 @@ export function DispositivoForm() {
 // a Nocturne como slot 96x64 (image-slot del mockup) con un texto
 // descriptivo al lado.
 function FotoEditor({
-  dispositivoId,
   foto,
   onChange,
 }: {
-  dispositivoId: string
   foto: PasoAdjunto | null
   onChange: (foto: PasoAdjunto | null) => void
 }) {
@@ -633,11 +632,14 @@ function FotoEditor({
     setSubiendo(true)
     try {
       const archivoFinal = await comprimirImagen(archivo)
-      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
-      const referencia = `dispositivos/${dispositivoId}/foto/${Date.now()}-${nombreLimpio}`
-      const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+      // Deduplicacion por hash (tarea 123): si esta misma foto ya existe
+      // como adjunto o como foto de otro equipo, se reutiliza su
+      // referencia en vez de subirla de nuevo.
+      const { referencia, resultado, reutilizado } = await subirConDeduplicacion(archivoFinal, archivoFinal.name)
       if (resultado === 'encolado') {
         setAviso('Sin conexión: la foto quedó guardada en este dispositivo y se subirá sola al recuperar señal.')
+      } else if (reutilizado) {
+        setAviso('Esa foto ya existía: se reutilizó sin subir contenido nuevo.')
       }
       onChange({ referencia, nombre: archivoFinal.name, tipo: archivoFinal.type })
     } catch {

@@ -4,7 +4,7 @@ import { supabase, supabaseConfigured } from '../lib/supabase'
 import { db, type Adjunto } from '../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../lib/repositorio'
 import { comprimirImagen } from '../lib/comprimirImagen'
-import { eliminarArchivoPendiente, subirOEncolarArchivo } from '../lib/archivosPendientes'
+import { eliminarArchivoPendiente, referenciaEnUso, subirConDeduplicacion } from '../lib/archivosPendientes'
 import { DialogoEliminar } from './DialogoEliminar'
 import { useUrlAdjunto } from './useUrlAdjunto'
 import { VisorImagen } from './VisorImagen'
@@ -49,6 +49,7 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
 
     const fallidos: string[] = []
     let encolados = 0
+    let reutilizados = 0
     for (let i = 0; i < archivos.length; i++) {
       setProgreso(archivos.length > 1 ? `Subiendo ${i + 1} de ${archivos.length}...` : 'Subiendo...')
       try {
@@ -56,13 +57,15 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
         // telefono antes de subirlas (ver src/lib/comprimirImagen.ts).
         // Si algo falla se sube el archivo original sin tocar.
         const archivoFinal = await comprimirImagen(archivos[i])
-        const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
-        const referencia = `${entidadTipo}s/${entidadId}/${Date.now()}-${nombreLimpio}`
 
-        // Sin conexion, el archivo queda en el telefono y la cola de
-        // sincronizacion lo sube sola al recuperar señal.
-        const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+        // Deduplicacion por hash (tarea 123): si el contenido ya existe
+        // (subido por este u otro tecnico), se reutiliza su referencia
+        // en vez de subirlo de nuevo. Sin conexion, se encola igual que
+        // antes: la cola de sincronizacion lo sube sola al recuperar
+        // señal.
+        const { referencia, resultado, reutilizado } = await subirConDeduplicacion(archivoFinal, archivoFinal.name)
         if (resultado === 'encolado') encolados += 1
+        if (reutilizado) reutilizados += 1
 
         await guardarRegistro('adjuntos', {
           id: nuevoId(),
@@ -84,6 +87,12 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
           ? 'Sin conexión: el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal.'
           : `Sin conexión: ${encolados} archivos quedaron guardados en este dispositivo y se subirán solos al recuperar señal.`,
       )
+    } else if (reutilizados > 0) {
+      setAviso(
+        reutilizados === 1
+          ? 'Ese archivo ya existía: se reutilizó sin subir contenido nuevo.'
+          : `${reutilizados} archivos ya existían: se reutilizaron sin subir contenido nuevo.`,
+      )
     }
     setProgreso(null)
   }
@@ -92,6 +101,14 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
     const adjunto = aEliminar
     if (!adjunto) return
     await eliminarRegistro('adjuntos', adjunto.id)
+    // Con deduplicacion (tarea 123) la misma referencia puede seguir
+    // en uso desde otra ficha (otro adjunto, o la foto de un
+    // dispositivo): en ese caso no se toca ni la cola ni el archivo en
+    // Storage, que la otra ficha todavia necesita.
+    if (await referenciaEnUso(adjunto.referencia)) {
+      setAEliminar(null)
+      return
+    }
     // Si el archivo seguia en la cola de subida, ya no hay que subirlo;
     // tambien se libera su copia offline.
     await eliminarArchivoPendiente(adjunto.referencia)

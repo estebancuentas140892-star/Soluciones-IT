@@ -105,7 +105,7 @@ Los tres tienen versión derivada o local que entrega el mismo valor sin esquema
 
 - D1. Favoritos: **personales por dispositivo**, sin esquema (tarea 108, 2026-07-20).
 - D2. Actividad del equipo: **solo bloque en Inicio**, sin pantalla completa por ahora (tarea 109, 2026-07-20).
-- D3. Deduplicación por hash de adjuntos: **anotada como tarea futura** (2026-07-21), sin construirla todavía; se agenda si algún día aparecen duplicados reales.
+- D3. Deduplicación por hash de adjuntos: **implementada** (tarea 123, 2026-07-21): referencia por hash SHA-256 del contenido, reutilizada cuando ya existe, sin esquema ni migración.
 - D4. Nombre del módulo: **se mantiene "Soluciones"** (2026-07-21). Es la promesa al técnico (entra buscando una solución, no "conocimiento"), lleva más de un año de hábito del equipo y combina con Diagnóstico ("del problema a la solución"). Ningún texto de la app cambia.
 - D5. Bloque "Pendientes" en Inicio: **aprobado tal cual, con los tres contenidos propuestos** (2026-07-21, tarea 122): mis borradores (`articulos.estado = 'borrador'` del usuario actual, por `updatedBy`), credenciales por vencer o vencidas (solo con permiso de bóveda) y sugerencias del equipo sin revisar (mismo dato que `SugerenciasEquipoPage`). Lógica pura en `src/features/inicio/pendientes.ts`; bloque visible en Inicio solo cuando hay al menos un pendiente, con un tope de 6 renglones (las credenciales vencidas pesan más que un borrador propio).
 
