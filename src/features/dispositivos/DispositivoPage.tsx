@@ -317,7 +317,7 @@ export function DispositivoPage() {
                   className={BTN_GHOST}
                 >
                   <LockSimple size={13} aria-hidden />
-                  Guardar credencial
+                  Guardar secreto
                 </Link>
               )}
             </div>

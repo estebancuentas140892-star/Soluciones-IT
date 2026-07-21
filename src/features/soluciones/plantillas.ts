@@ -49,7 +49,7 @@ const PLANTILLAS: Record<TipoArticulo, Plantilla> = {
   },
   configuracion: {
     ...VACIA,
-    requisitos: ['Acceso al equipo o sistema', 'Credenciales necesarias (vincúlalas desde la bóveda)'],
+    requisitos: ['Acceso al equipo o sistema', 'Secretos necesarios (vincúlalos desde la bóveda)'],
     pasos: [
       {
         titulo: 'Respaldar la configuración actual',

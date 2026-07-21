@@ -16,7 +16,6 @@ import {
   Key,
   LockSimple,
   MagnifyingGlass,
-  Monitor,
   Note,
   PencilSimple,
   Plus,
@@ -60,8 +59,8 @@ import {
 // La lógica y los datos no cambian: la contraseña maestra descifra
 // todo en el propio teléfono (ver BovedaGuard) y nunca sale de él.
 //
-// Dos hojas inferiores completan el mockup: "Crear" ofrece los cuatro
-// atajos de tipo (todos abren el mismo editor) y el menú "···" de cada
+// Dos hojas inferiores completan el mockup: "Crear" ofrece los atajos
+// de tipo (todos abren el mismo editor) y el menú "···" de cada
 // fila permite copiar el usuario o la contraseña sin abrir la ficha
 // (descifra al momento y registra el acceso en la auditoría), abrir,
 // editar o eliminar (esto último exige la contraseña maestra).
@@ -100,23 +99,19 @@ function severidad(estado: EstadoVencimiento): number {
   return estado ? ORDEN_VENCIMIENTO[estado] : 2
 }
 
-// Atajos de la hoja "Crear": los cuatro tipos de credencial del handoff.
-// Todos abren el mismo editor; el `tipo` viaja en la URL para que, cuando
-// se re-autorice el Editor de Credencial (tarea 97), deje listos de una
-// vez los campos que ese tipo suele tocar. Hoy el editor lo ignora sin
-// romperse: el atajo sigue siendo una entrada guiada válida.
+// Atajos de la hoja "Crear": los tipos de secreto del handoff. Todos
+// abren el mismo editor; el `tipo` viaja en la URL para que deje listos
+// de una vez los campos que ese tipo suele tocar. El preset "Equipo o
+// servicio" se eliminó en la fase P0 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md
+// (2026-07-21): un secreto ya no puede representar un equipo entero (eso
+// duplicaba datos que ya viven en la ficha del dispositivo); un equipo se
+// sigue pudiendo VINCULAR a un secreto desde "Equipos con acceso".
 const PRESETS: {
   tipo: string
   nombre: string
   descripcion: string
   Icono: (props: IconoProps) => React.JSX.Element
 }[] = [
-  {
-    tipo: 'equipo',
-    nombre: 'Equipo o servicio',
-    descripcion: 'Usuario y contraseña de un dispositivo o panel',
-    Icono: Monitor,
-  },
   { tipo: 'wifi', nombre: 'Red WiFi', descripcion: 'Nombre de la red y clave', Icono: WifiHigh },
   {
     tipo: 'web',
@@ -384,7 +379,7 @@ export function BovedaPage() {
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder="Título, categoría o equipo"
-              aria-label="Buscar credenciales"
+              aria-label="Buscar secretos"
               className="bov-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-600"
             />
             {buscando && (
@@ -438,8 +433,8 @@ export function BovedaPage() {
             <Warning size={16} className="shrink-0 text-noct-precaucion" aria-hidden />
             <p className="text-[12.5px] leading-relaxed">
               {porRotar === 1
-                ? '1 credencial necesita rotarse pronto. Aparece primero en la lista.'
-                : `${porRotar} credenciales necesitan rotarse pronto. Aparecen primero en la lista.`}
+                ? '1 secreto necesita rotarse pronto. Aparece primero en la lista.'
+                : `${porRotar} secretos necesitan rotarse pronto. Aparecen primero en la lista.`}
             </p>
           </div>
         )}
@@ -504,7 +499,7 @@ export function BovedaPage() {
           <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-noct-neutral-700 px-6 py-11 text-center">
             <Vault size={30} className="text-noct-neutral-600" aria-hidden />
             <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-              {hayFiltrosActivos ? 'Ninguna credencial coincide.' : 'Aún no hay credenciales guardadas.'}
+              {hayFiltrosActivos ? 'Ningún secreto coincide.' : 'Aún no hay secretos guardados.'}
             </p>
             {hayFiltrosActivos && (
               <button type="button" onClick={quitarFiltros} className={BTN_SECUNDARIO}>
@@ -541,8 +536,8 @@ export function BovedaPage() {
         </div>
       </main>
 
-      {/* Hoja "Crear": los cuatro atajos del handoff. Todos abren el
-          mismo Editor de Credencial; el tipo solo adelanta el trabajo. */}
+      {/* Hoja "Crear": los atajos de tipo de secreto. Todos abren el
+          mismo editor; el tipo solo adelanta el trabajo. */}
       {crearAbierto && (
         <HojaInferior etiqueta="Guardar en la bóveda" onCerrar={() => setCrearAbierto(false)}>
           <div className="flex items-center justify-between gap-2.5 px-1.5 pb-2.5">
@@ -667,9 +662,9 @@ export function BovedaPage() {
         abierto={Boolean(credencialEliminar)}
         sensible
         titulo={`¿Eliminar "${credencialEliminar?.titulo ?? ''}"?`}
-        descripcion="Esta acción eliminará esta credencial de la bóveda."
+        descripcion="Esta acción eliminará este secreto de la bóveda."
         advertencia={
-          impactoEliminar ? `${impactoEliminar} Esos pasos quedarán sin la credencial vinculada.` : null
+          impactoEliminar ? `${impactoEliminar} Esos pasos quedarán sin el secreto vinculado.` : null
         }
         onCerrar={() => setEliminarId(null)}
         onConfirmar={confirmarEliminar}

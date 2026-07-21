@@ -9,7 +9,7 @@ const NOMBRE_TABLA: Record<string, string> = {
   articulos: 'Solución',
   dispositivos: 'Equipo',
   conexiones: 'Conexión',
-  credenciales: 'Credencial',
+  credenciales: 'Secreto',
   adjuntos: 'Adjunto',
   historial: 'Registro de historial',
   diagnosticos: 'Diagnóstico',

@@ -164,9 +164,9 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
   agregarLineasAdjuntos(cambios, imagenesDe(previo), imagenesDe(actual), etiqueta)
 
   if (previo.credencialId !== actual.credencialId) {
-    if (!previo.credencialId) cambios.push(`Se agregó una credencial al ${etiqueta}.`)
-    else if (!actual.credencialId) cambios.push(`Se eliminó la credencial del ${etiqueta}.`)
-    else cambios.push(`Se reemplazó la credencial del ${etiqueta}.`)
+    if (!previo.credencialId) cambios.push(`Se agregó un secreto al ${etiqueta}.`)
+    else if (!actual.credencialId) cambios.push(`Se eliminó el secreto del ${etiqueta}.`)
+    else cambios.push(`Se reemplazó el secreto del ${etiqueta}.`)
   }
 
   if (previo.subArticuloId !== actual.subArticuloId) {

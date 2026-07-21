@@ -262,7 +262,7 @@ export function CredencialPage() {
             <button
               type="button"
               onClick={() => setMostrarEliminar(true)}
-              aria-label="Eliminar la credencial"
+              aria-label="Eliminar el secreto"
               className={BTN_ICONO_PELIGRO}
             >
               <TrashSimple size={16} aria-hidden />
@@ -292,7 +292,7 @@ export function CredencialPage() {
 
         {datos === null ? (
           <p className="rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5 text-[12.5px] leading-relaxed text-noct-precaucion">
-            No se pudo descifrar esta credencial con la contraseña maestra actual. Se guardó con una
+            No se pudo descifrar este secreto con la contraseña maestra actual. Se guardó con una
             contraseña distinta: verifica con el equipo cuál se usó, o edítala para reemplazar su
             contenido.
           </p>
@@ -300,7 +300,7 @@ export function CredencialPage() {
           <section>
             {sinContenido ? (
               <p className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-6 text-center text-[13px] text-noct-neutral-500">
-                Esta credencial no tiene datos guardados.
+                Este secreto no tiene datos guardados.
               </p>
             ) : (
               <div className="divide-y divide-noct-divider rounded-lg border border-noct-divider bg-noct-surface px-3.5">
@@ -319,6 +319,16 @@ export function CredencialPage() {
             {datos.notas && (
               <p className="mt-2.5 whitespace-pre-wrap px-0.5 text-[13px] leading-[1.55] text-noct-neutral-300">
                 {datos.notas}
+              </p>
+            )}
+            {/* Dato heredado de un secreto de tipo "equipo" guardado antes
+                de la fase P0 (2026-07-21): el editor ya no permite crear
+                una IP nueva aquí, pero se sigue mostrando hasta que se
+                edite el secreto y se quite a mano. */}
+            {datos.ip && (
+              <p className="mt-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5 text-[12px] leading-relaxed text-noct-precaucion">
+                La dirección IP es un dato heredado de un equipo. Vincula el equipo en &quot;Da
+                acceso a&quot; y edita este secreto para quitarla.
               </p>
             )}
           </section>
@@ -376,7 +386,7 @@ export function CredencialPage() {
               ))}
             </div>
             <p className="mt-1.5 px-2 text-[12px] leading-[1.5] text-noct-neutral-600">
-              Si se elimina esta credencial, esos pasos quedan sin ella.
+              Si se elimina este secreto, esos pasos quedan sin él.
             </p>
           </section>
         )}
@@ -411,7 +421,7 @@ export function CredencialPage() {
         sensible
         titulo={`¿Eliminar "${credencial.titulo}"?`}
         descripcion="Se elimina de la bóveda de todo el equipo."
-        advertencia={impacto ? `${impacto} Esos pasos quedarán sin la credencial vinculada.` : null}
+        advertencia={impacto ? `${impacto} Esos pasos quedarán sin el secreto vinculado.` : null}
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />

@@ -67,7 +67,7 @@ export function CredencialEnPaso({ credencialId, tituloReferencia }: Props) {
           <span className="block text-[10px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
             Datos protegidos
           </span>
-          <span className="block truncate text-[13.5px] font-medium">{titulo || 'Credencial'}</span>
+          <span className="block truncate text-[13.5px] font-medium">{titulo || 'Secreto'}</span>
         </span>
         {credencial && !eliminada && <IndicadorVencimiento venceEn={credencial.venceEn ?? null} />}
         {abierto ? (
@@ -184,7 +184,7 @@ function DatosDescifrados({
   if (datos === null) {
     return (
       <p className="text-[13px] leading-normal text-noct-precaucion">
-        No se pudo descifrar esta credencial con la contraseña maestra actual. Ábrela en la sección
+        No se pudo descifrar este secreto con la contraseña maestra actual. Ábrelo en la sección
         Bóveda para ver los detalles.
       </p>
     )
@@ -236,7 +236,7 @@ function DatosDescifrados({
         <p className="whitespace-pre-wrap text-xs leading-normal text-noct-neutral-400">{datos.notas}</p>
       )}
       {sinCampos && !datos.notas && (
-        <p className="text-xs text-noct-neutral-500">Esta credencial no tiene datos guardados.</p>
+        <p className="text-xs text-noct-neutral-500">Este secreto no tiene datos guardados.</p>
       )}
     </div>
   )

@@ -22,40 +22,42 @@ interface CampoExtra {
 }
 
 // Presets de "Crear" (decisión de diseño D-018, handoff "Rediseño de
-// aplicación empresarial"): los 4 tipos NO son entidades distintas, son
+// aplicación empresarial"): los tipos NO son entidades distintas, son
 // el mismo editor precargando qué campos del secreto aparecen, para
 // escribir menos. El tipo llega por la URL desde la hoja "Crear" de la
 // Bóveda (`/boveda/nueva?tipo=...`). 'completo' es el modo sin preset:
 // al editar, o al crear desde la ficha de un equipo, se muestran todos.
-type TipoCredencial = 'equipo' | 'wifi' | 'web' | 'nota' | 'completo'
+// El preset 'equipo' (que guardaba usuario, contraseña e IP de un
+// dispositivo entero dentro del secreto) se eliminó en la fase P0 de
+// PROPUESTA_SEGURIDAD_DISPOSITIVO.md (2026-07-21): esa información es
+// la del propio equipo y ya no se duplica aquí. Un equipo se sigue
+// pudiendo vincular a un secreto (sección "Equipos con acceso" más
+// abajo), pero el secreto ya no puede REPRESENTAR al equipo.
+type TipoCredencial = 'wifi' | 'web' | 'nota' | 'completo'
 
-const TIPOS_VALIDOS = ['equipo', 'wifi', 'web', 'nota'] as const
+const TIPOS_VALIDOS = ['wifi', 'web', 'nota'] as const
 
 interface CamposVisibles {
   usuario: boolean
   contrasena: boolean
-  ip: boolean
   url: boolean
   extras: boolean
 }
 
 const CAMPOS_POR_TIPO: Record<TipoCredencial, CamposVisibles> = {
-  equipo: { usuario: true, contrasena: true, ip: true, url: false, extras: true },
-  wifi: { usuario: false, contrasena: true, ip: false, url: false, extras: true },
-  web: { usuario: true, contrasena: true, ip: false, url: true, extras: true },
-  nota: { usuario: false, contrasena: false, ip: false, url: false, extras: false },
-  completo: { usuario: true, contrasena: true, ip: true, url: true, extras: true },
+  wifi: { usuario: false, contrasena: true, url: false, extras: true },
+  web: { usuario: true, contrasena: true, url: true, extras: true },
+  nota: { usuario: false, contrasena: false, url: false, extras: false },
+  completo: { usuario: true, contrasena: true, url: true, extras: true },
 }
 
 const NOMBRE_TIPO: Record<Exclude<TipoCredencial, 'completo'>, string> = {
-  equipo: 'Equipo o servicio',
   wifi: 'Red WiFi',
   web: 'Cuenta web',
   nota: 'Nota segura',
 }
 
 const PLACEHOLDER_TITULO: Record<TipoCredencial, string> = {
-  equipo: 'Qué abre: Router principal, servidor...',
   wifi: 'Nombre de la red WiFi',
   web: 'Servicio: Panel de Supabase, correo...',
   nota: 'Título de la nota',
@@ -86,7 +88,7 @@ export function CredencialForm() {
 
   // Tipo/preset del secreto (D-018). Al editar (o crear sin `?tipo=`
   // válido, p. ej. desde la ficha de un equipo) se muestra el formulario
-  // completo; los 4 presets solo aplican al crear desde la hoja "Crear".
+  // completo; los presets solo aplican al crear desde la hoja "Crear".
   const tipoParam = searchParams.get('tipo')
   const tipo: TipoCredencial =
     !esEdicion && (TIPOS_VALIDOS as readonly string[]).includes(tipoParam ?? '')
@@ -118,7 +120,10 @@ export function CredencialForm() {
   const [usuario, setUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [verContrasena, setVerContrasena] = useState(false)
-  const [ip, setIp] = useState('')
+  // Dirección IP heredada de un secreto de tipo 'equipo' guardado antes
+  // de la fase P0 (2026-07-21): ya no se edita como campo nuevo, solo
+  // se conserva tal cual hasta que el técnico la quite a mano.
+  const [ipHeredada, setIpHeredada] = useState('')
   const [url, setUrl] = useState('')
   const [notas, setNotas] = useState('')
   const [extras, setExtras] = useState<CampoExtra[]>([])
@@ -158,7 +163,7 @@ export function CredencialForm() {
       if (datos) {
         setUsuario(datos.usuario)
         setContrasena(datos.contrasena)
-        setIp(datos.ip)
+        setIpHeredada(datos.ip)
         setUrl(datos.url)
         setNotas(datos.notas)
         setExtras(Object.entries(datos.extras).map(([clave, valor]) => ({ clave, valor })))
@@ -203,7 +208,7 @@ export function CredencialForm() {
       const datosCifrados = await cifrarCredencial({
         usuario: usuario.trim(),
         contrasena,
-        ip: ip.trim(),
+        ip: ipHeredada.trim(),
         url: url.trim(),
         notas: notas.trim(),
         extras: Object.fromEntries(
@@ -242,7 +247,6 @@ export function CredencialForm() {
   // Aviso del pie: error de bloqueo primero, luego validación.
   const aviso = error ?? (intentoGuardar && !valido ? 'Falta el título' : '')
   const avisoEsError = Boolean(error) || (intentoGuardar && !valido)
-  const mostrarIpUrl = visibles.ip || visibles.url
   const etiquetaContrasena = tipo === 'wifi' ? 'Clave' : 'Contraseña'
 
   return (
@@ -260,7 +264,7 @@ export function CredencialForm() {
           <div className="flex items-start justify-between gap-2 px-4 pb-3 pt-0.5">
             <div className="min-w-0">
               <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
-                {esEdicion ? 'Editar credencial' : 'Nueva credencial'}
+                {esEdicion ? 'Editar secreto' : 'Nuevo secreto'}
               </h1>
               <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
                 Solo el título es obligatorio; el vencimiento y los equipos no se cifran para poder
@@ -319,6 +323,26 @@ export function CredencialForm() {
             <section className="flex flex-col gap-3.5">
               <TituloSeccion>Secreto</TituloSeccion>
 
+              {/* Dirección IP heredada de un secreto de tipo "equipo"
+                  guardado antes de la fase P0: ya no se puede crear de
+                  nuevo, solo se conserva hasta que se quite a mano. */}
+              {ipHeredada && (
+                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                    Guarda una dirección IP heredada ({ipHeredada}). Vincula el equipo en
+                    &quot;Equipos con acceso&quot; y quita este dato: ya no se guarda en secretos
+                    nuevos.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIpHeredada('')}
+                    className="shrink-0 text-[12px] font-medium text-noct-precaucion underline"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              )}
+
               {visibles.usuario && (
                 <label className="flex flex-col gap-1.5">
                   <span className={CLASE_ETIQUETA}>Usuario</span>
@@ -368,34 +392,17 @@ export function CredencialForm() {
                 </div>
               )}
 
-              {mostrarIpUrl && (
-                <div className="flex gap-3">
-                  {visibles.ip && (
-                    <label className="flex flex-1 flex-col gap-1.5">
-                      <span className={CLASE_ETIQUETA}>Dirección IP</span>
-                      <input
-                        type="text"
-                        value={ip}
-                        onChange={(e) => setIp(e.target.value)}
-                        placeholder="192.168.1.1"
-                        inputMode="decimal"
-                        className={`min-h-11 ${CLASE_CAMPO_MONO}`}
-                      />
-                    </label>
-                  )}
-                  {visibles.url && (
-                    <label className="flex flex-1 flex-col gap-1.5">
-                      <span className={CLASE_ETIQUETA}>URL</span>
-                      <input
-                        type="text"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        placeholder="https://..."
-                        className={`min-h-11 ${CLASE_CAMPO_MONO}`}
-                      />
-                    </label>
-                  )}
-                </div>
+              {visibles.url && (
+                <label className="flex flex-col gap-1.5">
+                  <span className={CLASE_ETIQUETA}>URL</span>
+                  <input
+                    type="text"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://..."
+                    className={`min-h-11 ${CLASE_CAMPO_MONO}`}
+                  />
+                </label>
               )}
 
               {visibles.extras && (
@@ -529,7 +536,7 @@ export function CredencialForm() {
                 style={{ opacity: valido ? undefined : 0.55 }}
               >
                 <LockSimple size={15} aria-hidden />
-                {guardando ? 'Guardando...' : 'Guardar credencial'}
+                {guardando ? 'Guardando...' : 'Guardar secreto'}
               </button>
             </div>
           </div>

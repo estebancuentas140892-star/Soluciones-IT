@@ -33,8 +33,8 @@ export const ETIQUETA_ACCION_BOVEDA: Record<AccesoBoveda['accion'], string> = {
   mostro: 'Mostró la contraseña',
   copio_usuario: 'Copió el usuario',
   copio_contrasena: 'Copió la contraseña',
-  modifico: 'Modificó la credencial',
-  elimino: 'Eliminó la credencial',
+  modifico: 'Modificó el secreto',
+  elimino: 'Eliminó el secreto',
 }
 
 export function etiquetaResuelto(resuelto: EjecucionDiagnostico['resuelto']): string {

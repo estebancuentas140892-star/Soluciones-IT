@@ -153,13 +153,13 @@ describe('resumenProcedimiento', () => {
     const otraCred = paso({ ...base, credencialId: 'c2', credencialTitulo: 'Otro' })
 
     expect(resumenProcedimiento(json(proc([base])), json(proc([conCred]))).cambios).toEqual([
-      'Se agregó una credencial al Paso 1: Login.',
+      'Se agregó un secreto al Paso 1: Login.',
     ])
     expect(resumenProcedimiento(json(proc([conCred])), json(proc([otraCred]))).cambios).toEqual([
-      'Se reemplazó la credencial del Paso 1: Login.',
+      'Se reemplazó el secreto del Paso 1: Login.',
     ])
     expect(resumenProcedimiento(json(proc([conCred])), json(proc([base]))).cambios).toEqual([
-      'Se eliminó la credencial del Paso 1: Login.',
+      'Se eliminó el secreto del Paso 1: Login.',
     ])
   })
 
