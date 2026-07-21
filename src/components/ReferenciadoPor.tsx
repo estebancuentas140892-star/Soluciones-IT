@@ -17,6 +17,13 @@ const ETIQUETA_RELACION: Record<TipoRelacion, string> = {
   decision: 'Vinculado desde una decisión en',
   credencial_paso: 'Usada en el procedimiento',
   credencial_tarea: 'Usada en una tarea de',
+  // Grupo P2: mismas etiquetas que su par de credencial, pero para un
+  // campo protegido de un dispositivo. La ficha del dispositivo NO usa
+  // este componente para sus propios campos (viven en SeguridadDelEquipo,
+  // no son un "referenciado por" del equipo); estas etiquetas solo
+  // aplican si algo pidiera ReferenciadoPor sobre un 'campo_protegido'.
+  campo_paso: 'Usado en el procedimiento',
+  campo_tarea: 'Usado en una tarea de',
   relacionado: 'Relacionado desde',
   dispositivo_afectado: 'Aparece en',
   diagnostico_articulo: 'Ejecutado por el diagnóstico',
@@ -25,6 +32,9 @@ const ETIQUETA_RELACION: Record<TipoRelacion, string> = {
   // propio que aplica el permiso de bóveda; esta etiqueta es solo el
   // respaldo del Record exhaustivo, redactada desde el equipo.
   credencial_dispositivo: 'Credencial de acceso',
+  // Igual que la anterior: la ficha del dispositivo muestra sus propios
+  // campos protegidos en SeguridadDelEquipo, no vía este componente.
+  campo_dispositivo: 'Dato protegido del equipo',
 }
 
 // Orden estable de los grupos en la ficha.
@@ -35,10 +45,13 @@ const ORDEN_RELACION: TipoRelacion[] = [
   'decision',
   'credencial_paso',
   'credencial_tarea',
+  'campo_paso',
+  'campo_tarea',
   'dispositivo_afectado',
   'relacionado',
   'conexion',
   'credencial_dispositivo',
+  'campo_dispositivo',
 ]
 
 interface Props {

@@ -1,10 +1,24 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
-import { CaretDown, CaretUp, Key, LockSimple, PencilSimple, Plus, TrashSimple, X } from '../../components/iconos'
+import {
+  BookOpen,
+  CaretDown,
+  CaretRight,
+  CaretUp,
+  Key,
+  LockSimple,
+  PencilSimple,
+  Plus,
+  TrashSimple,
+  X,
+} from '../../components/iconos'
 import { BTN_GHOST_ACENTO, BTN_GHOST_PELIGRO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { useGrafo } from '../../components/useGrafo'
 import { db, type CampoProtegido, type TipoCampoProtegido } from '../../lib/db'
+import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { eliminarRegistro, guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoSecreto } from '../boveda/CampoSecreto'
 import { cifrarValor, desbloquear, descifrarValor } from '../boveda/sesionBoveda'
@@ -52,6 +66,11 @@ export function SeguridadDelEquipo({
   // null si el editor esta cerrado.
   const [editando, setEditando] = useState<string | 'nuevo' | null>(null)
   const [aEliminar, setAEliminar] = useState<CampoProtegido | null>(null)
+
+  // Impacto antes de eliminar (grupo P2): que procedimientos vinculan
+  // este campo y quedarian sin el, mismo patron que CredencialPage.
+  const grafo = useGrafo()
+  const impactoEliminar = aEliminar ? resumenImpacto(grafo, 'campo_protegido', aEliminar.id) : null
 
   if (!puedeVerBoveda) return null
 
@@ -121,6 +140,7 @@ export function SeguridadDelEquipo({
         sensible
         titulo={`¿Eliminar "${aEliminar?.nombre ?? ''}"?`}
         descripcion="Se elimina este dato protegido del equipo para todo el equipo de trabajo."
+        advertencia={impactoEliminar ? `${impactoEliminar} Esos pasos quedarán sin el dato vinculado.` : null}
         onCerrar={() => setAEliminar(null)}
         onConfirmar={async () => {
           if (!aEliminar) return
@@ -152,6 +172,14 @@ function FilaCampoProtegido({
   onEliminar: () => void
 }) {
   const [abierto, setAbierto] = useState(false)
+  // "Usado en" (grupo P2): procedimientos que vinculan este campo,
+  // derivado del grafo (nunca se guarda). Mismo patron que "Usada en"
+  // en la ficha de una credencial de la boveda.
+  const grafo = useGrafo()
+  const usadoEn = useMemo(
+    () => origenesDistintos(referenciasHacia(grafo, 'campo_protegido', campo.id, ['campo_paso', 'campo_tarea'])),
+    [grafo, campo.id],
+  )
 
   return (
     <div className="rounded-md border border-noct-divider bg-noct-bg/40">
@@ -207,6 +235,28 @@ function FilaCampoProtegido({
               Eliminar
             </button>
           </div>
+          {usadoEn.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-noct-neutral-500">
+                Usado en
+              </span>
+              {usadoEn.map((origen) => (
+                <Link
+                  key={`${origen.tipo}:${origen.id}`}
+                  to={origen.ruta}
+                  className="flex min-h-9 items-center gap-2 rounded-md px-1.5 text-[12.5px] text-noct-text hover:bg-noct-text/[.05]"
+                >
+                  <BookOpen size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{origen.titulo}</span>
+                  <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />
+                </Link>
+              ))}
+              <p className="px-1.5 text-[11.5px] text-noct-neutral-600">
+                Si se elimina este dato, esos pasos quedan sin él.
+              </p>
+            </div>
+          )}
+
           {/* Historial POR CAMPO: cuelga de 'campo_protegido' + el id
               del campo, no del dispositivo. Es lo que permite que la
               RLS lo restrinja a quien tiene permiso de bóveda; colgarlo

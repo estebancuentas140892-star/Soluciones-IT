@@ -15,9 +15,15 @@ export function useGrafo(): Arista[] {
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
   const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const conexiones = useLiveQuery(() => db.conexiones.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  // Solo llegan aqui las filas que la RLS descargo (permiso de boveda).
+  const camposProtegidos = useLiveQuery(
+    () => db.campos_protegidos.filter((c) => !c.eliminadoEn).toArray(),
+    [],
+    [],
+  )
 
   return useMemo(
-    () => construirGrafo({ articulos, dispositivos, credenciales, diagnosticos, conexiones }),
-    [articulos, dispositivos, credenciales, diagnosticos, conexiones],
+    () => construirGrafo({ articulos, dispositivos, credenciales, diagnosticos, conexiones, camposProtegidos }),
+    [articulos, dispositivos, credenciales, diagnosticos, conexiones, camposProtegidos],
   )
 }

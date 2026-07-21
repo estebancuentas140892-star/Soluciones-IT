@@ -6,7 +6,9 @@ import type {
   Procedimiento,
   TipoBloque,
   TipoTarea,
+  TipoVinculoProtegido,
   TonoAviso,
+  VinculoProtegido,
 } from './db'
 
 // Logica pura de los procedimientos paso a paso, separada de los
@@ -21,8 +23,7 @@ export function crearPaso(): PasoProcedimiento {
     objetivo: '',
     bloques: [],
     adjuntos: [],
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
     subArticuloId: null,
     subArticuloTitulo: '',
     solucionArticuloId: null,
@@ -40,8 +41,7 @@ export function crearBloqueTarea(tipoTarea: TipoTarea = 'accion'): BloquePaso {
     tipoTarea,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
   }
 }
 
@@ -58,8 +58,7 @@ export function crearBloqueAviso(): BloquePaso {
     tipoTarea: null,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
   }
 }
 
@@ -115,13 +114,35 @@ function dificultadValida(valor: unknown): NivelDificultad | null {
     : null
 }
 
+const TIPOS_VINCULO_PROTEGIDO: TipoVinculoProtegido[] = ['credencial', 'campo']
+
+// Vinculo protegido de un paso o una tarea (grupo P2), tolerando datos
+// de dos epocas: si trae el objeto nuevo `vinculoProtegido` se valida
+// tal cual; si trae los campos viejos `credencialId`/`credencialTitulo`
+// (el unico vinculo protegido que existia antes de P2), se migran a
+// `{tipo:'credencial', ...}`, mismo patron con el que ya se migraron
+// `instrucciones` a bloques e `imagen` a adjuntos. Comparte logica
+// entre paso y bloque porque ambos guardan el vinculo con el mismo par
+// de campos.
+function normalizarVinculoProtegido(origen: Record<string, unknown>): VinculoProtegido | null {
+  if (origen.vinculoProtegido && typeof origen.vinculoProtegido === 'object') {
+    const v = origen.vinculoProtegido as Record<string, unknown>
+    const tipo = (TIPOS_VINCULO_PROTEGIDO as string[]).includes(v.tipo as string)
+      ? (v.tipo as TipoVinculoProtegido)
+      : null
+    const id = typeof v.id === 'string' && v.id !== '' ? v.id : null
+    return tipo && id ? { tipo, id, titulo: texto(v.titulo) } : null
+  }
+  const credencialId =
+    typeof origen.credencialId === 'string' && origen.credencialId !== '' ? origen.credencialId : null
+  return credencialId ? { tipo: 'credencial', id: credencialId, titulo: texto(origen.credencialTitulo) } : null
+}
+
 // Los campos que el editor dejo de ofrecer (detalle, nota,
 // advertencia, consejo y decision de ramificacion) se descartan aqui
 // a proposito: los articulos guardados antes del rediseño los pierden
 // al normalizar, decision tomada por el usuario el 2026-07-03.
 function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
-  const credencialId =
-    typeof origen.credencialId === 'string' && origen.credencialId !== '' ? origen.credencialId : null
   const subArticuloId =
     typeof origen.subArticuloId === 'string' && origen.subArticuloId !== '' ? origen.subArticuloId : null
   const solucionArticuloId =
@@ -134,9 +155,7 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     objetivo: texto(origen.objetivo),
     bloques: normalizarBloques(origen),
     adjuntos: normalizarAdjuntos(origen),
-    credencialId,
-    // Los titulos de referencia solo tienen sentido junto a su id.
-    credencialTitulo: credencialId ? texto(origen.credencialTitulo) : '',
+    vinculoProtegido: normalizarVinculoProtegido(origen),
     subArticuloId,
     subArticuloTitulo: subArticuloId ? texto(origen.subArticuloTitulo) : '',
     solucionArticuloId,
@@ -169,8 +188,7 @@ function normalizarBloques(origen: Record<string, unknown>): BloquePaso[] {
         tipoTarea: 'accion' as const,
         decisionArticuloId: null,
         decisionArticuloTitulo: '',
-        credencialId: null,
-        credencialTitulo: '',
+        vinculoProtegido: null,
       }))
   }
 
@@ -195,8 +213,7 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     tipoTarea: null,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
   }
 
   if (tipo === 'imagen') {
@@ -226,11 +243,8 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     origen.decisionArticuloId !== ''
       ? origen.decisionArticuloId
       : null
-  // Vinculo de credencial (tarea 40): opcional en cualquier tarea,
-  // sin depender del tipoTarea. El titulo de referencia solo tiene
-  // sentido junto a su id, mismo patron que el resto de vinculos.
-  const credencialId =
-    typeof origen.credencialId === 'string' && origen.credencialId !== '' ? origen.credencialId : null
+  // Vinculo protegido (tarea 40, generalizado en P2): opcional en
+  // cualquier tarea, sin depender del tipoTarea.
   return {
     id,
     tipo: 'tarea',
@@ -240,8 +254,7 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     tipoTarea,
     decisionArticuloId,
     decisionArticuloTitulo: decisionArticuloId ? texto(origen.decisionArticuloTitulo) : '',
-    credencialId,
-    credencialTitulo: credencialId ? texto(origen.credencialTitulo) : '',
+    vinculoProtegido: normalizarVinculoProtegido(origen),
   }
 }
 
@@ -320,8 +333,9 @@ function texto(valor: unknown): string {
 // copia seria buscarse problemas). Los adjuntos y la portada CONSERVAN
 // su referencia de Storage a proposito: los archivos se comparten sin
 // copiarse (nunca se borran de Storage) y los vinculos a otros
-// articulos (credencial, subprocedimiento, solucion, decision) siguen
-// apuntando a los mismos, que es lo correcto en una copia.
+// articulos o a informacion protegida (subprocedimiento, solucion,
+// decision, vinculoProtegido) siguen apuntando a los mismos, que es lo
+// correcto en una copia.
 export function duplicarProcedimiento(procedimiento: Procedimiento): Procedimiento {
   return {
     ...procedimiento,
@@ -339,9 +353,9 @@ export function duplicarProcedimiento(procedimiento: Procedimiento): Procedimien
 
 // Texto plano de un procedimiento para el indice de busqueda: asi
 // "back up" encuentra el articulo aunque solo aparezca en un paso.
-// El titulo de la credencial vinculada queda fuera a proposito: los
-// titulos de la boveda solo aparecen en la busqueda cuando esta
-// desbloqueada (ARQUITECTURA.md, seccion 6).
+// El titulo de la informacion protegida vinculada (credencial o campo
+// protegido) queda fuera a proposito: esos titulos solo entran al
+// indice cuando la boveda esta desbloqueada (ARQUITECTURA.md, seccion 6).
 export function textoDeProcedimiento(procedimiento: Procedimiento | null): string {
   if (!procedimiento) return ''
   // La descripcion ("cuando usar este procedimiento") entra al indice:
@@ -454,7 +468,9 @@ export function prepararProcedimientoParaGuardar({
       titulo: paso.titulo.trim(),
       objetivo: paso.objetivo.trim(),
       bloques: limpiarBloques(paso.bloques),
-      credencialTitulo: paso.credencialId ? paso.credencialTitulo.trim() : '',
+      vinculoProtegido: paso.vinculoProtegido
+        ? { ...paso.vinculoProtegido, titulo: paso.vinculoProtegido.titulo.trim() }
+        : null,
       subArticuloTitulo: paso.subArticuloId ? paso.subArticuloTitulo.trim() : '',
       solucionArticuloTitulo: paso.solucionArticuloId ? paso.solucionArticuloTitulo.trim() : '',
     }))
@@ -463,7 +479,7 @@ export function prepararProcedimientoParaGuardar({
         paso.titulo !== '' ||
         paso.bloques.length > 0 ||
         paso.adjuntos.length > 0 ||
-        paso.credencialId !== null ||
+        paso.vinculoProtegido !== null ||
         paso.subArticuloId !== null ||
         paso.solucionArticuloId !== null,
     )
@@ -485,14 +501,17 @@ export function prepararProcedimientoParaGuardar({
 // tareas y avisos vacios (una imagen sin texto es valida, es el pie que
 // es opcional). Una imagen sin adjunto no deberia existir, pero se
 // descarta por seguridad. Los titulos de referencia de los vinculos de
-// decision y de credencial (tarea 40) solo se conservan junto a su id.
+// decision e informacion protegida (tarea 40) solo se conservan junto
+// a su id.
 function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
   return bloques
     .map((bloque) => ({
       ...bloque,
       texto: bloque.texto.trim(),
       decisionArticuloTitulo: bloque.decisionArticuloId ? bloque.decisionArticuloTitulo.trim() : '',
-      credencialTitulo: bloque.credencialId ? bloque.credencialTitulo.trim() : '',
+      vinculoProtegido: bloque.vinculoProtegido
+        ? { ...bloque.vinculoProtegido, titulo: bloque.vinculoProtegido.titulo.trim() }
+        : null,
     }))
     .filter((bloque) => {
       if (bloque.tipo === 'imagen') return bloque.adjunto !== null

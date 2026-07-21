@@ -12,8 +12,7 @@ function tarea(texto: string): BloquePaso {
     tipoTarea: 'accion',
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
   }
 }
 
@@ -27,8 +26,7 @@ function aviso(texto: string, tono: BloquePaso['tono'] = 'info'): BloquePaso {
     tipoTarea: null,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
   }
 }
 
@@ -43,8 +41,7 @@ function paso(
     objetivo: '',
     bloques: tareas ? tareas.map(tarea) : [],
     adjuntos: [],
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
     subArticuloId: null,
     subArticuloTitulo: '',
     solucionArticuloId: null,
@@ -147,19 +144,19 @@ describe('resumenProcedimiento', () => {
     ])
   })
 
-  it('detecta credencial agregada, reemplazada y eliminada', () => {
+  it('detecta vínculo protegido agregado, reemplazado y eliminado (credencial o campo protegido)', () => {
     const base = paso({ id: 'p2', titulo: 'Login', tareas: ['a'] })
-    const conCred = paso({ ...base, credencialId: 'c1', credencialTitulo: 'SQL' })
-    const otraCred = paso({ ...base, credencialId: 'c2', credencialTitulo: 'Otro' })
+    const conCred = paso({ ...base, vinculoProtegido: { tipo: 'credencial', id: 'c1', titulo: 'SQL' } })
+    const conCampo = paso({ ...base, vinculoProtegido: { tipo: 'campo', id: 'cp-1', titulo: 'PIN' } })
 
     expect(resumenProcedimiento(json(proc([base])), json(proc([conCred]))).cambios).toEqual([
-      'Se agregó un secreto al Paso 1: Login.',
+      'Se vinculó información protegida al Paso 1: Login.',
     ])
-    expect(resumenProcedimiento(json(proc([conCred])), json(proc([otraCred]))).cambios).toEqual([
-      'Se reemplazó el secreto del Paso 1: Login.',
+    expect(resumenProcedimiento(json(proc([conCred])), json(proc([conCampo]))).cambios).toEqual([
+      'Se cambió la información protegida del Paso 1: Login.',
     ])
     expect(resumenProcedimiento(json(proc([conCred])), json(proc([base]))).cambios).toEqual([
-      'Se eliminó el secreto del Paso 1: Login.',
+      'Se quitó la información protegida del Paso 1: Login.',
     ])
   })
 
@@ -329,8 +326,7 @@ describe('resumenProcedimiento', () => {
           tipoTarea: null,
           decisionArticuloId: null,
           decisionArticuloTitulo: '',
-          credencialId: null,
-          credencialTitulo: '',
+          vinculoProtegido: null,
         },
       ],
     })

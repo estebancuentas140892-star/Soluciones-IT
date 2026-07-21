@@ -208,12 +208,7 @@ export function ProcedimientoVista({
                         />
                       ))}
 
-                      {paso.credencialId && (
-                        <CredencialEnPaso
-                          credencialId={paso.credencialId}
-                          tituloReferencia={paso.credencialTitulo}
-                        />
-                      )}
+                      {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} />}
 
                       {paso.subArticuloId && (
                         <SubProcedimientoEnPaso
@@ -703,13 +698,11 @@ export function BloqueVista({
     )
   }
 
-  // El vinculo de credencial (tarea 40) es independiente del tipo de
-  // tarea: se muestra debajo de la casilla o de la pregunta, con el
-  // mismo bloque protegido contraido por defecto que ya protege la
-  // credencial vinculada a un paso completo.
-  const credencialInline = bloque.credencialId && (
-    <CredencialEnPaso credencialId={bloque.credencialId} tituloReferencia={bloque.credencialTitulo} />
-  )
+  // El vinculo protegido (tarea 40, generalizado en P2) es independiente
+  // del tipo de tarea: se muestra debajo de la casilla o de la
+  // pregunta, con el mismo bloque protegido contraido por defecto que
+  // ya protege el vinculo de un paso completo.
+  const credencialInline = bloque.vinculoProtegido && <CredencialEnPaso vinculo={bloque.vinculoProtegido} />
 
   if (bloque.tipoTarea === 'decision') {
     return (

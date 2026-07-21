@@ -19,15 +19,13 @@ const TAREA_ACCION = {
   tipoTarea: 'accion',
   decisionArticuloId: null,
   decisionArticuloTitulo: '',
-  credencialId: null,
-  credencialTitulo: '',
+  vinculoProtegido: null,
 } as const
 const SIN_TAREA = {
   tipoTarea: null,
   decisionArticuloId: null,
   decisionArticuloTitulo: '',
-  credencialId: null,
-  credencialTitulo: '',
+  vinculoProtegido: null,
 } as const
 
 // Bloque 'tarea' de prueba con id fijo por texto (para asserts estables).
@@ -42,8 +40,7 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
     objetivo: '',
     bloques: [],
     adjuntos: [],
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
     subArticuloId: null,
     subArticuloTitulo: '',
     solucionArticuloId: null,
@@ -114,8 +111,7 @@ describe('normalizarProcedimiento', () => {
       objetivo: '',
       bloques: [],
       adjuntos: [],
-      credencialId: null,
-      credencialTitulo: '',
+      vinculoProtegido: null,
       subArticuloId: null,
       subArticuloTitulo: '',
       solucionArticuloId: null,
@@ -189,19 +185,41 @@ describe('normalizarProcedimiento', () => {
     expect(sinId?.pasos[0].solucionArticuloTitulo).toBe('')
   })
 
-  it('conserva el vínculo de credencial y descarta uno mal formado', () => {
+  it('conserva el vínculo protegido (formato legado credencialId) migrado a {tipo:"credencial"}', () => {
     const conVinculo = normalizarProcedimiento({
-      pasos: [pasoCompleto({ credencialId: 'cred-1', credencialTitulo: 'SQL Server' })],
+      pasos: [pasoCompleto({ credencialId: 'cred-1', credencialTitulo: 'SQL Server' } as never)],
     })
-    expect(conVinculo?.pasos[0].credencialId).toBe('cred-1')
-    expect(conVinculo?.pasos[0].credencialTitulo).toBe('SQL Server')
+    expect(conVinculo?.pasos[0].vinculoProtegido).toEqual({ tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server' })
 
     // Sin id valido no hay vinculo, y el titulo suelto se descarta.
     const sinId = normalizarProcedimiento({
       pasos: [pasoCompleto({ credencialId: 42, credencialTitulo: 'SQL Server' } as never)],
     })
-    expect(sinId?.pasos[0].credencialId).toBeNull()
-    expect(sinId?.pasos[0].credencialTitulo).toBe('')
+    expect(sinId?.pasos[0].vinculoProtegido).toBeNull()
+  })
+
+  it('conserva el vínculo protegido en formato nuevo, de credencial o de campo protegido', () => {
+    const credencial = normalizarProcedimiento({
+      pasos: [pasoCompleto({ vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server' } })],
+    })
+    expect(credencial?.pasos[0].vinculoProtegido).toEqual({ tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server' })
+
+    const campo = normalizarProcedimiento({
+      pasos: [pasoCompleto({ vinculoProtegido: { tipo: 'campo', id: 'cp-1', titulo: 'PIN de impresión' } })],
+    })
+    expect(campo?.pasos[0].vinculoProtegido).toEqual({ tipo: 'campo', id: 'cp-1', titulo: 'PIN de impresión' })
+  })
+
+  it('descarta un vínculo protegido con tipo o id inválido', () => {
+    const sinTipo = normalizarProcedimiento({
+      pasos: [pasoCompleto({ vinculoProtegido: { tipo: 'equipo', id: 'x', titulo: 'Y' } as never })],
+    })
+    expect(sinTipo?.pasos[0].vinculoProtegido).toBeNull()
+
+    const sinId = normalizarProcedimiento({
+      pasos: [pasoCompleto({ vinculoProtegido: { tipo: 'campo', id: 42, titulo: 'Y' } as never })],
+    })
+    expect(sinId?.pasos[0].vinculoProtegido).toBeNull()
   })
 
   it('migra las viejas instrucciones a bloques de tarea, descartando las vacías', () => {
@@ -307,8 +325,7 @@ describe('normalizarProcedimiento', () => {
         tipoTarea: 'verificacion',
         decisionArticuloId: null,
         decisionArticuloTitulo: '',
-        credencialId: null,
-        credencialTitulo: '',
+        vinculoProtegido: null,
       },
       {
         id: 'b2',
@@ -319,8 +336,7 @@ describe('normalizarProcedimiento', () => {
         tipoTarea: 'decision',
         decisionArticuloId: 'art-9',
         decisionArticuloTitulo: 'Instalar impresora',
-        credencialId: null,
-        credencialTitulo: '',
+        vinculoProtegido: null,
       },
     ])
   })
@@ -344,7 +360,7 @@ describe('normalizarProcedimiento', () => {
     expect(bloques[1]).toMatchObject({ tipoTarea: 'decision', decisionArticuloId: null, decisionArticuloTitulo: '' })
   })
 
-  it('conserva el vínculo de credencial de una tarea y descarta uno mal formado', () => {
+  it('conserva el vínculo protegido (formato legado) de una tarea y descarta uno mal formado', () => {
     const conVinculo = normalizarProcedimiento({
       pasos: [
         {
@@ -355,7 +371,11 @@ describe('normalizarProcedimiento', () => {
         },
       ],
     })
-    expect(conVinculo?.pasos[0].bloques[0]).toMatchObject({ credencialId: 'cred-1', credencialTitulo: 'SQL Server' })
+    expect(conVinculo?.pasos[0].bloques[0].vinculoProtegido).toEqual({
+      tipo: 'credencial',
+      id: 'cred-1',
+      titulo: 'SQL Server',
+    })
 
     // Sin id valido no hay vinculo, y el titulo suelto se descarta.
     const sinId = normalizarProcedimiento({
@@ -366,10 +386,33 @@ describe('normalizarProcedimiento', () => {
         },
       ],
     })
-    expect(sinId?.pasos[0].bloques[0]).toMatchObject({ credencialId: null, credencialTitulo: '' })
+    expect(sinId?.pasos[0].bloques[0].vinculoProtegido).toBeNull()
   })
 
-  it('el vínculo de credencial de una tarea es independiente de su tipoTarea (accion, verificacion o decision)', () => {
+  it('conserva el vínculo protegido de una tarea a un campo protegido de un dispositivo', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [
+            {
+              id: 'b1',
+              tipo: 'tarea',
+              texto: 'Ingresar el PIN de impresión',
+              vinculoProtegido: { tipo: 'campo', id: 'cp-1', titulo: 'PIN de impresión' },
+            },
+          ],
+        },
+      ],
+    })
+    expect(resultado?.pasos[0].bloques[0].vinculoProtegido).toEqual({
+      tipo: 'campo',
+      id: 'cp-1',
+      titulo: 'PIN de impresión',
+    })
+  })
+
+  it('el vínculo protegido de una tarea es independiente de su tipoTarea (accion, verificacion o decision)', () => {
     const resultado = normalizarProcedimiento({
       pasos: [
         {
@@ -392,8 +435,7 @@ describe('normalizarProcedimiento', () => {
     expect(resultado?.pasos[0].bloques[0]).toMatchObject({
       tipoTarea: 'decision',
       decisionArticuloId: 'art-9',
-      credencialId: 'cred-1',
-      credencialTitulo: 'SQL Server',
+      vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server' },
     })
   })
 
@@ -519,10 +561,12 @@ describe('textoDeProcedimiento', () => {
     expect(textoDeProcedimiento(null)).toBe('')
   })
 
-  it('no incluye el título de la credencial vinculada (la bóveda solo se busca desbloqueada)', () => {
+  it('no incluye el título de la información protegida vinculada (la bóveda solo se busca desbloqueada)', () => {
     const texto = textoDeProcedimiento(
       procedimientoCompleto({
-        pasos: [pasoCompleto({ credencialId: 'cred-1', credencialTitulo: 'SQL Server producción' })],
+        pasos: [
+          pasoCompleto({ vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server producción' } }),
+        ],
       }),
     )
     expect(texto).not.toContain('SQL Server producción')
@@ -682,22 +726,22 @@ describe('prepararProcedimientoParaGuardar', () => {
     expect(huerfano?.pasos[0].bloques[0].decisionArticuloTitulo).toBe('')
   })
 
-  it('limpia el título del vínculo de credencial de una tarea y lo descarta si quedó huérfano', () => {
+  it('limpia el título del vínculo protegido de una tarea', () => {
     const conVinculo = preparar([
       pasoCompleto({
         bloques: [
-          { ...tarea('Ingresar usuario y contraseña'), credencialId: 'cred-1', credencialTitulo: '  SQL Server  ' },
+          {
+            ...tarea('Ingresar usuario y contraseña'),
+            vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: '  SQL Server  ' },
+          },
         ],
       }),
     ])
-    expect(conVinculo?.pasos[0].bloques[0].credencialTitulo).toBe('SQL Server')
-
-    const huerfano = preparar([
-      pasoCompleto({
-        bloques: [{ ...tarea('Ingresar usuario y contraseña'), credencialTitulo: 'huérfano' }],
-      }),
-    ])
-    expect(huerfano?.pasos[0].bloques[0].credencialTitulo).toBe('')
+    expect(conVinculo?.pasos[0].bloques[0].vinculoProtegido).toEqual({
+      tipo: 'credencial',
+      id: 'cred-1',
+      titulo: 'SQL Server',
+    })
   })
 
   it('conserva un paso que solo tiene adjuntos', () => {
@@ -706,18 +750,12 @@ describe('prepararProcedimientoParaGuardar', () => {
     expect(preparar([paso])?.pasos).toHaveLength(1)
   })
 
-  it('conserva un paso que solo tiene credencial vinculada y limpia el título de referencia', () => {
+  it('conserva un paso que solo tiene información protegida vinculada y limpia el título de referencia', () => {
     const paso = crearPaso()
-    paso.credencialId = 'cred-1'
-    paso.credencialTitulo = '  SQL Server  '
+    paso.vinculoProtegido = { tipo: 'credencial', id: 'cred-1', titulo: '  SQL Server  ' }
     const resultado = preparar([paso])
     expect(resultado?.pasos).toHaveLength(1)
-    expect(resultado?.pasos[0].credencialTitulo).toBe('SQL Server')
-  })
-
-  it('descarta el título de referencia si el paso quedó sin credencial', () => {
-    const resultado = preparar([pasoCompleto({ credencialId: null, credencialTitulo: 'huérfano' })])
-    expect(resultado?.pasos[0].credencialTitulo).toBe('')
+    expect(resultado?.pasos[0].vinculoProtegido).toEqual({ tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server' })
   })
 
   it('conserva un paso que solo tiene subprocedimiento y limpia su título de referencia', () => {
@@ -756,8 +794,7 @@ describe('duplicarProcedimiento', () => {
         pasoCompleto({
           bloques: [tarea('Encender la impresora')],
           adjuntos: [{ referencia: 'a/manual.pdf', nombre: 'manual.pdf', tipo: 'application/pdf' }],
-          credencialId: 'cred-1',
-          credencialTitulo: 'Impresora',
+          vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'Impresora' },
           subArticuloId: 'art-2',
           subArticuloTitulo: 'Configurar impresora',
         }),
@@ -774,7 +811,7 @@ describe('duplicarProcedimiento', () => {
     expect(copia.descripcion).toBe('Cuándo usarlo')
     expect(copia.pasos[0].titulo).toBe(original.pasos[0].titulo)
     expect(copia.pasos[0].bloques[0].texto).toBe('Encender la impresora')
-    expect(copia.pasos[0].credencialId).toBe('cred-1')
+    expect(copia.pasos[0].vinculoProtegido).toEqual({ tipo: 'credencial', id: 'cred-1', titulo: 'Impresora' })
     expect(copia.pasos[0].subArticuloId).toBe('art-2')
 
     // Adjuntos y portada comparten la referencia de Storage (los

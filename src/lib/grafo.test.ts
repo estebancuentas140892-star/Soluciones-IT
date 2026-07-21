@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type {
   Articulo,
+  CampoProtegido,
   Conexion,
   Credencial,
   Diagnostico,
@@ -45,8 +46,7 @@ function paso(cambios: Partial<PasoProcedimiento>): PasoProcedimiento {
     objetivo: '',
     bloques: [],
     adjuntos: [],
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
     subArticuloId: null,
     subArticuloTitulo: '',
     solucionArticuloId: null,
@@ -115,6 +115,19 @@ function diagnostico(cambios: Partial<Diagnostico> & { id: string; titulo: strin
   }
 }
 
+function campoProtegido(cambios: Partial<CampoProtegido> & { id: string; nombre: string }): CampoProtegido {
+  return {
+    dispositivoId: null,
+    tipo: 'texto',
+    valorCifrado: '',
+    orden: 0,
+    updatedAt: '',
+    updatedBy: null,
+    eliminadoEn: null,
+    ...cambios,
+  }
+}
+
 function conexion(cambios: Partial<Conexion> & { id: string }): Conexion {
   return {
     tipo: 'enlace',
@@ -140,6 +153,7 @@ function datos(parcial: Partial<DatosGrafo>): DatosGrafo {
     credenciales: [],
     diagnosticos: [],
     conexiones: [],
+    camposProtegidos: [],
     ...parcial,
   }
 }
@@ -150,8 +164,7 @@ describe('construirGrafo', () => {
       paso({
         subArticuloId: 'sub-1',
         subArticuloTitulo: 'Subproc',
-        credencialId: 'cred-1',
-        credencialTitulo: 'Router',
+        vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'Router' },
         bloques: [
           {
             id: 'bloque-1',
@@ -162,8 +175,7 @@ describe('construirGrafo', () => {
             tipoTarea: 'decision',
             decisionArticuloId: 'dec-1',
             decisionArticuloTitulo: 'Solución',
-            credencialId: 'cred-2',
-            credencialTitulo: 'Switch',
+            vinculoProtegido: { tipo: 'credencial', id: 'cred-2', titulo: 'Switch' },
           },
         ],
       }),
@@ -182,6 +194,33 @@ describe('construirGrafo', () => {
     // El origen lleva el título vivo del artículo, no una copia.
     expect(grafo[0].origen.titulo).toBe('Principal')
     expect(grafo[0].origen.ruta).toBe('/soluciones/cat-1/art-1')
+  })
+
+  it('crea aristas de campo protegido (tipo "campo") desde un paso y desde una tarea', () => {
+    const proc = procedimiento([
+      paso({
+        vinculoProtegido: { tipo: 'campo', id: 'cp-1', titulo: 'Contraseña administrador' },
+        bloques: [
+          {
+            id: 'bloque-1',
+            tipo: 'tarea',
+            texto: 'Ingresar el PIN',
+            tono: null,
+            adjunto: null,
+            tipoTarea: 'accion',
+            decisionArticuloId: null,
+            decisionArticuloTitulo: '',
+            vinculoProtegido: { tipo: 'campo', id: 'cp-2', titulo: 'PIN de impresión' },
+          },
+        ],
+      }),
+    ])
+    const grafo = construirGrafo(
+      datos({ articulos: [articulo({ id: 'art-1', titulo: 'Conectar impresora', procedimiento: proc })] }),
+    )
+    const relaciones = grafo.map((a) => [a.relacion, a.destinoTipo, a.destinoId])
+    expect(relaciones).toContainEqual(['campo_paso', 'campo_protegido', 'cp-1'])
+    expect(relaciones).toContainEqual(['campo_tarea', 'campo_protegido', 'cp-2'])
   })
 
   it('crea aristas de relacionado y dispositivo afectado', () => {
@@ -245,6 +284,35 @@ describe('construirGrafo', () => {
     expect(desdeSwitch?.destinoId).toBe('ap')
   })
 
+  it('crea una arista de campo protegido a su dispositivo dueño, con el título del propio campo', () => {
+    const grafo = construirGrafo(
+      datos({
+        camposProtegidos: [campoProtegido({ id: 'cp-1', nombre: 'Contraseña administrador', dispositivoId: 'd1' })],
+      }),
+    )
+    const arista = grafo.find((a) => a.relacion === 'campo_dispositivo')
+    expect(arista?.origen).toEqual({
+      tipo: 'campo_protegido',
+      id: 'cp-1',
+      titulo: 'Contraseña administrador',
+      ruta: '/dispositivos/d1',
+    })
+    expect(arista?.destinoTipo).toBe('dispositivo')
+    expect(arista?.destinoId).toBe('d1')
+  })
+
+  it('un campo protegido sin dispositivo o eliminado no genera arista de pertenencia', () => {
+    const grafo = construirGrafo(
+      datos({
+        camposProtegidos: [
+          campoProtegido({ id: 'cp-1', nombre: 'Sin equipo', dispositivoId: null }),
+          campoProtegido({ id: 'cp-2', nombre: 'Borrado', dispositivoId: 'd1', eliminadoEn: '2026-01-01' }),
+        ],
+      }),
+    )
+    expect(grafo.some((a) => a.relacion === 'campo_dispositivo')).toBe(false)
+  })
+
   it('ignora entidades eliminadas', () => {
     const proc = procedimiento([paso({ subArticuloId: 'sub-1', subArticuloTitulo: 'X' })])
     const grafo = construirGrafo(
@@ -257,7 +325,7 @@ describe('construirGrafo', () => {
 })
 
 describe('referenciasHacia', () => {
-  const proc = procedimiento([paso({ credencialId: 'cred-1', credencialTitulo: 'Router' })])
+  const proc = procedimiento([paso({ vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'Router' } })])
   const grafo = construirGrafo(
     datos({
       articulos: [
@@ -292,8 +360,8 @@ describe('referenciasHacia', () => {
 describe('origenesDistintos', () => {
   it('colapsa un origen que referencia varias veces al mismo destino', () => {
     const proc = procedimiento([
-      paso({ credencialId: 'cred-1', credencialTitulo: 'Router' }),
-      paso({ credencialId: 'cred-1', credencialTitulo: 'Router' }),
+      paso({ vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'Router' } }),
+      paso({ vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'Router' } }),
     ])
     const grafo = construirGrafo(
       datos({ articulos: [articulo({ id: 'art-1', titulo: 'Doble uso', procedimiento: proc })] }),
@@ -306,11 +374,31 @@ describe('origenesDistintos', () => {
 
 describe('resumenImpacto', () => {
   it('resume en una frase quién usa una credencial', () => {
-    const proc = procedimiento([paso({ credencialId: 'cred-1', credencialTitulo: 'Router' })])
+    const proc = procedimiento([paso({ vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'Router' } })])
     const grafo = construirGrafo(
       datos({ articulos: [articulo({ id: 'art-1', titulo: 'P', procedimiento: proc })] }),
     )
     expect(resumenImpacto(grafo, 'credencial', 'cred-1')).toBe('Se usa en 1 procedimiento.')
+  })
+
+  it('resume en una frase quién usa un campo protegido', () => {
+    const proc = procedimiento([paso({ vinculoProtegido: { tipo: 'campo', id: 'cp-1', titulo: 'PIN' } })])
+    const grafo = construirGrafo(
+      datos({ articulos: [articulo({ id: 'art-1', titulo: 'P', procedimiento: proc })] }),
+    )
+    expect(resumenImpacto(grafo, 'campo_protegido', 'cp-1')).toBe('Se usa en 1 procedimiento.')
+  })
+
+  it('avisa antes de eliminar un dispositivo con campos protegidos (cierra el hueco de huérfanos de P1)', () => {
+    const grafo = construirGrafo(
+      datos({
+        camposProtegidos: [
+          campoProtegido({ id: 'cp-1', nombre: 'Usuario', dispositivoId: 'd1' }),
+          campoProtegido({ id: 'cp-2', nombre: 'Contraseña', dispositivoId: 'd1' }),
+        ],
+      }),
+    )
+    expect(resumenImpacto(grafo, 'dispositivo', 'd1')).toBe('Se usa en 2 datos protegidos.')
   })
 
   it('combina categorías con "y"', () => {

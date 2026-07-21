@@ -646,7 +646,12 @@ export function ArticuloForm() {
                   <TituloSeccion>Pasos</TituloSeccion>
                   <span className="text-[11px] text-noct-neutral-600">{resumenPasos}</span>
                 </div>
-                <PasosEditor articuloId={id} pasos={pasos} onPasosChange={setPasos} />
+                <PasosEditor
+                  articuloId={id}
+                  pasos={pasos}
+                  onPasosChange={setPasos}
+                  dispositivosAfectados={dispositivosAfectados}
+                />
               </section>
 
               <Campo etiqueta="Verificación final (una comprobación por línea)">

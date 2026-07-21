@@ -1,4 +1,4 @@
-import type { Articulo, Conexion, Credencial, Diagnostico, Dispositivo } from './db'
+import type { Articulo, CampoProtegido, Conexion, Credencial, Diagnostico, Dispositivo } from './db'
 import { normalizarProcedimiento } from './procedimiento'
 
 // Grafo de referencias entre entidades (fase N1 de
@@ -14,7 +14,7 @@ import { normalizarProcedimiento } from './procedimiento'
 // del origen son vivos por construcción: se toman de la fila local al
 // construir el grafo, así que renombrar algo se refleja sin tocar copias.
 
-export type TipoEntidad = 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico'
+export type TipoEntidad = 'articulo' | 'dispositivo' | 'credencial' | 'diagnostico' | 'campo_protegido'
 
 // Cómo un origen referencia a un destino. El nombre describe el vínculo
 // desde el origen; la etiqueta que ve el usuario (desde el destino) la
@@ -25,11 +25,14 @@ export type TipoRelacion =
   | 'decision' // una tarea de decisión vincula otro artículo
   | 'credencial_paso' // un paso vincula una credencial de la bóveda
   | 'credencial_tarea' // una tarea concreta vincula una credencial
+  | 'campo_paso' // un paso vincula un campo protegido de un dispositivo (grupo P2)
+  | 'campo_tarea' // una tarea concreta vincula un campo protegido (grupo P2)
   | 'relacionado' // artículo -> artículo por la lista "relacionados"
   | 'dispositivo_afectado' // artículo -> dispositivo por "dispositivos afectados"
   | 'diagnostico_articulo' // una opción de un diagnóstico ejecuta un artículo
   | 'conexion' // dispositivo <-> dispositivo (cableado/instalación)
   | 'credencial_dispositivo' // credencial -> dispositivo al que da acceso (grupo N3)
+  | 'campo_dispositivo' // campo protegido -> dispositivo dueño (grupo P2): si se elimina el equipo, el dato queda huérfano
 
 // Referencia navegable a una entidad: lo justo para pintar un enlace sin
 // volver a consultar la base. `titulo` y `ruta` se calculan al construir
@@ -54,6 +57,7 @@ export interface DatosGrafo {
   credenciales: Credencial[]
   diagnosticos: Diagnostico[]
   conexiones: Conexion[]
+  camposProtegidos: CampoProtegido[]
 }
 
 function rutaArticulo(a: Articulo): string {
@@ -89,10 +93,22 @@ export function construirGrafo(datos: DatosGrafo): Arista[] {
       for (const paso of procedimiento.pasos) {
         if (paso.subArticuloId) agregar('articulo', paso.subArticuloId, 'subprocedimiento')
         if (paso.solucionArticuloId) agregar('articulo', paso.solucionArticuloId, 'solucion')
-        if (paso.credencialId) agregar('credencial', paso.credencialId, 'credencial_paso')
+        if (paso.vinculoProtegido) {
+          agregar(
+            paso.vinculoProtegido.tipo === 'campo' ? 'campo_protegido' : 'credencial',
+            paso.vinculoProtegido.id,
+            paso.vinculoProtegido.tipo === 'campo' ? 'campo_paso' : 'credencial_paso',
+          )
+        }
         for (const bloque of paso.bloques) {
           if (bloque.decisionArticuloId) agregar('articulo', bloque.decisionArticuloId, 'decision')
-          if (bloque.credencialId) agregar('credencial', bloque.credencialId, 'credencial_tarea')
+          if (bloque.vinculoProtegido) {
+            agregar(
+              bloque.vinculoProtegido.tipo === 'campo' ? 'campo_protegido' : 'credencial',
+              bloque.vinculoProtegido.id,
+              bloque.vinculoProtegido.tipo === 'campo' ? 'campo_tarea' : 'credencial_tarea',
+            )
+          }
         }
       }
     }
@@ -127,6 +143,28 @@ export function construirGrafo(datos: DatosGrafo): Arista[] {
         relacion: 'credencial_dispositivo',
       })
     }
+  }
+
+  // Campo protegido -> dispositivo dueño (grupo P2): a diferencia del
+  // vínculo anterior (una credencial da acceso OPCIONALMENTE a varios
+  // equipos), aquí es pertenencia: el campo protegido existe PORQUE ese
+  // equipo existe. Cierra el hueco que dejaba la fase P1 (eliminar un
+  // dispositivo no avisaba de sus campos protegidos, que quedaban
+  // huérfanos): al construirse esta arista, `resumenImpacto` sobre el
+  // dispositivo ya cuenta cuántos datos protegidos se perderían.
+  for (const campo of datos.camposProtegidos) {
+    if (campo.eliminadoEn || !campo.dispositivoId) continue
+    aristas.push({
+      origen: {
+        tipo: 'campo_protegido',
+        id: campo.id,
+        titulo: campo.nombre,
+        ruta: `/dispositivos/${campo.dispositivoId}`,
+      },
+      destinoTipo: 'dispositivo',
+      destinoId: campo.dispositivoId,
+      relacion: 'campo_dispositivo',
+    })
   }
 
   for (const diagnostico of datos.diagnosticos) {
@@ -228,6 +266,7 @@ export function resumenImpacto(aristas: Arista[], tipo: TipoEntidad, id: string)
     { clave: 'diagnostico', singular: 'diagnóstico', plural: 'diagnósticos', ids: new Set() },
     { clave: 'articulo', singular: 'artículo', plural: 'artículos', ids: new Set() },
     { clave: 'credencial', singular: 'credencial', plural: 'credenciales', ids: new Set() },
+    { clave: 'campo_protegido', singular: 'dato protegido', plural: 'datos protegidos', ids: new Set() },
     { clave: 'conexion', singular: 'conexión', plural: 'conexiones', ids: new Set() },
   ]
   const porClave = Object.fromEntries(grupos.map((g) => [g.clave, g]))
@@ -254,11 +293,15 @@ function categoriaImpacto(relacion: TipoRelacion): string {
       return 'conexion'
     case 'credencial_dispositivo':
       return 'credencial'
+    case 'campo_dispositivo':
+      return 'campo_protegido'
     case 'subprocedimiento':
     case 'solucion':
     case 'decision':
     case 'credencial_paso':
     case 'credencial_tarea':
+    case 'campo_paso':
+    case 'campo_tarea':
       return 'procedimiento'
     case 'relacionado':
     case 'dispositivo_afectado':

@@ -90,6 +90,25 @@ export type TipoBloque = 'tarea' | 'aviso' | 'imagen'
 //   procedimiento ejecutado desde un diagnostico.
 export type TipoTarea = 'accion' | 'verificacion' | 'decision'
 
+// A que apunta un vinculo protegido (grupo P2): un secreto INDEPENDIENTE
+// de la boveda ('credencial', `Credencial`) o un dato PROPIO de un
+// equipo ('campo', `CampoProtegido`). El mismo vinculo sirve para los
+// dos porque ambos comparten cifrado, RLS y desbloqueo; solo cambia de
+// que tabla se lee el valor al mostrarlo.
+export type TipoVinculoProtegido = 'credencial' | 'campo'
+
+// Vinculo de un paso o una tarea a informacion protegida (grupo P2,
+// reemplaza a `credencialId`/`credencialTitulo`, que solo podian
+// apuntar a una credencial). `titulo` es copia de referencia, mismo
+// patron que el resto de vinculos del sistema: permite mostrar "Datos
+// protegidos: X" incluso a quien no tiene permiso de boveda (RLS no le
+// descarga ni la credencial ni el campo protegido).
+export interface VinculoProtegido {
+  tipo: TipoVinculoProtegido
+  id: string
+  titulo: string
+}
+
 // Un bloque del contenido de un paso. Reemplaza a las viejas
 // `instrucciones: string[]`: ahora el cuerpo del paso es una lista
 // ordenada y heterogenea (tareas, avisos e imagenes intercalados).
@@ -99,12 +118,13 @@ export type TipoTarea = 'accion' | 'verificacion' | 'decision'
 // `texto` es la tarea, el aviso o el pie de la imagen. `tipoTarea`
 // solo aplica a 'tarea', y el vinculo de decision (id + copia del
 // titulo, mismo patron que los vinculos del paso) solo a las tareas
-// de tipo 'decision'. `credencialId`/`credencialTitulo` (tarea 40,
-// 2026-07-09) es el mismo vinculo con la boveda que ya existe a nivel
-// de paso completo (`PasoProcedimiento.credencialId`), pero anclado a
-// una tarea puntual: solo aplica a bloques 'tarea', para el caso de
-// un paso con varias instrucciones donde solo una necesita mostrar
-// una credencial (por ejemplo "Ingresar usuario y contraseña").
+// de tipo 'decision'. `vinculoProtegido` (tarea 40, 2026-07-09;
+// generalizado a campos protegidos en el grupo P2, 2026-07-21) es el
+// mismo vinculo que ya existe a nivel de paso completo
+// (`PasoProcedimiento.vinculoProtegido`), pero anclado a una tarea
+// puntual: solo aplica a bloques 'tarea', para el caso de un paso con
+// varias instrucciones donde solo una necesita mostrar el dato (por
+// ejemplo "Ingresar usuario y contraseña").
 export interface BloquePaso {
   id: string
   tipo: TipoBloque
@@ -114,8 +134,7 @@ export interface BloquePaso {
   tipoTarea: TipoTarea | null
   decisionArticuloId: string | null
   decisionArticuloTitulo: string
-  credencialId: string | null
-  credencialTitulo: string
+  vinculoProtegido: VinculoProtegido | null
 }
 
 export interface PasoProcedimiento {
@@ -136,13 +155,14 @@ export interface PasoProcedimiento {
   // para capturas ancladas a una tarea concreta. Antes era un solo
   // `imagen`; al normalizar, ese valor viejo se migra al primer adjunto.
   adjuntos: PasoAdjunto[]
-  // Credencial de la boveda vinculada al paso (su apartado "Datos"),
-  // o null. El titulo es una copia de referencia: permite mostrar
-  // "Datos: SQL Server" incluso a tecnicos sin acceso a la boveda
-  // (RLS no les descarga las filas de credenciales). Los secretos
-  // nunca viajan aqui.
-  credencialId: string | null
-  credencialTitulo: string
+  // Informacion protegida vinculada al paso (su apartado "Datos"), o
+  // null: un secreto independiente de la boveda o un campo protegido
+  // de un dispositivo (grupo P2; antes solo podia ser una credencial,
+  // via `credencialId`/`credencialTitulo`). El titulo es una copia de
+  // referencia: permite mostrar "Datos: SQL Server" incluso a tecnicos
+  // sin acceso a la boveda (RLS no les descarga ni las credenciales ni
+  // los campos protegidos). El secreto en si nunca viaja aqui.
+  vinculoProtegido: VinculoProtegido | null
   // Otro articulo con procedimiento vinculado como subprocedimiento
   // del paso, o null: convierte el paso en una "tarea" cuyo paso a
   // paso vive en su propio articulo, reutilizable desde varios

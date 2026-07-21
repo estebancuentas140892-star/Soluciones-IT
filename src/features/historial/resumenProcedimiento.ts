@@ -163,10 +163,14 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
   // paso"; da igual donde vivan en el JSON).
   agregarLineasAdjuntos(cambios, imagenesDe(previo), imagenesDe(actual), etiqueta)
 
-  if (previo.credencialId !== actual.credencialId) {
-    if (!previo.credencialId) cambios.push(`Se agregó un secreto al ${etiqueta}.`)
-    else if (!actual.credencialId) cambios.push(`Se eliminó el secreto del ${etiqueta}.`)
-    else cambios.push(`Se reemplazó el secreto del ${etiqueta}.`)
+  // El vinculo protegido (grupo P2) puede apuntar a una credencial o a
+  // un campo protegido de un equipo; se compara por id, no por
+  // identidad de objeto, y el texto no distingue el tipo (para el
+  // historial, ambos son "informacion protegida").
+  if ((previo.vinculoProtegido?.id ?? null) !== (actual.vinculoProtegido?.id ?? null)) {
+    if (!previo.vinculoProtegido) cambios.push(`Se vinculó información protegida al ${etiqueta}.`)
+    else if (!actual.vinculoProtegido) cambios.push(`Se quitó la información protegida del ${etiqueta}.`)
+    else cambios.push(`Se cambió la información protegida del ${etiqueta}.`)
   }
 
   if (previo.subArticuloId !== actual.subArticuloId) {

@@ -5,9 +5,11 @@ import {
   db,
   type Articulo,
   type BloquePaso,
+  type DispositivoAfectado,
   type PasoAdjunto,
   type PasoProcedimiento,
   type TipoTarea,
+  type TipoVinculoProtegido,
   type TonoAviso,
 } from '../../lib/db'
 import { crearBloqueAviso, crearBloqueTarea, crearPaso, normalizarProcedimiento } from '../../lib/procedimiento'
@@ -43,6 +45,21 @@ interface Props {
   articuloId: string
   pasos: PasoProcedimiento[]
   onPasosChange: (pasos: PasoProcedimiento[]) => void
+  // Equipos donde aplica este artículo (grupo P2): sus campos
+  // protegidos aparecen primero al vincular información protegida a un
+  // paso, antes que los secretos globales de la bóveda (ejemplo del
+  // encargo: "Conectar impresora Lanier MP3050" -> "Contraseña
+  // administrador del dispositivo").
+  dispositivosAfectados: DispositivoAfectado[]
+}
+
+// Una opcion del selector polimorfico "Vincular informacion
+// protegida": un secreto de la boveda o un campo protegido de un
+// equipo, cada uno con su id ya calificado por tipo.
+interface OpcionVinculoProtegido {
+  tipo: TipoVinculoProtegido
+  id: string
+  titulo: string
 }
 
 // Metadatos visuales de cada clasificacion de tarea (handoff "Editor de
@@ -111,8 +128,7 @@ function crearBloqueImagenVacio(): BloquePaso {
     tipoTarea: null,
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
-    credencialId: null,
-    credencialTitulo: '',
+    vinculoProtegido: null,
   }
 }
 
@@ -122,7 +138,7 @@ function crearBloqueImagenVacio(): BloquePaso {
 // cuerpo de bloques (tareas con casilla, advertencias e imagenes), mas un
 // menu de reordenar/eliminar y los vinculos del paso (bóveda,
 // procedimiento y solución).
-export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
+export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfectados }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [menuPasoId, setMenuPasoId] = useState<string | null>(null)
@@ -132,12 +148,48 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
   const [subiendoAdjuntoPasoId, setSubiendoAdjuntoPasoId] = useState<string | null>(null)
   const [focoBloqueId, setFocoBloqueId] = useState<string | null>(null)
 
-  // Credenciales de la boveda para vincular a un paso. Solo llegan a
-  // este dispositivo las de usuarios con permiso de boveda (RLS); el
-  // titulo es visible sin desbloquear, los secretos no.
+  // Secretos de la boveda para vincular a un paso. Solo llegan a este
+  // dispositivo los de usuarios con permiso de boveda (RLS); el titulo
+  // es visible sin desbloquear, los secretos no.
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
-  const credencialesOrdenadas = useMemo(
-    () => [...credenciales].sort((a, b) => a.titulo.localeCompare(b.titulo)),
+  // Campos protegidos de los equipos donde aplica este articulo (grupo
+  // P2): misma RLS que las credenciales, asi que sin permiso de boveda
+  // esta lista llega vacia y el grupo "Datos protegidos del equipo"
+  // del selector no aparece.
+  const camposProtegidos = useLiveQuery(
+    () => db.campos_protegidos.filter((c) => !c.eliminadoEn).toArray(),
+    [],
+    [],
+  )
+  const idsEquiposVinculados = useMemo(
+    () => new Set(dispositivosAfectados.map((d) => d.id)),
+    [dispositivosAfectados],
+  )
+  const nombrePorEquipo = useMemo(
+    () => new Map(dispositivosAfectados.map((d) => [d.id, d.nombre])),
+    [dispositivosAfectados],
+  )
+  const opcionesCampos = useMemo<OpcionVinculoProtegido[]>(
+    () =>
+      camposProtegidos
+        .filter((c) => c.dispositivoId && idsEquiposVinculados.has(c.dispositivoId))
+        .map((c) => ({
+          tipo: 'campo' as const,
+          id: c.id,
+          titulo: `${c.nombre} (${nombrePorEquipo.get(c.dispositivoId as string) ?? ''})`,
+        }))
+        .sort((a, b) => a.titulo.localeCompare(b.titulo, 'es')),
+    [camposProtegidos, idsEquiposVinculados, nombrePorEquipo],
+  )
+  const opcionesCredenciales = useMemo<OpcionVinculoProtegido[]>(
+    () =>
+      [...credenciales]
+        .map((c) => ({
+          tipo: 'credencial' as const,
+          id: c.id,
+          titulo: c.categoria ? `${c.titulo} (${c.categoria})` : c.titulo,
+        }))
+        .sort((a, b) => a.titulo.localeCompare(b.titulo, 'es')),
     [credenciales],
   )
 
@@ -402,7 +454,8 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
             onQuitar={(referencia) => quitarAdjuntoPaso(indice, referencia)}
           />
 
-          {/* Vinculos del paso: bóveda, procedimiento o solución. */}
+          {/* Vinculos del paso: informacion protegida, procedimiento o
+              solucion. */}
           <div className="mt-2.5 border-t border-noct-divider pt-2">
             {vinculosPasoId === paso.id ? (
               <div className="flex flex-col gap-1.5">
@@ -415,20 +468,18 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
                   Vínculos del paso
                   <CaretUp size={12} className="ml-auto" />
                 </button>
-                <VinculoDelPaso
-                  Icono={LockSimple}
-                  etiqueta="Datos de la bóveda"
-                  vinculado={paso.credencialId ? paso.credencialTitulo : null}
-                  opciones={credencialesOrdenadas.map((c) => ({
-                    id: c.id,
-                    titulo: c.categoria ? `${c.titulo} (${c.categoria})` : c.titulo,
-                  }))}
-                  onElegir={(id) => {
-                    const credencial = credencialesOrdenadas.find((c) => c.id === id)
-                    if (credencial) actualizarPaso(indice, { credencialId: credencial.id, credencialTitulo: credencial.titulo })
-                  }}
-                  onQuitar={() => actualizarPaso(indice, { credencialId: null, credencialTitulo: '' })}
-                  placeholderVacio="Vincular datos de la bóveda (opcional)"
+                <VinculoProtegidoDelPaso
+                  vinculo={paso.vinculoProtegido}
+                  gruposOpciones={[
+                    { etiqueta: 'Datos protegidos del equipo', opciones: opcionesCampos },
+                    { etiqueta: 'Secretos de la bóveda', opciones: opcionesCredenciales },
+                  ]}
+                  onElegir={(opcion) =>
+                    actualizarPaso(indice, {
+                      vinculoProtegido: { tipo: opcion.tipo, id: opcion.id, titulo: opcion.titulo },
+                    })
+                  }
+                  onQuitar={() => actualizarPaso(indice, { vinculoProtegido: null })}
                 />
                 <VinculoDelPaso
                   Icono={BookOpen}
@@ -471,7 +522,7 @@ export function PasosEditor({ articuloId, pasos, onPasosChange }: Props) {
                 className="flex min-h-10 w-full items-center gap-2 rounded-md px-0.5 py-1 text-left text-[12.5px] text-noct-neutral-500 hover:text-noct-text"
               >
                 <LinkSimple size={15} />
-                Vínculos del paso: bóveda, procedimiento o solución
+                Vínculos del paso: información protegida, procedimiento o solución
                 <CaretDown size={12} className="ml-auto" />
               </button>
             )}
@@ -666,6 +717,79 @@ function VinculoDelPaso({
             {o.titulo}
           </option>
         ))}
+      </select>
+    </div>
+  )
+}
+
+// Vinculo protegido del paso (grupo P2): "Vincular información
+// protegida" reemplaza al viejo "Datos de la bóveda", que solo podía
+// apuntar a una credencial. Mismo aspecto que VinculoDelPaso, pero con
+// dos grupos de opciones (datos protegidos del equipo primero, secretos
+// globales después) que el <select> nativo separa con <optgroup>. El
+// valor de cada <option> codifica "tipo:id" porque el id por si solo
+// no basta para saber a que tabla apuntar.
+function VinculoProtegidoDelPaso({
+  vinculo,
+  gruposOpciones,
+  onElegir,
+  onQuitar,
+}: {
+  vinculo: { tipo: TipoVinculoProtegido; id: string; titulo: string } | null
+  gruposOpciones: { etiqueta: string; opciones: OpcionVinculoProtegido[] }[]
+  onElegir: (opcion: OpcionVinculoProtegido) => void
+  onQuitar: () => void
+}) {
+  if (vinculo) {
+    return (
+      <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-noct-divider bg-noct-surface px-3">
+        <p className="flex min-w-0 items-center gap-2.5 truncate text-[13px] text-noct-text">
+          <LockSimple size={15} className="shrink-0 text-noct-neutral-400" />
+          <span className="min-w-0 truncate">Información protegida: {vinculo.titulo}</span>
+        </p>
+        <button
+          type="button"
+          onClick={onQuitar}
+          className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+  }
+
+  const hayOpciones = gruposOpciones.some((g) => g.opciones.length > 0)
+  if (!hayOpciones) return null
+
+  return (
+    <div className="relative">
+      <LockSimple size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400" />
+      <select
+        value=""
+        aria-label="Vincular información protegida (opcional)"
+        onChange={(e) => {
+          if (!e.target.value) return
+          const separador = e.target.value.indexOf(':')
+          const tipo = e.target.value.slice(0, separador) as TipoVinculoProtegido
+          const id = e.target.value.slice(separador + 1)
+          const opcion = gruposOpciones.flatMap((g) => g.opciones).find((o) => o.tipo === tipo && o.id === id)
+          if (opcion) onElegir(opcion)
+        }}
+        className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+      >
+        <option value="">Vincular información protegida (opcional)</option>
+        {gruposOpciones.map(
+          (grupo) =>
+            grupo.opciones.length > 0 && (
+              <optgroup key={grupo.etiqueta} label={grupo.etiqueta}>
+                {grupo.opciones.map((o) => (
+                  <option key={`${o.tipo}:${o.id}`} value={`${o.tipo}:${o.id}`}>
+                    {o.titulo}
+                  </option>
+                ))}
+              </optgroup>
+            ),
+        )}
       </select>
     </div>
   )

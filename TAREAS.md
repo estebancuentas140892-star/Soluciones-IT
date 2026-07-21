@@ -4,9 +4,11 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 116 (Fase P1 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md: campos protegidos del dispositivo) quedó terminada, verificada y archivada el 2026-07-21. **Bloqueada por un paso del usuario**: aplicar `supabase/schema.sql` en el panel de Supabase (ver la sección 1 de `supabase/INSTRUCCIONES.md`, apartado "Actualización del 2026-07-21"). Hasta que se aplique, la sección Seguridad funciona en local pero la tabla `campos_protegidos` no sincroniza (el motor aísla su fallo y las demás tablas siguen bajando con normalidad, por el endurecimiento de la tarea 98).
+Sin tarea en desarrollo. La tarea 117 (Fase P2 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md: vínculo polimórfico "Vincular información protegida" en pasos y tareas, más el grafo) quedó terminada, verificada y archivada el 2026-07-21. Cierra el hueco que había dejado P1 (dispositivos con campos protegidos huérfanos al eliminarse): verificado en navegador real que el diálogo de eliminar un equipo ahora avisa "Se usa en 1 artículo y 1 dato protegido".
 
-Hueco conocido que deja P1 y que debe cerrar P2: eliminar un dispositivo NO elimina ni avisa de sus campos protegidos, que quedan huérfanos (siguen cifrados y protegidos por RLS, no hay fuga, pero ya no son alcanzables desde ninguna pantalla). Se cierra al sumar `campos_protegidos` al grafo de referencias en P2, que es donde ya estaba previsto tocar `src/lib/grafo.ts`: con eso el diálogo de eliminación avisa "Se usa en N datos protegidos" como ya hace con el resto de vínculos.
+Sigue pendiente el paso del usuario de la tarea 116 (Fase P1): aplicar `supabase/schema.sql` en el panel de Supabase (ver la sección 1 de `supabase/INSTRUCCIONES.md`, apartado "Actualización del 2026-07-21"). Hasta que se aplique, la sección Seguridad funciona en local pero `campos_protegidos` no sincroniza (el motor aísla su fallo, el resto de tablas sigue bajando con normalidad).
+
+Antes, la tarea 116 (Fase P1 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md: campos protegidos del dispositivo) quedó terminada, verificada y archivada el 2026-07-21.
 
 Antes, la tarea 115 (Fase P0 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md: quitar el preset "Equipo o servicio" y el campo IP del editor de la Bóveda, renombrar a "Secretos") quedó terminada, verificada y archivada el 2026-07-21.
 

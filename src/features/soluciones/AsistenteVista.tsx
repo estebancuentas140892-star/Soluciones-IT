@@ -282,9 +282,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         </ul>
       )}
 
-      {paso.credencialId && (
-        <CredencialEnPaso credencialId={paso.credencialId} tituloReferencia={paso.credencialTitulo} />
-      )}
+      {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} />}
 
       {paso.subArticuloId && (
         <SubProcedimientoEnAsistente
