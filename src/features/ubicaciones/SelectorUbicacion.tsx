@@ -3,12 +3,12 @@ import { useMemo, useState } from 'react'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { ordenarPorRuta, mapaPorId, rutaUbicacion } from './arbol'
+import { CLASE_CAMPO as CLASE_CAMPO_BASE } from '../../components/campos'
 
-// Campo re-tematizado a Nocturne (el selector solo se usa en el Editor
-// de Dispositivo, ya en Nocturne): borde divisor, fondo de superficie y
-// foco en el acento, a juego con el resto del formulario.
-const CLASE_CAMPO =
-  'min-h-11 w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+// El selector vive dentro del Editor de Dispositivo y comparte su campo;
+// solo fija el alto mínimo táctil (44px), que no compite con ninguna
+// utilidad del campo compartido.
+const CLASE_CAMPO = `min-h-11 ${CLASE_CAMPO_BASE}`
 
 // Valores especiales del selector, distintos de cualquier id de ubicacion.
 const TEXTO_LIBRE = '__texto__'

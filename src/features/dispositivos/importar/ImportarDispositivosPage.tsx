@@ -16,6 +16,7 @@ import {
 } from '../../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../../components/nocturne'
 import { leerArchivoTabular } from './leerArchivo'
+import { CLASE_CAMPO } from '../../../components/campos'
 import { ETIQUETA_CAMPO, generarPlantillaCsv, mapearFilas } from './mapearFilas'
 
 type Fase =
@@ -23,9 +24,6 @@ type Fase =
   | { paso: 'revisar'; nombreArchivo: string; filas: string[][] }
   | { paso: 'importando'; total: number; avance: number }
   | { paso: 'terminado'; importados: number; fallidos: number }
-
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent'
 
 // Importación masiva de dispositivos re-autorizada al sistema Nocturne
 // (handoff "Rediseño de aplicación empresarial", Importar

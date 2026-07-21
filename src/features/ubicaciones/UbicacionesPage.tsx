@@ -16,6 +16,7 @@ import { db, type Ubicacion } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { hijosDirectos } from './arbol'
 import { textosSinUbicacion } from './migracion'
+import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 
 // Minusculas sin acentos, para que la busqueda encuentre "Area" al
 // escribir "area".
@@ -35,8 +36,8 @@ function ordenarConNivel(ubicaciones: Ubicacion[]): { u: Ubicacion; nivel: numbe
   return orden
 }
 
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-bg px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+// Buscador dibujado sobre una tarjeta: variante de fondo de app.
+const CLASE_CAMPO = CLASE_CAMPO_SOBRE_SUPERFICIE
 
 // Lista de ubicaciones (grupo N3) re-autorizada al sistema Nocturne
 // (handoff "Rediseño de aplicación empresarial", Ubicaciones.dc.html): el

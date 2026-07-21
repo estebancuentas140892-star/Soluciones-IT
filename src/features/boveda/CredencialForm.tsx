@@ -5,16 +5,21 @@ import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { ArrowsClockwise, Eye, EyeSlash, LockSimple, Paperclip, Plus, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import {
+  Campo,
+  CampoConSugerencias,
+  CamposClaveValor,
+  CLASE_CAMPO,
+  CLASE_CAMPO_MONO,
+  CLASE_ETIQUETA,
+  type CampoClaveValor,
+} from '../../components/campos'
 import { subirOEncolarArchivo, eliminarArchivoPendiente } from '../../lib/archivosPendientes'
 import { db, type ArchivoSeguro, type Dispositivo, type DispositivoAfectado, type TipoSecreto } from '../../lib/db'
 import { guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
+import { valoresUnicos } from '../../lib/vocabulario'
 import { BUCKET_ARCHIVOS_BOVEDA } from './archivoSeguro'
 import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBoveda'
-
-interface CampoExtra {
-  clave: string
-  valor: string
-}
 
 // Cinco tipos de secreto (fase P3 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md,
 // sección 3.2): el `tipo` ya no es solo un preset de URL que precarga
@@ -92,11 +97,6 @@ function normalizar(texto: string): string {
     .replace(/[̀-ͯ]/g, '')
 }
 
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
-const CLASE_CAMPO_MONO = `${CLASE_CAMPO} font-mono`
-const CLASE_ETIQUETA = 'text-[12.5px] font-medium text-noct-neutral-400'
-
 export function CredencialForm() {
   const { credencialId } = useParams()
   const navigate = useNavigate()
@@ -147,8 +147,13 @@ export function CredencialForm() {
     () => [...dispositivosDisponibles].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true })),
     [dispositivosDisponibles],
   )
+  // Vocabulario derivado, igual que las marcas de un dispositivo. Antes
+  // deduplicaba con `new Set` sin recortar espacios ni ignorar
+  // mayúsculas, así que "POS" y "pos" aparecían como dos categorías
+  // distintas; `valoresUnicos` las une y además ordena con locale
+  // español (los acentos dejan de irse al final).
   const categorias = useMemo(
-    () => [...new Set((credenciales ?? []).map((c) => c.categoria).filter(Boolean))].sort(),
+    () => valoresUnicos((credenciales ?? []).map((c) => c.categoria)),
     [credenciales],
   )
 
@@ -163,7 +168,7 @@ export function CredencialForm() {
   const [ipHeredada, setIpHeredada] = useState('')
   const [url, setUrl] = useState('')
   const [notas, setNotas] = useState('')
-  const [extras, setExtras] = useState<CampoExtra[]>([])
+  const [extras, setExtras] = useState<CampoClaveValor[]>([])
   // Equipos a los que da acceso esta credencial (grupo N3): lista
   // {id, nombre} como copia de referencia. NO se cifra (como venceEn):
   // que credencial pertenece a que equipo no es el secreto.
@@ -241,14 +246,6 @@ export function CredencialForm() {
         <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
       </div>
     )
-  }
-
-  function actualizarExtra(indice: number, campo: keyof CampoExtra, valor: string) {
-    setExtras((actuales) => actuales.map((e, i) => (i === indice ? { ...e, [campo]: valor } : e)))
-  }
-
-  function quitarExtra(indice: number) {
-    setExtras((actuales) => actuales.filter((_, i) => i !== indice))
   }
 
   // Cifra y sube (o encola sin conexión) el archivo elegido de inmediato,
@@ -424,22 +421,15 @@ export function CredencialForm() {
                 </div>
               )}
 
-              <div className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Categoría</span>
-                <input
-                  type="text"
-                  list="categorias-boveda"
-                  value={categoria}
-                  onChange={(e) => setCategoria(e.target.value)}
+              <Campo etiqueta="Categoría">
+                <CampoConSugerencias
+                  valor={categoria}
+                  onChange={setCategoria}
+                  sugerencias={categorias}
                   placeholder="Redes, Servidores, CCTV..."
-                  className={`min-h-11 ${CLASE_CAMPO}`}
+                  className="min-h-11"
                 />
-                <datalist id="categorias-boveda">
-                  {categorias.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
-              </div>
+              </Campo>
             </section>
 
             {/* Secreto: todo lo que viaja cifrado en datosCifrados. El
@@ -531,50 +521,14 @@ export function CredencialForm() {
               )}
 
               {visibles.extras && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className={CLASE_ETIQUETA}>Otros datos protegidos</span>
-                    <button
-                      type="button"
-                      onClick={() => setExtras((actuales) => [...actuales, { clave: '', valor: '' }])}
-                      className={`${BTN_GHOST} whitespace-nowrap`}
-                    >
-                      <Plus size={13} aria-hidden />
-                      Campo
-                    </button>
-                  </div>
-                  <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
-                    Puerto, PIN, clave WiFi, usuario de respaldo... también van cifrados.
-                  </p>
-
-                  {extras.map((campo, indice) => (
-                    <div key={indice} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Campo"
-                        value={campo.clave}
-                        onChange={(e) => actualizarExtra(indice, 'clave', e.target.value)}
-                        className={`min-h-[42px] w-[38%] ${CLASE_CAMPO}`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Valor"
-                        value={campo.valor}
-                        onChange={(e) => actualizarExtra(indice, 'valor', e.target.value)}
-                        autoComplete="off"
-                        className={`min-h-[42px] flex-1 ${CLASE_CAMPO_MONO}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => quitarExtra(indice)}
-                        aria-label="Quitar este campo"
-                        className="flex min-h-11 w-8 shrink-0 items-center justify-center text-noct-neutral-600 hover:text-noct-text"
-                      >
-                        <X size={14} aria-hidden />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <CamposClaveValor
+                  titulo="Otros datos protegidos"
+                  ayuda="Puerto, PIN, clave WiFi, usuario de respaldo... también van cifrados."
+                  campos={extras}
+                  onChange={setExtras}
+                  valorMono
+                  valorAutoComplete="off"
+                />
               )}
 
               {/* Archivo cifrado (fase P5, tipo "Archivo seguro"): se

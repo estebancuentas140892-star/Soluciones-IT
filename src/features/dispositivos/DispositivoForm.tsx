@@ -2,46 +2,26 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
+import { Camera, CaretDown, CaretUp, FloppyDisk, TrashSimple, Warning } from '../../components/iconos'
+import { BTN_PRIMARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import {
-  Camera,
-  CaretDown,
-  CaretUp,
-  FloppyDisk,
-  Plus,
-  TrashSimple,
-  Warning,
-  X,
-} from '../../components/iconos'
-import { BTN_GHOST_ACENTO, BTN_PRIMARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
+  Campo,
+  CampoConSugerencias,
+  CamposClaveValor,
+  CLASE_CAMPO,
+  CLASE_ETIQUETA,
+  type CampoClaveValor,
+} from '../../components/campos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { db, type PasoAdjunto } from '../../lib/db'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirConDeduplicacion } from '../../lib/archivosPendientes'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
+import { valoresUnicos } from '../../lib/vocabulario'
 import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
 import { SelectorUbicacion } from '../ubicaciones/SelectorUbicacion'
 import { ESTADOS_SUGERIDOS } from './estados'
-
-interface CampoDetalle {
-  clave: string
-  valor: string
-}
-
-// Valores distintos, sin vacíos y ordenados, para un datalist de
-// autocompletar. Deduplica sin distinguir mayúsculas (conserva la
-// primera forma vista) para no ofrecer "POS" y "pos" como opciones
-// separadas.
-function valoresUnicos(valores: string[]): string[] {
-  const porClave = new Map<string, string>()
-  for (const valor of valores) {
-    const limpio = valor.trim()
-    if (limpio === '') continue
-    const clave = limpio.toLowerCase()
-    if (!porClave.has(clave)) porClave.set(clave, limpio)
-  }
-  return [...porClave.values()].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
-}
 
 // Punto de color de cada estado sugerido (08_ESTILO: operativo verde,
 // mantenimiento ámbar, fuera de servicio rojo, de baja neutro). Se
@@ -52,13 +32,6 @@ const PUNTO_ESTADO: Record<string, string> = {
   'Fuera de servicio': 'bg-noct-error',
   'De baja': 'bg-noct-neutral-500',
 }
-
-// Clases compartidas de los campos de texto (mismo lenguaje que los
-// demás editores Nocturne): borde divisor, fondo de superficie y foco
-// en el acento.
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
-const CLASE_ETIQUETA = 'text-[12.5px] font-medium text-noct-neutral-400'
 
 // Formato de una IP v4 sencilla (cuatro grupos de 1-3 dígitos). Es una
 // validación de forma, no de rango: sirve para avisar de un error obvio
@@ -146,7 +119,7 @@ export function DispositivoForm() {
   // seleccionado por defecto).
   const [estado, setEstado] = useState(esEdicion || esDuplicado ? '' : 'Operativo')
   const [observaciones, setObservaciones] = useState('')
-  const [detalles, setDetalles] = useState<CampoDetalle[]>([])
+  const [detalles, setDetalles] = useState<CampoClaveValor[]>([])
   const [foto, setFoto] = useState<PasoAdjunto | null>(null)
   const [motivo, setMotivo] = useState('')
   const [masAbierto, setMasAbierto] = useState(false)
@@ -221,14 +194,6 @@ export function DispositivoForm() {
     conContenidoMas === 0 ? 'observaciones y propiedades' : `${conContenidoMas} con contenido`
 
   if (esEdicion && dispositivo === null) return <Navigate to="/dispositivos" replace />
-
-  function actualizarDetalle(indice: number, campo: keyof CampoDetalle, valor: string) {
-    setDetalles((actuales) => actuales.map((d, i) => (i === indice ? { ...d, [campo]: valor } : d)))
-  }
-
-  function quitarDetalle(indice: number) {
-    setDetalles((actuales) => actuales.filter((_, i) => i !== indice))
-  }
 
   async function guardar() {
     if (!valido) {
@@ -340,22 +305,15 @@ export function DispositivoForm() {
             </div>
 
             <div className="flex gap-3">
-              <label className="flex flex-1 flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Marca</span>
-                <input
-                  type="text"
-                  list="ded-marcas"
-                  value={marca}
-                  onChange={(e) => setMarca(e.target.value)}
+              <Campo etiqueta="Marca" className="flex-1">
+                <CampoConSugerencias
+                  valor={marca}
+                  onChange={setMarca}
+                  sugerencias={marcasSugeridas}
                   placeholder="Zebra, HP, Cisco..."
-                  className={`min-h-11 ${CLASE_CAMPO}`}
+                  className="min-h-11"
                 />
-                <datalist id="ded-marcas">
-                  {marcasSugeridas.map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
-              </label>
+              </Campo>
               <label className="flex flex-1 flex-col gap-1.5">
                 <span className={CLASE_ETIQUETA}>Modelo</span>
                 <input
@@ -507,58 +465,13 @@ export function DispositivoForm() {
                   />
                 </label>
 
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className={CLASE_ETIQUETA}>Propiedades de {categoriaNombre}</span>
-                    <button
-                      type="button"
-                      onClick={() => setDetalles((actuales) => [...actuales, { clave: '', valor: '' }])}
-                      className={BTN_GHOST_ACENTO}
-                    >
-                      <Plus size={13} aria-hidden />
-                      Campo
-                    </button>
-                  </div>
-                  <p className="text-[12px] leading-[1.5] text-noct-neutral-600">
-                    Se sugieren los campos que ya usan otros equipos de la misma categoría.
-                  </p>
-
-                  {propiedadesSugeridas.length > 0 && (
-                    <datalist id="ded-propiedades">
-                      {propiedadesSugeridas.map((clave) => (
-                        <option key={clave} value={clave} />
-                      ))}
-                    </datalist>
-                  )}
-
-                  {detalles.map((campo, indice) => (
-                    <div key={indice} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Campo"
-                        value={campo.clave}
-                        onChange={(e) => actualizarDetalle(indice, 'clave', e.target.value)}
-                        list="ded-propiedades"
-                        className="box-border min-h-[42px] w-[38%] rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-[13.5px] text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Valor"
-                        value={campo.valor}
-                        onChange={(e) => actualizarDetalle(indice, 'valor', e.target.value)}
-                        className="box-border min-h-[42px] min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-[13.5px] text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => quitarDetalle(indice)}
-                        aria-label="Quitar este campo"
-                        className="flex min-h-11 w-8 shrink-0 items-center justify-center text-noct-neutral-600 hover:text-noct-text"
-                      >
-                        <X size={14} aria-hidden />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <CamposClaveValor
+                  titulo={`Propiedades de ${categoriaNombre}`}
+                  ayuda="Se sugieren los campos que ya usan otros equipos de la misma categoría."
+                  campos={detalles}
+                  onChange={setDetalles}
+                  sugerenciasClave={propiedadesSugeridas}
+                />
 
                 {esEdicion && (
                   <label className="flex flex-col gap-1.5">

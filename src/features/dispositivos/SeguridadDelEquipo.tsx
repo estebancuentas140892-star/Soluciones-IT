@@ -24,6 +24,7 @@ import { CampoSecreto } from '../boveda/CampoSecreto'
 import { cifrarValor, desbloquear, descifrarValor } from '../boveda/sesionBoveda'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { Historial } from '../historial/Historial'
+import { CLASE_CAMPO } from '../../components/campos'
 import {
   camposDeDispositivo,
   esOcultoPorDefecto,
@@ -459,7 +460,7 @@ function EditorCampo({
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Usuario administrador, PIN de impresión..."
-          className="min-h-11 w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
+          className={`min-h-11 ${CLASE_CAMPO}`}
         />
       </label>
 
@@ -468,7 +469,7 @@ function EditorCampo({
         <select
           value={tipo}
           onChange={(e) => setTipo(e.target.value as TipoCampoProtegido)}
-          className="min-h-11 w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent"
+          className={`min-h-11 ${CLASE_CAMPO}`}
         >
           {TIPOS_CAMPO_PROTEGIDO.map((t) => (
             <option key={t.tipo} value={t.tipo}>

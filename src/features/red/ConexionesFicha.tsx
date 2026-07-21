@@ -11,6 +11,7 @@ import {
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, Plus, X } from '../../components/iconos'
 import { BTN_GHOST_ACENTO, BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { CLASE_CAMPO, CLASE_ETIQUETA as CLASE_ETIQUETA_BASE } from '../../components/campos'
 
 // Relacion nueva vista desde la ficha actual: define quien es origen y
 // quien destino segun lo que el tecnico quiere documentar. 'relacionado'
@@ -18,10 +19,9 @@ import { BTN_GHOST_ACENTO, BTN_PRIMARIO, TituloSeccion } from '../../components/
 // impresora), sin puertos ni medio y sin entrar en la topologia.
 type Modo = 'enlace' | 'instalado' | 'contiene' | 'relacionado'
 
-// Campo de texto compartido, re-autorizado a Nocturne.
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
-const CLASE_ETIQUETA = 'flex flex-col gap-1.5 text-[12.5px] font-medium text-noct-neutral-400'
+// Aquí el rótulo se aplica al propio `<label>`, que además apila el
+// texto sobre el control, así que suma el flex al rótulo compartido.
+const CLASE_ETIQUETA = `flex flex-col gap-1.5 ${CLASE_ETIQUETA_BASE}`
 
 // Seccion Conexiones de la ficha de un dispositivo: lista sus enlaces
 // e instalaciones (navegables a la ficha del otro extremo) y permite

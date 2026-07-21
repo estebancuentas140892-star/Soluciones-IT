@@ -7,9 +7,7 @@ import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
 import { useAuth } from './authContext'
 import { validarCambioContrasena } from './erroresAuth'
 
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
-const CLASE_ETIQUETA = 'text-[12.5px] font-medium text-noct-neutral-400'
+import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 
 // Cuenta del técnico con sesión activa, re-autorizada al sistema
 // Nocturne (tarea 97, sin mockup: se traduce el diseño heredado

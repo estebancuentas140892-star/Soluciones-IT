@@ -5,6 +5,7 @@ import { BotonVolver } from '../../components/BotonVolver'
 import { ArrowElbowDownRight } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
+import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import {
   claveUbicacion,
@@ -13,8 +14,8 @@ import {
   type GrupoMigracion,
 } from './migracion'
 
-const CLASE_CAMPO =
-  'box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+// Sin ancho propio: cada fila del informe le fija el suyo (`w-2/5`).
+const CLASE_CAMPO = CLASE_CAMPO_SIN_ANCHO
 
 // Migracion asistida de ubicaciones (grupo N3) re-autorizada al sistema
 // Nocturne: convierte los textos de ubicacion sueltos de los

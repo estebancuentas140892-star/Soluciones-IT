@@ -16,9 +16,11 @@ import {
 } from './bloqueoApp'
 import { serializarPatron } from './patron'
 import { PatronInput } from './PatronInput'
+import { CLASE_CAMPO as CLASE_CAMPO_BASE } from '../../components/campos'
 
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-center text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+// Contraseña de desbloqueo centrada: `text-center` es alineación, no
+// tamaño, así que no compite con el `text-sm` del campo compartido.
+const CLASE_CAMPO = `${CLASE_CAMPO_BASE} text-center`
 
 // "Seguridad de la aplicación" re-autorizada al sistema Nocturne
 // (tarea 97, sin mockup: se traduce el diseño heredado siguiendo el

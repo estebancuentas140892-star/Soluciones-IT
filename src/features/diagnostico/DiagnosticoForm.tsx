@@ -44,12 +44,7 @@ import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
 import { Historial } from '../historial/Historial'
 import { PruebaDiagnostico } from './PruebaDiagnostico'
 
-// Clases compartidas de los campos de texto (mismo lenguaje que el
-// Editor de Artículo): borde divisor, fondo de superficie y foco en el
-// acento.
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
-const CLASE_ETIQUETA = 'text-[12.5px] font-medium text-noct-neutral-400'
+import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 
 // Editor de un diagnóstico guiado, rediseñado al sistema Nocturne
 // (handoff "Rediseño de aplicación empresarial", Editor de

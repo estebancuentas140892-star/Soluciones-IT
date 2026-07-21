@@ -40,6 +40,7 @@ import {
   X,
 } from '../../components/iconos'
 import { TONOS_AVISO } from './tonos'
+import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
 
 interface Props {
   articuloId: string
@@ -863,7 +864,7 @@ function BloqueEditor({
             }}
             onPaste={(e) => onPegar(e.clipboardData.getData('text'), e)}
             placeholder={info.placeholder}
-            className="min-h-11 min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent"
+            className={`min-h-11 min-w-0 flex-1 ${CLASE_CAMPO_SIN_ANCHO}`}
           />
           <BotonQuitar onClick={onQuitar} etiqueta="Quitar esta línea" />
         </div>

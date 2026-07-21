@@ -3,13 +3,15 @@ import { registrarIntervencion } from '../../lib/repositorio'
 import { Adjuntos } from '../../components/Adjuntos'
 import { Plus } from '../../components/iconos'
 import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO } from '../../components/nocturne'
+import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 
 interface Props {
   dispositivoId: string
 }
 
-const CLASE_CAMPO =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-bg px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+// El formulario se dibuja sobre una tarjeta, así que usa la variante de
+// fondo de app (sobre superficie el campo no contrastaría).
+const CLASE_CAMPO = CLASE_CAMPO_SOBRE_SUPERFICIE
 
 // Bitacora manual: lo que el historial automatico no captura porque
 // no viene de editar un campo (ejemplo: "cambio de disco",

@@ -47,6 +47,7 @@ import { PasosEditor } from './PasosEditor'
 import { hayPlantilla, pasosDePlantilla, plantillaDe } from './plantillas'
 import { colorIconoDeTipo, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
 import { tituloEditar, tituloNuevo } from './tiposArticulo'
+import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 
 // La vista previa carga react-markdown, que pesa: se difiere hasta que
 // el usuario la pida para no encarecer la apertura del editor.
@@ -79,12 +80,6 @@ const DIFICULTADES: { valor: NivelDificultad; etiqueta: string }[] = [
   { valor: 'intermedio', etiqueta: 'Intermedio' },
   { valor: 'avanzado', etiqueta: 'Avanzado' },
 ]
-
-// Clases compartidas de los campos de texto del editor (borde divisor,
-// fondo de superficie y foco en el acento).
-const CLASE_CAMPO =
-  'w-full rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent'
-const CLASE_ETIQUETA = 'text-[12.5px] font-medium text-noct-neutral-400'
 
 // Editor de articulos en el sistema Nocturne (handoff "Editor de
 // Artículo"): cabecera pegajosa con el tipo dinamico y, desde la fase
