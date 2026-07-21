@@ -157,6 +157,10 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       venceEn: 'vence_en',
       dispositivos: 'dispositivos',
       tipo: 'tipo',
+      // Archivo cifrado de un secreto tipo 'archivo' (fase P5): jsonb
+      // en claro (referencia, nombre, tipo MIME, tamaño), el contenido
+      // real vive cifrado en el bucket archivos_boveda de Storage.
+      archivo: 'archivo',
     },
   },
   adjuntos: {

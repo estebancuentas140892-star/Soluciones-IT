@@ -189,6 +189,7 @@ describe('guardarRegistro', () => {
       datosCifrados: 'bloque-cifrado-original',
       venceEn: null,
       dispositivos: [],
+      archivo: null,
     })
     await guardarRegistro('credenciales', {
       id,
@@ -198,6 +199,7 @@ describe('guardarRegistro', () => {
       datosCifrados: 'bloque-cifrado-nuevo',
       venceEn: null,
       dispositivos: [],
+      archivo: null,
     })
 
     const cambio = (await db.historial.toArray()).find((c) => c.campo === 'datosCifrados')

@@ -110,9 +110,10 @@ function severidad(estado: EstadoVencimiento): number {
 // P0 (2026-07-21): un secreto ya no puede representar un equipo entero
 // (eso duplicaba datos que ya viven en la ficha del dispositivo); un
 // equipo se sigue pudiendo VINCULAR a un secreto desde "Equipos con
-// acceso". "Archivo seguro" todavía no cifra binarios (eso es la fase
-// P5, deliberadamente fuera de este lote): por ahora solo guarda notas
-// y datos de referencia sobre dónde vive el archivo.
+// acceso". "Archivo seguro" (fase P5) cifra el archivo en el propio
+// teléfono antes de subirlo a un bucket de Storage propio y privado
+// (`archivos_boveda`, RLS de bóveda), distinto del bucket `adjuntos`
+// de fotos/manuales que cualquier autenticado puede leer.
 const PRESETS: {
   tipo: string
   nombre: string
@@ -130,7 +131,7 @@ const PRESETS: {
   {
     tipo: 'archivo',
     nombre: 'Archivo seguro',
-    descripcion: 'Dónde vive un archivo protegido y su clave',
+    descripcion: 'Un archivo cifrado: licencia, certificado, configuración...',
     Icono: Paperclip,
   },
   {

@@ -2,8 +2,11 @@ import { db, ID_VERIFICADOR } from '../../lib/db'
 import {
   aBase64,
   analizarBloque,
+  analizarBloqueBinario,
+  cifrarBinario,
   cifrarTexto,
   derivarClave,
+  descifrarBinario,
   descifrarTexto,
   ITERACIONES_PBKDF2,
   nuevaSal,
@@ -372,6 +375,38 @@ export async function descifrarValor(valorCifrado: string): Promise<string | nul
   if (!clave) return null
   try {
     return await descifrarTexto(clave, bloque)
+  } catch {
+    return null
+  }
+}
+
+// Cifra un archivo entero (fase P5, "Archivo seguro"): mismo criterio
+// que cifrarValor, reutiliza la clave principal ya derivada (sin volver
+// a correr PBKDF2 por archivo) y produce el formato binario
+// autocontenido de crypto.ts, listo para subirse tal cual a Storage.
+export async function cifrarArchivo(archivo: File): Promise<Blob> {
+  if (!desbloqueada || !principal) throw new Error('La bóveda está bloqueada.')
+  const datos = new Uint8Array(await archivo.arrayBuffer())
+  const cifrado = await cifrarBinario(principal.clave, principal.salt, principal.iteraciones, datos)
+  return new Blob([cifrado])
+}
+
+// Descifra un archivo ya descargado de Storage. Devuelve null si la
+// boveda esta bloqueada, el blob no tiene el formato esperado o se
+// cifro con una contrasena distinta a la actual (mismos casos que
+// descifrarValor). `tipoMime` es la copia en claro guardada junto a la
+// credencial (nunca viaja dentro del bloque cifrado): se reaplica al
+// Blob resultante para que se pueda abrir o descargar como el archivo
+// original.
+export async function descifrarArchivo(blobCifrado: Blob, tipoMime: string): Promise<Blob | null> {
+  if (!desbloqueada) return null
+  const bloque = analizarBloqueBinario(new Uint8Array(await blobCifrado.arrayBuffer()))
+  if (!bloque) return null
+  const clave = clavesPorSal.get(aBase64(bloque.salt))
+  if (!clave) return null
+  try {
+    const datos = await descifrarBinario(clave, bloque)
+    return new Blob([datos], { type: tipoMime })
   } catch {
     return null
   }

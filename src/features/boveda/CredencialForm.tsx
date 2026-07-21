@@ -1,13 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
-import { ArrowsClockwise, Eye, EyeSlash, LockSimple, Plus, X } from '../../components/iconos'
+import { ArrowsClockwise, Eye, EyeSlash, LockSimple, Paperclip, Plus, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
-import { db, type Dispositivo, type DispositivoAfectado, type TipoSecreto } from '../../lib/db'
+import { subirOEncolarArchivo, eliminarArchivoPendiente } from '../../lib/archivosPendientes'
+import { db, type ArchivoSeguro, type Dispositivo, type DispositivoAfectado, type TipoSecreto } from '../../lib/db'
 import { guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
-import { cifrarCredencial, descifrarCredencial } from './sesionBoveda'
+import { BUCKET_ARCHIVOS_BOVEDA } from './archivoSeguro'
+import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBoveda'
 
 interface CampoExtra {
   clave: string
@@ -38,10 +40,8 @@ const CAMPOS_POR_TIPO: Record<TipoSecreto, CamposVisibles> = {
   cuenta: TODOS_LOS_CAMPOS,
   red: { usuario: false, contrasena: true, url: false, extras: true },
   llave: { usuario: false, contrasena: true, url: false, extras: true },
-  // Archivo seguro guarda por ahora solo notas y datos protegidos de
-  // referencia (dónde vive el archivo, su clave); cifrar el binario en
-  // sí es la fase P5, deliberadamente fuera de este lote (ver la
-  // advertencia de la propuesta).
+  // Archivo seguro (fase P5): notas y datos protegidos de referencia,
+  // más el propio archivo cifrado (editor aparte, ver más abajo).
   archivo: { usuario: false, contrasena: false, url: false, extras: true },
   nota: { usuario: false, contrasena: false, url: false, extras: false },
 }
@@ -58,7 +58,7 @@ const DESCRIPCION_TIPO: Record<TipoSecreto, string> = {
   cuenta: 'Usuario y contraseña de un servicio o aplicación',
   red: 'Clave de una red WiFi u otro acceso compartido',
   llave: 'Token, licencia o certificado',
-  archivo: 'Dónde vive un archivo protegido y su clave, sin adjuntarlo',
+  archivo: 'Un archivo cifrado (licencia, certificado, config...) con sus datos de referencia',
   nota: 'Texto cifrado, sin usuario ni contraseña',
 }
 
@@ -66,7 +66,7 @@ const PLACEHOLDER_TITULO: Record<TipoSecreto, string> = {
   cuenta: 'Servicio: Panel de Supabase, correo...',
   red: 'Nombre de la red WiFi',
   llave: 'Licencia de Windows, certificado SSL...',
-  archivo: 'Qué archivo protege esta clave',
+  archivo: 'Qué es este archivo',
   nota: 'Título de la nota',
 }
 
@@ -102,6 +102,13 @@ export function CredencialForm() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const esEdicion = Boolean(credencialId)
+
+  // El id se decide UNA SOLA VEZ al montar (no en cada envío, como
+  // pasaba antes): el editor de archivo (fase P5) necesita subirlo a
+  // una ruta estable `credenciales/<id>/...` antes de que la fila
+  // exista, mismo motivo por el que DispositivoForm ya hace esto para
+  // la foto del equipo.
+  const [id] = useState(() => credencialId ?? nuevoId())
 
   // Creacion contextual (fase N2/N3, punto 1): "+ Credencial" desde la
   // ficha de un equipo llega con /boveda/nueva?titulo=<sugerido>
@@ -170,6 +177,13 @@ export function CredencialForm() {
   // registro, sin esperar el descifrado.
   const [venceEn, setVenceEn] = useState('')
   const [motivo, setMotivo] = useState('')
+  // Archivo cifrado del secreto tipo 'archivo' (fase P5). Se sube al
+  // elegirlo (no al guardar el formulario), como ya hace FotoEditor en
+  // DispositivoForm; solo el {referencia, nombre, tipo, tamano} viaja
+  // en el estado del formulario hasta el guardado final.
+  const [archivo, setArchivo] = useState<ArchivoSeguro | null>(null)
+  const [subiendoArchivo, setSubiendoArchivo] = useState(false)
+  const [errorArchivo, setErrorArchivo] = useState<string | null>(null)
   const [sinDescifrar, setSinDescifrar] = useState(false)
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
   const [guardando, setGuardando] = useState(false)
@@ -200,6 +214,7 @@ export function CredencialForm() {
     setTipo(credencial.tipo ?? 'cuenta')
     setVenceEn(credencial.venceEn ?? '')
     setDispositivos(credencial.dispositivos ?? [])
+    setArchivo(credencial.archivo ?? null)
     void descifrarCredencial(credencial.datosCifrados).then((datos) => {
       if (!vigente) return
       if (datos) {
@@ -236,6 +251,44 @@ export function CredencialForm() {
     setExtras((actuales) => actuales.filter((_, i) => i !== indice))
   }
 
+  // Cifra y sube (o encola sin conexión) el archivo elegido de inmediato,
+  // igual que ya hace FotoEditor con la foto del equipo: no espera a que
+  // se guarde el formulario completo. Si ya había uno, reemplaza el
+  // estado local y cancela su subida pendiente si todavía no se había
+  // confirmado (inofensivo si ya se subió: no borra nada de Storage,
+  // eso solo pasa al eliminar el secreto completo desde su ficha).
+  async function manejarArchivoElegido(evento: ChangeEvent<HTMLInputElement>) {
+    const elegido = evento.target.files?.[0]
+    evento.target.value = ''
+    if (!elegido) return
+
+    setErrorArchivo(null)
+    setSubiendoArchivo(true)
+    try {
+      const cifrado = await cifrarArchivo(elegido)
+      const nombreLimpio = elegido.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+      const referencia = `credenciales/${id}/${Date.now()}-${nombreLimpio}`
+      await subirOEncolarArchivo(referencia, cifrado, elegido.name, BUCKET_ARCHIVOS_BOVEDA)
+      if (archivo) await eliminarArchivoPendiente(archivo.referencia)
+      setArchivo({ referencia, nombre: elegido.name, tipo: elegido.type, tamano: elegido.size })
+    } catch {
+      setErrorArchivo('No se pudo cifrar o subir el archivo. Inténtalo de nuevo.')
+    } finally {
+      setSubiendoArchivo(false)
+    }
+  }
+
+  function quitarArchivo() {
+    if (archivo) void eliminarArchivoPendiente(archivo.referencia)
+    setArchivo(null)
+  }
+
+  function formatearTamano(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
   async function manejarEnvio(evento: FormEvent) {
     evento.preventDefault()
     if (!titulo.trim()) {
@@ -246,7 +299,6 @@ export function CredencialForm() {
     setError(null)
 
     try {
-      const id = credencialId ?? nuevoId()
       const datosCifrados = await cifrarCredencial({
         usuario: usuario.trim(),
         contrasena,
@@ -269,6 +321,7 @@ export function CredencialForm() {
           datosCifrados,
           venceEn: venceEn.trim() === '' ? null : venceEn.trim(),
           dispositivos,
+          archivo,
         },
         motivo.trim(),
       )
@@ -521,6 +574,50 @@ export function CredencialForm() {
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Archivo cifrado (fase P5, tipo "Archivo seguro"): se
+                  cifra y sube al elegirlo, no al guardar el formulario
+                  completo (mismo patrón que la foto del dispositivo). */}
+              {tipo === 'archivo' && (
+                <div className="flex flex-col gap-1.5">
+                  <span className={CLASE_ETIQUETA}>Archivo</span>
+                  {archivo ? (
+                    <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Paperclip size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+                        <span className="min-w-0 truncate text-sm">
+                          {archivo.nombre} · {formatearTamano(archivo.tamano)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={quitarArchivo}
+                        className="shrink-0 text-[12px] font-medium text-noct-neutral-400 underline"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      className={`flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-noct-neutral-700 px-3 py-2.5 text-sm text-noct-neutral-400 ${subiendoArchivo ? 'opacity-60' : ''}`}
+                    >
+                      <Paperclip size={15} aria-hidden />
+                      {subiendoArchivo ? 'Cifrando y subiendo...' : 'Elegir archivo'}
+                      <input
+                        type="file"
+                        className="hidden"
+                        disabled={subiendoArchivo}
+                        onChange={(e) => void manejarArchivoElegido(e)}
+                      />
+                    </label>
+                  )}
+                  {errorArchivo && <p className="text-[12px] text-noct-error">{errorArchivo}</p>}
+                  <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                    Se cifra en este teléfono antes de subirse: ni el servidor ni un técnico sin acceso
+                    a la Bóveda pueden leerlo.
+                  </p>
                 </div>
               )}
 

@@ -96,6 +96,7 @@ function credencial(cambios: Partial<Credencial> & { id: string; titulo: string 
     datosCifrados: '',
     venceEn: null,
     dispositivos: [],
+    archivo: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn: null,

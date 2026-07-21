@@ -230,8 +230,9 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
     }
 
     // La boveda solo entra al indice cuando esta desbloqueada, y
-    // unicamente por titulo y categoria: el contenido cifrado de las
-    // credenciales nunca se indexa.
+    // unicamente por titulo, categoria y el NOMBRE del archivo seguro
+    // (fase P5, nunca su contenido, que ni siquiera esta descifrado
+    // aqui): el contenido cifrado de las credenciales nunca se indexa.
     if (bovedaDesbloqueada) {
       for (const credencial of credenciales ?? []) {
         documentos.push({
@@ -240,7 +241,11 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           titulo: credencial.titulo,
           subtitulo: credencial.categoria,
           ruta: `/boveda/${credencial.id}`,
-          texto: credencial.titulo,
+          // NUNCA portadaRef: credencial.archivo?.referencia, aunque el
+          // tipo MIME sea imagen. Esa referencia apunta al bucket
+          // cifrado (archivos_boveda) y no se puede renderizar directo
+          // como <img>, a diferencia de los adjuntos normales.
+          texto: [credencial.titulo, credencial.archivo?.nombre ?? ''].join(' '),
           portadaRef: '',
         })
       }

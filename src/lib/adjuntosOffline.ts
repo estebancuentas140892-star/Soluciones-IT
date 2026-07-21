@@ -23,15 +23,23 @@ export async function estaDisponibleOffline(referencia: string): Promise<boolean
   return (await cache.match(claveDe(referencia))) !== undefined
 }
 
+// Devuelve el Blob crudo ya cacheado, o null si todavia no esta
+// disponible offline. Separada de obtenerUrlOffline (que la envuelve
+// con URL.createObjectURL) porque el archivo seguro (fase P5) necesita
+// los bytes crudos para descifrarlos, no una URL.
+export async function obtenerBlobOffline(referencia: string): Promise<Blob | null> {
+  if (typeof caches === 'undefined') return null
+  const cache = await caches.open(NOMBRE_CACHE)
+  const respuesta = await cache.match(claveDe(referencia))
+  return respuesta ? await respuesta.blob() : null
+}
+
 // Devuelve una URL local (blob:) para mostrar un adjunto ya
 // descargado, o null si todavia no esta disponible offline. Quien la
 // use debe liberarla con URL.revokeObjectURL al dejar de mostrarla.
 export async function obtenerUrlOffline(referencia: string): Promise<string | null> {
-  if (typeof caches === 'undefined') return null
-  const cache = await caches.open(NOMBRE_CACHE)
-  const respuesta = await cache.match(claveDe(referencia))
-  if (!respuesta) return null
-  return URL.createObjectURL(await respuesta.blob())
+  const blob = await obtenerBlobOffline(referencia)
+  return blob ? URL.createObjectURL(blob) : null
 }
 
 async function fetchYGuardar(referencia: string, urlFirmada: string): Promise<void> {
@@ -69,6 +77,34 @@ export async function cachearSiHaceFalta(referencia: string, urlFirmada: string)
   } catch {
     // Sin conexion o error de red: no es grave.
   }
+}
+
+// Sirve un archivo para verlo/descargarlo ya mismo (fase P5, "Archivo
+// seguro"): cache offline primero (sin tocar la red); si no esta,
+// pide una URL firmada del BUCKET dado (a diferencia del resto de este
+// archivo, que siempre usa 'adjuntos') y hace fetch, cacheando de paso
+// para la proxima vez. A diferencia de cachearSiHaceFalta (que no
+// bloquea la vista, que ya se muestra con la URL firmada), aqui SI hay
+// que esperar el Blob completo: hace falta para descifrarlo antes de
+// poder mostrar u ofrecer nada. Lanza si no hay forma de conseguirlo
+// (sin conexion y sin cache, o el servidor lo rechaza).
+export async function obtenerBlobParaVer(
+  referencia: string,
+  bucket: string,
+  duracionSegundos = 120,
+): Promise<Blob> {
+  const enCache = await obtenerBlobOffline(referencia)
+  if (enCache) return enCache
+
+  if (!supabase) throw new Error('La aplicación aún no está conectada al servidor.')
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(referencia, duracionSegundos)
+  if (error || !data) throw new Error(error?.message ?? 'No se pudo obtener el enlace del archivo.')
+
+  const respuesta = await fetch(data.signedUrl)
+  if (!respuesta.ok) throw new Error('No se pudo descargar el archivo.')
+  const blob = await respuesta.blob()
+  await guardarEnCacheOffline(referencia, blob)
+  return blob
 }
 
 async function descargarUno(referencia: string): Promise<void> {

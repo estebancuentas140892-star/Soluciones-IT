@@ -35,6 +35,52 @@ describe('encolarArchivo', () => {
   })
 })
 
+// Bucket parametrizable (fase P5, "Archivo seguro"): la Boveda sube a
+// un bucket propio y privado (archivos_boveda), distinto del bucket
+// por defecto de fotos/manuales (adjuntos). Sin pasar `bucket` explicito
+// nada cambia para los adjuntos normales (regresion).
+describe('bucket parametrizable', () => {
+  it('sin bucket explicito, encolarArchivo sigue guardando "adjuntos" (regresión)', async () => {
+    await encolarArchivo('dispositivos/d1/foto.jpg', archivoDePrueba(), 'foto.jpg')
+    const guardado = await db.archivosPendientes.get('dispositivos/d1/foto.jpg')
+    expect(guardado?.bucket).toBe('adjuntos')
+  })
+
+  it('con un bucket explicito, lo guarda y lo usa al procesar la cola', async () => {
+    await encolarArchivo('credenciales/c1/licencia.pdf', archivoDePrueba(), 'licencia.pdf', 'archivos_boveda')
+    const guardado = await db.archivosPendientes.get('credenciales/c1/licencia.pdf')
+    expect(guardado?.bucket).toBe('archivos_boveda')
+
+    const bucketsUsados: string[] = []
+    await procesarArchivosPendientes(async (_referencia, _contenido, _tipo, bucket) => {
+      bucketsUsados.push(bucket)
+      return null
+    })
+    expect(bucketsUsados).toEqual(['archivos_boveda'])
+  })
+
+  it('una fila vieja sin bucket (guardada antes de este campo) se procesa como "adjuntos"', async () => {
+    // Simula una fila de antes de la fase P5, que nunca tuvo `bucket`
+    // (put directo a la tabla, sin pasar por encolarArchivo).
+    await db.archivosPendientes.put({
+      referencia: 'ref-vieja',
+      contenido: archivoDePrueba(),
+      tipo: 'image/jpeg',
+      nombre: 'a.jpg',
+      creadoEn: new Date().toISOString(),
+      error: null,
+      intentos: 0,
+    })
+
+    const bucketsUsados: string[] = []
+    await procesarArchivosPendientes(async (_referencia, _contenido, _tipo, bucket) => {
+      bucketsUsados.push(bucket)
+      return null
+    })
+    expect(bucketsUsados).toEqual(['adjuntos'])
+  })
+})
+
 describe('eliminarArchivoPendiente', () => {
   it('saca el archivo de la cola (por ejemplo, al eliminar su adjunto)', async () => {
     await encolarArchivo('ref-1', archivoDePrueba(), 'a.jpg')

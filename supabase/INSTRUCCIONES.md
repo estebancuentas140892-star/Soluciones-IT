@@ -24,6 +24,20 @@ Punto importante de seguridad: `campos_protegidos` lleva **la misma RLS que `cre
 
 Para verificar: en **Table Editor** debe aparecer `campos_protegidos`, y en **Authentication > Policies** debe tener la política `campos_protegidos_acceso`.
 
+### Actualización del 2026-07-21 (grupo de esquema P5: archivo seguro cifrado)
+
+Vuelve a ejecutar `schema.sql` completo (idempotente) para incorporar el grupo P5, que agrega:
+
+- La columna `archivo` (jsonb) en `credenciales`: metadatos EN CLARO del archivo adjunto de un secreto tipo "Archivo seguro" (referencia, nombre, tipo, tamaño). El contenido real del archivo va cifrado y vive en Storage, nunca en esta columna.
+- El valor `'descargo'` en el CHECK de `accesos_boveda.accion` (auditoría de descargar y descifrar un archivo seguro).
+- Un bucket de Storage **nuevo y privado**: `archivos_boveda`, con sus 4 políticas.
+
+Punto importante de seguridad: a diferencia del bucket `adjuntos` (que cualquier técnico autenticado puede leer, sin exigir ningún permiso), las 4 políticas de `archivos_boveda` exigen `puede_ver_boveda()`, igual que las tablas de la bóveda. Es la razón de que sea un bucket propio y no el mismo `adjuntos`: como desde el 2026-07-17 la contraseña maestra la conoce todo el equipo, subir ahí un archivo cifrado sería una regresión de seguridad silenciosa (cualquiera sin permiso de bóveda podría descargarlo y, sabiendo la contraseña compartida, descifrarlo).
+
+Para verificar: en **Table Editor**, la tabla `credenciales` debe tener la columna `archivo`; en **Storage** debe aparecer el bucket `archivos_boveda`; en **Authentication > Policies** deben aparecer las 4 políticas `archivos_boveda_storage_*`.
+
+Nota para quien ejecute `scripts/huerfanos-storage.mjs` de ahora en adelante: como el bucket nuevo exige `puede_ver_boveda()`, la cuenta técnica que use el script para iniciar sesión debe tener ese permiso, o el listado de `archivos_boveda` fallará por RLS (el resto del script sigue funcionando igual).
+
 ## 2. Crear los 5 usuarios del equipo
 
 1. En el menú lateral, abrir **Authentication**, pestaña **Users**.

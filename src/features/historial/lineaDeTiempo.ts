@@ -35,11 +35,18 @@ export const ETIQUETA_ACCION_BOVEDA: Record<AccesoBoveda['accion'], string> = {
   copio_contrasena: 'Copió la contraseña',
   modifico: 'Modificó el secreto',
   elimino: 'Eliminó el secreto',
+  // Descargar un archivo seguro (fase P5) implica descifrarlo, mismo
+  // peso de auditoria que revelar una contraseña.
+  descargo: 'Descargó el archivo',
 }
 
 // Las mismas acciones, contadas sobre un campo protegido de un equipo
 // (grupo P1): ahi no se consulta "la ficha" ni se modifica "el
-// secreto" de la boveda, sino un dato concreto del dispositivo.
+// secreto" de la boveda, sino un dato concreto del dispositivo. Un
+// campo protegido no tiene archivo adjunto (eso es exclusivo de los
+// secretos tipo 'archivo' de la Boveda), asi que 'descargo' nunca
+// deberia aparecer aqui en la practica; se completa solo para que el
+// Record siga siendo exhaustivo.
 const ETIQUETA_ACCION_CAMPO: Record<AccesoBoveda['accion'], string> = {
   consulto: 'Consultó el dato protegido',
   mostro: 'Mostró el valor',
@@ -47,6 +54,7 @@ const ETIQUETA_ACCION_CAMPO: Record<AccesoBoveda['accion'], string> = {
   copio_contrasena: 'Copió el valor',
   modifico: 'Modificó el dato protegido',
   elimino: 'Eliminó el dato protegido',
+  descargo: 'Descargó el archivo',
 }
 
 // Etiqueta de una entrada de auditoria segun sobre que se hizo. Las

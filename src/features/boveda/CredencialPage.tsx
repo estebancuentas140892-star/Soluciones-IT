@@ -11,24 +11,29 @@ import {
   Check,
   ClockCounterClockwise,
   Copy,
+  DownloadSimple,
   Eye,
   EyeSlash,
   Monitor,
+  Paperclip,
   PencilSimple,
   TrashSimple,
   type IconoProps,
 } from '../../components/iconos'
 import { BTN_ICONO_PELIGRO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useGrafo } from '../../components/useGrafo'
+import { obtenerBlobParaVer } from '../../lib/adjuntosOffline'
 import { db, type AccesoBoveda, type Dispositivo } from '../../lib/db'
 import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { textoVivo } from '../../lib/referencia'
 import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
+import { supabase } from '../../lib/supabase'
 import { combinarEventos, etiquetaAccesoBoveda, type EventoLinea } from '../historial/lineaDeTiempo'
 import { descripcionEntrada } from '../historial/textoHistorial'
+import { BUCKET_ARCHIVOS_BOVEDA, DURACION_URL_ARCHIVO_SEGURO_SEGUNDOS } from './archivoSeguro'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
-import { descifrarCredencial, type DatosCredencial } from './sesionBoveda'
+import { descifrarArchivo, descifrarCredencial, type DatosCredencial } from './sesionBoveda'
 
 // Ficha de una credencial re-autorizada al sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Ficha de Credencial.dc.html,
@@ -75,6 +80,16 @@ const ICONO_ACCION: Record<AccesoBoveda['accion'], (props: IconoProps) => React.
   copio_contrasena: Copy,
   modifico: PencilSimple,
   elimino: TrashSimple,
+  descargo: DownloadSimple,
+}
+
+// "240 KB" / "1.4 MB": mismo criterio de duplicar helpers pequeños de
+// presentación que ya usan fechaCorta/fechaHoraCorta en vez de
+// compartir un módulo (ver también CredencialForm.tsx).
+function formatearTamano(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 export function CredencialPage() {
@@ -112,6 +127,10 @@ export function CredencialPage() {
   const [revelados, setRevelados] = useState<Set<string>>(new Set())
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
   const [verTodaActividad, setVerTodaActividad] = useState(false)
+  // Archivo cifrado del secreto (fase P5): descarga bajo demanda, nunca
+  // se descifra ni se guarda en claro hasta que el técnico lo pide.
+  const [descargandoArchivo, setDescargandoArchivo] = useState(false)
+  const [errorArchivo, setErrorArchivo] = useState<string | null>(null)
 
   // Impacto antes de eliminar (fase N1): procedimientos que muestran
   // esta credencial en alguno de sus pasos o tareas y quedarían sin ella.
@@ -186,11 +205,51 @@ export function CredencialPage() {
   // Copia local: TypeScript no conserva el descarte de null/undefined
   // de arriba dentro de las funciones declaradas mas abajo.
   const tituloActual = credencial.titulo
+  const archivoActual = credencial.archivo
 
   async function eliminar() {
     await registrarAccesoBoveda({ credencialId, credencialTitulo: tituloActual, accion: 'elimino' })
     await eliminarRegistro('credenciales', credencialId)
+    // El archivo cifrado solo se borra de Storage AQUI, al eliminar el
+    // secreto completo (una acción ya comprometida y confirmada con la
+    // contraseña maestra): editar o quitar el archivo desde el
+    // formulario nunca toca Storage, solo el estado local (ver
+    // CredencialForm.tsx). Best effort, igual que Adjuntos.tsx.
+    if (archivoActual && supabase && navigator.onLine) {
+      await supabase.storage.from(BUCKET_ARCHIVOS_BOVEDA).remove([archivoActual.referencia])
+    }
     navigate('/boveda')
+  }
+
+  // Descifra y descarga el archivo seguro bajo demanda: nunca deja una
+  // URL descifrada viva, se revoca apenas se dispara la descarga.
+  async function descargarArchivo() {
+    if (!archivoActual) return
+    setErrorArchivo(null)
+    setDescargandoArchivo(true)
+    try {
+      const cifrado = await obtenerBlobParaVer(
+        archivoActual.referencia,
+        BUCKET_ARCHIVOS_BOVEDA,
+        DURACION_URL_ARCHIVO_SEGURO_SEGUNDOS,
+      )
+      const descifrado = await descifrarArchivo(cifrado, archivoActual.tipo)
+      if (!descifrado) {
+        setErrorArchivo('No se pudo descifrar con la contraseña maestra actual.')
+        return
+      }
+      const url = URL.createObjectURL(descifrado)
+      const enlace = document.createElement('a')
+      enlace.href = url
+      enlace.download = archivoActual.nombre
+      enlace.click()
+      URL.revokeObjectURL(url)
+      void registrarAccesoBoveda({ credencialId, credencialTitulo: tituloActual, accion: 'descargo' })
+    } catch {
+      setErrorArchivo('No se pudo descargar el archivo. Revisa tu conexión.')
+    } finally {
+      setDescargandoArchivo(false)
+    }
   }
 
   // Revelar u ocultar un campo. Solo la contraseña genera entrada de
@@ -241,7 +300,7 @@ export function CredencialPage() {
   const campos = camposPosibles.filter((campo) => campo.valor)
 
   const url = datos?.url ?? ''
-  const sinContenido = campos.length === 0 && !url
+  const sinContenido = campos.length === 0 && !url && !credencial.archivo
   const metaLinea = [credencial.categoria, `modificada el ${fechaHoraCorta(credencial.updatedAt)}`]
     .filter(Boolean)
     .join(' · ')
@@ -314,7 +373,17 @@ export function CredencialPage() {
                   />
                 ))}
                 {url && <FilaUrl url={url} />}
+                {credencial.archivo && (
+                  <FilaArchivo
+                    archivo={credencial.archivo}
+                    descargando={descargandoArchivo}
+                    onDescargar={() => void descargarArchivo()}
+                  />
+                )}
               </div>
+            )}
+            {errorArchivo && (
+              <p className="mt-2.5 text-[12.5px] text-noct-error">{errorArchivo}</p>
             )}
             {datos.notas && (
               <p className="mt-2.5 whitespace-pre-wrap px-0.5 text-[13px] leading-[1.55] text-noct-neutral-300">
@@ -509,6 +578,39 @@ function FilaUrl({ url }: { url: string }) {
         <span className="min-w-0 flex-1 truncate font-mono text-[13.5px]">{url}</span>
       )}
       <ArrowSquareOut size={15} className="w-9 shrink-0 text-noct-neutral-600" aria-hidden />
+    </div>
+  )
+}
+
+// Fila del archivo seguro (fase P5): nombre + tamaño y un botón
+// "Descargar" que descifra bajo demanda. A diferencia de FilaSecreto no
+// hay nada que mostrar/ocultar aquí (el contenido nunca llega a la
+// pantalla sin pasar por la descarga): el candado está en el propio
+// verbo de la acción, no en un ojo.
+function FilaArchivo({
+  archivo,
+  descargando,
+  onDescargar,
+}: {
+  archivo: { nombre: string; tamano: number }
+  descargando: boolean
+  onDescargar: () => void
+}) {
+  return (
+    <div className="flex min-h-12 items-center gap-2.5 py-1.5">
+      <Paperclip size={15} className="w-24 shrink-0 text-noct-neutral-500" aria-hidden />
+      <span className="min-w-0 flex-1 truncate text-[13.5px]">
+        {archivo.nombre} <span className="text-noct-neutral-500">· {formatearTamano(archivo.tamano)}</span>
+      </span>
+      <button
+        type="button"
+        onClick={onDescargar}
+        disabled={descargando}
+        aria-label={`Descargar ${archivo.nombre}`}
+        className="flex min-h-11 w-9 shrink-0 items-center justify-center rounded-md text-noct-neutral-500 transition-colors hover:bg-noct-text/5 hover:text-noct-text disabled:opacity-50"
+      >
+        <DownloadSimple size={16} aria-hidden />
+      </button>
     </div>
   )
 }

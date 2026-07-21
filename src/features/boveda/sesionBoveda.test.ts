@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, ID_VERIFICADOR } from '../../lib/db'
-import { cifrarTexto, derivarClave, ITERACIONES_PBKDF2, nuevaSal } from '../../lib/crypto'
+import { cifrarBinario, cifrarTexto, derivarClave, ITERACIONES_PBKDF2, nuevaSal } from '../../lib/crypto'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import {
   bloquear,
   bovedaDesbloqueada,
+  cifrarArchivo,
   cifrarCredencial,
   cifrarValor,
+  descifrarArchivo,
   descifrarCredencial,
   descifrarValor,
   desbloquear,
@@ -46,6 +48,7 @@ async function guardarCredencial(titulo: string, datosCifrados: string): Promise
     datosCifrados,
     venceEn: null,
     dispositivos: [],
+    archivo: null,
   })
 }
 
@@ -281,6 +284,67 @@ describe('cifrarValor / descifrarValor (campos protegidos del dispositivo)', () 
     await desbloquear('maestra')
 
     expect(await descifrarValor('esto-no-es-un-bloque')).toBeNull()
+  })
+})
+
+// Archivo entero (fase P5, "Archivo seguro"): mismo criterio que
+// cifrarValor/descifrarValor pero sobre bytes binarios, con el formato
+// autocontenido de crypto.ts en vez del bloque de texto.
+describe('cifrarArchivo / descifrarArchivo (Archivo seguro)', () => {
+  it('ida y vuelta con la boveda abierta, conservando el tipo MIME', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+    const original = new File(['contenido secreto'], 'clave.txt', { type: 'text/plain' })
+
+    const cifrado = await cifrarArchivo(original)
+    const descifrado = await descifrarArchivo(cifrado, 'text/plain')
+    expect(descifrado).not.toBeNull()
+    expect(descifrado?.type).toBe('text/plain')
+    expect(await descifrado?.text()).toBe('contenido secreto')
+  })
+
+  it('un archivo de 0 bytes cifra y descifra igual', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+    const vacio = new File([], 'vacio.bin')
+
+    const cifrado = await cifrarArchivo(vacio)
+    const descifrado = await descifrarArchivo(cifrado, 'application/octet-stream')
+    expect(await descifrado?.arrayBuffer()).toEqual(new ArrayBuffer(0))
+  })
+
+  it('con la boveda bloqueada no se puede cifrar ni descifrar', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+    const cifrado = await cifrarArchivo(new File(['x'], 'x.txt'))
+
+    bloquear()
+
+    expect(await descifrarArchivo(cifrado, 'text/plain')).toBeNull()
+    await expect(cifrarArchivo(new File(['y'], 'y.txt'))).rejects.toThrow()
+  })
+
+  it('un archivo cifrado con otra contraseña maestra queda ilegible', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+
+    const saltAjeno = nuevaSal()
+    const claveAjena = await derivarClave('otra-contrasena', saltAjeno, ITERACIONES_PBKDF2)
+    const bytesCifradoAjeno = await cifrarBinario(
+      claveAjena,
+      saltAjeno,
+      ITERACIONES_PBKDF2,
+      new TextEncoder().encode('secreto ajeno'),
+    )
+
+    expect(await descifrarArchivo(new Blob([bytesCifradoAjeno]), 'text/plain')).toBeNull()
+  })
+
+  it('un blob con formato invalido devuelve null en vez de romper', async () => {
+    await sembrarVerificador('maestra')
+    await desbloquear('maestra')
+
+    expect(await descifrarArchivo(new Blob(['esto no es un bloque binario valido']), 'text/plain')).toBeNull()
   })
 })
 

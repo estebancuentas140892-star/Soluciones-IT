@@ -459,6 +459,21 @@ alter table public.credenciales drop constraint if exists credenciales_tipo_chec
 alter table public.credenciales add constraint credenciales_tipo_check
   check (tipo in ('cuenta', 'red', 'llave', 'archivo', 'nota'));
 
+-- Archivo cifrado de un secreto tipo 'archivo' (fase P5, "Archivo
+-- seguro"). jsonb EN CLARO (referencia, nombre, tipo MIME, tamaño):
+-- mismo criterio que dispositivos.foto o campos_protegidos.nombre/tipo,
+-- el contenido real vive cifrado en el bucket privado archivos_boveda
+-- de Storage (seccion 4 mas abajo), nunca en esta columna.
+alter table public.credenciales add column if not exists archivo jsonb;
+
+-- 'descargo' (fase P5): descifrar y descargar un archivo seguro. Es
+-- una accion propia porque ese tipo de secreto no tiene contraseña
+-- que "mostrar"; reusar 'mostro' dejaria una etiqueta falsa en la
+-- auditoria inmutable.
+alter table public.accesos_boveda drop constraint if exists accesos_boveda_accion_check;
+alter table public.accesos_boveda add constraint accesos_boveda_accion_check
+  check (accion in ('consulto', 'mostro', 'copio_usuario', 'copio_contrasena', 'modifico', 'elimino', 'descargo'));
+
 -- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
@@ -728,6 +743,37 @@ create policy adjuntos_storage_edicion on storage.objects
 drop policy if exists adjuntos_storage_borrado on storage.objects;
 create policy adjuntos_storage_borrado on storage.objects
   for delete to authenticated using (bucket_id = 'adjuntos');
+
+-- Bucket PROPIO y privado para los archivos seguros de la boveda (fase
+-- P5), distinto del bucket 'adjuntos' de arriba. adjuntos_storage_lectura
+-- deja leer a CUALQUIER autenticado sin exigir ningun permiso; subir ahi
+-- un archivo cifrado seria una regresion de seguridad silenciosa, porque
+-- desde el 2026-07-17 la contraseña maestra la conoce todo el equipo
+-- (autoriza las eliminaciones sensibles), asi que un tecnico sin permiso
+-- de boveda podria descargarlo Y descifrarlo. Por eso archivos_boveda
+-- exige puede_ver_boveda() en sus 4 politicas, igual que las tablas de
+-- la boveda (credenciales, campos_protegidos).
+insert into storage.buckets (id, name, public)
+values ('archivos_boveda', 'archivos_boveda', false)
+on conflict (id) do nothing;
+
+drop policy if exists archivos_boveda_storage_lectura on storage.objects;
+create policy archivos_boveda_storage_lectura on storage.objects
+  for select to authenticated using (bucket_id = 'archivos_boveda' and public.puede_ver_boveda());
+
+drop policy if exists archivos_boveda_storage_subida on storage.objects;
+create policy archivos_boveda_storage_subida on storage.objects
+  for insert to authenticated with check (bucket_id = 'archivos_boveda' and public.puede_ver_boveda());
+
+drop policy if exists archivos_boveda_storage_edicion on storage.objects;
+create policy archivos_boveda_storage_edicion on storage.objects
+  for update to authenticated
+  using (bucket_id = 'archivos_boveda' and public.puede_ver_boveda())
+  with check (bucket_id = 'archivos_boveda' and public.puede_ver_boveda());
+
+drop policy if exists archivos_boveda_storage_borrado on storage.objects;
+create policy archivos_boveda_storage_borrado on storage.objects
+  for delete to authenticated using (bucket_id = 'archivos_boveda' and public.puede_ver_boveda());
 
 -- ----------------------------------------------------------------
 -- 5. Datos iniciales

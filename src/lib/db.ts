@@ -357,6 +357,24 @@ export interface Conexion {
 // siempre se lee con `?? 'cuenta'`.
 export type TipoSecreto = 'cuenta' | 'red' | 'llave' | 'archivo' | 'nota'
 
+// Archivo adjunto de un secreto tipo 'archivo' (fase P5, "Archivo
+// seguro"). Metadatos EN CLARO (mismo criterio que
+// CampoProtegido.nombre/tipo o Dispositivo.foto): saber que hay un
+// archivo llamado "licencia.pdf" de 240 KB no es el secreto, permite
+// listarlo sin desbloquear la boveda. El contenido real vive cifrado en
+// el bucket privado `archivos_boveda` de Supabase Storage (RLS
+// puede_ver_boveda, distinto del bucket `adjuntos` de fotos/manuales,
+// que cualquier autenticado puede leer); `referencia` apunta ahi.
+export interface ArchivoSeguro {
+  referencia: string
+  nombre: string
+  tipo: string
+  // Tamano del archivo ORIGINAL en bytes (no del blob cifrado, un poco
+  // mas grande por la cabecera y el tag de GCM): lo que el tecnico
+  // espera ver antes de descargar y descifrar.
+  tamano: number
+}
+
 export interface Credencial {
   id: string
   titulo: string
@@ -374,6 +392,9 @@ export interface Credencial {
   // sigue en datosCifrados. Habilita el inverso "credenciales de este
   // equipo" en la ficha del dispositivo sin desbloquear la boveda.
   dispositivos: DispositivoAfectado[]
+  // Archivo cifrado de un secreto tipo 'archivo' (fase P5), o null.
+  // Puede llegar null de una base que aun no tiene la columna.
+  archivo: ArchivoSeguro | null
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -608,7 +629,18 @@ export interface HistorialEntrada {
 // Que hizo el tecnico con una credencial (fase B3, auditoria de la
 // boveda): consulto la ficha, mostro la contrasena oculta, copio el
 // usuario o la contrasena, o la modifico/elimino.
-export type AccionBoveda = 'consulto' | 'mostro' | 'copio_usuario' | 'copio_contrasena' | 'modifico' | 'elimino'
+// 'descargo' (fase P5): descifrar y descargar un archivo seguro. Es una
+// accion propia porque un secreto tipo 'archivo' no tiene contraseña
+// que "mostrar"; reusar 'mostro' dejaria una etiqueta falsa en la
+// auditoria y no se podria distinguir de revelar una contraseña.
+export type AccionBoveda =
+  | 'consulto'
+  | 'mostro'
+  | 'copio_usuario'
+  | 'copio_contrasena'
+  | 'modifico'
+  | 'elimino'
+  | 'descargo'
 
 // Registro inmutable de accesos a la boveda, sincronizado con el
 // equipo (solo se insertan filas, como el historial). credencialTitulo
@@ -687,6 +719,10 @@ export interface ArchivoPendiente {
   contenido: Blob
   tipo: string
   nombre: string
+  // Bucket de Storage al que subir (fase P5): opcional y leido con
+  // `?? 'adjuntos'` para las filas guardadas antes de que existiera
+  // este campo, que siempre fueron a ese bucket.
+  bucket?: string
   creadoEn: string
   error: string | null
   intentos: number

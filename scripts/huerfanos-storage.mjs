@@ -1,15 +1,18 @@
 #!/usr/bin/env node
-// Reporte de solo lectura: compara el bucket de Storage 'adjuntos' contra
-// las referencias reales que la app conoce (tabla adjuntos + procedimiento
-// de cada articulo + foto de cada dispositivo) y lista los archivos que
-// sobran, sin borrar nada. Ver tarea 101 en TAREAS_ARCHIVO.md.
+// Reporte de solo lectura: compara los buckets de Storage contra las
+// referencias reales que la app conoce y lista los archivos que sobran,
+// sin borrar nada. Ver tarea 101 en TAREAS_ARCHIVO.md (bucket 'adjuntos')
+// y la fase P5 (bucket 'archivos_boveda', archivos seguros cifrados).
 //
 // Este script NUNCA llama a storage.remove(): solo lee y reporta. Decidir
 // si vale la pena borrar los huerfanos (y borrarlos, a mano o en un script
 // aparte) es un paso del usuario, con el reporte en la mano.
 //
 // Variables de entorno requeridas (las mismas credenciales de cualquier
-// tecnico del equipo, o las del usuario de respaldo de RESPALDO.md):
+// tecnico del equipo, o las del usuario de respaldo de RESPALDO.md). Desde
+// la fase P5, la cuenta usada aqui necesita ademas el permiso
+// puede_ver_boveda: sin el, la RLS del bucket archivos_boveda y de la
+// tabla credenciales no deja leer nada y esa mitad del reporte sale vacia:
 //   SUPABASE_URL
 //   SUPABASE_ANON_KEY
 //   SUPABASE_EMAIL
@@ -19,7 +22,11 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const BUCKET = 'adjuntos'
+const BUCKET_ADJUNTOS = 'adjuntos'
+// Bucket privado de archivos seguros cifrados (fase P5): sus politicas de
+// Storage exigen puede_ver_boveda(), a diferencia de BUCKET_ADJUNTOS que
+// cualquier autenticado puede leer.
+const BUCKET_ARCHIVOS_BOVEDA = 'archivos_boveda'
 const TAMANO_PAGINA = 1000
 
 function variableRequerida(nombre) {
@@ -79,15 +86,15 @@ function referenciasDeProcedimiento(procedimiento) {
   return referencias
 }
 
-// Todas las referencias de Storage que la app conoce hoy: la tabla
-// `adjuntos`, el procedimiento de cada articulo y la foto de cada
+// Todas las referencias del bucket 'adjuntos' que la app conoce hoy: la
+// tabla `adjuntos`, el procedimiento de cada articulo y la foto de cada
 // dispositivo. Esto ultimo es MAS completo que `referenciasParaOffline` de
 // src/lib/adjuntosOffline.ts, que no incluye `dispositivos.foto` (hueco
 // anotado aparte en TAREAS.md, tarea 114: ese hueco significa que las fotos
 // de dispositivo hoy no entran al cache de "Descargar todo para offline").
 // Solo cuenta filas vivas (eliminado_en null): una fila borrada logicamente
 // ya no es un uso real, mismo criterio que el resto de la app.
-async function referenciasReales(supabase) {
+async function referenciasRealesAdjuntos(supabase) {
   const referencias = new Set()
 
   const adjuntos = await todasLasFilas(supabase, 'adjuntos', 'referencia,eliminado_en')
@@ -109,25 +116,39 @@ async function referenciasReales(supabase) {
   return referencias
 }
 
-// Recorre el bucket completo (Storage no tiene un listado recursivo nativo:
-// list() solo da un nivel por llamada). Una entrada sin `metadata` es una
-// carpeta (se explora); con `metadata` es un archivo (se reporta con su
-// ruta completa y su tamaño).
-async function archivosDelBucket(supabase, prefijo = '') {
+// Referencias del bucket 'archivos_boveda' (fase P5): solo la columna
+// `archivo` de `credenciales`, de secretos vivos. Requiere que la cuenta
+// del script tenga puede_ver_boveda (ver el encabezado del archivo); sin
+// ese permiso la RLS de la tabla devuelve cero filas y el reporte de este
+// bucket sale vacio, en vez de fallar.
+async function referenciasRealesArchivosBoveda(supabase) {
+  const referencias = new Set()
+  const credenciales = await todasLasFilas(supabase, 'credenciales', 'archivo,eliminado_en')
+  for (const fila of credenciales) {
+    if (!fila.eliminado_en && fila.archivo?.referencia) referencias.add(fila.archivo.referencia)
+  }
+  return referencias
+}
+
+// Recorre el bucket dado por completo (Storage no tiene un listado
+// recursivo nativo: list() solo da un nivel por llamada). Una entrada sin
+// `metadata` es una carpeta (se explora); con `metadata` es un archivo (se
+// reporta con su ruta completa y su tamaño).
+async function archivosDelBucket(supabase, bucket, prefijo = '') {
   const archivos = []
   let desde = 0
   for (;;) {
     const { data, error } = await supabase.storage
-      .from(BUCKET)
+      .from(bucket)
       .list(prefijo, { limit: TAMANO_PAGINA, offset: desde, sortBy: { column: 'name', order: 'asc' } })
-    if (error) throw new Error(`Error listando "${prefijo}" en el bucket ${BUCKET}: ${error.message}`)
+    if (error) throw new Error(`Error listando "${prefijo}" en el bucket ${bucket}: ${error.message}`)
 
     for (const entrada of data) {
       const ruta = prefijo ? `${prefijo}/${entrada.name}` : entrada.name
       if (entrada.metadata) {
         archivos.push({ ruta, bytes: entrada.metadata.size ?? 0 })
       } else {
-        archivos.push(...(await archivosDelBucket(supabase, ruta)))
+        archivos.push(...(await archivosDelBucket(supabase, bucket, ruta)))
       }
     }
 
@@ -158,26 +179,35 @@ async function main() {
     throw new Error(`No se pudo iniciar sesión: ${errorSesion.message}`)
   }
 
-  console.log('Leyendo referencias reales (adjuntos, procedimientos, fotos de dispositivo)...')
-  const referencias = await referenciasReales(supabase)
-  console.log(`  ${referencias.size} referencias encontradas.`)
+  const buckets = [
+    { bucket: BUCKET_ADJUNTOS, obtenerReferencias: referenciasRealesAdjuntos, etiqueta: 'adjuntos, procedimientos, fotos de dispositivo' },
+    { bucket: BUCKET_ARCHIVOS_BOVEDA, obtenerReferencias: referenciasRealesArchivosBoveda, etiqueta: 'archivos seguros de la Bóveda' },
+  ]
 
-  console.log(`Listando el bucket "${BUCKET}" (puede tardar según la cantidad de archivos)...`)
-  const archivos = await archivosDelBucket(supabase)
-  console.log(`  ${archivos.length} archivos en Storage.`)
-
-  const huerfanos = archivos.filter((a) => !referencias.has(a.ruta))
-  const bytesHuerfanos = huerfanos.reduce((total, a) => total + a.bytes, 0)
-
-  console.log('')
-  console.log('=== Reporte (solo lectura, no se borró nada) ===')
-  if (huerfanos.length === 0) {
-    console.log('Sin archivos huérfanos: todo lo que hay en Storage tiene al menos una fila que lo usa.')
-  } else {
-    console.log(`${huerfanos.length} archivo(s) huérfano(s), ${formatoBytes(bytesHuerfanos)} en total:`)
-    for (const h of huerfanos) console.log(`  ${h.ruta}  (${formatoBytes(h.bytes)})`)
+  for (const { bucket, obtenerReferencias, etiqueta } of buckets) {
     console.log('')
-    console.log('Ningún archivo fue borrado. Decidir si vale la pena limpiarlos es un paso aparte.')
+    console.log(`--- Bucket "${bucket}" ---`)
+    console.log(`Leyendo referencias reales (${etiqueta})...`)
+    const referencias = await obtenerReferencias(supabase)
+    console.log(`  ${referencias.size} referencias encontradas.`)
+
+    console.log(`Listando el bucket "${bucket}" (puede tardar según la cantidad de archivos)...`)
+    const archivos = await archivosDelBucket(supabase, bucket)
+    console.log(`  ${archivos.length} archivos en Storage.`)
+
+    const huerfanos = archivos.filter((a) => !referencias.has(a.ruta))
+    const bytesHuerfanos = huerfanos.reduce((total, a) => total + a.bytes, 0)
+
+    console.log('')
+    console.log(`=== Reporte de "${bucket}" (solo lectura, no se borró nada) ===`)
+    if (huerfanos.length === 0) {
+      console.log('Sin archivos huérfanos: todo lo que hay en Storage tiene al menos una fila que lo usa.')
+    } else {
+      console.log(`${huerfanos.length} archivo(s) huérfano(s), ${formatoBytes(bytesHuerfanos)} en total:`)
+      for (const h of huerfanos) console.log(`  ${h.ruta}  (${formatoBytes(h.bytes)})`)
+      console.log('')
+      console.log('Ningún archivo fue borrado. Decidir si vale la pena limpiarlos es un paso aparte.')
+    }
   }
 
   await supabase.auth.signOut()
