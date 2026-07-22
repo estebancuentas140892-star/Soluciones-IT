@@ -339,15 +339,20 @@ export function buscar(indice: MiniSearch<DocumentoBusqueda>, consulta: string):
   }))
 }
 
-// Articulos con titulo parecido al texto dado, para avisar antes de
-// crear un duplicado ("Ya existe 'Conectar impresora'... ¿abrirlo en
-// lugar de crear uno nuevo?"). Solo cuenta las coincidencias en el
-// TITULO (no en el contenido): es lo que define que dos articulos
-// traten de lo mismo. Devuelve como maximo `limite` resultados.
-export function buscarArticulosSimilares(
+// Entradas con titulo parecido al texto dado, para avisar antes de
+// crear una duplicada ("Ya existe 'Conectar impresora'... ¿abrirlo en
+// lugar de crear una nueva?"). Solo cuenta las coincidencias en el
+// TITULO (no en el contenido): es lo que define que dos entradas
+// traten de lo mismo. `tipos` acota que tipos de resultado cuentan
+// (hallazgo K5 de AUDITORIA_FLUJOS_TI.md: un `problema_frecuente` y un
+// `diagnostico` del mismo problema son dos entradas al mismo
+// conocimiento, y el aviso de duplicado solo cruzaba articulos con
+// articulos). Devuelve como maximo `limite` resultados.
+export function buscarSimilares(
   indice: MiniSearch<DocumentoBusqueda>,
   titulo: string,
-  excluirArticuloId: string,
+  excluirId: string,
+  tipos: TipoResultado[],
   limite = 3,
 ): ResultadoBusqueda[] {
   const texto = titulo.trim()
@@ -356,11 +361,14 @@ export function buscarArticulosSimilares(
     .search(expandirConsulta(texto))
     .filter(
       (resultado) =>
-        resultado.tipo === 'articulo' &&
-        String(resultado.id) !== `articulo:${excluirArticuloId}` &&
+        tipos.includes(resultado.tipo as TipoResultado) &&
+        // El id propio se excluye por su tipo real (no cualquier
+        // articulo/diagnostico que comparta el mismo uuid al azar):
+        // un articulo y un diagnostico nunca comparten espacio de ids.
+        String(resultado.id) !== `${resultado.tipo}:${excluirId}` &&
         // `match` mapea cada termino encontrado a los campos donde
         // aparecio: exigir el titulo descarta coincidencias que solo
-        // estan en el cuerpo del articulo.
+        // estan en el cuerpo de la entrada.
         Object.values(resultado.match).some((campos) => campos.includes('titulo')),
     )
     .slice(0, limite)
@@ -372,4 +380,13 @@ export function buscarArticulosSimilares(
       ruta: resultado.ruta as string,
       portadaRef: (resultado.portadaRef as string) ?? '',
     }))
+}
+
+export function buscarArticulosSimilares(
+  indice: MiniSearch<DocumentoBusqueda>,
+  titulo: string,
+  excluirArticuloId: string,
+  limite = 3,
+): ResultadoBusqueda[] {
+  return buscarSimilares(indice, titulo, excluirArticuloId, ['articulo'], limite)
 }

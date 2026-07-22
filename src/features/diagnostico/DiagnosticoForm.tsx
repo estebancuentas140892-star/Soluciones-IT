@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db, type Articulo, type NodoDiagnostico } from '../../lib/db'
 import {
   crearNodo,
@@ -25,6 +25,7 @@ import {
   DotsThreeOutline,
   FlagCheckered,
   FloppyDisk,
+  Info,
   Play,
   Plus,
   Signpost,
@@ -44,6 +45,7 @@ import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { Historial } from '../historial/Historial'
 import { PruebaDiagnostico } from './PruebaDiagnostico'
+import { buscarSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 
@@ -63,6 +65,7 @@ export function DiagnosticoForm() {
   const { diagnosticoId } = useParams()
   const navigate = useNavigate()
   const esEdicion = Boolean(diagnosticoId)
+  const [searchParams] = useSearchParams()
 
   const [id] = useState(() => diagnosticoId ?? nuevoId())
   const diagnostico = useLiveQuery(
@@ -71,7 +74,12 @@ export function DiagnosticoForm() {
   )
 
   const [titulo, setTitulo] = useState('')
-  const [categoriaId, setCategoriaId] = useState('')
+  // Hallazgo K4 de AUDITORIA_FLUJOS_TI.md: llegar con ?categoria=<id>
+  // (por ejemplo desde "Crear" en la lista ya filtrada) preselecciona
+  // esa categoría, mismo criterio que ArticuloForm con la categoría de
+  // su ruta. Solo al crear: al editar, el efecto de carga la pisa con
+  // la del diagnóstico real.
+  const [categoriaId, setCategoriaId] = useState(() => (esEdicion ? '' : (searchParams.get('categoria') ?? '')))
   const [descripcion, setDescripcion] = useState('')
   const [nodos, setNodos] = useState<NodoDiagnostico[]>(() => [crearNodo()])
   const [motivo, setMotivo] = useState('')
@@ -82,6 +90,24 @@ export function DiagnosticoForm() {
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
 
   const categorias = useLiveQuery(() => db.categorias.orderBy('orden').toArray(), [], [])
+
+  // Anti duplicados cruzado (hallazgo K5 de AUDITORIA_FLUJOS_TI.md): un
+  // problema_frecuente y un diagnostico del mismo problema son dos
+  // entradas al mismo conocimiento, y hasta ahora nada las cruzaba (el
+  // articulo sí avisaba de similares, el diagnóstico no avisaba de
+  // nada). Mismo patrón de rebote de 300 ms que ArticuloForm.
+  const indice = useIndiceBusqueda()
+  const [tituloConRebote, setTituloConRebote] = useState('')
+  useEffect(() => {
+    const temporizador = setTimeout(() => setTituloConRebote(titulo), 300)
+    return () => clearTimeout(temporizador)
+  }, [titulo])
+  const [similaresDescartados, setSimilaresDescartados] = useState(false)
+  const similares = useMemo(
+    () => (esEdicion ? [] : buscarSimilares(indice, tituloConRebote, id, ['articulo', 'diagnostico'])),
+    [indice, tituloConRebote, esEdicion, id],
+  )
+  const mostrarSimilares = !esEdicion && !similaresDescartados && similares.length > 0 && titulo.trim().length > 0
 
   // Ids de artículos ejecutables en tiempo de ejecución (existen, no
   // eliminados y con procedimiento), sin importar su estado: el
@@ -209,6 +235,39 @@ export function DiagnosticoForm() {
                 className={`min-h-11 ${CLASE_CAMPO}`}
               />
             </label>
+
+            {mostrarSimilares && (
+              <div className="flex flex-col gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/10 px-3 py-2.5">
+                <div className="flex items-start gap-2.5">
+                  <Info size={16} className="mt-px shrink-0 text-noct-accent" />
+                  <p className="text-[13px] leading-[1.5]">
+                    Ya existe algo parecido. Ábrelo en lugar de documentarlo dos veces.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1 pl-[26px]">
+                  {similares.map((similar) => (
+                    <div key={similar.id} className="flex items-center justify-between gap-2">
+                      <Link
+                        to={similar.ruta}
+                        className="min-w-0 truncate text-[13.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400"
+                      >
+                        {similar.titulo}
+                        <span className="ml-1.5 text-[11px] font-normal text-noct-neutral-500">
+                          {similar.tipo === 'diagnostico' ? 'Diagnóstico' : 'Artículo'}
+                        </span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setSimilaresDescartados(true)}
+                        className="shrink-0 p-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
+                      >
+                        Descartar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <span className={CLASE_ETIQUETA}>

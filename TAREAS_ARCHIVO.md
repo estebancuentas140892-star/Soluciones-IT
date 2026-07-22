@@ -1,5 +1,19 @@
 # Historial de tareas finalizadas
 
+### 141. K3, K4 y K5 de la auditoría de flujos (completitud, contexto y anti duplicados)
+
+**Estado**: TERMINADA el 2026-07-22. **Prioridad**: MEDIA los tres. Con esto se cierran los tres hallazgos MEDIA de mayor prioridad del grupo de conocimiento (`AUDITORIA_FLUJOS_TI.md`).
+
+**K3 - La completitud no dependía del tipo de artículo**: `senalesDeArticulo` en `src/features/soluciones/completitudArticulo.ts` ahora recibe `tipo` en `DatosCompletitud`. Un `manual` (Markdown puro, sin procedimiento) cambia las cuatro señales atadas a la pestaña "Pasos" (agregar el primer paso, el segundo, requisitos, verificación final) por una sola: si el campo `contenido` (las "Notas adicionales" en Markdown) tiene texto. Antes un manual se quedaba para siempre con "Agregar al menos un paso" y un porcentaje que nunca podía subir. Cualquier otro tipo conserva exactamente las diez señales de antes, sin cambio de comportamiento.
+
+**K4 - El editor de diagnóstico no heredaba la categoría del contexto**: los dos enlaces "Crear" de `src/features/diagnostico/DiagnosticosPage.tsx` (cabecera y estado vacío) propagan `?categoria=<id>` cuando la lista ya está filtrada. `DiagnosticoForm.tsx` lee ese parámetro con `useSearchParams` y preselecciona el chip solo al crear (`useState` perezoso guardado por `esEdicion`); al editar, el efecto de carga existente sigue imponiendo la categoría real del diagnóstico. Mismo criterio que ya usaba `ArticuloForm` con la categoría de su ruta.
+
+**K5 - Anti duplicados asimétrico entre artículos y diagnósticos**: `buscarArticulosSimilares` (`src/features/busqueda/useIndiceBusqueda.ts`) se generalizó a `buscarSimilares(indice, titulo, excluirId, tipos, limite)`, que acota los resultados por tipo (`articulo`, `diagnostico`, ...); `buscarArticulosSimilares` ahora es un envoltorio que llama a la general con `['articulo']`, así que su comportamiento y sus pruebas existentes no cambiaron. `DiagnosticoForm.tsx` gana el mismo bloque visual de aviso que ya tenía `ArticuloForm` ("Ya existe algo parecido. Ábrelo en lugar de documentarlo dos veces."), con rebote de 300 ms sobre el título, pero cruzando `['articulo', 'diagnostico']`: crear un diagnóstico avisa si ya existe un artículo del mismo problema, y viceversa. Cada resultado muestra una etiqueta ("Artículo" / "Diagnóstico") para distinguir a cuál lleva el enlace.
+
+**Verificado en navegador real** (Chrome, servidor de desarrollo, datos sembrados y luego borrados): K4, al entrar a la lista de diagnósticos filtrada por "Impresoras" y navegar a `/diagnostico/nuevo?categoria=...`, el chip "Impresoras" apareció ya activo (`aria-pressed="true"`). K5, con un artículo "Reiniciar el spooler de impresión" y un diagnóstico "La impresora no imprime" ya existentes, escribir un título parecido en el editor de diagnóstico mostró ambos resultados con su etiqueta correcta y enlaces a sus rutas reales; "Descartar" ocultó el aviso. K3, un artículo tipo Manual con solo el título mostró 14% y 6 sugerencias, incluida "Escribir el contenido del manual" y sin "Agregar al menos un paso"; al escribir contenido en Markdown (sin agregar ningún paso) subió a 29% y la sugerencia de contenido desapareció; al guardar, IndexedDB confirmó `tipo: manual`, el contenido persistido y `pasos: 0`. Sin errores de consola en ningún caso.
+
+**Pruebas**: 1353 en verde (8 nuevas: 4 sobre `manual` en `completitudArticulo.test.ts`, 4 sobre `buscarSimilares` en `busqueda.test.ts`, que también verifican que `buscarArticulosSimilares` sigue siendo equivalente a pedir solo `['articulo']`). `tsc -b`, `oxlint` y `npm run build` limpios. Sin cambios de esquema.
+
 ### 140. Bucle sugerencia -> borrador de artículo (hallazgo K2 de la auditoría de flujos)
 
 **Estado**: TERMINADA el 2026-07-22. **Prioridad**: ALTA (era el último hallazgo ALTA pendiente de la auditoría).

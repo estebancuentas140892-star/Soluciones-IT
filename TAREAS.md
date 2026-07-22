@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 140 (bucle sugerencia -> borrador de artículo, hallazgo K2) quedó terminada, verificada en navegador real y archivada el 2026-07-22. **Queda un paso del usuario**: aplicar en Supabase el bloque nuevo de `supabase/schema.sql` (columna `articulos.origen_sugerencia_id`). La app funciona igual antes y después de aplicarlo (la columna está declarada en `camposOpcionales`), pero hasta que se aplique, el vínculo sugerencia -> artículo NO viaja entre dispositivos: cada técnico verá "Ya redactada" solo para los artículos que él mismo creó.
+Sin tarea en desarrollo. La tarea 141 (K3, K4 y K5 de la auditoría de flujos) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Con esto quedan resueltos los tres hallazgos MEDIA de prioridad más alta; ver el detalle en TAREAS_ARCHIVO.md.
+
+Antes, la tarea 140 (bucle sugerencia -> borrador de artículo, hallazgo K2) quedó terminada, verificada en navegador real y archivada el 2026-07-22. **Queda un paso del usuario**: aplicar en Supabase el bloque nuevo de `supabase/schema.sql` (columna `articulos.origen_sugerencia_id`). La app funciona igual antes y después de aplicarlo (la columna está declarada en `camposOpcionales`), pero hasta que se aplique, el vínculo sugerencia -> artículo NO viaja entre dispositivos: cada técnico verá "Ya redactada" solo para los artículos que él mismo creó.
 
 Antes, la tarea 135 (asistente de incorporación y cableado en el alta, hallazgos O1+O2+O3 de la auditoría de flujos) quedó terminada, verificada en navegador y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
 

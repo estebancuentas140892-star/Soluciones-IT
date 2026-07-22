@@ -4,6 +4,8 @@
 // pestaña que todavia tiene algo pendiente: el indicador de completitud
 // mira SIEMPRE todo el formulario, no solo la pestaña visible.
 
+import type { TipoArticulo } from '../../lib/db'
+
 export type PestanaEditor = 'general' | 'pasos' | 'detalles' | 'publicacion'
 
 // Orden de las pestañas en la barra, que es tambien el orden en que se
@@ -41,6 +43,12 @@ export interface Completitud {
 // Datos del formulario que alimentan las señales, ya en la forma en que
 // el editor los tiene (textos sin recortar, contadores para las listas).
 export interface DatosCompletitud {
+  // Hallazgo K3 de AUDITORIA_FLUJOS_TI.md: las señales originales
+  // exigian pasos, requisitos y verificacion sin importar el tipo. Un
+  // `manual` (Markdown puro, sin procedimiento) se quedaba
+  // permanentemente en un porcentaje que nunca podia subir, con
+  // sugerencias que llevaban a la pestaña "Pasos" pese a no aplicarle.
+  tipo: TipoArticulo
   titulo: string
   cantidadPasos: number
   descripcion: string
@@ -50,15 +58,45 @@ export interface DatosCompletitud {
   dificultad: string
   verificacionFinal: string
   objetivoGeneral: string
+  // Cuerpo en Markdown del articulo ("Notas adicionales" en el editor).
+  // Solo la puntua la señal de tipo 'manual': es su unico contenido
+  // real, ya que un manual normalmente no tiene procedimiento.
+  contenido: string
 }
 
-// Las diez señales del handoff "Editor de Artículo", cada una con la
-// pestaña donde vive su campo desde J5.
+// Señales del handoff "Editor de Artículo", cada una con la pestaña
+// donde vive su campo desde J5. Un `manual` cambia las cuatro señales
+// atadas a la pestaña "Pasos" (agregar paso, segundo paso, requisitos,
+// verificación final) por una sola: tener contenido escrito.
 export function senalesDeArticulo(datos: DatosCompletitud): SenalCompletitud[] {
+  const esManual = datos.tipo === 'manual'
+
+  const senalesDePasos: SenalCompletitud[] = esManual
+    ? [
+        {
+          cumplida: Boolean(datos.contenido.trim()),
+          pestana: 'detalles',
+          sugerencia: 'Escribir el contenido del manual',
+        },
+      ]
+    : [
+        { cumplida: datos.cantidadPasos > 0, pestana: 'pasos', sugerencia: 'Agregar al menos un paso' },
+        { cumplida: datos.cantidadPasos > 1, pestana: 'pasos', sugerencia: '' },
+        {
+          cumplida: Boolean(datos.requisitos.trim()),
+          pestana: 'pasos',
+          sugerencia: 'Anotar los requisitos previos',
+        },
+        {
+          cumplida: Boolean(datos.verificacionFinal.trim()),
+          pestana: 'pasos',
+          sugerencia: 'Escribir la verificación final',
+        },
+      ]
+
   return [
     { cumplida: Boolean(datos.titulo.trim()), pestana: 'general', sugerencia: '' },
-    { cumplida: datos.cantidadPasos > 0, pestana: 'pasos', sugerencia: 'Agregar al menos un paso' },
-    { cumplida: datos.cantidadPasos > 1, pestana: 'pasos', sugerencia: '' },
+    ...senalesDePasos,
     {
       cumplida: Boolean(datos.descripcion.trim()),
       pestana: 'general',
@@ -70,21 +108,11 @@ export function senalesDeArticulo(datos: DatosCompletitud): SenalCompletitud[] {
       sugerencia: 'Agregar etiquetas para el buscador',
     },
     {
-      cumplida: Boolean(datos.requisitos.trim()),
-      pestana: 'pasos',
-      sugerencia: 'Anotar los requisitos previos',
-    },
-    {
       cumplida: Boolean(datos.tiempoEstimadoMin.trim()),
       pestana: 'detalles',
       sugerencia: 'Indicar el tiempo estimado',
     },
     { cumplida: Boolean(datos.dificultad), pestana: 'detalles', sugerencia: 'Indicar la dificultad' },
-    {
-      cumplida: Boolean(datos.verificacionFinal.trim()),
-      pestana: 'pasos',
-      sugerencia: 'Escribir la verificación final',
-    },
     {
       cumplida: Boolean(datos.objetivoGeneral.trim()),
       pestana: 'general',

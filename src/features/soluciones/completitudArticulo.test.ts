@@ -7,6 +7,7 @@ import {
 } from './completitudArticulo'
 
 const VACIO: DatosCompletitud = {
+  tipo: 'instalacion',
   titulo: '',
   cantidadPasos: 0,
   descripcion: '',
@@ -16,9 +17,11 @@ const VACIO: DatosCompletitud = {
   dificultad: '',
   verificacionFinal: '',
   objetivoGeneral: '',
+  contenido: '',
 }
 
 const COMPLETO: DatosCompletitud = {
+  tipo: 'instalacion',
   titulo: 'Instalar impresora de bodega',
   cantidadPasos: 3,
   descripcion: 'Cuando llega una impresora nueva',
@@ -28,6 +31,7 @@ const COMPLETO: DatosCompletitud = {
   dificultad: 'intermedio',
   verificacionFinal: 'La impresión de prueba salió',
   objetivoGeneral: 'Dejar la impresora operativa',
+  contenido: '',
 }
 
 describe('calcularCompletitud', () => {
@@ -98,5 +102,53 @@ describe('calcularCompletitud', () => {
       senalesDeArticulo({ ...VACIO, descripcion: '   ', objetivoGeneral: '\n\t' }),
     )
     expect(soloEspacios.porcentaje).toBe(0)
+  })
+
+  // Hallazgo K3 de AUDITORIA_FLUJOS_TI.md: un manual no tiene
+  // procedimiento, así que antes se quedaba con "Agregar al menos un
+  // paso" para siempre y un porcentaje que nunca llegaba a 100.
+  describe('artículos de tipo manual', () => {
+    it('no exige pasos, requisitos ni verificación final', () => {
+      const manualVacio = calcularCompletitud(senalesDeArticulo({ ...VACIO, tipo: 'manual' }))
+      const sugerencias = manualVacio.sugerencias.map((s) => s.texto)
+      expect(sugerencias).not.toContain('Agregar al menos un paso')
+      expect(sugerencias).not.toContain('Anotar los requisitos previos')
+      expect(sugerencias).not.toContain('Escribir la verificación final')
+      expect(manualVacio.pestanasPendientes.has('pasos')).toBe(false)
+    })
+
+    it('un manual puede llegar a 100 % sin ningún paso', () => {
+      const manualCompleto = calcularCompletitud(
+        senalesDeArticulo({
+          ...VACIO,
+          tipo: 'manual',
+          titulo: 'Configurar VPN corporativa',
+          descripcion: 'Cuando alguien trabaja remoto',
+          cantidadEtiquetas: 2,
+          tiempoEstimadoMin: '5',
+          dificultad: 'principiante',
+          objetivoGeneral: 'Dejar el acceso remoto funcionando',
+          contenido: '## Pasos\n1. Abrir el cliente VPN\n2. Ingresar credenciales',
+        }),
+      )
+      expect(manualCompleto.porcentaje).toBe(100)
+    })
+
+    it('puntúa el contenido en Markdown en vez del paso a paso', () => {
+      const sinContenido = calcularCompletitud(senalesDeArticulo({ ...VACIO, tipo: 'manual' }))
+      const conContenido = calcularCompletitud(
+        senalesDeArticulo({ ...VACIO, tipo: 'manual', contenido: 'Texto del manual' }),
+      )
+      expect(conContenido.porcentaje).toBeGreaterThan(sinContenido.porcentaje)
+      expect(sinContenido.sugerencias.map((s) => s.texto)).toContain('Escribir el contenido del manual')
+      expect(conContenido.sugerencias.map((s) => s.texto)).not.toContain('Escribir el contenido del manual')
+    })
+
+    it('un artículo que no es manual sigue exigiendo pasos, no contenido', () => {
+      const instalacionVacia = calcularCompletitud(senalesDeArticulo({ ...VACIO, tipo: 'instalacion' }))
+      const sugerencias = instalacionVacia.sugerencias.map((s) => s.texto)
+      expect(sugerencias).toContain('Agregar al menos un paso')
+      expect(sugerencias).not.toContain('Escribir el contenido del manual')
+    })
   })
 })

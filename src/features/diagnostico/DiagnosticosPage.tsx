@@ -91,7 +91,10 @@ export function DiagnosticosPage() {
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 px-2 pt-2.5">
             <BotonVolver />
-            <Link to="/diagnostico/nuevo" className={`shrink-0 ${BTN_GHOST}`}>
+            <Link
+              to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
+              className={`shrink-0 ${BTN_GHOST}`}
+            >
               <Plus size={14} aria-hidden />
               Crear
             </Link>
@@ -229,7 +232,10 @@ export function DiagnosticosPage() {
                 Todavía no hay diagnósticos. Crea el primero con "Crear": un problema frecuente y las
                 preguntas que llevan a su solución.
               </p>
-              <Link to="/diagnostico/nuevo" className={`mt-0.5 ${BTN_SECUNDARIO}`}>
+              <Link
+                to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
+                className={`mt-0.5 ${BTN_SECUNDARIO}`}
+              >
                 <Plus size={14} aria-hidden />
                 Crear diagnóstico
               </Link>

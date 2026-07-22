@@ -335,6 +335,7 @@ export function ArticuloForm() {
     () =>
       calcularCompletitud(
         senalesDeArticulo({
+          tipo,
           titulo,
           cantidadPasos: pasos.length,
           descripcion,
@@ -344,9 +345,22 @@ export function ArticuloForm() {
           dificultad,
           verificacionFinal,
           objetivoGeneral,
+          contenido,
         }),
       ),
-    [titulo, pasos, descripcion, etiquetas, requisitos, tiempoEstimadoMin, dificultad, verificacionFinal, objetivoGeneral],
+    [
+      tipo,
+      titulo,
+      pasos,
+      descripcion,
+      etiquetas,
+      requisitos,
+      tiempoEstimadoMin,
+      dificultad,
+      verificacionFinal,
+      objetivoGeneral,
+      contenido,
+    ],
   )
 
   const plantilla = plantillaDe(tipo)

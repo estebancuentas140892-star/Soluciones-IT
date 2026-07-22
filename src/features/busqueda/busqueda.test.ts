@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buscar,
   buscarArticulosSimilares,
+  buscarSimilares,
   crearIndiceDesdeDocumentos,
   type DocumentoBusqueda,
 } from './useIndiceBusqueda'
@@ -79,6 +80,14 @@ const documentos: DocumentoBusqueda[] = [
     subtitulo: 'Persona',
     ruta: '/personas/juan-perez',
     texto: 'Juan Pérez contador',
+  },
+  {
+    id: 'diagnostico:d1',
+    tipo: 'diagnostico',
+    titulo: 'La impresora no imprime',
+    subtitulo: 'Impresoras · Diagnóstico',
+    ruta: '/diagnostico/d1',
+    texto: 'La impresora no imprime revisar spooler y cable',
   },
 ]
 
@@ -186,5 +195,32 @@ describe('buscarArticulosSimilares', () => {
     expect(buscarArticulosSimilares(indice, 'cá', 'nuevo-id')).toEqual([])
     const similares = buscarArticulosSimilares(indice, 'Cámara bodega', 'nuevo-id')
     expect(similares.every((r) => r.tipo === 'articulo')).toBe(true)
+  })
+})
+
+// Hallazgo K5 de AUDITORIA_FLUJOS_TI.md: un problema_frecuente y un
+// diagnostico del mismo problema son dos entradas al mismo
+// conocimiento; `buscarSimilares` generaliza el aviso de duplicado
+// para cruzarlas, en vez de comparar solo artículos con artículos.
+describe('buscarSimilares', () => {
+  it('cruza artículos y diagnósticos cuando se piden ambos tipos', () => {
+    const similares = buscarSimilares(indice, 'La impresora no imprime', 'nuevo-id', ['articulo', 'diagnostico'])
+    expect(similares.map((r) => r.id)).toContain('diagnostico:d1')
+  })
+
+  it('respeta la lista de tipos: pedir solo diagnóstico excluye artículos parecidos', () => {
+    const similares = buscarSimilares(indice, 'Reinicio de switch de red', 'nuevo-id', ['diagnostico'])
+    expect(similares).toEqual([])
+  })
+
+  it('al editar, excluye el propio diagnóstico de sus resultados', () => {
+    const similares = buscarSimilares(indice, 'La impresora no imprime', 'd1', ['articulo', 'diagnostico'])
+    expect(similares.map((r) => r.id)).not.toContain('diagnostico:d1')
+  })
+
+  it('buscarArticulosSimilares sigue siendo equivalente a pedir solo artículos', () => {
+    const general = buscarSimilares(indice, 'Configurar impresora Epson', 'nuevo-id', ['articulo'])
+    const especifico = buscarArticulosSimilares(indice, 'Configurar impresora Epson', 'nuevo-id')
+    expect(especifico).toEqual(general)
   })
 })

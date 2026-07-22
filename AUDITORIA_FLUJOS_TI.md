@@ -142,15 +142,15 @@ La creación desde la ficha del equipo ya precarga título, categoría y víncul
 `DiagnosticoRunPage.tsx:524-531` captura la solución propuesta cuando el diagnóstico no resolvió; `SugerenciasEquipoPage.tsx:53-68` solo la lista en lectura. El texto + el título del diagnóstico + su categoría son exactamente el borrador de un `problema_frecuente`, pero hay que recrearlo a mano (re-tecleo). Está planeado como "bucle sugerencia -> borrador" en `PROPUESTA_REVISION_ARQUITECTURA.md` (Fase 2) y `PROPUESTA_MODULOS.md`, sin construir.
 - Automatizar: botón "Redactar artículo desde esta sugerencia" que abra `ArticuloForm` precargando título, descripción y categoría.
 
-**K3 - La completitud es procedimiento-céntrica y no depende del tipo. [MEDIA] [NUEVO]**
+**K3 - La completitud es procedimiento-céntrica y no depende del tipo. [MEDIA] [NUEVO] [RESUELTO en la tarea 141, 2026-07-22]**
 `senalesDeArticulo` no recibe `tipo` (`src/features/soluciones/completitudArticulo.ts:57-94`); sus diez señales exigen pasos, requisitos y verificación. Un `manual` mostrará permanentemente "Agregar al menos un paso" y un porcentaje que nunca podrá subir, con sugerencias que llevan a pestañas que no aplican.
 - UX: que `senalesDeArticulo` reciba `tipo` y para `manual` puntúe contenido Markdown, objetivo y etiquetas en vez de pasos.
 
-**K4 - El editor de diagnóstico no hereda la categoría del contexto. [MEDIA] [NUEVO]**
+**K4 - El editor de diagnóstico no hereda la categoría del contexto. [MEDIA] [NUEVO] [RESUELTO en la tarea 141, 2026-07-22]**
 "Crear" enlaza a `/diagnostico/nuevo` sin `?categoria` aunque la lista esté filtrada (`src/features/diagnostico/DiagnosticosPage.tsx:94,232`); el formulario nunca lee `useSearchParams` y la categoría arranca vacía y obligatoria (`DiagnosticoForm.tsx:62-84,213`). El técnico que veía "Solo: Impresoras" tiene que volver a elegirla, a diferencia de `ArticuloForm`, que sí deriva la categoría de la ruta.
 - Autocompletar: pasar `?categoria=` en el enlace y sembrar el chip activo.
 
-**K5 - Anti-duplicados asimétrico entre artículos y diagnósticos. [MEDIA] [NUEVO]**
+**K5 - Anti-duplicados asimétrico entre artículos y diagnósticos. [MEDIA] [NUEVO] [RESUELTO en la tarea 141, 2026-07-22]**
 Al crear un artículo se avisan similares (`ArticuloForm.tsx:210-213,528-556`); al crear un diagnóstico, el título no tiene ningún aviso (`DiagnosticoForm.tsx:202-209`). Un `problema_frecuente` y un `diagnostico` del mismo problema son dos entradas al mismo conocimiento y nada las cruza (fusionar árboles está descartado a propósito, pero el aviso cruzado no).
 - Automatizar: reutilizar el índice de búsqueda en `DiagnosticoForm` para ofrecer el artículo o diagnóstico ya existente.
 
@@ -296,9 +296,9 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | S3 | Campo protegido sin motivo ni "Generar" | Media | Baja | Bajo | Nuevo |
 | S4 | Título de credencial congela el nombre | Media | Baja | Bajo | Nuevo |
 | S5 | Solapamiento credencial/campo protegido | Media | Baja | Bajo | Nuevo |
-| K3 | Completitud no depende del tipo | Media | Baja | Bajo | Nuevo |
-| K4 | Diagnóstico no hereda categoría | Media | Baja | Bajo | Nuevo |
-| K5 | Anti-duplicados asimétrico | Media | Baja | Bajo | Nuevo |
+| K3 | Completitud no depende del tipo | Media | Baja | Bajo | RESUELTO (tarea 141) |
+| K4 | Diagnóstico no hereda categoría | Media | Baja | Bajo | RESUELTO (tarea 141) |
+| K5 | Anti-duplicados asimétrico | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | D1 | `FormularioConexion` duplicado y divergido | Media | Baja | Bajo | Nuevo |
 | D2 | Búsquedas de subcadena vs índice global | Media | Media | Bajo | Parcial |
 | N3 | Punto de red no hereda ubicación | Baja | Baja | Bajo | Nuevo |
@@ -321,7 +321,7 @@ Hoja de ruta propuesta por fases (agrupando por afinidad técnica, no solo por p
 - **Fase persona (estructural, el mayor salto de valor):** T1 (entidad Persona/Responsable) con su migración asistida, reutilizando el patrón exacto de `ubicaciones`. Habilita el inventario por persona y el alta/baja de empleados.
 - **Fase ciclo de vida:** L1 (baja con cascada), L2 (reemplazo con herencia), L3 (relación de sustitución) y T2 (garantía/compra), apoyados en el grafo de referencias inversas y el patrón de migración asistida.
 - **Fase incorporación y cableado:** O1 (asistente/checklist post-alta apoyado en el motor de completitud existente), O2, O3, N2, N3, N4, N5, más la unificación D1. Colapsa el flujo estrella a un recorrido guiado.
-- **Fase conocimiento:** K2 (bucle sugerencia -> borrador, ya planeado), K3, K4, K5, K6. Recicla el conocimiento del equipo sin re-teclear.
+- **Fase conocimiento:** K2, K3, K4 y K5 RESUELTOS (tareas 140 y 141, 2026-07-22). Solo queda K6 (crear procedimiento contextual desde un equipo). Recicla el conocimiento del equipo sin re-teclear.
 - **Fase secretos:** S2, S3, S4, S5, S6, unificando la política de rotación.
 - **Fase deuda técnica (oportunista):** D2, D3, D4, cuando se toquen esas pantallas por otra razón.
 
