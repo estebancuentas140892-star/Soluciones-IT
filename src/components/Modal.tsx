@@ -49,7 +49,7 @@ export function Modal({ abierto, onCerrar, tituloId, children }: Props) {
   // dentro de cualquier cabecera con desenfoque.
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/70 p-4 backdrop-blur-sm sm:items-center"
+      className="nocturne fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-4 font-inter backdrop-blur-sm sm:items-center"
       onClick={onCerrar}
     >
       <div
@@ -57,7 +57,7 @@ export function Modal({ abierto, onCerrar, tituloId, children }: Props) {
         aria-modal="true"
         aria-labelledby={tituloId}
         onClick={(evento) => evento.stopPropagation()}
-        className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-slate-950/60"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-noct-divider bg-noct-surface p-5 text-noct-text shadow-2xl"
       >
         {children}
       </div>

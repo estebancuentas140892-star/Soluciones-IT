@@ -34,6 +34,11 @@ const BTN_BASE =
   'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border text-[13px] font-medium leading-tight'
 export const BTN_PRIMARIO = `${BTN_BASE} border-noct-accent px-2.5 py-[7px] text-noct-accent hover:bg-noct-accent/10 active:bg-noct-accent/20`
 export const BTN_SECUNDARIO = `${BTN_BASE} border-noct-divider px-2.5 py-[7px] text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
+// Variante destructiva del primario (.btn-danger): para la accion que
+// SI ejecuta la eliminacion (a diferencia de BTN_GHOST_PELIGRO, pensado
+// para acciones ligeras). Delineada en rojo, nunca rellena, misma regla
+// de Nocturne que el resto de la familia BTN_PRIMARIO.
+export const BTN_PRIMARIO_PELIGRO = `${BTN_BASE} border-noct-error px-2.5 py-[7px] text-noct-error hover:bg-noct-error/10 active:bg-noct-error/20`
 // Botón fantasma (.btn-ghost): sin borde, solo tinte al pasar por
 // encima. Para acciones ligeras de cabecera y pie (Crear, Volver,
 // Cancelar) donde un borde competiría con la acción principal.

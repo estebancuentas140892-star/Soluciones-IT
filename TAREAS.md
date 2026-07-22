@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 137 (normalizar las filas ya cacheadas en IndexedDB, causa raíz de la tarea 136) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
+Sin tarea en desarrollo. La tarea 139 (completar la migración a Nocturne: 12 archivos con el tema heredado) quedó terminada y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
+
+Antes, la tarea 137 (normalizar las filas ya cacheadas en IndexedDB, causa raíz de la tarea 136) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
 
 Antes, la tarea 138 (migrar el `ErrorBoundary` al sistema Nocturne) quedó terminada, verificada en navegador real y archivada el 2026-07-22, en una sesión paralela. Ver el detalle en TAREAS_ARCHIVO.md. Dejó abierta la tarea 139 (los 12 archivos que la tarea 113 dio por migrados y no lo están), en "Por hacer".
 
@@ -91,14 +93,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 139. La migración a Nocturne no está completa: quedan 12 archivos con el tema heredado
-- Descripción: la entrada de la tarea 113 afirma que "TODA la app, incluidos sus componentes compartidos, está en el sistema Nocturne: ya no queda ningún resto del tema claro heredado en todo el proyecto", y la 125 y la 130 lo repiten. **No es exacto.** Al migrar el `ErrorBoundary` (tarea 138) se corrió el grep sobre todo `src/` y quedan **56 apariciones de `slate-*`/`sky-*` repartidas en 12 archivos**, ninguno de ellos el ErrorBoundary. Varios se ven a diario, no solo cuando algo falla: el diálogo de eliminar, el panel de sincronización, los adjuntos y el login.
-- Archivos y cuántas apariciones tiene cada uno: `src/components/PanelSync.tsx` (13), `src/features/soluciones/VistaPreviaArticulo.tsx` (10), `src/components/Adjuntos.tsx` (7), `src/features/autenticacion/LoginPage.tsx` (7), `src/components/DialogoEliminar.tsx` (6), `src/components/ReferenciadoPor.tsx` (4), `src/components/ActualizacionDisponible.tsx` (3), `src/components/Modal.tsx` (2), `src/components/Cargando.tsx` (1), `src/components/MiniaturaPortada.tsx` (1), `src/components/VisorImagen.tsx` (1), `src/features/autenticacion/RequireAuth.tsx` (1).
-- Suma además el color de marca fuera de las clases de Tailwind, que también sigue en el tono heredado (`#0f172a`, que es `slate-900`, en vez del `#161826` de Nocturne): `index.html:8` (`<meta name="theme-color">`, la barra del navegador en Android) y `vite.config.ts:26-27` (`theme_color` y `background_color` del manifiesto, o sea la pantalla de arranque de la PWA instalada). Es un cambio de dos líneas y se nota en cada apertura desde el teléfono.
-- Nota de método para quien la tome: `Cargando.tsx` es el fallback de Suspense de TODA la app y `Modal.tsx` lo usa media docena de pantallas, así que conviene migrarlos primero y mirar el resultado dentro de una pantalla Nocturne real. Y antes de importar iconos en `Cargando.tsx`, `Modal.tsx` o `ActualizacionDisponible.tsx`, revisar la nota de trozos que dejó la tarea 138 en `src/components/ErrorBoundary.tsx`: lo que cuelga del trozo de entrada paga su peso en cada arranque frío.
-- Prioridad: Media (es apariencia, no bloquea nada, pero contradice la regla 12 y el tablero da el trabajo por hecho).
-- Ubicación: los 12 archivos de arriba, más `index.html:8` y `vite.config.ts:26-27`.
 
 **AUDITORÍA INTEGRAL DE FLUJOS (2026-07-21)**: recorrido de procesos reales de TI (no pantalla por pantalla), documentado en [AUDITORIA_FLUJOS_TI.md](AUDITORIA_FLUJOS_TI.md). Se hizo con 3 agentes en paralelo (red, ciclo de vida/bóveda, base de conocimiento) más el análisis del modelo completo, todo anclado a `archivo:linea` y contrastado contra las propuestas para separar lo NUEVO de lo ya planeado. 30 hallazgos con ID estable. Veredicto: el principio "cada dato una sola vez" se cumple ~85%; los huecos reales son estructurales y de alto valor. **La Fase de corrección (K1, S1, N1) quedó completa el 2026-07-22, tarea 131.** El usuario decidió el 2026-07-22 el orden del resto de los ALTA: T1 (tarea 132), L1 (tarea 133) y L2/L3 (tarea 134) ya están completas y archivadas; solo queda O1/O2/O3 (tarea 135 abajo). K2 (bucle sugerencia -> borrador, ya planeado) queda sin agendar todavía. Ningún hallazgo restante bloquea el uso diario.
 

@@ -126,7 +126,7 @@ export function VisorImagen({ url, alt, onCerrar }: Props) {
         type="button"
         onClick={onCerrar}
         aria-label="Cerrar imagen"
-        className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/80 text-lg text-slate-200"
+        className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-noct-bg/80 text-lg text-noct-text"
       >
         ✕
       </button>

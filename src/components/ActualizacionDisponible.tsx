@@ -1,4 +1,5 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { BTN_PRIMARIO } from './nocturne'
 
 // Comprobacion periodica de version nueva (ademas de al cargar la app):
 // un telefono que queda abierto durante horas se entera sin que el
@@ -28,13 +29,13 @@ export function ActualizacionDisponible() {
     // Flota sobre la barra inferior (fixed bottom-0 z-20): por eso
     // bottom-20 y z-50. Centrado como pastilla para verse igual en las
     // pantallas sin barra (login, escaner).
-    <div className="fixed inset-x-0 bottom-20 z-50 flex justify-center px-4">
-      <div className="flex items-center gap-3 rounded-full border border-sky-700 bg-sky-950/95 px-4 py-2 shadow-lg backdrop-blur">
-        <p className="text-sm text-sky-100">Versión nueva disponible</p>
+    <div className="nocturne fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 font-inter">
+      <div className="flex items-center gap-3 rounded-full border border-noct-accent/40 bg-noct-surface/95 px-4 py-2 shadow-lg backdrop-blur">
+        <p className="text-sm text-noct-text">Versión nueva disponible</p>
         <button
           type="button"
           onClick={() => void updateServiceWorker(true)}
-          className="shrink-0 rounded-full bg-sky-500 px-3 py-1 text-xs font-medium text-slate-950"
+          className={`shrink-0 ${BTN_PRIMARIO}`}
         >
           Actualizar
         </button>

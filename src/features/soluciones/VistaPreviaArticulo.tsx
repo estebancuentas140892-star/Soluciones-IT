@@ -3,6 +3,7 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { db, type Procedimiento, type TipoArticulo } from '../../lib/db'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import { TagNeutral } from '../../components/nocturne'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { etiquetaDeTipo } from './tiposArticulo'
 
@@ -54,18 +55,18 @@ export function VistaPreviaArticulo({
   }, [onCerrar, idEfimero])
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-950/95 px-4 py-3 backdrop-blur">
-        <p className="text-sm font-medium text-slate-200">
+    <div className="nocturne fixed inset-0 z-[70] overflow-y-auto bg-noct-bg font-inter text-noct-text">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-noct-divider bg-noct-bg/[.92] px-4 py-3 backdrop-blur-[12px]">
+        <p className="text-sm font-medium text-noct-text">
           Vista previa
-          <span className="ml-2 rounded-full border border-amber-800 bg-amber-950/40 px-2 py-0.5 text-[10px] text-amber-400">
+          <span className="ml-2 rounded-full border border-noct-precaucion/50 bg-noct-precaucion/[.14] px-2 py-0.5 text-[10px] text-noct-precaucion">
             Sin guardar
           </span>
         </p>
         <button
           type="button"
           onClick={onCerrar}
-          className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300"
+          className="rounded-lg border border-noct-divider px-3 py-1.5 text-xs text-noct-text hover:bg-noct-text/[.07]"
         >
           Cerrar
         </button>
@@ -76,21 +77,18 @@ export function VistaPreviaArticulo({
           <img
             src={urlPortada}
             alt={`Portada: ${titulo}`}
-            className="max-h-44 w-full rounded-xl border border-slate-800 object-cover"
+            className="max-h-44 w-full rounded-xl border border-noct-divider object-cover"
           />
         )}
 
         <div>
           <h1 className="text-xl font-semibold">{titulo || '(Sin título)'}</h1>
-          <p className="text-xs text-slate-500">{etiquetaDeTipo(tipo)}</p>
+          <p className="text-xs text-noct-neutral-500">{etiquetaDeTipo(tipo)}</p>
           {etiquetas.length > 0 && (
             <ul className="mt-2 flex flex-wrap gap-1.5">
               {etiquetas.map((etiqueta) => (
-                <li
-                  key={etiqueta}
-                  className="rounded-full border border-slate-800 bg-slate-900 px-2.5 py-0.5 text-[11px] text-slate-400"
-                >
-                  {etiqueta}
+                <li key={etiqueta}>
+                  <TagNeutral>{etiqueta}</TagNeutral>
                 </li>
               ))}
             </ul>
@@ -98,7 +96,7 @@ export function VistaPreviaArticulo({
         </div>
 
         {procedimiento?.descripcion && (
-          <p className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-300">
+          <p className="rounded-xl border border-noct-divider bg-noct-surface px-4 py-3 text-sm text-noct-neutral-200">
             {procedimiento.descripcion}
           </p>
         )}
@@ -108,13 +106,13 @@ export function VistaPreviaArticulo({
         )}
 
         {contenido.trim() !== '' && (
-          <article className="prose prose-invert prose-sm max-w-none prose-headings:text-slate-100 prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-slate-100 prose-a:text-sky-400">
+          <article className="prose prose-invert prose-sm max-w-none prose-headings:font-medium prose-headings:text-noct-text prose-p:text-noct-neutral-200 prose-li:text-noct-neutral-200 prose-strong:text-noct-text prose-a:text-noct-accent-400">
             <Markdown remarkPlugins={[remarkGfm]}>{contenido}</Markdown>
           </article>
         )}
 
         {!procedimiento && contenido.trim() === '' && (
-          <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
+          <p className="rounded-xl border border-dashed border-noct-divider px-4 py-6 text-center text-sm text-noct-neutral-500">
             Todavía no hay contenido para previsualizar.
           </p>
         )}

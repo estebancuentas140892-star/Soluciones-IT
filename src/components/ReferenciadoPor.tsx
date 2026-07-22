@@ -86,17 +86,17 @@ export function ReferenciadoPor({ tipo, id, relaciones, titulo = 'Referenciado p
   if (grupos.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4">
-      <h2 className="text-sm font-medium text-slate-400">{titulo}</h2>
+    <div className="flex flex-col gap-3 rounded-xl border border-noct-divider bg-noct-surface px-4 py-4">
+      <h2 className="text-sm font-medium text-noct-neutral-400">{titulo}</h2>
       {grupos.map((grupo) => (
         <div key={grupo.relacion}>
-          <p className="mb-1 text-xs text-slate-500">{ETIQUETA_RELACION[grupo.relacion]}</p>
+          <p className="mb-1 text-xs text-noct-neutral-500">{ETIQUETA_RELACION[grupo.relacion]}</p>
           <ul className="flex flex-wrap gap-2">
             {grupo.origenes.map((origen) => (
               <li key={`${origen.tipo}:${origen.id}`}>
                 <Link
                   to={origen.ruta}
-                  className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-sky-400"
+                  className="rounded-full border border-noct-divider bg-noct-bg px-3 py-1.5 text-xs text-noct-accent-400"
                 >
                   {origen.titulo}
                 </Link>

@@ -23,8 +23,8 @@ export default defineConfig({
         name: 'Soluciones IT',
         short_name: 'Soluciones IT',
         description: 'Base de conocimiento, inventario de dispositivos y credenciales para el equipo de soporte de TI',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#161826',
+        background_color: '#161826',
         display: 'standalone',
         start_url: '/',
         icons: [

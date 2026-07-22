@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { estadoInicialBoveda, verificarContrasenaMaestra } from '../features/boveda/sesionBoveda'
 import { CampoContrasena } from './CampoContrasena'
+import { CLASE_CAMPO_SOBRE_SUPERFICIE, CLASE_ETIQUETA } from './campos'
 import { Modal } from './Modal'
+import { BTN_PRIMARIO_PELIGRO, BTN_SECUNDARIO } from './nocturne'
 
 interface Props {
   abierto: boolean
@@ -111,22 +113,22 @@ export function DialogoEliminar({
     <Modal abierto={abierto} onCerrar={onCerrar} tituloId={tituloId}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <h2 id={tituloId} className="text-base font-semibold text-slate-100">
+          <h2 id={tituloId} className="text-base font-semibold text-noct-text">
             {titulo}
           </h2>
-          <p className="text-sm text-slate-400">{descripcion}</p>
+          <p className="text-sm text-noct-neutral-400">{descripcion}</p>
         </div>
 
         {advertencia && (
-          <div className="rounded-lg border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-200">
+          <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2 text-sm text-noct-precaucion">
             {advertencia}
           </div>
         )}
 
-        {modo === 'cargando' && <p className="text-sm text-slate-500">Comprobando...</p>}
+        {modo === 'cargando' && <p className="text-sm text-noct-neutral-500">Comprobando...</p>}
 
         {modo === 'sin-comprobar' && (
-          <p className="rounded-lg border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-200">
+          <p className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2 text-sm text-noct-precaucion">
             No se pudo comprobar la contraseña maestra del equipo. Conéctate a internet, espera a
             que la aplicación sincronice y vuelve a intentarlo.
           </p>
@@ -134,7 +136,7 @@ export function DialogoEliminar({
 
         {modo === 'contrasena' && (
           <form onSubmit={confirmar} className="flex flex-col gap-2">
-            <label htmlFor="contrasena-eliminar" className="text-xs text-slate-400">
+            <label htmlFor="contrasena-eliminar" className={CLASE_ETIQUETA}>
               Para continuar, ingresa la contraseña maestra.
             </label>
             <CampoContrasena
@@ -143,19 +145,15 @@ export function DialogoEliminar({
               value={contrasena}
               onChange={(e) => setContrasena(e.target.value)}
               placeholder="Contraseña maestra"
-              className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className={CLASE_CAMPO_SOBRE_SUPERFICIE}
             />
           </form>
         )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-noct-error">{error}</p>}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCerrar}
-            className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300"
-          >
+          <button type="button" onClick={onCerrar} className={BTN_SECUNDARIO}>
             {modo === 'sin-comprobar' ? 'Cerrar' : 'Cancelar'}
           </button>
           {modo !== 'sin-comprobar' && modo !== 'cargando' && (
@@ -163,7 +161,7 @@ export function DialogoEliminar({
               type="button"
               onClick={() => void confirmar()}
               disabled={ocupado || (modo === 'contrasena' && contrasena === '')}
-              className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className={`${BTN_PRIMARIO_PELIGRO} disabled:opacity-50`}
             >
               {ocupado ? 'Eliminando...' : textoConfirmar}
             </button>

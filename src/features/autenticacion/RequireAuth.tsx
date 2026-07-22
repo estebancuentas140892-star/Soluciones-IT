@@ -1,16 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom'
+import { Cargando } from '../../components/Cargando'
 import { useAuth } from './authContext'
 
 export function RequireAuth() {
   const { cargando, session } = useAuth()
 
-  if (cargando) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-slate-950 text-sm text-slate-400">
-        Cargando...
-      </div>
-    )
-  }
+  if (cargando) return <Cargando />
 
   if (!session) return <Navigate to="/login" replace />
 

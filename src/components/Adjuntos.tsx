@@ -121,9 +121,9 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-medium text-slate-400">Adjuntos</h2>
+        <h2 className="text-sm font-medium text-noct-neutral-400">Adjuntos</h2>
         <div className="flex gap-2">
-          <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+          <label className="cursor-pointer rounded-lg border border-noct-divider px-3 py-1.5 text-xs text-noct-text hover:bg-noct-text/[.07]">
             {subiendo ? progreso : 'Cámara'}
             <input
               type="file"
@@ -135,7 +135,7 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
             />
           </label>
           {!subiendo && (
-            <label className="cursor-pointer rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-300">
+            <label className="cursor-pointer rounded-lg border border-noct-divider px-3 py-1.5 text-xs text-noct-text hover:bg-noct-text/[.07]">
               + Archivos
               <input
                 type="file"
@@ -150,10 +150,10 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
         </div>
       </div>
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      {aviso && <p className="text-xs text-amber-300">{aviso}</p>}
+      {error && <p className="text-xs text-noct-error">{error}</p>}
+      {aviso && <p className="text-xs text-noct-precaucion">{aviso}</p>}
 
-      {adjuntos && adjuntos.length === 0 && <p className="text-xs text-slate-500">Sin adjuntos todavía</p>}
+      {adjuntos && adjuntos.length === 0 && <p className="text-xs text-noct-neutral-500">Sin adjuntos todavía</p>}
 
       <div className="grid grid-cols-2 gap-2">
         {adjuntos?.map((adjunto) => (
@@ -178,12 +178,12 @@ function AdjuntoItem({ adjunto, onEliminar }: { adjunto: Adjunto; onEliminar: ()
   const [visorAbierto, setVisorAbierto] = useState(false)
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+    <div className="relative overflow-hidden rounded-xl border border-noct-divider bg-noct-surface">
       <button
         type="button"
         onClick={onEliminar}
         aria-label={`Eliminar ${adjunto.nombre}`}
-        className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/80 text-xs text-slate-300"
+        className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-noct-bg/80 text-xs text-noct-text"
       >
         ×
       </button>
@@ -193,7 +193,7 @@ function AdjuntoItem({ adjunto, onEliminar }: { adjunto: Adjunto; onEliminar: ()
         </button>
       ) : (
         <a href={url ?? undefined} target="_blank" rel="noreferrer" className="block">
-          <div className="flex h-28 items-center justify-center px-2 text-center text-xs text-slate-400">
+          <div className="flex h-28 items-center justify-center px-2 text-center text-xs text-noct-neutral-400">
             {adjunto.nombre}
           </div>
         </a>

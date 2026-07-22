@@ -8,7 +8,7 @@ import { useUrlAdjunto } from './useUrlAdjunto'
 export function MiniaturaPortada({
   referencia,
   alt = '',
-  className = 'h-10 w-10 shrink-0 rounded-lg border border-slate-800 object-cover',
+  className = 'h-10 w-10 shrink-0 rounded-lg border border-noct-divider object-cover',
 }: {
   referencia: string
   alt?: string

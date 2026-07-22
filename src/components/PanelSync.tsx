@@ -9,6 +9,7 @@ import {
   suscribirSync,
 } from '../lib/sync'
 import { Modal } from './Modal'
+import { BTN_PRIMARIO, BTN_SECUNDARIO } from './nocturne'
 
 interface Props {
   abierto: boolean
@@ -42,13 +43,13 @@ export function PanelSync({ abierto, onCerrar }: Props) {
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} tituloId="panel-sync-titulo">
       <div className="flex flex-col gap-4">
-        <h2 id="panel-sync-titulo" className="text-base font-semibold text-slate-100">
+        <h2 id="panel-sync-titulo" className="text-base font-semibold text-noct-text">
           Sincronización
         </h2>
 
-        <dl className="flex flex-col gap-1.5 text-sm text-slate-300">
+        <dl className="flex flex-col gap-1.5 text-sm text-noct-neutral-200">
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Estado</dt>
+            <dt className="text-noct-neutral-400">Estado</dt>
             <dd>
               {estado.enCurso
                 ? 'Sincronizando...'
@@ -58,43 +59,43 @@ export function PanelSync({ abierto, onCerrar }: Props) {
             </dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Última sincronización</dt>
+            <dt className="text-noct-neutral-400">Última sincronización</dt>
             <dd>{estado.ultimaSync ? new Date(estado.ultimaSync).toLocaleTimeString() : 'Aún no'}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Cambios por subir</dt>
+            <dt className="text-noct-neutral-400">Cambios por subir</dt>
             <dd>{estado.cambiosPendientes}</dd>
           </div>
         </dl>
 
         {estado.sinSesion && (
-          <p className="rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-200">
+          <p className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-3 py-2 text-xs text-noct-precaucion">
             No se detecta una sesión activa: puede que debas volver a iniciar sesión.
           </p>
         )}
 
         {estado.ultimoError && (
-          <p className="rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-200">
+          <p className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-3 py-2 text-xs text-noct-precaucion">
             Última pasada con problema: {estado.ultimoError}
           </p>
         )}
 
         {estado.conflictosRecientes.length > 0 && (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-amber-300">
+            <h3 className="text-sm font-medium text-noct-precaucion">
               Ediciones de compañeros sobrescritas ({estado.conflictosRecientes.length})
             </h3>
             <ul className="flex flex-col gap-1.5">
               {estado.conflictosRecientes.map((mensaje, indice) => (
                 <li
                   key={indice}
-                  className="rounded-lg border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-200"
+                  className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-3 py-2 text-xs text-noct-precaucion"
                 >
                   {mensaje}
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-noct-neutral-500">
               Se subió el cambio de todas formas (gana la última escritura); revisa el historial de
               esas fichas si algo no cuadra.
             </p>
@@ -103,7 +104,7 @@ export function PanelSync({ abierto, onCerrar }: Props) {
 
         {conError.length > 0 && (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-red-300">
+            <h3 className="text-sm font-medium text-noct-error">
               Cambios que el servidor rechazó ({conError.length})
             </h3>
             {/* Agrupados por causa: casi siempre todos fallan por lo
@@ -114,21 +115,21 @@ export function PanelSync({ abierto, onCerrar }: Props) {
             {grupos.map((grupo) => (
               <div
                 key={grupo.explicacion}
-                className="flex flex-col gap-2 rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2.5"
+                className="flex flex-col gap-2 rounded-lg border border-noct-error/35 bg-noct-error/[.08] px-3 py-2.5"
               >
-                <p className="text-xs text-red-200">{grupo.explicacion}</p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-noct-error">{grupo.explicacion}</p>
+                <p className="text-[11px] text-noct-neutral-400">
                   {grupo.cambios.length === 1
                     ? 'Afecta a 1 ficha:'
                     : `Afecta a ${grupo.cambios.length} fichas:`}
                 </p>
                 <ul className="flex max-h-56 flex-col gap-1.5 overflow-y-auto">
                   {grupo.cambios.map(({ cambio, descripcion }) => (
-                    <li key={cambio.id} className="flex flex-col gap-1 border-l border-red-900/50 pl-2.5">
-                      <p className="text-[13px] leading-snug text-slate-100">{descripcion.titulo}</p>
+                    <li key={cambio.id} className="flex flex-col gap-1 border-l border-noct-error/35 pl-2.5">
+                      <p className="text-[13px] leading-snug text-noct-text">{descripcion.titulo}</p>
                       {descartando === cambio.id ? (
                         <div className="flex flex-col gap-1.5">
-                          <p className="text-xs text-amber-200">
+                          <p className="text-xs text-noct-precaucion">
                             ¿Descartar este cambio? Se perderá y la ficha volverá a como está en el
                             servidor.
                           </p>
@@ -137,14 +138,14 @@ export function PanelSync({ abierto, onCerrar }: Props) {
                               type="button"
                               disabled={ocupado}
                               onClick={() => void descartar(cambio.id)}
-                              className="rounded-lg border border-red-800 px-2.5 py-1 text-xs text-red-300 disabled:opacity-50"
+                              className="rounded-lg border border-noct-error/45 px-2.5 py-1 text-xs text-noct-error hover:bg-noct-error/10 disabled:opacity-50"
                             >
                               {ocupado ? 'Descartando...' : 'Sí, descartar'}
                             </button>
                             <button
                               type="button"
                               onClick={() => setDescartando(null)}
-                              className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-300"
+                              className="rounded-lg border border-noct-divider px-2.5 py-1 text-xs text-noct-text hover:bg-noct-text/[.07]"
                             >
                               Cancelar
                             </button>
@@ -154,7 +155,7 @@ export function PanelSync({ abierto, onCerrar }: Props) {
                         <button
                           type="button"
                           onClick={() => setDescartando(cambio.id)}
-                          className="self-start text-[11px] text-slate-500 underline underline-offset-2"
+                          className="self-start text-[11px] text-noct-neutral-500 underline underline-offset-2"
                         >
                           Descartar ({descripcion.intentos} intentos)
                         </button>
@@ -164,7 +165,7 @@ export function PanelSync({ abierto, onCerrar }: Props) {
                 </ul>
               </div>
             ))}
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-noct-neutral-500">
               Los cambios rechazados se reintentan solos en cada sincronización. Descartar es solo
               para cuando el error no se resuelve.
             </p>
@@ -172,18 +173,10 @@ export function PanelSync({ abierto, onCerrar }: Props) {
         )}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => void sincronizar()}
-            className="rounded-xl border border-sky-800 px-4 py-2 text-sm text-sky-300"
-          >
+          <button type="button" onClick={() => void sincronizar()} className={BTN_PRIMARIO}>
             Reintentar ahora
           </button>
-          <button
-            type="button"
-            onClick={onCerrar}
-            className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300"
-          >
+          <button type="button" onClick={onCerrar} className={BTN_SECUNDARIO}>
             Cerrar
           </button>
         </div>

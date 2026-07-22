@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { BotonVolver } from '../../components/BotonVolver'
+import { Cargando } from '../../components/Cargando'
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 import { type IconoProps, LockSimple, PlugsConnected } from '../../components/iconos'
 import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
@@ -167,14 +168,6 @@ export function ReemplazoPage() {
         </button>
       </div>
     </Pantalla>
-  )
-}
-
-function Cargando() {
-  return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-noct-text">
-      <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
-    </div>
   )
 }
 
