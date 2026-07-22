@@ -100,6 +100,18 @@ const UbicacionForm = lazy(() =>
 const MigracionUbicaciones = lazy(() =>
   import('./features/ubicaciones/MigracionUbicaciones').then((m) => ({ default: m.MigracionUbicaciones })),
 )
+const PersonasPage = lazy(() =>
+  import('./features/personas/PersonasPage').then((m) => ({ default: m.PersonasPage })),
+)
+const PersonaPage = lazy(() =>
+  import('./features/personas/PersonaPage').then((m) => ({ default: m.PersonaPage })),
+)
+const PersonaForm = lazy(() =>
+  import('./features/personas/PersonaForm').then((m) => ({ default: m.PersonaForm })),
+)
+const MigracionPersonas = lazy(() =>
+  import('./features/personas/MigracionPersonas').then((m) => ({ default: m.MigracionPersonas })),
+)
 const RedPage = lazy(() => import('./features/red/RedPage').then((m) => ({ default: m.RedPage })))
 const TopologiaPage = lazy(() =>
   import('./features/red/TopologiaPage').then((m) => ({ default: m.TopologiaPage })),
@@ -333,6 +345,51 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <UbicacionPage />
+                  </Suspense>
+                }
+              />
+              {/* Personas como entidad (hallazgo T1 de AUDITORIA_FLUJOS_TI.md):
+                  lista plana con creación inline, ficha 360, formulario y
+                  migración asistida. Mismo patrón Nocturne que ubicaciones,
+                  cada una trae su propio shell enfocado (bajo Dispositivos),
+                  por eso salen del Layout oscuro. */}
+              <Route
+                path="personas"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <PersonasPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="personas/nueva"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <PersonaForm />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="personas/migrar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <MigracionPersonas />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="personas/:personaId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <PersonaPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="personas/:personaId/editar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <PersonaForm />
                   </Suspense>
                 }
               />

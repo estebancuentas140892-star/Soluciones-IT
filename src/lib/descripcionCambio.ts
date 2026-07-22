@@ -20,6 +20,7 @@ const NOMBRE_TABLA: Record<string, string> = {
   // momento en que el tecnico necesita entender que fallo.
   ubicaciones: 'Ubicación',
   campos_protegidos: 'Dato protegido',
+  personas: 'Persona',
 }
 
 // El titulo visible de la ficha, buscando en los campos que usan las

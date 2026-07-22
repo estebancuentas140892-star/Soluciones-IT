@@ -77,6 +77,8 @@ function dispositivo(cambios: Partial<Dispositivo> & { id: string; nombre: strin
     placaInventario: '',
     ubicacion: '',
     ubicacionId: null,
+    responsable: '',
+    responsableId: null,
     ip: '',
     estado: '',
     observaciones: '',

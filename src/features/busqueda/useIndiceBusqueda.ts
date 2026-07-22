@@ -17,6 +17,7 @@ export type TipoResultado =
   | 'categoria'
   | 'adjunto'
   | 'ubicacion'
+  | 'persona'
 
 export interface DocumentoBusqueda {
   id: string
@@ -58,6 +59,9 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
   // Ubicaciones (grupo N3, fase P3 punto 4 del encargo): hoy faltaban
   // del buscador global pese a ser una entidad propia desde hace tiempo.
   const ubicaciones = useLiveQuery(() => db.ubicaciones.filter((u) => !u.eliminadoEn).toArray(), [], [])
+  // Personas (hallazgo T1): mismo criterio que ubicaciones, entidad
+  // propia indexable desde el buscador global.
+  const personas = useLiveQuery(() => db.personas.filter((p) => !p.eliminadoEn).toArray(), [], [])
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
   const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   // Adjuntos del articulo/dispositivo completo (fase N2, punto 2): la
@@ -109,6 +113,20 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
         subtitulo: ruta.slice(0, -1).join(' > ') || 'Ubicación',
         ruta: `/ubicaciones/${ubicacion.id}`,
         texto: [ubicacion.nombre, ubicacion.notas].join(' '),
+        portadaRef: '',
+      })
+    }
+
+    // Personas como resultado propio (hallazgo T1): "¿quién es Juan
+    // Pérez?" hoy solo se resolvía revisando cada dispositivo a mano.
+    for (const persona of personas ?? []) {
+      documentos.push({
+        id: `persona:${persona.id}`,
+        tipo: 'persona',
+        titulo: persona.nombre,
+        subtitulo: 'Persona',
+        ruta: `/personas/${persona.id}`,
+        texto: [persona.nombre, persona.notas].join(' '),
         portadaRef: '',
       })
     }
@@ -171,6 +189,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
           dispositivo.serial,
           dispositivo.placaInventario,
           dispositivo.ubicacion,
+          dispositivo.responsable,
           dispositivo.ip,
           dispositivo.estado,
           dispositivo.observaciones,
@@ -278,6 +297,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
     dispositivos,
     categorias,
     ubicaciones,
+    personas,
     credenciales,
     diagnosticos,
     adjuntosTabla,

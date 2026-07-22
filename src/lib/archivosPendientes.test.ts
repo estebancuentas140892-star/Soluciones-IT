@@ -206,6 +206,8 @@ function dispositivoDePrueba(referenciaFoto: string | null, eliminadoEn: string 
     placaInventario: '',
     ubicacion: '',
     ubicacionId: null,
+    responsable: '',
+    responsableId: null,
     ip: '',
     estado: '',
     observaciones: '',

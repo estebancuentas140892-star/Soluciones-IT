@@ -80,6 +80,26 @@ describe('padreDe', () => {
     })
   })
 
+  describe('Personas (se alcanza desde Dispositivos)', () => {
+    it('la lista de personas sube a Dispositivos', () => {
+      expect(padreDe('/personas')).toEqual({ to: '/dispositivos', etiqueta: 'Dispositivos' })
+    })
+
+    it('nueva, migrar y la ficha vuelven a la lista de personas', () => {
+      const lista = { to: '/personas', etiqueta: 'Personas' }
+      expect(padreDe('/personas/nueva')).toEqual(lista)
+      expect(padreDe('/personas/migrar')).toEqual(lista)
+      expect(padreDe('/personas/per-1')).toEqual(lista)
+    })
+
+    it('editar vuelve a la ficha de la persona', () => {
+      expect(padreDe('/personas/per-1/editar')).toEqual({
+        to: '/personas/per-1',
+        etiqueta: 'Volver',
+      })
+    })
+  })
+
   describe('Bóveda', () => {
     it('nueva y la ficha vuelven a la lista', () => {
       const lista = { to: '/boveda', etiqueta: 'Bóveda' }

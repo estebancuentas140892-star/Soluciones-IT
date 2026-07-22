@@ -37,6 +37,8 @@ function dispositivoDePrueba(id: string, nombre: string): Dispositivo {
     placaInventario: '',
     ubicacion: 'Bodega',
     ubicacionId: null,
+    responsable: '',
+    responsableId: null,
     ip: '',
     estado: '',
     observaciones: '',

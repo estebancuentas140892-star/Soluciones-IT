@@ -29,6 +29,7 @@ const RAICES_NO_TAB: Record<string, Padre> = {
   '/diagnostico': { to: '/', etiqueta: 'Inicio' },
   '/escaner': { to: '/', etiqueta: 'Inicio' },
   '/ubicaciones': { to: '/dispositivos', etiqueta: 'Dispositivos' },
+  '/personas': { to: '/dispositivos', etiqueta: 'Dispositivos' },
   '/cuenta': { to: '/', etiqueta: 'Inicio' },
 }
 
@@ -73,6 +74,10 @@ export function padreDe(pathname: string): Padre | null {
     case 'ubicaciones': {
       if (b === 'editar') return { to: `/ubicaciones/${a}`, etiqueta: 'Volver' }
       return { to: '/ubicaciones', etiqueta: 'Ubicaciones' }
+    }
+    case 'personas': {
+      if (b === 'editar') return { to: `/personas/${a}`, etiqueta: 'Volver' }
+      return { to: '/personas', etiqueta: 'Personas' }
     }
     case 'boveda': {
       if (b === 'editar') return { to: `/boveda/${a}`, etiqueta: 'Volver' }

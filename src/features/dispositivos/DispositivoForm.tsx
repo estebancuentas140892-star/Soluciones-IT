@@ -22,6 +22,7 @@ import { valoresUnicos } from '../../lib/vocabulario'
 import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { SelectorUbicacion } from '../ubicaciones/SelectorUbicacion'
+import { SelectorPersona } from '../personas/SelectorPersona'
 import { ESTADOS_SUGERIDOS } from './estados'
 
 // Punto de color de cada estado sugerido (08_ESTILO: operativo verde,
@@ -114,6 +115,10 @@ export function DispositivoForm() {
   const [ubicacion, setUbicacion] = useState('')
   // Id de la ubicacion (entidad, grupo N3), o null si es texto libre.
   const [ubicacionId, setUbicacionId] = useState<string | null>(null)
+  const [responsable, setResponsable] = useState('')
+  // Id de la persona responsable (entidad, hallazgo T1), o null si es
+  // texto libre.
+  const [responsableId, setResponsableId] = useState<string | null>(null)
   const [ip, setIp] = useState('')
   // Estado libre; en un equipo nuevo se asume "Operativo" (lo esperable
   // al registrar un equipo que se acaba de instalar y que el mockup trae
@@ -138,6 +143,8 @@ export function DispositivoForm() {
     setPlacaInventario(dispositivo.placaInventario)
     setUbicacion(dispositivo.ubicacion)
     setUbicacionId(dispositivo.ubicacionId ?? null)
+    setResponsable(dispositivo.responsable)
+    setResponsableId(dispositivo.responsableId ?? null)
     setIp(dispositivo.ip)
     setEstado(dispositivo.estado)
     setObservaciones(dispositivo.observaciones)
@@ -161,6 +168,8 @@ export function DispositivoForm() {
     setPlacaInventario('')
     setUbicacion(original.ubicacion)
     setUbicacionId(original.ubicacionId ?? null)
+    setResponsable(original.responsable)
+    setResponsableId(original.responsableId ?? null)
     setIp('')
     setEstado(original.estado)
     setObservaciones(original.observaciones)
@@ -220,6 +229,9 @@ export function DispositivoForm() {
         ubicacion: ubicacion.trim(),
         // Solo se conserva el id si la ubicacion no quedo en blanco.
         ubicacionId: ubicacion.trim() === '' ? null : ubicacionId,
+        responsable: responsable.trim(),
+        // Mismo invariante que ubicacionId: sin texto no hay id.
+        responsableId: responsable.trim() === '' ? null : responsableId,
         ip: ip.trim(),
         estado: estado.trim(),
         observaciones: observaciones.trim(),
@@ -387,6 +399,19 @@ export function DispositivoForm() {
               onChange={(idUbicacion, texto) => {
                 setUbicacionId(idUbicacion)
                 setUbicacion(texto)
+              }}
+            />
+          </section>
+
+          {/* Responsable (entidad, hallazgo T1): SelectorPersona. */}
+          <section className="flex flex-col gap-2.5">
+            <TituloSeccion>Responsable</TituloSeccion>
+            <SelectorPersona
+              responsableId={responsableId}
+              responsable={responsable}
+              onChange={(idResponsable, texto) => {
+                setResponsableId(idResponsable)
+                setResponsable(texto)
               }}
             />
           </section>

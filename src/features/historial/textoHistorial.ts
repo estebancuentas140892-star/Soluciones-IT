@@ -15,6 +15,7 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
   serial: 'Número de serie',
   placaInventario: 'Placa de inventario',
   ubicacion: 'Ubicación',
+  responsable: 'Responsable',
   ip: 'Dirección IP',
   estado: 'Estado',
   observaciones: 'Observaciones',

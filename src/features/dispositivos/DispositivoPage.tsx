@@ -27,6 +27,7 @@ import {
   QrCode,
   ShareNetwork,
   TrashSimple,
+  User,
   Warning,
 } from '../../components/iconos'
 import {
@@ -109,6 +110,12 @@ export function DispositivoPage() {
     () => (dispositivo?.ubicacionId ? db.ubicaciones.get(dispositivo.ubicacionId) : undefined),
     [dispositivo?.ubicacionId],
   )
+  // Responsable como entidad (hallazgo T1): mismo criterio de referencia
+  // viva que la ubicacion.
+  const responsableVinculado = useLiveQuery(
+    () => (dispositivo?.responsableId ? db.personas.get(dispositivo.responsableId) : undefined),
+    [dispositivo?.responsableId],
+  )
 
   const idVisitado = dispositivo && !dispositivo.eliminadoEn ? dispositivo.id : null
   useEffect(() => {
@@ -153,6 +160,11 @@ export function DispositivoPage() {
   // existe y no esta eliminada; si no, la copia de referencia guardada.
   const ubicacionViva = ubicacionVinculada && !ubicacionVinculada.eliminadoEn ? ubicacionVinculada : null
   const ubicacionNombre = textoVivo(ubicacionViva?.nombre, dispositivo.ubicacion)
+
+  // Nombre a mostrar del responsable: el vivo de la persona enlazada si
+  // existe y no esta eliminada; si no, la copia de referencia guardada.
+  const responsableVivo = responsableVinculado && !responsableVinculado.eliminadoEn ? responsableVinculado : null
+  const responsableNombre = textoVivo(responsableVivo?.nombre, dispositivo.responsable)
 
   const detalles = Object.entries(dispositivo.detalles).filter(([, valor]) => valor)
   const estado = dispositivo.estado ? estadoConEtiqueta(dispositivo.estado) : null
@@ -258,8 +270,8 @@ export function DispositivoPage() {
           )}
         </header>
 
-        {/* Información: filas copiables y ubicación viva. */}
-        {(campos.length > 0 || ubicacionNombre || detalles.length > 0) && (
+        {/* Información: filas copiables, ubicación y responsable vivos. */}
+        {(campos.length > 0 || ubicacionNombre || responsableNombre || detalles.length > 0) && (
           <section>
             <TituloSeccion className="mb-2">Información</TituloSeccion>
             <div className="divide-y divide-noct-divider rounded-lg border border-noct-divider bg-noct-surface px-3.5">
@@ -284,6 +296,25 @@ export function DispositivoPage() {
                     <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-neutral-200">
                       <MapPin size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
                       {ubicacionNombre}
+                    </span>
+                  )}
+                </div>
+              )}
+              {responsableNombre && (
+                <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
+                  <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">Responsable</span>
+                  {responsableVivo ? (
+                    <Link
+                      to={`/personas/${responsableVivo.id}`}
+                      className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
+                    >
+                      <User size={14} className="shrink-0" aria-hidden />
+                      {responsableNombre}
+                    </Link>
+                  ) : (
+                    <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-neutral-200">
+                      <User size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                      {responsableNombre}
                     </span>
                   )}
                 </div>

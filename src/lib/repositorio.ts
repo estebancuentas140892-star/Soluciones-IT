@@ -197,10 +197,18 @@ export async function registrarAccesoBoveda(
 // Historial
 // ----------------------------------------------------------------
 
-// `ubicacionId` (grupo N3) no genera su propia entrada: su companero
-// legible `ubicacion` (la copia del nombre) ya registra el cambio de
-// lugar de forma entendible, sin volcar un UUID en el historial.
-const CAMPOS_SIN_HISTORIAL = new Set(['id', 'updatedAt', 'updatedBy', 'eliminadoEn', 'ubicacionId'])
+// `ubicacionId` (grupo N3) y `responsableId` (hallazgo T1) no generan su
+// propia entrada: su companero legible (`ubicacion`/`responsable`, la
+// copia del nombre) ya registra el cambio de forma entendible, sin
+// volcar un UUID en el historial.
+const CAMPOS_SIN_HISTORIAL = new Set([
+  'id',
+  'updatedAt',
+  'updatedBy',
+  'eliminadoEn',
+  'ubicacionId',
+  'responsableId',
+])
 
 // Campos que el servidor reescribe en cada guardado: no cuentan como un
 // cambio real de la ficha (a diferencia de un campo suprimido del
@@ -334,6 +342,7 @@ const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, 
     diagnosticos: 'diagnostico',
     ubicaciones: 'ubicacion',
     campos_protegidos: 'campo_protegido',
+    personas: 'persona',
   }
 
 // No incluye 'adjuntos': el destino de un adjunto se resuelve aparte

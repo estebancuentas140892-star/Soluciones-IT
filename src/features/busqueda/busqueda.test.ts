@@ -72,6 +72,14 @@ const documentos: DocumentoBusqueda[] = [
     ruta: '/ubicaciones/sala-servidores',
     texto: 'Sala de servidores acceso restringido con llave',
   },
+  {
+    id: 'persona:juan-perez',
+    tipo: 'persona',
+    titulo: 'Juan Pérez',
+    subtitulo: 'Persona',
+    ruta: '/personas/juan-perez',
+    texto: 'Juan Pérez contador',
+  },
 ]
 
 const indice = crearIndiceDesdeDocumentos(documentos)
@@ -149,6 +157,13 @@ describe('buscar', () => {
     expect(ubicacion).toBeDefined()
     expect(ubicacion?.tipo).toBe('ubicacion')
     expect(ubicacion?.subtitulo).toBe('Sede Norte')
+  })
+
+  it('encuentra una persona por su nombre (hallazgo T1)', () => {
+    const resultados = buscar(indice, 'juan perez')
+    const persona = resultados.find((r) => r.id === 'persona:juan-perez')
+    expect(persona).toBeDefined()
+    expect(persona?.tipo).toBe('persona')
   })
 })
 

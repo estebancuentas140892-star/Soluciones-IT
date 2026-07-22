@@ -475,6 +475,37 @@ alter table public.accesos_boveda add constraint accesos_boveda_accion_check
   check (accion in ('consulto', 'mostro', 'copio_usuario', 'copio_contrasena', 'modifico', 'elimino', 'descargo'));
 
 -- ----------------------------------------------------------------
+-- 1d. Grupo de esquema T1 (2026-07-22): entidad Persona/Responsable.
+--     El sujeto del escenario "llega una computadora para un empleado"
+--     no existia en el modelo; "usuario asignado" era texto libre
+--     suelto dentro de dispositivos.detalles, sin ficha propia ni
+--     forma de responder "que equipos tiene esta persona". Mismo
+--     patron exacto que ubicaciones (grupo N3): entidad + referencia
+--     viva + copia de nombre. Decision del usuario (2026-07-22): sin
+--     jerarquia (no aplica a personas) y solo nombre + notas.
+--     Hallazgo T1 de AUDITORIA_FLUJOS_TI.md.
+-- ----------------------------------------------------------------
+
+create table if not exists public.personas (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null,
+  notas text not null default '',
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+alter table public.dispositivos add column if not exists responsable_id uuid references public.personas (id);
+
+create index if not exists idx_personas_updated on public.personas (updated_at);
+create index if not exists idx_dispositivos_responsable on public.dispositivos (responsable_id);
+
+-- El historial ahora tambien registra cambios de personas.
+alter table public.historial drop constraint if exists historial_entidad_tipo_check;
+alter table public.historial add constraint historial_entidad_tipo_check
+  check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico', 'ubicacion', 'campo_protegido', 'persona'));
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 
@@ -544,6 +575,11 @@ create trigger trg_campos_protegidos_modificacion
   before insert or update on public.campos_protegidos
   for each row execute function public.registrar_modificacion();
 
+drop trigger if exists trg_personas_modificacion on public.personas;
+create trigger trg_personas_modificacion
+  before insert or update on public.personas
+  for each row execute function public.registrar_modificacion();
+
 -- Crea el perfil automaticamente cuando se da de alta un usuario
 -- en Authentication.
 create or replace function public.crear_perfil()
@@ -599,6 +635,7 @@ alter table public.ejecuciones_diagnostico enable row level security;
 alter table public.accesos_boveda enable row level security;
 alter table public.ubicaciones enable row level security;
 alter table public.campos_protegidos enable row level security;
+alter table public.personas enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -695,6 +732,12 @@ create policy diagnosticos_acceso on public.diagnosticos
 -- el resto del contenido general (categorias, dispositivos...).
 drop policy if exists ubicaciones_acceso on public.ubicaciones;
 create policy ubicaciones_acceso on public.ubicaciones
+  for all to authenticated using (true) with check (true);
+
+-- Personas: acceso completo para cualquier tecnico autenticado, mismo
+-- criterio que ubicaciones (contenido general, no boveda).
+drop policy if exists personas_acceso on public.personas;
+create policy personas_acceso on public.personas
   for all to authenticated using (true) with check (true);
 
 -- Ejecuciones de diagnostico: se pueden leer y agregar, nunca editar
@@ -820,7 +863,7 @@ declare
     'categorias', 'articulos', 'dispositivos', 'credenciales', 'adjuntos',
     'historial', 'conexiones', 'diagnosticos', 'ejecuciones_diagnostico',
     'accesos_boveda', 'perfiles', 'boveda_meta', 'ubicaciones',
-    'campos_protegidos'
+    'campos_protegidos', 'personas'
   ];
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then

@@ -43,6 +43,17 @@ describe('mapearFilas: encabezados', () => {
     })
   })
 
+  it('reconoce columnas de responsable (hallazgo T1): usuario asignado, responsable, asignado a...', () => {
+    const filas = [
+      ['Nombre', 'Categoría', 'Usuario asignado'],
+      ['POS caja 1', 'POS', 'Juan Pérez'],
+    ]
+    const resultado = mapearFilas(filas, opciones())
+    expect(resultado.importables[0].datos.responsable).toBe('Juan Pérez')
+    expect(resultado.importables[0].datos.responsableId).toBeNull()
+    expect(resultado.importables[0].datos.detalles).toEqual({})
+  })
+
   it('ignora la puntuación de los encabezados: "No. de serie" y "Nº de serie" son Serial', () => {
     const conPunto = mapearFilas(
       [

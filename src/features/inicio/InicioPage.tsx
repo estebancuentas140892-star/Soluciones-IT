@@ -78,6 +78,7 @@ const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
   dispositivo: { Icono: Monitor, tono: 'text-noct-exito bg-noct-exito/[.12]' },
   credencial: { Icono: LockSimple, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
   ubicacion: { Icono: MapPin, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
+  persona: { Icono: User, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
 }
 
 // Los resultados se agrupan por fuente (los modulos con contenido
@@ -95,6 +96,8 @@ const GRUPOS_BUSQUEDA: {
   // Ubicaciones en el buscador (fase P3, punto 4 del encargo): hoy
   // faltaban pese a ser entidad propia desde N3.
   { id: 'ubicaciones', nombre: 'Ubicaciones', Icono: MapPin, tipos: ['ubicacion'] },
+  // Personas en el buscador (hallazgo T1): mismo criterio que ubicaciones.
+  { id: 'personas', nombre: 'Personas', Icono: User, tipos: ['persona'] },
 ]
 
 // Parte un titulo en tres tramos segun donde cae el termino buscado

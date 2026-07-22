@@ -16,6 +16,7 @@ export type CampoFijo =
   | 'serial'
   | 'placaInventario'
   | 'ubicacion'
+  | 'responsable'
   | 'ip'
   | 'estado'
   | 'observaciones'
@@ -48,6 +49,11 @@ const ALIAS_POR_CAMPO: Record<CampoFijo, string[]> = {
     'codigo inventario',
   ],
   ubicacion: ['ubicacion', 'sede', 'area', 'oficina', 'lugar', 'sitio'],
+  // Hallazgo T1: quien tiene asignado el equipo (usuario, empleado,
+  // responsable). Mismo criterio que ubicacion: la importacion masiva
+  // trae solo el texto, sin vincular a la entidad (migrable despues
+  // desde /personas/migrar).
+  responsable: ['usuario asignado', 'responsable', 'asignado a', 'empleado', 'encargado', 'usuario'],
   ip: ['ip', 'direccion ip'],
   estado: ['estado', 'estatus', 'condicion'],
   observaciones: ['observaciones', 'observacion', 'notas', 'nota', 'comentarios', 'comentario', 'descripcion'],
@@ -61,6 +67,7 @@ export const ETIQUETA_CAMPO: Record<CampoFijo, string> = {
   serial: 'Serial',
   placaInventario: 'Placa de inventario',
   ubicacion: 'Ubicación',
+  responsable: 'Responsable',
   ip: 'IP',
   estado: 'Estado',
   observaciones: 'Observaciones',
@@ -187,6 +194,10 @@ export function mapearFilas(filas: string[][], opciones: OpcionesMapeo): Resulta
       // sin vincular a una entidad (grupo N3), migrable despues desde la
       // pantalla de migracion asistida.
       ubicacionId: null,
+      responsable: '',
+      // Mismo criterio que ubicacionId (hallazgo T1): sin vincular hasta
+      // que se migre desde /personas/migrar.
+      responsableId: null,
       ip: '',
       estado: '',
       observaciones: '',

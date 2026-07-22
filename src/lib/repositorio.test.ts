@@ -13,6 +13,8 @@ function dispositivoDePrueba(id: string): Omit<Dispositivo, 'updatedAt' | 'updat
     placaInventario: 'INV-100',
     ubicacion: 'Bodega norte',
     ubicacionId: null,
+    responsable: '',
+    responsableId: null,
     ip: '192.168.1.50',
     estado: 'Operativa',
     observaciones: '',

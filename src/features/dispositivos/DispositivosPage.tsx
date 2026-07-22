@@ -12,6 +12,7 @@ import {
   Plus,
   QrCode,
   UploadSimple,
+  User,
   XCircleFill,
 } from '../../components/iconos'
 import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
@@ -129,7 +130,7 @@ export function DispositivosPage() {
             <button
               type="button"
               onClick={() => setMenuAbierto((v) => !v)}
-              aria-label="Más acciones: ubicaciones, etiquetas QR, importar"
+              aria-label="Más acciones: ubicaciones, personas, etiquetas QR, importar"
               aria-expanded={menuAbierto}
               className={BTN_ICONO_SECUNDARIO}
             >
@@ -147,6 +148,14 @@ export function DispositivosPage() {
             >
               <MapPin size={14} aria-hidden />
               Ubicaciones
+            </Link>
+            <Link
+              to="/personas"
+              onClick={() => setMenuAbierto(false)}
+              className={`shrink-0 ${BTN_SECUNDARIO}`}
+            >
+              <User size={14} aria-hidden />
+              Personas
             </Link>
             <Link
               to="/dispositivos/etiquetas"

@@ -22,6 +22,8 @@ function dispositivo(id: string, nombre: string, categoriaId: string, eliminadoE
     placaInventario: '',
     ubicacion: '',
     ubicacionId: null,
+    responsable: '',
+    responsableId: null,
     ip: '',
     estado: '',
     observaciones: '',

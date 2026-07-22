@@ -12,6 +12,7 @@ import {
   type Dispositivo,
   type EjecucionDiagnostico,
   type HistorialEntrada,
+  type Persona,
   type Ubicacion,
 } from './db'
 
@@ -32,6 +33,7 @@ export const TABLAS_SINCRONIZADAS = [
   'accesos_boveda',
   'ubicaciones',
   'campos_protegidos',
+  'personas',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
@@ -57,6 +59,7 @@ export interface EntidadPorTabla {
   accesos_boveda: AccesoBoveda
   ubicaciones: Ubicacion
   campos_protegidos: CampoProtegido
+  personas: Persona
 }
 
 interface ConfigTabla {
@@ -158,6 +161,8 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       placaInventario: 'placa_inventario',
       ubicacion: 'ubicacion',
       ubicacionId: 'ubicacion_id',
+      responsable: 'responsable',
+      responsableId: 'responsable_id',
       ip: 'ip',
       estado: 'estado',
       observaciones: 'observaciones',
@@ -170,6 +175,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       serial: '',
       placaInventario: '',
       ubicacion: '',
+      responsable: '',
       ip: '',
       estado: '',
       observaciones: '',
@@ -339,6 +345,16 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       orden: 'orden',
     },
     porDefecto: { tipo: 'texto', orden: 0 },
+  },
+  // Persona/responsable como entidad (hallazgo T1). Va al final de la
+  // lista de tablas sincronizadas, mismo criterio que ubicaciones y
+  // campos_protegidos: si el esquema aun no se aplico en el servidor, su
+  // fallo no impide descargar las demas.
+  personas: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: { ...camposComunes, nombre: 'nombre', notas: 'notas' },
+    porDefecto: { notas: '' },
   },
 }
 

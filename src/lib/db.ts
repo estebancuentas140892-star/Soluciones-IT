@@ -41,6 +41,19 @@ export interface Ubicacion {
   eliminadoEn: string | null
 }
 
+// Una persona como entidad (hallazgo T1 de AUDITORIA_FLUJOS_TI.md):
+// reemplaza el texto libre que antes solo vivia como una clave suelta
+// dentro de `Dispositivo.detalles` (por ejemplo "Usuario asignado").
+// Sin jerarquia (no aplica a personas, a diferencia de ubicaciones).
+export interface Persona {
+  id: string
+  nombre: string
+  notas: string
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
 export type TipoArticulo =
   | 'instalacion'
   | 'configuracion'
@@ -302,6 +315,11 @@ export interface Dispositivo {
   ubicacion: string
   // Id de la ubicacion (entidad), o null. Dato canonico del lugar.
   ubicacionId: string | null
+  // Copia de referencia del nombre del responsable (hallazgo T1): mismo
+  // patron que `ubicacion`. El dato canonico es `responsableId`.
+  responsable: string
+  // Id de la persona responsable (entidad), o null.
+  responsableId: string | null
   ip: string
   estado: string
   observaciones: string
@@ -612,6 +630,8 @@ export type TipoEntidadHistorial =
   // boveda (misma restriccion que 'credencial' en la RLS). El valor
   // nunca entra al historial, se registra como "(cifrado)".
   | 'campo_protegido'
+  // Hallazgo T1: persona/responsable.
+  | 'persona'
 
 export interface HistorialEntrada {
   id: string
@@ -783,6 +803,7 @@ class SolucionesItDatabase extends Dexie {
   articulos!: EntityTable<Articulo, 'id'>
   dispositivos!: EntityTable<Dispositivo, 'id'>
   ubicaciones!: EntityTable<Ubicacion, 'id'>
+  personas!: EntityTable<Persona, 'id'>
   conexiones!: EntityTable<Conexion, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
   // Nombre con guion bajo a proposito, como ejecuciones_diagnostico y
@@ -896,6 +917,15 @@ class SolucionesItDatabase extends Dexie {
     // los de un equipo sin recorrer la tabla entera.
     this.version(12).stores({
       campos_protegidos: 'id, dispositivoId, updatedAt',
+    })
+
+    // Grupo de esquema T1 (2026-07-22): persona/responsable como
+    // entidad, mismo criterio que ubicaciones (grupo N3). La columna
+    // nueva de dispositivos (responsableId) no se declara aqui: Dexie
+    // solo necesita los indices, y vive dentro del objeto igual que el
+    // resto de campos.
+    this.version(13).stores({
+      personas: 'id, updatedAt',
     })
   }
 }

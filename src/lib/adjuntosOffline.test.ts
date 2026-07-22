@@ -36,6 +36,8 @@ function dispositivoDePrueba(id: string, foto: Dispositivo['foto'] = null): Disp
     placaInventario: '',
     ubicacion: '',
     ubicacionId: null,
+    responsable: '',
+    responsableId: null,
     ip: '',
     estado: '',
     observaciones: '',
