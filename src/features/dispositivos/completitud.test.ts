@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Dispositivo } from '../../lib/db'
-import { completitudDispositivo } from './completitud'
+import { completitudDispositivo, pasosSiguientes, type DisponibilidadPasos } from './completitud'
 
 function dispositivoCompleto(): Dispositivo {
   return {
@@ -96,5 +96,45 @@ describe('completitudDispositivo', () => {
       eliminadoEn: null,
     }
     expect(completitudDispositivo(vacio, false).porcentaje).toBe(0)
+  })
+})
+
+describe('pasosSiguientes', () => {
+  const todoDisponible: DisponibilidadPasos = {
+    puedeVerBoveda: true,
+    tieneSeguridad: true,
+    tieneConexiones: true,
+    tieneProcedimiento: true,
+  }
+
+  it('sin nada pendiente, no sugiere ningún paso', () => {
+    const dispositivo = dispositivoCompleto()
+    expect(pasosSiguientes(dispositivo, todoDisponible)).toEqual([])
+  })
+
+  it('sugiere agregar foto cuando falta', () => {
+    const dispositivo = { ...dispositivoCompleto(), foto: null }
+    const pasos = pasosSiguientes(dispositivo, todoDisponible)
+    expect(pasos.map((p) => p.clave)).toEqual(['foto'])
+  })
+
+  it('sugiere seguridad solo si el técnico puede ver la bóveda', () => {
+    const dispositivo = dispositivoCompleto()
+    const sinBoveda = pasosSiguientes(dispositivo, { ...todoDisponible, tieneSeguridad: false, puedeVerBoveda: false })
+    expect(sinBoveda.map((p) => p.clave)).not.toContain('seguridad')
+
+    const conBoveda = pasosSiguientes(dispositivo, { ...todoDisponible, tieneSeguridad: false, puedeVerBoveda: true })
+    expect(conBoveda.map((p) => p.clave)).toContain('seguridad')
+  })
+
+  it('sugiere conexiones y procedimiento cuando faltan, en el orden foto/seguridad/conexiones/procedimiento', () => {
+    const dispositivo = { ...dispositivoCompleto(), foto: null }
+    const pasos = pasosSiguientes(dispositivo, {
+      puedeVerBoveda: true,
+      tieneSeguridad: false,
+      tieneConexiones: false,
+      tieneProcedimiento: false,
+    })
+    expect(pasos.map((p) => p.clave)).toEqual(['foto', 'seguridad', 'conexiones', 'procedimiento'])
   })
 })

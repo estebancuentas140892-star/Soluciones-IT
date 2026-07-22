@@ -263,8 +263,17 @@ export function DispositivoForm() {
 
     // Modo reemplazo: en vez de ir directo a la ficha, se encadena la
     // migracion de conexiones/credenciales/campos protegidos del equipo
-    // saliente.
-    navigate(esReemplazo ? `/dispositivos/${id}/reemplazo` : `/dispositivos/${id}`)
+    // saliente (con su propio aviso de pendientes, no necesita el
+    // bloque "Que sigue").
+    if (esReemplazo) {
+      navigate(`/dispositivos/${id}/reemplazo`)
+      return
+    }
+    // Recien creado (hallazgo O1, incluye duplicar: es un equipo fisico
+    // distinto con id propio): la ficha muestra el bloque "Que sigue"
+    // una sola vez, via el estado de navegacion. No se marca al editar,
+    // que ya vuelve a una ficha con historia propia.
+    navigate(`/dispositivos/${id}`, esEdicion ? undefined : { state: { recienCreado: true } })
   }
 
   if ((esEdicion || copiarDe) && !cargadoInicial) {

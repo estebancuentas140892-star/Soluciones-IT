@@ -12,7 +12,7 @@ import {
 } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, Plus, X } from '../../components/iconos'
-import { BTN_GHOST_ACENTO, BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { CLASE_CAMPO, CLASE_ETIQUETA as CLASE_ETIQUETA_BASE } from '../../components/campos'
 
 // Aquí el rótulo se aplica al propio `<label>`, que además apila el
@@ -182,6 +182,10 @@ function FormularioConexion({
     [dispositivo.id],
     [],
   )
+  // Categorias para el alta rapida de equipo (hallazgo O3): mismo orden
+  // que usa DispositivoForm, categoria_id es NOT NULL en el esquema asi
+  // que hace falta elegir una.
+  const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
 
   const [modo, setModo] = useState<ModoConexion>('enlace')
   const [busqueda, setBusqueda] = useState('')
@@ -192,6 +196,16 @@ function FormularioConexion({
   const [notas, setNotas] = useState('')
   const [guardando, setGuardando] = useState(false)
 
+  // Alta rapida del otro extremo (hallazgo O3): cuando el equipo todavia
+  // no existe en el inventario, se crea sin salir de este formulario,
+  // mismo patron "buscar o crear inline" que SelectorUbicacion/
+  // SelectorPersona (nombre + lo minimo que exige el esquema, aqui
+  // categoria).
+  const [creandoEquipo, setCreandoEquipo] = useState(false)
+  const [nombreEquipoNuevo, setNombreEquipoNuevo] = useState('')
+  const [categoriaEquipoNuevo, setCategoriaEquipoNuevo] = useState('')
+  const [guardandoEquipo, setGuardandoEquipo] = useState(false)
+
   const coincidencias = useMemo(() => {
     const texto = busqueda.trim().toLowerCase()
     if (!texto) return []
@@ -200,7 +214,10 @@ function FormularioConexion({
       .slice(0, 8)
   }, [todos, busqueda])
 
-  async function guardar() {
+  // `cerrarAlTerminar` en false es "Guardar y agregar otra" (hallazgo
+  // O2): conserva el tipo de relacion elegido (lo tedioso de re-elegir)
+  // y solo limpia el resto, sin cerrar el formulario.
+  async function guardar(cerrarAlTerminar: boolean) {
     if (!otro) return
     setGuardando(true)
 
@@ -226,7 +243,51 @@ function FormularioConexion({
       notas: notas.trim(),
     })
 
-    onCerrar()
+    if (cerrarAlTerminar) {
+      onCerrar()
+      return
+    }
+    setOtro(null)
+    setBusqueda('')
+    setPuertoLocal('')
+    setPuertoRemoto('')
+    setMedio('')
+    setNotas('')
+    setGuardando(false)
+  }
+
+  async function crearEquipo() {
+    const nombre = nombreEquipoNuevo.trim()
+    if (nombre === '' || categoriaEquipoNuevo === '') return
+    setGuardandoEquipo(true)
+    const id = nuevoId()
+    await guardarRegistro('dispositivos', {
+      id,
+      categoriaId: categoriaEquipoNuevo,
+      nombre,
+      marca: '',
+      modelo: '',
+      serial: '',
+      placaInventario: '',
+      ubicacion: '',
+      ubicacionId: null,
+      responsable: '',
+      responsableId: null,
+      reemplazaA: null,
+      ip: '',
+      estado: 'Operativo',
+      observaciones: '',
+      detalles: {},
+      foto: null,
+    })
+    // Se relee de la base (en vez de fabricar el objeto a mano) para
+    // usar la fila real, con updatedAt/updatedBy que puso el repositorio.
+    const creado = await db.dispositivos.get(id)
+    if (creado) setOtro(creado)
+    setCreandoEquipo(false)
+    setNombreEquipoNuevo('')
+    setCategoriaEquipoNuevo('')
+    setGuardandoEquipo(false)
   }
 
   return (
@@ -299,6 +360,68 @@ function FormularioConexion({
               ))}
             </ul>
           )}
+
+          {/* Alta rapida del otro extremo (hallazgo O3): el equipo puede
+              no existir todavia en el inventario (se acaba de instalar).
+              Mismo patron "buscar o crear" que SelectorUbicacion/
+              SelectorPersona. */}
+          {creandoEquipo ? (
+            <div className="flex flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface/60 px-3 py-3">
+              <input
+                type="text"
+                value={nombreEquipoNuevo}
+                onChange={(e) => setNombreEquipoNuevo(e.target.value)}
+                placeholder="Nombre del equipo nuevo"
+                className={`min-h-11 ${CLASE_CAMPO}`}
+                autoFocus
+              />
+              <select
+                value={categoriaEquipoNuevo}
+                onChange={(e) => setCategoriaEquipoNuevo(e.target.value)}
+                className={`min-h-11 ${CLASE_CAMPO}`}
+              >
+                <option value="">Elige una categoría...</option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void crearEquipo()}
+                  disabled={guardandoEquipo || nombreEquipoNuevo.trim() === '' || categoriaEquipoNuevo === ''}
+                  className={`${BTN_PRIMARIO} disabled:opacity-50`}
+                >
+                  {guardandoEquipo ? 'Creando...' : 'Crear y usar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreandoEquipo(false)
+                    setNombreEquipoNuevo('')
+                    setCategoriaEquipoNuevo('')
+                  }}
+                  className={BTN_SECUNDARIO}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setCreandoEquipo(true)
+                setNombreEquipoNuevo(busqueda.trim())
+              }}
+              className={`self-start ${BTN_GHOST_ACENTO}`}
+            >
+              <Plus size={13} aria-hidden />
+              Crear equipo nuevo
+            </button>
+          )}
         </div>
       )}
 
@@ -362,14 +485,28 @@ function FormularioConexion({
         />
       </label>
 
-      <button
-        type="button"
-        onClick={() => void guardar()}
-        disabled={!otro || guardando}
-        className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
-      >
-        {guardando ? 'Guardando...' : 'Guardar conexión'}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void guardar(true)}
+          disabled={!otro || guardando}
+          className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
+        >
+          {guardando ? 'Guardando...' : 'Guardar conexión'}
+        </button>
+        {/* "Guardar y agregar otra" (hallazgo O2): un equipo suele tener
+            varias conexiones del MISMO tipo (un switch con 20 uplinks a
+            puntos de red, por ejemplo); conserva el tipo de relación
+            elegido y deja el formulario abierto para la siguiente. */}
+        <button
+          type="button"
+          onClick={() => void guardar(false)}
+          disabled={!otro || guardando}
+          className={`${BTN_SECUNDARIO} min-h-11 px-4 disabled:opacity-50`}
+        >
+          Guardar y agregar otra
+        </button>
+      </div>
     </div>
   )
 }

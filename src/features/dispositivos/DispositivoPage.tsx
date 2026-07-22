@@ -1,14 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { dependenciasDeBaja, sinDependencias } from './baja'
-import { completitudDispositivo } from './completitud'
+import { completitudDispositivo, pasosSiguientes, type PasoSiguiente } from './completitud'
 import { compartirOCopiar, copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { textoVivo } from '../../lib/referencia'
-import { resumenImpacto } from '../../lib/grafo'
+import { referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { ShellNocturne } from '../../app/ShellNocturne'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
@@ -19,13 +19,16 @@ import { useGrafo } from '../../components/useGrafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
   ArrowsClockwise,
+  BookOpen,
   CaretRight,
+  Camera,
   Check,
   Copy,
   DotsThreeOutline,
   LockSimple,
   MapPin,
   PencilSimple,
+  PlugsConnected,
   Plus,
   QrCode,
   ShareNetwork,
@@ -91,6 +94,7 @@ function pillEstado(etiqueta: string): string {
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   // Nudge anti duplicidad de la Bóveda (fase P3): "Ir a la ficha" desde
   // un secreto cuyo título coincide con este equipo llega con
@@ -99,6 +103,16 @@ export function DispositivoPage() {
   const nombreCampoSugerido = searchParams.get('nuevoCampoProtegido') ?? ''
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(false)
+  // Bloque "Que sigue" (hallazgo O1): capturado UNA SOLA VEZ al montar,
+  // no releido de `location.state` en cada render. Los pasos son anclas
+  // <a href="#..."> nativas (mas abajo, no <Link>), y el propio history
+  // de React Router trata un cambio de hash como una navegacion nueva
+  // CON `state: null`; si se leyera `location.state` en cada render, el
+  // bloque se autodestruiria en cuanto el tecnico tocara uno de sus
+  // propios enlaces (confirmado en navegador antes de esta correccion).
+  const [recienCreado] = useState(
+    () => Boolean((location.state as { recienCreado?: boolean } | null)?.recienCreado),
+  )
 
   const dispositivo = useLiveQuery(() => db.dispositivos.get(dispositivoId), [dispositivoId])
   const categoria = useLiveQuery(
@@ -196,6 +210,18 @@ export function DispositivoPage() {
   // Completitud de la ficha (fase J3): guia, nunca bloquea. Solo se
   // muestra cuando falta algo.
   const completitud = completitudDispositivo(dispositivo, esRed)
+
+  // Pasos del bloque "Que sigue" (`recienCreado` ya capturado arriba):
+  // se calculan en vivo contra el grafo ya cargado (useGrafo), asi que
+  // un paso desaparece de la lista en cuanto se completa, sin recargar.
+  const pasos = recienCreado
+    ? pasosSiguientes(dispositivo, {
+        puedeVerBoveda: Boolean(perfil?.puedeVerBoveda),
+        tieneSeguridad: referenciasHacia(grafo, 'dispositivo', dispositivoId, ['campo_dispositivo']).length > 0,
+        tieneConexiones: referenciasHacia(grafo, 'dispositivo', dispositivoId, ['conexion']).length > 0,
+        tieneProcedimiento: referenciasHacia(grafo, 'dispositivo', dispositivoId, ['dispositivo_afectado']).length > 0,
+      })
+    : []
 
   return (
     <ShellNocturne>
@@ -315,6 +341,8 @@ export function DispositivoPage() {
           <BannerMigracionPendiente nuevoId={dispositivoId} viejoId={dispositivo.reemplazaA} />
         )}
 
+        {pasos.length > 0 && <QueSigue pasos={pasos} dispositivoId={dispositivoId} />}
+
         {/* Información: filas copiables, ubicación, responsable y
             reemplazo vivos. */}
         {(campos.length > 0 ||
@@ -407,15 +435,19 @@ export function DispositivoPage() {
             equipo, cifrados y con la misma protección que la Bóveda.
             Va justo después de Información porque es más información
             del equipo, no una acción. Sin permiso de bóveda no se
-            renderiza nada (el componente devuelve null). */}
-        <SeguridadDelEquipo
-          dispositivoId={dispositivoId}
-          puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
-          nombreSugerido={nombreCampoSugerido}
-        />
+            renderiza nada (el componente devuelve null). El id ancla el
+            bloque "Que sigue" (O1). */}
+        <div id="seguridad">
+          <SeguridadDelEquipo
+            dispositivoId={dispositivoId}
+            puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
+            nombreSugerido={nombreCampoSugerido}
+          />
+        </div>
 
-        {/* Resolver con este equipo: diagnóstico, vínculos y creación. */}
-        <section>
+        {/* Resolver con este equipo: diagnóstico, vínculos y creación.
+            El id ancla el paso "procedimiento" del bloque "Que sigue" (O1). */}
+        <section id="resolver">
           <TituloSeccion className="mb-2">Resolver con este equipo</TituloSeccion>
           <div className="flex flex-col gap-2">
             <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} categoriaNombre={categoria?.nombre} />
@@ -450,7 +482,10 @@ export function DispositivoPage() {
 
         <ImpactoYDependencias dispositivo={dispositivo} />
 
-        <ConexionesFicha dispositivo={dispositivo} />
+        {/* El id ancla el paso "conexiones" del bloque "Que sigue" (O1). */}
+        <div id="conexiones">
+          <ConexionesFicha dispositivo={dispositivo} />
+        </div>
 
         <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} />
 
@@ -474,6 +509,54 @@ export function DispositivoPage() {
         onConfirmar={eliminar}
       />
     </ShellNocturne>
+  )
+}
+
+// Icono de cada paso sugerido (hallazgo O1).
+const ICONO_PASO: Record<PasoSiguiente['clave'], typeof Camera> = {
+  foto: Camera,
+  seguridad: LockSimple,
+  conexiones: PlugsConnected,
+  procedimiento: BookOpen,
+}
+
+// Bloque "Que sigue" (hallazgo O1 de la auditoría de flujos): documentar
+// un equipo completo hoy cruza 4 contextos de la misma ficha, recorridos
+// de a uno. En vez de un asistente por pasos (stepper) completo, se
+// muestra una sola vez justo después de crear el equipo (decisión del
+// usuario, 2026-07-22), con enlaces directos a lo que falta.
+function QueSigue({ pasos, dispositivoId }: { pasos: PasoSiguiente[]; dispositivoId: string }) {
+  return (
+    <section className="flex flex-col gap-2 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3.5">
+      <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">¿Qué sigue?</p>
+      <div className="flex flex-col">
+        {pasos.map((paso) => {
+          const Icono = ICONO_PASO[paso.clave]
+          const fila = (
+            <>
+              <Icono size={16} className="shrink-0 text-noct-accent-300" aria-hidden />
+              <span className="min-w-0 flex-1">{paso.etiqueta}</span>
+              <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+            </>
+          )
+          const clase = 'flex min-h-11 items-center gap-2.5 rounded-md px-1.5 text-[13px] text-noct-text hover:bg-noct-text/[.06]'
+          // "foto" navega al formulario (unico dato de estos 4 que se
+          // edita ahi); el resto es un ancla NATIVA (<a href="#...">,
+          // no <Link>) a una seccion que ya esta mas abajo en esta misma
+          // ficha: el salto lo resuelve el navegador, sin depender de
+          // que React Router reaccione al cambio de hash.
+          return paso.clave === 'foto' ? (
+            <Link key={paso.clave} to={`/dispositivos/${dispositivoId}/editar`} className={clase}>
+              {fila}
+            </Link>
+          ) : (
+            <a key={paso.clave} href={`#${paso.clave === 'procedimiento' ? 'resolver' : paso.clave}`} className={clase}>
+              {fila}
+            </a>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 

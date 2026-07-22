@@ -52,3 +52,44 @@ export function completitudDispositivo(
     faltantes: senales.filter((s) => !s.cumple).map((s) => s.etiqueta),
   }
 }
+
+export interface PasoSiguiente {
+  clave: 'foto' | 'seguridad' | 'conexiones' | 'procedimiento'
+  etiqueta: string
+}
+
+export interface DisponibilidadPasos {
+  // Sin permiso de bóveda el técnico no puede guardar datos de
+  // Seguridad, así que ese paso no se le ofrece (mismo criterio que ya
+  // aplica SeguridadDelEquipo.tsx, que directamente no se renderiza).
+  puedeVerBoveda: boolean
+  tieneSeguridad: boolean
+  tieneConexiones: boolean
+  tieneProcedimiento: boolean
+}
+
+// Pasos sugeridos tras dar de alta un equipo (hallazgo O1 de la
+// auditoría de flujos): documentar un equipo completo cruza 4
+// contextos de la misma ficha (foto, Seguridad, Conexiones,
+// procedimiento vinculado) que hoy se recorren de a uno. No es una
+// lista de bloqueo, es una guía puntual que se muestra una sola vez
+// justo después de crear el equipo (ver DispositivoPage.tsx); se
+// recalcula en vivo, así que un paso desaparece de la lista en cuanto
+// se completa, sin recargar la página.
+export function pasosSiguientes(
+  dispositivo: Dispositivo,
+  disponibilidad: DisponibilidadPasos,
+): PasoSiguiente[] {
+  const pasos: PasoSiguiente[] = []
+  if (!dispositivo.foto) pasos.push({ clave: 'foto', etiqueta: 'Agregar una foto' })
+  if (disponibilidad.puedeVerBoveda && !disponibilidad.tieneSeguridad) {
+    pasos.push({ clave: 'seguridad', etiqueta: 'Guardar sus datos de acceso' })
+  }
+  if (!disponibilidad.tieneConexiones) {
+    pasos.push({ clave: 'conexiones', etiqueta: 'Registrar sus conexiones de red' })
+  }
+  if (!disponibilidad.tieneProcedimiento) {
+    pasos.push({ clave: 'procedimiento', etiqueta: 'Vincular un procedimiento o reportar una incidencia' })
+  }
+  return pasos
+}

@@ -4,11 +4,13 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 139 (completar la migración a Nocturne: 12 archivos con el tema heredado) quedó terminada y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
+Sin tarea en desarrollo. La tarea 135 (asistente de incorporación y cableado en el alta, hallazgos O1+O2+O3 de la auditoría de flujos) quedó terminada, verificada en navegador y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
+
+Antes, la tarea 139 (completar la migración a Nocturne: 12 archivos con el tema heredado) quedó terminada y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
+
+Antes, la tarea 138 (migrar el `ErrorBoundary` al sistema Nocturne) quedó terminada, verificada en navegador real y archivada el 2026-07-22, en una sesión paralela. Ver el detalle en TAREAS_ARCHIVO.md.
 
 Antes, la tarea 137 (normalizar las filas ya cacheadas en IndexedDB, causa raíz de la tarea 136) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
-
-Antes, la tarea 138 (migrar el `ErrorBoundary` al sistema Nocturne) quedó terminada, verificada en navegador real y archivada el 2026-07-22, en una sesión paralela. Ver el detalle en TAREAS_ARCHIVO.md. Dejó abierta la tarea 139 (los 12 archivos que la tarea 113 dio por migrados y no lo están), en "Por hacer".
 
 Antes, la tarea 136 (la Bóveda no abría: "No se pudo cargar la aplicación", reportado por el usuario) quedó terminada y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md. Su causa raíz quedó cerrada por la tarea 137.
 
@@ -94,12 +96,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-**AUDITORÍA INTEGRAL DE FLUJOS (2026-07-21)**: recorrido de procesos reales de TI (no pantalla por pantalla), documentado en [AUDITORIA_FLUJOS_TI.md](AUDITORIA_FLUJOS_TI.md). Se hizo con 3 agentes en paralelo (red, ciclo de vida/bóveda, base de conocimiento) más el análisis del modelo completo, todo anclado a `archivo:linea` y contrastado contra las propuestas para separar lo NUEVO de lo ya planeado. 30 hallazgos con ID estable. Veredicto: el principio "cada dato una sola vez" se cumple ~85%; los huecos reales son estructurales y de alto valor. **La Fase de corrección (K1, S1, N1) quedó completa el 2026-07-22, tarea 131.** El usuario decidió el 2026-07-22 el orden del resto de los ALTA: T1 (tarea 132), L1 (tarea 133) y L2/L3 (tarea 134) ya están completas y archivadas; solo queda O1/O2/O3 (tarea 135 abajo). K2 (bucle sugerencia -> borrador, ya planeado) queda sin agendar todavía. Ningún hallazgo restante bloquea el uso diario.
-
-### 135. Asistente de incorporación y cableado en el alta (hallazgos O1 + O2 + O3 de la auditoría de flujos)
-- Descripción: documentar un equipo nuevo completo cruza 4 contextos (form, Seguridad, Conexiones, editor de artículo) recorridos de a uno. **Decisión del usuario (2026-07-22) para O1: bloque post-guardado "¿Qué sigue?"** en la ficha, sin rediseñar el formulario, usando el motor de completitud ya existente (`src/features/dispositivos/completitud.ts`) para enlazar directo a lo que falta (foto, seguridad, conexiones, procedimiento); se descarta el asistente por pasos (stepper) completo. Suma O2 (botón "Guardar y agregar otra" en el formulario de conexión, que hoy colapsa y obliga a reabrir y re-elegir tipo cada vez: `src/features/red/ConexionesFicha.tsx:234,120,190`) y O3 (crear el equipo del otro extremo inline cuando no existe todavía: `ConexionesFicha.tsx:199-205`).
-- Prioridad: Alta
-- Ubicación: `src/features/dispositivos/DispositivoPage.tsx`, `src/features/dispositivos/completitud.ts`, `src/features/red/ConexionesFicha.tsx:120,190,199-205,234`.
+**AUDITORÍA INTEGRAL DE FLUJOS (2026-07-21)**: recorrido de procesos reales de TI (no pantalla por pantalla), documentado en [AUDITORIA_FLUJOS_TI.md](AUDITORIA_FLUJOS_TI.md). Se hizo con 3 agentes en paralelo (red, ciclo de vida/bóveda, base de conocimiento) más el análisis del modelo completo, todo anclado a `archivo:linea` y contrastado contra las propuestas para separar lo NUEVO de lo ya planeado. 30 hallazgos con ID estable. Veredicto: el principio "cada dato una sola vez" se cumple ~85%; los huecos reales son estructurales y de alto valor. **La Fase de corrección (K1, S1, N1) quedó completa el 2026-07-22, tarea 131**, y los cuatro hallazgos ALTA que el usuario ordenó ese mismo día también: T1 (tarea 132), L1 (tarea 133), L2/L3 (tarea 134) y O1/O2/O3 (tarea 135). K2 (bucle sugerencia -> borrador, ya planeado) queda sin agendar todavía. Ningún hallazgo restante bloquea el uso diario.
 
 [PROPUESTA_SEGURIDAD_DISPOSITIVO.md](PROPUESTA_SEGURIDAD_DISPOSITIVO.md) quedó COMPLETA el 2026-07-21: las seis fases (P0 a P5) están implementadas, verificadas y archivadas (tareas 115 a 121). Sin código pendiente; solo falta que el usuario aplique en Supabase los `schema.sql` acumulados de las fases con esquema (P1 y P5) y pruebe el flujo completo en su teléfono. Detalle de cada fase en TAREAS_ARCHIVO.md.
 
