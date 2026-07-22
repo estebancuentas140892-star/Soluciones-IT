@@ -33,6 +33,7 @@ export type TipoRelacion =
   | 'conexion' // dispositivo <-> dispositivo (cableado/instalación)
   | 'credencial_dispositivo' // credencial -> dispositivo al que da acceso (grupo N3)
   | 'campo_dispositivo' // campo protegido -> dispositivo dueño (grupo P2): si se elimina el equipo, el dato queda huérfano
+  | 'reemplaza' // dispositivo -> dispositivo que reemplaza (hallazgo L3)
 
 // Referencia navegable a una entidad: lo justo para pintar un enlace sin
 // volver a consultar la base. `titulo` y `ruta` se calculan al construir
@@ -167,6 +168,25 @@ export function construirGrafo(datos: DatosGrafo): Arista[] {
     })
   }
 
+  // Dispositivo -> equipo que reemplaza (hallazgo L3): autorreferencia
+  // dentro de `dispositivos.reemplazaA`. Habilita "Reemplazado por" en la
+  // ficha del equipo saliente y el aviso de impacto si se intentara
+  // eliminarlo del todo (no solo darlo de baja) mientras algo lo reemplaza.
+  for (const dispositivo of datos.dispositivos) {
+    if (dispositivo.eliminadoEn || !dispositivo.reemplazaA) continue
+    aristas.push({
+      origen: {
+        tipo: 'dispositivo',
+        id: dispositivo.id,
+        titulo: dispositivo.nombre,
+        ruta: `/dispositivos/${dispositivo.id}`,
+      },
+      destinoTipo: 'dispositivo',
+      destinoId: dispositivo.reemplazaA,
+      relacion: 'reemplaza',
+    })
+  }
+
   for (const diagnostico of datos.diagnosticos) {
     if (diagnostico.eliminadoEn) continue
     const origen: NodoRef = {
@@ -268,6 +288,7 @@ export function resumenImpacto(aristas: Arista[], tipo: TipoEntidad, id: string)
     { clave: 'credencial', singular: 'credencial', plural: 'credenciales', ids: new Set() },
     { clave: 'campo_protegido', singular: 'dato protegido', plural: 'datos protegidos', ids: new Set() },
     { clave: 'conexion', singular: 'conexión', plural: 'conexiones', ids: new Set() },
+    { clave: 'reemplazo', singular: 'reemplazo', plural: 'reemplazos', ids: new Set() },
   ]
   const porClave = Object.fromEntries(grupos.map((g) => [g.clave, g]))
 
@@ -295,6 +316,8 @@ function categoriaImpacto(relacion: TipoRelacion): string {
       return 'credencial'
     case 'campo_dispositivo':
       return 'campo_protegido'
+    case 'reemplaza':
+      return 'reemplazo'
     case 'subprocedimiento':
     case 'solucion':
     case 'decision':

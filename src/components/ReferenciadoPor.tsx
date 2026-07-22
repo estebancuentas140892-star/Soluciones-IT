@@ -35,6 +35,10 @@ const ETIQUETA_RELACION: Record<TipoRelacion, string> = {
   // Igual que la anterior: la ficha del dispositivo muestra sus propios
   // campos protegidos en SeguridadDelEquipo, no vía este componente.
   campo_dispositivo: 'Dato protegido del equipo',
+  // Hallazgo L3: la ficha del dispositivo muestra su propia fila
+  // "Reemplazado por" (DispositivoPage.tsx), no vía este componente; esta
+  // etiqueta es solo el respaldo del Record exhaustivo.
+  reemplaza: 'Reemplazado por',
 }
 
 // Orden estable de los grupos en la ficha.
@@ -52,6 +56,7 @@ const ORDEN_RELACION: TipoRelacion[] = [
   'conexion',
   'credencial_dispositivo',
   'campo_dispositivo',
+  'reemplaza',
 ]
 
 interface Props {

@@ -39,6 +39,7 @@ function dispositivoDePrueba(id: string, nombre: string): Dispositivo {
     ubicacionId: null,
     responsable: '',
     responsableId: null,
+    reemplazaA: null,
     ip: '',
     estado: '',
     observaciones: '',

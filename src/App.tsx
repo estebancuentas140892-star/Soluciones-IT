@@ -65,6 +65,9 @@ const DispositivoForm = lazy(() =>
 const DarDeBajaPage = lazy(() =>
   import('./features/dispositivos/DarDeBajaPage').then((m) => ({ default: m.DarDeBajaPage })),
 )
+const ReemplazoPage = lazy(() =>
+  import('./features/dispositivos/ReemplazoPage').then((m) => ({ default: m.ReemplazoPage })),
+)
 const BovedaGuard = lazy(() =>
   import('./features/boveda/BovedaGuard').then((m) => ({ default: m.BovedaGuard })),
 )
@@ -421,6 +424,19 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <DarDeBajaPage />
+                  </Suspense>
+                }
+              />
+              {/* Reemplazar equipo (hallazgos L2/L3 de AUDITORIA_FLUJOS_TI.md):
+                  tras crear el equipo entrante con ?reemplazaA=<id>, esta
+                  pantalla migra sus conexiones, credenciales y campos
+                  protegidos. Propia pantalla Nocturne, por eso sale del
+                  Layout oscuro como el resto de asistentes. */}
+              <Route
+                path="dispositivos/:dispositivoId/reemplazo"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ReemplazoPage />
                   </Suspense>
                 }
               />

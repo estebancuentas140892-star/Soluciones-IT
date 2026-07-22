@@ -61,10 +61,18 @@ export function DispositivoForm() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const esEdicion = Boolean(dispositivoId)
+  // Modo reemplazo (hallazgo L2): /dispositivos/nuevo?reemplazaA=<id>
+  // precarga igual que copiarDe (misma identidad, ubicación y
+  // responsable heredados; serial/placa/IP/foto en blanco, cada equipo
+  // físico es distinto) y, al guardar, encadena la migración de
+  // conexiones/credenciales/campos protegidos del saliente en vez de ir
+  // directo a la ficha.
+  const reemplazaAParam = esEdicion ? null : searchParams.get('reemplazaA')
+  const esReemplazo = Boolean(reemplazaAParam)
   // Modo duplicar: /dispositivos/nuevo?copiarDe=<id> precarga la ficha
   // de otro dispositivo, dejando en blanco lo que identifica al equipo
   // (serial, placa, IP).
-  const copiarDe = esEdicion ? null : searchParams.get('copiarDe')
+  const copiarDe = esEdicion ? null : (searchParams.get('copiarDe') ?? reemplazaAParam)
   const esDuplicado = Boolean(copiarDe)
   // El id se decide desde el inicio (no al guardar): estable para
   // excluirse a si mismo del chequeo de serial duplicado mientras se
@@ -119,6 +127,10 @@ export function DispositivoForm() {
   // Id de la persona responsable (entidad, hallazgo T1), o null si es
   // texto libre.
   const [responsableId, setResponsableId] = useState<string | null>(null)
+  // Equipo que este reemplaza (hallazgo L3): viene del parámetro al crear
+  // (modo reemplazo) o de la ficha ya guardada al editar; no se toca en
+  // el resto del formulario.
+  const [reemplazaAId, setReemplazaAId] = useState<string | null>(reemplazaAParam)
   const [ip, setIp] = useState('')
   // Estado libre; en un equipo nuevo se asume "Operativo" (lo esperable
   // al registrar un equipo que se acaba de instalar y que el mockup trae
@@ -145,6 +157,7 @@ export function DispositivoForm() {
     setUbicacionId(dispositivo.ubicacionId ?? null)
     setResponsable(dispositivo.responsable)
     setResponsableId(dispositivo.responsableId ?? null)
+    setReemplazaAId(dispositivo.reemplazaA ?? null)
     setIp(dispositivo.ip)
     setEstado(dispositivo.estado)
     setObservaciones(dispositivo.observaciones)
@@ -161,7 +174,10 @@ export function DispositivoForm() {
       return
     }
     setCategoriaId(original.categoriaId)
-    setNombre(`${original.nombre} (copia)`)
+    // En reemplazo se conserva el nombre tal cual (suele ser la misma
+    // identidad logica del puesto/rack); en duplicar se distingue con
+    // "(copia)" porque de ahi suelen salir varios equipos iguales.
+    setNombre(esReemplazo ? original.nombre : `${original.nombre} (copia)`)
     setMarca(original.marca)
     setModelo(original.modelo)
     setSerial('')
@@ -171,14 +187,17 @@ export function DispositivoForm() {
     setResponsable(original.responsable)
     setResponsableId(original.responsableId ?? null)
     setIp('')
-    setEstado(original.estado)
+    // En reemplazo el equipo entrante es nuevo y presumiblemente
+    // operativo: copiar el estado del saliente arrastraria justo el
+    // motivo por el que se reemplaza (por ejemplo "Fuera de servicio").
+    setEstado(esReemplazo ? 'Operativo' : original.estado)
     setObservaciones(original.observaciones)
     setDetalles(Object.entries(original.detalles).map(([clave, valor]) => ({ clave, valor })))
     // La foto NO se copia: es un equipo fisico distinto, con su propia
     // imagen (mismo criterio que serial, placa e IP, que tampoco se
     // copian).
     setCargadoInicial(true)
-  }, [esEdicion, original, cargadoInicial])
+  }, [esEdicion, original, cargadoInicial, esReemplazo])
 
   // Nombre de la categoría elegida, para el rótulo "Propiedades de X".
   const categoriaNombre = useMemo(
@@ -232,6 +251,7 @@ export function DispositivoForm() {
         responsable: responsable.trim(),
         // Mismo invariante que ubicacionId: sin texto no hay id.
         responsableId: responsable.trim() === '' ? null : responsableId,
+        reemplazaA: reemplazaAId,
         ip: ip.trim(),
         estado: estado.trim(),
         observaciones: observaciones.trim(),
@@ -241,7 +261,10 @@ export function DispositivoForm() {
       motivo.trim(),
     )
 
-    navigate(`/dispositivos/${id}`)
+    // Modo reemplazo: en vez de ir directo a la ficha, se encadena la
+    // migracion de conexiones/credenciales/campos protegidos del equipo
+    // saliente.
+    navigate(esReemplazo ? `/dispositivos/${id}/reemplazo` : `/dispositivos/${id}`)
   }
 
   if ((esEdicion || copiarDe) && !cargadoInicial) {
@@ -261,7 +284,11 @@ export function DispositivoForm() {
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
             <BotonVolver>Cancelar</BotonVolver>
-            {esDuplicado && <TagNeutral className="shrink-0">Copia de otro equipo</TagNeutral>}
+            {esReemplazo ? (
+              <TagNeutral className="shrink-0">Reemplazo de otro equipo</TagNeutral>
+            ) : (
+              esDuplicado && <TagNeutral className="shrink-0">Copia de otro equipo</TagNeutral>
+            )}
           </header>
           <div className="px-4 pb-3 pt-0.5">
             <h1 className="m-0 text-[22px] font-medium leading-[1.25]">

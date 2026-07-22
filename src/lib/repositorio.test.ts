@@ -15,6 +15,7 @@ function dispositivoDePrueba(id: string): Omit<Dispositivo, 'updatedAt' | 'updat
     ubicacionId: null,
     responsable: '',
     responsableId: null,
+    reemplazaA: null,
     ip: '192.168.1.50',
     estado: 'Operativa',
     observaciones: '',

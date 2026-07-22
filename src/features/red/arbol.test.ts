@@ -24,6 +24,7 @@ function dispositivo(id: string, nombre: string, categoriaId: string, eliminadoE
     ubicacionId: null,
     responsable: '',
     responsableId: null,
+    reemplazaA: null,
     ip: '',
     estado: '',
     observaciones: '',

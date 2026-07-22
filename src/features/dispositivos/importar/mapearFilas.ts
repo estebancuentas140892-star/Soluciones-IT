@@ -198,6 +198,10 @@ export function mapearFilas(filas: string[][], opciones: OpcionesMapeo): Resulta
       // Mismo criterio que ubicacionId (hallazgo T1): sin vincular hasta
       // que se migre desde /personas/migrar.
       responsableId: null,
+      // La importacion masiva nunca crea un equipo de reemplazo
+      // (hallazgo L3): esa accion solo se dispara desde el menu de una
+      // ficha existente.
+      reemplazaA: null,
       ip: '',
       estado: '',
       observaciones: '',

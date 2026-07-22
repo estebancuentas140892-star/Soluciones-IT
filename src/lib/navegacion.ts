@@ -64,11 +64,14 @@ export function padreDe(pathname: string): Padre | null {
       return { to: `/soluciones/${a}/${b}`, etiqueta: 'Volver' } // editar/ejecutar -> ficha
     }
     case 'dispositivos': {
-      // /dispositivos/:id/editar y /dispositivos/:id/baja -> ficha; el
-      // resto (nuevo, importar, etiquetas, :id) -> lista. La ficha de un
-      // equipo de red vuelve a Red: eso depende de datos en runtime
-      // (es_red), la pantalla lo resuelve con un override.
-      if (b === 'editar' || b === 'baja') return { to: `/dispositivos/${a}`, etiqueta: 'Volver' }
+      // /dispositivos/:id/editar, /dispositivos/:id/baja y
+      // /dispositivos/:id/reemplazo -> ficha; el resto (nuevo, importar,
+      // etiquetas, :id) -> lista. La ficha de un equipo de red vuelve a
+      // Red: eso depende de datos en runtime (es_red), la pantalla lo
+      // resuelve con un override.
+      if (b === 'editar' || b === 'baja' || b === 'reemplazo') {
+        return { to: `/dispositivos/${a}`, etiqueta: 'Volver' }
+      }
       return { to: '/dispositivos', etiqueta: 'Dispositivos' }
     }
     case 'ubicaciones': {

@@ -163,6 +163,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       ubicacionId: 'ubicacion_id',
       responsable: 'responsable',
       responsableId: 'responsable_id',
+      reemplazaA: 'reemplaza_a',
       ip: 'ip',
       estado: 'estado',
       observaciones: 'observaciones',

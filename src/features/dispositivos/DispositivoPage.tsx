@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { dependenciasDeBaja, sinDependencias } from './baja'
 import { completitudDispositivo } from './completitud'
 import { compartirOCopiar, copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
@@ -17,6 +18,8 @@ import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useGrafo } from '../../components/useGrafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
+  ArrowsClockwise,
+  CaretRight,
   Check,
   Copy,
   DotsThreeOutline,
@@ -117,6 +120,17 @@ export function DispositivoPage() {
     () => (dispositivo?.responsableId ? db.personas.get(dispositivo.responsableId) : undefined),
     [dispositivo?.responsableId],
   )
+  // Reemplazo (hallazgo L3): equipo al que este reemplaza (si lo hay) y
+  // equipo que reemplazo a este (inverso, derivado con un filtro directo
+  // ya que no hay copia de referencia que consultar sin ella).
+  const reemplazaVinculado = useLiveQuery(
+    () => (dispositivo?.reemplazaA ? db.dispositivos.get(dispositivo.reemplazaA) : undefined),
+    [dispositivo?.reemplazaA],
+  )
+  const reemplazadoPor = useLiveQuery(
+    () => db.dispositivos.filter((d) => !d.eliminadoEn && d.reemplazaA === dispositivoId).first(),
+    [dispositivoId],
+  )
 
   const idVisitado = dispositivo && !dispositivo.eliminadoEn ? dispositivo.id : null
   useEffect(() => {
@@ -167,6 +181,12 @@ export function DispositivoPage() {
   const responsableVivo = responsableVinculado && !responsableVinculado.eliminadoEn ? responsableVinculado : null
   const responsableNombre = textoVivo(responsableVivo?.nombre, dispositivo.responsable)
 
+  // Sin copia de referencia para reemplazaA (autorreferencia estricta,
+  // fijada una sola vez al crear): si la fila vinculada no esta
+  // disponible (aun sincronizando, o realmente no existe) la fila de la
+  // ficha simplemente no se muestra, en vez de mostrar el id crudo.
+  const reemplazaNombre = reemplazaVinculado?.nombre ?? null
+
   const detalles = Object.entries(dispositivo.detalles).filter(([, valor]) => valor)
   const estado = dispositivo.estado ? estadoConEtiqueta(dispositivo.estado) : null
   const metaLinea = [categoria?.nombre, `actualizado ${fechaCorta(dispositivo.updatedAt)}`]
@@ -190,7 +210,7 @@ export function DispositivoPage() {
           <button
             type="button"
             onClick={() => setMenuAbierto((v) => !v)}
-            aria-label="Más acciones: duplicar, editar, etiqueta QR, dar de baja o eliminar"
+            aria-label="Más acciones: duplicar, editar, etiqueta QR, reemplazar, dar de baja o eliminar"
             aria-expanded={menuAbierto}
             className={BTN_ICONO_SECUNDARIO}
           >
@@ -220,6 +240,14 @@ export function DispositivoPage() {
           <Link to="/dispositivos/etiquetas" onClick={() => setMenuAbierto(false)} className={`shrink-0 ${BTN_SECUNDARIO}`}>
             <QrCode size={14} aria-hidden />
             Etiqueta QR
+          </Link>
+          <Link
+            to={`/dispositivos/nuevo?reemplazaA=${dispositivoId}`}
+            onClick={() => setMenuAbierto(false)}
+            className={`shrink-0 ${BTN_SECUNDARIO}`}
+          >
+            <ArrowsClockwise size={14} aria-hidden />
+            Reemplazar
           </Link>
           <Link
             to={`/dispositivos/${dispositivoId}/baja`}
@@ -279,8 +307,22 @@ export function DispositivoPage() {
           )}
         </header>
 
-        {/* Información: filas copiables, ubicación y responsable vivos. */}
-        {(campos.length > 0 || ubicacionNombre || responsableNombre || detalles.length > 0) && (
+        {/* Migracion pendiente (hallazgos L2/L3): este equipo reemplaza a
+            otro que todavia tiene conexiones, credenciales o campos
+            protegidos sin mover. Enlaza a la pantalla de migracion en vez
+            de repetir aqui la logica de que hay pendiente. */}
+        {dispositivo.reemplazaA && (
+          <BannerMigracionPendiente nuevoId={dispositivoId} viejoId={dispositivo.reemplazaA} />
+        )}
+
+        {/* Información: filas copiables, ubicación, responsable y
+            reemplazo vivos. */}
+        {(campos.length > 0 ||
+          ubicacionNombre ||
+          responsableNombre ||
+          reemplazaNombre ||
+          reemplazadoPor ||
+          detalles.length > 0) && (
           <section>
             <TituloSeccion className="mb-2">Información</TituloSeccion>
             <div className="divide-y divide-noct-divider rounded-lg border border-noct-divider bg-noct-surface px-3.5">
@@ -326,6 +368,30 @@ export function DispositivoPage() {
                       {responsableNombre}
                     </span>
                   )}
+                </div>
+              )}
+              {reemplazaNombre && (
+                <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
+                  <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">Reemplaza a</span>
+                  <Link
+                    to={`/dispositivos/${dispositivo.reemplazaA}`}
+                    className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
+                  >
+                    <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
+                    {reemplazaNombre}
+                  </Link>
+                </div>
+              )}
+              {reemplazadoPor && (
+                <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
+                  <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">Reemplazado por</span>
+                  <Link
+                    to={`/dispositivos/${reemplazadoPor.id}`}
+                    className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
+                  >
+                    <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
+                    {reemplazadoPor.nombre}
+                  </Link>
                 </div>
               )}
             </div>
@@ -408,6 +474,41 @@ export function DispositivoPage() {
         onConfirmar={eliminar}
       />
     </ShellNocturne>
+  )
+}
+
+// Aviso de migración pendiente (hallazgos L2/L3): este equipo se creó
+// como reemplazo de otro (`reemplazaA`) pero la migración de conexiones,
+// credenciales o campos protegidos todavía no se hizo (se dejó "para
+// después" desde ReemplazoPage). Reutiliza la misma `dependenciasDeBaja`
+// que la pantalla de migración, así el aviso desaparece solo en cuanto
+// no quede nada pendiente.
+function BannerMigracionPendiente({ nuevoId, viejoId }: { nuevoId: string; viejoId: string }) {
+  const conexiones = useLiveQuery(() => db.conexiones.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  const camposProtegidos = useLiveQuery(
+    () => db.campos_protegidos.filter((c) => !c.eliminadoEn).toArray(),
+    [],
+    [],
+  )
+  const dependencias = useMemo(
+    () => dependenciasDeBaja(viejoId, { conexiones, credenciales, camposProtegidos }),
+    [viejoId, conexiones, credenciales, camposProtegidos],
+  )
+
+  if (sinDependencias(dependencias)) return null
+
+  return (
+    <Link
+      to={`/dispositivos/${nuevoId}/reemplazo`}
+      className="flex items-center gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5 text-noct-text"
+    >
+      <ArrowsClockwise size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+      <span className="min-w-0 flex-1 text-[13px] leading-[1.45]">
+        Este equipo reemplaza a otro que todavía tiene conexiones, credenciales o campos protegidos sin migrar.
+      </span>
+      <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+    </Link>
   )
 }
 

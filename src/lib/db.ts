@@ -320,6 +320,11 @@ export interface Dispositivo {
   responsable: string
   // Id de la persona responsable (entidad), o null.
   responsableId: string | null
+  // Id del equipo que este dispositivo reemplaza (hallazgo L3), o null.
+  // Autorreferencia a la propia tabla; el inverso ("reemplazado por") se
+  // deriva en el grafo, no se guarda. Se fija una sola vez al crear el
+  // equipo desde la accion "Reemplazar equipo" y no se edita despues.
+  reemplazaA: string | null
   ip: string
   estado: string
   observaciones: string

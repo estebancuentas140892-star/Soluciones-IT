@@ -506,6 +506,17 @@ alter table public.historial add constraint historial_entidad_tipo_check
   check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico', 'ubicacion', 'campo_protegido', 'persona'));
 
 -- ----------------------------------------------------------------
+-- 1e. Grupo de esquema L2/L3 (2026-07-22): "Reemplazar equipo".
+--     Autorreferencia en dispositivos: el equipo entrante guarda a
+--     cual reemplazo. El grafo deriva el inverso ("reemplazado por"),
+--     mismo patron que credencial_dispositivo. Sin tabla nueva.
+--     Hallazgos L2 y L3 de AUDITORIA_FLUJOS_TI.md.
+-- ----------------------------------------------------------------
+
+alter table public.dispositivos add column if not exists reemplaza_a uuid references public.dispositivos (id);
+create index if not exists idx_dispositivos_reemplaza on public.dispositivos (reemplaza_a);
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 

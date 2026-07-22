@@ -79,6 +79,7 @@ function dispositivo(cambios: Partial<Dispositivo> & { id: string; nombre: strin
     ubicacionId: null,
     responsable: '',
     responsableId: null,
+    reemplazaA: null,
     ip: '',
     estado: '',
     observaciones: '',
@@ -316,6 +317,38 @@ describe('construirGrafo', () => {
     expect(grafo.some((a) => a.relacion === 'campo_dispositivo')).toBe(false)
   })
 
+  it('crea una arista de reemplazo del equipo entrante hacia el saliente (hallazgo L3)', () => {
+    const grafo = construirGrafo(
+      datos({
+        dispositivos: [
+          dispositivo({ id: 'sw-nuevo', nombre: 'Switch nuevo', reemplazaA: 'sw-viejo' }),
+          dispositivo({ id: 'sw-viejo', nombre: 'Switch viejo' }),
+        ],
+      }),
+    )
+    const arista = grafo.find((a) => a.relacion === 'reemplaza')
+    expect(arista?.origen).toEqual({
+      tipo: 'dispositivo',
+      id: 'sw-nuevo',
+      titulo: 'Switch nuevo',
+      ruta: '/dispositivos/sw-nuevo',
+    })
+    expect(arista?.destinoTipo).toBe('dispositivo')
+    expect(arista?.destinoId).toBe('sw-viejo')
+  })
+
+  it('un dispositivo sin reemplazaA o eliminado no genera arista de reemplazo', () => {
+    const grafo = construirGrafo(
+      datos({
+        dispositivos: [
+          dispositivo({ id: 'd1', nombre: 'Sin reemplazo' }),
+          dispositivo({ id: 'd2', nombre: 'Borrado', reemplazaA: 'd1', eliminadoEn: '2026-01-01' }),
+        ],
+      }),
+    )
+    expect(grafo.some((a) => a.relacion === 'reemplaza')).toBe(false)
+  })
+
   it('ignora entidades eliminadas', () => {
     const proc = procedimiento([paso({ subArticuloId: 'sub-1', subArticuloTitulo: 'X' })])
     const grafo = construirGrafo(
@@ -435,5 +468,17 @@ describe('resumenImpacto', () => {
   it('devuelve null cuando nada la referencia', () => {
     const grafo = construirGrafo(datos({ credenciales: [credencial({ id: 'cred-1', titulo: 'Sola' })] }))
     expect(resumenImpacto(grafo, 'credencial', 'cred-1')).toBeNull()
+  })
+
+  it('avisa antes de eliminar del todo un equipo que ya fue reemplazado (hallazgo L3)', () => {
+    const grafo = construirGrafo(
+      datos({
+        dispositivos: [
+          dispositivo({ id: 'sw-nuevo', nombre: 'Switch nuevo', reemplazaA: 'sw-viejo' }),
+          dispositivo({ id: 'sw-viejo', nombre: 'Switch viejo' }),
+        ],
+      }),
+    )
+    expect(resumenImpacto(grafo, 'dispositivo', 'sw-viejo')).toBe('Se usa en 1 reemplazo.')
   })
 })

@@ -65,6 +65,13 @@ describe('padreDe', () => {
         etiqueta: 'Volver',
       })
     })
+
+    it('reemplazo (hallazgos L2/L3) vuelve a la ficha del dispositivo', () => {
+      expect(padreDe('/dispositivos/cam-1/reemplazo')).toEqual({
+        to: '/dispositivos/cam-1',
+        etiqueta: 'Volver',
+      })
+    })
   })
 
   describe('Ubicaciones (se alcanza desde Dispositivos)', () => {

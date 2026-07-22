@@ -200,7 +200,10 @@ export async function registrarAccesoBoveda(
 // `ubicacionId` (grupo N3) y `responsableId` (hallazgo T1) no generan su
 // propia entrada: su companero legible (`ubicacion`/`responsable`, la
 // copia del nombre) ya registra el cambio de forma entendible, sin
-// volcar un UUID en el historial.
+// volcar un UUID en el historial. `reemplazaA` (hallazgo L3) tampoco: se
+// fija una sola vez al crear el equipo (la propia "creacion" ya alcanza)
+// y su trazabilidad real es la fila "Reemplaza a" de la ficha, no el
+// historial.
 const CAMPOS_SIN_HISTORIAL = new Set([
   'id',
   'updatedAt',
@@ -208,6 +211,7 @@ const CAMPOS_SIN_HISTORIAL = new Set([
   'eliminadoEn',
   'ubicacionId',
   'responsableId',
+  'reemplazaA',
 ])
 
 // Campos que el servidor reescribe en cada guardado: no cuentan como un
