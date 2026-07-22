@@ -458,7 +458,16 @@ export function DispositivoPage() {
             </div>
             {/* Creacion contextual (fase N2, punto 1): precarga la
                 categoria y el equipo afectado, asi ningun dato visible
-                aqui se vuelve a escribir a mano en el formulario. */}
+                aqui se vuelve a escribir a mano en el formulario.
+                "Documentar procedimiento" (hallazgo K6 de
+                AUDITORIA_FLUJOS_TI.md) es el mismo mecanismo de
+                "Reportar incidencia" pero sin forzar
+                tipo=problema_frecuente: antes solo existia el atajo
+                contextual para una incidencia, y un procedimiento
+                normal ("Instalar esta impresora", "Configurar este
+                switch") obligaba a agregar el equipo a mano en
+                "Equipos donde aplica". ArticuloForm ya lee
+                dispositivoAfectado sin importar el tipo. */}
             <div className="flex flex-wrap gap-2">
               <Link
                 to={`/soluciones/${dispositivo.categoriaId}/nuevo?tipo=problema_frecuente&dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
@@ -466,6 +475,13 @@ export function DispositivoPage() {
               >
                 <Plus size={13} aria-hidden />
                 Reportar incidencia
+              </Link>
+              <Link
+                to={`/soluciones/${dispositivo.categoriaId}/nuevo?dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
+                className={BTN_GHOST}
+              >
+                <BookOpen size={13} aria-hidden />
+                Documentar procedimiento
               </Link>
               {perfil?.puedeVerBoveda && (
                 <Link

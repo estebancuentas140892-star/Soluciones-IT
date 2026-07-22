@@ -154,7 +154,7 @@ La creación desde la ficha del equipo ya precarga título, categoría y víncul
 Al crear un artículo se avisan similares (`ArticuloForm.tsx:210-213,528-556`); al crear un diagnóstico, el título no tiene ningún aviso (`DiagnosticoForm.tsx:202-209`). Un `problema_frecuente` y un `diagnostico` del mismo problema son dos entradas al mismo conocimiento y nada las cruza (fusionar árboles está descartado a propósito, pero el aviso cruzado no).
 - Automatizar: reutilizar el índice de búsqueda en `DiagnosticoForm` para ofrecer el artículo o diagnóstico ya existente.
 
-**K6 - No hay creación contextual de procedimiento desde un equipo (solo de incidencia). [BAJA] [NUEVO]**
+**K6 - No hay creación contextual de procedimiento desde un equipo (solo de incidencia). [BAJA] [NUEVO] [RESUELTO en la tarea 142, 2026-07-22]**
 `DispositivoPage.tsx:326` solo genera el enlace contextual para `tipo=problema_frecuente`. Para documentar un procedimiento normal "de este equipo" hay que agregar el equipo a mano en "Equipos donde aplica".
 - Autocompletar: ofrecer también "Documentar procedimiento para este equipo" que precargue `dispositivosAfectados`.
 
@@ -305,7 +305,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | N4 | Sin puerto consecutivo sugerido | Baja | Baja | Bajo | Nuevo |
 | N6 | Puertos sin vista de "libres" | Baja | Media | Bajo | Nuevo |
 | S6 | Sin sugerir equipo por IP/URL en bóveda | Baja | Baja | Bajo | Nuevo |
-| K6 | Sin procedimiento contextual desde equipo | Baja | Baja | Bajo | Nuevo |
+| K6 | Sin procedimiento contextual desde equipo | Baja | Baja | Bajo | RESUELTO (tarea 142) |
 | D3 | Lecturas full-table redundantes en ficha | Baja | Baja | Bajo | Nuevo |
 | D4 | Árbol de topología recomputado por render | Baja | Media | Bajo | Nuevo |
 
@@ -321,7 +321,7 @@ Hoja de ruta propuesta por fases (agrupando por afinidad técnica, no solo por p
 - **Fase persona (estructural, el mayor salto de valor):** T1 (entidad Persona/Responsable) con su migración asistida, reutilizando el patrón exacto de `ubicaciones`. Habilita el inventario por persona y el alta/baja de empleados.
 - **Fase ciclo de vida:** L1 (baja con cascada), L2 (reemplazo con herencia), L3 (relación de sustitución) y T2 (garantía/compra), apoyados en el grafo de referencias inversas y el patrón de migración asistida.
 - **Fase incorporación y cableado:** O1 (asistente/checklist post-alta apoyado en el motor de completitud existente), O2, O3, N2, N3, N4, N5, más la unificación D1. Colapsa el flujo estrella a un recorrido guiado.
-- **Fase conocimiento:** K2, K3, K4 y K5 RESUELTOS (tareas 140 y 141, 2026-07-22). Solo queda K6 (crear procedimiento contextual desde un equipo). Recicla el conocimiento del equipo sin re-teclear.
+- **Fase conocimiento:** K2 a K6 RESUELTOS (tareas 140, 141 y 142, 2026-07-22). Grupo completo. Reciclaba el conocimiento del equipo sin re-teclear.
 - **Fase secretos:** S2, S3, S4, S5, S6, unificando la política de rotación.
 - **Fase deuda técnica (oportunista):** D2, D3, D4, cuando se toquen esas pantallas por otra razón.
 

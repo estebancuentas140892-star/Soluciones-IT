@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 142. K6 de la auditoría de flujos (crear procedimiento contextual desde un equipo)
+
+**Estado**: TERMINADA el 2026-07-22. **Prioridad**: BAJA. Último hallazgo pendiente del grupo de conocimiento (K1 a K6); con esta tarea el grupo queda completo.
+
+**Problema** (`AUDITORIA_FLUJOS_TI.md:157-159`): `DispositivoPage.tsx` solo generaba un enlace de creación contextual para incidencias (`tipo=problema_frecuente`, botón "Reportar incidencia"). Para documentar un procedimiento normal de un equipo ("Instalar esta impresora", "Configurar este switch") había que crear el artículo desde Soluciones y agregar el equipo a mano en "Equipos donde aplica".
+
+**Qué se construyó**: en `src/features/dispositivos/DispositivoPage.tsx`, sección "Resolver con este equipo", un segundo enlace "Documentar procedimiento" junto a "Reportar incidencia", al mismo `/soluciones/<categoriaId>/nuevo` con `dispositivoAfectado`/`dispositivoNombre`, pero SIN el parámetro `tipo`: el técnico elige instalación, configuración, conexión, mantenimiento o manual, y el formulario cae en su tipo por defecto (`manual`) si no elige nada. No requirió tocar `ArticuloForm.tsx`: ya leía `dispositivoAfectado` sin importar el tipo, porque `dispositivosAfectados` siempre fue un campo universal del artículo (la sección "Equipos donde aplica" nunca estuvo condicionada por tipo).
+
+**Verificado en navegador real** (Chrome, servidor de desarrollo, datos sembrados y luego borrados): el enlace apareció con la URL correcta (sin `tipo=`); al entrar, el tipo por defecto quedó en "Manual" (no en "Problema frecuente"); la pestaña General mostró "Equipos donde aplica" con "Impresora Bodega Norte" ya precargada; al guardar, IndexedDB confirmó `tipo: manual` y `dispositivosAfectados` con el equipo correcto. El artículo no apareció en "Procedimientos de este equipo" porque nace en borrador y esa sección solo lista publicados (mismo criterio que el resto de la app, no un defecto de esta tarea). Sin errores de consola.
+
+**Pruebas**: 1353 en verde, sin pruebas nuevas (cambio de solo dos enlaces JSX sin lógica pura que extraer; se verificó en navegador real, mismo criterio que K4). `tsc -b`, `oxlint` y `npm run build` limpios. Sin cambios de esquema.
+
 ### 141. K3, K4 y K5 de la auditoría de flujos (completitud, contexto y anti duplicados)
 
 **Estado**: TERMINADA el 2026-07-22. **Prioridad**: MEDIA los tres. Con esto se cierran los tres hallazgos MEDIA de mayor prioridad del grupo de conocimiento (`AUDITORIA_FLUJOS_TI.md`).
