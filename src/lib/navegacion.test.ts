@@ -58,6 +58,13 @@ describe('padreDe', () => {
         etiqueta: 'Volver',
       })
     })
+
+    it('dar de baja (hallazgo L1) vuelve a la ficha del dispositivo', () => {
+      expect(padreDe('/dispositivos/cam-1/baja')).toEqual({
+        to: '/dispositivos/cam-1',
+        etiqueta: 'Volver',
+      })
+    })
   })
 
   describe('Ubicaciones (se alcanza desde Dispositivos)', () => {

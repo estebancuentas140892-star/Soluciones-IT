@@ -29,6 +29,7 @@ import {
   TrashSimple,
   User,
   Warning,
+  XCircle,
 } from '../../components/iconos'
 import {
   BTN_GHOST,
@@ -189,7 +190,7 @@ export function DispositivoPage() {
           <button
             type="button"
             onClick={() => setMenuAbierto((v) => !v)}
-            aria-label="Más acciones: duplicar, editar, etiqueta QR o eliminar"
+            aria-label="Más acciones: duplicar, editar, etiqueta QR, dar de baja o eliminar"
             aria-expanded={menuAbierto}
             className={BTN_ICONO_SECUNDARIO}
           >
@@ -219,6 +220,14 @@ export function DispositivoPage() {
           <Link to="/dispositivos/etiquetas" onClick={() => setMenuAbierto(false)} className={`shrink-0 ${BTN_SECUNDARIO}`}>
             <QrCode size={14} aria-hidden />
             Etiqueta QR
+          </Link>
+          <Link
+            to={`/dispositivos/${dispositivoId}/baja`}
+            onClick={() => setMenuAbierto(false)}
+            className={`shrink-0 ${BTN_SECUNDARIO}`}
+          >
+            <XCircle size={14} aria-hidden />
+            Dar de baja
           </Link>
           <button
             type="button"

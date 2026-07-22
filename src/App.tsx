@@ -62,6 +62,9 @@ const DispositivoPage = lazy(() =>
 const DispositivoForm = lazy(() =>
   import('./features/dispositivos/DispositivoForm').then((m) => ({ default: m.DispositivoForm })),
 )
+const DarDeBajaPage = lazy(() =>
+  import('./features/dispositivos/DarDeBajaPage').then((m) => ({ default: m.DarDeBajaPage })),
+)
 const BovedaGuard = lazy(() =>
   import('./features/boveda/BovedaGuard').then((m) => ({ default: m.BovedaGuard })),
 )
@@ -406,6 +409,18 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <DispositivoForm />
+                  </Suspense>
+                }
+              />
+              {/* Dar de baja con cascada (hallazgo L1 de AUDITORIA_FLUJOS_TI.md):
+                  resuelve conexiones, credenciales y campos protegidos del
+                  equipo antes de fijar el estado. Propia pantalla Nocturne,
+                  por eso sale del Layout oscuro como el resto de asistentes. */}
+              <Route
+                path="dispositivos/:dispositivoId/baja"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <DarDeBajaPage />
                   </Suspense>
                 }
               />
