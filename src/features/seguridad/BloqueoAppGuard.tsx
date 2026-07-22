@@ -4,6 +4,8 @@ import { Outlet } from 'react-router-dom'
 import { db, ID_BLOQUEO_APP, type MetodoBloqueoApp } from '../../lib/db'
 import { Cargando } from '../../components/Cargando'
 import { CampoContrasena } from '../../components/CampoContrasena'
+import { LockSimple } from '../../components/iconos'
+import { BTN_PRIMARIO, BTN_GHOST_TENUE } from '../../components/nocturne'
 import { useAuth } from '../autenticacion/authContext'
 import { desbloquearApp, restablecerBloqueoApp } from './bloqueoApp'
 import { serializarPatron } from './patron'
@@ -58,12 +60,14 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-slate-950 px-6 text-slate-100">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <IconoCandado />
+    <div className="nocturne flex min-h-svh flex-col items-center justify-center gap-6 bg-noct-bg px-6 font-inter text-noct-text">
+      <div className="flex flex-col items-center gap-[18px] text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-noct-divider bg-noct-surface text-noct-accent-300">
+          <LockSimple size={28} aria-hidden />
+        </div>
         <div>
-          <h1 className="text-xl font-semibold">Soluciones IT</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-[22px] font-medium leading-tight">Soluciones IT</h1>
+          <p className="mt-1.5 text-[13.5px] text-noct-neutral-400">
             {metodo === 'patron'
               ? 'Dibuja tu patrón para continuar'
               : 'Ingresa tu contraseña de desbloqueo'}
@@ -78,23 +82,23 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
             deshabilitado={abriendo}
             reiniciarToken={reinicioPatron}
           />
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
         </div>
       ) : (
-        <form onSubmit={manejarEnvioContrasena} className="flex w-full max-w-xs flex-col gap-3">
+        <form onSubmit={manejarEnvioContrasena} className="flex w-full max-w-[300px] flex-col gap-2.5">
           <CampoContrasena
             required
             autoFocus
             value={contrasena}
             onChange={(e) => setContrasena(e.target.value)}
             placeholder="Contraseña de desbloqueo"
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className={`min-h-12 w-full rounded-md border bg-noct-surface px-3.5 py-3 text-center text-[15px] text-noct-text outline-none transition-colors placeholder:text-noct-neutral-600 focus:border-noct-accent ${error ? 'border-noct-error/55' : 'border-noct-divider'}`}
           />
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
           <button
             type="submit"
             disabled={abriendo}
-            className="rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-medium text-slate-950 disabled:opacity-50"
+            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
           >
             {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
           </button>
@@ -105,13 +109,13 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
         <button
           type="button"
           onClick={() => setMostrarAyuda((v) => !v)}
-          className="text-xs text-slate-500 underline decoration-dotted underline-offset-2"
+          className="text-[12.5px] text-noct-neutral-500 underline decoration-dotted underline-offset-2"
         >
           ¿Olvidaste tu código de desbloqueo?
         </button>
         {mostrarAyuda && (
-          <div className="flex max-w-xs flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900 p-3">
-            <p className="text-xs text-slate-400">
+          <div className="flex max-w-[300px] flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface p-3">
+            <p className="text-[12.5px] leading-relaxed text-noct-neutral-400">
               Puedes cerrar sesión para quitar el bloqueo. Para volver a entrar necesitarás la
               contraseña de tu cuenta. Tu información no se pierde: se recupera al iniciar sesión de
               nuevo.
@@ -119,30 +123,13 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
             <button
               type="button"
               onClick={() => void restablecerYCerrar()}
-              className="rounded-xl border border-slate-700 px-4 py-2 text-xs text-slate-200"
+              className={`${BTN_GHOST_TENUE} min-h-9 justify-center`}
             >
               Cerrar sesión y quitar el bloqueo
             </button>
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-function IconoCandado() {
-  return (
-    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-slate-800 bg-slate-900">
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        className="h-6 w-6 text-slate-400"
-      >
-        <rect x="5" y="11" width="14" height="9" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M8 11V7.5a4 4 0 0 1 8 0V11" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
     </div>
   )
 }
