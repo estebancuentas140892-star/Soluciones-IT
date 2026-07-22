@@ -1,4 +1,10 @@
-import Dexie, { type EntityTable } from 'dexie'
+import Dexie, { type EntityTable, type Table } from 'dexie'
+import {
+  normalizarEntidad,
+  TABLAS_SINCRONIZADAS,
+  type EntidadPorTabla,
+  type TablaSincronizada,
+} from './tablas'
 
 export interface Perfil {
   id: string
@@ -932,7 +938,47 @@ class SolucionesItDatabase extends Dexie {
     this.version(13).stores({
       personas: 'id, updatedAt',
     })
+
+    // Version 14 (2026-07-22, tarea 137): NO cambia el esquema, solo
+    // repara datos ya guardados. Sin `.stores()`, Dexie conserva el
+    // esquema de la version anterior y ejecuta el upgrade una sola vez
+    // por dispositivo.
+    //
+    // Causa (destapada por la tarea 136, la Boveda que no abria): el
+    // relleno por defecto de `aEntidadLocal` solo actua al DESCARGAR
+    // una fila, y la sincronizacion es incremental por cursor, asi que
+    // una fila que ya vivia en IndexedDB no se vuelve a bajar mientras
+    // su `updated_at` no cambie en el servidor: conserva para siempre
+    // los huecos que dejo una version anterior de la app. Ese hueco
+    // reventaba el render de la Boveda con un TypeError.
+    //
+    // Se hace aqui y no al arrancar la app a proposito: el upgrade
+    // termina ANTES de que nada pueda leer la base, asi que ninguna
+    // pantalla llega a ver una fila a medias. No pasa por el
+    // repositorio, de modo que no encola cambios en `cambiosPendientes`
+    // ni interfiere con la regla anti pisado (tarea 128); y como solo
+    // rellena huecos, jamas pisa un valor existente ni toca los campos
+    // cifrados.
+    this.version(14).upgrade(async (tx) => {
+      for (const tabla of TABLAS_SINCRONIZADAS) {
+        await tx
+          .table(tabla)
+          .toCollection()
+          .modify((fila: Record<string, unknown>) => {
+            normalizarEntidad(tabla, fila)
+          })
+      }
+    })
   }
 }
 
 export const db = new SolucionesItDatabase()
+
+// Mapea el nombre de una tabla sincronizada a su store de Dexie. Vive
+// aqui y no en `tablas.ts` para que ese modulo pueda importar de este
+// solo tipos: `db.ts` necesita `configTablas`/`normalizarEntidad` en
+// runtime para el upgrade de la version 14, y un import mutuo dejaria
+// un ciclo.
+export function storeDe<T extends TablaSincronizada>(tabla: T): Table<EntidadPorTabla[T], string> {
+  return db.table(tabla)
+}

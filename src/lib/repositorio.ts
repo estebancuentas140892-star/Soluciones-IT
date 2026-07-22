@@ -1,5 +1,6 @@
 import {
   db,
+  storeDe,
   type AccesoBoveda,
   type Adjunto,
   type Conexion,
@@ -10,7 +11,7 @@ import {
 import { resumenConexion } from './conexiones'
 import { supabase } from './supabase'
 import { programarSync } from './sync'
-import { storeDe, type EntidadPorTabla, type TablaEditable } from './tablas'
+import { type EntidadPorTabla, type TablaEditable } from './tablas'
 
 // Punto unico de escritura de la app. Toda creacion, edicion o
 // eliminacion pasa por aqui para que siempre ocurran las tres cosas:

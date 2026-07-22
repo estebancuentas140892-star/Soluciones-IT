@@ -1,12 +1,11 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import { db, type CambioPendiente, type Perfil } from './db'
+import { db, storeDe, type CambioPendiente, type Perfil } from './db'
 import { supabase } from './supabase'
 import { contarArchivosPendientes, esErrorDeRed, procesarArchivosPendientes } from './archivosPendientes'
 import {
   aEntidadLocal,
   aFilaRemota,
   configTablas,
-  storeDe,
   TABLAS_SINCRONIZADAS,
   type TablaSincronizada,
 } from './tablas'

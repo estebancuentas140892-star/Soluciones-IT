@@ -1,19 +1,22 @@
-import type { Table } from 'dexie'
-import {
-  db,
-  type AccesoBoveda,
-  type Adjunto,
-  type Articulo,
-  type CampoProtegido,
-  type Categoria,
-  type Conexion,
-  type Credencial,
-  type Diagnostico,
-  type Dispositivo,
-  type EjecucionDiagnostico,
-  type HistorialEntrada,
-  type Persona,
-  type Ubicacion,
+// Este modulo importa de `./db` SOLO tipos (no `db` ni ninguna otra
+// referencia en runtime) a proposito: `db.ts` si importa de aqui
+// `configTablas` y `normalizarEntidad` para el upgrade de la version
+// 14, y si el import fuera mutuo en runtime quedaria un ciclo. Por eso
+// `storeDe` vive en `db.ts` y no aqui, pese a mapear nombres de tabla.
+import type {
+  AccesoBoveda,
+  Adjunto,
+  Articulo,
+  CampoProtegido,
+  Categoria,
+  Conexion,
+  Credencial,
+  Diagnostico,
+  Dispositivo,
+  EjecucionDiagnostico,
+  HistorialEntrada,
+  Persona,
+  Ubicacion,
 } from './db'
 
 // Tablas que se sincronizan con Supabase, en el orden en que deben
@@ -359,10 +362,6 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
   },
 }
 
-export function storeDe<T extends TablaSincronizada>(tabla: T): Table<EntidadPorTabla[T], string> {
-  return db.table(tabla)
-}
-
 // Convierte una entidad local en una fila para Supabase. No envia
 // updated_at ni updated_by porque los pone siempre el servidor. Una
 // entidad guardada por una version anterior de la app puede traer null
@@ -393,4 +392,56 @@ export function aEntidadLocal<T extends TablaSincronizada>(
     entidad[local] = fila[remota] ?? config.porDefecto[local] ?? null
   }
   return entidad as unknown as EntidadPorTabla[T]
+}
+
+// Copia los valores por defecto que son objetos o arreglos, para que
+// dos filas normalizadas en la misma pasada no terminen compartiendo la
+// MISMA lista (mutar la de una habria mutado la de la otra). Los
+// defaults declarados son planos ('', 0, false, [], {}), asi que una
+// copia superficial alcanza.
+function copiarValor(valor: unknown): unknown {
+  if (Array.isArray(valor)) return [...valor]
+  if (valor !== null && typeof valor === 'object') return { ...(valor as Record<string, unknown>) }
+  return valor
+}
+
+// Repara una fila YA GUARDADA en la base local para que cumpla el mismo
+// contrato que `aEntidadLocal` le habria dado si se descargara hoy.
+// Muta `entidad` y devuelve true si tuvo que cambiar algo.
+//
+// Existe porque `aEntidadLocal` solo actua al DESCARGAR una fila, y la
+// sincronizacion es incremental por cursor: una fila que ya estaba en
+// IndexedDB no se vuelve a bajar mientras su `updated_at` no cambie en
+// el servidor, asi que conserva para siempre los huecos que dejo una
+// version anterior de la app (una columna que aun no existia cuando se
+// descargo). Ese hueco es el que rompio la Boveda en un telefono real:
+// una credencial anterior al grupo N3 llegaba sin `dispositivos` y
+// `detectarCandidatos` lanzaba un TypeError en pleno render (tarea 136).
+//
+// Solo rellena lo que falta o esta en null; nunca pisa un valor
+// existente, ni siquiera uno "vacio" ('' , 0, false), que es un dato
+// legitimo y no un hueco. `updatedAt`/`updatedBy` quedan fuera a
+// proposito (los pone siempre el servidor, y escribirles null mentiria
+// sobre su tipo), igual que los excluye `aFilaRemota`. Los campos
+// secretos (`datosCifrados`, `valorCifrado`) no declaran default, asi
+// que esta funcion nunca les inventa un valor: como mucho dejaria en
+// null uno que ya viniera ausente, que es lo mismo que haria hoy una
+// descarga.
+export function normalizarEntidad(tabla: TablaSincronizada, entidad: Record<string, unknown>): boolean {
+  const config = configTablas[tabla]
+  let cambio = false
+  for (const local of Object.keys(config.campos)) {
+    if (local === 'updatedAt' || local === 'updatedBy') continue
+    const actual = entidad[local]
+    if (actual !== undefined && actual !== null) continue
+    // `?? null` replica exactamente lo que habria hecho `aEntidadLocal`:
+    // el default declarado si existe, y null si la columna admite null.
+    const repuesto = config.porDefecto[local] ?? null
+    // Un null legitimo (columna sin default, como `venceEn` o
+    // `eliminadoEn`) ya esta bien: no cuenta como cambio.
+    if (actual === null && repuesto === null) continue
+    entidad[local] = copiarValor(repuesto)
+    cambio = true
+  }
+  return cambio
 }

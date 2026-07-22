@@ -4,9 +4,11 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 138 (migrar el `ErrorBoundary` al sistema Nocturne) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md. Dejó abierta la tarea 139 (los 12 archivos que la tarea 113 dio por migrados y no lo están), en "Por hacer".
+Sin tarea en desarrollo. La tarea 137 (normalizar las filas ya cacheadas en IndexedDB, causa raíz de la tarea 136) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
 
-Antes, la tarea 136 (la Bóveda no abría: "No se pudo cargar la aplicación", reportado por el usuario) quedó terminada y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md. Dejó abierta la tarea 137 (normalizar las filas ya cacheadas en IndexedDB), que ataca la causa raíz de esa familia de fallos y está en "Por hacer".
+Antes, la tarea 138 (migrar el `ErrorBoundary` al sistema Nocturne) quedó terminada, verificada en navegador real y archivada el 2026-07-22, en una sesión paralela. Ver el detalle en TAREAS_ARCHIVO.md. Dejó abierta la tarea 139 (los 12 archivos que la tarea 113 dio por migrados y no lo están), en "Por hacer".
+
+Antes, la tarea 136 (la Bóveda no abría: "No se pudo cargar la aplicación", reportado por el usuario) quedó terminada y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md. Su causa raíz quedó cerrada por la tarea 137.
 
 Antes, la tarea 134 (Reemplazar equipo, hallazgos L2 + L3) quedó terminada, verificada en navegador real de punta a punta y archivada el 2026-07-22. Ver el detalle en TAREAS_ARCHIVO.md.
 
@@ -97,13 +99,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - Nota de método para quien la tome: `Cargando.tsx` es el fallback de Suspense de TODA la app y `Modal.tsx` lo usa media docena de pantallas, así que conviene migrarlos primero y mirar el resultado dentro de una pantalla Nocturne real. Y antes de importar iconos en `Cargando.tsx`, `Modal.tsx` o `ActualizacionDisponible.tsx`, revisar la nota de trozos que dejó la tarea 138 en `src/components/ErrorBoundary.tsx`: lo que cuelga del trozo de entrada paga su peso en cada arranque frío.
 - Prioridad: Media (es apariencia, no bloquea nada, pero contradice la regla 12 y el tablero da el trabajo por hecho).
 - Ubicación: los 12 archivos de arriba, más `index.html:8` y `vite.config.ts:26-27`.
-
-### 137. Normalizar las filas ya cacheadas en IndexedDB (causa raíz de la tarea 136)
-- Descripción: la tarea 128 corrigió con `porDefecto` (`src/lib/tablas.ts:94,371-396`) que una columna ausente en la fila descargada se guardara como `null` o quedara sin la propiedad. Pero ese relleno **solo se aplica al bajar una fila**, y la sincronización es incremental por cursor (`columnaCursor`): una fila que ya estaba en IndexedDB antes de la corrección no se vuelve a descargar mientras su `updated_at` no cambie en el servidor, así que **conserva el hueco para siempre**. Eso es lo que rompió la Bóveda en el teléfono del usuario (tarea 136) mientras las 659 pruebas seguían en verde: los fixtures siempre construyen la entidad completa. El fix de la 136 fue defensivo y puntual (dos guardas `?? []`); esto cierra la clase entera de fallos en las 13 tablas.
-- Propuesta: versión nueva de Dexie con `upgrade` que recorra cada tabla sincronizada y reescriba las filas aplicando `configTablas[tabla].porDefecto` sobre las propiedades ausentes o `null` (la misma fuente de verdad que ya usa `aEntidadLocal`, sin duplicar el contrato). Es idempotente y no toca valores existentes. Alternativa más barata si se prefiere no versionar el esquema: normalizar al leer, en un único punto de acceso.
-- Riesgo a tener en cuenta: no debe pisar cambios pendientes de subida (la regla anti pisado de la tarea 128) ni tocar `datosCifrados`/`valorCifrado`.
-- Prioridad: Alta (es la causa raíz de un fallo que ya dejó la app inutilizable en un dispositivo real).
-- Ubicación: `src/lib/db.ts:839-935` (versiones de Dexie, la última es la 13), `src/lib/tablas.ts:94,104-360,386-396`.
 
 **AUDITORÍA INTEGRAL DE FLUJOS (2026-07-21)**: recorrido de procesos reales de TI (no pantalla por pantalla), documentado en [AUDITORIA_FLUJOS_TI.md](AUDITORIA_FLUJOS_TI.md). Se hizo con 3 agentes en paralelo (red, ciclo de vida/bóveda, base de conocimiento) más el análisis del modelo completo, todo anclado a `archivo:linea` y contrastado contra las propuestas para separar lo NUEVO de lo ya planeado. 30 hallazgos con ID estable. Veredicto: el principio "cada dato una sola vez" se cumple ~85%; los huecos reales son estructurales y de alto valor. **La Fase de corrección (K1, S1, N1) quedó completa el 2026-07-22, tarea 131.** El usuario decidió el 2026-07-22 el orden del resto de los ALTA: T1 (tarea 132), L1 (tarea 133) y L2/L3 (tarea 134) ya están completas y archivadas; solo queda O1/O2/O3 (tarea 135 abajo). K2 (bucle sugerencia -> borrador, ya planeado) queda sin agendar todavía. Ningún hallazgo restante bloquea el uso diario.
 
