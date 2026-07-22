@@ -17,6 +17,7 @@ import {
 import { subirOEncolarArchivo, eliminarArchivoPendiente } from '../../lib/archivosPendientes'
 import { db, type ArchivoSeguro, type Dispositivo, type DispositivoAfectado, type TipoSecreto } from '../../lib/db'
 import { guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
+import { proximoVencimiento, vencimientoDesactualizado } from '../../lib/vencimiento'
 import { valoresUnicos } from '../../lib/vocabulario'
 import { BUCKET_ARCHIVOS_BOVEDA } from './archivoSeguro'
 import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBoveda'
@@ -161,6 +162,10 @@ export function CredencialForm() {
   const [categoria, setCategoria] = useState(categoriaContextual)
   const [usuario, setUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
+  // Contraseña tal como se cargó al abrir el editor (S1): compararla
+  // con el valor actual es como se detecta que el técnico la rotó, sin
+  // depender de que recuerde tocar el vencimiento a mano.
+  const [contrasenaOriginal, setContrasenaOriginal] = useState('')
   const [verContrasena, setVerContrasena] = useState(false)
   // Dirección IP heredada de un secreto de tipo 'equipo' guardado antes
   // de la fase P0 (2026-07-21): ya no se edita como campo nuevo, solo
@@ -181,6 +186,10 @@ export function CredencialForm() {
   // del resto del formulario NO viaja cifrada: se carga directo del
   // registro, sin esperar el descifrado.
   const [venceEn, setVenceEn] = useState('')
+  // Vencimiento tal como se cargó (S1): mientras el técnico no lo
+  // toque desde entonces, sigue siendo este valor; sirve para no
+  // repetir el aviso de rotación si ya lo atendió.
+  const [venceEnOriginal, setVenceEnOriginal] = useState('')
   const [motivo, setMotivo] = useState('')
   // Archivo cifrado del secreto tipo 'archivo' (fase P5). Se sube al
   // elegirlo (no al guardar el formulario), como ya hace FotoEditor en
@@ -218,6 +227,7 @@ export function CredencialForm() {
     setCategoria(credencial.categoria)
     setTipo(credencial.tipo ?? 'cuenta')
     setVenceEn(credencial.venceEn ?? '')
+    setVenceEnOriginal(credencial.venceEn ?? '')
     setDispositivos(credencial.dispositivos ?? [])
     setArchivo(credencial.archivo ?? null)
     void descifrarCredencial(credencial.datosCifrados).then((datos) => {
@@ -225,6 +235,7 @@ export function CredencialForm() {
       if (datos) {
         setUsuario(datos.usuario)
         setContrasena(datos.contrasena)
+        setContrasenaOriginal(datos.contrasena)
         setIpHeredada(datos.ip)
         setUrl(datos.url)
         setNotas(datos.notas)
@@ -278,6 +289,24 @@ export function CredencialForm() {
   function quitarArchivo() {
     if (archivo) void eliminarArchivoPendiente(archivo.referencia)
     setArchivo(null)
+  }
+
+  // S1: si la contraseña cambió desde que se abrió el editor y el
+  // vencimiento sigue siendo el mismo, avisa en vez de dejar que el
+  // secreto quede "Vencida" o "Próxima" sin ningún motivo real. Ofrece
+  // una fecha, no la impone: el técnico puede ajustarla o ignorarla.
+  const avisarVencimientoDesactualizado =
+    esEdicion &&
+    cargadoInicial &&
+    vencimientoDesactualizado({
+      contrasenaActual: contrasena,
+      contrasenaOriginal,
+      venceEnActual: venceEn,
+      venceEnOriginal,
+    })
+
+  function renovarVencimiento() {
+    setVenceEn(proximoVencimiento())
   }
 
   function formatearTamano(bytes: number): string {
@@ -618,6 +647,21 @@ export function CredencialForm() {
                   className={`min-h-11 [color-scheme:dark] ${CLASE_CAMPO}`}
                 />
               </label>
+
+              {avisarVencimientoDesactualizado && (
+                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                    La contraseña cambió pero el vencimiento sigue siendo el mismo. ¿Renovarlo?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={renovarVencimiento}
+                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                  >
+                    Renovar 90 días
+                  </button>
+                </div>
+              )}
 
               <div className="flex flex-col gap-2">
                 <span className={CLASE_ETIQUETA}>Equipos con acceso</span>

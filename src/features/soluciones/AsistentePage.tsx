@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
 import { BotonVolver } from '../../components/BotonVolver'
 import { AsistenteVista } from './AsistenteVista'
 
@@ -28,8 +28,11 @@ export function AsistentePage() {
       </div>
     )
   }
-  // Un articulo sin procedimiento no tiene modo ejecucion que ofrecer.
-  if (!procedimiento) return <Navigate to={`/soluciones/${categoriaId}/${articuloId}`} replace />
+  // Un articulo sin pasos (sin procedimiento, o con metadata pero sin
+  // pasos: K1) no tiene modo ejecucion que ofrecer.
+  if (!procedimientoEjecutable(procedimiento)) {
+    return <Navigate to={`/soluciones/${categoriaId}/${articuloId}`} replace />
+  }
 
   return (
     <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">

@@ -7,6 +7,7 @@ import {
   pasoSeCompletaSolo,
   pasoTrabajoPrevioCompleto,
   prepararProcedimientoParaGuardar,
+  procedimientoEjecutable,
   siguientePasoPendiente,
   tareasDe,
   textoDeProcedimiento,
@@ -72,8 +73,41 @@ describe('normalizarProcedimiento', () => {
     expect(normalizarProcedimiento({})).toBeNull()
   })
 
-  it('devuelve null si no hay pasos (es un artículo normal)', () => {
-    expect(normalizarProcedimiento({ requisitos: ['algo'], pasos: [] })).toBeNull()
+  it('devuelve null solo si no hay ningún contenido, ni pasos ni metadata (es un artículo normal)', () => {
+    expect(normalizarProcedimiento({ pasos: [] })).toBeNull()
+    expect(normalizarProcedimiento({ requisitos: [], pasos: [], verificacionFinal: [] })).toBeNull()
+  })
+
+  it('conserva la metadata aunque no haya pasos (hallazgo K1: antes se perdía en silencio)', () => {
+    const resultado = normalizarProcedimiento({
+      descripcion: 'Guía de referencia sin pasos',
+      objetivoGeneral: 'Dejar documentado el procedimiento',
+      requisitos: ['algo'],
+      verificacionFinal: ['Todo quedó anotado'],
+      tiempoEstimadoMin: 5,
+      dificultad: 'principiante',
+      pasos: [],
+    })
+    expect(resultado).not.toBeNull()
+    expect(resultado?.pasos).toEqual([])
+    expect(resultado?.descripcion).toBe('Guía de referencia sin pasos')
+    expect(resultado?.objetivoGeneral).toBe('Dejar documentado el procedimiento')
+    expect(resultado?.requisitos).toEqual(['algo'])
+    expect(resultado?.verificacionFinal).toEqual(['Todo quedó anotado'])
+    expect(resultado?.tiempoEstimadoMin).toBe(5)
+    expect(resultado?.dificultad).toBe('principiante')
+  })
+
+  it('conserva solo la portada aunque no haya ningún otro campo ni pasos', () => {
+    const resultado = normalizarProcedimiento({
+      portada: { referencia: 'articulos/a1/portada/1-p.jpg', nombre: 'p.jpg', tipo: 'image/jpeg' },
+      pasos: [],
+    })
+    expect(resultado?.portada).toEqual({
+      referencia: 'articulos/a1/portada/1-p.jpg',
+      nombre: 'p.jpg',
+      tipo: 'image/jpeg',
+    })
   })
 
   it('conserva un procedimiento bien formado tal cual', () => {
@@ -515,6 +549,20 @@ describe('normalizarProcedimiento', () => {
   })
 })
 
+describe('procedimientoEjecutable', () => {
+  it('es falso para null', () => {
+    expect(procedimientoEjecutable(null)).toBe(false)
+  })
+
+  it('es falso para un procedimiento sin pasos, aunque tenga metadata', () => {
+    expect(procedimientoEjecutable(procedimientoCompleto({ pasos: [] }))).toBe(false)
+  })
+
+  it('es verdadero para un procedimiento con al menos un paso', () => {
+    expect(procedimientoEjecutable(procedimientoCompleto())).toBe(true)
+  })
+})
+
 describe('tareasDe', () => {
   it('devuelve solo los bloques de tipo tarea, en orden', () => {
     const bloques: BloquePaso[] = [
@@ -663,6 +711,26 @@ describe('prepararProcedimientoParaGuardar', () => {
     const resultado = preparar([vacio, pasoCompleto()])
     expect(resultado?.pasos).toHaveLength(1)
     expect(resultado?.pasos[0].titulo).toBe('Abrir SQL Server Management Studio')
+  })
+
+  it('conserva la metadata de un artículo sin pasos en vez de perderla (hallazgo K1)', () => {
+    const vacio = crearPaso()
+    const resultado = preparar([vacio], {
+      descripcion: '  Usar como referencia rápida  ',
+      objetivoGeneral: '  Documentar el procedimiento  ',
+      requisitosTexto: 'Acceso a la red',
+      verificacionFinalTexto: 'Todo quedó anotado',
+      tiempoEstimadoMin: 5,
+      dificultad: 'principiante',
+    })
+    expect(resultado).not.toBeNull()
+    expect(resultado?.pasos).toEqual([])
+    expect(resultado?.descripcion).toBe('Usar como referencia rápida')
+    expect(resultado?.objetivoGeneral).toBe('Documentar el procedimiento')
+    expect(resultado?.requisitos).toEqual(['Acceso a la red'])
+    expect(resultado?.verificacionFinal).toEqual(['Todo quedó anotado'])
+    expect(resultado?.tiempoEstimadoMin).toBe(5)
+    expect(resultado?.dificultad).toBe('principiante')
   })
 
   it('limpia espacios en los bloques y descarta tareas y avisos vacíos', () => {

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db, type MotivoNoResuelto, type NodoDiagnostico, type ProgresoDiagnostico } from '../../lib/db'
 import { normalizarNodos, porcentajeDiagnostico } from '../../lib/diagnostico'
-import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
+import { normalizarProcedimiento, procedimientoEjecutable, tareasDe } from '../../lib/procedimiento'
 import {
   duracionSegundos,
   eliminarProgresoDiagnostico,
@@ -366,9 +366,9 @@ function ArticuloEnDiagnostico({
 
   if (articulo === undefined) return null
 
-  // El artículo vinculado ya no existe o quedó sin procedimiento: no hay
-  // nada que ejecutar. Se avisa y se deja continuar a mano.
-  if (articulo === null || articulo.eliminadoEn || !procedimiento) {
+  // El artículo vinculado ya no existe o quedó sin pasos: no hay nada
+  // que ejecutar. Se avisa y se deja continuar a mano.
+  if (articulo === null || articulo.eliminadoEn || !procedimientoEjecutable(procedimiento)) {
     return (
       <div className="flex flex-col gap-3 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-4 py-3.5">
         <p className="text-[13px] leading-relaxed text-noct-text">

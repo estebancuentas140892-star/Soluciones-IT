@@ -12,7 +12,13 @@ import {
   type TipoVinculoProtegido,
   type TonoAviso,
 } from '../../lib/db'
-import { crearBloqueAviso, crearBloqueTarea, crearPaso, normalizarProcedimiento } from '../../lib/procedimiento'
+import {
+  crearBloqueAviso,
+  crearBloqueTarea,
+  crearPaso,
+  normalizarProcedimiento,
+  procedimientoEjecutable,
+} from '../../lib/procedimiento'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
@@ -206,7 +212,7 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
             !a.eliminadoEn &&
             a.id !== articuloId &&
             (a.estado ?? 'publicado') === 'publicado' &&
-            normalizarProcedimiento(a.procedimiento) !== null,
+            procedimientoEjecutable(normalizarProcedimiento(a.procedimiento)),
         )
         .toArray(),
     [articuloId],

@@ -116,8 +116,6 @@ describe('referenciasParaOffline', () => {
         portada: { referencia: 'articulos/art-1/portada/x.jpg', nombre: 'x.jpg', tipo: 'image/jpeg' },
         objetivoGeneral: '',
         requisitos: [],
-        // normalizarProcedimiento descarta el procedimiento entero (portada
-        // incluida) si no tiene ningun paso; un paso vacio basta aqui.
         pasos: [
           {
             id: 'p1',

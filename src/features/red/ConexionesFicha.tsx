@@ -1,23 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type Conexion, type Dispositivo, type TipoConexion } from '../../lib/db'
+import { db, type Conexion, type Dispositivo } from '../../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
 import {
   agruparConexiones,
+  datosSegunModo,
   MEDIOS_SUGERIDOS,
   type ExtremoConexion,
+  type ModoConexion,
 } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, Plus, X } from '../../components/iconos'
 import { BTN_GHOST_ACENTO, BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
 import { CLASE_CAMPO, CLASE_ETIQUETA as CLASE_ETIQUETA_BASE } from '../../components/campos'
-
-// Relacion nueva vista desde la ficha actual: define quien es origen y
-// quien destino segun lo que el tecnico quiere documentar. 'relacionado'
-// (grupo N3) vincula dos equipos que no son de red (un POS con su
-// impresora), sin puertos ni medio y sin entrar en la topologia.
-type Modo = 'enlace' | 'instalado' | 'contiene' | 'relacionado'
 
 // Aquí el rótulo se aplica al propio `<label>`, que además apila el
 // texto sobre el control, así que suma el flex al rótulo compartido.
@@ -187,7 +183,7 @@ function FormularioConexion({
     [],
   )
 
-  const [modo, setModo] = useState<Modo>('enlace')
+  const [modo, setModo] = useState<ModoConexion>('enlace')
   const [busqueda, setBusqueda] = useState('')
   const [otro, setOtro] = useState<Dispositivo | null>(null)
   const [puertoLocal, setPuertoLocal] = useState('')
@@ -208,25 +204,24 @@ function FormularioConexion({
     if (!otro) return
     setGuardando(true)
 
-    const tipo: TipoConexion =
-      modo === 'enlace' ? 'enlace' : modo === 'relacionado' ? 'relacionado' : 'instalacion'
-    // Solo un enlace lleva puertos y medio; instalacion y relacionado no.
-    const conPuertos = modo === 'enlace'
-    // En 'contiene' el equipo seleccionado es el que se instala en
-    // este (este es el rack); en el resto, este es el origen.
-    const origenEsteDispositivo = modo !== 'contiene'
+    const { tipo, origenEsteDispositivo, conPuertos } = datosSegunModo(modo)
     const origen = origenEsteDispositivo ? dispositivo : otro
     const destino = origenEsteDispositivo ? otro : dispositivo
+    // Los campos del formulario son siempre "puerto en este equipo" y
+    // "puerto en el otro"; segun el sentido (N1), eso mapea a origen o
+    // a destino.
+    const puertoEnOrigen = origenEsteDispositivo ? puertoLocal : puertoRemoto
+    const puertoEnDestino = origenEsteDispositivo ? puertoRemoto : puertoLocal
 
     await guardarRegistro('conexiones', {
       id: nuevoId(),
       tipo,
       origenId: origen.id,
       origenNombre: origen.nombre,
-      origenPuerto: conPuertos ? puertoLocal.trim() : '',
+      origenPuerto: conPuertos ? puertoEnOrigen.trim() : '',
       destinoId: destino.id,
       destinoNombre: destino.nombre,
-      destinoPuerto: conPuertos ? puertoRemoto.trim() : '',
+      destinoPuerto: conPuertos ? puertoEnDestino.trim() : '',
       medio: conPuertos ? medio.trim() : '',
       notas: notas.trim(),
     })
@@ -245,8 +240,13 @@ function FormularioConexion({
 
       <label className={CLASE_ETIQUETA}>
         Tipo de relación
-        <select value={modo} onChange={(e) => setModo(e.target.value as Modo)} className={`min-h-11 ${CLASE_CAMPO}`}>
-          <option value="enlace">Enlace hacia otro equipo</option>
+        <select
+          value={modo}
+          onChange={(e) => setModo(e.target.value as ModoConexion)}
+          className={`min-h-11 ${CLASE_CAMPO}`}
+        >
+          <option value="enlace">Da servicio a (uplink hacia otro equipo)</option>
+          <option value="recibeDe">Recibe servicio de (uplink desde otro equipo)</option>
           <option value="instalado">Está instalado en (rack)</option>
           <option value="contiene">Contiene el equipo (este es un rack)</option>
           <option value="relacionado">Relacionado con (equipo no de red)</option>
@@ -302,7 +302,7 @@ function FormularioConexion({
         </div>
       )}
 
-      {modo === 'enlace' && (
+      {(modo === 'enlace' || modo === 'recibeDe') && (
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
             <label className={CLASE_ETIQUETA}>

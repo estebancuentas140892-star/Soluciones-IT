@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Conexion } from './db'
-import { agruparConexiones, compararNatural, desdeExtremo, resumenConexion } from './conexiones'
+import { agruparConexiones, compararNatural, datosSegunModo, desdeExtremo, resumenConexion } from './conexiones'
 
 function conexion(parcial: Partial<Conexion>): Conexion {
   return {
@@ -105,5 +105,47 @@ describe('agruparConexiones', () => {
     expect(grupos.enlaces).toHaveLength(0)
     // Ordenados por el nombre del otro extremo (vivo se resuelve en la UI).
     expect(grupos.relacionados.map((e) => e.otroNombre)).toEqual(['Impresora', 'Lector'])
+  })
+})
+
+describe('datosSegunModo', () => {
+  it('"enlace": este dispositivo es el origen (da servicio al otro)', () => {
+    expect(datosSegunModo('enlace')).toEqual({
+      tipo: 'enlace',
+      origenEsteDispositivo: true,
+      conPuertos: true,
+    })
+  })
+
+  it('"recibeDe": el otro dispositivo es el origen (hallazgo N1: sin esto, documentar "el switch me da servicio" desde la ficha del punto invertía la topología)', () => {
+    expect(datosSegunModo('recibeDe')).toEqual({
+      tipo: 'enlace',
+      origenEsteDispositivo: false,
+      conPuertos: true,
+    })
+  })
+
+  it('"instalado": este dispositivo es el origen (se instala en el otro)', () => {
+    expect(datosSegunModo('instalado')).toEqual({
+      tipo: 'instalacion',
+      origenEsteDispositivo: true,
+      conPuertos: false,
+    })
+  })
+
+  it('"contiene": el otro dispositivo es el origen (se instala en este)', () => {
+    expect(datosSegunModo('contiene')).toEqual({
+      tipo: 'instalacion',
+      origenEsteDispositivo: false,
+      conPuertos: false,
+    })
+  })
+
+  it('"relacionado": sin puertos, este dispositivo como origen por convención', () => {
+    expect(datosSegunModo('relacionado')).toEqual({
+      tipo: 'relacionado',
+      origenEsteDispositivo: true,
+      conPuertos: false,
+    })
   })
 })

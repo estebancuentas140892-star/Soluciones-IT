@@ -11,7 +11,7 @@ import {
   procedimientosVinculadosRotos,
   validarNodos,
 } from '../../lib/diagnostico'
-import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
@@ -90,7 +90,9 @@ export function DiagnosticoForm() {
   const idsEjecutables = useLiveQuery(
     async () => {
       const todos = await db.articulos.filter((a) => !a.eliminadoEn).toArray()
-      return new Set(todos.filter((a) => normalizarProcedimiento(a.procedimiento) !== null).map((a) => a.id))
+      return new Set(
+        todos.filter((a) => procedimientoEjecutable(normalizarProcedimiento(a.procedimiento))).map((a) => a.id),
+      )
     },
     [],
     new Set<string>(),
@@ -105,7 +107,7 @@ export function DiagnosticoForm() {
           (a) =>
             !a.eliminadoEn &&
             (a.estado ?? 'publicado') === 'publicado' &&
-            normalizarProcedimiento(a.procedimiento) !== null,
+            procedimientoEjecutable(normalizarProcedimiento(a.procedimiento)),
         )
         .toArray(),
     [],

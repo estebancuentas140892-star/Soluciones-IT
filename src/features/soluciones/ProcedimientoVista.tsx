@@ -2,7 +2,12 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
-import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
+import {
+  normalizarProcedimiento,
+  pasoTrabajoPrevioCompleto,
+  procedimientoEjecutable,
+  tareasDe,
+} from '../../lib/procedimiento'
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
@@ -353,7 +358,7 @@ function ContadorSubProgreso({ subArticuloId }: { subArticuloId: string }) {
     [articulo],
   )
 
-  if (!procedimiento) return null
+  if (!procedimientoEjecutable(procedimiento)) return null
   const total = procedimiento.pasos.length
   const hechos = contarHechos(
     progreso?.pasosHechos ?? [],
@@ -437,8 +442,8 @@ function SubProcedimientoEnPaso({
   // Mas alla del primer nivel de anidamiento solo se enlaza, sin
   // expandir: evita la expansion infinita y corta cualquier ciclo
   // (A vincula a B y B a A). Tambien cubre el caso de un articulo
-  // vinculado que ya no tiene pasos.
-  if (nivel >= 1 || !procedimiento) {
+  // vinculado que ya no tiene pasos (o nunca los tuvo: K1).
+  if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
     return (
       <Link
         to={ruta}
@@ -544,9 +549,9 @@ function SolucionEnPaso({
   const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
 
   // Dentro de un subprocedimiento ya expandido (o si la solucion se
-  // quedo sin pasos) solo se enlaza: misma regla de un solo nivel que
-  // corta ciclos en los subprocedimientos.
-  if (nivel >= 1 || !procedimiento) {
+  // quedo sin pasos, o nunca los tuvo: K1) solo se enlaza: misma regla
+  // de un solo nivel que corta ciclos en los subprocedimientos.
+  if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
     return (
       <Link
         to={ruta}
@@ -833,7 +838,7 @@ function DecisionEnTarea({
   // Misma regla de un solo nivel de anidamiento que los
   // subprocedimientos y las soluciones: mas profundo solo se enlaza
   // (corta ciclos), y el tecnico marca la decision al volver.
-  if (nivel >= 1 || !procedimiento || !ejecutarInline) {
+  if (nivel >= 1 || !procedimientoEjecutable(procedimiento) || !ejecutarInline) {
     return (
       <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-3 py-[11px]">
         <div className="flex items-center gap-2.5">

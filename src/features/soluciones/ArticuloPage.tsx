@@ -4,7 +4,7 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db, type Articulo, type ArticuloRelacionado, type NivelDificultad } from '../../lib/db'
-import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
 import { reiniciarProgreso } from '../../lib/progresoPasos'
 import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
@@ -76,6 +76,12 @@ export function ArticuloPage() {
   // Memorizado para que los ids generados al normalizar datos viejos
   // sean estables entre renders (el progreso local depende de ellos).
   const procedimiento = useMemo(() => normalizarProcedimiento(articulo?.procedimiento), [articulo])
+  // Un procedimiento puede existir solo por su metadata y sin pasos
+  // (K1: un manual con descripcion/portada/objetivo pero sin pasos no
+  // es null). "Ejecutar", el modo asistente, reiniciar progreso y el
+  // cuerpo en pasos del procedimiento solo tienen sentido si hay algo
+  // que ejecutar.
+  const tieneProcedimiento = procedimientoEjecutable(procedimiento)
 
   // Impacto antes de eliminar (fase N1): otros procedimientos o
   // diagnósticos que referencian este artículo y quedarían con el
@@ -118,7 +124,7 @@ export function ArticuloPage() {
         <BotonVolver>{categoria?.nombre ?? 'Soluciones'}</BotonVolver>
         <div className="flex shrink-0 items-center gap-2">
           <BotonFavorito tipo="articulo" entidadId={articuloId} />
-          {procedimiento && (
+          {tieneProcedimiento && (
             <Link
               to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
               className={BTN_PRIMARIO}
@@ -135,7 +141,7 @@ export function ArticuloPage() {
           <MenuAcciones
             articulo={articulo}
             categoriaId={categoriaId}
-            conProcedimiento={Boolean(procedimiento)}
+            conProcedimiento={tieneProcedimiento}
             onEliminar={() => setMostrarEliminar(true)}
           />
         </div>
@@ -197,12 +203,12 @@ export function ArticuloPage() {
           abierto={mostrarEliminar}
           sensible
           titulo={
-            procedimiento
+            tieneProcedimiento
               ? `¿Eliminar procedimiento "${articulo.titulo}"?`
               : `¿Eliminar artículo "${articulo.titulo}"?`
           }
           descripcion={
-            procedimiento
+            tieneProcedimiento
               ? 'Esta acción eliminará todo el procedimiento y sus pasos asociados.'
               : 'Esta acción eliminará el artículo por completo.'
           }
@@ -213,7 +219,7 @@ export function ArticuloPage() {
 
         {articulo.tipo === 'problema_frecuente' && <IncidenciaResumen articulo={articulo} />}
 
-        {procedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
+        {tieneProcedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
 
         {articulo.contenido.trim() !== '' && (
           <article className="prose prose-invert prose-sm max-w-none prose-headings:font-medium prose-headings:text-noct-text prose-p:text-noct-neutral-200 prose-li:text-noct-neutral-200 prose-strong:text-noct-text prose-a:text-noct-accent-400">
@@ -225,7 +231,7 @@ export function ArticuloPage() {
             se usan). El apartado del articulo solo se muestra para
             articulos sin procedimiento (manuales en Markdown), que no
             tienen pasos donde anclar el archivo. */}
-        {!procedimiento && <Adjuntos entidadTipo="articulo" entidadId={articuloId} />}
+        {!tieneProcedimiento && <Adjuntos entidadTipo="articulo" entidadId={articuloId} />}
 
         <ArticulosRelacionados articuloId={articuloId} relacionados={articulo.relacionados ?? []} />
 

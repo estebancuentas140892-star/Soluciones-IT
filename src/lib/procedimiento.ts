@@ -69,12 +69,24 @@ export function tareasDe(bloques: BloquePaso[]): BloquePaso[] {
   return bloques.filter((b) => b.tipo === 'tarea')
 }
 
-// Devuelve un procedimiento bien formado o null si no hay pasos (un
-// articulo sin pasos es un articulo normal). Tolera datos incompletos
-// o corruptos que lleguen del servidor o de versiones anteriores.
+// Devuelve un procedimiento bien formado o null si no queda ningun
+// contenido (ni pasos ni metadata): un articulo asi es un articulo
+// normal. OJO: un procedimiento SIN pasos pero con metadata (portada,
+// descripcion, objetivo, requisitos o verificacion) no es null: es un
+// manual con esa informacion y sin pasos ejecutables. Quien necesite
+// saber si hay algo que EJECUTAR debe revisar `pasos.length > 0`
+// aparte (ver `procedimientoEjecutable`), no la nulidad de este
+// resultado (hallazgo K1 de AUDITORIA_FLUJOS_TI.md: antes cualquier
+// articulo sin pasos perdia en silencio toda su metadata al guardar y
+// al recargar el editor). Tolera datos incompletos o corruptos que
+// lleguen del servidor o de versiones anteriores.
 export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
   if (!valor || typeof valor !== 'object' || Array.isArray(valor)) return null
   const origen = valor as Record<string, unknown>
+
+  const descripcion = texto(origen.descripcion)
+  const portada = normalizarUnAdjunto(origen.portada)
+  const objetivoGeneral = texto(origen.objetivoGeneral)
 
   const requisitos = Array.isArray(origen.requisitos)
     ? origen.requisitos.filter((r): r is string => typeof r === 'string' && r.trim() !== '')
@@ -90,17 +102,40 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
         .map(normalizarPaso)
     : []
 
-  if (pasos.length === 0) return null
+  const tiempoEstimadoMin = numeroPositivo(origen.tiempoEstimadoMin)
+  const dificultad = dificultadValida(origen.dificultad)
+
+  const sinContenido =
+    descripcion === '' &&
+    !portada &&
+    objetivoGeneral === '' &&
+    requisitos.length === 0 &&
+    pasos.length === 0 &&
+    verificacionFinal.length === 0 &&
+    tiempoEstimadoMin === null &&
+    dificultad === null
+  if (sinContenido) return null
+
   return {
-    descripcion: texto(origen.descripcion),
-    portada: normalizarUnAdjunto(origen.portada),
-    objetivoGeneral: texto(origen.objetivoGeneral),
+    descripcion,
+    portada,
+    objetivoGeneral,
     requisitos,
     pasos,
     verificacionFinal,
-    tiempoEstimadoMin: numeroPositivo(origen.tiempoEstimadoMin),
-    dificultad: dificultadValida(origen.dificultad),
+    tiempoEstimadoMin,
+    dificultad,
   }
+}
+
+// ¿Este procedimiento tiene pasos que ejecutar? Un procedimiento no
+// nulo puede existir solo por su metadata (K1): esta es la pregunta
+// correcta para decidir si corresponde ofrecer "Ejecutar", el modo
+// asistente, vincularlo como subprocedimiento/solucion de otro paso o
+// como raiz de un diagnostico. Un `procedimiento` null nunca es
+// ejecutable.
+export function procedimientoEjecutable(procedimiento: Procedimiento | null): procedimiento is Procedimiento {
+  return procedimiento !== null && procedimiento.pasos.length > 0
 }
 
 function numeroPositivo(valor: unknown): number | null {
@@ -436,9 +471,15 @@ export interface DatosProcedimientoParaGuardar {
 }
 
 // Prepara el procedimiento que se va a guardar: limpia espacios,
-// descarta pasos totalmente vacios y devuelve null si no queda nada.
-// Los requisitos volvieron a editarse (antes del 2026-07-03 no se
-// podian); los articulos guardados desde entonces igual los conservan.
+// descarta pasos totalmente vacios y devuelve null solo si no queda
+// ningun contenido, ni pasos ni metadata (K1: antes devolvia null en
+// cuanto no habia pasos, aunque el autor hubiera escrito descripcion,
+// portada, objetivo, requisitos, verificacion, tiempo o dificultad;
+// ese null se guardaba tal cual y todo eso se perdia en silencio, y se
+// volvia a perder al reabrir el editor porque `normalizarProcedimiento`
+// aplicaba la misma regla al leer). Los requisitos volvieron a
+// editarse (antes del 2026-07-03 no se podian); los articulos
+// guardados desde entonces igual los conservan.
 export function prepararProcedimientoParaGuardar({
   descripcion,
   portada,
@@ -481,11 +522,24 @@ export function prepararProcedimientoParaGuardar({
         paso.solucionArticuloId !== null,
     )
 
-  if (pasosLimpios.length === 0) return null
+  const descripcionLimpia = descripcion.trim()
+  const objetivoGeneralLimpio = objetivoGeneral.trim()
+
+  const sinContenido =
+    descripcionLimpia === '' &&
+    !portada &&
+    objetivoGeneralLimpio === '' &&
+    requisitos.length === 0 &&
+    pasosLimpios.length === 0 &&
+    verificacionFinal.length === 0 &&
+    tiempoEstimadoMin === null &&
+    dificultad === null
+  if (sinContenido) return null
+
   return {
-    descripcion: descripcion.trim(),
+    descripcion: descripcionLimpia,
     portada,
-    objetivoGeneral: objetivoGeneral.trim(),
+    objetivoGeneral: objetivoGeneralLimpio,
     requisitos,
     pasos: pasosLimpios,
     verificacionFinal,

@@ -1,10 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { db, type Conexion, type Dispositivo, type TipoConexion } from '../../lib/db'
+import { db, type Conexion, type Dispositivo } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
-import { agruparConexiones, MEDIOS_SUGERIDOS, type ExtremoConexion } from '../../lib/conexiones'
+import {
+  agruparConexiones,
+  datosSegunModo,
+  MEDIOS_SUGERIDOS,
+  type ExtremoConexion,
+  type ModoConexion,
+} from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
@@ -27,13 +33,17 @@ import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from 
 // aspecto del mockup. El bosque general (/red/topologia, sin equipo)
 // sigue en TopologiaPage hasta su propia re-autoría (tarea 92).
 
-// Tipo de relación del formulario de "Agregar conexión": define quién
-// es origen y quién destino según lo que el técnico quiere documentar.
-// Mismo criterio que el editor de la ficha (ConexionesFicha).
-type ModoConexion = 'enlace' | 'instalado' | 'contiene' | 'relacionado'
-
+// Tipo de relación del formulario de "Agregar conexión": el sentido
+// (quién es origen/padre en la topología, ver arbol.ts) según lo que
+// el técnico quiere documentar es `ModoConexion`, compartido con el
+// editor de la ficha (ConexionesFicha) en lib/conexiones.ts.
 const TIPOS_CONEXION: { valor: ModoConexion; nombre: string; ayuda: string }[] = [
-  { valor: 'enlace', nombre: 'Enlace', ayuda: 'Este equipo da servicio al otro por un puerto. Entra en la topología.' },
+  { valor: 'enlace', nombre: 'Da servicio a', ayuda: 'Este equipo da servicio al otro por un puerto (uplink). Entra en la topología.' },
+  {
+    valor: 'recibeDe',
+    nombre: 'Recibe de',
+    ayuda: 'El otro equipo te da servicio por un puerto (uplink). Entra en la topología.',
+  },
   { valor: 'instalado', nombre: 'Instalado en', ayuda: 'Este equipo está montado dentro del otro (un rack).' },
   { valor: 'contiene', nombre: 'Contiene', ayuda: 'El otro equipo está montado dentro de este.' },
   {
@@ -477,29 +487,29 @@ function FormularioConexion({ equipo, onCerrar }: { equipo: Dispositivo; onCerra
   }, [todos, busqueda])
 
   const tipoActual = TIPOS_CONEXION.find((t) => t.valor === modo)
-  const esEnlace = modo === 'enlace'
+  const esEnlace = modo === 'enlace' || modo === 'recibeDe'
 
   async function guardar() {
     if (!otro || guardando) return
     setGuardando(true)
 
-    const tipo: TipoConexion = modo === 'enlace' ? 'enlace' : modo === 'relacionado' ? 'relacionado' : 'instalacion'
-    const conPuertos = modo === 'enlace'
-    // En 'contiene', el equipo elegido se instala en ESTE (este es el
-    // rack); en el resto, este es el origen.
-    const origenEsteEquipo = modo !== 'contiene'
-    const origen = origenEsteEquipo ? equipo : otro
-    const destino = origenEsteEquipo ? otro : equipo
+    const { tipo, origenEsteDispositivo, conPuertos } = datosSegunModo(modo)
+    const origen = origenEsteDispositivo ? equipo : otro
+    const destino = origenEsteDispositivo ? otro : equipo
+    // Los campos del formulario son siempre "puerto aquí" y "puerto en
+    // el otro"; segun el sentido (N1), eso mapea a origen o a destino.
+    const puertoEnOrigen = origenEsteDispositivo ? puertoLocal : puertoRemoto
+    const puertoEnDestino = origenEsteDispositivo ? puertoRemoto : puertoLocal
 
     await guardarRegistro('conexiones', {
       id: nuevoId(),
       tipo,
       origenId: origen.id,
       origenNombre: origen.nombre,
-      origenPuerto: conPuertos ? puertoLocal.trim() : '',
+      origenPuerto: conPuertos ? puertoEnOrigen.trim() : '',
       destinoId: destino.id,
       destinoNombre: destino.nombre,
-      destinoPuerto: conPuertos ? puertoRemoto.trim() : '',
+      destinoPuerto: conPuertos ? puertoEnDestino.trim() : '',
       medio: conPuertos ? medio.trim() : '',
       notas: '',
     })

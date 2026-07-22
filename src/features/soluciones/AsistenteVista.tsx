@@ -2,7 +2,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
-import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, siguientePasoPendiente, tareasDe } from '../../lib/procedimiento'
+import {
+  normalizarProcedimiento,
+  pasoTrabajoPrevioCompleto,
+  procedimientoEjecutable,
+  siguientePasoPendiente,
+  tareasDe,
+} from '../../lib/procedimiento'
 import {
   alternarVerificacionFinal,
   contarHechos,
@@ -490,7 +496,7 @@ function SubProcedimientoEnAsistente({
 
   // Misma regla de un solo nivel que ProcedimientoVista: mas alla se
   // enlaza, sin ejecutar aqui, y evita cualquier ciclo de vinculos.
-  if (nivel >= 1 || !procedimiento) {
+  if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
     return (
       <Link
         to={ruta}
@@ -592,7 +598,7 @@ function SolucionEnAsistente({
 
   const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
 
-  if (nivel >= 1 || !procedimiento) {
+  if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
     return (
       <Link
         to={ruta}

@@ -24,3 +24,44 @@ export function estadoVencimiento(venceEn: string | null, hoy: Date = new Date()
   if (diasRestantes <= DIAS_AVISO_VENCIMIENTO) return 'proxima'
   return null
 }
+
+// Dias sugeridos al renovar el vencimiento tras detectar que la
+// contraseña rotó (hallazgo S1 de AUDITORIA_FLUJOS_TI.md): 90 dias es
+// una politica de rotacion tipica; el tecnico puede ajustar la fecha a
+// mano despues, el campo sigue siendo un input de fecha normal.
+export const DIAS_RENOVACION_VENCIMIENTO = 90
+
+// Proxima fecha de vencimiento sugerida al rotar, en formato
+// "YYYY-MM-DD". `hoy` inyectable para pruebas.
+export function proximoVencimiento(hoy: Date = new Date()): string {
+  const fecha = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + DIAS_RENOVACION_VENCIMIENTO)
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dd = String(fecha.getDate()).padStart(2, '0')
+  return `${fecha.getFullYear()}-${mm}-${dd}`
+}
+
+// ¿El vencimiento quedó desactualizado tras rotar la contraseña?
+// Verdadero cuando la contraseña cambió respecto a la que se cargó al
+// abrir el editor y el vencimiento sigue siendo el mismo que ya estaba
+// guardado (el técnico aún no lo tocó desde entonces). Antes de esto,
+// rotar una contraseña no reseteaba `venceEn`: el secreto seguía
+// "Vencida" o "Próxima" sin que nada avisara que la fecha ya no
+// describe la contraseña actual.
+export function vencimientoDesactualizado({
+  contrasenaActual,
+  contrasenaOriginal,
+  venceEnActual,
+  venceEnOriginal,
+}: {
+  contrasenaActual: string
+  contrasenaOriginal: string
+  venceEnActual: string
+  venceEnOriginal: string
+}): boolean {
+  return (
+    contrasenaActual.trim() !== '' &&
+    contrasenaActual !== contrasenaOriginal &&
+    venceEnOriginal !== '' &&
+    venceEnActual === venceEnOriginal
+  )
+}
