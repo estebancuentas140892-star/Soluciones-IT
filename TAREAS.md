@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 142 (K6 de la auditoría de flujos, crear procedimiento contextual desde un equipo) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Con esto queda resuelto el grupo K completo (K1 a K6) de la auditoría de flujos.
+Sin tarea en desarrollo. La tarea 143 (endurecimiento de `camposOpcionales` y columna `dispositivos.responsable` que faltaba en el esquema) quedó terminada y archivada el 2026-07-22. **Requiere un paso del usuario**: volver a ejecutar `supabase/schema.sql` completo en Supabase para crear `dispositivos.responsable`. Hasta que se aplique, TODA escritura de dispositivos sigue siendo rechazada por el servidor.
+
+Antes, la tarea 142 (K6 de la auditoría de flujos, crear procedimiento contextual desde un equipo) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Con esto queda resuelto el grupo K completo (K1 a K6) de la auditoría de flujos.
 
 Antes, la tarea 141 (K3, K4 y K5 de la auditoría de flujos) quedó terminada, verificada en navegador real y archivada el 2026-07-22. Con esto quedaron resueltos los tres hallazgos MEDIA de prioridad más alta; ver el detalle en TAREAS_ARCHIVO.md.
 

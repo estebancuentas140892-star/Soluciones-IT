@@ -121,6 +121,17 @@ create table if not exists public.dispositivos (
 -- Por si la tabla ya existia de una version anterior del esquema.
 alter table public.dispositivos add column if not exists foto jsonb;
 
+-- Responsable como TEXTO libre. Falto en este archivo desde el
+-- principio (defecto encontrado el 2026-07-22 por un error real de
+-- sincronizacion: "Could not find the 'responsable' column of
+-- 'dispositivos' in the schema cache"). La app siempre la envio, con
+-- default '' declarado en `porDefecto` de src/lib/tablas.ts, asi que
+-- una base creada desde este archivo rechazaba TODA escritura de
+-- dispositivos. No confundir con `responsable_id` (mas abajo), que es
+-- la referencia a la entidad Persona: este texto se conserva como
+-- copia de referencia, igual que `ubicacion` junto a `ubicacion_id`.
+alter table public.dispositivos add column if not exists responsable text not null default '';
+
 -- Relacion documentada entre dos dispositivos (el mapa de la red).
 -- - 'enlace': cable o señal de origen a destino. El origen es el lado
 --   que da servicio (switch, router) y el destino el que lo recibe.

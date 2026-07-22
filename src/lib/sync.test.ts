@@ -156,6 +156,35 @@ describe('mapeo entre columnas locales y remotas', () => {
     expect(articulo.origenSugerenciaId).toBeNull()
   })
 
+  // Tarea 143: segunda columna opcional, `dispositivos.reemplaza_a`
+  // (tarea 134, hallazgo L2/L3), endurecida tras el error real que vio
+  // el usuario en produccion antes de aplicar el schema.sql: "Could not
+  // find the 'reemplaza_a' column of 'dispositivos' in the schema
+  // cache". Con esto un equipo normal (sin reemplazo) se sube igual
+  // aunque el esquema remoto no tenga la columna todavia.
+  it('reemplazaA sin valor no viaja en el payload de subida de un dispositivo', () => {
+    const fila = aFilaRemota('dispositivos', {
+      id: nuevoId(),
+      categoriaId: nuevoId(),
+      nombre: 'Impresora Bodega Norte',
+      reemplazaA: null,
+    })
+
+    expect(fila).not.toHaveProperty('reemplaza_a')
+    expect(fila).toHaveProperty('nombre', 'Impresora Bodega Norte')
+  })
+
+  it('reemplazaA con valor sí viaja', () => {
+    const fila = aFilaRemota('dispositivos', {
+      id: nuevoId(),
+      categoriaId: nuevoId(),
+      nombre: 'Impresora Bodega Norte (nueva)',
+      reemplazaA: 'dispositivo-viejo',
+    })
+
+    expect(fila.reemplaza_a).toBe('dispositivo-viejo')
+  })
+
   it('el procedimiento viaja completo en ambas direcciones', () => {
     const procedimiento = {
       requisitos: ['Credenciales del SQL Server'],

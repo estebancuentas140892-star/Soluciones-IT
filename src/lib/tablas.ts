@@ -199,6 +199,14 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       detalles: 'detalles',
       foto: 'foto',
     },
+    // `reemplazaA` no lleva default: es nullable de verdad y va en
+    // `camposOpcionales` (tarea 143) para que un equipo normal se siga
+    // subiendo sin esa clave mientras el usuario no haya aplicado el
+    // schema.sql. Solo se fija UNA VEZ al crear el equipo entrante
+    // (`?reemplazaA=<id>` en DispositivoForm.tsx) y no hay forma de
+    // limpiarlo desde la app: cumple la condicion de camposOpcionales
+    // (un valor que nunca se vuelve a null desde la app).
+    camposOpcionales: ['reemplazaA'],
     porDefecto: {
       marca: '',
       modelo: '',

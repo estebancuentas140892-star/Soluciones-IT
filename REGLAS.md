@@ -29,6 +29,13 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
     - Que Vercel generó un despliegue nuevo para ese commit y terminó en estado "Ready" (verificable con `gh api repos/<owner>/<repo>/commits/<sha>/status` y `.../deployments`, o esperando ~1-2 min y confirmando por HTTP que el sitio sirve el build nuevo).
     - Se le avisa al usuario que la app es una PWA con `registerType: 'prompt'` (ver `vite.config.ts`): en un dispositivo que ya la tiene instalada, la versión nueva NO se activa sola. Aparece el aviso "Actualización disponible" (`src/components/ActualizacionDisponible.tsx`) y hay que aceptarlo; en escritorio, una recarga forzada. Si el usuario dice que "no ve el cambio", lo más probable es (a) que faltó el push, o (b) que el service worker está sirviendo la versión anterior en su dispositivo y falta aceptar la actualización.
 
+## Esquema de base de datos
+
+17. Toda columna que la app sincronice debe existir en `supabase/schema.sql` (regla nacida el 2026-07-22, tarea 143, tras un error real en producción). `aFilaRemota` envía todas las columnas declaradas en `configTablas`, y PostgREST rechaza la fila ENTERA si una no existe en el servidor: el cambio se queda reintentándose para siempre en la cola y esa ficha además deja de recibir las novedades del equipo. Al agregar una columna:
+    - Declararla en `src/lib/tablas.ts` Y en `supabase/schema.sql` en el mismo cambio, nunca en uno solo. La prueba `src/lib/esquema.test.ts` lo verifica automáticamente y falla si se olvida.
+    - Si es nullable y su valor no se limpia nunca desde la interfaz, declararla también en `camposOpcionales`: así se omite del payload cuando vale null y el despliegue no depende de que el usuario aplique el SQL a tiempo. Si el usuario SÍ puede vaciarla (desasignar una persona o una ubicación), NO va ahí: necesita viajar como null.
+    - Avisar al usuario, al entregar, que debe ejecutar `supabase/schema.sql` completo en el SQL Editor de Supabase, y que el archivo es idempotente.
+
 ## Diseño
 
 15. Alcance de un handoff de diseño (regla acordada 2026-07-18): cuando se autoriza implementar un handoff de Claude Design, no se implementa solo el archivo `.dc.html` que señala el README, sino TODAS las pantallas (`.dc.html`) que estén dentro de la carpeta del proyecto del handoff (por ejemplo `.../project/`). El README apunta a la pantalla que el usuario tenía abierta, pero el encargo es dejar re-autorizada toda la carpeta. Cada pantalla se implementa como su propia tarea (una "En proceso" a la vez, regla 4), verificada y archivada, hasta agotar la carpeta. Antes de empezar se revisa qué pantallas de la carpeta ya están hechas (para no repetirlas) y se listan las que faltan.

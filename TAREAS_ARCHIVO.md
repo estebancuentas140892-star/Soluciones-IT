@@ -1,5 +1,21 @@
 # Historial de tareas finalizadas
 
+### 143. Endurecimiento de `camposOpcionales` y la columna `responsable` que faltaba en el esquema
+
+**Estado**: TERMINADA el 2026-07-22. **Prioridad**: ALTA (nació de un error real en producción reportado por el usuario). **Requiere un paso del usuario**: volver a ejecutar `supabase/schema.sql` completo.
+
+**Origen**: el usuario reportó que el panel de sincronización mostraba un cambio rechazado con "Could not find the 'reemplaza_a' column of 'dispositivos' in the schema cache" (148 intentos acumulados). Tras aplicar el `schema.sql`, el error cambió a la MISMA falla pero con `responsable`.
+
+**Defecto de fondo encontrado**: `dispositivos.responsable` (texto libre) **nunca estuvo en `supabase/schema.sql`**, ni en el `create table` ni en ningún `alter table`. La app siempre la envió (declarada en `campos` y con default `''` en `porDefecto`, `src/lib/tablas.ts`), así que cualquier base creada desde ese archivo rechazaba TODA escritura de dispositivos. No es lo mismo que `responsable_id`, que sí estaba (tarea 132, entidad Persona): el texto se conserva como copia de referencia, igual que `ubicacion` junto a `ubicacion_id`. Corregido con un `alter table ... add column if not exists responsable text not null default ''` junto al de `foto`.
+
+**Endurecimiento 1 - `camposOpcionales` para `dispositivos.reemplazaA`**: era la petición original. La columna se declara opcional, así que `aFilaRemota` la omite del payload cuando vale null y un equipo sin reemplazo se sube igual aunque el servidor no tenga la columna. Es seguro porque `reemplazaA` se fija UNA sola vez al crear el equipo entrante (`?reemplazaA=<id>` en `DispositivoForm.tsx:133`) y no hay forma de limpiarlo desde la interfaz, que es la condición que exige el mecanismo. NO se aplicó a `responsableId` ni a `ubicacionId`: esos sí se pueden vaciar legítimamente al desasignar, así que necesitan viajar como null.
+
+**Endurecimiento 2 - prueba permanente contra la deriva esquema/app** (`src/lib/esquema.test.ts`, nuevo): lee `supabase/schema.sql` como texto (no ejecuta nada contra Supabase) y comprueba, por cada tabla sincronizada, que exista su `create table` y que TODA columna declarada en `configTablas.campos` esté definida, ya sea en el `create table` o en un `alter table ... add column if not exists`. Excluye `updated_at`/`updated_by`, que las pone el servidor por trigger y `aFilaRemota` nunca envía. Suma una tercera comprobación: una columna en `camposOpcionales` no debe tener además un valor en `porDefecto`, porque ese default la haría viajar siempre y anularía la protección. Esta prueba habría detectado el defecto de `responsable` desde el primer día; se verificó quitando temporalmente la columna del SQL y confirmando que falla con `expected [ 'responsable' ] to deeply equal []`.
+
+**Verificación**: 1394 pruebas en verde (41 nuevas: 39 del guardián de esquema, 2 de `reemplazaA` en `sync.test.ts`). `tsc -b`, `oxlint` y `npm run build` limpios. No se verificó en navegador porque no hay cambio de interfaz: el efecto es sobre el payload de subida y sobre el SQL, ambos cubiertos por pruebas.
+
+**Pendiente del usuario**: ejecutar de nuevo `supabase/schema.sql` completo en el SQL Editor de Supabase. Es idempotente. Hasta entonces el cambio en cola sigue rechazándose, y NO conviene descartarlo (descartar borra la edición y restaura la versión del servidor, ver `descartarCambioPendiente` en `src/lib/sync.ts:377`).
+
 ### 142. K6 de la auditoría de flujos (crear procedimiento contextual desde un equipo)
 
 **Estado**: TERMINADA el 2026-07-22. **Prioridad**: BAJA. Último hallazgo pendiente del grupo de conocimiento (K1 a K6); con esta tarea el grupo queda completo.
