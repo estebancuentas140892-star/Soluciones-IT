@@ -95,6 +95,26 @@ interface ConfigTabla {
   // (titulo, categoria_id, valor_cifrado...) no llevan valor de
   // relleno a proposito: si faltan es un error de verdad y debe verse.
   porDefecto: Record<string, unknown>
+  // Columnas NULLABLE agregadas despues de que la app ya estaba en uso,
+  // por nombre de propiedad LOCAL (tarea 140). `aFilaRemota` las OMITE
+  // del payload cuando su valor local es nulo, en vez de mandar
+  // `columna: null`.
+  //
+  // Para que sirve: `aFilaRemota` emite siempre todas las columnas
+  // configuradas, asi que declarar una columna nueva rompe el push de
+  // TODAS las filas de esa tabla mientras el usuario no haya aplicado
+  // el `alter table` en Supabase (PostgREST rechaza la clave
+  // desconocida y el cambio se queda en la cola, ver sync.ts). Al
+  // omitirla, una fila que no usa la columna se sube exactamente igual
+  // que antes del cambio, y el despliegue deja de depender de que el
+  // SQL se corra a tiempo.
+  //
+  // Precio, y por que aqui es correcto: como el upsert solo escribe las
+  // claves presentes, una columna opcional NUNCA se vuelve a poner en
+  // null desde la app una vez que tiene valor. Solo deben declararse
+  // aqui columnas cuyo valor no se limpia (el origen de un articulo no
+  // cambia). Una columna que el usuario pueda vaciar no va aqui.
+  camposOpcionales?: readonly string[]
 }
 
 const camposComunes = {
@@ -137,7 +157,13 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       version: 'version',
       relacionados: 'relacionados',
       ordenRutaInicio: 'orden_ruta_inicio',
+      origenSugerenciaId: 'origen_sugerencia_id',
     },
+    // `origenSugerenciaId` no lleva default: es nullable de verdad (no
+    // es NOT NULL DEFAULT), y va en `camposOpcionales` para que un
+    // articulo normal se siga subiendo sin esa clave mientras el
+    // usuario no haya aplicado el schema.sql (tarea 140).
+    camposOpcionales: ['origenSugerenciaId'],
     porDefecto: {
       contenido: '',
       etiquetas: [],
@@ -371,9 +397,16 @@ export function aFilaRemota(tabla: TablaSincronizada, entidad: unknown): Record<
   const origen = entidad as Record<string, unknown>
   const config = configTablas[tabla]
   const fila: Record<string, unknown> = {}
+  const opcionales = config.camposOpcionales
   for (const [local, remota] of Object.entries(config.campos)) {
     if (local === 'updatedAt' || local === 'updatedBy') continue
-    fila[remota] = origen[local] ?? config.porDefecto[local] ?? null
+    const valor = origen[local] ?? config.porDefecto[local] ?? null
+    // Una columna opcional sin valor no viaja: asi la fila se sube
+    // igual que antes de que la columna existiera, y el push no
+    // depende de que el esquema ya este aplicado en el servidor (ver
+    // `camposOpcionales` en ConfigTabla).
+    if (valor === null && opcionales?.includes(local)) continue
+    fila[remota] = valor
   }
   return fila
 }

@@ -138,7 +138,7 @@ La creación desde la ficha del equipo ya precarga título, categoría y víncul
 - Arquitectura: mover descripción/portada/objetivo a nivel de artículo (columnas, o sin esquema persistir la metadata aunque `pasos` esté vacío devolviendo un objeto sin pasos en vez de `null`). Esos datos describen al artículo, no al paso a paso.
 - Riesgo: es escritura al vacío, el técnico no recibe ningún aviso de que perdió lo que escribió.
 
-**K2 - Bucle sugerencia → borrador de artículo: capturado pero sin cierre. [ALTA] [PLANEADO]**
+**K2 - Bucle sugerencia → borrador de artículo: capturado pero sin cierre. [ALTA] [PLANEADO] [RESUELTO en la tarea 140, 2026-07-22]**
 `DiagnosticoRunPage.tsx:524-531` captura la solución propuesta cuando el diagnóstico no resolvió; `SugerenciasEquipoPage.tsx:53-68` solo la lista en lectura. El texto + el título del diagnóstico + su categoría son exactamente el borrador de un `problema_frecuente`, pero hay que recrearlo a mano (re-tecleo). Está planeado como "bucle sugerencia -> borrador" en `PROPUESTA_REVISION_ARQUITECTURA.md` (Fase 2) y `PROPUESTA_MODULOS.md`, sin construir.
 - Automatizar: botón "Redactar artículo desde esta sugerencia" que abra `ArticuloForm` precargando título, descripción y categoría.
 
@@ -286,7 +286,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | N1 | Trampa de dirección invierte topología | Alta | Baja-Media | Datos mal modelados | Nuevo |
 | S1 | Rotar no resetea vencimiento | Alta | Baja | Ocultar rotación no hecha | Nuevo |
 | K1 | Pérdida silenciosa de metadata sin pasos | Alta | Baja | Corrige defecto activo | Nuevo |
-| K2 | Sugerencia -> borrador sin cierre | Alta | Baja-Media | Bajo | Planeado |
+| K2 | Sugerencia -> borrador sin cierre | Alta | Baja-Media | Bajo | RESUELTO (tarea 140) |
 | T2 | Sin ciclo de vida del activo (garantía) | Media | Media | Bajo | Nuevo |
 | T3 | Importador aplasta jerarquía de ubicación | Media | Media | Bajo | Nuevo |
 | L3 | Falta relación "reemplaza a" | Media | Baja | Bajo | Nuevo |

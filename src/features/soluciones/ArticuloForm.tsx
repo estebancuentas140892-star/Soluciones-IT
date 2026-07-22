@@ -104,6 +104,10 @@ export function ArticuloForm() {
   const esEdicion = Boolean(articuloId)
 
   const copiarDe = esEdicion ? null : searchParams.get('copiarDe')
+  // Bucle sugerencia -> borrador (tarea 140, hallazgo K2): id de la
+  // ejecucion de diagnostico cuyo texto libre se esta convirtiendo en
+  // articulo. Excluyente con `copiarDe`, que precarga otra cosa.
+  const desdeSugerencia = esEdicion || copiarDe ? null : searchParams.get('desdeSugerencia')
   const tipoContextual = !esEdicion && !copiarDe ? searchParams.get('tipo') : null
   const dispositivoContextualId = !esEdicion && !copiarDe ? searchParams.get('dispositivoAfectado') : null
   const dispositivoContextualNombre = searchParams.get('dispositivoNombre') ?? ''
@@ -118,6 +122,11 @@ export function ArticuloForm() {
   const original = useLiveQuery(
     async () => (copiarDe ? ((await db.articulos.get(copiarDe)) ?? null) : null),
     [copiarDe],
+  )
+  const sugerencia = useLiveQuery(
+    async () =>
+      desdeSugerencia ? ((await db.ejecuciones_diagnostico.get(desdeSugerencia)) ?? null) : null,
+    [desdeSugerencia],
   )
 
   const [titulo, setTitulo] = useState('')
@@ -182,7 +191,7 @@ export function ArticuloForm() {
       .sort((a, b) => a.nombre.localeCompare(b.nombre))
   }, [candidatosDispositivos, dispositivosAfectados])
 
-  const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe)
+  const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe && !desdeSugerencia)
   const [guardando, setGuardando] = useState(false)
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false)
   const [similaresDescartados, setSimilaresDescartados] = useState(false)
@@ -278,6 +287,30 @@ export function ArticuloForm() {
     setEstado('borrador')
     setCargadoInicial(true)
   }, [copiarDe, original, cargadoInicial])
+
+  // Precarga del bucle sugerencia -> borrador (tarea 140, hallazgo K2).
+  // La sugerencia es el texto libre que escribio un tecnico cuando un
+  // diagnostico no resolvio ("Encontre otra solucion"): junto al titulo
+  // del diagnostico y su categoria YA es el borrador de un problema
+  // frecuente, y hasta ahora habia que recrearlo a mano.
+  //
+  // La solucion propuesta entra como DESCRIPCION del procedimiento, no
+  // como pasos: es prosa, y convertirla en un paso a paso es
+  // exactamente el trabajo de redaccion que el tecnico viene a hacer.
+  // El articulo nace en borrador (nadie publica sin revisar) y la
+  // categoria no se toca: ya viene en la ruta, puesta por quien enlaza.
+  useEffect(() => {
+    if (!desdeSugerencia || cargadoInicial || sugerencia === undefined) return
+    if (sugerencia === null) {
+      setCargadoInicial(true)
+      return
+    }
+    setTitulo(sugerencia.diagnosticoTitulo)
+    setTipo('problema_frecuente')
+    setDescripcion(sugerencia.solucionPropuesta)
+    setEstado('borrador')
+    setCargadoInicial(true)
+  }, [desdeSugerencia, sugerencia, cargadoInicial])
 
   const procedimientoPreparado = useMemo(
     () =>
@@ -392,6 +425,9 @@ export function ArticuloForm() {
         estado,
         version,
         relacionados,
+        // Al editar se conserva el origen ya guardado: de que sugerencia
+        // nacio el articulo no cambia nunca (tarea 140, hallazgo K2).
+        origenSugerenciaId: esEdicion ? (articulo?.origenSugerenciaId ?? null) : desdeSugerencia,
       },
       motivo.trim(),
     )

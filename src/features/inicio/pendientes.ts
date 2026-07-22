@@ -59,13 +59,30 @@ export function credencialesPorVencer(credenciales: Credencial[]): ItemPendiente
 }
 
 // Mismo dato que ya muestra SugerenciasEquipoPage (motivo
-// 'encontro_otra_solucion' con texto propuesto): sin flujo de
-// "revisado" todavía, así que "sin revisar" es, hoy, "todas las que
-// existen". Si algún día se agrega ese flujo, este filtro es el lugar
-// donde sumar la condición.
-export function sugerenciasSinRevisar(ejecuciones: EjecucionDiagnostico[]): ItemPendiente[] {
+// 'encontro_otra_solucion' con texto propuesto). "Sin revisar" era,
+// hasta la tarea 140, "todas las que existen", porque no habia ningun
+// flujo que las cerrara; este era el lugar marcado para sumar la
+// condicion cuando lo hubiera, y ya lo hay: una sugerencia que ya se
+// convirtio en articulo (hallazgo K2) deja de ser un pendiente.
+//
+// El cierre se lee del articulo (`origenSugerenciaId`), no de la
+// ejecucion, que es un registro inmutable. Un articulo eliminado no
+// cierra nada: la sugerencia vuelve a la lista, que es lo correcto si
+// alguien borro el borrador que la atendia.
+export function sugerenciasSinRevisar(
+  ejecuciones: EjecucionDiagnostico[],
+  articulos: Articulo[],
+): ItemPendiente[] {
+  const yaRedactadas = new Set(
+    articulos.filter((a) => !a.eliminadoEn && a.origenSugerenciaId).map((a) => a.origenSugerenciaId),
+  )
   return ejecuciones
-    .filter((e) => e.motivo === 'encontro_otra_solucion' && e.solucionPropuesta.trim() !== '')
+    .filter(
+      (e) =>
+        e.motivo === 'encontro_otra_solucion' &&
+        e.solucionPropuesta.trim() !== '' &&
+        !yaRedactadas.has(e.id),
+    )
     .sort((a, b) => (a.fechaHora < b.fechaHora ? 1 : -1))
     .map((e) => ({
       clave: `sugerencia:${e.id}`,
@@ -86,15 +103,29 @@ export function calcularPendientes(datos: {
   articulos: Articulo[]
   credenciales: Credencial[]
   ejecuciones: EjecucionDiagnostico[]
+  // Artículos nacidos de una sugerencia, en CUALQUIER estado (tarea
+  // 140). Va aparte de `articulos` a propósito: ese primer parámetro
+  // trae solo los borradores, y si el cierre del bucle se leyera de
+  // ahí, publicar el artículo (que es el cierre más fuerte posible)
+  // devolvería la sugerencia a los pendientes para siempre.
+  articulosDeSugerencia: Articulo[]
   usuarioId: string
   puedeVerBoveda: boolean
   limite?: number
 }): ItemPendiente[] {
-  const { articulos, credenciales, ejecuciones, usuarioId, puedeVerBoveda, limite = 6 } = datos
+  const {
+    articulos,
+    credenciales,
+    ejecuciones,
+    articulosDeSugerencia,
+    usuarioId,
+    puedeVerBoveda,
+    limite = 6,
+  } = datos
   const items = [
     ...credencialesPorVencer(puedeVerBoveda ? credenciales : []),
     ...borradoresPropios(articulos, usuarioId),
-    ...sugerenciasSinRevisar(ejecuciones),
+    ...sugerenciasSinRevisar(ejecuciones, articulosDeSugerencia),
   ]
   return items.slice(0, limite)
 }

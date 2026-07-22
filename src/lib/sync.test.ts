@@ -109,6 +109,53 @@ describe('mapeo entre columnas locales y remotas', () => {
     expect(fila.estado).toBe('borrador')
   })
 
+  // Tarea 140 (hallazgo K2). `origen_sugerencia_id` es la primera
+  // columna declarada `camposOpcionales`: se agrego cuando la app ya
+  // estaba en uso, asi que el push NO debe mandarla mientras no tenga
+  // valor. Si viajara como null, PostgREST rechazaria TODA fila de
+  // articulos hasta que el usuario aplique el schema.sql, y el cambio
+  // se quedaria reintentandose en la cola (el mismo cuadro real que
+  // documenta `porDefecto` en tablas.ts).
+  it('una columna opcional sin valor no viaja en el payload de subida', () => {
+    const fila = aFilaRemota('articulos', {
+      id: nuevoId(),
+      categoriaId: nuevoId(),
+      titulo: 'Artículo escrito a mano',
+      tipo: 'manual',
+      origenSugerenciaId: null,
+    })
+
+    expect(fila).not.toHaveProperty('origen_sugerencia_id')
+    // El resto de la fila se sigue enviando igual que siempre.
+    expect(fila).toHaveProperty('titulo', 'Artículo escrito a mano')
+  })
+
+  it('una columna opcional con valor sí viaja', () => {
+    const fila = aFilaRemota('articulos', {
+      id: nuevoId(),
+      categoriaId: nuevoId(),
+      titulo: 'Redactado desde una sugerencia',
+      tipo: 'problema_frecuente',
+      origenSugerenciaId: 'ejecucion-1',
+    })
+
+    expect(fila.origen_sugerencia_id).toBe('ejecucion-1')
+  })
+
+  // Una propiedad ausente del payload (no solo null) tampoco debe
+  // inventar la columna: es el caso de todo articulo guardado por una
+  // version anterior de la app y encolado antes de este cambio.
+  it('una columna opcional ausente del payload tampoco viaja', () => {
+    const fila = aFilaRemota('articulos', { id: nuevoId(), titulo: 'Sin la propiedad' })
+    expect(fila).not.toHaveProperty('origen_sugerencia_id')
+  })
+
+  it('al bajar, una fila sin la columna opcional deja la propiedad en null', () => {
+    const fila = filaRemotaDeArticulo(nuevoId(), 'Artículo viejo')
+    const articulo = aEntidadLocal('articulos', fila)
+    expect(articulo.origenSugerenciaId).toBeNull()
+  })
+
   it('el procedimiento viaja completo en ambas direcciones', () => {
     const procedimiento = {
       requisitos: ['Credenciales del SQL Server'],
@@ -211,6 +258,7 @@ describe('aplicarFilasRemotas', () => {
       estado: 'publicado',
       version: '1.0',
       relacionados: [],
+      origenSugerenciaId: null,
     })
 
     await aplicarFilasRemotas('articulos', [filaRemotaDeArticulo(id, 'Versión vieja del servidor')])
@@ -328,6 +376,7 @@ describe('descartarCambioPendiente', () => {
       estado: 'publicado',
       version: '1.0',
       relacionados: [],
+      origenSugerenciaId: null,
     })
     const cola = await db.cambiosPendientes.where('[tabla+entidadId]').equals(['articulos', id]).toArray()
     expect(cola.length).toBeGreaterThan(0)

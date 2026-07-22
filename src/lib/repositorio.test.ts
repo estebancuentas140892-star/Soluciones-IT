@@ -41,6 +41,7 @@ function articuloDePrueba(id: string): Omit<Articulo, 'updatedAt' | 'updatedBy' 
     estado: 'publicado',
     version: '1.0',
     relacionados: [],
+    origenSugerenciaId: null,
   }
 }
 

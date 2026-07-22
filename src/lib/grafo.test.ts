@@ -32,6 +32,7 @@ function articulo(cambios: Partial<Articulo> & { id: string; titulo: string }): 
     estado: 'publicado',
     version: '1.0',
     relacionados: [],
+    origenSugerenciaId: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn: null,

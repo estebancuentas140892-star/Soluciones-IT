@@ -18,6 +18,7 @@ function articulo(cambios: Partial<Articulo> & { id: string }): Articulo {
     estado: 'publicado',
     version: '1.0',
     relacionados: [],
+    origenSugerenciaId: null,
     updatedAt: '2026-07-01T00:00:00Z',
     updatedBy: null,
     eliminadoEn: null,
@@ -109,7 +110,29 @@ describe('sugerenciasSinRevisar', () => {
       ejecucion({ id: 'e1', motivo: 'encontro_otra_solucion', solucionPropuesta: 'Reinicié el spooler' }),
       ejecucion({ id: 'e2', motivo: 'no_funciono', solucionPropuesta: '' }),
       ejecucion({ id: 'e3', motivo: 'encontro_otra_solucion', solucionPropuesta: '   ' }),
+    ], [])
+    expect(items.map((i) => i.clave)).toEqual(['sugerencia:e1'])
+  })
+
+  // Cierre del bucle sugerencia -> borrador (tarea 140, hallazgo K2).
+  it('excluye una sugerencia que ya se convirtió en artículo', () => {
+    const ejecuciones = [
+      ejecucion({ id: 'e1', motivo: 'encontro_otra_solucion', solucionPropuesta: 'Reinicié el spooler' }),
+      ejecucion({ id: 'e2', motivo: 'encontro_otra_solucion', solucionPropuesta: 'Cambié el cable' }),
+    ]
+    const items = sugerenciasSinRevisar(ejecuciones, [
+      articulo({ id: 'a1', origenSugerenciaId: 'e1' }),
     ])
+    expect(items.map((i) => i.clave)).toEqual(['sugerencia:e2'])
+  })
+
+  // Si se borra el artículo que la atendía, la sugerencia vuelve a estar
+  // pendiente: nadie la está resolviendo ya.
+  it('vuelve a incluirla si el artículo que la atendía fue eliminado', () => {
+    const items = sugerenciasSinRevisar(
+      [ejecucion({ id: 'e1', motivo: 'encontro_otra_solucion', solucionPropuesta: 'Reinicié el spooler' })],
+      [articulo({ id: 'a1', origenSugerenciaId: 'e1', eliminadoEn: '2026-07-20T00:00:00Z' })],
+    )
     expect(items.map((i) => i.clave)).toEqual(['sugerencia:e1'])
   })
 })
@@ -121,6 +144,7 @@ describe('calcularPendientes', () => {
       articulos: [articulo({ id: 'a1', estado: 'borrador', updatedBy: 'yo', titulo: 'Mi borrador' })],
       credenciales: [credencial({ id: 'c1', titulo: 'Vencida', venceEn: ayer })],
       ejecuciones: [ejecucion({ id: 'e1' })],
+      articulosDeSugerencia: [],
       usuarioId: 'yo',
       puedeVerBoveda: true,
       limite: 2,
@@ -135,8 +159,33 @@ describe('calcularPendientes', () => {
       articulos: [],
       credenciales: [credencial({ id: 'c1', titulo: 'Vencida', venceEn: ayer })],
       ejecuciones: [],
+      articulosDeSugerencia: [],
       usuarioId: 'yo',
       puedeVerBoveda: false,
+    })
+    expect(items).toEqual([])
+  })
+
+  // Regresión de un defecto encontrado verificando la tarea 140 en el
+  // navegador: `articulos` trae SOLO los borradores (así lo consulta
+  // InicioPage), así que si el cierre del bucle se leyera de ahí,
+  // publicar el artículo devolvería la sugerencia a los pendientes.
+  // Publicar es el cierre más fuerte que existe, no el más débil.
+  it('una sugerencia ya redactada no vuelve a pendientes al publicar el artículo', () => {
+    const yaRedactada = articulo({
+      id: 'a1',
+      estado: 'publicado',
+      titulo: 'La impresora no imprime',
+      origenSugerenciaId: 'e1',
+    })
+    const items = calcularPendientes({
+      // El artículo publicado ya no está entre los borradores.
+      articulos: [],
+      credenciales: [],
+      ejecuciones: [ejecucion({ id: 'e1' })],
+      articulosDeSugerencia: [yaRedactada],
+      usuarioId: 'yo',
+      puedeVerBoveda: true,
     })
     expect(items).toEqual([])
   })

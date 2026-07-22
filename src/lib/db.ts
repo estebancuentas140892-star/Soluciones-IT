@@ -301,6 +301,18 @@ export interface Articulo {
   // Vive en columna (no en el JSON) porque las rutas de inicio pueden
   // ser cualquier articulo, incluidos manuales sin procedimiento.
   ordenRutaInicio: number
+  // Id de la ejecucion de diagnostico de la que nacio este articulo
+  // (tarea 140, hallazgo K2): cierra el bucle "sugerencia -> borrador".
+  // null en todo lo que se escribio a mano, que es la enorme mayoria.
+  //
+  // Vive aqui y no en la ejecucion a proposito:
+  // `ejecuciones_diagnostico` es un registro inmutable (`soloInsercion`
+  // en tablas.ts), asi que marcar la ejecucion como atendida obligaria
+  // a volverla actualizable. De que sugerencia nacio es ademas un
+  // atributo del articulo, no de la ejecucion. La pantalla de
+  // sugerencias deriva de aqui cuales ya estan redactadas, sin guardar
+  // ningun estado propio.
+  origenSugerenciaId: string | null
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null

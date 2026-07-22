@@ -153,6 +153,14 @@ export function InicioPage() {
     [],
     [],
   )
+  // Artículos que ya cerraron una sugerencia (tarea 140). Consulta
+  // propia y no `borradores`: el artículo puede estar publicado, y ese
+  // es justamente el caso en que la sugerencia está más cerrada.
+  const articulosDeSugerencia = useLiveQuery(
+    () => db.articulos.filter((a) => !a.eliminadoEn && Boolean(a.origenSugerenciaId)).toArray(),
+    [],
+    [],
+  )
   const pendientes = useMemo(
     () =>
       perfil
@@ -160,11 +168,12 @@ export function InicioPage() {
             articulos: borradores,
             credenciales: credencialesConVencimiento,
             ejecuciones: ejecucionesConSugerencia,
+            articulosDeSugerencia,
             usuarioId: perfil.id,
             puedeVerBoveda: perfil.puedeVerBoveda,
           })
         : [],
-    [perfil, borradores, credencialesConVencimiento, ejecucionesConSugerencia],
+    [perfil, borradores, credencialesConVencimiento, ejecucionesConSugerencia, articulosDeSugerencia],
   )
 
   // Articulos marcados por el equipo como "ruta de inicio" (ver

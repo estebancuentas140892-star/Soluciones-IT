@@ -517,6 +517,31 @@ alter table public.dispositivos add column if not exists reemplaza_a uuid refere
 create index if not exists idx_dispositivos_reemplaza on public.dispositivos (reemplaza_a);
 
 -- ----------------------------------------------------------------
+-- 1.x Bucle sugerencia -> borrador de articulo (tarea 140)
+--     De que sugerencia del equipo nacio un articulo. La sugerencia es
+--     una fila de ejecuciones_diagnostico con motivo
+--     'encontro_otra_solucion': el texto libre que escribio un tecnico
+--     cuando el diagnostico no resolvio. La pantalla de sugerencias y
+--     los pendientes de Inicio derivan de aqui cuales ya se
+--     redactaron, sin guardar ningun estado aparte.
+--     Hallazgo K2 de AUDITORIA_FLUJOS_TI.md.
+--
+--     Nullable y SIN foreign key, igual que diagnostico_id en esa
+--     misma tabla: casi ningun articulo nace de una sugerencia, y una
+--     FK podria rechazar el guardado de un articulo si la fila de la
+--     ejecucion todavia no llego al servidor. La integridad aqui no
+--     vale bloquear una escritura del tecnico.
+--
+--     Del lado de la app la columna esta declarada en
+--     `camposOpcionales` (src/lib/tablas.ts), asi que un articulo sin
+--     origen se sigue subiendo sin esta clave: la app funciona igual
+--     antes y despues de aplicar este bloque.
+-- ----------------------------------------------------------------
+
+alter table public.articulos add column if not exists origen_sugerencia_id uuid;
+create index if not exists idx_articulos_origen_sugerencia on public.articulos (origen_sugerencia_id);
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 

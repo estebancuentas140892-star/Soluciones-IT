@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { BotonVolver } from '../../components/BotonVolver'
-import { Lightbulb } from '../../components/iconos'
+import { Check, Lightbulb, Plus } from '../../components/iconos'
 
 const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -15,15 +16,38 @@ const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', ti
 // centrado "alcanzada desde Inicio" que CuentaPage y DiagnosticosPage
 // (desde donde también se enlaza).
 export function SugerenciasEquipoPage() {
-  const sugerencias = useLiveQuery(
-    () =>
-      db.ejecuciones_diagnostico
-        .filter((e) => e.motivo === 'encontro_otra_solucion' && e.solucionPropuesta.trim() !== '')
-        .toArray()
-        .then((lista) => lista.sort((a, b) => (a.fechaHora < b.fechaHora ? 1 : -1))),
-    [],
-    [],
-  )
+  // Cada sugerencia se enriquece con lo que hace falta para cerrar el
+  // bucle (tarea 140, hallazgo K2): la categoria donde nacera el
+  // articulo y el articulo que ya la atendio, si existe.
+  //
+  // La categoria NO esta en la ejecucion: se resuelve por
+  // `diagnosticoId` contra el diagnostico. Si el diagnostico fue
+  // eliminado no hay a donde crear el articulo, y la tarjeta se queda
+  // solo en lectura en vez de ofrecer un enlace roto.
+  const sugerencias = useLiveQuery(async () => {
+    const lista = await db.ejecuciones_diagnostico
+      .filter((e) => e.motivo === 'encontro_otra_solucion' && e.solucionPropuesta.trim() !== '')
+      .toArray()
+    lista.sort((a, b) => (a.fechaHora < b.fechaHora ? 1 : -1))
+
+    const diagnosticos = await db.diagnosticos.bulkGet([
+      ...new Set(lista.map((e) => e.diagnosticoId)),
+    ])
+    const categoriaPorDiagnostico = new Map(
+      diagnosticos
+        .filter((d) => d && !d.eliminadoEn)
+        .map((d) => [d!.id, d!.categoriaId] as const),
+    )
+
+    const redactados = await db.articulos.filter((a) => !a.eliminadoEn && !!a.origenSugerenciaId).toArray()
+    const articuloPorSugerencia = new Map(redactados.map((a) => [a.origenSugerenciaId!, a] as const))
+
+    return lista.map((sugerencia) => ({
+      sugerencia,
+      categoriaId: categoriaPorDiagnostico.get(sugerencia.diagnosticoId) ?? null,
+      articulo: articuloPorSugerencia.get(sugerencia.id) ?? null,
+    }))
+  }, [], [])
 
   return (
     <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
@@ -50,7 +74,7 @@ export function SugerenciasEquipoPage() {
               </p>
             </div>
           ) : (
-            sugerencias.map((sugerencia) => (
+            sugerencias.map(({ sugerencia, categoriaId, articulo }) => (
               <div key={sugerencia.id} className="rounded-lg border border-noct-divider bg-noct-surface px-4 py-3">
                 <div className="flex items-center justify-between gap-2 text-[12px] text-noct-neutral-500">
                   <span className="truncate">{sugerencia.diagnosticoTitulo}</span>
@@ -64,6 +88,30 @@ export function SugerenciasEquipoPage() {
                     Reportado por {sugerencia.usuarioNombre}
                   </p>
                 )}
+
+                {/* Cierre del bucle (hallazgo K2): mientras nadie la haya
+                    redactado se ofrece convertirla; despues, la tarjeta
+                    muestra a donde fue a parar en vez del boton, para que
+                    dos tecnicos no escriban el mismo articulo dos veces. */}
+                {articulo ? (
+                  <Link
+                    to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+                    className="mt-3 flex items-center gap-1.5 text-[12.5px] font-medium text-noct-accent-300"
+                  >
+                    <Check size={14} aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">
+                      Ya redactada: {articulo.titulo || '(sin título)'}
+                    </span>
+                  </Link>
+                ) : categoriaId ? (
+                  <Link
+                    to={`/soluciones/${categoriaId}/nuevo?desdeSugerencia=${sugerencia.id}`}
+                    className="mt-3 flex items-center justify-center gap-1.5 rounded-md border border-noct-divider px-3 py-2 text-[12.5px] font-medium text-noct-text"
+                  >
+                    <Plus size={14} aria-hidden />
+                    Redactar artículo
+                  </Link>
+                ) : null}
               </div>
             ))
           )}
