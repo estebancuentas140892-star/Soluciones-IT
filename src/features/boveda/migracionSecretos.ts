@@ -51,16 +51,24 @@ export function detectarCandidatos(
 ): CandidatoMigracion[] {
   const vivos = dispositivos.filter((d) => !d.eliminadoEn)
   const porId = new Map(vivos.map((d) => [d.id, d]))
+  // `d.ip` puede llegar undefined en filas cacheadas por versiones muy
+  // anteriores; `?? ''` evita que un solo registro viejo rompa el render.
   const porIp = new Map(
-    vivos.filter((d) => d.ip.trim() !== '').map((d) => [normalizar(d.ip), d]),
+    vivos.filter((d) => (d.ip ?? '').trim() !== '').map((d) => [normalizar(d.ip ?? ''), d]),
   )
 
   const candidatos: CandidatoMigracion[] = []
   for (const c of credenciales) {
     if (c.eliminadoEn) continue
 
-    if (c.dispositivos.length === 1) {
-      const equipo = porId.get(c.dispositivos[0].id)
+    // `c.dispositivos` puede ser undefined en credenciales creadas antes
+    // del grupo N3 (cuando esa columna no existia) y aun sin re-sincronizar.
+    // Sin esta guarda, una sola fila vieja lanzaba un TypeError en el
+    // render de la Boveda (aviso de migracion), que el ErrorBoundary
+    // mostraba como "No se pudo cargar la aplicacion".
+    const vinculados = c.dispositivos ?? []
+    if (vinculados.length === 1) {
+      const equipo = porId.get(vinculados[0].id)
       if (equipo) {
         candidatos.push({
           credencialId: c.id,

@@ -93,6 +93,31 @@ describe('detectarCandidatos', () => {
     expect(detectarCandidatos(credenciales, dispositivos, new Map([['c1', '']]))).toEqual([])
     expect(detectarCandidatos(credenciales, dispositivos, new Map([['c1', '10.0.0.99']]))).toEqual([])
   })
+
+  // Regresion (2026-07-22): una credencial cacheada antes del grupo N3
+  // llega sin la propiedad `dispositivos`. El relleno de tablas.ts
+  // (porDefecto) solo aplica a filas descargadas despues, y la
+  // sincronizacion es incremental por cursor: la fila vieja nunca se
+  // vuelve a bajar y conserva el hueco. Sin la guarda esto lanzaba
+  // "Cannot read properties of undefined (reading 'length')" en el
+  // render de la Boveda, y el ErrorBoundary tapaba la pantalla entera
+  // con "No se pudo cargar la aplicacion".
+  it('tolera una credencial vieja sin la propiedad dispositivos', () => {
+    const vieja = { id: 'c1', titulo: 'Credencial vieja', eliminadoEn: null } as unknown as Parameters<
+      typeof detectarCandidatos
+    >[0][number]
+    expect(() => detectarCandidatos([vieja], dispositivos, new Map())).not.toThrow()
+    // y se sigue detectando por IP heredada, como cualquier otra sin vinculo
+    expect(detectarCandidatos([vieja], dispositivos, new Map([['c1', '192.168.1.50']]))).toEqual([
+      {
+        credencialId: 'c1',
+        credencialTitulo: 'Credencial vieja',
+        dispositivoId: 'd1',
+        dispositivoNombre: 'Impresora Lanier',
+        motivo: 'ip',
+      },
+    ])
+  })
 })
 
 describe('camposAMigrar', () => {

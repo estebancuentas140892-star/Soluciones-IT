@@ -93,6 +93,18 @@ describe('dependenciasDeBaja', () => {
     expect(dependenciasDeBaja('d1', datos).credenciales).toEqual([])
   })
 
+  // Regresion (2026-07-22): misma fila vieja que rompia la Boveda (ver
+  // boveda/migracionSecretos.test.ts). Una credencial cacheada antes del
+  // grupo N3 no trae `dispositivos`; sin la guarda, abrir "Dar de baja"
+  // o "Reemplazar" lanzaba un TypeError y tapaba la pantalla.
+  it('tolera una credencial vieja sin la propiedad dispositivos', () => {
+    const vieja = credencial('cr1', [])
+    delete (vieja as Partial<Credencial>).dispositivos
+    const datos = { conexiones: [], credenciales: [vieja], camposProtegidos: [] }
+    expect(() => dependenciasDeBaja('d1', datos)).not.toThrow()
+    expect(dependenciasDeBaja('d1', datos).credenciales).toEqual([])
+  })
+
   it('encuentra los campos protegidos del equipo, no los que son de otro o no tienen equipo', () => {
     const datos = {
       conexiones: [],

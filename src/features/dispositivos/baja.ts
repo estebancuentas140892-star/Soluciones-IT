@@ -32,8 +32,13 @@ export function dependenciasDeBaja(dispositivoId: string, datos: DatosBaja): Dep
     conexiones: datos.conexiones.filter(
       (c) => !c.eliminadoEn && (c.origenId === dispositivoId || c.destinoId === dispositivoId),
     ),
+    // `c.dispositivos` puede ser undefined en credenciales creadas antes
+    // del grupo N3 (cuando esa columna no existia) y aun sin
+    // re-sincronizar; sin `?? []` una sola fila vieja rompe el render de
+    // "Dar de baja" y "Reemplazar" (misma guarda que en
+    // boveda/migracionSecretos.ts).
     credenciales: datos.credenciales.filter(
-      (c) => !c.eliminadoEn && c.dispositivos.some((d) => d.id === dispositivoId),
+      (c) => !c.eliminadoEn && (c.dispositivos ?? []).some((d) => d.id === dispositivoId),
     ),
     camposProtegidos: datos.camposProtegidos.filter((c) => !c.eliminadoEn && c.dispositivoId === dispositivoId),
   }
