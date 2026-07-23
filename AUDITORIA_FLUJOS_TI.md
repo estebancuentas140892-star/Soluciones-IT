@@ -119,7 +119,7 @@ El puerto vive como texto suelto en cada `Conexion` (`origenPuerto`/`destinoPuer
 `SeguridadDelEquipo.tsx:402-435` llama a `guardarRegistro('campos_protegidos', ...)` sin `motivo`, frente a `CredencialForm.tsx:311-324` que sí lo pasa y tiene el campo. El historial por campo registra el cambio pero nunca el porqué (rotación, incidente, filtración). Tampoco reutiliza el botón "Generar" de la bóveda (`CredencialForm.tsx:492-502`).
 - UX: añadir "Motivo" opcional al editor de campo y reutilizar `generarContrasena`.
 
-**S4 - El título de credencial "Acceso {nombre}" congela el nombre del equipo. [MEDIA] [NUEVO]**
+**S4 - El título de credencial "Acceso {nombre}" congela el nombre del equipo. [MEDIA] [NUEVO] [RESUELTO en la tarea 149, 2026-07-23]**
 La creación contextual arma `titulo=Acceso ${dispositivo.nombre}` (`DispositivoPage.tsx:334`) y ese texto se guarda congelado (`CredencialForm.tsx:310-311`). Si el equipo se renombra, el título del secreto queda desfasado, mientras el resto del sistema sí usa referencia viva. Existe un nudge cuando el título coincide (`CredencialForm.tsx:208-212`), pero no cuando quedó desfasado.
 - Debería referenciarse: no bakear el nombre en el título (dejar título genérico + equipo vía vínculo vivo), o marcar el título como derivado y refrescarlo desde el equipo vinculado.
 
@@ -294,7 +294,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | N5 | Búsqueda sin sugerencias por ubicación/tipo | Media | Baja | Bajo | Nuevo |
 | S2 | Campos protegidos sin vencimiento | Media | Baja | Bajo | RESUELTO (tarea 147) |
 | S3 | Campo protegido sin motivo ni "Generar" | Media | Baja | Bajo | RESUELTO (tarea 148) |
-| S4 | Título de credencial congela el nombre | Media | Baja | Bajo | Nuevo |
+| S4 | Título de credencial congela el nombre | Media | Baja | Bajo | RESUELTO (tarea 149) |
 | S5 | Solapamiento credencial/campo protegido | Media | Baja | Bajo | Nuevo |
 | K3 | Completitud no depende del tipo | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | K4 | Diagnóstico no hereda categoría | Media | Baja | Bajo | RESUELTO (tarea 141) |

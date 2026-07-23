@@ -21,6 +21,7 @@ import { generarContrasena } from '../../lib/generarContrasena'
 import { proximoVencimiento, vencimientoDesactualizado } from '../../lib/vencimiento'
 import { valoresUnicos } from '../../lib/vocabulario'
 import { BUCKET_ARCHIVOS_BOVEDA } from './archivoSeguro'
+import { tituloAccesoSugerido } from './tituloAcceso'
 import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBoveda'
 
 // Cinco tipos de secreto (fase P3 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md,
@@ -220,6 +221,17 @@ export function CredencialForm() {
     if (!buscado) return null
     return dispositivosOrdenados.find((d) => normalizar(d.nombre) === buscado) ?? null
   }, [titulo, dispositivosOrdenados])
+
+  // Título desactualizado (hallazgo S4): si el equipo vinculado se
+  // renombró desde que se creó "Acceso {nombre}" y el técnico no
+  // personalizó el título desde entonces, se sugiere el título vivo en
+  // vez de dejarlo desfasado en silencio.
+  const primerVinculo = dispositivos[0] ?? null
+  const tituloSugerido = useMemo(() => {
+    if (!primerVinculo) return null
+    const vivo = dispositivosOrdenados.find((d) => d.id === primerVinculo.id)?.nombre ?? ''
+    return tituloAccesoSugerido(titulo, primerVinculo.nombre, vivo)
+  }, [titulo, primerVinculo, dispositivosOrdenados])
 
   useEffect(() => {
     if (!credencial || cargadoInicial) return
@@ -448,6 +460,21 @@ export function CredencialForm() {
                   >
                     Ir a la ficha
                   </Link>
+                </div>
+              )}
+
+              {tituloSugerido && (
+                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                    El equipo vinculado se renombró. El título quedó desactualizado.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setTitulo(tituloSugerido)}
+                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                  >
+                    Usar &quot;{tituloSugerido}&quot;
+                  </button>
                 </div>
               )}
 

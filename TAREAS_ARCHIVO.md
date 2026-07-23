@@ -1,5 +1,19 @@
 # Historial de tareas finalizadas
 
+### 149. El título de credencial ya no queda desfasado si el equipo se renombra (hallazgo S4)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1449 pruebas en verde. **Prioridad**: MEDIA. **Sin verificar en navegador**: mismo límite de sesión que las tareas 144 a 148.
+
+**Qué resolvía**: la creación contextual de una credencial desde la ficha de un equipo arma el título como `Acceso {nombre}` (`DispositivoPage.tsx`) y ese texto queda congelado en un campo libre; si el equipo se renombra después, el título del secreto queda desfasado y nada lo avisa, a diferencia del resto de la app, que usa referencia viva (`src/lib/referencia.ts`, `textoVivo`).
+
+**Decisión de diseño**: no se optó por dejar de bakear el nombre en el título (cambiaría la UX de la Bóveda, que muestra el título como identificador principal en listas y búsqueda). En cambio, siguiendo la otra alternativa que planteaba el propio hallazgo, se detecta cuándo el título sigue el patrón exacto de la creación contextual sin que el técnico lo haya personalizado, y se ofrece actualizarlo: mismo patrón UX que S1 (`vencimientoDesactualizado` + botón "Renovar"), no una sobrescritura silenciosa.
+
+**Cambios**:
+- `src/features/boveda/tituloAcceso.ts` (+ `tituloAcceso.test.ts`, 5 pruebas): `tituloAccesoSugerido(titulo, copiaNombre, nombreVivo)`, pura. Devuelve el título sugerido solo si el título guardado sigue siendo literalmente `Acceso {copiaNombre}` (el técnico no lo tocó) y el nombre vivo del equipo vinculado difiere; `null` en cualquier otro caso (título personalizado, equipo sin cambios, o sin equipo vinculado/eliminado).
+- `src/features/boveda/CredencialForm.tsx`: nuevo aviso ámbar (mismo estilo que el nudge anti duplicidad ya existente) que ofrece "Usar Acceso {nombre nuevo}" cuando `tituloAccesoSugerido` no es null, comparando contra el primer equipo vinculado (`dispositivos[0]`) resuelto contra `dispositivosOrdenados` (la misma consulta en vivo que ya usaba el nudge de duplicidad).
+
+**Fuera de alcance**: no se tocó la copia congelada `dispositivos[].nombre` (ese vínculo ya se resuelve en vivo en `CredencialPage.tsx` vía `textoVivo`, hallazgo distinto); tampoco se generalizó la detección a títulos que no siguen el patrón `Acceso {nombre}` exacto (por ejemplo si el técnico agregó texto extra), que quedan fuera del hallazgo original.
+
 ### 148. Motivo del cambio y "Generar contraseña" para campos protegidos (hallazgo S3)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1444 pruebas en verde. **Prioridad**: MEDIA. Mismo patrón que la tarea 147 (S2), siguiente hallazgo del flujo 4 de la auditoría. **Sin verificar en navegador**: mismo límite de sesión que las tareas 144 a 147 (sin Supabase configurado no hay login); se confirmó que la app arranca sin errores de consola.
