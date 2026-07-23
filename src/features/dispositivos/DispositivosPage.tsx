@@ -3,7 +3,9 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
-import { MiniaturaPortada } from '../../components/MiniaturaPortada'
+import { idsDeRed, esDeRed } from '../../lib/categorias'
+import { incluyeTexto } from '../../lib/texto'
+import { FilaDispositivo } from '../../components/FilaDispositivo'
 import {
   DotsThreeOutline,
   MagnifyingGlass,
@@ -16,8 +18,7 @@ import {
   XCircleFill,
 } from '../../components/iconos'
 import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
-import { IconoNodo } from '../red/IconoNodo'
-import { claseEstado, estadoConEtiqueta, tipoDeNodoVisual } from '../red/topologiaVisual'
+import { estadoConEtiqueta } from '../red/topologiaVisual'
 
 // Pantalla Dispositivos re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Dispositivos.dc.html, entrada
@@ -48,13 +49,10 @@ export function DispositivosPage() {
   const [menuAbierto, setMenuAbierto] = useState(false)
 
   const categoriasGenerales = useMemo(
-    () => (categorias ?? []).filter((c) => !c.esRed),
+    () => (categorias ?? []).filter((c) => !esDeRed(c)),
     [categorias],
   )
-  const idsRed = useMemo(
-    () => new Set((categorias ?? []).filter((c) => c.esRed).map((c) => c.id)),
-    [categorias],
-  )
+  const idsRed = useMemo(() => idsDeRed(categorias), [categorias])
   const nombreCategoria = useMemo(
     () => new Map((categorias ?? []).map((c) => [c.id, c.nombre])),
     [categorias],
@@ -66,11 +64,9 @@ export function DispositivosPage() {
   )
 
   const filtrados = useMemo(() => {
-    const buscado = texto.trim().toLowerCase()
     return generales.filter((d) => {
       if (categoriaId && d.categoriaId !== categoriaId) return false
-      if (!buscado) return true
-      return [d.nombre, d.ip, d.ubicacion, d.serial].join(' ').toLowerCase().includes(buscado)
+      return incluyeTexto([d.nombre, d.ip, d.ubicacion, d.serial], texto)
     })
   }, [generales, categoriaId, texto])
 
@@ -253,48 +249,15 @@ export function DispositivosPage() {
 
         {hayResultados ? (
           <div className="flex flex-col">
-            {filtrados.map((d) => {
-              const estado = estadoConEtiqueta(d.estado)
-              return (
-                <Link
-                  key={d.id}
-                  to={`/dispositivos/${d.id}`}
-                  className="flex min-h-[56px] items-center gap-[13px] rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-                >
-                  <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-noct-text/[.06] text-noct-neutral-400">
-                    {d.foto ? (
-                      <MiniaturaPortada
-                        referencia={d.foto.referencia}
-                        alt={d.nombre}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <IconoNodo
-                        tipo={tipoDeNodoVisual(nombreCategoria.get(d.categoriaId) ?? '')}
-                        className="h-[19px] w-[19px]"
-                      />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium leading-[1.3]">{d.nombre}</p>
-                    <p className="truncate text-[12px] text-noct-neutral-500">
-                      {[nombreCategoria.get(d.categoriaId), d.ubicacion].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-[3px]">
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-[11.5px] font-medium ${claseEstado(estado.etiqueta)}`}
-                    >
-                      <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
-                      {estado.etiqueta}
-                    </span>
-                    {d.ip && (
-                      <span className="font-mono text-[11px] text-noct-neutral-600">{d.ip}</span>
-                    )}
-                  </div>
-                </Link>
-              )
-            })}
+            {filtrados.map((d) => (
+              <FilaDispositivo
+                key={d.id}
+                dispositivo={d}
+                categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
+                subtitulo={[nombreCategoria.get(d.categoriaId), d.ubicacion].filter(Boolean).join(' · ')}
+                conFoto
+              />
+            ))}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-11 text-center">

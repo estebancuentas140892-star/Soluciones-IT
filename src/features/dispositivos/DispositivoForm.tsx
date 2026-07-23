@@ -45,17 +45,18 @@ const RE_IP = /^\d{1,3}(\.\d{1,3}){3}$/
 // cabecera pegajosa con "Cancelar" (y el tag "Copia de otro equipo" al
 // duplicar), campos esenciales (nombre y categoría en chips son lo
 // único obligatorio), foto, identificación con aviso de serial ya
-// existente, ubicación, conectividad (IP validada y estado en chips con
-// punto de color) y un bloque plegable "Más información" con
-// observaciones, propiedades sugeridas por categoría y el motivo del
-// cambio. Trae su propio shell a pantalla completa, por eso su ruta
-// sale del Layout oscuro como los demás editores. Conserva intactos el
-// modelo de datos y toda la lógica del editor previo: id decidido al
-// inicio (estable para excluirse a sí mismo del chequeo de serial
-// duplicado y para navegar a la ficha tras guardar), modo duplicar por
-// `?copiarDe`, subida/encolado de la foto, marcas y propiedades
-// sugeridas aprendidas del uso real, ubicación como entidad y guardado
-// con motivo.
+// existente, ubicación, conectividad (IP validada, con el mismo aviso
+// de duplicado que el serial, y estado en chips con punto de color) y
+// un bloque plegable "Más información" con observaciones, propiedades
+// sugeridas por categoría y el motivo del cambio. Trae su propio shell
+// a pantalla completa, por eso su ruta sale del Layout oscuro como los
+// demás editores. Conserva intactos el modelo de datos y toda la
+// lógica del editor previo: id decidido al inicio (estable para
+// excluirse a sí mismo del chequeo de serial/IP duplicados y para
+// navegar a la ficha tras guardar), modo duplicar por `?copiarDe`,
+// subida/encolado de la foto, marcas y propiedades sugeridas
+// aprendidas del uso real, ubicación como entidad y guardado con
+// motivo.
 export function DispositivoForm() {
   const { dispositivoId } = useParams()
   const [searchParams] = useSearchParams()
@@ -212,6 +213,14 @@ export function DispositivoForm() {
     if (buscado === '') return null
     return todosDispositivos.find((d) => d.id !== id && d.serial.trim().toLowerCase() === buscado) ?? null
   }, [todosDispositivos, serial, id])
+
+  // Mismo chequeo que serialDuplicado, para la IP: dos equipos con la
+  // misma IP suele ser un error de tecleo o un conflicto de red real.
+  const ipDuplicada = useMemo(() => {
+    const buscada = ip.trim().toLowerCase()
+    if (buscada === '') return null
+    return todosDispositivos.find((d) => d.id !== id && d.ip.trim().toLowerCase() === buscada) ?? null
+  }, [todosDispositivos, ip, id])
 
   const ipValida = ip.trim() === '' || RE_IP.test(ip.trim())
   const valido = nombre.trim() !== '' && categoriaId !== ''
@@ -471,6 +480,18 @@ export function DispositivoForm() {
                 <span className="text-[12px] text-noct-precaucion">No parece una IP válida (formato 192.168.1.10)</span>
               )}
             </label>
+            {ipDuplicada && (
+              <div className="flex items-start gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2.5">
+                <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+                <p className="text-[13px] leading-[1.5]">
+                  Esta IP ya existe en{' '}
+                  <Link to={`/dispositivos/${ipDuplicada.id}`} className="text-noct-accent-300 hover:text-noct-accent-400">
+                    {ipDuplicada.nombre}
+                  </Link>
+                  . Revisar antes de crear un conflicto de red.
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <span className={CLASE_ETIQUETA}>Estado</span>

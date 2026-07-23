@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
+import { idsDeRed } from '../../lib/categorias'
 import { BotonVolver } from '../../components/BotonVolver'
 import { CaretDown, CaretRight, MagnifyingGlass, TreeStructure, XCircleFill } from '../../components/iconos'
 import { BTN_GHOST } from '../../components/nocturne'
@@ -34,7 +35,7 @@ export function TopologiaPage() {
   const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
 
   const arboles = useMemo(() => {
-    const idsRed = new Set((categorias ?? []).filter((c) => c.esRed).map((c) => c.id))
+    const idsRed = idsDeRed(categorias)
     return construirBosque(dispositivos ?? [], conexiones ?? [], (categoriaId) => idsRed.has(categoriaId))
   }, [dispositivos, conexiones, categorias])
 

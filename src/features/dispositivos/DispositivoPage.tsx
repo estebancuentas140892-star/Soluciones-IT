@@ -48,6 +48,7 @@ import {
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { estadoConEtiqueta } from '../red/topologiaVisual'
+import { esDeRed } from '../../lib/categorias'
 import { Historial } from '../historial/Historial'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
 import { CredencialesDelEquipo } from './CredencialesDelEquipo'
@@ -169,7 +170,7 @@ export function DispositivoPage() {
 
   // Los dispositivos de red se listan en la seccion Red: la navegacion
   // de vuelta y la eliminacion regresan alli.
-  const esRed = Boolean(categoria?.esRed)
+  const esRed = esDeRed(categoria)
   const volverA = esRed ? '/red' : '/dispositivos'
 
   async function eliminar() {

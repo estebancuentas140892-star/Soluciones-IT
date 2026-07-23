@@ -4,10 +4,11 @@ import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
 import { compararNatural } from '../../lib/conexiones'
+import { esDeRed } from '../../lib/categorias'
+import { incluyeTexto } from '../../lib/texto'
+import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CaretRight, MagnifyingGlass, MapPin, Plus, TreeStructure, XCircleFill } from '../../components/iconos'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
-import { IconoNodo } from './IconoNodo'
-import { claseEstado, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
 
 // Sección Red re-autorizada en el sistema Nocturne (handoff "Rediseño
 // de aplicación empresarial", Red.dc.html, tarea 91): responde "¿cómo
@@ -29,7 +30,7 @@ export function RedPage() {
 
   const [texto, setTexto] = useState('')
 
-  const categoriasRed = useMemo(() => (categorias ?? []).filter((c) => c.esRed), [categorias])
+  const categoriasRed = useMemo(() => (categorias ?? []).filter(esDeRed), [categorias])
   const idsRed = useMemo(() => new Set(categoriasRed.map((c) => c.id)), [categoriasRed])
   const nombreCategoria = useMemo(
     () => new Map((categorias ?? []).map((c) => [c.id, c.nombre])),
@@ -37,16 +38,14 @@ export function RedPage() {
   )
 
   const filtrados = useMemo(() => {
-    const buscado = texto.trim().toLowerCase()
     return (dispositivos ?? [])
       .filter((d) => idsRed.has(d.categoriaId))
-      .filter((d) => {
-        if (!buscado) return true
-        return [d.nombre, d.ubicacion, d.ip, d.marca, d.modelo, nombreCategoria.get(d.categoriaId)]
-          .join(' ')
-          .toLowerCase()
-          .includes(buscado)
-      })
+      .filter((d) =>
+        incluyeTexto(
+          [d.nombre, d.ubicacion, d.ip, d.marca, d.modelo, nombreCategoria.get(d.categoriaId)],
+          texto,
+        ),
+      )
   }, [dispositivos, idsRed, texto, nombreCategoria])
 
   // Grupos por ubicación (texto libre), orden alfabético natural; los
@@ -161,38 +160,16 @@ export function RedPage() {
                 </div>
                 <div className="flex flex-col">
                   {grupo.equipos.map((d) => {
-                    const estado = estadoConEtiqueta(d.estado)
                     const marcaModelo = [d.marca, d.modelo].filter(Boolean).join(' ')
                     return (
-                      <Link
+                      <FilaDispositivo
                         key={d.id}
-                        to={`/dispositivos/${d.id}`}
-                        className="flex min-h-[56px] items-center gap-[13px] rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-                      >
-                        <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-400">
-                          <IconoNodo
-                            tipo={tipoDeNodoVisual(nombreCategoria.get(d.categoriaId) ?? '')}
-                            className="h-[19px] w-[19px]"
-                          />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium leading-[1.3]">{d.nombre}</p>
-                          <p className="truncate text-[12px] text-noct-neutral-500">
-                            {[nombreCategoria.get(d.categoriaId), marcaModelo].filter(Boolean).join(' · ')}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-[3px]">
-                          <span
-                            className={`inline-flex items-center gap-1.5 text-[11.5px] font-medium ${claseEstado(estado.etiqueta)}`}
-                          >
-                            <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
-                            {estado.etiqueta}
-                          </span>
-                          {d.ip && (
-                            <span className="font-mono text-[11px] text-noct-neutral-600">{d.ip}</span>
-                          )}
-                        </div>
-                      </Link>
+                        dispositivo={d}
+                        categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
+                        subtitulo={[nombreCategoria.get(d.categoriaId), marcaModelo]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      />
                     )
                   })}
                 </div>
