@@ -40,6 +40,7 @@ Fecha de redacción: 2026-07-23. Basado en una lectura directa del código en `s
 14. [Árbol jerárquico de navegación](#14-arbol-de-navegacion)
 15. [Verificación final (auditoría de cobertura)](#15-verificacion-final)
 16. [Hallazgos y oportunidades de mejora](#16-hallazgos)
+17. [Historial de cambios](#17-historial-de-cambios)
 
 ---
 
@@ -1072,4 +1073,16 @@ Observaciones surgidas del recorrido. La mayoría son mejoras de mantenibilidad,
 ### Resumen
 
 La aplicación es funcionalmente muy completa y arquitectónicamente coherente: el grafo derivado, la referencia viva, los avisos anti duplicidad y la creación contextual están bien resueltos. Las oportunidades reales son de **consolidación de código** (helpers y patrones de UI repetidos) más que de funcionalidad faltante, y algunas **automatizaciones** (notificaciones, mantenimiento preventivo) que la base de datos actual ya soportaría sin cambios de esquema.
+
+---
+
+<a id="17-historial-de-cambios"></a>
+## 17. Historial de cambios
+
+Registro obligatorio de la evolución del proyecto (REGLAS.md, regla 19). Cada cambio de código que afecte pantallas, formularios, campos, botones, validaciones, flujos, navegación, lógica de negocio, estructura de datos o comportamiento de un módulo se anota aquí en la misma tarea, con: Fecha · Área · Tipo (Agregado/Modificado/Eliminado/Refactorizado/Optimizado) · Descripción · Motivo · Impacto.
+
+| Fecha | Área | Tipo | Descripción | Motivo | Impacto |
+|-------|------|------|-------------|--------|---------|
+| 2026-07-23 | Documentación | Agregado | Se creó este documento (`DOCUMENTACION_FUNCIONAL.md`), inventario funcional completo de la app | Encargo del usuario: única fuente de verdad funcional | Base de referencia; sin cambio de código |
+| 2026-07-23 | Proceso / Documentación | Agregado | Auditoría de rediseño del flujo del técnico ([AUDITORIA_FLUJO_INSTALACION.md](AUDITORIA_FLUJO_INSTALACION.md)) y política obligatoria de mantenimiento (REGLAS.md regla 19). Se creó esta sección de Historial de cambios | Encargo del usuario: rediseñar el flujo bajo "cada dato una sola vez" y documentar todo cambio | Sin cambio de código todavía; las mejoras H1-H9 quedan como tareas 160-166 pendientes de aprobación de fases |
 

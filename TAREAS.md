@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-Sin tarea en desarrollo. La tarea 158 (documentación funcional exhaustiva de toda la aplicación) quedó terminada el 2026-07-23: se creó `DOCUMENTACION_FUNCIONAL.md` en la raíz, un inventario completo y estructurado de toda la app (visión general, stack/shells/temas/navegación, mapa completo de rutas, modelo de datos, las 5 secciones del menú y las secundarias con su objetivo/botones/acciones/filtros/listas/indicadores, catálogo de formularios campo por campo con tipo de control/obligatoriedad/defecto/placeholder/validaciones, catálogo de modales y hojas, catálogo de botones y primitivas, menús, acciones transversales, grafo de relaciones entre secciones, seis flujos funcionales completos, árbol jerárquico de navegación, auditoría de cobertura y una sección de hallazgos y oportunidades de mejora). Se construyó leyendo directamente el código de todas las pantallas, editores, modales y primitivas de `src/`. **Modelo/esfuerzo:** Opus 4.8 / Extra (35/55 en la matriz), en línea sin subagentes. Enlazado desde CLAUDE.md como documento clave (pendiente si el usuario quiere el enlace). Sin cambios de código de producción. Ver el detalle en TAREAS_ARCHIVO.md.
+Sin tarea de código en desarrollo. La tarea 159 (auditoría de rediseño del flujo del técnico, caso de uso "conectar impresora a PC Windows") entregó su **auditoría completa** el 2026-07-23 en [AUDITORIA_FLUJO_INSTALACION.md](AUDITORIA_FLUJO_INSTALACION.md). **Veredicto:** la app ya cumple ~85% del principio "cada dato una sola vez" (referencia viva, grafo derivado, vínculos protegidos que referencian secretos sin copiarlos, subprocedimientos por composición, Red sin duplicar el inventario, creación contextual precargada). Los huecos reales quedan como tareas 160 a 166 en "Por hacer", priorizados. **La implementación está pendiente de que el usuario apruebe las fases** (regla del encargo: auditar antes de tocar código; y algunos puntos, como el orden de pestañas y "aplica a" por marca/modelo, se pidió analizarlos antes de implementarlos). Modelo/esfuerzo: Opus 4.8 / Max (47/55). Se registró la nueva política obligatoria de mantenimiento de tareas y documentación en REGLAS.md (regla 19).
+
+Antes, la tarea 158 (documentación funcional exhaustiva de toda la aplicación) quedó terminada el 2026-07-23: se creó `DOCUMENTACION_FUNCIONAL.md` en la raíz, un inventario completo y estructurado de toda la app (visión general, stack/shells/temas/navegación, mapa completo de rutas, modelo de datos, las 5 secciones del menú y las secundarias con su objetivo/botones/acciones/filtros/listas/indicadores, catálogo de formularios campo por campo con tipo de control/obligatoriedad/defecto/placeholder/validaciones, catálogo de modales y hojas, catálogo de botones y primitivas, menús, acciones transversales, grafo de relaciones entre secciones, seis flujos funcionales completos, árbol jerárquico de navegación, auditoría de cobertura y una sección de hallazgos y oportunidades de mejora). Se construyó leyendo directamente el código de todas las pantallas, editores, modales y primitivas de `src/`. **Modelo/esfuerzo:** Opus 4.8 / Extra (35/55 en la matriz), en línea sin subagentes. Enlazado desde CLAUDE.md como documento clave (pendiente si el usuario quiere el enlace). Sin cambios de código de producción. Ver el detalle en TAREAS_ARCHIVO.md.
 
 Antes, la tarea 157 (hallazgo D2 de la auditoría de flujos: el buscador del formulario de conexión reutiliza `incluyeTexto()`) quedó terminada y archivada el 2026-07-23: `candidatosConexion` en `src/lib/conexiones.ts` dejó de repetir el patrón de filtro por subcadena y reusa `incluyeTexto()` de `src/lib/texto.ts` (regla ya extraída en la tarea 145 para Dispositivos y Red). Typecheck, lint y 1602 pruebas en verde. **Con esto D2 queda resuelto para los tres buscadores que comparten semántica; Soluciones sigue aparte por diseño** (normalización de acentos, resaltado del término, campos extra), decisión ya registrada en la tarea 145. Sin verificar en navegador (falta una cuenta de técnico real para iniciar sesión). Ver el detalle en TAREAS_ARCHIVO.md.
 
@@ -133,6 +135,62 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+**REDISEÑO DEL FLUJO DEL TÉCNICO (auditoría del 2026-07-23, [AUDITORIA_FLUJO_INSTALACION.md](AUDITORIA_FLUJO_INSTALACION.md)).** Tareas registradas con el formato de la regla 19. Fases: 1 (H1, H3, H9), 2 (H4, H2, H5), 3 (H6, con esquema, deferida). Ninguna de las fases 1 y 2 toca el esquema ni rompe compatibilidad. Pendientes de aprobación de fases por el usuario.
+
+### 160. Procedimientos e incidencias por categoría en la ficha del equipo (hallazgo H1)
+- Descripción: en la ficha del dispositivo, además de los procedimientos/incidencias vinculados por `dispositivosAfectados` ("específicos de este equipo"), mostrar "De esta categoría": los publicados cuyo `categoria_id` coincide con la categoría del equipo. Consulta derivada, sin esquema. Separar visualmente lo específico de lo general; "Ver todos" a `/soluciones?categoria=<id>`.
+- Motivo: hoy un procedimiento genérico ("Instalar impresora de red") no aparece en una impresora concreta salvo que se vincule equipo por equipo. El diagnóstico ya se ofrece por categoría (inconsistencia).
+- Impacto: cierra el paso 7 del caso de uso; el técnico resuelve desde la ficha sin cambiar de módulo; escala sin vínculos manuales.
+- Prioridad: **Alta**. Estado: Pendiente.
+- Área afectada: `src/features/dispositivos/procedimientosDeDispositivo.ts`, `problemasDeDispositivo.ts`, `ProcedimientosDelEquipo.tsx`, `ProblemasDelEquipo.tsx`, `DispositivoPage.tsx`.
+- Dependencias: ninguna.
+
+### 161. El escáner precarga el código leído al registrar un equipo (hallazgo H3)
+- Descripción: "Registrar equipo" desde el escáner abre `/dispositivos/nuevo?serial=<código>` y `DispositivoForm` precarga el serial (editable).
+- Motivo: hoy se reescribe el serial/placa que la app ya leyó (viola "nunca escribir dos veces").
+- Impacto: un dato menos que teclear; flujo escáner -> alta sin fricción.
+- Prioridad: **Media**. Estado: Pendiente.
+- Área afectada: `EscanerPage.tsx`, `DispositivoForm.tsx`.
+- Dependencias: ninguna.
+
+### 162. Inicio: atajo "Registrar equipo" y "Crear" ante búsqueda sin resultados (hallazgo H9)
+- Descripción: añadir un atajo "Registrar equipo" a la rejilla de atajos de Inicio; en el estado "Sin coincidencias" del buscador global, ofrecer "Crear dispositivo" (con el texto buscado como nombre).
+- Motivo: el técnico que recibe hardware no tiene arranque directo; el buscador sin resultados no ofrece crear.
+- Impacto: menos clics y menos navegación al empezar un trabajo.
+- Prioridad: **Media**. Estado: Pendiente.
+- Área afectada: `InicioPage.tsx`.
+- Dependencias: ninguna.
+
+### 163. Reutilización de procedimientos más visible en el editor (hallazgo H4)
+- Descripción: subir la descubribilidad de "Reutilizar procedimiento" (subprocedimiento) en `PasosEditor`, hoy en la sección plegada "Vínculos del paso". Solo presentación; la composición ya existe y funciona.
+- Motivo: riesgo de copiar pasos en vez de referenciarlos por desconocimiento de la función.
+- Impacto: fomenta la composición; menos duplicación.
+- Prioridad: **Media**. Estado: Pendiente.
+- Área afectada: `PasosEditor.tsx`.
+- Dependencias: ninguna.
+
+### 164. Elegir "para este equipo" o "para la categoría" al documentar desde la ficha (hallazgo H2)
+- Descripción: al "Documentar procedimiento" desde la ficha del equipo, ofrecer explícitamente crear el artículo vinculado al equipo o solo a su categoría. NO agregar marca/modelo como campos del artículo (sería duplicación; el artículo referencia el equipo).
+- Motivo: aprovechar H1 para que un procedimiento nazca ya aplicable a toda la categoría cuando corresponde.
+- Impacto: coherencia con el principio; menos campos que llenar.
+- Prioridad: **Media**. Estado: Pendiente. Depende de la 160 (H1).
+- Área afectada: `DispositivoPage.tsx`, `ArticuloForm.tsx`.
+
+### 165. Decisión: mantener 4 pestañas en el editor de artículo (hallazgo H5)
+- Descripción: NO convertir el editor a 7 pestañas (empeoraría móvil; el flujo lineal ya existe dentro de las 4). Ajuste opcional: mover "Equipos donde aplica" de General a Detalles una vez implementado H1.
+- Motivo: mobile-first; evitar un retroceso de UX.
+- Impacto: se conserva la ergonomía móvil.
+- Prioridad: **Baja** (decisión, no cambio). Estado: Pendiente de confirmación del usuario.
+- Área afectada: `ArticuloForm.tsx`, `completitudArticulo.ts`.
+
+### 166. "Aplica a" por marca/modelo/versión (hallazgo H6, con esquema, DEFERIDA)
+- Descripción: criterio `aplica_a` (JSON con marca/modelo/versión opcionales) en el artículo, emparejado contra el equipo, para procedimientos que aplican a un modelo concreto dentro de una categoría.
+- Motivo: precisión fina de aplicabilidad más allá de la categoría (H1).
+- Impacto: marginal una vez implementado H1; la mayoría de procedimientos aplican a nivel categoría.
+- Prioridad: **Baja** (deferida). Estado: Pendiente (evaluar tras H1). Requiere esquema (`articulos.aplica_a`, más `supabase/schema.sql` por la regla 17).
+- Área afectada: `articulos` (esquema), `ArticuloForm.tsx`, lógica de aplicabilidad.
+- Dependencias: 160 (H1).
 
 **AUDITORÍA INTEGRAL DE FLUJOS (2026-07-21)**: recorrido de procesos reales de TI (no pantalla por pantalla), documentado en [AUDITORIA_FLUJOS_TI.md](AUDITORIA_FLUJOS_TI.md). Se hizo con 3 agentes en paralelo (red, ciclo de vida/bóveda, base de conocimiento) más el análisis del modelo completo, todo anclado a `archivo:linea` y contrastado contra las propuestas para separar lo NUEVO de lo ya planeado. 30 hallazgos con ID estable. Veredicto: el principio "cada dato una sola vez" se cumple ~85%; los huecos reales son estructurales y de alto valor. **La Fase de corrección (K1, S1, N1) quedó completa el 2026-07-22, tarea 131**, y los cuatro hallazgos ALTA que el usuario ordenó ese mismo día también: T1 (tarea 132), L1 (tarea 133), L2/L3 (tarea 134) y O1/O2/O3 (tarea 135). **El grupo K completo (K1 a K6, base de conocimiento) quedó resuelto el 2026-07-22 en las tareas 131, 140, 141 y 142: ningún hallazgo ALTA sigue pendiente.** El flujo 4 completo (S1 a S6, secretos y bóveda) quedó resuelto el 2026-07-23 (tareas 147 a 151), el grupo de red e incorporación (N2 a N5 y D1) se resolvió el mismo día (tareas 152 a 156), y D2 también (tarea 157). Lo que resta son D3, D4, T2, T3 y demás, ninguno de los cuales bloquea el uso diario.
 
