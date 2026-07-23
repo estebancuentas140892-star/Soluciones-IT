@@ -1,4 +1,5 @@
 import type { Conexion, Dispositivo, TipoConexion } from './db'
+import { incluyeTexto } from './texto'
 
 // Logica pura de las conexiones entre dispositivos, separada de React
 // y de la base local para poder probarla sola.
@@ -154,9 +155,12 @@ export function candidatosConexion(
   idsRed: Set<string>,
   limite = 8,
 ): Dispositivo[] {
-  const buscado = texto.trim().toLowerCase()
+  const buscado = texto.trim() !== ''
+  // Hallazgo D2: mismo filtro de subcadena que ya comparten Soluciones,
+  // Dispositivos y Red (src/lib/texto.ts), en vez de repetir aquí el
+  // patron `join(' ').toLowerCase().includes(...)`.
   const base = buscado
-    ? candidatos.filter((d) => [d.nombre, d.ubicacion, d.ip].join(' ').toLowerCase().includes(buscado))
+    ? candidatos.filter((d) => incluyeTexto([d.nombre, d.ubicacion, d.ip], texto))
     : candidatos.filter((d) => puntajeCandidato(d, equipoActual, idsRed) > 0)
 
   return [...base]

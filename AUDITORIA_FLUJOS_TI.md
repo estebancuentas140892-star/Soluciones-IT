@@ -164,7 +164,7 @@ Al crear un artículo se avisan similares (`ArticuloForm.tsx:210-213,528-556`); 
 `ConexionesFicha.tsx:177-375` y `TopologiaEquipoPage.tsx:456-645` comparten lógica de guardado y de coincidencias, con distinto chrome, y ya divergieron: el medio por defecto arranca vacío en la ficha (`ConexionesFicha.tsx:195`) y en UTP en la topología (`TopologiaEquipoPage.tsx:468`), cuando `MEDIOS_SUGERIDOS[0]` ya es UTP.
 - Arquitectura: extraer un `<FormularioConexion>` compartido (encaja en el tema "piezas compartidas" de la Fase 1 de `PROPUESTA_REVISION_ARQUITECTURA.md`, que menciona `FilaDispositivo`/`esDeRed()` pero no este formulario). Unificar el default de medio en UTP.
 
-**D2 - Búsquedas locales de subcadena coexisten con el índice global MiniSearch. [MEDIA] [PARCIAL]**
+**D2 - Búsquedas locales de subcadena coexisten con el índice global MiniSearch. [MEDIA] [PARCIAL] [RESUELTO en la tarea 157, 2026-07-23]**
 `SolucionesPage.tsx`, `DispositivosPage.tsx`, `RedPage.tsx` y el buscador del formulario de conexión filtran por subcadena, sin la tolerancia a errores del índice global, con lógica repetida. Está señalado como remate pendiente de la Fase 1 en `TAREAS.md`.
 - Arquitectura: converger a un buscador compartido con la misma semántica del índice global.
 
@@ -300,7 +300,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | K4 | Diagnóstico no hereda categoría | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | K5 | Anti-duplicados asimétrico | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | D1 | `FormularioConexion` duplicado y divergido | Media | Baja | Bajo | RESUELTO (tarea 156) |
-| D2 | Búsquedas de subcadena vs índice global | Media | Media | Bajo | Parcial |
+| D2 | Búsquedas de subcadena vs índice global | Media | Media | Bajo | RESUELTO (tarea 157) |
 | N3 | Punto de red no hereda ubicación | Baja | Baja | Bajo | RESUELTO (tarea 155) |
 | N4 | Sin puerto consecutivo sugerido | Baja | Baja | Bajo | RESUELTO (tarea 154) |
 | N6 | Puertos sin vista de "libres" | Baja | Media | Bajo | Nuevo |
@@ -323,6 +323,6 @@ Hoja de ruta propuesta por fases (agrupando por afinidad técnica, no solo por p
 - **Fase incorporación y cableado:** grupo COMPLETO. O1, O2, O3 (tarea 135, 2026-07-22); N2, N3, N4, N5 y la unificación D1 (tareas 152 a 156, 2026-07-23).
 - **Fase conocimiento:** K2 a K6 RESUELTOS (tareas 140, 141 y 142, 2026-07-22). Grupo completo. Reciclaba el conocimiento del equipo sin re-teclear.
 - **Fase secretos:** S2 a S6 RESUELTOS (tareas 147 a 151, 2026-07-23). Grupo completo junto con S1 (tarea 131): todo el flujo 4 (secretos y bóveda) queda sin hallazgos pendientes.
-- **Fase deuda técnica (oportunista):** D2, D3, D4, cuando se toquen esas pantallas por otra razón.
+- **Fase deuda técnica (oportunista):** D2 RESUELTO (tarea 157, 2026-07-23); D3, D4 quedan para cuando se toquen esas pantallas por otra razón.
 
 Ninguno de estos cambios contradice el principio rector; al contrario, T1 lo extiende a las personas, L1/L2/L3 lo extienden al tiempo, y el resto elimina el trabajo manual y los re-tecleos que todavía quedan. Recomendación de arranque: la Fase de corrección (barata y con defectos activos) seguida de la Fase persona (el mayor retorno estructural).

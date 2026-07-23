@@ -1,5 +1,15 @@
 # Historial de tareas finalizadas
 
+### 157. El buscador del formulario de conexión reutiliza `incluyeTexto()` (hallazgo D2)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1602 pruebas propias en verde. **Prioridad**: MEDIA. **Sin verificar en navegador**: mismo límite que las tareas 150 a 156 (falta una cuenta de técnico real para iniciar sesión).
+
+**Qué resolvía**: la tarea 145 (2026-07-23) ya había extraído `incluyeTexto()` (`src/lib/texto.ts`) como regla única de los buscadores de subcadena de Dispositivos y Red, y había registrado por qué NO convenía unificarlos con el índice global de MiniSearch (excluye a propósito los borradores, que estas listas sí deben mostrar). Pero `candidatosConexion` (`src/lib/conexiones.ts`, construida más tarde el mismo día en la tarea 153, hallazgo N5) reintrodujo el mismo patrón `[...campos].join(' ').toLowerCase().includes(buscado)` en vez de reusar `incluyeTexto()`, sin que nadie lo notara porque la función es nueva.
+
+**Cambio**: `candidatosConexion` ahora llama a `incluyeTexto([d.nombre, d.ubicacion, d.ip], texto)` para el filtro por texto, en vez de repetir la lógica. Sin cambio de comportamiento (mismos campos, misma normalización), las 42 pruebas de `conexiones.test.ts` siguen en verde sin tocarlas.
+
+**Decisión de alcance, reafirmando la de la tarea 145**: `SolucionesPage.tsx` (el cuarto buscador que menciona el hallazgo original) sigue sin usar `incluyeTexto()` a propósito: no filtra por los mismos campos (suma etiquetas y tipo de artículo), compara con normalización de acentos (`normalizarTexto`, no solo minúsculas) y necesita la posición del match para resaltar el término encontrado en tres tramos. Forzarlo a `incluyeTexto()` perdería esas tres capacidades sin ganar nada real; la propuesta original (`PROPUESTA_REVISION_ARQUITECTURA.md`, "unificar los 4 buscadores en el índice global filtrado por tipo") ya fue evaluada y descartada en la tarea 145 por la razón de los borradores. Con esto, D2 queda resuelto para los tres buscadores que sí comparten la misma semántica (Dispositivos, Red, formulario de conexión); Soluciones se mantiene aparte por diseño, no por deuda pendiente.
+
 ### 156. `<FormularioConexion>` compartido entre ficha y topología (hallazgo D1)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1602 pruebas propias en verde. **Prioridad**: MEDIA (refactor, sin comportamiento visible nuevo salvo el default de medio). Cierra el grupo completo de la "Fase incorporación y cableado" de la auditoría (O1-O3 de la tarea 135, más N2 a N5 y D1 de hoy). **Sin verificar en navegador**: mismo límite que las tareas 150 a 155 (falta una cuenta de técnico real para iniciar sesión); se verificó por HTTP que la app arranca sin errores de consola y por el build que el nuevo chunk `FormularioConexion` se generó y ambas pantallas bajaron de peso.
