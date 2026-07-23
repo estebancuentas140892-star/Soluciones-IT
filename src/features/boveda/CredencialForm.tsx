@@ -22,6 +22,7 @@ import { proximoVencimiento, vencimientoDesactualizado } from '../../lib/vencimi
 import { valoresUnicos } from '../../lib/vocabulario'
 import { BUCKET_ARCHIVOS_BOVEDA } from './archivoSeguro'
 import { equiposConContrasenaProtegida } from './solapamientoSecreto'
+import { equipoPorIpOUrl } from './sugerenciaEquipoPorIp'
 import { tituloAccesoSugerido } from './tituloAcceso'
 import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBoveda'
 
@@ -249,6 +250,14 @@ export function CredencialForm() {
     () => (tipo === 'cuenta' ? equiposConContrasenaProtegida(dispositivos, camposProtegidosConContrasena) : []),
     [tipo, dispositivos, camposProtegidosConContrasena],
   )
+
+  // Sugerencia por IP/URL (hallazgo S6): solo tiene sentido si todavía
+  // no hay ningún equipo vinculado, para no ofrecer un segundo vínculo
+  // encima del que ya se eligió a mano.
+  const equipoSugeridoPorIp = useMemo(() => {
+    if (dispositivos.length > 0) return null
+    return equipoPorIpOUrl(url, dispositivosOrdenados)
+  }, [url, dispositivos, dispositivosOrdenados])
 
   useEffect(() => {
     if (!credencial || cargadoInicial) return
@@ -592,6 +601,27 @@ export function CredencialForm() {
                     className={`min-h-11 ${CLASE_CAMPO_MONO}`}
                   />
                 </label>
+              )}
+
+              {equipoSugeridoPorIp && (
+                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                    Esa dirección coincide con &quot;{equipoSugeridoPorIp.nombre}&quot; del inventario.
+                    ¿Vincular este secreto a ese equipo?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDispositivos((actuales) => [
+                        ...actuales,
+                        { id: equipoSugeridoPorIp.id, nombre: equipoSugeridoPorIp.nombre },
+                      ])
+                    }
+                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                  >
+                    Vincular equipo
+                  </button>
+                </div>
               )}
 
               {visibles.extras && (

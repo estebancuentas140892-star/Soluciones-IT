@@ -127,7 +127,7 @@ La creación contextual arma `titulo=Acceso ${dispositivo.nombre}` (`Dispositivo
 Una credencial 'cuenta' vinculada a un equipo guarda usuario+contraseña, y ese mismo equipo puede tener un `CampoProtegido` 'contrasena'. Nada impide que la contraseña de administrador esté en ambos; al rotar hay que acordarse de cambiarla en los dos y, si no, divergen. Las fases P0-P4 resolvieron "un secreto REPRESENTA un equipo", no "dos lugares guardan la misma contraseña".
 - Automatizar: extender el nudge para avisar "este equipo ya guarda una contraseña en Seguridad; evita duplicarla" cuando una credencial 'cuenta' se vincula a un equipo que ya tiene un campo 'contrasena'.
 
-**S6 - Al crear un secreto desde la bóveda, no sugiere equipo por coincidencia de IP/URL. [BAJA] [NUEVO]**
+**S6 - Al crear un secreto desde la bóveda, no sugiere equipo por coincidencia de IP/URL. [BAJA] [NUEVO] [RESUELTO en la tarea 151, 2026-07-23]**
 La creación desde la ficha del equipo ya precarga título, categoría y vínculo (bien, planeado/hecho). El hueco es la creación desde la bóveda: solo hay nudge por coincidencia exacta de título.
 - Autocompletar: sugerir equipo candidato en "Equipos con acceso" cuando la URL/IP escrita coincida con la `ip` de algún dispositivo.
 
@@ -304,7 +304,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | N3 | Punto de red no hereda ubicación | Baja | Baja | Bajo | Nuevo |
 | N4 | Sin puerto consecutivo sugerido | Baja | Baja | Bajo | Nuevo |
 | N6 | Puertos sin vista de "libres" | Baja | Media | Bajo | Nuevo |
-| S6 | Sin sugerir equipo por IP/URL en bóveda | Baja | Baja | Bajo | Nuevo |
+| S6 | Sin sugerir equipo por IP/URL en bóveda | Baja | Baja | Bajo | RESUELTO (tarea 151) |
 | K6 | Sin procedimiento contextual desde equipo | Baja | Baja | Bajo | RESUELTO (tarea 142) |
 | D3 | Lecturas full-table redundantes en ficha | Baja | Baja | Bajo | Nuevo |
 | D4 | Árbol de topología recomputado por render | Baja | Media | Bajo | Nuevo |
@@ -322,7 +322,7 @@ Hoja de ruta propuesta por fases (agrupando por afinidad técnica, no solo por p
 - **Fase ciclo de vida:** L1 (baja con cascada), L2 (reemplazo con herencia), L3 (relación de sustitución) y T2 (garantía/compra), apoyados en el grafo de referencias inversas y el patrón de migración asistida.
 - **Fase incorporación y cableado:** O1 (asistente/checklist post-alta apoyado en el motor de completitud existente), O2, O3, N2, N3, N4, N5, más la unificación D1. Colapsa el flujo estrella a un recorrido guiado.
 - **Fase conocimiento:** K2 a K6 RESUELTOS (tareas 140, 141 y 142, 2026-07-22). Grupo completo. Reciclaba el conocimiento del equipo sin re-teclear.
-- **Fase secretos:** S2, S3, S4, S5, S6, unificando la política de rotación.
+- **Fase secretos:** S2 a S6 RESUELTOS (tareas 147 a 151, 2026-07-23). Grupo completo junto con S1 (tarea 131): todo el flujo 4 (secretos y bóveda) queda sin hallazgos pendientes.
 - **Fase deuda técnica (oportunista):** D2, D3, D4, cuando se toquen esas pantallas por otra razón.
 
 Ninguno de estos cambios contradice el principio rector; al contrario, T1 lo extiende a las personas, L1/L2/L3 lo extienden al tiempo, y el resto elimina el trabajo manual y los re-tecleos que todavía quedan. Recomendación de arranque: la Fase de corrección (barata y con defectos activos) seguida de la Fase persona (el mayor retorno estructural).

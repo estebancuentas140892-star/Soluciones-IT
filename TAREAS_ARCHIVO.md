@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 151. Sugerencia de equipo por coincidencia de IP/URL al crear un secreto (hallazgo S6)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y pruebas propias en verde (111 de `src/features/boveda`). **Prioridad**: BAJA. Con esta se cierra el flujo 4 completo de la auditoría (S1 a S6, secretos y bóveda), sin hallazgos pendientes en ese flujo. **Sin verificar en navegador**: mismo límite que la tarea 150 (falta una cuenta de técnico real para iniciar sesión).
+
+**Qué resolvía**: la creación contextual de un secreto desde la ficha de un equipo ya precarga título, categoría y vínculo; el hueco era crear el secreto directamente desde la Bóveda, donde solo existía el nudge por coincidencia EXACTA de título (`dispositivoCoincidente`, hallazgo S3 en origen). Si el técnico tecleaba la URL o IP de un equipo ya inventariado, nada lo sugería.
+
+**Cambios**:
+- `src/features/boveda/sugerenciaEquipoPorIp.ts` (+ test, 5 pruebas): `equipoPorIpOUrl(texto, dispositivos)`, pura. Busca por subcadena (no igualdad exacta) para cubrir tanto `192.168.1.10` como `https://192.168.1.10/admin`.
+- `src/features/boveda/CredencialForm.tsx`: mientras el campo `URL` es visible para el tipo de secreto elegido y todavía no hay ningún equipo vinculado, se calcula la coincidencia contra `dispositivosOrdenados` (la misma consulta en vivo que ya usan los otros nudges) y se muestra un aviso con botón "Vincular equipo", que agrega el vínculo sin salir del formulario.
+
+**Fuera de alcance**: no se agregó ninguna sugerencia sobre el campo `Usuario` ni sobre los campos "Otros datos protegidos" (`extras`), solo sobre `URL`, que es el campo que el hallazgo original señala.
+
 ### 150. Aviso de solapamiento entre credencial y campo protegido (hallazgo S5)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1449 pruebas propias en verde (más 101 de `src/features/boveda` verificadas aparte). **Prioridad**: MEDIA. Con esta se cierran S2 a S5, los cuatro hallazgos que integraban el flujo 4 de la auditoría junto con S1 (ya resuelto antes). **Sin verificar en navegador**: esta sesión ya tiene Supabase configurado (`.env` cargado con las credenciales del proyecto), pero falta una cuenta de un técnico real para iniciar sesión y ver la pantalla; se confirmó que la app conecta y muestra el login normal (ya no el aviso de "sin conectar").
