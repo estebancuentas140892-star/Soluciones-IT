@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { esDeRed, idsDeRed } from './categorias'
+import { esDeRed, idsDeRed, ordenarPriorizandoRed } from './categorias'
 import type { Categoria } from './db'
 
 function categoria(parcial: Partial<Categoria> & { id: string }): Categoria {
@@ -52,5 +52,38 @@ describe('idsDeRed', () => {
 
   it('tolera que las categorías aún no estén cargadas', () => {
     expect(idsDeRed(undefined).size).toBe(0)
+  })
+})
+
+describe('ordenarPriorizandoRed', () => {
+  it('sin el flag, no cambia el orden', () => {
+    const cats = [
+      categoria({ id: 'impresoras', esRed: false }),
+      categoria({ id: 'switches', esRed: true }),
+    ]
+    expect(ordenarPriorizandoRed(cats, false)).toEqual(cats)
+  })
+
+  it('con el flag, las categorías de red pasan primero', () => {
+    const cats = [
+      categoria({ id: 'impresoras', esRed: false }),
+      categoria({ id: 'switches', esRed: true }),
+      categoria({ id: 'servidores', esRed: false }),
+      categoria({ id: 'racks', esRed: true }),
+    ]
+    expect(ordenarPriorizandoRed(cats, true).map((c) => c.id)).toEqual([
+      'switches',
+      'racks',
+      'impresoras',
+      'servidores',
+    ])
+  })
+
+  it('conserva el orden relativo dentro de cada grupo', () => {
+    const cats = [
+      categoria({ id: 'racks', esRed: true, orden: 2 }),
+      categoria({ id: 'switches', esRed: true, orden: 1 }),
+    ]
+    expect(ordenarPriorizandoRed(cats, true).map((c) => c.id)).toEqual(['racks', 'switches'])
   })
 })

@@ -14,6 +14,7 @@ import {
 } from '../../components/campos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { db, type PasoAdjunto } from '../../lib/db'
+import { ordenarPriorizandoRed } from '../../lib/categorias'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirConDeduplicacion } from '../../lib/archivosPendientes'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -75,6 +76,10 @@ export function DispositivoForm() {
   // (serial, placa, IP).
   const copiarDe = esEdicion ? null : (searchParams.get('copiarDe') ?? reemplazaAParam)
   const esDuplicado = Boolean(copiarDe)
+  // Contexto de red (hallazgo N2): /dispositivos/nuevo?red=1 desde
+  // RedPage.tsx prioriza las categorías `es_red` en el selector, en vez
+  // de dejarlo pelado como cualquier alta genérica.
+  const priorizarRed = searchParams.get('red') === '1'
   // El id se decide desde el inicio (no al guardar): estable para
   // excluirse a si mismo del chequeo de serial duplicado mientras se
   // edita y para poder navegar a la ficha en cuanto se guarda.
@@ -89,7 +94,11 @@ export function DispositivoForm() {
     if (!copiarDe) return undefined
     return (await db.dispositivos.get(copiarDe)) ?? null
   }, [copiarDe])
-  const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
+  const categoriasSinOrdenar = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
+  const categorias = useMemo(
+    () => ordenarPriorizandoRed(categoriasSinOrdenar, priorizarRed),
+    [categoriasSinOrdenar, priorizarRed],
+  )
 
   // Vocabulario derivado (fase N0): las marcas ya usadas por otros
   // equipos se ofrecen como autocompletar. La ubicación dejó de ser texto

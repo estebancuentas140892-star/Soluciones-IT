@@ -1,5 +1,18 @@
 # Historial de tareas finalizadas
 
+### 152. "Crear" de Red prioriza las categorías de red (hallazgo N2)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y pruebas propias en verde. **Prioridad**: MEDIA. Refuerza la pregunta abierta de la tarea 62. **Sin verificar en navegador**: mismo límite que las tareas 150 y 151 (falta una cuenta de técnico real para iniciar sesión).
+
+**Qué resolvía**: el botón "Crear" de `RedPage.tsx` iba a `/dispositivos/nuevo` pelado, sin priorizar las categorías `es_red` en el selector, a diferencia de otras creaciones contextuales de la app (por ejemplo desde la ficha de un equipo).
+
+**Cambios**:
+- `src/lib/categorias.ts`: nueva función `ordenarPriorizandoRed(categorias, priorizarRed)` (+ 3 pruebas nuevas en `categorias.test.ts`), que antepone las categorías `es_red` conservando el orden relativo dentro de cada grupo (`Array.sort` es estable). Sin el flag, no cambia nada.
+- `src/features/red/RedPage.tsx`: el enlace "Crear" pasa a `/dispositivos/nuevo?red=1`.
+- `src/features/dispositivos/DispositivoForm.tsx`: lee `?red=1` y aplica `ordenarPriorizandoRed` sobre las categorías antes de renderizar los chips del selector.
+
+**Fuera de alcance**: no se preselecciona automáticamente ninguna categoría (el técnico sigue eligiendo); tampoco se resolvió la pregunta abierta de la tarea 62 (si el botón debería abrir un flujo dedicado a crear una conexión de red en vez de un alta genérica), que sigue en pie.
+
 ### 151. Sugerencia de equipo por coincidencia de IP/URL al crear un secreto (hallazgo S6)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y pruebas propias en verde (111 de `src/features/boveda`). **Prioridad**: BAJA. Con esta se cierra el flujo 4 completo de la auditoría (S1 a S6, secretos y bóveda), sin hallazgos pendientes en ese flujo. **Sin verificar en navegador**: mismo límite que la tarea 150 (falta una cuenta de técnico real para iniciar sesión).

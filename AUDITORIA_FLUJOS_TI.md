@@ -84,7 +84,7 @@ Desde la ficha del punto de red, el modo por defecto `enlace` fija `origenEsteDi
 - Arquitectura: agregar modo "Recibe servicio de (uplink)" que ponga al otro equipo como origen, o invertir automáticamente según categoría (rack/switch siempre es el padre).
 - Riesgo: es un error silencioso de modelado que corrompe la utilidad principal de la topología.
 
-**N2 - "Crear" de Red no hereda ningún contexto de red. [MEDIA] [NUEVO, refuerza tarea 62]**
+**N2 - "Crear" de Red no hereda ningún contexto de red. [MEDIA] [NUEVO, refuerza tarea 62] [RESUELTO en la tarea 152, 2026-07-23]**
 Va a `/dispositivos/nuevo` pelado (`src/features/red/RedPage.tsx:94`), sin priorizar categorías `es_red` ni preseleccionar ubicación, a diferencia de otras creaciones contextuales de la app (`DispositivoPage.tsx:326,334`).
 - Autocompletar: `/dispositivos/nuevo?red=1` para ordenar primero las categorías de red y sembrar el flujo dedicado.
 
@@ -290,7 +290,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | T2 | Sin ciclo de vida del activo (garantía) | Media | Media | Bajo | Nuevo |
 | T3 | Importador aplasta jerarquía de ubicación | Media | Media | Bajo | Nuevo |
 | L3 | Falta relación "reemplaza a" | Media | Baja | Bajo | Nuevo |
-| N2 | "Crear" de Red sin contexto | Media | Baja | Bajo | Nuevo |
+| N2 | "Crear" de Red sin contexto | Media | Baja | Bajo | RESUELTO (tarea 152) |
 | N5 | Búsqueda sin sugerencias por ubicación/tipo | Media | Baja | Bajo | Nuevo |
 | S2 | Campos protegidos sin vencimiento | Media | Baja | Bajo | RESUELTO (tarea 147) |
 | S3 | Campo protegido sin motivo ni "Generar" | Media | Baja | Bajo | RESUELTO (tarea 148) |

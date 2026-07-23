@@ -22,3 +22,13 @@ export function esDeRed(categoria: Categoria | null | undefined): boolean {
 export function idsDeRed(categorias: Categoria[] | undefined): Set<string> {
   return new Set((categorias ?? []).filter(esDeRed).map((c) => c.id))
 }
+
+// Hallazgo N2 de AUDITORIA_FLUJOS_TI.md: "Crear" desde Red iba a
+// /dispositivos/nuevo pelado, sin priorizar las categorias de red. Con
+// `priorizarRed` en true, las categorias `es_red` pasan primero
+// (orden estable: dentro de cada grupo se conserva el orden original,
+// que ya viene ordenado por `orden`). Sin el flag, el orden no cambia.
+export function ordenarPriorizandoRed(categorias: Categoria[], priorizarRed: boolean): Categoria[] {
+  if (!priorizarRed) return categorias
+  return [...categorias].sort((a, b) => Number(esDeRed(b)) - Number(esDeRed(a)))
+}

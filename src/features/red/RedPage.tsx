@@ -90,7 +90,7 @@ export function RedPage() {
               Cómo está conectada la infraestructura
             </p>
           </div>
-          <Link to="/dispositivos/nuevo" className={`shrink-0 ${BTN_SECUNDARIO}`}>
+          <Link to="/dispositivos/nuevo?red=1" className={`shrink-0 ${BTN_SECUNDARIO}`}>
             <Plus size={15} aria-hidden />
             Crear
           </Link>
