@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 155. El punto de red hereda la ubicación de su rack/switch (hallazgo N3)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1602 pruebas propias en verde. **Prioridad**: BAJA. Con esta se cierran los cuatro hallazgos de red pendientes del día (N2, N3, N4, N5, tareas 152 a 155). **Sin verificar en navegador**: mismo límite que las tareas 150 a 154 (falta una cuenta de técnico real para iniciar sesión).
+
+**Qué resolvía**: la ubicación se teclea a mano al dar de alta un equipo, y la conexión posterior ya conoce el rack/switch al que se conecta (que suele tener ubicación), pero nada la propagaba.
+
+**Cambios**:
+- `src/lib/conexiones.ts`: nueva función `ubicacionHeredable(equipoActual, otro)` (+ 3 pruebas nuevas en `conexiones.test.ts`), pura. Devuelve la ubicación a copiar del OTRO extremo hacia el equipo actual solo cuando el actual no tiene ninguna todavía; nunca pisa una ubicación ya cargada.
+- `src/features/red/ConexionesFicha.tsx` y `src/features/red/TopologiaEquipoPage.tsx`: al elegir el otro extremo de una conexión, si aplica la herencia se muestra un aviso "Este equipo no tiene ubicación. ¿Copiar '{ubicación}' desde {otro}?" con botón "Copiar ubicación", que guarda el `ubicacionId`/`ubicacion` en el dispositivo actual (mismo patrón de nudge con acción explícita que S4/S5, no una sobrescritura silenciosa).
+
+**Fuera de alcance**: no se propaga en la dirección inversa (el otro equipo heredando la ubicación de este); el hallazgo original solo pedía "al conectar a un rack/switch, ofrecer copiar SU ubicación", que es unidireccional por diseño.
+
 ### 154. Sugerencia de puerto consecutivo libre al enlazar (hallazgo N4)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1599 pruebas propias en verde. **Prioridad**: BAJA. **Sin verificar en navegador**: mismo límite que las tareas 150 a 153 (falta una cuenta de técnico real para iniciar sesión).

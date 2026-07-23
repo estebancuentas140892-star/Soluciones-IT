@@ -10,6 +10,7 @@ import {
   datosSegunModo,
   MEDIOS_SUGERIDOS,
   proximoPuertoLibre,
+  ubicacionHeredable,
   type ExtremoConexion,
   type ModoConexion,
 } from '../../lib/conexiones'
@@ -502,6 +503,20 @@ function FormularioConexion({
     [todos, busqueda, equipo, idsRed],
   )
 
+  // Hallazgo N3: si este equipo todavía no tiene ubicación y el otro
+  // extremo sí, se ofrece copiarla (nunca se pisa una ya cargada).
+  const [heredandoUbicacion, setHeredandoUbicacion] = useState(false)
+  const sugerenciaUbicacion = useMemo(
+    () => (otro ? ubicacionHeredable(equipo, otro) : null),
+    [equipo, otro],
+  )
+  async function heredarUbicacion() {
+    if (!sugerenciaUbicacion) return
+    setHeredandoUbicacion(true)
+    await guardarRegistro('dispositivos', { ...equipo, ...sugerenciaUbicacion })
+    setHeredandoUbicacion(false)
+  }
+
   const tipoActual = TIPOS_CONEXION.find((t) => t.valor === modo)
   const esEnlace = modo === 'enlace' || modo === 'recibeDe'
 
@@ -579,7 +594,26 @@ function FormularioConexion({
             Cambiar
           </button>
         </div>
-      ) : (
+      ) : null}
+
+      {otro && sugerenciaUbicacion && (
+        <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+          <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+            Este equipo no tiene ubicación. ¿Copiar &quot;{sugerenciaUbicacion.ubicacion}&quot; desde{' '}
+            {otro.nombre}?
+          </p>
+          <button
+            type="button"
+            disabled={heredandoUbicacion}
+            onClick={heredarUbicacion}
+            className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline disabled:opacity-50"
+          >
+            {heredandoUbicacion ? 'Copiando...' : 'Copiar ubicación'}
+          </button>
+        </div>
+      )}
+
+      {!otro && (
         <div className="flex flex-col gap-1.5">
           <input
             type="search"

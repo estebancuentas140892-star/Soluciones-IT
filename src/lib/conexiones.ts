@@ -177,6 +177,23 @@ function puntajeCandidato(d: Dispositivo, equipoActual: Dispositivo, idsRed: Set
 // para calcularlo. Solo cuenta los puertos puramente numericos (un
 // switch con "Gi0/3" u otro esquema no numerico simplemente no aporta
 // al calculo, no rompe la sugerencia para el resto).
+// Hallazgo N3 de AUDITORIA_FLUJOS_TI.md: la ubicacion se teclea a mano
+// al dar de alta un equipo, y la conexion posterior ya conoce el
+// rack/switch (que suele tener ubicacion), pero nada la propaga. Esta
+// funcion devuelve la ubicacion a copiar del OTRO extremo hacia el
+// equipo actual, solo cuando el actual no tiene ninguna todavia (nunca
+// pisa una ubicacion ya cargada) y el otro si la tiene.
+export interface UbicacionHeredable {
+  ubicacionId: string
+  ubicacion: string
+}
+
+export function ubicacionHeredable(equipoActual: Dispositivo, otro: Dispositivo): UbicacionHeredable | null {
+  if (equipoActual.ubicacionId || equipoActual.ubicacion.trim() !== '') return null
+  if (!otro.ubicacionId || otro.ubicacion.trim() === '') return null
+  return { ubicacionId: otro.ubicacionId, ubicacion: otro.ubicacion }
+}
+
 export function proximoPuertoLibre(enlaces: { puertoLocal: string }[]): string {
   const usados = new Set(
     enlaces

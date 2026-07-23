@@ -8,6 +8,7 @@ import {
   desdeExtremo,
   proximoPuertoLibre,
   resumenConexion,
+  ubicacionHeredable,
   type ExtremoConexion,
 } from './conexiones'
 
@@ -264,5 +265,30 @@ describe('proximoPuertoLibre', () => {
 
   it('ignora puertos vacíos o en blanco', () => {
     expect(proximoPuertoLibre([extremoConPuerto(''), extremoConPuerto('1')])).toBe('2')
+  })
+})
+
+describe('ubicacionHeredable', () => {
+  it('sugiere la ubicación del otro equipo cuando el actual no tiene ninguna', () => {
+    const actual = dispositivo({ id: 'e1', nombre: 'Punto de red D80' })
+    const otro = dispositivo({ id: 'r1', nombre: 'Rack A01', ubicacionId: 'ubi-1', ubicacion: 'Bodega' })
+    expect(ubicacionHeredable(actual, otro)).toEqual({ ubicacionId: 'ubi-1', ubicacion: 'Bodega' })
+  })
+
+  it('no sugiere nada si el equipo actual ya tiene ubicación', () => {
+    const actual = dispositivo({
+      id: 'e1',
+      nombre: 'Punto de red D80',
+      ubicacionId: 'ubi-2',
+      ubicacion: 'Oficina',
+    })
+    const otro = dispositivo({ id: 'r1', nombre: 'Rack A01', ubicacionId: 'ubi-1', ubicacion: 'Bodega' })
+    expect(ubicacionHeredable(actual, otro)).toBeNull()
+  })
+
+  it('no sugiere nada si el otro equipo tampoco tiene ubicación', () => {
+    const actual = dispositivo({ id: 'e1', nombre: 'Punto de red D80' })
+    const otro = dispositivo({ id: 'r1', nombre: 'Rack A01' })
+    expect(ubicacionHeredable(actual, otro)).toBeNull()
   })
 })

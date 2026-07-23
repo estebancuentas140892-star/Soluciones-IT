@@ -88,7 +88,7 @@ Desde la ficha del punto de red, el modo por defecto `enlace` fija `origenEsteDi
 Va a `/dispositivos/nuevo` pelado (`src/features/red/RedPage.tsx:94`), sin priorizar categorías `es_red` ni preseleccionar ubicación, a diferencia de otras creaciones contextuales de la app (`DispositivoPage.tsx:326,334`).
 - Autocompletar: `/dispositivos/nuevo?red=1` para ordenar primero las categorías de red y sembrar el flujo dedicado.
 
-**N3 - El punto de red no hereda la ubicación de su rack/switch. [BAJA] [NUEVO]**
+**N3 - El punto de red no hereda la ubicación de su rack/switch. [BAJA] [NUEVO] [RESUELTO en la tarea 155, 2026-07-23]**
 La ubicación se teclea a mano en el alta y la conexión posterior conoce el rack/switch (que ya tiene ubicación), pero nada la propaga.
 - Automatizar: al conectar a un rack/switch, ofrecer copiar su `ubicacion/ubicacionId` si el equipo no la tenía.
 
@@ -301,7 +301,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | K5 | Anti-duplicados asimétrico | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | D1 | `FormularioConexion` duplicado y divergido | Media | Baja | Bajo | Nuevo |
 | D2 | Búsquedas de subcadena vs índice global | Media | Media | Bajo | Parcial |
-| N3 | Punto de red no hereda ubicación | Baja | Baja | Bajo | Nuevo |
+| N3 | Punto de red no hereda ubicación | Baja | Baja | Bajo | RESUELTO (tarea 155) |
 | N4 | Sin puerto consecutivo sugerido | Baja | Baja | Bajo | RESUELTO (tarea 154) |
 | N6 | Puertos sin vista de "libres" | Baja | Media | Bajo | Nuevo |
 | S6 | Sin sugerir equipo por IP/URL en bóveda | Baja | Baja | Bajo | RESUELTO (tarea 151) |
@@ -320,7 +320,7 @@ Hoja de ruta propuesta por fases (agrupando por afinidad técnica, no solo por p
 - **Fase de corrección (rápida, alto impacto, bajo riesgo):** K1 (pérdida de metadata), S1 (rotar no resetea vencimiento), N1 (dirección de topología). Son defectos que hacen perder datos, mentir avisos o corromper la topología; se corrigen con poco código y conviene hacerlos antes de escalar el uso.
 - **Fase persona (estructural, el mayor salto de valor):** T1 (entidad Persona/Responsable) con su migración asistida, reutilizando el patrón exacto de `ubicaciones`. Habilita el inventario por persona y el alta/baja de empleados.
 - **Fase ciclo de vida:** L1 (baja con cascada), L2 (reemplazo con herencia), L3 (relación de sustitución) y T2 (garantía/compra), apoyados en el grafo de referencias inversas y el patrón de migración asistida.
-- **Fase incorporación y cableado:** O1 (asistente/checklist post-alta apoyado en el motor de completitud existente), O2, O3, N2, N3, N4, N5, más la unificación D1. Colapsa el flujo estrella a un recorrido guiado.
+- **Fase incorporación y cableado:** O1 (asistente/checklist post-alta apoyado en el motor de completitud existente), O2, O3 pendientes; N2, N3, N4, N5 RESUELTOS (tareas 152 a 155, 2026-07-23), sin la unificación D1 (sigue pendiente).
 - **Fase conocimiento:** K2 a K6 RESUELTOS (tareas 140, 141 y 142, 2026-07-22). Grupo completo. Reciclaba el conocimiento del equipo sin re-teclear.
 - **Fase secretos:** S2 a S6 RESUELTOS (tareas 147 a 151, 2026-07-23). Grupo completo junto con S1 (tarea 131): todo el flujo 4 (secretos y bóveda) queda sin hallazgos pendientes.
 - **Fase deuda técnica (oportunista):** D2, D3, D4, cuando se toquen esas pantallas por otra razón.
