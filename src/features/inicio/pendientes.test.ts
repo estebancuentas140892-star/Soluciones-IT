@@ -25,6 +25,7 @@ function articulo(cambios: Partial<Articulo> & { id: string }): Articulo {
     version: '1.0',
     relacionados: [],
     origenSugerenciaId: null,
+    aplicaA: null,
     updatedAt: '2026-07-01T00:00:00Z',
     updatedBy: null,
     eliminadoEn: null,

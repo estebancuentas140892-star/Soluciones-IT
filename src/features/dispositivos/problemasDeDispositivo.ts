@@ -1,4 +1,5 @@
 import type { Articulo } from '../../lib/db'
+import { aplicaAlDispositivo, type CriterioDispositivo } from '../soluciones/aplicaA'
 
 // Problemas frecuentes que afectan a un equipo concreto (tarea 39,
 // fase 1): el inverso del vínculo `dispositivosAfectados` (tarea 38),
@@ -22,12 +23,14 @@ export function problemasDeDispositivo(articulos: Articulo[], dispositivoId: str
 // Incidencias aplicables por CATEGORIA (hallazgo H1): las incidencias
 // publicadas de la misma categoria del equipo, aunque no lo mencionen en
 // dispositivosAfectados. Mismo criterio que procedimientosDeCategoria;
-// se excluyen las ya listadas como especificas del equipo. Derivada, sin
+// se excluyen las ya listadas como especificas del equipo. `dispositivo`
+// (hallazgo H6, opcional) refina ademas por `aplicaA`. Derivada, sin
 // esquema. Logica pura.
 export function problemasDeCategoria(
   articulos: Articulo[],
   categoriaId: string,
   idsExcluidos: ReadonlySet<string>,
+  dispositivo?: CriterioDispositivo,
 ): Articulo[] {
   return articulos
     .filter(
@@ -36,7 +39,8 @@ export function problemasDeCategoria(
         a.tipo === 'problema_frecuente' &&
         (a.estado ?? 'publicado') === 'publicado' &&
         a.categoriaId === categoriaId &&
-        !idsExcluidos.has(a.id),
+        !idsExcluidos.has(a.id) &&
+        (!dispositivo || aplicaAlDispositivo(a.aplicaA ?? null, dispositivo)),
     )
     .sort((a, b) => a.titulo.localeCompare(b.titulo, 'es', { numeric: true }))
 }

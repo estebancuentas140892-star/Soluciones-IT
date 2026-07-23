@@ -202,6 +202,24 @@ export interface PasoProcedimiento {
 // saber que esperar antes de empezar. null si no se definio.
 export type NivelDificultad = 'principiante' | 'intermedio' | 'avanzado'
 
+// Refinamiento opcional de a que equipos aplica un articulo DENTRO de
+// su categoria (hallazgo H6 de AUDITORIA_FLUJO_INSTALACION.md, grupo de
+// esquema 2026-07-23). Por defecto (null) un articulo publicado ya
+// aplica a TODA la categoria (hallazgo H1, sin esquema); `aplicaA`
+// existe solo para el caso mas fino de un procedimiento que aplica a UN
+// modelo concreto dentro de la categoria (por ejemplo, la Zebra ZT411
+// especificamente, no cualquier impresora). Cada campo es opcional por
+// separado: solo marca filtra por marca sin importar el modelo, y
+// viceversa; ambos a la vez exigen coincidir en los dos. Se compara sin
+// distinguir mayusculas ni espacios (ver aplicaAlDispositivo en
+// src/features/soluciones/aplicaA.ts). NUNCA duplica el dato del
+// dispositivo: solo lo referencia por texto para comparar en el
+// momento, igual que el resto de la app.
+export interface AplicaA {
+  marca: string | null
+  modelo: string | null
+}
+
 // Un articulo con procedimiento se muestra como una lista de pasos
 // numerados y expandibles, con un bloque "Antes de empezar".
 export interface Procedimiento {
@@ -313,6 +331,12 @@ export interface Articulo {
   // sugerencias deriva de aqui cuales ya estan redactadas, sin guardar
   // ningun estado propio.
   origenSugerenciaId: string | null
+  // Refinamiento opcional de aplicabilidad dentro de la categoria
+  // (hallazgo H6), o null para "toda la categoria" (el comportamiento
+  // por defecto desde H1). Puede llegar undefined/null de una base sin
+  // la columna todavia (grupo de esquema 2026-07-23); se lee siempre
+  // con `?? null`.
+  aplicaA: AplicaA | null
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null

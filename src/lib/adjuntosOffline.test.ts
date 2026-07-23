@@ -20,6 +20,7 @@ function articuloDePrueba(id: string, procedimiento: Articulo['procedimiento'] =
     version: '1.0',
     relacionados: [],
     origenSugerenciaId: null,
+    aplicaA: null,
     updatedAt: new Date().toISOString(),
     updatedBy: null,
     eliminadoEn: null,

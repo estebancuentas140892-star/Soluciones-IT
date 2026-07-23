@@ -19,10 +19,16 @@ export function ProblemasDelEquipo({
   dispositivoId,
   categoriaId,
   categoriaNombre,
+  marca,
+  modelo,
 }: {
   dispositivoId: string
   categoriaId: string
   categoriaNombre?: string
+  // Hallazgo H6: refina "de esta categoría" a las incidencias que no
+  // restringen marca/modelo o que coinciden con los de este equipo.
+  marca: string
+  modelo: string
 }) {
   const articulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
   const especificos = useMemo(
@@ -31,8 +37,8 @@ export function ProblemasDelEquipo({
   )
   const deCategoria = useMemo(() => {
     const idsExcluidos = new Set(especificos.map((a) => a.id))
-    return problemasDeCategoria(articulos, categoriaId, idsExcluidos)
-  }, [articulos, categoriaId, especificos])
+    return problemasDeCategoria(articulos, categoriaId, idsExcluidos, { marca, modelo })
+  }, [articulos, categoriaId, especificos, marca, modelo])
 
   if (especificos.length === 0 && deCategoria.length === 0) return null
 

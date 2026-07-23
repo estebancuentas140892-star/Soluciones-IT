@@ -18,6 +18,7 @@ function articulo(cambios: Partial<Articulo> & { id: string; titulo: string }): 
     version: '1.0',
     relacionados: [],
     origenSugerenciaId: null,
+    aplicaA: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn: null,
@@ -94,5 +95,15 @@ describe('problemasDeCategoria', () => {
       articulo({ id: 'ok', titulo: 'Vigente', categoriaId: 'cat-1' }),
     ]
     expect(problemasDeCategoria(articulos, 'cat-1', new Set()).map((a) => a.id)).toEqual(['ok'])
+  })
+
+  it('hallazgo H6: con dispositivo, filtra las incidencias que restringen marca/modelo distinto', () => {
+    const articulos = [
+      articulo({ id: 'general', titulo: 'General', categoriaId: 'cat-1', aplicaA: null }),
+      articulo({ id: 'zebra', titulo: 'Solo Zebra', categoriaId: 'cat-1', aplicaA: { marca: 'Zebra', modelo: null } }),
+      articulo({ id: 'hp', titulo: 'Solo HP', categoriaId: 'cat-1', aplicaA: { marca: 'HP', modelo: null } }),
+    ]
+    const resultado = problemasDeCategoria(articulos, 'cat-1', new Set(), { marca: 'Zebra', modelo: 'ZT411' })
+    expect(resultado.map((a) => a.id)).toEqual(['general', 'zebra'])
   })
 })

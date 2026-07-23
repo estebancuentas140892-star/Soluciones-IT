@@ -188,7 +188,7 @@ Resumen de las entidades que la app maneja. Detalle completo de columnas y decis
 | Tabla | Rol | ¿Sincroniza? |
 |-------|-----|--------------|
 | `categorias` | Categorías de conocimiento y de dispositivos (bandera `es_red`, color) | Sí |
-| `articulos` | Procedimientos, manuales, incidencias (JSON `procedimiento`) | Sí |
+| `articulos` | Procedimientos, manuales, incidencias (JSON `procedimiento`); `aplica_a` (jsonb, hallazgo H6) refina a qué marca/modelo aplica dentro de la categoría, null = toda la categoría | Sí |
 | `dispositivos` | Inventario de equipos (generales y de red) | Sí |
 | `conexiones` | Enlaces entre equipos (enlace, instalación, relacionado) | Sí |
 | `ubicaciones` | Lugares físicos con jerarquía opcional | Sí |
@@ -280,7 +280,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 **Cuerpo:**
 - Avisos si es **Borrador** ("No aparece en el buscador, rutas de inicio ni diagnóstico") u **Obsoleto** ("Usar el procedimiento vigente").
 - **Portada** (imagen banner, si tiene).
-- **Encabezado**: etiquetas de metadatos (categoría, dificultad, tiempo), pastilla de estado, título, descripción ("cuándo usar"), línea meta (tipo · vX.X · Actualizado el DD mmm por Autor).
+- **Encabezado**: etiquetas de metadatos (categoría, dificultad, tiempo), pastilla de estado, título, descripción ("cuándo usar"), línea meta (tipo · vX.X · Actualizado el DD mmm por Autor). Si el artículo restringe marca/modelo (hallazgo H6), una etiqueta adicional "Marca: X" / "Modelo: Y" avisa que no aparece en otros equipos de la misma categoría.
 - Si es **problema_frecuente**: bloques "Síntomas", "Posibles causas" y "Dispositivos afectados" (pastillas navegables a la ficha de cada equipo).
 - **Procedimiento** (si tiene pasos): `ProcedimientoVista` (ver sección 13, flujo de ejecución) con objetivo, requisitos "Antes de empezar", barra de progreso pegajosa, stepper de pasos con tareas/avisos/imágenes/vínculos, y verificación final.
 - **Contenido en Markdown** (notas adicionales).
@@ -332,7 +332,7 @@ Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un e
 - **"¿Qué sigue?"** (solo la primera vez tras crear el equipo): pasos sugeridos (agregar foto, seguridad, conexiones, documentar procedimiento) con enlaces directos.
 - **"Información"**: tarjeta de filas copiables (marca, modelo, serial, placa, IP), propiedades personalizadas (detalles clave/valor), **Ubicación** (enlace vivo a su ficha), **Responsable** (enlace vivo a la persona), **"Reemplaza a"** / **"Reemplazado por"** (enlaces), y observaciones.
 - **"Seguridad"** (`SeguridadDelEquipo`, solo con permiso de bóveda): datos protegidos propios del equipo (usuario, contraseña, PIN...). Ver sección 7.
-- **"Resolver con este equipo"**: botón "Iniciar diagnóstico" (si hay diagnóstico para su categoría); listas "Procedimientos de este equipo" y "Problemas frecuentes de este equipo" que muestran **tanto los específicos** (vinculados por `dispositivosAfectados`) **como los de su categoría** (procedimientos e incidencias publicados de la misma categoría, derivados por `categoria_id` sin esquema, con sub-rótulo "De la categoría {X}" y "Ver todos" cuando hay más de 5, hallazgo H1); "Credenciales de este equipo" (con permiso); y creación contextual: **"Reportar incidencia"**, **"Documentar procedimiento"**, **"Guardar secreto"** (con permiso), todos precargando el equipo.
+- **"Resolver con este equipo"**: botón "Iniciar diagnóstico" (si hay diagnóstico para su categoría); listas "Procedimientos de este equipo" y "Problemas frecuentes de este equipo" que muestran **tanto los específicos** (vinculados por `dispositivosAfectados`) **como los de su categoría** (procedimientos e incidencias publicados de la misma categoría, derivados por `categoria_id`, con sub-rótulo "De la categoría {X}" y "Ver todos" cuando hay más de 5, hallazgo H1), refinados además por el criterio **marca/modelo** del artículo si lo tiene (`aplicaA`, hallazgo H6: un artículo solo aparece si no restringe marca/modelo o si coincide con los de este equipo); "Credenciales de este equipo" (con permiso); y creación contextual: **"Reportar incidencia"**, **"Documentar procedimiento"**, **"Guardar secreto"** (con permiso), todos precargando el equipo.
 - **"Si este equipo falla"** (`ImpactoYDependencias`, si participa en conexiones): impacto de falla y dependencia ascendente.
 - **"Conexiones"** (`ConexionesFicha`): agrupadas en Instalado en / Contiene / Enlaces / Relacionados, con enlace "Ver en topología" y alta/baja de conexión.
 - **"Adjuntos"**.
@@ -578,6 +578,7 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 | Etiquetas | `etiquetas` | Editor de chips + sugerencias | No | [] | Enter/coma agregan; chips de sugerencia del vocabulario ya usado |
 | Imagen de portada | `portada` | Carga de imagen | No | null | Identifica el artículo en lista y buscador |
 | Equipos donde aplica | `dispositivosAfectados` | Selector múltiple (chips + select) | No | [] | Marca el artículo como **específico** de esos equipos. Publicado, ya aparece por **categoría** en las fichas aunque se deje vacío (aclarado en la ayuda del campo, H1/H2) |
+| Restringir a marca o modelo (opcional) | `aplicaA.marca` / `aplicaA.modelo` | Dos textos con sugerencias (datalist) | No | null (sin restricción) | "Cualquier marca" / "Cualquier modelo" | Refina "de esta categoría" (H1) a un modelo concreto (hallazgo H6). Vacíos: aplica a toda la categoría. Sugerencias tomadas del inventario. Se copia al duplicar el artículo |
 
 **Pestaña Pasos** (lo que se ejecuta):
 
@@ -1091,4 +1092,5 @@ Registro obligatorio de la evolución del proyecto (REGLAS.md, regla 19). Cada c
 | 2026-07-23 | Soluciones (editor de pasos) | Agregado | H4: botón "Reutilizar" en la fila de bloques del paso, que abre los "Vínculos del paso" (Procedimiento relacionado). La composición por referencia ya existía; se hace descubrible | Riesgo de copiar pasos en vez de referenciarlos por desconocimiento de la función | Fomenta la composición; menos duplicación |
 | 2026-07-23 | Soluciones (editor, General) | Modificado | H2: la ayuda de "Equipos donde aplica" aclara que, publicado, el artículo ya aparece por categoría aunque se deje vacío; vincular marca como específico | Evitar que el técnico crea que debe vincular equipo por equipo | Refuerza el principio "cada dato una sola vez"; menos trabajo manual |
 | 2026-07-23 | Soluciones (editor) | (Decisión) | H5: se decide MANTENER las 4 pestañas del editor (General/Pasos/Detalles/Publicación); NO pasar a 7. El flujo lineal ya existe dentro de las pestañas y 7 empeorarían móvil | Mobile-first; evitar un retroceso de UX | Sin cambio de código |
+| 2026-07-23 | Soluciones + Dispositivos (esquema) | Agregado | H6: columna `articulos.aplica_a` (jsonb nullable, `{marca, modelo}`) para refinar H1 a un modelo concreto dentro de la categoría. Editor: dos campos "Restringir a marca o modelo (opcional)" con sugerencias del inventario, en la pestaña General. Ficha: etiqueta "Marca: X"/"Modelo: Y" cuando restringe. `aplicaAlDispositivo` (nuevo módulo puro `src/features/soluciones/aplicaA.ts`, con pruebas) filtra "Procedimientos/Problemas de este equipo" además de por categoría. Historial: entrada legible "Marca: X · Modelo: Y" en vez de JSON crudo | Cerrar el hallazgo H6, deferido en la auditoría; el usuario pidió proceder | Aplicabilidad fina sin duplicar el dato del dispositivo (solo se referencia por texto para comparar). **Regla 17: columna genuinamente vaciable, por eso NO va en `camposOpcionales`** (mismo criterio que `ubicacion_id`/`responsable_id`) y viaja siempre, incluido null. Consecuencia: hasta que se aplique `supabase/schema.sql`, **todo guardado de CUALQUIER artículo** (no solo los que usan este campo) será rechazado por PostgREST y quedará reintentándose en la cola, mismo síntoma que la tarea 128. Paso del usuario, bloqueante: aplicar `supabase/schema.sql` de inmediato tras este despliegue |
 

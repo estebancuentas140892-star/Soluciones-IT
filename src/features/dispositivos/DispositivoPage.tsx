@@ -457,11 +457,15 @@ export function DispositivoPage() {
                 dispositivoId={dispositivoId}
                 categoriaId={dispositivo.categoriaId}
                 categoriaNombre={categoria?.nombre}
+                marca={dispositivo.marca}
+                modelo={dispositivo.modelo}
               />
               <ProblemasDelEquipo
                 dispositivoId={dispositivoId}
                 categoriaId={dispositivo.categoriaId}
                 categoriaNombre={categoria?.nombre}
+                marca={dispositivo.marca}
+                modelo={dispositivo.modelo}
               />
               <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)} />
             </div>

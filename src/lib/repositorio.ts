@@ -437,6 +437,12 @@ function formatearValor(campo: string, valor: unknown): string {
   if (campo === 'dispositivosAfectados' || campo === 'dispositivos') {
     return nombresDispositivosAfectados(valor)
   }
+  // Refinamiento de aplicabilidad (hallazgo H6): "Marca: X · Modelo: Y"
+  // en vez del JSON crudo. Se calcula aqui en vez de reutilizar
+  // describirAplicaA de features/soluciones/aplicaA.ts a proposito:
+  // src/lib nunca importa de src/features (mismo criterio que el resto
+  // de este archivo), asi que la logica de formato se repite, minima.
+  if (campo === 'aplicaA') return textoAplicaA(valor)
   // Los nodos de un diagnostico son un arbol JSON: en el historial
   // basta un resumen del tamano, no el volcado completo.
   if (campo === 'nodos') {
@@ -444,6 +450,15 @@ function formatearValor(campo: string, valor: unknown): string {
     return valor.length === 1 ? '1 pregunta' : `${valor.length} preguntas`
   }
   return valorComparable(valor)
+}
+
+function textoAplicaA(valor: unknown): string {
+  if (!valor || typeof valor !== 'object') return ''
+  const { marca, modelo } = valor as { marca?: unknown; modelo?: unknown }
+  const partes: string[] = []
+  if (typeof marca === 'string' && marca) partes.push(`Marca: ${marca}`)
+  if (typeof modelo === 'string' && modelo) partes.push(`Modelo: ${modelo}`)
+  return partes.join(' · ')
 }
 
 function nombresDispositivosAfectados(valor: unknown): string {

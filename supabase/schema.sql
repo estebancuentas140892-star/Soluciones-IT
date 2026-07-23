@@ -560,6 +560,35 @@ alter table public.articulos add column if not exists origen_sugerencia_id uuid;
 create index if not exists idx_articulos_origen_sugerencia on public.articulos (origen_sugerencia_id);
 
 -- ----------------------------------------------------------------
+-- 1.y Aplicabilidad fina dentro de la categoria (hallazgo H6,
+--     AUDITORIA_FLUJO_INSTALACION.md, 2026-07-23).
+--
+--     Desde el hallazgo H1 (sin esquema) un articulo publicado ya
+--     aparece en la ficha de TODOS los equipos de su categoria, sin
+--     vincularlo uno por uno. `aplica_a` es el refinamiento opcional
+--     para el caso mas fino: un procedimiento que aplica solo a una
+--     marca o un modelo concreto dentro de esa categoria (por ejemplo,
+--     solo la Zebra ZT411, no cualquier impresora). jsonb nullable,
+--     null = "toda la categoria" (comportamiento por defecto, sin
+--     cambios). Forma: {"marca": string | null, "modelo": string | null}.
+--
+--     NO lleva NOT NULL DEFAULT (a proposito): el técnico puede vaciarlo
+--     desde el editor para volver a "toda la categoria", asi que viaja
+--     siempre, incluido null (mismo criterio que dispositivos.ubicacion_id
+--     y responsable_id). Del lado de la app NO esta en `camposOpcionales`
+--     por el mismo motivo (ver src/lib/tablas.ts).
+--
+--     Advertencia de despliegue (regla 17 de REGLAS.md): hasta que este
+--     bloque se aplique en Supabase, CUALQUIER guardado de un articulo
+--     (no solo los que usan este campo) sera rechazado por PostgREST y
+--     quedara reintentandose en la cola de sincronizacion, con el mismo
+--     sintoma que documenta la tarea 128. Aplicar este archivo completo
+--     de inmediato tras desplegar el codigo.
+-- ----------------------------------------------------------------
+
+alter table public.articulos add column if not exists aplica_a jsonb;
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 

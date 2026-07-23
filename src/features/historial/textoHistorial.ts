@@ -27,6 +27,7 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
   sintomas: 'Síntomas',
   causas: 'Posibles causas',
   dispositivosAfectados: 'Dispositivos afectados',
+  aplicaA: 'Aplica a',
   dispositivos: 'Equipos con acceso',
   descripcion: 'Descripción',
   nodos: 'Preguntas del diagnóstico',

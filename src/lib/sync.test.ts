@@ -123,6 +123,7 @@ describe('mapeo entre columnas locales y remotas', () => {
       titulo: 'Artículo escrito a mano',
       tipo: 'manual',
       origenSugerenciaId: null,
+    aplicaA: null,
     })
 
     expect(fila).not.toHaveProperty('origen_sugerencia_id')
@@ -288,6 +289,7 @@ describe('aplicarFilasRemotas', () => {
       version: '1.0',
       relacionados: [],
       origenSugerenciaId: null,
+    aplicaA: null,
     })
 
     await aplicarFilasRemotas('articulos', [filaRemotaDeArticulo(id, 'Versión vieja del servidor')])
@@ -406,6 +408,7 @@ describe('descartarCambioPendiente', () => {
       version: '1.0',
       relacionados: [],
       origenSugerenciaId: null,
+    aplicaA: null,
     })
     const cola = await db.cambiosPendientes.where('[tabla+entidadId]').equals(['articulos', id]).toArray()
     expect(cola.length).toBeGreaterThan(0)

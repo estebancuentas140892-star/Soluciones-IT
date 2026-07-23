@@ -37,6 +37,7 @@ import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TagNeutral, TituloS
 import { Historial } from '../historial/Historial'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { etiquetaDeTipo } from './tiposArticulo'
+import { describirAplicaA } from './aplicaA'
 
 const ETIQUETA_DIFICULTAD: Record<NivelDificultad, string> = {
   principiante: 'Principiante',
@@ -170,6 +171,12 @@ export function ArticuloPage() {
         <header className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-1.5">
             {categoria?.nombre && <TagNeutral>{categoria.nombre}</TagNeutral>}
+            {/* Hallazgo H6: aviso de transparencia. Sin esto, un tecnico
+                que abre el articulo desde el buscador no entenderia por
+                que no aparece en OTRO equipo de la misma categoria. */}
+            {describirAplicaA(articulo.aplicaA ?? null) && (
+              <TagNeutral>{describirAplicaA(articulo.aplicaA ?? null)}</TagNeutral>
+            )}
             {procedimiento?.dificultad && (
               <TagNeutral>{ETIQUETA_DIFICULTAD[procedimiento.dificultad]}</TagNeutral>
             )}

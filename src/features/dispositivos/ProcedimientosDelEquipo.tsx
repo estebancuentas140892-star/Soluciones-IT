@@ -23,10 +23,16 @@ export function ProcedimientosDelEquipo({
   dispositivoId,
   categoriaId,
   categoriaNombre,
+  marca,
+  modelo,
 }: {
   dispositivoId: string
   categoriaId: string
   categoriaNombre?: string
+  // Hallazgo H6: refina "de esta categoría" a los procedimientos que no
+  // restringen marca/modelo o que coinciden con los de este equipo.
+  marca: string
+  modelo: string
 }) {
   const articulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
   const especificos = useMemo(
@@ -35,8 +41,8 @@ export function ProcedimientosDelEquipo({
   )
   const deCategoria = useMemo(() => {
     const idsExcluidos = new Set(especificos.map((a) => a.id))
-    return procedimientosDeCategoria(articulos, categoriaId, idsExcluidos)
-  }, [articulos, categoriaId, especificos])
+    return procedimientosDeCategoria(articulos, categoriaId, idsExcluidos, { marca, modelo })
+  }, [articulos, categoriaId, especificos, marca, modelo])
 
   if (especificos.length === 0 && deCategoria.length === 0) return null
 

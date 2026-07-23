@@ -47,7 +47,9 @@ import { PasosEditor } from './PasosEditor'
 import { hayPlantilla, pasosDePlantilla, plantillaDe } from './plantillas'
 import { colorIconoDeTipo, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
 import { tituloEditar, tituloNuevo } from './tiposArticulo'
-import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
+import { aplicaADesdeFormulario } from './aplicaA'
+import { valoresUnicos } from '../../lib/vocabulario'
+import { CampoConSugerencias, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 
 // La vista previa carga react-markdown, que pesa: se difiere hasta que
 // el usuario la pida para no encarecer la apertura del editor.
@@ -152,6 +154,11 @@ export function ArticuloForm() {
   const [dispositivosAfectados, setDispositivosAfectados] = useState(
     dispositivoContextualId ? [{ id: dispositivoContextualId, nombre: dispositivoContextualNombre }] : [],
   )
+  // Refinamiento opcional de aplicabilidad dentro de la categoria
+  // (hallazgo H6): vacios por defecto, que es "toda la categoria", el
+  // comportamiento de H1 sin cambios.
+  const [aplicaAMarca, setAplicaAMarca] = useState('')
+  const [aplicaAModelo, setAplicaAModelo] = useState('')
   const [ordenRutaInicio, setOrdenRutaInicio] = useState(0)
   const [relacionados, setRelacionados] = useState<{ id: string; titulo: string }[]>([])
   // Salto de version mayor (1.4 -> 2.0) en vez del menor por defecto:
@@ -190,6 +197,18 @@ export function ArticuloForm() {
       .filter((d) => !yaPuestos.has(d.id))
       .sort((a, b) => a.nombre.localeCompare(b.nombre))
   }, [candidatosDispositivos, dispositivosAfectados])
+
+  // Sugerencias de marca/modelo para "Aplica a" (hallazgo H6): las ya
+  // usadas por el inventario, mismo vocabulario derivado que usa
+  // DispositivoForm para sus propios campos de marca.
+  const marcasSugeridas = useMemo(
+    () => valoresUnicos(candidatosDispositivos.map((d) => d.marca)),
+    [candidatosDispositivos],
+  )
+  const modelosSugeridos = useMemo(
+    () => valoresUnicos(candidatosDispositivos.map((d) => d.modelo)),
+    [candidatosDispositivos],
+  )
 
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion && !copiarDe && !desdeSugerencia)
   const [guardando, setGuardando] = useState(false)
@@ -250,6 +269,8 @@ export function ArticuloForm() {
     setSintomas((articulo.sintomas ?? []).join('\n'))
     setCausas((articulo.causas ?? []).join('\n'))
     setDispositivosAfectados(articulo.dispositivosAfectados ?? [])
+    setAplicaAMarca(articulo.aplicaA?.marca ?? '')
+    setAplicaAModelo(articulo.aplicaA?.modelo ?? '')
     setEsRutaInicio(articulo.esRutaInicio)
     setOrdenRutaInicio(articulo.ordenRutaInicio ?? 0)
     setEstado(articulo.estado ?? 'publicado')
@@ -283,6 +304,11 @@ export function ArticuloForm() {
     setSintomas((original.sintomas ?? []).join('\n'))
     setCausas((original.causas ?? []).join('\n'))
     setDispositivosAfectados(original.dispositivosAfectados ?? [])
+    // Aplicabilidad (H6) SI se copia al duplicar: es sobre que equipos
+    // aplica el procedimiento, no una identidad del articulo, mismo
+    // criterio que la categoria o los equipos donde aplica.
+    setAplicaAMarca(original.aplicaA?.marca ?? '')
+    setAplicaAModelo(original.aplicaA?.modelo ?? '')
     setRelacionados(original.relacionados ?? [])
     setEstado('borrador')
     setCargadoInicial(true)
@@ -434,6 +460,7 @@ export function ArticuloForm() {
           .map((c) => c.trim())
           .filter(Boolean),
         dispositivosAfectados,
+        aplicaA: aplicaADesdeFormulario(aplicaAMarca, aplicaAModelo),
         esRutaInicio,
         ordenRutaInicio: esRutaInicio ? Math.max(0, Math.trunc(ordenRutaInicio || 0)) : 0,
         estado,
@@ -669,6 +696,15 @@ export function ArticuloForm() {
                 disponibles={dispositivosDisponibles}
                 onChange={setDispositivosAfectados}
                 categoriaNombre={categoria?.nombre}
+              />
+
+              <AplicaACriterios
+                marca={aplicaAMarca}
+                modelo={aplicaAModelo}
+                onCambiarMarca={setAplicaAMarca}
+                onCambiarModelo={setAplicaAModelo}
+                marcasSugeridas={marcasSugeridas}
+                modelosSugeridos={modelosSugeridos}
               />
             </>
           )}
@@ -1067,6 +1103,56 @@ function EquiposDondeAplica({
         Vincula equipos para destacar el artículo como específico de ellos. Publicado, ya aparece en
         las fichas de todos los equipos de la categoría{categoriaNombre ? ` ${categoriaNombre}` : ''}{' '}
         aunque lo dejes vacío.
+      </p>
+    </div>
+  )
+}
+
+// Refinamiento opcional de "a qué equipos aplica dentro de la
+// categoría" (hallazgo H6): dos campos de texto con sugerencias del
+// vocabulario ya usado en el inventario. Vacíos por defecto ("toda la
+// categoría", el comportamiento de H1 sin tocar nada). Solo tiene
+// sentido cuando un procedimiento aplica a un modelo concreto (por
+// ejemplo, la configuración exacta de una Zebra ZT411), no a toda la
+// categoría de impresoras; la mayoría de los artículos no lo necesitan.
+function AplicaACriterios({
+  marca,
+  modelo,
+  onCambiarMarca,
+  onCambiarModelo,
+  marcasSugeridas,
+  modelosSugeridos,
+}: {
+  marca: string
+  modelo: string
+  onCambiarMarca: (valor: string) => void
+  onCambiarModelo: (valor: string) => void
+  marcasSugeridas: string[]
+  modelosSugeridos: string[]
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className={CLASE_ETIQUETA}>Restringir a marca o modelo (opcional)</span>
+      <div className="flex gap-2">
+        <CampoConSugerencias
+          valor={marca}
+          onChange={onCambiarMarca}
+          sugerencias={marcasSugeridas}
+          placeholder="Cualquier marca"
+          className="min-h-11 flex-1"
+        />
+        <CampoConSugerencias
+          valor={modelo}
+          onChange={onCambiarModelo}
+          sugerencias={modelosSugeridos}
+          placeholder="Cualquier modelo"
+          className="min-h-11 flex-1"
+        />
+      </div>
+      <p className="text-xs leading-[1.5] text-noct-neutral-500">
+        Vacío: aplica a toda la categoría (lo habitual). Solo llenarlo cuando el procedimiento sea
+        específico de una marca o modelo, por ejemplo la configuración exacta de una impresora
+        concreta dentro de la categoría.
       </p>
     </div>
   )

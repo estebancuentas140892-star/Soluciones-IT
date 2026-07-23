@@ -18,6 +18,7 @@ function articulo(cambios: Partial<Articulo> & { id: string; titulo: string }): 
     version: '1.0',
     relacionados: [],
     origenSugerenciaId: null,
+    aplicaA: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn: null,
@@ -92,5 +93,22 @@ describe('procedimientosDeCategoria', () => {
       articulo({ id: 'ok', titulo: 'Vigente', categoriaId: 'cat-1' }),
     ]
     expect(procedimientosDeCategoria(articulos, 'cat-1', new Set()).map((a) => a.id)).toEqual(['ok'])
+  })
+
+  it('hallazgo H6: sin dispositivo, ignora aplicaA (se comporta como antes de H6)', () => {
+    const articulos = [
+      articulo({ id: 'restringido', titulo: 'Solo Zebra', categoriaId: 'cat-1', aplicaA: { marca: 'Zebra', modelo: null } }),
+    ]
+    expect(procedimientosDeCategoria(articulos, 'cat-1', new Set()).map((a) => a.id)).toEqual(['restringido'])
+  })
+
+  it('hallazgo H6: con dispositivo, filtra los que restringen marca/modelo distinto', () => {
+    const articulos = [
+      articulo({ id: 'general', titulo: 'General', categoriaId: 'cat-1', aplicaA: null }),
+      articulo({ id: 'zebra', titulo: 'Solo Zebra', categoriaId: 'cat-1', aplicaA: { marca: 'Zebra', modelo: null } }),
+      articulo({ id: 'hp', titulo: 'Solo HP', categoriaId: 'cat-1', aplicaA: { marca: 'HP', modelo: null } }),
+    ]
+    const resultado = procedimientosDeCategoria(articulos, 'cat-1', new Set(), { marca: 'Zebra', modelo: 'ZT411' })
+    expect(resultado.map((a) => a.id)).toEqual(['general', 'zebra'])
   })
 })

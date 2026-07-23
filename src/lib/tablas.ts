@@ -158,6 +158,15 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       relacionados: 'relacionados',
       ordenRutaInicio: 'orden_ruta_inicio',
       origenSugerenciaId: 'origen_sugerencia_id',
+      // Hallazgo H6 (grupo de esquema 2026-07-23): a diferencia de
+      // `origenSugerenciaId`, este campo SI se puede vaciar desde la
+      // interfaz (quitar la marca/modelo restringidos). Por eso NO va
+      // en `camposOpcionales` (esa proteccion asume que, una vez con
+      // valor, nunca vuelve a null; aqui si puede), sino sin default,
+      // igual que `dispositivos.ubicacionId`/`responsableId`: viaja
+      // siempre, incluido null, para que vaciarlo se propague de
+      // verdad al resto del equipo.
+      aplicaA: 'aplica_a',
     },
     // `origenSugerenciaId` no lleva default: es nullable de verdad (no
     // es NOT NULL DEFAULT), y va en `camposOpcionales` para que un

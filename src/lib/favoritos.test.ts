@@ -21,6 +21,7 @@ function articuloDePrueba(id: string, titulo: string): Articulo {
     version: '1.0',
     relacionados: [],
     origenSugerenciaId: null,
+    aplicaA: null,
     updatedAt: new Date().toISOString(),
     updatedBy: null,
     eliminadoEn: null,
