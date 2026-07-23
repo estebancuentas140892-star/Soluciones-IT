@@ -1,4 +1,4 @@
-import type { Articulo, Credencial, EjecucionDiagnostico } from '../../lib/db'
+import type { Articulo, CampoProtegido, Credencial, EjecucionDiagnostico } from '../../lib/db'
 import { estadoVencimiento } from '../../lib/vencimiento'
 
 // Bloque "Pendientes" de Inicio (decisión D5 de PROPUESTA_JORNADA_TECNICO.md,
@@ -17,7 +17,7 @@ export interface ItemPendiente {
   detalle: string
   ruta: string
   tono: 'neutro' | 'precaucion' | 'error'
-  categoria: 'borrador' | 'credencial' | 'sugerencia'
+  categoria: 'borrador' | 'credencial' | 'sugerencia' | 'campo_protegido'
 }
 
 // Artículos en borrador que este técnico editó por última vez. No hay
@@ -55,6 +55,29 @@ export function credencialesPorVencer(credenciales: Credencial[]): ItemPendiente
       ruta: `/boveda/${credencial.id}`,
       tono: estado === 'vencida' ? 'error' : 'precaucion',
       categoria: 'credencial',
+    }))
+}
+
+// Campos protegidos de equipo vencidos o por vencer (hallazgo S2):
+// mismo cálculo que credencialesPorVencer, aplicado a la otra mitad de
+// la bóveda. `nombresPorId` da el nombre vivo del equipo (el campo
+// protegido no lo guarda, solo el dispositivoId).
+export function camposProtegidosPorVencer(
+  campos: CampoProtegido[],
+  nombresPorId: Map<string, string>,
+): ItemPendiente[] {
+  return campos
+    .filter((c) => !c.eliminadoEn && c.dispositivoId)
+    .map((c) => ({ campo: c, estado: estadoVencimiento(c.venceEn) }))
+    .filter((x): x is { campo: CampoProtegido; estado: 'vencida' | 'proxima' } => x.estado !== null)
+    .sort((a, b) => (a.estado === b.estado ? 0 : a.estado === 'vencida' ? -1 : 1))
+    .map(({ campo, estado }) => ({
+      clave: `campo_protegido:${campo.id}`,
+      titulo: campo.nombre,
+      detalle: `${estado === 'vencida' ? 'Vencida' : 'Vence pronto'} · ${nombresPorId.get(campo.dispositivoId!) ?? 'Equipo eliminado'}`,
+      ruta: `/dispositivos/${campo.dispositivoId}`,
+      tono: estado === 'vencida' ? 'error' : 'precaucion',
+      categoria: 'campo_protegido',
     }))
 }
 
@@ -102,6 +125,8 @@ export function sugerenciasSinRevisar(
 export function calcularPendientes(datos: {
   articulos: Articulo[]
   credenciales: Credencial[]
+  camposProtegidos: CampoProtegido[]
+  nombresDispositivosPorId: Map<string, string>
   ejecuciones: EjecucionDiagnostico[]
   // Artículos nacidos de una sugerencia, en CUALQUIER estado (tarea
   // 140). Va aparte de `articulos` a propósito: ese primer parámetro
@@ -116,6 +141,8 @@ export function calcularPendientes(datos: {
   const {
     articulos,
     credenciales,
+    camposProtegidos,
+    nombresDispositivosPorId,
     ejecuciones,
     articulosDeSugerencia,
     usuarioId,
@@ -124,6 +151,7 @@ export function calcularPendientes(datos: {
   } = datos
   const items = [
     ...credencialesPorVencer(puedeVerBoveda ? credenciales : []),
+    ...camposProtegidosPorVencer(puedeVerBoveda ? camposProtegidos : [], nombresDispositivosPorId),
     ...borradoresPropios(articulos, usuarioId),
     ...sugerenciasSinRevisar(ejecuciones, articulosDeSugerencia),
   ]

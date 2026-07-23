@@ -1,5 +1,79 @@
 # Historial de tareas finalizadas
 
+### 148. Motivo del cambio y "Generar contraseña" para campos protegidos (hallazgo S3)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1444 pruebas en verde. **Prioridad**: MEDIA. Mismo patrón que la tarea 147 (S2), siguiente hallazgo del flujo 4 de la auditoría. **Sin verificar en navegador**: mismo límite de sesión que las tareas 144 a 147 (sin Supabase configurado no hay login); se confirmó que la app arranca sin errores de consola.
+
+**Qué resolvía**: `SeguridadDelEquipo.tsx` guardaba un campo protegido sin capturar `motivo` (el historial registraba el cambio pero nunca el porqué: rotación, incidente, filtración) y no tenía botón "Generar" para crear un valor aleatorio, a diferencia de `CredencialForm.tsx` que sí tiene ambos.
+
+**Cambios**:
+- `src/lib/generarContrasena.ts`: la función `generarContrasena` (16 caracteres sin ambigüedad O/0, l/1, I) se extrajo de `CredencialForm.tsx` a un módulo compartido, para no duplicarla entre Bóveda y campos protegidos.
+- `src/features/boveda/CredencialForm.tsx`: importa la función compartida en vez de definirla localmente, sin cambio de comportamiento.
+- `src/features/dispositivos/SeguridadDelEquipo.tsx`, `EditorCampo`: botón "Generar" junto al valor (solo para tipos `esOcultoPorDefecto`, es decir todo menos `usuario`: no tiene sentido generar aleatoriamente un nombre de usuario), campo "Motivo del cambio (opcional)" visible solo al editar (mismo criterio que `CredencialForm.tsx`), y `motivo.trim()` pasado como tercer argumento a `guardarRegistro`. De paso, el botón "Ver/Ocultar" del valor se unificó al ícono (ojo) que ya usa la Bóveda, en vez del botón de texto que tenía antes.
+
+**Fuera de alcance**: no se agregó un histórico de "motivos anteriores" ni validación de motivo obligatorio; es opcional, igual que en credenciales.
+
+### 147. Vencimiento y recordatorio de rotación para campos protegidos del equipo (hallazgo S2)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1444 pruebas en verde. **Prioridad**: MEDIA. Primer hallazgo MEDIA/BAJA fuera del grupo K que se retoma tras cerrar todos los ALTA. **Sin verificar en navegador**: mismo límite que las tareas 144, 145 y 146 (esta sesión no tiene Supabase configurado, no hay login posible); se confirmó que la app arranca sin errores de consola.
+
+**Qué resolvía**: `CampoProtegido` (los datos sensibles propios de un equipo: usuario, contraseña, PIN) no tenía `venceEn`, a diferencia de `Credencial.venceEn`. Justo tras la migración P4 (que movió la contraseña de administrador de la Bóveda a la ficha del equipo como campo protegido), ese dato quedó sin ningún aviso de rotación.
+
+**Cambios**, siguiendo el patrón exacto ya usado por `Credencial.venceEn` (mismas funciones de `src/lib/vencimiento.ts`, reutilizadas sin tocarlas):
+- `src/lib/db.ts`: `CampoProtegido.venceEn: string | null`.
+- `src/lib/tablas.ts`: mapeo `venceEn: 'vence_en'` en `campos_protegidos`.
+- `supabase/schema.sql`: columna `vence_en date` en `campos_protegidos` + `alter table ... add column if not exists` de compatibilidad retro; nota nueva en `supabase/INSTRUCCIONES.md`.
+- `src/features/dispositivos/SeguridadDelEquipo.tsx`: `EditorCampo` gana un input de fecha "Vencimiento (opcional)" (mismo patrón visual que `CredencialForm.tsx`); `FilaCampoProtegido` muestra el badge "Vencida"/"Vence pronto" (mismo componente visual que la Bóveda).
+- `src/features/inicio/pendientes.ts`: nueva función `camposProtegidosPorVencer(campos, nombresPorId)`, sumada a `calcularPendientes` junto a `credencialesPorVencer`; nueva categoría `'campo_protegido'` en `ItemPendiente`.
+- `src/features/inicio/InicioPage.tsx`: dos consultas nuevas (campos protegidos con vencimiento, y un mapa id→nombre de dispositivos para resolver el nombre vivo del equipo en el detalle del pendiente) y su ícono en `ICONO_PENDIENTE`.
+
+**Decisión de alcance**: el aviso agregado de "N secretos necesitan rotarse" de `BovedaPage.tsx` (líneas 455-464) NO se tocó, a propósito: esa pantalla lista únicamente `credenciales` de la Bóveda, y sumar ahí un conteo de datos que viven en fichas de equipo distintas habría sido confuso sin rediseñar la sección. El recordatorio de campos protegidos vive donde corresponde: en la propia ficha del equipo (badge) y en el bloque "Pendientes" de Inicio (transversal a ambas fuentes).
+
+**Fuera de alcance**: S1 (rotar la contraseña resetea el vencimiento automáticamente) es un hallazgo aparte, ya resuelto solo para `Credencial`; no se replicó aquí la lógica de `vencimientoDesactualizado` porque `CampoProtegido` no tiene un campo "contraseña original" separado del valor cifrado genérico (aplicaría igual a un PIN o un token, no solo a contraseñas), y el hallazgo S2 no lo pedía.
+
+### 146. Tablero de estadísticas de diagnóstico y "Problemas frecuentes" en Inicio (D4 + F3)
+
+**Estado**: TERMINADA el 2026-07-23, código y 1442 pruebas en verde. **Prioridad**: MEDIA. Cierra el punto 9 (D4+F3) de la tabla de priorización de PROPUESTA_MODULOS.md, pendiente desde el 2026-07-09. **Verificación parcial en navegador**: sin Supabase configurado en esta sesión no hay login posible, así que no se pudo ver el contenido real; sí se verificó que la app arranca sin errores de consola y que la ruta nueva redirige a login limpio como el resto de rutas protegidas (mismo límite que las tareas 144 y 145).
+
+**Por qué ahora era viable**: `ejecuciones_diagnostico` lleva registrando datos desde la tarea 46 (2026-07-19) sin que nada los agregara. Era la pieza de mayor valor pendiente de las dos propuestas de arquitectura (F3 de PROPUESTA_MODULOS.md y Fase 2 de PROPUESTA_REVISION_ARQUITECTURA.md), y sin esquema nuevo: pura lectura y agregación de una tabla que ya sincroniza.
+
+**Módulos puros nuevos** (mismo patrón que `actividadEquipo.ts`: lógica separada de React y de la base, testeable sola):
+- `src/features/diagnostico/motivos.ts`: único dueño del texto de cada motivo de "no resuelto" (antes vivía suelto dentro de `DiagnosticoRunPage.tsx`, mezclado con sus iconos). `DiagnosticoRunPage.tsx` se migró para leer de aquí (`ICONO_MOTIVO` se quedó ahí, porque el icono es un detalle de esa pantalla, no un dato).
+- `src/features/diagnostico/estadisticas.ts`: `resumirEjecuciones` (total, resueltas/no resueltas/abandonadas, tasa de éxito y duración típica), `problemasMasFrecuentes`, `procedimientosMasUsados`, `motivosDeFallo`, `formatearDuracion`, `formatearPorcentaje`. Dos decisiones de diseño documentadas en el propio código: (1) la tasa de éxito y la duración típica se calculan solo sobre ejecuciones CERRADAS (resuelto 'si'/'no'), porque una abandonada no es un fracaso del diagnóstico y su duración es arbitraria; (2) la duración típica es la MEDIANA, no el promedio, para que una sola sesión olvidada abierta 10 horas no arrastre el número que ve el equipo. 25 pruebas nuevas en `estadisticas.test.ts`.
+- `src/features/inicio/problemasFrecuentes.ts`: envuelve `problemasMasFrecuentes` para el bloque de Inicio (D4), con el fallback que pedía la propuesta ("los más ejecutados, o los más recientes mientras no haya volumen"): con CERO ejecuciones registradas cae a los diagnósticos más recientes por `updatedAt`; desde la primera ejecución ya usa la frecuencia real (un umbral mayor habría sido un número arbitrario sin motivo claro). Resuelve el título contra la ficha viva (`textoVivo`, la misma regla de referencia de `src/lib/referencia.ts`), no contra la copia congelada de la ejecución. 7 pruebas nuevas.
+
+**Pantalla nueva** `src/features/diagnostico/EstadisticasPage.tsx`, ruta `/diagnostico/estadisticas`: mismo shell centrado que `SugerenciasEquipoPage` (alcanzable desde Inicio y desde Diagnóstico, sin pestaña propia). Cuatro tarjetas de resumen, y tres listas (problemas más frecuentes con enlace a cada diagnóstico, procedimientos más usados con enlace al artículo, y motivos de fallo con enlace a "Sugerencias del equipo" cuando corresponde). Estado vacío explícito mientras no haya ninguna ejecución.
+
+**Cableado**: enlace "Estadísticas" junto a "Sugerencias del equipo" en `DiagnosticosPage.tsx`; bloque "Problemas frecuentes" en `InicioPage.tsx` (después de los atajos rápidos, antes de "Pendientes"), con su propio enlace al tablero completo. Icono `ChartBar` nuevo en `src/components/iconos.tsx`, extraído de `@phosphor-icons/core` instalado temporalmente y desinstalado después (mismo procedimiento que el icono de la app, tarea 10; confirmado que `package.json`/`package-lock.json` no quedaron tocados).
+
+**Verificación**: `tsc -b`, `oxlint` y `npm run build` limpios (117 entradas de precache, una más por el chunk nuevo de `EstadisticasPage`). 1442 pruebas en verde, 32 nuevas (25 de `estadisticas.ts` + 7 de `problemasFrecuentes.ts`). Sin cambios de esquema.
+
+### 145. Remates de la Fase 1 de la revisión arquitectónica (`esDeRed`, matcher compartido, `FilaDispositivo`)
+
+**Estado**: TERMINADA el 2026-07-23, código y 1410 pruebas en verde, SIN verificar en navegador (mismo motivo que la tarea 144: este entorno no tiene Supabase configurado, así que no hay login posible). **Prioridad**: MEDIA. Alcance elegido por el usuario: "solo lo seguro", sin cambio de comportamiento visible.
+
+**1 - `esDeRed()` como único dueño de la regla `es_red`** (`src/lib/categorias.ts`, nuevo): la regla vivía suelta en cuatro pantallas y con TRES criterios distintos, un defecto latente real: `DispositivosPage.tsx:51,55` y `RedPage.tsx:32` leían `c.esRed` crudo, sin `Boolean()`, pese a que `db.ts:25` documenta explícitamente que el campo "puede llegar null de una base que aun no tiene la columna, por eso siempre se lee con Boolean()"; `TopologiaPage.tsx:37` armaba su propio Set inline; solo `DispositivoPage.tsx:172` lo hacía bien. El módulo expone `esDeRed(categoria)` (tolera null/undefined) e `idsDeRed(categorias)`, que es el uso más repetido (separar el inventario entre las dos secciones). Los cuatro puntos de uso quedaron migrados; no queda ningún `.esRed` suelto en el código (verificado por grep: solo aparece dentro de `categorias.ts` y su prueba).
+
+**2 - `incluyeTexto()` como regla única de los buscadores locales** (`src/lib/texto.ts`, junto a `texto()`): las tres pantallas repetían calcado el patrón `[...campos].join(' ').toLowerCase().includes(buscado)` con su propio `trim()` previo. Se extrajo preservando la semántica EXACTA, incluido que `join` convierte null/undefined en `''` (por eso la firma acepta `(string | null | undefined)[]`: `RedPage` ya pasaba `nombreCategoria.get(id)`, que puede ser undefined) y que una consulta vacía acepta todo.
+
+**Decisión registrada: NO se unificaron los tres buscadores con el índice global**, que era la letra literal del pendiente en `PROPUESTA_REVISION_ARQUITECTURA.md`. Al contrastarlo contra el código real resultó inviable sin romper comportamiento: el índice global (`features/busqueda/useIndiceBusqueda.ts:53`) **excluye a propósito los artículos en borrador y obsoletos**, mientras que la lista de Soluciones SÍ debe mostrar los borradores propios; además aplica fuzzy y sinónimos (deseable en el buscador universal, ruidoso al filtrar en el sitio una lista ya cargada) y devuelve un `ResultadoBusqueda` genérico sin los campos que estas filas muestran (IP, estado, ubicación, marca/modelo). Lo que se unificó es la REGLA, no el motor; el porqué quedó escrito en el comentario de `incluyeTexto` para que no se vuelva a proponer sin el contexto.
+
+**3 - `<FilaDispositivo>` compartida** (`src/components/FilaDispositivo.tsx`, nuevo): Dispositivos y Red repetían la misma fila de ~35 líneas de JSX (avatar, nombre, subtítulo, estado con punto de color, IP) con solo dos diferencias reales, que son las dos props del componente: `subtitulo` (Dispositivos muestra categoría y ubicación; Red, categoría y marca/modelo, porque allí la ubicación ya es el título del grupo) y `conFoto` (solo Dispositivos muestra la fotografía del equipo; en Red el avatar es siempre el icono del tipo de nodo, que es lo que distingue un switch de un access point de un vistazo). Se conservó el detalle de que en Dispositivos el contenedor del avatar lleva `overflow-hidden` siempre, tenga foto o no.
+
+**NO se hizo `<FilaArticulo>`**, y se recomienda no hacerla: la fila de Soluciones (`SolucionesPage.tsx:448`) comparte el contenedor pero nada de su interior (resaltado del término buscado en tres tramos, icono por tipo de artículo con su tono, tiempo estimado, insignias de borrador/obsoleto). Forzar un componente común exigiría más props condicionales que líneas compartidas.
+
+**Verificación**: `tsc -b` (con `noUnusedLocals`/`noUnusedParameters` activos, así que confirma también que no quedaron imports muertos tras el refactor), `oxlint` y `npm run build` limpios. 1410 pruebas en verde, 16 nuevas: `src/lib/categorias.test.ts` (incluida la regresión del campo null que motivó la extracción) y `src/lib/texto.test.ts` (que además estrena la cobertura de `texto()`, que no tenía prueba propia). Sin cambios de esquema.
+
+### 144. Anti duplicados de IP en el editor de dispositivo
+
+**Estado**: TERMINADA el 2026-07-23, código y pruebas en verde, SIN verificar en navegador (ver más abajo). **Prioridad**: MEDIA. Parte de la Fase 2 de PROPUESTA_REVISION_ARQUITECTURA.md, el único punto puntual y acotado de esa fase (el resto es el tablero de insights, más grande).
+
+**Qué se construyó**: en `src/features/dispositivos/DispositivoForm.tsx`, junto a `serialDuplicado` (línea 210) se agregó `ipDuplicada`, un `useMemo` con la misma forma exacta: busca, entre los dispositivos no eliminados, otro equipo (distinto del actual por `id`) cuya IP (recortada y en minúsculas) coincida con la que se está escribiendo; devuelve `null` si el campo está vacío. En la sección "Conectividad y estado", debajo del campo IP, se agregó el mismo bloque de aviso que ya existía para el serial (icono `Warning`, borde y fondo `noct-precaucion`, enlace a la ficha del equipo que ya usa esa IP), con el texto "Esta IP ya existe en... Revisar antes de crear un conflicto de red." No bloquea el guardado, igual que el aviso de serial: es una señal, no una validación dura.
+
+**Por qué no se extrajo a una función pura testeable**: se siguió el patrón exacto del código ya existente (`serialDuplicado` tampoco está extraído; vive inline en el componente como `useMemo`). Introducir una asimetría (uno extraído, el otro no) para un cambio de tres líneas de lógica habría sido una abstracción prematura sin beneficio real, dado que la lógica es trivial y no se reutiliza en otro lugar.
+
+**Verificación**: `tsc -b`, `oxlint` (`npm run lint`) y `npm run build` limpios. 1394 pruebas en verde, sin pruebas nuevas (mismo criterio que el resto de esta lógica: no hay una función pura nueva que testear, y el componente no tenía pruebas propias antes de este cambio). **NO se verificó en navegador real**: este entorno de sesión no tiene `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` configuradas (no existe `.env`, solo `.env.example`; sin variables de entorno de Supabase en la shell), así que el login real no es posible y la pantalla se queda en "Inicia sesión para continuar". Mismo límite ya documentado en la tarea 132. Queda como mejora opcional que el usuario confirme en su teléfono o en una sesión con Supabase configurado que el aviso aparece al escribir una IP que ya usa otro equipo y que el enlace lleva a la ficha correcta.
+
 ### 143. Endurecimiento de `camposOpcionales` y la columna `responsable` que faltaba en el esquema
 
 **Estado**: TERMINADA el 2026-07-22. **Prioridad**: ALTA (nació de un error real en producción reportado por el usuario). **Requiere un paso del usuario**: volver a ejecutar `supabase/schema.sql` completo.

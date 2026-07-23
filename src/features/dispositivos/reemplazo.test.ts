@@ -46,6 +46,7 @@ function campoProtegido(dispositivoId: string | null): CampoProtegido {
     tipo: 'pin',
     valorCifrado: 'cifrado-original',
     orden: 0,
+    venceEn: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn: null,

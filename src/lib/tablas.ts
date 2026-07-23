@@ -381,6 +381,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       tipo: 'tipo',
       valorCifrado: 'valor_cifrado',
       orden: 'orden',
+      venceEn: 'vence_en',
     },
     porDefecto: { tipo: 'texto', orden: 0 },
   },

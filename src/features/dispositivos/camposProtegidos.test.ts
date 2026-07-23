@@ -16,6 +16,7 @@ function campo(parcial: Partial<CampoProtegido> = {}): CampoProtegido {
     tipo: 'contrasena',
     valorCifrado: 'v1.600000.a.b.c',
     orden: 0,
+    venceEn: null,
     updatedAt: '2026-07-21T10:00:00.000Z',
     updatedBy: null,
     eliminadoEn: null,

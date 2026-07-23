@@ -220,6 +220,7 @@ describe('guardarRegistro', () => {
       tipo: 'pin',
       valorCifrado: 'v1.600000.sal.iv.bloque-original',
       orden: 0,
+      venceEn: null,
     })
     await guardarRegistro('campos_protegidos', {
       id,
@@ -228,6 +229,7 @@ describe('guardarRegistro', () => {
       tipo: 'pin',
       valorCifrado: 'v1.600000.sal.iv.bloque-nuevo',
       orden: 0,
+      venceEn: null,
     })
 
     const cambio = (await db.historial.toArray()).find((c) => c.campo === 'valorCifrado')
@@ -248,6 +250,7 @@ describe('guardarRegistro', () => {
       tipo: 'contrasena',
       valorCifrado: 'v1.600000.sal.iv.bloque',
       orden: 0,
+      venceEn: null,
     })
 
     const entradas = await db.historial.toArray()

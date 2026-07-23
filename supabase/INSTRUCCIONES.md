@@ -38,6 +38,12 @@ Para verificar: en **Table Editor**, la tabla `credenciales` debe tener la colum
 
 Nota para quien ejecute `scripts/huerfanos-storage.mjs` de ahora en adelante: como el bucket nuevo exige `puede_ver_boveda()`, la cuenta técnica que use el script para iniciar sesión debe tener ese permiso, o el listado de `archivos_boveda` fallará por RLS (el resto del script sigue funcionando igual).
 
+### Actualización del 2026-07-23 (hallazgo S2: vencimiento de campos protegidos)
+
+Vuelve a ejecutar `schema.sql` completo (idempotente) para agregar la columna `vence_en` (fecha, opcional) a `campos_protegidos`, mismo criterio sin cifrar que `credenciales.vence_en`. Hasta que se aplique, la app funciona igual (Dexie no exige la columna del lado del servidor), pero el vencimiento que se guarde en un campo protegido no viajará entre dispositivos.
+
+Para verificar: en **Table Editor**, la tabla `campos_protegidos` debe tener la columna `vence_en`.
+
 ## 2. Crear los 5 usuarios del equipo
 
 1. En el menú lateral, abrir **Authentication**, pestaña **Users**.

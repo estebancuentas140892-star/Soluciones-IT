@@ -431,10 +431,17 @@ create table if not exists public.campos_protegidos (
   tipo text not null default 'texto' check (tipo in ('usuario', 'contrasena', 'pin', 'llave', 'token', 'texto')),
   valor_cifrado text not null,
   orden integer not null default 0,
+  -- Fecha de vencimiento opcional, recordatorio de rotacion (hallazgo
+  -- S2 de AUDITORIA_FLUJOS_TI.md): mismo criterio sin cifrar que
+  -- credenciales.vence_en.
+  vence_en date,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
 );
+
+-- Por si la tabla ya existia de una version anterior del esquema.
+alter table public.campos_protegidos add column if not exists vence_en date;
 
 create index if not exists idx_campos_protegidos_updated on public.campos_protegidos (updated_at);
 create index if not exists idx_campos_protegidos_dispositivo on public.campos_protegidos (dispositivo_id);

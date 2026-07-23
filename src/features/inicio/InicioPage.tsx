@@ -12,6 +12,7 @@ import { DescargarOffline } from '../../components/DescargarOffline'
 import {
   BookOpen,
   CaretRight,
+  ChartBar,
   CheckCircle,
   ClockCounterClockwise,
   CloudArrowUp,
@@ -32,6 +33,7 @@ import {
   User,
   UsersThree,
   Vault,
+  WarningCircle,
   XCircleFill,
 } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
@@ -51,6 +53,7 @@ import {
 import { etiquetaResuelto } from '../historial/lineaDeTiempo'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { calcularPendientes, type ItemPendiente } from './pendientes'
+import { problemasFrecuentesInicio } from './problemasFrecuentes'
 
 // Pantalla de Inicio en el sistema Nocturne (re-autoria del handoff
 // "Rediseño de aplicación empresarial", Inicio.dc.html). Un solo punto
@@ -133,6 +136,20 @@ export function InicioPage() {
   const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
   const actividad = useLiveQuery(() => obtenerActividadReciente(), [], [])
 
+  // Problemas frecuentes (decision D4 de PROPUESTA_MODULOS.md, punto 10):
+  // agregacion local sobre ejecuciones_diagnostico, con fallback a los
+  // diagnosticos mas recientes mientras el equipo no acumule volumen.
+  const ejecucionesDiagnostico = useLiveQuery(() => db.ejecuciones_diagnostico.toArray(), [], [])
+  const diagnosticosVivos = useLiveQuery(
+    () => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(),
+    [],
+    [],
+  )
+  const problemasFrecuentes = useMemo(
+    () => problemasFrecuentesInicio(ejecucionesDiagnostico, diagnosticosVivos),
+    [ejecucionesDiagnostico, diagnosticosVivos],
+  )
+
   // Pendientes (fase J-D5 de PROPUESTA_JORNADA_TECNICO.md, decision
   // aprobada por el usuario el 2026-07-21 con el contenido recomendado):
   // bloque derivado de lo que ya significa "pendiente" en los datos
@@ -147,6 +164,20 @@ export function InicioPage() {
     () => db.credenciales.filter((c) => !c.eliminadoEn && Boolean(c.venceEn)).toArray(),
     [],
     [],
+  )
+  // Campos protegidos de equipo con vencimiento (hallazgo S2): la otra
+  // mitad de la bóveda, mismo criterio que credencialesConVencimiento.
+  const camposProtegidosConVencimiento = useLiveQuery(
+    () => db.campos_protegidos.filter((c) => !c.eliminadoEn && Boolean(c.venceEn)).toArray(),
+    [],
+    [],
+  )
+  // Solo nombre e id: lo mínimo para resolver el nombre vivo del equipo
+  // en el detalle del pendiente, sin cargar la ficha completa.
+  const nombresDispositivosPorId = useLiveQuery(
+    async () => new Map((await db.dispositivos.toArray()).map((d) => [d.id, d.nombre])),
+    [],
+    new Map<string, string>(),
   )
   const ejecucionesConSugerencia = useLiveQuery(
     () => db.ejecuciones_diagnostico.filter((e) => e.motivo === 'encontro_otra_solucion').toArray(),
@@ -167,13 +198,23 @@ export function InicioPage() {
         ? calcularPendientes({
             articulos: borradores,
             credenciales: credencialesConVencimiento,
+            camposProtegidos: camposProtegidosConVencimiento,
+            nombresDispositivosPorId,
             ejecuciones: ejecucionesConSugerencia,
             articulosDeSugerencia,
             usuarioId: perfil.id,
             puedeVerBoveda: perfil.puedeVerBoveda,
           })
         : [],
-    [perfil, borradores, credencialesConVencimiento, ejecucionesConSugerencia, articulosDeSugerencia],
+    [
+      perfil,
+      borradores,
+      credencialesConVencimiento,
+      camposProtegidosConVencimiento,
+      nombresDispositivosPorId,
+      ejecucionesConSugerencia,
+      articulosDeSugerencia,
+    ],
   )
 
   // Articulos marcados por el equipo como "ruta de inicio" (ver
@@ -378,6 +419,52 @@ export function InicioPage() {
                 detalle="Ficha por código QR"
               />
             </div>
+
+            {/* Problemas frecuentes (decisión D4 de PROPUESTA_MODULOS.md):
+                los diagnósticos que más se ejecutan, o los más recientes
+                mientras no haya historial suficiente. Vista derivada,
+                colapsada a 4 filas; enlaza al tablero completo. */}
+            {problemasFrecuentes.length > 0 && (
+              <section>
+                <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
+                  <div className="flex items-center gap-2">
+                    <WarningCircle size={14} className="text-noct-neutral-400" aria-hidden />
+                    <TituloSeccion>Problemas frecuentes</TituloSeccion>
+                  </div>
+                  <Link
+                    to="/diagnostico/estadisticas"
+                    className="inline-flex shrink-0 items-center gap-1 text-[11.5px] text-noct-accent-300 underline-offset-2 hover:underline"
+                  >
+                    <ChartBar size={12} aria-hidden />
+                    Estadísticas
+                  </Link>
+                </div>
+                <div className="flex flex-col">
+                  {problemasFrecuentes.map((problema) => (
+                    <Link
+                      key={problema.diagnosticoId}
+                      to={`/diagnostico/${problema.diagnosticoId}`}
+                      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+                    >
+                      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">
+                        <WarningCircle size={17} aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-[1.3] [text-wrap:pretty]">
+                        {problema.titulo}
+                      </span>
+                      <span className="shrink-0 text-[12px] text-noct-neutral-500">
+                        {problema.ejecuciones == null
+                          ? 'Nuevo'
+                          : problema.ejecuciones === 1
+                            ? '1 vez'
+                            : `${problema.ejecuciones} veces`}
+                      </span>
+                      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Pendientes (decisión D5 de PROPUESTA_JORNADA_TECNICO.md):
                 mis borradores, credenciales por vencer/vencidas (solo con
@@ -607,6 +694,7 @@ function FilaActividadItem({ fila }: { fila: FilaActividad }) {
 const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) => React.JSX.Element> = {
   borrador: PencilSimple,
   credencial: LockSimple,
+  campo_protegido: LockSimple,
   sugerencia: Lightbulb,
 }
 const TONO_PENDIENTE: Record<ItemPendiente['tono'], string> = {

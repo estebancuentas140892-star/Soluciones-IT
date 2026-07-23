@@ -44,6 +44,7 @@ function campoProtegido(id: string, dispositivoId: string | null, eliminadoEn: s
     tipo: 'pin',
     valorCifrado: '',
     orden: 0,
+    venceEn: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn,

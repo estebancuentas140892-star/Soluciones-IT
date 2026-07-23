@@ -126,6 +126,7 @@ function campoProtegido(cambios: Partial<CampoProtegido> & { id: string; nombre:
     tipo: 'texto',
     valorCifrado: '',
     orden: 0,
+    venceEn: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn: null,

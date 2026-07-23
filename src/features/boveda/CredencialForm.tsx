@@ -17,6 +17,7 @@ import {
 import { subirOEncolarArchivo, eliminarArchivoPendiente } from '../../lib/archivosPendientes'
 import { db, type ArchivoSeguro, type Dispositivo, type DispositivoAfectado, type TipoSecreto } from '../../lib/db'
 import { guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
+import { generarContrasena } from '../../lib/generarContrasena'
 import { proximoVencimiento, vencimientoDesactualizado } from '../../lib/vencimiento'
 import { valoresUnicos } from '../../lib/vocabulario'
 import { BUCKET_ARCHIVOS_BOVEDA } from './archivoSeguro'
@@ -779,9 +780,3 @@ function EquiposVinculadosEditor({
   )
 }
 
-function generarContrasena(): string {
-  // Sin caracteres que se confunden entre si (O/0, l/1, I).
-  const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!#$%&*+-=?'
-  const valores = crypto.getRandomValues(new Uint32Array(16))
-  return Array.from(valores, (v) => caracteres[v % caracteres.length]).join('')
-}

@@ -111,11 +111,11 @@ El puerto vive como texto suelto en cada `Conexion` (`origenPuerto`/`destinoPuer
 - Automatizar: al detectar que la contraseña cifrada cambió, ofrecer o auto-aplicar "renovar vencimiento" (+N meses de política), o guardar `ultimaRotacion` y derivar el próximo vencimiento de ahí en vez de una fecha absoluta suelta.
 - Impacto: la política de rotación deja de depender de que el técnico recuerde editar una fecha.
 
-**S2 - Los campos protegidos del equipo no tienen vencimiento ni recordatorio de rotación. [MEDIA] [NUEVO]**
+**S2 - Los campos protegidos del equipo no tienen vencimiento ni recordatorio de rotación. [MEDIA] [NUEVO] [RESUELTO en la tarea 147, 2026-07-23]**
 `CampoProtegido` (`src/lib/db.ts:425-437`) no tiene `venceEn`, a diferencia de `Credencial.venceEn`. Justo tras la migración P4, la contraseña de administrador de un equipo vive como campo protegido, que es lo que MÁS conviene rotar y lo único sin ningún aviso.
 - BD: añadir `venceEn` opcional (sin cifrar, mismo criterio que en credenciales) y sumar los campos protegidos al aviso de rotación de Inicio/Bóveda.
 
-**S3 - Cambiar un campo protegido no captura "motivo" ni tiene botón "Generar contraseña". [MEDIA] [NUEVO]**
+**S3 - Cambiar un campo protegido no captura "motivo" ni tiene botón "Generar contraseña". [MEDIA] [NUEVO] [RESUELTO en la tarea 148, 2026-07-23]**
 `SeguridadDelEquipo.tsx:402-435` llama a `guardarRegistro('campos_protegidos', ...)` sin `motivo`, frente a `CredencialForm.tsx:311-324` que sí lo pasa y tiene el campo. El historial por campo registra el cambio pero nunca el porqué (rotación, incidente, filtración). Tampoco reutiliza el botón "Generar" de la bóveda (`CredencialForm.tsx:492-502`).
 - UX: añadir "Motivo" opcional al editor de campo y reutilizar `generarContrasena`.
 
@@ -292,8 +292,8 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | L3 | Falta relación "reemplaza a" | Media | Baja | Bajo | Nuevo |
 | N2 | "Crear" de Red sin contexto | Media | Baja | Bajo | Nuevo |
 | N5 | Búsqueda sin sugerencias por ubicación/tipo | Media | Baja | Bajo | Nuevo |
-| S2 | Campos protegidos sin vencimiento | Media | Baja | Bajo | Nuevo |
-| S3 | Campo protegido sin motivo ni "Generar" | Media | Baja | Bajo | Nuevo |
+| S2 | Campos protegidos sin vencimiento | Media | Baja | Bajo | RESUELTO (tarea 147) |
+| S3 | Campo protegido sin motivo ni "Generar" | Media | Baja | Bajo | RESUELTO (tarea 148) |
 | S4 | Título de credencial congela el nombre | Media | Baja | Bajo | Nuevo |
 | S5 | Solapamiento credencial/campo protegido | Media | Baja | Bajo | Nuevo |
 | K3 | Completitud no depende del tipo | Media | Baja | Bajo | RESUELTO (tarea 141) |

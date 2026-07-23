@@ -4,10 +4,14 @@ import { Link } from 'react-router-dom'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import {
+  ArrowsClockwise,
   BookOpen,
   CaretDown,
   CaretRight,
   CaretUp,
+  ClockCountdown,
+  Eye,
+  EyeSlash,
   Key,
   LockSimple,
   PencilSimple,
@@ -15,11 +19,13 @@ import {
   TrashSimple,
   X,
 } from '../../components/iconos'
-import { BTN_GHOST_ACENTO, BTN_GHOST_PELIGRO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { BTN_GHOST_ACENTO, BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useGrafo } from '../../components/useGrafo'
 import { db, type CampoProtegido, type TipoCampoProtegido } from '../../lib/db'
+import { generarContrasena } from '../../lib/generarContrasena'
 import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { eliminarRegistro, guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
+import { estadoVencimiento } from '../../lib/vencimiento'
 import { CampoSecreto } from '../boveda/CampoSecreto'
 import { cifrarValor, desbloquear, descifrarValor } from '../boveda/sesionBoveda'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
@@ -188,6 +194,9 @@ function FilaCampoProtegido({
     () => origenesDistintos(referenciasHacia(grafo, 'campo_protegido', campo.id, ['campo_paso', 'campo_tarea'])),
     [grafo, campo.id],
   )
+  // Recordatorio de rotacion (hallazgo S2): mismo criterio que la
+  // Boveda de credenciales.
+  const vencimiento = estadoVencimiento(campo.venceEn)
 
   return (
     <div className="rounded-md border border-noct-divider bg-noct-bg/40">
@@ -219,6 +228,18 @@ function FilaCampoProtegido({
             {etiquetaTipo(campo.tipo)}
           </span>
         </span>
+        {vencimiento && (
+          <span
+            className={`inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap rounded-full border px-[9px] py-[3px] text-[11px] font-medium ${
+              vencimiento === 'vencida'
+                ? 'border-noct-error/40 text-noct-error'
+                : 'border-noct-precaucion/40 text-noct-precaucion'
+            }`}
+          >
+            <ClockCountdown size={12} aria-hidden />
+            {vencimiento === 'vencida' ? 'Vencida' : 'Vence pronto'}
+          </span>
+        )}
         {abierto ? (
           <CaretUp size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
         ) : (
@@ -367,6 +388,12 @@ function EditorCampo({
   const desbloqueada = useBovedaDesbloqueada()
   const [nombre, setNombre] = useState(campo?.nombre ?? nombreInicial ?? '')
   const [tipo, setTipo] = useState<TipoCampoProtegido>(campo?.tipo ?? 'contrasena')
+  // Vencimiento (hallazgo S2), "YYYY-MM-DD" o '': mismo criterio que
+  // Credencial.venceEn, sin cifrar.
+  const [venceEn, setVenceEn] = useState(campo?.venceEn ?? '')
+  // Motivo del cambio (hallazgo S3), opcional y solo al editar: mismo
+  // criterio que CredencialForm.tsx.
+  const [motivo, setMotivo] = useState('')
   const [valor, setValor] = useState('')
   const [verValor, setVerValor] = useState(false)
   const [cargado, setCargado] = useState(campo === null)
@@ -410,14 +437,19 @@ function EditorCampo({
     setError(null)
     try {
       const id = campo?.id ?? nuevoId()
-      await guardarRegistro('campos_protegidos', {
-        id,
-        dispositivoId,
-        nombre: nombre.trim(),
-        tipo,
-        valorCifrado: await cifrarValor(valor),
-        orden: campo?.orden ?? siguienteOrden(camposDelEquipo),
-      })
+      await guardarRegistro(
+        'campos_protegidos',
+        {
+          id,
+          dispositivoId,
+          nombre: nombre.trim(),
+          tipo,
+          valorCifrado: await cifrarValor(valor),
+          orden: campo?.orden ?? siguienteOrden(camposDelEquipo),
+          venceEn: venceEn.trim() === '' ? null : venceEn.trim(),
+        },
+        motivo.trim(),
+      )
       if (campo) {
         await registrarAccesoBoveda({
           entidadTipo: 'campo_protegido',
@@ -491,15 +523,52 @@ function EditorCampo({
           <button
             type="button"
             onClick={() => setVerValor((v) => !v)}
-            className={`${BTN_SECUNDARIO} shrink-0`}
+            aria-label={verValor ? 'Ocultar valor' : 'Mostrar valor'}
+            className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
           >
-            {verValor ? 'Ocultar' : 'Ver'}
+            {verValor ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
           </button>
+          {esOcultoPorDefecto(tipo) && (
+            <button
+              type="button"
+              onClick={() => {
+                setValor(generarContrasena())
+                setVerValor(true)
+              }}
+              className={`${BTN_SECUNDARIO} h-11 shrink-0 whitespace-nowrap`}
+            >
+              <ArrowsClockwise size={14} aria-hidden />
+              Generar
+            </button>
+          )}
         </div>
         {!cargado && (
           <p className="text-[11.5px] text-noct-neutral-500">Cargando el valor actual...</p>
         )}
       </div>
+
+      <label className="flex max-w-[220px] flex-col gap-1.5">
+        <span className="text-[12px] text-noct-neutral-400">Vencimiento (opcional)</span>
+        <input
+          type="date"
+          value={venceEn}
+          onChange={(e) => setVenceEn(e.target.value)}
+          className={`min-h-11 [color-scheme:dark] ${CLASE_CAMPO}`}
+        />
+      </label>
+
+      {campo && (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[12px] text-noct-neutral-400">Motivo del cambio (opcional)</span>
+          <input
+            type="text"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Por qué se actualizó: rotación, incidente..."
+            className={`min-h-11 ${CLASE_CAMPO}`}
+          />
+        </label>
+      )}
 
       {error && <p className="text-[12px] text-noct-error">{error}</p>}
 

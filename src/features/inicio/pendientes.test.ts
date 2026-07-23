@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { Articulo, Credencial, EjecucionDiagnostico } from '../../lib/db'
-import { borradoresPropios, calcularPendientes, credencialesPorVencer, sugerenciasSinRevisar } from './pendientes'
+import type { Articulo, CampoProtegido, Credencial, EjecucionDiagnostico } from '../../lib/db'
+import {
+  borradoresPropios,
+  calcularPendientes,
+  camposProtegidosPorVencer,
+  credencialesPorVencer,
+  sugerenciasSinRevisar,
+} from './pendientes'
 
 function articulo(cambios: Partial<Articulo> & { id: string }): Articulo {
   return {
@@ -34,6 +40,20 @@ function credencial(cambios: Partial<Credencial> & { id: string; titulo: string 
     venceEn: null,
     dispositivos: [],
     archivo: null,
+    updatedAt: '',
+    updatedBy: null,
+    eliminadoEn: null,
+    ...cambios,
+  }
+}
+
+function campoProtegido(cambios: Partial<CampoProtegido> & { id: string; nombre: string }): CampoProtegido {
+  return {
+    dispositivoId: 'd1',
+    tipo: 'contrasena',
+    valorCifrado: '',
+    orden: 0,
+    venceEn: null,
     updatedAt: '',
     updatedBy: null,
     eliminadoEn: null,
@@ -104,6 +124,41 @@ describe('credencialesPorVencer', () => {
   })
 })
 
+describe('camposProtegidosPorVencer', () => {
+  it('incluye vencidos y próximos, vencidos primero, con el nombre vivo del equipo', () => {
+    const hoy = new Date()
+    const enUnMes = new Date(hoy.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const ayer = new Date(hoy.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const items = camposProtegidosPorVencer(
+      [
+        campoProtegido({ id: 'cp1', nombre: 'Lejana', dispositivoId: 'd1', venceEn: enUnMes }),
+        campoProtegido({ id: 'cp2', nombre: 'Vencida', dispositivoId: 'd2', venceEn: ayer }),
+      ],
+      new Map([
+        ['d1', 'Switch A'],
+        ['d2', 'Switch B'],
+      ]),
+    )
+    expect(items.map((i) => i.titulo)).toEqual(['Vencida'])
+    expect(items[0].detalle).toBe('Vencida · Switch B')
+    expect(items[0].ruta).toBe('/dispositivos/d2')
+  })
+
+  it('no incluye un campo sin vencimiento, eliminado o sin equipo', () => {
+    const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    expect(
+      camposProtegidosPorVencer(
+        [
+          campoProtegido({ id: 'cp1', nombre: 'Sin fecha', dispositivoId: 'd1' }),
+          campoProtegido({ id: 'cp2', nombre: 'Vencido y eliminado', dispositivoId: 'd1', venceEn: ayer, eliminadoEn: '2026-07-01T00:00:00Z' }),
+          campoProtegido({ id: 'cp3', nombre: 'Sin equipo', dispositivoId: null, venceEn: ayer }),
+        ],
+        new Map([['d1', 'Switch A']]),
+      ),
+    ).toEqual([])
+  })
+})
+
 describe('sugerenciasSinRevisar', () => {
   it('incluye solo las de motivo "encontro_otra_solucion" con texto', () => {
     const items = sugerenciasSinRevisar([
@@ -143,6 +198,8 @@ describe('calcularPendientes', () => {
     const items = calcularPendientes({
       articulos: [articulo({ id: 'a1', estado: 'borrador', updatedBy: 'yo', titulo: 'Mi borrador' })],
       credenciales: [credencial({ id: 'c1', titulo: 'Vencida', venceEn: ayer })],
+      camposProtegidos: [],
+      nombresDispositivosPorId: new Map(),
       ejecuciones: [ejecucion({ id: 'e1' })],
       articulosDeSugerencia: [],
       usuarioId: 'yo',
@@ -158,6 +215,8 @@ describe('calcularPendientes', () => {
     const items = calcularPendientes({
       articulos: [],
       credenciales: [credencial({ id: 'c1', titulo: 'Vencida', venceEn: ayer })],
+      camposProtegidos: [],
+      nombresDispositivosPorId: new Map(),
       ejecuciones: [],
       articulosDeSugerencia: [],
       usuarioId: 'yo',
@@ -182,6 +241,8 @@ describe('calcularPendientes', () => {
       // El artículo publicado ya no está entre los borradores.
       articulos: [],
       credenciales: [],
+      camposProtegidos: [],
+      nombresDispositivosPorId: new Map(),
       ejecuciones: [ejecucion({ id: 'e1' })],
       articulosDeSugerencia: [yaRedactada],
       usuarioId: 'yo',

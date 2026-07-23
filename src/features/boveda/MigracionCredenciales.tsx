@@ -124,6 +124,7 @@ export function MigracionCredenciales() {
           tipo: campo.tipo,
           valorCifrado: await cifrarValor(campo.valor),
           orden: ordenBase + indice,
+          venceEn: null,
         })
       }
       // Se registra como eliminación (mismo patrón que BovedaPage y

@@ -472,6 +472,9 @@ export interface CampoProtegido {
   // Bloque AES-256-GCM (mismo formato que Credencial.datosCifrados).
   valorCifrado: string
   orden: number
+  // "YYYY-MM-DD" o null, mismo criterio que Credencial.venceEn: sin cifrar,
+  // recordatorio de rotacion (hallazgo S2 de AUDITORIA_FLUJOS_TI.md).
+  venceEn: string | null
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
