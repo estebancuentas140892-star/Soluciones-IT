@@ -3,24 +3,14 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { db, type Conexion, type Dispositivo } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
-import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
-import {
-  agruparConexiones,
-  candidatosConexion,
-  datosSegunModo,
-  MEDIOS_SUGERIDOS,
-  proximoPuertoLibre,
-  ubicacionHeredable,
-  type ExtremoConexion,
-  type ModoConexion,
-} from '../../lib/conexiones'
-import { idsDeRed } from '../../lib/categorias'
+import { eliminarRegistro } from '../../lib/repositorio'
+import { agruparConexiones, type ExtremoConexion } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
-import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
+import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { BotonVolver } from '../../components/BotonVolver'
 import { IconoNodo } from './IconoNodo'
+import { FormularioConexion } from './FormularioConexion'
 import { construirArbol, contarDescendientes, contarImpacto, infoDeDispositivos, type NodoTopologia } from './arbol'
 import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
 
@@ -36,26 +26,11 @@ import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from 
 // (repositorio.ts); esta pantalla solo compone esas piezas con el
 // aspecto del mockup. El bosque general (/red/topologia, sin equipo)
 // sigue en TopologiaPage hasta su propia re-autoría (tarea 92).
-
-// Tipo de relación del formulario de "Agregar conexión": el sentido
-// (quién es origen/padre en la topología, ver arbol.ts) según lo que
-// el técnico quiere documentar es `ModoConexion`, compartido con el
-// editor de la ficha (ConexionesFicha) en lib/conexiones.ts.
-const TIPOS_CONEXION: { valor: ModoConexion; nombre: string; ayuda: string }[] = [
-  { valor: 'enlace', nombre: 'Da servicio a', ayuda: 'Este equipo da servicio al otro por un puerto (uplink). Entra en la topología.' },
-  {
-    valor: 'recibeDe',
-    nombre: 'Recibe de',
-    ayuda: 'El otro equipo te da servicio por un puerto (uplink). Entra en la topología.',
-  },
-  { valor: 'instalado', nombre: 'Instalado en', ayuda: 'Este equipo está montado dentro del otro (un rack).' },
-  { valor: 'contiene', nombre: 'Contiene', ayuda: 'El otro equipo está montado dentro de este.' },
-  {
-    valor: 'relacionado',
-    nombre: 'Relacionado',
-    ayuda: 'Vincula equipos que no son de red (un POS con su impresora). No entra en la topología.',
-  },
-]
+//
+// El formulario de "Agregar conexión" es el mismo componente compartido
+// que usa ConexionesFicha (hallazgo D1 de AUDITORIA_FLUJOS_TI.md: antes
+// eran dos implementaciones casi idénticas ya divergidas), ver
+// FormularioConexion.tsx.
 
 export function TopologiaEquipoPage() {
   const { dispositivoId = '' } = useParams()
@@ -416,7 +391,12 @@ function ConexionesSeccion({
       </div>
 
       {agregando && (
-        <FormularioConexion equipo={equipo} enlaces={grupos.enlaces} onCerrar={onToggleAgregar} />
+        <FormularioConexion
+          dispositivo={equipo}
+          enlaces={grupos.enlaces}
+          variante="topologia"
+          onCerrar={onToggleAgregar}
+        />
       )}
 
       {total === 0 && !agregando && (
@@ -466,246 +446,6 @@ function ConexionesSeccion({
         </div>
       ))}
     </section>
-  )
-}
-
-function FormularioConexion({
-  equipo,
-  enlaces,
-  onCerrar,
-}: {
-  equipo: Dispositivo
-  enlaces: ExtremoConexion[]
-  onCerrar: () => void
-}) {
-  const todos = useLiveQuery(
-    () => db.dispositivos.filter((d) => !d.eliminadoEn && d.id !== equipo.id).toArray(),
-    [equipo.id],
-    [],
-  )
-  const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
-
-  const [modo, setModo] = useState<ModoConexion>('enlace')
-  const [busqueda, setBusqueda] = useState('')
-  const [otro, setOtro] = useState<Dispositivo | null>(null)
-  // Hallazgo N4: arranca en el menor puerto libre de este equipo. Sigue
-  // siendo editable: es una propuesta, no una imposición.
-  const [puertoLocal, setPuertoLocal] = useState(() => proximoPuertoLibre(enlaces))
-  const [puertoRemoto, setPuertoRemoto] = useState('')
-  const [medio, setMedio] = useState('UTP')
-  const [guardando, setGuardando] = useState(false)
-
-  // Hallazgo N5: prioriza equipos de la misma ubicación o de categoría
-  // de red, y pre-sugiere sin necesidad de teclear cuando alguno aplica.
-  const idsRed = useMemo(() => idsDeRed(categorias), [categorias])
-  const coincidencias = useMemo(
-    () => candidatosConexion(todos ?? [], busqueda, equipo, idsRed),
-    [todos, busqueda, equipo, idsRed],
-  )
-
-  // Hallazgo N3: si este equipo todavía no tiene ubicación y el otro
-  // extremo sí, se ofrece copiarla (nunca se pisa una ya cargada).
-  const [heredandoUbicacion, setHeredandoUbicacion] = useState(false)
-  const sugerenciaUbicacion = useMemo(
-    () => (otro ? ubicacionHeredable(equipo, otro) : null),
-    [equipo, otro],
-  )
-  async function heredarUbicacion() {
-    if (!sugerenciaUbicacion) return
-    setHeredandoUbicacion(true)
-    await guardarRegistro('dispositivos', { ...equipo, ...sugerenciaUbicacion })
-    setHeredandoUbicacion(false)
-  }
-
-  const tipoActual = TIPOS_CONEXION.find((t) => t.valor === modo)
-  const esEnlace = modo === 'enlace' || modo === 'recibeDe'
-
-  async function guardar() {
-    if (!otro || guardando) return
-    setGuardando(true)
-
-    const { tipo, origenEsteDispositivo, conPuertos } = datosSegunModo(modo)
-    const origen = origenEsteDispositivo ? equipo : otro
-    const destino = origenEsteDispositivo ? otro : equipo
-    // Los campos del formulario son siempre "puerto aquí" y "puerto en
-    // el otro"; segun el sentido (N1), eso mapea a origen o a destino.
-    const puertoEnOrigen = origenEsteDispositivo ? puertoLocal : puertoRemoto
-    const puertoEnDestino = origenEsteDispositivo ? puertoRemoto : puertoLocal
-
-    await guardarRegistro('conexiones', {
-      id: nuevoId(),
-      tipo,
-      origenId: origen.id,
-      origenNombre: origen.nombre,
-      origenPuerto: conPuertos ? puertoEnOrigen.trim() : '',
-      destinoId: destino.id,
-      destinoNombre: destino.nombre,
-      destinoPuerto: conPuertos ? puertoEnDestino.trim() : '',
-      medio: conPuertos ? medio.trim() : '',
-      notas: '',
-    })
-
-    onCerrar()
-  }
-
-  const claseChip = (activo: boolean) =>
-    `inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-medium ${
-      activo
-        ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
-        : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
-    }`
-
-  const claseCampo = `${CLASE_CAMPO_SOBRE_SUPERFICIE} min-h-11`
-
-  return (
-    <div className="mb-3 flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-surface p-3">
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[12px] text-noct-neutral-500">Tipo de relación</span>
-        <div className="flex flex-wrap gap-1.5">
-          {TIPOS_CONEXION.map((t) => (
-            <button
-              key={t.valor}
-              type="button"
-              onClick={() => setModo(t.valor)}
-              aria-pressed={t.valor === modo}
-              className={claseChip(t.valor === modo)}
-            >
-              {t.nombre}
-            </button>
-          ))}
-        </div>
-        <p className="text-[11.5px] leading-normal text-noct-neutral-600">{tipoActual?.ayuda}</p>
-      </div>
-
-      {otro ? (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/[.08] px-3 py-2.5">
-          <span className="inline-flex min-w-0 items-center gap-2 text-[13.5px] text-noct-text">
-            <Monitor size={15} className="shrink-0 text-noct-accent-300" aria-hidden />
-            <span className="truncate">{otro.nombre}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setOtro(null)
-              setBusqueda('')
-            }}
-            className="shrink-0 p-1.5 text-[12px] text-noct-neutral-500 hover:text-noct-text"
-          >
-            Cambiar
-          </button>
-        </div>
-      ) : null}
-
-      {otro && sugerenciaUbicacion && (
-        <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
-          <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-            Este equipo no tiene ubicación. ¿Copiar &quot;{sugerenciaUbicacion.ubicacion}&quot; desde{' '}
-            {otro.nombre}?
-          </p>
-          <button
-            type="button"
-            disabled={heredandoUbicacion}
-            onClick={heredarUbicacion}
-            className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline disabled:opacity-50"
-          >
-            {heredandoUbicacion ? 'Copiando...' : 'Copiar ubicación'}
-          </button>
-        </div>
-      )}
-
-      {!otro && (
-        <div className="flex flex-col gap-1.5">
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar el otro equipo por nombre, ubicación o IP"
-            className={`${claseCampo} [&::-webkit-search-cancel-button]:hidden`}
-          />
-          {coincidencias.length > 0 && (
-            <div className="flex flex-col gap-1">
-              {!busqueda.trim() && (
-                <p className="text-[11.5px] text-noct-neutral-500">
-                  Sugeridos por ubicación o tipo de red
-                </p>
-              )}
-              {coincidencias.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => {
-                    setOtro(d)
-                    setBusqueda('')
-                  }}
-                  className="flex min-h-11 items-center gap-2.5 rounded-md border border-noct-divider bg-noct-surface px-2.5 text-left text-noct-text hover:border-noct-accent"
-                >
-                  <Monitor size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-[13px]">{d.nombre}</span>
-                  {d.ip && <span className="font-mono text-[11px] text-noct-neutral-600">{d.ip}</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {esEnlace && (
-        <>
-          <div className="flex gap-2.5">
-            <label className="flex flex-1 flex-col gap-1.5">
-              <span className="text-[12px] text-noct-neutral-500">Puerto aquí</span>
-              <input
-                type="text"
-                value={puertoLocal}
-                onChange={(e) => setPuertoLocal(e.target.value)}
-                placeholder="3"
-                className={`${claseCampo} font-mono`}
-              />
-            </label>
-            <label className="flex flex-1 flex-col gap-1.5">
-              <span className="text-[12px] text-noct-neutral-500">Puerto en el otro</span>
-              <input
-                type="text"
-                value={puertoRemoto}
-                onChange={(e) => setPuertoRemoto(e.target.value)}
-                placeholder="Opcional"
-                className={`${claseCampo} font-mono`}
-              />
-            </label>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[12px] text-noct-neutral-500">Medio</span>
-            <div className="flex flex-wrap gap-1.5">
-              {MEDIOS_SUGERIDOS.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMedio(m)}
-                  aria-pressed={medio === m}
-                  className={claseChip(medio === m)}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => void guardar()}
-          disabled={!otro || guardando}
-          className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-55`}
-        >
-          {guardando ? 'Guardando...' : 'Guardar conexión'}
-        </button>
-        <button type="button" onClick={onCerrar} className={`${BTN_GHOST} min-h-11 px-3`}>
-          Cancelar
-        </button>
-      </div>
-    </div>
   )
 }
 

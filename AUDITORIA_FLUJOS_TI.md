@@ -62,18 +62,18 @@ Lo más cercano es Duplicar (`?copiarDe`, `src/features/dispositivos/Dispositivo
 
 ### C. Incorporación / alta de un dispositivo (flujo estrella)
 
-**O1 - Alta fragmentada: no hay asistente de incorporación. [ALTA] [NUEVO, refuerza tarea 62]**
+**O1 - Alta fragmentada: no hay asistente de incorporación. [ALTA] [NUEVO, refuerza tarea 62] [RESUELTO en la tarea 135, 2026-07-22]**
 El editor de dispositivo (`DispositivoForm.tsx`) solo captura identidad, ubicación e IP; guarda y navega a la ficha (`:232`). Todo lo demás (seguridad, conexiones, procedimientos) se hace después, en la ficha, cada elemento de a uno y en secciones distintas. No existe una vista que guíe "identidad, ubicación, red, seguridad, procedimientos" ni que muestre el progreso.
 - Clics que se pueden eliminar: documentar un equipo nuevo completo cruza 4 contextos (form, Seguridad, Conexiones, editor de artículo) con re-desplazamientos constantes.
 - UX: un asistente por pasos (stepper) o, sin rediseñar, un bloque post-guardado "¿Qué sigue?" que use el motor de completitud que YA existe (`src/features/dispositivos/completitud.ts`) para enlazar directo a cada sub-tarea pendiente (falta foto, falta seguridad, sin conexiones).
 - Impacto: convierte una incorporación de "recordar hacer 6 cosas en 4 pantallas" en una lista guiada.
 
-**O2 - No se puede cablear durante el alta; cada conexión es un ciclo abrir/cerrar. [ALTA] [NUEVO]**
+**O2 - No se puede cablear durante el alta; cada conexión es un ciclo abrir/cerrar. [ALTA] [NUEVO] [RESUELTO en la tarea 135, 2026-07-22]**
 El formulario de conexión colapsa al guardar (`src/features/red/ConexionesFicha.tsx:234`), obligando a re-abrir (`:120`) y re-elegir el tipo (que vuelve a `enlace`, `:190`) para la siguiente. Medido: crear un punto de red y cablearlo a switch + rack + AP son ~20 clics y 3 aperturas de formulario, todo obligatoriamente después de guardar el equipo.
 - Clics: botón "Guardar y agregar otra" que conserve el formulario abierto y recuerde el último tipo y medio.
 - Automatizar: bloque opcional "¿A qué se conecta?" dentro del propio alta que cree las conexiones en el mismo guardado.
 
-**O3 - No se puede crear el equipo del otro extremo desde el formulario de conexión. [ALTA] [NUEVO]**
+**O3 - No se puede crear el equipo del otro extremo desde el formulario de conexión. [ALTA] [NUEVO] [RESUELTO en la tarea 135, 2026-07-22]**
 `coincidencias` solo lista dispositivos que ya existen (`ConexionesFicha.tsx:199-205`). Si el switch no está dado de alta, el flujo se corta: hay que abandonar, crearlo como ficha completa y volver.
 - Automatizar: opción "Crear equipo nuevo con este nombre" inline que cree la ficha mínima (nombre + categoría de red heredada) y la conecte en el mismo gesto.
 
@@ -160,7 +160,7 @@ Al crear un artículo se avisan similares (`ArticuloForm.tsx:210-213,528-556`); 
 
 ### G. Deuda técnica, rendimiento y duplicación de código
 
-**D1 - Dos implementaciones casi idénticas de `FormularioConexion`, ya divergidas. [MEDIA] [NUEVO]**
+**D1 - Dos implementaciones casi idénticas de `FormularioConexion`, ya divergidas. [MEDIA] [NUEVO] [RESUELTO en la tarea 156, 2026-07-23]**
 `ConexionesFicha.tsx:177-375` y `TopologiaEquipoPage.tsx:456-645` comparten lógica de guardado y de coincidencias, con distinto chrome, y ya divergieron: el medio por defecto arranca vacío en la ficha (`ConexionesFicha.tsx:195`) y en UTP en la topología (`TopologiaEquipoPage.tsx:468`), cuando `MEDIOS_SUGERIDOS[0]` ya es UTP.
 - Arquitectura: extraer un `<FormularioConexion>` compartido (encaja en el tema "piezas compartidas" de la Fase 1 de `PROPUESTA_REVISION_ARQUITECTURA.md`, que menciona `FilaDispositivo`/`esDeRed()` pero no este formulario). Unificar el default de medio en UTP.
 
@@ -280,9 +280,9 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | T1 | Falta entidad Persona/Responsable | Alta | Alta | Migración de "usuario asignado" | Nuevo |
 | L1 | "Dar de baja" sin cascada (huérfanos) | Alta | Media | Archivar de más | Nuevo |
 | L2 | "Reemplazar" no existe; Duplicar pierde todo | Alta | Media-Alta | Herencia parcial | Nuevo |
-| O1 | Alta fragmentada, sin asistente | Alta | Media-Alta | Rediseño de flujo | Nuevo |
-| O2 | Cableado de a uno, sin durante el alta | Alta | Media | Bajo | Nuevo |
-| O3 | No crear el otro extremo en conexión | Alta | Media | Bajo | Nuevo |
+| O1 | Alta fragmentada, sin asistente | Alta | Media-Alta | Rediseño de flujo | RESUELTO (tarea 135) |
+| O2 | Cableado de a uno, sin durante el alta | Alta | Media | Bajo | RESUELTO (tarea 135) |
+| O3 | No crear el otro extremo en conexión | Alta | Media | Bajo | RESUELTO (tarea 135) |
 | N1 | Trampa de dirección invierte topología | Alta | Baja-Media | Datos mal modelados | Nuevo |
 | S1 | Rotar no resetea vencimiento | Alta | Baja | Ocultar rotación no hecha | Nuevo |
 | K1 | Pérdida silenciosa de metadata sin pasos | Alta | Baja | Corrige defecto activo | Nuevo |
@@ -299,7 +299,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | K3 | Completitud no depende del tipo | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | K4 | Diagnóstico no hereda categoría | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | K5 | Anti-duplicados asimétrico | Media | Baja | Bajo | RESUELTO (tarea 141) |
-| D1 | `FormularioConexion` duplicado y divergido | Media | Baja | Bajo | Nuevo |
+| D1 | `FormularioConexion` duplicado y divergido | Media | Baja | Bajo | RESUELTO (tarea 156) |
 | D2 | Búsquedas de subcadena vs índice global | Media | Media | Bajo | Parcial |
 | N3 | Punto de red no hereda ubicación | Baja | Baja | Bajo | RESUELTO (tarea 155) |
 | N4 | Sin puerto consecutivo sugerido | Baja | Baja | Bajo | RESUELTO (tarea 154) |
@@ -320,7 +320,7 @@ Hoja de ruta propuesta por fases (agrupando por afinidad técnica, no solo por p
 - **Fase de corrección (rápida, alto impacto, bajo riesgo):** K1 (pérdida de metadata), S1 (rotar no resetea vencimiento), N1 (dirección de topología). Son defectos que hacen perder datos, mentir avisos o corromper la topología; se corrigen con poco código y conviene hacerlos antes de escalar el uso.
 - **Fase persona (estructural, el mayor salto de valor):** T1 (entidad Persona/Responsable) con su migración asistida, reutilizando el patrón exacto de `ubicaciones`. Habilita el inventario por persona y el alta/baja de empleados.
 - **Fase ciclo de vida:** L1 (baja con cascada), L2 (reemplazo con herencia), L3 (relación de sustitución) y T2 (garantía/compra), apoyados en el grafo de referencias inversas y el patrón de migración asistida.
-- **Fase incorporación y cableado:** O1 (asistente/checklist post-alta apoyado en el motor de completitud existente), O2, O3 pendientes; N2, N3, N4, N5 RESUELTOS (tareas 152 a 155, 2026-07-23), sin la unificación D1 (sigue pendiente).
+- **Fase incorporación y cableado:** grupo COMPLETO. O1, O2, O3 (tarea 135, 2026-07-22); N2, N3, N4, N5 y la unificación D1 (tareas 152 a 156, 2026-07-23).
 - **Fase conocimiento:** K2 a K6 RESUELTOS (tareas 140, 141 y 142, 2026-07-22). Grupo completo. Reciclaba el conocimiento del equipo sin re-teclear.
 - **Fase secretos:** S2 a S6 RESUELTOS (tareas 147 a 151, 2026-07-23). Grupo completo junto con S1 (tarea 131): todo el flujo 4 (secretos y bóveda) queda sin hallazgos pendientes.
 - **Fase deuda técnica (oportunista):** D2, D3, D4, cuando se toquen esas pantallas por otra razón.

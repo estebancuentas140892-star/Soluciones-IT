@@ -1,5 +1,20 @@
 # Historial de tareas finalizadas
 
+### 156. `<FormularioConexion>` compartido entre ficha y topología (hallazgo D1)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1602 pruebas propias en verde. **Prioridad**: MEDIA (refactor, sin comportamiento visible nuevo salvo el default de medio). Cierra el grupo completo de la "Fase incorporación y cableado" de la auditoría (O1-O3 de la tarea 135, más N2 a N5 y D1 de hoy). **Sin verificar en navegador**: mismo límite que las tareas 150 a 155 (falta una cuenta de técnico real para iniciar sesión); se verificó por HTTP que la app arranca sin errores de consola y por el build que el nuevo chunk `FormularioConexion` se generó y ambas pantallas bajaron de peso.
+
+**Qué resolvía**: `ConexionesFicha.tsx` y `TopologiaEquipoPage.tsx` tenían cada una su propia copia casi idéntica de `FormularioConexion` (estado, `guardar`, `coincidencias`, sugerencia de puerto y de ubicación), ya divergidas: el medio por defecto arrancaba vacío en la ficha y en `'UTP'` en la topología, pese a que `MEDIOS_SUGERIDOS[0]` ya es `'UTP'`. Cualquier corrección futura (como las de N3/N4/N5 de hoy mismo) había que aplicarla dos veces.
+
+**Cambios**:
+- `src/features/red/FormularioConexion.tsx` (nuevo, ~550 líneas): componente único con TODO el estado y la lógica de guardado, parametrizado por `variante: 'ficha' | 'topologia'` que solo controla el "chrome" visual que cada pantalla ya tenía antes de esta tarea (selector `<select>` + datalist vs chips para tipo de relación y medio; encabezado propio con "Cancelar" vs footer con botón "Cancelar" aparte; "Guardar y agregar otra" solo en `ficha`, que es la que ya la tenía).
+- `src/features/red/ConexionesFicha.tsx`: perdió su copia local de `FormularioConexion` (555 → 167 líneas); ahora importa el componente compartido con `variante="ficha"`.
+- `src/features/red/TopologiaEquipoPage.tsx`: mismo cambio, `variante="topologia"`; también perdió su copia local (y `TIPOS_CONEXION`, que se movió al archivo compartido).
+- El default de `medio` quedó unificado en `MEDIOS_SUGERIDOS[0]` (`'UTP'`) en las dos pantallas, el pedido explícito del hallazgo.
+- Efecto en el bundle (verificado con `npm run build`): `DispositivoPage` bajó de 44.84 kB a 39.14 kB y `TopologiaEquipoPage` de 15.74 kB a 10.74 kB; el código antes duplicado ahora vive en un chunk propio `FormularioConexion` de 11.05 kB, cargado por ambas rutas.
+
+**Decisión de alcance**: NO se llevó paridad de funciones entre variantes más allá de lo que ya compartían. La alta rápida de equipo inline (hallazgo O3, tarea 135) y el campo "Notas" siguen existiendo solo en la variante `ficha`, que es la que ya los tenía; no se los agregó a `topologia` porque el hallazgo D1 pedía desduplicar la lógica y unificar el default de medio, no expandir capacidades de una pantalla a la otra (eso sería una tarea aparte, con su propio análisis de si conviene).
+
 ### 155. El punto de red hereda la ubicación de su rack/switch (hallazgo N3)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1602 pruebas propias en verde. **Prioridad**: BAJA. Con esta se cierran los cuatro hallazgos de red pendientes del día (N2, N3, N4, N5, tareas 152 a 155). **Sin verificar en navegador**: mismo límite que las tareas 150 a 154 (falta una cuenta de técnico real para iniciar sesión).
