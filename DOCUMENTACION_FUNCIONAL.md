@@ -1,0 +1,1075 @@
+# Documentación funcional de Soluciones IT
+
+Inventario completo y estructurado de todo lo que existe dentro de la aplicación: cada pantalla, menú, formulario, modal, pestaña, botón, campo, acción, relación y flujo. El objetivo es que cualquier desarrollador entienda la estructura completa leyendo únicamente este documento.
+
+> Este documento describe el "qué" y el "cómo se usa" (funcional). El "por qué" técnico y las decisiones de arquitectura viven en [ARQUITECTURA.md](ARQUITECTURA.md); el trabajo pendiente en [TAREAS.md](TAREAS.md).
+
+Fecha de redacción: 2026-07-23. Basado en una lectura directa del código en `src/`.
+
+---
+
+## Índice
+
+1. [Visión general](#1-vision-general)
+2. [Cómo está construida la app (stack, shells, temas, navegación)](#2-como-esta-construida)
+3. [Mapa completo de rutas](#3-mapa-completo-de-rutas)
+4. [Modelo de datos (tablas)](#4-modelo-de-datos)
+5. [Secciones del menú principal](#5-secciones-del-menu-principal)
+   - 5.1 [Inicio](#51-inicio)
+   - 5.2 [Soluciones](#52-soluciones)
+   - 5.3 [Dispositivos](#53-dispositivos)
+   - 5.4 [Red](#54-red)
+   - 5.5 [Bóveda](#55-boveda)
+6. [Secciones secundarias](#6-secciones-secundarias)
+   - 6.1 [Diagnóstico Inteligente](#61-diagnostico-inteligente)
+   - 6.2 [Escáner](#62-escaner)
+   - 6.3 [Ubicaciones](#63-ubicaciones)
+   - 6.4 [Personas](#64-personas)
+   - 6.5 [Ficha de categoría](#65-ficha-de-categoria)
+   - 6.6 [Mi cuenta y Seguridad de la aplicación](#66-mi-cuenta-y-seguridad)
+   - 6.7 [Etiquetas QR e Importación](#67-etiquetas-e-importacion)
+   - 6.8 [Estadísticas y Sugerencias del equipo](#68-estadisticas-y-sugerencias)
+   - 6.9 [Autenticación (login) y actualización](#69-autenticacion)
+7. [Catálogo de formularios (campo por campo)](#7-catalogo-de-formularios)
+8. [Catálogo de modales, hojas y diálogos](#8-catalogo-de-modales)
+9. [Catálogo de botones y primitivas de interfaz](#9-catalogo-de-botones)
+10. [Menús](#10-menus)
+11. [Acciones transversales](#11-acciones-transversales)
+12. [Relaciones entre secciones](#12-relaciones-entre-secciones)
+13. [Flujos funcionales completos](#13-flujos-completos)
+14. [Árbol jerárquico de navegación](#14-arbol-de-navegacion)
+15. [Verificación final (auditoría de cobertura)](#15-verificacion-final)
+16. [Hallazgos y oportunidades de mejora](#16-hallazgos)
+
+---
+
+<a id="1-vision-general"></a>
+## 1. Visión general
+
+Soluciones IT (nombre interno de marca en la interfaz: **"IT Brain"**) es una aplicación web progresiva (PWA) para un equipo de 5 técnicos de soporte y mantenimiento de TI. Sustituye a Miro como fuente de conocimiento del equipo. Funciona **offline primero**: toda la información vive en el teléfono (IndexedDB) y se consulta al instante sin internet; cuando hay conexión, sincroniza con Supabase para que los técnicos compartan siempre lo mismo.
+
+Cuatro pilares, más un motor de diagnóstico:
+
+- **Base de conocimiento** por categorías (sección Soluciones): procedimientos, manuales e incidencias.
+- **Inventario de dispositivos** (sección Dispositivos): equipos que no son de red.
+- **Infraestructura de red** (sección Red): equipos de red y topología de conexiones.
+- **Bóveda de credenciales** cifradas (sección Bóveda): usuarios, contraseñas, llaves, archivos.
+- **Diagnóstico Inteligente**: del problema a la solución mediante un árbol de preguntas.
+
+La app es de **tema oscuro únicamente** (sistema de diseño "Nocturne": fondo `#161826`, un solo color de acento `#9184d9` siempre delineado, tipografía Inter). No hay modo claro ni conmutador de tema.
+
+---
+
+<a id="2-como-esta-construida"></a>
+## 2. Cómo está construida la app
+
+### 2.1 Stack
+
+| Capa | Tecnología |
+|------|------------|
+| Interfaz | React + TypeScript + Vite |
+| Estilos | Tailwind CSS v4 (tokens `noct-*`) |
+| Navegación | React Router (`BrowserRouter`) |
+| Datos locales | Dexie (IndexedDB) |
+| Búsqueda | MiniSearch (índice en memoria) |
+| Offline | vite-plugin-pwa (service worker, `registerType: 'prompt'`) |
+| Backend | Supabase (Postgres + Auth + Storage + Realtime) |
+| Cifrado bóveda | WebCrypto (AES-256-GCM + PBKDF2) |
+| Hosting | Vercel (https://soluciones-it-psi.vercel.app) |
+
+### 2.2 Estructura de la interfaz: shells
+
+La app monta rutas dentro de dos envoltorios de autorización y luego cada pantalla usa uno de tres tipos de "shell" (contenedor visual):
+
+1. **`RequireAuth`** (`src/features/autenticacion/RequireAuth.tsx`): sin sesión activa redirige a `/login`.
+2. **`BloqueoAppGuard`** (`src/features/seguridad/BloqueoAppGuard.tsx`): envuelve TODA la zona autenticada. Si el dispositivo tiene activado el bloqueo local (patrón o contraseña), pide desbloquear antes de mostrar cualquier pantalla.
+
+Tipos de shell de las pantallas:
+
+- **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con el logotipo "IT Brain", los módulos y el perfil del usuario (enlace a Cuenta). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque. La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Soluciones, Dispositivos, Red, Bóveda y sus fichas).
+- **Shell centrado propio**: pantallas alcanzadas desde Inicio que no son pestaña (Diagnóstico, Estadísticas, Sugerencias, Cuenta, Seguridad, Ubicaciones, Personas y sus fichas/formularios). Columna centrada de 448px con cabecera pegajosa y botón "Volver".
+- **Shell a pantalla completa**: los editores (Artículo, Dispositivo, Credencial, Diagnóstico), el escáner, las etiquetas QR y la importación. Cabecera pegajosa + barra de acciones inferior fija; salen del contenedor con barra para no distraer.
+
+Las **5 pestañas** de la barra inferior/lateral (`DESTINOS_BASE` + `DESTINO_BOVEDA`):
+
+| Pestaña | Ruta | Icono | Visible para |
+|---------|------|-------|--------------|
+| Inicio | `/` | House | Todos |
+| Soluciones | `/soluciones` | BookOpen | Todos |
+| Dispositivos | `/dispositivos` | Monitor | Todos |
+| Red | `/red` | TreeStructure | Todos |
+| Bóveda | `/boveda` | Vault | Solo con permiso `puede_ver_boveda` |
+
+La Bóveda **solo aparece a quien tiene el permiso**; el resto ni sabe que existe (la barra muestra 4 o 5 pestañas según el permiso).
+
+### 2.3 Los tres lenguajes de color
+
+Conviven tres sistemas de color sobre superficies distintas (no se mezclan):
+
+- **Estado de un equipo** (`src/features/dispositivos/estados.ts` + `topologiaVisual.ts`): 🟢 operativo (verde/éxito), 🟡 en mantenimiento (ámbar/precaución), 🔴 fuera de servicio (rojo/error), ⚫ de baja (neutro), gris para cualquier texto libre.
+- **Tipo de documento** (`iconosSoluciones.ts`): tiñe el recuadro del icono de cada artículo según su tipo.
+- **Identidad de categoría** (`coloresCategoria.ts`): tiñe los chips de filtro, cabeceras de grupo, rejillas de selección y la ficha de categoría. Se deriva del `orden` de la categoría o de un override manual (`categorias.color`).
+
+### 2.4 Navegación "Volver" / "Cancelar"
+
+Fuente única: `src/lib/navegacion.ts` (`padreDe(pathname)`), con pruebas. Define el "padre lógico" (pantalla superior) de cada ruta y su etiqueta. `src/components/BotonVolver.tsx` deriva de ahí destino y texto. Es navegación "Up" declarada, no `history.back()` (hay flujos hacia adelante donde retroceder caería en el formulario recién enviado). Regla: creación y fichas de contenido suben a la pantalla-lista de su sección; edición y asistente suben a la ficha de la entidad. El filtro de la lista viaja por URL (`?categoria=<id>`, `?etiqueta=<x>`) para volver "exactamente como estaba".
+
+### 2.5 Sincronización y estado offline
+
+- Todas las lecturas/escrituras van primero a la base local (Dexie); la app nunca espera a la red.
+- Cola de cambios pendientes (outbox, tabla `cambiosPendientes`): cada edición offline se guarda y se envía al reconectar.
+- Descarga de novedades por `updated_at` (cursor `recibido_en` en las tablas inmutables).
+- Propagación en tiempo real vía Supabase Realtime (un canal `cambios-equipo`): reduce el retraso a 1-2 segundos. El evento solo dispara una descarga; la descarga respeta RLS por consulta.
+- Conflictos: gana la última escritura, pero el historial conserva ambos cambios y el panel de sincronización avisa qué ficha se sobrescribió.
+- La **pastilla de sincronización** (cabecera de Inicio) resume el estado con cuatro variantes: "Al día" (neutro), "Sincronizando" (precaución), "Con error" (rojo) y "Sin conexión" (precaución). Tocarla fuerza una sincronización y abre el **Panel de sincronización** (ver sección 8).
+
+---
+
+<a id="3-mapa-completo-de-rutas"></a>
+## 3. Mapa completo de rutas
+
+Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.lazy`).
+
+| Ruta | Pantalla / Componente | Shell | Descripción |
+|------|-----------------------|-------|-------------|
+| `/login` | LoginPage | Propio centrado | Inicio de sesión (fuera de RequireAuth) |
+| `/` (index) | InicioPage | ShellNocturne | Pantalla principal + buscador global |
+| `/cuenta` | CuentaPage | Centrado | Mi cuenta (cambiar contraseña, cerrar sesión) |
+| `/cuenta/seguridad` | SeguridadPage | Centrado | Bloqueo de la app (patrón/contraseña) |
+| `/soluciones` | SolucionesPage | ShellNocturne | Lista de artículos, chips de categoría, buscador |
+| `/soluciones/:categoriaId` | CategoriaPage | ShellNocturne | Ficha 360° de una categoría |
+| `/soluciones/:categoriaId/nuevo` | ArticuloForm | Pantalla completa | Crear artículo (editor con 4 pestañas) |
+| `/soluciones/:categoriaId/:articuloId` | ArticuloPage | ShellNocturne | Ficha de un artículo/procedimiento |
+| `/soluciones/:categoriaId/:articuloId/editar` | ArticuloForm | Pantalla completa | Editar artículo |
+| `/soluciones/:categoriaId/:articuloId/ejecutar` | AsistentePage | Pantalla completa | Modo asistente (un paso a la vez) |
+| `/dispositivos` | DispositivosPage | ShellNocturne | Inventario general |
+| `/dispositivos/nuevo` | DispositivoForm | Pantalla completa | Crear equipo (soporta `?copiarDe`, `?reemplazaA`, `?red=1`) |
+| `/dispositivos/:dispositivoId` | DispositivoPage | ShellNocturne | Ficha 360° de un equipo |
+| `/dispositivos/:dispositivoId/editar` | DispositivoForm | Pantalla completa | Editar equipo |
+| `/dispositivos/:dispositivoId/baja` | DarDeBajaPage | Pantalla completa | Dar de baja con cascada |
+| `/dispositivos/:dispositivoId/reemplazo` | ReemplazoPage | Pantalla completa | Migrar dependencias al reemplazar |
+| `/dispositivos/etiquetas` | EtiquetasPage | Pantalla completa | Etiquetas QR imprimibles |
+| `/dispositivos/importar` | ImportarDispositivosPage | Pantalla completa | Importación masiva Excel/CSV (3 pasos) |
+| `/ubicaciones` | UbicacionesPage | Centrado | Lista de ubicaciones (árbol) |
+| `/ubicaciones/nueva` | UbicacionForm | Centrado | Crear ubicación |
+| `/ubicaciones/migrar` | MigracionUbicaciones | Centrado | Convertir textos en ubicaciones |
+| `/ubicaciones/:ubicacionId` | UbicacionPage | Centrado | Ficha 360° de una ubicación |
+| `/ubicaciones/:ubicacionId/editar` | UbicacionForm | Centrado | Editar ubicación |
+| `/personas` | PersonasPage | Centrado | Lista de personas/responsables |
+| `/personas/nueva` | PersonaForm | Centrado | Crear persona |
+| `/personas/migrar` | MigracionPersonas | Centrado | Convertir textos en personas |
+| `/personas/:personaId` | PersonaPage | Centrado | Ficha 360° de una persona |
+| `/personas/:personaId/editar` | PersonaForm | Centrado | Editar persona |
+| `/red` | RedPage | ShellNocturne | Inventario de red por ubicación |
+| `/red/topologia` | TopologiaPage | ShellNocturne | Mapa/bosque de toda la red |
+| `/red/topologia/:dispositivoId` | TopologiaEquipoPage | ShellNocturne | Topología centrada en un equipo |
+| `/boveda` | BovedaGuard > BovedaPage | ShellNocturne | Lista de secretos (tras desbloqueo) |
+| `/boveda/nueva` | CredencialForm | Pantalla completa | Crear secreto |
+| `/boveda/migrar` | MigracionCredenciales | Pantalla completa | Migrar secretos que son de un equipo |
+| `/boveda/:credencialId` | CredencialPage | ShellNocturne | Ficha de un secreto (descifrado local) |
+| `/boveda/:credencialId/editar` | CredencialForm | Pantalla completa | Editar secreto |
+| `/diagnostico` | DiagnosticosPage | Centrado | Lista de problemas por categoría |
+| `/diagnostico/nuevo` | DiagnosticoForm | Pantalla completa | Crear diagnóstico (árbol de preguntas) |
+| `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Pantalla completa | Asistente de ejecución del diagnóstico |
+| `/diagnostico/:diagnosticoId/editar` | DiagnosticoForm | Pantalla completa | Editar diagnóstico |
+| `/diagnostico/estadisticas` | EstadisticasPage | Centrado | Tablero de estadísticas |
+| `/diagnostico/sugerencias` | SugerenciasEquipoPage | Centrado | Sugerencias del equipo (borrador de artículos) |
+| `/escaner` | EscanerPage | Pantalla completa | Escaneo de QR y códigos de barras |
+| `/notas/*` | (redirección) | - | Redirige a `/boveda` (nombre antiguo) |
+
+---
+
+<a id="4-modelo-de-datos"></a>
+## 4. Modelo de datos (tablas)
+
+Resumen de las entidades que la app maneja. Detalle completo de columnas y decisiones en [ARQUITECTURA.md](ARQUITECTURA.md) sección 5. Las tablas sincronizadas viven tanto en Dexie (local) como en Supabase (remoto). Algunas tablas son **solo locales** (no sincronizan): `recientes`, `favoritos`, `progresoPasos`, `progresoDiagnostico`, `seguridadApp`, `cambiosPendientes`, `archivosPendientes`.
+
+| Tabla | Rol | ¿Sincroniza? |
+|-------|-----|--------------|
+| `categorias` | Categorías de conocimiento y de dispositivos (bandera `es_red`, color) | Sí |
+| `articulos` | Procedimientos, manuales, incidencias (JSON `procedimiento`) | Sí |
+| `dispositivos` | Inventario de equipos (generales y de red) | Sí |
+| `conexiones` | Enlaces entre equipos (enlace, instalación, relacionado) | Sí |
+| `ubicaciones` | Lugares físicos con jerarquía opcional | Sí |
+| `personas` | Responsables de equipos | Sí |
+| `credenciales` | Secretos de la bóveda (cifrados) | Sí |
+| `campos_protegidos` | Datos sensibles propios de un equipo (cifrados) | Sí |
+| `diagnosticos` | Árboles de preguntas del diagnóstico | Sí |
+| `ejecuciones_diagnostico` | Registro inmutable de cada diagnóstico ejecutado | Sí |
+| `accesos_boveda` | Auditoría inmutable de la bóveda | Sí |
+| `historial` | Registro inmutable de cambios de todas las entidades | Sí |
+| `adjuntos` | Referencias a archivos en Storage | Sí |
+| `perfiles` | Datos de cada usuario (nombre, permiso de bóveda) | Sí |
+| `boveda_meta` | Verificador de la contraseña maestra | Sí |
+| `recientes` | Últimas fichas consultadas (personal) | No |
+| `favoritos` | Fichas fijadas con la estrella (personal) | No |
+| `progresoPasos` | Avance local de cada procedimiento | No |
+| `progresoDiagnostico` | Sesión de diagnóstico en curso | No |
+| `seguridadApp` | Verificador del bloqueo de la app | No |
+| `cambiosPendientes` | Cola de subida (outbox) | No |
+| `archivosPendientes` | Cola de subida de archivos offline | No |
+
+Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
+
+---
+
+<a id="5-secciones-del-menu-principal"></a>
+## 5. Secciones del menú principal
+
+<a id="51-inicio"></a>
+### 5.1 Inicio
+
+**Ruta:** `/` · **Archivo:** `src/features/inicio/InicioPage.tsx` · **Shell:** ShellNocturne
+
+**Objetivo.** Punto único de entrada al conocimiento del equipo. La pantalla principal ES el buscador global (el pilar de la app): abrir y buscar toma dos toques. Cuando no se busca, muestra atajos de trabajo y bloques derivados de la actividad reciente.
+
+**Cabecera fija (con desenfoque).**
+- Título "IT Brain" y saludo dinámico según la hora ("Buenos días/tardes/noches. Todo el conocimiento del equipo, al instante").
+- **Pastilla de sincronización** (botón `PastillaSync`): muestra el estado (Al día / Sincronizando / Con error / Sin conexión) con icono, etiqueta y color. Al pulsarla fuerza una sincronización y abre el Panel de sincronización.
+- **Botón "Mi cuenta"** (icono User, solo móvil `lg:hidden`): único acceso a Cuenta/Seguridad/Cerrar sesión desde el teléfono. En escritorio ese acceso vive en la barra lateral.
+- **Buscador global** (input `type="search"`): placeholder "Buscar en todo: artículos, equipos, bóveda". Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
+
+**Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Soluciones** (diagnósticos, categorías, artículos, adjuntos), **Dispositivos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas**. Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
+
+**Modo inicio (sin texto), bloques en orden:**
+1. **"Continuar donde quedaste"** (si aplica): tarjeta destacada con el procedimiento a medias más reciente, barra de progreso y "Paso N de M". Enlaza a su ficha.
+2. **Atajos rápidos** (rejilla de 2): "Diagnóstico inteligente" (→ `/diagnostico`) y "Escanear equipo" (→ `/escaner`).
+3. **"Problemas frecuentes"** (si hay): los diagnósticos más ejecutados (o los más recientes si no hay volumen), colapsado a 4 filas, con contador de veces y enlace "Estadísticas" (→ `/diagnostico/estadisticas`).
+4. **"Pendientes"** (si hay): bloque derivado con mis borradores, credenciales/campos protegidos por vencer o vencidos (solo con permiso de bóveda) y sugerencias del equipo sin revisar. Cada fila lleva a su destino.
+5. **"Favoritos"** (si hay): lista estable que el técnico arma con la estrella de cada ficha. Personal por dispositivo.
+6. **"Recientes"**: últimas fichas consultadas (se desplaza con el uso). Estado vacío informativo.
+7. **"Para empezar"** (si hay): ruta de aprendizaje con los artículos marcados como ruta de inicio, numerados y ordenados por `orden_ruta_inicio`. En escritorio, Recientes y Para empezar se reparten en dos columnas.
+8. **"Actividad del equipo"** (si hay): feed COMPARTIDO (a diferencia de Favoritos/Recientes que son personales) con las últimas ediciones y ejecuciones de diagnóstico ("Ana editó X (3 cambios)", "Ana ejecutó el diagnóstico X (Resuelto)"), colapsado a 5 renglones.
+9. **Botón "Descargar todo para offline"** (`DescargarOffline`): deja el contenido de adjuntos en el teléfono antes de salir a un mantenimiento, con progreso.
+
+**Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Soluciones, Dispositivos, Bóveda, Ubicaciones y Personas; los bloques enlazan a diagnósticos, artículos, credenciales, fichas de equipo, la pantalla de estadísticas y las sugerencias del equipo.
+
+---
+
+<a id="52-soluciones"></a>
+### 5.2 Soluciones
+
+**Ruta:** `/soluciones` · **Archivo:** `src/features/soluciones/SolucionesPage.tsx` · **Shell:** ShellNocturne
+
+**Objetivo.** Responder "¿cómo realizo este procedimiento?". Rejilla de artículos (procedimientos, manuales, incidencias) filtrable por categoría, tipo y etiqueta.
+
+**Cabecera fija:**
+- Título "Soluciones".
+- **Botón "Crear"**: habilitado solo cuando hay una categoría seleccionada (un artículo siempre nace dentro de una categoría). Sin categoría aparece deshabilitado con tooltip "Elige una categoría para crear el artículo dentro de ella". Abre `/soluciones/:categoriaId/nuevo`.
+- **Buscador** (`type="search"`): placeholder "Buscar procedimiento, categoría o etiqueta". Busca por título, categoría, tipo y etiquetas (normalizado sin acentos).
+- **Chips de categoría** (deslizables en móvil; en escritorio `xl`, rail lateral fijo de 220px): "Todos" + una por categoría, cada uno con su color de identidad, icono y conteo.
+- **Subfiltros por tipo**: dentro de una categoría aparecen chips por tipo presente (instalación, configuración, conexión, problema frecuente, mantenimiento, manual).
+
+**Cuerpo (lista):**
+- Al **buscar**: resultados agrupados por categoría (encabezado con icono, nombre y conteo), término resaltado.
+- Al **navegar**: lista plana (o rejilla en escritorio: `@lg` 2 columnas, `@4xl` 3). Cada fila muestra icono de tipo coloreado (o miniatura de portada), título, etiqueta de tipo, tiempo estimado (si tiene) y una pastilla "Borrador"/"Obsoleto" si aplica.
+- **Filtro por etiqueta** (banner "Etiqueta: X · Ver todos"): se activa al tocar una etiqueta en la ficha de un artículo (`?etiqueta=<x>`). Ignora categoría y tipo mientras esté activo.
+- Estados vacíos: "Aún no hay artículos" (primera vez) o "Sin coincidencias" con botón "Limpiar búsqueda".
+
+**Acciones:** buscar, filtrar por categoría/tipo/etiqueta, crear artículo, abrir un artículo, abrir una categoría (desde el buscador global, no desde esta lista).
+
+**Interacción.** Cada artículo abre su ficha; las categorías son un filtro (la ficha de categoría se alcanza desde el buscador global y desde la ficha de un dispositivo). Las fichas de dispositivos enlazan a los procedimientos de su categoría y viceversa.
+
+#### 5.2.1 Ficha de artículo (`ArticuloPage`)
+
+**Ruta:** `/soluciones/:categoriaId/:articuloId` · **Shell:** ShellNocturne
+
+**Cabecera:** "Volver" (a la lista con el chip de la categoría), **estrella de favorito**, botón **"Ejecutar"** (solo si tiene procedimiento con pasos; abre el modo asistente), botón **"Editar"**, y menú **"···"** con: **Compartir**, **Duplicar** (`?copiarDe`), **Reiniciar progreso** (si tiene procedimiento) y **Eliminar** (eliminación sensible, pide contraseña maestra).
+
+**Cuerpo:**
+- Avisos si es **Borrador** ("No aparece en el buscador, rutas de inicio ni diagnóstico") u **Obsoleto** ("Usar el procedimiento vigente").
+- **Portada** (imagen banner, si tiene).
+- **Encabezado**: etiquetas de metadatos (categoría, dificultad, tiempo), pastilla de estado, título, descripción ("cuándo usar"), línea meta (tipo · vX.X · Actualizado el DD mmm por Autor).
+- Si es **problema_frecuente**: bloques "Síntomas", "Posibles causas" y "Dispositivos afectados" (pastillas navegables a la ficha de cada equipo).
+- **Procedimiento** (si tiene pasos): `ProcedimientoVista` (ver sección 13, flujo de ejecución) con objetivo, requisitos "Antes de empezar", barra de progreso pegajosa, stepper de pasos con tareas/avisos/imágenes/vínculos, y verificación final.
+- **Contenido en Markdown** (notas adicionales).
+- **Adjuntos** (solo en artículos sin procedimiento).
+- **"Relacionados"** y **"Aparece como relacionado en"** (inverso calculado localmente).
+- **"Referenciado por"** (`ReferenciadoPor`): qué procedimientos y diagnósticos usan este artículo como subprocedimiento, solución, decisión o ejecución.
+- **Etiquetas** tocables (llevan a `/soluciones?etiqueta=<x>`).
+- **Historial** (línea de tiempo).
+
+#### 5.2.2 Editor de artículo (`ArticuloForm`)
+
+Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un editor a pantalla completa con **cuatro pestañas** (General, Pasos, Detalles, Publicación), completitud con sugerencias, vista previa, plantillas por tipo y aviso de artículos similares.
+
+---
+
+<a id="53-dispositivos"></a>
+### 5.3 Dispositivos
+
+**Ruta:** `/dispositivos` · **Archivo:** `src/features/dispositivos/DispositivosPage.tsx` · **Shell:** ShellNocturne
+
+**Objetivo.** Responder "¿qué se sabe de cada equipo?" con el inventario **general** (los equipos de categorías de red van en la sección Red, no aquí).
+
+**Cabecera fija:**
+- Título "Dispositivos" y subtítulo "Qué se sabe de cada equipo".
+- **Botón "Escanear equipo"** (icono QR, → `/escaner`).
+- **Botón "Crear"** (→ `/dispositivos/nuevo`).
+- Menú **"···"** con: **Ubicaciones** (→ `/ubicaciones`), **Personas** (→ `/personas`), **Etiquetas QR** (→ `/dispositivos/etiquetas`), **Importar** (→ `/dispositivos/importar`).
+- **Buscador** (`type="search"`): placeholder "Nombre, IP, serial o ubicación".
+- **Chips de categoría** deslizables (solo categorías generales): "Todos" + una por categoría con su conteo.
+
+**Cuerpo:**
+- **Resumen de estados** (siempre sobre el inventario completo, sin filtrar): "N equipos", "N operativos" (verde), "N en mantenimiento" (ámbar), "N fuera de servicio" (rojo).
+- **Lista de fichas** (`FilaDispositivo`): miniatura de foto (o icono), nombre, subtítulo (categoría · ubicación), indicador de estado.
+- Estados vacíos: "Ningún dispositivo coincide" (con filtros, botón "Quitar filtros") o "Aún no hay dispositivos registrados".
+
+**Acciones:** buscar, filtrar por categoría, crear, escanear, abrir ubicaciones/personas/etiquetas/importar, abrir una ficha.
+
+#### 5.3.1 Ficha de dispositivo (`DispositivoPage`)
+
+**Ruta:** `/dispositivos/:dispositivoId` · **Shell:** ShellNocturne. Vista 360°.
+
+**Cabecera:** "Volver" (a Dispositivos o a Red según `es_red` de su categoría), **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace), menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
+
+**Cuerpo:**
+- **Foto banner** (si tiene).
+- Título, línea meta (categoría · actualizado), **pastilla de estado** con punto de color.
+- **Aviso de completitud** (solo si falta algo): "Ficha al 70%. Falta: foto, serial." con enlace a Editar.
+- **Banner de migración pendiente** (si este equipo reemplaza a otro con dependencias sin migrar): enlaza a `/reemplazo`.
+- **"¿Qué sigue?"** (solo la primera vez tras crear el equipo): pasos sugeridos (agregar foto, seguridad, conexiones, documentar procedimiento) con enlaces directos.
+- **"Información"**: tarjeta de filas copiables (marca, modelo, serial, placa, IP), propiedades personalizadas (detalles clave/valor), **Ubicación** (enlace vivo a su ficha), **Responsable** (enlace vivo a la persona), **"Reemplaza a"** / **"Reemplazado por"** (enlaces), y observaciones.
+- **"Seguridad"** (`SeguridadDelEquipo`, solo con permiso de bóveda): datos protegidos propios del equipo (usuario, contraseña, PIN...). Ver sección 7.
+- **"Resolver con este equipo"**: botón "Iniciar diagnóstico" (si hay diagnóstico para su categoría), listas "Procedimientos de este equipo", "Problemas frecuentes de este equipo", "Credenciales de este equipo" (con permiso), y creación contextual: **"Reportar incidencia"**, **"Documentar procedimiento"**, **"Guardar secreto"** (con permiso), todos precargando el equipo.
+- **"Si este equipo falla"** (`ImpactoYDependencias`, si participa en conexiones): impacto de falla y dependencia ascendente.
+- **"Conexiones"** (`ConexionesFicha`): agrupadas en Instalado en / Contiene / Enlaces / Relacionados, con enlace "Ver en topología" y alta/baja de conexión.
+- **"Adjuntos"**.
+- **"Intervenciones"**: `RegistrarIntervencion` (bitácora manual) + Historial (línea de tiempo, incluye cambios de cableado).
+
+#### 5.3.2 Editor de dispositivo (`DispositivoForm`)
+
+Ver campo por campo en la sección 7. Soporta tres modos por query param: normal, **duplicar** (`?copiarDe`), **reemplazo** (`?reemplazaA`), y priorización de categorías de red (`?red=1`).
+
+---
+
+<a id="54-red"></a>
+### 5.4 Red
+
+**Ruta:** `/red` · **Archivo:** `src/features/red/RedPage.tsx` · **Shell:** ShellNocturne
+
+**Objetivo.** Responder "¿cómo está conectada la infraestructura?". Reúne los equipos de las categorías marcadas `es_red` (racks, puntos de red, switches, access points, cámaras). No duplica el inventario: son dispositivos normales con la bandera de categoría.
+
+**Cabecera:** título "Red", **botón "Crear"** (→ `/dispositivos/nuevo?red=1`, que prioriza las categorías de red en el selector), **buscador** (placeholder "Equipo de red, IP, ubicación").
+
+**Cuerpo:**
+- **Entrada destacada a "Topología de red"** (tintada en acento, → `/red/topologia`): "Recorrer las conexiones desde el rack hasta cada equipo".
+- **Equipos agrupados por ubicación** (texto libre, orden natural; los sin ubicación al final): cada grupo con encabezado (icono MapPin, nombre, conteo) y filas `FilaDispositivo`.
+- Estados vacíos análogos a Dispositivos.
+
+**La ficha de un equipo de red es la misma** `DispositivoPage` (sección 5.3.1); solo cambia el retorno ("Volver" vuelve a Red).
+
+#### 5.4.1 Topología general (`TopologiaPage`)
+
+**Ruta:** `/red/topologia` · **Shell:** ShellNocturne. Árbol/bosque expandible de toda la red. Sin raíz muestra el bosque completo (racks y switches de núcleo). Buscador propio que expande las ramas necesarias, resalta coincidencias y hace scroll a la primera. Cada nodo lleva estado (punto de color) e icono según el medio de conexión con su padre. Enlace de impacto "+N" por fila que abre la topología de ese equipo.
+
+#### 5.4.2 Topología de un equipo (`TopologiaEquipoPage`)
+
+**Ruta:** `/red/topologia/:dispositivoId` · **Shell:** ShellNocturne
+
+**Cabecera:** "Volver" (a Topología), botón **"Abrir la ficha"**, e identidad del equipo (nombre, estado con punto de color, IP).
+
+**Cuerpo:**
+- **"Depende de"**: padres directos (dónde está instalado y los enlaces que RECIBE), navegables.
+- **"Si este equipo falla"**: impacto por categoría en el tono de precaución ("También quedarían sin servicio N equipos") con chips por categoría.
+- **"Dependen de este equipo"**: árbol expandible de descendientes, filas indentadas con caret, icono por tipo, detalle de conexión y punto de estado; marca con ↺ los nodos ya vistos (cortan ciclos).
+- **"Conexiones"**: lista agrupada editable (Instalado en / Contiene / Enlaces / Relacionados) con botón **"Agregar"** que abre `FormularioConexion` (variante topología, con chips) y "X" para quitar cada conexión.
+
+---
+
+<a id="55-boveda"></a>
+### 5.5 Bóveda
+
+**Ruta:** `/boveda` · **Archivo:** `src/features/boveda/BovedaPage.tsx` (bajo `BovedaGuard`) · **Shell:** ShellNocturne
+
+Solo visible para usuarios con permiso `puede_ver_boveda`. La sección más sensible: la lista solo expone metadatos; los secretos se descifran únicamente al abrir una ficha, en el propio teléfono.
+
+**Pantalla de bloqueo (`BovedaGuard`).** Al entrar, si la bóveda está bloqueada, aparece una pantalla centrada con candado, título "Bóveda" y:
+- Si no tiene permiso: mensaje genérico de sección restringida (mínima exposición, sin revelar qué guarda).
+- Si el equipo ya definió contraseña maestra (`verificar`): campo "Contraseña maestra" y botón "Desbloquear". Nota del autobloqueo por inactividad.
+- Si aún no existe (`crear`): campo + confirmación + advertencia de que la contraseña quedará como la del equipo y es irrecuperable si se pierde.
+- Si no se puede comprobar (offline sin verificador local): mensaje y botón "Reintentar".
+
+**Lista (`BovedaPage`), cabecera:**
+- Título "Bóveda", subtítulo "Usuarios y contraseñas del equipo".
+- **Botón "Bloquear ahora"** (icono candado).
+- **Botón "Crear"**: abre la **hoja inferior "Guardar en la bóveda"** con los cinco tipos de secreto (Cuenta de sistema, Red, Llave digital, Archivo seguro, Nota segura); todos abren el mismo editor con `?tipo=`.
+- **Buscador** (placeholder "Título, categoría o equipo").
+- **Chips de categoría** (texto libre) con conteo, "Todas" incluida.
+
+**Cuerpo:**
+- **Aviso de rotación** (si hay secretos por vencer): "N secretos necesitan rotarse pronto".
+- **Aviso de migración** (si hay candidatas, sin descifrar): "N secretos parecen ser de un solo equipo. Muévelos a su ficha." (→ `/boveda/migrar`).
+- **Lista de secretos** (ordenados por urgencia de vencimiento): icono derivado de la categoría, título, detalle (categoría · N equipos con acceso), pastilla "Vencida"/"Vence pronto", y menú **"···"** por fila.
+- **Menú "···" de una fila** (hoja inferior): **Copiar usuario** y **Copiar contraseña** (sin mostrarla; descifra al momento y registra en la auditoría), **Abrir la ficha**, **Editar**, **Eliminar** (pide contraseña maestra).
+- **Autobloqueo por inactividad** (pie): chips 1/5/15/30 min.
+
+#### 5.5.1 Ficha de credencial (`CredencialPage`)
+
+**Ruta:** `/boveda/:credencialId` · **Shell:** ShellNocturne. Descifra el secreto en el propio teléfono.
+
+**Cabecera:** "Volver" (a Bóveda), **Editar**, **Eliminar** (icono, sensible).
+
+**Cuerpo:**
+- Título, línea meta (categoría · modificada el DD mmm HH:MM), **indicador de vencimiento**, y línea "Último acceso" (cada consulta queda registrada).
+- **Tarjeta de campos**: cada fila con etiqueta, valor monoespaciado, **ojo** (mostrar/ocultar los secretos; mostrar la contraseña registra en auditoría) y **copiar** (con confirmación). Incluye Usuario, Contraseña (oculta), IP heredada (con aviso), extras cifrados, y **URL** como enlace, y **Archivo seguro** (botón descargar que descifra bajo demanda).
+- **Notas**.
+- **"Da acceso a"**: equipos vinculados (nombre vivo), navegables.
+- **"Usada en"**: procedimientos que muestran esta credencial en algún paso (derivado del grafo).
+- **"Actividad"**: auditoría de la bóveda + historial de cambios en una sola línea de tiempo (consultó, mostró, copió usuario/contraseña, modificó, eliminó, descargó).
+
+#### 5.5.2 Editor de credencial (`CredencialForm`)
+
+Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qué campos aparecen; avisos anti duplicidad; vínculo con equipos; vencimiento; archivo cifrado.
+
+---
+
+<a id="6-secciones-secundarias"></a>
+## 6. Secciones secundarias
+
+<a id="61-diagnostico-inteligente"></a>
+### 6.1 Diagnóstico Inteligente
+
+**Ruta:** `/diagnostico` · **Archivo:** `src/features/diagnostico/DiagnosticosPage.tsx` · **Shell:** centrado
+
+**Objetivo.** El técnico no piensa en el nombre de un procedimiento sino en el problema ("la impresora no imprime"). Cada fila ES un problema; tocarlo abre el asistente guiado.
+
+**Lista (`DiagnosticosPage`):**
+- Cabecera: "Volver a Inicio", **botón "Crear"** (→ `/diagnostico/nuevo`, hereda categoría si se llega filtrado), título "Diagnóstico inteligente", enlaces **"Sugerencias del equipo"** y **"Estadísticas"**, y **buscador** (placeholder "Describir el problema: no imprime, sin red...").
+- Banner "Solo: {Categoría}" cuando se llega filtrado (`?categoria=<id>`), con "Ver todos".
+- **"Diagnóstico en curso"** (si hay sesión a medias): tarjeta destacada para retomar.
+- **Problemas agrupados por categoría** (icono con color, filas con icono de alerta, título, descripción, **estrella de favorito** y flecha).
+- Estados vacíos: "Todavía no hay diagnósticos" (con "Crear diagnóstico") o "Ningún problema coincide" (con "Ir a Soluciones").
+
+**Asistente de ejecución (`DiagnosticoRunPage`).** Ruta `/diagnostico/:diagnosticoId`, pantalla completa sin barra inferior. Arranca directo en la primera pregunta (auto-inicio). Cabecera con "Salir", título, botón editar y **barra de progreso** ("Pregunta N" / "Completado").
+- **Pregunta**: título grande, descripción opcional, y una lista de opciones tocables (cada una puede indicar "Ejecuta: {procedimiento}").
+- Al responder una opción que ejecuta un procedimiento: se abre `AsistenteVista` (modo asistente) inline; al completarlo, el diagnóstico continúa solo.
+- Pie: **"Volver"** (deshace la última respuesta) y **"Cancelar"** (con confirmación: "El avance se descarta y queda registrado como abandonado").
+- **Resultado final**: mensaje, "Camino recorrido", procedimientos ejecutados, y la pregunta **"¿Quedó resuelto el problema?"** con "Sí, resuelto" / "No". Si "No", pide el **motivo** (no funcionó / no encontró el problema / faltan pasos / encontré otra solución / otro) y, si es "encontré otra solución", un **texto libre** que alimenta las Sugerencias del equipo.
+
+**Editor de diagnóstico (`DiagnosticoForm`).** Ver campo por campo en la sección 7. Árbol de preguntas (nodos y opciones), botón "Probar" (recorrido en memoria), validación de ramas sueltas/ciclos/inalcanzables, aviso de vínculos rotos.
+
+<a id="62-escaner"></a>
+### 6.2 Escáner
+
+**Ruta:** `/escaner` · **Archivo:** `src/features/escaner/EscanerPage.tsx` · **Shell:** pantalla completa (cámara)
+
+**Objetivo.** Leer códigos QR (URL de la ficha) y códigos de barras (placa/serial) con la cámara trasera para abrir la ficha de un dispositivo. Usa el detector nativo (`BarcodeDetector`) o cae a jsQR.
+
+**Elementos:**
+- Cabecera: "Volver", título "Escanear equipo", botón **"Linterna"** (si el dispositivo la soporta).
+- Marco de escaneo con línea animada y texto guía.
+- Estados de fallo: sin permiso / sin cámara / no soportado, cada uno con mensaje y la alternativa de búsqueda manual.
+- **Búsqueda manual** (barra inferior): input "O escribir la placa o el serial" + botón "Buscar".
+- **Tarjetas de aviso** (reemplazan la barra al haber resultado):
+  - **"Equipo identificado"** (encontrado): nombre y ubicación, botones **"Abrir la ficha"** y **"Seguir"**.
+  - **"Varios equipos comparten este código"**: lista de opciones + "Seguir escaneando".
+  - **"Ningún equipo coincide con este código"**: muestra el código, botones "Seguir escaneando" y "Registrar equipo".
+
+<a id="63-ubicaciones"></a>
+### 6.3 Ubicaciones
+
+**Ruta:** `/ubicaciones` · **Archivo:** `src/features/ubicaciones/UbicacionesPage.tsx` · **Shell:** centrado (bajo Dispositivos)
+
+**Objetivo.** El lugar físico como entidad propia (con jerarquía opcional Sede > Área > Punto), que reemplaza el texto libre de ubicación.
+
+**Lista:** cabecera "Volver a Dispositivos", **botón "Crear"** (creación inline: nombre + chips de ubicación padre), **buscador** ("Buscar un lugar"). Aviso de migración (si hay equipos con la ubicación como texto → `/ubicaciones/migrar`). Árbol con sangría por jerarquía: icono House (raíz) o MapPin, nombre, conteo de equipos, flecha.
+
+**Ficha (`UbicacionPage`), vista 360°:** ancestros (ruta jerárquica), sub-ubicaciones, "equipos en este lugar" (inverso de `ubicacion_id`), acciones editar/crear sub-ubicación, e historial. Botones para crear sub-ubicación (`?padre=<id>`).
+
+**Formulario (`UbicacionForm`):** ver sección 7. **Migración asistida (`MigracionUbicaciones`):** convierte los textos de ubicación existentes en entidades, fusionando variantes por nombre; idempotente.
+
+<a id="64-personas"></a>
+### 6.4 Personas
+
+**Ruta:** `/personas` · **Archivo:** `src/features/personas/PersonasPage.tsx` · **Shell:** centrado (bajo Dispositivos)
+
+**Objetivo.** El responsable de un equipo como entidad propia (sin jerarquía, a diferencia de ubicaciones). Mismo patrón que Ubicaciones: lista plana con creación inline y buscador, aviso de migración, **ficha 360°** (`PersonaPage`) con los equipos asignados a esa persona e historial, **formulario** (`PersonaForm`, ver sección 7) y **migración asistida** (`MigracionPersonas`).
+
+<a id="65-ficha-de-categoria"></a>
+### 6.5 Ficha de categoría (`CategoriaPage`)
+
+**Ruta:** `/soluciones/:categoriaId` · **Shell:** ShellNocturne (bajo Soluciones)
+
+Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con el icono en su color de identidad, nombre y resumen (N artículos · N equipos · N diagnósticos), **botón "Artículo"** para crear. Cuerpo: artículos agrupados por tipo (con chip de avance X/Y en los que están a medias), "Dispositivos de esta categoría" (con estado), "Diagnósticos de esta categoría", e historial. Se alcanza desde el buscador global y desde la ficha de un dispositivo.
+
+<a id="66-mi-cuenta-y-seguridad"></a>
+### 6.6 Mi cuenta y Seguridad de la aplicación
+
+**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, shell centrado. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**.
+
+**Seguridad de la aplicación (`SeguridadPage`).** Ruta `/cuenta/seguridad`, shell centrado. Configura el **bloqueo del dispositivo** (patrón o contraseña, nunca biometría), una capa distinta de la sesión y de la contraseña maestra.
+- **Sin configurar:** invitación + selector de método (Patrón / Contraseña) + captura del secreto con confirmación.
+- **Configurado:** tarjeta "Bloqueo activo" (método), botón **"Bloquear ahora"**, selector de **Autobloqueo por inactividad**, y botones **"Cambiar"** y **"Quitar bloqueo"** (ambos piden el secreto actual).
+- El patrón se dibuja en una cuadrícula 3x3 (`PatronInput`); la contraseña, mínimo 4 caracteres.
+
+<a id="67-etiquetas-e-importacion"></a>
+### 6.7 Etiquetas QR e Importación
+
+**Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, pantalla completa. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Cabecera "Volver a Dispositivos", **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
+
+**Importación masiva (`ImportarDispositivosPage`).** Ruta `/dispositivos/importar`, pantalla completa. Flujo de **3 pasos**:
+1. **Elegir archivo** (.xlsx o .csv). Reconoce encabezados parecidos ("No. de serie" = Serial, "Sede" = Ubicación). Enlace **"Descargar plantilla CSV de ejemplo"**.
+2. **Revisar**: columnas detectadas (campo o "propiedad del equipo"), selector de categoría para filas sin ella, contadores "nuevos" / "se omiten" (por serial/placa ya registrados), lista desplegable de filas omitidas y vista previa de las primeras filas. Barra inferior: "Cancelar" / "Importar N dispositivos".
+3. **Importando / Terminado**: barra de progreso; al final "N dispositivos importados", botón "Ver dispositivos" e "Importar otro archivo". Cada equipo queda con la nota del archivo de origen en su historial.
+
+<a id="68-estadisticas-y-sugerencias"></a>
+### 6.8 Estadísticas y Sugerencias del equipo
+
+**Estadísticas de diagnóstico (`EstadisticasPage`).** Ruta `/diagnostico/estadisticas`, shell centrado. Agrega `ejecuciones_diagnostico`:
+- **Tarjetas de resumen** (rejilla de 4): Ejecuciones, Tasa de éxito (sobre las cerradas), Duración típica (cuando se resuelve), Abandonados.
+- **"Problemas más frecuentes"**: título, veces, tasa de éxito (enlace al diagnóstico si sigue vivo).
+- **"Procedimientos más usados"**: título y veces (enlace al artículo).
+- **"Por qué no queda resuelto"**: motivos de fallo con conteo, y enlace a las sugerencias del equipo.
+- Estado vacío si no hay ejecuciones.
+
+**Sugerencias del equipo (`SugerenciasEquipoPage`).** Ruta `/diagnostico/sugerencias`, shell centrado. Lista los textos libres que dejaron los técnicos cuando marcaron "Encontré otra solución". Cada tarjeta: diagnóstico de origen, fecha, texto propuesto, quién lo reportó, y **botón "Redactar artículo"** (→ editor precargado `?desdeSugerencia=<id>`) o, si ya se redactó, "Ya redactada: {título}" con enlace al artículo (cierra el bucle para no duplicar trabajo).
+
+<a id="69-autenticacion"></a>
+### 6.9 Autenticación (login) y actualización
+
+**Login (`LoginPage`).** Ruta `/login`, fuera de la zona autenticada. Título "Soluciones IT", campos **Correo** (`type="email"`) y **Contraseña**, botón "Ingresar". Aviso si Supabase no está configurado. Usa `autoComplete="off"` para que el navegador no ofrezca guardar la cuenta.
+
+**Aviso de actualización (`ActualizacionDisponible`).** Componente global. Cuando se publica una versión nueva, muestra un aviso discreto "Versión nueva disponible" con botón "Actualizar" (activa el nuevo service worker y recarga sin interrumpir un procedimiento a medias). Se comprueba al abrir y cada hora.
+
+---
+
+<a id="7-catalogo-de-formularios"></a>
+## 7. Catálogo de formularios (campo por campo)
+
+Convenciones: **Obligatorio** = validado antes de guardar. La app prioriza guardar sobre bloquear: casi todos los formularios exigen solo lo mínimo (un nombre o título) y el resto se completa después. Las primitivas de campo (`CLASE_CAMPO`, `<Campo>`, `<CampoConSugerencias>`, `<CamposClaveValor>`) viven en `src/components/campos.tsx`.
+
+### 7.1 Editor de dispositivo (`DispositivoForm`)
+
+Archivo `src/features/dispositivos/DispositivoForm.tsx`. Título dinámico "Nuevo/Editar dispositivo". El `id` se decide al montar (estable). Guarda con `guardarRegistro('dispositivos', ...)`.
+
+| Campo visible | Interno | Tipo de control | Oblig. | Defecto | Placeholder / opciones | Validaciones / notas |
+|---------------|---------|-----------------|--------|---------|------------------------|----------------------|
+| Nombre | `nombre` | Texto | **Sí** | vacío | "Qué es y dónde está: Zebra ZT411 · Bodega central" | No vacío. Alimenta buscador y QR |
+| Categoría | `categoriaId` | Chips (una selección) | **Sí** | vacío | categorías vivas; con `?red=1` las de red van primero | Debe elegirse una |
+| Marca | `marca` | Texto con sugerencias (datalist) | No | vacío | "Zebra, HP, Cisco..." | Sugiere marcas ya usadas |
+| Modelo | `modelo` | Texto | No | vacío | "ZT411" | - |
+| Foto | `foto` | Carga de imagen | No | null | slot 96x64 | Se comprime y sube al elegir; cola offline; dedup por hash. No se copia al duplicar |
+| Número de serie | `serial` | Texto monoespaciado | No | vacío | - | Aviso si ya existe en otro equipo (enlace a esa ficha) |
+| Placa de inventario | `placaInventario` | Texto monoespaciado | No | vacío | - | - |
+| Ubicación | `ubicacionId` / `ubicacion` | Selector de ubicación (buscar/crear/texto) | No | null | `SelectorUbicacion` | Elige entidad registrada, crea inline o texto libre de respaldo |
+| Responsable | `responsableId` / `responsable` | Selector de persona (buscar/crear/texto) | No | null | `SelectorPersona` | Igual que ubicación |
+| Dirección IP | `ip` | Texto (inputMode decimal) | No | vacío | "192.168.1.10" | Valida forma IPv4 (aviso, no bloquea); aviso si duplicada en otro equipo |
+| Estado | `estado` | Chips con punto de color | No | "Operativo" (nuevo) | Operativo / En mantenimiento / Fuera de servicio / De baja | Texto libre; los 4 sugeridos con color |
+| Observaciones | `observaciones` | Área de texto (plegable "Más información") | No | vacío | "Qué imprime, cada cuánto se mantiene..." | - |
+| Propiedades de {categoría} | `detalles` | Editor clave/valor (plegable) | No | {} | sugiere claves de otros equipos de la misma categoría | Pares libres; se descartan las claves vacías al guardar |
+| Motivo del cambio | `motivo` | Texto (plegable, solo edición) | No | vacío | "Por qué se actualizó esta ficha" | Va al historial |
+
+Barra inferior fija: aviso de validación + botón **"Guardar dispositivo"** (atenuado si falta nombre o categoría). En modo reemplazo, tras guardar encadena a `/reemplazo`; recién creado abre la ficha con el bloque "¿Qué sigue?".
+
+### 7.2 Editor de artículo (`ArticuloForm`)
+
+Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa con **cuatro pestañas** dentro de un contenedor pegajoso. El estado vive todo en el componente (cambiar de pestaña no pierde nada; un solo guardado). Cabecera con tipo dinámico ("Nueva instalación", "Nuevo manual"...) y pastilla de estado. Cada pestaña marca con un punto si tiene algo pendiente. Barra inferior con **completitud %** (10 señales), lista de **sugerencias** tocables (cada una lleva a su pestaña), botón **"Vista previa"** y botón **"Guardar"**.
+
+**Pestaña General** (de qué trata y cómo se encuentra):
+
+| Campo | Interno | Control | Oblig. | Defecto | Notas |
+|-------|---------|---------|--------|---------|-------|
+| Tipo de documento | `tipo` | Rejilla de 6 (una selección) | - | manual (o `?tipo=`) | instalación, configuración, conexión, problema frecuente, mantenimiento, manual |
+| Título | `titulo` | Texto | **Sí** | vacío | Aviso de artículos similares (anti duplicados); al enviar vacío salta a General y marca el campo |
+| ¿Cuándo usar este procedimiento? | `descripcion` | Área de texto | No | vacío | Se muestra bajo el título e indexa en búsqueda |
+| Objetivo general (1 línea) | `objetivoGeneral` | Texto | No | vacío | Qué se logra al completar todo |
+| Etiquetas | `etiquetas` | Editor de chips + sugerencias | No | [] | Enter/coma agregan; chips de sugerencia del vocabulario ya usado |
+| Imagen de portada | `portada` | Carga de imagen | No | null | Identifica el artículo en lista y buscador |
+| Equipos donde aplica | `dispositivosAfectados` | Selector múltiple (chips + select) | No | [] | Alimenta "Procedimientos/Problemas de este equipo" |
+
+**Pestaña Pasos** (lo que se ejecuta):
+
+| Campo | Interno | Control | Notas |
+|-------|---------|---------|-------|
+| Antes de empezar (un requisito por línea) | `requisitos` | Área de texto | Una línea = un requisito |
+| Pasos | `pasos` | `PasosEditor` (ver 7.2.1) | Constructor de pasos con bloques |
+| Verificación final (una por línea) | `verificacionFinal` | Área de texto | Checklist final |
+
+**Pestaña Detalles** (ayuda a decidir si sirve):
+
+| Campo | Interno | Control | Notas |
+|-------|---------|---------|-------|
+| Síntomas (uno por línea) | `sintomas` | Área de texto | Solo se muestra si tipo = problema frecuente |
+| Posibles causas (una por línea) | `causas` | Área de texto | Idem |
+| Tiempo (min) | `tiempoEstimadoMin` | Número | Sin flechas de incremento |
+| Dificultad | `dificultad` | Control segmentado | Principiante / Intermedio / Avanzado (toca de nuevo para deseleccionar) |
+| Artículos relacionados | `relacionados` | Chips + select | Copia de referencia {id, título} |
+| Notas adicionales (admite Markdown) | `contenido` | Área de texto monoespaciada | Se renderiza como Markdown en la ficha |
+
+**Pestaña Publicación** (quién lo ve y cómo queda registrado):
+
+| Campo | Interno | Control | Notas |
+|-------|---------|---------|-------|
+| Estado | `estado` | Control segmentado | Borrador / Publicado / Obsoleto |
+| Destacar en Inicio como ruta de aprendizaje | `esRutaInicio` | Casilla | Al marcar aparece el orden |
+| Orden en la ruta de Inicio | `ordenRutaInicio` | Número | Menor primero; solo si es ruta de inicio |
+| Es un cambio mayor | `cambioMayor` | Casilla | Solo al editar un publicado; sube la versión mayor |
+| Motivo del cambio | `motivo` | Texto | Solo edición; va al historial |
+
+#### 7.2.1 Editor de pasos (`PasosEditor`)
+
+Cada **paso** es una tarjeta con: número, **Título** ("Qué hacer en este paso"), **Objetivo** ("qué se logra al terminar", opcional) y un menú **"···"** (Subir / Bajar / Eliminar, con confirmación). El **cuerpo** del paso son **bloques** que se agregan con tres botones: **Tarea**, **Advertencia**, **Imagen**.
+
+- **Bloque Tarea**: icono que se toca para ciclar el tipo (Acción con casilla → Verificación → Decisión Sí/No) + texto. Enter inserta otra tarea; pegar varias líneas las reparte. Una **Decisión** puede vincular "Si responde No" un artículo (select). Cada tarea puede llevar además un vínculo protegido.
+- **Bloque Advertencia**: icono que cicla el tono (información, precaución, importante, consejo, dato técnico) + área de texto.
+- **Bloque Imagen**: slot para subir una captura + pie opcional.
+- **Archivos del paso completo**: "Adjuntar archivo del paso: manual, PDF o planilla" (distinto de las imágenes ancladas a una tarea).
+- **Vínculos del paso** (bloque plegable "Vínculos del paso"):
+  - **"Vincular información protegida"** (select con dos grupos): datos protegidos de los equipos del artículo, y secretos de la bóveda.
+  - **"Procedimiento relacionado"** (subprocedimiento que se ejecuta en este paso).
+  - **"Solución si el paso falla"**.
+
+### 7.3 Editor de credencial (`CredencialForm`)
+
+Archivo `src/features/boveda/CredencialForm.tsx`. Título "Nuevo/Editar secreto". Cabecera con "Se guarda cifrada". El tipo decide qué campos aparecen (`CAMPOS_POR_TIPO`); botón "Mostrar todos los campos" los revela sin perder nada. Todo lo del bloque "Secreto" viaja **cifrado** (`datos_cifrados`); vencimiento y equipos NO se cifran (para avisar/navegar sin desbloquear).
+
+| Campo | Interno | Control | Oblig. | Notas |
+|-------|---------|---------|--------|-------|
+| Tipo de secreto | `tipo` | Lista desplegable | - | Cuenta de sistema / Red / Llave digital / Archivo seguro / Nota segura. Cambia los campos visibles y el placeholder del título |
+| Título | `titulo` | Texto | **Sí** | Placeholder según tipo. Avisos: coincide con un equipo del inventario ("Ir a la ficha"); título desactualizado si el equipo se renombró |
+| Categoría | `categoria` | Texto con sugerencias | No | "Redes, Servidores, CCTV..." |
+| Usuario | (en `datosCifrados`) | Texto monoespaciado | No | Solo tipo cuenta (o "Mostrar todos") |
+| Contraseña / Clave | (cifrado) | `CampoContrasena` enmascarado + ojo + **"Generar"** | No | "Generar" crea 16 caracteres sin ambiguos (O/0, l/1). Etiqueta varía por tipo |
+| URL | (cifrado) | Texto monoespaciado | No | "https://...". Aviso si coincide con la IP/URL de un equipo ("Vincular equipo") |
+| Otros datos protegidos | (cifrado) | Editor clave/valor monoespaciado | No | "Puerto, PIN, clave WiFi..." también cifrados |
+| Archivo | `archivo` | Carga de archivo (cifrado) | No | Solo tipo archivo. Se cifra en el teléfono al elegirlo, bucket privado |
+| Notas | (cifrado) | Área de texto | No | "Cómo y cuándo se usa" |
+| Vencimiento (opcional) | `venceEn` | Fecha | No | Sin cifrar. Aviso si la contraseña cambió pero el vencimiento no ("Renovar 90 días") |
+| Equipos con acceso | `dispositivos` | Chips + select | No | Copia de referencia {id, nombre}. Aviso de solapamiento con contraseña protegida del equipo |
+| Motivo del cambio | `motivo` | Texto | No | Solo edición |
+
+Barra inferior: **"Guardar secreto"**. Si el autobloqueo cierra la bóveda durante la edición, avisa que hay que desbloquear de nuevo.
+
+### 7.4 Datos protegidos del equipo (`SeguridadDelEquipo` / `EditorCampo`)
+
+Archivo `src/features/dispositivos/SeguridadDelEquipo.tsx`. Vive en la sección "Seguridad" de la ficha del equipo (no en `DispositivoForm`). Solo con permiso de bóveda; guardar exige la bóveda desbloqueada (formulario de desbloqueo inline si está cerrada). Nombre y tipo van SIN cifrar; solo el valor se cifra.
+
+| Campo | Interno | Control | Oblig. | Notas |
+|-------|---------|---------|--------|-------|
+| Nombre | `nombre` | Texto | **Sí** | "Usuario administrador, PIN de impresión...". No duplicado dentro del equipo |
+| Tipo | `tipo` | Lista desplegable | - | usuario / contraseña / PIN / llave / token / texto |
+| Valor | `valorCifrado` | `CampoContrasena` + ojo + **"Generar"** (si oculto por defecto) | No | Se cifra al guardar |
+| Vencimiento (opcional) | `venceEn` | Fecha | No | Recordatorio de rotación |
+| Motivo del cambio | `motivo` | Texto | No | Solo edición |
+
+Botón **"Guardar"**. Cada fila de la lista muestra nombre y tipo; al desplegar (con bóveda abierta) muestra el valor con `CampoSecreto` (mostrar/ocultar y copiar con auditoría), botones Editar/Eliminar, "Usado en" e historial por campo.
+
+### 7.5 Editor de diagnóstico (`DiagnosticoForm`)
+
+Archivo `src/features/diagnostico/DiagnosticoForm.tsx`. Pantalla completa.
+
+| Campo | Interno | Control | Oblig. | Notas |
+|-------|---------|---------|--------|-------|
+| Problema | `titulo` | Texto | **Sí** | "Como lo diría el técnico: La impresora no imprime". Aviso de similares (artículo o diagnóstico) |
+| Categoría | `categoriaId` | Chips | **Sí** | Con color de identidad |
+| Descripción (opcional) | `descripcion` | Texto | No | Una línea para reconocer el problema |
+| Preguntas | `nodos` | Editor de árbol (`NodosEditor`) | - | Ver abajo |
+| Motivo del cambio | `motivo` | Texto | No | Solo edición |
+
+**Editor de preguntas (`NodosEditor`).** Lista de tarjetas; la primera es "Inicio del diagnóstico". Cada tarjeta: menú "···" (Subir/Bajar/Duplicar/Eliminar), campo **Pregunta** ("¿La impresora está encendida?"), campo **descripción** ("Cómo comprobarlo, opcional"), y una lista de **Respuestas** (botón "Respuesta" para agregar). Cada respuesta tiene: **etiqueta** ("Sí, No, otra..."), un **destino** (select: "Termina aquí" o "Sigue en la pregunta N"), un **mensaje final** (si termina) y opcionalmente **"Vincular procedimiento"** (ejecuta un artículo). Botón "Agregar pregunta".
+
+Barra inferior: **"Probar"** (recorrido en memoria sin registrar) y **"Guardar diagnóstico"**. Validaciones al guardar: toda rama termina en algo útil, sin ciclos, sin preguntas inalcanzables; aviso (sin bloquear) de procedimientos vinculados no disponibles.
+
+### 7.6 Alta de conexión (`FormularioConexion`)
+
+Archivo `src/features/red/FormularioConexion.tsx`. Compartido entre la ficha de dispositivo (variante "ficha", con selects) y la topología del equipo (variante "topologia", con chips).
+
+| Campo | Interno | Control | Notas |
+|-------|---------|---------|-------|
+| Tipo de relación | `modo` | Select / chips | Da servicio a / Recibe de / Instalado en / Contiene / Relacionado |
+| Otro equipo | `otro` | Buscador con sugerencias | Prioriza misma ubicación o categoría de red; permite **crear equipo nuevo** inline |
+| Puerto en este equipo | `puertoLocal` | Texto | Solo enlaces; sugiere el próximo puerto libre |
+| Puerto en el otro | `puertoRemoto` | Texto | Opcional, solo enlaces |
+| Medio | `medio` | Texto con datalist / chips | UTP (defecto), fibra óptica, inalámbrico... Solo enlaces |
+| Notas | `notas` | Texto | Solo variante ficha |
+
+Botones: **"Guardar conexión"** y (variante ficha) **"Guardar y agregar otra"** (conserva el tipo). Aviso: si este equipo no tiene ubicación y el otro sí, ofrece **"Copiar ubicación"**.
+
+### 7.7 Formularios simples
+
+- **Ubicación (`UbicacionForm`).** Nombre (**obligatorio**, "Taquilla 2, Bodega, Rack principal..."), "Dentro de" (select de ubicación padre; no puede ser ella misma ni una descendiente), Notas, Motivo (edición). Botón "Guardar ubicación".
+- **Persona (`PersonaForm`).** Nombre (**obligatorio**, "Juan Pérez"), Notas ("Cargo, área, extensión..."), Motivo (edición). Botón "Guardar persona".
+- **Registrar intervención (`RegistrarIntervencion`).** En la ficha del equipo. "Qué se hizo" (área de texto, **obligatorio**, "cambio de ribbon, limpieza de cabezal..."), "Motivo (opcional)". Botón "Guardar intervención"; tras guardar ofrece adjuntar una foto.
+- **Dar de baja (`DarDeBajaPage`).** Motivo (opcional, "Fin de vida útil..."). El botón "Confirmar baja" solo se habilita cuando se resolvieron las dependencias (conexiones, credenciales, campos protegidos).
+- **Reemplazo (`ReemplazoPage`).** Motivo (opcional). Botón "Migrar todo y dar de baja".
+- **Login (`LoginPage`).** Correo (email, obligatorio), Contraseña (obligatorio). Botón "Ingresar".
+- **Mi cuenta (`CuentaPage`).** Contraseña actual / Nueva / Confirmar (los tres obligatorios). Botón "Cambiar contraseña".
+- **Importar (`ImportarDispositivosPage`).** Carga de archivo (.csv/.xlsx) y, en la revisión, "Categoría para las filas que no traen una" (select). Botón "Importar N dispositivos".
+
+---
+
+<a id="8-catalogo-de-modales"></a>
+## 8. Catálogo de modales, hojas y diálogos
+
+La app usa **modales** (centrados, `src/components/Modal.tsx`, renderizados con `createPortal` a `document.body`), **hojas inferiores** (pegadas al borde inferior, en la Bóveda), y **diálogos/confirmaciones en línea**.
+
+| Modal / hoja | Cómo se abre | Desde dónde | Contenido | Qué hace |
+|--------------|--------------|-------------|-----------|----------|
+| **Diálogo de eliminación** (`DialogoEliminar`) | Botón "Eliminar" | Fichas de artículo, dispositivo, credencial, campo protegido, diagnóstico, paso | Título, descripción, **advertencia de impacto** (qué vínculos quedarían rotos) y, si es **sensible**, campo "Contraseña maestra" | Elimina (soft-delete). Las sensibles verifican la contraseña maestra contra el verificador; si el equipo no tiene contraseña maestra, cae a confirmación normal; si no se puede comprobar (offline), la niega |
+| **Panel de sincronización** (`PanelSync`) | Tocar la pastilla de sincronización | Cabecera de Inicio | Estado (tiempo real / cada 2 min), última sincronización, cambios por subir, conflictos (ediciones sobrescritas), y **cambios rechazados agrupados por causa** con opción "Descartar" por ficha | "Reintentar ahora" fuerza sincronización; "Descartar" restaura la versión del servidor de una ficha atascada |
+| **Visor de imagen** (`VisorImagen`) | Tocar una imagen de un adjunto o paso | `Adjuntos`, `ProcedimientoVista` | Imagen a pantalla completa con zoom (pellizco/doble toque) y arrastre | Cierra al salir |
+| **Hoja "Guardar en la bóveda"** | Botón "Crear" de la Bóveda | `BovedaPage` | Los cinco tipos de secreto (Cuenta, Red, Llave, Archivo, Nota) | Cada uno abre el editor con `?tipo=` |
+| **Hoja de acciones de una fila** | Menú "···" de una fila | `BovedaPage` | Copiar usuario / Copiar contraseña (sin mostrarla, con auditoría) / Abrir la ficha / Editar / Eliminar | Las copias descifran al momento y registran en la auditoría |
+| **Menú "···" de la ficha de artículo** | Botón "···" | `ArticuloPage` | Compartir / Duplicar / Reiniciar progreso / Eliminar | Menú flotante (cierra al hacer clic fuera) |
+| **Menú "···" de la ficha de dispositivo** | Botón "···" | `DispositivoPage` | Duplicar / Editar / Etiqueta QR / Reemplazar / Dar de baja / Eliminar | Fila de botones bajo la cabecera |
+| **Menú "···" de Dispositivos** | Botón "···" | `DispositivosPage` | Ubicaciones / Personas / Etiquetas QR / Importar | - |
+| **Vista previa de artículo** (`VistaPreviaArticulo`) | Botón "Vista previa" | `ArticuloForm` | Render interactivo del artículo antes de guardar | Progreso efímero que se borra al cerrar |
+| **Confirmación "Cancelar diagnóstico"** | Botón "Cancelar" | `DiagnosticoRunPage` | "¿Cancelar el diagnóstico? El avance se descarta y queda registrado como abandonado" | "Sí, cancelar" / "Seguir con el diagnóstico" |
+| **Pregunta de error / decisión** | Al completar el trabajo previo de un paso | `ProcedimientoVista` / `AsistenteVista` | "¿Ocurrió algún error?" / pregunta Sí/No | "No, continuar" avanza; "Sí, ver la solución" despliega el vínculo |
+| **Desbloqueo de la bóveda** | Al entrar a la Bóveda o a un campo protegido | `BovedaGuard`, `CredencialEnPaso`, `SeguridadDelEquipo` | Campo contraseña maestra + "Desbloquear" | Deriva la clave en el teléfono; sesión compartida con autobloqueo |
+| **Pantalla de bloqueo de la app** (`BloqueoAppGuard`) | Al abrir la app / tras inactividad | Envuelve toda la zona autenticada | Patrón (cuadrícula 3x3) o contraseña; "Cerrar sesión y quitar el bloqueo" | Desbloquea la interfaz (no cifra datos) |
+
+---
+
+<a id="9-catalogo-de-botones"></a>
+## 9. Catálogo de botones y primitivas de interfaz
+
+### 9.1 Variantes de botón (`src/components/nocturne.tsx`)
+
+Regla del sistema Nocturne: los botones van **delineados**, nunca rellenos.
+
+| Constante | Aspecto | Uso |
+|-----------|---------|-----|
+| `BTN_PRIMARIO` | Delineado en acento | Acción principal (Guardar, Ingresar, Ejecutar) |
+| `BTN_SECUNDARIO` | Delineado en el divisor | Acción secundaria (Crear, Editar, Cancelar) |
+| `BTN_PRIMARIO_PELIGRO` | Delineado en rojo | La acción que ejecuta una eliminación |
+| `BTN_GHOST` | Sin borde, tinte al pasar | Acciones ligeras (Volver, Cancelar) |
+| `BTN_GHOST_ACENTO` | Fantasma en acento | "Agregar", "Registrar" |
+| `BTN_GHOST_PELIGRO` | Fantasma en rojo | Eliminar ligero |
+| `BTN_GHOST_TENUE` | Fantasma atenuado | Descarte junto a una acción principal |
+| `BTN_ICONO_SECUNDARIO` | Cuadrado 34x34 delineado | Iconos de cabecera (compartir, escanear, "···") |
+| `BTN_ICONO_PELIGRO` | Cuadrado sin borde en rojo | Eliminar de icono |
+
+Otras primitivas: `TituloSeccion` (rótulo 11px en mayúsculas), `TagNeutral` (etiqueta neutra para metadatos), `CampoContrasena` (campo enmascarado por CSS que NO es `type="password"`, para que el gestor del sistema no ofrezca guardarlo), `BotonFavorito` (estrella de fijar), `BotonVolver` (navegación "Up").
+
+### 9.2 Botones por pantalla (resumen)
+
+Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 7 y 8. En síntesis, los patrones recurrentes son:
+
+- **Cabecera de lista**: "Volver" (o marca), "Crear", buscador (con "Borrar"), a veces "···" con acciones extra o iconos (escanear, bloquear).
+- **Cabecera de ficha**: "Volver", estrella de favorito, compartir, "Editar", "···" con el resto.
+- **Barra inferior de editor**: aviso/completitud + acción principal ("Guardar ...", a veces con "Vista previa" o "Probar").
+- **Filas de lista**: enlace a la ficha + a veces acción rápida (estrella, "···", "X" para quitar).
+- **Copiar**: en fichas de dispositivo y credencial, cada valor tiene un botón de copiar con confirmación (tilde).
+
+---
+
+<a id="10-menus"></a>
+## 10. Menús
+
+| Menú | Opciones | Navegación / acción |
+|------|----------|---------------------|
+| **Barra de navegación** (`ShellNocturne`) | Inicio, Soluciones, Dispositivos, Red, (Bóveda con permiso) | Cambia de sección; en escritorio incluye el perfil (→ Cuenta) |
+| **"···" de Dispositivos** | Ubicaciones, Personas, Etiquetas QR, Importar | Navega a cada pantalla |
+| **"···" de la ficha de dispositivo** | Duplicar, Editar, Etiqueta QR, Reemplazar, Dar de baja, Eliminar | Acciones sobre el equipo |
+| **"···" de la ficha de artículo** | Compartir, Duplicar, Reiniciar progreso, Eliminar | Acciones sobre el artículo |
+| **"···" de la ficha de credencial (lista)** | Copiar usuario, Copiar contraseña, Abrir, Editar, Eliminar | Acciones rápidas sobre el secreto |
+| **"···" de un paso** (editor) | Subir, Bajar, Eliminar | Reordena/quita el paso |
+| **"···" de una pregunta** (editor diagnóstico) | Subir, Bajar, Duplicar, Eliminar | Reordena/duplica/quita el nodo |
+| **Hoja "Crear" de la Bóveda** | 5 tipos de secreto | Abre el editor con el tipo |
+| **Enlaces de Diagnóstico** | Sugerencias del equipo, Estadísticas | Navega a esas pantallas |
+
+---
+
+<a id="11-acciones-transversales"></a>
+## 11. Acciones transversales
+
+| Acción | Dónde | Qué hace | Tablas afectadas |
+|--------|-------|----------|------------------|
+| **Crear** | Cada sección | Abre el formulario/editor correspondiente | La entidad + `historial` |
+| **Editar** | Fichas | Reabre el editor con los datos cargados | La entidad + `historial` |
+| **Duplicar** | Fichas de dispositivo y artículo | `?copiarDe=<id>`: precarga la ficha regenerando ids internos; no copia serial/placa/IP/foto (dispositivo) ni estado/versión (artículo, nace borrador) | La entidad |
+| **Eliminar** | Fichas | Borrado suave con confirmación; sensible (contraseña maestra) para artículo, credencial, dispositivo, diagnóstico | La entidad (`eliminado_en`) + `historial` (+ `accesos_boveda` en credenciales) |
+| **Dar de baja** | Ficha de dispositivo (→ `/baja`) | Resuelve conexiones/credenciales/campos protegidos y fija estado "De baja" | `dispositivos`, `conexiones`, `credenciales`, `campos_protegidos` |
+| **Reemplazar** | Ficha de dispositivo (→ `/reemplazo`) | Crea el equipo entrante (`?reemplazaA`) y migra las dependencias del saliente, que queda "De baja" | Igual que baja + el equipo nuevo |
+| **Archivar** | (No existe como tal) | El equivalente es "Obsoleto" (artículos) y "De baja" (equipos) | - |
+| **Registrar intervención** | Ficha de dispositivo | Bitácora manual + foto opcional | `historial`, `adjuntos` |
+| **Escanear** | Inicio / Dispositivos → `/escaner` | Lee QR/código de barras y abre la ficha | (solo lectura) |
+| **Importar** | Dispositivos → `/dispositivos/importar` | Carga masiva desde Excel/CSV, con revisión y omisión de duplicados | `dispositivos`, `historial` |
+| **Imprimir etiquetas** | Dispositivos → `/dispositivos/etiquetas` | Genera e imprime etiquetas QR seleccionadas | (solo lectura) |
+| **Compartir** | Fichas de dispositivo y artículo | Diálogo nativo o copia el enlace | (solo lectura) |
+| **Copiar** | Fichas de dispositivo y credencial | Copia un valor al portapapeles (con auditoría en la bóveda) | `accesos_boveda` (en la bóveda) |
+| **Descargar** | Ficha de credencial (archivo seguro) / Inicio ("Descargar todo para offline") | Descifra y descarga un archivo / precachea adjuntos | `accesos_boveda` (archivo); cache local |
+| **Sincronizar** | Pastilla de sincronización / automático | Sube la cola y descarga novedades | Todas las sincronizadas |
+| **Buscar** | Inicio (global) y cada sección (local) | Filtra por texto, tolera errores y sinónimos | (solo lectura) |
+| **Filtrar / Ordenar** | Listas | Por categoría, tipo, etiqueta, estado, ubicación | (solo lectura) |
+| **Ejecutar procedimiento** | Ficha de artículo → `/ejecutar` | Modo asistente paso a paso | `progresoPasos` (local) |
+| **Ejecutar diagnóstico** | Lista de diagnósticos → `/:id` | Asistente de preguntas; registra la ejecución al cerrar | `progresoDiagnostico` (local), `ejecuciones_diagnostico` |
+| **Migrar** | Bóveda / Ubicaciones / Personas | Convierte datos antiguos (secretos que son de un equipo, textos en entidades) | Según el caso |
+| **Favorito** | Cabecera de fichas / filas de diagnóstico | Fija/quita de la lista de Favoritos de Inicio | `favoritos` (local) |
+| **Reiniciar progreso** | Ficha/menú de artículo | Borra el avance local del procedimiento | `progresoPasos` (local) |
+
+---
+
+<a id="12-relaciones-entre-secciones"></a>
+## 12. Relaciones entre secciones
+
+El principio rector del producto es "cada dato existe una sola vez y todo lo demás lo referencia". Las secciones están tejidas entre sí. Los vínculos guardan el id del otro extremo más una **copia de su título** (caché de presentación); la **regla de referencia viva** (`src/lib/referencia.ts`) muestra el dato actual si la fila existe local, y usa la copia solo si falta o fue eliminada. El **grafo de referencias** (`src/lib/grafo.ts`, derivado, no almacenado) permite el inverso universal "¿qué referencia a esto?".
+
+```
+Dispositivo
+ ├── Categoría (categoria_id; decide si va en Dispositivos o en Red)
+ ├── Ubicación (ubicacion_id → ficha de la ubicación)
+ ├── Persona / Responsable (responsable_id → ficha de la persona)
+ ├── Conexiones (con otros dispositivos → topología)
+ ├── Campos protegidos (Seguridad; misma protección que la Bóveda)
+ ├── Credenciales de la bóveda (que le dan acceso)
+ ├── Procedimientos y Problemas frecuentes (artículos "donde aplica")
+ ├── Diagnósticos (de su categoría)
+ ├── Reemplaza a / Reemplazado por (otro dispositivo)
+ ├── Adjuntos
+ └── Historial (incluye intervenciones y cambios de cableado)
+
+Artículo (Soluciones)
+ ├── Categoría
+ ├── Dispositivos afectados / donde aplica
+ ├── Pasos → vínculos: información protegida (credencial o campo), subprocedimiento, solución
+ ├── Relacionados (otros artículos) + inverso
+ ├── Referenciado por (subprocedimiento/solución/decisión/diagnóstico)
+ ├── Ruta de inicio (aparece en Inicio "Para empezar")
+ └── Historial (+ ejecuciones de diagnóstico que lo usaron)
+
+Diagnóstico
+ ├── Categoría
+ ├── Opciones que ejecutan Artículos (con procedimiento)
+ ├── Ejecuciones (registro inmutable → Estadísticas, Sugerencias)
+ └── Historial
+
+Credencial (Bóveda)
+ ├── Categoría (texto libre)
+ ├── Equipos con acceso (dispositivos)
+ ├── Usada en (pasos de procedimientos)
+ ├── Archivo seguro (Storage cifrado)
+ └── Actividad (accesos_boveda + historial)
+
+Ubicación ── Dispositivos que están ahí; jerarquía padre/hijos
+Persona   ── Dispositivos asignados
+Categoría ── Artículos + Dispositivos + Diagnósticos (ficha 360°)
+```
+
+Puntos de navegación cruzada destacados:
+- Desde la ficha de un **dispositivo** se llega en un toque a sus procedimientos, problemas, credenciales, ubicación, responsable, topología, diagnóstico de su categoría, y a crear una incidencia/procedimiento/secreto ya precargados.
+- Desde un **artículo** se navega a sus dispositivos afectados, relacionados, y quién lo referencia.
+- El **buscador global** de Inicio encuentra por igual artículos, equipos (generales y de red), credenciales (con permiso), ubicaciones y personas.
+- La **eliminación** de cualquier entidad avisa antes qué vínculos quedarían rotos (impacto derivado del grafo).
+
+---
+
+<a id="13-flujos-completos"></a>
+## 13. Flujos funcionales completos
+
+### 13.1 Crear y documentar un equipo nuevo
+
+```
+Dispositivos > Crear
+ → Formulario (nombre + categoría obligatorios; foto, serial, IP, ubicación, responsable...)
+ → Guardar dispositivo → guardarRegistro('dispositivos') + historial + cola de subida
+ → Ficha del equipo con bloque "¿Qué sigue?"
+      ├── Agregar foto (→ Editar)
+      ├── Seguridad (datos protegidos, con bóveda)
+      ├── Conexiones (topología)
+      └── Documentar procedimiento / Reportar incidencia
+ → Sincronización (Realtime + cola) → el resto del equipo lo ve en segundos
+```
+
+### 13.2 Ejecutar un procedimiento (modo asistente)
+
+```
+Soluciones > (categoría) > Artículo
+ → Ejecutar (/soluciones/:cat/:art/ejecutar)
+ → AsistentePage: un paso a la vez, objetivo, checklist, cronómetro
+      ├── Marcar tareas (accion / verificación)
+      ├── Responder decisiones Sí/No (No abre un vínculo inline)
+      ├── Ejecutar subprocedimiento vinculado (anidado)
+      ├── Adjuntar evidencia del paso (→ intervención en el historial del equipo)
+      └── Pregunta de error "¿Ocurrió algún error?" → solución vinculada
+ → Verificación final → banner "Procedimiento completado"
+ (Progreso local en progresoPasos; "Continuar donde quedaste" en Inicio si se sale a medias)
+```
+
+### 13.3 Diagnóstico inteligente
+
+```
+Inicio > Diagnóstico inteligente (o Problemas frecuentes)
+ → Lista de problemas por categoría > elegir un problema
+ → DiagnosticoRunPage: pregunta a la vez, opciones
+      └── una opción puede ejecutar un procedimiento (AsistenteVista inline)
+ → Resultado: "¿Quedó resuelto?"
+      ├── Sí → registra ejecución (resuelto)
+      └── No → motivo (+ "Encontré otra solución" → texto libre)
+              → registra ejecución + alimenta Sugerencias del equipo
+ → Estadísticas agregan todas las ejecuciones
+ → Sugerencias > "Redactar artículo" (?desdeSugerencia) → borrador precargado
+```
+
+### 13.4 Guardar y usar un secreto
+
+```
+Bóveda > Crear > (tipo)  [o desde la ficha de un equipo: "Guardar secreto"]
+ → CredencialForm (cifra en el teléfono) > Guardar secreto
+ → Lista de la Bóveda
+ → Ficha del secreto: revelar (auditoría), copiar (auditoría), descargar archivo
+ → El secreto se puede vincular a un paso de un procedimiento (aparece como "Datos" del paso,
+    contraído, pide bóveda abierta) y aparece en "Usada en"
+ → Nudge anti duplicidad: si en realidad es de un equipo, migrar a su ficha (/boveda/migrar)
+```
+
+### 13.5 Registrar y mapear la red
+
+```
+Red > Crear (?red=1, prioriza categorías de red) → equipo de red
+ → Ficha > Conexiones > Agregar conexión (tipo, otro equipo, puertos, medio)
+ → Topología de red (bosque) o Topología del equipo (depende de / si falla / dependen de él)
+ → Cada conexión escribe en el historial de ambos extremos
+```
+
+### 13.6 Ciclo de vida: reemplazo y baja
+
+```
+Ficha de equipo > "···" > Reemplazar → crea entrante (?reemplazaA) → ReemplazoPage
+ → migra conexiones/credenciales/campos protegidos → saliente queda "De baja"
+
+Ficha de equipo > "···" > Dar de baja → resuelve cada dependencia (quitar/desvincular/conservar)
+ → Confirmar baja (estado "De baja")
+```
+
+---
+
+<a id="14-arbol-de-navegacion"></a>
+## 14. Árbol jerárquico de navegación
+
+```
+Login
+ └── (autenticado) → Bloqueo de la app (patrón/contraseña, si está activo)
+
+Inicio (/)
+ ├── Buscador global (Soluciones · Dispositivos · Bóveda · Ubicaciones · Personas)
+ ├── Continuar donde quedaste → Ficha de artículo
+ ├── Atajos: Diagnóstico inteligente · Escanear equipo
+ ├── Problemas frecuentes → Diagnóstico · Estadísticas
+ ├── Pendientes · Favoritos · Recientes · Para empezar · Actividad del equipo
+ ├── Descargar todo para offline
+ ├── Pastilla de sincronización → Panel de sincronización
+ └── Mi cuenta (móvil)
+      ├── Cambiar contraseña
+      ├── Seguridad de la aplicación (bloqueo patrón/contraseña, autobloqueo)
+      └── Cerrar sesión
+
+Soluciones (/soluciones)
+ ├── Buscar · Chips de categoría · Subfiltros por tipo · Filtro por etiqueta
+ ├── Crear → Editor de artículo
+ │    ├── General (tipo, título, portada, etiquetas, equipos)
+ │    ├── Pasos (requisitos, PasosEditor, verificación final)
+ │    ├── Detalles (síntomas, causas, tiempo, dificultad, relacionados, notas)
+ │    ├── Publicación (estado, ruta de inicio, cambio mayor, motivo)
+ │    ├── Vista previa
+ │    └── Guardar
+ ├── Ficha de categoría (/:cat) → artículos + dispositivos + diagnósticos + historial
+ └── Ficha de artículo (/:cat/:art)
+      ├── Ejecutar → Asistente (paso a paso)
+      ├── Editar · Duplicar · Reiniciar progreso · Compartir · Eliminar · Favorito
+      └── Procedimiento · Relacionados · Referenciado por · Historial
+
+Dispositivos (/dispositivos)
+ ├── Buscar · Chips de categoría · Resumen de estados
+ ├── Escanear · Crear · "···" (Ubicaciones · Personas · Etiquetas QR · Importar)
+ ├── Ubicaciones (/ubicaciones) → Crear · Migrar · Ficha · Editar
+ ├── Personas (/personas) → Crear · Migrar · Ficha · Editar
+ ├── Etiquetas QR (/etiquetas) → seleccionar · imprimir
+ ├── Importar (/importar) → elegir · revisar · importar
+ └── Ficha de dispositivo (/:id)
+      ├── Editar · Duplicar · Etiqueta QR · Reemplazar · Dar de baja · Eliminar
+      ├── Compartir · Favorito · Copiar campos
+      ├── ¿Qué sigue? · Información · Seguridad (datos protegidos)
+      ├── Resolver con este equipo (diagnóstico · procedimientos · problemas · credenciales)
+      │    └── Reportar incidencia · Documentar procedimiento · Guardar secreto
+      ├── Si este equipo falla (impacto) · Conexiones (→ topología) · Adjuntos
+      ├── Intervenciones (registrar) · Historial
+      ├── Reemplazo (/:id/reemplazo)
+      └── Dar de baja (/:id/baja)
+
+Red (/red)
+ ├── Buscar · Crear (equipo de red) · agrupado por ubicación
+ ├── Topología de red (/red/topologia) → bosque expandible · buscador
+ └── Topología de un equipo (/red/topologia/:id)
+      ├── Depende de · Si este equipo falla · Dependen de este equipo
+      └── Conexiones (agregar/quitar) · Abrir la ficha
+
+Bóveda (/boveda) [permiso puede_ver_boveda]
+ ├── Desbloqueo (contraseña maestra) · Bloquear ahora · Autobloqueo
+ ├── Buscar · Chips de categoría · Aviso de rotación · Aviso de migración
+ ├── Crear (hoja: Cuenta · Red · Llave · Archivo · Nota) → Editor de credencial
+ ├── Migrar (/boveda/migrar)
+ ├── "···" de fila (Copiar usuario · Copiar contraseña · Abrir · Editar · Eliminar)
+ └── Ficha de credencial (/:id)
+      ├── Editar · Eliminar
+      ├── Campos (revelar · copiar · descargar archivo) · Da acceso a · Usada en · Actividad
+
+Diagnóstico (desde Inicio, /diagnostico)
+ ├── Buscar · Crear · Sugerencias del equipo · Estadísticas
+ ├── Diagnóstico en curso (retomar)
+ ├── Editor de diagnóstico (/nuevo, /:id/editar) → preguntas · respuestas · Probar · Guardar
+ ├── Asistente (/:id) → preguntas · procedimientos inline · resultado (¿resuelto? + motivo)
+ ├── Estadísticas (/estadisticas)
+ └── Sugerencias (/sugerencias) → Redactar artículo
+```
+
+---
+
+<a id="15-verificacion-final"></a>
+## 15. Verificación final (auditoría de cobertura)
+
+Repaso de que no quedó nada sin documentar, contra la lista de archivos de `src/`:
+
+- [x] **Ningún menú sin documentar.** Barra de navegación, todos los "···", la hoja "Crear" de la Bóveda y los enlaces de Diagnóstico están en las secciones 5, 6, 8 y 10.
+- [x] **Ningún botón sin analizar.** Botones de cabecera, de barra inferior, de fila y de copiar cubiertos por pantalla (secciones 5-8) y por variante (sección 9).
+- [x] **Ningún formulario sin documentar.** Los 15 formularios/editores (dispositivo, artículo, pasos, credencial, campo protegido, diagnóstico, conexión, ubicación, persona, intervención, baja, reemplazo, login, cuenta, importación) están en la sección 7.
+- [x] **Ningún modal sin documentar.** Diálogo de eliminación, panel de sincronización, visor de imagen, hojas de la Bóveda, menús flotantes, vista previa, confirmaciones y desbloqueos en la sección 8.
+- [x] **Ningún campo sin describir.** Cada campo con su tipo de control, obligatoriedad, valor por defecto, placeholder y validaciones en la sección 7.
+- [x] **Ningún selector sin listar.** Categoría (chips), tipo de secreto/campo/artículo, estado, dificultad, ubicación padre, medio de conexión, tipo de relación: opciones y dependencias en las secciones 5-7.
+- [x] **Ninguna validación sin explicar.** Obligatoriedad, IP válida, anti duplicados (serial/IP/título), no vacío, no duplicado dentro del equipo, ramas del diagnóstico, contraseña maestra: en la sección 7 y en el flujo de eliminación (sección 8).
+- [x] **Ninguna relación sin documentar.** Grafo de relaciones entre secciones en la sección 12.
+- [x] **Ningún flujo funcional sin mapear.** Seis flujos completos en la sección 13 y el árbol de navegación en la sección 14.
+
+**Nota de método.** El documento se construyó leyendo directamente el código de todas las pantallas, editores, modales y primitivas. Un puñado de componentes compartidos pequeños (visor de imagen, adjuntos, selectores de ubicación/persona, indicadores, migraciones, componentes "de este equipo") se describen a partir de su uso en las pantallas que sí se leyeron por completo y de [ARQUITECTURA.md](ARQUITECTURA.md); su comportamiento observable está cubierto, aunque no se transcribió su interior línea por línea.
+
+---
+
+<a id="16-hallazgos"></a>
+## 16. Hallazgos y oportunidades de mejora
+
+Observaciones surgidas del recorrido. La mayoría son mejoras de mantenibilidad, no defectos: la app está muy cuidada y sigue de forma consistente el principio "cada dato una sola vez". Ninguno bloquea el uso diario.
+
+### 16.1 Duplicación de utilidades pequeñas (mantenibilidad)
+
+- **`normalizar` / `normalizarTexto`** (minúsculas sin acentos para buscar) está reimplementado en varios archivos: `BovedaPage.tsx`, `CredencialForm.tsx`, `UbicacionesPage.tsx` y `iconosSoluciones.ts`. Los tres buscadores locales de Dispositivos/Red/conexión ya comparten `incluyeTexto()` (`src/lib/texto.ts`), pero el normalizador de texto sigue disperso. **Oportunidad:** una única función de normalización en `src/lib/texto.ts` reutilizada por todos.
+- **`partirTitulo`** (resaltado del término buscado en tres tramos) está duplicado casi idéntico entre `InicioPage.tsx` y `SolucionesPage.tsx`. **Oportunidad:** extraerlo a un helper compartido.
+- **`fechaCorta` / `fechaHoraCorta` / `formatearTamano`** están repetidos entre `DispositivoPage`, `ArticuloPage`, `CredencialPage` y `CredencialForm`. El código lo marca como decisión deliberada ("duplicar helpers pequeños de presentación"), pero un módulo `src/lib/formato.ts` reduciría deriva.
+
+### 16.2 Patrones de interfaz repetidos (candidatos a componente compartido)
+
+- **"Aviso con acción"** (recuadro de precaución con un texto y un botón/enlace a la derecha) aparece muchas veces con markup casi idéntico: IP heredada, título que coincide con un equipo, título desactualizado, equipo sugerido por IP, solapamiento de contraseña, herencia de ubicación, migración pendiente. **Oportunidad:** un componente `<AvisoConAccion tono texto accion>` unificaría el aspecto y reduciría el riesgo de deriva visual.
+- **"Motivo del cambio (opcional)"** es un campo idéntico repetido en 7 editores (dispositivo, artículo, credencial, campo protegido, diagnóstico, ubicación, persona). **Oportunidad:** un `<CampoMotivo>` compartido.
+- **"Buscar o crear inline"** (elegir una entidad existente o crearla sin salir del formulario) está implementado por separado en `SelectorUbicacion`, `SelectorPersona` y la alta rápida de equipo de `FormularioConexion`. **Oportunidad:** una primitiva genérica de "selector con creación inline".
+
+### 16.3 Deuda funcional menor
+
+- **IP heredada de secretos tipo "equipo"** (anteriores a la fase P0): la ficha y el editor de credencial siguen mostrando avisos para quitarla a mano. Es una migración incompleta por diseño (no se fuerza). **Oportunidad:** un paso de migración masiva junto con `/boveda/migrar`, o retirarla automáticamente cuando el equipo ya está vinculado.
+- **En la ficha de credencial**, la dirección IP puede mostrarse tanto como fila de la tarjeta de campos como en un aviso al pie (según sea heredada). Es coherente pero puede leerse como redundante.
+- **Botón "Crear" de Red** va a `/dispositivos/nuevo?red=1` (alta genérica priorizando categorías de red). Pregunta abierta registrada en TAREAS.md desde la tarea 62: si convendría un flujo dedicado a crear una conexión de red. **Recomendación:** el alta genérica con priorización es razonable; un flujo dedicado solo se justifica si el equipo lo pide.
+
+### 16.4 Automatizaciones que podrían aportar
+
+- **Notificaciones de vencimiento.** Hoy los vencimientos de credenciales y campos protegidos se ven en Inicio ("Pendientes") y en la Bóveda, pero no hay notificación push. Una notificación (o un recordatorio en la "Actividad del equipo") reduciría el olvido de rotaciones.
+- **Recordatorios de mantenimiento preventivo por dispositivo** y **reporte mensual desde el historial**: ya propuestos al usuario (TAREAS.md) y sin agendar; encajan bien con la infraestructura de historial e Inicio que ya existe.
+- **Respaldo automático** (workflow semanal cifrado) está construido pero bloqueado por pasos del usuario en Supabase/GitHub (TAREAS.md tarea 15).
+
+### 16.5 Consistencia visual (completa)
+
+- La migración al sistema Nocturne está **completa**: una búsqueda de clases del tema claro heredado (`slate-*`/`sky-*`) en todo `src/` no arroja ninguna coincidencia (confirma la tarea 139). **Oportunidad de bajo costo:** agregar una prueba automatizada que rechace `slate-`/`sky-` en `src/`, para que una futura regresión no reintroduzca el tema claro sin que nadie lo note.
+
+### Resumen
+
+La aplicación es funcionalmente muy completa y arquitectónicamente coherente: el grafo derivado, la referencia viva, los avisos anti duplicidad y la creación contextual están bien resueltos. Las oportunidades reales son de **consolidación de código** (helpers y patrones de UI repetidos) más que de funcionalidad faltante, y algunas **automatizaciones** (notificaciones, mantenimiento preventivo) que la base de datos actual ya soportaría sin cambios de esquema.
+
