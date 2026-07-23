@@ -8,6 +8,7 @@ import {
   candidatosConexion,
   datosSegunModo,
   MEDIOS_SUGERIDOS,
+  proximoPuertoLibre,
   type ExtremoConexion,
   type ModoConexion,
 } from '../../lib/conexiones'
@@ -113,7 +114,11 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
       )}
 
       {agregando ? (
-        <FormularioConexion dispositivo={dispositivo} onCerrar={() => setAgregando(false)} />
+        <FormularioConexion
+          dispositivo={dispositivo}
+          enlaces={grupos.enlaces}
+          onCerrar={() => setAgregando(false)}
+        />
       ) : (
         <button type="button" onClick={() => setAgregando(true)} className={`${BTN_GHOST_ACENTO} self-start`}>
           <Plus size={13} aria-hidden />
@@ -174,9 +179,11 @@ function FilaConexion({
 
 function FormularioConexion({
   dispositivo,
+  enlaces,
   onCerrar,
 }: {
   dispositivo: Dispositivo
+  enlaces: ExtremoConexion[]
   onCerrar: () => void
 }) {
   const todos = useLiveQuery(
@@ -192,7 +199,10 @@ function FormularioConexion({
   const [modo, setModo] = useState<ModoConexion>('enlace')
   const [busqueda, setBusqueda] = useState('')
   const [otro, setOtro] = useState<Dispositivo | null>(null)
-  const [puertoLocal, setPuertoLocal] = useState('')
+  // Hallazgo N4: arranca en el menor puerto libre de este equipo, visto
+  // desde sus enlaces ya registrados. Sigue siendo editable: es una
+  // propuesta, no una imposición.
+  const [puertoLocal, setPuertoLocal] = useState(() => proximoPuertoLibre(enlaces))
   const [puertoRemoto, setPuertoRemoto] = useState('')
   const [medio, setMedio] = useState('')
   const [notas, setNotas] = useState('')
@@ -251,7 +261,10 @@ function FormularioConexion({
     }
     setOtro(null)
     setBusqueda('')
-    setPuertoLocal('')
+    // Sigue sugiriendo el siguiente puerto libre (hallazgo N4): la lista
+    // de enlaces del prop aún no incluye el que se acaba de guardar, así
+    // que se suma a mano el puerto recién usado antes de recalcular.
+    setPuertoLocal(conPuertos ? proximoPuertoLibre([...enlaces, { puertoLocal: puertoLocal.trim() }]) : '')
     setPuertoRemoto('')
     setMedio('')
     setNotas('')

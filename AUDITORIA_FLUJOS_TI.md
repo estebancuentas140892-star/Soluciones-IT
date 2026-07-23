@@ -92,7 +92,7 @@ Va a `/dispositivos/nuevo` pelado (`src/features/red/RedPage.tsx:94`), sin prior
 La ubicación se teclea a mano en el alta y la conexión posterior conoce el rack/switch (que ya tiene ubicación), pero nada la propaga.
 - Automatizar: al conectar a un rack/switch, ofrecer copiar su `ubicacion/ubicacionId` si el equipo no la tenía.
 
-**N4 - Sin sugerencia de puerto consecutivo libre. [BAJA] [NUEVO]**
+**N4 - Sin sugerencia de puerto consecutivo libre. [BAJA] [NUEVO] [RESUELTO en la tarea 154, 2026-07-23]**
 Al enlazar desde un switch no se ofrece el próximo puerto libre (`ConexionesFicha.tsx:193`), pese a que las conexiones existentes ya se pueden leer (`agruparConexiones` en `src/lib/conexiones.ts`).
 - Automatizar: proponer el menor puerto no usado del switch.
 
@@ -302,7 +302,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | D1 | `FormularioConexion` duplicado y divergido | Media | Baja | Bajo | Nuevo |
 | D2 | Búsquedas de subcadena vs índice global | Media | Media | Bajo | Parcial |
 | N3 | Punto de red no hereda ubicación | Baja | Baja | Bajo | Nuevo |
-| N4 | Sin puerto consecutivo sugerido | Baja | Baja | Bajo | Nuevo |
+| N4 | Sin puerto consecutivo sugerido | Baja | Baja | Bajo | RESUELTO (tarea 154) |
 | N6 | Puertos sin vista de "libres" | Baja | Media | Bajo | Nuevo |
 | S6 | Sin sugerir equipo por IP/URL en bóveda | Baja | Baja | Bajo | RESUELTO (tarea 151) |
 | K6 | Sin procedimiento contextual desde equipo | Baja | Baja | Bajo | RESUELTO (tarea 142) |

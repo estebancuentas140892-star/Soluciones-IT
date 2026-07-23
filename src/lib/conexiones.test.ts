@@ -6,7 +6,9 @@ import {
   compararNatural,
   datosSegunModo,
   desdeExtremo,
+  proximoPuertoLibre,
   resumenConexion,
+  type ExtremoConexion,
 } from './conexiones'
 
 function dispositivo(parcial: Partial<Dispositivo> & { id: string; nombre: string }): Dispositivo {
@@ -234,5 +236,33 @@ describe('candidatosConexion', () => {
       dispositivo({ id: `d${i}`, nombre: `Switch ${i}`, ubicacionId: 'ubi-1' }),
     )
     expect(candidatosConexion(candidatos, 'switch', equipoActual, idsRed, 3)).toHaveLength(3)
+  })
+})
+
+function extremoConPuerto(puertoLocal: string): ExtremoConexion {
+  return desdeExtremo(conexion({ origenId: 'yo', origenPuerto: puertoLocal }), 'yo')
+}
+
+describe('proximoPuertoLibre', () => {
+  it('propone el puerto 1 cuando el switch no tiene ningún enlace', () => {
+    expect(proximoPuertoLibre([])).toBe('1')
+  })
+
+  it('propone el siguiente consecutivo tras los ya usados', () => {
+    expect(proximoPuertoLibre([extremoConPuerto('1'), extremoConPuerto('2'), extremoConPuerto('3')])).toBe(
+      '4',
+    )
+  })
+
+  it('propone el menor puerto libre, no el máximo + 1, si hay un hueco', () => {
+    expect(proximoPuertoLibre([extremoConPuerto('1'), extremoConPuerto('3')])).toBe('2')
+  })
+
+  it('ignora puertos no numéricos sin romper el cálculo', () => {
+    expect(proximoPuertoLibre([extremoConPuerto('Gi0/1'), extremoConPuerto('1')])).toBe('2')
+  })
+
+  it('ignora puertos vacíos o en blanco', () => {
+    expect(proximoPuertoLibre([extremoConPuerto(''), extremoConPuerto('1')])).toBe('2')
   })
 })

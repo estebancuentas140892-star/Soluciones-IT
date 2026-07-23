@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 154. Sugerencia de puerto consecutivo libre al enlazar (hallazgo N4)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1599 pruebas propias en verde. **Prioridad**: BAJA. **Sin verificar en navegador**: mismo límite que las tareas 150 a 153 (falta una cuenta de técnico real para iniciar sesión).
+
+**Qué resolvía**: al enlazar desde un switch, el campo "Puerto en este equipo" arrancaba vacío, pese a que sus enlaces ya registrados (con el puerto local de cada uno) alcanzan para calcular el menor puerto numérico libre.
+
+**Cambios**:
+- `src/lib/conexiones.ts`: nueva función `proximoPuertoLibre(enlaces)` (+ 5 pruebas nuevas en `conexiones.test.ts`), pura. Cuenta solo los puertos puramente numéricos (un esquema como "Gi0/3" simplemente no aporta al cálculo, no rompe la sugerencia); devuelve el MENOR libre, no el máximo + 1, para llenar huecos si algún puerto de en medio quedó libre.
+- `src/features/red/ConexionesFicha.tsx` y `src/features/red/TopologiaEquipoPage.tsx`: el campo de puerto local arranca con la sugerencia (sigue siendo editable, no se impone). En `ConexionesFicha.tsx`, que además tiene "Guardar y agregar otra" (hallazgo O2), tras guardar se vuelve a calcular la sugerencia sumando a mano el puerto recién usado (la lista de enlaces del prop todavía no lo incluye en ese instante).
+
+**Fuera de alcance**: no se tocó el campo "Puerto en el otro equipo" (el hallazgo original solo pedía el puerto de ESTE equipo, que es el que se puede calcular sin ambigüedad); tampoco se extrajo el `<FormularioConexion>` compartido entre ambos archivos (hallazgo D1, sigue pendiente).
+
 ### 153. La búsqueda del otro extremo prioriza ubicación y categoría de red (hallazgo N5)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y pruebas propias en verde (1594). **Prioridad**: MEDIA. **Sin verificar en navegador**: mismo límite que las tareas 150 a 152 (falta una cuenta de técnico real para iniciar sesión).

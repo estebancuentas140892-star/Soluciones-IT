@@ -170,3 +170,20 @@ function puntajeCandidato(d: Dispositivo, equipoActual: Dispositivo, idsRed: Set
   if (idsRed.has(d.categoriaId)) puntaje += 1
   return puntaje
 }
+
+// Hallazgo N4 de AUDITORIA_FLUJOS_TI.md: al enlazar desde un switch no
+// se ofrecia el proximo puerto libre, pese a que sus enlaces ya
+// registrados (con el puerto de ESTE equipo, `puertoLocal`) alcanzan
+// para calcularlo. Solo cuenta los puertos puramente numericos (un
+// switch con "Gi0/3" u otro esquema no numerico simplemente no aporta
+// al calculo, no rompe la sugerencia para el resto).
+export function proximoPuertoLibre(enlaces: { puertoLocal: string }[]): string {
+  const usados = new Set(
+    enlaces
+      .map((e) => Number(e.puertoLocal.trim()))
+      .filter((n) => Number.isInteger(n) && n > 0),
+  )
+  let candidato = 1
+  while (usados.has(candidato)) candidato++
+  return String(candidato)
+}

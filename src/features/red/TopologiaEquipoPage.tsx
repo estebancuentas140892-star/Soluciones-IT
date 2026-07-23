@@ -9,6 +9,7 @@ import {
   candidatosConexion,
   datosSegunModo,
   MEDIOS_SUGERIDOS,
+  proximoPuertoLibre,
   type ExtremoConexion,
   type ModoConexion,
 } from '../../lib/conexiones'
@@ -413,7 +414,9 @@ function ConexionesSeccion({
         </button>
       </div>
 
-      {agregando && <FormularioConexion equipo={equipo} onCerrar={onToggleAgregar} />}
+      {agregando && (
+        <FormularioConexion equipo={equipo} enlaces={grupos.enlaces} onCerrar={onToggleAgregar} />
+      )}
 
       {total === 0 && !agregando && (
         <p className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-4 text-center text-sm text-noct-neutral-500">
@@ -465,7 +468,15 @@ function ConexionesSeccion({
   )
 }
 
-function FormularioConexion({ equipo, onCerrar }: { equipo: Dispositivo; onCerrar: () => void }) {
+function FormularioConexion({
+  equipo,
+  enlaces,
+  onCerrar,
+}: {
+  equipo: Dispositivo
+  enlaces: ExtremoConexion[]
+  onCerrar: () => void
+}) {
   const todos = useLiveQuery(
     () => db.dispositivos.filter((d) => !d.eliminadoEn && d.id !== equipo.id).toArray(),
     [equipo.id],
@@ -476,7 +487,9 @@ function FormularioConexion({ equipo, onCerrar }: { equipo: Dispositivo; onCerra
   const [modo, setModo] = useState<ModoConexion>('enlace')
   const [busqueda, setBusqueda] = useState('')
   const [otro, setOtro] = useState<Dispositivo | null>(null)
-  const [puertoLocal, setPuertoLocal] = useState('')
+  // Hallazgo N4: arranca en el menor puerto libre de este equipo. Sigue
+  // siendo editable: es una propuesta, no una imposición.
+  const [puertoLocal, setPuertoLocal] = useState(() => proximoPuertoLibre(enlaces))
   const [puertoRemoto, setPuertoRemoto] = useState('')
   const [medio, setMedio] = useState('UTP')
   const [guardando, setGuardando] = useState(false)
