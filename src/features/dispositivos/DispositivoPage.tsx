@@ -453,8 +453,16 @@ export function DispositivoPage() {
           <div className="flex flex-col gap-2">
             <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} categoriaNombre={categoria?.nombre} />
             <div className="flex flex-col">
-              <ProcedimientosDelEquipo dispositivoId={dispositivoId} />
-              <ProblemasDelEquipo dispositivoId={dispositivoId} />
+              <ProcedimientosDelEquipo
+                dispositivoId={dispositivoId}
+                categoriaId={dispositivo.categoriaId}
+                categoriaNombre={categoria?.nombre}
+              />
+              <ProblemasDelEquipo
+                dispositivoId={dispositivoId}
+                categoriaId={dispositivo.categoriaId}
+                categoriaNombre={categoria?.nombre}
+              />
               <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)} />
             </div>
             {/* Creacion contextual (fase N2, punto 1): precarga la

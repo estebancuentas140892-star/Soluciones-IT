@@ -668,6 +668,7 @@ export function ArticuloForm() {
                 elegidos={dispositivosAfectados}
                 disponibles={dispositivosDisponibles}
                 onChange={setDispositivosAfectados}
+                categoriaNombre={categoria?.nombre}
               />
             </>
           )}
@@ -1011,10 +1012,12 @@ function EquiposDondeAplica({
   elegidos,
   disponibles,
   onChange,
+  categoriaNombre,
 }: {
   elegidos: { id: string; nombre: string }[]
   disponibles: { id: string; nombre: string }[]
   onChange: (equipos: { id: string; nombre: string }[]) => void
+  categoriaNombre?: string
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -1061,7 +1064,9 @@ function EquiposDondeAplica({
         </div>
       )}
       <p className="text-xs leading-[1.5] text-noct-neutral-500">
-        El artículo aparecerá en la ficha de cada equipo vinculado.
+        Vincula equipos para destacar el artículo como específico de ellos. Publicado, ya aparece en
+        las fichas de todos los equipos de la categoría{categoriaNombre ? ` ${categoriaNombre}` : ''}{' '}
+        aunque lo dejes vacío.
       </p>
     </div>
   )

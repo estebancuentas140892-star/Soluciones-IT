@@ -248,6 +248,14 @@ export function EscanerPage() {
         ? 'No se encontró una cámara en este equipo. Busca el equipo escribiendo su placa de inventario o el serial.'
         : 'Este navegador no permite usar la cámara aquí. Busca el equipo escribiendo su placa de inventario o el serial.'
 
+  // Registrar el equipo precargando el codigo leido como serial
+  // (hallazgo H3): asi el tecnico no reescribe lo que la app ya leyo. Se
+  // omite si el codigo es una URL de etiqueta (no es un serial).
+  const rutaRegistrarEquipo =
+    aviso?.tipo === 'no_encontrado' && !/^https?:\/\//i.test(aviso.codigo)
+      ? `/dispositivos/nuevo?serial=${encodeURIComponent(aviso.codigo)}`
+      : '/dispositivos/nuevo'
+
   return (
     <div className="nocturne relative mx-auto flex min-h-svh max-w-md flex-col overflow-hidden bg-noct-bg font-inter text-[15px] text-noct-text">
       <video
@@ -361,7 +369,7 @@ export function EscanerPage() {
               >
                 {fallo ? 'Cerrar' : 'Seguir escaneando'}
               </button>
-              <Link to="/dispositivos/nuevo" className={BTN_SECUNDARIO}>
+              <Link to={rutaRegistrarEquipo} className={BTN_SECUNDARIO}>
                 Registrar equipo
               </Link>
             </div>

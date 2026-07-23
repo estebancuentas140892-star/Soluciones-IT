@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Articulo, DispositivoAfectado, TipoArticulo } from '../../lib/db'
-import { procedimientosDeDispositivo } from './procedimientosDeDispositivo'
+import { procedimientosDeCategoria, procedimientosDeDispositivo } from './procedimientosDeDispositivo'
 
 function articulo(cambios: Partial<Articulo> & { id: string; titulo: string }): Articulo {
   return {
@@ -62,5 +62,35 @@ describe('procedimientosDeDispositivo', () => {
   it('devuelve vacío cuando el equipo no aparece en ningún procedimiento', () => {
     const articulos = [articulo({ id: 'a', titulo: 'A', dispositivosAfectados: [{ id: 'disp-9', nombre: 'X' }] })]
     expect(procedimientosDeDispositivo(articulos, 'disp-1')).toEqual([])
+  })
+})
+
+describe('procedimientosDeCategoria', () => {
+  it('lista los procedimientos publicados de la categoría, sin necesidad de vínculo por equipo', () => {
+    const articulos = [
+      articulo({ id: 'b', titulo: 'B: configurar', categoriaId: 'cat-1' }),
+      articulo({ id: 'a', titulo: 'A: instalar', categoriaId: 'cat-1' }),
+      articulo({ id: 'otra', titulo: 'De otra categoría', categoriaId: 'cat-2' }),
+    ]
+    expect(procedimientosDeCategoria(articulos, 'cat-1', new Set()).map((a) => a.id)).toEqual(['a', 'b'])
+  })
+
+  it('excluye los ids ya listados como específicos del equipo', () => {
+    const articulos = [
+      articulo({ id: 'especifico', titulo: 'Ya vinculado', categoriaId: 'cat-1' }),
+      articulo({ id: 'general', titulo: 'General', categoriaId: 'cat-1' }),
+    ]
+    expect(procedimientosDeCategoria(articulos, 'cat-1', new Set(['especifico'])).map((a) => a.id)).toEqual(['general'])
+  })
+
+  it('ignora incidencias, borradores, obsoletos y eliminados', () => {
+    const articulos = [
+      articulo({ id: 'incidencia', titulo: 'Incidencia', tipo: 'problema_frecuente', categoriaId: 'cat-1' }),
+      articulo({ id: 'borrador', titulo: 'Borrador', estado: 'borrador', categoriaId: 'cat-1' }),
+      articulo({ id: 'obsoleto', titulo: 'Obsoleto', estado: 'obsoleto', categoriaId: 'cat-1' }),
+      articulo({ id: 'eliminado', titulo: 'Eliminado', eliminadoEn: '2026-01-01', categoriaId: 'cat-1' }),
+      articulo({ id: 'ok', titulo: 'Vigente', categoriaId: 'cat-1' }),
+    ]
+    expect(procedimientosDeCategoria(articulos, 'cat-1', new Set()).map((a) => a.id)).toEqual(['ok'])
   })
 })

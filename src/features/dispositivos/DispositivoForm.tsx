@@ -80,6 +80,13 @@ export function DispositivoForm() {
   // RedPage.tsx prioriza las categorías `es_red` en el selector, en vez
   // de dejarlo pelado como cualquier alta genérica.
   const priorizarRed = searchParams.get('red') === '1'
+  // Precarga contextual de un alta "en blanco" (sin copiarDe/reemplazaA):
+  // el serial leido por el escaner (hallazgo H3) o el nombre escrito en
+  // el buscador de Inicio (hallazgo H9), para no reescribir un dato que
+  // la app ya conoce. Solo aplica al crear desde cero: en duplicar y
+  // reemplazo la precarga viene de la ficha original.
+  const serialContextual = !esEdicion && !copiarDe ? (searchParams.get('serial') ?? '') : ''
+  const nombreContextual = !esEdicion && !copiarDe ? (searchParams.get('nombre') ?? '') : ''
   // El id se decide desde el inicio (no al guardar): estable para
   // excluirse a si mismo del chequeo de serial duplicado mientras se
   // edita y para poder navegar a la ficha en cuanto se guarda.
@@ -125,10 +132,10 @@ export function DispositivoForm() {
       ),
     [todosDispositivos, categoriaId],
   )
-  const [nombre, setNombre] = useState('')
+  const [nombre, setNombre] = useState(nombreContextual)
   const [marca, setMarca] = useState('')
   const [modelo, setModelo] = useState('')
-  const [serial, setSerial] = useState('')
+  const [serial, setSerial] = useState(serialContextual)
   const [placaInventario, setPlacaInventario] = useState('')
   const [ubicacion, setUbicacion] = useState('')
   // Id de la ubicacion (entidad, grupo N3), o null si es texto libre.

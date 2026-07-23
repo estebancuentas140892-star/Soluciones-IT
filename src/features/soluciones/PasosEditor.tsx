@@ -450,6 +450,13 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
               <BotonAgregar Icono={Camera} onClick={() => agregarBloque(indice, crearBloqueImagenVacio())}>
                 Imagen
               </BotonAgregar>
+              {/* Reutilizar (hallazgo H4): abre los vínculos del paso, donde
+                  vive "Procedimiento relacionado". La composición por
+                  referencia ya existía; este botón la hace descubrible
+                  junto a los bloques, en vez de esconderla en el plegable. */}
+              <BotonAgregar Icono={BookOpen} onClick={() => setVinculosPasoId(paso.id)}>
+                Reutilizar
+              </BotonAgregar>
             </div>
           </div>
 

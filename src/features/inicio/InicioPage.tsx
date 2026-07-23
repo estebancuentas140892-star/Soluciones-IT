@@ -27,6 +27,7 @@ import {
   Monitor,
   PencilSimple,
   Play,
+  Plus,
   QrCode,
   Star,
   TreeStructure,
@@ -367,9 +368,21 @@ export function InicioPage() {
                   Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
                 </p>
               </div>
-              <button type="button" onClick={() => setQuery('')} className={`mt-0.5 ${BTN_SECUNDARIO}`}>
-                Limpiar búsqueda
-              </button>
+              {/* Crear desde el buscador sin resultados (hallazgo H9): si
+                  el equipo no existe, se registra sin cambiar de módulo,
+                  con el texto buscado precargado como nombre. */}
+              <div className="mt-0.5 flex flex-wrap justify-center gap-2">
+                <Link
+                  to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
+                  className={BTN_SECUNDARIO}
+                >
+                  <Plus size={15} aria-hidden />
+                  Crear dispositivo
+                </Link>
+                <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
+                  Limpiar búsqueda
+                </button>
+              </div>
             </div>
           )
         ) : (
@@ -417,6 +430,16 @@ export function InicioPage() {
                 Icono={QrCode}
                 titulo="Escanear equipo"
                 detalle="Ficha por código QR"
+              />
+              {/* Registrar equipo (hallazgo H9): el arranque natural de
+                  quien recibe hardware nuevo. Va a lo ancho para no dejar
+                  un hueco impar en la rejilla de dos columnas. */}
+              <AtajoRapido
+                to="/dispositivos/nuevo"
+                Icono={Monitor}
+                titulo="Registrar equipo"
+                detalle="Dar de alta un dispositivo nuevo"
+                className="col-span-2"
               />
             </div>
 
@@ -731,16 +754,18 @@ function AtajoRapido({
   Icono,
   titulo,
   detalle,
+  className = '',
 }: {
   to: string
   Icono: (props: IconoProps) => React.JSX.Element
   titulo: string
   detalle: string
+  className?: string
 }) {
   return (
     <Link
       to={to}
-      className="flex min-h-11 flex-col gap-2 rounded-lg border border-noct-divider bg-noct-surface p-3.5 text-noct-text hover:border-noct-accent hover:bg-noct-accent/[.06]"
+      className={`flex min-h-11 flex-col gap-2 rounded-lg border border-noct-divider bg-noct-surface p-3.5 text-noct-text hover:border-noct-accent hover:bg-noct-accent/[.06] ${className}`}
     >
       <Icono size={21} className="text-noct-accent" aria-hidden />
       <span className="text-[13.5px] font-medium leading-[1.3]">

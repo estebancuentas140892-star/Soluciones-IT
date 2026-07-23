@@ -234,7 +234,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **Modo inicio (sin texto), bloques en orden:**
 1. **"Continuar donde quedaste"** (si aplica): tarjeta destacada con el procedimiento a medias más reciente, barra de progreso y "Paso N de M". Enlaza a su ficha.
-2. **Atajos rápidos** (rejilla de 2): "Diagnóstico inteligente" (→ `/diagnostico`) y "Escanear equipo" (→ `/escaner`).
+2. **Atajos rápidos**: "Diagnóstico inteligente" (→ `/diagnostico`), "Escanear equipo" (→ `/escaner`) y, a lo ancho, **"Registrar equipo"** (→ `/dispositivos/nuevo`, hallazgo H9: arranque directo para quien recibe hardware nuevo). Además, en el estado "Sin coincidencias" del buscador se ofrece **"Crear dispositivo"** con el texto buscado precargado como nombre (`?nombre=`).
 3. **"Problemas frecuentes"** (si hay): los diagnósticos más ejecutados (o los más recientes si no hay volumen), colapsado a 4 filas, con contador de veces y enlace "Estadísticas" (→ `/diagnostico/estadisticas`).
 4. **"Pendientes"** (si hay): bloque derivado con mis borradores, credenciales/campos protegidos por vencer o vencidos (solo con permiso de bóveda) y sugerencias del equipo sin revisar. Cada fila lleva a su destino.
 5. **"Favoritos"** (si hay): lista estable que el técnico arma con la estrella de cada ficha. Personal por dispositivo.
@@ -332,7 +332,7 @@ Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un e
 - **"¿Qué sigue?"** (solo la primera vez tras crear el equipo): pasos sugeridos (agregar foto, seguridad, conexiones, documentar procedimiento) con enlaces directos.
 - **"Información"**: tarjeta de filas copiables (marca, modelo, serial, placa, IP), propiedades personalizadas (detalles clave/valor), **Ubicación** (enlace vivo a su ficha), **Responsable** (enlace vivo a la persona), **"Reemplaza a"** / **"Reemplazado por"** (enlaces), y observaciones.
 - **"Seguridad"** (`SeguridadDelEquipo`, solo con permiso de bóveda): datos protegidos propios del equipo (usuario, contraseña, PIN...). Ver sección 7.
-- **"Resolver con este equipo"**: botón "Iniciar diagnóstico" (si hay diagnóstico para su categoría), listas "Procedimientos de este equipo", "Problemas frecuentes de este equipo", "Credenciales de este equipo" (con permiso), y creación contextual: **"Reportar incidencia"**, **"Documentar procedimiento"**, **"Guardar secreto"** (con permiso), todos precargando el equipo.
+- **"Resolver con este equipo"**: botón "Iniciar diagnóstico" (si hay diagnóstico para su categoría); listas "Procedimientos de este equipo" y "Problemas frecuentes de este equipo" que muestran **tanto los específicos** (vinculados por `dispositivosAfectados`) **como los de su categoría** (procedimientos e incidencias publicados de la misma categoría, derivados por `categoria_id` sin esquema, con sub-rótulo "De la categoría {X}" y "Ver todos" cuando hay más de 5, hallazgo H1); "Credenciales de este equipo" (con permiso); y creación contextual: **"Reportar incidencia"**, **"Documentar procedimiento"**, **"Guardar secreto"** (con permiso), todos precargando el equipo.
 - **"Si este equipo falla"** (`ImpactoYDependencias`, si participa en conexiones): impacto de falla y dependencia ascendente.
 - **"Conexiones"** (`ConexionesFicha`): agrupadas en Instalado en / Contiene / Enlaces / Relacionados, con enlace "Ver en topología" y alta/baja de conexión.
 - **"Adjuntos"**.
@@ -465,7 +465,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - **Tarjetas de aviso** (reemplazan la barra al haber resultado):
   - **"Equipo identificado"** (encontrado): nombre y ubicación, botones **"Abrir la ficha"** y **"Seguir"**.
   - **"Varios equipos comparten este código"**: lista de opciones + "Seguir escaneando".
-  - **"Ningún equipo coincide con este código"**: muestra el código, botones "Seguir escaneando" y "Registrar equipo".
+  - **"Ningún equipo coincide con este código"**: muestra el código, botones "Seguir escaneando" y "Registrar equipo" (este último precarga el código leído como serial en el alta, `?serial=`, salvo que sea una URL de etiqueta; hallazgo H3).
 
 <a id="63-ubicaciones"></a>
 ### 6.3 Ubicaciones
@@ -546,12 +546,12 @@ Archivo `src/features/dispositivos/DispositivoForm.tsx`. Título dinámico "Nuev
 
 | Campo visible | Interno | Tipo de control | Oblig. | Defecto | Placeholder / opciones | Validaciones / notas |
 |---------------|---------|-----------------|--------|---------|------------------------|----------------------|
-| Nombre | `nombre` | Texto | **Sí** | vacío | "Qué es y dónde está: Zebra ZT411 · Bodega central" | No vacío. Alimenta buscador y QR |
+| Nombre | `nombre` | Texto | **Sí** | vacío (o `?nombre=`) | "Qué es y dónde está: Zebra ZT411 · Bodega central" | No vacío. Alimenta buscador y QR. Se precarga desde el buscador de Inicio sin resultados (H9) |
 | Categoría | `categoriaId` | Chips (una selección) | **Sí** | vacío | categorías vivas; con `?red=1` las de red van primero | Debe elegirse una |
 | Marca | `marca` | Texto con sugerencias (datalist) | No | vacío | "Zebra, HP, Cisco..." | Sugiere marcas ya usadas |
 | Modelo | `modelo` | Texto | No | vacío | "ZT411" | - |
 | Foto | `foto` | Carga de imagen | No | null | slot 96x64 | Se comprime y sube al elegir; cola offline; dedup por hash. No se copia al duplicar |
-| Número de serie | `serial` | Texto monoespaciado | No | vacío | - | Aviso si ya existe en otro equipo (enlace a esa ficha) |
+| Número de serie | `serial` | Texto monoespaciado | No | vacío (o `?serial=`) | - | Aviso si ya existe en otro equipo (enlace a esa ficha). Se precarga con el código leído por el escáner (H3) |
 | Placa de inventario | `placaInventario` | Texto monoespaciado | No | vacío | - | - |
 | Ubicación | `ubicacionId` / `ubicacion` | Selector de ubicación (buscar/crear/texto) | No | null | `SelectorUbicacion` | Elige entidad registrada, crea inline o texto libre de respaldo |
 | Responsable | `responsableId` / `responsable` | Selector de persona (buscar/crear/texto) | No | null | `SelectorPersona` | Igual que ubicación |
@@ -577,7 +577,7 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 | Objetivo general (1 línea) | `objetivoGeneral` | Texto | No | vacío | Qué se logra al completar todo |
 | Etiquetas | `etiquetas` | Editor de chips + sugerencias | No | [] | Enter/coma agregan; chips de sugerencia del vocabulario ya usado |
 | Imagen de portada | `portada` | Carga de imagen | No | null | Identifica el artículo en lista y buscador |
-| Equipos donde aplica | `dispositivosAfectados` | Selector múltiple (chips + select) | No | [] | Alimenta "Procedimientos/Problemas de este equipo" |
+| Equipos donde aplica | `dispositivosAfectados` | Selector múltiple (chips + select) | No | [] | Marca el artículo como **específico** de esos equipos. Publicado, ya aparece por **categoría** en las fichas aunque se deje vacío (aclarado en la ayuda del campo, H1/H2) |
 
 **Pestaña Pasos** (lo que se ejecuta):
 
@@ -610,7 +610,7 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 
 #### 7.2.1 Editor de pasos (`PasosEditor`)
 
-Cada **paso** es una tarjeta con: número, **Título** ("Qué hacer en este paso"), **Objetivo** ("qué se logra al terminar", opcional) y un menú **"···"** (Subir / Bajar / Eliminar, con confirmación). El **cuerpo** del paso son **bloques** que se agregan con tres botones: **Tarea**, **Advertencia**, **Imagen**.
+Cada **paso** es una tarjeta con: número, **Título** ("Qué hacer en este paso"), **Objetivo** ("qué se logra al terminar", opcional) y un menú **"···"** (Subir / Bajar / Eliminar, con confirmación). El **cuerpo** del paso son **bloques** que se agregan con cuatro botones: **Tarea**, **Advertencia**, **Imagen** y **Reutilizar** (H4: abre los "Vínculos del paso", donde vive "Procedimiento relacionado"; hace visible la composición por referencia, que ya existía en el plegable).
 
 - **Bloque Tarea**: icono que se toca para ciclar el tipo (Acción con casilla → Verificación → Decisión Sí/No) + texto. Enter inserta otra tarea; pegar varias líneas las reparte. Una **Decisión** puede vincular "Si responde No" un artículo (select). Cada tarea puede llevar además un vínculo protegido.
 - **Bloque Advertencia**: icono que cicla el tono (información, precaución, importante, consejo, dato técnico) + área de texto.
@@ -1085,4 +1085,10 @@ Registro obligatorio de la evolución del proyecto (REGLAS.md, regla 19). Cada c
 |-------|------|------|-------------|--------|---------|
 | 2026-07-23 | Documentación | Agregado | Se creó este documento (`DOCUMENTACION_FUNCIONAL.md`), inventario funcional completo de la app | Encargo del usuario: única fuente de verdad funcional | Base de referencia; sin cambio de código |
 | 2026-07-23 | Proceso / Documentación | Agregado | Auditoría de rediseño del flujo del técnico ([AUDITORIA_FLUJO_INSTALACION.md](AUDITORIA_FLUJO_INSTALACION.md)) y política obligatoria de mantenimiento (REGLAS.md regla 19). Se creó esta sección de Historial de cambios | Encargo del usuario: rediseñar el flujo bajo "cada dato una sola vez" y documentar todo cambio | Sin cambio de código todavía; las mejoras H1-H9 quedan como tareas 160-166 pendientes de aprobación de fases |
+| 2026-07-23 | Dispositivos (ficha) | Agregado | H1: "Procedimientos/Problemas de este equipo" ahora también muestran los publicados de la **categoría** del equipo (sub-rótulo "De la categoría {X}", máx. 5 + "Ver todos"), no solo los vinculados por equipo. Funciones puras `procedimientosDeCategoria`/`problemasDeCategoria` (con pruebas) | Un procedimiento genérico no aparecía en un equipo concreto salvo vínculo manual; el diagnóstico ya se ofrecía por categoría (inconsistencia) | El técnico encuentra el procedimiento desde la ficha; escala sin vínculos manuales. Sin esquema |
+| 2026-07-23 | Escáner / Dispositivos (editor) | Agregado | H3: "Registrar equipo" desde el escáner precarga el código leído como serial (`?serial=`, salvo URL de etiqueta); `DispositivoForm` lee `?serial` y `?nombre` en un alta en blanco | Se reescribía un dato ya leído (viola "nunca escribir dos veces") | Un dato menos que teclear; flujo escáner -> alta sin fricción |
+| 2026-07-23 | Inicio | Agregado | H9: atajo "Registrar equipo" en la rejilla de atajos y botón "Crear dispositivo" (con el texto buscado como nombre) en el estado "Sin coincidencias" del buscador | El técnico que recibe hardware no tenía arranque directo; el buscador sin resultados no ofrecía crear | Menos clics y menos navegación al empezar un trabajo |
+| 2026-07-23 | Soluciones (editor de pasos) | Agregado | H4: botón "Reutilizar" en la fila de bloques del paso, que abre los "Vínculos del paso" (Procedimiento relacionado). La composición por referencia ya existía; se hace descubrible | Riesgo de copiar pasos en vez de referenciarlos por desconocimiento de la función | Fomenta la composición; menos duplicación |
+| 2026-07-23 | Soluciones (editor, General) | Modificado | H2: la ayuda de "Equipos donde aplica" aclara que, publicado, el artículo ya aparece por categoría aunque se deje vacío; vincular marca como específico | Evitar que el técnico crea que debe vincular equipo por equipo | Refuerza el principio "cada dato una sola vez"; menos trabajo manual |
+| 2026-07-23 | Soluciones (editor) | (Decisión) | H5: se decide MANTENER las 4 pestañas del editor (General/Pasos/Detalles/Publicación); NO pasar a 7. El flujo lineal ya existe dentro de las pestañas y 7 empeorarían móvil | Mobile-first; evitar un retroceso de UX | Sin cambio de código |
 

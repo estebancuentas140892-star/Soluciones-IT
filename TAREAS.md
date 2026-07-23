@@ -136,13 +136,13 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-**REDISEÑO DEL FLUJO DEL TÉCNICO (auditoría del 2026-07-23, [AUDITORIA_FLUJO_INSTALACION.md](AUDITORIA_FLUJO_INSTALACION.md)).** Tareas registradas con el formato de la regla 19. Fases: 1 (H1, H3, H9), 2 (H4, H2, H5), 3 (H6, con esquema, deferida). Ninguna de las fases 1 y 2 toca el esquema ni rompe compatibilidad. Pendientes de aprobación de fases por el usuario.
+**REDISEÑO DEL FLUJO DEL TÉCNICO (auditoría del 2026-07-23, [AUDITORIA_FLUJO_INSTALACION.md](AUDITORIA_FLUJO_INSTALACION.md)).** Tareas registradas con el formato de la regla 19. **Fases 1 y 2 IMPLEMENTADAS y verificadas el 2026-07-23** (H1, H3, H9, H4, H2 completadas; H5 es una decisión aplicada). Sin esquema, sin romper compatibilidad. Verificación: lint, typecheck y build en verde; 8 pruebas nuevas para `procedimientosDeCategoria`/`problemasDeCategoria` en verde; 1608 pruebas pasan (los 4 fallos restantes son de `archivosPendientes.test.ts`, preexistentes y ajenos: RLS de Storage con el `.env` real de esta sesión). DOCUMENTACION_FUNCIONAL.md e Historial de cambios actualizados en la misma tarea. **Sin verificar en navegador** (la app exige login de técnico real, no disponible en esta sesión). Queda solo la Fase 3 (H6, con esquema, deferida).
 
 ### 160. Procedimientos e incidencias por categoría en la ficha del equipo (hallazgo H1)
 - Descripción: en la ficha del dispositivo, además de los procedimientos/incidencias vinculados por `dispositivosAfectados` ("específicos de este equipo"), mostrar "De esta categoría": los publicados cuyo `categoria_id` coincide con la categoría del equipo. Consulta derivada, sin esquema. Separar visualmente lo específico de lo general; "Ver todos" a `/soluciones?categoria=<id>`.
 - Motivo: hoy un procedimiento genérico ("Instalar impresora de red") no aparece en una impresora concreta salvo que se vincule equipo por equipo. El diagnóstico ya se ofrece por categoría (inconsistencia).
 - Impacto: cierra el paso 7 del caso de uso; el técnico resuelve desde la ficha sin cambiar de módulo; escala sin vínculos manuales.
-- Prioridad: **Alta**. Estado: Pendiente.
+- Prioridad: **Alta**. Estado: **Completada** (2026-07-23): `procedimientosDeCategoria`/`problemasDeCategoria` + sub-rótulo "De la categoría {X}" con "Ver todos". 8 pruebas nuevas en verde.
 - Área afectada: `src/features/dispositivos/procedimientosDeDispositivo.ts`, `problemasDeDispositivo.ts`, `ProcedimientosDelEquipo.tsx`, `ProblemasDelEquipo.tsx`, `DispositivoPage.tsx`.
 - Dependencias: ninguna.
 
@@ -150,7 +150,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - Descripción: "Registrar equipo" desde el escáner abre `/dispositivos/nuevo?serial=<código>` y `DispositivoForm` precarga el serial (editable).
 - Motivo: hoy se reescribe el serial/placa que la app ya leyó (viola "nunca escribir dos veces").
 - Impacto: un dato menos que teclear; flujo escáner -> alta sin fricción.
-- Prioridad: **Media**. Estado: Pendiente.
+- Prioridad: **Media**. Estado: **Completada** (2026-07-23).
 - Área afectada: `EscanerPage.tsx`, `DispositivoForm.tsx`.
 - Dependencias: ninguna.
 
@@ -158,7 +158,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - Descripción: añadir un atajo "Registrar equipo" a la rejilla de atajos de Inicio; en el estado "Sin coincidencias" del buscador global, ofrecer "Crear dispositivo" (con el texto buscado como nombre).
 - Motivo: el técnico que recibe hardware no tiene arranque directo; el buscador sin resultados no ofrece crear.
 - Impacto: menos clics y menos navegación al empezar un trabajo.
-- Prioridad: **Media**. Estado: Pendiente.
+- Prioridad: **Media**. Estado: **Completada** (2026-07-23).
 - Área afectada: `InicioPage.tsx`.
 - Dependencias: ninguna.
 
@@ -166,7 +166,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - Descripción: subir la descubribilidad de "Reutilizar procedimiento" (subprocedimiento) en `PasosEditor`, hoy en la sección plegada "Vínculos del paso". Solo presentación; la composición ya existe y funciona.
 - Motivo: riesgo de copiar pasos en vez de referenciarlos por desconocimiento de la función.
 - Impacto: fomenta la composición; menos duplicación.
-- Prioridad: **Media**. Estado: Pendiente.
+- Prioridad: **Media**. Estado: **Completada** (2026-07-23): botón "Reutilizar" en la fila de bloques del paso.
 - Área afectada: `PasosEditor.tsx`.
 - Dependencias: ninguna.
 
@@ -174,14 +174,14 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - Descripción: al "Documentar procedimiento" desde la ficha del equipo, ofrecer explícitamente crear el artículo vinculado al equipo o solo a su categoría. NO agregar marca/modelo como campos del artículo (sería duplicación; el artículo referencia el equipo).
 - Motivo: aprovechar H1 para que un procedimiento nazca ya aplicable a toda la categoría cuando corresponde.
 - Impacto: coherencia con el principio; menos campos que llenar.
-- Prioridad: **Media**. Estado: Pendiente. Depende de la 160 (H1).
+- Prioridad: **Media**. Estado: **Completada** (2026-07-23): la ayuda de "Equipos donde aplica" aclara la aplicación por categoría (aprovecha H1); no se agregaron marca/modelo al artículo (sería duplicación). Depende de la 160 (H1).
 - Área afectada: `DispositivoPage.tsx`, `ArticuloForm.tsx`.
 
 ### 165. Decisión: mantener 4 pestañas en el editor de artículo (hallazgo H5)
 - Descripción: NO convertir el editor a 7 pestañas (empeoraría móvil; el flujo lineal ya existe dentro de las 4). Ajuste opcional: mover "Equipos donde aplica" de General a Detalles una vez implementado H1.
 - Motivo: mobile-first; evitar un retroceso de UX.
 - Impacto: se conserva la ergonomía móvil.
-- Prioridad: **Baja** (decisión, no cambio). Estado: Pendiente de confirmación del usuario.
+- Prioridad: **Baja** (decisión, no cambio). Estado: **Completada** (2026-07-23): decisión aplicada de MANTENER 4 pestañas (registrada en la auditoría y en el Historial de cambios). No se movió "Equipos donde aplica" (ajuste opcional descartado por churn marginal).
 - Área afectada: `ArticuloForm.tsx`, `completitudArticulo.ts`.
 
 ### 166. "Aplica a" por marca/modelo/versión (hallazgo H6, con esquema, DEFERIDA)

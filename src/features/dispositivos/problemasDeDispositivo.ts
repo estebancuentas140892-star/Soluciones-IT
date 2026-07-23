@@ -18,3 +18,25 @@ export function problemasDeDispositivo(articulos: Articulo[], dispositivoId: str
     )
     .sort((a, b) => a.titulo.localeCompare(b.titulo, 'es', { numeric: true }))
 }
+
+// Incidencias aplicables por CATEGORIA (hallazgo H1): las incidencias
+// publicadas de la misma categoria del equipo, aunque no lo mencionen en
+// dispositivosAfectados. Mismo criterio que procedimientosDeCategoria;
+// se excluyen las ya listadas como especificas del equipo. Derivada, sin
+// esquema. Logica pura.
+export function problemasDeCategoria(
+  articulos: Articulo[],
+  categoriaId: string,
+  idsExcluidos: ReadonlySet<string>,
+): Articulo[] {
+  return articulos
+    .filter(
+      (a) =>
+        !a.eliminadoEn &&
+        a.tipo === 'problema_frecuente' &&
+        (a.estado ?? 'publicado') === 'publicado' &&
+        a.categoriaId === categoriaId &&
+        !idsExcluidos.has(a.id),
+    )
+    .sort((a, b) => a.titulo.localeCompare(b.titulo, 'es', { numeric: true }))
+}

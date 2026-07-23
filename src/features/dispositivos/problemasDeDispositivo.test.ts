@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Articulo, DispositivoAfectado, TipoArticulo } from '../../lib/db'
-import { problemasDeDispositivo } from './problemasDeDispositivo'
+import { problemasDeCategoria, problemasDeDispositivo } from './problemasDeDispositivo'
 
 function articulo(cambios: Partial<Articulo> & { id: string; titulo: string }): Articulo {
   return {
@@ -64,5 +64,35 @@ describe('problemasDeDispositivo', () => {
   it('devuelve vacío cuando el equipo no aparece en ninguna incidencia', () => {
     const articulos = [articulo({ id: 'a', titulo: 'A', dispositivosAfectados: [{ id: 'disp-9', nombre: 'X' }] })]
     expect(problemasDeDispositivo(articulos, 'disp-1')).toEqual([])
+  })
+})
+
+describe('problemasDeCategoria', () => {
+  it('lista las incidencias publicadas de la categoría, sin necesidad de vínculo por equipo', () => {
+    const articulos = [
+      articulo({ id: 'b', titulo: 'B: papel atascado', categoriaId: 'cat-1' }),
+      articulo({ id: 'a', titulo: 'A: no imprime', categoriaId: 'cat-1' }),
+      articulo({ id: 'otra', titulo: 'De otra categoría', categoriaId: 'cat-2' }),
+    ]
+    expect(problemasDeCategoria(articulos, 'cat-1', new Set()).map((a) => a.id)).toEqual(['a', 'b'])
+  })
+
+  it('excluye los ids ya listados como específicos del equipo', () => {
+    const articulos = [
+      articulo({ id: 'especifico', titulo: 'Ya vinculada', categoriaId: 'cat-1' }),
+      articulo({ id: 'general', titulo: 'General', categoriaId: 'cat-1' }),
+    ]
+    expect(problemasDeCategoria(articulos, 'cat-1', new Set(['especifico'])).map((a) => a.id)).toEqual(['general'])
+  })
+
+  it('ignora procedimientos, borradores, obsoletos y eliminados', () => {
+    const articulos = [
+      articulo({ id: 'proc', titulo: 'Procedimiento', tipo: 'instalacion', categoriaId: 'cat-1' }),
+      articulo({ id: 'borrador', titulo: 'Borrador', estado: 'borrador', categoriaId: 'cat-1' }),
+      articulo({ id: 'obsoleto', titulo: 'Obsoleto', estado: 'obsoleto', categoriaId: 'cat-1' }),
+      articulo({ id: 'eliminado', titulo: 'Eliminado', eliminadoEn: '2026-01-01', categoriaId: 'cat-1' }),
+      articulo({ id: 'ok', titulo: 'Vigente', categoriaId: 'cat-1' }),
+    ]
+    expect(problemasDeCategoria(articulos, 'cat-1', new Set()).map((a) => a.id)).toEqual(['ok'])
   })
 })
