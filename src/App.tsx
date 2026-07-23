@@ -53,6 +53,9 @@ const DiagnosticoRunPage = lazy(() =>
 const SugerenciasEquipoPage = lazy(() =>
   import('./features/diagnostico/SugerenciasEquipoPage').then((m) => ({ default: m.SugerenciasEquipoPage })),
 )
+const EstadisticasPage = lazy(() =>
+  import('./features/diagnostico/EstadisticasPage').then((m) => ({ default: m.EstadisticasPage })),
+)
 const DispositivosPage = lazy(() =>
   import('./features/dispositivos/DispositivosPage').then((m) => ({ default: m.DispositivosPage })),
 )
@@ -525,6 +528,18 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <SugerenciasEquipoPage />
+                  </Suspense>
+                }
+              />
+              {/* Tablero de estadisticas (F3 de PROPUESTA_MODULOS.md):
+                  mismo patron de shell centrado que SugerenciasEquipoPage,
+                  ruta estatica que React Router prioriza sobre
+                  diagnostico/:diagnosticoId aunque este se declare antes. */}
+              <Route
+                path="diagnostico/estadisticas"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <EstadisticasPage />
                   </Suspense>
                 }
               />

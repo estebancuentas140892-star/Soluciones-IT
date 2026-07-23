@@ -28,6 +28,7 @@ import {
 } from '../../components/iconos'
 import { BTN_GHOST, BTN_GHOST_TENUE, BTN_PRIMARIO } from '../../components/nocturne'
 import { AsistenteVista } from '../soluciones/AsistenteVista'
+import { ETIQUETA_MOTIVO, MOTIVOS_ORDEN, type MotivoConcreto } from './motivos'
 
 // Asistente del Modo Diagnóstico Inteligente re-autorizado en Nocturne
 // (handoff "Rediseño de aplicación empresarial", Diagnóstico.dc.html;
@@ -406,17 +407,17 @@ function ArticuloEnDiagnostico({
   )
 }
 
-const MOTIVOS_NO_RESUELTO: {
-  valor: Exclude<MotivoNoResuelto, ''>
-  etiqueta: string
-  Icono: (props: IconoProps) => React.JSX.Element
-}[] = [
-  { valor: 'no_funciono', etiqueta: 'La solución no funcionó', Icono: XCircle },
-  { valor: 'no_encontro_problema', etiqueta: 'No encontré mi problema', Icono: MagnifyingGlass },
-  { valor: 'faltan_pasos', etiqueta: 'Faltan pasos', Icono: ListPlus },
-  { valor: 'encontro_otra_solucion', etiqueta: 'Encontré otra solución', Icono: Lightbulb },
-  { valor: 'otro', etiqueta: 'Otro', Icono: DotsThreeCircle },
-]
+// El texto de cada motivo vive en motivos.ts (unico dueño, tambien lo
+// lee el tablero de estadisticas); el icono es un detalle de esta
+// pantalla nada mas, asi que se mapea aparte en vez de meter React en
+// un modulo de datos puro.
+const ICONO_MOTIVO: Record<MotivoConcreto, (props: IconoProps) => React.JSX.Element> = {
+  no_funciono: XCircle,
+  no_encontro_problema: MagnifyingGlass,
+  faltan_pasos: ListPlus,
+  encontro_otra_solucion: Lightbulb,
+  otro: DotsThreeCircle,
+}
 
 // Resultado del diagnóstico: qué se encontró, qué se ejecutó y la
 // pregunta que alimenta las estadísticas: ¿quedó resuelto? Si "No", pide
@@ -497,8 +498,9 @@ function Resultado({
               ¿Por qué no quedó resuelto? Ayuda a mejorar la base.
             </p>
             <div className="flex flex-col gap-1">
-              {MOTIVOS_NO_RESUELTO.map(({ valor, etiqueta, Icono }) => {
+              {MOTIVOS_ORDEN.map((valor) => {
                 const activo = motivo === valor
+                const Icono = ICONO_MOTIVO[valor]
                 return (
                   <button
                     key={valor}
@@ -515,7 +517,7 @@ function Resultado({
                       className={`shrink-0 ${activo ? 'text-noct-accent-300' : 'text-noct-neutral-500'}`}
                       aria-hidden
                     />
-                    {etiqueta}
+                    {ETIQUETA_MOTIVO[valor]}
                   </button>
                 )
               })}

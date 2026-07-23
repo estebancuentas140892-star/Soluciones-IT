@@ -6,6 +6,7 @@ import { BotonFavorito } from '../../components/BotonFavorito'
 import { BotonVolver } from '../../components/BotonVolver'
 import {
   CaretRight,
+  ChartBar,
   MagnifyingGlass,
   Play,
   Plus,
@@ -104,12 +105,21 @@ export function DiagnosticosPage() {
             <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
               Empezar por el problema, llegar a la solución
             </p>
-            <Link
-              to="/diagnostico/sugerencias"
-              className="mt-1.5 inline-block text-[12px] text-noct-accent-300 underline-offset-2 hover:underline"
-            >
-              Sugerencias del equipo
-            </Link>
+            <div className="mt-1.5 flex items-center gap-3">
+              <Link
+                to="/diagnostico/sugerencias"
+                className="text-[12px] text-noct-accent-300 underline-offset-2 hover:underline"
+              >
+                Sugerencias del equipo
+              </Link>
+              <Link
+                to="/diagnostico/estadisticas"
+                className="inline-flex items-center gap-1 text-[12px] text-noct-accent-300 underline-offset-2 hover:underline"
+              >
+                <ChartBar size={12} aria-hidden />
+                Estadísticas
+              </Link>
+            </div>
           </div>
           <div className="px-4 pb-3">
             <label
