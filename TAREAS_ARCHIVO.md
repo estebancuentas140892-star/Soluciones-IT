@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 150. Aviso de solapamiento entre credencial y campo protegido (hallazgo S5)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1449 pruebas propias en verde (más 101 de `src/features/boveda` verificadas aparte). **Prioridad**: MEDIA. Con esta se cierran S2 a S5, los cuatro hallazgos que integraban el flujo 4 de la auditoría junto con S1 (ya resuelto antes). **Sin verificar en navegador**: esta sesión ya tiene Supabase configurado (`.env` cargado con las credenciales del proyecto), pero falta una cuenta de un técnico real para iniciar sesión y ver la pantalla; se confirmó que la app conecta y muestra el login normal (ya no el aviso de "sin conectar").
+
+**Qué resolvía**: una credencial tipo 'cuenta' vinculada a un equipo guarda usuario+contraseña, y ese mismo equipo puede tener un `CampoProtegido` tipo 'contrasena' en su ficha (Seguridad). Nada impedía que la misma contraseña de administrador viviera en los dos lados a la vez; al rotarla había que acordarse de cambiarla en ambos, o divergían en silencio.
+
+**Cambios**:
+- `src/features/boveda/solapamientoSecreto.ts` (+ test, 4 pruebas): `equiposConContrasenaProtegida(vinculados, camposProtegidos)`, pura. Devuelve los equipos vinculados a la credencial que ya tienen un campo protegido activo de tipo 'contrasena'.
+- `src/features/boveda/CredencialForm.tsx`: consulta en vivo de `campos_protegidos` con tipo 'contrasena'; cuando el tipo de secreto es 'cuenta' (el que representa usuario+contraseña de acceso, el mismo dato que un campo protegido 'contrasena'), se calcula el solapamiento contra los equipos vinculados y se muestra un aviso ámbar por cada equipo solapado (mismo estilo que el nudge anti duplicidad ya existente), con enlace directo a la ficha del equipo.
+
+**Decisión de alcance**: el aviso se limita al tipo 'cuenta' de la credencial, siguiendo la literalidad del hallazgo (es el tipo que representa la identidad de acceso completa de un equipo). Los otros tipos ('red', 'llave', 'archivo', 'nota') no disparan el aviso aunque también tengan un campo `contraseña` visible, porque no representan necesariamente la misma cosa que un campo protegido de equipo (por ejemplo 'red' es más bien un secreto de infraestructura de red, no una cuenta de acceso al propio equipo).
+
 ### 149. El título de credencial ya no queda desfasado si el equipo se renombra (hallazgo S4)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1449 pruebas en verde. **Prioridad**: MEDIA. **Sin verificar en navegador**: mismo límite de sesión que las tareas 144 a 148.

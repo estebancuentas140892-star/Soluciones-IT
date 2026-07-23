@@ -21,6 +21,7 @@ import { generarContrasena } from '../../lib/generarContrasena'
 import { proximoVencimiento, vencimientoDesactualizado } from '../../lib/vencimiento'
 import { valoresUnicos } from '../../lib/vocabulario'
 import { BUCKET_ARCHIVOS_BOVEDA } from './archivoSeguro'
+import { equiposConContrasenaProtegida } from './solapamientoSecreto'
 import { tituloAccesoSugerido } from './tituloAcceso'
 import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBoveda'
 
@@ -150,6 +151,14 @@ export function CredencialForm() {
     () => [...dispositivosDisponibles].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true })),
     [dispositivosDisponibles],
   )
+  // Solapamiento credencial <-> campo protegido (hallazgo S5): datos de
+  // los campos protegidos de tipo 'contrasena', para avisar si un equipo
+  // vinculado ya guarda su contraseña en Seguridad.
+  const camposProtegidosConContrasena = useLiveQuery(
+    () => db.campos_protegidos.filter((c) => !c.eliminadoEn && c.tipo === 'contrasena').toArray(),
+    [],
+    [],
+  )
   // Vocabulario derivado, igual que las marcas de un dispositivo. Antes
   // deduplicaba con `new Set` sin recortar espacios ni ignorar
   // mayúsculas, así que "POS" y "pos" aparecían como dos categorías
@@ -232,6 +241,14 @@ export function CredencialForm() {
     const vivo = dispositivosOrdenados.find((d) => d.id === primerVinculo.id)?.nombre ?? ''
     return tituloAccesoSugerido(titulo, primerVinculo.nombre, vivo)
   }, [titulo, primerVinculo, dispositivosOrdenados])
+
+  // Solapamiento (hallazgo S5): solo aplica al tipo 'cuenta', que es el
+  // que guarda usuario+contraseña representando la identidad de acceso
+  // del equipo (el mismo dato que un CampoProtegido 'contrasena').
+  const equiposSolapados = useMemo(
+    () => (tipo === 'cuenta' ? equiposConContrasenaProtegida(dispositivos, camposProtegidosConContrasena) : []),
+    [tipo, dispositivos, camposProtegidosConContrasena],
+  )
 
   useEffect(() => {
     if (!credencial || cargadoInicial) return
@@ -700,6 +717,24 @@ export function CredencialForm() {
                   onQuitar={(id) => setDispositivos((actuales) => actuales.filter((d) => d.id !== id))}
                 />
               </div>
+
+              {equiposSolapados.map((equipo) => (
+                <div
+                  key={equipo.id}
+                  className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5"
+                >
+                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                    &quot;{equipo.nombre}&quot; ya guarda una contraseña en Seguridad. Evita duplicarla: al
+                    rotar hay que acordarse de cambiarla en los dos lados.
+                  </p>
+                  <Link
+                    to={`/dispositivos/${equipo.id}`}
+                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                  >
+                    Ir a la ficha
+                  </Link>
+                </div>
+              ))}
 
               {esEdicion && (
                 <label className="flex flex-col gap-1.5">

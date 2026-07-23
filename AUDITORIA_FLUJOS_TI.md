@@ -123,7 +123,7 @@ El puerto vive como texto suelto en cada `Conexion` (`origenPuerto`/`destinoPuer
 La creación contextual arma `titulo=Acceso ${dispositivo.nombre}` (`DispositivoPage.tsx:334`) y ese texto se guarda congelado (`CredencialForm.tsx:310-311`). Si el equipo se renombra, el título del secreto queda desfasado, mientras el resto del sistema sí usa referencia viva. Existe un nudge cuando el título coincide (`CredencialForm.tsx:208-212`), pero no cuando quedó desfasado.
 - Debería referenciarse: no bakear el nombre en el título (dejar título genérico + equipo vía vínculo vivo), o marcar el título como derivado y refrescarlo desde el equipo vinculado.
 
-**S5 - Solapamiento credencial ↔ campo protegido: el mismo secreto puede vivir en los dos lados. [MEDIA] [NUEVO]**
+**S5 - Solapamiento credencial ↔ campo protegido: el mismo secreto puede vivir en los dos lados. [MEDIA] [NUEVO] [RESUELTO en la tarea 150, 2026-07-23]**
 Una credencial 'cuenta' vinculada a un equipo guarda usuario+contraseña, y ese mismo equipo puede tener un `CampoProtegido` 'contrasena'. Nada impide que la contraseña de administrador esté en ambos; al rotar hay que acordarse de cambiarla en los dos y, si no, divergen. Las fases P0-P4 resolvieron "un secreto REPRESENTA un equipo", no "dos lugares guardan la misma contraseña".
 - Automatizar: extender el nudge para avisar "este equipo ya guarda una contraseña en Seguridad; evita duplicarla" cuando una credencial 'cuenta' se vincula a un equipo que ya tiene un campo 'contrasena'.
 
@@ -295,7 +295,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | S2 | Campos protegidos sin vencimiento | Media | Baja | Bajo | RESUELTO (tarea 147) |
 | S3 | Campo protegido sin motivo ni "Generar" | Media | Baja | Bajo | RESUELTO (tarea 148) |
 | S4 | Título de credencial congela el nombre | Media | Baja | Bajo | RESUELTO (tarea 149) |
-| S5 | Solapamiento credencial/campo protegido | Media | Baja | Bajo | Nuevo |
+| S5 | Solapamiento credencial/campo protegido | Media | Baja | Bajo | RESUELTO (tarea 150) |
 | K3 | Completitud no depende del tipo | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | K4 | Diagnóstico no hereda categoría | Media | Baja | Bajo | RESUELTO (tarea 141) |
 | K5 | Anti-duplicados asimétrico | Media | Baja | Bajo | RESUELTO (tarea 141) |
