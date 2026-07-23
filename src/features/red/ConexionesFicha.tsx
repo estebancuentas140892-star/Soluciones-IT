@@ -5,11 +5,13 @@ import { db, type Conexion, type Dispositivo } from '../../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
 import {
   agruparConexiones,
+  candidatosConexion,
   datosSegunModo,
   MEDIOS_SUGERIDOS,
   type ExtremoConexion,
   type ModoConexion,
 } from '../../lib/conexiones'
+import { idsDeRed } from '../../lib/categorias'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, Plus, X } from '../../components/iconos'
 import { BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
@@ -206,13 +208,13 @@ function FormularioConexion({
   const [categoriaEquipoNuevo, setCategoriaEquipoNuevo] = useState('')
   const [guardandoEquipo, setGuardandoEquipo] = useState(false)
 
-  const coincidencias = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase()
-    if (!texto) return []
-    return (todos ?? [])
-      .filter((d) => [d.nombre, d.ubicacion, d.ip].join(' ').toLowerCase().includes(texto))
-      .slice(0, 8)
-  }, [todos, busqueda])
+  // Hallazgo N5: prioriza equipos de la misma ubicación o de categoría
+  // de red, y pre-sugiere sin necesidad de teclear cuando alguno aplica.
+  const idsRed = useMemo(() => idsDeRed(categorias), [categorias])
+  const coincidencias = useMemo(
+    () => candidatosConexion(todos ?? [], busqueda, dispositivo, idsRed),
+    [todos, busqueda, dispositivo, idsRed],
+  )
 
   // `cerrarAlTerminar` en false es "Guardar y agregar otra" (hallazgo
   // O2): conserva el tipo de relacion elegido (lo tedioso de re-elegir)
@@ -341,24 +343,31 @@ function FormularioConexion({
             className={`min-h-11 ${CLASE_CAMPO}`}
           />
           {coincidencias.length > 0 && (
-            <ul className="flex flex-col gap-1">
-              {coincidencias.map((d) => (
-                <li key={d.id}>
-                  <button
-                    type="button"
-                    onClick={() => setOtro(d)}
-                    className="w-full rounded-md border border-noct-divider bg-noct-bg px-3 py-2 text-left hover:border-noct-accent"
-                  >
-                    <p className="text-sm text-noct-text">{d.nombre}</p>
-                    {(d.ubicacion || d.ip) && (
-                      <p className="text-xs text-noct-neutral-400">
-                        {[d.ubicacion, d.ip].filter(Boolean).join(' · ')}
-                      </p>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              {!busqueda.trim() && (
+                <p className="text-[11.5px] text-noct-neutral-500">
+                  Sugeridos por ubicación o tipo de red
+                </p>
+              )}
+              <ul className="flex flex-col gap-1">
+                {coincidencias.map((d) => (
+                  <li key={d.id}>
+                    <button
+                      type="button"
+                      onClick={() => setOtro(d)}
+                      className="w-full rounded-md border border-noct-divider bg-noct-bg px-3 py-2 text-left hover:border-noct-accent"
+                    >
+                      <p className="text-sm text-noct-text">{d.nombre}</p>
+                      {(d.ubicacion || d.ip) && (
+                        <p className="text-xs text-noct-neutral-400">
+                          {[d.ubicacion, d.ip].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           {/* Alta rapida del otro extremo (hallazgo O3): el equipo puede

@@ -1,4 +1,4 @@
-import type { Conexion, TipoConexion } from './db'
+import type { Conexion, Dispositivo, TipoConexion } from './db'
 
 // Logica pura de las conexiones entre dispositivos, separada de React
 // y de la base local para poder probarla sola.
@@ -133,4 +133,40 @@ export function agruparConexiones(
       compararNatural(a.puertoLocal, b.puertoLocal) || compararNatural(a.otroNombre, b.otroNombre),
   )
   return grupos
+}
+
+// Hallazgo N5 de AUDITORIA_FLUJOS_TI.md: la busqueda del otro extremo al
+// crear una conexion exigia teclear y filtraba solo por nombre/ubicacion
+// (texto)/ip, sin priorizar los candidatos mas probables: equipos de la
+// MISMA ubicacion (rack/switch al lado) o categorias `es_red` (lo
+// esperable para un uplink). Compartida entre ConexionesFicha.tsx y
+// TopologiaEquipoPage.tsx (que hoy duplican este calculo, hallazgo D1).
+//
+// Con texto: filtra igual que antes (nombre/ubicacion/ip) y solo
+// reordena los resultados, sin cambiar que aparece. Sin texto: en vez de
+// no mostrar nada, pre-sugiere los candidatos con alguna pista real
+// (misma ubicacion o categoria de red); si ninguno la tiene, sigue sin
+// mostrar nada (listar "todos" sin ningun criterio no seria sugerencia).
+export function candidatosConexion(
+  candidatos: Dispositivo[],
+  texto: string,
+  equipoActual: Dispositivo,
+  idsRed: Set<string>,
+  limite = 8,
+): Dispositivo[] {
+  const buscado = texto.trim().toLowerCase()
+  const base = buscado
+    ? candidatos.filter((d) => [d.nombre, d.ubicacion, d.ip].join(' ').toLowerCase().includes(buscado))
+    : candidatos.filter((d) => puntajeCandidato(d, equipoActual, idsRed) > 0)
+
+  return [...base]
+    .sort((a, b) => puntajeCandidato(b, equipoActual, idsRed) - puntajeCandidato(a, equipoActual, idsRed))
+    .slice(0, limite)
+}
+
+function puntajeCandidato(d: Dispositivo, equipoActual: Dispositivo, idsRed: Set<string>): number {
+  let puntaje = 0
+  if (equipoActual.ubicacionId && d.ubicacionId === equipoActual.ubicacionId) puntaje += 2
+  if (idsRed.has(d.categoriaId)) puntaje += 1
+  return puntaje
 }

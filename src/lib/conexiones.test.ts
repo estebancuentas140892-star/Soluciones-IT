@@ -1,6 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import type { Conexion } from './db'
-import { agruparConexiones, compararNatural, datosSegunModo, desdeExtremo, resumenConexion } from './conexiones'
+import type { Conexion, Dispositivo } from './db'
+import {
+  agruparConexiones,
+  candidatosConexion,
+  compararNatural,
+  datosSegunModo,
+  desdeExtremo,
+  resumenConexion,
+} from './conexiones'
+
+function dispositivo(parcial: Partial<Dispositivo> & { id: string; nombre: string }): Dispositivo {
+  return {
+    categoriaId: 'cat-generica',
+    marca: '',
+    modelo: '',
+    serial: '',
+    placaInventario: '',
+    ubicacion: '',
+    ubicacionId: null,
+    responsable: '',
+    responsableId: null,
+    reemplazaA: null,
+    ip: '',
+    estado: '',
+    observaciones: '',
+    detalles: {},
+    foto: null,
+    updatedAt: '',
+    updatedBy: null,
+    eliminadoEn: null,
+    ...parcial,
+  }
+}
 
 function conexion(parcial: Partial<Conexion>): Conexion {
   return {
@@ -147,5 +178,61 @@ describe('datosSegunModo', () => {
       origenEsteDispositivo: true,
       conPuertos: false,
     })
+  })
+})
+
+describe('candidatosConexion', () => {
+  const equipoActual = dispositivo({ id: 'e1', nombre: 'Punto de red D80', ubicacionId: 'ubi-1' })
+  const idsRed = new Set(['cat-red'])
+
+  it('con texto, filtra por nombre/ubicación/ip igual que antes', () => {
+    const candidatos = [
+      dispositivo({ id: 'd1', nombre: 'Switch A', ubicacion: 'Bodega' }),
+      dispositivo({ id: 'd2', nombre: 'Impresora B', ubicacion: 'Oficina' }),
+    ]
+    expect(candidatosConexion(candidatos, 'switch', equipoActual, idsRed).map((d) => d.id)).toEqual(['d1'])
+  })
+
+  it('con texto, ordena primero el candidato de la misma ubicación', () => {
+    const candidatos = [
+      dispositivo({ id: 'd1', nombre: 'Switch A', ubicacionId: 'ubi-2' }),
+      dispositivo({ id: 'd2', nombre: 'Switch B', ubicacionId: 'ubi-1' }),
+    ]
+    expect(candidatosConexion(candidatos, 'switch', equipoActual, idsRed).map((d) => d.id)).toEqual([
+      'd2',
+      'd1',
+    ])
+  })
+
+  it('con texto, ordena primero una categoría de red cuando no hay coincidencia de ubicación', () => {
+    const candidatos = [
+      dispositivo({ id: 'd1', nombre: 'Switch A', categoriaId: 'cat-generica' }),
+      dispositivo({ id: 'd2', nombre: 'Switch B', categoriaId: 'cat-red' }),
+    ]
+    expect(candidatosConexion(candidatos, 'switch', equipoActual, idsRed).map((d) => d.id)).toEqual([
+      'd2',
+      'd1',
+    ])
+  })
+
+  it('sin texto, pre-sugiere los candidatos de la misma ubicación o de categoría de red', () => {
+    const candidatos = [
+      dispositivo({ id: 'd1', nombre: 'Rack A', ubicacionId: 'ubi-1' }),
+      dispositivo({ id: 'd2', nombre: 'Switch de otra sede', categoriaId: 'cat-red' }),
+      dispositivo({ id: 'd3', nombre: 'Impresora', categoriaId: 'cat-generica' }),
+    ]
+    expect(candidatosConexion(candidatos, '', equipoActual, idsRed).map((d) => d.id)).toEqual(['d1', 'd2'])
+  })
+
+  it('sin texto y sin ninguna pista real, no sugiere nada', () => {
+    const candidatos = [dispositivo({ id: 'd1', nombre: 'Impresora', categoriaId: 'cat-generica' })]
+    expect(candidatosConexion(candidatos, '', equipoActual, idsRed)).toEqual([])
+  })
+
+  it('respeta el límite', () => {
+    const candidatos = Array.from({ length: 10 }, (_, i) =>
+      dispositivo({ id: `d${i}`, nombre: `Switch ${i}`, ubicacionId: 'ubi-1' }),
+    )
+    expect(candidatosConexion(candidatos, 'switch', equipoActual, idsRed, 3)).toHaveLength(3)
   })
 })

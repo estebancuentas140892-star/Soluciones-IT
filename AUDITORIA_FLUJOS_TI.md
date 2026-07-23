@@ -96,7 +96,7 @@ La ubicación se teclea a mano en el alta y la conexión posterior conoce el rac
 Al enlazar desde un switch no se ofrece el próximo puerto libre (`ConexionesFicha.tsx:193`), pese a que las conexiones existentes ya se pueden leer (`agruparConexiones` en `src/lib/conexiones.ts`).
 - Automatizar: proponer el menor puerto no usado del switch.
 
-**N5 - La búsqueda del otro extremo no sugiere por ubicación ni por tipo. [MEDIA] [NUEVO]**
+**N5 - La búsqueda del otro extremo no sugiere por ubicación ni por tipo. [MEDIA] [NUEVO] [RESUELTO en la tarea 153, 2026-07-23]**
 `coincidencias` exige teclear y filtra solo por nombre/ubicación/IP (`ConexionesFicha.tsx:199-205`); no prioriza equipos de la misma ubicación ni las categorías esperables (rack/switch/AP para un uplink).
 - Automatizar: al abrir, pre-sugerir racks/switches de la misma ubicación del equipo; ordenar candidatos `es_red` primero. Habilita "sugerir switch/rack por ubicación".
 
@@ -291,7 +291,7 @@ Cada flujo se analiza según el índice pedido. Para no repetir el detalle, se r
 | T3 | Importador aplasta jerarquía de ubicación | Media | Media | Bajo | Nuevo |
 | L3 | Falta relación "reemplaza a" | Media | Baja | Bajo | Nuevo |
 | N2 | "Crear" de Red sin contexto | Media | Baja | Bajo | RESUELTO (tarea 152) |
-| N5 | Búsqueda sin sugerencias por ubicación/tipo | Media | Baja | Bajo | Nuevo |
+| N5 | Búsqueda sin sugerencias por ubicación/tipo | Media | Baja | Bajo | RESUELTO (tarea 153) |
 | S2 | Campos protegidos sin vencimiento | Media | Baja | Bajo | RESUELTO (tarea 147) |
 | S3 | Campo protegido sin motivo ni "Generar" | Media | Baja | Bajo | RESUELTO (tarea 148) |
 | S4 | Título de credencial congela el nombre | Media | Baja | Bajo | RESUELTO (tarea 149) |

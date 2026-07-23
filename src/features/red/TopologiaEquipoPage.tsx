@@ -6,11 +6,13 @@ import { ShellNocturne } from '../../app/ShellNocturne'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
 import {
   agruparConexiones,
+  candidatosConexion,
   datosSegunModo,
   MEDIOS_SUGERIDOS,
   type ExtremoConexion,
   type ModoConexion,
 } from '../../lib/conexiones'
+import { idsDeRed } from '../../lib/categorias'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
@@ -469,6 +471,7 @@ function FormularioConexion({ equipo, onCerrar }: { equipo: Dispositivo; onCerra
     [equipo.id],
     [],
   )
+  const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
 
   const [modo, setModo] = useState<ModoConexion>('enlace')
   const [busqueda, setBusqueda] = useState('')
@@ -478,13 +481,13 @@ function FormularioConexion({ equipo, onCerrar }: { equipo: Dispositivo; onCerra
   const [medio, setMedio] = useState('UTP')
   const [guardando, setGuardando] = useState(false)
 
-  const coincidencias = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase()
-    if (!texto) return []
-    return (todos ?? [])
-      .filter((d) => [d.nombre, d.ubicacion, d.ip].join(' ').toLowerCase().includes(texto))
-      .slice(0, 8)
-  }, [todos, busqueda])
+  // Hallazgo N5: prioriza equipos de la misma ubicación o de categoría
+  // de red, y pre-sugiere sin necesidad de teclear cuando alguno aplica.
+  const idsRed = useMemo(() => idsDeRed(categorias), [categorias])
+  const coincidencias = useMemo(
+    () => candidatosConexion(todos ?? [], busqueda, equipo, idsRed),
+    [todos, busqueda, equipo, idsRed],
+  )
 
   const tipoActual = TIPOS_CONEXION.find((t) => t.valor === modo)
   const esEnlace = modo === 'enlace' || modo === 'recibeDe'
@@ -574,6 +577,11 @@ function FormularioConexion({ equipo, onCerrar }: { equipo: Dispositivo; onCerra
           />
           {coincidencias.length > 0 && (
             <div className="flex flex-col gap-1">
+              {!busqueda.trim() && (
+                <p className="text-[11.5px] text-noct-neutral-500">
+                  Sugeridos por ubicación o tipo de red
+                </p>
+              )}
               {coincidencias.map((d) => (
                 <button
                   key={d.id}

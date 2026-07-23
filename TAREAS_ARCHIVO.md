@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 153. La búsqueda del otro extremo prioriza ubicación y categoría de red (hallazgo N5)
+
+**Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y pruebas propias en verde (1594). **Prioridad**: MEDIA. **Sin verificar en navegador**: mismo límite que las tareas 150 a 152 (falta una cuenta de técnico real para iniciar sesión).
+
+**Qué resolvía**: al crear una conexión, la búsqueda del otro extremo (`ConexionesFicha.tsx` y su gemelo `TopologiaEquipoPage.tsx`, hallazgo D1) exigía teclear y filtraba solo por nombre/ubicación (texto)/IP, sin priorizar los candidatos más probables: un equipo de la misma ubicación (rack/switch al lado) o de categoría `es_red` (lo esperable para un uplink).
+
+**Cambios**:
+- `src/lib/conexiones.ts`: nueva función `candidatosConexion(candidatos, texto, equipoActual, idsRed, limite = 8)` (+ 6 pruebas nuevas en `conexiones.test.ts`). Con texto, filtra igual que antes y solo reordena (misma ubicación puntúa más que categoría de red). Sin texto, en vez de no mostrar nada, pre-sugiere los candidatos con alguna pista real (misma `ubicacionId` o categoría `es_red`); si ninguno la tiene, sigue sin mostrar nada.
+- `src/features/red/ConexionesFicha.tsx` y `src/features/red/TopologiaEquipoPage.tsx`: ambos consumen la función compartida en vez de su cálculo de `coincidencias` duplicado (mismo bug, hallazgo D1), y muestran un texto "Sugeridos por ubicación o tipo de red" cuando la lista aparece sin que el técnico haya tecleado nada.
+
+**Fuera de alcance**: no se resolvió D1 completo (la extracción de un `<FormularioConexion>` compartido entre ambos archivos, que siguen siendo dos componentes casi idénticos); solo se desduplicó la lógica de `coincidencias`, que era justamente la pieza que tenía el defecto de N5.
+
 ### 152. "Crear" de Red prioriza las categorías de red (hallazgo N2)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y pruebas propias en verde. **Prioridad**: MEDIA. Refuerza la pregunta abierta de la tarea 62. **Sin verificar en navegador**: mismo límite que las tareas 150 y 151 (falta una cuenta de técnico real para iniciar sesión).
