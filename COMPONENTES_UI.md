@@ -73,6 +73,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** barra flotante que avisa cuando hay una versión nueva de la PWA y la aplica al tocar "Actualizar". Hace su propio chequeo cada hora.
 - **Props:** ninguna. Devuelve `null` mientras no haya novedad.
 - **Dónde:** montado una vez en `App.tsx`, global.
+- **La recarga la controla el componente, nunca la librería** (corregido el 2026-07-27 tras un fallo reportado en el teléfono: "le doy al botón y no pasa nada"). `updateServiceWorker` acaba llamando a `messageSkipWaiting()` de workbox-window, que es literalmente `registration.waiting && enviarMensaje(...)`: **si no hay worker en espera no hace nada en silencio**, no se emite `controllerchange` y no hay recarga, pero el aviso sigue visible porque `needRefresh` continúa en `true`. El botón quedaba inerte para siempre. Y `waiting` puede ser `null` con el aviso delante si otra ventana de la app ya activó ese worker, o si el teléfono suspendió la app y el navegador lo activó por su cuenta (raro en escritorio, normal en móvil: por eso el fallo solo se veía en el teléfono). Ahora el componente engancha su propio `controllerchange` **y** una red de seguridad por tiempo (2,5 s) que recarga igual, así que el botón tiene un solo contrato: recarga. Muestra "Actualizando..." y se deshabilita al pulsarse, para que el toque siempre tenga respuesta visible.
 
 ### 2.2 `Adjuntos`
 - **Propósito:** galería de adjuntos de una ficha (subir desde cámara o archivo, ver, eliminar) con compresión, deduplicación por hash y cola offline.

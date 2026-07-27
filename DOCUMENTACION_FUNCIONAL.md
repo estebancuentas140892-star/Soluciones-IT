@@ -538,7 +538,7 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 
 **Login (`LoginPage`).** Ruta `/login`, fuera de la zona autenticada. Título "Soluciones IT", campos **Correo** (`type="email"`) y **Contraseña**, botón "Ingresar". Aviso si Supabase no está configurado. Usa `autoComplete="off"` para que el navegador no ofrezca guardar la cuenta.
 
-**Aviso de actualización (`ActualizacionDisponible`).** Componente global. Cuando se publica una versión nueva, muestra un aviso discreto "Versión nueva disponible" con botón "Actualizar" (activa el nuevo service worker y recarga sin interrumpir un procedimiento a medias). Se comprueba al abrir y cada hora.
+**Aviso de actualización (`ActualizacionDisponible`).** Componente global. Cuando se publica una versión nueva, muestra un aviso discreto "Versión nueva disponible" con botón "Actualizar" (activa el nuevo service worker y recarga sin interrumpir un procedimiento a medias). Se comprueba al abrir y cada hora. Al pulsar, el botón pasa a "Actualizando..." y queda deshabilitado; la recarga ocurre en cuanto el service worker nuevo toma el control, y de todos modos pasados 2,5 segundos, así que el botón nunca se queda sin efecto (corregido el 2026-07-27, ver [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.1).
 
 ---
 

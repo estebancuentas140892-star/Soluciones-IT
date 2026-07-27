@@ -8,7 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-07-27
 
-### Rediseño de la lista de Soluciones (tarea 168, pantalla P1 del handoff "Auditoría de Soluciones TI")
+### Corregido (tarea 179): el botón "Actualizar" del aviso de versión nueva no hacía nada
+
+**Área modificada:** `src/components/ActualizacionDisponible.tsx`.
+**Motivo:** reportado por el usuario en su teléfono justo al ir a revisar el rediseño de P1: pulsaba "Versión nueva disponible / Actualizar" y no ocurría nada.
+**Impacto esperado:** el botón siempre recarga, así que un despliegue nuevo siempre se puede aplicar desde el aviso.
+
+- **Corregido** la recarga ya no se delega en la librería. `updateServiceWorker` acaba llamando a `messageSkipWaiting()` de workbox-window, que es literalmente `registration.waiting && enviarMensaje(...)`: si en ese momento no hay worker en espera **no hace nada en silencio**, no se emite `controllerchange` y no hay recarga, pero el aviso sigue visible porque `needRefresh` continúa en `true`. El botón quedaba inerte de forma permanente hasta recargar a mano. `registration.waiting` puede ser `null` con el aviso delante si otra ventana de la app ya activó ese worker, o si el teléfono suspendió la app y el navegador lo activó por su cuenta: raro en escritorio y normal en móvil, que es por qué el fallo solo se veía en el teléfono. Ahora el componente engancha su propio `controllerchange` y además una red de seguridad por tiempo (2,5 s) que recarga igual; como el worker nuevo ya está activo en ese escenario, esa recarga trae la versión nueva de todos modos.
+- **Cambiado** al pulsar, el botón pasa a "Actualizando..." y se deshabilita. Parte del reporte era que el toque no daba ninguna señal de haberse registrado.
+- **Documentación:** [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.1, [ARQUITECTURA.md](ARQUITECTURA.md) sección 7 y [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (acciones transversales).
+
+**Verificación:** typecheck, lint y build limpios. Reproducción de punta a punta en `vite preview` con Chrome real: con la v1 controlando la página, se construyó una v2 con un marcador visible, el aviso apareció, y pulsar "Actualizar" recargó dejando el marcador de la v2 en pantalla y el aviso retirado (`waiting` a `null`). Verificado también con el worker nuevo ya en espera antes de cargar la página, que es lo que pasa al abrir la app desde el icono. **El tramo concreto que fallaba (aviso visible con `waiting` en `null`) no se pudo reproducir en escritorio**: Chrome no permite redefinir `location.reload` para observar el intento de recarga sin navegar, y ese estado depende del ciclo de vida del móvil. Queda probado por lectura del código enviado (la guarda existe en el build minificado de workbox-window 7.4.1) y el arreglo es un superconjunto del comportamiento anterior: solo puede añadir una recarga que antes no ocurría.
+
+### Rediseño de la lista de Soluciones (tarea 171, pantalla P1 del handoff "Auditoría de Soluciones TI")
 
 **Área modificada:** sección Soluciones (`/soluciones`) y componentes compartidos de `src/components`.
 **Motivo:** implementar la auditoría de diseño de la sección, que documentó 11 problemas y 13 decisiones para esta pantalla, más 7 reglas visuales transversales.
