@@ -4,8 +4,13 @@ Aplicación móvil (PWA) para el equipo de soporte y mantenimiento de TI: base d
 
 ## Documentos clave
 
-- [ARQUITECTURA.md](ARQUITECTURA.md): stack, modelo de datos y decisiones técnicas.
-- [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md): inventario funcional completo de la app (pantallas, formularios campo por campo, modales, botones, acciones, relaciones y flujos).
+- [ARQUITECTURA.md](ARQUITECTURA.md): stack y decisiones técnicas de implementación.
+- [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md): comportamiento interno del sistema (reglas de negocio numeradas, permisos con matriz, ciclos de vida y máquinas de estado, eventos, dependencias, modelo entidad-relación, convenciones y roadmap).
+- [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md): lo visible al usuario (pantallas, formularios campo por campo, modales, botones, flujos y navegación).
+- [COMPONENTES_UI.md](COMPONENTES_UI.md): catálogo de componentes reutilizables (props, variantes, dónde se usan).
+- [BUSCADOR.md](BUSCADOR.md): el subsistema de búsqueda (qué indexa, ranking, difuso, sinónimos, rendimiento).
+- [DECISIONES.md](DECISIONES.md): decisiones de arquitectura (ADR) con su motivo.
+- [CHANGELOG.md](CHANGELOG.md): historial de cambios canónico.
 - [TAREAS.md](TAREAS.md): tablero Kanban con el trabajo pendiente y en desarrollo.
 - [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md): historial de tareas finalizadas.
 - [REGLAS.md](REGLAS.md): reglas de trabajo acordadas. Leerlas y aplicarlas siempre.

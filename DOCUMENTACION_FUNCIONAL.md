@@ -137,7 +137,7 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/` (index) | InicioPage | ShellNocturne | Pantalla principal + buscador global |
 | `/cuenta` | CuentaPage | Centrado | Mi cuenta (cambiar contraseña, cerrar sesión) |
 | `/cuenta/seguridad` | SeguridadPage | Centrado | Bloqueo de la app (patrón/contraseña) |
-| `/soluciones` | SolucionesPage | ShellNocturne | Lista de artículos, chips de categoría, buscador |
+| `/soluciones` | SolucionesPage | ShellNocturne | Lista de artículos, chips de categoría, buscador, hoja de tipo, bloque "Sin terminar" |
 | `/soluciones/:categoriaId` | CategoriaPage | ShellNocturne | Ficha 360° de una categoría |
 | `/soluciones/:categoriaId/nuevo` | ArticuloForm | Pantalla completa | Crear artículo (editor con 4 pestañas) |
 | `/soluciones/:categoriaId/:articuloId` | ArticuloPage | ShellNocturne | Ficha de un artículo/procedimiento |
@@ -254,20 +254,27 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **Objetivo.** Responder "¿cómo realizo este procedimiento?". Rejilla de artículos (procedimientos, manuales, incidencias) filtrable por categoría, tipo y etiqueta.
 
+> **Rediseñada el 2026-07-27** a partir del handoff "Auditoría de Soluciones TI" (pantalla P1). Las reglas visuales que rigen ahora toda la sección (R1 a R7) están en [DECISIONES.md](DECISIONES.md) AD-019. El layout de escritorio se conservó tal cual (AD-021).
+
 **Cabecera fija:**
-- Título "Soluciones".
-- **Botón "Crear"**: habilitado solo cuando hay una categoría seleccionada (un artículo siempre nace dentro de una categoría). Sin categoría aparece deshabilitado con tooltip "Elige una categoría para crear el artículo dentro de ella". Abre `/soluciones/:categoriaId/nuevo`.
-- **Buscador** (`type="search"`): placeholder "Buscar procedimiento, categoría o etiqueta". Busca por título, categoría, tipo y etiquetas (normalizado sin acentos).
-- **Chips de categoría** (deslizables en móvil; en escritorio `xl`, rail lateral fijo de 220px): "Todos" + una por categoría, cada uno con su color de identidad, icono y conteo.
-- **Subfiltros por tipo**: dentro de una categoría aparecen chips por tipo presente (instalación, configuración, conexión, problema frecuente, mantenimiento, manual).
+- Título "Soluciones" y, debajo, la **pastilla de frescura**: "N artículos al día · hace 4 min", o "N cambios sin subir" en ámbar, o "sin sincronizar aún" (regla R7; antes esta señal solo existía en Inicio). Es informativa, no abre nada.
+- **Botón "Crear"**, siempre activo y en acento (regla R3). Con una categoría elegida abre `/soluciones/:categoriaId/nuevo`; **sin categoría abre la hoja "¿En qué categoría?"** y navega al editor de la que se elija. Antes estaba deshabilitado y la razón vivía en un `title`, que en un teléfono nadie lee porque no hay hover.
+- **Buscador** (`type="search"`): placeholder "Buscar equipo, síntoma o etiqueta". Busca por título, categoría, tipo y etiquetas (normalizado sin acentos). El botón de borrar mide **44 px** reales (regla R6; medía 26).
+- **Chips de categoría** (deslizables en móvil, con un degradado en el extremo derecho que indica que hay más sin necesidad de barra; en escritorio `xl`, rail lateral fijo de 220px): "Todos" + una por categoría, cada uno con su color de identidad, icono y conteo.
+- **Botón "Tipo"**: el segundo eje de filtro ya no ocupa cabecera (regla R4). Abre la hoja inferior "Tipo de documento", con los tipos presentes y su conteo. Cuando hay uno elegido, el botón muestra su nombre en acento. Está disponible siempre, no solo dentro de una categoría, y se acota a la categoría activa cuando hay una.
 
 **Cuerpo (lista):**
-- Al **buscar**: resultados agrupados por categoría (encabezado con icono, nombre y conteo), término resaltado.
-- Al **navegar**: lista plana (o rejilla en escritorio: `@lg` 2 columnas, `@4xl` 3). Cada fila muestra icono de tipo coloreado (o miniatura de portada), título, etiqueta de tipo, tiempo estimado (si tiene) y una pastilla "Borrador"/"Obsoleto" si aplica.
+- **Bloque "Sin terminar"** arriba (solo al navegar, sin buscar ni filtrar por etiqueta): hasta 3 procedimientos que este técnico dejó a medias, con el paso actual, los minutos que le quedan (~), una barra de avance y la acción "Seguir", que va directo al modo asistente. Retomar pasó de cuatro toques a uno. El avance es local del dispositivo.
+- Al **buscar**: resultados agrupados por categoría (encabezado con icono, nombre y conteo), término resaltado, y encabezado "N artículos coinciden". Si la coincidencia **no** fue en el título, la fila lo explica: "Coincide en la etiqueta *zebra*".
+- **Cinta de contexto al buscar** con una categoría elegida: "Busco en todas las categorías. El filtro **X** queda en pausa", con el botón **"Solo ahí"** para acotar (y "En todas" para volver a abrir). Antes buscar descartaba los filtros en silencio.
+- Al **navegar**: lista plana (o rejilla en escritorio: `@lg` 2 columnas, `@4xl` 3), bajo el rótulo "Todos los artículos" con su conteo. Cada fila (`FilaArticulo`) muestra el **glifo del tipo en su color dentro de un recuadro neutro** (regla R1; antes el recuadro entero iba relleno del color del tipo y seis tipos en columna hacían arcoíris), título de 15 px, línea de metadatos (categoría · tipo · tiempo estimado) y una **pastilla de contorno** "Borrador"/"Obsoleto" si aplica (antes eran dos formas distintas para el mismo dato).
 - **Filtro por etiqueta** (banner "Etiqueta: X · Ver todos"): se activa al tocar una etiqueta en la ficha de un artículo (`?etiqueta=<x>`). Ignora categoría y tipo mientras esté activo.
-- Estados vacíos: "Aún no hay artículos" (primera vez) o "Sin coincidencias" con botón "Limpiar búsqueda".
+- **Estados vacíos, todos con acción** (regla R5):
+  - Primera vez: "Aquí va a vivir lo que el equipo sabe" + **"Crear el primero"**.
+  - Búsqueda sin resultados: "Nada coincide con «X»", con corrección ortográfica tocable si la hay ("Quizá quisiste decir *zebra*") + **"Limpiar la búsqueda"** y **"Documentarlo"**.
+  - Filtros sin resultados: "No hay artículos con estos filtros" + **"Quitar los filtros"** y "Crear".
 
-**Acciones:** buscar, filtrar por categoría/tipo/etiqueta, crear artículo, abrir un artículo, abrir una categoría (desde el buscador global, no desde esta lista).
+**Acciones:** buscar (acotable a la categoría), filtrar por categoría/tipo/etiqueta, retomar un procedimiento a medias, crear artículo (con o sin categoría elegida), abrir un artículo, abrir una categoría (desde el buscador global, no desde esta lista).
 
 **Interacción.** Cada artículo abre su ficha; las categorías son un filtro (la ficha de categoría se alcanza desde el buscador global y desde la ficha de un dispositivo). Las fichas de dispositivos enlazan a los procedimientos de su categoría y viceversa.
 
@@ -1046,7 +1053,7 @@ Observaciones surgidas del recorrido. La mayoría son mejoras de mantenibilidad,
 ### 16.1 Duplicación de utilidades pequeñas (mantenibilidad)
 
 - **`normalizar` / `normalizarTexto`** (minúsculas sin acentos para buscar) está reimplementado en varios archivos: `BovedaPage.tsx`, `CredencialForm.tsx`, `UbicacionesPage.tsx` y `iconosSoluciones.ts`. Los tres buscadores locales de Dispositivos/Red/conexión ya comparten `incluyeTexto()` (`src/lib/texto.ts`), pero el normalizador de texto sigue disperso. **Oportunidad:** una única función de normalización en `src/lib/texto.ts` reutilizada por todos.
-- **`partirTitulo`** (resaltado del término buscado en tres tramos) está duplicado casi idéntico entre `InicioPage.tsx` y `SolucionesPage.tsx`. **Oportunidad:** extraerlo a un helper compartido.
+- **`partirTitulo`** (resaltado del término buscado en tres tramos) sigue duplicado casi idéntico entre `InicioPage.tsx` y `src/features/soluciones/coincidencia.ts` (el 2026-07-27 salió de `SolucionesPage.tsx` a ese módulo, pero la copia de Inicio quedó). **Oportunidad:** extraerlo a un helper compartido.
 - **`fechaCorta` / `fechaHoraCorta` / `formatearTamano`** están repetidos entre `DispositivoPage`, `ArticuloPage`, `CredencialPage` y `CredencialForm`. El código lo marca como decisión deliberada ("duplicar helpers pequeños de presentación"), pero un módulo `src/lib/formato.ts` reduciría deriva.
 
 ### 16.2 Patrones de interfaz repetidos (candidatos a componente compartido)

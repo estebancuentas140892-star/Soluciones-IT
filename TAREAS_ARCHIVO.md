@@ -1,5 +1,42 @@
 # Historial de tareas finalizadas
 
+### 171. Rediseño de la lista de Soluciones (pantalla P1 del handoff "Auditoría de Soluciones TI")
+
+**Estado**: TERMINADA el 2026-07-27. Typecheck, lint y build limpios; 96 pruebas en la sección Soluciones y los helpers nuevos (44 de ellas nuevas). Quedan los **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts` (RLS de Storage contra el `.env` real de la sesión), ya conocidos desde la tarea 166: `archivosPendientes.ts` no importa ninguno de los archivos de esta tarea, y los mismos 2 fallos aparecen en el worktree obsoleto `.claude/worktrees/dazzling-benz-13478d`, que es anterior a este trabajo. **Prioridad**: ALTA. **Modelo/esfuerzo**: Opus 4.8 / Extra (44/55), ejecutado en Opus 5. **Sin verificar en navegador**: la app exige login de técnico real y esta sesión no tiene una cuenta (mismo límite desde la tarea 144); se confirmó que arranca sin errores de consola y que `/soluciones` redirige a login limpiamente.
+
+**De dónde viene**: handoff de Claude Design "Auditoría de Soluciones TI" (`Auditoría de Soluciones TI-handoff.zip` en la raíz). El MCP de diseño **no pudo leer el proyecto remoto** (`21931703-...` devuelve 404: `DesignSync` solo alcanza proyectos de tipo *design system*, y esa URL es un proyecto de *design creation*), así que se trabajó desde el zip exportado, que trae el mismo `.dc.html`, su `support.js` y el bundle Nocturne. El documento no es una pantalla suelta: es una auditoría con el "antes y después" de **cinco** pantallas (P1 a P5), con 11 problemas y 13 decisiones solo para P1, más 7 reglas visuales transversales y 8 pendientes declarados.
+
+**Alcance acordado con el usuario antes de empezar**: implementar los componentes compartidos y P1, y **parar ahí para que revise el criterio** antes de replicarlo en P2 a P5 (que quedaron como tareas 172 a 175). Se decidió además **conservar el layout de escritorio** existente, porque la auditoría solo resolvió 448 px (ver AD-021).
+
+**Qué se construyó** (5 componentes y 4 módulos de lógica pura, todos nuevos):
+
+- `src/components/PastillaEstado.tsx`: UNA sola forma de contorno para todo estado de fila. Es el `IndicadorEstado` que pedía CAND-1. Antes "Borrador" iba con borde punteado y relleno ámbar y "Obsoleto" con relleno neutro sólido: dos diseños para el mismo tipo de dato.
+- `src/components/IndicadorAvance.tsx`: único indicador de "X de Y pasos", variantes `anillo|barra|texto`. El anillo no cambia de ancho con el valor, así que las filas de una lista siguen alineadas. Registrado como **CAND-7**.
+- `src/components/PastillaFrescura.tsx`: frescura del dato y cambios sin subir bajo el título (regla R7). Antes esta señal solo existía en Inicio, así que en el resto de la app no se sabía si se veía la copia de ayer.
+- `src/components/HojaFiltro.tsx`: hoja inferior genérica para el segundo eje de filtro y para elegir categoría al crear (R4). Se apoya en `Modal`, que ya resuelve portal, Escape y bloqueo de scroll.
+- `src/features/soluciones/FilaArticulo.tsx`: la fila de artículo compartida.
+- `src/lib/tiempoRelativo.ts`: antigüedad en lenguaje humano ("hace 4 min"). No usa `Intl.RelativeTimeFormat` porque obliga a elegir la unidad por fuera, que es justo lo que se quiere calcular.
+- `src/features/soluciones/sinTerminar.ts`: los procedimientos a medias, ordenados por lo último que se tocó, con los minutos restantes repartidos por pasos.
+- `src/features/soluciones/coincidencia.ts`: además de si un artículo coincide, **por dónde** (título, etiqueta, categoría, tipo). Absorbe `partirTitulo`, que vivía dentro de `SolucionesPage.tsx`.
+- `src/features/soluciones/sugerenciaBusqueda.ts`: corrección ortográfica local con distancia de edición y tolerancia por longitud (0 con menos de 4 letras, 1 hasta 6, 2 desde 7). No reutiliza el `fuzzy` del índice global porque ese índice excluye borradores y obsoletos, que esta pantalla sí lista.
+
+**Qué cambió en `SolucionesPage.tsx`** (las 13 decisiones de P1): un solo eje de filtro visible y el tipo plegado en hoja (cabecera de 232 a ~156 px); "Crear" siempre activo y en acento, con hoja que pregunta la categoría cuando no hay ninguna elegida; el matiz del tipo se queda en el glifo con recuadro neutro; bloque "Sin terminar" arriba; título a 15 px y metadatos a 12 px; segunda línea con la categoría al mezclarlas; estado en una sola forma; cinta de contexto al buscar con "Solo ahí" para acotar; "Coincide en la etiqueta X" cuando el match no está en el título; pastilla de frescura; degradado de recorte en el carrusel; los tres estados vacíos con acción; y el borrar del buscador de 26 a 44 px.
+
+**Tres decisiones registradas en [DECISIONES.md](DECISIONES.md)**:
+
+- **AD-019**: las reglas visuales R1 a R7 de la sección. No cambian los tokens ni los tres lenguajes de color (AD-011 sigue vigente), solo cómo se combinan en una misma superficie.
+- **AD-020**: `FilaArticulo` **matiza, sin contradecir**, la decisión de la tarea 145 de "NO crear `<FilaArticulo>`". Esa decisión comparaba la fila de artículo contra `FilaDispositivo` y la de Red ("no comparte interior con las otras dos filas") y sigue siendo correcta: esto **no** se unifica con la fila de dispositivo. Lo que se unifica son las **dos filas de artículo** (`SolucionesPage` y `CategoriaPage`), que el rediseño hace converger a propósito, así que el componente no necesita las props condicionales que la 145 temía.
+- **AD-021**: el escritorio se conserva tal cual.
+
+**Dos erratas del documento de diseño, corregidas al documentar** (no se propagaron al código):
+
+1. La auditoría dice que `IndicadorAvance` "cierra CAND-3", pero CAND-3 en COMPONENTES_UI.md es "copiar con confirmación (tilde)" y no tiene relación con el avance. Se registró como **CAND-7** para no romper la numeración ya publicada. Sus referencias a CAND-1, CAND-2 y CAND-6 sí son correctas.
+2. El propio mockup de P1 dibuja el botón "Crear" con `min-height: 36px`, que contradice su regla R6 ("todo toque 44 px"). Se siguió el píxel del mockup en ese botón y se aplicó R6 donde la auditoría sí lo señalaba como defecto: el borrar del buscador, que medía 26 px. Queda anotado por si el usuario prefiere 44 en los dos.
+
+**Sin cambios de estructura de datos**: ninguna tabla, columna ni relación nueva. `db.progresoPasos` (que alimenta "Sin terminar") ya existía y es local del dispositivo, así que no toca `supabase/schema.sql` ni requiere ningún paso en Supabase.
+
+**Documentación actualizada en la misma tarea** (regla 19b): [COMPONENTES_UI.md](COMPONENTES_UI.md) (secciones 2.10b a 2.10e, 3.8b, y CAND-1/CAND-2/CAND-7), [BUSCADOR.md](BUSCADOR.md) (10.1 a 10.3), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.2), [DECISIONES.md](DECISIONES.md) (AD-019 a AD-021) y [CHANGELOG.md](CHANGELOG.md).
+
 ### 157. El buscador del formulario de conexión reutiliza `incluyeTexto()` (hallazgo D2)
 
 **Estado**: TERMINADA el 2026-07-23, código, typecheck, lint y 1602 pruebas propias en verde. **Prioridad**: MEDIA. **Sin verificar en navegador**: mismo límite que las tareas 150 a 156 (falta una cuenta de técnico real para iniciar sesión).
