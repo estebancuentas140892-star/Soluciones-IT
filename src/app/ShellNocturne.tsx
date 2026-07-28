@@ -2,6 +2,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 import { Avatar } from '../components/Avatar'
+import { Marca } from '../components/Marca'
 import {
   BookOpen,
   BookOpenFill,
@@ -241,18 +242,3 @@ function EnlaceGrupo({
   )
 }
 
-// Marca de la app (cerebro): glifo del handoff de Soluciones, usado
-// solo aquí como logotipo del sidebar; no forma parte del set de iconos
-// de dominio. La regla R12 retiró el nombre "IT Brain" de la interfaz
-// (tarea 180) pero conserva este glifo como marca.
-function Marca(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
-      <path
-        d="M12 3a4 4 0 0 0-4 4v1.2A5 5 0 0 0 5 13v3a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-3a5 5 0 0 0-3-4.8V7a4 4 0 0 0-4-4Z"
-        strokeLinejoin="round"
-      />
-      <path d="M9 20v.5A1.5 1.5 0 0 0 10.5 22h3a1.5 1.5 0 0 0 1.5-1.5V20" strokeLinecap="round" />
-    </svg>
-  )
-}

@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useSyncExternalStore, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { BotonInstalarApp } from '../../components/BotonInstalarApp'
 import { BotonVolver } from '../../components/BotonVolver'
 import { CampoContrasena } from '../../components/CampoContrasena'
-import { CaretRight, LockSimple, SignOut } from '../../components/iconos'
+import { CaretRight, DownloadSimple, LockSimple, SignOut } from '../../components/iconos'
 import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { obtenerEstadoInstalacion, suscribirEstadoInstalacion } from '../../lib/instalacionPwa'
 import { useAuth } from './authContext'
 import { validarCambioContrasena } from './erroresAuth'
 
@@ -25,6 +27,7 @@ import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 // cerrar sesión.
 export function CuentaPage() {
   const { session, perfil, cambiarContrasena, cerrarSesion } = useAuth()
+  const instalacion = useSyncExternalStore(suscribirEstadoInstalacion, obtenerEstadoInstalacion)
 
   const [actual, setActual] = useState('')
   const [nueva, setNueva] = useState('')
@@ -138,6 +141,28 @@ export function CuentaPage() {
               {guardando ? 'Cambiando...' : 'Cambiar contraseña'}
             </button>
           </form>
+
+          {/* Instalar la app (tarea 184): el segundo de los dos unicos
+              sitios desde donde se ofrece, junto con la bienvenida del
+              primer dia. Nunca como banner (decision del handoff), y solo
+              mientras no corra ya instalada: quien la tiene no necesita
+              una tarjeta que se lo recuerde. */}
+          {!instalacion.instalada && (
+            <div className="flex items-center gap-3 rounded-lg border border-noct-divider bg-noct-surface p-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent">
+                <DownloadSimple size={17} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium leading-tight">
+                  Instalar la app en este dispositivo
+                </span>
+                <span className="mt-0.5 block text-[12px] leading-relaxed text-noct-neutral-500">
+                  Abre con su propio icono, a pantalla completa y sin señal.
+                </span>
+              </span>
+              <BotonInstalarApp />
+            </div>
+          )}
 
           <Link
             to="/cuenta/seguridad"

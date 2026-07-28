@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { iniciarInstalacionPwa } from './lib/instalacionPwa'
 import { recargarUnaVezPorChunk } from './lib/recargaChunk'
 import { iniciarSync } from './lib/sync'
 
@@ -16,6 +17,12 @@ import { iniciarSync } from './lib/sync'
 window.addEventListener('vite:preloadError', () => {
   recargarUnaVezPorChunk()
 })
+
+// El navegador dispara `beforeinstallprompt` una sola vez y muy pronto
+// tras cargar la pagina, asi que el oyente se registra aqui y no dentro
+// de la pantalla que ofrece instalar: todas las pantallas se cargan bajo
+// demanda y el evento ya habria pasado cuando montan.
+iniciarInstalacionPwa()
 
 try {
   iniciarSync()

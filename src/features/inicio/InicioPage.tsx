@@ -43,6 +43,7 @@ import {
 } from '../historial/actividadEquipo'
 import { etiquetaResuelto } from '../historial/lineaDeTiempo'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
+import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
 import { calcularPendientes, type ItemPendiente } from './pendientes'
 import { problemasFrecuentesInicio } from './problemasFrecuentes'
 
@@ -209,22 +210,30 @@ export function InicioPage() {
     return null
   }, [])
 
-  const hora = new Date().getHours()
-  const saludo =
-    (hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches') +
-    '. Todo el conocimiento del equipo, al instante'
-
   const gruposResultado = useMemo(() => agruparResultados(resultados), [resultados])
+
+  // Bienvenida del primer día (tarea 184): se muestra mientras falte
+  // alguno de sus tres pasos Y esta pantalla no tenga todavía bloques
+  // propios. `enCurso` es `undefined` hasta que su consulta resuelve; se
+  // espera a saberlo para no mostrar la bienvenida un instante a quien sí
+  // tiene un procedimiento a medias.
+  const consultasListas = enCurso !== undefined
+  const hayBloquesReales = recientes.length > 0 || pendientes.length > 0 || enCurso != null
 
   return (
     <ShellNocturne>
       {/* El titulo ("Inicio", regla R12), el estado del dato, la lupa y la
           cuenta los aporta ya BarraSuperior (tarea 181). Inicio conserva
           ademas su buscador en linea, porque esta pantalla ES el buscador:
-          abrir y buscar sigue tomando dos toques. */}
-      <BarraSuperior titulo="Inicio">
-        <p className="px-4 pb-0.5 text-[12.5px] text-noct-neutral-400">{saludo}</p>
+          abrir y buscar sigue tomando dos toques.
 
+          El saludo por hora ("Buenos días. Todo el conocimiento del
+          equipo, al instante") se retiro en la tarea 184, decision
+          aprobada por el usuario: ocupaba la linea de contexto con un
+          eslogan que cambiaba tres veces al dia, asi que la entrada no se
+          veia igual dos veces. Lo que hay que decir el primer dia lo dice
+          ahora BienvenidaPrimerDia, y solo mientras haga falta. */}
+      <BarraSuperior titulo="Inicio">
         <div className="px-4 pb-3 pt-2">
           <label
             className={`flex h-11 items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
@@ -290,6 +299,14 @@ export function InicioPage() {
           )
         ) : (
           <div className="@container flex flex-col gap-[22px]">
+            {/* Bienvenida del primer día: los tres pasos que dejan al
+                técnico listo para trabajar sin señal. Se retira sola (no
+                se cierra a mano) cuando los cumple o cuando esta pantalla
+                ya tiene bloques propios que mostrar. */}
+            {consultasListas && (
+              <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
+            )}
+
             {enCurso && (
               <Link
                 to={enCurso.ruta}

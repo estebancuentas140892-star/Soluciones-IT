@@ -87,6 +87,19 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Detalles:** las iniciales las calcula `inicialesDe()` (`src/lib/iniciales.ts`, con pruebas): nombre y primer apellido, un solo nombre (sus dos primeras letras), o la parte local del correo como respaldo.
 - **Dónde:** `BarraSuperior` (avatar de la ranura de cuenta), `PantallaMas` (fila de perfil del grupo "Mi cuenta").
 
+### 2.2c `BotonInstalarApp`
+- **Propósito:** botón que instala la PWA en el dispositivo, con las instrucciones manuales dentro (modal) para los navegadores que no ofrecen diálogo nativo. Nace en la tarea 184.
+- **Props:** `{ className?: string }` (se concatena tras `BTN_PRIMARIO min-h-11 shrink-0 px-3`).
+- **Variantes:** el rótulo es **"Instalar"** cuando hay diálogo nativo guardado y **"Cómo instalar"** cuando no (Safari de iOS siempre; el resto, cuando el diálogo ya se usó o se rechazó). Si el técnico rechaza el diálogo, cae al modal de instrucciones.
+- **Detalles:** no decide si debe verse; eso depende del contexto (en la bienvenida lo decide el paso 2, en Mi cuenta la tarjeta que lo contiene, que se oculta si `obtenerEstadoInstalacion().instalada`). Lee el estado con `useSyncExternalStore` desde `src/lib/instalacionPwa.ts`.
+- **Dónde:** `BienvenidaPrimerDia` (paso 2) y `CuentaPage`. Son los dos únicos sitios desde donde la app ofrece instalarse: la decisión del handoff es "ahí y en Mi cuenta, nunca como banner intrusivo".
+
+### 2.2d `Marca`
+- **Propósito:** el glifo de la marca (el cerebro). **No** forma parte del set de iconos de dominio (`iconos.tsx`): es el logotipo, y se usa solo donde la app se presenta a sí misma.
+- **Props:** las de un `<svg>` (`React.SVGProps<SVGSVGElement>`); el tamaño y el color van en `className`.
+- **Detalles:** vivía como función privada dentro de `ShellNocturne.tsx`; la tarea 184 lo extrajo al necesitarlo también el login. La regla R12 retiró el nombre "IT Brain" de la interfaz (tarea 180) pero conserva este glifo como marca ([DECISIONES.md](DECISIONES.md) AD-022).
+- **Dónde:** `ShellNocturne` (cabecera del sidebar de escritorio), `LoginPage` (cuadro de 52 px delineado en acento).
+
 ### 2.3 `BotonFavorito`
 - **Propósito:** estrella para marcar/desmarcar una ficha como favorita.
 - **Props:** `{ tipo: TipoFavorito, entidadId, variante?: 'cabecera' | 'fila' = 'cabecera' }`.
@@ -260,6 +273,14 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** `SolucionesPage`. **Pendiente:** migrar `CategoriaPage` al rediseñar P4.
 - **Relación con la decisión de la tarea 145** (que dijo "NO crear `<FilaArticulo>`"): ahí se comparaba la fila de artículo contra `FilaDispositivo` y la de Red, y sigue valiendo (esto **no** se unifica con la fila de dispositivo). Lo que se unifica son las **dos filas de artículo**, que divergían solo porque nadie las había mirado juntas y que el rediseño hace converger a propósito. Ver [DECISIONES.md](DECISIONES.md).
 
+### 3.8d `inicio/BienvenidaPrimerDia`
+- **Propósito:** la primera impresión de la app para un técnico nuevo (tarea 184, mockup `3b`). Con la base vacía, seis de los nueve bloques de Inicio no se pintan, así que la entrada eran un buscador y tres atajos; y lo que de verdad hay que hacer el primer día (instalar la app y bajar los adjuntos, de lo que depende el trabajo sin señal) no se ofrecía en ninguna pantalla.
+- **Props:** `{ nombre?: string | null, hayBloquesReales: boolean }`. Del nombre usa solo el de pila ("Bienvenido, Andrés Vélez" se come la línea entera en 448 px).
+- **Contenido:** tres pasos que se apagan solos (entraste · instala la app · descarga para offline), con `BotonInstalarApp` en el segundo y el botón "Descargar" en el tercero, que comparte estado con `DescargarOffline` (misma función, así que el progreso se ve en los dos sitios).
+- **Se retira sola**, sin botón de cerrar: cuando los tres pasos están hechos o cuando `hayBloquesReales` (recientes, pendientes o un procedimiento a medias). Cerrar a mano habría exigido guardar la decisión en alguna parte; el bloque desaparece porque deja de ser cierto.
+- **Reparto:** la regla vive aparte y probada en `inicio/bienvenida.ts` (`pasosBienvenida`, `debeMostrarBienvenida`); el componente solo lee el estado real del dispositivo (`instalacionPwa.ts`, `adjuntosOffline.ts`) y pinta. La marca de cada paso usa dos canales, forma y color (regla R16): check verde si está hecho, número si falta, en acento solo el primero que falta.
+- **Dónde:** `InicioPage`, primer bloque del modo sin búsqueda.
+
 ### 3.8c `busqueda/BuscadorGlobal` y `busqueda/ResultadosBusqueda`
 - **Propósito:** el buscador global en capa (tarea 181, mockup `3d`). Hasta ahora buscar era global pero vivía **dentro** de Inicio: desde cualquier otra pestaña había que volver a Inicio y perder el sitio donde se estaba. Ahora la lupa vive en `BarraSuperior` y abre esta capa a pantalla completa sin abandonar la pantalla actual.
 - **Props:** `BuscadorGlobal` recibe `{ abierto, onCerrar }`; `ResultadosBusqueda`, `{ grupos, consulta, onNavegar? }`; `FilaResultado`, `{ resultado, consulta, onNavegar? }`.
@@ -288,6 +309,8 @@ Cada una centraliza un patrón que antes estaba duplicado (con su comentario en 
 | `useGrafo` / `grafo.ts` | grafo de referencias entre entidades |
 | `Modal` | ventana modal + portal a `document.body` |
 | `IndicadorVencimiento` + `vencimiento.ts` | lógica de vencimiento |
+| `Marca` | el glifo de la marca (logotipo), fuera del set de iconos de dominio |
+| `BotonInstalarApp` + `instalacionPwa.ts` | ofrecer instalar la PWA y detectar si ya lo está |
 
 ## 5. Candidatos a componente (duplicación no extraída)
 

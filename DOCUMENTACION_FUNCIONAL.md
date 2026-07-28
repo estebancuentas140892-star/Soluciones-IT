@@ -250,12 +250,17 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 **Objetivo.** Punto único de entrada al conocimiento del equipo. La pantalla principal ES el buscador global (el pilar de la app): abrir y buscar toma dos toques. Cuando no se busca, muestra atajos de trabajo y bloques derivados de la actividad reciente.
 
 **Cabecera fija (con desenfoque).** Desde la tarea 181 la fila superior es la **barra superior global** (ver la sección 2), común a las cinco pestañas: título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022), pastilla de sincronización, lupa y avatar de la cuenta. Debajo, lo propio de Inicio:
-- Saludo dinámico según la hora ("Buenos días/tardes/noches. Todo el conocimiento del equipo, al instante"). El saludo tiene su retirada agendada en la tarea 184.
 - **Buscador en línea** (input `type="search"`): placeholder "Buscar en todo: artículos, equipos, bóveda". Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo. **Se conserva** además de la lupa de la barra porque esta pantalla ES el buscador: abrir y buscar sigue tomando dos toques.
+- **Sin saludo.** El saludo dinámico según la hora ("Buenos días/tardes/noches. Todo el conocimiento del equipo, al instante") **se retiró en la tarea 184** (decisión aprobada por el usuario): ocupaba la línea de contexto con un eslogan que cambiaba tres veces al día, así que la entrada nunca se veía igual dos veces. Lo que hay que decir el primer día lo dice ahora la bienvenida (bloque 0 de abajo), y solo mientras haga falta.
 
 **Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas**. Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
 
 **Modo inicio (sin texto), bloques en orden:**
+0. **Bienvenida del primer día** (`BienvenidaPrimerDia`, tarea 184; solo mientras haga falta): "Bienvenido, {nombre de pila}", una línea de qué vive aquí, y **tres pasos que se apagan solos**, cada uno con su marca (check verde si está hecho, su número si falta; el primero que falta va en acento y el resto en neutro):
+   1. *Entraste con tu cuenta* (siempre hecho: esta pantalla solo se ve con sesión).
+   2. *Instala la app en el teléfono*, con botón **"Instalar"** (diálogo nativo del navegador) o **"Cómo instalar"** si el navegador no lo ofrece (Safari de iOS siempre), que abre un modal con los tres pasos manuales. Se marca hecho cuando la app corre instalada.
+   3. *Descarga todo para trabajar sin señal*, con botón **"Descargar"** que dispara la misma descarga que el bloque 9 (comparten estado, así que el progreso se ve en los dos). Se marca hecho tras la primera descarga.
+   **Se retira sola**, sin botón de cerrar: cuando los tres pasos están hechos, o cuando esta pantalla ya tiene bloques propios (recientes, pendientes o un procedimiento a medias). Un cierre a mano habría hecho falta guardar; el bloque desaparece porque deja de ser cierto. Consecuencia conocida: quien llega a un equipo con pendientes visibles no ve la bienvenida, y la instalación le queda ofrecida en Mi cuenta (sección 6.6).
 1. **"Continuar donde quedaste"** (si aplica): tarjeta destacada con el procedimiento a medias más reciente, barra de progreso y "Paso N de M". Enlaza a su ficha.
 2. **Atajos rápidos**: "Diagnóstico inteligente" (→ `/diagnostico`), "Escanear equipo" (→ `/escaner`) y, a lo ancho, **"Registrar equipo"** (→ `/dispositivos/nuevo`, hallazgo H9: arranque directo para quien recibe hardware nuevo). Además, en el estado "Sin coincidencias" del buscador se ofrece **"Crear dispositivo"** con el texto buscado precargado como nombre (`?nombre=`).
 3. **"Problemas frecuentes"** (si hay): los diagnósticos más ejecutados (o los más recientes si no hay volumen), colapsado a 4 filas, con contador de veces y enlace "Estadísticas" (→ `/diagnostico/estadisticas`).
@@ -546,7 +551,7 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 <a id="66-mi-cuenta-y-seguridad"></a>
 ### 6.6 Mi cuenta y Seguridad de la aplicación
 
-**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, shell centrado. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**. Desde la tarea 182 también se alcanza con un toque desde el avatar de la barra superior (en móvil) o desde la fila de perfil de "Más".
+**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, shell centrado. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Tarjeta **"Instalar la app en este dispositivo"** (tarea 184) con el mismo botón que la bienvenida (`BotonInstalarApp`): solo aparece mientras la app **no** corra ya instalada, y es el segundo de los dos únicos sitios desde donde se ofrece instalar (nunca como banner). Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**. Desde la tarea 182 también se alcanza con un toque desde el avatar de la barra superior (en móvil) o desde la fila de perfil de "Más".
 
 **Seguridad de la aplicación (`SeguridadPage`).** Ruta `/cuenta/seguridad`, shell centrado. Configura el **bloqueo del dispositivo** (patrón o contraseña, nunca biometría), una capa distinta de la sesión y de la contraseña maestra.
 - **Sin configurar:** invitación + selector de método (Patrón / Contraseña) + captura del secreto con confirmación.
@@ -580,7 +585,13 @@ Ambas se alcanzaban solo desde el menú "···" de Equipos; desde la tarea 182 
 <a id="69-autenticacion"></a>
 ### 6.9 Autenticación (login) y actualización
 
-**Login (`LoginPage`).** Ruta `/login`, fuera de la zona autenticada. Título "Soluciones IT", campos **Correo** (`type="email"`) y **Contraseña**, botón "Ingresar". Aviso si Supabase no está configurado. Usa `autoComplete="off"` para que el navegador no ofrezca guardar la cuenta.
+**Login (`LoginPage`).** Ruta `/login`, fuera de la zona autenticada. **Rediseñado en la tarea 184** (mockup `3b` del handoff): antes decía el nombre de la app y "Inicia sesión para continuar", y nada más, siendo la primera pantalla que ve un técnico nuevo.
+- **Se presenta:** glifo de la marca (`Marca`, el cerebro, en un cuadro de 52 px delineado en acento), título "Soluciones IT" y una línea de qué es esto: "La base de conocimiento del equipo de soporte y mantenimiento de TI." **No nombra a la organización** a propósito ([DECISIONES.md](DECISIONES.md) AD-025).
+- **Campos:** **Correo** (`type="email"`, placeholder "tu@correo.com") y **Contraseña** (`CampoContrasena`), con botón "Ingresar" de 52 px.
+- **"¿La olvidaste?"** en la fila del rótulo de Contraseña, con 44 px reales de zona táctil (regla R6; el mockup lo dibuja de 18). **No envía correos de recuperación**: abre un modal que dice el camino real, pedirle al administrador una contraseña nueva desde el panel de Supabase, igual que con la primera (AD-025). También recuerda que el bloqueo del teléfono es otra cosa y se resuelve en su propia pantalla.
+- **A quién pedir acceso:** "¿Sin cuenta? Pídesela al administrador de la app. Todo queda guardado en este teléfono, así que funciona sin señal."
+- **Autocompletado:** el **correo sí** se autocompleta (`autoComplete="username"`); la contraseña sigue fuera del gestor (lo garantiza `CampoContrasena`, que usa texto enmascarado por CSS para que el llavero no reconozca el formulario como un login). El `autoComplete="off"` que llevaba el `<form>` se retiró: puesto ahí anulaba también la pista del correo.
+- Aviso si Supabase no está configurado.
 
 **Aviso de actualización (`ActualizacionDisponible`).** Componente global. Cuando se publica una versión nueva, muestra un aviso discreto "Versión nueva disponible" con botón "Actualizar" (activa el nuevo service worker y recarga sin interrumpir un procedimiento a medias). Se comprueba al abrir y cada hora. Al pulsar, el botón pasa a "Actualizando..." y queda deshabilitado; la recarga ocurre en cuanto el service worker nuevo toma el control, y de todos modos pasados 2,5 segundos, así que el botón nunca se queda sin efecto (corregido el 2026-07-27, ver [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.1).
 
@@ -746,7 +757,7 @@ Botones: **"Guardar conexión"** y (variante ficha) **"Guardar y agregar otra"**
 - **Registrar intervención (`RegistrarIntervencion`).** En la ficha del equipo. "Qué se hizo" (área de texto, **obligatorio**, "cambio de ribbon, limpieza de cabezal..."), "Motivo (opcional)". Botón "Guardar intervención"; tras guardar ofrece adjuntar una foto.
 - **Dar de baja (`DarDeBajaPage`).** Motivo (opcional, "Fin de vida útil..."). El botón "Confirmar baja" solo se habilita cuando se resolvieron las dependencias (conexiones, credenciales, campos protegidos).
 - **Reemplazo (`ReemplazoPage`).** Motivo (opcional). Botón "Migrar todo y dar de baja".
-- **Login (`LoginPage`).** Correo (email, obligatorio), Contraseña (obligatorio). Botón "Ingresar".
+- **Login (`LoginPage`).** Correo (email, obligatorio, `autoComplete="username"`), Contraseña (obligatorio, fuera del gestor). Botón "Ingresar". Ver la sección 6.9.
 - **Mi cuenta (`CuentaPage`).** Contraseña actual / Nueva / Confirmar (los tres obligatorios). Botón "Cambiar contraseña".
 - **Importar (`ImportarDispositivosPage`).** Carga de archivo (.csv/.xlsx) y, en la revisión, "Categoría para las filas que no traen una" (select). Botón "Importar N equipos".
 
@@ -772,6 +783,8 @@ La app usa **modales** (centrados, `src/components/Modal.tsx`, renderizados con 
 | **Pregunta de error / decisión** | Al completar el trabajo previo de un paso | `ProcedimientoVista` / `AsistenteVista` | "¿Ocurrió algún error?" / pregunta Sí/No | "No, continuar" avanza; "Sí, ver la solución" despliega el vínculo |
 | **Desbloqueo de la bóveda** | Al entrar a la Bóveda o a un campo protegido | `BovedaGuard`, `CredencialEnPaso`, `SeguridadDelEquipo` | Campo contraseña maestra + "Desbloquear" | Deriva la clave en el teléfono; sesión compartida con autobloqueo |
 | **Pantalla de bloqueo de la app** (`BloqueoAppGuard`) | Al abrir la app / tras inactividad | Envuelve toda la zona autenticada | Patrón (cuadrícula 3x3) o contraseña; "Cerrar sesión y quitar el bloqueo" | Desbloquea la interfaz (no cifra datos) |
+| **"Olvidé mi contraseña"** (tarea 184) | Enlace "¿La olvidaste?" | `LoginPage` | Dice el camino real: pedirle al administrador una contraseña nueva desde el panel de Supabase, y cambiarla luego en Mi cuenta. Distingue esta contraseña del bloqueo del teléfono | Solo informa; botón "Entendido" |
+| **"Instalar la app en el teléfono"** (tarea 184) | Botón "Cómo instalar", o "Instalar" cuando el navegador rechaza su diálogo | `BotonInstalarApp` (bienvenida de Inicio y Mi cuenta) | Los tres pasos manuales (menú del navegador → "Añadir a pantalla de inicio" → confirmar) | Solo informa; botón "Entendido" |
 
 ---
 
@@ -998,10 +1011,12 @@ Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de Mi cu
 
 ```
 Login
+ ├── ¿La olvidaste? → Modal "Olvidé mi contraseña" (pedirla al administrador)
  └── (autenticado) → Bloqueo de la app (patrón/contraseña, si está activo)
 
 Inicio (/)
  ├── Buscador global (Guías · Equipos · Bóveda · Ubicaciones · Personas)
+ ├── Bienvenida del primer día (entraste · instalar · descargar para offline)
  ├── Continuar donde quedaste → Ficha de artículo
  ├── Atajos: Diagnóstico inteligente · Escanear equipo
  ├── Problemas frecuentes → Diagnóstico · Estadísticas
