@@ -527,6 +527,8 @@ Un solo envoltorio de pantalla, `src/app/Chasis.tsx` (tarea 185), con `modo = se
 
 El chasis reserva además el espacio inferior que la barra ocupa (regla **R22**), en una sola constante medida en el navegador; antes once pantallas escribían ese cálculo a mano. Hasta esta tarea convivían dos chasis (13 pantallas con navegación, 25 con un contenedor propio), y tres listas que se recorren durante minutos (Personas, Ubicaciones, Diagnósticos) habían quedado sin barra por aplicarles la regla de "pantalla enfocada" donde no correspondía. El mapa completo de las 44 rutas (path, componente, nivel, guard, padre) está en [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md), sección 3; el contrato del componente, en [COMPONENTES_UI.md](COMPONENTES_UI.md) sección 2.0; las decisiones, en [DECISIONES.md](DECISIONES.md) AD-026 y AD-027.
 
+Desde la tarea 186, los niveles `seccion` y `documento` montan además `BarraReanudar`: una barra flotante del procedimiento a medias más reciente (regla **R23**, un aviso solo si hay un dato detrás), que se descarta deslizando o con su botón "X" y deja un punto en la pestaña Guías mientras el descarte siga vigente. Detalle del componente en [COMPONENTES_UI.md](COMPONENTES_UI.md) sección 2.10i.
+
 ### 11.3 Enlaces cruzados (mapa)
 
 Dos pantallas son hubs. La creación contextual siempre viaja por query params (nunca por estado del router), para sobrevivir a una recarga.

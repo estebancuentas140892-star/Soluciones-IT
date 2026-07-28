@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-07-28
 
+### Agregado (tarea 186): `BarraReanudar`, el procedimiento a medias viaja contigo
+
+**Área modificada:** `src/app/Chasis.tsx`, `src/components/BarraReanudar.tsx` (nuevo), `src/features/soluciones/useReanudar.ts` (nuevo).
+**Motivo:** turno 4 del handoff "Auditoría de Soluciones TI" (mockup `4e`), regla **R23**. Caso real: estar en el paso 3 de un mantenimiento y salir a la Bóveda a buscar una clave; hasta ahora la app no recordaba en pantalla que había algo a medias y había que volver a Inicio a reconstruirlo. El propio handoff la señala como "la propuesta que más cambia el día del técnico".
+**Impacto esperado:** alto en uso diario, sin esquema nuevo ni tabla nueva: el dato (`db.progresoPasos`) ya existía.
+
+- **Agregado** `src/features/soluciones/useReanudar.ts`: el procedimiento a medias más reciente de todo el equipo de artículos, reutilizando `articulosSinTerminar` (ya usado en el bloque "Sin terminar" de `SolucionesPage`) en vez de duplicar la consulta a `progresoPasos`. También resuelve si ese procedimiento está descartado (persistido en `localStorage`, una clave con el id del último artículo descartado).
+- **Agregado** `src/components/BarraReanudar.tsx`: barra flotante con el título, "Paso N de M", los minutos restantes y "Seguir" (directo al asistente). Se descarta con arrastre horizontal (umbral de 90 px) o con un botón "X" siempre presente. El arrastre solo captura el puntero una vez superado un umbral de 6 px, para no robarle el click a la X ni al enlace "Seguir" cuando es solo un toque.
+- **Cambiado** `Chasis`: monta `BarraReanudar` en los niveles `seccion` y `documento` (no en `tarea`, que ya tiene su propia `BarraTarea`, R19). Mientras el procedimiento vigente esté descartado, la pestaña Guías (solo móvil) suma un punto de aviso junto a su icono.
+- **Documentación:** [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.0 y 2.10i (nuevo); [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) sección del chasis; [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) 11.2.
+
+**Verificación:** typecheck, lint y build limpios. 1702 pruebas pasan; los 4 fallos que quedan son los mismos **preexistentes y ajenos** de `archivosPendientes.test.ts` (RLS de Storage con el `.env` real), duplicados por el worktree obsoleto de la tarea 178. **Verificado en navegador real** con un banco de pruebas temporal (bypass de sesión en `RequireAuth` + una siembra de artículo/progreso, ambos retirados antes de commitear): la barra aparece en Inicio con el paso y los minutos correctos, el botón "X" la descarta, el punto aparece en la pestaña Guías en viewport móvil (375x812) y desaparece la barra; el arrastre horizontal (simulado con eventos de puntero reales) también descarta al superar el umbral. Encontrado y corregido en la misma tarea: la primera versión capturaba el puntero desde el primer píxel de movimiento, lo que impedía el click normal del botón "X" y del enlace "Seguir" (un `setPointerCapture` inmediato retargetea el `pointerup` al contenedor); ahora solo se captura tras superar 6 px de arrastre real.
+
 ### Refactorizado (tarea 185): un solo chasis, con tres niveles, y `BarraTarea`
 
 **Área modificada:** el chasis (`src/app/Chasis.tsx`, nuevo, que absorbe y reemplaza a `src/app/ShellNocturne.tsx`, eliminado), `src/components/BarraTarea.tsx` (nuevo), `src/lib/navegacion.ts`, `src/App.tsx` y las 35 pantallas de `src/features/`.

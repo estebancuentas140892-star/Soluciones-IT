@@ -2,7 +2,9 @@ import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
+import { useReanudar } from '../features/soluciones/useReanudar'
 import { Avatar } from '../components/Avatar'
+import { BarraReanudar } from '../components/BarraReanudar'
 import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
@@ -157,6 +159,10 @@ export function Chasis(props: Props) {
   const { perfil } = useAuth()
   const perfilVivo = usePerfilVivo()
   const usuario = perfilVivo ?? perfil
+  // Tarea 186: el mismo dato alimenta la barra flotante de aqui abajo y
+  // el punto de la pestaña Guías (nunca los dos a la vez: mientras se
+  // ve la barra no hace falta el punto, y viceversa).
+  const reanudar = useReanudar()
 
   // Nivel 3: tarea con salida. Sin pestañas y sin sidebar (la tarea
   // ocupa la pantalla entera, como hasta ahora), con la BarraTarea
@@ -297,6 +303,16 @@ export function Chasis(props: Props) {
         </div>
       </div>
 
+      {reanudar.actual && !reanudar.descartado && (
+        <BarraReanudar
+          articulo={reanudar.actual.articulo}
+          hechos={reanudar.actual.hechos}
+          total={reanudar.actual.total}
+          minutosRestantes={reanudar.actual.minutosRestantes}
+          onDescartar={reanudar.descartar}
+        />
+      )}
+
       {/* Pestañas inferiores: solo móvil. Siempre 5 columnas, siempre las
           mismas 5 (R17). Rótulo a 12px en celdas de 52 (antes 10.5px en
           44: "por debajo de cualquier mínimo razonable" para navegación
@@ -305,31 +321,47 @@ export function Chasis(props: Props) {
           icono relleno y color de acento; más presionado (fondo de acento
           al 10%) y foco de teclado (anillo de 2px), que antes no existían. */}
       <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] sm:max-w-xl md:max-w-3xl lg:hidden">
-        {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              `relative flex min-h-[52px] flex-col items-center gap-1 pb-[10px] pt-[9px] text-[12px] font-medium outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
-                isActive ? 'text-noct-accent-300' : 'text-noct-neutral-300'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span
-                    className="absolute left-1/2 top-0 h-[2px] w-[26px] -translate-x-1/2 rounded-b-[2px] bg-noct-accent"
-                    aria-hidden
-                  />
-                )}
-                {isActive ? <IconoActivo size={22} /> : <Icono size={22} />}
-                {label}
-              </>
-            )}
-          </NavLink>
-        ))}
+        {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => {
+          // Punto de la pestaña Guías (tarea 186): mientras la
+          // BarraReanudar este descartada para el procedimiento a
+          // medias vigente, la pestaña recuerda que sigue ahi (R23: un
+          // aviso solo si hay un dato detras).
+          const conPunto = to === '/soluciones' && Boolean(reanudar.actual) && reanudar.descartado
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `relative flex min-h-[52px] flex-col items-center gap-1 pb-[10px] pt-[9px] text-[12px] font-medium outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
+                  isActive ? 'text-noct-accent-300' : 'text-noct-neutral-300'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span
+                      className="absolute left-1/2 top-0 h-[2px] w-[26px] -translate-x-1/2 rounded-b-[2px] bg-noct-accent"
+                      aria-hidden
+                    />
+                  )}
+                  <span className="relative">
+                    {isActive ? <IconoActivo size={22} /> : <Icono size={22} />}
+                    {conPunto && (
+                      <span
+                        className="absolute -right-0.5 -top-0.5 h-[7px] w-[7px] rounded-full bg-noct-accent"
+                        aria-hidden
+                      />
+                    )}
+                  </span>
+                  {label}
+                  {conPunto && <span className="sr-only"> (hay un procedimiento a medias)</span>}
+                </>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
     </div>
   )

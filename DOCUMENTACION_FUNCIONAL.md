@@ -100,6 +100,8 @@ En **escritorio (>=1024px)** los niveles Sección y Documento muestran la barra 
 
 **La barra de tarea (`BarraTarea`).** Quitar la barra de pestañas obliga a poner algo que oriente (regla **R19**): fondo de superficie para que se note que el chasis cambió, el rótulo de lo que se está haciendo, sobre qué, la promesa escrita de a dónde se vuelve ("Guías › Impresoras · vuelves aquí al terminar") y una X de salida siempre en el mismo sitio. Antes, pasar de la ficha al editor apagaba la navegación y ponía otra barra fija abajo, sin decir nada.
 
+**BarraReanudar (desde la tarea 186).** Mientras haya un procedimiento a medias, una barra flotante viaja por los niveles Sección y Documento (no en Tarea, que ya tiene su propia `BarraTarea`) con el título del artículo, el paso actual, los minutos que quedan y "Seguir", directo al asistente. Caso real: estar en el paso 3 de un mantenimiento y salir a la Bóveda a buscar una clave, sin perder el hilo de vuelta. Se descarta deslizándola o con su botón "X" (regla **R23**: un aviso solo si hay un dato detrás); mientras siga descartada para ese mismo artículo, la pestaña Guías (solo móvil) muestra un punto de aviso. Si aparece un procedimiento más reciente para retomar, la barra vuelve a mostrarse sola.
+
 El **login** queda fuera del chasis (no hay sesión todavía) y trae su propia columna centrada.
 
 **Desde la tarea 182 el sidebar de escritorio y la barra de pestañas de móvil ya no comparten la misma lista** (antes sí, `DESTINOS_BASE` + `DESTINO_BOVEDA` condicional a los dos). El **sidebar** de escritorio pasa a tener **catorce destinos** desde la tarea 183 (mockup `3e`: "el sidebar tiene 240 px de alto libre y ofrece cinco destinos de catorce"), en tres bloques:

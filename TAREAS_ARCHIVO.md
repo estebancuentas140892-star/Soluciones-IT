@@ -1,5 +1,24 @@
 # Historial de tareas finalizadas
 
+### 186. BarraReanudar: el procedimiento a medias viaja contigo (R23)
+
+**Estado**: TERMINADA el 2026-07-28. Typecheck, lint y build limpios; 1702 pruebas pasan. **Prioridad**: Alta. **Origen**: turno 4 del handoff "Auditoría de Soluciones TI", mockup `4e`. **Modelo/esfuerzo**: Sonnet 5 / Alto, sin Ultracode.
+
+**Problema**: el avance a medias de un procedimiento (`db.progresoPasos`) ya existía y ya se mostraba en dos sitios (bloque "Sin terminar" de `SolucionesPage` y "Continuar donde quedaste" de Inicio), pero solo dentro de esas dos pantallas. El caso real que señala el propio handoff como "la propuesta que más cambia el día del técnico": estar en el paso 3 de un mantenimiento y salir a la Bóveda a buscar una clave; al volver, nada en pantalla recordaba que había algo a medias, y retomarlo costaba volver a Inicio o a Guías y reconstruir dónde se había quedado.
+
+**Cambio**:
+
+- **`src/features/soluciones/useReanudar.ts`** (nuevo): expone el procedimiento a medias más reciente de todo el equipo de artículos, reutilizando `articulosSinTerminar` (la misma función que ya alimentaba el bloque "Sin terminar") en vez de duplicar la consulta a `progresoPasos`. Suma el estado de descarte: si el artículo vigente coincide con el último id descartado (persistido en `localStorage`, clave `reanudar_descartado_id`), la barra se considera descartada. Si aparece un procedimiento distinto (más reciente), el descarte previo deja de aplicar y la barra vuelve a mostrarse sola.
+- **`src/components/BarraReanudar.tsx`** (nuevo): barra flotante presentacional con `IndicadorAvance` (anillo), título del artículo, "Paso N de M" con los minutos restantes (~) y un enlace "Seguir" directo a `/soluciones/:categoria/:articulo/ejecutar`. Se descarta arrastrando horizontalmente (umbral de 90 px) o con un botón "X" siempre presente, alternativa sin gesto.
+- **`src/app/Chasis.tsx`**: monta `BarraReanudar` en los niveles `seccion` y `documento` (nunca en `tarea`, que ya tiene su propia `BarraTarea` y no necesita una segunda barra flotante, R19). Mientras el procedimiento vigente esté descartado, la pestaña Guías de la barra móvil (`to === '/soluciones'`) suma un punto de aviso junto a su icono, con texto accesible oculto ("hay un procedimiento a medias").
+
+**Hallazgo y corrección durante la verificación**: la primera versión llamaba a `setPointerCapture` desde el primer píxel de movimiento (`onPointerDown`). Eso retargetea el `pointerup` posterior al contenedor completo, así que el `click` sintetizado por el navegador para el botón "X" y el enlace "Seguir" dejaba de dispararse cuando el toque no llegaba a moverse (el caso normal de un tap): el botón "Descartar" no hacía nada. Corregido para no capturar el puntero hasta superar un umbral de 6 px de arrastre real; por debajo de eso, el toque llega sin tocar a los hijos interactivos.
+
+**Verificación**: typecheck, lint, build y 1702 pruebas en verde (los 4 fallos que quedan son los mismos **preexistentes y ajenos** de `archivosPendientes.test.ts`, duplicados por el worktree obsoleto de la tarea 178). **Verificado en navegador real** con un banco de pruebas temporal (bypass de sesión en `RequireAuth.tsx` + una siembra de categoría/artículo/progreso vía un componente y una ruta `banco-186` añadidos solo para la prueba), **retirado por completo antes de commitear** (confirmado con `git status`, que solo deja los 4 archivos del cambio real): la barra aparece en Inicio con "Paso 2 de 4 · ~15 min" y el enlace "Seguir" correcto; el botón "X" la descarta (confirmado que ya no queda en el árbol de accesibilidad); a 375x812 el punto aparece junto al icono de la pestaña Guías tras el descarte; el arrastre horizontal, simulado con eventos de puntero reales (`pointerdown`/`pointermove`/`pointerup`) para no depender de una captura de pantalla, también descarta al superar el umbral de 90 px.
+
+**Lo que NO incluyó**: el punto de la pestaña Guías en el sidebar de escritorio (el texto de la tarea dice "pestaña", que en esta app son solo las 5 de móvil; el sidebar de escritorio ya tiene la barra misma más visible). Los comportamientos dinámicos del resto del chasis (cabecera colapsable, memoria por pestaña, más avisos, transiciones) siguen en la tarea 187.
+
+
 ### 185. Chasis en tres niveles y BarraTarea (R18, R19, R22)
 
 **Estado**: TERMINADA el 2026-07-28. Lint, `tsc -b` y build limpios; 1702 pruebas pasan, 9 de ellas nuevas. **Prioridad**: Alta. **Origen**: turno 4 del handoff "Auditoría de Soluciones TI", mockups `4a` a `4c`. **Modelo/esfuerzo**: Opus 5 / Extra, sin Ultracode.

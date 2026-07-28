@@ -86,6 +86,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
   - `tarea`: `{ modo: 'tarea', rotulo: string, titulo: string, vuelta?: string, salidaA?: string, salidaEtiqueta?: string, alSalir?: () => void, barra?: ReactNode, children }`
   - `barra` es siempre la banda de controles propios de la pantalla, dentro del mismo bloque pegajoso que la cabecera (AD-023).
 - **Reserva su propio espacio (regla R22).** La columna de contenido lleva `pb-[calc(65px+env(safe-area-inset-bottom))] lg:pb-0` en los niveles con pestañas, así que ninguna pantalla calcula a mano el alto de la barra. Los 65 px son **medidos** (63,6 de celda + 1 de borde), no los 53 que citaba la auditoría, un dato anterior a la tarea 182.
+- **`BarraReanudar` (tarea 186):** en `seccion` y `documento` (nunca en `tarea`), monta la barra flotante del procedimiento a medias más reciente (ver 2.10i) a partir de `useReanudar()`. Mientras esté descartada, la pestaña Guías (solo móvil) muestra un punto de aviso junto a su icono.
 - **Dónde:** todas las rutas autenticadas. `BotonVolver` ya solo lo usan el propio chasis y `BarraTarea`.
 
 ### 2.1 `ActualizacionDisponible`
@@ -209,6 +210,13 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Variantes:** cuatro estados: al día (icono verde, texto `neutral-300`), sincronizando/pendiente, con error y sin conexión (en estos tres el color pasa también al texto, porque hay algo que atender).
 - **Historia:** vivía dentro de `InicioPage`, así que en las otras cuatro pestañas no había forma de saber si lo escrito ya había subido. La tarea 181 la extrajo a `src/components/PastillaSync.tsx` y la montó en el chasis (regla **R7** aplicada al chasis). **Pendiente en la tarea 187:** contraerse a solo icono cuando todo está al día o el título de la sección es largo.
 - **Dónde:** solo `BarraSuperior`.
+
+### 2.10i `BarraReanudar`
+- **Propósito:** barra flotante que viaja por toda la app mientras haya un procedimiento a medias (tarea 186, mockup `4e`). Caso real: estar en el paso 3 de un mantenimiento y salir a la Bóveda a buscar una clave, sin perder el hilo de vuelta. Muestra el título del artículo, el paso actual, los minutos restantes estimados y un acceso directo "Seguir" al asistente.
+- **Props:** `{ articulo: Articulo, hechos: number, total: number, minutosRestantes: number | null, onDescartar: () => void }`. Presentacional puro; los datos y el estado de descarte los resuelve `useReanudar` (`src/features/soluciones/useReanudar.ts`), que reutiliza `articulosSinTerminar` (ya usado en el bloque "Sin terminar" de `SolucionesPage`) en vez de duplicar la consulta a `progresoPasos`.
+- **Se descarta** deslizando horizontalmente (arrastre con umbral de 90 px, con un umbral previo de 6 px antes de capturar el puntero para no robarle el click al botón "X" ni al enlace "Seguir") o con el botón "X", siempre presente como alternativa sin gesto. El descarte se recuerda en `localStorage` mientras siga siendo el mismo artículo: si aparece un procedimiento más reciente para retomar, la barra vuelve a mostrarse sola.
+- **Reglas que aplica:** **R23** (un aviso solo si hay un dato detrás: no se muestra si no hay ningún procedimiento a medias). Mientras la barra está descartada, la pestaña Guías (solo móvil) muestra un punto de aviso en su lugar.
+- **Dónde:** la monta `Chasis` en los niveles `seccion` y `documento` (no en `tarea`: esas pantallas ya tienen su propia `BarraTarea` y no necesitan una segunda barra flotante, R19).
 
 ### 2.11 `MiniaturaPortada`
 - **Propósito:** miniatura de la portada de un procedimiento o la foto de un dispositivo en listados; si la imagen no está disponible offline, no muestra nada.
