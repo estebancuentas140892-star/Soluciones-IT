@@ -157,11 +157,18 @@ function App() {
                 </Suspense>
               }
             >
-              {/* Pantallas fuera del Layout (sin barra inferior): el
+              {/* Desde la tarea 185 todas las rutas montan el mismo
+                  chasis (src/app/Chasis.tsx) y cada pantalla declara su
+                  nivel: `seccion` (raiz de una pila), `documento` (algo
+                  que se lee o se recorre) o `tarea` (algo que se hace y
+                  de lo que se sale). Solo el nivel `tarea` se queda sin
+                  la barra de pestañas, y a cambio pone una BarraTarea
+                  que dice que se esta haciendo y como se sale (R19).
+
+                  Las tres primeras de aqui abajo son de ese nivel: el
                   escaner usa la camara a pantalla completa, las
-                  etiquetas se imprimen sin el shell de la app y el
-                  modo asistente evita distraer al tecnico con el
-                  resto de la interfaz mientras ejecuta un paso. */}
+                  etiquetas se imprimen sin el chasis y el modo asistente
+                  evita distraer al tecnico mientras ejecuta un paso. */}
               <Route
                 path="escaner"
                 element={
@@ -243,12 +250,9 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* La ficha de articulo es la primera pantalla del
-                  rediseño Nocturne (tarea 58, handoff "Herramienta IT
-                  para técnicos"): trae su propio ShellNocturne, por
-                  eso va fuera del Layout oscuro. La lista de Soluciones
-                  (tarea 59, handoff de Soluciones trasladado a Nocturne)
-                  tambien trae su ShellNocturne y sale del Layout. */}
+              {/* Guias: la lista es nivel `seccion` (es pestaña); la
+                  ficha de categoria y la de articulo, nivel `documento`;
+                  el editor y el asistente, nivel `tarea`. */}
               <Route
                 path="soluciones"
                 element={
@@ -285,14 +289,10 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* Dispositivos re-autorizada a Nocturne (handoff "Rediseño
-                  de aplicación empresarial", Dispositivos.dc.html, tarea
-                  85): trae su propio ShellNocturne, por eso sale del
-                  Layout oscuro. Red (tarea 91), la topología general
-                  (TopologiaPage, tarea 92) y la topología de un equipo
-                  (TopologiaEquipoPage, tarea 93) ya están en Nocturne,
-                  cada una con su propio ShellNocturne, también fuera
-                  del Layout. */}
+              {/* Equipos y Red son nivel `seccion` (son pestañas); la
+                  topología general (TopologiaPage, tarea 92) y la de un
+                  equipo (TopologiaEquipoPage, tarea 93), nivel
+                  `documento`. */}
               <Route
                 path="dispositivos"
                 element={
@@ -301,12 +301,9 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* La ficha de dispositivo (tarea 86, Ficha de
-                  Dispositivo.dc.html) y el editor (tarea 87, Editor de
-                  Dispositivo.dc.html) traen su propio shell Nocturne, por
-                  eso salen del Layout oscuro. La ficha usa ShellNocturne
-                  (sidebar/pestañas) como la ficha de artículo; el editor
-                  va a pantalla completa como los demás editores. */}
+              {/* La ficha de dispositivo (tarea 86) es nivel
+                  `documento`, como la de artículo; el editor (tarea 87)
+                  es nivel `tarea`, como los demás editores. */}
               <Route
                 path="dispositivos/:dispositivoId"
                 element={
@@ -465,9 +462,9 @@ function App() {
               />
               {/* Topología de un equipo re-autorizada a Nocturne (handoff
                   "Rediseño de aplicación empresarial", Topología de
-                  Equipo.dc.html): pantalla propia con su ShellNocturne.
-                  El bosque general (/red/topologia, sin equipo) vive en
-                  TopologiaPage, también en Nocturne (tarea 92). */}
+                  Equipo.dc.html). El bosque general (/red/topologia, sin
+                  equipo) vive en TopologiaPage (tarea 92); las dos son
+                  nivel `documento`. */}
               <Route
                 path="red/topologia/:dispositivoId"
                 element={
@@ -476,12 +473,10 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* Inicio re-autorizada a Nocturne (handoff "Rediseño de
-                  aplicación empresarial", Inicio.dc.html): trae su propio
-                  ShellNocturne (cabecera con estado de sincronizacion,
-                  buscador global y pestañas/sidebar), por eso sale del
-                  Layout oscuro heredado como las demas pantallas del
-                  rediseño. */}
+              {/* Inicio (handoff "Rediseño de aplicación empresarial",
+                  Inicio.dc.html): nivel `seccion`, con la cabecera
+                  global del chasis (estado del dato, buscador y cuenta)
+                  y las pestañas. */}
               <Route
                 index
                 element={
@@ -509,7 +504,7 @@ function App() {
               </Route>
               {/* "Más" (tarea 182, mockup 3f): quinta pestaña, puerta de los
                   destinos que hoy no aparecen en la barra ni en el sidebar.
-                  Trae su propio ShellNocturne, como el resto de pestañas. */}
+                  Nivel `seccion`, como el resto de pestañas. */}
               <Route
                 path="mas"
                 element={

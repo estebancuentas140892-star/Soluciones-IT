@@ -33,7 +33,7 @@ import {
   Warning,
   X,
 } from '../../components/iconos'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import {
@@ -485,24 +485,22 @@ export function ArticuloForm() {
   }
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col">
-        {/* Cabecera pegajosa con blur: cancelar, estado y titulo dinamico. */}
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            {/* Destino derivado de la jerarquía central (padreDe): en
-                creación vuelve a la lista con el chip de la categoría; en
-                edición, a la ficha del artículo. */}
-            <BotonVolver>Cancelar</BotonVolver>
-            <TagNeutral className="shrink-0">{estadoEtiqueta}</TagNeutral>
-          </header>
-          <div className="px-4 pb-2.5 pt-0.5">
-            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
-              {esEdicion ? tituloEditar(tipo) : tituloNuevo(tipo)}
-            </h1>
-            <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
-              Se guarda en la categoría {categoria?.nombre ?? '...'}
-            </p>
+    // Nivel 3 del chasis (tarea 185): tarea con salida. Es de los pocos
+    // sitios donde la barra de pestañas cede, y a cambio la BarraTarea
+    // dice qué se está haciendo, sobre qué y a dónde se vuelve (R19).
+    // El destino de la X lo deriva la jerarquía central (padreDe): en
+    // creación, la lista con el chip de la categoría; en edición, la
+    // ficha del artículo.
+    <Chasis
+      modo="tarea"
+      rotulo={esEdicion ? 'Editando' : 'Creando'}
+      titulo={titulo.trim() || (esEdicion ? tituloEditar(tipo) : tituloNuevo(tipo))}
+      vuelta={categoria?.nombre ? `Guías › ${categoria.nombre}` : 'Guías'}
+      salidaEtiqueta="Cancelar y volver"
+      barra={
+        <>
+          <div className="px-4 pb-2">
+            <TagNeutral>{estadoEtiqueta}</TagNeutral>
           </div>
 
           {/* Pestañas del editor (J5). Van dentro del bloque pegajoso
@@ -540,449 +538,449 @@ export function ArticuloForm() {
               )
             })}
           </div>
-        </div>
+        </>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-6 px-4 pb-[190px] pt-[18px]">
+        {/* PESTAÑA GENERAL: de qué trata el artículo y cómo se
+            encuentra (tipo, título, portada, etiquetas, equipos). */}
+        {pestana === 'general' && (
+          <>
+            <section>
+              <TituloSeccion className="mb-2">Tipo de documento</TituloSeccion>
+              <div className="grid grid-cols-2 gap-2">
+                {TIPOS_GRID.map((t) => {
+                  const Icono = iconoDeTipo(t.valor)
+                  const activo = t.valor === tipo
+                  return (
+                    <button
+                      key={t.valor}
+                      type="button"
+                      onClick={() => setTipo(t.valor)}
+                      aria-pressed={activo}
+                      className={`flex min-h-11 items-center gap-[9px] rounded-md border px-3 py-2 text-left text-[13px] font-medium transition-colors ${
+                        activo
+                          ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
+                          : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/5'
+                      }`}
+                    >
+                      <Icono
+                        size={17}
+                        className={`shrink-0 ${activo ? 'text-noct-accent-300' : colorIconoDeTipo(t.valor)}`}
+                      />
+                      {t.etiqueta}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
 
-        <main className="flex flex-1 flex-col gap-6 px-4 pb-[190px] pt-[18px]">
-          {/* PESTAÑA GENERAL: de qué trata el artículo y cómo se
-              encuentra (tipo, título, portada, etiquetas, equipos). */}
-          {pestana === 'general' && (
-            <>
-              <section>
-                <TituloSeccion className="mb-2">Tipo de documento</TituloSeccion>
-                <div className="grid grid-cols-2 gap-2">
-                  {TIPOS_GRID.map((t) => {
-                    const Icono = iconoDeTipo(t.valor)
-                    const activo = t.valor === tipo
-                    return (
-                      <button
-                        key={t.valor}
-                        type="button"
-                        onClick={() => setTipo(t.valor)}
-                        aria-pressed={activo}
-                        className={`flex min-h-11 items-center gap-[9px] rounded-md border px-3 py-2 text-left text-[13px] font-medium transition-colors ${
-                          activo
-                            ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
-                            : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/5'
-                        }`}
-                      >
-                        <Icono
-                          size={17}
-                          className={`shrink-0 ${activo ? 'text-noct-accent-300' : colorIconoDeTipo(t.valor)}`}
-                        />
-                        {t.etiqueta}
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
+            {/* Titulo + anti duplicados */}
+            <section className="flex flex-col gap-2.5">
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>
+                  Título <span className="text-noct-accent-300">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={titulo}
+                  onChange={(e) => {
+                    setTitulo(e.target.value)
+                    if (errorEnvio) setErrorEnvio(null)
+                  }}
+                  placeholder="Qué se hace y sobre qué equipo"
+                  aria-invalid={errorEnvio !== null}
+                  className={`min-h-11 ${CLASE_CAMPO} ${errorEnvio ? 'border-noct-error' : ''}`}
+                />
+              </label>
 
-              {/* Titulo + anti duplicados */}
-              <section className="flex flex-col gap-2.5">
-                <label className="flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>
-                    Título <span className="text-noct-accent-300">*</span>
-                  </span>
-                  <input
-                    type="text"
-                    value={titulo}
-                    onChange={(e) => {
-                      setTitulo(e.target.value)
-                      if (errorEnvio) setErrorEnvio(null)
-                    }}
-                    placeholder="Qué se hace y sobre qué equipo"
-                    aria-invalid={errorEnvio !== null}
-                    className={`min-h-11 ${CLASE_CAMPO} ${errorEnvio ? 'border-noct-error' : ''}`}
-                  />
-                </label>
+              {errorEnvio && (
+                <p className="flex items-center gap-2 text-[12.5px] text-noct-error">
+                  <Warning size={14} className="shrink-0" />
+                  {errorEnvio}
+                </p>
+              )}
 
-                {errorEnvio && (
-                  <p className="flex items-center gap-2 text-[12.5px] text-noct-error">
-                    <Warning size={14} className="shrink-0" />
-                    {errorEnvio}
-                  </p>
-                )}
-
-                {mostrarSimilares && (
-                  <div className="flex flex-col gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/10 px-3 py-2.5">
-                    <div className="flex items-start gap-2.5">
-                      <Info size={16} className="mt-px shrink-0 text-noct-accent" />
-                      <p className="text-[13px] leading-[1.5]">
-                        Ya existe un artículo parecido. Ábrelo en lugar de documentarlo dos veces.
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1 pl-[26px]">
-                      {similares.map((similar) => (
-                        <div key={similar.id} className="flex items-center justify-between gap-2">
-                          <Link
-                            to={similar.ruta}
-                            className="min-w-0 truncate text-[13.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400"
-                          >
-                            {similar.titulo}
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => setSimilaresDescartados(true)}
-                            className="shrink-0 p-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
-                          >
-                            Descartar
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              {/* Oferta de plantilla */}
-              {ofrecerPlantilla && (
-                <div className="flex flex-col gap-2.5 rounded-md border border-noct-accent/30 bg-noct-accent/10 p-3">
+              {mostrarSimilares && (
+                <div className="flex flex-col gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/10 px-3 py-2.5">
                   <div className="flex items-start gap-2.5">
-                    <Sparkle size={16} className="mt-px shrink-0 text-noct-accent" />
+                    <Info size={16} className="mt-px shrink-0 text-noct-accent" />
                     <p className="text-[13px] leading-[1.5]">
-                      Estructura recomendada para{' '}
-                      {TIPOS_GRID.find((t) => t.valor === tipo)?.etiqueta.toLowerCase()}: pasos con sus
-                      tareas, requisitos y verificación final. Solo hay que editar los textos.
+                      Ya existe un artículo parecido. Ábrelo en lugar de documentarlo dos veces.
                     </p>
                   </div>
-                  <div className="flex gap-2 pl-[26px]">
-                    <button
-                      type="button"
-                      onClick={aplicarPlantilla}
-                      className="inline-flex items-center rounded-lg border border-noct-accent px-2.5 py-[7px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10"
-                    >
-                      Usar plantilla
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPlantillasDescartadas((actuales) => new Set([...actuales, tipo]))}
-                      className="inline-flex items-center rounded-lg border border-transparent px-1 py-[7px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10"
-                    >
-                      Empezar en blanco
-                    </button>
+                  <div className="flex flex-col gap-1 pl-[26px]">
+                    {similares.map((similar) => (
+                      <div key={similar.id} className="flex items-center justify-between gap-2">
+                        <Link
+                          to={similar.ruta}
+                          className="min-w-0 truncate text-[13.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400"
+                        >
+                          {similar.titulo}
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setSimilaresDescartados(true)}
+                          className="shrink-0 p-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
+                        >
+                          Descartar
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
+            </section>
 
-              <Campo etiqueta="¿Cuándo usar este procedimiento?">
-                <textarea
-                  rows={2}
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                  placeholder="Usar cuando llega una impresora nueva a bodega o pierde su configuración"
-                  className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+            {/* Oferta de plantilla */}
+            {ofrecerPlantilla && (
+              <div className="flex flex-col gap-2.5 rounded-md border border-noct-accent/30 bg-noct-accent/10 p-3">
+                <div className="flex items-start gap-2.5">
+                  <Sparkle size={16} className="mt-px shrink-0 text-noct-accent" />
+                  <p className="text-[13px] leading-[1.5]">
+                    Estructura recomendada para{' '}
+                    {TIPOS_GRID.find((t) => t.valor === tipo)?.etiqueta.toLowerCase()}: pasos con sus
+                    tareas, requisitos y verificación final. Solo hay que editar los textos.
+                  </p>
+                </div>
+                <div className="flex gap-2 pl-[26px]">
+                  <button
+                    type="button"
+                    onClick={aplicarPlantilla}
+                    className="inline-flex items-center rounded-lg border border-noct-accent px-2.5 py-[7px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10"
+                  >
+                    Usar plantilla
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlantillasDescartadas((actuales) => new Set([...actuales, tipo]))}
+                    className="inline-flex items-center rounded-lg border border-transparent px-1 py-[7px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10"
+                  >
+                    Empezar en blanco
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <Campo etiqueta="¿Cuándo usar este procedimiento?">
+              <textarea
+                rows={2}
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder="Usar cuando llega una impresora nueva a bodega o pierde su configuración"
+                className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+              />
+            </Campo>
+
+            <Campo etiqueta="Objetivo general (1 línea)">
+              <input
+                type="text"
+                value={objetivoGeneral}
+                onChange={(e) => setObjetivoGeneral(e.target.value)}
+                placeholder="Qué se logra al completar todo el procedimiento"
+                className={`min-h-11 ${CLASE_CAMPO}`}
+              />
+            </Campo>
+
+            <EtiquetasEditor
+              etiquetas={etiquetas}
+              onChange={setEtiquetas}
+              sugerencias={vocabularioEtiquetas}
+            />
+
+            <PortadaEditor articuloId={id} portada={portada} onChange={setPortada} />
+
+            <EquiposDondeAplica
+              elegidos={dispositivosAfectados}
+              disponibles={dispositivosDisponibles}
+              onChange={setDispositivosAfectados}
+              categoriaNombre={categoria?.nombre}
+            />
+
+            <AplicaACriterios
+              marca={aplicaAMarca}
+              modelo={aplicaAModelo}
+              onCambiarMarca={setAplicaAMarca}
+              onCambiarModelo={setAplicaAModelo}
+              marcasSugeridas={marcasSugeridas}
+              modelosSugeridos={modelosSugeridos}
+            />
+          </>
+        )}
+
+        {/* PESTAÑA PASOS: lo que el técnico ejecuta, de principio a
+            fin (requisitos previos, pasos y verificación final). */}
+        {pestana === 'pasos' && (
+          <>
+            <Campo etiqueta="Antes de empezar (un requisito por línea)">
+              <textarea
+                rows={3}
+                value={requisitos}
+                onChange={(e) => setRequisitos(e.target.value)}
+                placeholder={'Acceso a la red\nPermisos de administrador'}
+                className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+              />
+            </Campo>
+
+            <section>
+              <div className="mb-2.5 flex items-baseline justify-between">
+                <TituloSeccion>Pasos</TituloSeccion>
+                <span className="text-[11px] text-noct-neutral-600">{resumenPasos}</span>
+              </div>
+              <PasosEditor
+                articuloId={id}
+                pasos={pasos}
+                onPasosChange={setPasos}
+                dispositivosAfectados={dispositivosAfectados}
+              />
+            </section>
+
+            <Campo etiqueta="Verificación final (una comprobación por línea)">
+              <textarea
+                rows={3}
+                value={verificacionFinal}
+                onChange={(e) => setVerificacionFinal(e.target.value)}
+                placeholder={'La impresora aparece instalada\nLa impresión de prueba fue exitosa'}
+                className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+              />
+            </Campo>
+          </>
+        )}
+
+        {/* PESTAÑA DETALLES: lo que ayuda a decidir si este artículo
+            sirve (síntomas, esfuerzo, artículos vecinos y notas). */}
+        {pestana === 'detalles' && (
+          <>
+            {esProblema && (
+              <>
+                <Campo etiqueta="Síntomas (uno por línea)">
+                  <textarea
+                    rows={3}
+                    value={sintomas}
+                    onChange={(e) => setSintomas(e.target.value)}
+                    placeholder={'No imprime nada\nLuz roja parpadeando'}
+                    className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                  />
+                </Campo>
+                <Campo etiqueta="Posibles causas (una por línea)">
+                  <textarea
+                    rows={3}
+                    value={causas}
+                    onChange={(e) => setCausas(e.target.value)}
+                    placeholder={'Cable de red suelto\nTóner agotado'}
+                    className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                  />
+                </Campo>
+              </>
+            )}
+
+            <div className="flex gap-3">
+              <label className="flex flex-1 flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Tiempo (min)</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={tiempoEstimadoMin}
+                  onChange={(e) => setTiempoEstimadoMin(e.target.value)}
+                  className={`min-h-11 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${CLASE_CAMPO}`}
                 />
-              </Campo>
+              </label>
+              <div className="flex flex-[2] flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Dificultad</span>
+                <Segmentado
+                  opciones={DIFICULTADES}
+                  valor={dificultad}
+                  onCambiar={(v) => setDificultad((actual) => (actual === v ? '' : v))}
+                />
+              </div>
+            </div>
 
-              <Campo etiqueta="Objetivo general (1 línea)">
+            <div className="flex flex-col gap-2">
+              <span className={CLASE_ETIQUETA}>Artículos relacionados</span>
+              {relacionados.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {relacionados.map((r) => (
+                    <TagNeutral key={r.id} className="gap-1.5">
+                      {r.titulo}
+                      <button
+                        type="button"
+                        onClick={() => setRelacionados((actuales) => actuales.filter((x) => x.id !== r.id))}
+                        aria-label={`Quitar ${r.titulo} de relacionados`}
+                        className="flex p-0.5 text-noct-neutral-500 hover:text-noct-text"
+                      >
+                        <X size={11} />
+                      </button>
+                    </TagNeutral>
+                  ))}
+                </div>
+              )}
+              {relacionadosDisponibles.length > 0 && (
+                <div className="relative">
+                  <LinkSimple
+                    size={15}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400"
+                  />
+                  <select
+                    value=""
+                    aria-label="Agregar artículo relacionado"
+                    onChange={(e) => {
+                      const articulo = relacionadosDisponibles.find((a) => a.id === e.target.value)
+                      if (articulo) {
+                        setRelacionados((actuales) => [
+                          ...actuales,
+                          { id: articulo.id, titulo: articulo.titulo },
+                        ])
+                      }
+                    }}
+                    className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+                  >
+                    <option value="">Vincular artículo relacionado (opcional)</option>
+                    {relacionadosDisponibles.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <Campo etiqueta="Notas adicionales (admite Markdown)">
+              <textarea
+                rows={3}
+                value={contenido}
+                onChange={(e) => setContenido(e.target.value)}
+                placeholder="Notas de cierre, enlaces del fabricante, aclaraciones"
+                className={`resize-y font-mono text-[13px] leading-[1.55] ${CLASE_CAMPO}`}
+              />
+            </Campo>
+          </>
+        )}
+
+        {/* PESTAÑA PUBLICACIÓN: quién lo ve y cómo queda registrado
+            el cambio. */}
+        {pestana === 'publicacion' && (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <span className={CLASE_ETIQUETA}>Estado</span>
+              <Segmentado opciones={ESTADOS} valor={estado} onCambiar={(v) => setEstado(v)} />
+              <p className="text-xs leading-[1.5] text-noct-neutral-500">
+                Un borrador u obsoleto no aparece en el buscador ni en el diagnóstico.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Casilla
+                marcada={esRutaInicio}
+                onCambiar={() => setEsRutaInicio((v) => !v)}
+                titulo="Destacar en Inicio como ruta de aprendizaje"
+                ayuda='Para guías como "Primer día en TI".'
+              />
+              {/* Orden dentro de la ruta de inicio (tarea 74): solo
+                  tiene sentido si el artículo está destacado. */}
+              {esRutaInicio && (
+                <label className="ml-[28px] flex flex-col gap-1.5">
+                  <span className={CLASE_ETIQUETA}>Orden en la ruta de Inicio</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={ordenRutaInicio}
+                    onChange={(e) => setOrdenRutaInicio(Number(e.target.value))}
+                    className={`min-h-11 w-24 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${CLASE_CAMPO}`}
+                  />
+                  <span className="text-xs leading-[1.5] text-noct-neutral-500">
+                    Los destacados se muestran de menor a mayor. El 0 va primero.
+                  </span>
+                </label>
+              )}
+            </div>
+
+            {/* Cambio mayor (tarea 74): la versión solo se mueve al
+                guardar un artículo YA publicado, así que fuera de ese
+                caso la opción confundiría más de lo que ayuda. */}
+            {esEdicion && articulo?.estado === 'publicado' && (
+              <div className="flex flex-col gap-2">
+                <Casilla
+                  marcada={cambioMayor}
+                  onCambiar={() => setCambioMayor((v) => !v)}
+                  titulo="Es un cambio mayor"
+                  ayuda={`La versión pasaría de ${articulo.version ?? '1.0'} a ${siguienteVersion(
+                    articulo.version ?? '1.0',
+                    true,
+                  )} en vez de ${siguienteVersion(articulo.version ?? '1.0', false)}.`}
+                />
+              </div>
+            )}
+
+            {esEdicion && (
+              <Campo etiqueta="Motivo del cambio">
                 <input
                   type="text"
-                  value={objetivoGeneral}
-                  onChange={(e) => setObjetivoGeneral(e.target.value)}
-                  placeholder="Qué se logra al completar todo el procedimiento"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="Por qué se actualizó este artículo"
                   className={`min-h-11 ${CLASE_CAMPO}`}
                 />
               </Campo>
+            )}
+          </>
+        )}
+      </main>
 
-              <EtiquetasEditor
-                etiquetas={etiquetas}
-                onChange={setEtiquetas}
-                sugerencias={vocabularioEtiquetas}
-              />
-
-              <PortadaEditor articuloId={id} portada={portada} onChange={setPortada} />
-
-              <EquiposDondeAplica
-                elegidos={dispositivosAfectados}
-                disponibles={dispositivosDisponibles}
-                onChange={setDispositivosAfectados}
-                categoriaNombre={categoria?.nombre}
-              />
-
-              <AplicaACriterios
-                marca={aplicaAMarca}
-                modelo={aplicaAModelo}
-                onCambiarMarca={setAplicaAMarca}
-                onCambiarModelo={setAplicaAModelo}
-                marcasSugeridas={marcasSugeridas}
-                modelosSugeridos={modelosSugeridos}
-              />
-            </>
-          )}
-
-          {/* PESTAÑA PASOS: lo que el técnico ejecuta, de principio a
-              fin (requisitos previos, pasos y verificación final). */}
-          {pestana === 'pasos' && (
-            <>
-              <Campo etiqueta="Antes de empezar (un requisito por línea)">
-                <textarea
-                  rows={3}
-                  value={requisitos}
-                  onChange={(e) => setRequisitos(e.target.value)}
-                  placeholder={'Acceso a la red\nPermisos de administrador'}
-                  className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                />
-              </Campo>
-
-              <section>
-                <div className="mb-2.5 flex items-baseline justify-between">
-                  <TituloSeccion>Pasos</TituloSeccion>
-                  <span className="text-[11px] text-noct-neutral-600">{resumenPasos}</span>
-                </div>
-                <PasosEditor
-                  articuloId={id}
-                  pasos={pasos}
-                  onPasosChange={setPasos}
-                  dispositivosAfectados={dispositivosAfectados}
-                />
-              </section>
-
-              <Campo etiqueta="Verificación final (una comprobación por línea)">
-                <textarea
-                  rows={3}
-                  value={verificacionFinal}
-                  onChange={(e) => setVerificacionFinal(e.target.value)}
-                  placeholder={'La impresora aparece instalada\nLa impresión de prueba fue exitosa'}
-                  className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                />
-              </Campo>
-            </>
-          )}
-
-          {/* PESTAÑA DETALLES: lo que ayuda a decidir si este artículo
-              sirve (síntomas, esfuerzo, artículos vecinos y notas). */}
-          {pestana === 'detalles' && (
-            <>
-              {esProblema && (
-                <>
-                  <Campo etiqueta="Síntomas (uno por línea)">
-                    <textarea
-                      rows={3}
-                      value={sintomas}
-                      onChange={(e) => setSintomas(e.target.value)}
-                      placeholder={'No imprime nada\nLuz roja parpadeando'}
-                      className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                    />
-                  </Campo>
-                  <Campo etiqueta="Posibles causas (una por línea)">
-                    <textarea
-                      rows={3}
-                      value={causas}
-                      onChange={(e) => setCausas(e.target.value)}
-                      placeholder={'Cable de red suelto\nTóner agotado'}
-                      className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
-                    />
-                  </Campo>
-                </>
-              )}
-
-              <div className="flex gap-3">
-                <label className="flex flex-1 flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>Tiempo (min)</span>
-                  <input
-                    type="number"
-                    min={1}
-                    value={tiempoEstimadoMin}
-                    onChange={(e) => setTiempoEstimadoMin(e.target.value)}
-                    className={`min-h-11 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${CLASE_CAMPO}`}
-                  />
-                </label>
-                <div className="flex flex-[2] flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>Dificultad</span>
-                  <Segmentado
-                    opciones={DIFICULTADES}
-                    valor={dificultad}
-                    onCambiar={(v) => setDificultad((actual) => (actual === v ? '' : v))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <span className={CLASE_ETIQUETA}>Artículos relacionados</span>
-                {relacionados.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {relacionados.map((r) => (
-                      <TagNeutral key={r.id} className="gap-1.5">
-                        {r.titulo}
-                        <button
-                          type="button"
-                          onClick={() => setRelacionados((actuales) => actuales.filter((x) => x.id !== r.id))}
-                          aria-label={`Quitar ${r.titulo} de relacionados`}
-                          className="flex p-0.5 text-noct-neutral-500 hover:text-noct-text"
-                        >
-                          <X size={11} />
-                        </button>
-                      </TagNeutral>
-                    ))}
-                  </div>
-                )}
-                {relacionadosDisponibles.length > 0 && (
-                  <div className="relative">
-                    <LinkSimple
-                      size={15}
-                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400"
-                    />
-                    <select
-                      value=""
-                      aria-label="Agregar artículo relacionado"
-                      onChange={(e) => {
-                        const articulo = relacionadosDisponibles.find((a) => a.id === e.target.value)
-                        if (articulo) {
-                          setRelacionados((actuales) => [
-                            ...actuales,
-                            { id: articulo.id, titulo: articulo.titulo },
-                          ])
-                        }
-                      }}
-                      className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
-                    >
-                      <option value="">Vincular artículo relacionado (opcional)</option>
-                      {relacionadosDisponibles.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.titulo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <Campo etiqueta="Notas adicionales (admite Markdown)">
-                <textarea
-                  rows={3}
-                  value={contenido}
-                  onChange={(e) => setContenido(e.target.value)}
-                  placeholder="Notas de cierre, enlaces del fabricante, aclaraciones"
-                  className={`resize-y font-mono text-[13px] leading-[1.55] ${CLASE_CAMPO}`}
-                />
-              </Campo>
-            </>
-          )}
-
-          {/* PESTAÑA PUBLICACIÓN: quién lo ve y cómo queda registrado
-              el cambio. */}
-          {pestana === 'publicacion' && (
-            <>
-              <div className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Estado</span>
-                <Segmentado opciones={ESTADOS} valor={estado} onCambiar={(v) => setEstado(v)} />
-                <p className="text-xs leading-[1.5] text-noct-neutral-500">
-                  Un borrador u obsoleto no aparece en el buscador ni en el diagnóstico.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Casilla
-                  marcada={esRutaInicio}
-                  onCambiar={() => setEsRutaInicio((v) => !v)}
-                  titulo="Destacar en Inicio como ruta de aprendizaje"
-                  ayuda='Para guías como "Primer día en TI".'
-                />
-                {/* Orden dentro de la ruta de inicio (tarea 74): solo
-                    tiene sentido si el artículo está destacado. */}
-                {esRutaInicio && (
-                  <label className="ml-[28px] flex flex-col gap-1.5">
-                    <span className={CLASE_ETIQUETA}>Orden en la ruta de Inicio</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={ordenRutaInicio}
-                      onChange={(e) => setOrdenRutaInicio(Number(e.target.value))}
-                      className={`min-h-11 w-24 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${CLASE_CAMPO}`}
-                    />
-                    <span className="text-xs leading-[1.5] text-noct-neutral-500">
-                      Los destacados se muestran de menor a mayor. El 0 va primero.
-                    </span>
-                  </label>
-                )}
-              </div>
-
-              {/* Cambio mayor (tarea 74): la versión solo se mueve al
-                  guardar un artículo YA publicado, así que fuera de ese
-                  caso la opción confundiría más de lo que ayuda. */}
-              {esEdicion && articulo?.estado === 'publicado' && (
-                <div className="flex flex-col gap-2">
-                  <Casilla
-                    marcada={cambioMayor}
-                    onCambiar={() => setCambioMayor((v) => !v)}
-                    titulo="Es un cambio mayor"
-                    ayuda={`La versión pasaría de ${articulo.version ?? '1.0'} a ${siguienteVersion(
-                      articulo.version ?? '1.0',
-                      true,
-                    )} en vez de ${siguienteVersion(articulo.version ?? '1.0', false)}.`}
-                  />
-                </div>
-              )}
-
-              {esEdicion && (
-                <Campo etiqueta="Motivo del cambio">
-                  <input
-                    type="text"
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    placeholder="Por qué se actualizó este artículo"
-                    className={`min-h-11 ${CLASE_CAMPO}`}
-                  />
-                </Campo>
-              )}
-            </>
-          )}
-        </main>
-
-        {/* Barra inferior fija: completitud, sugerencias y acciones. */}
-        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
-          {sugerenciasAbiertas && completitud.sugerencias.length > 0 && (
-            <div className="flex flex-col gap-[5px] pb-2.5 pt-0.5">
-              {/* Cada sugerencia lleva a la pestaña donde se resuelve:
-                  con pestañas, saber que falta algo no basta si hay que
-                  buscar donde. */}
-              {completitud.sugerencias.map((sugerencia) => (
-                <button
-                  key={sugerencia.texto}
-                  type="button"
-                  onClick={() => irA(sugerencia.pestana)}
-                  className="flex items-center gap-[7px] py-0.5 text-left text-[12.5px] text-noct-neutral-400 hover:text-noct-text"
-                >
-                  <Circle size={9} className="shrink-0 text-noct-neutral-600" />
-                  {sugerencia.texto}
-                </button>
-              ))}
-            </div>
-          )}
+      {/* Barra inferior fija: completitud, sugerencias y acciones. */}
+      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
+        {sugerenciasAbiertas && completitud.sugerencias.length > 0 && (
+          <div className="flex flex-col gap-[5px] pb-2.5 pt-0.5">
+            {/* Cada sugerencia lleva a la pestaña donde se resuelve:
+                con pestañas, saber que falta algo no basta si hay que
+                buscar donde. */}
+            {completitud.sugerencias.map((sugerencia) => (
+              <button
+                key={sugerencia.texto}
+                type="button"
+                onClick={() => irA(sugerencia.pestana)}
+                className="flex items-center gap-[7px] py-0.5 text-left text-[12.5px] text-noct-neutral-400 hover:text-noct-text"
+              >
+                <Circle size={9} className="shrink-0 text-noct-neutral-600" />
+                {sugerencia.texto}
+              </button>
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setSugerenciasAbiertas((v) => !v)}
+          className="flex w-full items-center gap-2.5 pb-[9px]"
+        >
+          <span className="shrink-0 text-xs text-noct-neutral-400">
+            Completitud {completitud.porcentaje}%
+          </span>
+          <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-neutral-900">
+            <span
+              className="block h-full rounded-full bg-noct-accent transition-[width] duration-150"
+              style={{ width: `${completitud.porcentaje}%` }}
+            />
+          </span>
+          <span className="shrink-0 text-xs text-noct-accent-300">{sugerenciasEtiqueta}</span>
+        </button>
+        <div className="flex gap-2.5">
           <button
             type="button"
-            onClick={() => setSugerenciasAbiertas((v) => !v)}
-            className="flex w-full items-center gap-2.5 pb-[9px]"
+            onClick={() => setMostrarVistaPrevia(true)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-noct-divider px-2.5 py-[9px] text-[13px] font-medium text-noct-text hover:bg-noct-text/[.07]"
           >
-            <span className="shrink-0 text-xs text-noct-neutral-400">
-              Completitud {completitud.porcentaje}%
-            </span>
-            <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-neutral-900">
-              <span
-                className="block h-full rounded-full bg-noct-accent transition-[width] duration-150"
-                style={{ width: `${completitud.porcentaje}%` }}
-              />
-            </span>
-            <span className="shrink-0 text-xs text-noct-accent-300">{sugerenciasEtiqueta}</span>
+            <Eye size={15} />
+            Vista previa
           </button>
-          <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={() => setMostrarVistaPrevia(true)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-noct-divider px-2.5 py-[9px] text-[13px] font-medium text-noct-text hover:bg-noct-text/[.07]"
-            >
-              <Eye size={15} />
-              Vista previa
-            </button>
-            <button
-              type="button"
-              disabled={guardando}
-              onClick={() => void manejarEnvio()}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-noct-accent px-2.5 py-[9px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10 disabled:opacity-50"
-            >
-              <FloppyDisk size={15} />
-              {guardando ? 'Guardando...' : guardarEtiqueta}
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={guardando}
+            onClick={() => void manejarEnvio()}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-noct-accent px-2.5 py-[9px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10 disabled:opacity-50"
+          >
+            <FloppyDisk size={15} />
+            {guardando ? 'Guardando...' : guardarEtiqueta}
+          </button>
         </div>
       </div>
 
@@ -999,7 +997,7 @@ export function ArticuloForm() {
           />
         </Suspense>
       )}
-    </div>
+    </Chasis>
   )
 }
 

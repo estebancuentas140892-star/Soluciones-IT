@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { ArrowsClockwise, Eye, EyeSlash, LockSimple, Paperclip, Plus, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
@@ -410,399 +410,397 @@ export function CredencialForm() {
   const etiquetaContrasena = ETIQUETA_CONTRASENA[tipo]
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col">
-        {/* Cabecera pegajosa con blur: cancelar, nota de cifrado y título. */}
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 py-2.5 pb-0 pl-2 pr-3">
-            <BotonVolver>Cancelar</BotonVolver>
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
-              <LockSimple size={13} aria-hidden />
-              Se guarda cifrada
-            </span>
-          </header>
-          <div className="px-4 pb-3 pt-0.5">
-            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
-              {esEdicion ? 'Editar secreto' : 'Nuevo secreto'}
-            </h1>
-            <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
-              Solo el título es obligatorio; el vencimiento y los equipos no se cifran para poder
-              avisar sin desbloquear
-            </p>
-          </div>
+    // Nivel 3 del chasis (tarea 185): tarea con salida. Sin pestañas, y
+    // en su lugar la BarraTarea con el rótulo, el secreto y la ruta de
+    // vuelta escrita (R19).
+    <Chasis
+      modo="tarea"
+      rotulo={esEdicion ? 'Editando' : 'Creando'}
+      titulo={titulo.trim() || (esEdicion ? 'Editar secreto' : 'Nuevo secreto')}
+      salidaEtiqueta="Cancelar y volver"
+      barra={
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-4 pb-2.5">
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-[11.5px] text-noct-neutral-400">
+            <LockSimple size={13} aria-hidden />
+            Se guarda cifrada
+          </span>
+          <p className="min-w-0 flex-1 text-[12px] text-noct-neutral-500">
+            Solo el título es obligatorio; el vencimiento y los equipos no se cifran para poder
+            avisar sin desbloquear
+          </p>
         </div>
+      }
+    >
+      {sinDescifrar && (
+        <div className="mx-4 mt-4 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5 text-[12.5px] leading-relaxed text-noct-precaucion">
+          No se pudo descifrar el contenido actual (se guardó con otra contraseña maestra). Si
+          guardas, se reemplazará por lo que escribas aquí.
+        </div>
+      )}
 
-        {sinDescifrar && (
-          <div className="mx-4 mt-4 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5 text-[12.5px] leading-relaxed text-noct-precaucion">
-            No se pudo descifrar el contenido actual (se guardó con otra contraseña maestra). Si
-            guardas, se reemplazará por lo que escribas aquí.
-          </div>
-        )}
+      <form onSubmit={manejarEnvio} className="flex flex-1 flex-col">
+        <main className="flex flex-1 flex-col gap-6 px-4 pb-[120px] pt-[18px]">
+          {/* Identificación: tipo, título + categoría. */}
+          <section className="flex flex-col gap-3.5">
+            <label className="flex flex-col gap-1.5">
+              <span className={CLASE_ETIQUETA}>Tipo de secreto</span>
+              <select
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as TipoSecreto)}
+                className={`min-h-11 ${CLASE_CAMPO}`}
+              >
+                {TIPOS_SECRETO_VALIDOS.map((t) => (
+                  <option key={t} value={t}>
+                    {NOMBRE_TIPO[t]}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                {DESCRIPCION_TIPO[tipo]}
+              </span>
+            </label>
 
-        <form onSubmit={manejarEnvio} className="flex flex-1 flex-col">
-          <main className="flex flex-1 flex-col gap-6 px-4 pb-[120px] pt-[18px]">
-            {/* Identificación: tipo, título + categoría. */}
-            <section className="flex flex-col gap-3.5">
-              <label className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Tipo de secreto</span>
-                <select
-                  value={tipo}
-                  onChange={(e) => setTipo(e.target.value as TipoSecreto)}
-                  className={`min-h-11 ${CLASE_CAMPO}`}
+            <label className="flex flex-col gap-1.5">
+              <span className={CLASE_ETIQUETA}>
+                Título <span className="text-noct-accent-300">*</span>
+              </span>
+              <input
+                type="text"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                placeholder={PLACEHOLDER_TITULO[tipo]}
+                className={`min-h-11 ${CLASE_CAMPO}`}
+              />
+            </label>
+
+            {dispositivoCoincidente && (
+              <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                  &quot;{dispositivoCoincidente.nombre}&quot; ya es un equipo del inventario. ¿Esto
+                  pertenece a ese equipo? Guárdalo en su ficha en vez de un secreto aparte.
+                </p>
+                <Link
+                  to={`/dispositivos/${dispositivoCoincidente.id}?nuevoCampoProtegido=${encodeURIComponent(titulo.trim())}`}
+                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
                 >
-                  {TIPOS_SECRETO_VALIDOS.map((t) => (
-                    <option key={t} value={t}>
-                      {NOMBRE_TIPO[t]}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
-                  {DESCRIPCION_TIPO[tipo]}
-                </span>
-              </label>
+                  Ir a la ficha
+                </Link>
+              </div>
+            )}
 
-              <label className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>
-                  Título <span className="text-noct-accent-300">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder={PLACEHOLDER_TITULO[tipo]}
-                  className={`min-h-11 ${CLASE_CAMPO}`}
-                />
-              </label>
-
-              {dispositivoCoincidente && (
-                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
-                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                    &quot;{dispositivoCoincidente.nombre}&quot; ya es un equipo del inventario. ¿Esto
-                    pertenece a ese equipo? Guárdalo en su ficha en vez de un secreto aparte.
-                  </p>
-                  <Link
-                    to={`/dispositivos/${dispositivoCoincidente.id}?nuevoCampoProtegido=${encodeURIComponent(titulo.trim())}`}
-                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
-                  >
-                    Ir a la ficha
-                  </Link>
-                </div>
-              )}
-
-              {tituloSugerido && (
-                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
-                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                    El equipo vinculado se renombró. El título quedó desactualizado.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setTitulo(tituloSugerido)}
-                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
-                  >
-                    Usar &quot;{tituloSugerido}&quot;
-                  </button>
-                </div>
-              )}
-
-              <Campo etiqueta="Categoría">
-                <CampoConSugerencias
-                  valor={categoria}
-                  onChange={setCategoria}
-                  sugerencias={categorias}
-                  placeholder="Redes, Servidores, CCTV..."
-                  className="min-h-11"
-                />
-              </Campo>
-            </section>
-
-            {/* Secreto: todo lo que viaja cifrado en datosCifrados. El
-                tipo decide qué campos aparecen (fase P3); "Mostrar todos"
-                los revela sin perder nada. */}
-            <section className="flex flex-col gap-3.5">
-              <TituloSeccion>Secreto</TituloSeccion>
-
-              {/* Dirección IP heredada de un secreto de tipo "equipo"
-                  guardado antes de la fase P0: ya no se puede crear de
-                  nuevo, solo se conserva hasta que se quite a mano. */}
-              {ipHeredada && (
-                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
-                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                    Guarda una dirección IP heredada ({ipHeredada}). Vincula el equipo en
-                    &quot;Equipos con acceso&quot; y quita este dato: ya no se guarda en secretos
-                    nuevos.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setIpHeredada('')}
-                    className="shrink-0 text-[12px] font-medium text-noct-precaucion underline"
-                  >
-                    Quitar
-                  </button>
-                </div>
-              )}
-
-              {visibles.usuario && (
-                <label className="flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>Usuario</span>
-                  <input
-                    type="text"
-                    value={usuario}
-                    onChange={(e) => setUsuario(e.target.value)}
-                    autoComplete="off"
-                    className={`min-h-11 ${CLASE_CAMPO_MONO}`}
-                  />
-                </label>
-              )}
-
-              {visibles.contrasena && (
-                <div className="flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>{etiquetaContrasena}</span>
-                  <div className="flex gap-2">
-                    <CampoContrasena
-                      revelado={verContrasena}
-                      value={contrasena}
-                      onChange={(e) => setContrasena(e.target.value)}
-                      className={`min-h-11 flex-1 ${CLASE_CAMPO_MONO}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setVerContrasena((v) => !v)}
-                      aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                      className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
-                    >
-                      {verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setContrasena(generarContrasena())
-                        setVerContrasena(true)
-                      }}
-                      className={`${BTN_SECUNDARIO} h-11 shrink-0 whitespace-nowrap`}
-                    >
-                      <ArrowsClockwise size={14} aria-hidden />
-                      Generar
-                    </button>
-                  </div>
-                  <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
-                    Generar crea 16 caracteres sin los que se confunden entre sí (O/0, l/1).
-                  </p>
-                </div>
-              )}
-
-              {visibles.url && (
-                <label className="flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>URL</span>
-                  <input
-                    type="text"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://..."
-                    className={`min-h-11 ${CLASE_CAMPO_MONO}`}
-                  />
-                </label>
-              )}
-
-              {equipoSugeridoPorIp && (
-                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
-                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                    Esa dirección coincide con &quot;{equipoSugeridoPorIp.nombre}&quot; del inventario.
-                    ¿Vincular este secreto a ese equipo?
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDispositivos((actuales) => [
-                        ...actuales,
-                        { id: equipoSugeridoPorIp.id, nombre: equipoSugeridoPorIp.nombre },
-                      ])
-                    }
-                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
-                  >
-                    Vincular equipo
-                  </button>
-                </div>
-              )}
-
-              {visibles.extras && (
-                <CamposClaveValor
-                  titulo="Otros datos protegidos"
-                  ayuda="Puerto, PIN, clave WiFi, usuario de respaldo... también van cifrados."
-                  campos={extras}
-                  onChange={setExtras}
-                  valorMono
-                  valorAutoComplete="off"
-                />
-              )}
-
-              {/* Archivo cifrado (fase P5, tipo "Archivo seguro"): se
-                  cifra y sube al elegirlo, no al guardar el formulario
-                  completo (mismo patrón que la foto del dispositivo). */}
-              {tipo === 'archivo' && (
-                <div className="flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>Archivo</span>
-                  {archivo ? (
-                    <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <Paperclip size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
-                        <span className="min-w-0 truncate text-sm">
-                          {archivo.nombre} · {formatearTamano(archivo.tamano)}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={quitarArchivo}
-                        className="shrink-0 text-[12px] font-medium text-noct-neutral-400 underline"
-                      >
-                        Quitar
-                      </button>
-                    </div>
-                  ) : (
-                    <label
-                      className={`flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-noct-neutral-700 px-3 py-2.5 text-sm text-noct-neutral-400 ${subiendoArchivo ? 'opacity-60' : ''}`}
-                    >
-                      <Paperclip size={15} aria-hidden />
-                      {subiendoArchivo ? 'Cifrando y subiendo...' : 'Elegir archivo'}
-                      <input
-                        type="file"
-                        className="hidden"
-                        disabled={subiendoArchivo}
-                        onChange={(e) => void manejarArchivoElegido(e)}
-                      />
-                    </label>
-                  )}
-                  {errorArchivo && <p className="text-[12px] text-noct-error">{errorArchivo}</p>}
-                  <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
-                    Se cifra en este teléfono antes de subirse: ni el servidor ni un técnico sin acceso
-                    a la Bóveda pueden leerlo.
-                  </p>
-                </div>
-              )}
-
-              <label className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Notas</span>
-                <textarea
-                  rows={2}
-                  value={notas}
-                  onChange={(e) => setNotas(e.target.value)}
-                  placeholder="Cómo y cuándo se usa"
-                  className={`resize-y ${CLASE_CAMPO}`}
-                />
-              </label>
-
-              {hayCamposOcultos && (
+            {tituloSugerido && (
+              <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                  El equipo vinculado se renombró. El título quedó desactualizado.
+                </p>
                 <button
                   type="button"
-                  onClick={() => setMostrarTodos(true)}
-                  className={`${BTN_GHOST} self-start`}
+                  onClick={() => setTitulo(tituloSugerido)}
+                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
                 >
-                  <Plus size={13} aria-hidden />
-                  Mostrar todos los campos
+                  Usar &quot;{tituloSugerido}&quot;
                 </button>
-              )}
-            </section>
-
-            {/* Visible sin desbloquear: vencimiento y equipos no son el
-                secreto; existen para avisar y navegar con la bóveda cerrada. */}
-            <section className="flex flex-col gap-3.5">
-              <div>
-                <TituloSeccion>Visible sin desbloquear</TituloSeccion>
-                <p className="mt-[3px] text-[12px] leading-relaxed text-noct-neutral-600">
-                  El vencimiento y el vínculo con equipos no son el secreto: permiten avisos y
-                  navegación con la bóveda cerrada
-                </p>
               </div>
+            )}
 
-              <label className="flex max-w-[220px] flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Vencimiento (opcional)</span>
+            <Campo etiqueta="Categoría">
+              <CampoConSugerencias
+                valor={categoria}
+                onChange={setCategoria}
+                sugerencias={categorias}
+                placeholder="Redes, Servidores, CCTV..."
+                className="min-h-11"
+              />
+            </Campo>
+          </section>
+
+          {/* Secreto: todo lo que viaja cifrado en datosCifrados. El
+              tipo decide qué campos aparecen (fase P3); "Mostrar todos"
+              los revela sin perder nada. */}
+          <section className="flex flex-col gap-3.5">
+            <TituloSeccion>Secreto</TituloSeccion>
+
+            {/* Dirección IP heredada de un secreto de tipo "equipo"
+                guardado antes de la fase P0: ya no se puede crear de
+                nuevo, solo se conserva hasta que se quite a mano. */}
+            {ipHeredada && (
+              <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                  Guarda una dirección IP heredada ({ipHeredada}). Vincula el equipo en
+                  &quot;Equipos con acceso&quot; y quita este dato: ya no se guarda en secretos
+                  nuevos.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIpHeredada('')}
+                  className="shrink-0 text-[12px] font-medium text-noct-precaucion underline"
+                >
+                  Quitar
+                </button>
+              </div>
+            )}
+
+            {visibles.usuario && (
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Usuario</span>
                 <input
-                  type="date"
-                  value={venceEn}
-                  onChange={(e) => setVenceEn(e.target.value)}
-                  className={`min-h-11 [color-scheme:dark] ${CLASE_CAMPO}`}
+                  type="text"
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
+                  autoComplete="off"
+                  className={`min-h-11 ${CLASE_CAMPO_MONO}`}
                 />
               </label>
+            )}
 
-              {avisarVencimientoDesactualizado && (
-                <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
-                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                    La contraseña cambió pero el vencimiento sigue siendo el mismo. ¿Renovarlo?
-                  </p>
+            {visibles.contrasena && (
+              <div className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>{etiquetaContrasena}</span>
+                <div className="flex gap-2">
+                  <CampoContrasena
+                    revelado={verContrasena}
+                    value={contrasena}
+                    onChange={(e) => setContrasena(e.target.value)}
+                    className={`min-h-11 flex-1 ${CLASE_CAMPO_MONO}`}
+                  />
                   <button
                     type="button"
-                    onClick={renovarVencimiento}
-                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                    onClick={() => setVerContrasena((v) => !v)}
+                    aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
                   >
-                    Renovar 90 días
+                    {verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContrasena(generarContrasena())
+                      setVerContrasena(true)
+                    }}
+                    className={`${BTN_SECUNDARIO} h-11 shrink-0 whitespace-nowrap`}
+                  >
+                    <ArrowsClockwise size={14} aria-hidden />
+                    Generar
                   </button>
                 </div>
-              )}
-
-              <div className="flex flex-col gap-2">
-                <span className={CLASE_ETIQUETA}>Equipos con acceso</span>
-                <EquiposVinculadosEditor
-                  vinculados={dispositivos}
-                  dispositivos={dispositivosOrdenados}
-                  onVincular={(d) => setDispositivos((actuales) => [...actuales, { id: d.id, nombre: d.nombre }])}
-                  onQuitar={(id) => setDispositivos((actuales) => actuales.filter((d) => d.id !== id))}
-                />
+                <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                  Generar crea 16 caracteres sin los que se confunden entre sí (O/0, l/1).
+                </p>
               </div>
+            )}
 
-              {equiposSolapados.map((equipo) => (
-                <div
-                  key={equipo.id}
-                  className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5"
+            {visibles.url && (
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>URL</span>
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://..."
+                  className={`min-h-11 ${CLASE_CAMPO_MONO}`}
+                />
+              </label>
+            )}
+
+            {equipoSugeridoPorIp && (
+              <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                  Esa dirección coincide con &quot;{equipoSugeridoPorIp.nombre}&quot; del inventario.
+                  ¿Vincular este secreto a ese equipo?
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDispositivos((actuales) => [
+                      ...actuales,
+                      { id: equipoSugeridoPorIp.id, nombre: equipoSugeridoPorIp.nombre },
+                    ])
+                  }
+                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
                 >
-                  <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                    &quot;{equipo.nombre}&quot; ya guarda una contraseña en Seguridad. Evita duplicarla: al
-                    rotar hay que acordarse de cambiarla en los dos lados.
-                  </p>
-                  <Link
-                    to={`/dispositivos/${equipo.id}`}
-                    className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                  Vincular equipo
+                </button>
+              </div>
+            )}
+
+            {visibles.extras && (
+              <CamposClaveValor
+                titulo="Otros datos protegidos"
+                ayuda="Puerto, PIN, clave WiFi, usuario de respaldo... también van cifrados."
+                campos={extras}
+                onChange={setExtras}
+                valorMono
+                valorAutoComplete="off"
+              />
+            )}
+
+            {/* Archivo cifrado (fase P5, tipo "Archivo seguro"): se
+                cifra y sube al elegirlo, no al guardar el formulario
+                completo (mismo patrón que la foto del dispositivo). */}
+            {tipo === 'archivo' && (
+              <div className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Archivo</span>
+                {archivo ? (
+                  <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Paperclip size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+                      <span className="min-w-0 truncate text-sm">
+                        {archivo.nombre} · {formatearTamano(archivo.tamano)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={quitarArchivo}
+                      className="shrink-0 text-[12px] font-medium text-noct-neutral-400 underline"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    className={`flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-noct-neutral-700 px-3 py-2.5 text-sm text-noct-neutral-400 ${subiendoArchivo ? 'opacity-60' : ''}`}
                   >
-                    Ir a la ficha
-                  </Link>
-                </div>
-              ))}
+                    <Paperclip size={15} aria-hidden />
+                    {subiendoArchivo ? 'Cifrando y subiendo...' : 'Elegir archivo'}
+                    <input
+                      type="file"
+                      className="hidden"
+                      disabled={subiendoArchivo}
+                      onChange={(e) => void manejarArchivoElegido(e)}
+                    />
+                  </label>
+                )}
+                {errorArchivo && <p className="text-[12px] text-noct-error">{errorArchivo}</p>}
+                <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                  Se cifra en este teléfono antes de subirse: ni el servidor ni un técnico sin acceso
+                  a la Bóveda pueden leerlo.
+                </p>
+              </div>
+            )}
 
-              {esEdicion && (
-                <label className="flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>Motivo del cambio (opcional)</span>
-                  <input
-                    type="text"
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    placeholder="Por qué se actualizó: rotación, incidente..."
-                    className={`min-h-11 ${CLASE_CAMPO}`}
-                  />
-                </label>
-              )}
-            </section>
-          </main>
+            <label className="flex flex-col gap-1.5">
+              <span className={CLASE_ETIQUETA}>Notas</span>
+              <textarea
+                rows={2}
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                placeholder="Cómo y cuándo se usa"
+                className={`resize-y ${CLASE_CAMPO}`}
+              />
+            </label>
 
-          {/* Barra inferior fija: aviso + Guardar. */}
-          <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
-            <div className="flex items-center gap-2.5">
-              <span
-                className={`min-w-0 flex-1 truncate text-[12px] ${avisoEsError ? 'text-noct-precaucion' : 'text-noct-neutral-500'}`}
-              >
-                {aviso}
-              </span>
+            {hayCamposOcultos && (
               <button
-                type="submit"
-                disabled={guardando}
-                className={`${BTN_PRIMARIO} min-h-[46px] px-4 disabled:opacity-50`}
-                style={{ opacity: valido ? undefined : 0.55 }}
+                type="button"
+                onClick={() => setMostrarTodos(true)}
+                className={`${BTN_GHOST} self-start`}
               >
-                <LockSimple size={15} aria-hidden />
-                {guardando ? 'Guardando...' : 'Guardar secreto'}
+                <Plus size={13} aria-hidden />
+                Mostrar todos los campos
               </button>
+            )}
+          </section>
+
+          {/* Visible sin desbloquear: vencimiento y equipos no son el
+              secreto; existen para avisar y navegar con la bóveda cerrada. */}
+          <section className="flex flex-col gap-3.5">
+            <div>
+              <TituloSeccion>Visible sin desbloquear</TituloSeccion>
+              <p className="mt-[3px] text-[12px] leading-relaxed text-noct-neutral-600">
+                El vencimiento y el vínculo con equipos no son el secreto: permiten avisos y
+                navegación con la bóveda cerrada
+              </p>
             </div>
+
+            <label className="flex max-w-[220px] flex-col gap-1.5">
+              <span className={CLASE_ETIQUETA}>Vencimiento (opcional)</span>
+              <input
+                type="date"
+                value={venceEn}
+                onChange={(e) => setVenceEn(e.target.value)}
+                className={`min-h-11 [color-scheme:dark] ${CLASE_CAMPO}`}
+              />
+            </label>
+
+            {avisarVencimientoDesactualizado && (
+              <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                  La contraseña cambió pero el vencimiento sigue siendo el mismo. ¿Renovarlo?
+                </p>
+                <button
+                  type="button"
+                  onClick={renovarVencimiento}
+                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                >
+                  Renovar 90 días
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <span className={CLASE_ETIQUETA}>Equipos con acceso</span>
+              <EquiposVinculadosEditor
+                vinculados={dispositivos}
+                dispositivos={dispositivosOrdenados}
+                onVincular={(d) => setDispositivos((actuales) => [...actuales, { id: d.id, nombre: d.nombre }])}
+                onQuitar={(id) => setDispositivos((actuales) => actuales.filter((d) => d.id !== id))}
+              />
+            </div>
+
+            {equiposSolapados.map((equipo) => (
+              <div
+                key={equipo.id}
+                className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5"
+              >
+                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                  &quot;{equipo.nombre}&quot; ya guarda una contraseña en Seguridad. Evita duplicarla: al
+                  rotar hay que acordarse de cambiarla en los dos lados.
+                </p>
+                <Link
+                  to={`/dispositivos/${equipo.id}`}
+                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                >
+                  Ir a la ficha
+                </Link>
+              </div>
+            ))}
+
+            {esEdicion && (
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Motivo del cambio (opcional)</span>
+                <input
+                  type="text"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="Por qué se actualizó: rotación, incidente..."
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </label>
+            )}
+          </section>
+        </main>
+
+        {/* Barra inferior fija: aviso + Guardar. */}
+        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`min-w-0 flex-1 truncate text-[12px] ${avisoEsError ? 'text-noct-precaucion' : 'text-noct-neutral-500'}`}
+            >
+              {aviso}
+            </span>
+            <button
+              type="submit"
+              disabled={guardando}
+              className={`${BTN_PRIMARIO} min-h-[46px] px-4 disabled:opacity-50`}
+              style={{ opacity: valido ? undefined : 0.55 }}
+            >
+              <LockSimple size={15} aria-hidden />
+              {guardando ? 'Guardando...' : 'Guardar secreto'}
+            </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </Chasis>
   )
 }
 

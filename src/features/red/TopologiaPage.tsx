@@ -2,9 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { ShellNocturne } from '../../app/ShellNocturne'
+import { Chasis } from '../../app/Chasis'
 import { idsDeRed } from '../../lib/categorias'
-import { BotonVolver } from '../../components/BotonVolver'
 import { CaretDown, CaretRight, MagnifyingGlass, TreeStructure, XCircleFill } from '../../components/iconos'
 import { BTN_GHOST } from '../../components/nocturne'
 import { construirBosque, contarDescendientes, type NodoTopologia } from './arbol'
@@ -106,23 +105,25 @@ export function TopologiaPage() {
   }, [idsCoincidentes])
 
   return (
-    <ShellNocturne>
-      {/* Cabecera fija con desenfoque: retorno a Red, botones de
-          expansión, título, buscador y leyenda de estados. */}
-      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-        <header className="flex items-center justify-between gap-2 px-2 pt-2.5">
-          <BotonVolver />
-          {hayContenido && (
-            <div className="flex shrink-0 gap-1.5">
-              <button type="button" onClick={expandirTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>
-                Expandir todo
-              </button>
-              <button type="button" onClick={contraerTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>
-                Contraer
-              </button>
-            </div>
-          )}
-        </header>
+    // Nivel 2 del chasis (tarea 185): documento. El chasis pone el
+    // bloque pegajoso, el retorno a Red y las pestañas; aquí quedan los
+    // botones de expansión, el título, el buscador y la leyenda.
+    <Chasis
+      modo="documento"
+      acciones={
+        hayContenido && (
+          <>
+            <button type="button" onClick={expandirTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>
+              Expandir todo
+            </button>
+            <button type="button" onClick={contraerTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>
+              Contraer
+            </button>
+          </>
+        )
+      }
+      barra={
+      <>
         <div className="px-4 pb-2 pt-0.5">
           <h1 className="text-[22px] font-medium leading-tight">Topología de red</h1>
           <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">
@@ -167,9 +168,10 @@ export function TopologiaPage() {
           <LeyendaEstado clase="text-noct-precaucion" etiqueta="Mantenimiento" />
           <LeyendaEstado clase="text-noct-error" etiqueta="Fuera de servicio" />
         </div>
-      </div>
-
-      <main className="flex flex-1 flex-col gap-3 px-4 pb-[116px] pt-3 lg:pb-16">
+      </>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-3 px-4 pb-16 pt-3">
         {buscando && idsCoincidentes.size === 0 && (
           <p className="px-0.5 text-[12.5px] text-noct-neutral-500">
             Ningún equipo coincide con "{busqueda.trim()}".
@@ -215,7 +217,7 @@ export function TopologiaPage() {
           servicio si falla.
         </p>
       </main>
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

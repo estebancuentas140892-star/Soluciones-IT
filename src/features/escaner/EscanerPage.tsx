@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
-import { BotonVolver } from '../../components/BotonVolver'
+import { BarraTarea } from '../../components/BarraTarea'
 import {
   ArrowRight,
   CameraSlash,
@@ -280,27 +280,29 @@ export function EscanerPage() {
       {/* Velo superior: mantiene legible la cabecera sobre el video en vivo. */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-28 bg-gradient-to-b from-noct-bg/85 to-transparent" />
 
-      <header className="relative z-10 flex items-center justify-between gap-2 px-2 pt-2.5">
-        <BotonVolver>Volver</BotonVolver>
-        <h1 className="text-sm font-medium">Escanear equipo</h1>
-        {linterna.disponible ? (
-          <button
-            type="button"
-            onClick={() => void alternarLinterna()}
-            aria-pressed={linterna.encendida}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium backdrop-blur-[8px] ${
-              linterna.encendida
-                ? 'border-noct-precaucion/50 bg-noct-precaucion/[.12] text-noct-precaucion'
-                : 'border-noct-divider bg-noct-bg/65 text-noct-neutral-300'
-            }`}
-          >
-            {linterna.encendida ? <FlashlightFill size={15} aria-hidden /> : <Flashlight size={15} aria-hidden />}
-            Linterna
-          </button>
-        ) : (
-          <span className="w-[92px]" />
+      {/* Nivel 3 del chasis (tarea 185): tarea con salida. El escáner
+          conserva su propio contenedor porque el video va detrás a
+          pantalla completa, pero adopta la BarraTarea, que orienta y da
+          la salida siempre en el mismo sitio (R19). */}
+      <BarraTarea rotulo="Escaneando" titulo="Código QR o de barras" salidaEtiqueta="Salir del escáner">
+        {linterna.disponible && (
+          <div className="flex justify-end px-3 pb-2">
+            <button
+              type="button"
+              onClick={() => void alternarLinterna()}
+              aria-pressed={linterna.encendida}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium backdrop-blur-[8px] ${
+                linterna.encendida
+                  ? 'border-noct-precaucion/50 bg-noct-precaucion/[.12] text-noct-precaucion'
+                  : 'border-noct-divider bg-noct-bg/65 text-noct-neutral-300'
+              }`}
+            >
+              {linterna.encendida ? <FlashlightFill size={15} aria-hidden /> : <Flashlight size={15} aria-hidden />}
+              Linterna
+            </button>
+          </div>
         )}
-      </header>
+      </BarraTarea>
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center gap-[18px] px-8 pb-32 pt-6">
         {fallo ? (

@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Outlet } from 'react-router-dom'
 import { db, ID_VERIFICADOR } from '../../lib/db'
-import { ShellNocturne } from '../../app/ShellNocturne'
+import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
@@ -18,9 +18,9 @@ import { useBovedaDesbloqueada } from './useSesionBoveda'
 // Envuelve todas las rutas de la bóveda: exige el permiso
 // puedeVerBoveda del perfil y que la bóveda esté desbloqueada. Es la
 // pantalla "bloqueada" del handoff Bóveda.dc.html (tarea 97):
-// re-autorizada al sistema Nocturne, trae su propio ShellNocturne
-// (pestañas/sidebar visibles como en el mockup) mientras la lista y la
-// ficha van tras el Outlet. La lógica de seguridad (verificar/crear/
+// re-autorizada al sistema Nocturne, declara nivel de sección en el
+// chasis (pestañas/sidebar visibles como en el mockup) mientras la lista
+// y la ficha van tras el Outlet. La lógica de seguridad (verificar/crear/
 // sin-confirmar contra el servidor) no cambia: solo el aspecto.
 export function BovedaGuard() {
   const desbloqueada = useBovedaDesbloqueada()
@@ -39,8 +39,10 @@ export function BovedaGuard() {
 }
 
 // Envoltorio común de las pantallas de bloqueo: columna centrada con el
-// candado, el título y una descripción, dentro del ShellNocturne (las
-// pestañas siguen visibles, como en el mockup).
+// candado y una descripción, en el nivel de sección del chasis (tarea
+// 185), así que las pestañas siguen visibles, como en el mockup. El
+// nombre de la sección lo pone la barra superior (R14): antes se
+// repetía aquí dentro como un h1 propio.
 function PantallaBoveda({
   descripcion,
   children,
@@ -49,20 +51,17 @@ function PantallaBoveda({
   children: ReactNode
 }) {
   return (
-    <ShellNocturne>
-      <div className="flex flex-1 flex-col items-center justify-center gap-[18px] px-6 pb-[120px] pt-8 text-center">
+    <Chasis titulo="Bóveda">
+      <div className="flex flex-1 flex-col items-center justify-center gap-[18px] px-6 py-8 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full border border-noct-divider bg-noct-surface text-noct-accent-300">
           <LockSimple size={28} aria-hidden />
         </div>
-        <div>
-          <h1 className="text-[22px] font-medium leading-tight">Bóveda</h1>
-          <p className="mx-auto mt-1.5 max-w-[300px] text-[13.5px] leading-relaxed text-noct-neutral-400">
-            {descripcion}
-          </p>
-        </div>
+        <p className="mx-auto max-w-[300px] text-[13.5px] leading-relaxed text-noct-neutral-400">
+          {descripcion}
+        </p>
         {children}
       </div>
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

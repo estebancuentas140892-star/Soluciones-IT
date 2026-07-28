@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { CaretDown, CaretUp, LinkSimple, Monitor, Wrench } from '../../components/iconos'
 import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
 import { type CampoProtegido, db } from '../../lib/db'
@@ -144,169 +144,166 @@ export function MigracionCredenciales() {
   }
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col">
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver />
-          </header>
-          <div className="px-4 pb-3 pt-0.5">
-            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">Migrar secretos de equipo</h1>
-            <p className="mt-[3px] text-[12.5px] leading-[1.5] text-noct-neutral-500">
-              Detecta secretos que en realidad son de un equipo (vinculados a uno solo, o con su misma
-              dirección IP) y los mueve a "Seguridad" en su ficha. Revisa qué se va a crear antes de
-              migrar cada uno.
-            </p>
-          </div>
-        </div>
+    // Nivel 3 del chasis (tarea 185): tarea con salida.
+    <Chasis
+      modo="tarea"
+      rotulo="Migrando"
+      titulo="Secretos que son de un equipo"
+      salidaEtiqueta="Salir sin migrar"
+      barra={
+        <p className="px-4 pb-2.5 text-[12px] leading-[1.5] text-noct-neutral-500">
+          Detecta secretos que en realidad son de un equipo (vinculados a uno solo, o con su misma
+          dirección IP) y los mueve a "Seguridad" en su ficha. Revisa qué se va a crear antes de
+          migrar cada uno.
+        </p>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-2.5 px-4 pb-12 pt-[18px]">
+        {analizando && (
+          <p className="rounded-md border border-dashed border-noct-neutral-700 px-4 py-6 text-center text-sm text-noct-neutral-500">
+            Analizando los secretos guardados...
+          </p>
+        )}
 
-        <main className="flex flex-1 flex-col gap-2.5 px-4 pb-12 pt-[18px]">
-          {analizando && (
-            <p className="rounded-md border border-dashed border-noct-neutral-700 px-4 py-6 text-center text-sm text-noct-neutral-500">
-              Analizando los secretos guardados...
-            </p>
-          )}
+        {!analizando && candidatos.length === 0 && (
+          <p className="rounded-md border border-dashed border-noct-neutral-700 px-4 py-6 text-center text-sm text-noct-neutral-500">
+            No hay secretos pendientes de migrar. Todo lo que representa a un equipo ya vive en su
+            ficha.
+          </p>
+        )}
 
-          {!analizando && candidatos.length === 0 && (
-            <p className="rounded-md border border-dashed border-noct-neutral-700 px-4 py-6 text-center text-sm text-noct-neutral-500">
-              No hay secretos pendientes de migrar. Todo lo que representa a un equipo ya vive en su
-              ficha.
-            </p>
-          )}
+        {!analizando &&
+          candidatos.map((candidato) => {
+            const datos = descifradas.get(candidato.credencialId)
+            const noLegible = datos == null
+            const expandido = expandidoId === candidato.credencialId
+            const existentes = camposDeDispositivo(camposProtegidos, candidato.dispositivoId)
+            const campos = datos ? camposAMigrar(datos, existentes) : []
 
-          {!analizando &&
-            candidatos.map((candidato) => {
-              const datos = descifradas.get(candidato.credencialId)
-              const noLegible = datos == null
-              const expandido = expandidoId === candidato.credencialId
-              const existentes = camposDeDispositivo(camposProtegidos, candidato.dispositivoId)
-              const campos = datos ? camposAMigrar(datos, existentes) : []
-
-              return (
-                <div
-                  key={candidato.credencialId}
-                  className="rounded-md border border-noct-divider bg-noct-surface"
+            return (
+              <div
+                key={candidato.credencialId}
+                className="rounded-md border border-noct-divider bg-noct-surface"
+              >
+                <button
+                  type="button"
+                  onClick={() => alternarExpandir(candidato)}
+                  aria-expanded={expandido}
+                  className="flex min-h-[56px] w-full items-center gap-2.5 px-3 py-2 text-left"
                 >
-                  <button
-                    type="button"
-                    onClick={() => alternarExpandir(candidato)}
-                    aria-expanded={expandido}
-                    className="flex min-h-[56px] w-full items-center gap-2.5 px-3 py-2 text-left"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-400">
-                      <Monitor size={17} aria-hidden />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-400">
+                    <Monitor size={17} aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13.5px] font-medium leading-tight">
+                      {candidato.credencialTitulo}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-medium leading-tight">
-                        {candidato.credencialTitulo}
-                      </span>
-                      <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-noct-neutral-500">
-                        {candidato.motivo === 'vinculo' ? (
-                          <LinkSimple size={11} className="shrink-0" aria-hidden />
-                        ) : (
-                          <Wrench size={11} className="shrink-0" aria-hidden />
-                        )}
-                        {candidato.motivo === 'vinculo' ? 'Vinculada a' : 'Misma IP que'}{' '}
-                        {candidato.dispositivoNombre}
-                      </span>
-                    </span>
-                    {expandido ? (
-                      <CaretUp size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                    ) : (
-                      <CaretDown size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                    )}
-                  </button>
-
-                  {expandido && (
-                    <div className="flex flex-col gap-2 border-t border-noct-divider p-3">
-                      {noLegible ? (
-                        <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                          No se pudo descifrar este secreto con la contraseña maestra actual (se guardó
-                          con otra). No se puede migrar sin poder leer su contenido.
-                        </p>
-                      ) : campos.length === 0 ? (
-                        <p className="text-[12.5px] text-noct-neutral-500">
-                          Este secreto no tiene contenido: se puede eliminar directo desde la Bóveda.
-                        </p>
+                    <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-noct-neutral-500">
+                      {candidato.motivo === 'vinculo' ? (
+                        <LinkSimple size={11} className="shrink-0" aria-hidden />
                       ) : (
-                        <>
-                          <TituloSeccion>
-                            Se creará en "{candidato.dispositivoNombre}"
-                          </TituloSeccion>
-                          <dl className="flex flex-col gap-1.5">
-                            {campos.map((campo) => {
-                              const clave = `${candidato.credencialId}:${campo.nombre}`
-                              // Mismo criterio que SeguridadDelEquipo: el
-                              // usuario no es un secreto que haya que
-                              // esconder (hace falta leerlo para
-                              // escribirlo en otro lado); contraseña y
-                              // el resto (URL, notas, extras) sí.
-                              const oculta = esOcultoPorDefecto(campo.tipo)
-                              const accion = accionCopia(campo.tipo)
-                              return (
-                                <CampoSecreto
-                                  key={clave}
-                                  etiqueta={campo.nombre}
-                                  valor={campo.valor}
-                                  oculto={oculta && !revelados.has(clave)}
-                                  alternarOculto={
-                                    oculta
-                                      ? () =>
-                                          alternarRevelado(
-                                            candidato.credencialId,
-                                            candidato.credencialTitulo,
-                                            campo,
-                                          )
-                                      : undefined
-                                  }
-                                  onCopiado={
-                                    accion
-                                      ? () =>
-                                          void registrarAccesoBoveda({
-                                            credencialId: candidato.credencialId,
-                                            credencialTitulo: candidato.credencialTitulo,
-                                            accion,
-                                          })
-                                      : undefined
-                                  }
-                                />
-                              )
-                            })}
-                          </dl>
-                        </>
+                        <Wrench size={11} className="shrink-0" aria-hidden />
                       )}
-                      {datos?.ip && (
-                        <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
-                          Se descarta la dirección IP heredada ({datos.ip}): ya vive sin cifrar en la
-                          ficha del equipo.
-                        </p>
-                      )}
-                      <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
-                        Al migrar, este secreto se elimina de la Bóveda: el contenido pasa a la sección
-                        "Seguridad" del equipo.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => void migrar(candidato)}
-                        disabled={noLegible || migrandoId === candidato.credencialId}
-                        className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
-                      >
-                        {migrandoId === candidato.credencialId ? 'Migrando...' : 'Migrar a este equipo'}
-                      </button>
-                    </div>
+                      {candidato.motivo === 'vinculo' ? 'Vinculada a' : 'Misma IP que'}{' '}
+                      {candidato.dispositivoNombre}
+                    </span>
+                  </span>
+                  {expandido ? (
+                    <CaretUp size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                  ) : (
+                    <CaretDown size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
                   )}
-                </div>
-              )
-            })}
+                </button>
 
-          {sinLeer > 0 && (
-            <p className="px-0.5 text-[11.5px] leading-relaxed text-noct-neutral-600">
-              {sinLeer} {sinLeer === 1 ? 'secreto detectado no se pudo' : 'secretos detectados no se pudieron'} leer
-              con la contraseña maestra actual, así que no se pueden migrar todavía.
-            </p>
-          )}
-        </main>
-      </div>
-    </div>
+                {expandido && (
+                  <div className="flex flex-col gap-2 border-t border-noct-divider p-3">
+                    {noLegible ? (
+                      <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                        No se pudo descifrar este secreto con la contraseña maestra actual (se guardó
+                        con otra). No se puede migrar sin poder leer su contenido.
+                      </p>
+                    ) : campos.length === 0 ? (
+                      <p className="text-[12.5px] text-noct-neutral-500">
+                        Este secreto no tiene contenido: se puede eliminar directo desde la Bóveda.
+                      </p>
+                    ) : (
+                      <>
+                        <TituloSeccion>
+                          Se creará en "{candidato.dispositivoNombre}"
+                        </TituloSeccion>
+                        <dl className="flex flex-col gap-1.5">
+                          {campos.map((campo) => {
+                            const clave = `${candidato.credencialId}:${campo.nombre}`
+                            // Mismo criterio que SeguridadDelEquipo: el
+                            // usuario no es un secreto que haya que
+                            // esconder (hace falta leerlo para
+                            // escribirlo en otro lado); contraseña y
+                            // el resto (URL, notas, extras) sí.
+                            const oculta = esOcultoPorDefecto(campo.tipo)
+                            const accion = accionCopia(campo.tipo)
+                            return (
+                              <CampoSecreto
+                                key={clave}
+                                etiqueta={campo.nombre}
+                                valor={campo.valor}
+                                oculto={oculta && !revelados.has(clave)}
+                                alternarOculto={
+                                  oculta
+                                    ? () =>
+                                        alternarRevelado(
+                                          candidato.credencialId,
+                                          candidato.credencialTitulo,
+                                          campo,
+                                        )
+                                    : undefined
+                                }
+                                onCopiado={
+                                  accion
+                                    ? () =>
+                                        void registrarAccesoBoveda({
+                                          credencialId: candidato.credencialId,
+                                          credencialTitulo: candidato.credencialTitulo,
+                                          accion,
+                                        })
+                                    : undefined
+                                }
+                              />
+                            )
+                          })}
+                        </dl>
+                      </>
+                    )}
+                    {datos?.ip && (
+                      <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                        Se descarta la dirección IP heredada ({datos.ip}): ya vive sin cifrar en la
+                        ficha del equipo.
+                      </p>
+                    )}
+                    <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                      Al migrar, este secreto se elimina de la Bóveda: el contenido pasa a la sección
+                      "Seguridad" del equipo.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void migrar(candidato)}
+                      disabled={noLegible || migrandoId === candidato.credencialId}
+                      className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+                    >
+                      {migrandoId === candidato.credencialId ? 'Migrando...' : 'Migrar a este equipo'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+        {sinLeer > 0 && (
+          <p className="px-0.5 text-[11.5px] leading-relaxed text-noct-neutral-600">
+            {sinLeer} {sinLeer === 1 ? 'secreto detectado no se pudo' : 'secretos detectados no se pudieron'} leer
+            con la contraseña maestra actual, así que no se pueden migrar todavía.
+          </p>
+        )}
+      </main>
+    </Chasis>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { padreDe } from './navegacion'
+import { padreDe, vueltaDeTarea } from './navegacion'
 
 describe('padreDe', () => {
   it('las pestañas de la barra no tienen pantalla superior', () => {
@@ -164,5 +164,34 @@ describe('padreDe', () => {
     it('Seguridad sube a Mi cuenta', () => {
       expect(padreDe('/cuenta/seguridad')).toEqual({ to: '/cuenta', etiqueta: 'Mi cuenta' })
     })
+  })
+})
+
+// La barra de tarea (nivel 3 del chasis, tarea 185) es la única que
+// puede quitar las pestañas, así que tiene que escribir a dónde vuelve
+// (R19). Esta función dice cuándo la jerarquía basta y cuándo la
+// pantalla debe poner su propio texto.
+describe('vueltaDeTarea', () => {
+  it('usa la etiqueta del padre cuando esta nombra su destino', () => {
+    expect(vueltaDeTarea('/dispositivos/nuevo')).toBe('Equipos')
+    expect(vueltaDeTarea('/soluciones/impresoras/nuevo')).toBe('Guías')
+    expect(vueltaDeTarea('/boveda/nueva')).toBe('Bóveda')
+    expect(vueltaDeTarea('/diagnostico/nuevo')).toBe('Diagnósticos')
+    expect(vueltaDeTarea('/personas/nueva')).toBe('Personas')
+    expect(vueltaDeTarea('/ubicaciones/nueva')).toBe('Ubicaciones')
+  })
+
+  it('devuelve null donde el padre solo sabe decir "Volver"', () => {
+    // Editar y ejecutar suben a la ficha de una entidad cuyo nombre
+    // depende de datos en runtime: ahí escribe la pantalla.
+    expect(vueltaDeTarea('/soluciones/impresoras/zebra/editar')).toBeNull()
+    expect(vueltaDeTarea('/soluciones/impresoras/zebra/ejecutar')).toBeNull()
+    expect(vueltaDeTarea('/dispositivos/pc-1/editar')).toBeNull()
+    expect(vueltaDeTarea('/dispositivos/pc-1/baja')).toBeNull()
+    expect(vueltaDeTarea('/boveda/wifi/editar')).toBeNull()
+  })
+
+  it('devuelve null en una raíz, que no tiene a dónde volver', () => {
+    expect(vueltaDeTarea('/soluciones')).toBeNull()
   })
 })

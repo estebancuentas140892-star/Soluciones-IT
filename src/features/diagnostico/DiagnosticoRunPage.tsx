@@ -13,11 +13,11 @@ import {
   volverAtras,
 } from '../../lib/progresoDiagnostico'
 import { contarHechos, verificacionFinalCompleta } from '../../lib/progresoPasos'
+import { Chasis } from '../../app/Chasis'
 import { registrarEjecucionDiagnostico } from '../../lib/repositorio'
 import {
   ArrowLeft,
   BookOpen,
-  CaretLeft,
   DotsThreeCircle,
   Lightbulb,
   ListPlus,
@@ -118,31 +118,27 @@ export function DiagnosticoRunPage() {
   const etiquetaProgreso = esFinal ? 'Completado' : `Pregunta ${(progreso?.camino.length ?? 0) + 1}`
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh w-full max-w-md flex-col">
-        {/* Cabecera fija con desenfoque: salir, título y barra de
-            progreso (pegajosa, como pide 08_ESTILO). */}
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 px-2 pb-1 pt-2.5">
-            <button
-              type="button"
-              onClick={() => void salir()}
-              className="inline-flex min-w-0 items-center gap-1 rounded-lg py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 transition-colors hover:bg-noct-text/5 hover:text-noct-text"
+    // Nivel 3 del chasis (tarea 185): tarea con salida. La X guarda el
+    // avance antes de salir (`salir`), como hacía el botón "Salir" que
+    // reemplaza. Debajo, la barra de progreso pegajosa (08_ESTILO).
+    <Chasis
+      modo="tarea"
+      rotulo="Diagnosticando"
+      titulo={titulo}
+      vuelta="Diagnósticos"
+      salidaEtiqueta="Guardar el avance y salir"
+      alSalir={() => void salir()}
+      barra={
+        <>
+          <div className="flex justify-end px-3 pb-1">
+            <Link
+              to={`/diagnostico/${diagnosticoId}/editar`}
+              aria-label="Editar diagnóstico"
+              className="flex shrink-0 rounded-md p-1.5 text-noct-neutral-500 hover:bg-noct-text/5 hover:text-noct-text"
             >
-              <CaretLeft size={16} className="shrink-0" aria-hidden />
-              Salir
-            </button>
-            <div className="flex min-w-0 items-center gap-1.5">
-              <p className="min-w-0 truncate text-[12px] text-noct-neutral-500">{titulo}</p>
-              <Link
-                to={`/diagnostico/${diagnosticoId}/editar`}
-                aria-label="Editar diagnóstico"
-                className="flex shrink-0 rounded-md p-1.5 text-noct-neutral-500 hover:bg-noct-text/5 hover:text-noct-text"
-              >
-                <PencilSimple size={15} aria-hidden />
-              </Link>
-            </div>
-          </header>
+              <PencilSimple size={15} aria-hidden />
+            </Link>
+          </div>
           {progreso && (
             <div className="flex items-center gap-2.5 px-4 pb-3">
               <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-neutral-900">
@@ -156,40 +152,40 @@ export function DiagnosticoRunPage() {
               <span className="shrink-0 text-[11.5px] text-noct-neutral-500">{etiquetaProgreso}</span>
             </div>
           )}
-        </div>
+        </>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-[18px] px-4 pb-10 pt-[22px]">
+        {cargando && <p className="text-sm text-noct-neutral-400">Cargando...</p>}
 
-        <main className="flex flex-1 flex-col gap-[18px] px-4 pb-10 pt-[22px]">
-          {cargando && <p className="text-sm text-noct-neutral-400">Cargando...</p>}
+        {sinPreguntas && (
+          <div className="flex flex-col gap-3 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-4 py-3.5">
+            <p className="text-[13px] leading-relaxed text-noct-text">
+              Este diagnóstico todavía no tiene preguntas.
+            </p>
+            <Link
+              to={`/diagnostico/${diagnosticoId}/editar`}
+              className="self-start rounded-lg border border-noct-precaucion/45 px-3 py-1.5 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
+            >
+              Editar para agregarlas
+            </Link>
+          </div>
+        )}
 
-          {sinPreguntas && (
-            <div className="flex flex-col gap-3 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-4 py-3.5">
-              <p className="text-[13px] leading-relaxed text-noct-text">
-                Este diagnóstico todavía no tiene preguntas.
-              </p>
-              <Link
-                to={`/diagnostico/${diagnosticoId}/editar`}
-                className="self-start rounded-lg border border-noct-precaucion/45 px-3 py-1.5 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
-              >
-                Editar para agregarlas
-              </Link>
-            </div>
-          )}
-
-          {progreso && (
-            <Sesion
-              nodos={nodos}
-              progreso={progreso}
-              diagnosticoId={diagnosticoId}
-              confirmandoCancelar={confirmandoCancelar}
-              onConfirmarCancelar={setConfirmandoCancelar}
-              onCerrar={(resuelto, motivo, solucionPropuesta) =>
-                void cerrar(resuelto, progreso, motivo, solucionPropuesta)
-              }
-            />
-          )}
-        </main>
-      </div>
-    </div>
+        {progreso && (
+          <Sesion
+            nodos={nodos}
+            progreso={progreso}
+            diagnosticoId={diagnosticoId}
+            confirmandoCancelar={confirmandoCancelar}
+            onConfirmarCancelar={setConfirmandoCancelar}
+            onCerrar={(resuelto, motivo, solucionPropuesta) =>
+              void cerrar(resuelto, progreso, motivo, solucionPropuesta)
+            }
+          />
+        )}
+      </main>
+    </Chasis>
   )
 }
 

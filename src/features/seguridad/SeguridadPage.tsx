@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, type FormEvent } from 'react'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
@@ -33,31 +33,28 @@ export function SeguridadPage() {
   const config = useLiveQuery(async () => (await db.seguridadApp.get(ID_BLOQUEO_APP)) ?? null, [])
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh w-full max-w-md flex-col">
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="px-2 pt-2.5">
-            <BotonVolver />
-          </header>
-          <div className="px-4 pb-3 pt-0.5">
-            <h1 className="text-[22px] font-medium leading-[1.25]">Seguridad de la aplicación</h1>
-            <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
-              Bloqueo de este dispositivo. Se pide al abrir la app y tras un rato de inactividad.
-            </p>
-          </div>
+    // Nivel 2 del chasis (tarea 185): documento.
+    <Chasis
+      modo="documento"
+      barra={
+        <div className="px-4 pb-3 pt-0.5">
+          <h1 className="text-[22px] font-medium leading-[1.25]">Seguridad de la aplicación</h1>
+          <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
+            Bloqueo de este dispositivo. Se pide al abrir la app y tras un rato de inactividad.
+          </p>
         </div>
-
-        <main className="flex flex-1 flex-col gap-4 px-4 pb-10 pt-4">
-          {config === undefined ? (
-            <p className="text-[13px] text-noct-neutral-400">Cargando...</p>
-          ) : config === null ? (
-            <PanelSinConfigurar />
-          ) : (
-            <PanelConfigurado metodo={config.metodo} minutos={config.minutosAutobloqueo} />
-          )}
-        </main>
-      </div>
-    </div>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-4 px-4 pb-10 pt-4">
+        {config === undefined ? (
+          <p className="text-[13px] text-noct-neutral-400">Cargando...</p>
+        ) : config === null ? (
+          <PanelSinConfigurar />
+        ) : (
+          <PanelConfigurado metodo={config.metodo} minutos={config.minutosAutobloqueo} />
+        )}
+      </main>
+    </Chasis>
   )
 }
 

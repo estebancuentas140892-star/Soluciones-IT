@@ -69,6 +69,25 @@ Componentes:
 
 Convención: "Props" muestra la firma real; los opcionales llevan su default. "Dónde se usa" viene de los call sites reales.
 
+### 2.0 `Chasis` (`src/app/Chasis.tsx`)
+
+- **Propósito:** el chasis único de la app (tarea 185, mockup `4c`). Reemplaza a `ShellNocturne` (eliminado) y a los 15 contenedores `max-w-md` que cada pantalla montaba a mano. Aporta el marco completo: sidebar de escritorio de catorce destinos, columna de contenido de ancho progresivo, barra superior o de tarea, y barra de cinco pestañas en móvil.
+- **Tres niveles y ni uno más (regla R18).** Cada pantalla declara el suyo:
+
+  | `modo` | Qué es | Cabecera | Pestañas | Sidebar |
+  |---|---|---|---|---|
+  | `seccion` (default) | raíz de una pila: las cinco pestañas, la Bóveda y su bloqueo | `BarraSuperior` (título, estado del dato, buscar, cuenta) | sí | sí |
+  | `documento` | algo que se lee o se recorre dentro de una sección | fila de regreso + acciones propias | sí | sí |
+  | `tarea` | algo que se hace y de lo que se sale: editor, asistente, escáner, importador, migración | `BarraTarea` | **no** | no |
+
+- **Props** (unión discriminada por `modo`, así cada nivel solo acepta lo suyo):
+  - `seccion`: `{ titulo: string, barra?: ReactNode, children }`
+  - `documento`: `{ modo: 'documento', volverA?: string, volverEtiqueta?: string, acciones?: ReactNode, barra?: ReactNode, children }`
+  - `tarea`: `{ modo: 'tarea', rotulo: string, titulo: string, vuelta?: string, salidaA?: string, salidaEtiqueta?: string, alSalir?: () => void, barra?: ReactNode, children }`
+  - `barra` es siempre la banda de controles propios de la pantalla, dentro del mismo bloque pegajoso que la cabecera (AD-023).
+- **Reserva su propio espacio (regla R22).** La columna de contenido lleva `pb-[calc(65px+env(safe-area-inset-bottom))] lg:pb-0` en los niveles con pestañas, así que ninguna pantalla calcula a mano el alto de la barra. Los 65 px son **medidos** (63,6 de celda + 1 de borde), no los 53 que citaba la auditoría, un dato anterior a la tarea 182.
+- **Dónde:** todas las rutas autenticadas. `BotonVolver` ya solo lo usan el propio chasis y `BarraTarea`.
+
 ### 2.1 `ActualizacionDisponible`
 - **Propósito:** barra flotante que avisa cuando hay una versión nueva de la PWA y la aplica al tocar "Actualizar". Hace su propio chequeo cada hora.
 - **Props:** ninguna. Devuelve `null` mientras no haya novedad.
@@ -97,8 +116,8 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.2d `Marca`
 - **Propósito:** el glifo de la marca (el cerebro). **No** forma parte del set de iconos de dominio (`iconos.tsx`): es el logotipo, y se usa solo donde la app se presenta a sí misma.
 - **Props:** las de un `<svg>` (`React.SVGProps<SVGSVGElement>`); el tamaño y el color van en `className`.
-- **Detalles:** vivía como función privada dentro de `ShellNocturne.tsx`; la tarea 184 lo extrajo al necesitarlo también el login. La regla R12 retiró el nombre "IT Brain" de la interfaz (tarea 180) pero conserva este glifo como marca ([DECISIONES.md](DECISIONES.md) AD-022).
-- **Dónde:** `ShellNocturne` (cabecera del sidebar de escritorio), `LoginPage` (cuadro de 52 px delineado en acento).
+- **Detalles:** vivía como función privada dentro del shell (hoy `Chasis.tsx`); la tarea 184 lo extrajo al necesitarlo también el login. La regla R12 retiró el nombre "IT Brain" de la interfaz (tarea 180) pero conserva este glifo como marca ([DECISIONES.md](DECISIONES.md) AD-022).
+- **Dónde:** `Chasis` (cabecera del sidebar de escritorio), `LoginPage` (cuadro de 52 px delineado en acento).
 
 ### 2.3 `BotonFavorito`
 - **Propósito:** estrella para marcar/desmarcar una ficha como favorita.
@@ -109,7 +128,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.4 `BotonVolver`
 - **Propósito:** botón de regreso unificado; deriva destino y etiqueta de la fuente única `padreDe` (`src/lib/navegacion.ts`) en vez de cablearlos a mano.
 - **Props:** `{ to?, children? }`. `to` sobreescribe el destino derivado (contexto en runtime, ej. equipo de red vuelve a Red); `children` sobreescribe la etiqueta ("Salir", "Cancelar").
-- **Dónde:** 31 archivos (casi toda cabecera de ficha o formulario). Desde la tarea 182, `UbicacionesPage` y `PersonasPage` dejaron de pasarle un `to`/`children` fijo a "Equipos": ahora usan el valor por defecto, que `padreDe` resuelve a "Más" (su puerta real desde que dejaron de vivir solo detrás del menú "···" de Equipos).
+- **Dónde:** desde la tarea 185, **solo dos sitios**: `Chasis` en `modo="documento"` y `BarraTarea` (para derivar el destino de la X). Antes lo llamaban 31 archivos, cada uno dentro de una cabecera propia; ahora la cabecera es del chasis y las pantallas solo pasan `volverA`/`volverEtiqueta` cuando el destino depende de datos en runtime (un equipo de red vuelve a Red).
 
 ### 2.5 `CampoContrasena`
 - **Propósito:** campo para **escribir** un secreto que evita que el sistema operativo o gestores de terceros lo detecten como login y ofrezcan guardarlo. Complementario de `CampoSecreto` (que muestra un secreto ya guardado).
@@ -175,9 +194,14 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.10f `BarraSuperior`
 - **Propósito:** la barra superior global del chasis (tarea 181, mockup `3d` del handoff). Tres ranuras fijas, siempre en el mismo orden y en las cinco pestañas (regla **R14**): **título de la sección** (confirma cuál pestaña está iluminada), **estado del dato** (`PastillaSync`) y **buscar + cuenta**. Antes no existía: cada pantalla dibujaba su cabecera con altura, relleno y controles distintos, y los tres servicios globales vivían dentro de Inicio.
 - **Props:** `{ titulo: string, children?: ReactNode }`. `children` es la banda de controles propios de la pantalla, que se dibuja justo debajo dentro del mismo bloque pegajoso.
-- **Variantes:** hoy solo el **modo raíz** (nivel 1, "sección"). Los modos *documento* y *tarea*, con regreso y miga, llegan con el chasis de tres niveles (tarea 185) y `MigaDePan` (tarea 188).
+- **Variantes:** es la cabecera del nivel 1 del chasis (`modo="seccion"`). El nivel 2 (documento) usa una fila de regreso propia del chasis y el nivel 3 (tarea) usa `BarraTarea`; la miga llega con `MigaDePan` (tarea 188).
 - **Reglas que aplica:** las acciones propias de la pantalla ("Crear", "Escanear", el menú "···") **no** van en la fila del título: van en `children`. Es la única forma de que la fila superior caiga siempre en el mismo sitio, que es el problema que la barra resuelve. Ver [DECISIONES.md](DECISIONES.md) AD-023.
-- **Dónde:** las cinco pestañas raíz: `InicioPage`, `SolucionesPage`, `DispositivosPage`, `RedPage` y `BovedaPage`.
+- **Dónde:** ya no la montan las pantallas: desde la tarea 185 la monta `Chasis` cuando el nivel es `seccion` (Inicio, Guías, Equipos, Red, Más, Bóveda y su pantalla de bloqueo).
+
+### 2.10h `BarraTarea`
+- **Propósito:** la cabecera del nivel 3 del chasis (tarea 185, mockup `4c`). El nivel `tarea` es el único que puede quedarse sin la barra de pestañas, y la regla **R19** exige que quien la quita ponga algo que oriente en su lugar: fondo de superficie (para que se note que el chasis cambió), rótulo de lo que se está haciendo ("Editando", "Ejecutando", "Migrando"), sobre qué, la ruta de vuelta **escrita** ("Guías › Impresoras · vuelves aquí al terminar") y una X de salida siempre en el mismo sitio.
+- **Props:** `{ rotulo, titulo, vuelta?, salidaA?, salidaEtiqueta = 'Salir sin guardar', alSalir?, children? }`. `vuelta` se deriva de `vueltaDeTarea(pathname)` si no se pasa; esa función devuelve `null` cuando la jerarquía solo sabe decir "Volver" (editar y ejecutar suben a una ficha cuyo nombre depende de datos en runtime), y entonces la pantalla escribe el texto. `alSalir` reemplaza la navegación de la X, para las tareas que guardan avance antes de salir.
+- **Dónde:** la monta `Chasis` en `modo="tarea"`. Tres pantallas la usan directamente porque conservan su contenedor propio: `EscanerPage` (el video va detrás a pantalla completa), `EtiquetasPage` (la hoja de impresión vive fuera de la columna) y, por herencia del chasis, el resto de editores.
 
 ### 2.10g `PastillaSync`
 - **Propósito:** la ranura "estado del dato" de la barra superior: responde de un vistazo "¿ya subió lo que cambié?" con icono, etiqueta y color. Tocarla fuerza una sincronización y abre `PanelSync`.
@@ -301,6 +325,7 @@ Cada una centraliza un patrón que antes estaba duplicado (con su comentario en 
 
 | Fuente única | Centraliza |
 |---|---|
+| `Chasis` (`src/app/Chasis.tsx`) | el marco de toda pantalla: sidebar, columna, cabecera, pestañas y el espacio que la barra ocupa |
 | `nocturne.tsx` (`BTN_*`) | variantes de botón |
 | `campos.tsx` (`CLASE_CAMPO*`, `Campo*`) | aspecto de campo y su etiqueta; editor clave/valor |
 | `topologiaVisual.ts` (`claseEstado`, `estadoConEtiqueta`) | color y etiqueta del estado de un dispositivo |

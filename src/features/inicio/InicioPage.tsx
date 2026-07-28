@@ -6,8 +6,7 @@ import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { contarHechos } from '../../lib/progresoPasos'
 import { obtenerFavoritos } from '../../lib/favoritos'
 import { obtenerRecientes } from '../../lib/recientes'
-import { ShellNocturne } from '../../app/ShellNocturne'
-import { BarraSuperior } from '../../components/BarraSuperior'
+import { Chasis } from '../../app/Chasis'
 import { DescargarOffline } from '../../components/DescargarOffline'
 import {
   CaretRight,
@@ -52,9 +51,9 @@ import { problemasFrecuentesInicio } from './problemasFrecuentes'
 // de entrada al conocimiento del equipo: un buscador global que atraviesa
 // soluciones, dispositivos y boveda, y, cuando no se busca, los atajos de
 // trabajo (retomar un procedimiento a medias, diagnostico, escaner), lo
-// reciente y la ruta de aprendizaje. Trae su propio ShellNocturne (sidebar
-// en escritorio, pestañas en movil), por eso su ruta vive fuera del Layout
-// oscuro heredado, como el resto de pantallas ya re-autorizadas.
+// reciente y la ruta de aprendizaje. Declara nivel de sección en el
+// chasis unico (tarea 185), que le pone sidebar en escritorio y pestañas
+// en movil.
 
 // VISUAL_POR_TIPO, GRUPOS_BUSQUEDA, partirTitulo y FilaResultado vivian
 // aqui porque Inicio era el unico sitio desde donde se podia buscar. La
@@ -221,19 +220,20 @@ export function InicioPage() {
   const hayBloquesReales = recientes.length > 0 || pendientes.length > 0 || enCurso != null
 
   return (
-    <ShellNocturne>
-      {/* El titulo ("Inicio", regla R12), el estado del dato, la lupa y la
-          cuenta los aporta ya BarraSuperior (tarea 181). Inicio conserva
-          ademas su buscador en linea, porque esta pantalla ES el buscador:
-          abrir y buscar sigue tomando dos toques.
-
-          El saludo por hora ("Buenos días. Todo el conocimiento del
-          equipo, al instante") se retiro en la tarea 184, decision
-          aprobada por el usuario: ocupaba la linea de contexto con un
-          eslogan que cambiaba tres veces al dia, asi que la entrada no se
-          veia igual dos veces. Lo que hay que decir el primer dia lo dice
-          ahora BienvenidaPrimerDia, y solo mientras haga falta. */}
-      <BarraSuperior titulo="Inicio">
+    // Nivel 1 del chasis (tarea 185): raíz de su pila. El titulo
+    // ("Inicio", regla R12), el estado del dato, la lupa y la cuenta los
+    // aporta el chasis (tarea 181). Inicio conserva ademas su buscador
+    // en linea, porque esta pantalla ES el buscador: abrir y buscar
+    // sigue tomando dos toques.
+    //
+    // El saludo por hora ("Buenos días. Todo el conocimiento del equipo,
+    // al instante") se retiro en la tarea 184, decision aprobada por el
+    // usuario: ocupaba la linea de contexto con un eslogan que cambiaba
+    // tres veces al dia, asi que la entrada no se veia igual dos veces.
+    // Lo que hay que decir el primer dia lo dice ahora
+    // BienvenidaPrimerDia, y solo mientras haga falta.
+    <Chasis titulo="Inicio" barra={
+      <>
         <div className="px-4 pb-3 pt-2">
           <label
             className={`flex h-11 items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
@@ -265,9 +265,9 @@ export function InicioPage() {
             )}
           </label>
         </div>
-      </BarraSuperior>
-
-      <main className="flex-1 px-4 pb-[116px] pt-4 lg:pb-16">
+      </>
+    }>
+      <main className="flex-1 px-4 pb-16 pt-4">
         {buscando ? (
           gruposResultado.length > 0 ? (
             <ResultadosBusqueda grupos={gruposResultado} consulta={consulta} />
@@ -559,7 +559,7 @@ export function InicioPage() {
           </div>
         )}
       </main>
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

@@ -2,8 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { ShellNocturne } from '../../app/ShellNocturne'
-import { BarraSuperior } from '../../components/BarraSuperior'
+import { Chasis } from '../../app/Chasis'
 import {
   ArrowElbowDownRight,
   ArrowSquareOut,
@@ -59,8 +58,8 @@ import {
 // y solo se descifra al abrir la ficha. Buscador único (título,
 // categoría o equipo), chips de categoría deslizables con conteo
 // (incluye "Todas"), aviso de rotación y control de autobloqueo por
-// inactividad. Trae su propio ShellNocturne (sidebar en escritorio,
-// pestañas en móvil), por eso su ruta sale del Layout oscuro heredado.
+// inactividad. Declara nivel de sección en el chasis único (tarea 185),
+// que le pone sidebar en escritorio y pestañas en móvil.
 // La lógica y los datos no cambian: la contraseña maestra descifra
 // todo en el propio teléfono (ver BovedaGuard) y nunca sale de él.
 //
@@ -356,11 +355,12 @@ export function BovedaPage() {
   }
 
   return (
-    <ShellNocturne>
-      {/* El título, el estado del dato, buscar y la cuenta los aporta ya
-          BarraSuperior (tarea 181). Aquí quedan las acciones propias de la
-          sección, el buscador y la fila de chips de categoría deslizable. */}
-      <BarraSuperior titulo="Bóveda">
+    // Nivel 1 del chasis (tarea 185): raíz de su pila. El título, el
+    // estado del dato, buscar y la cuenta los aporta el chasis (tarea
+    // 181); en `barra` quedan las acciones propias de la sección, el
+    // buscador y la fila de chips de categoría deslizable.
+    <Chasis titulo="Bóveda" barra={
+      <>
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
             Usuarios y contraseñas del equipo
@@ -448,9 +448,9 @@ export function BovedaPage() {
             })}
           </div>
         )}
-      </BarraSuperior>
-
-      <main className="flex flex-1 flex-col gap-3 px-4 pb-[116px] pt-3 lg:pb-16">
+      </>
+    }>
+      <main className="flex flex-1 flex-col gap-3 px-4 pb-16 pt-3">
         {mostrarAviso && (
           <div className="flex items-center gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
             <Warning size={16} className="shrink-0 text-noct-precaucion" aria-hidden />
@@ -710,6 +710,6 @@ export function BovedaPage() {
         onCerrar={() => setEliminarId(null)}
         onConfirmar={confirmarEliminar}
       />
-    </ShellNocturne>
+    </Chasis>
   )
 }

@@ -4,7 +4,7 @@
 // escritorio y el login). La regla R12 retiro el nombre "IT Brain" de
 // la interfaz (tarea 180) pero conserva este glifo como marca.
 //
-// Vivia dentro de ShellNocturne.tsx hasta la tarea 184, que necesito el
+// Vivia dentro de Chasis.tsx (antes ShellNocturne.tsx) hasta la tarea 184, que necesito el
 // mismo glifo en el login: "el login se presenta" empieza por mostrar la
 // marca, y duplicar el trazado habria dejado dos copias que divergen.
 export function Marca(props: React.SVGProps<SVGSVGElement>) {

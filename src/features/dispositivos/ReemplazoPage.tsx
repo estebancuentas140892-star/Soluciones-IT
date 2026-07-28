@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { Cargando } from '../../components/Cargando'
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 import { type IconoProps, LockSimple, PlugsConnected } from '../../components/iconos'
@@ -181,22 +181,22 @@ function Pantalla({
   children: React.ReactNode
 }) {
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col">
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver to={`/dispositivos/${nuevoId}`}>Volver</BotonVolver>
-          </header>
-          <div className="px-4 pb-3 pt-0.5">
-            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">{titulo}</h1>
-            <p className="mt-[3px] text-[12.5px] leading-[1.5] text-noct-neutral-500">
-              Se puede volver más tarde: nada se pierde ni se toca hasta confirmar.
-            </p>
-          </div>
-        </div>
-        <main className="flex flex-1 flex-col gap-4 px-4 pb-12 pt-[18px]">{children}</main>
-      </div>
-    </div>
+    // Nivel 3 del chasis (tarea 185): tarea con salida.
+    <Chasis
+      modo="tarea"
+      rotulo="Reemplazando"
+      titulo={titulo}
+      salidaA={`/dispositivos/${nuevoId}`}
+      vuelta="La ficha del equipo nuevo"
+      salidaEtiqueta="Salir sin migrar"
+      barra={
+        <p className="px-4 pb-2.5 text-[12px] leading-[1.5] text-noct-neutral-500">
+          Se puede volver más tarde: nada se pierde ni se toca hasta confirmar.
+        </p>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-4 px-4 pb-12 pt-[18px]">{children}</main>
+    </Chasis>
   )
 }
 

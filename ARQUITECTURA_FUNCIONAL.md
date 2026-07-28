@@ -517,9 +517,15 @@ La auditoría es de buena fe del equipo: se registra desde el cliente en el mome
 
 El botón "Volver"/"Cancelar" es navegación "Up" (padre lógico declarado), no `history.back()`. `src/lib/navegacion.ts` (`padreDe`) es la única fuente de qué pantalla es superior a cuál. Regla: la creación y las fichas de contenido suben a la lista de su sección; la edición y el asistente suben a la ficha de la entidad. Único override en tiempo de ejecución: la ficha de un equipo de red vuelve a `/red` en vez de a `/dispositivos`.
 
-### 11.2 Shells
+### 11.2 Chasis de tres niveles
 
-Tres envoltorios de pantalla: **ShellNocturne** (12 pantallas destino de pestaña, con barra lateral en escritorio), **Pantalla completa** (editores, con barra de acciones fija) y **Centrado** (columna centrada, botón inline). El mapa completo de las 44 rutas (path, componente, shell, guard, padre) está en [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md), sección 3.
+Un solo envoltorio de pantalla, `src/app/Chasis.tsx` (tarea 185), con `modo = seccion | documento | tarea`. Cada pantalla declara su nivel y ninguna inventa un cuarto (regla **R18**):
+
+- **`seccion`**: raíz de una pila (las cinco pestañas más la Bóveda). Barra superior de tres ranuras y barra de pestañas.
+- **`documento`**: algo que se lee o se recorre dentro de una sección. Fila de regreso y acciones propias; **conserva** la barra de pestañas.
+- **`tarea`**: algo que se hace y de lo que se sale (editor, asistente, escáner, importador, migración). Es el único nivel sin barra de pestañas, y en su lugar pone una `BarraTarea` que dice qué se hace, sobre qué y a dónde se vuelve (regla **R19**).
+
+El chasis reserva además el espacio inferior que la barra ocupa (regla **R22**), en una sola constante medida en el navegador; antes once pantallas escribían ese cálculo a mano. Hasta esta tarea convivían dos chasis (13 pantallas con navegación, 25 con un contenedor propio), y tres listas que se recorren durante minutos (Personas, Ubicaciones, Diagnósticos) habían quedado sin barra por aplicarles la regla de "pantalla enfocada" donde no correspondía. El mapa completo de las 44 rutas (path, componente, nivel, guard, padre) está en [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md), sección 3; el contrato del componente, en [COMPONENTES_UI.md](COMPONENTES_UI.md) sección 2.0; las decisiones, en [DECISIONES.md](DECISIONES.md) AD-026 y AD-027.
 
 ### 11.3 Enlaces cruzados (mapa)
 
@@ -582,7 +588,7 @@ Mejoras de accesibilidad pendientes se registran en [TAREAS.md](TAREAS.md).
 
 ```
 src/
-  app/          shell global (ShellNocturne)
+  app/          chasis global (Chasis)
   features/<dominio>/   pantallas y lógica de cada dominio
   lib/          lógica pura y acceso a datos (sin JSX)
   components/   componentes compartidos entre dominios

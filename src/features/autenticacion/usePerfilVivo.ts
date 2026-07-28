@@ -7,7 +7,7 @@ import { useAuth } from './authContext'
 // instante cuando sync trae un cambio de permisos (por ejemplo
 // puedeVerBoveda) desde otro dispositivo. undefined mientras carga,
 // null sin sesion o sin fila de perfil. Antes cada pantalla repetia
-// esta misma consulta por su cuenta (ShellNocturne, BovedaGuard,
+// esta misma consulta por su cuenta (Chasis, BovedaGuard,
 // CredencialEnPaso, DispositivoPage).
 export function usePerfilVivo(): Perfil | null | undefined {
   const { session } = useAuth()

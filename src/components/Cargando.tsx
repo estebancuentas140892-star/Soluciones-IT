@@ -2,7 +2,7 @@
 // mientras se descarga el trozo (chunk) de una pantalla cargada de
 // forma diferida, y en cualquier vista que espere datos locales. Trae
 // su propio fondo y tipografia porque se dibuja ANTES de que exista
-// el shell autenticado (ShellNocturne): en el login, el guard de
+// el chasis autenticado (Chasis): en el login, el guard de
 // bloqueo y el de sesion no hay ningun ancestro que ya pinte el fondo
 // oscuro (mismo motivo que documenta ErrorBoundary.tsx).
 export function Cargando() {

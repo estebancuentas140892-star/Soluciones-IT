@@ -9,7 +9,7 @@ import { reiniciarProgreso } from '../../lib/progresoPasos'
 import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
-import { ShellNocturne } from '../../app/ShellNocturne'
+import { Chasis } from '../../app/Chasis'
 import { Adjuntos } from '../../components/Adjuntos'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { ReferenciadoPor } from '../../components/ReferenciadoPor'
@@ -32,7 +32,6 @@ import {
   WarningOctagon,
 } from '../../components/iconos'
 import { BotonFavorito } from '../../components/BotonFavorito'
-import { BotonVolver } from '../../components/BotonVolver'
 import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
 import { ProcedimientoVista } from './ProcedimientoVista'
@@ -98,9 +97,9 @@ export function ArticuloPage() {
   if (articulo === null) return <Navigate to={`/soluciones?categoria=${categoriaId}`} replace />
   if (!articulo) {
     return (
-      <ShellNocturne>
+      <Chasis modo="documento">
         <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
-      </ShellNocturne>
+      </Chasis>
     )
   }
 
@@ -117,13 +116,16 @@ export function ArticuloPage() {
   ].join(' · ')
 
   return (
-    <ShellNocturne>
-      <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5 lg:px-10 lg:pt-4">
-        {/* Destino derivado de la jerarquía central (padreDe): la ficha
-            de artículo sube a la lista de Soluciones con el chip de su
-            categoría. La etiqueta muestra el nombre de la categoría. */}
-        <BotonVolver>{categoria?.nombre ?? 'Guías'}</BotonVolver>
-        <div className="flex shrink-0 items-center gap-2">
+    // Nivel 2 del chasis (tarea 185): documento. Conserva las pestañas
+    // (R19: la barra solo cede ante una tarea con salida) y el regreso
+    // deriva de la jerarquía central (padreDe): la ficha de artículo
+    // sube a la lista de Guías con el chip de su categoría, y la
+    // etiqueta muestra el nombre de la categoría.
+    <Chasis
+      modo="documento"
+      volverEtiqueta={categoria?.nombre ?? 'Guías'}
+      acciones={
+        <>
           <BotonFavorito tipo="articulo" entidadId={articuloId} />
           {tieneProcedimiento && (
             <Link
@@ -145,10 +147,10 @@ export function ArticuloPage() {
             conProcedimiento={tieneProcedimiento}
             onEliminar={() => setMostrarEliminar(true)}
           />
-        </div>
-      </header>
-
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-[116px] pt-1 lg:px-12 lg:pb-16">
+        </>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-12">
         {estado === 'borrador' && (
           <div className="flex items-start gap-2.5 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-3 py-2.5">
             <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
@@ -270,7 +272,7 @@ export function ArticuloPage() {
 
         <Historial entidadTipo="articulo" entidadId={articuloId} />
       </main>
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

@@ -3,8 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { db, type Articulo } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { contarHechos } from '../../lib/progresoPasos'
-import { ShellNocturne } from '../../app/ShellNocturne'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { CaretRight, Plus, WarningCircle } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
@@ -22,9 +21,8 @@ import { TIPOS_ARTICULO } from './tiposArticulo'
 // categoria (articulos, dispositivos, diagnosticos) mas su historial,
 // sin tocar el esquema: dispositivos y diagnosticos ya llevan
 // categoria_id, solo faltaba mostrarlos juntos aqui. Ruta anidada bajo
-// la pestaña Soluciones, por eso usa el mismo ShellNocturne que
-// SolucionesPage y ArticuloPage (la barra inferior sigue resaltando
-// Soluciones).
+// la pestaña Guias, asi que declara nivel de documento en el chasis
+// (tarea 185): la barra inferior sigue puesta y resaltando Guias.
 export function CategoriaPage() {
   const { categoriaId = '' } = useParams()
 
@@ -51,15 +49,18 @@ export function CategoriaPage() {
   const IconoCategoria = iconoDeCategoria(categoria?.nombre ?? '')
 
   return (
-    <ShellNocturne>
-      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-        <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-          <BotonVolver />
-          <Link to={`/soluciones/${categoriaId}/nuevo`} className={`shrink-0 ${BTN_SECUNDARIO}`}>
-            <Plus size={15} aria-hidden />
-            Artículo
-          </Link>
-        </header>
+    // Nivel 2 del chasis (tarea 185): documento. El bloque pegajoso, el
+    // regreso y las pestañas los pone el chasis; aquí queda la identidad
+    // de la categoría.
+    <Chasis
+      modo="documento"
+      acciones={
+        <Link to={`/soluciones/${categoriaId}/nuevo`} className={`shrink-0 ${BTN_SECUNDARIO}`}>
+          <Plus size={15} aria-hidden />
+          Artículo
+        </Link>
+      }
+      barra={
         <div className="px-4 pb-3 pt-0.5">
           {/* La ficha de la categoría es donde su identidad debe leerse
               más: el icono va en un recuadro con su color propio (fase
@@ -91,8 +92,8 @@ export function CategoriaPage() {
             </p>
           )}
         </div>
-      </div>
-
+      }
+    >
       <main className="flex flex-1 flex-col gap-6 px-4 pb-10 pt-3.5">
         {vacia && (
           <div className="rounded-lg border border-dashed border-noct-neutral-700 px-6 py-14 text-center">
@@ -215,7 +216,7 @@ export function CategoriaPage() {
 
         <Historial entidadTipo="categoria" entidadId={categoriaId} />
       </main>
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

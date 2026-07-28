@@ -2,8 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { ShellNocturne } from '../../app/ShellNocturne'
-import { BarraSuperior } from '../../components/BarraSuperior'
+import { Chasis } from '../../app/Chasis'
 import { idsDeRed, esDeRed } from '../../lib/categorias'
 import { incluyeTexto } from '../../lib/texto'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
@@ -28,10 +27,10 @@ import { estadoConEtiqueta } from '../red/topologiaVisual'
 // decisión ya existente antes del rediseño). Buscador único, chips de
 // categoría deslizables con conteo (incluye "Todos") y un resumen de
 // estados siempre sobre el total, sin filtrar (vista general de un
-// vistazo). Trae su propio ShellNocturne (sidebar en escritorio,
-// pestañas en móvil), por eso su ruta vive fuera del Layout oscuro
-// heredado. La lógica y los datos no cambian respecto de la versión de
-// tema claro: solo se re-autoriza el aspecto a Nocturne.
+// vistazo). Declara nivel de sección en el chasis único (tarea 185),
+// que le pone sidebar en escritorio y pestañas en móvil. La lógica y
+// los datos no cambian respecto de la versión de tema claro: solo se
+// re-autoriza el aspecto a Nocturne.
 
 export function DispositivosPage() {
   const dispositivos = useLiveQuery(
@@ -103,11 +102,12 @@ export function DispositivosPage() {
   }
 
   return (
-    <ShellNocturne>
-      {/* El título, el estado del dato, buscar y la cuenta los aporta ya
-          BarraSuperior (tarea 181). Aquí quedan las acciones propias de la
-          sección, el buscador de equipos y la fila de chips deslizable. */}
-      <BarraSuperior titulo="Equipos">
+    // Nivel 1 del chasis (tarea 185): raíz de su pila. El título, el
+    // estado del dato, buscar y la cuenta los aporta el chasis (tarea
+    // 181); en `barra` quedan las acciones propias de la sección, el
+    // buscador de equipos y la fila de chips deslizable.
+    <Chasis titulo="Equipos" barra={
+      <>
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
             Qué se sabe de cada equipo
@@ -236,9 +236,9 @@ export function DispositivosPage() {
             })}
           </div>
         )}
-      </BarraSuperior>
-
-      <main className="flex-1 px-4 pb-[116px] pt-3 lg:pb-16">
+      </>
+    }>
+      <main className="flex-1 px-4 pb-16 pt-3">
         {/* Resumen de estados: total y desglose operativo/mantenimiento/
             fuera de servicio, siempre sobre el inventario completo. */}
         <div className="mb-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 px-0.5">
@@ -281,7 +281,7 @@ export function DispositivosPage() {
           </div>
         )}
       </main>
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

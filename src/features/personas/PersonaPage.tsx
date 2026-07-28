@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { CaretRight, PencilSimple, TrashSimple } from '../../components/iconos'
 import { BTN_GHOST_PELIGRO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
@@ -47,62 +47,61 @@ export function PersonaPage() {
   const advertencia = equipos.length > 0 ? `${equipos.length} ${equipos.length === 1 ? 'equipo quedará' : 'equipos quedarán'} sin este vínculo.` : null
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col">
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver to="/personas">Personas</BotonVolver>
-          </header>
-          <div className="px-4 pb-3 pt-0.5">
-            <h1 className="m-0 text-[21px] font-medium leading-[1.25]">{persona.nombre}</h1>
-          </div>
+    // Nivel 2 del chasis (tarea 185): documento.
+    <Chasis
+      modo="documento"
+      volverA="/personas"
+      volverEtiqueta="Personas"
+      barra={
+        <div className="px-4 pb-3 pt-0.5">
+          <h1 className="m-0 text-[21px] font-medium leading-[1.25]">{persona.nombre}</h1>
+        </div>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-12 pt-3.5">
+        <div className="flex flex-wrap gap-2">
+          <Link to={`/personas/${personaId}/editar`} className={`shrink-0 ${BTN_SECUNDARIO}`}>
+            <PencilSimple size={14} aria-hidden />
+            Editar
+          </Link>
+          <button type="button" onClick={() => setMostrarEliminar(true)} className={BTN_GHOST_PELIGRO}>
+            <TrashSimple size={14} aria-hidden />
+            Eliminar
+          </button>
         </div>
 
-        <main className="flex flex-1 flex-col gap-[22px] px-4 pb-12 pt-3.5">
-          <div className="flex flex-wrap gap-2">
-            <Link to={`/personas/${personaId}/editar`} className={`shrink-0 ${BTN_SECUNDARIO}`}>
-              <PencilSimple size={14} aria-hidden />
-              Editar
-            </Link>
-            <button type="button" onClick={() => setMostrarEliminar(true)} className={BTN_GHOST_PELIGRO}>
-              <TrashSimple size={14} aria-hidden />
-              Eliminar
-            </button>
-          </div>
-
-          {persona.notas && (
-            <section>
-              <TituloSeccion className="mb-1.5">Notas</TituloSeccion>
-              <p className="whitespace-pre-wrap text-[13.5px] leading-[1.55] text-noct-neutral-300">{persona.notas}</p>
-            </section>
-          )}
-
+        {persona.notas && (
           <section>
-            <TituloSeccion className="mb-1.5">Equipos asignados</TituloSeccion>
-            {equipos.length === 0 ? (
-              <p className="rounded-md border border-dashed border-noct-neutral-700 px-4 py-3.5 text-center text-[12.5px] text-noct-neutral-500">
-                Ningún equipo tiene asignada esta persona.
-              </p>
-            ) : (
-              <div className="flex flex-col">
-                {equipos.map((d) => (
-                  <Link
-                    key={d.id}
-                    to={`/dispositivos/${d.id}`}
-                    className="flex min-h-[46px] items-center gap-2.5 rounded-md px-1.5 py-2 text-noct-text transition-colors hover:bg-noct-text/[.05]"
-                  >
-                    <span className="min-w-0 flex-1 truncate text-[13.5px]">{d.nombre}</span>
-                    {d.ip && <span className="shrink-0 font-mono text-[11px] text-noct-neutral-600">{d.ip}</span>}
-                    <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />
-                  </Link>
-                ))}
-              </div>
-            )}
+            <TituloSeccion className="mb-1.5">Notas</TituloSeccion>
+            <p className="whitespace-pre-wrap text-[13.5px] leading-[1.55] text-noct-neutral-300">{persona.notas}</p>
           </section>
+        )}
 
-          <Historial entidadTipo="persona" entidadId={personaId} />
-        </main>
-      </div>
+        <section>
+          <TituloSeccion className="mb-1.5">Equipos asignados</TituloSeccion>
+          {equipos.length === 0 ? (
+            <p className="rounded-md border border-dashed border-noct-neutral-700 px-4 py-3.5 text-center text-[12.5px] text-noct-neutral-500">
+              Ningún equipo tiene asignada esta persona.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {equipos.map((d) => (
+                <Link
+                  key={d.id}
+                  to={`/dispositivos/${d.id}`}
+                  className="flex min-h-[46px] items-center gap-2.5 rounded-md px-1.5 py-2 text-noct-text transition-colors hover:bg-noct-text/[.05]"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[13.5px]">{d.nombre}</span>
+                  {d.ip && <span className="shrink-0 font-mono text-[11px] text-noct-neutral-600">{d.ip}</span>}
+                  <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <Historial entidadTipo="persona" entidadId={personaId} />
+      </main>
 
       <DialogoEliminar
         abierto={mostrarEliminar}
@@ -112,6 +111,6 @@ export function PersonaPage() {
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
-    </div>
+    </Chasis>
   )
 }

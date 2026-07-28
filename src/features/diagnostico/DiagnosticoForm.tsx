@@ -13,7 +13,7 @@ import {
 } from '../../lib/diagnostico'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
 import { eliminarRegistro, guardarRegistro, nuevoId } from '../../lib/repositorio'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import {
   ArrowDown,
@@ -193,193 +193,191 @@ export function DiagnosticoForm() {
   }
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col">
-        {/* Cabecera pegajosa con blur: cancelar, eliminar y título. */}
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver>Cancelar</BotonVolver>
-            {esEdicion && (
-              <button
-                type="button"
-                onClick={() => setMostrarEliminar(true)}
-                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[12.5px] text-noct-neutral-500 hover:text-noct-error"
-              >
-                <TrashSimple size={15} aria-hidden />
-                Eliminar
-              </button>
-            )}
-          </header>
-          <div className="px-4 pb-3 pt-0.5">
-            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
-              {esEdicion ? 'Editar diagnóstico' : 'Nuevo diagnóstico'}
-            </h1>
-            <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
-              Un árbol de preguntas que lleva del problema a la solución
-            </p>
-          </div>
-        </div>
-
-        <main className="flex flex-1 flex-col gap-6 px-4 pb-[150px] pt-[18px]">
-          {/* Problema + categoría + descripción */}
-          <section className="flex flex-col gap-3.5">
-            <label className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>
-                Problema <span className="text-noct-accent-300">*</span>
-              </span>
-              <input
-                type="text"
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                placeholder="Como lo diría el técnico: La impresora no imprime"
-                className={`min-h-11 ${CLASE_CAMPO}`}
-              />
-            </label>
-
-            {mostrarSimilares && (
-              <div className="flex flex-col gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/10 px-3 py-2.5">
-                <div className="flex items-start gap-2.5">
-                  <Info size={16} className="mt-px shrink-0 text-noct-accent" />
-                  <p className="text-[13px] leading-[1.5]">
-                    Ya existe algo parecido. Ábrelo en lugar de documentarlo dos veces.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1 pl-[26px]">
-                  {similares.map((similar) => (
-                    <div key={similar.id} className="flex items-center justify-between gap-2">
-                      <Link
-                        to={similar.ruta}
-                        className="min-w-0 truncate text-[13.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400"
-                      >
-                        {similar.titulo}
-                        <span className="ml-1.5 text-[11px] font-normal text-noct-neutral-500">
-                          {similar.tipo === 'diagnostico' ? 'Diagnóstico' : 'Artículo'}
-                        </span>
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setSimilaresDescartados(true)}
-                        className="shrink-0 p-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
-                      >
-                        Descartar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>
-                Categoría <span className="text-noct-accent-300">*</span>
-              </span>
-              <div className="flex flex-wrap gap-[7px]">
-                {categorias.map((c) => {
-                  const activa = c.id === categoriaId
-                  const Icono = iconoDeCategoria(c.nombre)
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      aria-pressed={activa}
-                      onClick={() => setCategoriaId(c.id)}
-                      className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
-                        activa
-                          ? claseActivaDeCategoria(c)
-                          : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
-                      }`}
-                    >
-                      <Icono
-                        size={15}
-                        className={activa ? undefined : claseTextoDeCategoria(c)}
-                        aria-hidden
-                      />
-                      {c.nombre}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <label className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>Descripción (opcional)</span>
-              <input
-                type="text"
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Una línea que ayude a reconocer el problema"
-                className={`min-h-11 ${CLASE_CAMPO}`}
-              />
-            </label>
-          </section>
-
-          <NodosEditor nodos={nodos} onChange={setNodos} articulos={vinculablesOrdenados} />
-
-          {problemas.length > 0 && (
-            <div className="flex flex-col gap-[7px] rounded-md border border-noct-error/35 bg-noct-error/[.09] px-[13px] py-3">
-              <p className="flex items-center gap-2 text-[13px] font-medium">
-                <WarningOctagon size={16} className="text-noct-error" aria-hidden />
-                Antes de guardar, revisar esto
-              </p>
-              {problemas.map((problema, indice) => (
-                <p key={indice} className="ml-6 text-[12.5px] leading-[1.5] text-noct-neutral-300">
-                  {problema}
-                </p>
-              ))}
-            </div>
-          )}
-
-          {advertenciasVinculos.length > 0 && (
-            <div className="flex flex-col gap-[7px] rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-[13px] py-3">
-              <p className="flex items-center gap-2 text-[13px] font-medium">
-                <Warning size={16} className="text-noct-precaucion" aria-hidden />
-                Procedimientos vinculados sin disponibilidad
-              </p>
-              {advertenciasVinculos.map((advertencia, indice) => (
-                <p key={indice} className="ml-6 text-[12.5px] leading-[1.5] text-noct-neutral-300">
-                  {advertencia}
-                </p>
-              ))}
-              <p className="ml-6 text-[11px] leading-[1.5] text-noct-neutral-500">
-                No impide guardar (puede ser un artículo que aún no sincronizó), pero en el diagnóstico real esa
-                rama quedaría sin el procedimiento.
-              </p>
-            </div>
-          )}
-
+    // Nivel 3 del chasis (tarea 185): tarea con salida. Sin pestañas, y
+    // en su lugar la BarraTarea con el rótulo, el diagnóstico y la ruta
+    // de vuelta escrita (R19).
+    <Chasis
+      modo="tarea"
+      rotulo={esEdicion ? 'Editando' : 'Creando'}
+      titulo={titulo.trim() || (esEdicion ? 'Editar diagnóstico' : 'Nuevo diagnóstico')}
+      salidaEtiqueta="Cancelar y volver"
+      barra={
+        <div className="flex items-center justify-between gap-2 px-4 pb-2.5">
+          <p className="min-w-0 flex-1 text-[12px] text-noct-neutral-500">
+            Un árbol de preguntas que lleva del problema a la solución
+          </p>
           {esEdicion && (
-            <label className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>Motivo del cambio (opcional)</span>
-              <input
-                type="text"
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                placeholder="Por qué se actualizó este diagnóstico"
-                className={`min-h-11 ${CLASE_CAMPO}`}
-              />
-            </label>
-          )}
-
-          {esEdicion && <Historial entidadTipo="diagnostico" entidadId={id} />}
-        </main>
-
-        {/* Barra inferior fija: Probar y Guardar. */}
-        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
-          <div className="flex gap-2.5">
-            <button type="button" onClick={() => setMostrarPrueba(true)} className={`${BTN_SECUNDARIO} px-4 py-[11px]`}>
-              <Play size={15} aria-hidden />
-              Probar
-            </button>
             <button
               type="button"
-              disabled={guardando}
-              onClick={() => void guardar()}
-              className={`flex-1 ${BTN_PRIMARIO} py-[11px] text-sm disabled:opacity-50`}
+              onClick={() => setMostrarEliminar(true)}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-2 text-[12.5px] text-noct-neutral-500 hover:text-noct-error"
             >
-              <FloppyDisk size={15} aria-hidden />
-              {guardando ? 'Guardando...' : 'Guardar diagnóstico'}
+              <TrashSimple size={15} aria-hidden />
+              Eliminar
             </button>
+          )}
+        </div>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-6 px-4 pb-[150px] pt-[18px]">
+        {/* Problema + categoría + descripción */}
+        <section className="flex flex-col gap-3.5">
+          <label className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>
+              Problema <span className="text-noct-accent-300">*</span>
+            </span>
+            <input
+              type="text"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Como lo diría el técnico: La impresora no imprime"
+              className={`min-h-11 ${CLASE_CAMPO}`}
+            />
+          </label>
+
+          {mostrarSimilares && (
+            <div className="flex flex-col gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/10 px-3 py-2.5">
+              <div className="flex items-start gap-2.5">
+                <Info size={16} className="mt-px shrink-0 text-noct-accent" />
+                <p className="text-[13px] leading-[1.5]">
+                  Ya existe algo parecido. Ábrelo en lugar de documentarlo dos veces.
+                </p>
+              </div>
+              <div className="flex flex-col gap-1 pl-[26px]">
+                {similares.map((similar) => (
+                  <div key={similar.id} className="flex items-center justify-between gap-2">
+                    <Link
+                      to={similar.ruta}
+                      className="min-w-0 truncate text-[13.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400"
+                    >
+                      {similar.titulo}
+                      <span className="ml-1.5 text-[11px] font-normal text-noct-neutral-500">
+                        {similar.tipo === 'diagnostico' ? 'Diagnóstico' : 'Artículo'}
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setSimilaresDescartados(true)}
+                      className="shrink-0 p-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
+                    >
+                      Descartar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>
+              Categoría <span className="text-noct-accent-300">*</span>
+            </span>
+            <div className="flex flex-wrap gap-[7px]">
+              {categorias.map((c) => {
+                const activa = c.id === categoriaId
+                const Icono = iconoDeCategoria(c.nombre)
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    aria-pressed={activa}
+                    onClick={() => setCategoriaId(c.id)}
+                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                      activa
+                        ? claseActivaDeCategoria(c)
+                        : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
+                    }`}
+                  >
+                    <Icono
+                      size={15}
+                      className={activa ? undefined : claseTextoDeCategoria(c)}
+                      aria-hidden
+                    />
+                    {c.nombre}
+                  </button>
+                )
+              })}
+            </div>
           </div>
+
+          <label className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>Descripción (opcional)</span>
+            <input
+              type="text"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Una línea que ayude a reconocer el problema"
+              className={`min-h-11 ${CLASE_CAMPO}`}
+            />
+          </label>
+        </section>
+
+        <NodosEditor nodos={nodos} onChange={setNodos} articulos={vinculablesOrdenados} />
+
+        {problemas.length > 0 && (
+          <div className="flex flex-col gap-[7px] rounded-md border border-noct-error/35 bg-noct-error/[.09] px-[13px] py-3">
+            <p className="flex items-center gap-2 text-[13px] font-medium">
+              <WarningOctagon size={16} className="text-noct-error" aria-hidden />
+              Antes de guardar, revisar esto
+            </p>
+            {problemas.map((problema, indice) => (
+              <p key={indice} className="ml-6 text-[12.5px] leading-[1.5] text-noct-neutral-300">
+                {problema}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {advertenciasVinculos.length > 0 && (
+          <div className="flex flex-col gap-[7px] rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-[13px] py-3">
+            <p className="flex items-center gap-2 text-[13px] font-medium">
+              <Warning size={16} className="text-noct-precaucion" aria-hidden />
+              Procedimientos vinculados sin disponibilidad
+            </p>
+            {advertenciasVinculos.map((advertencia, indice) => (
+              <p key={indice} className="ml-6 text-[12.5px] leading-[1.5] text-noct-neutral-300">
+                {advertencia}
+              </p>
+            ))}
+            <p className="ml-6 text-[11px] leading-[1.5] text-noct-neutral-500">
+              No impide guardar (puede ser un artículo que aún no sincronizó), pero en el diagnóstico real esa
+              rama quedaría sin el procedimiento.
+            </p>
+          </div>
+        )}
+
+        {esEdicion && (
+          <label className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>Motivo del cambio (opcional)</span>
+            <input
+              type="text"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Por qué se actualizó este diagnóstico"
+              className={`min-h-11 ${CLASE_CAMPO}`}
+            />
+          </label>
+        )}
+
+        {esEdicion && <Historial entidadTipo="diagnostico" entidadId={id} />}
+      </main>
+
+      {/* Barra inferior fija: Probar y Guardar. */}
+      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
+        <div className="flex gap-2.5">
+          <button type="button" onClick={() => setMostrarPrueba(true)} className={`${BTN_SECUNDARIO} px-4 py-[11px]`}>
+            <Play size={15} aria-hidden />
+            Probar
+          </button>
+          <button
+            type="button"
+            disabled={guardando}
+            onClick={() => void guardar()}
+            className={`flex-1 ${BTN_PRIMARIO} py-[11px] text-sm disabled:opacity-50`}
+          >
+            <FloppyDisk size={15} aria-hidden />
+            {guardando ? 'Guardando...' : 'Guardar diagnóstico'}
+          </button>
         </div>
       </div>
 
@@ -400,7 +398,7 @@ export function DiagnosticoForm() {
           onCerrar={() => setMostrarPrueba(false)}
         />
       )}
-    </div>
+    </Chasis>
   )
 }
 

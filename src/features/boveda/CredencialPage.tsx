@@ -1,8 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { ShellNocturne } from '../../app/ShellNocturne'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import {
   ArrowSquareOut,
@@ -46,8 +45,8 @@ import { descifrarArchivo, descifrarCredencial, type DatosCredencial } from './s
 // vinculados, con su nombre vivo), "Usada en" (procedimientos que la
 // referencian, derivado del grafo) y "Actividad" (auditoría de la
 // bóveda + historial de cambios, en una sola línea de tiempo).
-// Trae su propio ShellNocturne, por eso su ruta sale del Layout oscuro
-// heredado. La lógica no cambia: cada consulta, revelado y copia queda
+// Declara nivel de documento en el chasis (tarea 185), así que conserva
+// las pestañas. La lógica no cambia: cada consulta, revelado y copia queda
 // registrada, y el secreto nunca sale del dispositivo.
 
 // "2 jul, 10:32": fecha corta con hora, con el año solo cuando no es el
@@ -197,9 +196,9 @@ export function CredencialPage() {
   if (credencial === null || credencial?.eliminadoEn) return <Navigate to="/boveda" replace />
   if (!credencial || datos === undefined) {
     return (
-      <ShellNocturne>
+      <Chasis modo="documento">
         <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
-      </ShellNocturne>
+      </Chasis>
     )
   }
   // Copia local: TypeScript no conserva el descarte de null/undefined
@@ -307,30 +306,30 @@ export function CredencialPage() {
   const eventosVisibles = verTodaActividad ? eventos : eventos.slice(0, 6)
 
   return (
-    <ShellNocturne>
-      {/* Cabecera pegajosa: volver a la Bóveda y las dos acciones de la
-          ficha. Eliminar va en rojo y de solo icono, como en el mockup. */}
-      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-        <header className="flex items-center justify-between gap-2 py-2 pl-2 pr-3 lg:px-10">
-          <BotonVolver />
-          <div className="flex shrink-0 gap-1.5">
-            <Link to={`/boveda/${credencialId}/editar`} className={BTN_SECUNDARIO}>
-              <PencilSimple size={14} aria-hidden />
-              Editar
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMostrarEliminar(true)}
-              aria-label="Eliminar el secreto"
-              className={BTN_ICONO_PELIGRO}
-            >
-              <TrashSimple size={16} aria-hidden />
-            </button>
-          </div>
-        </header>
-      </div>
-
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-[116px] pt-4 lg:px-10 lg:pb-16">
+    // Nivel 2 del chasis (tarea 185): documento. El bloque pegajoso, el
+    // regreso a la Bóveda y las pestañas los pone el chasis; aquí quedan
+    // las dos acciones de la ficha. Eliminar va en rojo y de solo icono,
+    // como en el mockup.
+    <Chasis
+      modo="documento"
+      acciones={
+        <>
+          <Link to={`/boveda/${credencialId}/editar`} className={BTN_SECUNDARIO}>
+            <PencilSimple size={14} aria-hidden />
+            Editar
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMostrarEliminar(true)}
+            aria-label="Eliminar el secreto"
+            className={BTN_ICONO_PELIGRO}
+          >
+            <TrashSimple size={16} aria-hidden />
+          </button>
+        </>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-4 lg:px-10">
         <header>
           <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0">
@@ -494,7 +493,7 @@ export function CredencialPage() {
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

@@ -2,13 +2,12 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { db, type Conexion, type Dispositivo } from '../../lib/db'
-import { ShellNocturne } from '../../app/ShellNocturne'
+import { Chasis } from '../../app/Chasis'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { agruparConexiones, type ExtremoConexion } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
-import { BotonVolver } from '../../components/BotonVolver'
 import { IconoNodo } from './IconoNodo'
 import { FormularioConexion } from './FormularioConexion'
 import { construirArbol, contarDescendientes, contarImpacto, infoDeDispositivos, type NodoTopologia } from './arbol'
@@ -101,12 +100,12 @@ export function TopologiaEquipoPage() {
   const [agregando, setAgregando] = useState(false)
 
   if (!dispositivos || !conexiones) {
-    return <ShellNocturne>{null}</ShellNocturne>
+    return <Chasis modo="documento">{null}</Chasis>
   }
 
   if (!equipo) {
     return (
-      <ShellNocturne>
+      <Chasis modo="documento">
         <main className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
           <p className="text-[14.5px] font-medium">No se encontró el equipo</p>
@@ -114,24 +113,26 @@ export function TopologiaEquipoPage() {
             Volver a la topología
           </Link>
         </main>
-      </ShellNocturne>
+      </Chasis>
     )
   }
 
   const estado = estadoConEtiqueta(equipo.estado)
 
   return (
-    <ShellNocturne>
-      {/* Cabecera fija: retorno a la topología, acceso a la ficha e
-          identidad del equipo (nombre, estado con punto de color e IP). */}
-      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-        <header className="flex items-center justify-between gap-2 px-2 pb-1.5 pt-2.5">
-          <BotonVolver />
-          <Link to={`/dispositivos/${equipo.id}`} className={`shrink-0 ${BTN_GHOST}`}>
-            <Monitor size={14} aria-hidden />
-            Abrir la ficha
-          </Link>
-        </header>
+    // Nivel 2 del chasis (tarea 185): documento. El chasis pone el
+    // bloque pegajoso, el retorno a la topología y las pestañas; aquí
+    // quedan el acceso a la ficha y la identidad del equipo (nombre,
+    // estado con punto de color e IP).
+    <Chasis
+      modo="documento"
+      acciones={
+        <Link to={`/dispositivos/${equipo.id}`} className={`shrink-0 ${BTN_GHOST}`}>
+          <Monitor size={14} aria-hidden />
+          Abrir la ficha
+        </Link>
+      }
+      barra={
         <div className="flex items-center gap-3 px-4 pb-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.14] text-noct-accent-300">
             <TreeStructure size={20} aria-hidden />
@@ -152,9 +153,9 @@ export function TopologiaEquipoPage() {
             </p>
           </div>
         </div>
-      </div>
-
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-[116px] pt-4 lg:pb-16">
+      }
+    >
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-4">
         {/* Depende de: padres directos, navegables a su ficha. */}
         {dependeDe.length > 0 && (
           <section>
@@ -232,7 +233,7 @@ export function TopologiaEquipoPage() {
           onToggleAgregar={() => setAgregando((v) => !v)}
         />
       </main>
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

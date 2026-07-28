@@ -2,8 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { ShellNocturne } from '../../app/ShellNocturne'
-import { BarraSuperior } from '../../components/BarraSuperior'
+import { Chasis } from '../../app/Chasis'
 import { compararNatural } from '../../lib/conexiones'
 import { esDeRed } from '../../lib/categorias'
 import { incluyeTexto } from '../../lib/texto'
@@ -15,11 +14,11 @@ import { BTN_SECUNDARIO } from '../../components/nocturne'
 // de aplicación empresarial", Red.dc.html, tarea 91): responde "¿cómo
 // está conectada la infraestructura?" con el inventario de red
 // agrupado por ubicación y la entrada destacada a la Topología. Reúne
-// los dispositivos de las categorías marcadas como es_red. Trae su
-// propio ShellNocturne (sidebar en escritorio, pestañas en móvil), por
-// eso su ruta vive fuera del Layout oscuro heredado. La lógica y los
-// datos no cambian respecto de la versión de tema claro: solo se
-// re-autoriza el aspecto a Nocturne.
+// los dispositivos de las categorías marcadas como es_red. Declara
+// nivel de sección en el chasis único (tarea 185), que le pone sidebar
+// en escritorio y pestañas en móvil. La lógica y los datos no cambian
+// respecto de la versión de tema claro: solo se re-autoriza el aspecto
+// a Nocturne.
 
 export function RedPage() {
   const dispositivos = useLiveQuery(
@@ -80,11 +79,12 @@ export function RedPage() {
   const hayResultados = filtrados.length > 0
 
   return (
-    <ShellNocturne>
-      {/* El título, el estado del dato, buscar y la cuenta los aporta ya
-          BarraSuperior (tarea 181). Aquí quedan la acción Crear y el
-          buscador de equipos de red, con borde de acento al escribir. */}
-      <BarraSuperior titulo="Red">
+    // Nivel 1 del chasis (tarea 185): raíz de su pila. El título, el
+    // estado del dato, buscar y la cuenta los aporta el chasis (tarea
+    // 181); en `barra` quedan la acción Crear y el buscador de equipos
+    // de red, con borde de acento al escribir.
+    <Chasis titulo="Red" barra={
+      <>
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
             Cómo está conectada la infraestructura
@@ -126,9 +126,9 @@ export function RedPage() {
             )}
           </label>
         </div>
-      </BarraSuperior>
-
-      <main className="flex-1 px-4 pb-[116px] pt-3.5 lg:pb-16">
+      </>
+    }>
+      <main className="flex-1 px-4 pb-16 pt-3.5">
         <div className="flex flex-col gap-[18px]">
           {/* Entrada destacada a la Topología, tintada en el acento. */}
           <Link
@@ -196,6 +196,6 @@ export function RedPage() {
           )}
         </div>
       </main>
-    </ShellNocturne>
+    </Chasis>
   )
 }

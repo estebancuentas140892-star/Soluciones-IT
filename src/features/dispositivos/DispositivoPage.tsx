@@ -9,11 +9,10 @@ import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { textoVivo } from '../../lib/referencia'
 import { referenciasHacia, resumenImpacto } from '../../lib/grafo'
-import { ShellNocturne } from '../../app/ShellNocturne'
+import { Chasis } from '../../app/Chasis'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonFavorito } from '../../components/BotonFavorito'
-import { BotonVolver } from '../../components/BotonVolver'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useGrafo } from '../../components/useGrafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
@@ -90,8 +89,8 @@ function pillEstado(etiqueta: string): string {
 // "Resolver con este equipo" (diagnóstico destacado + procedimientos,
 // problemas y credenciales vinculados + creación contextual), "Si este
 // equipo falla" (impacto y dependencias), conexiones e intervenciones.
-// Trae su propio ShellNocturne, por eso su ruta sale del Layout oscuro.
-// Conserva intacta toda la lógica y los datos de la vista 360°.
+// Declara nivel de documento en el chasis (tarea 185), así que conserva
+// las pestañas, y toda la lógica y los datos de la vista 360°.
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
   const navigate = useNavigate()
@@ -162,9 +161,9 @@ export function DispositivoPage() {
   if (dispositivo === null) return <Navigate to="/dispositivos" replace />
   if (!dispositivo) {
     return (
-      <ShellNocturne>
+      <Chasis modo="documento">
         <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
-      </ShellNocturne>
+      </Chasis>
     )
   }
 
@@ -225,13 +224,15 @@ export function DispositivoPage() {
     : []
 
   return (
-    <ShellNocturne>
-      {/* Cabecera: regreso contextual, compartir y menú de acciones. */}
-      <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5 lg:px-10 lg:pt-4">
-        <BotonVolver to={volverA}>
-          {esRed ? 'Red' : 'Equipos'}
-        </BotonVolver>
-        <div className="flex shrink-0 items-center gap-2">
+    // Nivel 2 del chasis (tarea 185): documento. Conserva las pestañas
+    // (R19) y el regreso es contextual: un equipo de red vuelve a Red,
+    // que es de donde se llega, y no a Equipos.
+    <Chasis
+      modo="documento"
+      volverA={volverA}
+      volverEtiqueta={esRed ? 'Red' : 'Equipos'}
+      acciones={
+        <>
           <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} />
           <BotonCompartir titulo={dispositivo.nombre} />
           <button
@@ -243,10 +244,9 @@ export function DispositivoPage() {
           >
             <DotsThreeOutline size={17} aria-hidden />
           </button>
-        </div>
-      </header>
-
-      {menuAbierto && (
+        </>
+      }
+      barra={menuAbierto && (
         <div className="flex flex-wrap gap-2 px-4 pb-2 lg:px-10">
           <Link
             to={`/dispositivos/nuevo?copiarDe=${dispositivoId}`}
@@ -297,8 +297,8 @@ export function DispositivoPage() {
           </button>
         </div>
       )}
-
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-[116px] pt-1 lg:px-12 lg:pb-16">
+    >
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-12">
         {/* Encabezado del equipo: foto, título, categoría/fecha y estado. */}
         <header className="flex flex-col gap-3">
           {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}
@@ -537,7 +537,7 @@ export function DispositivoPage() {
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

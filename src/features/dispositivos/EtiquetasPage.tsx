@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
 import QRCode from 'qrcode'
-import { BotonVolver } from '../../components/BotonVolver'
+import { BarraTarea } from '../../components/BarraTarea'
 import { Check, Printer, QrCode } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db, type Dispositivo } from '../../lib/db'
@@ -67,18 +67,19 @@ export function EtiquetasPage() {
     <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text print:block print:min-h-0 print:bg-white print:text-black">
       {/* Interfaz de pantalla (no se imprime). */}
       <div className="mx-auto flex min-h-svh max-w-md flex-col print:hidden">
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver to="/dispositivos">
-              Equipos
-            </BotonVolver>
-          </header>
-          <div className="px-4 pb-2.5 pt-0.5">
-            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">Etiquetas QR</h1>
-            <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
-              Imprimir y pegar en los equipos: al escanear se abre su ficha
-            </p>
-          </div>
+        {/* Nivel 3 del chasis (tarea 185): tarea con salida. Esta
+            pantalla conserva su contenedor propio porque la hoja de
+            impresión vive fuera de él, pero adopta la BarraTarea. */}
+        <BarraTarea
+          rotulo="Imprimiendo"
+          titulo="Etiquetas QR"
+          salidaA="/dispositivos"
+          vuelta="Equipos"
+          salidaEtiqueta="Salir sin imprimir"
+        >
+          <p className="px-4 pb-2.5 text-[12px] text-noct-neutral-500">
+            Imprimir y pegar en los equipos: al escanear se abre su ficha
+          </p>
           {categorias.length > 0 && (
             <div className="flex gap-[7px] overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {[{ id: '', nombre: 'Todas' }, ...categorias].map((c) => {
@@ -101,7 +102,7 @@ export function EtiquetasPage() {
               })}
             </div>
           )}
-        </div>
+        </BarraTarea>
 
         <main className="flex flex-1 flex-col gap-3 px-4 pb-[110px] pt-3.5">
           {visibles.length > 0 ? (

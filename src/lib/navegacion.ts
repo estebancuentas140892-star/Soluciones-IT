@@ -117,3 +117,17 @@ export function padreDe(pathname: string): Padre | null {
       return { to: '/', etiqueta: 'Inicio' }
   }
 }
+
+/**
+ * Texto de la ruta de vuelta para la barra de tarea (nivel 3 del chasis,
+ * tarea 185). Devuelve null cuando la jerarquía solo sabe decir "Volver":
+ * editar y ejecutar suben a la ficha de una entidad cuyo nombre depende
+ * de datos en runtime, así que ahí la pantalla debe escribir el suyo.
+ * La regla R19 pide que quien quita la barra de pestañas ponga algo que
+ * oriente, y "Volver" no orienta.
+ */
+export function vueltaDeTarea(pathname: string): string | null {
+  const padre = padreDe(pathname)
+  if (!padre || padre.etiqueta === 'Volver') return null
+  return padre.etiqueta
+}

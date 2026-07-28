@@ -1,9 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ShellNocturne } from '../../app/ShellNocturne'
+import { Chasis } from '../../app/Chasis'
 import { Avatar } from '../../components/Avatar'
-import { BarraSuperior } from '../../components/BarraSuperior'
 import {
   CaretRight,
   type IconoProps,
@@ -37,10 +36,10 @@ export function PantallaMas() {
   const bloqueo = useLiveQuery(async () => (await db.seguridadApp.get(ID_BLOQUEO_APP)) ?? null, [])
 
   return (
-    <ShellNocturne>
-      <BarraSuperior titulo="Más" />
-
-      <main className="flex-1 px-4 pb-[116px] pt-4 lg:pb-16">
+    // Nivel 1 del chasis (tarea 185): raíz de su pila, sin controles
+    // propios bajo la fila superior.
+    <Chasis titulo="Más">
+      <main className="flex-1 px-4 pb-16 pt-4">
         <div className="flex flex-col gap-[22px]">
           {usuario?.puedeVerBoveda && (
             <section>
@@ -132,7 +131,7 @@ export function PantallaMas() {
           </section>
         </div>
       </main>
-    </ShellNocturne>
+    </Chasis>
   )
 }
 

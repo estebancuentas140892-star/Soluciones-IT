@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { Chasis } from '../../app/Chasis'
 import { db } from '../../lib/db'
 import { BotonFavorito } from '../../components/BotonFavorito'
-import { BotonVolver } from '../../components/BotonVolver'
 import {
   CaretRight,
   ChartBar,
@@ -23,9 +23,9 @@ import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 // El técnico no piensa en el nombre de un procedimiento sino en el
 // problema que tiene delante: cada fila ES un problema ("La impresora
 // no imprime") agrupado por categoría, y tocarlo abre el diagnóstico
-// guiado. Pantalla enfocada a la que se llega desde Inicio (no es una
-// pestaña), por eso trae su propio shell centrado con "Volver a Inicio"
-// en vez del ShellNocturne con pestañas.
+// guiado. Se llega desde Inicio y desde "Más" (no es una pestaña), así
+// que declara nivel de documento en el chasis (tarea 185): regreso
+// arriba y barra de pestañas abajo, que hasta entonces no tenía.
 export function DiagnosticosPage() {
   const [filtro, setFiltro] = useState('')
   const [searchParams] = useSearchParams()
@@ -85,21 +85,24 @@ export function DiagnosticosPage() {
   const categoriaActiva = categorias.find((c) => c.id === categoriaFiltro)
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh w-full max-w-md flex-col">
-        {/* Cabecera fija con desenfoque: volver a Inicio, crear, título
-            y buscador del problema. */}
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 px-2 pt-2.5">
-            <BotonVolver />
-            <Link
-              to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
-              className={`shrink-0 ${BTN_GHOST}`}
-            >
-              <Plus size={14} aria-hidden />
-              Crear
-            </Link>
-          </header>
+    // Nivel 2 del chasis (tarea 185): documento. Recupera la barra de
+    // pestañas, que esta pantalla había perdido por aplicarle la regla
+    // de "pantalla enfocada" (R19): es una lista de problemas que se
+    // recorre durante minutos, no una tarea con salida, y sin barra era
+    // una isla con una sola puerta.
+    <Chasis
+      modo="documento"
+      acciones={
+        <Link
+          to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
+          className={`shrink-0 ${BTN_GHOST}`}
+        >
+          <Plus size={14} aria-hidden />
+          Crear
+        </Link>
+      }
+      barra={
+        <>
           <div className="px-4 pb-2.5 pt-0.5">
             <h1 className="text-[22px] font-medium leading-[1.25]">Diagnóstico inteligente</h1>
             <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
@@ -152,119 +155,119 @@ export function DiagnosticosPage() {
               )}
             </label>
           </div>
-        </div>
-
-        <main className="flex flex-1 flex-col gap-[18px] px-4 pb-10 pt-3.5">
-          {categoriaActiva && (
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] px-3.5 py-2.5">
-              <p className="min-w-0 truncate text-[12.5px] text-noct-accent-300">
-                Solo: {categoriaActiva.nombre}
-              </p>
-              <Link
-                to="/diagnostico"
-                className="shrink-0 text-[12px] text-noct-accent-300 underline underline-offset-2"
-              >
-                Ver todos
-              </Link>
-            </div>
-          )}
-
-          {/* Diagnóstico en curso: al retomar, la ficha del asistente
-              detecta el progreso guardado y continúa donde quedó. No se
-              muestra mientras se filtra (fidelidad al diseño). */}
-          {enCurso && !hayFiltro && (
+        </>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-[18px] px-4 pb-10 pt-3.5">
+        {categoriaActiva && (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] px-3.5 py-2.5">
+            <p className="min-w-0 truncate text-[12.5px] text-noct-accent-300">
+              Solo: {categoriaActiva.nombre}
+            </p>
             <Link
-              to={`/diagnostico/${enCurso.id}`}
-              className="flex items-center gap-3 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3.5 text-noct-text hover:bg-noct-accent/[.13]"
+              to="/diagnostico"
+              className="shrink-0 text-[12px] text-noct-accent-300 underline underline-offset-2"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-accent/[.16] text-noct-accent-300">
-                <Play size={18} aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
-                  Diagnóstico en curso
-                </span>
-                <span className="mt-[3px] block text-[14.5px] font-medium leading-[1.3]">
-                  {enCurso.titulo}
-                </span>
-              </span>
-              <CaretRight size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              Ver todos
             </Link>
-          )}
+          </div>
+        )}
 
-          {grupos.map(({ categoria, Icono, delGrupo }) => (
-            <section key={categoria.id}>
-              <div className="mb-1.5 flex items-center gap-2 px-0.5">
-                <Icono size={14} className={claseTextoDeCategoria(categoria)} aria-hidden />
-                <TituloSeccion>{categoria.nombre}</TituloSeccion>
-              </div>
-              <div className="flex flex-col">
-                {delGrupo.map((diagnostico) => (
-                  /* La estrella es hermana del enlace, no hija: un boton
-                     dentro de un enlace no es HTML valido y el toque se
-                     ambiguaria en movil. El resalte al pasar por encima
-                     queda en el contenedor para que la fila entera siga
-                     sintiendose una sola pieza. */
-                  <div
-                    key={diagnostico.id}
-                    className="flex min-h-[52px] items-center gap-1 rounded px-2 hover:bg-noct-text/[.05]"
+        {/* Diagnóstico en curso: al retomar, la ficha del asistente
+            detecta el progreso guardado y continúa donde quedó. No se
+            muestra mientras se filtra (fidelidad al diseño). */}
+        {enCurso && !hayFiltro && (
+          <Link
+            to={`/diagnostico/${enCurso.id}`}
+            className="flex items-center gap-3 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3.5 text-noct-text hover:bg-noct-accent/[.13]"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-accent/[.16] text-noct-accent-300">
+              <Play size={18} aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
+                Diagnóstico en curso
+              </span>
+              <span className="mt-[3px] block text-[14.5px] font-medium leading-[1.3]">
+                {enCurso.titulo}
+              </span>
+            </span>
+            <CaretRight size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+          </Link>
+        )}
+
+        {grupos.map(({ categoria, Icono, delGrupo }) => (
+          <section key={categoria.id}>
+            <div className="mb-1.5 flex items-center gap-2 px-0.5">
+              <Icono size={14} className={claseTextoDeCategoria(categoria)} aria-hidden />
+              <TituloSeccion>{categoria.nombre}</TituloSeccion>
+            </div>
+            <div className="flex flex-col">
+              {delGrupo.map((diagnostico) => (
+                /* La estrella es hermana del enlace, no hija: un boton
+                   dentro de un enlace no es HTML valido y el toque se
+                   ambiguaria en movil. El resalte al pasar por encima
+                   queda en el contenedor para que la fila entera siga
+                   sintiendose una sola pieza. */
+                <div
+                  key={diagnostico.id}
+                  className="flex min-h-[52px] items-center gap-1 rounded px-2 hover:bg-noct-text/[.05]"
+                >
+                  <Link
+                    to={`/diagnostico/${diagnostico.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-[13px] py-[11px] text-noct-text"
                   >
-                    <Link
-                      to={`/diagnostico/${diagnostico.id}`}
-                      className="flex min-w-0 flex-1 items-center gap-[13px] py-[11px] text-noct-text"
-                    >
-                      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">
-                        <WarningCircle size={17} aria-hidden />
+                    <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">
+                      <WarningCircle size={17} aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
+                        {diagnostico.titulo}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-                          {diagnostico.titulo}
+                      {diagnostico.descripcion && (
+                        <span className="mt-0.5 block truncate text-[12px] text-noct-neutral-500">
+                          {diagnostico.descripcion}
                         </span>
-                        {diagnostico.descripcion && (
-                          <span className="mt-0.5 block truncate text-[12px] text-noct-neutral-500">
-                            {diagnostico.descripcion}
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                    <BotonFavorito tipo="diagnostico" entidadId={diagnostico.id} variante="fila" />
-                    <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
-
-          {sinContenido && (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
-              <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
-              <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-                Todavía no hay diagnósticos. Crea el primero con "Crear": un problema frecuente y las
-                preguntas que llevan a su solución.
-              </p>
-              <Link
-                to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
-                className={`mt-0.5 ${BTN_SECUNDARIO}`}
-              >
-                <Plus size={14} aria-hidden />
-                Crear diagnóstico
-              </Link>
+                      )}
+                    </span>
+                  </Link>
+                  <BotonFavorito tipo="diagnostico" entidadId={diagnostico.id} variante="fila" />
+                  <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+                </div>
+              ))}
             </div>
-          )}
+          </section>
+        ))}
 
-          {sinCoincidencias && (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
-              <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
-              <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-                Ningún problema coincide. Prueba con otra palabra o busca directo en Guías.
-              </p>
-              <Link to="/soluciones" className={`mt-0.5 ${BTN_SECUNDARIO}`}>
-                Ir a Guías
-              </Link>
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
+        {sinContenido && (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
+            <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
+            <p className="text-[13px] leading-relaxed text-noct-neutral-400">
+              Todavía no hay diagnósticos. Crea el primero con "Crear": un problema frecuente y las
+              preguntas que llevan a su solución.
+            </p>
+            <Link
+              to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
+              className={`mt-0.5 ${BTN_SECUNDARIO}`}
+            >
+              <Plus size={14} aria-hidden />
+              Crear diagnóstico
+            </Link>
+          </div>
+        )}
+
+        {sinCoincidencias && (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
+            <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
+            <p className="text-[13px] leading-relaxed text-noct-neutral-400">
+              Ningún problema coincide. Prueba con otra palabra o busca directo en Guías.
+            </p>
+            <Link to="/soluciones" className={`mt-0.5 ${BTN_SECUNDARIO}`}>
+              Ir a Guías
+            </Link>
+          </div>
+        )}
+      </main>
+    </Chasis>
   )
 }

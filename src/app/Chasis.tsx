@@ -1,7 +1,11 @@
+import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 import { Avatar } from '../components/Avatar'
+import { BarraSuperior } from '../components/BarraSuperior'
+import { BarraTarea } from '../components/BarraTarea'
+import { BotonVolver } from '../components/BotonVolver'
 import { Marca } from '../components/Marca'
 import {
   BookOpen,
@@ -23,15 +27,31 @@ import {
 } from '../components/iconos'
 import { TituloSeccion } from '../components/nocturne'
 
-// Shell del sistema Nocturne (handoff "Herramienta IT para técnicos",
-// 2026-07-16). Responsive según el layout del handoff de Soluciones
-// (D-006, adaptado a Nocturne): en escritorio (>=1024px) sidebar fija
-// de 240px con los 5 módulos y el perfil; en móvil, columna centrada
-// de 448px con 5 pestañas inferiores fijas con blur. Nocturne
-// reemplaza la dirección de tema claro del handoff anterior; lo usan
-// solo las pantallas ya re-autorizadas y el resto de la app sigue en
-// su shell actual hasta que el rediseño de cada una llegue (D-008:
-// re-autoría pantalla por pantalla).
+// Chasis único de la app (tarea 185, mockup 4c del handoff "Auditoría de
+// Soluciones TI"). Nace del ShellNocturne (handoff "Herramienta IT para
+// técnicos", 2026-07-16), que aportaba sidebar y pestañas a 13 pantallas
+// mientras las otras 25 montaban su propio contenedor `max-w-md`: el
+// chasis se encendía y se apagaba sin avisar, y una lista que se recorre
+// durante minutos (Personas, Ubicaciones, Diagnósticos) quedaba como una
+// isla con una sola salida.
+//
+// Tres niveles y ni uno más (regla R18). Cada pantalla declara el suyo:
+//
+//   seccion   raíz de una pila. Barra superior con las tres ranuras
+//             globales (título, estado del dato, buscar) y pestañas.
+//   documento algo que se lee o se recorre dentro de una sección.
+//             Regreso, acciones propias y pestañas: sigue siendo
+//             navegación, así que la barra se queda (R19).
+//   tarea     algo que se está haciendo y de lo que se sale: editor,
+//             asistente, escáner, importador. Es el ÚNICO nivel que
+//             puede quedarse sin pestañas, y a cambio pone una
+//             `BarraTarea` que dice qué haces y cómo sales (R19).
+//
+// El chasis reserva su propio espacio inferior (R22): antes, once
+// pantallas escribían `pb-[116px]` a mano para una barra que mide 53,
+// así que cualquier cambio en la barra obligaba a tocar once archivos.
+
+export type ModoChasis = 'seccion' | 'documento' | 'tarea'
 
 interface Destino {
   to: string
@@ -74,14 +94,117 @@ const DESTINO_MAS: Destino = {
   end: false,
 }
 
-export function ShellNocturne({ children }: { children: React.ReactNode }) {
+// Alto real de la barra de pestañas, MEDIDO en el navegador: 63.6px de
+// celda (el `min-h-[52px]` se queda corto frente a su contenido real,
+// icono de 22 + rótulo de 12 + 19 de relleno) más 1px de borde, más el
+// área segura del teléfono. El chasis lo reserva por todos, para que
+// ninguna pantalla vuelva a calcularlo a mano (R22).
+//
+// La auditoría del handoff hablaba de "una barra que mide 53": ese dato
+// es anterior a la tarea 182, que subió las celdas a 52px de mínimo y el
+// rótulo a 12px. Reservar 53 dejaba 12px de contenido bajo la barra.
+const ALTO_PESTANAS = 'pb-[calc(65px+env(safe-area-inset-bottom))] lg:pb-0'
+
+interface PropsComunes {
+  children: ReactNode
+}
+
+interface PropsSeccion extends PropsComunes {
+  modo?: 'seccion'
+  /** Nombre de la sección: ranura 1 de la barra superior (R14). */
+  titulo: string
+  /**
+   * Banda de controles propios de la pantalla ("Crear", buscador,
+   * chips), justo debajo de la fila superior y dentro del mismo bloque
+   * pegajoso (AD-023: no suben a la fila del título).
+   */
+  barra?: ReactNode
+}
+
+interface PropsDocumento extends PropsComunes {
+  modo: 'documento'
+  /** Override del destino de regreso (cuando depende de datos en runtime). */
+  volverA?: string
+  /** Override de la etiqueta del regreso. */
+  volverEtiqueta?: string
+  /** Acciones propias de la pantalla, a la derecha de la fila de regreso. */
+  acciones?: ReactNode
+  /** Banda bajo la fila de regreso: título, buscador, pestañas internas. */
+  barra?: ReactNode
+}
+
+interface PropsTarea extends PropsComunes {
+  modo: 'tarea'
+  /** Qué se está haciendo: "Editando", "Creando", "Ejecutando"... */
+  rotulo: string
+  /** Sobre qué. */
+  titulo: string
+  /** Ruta de vuelta escrita ("Guías › Impresoras"). */
+  vuelta?: string
+  /** Override del destino de la X. */
+  salidaA?: string
+  /** Texto accesible de la X. */
+  salidaEtiqueta?: string
+  /** Reemplaza la navegación de la X (confirmar antes de descartar). */
+  alSalir?: () => void
+  /** Banda bajo la barra de tarea: pestañas del editor, progreso. */
+  barra?: ReactNode
+}
+
+type Props = PropsSeccion | PropsDocumento | PropsTarea
+
+export function Chasis(props: Props) {
   const { perfil } = useAuth()
   const perfilVivo = usePerfilVivo()
-
   const usuario = perfilVivo ?? perfil
-  // Escritorio: los cinco módulos, Bóveda condicional al permiso (sin
-  // cambios de la tarea 182). Los grupos "Herramientas" y "Registros"
-  // se dibujan aparte, debajo de este nav (tarea 183).
+
+  // Nivel 3: tarea con salida. Sin pestañas y sin sidebar (la tarea
+  // ocupa la pantalla entera, como hasta ahora), con la BarraTarea
+  // orientando en su lugar. El escritorio de los editores lo resuelve
+  // la tarea 176, que les da su propio ancho.
+  if (props.modo === 'tarea') {
+    return (
+      <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
+        <div className="mx-auto flex min-h-svh w-full max-w-md flex-col">
+          <BarraTarea
+            rotulo={props.rotulo}
+            titulo={props.titulo}
+            vuelta={props.vuelta}
+            salidaA={props.salidaA}
+            salidaEtiqueta={props.salidaEtiqueta}
+            alSalir={props.alSalir}
+          >
+            {props.barra}
+          </BarraTarea>
+          {props.children}
+        </div>
+      </div>
+    )
+  }
+
+  // Niveles 1 y 2: los dos conservan las pestañas (R19, la barra solo
+  // cede ante una tarea con salida). Solo cambia la fila superior.
+  const cabecera =
+    props.modo === 'documento' ? (
+      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
+        {/* Una sola gramática para la fila superior: el regreso siempre a
+            la izquierda y las acciones siempre a la derecha, en el mismo
+            eje que la fila de las raíces. Antes cada pantalla elegía su
+            propio relleno (`px-2`, `pl-2 pr-3`, `px-4`) y los controles
+            no caían nunca en el mismo sitio al bajar un nivel. */}
+        <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5">
+          <BotonVolver to={props.volverA}>{props.volverEtiqueta}</BotonVolver>
+          {props.acciones && <div className="flex shrink-0 items-center gap-1.5">{props.acciones}</div>}
+        </div>
+        {props.barra}
+      </div>
+    ) : (
+      <BarraSuperior titulo={props.titulo}>{props.barra}</BarraSuperior>
+    )
+
+  // Escritorio: los cinco módulos, Bóveda condicional al permiso. Los
+  // grupos "Herramientas" y "Registros" se dibujan aparte, debajo de
+  // este nav (tarea 183).
   const destinosDesktop = usuario?.puedeVerBoveda ? [...DESTINOS_BASE, DESTINO_BOVEDA] : DESTINOS_BASE
   // Móvil: siempre las mismas cinco, para todos (regla R17). Antes la
   // barra cambiaba de 4 a 5 columnas según el permiso de Bóveda, así
@@ -163,10 +286,14 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
           recibían la interfaz de teléfono. Ahora crece por tramos
           (móvil 448 -> tablet -> laptop -> monitor) para aprovechar el
           espacio sin perder la lectura cómoda. Las pantallas dentro
-          reflujan a varias columnas con container queries. */}
+          reflujan a varias columnas con container queries. El relleno
+          inferior lo pone el chasis, no cada pantalla (R22). */}
       <div className="flex min-h-svh min-w-0 flex-1 flex-col">
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col sm:max-w-xl md:max-w-3xl lg:max-w-[1040px] 2xl:max-w-[1240px]">
-          {children}
+        <div
+          className={`mx-auto flex w-full max-w-md flex-1 flex-col sm:max-w-xl md:max-w-3xl lg:max-w-[1040px] 2xl:max-w-[1240px] ${ALTO_PESTANAS}`}
+        >
+          {cabecera}
+          {props.children}
         </div>
       </div>
 
@@ -241,4 +368,3 @@ function EnlaceGrupo({
     </NavLink>
   )
 }
-

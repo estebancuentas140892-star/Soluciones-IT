@@ -86,13 +86,21 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 1. **`RequireAuth`** (`src/features/autenticacion/RequireAuth.tsx`): sin sesión activa redirige a `/login`.
 2. **`BloqueoAppGuard`** (`src/features/seguridad/BloqueoAppGuard.tsx`): envuelve TODA la zona autenticada. Si el dispositivo tiene activado el bloqueo local (patrón o contraseña), pide desbloquear antes de mostrar cualquier pantalla.
 
-Tipos de shell de las pantallas:
+**Un solo chasis con tres niveles (`src/app/Chasis.tsx`, desde la tarea 185).** Toda pantalla autenticada monta el mismo chasis y declara cuál de los tres niveles es (regla **R18**). Hasta la tarea 185 convivían dos: trece pantallas con navegación y veinticinco con un contenedor propio sin ella, así que el chasis se encendía y se apagaba al moverse por la app.
 
-- **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con la marca "Soluciones IT", **catorce destinos desde la tarea 183** (antes cinco), y el perfil del usuario al pie (enlace a Cuenta). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque, **siempre las mismas para todos** desde la tarea 182 (regla R17). La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Guías, Equipos, Red, Bóveda, Más y sus fichas).
-- **Shell centrado propio**: pantallas alcanzadas desde Inicio que no son pestaña (Diagnóstico, Estadísticas, Sugerencias, Cuenta, Seguridad, Ubicaciones, Personas y sus fichas/formularios). Columna centrada de 448px con cabecera pegajosa y botón "Volver".
+| Nivel | Qué pantallas | Qué se ve arriba | ¿Barra de pestañas? |
+|---|---|---|---|
+| **Sección** | Inicio, Guías, Equipos, Red, Más, Bóveda | título de la sección, estado del dato, buscar y cuenta | sí |
+| **Documento** | fichas y listas internas: categoría, artículo, equipo, secreto, topología, Ubicaciones, Personas, Diagnóstico, Estadísticas, Sugerencias, Mi cuenta, Seguridad | regreso con el nombre de a dónde vuelve, y a la derecha las acciones de la pantalla | sí |
+| **Tarea** | lo que se hace y de lo que se sale: los cuatro editores, el asistente, el diagnóstico en ejecución, el escáner, las etiquetas, la importación y las tres migraciones | `BarraTarea`: rótulo ("Editando"), sobre qué, la ruta de vuelta escrita y una X | **no** |
 
-**Barra superior global (`BarraSuperior`, desde la tarea 181).** Las **cinco pestañas raíz** comparten la misma fila superior, con tres ranuras fijas y siempre en el mismo orden (regla R14): **título de la sección**, **estado del dato** (pastilla de sincronización) y **buscar + cuenta**. Las acciones propias de cada pantalla ("Crear", "Escanear", el menú "···", el subtítulo) van en la banda que queda justo debajo, dentro del mismo bloque pegajoso ([DECISIONES.md](DECISIONES.md) AD-023). La lupa abre el **buscador global en capa** desde cualquiera de las cinco, sin abandonar la pantalla; el avatar (iniciales del técnico) lleva a Mi cuenta y solo aparece en móvil, porque en escritorio la cuenta vive al pie del sidebar. Las pantallas internas todavía dibujan su propia cabecera con "Volver": los niveles *documento* y *tarea* llegan con el chasis de tres niveles (tarea 185).
-- **Shell a pantalla completa**: los editores (Artículo, Dispositivo, Credencial, Diagnóstico), el escáner, las etiquetas QR y la importación. Cabecera pegajosa + barra de acciones inferior fija; salen del contenedor con barra para no distraer.
+En **escritorio (>=1024px)** los niveles Sección y Documento muestran la barra lateral fija de 240px con la marca "Soluciones IT", **catorce destinos desde la tarea 183** (antes cinco) y el perfil al pie. En **móvil** muestran 5 pestañas inferiores fijas con desenfoque, **siempre las mismas para todos** desde la tarea 182 (regla R17). La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes) y **el chasis reserva el espacio que la barra ocupa** (regla R22), así que ninguna pantalla lo calcula a mano. El nivel Tarea va sin barra y sin sidebar, en columna de 448px.
+
+**Barra superior global (`BarraSuperior`, desde la tarea 181).** Es la cabecera del nivel Sección: tres ranuras fijas y siempre en el mismo orden (regla R14): **título de la sección**, **estado del dato** (pastilla de sincronización) y **buscar + cuenta**. Las acciones propias de cada pantalla ("Crear", "Escanear", el menú "···", el subtítulo) van en la banda que queda justo debajo, dentro del mismo bloque pegajoso ([DECISIONES.md](DECISIONES.md) AD-023). La lupa abre el **buscador global en capa** desde cualquiera de las cinco, sin abandonar la pantalla; el avatar (iniciales del técnico) lleva a Mi cuenta y solo aparece en móvil, porque en escritorio la cuenta vive al pie del sidebar. La miga de pan del nivel Documento llega con la tarea 188.
+
+**La barra de tarea (`BarraTarea`).** Quitar la barra de pestañas obliga a poner algo que oriente (regla **R19**): fondo de superficie para que se note que el chasis cambió, el rótulo de lo que se está haciendo, sobre qué, la promesa escrita de a dónde se vuelve ("Guías › Impresoras · vuelves aquí al terminar") y una X de salida siempre en el mismo sitio. Antes, pasar de la ficha al editor apagaba la navegación y ponía otra barra fija abajo, sin decir nada.
+
+El **login** queda fuera del chasis (no hay sesión todavía) y trae su propia columna centrada.
 
 **Desde la tarea 182 el sidebar de escritorio y la barra de pestañas de móvil ya no comparten la misma lista** (antes sí, `DESTINOS_BASE` + `DESTINO_BOVEDA` condicional a los dos). El **sidebar** de escritorio pasa a tener **catorce destinos** desde la tarea 183 (mockup `3e`: "el sidebar tiene 240 px de alto libre y ofrece cinco destinos de catorce"), en tres bloques:
 
@@ -155,52 +163,52 @@ Fuente única: `src/lib/navegacion.ts` (`padreDe(pathname)`), con pruebas. Defin
 
 Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.lazy`).
 
-| Ruta | Pantalla / Componente | Shell | Descripción |
+| Ruta | Pantalla / Componente | Nivel del chasis | Descripción |
 |------|-----------------------|-------|-------------|
-| `/login` | LoginPage | Propio centrado | Inicio de sesión (fuera de RequireAuth) |
-| `/` (index) | InicioPage | ShellNocturne | Pantalla principal + buscador global |
-| `/cuenta` | CuentaPage | Centrado | Mi cuenta (cambiar contraseña, cerrar sesión) |
-| `/cuenta/seguridad` | SeguridadPage | Centrado | Bloqueo de la app (patrón/contraseña) |
-| `/soluciones` | SolucionesPage | ShellNocturne | Lista de artículos, chips de categoría, buscador, hoja de tipo, bloque "Sin terminar" |
-| `/soluciones/:categoriaId` | CategoriaPage | ShellNocturne | Ficha 360° de una categoría |
-| `/soluciones/:categoriaId/nuevo` | ArticuloForm | Pantalla completa | Crear artículo (editor con 4 pestañas) |
-| `/soluciones/:categoriaId/:articuloId` | ArticuloPage | ShellNocturne | Ficha de un artículo/procedimiento |
-| `/soluciones/:categoriaId/:articuloId/editar` | ArticuloForm | Pantalla completa | Editar artículo |
-| `/soluciones/:categoriaId/:articuloId/ejecutar` | AsistentePage | Pantalla completa | Modo asistente (un paso a la vez) |
-| `/dispositivos` | DispositivosPage | ShellNocturne | Inventario general |
-| `/dispositivos/nuevo` | DispositivoForm | Pantalla completa | Crear equipo (soporta `?copiarDe`, `?reemplazaA`, `?red=1`) |
-| `/dispositivos/:dispositivoId` | DispositivoPage | ShellNocturne | Ficha 360° de un equipo |
-| `/dispositivos/:dispositivoId/editar` | DispositivoForm | Pantalla completa | Editar equipo |
-| `/dispositivos/:dispositivoId/baja` | DarDeBajaPage | Pantalla completa | Dar de baja con cascada |
-| `/dispositivos/:dispositivoId/reemplazo` | ReemplazoPage | Pantalla completa | Migrar dependencias al reemplazar |
-| `/dispositivos/etiquetas` | EtiquetasPage | Pantalla completa | Etiquetas QR imprimibles |
-| `/dispositivos/importar` | ImportarDispositivosPage | Pantalla completa | Importación masiva Excel/CSV (3 pasos) |
-| `/ubicaciones` | UbicacionesPage | Centrado | Lista de ubicaciones (árbol) |
-| `/ubicaciones/nueva` | UbicacionForm | Centrado | Crear ubicación |
-| `/ubicaciones/migrar` | MigracionUbicaciones | Centrado | Convertir textos en ubicaciones |
-| `/ubicaciones/:ubicacionId` | UbicacionPage | Centrado | Ficha 360° de una ubicación |
-| `/ubicaciones/:ubicacionId/editar` | UbicacionForm | Centrado | Editar ubicación |
-| `/personas` | PersonasPage | Centrado | Lista de personas/responsables |
-| `/personas/nueva` | PersonaForm | Centrado | Crear persona |
-| `/personas/migrar` | MigracionPersonas | Centrado | Convertir textos en personas |
-| `/personas/:personaId` | PersonaPage | Centrado | Ficha 360° de una persona |
-| `/personas/:personaId/editar` | PersonaForm | Centrado | Editar persona |
-| `/red` | RedPage | ShellNocturne | Inventario de red por ubicación |
-| `/red/topologia` | TopologiaPage | ShellNocturne | Mapa/bosque de toda la red |
-| `/red/topologia/:dispositivoId` | TopologiaEquipoPage | ShellNocturne | Topología centrada en un equipo |
-| `/boveda` | BovedaGuard > BovedaPage | ShellNocturne | Lista de secretos (tras desbloqueo) |
-| `/boveda/nueva` | CredencialForm | Pantalla completa | Crear secreto |
-| `/boveda/migrar` | MigracionCredenciales | Pantalla completa | Migrar secretos que son de un equipo |
-| `/boveda/:credencialId` | CredencialPage | ShellNocturne | Ficha de un secreto (descifrado local) |
-| `/boveda/:credencialId/editar` | CredencialForm | Pantalla completa | Editar secreto |
-| `/mas` | PantallaMas | ShellNocturne | Quinta pestaña móvil: puerta de Bóveda, Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar y Mi cuenta (tarea 182) |
-| `/diagnostico` | DiagnosticosPage | Centrado | Lista de problemas por categoría |
-| `/diagnostico/nuevo` | DiagnosticoForm | Pantalla completa | Crear diagnóstico (árbol de preguntas) |
-| `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Pantalla completa | Asistente de ejecución del diagnóstico |
-| `/diagnostico/:diagnosticoId/editar` | DiagnosticoForm | Pantalla completa | Editar diagnóstico |
-| `/diagnostico/estadisticas` | EstadisticasPage | Centrado | Tablero de estadísticas |
-| `/diagnostico/sugerencias` | SugerenciasEquipoPage | Centrado | Sugerencias del equipo (borrador de artículos) |
-| `/escaner` | EscanerPage | Pantalla completa | Escaneo de QR y códigos de barras |
+| `/login` | LoginPage | Fuera del chasis | Inicio de sesión (fuera de RequireAuth) |
+| `/` (index) | InicioPage | Sección | Pantalla principal + buscador global |
+| `/cuenta` | CuentaPage | Documento | Mi cuenta (cambiar contraseña, cerrar sesión) |
+| `/cuenta/seguridad` | SeguridadPage | Documento | Bloqueo de la app (patrón/contraseña) |
+| `/soluciones` | SolucionesPage | Sección | Lista de artículos, chips de categoría, buscador, hoja de tipo, bloque "Sin terminar" |
+| `/soluciones/:categoriaId` | CategoriaPage | Documento | Ficha 360° de una categoría |
+| `/soluciones/:categoriaId/nuevo` | ArticuloForm | Tarea | Crear artículo (editor con 4 pestañas) |
+| `/soluciones/:categoriaId/:articuloId` | ArticuloPage | Documento | Ficha de un artículo/procedimiento |
+| `/soluciones/:categoriaId/:articuloId/editar` | ArticuloForm | Tarea | Editar artículo |
+| `/soluciones/:categoriaId/:articuloId/ejecutar` | AsistentePage | Tarea | Modo asistente (un paso a la vez) |
+| `/dispositivos` | DispositivosPage | Sección | Inventario general |
+| `/dispositivos/nuevo` | DispositivoForm | Tarea | Crear equipo (soporta `?copiarDe`, `?reemplazaA`, `?red=1`) |
+| `/dispositivos/:dispositivoId` | DispositivoPage | Documento | Ficha 360° de un equipo |
+| `/dispositivos/:dispositivoId/editar` | DispositivoForm | Tarea | Editar equipo |
+| `/dispositivos/:dispositivoId/baja` | DarDeBajaPage | Tarea | Dar de baja con cascada |
+| `/dispositivos/:dispositivoId/reemplazo` | ReemplazoPage | Tarea | Migrar dependencias al reemplazar |
+| `/dispositivos/etiquetas` | EtiquetasPage | Tarea | Etiquetas QR imprimibles |
+| `/dispositivos/importar` | ImportarDispositivosPage | Tarea | Importación masiva Excel/CSV (3 pasos) |
+| `/ubicaciones` | UbicacionesPage | Documento | Lista de ubicaciones (árbol) |
+| `/ubicaciones/nueva` | UbicacionForm | Tarea | Crear ubicación |
+| `/ubicaciones/migrar` | MigracionUbicaciones | Tarea | Convertir textos en ubicaciones |
+| `/ubicaciones/:ubicacionId` | UbicacionPage | Documento | Ficha 360° de una ubicación |
+| `/ubicaciones/:ubicacionId/editar` | UbicacionForm | Tarea | Editar ubicación |
+| `/personas` | PersonasPage | Documento | Lista de personas/responsables |
+| `/personas/nueva` | PersonaForm | Tarea | Crear persona |
+| `/personas/migrar` | MigracionPersonas | Tarea | Convertir textos en personas |
+| `/personas/:personaId` | PersonaPage | Documento | Ficha 360° de una persona |
+| `/personas/:personaId/editar` | PersonaForm | Tarea | Editar persona |
+| `/red` | RedPage | Sección | Inventario de red por ubicación |
+| `/red/topologia` | TopologiaPage | Documento | Mapa/bosque de toda la red |
+| `/red/topologia/:dispositivoId` | TopologiaEquipoPage | Documento | Topología centrada en un equipo |
+| `/boveda` | BovedaGuard > BovedaPage | Sección | Lista de secretos (tras desbloqueo) |
+| `/boveda/nueva` | CredencialForm | Tarea | Crear secreto |
+| `/boveda/migrar` | MigracionCredenciales | Tarea | Migrar secretos que son de un equipo |
+| `/boveda/:credencialId` | CredencialPage | Documento | Ficha de un secreto (descifrado local) |
+| `/boveda/:credencialId/editar` | CredencialForm | Tarea | Editar secreto |
+| `/mas` | PantallaMas | Sección | Quinta pestaña móvil: puerta de Bóveda, Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar y Mi cuenta (tarea 182) |
+| `/diagnostico` | DiagnosticosPage | Documento | Lista de problemas por categoría |
+| `/diagnostico/nuevo` | DiagnosticoForm | Tarea | Crear diagnóstico (árbol de preguntas) |
+| `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Tarea | Asistente de ejecución del diagnóstico |
+| `/diagnostico/:diagnosticoId/editar` | DiagnosticoForm | Tarea | Editar diagnóstico |
+| `/diagnostico/estadisticas` | EstadisticasPage | Documento | Tablero de estadísticas |
+| `/diagnostico/sugerencias` | SugerenciasEquipoPage | Documento | Sugerencias del equipo (borrador de artículos) |
+| `/escaner` | EscanerPage | Tarea | Escaneo de QR y códigos de barras |
 | `/notas/*` | (redirección) | - | Redirige a `/boveda` (nombre antiguo) |
 
 ---
@@ -245,7 +253,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 <a id="51-inicio"></a>
 ### 5.1 Inicio
 
-**Ruta:** `/` · **Archivo:** `src/features/inicio/InicioPage.tsx` · **Shell:** ShellNocturne
+**Ruta:** `/` · **Archivo:** `src/features/inicio/InicioPage.tsx` · **Nivel:** Sección
 
 **Objetivo.** Punto único de entrada al conocimiento del equipo. La pantalla principal ES el buscador global (el pilar de la app): abrir y buscar toma dos toques. Cuando no se busca, muestra atajos de trabajo y bloques derivados de la actividad reciente.
 
@@ -278,7 +286,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 <a id="52-guias"></a>
 ### 5.2 Guías
 
-**Ruta:** `/soluciones` · **Archivo:** `src/features/soluciones/SolucionesPage.tsx` · **Shell:** ShellNocturne
+**Ruta:** `/soluciones` · **Archivo:** `src/features/soluciones/SolucionesPage.tsx` · **Nivel:** Sección
 
 **Objetivo.** Responder "¿cómo realizo este procedimiento?". Rejilla de artículos (procedimientos, manuales, incidencias) filtrable por categoría, tipo y etiqueta.
 
@@ -308,7 +316,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 #### 5.2.1 Ficha de artículo (`ArticuloPage`)
 
-**Ruta:** `/soluciones/:categoriaId/:articuloId` · **Shell:** ShellNocturne
+**Ruta:** `/soluciones/:categoriaId/:articuloId` · **Nivel:** Documento
 
 **Cabecera:** "Volver" (a la lista con el chip de la categoría), **estrella de favorito**, botón **"Ejecutar"** (solo si tiene procedimiento con pasos; abre el modo asistente), botón **"Editar"**, y menú **"···"** con: **Compartir**, **Duplicar** (`?copiarDe`), **Reiniciar progreso** (si tiene procedimiento) y **Eliminar** (eliminación sensible, pide contraseña maestra).
 
@@ -334,7 +342,7 @@ Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un e
 <a id="53-equipos"></a>
 ### 5.3 Equipos
 
-**Ruta:** `/dispositivos` · **Archivo:** `src/features/dispositivos/DispositivosPage.tsx` · **Shell:** ShellNocturne
+**Ruta:** `/dispositivos` · **Archivo:** `src/features/dispositivos/DispositivosPage.tsx` · **Nivel:** Sección
 
 **Objetivo.** Responder "¿qué se sabe de cada equipo?" con el inventario **general** (los equipos de categorías de red van en la sección Red, no aquí).
 
@@ -355,7 +363,7 @@ Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un e
 
 #### 5.3.1 Ficha de dispositivo (`DispositivoPage`)
 
-**Ruta:** `/dispositivos/:dispositivoId` · **Shell:** ShellNocturne. Vista 360°.
+**Ruta:** `/dispositivos/:dispositivoId` · **Nivel:** Documento. Vista 360°.
 
 **Cabecera:** "Volver" (a Equipos o a Red según `es_red` de su categoría), **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace), menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
 
@@ -382,7 +390,7 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 <a id="54-red"></a>
 ### 5.4 Red
 
-**Ruta:** `/red` · **Archivo:** `src/features/red/RedPage.tsx` · **Shell:** ShellNocturne
+**Ruta:** `/red` · **Archivo:** `src/features/red/RedPage.tsx` · **Nivel:** Sección
 
 **Objetivo.** Responder "¿cómo está conectada la infraestructura?". Reúne los equipos de las categorías marcadas `es_red` (racks, puntos de red, switches, access points, cámaras). No duplica el inventario: son dispositivos normales con la bandera de categoría.
 
@@ -397,11 +405,11 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 
 #### 5.4.1 Topología general (`TopologiaPage`)
 
-**Ruta:** `/red/topologia` · **Shell:** ShellNocturne. Árbol/bosque expandible de toda la red. Sin raíz muestra el bosque completo (racks y switches de núcleo). Buscador propio que expande las ramas necesarias, resalta coincidencias y hace scroll a la primera. Cada nodo lleva estado (punto de color) e icono según el medio de conexión con su padre. Enlace de impacto "+N" por fila que abre la topología de ese equipo.
+**Ruta:** `/red/topologia` · **Nivel:** Documento. Árbol/bosque expandible de toda la red. Sin raíz muestra el bosque completo (racks y switches de núcleo). Buscador propio que expande las ramas necesarias, resalta coincidencias y hace scroll a la primera. Cada nodo lleva estado (punto de color) e icono según el medio de conexión con su padre. Enlace de impacto "+N" por fila que abre la topología de ese equipo.
 
 #### 5.4.2 Topología de un equipo (`TopologiaEquipoPage`)
 
-**Ruta:** `/red/topologia/:dispositivoId` · **Shell:** ShellNocturne
+**Ruta:** `/red/topologia/:dispositivoId` · **Nivel:** Documento
 
 **Cabecera:** "Volver" (a Topología), botón **"Abrir la ficha"**, e identidad del equipo (nombre, estado con punto de color, IP).
 
@@ -416,7 +424,7 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 <a id="55-boveda"></a>
 ### 5.5 Bóveda
 
-**Ruta:** `/boveda` · **Archivo:** `src/features/boveda/BovedaPage.tsx` (bajo `BovedaGuard`) · **Shell:** ShellNocturne
+**Ruta:** `/boveda` · **Archivo:** `src/features/boveda/BovedaPage.tsx` (bajo `BovedaGuard`) · **Nivel:** Sección
 
 Solo visible para usuarios con permiso `puede_ver_boveda`. La sección más sensible: la lista solo expone metadatos; los secretos se descifran únicamente al abrir una ficha, en el propio teléfono.
 
@@ -442,7 +450,7 @@ Solo visible para usuarios con permiso `puede_ver_boveda`. La sección más sens
 
 #### 5.5.1 Ficha de credencial (`CredencialPage`)
 
-**Ruta:** `/boveda/:credencialId` · **Shell:** ShellNocturne. Descifra el secreto en el propio teléfono.
+**Ruta:** `/boveda/:credencialId` · **Nivel:** Documento. Descifra el secreto en el propio teléfono.
 
 **Cabecera:** "Volver" (a Bóveda), **Editar**, **Eliminar** (icono, sensible).
 
@@ -461,7 +469,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 <a id="56-mas"></a>
 ### 5.6 Más
 
-**Ruta:** `/mas` · **Archivo:** `src/features/mas/PantallaMas.tsx` · **Shell:** ShellNocturne
+**Ruta:** `/mas` · **Archivo:** `src/features/mas/PantallaMas.tsx` · **Nivel:** Sección
 
 **Nueva desde la tarea 182** (mockup `3f` del handoff "Auditoría de Soluciones TI"). Quinta pestaña móvil: la puerta de los ocho destinos que hasta esa tarea no aparecían ni en la barra ni en el sidebar, así que un técnico nuevo no podía encontrarlos sin que alguien se los mostrara (regla **R15**, "todo destino tiene puerta"). La Bóveda deja de ser pestaña y encabeza el primer grupo (decisión aprobada por el usuario en `Decisiones aprobadas.md`).
 
@@ -496,7 +504,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - **Problemas agrupados por categoría** (icono con color, filas con icono de alerta, título, descripción, **estrella de favorito** y flecha).
 - Estados vacíos: "Todavía no hay diagnósticos" (con "Crear diagnóstico") o "Ningún problema coincide" (con "Ir a Guías").
 
-**Asistente de ejecución (`DiagnosticoRunPage`).** Ruta `/diagnostico/:diagnosticoId`, pantalla completa sin barra inferior. Arranca directo en la primera pregunta (auto-inicio). Cabecera con "Salir", título, botón editar y **barra de progreso** ("Pregunta N" / "Completado").
+**Asistente de ejecución (`DiagnosticoRunPage`).** Ruta `/diagnostico/:diagnosticoId`, nivel Tarea (sin barra de pestañas). Arranca directo en la primera pregunta (auto-inicio). Barra de tarea ("Diagnosticando", el problema, vuelve a Diagnósticos; la X guarda el avance), botón editar y **barra de progreso** ("Pregunta N" / "Completado").
 - **Pregunta**: título grande, descripción opcional, y una lista de opciones tocables (cada una puede indicar "Ejecuta: {procedimiento}").
 - Al responder una opción que ejecuta un procedimiento: se abre `AsistenteVista` (modo asistente) inline; al completarlo, el diagnóstico continúa solo.
 - Pie: **"Volver"** (deshace la última respuesta) y **"Cancelar"** (con confirmación: "El avance se descarta y queda registrado como abandonado").
@@ -507,7 +515,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 <a id="62-escaner"></a>
 ### 6.2 Escáner
 
-**Ruta:** `/escaner` · **Archivo:** `src/features/escaner/EscanerPage.tsx` · **Shell:** pantalla completa (cámara)
+**Ruta:** `/escaner` · **Archivo:** `src/features/escaner/EscanerPage.tsx` · **Nivel:** Tarea (cámara a pantalla completa)
 
 **Objetivo.** Leer códigos QR (URL de la ficha) y códigos de barras (placa/serial) con la cámara trasera para abrir la ficha de un dispositivo. Usa el detector nativo (`BarcodeDetector`) o cae a jsQR.
 
@@ -544,16 +552,16 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 <a id="65-ficha-de-categoria"></a>
 ### 6.5 Ficha de categoría (`CategoriaPage`)
 
-**Ruta:** `/soluciones/:categoriaId` · **Shell:** ShellNocturne (bajo Guías)
+**Ruta:** `/soluciones/:categoriaId` · **Nivel:** Documento (bajo Guías)
 
 Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con el icono en su color de identidad, nombre y resumen (N artículos · N equipos · N diagnósticos), **botón "Artículo"** para crear. Cuerpo: artículos agrupados por tipo (con chip de avance X/Y en los que están a medias), "Equipos de esta categoría" (con estado), "Diagnósticos de esta categoría", e historial. Se alcanza desde el buscador global y desde la ficha de un equipo.
 
 <a id="66-mi-cuenta-y-seguridad"></a>
 ### 6.6 Mi cuenta y Seguridad de la aplicación
 
-**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, shell centrado. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Tarjeta **"Instalar la app en este dispositivo"** (tarea 184) con el mismo botón que la bienvenida (`BotonInstalarApp`): solo aparece mientras la app **no** corra ya instalada, y es el segundo de los dos únicos sitios desde donde se ofrece instalar (nunca como banner). Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**. Desde la tarea 182 también se alcanza con un toque desde el avatar de la barra superior (en móvil) o desde la fila de perfil de "Más".
+**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, nivel Documento. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Tarjeta **"Instalar la app en este dispositivo"** (tarea 184) con el mismo botón que la bienvenida (`BotonInstalarApp`): solo aparece mientras la app **no** corra ya instalada, y es el segundo de los dos únicos sitios desde donde se ofrece instalar (nunca como banner). Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**. Desde la tarea 182 también se alcanza con un toque desde el avatar de la barra superior (en móvil) o desde la fila de perfil de "Más".
 
-**Seguridad de la aplicación (`SeguridadPage`).** Ruta `/cuenta/seguridad`, shell centrado. Configura el **bloqueo del dispositivo** (patrón o contraseña, nunca biometría), una capa distinta de la sesión y de la contraseña maestra.
+**Seguridad de la aplicación (`SeguridadPage`).** Ruta `/cuenta/seguridad`, nivel Documento. Configura el **bloqueo del dispositivo** (patrón o contraseña, nunca biometría), una capa distinta de la sesión y de la contraseña maestra.
 - **Sin configurar:** invitación + selector de método (Patrón / Contraseña) + captura del secreto con confirmación.
 - **Configurado:** tarjeta "Bloqueo activo" (método), botón **"Bloquear ahora"**, selector de **Autobloqueo por inactividad**, y botones **"Cambiar"** y **"Quitar bloqueo"** (ambos piden el secreto actual).
 - El patrón se dibuja en una cuadrícula 3x3 (`PatronInput`); la contraseña, mínimo 4 caracteres.
@@ -563,9 +571,9 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 
 Ambas se alcanzaban solo desde el menú "···" de Equipos; desde la tarea 182 tienen además puerta propia en "Más" (grupo "Registros"). Su "Volver" sigue subiendo a Equipos, que sigue siendo su camino principal.
 
-**Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, pantalla completa. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Cabecera "Volver a Equipos", **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
+**Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, nivel Tarea. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Barra de tarea ("Imprimiendo · Etiquetas QR", vuelve a Equipos) y **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
 
-**Importación masiva (`ImportarDispositivosPage`).** Ruta `/dispositivos/importar`, pantalla completa. Flujo de **3 pasos**:
+**Importación masiva (`ImportarDispositivosPage`).** Ruta `/dispositivos/importar`, nivel Tarea. Flujo de **3 pasos**:
 1. **Elegir archivo** (.xlsx o .csv). Reconoce encabezados parecidos ("No. de serie" = Serial, "Sede" = Ubicación). Enlace **"Descargar plantilla CSV de ejemplo"**.
 2. **Revisar**: columnas detectadas (campo o "propiedad del equipo"), selector de categoría para filas sin ella, contadores "nuevos" / "se omiten" (por serial/placa ya registrados), lista desplegable de filas omitidas y vista previa de las primeras filas. Barra inferior: "Cancelar" / "Importar N dispositivos".
 3. **Importando / Terminado**: barra de progreso; al final "N dispositivos importados", botón "Ver dispositivos" e "Importar otro archivo". Cada equipo queda con la nota del archivo de origen en su historial.
@@ -573,14 +581,14 @@ Ambas se alcanzaban solo desde el menú "···" de Equipos; desde la tarea 182 
 <a id="68-estadisticas-y-sugerencias"></a>
 ### 6.8 Estadísticas y Sugerencias del equipo
 
-**Estadísticas de diagnóstico (`EstadisticasPage`).** Ruta `/diagnostico/estadisticas`, shell centrado. Agrega `ejecuciones_diagnostico`:
+**Estadísticas de diagnóstico (`EstadisticasPage`).** Ruta `/diagnostico/estadisticas`, nivel Documento. Agrega `ejecuciones_diagnostico`:
 - **Tarjetas de resumen** (rejilla de 4): Ejecuciones, Tasa de éxito (sobre las cerradas), Duración típica (cuando se resuelve), Abandonados.
 - **"Problemas más frecuentes"**: título, veces, tasa de éxito (enlace al diagnóstico si sigue vivo).
 - **"Procedimientos más usados"**: título y veces (enlace al artículo).
 - **"Por qué no queda resuelto"**: motivos de fallo con conteo, y enlace a las sugerencias del equipo.
 - Estado vacío si no hay ejecuciones.
 
-**Sugerencias del equipo (`SugerenciasEquipoPage`).** Ruta `/diagnostico/sugerencias`, shell centrado. Lista los textos libres que dejaron los técnicos cuando marcaron "Encontré otra solución". Cada tarjeta: diagnóstico de origen, fecha, texto propuesto, quién lo reportó, y **botón "Redactar artículo"** (→ editor precargado `?desdeSugerencia=<id>`) o, si ya se redactó, "Ya redactada: {título}" con enlace al artículo (cierra el bucle para no duplicar trabajo).
+**Sugerencias del equipo (`SugerenciasEquipoPage`).** Ruta `/diagnostico/sugerencias`, nivel Documento. Lista los textos libres que dejaron los técnicos cuando marcaron "Encontré otra solución". Cada tarjeta: diagnóstico de origen, fecha, texto propuesto, quién lo reportó, y **botón "Redactar artículo"** (→ editor precargado `?desdeSugerencia=<id>`) o, si ya se redactó, "Ya redactada: {título}" con enlace al artículo (cierra el bucle para no duplicar trabajo).
 
 <a id="69-autenticacion"></a>
 ### 6.9 Autenticación (login) y actualización
@@ -627,7 +635,7 @@ Barra inferior fija: aviso de validación + botón **"Guardar dispositivo"** (at
 
 ### 7.2 Editor de artículo (`ArticuloForm`)
 
-Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa con **cuatro pestañas** dentro de un contenedor pegajoso. El estado vive todo en el componente (cambiar de pestaña no pierde nada; un solo guardado). Cabecera con tipo dinámico ("Nueva instalación", "Nuevo manual"...) y pastilla de estado. Cada pestaña marca con un punto si tiene algo pendiente. Barra inferior con **completitud %** (10 señales), lista de **sugerencias** tocables (cada una lleva a su pestaña), botón **"Vista previa"** y botón **"Guardar"**.
+Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa con **cuatro pestañas** dentro de un contenedor pegajoso. El estado vive todo en el componente (cambiar de pestaña no pierde nada; un solo guardado). Cabecera de tarea ("Editando" o "Creando", el título del artículo y la ruta de vuelta escrita) y pastilla de estado en la banda de debajo. Cada pestaña marca con un punto si tiene algo pendiente. Barra inferior con **completitud %** (10 señales), lista de **sugerencias** tocables (cada una lleva a su pestaña), botón **"Vista previa"** y botón **"Guardar"**.
 
 **Pestaña General** (de qué trata y cómo se encuentra):
 
@@ -826,8 +834,8 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 
 | Menú | Opciones | Navegación / acción |
 |------|----------|---------------------|
-| **Barra de navegación** (`ShellNocturne`), escritorio (tarea 183) | Inicio, Guías, Equipos, Red, (Bóveda con permiso); Herramientas: Diagnóstico, Escanear; Registros: Ubicaciones, Personas | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
-| **Barra de navegación** (`ShellNocturne`), móvil (tarea 182) | Inicio, Guías, Equipos, Red, Más | Cambia de sección; siempre las mismas cinco, iguales para todos |
+| **Barra de navegación** (`Chasis`), escritorio (tarea 183) | Inicio, Guías, Equipos, Red, (Bóveda con permiso); Herramientas: Diagnóstico, Escanear; Registros: Ubicaciones, Personas | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
+| **Barra de navegación** (`Chasis`), móvil (tarea 182) | Inicio, Guías, Equipos, Red, Más | Cambia de sección; siempre las mismas cinco, iguales para todos |
 | **"Más"** (tarea 182) | Bóveda (con permiso), Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar, Mi cuenta, Bloqueo y seguridad | Navega a cada pantalla; ver sección 5.6 |
 | **"···" de Equipos** | Ubicaciones, Personas, Etiquetas QR, Importar | Navega a cada pantalla |
 | **"···" de la ficha de dispositivo** | Duplicar, Editar, Etiqueta QR, Reemplazar, Dar de baja, Eliminar | Acciones sobre el equipo |

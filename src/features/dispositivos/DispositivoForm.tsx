@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { BotonVolver } from '../../components/BotonVolver'
+import { Chasis } from '../../app/Chasis'
 import { Camera, CaretDown, CaretUp, FloppyDisk, TrashSimple, Warning } from '../../components/iconos'
 import { BTN_PRIMARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import {
@@ -312,305 +312,303 @@ export function DispositivoForm() {
   const aviso = intentoGuardar && !valido ? 'Falta el nombre o la categoría' : ''
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col">
-        {/* Cabecera pegajosa con blur: cancelar, tag de copia y título. */}
-        <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-          <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver>Cancelar</BotonVolver>
-            {esReemplazo ? (
-              <TagNeutral className="shrink-0">Reemplazo de otro equipo</TagNeutral>
-            ) : (
-              esDuplicado && <TagNeutral className="shrink-0">Copia de otro equipo</TagNeutral>
-            )}
-          </header>
-          <div className="px-4 pb-3 pt-0.5">
-            <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
-              {esEdicion ? 'Editar equipo' : 'Nuevo equipo'}
-            </h1>
-            <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
-              Solo el nombre y la categoría son obligatorios; el resto se puede completar después
-            </p>
-          </div>
+    // Nivel 3 del chasis (tarea 185): tarea con salida. Sin pestañas, y
+    // en su lugar la BarraTarea con el rótulo, el equipo y la ruta de
+    // vuelta escrita (R19).
+    <Chasis
+      modo="tarea"
+      rotulo={esEdicion ? 'Editando' : 'Creando'}
+      titulo={nombre.trim() || (esEdicion ? 'Editar equipo' : 'Nuevo equipo')}
+      salidaEtiqueta="Cancelar y volver"
+      barra={
+        <div className="flex flex-wrap items-center gap-2 px-4 pb-2.5">
+          {esReemplazo ? (
+            <TagNeutral>Reemplazo de otro equipo</TagNeutral>
+          ) : (
+            esDuplicado && <TagNeutral>Copia de otro equipo</TagNeutral>
+          )}
+          <p className="min-w-0 flex-1 text-[12px] text-noct-neutral-500">
+            Solo el nombre y la categoría son obligatorios; el resto se puede completar después
+          </p>
         </div>
+      }
+    >
+      <main className="flex flex-1 flex-col gap-6 px-4 pb-[120px] pt-[18px]">
+        {/* Datos esenciales: nombre, categoría, marca/modelo y foto. */}
+        <section className="flex flex-col gap-3.5">
+          <label className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>
+              Nombre <span className="text-noct-accent-300">*</span>
+            </span>
+            <input
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Qué es y dónde está: Zebra ZT411 · Bodega central"
+              className={`min-h-11 ${CLASE_CAMPO}`}
+            />
+          </label>
 
-        <main className="flex flex-1 flex-col gap-6 px-4 pb-[120px] pt-[18px]">
-          {/* Datos esenciales: nombre, categoría, marca/modelo y foto. */}
-          <section className="flex flex-col gap-3.5">
-            <label className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>
-                Nombre <span className="text-noct-accent-300">*</span>
-              </span>
+          <div className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>
+              Categoría <span className="text-noct-accent-300">*</span>
+            </span>
+            <div className="flex flex-wrap gap-[7px]">
+              {categorias.map((c) => {
+                const activa = c.id === categoriaId
+                const Icono = iconoDeCategoria(c.nombre)
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    aria-pressed={activa}
+                    onClick={() => setCategoriaId(c.id)}
+                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                      activa
+                        ? claseActivaDeCategoria(c)
+                        : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
+                    }`}
+                  >
+                    <Icono
+                      size={15}
+                      className={activa ? undefined : claseTextoDeCategoria(c)}
+                      aria-hidden
+                    />
+                    {c.nombre}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Campo etiqueta="Marca" className="flex-1">
+              <CampoConSugerencias
+                valor={marca}
+                onChange={setMarca}
+                sugerencias={marcasSugeridas}
+                placeholder="Zebra, HP, Cisco..."
+                className="min-h-11"
+              />
+            </Campo>
+            <label className="flex flex-1 flex-col gap-1.5">
+              <span className={CLASE_ETIQUETA}>Modelo</span>
               <input
                 type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Qué es y dónde está: Zebra ZT411 · Bodega central"
+                value={modelo}
+                onChange={(e) => setModelo(e.target.value)}
+                placeholder="ZT411"
                 className={`min-h-11 ${CLASE_CAMPO}`}
               />
             </label>
+          </div>
 
-            <div className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>
-                Categoría <span className="text-noct-accent-300">*</span>
-              </span>
-              <div className="flex flex-wrap gap-[7px]">
-                {categorias.map((c) => {
-                  const activa = c.id === categoriaId
-                  const Icono = iconoDeCategoria(c.nombre)
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      aria-pressed={activa}
-                      onClick={() => setCategoriaId(c.id)}
-                      className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
-                        activa
-                          ? claseActivaDeCategoria(c)
-                          : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
-                      }`}
-                    >
-                      <Icono
-                        size={15}
-                        className={activa ? undefined : claseTextoDeCategoria(c)}
-                        aria-hidden
-                      />
-                      {c.nombre}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+          <FotoEditor foto={foto} onChange={setFoto} />
+        </section>
 
-            <div className="flex gap-3">
-              <Campo etiqueta="Marca" className="flex-1">
-                <CampoConSugerencias
-                  valor={marca}
-                  onChange={setMarca}
-                  sugerencias={marcasSugeridas}
-                  placeholder="Zebra, HP, Cisco..."
-                  className="min-h-11"
-                />
-              </Campo>
-              <label className="flex flex-1 flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Modelo</span>
-                <input
-                  type="text"
-                  value={modelo}
-                  onChange={(e) => setModelo(e.target.value)}
-                  placeholder="ZT411"
-                  className={`min-h-11 ${CLASE_CAMPO}`}
-                />
-              </label>
-            </div>
-
-            <FotoEditor foto={foto} onChange={setFoto} />
-          </section>
-
-          {/* Identificación física: serial y placa, con aviso de serial
-              ya existente. */}
-          <section className="flex flex-col gap-3.5">
-            <div>
-              <TituloSeccion>Identificación</TituloSeccion>
-              <p className="mt-[3px] text-[12px] text-noct-neutral-600">
-                Cómo distinguir físicamente este equipo de otro igual
-                {esDuplicado ? '. Serial, placa e IP no se copian: son de cada equipo físico' : ''}
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <label className="flex flex-1 flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Número de serie</span>
-                <input
-                  type="text"
-                  value={serial}
-                  onChange={(e) => setSerial(e.target.value)}
-                  className={`min-h-11 font-mono ${CLASE_CAMPO}`}
-                />
-              </label>
-              <label className="flex flex-1 flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Placa de inventario</span>
-                <input
-                  type="text"
-                  value={placaInventario}
-                  onChange={(e) => setPlacaInventario(e.target.value)}
-                  className={`min-h-11 font-mono ${CLASE_CAMPO}`}
-                />
-              </label>
-            </div>
-            {serialDuplicado && (
-              <div className="flex items-start gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2.5">
-                <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
-                <p className="text-[13px] leading-[1.5]">
-                  Este serial ya existe en{' '}
-                  <Link to={`/dispositivos/${serialDuplicado.id}`} className="text-noct-accent-300 hover:text-noct-accent-400">
-                    {serialDuplicado.nombre}
-                  </Link>
-                  . Revisar antes de crear un duplicado.
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* Ubicación (entidad N3): SelectorUbicacion re-tematizado. */}
-          <section className="flex flex-col gap-2.5">
-            <TituloSeccion>Ubicación</TituloSeccion>
-            <SelectorUbicacion
-              ubicacionId={ubicacionId}
-              ubicacion={ubicacion}
-              onChange={(idUbicacion, texto) => {
-                setUbicacionId(idUbicacion)
-                setUbicacion(texto)
-              }}
-            />
-          </section>
-
-          {/* Responsable (entidad, hallazgo T1): SelectorPersona. */}
-          <section className="flex flex-col gap-2.5">
-            <TituloSeccion>Responsable</TituloSeccion>
-            <SelectorPersona
-              responsableId={responsableId}
-              responsable={responsable}
-              onChange={(idResponsable, texto) => {
-                setResponsableId(idResponsable)
-                setResponsable(texto)
-              }}
-            />
-          </section>
-
-          {/* Conectividad y estado: IP (validada) y estado en chips. */}
-          <section className="flex flex-col gap-3.5">
-            <TituloSeccion>Conectividad y estado</TituloSeccion>
-            <label className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>Dirección IP</span>
+        {/* Identificación física: serial y placa, con aviso de serial
+            ya existente. */}
+        <section className="flex flex-col gap-3.5">
+          <div>
+            <TituloSeccion>Identificación</TituloSeccion>
+            <p className="mt-[3px] text-[12px] text-noct-neutral-600">
+              Cómo distinguir físicamente este equipo de otro igual
+              {esDuplicado ? '. Serial, placa e IP no se copian: son de cada equipo físico' : ''}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <label className="flex flex-1 flex-col gap-1.5">
+              <span className={CLASE_ETIQUETA}>Número de serie</span>
               <input
                 type="text"
-                inputMode="decimal"
-                value={ip}
-                onChange={(e) => setIp(e.target.value)}
-                placeholder="192.168.1.10"
-                className={`min-h-11 w-full box-border rounded-md border bg-noct-surface px-3 py-2.5 font-mono text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600 ${
-                  ipValida ? 'border-noct-divider' : 'border-noct-precaucion/55'
-                }`}
+                value={serial}
+                onChange={(e) => setSerial(e.target.value)}
+                className={`min-h-11 font-mono ${CLASE_CAMPO}`}
               />
-              {!ipValida && (
-                <span className="text-[12px] text-noct-precaucion">No parece una IP válida (formato 192.168.1.10)</span>
-              )}
             </label>
-            {ipDuplicada && (
-              <div className="flex items-start gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2.5">
-                <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
-                <p className="text-[13px] leading-[1.5]">
-                  Esta IP ya existe en{' '}
-                  <Link to={`/dispositivos/${ipDuplicada.id}`} className="text-noct-accent-300 hover:text-noct-accent-400">
-                    {ipDuplicada.nombre}
-                  </Link>
-                  . Revisar antes de crear un conflicto de red.
-                </p>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>Estado</span>
-              <div className="flex flex-wrap gap-[7px]">
-                {ESTADOS_SUGERIDOS.map((valor) => {
-                  const activo = estado.trim().toLowerCase() === valor.toLowerCase()
-                  return (
-                    <button
-                      key={valor}
-                      type="button"
-                      aria-pressed={activo}
-                      onClick={() => setEstado(valor)}
-                      className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
-                        activo
-                          ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
-                          : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
-                      }`}
-                    >
-                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${PUNTO_ESTADO[valor]}`} />
-                      {valor}
-                    </button>
-                  )
-                })}
-              </div>
+            <label className="flex flex-1 flex-col gap-1.5">
+              <span className={CLASE_ETIQUETA}>Placa de inventario</span>
+              <input
+                type="text"
+                value={placaInventario}
+                onChange={(e) => setPlacaInventario(e.target.value)}
+                className={`min-h-11 font-mono ${CLASE_CAMPO}`}
+              />
+            </label>
+          </div>
+          {serialDuplicado && (
+            <div className="flex items-start gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2.5">
+              <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+              <p className="text-[13px] leading-[1.5]">
+                Este serial ya existe en{' '}
+                <Link to={`/dispositivos/${serialDuplicado.id}`} className="text-noct-accent-300 hover:text-noct-accent-400">
+                  {serialDuplicado.nombre}
+                </Link>
+                . Revisar antes de crear un duplicado.
+              </p>
             </div>
-          </section>
+          )}
+        </section>
 
-          {/* Más información (plegable): observaciones, propiedades por
-              categoría y el motivo del cambio en edición. */}
-          <section className="border-t border-noct-divider">
-            <button
-              type="button"
-              onClick={() => setMasAbierto((v) => !v)}
-              aria-expanded={masAbierto}
-              className="flex min-h-[52px] w-full items-center gap-2.5 px-0.5 py-1.5 text-left"
-            >
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
-                Más información
-              </span>
-              <span className="text-[11px] text-noct-neutral-600">{resumenMas}</span>
-              {masAbierto ? (
-                <CaretUp size={14} className="ml-auto text-noct-neutral-500" aria-hidden />
-              ) : (
-                <CaretDown size={14} className="ml-auto text-noct-neutral-500" aria-hidden />
-              )}
-            </button>
+        {/* Ubicación (entidad N3): SelectorUbicacion re-tematizado. */}
+        <section className="flex flex-col gap-2.5">
+          <TituloSeccion>Ubicación</TituloSeccion>
+          <SelectorUbicacion
+            ubicacionId={ubicacionId}
+            ubicacion={ubicacion}
+            onChange={(idUbicacion, texto) => {
+              setUbicacionId(idUbicacion)
+              setUbicacion(texto)
+            }}
+          />
+        </section>
 
-            {masAbierto && (
-              <div className="flex flex-col gap-4 pb-2 pt-1">
+        {/* Responsable (entidad, hallazgo T1): SelectorPersona. */}
+        <section className="flex flex-col gap-2.5">
+          <TituloSeccion>Responsable</TituloSeccion>
+          <SelectorPersona
+            responsableId={responsableId}
+            responsable={responsable}
+            onChange={(idResponsable, texto) => {
+              setResponsableId(idResponsable)
+              setResponsable(texto)
+            }}
+          />
+        </section>
+
+        {/* Conectividad y estado: IP (validada) y estado en chips. */}
+        <section className="flex flex-col gap-3.5">
+          <TituloSeccion>Conectividad y estado</TituloSeccion>
+          <label className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>Dirección IP</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={ip}
+              onChange={(e) => setIp(e.target.value)}
+              placeholder="192.168.1.10"
+              className={`min-h-11 w-full box-border rounded-md border bg-noct-surface px-3 py-2.5 font-mono text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600 ${
+                ipValida ? 'border-noct-divider' : 'border-noct-precaucion/55'
+              }`}
+            />
+            {!ipValida && (
+              <span className="text-[12px] text-noct-precaucion">No parece una IP válida (formato 192.168.1.10)</span>
+            )}
+          </label>
+          {ipDuplicada && (
+            <div className="flex items-start gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2.5">
+              <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+              <p className="text-[13px] leading-[1.5]">
+                Esta IP ya existe en{' '}
+                <Link to={`/dispositivos/${ipDuplicada.id}`} className="text-noct-accent-300 hover:text-noct-accent-400">
+                  {ipDuplicada.nombre}
+                </Link>
+                . Revisar antes de crear un conflicto de red.
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>Estado</span>
+            <div className="flex flex-wrap gap-[7px]">
+              {ESTADOS_SUGERIDOS.map((valor) => {
+                const activo = estado.trim().toLowerCase() === valor.toLowerCase()
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => setEstado(valor)}
+                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                      activo
+                        ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
+                        : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
+                    }`}
+                  >
+                    <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${PUNTO_ESTADO[valor]}`} />
+                    {valor}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Más información (plegable): observaciones, propiedades por
+            categoría y el motivo del cambio en edición. */}
+        <section className="border-t border-noct-divider">
+          <button
+            type="button"
+            onClick={() => setMasAbierto((v) => !v)}
+            aria-expanded={masAbierto}
+            className="flex min-h-[52px] w-full items-center gap-2.5 px-0.5 py-1.5 text-left"
+          >
+            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
+              Más información
+            </span>
+            <span className="text-[11px] text-noct-neutral-600">{resumenMas}</span>
+            {masAbierto ? (
+              <CaretUp size={14} className="ml-auto text-noct-neutral-500" aria-hidden />
+            ) : (
+              <CaretDown size={14} className="ml-auto text-noct-neutral-500" aria-hidden />
+            )}
+          </button>
+
+          {masAbierto && (
+            <div className="flex flex-col gap-4 pb-2 pt-1">
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Observaciones</span>
+                <textarea
+                  rows={3}
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  placeholder="Qué imprime, cada cuánto se mantiene, particularidades"
+                  className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                />
+              </label>
+
+              <CamposClaveValor
+                titulo={`Propiedades de ${categoriaNombre}`}
+                ayuda="Se sugieren los campos que ya usan otros equipos de la misma categoría."
+                campos={detalles}
+                onChange={setDetalles}
+                sugerenciasClave={propiedadesSugeridas}
+              />
+
+              {esEdicion && (
                 <label className="flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>Observaciones</span>
-                  <textarea
-                    rows={3}
-                    value={observaciones}
-                    onChange={(e) => setObservaciones(e.target.value)}
-                    placeholder="Qué imprime, cada cuánto se mantiene, particularidades"
-                    className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+                  <span className={CLASE_ETIQUETA}>Motivo del cambio (opcional)</span>
+                  <input
+                    type="text"
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Por qué se actualizó esta ficha"
+                    className={`min-h-11 ${CLASE_CAMPO}`}
                   />
                 </label>
+              )}
+            </div>
+          )}
+        </section>
+      </main>
 
-                <CamposClaveValor
-                  titulo={`Propiedades de ${categoriaNombre}`}
-                  ayuda="Se sugieren los campos que ya usan otros equipos de la misma categoría."
-                  campos={detalles}
-                  onChange={setDetalles}
-                  sugerenciasClave={propiedadesSugeridas}
-                />
-
-                {esEdicion && (
-                  <label className="flex flex-col gap-1.5">
-                    <span className={CLASE_ETIQUETA}>Motivo del cambio (opcional)</span>
-                    <input
-                      type="text"
-                      value={motivo}
-                      onChange={(e) => setMotivo(e.target.value)}
-                      placeholder="Por qué se actualizó esta ficha"
-                      className={`min-h-11 ${CLASE_CAMPO}`}
-                    />
-                  </label>
-                )}
-              </div>
-            )}
-          </section>
-        </main>
-
-        {/* Barra inferior fija: aviso de validación + Guardar. */}
-        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
-          <div className="flex items-center gap-2.5">
-            <span className="min-w-0 flex-1 truncate text-[12px] text-noct-precaucion">{aviso}</span>
-            <button
-              type="button"
-              disabled={guardando}
-              onClick={() => void guardar()}
-              className={`${BTN_PRIMARIO} min-h-[46px] px-4 disabled:opacity-50`}
-              style={{ opacity: valido ? undefined : 0.55 }}
-            >
-              <FloppyDisk size={15} aria-hidden />
-              {guardando ? 'Guardando...' : 'Guardar equipo'}
-            </button>
-          </div>
+      {/* Barra inferior fija: aviso de validación + Guardar. */}
+      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
+        <div className="flex items-center gap-2.5">
+          <span className="min-w-0 flex-1 truncate text-[12px] text-noct-precaucion">{aviso}</span>
+          <button
+            type="button"
+            disabled={guardando}
+            onClick={() => void guardar()}
+            className={`${BTN_PRIMARIO} min-h-[46px] px-4 disabled:opacity-50`}
+            style={{ opacity: valido ? undefined : 0.55 }}
+          >
+            <FloppyDisk size={15} aria-hidden />
+            {guardando ? 'Guardando...' : 'Guardar equipo'}
+          </button>
         </div>
       </div>
-    </div>
+    </Chasis>
   )
 }
 

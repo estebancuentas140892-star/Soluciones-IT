@@ -3,8 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
-import { ShellNocturne } from '../../app/ShellNocturne'
-import { BarraSuperior } from '../../components/BarraSuperior'
+import { Chasis } from '../../app/Chasis'
 import { CaretDown, Info, MagnifyingGlass, Play, Plus, XCircleFill } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
@@ -335,13 +334,14 @@ export function SolucionesPage() {
   }
 
   return (
-    <ShellNocturne>
-      {/* El título, el estado del dato, buscar y la cuenta los aporta ya
-          BarraSuperior (tarea 181). Aquí quedan solo los controles propios
-          de la sección: frescura, "Crear", el buscador de artículos y UN
-          solo eje de filtro visible (categorías) más el botón que plega
-          el segundo. */}
-      <BarraSuperior titulo="Guías">
+    // Nivel 1 del chasis (tarea 185): raíz de su pila, con la barra
+    // superior de tres ranuras y las pestañas. El título, el estado del
+    // dato, buscar y la cuenta los aporta el chasis (tarea 181); en
+    // `barra` quedan solo los controles propios de la sección: frescura,
+    // "Crear", el buscador de artículos y UN solo eje de filtro visible
+    // (categorías) más el botón que plega el segundo.
+    <Chasis titulo="Guías" barra={
+      <>
         <header className="flex items-center justify-between gap-2.5 px-4 pb-2 pt-1">
           <PastillaFrescura total={articulos.length} singular="artículo" plural="artículos" />
           {botonCrear}
@@ -436,9 +436,9 @@ export function SolucionesPage() {
             )}
           </div>
         )}
-      </BarraSuperior>
-
-      <main className="flex-1 px-4 pb-[116px] pt-3.5 lg:pb-16">
+      </>
+    }>
+      <main className="flex-1 px-4 pb-16 pt-3.5">
         <div className={!buscando ? 'xl:grid xl:grid-cols-[220px_minmax(0,1fr)] xl:items-start xl:gap-6' : ''}>
           {!buscando && (
             <aside className="hidden min-w-0 xl:block">
@@ -712,6 +712,6 @@ export function SolucionesPage() {
         opciones={opcionesCrear}
         onElegir={(id) => navigate(`/soluciones/${id}/nuevo`)}
       />
-    </ShellNocturne>
+    </Chasis>
   )
 }
