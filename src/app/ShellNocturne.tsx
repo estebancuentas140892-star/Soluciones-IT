@@ -1,20 +1,26 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
+import { Avatar } from '../components/Avatar'
 import {
   BookOpen,
   BookOpenFill,
+  CaretRight,
   DotsNine,
   House,
   HouseFill,
+  MapPin,
   Monitor,
   MonitorFill,
+  QrCode,
   TreeStructure,
   TreeStructureFill,
+  UsersThree,
   Vault,
   VaultFill,
   type IconoProps,
 } from '../components/iconos'
+import { TituloSeccion } from '../components/nocturne'
 
 // Shell del sistema Nocturne (handoff "Herramienta IT para técnicos",
 // 2026-07-16). Responsive según el layout del handoff de Soluciones
@@ -43,8 +49,8 @@ const DESTINOS_BASE: Destino[] = [
 
 // La Bóveda solo aparece a quien tiene el permiso; el resto ni
 // siquiera sabe que existe. Sigue siendo un destino completo del
-// sidebar de escritorio (sin cambios en esta tarea; el sidebar de 14
-// destinos es la tarea 183).
+// sidebar de escritorio, en su nav principal (no baja a "Herramientas"
+// ni a "Registros": ver DESTINO_MAS más abajo).
 const DESTINO_BOVEDA: Destino = {
   to: '/boveda',
   label: 'Bóveda',
@@ -72,8 +78,9 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
   const perfilVivo = usePerfilVivo()
 
   const usuario = perfilVivo ?? perfil
-  // Escritorio conserva su lógica actual (Bóveda condicional al
-  // permiso); el sidebar completo de 14 destinos es la tarea 183.
+  // Escritorio: los cinco módulos, Bóveda condicional al permiso (sin
+  // cambios de la tarea 182). Los grupos "Herramientas" y "Registros"
+  // se dibujan aparte, debajo de este nav (tarea 183).
   const destinosDesktop = usuario?.puedeVerBoveda ? [...DESTINOS_BASE, DESTINO_BOVEDA] : DESTINOS_BASE
   // Móvil: siempre las mismas cinco, para todos (regla R17). Antes la
   // barra cambiaba de 4 a 5 columnas según el permiso de Bóveda, así
@@ -82,8 +89,13 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text lg:flex">
-      {/* Sidebar de escritorio: fija a 240px, con los módulos y el perfil. */}
-      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col gap-6 border-r border-noct-divider bg-noct-surface px-3 py-5 lg:flex">
+      {/* Sidebar de escritorio: fija a 240px. Catorce destinos desde la
+          tarea 183 (mockup 3e): los cinco módulos, "Herramientas" y
+          "Registros" (los ocho que hasta la 182 solo tenían puerta en
+          "Más", que no existe fuera de móvil), y el perfil al pie. Antes
+          el sidebar tenía 240px de alto libre y ofrecía cinco destinos
+          de catorce. */}
+      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col gap-[18px] border-r border-noct-divider bg-noct-surface px-3 py-5 lg:flex">
         <div className="flex items-center gap-2 px-2">
           <Marca className="h-[22px] w-[22px] text-noct-accent" />
           <span className="text-[15px] font-semibold">Soluciones IT</span>
@@ -111,12 +123,36 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
             </NavLink>
           ))}
         </nav>
-        <div className="mt-auto border-t border-noct-divider pt-2">
-          <Link to="/cuenta" className="block rounded-md p-2.5 hover:bg-noct-text/[.05]">
-            <p className="truncate text-[13px] font-semibold">{usuario?.nombre || 'Mi cuenta'}</p>
-            {usuario?.correo && (
-              <p className="truncate text-xs text-noct-neutral-500">{usuario.correo}</p>
-            )}
+
+        <div>
+          <TituloSeccion className="mb-1.5 px-2.5">Herramientas</TituloSeccion>
+          <nav className="flex flex-col gap-0.5">
+            <EnlaceGrupo to="/diagnostico" label="Diagnóstico" Icono={TreeStructure} />
+            <EnlaceGrupo to="/escaner" label="Escanear" Icono={QrCode} />
+          </nav>
+        </div>
+
+        <div>
+          <TituloSeccion className="mb-1.5 px-2.5">Registros</TituloSeccion>
+          <nav className="flex flex-col gap-0.5">
+            <EnlaceGrupo to="/ubicaciones" label="Ubicaciones" Icono={MapPin} />
+            <EnlaceGrupo to="/personas" label="Personas" Icono={UsersThree} />
+          </nav>
+        </div>
+
+        <div className="mt-auto border-t border-noct-divider pt-2.5">
+          <Link
+            to="/cuenta"
+            className="flex items-center gap-2.5 rounded-md p-1.5 hover:bg-noct-text/[.05]"
+          >
+            <Avatar nombre={usuario?.nombre} correo={usuario?.correo} className="h-[30px] w-[30px] text-[11px]" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[12.5px] font-medium leading-[1.2]">
+                {usuario?.nombre || 'Mi cuenta'}
+              </span>
+              <span className="mt-0.5 block text-[11px] text-noct-neutral-400">Mi cuenta</span>
+            </span>
+            <CaretRight size={13} className="shrink-0 text-noct-neutral-400" aria-hidden />
           </Link>
         </div>
       </aside>
@@ -168,6 +204,40 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
     </div>
+  )
+}
+
+// Enlace de los grupos "Herramientas" y "Registros" del sidebar de
+// escritorio (tarea 183): un solo icono (sin variante rellena, para no
+// sumar más colisiones a las que ya tiene el set hoy, ver R24) que
+// recolorea a acento cuando está activo.
+function EnlaceGrupo({
+  to,
+  label,
+  Icono,
+}: {
+  to: string
+  label: string
+  Icono: (props: IconoProps) => React.JSX.Element
+}) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] ${
+          isActive
+            ? 'font-medium text-noct-accent-300'
+            : 'font-normal text-noct-neutral-300 hover:bg-noct-text/[.05]'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icono size={17} className={isActive ? 'text-noct-accent' : 'text-noct-neutral-400'} aria-hidden />
+          {label}
+        </>
+      )}
+    </NavLink>
   )
 }
 

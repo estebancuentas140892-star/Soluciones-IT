@@ -224,14 +224,7 @@ La **tarea 181** (`BarraSuperior` global: dónde estoy, qué sabe la app, buscar
 
 La **tarea 182** (barra de pestañas de cinco destinos fijos y `PantallaMas`, reglas R15/R16/R17) quedó **terminada y archivada el 2026-07-28**. La barra móvil es ya siempre Inicio · Guías · Equipos · Red · Más, igual para todos; la Bóveda encabeza "Más" junto con Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar y Mi cuenta. **No incluyó** "tocar la pestaña activa vuelve a su raíz" (comportamiento dinámico, es la tarea 187). El "Volver" de Ubicaciones y Personas cambió de Equipos a "Más" ([DECISIONES.md](DECISIONES.md) AD-024); Etiquetas e Importar conservan a Equipos. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
-### 183. Sidebar completo de escritorio
-
-- **Descripción:** el sidebar pasa de cinco destinos a catorce, agrupados: los cinco módulos, más un grupo "Herramientas", más un grupo "Registros", más la cuenta al pie.
-- **Motivo:** el sidebar tiene 240 px de alto libre y ofrece cinco destinos de catorce; el resto solo se alcanza desde dentro de otra sección.
-- **Impacto:** en escritorio desaparece la necesidad de la pantalla "Más".
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/app/ShellNocturne.tsx` (el `<aside>` de las líneas 63-99).
-- **Dependencias:** la 182 define la agrupación de destinos que este sidebar reordena.
+La **tarea 183** (sidebar completo de escritorio) quedó **terminada y archivada el 2026-07-28**. El sidebar pasa de cinco destinos a catorce: el nav principal sin cambios (Inicio, Guías, Equipos, Red, Bóveda con permiso), más los grupos "Herramientas" (Diagnóstico, Escanear) y "Registros" (Ubicaciones, Personas), más el perfil al pie con `Avatar`. Etiquetas QR e Importar no ganan entrada aquí (siguen solo en el "···" de Equipos). Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ### 184. Login que se presenta y bienvenida del primer día
 

@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-07-28
 
+### Agregado (tarea 183): sidebar completo de escritorio, de cinco a catorce destinos
+
+**Área modificada:** `src/app/ShellNocturne.tsx` (solo el `<aside>` de escritorio).
+**Motivo:** turno 3 del handoff "Auditoría de Soluciones TI" (mockup `3e`, "el sidebar tiene 240 px de alto libre y ofrece cinco destinos de catorce"). Los mismos ocho destinos que la tarea 182 le dio puerta en móvil (dentro de "Más") seguían sin ella en escritorio, donde "Más" no existe.
+**Impacto esperado:** en escritorio, Diagnóstico, Escanear, Ubicaciones y Personas dejan de alcanzarse solo desde dentro de otra sección; el espacio libre del sidebar (antes vacío bajo el nav de 5 ítems) se usa.
+
+- **Agregado** grupo **"Herramientas"** (Diagnóstico, Escanear) y grupo **"Registros"** (Ubicaciones, Personas), con su rótulo (`TituloSeccion`, el mismo componente de otras cabeceras de sección) y un enlace por fila (`EnlaceGrupo`, local del archivo): icono sin variante rellena que recolorea a acento cuando está activo, para no sumar más colisiones al set de iconos (deferido a la tarea 189, regla R24).
+- **Cambiado** el perfil al pie del sidebar usa ahora `Avatar` (iniciales del técnico) y un caret, en vez de solo nombre y correo en texto; el subtítulo pasa a ser el rótulo fijo "Mi cuenta" (mismo criterio que el mockup), no el correo.
+- **Sin cambios** el nav principal (Inicio, Guías, Equipos, Red, Bóveda con permiso): la Bóveda sigue ahí, no baja a ningún grupo nuevo. Etiquetas QR e Importar **no** ganan entrada en el sidebar: siguen alcanzándose solo desde el "···" de Equipos, igual que en móvil desde la tarea 182.
+- **Documentación:** [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) secciones 2, 5.6 y 10.
+
+**Verificación:** lint, `tsc -b` y build limpios. 1677 pruebas pasan (sin pruebas nuevas: cambio de presentación pura, sin lógica propia que aislar). Siguen los mismos **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts`. La app arranca sin errores de consola. **Sin verificar en navegador con sesión real**: el sidebar vive detrás del login y esta sesión no tiene cuenta de técnico.
+
 ### Agregado (tarea 182): barra de pestañas de cinco destinos fijos y la pantalla "Más"
 
 **Área modificada:** chasis (`src/app/ShellNocturne.tsx`, ruta y pantalla nuevas `src/features/mas/PantallaMas.tsx`), navegación (`src/lib/navegacion.ts`), `UbicacionesPage.tsx`, `PersonasPage.tsx`.

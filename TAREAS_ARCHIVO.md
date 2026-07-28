@@ -1,5 +1,21 @@
 # Historial de tareas finalizadas
 
+### 183. Sidebar completo de escritorio
+
+**Estado**: TERMINADA el 2026-07-28. Lint, `tsc -b` y build limpios; 1677 pruebas pasan. **Prioridad**: Media. **Origen**: turno 3 del handoff "Auditoría de Soluciones TI", mockup `3e` ("el sidebar tiene 240 px de alto libre y ofrece cinco destinos de catorce").
+
+**Problema**: el sidebar de escritorio tenía 240 px de alto libre bajo sus cinco ítems (Inicio, Guías, Equipos, Red, Bóveda con permiso) y no ofrecía los mismos ocho destinos que la tarea 182 le había dado puerta a "Más" en móvil. En escritorio esos ocho seguían sin ninguna puerta directa: Diagnóstico y Escáner solo desde Inicio, Ubicaciones y Personas solo desde el "···" de Equipos.
+
+**Cambio**: `src/app/ShellNocturne.tsx` gana dos grupos nuevos bajo el nav principal, **"Herramientas"** (Diagnóstico, Escanear) y **"Registros"** (Ubicaciones, Personas), cada uno con su rótulo (reutilizando `TituloSeccion`) y un enlace por fila (`EnlaceGrupo`, componente local del archivo): un solo icono sin variante rellena que recolorea a acento cuando está activo, para no sumar más colisiones al set de iconos (esa limpieza es la tarea 189). El perfil al pie pasa a usar `Avatar` (iniciales, ya extraído en la tarea 182) con un caret, y su subtítulo cambia de mostrar el correo a un rótulo fijo "Mi cuenta", siguiendo el mockup.
+
+**Lo que NO cambió, y por qué**: el nav principal (Inicio, Guías, Equipos, Red, Bóveda) sigue exactamente igual; la Bóveda no baja a ningún grupo nuevo. Etiquetas QR e Importar **no** ganan entrada en el sidebar (siguen solo en el "···" de Equipos), mismo criterio que en móvil desde la tarea 182: son acciones sobre el inventario, no destinos de navegación de primer nivel.
+
+**Ubicación**: `src/app/ShellNocturne.tsx` (único archivo tocado).
+
+**Verificación**: lint, `tsc -b` y build limpios. 1677 pruebas pasan. Siguen los mismos **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts`. La app arranca sin errores de consola. **Sin verificar en navegador con sesión real**: el sidebar vive detrás del login y esta sesión no tiene cuenta de técnico, así que no se pudo confirmar visualmente el agrupado ni el estado activo de los enlaces nuevos. Sin pruebas unitarias nuevas: cambio de presentación pura sin lógica propia que aislar.
+
+---
+
 ### 182. BarraPestanas de cinco destinos fijos y PantallaMas
 
 **Estado**: TERMINADA el 2026-07-28. Lint, `tsc -b` y build limpios; 1677 pruebas pasan. **Prioridad**: ALTA. **Origen**: turno 3 del handoff "Auditoría de Soluciones TI", mockups `3e` (escritorio) y `3f` (móvil, "la pestaña 'Más' recoge los nueve destinos y deja de esconderlos dentro de otra sección").

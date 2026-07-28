@@ -88,21 +88,30 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 
 Tipos de shell de las pantallas:
 
-- **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con la marca "Soluciones IT", los módulos y el perfil del usuario (enlace a Cuenta); sin cambios en la tarea 182, la Bóveda sigue apareciendo ahí cuando hay permiso (el sidebar completo de 14 destinos es la tarea 183). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque, **siempre las mismas para todos** desde la tarea 182 (regla R17). La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Guías, Equipos, Red, Bóveda, Más y sus fichas).
+- **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con la marca "Soluciones IT", **catorce destinos desde la tarea 183** (antes cinco), y el perfil del usuario al pie (enlace a Cuenta). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque, **siempre las mismas para todos** desde la tarea 182 (regla R17). La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Guías, Equipos, Red, Bóveda, Más y sus fichas).
 - **Shell centrado propio**: pantallas alcanzadas desde Inicio que no son pestaña (Diagnóstico, Estadísticas, Sugerencias, Cuenta, Seguridad, Ubicaciones, Personas y sus fichas/formularios). Columna centrada de 448px con cabecera pegajosa y botón "Volver".
 
 **Barra superior global (`BarraSuperior`, desde la tarea 181).** Las **cinco pestañas raíz** comparten la misma fila superior, con tres ranuras fijas y siempre en el mismo orden (regla R14): **título de la sección**, **estado del dato** (pastilla de sincronización) y **buscar + cuenta**. Las acciones propias de cada pantalla ("Crear", "Escanear", el menú "···", el subtítulo) van en la banda que queda justo debajo, dentro del mismo bloque pegajoso ([DECISIONES.md](DECISIONES.md) AD-023). La lupa abre el **buscador global en capa** desde cualquiera de las cinco, sin abandonar la pantalla; el avatar (iniciales del técnico) lleva a Mi cuenta y solo aparece en móvil, porque en escritorio la cuenta vive al pie del sidebar. Las pantallas internas todavía dibujan su propia cabecera con "Volver": los niveles *documento* y *tarea* llegan con el chasis de tres niveles (tarea 185).
 - **Shell a pantalla completa**: los editores (Artículo, Dispositivo, Credencial, Diagnóstico), el escáner, las etiquetas QR y la importación. Cabecera pegajosa + barra de acciones inferior fija; salen del contenedor con barra para no distraer.
 
-**Desde la tarea 182 el sidebar de escritorio y la barra de pestañas de móvil ya no comparten la misma lista** (antes sí, `DESTINOS_BASE` + `DESTINO_BOVEDA` condicional a los dos). El **sidebar** conserva ese mismo criterio sin cambios:
+**Desde la tarea 182 el sidebar de escritorio y la barra de pestañas de móvil ya no comparten la misma lista** (antes sí, `DESTINOS_BASE` + `DESTINO_BOVEDA` condicional a los dos). El **sidebar** de escritorio pasa a tener **catorce destinos** desde la tarea 183 (mockup `3e`: "el sidebar tiene 240 px de alto libre y ofrece cinco destinos de catorce"), en tres bloques:
 
-| Destino (escritorio) | Ruta | Icono | Visible para |
+**Nav principal** (sin cambios de la tarea 182):
+
+| Destino | Ruta | Icono | Visible para |
 |---------|------|-------|--------------|
 | Inicio | `/` | House | Todos |
 | Guías | `/soluciones` | BookOpen | Todos |
 | Equipos | `/dispositivos` | Monitor | Todos |
 | Red | `/red` | TreeStructure | Todos |
 | Bóveda | `/boveda` | Vault | Solo con permiso `puede_ver_boveda` |
+
+**Herramientas** (nuevo, tarea 183): Diagnóstico, Escanear.
+**Registros** (nuevo, tarea 183): Ubicaciones, Personas.
+
+Estos cuatro son los mismos destinos que "Más" da en móvil (menos Bóveda, Etiquetas, Importar y Mi cuenta, que en escritorio ya tienen puerta: Bóveda en el nav principal, Etiquetas e Importar en el "···" de Equipos, Mi cuenta al pie del sidebar). Icono sin variante rellena (evita sumar más colisiones a las que ya tiene el set, ver R24): solo recolorea a acento cuando está activo.
+
+**Perfil al pie**, ahora con `Avatar` (iniciales) y un caret, en vez de solo nombre y correo: nombre, subtítulo fijo "Mi cuenta", enlace a `/cuenta`.
 
 Las **5 pestañas de móvil** (`DESTINOS_BASE` + `DESTINO_MAS`) son en cambio fijas, iguales para todos (regla R17: "los permisos cambian lo que hay detrás de una puerta, no la forma de la barra"). La Bóveda deja de ser pestaña móvil y pasa a encabezar "Más" (decisión aprobada por el usuario):
 
@@ -116,7 +125,7 @@ Las **5 pestañas de móvil** (`DESTINOS_BASE` + `DESTINO_MAS`) son en cambio fi
 
 Estado de la pestaña activa en tres canales (regla R16 exige al menos dos): barra de 2px sobre la pestaña, icono relleno (salvo "Más", que no tiene variante rellena) y color de acento (`neutral-300` inactivo, antes `neutral-500`); más un rótulo de 12px en celdas de 52px (antes 10,5px en 44), estado presionado (fondo de acento al 10%) y anillo de foco de 2px, ninguno de los cuales existía antes de la tarea 182.
 
-La Bóveda **solo aparece a quien tiene el permiso**; el resto ni sabe que existe (la barra muestra 4 o 5 pestañas según el permiso).
+La Bóveda **solo aparece a quien tiene el permiso**; el resto ni sabe que existe. Desde la tarea 182 esto ya no cambia la FORMA de ninguna barra: en móvil la pestaña "Más" siempre está (con o sin la fila de Bóveda dentro); en escritorio el nav principal del sidebar mide 5 o 6 filas según el permiso, pero los bloques "Herramientas"/"Registros"/perfil de abajo no varían.
 
 ### 2.3 Los tres lenguajes de color
 
@@ -461,7 +470,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Volver.** Ubicaciones y Personas, alcanzadas ahora desde aquí, suben a "Más" (no a Equipos): antes su regreso llevaba a una sección que el técnico no había visitado si llegaba por un enlace o por esta pantalla (mismo defecto que el problema #3 del turno 3 de la auditoría). Diagnóstico y Escanear siguen subiendo a Inicio (su puerta original, que se conserva); Etiquetas e Importar siguen subiendo a Equipos, porque su camino principal sigue siendo el menú "···" de esa sección.
 
-**Pendiente:** el sidebar de escritorio no ofrece "Más" (no lo necesita: sigue mostrando Bóveda como destino propio); el resto de los ocho destinos solo gana puerta explícita en escritorio con el sidebar completo de la tarea 183.
+**Escritorio:** el sidebar no ofrece "Más" (no lo necesita: sigue mostrando Bóveda como destino propio en su nav principal). Desde la tarea 183 el sidebar completo de 14 destinos da puerta propia en escritorio a Diagnóstico, Escanear, Ubicaciones y Personas (grupos "Herramientas"/"Registros"), y Mi cuenta vive al pie. Etiquetas QR e Importar siguen alcanzándose solo desde el "···" de Equipos en ambas anchuras.
 
 ---
 
@@ -804,7 +813,7 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 
 | Menú | Opciones | Navegación / acción |
 |------|----------|---------------------|
-| **Barra de navegación** (`ShellNocturne`), escritorio | Inicio, Guías, Equipos, Red, (Bóveda con permiso) | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
+| **Barra de navegación** (`ShellNocturne`), escritorio (tarea 183) | Inicio, Guías, Equipos, Red, (Bóveda con permiso); Herramientas: Diagnóstico, Escanear; Registros: Ubicaciones, Personas | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
 | **Barra de navegación** (`ShellNocturne`), móvil (tarea 182) | Inicio, Guías, Equipos, Red, Más | Cambia de sección; siempre las mismas cinco, iguales para todos |
 | **"Más"** (tarea 182) | Bóveda (con permiso), Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar, Mi cuenta, Bloqueo y seguridad | Navega a cada pantalla; ver sección 5.6 |
 | **"···" de Equipos** | Ubicaciones, Personas, Etiquetas QR, Importar | Navega a cada pantalla |
