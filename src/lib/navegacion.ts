@@ -29,15 +29,23 @@ export interface Padre {
 
 // Pestañas de la barra inferior: son raíces de su pila, no muestran
 // "Volver" (se navega entre ellas por la barra, no retrocediendo).
-const TABS = new Set(['/', '/soluciones', '/dispositivos', '/red', '/boveda'])
+// `/mas` (tarea 182) reemplaza a `/boveda` como quinta pestaña móvil;
+// `/boveda` sigue siendo raíz aparte (pestaña de escritorio, y puerta
+// destacada dentro de "Más" en móvil), así que se queda en el set.
+const TABS = new Set(['/', '/soluciones', '/dispositivos', '/red', '/boveda', '/mas'])
 
 // Raíces que no son pestañas pero se alcanzan desde otra sección: su
 // "Volver" sube a esa sección de origen.
 const RAICES_NO_TAB: Record<string, Padre> = {
   '/diagnostico': { to: '/', etiqueta: 'Inicio' },
   '/escaner': { to: '/', etiqueta: 'Inicio' },
-  '/ubicaciones': { to: '/dispositivos', etiqueta: 'Equipos' },
-  '/personas': { to: '/dispositivos', etiqueta: 'Equipos' },
+  // Antes subían a Equipos (de donde se alcanzaban por el menú "···").
+  // Desde la tarea 182 su puerta principal es "Más" (regla R15), así
+  // que ese es su padre real: subir a Equipos llevaría a una sección
+  // que el técnico no visitó si llegó por Más (el mismo problema que
+  // ya tenía este par, detectado en la auditoría de la tarea 179-182).
+  '/ubicaciones': { to: '/mas', etiqueta: 'Más' },
+  '/personas': { to: '/mas', etiqueta: 'Más' },
   '/cuenta': { to: '/', etiqueta: 'Inicio' },
 }
 

@@ -4,6 +4,7 @@ import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 import {
   BookOpen,
   BookOpenFill,
+  DotsNine,
   House,
   HouseFill,
   Monitor,
@@ -41,7 +42,9 @@ const DESTINOS_BASE: Destino[] = [
 ]
 
 // La Bóveda solo aparece a quien tiene el permiso; el resto ni
-// siquiera sabe que existe.
+// siquiera sabe que existe. Sigue siendo un destino completo del
+// sidebar de escritorio (sin cambios en esta tarea; el sidebar de 14
+// destinos es la tarea 183).
 const DESTINO_BOVEDA: Destino = {
   to: '/boveda',
   label: 'Bóveda',
@@ -50,12 +53,32 @@ const DESTINO_BOVEDA: Destino = {
   end: false,
 }
 
+// Quinta pestaña móvil (tarea 182, mockup 3f): la Bóveda deja de ser
+// pestaña y pasa a encabezar "Más" (decisión aprobada por el usuario),
+// que además da puerta a los ocho destinos que hoy no aparecen en la
+// barra ni en el sidebar. Sin variante rellena: el mockup usa el mismo
+// glifo activo e inactivo, solo cambia el color (igual que hace el
+// resto del estado con la barra de 2px y el color de acento).
+const DESTINO_MAS: Destino = {
+  to: '/mas',
+  label: 'Más',
+  icono: DotsNine,
+  iconoActivo: DotsNine,
+  end: false,
+}
+
 export function ShellNocturne({ children }: { children: React.ReactNode }) {
   const { perfil } = useAuth()
   const perfilVivo = usePerfilVivo()
 
   const usuario = perfilVivo ?? perfil
-  const destinos = usuario?.puedeVerBoveda ? [...DESTINOS_BASE, DESTINO_BOVEDA] : DESTINOS_BASE
+  // Escritorio conserva su lógica actual (Bóveda condicional al
+  // permiso); el sidebar completo de 14 destinos es la tarea 183.
+  const destinosDesktop = usuario?.puedeVerBoveda ? [...DESTINOS_BASE, DESTINO_BOVEDA] : DESTINOS_BASE
+  // Móvil: siempre las mismas cinco, para todos (regla R17). Antes la
+  // barra cambiaba de 4 a 5 columnas según el permiso de Bóveda, así
+  // que dos técnicos con el mismo teléfono veían barras distintas.
+  const destinosMobile = [...DESTINOS_BASE, DESTINO_MAS]
 
   return (
     <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text lg:flex">
@@ -66,7 +89,7 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
           <span className="text-[15px] font-semibold">Soluciones IT</span>
         </div>
         <nav className="flex flex-col gap-0.5">
-          {destinos.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
+          {destinosDesktop.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -110,25 +133,33 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Pestañas inferiores: solo móvil. */}
-      <nav
-        className={`fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] lg:hidden ${
-          destinos.length === 5 ? 'grid-cols-5' : 'grid-cols-4'
-        }`}
-      >
-        {destinos.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
+      {/* Pestañas inferiores: solo móvil. Siempre 5 columnas, siempre las
+          mismas 5 (R17). Rótulo a 12px en celdas de 52 (antes 10.5px en
+          44: "por debajo de cualquier mínimo razonable" para navegación
+          que se usa con guantes y a pleno sol). Estado en tres canales
+          (R16 pide al menos dos): barra de 2px sobre la pestaña activa,
+          icono relleno y color de acento; más presionado (fondo de acento
+          al 10%) y foco de teclado (anillo de 2px), que antes no existían. */}
+      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] sm:max-w-xl md:max-w-3xl lg:hidden">
+        {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             className={({ isActive }) =>
-              `flex min-h-11 flex-col items-center gap-[3px] pb-[9px] pt-2 text-[10.5px] font-medium ${
-                isActive ? 'text-noct-accent' : 'text-noct-neutral-500'
+              `relative flex min-h-[52px] flex-col items-center gap-1 pb-[10px] pt-[9px] text-[12px] font-medium outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
+                isActive ? 'text-noct-accent-300' : 'text-noct-neutral-300'
               }`
             }
           >
             {({ isActive }) => (
               <>
+                {isActive && (
+                  <span
+                    className="absolute left-1/2 top-0 h-[2px] w-[26px] -translate-x-1/2 rounded-b-[2px] bg-noct-accent"
+                    aria-hidden
+                  />
+                )}
                 {isActive ? <IconoActivo size={22} /> : <Icono size={22} />}
                 {label}
               </>

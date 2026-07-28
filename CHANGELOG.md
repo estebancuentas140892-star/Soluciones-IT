@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-07-28
 
+### Agregado (tarea 182): barra de pestañas de cinco destinos fijos y la pantalla "Más"
+
+**Área modificada:** chasis (`src/app/ShellNocturne.tsx`, ruta y pantalla nuevas `src/features/mas/PantallaMas.tsx`), navegación (`src/lib/navegacion.ts`), `UbicacionesPage.tsx`, `PersonasPage.tsx`.
+**Motivo:** turno 3 del handoff "Auditoría de Soluciones TI" (mockups `3e`/`3f`). Ocho destinos (Diagnóstico, Escáner, Ubicaciones, Personas, Mi cuenta, Seguridad, Etiquetas, Importar) no aparecían ni en la barra ni en el sidebar; solo se alcanzaban desde dentro de otra sección. La barra móvil además cambiaba de 4 a 5 columnas según el permiso de Bóveda, así que dos técnicos con el mismo teléfono veían barras distintas.
+**Impacto esperado:** todo destino gana puerta (regla R15) sin que la barra dependa del permiso de nadie (R17). Cuesta un toque a quien tiene acceso a la Bóveda.
+
+- **Agregado** `src/features/mas/PantallaMas.tsx`: quinta pestaña, en cuatro grupos. "Consulta protegida" (Bóveda, solo con permiso, fila destacada). "Herramientas" (Diagnóstico, Escanear equipo). "Registros" (Ubicaciones y Personas con conteo en vivo, Etiquetas QR, Importar). "Mi cuenta" (perfil con avatar, Bloqueo y seguridad con su estado leído en vivo).
+- **Agregado** icono `DotsNine` (`src/components/iconos.tsx`): el glifo de "Más", sin variante rellena (el mockup usa el mismo trazo activo e inactivo).
+- **Agregado** `src/components/Avatar.tsx`: extrae el avatar con iniciales que ya vivía en `BarraSuperior` (tarea 181), reutilizado ahora en la fila de perfil de "Más".
+- **Cambiado** `ShellNocturne.tsx` separa por primera vez la lista de destinos de escritorio (sin cambios: Bóveda condicional al permiso, sigue así hasta el sidebar completo de la tarea 183) de la de móvil, que ahora es **siempre** Inicio · Guías · Equipos · Red · Más, igual para todos. La Bóveda deja de ser pestaña móvil (decisión aprobada por el usuario).
+- **Cambiado** estado de la pestaña activa en tres canales (R16 pide mínimo dos, antes había uno y medio): barra de 2px sobre la pestaña, icono relleno y color de acento; suma estado presionado (fondo de acento al 10%) y anillo de foco de 2px, que no existían. Rótulo de 10,5px a 12px, celda de 44px a 52px.
+- **Cambiado** `src/lib/navegacion.ts`: el "Volver" de Ubicaciones y Personas sube ahora a "Más", no a Equipos (antes llevaba a una sección que el técnico no había visitado si llegaba por un enlace; ver [DECISIONES.md](DECISIONES.md) AD-024). Etiquetas QR e Importar conservan a Equipos como padre: su camino principal sigue siendo el menú "···" de esa sección.
+- **Documentación:** [DECISIONES.md](DECISIONES.md) AD-024; [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.2b (`Avatar`), 2.4 (`BotonVolver`) y la nota de `DotsNine`; [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) secciones 2, 3, 5.6 (nueva), 6.3, 6.4, 6.6, 6.7, 10 y 14.
+
+**Verificación:** lint, `tsc -b` y build limpios. 1677 pruebas pasan (sin pruebas nuevas: la pantalla es routing y presentación, cubierta por la app en conjunto; `navegacion.test.ts` se actualizó para las etiquetas nuevas). Siguen los mismos **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts`. La app arranca sin errores de consola; `/mas` resuelve la ruta y redirige limpio a `/login` sin sesión. **Sin verificar en navegador con sesión real**: la pantalla vive detrás del login y esta sesión no tiene cuenta de técnico.
+
 ### Agregado (tarea 181): barra superior global, con el buscador y el estado del dato en las cinco pestañas
 
 **Área modificada:** chasis (`src/components/BarraSuperior.tsx`, `PastillaSync.tsx`) y las cinco pestañas raíz; buscador (`src/features/busqueda/`).

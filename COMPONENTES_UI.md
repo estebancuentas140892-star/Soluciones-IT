@@ -60,7 +60,7 @@ Componentes:
 
 ### 1.3 `src/components/iconos.tsx` (set de iconos)
 
-92 iconos Phosphor (MIT) inlineados como SVG propios, para no depender de CDN (rompe offline) ni cargar el paquete completo.
+93 iconos Phosphor (MIT) inlineados como SVG propios, para no depender de CDN (rompe offline) ni cargar el paquete completo. Suma desde la tarea 182: `DotsNine` (el glifo de "Más", una cuadrícula de 9 puntos; sin variante `Fill`, el mockup usa el mismo trazo activo e inactivo).
 
 - Props: `IconoProps = SVGProps<SVGSVGElement> & { size?: number }`. `size` por defecto 16, `fill="currentColor"` (hereda el color del texto), `aria-hidden` por defecto.
 - Variantes: el sufijo `Fill` marca la versión rellena (`Star`/`StarFill`, `House`/`HouseFill`, `Vault`/`VaultFill`...), usada típicamente para la pestaña activa.
@@ -81,6 +81,12 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Variantes:** decide imagen vs archivo genérico según el `tipo`; usa `VisorImagen` para imágenes.
 - **Dónde:** `DispositivoPage`, `ArticuloPage`, `Historial` (adjuntos de una intervención), `RegistrarIntervencion`, `AsistenteVista`.
 
+### 2.2b `Avatar`
+- **Propósito:** las iniciales del técnico en un círculo, o el icono genérico de usuario si no hay nombre ni correo. Extraído en la tarea 182 al reutilizarse en `PantallaMas` con otro tamaño (34 px, contra los 30 px de `BarraSuperior`); nació en la tarea 181.
+- **Props:** `{ nombre?, correo?, className?: string = 'h-[30px] w-[30px] text-[11px]' }`. El tamaño y la tipografía van en `className` (no hay tamaño único posible con clases Tailwind estáticas).
+- **Detalles:** las iniciales las calcula `inicialesDe()` (`src/lib/iniciales.ts`, con pruebas): nombre y primer apellido, un solo nombre (sus dos primeras letras), o la parte local del correo como respaldo.
+- **Dónde:** `BarraSuperior` (avatar de la ranura de cuenta), `PantallaMas` (fila de perfil del grupo "Mi cuenta").
+
 ### 2.3 `BotonFavorito`
 - **Propósito:** estrella para marcar/desmarcar una ficha como favorita.
 - **Props:** `{ tipo: TipoFavorito, entidadId, variante?: 'cabecera' | 'fila' = 'cabecera' }`.
@@ -90,7 +96,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.4 `BotonVolver`
 - **Propósito:** botón de regreso unificado; deriva destino y etiqueta de la fuente única `padreDe` (`src/lib/navegacion.ts`) en vez de cablearlos a mano.
 - **Props:** `{ to?, children? }`. `to` sobreescribe el destino derivado (contexto en runtime, ej. equipo de red vuelve a Red); `children` sobreescribe la etiqueta ("Salir", "Cancelar").
-- **Dónde:** 31 archivos (casi toda cabecera de ficha o formulario).
+- **Dónde:** 31 archivos (casi toda cabecera de ficha o formulario). Desde la tarea 182, `UbicacionesPage` y `PersonasPage` dejaron de pasarle un `to`/`children` fijo a "Equipos": ahora usan el valor por defecto, que `padreDe` resuelve a "Más" (su puerta real desde que dejaron de vivir solo detrás del menú "···" de Equipos).
 
 ### 2.5 `CampoContrasena`
 - **Propósito:** campo para **escribir** un secreto que evita que el sistema operativo o gestores de terceros lo detecten como login y ofrezcan guardarlo. Complementario de `CampoSecreto` (que muestra un secreto ya guardado).

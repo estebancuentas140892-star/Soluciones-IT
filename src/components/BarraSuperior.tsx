@@ -2,8 +2,8 @@ import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
-import { inicialesDe } from '../lib/iniciales'
-import { MagnifyingGlass, User } from './iconos'
+import { Avatar } from './Avatar'
+import { MagnifyingGlass } from './iconos'
 import { PastillaSync } from './PastillaSync'
 
 const BuscadorGlobal = lazy(() =>
@@ -37,7 +37,6 @@ export function BarraSuperior({ titulo, children }: { titulo: string; children?:
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
 
   const usuario = perfilVivo ?? perfil
-  const iniciales = inicialesDe(usuario?.nombre, usuario?.correo)
 
   return (
     <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
@@ -62,13 +61,7 @@ export function BarraSuperior({ titulo, children }: { titulo: string; children?:
             title={usuario?.nombre || 'Mi cuenta'}
             className="flex h-11 w-11 items-center justify-center lg:hidden"
           >
-            {iniciales ? (
-              <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-noct-neutral-800 text-[11px] font-medium leading-none text-noct-neutral-100">
-                {iniciales}
-              </span>
-            ) : (
-              <User size={20} className="text-noct-neutral-200" aria-hidden />
-            )}
+            <Avatar nombre={usuario?.nombre} correo={usuario?.correo} />
           </Link>
         </div>
       </div>

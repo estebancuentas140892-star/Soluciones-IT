@@ -44,9 +44,10 @@ const CLASE_CAMPO = CLASE_CAMPO_SOBRE_SUPERFICIE
 // lugar físico como entidad, con su jerarquía (árbol con sangría),
 // cuántos equipos hay en cada una, creación inline y el aviso de
 // migración de los textos de ubicación que aún no son entidad. Trae su
-// propio shell Nocturne (pantalla enfocada bajo Dispositivos), por eso
-// sale del Layout oscuro. La lógica y los datos no cambian: al tocar una
-// ubicación se navega a su ficha 360°.
+// propio shell Nocturne (pantalla enfocada; su puerta es "Más" desde la
+// tarea 182, antes se alcanzaba solo desde el menú "···" de Equipos),
+// por eso sale del Layout oscuro. La lógica y los datos no cambian: al
+// tocar una ubicación se navega a su ficha 360°.
 export function UbicacionesPage() {
   const navigate = useNavigate()
   const ubicaciones = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
@@ -97,9 +98,7 @@ export function UbicacionesPage() {
         {/* Cabecera pegajosa: volver, crear, título y buscador. */}
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver to="/dispositivos">
-              Equipos
-            </BotonVolver>
+            <BotonVolver />
             <button type="button" onClick={alternarCrear} className={`shrink-0 ${BTN_SECUNDARIO}`}>
               <Plus size={15} aria-hidden />
               Crear

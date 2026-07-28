@@ -20,6 +20,7 @@ Fecha de redacción: 2026-07-23. Basado en una lectura directa del código en `s
    - 5.3 [Equipos](#53-equipos)
    - 5.4 [Red](#54-red)
    - 5.5 [Bóveda](#55-boveda)
+   - 5.6 [Más](#56-mas)
 6. [Secciones secundarias](#6-secciones-secundarias)
    - 6.1 [Diagnóstico Inteligente](#61-diagnostico-inteligente)
    - 6.2 [Escáner](#62-escaner)
@@ -87,21 +88,33 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 
 Tipos de shell de las pantallas:
 
-- **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con la marca "Soluciones IT", los módulos y el perfil del usuario (enlace a Cuenta). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque. La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Guías, Equipos, Red, Bóveda y sus fichas).
+- **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con la marca "Soluciones IT", los módulos y el perfil del usuario (enlace a Cuenta); sin cambios en la tarea 182, la Bóveda sigue apareciendo ahí cuando hay permiso (el sidebar completo de 14 destinos es la tarea 183). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque, **siempre las mismas para todos** desde la tarea 182 (regla R17). La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Guías, Equipos, Red, Bóveda, Más y sus fichas).
 - **Shell centrado propio**: pantallas alcanzadas desde Inicio que no son pestaña (Diagnóstico, Estadísticas, Sugerencias, Cuenta, Seguridad, Ubicaciones, Personas y sus fichas/formularios). Columna centrada de 448px con cabecera pegajosa y botón "Volver".
 
 **Barra superior global (`BarraSuperior`, desde la tarea 181).** Las **cinco pestañas raíz** comparten la misma fila superior, con tres ranuras fijas y siempre en el mismo orden (regla R14): **título de la sección**, **estado del dato** (pastilla de sincronización) y **buscar + cuenta**. Las acciones propias de cada pantalla ("Crear", "Escanear", el menú "···", el subtítulo) van en la banda que queda justo debajo, dentro del mismo bloque pegajoso ([DECISIONES.md](DECISIONES.md) AD-023). La lupa abre el **buscador global en capa** desde cualquiera de las cinco, sin abandonar la pantalla; el avatar (iniciales del técnico) lleva a Mi cuenta y solo aparece en móvil, porque en escritorio la cuenta vive al pie del sidebar. Las pantallas internas todavía dibujan su propia cabecera con "Volver": los niveles *documento* y *tarea* llegan con el chasis de tres niveles (tarea 185).
 - **Shell a pantalla completa**: los editores (Artículo, Dispositivo, Credencial, Diagnóstico), el escáner, las etiquetas QR y la importación. Cabecera pegajosa + barra de acciones inferior fija; salen del contenedor con barra para no distraer.
 
-Las **5 pestañas** de la barra inferior/lateral (`DESTINOS_BASE` + `DESTINO_BOVEDA`):
+**Desde la tarea 182 el sidebar de escritorio y la barra de pestañas de móvil ya no comparten la misma lista** (antes sí, `DESTINOS_BASE` + `DESTINO_BOVEDA` condicional a los dos). El **sidebar** conserva ese mismo criterio sin cambios:
 
-| Pestaña | Ruta | Icono | Visible para |
+| Destino (escritorio) | Ruta | Icono | Visible para |
 |---------|------|-------|--------------|
 | Inicio | `/` | House | Todos |
 | Guías | `/soluciones` | BookOpen | Todos |
 | Equipos | `/dispositivos` | Monitor | Todos |
 | Red | `/red` | TreeStructure | Todos |
 | Bóveda | `/boveda` | Vault | Solo con permiso `puede_ver_boveda` |
+
+Las **5 pestañas de móvil** (`DESTINOS_BASE` + `DESTINO_MAS`) son en cambio fijas, iguales para todos (regla R17: "los permisos cambian lo que hay detrás de una puerta, no la forma de la barra"). La Bóveda deja de ser pestaña móvil y pasa a encabezar "Más" (decisión aprobada por el usuario):
+
+| Pestaña (móvil) | Ruta | Icono | Visible para |
+|---------|------|-------|--------------|
+| Inicio | `/` | House | Todos |
+| Guías | `/soluciones` | BookOpen | Todos |
+| Equipos | `/dispositivos` | Monitor | Todos |
+| Red | `/red` | TreeStructure | Todos |
+| Más | `/mas` | DotsNine | Todos |
+
+Estado de la pestaña activa en tres canales (regla R16 exige al menos dos): barra de 2px sobre la pestaña, icono relleno (salvo "Más", que no tiene variante rellena) y color de acento (`neutral-300` inactivo, antes `neutral-500`); más un rótulo de 12px en celdas de 52px (antes 10,5px en 44), estado presionado (fondo de acento al 10%) y anillo de foco de 2px, ninguno de los cuales existía antes de la tarea 182.
 
 La Bóveda **solo aparece a quien tiene el permiso**; el resto ni sabe que existe (la barra muestra 4 o 5 pestañas según el permiso).
 
@@ -171,6 +184,7 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/boveda/migrar` | MigracionCredenciales | Pantalla completa | Migrar secretos que son de un equipo |
 | `/boveda/:credencialId` | CredencialPage | ShellNocturne | Ficha de un secreto (descifrado local) |
 | `/boveda/:credencialId/editar` | CredencialForm | Pantalla completa | Editar secreto |
+| `/mas` | PantallaMas | ShellNocturne | Quinta pestaña móvil: puerta de Bóveda, Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar y Mi cuenta (tarea 182) |
 | `/diagnostico` | DiagnosticosPage | Centrado | Lista de problemas por categoría |
 | `/diagnostico/nuevo` | DiagnosticoForm | Pantalla completa | Crear diagnóstico (árbol de preguntas) |
 | `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Pantalla completa | Asistente de ejecución del diagnóstico |
@@ -430,6 +444,25 @@ Solo visible para usuarios con permiso `puede_ver_boveda`. La sección más sens
 
 Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qué campos aparecen; avisos anti duplicidad; vínculo con equipos; vencimiento; archivo cifrado.
 
+<a id="56-mas"></a>
+### 5.6 Más
+
+**Ruta:** `/mas` · **Archivo:** `src/features/mas/PantallaMas.tsx` · **Shell:** ShellNocturne
+
+**Nueva desde la tarea 182** (mockup `3f` del handoff "Auditoría de Soluciones TI"). Quinta pestaña móvil: la puerta de los ocho destinos que hasta esa tarea no aparecían ni en la barra ni en el sidebar, así que un técnico nuevo no podía encontrarlos sin que alguien se los mostrara (regla **R15**, "todo destino tiene puerta"). La Bóveda deja de ser pestaña y encabeza el primer grupo (decisión aprobada por el usuario en `Decisiones aprobadas.md`).
+
+**Cabecera:** la fila superior es la **barra superior global** (título "Más", sincronización, lupa y cuenta; ver la sección 2). Sin controles propios en la banda de debajo: esta pantalla es solo un índice.
+
+**Cuerpo, en grupos:**
+- **"Consulta protegida"** (solo con permiso `puede_ver_boveda`): fila destacada de **Bóveda** ("Claves y credenciales del equipo"), con el mismo tratamiento visual que la tarjeta de "Diagnóstico en curso" (borde y fondo en acento), porque es la única entrada que exige un permiso.
+- **"Herramientas"**: **Diagnóstico** ("Del síntoma a la guía, paso a paso") y **Escanear equipo** ("Abre la ficha por código QR").
+- **"Registros"**: **Ubicaciones** ("Sedes, salas y racks · N", conteo en vivo), **Personas** ("Responsables de cada equipo · N", conteo en vivo), **Etiquetas QR** y **Importar** (misma pantalla que el menú "···" de Equipos, ahora con puerta propia).
+- **"Mi cuenta"**: fila de perfil (avatar con iniciales, nombre, correo → `/cuenta`) y **"Bloqueo y seguridad"** (→ `/cuenta/seguridad`), con subtítulo que dice el método configurado y si está activo o inactivo, leído en vivo de `db.seguridadApp`.
+
+**Volver.** Ubicaciones y Personas, alcanzadas ahora desde aquí, suben a "Más" (no a Equipos): antes su regreso llevaba a una sección que el técnico no había visitado si llegaba por un enlace o por esta pantalla (mismo defecto que el problema #3 del turno 3 de la auditoría). Diagnóstico y Escanear siguen subiendo a Inicio (su puerta original, que se conserva); Etiquetas e Importar siguen subiendo a Equipos, porque su camino principal sigue siendo el menú "···" de esa sección.
+
+**Pendiente:** el sidebar de escritorio no ofrece "Más" (no lo necesita: sigue mostrando Bóveda como destino propio); el resto de los ocho destinos solo gana puerta explícita en escritorio con el sidebar completo de la tarea 183.
+
 ---
 
 <a id="6-secciones-secundarias"></a>
@@ -477,11 +510,11 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 <a id="63-ubicaciones"></a>
 ### 6.3 Ubicaciones
 
-**Ruta:** `/ubicaciones` · **Archivo:** `src/features/ubicaciones/UbicacionesPage.tsx` · **Shell:** centrado (bajo Equipos)
+**Ruta:** `/ubicaciones` · **Archivo:** `src/features/ubicaciones/UbicacionesPage.tsx` · **Shell:** centrado (bajo "Más" desde la tarea 182; antes bajo Equipos, ver [DECISIONES.md](DECISIONES.md))
 
 **Objetivo.** El lugar físico como entidad propia (con jerarquía opcional Sede > Área > Punto), que reemplaza el texto libre de ubicación.
 
-**Lista:** cabecera "Volver a Equipos", **botón "Crear"** (creación inline: nombre + chips de ubicación padre), **buscador** ("Buscar un lugar"). Aviso de migración (si hay equipos con la ubicación como texto → `/ubicaciones/migrar`). Árbol con sangría por jerarquía: icono House (raíz) o MapPin, nombre, conteo de equipos, flecha.
+**Lista:** cabecera "Volver a Más", **botón "Crear"** (creación inline: nombre + chips de ubicación padre), **buscador** ("Buscar un lugar"). Aviso de migración (si hay equipos con la ubicación como texto → `/ubicaciones/migrar`). Árbol con sangría por jerarquía: icono House (raíz) o MapPin, nombre, conteo de equipos, flecha.
 
 **Ficha (`UbicacionPage`), vista 360°:** ancestros (ruta jerárquica), sub-ubicaciones, "equipos en este lugar" (inverso de `ubicacion_id`), acciones editar/crear sub-ubicación, e historial. Botones para crear sub-ubicación (`?padre=<id>`).
 
@@ -490,7 +523,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 <a id="64-personas"></a>
 ### 6.4 Personas
 
-**Ruta:** `/personas` · **Archivo:** `src/features/personas/PersonasPage.tsx` · **Shell:** centrado (bajo Equipos)
+**Ruta:** `/personas` · **Archivo:** `src/features/personas/PersonasPage.tsx` · **Shell:** centrado (bajo "Más" desde la tarea 182; antes bajo Equipos)
 
 **Objetivo.** El responsable de un equipo como entidad propia (sin jerarquía, a diferencia de ubicaciones). Mismo patrón que Ubicaciones: lista plana con creación inline y buscador, aviso de migración, **ficha 360°** (`PersonaPage`) con los equipos asignados a esa persona e historial, **formulario** (`PersonaForm`, ver sección 7) y **migración asistida** (`MigracionPersonas`).
 
@@ -504,7 +537,7 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 <a id="66-mi-cuenta-y-seguridad"></a>
 ### 6.6 Mi cuenta y Seguridad de la aplicación
 
-**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, shell centrado. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**.
+**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, shell centrado. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**. Desde la tarea 182 también se alcanza con un toque desde el avatar de la barra superior (en móvil) o desde la fila de perfil de "Más".
 
 **Seguridad de la aplicación (`SeguridadPage`).** Ruta `/cuenta/seguridad`, shell centrado. Configura el **bloqueo del dispositivo** (patrón o contraseña, nunca biometría), una capa distinta de la sesión y de la contraseña maestra.
 - **Sin configurar:** invitación + selector de método (Patrón / Contraseña) + captura del secreto con confirmación.
@@ -513,6 +546,8 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 
 <a id="67-etiquetas-e-importacion"></a>
 ### 6.7 Etiquetas QR e Importación
+
+Ambas se alcanzaban solo desde el menú "···" de Equipos; desde la tarea 182 tienen además puerta propia en "Más" (grupo "Registros"). Su "Volver" sigue subiendo a Equipos, que sigue siendo su camino principal.
 
 **Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, pantalla completa. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Cabecera "Volver a Equipos", **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
 
@@ -769,7 +804,9 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 
 | Menú | Opciones | Navegación / acción |
 |------|----------|---------------------|
-| **Barra de navegación** (`ShellNocturne`) | Inicio, Guías, Equipos, Red, (Bóveda con permiso) | Cambia de sección; en escritorio incluye el perfil (→ Cuenta) |
+| **Barra de navegación** (`ShellNocturne`), escritorio | Inicio, Guías, Equipos, Red, (Bóveda con permiso) | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
+| **Barra de navegación** (`ShellNocturne`), móvil (tarea 182) | Inicio, Guías, Equipos, Red, Más | Cambia de sección; siempre las mismas cinco, iguales para todos |
+| **"Más"** (tarea 182) | Bóveda (con permiso), Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar, Mi cuenta, Bloqueo y seguridad | Navega a cada pantalla; ver sección 5.6 |
 | **"···" de Equipos** | Ubicaciones, Personas, Etiquetas QR, Importar | Navega a cada pantalla |
 | **"···" de la ficha de dispositivo** | Duplicar, Editar, Etiqueta QR, Reemplazar, Dar de baja, Eliminar | Acciones sobre el equipo |
 | **"···" de la ficha de artículo** | Compartir, Duplicar, Reiniciar progreso, Eliminar | Acciones sobre el artículo |
@@ -948,6 +985,8 @@ Ficha de equipo > "···" > Dar de baja → resuelve cada dependencia (quitar/d
 <a id="14-arbol-de-navegacion"></a>
 ## 14. Árbol jerárquico de navegación
 
+Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de Mi cuenta viven en la barra superior de las **cinco** pestañas (Inicio, Guías, Equipos, Red, Más), no solo en Inicio: se omiten del resto de los árboles de abajo para no repetirlos.
+
 ```
 Login
  └── (autenticado) → Bloqueo de la app (patrón/contraseña, si está activo)
@@ -959,11 +998,7 @@ Inicio (/)
  ├── Problemas frecuentes → Diagnóstico · Estadísticas
  ├── Pendientes · Favoritos · Recientes · Para empezar · Actividad del equipo
  ├── Descargar todo para offline
- ├── Pastilla de sincronización → Panel de sincronización
- └── Mi cuenta (móvil)
-      ├── Cambiar contraseña
-      ├── Seguridad de la aplicación (bloqueo patrón/contraseña, autobloqueo)
-      └── Cerrar sesión
+ └── Pastilla de sincronización → Panel de sincronización
 
 Guías (/soluciones)
  ├── Buscar · Chips de categoría · Subfiltros por tipo · Filtro por etiqueta
@@ -983,8 +1018,6 @@ Guías (/soluciones)
 Equipos (/dispositivos)
  ├── Buscar · Chips de categoría · Resumen de estados
  ├── Escanear · Crear · "···" (Ubicaciones · Personas · Etiquetas QR · Importar)
- ├── Ubicaciones (/ubicaciones) → Crear · Migrar · Ficha · Editar
- ├── Personas (/personas) → Crear · Migrar · Ficha · Editar
  ├── Etiquetas QR (/etiquetas) → seleccionar · imprimir
  ├── Importar (/importar) → elegir · revisar · importar
  └── Ficha de dispositivo (/:id)
@@ -997,6 +1030,9 @@ Equipos (/dispositivos)
       ├── Intervenciones (registrar) · Historial
       ├── Reemplazo (/:id/reemplazo)
       └── Dar de baja (/:id/baja)
+
+# Ubicaciones y Personas se alcanzan también desde el "···" de aquí, pero
+# su padre real es "Más" desde la tarea 182: ver ese árbol más abajo.
 
 Red (/red)
  ├── Buscar · Crear (equipo de red) · agrupado por ubicación
@@ -1015,7 +1051,13 @@ Bóveda (/boveda) [permiso puede_ver_boveda]
       ├── Editar · Eliminar
       ├── Campos (revelar · copiar · descargar archivo) · Da acceso a · Usada en · Actividad
 
-Diagnóstico (desde Inicio, /diagnostico)
+Más (/mas) — quinta pestaña móvil desde la tarea 182
+ ├── Consulta protegida: Bóveda (solo con permiso puede_ver_boveda)
+ ├── Herramientas: Diagnóstico · Escanear equipo
+ ├── Registros: Ubicaciones (/ubicaciones) · Personas (/personas) · Etiquetas QR · Importar
+ └── Mi cuenta: Perfil (/cuenta) · Bloqueo y seguridad (/cuenta/seguridad)
+
+Diagnóstico (desde Inicio y Más, /diagnostico)
  ├── Buscar · Crear · Sugerencias del equipo · Estadísticas
  ├── Diagnóstico en curso (retomar)
  ├── Editor de diagnóstico (/nuevo, /:id/editar) → preguntas · respuestas · Probar · Guardar

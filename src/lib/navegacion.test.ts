@@ -3,7 +3,7 @@ import { padreDe } from './navegacion'
 
 describe('padreDe', () => {
   it('las pestañas de la barra no tienen pantalla superior', () => {
-    for (const tab of ['/', '/soluciones', '/dispositivos', '/red', '/boveda']) {
+    for (const tab of ['/', '/soluciones', '/dispositivos', '/red', '/boveda', '/mas']) {
       expect(padreDe(tab)).toBeNull()
     }
   })
@@ -74,9 +74,9 @@ describe('padreDe', () => {
     })
   })
 
-  describe('Ubicaciones (se alcanza desde Equipos)', () => {
-    it('la lista de ubicaciones sube a Dispositivos', () => {
-      expect(padreDe('/ubicaciones')).toEqual({ to: '/dispositivos', etiqueta: 'Equipos' })
+  describe('Ubicaciones (se alcanza desde "Más", tarea 182)', () => {
+    it('la lista de ubicaciones sube a Más, no a Equipos', () => {
+      expect(padreDe('/ubicaciones')).toEqual({ to: '/mas', etiqueta: 'Más' })
     })
 
     it('nueva, migrar y la ficha vuelven a la lista de ubicaciones', () => {
@@ -94,9 +94,9 @@ describe('padreDe', () => {
     })
   })
 
-  describe('Personas (se alcanza desde Equipos)', () => {
-    it('la lista de personas sube a Dispositivos', () => {
-      expect(padreDe('/personas')).toEqual({ to: '/dispositivos', etiqueta: 'Equipos' })
+  describe('Personas (se alcanza desde "Más", tarea 182)', () => {
+    it('la lista de personas sube a Más, no a Equipos', () => {
+      expect(padreDe('/personas')).toEqual({ to: '/mas', etiqueta: 'Más' })
     })
 
     it('nueva, migrar y la ficha vuelven a la lista de personas', () => {

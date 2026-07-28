@@ -122,6 +122,9 @@ const MigracionPersonas = lazy(() =>
   import('./features/personas/MigracionPersonas').then((m) => ({ default: m.MigracionPersonas })),
 )
 const RedPage = lazy(() => import('./features/red/RedPage').then((m) => ({ default: m.RedPage })))
+const PantallaMas = lazy(() =>
+  import('./features/mas/PantallaMas').then((m) => ({ default: m.PantallaMas })),
+)
 const TopologiaPage = lazy(() =>
   import('./features/red/TopologiaPage').then((m) => ({ default: m.TopologiaPage })),
 )
@@ -323,7 +326,8 @@ function App() {
               {/* Ubicaciones como entidad (grupo N3, tarea 88, Ubicaciones.dc.html):
                   lista con árbol y creación inline, ficha 360, formulario y
                   migración asistida. Re-autorizadas a Nocturne, cada una trae
-                  su propio shell enfocado (bajo Dispositivos), por eso salen
+                  su propio shell enfocado; su puerta es "Más" desde la tarea
+                  182 (antes solo el menú "···" de Equipos), por eso salen
                   del Layout oscuro. */}
               <Route
                 path="ubicaciones"
@@ -360,8 +364,8 @@ function App() {
               {/* Personas como entidad (hallazgo T1 de AUDITORIA_FLUJOS_TI.md):
                   lista plana con creación inline, ficha 360, formulario y
                   migración asistida. Mismo patrón Nocturne que ubicaciones,
-                  cada una trae su propio shell enfocado (bajo Dispositivos),
-                  por eso salen del Layout oscuro. */}
+                  cada una trae su propio shell enfocado; su puerta es "Más"
+                  desde la tarea 182, por eso salen del Layout oscuro. */}
               <Route
                 path="personas"
                 element={
@@ -503,6 +507,17 @@ function App() {
                 <Route path=":credencialId/editar" element={<CredencialForm />} />
                 <Route path=":credencialId" element={<CredencialPage />} />
               </Route>
+              {/* "Más" (tarea 182, mockup 3f): quinta pestaña, puerta de los
+                  destinos que hoy no aparecen en la barra ni en el sidebar.
+                  Trae su propio ShellNocturne, como el resto de pestañas. */}
+              <Route
+                path="mas"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <PantallaMas />
+                  </Suspense>
+                }
+              />
               {/* Cuenta, Seguridad y Sugerencias del equipo re-autorizadas a
                   Nocturne (tarea 97, sin mockup: se tradujo el diseño
                   heredado): traen su propio shell centrado (mismo patrón

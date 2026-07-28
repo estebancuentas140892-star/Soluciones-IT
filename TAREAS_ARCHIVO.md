@@ -1,5 +1,23 @@
 # Historial de tareas finalizadas
 
+### 182. BarraPestanas de cinco destinos fijos y PantallaMas
+
+**Estado**: TERMINADA el 2026-07-28. Lint, `tsc -b` y build limpios; 1677 pruebas pasan. **Prioridad**: ALTA. **Origen**: turno 3 del handoff "Auditoría de Soluciones TI", mockups `3e` (escritorio) y `3f` (móvil, "la pestaña 'Más' recoge los nueve destinos y deja de esconderlos dentro de otra sección").
+
+**Problema**: ocho destinos (Diagnóstico, Escáner, Ubicaciones, Personas, Mi cuenta, Seguridad, Etiquetas, Importar) no aparecían ni en la barra ni en el sidebar; un técnico nuevo no podía encontrarlos sin que alguien se los mostrara. La barra móvil cambiaba de 4 a 5 columnas según el permiso de Bóveda: dos técnicos con el mismo teléfono veían barras distintas. Los rótulos medían 10,5 px, por debajo de cualquier mínimo razonable para navegación que se usa con guantes y a pleno sol; el estado activo se jugaba a un canal y medio (icono relleno + color, sin forma); no había estado presionado ni foco de teclado visible; entre 768 y 1024 px la barra seguía anclada a 448 px centrados.
+
+**Cambio**: `src/features/mas/PantallaMas.tsx`, la quinta pestaña, en cuatro grupos: "Consulta protegida" (Bóveda, solo con permiso, fila destacada con el mismo tratamiento visual que la tarjeta de "Diagnóstico en curso"), "Herramientas" (Diagnóstico, Escanear equipo), "Registros" (Ubicaciones y Personas con conteo en vivo, Etiquetas QR, Importar) y "Mi cuenta" (perfil con avatar, Bloqueo y seguridad con su estado leído en vivo de `db.seguridadApp`). La Bóveda deja de ser pestaña móvil y encabeza el primer grupo (decisión aprobada por el usuario en `Decisiones aprobadas.md`).
+
+**`ShellNocturne.tsx` separa por primera vez** la lista de destinos de escritorio (sin cambios: Bóveda condicional al permiso, deferido a la tarea 183) de la de móvil, que pasa a ser **siempre** Inicio · Guías · Equipos · Red · Más, igual para todos (regla **R17**). Estado de la pestaña activa en tres canales (**R16** pide mínimo dos): barra de 2px sobre la pestaña, icono relleno y color de acento; suma estado presionado (fondo de acento al 10%) y anillo de foco de 2px, que no existían. Rótulo de 10,5px a 12px, celda de 44px a 52px. Icono nuevo `DotsNine` (sin variante rellena: el mockup usa el mismo trazo activo e inactivo). `Avatar` (`src/components/Avatar.tsx`) se extrae de `BarraSuperior` (tarea 181) para reutilizarse en la fila de perfil.
+
+**Decisión tomada**: el "Volver" de Ubicaciones y Personas sube ahora a "Más", no a Equipos (`src/lib/navegacion.ts`). El problema #3 del turno 3 de la auditoría señaló en concreto que ese regreso llevaba "a una sección que el técnico no visitó" cuando llegaba por un enlace profundo; con "Más" como puerta canónica desde esta tarea, mantenerlo apuntando a Equipos habría dejado el mismo defecto sin corregir. Etiquetas QR e Importar, en cambio, **conservan** a Equipos como padre: siguen siendo acciones sobre el inventario cuyo camino principal es el menú "···" de esa sección; "Más" es ahí una puerta secundaria. Registrado en [DECISIONES.md](DECISIONES.md) AD-024. Como consecuencia, `UbicacionesPage.tsx` y `PersonasPage.tsx` dejaron de pasarle un `to`/`children` fijo a `BotonVolver` y usan ahora el valor por defecto.
+
+**Ubicación**: `src/features/mas/PantallaMas.tsx`, `src/components/Avatar.tsx` (nuevos); `src/app/ShellNocturne.tsx`, `src/App.tsx` (ruta `mas`), `src/lib/navegacion.ts` (+ `navegacion.test.ts`), `src/components/iconos.tsx` (+ `DotsNine`), `src/components/BarraSuperior.tsx` (usa `Avatar`), `src/features/ubicaciones/UbicacionesPage.tsx`, `src/features/personas/PersonasPage.tsx` (modificados).
+
+**Verificación**: lint, `tsc -b` y build limpios. 1677 pruebas pasan. Siguen los mismos **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts`. La app arranca sin errores de consola; `/mas` resuelve la ruta y redirige limpio a `/login` sin sesión activa. **Sin verificar en navegador con sesión real**: la pantalla vive detrás del login y esta sesión no tiene cuenta de técnico, así que no se pudo confirmar visualmente el agrupado, los conteos en vivo ni el estado de bloqueo. Tampoco hay pruebas unitarias nuevas: la pantalla es routing y presentación pura sobre datos ya probados en otras partes (`iniciales.test.ts`, `navegacion.test.ts`), sin lógica propia que aislar.
+
+---
+
 ### 181. BarraSuperior global: dónde estoy, qué sabe la app, buscar
 
 **Estado**: TERMINADA el 2026-07-28. Lint, `tsc -b` y build limpios; 1677 pruebas pasan (8 nuevas). **Prioridad**: ALTA. **Origen**: turno 3 del handoff "Auditoría de Soluciones TI", mockup `3d` ("especificación completa, lista para implementar").
