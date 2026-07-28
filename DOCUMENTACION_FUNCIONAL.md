@@ -16,8 +16,8 @@ Fecha de redacción: 2026-07-23. Basado en una lectura directa del código en `s
 4. [Modelo de datos (tablas)](#4-modelo-de-datos)
 5. [Secciones del menú principal](#5-secciones-del-menu-principal)
    - 5.1 [Inicio](#51-inicio)
-   - 5.2 [Soluciones](#52-soluciones)
-   - 5.3 [Dispositivos](#53-dispositivos)
+   - 5.2 [Guías](#52-guias)
+   - 5.3 [Equipos](#53-equipos)
    - 5.4 [Red](#54-red)
    - 5.5 [Bóveda](#55-boveda)
 6. [Secciones secundarias](#6-secciones-secundarias)
@@ -47,12 +47,12 @@ Fecha de redacción: 2026-07-23. Basado en una lectura directa del código en `s
 <a id="1-vision-general"></a>
 ## 1. Visión general
 
-Soluciones IT (nombre interno de marca en la interfaz: **"IT Brain"**) es una aplicación web progresiva (PWA) para un equipo de 5 técnicos de soporte y mantenimiento de TI. Sustituye a Miro como fuente de conocimiento del equipo. Funciona **offline primero**: toda la información vive en el teléfono (IndexedDB) y se consulta al instante sin internet; cuando hay conexión, sincroniza con Supabase para que los técnicos compartan siempre lo mismo.
+Soluciones IT es una aplicación web progresiva (PWA) para un equipo de 5 técnicos de soporte y mantenimiento de TI. Sustituye a Miro como fuente de conocimiento del equipo. Funciona **offline primero**: toda la información vive en el teléfono (IndexedDB) y se consulta al instante sin internet; cuando hay conexión, sincroniza con Supabase para que los técnicos compartan siempre lo mismo.
 
 Cuatro pilares, más un motor de diagnóstico:
 
-- **Base de conocimiento** por categorías (sección Soluciones): procedimientos, manuales e incidencias.
-- **Inventario de dispositivos** (sección Dispositivos): equipos que no son de red.
+- **Base de conocimiento** por categorías (sección Guías): procedimientos, manuales e incidencias.
+- **Inventario de equipos** (sección Equipos): equipos que no son de red.
 - **Infraestructura de red** (sección Red): equipos de red y topología de conexiones.
 - **Bóveda de credenciales** cifradas (sección Bóveda): usuarios, contraseñas, llaves, archivos.
 - **Diagnóstico Inteligente**: del problema a la solución mediante un árbol de preguntas.
@@ -87,7 +87,7 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 
 Tipos de shell de las pantallas:
 
-- **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con el logotipo "IT Brain", los módulos y el perfil del usuario (enlace a Cuenta). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque. La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Soluciones, Dispositivos, Red, Bóveda y sus fichas).
+- **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con la marca "Soluciones IT", los módulos y el perfil del usuario (enlace a Cuenta). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque. La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Guías, Equipos, Red, Bóveda y sus fichas).
 - **Shell centrado propio**: pantallas alcanzadas desde Inicio que no son pestaña (Diagnóstico, Estadísticas, Sugerencias, Cuenta, Seguridad, Ubicaciones, Personas y sus fichas/formularios). Columna centrada de 448px con cabecera pegajosa y botón "Volver".
 - **Shell a pantalla completa**: los editores (Artículo, Dispositivo, Credencial, Diagnóstico), el escáner, las etiquetas QR y la importación. Cabecera pegajosa + barra de acciones inferior fija; salen del contenedor con barra para no distraer.
 
@@ -96,8 +96,8 @@ Las **5 pestañas** de la barra inferior/lateral (`DESTINOS_BASE` + `DESTINO_BOV
 | Pestaña | Ruta | Icono | Visible para |
 |---------|------|-------|--------------|
 | Inicio | `/` | House | Todos |
-| Soluciones | `/soluciones` | BookOpen | Todos |
-| Dispositivos | `/dispositivos` | Monitor | Todos |
+| Guías | `/soluciones` | BookOpen | Todos |
+| Equipos | `/dispositivos` | Monitor | Todos |
 | Red | `/red` | TreeStructure | Todos |
 | Bóveda | `/boveda` | Vault | Solo con permiso `puede_ver_boveda` |
 
@@ -225,12 +225,12 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 **Objetivo.** Punto único de entrada al conocimiento del equipo. La pantalla principal ES el buscador global (el pilar de la app): abrir y buscar toma dos toques. Cuando no se busca, muestra atajos de trabajo y bloques derivados de la actividad reciente.
 
 **Cabecera fija (con desenfoque).**
-- Título "IT Brain" y saludo dinámico según la hora ("Buenos días/tardes/noches. Todo el conocimiento del equipo, al instante").
+- Título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022) y saludo dinámico según la hora ("Buenos días/tardes/noches. Todo el conocimiento del equipo, al instante"). El saludo tiene su retirada agendada en la tarea 184.
 - **Pastilla de sincronización** (botón `PastillaSync`): muestra el estado (Al día / Sincronizando / Con error / Sin conexión) con icono, etiqueta y color. Al pulsarla fuerza una sincronización y abre el Panel de sincronización.
 - **Botón "Mi cuenta"** (icono User, solo móvil `lg:hidden`): único acceso a Cuenta/Seguridad/Cerrar sesión desde el teléfono. En escritorio ese acceso vive en la barra lateral.
 - **Buscador global** (input `type="search"`): placeholder "Buscar en todo: artículos, equipos, bóveda". Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
 
-**Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Soluciones** (diagnósticos, categorías, artículos, adjuntos), **Dispositivos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas**. Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
+**Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas**. Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
 
 **Modo inicio (sin texto), bloques en orden:**
 1. **"Continuar donde quedaste"** (si aplica): tarjeta destacada con el procedimiento a medias más reciente, barra de progreso y "Paso N de M". Enlaza a su ficha.
@@ -243,21 +243,21 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 8. **"Actividad del equipo"** (si hay): feed COMPARTIDO (a diferencia de Favoritos/Recientes que son personales) con las últimas ediciones y ejecuciones de diagnóstico ("Ana editó X (3 cambios)", "Ana ejecutó el diagnóstico X (Resuelto)"), colapsado a 5 renglones.
 9. **Botón "Descargar todo para offline"** (`DescargarOffline`): deja el contenido de adjuntos en el teléfono antes de salir a un mantenimiento, con progreso.
 
-**Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Soluciones, Dispositivos, Bóveda, Ubicaciones y Personas; los bloques enlazan a diagnósticos, artículos, credenciales, fichas de equipo, la pantalla de estadísticas y las sugerencias del equipo.
+**Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Guías, Equipos, Bóveda, Ubicaciones y Personas; los bloques enlazan a diagnósticos, artículos, credenciales, fichas de equipo, la pantalla de estadísticas y las sugerencias del equipo.
 
 ---
 
-<a id="52-soluciones"></a>
-### 5.2 Soluciones
+<a id="52-guias"></a>
+### 5.2 Guías
 
 **Ruta:** `/soluciones` · **Archivo:** `src/features/soluciones/SolucionesPage.tsx` · **Shell:** ShellNocturne
 
 **Objetivo.** Responder "¿cómo realizo este procedimiento?". Rejilla de artículos (procedimientos, manuales, incidencias) filtrable por categoría, tipo y etiqueta.
 
-> **Rediseñada el 2026-07-27** a partir del handoff "Auditoría de Soluciones TI" (pantalla P1). Las reglas visuales que rigen ahora toda la sección (R1 a R7) están en [DECISIONES.md](DECISIONES.md) AD-019. El layout de escritorio se conservó tal cual (AD-021).
+> **Rediseñada el 2026-07-27** a partir del handoff "Auditoría de Soluciones TI" (pantalla P1). Las reglas visuales que rigen ahora toda la sección (R1 a R7) están en [DECISIONES.md](DECISIONES.md) AD-019. El layout de escritorio se conservó tal cual (AD-021). **Renombrada a "Guías" el 2026-07-28** (AD-022); la ruta sigue siendo `/soluciones`.
 
 **Cabecera fija:**
-- Título "Soluciones" y, debajo, la **pastilla de frescura**: "N artículos al día · hace 4 min", o "N cambios sin subir" en ámbar, o "sin sincronizar aún" (regla R7; antes esta señal solo existía en Inicio). Es informativa, no abre nada.
+- Título "Guías" y, debajo, la **pastilla de frescura**: "N artículos al día · hace 4 min", o "N cambios sin subir" en ámbar, o "sin sincronizar aún" (regla R7; antes esta señal solo existía en Inicio). Es informativa, no abre nada.
 - **Botón "Crear"**, siempre activo y en acento (regla R3). Con una categoría elegida abre `/soluciones/:categoriaId/nuevo`; **sin categoría abre la hoja "¿En qué categoría?"** y navega al editor de la que se elija. Antes estaba deshabilitado y la razón vivía en un `title`, que en un teléfono nadie lee porque no hay hover.
 - **Buscador** (`type="search"`): placeholder "Buscar equipo, síntoma o etiqueta". Busca por título, categoría, tipo y etiquetas (normalizado sin acentos). El botón de borrar mide **44 px** reales (regla R6; medía 26).
 - **Chips de categoría** (deslizables en móvil, con un degradado en el extremo derecho que indica que hay más sin necesidad de barra; en escritorio `xl`, rail lateral fijo de 220px): "Todos" + una por categoría, cada uno con su color de identidad, icono y conteo.
@@ -288,7 +288,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 - Avisos si es **Borrador** ("No aparece en el buscador, rutas de inicio ni diagnóstico") u **Obsoleto** ("Usar el procedimiento vigente").
 - **Portada** (imagen banner, si tiene).
 - **Encabezado**: etiquetas de metadatos (categoría, dificultad, tiempo), pastilla de estado, título, descripción ("cuándo usar"), línea meta (tipo · vX.X · Actualizado el DD mmm por Autor). Si el artículo restringe marca/modelo (hallazgo H6), una etiqueta adicional "Marca: X" / "Modelo: Y" avisa que no aparece en otros equipos de la misma categoría.
-- Si es **problema_frecuente**: bloques "Síntomas", "Posibles causas" y "Dispositivos afectados" (pastillas navegables a la ficha de cada equipo).
+- Si es **problema_frecuente**: bloques "Síntomas", "Posibles causas" y "Equipos afectados" (pastillas navegables a la ficha de cada equipo).
 - **Procedimiento** (si tiene pasos): `ProcedimientoVista` (ver sección 13, flujo de ejecución) con objetivo, requisitos "Antes de empezar", barra de progreso pegajosa, stepper de pasos con tareas/avisos/imágenes/vínculos, y verificación final.
 - **Contenido en Markdown** (notas adicionales).
 - **Adjuntos** (solo en artículos sin procedimiento).
@@ -303,15 +303,15 @@ Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un e
 
 ---
 
-<a id="53-dispositivos"></a>
-### 5.3 Dispositivos
+<a id="53-equipos"></a>
+### 5.3 Equipos
 
 **Ruta:** `/dispositivos` · **Archivo:** `src/features/dispositivos/DispositivosPage.tsx` · **Shell:** ShellNocturne
 
 **Objetivo.** Responder "¿qué se sabe de cada equipo?" con el inventario **general** (los equipos de categorías de red van en la sección Red, no aquí).
 
 **Cabecera fija:**
-- Título "Dispositivos" y subtítulo "Qué se sabe de cada equipo".
+- Título "Equipos" y subtítulo "Qué se sabe de cada equipo". **Renombrada el 2026-07-28** ([DECISIONES.md](DECISIONES.md) AD-022); la ruta sigue siendo `/dispositivos`.
 - **Botón "Escanear equipo"** (icono QR, → `/escaner`).
 - **Botón "Crear"** (→ `/dispositivos/nuevo`).
 - Menú **"···"** con: **Ubicaciones** (→ `/ubicaciones`), **Personas** (→ `/personas`), **Etiquetas QR** (→ `/dispositivos/etiquetas`), **Importar** (→ `/dispositivos/importar`).
@@ -329,7 +329,7 @@ Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un e
 
 **Ruta:** `/dispositivos/:dispositivoId` · **Shell:** ShellNocturne. Vista 360°.
 
-**Cabecera:** "Volver" (a Dispositivos o a Red según `es_red` de su categoría), **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace), menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
+**Cabecera:** "Volver" (a Equipos o a Red según `es_red` de su categoría), **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace), menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
 
 **Cuerpo:**
 - **Foto banner** (si tiene).
@@ -363,7 +363,7 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 **Cuerpo:**
 - **Entrada destacada a "Topología de red"** (tintada en acento, → `/red/topologia`): "Recorrer las conexiones desde el rack hasta cada equipo".
 - **Equipos agrupados por ubicación** (texto libre, orden natural; los sin ubicación al final): cada grupo con encabezado (icono MapPin, nombre, conteo) y filas `FilaDispositivo`.
-- Estados vacíos análogos a Dispositivos.
+- Estados vacíos análogos a Equipos.
 
 **La ficha de un equipo de red es la misma** `DispositivoPage` (sección 5.3.1); solo cambia el retorno ("Volver" vuelve a Red).
 
@@ -447,7 +447,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - Banner "Solo: {Categoría}" cuando se llega filtrado (`?categoria=<id>`), con "Ver todos".
 - **"Diagnóstico en curso"** (si hay sesión a medias): tarjeta destacada para retomar.
 - **Problemas agrupados por categoría** (icono con color, filas con icono de alerta, título, descripción, **estrella de favorito** y flecha).
-- Estados vacíos: "Todavía no hay diagnósticos" (con "Crear diagnóstico") o "Ningún problema coincide" (con "Ir a Soluciones").
+- Estados vacíos: "Todavía no hay diagnósticos" (con "Crear diagnóstico") o "Ningún problema coincide" (con "Ir a Guías").
 
 **Asistente de ejecución (`DiagnosticoRunPage`).** Ruta `/diagnostico/:diagnosticoId`, pantalla completa sin barra inferior. Arranca directo en la primera pregunta (auto-inicio). Cabecera con "Salir", título, botón editar y **barra de progreso** ("Pregunta N" / "Completado").
 - **Pregunta**: título grande, descripción opcional, y una lista de opciones tocables (cada una puede indicar "Ejecuta: {procedimiento}").
@@ -477,11 +477,11 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 <a id="63-ubicaciones"></a>
 ### 6.3 Ubicaciones
 
-**Ruta:** `/ubicaciones` · **Archivo:** `src/features/ubicaciones/UbicacionesPage.tsx` · **Shell:** centrado (bajo Dispositivos)
+**Ruta:** `/ubicaciones` · **Archivo:** `src/features/ubicaciones/UbicacionesPage.tsx` · **Shell:** centrado (bajo Equipos)
 
 **Objetivo.** El lugar físico como entidad propia (con jerarquía opcional Sede > Área > Punto), que reemplaza el texto libre de ubicación.
 
-**Lista:** cabecera "Volver a Dispositivos", **botón "Crear"** (creación inline: nombre + chips de ubicación padre), **buscador** ("Buscar un lugar"). Aviso de migración (si hay equipos con la ubicación como texto → `/ubicaciones/migrar`). Árbol con sangría por jerarquía: icono House (raíz) o MapPin, nombre, conteo de equipos, flecha.
+**Lista:** cabecera "Volver a Equipos", **botón "Crear"** (creación inline: nombre + chips de ubicación padre), **buscador** ("Buscar un lugar"). Aviso de migración (si hay equipos con la ubicación como texto → `/ubicaciones/migrar`). Árbol con sangría por jerarquía: icono House (raíz) o MapPin, nombre, conteo de equipos, flecha.
 
 **Ficha (`UbicacionPage`), vista 360°:** ancestros (ruta jerárquica), sub-ubicaciones, "equipos en este lugar" (inverso de `ubicacion_id`), acciones editar/crear sub-ubicación, e historial. Botones para crear sub-ubicación (`?padre=<id>`).
 
@@ -490,16 +490,16 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 <a id="64-personas"></a>
 ### 6.4 Personas
 
-**Ruta:** `/personas` · **Archivo:** `src/features/personas/PersonasPage.tsx` · **Shell:** centrado (bajo Dispositivos)
+**Ruta:** `/personas` · **Archivo:** `src/features/personas/PersonasPage.tsx` · **Shell:** centrado (bajo Equipos)
 
 **Objetivo.** El responsable de un equipo como entidad propia (sin jerarquía, a diferencia de ubicaciones). Mismo patrón que Ubicaciones: lista plana con creación inline y buscador, aviso de migración, **ficha 360°** (`PersonaPage`) con los equipos asignados a esa persona e historial, **formulario** (`PersonaForm`, ver sección 7) y **migración asistida** (`MigracionPersonas`).
 
 <a id="65-ficha-de-categoria"></a>
 ### 6.5 Ficha de categoría (`CategoriaPage`)
 
-**Ruta:** `/soluciones/:categoriaId` · **Shell:** ShellNocturne (bajo Soluciones)
+**Ruta:** `/soluciones/:categoriaId` · **Shell:** ShellNocturne (bajo Guías)
 
-Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con el icono en su color de identidad, nombre y resumen (N artículos · N equipos · N diagnósticos), **botón "Artículo"** para crear. Cuerpo: artículos agrupados por tipo (con chip de avance X/Y en los que están a medias), "Dispositivos de esta categoría" (con estado), "Diagnósticos de esta categoría", e historial. Se alcanza desde el buscador global y desde la ficha de un dispositivo.
+Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con el icono en su color de identidad, nombre y resumen (N artículos · N equipos · N diagnósticos), **botón "Artículo"** para crear. Cuerpo: artículos agrupados por tipo (con chip de avance X/Y en los que están a medias), "Equipos de esta categoría" (con estado), "Diagnósticos de esta categoría", e historial. Se alcanza desde el buscador global y desde la ficha de un equipo.
 
 <a id="66-mi-cuenta-y-seguridad"></a>
 ### 6.6 Mi cuenta y Seguridad de la aplicación
@@ -514,7 +514,7 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 <a id="67-etiquetas-e-importacion"></a>
 ### 6.7 Etiquetas QR e Importación
 
-**Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, pantalla completa. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Cabecera "Volver a Dispositivos", **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
+**Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, pantalla completa. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Cabecera "Volver a Equipos", **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
 
 **Importación masiva (`ImportarDispositivosPage`).** Ruta `/dispositivos/importar`, pantalla completa. Flujo de **3 pasos**:
 1. **Elegir archivo** (.xlsx o .csv). Reconoce encabezados parecidos ("No. de serie" = Serial, "Sede" = Ubicación). Enlace **"Descargar plantilla CSV de ejemplo"**.
@@ -704,7 +704,7 @@ Botones: **"Guardar conexión"** y (variante ficha) **"Guardar y agregar otra"**
 - **Reemplazo (`ReemplazoPage`).** Motivo (opcional). Botón "Migrar todo y dar de baja".
 - **Login (`LoginPage`).** Correo (email, obligatorio), Contraseña (obligatorio). Botón "Ingresar".
 - **Mi cuenta (`CuentaPage`).** Contraseña actual / Nueva / Confirmar (los tres obligatorios). Botón "Cambiar contraseña".
-- **Importar (`ImportarDispositivosPage`).** Carga de archivo (.csv/.xlsx) y, en la revisión, "Categoría para las filas que no traen una" (select). Botón "Importar N dispositivos".
+- **Importar (`ImportarDispositivosPage`).** Carga de archivo (.csv/.xlsx) y, en la revisión, "Categoría para las filas que no traen una" (select). Botón "Importar N equipos".
 
 ---
 
@@ -722,7 +722,7 @@ La app usa **modales** (centrados, `src/components/Modal.tsx`, renderizados con 
 | **Hoja de acciones de una fila** | Menú "···" de una fila | `BovedaPage` | Copiar usuario / Copiar contraseña (sin mostrarla, con auditoría) / Abrir la ficha / Editar / Eliminar | Las copias descifran al momento y registran en la auditoría |
 | **Menú "···" de la ficha de artículo** | Botón "···" | `ArticuloPage` | Compartir / Duplicar / Reiniciar progreso / Eliminar | Menú flotante (cierra al hacer clic fuera) |
 | **Menú "···" de la ficha de dispositivo** | Botón "···" | `DispositivoPage` | Duplicar / Editar / Etiqueta QR / Reemplazar / Dar de baja / Eliminar | Fila de botones bajo la cabecera |
-| **Menú "···" de Dispositivos** | Botón "···" | `DispositivosPage` | Ubicaciones / Personas / Etiquetas QR / Importar | - |
+| **Menú "···" de Equipos** | Botón "···" | `DispositivosPage` | Ubicaciones / Personas / Etiquetas QR / Importar | - |
 | **Vista previa de artículo** (`VistaPreviaArticulo`) | Botón "Vista previa" | `ArticuloForm` | Render interactivo del artículo antes de guardar | Progreso efímero que se borra al cerrar |
 | **Confirmación "Cancelar diagnóstico"** | Botón "Cancelar" | `DiagnosticoRunPage` | "¿Cancelar el diagnóstico? El avance se descarta y queda registrado como abandonado" | "Sí, cancelar" / "Seguir con el diagnóstico" |
 | **Pregunta de error / decisión** | Al completar el trabajo previo de un paso | `ProcedimientoVista` / `AsistenteVista` | "¿Ocurrió algún error?" / pregunta Sí/No | "No, continuar" avanza; "Sí, ver la solución" despliega el vínculo |
@@ -769,8 +769,8 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 
 | Menú | Opciones | Navegación / acción |
 |------|----------|---------------------|
-| **Barra de navegación** (`ShellNocturne`) | Inicio, Soluciones, Dispositivos, Red, (Bóveda con permiso) | Cambia de sección; en escritorio incluye el perfil (→ Cuenta) |
-| **"···" de Dispositivos** | Ubicaciones, Personas, Etiquetas QR, Importar | Navega a cada pantalla |
+| **Barra de navegación** (`ShellNocturne`) | Inicio, Guías, Equipos, Red, (Bóveda con permiso) | Cambia de sección; en escritorio incluye el perfil (→ Cuenta) |
+| **"···" de Equipos** | Ubicaciones, Personas, Etiquetas QR, Importar | Navega a cada pantalla |
 | **"···" de la ficha de dispositivo** | Duplicar, Editar, Etiqueta QR, Reemplazar, Dar de baja, Eliminar | Acciones sobre el equipo |
 | **"···" de la ficha de artículo** | Compartir, Duplicar, Reiniciar progreso, Eliminar | Acciones sobre el artículo |
 | **"···" de la ficha de credencial (lista)** | Copiar usuario, Copiar contraseña, Abrir, Editar, Eliminar | Acciones rápidas sobre el secreto |
@@ -794,9 +794,9 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 | **Reemplazar** | Ficha de dispositivo (→ `/reemplazo`) | Crea el equipo entrante (`?reemplazaA`) y migra las dependencias del saliente, que queda "De baja" | Igual que baja + el equipo nuevo |
 | **Archivar** | (No existe como tal) | El equivalente es "Obsoleto" (artículos) y "De baja" (equipos) | - |
 | **Registrar intervención** | Ficha de dispositivo | Bitácora manual + foto opcional | `historial`, `adjuntos` |
-| **Escanear** | Inicio / Dispositivos → `/escaner` | Lee QR/código de barras y abre la ficha | (solo lectura) |
-| **Importar** | Dispositivos → `/dispositivos/importar` | Carga masiva desde Excel/CSV, con revisión y omisión de duplicados | `dispositivos`, `historial` |
-| **Imprimir etiquetas** | Dispositivos → `/dispositivos/etiquetas` | Genera e imprime etiquetas QR seleccionadas | (solo lectura) |
+| **Escanear** | Inicio / Equipos → `/escaner` | Lee QR/código de barras y abre la ficha | (solo lectura) |
+| **Importar** | Equipos → `/dispositivos/importar` | Carga masiva desde Excel/CSV, con revisión y omisión de duplicados | `dispositivos`, `historial` |
+| **Imprimir etiquetas** | Equipos → `/dispositivos/etiquetas` | Genera e imprime etiquetas QR seleccionadas | (solo lectura) |
 | **Compartir** | Fichas de dispositivo y artículo | Diálogo nativo o copia el enlace | (solo lectura) |
 | **Copiar** | Fichas de dispositivo y credencial | Copia un valor al portapapeles (con auditoría en la bóveda) | `accesos_boveda` (en la bóveda) |
 | **Descargar** | Ficha de credencial (archivo seguro) / Inicio ("Descargar todo para offline") | Descifra y descarga un archivo / precachea adjuntos | `accesos_boveda` (archivo); cache local |
@@ -818,7 +818,7 @@ El principio rector del producto es "cada dato existe una sola vez y todo lo dem
 
 ```
 Dispositivo
- ├── Categoría (categoria_id; decide si va en Dispositivos o en Red)
+ ├── Categoría (categoria_id; decide si va en Equipos o en Red)
  ├── Ubicación (ubicacion_id → ficha de la ubicación)
  ├── Persona / Responsable (responsable_id → ficha de la persona)
  ├── Conexiones (con otros dispositivos → topología)
@@ -830,9 +830,9 @@ Dispositivo
  ├── Adjuntos
  └── Historial (incluye intervenciones y cambios de cableado)
 
-Artículo (Soluciones)
+Artículo (Guías)
  ├── Categoría
- ├── Dispositivos afectados / donde aplica
+ ├── Equipos afectados / donde aplica
  ├── Pasos → vínculos: información protegida (credencial o campo), subprocedimiento, solución
  ├── Relacionados (otros artículos) + inverso
  ├── Referenciado por (subprocedimiento/solución/decisión/diagnóstico)
@@ -852,9 +852,9 @@ Credencial (Bóveda)
  ├── Archivo seguro (Storage cifrado)
  └── Actividad (accesos_boveda + historial)
 
-Ubicación ── Dispositivos que están ahí; jerarquía padre/hijos
-Persona   ── Dispositivos asignados
-Categoría ── Artículos + Dispositivos + Diagnósticos (ficha 360°)
+Ubicación ── Equipos que están ahí; jerarquía padre/hijos
+Persona   ── Equipos asignados
+Categoría ── Artículos + Equipos + Diagnósticos (ficha 360°)
 ```
 
 Puntos de navegación cruzada destacados:
@@ -871,7 +871,7 @@ Puntos de navegación cruzada destacados:
 ### 13.1 Crear y documentar un equipo nuevo
 
 ```
-Dispositivos > Crear
+Equipos > Crear
  → Formulario (nombre + categoría obligatorios; foto, serial, IP, ubicación, responsable...)
  → Guardar dispositivo → guardarRegistro('dispositivos') + historial + cola de subida
  → Ficha del equipo con bloque "¿Qué sigue?"
@@ -885,7 +885,7 @@ Dispositivos > Crear
 ### 13.2 Ejecutar un procedimiento (modo asistente)
 
 ```
-Soluciones > (categoría) > Artículo
+Guías > (categoría) > Artículo
  → Ejecutar (/soluciones/:cat/:art/ejecutar)
  → AsistentePage: un paso a la vez, objetivo, checklist, cronómetro
       ├── Marcar tareas (accion / verificación)
@@ -953,7 +953,7 @@ Login
  └── (autenticado) → Bloqueo de la app (patrón/contraseña, si está activo)
 
 Inicio (/)
- ├── Buscador global (Soluciones · Dispositivos · Bóveda · Ubicaciones · Personas)
+ ├── Buscador global (Guías · Equipos · Bóveda · Ubicaciones · Personas)
  ├── Continuar donde quedaste → Ficha de artículo
  ├── Atajos: Diagnóstico inteligente · Escanear equipo
  ├── Problemas frecuentes → Diagnóstico · Estadísticas
@@ -965,7 +965,7 @@ Inicio (/)
       ├── Seguridad de la aplicación (bloqueo patrón/contraseña, autobloqueo)
       └── Cerrar sesión
 
-Soluciones (/soluciones)
+Guías (/soluciones)
  ├── Buscar · Chips de categoría · Subfiltros por tipo · Filtro por etiqueta
  ├── Crear → Editor de artículo
  │    ├── General (tipo, título, portada, etiquetas, equipos)
@@ -980,7 +980,7 @@ Soluciones (/soluciones)
       ├── Editar · Duplicar · Reiniciar progreso · Compartir · Eliminar · Favorito
       └── Procedimiento · Relacionados · Referenciado por · Historial
 
-Dispositivos (/dispositivos)
+Equipos (/dispositivos)
  ├── Buscar · Chips de categoría · Resumen de estados
  ├── Escanear · Crear · "···" (Ubicaciones · Personas · Etiquetas QR · Importar)
  ├── Ubicaciones (/ubicaciones) → Crear · Migrar · Ficha · Editar

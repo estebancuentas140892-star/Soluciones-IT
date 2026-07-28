@@ -108,7 +108,7 @@ export function DispositivosPage() {
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
         <header className="flex items-start justify-between gap-2 px-4 pb-0.5 pt-3">
           <div className="min-w-0">
-            <h1 className="text-[22px] font-medium leading-tight">Dispositivos</h1>
+            <h1 className="text-[22px] font-medium leading-tight">Equipos</h1>
             <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">Qué se sabe de cada equipo</p>
           </div>
           <div className="flex shrink-0 gap-2">
@@ -188,7 +188,7 @@ export function DispositivosPage() {
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder="Nombre, IP, serial o ubicación"
-              aria-label="Buscar dispositivos"
+              aria-label="Buscar equipos"
               className="dis-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
             />
             {buscando && (
@@ -264,7 +264,7 @@ export function DispositivosPage() {
             <Monitor size={30} className="text-noct-neutral-600" aria-hidden />
             <div>
               <p className="text-[14.5px] font-medium">
-                {hayFiltrosActivos ? 'Ningún dispositivo coincide' : 'Aún no hay dispositivos registrados'}
+                {hayFiltrosActivos ? 'Ningún equipo coincide' : 'Aún no hay equipos registrados'}
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
                 {hayFiltrosActivos

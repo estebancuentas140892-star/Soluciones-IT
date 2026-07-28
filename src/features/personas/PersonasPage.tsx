@@ -74,7 +74,7 @@ export function PersonasPage() {
         {/* Cabecera pegajosa: volver, crear, título y buscador. */}
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
-            <BotonVolver to="/dispositivos">Dispositivos</BotonVolver>
+            <BotonVolver to="/dispositivos">Equipos</BotonVolver>
             <button type="button" onClick={alternarCrear} className={`shrink-0 ${BTN_SECUNDARIO}`}>
               <Plus size={15} aria-hidden />
               Crear

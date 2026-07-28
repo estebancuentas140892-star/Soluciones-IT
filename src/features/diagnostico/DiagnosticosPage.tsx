@@ -256,10 +256,10 @@ export function DiagnosticosPage() {
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
               <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
               <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-                Ningún problema coincide. Prueba con otra palabra o busca directo en Soluciones.
+                Ningún problema coincide. Prueba con otra palabra o busca directo en Guías.
               </p>
               <Link to="/soluciones" className={`mt-0.5 ${BTN_SECUNDARIO}`}>
-                Ir a Soluciones
+                Ir a Guías
               </Link>
             </div>
           )}

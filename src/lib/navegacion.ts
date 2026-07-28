@@ -19,6 +19,14 @@ export interface Padre {
   etiqueta: string
 }
 
+// Las RUTAS conservan su nombre original aunque las secciones se
+// renombraran a "Guías" y "Equipos" (regla R12, tarea 180): el handoff
+// solo pide el cambio visible, y renombrar `/soluciones` y
+// `/dispositivos` invalidaría los enlaces profundos que el equipo ya
+// tiene compartidos y guardados en sus teléfonos. Aquí solo cambian las
+// etiquetas; los identificadores de código siguen en su idioma original
+// (regla 9 de REGLAS.md).
+
 // Pestañas de la barra inferior: son raíces de su pila, no muestran
 // "Volver" (se navega entre ellas por la barra, no retrocediendo).
 const TABS = new Set(['/', '/soluciones', '/dispositivos', '/red', '/boveda'])
@@ -28,8 +36,8 @@ const TABS = new Set(['/', '/soluciones', '/dispositivos', '/red', '/boveda'])
 const RAICES_NO_TAB: Record<string, Padre> = {
   '/diagnostico': { to: '/', etiqueta: 'Inicio' },
   '/escaner': { to: '/', etiqueta: 'Inicio' },
-  '/ubicaciones': { to: '/dispositivos', etiqueta: 'Dispositivos' },
-  '/personas': { to: '/dispositivos', etiqueta: 'Dispositivos' },
+  '/ubicaciones': { to: '/dispositivos', etiqueta: 'Equipos' },
+  '/personas': { to: '/dispositivos', etiqueta: 'Equipos' },
   '/cuenta': { to: '/', etiqueta: 'Inicio' },
 }
 
@@ -53,11 +61,11 @@ export function padreDe(pathname: string): Padre | null {
       //   /soluciones/:cat/:art            ficha de artículo   -> lista + chip
       //   /soluciones/:cat/:art/editar     editar artículo     -> ficha
       //   /soluciones/:cat/:art/ejecutar   asistente           -> ficha
-      const lista: Padre = { to: '/soluciones', etiqueta: 'Soluciones' }
+      const lista: Padre = { to: '/soluciones', etiqueta: 'Guías' }
       if (!a) return lista
       // La categoría es un FILTRO de la lista (decisión del usuario,
       // 2026-07-18): volver a un artículo o a crear repone su chip.
-      const listaConChip: Padre = { to: `/soluciones?categoria=${a}`, etiqueta: 'Soluciones' }
+      const listaConChip: Padre = { to: `/soluciones?categoria=${a}`, etiqueta: 'Guías' }
       if (!b) return lista // ficha de categoría -> lista principal
       if (b === 'nuevo') return listaConChip
       if (!c) return listaConChip // ficha de artículo -> lista con su chip
@@ -72,7 +80,7 @@ export function padreDe(pathname: string): Padre | null {
       if (b === 'editar' || b === 'baja' || b === 'reemplazo') {
         return { to: `/dispositivos/${a}`, etiqueta: 'Volver' }
       }
-      return { to: '/dispositivos', etiqueta: 'Dispositivos' }
+      return { to: '/dispositivos', etiqueta: 'Equipos' }
     }
     case 'ubicaciones': {
       if (b === 'editar') return { to: `/ubicaciones/${a}`, etiqueta: 'Volver' }

@@ -1,5 +1,23 @@
 # Historial de tareas finalizadas
 
+### 180. Un solo nombre visible: "Soluciones IT", con las secciones Guías y Equipos
+
+**Estado**: TERMINADA el 2026-07-28. Lint, `tsc -b` y build limpios; 1669 pruebas pasan. **Prioridad**: ALTA. **Origen**: primera recomendación del turno 3 del handoff "Auditoría de Soluciones TI", reimportado ese día con dos turnos nuevos y un archivo `Decisiones aprobadas.md` donde el usuario cierra por escrito las decisiones que el handoff dejaba abiertas.
+
+**Problema**: la app se presentaba con **dos nombres**. El login y la pantalla de bloqueo decían "Soluciones IT"; Inicio y el sidebar decían "IT Brain". Es lo primero que lee un técnico nuevo, en las tres primeras pantallas que ve. Inicio era además la única pestaña cuyo encabezado no repetía el rótulo de su pestaña, así que la señal de ubicación se perdía justo en la pantalla de entrada. Y "Soluciones" nombraba a la vez la app y una sección, lo que le quitaba la palabra al bloque "solución" anidado dentro de un paso, que es donde de verdad significa algo.
+
+**Cambio**: la app se llama "Soluciones IT" en toda la interfaz y "IT Brain" desaparece de la pantalla (se conserva como nombre interno del proyecto, y el glifo del cerebro sigue siendo la marca del sidebar). La sección Soluciones pasa a "Guías" y Dispositivos a "Equipos". El encabezado de Inicio pasa a decir "Inicio". El renombre alcanza a las pestañas y el sidebar (`ShellNocturne`), las etiquetas de regreso de `navegacion.ts` (que alimentan `BotonVolver` en Ubicaciones, Personas, Etiquetas QR, Importar y las fichas), los grupos del buscador global, los títulos de lista, los estados vacíos, el diálogo de eliminar, el editor de equipo, la importación masiva y las etiquetas del historial.
+
+**Vocabulario del inventario**: se unifica en "equipo" ("Equipos afectados", "Crear equipo", "Ningún equipo coincide", "Guardar equipo", "N equipos importados"). **No** se tocaron los textos donde "dispositivo" significa el teléfono del técnico y no una ficha del inventario ("el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal", "bloqueo de este dispositivo con patrón o contraseña"): ahí la palabra significa otra cosa y cambiarla habría introducido un error.
+
+**Lo que NO cambió, y por qué**: las rutas. `/soluciones` y `/dispositivos` se conservan tal cual. El handoff solo pide el cambio visible, y renombrarlas invalidaría los enlaces profundos que el equipo ya tiene compartidos y guardados en sus teléfonos; el coste es que la URL y el rótulo dejan de coincidir, algo que en una PWA de teléfono casi no se ve. Tampoco cambian los identificadores de código (`SolucionesPage`, `DispositivoForm`, la tabla `dispositivos`), por la regla 9 de REGLAS.md. Queda registrado en [DECISIONES.md](DECISIONES.md) AD-022.
+
+**Ubicación**: `src/app/ShellNocturne.tsx` (destinos y marca del sidebar), `src/lib/navegacion.ts` (+ `navegacion.test.ts` actualizada a las etiquetas nuevas), `src/features/inicio/InicioPage.tsx`, `src/features/soluciones/SolucionesPage.tsx` y `ArticuloPage.tsx`, `src/features/dispositivos/DispositivosPage.tsx`, `DispositivoPage.tsx`, `DispositivoForm.tsx`, `EtiquetasPage.tsx` e `importar/ImportarDispositivosPage.tsx`, `src/features/diagnostico/DiagnosticosPage.tsx`, `src/features/ubicaciones/UbicacionesPage.tsx`, `src/features/personas/PersonasPage.tsx`, `src/features/historial/textoHistorial.ts`.
+
+**Verificación**: lint, `tsc -b` y build limpios. 1669 pruebas pasan. Siguen los mismos **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts` (RLS de Storage contra el `.env` real de la sesión), duplicados por el worktree obsoleto de la tarea 178. La app arranca sin errores de consola y redirige limpio a `/login`. **Sin verificar en navegador la interfaz renombrada**: vive detrás del login y esta sesión no tiene una cuenta real de técnico. Se verificó en su lugar **por contenido del build**: "IT Brain" no aparece ya en ningún chunk de `dist/`, y "Guías" viaja en 7 chunks (incluido `ShellNocturne`, que dibuja la barra de pestañas) y "Equipos" en 22.
+
+---
+
 ### 179. El botón "Actualizar" del aviso de versión nueva no hacía nada
 
 **Estado**: TERMINADA el 2026-07-27. Typecheck, lint y build limpios. **Prioridad**: ALTA (bloqueaba aplicar cualquier despliegue desde el teléfono, incluida la revisión del rediseño de P1). **Reportado por el usuario** en su teléfono.

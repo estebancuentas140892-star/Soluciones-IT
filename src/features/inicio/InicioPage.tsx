@@ -94,8 +94,8 @@ const GRUPOS_BUSQUEDA: {
   Icono: (props: IconoProps) => React.JSX.Element
   tipos: TipoResultado[]
 }[] = [
-  { id: 'soluciones', nombre: 'Soluciones', Icono: BookOpen, tipos: ['diagnostico', 'categoria', 'articulo', 'adjunto'] },
-  { id: 'dispositivos', nombre: 'Dispositivos', Icono: Monitor, tipos: ['dispositivo'] },
+  { id: 'soluciones', nombre: 'Guías', Icono: BookOpen, tipos: ['diagnostico', 'categoria', 'articulo', 'adjunto'] },
+  { id: 'dispositivos', nombre: 'Equipos', Icono: Monitor, tipos: ['dispositivo'] },
   { id: 'boveda', nombre: 'Bóveda', Icono: Vault, tipos: ['credencial'] },
   // Ubicaciones en el buscador (fase P3, punto 4 del encargo): hoy
   // faltaban pese a ser entidad propia desde N3.
@@ -287,7 +287,11 @@ export function InicioPage() {
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-3">
           <div>
-            <h1 className="text-[22px] font-medium leading-tight">IT Brain</h1>
+            {/* El encabezado repite siempre la pestaña activa (regla R12,
+                tarea 180): antes decía "IT Brain", el único caso donde
+                rótulo y encabezado no coincidían. La marca vive ahora en
+                el login, el bloqueo y el sidebar. */}
+            <h1 className="text-[22px] font-medium leading-tight">Inicio</h1>
             <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{saludo}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -377,7 +381,7 @@ export function InicioPage() {
                   className={BTN_SECUNDARIO}
                 >
                   <Plus size={15} aria-hidden />
-                  Crear dispositivo
+                  Crear equipo
                 </Link>
                 <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
                   Limpiar búsqueda
@@ -438,7 +442,7 @@ export function InicioPage() {
                 to="/dispositivos/nuevo"
                 Icono={Monitor}
                 titulo="Registrar equipo"
-                detalle="Dar de alta un dispositivo nuevo"
+                detalle="Dar de alta un equipo nuevo"
                 className="col-span-2"
               />
             </div>

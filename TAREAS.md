@@ -162,6 +162,17 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 **REDISEÑO DE LA SECCIÓN SOLUCIONES (handoff "Auditoría de Soluciones TI", autorizado el 2026-07-27).** El `.dc.html` documenta cinco pantallas con su antes y después. **P1 implementada (tarea 171, archivada).** Las cuatro restantes van abajo como tareas 172 a 175, una por pantalla (regla 15: cada pantalla es su propia tarea, una "En proceso" a la vez). Todas comparten las reglas visuales R1 a R7 de [DECISIONES.md](DECISIONES.md) AD-019 y los componentes ya creados en la 171. El handoff vive en `Auditoría de Soluciones TI-handoff.zip` en la raíz del repo.
 
+**AMPLIACIÓN DEL HANDOFF (reimportado el 2026-07-28).** El mismo `.dc.html` creció de 1 a **cuatro turnos** y trae un archivo nuevo, `Decisiones aprobadas.md`, donde el usuario cierra por escrito las decisiones que el turno 3 dejaba abiertas. Lo que ya estaba registrado no cambia; lo que se agrega es:
+
+- **Turno 1 "Encuadre"** (mockups `1a` a `1l`): las cinco pantallas de Soluciones en móvil. Es el handoff original. P1 hecha (171), P2 a P5 son las tareas 172 a 175.
+- **Turno 2 "Escritorio"** (`2a` a `2f`): resuelve el escritorio de lista, ficha y editor a 1440 px. **Da diseño a la tarea 176**, que hasta hoy era un pendiente sin mockup. Suma las reglas R8 a R11.
+- **Turno 3 "Capa global"** (`3a` a `3f`): 20 problemas del chasis y la primera impresión. Barra superior global, cinco pestañas fijas, pantalla "Más", sidebar completo, login y bienvenida del primer día. Suma R12 a R17. **Tareas 180 a 184 y 188.**
+- **Turno 4 "Navegación móvil como sistema"** (`4a` a `4e`): 15 problemas de continuidad. Chasis de tres niveles, barra de reanudar, cabecera colapsable, memoria por pestaña, avisos con dato detrás y transiciones con dirección. Suma R18 a R24. **Tareas 185 a 187 y 189.**
+
+Las 24 reglas visuales R1 a R24 quedan como el criterio único de la app; las siete primeras ya están en AD-019. **Decisiones cerradas por el usuario** en `Decisiones aprobadas.md`: la app se llama "Soluciones IT" en todas las pantallas, la sección Soluciones pasa a llamarse **Guías**, Dispositivos pasa a **Equipos**, la Bóveda deja de ser pestaña y encabeza "Más", se retira el saludo por hora y se permite autocompletar solo el correo.
+
+**Orden recomendado, y por qué:** el chasis (turnos 3 y 4) y los renombres tocan la cabecera, el contenedor y el regreso de las mismas pantallas que rediseñan P2 a P5. Hacer primero la sección obligaría a reescribir esas cabeceras dos veces, así que conviene cerrar chasis y nombres (180 a 189) antes de retomar 172 a 176.
+
 ### 172. Rediseño P2: ficha de artículo (`/soluciones/:categoria/:articulo`)
 
 - **Descripción:** aplicar las 11 decisiones de la auditoría para P2. Una sola acción dominante fija abajo con etiqueta contextual ("Empezar" / "Seguir en el paso 3 de 6" / "Repetir") en vez de "Ejecutar" y "Editar" con el mismo peso arriba; cabecera de tres controles de 44 px; kicker de tipo sobre el título en su matiz; metadatos como lista de definición con rótulo (Tiempo, Dificultad, Aplica a, Versión); pasos plegados salvo el actual; progreso segmentado junto al título en vez de barra pegajosa aparte; casillas de 24 px en filas de 44 y texto de tarea a 15 px; la verificación final se anuncia en vez de mostrarse apagada; el aviso lleva su palabra ("Precaución.") además del color; datos protegidos con acción de ancho completo; estado una sola vez.
@@ -200,12 +211,95 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ### 176. Rediseño de escritorio de las cinco pantallas de Soluciones
 
-- **Descripción:** la auditoría resolvió las cinco pantallas solo a 448 px y dejó el escritorio como pendiente explícito. Falta rediseñar el rail de categorías y la rejilla de 2 y 3 columnas de `SolucionesPage` a partir de 1280 px, y la ficha de artículo a dos columnas.
-- **Motivo:** al implementar P1 se conservó el layout de escritorio existente (decisión del usuario, [DECISIONES.md](DECISIONES.md) AD-021), así que durante un tiempo conviven dos criterios en el mismo componente: el eje "Tipo" va plegado en hoja en móvil y desplegado en el rail en escritorio.
-- **Impacto:** un solo criterio visual en todas las anchuras; hoy la incoherencia es interna y no rompe nada.
+- **Descripción:** **ya tiene diseño** (turno 2 del handoff, mockups `2a` a `2f`, todo dibujado a 1440 px). Tres zonas en vez de un bloque centrado: rail de navegación, columna de trabajo y carril de contexto. (a) **Lista** (`2a`/`2b`): se suelta el tope de 1040 px y el contenido se ancla a la izquierda; una sola columna de filas de 700 px en vez de 2 o 3 columnas apretadas, con la línea de contexto completa que en el teléfono no cabía; buscador de 420 px con su atajo `/` junto al título; el rail de tipos pasa de chips huérfanos a lista con rótulo, casilla y contador; carril derecho con estado del dato y "Sin terminar". (b) **Ficha** (`2c`/`2d`): medida de lectura de 700 px pegada a la izquierda y carril pegajoso con metadatos, índice de los 6 pasos y la acción; paso activo a 15 px con casillas de 22 en filas de 44; sin barra de progreso pegajosa ni barra inferior. (c) **Editor** (`2e`/`2f`): entra al shell, rail vertical con las cuatro secciones y sus pendientes contados, formulario de 640 px y vista previa viva permanente a la derecha (deja de ser modal); las acciones suben a la cabecera. Estados vacíos alineados a la izquierda; adjuntos dejan de ser `grid-cols-2` fijo.
+- **Motivo:** el peor problema de toda la sección es que `ArticuloForm` no tiene escritorio (`mx-auto max-w-md` sin un solo punto de ruptura, barra fija `left-1/2 max-w-md`): a 1440 px son 448 px de trabajo y 992 de vacío, justo en la pantalla donde se escribe. Además hay doble centrado (1040 px dentro de 1200, con 80 px muertos por lado, contra el flush left de Nocturne), medida de lectura de 944 px (unas 130 letras por línea) y una rejilla que a 1536 px pasa a 3 columnas de 313 y empeora una fila que en el teléfono ya iba justa.
+- **Impacto:** la PC es donde se documenta; hoy el ancho no se gasta en información. Cierra los 12 problemas de escritorio y estrena tres estructuras compartidas.
 - **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** las cinco pantallas de `src/features/soluciones/`, en sus tramos `xl:` y `@lg`/`@4xl`.
-- **Dependencias:** conviene hacerla al final, cuando las cinco pantallas móviles estén cerradas.
+- **Área afectada:** las cinco pantallas de `src/features/soluciones/`, en sus tramos `xl:` y `@lg`/`@4xl`; `src/app/ShellNocturne.tsx` (el tope `lg:max-w-[1040px] 2xl:max-w-[1240px]` de la línea 108). Componentes nuevos: `RailSecciones`, `CarrilContexto` y `VistaPreviaViva`.
+- **Dependencias:** conviene hacerla cuando las cinco pantallas móviles estén cerradas, y después del chasis (tareas 180 a 189), que redefine el contenedor de contenido. Reglas nuevas que fija: **R8** (texto corrido nunca pasa de 720 px), **R9** (tres zonas en escritorio), **R10** (campos a su tamaño: buscador de 420 px) y **R11** (sin barras fijas en escritorio; la acción principal vive arriba a la derecha).
+
+La **tarea 180** (un solo nombre: "Soluciones IT", con las secciones Guías y Equipos, regla R12) quedó **terminada y archivada el 2026-07-28**. Fija el vocabulario que usan las nueve tareas de abajo. Decisión registrada en [DECISIONES.md](DECISIONES.md) AD-022, con su límite explícito: **las rutas `/soluciones` y `/dispositivos` NO cambian**, para no invalidar los enlaces profundos que el equipo ya tiene guardados. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+### 181. BarraSuperior global: dónde estoy, qué sabe la app, buscar (R14)
+
+- **Descripción:** crear `BarraSuperior`, persistente en las cinco pestañas, con tres ranuras: título de sección · estado del dato · buscar + cuenta. Dos modos, raíz (título) e interna (regreso y miga). Sacar de `InicioPage` la pastilla de sincronización y el buscador global y montarlos en el chasis: `BuscadorGlobal` pasa a abrirse en capa desde cualquier pestaña, sin abandonar la pantalla. Los buscadores de sección declaran su alcance por escrito ("solo en Guías") y ofrecen ampliarlo. Unificar la gramática de la fila superior, hoy partida en dos (`px-4 pt-3` en las raíces, `pl-2 pr-3 py-2.5` en las internas, con el título 46 px más abajo).
+- **Motivo:** hoy no existe barra superior global: cada pantalla dibuja la suya con altura, relleno y controles distintos. Buscar es global pero vive en Inicio, así que desde cualquier otra pestaña hay que volver a Inicio y perder el lugar donde se estaba. El estado de sincronización solo existe en Inicio: en las otras cuatro pestañas no hay forma de saber si lo que se acaba de escribir ya subió. "Mi cuenta" en móvil solo se alcanza desde Inicio.
+- **Impacto:** encontrar cualquier cosa pasa a un toque desde donde estés, y la app dice siempre qué sabe. Es la pieza de la que dependen las tareas 185, 187 y 188.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/app/ShellNocturne.tsx`, `src/features/inicio/InicioPage.tsx` (cabecera, buscador global y pastilla de sincronización), `src/features/busqueda/`. Componentes nuevos: `BarraSuperior`, `BuscadorGlobal`.
+- **Dependencias:** la 180 fija los rótulos. Reglas que fija: **R14** (el chasis presta tres servicios en todas las pestañas) y **R7** aplicada al chasis (la app dice qué sabe).
+
+### 182. BarraPestanas de cinco destinos fijos y PantallaMas (R15, R16, R17)
+
+- **Descripción:** cinco pestañas fijas e iguales para todos: **Inicio · Guías · Equipos · Red · Más**. La Bóveda deja de ser pestaña y encabeza la primera fila de "Más" (decisión aprobada por el usuario). `PantallaMas` recoge los nueve destinos que hoy no tienen puerta, agrupados y con su conteo: Bóveda, Diagnóstico, Escanear, Ubicaciones, Personas, Mi cuenta, Seguridad, Etiquetas e Importar. Estado activo en dos canales (barra de 2 px sobre la pestaña, icono relleno y color de acento), estados completos (inactivo en `neutral-300`, presionado con fondo de acento al 10 %, foco con anillo de 2 px), rótulos a 12 px en celdas de 52, y la barra al ancho del contenido en tablet. Tocar la pestaña activa vuelve a su raíz; en la raíz, sube al principio de la lista.
+- **Motivo:** hay nueve destinos que un técnico nuevo no puede encontrar sin que alguien se lo cuente. La barra cambia de forma según el permiso (cinco columnas o cuatro), así que dos técnicos con el mismo teléfono ven barras distintas. Los rótulos miden 10,5 px en la navegación que se usa con guantes y a pleno sol, el estado activo se juega a un canal y medio, y no hay `:active`, `:hover` ni el anillo de foco que Nocturne exige. Entre 768 y 1024 px la barra sigue anclada a 448 px centrados, como una isla debajo de la pantalla.
+- **Impacto:** todo destino gana puerta y la barra deja de depender del permiso. Cuesta un toque a quien tiene acceso a la Bóveda.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/app/ShellNocturne.tsx` (líneas 36-58 y 113-138), `src/App.tsx` (ruta nueva de "Más"), `src/lib/navegacion.ts`. Componentes nuevos: `BarraPestanas`, `PantallaMas`.
+- **Dependencias:** la 180 (rótulos) y la 181 (la barra superior comparte el criterio de estados). Reglas que fija: **R15** (todo destino tiene puerta), **R16** (estado en dos canales) y **R17** (el chasis es igual para todos).
+
+### 183. Sidebar completo de escritorio
+
+- **Descripción:** el sidebar pasa de cinco destinos a catorce, agrupados: los cinco módulos, más un grupo "Herramientas", más un grupo "Registros", más la cuenta al pie.
+- **Motivo:** el sidebar tiene 240 px de alto libre y ofrece cinco destinos de catorce; el resto solo se alcanza desde dentro de otra sección.
+- **Impacto:** en escritorio desaparece la necesidad de la pantalla "Más".
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/app/ShellNocturne.tsx` (el `<aside>` de las líneas 63-99).
+- **Dependencias:** la 182 define la agrupación de destinos que este sidebar reordena.
+
+### 184. Login que se presenta y bienvenida del primer día
+
+- **Descripción:** (a) **Login**: marca, una línea de qué es esto y de quién es, "¿la olvidaste?" y a quién pedir acceso si no tienes cuenta. Permitir autocompletar **solo el correo** (`autocomplete="username"`), manteniendo la contraseña fuera del gestor (decisión aprobada por el usuario). (b) **`BienvenidaPrimerDia`**: tres pasos que se apagan solos a medida que se cumplen (entraste · instala la app · descarga para trabajar sin señal), sin tour modal. La instalación de la PWA se ofrece ahí y en Mi cuenta, nunca como banner intrusivo. (c) Retirar el saludo por hora del encabezado permanente (decisión aprobada); si se conserva, va dentro de esta bienvenida.
+- **Motivo:** con la base vacía, seis de los nueve bloques de Inicio no se pintan: a un técnico nuevo le quedan un saludo, un buscador y tres atajos. El login no dice qué es esto ni qué hacer si olvidaste la contraseña, y la app instalable no invita a instalarse pese a que de eso depende el trabajo sin señal. El saludo ocupa la línea de contexto con un eslogan que además cambia según la hora, así que la entrada nunca se ve igual dos veces.
+- **Impacto:** el primer arranque explica la app y encamina la instalación, que es lo que habilita el trabajo sin señal.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/autenticacion/LoginPage.tsx`, `src/features/inicio/InicioPage.tsx`, `src/features/autenticacion/CuentaPage.tsx`. Componente nuevo: `BienvenidaPrimerDia`.
+- **Dependencias:** la 180 (el nombre que muestra el login). La línea de contexto que libera el saludo la ocupa la pastilla de sincronía de la tarea 181.
+
+### 185. Chasis en tres niveles y BarraTarea (R18, R19, R22)
+
+- **Descripción:** un solo componente de chasis con modo `seccion | documento | tarea`, que reemplaza los 15 contenedores `max-w-md` escritos a mano. **Sección**: título y pestañas. **Documento**: regreso, miga y pestañas. **Tarea**: `BarraTarea` sin pestañas, con rótulo de la tarea ("Editando"), la ruta de vuelta escrita y una X. La barra solo cede ante una tarea con salida (editor, asistente, escáner, diagnóstico en ejecución): **Personas, Ubicaciones y Diagnósticos recuperan el chasis**, porque son listas que se recorren durante minutos. El shell reserva su propio espacio: se elimina el `pb-[116px]` escrito a mano en 11 pantallas para una barra que mide 53.
+- **Motivo:** 15 pantallas montan su propio contenedor sin barra de pestañas, así que el chasis se enciende y se apaga sin avisar y hay islas con una sola salida, cuyo regreso además lleva a una sección que el técnico no visitó (Personas y Ubicaciones suben a Dispositivos por jerarquía declarada, no por el camino real). Cualquier cambio en la barra obliga hoy a tocar once archivos, y ya hay pantallas con `pt` distinto (1, 3, 3.5, 4) sin motivo.
+- **Impacto:** es la tarea de más alcance del handoff: toca las 40 rutas. Riesgo alto de regresión en navegación, conviene hacerla por tandas verificando cada una.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/app/ShellNocturne.tsx`, `src/App.tsx` y los 43 archivos con `max-w-md`/`pb-[116px]` (medido el 2026-07-28: 112 apariciones). Componentes nuevos: el chasis de tres niveles y `BarraTarea`.
+- **Dependencias:** las 181 y 182 (la barra superior y las pestañas son las piezas que el chasis coloca). Reglas que fija: **R18** (tres niveles y ni uno más), **R19** (la barra solo cede ante una tarea con salida, y quien la quita pone algo que oriente) y **R22** (el chasis reserva su espacio).
+
+### 186. BarraReanudar: el procedimiento a medias viaja contigo
+
+- **Descripción:** mientras haya un procedimiento a medias, una barra de reanudar viaja por toda la app con el paso en curso y la vuelta al asistente. Se descarta deslizando y deja un punto en la pestaña Guías. Se alimenta de `progresoPasos`, que ya existe.
+- **Motivo:** el caso real es estar en el paso 3 y salir a la Bóveda a buscar una clave: hoy la app no recuerda en pantalla que había algo a medias y hay que volver a Inicio y reconstruirlo. El propio handoff la señala como "la propuesta que más cambia el día del técnico".
+- **Impacto:** alto en uso diario y sin esquema nuevo: el dato ya se calcula.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** el chasis de la tarea 185, `src/features/soluciones/useProcedimientoEjecucion.ts` y el cálculo de `progresoPasos`. Componente nuevo: `BarraReanudar`.
+- **Dependencias:** la 185 (el chasis donde se monta). Regla que fija: **R23** (un aviso solo si hay un dato detrás).
+
+### 187. Comportamientos dinámicos del chasis (R20, R21, R23)
+
+- **Descripción:** cuatro comportamientos, con sus dos extremos ya dibujados en el mockup `4e`. (a) **`CabeceraColapsable`**: el nombre de la sección se contrae a 14 px y se queda en pantalla. (b) **`MemoriaDePestana`**: al volver a una pestaña se restauran scroll y filtros. (c) **`AvisoPestana`**: punto en Guías si hay trabajo a medias, número en Más si hay pendientes reales, alimentados por `pendientes.ts` y `progresoPasos`; ningún punto decorativo. (d) **Transiciones con dirección**: entrar desde la derecha (180 ms), volver hacia la derecha, cambiar de pestaña con fundido (120 ms), respetando `prefers-reduced-motion`. La pastilla de sincronía se vuelve adaptativa: solo icono cuando todo está al día, texto y color cuando hay algo que atender.
+- **Motivo:** hoy hay cero transiciones en toda la app (ni `startViewTransition` ni transformaciones de entrada) y cero memoria de posición: cambiar de pestaña y volver reinicia el scroll y borra el filtro de categoría, porque la pestaña apunta a la ruta pelada. La barra inferior nunca refleja que hay pendientes, cambios sin subir o trabajo a medias, aunque la app ya calcula los tres datos.
+- **Impacto:** es la diferencia entre una app y una web. Sin cambios de datos: los tres avisos salen de cálculos que ya existen.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** el chasis de la tarea 185, `src/features/inicio/pendientes.ts`, `src/lib/navegacion.ts`. Componentes nuevos: `CabeceraColapsable`, `MemoriaDePestana`, `AvisoPestana`; `PastillaSync` (existente) gana dos tamaños según estado.
+- **Dependencias:** las 185 y 186. Reglas que fija: **R20** (volver es volver al mismo sitio), **R21** (el movimiento indica jerarquía) y **R23** (un aviso solo si hay un dato detrás).
+
+### 188. MigaDePan y el regreso que nombra su destino (R13)
+
+- **Descripción:** `MigaDePan` de una línea bajo el botón de regreso en móvil, y con los tramos completos y enlazados en escritorio, alimentada por `navegacion.ts`. `BotonVolver` pasa a exigir etiqueta siempre: se elimina el destino genérico "Volver", que hoy aparece a secas en editar, ejecutar, dar de baja y reemplazar.
+- **Motivo:** no hay migas en ninguna pantalla, ni en escritorio, donde sobran 1200 px. Dentro de una ficha nada dice en qué sección estás salvo la pestaña iluminada, a 700 px de distancia y a 10,5 px de tamaño. La jerarquía ya está resuelta y probada en `navegacion.ts`: basta darle etiqueta propia a cada padre en lugar del genérico.
+- **Impacto:** orientación dentro de las fichas sin depender de un rótulo diminuto al otro extremo de la pantalla. Bajo riesgo: se apoya en una fuente única que ya tiene pruebas.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/lib/navegacion.ts`, `src/components/BotonVolver.tsx`. Componente nuevo: `MigaDePan`.
+- **Dependencias:** la 181 (la miga vive en la ranura de la barra superior). Regla que fija: **R13** (el regreso nombra su destino, nunca "Volver" a secas).
+
+### 189. Un icono un significado, y el acento reservado (R24)
+
+- **Descripción:** (a) cerrar las colisiones de iconografía: `TreeStructure` es hoy la pestaña Red **y** Diagnóstico, y `BookOpen` es Guías, artículo **y** adjunto; darle a Diagnóstico un icono propio y separar los tres usos del libro. (b) reservar el acento para la orientación y la acción principal: el resaltado de búsqueda y los bordes informativos pasan a neutros. (c) unificar el criterio de los cinco buscadores, que hoy comparten forma, altura e icono con cinco alcances distintos.
+- **Motivo:** el acento hace hoy seis oficios a la vez (pestaña activa, botón primario, enlaces, progreso, resaltado de búsqueda, borde de "en curso"), y en una sola lista puede aparecer en seis sitios, con lo que deja de significar "estás aquí". Con dos iconos repetidos, el glifo tampoco identifica de forma fiable.
+- **Impacto:** el acento recupera su significado. Cambio visual amplio pero de bajo riesgo funcional.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `src/components/iconos.tsx`, `src/features/soluciones/iconosSoluciones.ts`, los cinco buscadores y las pantallas que pintan resaltado de búsqueda.
+- **Dependencias:** conviene hacerla al final del chasis, cuando estén decididos los destinos definitivos. Regla que fija: **R24** (un icono, un significado en toda la app).
 
 ### 177. Pendientes que la auditoría de Soluciones dejó fuera a propósito
 

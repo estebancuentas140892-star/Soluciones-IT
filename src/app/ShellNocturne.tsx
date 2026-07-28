@@ -35,8 +35,8 @@ interface Destino {
 
 const DESTINOS_BASE: Destino[] = [
   { to: '/', label: 'Inicio', icono: House, iconoActivo: HouseFill, end: true },
-  { to: '/soluciones', label: 'Soluciones', icono: BookOpen, iconoActivo: BookOpenFill, end: false },
-  { to: '/dispositivos', label: 'Dispositivos', icono: Monitor, iconoActivo: MonitorFill, end: false },
+  { to: '/soluciones', label: 'Guías', icono: BookOpen, iconoActivo: BookOpenFill, end: false },
+  { to: '/dispositivos', label: 'Equipos', icono: Monitor, iconoActivo: MonitorFill, end: false },
   { to: '/red', label: 'Red', icono: TreeStructure, iconoActivo: TreeStructureFill, end: false },
 ]
 
@@ -63,7 +63,7 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
       <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col gap-6 border-r border-noct-divider bg-noct-surface px-3 py-5 lg:flex">
         <div className="flex items-center gap-2 px-2">
           <Marca className="h-[22px] w-[22px] text-noct-accent" />
-          <span className="text-[15px] font-semibold">IT Brain</span>
+          <span className="text-[15px] font-semibold">Soluciones IT</span>
         </div>
         <nav className="flex flex-col gap-0.5">
           {destinos.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
@@ -140,9 +140,10 @@ export function ShellNocturne({ children }: { children: React.ReactNode }) {
   )
 }
 
-// Marca de IT Brain (cerebro): glifo del handoff de Soluciones, usado
+// Marca de la app (cerebro): glifo del handoff de Soluciones, usado
 // solo aquí como logotipo del sidebar; no forma parte del set de iconos
-// de dominio.
+// de dominio. La regla R12 retiró el nombre "IT Brain" de la interfaz
+// (tarea 180) pero conserva este glifo como marca.
 function Marca(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>

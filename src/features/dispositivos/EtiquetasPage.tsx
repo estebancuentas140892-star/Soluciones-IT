@@ -70,7 +70,7 @@ export function EtiquetasPage() {
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
             <BotonVolver to="/dispositivos">
-              Dispositivos
+              Equipos
             </BotonVolver>
           </header>
           <div className="px-4 pb-2.5 pt-0.5">
@@ -131,7 +131,7 @@ export function EtiquetasPage() {
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
               <QrCode size={30} className="text-noct-neutral-600" aria-hidden />
-              <p className="text-[13px] leading-[1.5] text-noct-neutral-400">No hay dispositivos en esta categoría.</p>
+              <p className="text-[13px] leading-[1.5] text-noct-neutral-400">No hay equipos en esta categoría.</p>
             </div>
           )}
         </main>

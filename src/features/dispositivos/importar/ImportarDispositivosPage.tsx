@@ -115,7 +115,7 @@ export function ImportarDispositivosPage() {
         <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
           <header className="flex items-center justify-between gap-2 py-2.5 pl-2 pr-3 pb-0">
             <BotonVolver to="/dispositivos">
-              Dispositivos
+              Equipos
             </BotonVolver>
             <span className="shrink-0 text-[12px] text-noct-neutral-500">{PASO_ETIQUETA[fase.paso]}</span>
           </header>
@@ -356,7 +356,7 @@ export function ImportarDispositivosPage() {
                   Importación completada
                 </p>
                 <p className="mt-1.5 text-[14.5px] leading-[1.5]">
-                  {fase.importados} {fase.importados === 1 ? 'dispositivo importado' : 'dispositivos importados'}.
+                  {fase.importados} {fase.importados === 1 ? 'equipo importado' : 'equipos importados'}.
                   {fase.fallidos > 0 && ` ${fase.fallidos} filas fallaron al guardarse.`} Los cambios se sincronizan
                   solos con el resto del equipo.
                 </p>
@@ -366,7 +366,7 @@ export function ImportarDispositivosPage() {
                 onClick={() => navigate('/dispositivos')}
                 className={`${BTN_PRIMARIO} min-h-12 justify-center`}
               >
-                Ver dispositivos
+                Ver equipos
               </button>
               <button
                 type="button"
@@ -396,7 +396,7 @@ export function ImportarDispositivosPage() {
                 className={`flex-1 ${BTN_PRIMARIO} justify-center py-[11px] disabled:opacity-50`}
               >
                 <DownloadSimple size={15} aria-hidden />
-                Importar {mapeo.importables.length} {mapeo.importables.length === 1 ? 'dispositivo' : 'dispositivos'}
+                Importar {mapeo.importables.length} {mapeo.importables.length === 1 ? 'equipo' : 'equipos'}
               </button>
             </div>
           </div>

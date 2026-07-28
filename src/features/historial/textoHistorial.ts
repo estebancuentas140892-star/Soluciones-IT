@@ -26,7 +26,7 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
   ordenRutaInicio: 'Orden en Para empezar',
   sintomas: 'Síntomas',
   causas: 'Posibles causas',
-  dispositivosAfectados: 'Dispositivos afectados',
+  dispositivosAfectados: 'Equipos afectados',
   aplicaA: 'Aplica a',
   dispositivos: 'Equipos con acceso',
   descripcion: 'Descripción',

@@ -122,7 +122,7 @@ export function ArticuloPage() {
         {/* Destino derivado de la jerarquía central (padreDe): la ficha
             de artículo sube a la lista de Soluciones con el chip de su
             categoría. La etiqueta muestra el nombre de la categoría. */}
-        <BotonVolver>{categoria?.nombre ?? 'Soluciones'}</BotonVolver>
+        <BotonVolver>{categoria?.nombre ?? 'Guías'}</BotonVolver>
         <div className="flex shrink-0 items-center gap-2">
           <BotonFavorito tipo="articulo" entidadId={articuloId} />
           {tieneProcedimiento && (
@@ -491,7 +491,7 @@ function IncidenciaResumen({ articulo }: { articulo: Articulo }) {
       {causas.length > 0 && <ListaIncidencia titulo="Posibles causas" items={causas} />}
       {dispositivosAfectados.length > 0 && (
         <section>
-          <TituloSeccion className="mb-2">Dispositivos afectados</TituloSeccion>
+          <TituloSeccion className="mb-2">Equipos afectados</TituloSeccion>
           <div className="flex flex-wrap gap-1.5">
             {dispositivosAfectados.map((dispositivo) => (
               <Link

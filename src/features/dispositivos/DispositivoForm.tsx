@@ -326,7 +326,7 @@ export function DispositivoForm() {
           </header>
           <div className="px-4 pb-3 pt-0.5">
             <h1 className="m-0 text-[22px] font-medium leading-[1.25]">
-              {esEdicion ? 'Editar dispositivo' : 'Nuevo dispositivo'}
+              {esEdicion ? 'Editar equipo' : 'Nuevo equipo'}
             </h1>
             <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
               Solo el nombre y la categoría son obligatorios; el resto se puede completar después
@@ -605,7 +605,7 @@ export function DispositivoForm() {
               style={{ opacity: valido ? undefined : 0.55 }}
             >
               <FloppyDisk size={15} aria-hidden />
-              {guardando ? 'Guardando...' : 'Guardar dispositivo'}
+              {guardando ? 'Guardando...' : 'Guardar equipo'}
             </button>
           </div>
         </div>

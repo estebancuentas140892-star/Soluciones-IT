@@ -6,6 +6,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-07-28
+
+### Cambiado (tarea 180): un solo nombre visible, y las secciones pasan a llamarse Guías y Equipos
+
+**Área modificada:** chasis (`src/app/ShellNocturne.tsx`), jerarquía de navegación (`src/lib/navegacion.ts`), Inicio, y los textos visibles de las secciones Guías, Equipos, Diagnóstico, Ubicaciones y Personas.
+**Motivo:** primera recomendación del turno 3 del handoff "Auditoría de Soluciones TI", reimportado hoy. La app se presentaba con dos nombres ("Soluciones IT" en login y bloqueo, "IT Brain" en Inicio y el sidebar) y una sección se llamaba igual que la app. Decisión aprobada por el usuario en `Decisiones aprobadas.md`.
+**Impacto esperado:** la primera impresión deja de contradecirse, el encabezado vuelve a confirmar la pestaña activa, y la palabra "solución" queda libre para el bloque anidado dentro de un paso, que es donde significa algo. Sin cambios de comportamiento ni de datos.
+
+- **Cambiado** el sidebar de escritorio dice "Soluciones IT" donde decía "IT Brain"; el glifo del cerebro se conserva como marca.
+- **Cambiado** el encabezado de Inicio dice "Inicio" donde decía "IT Brain". Era la única pestaña en la que el rótulo y el encabezado no coincidían.
+- **Cambiado** la pestaña y todos los rótulos de la sección Soluciones pasan a **"Guías"**; los de Dispositivos, a **"Equipos"**. Incluye las etiquetas de regreso de `navegacion.ts` (que alimentan `BotonVolver` en Ubicaciones, Personas y las fichas), los grupos del buscador global, los títulos de lista, los estados vacíos, el diálogo de eliminar, el editor de equipo y las etiquetas del historial.
+- **Cambiado** el vocabulario visible del inventario se unifica en "equipo": "Equipos afectados", "Crear equipo", "Ningún equipo coincide", "Guardar equipo". **No** se tocaron los textos donde "dispositivo" significa el teléfono del técnico ("el archivo quedó guardado en este dispositivo", "bloqueo de este dispositivo"), que conservan la palabra a propósito.
+- **Sin cambios** las rutas `/soluciones` y `/dispositivos`, los identificadores de código y el esquema de datos. El motivo está en [DECISIONES.md](DECISIONES.md) AD-022.
+- **Documentación:** [DECISIONES.md](DECISIONES.md) AD-022 (la decisión y sus límites) y [TAREAS.md](TAREAS.md) (registro de las diez tareas nuevas que salen de los turnos 2, 3 y 4 del handoff).
+
+**Verificación:** lint, `tsc -b` y build limpios. 1669 pruebas pasan, incluidas las de `navegacion.test.ts` actualizadas a las etiquetas nuevas. Siguen los mismos **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts` (RLS de Storage contra el `.env` real de la sesión), duplicados por el worktree obsoleto de la tarea 178. **Sin verificar en navegador**: la app exige login de técnico real, no disponible en esta sesión.
+
 ## 2026-07-27
 
 ### Corregido (tarea 179): el botón "Actualizar" del aviso de versión nueva no hacía nada

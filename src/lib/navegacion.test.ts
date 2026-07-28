@@ -10,21 +10,21 @@ describe('padreDe', () => {
 
   it('normaliza barras finales', () => {
     expect(padreDe('/soluciones/')).toBeNull()
-    expect(padreDe('/dispositivos/cam-1/')).toEqual({ to: '/dispositivos', etiqueta: 'Dispositivos' })
+    expect(padreDe('/dispositivos/cam-1/')).toEqual({ to: '/dispositivos', etiqueta: 'Equipos' })
   })
 
-  describe('Soluciones: la categoría es un filtro de la lista', () => {
+  describe('Guías: la categoría es un filtro de la lista', () => {
     it('la ficha de artículo vuelve a la lista con su chip de categoría', () => {
       expect(padreDe('/soluciones/cat-pos/art-1')).toEqual({
         to: '/soluciones?categoria=cat-pos',
-        etiqueta: 'Soluciones',
+        etiqueta: 'Guías',
       })
     })
 
     it('crear artículo vuelve a la lista con su chip', () => {
       expect(padreDe('/soluciones/cat-pos/nuevo')).toEqual({
         to: '/soluciones?categoria=cat-pos',
-        etiqueta: 'Soluciones',
+        etiqueta: 'Guías',
       })
     })
 
@@ -35,7 +35,7 @@ describe('padreDe', () => {
     })
 
     it('la ficha de categoría vuelve a la lista principal (sin chip), no a sí misma', () => {
-      expect(padreDe('/soluciones/cat-pos')).toEqual({ to: '/soluciones', etiqueta: 'Soluciones' })
+      expect(padreDe('/soluciones/cat-pos')).toEqual({ to: '/soluciones', etiqueta: 'Guías' })
     })
 
     it('nunca devuelve la CategoriaPage como destino de una ficha de artículo', () => {
@@ -43,9 +43,9 @@ describe('padreDe', () => {
     })
   })
 
-  describe('Dispositivos', () => {
+  describe('Equipos', () => {
     it('nuevo, importar, etiquetas y la ficha vuelven a la lista', () => {
-      const lista = { to: '/dispositivos', etiqueta: 'Dispositivos' }
+      const lista = { to: '/dispositivos', etiqueta: 'Equipos' }
       expect(padreDe('/dispositivos/nuevo')).toEqual(lista)
       expect(padreDe('/dispositivos/importar')).toEqual(lista)
       expect(padreDe('/dispositivos/etiquetas')).toEqual(lista)
@@ -74,9 +74,9 @@ describe('padreDe', () => {
     })
   })
 
-  describe('Ubicaciones (se alcanza desde Dispositivos)', () => {
+  describe('Ubicaciones (se alcanza desde Equipos)', () => {
     it('la lista de ubicaciones sube a Dispositivos', () => {
-      expect(padreDe('/ubicaciones')).toEqual({ to: '/dispositivos', etiqueta: 'Dispositivos' })
+      expect(padreDe('/ubicaciones')).toEqual({ to: '/dispositivos', etiqueta: 'Equipos' })
     })
 
     it('nueva, migrar y la ficha vuelven a la lista de ubicaciones', () => {
@@ -94,9 +94,9 @@ describe('padreDe', () => {
     })
   })
 
-  describe('Personas (se alcanza desde Dispositivos)', () => {
+  describe('Personas (se alcanza desde Equipos)', () => {
     it('la lista de personas sube a Dispositivos', () => {
-      expect(padreDe('/personas')).toEqual({ to: '/dispositivos', etiqueta: 'Dispositivos' })
+      expect(padreDe('/personas')).toEqual({ to: '/dispositivos', etiqueta: 'Equipos' })
     })
 
     it('nueva, migrar y la ficha vuelven a la lista de personas', () => {

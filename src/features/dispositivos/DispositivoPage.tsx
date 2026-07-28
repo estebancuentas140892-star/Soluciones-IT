@@ -229,7 +229,7 @@ export function DispositivoPage() {
       {/* Cabecera: regreso contextual, compartir y menú de acciones. */}
       <header className="flex items-center justify-between gap-2 pb-2 pl-2 pr-3 pt-2.5 lg:px-10 lg:pt-4">
         <BotonVolver to={volverA}>
-          {esRed ? 'Red' : 'Dispositivos'}
+          {esRed ? 'Red' : 'Equipos'}
         </BotonVolver>
         <div className="flex shrink-0 items-center gap-2">
           <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} />
@@ -531,8 +531,8 @@ export function DispositivoPage() {
       <DialogoEliminar
         abierto={mostrarEliminar}
         sensible
-        titulo={`¿Eliminar el dispositivo "${dispositivo.nombre}"?`}
-        descripcion="Esta acción eliminará la ficha del dispositivo, sus campos y sus conexiones registradas."
+        titulo={`¿Eliminar el equipo "${dispositivo.nombre}"?`}
+        descripcion="Esta acción eliminará la ficha del equipo, sus campos y sus conexiones registradas."
         advertencia={impacto ? `${impacto} Esas referencias quedarán rotas.` : null}
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}

@@ -340,7 +340,7 @@ export function SolucionesPage() {
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
         <header className="flex items-start justify-between gap-2.5 px-4 pb-2 pt-3">
           <div className="min-w-0">
-            <h1 className="text-[22px] font-medium leading-tight">Soluciones</h1>
+            <h1 className="text-[22px] font-medium leading-tight">Guías</h1>
             <PastillaFrescura
               total={articulos.length}
               singular="artículo"
