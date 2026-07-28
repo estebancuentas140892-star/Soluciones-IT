@@ -1,5 +1,25 @@
 # Historial de tareas finalizadas
 
+### 181. BarraSuperior global: dónde estoy, qué sabe la app, buscar
+
+**Estado**: TERMINADA el 2026-07-28. Lint, `tsc -b` y build limpios; 1677 pruebas pasan (8 nuevas). **Prioridad**: ALTA. **Origen**: turno 3 del handoff "Auditoría de Soluciones TI", mockup `3d` ("especificación completa, lista para implementar").
+
+**Problema**: el shell aportaba pestañas y sidebar y nada más. Cada pantalla dibujaba su propia cabecera, con dos gramáticas distintas (`px-4 pt-3` en las raíces, `pl-2 pr-3 py-2.5` en las internas, con el título 46 px más abajo), y los tres servicios globales vivían dentro de una sola pestaña: buscar era global pero estaba en Inicio, así que desde cualquier otra pestaña había que volver a Inicio y perder el sitio; el estado de sincronización solo existía en Inicio, así que en las otras cuatro no había forma de saber si lo escrito ya había subido; y "Mi cuenta" en móvil solo se alcanzaba desde Inicio.
+
+**Cambio**: `src/components/BarraSuperior.tsx` con tres ranuras fijas, siempre en el mismo orden y en las cinco pestañas (regla **R14**): título de la sección · estado del dato · buscar + cuenta. La lupa abre `BuscadorGlobal`, una capa a pantalla completa que **declara su alcance por escrito** y no obliga a abandonar la pantalla. `PastillaSync` sale de Inicio a `src/components/PastillaSync.tsx` y se monta en la barra (regla **R7** aplicada al chasis). El avatar con las iniciales del técnico lleva a Mi cuenta.
+
+**Reparto de archivos nuevos**: `BarraSuperior.tsx`, `PastillaSync.tsx`, `busqueda/BuscadorGlobal.tsx`, `busqueda/resultados.ts` (catálogo y helpers sin JSX), `busqueda/ResultadosBusqueda.tsx` (componentes) y `lib/iniciales.ts` con sus 8 pruebas. La presentación de resultados y la pastilla salen de `InicioPage.tsx`, que pierde unas 70 líneas. Catálogo y componentes van en archivos separados porque `oxlint` avisa (fast-refresh) cuando un archivo exporta ambas cosas.
+
+**Decisión tomada**: el handoff se contradice entre turnos sobre dónde va "Crear" (el turno 1 lo dibuja junto al título; el turno 3 declara que esa fila tiene solo tres ranuras). Manda el turno 3, que es el que legisla el chasis: las acciones propias de cada pantalla bajan a la banda de controles inmediatamente debajo, dentro del mismo bloque pegajoso. Ninguna acción se pierde ni cambia de comportamiento, solo de fila. Registrado en [DECISIONES.md](DECISIONES.md) AD-023.
+
+**Lo que NO entró, y dónde está agendado**: la barra cubre solo el **modo raíz** (nivel 1, "sección"); los modos *documento* y *tarea*, con regreso y miga, son el chasis de tres niveles (**tarea 185**) y `MigaDePan` (**tarea 188**). La pastilla adaptativa que se contrae a solo icono es de la **tarea 187**. Inicio **conserva** su buscador en línea además de la lupa, porque esa pantalla es el buscador y quitarlo habría sido una regresión de su razón de ser.
+
+**Ubicación**: `src/components/BarraSuperior.tsx`, `src/components/PastillaSync.tsx`, `src/lib/iniciales.ts` (+ `iniciales.test.ts`), `src/features/busqueda/BuscadorGlobal.tsx`, `resultados.ts` y `ResultadosBusqueda.tsx` (nuevos); `src/features/inicio/InicioPage.tsx`, `src/features/soluciones/SolucionesPage.tsx`, `src/features/dispositivos/DispositivosPage.tsx`, `src/features/red/RedPage.tsx`, `src/features/boveda/BovedaPage.tsx` (modificados).
+
+**Verificación**: lint, `tsc -b` y build limpios. 1677 pruebas pasan. Siguen los mismos **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts` (RLS de Storage contra el `.env` real de la sesión), duplicados por el worktree obsoleto de la tarea 178. La app arranca sin errores de consola y redirige limpio a `/login`. **Sin verificar en navegador**: la barra vive detrás del login y esta sesión no tiene cuenta real de técnico. El repo no tiene utilidades de prueba de componentes React (no hay `@testing-library`), así que la lógica nueva que sí es pura (`inicialesDe`) se cubrió con pruebas y el resto queda pendiente de una pasada en el teléfono del usuario.
+
+---
+
 ### 180. Un solo nombre visible: "Soluciones IT", con las secciones Guías y Equipos
 
 **Estado**: TERMINADA el 2026-07-28. Lint, `tsc -b` y build limpios; 1669 pruebas pasan. **Prioridad**: ALTA. **Origen**: primera recomendación del turno 3 del handoff "Auditoría de Soluciones TI", reimportado ese día con dos turnos nuevos y un archivo `Decisiones aprobadas.md` donde el usuario cierra por escrito las decisiones que el handoff dejaba abiertas.

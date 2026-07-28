@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
+import { BarraSuperior } from '../../components/BarraSuperior'
 import { CaretDown, Info, MagnifyingGlass, Play, Plus, XCircleFill } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
@@ -335,19 +336,14 @@ export function SolucionesPage() {
 
   return (
     <ShellNocturne>
-      {/* Cabecera fija: título con su frescura, buscador y UN solo eje de
-          filtro visible (categorías) más el botón que plega el segundo. */}
-      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-        <header className="flex items-start justify-between gap-2.5 px-4 pb-2 pt-3">
-          <div className="min-w-0">
-            <h1 className="text-[22px] font-medium leading-tight">Guías</h1>
-            <PastillaFrescura
-              total={articulos.length}
-              singular="artículo"
-              plural="artículos"
-              className="mt-[3px]"
-            />
-          </div>
+      {/* El título, el estado del dato, buscar y la cuenta los aporta ya
+          BarraSuperior (tarea 181). Aquí quedan solo los controles propios
+          de la sección: frescura, "Crear", el buscador de artículos y UN
+          solo eje de filtro visible (categorías) más el botón que plega
+          el segundo. */}
+      <BarraSuperior titulo="Guías">
+        <header className="flex items-center justify-between gap-2.5 px-4 pb-2 pt-1">
+          <PastillaFrescura total={articulos.length} singular="artículo" plural="artículos" />
           {botonCrear}
         </header>
 
@@ -440,7 +436,7 @@ export function SolucionesPage() {
             )}
           </div>
         )}
-      </div>
+      </BarraSuperior>
 
       <main className="flex-1 px-4 pb-[116px] pt-3.5 lg:pb-16">
         <div className={!buscando ? 'xl:grid xl:grid-cols-[220px_minmax(0,1fr)] xl:items-start xl:gap-6' : ''}>

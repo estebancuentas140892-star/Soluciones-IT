@@ -89,6 +89,8 @@ Tipos de shell de las pantallas:
 
 - **`ShellNocturne`** (`src/app/ShellNocturne.tsx`): el shell "con navegación". En **escritorio (>=1024px)** muestra una barra lateral fija de 240px con la marca "Soluciones IT", los módulos y el perfil del usuario (enlace a Cuenta). En **móvil** muestra 5 pestañas inferiores fijas con desenfoque. La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes). Lo usan las pantallas que son pestaña de la barra o cuelgan de una (Inicio, Guías, Equipos, Red, Bóveda y sus fichas).
 - **Shell centrado propio**: pantallas alcanzadas desde Inicio que no son pestaña (Diagnóstico, Estadísticas, Sugerencias, Cuenta, Seguridad, Ubicaciones, Personas y sus fichas/formularios). Columna centrada de 448px con cabecera pegajosa y botón "Volver".
+
+**Barra superior global (`BarraSuperior`, desde la tarea 181).** Las **cinco pestañas raíz** comparten la misma fila superior, con tres ranuras fijas y siempre en el mismo orden (regla R14): **título de la sección**, **estado del dato** (pastilla de sincronización) y **buscar + cuenta**. Las acciones propias de cada pantalla ("Crear", "Escanear", el menú "···", el subtítulo) van en la banda que queda justo debajo, dentro del mismo bloque pegajoso ([DECISIONES.md](DECISIONES.md) AD-023). La lupa abre el **buscador global en capa** desde cualquiera de las cinco, sin abandonar la pantalla; el avatar (iniciales del técnico) lleva a Mi cuenta y solo aparece en móvil, porque en escritorio la cuenta vive al pie del sidebar. Las pantallas internas todavía dibujan su propia cabecera con "Volver": los niveles *documento* y *tarea* llegan con el chasis de tres niveles (tarea 185).
 - **Shell a pantalla completa**: los editores (Artículo, Dispositivo, Credencial, Diagnóstico), el escáner, las etiquetas QR y la importación. Cabecera pegajosa + barra de acciones inferior fija; salen del contenedor con barra para no distraer.
 
 Las **5 pestañas** de la barra inferior/lateral (`DESTINOS_BASE` + `DESTINO_BOVEDA`):
@@ -224,11 +226,9 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **Objetivo.** Punto único de entrada al conocimiento del equipo. La pantalla principal ES el buscador global (el pilar de la app): abrir y buscar toma dos toques. Cuando no se busca, muestra atajos de trabajo y bloques derivados de la actividad reciente.
 
-**Cabecera fija (con desenfoque).**
-- Título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022) y saludo dinámico según la hora ("Buenos días/tardes/noches. Todo el conocimiento del equipo, al instante"). El saludo tiene su retirada agendada en la tarea 184.
-- **Pastilla de sincronización** (botón `PastillaSync`): muestra el estado (Al día / Sincronizando / Con error / Sin conexión) con icono, etiqueta y color. Al pulsarla fuerza una sincronización y abre el Panel de sincronización.
-- **Botón "Mi cuenta"** (icono User, solo móvil `lg:hidden`): único acceso a Cuenta/Seguridad/Cerrar sesión desde el teléfono. En escritorio ese acceso vive en la barra lateral.
-- **Buscador global** (input `type="search"`): placeholder "Buscar en todo: artículos, equipos, bóveda". Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
+**Cabecera fija (con desenfoque).** Desde la tarea 181 la fila superior es la **barra superior global** (ver la sección 2), común a las cinco pestañas: título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022), pastilla de sincronización, lupa y avatar de la cuenta. Debajo, lo propio de Inicio:
+- Saludo dinámico según la hora ("Buenos días/tardes/noches. Todo el conocimiento del equipo, al instante"). El saludo tiene su retirada agendada en la tarea 184.
+- **Buscador en línea** (input `type="search"`): placeholder "Buscar en todo: artículos, equipos, bóveda". Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo. **Se conserva** además de la lupa de la barra porque esta pantalla ES el buscador: abrir y buscar sigue tomando dos toques.
 
 **Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas**. Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
 
@@ -256,8 +256,8 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 > **Rediseñada el 2026-07-27** a partir del handoff "Auditoría de Soluciones TI" (pantalla P1). Las reglas visuales que rigen ahora toda la sección (R1 a R7) están en [DECISIONES.md](DECISIONES.md) AD-019. El layout de escritorio se conservó tal cual (AD-021). **Renombrada a "Guías" el 2026-07-28** (AD-022); la ruta sigue siendo `/soluciones`.
 
-**Cabecera fija:**
-- Título "Guías" y, debajo, la **pastilla de frescura**: "N artículos al día · hace 4 min", o "N cambios sin subir" en ámbar, o "sin sincronizar aún" (regla R7; antes esta señal solo existía en Inicio). Es informativa, no abre nada.
+**Cabecera fija:** la fila superior es la **barra superior global** (título "Guías", sincronización, lupa y cuenta; ver la sección 2). Debajo, lo propio de la sección:
+- **Pastilla de frescura**: "N artículos al día · hace 4 min", o "N cambios sin subir" en ámbar, o "sin sincronizar aún" (regla R7; antes esta señal solo existía en Inicio). Es informativa, no abre nada.
 - **Botón "Crear"**, siempre activo y en acento (regla R3). Con una categoría elegida abre `/soluciones/:categoriaId/nuevo`; **sin categoría abre la hoja "¿En qué categoría?"** y navega al editor de la que se elija. Antes estaba deshabilitado y la razón vivía en un `title`, que en un teléfono nadie lee porque no hay hover.
 - **Buscador** (`type="search"`): placeholder "Buscar equipo, síntoma o etiqueta". Busca por título, categoría, tipo y etiquetas (normalizado sin acentos). El botón de borrar mide **44 px** reales (regla R6; medía 26).
 - **Chips de categoría** (deslizables en móvil, con un degradado en el extremo derecho que indica que hay más sin necesidad de barra; en escritorio `xl`, rail lateral fijo de 220px): "Todos" + una por categoría, cada uno con su color de identidad, icono y conteo.
@@ -310,8 +310,8 @@ Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un e
 
 **Objetivo.** Responder "¿qué se sabe de cada equipo?" con el inventario **general** (los equipos de categorías de red van en la sección Red, no aquí).
 
-**Cabecera fija:**
-- Título "Equipos" y subtítulo "Qué se sabe de cada equipo". **Renombrada el 2026-07-28** ([DECISIONES.md](DECISIONES.md) AD-022); la ruta sigue siendo `/dispositivos`.
+**Cabecera fija:** la fila superior es la **barra superior global** (título "Equipos", sincronización, lupa y cuenta; ver la sección 2). **Renombrada el 2026-07-28** ([DECISIONES.md](DECISIONES.md) AD-022); la ruta sigue siendo `/dispositivos`. Debajo, lo propio de la sección:
+- Subtítulo "Qué se sabe de cada equipo".
 - **Botón "Escanear equipo"** (icono QR, → `/escaner`).
 - **Botón "Crear"** (→ `/dispositivos/nuevo`).
 - Menú **"···"** con: **Ubicaciones** (→ `/ubicaciones`), **Personas** (→ `/personas`), **Etiquetas QR** (→ `/dispositivos/etiquetas`), **Importar** (→ `/dispositivos/importar`).
@@ -358,7 +358,7 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 
 **Objetivo.** Responder "¿cómo está conectada la infraestructura?". Reúne los equipos de las categorías marcadas `es_red` (racks, puntos de red, switches, access points, cámaras). No duplica el inventario: son dispositivos normales con la bandera de categoría.
 
-**Cabecera:** título "Red", **botón "Crear"** (→ `/dispositivos/nuevo?red=1`, que prioriza las categorías de red en el selector), **buscador** (placeholder "Equipo de red, IP, ubicación").
+**Cabecera:** la fila superior es la **barra superior global** (título "Red", sincronización, lupa y cuenta; ver la sección 2). Debajo: subtítulo "Cómo está conectada la infraestructura", **botón "Crear"** (→ `/dispositivos/nuevo?red=1`, que prioriza las categorías de red en el selector) y **buscador** (placeholder "Equipo de red, IP, ubicación").
 
 **Cuerpo:**
 - **Entrada destacada a "Topología de red"** (tintada en acento, → `/red/topologia`): "Recorrer las conexiones desde el rack hasta cada equipo".
@@ -398,8 +398,8 @@ Solo visible para usuarios con permiso `puede_ver_boveda`. La sección más sens
 - Si aún no existe (`crear`): campo + confirmación + advertencia de que la contraseña quedará como la del equipo y es irrecuperable si se pierde.
 - Si no se puede comprobar (offline sin verificador local): mensaje y botón "Reintentar".
 
-**Lista (`BovedaPage`), cabecera:**
-- Título "Bóveda", subtítulo "Usuarios y contraseñas del equipo".
+**Lista (`BovedaPage`), cabecera:** la fila superior es la **barra superior global** (título "Bóveda", sincronización, lupa y cuenta; ver la sección 2). Debajo, lo propio de la sección:
+- Subtítulo "Usuarios y contraseñas del equipo".
 - **Botón "Bloquear ahora"** (icono candado).
 - **Botón "Crear"**: abre la **hoja inferior "Guardar en la bóveda"** con los cinco tipos de secreto (Cuenta de sistema, Red, Llave digital, Archivo seguro, Nota segura); todos abren el mismo editor con `?tipo=`.
 - **Buscador** (placeholder "Título, categoría o equipo").
@@ -860,7 +860,7 @@ Categoría ── Artículos + Equipos + Diagnósticos (ficha 360°)
 Puntos de navegación cruzada destacados:
 - Desde la ficha de un **dispositivo** se llega en un toque a sus procedimientos, problemas, credenciales, ubicación, responsable, topología, diagnóstico de su categoría, y a crear una incidencia/procedimiento/secreto ya precargados.
 - Desde un **artículo** se navega a sus dispositivos afectados, relacionados, y quién lo referencia.
-- El **buscador global** de Inicio encuentra por igual artículos, equipos (generales y de red), credenciales (con permiso), ubicaciones y personas.
+- El **buscador global**, accesible desde la lupa de la barra superior en las cinco pestañas (y en línea dentro de Inicio), encuentra por igual artículos, equipos (generales y de red), credenciales (con permiso), ubicaciones y personas.
 - La **eliminación** de cualquier entidad avisa antes qué vínculos quedarían rotos (impacto derivado del grafo).
 
 ---

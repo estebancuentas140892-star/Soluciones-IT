@@ -1,29 +1,24 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { lazy, Suspense, useDeferredValue, useMemo, useState, useSyncExternalStore } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { contarHechos } from '../../lib/progresoPasos'
 import { obtenerFavoritos } from '../../lib/favoritos'
 import { obtenerRecientes } from '../../lib/recientes'
-import { obtenerEstadoSync, sincronizar, suscribirSync } from '../../lib/sync'
 import { ShellNocturne } from '../../app/ShellNocturne'
+import { BarraSuperior } from '../../components/BarraSuperior'
 import { DescargarOffline } from '../../components/DescargarOffline'
 import {
-  BookOpen,
   CaretRight,
   ChartBar,
   CheckCircle,
   ClockCounterClockwise,
-  CloudArrowUp,
-  CloudCheck,
-  CloudSlash,
   FlagBanner,
   type IconoProps,
   Lightbulb,
   LockSimple,
   MagnifyingGlass,
-  MapPin,
   Monitor,
   PencilSimple,
   Play,
@@ -31,19 +26,14 @@ import {
   QrCode,
   Star,
   TreeStructure,
-  User,
   UsersThree,
-  Vault,
   WarningCircle,
   XCircleFill,
 } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
-import {
-  buscar,
-  type ResultadoBusqueda,
-  type TipoResultado,
-  useIndiceBusqueda,
-} from '../busqueda/useIndiceBusqueda'
+import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
+import { agruparResultados, VISUAL_POR_TIPO } from '../busqueda/resultados'
+import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import {
   ETIQUETA_ACCION_CAMBIO,
@@ -65,59 +55,11 @@ import { problemasFrecuentesInicio } from './problemasFrecuentes'
 // en escritorio, pestañas en movil), por eso su ruta vive fuera del Layout
 // oscuro heredado, como el resto de pantallas ya re-autorizadas.
 
-// Icono y tono del recuadro por tipo de resultado, con el lenguaje de
-// color del sistema: articulos/diagnosticos/categorias en el acento, un
-// dispositivo en verde (exito), una credencial y los adjuntos en neutro.
-// Las clases van completas y literales porque Tailwind no detecta nombres
-// construidos dinamicamente.
-interface Visual {
-  Icono: (props: IconoProps) => React.JSX.Element
-  tono: string
-}
-const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
-  articulo: { Icono: BookOpen, tono: 'text-noct-accent bg-noct-accent/[.12]' },
-  categoria: { Icono: BookOpen, tono: 'text-noct-accent bg-noct-accent/[.12]' },
-  diagnostico: { Icono: TreeStructure, tono: 'text-noct-accent bg-noct-accent/[.12]' },
-  adjunto: { Icono: BookOpen, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
-  dispositivo: { Icono: Monitor, tono: 'text-noct-exito bg-noct-exito/[.12]' },
-  credencial: { Icono: LockSimple, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
-  ubicacion: { Icono: MapPin, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
-  persona: { Icono: User, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
-}
-
-// Los resultados se agrupan por fuente (los modulos con contenido
-// buscable), no por los tipos internos: el tecnico piensa en "donde
-// esta", no en el tipo de dato. Cada tipo cae en su grupo.
-const GRUPOS_BUSQUEDA: {
-  id: string
-  nombre: string
-  Icono: (props: IconoProps) => React.JSX.Element
-  tipos: TipoResultado[]
-}[] = [
-  { id: 'soluciones', nombre: 'Guías', Icono: BookOpen, tipos: ['diagnostico', 'categoria', 'articulo', 'adjunto'] },
-  { id: 'dispositivos', nombre: 'Equipos', Icono: Monitor, tipos: ['dispositivo'] },
-  { id: 'boveda', nombre: 'Bóveda', Icono: Vault, tipos: ['credencial'] },
-  // Ubicaciones en el buscador (fase P3, punto 4 del encargo): hoy
-  // faltaban pese a ser entidad propia desde N3.
-  { id: 'ubicaciones', nombre: 'Ubicaciones', Icono: MapPin, tipos: ['ubicacion'] },
-  // Personas en el buscador (hallazgo T1): mismo criterio que ubicaciones.
-  { id: 'personas', nombre: 'Personas', Icono: User, tipos: ['persona'] },
-]
-
-// Parte un titulo en tres tramos segun donde cae el termino buscado
-// (comparando normalizado, devolviendo el original). El resaltado usa
-// `match`; si no hay coincidencia literal (busqueda difusa o por sinonimo)
-// todo el titulo queda en `pre`, sin resaltar.
-function partirTitulo(titulo: string, consulta: string) {
-  if (!consulta) return { pre: titulo, match: '', post: '' }
-  const i = normalizarTexto(titulo).indexOf(consulta)
-  if (i < 0) return { pre: titulo, match: '', post: '' }
-  return {
-    pre: titulo.slice(0, i),
-    match: titulo.slice(i, i + consulta.length),
-    post: titulo.slice(i + consulta.length),
-  }
-}
+// VISUAL_POR_TIPO, GRUPOS_BUSQUEDA, partirTitulo y FilaResultado vivian
+// aqui porque Inicio era el unico sitio desde donde se podia buscar. La
+// tarea 181 saco el buscador al chasis, asi que esa presentacion se
+// comparte ahora desde features/busqueda/resultados.tsx. Inicio sigue
+// usando VISUAL_POR_TIPO para el bloque "Actividad del equipo".
 
 export function InicioPage() {
   const [query, setQuery] = useState('')
@@ -272,44 +214,16 @@ export function InicioPage() {
     (hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches') +
     '. Todo el conocimiento del equipo, al instante'
 
-  // Grupos con al menos un resultado, en el orden fijo de GRUPOS_BUSQUEDA.
-  const gruposResultado = useMemo(() => {
-    return GRUPOS_BUSQUEDA.map((grupo) => {
-      const items = resultados.filter((r) => grupo.tipos.includes(r.tipo))
-      return items.length ? { ...grupo, items } : null
-    }).filter((g): g is NonNullable<typeof g> => g !== null)
-  }, [resultados])
+  const gruposResultado = useMemo(() => agruparResultados(resultados), [resultados])
 
   return (
     <ShellNocturne>
-      {/* Cabecera fija con desenfoque: marca, saludo, estado de
-          sincronizacion, acceso a la cuenta y el buscador global. */}
-      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-        <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-3">
-          <div>
-            {/* El encabezado repite siempre la pestaña activa (regla R12,
-                tarea 180): antes decía "IT Brain", el único caso donde
-                rótulo y encabezado no coincidían. La marca vive ahora en
-                el login, el bloqueo y el sidebar. */}
-            <h1 className="text-[22px] font-medium leading-tight">Inicio</h1>
-            <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{saludo}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <PastillaSync />
-            {/* Unica entrada a Cuenta, Seguridad y Cerrar sesion desde
-                el telefono: el sidebar de ShellNocturne que la ofrece
-                solo existe en escritorio (lg). Vive en Inicio por ser
-                la pestaña que todos abren primero. */}
-            <Link
-              to="/cuenta"
-              aria-label="Mi cuenta"
-              title="Mi cuenta"
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-noct-neutral-400 hover:bg-noct-text/[.05] hover:text-noct-text lg:hidden"
-            >
-              <User size={20} aria-hidden />
-            </Link>
-          </div>
-        </header>
+      {/* El titulo ("Inicio", regla R12), el estado del dato, la lupa y la
+          cuenta los aporta ya BarraSuperior (tarea 181). Inicio conserva
+          ademas su buscador en linea, porque esta pantalla ES el buscador:
+          abrir y buscar sigue tomando dos toques. */}
+      <BarraSuperior titulo="Inicio">
+        <p className="px-4 pb-0.5 text-[12.5px] text-noct-neutral-400">{saludo}</p>
 
         <div className="px-4 pb-3 pt-2">
           <label
@@ -342,27 +256,12 @@ export function InicioPage() {
             )}
           </label>
         </div>
-      </div>
+      </BarraSuperior>
 
       <main className="flex-1 px-4 pb-[116px] pt-4 lg:pb-16">
         {buscando ? (
           gruposResultado.length > 0 ? (
-            <div className="@container flex flex-col gap-5">
-              {gruposResultado.map((grupo) => (
-                <section key={grupo.id}>
-                  <div className="mb-1.5 flex items-center gap-2 px-0.5">
-                    <grupo.Icono size={14} className="text-noct-neutral-400" aria-hidden />
-                    <TituloSeccion>{grupo.nombre}</TituloSeccion>
-                    <span className="text-[11px] text-noct-neutral-600">{grupo.items.length}</span>
-                  </div>
-                  <div className="grid grid-cols-1 @2xl:grid-cols-2">
-                    {grupo.items.map((item) => (
-                      <FilaResultado key={item.id} resultado={item} consulta={consulta} />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
+            <ResultadosBusqueda grupos={gruposResultado} consulta={consulta} />
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
               <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
@@ -648,32 +547,6 @@ export function InicioPage() {
 }
 
 // Fila de un resultado de busqueda, con el termino resaltado.
-function FilaResultado({ resultado, consulta }: { resultado: ResultadoBusqueda; consulta: string }) {
-  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
-  const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
-  return (
-    <Link
-      to={resultado.ruta}
-      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-    >
-      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
-        <Icono size={17} aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="mb-0.5 block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-          {pre}
-          {match && <span className="rounded-[3px] bg-noct-accent/[.18] text-noct-accent-300">{match}</span>}
-          {post}
-        </span>
-        {resultado.subtitulo && (
-          <span className="block truncate text-[12px] text-noct-neutral-500">{resultado.subtitulo}</span>
-        )}
-      </span>
-      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-    </Link>
-  )
-}
-
 // Fila del bloque "Actividad del equipo": quien hizo que, sobre que
 // ficha, hace cuanto. Un cambio de campo dice "Ana editó X (3
 // cambios)"; una ejecucion de diagnostico dice "Ana ejecutó el
@@ -782,73 +655,3 @@ function AtajoRapido({
   )
 }
 
-// El panel de sincronizacion solo carga si el usuario lo abre.
-const PanelSync = lazy(() => import('../../components/PanelSync').then((m) => ({ default: m.PanelSync })))
-
-function suscribirRed(escucha: () => void): () => void {
-  window.addEventListener('online', escucha)
-  window.addEventListener('offline', escucha)
-  return () => {
-    window.removeEventListener('online', escucha)
-    window.removeEventListener('offline', escucha)
-  }
-}
-
-// Pastilla de estado de sincronizacion en la cabecera: responde de un
-// vistazo "¿ya se subio lo que cambie?" con icono, etiqueta y color.
-// Tocarla fuerza una sincronizacion y abre el panel (mismo comportamiento
-// que IndicadorSync, con el aspecto Nocturne del handoff). Cuatro estados:
-// al dia (neutro), sincronizando/pendiente (precaucion), con error (error)
-// y sin conexion (precaucion), siguiendo el lenguaje de estados de 08_ESTILO.
-function PastillaSync() {
-  const estado = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
-  const enLinea = useSyncExternalStore(suscribirRed, () => navigator.onLine)
-  const [panelAbierto, setPanelAbierto] = useState(false)
-
-  let Icono = CloudCheck
-  let etiqueta = 'Al día'
-  let titulo = 'Sincronizado y disponible sin conexión'
-  let clase = 'border-noct-divider text-noct-neutral-400'
-  if (!enLinea) {
-    Icono = CloudSlash
-    etiqueta = 'Sin conexión'
-    titulo =
-      estado.cambiosPendientes > 0
-        ? `Trabajando con la copia local. ${estado.cambiosPendientes} cambio(s) por subir.`
-        : 'Trabajando con la copia local'
-    clase = 'border-noct-precaucion/40 text-noct-precaucion'
-  } else if (estado.cambiosConError > 0) {
-    Icono = CloudSlash
-    etiqueta = 'Con error'
-    titulo = `${estado.cambiosConError} cambio(s) con error de sincronización`
-    clase = 'border-noct-error/40 text-noct-error'
-  } else if (estado.enCurso || estado.cambiosPendientes > 0) {
-    Icono = CloudArrowUp
-    etiqueta = 'Sincronizando'
-    titulo = estado.enCurso ? 'Subiendo los cambios' : 'Hay cambios pendientes de subir'
-    clase = 'border-noct-precaucion/40 text-noct-precaucion'
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => {
-          void sincronizar()
-          setPanelAbierto(true)
-        }}
-        title={`${titulo}. Tocar para ver el detalle y sincronizar ahora.`}
-        aria-label={titulo}
-        className={`inline-flex min-h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-[11px] text-[12px] font-medium ${clase}`}
-      >
-        <Icono size={14} className={estado.enCurso ? 'animate-pulse' : ''} aria-hidden />
-        {etiqueta}
-      </button>
-      {panelAbierto && (
-        <Suspense fallback={null}>
-          <PanelSync abierto={panelAbierto} onCerrar={() => setPanelAbierto(false)} />
-        </Suspense>
-      )}
-    </>
-  )
-}

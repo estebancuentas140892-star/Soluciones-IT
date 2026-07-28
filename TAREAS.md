@@ -220,14 +220,7 @@ Las 24 reglas visuales R1 a R24 quedan como el criterio único de la app; las si
 
 La **tarea 180** (un solo nombre: "Soluciones IT", con las secciones Guías y Equipos, regla R12) quedó **terminada y archivada el 2026-07-28**. Fija el vocabulario que usan las nueve tareas de abajo. Decisión registrada en [DECISIONES.md](DECISIONES.md) AD-022, con su límite explícito: **las rutas `/soluciones` y `/dispositivos` NO cambian**, para no invalidar los enlaces profundos que el equipo ya tiene guardados. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
-### 181. BarraSuperior global: dónde estoy, qué sabe la app, buscar (R14)
-
-- **Descripción:** crear `BarraSuperior`, persistente en las cinco pestañas, con tres ranuras: título de sección · estado del dato · buscar + cuenta. Dos modos, raíz (título) e interna (regreso y miga). Sacar de `InicioPage` la pastilla de sincronización y el buscador global y montarlos en el chasis: `BuscadorGlobal` pasa a abrirse en capa desde cualquier pestaña, sin abandonar la pantalla. Los buscadores de sección declaran su alcance por escrito ("solo en Guías") y ofrecen ampliarlo. Unificar la gramática de la fila superior, hoy partida en dos (`px-4 pt-3` en las raíces, `pl-2 pr-3 py-2.5` en las internas, con el título 46 px más abajo).
-- **Motivo:** hoy no existe barra superior global: cada pantalla dibuja la suya con altura, relleno y controles distintos. Buscar es global pero vive en Inicio, así que desde cualquier otra pestaña hay que volver a Inicio y perder el lugar donde se estaba. El estado de sincronización solo existe en Inicio: en las otras cuatro pestañas no hay forma de saber si lo que se acaba de escribir ya subió. "Mi cuenta" en móvil solo se alcanza desde Inicio.
-- **Impacto:** encontrar cualquier cosa pasa a un toque desde donde estés, y la app dice siempre qué sabe. Es la pieza de la que dependen las tareas 185, 187 y 188.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/app/ShellNocturne.tsx`, `src/features/inicio/InicioPage.tsx` (cabecera, buscador global y pastilla de sincronización), `src/features/busqueda/`. Componentes nuevos: `BarraSuperior`, `BuscadorGlobal`.
-- **Dependencias:** la 180 fija los rótulos. Reglas que fija: **R14** (el chasis presta tres servicios en todas las pestañas) y **R7** aplicada al chasis (la app dice qué sabe).
+La **tarea 181** (`BarraSuperior` global: dónde estoy, qué sabe la app, buscar, regla R14) quedó **terminada y archivada el 2026-07-28**. Las cinco pestañas comparten ya la misma fila superior de tres ranuras, la lupa abre el buscador global en capa desde cualquiera de ellas y la pastilla de sincronización salió de Inicio al chasis. Cubre solo el **modo raíz**: los modos documento y tarea son la 185, y la miga la 188. Decisión nueva en [DECISIONES.md](DECISIONES.md) AD-023 (las acciones propias de cada pantalla bajan de la fila del título a la banda de debajo, que resuelve una contradicción entre el turno 1 y el turno 3 del handoff). Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ### 182. BarraPestanas de cinco destinos fijos y PantallaMas (R15, R16, R17)
 

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
+import { BarraSuperior } from '../../components/BarraSuperior'
 import { idsDeRed, esDeRed } from '../../lib/categorias'
 import { incluyeTexto } from '../../lib/texto'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
@@ -103,14 +104,14 @@ export function DispositivosPage() {
 
   return (
     <ShellNocturne>
-      {/* Cabecera fija con desenfoque: título, acciones, buscador y la
-          fila de chips de categoría deslizable. */}
-      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-        <header className="flex items-start justify-between gap-2 px-4 pb-0.5 pt-3">
-          <div className="min-w-0">
-            <h1 className="text-[22px] font-medium leading-tight">Equipos</h1>
-            <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">Qué se sabe de cada equipo</p>
-          </div>
+      {/* El título, el estado del dato, buscar y la cuenta los aporta ya
+          BarraSuperior (tarea 181). Aquí quedan las acciones propias de la
+          sección, el buscador de equipos y la fila de chips deslizable. */}
+      <BarraSuperior titulo="Equipos">
+        <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
+          <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
+            Qué se sabe de cada equipo
+          </p>
           <div className="flex shrink-0 gap-2">
             <Link
               to="/escaner"
@@ -235,7 +236,7 @@ export function DispositivosPage() {
             })}
           </div>
         )}
-      </div>
+      </BarraSuperior>
 
       <main className="flex-1 px-4 pb-[116px] pt-3 lg:pb-16">
         {/* Resumen de estados: total y desglose operativo/mantenimiento/

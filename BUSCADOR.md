@@ -7,7 +7,7 @@ Este documento reemplaza y amplía la sección 6 de [ARQUITECTURA.md](ARQUITECTU
 ## 1. Idea general
 
 - Un **único índice [MiniSearch](https://github.com/lucaong/minisearch) en memoria** construido sobre los datos locales (Dexie). No hay búsqueda contra el servidor: al ser 100% local responde en milisegundos y sin internet.
-- El índice lo construye y consulta el hook `useIndiceBusqueda` (`src/features/busqueda/useIndiceBusqueda.ts`). El consumidor principal es el buscador de Inicio (`src/features/inicio/InicioPage.tsx`).
+- El índice lo construye y consulta el hook `useIndiceBusqueda` (`src/features/busqueda/useIndiceBusqueda.ts`). Lo consumen el buscador en línea de Inicio (`src/features/inicio/InicioPage.tsx`) y, desde la tarea 181, la capa global `BuscadorGlobal` (`src/features/busqueda/BuscadorGlobal.tsx`), que se abre con la lupa de la barra superior desde cualquiera de las cinco pestañas.
 - El mismo hook alimenta las sugerencias anti duplicados al crear un artículo o un diagnóstico (`buscarSimilares` / `buscarArticulosSimilares`).
 - Además del índice global existen varios **buscadores locales** más simples que filtran en el sitio la lista que una pantalla ya tiene cargada (Dispositivos, Red, Soluciones, alta de conexión). No pasan por MiniSearch (sección 9).
 
@@ -40,7 +40,7 @@ MiniSearch guarda `storeFields: ['tipo', 'titulo', 'subtitulo', 'ruta', 'portada
 
 `portadaRef` es la referencia de Storage de una miniatura: portada del procedimiento (artículo), foto principal (dispositivo) o la propia referencia si el adjunto es una imagen. Es `''` para categoría, ubicación, persona, diagnóstico, credencial y campo protegido (la credencial nunca expone la referencia de su archivo, que apunta al bucket cifrado `archivos_boveda`).
 
-> **Estado real (2026-07-24):** `portadaRef` se calcula y viaja hasta el resultado, pero **ningún componente de la interfaz lo pinta**. La fila de resultado (`FilaResultado` en `InicioPage.tsx`) usa un icono genérico por tipo, no la miniatura. La miniatura en resultados está pendiente (ver [TAREAS.md](TAREAS.md)).
+> **Estado real (2026-07-24):** `portadaRef` se calcula y viaja hasta el resultado, pero **ningún componente de la interfaz lo pinta**. La fila de resultado (`FilaResultado`, en `src/features/busqueda/ResultadosBusqueda.tsx` desde la tarea 181) usa un icono genérico por tipo, no la miniatura. La miniatura en resultados está pendiente (ver [TAREAS.md](TAREAS.md)).
 
 ## 4. Opciones de búsqueda
 
@@ -81,7 +81,7 @@ El mismo diccionario **no** alimenta el selector de "vincular procedimiento" de 
 ## 7. Ranking y agrupación
 
 - **Orden interno**: MiniSearch devuelve por score descendente (BM25 + boost por campo + pesos difuso/prefijo). No hay desempate adicional configurado por la app; a score idéntico el orden no está garantizado.
-- **Agrupación en Inicio**: los resultados no se muestran como lista plana. `GRUPOS_BUSQUEDA` define cinco grupos por fuente, en orden fijo: **Soluciones** (incluye diagnóstico, categoría, artículo y adjunto), **Dispositivos**, **Bóveda**, **Ubicaciones**, **Personas**. Dentro de cada grupo se respeta el score; entre grupos el orden es siempre el mismo (Soluciones primero), aunque un resultado de otro grupo tenga mayor score.
+- **Agrupación**: los resultados no se muestran como lista plana. `GRUPOS_BUSQUEDA` (en `src/features/busqueda/resultados.ts` desde la tarea 181; antes vivía dentro de `InicioPage.tsx`) define cinco grupos por fuente, en orden fijo: **Guías** (incluye diagnóstico, categoría, artículo y adjunto), **Equipos**, **Bóveda**, **Ubicaciones**, **Personas**. Lo aplican por igual Inicio y la capa global. Dentro de cada grupo se respeta el score; entre grupos el orden es siempre el mismo (Soluciones primero), aunque un resultado de otro grupo tenga mayor score.
 - **Sin tope ni paginación**: se pintan todos los resultados de cada grupo. Con el volumen del equipo no es un problema; queda anotado como ausencia de límite si el contenido crece (ver [TAREAS.md](TAREAS.md)).
 
 ## 8. Sugerencias anti duplicados
@@ -157,14 +157,14 @@ Cómo funciona:
 
 - El índice se **reconstruye completo** (no incremental) en cada cambio de datos: `useIndiceBusqueda` lee cada entidad con `useLiveQuery` y recalcula toda la lista en un `useMemo`. Para un equipo de 5 técnicos (cientos de documentos) es instantáneo.
 - El riesgo del diseño no es el volumen actual sino la **frecuencia**: cualquier sincronización en tiempo real que toque una de las tablas indexadas mientras Inicio está abierto fuerza una reconstrucción completa, no solo del documento cambiado. Objetivo y volúmenes esperados en [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md), sección de rendimiento.
-- La caja de Inicio usa `useDeferredValue` sobre la consulta para que escribir se sienta instantáneo aunque construir o consultar el índice tarde algo más. Los avisos anti duplicados usan un debounce de 300 ms.
+- Tanto la caja de Inicio como la capa global usan `useDeferredValue` sobre la consulta para que escribir se sienta instantáneo aunque construir o consultar el índice tarde algo más. Los avisos anti duplicados usan un debounce de 300 ms.
 
 ## 12. Deuda y mejoras registradas
 
 Todas registradas en [TAREAS.md](TAREAS.md):
 
 - Miniatura de portada en resultados: `portadaRef` viaja pero no se pinta.
-- Chips de filtro por tipo: descritos en la documentación previa pero inexistentes en el código (el agrupado es inline en `InicioPage.tsx`; no hubo nunca un `ResultadosBusqueda.tsx`).
+- Chips de filtro por tipo: descritos en la documentación previa pero inexistentes en el código. (El agrupado era inline en `InicioPage.tsx`; la tarea 181 lo extrajo a `busqueda/resultados.ts` y `busqueda/ResultadosBusqueda.tsx`, pero sigue sin haber chips de tipo.)
 - Tres normalizaciones de acentos sin unificar (`texto.ts`, `sinonimos.ts`, `iconosSoluciones.ts`).
 - Sin tope de resultados en el buscador global.
 - Acentos en el índice global dependen del `fuzzy`, no de una normalización propia: los términos cortos son el borde débil.

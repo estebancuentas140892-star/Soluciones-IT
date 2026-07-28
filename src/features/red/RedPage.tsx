@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { ShellNocturne } from '../../app/ShellNocturne'
+import { BarraSuperior } from '../../components/BarraSuperior'
 import { compararNatural } from '../../lib/conexiones'
 import { esDeRed } from '../../lib/categorias'
 import { incluyeTexto } from '../../lib/texto'
@@ -80,16 +81,14 @@ export function RedPage() {
 
   return (
     <ShellNocturne>
-      {/* Cabecera fija con desenfoque: título, acción Crear y buscador
-          con borde de acento al escribir. */}
-      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-        <header className="flex items-start justify-between gap-2 px-4 pb-0.5 pt-3">
-          <div className="min-w-0">
-            <h1 className="text-[22px] font-medium leading-tight">Red</h1>
-            <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">
-              Cómo está conectada la infraestructura
-            </p>
-          </div>
+      {/* El título, el estado del dato, buscar y la cuenta los aporta ya
+          BarraSuperior (tarea 181). Aquí quedan la acción Crear y el
+          buscador de equipos de red, con borde de acento al escribir. */}
+      <BarraSuperior titulo="Red">
+        <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
+          <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
+            Cómo está conectada la infraestructura
+          </p>
           <Link to="/dispositivos/nuevo?red=1" className={`shrink-0 ${BTN_SECUNDARIO}`}>
             <Plus size={15} aria-hidden />
             Crear
@@ -127,7 +126,7 @@ export function RedPage() {
             )}
           </label>
         </div>
-      </div>
+      </BarraSuperior>
 
       <main className="flex-1 px-4 pb-[116px] pt-3.5 lg:pb-16">
         <div className="flex flex-col gap-[18px]">

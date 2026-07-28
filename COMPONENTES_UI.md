@@ -153,6 +153,20 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Variantes:** tres mensajes por prioridad: cambios propios sin subir (ámbar, `CloudArrowUp`), sin sincronizar aún (`CloudSlash`) y al día (`CloudCheck` verde). Es de **solo lectura**: no abre el panel de sincronización, para no sumar un control a una cabecera que la auditoría pedía adelgazar.
 - **Dónde:** `SolucionesPage`. Lee el estado con `useSyncExternalStore(suscribirSync, obtenerEstadoSync)` y la antigüedad con `tiempoRelativo()` de `src/lib/tiempoRelativo.ts`.
 
+### 2.10f `BarraSuperior`
+- **Propósito:** la barra superior global del chasis (tarea 181, mockup `3d` del handoff). Tres ranuras fijas, siempre en el mismo orden y en las cinco pestañas (regla **R14**): **título de la sección** (confirma cuál pestaña está iluminada), **estado del dato** (`PastillaSync`) y **buscar + cuenta**. Antes no existía: cada pantalla dibujaba su cabecera con altura, relleno y controles distintos, y los tres servicios globales vivían dentro de Inicio.
+- **Props:** `{ titulo: string, children?: ReactNode }`. `children` es la banda de controles propios de la pantalla, que se dibuja justo debajo dentro del mismo bloque pegajoso.
+- **Variantes:** hoy solo el **modo raíz** (nivel 1, "sección"). Los modos *documento* y *tarea*, con regreso y miga, llegan con el chasis de tres niveles (tarea 185) y `MigaDePan` (tarea 188).
+- **Reglas que aplica:** las acciones propias de la pantalla ("Crear", "Escanear", el menú "···") **no** van en la fila del título: van en `children`. Es la única forma de que la fila superior caiga siempre en el mismo sitio, que es el problema que la barra resuelve. Ver [DECISIONES.md](DECISIONES.md) AD-023.
+- **Dónde:** las cinco pestañas raíz: `InicioPage`, `SolucionesPage`, `DispositivosPage`, `RedPage` y `BovedaPage`.
+
+### 2.10g `PastillaSync`
+- **Propósito:** la ranura "estado del dato" de la barra superior: responde de un vistazo "¿ya subió lo que cambié?" con icono, etiqueta y color. Tocarla fuerza una sincronización y abre `PanelSync`.
+- **Props:** ninguna. Lee el estado con `useSyncExternalStore(suscribirSync, obtenerEstadoSync)` y la conexión con los eventos `online`/`offline`.
+- **Variantes:** cuatro estados: al día (icono verde, texto `neutral-300`), sincronizando/pendiente, con error y sin conexión (en estos tres el color pasa también al texto, porque hay algo que atender).
+- **Historia:** vivía dentro de `InicioPage`, así que en las otras cuatro pestañas no había forma de saber si lo escrito ya había subido. La tarea 181 la extrajo a `src/components/PastillaSync.tsx` y la montó en el chasis (regla **R7** aplicada al chasis). **Pendiente en la tarea 187:** contraerse a solo icono cuando todo está al día o el título de la sección es largo.
+- **Dónde:** solo `BarraSuperior`.
+
 ### 2.11 `MiniaturaPortada`
 - **Propósito:** miniatura de la portada de un procedimiento o la foto de un dispositivo en listados; si la imagen no está disponible offline, no muestra nada.
 - **Props:** `{ referencia, alt?: string = '', className?: string = 'h-10 w-10 ...' }`.
@@ -167,7 +181,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.13 `PanelSync`
 - **Propósito:** vista humana del estado de sincronización: qué falta subir, qué falló y cómo seguir. "Descartar" es la salida de emergencia de un cambio atascado (restaura la versión del servidor).
 - **Props:** `{ abierto, onCerrar }`. Usa `Modal` internamente.
-- **Dónde:** solo `InicioPage` (se abre desde la pastilla de sincronización de la cabecera).
+- **Dónde:** solo `PastillaSync` (se abre al tocar la pastilla de la barra superior, en cualquiera de las cinco pestañas). Hasta la tarea 181 se abría solo desde Inicio.
 
 ### 2.14 `ReferenciadoPor`
 - **Propósito:** inverso universal "¿qué referencia a esto?"; a partir del grafo derivado (`useGrafo`) lista quién usa una entidad, agrupado por tipo de vínculo, con enlace a cada origen. Se oculta si no hay referencias.
@@ -239,6 +253,14 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Regla R1 ("color con oficio"):** el matiz del TIPO vive en el glifo y el recuadro va neutro (`text/6%`). Antes el recuadro entero iba relleno del color del tipo y, con seis tipos en la misma columna, la lista se leía como un arcoíris donde el color ya no informaba. El color de la CATEGORÍA sigue viviendo en los chips de filtro, nunca en la fila.
 - **Dónde:** `SolucionesPage`. **Pendiente:** migrar `CategoriaPage` al rediseñar P4.
 - **Relación con la decisión de la tarea 145** (que dijo "NO crear `<FilaArticulo>`"): ahí se comparaba la fila de artículo contra `FilaDispositivo` y la de Red, y sigue valiendo (esto **no** se unifica con la fila de dispositivo). Lo que se unifica son las **dos filas de artículo**, que divergían solo porque nadie las había mirado juntas y que el rediseño hace converger a propósito. Ver [DECISIONES.md](DECISIONES.md).
+
+### 3.8c `busqueda/BuscadorGlobal` y `busqueda/ResultadosBusqueda`
+- **Propósito:** el buscador global en capa (tarea 181, mockup `3d`). Hasta ahora buscar era global pero vivía **dentro** de Inicio: desde cualquier otra pestaña había que volver a Inicio y perder el sitio donde se estaba. Ahora la lupa vive en `BarraSuperior` y abre esta capa a pantalla completa sin abandonar la pantalla actual.
+- **Props:** `BuscadorGlobal` recibe `{ abierto, onCerrar }`; `ResultadosBusqueda`, `{ grupos, consulta, onNavegar? }`; `FilaResultado`, `{ resultado, consulta, onNavegar? }`.
+- **Alcance declarado:** la capa dice por escrito qué abarca ("Busca en todo a la vez: Guías, Equipos, Bóveda, Ubicaciones y Personas"). Era la otra mitad del problema que detectó la auditoría: cinco buscadores con la misma forma y cinco alcances distintos, sin nada que los distinguiera.
+- **Detalles:** portal a `document.body` por el mismo motivo que `Modal` (la barra desde la que se invoca lleva `backdrop-blur`, que crea bloque contenedor y rompería `fixed inset-0`); cierra con Escape, con la X o al elegir un resultado; enfoca el campo al abrir; la consulta **no** sobrevive al cierre.
+- **Reparto:** el catálogo y los helpers sin JSX (`VISUAL_POR_TIPO`, `GRUPOS_BUSQUEDA`, `partirTitulo`, `agruparResultados`) viven en `busqueda/resultados.ts`; la presentación, en `busqueda/ResultadosBusqueda.tsx`. Están separados para no mezclar componentes y constantes en un mismo archivo (lo avisa `oxlint` por fast-refresh).
+- **Dónde:** `BarraSuperior` monta la capa (carga diferida con `lazy`); `InicioPage` reutiliza `ResultadosBusqueda` para su buscador en línea, que conserva porque esa pantalla **es** el buscador.
 
 ### 3.8 `red/IconoNodo`
 - **Propósito:** icono del tipo de equipo de red (trazo estilo Lucide), compartido entre Topología y Red.

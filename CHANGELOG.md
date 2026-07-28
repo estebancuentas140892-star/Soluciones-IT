@@ -8,6 +8,24 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-07-28
 
+### Agregado (tarea 181): barra superior global, con el buscador y el estado del dato en las cinco pestañas
+
+**Área modificada:** chasis (`src/components/BarraSuperior.tsx`, `PastillaSync.tsx`) y las cinco pestañas raíz; buscador (`src/features/busqueda/`).
+**Motivo:** turno 3 del handoff "Auditoría de Soluciones TI" (mockup `3d`). El shell aportaba pestañas y sidebar y nada más: cada pantalla dibujaba su propia cabecera con altura, relleno y controles distintos, y los tres servicios globales vivían dentro de una sola pestaña.
+**Impacto esperado:** encontrar cualquier cosa pasa a un toque desde donde estés, sin perder el sitio; y en las cinco pestañas se sabe si lo que se acaba de escribir ya subió. Sin cambios de datos ni de esquema.
+
+- **Agregado** `src/components/BarraSuperior.tsx`: tres ranuras fijas y siempre en el mismo orden (regla **R14**): título de la sección · estado del dato · buscar + cuenta. Por ahora cubre el modo raíz; los modos documento y tarea llegan con el chasis de tres niveles (tarea 185).
+- **Agregado** `src/features/busqueda/BuscadorGlobal.tsx`: el buscador global en capa, invocable desde cualquier pestaña. **Declara su alcance por escrito** ("Busca en todo a la vez: Guías, Equipos, Bóveda, Ubicaciones y Personas"), que era la otra mitad del problema: cinco buscadores con la misma forma y cinco alcances distintos. Portal a `document.body` por el mismo motivo que `Modal` (la barra lleva `backdrop-blur`, que crea bloque contenedor).
+- **Agregado** `src/lib/iniciales.ts` (+ 8 pruebas): las iniciales del técnico para el avatar de la cuenta, que resuelve nombre suelto, nombre y apellidos, espacios de más y el respaldo por correo.
+- **Refactorizado** la presentación de resultados sale de `InicioPage.tsx` a `src/features/busqueda/resultados.ts` (catálogo y helpers: `VISUAL_POR_TIPO`, `GRUPOS_BUSQUEDA`, `partirTitulo`, `agruparResultados`) y `ResultadosBusqueda.tsx` (los componentes). Separados en dos archivos para no mezclar componentes y constantes, que `oxlint` avisa por fast-refresh. `InicioPage` pierde 70 líneas.
+- **Refactorizado** `PastillaSync` sale de `InicioPage.tsx` a `src/components/PastillaSync.tsx` y se monta en el chasis (regla **R7** aplicada al chasis), con la forma del mockup: sin borde, 44 px de alto de toque, rótulo de 12 px y el icono llevando el color del estado.
+- **Cambiado** las cinco pestañas raíz (`InicioPage`, `SolucionesPage`, `DispositivosPage`, `RedPage`, `BovedaPage`) dejan de dibujar su propia fila de título y montan `BarraSuperior`. Sus acciones ("Crear", "Escanear", el menú "···", los subtítulos, la pastilla de frescura) bajan a la banda de controles inmediatamente debajo: ver [DECISIONES.md](DECISIONES.md) AD-023, que resuelve la contradicción entre el turno 1 y el turno 3 del handoff. Los subtítulos suben de `neutral-500` a `neutral-400` para cumplir **R2**.
+- **Cambiado** "Mi cuenta" deja de alcanzarse solo desde Inicio en el teléfono: el avatar vive ahora en la barra de las cinco pestañas.
+- **Sin cambios** Inicio conserva su buscador en línea además de la lupa, porque esa pantalla ES el buscador: abrir y buscar sigue tomando dos toques.
+- **Documentación:** [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.10f, 2.10g, 2.13 y 3.8c; [DECISIONES.md](DECISIONES.md) AD-023; [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) secciones 2, 5.1 a 5.5 y 12; [BUSCADOR.md](BUSCADOR.md) secciones 1, 3, 7, 11 y 12.
+
+**Verificación:** lint, `tsc -b` y build limpios. 1677 pruebas pasan (8 nuevas de `iniciales`). Siguen los mismos **4 fallos preexistentes y ajenos** de `archivosPendientes.test.ts` (RLS de Storage), duplicados por el worktree obsoleto de la tarea 178. La app arranca sin errores de consola y redirige limpio a `/login`. **Sin verificar en navegador**: la barra vive detrás del login y esta sesión no tiene cuenta real de técnico.
+
 ### Cambiado (tarea 180): un solo nombre visible, y las secciones pasan a llamarse Guías y Equipos
 
 **Área modificada:** chasis (`src/app/ShellNocturne.tsx`), jerarquía de navegación (`src/lib/navegacion.ts`), Inicio, y los textos visibles de las secciones Guías, Equipos, Diagnóstico, Ubicaciones y Personas.
