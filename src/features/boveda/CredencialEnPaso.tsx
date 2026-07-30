@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { db, type CampoProtegido, type VinculoProtegido } from '../../lib/db'
 import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
-import { CaretDown, CaretUp, Key, LockSimple } from '../../components/iconos'
+import { CaretDown, CaretRight, CaretUp, Key, LockSimple } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { esOcultoPorDefecto, etiquetaTipo } from '../dispositivos/camposProtegidos'
@@ -12,6 +12,14 @@ import { CampoSecreto } from './CampoSecreto'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
 import { desbloquear, descifrarCredencial, descifrarValor, type DatosCredencial } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
+
+// Salida del bloque protegido hacia la ficha completa (decisión 10 de la
+// tarea 172): una acción de ancho completo, no una fila de texto con una
+// flecha que parece un enlace más entre los datos. Es el único camino
+// desde aquí a la ficha, y en un teléfono tiene que poder tocarse sin
+// apuntar (R6, toque de 44).
+const ACCION_BLOQUE =
+  'mt-0.5 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-noct-accent/40 px-3 text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10 active:bg-noct-accent/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent'
 
 interface Props {
   // Vinculo protegido de un paso o una tarea (grupo P2): un secreto
@@ -105,19 +113,18 @@ export function CredencialEnPaso({ vinculo }: Props) {
           ) : vinculo.tipo === 'credencial' && credencial ? (
             <>
               <DatosDescifrados datosCifrados={credencial.datosCifrados} credencialId={vinculo.id} credencialTitulo={titulo} />
-              <Link to={`/boveda/${vinculo.id}`} className="mt-0.5 text-[12.5px] font-medium text-noct-accent">
-                Ver ficha completa en Bóveda →
+              <Link to={`/boveda/${vinculo.id}`} className={ACCION_BLOQUE}>
+                Ver ficha completa en Bóveda
+                <CaretRight size={13} aria-hidden />
               </Link>
             </>
           ) : campo ? (
             <>
               <ValorCampoDescifrado campo={campo} titulo={titulo} />
               {campo.dispositivoId && (
-                <Link
-                  to={`/dispositivos/${campo.dispositivoId}`}
-                  className="mt-0.5 text-[12.5px] font-medium text-noct-accent"
-                >
-                  Ver ficha del equipo →
+                <Link to={`/dispositivos/${campo.dispositivoId}`} className={ACCION_BLOQUE}>
+                  Ver ficha del equipo
+                  <CaretRight size={13} aria-hidden />
                 </Link>
               )}
             </>

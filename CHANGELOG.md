@@ -8,6 +8,30 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-07-30
 
+### Cambiado (tarea 172): rediseño de la ficha de artículo (P2)
+
+**Área modificada:** `src/features/soluciones/ArticuloPage.tsx`, `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/VistaPreviaArticulo.tsx`, `src/features/boveda/CredencialEnPaso.tsx`, `src/components/IndicadorAvance.tsx`, `src/components/BarraAccionFicha.tsx` (nuevo).
+**Motivo:** turno 1 del handoff "Auditoría de Soluciones TI", mockups `1e` y `1f`: las 11 decisiones para la ficha de artículo. Con 6 pasos, avisos, imágenes y credenciales el documento pasaba de 4.000 px, así que para ver el paso 5 había que recorrer los cuatro anteriores enteros; y "Ejecutar", que es lo que se toca de pie frente al equipo, vivía arriba, en la zona menos alcanzable del pulgar, diciendo siempre "Ejecutar" incluso con 2 de 6 pasos hechos.
+**Impacto esperado:** alto en la pantalla que más se consulta. Sin cambios de datos ni de esquema.
+
+- **Agregado** `src/components/BarraAccionFicha.tsx`: una sola acción dominante, fija abajo, con etiqueta contextual ("Empezar" / "Seguir en el paso N de M" / "Repetir") y la promesa escrita de que el avance se guarda. La comparte con P5 (tarea 175).
+- **Cambiado** la cabecera de la ficha pasa de cinco controles a **tres de 44 px** (favorito, editar, "···"). "Ejecutar" se fue a la barra inferior y "Editar" perdió su rótulo: con la acción dominante abajo, un segundo botón de borde arriba volvía a competir con ella. Antes, con una categoría de nombre largo, la fila se estrangulaba.
+- **Agregado** kicker de tipo sobre el título, en el matiz del tipo, en vez de gastar una pastilla; y los metadatos pasan a **lista de definición con rótulo** (Tiempo, Dificultad, Aplica a, Versión). Antes eran cuatro pastillas neutras idénticas donde nada decía que "Zebra ZT411" es una restricción de aplicabilidad y no una etiqueta más. La categoría deja de repetirse en el cuerpo: la nombra el botón de regreso (**R13**).
+- **Cambiado** los pasos llegan **plegados salvo el actual**; al marcar el actual se cierra solo y se abre el siguiente. El técnico puede abrir o cerrar cualquiera a mano y su elección manda. Los niveles anidados siguen abiertos: ahí el plegado ya lo hace la tarjeta del vínculo.
+- **Cambiado** el avance va en **segmentos** (uno por paso) junto al título de "Pasos", y **se retira la barra de progreso pegajosa**, que era el segundo elemento fijo de la pantalla. Nueva variante `segmentos` en `IndicadorAvance`, que cae a la barra continua por encima de 12 pasos.
+- **Cambiado** casillas de tarea de 18 a **24 px en filas de 44** y texto de tarea de 14 a **15 px** (**R6**): es lo que se lee agachado junto a un rack y se toca con guantes.
+- **Cambiado** la verificación final **se anuncia** en una tarjeta neutra ("Al terminar hay 2 comprobaciones", con cuándo se abren) mientras no se pueda marcar, en vez de ocupar una tarjeta con acento y círculos al 30 % de opacidad (**R3**, ningún control muerto).
+- **Cambiado** el aviso de un paso dice **su palabra** ("Precaución.", "Importante.") además del color (**R16**, estado en dos canales). La palabra ya existía en `tonos.ts`; solo la usaba el editor.
+- **Cambiado** la salida del bloque de datos protegidos hacia la ficha completa pasa a ser una **acción de ancho completo** de 44 px, en vez de una fila de texto con flecha que parecía un enlace más entre los datos.
+- **Cambiado** el estado del artículo se dice **una sola vez**: se retira la pastilla "Borrador"/"Obsoleto" del cuerpo y se queda el panel superior, que es donde explica la consecuencia. Antes aparecían los dos a diez píxeles de distancia.
+- **Refactorizado** `ContadorSubProgreso` deja su pastilla "X/Y" propia y usa `IndicadorAvance`: **cierra CAND-7**, el candidato de las tres formas distintas de decir "vas por X de Y". De paso corrige una discrepancia real: aquí el avance intermedio era ámbar y en el resto de la app, acento.
+- **Eliminado** la prop `progresoPegajoso` de `ProcedimientoVista`: existía solo para que la vista previa del editor apagara la barra pegajosa, y esa barra ya no existe.
+- **Documentación:** [COMPONENTES_UI.md](COMPONENTES_UI.md) (`BarraAccionFicha` nuevo, `IndicadorAvance` con su cuarta variante, CAND-7 cerrado); [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) sección de la ficha de artículo.
+
+**Verificación:** `tsc -b`, lint y build limpios; 1724 pruebas pasan (los 4 fallos de siempre, preexistentes y ajenos). **Medido en navegador real** con un banco temporal (retirado antes de commitear) a 375x812, sobre un procedimiento de 6 pasos con aviso y 2 comprobaciones finales: casilla de 24x24 en fila de 44, texto de tarea a 15 px, 6 segmentos de avance para 6 pasos, **un solo cuerpo de paso visible de los 6**, el aviso con "Precaución." delante, la tarjeta de verificación con borde neutro (`noct-divider`, no acento) y el texto "Al terminar hay 2 comprobaciones", y la barra inferior pegajosa de 52 px con la etiqueta "Empezar". Sin desborde horizontal. La sección de pasos completa mide **1.148 px** (1,41 pantallas), frente a los más de 4.000 px que la auditoría midió para el documento entero.
+
+**Nota de método:** hasta esta tarea se venía ejecutando `npx tsc --noEmit` como comprobación de tipos, y en este proyecto **no comprueba nada**: `tsconfig.json` solo declara `references`, sin `files` ni `include`. El typecheck real es `tsc -b`, que es lo que corre `npm run build`; los commits anteriores sí pasaron por ahí, así que no llegó código sin comprobar, pero el comando queda corregido.
+
 ### Documentación (tarea 176): cerrada por absorción en la tarea 199
 
 **Área modificada:** [TAREAS.md](TAREAS.md), [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), [DECISIONES.md](DECISIONES.md) (AD-021 y AD-026), `src/app/Chasis.tsx` (un comentario).

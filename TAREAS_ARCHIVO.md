@@ -1,5 +1,31 @@
 # Historial de tareas finalizadas
 
+### 172. Rediseño P2: ficha de artículo
+
+**Estado**: TERMINADA y **verificada en navegador** el 2026-07-30. `tsc -b`, lint y build limpios; 1724 pruebas pasan. **Prioridad**: Alta. **Origen**: turno 1 del handoff "Auditoría de Soluciones TI", mockups `1e` y `1f`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
+
+Las 11 decisiones de la auditoría, todas aplicadas:
+
+1. **Una sola acción dominante, fija abajo** (`BarraAccionFicha`, componente nuevo que comparte con P5): "Empezar" / "Seguir en el paso N de M" / "Repetir", con la promesa escrita de que el avance se guarda. Antes "Ejecutar" y "Editar" pesaban lo mismo (Nocturne pide el primario delineado, así que eran dos botones de borde uno al lado del otro), vivían arriba y el botón decía "Ejecutar" incluso con 2 de 6 pasos hechos.
+2. **Cabecera de tres controles de 44 px** (favorito, editar, "···"). "Editar" pierde su rótulo: con la acción dominante abajo, un segundo botón de borde arriba volvía a competir con ella.
+3. **Kicker de tipo** sobre el título, en el matiz del tipo, en vez de gastar una pastilla.
+4. **Metadatos con rótulo** (Tiempo, Dificultad, Aplica a, Versión) como lista de definición. Antes eran cuatro pastillas neutras idénticas donde nada decía que "Zebra ZT411" es una restricción de aplicabilidad. La categoría deja de repetirse: la nombra el regreso (**R13**).
+5. **Pasos plegados salvo el actual.** Al marcar el actual se cierra solo y se abre el siguiente; la elección manual del técnico manda sobre el default. Los niveles anidados llegan abiertos (ahí el plegado ya lo hace la tarjeta del vínculo).
+6. **Avance en segmentos** junto al título de "Pasos" (variante nueva de `IndicadorAvance`, que cae a la barra continua por encima de 12 pasos) y **se retira la barra pegajosa**, que era el segundo elemento fijo de la pantalla.
+7. **Casillas de 24 px en filas de 44** y texto de tarea a **15 px** (antes 18 y 14): es lo que se lee agachado junto a un rack y se toca con guantes (**R6**).
+8. **La verificación final se anuncia** en tarjeta neutra ("Al terminar hay 2 comprobaciones" y cuándo se abren) en vez de ocupar una tarjeta con acento y círculos al 30 % de opacidad (**R3**).
+9. **El aviso dice su palabra** ("Precaución.") además del color (**R16**). La palabra ya existía en `tonos.ts`; solo la usaba el editor.
+10. **Datos protegidos con acción de ancho completo** de 44 px hacia la ficha, en vez de una fila de texto con flecha que parecía un enlace más entre los datos.
+11. **Estado una sola vez**: se retira la pastilla del cuerpo y se queda el panel superior, que es donde explica la consecuencia. Antes aparecían los dos a diez píxeles.
+
+**De paso, dos limpiezas que la tarea hizo posibles.** `ContadorSubProgreso` deja su pastilla "X/Y" propia y usa `IndicadorAvance`, con lo que **CAND-7 queda cerrado** para él (queda `AvanceArticulo` de `CategoriaPage`, que se unifica en la tarea 174); corrige además una discrepancia real, porque su avance intermedio era ámbar y en el resto de la app es acento. Y se eliminó la prop `progresoPegajoso` de `ProcedimientoVista`, que existía solo para que la vista previa del editor apagara la barra pegajosa: sin barra, no hay nada que apagar.
+
+**Verificación.** Medido con un banco temporal fuera de `RequireAuth` (retirado antes de commitear) a 375x812, sobre un procedimiento de 6 pasos con aviso y 2 comprobaciones finales: casilla de 24x24 en fila de 44, texto de tarea a 15 px, 6 segmentos para 6 pasos, **un solo cuerpo de paso visible de los 6**, el aviso con "Precaución." delante, la tarjeta de verificación con borde `noct-divider` (neutro, no acento) y el texto "Al terminar hay 2 comprobaciones", y la barra inferior pegajosa de 52 px con "Empezar". Sin desborde horizontal. La sección de pasos completa mide **1.148 px** (1,41 pantallas de 812), frente a los más de 4.000 px que la auditoría midió para el documento entero. Lo que NO se verificó: el plegado y desplegado a mano, que necesita clics reales, imposibles con el panel del navegador oculto (mismo límite de la tarea 187).
+
+**Hallazgo de método.** Hasta esta tarea se venía usando `npx tsc --noEmit` como comprobación de tipos y en este proyecto **no comprueba nada**: `tsconfig.json` solo declara `references`, sin `files` ni `include`. El typecheck real es `tsc -b`, que es lo que corre `npm run build`; los commits anteriores sí pasaron por ahí, así que no llegó código sin comprobar.
+
+**Ubicación**: `src/components/BarraAccionFicha.tsx` (nuevo); `src/features/soluciones/ArticuloPage.tsx`, `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/VistaPreviaArticulo.tsx`, `src/features/boveda/CredencialEnPaso.tsx`, `src/components/IndicadorAvance.tsx` (modificados).
+
 ### 176. Rediseño de escritorio de las cinco pantallas de Soluciones (CERRADA POR ABSORCIÓN)
 
 **Estado**: CERRADA el 2026-07-30 **por absorción en la tarea 199**, por decisión del usuario. No se implementó bajo este número y no se descartó: su contenido íntegro se trasladó. **Prioridad**: era Media. **Origen**: turno 2 del handoff "Auditoría de Soluciones TI", mockups `2a` a `2f`.

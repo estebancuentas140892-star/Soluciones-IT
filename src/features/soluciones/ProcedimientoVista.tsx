@@ -11,7 +11,8 @@ import {
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
-import { ArrowSquareOut, CaretRight, Check, CheckCircleFill, Circle } from '../../components/iconos'
+import { ArrowSquareOut, CaretRight, Check, CheckCircleFill, Circle, SealCheck } from '../../components/iconos'
+import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { tonoInfo } from './tonos'
@@ -40,11 +41,11 @@ interface Props {
   // pendiente: asi un subprocedimiento o una solucion que terminan
   // completan tambien la tarea del paso que los vincula.
   onCompletado?: () => void
-  // La ficha (nivel 0) muestra el progreso en una barra pegajosa con
-  // blur. La vista previa del formulario lo apaga: su overlay ya tiene
-  // una cabecera pegajosa propia y ambas chocarian en top 0.
-  progresoPegajoso?: boolean
 }
+// `progresoPegajoso` se retiró en la tarea 172: existía solo para que la
+// vista previa del editor apagara la barra pegajosa de progreso, y esa
+// barra ya no existe (el avance vive junto al título de "Pasos", en
+// segmentos). Sin elemento pegajoso no hay nada que apagar.
 
 // Vista de lectura de un procedimiento en el sistema Nocturne (handoff
 // "Ficha de Procedimiento.dc.html"): stepper vertical con todos los
@@ -60,7 +61,6 @@ export function ProcedimientoVista({
   procedimiento,
   nivel = 0,
   onCompletado,
-  progresoPegajoso = true,
 }: Props) {
   const refsPasos = useRef<(HTMLLIElement | null)[]>([])
 
@@ -96,6 +96,15 @@ export function ProcedimientoVista({
   // completar; los siguientes pendientes van con el borde divisor.
   const indiceActual = pasos.findIndex((p) => !hechos.has(p.id))
 
+  // Pasos que el técnico abrió o cerró a mano (tarea 172, decisión 5).
+  // Fuera de este mapa manda el estado por defecto: solo el paso actual
+  // llega abierto, así que al marcarlo hecho se cierra solo y se abre el
+  // siguiente, sin que nadie toque nada.
+  const [abiertoPorUsuario, setAbiertoPorUsuario] = useState<Record<string, boolean>>({})
+  function alternarAbierto(id: string, estaAbierto: boolean) {
+    setAbiertoPorUsuario((previo) => ({ ...previo, [id]: !estaAbierto }))
+  }
+
   return (
     <section className="flex flex-col gap-[22px]">
       {objetivoGeneral && (
@@ -119,33 +128,21 @@ export function ProcedimientoVista({
         </section>
       )}
 
-      {/* Barra de progreso pegajosa (solo el procedimiento principal):
-          el -mx-4 compensa el padding lateral de 16px del main de la
-          ficha para que el fondo con blur llegue borde a borde. */}
-      {nivel === 0 && pasos.length > 0 && (
-        <div
-          className={
-            progresoPegajoso ? 'sticky top-0 z-10 -mx-4 bg-noct-bg/90 px-4 py-2.5 backdrop-blur-[10px]' : ''
-          }
-        >
-          <div className="mb-[7px] flex items-center justify-between">
-            <span className="text-[12.5px] font-medium">Progreso</span>
-            <span className="text-[12.5px] text-noct-neutral-400">
-              {completados} de {pasos.length} pasos
-            </span>
-          </div>
-          <div className="h-1 overflow-hidden rounded-full bg-noct-neutral-900">
-            <div
-              className="h-full rounded-full bg-noct-accent shadow-[0_0_8px_color-mix(in_srgb,var(--color-noct-accent)_60%,transparent)] transition-[width] duration-150 ease-out"
-              style={{ width: `${progresoPct}%` }}
-            />
-          </div>
-        </div>
-      )}
-
       {pasos.length > 0 && (
         <section>
-          <TituloSeccion className="mb-3">Pasos</TituloSeccion>
+          {/* Decisión 6 de P2: el avance va junto al título de la sección,
+              como segmentos (uno por paso), en vez de una barra pegajosa
+              aparte. La barra pegajosa era el segundo elemento fijo de la
+              pantalla y solo aparecía cuando ya se habían recorrido el
+              objetivo y los requisitos; y con la acción dominante ya fija
+              abajo (decisión 1), dos elementos fijos sobran. */}
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <TituloSeccion>Pasos</TituloSeccion>
+            <div className="flex shrink-0 items-center gap-2">
+              <IndicadorAvance hechos={completados} total={pasos.length} variante="segmentos" />
+              <IndicadorAvance hechos={completados} total={pasos.length} variante="texto" />
+            </div>
+          </div>
           <ol>
             {pasos.map((paso, indice) => {
               const hecho = hechos.has(paso.id)
@@ -154,6 +151,11 @@ export function ProcedimientoVista({
               const subSatisfecho = subSatisfechoReactivo(paso)
               const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
               const esUltimo = indice === pasos.length - 1
+              // Solo el procedimiento principal plega. `abiertoPorUsuario`
+              // guarda la elección explícita del técnico y, si no la hay,
+              // manda el estado por defecto: abierto si es el paso actual.
+              const plegable = nivel === 0
+              const abierto = !plegable || (abiertoPorUsuario[paso.id] ?? indice === indiceActual)
               return (
                 <li
                   key={paso.id}
@@ -182,17 +184,60 @@ export function ProcedimientoVista({
                     {!esUltimo && <div className="my-1.5 w-px flex-1 bg-noct-divider" />}
                   </div>
 
-                  <div className={`min-w-0 flex-1 ${esUltimo ? '' : 'pb-[26px]'}`}>
-                    <div className="mb-3">
-                      <p className="text-sm font-medium">
-                        {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
-                      </p>
-                      {paso.objetivo && (
-                        <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{paso.objetivo}</p>
-                      )}
-                    </div>
+                  <div
+                    className={`min-w-0 flex-1 ${esUltimo ? '' : abierto ? 'pb-[26px]' : 'pb-1.5'}`}
+                  >
+                    {/* Decisión 5 de P2: plegado salvo el actual. Con 6
+                        pasos, avisos, imágenes y credenciales el documento
+                        pasaba de 4.000 px, así que para ver el paso 5 había
+                        que recorrer los cuatro anteriores enteros. El
+                        completado se colapsa a una fila con check y el
+                        pendiente a una fila con número (la insignia de la
+                        izquierda ya los distingue). Plegar es del
+                        procedimiento principal: los niveles anidados llegan
+                        abiertos, porque ahí el plegado ya lo hace la
+                        tarjeta del vínculo. */}
+                    {plegable ? (
+                      <button
+                        type="button"
+                        onClick={() => alternarAbierto(paso.id, abierto)}
+                        aria-expanded={abierto}
+                        className="flex min-h-11 w-full cursor-pointer items-center gap-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={`block text-sm ${
+                              hecho ? 'text-noct-neutral-500' : 'font-medium'
+                            } ${abierto ? '' : 'truncate'}`}
+                          >
+                            {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
+                          </span>
+                          {paso.objetivo && abierto && (
+                            <span className="mt-0.5 block text-[12.5px] text-noct-neutral-500">
+                              {paso.objetivo}
+                            </span>
+                          )}
+                        </span>
+                        <CaretRight
+                          size={13}
+                          className={`shrink-0 text-noct-neutral-600 transition-transform ${
+                            abierto ? '-rotate-90' : 'rotate-90'
+                          }`}
+                          aria-hidden
+                        />
+                      </button>
+                    ) : (
+                      <div className="mb-3">
+                        <p className="text-sm font-medium">
+                          {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
+                        </p>
+                        {paso.objetivo && (
+                          <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{paso.objetivo}</p>
+                        )}
+                      </div>
+                    )}
 
-                    <div className="flex flex-col gap-2.5">
+                    <div className={`flex flex-col gap-2.5 ${plegable ? 'mt-2' : ''} ${abierto ? '' : 'hidden'}`}>
                       {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
                       {paso.bloques.map((bloque) => (
@@ -254,16 +299,32 @@ export function ProcedimientoVista({
           procedimiento principal (el diseño la anuncia deshabilitada
           hasta completar los pasos); en los niveles anidados solo
           cuando ya se puede marcar, para no recargar la tarjeta. */}
-      {verificacionFinal.length > 0 && (nivel === 0 || pasosCompletados) && (
+      {verificacionFinal.length > 0 && (nivel === 0 || pasosCompletados) && !pasosCompletados && (
+        // Decisión 8 de P2: mientras no se pueda marcar, la verificación
+        // final SE ANUNCIA en una tarjeta neutra que dice cuántas
+        // comprobaciones hay y cuándo se abren, en vez de mostrarse
+        // apagada. Antes ocupaba una tarjeta con acento desde el primer
+        // momento, con sus círculos al 30% de opacidad: un bloque
+        // destacado que no se podía usar (R3, ningún control muerto).
+        <section className="rounded-lg border border-noct-divider bg-noct-surface px-3.5 py-3">
+          <div className="flex items-center gap-2">
+            <SealCheck size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
+            <h2 className="text-[13.5px] font-medium">
+              Al terminar {verificacionFinal.length === 1 ? 'hay 1 comprobación' : `hay ${verificacionFinal.length} comprobaciones`}
+            </h2>
+          </div>
+          <p className="mt-1 text-[12.5px] leading-normal text-noct-neutral-400">
+            Se abren cuando marques {pasos.length === 1 ? 'el paso' : `el paso ${pasos.length}`}. Son la prueba de
+            que quedó funcionando.
+          </p>
+        </section>
+      )}
+
+      {verificacionFinal.length > 0 && pasosCompletados && (
         <section className="rounded-lg border border-noct-accent/30 bg-noct-accent/[.08] p-3.5">
           <h2 className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-accent-300">
             Verificación final
           </h2>
-          {!pasosCompletados && (
-            <p className="mb-2.5 text-xs text-noct-neutral-400">
-              Se habilita al completar {pasos.length === 1 ? 'el paso' : `los ${pasos.length} pasos`}.
-            </p>
-          )}
           <div className="flex flex-col gap-[9px]">
             {verificacionFinal.map((item, indice) => {
               const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
@@ -273,21 +334,16 @@ export function ProcedimientoVista({
                   type="button"
                   role="checkbox"
                   aria-checked={marcada}
-                  disabled={!pasosCompletados}
                   onClick={() => void alternarVerificacionFinal(articuloId, indice)}
-                  className="flex w-full cursor-pointer items-start gap-2.5 text-left disabled:cursor-not-allowed"
+                  className="flex min-h-11 w-full cursor-pointer items-center gap-2.5 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
                 >
                   {marcada ? (
-                    <CheckCircleFill size={15} className="mt-0.5 shrink-0 text-noct-accent" aria-hidden />
+                    <CheckCircleFill size={22} className="shrink-0 text-noct-accent" aria-hidden />
                   ) : (
-                    <Circle
-                      size={15}
-                      className={`mt-0.5 shrink-0 ${pasosCompletados ? 'text-noct-accent-400' : 'text-noct-accent-600'}`}
-                      aria-hidden
-                    />
+                    <Circle size={22} className="shrink-0 text-noct-accent-400" aria-hidden />
                   )}
                   <span
-                    className={`text-[13.5px] leading-normal ${marcada ? 'text-noct-neutral-500 line-through' : ''}`}
+                    className={`text-[15px] leading-[1.4] ${marcada ? 'text-noct-neutral-500 line-through' : ''}`}
                   >
                     {item}
                   </span>
@@ -345,8 +401,13 @@ export function ProcedimientoVista({
 }
 
 // Avance del subprocedimiento vinculado, visible en la tarjeta de
-// vinculo: de un vistazo se ve si va completo (verde), a medias
-// (ambar) o sin empezar (neutro).
+// vinculo. Desde la tarea 172 lo dibuja `IndicadorAvance` en su variante
+// de anillo, la misma pieza que usan la lista de Guías, la barra de
+// reanudar y la cabecera de "Pasos": con esto se cierra **CAND-7**, el
+// candidato de las tres formas distintas de decir "vas por X de Y".
+// Antes era una pastilla "X/Y" propia con tres colores de fondo, que
+// además discrepaba del resto (aquí el intermedio era ámbar; en el resto
+// de la app, acento).
 function ContadorSubProgreso({ subArticuloId }: { subArticuloId: string }) {
   const articulo = useLiveQuery(
     async () => (await db.articulos.get(subArticuloId)) ?? null,
@@ -365,19 +426,7 @@ function ContadorSubProgreso({ subArticuloId }: { subArticuloId: string }) {
     procedimiento.pasos.map((p) => p.id),
   )
 
-  return (
-    <span
-      className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-medium ${
-        hechos === total
-          ? 'bg-noct-exito/15 text-noct-exito'
-          : hechos > 0
-            ? 'bg-noct-precaucion/15 text-noct-precaucion'
-            : 'bg-noct-neutral-800 text-noct-neutral-400'
-      }`}
-    >
-      {hechos}/{total}
-    </span>
-  )
+  return <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" />
 }
 
 // Encabezado de una tarjeta de vinculo a otra entidad (patron del
@@ -629,6 +678,9 @@ function FilaTarea({
   onAlternar: () => void
   ariaLabel: string
 }) {
+  // Decisión 7 de P2: casilla de 24 px en una fila de 44 y texto a 15 px.
+  // Antes eran 18 px de casilla y 14 de texto: es lo que se lee agachado
+  // junto a un rack, y lo que se toca con guantes (R6, toque de 44).
   return (
     <button
       type="button"
@@ -636,29 +688,29 @@ function FilaTarea({
       aria-checked={marcada}
       aria-label={ariaLabel}
       onClick={onAlternar}
-      className="flex w-full cursor-pointer items-start gap-2.5 text-left"
+      className="flex min-h-11 w-full cursor-pointer items-start gap-2.5 py-1 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
     >
       {marcada ? (
         <span
           aria-hidden
-          className="mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded bg-noct-accent"
+          className="mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-noct-accent"
         >
-          <Check size={13} className="text-noct-bg" />
+          <Check size={16} className="text-noct-bg" />
         </span>
       ) : (
         <span
           aria-hidden
-          className="mt-px h-[18px] w-[18px] shrink-0 rounded border-[1.5px] border-noct-neutral-700"
+          className="mt-px h-6 w-6 shrink-0 rounded-md border-[1.5px] border-noct-neutral-700"
         />
       )}
       <span
-        className={`min-w-0 flex-1 text-sm leading-normal ${
+        className={`min-w-0 flex-1 self-center text-[15px] leading-[1.4] ${
           marcada ? 'text-noct-neutral-600 line-through' : ''
         }`}
       >
         {texto}
       </span>
-      {esVerificacion && <TagNeutral className="shrink-0">Verificación</TagNeutral>}
+      {esVerificacion && <TagNeutral className="shrink-0 self-center">Verificación</TagNeutral>}
     </button>
   )
 }
@@ -683,10 +735,17 @@ export function BloqueVista({
 }) {
   if (bloque.tipo === 'aviso') {
     const tono = tonoInfo(bloque.tono)
+    // Decisión 9 de P2: el aviso dice SU PALABRA además del color. Un
+    // ámbar no significa nada por sí solo para quien no conoce el
+    // sistema, y a pleno sol puede no distinguirse (R16: estado en dos
+    // canales, nunca solo color). La palabra ya existía como
+    // `etiqueta` en tonos.ts, solo la usaba el editor.
     return (
       <div className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 ${tono.clasesPanel}`}>
         <tono.Icono size={16} className={`mt-px shrink-0 ${tono.claseIcono}`} aria-hidden />
-        <p className="min-w-0 text-[13px] leading-normal">{bloque.texto}</p>
+        <p className="min-w-0 text-[13px] leading-normal">
+          <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span> {bloque.texto}
+        </p>
       </div>
     )
   }

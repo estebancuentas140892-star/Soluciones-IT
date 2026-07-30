@@ -19,7 +19,11 @@
 // una lista siguen alineadas. La barra es la variante de bloque (cuando
 // hay ancho que gastar) y el texto la de lectura precisa.
 
-export type VarianteAvance = 'anillo' | 'barra' | 'texto'
+// La variante `segmentos` la estrena la ficha de artículo (tarea 172,
+// mockup `1f`): un segmento por paso junto al título de la sección, en
+// vez de una barra pegajosa aparte. Dice dos cosas que la barra continua
+// no dice: cuántos pasos hay en total y cuál es el que sigue.
+export type VarianteAvance = 'anillo' | 'barra' | 'texto' | 'segmentos'
 
 interface Props {
   hechos: number
@@ -55,6 +59,37 @@ export function IndicadorAvance({ hechos, total, variante = 'anillo', size = 26,
     return (
       <span className={`text-[11.5px] ${clases.texto} ${className}`}>
         {hechosSeguro} de {totalSeguro} pasos
+      </span>
+    )
+  }
+
+  if (variante === 'segmentos') {
+    // Con muchos pasos los segmentos se estrecharían hasta no leerse, así
+    // que por encima de 12 se cae a la barra continua: el dato importa
+    // más que la forma.
+    if (totalSeguro > 12 || totalSeguro === 0) {
+      return (
+        <IndicadorAvance hechos={hechosSeguro} total={totalSeguro} variante="barra" className={className} />
+      )
+    }
+    return (
+      <span
+        role="progressbar"
+        aria-valuenow={hechosSeguro}
+        aria-valuemin={0}
+        aria-valuemax={totalSeguro}
+        aria-label={etiqueta}
+        className={`flex items-center gap-[3px] ${className}`}
+      >
+        {Array.from({ length: totalSeguro }, (_, i) => (
+          <span
+            key={i}
+            aria-hidden
+            className={`h-[3px] w-[14px] rounded-full ${
+              i < hechosSeguro ? clases.relleno : 'bg-noct-neutral-800'
+            }`}
+          />
+        ))}
       </span>
     )
   }

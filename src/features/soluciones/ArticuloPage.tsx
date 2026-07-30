@@ -1,11 +1,17 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { db, type Articulo, type ArticuloRelacionado, type NivelDificultad } from '../../lib/db'
+import {
+  db,
+  type Articulo,
+  type ArticuloRelacionado,
+  type NivelDificultad,
+  type Procedimiento,
+} from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
-import { reiniciarProgreso } from '../../lib/progresoPasos'
+import { contarHechos, reiniciarProgreso } from '../../lib/progresoPasos'
 import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
@@ -20,21 +26,21 @@ import {
   BookOpen,
   CaretRight,
   Circle,
-  Clock,
   ClockCounterClockwise,
   Copy,
   DotsThreeBold,
   PencilSimple,
-  Play,
   ShareNetwork,
   TrashSimple,
   Warning,
   WarningOctagon,
 } from '../../components/iconos'
 import { BotonFavorito } from '../../components/BotonFavorito'
-import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
+import { BarraAccionFicha, type EstadoAccion } from '../../components/BarraAccionFicha'
+import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
 import { ProcedimientoVista } from './ProcedimientoVista'
+import { colorIconoDeTipo } from './iconosSoluciones'
 import { etiquetaDeTipo } from './tiposArticulo'
 import { describirAplicaA } from './aplicaA'
 
@@ -109,11 +115,10 @@ export function ArticuloPage() {
   }
 
   const estado = articulo.estado ?? 'publicado'
-  const metaLinea = [
-    etiquetaDeTipo(articulo.tipo),
-    `v${articulo.version ?? '1.0'}`,
-    `Actualizado el ${fechaCorta(articulo.updatedAt)}${autor?.nombre ? ` por ${autor.nombre}` : ''}`,
-  ].join(' · ')
+  // El tipo pasó al kicker (decisión 3) y la versión a la lista de
+  // metadatos (decisión 4), así que esta línea se queda solo con la
+  // procedencia del dato: cuándo y quién.
+  const metaLinea = `Actualizado el ${fechaCorta(articulo.updatedAt)}${autor?.nombre ? ` por ${autor.nombre}` : ''}`
 
   return (
     // Nivel 2 del chasis (tarea 185): documento. Conserva las pestañas
@@ -125,21 +130,22 @@ export function ArticuloPage() {
       modo="documento"
       volverEtiqueta={categoria?.nombre ?? 'Guías'}
       acciones={
+        // Decisión 2 de P2: tres controles de 44 px y ni uno más. Antes
+        // eran cinco (volver + estrella + Ejecutar + Editar + "···") y
+        // con una categoría de nombre largo la fila se estrangulaba.
+        // "Ejecutar" se va a la barra inferior (decisión 1) y "Editar"
+        // pierde su rótulo: con la acción dominante abajo, un botón de
+        // borde aquí arriba volvería a competir con ella, que es
+        // exactamente lo que la auditoría señala.
         <>
           <BotonFavorito tipo="articulo" entidadId={articuloId} />
-          {tieneProcedimiento && (
-            <Link
-              to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
-              className={BTN_PRIMARIO}
-              title="Ejecutar paso a paso, sin distracciones"
-            >
-              <Play size={14} aria-hidden />
-              Ejecutar
-            </Link>
-          )}
-          <Link to={`/soluciones/${categoriaId}/${articuloId}/editar`} className={BTN_SECUNDARIO}>
-            <PencilSimple size={15} aria-hidden />
-            Editar
+          <Link
+            to={`/soluciones/${categoriaId}/${articuloId}/editar`}
+            aria-label="Editar este artículo"
+            title="Editar"
+            className={BTN_ICONO_SECUNDARIO}
+          >
+            <PencilSimple size={17} aria-hidden />
           </Link>
           <MenuAcciones
             articulo={articulo}
@@ -173,40 +179,28 @@ export function ArticuloPage() {
         {procedimiento?.portada && <PortadaArticulo portada={procedimiento.portada} titulo={articulo.titulo} />}
 
         <header className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {categoria?.nombre && <TagNeutral>{categoria.nombre}</TagNeutral>}
-            {/* Hallazgo H6: aviso de transparencia. Sin esto, un tecnico
-                que abre el articulo desde el buscador no entenderia por
-                que no aparece en OTRO equipo de la misma categoria. */}
-            {describirAplicaA(articulo.aplicaA ?? null) && (
-              <TagNeutral>{describirAplicaA(articulo.aplicaA ?? null)}</TagNeutral>
-            )}
-            {procedimiento?.dificultad && (
-              <TagNeutral>{ETIQUETA_DIFICULTAD[procedimiento.dificultad]}</TagNeutral>
-            )}
-            {procedimiento?.tiempoEstimadoMin && (
-              <TagNeutral>
-                <Clock size={12} aria-hidden />
-                {procedimiento.tiempoEstimadoMin} min
-              </TagNeutral>
-            )}
-            {estado === 'borrador' && (
-              <span className="inline-flex items-center rounded-md bg-noct-precaucion/15 px-2.5 py-[3px] text-[11px] font-medium text-noct-precaucion">
-                Borrador
-              </span>
-            )}
-            {estado === 'obsoleto' && (
-              <span className="inline-flex items-center rounded-md bg-noct-error/15 px-2.5 py-[3px] text-[11px] font-medium text-noct-error">
-                Obsoleto
-              </span>
-            )}
-          </div>
+          {/* Kicker de tipo (decisión 3): identifica el documento en el
+              matiz de su tipo sin gastar una pastilla. Antes el tipo iba
+              dentro de la línea de metadatos, mezclado con la versión y
+              la fecha. La categoría ya no se repite aquí: la nombra el
+              botón de regreso (R13). */}
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-[0.08em] ${colorIconoDeTipo(articulo.tipo)}`}
+          >
+            {etiquetaDeTipo(articulo.tipo)}
+          </p>
           <h1 className="text-pretty text-[22px] font-medium leading-[1.25]">{articulo.titulo}</h1>
           {procedimiento?.descripcion && (
             <p className="text-pretty text-[13.5px] leading-normal text-noct-neutral-400">
               {procedimiento.descripcion}
             </p>
           )}
+          <MetadatosArticulo
+            tiempoMin={procedimiento?.tiempoEstimadoMin ?? null}
+            dificultad={procedimiento?.dificultad ?? null}
+            aplicaA={describirAplicaA(articulo.aplicaA ?? null)}
+            version={articulo.version ?? '1.0'}
+          />
           <p className="text-xs text-noct-neutral-500">{metaLinea}</p>
         </header>
 
@@ -273,8 +267,80 @@ export function ArticuloPage() {
         )}
 
         <Historial entidadTipo="articulo" entidadId={articuloId} />
+
+        {/* Decisión 1 de P2: una sola acción dominante, fija abajo y con
+            etiqueta contextual. Solo si hay algo que ejecutar (R3: ningún
+            control muerto). El `mt-auto` de la barra la empuja al pie
+            cuando el documento es corto. */}
+        {tieneProcedimiento && (
+          <AccionDominante articuloId={articuloId} categoriaId={categoriaId} procedimiento={procedimiento} />
+        )}
       </main>
     </Chasis>
+  )
+}
+
+// Los cuatro metadatos con su rótulo (decisión 4 de P2). Antes eran
+// cuatro pastillas neutras idénticas ("Impresoras", "Zebra ZT411",
+// "Intermedio", "25 min") donde nada decía que la segunda es una
+// restricción de aplicabilidad y no una etiqueta más. Como lista de
+// definición, cada dato dice qué es. Se omite el que no existe: una fila
+// "Dificultad: sin definir" no informa de nada.
+function MetadatosArticulo({
+  tiempoMin,
+  dificultad,
+  aplicaA,
+  version,
+}: {
+  tiempoMin: number | null
+  dificultad: NivelDificultad | null
+  aplicaA: string
+  version: string
+}) {
+  const filas: { rotulo: string; valor: string }[] = []
+  if (tiempoMin) filas.push({ rotulo: 'Tiempo', valor: `${tiempoMin} min` })
+  if (dificultad) filas.push({ rotulo: 'Dificultad', valor: ETIQUETA_DIFICULTAD[dificultad] })
+  if (aplicaA) filas.push({ rotulo: 'Aplica a', valor: aplicaA })
+  filas.push({ rotulo: 'Versión', valor: `v${version}` })
+
+  return (
+    <dl className="mt-0.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
+      {filas.map(({ rotulo, valor }) => (
+        <Fragment key={rotulo}>
+          <dt className="text-noct-neutral-500">{rotulo}</dt>
+          <dd className="min-w-0 text-noct-neutral-200">{valor}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  )
+}
+
+// Etiqueta contextual de la barra inferior: "Empezar" sin avance,
+// "Seguir en el paso N de M" a medias, "Repetir" cuando ya está todo
+// hecho. Antes decía "Ejecutar" siempre, incluso con 2 de 6 pasos
+// hechos, donde lo que se hace es seguir.
+function AccionDominante({
+  articuloId,
+  categoriaId,
+  procedimiento,
+}: {
+  articuloId: string
+  categoriaId: string
+  procedimiento: Procedimiento
+}) {
+  const progreso = useLiveQuery(() => db.progresoPasos.get(articuloId), [articuloId])
+  const idsPasos = procedimiento.pasos.map((p) => p.id)
+  const hechos = contarHechos(progreso?.pasosHechos ?? [], idsPasos)
+  const total = idsPasos.length
+  const estado: EstadoAccion = hechos === 0 ? 'empezar' : hechos >= total ? 'repetir' : 'seguir'
+
+  return (
+    <BarraAccionFicha
+      to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
+      estado={estado}
+      paso={hechos + 1}
+      total={total}
+    />
   )
 }
 

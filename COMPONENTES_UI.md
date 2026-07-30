@@ -190,10 +190,10 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** `SolucionesPage` (hoja de "Tipo de documento" y hoja de "¿En qué categoría?"). Usa `Modal` internamente, que ya resuelve portal, Escape y bloqueo de scroll.
 
 ### 2.10c `IndicadorAvance`
-- **Propósito:** único indicador de "vas por X de Y pasos" de la app, en tres variantes. Al completarse pasa de acento a verde, que es el momento que el técnico busca.
-- **Props:** `{ hechos, total, variante?: 'anillo' | 'barra' | 'texto' = 'anillo', size?: number = 26, className? }`.
-- **Variantes:** `anillo` es la de fila (su ancho NO cambia con el valor, así que las filas de una lista siguen alineadas); `barra` la de bloque; `texto` la de lectura precisa. `anillo` y `barra` exponen `role="progressbar"` con sus `aria-value*`.
-- **Dónde:** `SolucionesPage` (variante `barra`, en el bloque "Sin terminar"). **Pendiente de migrar:** `AvanceArticulo` de `CategoriaPage` y `ContadorSubProgreso` de `ProcedimientoVista` siguen siendo copias propias del mismo dato (candidato CAND-7, sección 5); se unifican al rediseñar P4 y P2.
+- **Propósito:** único indicador de "vas por X de Y pasos" de la app, en cuatro variantes. Al completarse pasa de acento a verde, que es el momento que el técnico busca.
+- **Props:** `{ hechos, total, variante?: 'anillo' | 'barra' | 'texto' | 'segmentos' = 'anillo', size?: number = 26, className? }`.
+- **Variantes:** `anillo` es la de fila (su ancho NO cambia con el valor, así que las filas de una lista siguen alineadas); `barra` la de bloque; `texto` la de lectura precisa; **`segmentos`** (tarea 172, mockup `1f`) dibuja un segmento por paso junto al título de una sección, y dice dos cosas que la barra continua no dice: cuántos pasos hay en total y cuál es el que sigue. Por encima de 12 pasos cae sola a `barra`, porque los segmentos se estrecharían hasta no leerse. Todas menos `texto` exponen `role="progressbar"` con sus `aria-value*`.
+- **Dónde:** `SolucionesPage` (`barra`, bloque "Sin terminar"), `ProcedimientoVista` (`segmentos` + `texto` en la cabecera de "Pasos", y `anillo` en la tarjeta de un subprocedimiento vinculado), `BarraReanudar` (`anillo`). **CAND-7 cerrado en la tarea 172** para `ContadorSubProgreso`, que era una pastilla "X/Y" propia y además discrepaba del resto (su intermedio era ámbar; en el resto de la app, acento). **Queda `AvanceArticulo` de `CategoriaPage`**, que se unifica al rediseñar P4 (tarea 174).
 
 ### 2.10d `PastillaEstado`
 - **Propósito:** UNA sola forma para todo estado que acompaña a una fila: pastilla de contorno, sin relleno. Es el `IndicadorEstado` que pedía CAND-1. Antes el mismo tipo de dato se dibujaba de tres maneras a la vez (Borrador con borde punteado y relleno ámbar, Obsoleto con relleno neutro sólido, estado de equipo como punto de color + etiqueta).
@@ -207,6 +207,12 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Props:** `{ total, singular, plural, className? }`. El sustantivo lo pone quien la usa, para que sirva a cualquier lista.
 - **Variantes:** tres mensajes por prioridad: cambios propios sin subir (ámbar, `CloudArrowUp`), sin sincronizar aún (`CloudSlash`) y al día (`CloudCheck` verde). Es de **solo lectura**: no abre el panel de sincronización, para no sumar un control a una cabecera que la auditoría pedía adelgazar.
 - **Dónde:** `SolucionesPage`. Lee el estado con `useSyncExternalStore(suscribirSync, obtenerEstadoSync)` y la antigüedad con `tiempoRelativo()` de `src/lib/tiempoRelativo.ts`.
+
+### 2.10e2 `BarraAccionFicha`
+- **Propósito:** la única acción dominante de una ficha, fija abajo (tarea 172, mockup `1f`). Nace de la auditoría de la ficha de artículo: "Ejecutar" y "Editar" pesaban lo mismo (Nocturne pide el primario delineado, así que eran dos botones de borde uno al lado del otro), vivían arriba (la zona menos alcanzable del pulgar) y decían siempre "Ejecutar", incluso con 2 de 6 pasos hechos, donde lo que se hace es *seguir*.
+- **Props:** `{ to: string, estado: 'empezar' | 'seguir' | 'repetir', paso?: number, total?: number }`. El estado lo calcula quien la monta a partir del avance real; `paso` y `total` solo se usan en `seguir`.
+- **Variantes:** la etiqueta y el icono salen del estado ("Empezar" con play, "Seguir en el paso N de M" con play, "Repetir" con flechas circulares), y debajo va una nota de una línea con la promesa correspondiente ("Tu avance se guarda en este teléfono"). Botón de 52 px de alto, pegajoso al pie de la columna de contenido.
+- **Dónde:** `ArticuloPage`. La comparte con el editor de P5 (tarea 175).
 
 ### 2.10f `BarraSuperior`
 - **Propósito:** la barra superior global del chasis (tarea 181, mockup `3d` del handoff). Tres ranuras fijas, siempre en el mismo orden y en las cinco pestañas (regla **R14**): **título de la sección** (confirma cuál pestaña está iluminada), **estado del dato** (`PastillaSync`) y **buscar + cuenta**. Antes no existía: cada pantalla dibujaba su cabecera con altura, relleno y controles distintos, y los tres servicios globales vivían dentro de Inicio.

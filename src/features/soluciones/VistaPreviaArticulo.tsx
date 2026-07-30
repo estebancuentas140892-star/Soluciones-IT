@@ -102,7 +102,7 @@ export function VistaPreviaArticulo({
         )}
 
         {procedimiento && (
-          <ProcedimientoVista articuloId={idEfimero} procedimiento={procedimiento} progresoPegajoso={false} />
+          <ProcedimientoVista articuloId={idEfimero} procedimiento={procedimiento} />
         )}
 
         {contenido.trim() !== '' && (

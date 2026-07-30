@@ -4,6 +4,20 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+### Tarea 173. Rediseño P3: modo ejecución del asistente (`/soluciones/:cat/:art/ejecutar`)
+
+- **Descripción:** las 9 decisiones de la auditoría para P3 (turno 1, mockups `1g` y `1h`). Navegación fija abajo (retroceso en cuadrado de 52 px, avance ocupando el resto); el botón dice qué falta y qué viene ("Falta 1 tarea para poder avanzar" encima, "Sigue: calibrar la etiqueta" dentro) en vez de un control apagado y mudo al 30 % de opacidad; "Guardar y salir" en lugar de "Salir"; progreso segmentado de N marcas que distingue hecho (verde) de actual (acento) y sirve para volver a un paso; escala de campo (título 21 px, tareas 16 px, casillas de 26 px en filas de 52); cronómetro en lenguaje humano ("7 min de 25"); una foto por fila a ancho completo; la evidencia fotográfica sube a acción de bloque con borde punteado; tarea completada tachada y en gris con la casilla rellena en acento.
+- **Motivo:** es la pantalla que se usa de pie, con guantes, a contraluz, y hoy tiene tipografía de escritorio, el avance al final del scroll y un "Siguiente" que se apaga sin decir por qué.
+- **Impacto:** el técnico deja de recorrer toda la pantalla para avanzar y entiende siempre por qué no puede.
+- **Prioridad:** Alta. **Estado:** En progreso.
+- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx` (632 líneas), `src/features/soluciones/AsistentePage.tsx`, `src/features/soluciones/useProcedimientoEjecucion.ts`.
+- **Dependencias:** la 172 (hecha), que ya definió `BarraAccionFicha` y la variante de segmentos de `IndicadorAvance`; las dos se reutilizan aquí.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+---
+
+La **tarea 172** (rediseño P2: ficha de artículo) quedó **terminada, verificada en navegador y archivada el 2026-07-30**. Las 11 decisiones aplicadas: acción dominante fija abajo con etiqueta contextual (`BarraAccionFicha`, componente nuevo), cabecera de tres controles de 44 px, kicker de tipo, metadatos con rótulo, pasos plegados salvo el actual, avance en segmentos (se retiró la barra pegajosa), casillas de 24 en filas de 44 con texto a 15 px, verificación final anunciada en tarjeta neutra, aviso con su palabra, datos protegidos con acción de ancho completo y estado dicho una sola vez. **Medido:** la sección de pasos de un procedimiento de 6 pasos mide 1.148 px (1,41 pantallas), frente a los más de 4.000 px que la auditoría midió. De paso **cierra CAND-7** para `ContadorSubProgreso` (queda `AvanceArticulo`, tarea 174) y elimina la prop `progresoPegajoso`, que ya no tenía nada que apagar. **Hallazgo de método:** `npx tsc --noEmit` no comprueba nada en este proyecto (el `tsconfig.json` solo tiene `references`); el typecheck real es `tsc -b`, el que corre `npm run build`. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
 La **tarea 191** (turno 5, parte 1: el chasis en cuatro puntos de quiebre, R25/R26/R30) quedó **terminada, verificada en navegador y archivada el 2026-07-30**. Cuatro puntos con composición completa: `<768` teléfono (columna 448 y pestañas), `768-1279` rail de iconos de 64 px sin pestañas, `1280-1679` sidebar de 240, `>=1680` sidebar de 232 y columna de hasta 1294. Con esto se cierra el hueco de tableta, donde antes el contenido medía 768 y la barra de pestañas seguía anclada a 448 centrados. `BarraReanudar` gana la variante `sidebar` (al pie del rail, no flotando). **Dos defectos encontrados al medir**, invisibles leyendo el código: el punto de quiebre declarado en px quedaba pisado por `xl` pese a que la media query coincidía (ver [DECISIONES.md](DECISIONES.md) AD-028), y la columna se estrechaba al ensanchar la ventana (1200 px a 1279, 1040 a 1280). **R26 queda a medias:** se eliminó el par `lg:px-10`/`lg:px-12`, pero cabecera y cuerpo del chasis siguen sin compartir eje; eso va en la 199. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 La **tarea 187** (comportamientos dinámicos del chasis, R20/R21/R23) quedó **terminada y archivada el 2026-07-30**, y su código ya está en producción (commit `f73467b`, despliegue confirmado por contenido). Los cuatro comportamientos del mockup `4e` más la pastilla de sincronía adaptativa. **Hallazgo:** los filtros no se podían restaurar porque no existían en la URL (el chip de `SolucionesPage` solo se leía como semilla), así que la tarea incluyó hacer que los tres filtros de eje la escriban; de paso, el filtro se puede compartir por enlace. **Queda una verificación pendiente, que no es un defecto conocido sino un límite del entorno:** lo que depende de scroll o de clic (cabecera colapsable, memoria de scroll y memoria de filtros de punta a punta) no se pudo verificar en navegador, porque con el panel oculto la página no compone fotogramas y el navegador no despacha esos eventos al React de la página. Basta abrir el panel y repetir esa parte. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
@@ -291,23 +305,7 @@ La **tarea 191** (turno 5, parte 1: el chasis en cuatro puntos de quiebre) está
 - **Área afectada:** `src/features/soluciones/ProcedimientoVista.tsx` (959 líneas), `ContadorSubProgreso` (migra a `IndicadorAvance`).
 - **Dependencias:** el turno 10 (tarea 196, editor de pasos) y la 172 (ficha de artículo). **Absorbe el punto (c) de la tarea 177.**
 
-### 172. Rediseño P2: ficha de artículo (`/soluciones/:categoria/:articulo`)
-
-- **Descripción:** aplicar las 11 decisiones de la auditoría para P2. Una sola acción dominante fija abajo con etiqueta contextual ("Empezar" / "Seguir en el paso 3 de 6" / "Repetir") en vez de "Ejecutar" y "Editar" con el mismo peso arriba; cabecera de tres controles de 44 px; kicker de tipo sobre el título en su matiz; metadatos como lista de definición con rótulo (Tiempo, Dificultad, Aplica a, Versión); pasos plegados salvo el actual; progreso segmentado junto al título en vez de barra pegajosa aparte; casillas de 24 px en filas de 44 y texto de tarea a 15 px; la verificación final se anuncia en vez de mostrarse apagada; el aviso lleva su palabra ("Precaución.") además del color; datos protegidos con acción de ancho completo; estado una sola vez.
-- **Motivo:** con 6 pasos, avisos, imágenes y credenciales el documento pasa de 4.000 px, y "Ejecutar" (lo que se toca de pie frente al equipo) está arriba, en la zona menos alcanzable del pulgar.
-- **Impacto:** el documento cabe en dos pantallas; la acción principal queda al alcance del pulgar y dice qué va a pasar.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/features/soluciones/ArticuloPage.tsx` (526 líneas), `src/features/soluciones/ProcedimientoVista.tsx` (959 líneas). Componentes nuevos que salen aquí: `BarraAccionFicha` (barra inferior de una acción, la comparte con P5) y migrar `ContadorSubProgreso` a `IndicadorAvance` (CAND-7).
-- **Dependencias:** ninguna bloqueante; reutiliza `IndicadorAvance` y `PastillaEstado` de la tarea 171.
-
-### 173. Rediseño P3: modo ejecución del asistente (`/soluciones/:cat/:art/ejecutar`)
-
-- **Descripción:** aplicar las 9 decisiones de la auditoría para P3. Navegación fija abajo (retroceso en cuadrado de 52 px, avance ocupando el resto); el botón dice qué falta y qué viene ("Falta 1 tarea para poder avanzar" encima, "Sigue: calibrar la etiqueta" dentro) en vez de un control apagado y mudo al 30 % de opacidad; "Guardar y salir" en lugar de "Salir"; progreso segmentado de N marcas que distingue hecho (verde) de actual (acento) y sirve para volver a un paso; escala de campo (título 21 px, tareas 16 px, casillas de 26 px en filas de 52); cronómetro en lenguaje humano ("7 min de 25"); una foto por fila a ancho completo; la evidencia fotográfica sube a acción de bloque con borde punteado; tarea completada tachada y en gris con la casilla rellena en acento.
-- **Motivo:** es la pantalla que se usa de pie, con guantes, a contraluz, y hoy tiene tipografía de escritorio, el avance al final del scroll y un "Siguiente" que se apaga sin decir por qué.
-- **Impacto:** el técnico deja de recorrer toda la pantalla para avanzar y entiende siempre por qué no puede.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx` (632 líneas), `src/features/soluciones/AsistentePage.tsx`, `src/features/soluciones/useProcedimientoEjecucion.ts`.
-- **Dependencias:** conviene hacerla después de la 172, que define `BarraAccionFicha`.
+La **tarea 172** (P2, ficha de artículo) está **archivada** y la **173** (P3, modo asistente) está **En proceso**, arriba. Quedan estas dos de las cinco pantallas móviles:
 
 ### 174. Rediseño P4: ficha de categoría (`/soluciones/:categoria`)
 
