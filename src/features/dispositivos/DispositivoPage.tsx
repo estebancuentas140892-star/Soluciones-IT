@@ -298,7 +298,11 @@ export function DispositivoPage() {
         </div>
       )}
     >
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-12">
+      {/* Un solo eje vertical (R26, tarea 191): esta ficha usaba
+          `lg:px-12` mientras su hermana de la Bóveda usaba `lg:px-10` y
+          la fila de chips de arriba también, así que cabecera y cuerpo
+          quedaban desalineados 8 px. El par se unifica en `lg:px-10`. */}
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-10">
         {/* Encabezado del equipo: foto, título, categoría/fecha y estado. */}
         <header className="flex flex-col gap-3">
           {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}

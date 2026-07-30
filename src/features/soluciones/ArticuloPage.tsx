@@ -150,7 +150,9 @@ export function ArticuloPage() {
         </>
       }
     >
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-12">
+      {/* `lg:px-10` y no `lg:px-12`: un solo eje vertical compartido con
+          las fichas hermanas de equipo y credencial (R26, tarea 191). */}
+      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-10">
         {estado === 'borrador' && (
           <div className="flex items-start gap-2.5 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-3 py-2.5">
             <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />

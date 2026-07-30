@@ -11,6 +11,12 @@ interface Props {
   total: number
   minutosRestantes: number | null
   onDescartar: () => void
+  /**
+   * `flotante` (por defecto) es la barra del teléfono, fija sobre las
+   * pestañas. `sidebar` es la de escritorio (tarea 191): al pie del rail
+   * de navegación, encima de la cuenta. Ver la nota de la variante.
+   */
+  variante?: 'flotante' | 'sidebar'
 }
 
 // Distancia de arrastre horizontal que cuenta como descarte (tarea 186,
@@ -36,7 +42,14 @@ const UMBRAL_INICIO_ARRASTRE_PX = 6
 // alternativa sin gesto) y el propio Chasis, via useReanudar, deja el
 // punto en la pestaña Guias mientras el descarte siga vigente para este
 // articulo.
-export function BarraReanudar({ articulo, hechos, total, minutosRestantes, onDescartar }: Props) {
+export function BarraReanudar({
+  articulo,
+  hechos,
+  total,
+  minutosRestantes,
+  onDescartar,
+  variante = 'flotante',
+}: Props) {
   const [dx, setDx] = useState(0)
   const [arrastrando, setArrastrando] = useState(false)
   const inicioX = useRef(0)
@@ -80,8 +93,45 @@ export function BarraReanudar({ articulo, hechos, total, minutosRestantes, onDes
   const Icono = iconoDeTipo(articulo.tipo)
   const opacidad = Math.max(0, 1 - Math.abs(dx) / 220)
 
+  // Variante de escritorio (tarea 191, turno 5): al pie de la sidebar y
+  // no flotando sobre el contenido. En escritorio el rail ya es
+  // persistente, así que el recordatorio no necesita robar altura al
+  // documento. Sin arrastre a propósito: deslizar es un gesto de dedo, y
+  // aquí el descarte lo hace el botón, que además siempre estuvo como
+  // alternativa sin gesto. En el rail estrecho (768-1279) queda solo el
+  // anillo de avance, del tamaño de los iconos que lo rodean.
+  if (variante === 'sidebar') {
+    return (
+      <div className="flex flex-col items-center gap-1 rounded-xl border border-noct-accent/40 bg-noct-bg/60 p-1.5 xl:flex-row xl:items-center xl:gap-1.5 xl:p-2">
+        <Link
+          to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
+          title={`Seguir "${articulo.titulo}", paso ${hechos + 1} de ${total}`}
+          className="flex min-w-0 items-center gap-2 text-noct-text xl:flex-1"
+        >
+          <IndicadorAvance hechos={hechos} total={total} size={26} className="shrink-0" />
+          <span className="hidden min-w-0 flex-1 xl:block">
+            <span className="block truncate text-[12.5px] font-medium leading-[1.25]">{articulo.titulo}</span>
+            <span className="mt-0.5 block truncate text-[11px] text-noct-neutral-400">
+              <Icono size={11} className={`mr-1 inline-block align-[-1px] ${colorIconoDeTipo(articulo.tipo)}`} aria-hidden />
+              Paso {hechos + 1} de {total}
+              {minutosRestantes != null && ` · ~${minutosRestantes} min`}
+            </span>
+          </span>
+        </Link>
+        <button
+          type="button"
+          onClick={onDescartar}
+          aria-label={`Descartar el aviso para continuar "${articulo.titulo}"`}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-noct-neutral-500 hover:bg-noct-text/[.08] hover:text-noct-text focus-visible:outline-2 focus-visible:outline-noct-accent"
+        >
+          <X size={13} aria-hidden />
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(65px+env(safe-area-inset-bottom)+8px)] z-30 flex justify-center px-3 font-inter lg:bottom-4 lg:px-0">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(65px+env(safe-area-inset-bottom)+8px)] z-30 flex justify-center px-3 font-inter md:hidden">
       <div
         onPointerDown={alBajarPuntero}
         onPointerMove={alMoverPuntero}
@@ -92,7 +142,7 @@ export function BarraReanudar({ articulo, hechos, total, minutosRestantes, onDes
           opacity: opacidad,
           transition: arrastrando ? 'none' : 'transform 150ms ease, opacity 150ms ease',
         }}
-        className="pointer-events-auto flex w-full max-w-md touch-pan-y items-center gap-1.5 rounded-xl border border-noct-accent/40 bg-noct-surface/95 py-2 pl-2.5 pr-2 shadow-lg backdrop-blur-[12px] sm:max-w-xl md:max-w-3xl lg:max-w-[380px]"
+        className="pointer-events-auto flex w-full max-w-md touch-pan-y items-center gap-1.5 rounded-xl border border-noct-accent/40 bg-noct-surface/95 py-2 pl-2.5 pr-2 shadow-lg backdrop-blur-[12px] sm:max-w-xl"
       >
         <Link
           to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}

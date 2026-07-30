@@ -27,6 +27,22 @@
 @theme {
   --font-inter: 'Inter Variable', system-ui, -apple-system, sans-serif;
 
+  /* Cuarto punto de quiebre del chasis (tarea 191, turno 5 del handoff,
+     regla R30). Los cuatro anchos con composición propia son 768 (`md`),
+     1280 (`xl`) y 1680 (este); por debajo de 768 es el teléfono. Los
+     defaults de Tailwind llegan hasta 1536 (`2xl`), que no coincide con
+     ninguno de los tres, así que el chasis usa `md`, `xl` y `3xl` y deja
+     `sm`, `lg` y `2xl` para lo que reflujan las pantallas por dentro.
+
+     En REM, no en px (105rem = 1680px), y no es cosmético: Tailwind
+     ordena las media queries por valor y no sabe comparar unidades
+     distintas, así que un punto de quiebre en px se emite ANTES del
+     bloque de los de rem. Declarado como `1680px`, la regla de 1680
+     quedaba delante de las de `sm`/`md`/`lg`/`xl` y `xl:w-60` pisaba a
+     `3xl:w-[232px]`: la sidebar seguía midiendo 240 a 1680 px aunque la
+     media query coincidiera. Medido en el navegador el 2026-07-30. */
+  --breakpoint-3xl: 105rem;
+
   --color-noct-bg: #161826;
   --color-noct-surface: #232532;
   --color-noct-text: #e9e9ed;

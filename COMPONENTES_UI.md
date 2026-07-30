@@ -85,7 +85,18 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
   - `documento`: `{ modo: 'documento', volverA?: string, volverEtiqueta?: string, acciones?: ReactNode, barra?: ReactNode, children }`
   - `tarea`: `{ modo: 'tarea', rotulo: string, titulo: string, vuelta?: string, salidaA?: string, salidaEtiqueta?: string, alSalir?: () => void, barra?: ReactNode, children }`
   - `barra` es siempre la banda de controles propios de la pantalla, dentro del mismo bloque pegajoso que la cabecera (AD-023).
-- **Reserva su propio espacio (regla R22).** La columna de contenido lleva `pb-[calc(65px+env(safe-area-inset-bottom))] lg:pb-0` en los niveles con pestañas, así que ninguna pantalla calcula a mano el alto de la barra. Los 65 px son **medidos** (63,6 de celda + 1 de borde), no los 53 que citaba la auditoría, un dato anterior a la tarea 182.
+- **Reserva su propio espacio (regla R22).** La columna de contenido lleva `pb-[calc(65px+env(safe-area-inset-bottom))] md:pb-0` en los niveles con pestañas, así que ninguna pantalla calcula a mano el alto de la barra. Los 65 px son **medidos** (63,6 de celda + 1 de borde), no los 53 que citaba la auditoría, un dato anterior a la tarea 182.
+- **Cuatro puntos de quiebre, cuatro composiciones (tarea 191, regla R30).** Los define el chasis y ninguna pantalla los repite. Medidos en el navegador:
+
+  | Ventana | Sidebar | Pestañas | Tope de la columna |
+  |---|---|---|---|
+  | `<768` | oculta | sí | 448 |
+  | `768-1279` (`md`) | rail de iconos, 64 px | no | 1040 |
+  | `1280-1679` (`xl`) | completa, 240 px | no | 1040 |
+  | `>=1680` (`3xl`) | completa, 232 px | no | 1294 (322 + 720 + 252) |
+
+  El rail estrecho es lo que cierra el hueco de tableta: antes la sidebar no llegaba hasta 1024, así que entre 768 y 1023 el contenido medía 768 mientras la barra de pestañas seguía anclada a 448 centrados. El tope de la columna **crece y nunca se estrecha**. El punto de 1680 vive en `@theme` como `--breakpoint-3xl: 105rem`, en rem y no en px por el motivo de [DECISIONES.md](DECISIONES.md) AD-028. Las tres zonas propiamente dichas (maestro-detalle) las reparte la tarea 199; aquí solo se reserva su ancho.
+- **`BarraReanudar` cambia de sitio en escritorio (tarea 191):** al pie del rail, encima de la cuenta, en vez de flotar sobre el contenido. Ver 2.10i.
 - **`BarraReanudar` (tarea 186):** en `seccion` y `documento` (nunca en `tarea`), monta la barra flotante del procedimiento a medias más reciente (ver 2.10i) a partir de `useReanudar()`. Mientras esté descartada, la pestaña Guías (solo móvil) muestra un punto de aviso junto a su icono.
 - **Comportamientos dinámicos (tarea 187).** Los cuatro se calculan aquí porque el chasis es el único envoltorio de TODAS las pantallas:
   - **Avisos con dato detrás (R23):** punto en Guías (procedimiento a medias descartado) y número en Más (conteo real de `usePendientes()`, no los seis que Inicio muestra). Ver 2.10k.
@@ -219,7 +230,8 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 ### 2.10i `BarraReanudar`
 - **Propósito:** barra flotante que viaja por toda la app mientras haya un procedimiento a medias (tarea 186, mockup `4e`). Caso real: estar en el paso 3 de un mantenimiento y salir a la Bóveda a buscar una clave, sin perder el hilo de vuelta. Muestra el título del artículo, el paso actual, los minutos restantes estimados y un acceso directo "Seguir" al asistente.
-- **Props:** `{ articulo: Articulo, hechos: number, total: number, minutosRestantes: number | null, onDescartar: () => void }`. Presentacional puro; los datos y el estado de descarte los resuelve `useReanudar` (`src/features/soluciones/useReanudar.ts`), que reutiliza `articulosSinTerminar` (ya usado en el bloque "Sin terminar" de `SolucionesPage`) en vez de duplicar la consulta a `progresoPasos`.
+- **Props:** `{ articulo: Articulo, hechos: number, total: number, minutosRestantes: number | null, onDescartar: () => void, variante?: 'flotante' | 'sidebar' }`. Presentacional puro; los datos y el estado de descarte los resuelve `useReanudar` (`src/features/soluciones/useReanudar.ts`), que reutiliza `articulosSinTerminar` (ya usado en el bloque "Sin terminar" de `SolucionesPage`) en vez de duplicar la consulta a `progresoPasos`.
+- **Dos variantes desde la tarea 191.** `flotante` (por defecto) es la del teléfono, fija sobre las pestañas y con el arrastre para descartar; se oculta desde 768. `sidebar` es la de escritorio: al pie del rail de navegación, encima de la cuenta, porque ahí el rail ya es persistente y el recordatorio no necesita robar altura al documento. En el rail estrecho (768-1279) queda solo el anillo de avance, del tamaño de los iconos que lo rodean, con el botón de descarte debajo. La variante `sidebar` **no tiene arrastre** a propósito: deslizar es un gesto de dedo, y el botón siempre estuvo como alternativa sin gesto. Medido: 46 px de contenido en el rail de 64 y 206 en el de 232, sin desborde.
 - **Se descarta** deslizando horizontalmente (arrastre con umbral de 90 px, con un umbral previo de 6 px antes de capturar el puntero para no robarle el click al botón "X" ni al enlace "Seguir") o con el botón "X", siempre presente como alternativa sin gesto. El descarte se recuerda en `localStorage` mientras siga siendo el mismo artículo: si aparece un procedimiento más reciente para retomar, la barra vuelve a mostrarse sola.
 - **Reglas que aplica:** **R23** (un aviso solo si hay un dato detrás: no se muestra si no hay ningún procedimiento a medias). Mientras la barra está descartada, la pestaña Guías (solo móvil) muestra un punto de aviso en su lugar.
 - **Dónde:** la monta `Chasis` en los niveles `seccion` y `documento` (no en `tarea`: esas pantallas ya tienen su propia `BarraTarea` y no necesitan una segunda barra flotante, R19).

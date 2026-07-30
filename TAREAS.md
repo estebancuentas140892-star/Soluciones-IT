@@ -4,21 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-### Tarea 187. Comportamientos dinámicos del chasis (R20, R21, R23)
+La **tarea 191** (turno 5, parte 1: el chasis en cuatro puntos de quiebre, R25/R26/R30) quedó **terminada, verificada en navegador y archivada el 2026-07-30**. Cuatro puntos con composición completa: `<768` teléfono (columna 448 y pestañas), `768-1279` rail de iconos de 64 px sin pestañas, `1280-1679` sidebar de 240, `>=1680` sidebar de 232 y columna de hasta 1294. Con esto se cierra el hueco de tableta, donde antes el contenido medía 768 y la barra de pestañas seguía anclada a 448 centrados. `BarraReanudar` gana la variante `sidebar` (al pie del rail, no flotando). **Dos defectos encontrados al medir**, invisibles leyendo el código: el punto de quiebre declarado en px quedaba pisado por `xl` pese a que la media query coincidía (ver [DECISIONES.md](DECISIONES.md) AD-028), y la columna se estrechaba al ensanchar la ventana (1200 px a 1279, 1040 a 1280). **R26 queda a medias:** se eliminó el par `lg:px-10`/`lg:px-12`, pero cabecera y cuerpo del chasis siguen sin compartir eje; eso va en la 199. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
-- **Descripción:** cuatro comportamientos, con sus dos extremos ya dibujados en el mockup `4e`. (a) `CabeceraColapsable`: el nombre de la sección se contrae a 14 px y se queda en pantalla. (b) `MemoriaDePestana`: al volver a una pestaña se restauran scroll y filtros. (c) `AvisoPestana`: punto en Guías si hay trabajo a medias, número en Más si hay pendientes reales, alimentados por `pendientes.ts` y `progresoPasos`; ningún punto decorativo. (d) Transiciones con dirección: entrar desde la derecha (180 ms), volver hacia la derecha, cambiar de pestaña con fundido (120 ms), respetando `prefers-reduced-motion`. La pastilla de sincronía se vuelve adaptativa: solo icono cuando todo está al día, texto y color cuando hay algo que atender.
-- **Motivo:** hoy hay cero transiciones en toda la app (ni `startViewTransition` ni transformaciones de entrada) y cero memoria de posición: cambiar de pestaña y volver reinicia el scroll y borra el filtro de categoría, porque la pestaña apunta a la ruta pelada. La barra inferior nunca refleja que hay pendientes, cambios sin subir o trabajo a medias, aunque la app ya calcula los tres datos.
-- **Impacto:** es la diferencia entre una app y una web. Sin cambios de datos: los tres avisos salen de cálculos que ya existen.
-- **Prioridad:** Media. **Estado:** En progreso, **código completo; solo falta la verificación en navegador de lo que depende de scroll y de clic.**
-- **Área afectada:** el chasis de la tarea 185 (`src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `src/components/PastillaSync.tsx`), `src/features/inicio/pendientes.ts`, `src/lib/navegacion.ts`. Componentes nuevos: `CabeceraColapsable`, `AvisoPestana`, más el módulo de memoria de scroll y el de dirección de transición.
-- **Dependencias:** las 185 y 186 (ambas archivadas). Reglas que fija: **R20** (volver es volver al mismo sitio), **R21** (el movimiento indica jerarquía) y **R23** (un aviso solo si hay un dato detrás).
-- **Modelo/esfuerzo:** Sonnet 5 / Alto.
-
-**Hecho (2026-07-30).** Los cuatro comportamientos más la pastilla adaptativa. Archivos nuevos: `src/app/direccionTransicion.ts` (+ prueba), `src/app/memoriaScroll.ts`, `src/app/memoriaPestana.ts` (+ prueba), `src/components/CabeceraColapsable.tsx`, `src/components/AvisoPestana.tsx`, `src/features/inicio/usePendientes.ts`. Modificados: `Chasis.tsx`, `BarraSuperior.tsx`, `PastillaSync.tsx`, `InicioPage.tsx`, `SolucionesPage.tsx`, `navegacion.ts` (+ prueba), `index.css`. Typecheck, lint y build limpios; 1724 pruebas pasan (24 nuevas), con los 4 fallos preexistentes y ajenos de siempre (`archivosPendientes.test.ts`, RLS de Storage, duplicados por el worktree obsoleto de la tarea 178).
-
-**Hallazgo de la implementación:** `MemoriaDePestana` pedía restaurar "scroll **y filtros**", y los filtros no se podían restaurar porque no existían en la URL. El chip de categoría de `SolucionesPage` solo se LEÍA de la URL como semilla ("los cambios de chip posteriores solo tocan el estado local"), que es exactamente lo que el mockup `4e` señala: "el filtro vive en la URL, pero la pestaña apunta a /soluciones pelado". Así que la tarea incluyó hacer que los tres filtros de eje (categoría, tipo, etiqueta) **escriban** en la URL con `replace`. Efecto lateral bueno: el filtro ahora se puede compartir por enlace.
-
-**Lo que FALTA:** verificar en navegador la cabecera colapsable, la memoria de scroll y la memoria de filtros de punta a punta. Se montó el banco temporal de siempre (fuera de `RequireAuth`, ya retirado) y sirvió para confirmar por DOM y estilo computado que `PastillaSync` al día mide exactamente 44x44 sin texto, que el contenedor recibe `data-transicion` con la animación correcta (`chasis-lateral`, 0,12 s) y que `AvisoPestana` dibuja sus dos variantes. Pero **con el panel del navegador oculto la página no compone fotogramas**, así que el navegador no despacha eventos de `scroll` ni de puntero al React de la página (se comprobó: un clic real sobre un botón cuyo centro devuelve `elementFromPoint` correcto no incrementó su contador), y el JS inyectado corre en un mundo aislado (`__vite_plugin_react_preamble_installed__` sale `undefined`), desde el que no se pueden simular. **Para cerrarla basta abrir el panel del navegador y repetir esa parte.**
+La **tarea 187** (comportamientos dinámicos del chasis, R20/R21/R23) quedó **terminada y archivada el 2026-07-30**, y su código ya está en producción (commit `f73467b`, despliegue confirmado por contenido). Los cuatro comportamientos del mockup `4e` más la pastilla de sincronía adaptativa. **Hallazgo:** los filtros no se podían restaurar porque no existían en la URL (el chip de `SolucionesPage` solo se leía como semilla), así que la tarea incluyó hacer que los tres filtros de eje la escriban; de paso, el filtro se puede compartir por enlace. **Queda una verificación pendiente, que no es un defecto conocido sino un límite del entorno:** lo que depende de scroll o de clic (cabecera colapsable, memoria de scroll y memoria de filtros de punta a punta) no se pudo verificar en navegador, porque con el panel oculto la página no compone fotogramas y el navegador no despacha esos eventos al React de la página. Basta abrir el panel y repetir esa parte. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ---
 
@@ -197,7 +185,7 @@ Las 24 reglas visuales R1 a R24 quedan como el criterio único de la app; las si
 
 | Turno | Tema | Mockups | Tarea |
 |---|---|---|---|
-| 5 | Escritorio como sistema | `5a` a `5d` | 191 |
+| 5 | Escritorio como sistema | `5a` a `5d` | 191 + 199 + 200 (partida al tomarla) |
 | 6 | Sección Equipos | `6a` a `6e` | 192 |
 | 7 | Sección Bóveda | `7a` a `7d` | 193 |
 | 8 | Sección Red | `8a` a `8d` | 194 |
@@ -215,14 +203,26 @@ Dos avisos sobre estas ocho tareas:
 
 Las reglas visuales del handoff van ya por **R41** (antes R24). Las nuevas, R25 a R41, están transcritas en `Decisiones aprobadas.md` dentro del zip del handoff y conviene subirlas a [DECISIONES.md](DECISIONES.md) al tomar la primera de estas ocho tareas.
 
-### 191. Turno 5: escritorio como sistema (R25 a R30)
+La **tarea 191** (turno 5, parte 1: el chasis en cuatro puntos de quiebre) está **En proceso**, arriba. Las otras dos partes del turno 5 son estas:
 
-- **Descripción:** cuatro puntos de quiebre con una composición completa en cada uno (`<768` teléfono · `768-1279` sidebar estrecha de iconos · `1280-1679` sidebar + lista + documento · `>=1680` las tres zonas a 232 · 322 · 720 · 252). **Maestro-detalle desde 1280 px:** abrir un artículo no cierra la lista y editar ocurre en la misma columna, conservando la URL del artículo (decisión cerrada). Medida máxima de 720 px para todo texto corrido, incluido el Markdown del artículo. Un solo eje vertical por pantalla (se elimina el par `lg:px-10`/`lg:px-12` entre fichas hermanas). La barra de reanudar pasa al pie de la sidebar, en vez de flotar sobre el contenido.
-- **Motivo:** el turno 2 resolvió el escritorio de tres pantallas de Guías; este lo generaliza a toda la app. Hoy el hueco 768-1279 queda huérfano y ninguna pantalla ofrece maestro-detalle, así que documentar obliga a perder la lista.
-- **Impacto:** alto en escritorio, que es donde se documenta. Sin cambios de datos.
+### 199. Turno 5, parte 2: maestro-detalle desde 1280 px y la medida de 720 (R8, R29)
+
+- **Descripción:** desde 1280 px, abrir un artículo **no cierra la lista**: lista a la izquierda, documento en el centro y carril de contexto a la derecha (ficha, equipos vinculados e historial, sin empujar el procedimiento hacia abajo). Editar ocurre en la misma columna, con la lista intacta. La URL sigue siendo `/soluciones/:categoria/:articulo` (decisión cerrada por el usuario: compartir un enlace tiene que seguir funcionando), así que en escritorio esa misma dirección se pinta con la lista al lado y en teléfono a pantalla completa. Medida máxima de **720 px** para todo texto corrido, incluido el Markdown del artículo (**R8** aplicada donde más importa: hoy la ficha tiene líneas de unos 140 caracteres).
+- **Motivo:** en una ventana de 1440 px la ficha reemplaza la lista entera igual que en el teléfono, así que comparar dos procedimientos obliga a ir y volver. Y el lado derecho queda vacío mientras el dato de contexto no cabe.
+- **Impacto:** alto en escritorio, que es donde se documenta. Es el cambio que hace que documentar en PC valga la pena. Riesgo medio: toca el enrutado de las fichas.
 - **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/app/Chasis.tsx` (puntos de quiebre y la sidebar estrecha), `src/components/BarraReanudar.tsx` (cambia de sitio en escritorio), y las pantallas de lista y ficha de Guías, Equipos, Red y Bóveda.
-- **Dependencias:** las 185 (hecha) y 176 (escritorio de las cinco pantallas de Guías, pendiente), con la que se solapa: conviene decidir si 176 se absorbe aquí. Reglas que fija: **R25** a **R30**.
+- **Área afectada:** `src/app/Chasis.tsx` (el modo maestro-detalle), `src/features/soluciones/SolucionesPage.tsx`, `ArticuloPage.tsx`, `ArticuloForm.tsx`. Componentes nuevos: `CarrilContexto`, `VistaPreviaViva`, `MigaEnlazada`.
+- **Dependencias:** la **191** (hecha: los puntos de quiebre son su cimiento) y la **176**, con la que se solapa: 176 pedía el escritorio de las cinco pantallas de Guías sin mockup, y el turno 5 se lo da. **Conviene absorber 176 aquí y cerrarla**; decisión del usuario. Reglas que fija: **R8**, **R9**, **R29**.
+- **Hereda de la 191 la otra mitad de R26:** la cabecera del chasis (`pl-4`, `pl-2 pr-3`) y el cuerpo de las fichas (`lg:px-10`) no comparten eje vertical. Alinearlos toca la cabecera de las 44 rutas, así que se hace aquí, que es donde la ficha se rehace de todas formas.
+
+### 200. Turno 5, parte 3: teclado, foco visible y densidad de fila (R27, R28)
+
+- **Descripción:** lo que el handoff llama "lo que hace que la PC valga la pena, y hoy no existe". (a) **Cinco atajos:** ⌘K buscar · ↑↓ recorrer y ↵ abrir · E editar · ⌘S guardar · Esc cerrar. (b) **Foco visible obligatorio** en filas, pestañas, chips y celdas: el anillo de 2 px en acento con 2 px de separación que Nocturne ya define y que hoy no se aplica en ninguna fila, pestaña ni chip, así que tabular por una lista es invisible. (c) **Dos densidades de la misma fila** (60 px táctil, 34 px con ratón) conmutadas por `pointer: fine` y **no por ancho** (**R27**): misma fila, mismo orden y mismo significado, con el icono fuera del recuadro y los metadatos a la derecha. Caben 9 artículos donde antes cabían 5, y 18 personas donde hoy caben 9.
+- **Motivo:** hoy no hay un solo atajo de teclado en la mitad de la app donde se escribe, ni siquiera para el buscador global.
+- **Impacto:** alto para quien documenta desde la PC; bajo riesgo funcional. Transversal a todas las listas.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/components/FilaDispositivo.tsx`, `src/features/soluciones/FilaArticulo.tsx`, `src/components/HojaFiltro.tsx`, `src/app/Chasis.tsx` (pestañas y sidebar), y las listas de Personas, Ubicaciones y Diagnósticos. Componente nuevo: `FilaDensa`.
+- **Dependencias:** la **191**. Conviene hacerla después del turno 6 (tarea 192), que redefine `FilaDispositivo`. Reglas que fija: **R27** (la densidad la decide el puntero) y **R28** (todo lo que se tabula se ve al enfocarse).
 
 ### 192. Turno 6: sección Equipos (R31 a R36)
 

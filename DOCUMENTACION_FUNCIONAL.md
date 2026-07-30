@@ -94,7 +94,18 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 | **Documento** | fichas y listas internas: categoría, artículo, equipo, secreto, topología, Ubicaciones, Personas, Diagnóstico, Estadísticas, Sugerencias, Mi cuenta, Seguridad | regreso con el nombre de a dónde vuelve, y a la derecha las acciones de la pantalla | sí |
 | **Tarea** | lo que se hace y de lo que se sale: los cuatro editores, el asistente, el diagnóstico en ejecución, el escáner, las etiquetas, la importación y las tres migraciones | `BarraTarea`: rótulo ("Editando"), sobre qué, la ruta de vuelta escrita y una X | **no** |
 
-En **escritorio (>=1024px)** los niveles Sección y Documento muestran la barra lateral fija de 240px con la marca "Soluciones IT", **catorce destinos desde la tarea 183** (antes cinco) y el perfil al pie. En **móvil** muestran 5 pestañas inferiores fijas con desenfoque, **siempre las mismas para todos** desde la tarea 182 (regla R17). La columna de contenido crece por tramos (móvil 448px hasta 1240px en pantallas grandes) y **el chasis reserva el espacio que la barra ocupa** (regla R22), así que ninguna pantalla lo calcula a mano. El nivel Tarea va sin barra y sin sidebar, en columna de 448px.
+**Cuatro anchos, cuatro composiciones (desde la tarea 191, regla R30).** Cada punto de quiebre entrega una pantalla completa, y los define el chasis: ninguna pantalla los repite.
+
+| Ventana | Qué se ve |
+|---|---|
+| Menos de 768px | Teléfono: columna de 448px y las 5 pestañas inferiores. |
+| 768 a 1279px | Tableta: barra lateral estrecha de **solo iconos** (64px) y una columna de trabajo. Sin pestañas inferiores. |
+| 1280 a 1679px | Portátil: barra lateral completa de 240px con la marca "Soluciones IT", sus catorce destinos y el perfil al pie. |
+| 1680px o más | Monitor: barra lateral de 232px y hasta 1294px de contenido, el espacio de las tres zonas (lista, documento y contexto). |
+
+Antes la barra lateral no aparecía hasta 1024px, así que entre 768 y 1023 no había ni barra lateral ni pestañas al ancho: el contenido medía 768px y la barra de pestañas seguía anclada a 448px centrados, flotando debajo. Afectaba a un iPad en horizontal y a cualquier ventana a media pantalla. Las 5 pestañas de móvil son **siempre las mismas para todos** desde la tarea 182 (regla R17), y **el chasis reserva el espacio que la barra ocupa** (regla R22), así que ninguna pantalla lo calcula a mano. El nivel Tarea va sin barra y sin barra lateral, en columna de 448px.
+
+**El procedimiento a medias, en escritorio, vive al pie de la barra lateral** (tarea 191), encima de la cuenta, en vez de flotar sobre el contenido. En la barra estrecha queda solo el anillo de avance, con su botón de descarte debajo.
 
 **Barra superior global (`BarraSuperior`, desde la tarea 181).** Es la cabecera del nivel Sección: tres ranuras fijas y siempre en el mismo orden (regla R14): **título de la sección**, **estado del dato** (pastilla de sincronización) y **buscar + cuenta**. Las acciones propias de cada pantalla ("Crear", "Escanear", el menú "···", el subtítulo) van en la banda que queda justo debajo, dentro del mismo bloque pegajoso ([DECISIONES.md](DECISIONES.md) AD-023). La lupa abre el **buscador global en capa** desde cualquiera de las cinco, sin abandonar la pantalla; el avatar (iniciales del técnico) lleva a Mi cuenta y solo aparece en móvil, porque en escritorio la cuenta vive al pie del sidebar. La miga de pan del nivel Documento llega con la tarea 188.
 

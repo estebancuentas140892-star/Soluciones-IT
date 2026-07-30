@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-07-30
 
+### Cambiado (tarea 191): el chasis en cuatro puntos de quiebre
+
+**Área modificada:** `src/app/Chasis.tsx`, `src/index.css`, `src/components/BarraReanudar.tsx`, `src/features/dispositivos/DispositivoPage.tsx`, `src/features/soluciones/ArticuloPage.tsx`.
+**Motivo:** turno 5 del handoff "Auditoría de Soluciones TI" (mockups `5a` a `5d`), reglas **R25**, **R26** y **R30**. Los puntos de quiebre eran los de Tailwind por defecto (640/768/1024/1536) y solo el de 1024 cambiaba algo estructural, así que entre 768 y 1023 no había sidebar, el contenido ya medía 768 y la barra de pestañas seguía anclada a 448 px centrados: una isla flotante en cualquier iPad en horizontal o ventana a media pantalla.
+**Impacto esperado:** cierra el hueco de tableta para las 44 rutas a la vez, sin tocar ninguna pantalla (el ancho lo decide el chasis). Sin cambios de datos.
+
+- **Cambiado** los puntos de quiebre del chasis a cuatro, con una composición completa en cada uno: `<768` teléfono (columna de 448 y pestañas), `768` rail de iconos de 64 px sin pestañas, `1280` sidebar completa de 240, `1680` sidebar de 232 y columna de hasta 1294 (322 de lista + 720 de documento + 252 de contexto, el presupuesto de las tres zonas que reparte la tarea 199).
+- **Agregado** el punto de quiebre `3xl` como token de `@theme` en `src/index.css`, **en rem (105rem) y no en px**: ver [DECISIONES.md](DECISIONES.md) AD-028, porque en px la regla se emite antes que las de `sm`/`md`/`lg`/`xl` y queda pisada.
+- **Agregado** la variante `sidebar` de `BarraReanudar`: en escritorio el procedimiento a medias vive al pie del rail, encima de la cuenta, en vez de flotar sobre el contenido. En el rail estrecho queda solo el anillo de avance, con el botón de descarte debajo; sin arrastre, porque deslizar es un gesto de dedo.
+- **Cambiado** `lg:px-12` por `lg:px-10` en la ficha de equipo y la de artículo: eran 8 px de desalineación entre fichas hermanas y con la fila de chips de la propia ficha de equipo (**R26**).
+- **Documentación:** [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.0 y 2.10i; [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) sección del chasis; [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) 11.2; [DECISIONES.md](DECISIONES.md) AD-028.
+
+**Verificación:** typecheck, lint y build limpios; 1724 pruebas pasan (los 4 fallos de siempre, preexistentes y ajenos). **Medido en navegador real** con un banco temporal (retirado antes de commitear), en seis anchos: 375 (sin sidebar, pestañas, columna 375), 767 (sin sidebar, pestañas, columna 448), 768 (rail de 64, sin pestañas, columna 689), 1279 (rail de 64, columna 1040), 1280 (sidebar 240 con rótulo, columna 1025) y 1680 (sidebar 232, columna 1294). Sin desborde horizontal en ninguno. La barra de reanudar de escritorio se midió dentro del ancho real de sus dos railes: 46 px de contenido en el rail de 64 y 206 en el de 232, sin desborde, con el rótulo oculto por debajo de 1280 y el botón de descarte siempre presente. **Dos defectos encontrados al medir**, los dos invisibles leyendo el código y corregidos en la misma tarea: el punto de quiebre en px quedaba pisado por `xl` (ver AD-028) y la columna se estrechaba al ensanchar la ventana (1200 px a 1279, 1040 a 1280) porque la banda de tableta no tenía tope.
+
+**Pendiente de esta regla:** **R26** queda a medias. Se eliminó el par `lg:px-10`/`lg:px-12` entre fichas hermanas, que es lo que el handoff midió, pero la cabecera del chasis (`pl-4`) y el cuerpo (`lg:px-10`) siguen sin compartir eje. Alinearlos toca la cabecera de las 44 rutas y se hace en la tarea 199, que rehace la ficha para el maestro-detalle.
+
 ### Agregado (tarea 187): comportamientos dinámicos del chasis
 
 **Área modificada:** `src/app/Chasis.tsx`, `src/app/direccionTransicion.ts`, `src/app/memoriaScroll.ts`, `src/app/memoriaPestana.ts` (los tres nuevos), `src/components/CabeceraColapsable.tsx` y `src/components/AvisoPestana.tsx` (nuevos), `src/components/BarraSuperior.tsx`, `src/components/PastillaSync.tsx`, `src/features/inicio/usePendientes.ts` (nuevo), `src/features/inicio/InicioPage.tsx`, `src/features/soluciones/SolucionesPage.tsx`, `src/lib/navegacion.ts`, `src/index.css`.

@@ -1,5 +1,52 @@
 # Historial de tareas finalizadas
 
+### 191. Turno 5, parte 1: el chasis en cuatro puntos de quiebre (R25, R26, R30)
+
+**Estado**: TERMINADA y **verificada en navegador** el 2026-07-30. Typecheck, lint y build limpios; 1724 pruebas pasan. **Prioridad**: Media. **Origen**: turno 5 del handoff "Auditoría de Soluciones TI", mockups `5a` a `5d`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
+
+Cuatro puntos de quiebre con una composición completa en cada uno, definidos en el chasis y en ninguna pantalla (**R25**, **R30**):
+
+| Ventana | Sidebar | Pestañas | Tope de columna |
+|---|---|---|---|
+| `<768` | oculta | sí | 448 |
+| `768-1279` (`md`) | rail de iconos, 64 px | no | 1040 |
+| `1280-1679` (`xl`) | completa, 240 px | no | 1040 |
+| `>=1680` (`3xl`) | completa, 232 px | no | 1294 |
+
+- **El rail estrecho cierra el hueco de tableta.** Antes la sidebar no aparecía hasta 1024, así que entre 768 y 1023 el contenido ya medía 768 mientras la barra de pestañas seguía anclada a 448 px centrados: una isla flotando debajo, en cualquier iPad en horizontal o ventana a media pantalla. Ahora la barra de pestañas se retira en el mismo punto en que aparece el rail. En el rail, cada destino conserva su `title` (el rótulo no se lee) y los dos grupos pierden su encabezado pero mantienen el separador, que es lo que agrupa.
+- **`BarraReanudar` gana la variante `sidebar`**: en escritorio va al pie del rail, encima de la cuenta, en vez de flotar sobre el contenido. Sin arrastre (deslizar es un gesto de dedo; el botón de descarte siempre estuvo).
+- **Un solo eje vertical, a medias (R26).** Se eliminó el par `lg:px-10`/`lg:px-12`, que eran 8 px de desalineación entre la ficha de equipo, la de artículo, la de credencial y la propia fila de chips de la ficha de equipo. **Lo que falta:** la cabecera del chasis (`pl-4`) y el cuerpo (`lg:px-10`) siguen sin compartir eje; alinearlos toca la cabecera de las 44 rutas y va en la tarea 199.
+
+**Dos defectos encontrados al medir en el navegador**, los dos invisibles leyendo el código:
+
+1. **El punto de quiebre en px quedaba pisado.** `--breakpoint-3xl: 1680px` generaba la media query correcta y `matchMedia('(min-width: 1680px)')` daba `true`, pero la sidebar seguía midiendo 240 a 1680 px. Causa: Tailwind ordena las media queries por valor y no compara unidades distintas, así que el bloque en px se emite ANTES de los de rem (`sm`/`md`/`lg`/`xl`) y `xl:w-60` ganaba por orden. Corregido declarándolo en rem (`105rem`). Ver [DECISIONES.md](DECISIONES.md) AD-028.
+2. **La columna se estrechaba al ensanchar la ventana.** La primera versión dejaba la banda de tableta sin tope (`md:max-w-none`) y ponía el de 1040 en `xl`, así que a 1279 la columna medía 1200 y a 1280 caía a 1040. Corregido subiendo el tope a `md`, de modo que los tres tramos de escritorio son monótonos.
+
+**Verificación.** Medido con un banco temporal fuera de `RequireAuth` (retirado antes de commitear) en seis anchos: 375 (sin sidebar, pestañas, columna 375), 767 (sin sidebar, pestañas, columna 448), 768 (rail 64, sin pestañas, columna 689), 1279 (rail 64, columna 1040), 1280 (sidebar 240 con rótulo, columna 1025) y 1680 (sidebar 232, columna 1294). Sin desborde horizontal en ninguno. La barra de reanudar de escritorio se midió dentro del ancho real de sus dos railes: 46 px de contenido en el de 64 y 206 en el de 232, sin desborde, con el rótulo oculto por debajo de 1280 (`display: none`) y el botón de descarte siempre presente. Los 4 fallos de pruebas restantes son los preexistentes y ajenos de `archivosPendientes.test.ts` (RLS de Storage), duplicados por el worktree obsoleto de la tarea 178.
+
+**Ubicación**: `src/app/Chasis.tsx` (`ANCHO_CONTENIDO`, `ALTO_PESTANAS`, el `aside` y la `nav` de pestañas), `src/index.css` (`--breakpoint-3xl` en `@theme`), `src/components/BarraReanudar.tsx` (variante `sidebar`), `src/features/dispositivos/DispositivoPage.tsx` y `src/features/soluciones/ArticuloPage.tsx` (`lg:px-10`).
+
+### 187. Comportamientos dinámicos del chasis (R20, R21, R23)
+
+**Estado**: TERMINADA el 2026-07-30 **con una verificación pendiente** (ver abajo). Typecheck, lint y build limpios; 1724 pruebas pasan, 24 nuevas. **Prioridad**: Media. **Origen**: turno 4 del handoff "Auditoría de Soluciones TI", mockup `4e`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
+
+Los cuatro comportamientos del mockup `4e`, más la pastilla adaptativa:
+
+- **Transiciones con dirección (R21).** `src/app/direccionTransicion.ts` decide `entra` (bajar un nivel), `vuelve` (subir) o `lateral` (entre raíces de pestaña) comparando la profundidad de la ruta anterior con la actual; el chasis lo publica como `data-transicion` en la columna de contenido y los keyframes viven en `src/index.css` (180 ms de desplazamiento, 120 ms de fundido), anulados en bloque bajo `prefers-reduced-motion`. La memoria de la última navegación se indexa por `location.key` y no por número de renders, para ser correcta bajo `StrictMode`, que monta cada componente dos veces en desarrollo: sin esa clave la segunda pasada veía la ruta ya actualizada por la primera y calculaba `lateral` para todo.
+- **Memoria por pestaña (R20).** `src/app/memoriaScroll.ts` guarda la posición por ruta y la restaura al montar, con un reintento a los dos fotogramas porque los datos de Dexie llegan después del primer render y la lista todavía es corta. `src/app/memoriaPestana.ts` guarda la cadena de búsqueda por raíz de pestaña y `destinoDePestana()` la repone en el `to` del enlace; estando dentro de la pestaña el enlace queda pelado, así que tocar la pestaña activa suelta el filtro y vuelve a su raíz. Solo se recuerda la búsqueda de la **raíz**, nunca la de una ficha interna: los filtros son de la lista.
+- **Avisos con dato detrás (R23).** `src/components/AvisoPestana.tsx` con dos variantes: punto (Guías, procedimiento a medias descartado) y número (Más, con "9+" por encima de nueve). El conteo sale de `src/features/inicio/usePendientes.ts`, un hook nuevo al que se mudaron las cinco consultas que vivían en `InicioPage`, porque el chasis necesita el total **real** y no los seis que Inicio muestra.
+- **`CabeceraColapsable`.** El nombre de la sección pasa de 21 a 14 px al desplazarse y no se va nunca de pantalla. Umbral de 12 px, deliberadamente bajo, y el trabajo diferido a `requestAnimationFrame` con guardia para no encolar dos por fotograma.
+- **`PastillaSync` adaptativa.** Al día no gasta palabras en la buena noticia: solo el icono, en un hueco de 44x44 igual al del resto de botones de la fila. Los otros tres estados dicen el número real ("3 sin subir", "2 con error") en vez de un genérico "Sincronizando". **Queda fuera** la franja de ancho completo que el mockup dibuja para "sin conexión con cambios": exigiría reestructurar la fila de tres ranuras de `BarraSuperior` en todas las pantallas de sección.
+- **Tocar la pestaña activa** en su raíz pelada sube al principio de la lista; con un filtro puesto, o desde una ficha interna, primero vuelve a la raíz.
+
+**Hallazgo de la implementación.** La decisión aprobada pedía restaurar "scroll **y filtros**", y los filtros no se podían restaurar porque no existían en la URL: el chip de categoría de `SolucionesPage` solo se LEÍA de la URL como semilla ("los cambios de chip posteriores solo tocan el estado local", decía su propio comentario). Es exactamente lo que diagnostica el mockup `4e`: "el filtro vive en la URL, pero la pestaña apunta a /soluciones pelado". Así que la tarea incluyó que los tres filtros de eje (categoría, tipo, etiqueta) **escriban** en la URL con `replace` (sin ensuciar el historial; el texto buscado no viaja, es transitorio y reescribiría la URL en cada tecla). Efecto lateral bueno: el filtro se puede compartir por enlace.
+
+**Verificación.** Typecheck, lint y build limpios. 1724 pruebas pasan; los 4 fallos restantes son los mismos preexistentes y ajenos de `archivosPendientes.test.ts` (RLS de Storage con el `.env` real), duplicados por el worktree obsoleto de la tarea 178. **Despliegue confirmado en producción** por contenido: el CSS de producción trae los tres keyframes y el selector `data-transicion`, el chunk `Chasis-*.js` trae las cadenas nuevas ("sin subir", "con error", "Subiendo") y ya no trae las viejas ("Sincronizando", "Al día", "Con error", "Sin conexión"); el diff normalizando hashes contra el build local sale idéntico.
+
+**VERIFICACIÓN PENDIENTE (no es un defecto conocido, es un límite del entorno).** Con el banco temporal de siempre (fuera de `RequireAuth`, ya retirado) se confirmó por DOM y estilo computado que la pastilla al día mide exactamente 44x44 sin texto, que el contenedor recibe `data-transicion` con la animación correcta aplicada (`chasis-lateral`, 0,12 s) y que `AvisoPestana` dibuja sus dos variantes. **Lo que depende de scroll o de clic quedó sin verificar**: cabecera colapsable, memoria de scroll y memoria de filtros de punta a punta. Con el panel del navegador oculto la página no compone fotogramas, así que el navegador no despacha eventos de `scroll` ni de puntero al React de la página (comprobado: un clic real sobre un botón cuyo centro devuelve el `elementFromPoint` correcto no incrementó su contador), y el JS inyectado corre en un mundo aislado desde el que no se pueden simular. **Basta abrir el panel del navegador y repetir esa parte.**
+
+**Ubicación**: `src/app/direccionTransicion.ts` (+ `.test.ts`), `src/app/memoriaScroll.ts`, `src/app/memoriaPestana.ts` (+ `.test.ts`), `src/components/CabeceraColapsable.tsx`, `src/components/AvisoPestana.tsx`, `src/features/inicio/usePendientes.ts` (nuevos); `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `src/components/PastillaSync.tsx`, `src/features/inicio/InicioPage.tsx`, `src/features/soluciones/SolucionesPage.tsx`, `src/lib/navegacion.ts` (+ `.test.ts`), `src/index.css` (modificados). Commit `f73467b`.
+
 ### 186. BarraReanudar: el procedimiento a medias viaja contigo (R23)
 
 **Estado**: TERMINADA el 2026-07-28. Typecheck, lint y build limpios; 1702 pruebas pasan. **Prioridad**: Alta. **Origen**: turno 4 del handoff "Auditoría de Soluciones TI", mockup `4e`. **Modelo/esfuerzo**: Sonnet 5 / Alto, sin Ultracode.

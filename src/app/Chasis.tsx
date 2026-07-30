@@ -111,7 +111,35 @@ const DESTINO_MAS: Destino = {
 // La auditoría del handoff hablaba de "una barra que mide 53": ese dato
 // es anterior a la tarea 182, que subió las celdas a 52px de mínimo y el
 // rótulo a 12px. Reservar 53 dejaba 12px de contenido bajo la barra.
-const ALTO_PESTANAS = 'pb-[calc(65px+env(safe-area-inset-bottom))] lg:pb-0'
+const ALTO_PESTANAS = 'pb-[calc(65px+env(safe-area-inset-bottom))] md:pb-0'
+
+// Los cuatro puntos de quiebre del chasis (tarea 191, turno 5, regla
+// R30: ningún ancho intermedio queda huérfano). Cada uno entrega una
+// composición completa, y son solo cuatro:
+//
+//   <768   teléfono: columna de 448 y pestañas abajo.
+//   768    (`md`) rail de iconos de 64 px + una columna de trabajo. Es el
+//          hueco que se cierra aquí: antes la sidebar no llegaba hasta
+//          1024, así que el contenido ya medía 768 mientras la barra de
+//          pestañas seguía anclada a 448 centrados, una isla flotante en
+//          cualquier iPad en horizontal o ventana a media pantalla.
+//   1280   (`xl`) sidebar completa de 240 px.
+//   1680   (`3xl`) presupuesto de las tres zonas: sidebar de 232 px y
+//          1.294 de contenido (322 de lista + 720 de documento + 252 de
+//          contexto). Las tres zonas propiamente dichas las reparte la
+//          tarea 199; aquí se reserva su ancho.
+//
+// Antes los puntos eran 640/768/1024/1536 y solo el de 1024 cambiaba algo
+// estructural: `sm` y `2xl` movían el ancho máximo sin recomponer nada.
+//
+// El tope de la columna crece y nunca se estrecha. La primera versión de
+// esta tarea dejaba la banda de tableta sin tope (`md:max-w-none`) y el
+// tope de 1040 aparecía en `xl`: medido en el navegador, a 1279 px la
+// columna daba 1200 y a 1280 caía a 1040, es decir, el contenido se
+// estrechaba al ensanchar la ventana. Con el tope puesto ya en `md` los
+// tres tramos de escritorio son monótonos: hasta 1040 y, desde 1680,
+// hasta 1294 (322 de lista + 720 de documento + 252 de contexto).
+const ANCHO_CONTENIDO = 'max-w-md md:max-w-[1040px] 3xl:max-w-[1294px]'
 
 interface PropsComunes {
   children: ReactNode
@@ -245,17 +273,27 @@ export function Chasis(props: Props) {
   const destinosMobile = [...DESTINOS_BASE, DESTINO_MAS]
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text lg:flex">
-      {/* Sidebar de escritorio: fija a 240px. Catorce destinos desde la
-          tarea 183 (mockup 3e): los cinco módulos, "Herramientas" y
-          "Registros" (los ocho que hasta la 182 solo tenían puerta en
-          "Más", que no existe fuera de móvil), y el perfil al pie. Antes
-          el sidebar tenía 240px de alto libre y ofrecía cinco destinos
-          de catorce. */}
-      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col gap-[18px] border-r border-noct-divider bg-noct-surface px-3 py-5 lg:flex">
-        <div className="flex items-center gap-2 px-2">
-          <Marca className="h-[22px] w-[22px] text-noct-accent" />
-          <span className="text-[15px] font-semibold">Soluciones IT</span>
+    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text md:flex">
+      {/* Sidebar de escritorio. Catorce destinos desde la tarea 183
+          (mockup 3e): los cinco módulos, "Herramientas" y "Registros"
+          (los ocho que hasta la 182 solo tenían puerta en "Más", que no
+          existe fuera de móvil), y el perfil al pie.
+
+          Dos formas desde la tarea 191 (turno 5): **rail de iconos** de
+          64 px entre 768 y 1279, y **completa** de 240 px desde 1280
+          (232 desde 1680, ver ANCHO_CONTENIDO). El rail estrecho es lo
+          que cierra el hueco de tableta: antes la sidebar no aparecía
+          hasta 1024 y en medio no había navegación de escritorio ni
+          barra de pestañas al ancho, solo una isla de 448 px.
+
+          En el rail, cada destino conserva su `title` porque el rótulo
+          no se lee; los dos grupos pierden su encabezado (un título de
+          sección no cabe ni se entiende en 64 px) pero mantienen el
+          separador, que es lo que agrupa. */}
+      <aside className="sticky top-0 hidden h-svh w-16 shrink-0 flex-col gap-[18px] overflow-y-auto border-r border-noct-divider bg-noct-surface px-2 py-5 md:flex xl:w-60 xl:px-3 3xl:w-[232px]">
+        <div className="flex items-center justify-center gap-2 xl:justify-start xl:px-2">
+          <Marca className="h-[22px] w-[22px] shrink-0 text-noct-accent" />
+          <span className="hidden text-[15px] font-semibold xl:inline">Soluciones IT</span>
         </div>
         <nav className="flex flex-col gap-0.5">
           {destinosDesktop.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
@@ -264,8 +302,9 @@ export function Chasis(props: Props) {
               to={destinoDePestana(to, location.pathname, RAICES_DE_PESTANA)}
               end={end}
               onClick={() => alTocarPestana(to)}
+              title={label}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-md px-2.5 py-[9px] text-sm ${
+                `flex min-h-11 items-center justify-center gap-2.5 rounded-md text-sm outline-none focus-visible:outline-2 focus-visible:outline-noct-accent xl:justify-start xl:px-2.5 xl:py-[9px] ${
                   isActive
                     ? 'bg-noct-accent/[.12] font-semibold text-noct-accent'
                     : 'font-medium text-noct-neutral-400 hover:bg-noct-text/[.05]'
@@ -275,42 +314,62 @@ export function Chasis(props: Props) {
               {({ isActive }) => (
                 <>
                   {isActive ? <IconoActivo size={18} /> : <Icono size={18} />}
-                  {label}
+                  <span className="hidden xl:inline">{label}</span>
                 </>
               )}
             </NavLink>
           ))}
         </nav>
 
-        <div>
-          <TituloSeccion className="mb-1.5 px-2.5">Herramientas</TituloSeccion>
+        <div className="border-t border-noct-divider pt-2.5 xl:border-t-0 xl:pt-0">
+          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Herramientas</TituloSeccion>
           <nav className="flex flex-col gap-0.5">
             <EnlaceGrupo to="/diagnostico" label="Diagnóstico" Icono={TreeStructure} />
             <EnlaceGrupo to="/escaner" label="Escanear" Icono={QrCode} />
           </nav>
         </div>
 
-        <div>
-          <TituloSeccion className="mb-1.5 px-2.5">Registros</TituloSeccion>
+        <div className="border-t border-noct-divider pt-2.5 xl:border-t-0 xl:pt-0">
+          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Registros</TituloSeccion>
           <nav className="flex flex-col gap-0.5">
             <EnlaceGrupo to="/ubicaciones" label="Ubicaciones" Icono={MapPin} />
             <EnlaceGrupo to="/personas" label="Personas" Icono={UsersThree} />
           </nav>
         </div>
 
-        <div className="mt-auto border-t border-noct-divider pt-2.5">
+        {/* El procedimiento a medias vive aquí en escritorio (tarea 191),
+            encima de la cuenta, en vez de flotar sobre el contenido. */}
+        {reanudar.actual && !reanudar.descartado && (
+          <div className="mt-auto">
+            <BarraReanudar
+              variante="sidebar"
+              articulo={reanudar.actual.articulo}
+              hechos={reanudar.actual.hechos}
+              total={reanudar.actual.total}
+              minutosRestantes={reanudar.actual.minutosRestantes}
+              onDescartar={reanudar.descartar}
+            />
+          </div>
+        )}
+
+        <div
+          className={`border-t border-noct-divider pt-2.5 ${
+            reanudar.actual && !reanudar.descartado ? '' : 'mt-auto'
+          }`}
+        >
           <Link
             to="/cuenta"
-            className="flex items-center gap-2.5 rounded-md p-1.5 hover:bg-noct-text/[.05]"
+            title={usuario?.nombre || 'Mi cuenta'}
+            className="flex items-center justify-center gap-2.5 rounded-md p-1.5 hover:bg-noct-text/[.05] xl:justify-start"
           >
-            <Avatar nombre={usuario?.nombre} correo={usuario?.correo} className="h-[30px] w-[30px] text-[11px]" />
-            <span className="min-w-0 flex-1">
+            <Avatar nombre={usuario?.nombre} correo={usuario?.correo} className="h-[30px] w-[30px] shrink-0 text-[11px]" />
+            <span className="hidden min-w-0 flex-1 xl:block">
               <span className="block truncate text-[12.5px] font-medium leading-[1.2]">
                 {usuario?.nombre || 'Mi cuenta'}
               </span>
               <span className="mt-0.5 block text-[11px] text-noct-neutral-400">Mi cuenta</span>
             </span>
-            <CaretRight size={13} className="shrink-0 text-noct-neutral-400" aria-hidden />
+            <CaretRight size={13} className="hidden shrink-0 text-noct-neutral-400 xl:block" aria-hidden />
           </Link>
         </div>
       </aside>
@@ -325,7 +384,7 @@ export function Chasis(props: Props) {
       <div className="flex min-h-svh min-w-0 flex-1 flex-col">
         <div
           data-transicion={direccion}
-          className={`mx-auto flex w-full max-w-md flex-1 flex-col sm:max-w-xl md:max-w-3xl lg:max-w-[1040px] 2xl:max-w-[1240px] ${ALTO_PESTANAS}`}
+          className={`mx-auto flex w-full flex-1 flex-col ${ANCHO_CONTENIDO} ${ALTO_PESTANAS}`}
         >
           {cabecera}
           {props.children}
@@ -349,7 +408,7 @@ export function Chasis(props: Props) {
           (R16 pide al menos dos): barra de 2px sobre la pestaña activa,
           icono relleno y color de acento; más presionado (fondo de acento
           al 10%) y foco de teclado (anillo de 2px), que antes no existían. */}
-      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] sm:max-w-xl md:max-w-3xl lg:hidden">
+      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden">
         {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => {
           // Puntos y números de la pestaña (R23: un aviso solo si hay un
           // dato detrás, nunca decorativo). Guías (tarea 186): mientras
@@ -414,8 +473,9 @@ function EnlaceGrupo({
   return (
     <NavLink
       to={to}
+      title={label}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] ${
+        `flex min-h-11 items-center justify-center gap-2.5 rounded-md text-[13px] outline-none focus-visible:outline-2 focus-visible:outline-noct-accent xl:min-h-0 xl:justify-start xl:px-2.5 xl:py-[7px] ${
           isActive
             ? 'font-medium text-noct-accent-300'
             : 'font-normal text-noct-neutral-300 hover:bg-noct-text/[.05]'
@@ -425,7 +485,7 @@ function EnlaceGrupo({
       {({ isActive }) => (
         <>
           <Icono size={17} className={isActive ? 'text-noct-accent' : 'text-noct-neutral-400'} aria-hidden />
-          {label}
+          <span className="hidden xl:inline">{label}</span>
         </>
       )}
     </NavLink>
