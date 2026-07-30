@@ -221,8 +221,10 @@ export function Chasis(props: Props) {
 
   // Nivel 3: tarea con salida. Sin pestañas y sin sidebar (la tarea
   // ocupa la pantalla entera, como hasta ahora), con la BarraTarea
-  // orientando en su lugar. El escritorio de los editores lo resuelve
-  // la tarea 176, que les da su propio ancho.
+  // orientando en su lugar. Los cuatro puntos de quiebre de la tarea 191
+  // NO llegan aquí a propósito: darle ancho propio a los editores es la
+  // tarea 199, que decide cómo se reparte (rail de secciones, formulario
+  // de 640 px y vista previa viva) en vez de solo estirar la columna.
   if (props.modo === 'tarea') {
     return (
       <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">

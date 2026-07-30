@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-07-30
 
+### Documentación (tarea 176): cerrada por absorción en la tarea 199
+
+**Área modificada:** [TAREAS.md](TAREAS.md), [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), [DECISIONES.md](DECISIONES.md) (AD-021 y AD-026), `src/app/Chasis.tsx` (un comentario).
+**Motivo:** decisión del usuario. La tarea 176 (escritorio de las cinco pantallas de Soluciones, turno 2 del handoff) y la parte 2 del turno 5 (tarea 199, maestro-detalle) eran el mismo trabajo visto desde dos turnos distintos: las dos rehacían la misma lista, la misma ficha y el mismo editor. Mantenerlas separadas obligaba a escribir esas tres pantallas dos veces.
+**Impacto esperado:** ninguno en el comportamiento de la app. Un solo frente de trabajo para el escritorio de Guías.
+
+- **Eliminado** la tarea 176 del tablero, con su contenido **íntegro** trasladado al frente (b) de la tarea 199: los mockups `2a` a `2f`, sus cuatro reglas (**R8** a **R11**) y sus tres componentes nuevos (`RailSecciones`, `CarrilContexto`, `VistaPreviaViva`). No se descartó nada.
+- **Corregido** una ubicación caduca que la 176 arrastraba: apuntaba al tope de ancho de `src/app/ShellNocturne.tsx` línea 108, archivo que la tarea 185 eliminó y cuyo tope reemplazó la 191 en la constante `ANCHO_CONTENIDO` de `Chasis.tsx`.
+- **Cambiado** el comentario del nivel `tarea` en `Chasis.tsx`, que remitía a la 176 para el ancho de los editores, y ahora remite a la 199 diciendo por qué los cuatro puntos de quiebre de la 191 no llegan a ese nivel a propósito.
+
 ### Cambiado (tarea 191): el chasis en cuatro puntos de quiebre
 
 **Área modificada:** `src/app/Chasis.tsx`, `src/index.css`, `src/components/BarraReanudar.tsx`, `src/features/dispositivos/DispositivoPage.tsx`, `src/features/soluciones/ArticuloPage.tsx`.

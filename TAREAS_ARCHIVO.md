@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+### 176. Rediseño de escritorio de las cinco pantallas de Soluciones (CERRADA POR ABSORCIÓN)
+
+**Estado**: CERRADA el 2026-07-30 **por absorción en la tarea 199**, por decisión del usuario. No se implementó bajo este número y no se descartó: su contenido íntegro se trasladó. **Prioridad**: era Media. **Origen**: turno 2 del handoff "Auditoría de Soluciones TI", mockups `2a` a `2f`.
+
+**Por qué se absorbió.** La 176 y la parte 2 del turno 5 (tarea 199) eran el mismo trabajo visto desde dos turnos distintos del handoff: la 176 pedía el escritorio de las cinco pantallas de Guías a 1440 px (turno 2), y la 199 el maestro-detalle como sistema de toda la app (turno 5). Las dos rehacían la misma ficha, la misma lista y el mismo editor. Mantenerlas separadas obligaba a escribir esas tres pantallas dos veces, y la segunda pasada habría deshecho parte de la primera.
+
+**Qué se trasladó, íntegro, al frente (b) de la tarea 199:** los mockups `2a` a `2f`; la lista con el contenido anclado a la izquierda, una sola columna de filas de 700 px, buscador de 420 px con su atajo `/` y el rail de tipos con rótulo, casilla y contador; la ficha con medida de lectura a la izquierda, carril pegajoso de metadatos e índice de pasos, y sin barra de progreso pegajosa ni barra inferior; el editor con rail vertical de secciones, formulario de 640 px y vista previa viva permanente en vez de modal, con las acciones en la cabecera; los estados vacíos alineados a la izquierda y los adjuntos sin `grid-cols-2` fijo. También sus cuatro reglas (**R8** medida máxima, **R9** tres zonas, **R10** campos a su tamaño, **R11** sin barras fijas en escritorio) y sus tres componentes nuevos (`RailSecciones`, `CarrilContexto`, `VistaPreviaViva`).
+
+**Ubicación caduca corregida al trasladarla.** La 176 apuntaba al tope `lg:max-w-[1040px] 2xl:max-w-[1240px]` de `src/app/ShellNocturne.tsx`, línea 108. Ese archivo **ya no existe**: la tarea 185 lo eliminó al unificar el chasis, y ese tope lo reemplazó la tarea 191 en la constante `ANCHO_CONTENIDO` de `src/app/Chasis.tsx`. Parte de la premisa de la 176 ya está resuelta por esas dos tareas: las cinco pantallas ya tienen contenedor y puntos de quiebre, así que lo que queda en la 199 es repartir el ancho por dentro.
+
+**Referencias actualizadas en el mismo cambio**: [TAREAS.md](TAREAS.md) (el bloque del turno 2 y el orden recomendado), [DECISIONES.md](DECISIONES.md) AD-021 y AD-026, la entrada de la tarea 185 de este archivo, y el comentario del nivel `tarea` en `src/app/Chasis.tsx`.
+
 ### 191. Turno 5, parte 1: el chasis en cuatro puntos de quiebre (R25, R26, R30)
 
 **Estado**: TERMINADA y **verificada en navegador** el 2026-07-30. Typecheck, lint y build limpios; 1724 pruebas pasan. **Prioridad**: Media. **Origen**: turno 5 del handoff "Auditoría de Soluciones TI", mockups `5a` a `5d`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
@@ -88,7 +100,7 @@ Los cuatro comportamientos del mockup `4e`, más la pastilla adaptativa:
 
 **Tres pantallas conservan su contenedor propio y usan `BarraTarea` suelta**, con motivo escrito en el código: el **escáner** (el video va detrás a pantalla completa, con velo y `overflow-hidden`), las **etiquetas QR** (la hoja de impresión es hermana de la columna, fuera de ella) y el **importador**, que trae su propio flujo de 3 pasos con barra inferior.
 
-**Decisiones registradas**: [DECISIONES.md](DECISIONES.md) **AD-026** (los tres niveles, qué pantalla es cuál, y por qué el nivel `tarea` sigue sin sidebar en escritorio: dárselo es la tarea 176, que trae su mockup) y **AD-027** (la reserva se mide, no se copia del handoff).
+**Decisiones registradas**: [DECISIONES.md](DECISIONES.md) **AD-026** (los tres niveles, qué pantalla es cuál, y por qué el nivel `tarea` sigue sin sidebar en escritorio: dárselo es la tarea 199, que era la 176 hasta que la absorbió el 2026-07-30, y trae su mockup) y **AD-027** (la reserva se mide, no se copia del handoff).
 
 **Verificación**: lint, `tsc -b` y build limpios. 1702 pruebas pasan; los 4 fallos restantes son los mismos **preexistentes y ajenos** de `archivosPendientes.test.ts` (RLS de Storage con el `.env` real de la sesión), duplicados por el worktree obsoleto de la tarea 178. **Los tres niveles SÍ se verificaron en navegador real**, con un banco de pruebas temporal montado fuera de `RequireAuth` y **retirado antes de commitear** (confirmado con `git status`): a 375x812 el nivel sección monta la barra superior con sus tres ranuras y las cinco pestañas; el documento conserva las pestañas y su regreso apunta a donde dice su etiqueta; el tarea va sin pestañas, sin sidebar, con la barra de superficie, el rótulo, el título, "Guías › Impresoras · vuelves aquí al terminar" y la X con su destino. A 1280x800, sección y documento muestran el sidebar y ocultan las pestañas; tarea sigue en columna de 448 px. Medido que la reserva (65 px) iguala el alto real de la barra y que, tras desplazarse al fondo, la última fila no queda tapada.
 
