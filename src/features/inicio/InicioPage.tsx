@@ -43,7 +43,8 @@ import {
 import { etiquetaResuelto } from '../historial/lineaDeTiempo'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
-import { calcularPendientes, type ItemPendiente } from './pendientes'
+import type { ItemPendiente } from './pendientes'
+import { usePendientes } from './usePendientes'
 import { problemasFrecuentesInicio } from './problemasFrecuentes'
 
 // Pantalla de Inicio en el sistema Nocturne (re-autoria del handoff
@@ -97,68 +98,11 @@ export function InicioPage() {
   // aprobada por el usuario el 2026-07-21 con el contenido recomendado):
   // bloque derivado de lo que ya significa "pendiente" en los datos
   // reales, sin tabla ni esquema nuevos. Ver src/features/inicio/pendientes.ts.
+  // Las cinco consultas viven en `usePendientes` (tarea 187): el chasis
+  // también las necesita, para el número de la pestaña Más.
   const perfil = usePerfilVivo()
-  const borradores = useLiveQuery(
-    () => db.articulos.filter((a) => !a.eliminadoEn && a.estado === 'borrador').toArray(),
-    [],
-    [],
-  )
-  const credencialesConVencimiento = useLiveQuery(
-    () => db.credenciales.filter((c) => !c.eliminadoEn && Boolean(c.venceEn)).toArray(),
-    [],
-    [],
-  )
-  // Campos protegidos de equipo con vencimiento (hallazgo S2): la otra
-  // mitad de la bóveda, mismo criterio que credencialesConVencimiento.
-  const camposProtegidosConVencimiento = useLiveQuery(
-    () => db.campos_protegidos.filter((c) => !c.eliminadoEn && Boolean(c.venceEn)).toArray(),
-    [],
-    [],
-  )
-  // Solo nombre e id: lo mínimo para resolver el nombre vivo del equipo
-  // en el detalle del pendiente, sin cargar la ficha completa.
-  const nombresDispositivosPorId = useLiveQuery(
-    async () => new Map((await db.dispositivos.toArray()).map((d) => [d.id, d.nombre])),
-    [],
-    new Map<string, string>(),
-  )
-  const ejecucionesConSugerencia = useLiveQuery(
-    () => db.ejecuciones_diagnostico.filter((e) => e.motivo === 'encontro_otra_solucion').toArray(),
-    [],
-    [],
-  )
-  // Artículos que ya cerraron una sugerencia (tarea 140). Consulta
-  // propia y no `borradores`: el artículo puede estar publicado, y ese
-  // es justamente el caso en que la sugerencia está más cerrada.
-  const articulosDeSugerencia = useLiveQuery(
-    () => db.articulos.filter((a) => !a.eliminadoEn && Boolean(a.origenSugerenciaId)).toArray(),
-    [],
-    [],
-  )
-  const pendientes = useMemo(
-    () =>
-      perfil
-        ? calcularPendientes({
-            articulos: borradores,
-            credenciales: credencialesConVencimiento,
-            camposProtegidos: camposProtegidosConVencimiento,
-            nombresDispositivosPorId,
-            ejecuciones: ejecucionesConSugerencia,
-            articulosDeSugerencia,
-            usuarioId: perfil.id,
-            puedeVerBoveda: perfil.puedeVerBoveda,
-          })
-        : [],
-    [
-      perfil,
-      borradores,
-      credencialesConVencimiento,
-      camposProtegidosConVencimiento,
-      nombresDispositivosPorId,
-      ejecucionesConSugerencia,
-      articulosDeSugerencia,
-    ],
-  )
+  const todosPendientes = usePendientes()
+  const pendientes = useMemo(() => todosPendientes.slice(0, 6), [todosPendientes])
 
   // Articulos marcados por el equipo como "ruta de inicio" (ver
   // ArticuloForm): puerta de entrada para quien recien llega. Menor

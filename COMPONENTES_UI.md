@@ -87,6 +87,11 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
   - `barra` es siempre la banda de controles propios de la pantalla, dentro del mismo bloque pegajoso que la cabecera (AD-023).
 - **Reserva su propio espacio (regla R22).** La columna de contenido lleva `pb-[calc(65px+env(safe-area-inset-bottom))] lg:pb-0` en los niveles con pestañas, así que ninguna pantalla calcula a mano el alto de la barra. Los 65 px son **medidos** (63,6 de celda + 1 de borde), no los 53 que citaba la auditoría, un dato anterior a la tarea 182.
 - **`BarraReanudar` (tarea 186):** en `seccion` y `documento` (nunca en `tarea`), monta la barra flotante del procedimiento a medias más reciente (ver 2.10i) a partir de `useReanudar()`. Mientras esté descartada, la pestaña Guías (solo móvil) muestra un punto de aviso junto a su icono.
+- **Comportamientos dinámicos (tarea 187).** Los cuatro se calculan aquí porque el chasis es el único envoltorio de TODAS las pantallas:
+  - **Avisos con dato detrás (R23):** punto en Guías (procedimiento a medias descartado) y número en Más (conteo real de `usePendientes()`, no los seis que Inicio muestra). Ver 2.10k.
+  - **Transiciones con dirección (R21):** pone `data-transicion` en la columna de contenido con el valor que devuelve `direccionPara(location)` de `src/app/direccionTransicion.ts` (`entra` al bajar un nivel, `vuelve` al subir, `lateral` entre raíces de pestaña). Los keyframes viven en `src/index.css` y se anulan bajo `prefers-reduced-motion`.
+  - **Memoria por pestaña (R20):** `useMemoriaScroll(pathname)` guarda y restaura la posición de scroll por ruta; `useMemoriaPestana(pathname, search)` guarda los filtros por raíz de pestaña y `destinoDePestana()` los repone en el `to` del enlace. Estando dentro de la pestaña el enlace queda pelado, así que tocar la pestaña activa suelta el filtro y vuelve a su raíz.
+  - **Tocar la pestaña activa** en su raíz pelada sube al principio de la lista (con `behavior: smooth`, o `auto` si el sistema pide menos movimiento).
 - **Dónde:** todas las rutas autenticadas. `BotonVolver` ya solo lo usan el propio chasis y `BarraTarea`.
 
 ### 2.1 `ActualizacionDisponible`
@@ -195,6 +200,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.10f `BarraSuperior`
 - **Propósito:** la barra superior global del chasis (tarea 181, mockup `3d` del handoff). Tres ranuras fijas, siempre en el mismo orden y en las cinco pestañas (regla **R14**): **título de la sección** (confirma cuál pestaña está iluminada), **estado del dato** (`PastillaSync`) y **buscar + cuenta**. Antes no existía: cada pantalla dibujaba su cabecera con altura, relleno y controles distintos, y los tres servicios globales vivían dentro de Inicio.
 - **Props:** `{ titulo: string, children?: ReactNode }`. `children` es la banda de controles propios de la pantalla, que se dibuja justo debajo dentro del mismo bloque pegajoso.
+- **El título no lo dibuja ella:** desde la tarea 187 delega en `CabeceraColapsable` (ver 2.10j), que lo contrae al desplazarse sin sacarlo de pantalla.
 - **Variantes:** es la cabecera del nivel 1 del chasis (`modo="seccion"`). El nivel 2 (documento) usa una fila de regreso propia del chasis y el nivel 3 (tarea) usa `BarraTarea`; la miga llega con `MigaDePan` (tarea 188).
 - **Reglas que aplica:** las acciones propias de la pantalla ("Crear", "Escanear", el menú "···") **no** van en la fila del título: van en `children`. Es la única forma de que la fila superior caiga siempre en el mismo sitio, que es el problema que la barra resuelve. Ver [DECISIONES.md](DECISIONES.md) AD-023.
 - **Dónde:** ya no la montan las pantallas: desde la tarea 185 la monta `Chasis` cuando el nivel es `seccion` (Inicio, Guías, Equipos, Red, Más, Bóveda y su pantalla de bloqueo).
@@ -207,8 +213,8 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.10g `PastillaSync`
 - **Propósito:** la ranura "estado del dato" de la barra superior: responde de un vistazo "¿ya subió lo que cambié?" con icono, etiqueta y color. Tocarla fuerza una sincronización y abre `PanelSync`.
 - **Props:** ninguna. Lee el estado con `useSyncExternalStore(suscribirSync, obtenerEstadoSync)` y la conexión con los eventos `online`/`offline`.
-- **Variantes:** cuatro estados: al día (icono verde, texto `neutral-300`), sincronizando/pendiente, con error y sin conexión (en estos tres el color pasa también al texto, porque hay algo que atender).
-- **Historia:** vivía dentro de `InicioPage`, así que en las otras cuatro pestañas no había forma de saber si lo escrito ya había subido. La tarea 181 la extrajo a `src/components/PastillaSync.tsx` y la montó en el chasis (regla **R7** aplicada al chasis). **Pendiente en la tarea 187:** contraerse a solo icono cuando todo está al día o el título de la sección es largo.
+- **Variantes:** cuatro estados. **Al día no gasta palabras en la buena noticia** (tarea 187): solo el icono verde, en un hueco cuadrado de 44x44 igual al del resto de botones de la fila. Los otros tres (sin conexión, con error, subiendo o pendiente) muestran texto y pasan el color también al texto, porque hay algo que atender, y **dicen el número real** ("3 sin subir", "2 con error", "Sin conexión · 3 sin subir") en vez de un genérico "Sincronizando".
+- **Historia:** vivía dentro de `InicioPage`, así que en las otras cuatro pestañas no había forma de saber si lo escrito ya había subido. La tarea 181 la extrajo a `src/components/PastillaSync.tsx` y la montó en el chasis (regla **R7** aplicada al chasis); la 187 la volvió adaptativa. **Queda fuera** la franja de ancho completo que el mockup `4e` dibuja para "sin conexión con cambios": exigiría reestructurar la fila de tres ranuras de `BarraSuperior` en todas las pantallas de sección, un cambio de más alcance que el color y el texto.
 - **Dónde:** solo `BarraSuperior`.
 
 ### 2.10i `BarraReanudar`
@@ -217,6 +223,18 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Se descarta** deslizando horizontalmente (arrastre con umbral de 90 px, con un umbral previo de 6 px antes de capturar el puntero para no robarle el click al botón "X" ni al enlace "Seguir") o con el botón "X", siempre presente como alternativa sin gesto. El descarte se recuerda en `localStorage` mientras siga siendo el mismo artículo: si aparece un procedimiento más reciente para retomar, la barra vuelve a mostrarse sola.
 - **Reglas que aplica:** **R23** (un aviso solo si hay un dato detrás: no se muestra si no hay ningún procedimiento a medias). Mientras la barra está descartada, la pestaña Guías (solo móvil) muestra un punto de aviso en su lugar.
 - **Dónde:** la monta `Chasis` en los niveles `seccion` y `documento` (no en `tarea`: esas pantallas ya tienen su propia `BarraTarea` y no necesitan una segunda barra flotante, R19).
+
+### 2.10j `CabeceraColapsable`
+- **Propósito:** el título de la sección dentro de `BarraSuperior` (tarea 187, mockup `4e`). Al desplazarse pasa de 21 a 14 px y **se queda en pantalla**: la orientación no debe depender solo de la pestaña iluminada, que en escritorio está a 700 px de distancia y mide 10,5 px. El mockup lo mide como una cabecera que baja de 232 a 150 px sin perder el nombre.
+- **Props:** `{ titulo: string }`.
+- **Cómo:** un listener de `scroll` sobre `window`, con el trabajo diferido a `requestAnimationFrame` y un guardia para no encolar dos por fotograma. Umbral de 12 px, deliberadamente bajo: el mockup lo dibuja como "desplazado", no como un salto que tarde en notarse. La transición es solo de `font-size` y se anula con `motion-reduce`.
+- **Dónde:** solo `BarraSuperior` (y por tanto, el nivel `seccion` del chasis). El nivel `documento` contrae su propia cabecera en la tarea 188, junto con `MigaDePan`.
+
+### 2.10k `AvisoPestana`
+- **Propósito:** el aviso de una pestaña de la barra inferior (tarea 187, mockup `4e`). Aplica la regla **R23** (un aviso solo si hay un dato detrás, ningún punto decorativo): quien la usa decide **cuándo**, este componente solo dibuja.
+- **Props:** unión discriminada. `{ variante: 'punto' }` para Guías (hay un procedimiento a medias y la `BarraReanudar` está descartada) y `{ variante: 'numero', valor: number }` para Más (conteo real de `usePendientes()`). Con `valor <= 0` devuelve `null`; por encima de nueve muestra "9+".
+- **Variantes:** el punto es de acento y mide 7 px; el número va en `precaucion` sobre texto de fondo, con anillo de 2 px del color del fondo para separarse del icono. Los dos son `aria-hidden`: el texto accesible lo pone la pestaña ("hay un procedimiento a medias", "N pendientes").
+- **Dónde:** solo `Chasis`, en la barra de pestañas móvil.
 
 ### 2.11 `MiniaturaPortada`
 - **Propósito:** miniatura de la portada de un procedimiento o la foto de un dispositivo en listados; si la imagen no está disponible offline, no muestra nada.

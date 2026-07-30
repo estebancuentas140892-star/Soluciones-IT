@@ -529,6 +529,13 @@ El chasis reserva además el espacio inferior que la barra ocupa (regla **R22**)
 
 Desde la tarea 186, los niveles `seccion` y `documento` montan además `BarraReanudar`: una barra flotante del procedimiento a medias más reciente (regla **R23**, un aviso solo si hay un dato detrás), que se descarta deslizando o con su botón "X" y deja un punto en la pestaña Guías mientras el descarte siga vigente. Detalle del componente en [COMPONENTES_UI.md](COMPONENTES_UI.md) sección 2.10i.
 
+Desde la tarea 187 el chasis suma cuatro comportamientos dinámicos, todos calculados en un solo sitio porque es el único envoltorio de todas las pantallas:
+
+- **Dirección del movimiento (regla R21).** `src/app/direccionTransicion.ts` compara la profundidad de la ruta anterior con la actual y devuelve `entra` (bajar un nivel), `vuelve` (subir) o `lateral` (entre raíces de pestaña, aunque `/` y `/soluciones` tengan distinta cantidad de segmentos). El chasis lo publica como `data-transicion` y los keyframes viven en `src/index.css`, anulados en bloque bajo `prefers-reduced-motion`. La memoria de la última navegación se indexa por `location.key`, no por número de renders, para ser correcta bajo `StrictMode`.
+- **Memoria por pestaña (regla R20).** Dos módulos: `memoriaScroll.ts` guarda la posición por ruta y la restaura al montar; `memoriaPestana.ts` guarda la cadena de búsqueda (los filtros) por raíz de pestaña y el enlace de la pestaña la repone al volver. Solo se recuerda la búsqueda de la **raíz**, nunca la de una ficha interna: los filtros son de la lista. Como corolario, el filtro tiene que existir en la URL para poder recordarse, así que `SolucionesPage` pasó de leerlo como semilla a escribirlo también (con `replace`, para no ensuciar el historial).
+- **Avisos solo con dato detrás (regla R23).** El punto de Guías sale de `useReanudar()` y el número de Más de `usePendientes()`, el conteo real y no los seis que Inicio muestra.
+- **Tocar la pestaña activa** en su raíz pelada sube al principio de la lista; con un filtro puesto, o desde una ficha interna, primero vuelve a la raíz.
+
 ### 11.3 Enlaces cruzados (mapa)
 
 Dos pantallas son hubs. La creación contextual siempre viaja por query params (nunca por estado del router), para sobrevivir a una recarga.

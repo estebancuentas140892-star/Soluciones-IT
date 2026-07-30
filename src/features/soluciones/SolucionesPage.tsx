@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
@@ -66,13 +66,20 @@ const MAX_SIN_TERMINAR = 3
 export function SolucionesPage() {
   // El parámetro ?categoria siembra el chip activo al volver desde el
   // editor tras Cancelar/Guardar (ArticuloForm), para reabrir la lista
-  // con el mismo filtro. Es una semilla inicial: los cambios de chip
-  // posteriores solo tocan el estado local, no la URL.
-  const [searchParams] = useSearchParams()
+  // con el mismo filtro.
+  //
+  // Desde la tarea 187 el viaje es en los dos sentidos: el chip también
+  // ESCRIBE en la URL, porque de ahí lo lee la memoria de pestaña del
+  // chasis (`src/app/memoriaPestana.ts`, regla R20). Antes el filtro
+  // solo vivía en el estado local, así que cambiar de pestaña y volver
+  // lo borraba: la pestaña apuntaba a `/soluciones` pelado.
+  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [categoriaSel, setCategoriaSel] = useState<string | null>(() => searchParams.get('categoria'))
-  const [tipoSel, setTipoSel] = useState<TipoArticulo | null>(null)
+  const [tipoSel, setTipoSel] = useState<TipoArticulo | null>(
+    () => TIPOS_ARTICULO.find((t) => t.valor === searchParams.get('tipo'))?.valor ?? null,
+  )
   // Filtro por etiqueta (fase J4): se llega aqui tocando una etiqueta en
   // la ficha de un articulo (?etiqueta=<x>). Es un modo propio, como
   // buscando: mientras esta activo ignora categoria/tipo, y se limpia
@@ -266,6 +273,20 @@ export function SolucionesPage() {
     ]
     return sugerenciaBusqueda(consultaCruda, textos)
   }, [articulos, buscando, categorias, consultaCruda, total])
+
+  // Los tres filtros de eje (categoría, tipo, etiqueta) viajan a la URL
+  // con `replace` para no ensuciar el historial: cambiar de chip no es un
+  // paso atrás que el técnico quiera deshacer, es la misma pantalla
+  // mirada de otra forma. El texto buscado NO viaja: es transitorio y
+  // reescribiría la URL en cada tecla.
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (categoriaSel) params.set('categoria', categoriaSel)
+    if (tipoSel) params.set('tipo', tipoSel)
+    if (etiquetaSel) params.set('etiqueta', etiquetaSel)
+    if (params.toString() === searchParams.toString()) return
+    setSearchParams(params, { replace: true })
+  }, [categoriaSel, tipoSel, etiquetaSel, searchParams, setSearchParams])
 
   function setCategoria(id: string | null) {
     setCategoriaSel((actual) => (actual === id ? null : id))

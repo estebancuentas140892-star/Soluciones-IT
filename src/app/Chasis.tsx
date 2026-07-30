@@ -1,14 +1,20 @@
 import type { ReactNode } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
+import { usePendientes } from '../features/inicio/usePendientes'
 import { useReanudar } from '../features/soluciones/useReanudar'
 import { Avatar } from '../components/Avatar'
+import { AvisoPestana } from '../components/AvisoPestana'
 import { BarraReanudar } from '../components/BarraReanudar'
 import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
 import { Marca } from '../components/Marca'
+import { direccionPara } from './direccionTransicion'
+import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
+import { useMemoriaScroll } from './memoriaScroll'
+import { RAICES_DE_PESTANA } from '../lib/navegacion'
 import {
   BookOpen,
   BookOpenFill,
@@ -163,6 +169,27 @@ export function Chasis(props: Props) {
   // el punto de la pestaña Guías (nunca los dos a la vez: mientras se
   // ve la barra no hace falta el punto, y viceversa).
   const reanudar = useReanudar()
+  // Tarea 187: cuenta real de pendientes para el número de "Más" (R23,
+  // ningún aviso decorativo); dirección de la transición de entrada
+  // (R21); y memoria de scroll y de filtros por pestaña (R20), todos
+  // calculados aquí porque Chasis es el único envoltorio de TODAS las
+  // pantallas.
+  const pendientes = usePendientes()
+  const location = useLocation()
+  const direccion = direccionPara(location)
+  useMemoriaScroll(location.pathname)
+  useMemoriaPestana(location.pathname, location.search)
+
+  // Tocar la pestaña ya activa sube al principio de la lista (mockup
+  // `4e`), en vez de no hacer nada (navegar a la ruta en la que ya
+  // estás es un no-op para el router). Solo cuando se está EXACTAMENTE
+  // en la raíz pelada: desde una ficha interna, o con un filtro puesto,
+  // el enlace lleva a la raíz y ahí sí hay navegación que hacer.
+  function alTocarPestana(raiz: string) {
+    if (location.pathname !== raiz || location.search !== '') return
+    const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ top: 0, behavior: reducido ? 'auto' : 'smooth' })
+  }
 
   // Nivel 3: tarea con salida. Sin pestañas y sin sidebar (la tarea
   // ocupa la pantalla entera, como hasta ahora), con la BarraTarea
@@ -171,7 +198,7 @@ export function Chasis(props: Props) {
   if (props.modo === 'tarea') {
     return (
       <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-        <div className="mx-auto flex min-h-svh w-full max-w-md flex-col">
+        <div className="mx-auto flex min-h-svh w-full max-w-md flex-col" data-transicion={direccion}>
           <BarraTarea
             rotulo={props.rotulo}
             titulo={props.titulo}
@@ -234,8 +261,9 @@ export function Chasis(props: Props) {
           {destinosDesktop.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
             <NavLink
               key={to}
-              to={to}
+              to={destinoDePestana(to, location.pathname, RAICES_DE_PESTANA)}
               end={end}
+              onClick={() => alTocarPestana(to)}
               className={({ isActive }) =>
                 `flex items-center gap-2.5 rounded-md px-2.5 py-[9px] text-sm ${
                   isActive
@@ -296,6 +324,7 @@ export function Chasis(props: Props) {
           inferior lo pone el chasis, no cada pantalla (R22). */}
       <div className="flex min-h-svh min-w-0 flex-1 flex-col">
         <div
+          data-transicion={direccion}
           className={`mx-auto flex w-full max-w-md flex-1 flex-col sm:max-w-xl md:max-w-3xl lg:max-w-[1040px] 2xl:max-w-[1240px] ${ALTO_PESTANAS}`}
         >
           {cabecera}
@@ -322,16 +351,19 @@ export function Chasis(props: Props) {
           al 10%) y foco de teclado (anillo de 2px), que antes no existían. */}
       <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] sm:max-w-xl md:max-w-3xl lg:hidden">
         {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => {
-          // Punto de la pestaña Guías (tarea 186): mientras la
-          // BarraReanudar este descartada para el procedimiento a
-          // medias vigente, la pestaña recuerda que sigue ahi (R23: un
-          // aviso solo si hay un dato detras).
+          // Puntos y números de la pestaña (R23: un aviso solo si hay un
+          // dato detrás, nunca decorativo). Guías (tarea 186): mientras
+          // la BarraReanudar esté descartada para el procedimiento a
+          // medias vigente, la pestaña recuerda que sigue ahí. Más
+          // (tarea 187): el conteo real de `usePendientes`.
           const conPunto = to === '/soluciones' && Boolean(reanudar.actual) && reanudar.descartado
+          const numeroPendientes = to === '/mas' ? pendientes.length : 0
           return (
             <NavLink
               key={to}
-              to={to}
+              to={destinoDePestana(to, location.pathname, RAICES_DE_PESTANA)}
               end={end}
+              onClick={() => alTocarPestana(to)}
               className={({ isActive }) =>
                 `relative flex min-h-[52px] flex-col items-center gap-1 pb-[10px] pt-[9px] text-[12px] font-medium outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
                   isActive ? 'text-noct-accent-300' : 'text-noct-neutral-300'
@@ -348,15 +380,14 @@ export function Chasis(props: Props) {
                   )}
                   <span className="relative">
                     {isActive ? <IconoActivo size={22} /> : <Icono size={22} />}
-                    {conPunto && (
-                      <span
-                        className="absolute -right-0.5 -top-0.5 h-[7px] w-[7px] rounded-full bg-noct-accent"
-                        aria-hidden
-                      />
-                    )}
+                    {conPunto && <AvisoPestana variante="punto" />}
+                    {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
                   </span>
                   {label}
                   {conPunto && <span className="sr-only"> (hay un procedimiento a medias)</span>}
+                  {numeroPendientes > 0 && (
+                    <span className="sr-only"> ({numeroPendientes} pendientes)</span>
+                  )}
                 </>
               )}
             </NavLink>

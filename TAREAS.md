@@ -4,6 +4,24 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+### Tarea 187. Comportamientos dinámicos del chasis (R20, R21, R23)
+
+- **Descripción:** cuatro comportamientos, con sus dos extremos ya dibujados en el mockup `4e`. (a) `CabeceraColapsable`: el nombre de la sección se contrae a 14 px y se queda en pantalla. (b) `MemoriaDePestana`: al volver a una pestaña se restauran scroll y filtros. (c) `AvisoPestana`: punto en Guías si hay trabajo a medias, número en Más si hay pendientes reales, alimentados por `pendientes.ts` y `progresoPasos`; ningún punto decorativo. (d) Transiciones con dirección: entrar desde la derecha (180 ms), volver hacia la derecha, cambiar de pestaña con fundido (120 ms), respetando `prefers-reduced-motion`. La pastilla de sincronía se vuelve adaptativa: solo icono cuando todo está al día, texto y color cuando hay algo que atender.
+- **Motivo:** hoy hay cero transiciones en toda la app (ni `startViewTransition` ni transformaciones de entrada) y cero memoria de posición: cambiar de pestaña y volver reinicia el scroll y borra el filtro de categoría, porque la pestaña apunta a la ruta pelada. La barra inferior nunca refleja que hay pendientes, cambios sin subir o trabajo a medias, aunque la app ya calcula los tres datos.
+- **Impacto:** es la diferencia entre una app y una web. Sin cambios de datos: los tres avisos salen de cálculos que ya existen.
+- **Prioridad:** Media. **Estado:** En progreso, **código completo; solo falta la verificación en navegador de lo que depende de scroll y de clic.**
+- **Área afectada:** el chasis de la tarea 185 (`src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `src/components/PastillaSync.tsx`), `src/features/inicio/pendientes.ts`, `src/lib/navegacion.ts`. Componentes nuevos: `CabeceraColapsable`, `AvisoPestana`, más el módulo de memoria de scroll y el de dirección de transición.
+- **Dependencias:** las 185 y 186 (ambas archivadas). Reglas que fija: **R20** (volver es volver al mismo sitio), **R21** (el movimiento indica jerarquía) y **R23** (un aviso solo si hay un dato detrás).
+- **Modelo/esfuerzo:** Sonnet 5 / Alto.
+
+**Hecho (2026-07-30).** Los cuatro comportamientos más la pastilla adaptativa. Archivos nuevos: `src/app/direccionTransicion.ts` (+ prueba), `src/app/memoriaScroll.ts`, `src/app/memoriaPestana.ts` (+ prueba), `src/components/CabeceraColapsable.tsx`, `src/components/AvisoPestana.tsx`, `src/features/inicio/usePendientes.ts`. Modificados: `Chasis.tsx`, `BarraSuperior.tsx`, `PastillaSync.tsx`, `InicioPage.tsx`, `SolucionesPage.tsx`, `navegacion.ts` (+ prueba), `index.css`. Typecheck, lint y build limpios; 1724 pruebas pasan (24 nuevas), con los 4 fallos preexistentes y ajenos de siempre (`archivosPendientes.test.ts`, RLS de Storage, duplicados por el worktree obsoleto de la tarea 178).
+
+**Hallazgo de la implementación:** `MemoriaDePestana` pedía restaurar "scroll **y filtros**", y los filtros no se podían restaurar porque no existían en la URL. El chip de categoría de `SolucionesPage` solo se LEÍA de la URL como semilla ("los cambios de chip posteriores solo tocan el estado local"), que es exactamente lo que el mockup `4e` señala: "el filtro vive en la URL, pero la pestaña apunta a /soluciones pelado". Así que la tarea incluyó hacer que los tres filtros de eje (categoría, tipo, etiqueta) **escriban** en la URL con `replace`. Efecto lateral bueno: el filtro ahora se puede compartir por enlace.
+
+**Lo que FALTA:** verificar en navegador la cabecera colapsable, la memoria de scroll y la memoria de filtros de punta a punta. Se montó el banco temporal de siempre (fuera de `RequireAuth`, ya retirado) y sirvió para confirmar por DOM y estilo computado que `PastillaSync` al día mide exactamente 44x44 sin texto, que el contenedor recibe `data-transicion` con la animación correcta (`chasis-lateral`, 0,12 s) y que `AvisoPestana` dibuja sus dos variantes. Pero **con el panel del navegador oculto la página no compone fotogramas**, así que el navegador no despacha eventos de `scroll` ni de puntero al React de la página (se comprobó: un clic real sobre un botón cuyo centro devuelve `elementFromPoint` correcto no incrementó su contador), y el JS inyectado corre en un mundo aislado (`__vite_plugin_react_preamble_installed__` sale `undefined`), desde el que no se pueden simular. **Para cerrarla basta abrir el panel del navegador y repetir esa parte.**
+
+---
+
 ### Tarea 167 - Mejora integral de la documentación y de la arquitectura funcional
 
 - **Descripción:** Convertir la documentación en la única fuente de verdad. Crear `ARQUITECTURA_FUNCIONAL.md` (reglas de negocio numeradas RN-xxx, modelo de permisos + matriz, ciclos de vida y máquinas de estado por entidad, eventos del sistema, dependencias entre entidades, arquitectura offline, manejo de conflictos, auditoría, rendimiento, accesibilidad, arquitectura de navegación, modelo entidad-relación, convenciones y roadmap), `COMPONENTES_UI.md` (catálogo de componentes reutilizables) y `BUSCADOR.md` (catálogo de búsqueda). Refactorizar `DOCUMENTACION_FUNCIONAL.md` para que quede solo con lo visible al usuario. Crear `DECISIONES.md` y `CHANGELOG.md` (hoy inexistentes). Auditoría final de duplicación, contradicciones y enlaces.
@@ -175,6 +193,100 @@ Las 24 reglas visuales R1 a R24 quedan como el criterio único de la app; las si
 
 **Orden recomendado, y por qué:** el chasis (turnos 3 y 4) y los renombres tocan la cabecera, el contenedor y el regreso de las mismas pantallas que rediseñan P2 a P5. Hacer primero la sección obligaría a reescribir esas cabeceras dos veces, así que conviene cerrar chasis y nombres (180 a 189) antes de retomar 172 a 176.
 
+**SEGUNDA AMPLIACIÓN DEL HANDOFF (reimportado el 2026-07-30).** El mismo `.dc.html` pasó de 4 a **doce turnos** (`t1` a `t12`, 5.620 líneas), y `Decisiones aprobadas.md` creció en consecuencia. Los turnos 1 a 4 ya estaban registrados arriba; **los ocho nuevos son los turnos 5 a 12** y quedan como tareas 191 a 198:
+
+| Turno | Tema | Mockups | Tarea |
+|---|---|---|---|
+| 5 | Escritorio como sistema | `5a` a `5d` | 191 |
+| 6 | Sección Equipos | `6a` a `6e` | 192 |
+| 7 | Sección Bóveda | `7a` a `7d` | 193 |
+| 8 | Sección Red | `8a` a `8d` | 194 |
+| 9 | Sección Inicio | `9a` a `9d` | 195 |
+| 10 | Editor de pasos | `10a` a `10c` | 196 |
+| 11 | Historial | `11a`, `11b` | 197 |
+| 12 | Procedimientos anidados | `12a`, `12b` | 198 |
+
+Con esto **las cinco pestañas quedan auditadas** y lo que falta son pantallas internas. El propio handoff declara un solo pendiente sin cubrir tras el turno 12: **Etiquetas QR e Importar**.
+
+Dos avisos sobre estas ocho tareas:
+
+- **Se registran por turno, no por pantalla**, porque varias son de sistema y no de una pantalla concreta (los puntos de quiebre del turno 5 tocan las 44 rutas; el historial del turno 11 es un componente compartido por 8 entidades). Al tomar cada una se parte por pantalla si aplica, según la regla 15 de [REGLAS.md](REGLAS.md); se anota aquí el desglose en ese momento.
+- **La premisa del turno 5 caducó en parte:** su evidencia era "25 pantallas montan `mx-auto max-w-md` y no tienen sidebar", y eso **ya lo resolvió la tarea 185** (Chasis único, `ShellNocturne` eliminado, los 15 contenedores escritos a mano borrados). De ese turno queda todo lo demás, que sigue vigente y sin hacer.
+
+Las reglas visuales del handoff van ya por **R41** (antes R24). Las nuevas, R25 a R41, están transcritas en `Decisiones aprobadas.md` dentro del zip del handoff y conviene subirlas a [DECISIONES.md](DECISIONES.md) al tomar la primera de estas ocho tareas.
+
+### 191. Turno 5: escritorio como sistema (R25 a R30)
+
+- **Descripción:** cuatro puntos de quiebre con una composición completa en cada uno (`<768` teléfono · `768-1279` sidebar estrecha de iconos · `1280-1679` sidebar + lista + documento · `>=1680` las tres zonas a 232 · 322 · 720 · 252). **Maestro-detalle desde 1280 px:** abrir un artículo no cierra la lista y editar ocurre en la misma columna, conservando la URL del artículo (decisión cerrada). Medida máxima de 720 px para todo texto corrido, incluido el Markdown del artículo. Un solo eje vertical por pantalla (se elimina el par `lg:px-10`/`lg:px-12` entre fichas hermanas). La barra de reanudar pasa al pie de la sidebar, en vez de flotar sobre el contenido.
+- **Motivo:** el turno 2 resolvió el escritorio de tres pantallas de Guías; este lo generaliza a toda la app. Hoy el hueco 768-1279 queda huérfano y ninguna pantalla ofrece maestro-detalle, así que documentar obliga a perder la lista.
+- **Impacto:** alto en escritorio, que es donde se documenta. Sin cambios de datos.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/app/Chasis.tsx` (puntos de quiebre y la sidebar estrecha), `src/components/BarraReanudar.tsx` (cambia de sitio en escritorio), y las pantallas de lista y ficha de Guías, Equipos, Red y Bóveda.
+- **Dependencias:** las 185 (hecha) y 176 (escritorio de las cinco pantallas de Guías, pendiente), con la que se solapa: conviene decidir si 176 se absorbe aquí. Reglas que fija: **R25** a **R30**.
+
+### 192. Turno 6: sección Equipos (R31 a R36)
+
+- **Descripción:** cinco mockups. `6a`/`6b` la lista: volver tocables los tres números que la app ya calcula, con `FiltroEstado` y conteos que siguen al filtro activo (**R32**). `6c`/`6d` la ficha: plegada por defecto salvo la sección con novedad (**R33**, **R34**), con `FilaDato` para lo copiable (**R35**). `6e` el retiro: la baja de un equipo pasa de diálogo a flujo con avance, reanudable. El estado del equipo **se calcula, no se escribe**: vocabulario cerrado de cinco estados y se retira el texto libre (**R36**). Los cuatro destinos del menú "···" desaparecen de aquí: ya viven en "Más" desde la tarea 182.
+- **Motivo:** el propio handoff señala `6b` como "el cambio de mayor rendimiento y menor costo": los números ya están calculados y no se pueden tocar.
+- **Impacto:** alto y barato en la lista; medio en la ficha. El vocabulario cerrado de estados **sí toca datos** (hay que decidir qué pasa con los valores libres ya guardados).
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/dispositivos/DispositivosPage.tsx`, `DispositivoPage.tsx`, `DarDeBajaPage.tsx`, `src/components/FilaDispositivo.tsx`. Componentes nuevos: `FiltroEstado`, `SeccionPlegable`, `FilaDato`.
+- **Dependencias:** `FilaDispositivo` ya es compartida entre Equipos y Red (tarea 145), así que lo que se decida aquí lo hereda Red (turno 8). Reglas que fija: **R31** a **R36**.
+
+### 193. Turno 7: sección Bóveda (R37 a R41)
+
+- **Descripción:** cuatro mockups. `7a` lo que hoy se cifra sin ser secreto; `7b` la regla como **primera pregunta** del editor, con las dos listas a la vista, y responder "no" no bloquea: busca el equipo y guarda cada dato en su campo; `7c` las clases y los códigos MFA; `7d` la revisión de lo ya guardado. Decisiones cerradas por el usuario: **cuatro clases con subtipo dentro** (Cuenta · Llave · Códigos · Archivo, con las once clases de la regla como subtipo), las URLs de paneles son **no secretas** y se van a los detalles del equipo, el campo "Usuario" del equipo **se queda visible** (con la excepción documentada), y la revisión es **sugerida, no obligatoria** (aviso persistente con su conteo, indescartable hasta llegar a cero). Los códigos MFA son un conjunto: copiar uno lo marca como gastado, con quién y cuándo, y avisa al bajar de tres. Se retira el tipo "Nota" (las existentes pasan por la revisión, ninguna se borra sin preguntar).
+- **Motivo:** el handoff lo resume así: la filosofía no hay que introducirla, hay que terminarla; la parte difícil (cifrado, permisos, desbloqueo, detección de duplicados) ya está hecha.
+- **Impacto:** alto en seguridad y en búsqueda (lo que sale del blob cifrado se vuelve buscable). **Toca datos y esquema**: reclasificar secretos y mover URLs y notas al equipo.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/boveda/` completo (`BovedaPage.tsx`, `CredencialForm.tsx`, `CredencialPage.tsx`, `MigracionCredenciales.tsx`, que se generaliza a `RevisionBoveda`), y `supabase/schema.sql`. Componentes nuevos: `PreguntaDeSecreto`, `ClaseDeSecreto` (sustituye a `TipoSecreto`), `CodigosMFA`, `RevisionBoveda`.
+- **Dependencias:** reutiliza `FilaDato` y `FiltroEstado` del turno 6 (tarea 192). Reglas que fija: **R37** a **R41**.
+
+### 194. Turno 8: sección Red (R42, R43)
+
+- **Descripción:** el mismo equipo aparece hoy en dos fichas distintas (`8a`) y el formulario de conexión en dos variantes (`8b`). La propuesta unifica: una sola ficha con el impacto al frente (`8c`, "Si este equipo falla, 6 equipos quedan sin red", que el handoff llama "la mejor idea de la app": solo hace falta que exista una sola vez) y **un solo formulario de conexión** para ficha y topología (`8d`). El medio del enlace se cierra a sus tres valores (UTP · Fibra óptica · Inalámbrico): gana el control de botones de la topología y se retira el `datalist` de texto libre de la ficha. La topología conserva su gramática propia, pero comparte vocabulario y componentes con la ficha.
+- **Motivo:** la lista de Red ya usa `FilaDispositivo` y hereda el turno 6 sin tocarla; el problema está en la ficha duplicada.
+- **Impacto:** medio. `FormularioConexion` ya se unificó en la tarea 156, así que parte del camino está hecho: aquí se cierra el vocabulario y se funden las dos fichas.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/red/RedPage.tsx`, `TopologiaPage.tsx`, `TopologiaEquipoPage.tsx`, `FormularioConexion.tsx`, `ConexionesFicha.tsx`, `src/lib/conexiones.ts` (`iconoDeVia`).
+- **Dependencias:** el turno 6 (tarea 192). Reglas que fija: **R42** (un formulario por entidad, sea cual sea la pantalla que lo abre) y **R43** (cada vista puede tener su gramática, pero no su vocabulario).
+
+### 195. Turno 9: sección Inicio, las tres zonas
+
+- **Descripción:** `9a` los nueve bloques de hoy, `9b` los dos problemas estructurales medidos, `9c` las tres zonas propuestas, `9d` los tres estados y el destino de cada bloque actual. Inicio se titula "Inicio" y ya cedió buscador, sincronía y cuenta al chasis (tarea 181): el hueco lo ocupa lo que el técnico necesita al abrir, en tres zonas ("Ahora" con lo que está a medias y lo que está caído, "Tu trabajo" con los pendientes, "Del equipo" con lo que pasó desde ayer). Los equipos fuera de servicio y las credenciales por vencer suben a "Ahora": la primera pregunta del turno ("¿hay algo caído ahora mismo?") hoy no se responde. La bienvenida de tres pasos se apaga sola cuando cada paso se cumple y pasa a vivir dentro de la zona "Ahora" en vez de ser un bloque aparte.
+- **Motivo:** Inicio se diseñó como "un solo punto de entrada al conocimiento" y el turno 3 mudó ese punto de entrada al chasis; sin buscador, la pantalla se quedó sin propósito y con nueve bloques de igual peso.
+- **Impacto:** alto en la primera pantalla de cada jornada. Sin esquema nuevo: los datos ya se calculan.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/inicio/InicioPage.tsx`, `pendientes.ts`, `usePendientes.ts`, `BienvenidaPrimerDia.tsx`. Componente nuevo: `ZonaAhora`.
+- **Dependencias:** las 181 y 184 (hechas) y la 187 (`usePendientes`, en proceso).
+
+### 196. Turno 10: editor de pasos (R44 a R48)
+
+- **Descripción:** el pendiente más antiguo, abierto desde el turno 1. `10a` los seis pasos abiertos a la vez (la pestaña pasa de 4.000 px, contra **R33** ya aprobada para las fichas) y el icono de tipo que **cicla** al tocarlo sin mostrar sus opciones; `10b` los vínculos con tres `<select>` nativos tras una etiqueta de 62 caracteres, más un botón "Agregar" que no agrega nada; `10c` la propuesta: **esquema arriba, un paso abierto abajo** (el esquema cabe en pantalla y sirve para ver el procedimiento completo, saltar a cualquier paso y reordenar arrastrando), el tipo se elige viendo la lista, los vínculos con `SelectorEntidad` en vez de `<select>`, deshacer en lugar de modal para lo reversible, y los atajos anunciados donde se usan. Decisiones cerradas: **un paso abierto en teléfono, varios en escritorio**; la decisión Sí/No **se renombra** a "Si la respuesta es No, abrir:" y no se amplía (ramificar el Sí es lo que hace Diagnóstico Inteligente, y conviene que sigan siendo dos herramientas); los archivos del paso **suben a la pestaña Detalles**. El pegado múltiple (seis líneas pegadas crean seis tareas) existe y es invisible: hay que anunciarlo.
+- **Motivo:** es la mitad del trabajo de documentar. El handoff pide revisar sobre todo el esquema, porque "cambia la forma de trabajar del editor, no solo su aspecto".
+- **Impacto:** alto para quien documenta. Riesgo alto de regresión: es la pantalla más grande de la app.
+- **Prioridad:** Alta (es el pendiente más antiguo). **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/PasosEditor.tsx` (1.035 líneas), `VistaPreviaArticulo.tsx`, `ArticuloForm.tsx`. Reutiliza `SelectorEntidad` y `SeccionPlegable`. Componente nuevo: `AvisoDeshacer`.
+- **Dependencias:** el turno 6 (`SeccionPlegable`) y la 175 (editor P5). Reglas que fija: **R44** a **R48**. **Absorbe el punto (a) de la tarea 177.**
+
+### 197. Turno 11: historial, un componente para ocho entidades
+
+- **Descripción:** `11a` plegado al pie de la ficha, con las cuatro fuentes de evento pesando exactamente lo mismo; `11b` abierto, agrupado por día, con tres pesos visuales (intervención escrita a mano en tarjeta con marca de color, cambio de campo en fila de una línea, acceso de auditoría en fila atenuada), filtro por tipo de evento con `FiltroEstado` (solo si hay más de un tipo, y respetando **R32**) y carga incremental. Los tres últimos eventos quedan siempre visibles. El rótulo se adapta a la entidad ("Qué le ha pasado" en un equipo, "Quién ha visto este secreto" en una credencial, "Cambios" en un artículo) aunque el componente sea uno. Se retira el volcado de depuración que hoy llega al teléfono del técnico. Y se cierra la deuda de los dos motores de resumen: el que escribe frases exactas por paso y el del feed de Inicio, con dos formatos de fecha distintos.
+- **Motivo:** arreglarlo una vez lo arregla en artículo, equipo, conexión, credencial, campo protegido, ubicación, persona y diagnóstico a la vez. Hoy nadie lo abre, así que nadie sabe que existe.
+- **Impacto:** alto por multiplicación (ocho entidades), coste de una sola pasada.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/historial/` (`Historial.tsx`, `lineaDeTiempo.ts`, `resumenCambios.ts`) y las ocho fichas que lo montan.
+- **Dependencias:** `FiltroEstado` del turno 6 (tarea 192). **Absorbe el punto (d) de la tarea 177.**
+
+### 198. Turno 12: procedimientos anidados
+
+- **Descripción:** `12a` el paso con cinco marcos de color, dos de ellos del mismo acento (barra de progreso, credencial, subprocedimiento, aviso y pregunta de error), sin señal de qué está dentro de qué; `12b` la propuesta: **la profundidad la marca la sangría con una línea vertical neutra de 2 px más 13 px de sangría** (el patrón de una cita), y el color vuelve a significar tipo, una sola vez por bloque. Queda un solo aviso de color, el ámbar, que es el único que advierte de algo. El avance se dice una sola vez con `IndicadorAvance` más una línea que nombra a qué documento pertenece ("Paso 1 de 3 de esta guía"), cerrando **CAND-3** también aquí. Un vínculo más allá del primer nivel **se enlaza en vez de expandirse** (decisión ya correcta, corta ciclos A→B→A), pero hoy la tarjeta enlazada se ve idéntica a la expandible: la versión enlazada tiene que advertirlo y prometer el regreso. Se corrigen dos rótulos ("Continúa en" sugiere que el procedimiento no vuelve; "Datos protegidos" nombra la categoría del dato y no lo que el técnico va a obtener) y el par de botones saturados con los colores intercambiados según el bloque.
+- **Motivo:** es el último pendiente de contenido del handoff, y hoy un aviso del subprocedimiento y un aviso del paso padre se ven idénticos aunque pertenezcan a documentos distintos.
+- **Impacto:** medio, concentrado en los procedimientos compuestos.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/ProcedimientoVista.tsx` (959 líneas), `ContadorSubProgreso` (migra a `IndicadorAvance`).
+- **Dependencias:** el turno 10 (tarea 196, editor de pasos) y la 172 (ficha de artículo). **Absorbe el punto (c) de la tarea 177.**
+
 ### 172. Rediseño P2: ficha de artículo (`/soluciones/:categoria/:articulo`)
 
 - **Descripción:** aplicar las 11 decisiones de la auditoría para P2. Una sola acción dominante fija abajo con etiqueta contextual ("Empezar" / "Seguir en el paso 3 de 6" / "Repetir") en vez de "Ejecutar" y "Editar" con el mismo peso arriba; cabecera de tres controles de 44 px; kicker de tipo sobre el título en su matiz; metadatos como lista de definición con rótulo (Tiempo, Dificultad, Aplica a, Versión); pasos plegados salvo el actual; progreso segmentado junto al título en vez de barra pegajosa aparte; casillas de 24 px en filas de 44 y texto de tarea a 15 px; la verificación final se anuncia en vez de mostrarse apagada; el aviso lleva su palabra ("Precaución.") además del color; datos protegidos con acción de ancho completo; estado una sola vez.
@@ -241,15 +353,6 @@ La **tarea 184** (login que se presenta y bienvenida del primer día) quedó **t
 
 La **tarea 185** (chasis en tres niveles y `BarraTarea`, reglas R18/R19/R22) quedó **terminada y archivada el 2026-07-28**. `src/app/Chasis.tsx` es ya el único envoltorio de pantalla, con `modo = seccion | documento | tarea`; `ShellNocturne.tsx` se eliminó y los 15 contenedores `max-w-md` escritos a mano desaparecieron. Las 44 rutas quedaron repartidas en 6 de sección, 15 de documento y 22 de tarea; **Personas, Ubicaciones, Diagnósticos, Sugerencias, Estadísticas, Mi cuenta y Seguridad recuperan la barra de pestañas**. `BotonVolver` pasa de 31 consumidores a dos. **Hallazgo al medir en el navegador:** la barra no mide 53 px como dice el handoff (dato anterior a la tarea 182) sino 64,6, así que la reserva quedó en 65; copiar el 53 habría dejado 12 px de contenido bajo la barra ([DECISIONES.md](DECISIONES.md) AD-027; los tres niveles, en AD-026). **Los tres niveles se verificaron en navegador real** con un banco de pruebas temporal, ya retirado; las 35 pantallas reales no, porque viven detrás del login. **No incluyó** la miga de pan (tarea 188) ni ningún comportamiento dinámico (tarea 187). Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
-### 187. Comportamientos dinámicos del chasis (R20, R21, R23)
-
-- **Descripción:** cuatro comportamientos, con sus dos extremos ya dibujados en el mockup `4e`. (a) **`CabeceraColapsable`**: el nombre de la sección se contrae a 14 px y se queda en pantalla. (b) **`MemoriaDePestana`**: al volver a una pestaña se restauran scroll y filtros. (c) **`AvisoPestana`**: punto en Guías si hay trabajo a medias, número en Más si hay pendientes reales, alimentados por `pendientes.ts` y `progresoPasos`; ningún punto decorativo. (d) **Transiciones con dirección**: entrar desde la derecha (180 ms), volver hacia la derecha, cambiar de pestaña con fundido (120 ms), respetando `prefers-reduced-motion`. La pastilla de sincronía se vuelve adaptativa: solo icono cuando todo está al día, texto y color cuando hay algo que atender.
-- **Motivo:** hoy hay cero transiciones en toda la app (ni `startViewTransition` ni transformaciones de entrada) y cero memoria de posición: cambiar de pestaña y volver reinicia el scroll y borra el filtro de categoría, porque la pestaña apunta a la ruta pelada. La barra inferior nunca refleja que hay pendientes, cambios sin subir o trabajo a medias, aunque la app ya calcula los tres datos.
-- **Impacto:** es la diferencia entre una app y una web. Sin cambios de datos: los tres avisos salen de cálculos que ya existen.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** el chasis de la tarea 185, `src/features/inicio/pendientes.ts`, `src/lib/navegacion.ts`. Componentes nuevos: `CabeceraColapsable`, `MemoriaDePestana`, `AvisoPestana`; `PastillaSync` (existente) gana dos tamaños según estado.
-- **Dependencias:** las 185 y 186. Reglas que fija: **R20** (volver es volver al mismo sitio), **R21** (el movimiento indica jerarquía) y **R23** (un aviso solo si hay un dato detrás).
-
 ### 188. MigaDePan y el regreso que nombra su destino (R13)
 
 - **Descripción:** `MigaDePan` de una línea bajo el botón de regreso en móvil, y con los tramos completos y enlazados en escritorio, alimentada por `navegacion.ts`. `BotonVolver` pasa a exigir etiqueta siempre: se elimina el destino genérico "Volver", que hoy aparece a secas en editar, ejecutar, dar de baja y reemplazar.
@@ -272,6 +375,7 @@ La **tarea 185** (chasis en tres niveles y `BarraTarea`, reglas R18/R19/R22) que
 
 - **Descripción:** ocho frentes que la auditoría nombró como no resueltos. (a) **Editor de pasos** (`PasosEditor.tsx`, 1035 líneas) y **vista previa** (`VistaPreviaArticulo.tsx`): son la mitad de la pestaña Pasos y merecen su propia pasada. (b) **Diálogo de eliminar** con contraseña maestra y aviso de impacto: es transversal, se ve con Bóveda. (c) **Procedimientos anidados** (subprocedimiento, solución y decisión dentro de un paso): la regla de un solo nivel funciona, pero apilan tres marcos de color y hay que decidir su jerarquía. (d) **Historial al pie de cada ficha**: componente compartido por 8 entidades, se audita completo aparte. (e) **Lectura sin conexión de adjuntos**: hoy el hueco dice "usa Descargar todo para offline" y falta el camino desde ahí. (f) **Accesibilidad de lector de pantalla**: el stepper usa `button role="checkbox"` sin agrupar; queda revisar el orden de lectura y los `aria-label` de la ficha. (g) **Modo alto contraste / texto grande** para trabajo a pleno sol, como ajuste global y no por sección. (h) **Miniatura de portada en la fila de artículo**, que `FilaArticulo` no soporta hoy (ver tarea 174).
 - **Motivo:** dejarlos registrados para que no se pierdan al cerrar el handoff, en vez de descubrirlos otra vez más adelante.
+- **Actualizado el 2026-07-30:** la segunda ampliación del handoff les dio mockup a tres de los ocho, que pasan a tener tarea propia y **salen de aquí**: (a) editor de pasos y vista previa a la **tarea 196**, (c) procedimientos anidados a la **198** y (d) historial a la **197**. Quedan vivos en esta tarea (b) diálogo de eliminar con contraseña maestra, (e) lectura sin conexión de adjuntos, (f) lector de pantalla en el stepper, (g) alto contraste y texto grande, y (h) miniatura de portada en la fila de artículo.
 - **Impacto:** varios son transversales (accesibilidad, alto contraste, historial) y afectan a más secciones que Soluciones.
 - **Prioridad:** Media (f y g suben a Alta si el equipo reporta problemas de lectura en campo). **Estado:** Pendiente.
 - **Área afectada:** ver cada punto.

@@ -32,7 +32,21 @@ export interface Padre {
 // `/mas` (tarea 182) reemplaza a `/boveda` como quinta pestaña móvil;
 // `/boveda` sigue siendo raíz aparte (pestaña de escritorio, y puerta
 // destacada dentro de "Más" en móvil), así que se queda en el set.
-const TABS = new Set(['/', '/soluciones', '/dispositivos', '/red', '/boveda', '/mas'])
+// Orden significativo: `raizQueContiene` (memoria de filtros por
+// pestaña, tarea 187) recorre esta lista y devuelve la primera que
+// coincide, así que las raíces más específicas van antes que "/".
+export const RAICES_DE_PESTANA = ['/soluciones', '/dispositivos', '/red', '/boveda', '/mas', '/']
+const TABS = new Set(RAICES_DE_PESTANA)
+
+// ¿Es la raíz de una pestaña? La usa el cálculo de dirección de las
+// transiciones (tarea 187, R21): cambiar de una raíz a otra es un
+// movimiento lateral (fundido), no "entrar" ni "volver", aunque sus
+// rutas tengan distinta profundidad (por ejemplo `/` tiene 0 segmentos
+// y `/soluciones` tiene 1).
+export function esRaizDePestana(pathname: string): boolean {
+  const ruta = pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
+  return TABS.has(ruta)
+}
 
 // Raíces que no son pestañas pero se alcanzan desde otra sección: su
 // "Volver" sube a esa sección de origen.

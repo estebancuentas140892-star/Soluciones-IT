@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { padreDe, vueltaDeTarea } from './navegacion'
+import { esRaizDePestana, padreDe, vueltaDeTarea } from './navegacion'
 
 describe('padreDe', () => {
   it('las pestañas de la barra no tienen pantalla superior', () => {
@@ -193,5 +193,23 @@ describe('vueltaDeTarea', () => {
 
   it('devuelve null en una raíz, que no tiene a dónde volver', () => {
     expect(vueltaDeTarea('/soluciones')).toBeNull()
+  })
+})
+
+describe('esRaizDePestana', () => {
+  it('las seis raíces (pestañas móviles y de escritorio) lo son', () => {
+    for (const tab of ['/', '/soluciones', '/dispositivos', '/red', '/boveda', '/mas']) {
+      expect(esRaizDePestana(tab)).toBe(true)
+    }
+  })
+
+  it('normaliza la barra final', () => {
+    expect(esRaizDePestana('/soluciones/')).toBe(true)
+  })
+
+  it('una ficha o lista interna no es una raíz', () => {
+    expect(esRaizDePestana('/soluciones/cat-1')).toBe(false)
+    expect(esRaizDePestana('/dispositivos/pc-1')).toBe(false)
+    expect(esRaizDePestana('/diagnostico')).toBe(false)
   })
 })

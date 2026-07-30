@@ -162,6 +162,57 @@ body {
   }
 }
 
+/* Transiciones con dirección del chasis (tarea 187, regla R21: "el
+   movimiento indica jerarquía"). El atributo `data-transicion` lo pone
+   Chasis.tsx en el div de contenido, calculado por
+   src/app/direccionTransicion.ts: "entra" al bajar un nivel (nueva
+   ficha), "vuelve" al subir uno, "lateral" al cambiar entre pestañas.
+   Solo anima la ENTRADA (no hay libreria de animacion para la salida),
+   asi que "vuelve" entra desde la izquierda para sentirse reversible en
+   vez de animar la pantalla que se abandona. */
+@keyframes chasis-entra {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes chasis-vuelve {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes chasis-lateral {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+[data-transicion='entra'] {
+  animation: chasis-entra 180ms ease-out;
+}
+[data-transicion='vuelve'] {
+  animation: chasis-vuelve 180ms ease-out;
+}
+[data-transicion='lateral'] {
+  animation: chasis-lateral 120ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-transicion] {
+    animation: none;
+  }
+}
+
 /* Campos de secreto (contraseña de login, contraseña maestra,
    contraseña de una credencial, bloqueo de la app): se escriben en un
    input type="text" enmascarado con esto, en vez de type="password".

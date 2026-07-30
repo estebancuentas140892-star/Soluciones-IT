@@ -102,6 +102,15 @@ En **escritorio (>=1024px)** los niveles Sección y Documento muestran la barra 
 
 **BarraReanudar (desde la tarea 186).** Mientras haya un procedimiento a medias, una barra flotante viaja por los niveles Sección y Documento (no en Tarea, que ya tiene su propia `BarraTarea`) con el título del artículo, el paso actual, los minutos que quedan y "Seguir", directo al asistente. Caso real: estar en el paso 3 de un mantenimiento y salir a la Bóveda a buscar una clave, sin perder el hilo de vuelta. Se descarta deslizándola o con su botón "X" (regla **R23**: un aviso solo si hay un dato detrás); mientras siga descartada para ese mismo artículo, la pestaña Guías (solo móvil) muestra un punto de aviso. Si aparece un procedimiento más reciente para retomar, la barra vuelve a mostrarse sola.
 
+**Lo que el chasis hace al moverse (desde la tarea 187).** Cuatro comportamientos que antes no existían:
+
+- **El nombre de la sección se contrae, no se va.** Al empezar a desplazarse, el título pasa de 21 a 14 px y se queda en pantalla: la orientación no depende solo de la pestaña iluminada.
+- **Volver es volver al mismo sitio (regla R20).** Al regresar a una pestaña se restauran la posición del scroll y el filtro que estaba puesto. Antes, cambiar de pestaña y volver reiniciaba el scroll y borraba el filtro de categoría. Como consecuencia, en Guías el filtro de categoría, tipo y etiqueta viaja en la dirección de la pantalla, así que también se puede compartir por enlace.
+- **El movimiento indica jerarquía (regla R21).** Entrar en algo se desliza desde la derecha (180 ms), volver se desliza desde la izquierda y cambiar de pestaña se funde (120 ms). Si el sistema pide menos movimiento (`prefers-reduced-motion`), no hay animación.
+- **Avisos solo si hay un dato detrás (regla R23).** Un punto en Guías cuando hay un procedimiento a medias y la barra de reanudar está descartada, y un número en Más con los pendientes reales ("9+" por encima de nueve). Ningún punto decorativo.
+- **La pastilla de sincronización se adapta.** Al día no gasta palabras en la buena noticia: solo el icono verde. Cuando hay algo que atender dice el número real ("3 sin subir", "2 con error") y pasa el color también al texto.
+- **Tocar la pestaña activa** sube al principio de la lista; si había un filtro puesto o se estaba dentro de una ficha, primero vuelve a la raíz de la pestaña.
+
 El **login** queda fuera del chasis (no hay sesión todavía) y trae su propia columna centrada.
 
 **Desde la tarea 182 el sidebar de escritorio y la barra de pestañas de móvil ya no comparten la misma lista** (antes sí, `DESTINOS_BASE` + `DESTINO_BOVEDA` condicional a los dos). El **sidebar** de escritorio pasa a tener **catorce destinos** desde la tarea 183 (mockup `3e`: "el sidebar tiene 240 px de alto libre y ofrece cinco destinos de catorce"), en tres bloques:

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 import { Avatar } from './Avatar'
+import { CabeceraColapsable } from './CabeceraColapsable'
 import { MagnifyingGlass } from './iconos'
 import { PastillaSync } from './PastillaSync'
 
@@ -41,7 +42,7 @@ export function BarraSuperior({ titulo, children }: { titulo: string; children?:
   return (
     <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
       <div className="flex items-center justify-between gap-2 pl-4 pr-2 pt-2.5">
-        <h1 className="min-w-0 truncate text-[21px] font-medium leading-[1.2]">{titulo}</h1>
+        <CabeceraColapsable titulo={titulo} />
         <div className="flex shrink-0 items-center gap-0.5">
           <PastillaSync />
           <button
