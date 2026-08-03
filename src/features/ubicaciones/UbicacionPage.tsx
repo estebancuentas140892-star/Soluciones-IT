@@ -68,6 +68,12 @@ export function UbicacionPage() {
       modo="documento"
       volverA="/ubicaciones"
       volverEtiqueta="Ubicaciones"
+      // Ancla permanente (M-001, M-R1, mockup `6b`): a esta pantalla se
+      // llega tocando la ubicación dentro de la ficha de un equipo, así
+      // que el nombre y de dónde cuelga se quedan arriba. El h1 pasa a
+      // vivir en el chasis; el de abajo se queda como rótulo grande.
+      titulo={ubicacion.nombre}
+      contexto={ancestros.length > 0 ? ancestros.map((a) => a.nombre).join(' › ') : 'Ubicaciones'}
       barra={
         <div className="px-4 pb-3 pt-0.5">
           {ancestros.length > 0 && (
@@ -82,7 +88,7 @@ export function UbicacionPage() {
               ))}
             </nav>
           )}
-          <h1 className="m-0 text-[21px] font-medium leading-[1.25]">{ubicacion.nombre}</h1>
+          <p className="m-0 text-[19px] font-medium leading-[1.25]">{ubicacion.nombre}</p>
         </div>
       }
     >

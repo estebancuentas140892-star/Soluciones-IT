@@ -1,11 +1,10 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type Dispositivo } from '../../lib/db'
+import type { Dispositivo } from '../../lib/db'
 import { Warning } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
-import { caminoAscendente, construirArbol, contarImpacto, infoDeDispositivos, type PasoAscendente } from './arbol'
+import type { PasoAscendente } from './arbol'
 import { iconoDeVia } from './medios'
+import { useImpactoEquipo } from './useImpactoEquipo'
 
 // Impacto de una falla y cadena de dependencia de un equipo (fase R1,
 // puntos 9 y 10 de PROPUESTA_MODULOS.md), en la ficha del dispositivo.
@@ -13,33 +12,25 @@ import { iconoDeVia } from './medios'
 // del tiempo no aporta nada y no ocupa espacio. Se apoya en el mismo
 // arbol de topologia que la vista de mapa (src/features/red/arbol.ts):
 // nunca duplica la logica de "que depende de que".
-export function ImpactoYDependencias({ dispositivo }: { dispositivo: Dispositivo }) {
-  const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
-  const conexiones = useLiveQuery(() => db.conexiones.filter((c) => !c.eliminadoEn).toArray(), [], [])
-  const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
-
-  const infoPorId = useMemo(() => infoDeDispositivos(dispositivos ?? []), [dispositivos])
-  const nombreCategoria = useMemo(
-    () => new Map((categorias ?? []).map((c) => [c.id, c.nombre])),
-    [categorias],
-  )
-
-  const impacto = useMemo(() => {
-    if (!conexiones) return new Map<string, number>()
-    const arbol = construirArbol(dispositivo.id, conexiones, infoPorId)
-    return contarImpacto(arbol)
-  }, [dispositivo.id, conexiones, infoPorId])
-
-  const camino = useMemo(
-    () => (conexiones ? caminoAscendente(dispositivo.id, conexiones, infoPorId) : []),
-    [dispositivo.id, conexiones, infoPorId],
-  )
+export function ImpactoYDependencias({
+  dispositivo,
+  sinCabecera = false,
+}: {
+  dispositivo: Dispositivo
+  /**
+   * La sección va dentro de una `SeccionPlegable` que ya escribe el
+   * rótulo y su conteo (ficha de equipo, M-014). Sin esto el título
+   * saldría dos veces seguidas.
+   */
+  sinCabecera?: boolean
+}) {
+  const { impacto, camino, nombreCategoria } = useImpactoEquipo(dispositivo.id)
 
   if (impacto.size === 0 && camino.length === 0) return null
 
   return (
     <section className="flex flex-col gap-2">
-      <TituloSeccion className="mb-1">Si este equipo falla</TituloSeccion>
+      {!sinCabecera && <TituloSeccion className="mb-1">Si este equipo falla</TituloSeccion>}
       {impacto.size > 0 && <ImpactoFalla impacto={impacto} nombreCategoria={nombreCategoria} />}
       {camino.length > 0 && <DependeDe camino={camino} />}
     </section>

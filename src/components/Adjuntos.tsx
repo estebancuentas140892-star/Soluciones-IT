@@ -12,9 +12,15 @@ import { VisorImagen } from './VisorImagen'
 interface Props {
   entidadTipo: Adjunto['entidadTipo']
   entidadId: string
+  /**
+   * El bloque va dentro de una `SeccionPlegable` que ya escribe el
+   * rótulo y su conteo (ficha de equipo, M-014). Los dos botones de
+   * subida se conservan, alineados a la derecha.
+   */
+  sinCabecera?: boolean
 }
 
-export function Adjuntos({ entidadTipo, entidadId }: Props) {
+export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props) {
   const adjuntos = useLiveQuery(
     () =>
       db.adjuntos
@@ -120,8 +126,8 @@ export function Adjuntos({ entidadTipo, entidadId }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-medium text-noct-neutral-400">Adjuntos</h2>
+      <div className={`flex items-center gap-2 ${sinCabecera ? 'justify-end' : 'justify-between'}`}>
+        {!sinCabecera && <h2 className="text-sm font-medium text-noct-neutral-400">Adjuntos</h2>}
         <div className="flex gap-2">
           <label className="cursor-pointer rounded-lg border border-noct-divider px-3 py-1.5 text-xs text-noct-text hover:bg-noct-text/[.07]">
             {subiendo ? progreso : 'Cámara'}

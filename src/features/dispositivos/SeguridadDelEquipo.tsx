@@ -62,9 +62,16 @@ export function SeguridadDelEquipo({
   dispositivoId,
   puedeVerBoveda,
   nombreSugerido,
+  sinCabecera = false,
 }: {
   dispositivoId: string
   puedeVerBoveda: boolean
+  /**
+   * La sección va dentro de una `SeccionPlegable` que ya escribe el
+   * rótulo y su conteo (ficha de equipo, M-014). El aviso "Cifrado en el
+   * dispositivo" no se pierde: baja al pie del bloque.
+   */
+  sinCabecera?: boolean
   // Nudge anti duplicidad de la Bóveda (fase P3): cuando llega no
   // vacío, abre el editor de "nuevo dato protegido" ya mismo con este
   // nombre precargado, en vez de esperar a que el técnico toque
@@ -89,13 +96,20 @@ export function SeguridadDelEquipo({
 
   return (
     <section>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <TituloSeccion>Seguridad</TituloSeccion>
-        <span className="inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
+      {sinCabecera ? (
+        <p className="mb-2 inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
           <LockSimple size={12} aria-hidden />
           Cifrado en el dispositivo
-        </span>
-      </div>
+        </p>
+      ) : (
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <TituloSeccion>Seguridad</TituloSeccion>
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
+            <LockSimple size={12} aria-hidden />
+            Cifrado en el dispositivo
+          </span>
+        </div>
+      )}
 
       <div className="rounded-lg border border-dashed border-noct-neutral-700 bg-noct-surface/55 p-3">
         {campos.length === 0 && editando === null ? (

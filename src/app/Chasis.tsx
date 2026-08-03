@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
@@ -11,6 +11,7 @@ import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
 import { Marca } from '../components/Marca'
+import { ProveedorBandaTarea } from './bandaTarea'
 import { direccionPara } from './direccionTransicion'
 import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
 import { useMemoriaScroll } from './memoriaScroll'
@@ -163,6 +164,16 @@ interface PropsDocumento extends PropsComunes {
   volverA?: string
   /** Override de la etiqueta del regreso. */
   volverEtiqueta?: string
+  /**
+   * Nombre de lo que se está viendo (M-R1, ancla permanente): se queda
+   * en pantalla al desplazarse, a 14 px, junto al regreso. Sin él la
+   * fila superior vuelve al `BotonVolver` con etiqueta de antes, que es
+   * lo correcto en las pantallas de documento que son listas y ya
+   * escriben su nombre en la banda de abajo.
+   */
+  titulo?: string
+  /** De dónde viene ("Equipos · Rack 1"), a 11 px sobre el título. */
+  contexto?: string
   /** Acciones propias de la pantalla, a la derecha de la fila de regreso. */
   acciones?: ReactNode
   /** Banda bajo la fila de regreso: título, buscador, pestañas internas. */
@@ -203,6 +214,12 @@ export function Chasis(props: Props) {
   // calculados aquí porque Chasis es el único envoltorio de TODAS las
   // pantallas.
   const pendientes = usePendientes()
+  // Hueco de la banda pegajosa del nivel tarea. Se guarda en estado (no
+  // en una ref) a propósito: así, cuando el div se monta, los hijos
+  // vuelven a renderizar y el portal encuentra su destino. Con una ref
+  // el primer render llegaría con `null` y la banda no aparecería hasta
+  // el siguiente cambio de estado del asistente.
+  const [ranuraTarea, setRanuraTarea] = useState<HTMLDivElement | null>(null)
   const location = useLocation()
   const direccion = direccionPara(location)
   useMemoriaScroll(location.pathname)
@@ -238,8 +255,12 @@ export function Chasis(props: Props) {
             alSalir={props.alSalir}
           >
             {props.barra}
+            {/* Ranura para la banda pegajosa de quien tenga el dato del
+                momento (el paso actual del asistente): ver
+                src/app/bandaTarea.tsx. */}
+            <div ref={setRanuraTarea} />
           </BarraTarea>
-          {props.children}
+          <ProveedorBandaTarea value={ranuraTarea}>{props.children}</ProveedorBandaTarea>
         </div>
       </div>
     )
@@ -255,8 +276,37 @@ export function Chasis(props: Props) {
             eje que la fila de las raíces. Antes cada pantalla elegía su
             propio relleno (`px-2`, `pl-2 pr-3`, `px-4`) y los controles
             no caían nunca en el mismo sitio al bajar un nivel. */}
+        {/* Ancla permanente del nivel documento (auditoría móvil del
+            2026-08-03, hallazgo M-001, regla M-R1, mockup `1b`). Hasta
+            ahora esta fila solo llevaba el regreso y los iconos: el
+            nombre del equipo o del artículo era un `h1` dentro del
+            scroll, así que en una ficha de tres o cuatro pantallas, tras
+            el primer desplazamiento, nada decía QUÉ se estaba viendo. Lo
+            único que orientaba era la pestaña iluminada, y esa dice
+            "Equipos", no qué equipo.
+
+            El cambio es una línea y ningún control nuevo: el regreso se
+            reduce a su cuadrado de 44 px (la etiqueta la asume el
+            contexto de arriba, que además nombra el destino real, R13) y
+            al lado van el origen a 11 px y el nombre a 14 px. */}
         <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5">
-          <BotonVolver to={props.volverA}>{props.volverEtiqueta}</BotonVolver>
+          {props.titulo ? (
+            <div className="flex min-w-0 flex-1 items-center gap-0.5">
+              <BotonVolver to={props.volverA} soloIcono>
+                {props.volverEtiqueta}
+              </BotonVolver>
+              <h1 className="min-w-0 flex-1">
+                {props.contexto && (
+                  <span className="block truncate text-[11px] leading-[1.3] text-noct-neutral-500">
+                    {props.contexto}
+                  </span>
+                )}
+                <span className="block truncate text-[14px] font-medium leading-[1.25]">{props.titulo}</span>
+              </h1>
+            </div>
+          ) : (
+            <BotonVolver to={props.volverA}>{props.volverEtiqueta}</BotonVolver>
+          )}
           {props.acciones && <div className="flex shrink-0 items-center gap-1.5">{props.acciones}</div>}
         </div>
         {props.barra}

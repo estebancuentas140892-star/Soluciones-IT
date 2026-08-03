@@ -209,3 +209,32 @@ Cada decisión indica su estado (Vigente / Revisada / Descartada), su contexto, 
 - **Decisión:** cuatro puntos y cuatro composiciones completas (regla **R30**), expresados con `md` (768), `xl` (1280) y un `3xl` propio (1680); `sm`, `lg` y `2xl` quedan libres para lo que reflujan las pantallas por dentro. La sidebar tiene dos formas, rail de iconos de 64 px y completa de 240 (232 desde 1680), y la barra de pestañas se retira en el mismo punto en que aparece el rail, así que nunca hay un ancho sin navegación de escritorio ni con la barra anclada por debajo del contenido.
 - **El `3xl` se declara en rem (`105rem`), no en px.** No es cosmético: Tailwind ordena las media queries por valor y no compara unidades distintas, así que un punto de quiebre en px se emite ANTES del bloque de los que están en rem. Declarado como `1680px`, la regla quedaba delante de las de `sm`/`md`/`lg`/`xl` y `xl:w-60` pisaba a `3xl:w-[232px]`: la sidebar seguía midiendo 240 a 1680 px **aunque la media query coincidiera**. Se detectó midiendo en el navegador, no leyendo el código.
 - **Consecuencias:** el tope de la columna crece y nunca se estrecha (448 → hasta 1040 → hasta 1294 desde 1680). La primera versión dejaba la banda de tableta sin tope y el de 1040 aparecía en `xl`, lo que producía una columna de 1200 px a 1279 y de 1040 a 1280: el contenido se estrechaba al ensanchar la ventana. Cualquier punto de quiebre nuevo se declara en rem y se verifica midiendo, no solo comprobando que la media query coincide.
+
+## AD-029. Las reglas móviles M-R1 a M-R14 acotan a R1-R41, no las sustituyen
+
+- **Estado:** Vigente (2026-08-03, tarea 201). Origen: handoff "Auditoría móvil: hallazgos y evidencia" (`Auditoría móvil.dc.html` y `Evidencia móvil.dc.html`), 34 hallazgos y 13 áreas recorridas.
+- **Contexto:** las 41 reglas visuales acumuladas (R1 a R41) nacieron de auditorías de sección y de escritorio. La auditoría móvil las revisa con un criterio distinto y más estrecho: si un técnico de pie frente a un rack, con una mano y guantes puestos, sabe **dónde está**, **qué está viendo** y **cuál es la siguiente acción** sin pensar en la interfaz. Su conclusión en una frase: la orientación está resuelta en la entrada de cada pantalla y **se disuelve al desplazarse**.
+- **Decisión:** se adoptan las catorce reglas M-R1 a M-R14 como bloque propio, con numeración propia, que **complementa** R1-R41 acotando qué significa cada una en un teléfono. Ninguna deroga una regla vigente.
+
+  | Regla | Qué obliga |
+  |---|---|
+  | **M-R1** | Anclaje permanente: en documento y tarea, el nombre de lo que se ve permanece en pantalla al desplazarse, a 14 px, junto al regreso. Extiende R14 a los niveles 2 y 3. |
+  | **M-R2** | Volver es deshacer el último salto, no subir al padre teórico, y el rótulo nombra el destino real. Matiza R13 y R20. |
+  | **M-R3** | Una acción dominante, fija abajo, de 52 px, con su promesa escrita en una línea. Si una pantalla no puede nombrar su acción dominante, le falta jerarquía. |
+  | **M-R4** | Cuatro capas de ficha: Ahora · Contexto · Acción · Profundidad. Solo las dos primeras abiertas; plegar exige mostrar el conteo. |
+  | **M-R5** | Piso del dato técnico: IP, serial, placa, MAC, puerto y clave se leen a 13 px monoespaciado como mínimo, nunca por debajo de `neutral-300`, tabulares y copiables con 44 px. Endurece R2 para datos. |
+  | **M-R6** | Una fila, un significado. Dos bloques con la misma forma tienen la misma naturaleza; si no, cambian de forma. Complementa R1. |
+  | **M-R7** | Cinco bloques por pantalla de sección, y el sexto se pliega o se va a su propia puerta. |
+  | **M-R8** | Un buscador por pantalla, de 46 px, con el alcance escrito y el mismo vocabulario en toda la app. |
+  | **M-R9** | El aviso se resuelve detrás de su puerta: un contador sobre una pestaña obliga a que su pantalla muestre lo contado. Endurece R23. |
+  | **M-R10** | La autoría tiene una sola puerta por pantalla, nombrada, al pie. El teléfono consulta y ejecuta; el ordenador documenta. |
+  | **M-R11** | Advertencia = un solo canal. Ámbar con icono y borde es advertencia y nada más; la profundidad se dibuja con sangría y línea. |
+  | **M-R12** | Lo irreversible no comparte forma con lo reversible, ni comparte fila, ni vive en la zona del pulgar. |
+  | **M-R13** | Se diseña a 360 y se verifica a 412: ningún relleno lateral mayor de 16, ninguna etiqueta de ancho fijo mayor de 96, ningún valor truncado que sea el motivo de la visita. |
+  | **M-R14** | Toque real de 44, y 48 en la acción dominante, con 8 px de separación entre objetivos vecinos. Aplica también a los controles que parecen decorativos. Endurece R6. |
+
+- **Los tres conflictos declarados, resueltos:**
+  - **M-R5 contra R2.** R2 fija el piso de contraste en `neutral-400` para texto bajo 14 px y deja `neutral-600` "para bordes y separadores". La IP de las listas estaba en `neutral-600`, es decir **ya incumplía R2**. Es un conflicto de grado, no de dirección: se adopta M-R5 (13 px, `neutral-300`) como piso para datos técnicos y R2 se mantiene para el resto del texto.
+  - **M-R3 contra R11.** R11 dice "sin barras fijas **en escritorio**: la acción principal vive arriba a la derecha". M-R3 exige barra fija abajo **en móvil**. No se contradicen; queda escrito aquí que R11 es una regla de escritorio, para que nadie las lea como una sola.
+  - **M-R9 contra la práctica de R23.** R23 pide "un aviso solo si hay un dato detrás" y el aviso de la pestaña "Más" lo cumple al pie de la letra (los pendientes existen), pero viven en Inicio. M-R9 endurece la regla: el dato tiene que estar **detrás de esa puerta**. Es la única M-R que declara mal resuelto algo ya implementado; se corrige en la fase 2 (tarea 203).
+- **Consecuencias:** (a) el criterio visual de la app pasa a ser R1-R41 **más** M-R1 a M-R14, y las M-R mandan cuando la pantalla se está mirando en un teléfono. (b) Tres decisiones ya aprobadas quedaron cumplidas solo a medias en móvil y se corrigen: la cabecera que "se queda en pantalla" solo existía en el nivel sección (M-001), el aviso de "Más" apunta a una pantalla que no contiene lo que anuncia (M-003) y los 44 px de toque se aplicaron en Guías pero no en Inicio ni en Red (M-005). (c) **M-023 (desbloqueo de la Bóveda) queda fuera de fase**: la auditoría lo registra con su alternativa (reutilizar el bloqueo del teléfono para reabrir la sesión, nunca para descifrar sin la maestra) y **no se implementa sin decisión explícita del usuario**.

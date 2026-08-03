@@ -4,15 +4,43 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+*(vacío: la tarea 201 se cerró el 2026-08-03. La siguiente es la 202, ver "Por hacer".)*
+
+---
+
+**HANDOFF NUEVO: "Auditoría móvil: hallazgos y evidencia" (importado el 2026-08-03).** Dos `.dc.html` en `Auditoría móvil_ hallazgos y evidencia-handoff.zip`: `Auditoría móvil.dc.html` (el informe: 34 hallazgos, 3 de ellos P0, 13 áreas recorridas y 14 reglas nuevas) y `Evidencia móvil.dc.html` (el lienzo: 10 turnos, 22 mockups, todo dibujado a 360 px con los tokens Nocturne reales). Es una auditoría **de método distinto** a las anteriores: no pregunta si la app se ve bien, sino si un técnico de pie frente a un rack, con una mano y guantes, sabe **dónde está**, **qué está viendo** y **cuál es la siguiente acción** sin pensar en la interfaz.
+
+Su diagnóstico en una frase: **la orientación está resuelta en la entrada de cada pantalla y se disuelve al desplazarse**. Las catorce reglas M-R1 a M-R14 quedaron registradas en [DECISIONES.md](DECISIONES.md) **AD-029**, con los tres conflictos que declaraban contra R1-R41 ya resueltos.
+
+La auditoría propone **tres fases**, y se implementan como tres tareas (regla 15: una "En proceso" a la vez):
+
+| Fase | Qué cubre | Hallazgos | Tarea |
+|---|---|---|---|
+| 1 | Lo que impide trabajar con el teléfono en la mano | M-010, M-011 (P0), M-014 (P0), M-001, M-015 | **201 (hecha)** |
+| 2 | Lo que hace perder tiempo todos los días | M-002, M-003, M-006, M-007, M-012, M-016*, M-018, M-019, M-021, M-026, M-029, M-032* | **202 a 205** |
+| 3 | Refinamiento y consistencia | M-004, M-005, M-008, M-009, M-013, M-017, M-020, M-022, M-024, M-025, M-027, M-028, M-030, M-031*, M-033, M-034 | **206** |
+
+*(\*) M-016, M-031 y M-032 se cerraron dentro de la fase 1: los tres caían dentro de las pantallas que se rehacían y separarlos habría obligado a tocarlas dos veces.*
+
+**M-023 (desbloqueo de la Bóveda) queda fuera de fase a propósito:** la auditoría lo registra con su alternativa y **no se implementa sin decisión explícita del usuario** (AD-029).
+
+---
+
+La **tarea 201** (fase 1 de la auditoría móvil) quedó **terminada, verificada en navegador y archivada el 2026-08-03**. Los cinco hallazgos de la fase, más tres de la fase 2 y 3 que caían dentro de las mismas pantallas. **Medido en navegador real a 360 px** con un banco de pruebas temporal (retirado antes de commitear): el ancla del nivel documento sigue en pantalla tras 415 px de scroll; la capa "Ahora" de la ficha de equipo termina a **265 px** (la primera pantalla, contra las tres que la auditoría midió para llegar a "Conexiones"); el ancla del paso mide 48 px dentro del bloque pegajoso y la acción dominante queda anclada al pie del viewport; la IP se lee a 14 px monoespaciado tabular en `noct-text`. Componentes nuevos: `FilaDato`, `SeccionPlegable`, `BandaTarea`, `useImpactoEquipo`. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+---
+
 ### Tarea 173. Rediseño P3: modo ejecución del asistente (`/soluciones/:cat/:art/ejecutar`)
+
+> **Actualizada el 2026-08-03 (tarea 201).** De sus nueve decisiones, **tres ya están hechas** y salen de aquí: la navegación fija abajo (retroceso en cuadrado, avance ocupando el resto), el botón que dice qué falta en vez de apagarse mudo, y "Atrás" reducido a icono. Las trajo la fase 1 de la auditoría móvil, que pedía exactamente lo mismo con otro número (M-011). **Quedan seis:** "Guardar y salir" en lugar de "Salir"; progreso segmentado de N marcas que distinga hecho de actual y sirva para volver a un paso (hoy el ancla lleva una barra continua); escala de campo (título 21 px, tareas 16 px, casillas de 26 px en filas de 52); cronómetro en lenguaje humano ("7 min de 25"); una foto por fila a ancho completo; y la evidencia fotográfica como acción de bloque con borde punteado. La tarea completa **sigue pendiente**, con menos alcance.
 
 - **Descripción:** las 9 decisiones de la auditoría para P3 (turno 1, mockups `1g` y `1h`). Navegación fija abajo (retroceso en cuadrado de 52 px, avance ocupando el resto); el botón dice qué falta y qué viene ("Falta 1 tarea para poder avanzar" encima, "Sigue: calibrar la etiqueta" dentro) en vez de un control apagado y mudo al 30 % de opacidad; "Guardar y salir" en lugar de "Salir"; progreso segmentado de N marcas que distingue hecho (verde) de actual (acento) y sirve para volver a un paso; escala de campo (título 21 px, tareas 16 px, casillas de 26 px en filas de 52); cronómetro en lenguaje humano ("7 min de 25"); una foto por fila a ancho completo; la evidencia fotográfica sube a acción de bloque con borde punteado; tarea completada tachada y en gris con la casilla rellena en acento.
 - **Motivo:** es la pantalla que se usa de pie, con guantes, a contraluz, y hoy tiene tipografía de escritorio, el avance al final del scroll y un "Siguiente" que se apaga sin decir por qué.
 - **Impacto:** el técnico deja de recorrer toda la pantalla para avanzar y entiende siempre por qué no puede.
-- **Prioridad:** Alta. **Estado:** En progreso.
-- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx` (632 líneas), `src/features/soluciones/AsistentePage.tsx`, `src/features/soluciones/useProcedimientoEjecucion.ts`.
-- **Dependencias:** la 172 (hecha), que ya definió `BarraAccionFicha` y la variante de segmentos de `IndicadorAvance`; las dos se reutilizan aquí.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
+- **Prioridad:** Media (bajó de Alta: los dos puntos que dolían de verdad, los P0 de la auditoría móvil, ya están hechos). **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx` (668 líneas), `src/features/soluciones/AsistentePage.tsx`, `src/features/soluciones/useProcedimientoEjecucion.ts`.
+- **Dependencias:** la 172 (hecha), que ya definió `BarraAccionFicha` y la variante de segmentos de `IndicadorAvance`; las dos se reutilizan aquí. Y la **201**, que ya puso el ancla de paso y la acción dominante fija: lo que queda se monta encima de ellas.
+- **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ---
 
@@ -175,6 +203,68 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 202. Auditoría móvil, fase 2: el regreso recuerda el camino (M-002, M-020, M-029, regla M-R2)
+
+- **Descripción:** hoy el regreso lleva al **padre declarado**, no al recorrido real, y eso convierte tres recorridos frecuentes en callejones: escanear un equipo y abrir su ficha deja al técnico en Equipos (no en el escáner, con la cámara viva); abrir un equipo desde la topología lo devuelve a la lista de Red; y un resultado de búsqueda vuelve a la lista de su sección. La regla **M-R2** matiza R13 y R20: volver es **deshacer el último salto**, y el rótulo nombra el destino real ("‹ Escáner"). El padre declarado se mantiene como respaldo para enlaces profundos y recargas, que es justo por lo que se eligió (`padreDe` no se retira). Incluye el contador de sesión del escáner ("3 leídos"), que es lo que da sentido a quedarse dentro (mockup `8b`).
+- **Motivo:** inventariar diez equipos de un rack cuesta **cuatro toques por equipo en vez de dos**, porque hay que volver a entrar al escáner por "Más". Y seguir una cadena de tres saltos de red rompe el hilo tres veces.
+- **Impacto:** alto en dos flujos de campo (inventariar un rack, recorrer la red). Riesgo medio: toca la fuente única de navegación, que hoy es determinista y tiene pruebas; el origen debe ser un **añadido** que nunca deje una pantalla sin salida.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/lib/navegacion.ts` (origen efímero además del padre declarado), `src/components/BotonVolver.tsx`, `src/app/Chasis.tsx` (la línea de contexto del ancla la escribe el origen cuando lo hay), `src/features/dispositivos/EscanerPage.tsx`, `src/features/red/TopologiaEquipoPage.tsx`, `src/features/dispositivos/DispositivoPage.tsx`.
+- **Dependencias:** la **201** (el ancla permanente ya existe y es donde se escribe el origen). Reglas que fija: **M-R2**. Se relaciona con la tarea **188** (`MigaDePan`), que sigue vigente para los tramos completos de escritorio.
+- **Modelo/esfuerzo:** Opus 5 / Alto (toca la fuente única de navegación de las 44 rutas).
+
+### 203. Auditoría móvil, fase 2: Inicio en cinco bloques y dos pesos de fila (M-006, M-007, M-013, M-003)
+
+- **Descripción:** con la base llena, Inicio mide más de **2.200 px** a 360 px: cuatro pantallas. El problema no es la cantidad de información sino que **cinco bloques usan exactamente la misma fila de 52 px** (cuadrado de 34, título de 14, subtítulo de 12, galón) y solo un rótulo de 11 px los distingue: "Pendientes" (algo que debo hacer) pesa igual que "Actividad del equipo" (algo que hizo otro). Propuesta (mockup `2b`): **cinco bloques máximo** (**M-R7**), **dos pesos de fila** (acción a 15 px con la razón en color de estado, información a 13,5 px sin cuadrado, **M-R6**), Actividad y "Para empezar" plegados tras una línea con su conteo, el segundo buscador retirado (la lupa del chasis ya busca en todo, **M-R8**) y **una sola tarjeta de reanudar** con dos tamaños, que no se repite si la barra flotante está visible (M-013). Cierra además **M-003**: el aviso numérico se muda de la pestaña "Más" a Inicio, que es donde vive el dato (**M-R9**).
+- **Motivo:** un aviso que lleva a un sitio donde no está lo avisado enseña al técnico a ignorar los avisos. Y sin foco, el técnico desplaza buscando en vez de reconocer.
+- **Impacto:** alto en la primera pantalla de cada jornada. Sin esquema nuevo: los datos ya se calculan.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/inicio/InicioPage.tsx`, `pendientes.ts`, `usePendientes.ts`, `src/app/Chasis.tsx` (el número deja la pestaña "Más"), `src/components/AvisoPestana.tsx`, `src/components/BarraReanudar.tsx`.
+- **Dependencias:** **absorbe la tarea 195** (turno 9 del handoff anterior, "Inicio, las tres zonas"), que pedía lo mismo con otro reparto: las tres zonas de la 195 y los cinco bloques de aquí son la misma pantalla, y hacerlas por separado obligaría a rehacerla dos veces. Al tomarla se decide qué reparto manda y se anota. Reglas que fija: **M-R6**, **M-R7**, **M-R9**.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+### 204. Auditoría móvil, fase 2: Red abre con el nodo, no con la lista (M-018, M-019)
+
+- **Descripción:** Red tiene hoy la forma de un **segundo inventario** (el mismo buscador, los mismos grupos y la misma fila de equipo que Equipos, con la ubicación como título de grupo) y aparta las relaciones detrás de una fila. El hallazgo que ahorra trabajo: **la pantalla que Red necesita ya está construida** (la topología de un equipo, con "Depende de", "si falla, caen N equipos" y el árbol de dependientes), solo está a **tres toques** y no es la forma de la sección. Propuesta (mockup `10c`): esa misma pantalla en la raíz de la pestaña, recordando el último nodo visitado (memoria de pestaña, que ya existe), con la lista de equipos por ubicación debajo, en una fila. **Cero componentes nuevos.** Y **M-019**: los grupos se forman con el **texto libre** de ubicación, no con `ubicacionId`, así que "Rack 1" y "rack 1" son dos grupos distintos.
+- **Motivo:** la sección que existe para explicar dependencias no las muestra en su primera pantalla. Y el técnico no encuentra el equipo donde lo busca porque su rack aparece escrito de dos maneras.
+- **Impacto:** alto, y barato: es mover una pantalla ya construida y cambiar la clave de agrupación. **M-019 toca datos** solo en lectura (agrupar por id y usar el texto como respaldo); no reescribe nada.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/red/RedPage.tsx`, `TopologiaEquipoPage.tsx`, `TopologiaPage.tsx`, `src/app/memoriaPestana.ts`.
+- **Dependencias:** la **202** (el recorrido por nodos necesita que el regreso deshaga un salto, M-020). Se cruza con la tarea **194** (turno 8: unificar las dos fichas de Red y su formulario de conexión), que sigue vigente y se hace después: la 204 mueve la puerta, la 194 funde las fichas.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+### 205. Auditoría móvil, fase 2: Bóveda y Diagnóstico, la acción frecuente a la vista (M-021, M-026)
+
+- **Descripción:** dos pantallas, dos arreglos pequeños de consecuencia grande. **(a) Bóveda (M-021, mockup `9b`):** el gesto real del técnico en el sitio es "copiar la clave del switch", y hoy vive dentro del menú "···" de la fila, que abre una hoja inferior: **tres toques y un cambio de superficie para el 80 % de las visitas**. La propuesta saca un botón "copiar" de 44 px a la fila, con la auditoría y el aviso de acceso que **ya existen** (nada de la arquitectura de seguridad se toca), y el menú conserva el resto. La fila vencida sube y dice **cuánto** hace que venció, en vez de una pastilla que solo dice "Vencida". **(b) Diagnóstico (M-026, mockup `5b`):** "Volver" (retrocede una pregunta) y "Cancelar" (descarta el avance y lo registra como abandono) comparten fila, tamaño y estilo fantasma de 13 px, en la zona del pulgar. "Atrás" pasa a icono junto a la pregunta; "Cancelar" sale de la zona del pulgar y deja de ser un botón (**M-R12**: lo irreversible no comparte forma con lo reversible).
+- **Motivo:** el menú "···" de la Bóveda está bien construido; lo que falla es que **sea el único camino**. Y en Diagnóstico se pierde un diagnóstico a medias por un toque a 8 px del correcto, sin que nada en la forma lo advierta.
+- **Impacto:** alto en la sección más usada en el sitio (Bóveda) y en el flujo con menos carga mental de la app (Diagnóstico). Sin esquema. **No toca cifrado, permisos, desbloqueo ni auditoría.**
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/boveda/BovedaPage.tsx`, `src/features/diagnostico/DiagnosticoRunPage.tsx`.
+- **Dependencias:** ninguna. Se cruza con la tarea **193** (turno 7, rediseño completo de la Bóveda), que es mucho más grande y sigue vigente: esta solo saca el botón de copiar a la fila. Reglas que fija: **M-R12**.
+- **Modelo/esfuerzo:** Sonnet 5 / Alto.
+
+### 206. Auditoría móvil, fase 2: un color, un significado dentro del paso (M-012, regla M-R11)
+
+- **Descripción:** dentro de un paso en ejecución, el color no distingue naturaleza: **ámbar** es a la vez "advertencia", "pregunta de error" y "solución vinculada"; el **acento** es a la vez "subprocedimiento" y "credencial protegida". Un paso puede llegar a mostrar **cinco marcos de color anidados**, dos de ellos del mismo tono con significado distinto, así que la advertencia real deja de destacar. Propuesta (mockup `3b`): **ámbar solo para advertencia**, con icono y borde; la **profundidad se dibuja con sangría y una línea vertical neutra**; los vínculos (credencial, subprocedimiento, evidencia) bajan a una lista sangrada con icono y sin fondo.
+- **Motivo:** es el mismo hallazgo que ya levantó el turno 12 de la auditoría anterior y sigue abierto. Un aviso del subprocedimiento y un aviso del paso padre se ven idénticos aunque pertenezcan a documentos distintos.
+- **Impacto:** medio, concentrado en los procedimientos compuestos, que son los más largos. Riesgo bajo: es composición y color, no lógica.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/ProcedimientoVista.tsx` (959 líneas), `src/features/soluciones/AsistenteVista.tsx` (`SubProcedimientoEnAsistente` y `SolucionEnAsistente`), `src/features/boveda/CredencialEnPaso.tsx`.
+- **Dependencias:** **es el mismo trabajo que la tarea 198** (turno 12, procedimientos anidados), vista desde los dos handoffs: la 198 lo pide con "2 px de línea vertical neutra más 13 px de sangría" y esta con **M-R11**. Al tomar cualquiera de las dos se cierra la otra por absorción, como se hizo con la 176 y la 199. Reglas que fija: **M-R11**.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+### 207. Auditoría móvil, fase 3: refinamiento y consistencia (16 hallazgos P2 y P3)
+
+- **Descripción:** los hallazgos menores, que la propia auditoría agrupa y advierte que **varios se cierran solos** al hacer las fases anteriores. **M-004 y M-009** (un buscador por pantalla, de 46 px, con el alcance escrito y el mismo texto en toda la app: hoy hay cuatro en línea con tres alturas y cuatro alcances distintos, más la lupa global, y en Inicio y Guías se ven dos a la vez, **M-R8**). **M-005** (el borrar del buscador mide unos 26 px en Inicio y Red; Guías ya lo corrigió a 44, **M-R14**). **M-008** ("Registrar equipo" deja la rejilla de atajos de Inicio: el alta se hace mejor en el ordenador y ya tiene su sitio con contexto, tras un escaneo sin coincidencia, **M-R10**). **M-017** (cerrar la migración a `PastillaEstado` en las cinco pantallas que hoy copian el estado a mano: cierra **CAND-1**). **M-022** (los chips de la Bóveda cuentan sobre la bóveda completa, no sobre el filtro activo, al revés de lo aprobado para Equipos). **M-024 y M-025** ("Importar" y "Etiquetas QR" a un grupo "Mejor desde el ordenador" al final de "Más"; el conteo a la derecha, como en el resto de la app, mockup `7b`). **M-027** (una línea con la última respuesta bajo el progreso del diagnóstico, "Enciende: no → Sin luces", tocable para retroceder ahí). **M-028** (retirar el lápiz "Editar diagnóstico" de dentro de la ejecución: mide unos 27 px y es autoría en mitad de una ejecución). **M-030** (la instrucción del escáner a 14 px con fondo propio: a pleno sol, sobre un rack claro, la única instrucción de la pantalla desaparece). **M-033** (la barra de reanudar se reduce a 36 px al desplazarse hacia abajo: sumada a las pestañas deja unos 430 px de contenido en un teléfono de 360x640). **M-034** (vocabulario escrito: **guía** es el documento, **procedimiento** son sus pasos, **solución** es el bloque anidado; "artículo" se retira de la interfaz).
+- **Motivo:** dejarlos registrados con su número para que no se pierdan al cerrar el handoff. Varios son de una línea.
+- **Impacto:** consistencia. **M-034 toca copy en muchas pantallas** y conviene hacerlo de una pasada; el resto es puntual.
+- **Prioridad:** Baja (M-005 y M-030 suben a Media si el equipo reporta fallos de toque o de lectura a pleno sol). **Estado:** Pendiente.
+- **Área afectada:** ver cada punto. Los cinco buscadores se cruzan con el punto (c) de la tarea **189**.
+- **Dependencias:** las fases 1 y 2. **M-017** cierra el resto de **CAND-1** (tarea 168) y se cruza con la tarea **174**.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio, salvo M-034 (Opus 5 / Alto: es un cambio de vocabulario transversal).
+
+---
 
 **REDISEÑO DEL FLUJO DEL TÉCNICO (auditoría del 2026-07-23, [AUDITORIA_FLUJO_INSTALACION.md](AUDITORIA_FLUJO_INSTALACION.md)).** Tareas registradas con el formato de la regla 19. **Fases 1, 2 y 3 IMPLEMENTADAS y verificadas el 2026-07-23** (H1 a H6 completadas; H5 es una decisión aplicada). El usuario pidió construir también H6 (deferida en la auditoría original) tras revisar el análisis. Verificación conjunta: lint, typecheck y build en verde; 1621 pruebas pasan (los mismos 4 fallos preexistentes y ajenos de `archivosPendientes.test.ts`, RLS de Storage con el `.env` real de esta sesión). DOCUMENTACION_FUNCIONAL.md e Historial de cambios actualizados en la misma tarea. **Sin verificar en navegador** (la app exige login de técnico real, no disponible en esta sesión).
 

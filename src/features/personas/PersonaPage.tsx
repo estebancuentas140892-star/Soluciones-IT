@@ -52,9 +52,14 @@ export function PersonaPage() {
       modo="documento"
       volverA="/personas"
       volverEtiqueta="Personas"
+      // Ancla permanente (M-001, M-R1, mockup `6b`): se llega desde
+      // "Responsable" en la ficha de un equipo, así que el nombre se
+      // queda arriba en vez de irse con el scroll.
+      titulo={persona.nombre}
+      contexto="Personas"
       barra={
         <div className="px-4 pb-3 pt-0.5">
-          <h1 className="m-0 text-[21px] font-medium leading-[1.25]">{persona.nombre}</h1>
+          <p className="m-0 text-[19px] font-medium leading-[1.25]">{persona.nombre}</p>
         </div>
       }
     >

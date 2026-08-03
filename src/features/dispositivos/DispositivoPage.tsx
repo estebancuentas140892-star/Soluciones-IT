@@ -1,53 +1,63 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { db } from '../../lib/db'
+import { db, type Dispositivo } from '../../lib/db'
 import { dependenciasDeBaja, sinDependencias } from './baja'
 import { completitudDispositivo, pasosSiguientes, type PasoSiguiente } from './completitud'
-import { compartirOCopiar, copiarAlPortapapeles } from '../../lib/portapapeles'
+import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { textoVivo } from '../../lib/referencia'
 import { referenciasHacia, resumenImpacto } from '../../lib/grafo'
+import { tiempoRelativo } from '../../lib/tiempoRelativo'
 import { Chasis } from '../../app/Chasis'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonFavorito } from '../../components/BotonFavorito'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { FilaDato } from '../../components/FilaDato'
+import { MiniaturaPortada } from '../../components/MiniaturaPortada'
+import { SeccionPlegable } from '../../components/SeccionPlegable'
 import { useGrafo } from '../../components/useGrafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
   ArrowsClockwise,
   BookOpen,
+  CaretDown,
   CaretRight,
   Camera,
   Check,
   Copy,
+  ClockCounterClockwise,
   DotsThreeOutline,
   LockSimple,
   MapPin,
+  Paperclip,
   PencilSimple,
   PlugsConnected,
   Plus,
   QrCode,
   ShareNetwork,
   TrashSimple,
+  TreeStructure,
   User,
-  Warning,
+  WarningOctagon,
   XCircle,
 } from '../../components/iconos'
 import {
-  BTN_GHOST,
-  BTN_GHOST_ACENTO,
   BTN_GHOST_PELIGRO,
   BTN_ICONO_SECUNDARIO,
   BTN_SECUNDARIO,
   TituloSeccion,
 } from '../../components/nocturne'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
+import { useImpactoEquipo } from '../red/useImpactoEquipo'
 import { ConexionesFicha } from '../red/ConexionesFicha'
-import { estadoConEtiqueta } from '../red/topologiaVisual'
+import { IconoNodo } from '../red/IconoNodo'
+import { estadoConEtiqueta, tipoDeNodoVisual } from '../red/topologiaVisual'
 import { esDeRed } from '../../lib/categorias'
+import { procedimientosDeCategoria, procedimientosDeDispositivo } from './procedimientosDeDispositivo'
+import { problemasDeCategoria, problemasDeDispositivo } from './problemasDeDispositivo'
 import { Historial } from '../historial/Historial'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
 import { CredencialesDelEquipo } from './CredencialesDelEquipo'
@@ -146,6 +156,58 @@ export function DispositivoPage() {
     [dispositivoId],
   )
 
+  // Conteos de la capa "Profundidad" (M-014, regla M-R4: plegar exige
+  // mostrar el conteo, para que plegar informe en vez de esconder).
+  // Viven aquí, con la cabecera plegada, y no dentro de cada bloque: si
+  // vivieran dentro habría que abrirlos para saber si vale la pena
+  // abrirlos, que es justo lo que la regla evita.
+  const totalConexiones = useLiveQuery(
+    async () =>
+      (await db.conexiones.where('origenId').equals(dispositivoId).filter((c) => !c.eliminadoEn).count()) +
+      (await db.conexiones.where('destinoId').equals(dispositivoId).filter((c) => !c.eliminadoEn).count()),
+    [dispositivoId],
+    0,
+  )
+  const totalCamposProtegidos = useLiveQuery(
+    () =>
+      db.campos_protegidos
+        .where('dispositivoId')
+        .equals(dispositivoId)
+        .filter((c) => !c.eliminadoEn)
+        .count(),
+    [dispositivoId],
+    0,
+  )
+  const totalAdjuntos = useLiveQuery(
+    () =>
+      db.adjuntos
+        .where('[entidadTipo+entidadId]')
+        .equals(['dispositivo', dispositivoId])
+        .filter((a) => !a.eliminadoEn)
+        .count(),
+    [dispositivoId],
+    0,
+  )
+  // "Intervenciones" cuenta el trabajo ESCRITO A MANO sobre el equipo
+  // (`campo: 'intervencion'`), no cada cambio de campo: la cabecera
+  // plegada promete lo que hay dentro, y lo que el técnico busca ahí es
+  // "¿qué le han hecho a este equipo?".
+  const intervenciones = useLiveQuery(
+    async () => {
+      const entradas = await db.historial
+        .where('[entidadTipo+entidadId]')
+        .equals(['dispositivo', dispositivoId])
+        .filter((e) => e.campo === 'intervencion')
+        .toArray()
+      const fechas = entradas.map((e) => e.fechaHora).sort()
+      return { total: fechas.length, ultima: fechas.at(-1) ?? null }
+    },
+    [dispositivoId],
+    { total: 0, ultima: null as string | null },
+  )
+  const { totalEquipos: equiposEnRiesgo, camino: cadenaDependencia } = useImpactoEquipo(dispositivoId)
+  const articulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
+
   const idVisitado = dispositivo && !dispositivo.eliminadoEn ? dispositivo.id : null
   useEffect(() => {
     if (idVisitado) void registrarVisita('dispositivo', idVisitado)
@@ -177,12 +239,15 @@ export function DispositivoPage() {
     navigate(volverA)
   }
 
-  const campos: { etiqueta: string; valor: string; mono?: boolean }[] = [
-    { etiqueta: 'Marca', valor: dispositivo.marca },
-    { etiqueta: 'Modelo', valor: dispositivo.modelo },
-    { etiqueta: 'Número de serie', valor: dispositivo.serial, mono: true },
-    { etiqueta: 'Placa de inventario', valor: dispositivo.placaInventario, mono: true },
-    { etiqueta: 'Dirección IP', valor: dispositivo.ip, mono: true },
+  // Reparto de los datos entre las capas "Ahora" y "Contexto" (M-014,
+  // regla M-R4). La IP sube a "Ahora" porque es el dato que se viene a
+  // buscar con el equipo delante; marca y modelo pasan a ser la línea
+  // bajo el nombre, no dos filas; serial y placa se quedan en
+  // "Contexto", que es donde se consultan.
+  const marcaModelo = [dispositivo.marca, dispositivo.modelo].filter(Boolean).join(' ')
+  const camposContexto: { etiqueta: string; valor: string; tecnico?: boolean }[] = [
+    { etiqueta: 'Número de serie', valor: dispositivo.serial, tecnico: true },
+    { etiqueta: 'Placa de inventario', valor: dispositivo.placaInventario, tecnico: true },
   ].filter((c) => c.valor)
 
   // Nombre a mostrar de la ubicacion: el vivo de la fila enlazada si
@@ -206,6 +271,24 @@ export function DispositivoPage() {
   const metaLinea = [categoria?.nombre, `actualizado ${fechaCorta(dispositivo.updatedAt)}`]
     .filter(Boolean)
     .join(' · ')
+
+  // Lo que se puede resolver con este equipo, contado para la promesa de
+  // la acción dominante (M-R3: la acción fija dice qué va a pasar).
+  const procedimientosPropios = procedimientosDeDispositivo(articulos, dispositivoId)
+  const problemasPropios = problemasDeDispositivo(articulos, dispositivoId)
+  const criterio = { marca: dispositivo.marca, modelo: dispositivo.modelo }
+  const totalResolver =
+    procedimientosPropios.length +
+    procedimientosDeCategoria(
+      articulos,
+      dispositivo.categoriaId,
+      new Set(procedimientosPropios.map((a) => a.id)),
+      criterio,
+    ).length
+  const totalProblemas =
+    problemasPropios.length +
+    problemasDeCategoria(articulos, dispositivo.categoriaId, new Set(problemasPropios.map((a) => a.id)), criterio)
+      .length
 
   // Completitud de la ficha (fase J3): guia, nunca bloquea. Solo se
   // muestra cuando falta algo.
@@ -231,6 +314,12 @@ export function DispositivoPage() {
       modo="documento"
       volverA={volverA}
       volverEtiqueta={esRed ? 'Red' : 'Equipos'}
+      // Ancla permanente (M-001, M-R1): el nombre del equipo se queda en
+      // pantalla al desplazarse, con de dónde viene y dónde está. Antes
+      // era un `h1` dentro del scroll, así que a partir de los primeros
+      // 400 px nada decía QUÉ equipo se estaba mirando.
+      titulo={dispositivo.nombre}
+      contexto={[esRed ? 'Red' : 'Equipos', ubicacionNombre].filter(Boolean).join(' · ')}
       acciones={
         <>
           <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} />
@@ -298,46 +387,32 @@ export function DispositivoPage() {
         </div>
       )}
     >
-      {/* Un solo eje vertical (R26, tarea 191): esta ficha usaba
-          `lg:px-12` mientras su hermana de la Bóveda usaba `lg:px-10` y
-          la fila de chips de arriba también, así que cabecera y cuerpo
-          quedaban desalineados 8 px. El par se unifica en `lg:px-10`. */}
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-10">
-        {/* Encabezado del equipo: foto, título, categoría/fecha y estado. */}
-        <header className="flex flex-col gap-3">
-          {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}
-          <div className="flex items-start justify-between gap-2.5">
-            <div className="min-w-0">
-              <h1 className="text-pretty text-[21px] font-medium leading-[1.25]">{dispositivo.nombre}</h1>
-              <p className="mt-1 text-[12.5px] text-noct-neutral-500">{metaLinea}</p>
-            </div>
-            {estado && (
-              <span
-                className={`inline-flex min-h-[28px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[12px] font-medium ${pillEstado(estado.etiqueta)}`}
-              >
-                <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
-                {estado.etiqueta}
-              </span>
-            )}
-          </div>
+      {/* La ficha 360° en cuatro capas (auditoría móvil del 2026-08-03,
+          hallazgo M-014 -P0-, regla M-R4, mockup `4b`).
 
-          {/* Completitud de la ficha (fase J3): linea discreta dentro de
-              la propia cabecera, solo cuando falta algo, con enlace
-              directo a Editar. Nunca bloquea el uso de la ficha, solo lo
-              señala. */}
-          {completitud.faltantes.length > 0 && (
-            <Link
-              to={`/dispositivos/${dispositivoId}/editar`}
-              className="flex items-center gap-1.5 text-[12.5px] text-noct-precaucion hover:underline"
-            >
-              <Warning size={13} className="shrink-0" aria-hidden />
-              <span className="min-w-0 truncate">
-                Ficha al {completitud.porcentaje}%. Falta: {completitud.faltantes.join(', ')}.
-              </span>
-            </Link>
-          )}
-        </header>
+          Lo medido: nueve secciones siempre abiertas, sin plegado ni
+          índice, en orden de escritura y no de urgencia. A 360 px,
+          "Conexiones" -la respuesta a "¿de qué depende esto?"- empezaba
+          pasadas TRES pantallas de scroll, y la primera se iba entera en
+          la foto de 150 px y la línea de completitud, que no sirven para
+          trabajar con el equipo delante. "360°" se estaba leyendo como
+          "todo a la vez".
 
+          El reparto no quita ni un dato:
+
+            Ahora        qué es, en qué estado, su IP copiable y dónde
+                         está. Cabe en la primera pantalla.
+            Contexto     la información técnica completa, abierta.
+            Acción       lo que se puede resolver con este equipo, con
+                         UNA sola acción dominante fija al pie (M-R3).
+            Profundidad  impacto, conexiones, datos protegidos, adjuntos
+                         e intervenciones, plegados CON SU CONTEO a la
+                         vista: "Conexiones · 4" dice más que cuatro
+                         filas que hay que desplazar (M-R4).
+
+          Un solo eje vertical (R26, tarea 191): `lg:px-10`, el mismo de
+          las fichas hermanas de artículo y credencial. */}
+      <main className="@container flex flex-1 flex-col gap-[22px] px-4 pb-4 pt-2 lg:px-10">
         {/* Migracion pendiente (hallazgos L2/L3): este equipo reemplaza a
             otro que todavia tiene conexiones, credenciales o campos
             protegidos sin mover. Enlaza a la pantalla de migracion en vez
@@ -348,45 +423,89 @@ export function DispositivoPage() {
 
         {pasos.length > 0 && <QueSigue pasos={pasos} dispositivoId={dispositivoId} />}
 
-        {/* Información: filas copiables, ubicación, responsable y
-            reemplazo vivos. */}
-        {(campos.length > 0 ||
-          ubicacionNombre ||
+        {/* CAPA 1 · AHORA. El nombre ya vive arriba, en el ancla
+            permanente del chasis (M-001), así que aquí no se repite a
+            21 px: la tarjeta lo da a 16 con lo que lo acompaña. */}
+        <section>
+          <TituloSeccion className="mb-2">Ahora</TituloSeccion>
+          <div className="divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
+            <div className="flex items-center gap-3 px-3.5 py-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-noct-text/[.06] text-noct-neutral-400">
+                {dispositivo.foto ? (
+                  <MiniaturaPortada
+                    referencia={dispositivo.foto.referencia}
+                    alt={dispositivo.nombre}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-5 w-5" />
+                )}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[16px] font-medium leading-[1.25]">{dispositivo.nombre}</span>
+                <span className="mt-0.5 block truncate text-[12.5px] text-noct-neutral-400">
+                  {marcaModelo || metaLinea}
+                </span>
+              </span>
+              {estado && (
+                <span
+                  className={`inline-flex min-h-[26px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[11.5px] font-medium ${pillEstado(estado.etiqueta)}`}
+                >
+                  <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
+                  {estado.etiqueta}
+                </span>
+              )}
+            </div>
+
+            {dispositivo.ip && (
+              <div className="px-3.5">
+                <FilaDato etiqueta="Dirección IP" valor={dispositivo.ip} tecnico copiable={dispositivo.ip} />
+              </div>
+            )}
+
+            {ubicacionNombre &&
+              (ubicacionViva ? (
+                <Link
+                  to={`/ubicaciones/${ubicacionViva.id}`}
+                  className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-accent-300 hover:bg-noct-text/[.04]"
+                >
+                  <MapPin size={15} className="shrink-0" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{ubicacionNombre}</span>
+                  <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                </Link>
+              ) : (
+                <span className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-neutral-200">
+                  <MapPin size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{ubicacionNombre}</span>
+                </span>
+              ))}
+          </div>
+        </section>
+
+        {/* CAPA 2 · CONTEXTO. Abierta, como manda M-R4. */}
+        {(camposContexto.length > 0 ||
+          detalles.length > 0 ||
           responsableNombre ||
           reemplazaNombre ||
           reemplazadoPor ||
-          detalles.length > 0) && (
+          dispositivo.observaciones) && (
           <section>
-            <TituloSeccion className="mb-2">Información</TituloSeccion>
+            <TituloSeccion className="mb-2">Contexto</TituloSeccion>
             <div className="divide-y divide-noct-divider rounded-lg border border-noct-divider bg-noct-surface px-3.5">
-              {campos.map((campo) => (
-                <FilaCampo key={campo.etiqueta} etiqueta={campo.etiqueta} valor={campo.valor} mono={campo.mono} />
+              {camposContexto.map((campo) => (
+                <FilaDato
+                  key={campo.etiqueta}
+                  etiqueta={campo.etiqueta}
+                  valor={campo.valor}
+                  tecnico={campo.tecnico}
+                  copiable={campo.valor}
+                />
               ))}
               {detalles.map(([clave, valor]) => (
-                <FilaCampo key={clave} etiqueta={clave} valor={valor} />
+                <FilaDato key={clave} etiqueta={clave} valor={valor} copiable={valor} />
               ))}
-              {ubicacionNombre && (
-                <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
-                  <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">Ubicación</span>
-                  {ubicacionViva ? (
-                    <Link
-                      to={`/ubicaciones/${ubicacionViva.id}`}
-                      className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
-                    >
-                      <MapPin size={14} className="shrink-0" aria-hidden />
-                      {ubicacionNombre}
-                    </Link>
-                  ) : (
-                    <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-neutral-200">
-                      <MapPin size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                      {ubicacionNombre}
-                    </span>
-                  )}
-                </div>
-              )}
               {responsableNombre && (
-                <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
-                  <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">Responsable</span>
+                <FilaDato etiqueta="Responsable">
                   {responsableVivo ? (
                     <Link
                       to={`/personas/${responsableVivo.id}`}
@@ -401,11 +520,10 @@ export function DispositivoPage() {
                       {responsableNombre}
                     </span>
                   )}
-                </div>
+                </FilaDato>
               )}
               {reemplazaNombre && (
-                <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
-                  <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">Reemplaza a</span>
+                <FilaDato etiqueta="Reemplaza a">
                   <Link
                     to={`/dispositivos/${dispositivo.reemplazaA}`}
                     className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
@@ -413,11 +531,10 @@ export function DispositivoPage() {
                     <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
                     {reemplazaNombre}
                   </Link>
-                </div>
+                </FilaDato>
               )}
               {reemplazadoPor && (
-                <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
-                  <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">Reemplazado por</span>
+                <FilaDato etiqueta="Reemplazado por">
                   <Link
                     to={`/dispositivos/${reemplazadoPor.id}`}
                     className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
@@ -425,8 +542,11 @@ export function DispositivoPage() {
                     <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
                     {reemplazadoPor.nombre}
                   </Link>
-                </div>
+                </FilaDato>
               )}
+              <FilaDato etiqueta="Categoría y fecha">
+                <span className="min-w-0 flex-1 truncate text-[13.5px] text-noct-neutral-300">{metaLinea}</span>
+              </FilaDato>
             </div>
             {dispositivo.observaciones && (
               <p className="mt-2.5 whitespace-pre-wrap px-0.5 text-[13px] leading-[1.55] text-noct-neutral-300">
@@ -436,24 +556,13 @@ export function DispositivoPage() {
           </section>
         )}
 
-        {/* Seguridad (grupo P1): los datos sensibles PROPIOS de este
-            equipo, cifrados y con la misma protección que la Bóveda.
-            Va justo después de Información porque es más información
-            del equipo, no una acción. Sin permiso de bóveda no se
-            renderiza nada (el componente devuelve null). El id ancla el
-            bloque "Que sigue" (O1). */}
-        <div id="seguridad">
-          <SeguridadDelEquipo
-            dispositivoId={dispositivoId}
-            puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
-            nombreSugerido={nombreCampoSugerido}
-          />
-        </div>
-
-        {/* Resolver con este equipo: diagnóstico, vínculos y creación.
-            El id ancla el paso "procedimiento" del bloque "Que sigue" (O1). */}
+        {/* CAPA 3 · ACCIÓN. Lo que se consulta con el equipo delante. Los
+            tres botones de creación que se intercalaban aquí bajaron a la
+            puerta única del pie (M-016, regla M-R10: el teléfono consulta
+            y ejecuta, el ordenador documenta). El id ancla el paso
+            "procedimiento" del bloque "Que sigue" (O1). */}
         <section id="resolver">
-          <TituloSeccion className="mb-2">Resolver con este equipo</TituloSeccion>
+          <TituloSeccion className="mb-2">Acción</TituloSeccion>
           <div className="flex flex-col gap-2">
             <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} categoriaNombre={categoria?.nombre} />
             <div className="flex flex-col">
@@ -473,63 +582,107 @@ export function DispositivoPage() {
               />
               <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)} />
             </div>
-            {/* Creacion contextual (fase N2, punto 1): precarga la
-                categoria y el equipo afectado, asi ningun dato visible
-                aqui se vuelve a escribir a mano en el formulario.
-                "Documentar procedimiento" (hallazgo K6 de
-                AUDITORIA_FLUJOS_TI.md) es el mismo mecanismo de
-                "Reportar incidencia" pero sin forzar
-                tipo=problema_frecuente: antes solo existia el atajo
-                contextual para una incidencia, y un procedimiento
-                normal ("Instalar esta impresora", "Configurar este
-                switch") obligaba a agregar el equipo a mano en
-                "Equipos donde aplica". ArticuloForm ya lee
-                dispositivoAfectado sin importar el tipo. */}
-            <div className="flex flex-wrap gap-2">
-              <Link
-                to={`/soluciones/${dispositivo.categoriaId}/nuevo?tipo=problema_frecuente&dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
-                className={BTN_GHOST_ACENTO}
+          </div>
+        </section>
+
+        {/* CAPA 4 · PROFUNDIDAD. Cinco filas de 52 px con su conteo, en
+            vez de cinco secciones abiertas de varias pantallas. El
+            contenido solo se monta al abrirse. */}
+        <section>
+          <TituloSeccion className="mb-2">Profundidad</TituloSeccion>
+          <div className="divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
+            {(equiposEnRiesgo > 0 || cadenaDependencia.length > 0) && (
+              <SeccionPlegable
+                titulo="Si falla, caen"
+                Icono={WarningOctagon}
+                tono="precaucion"
+                conteo={`${equiposEnRiesgo} ${equiposEnRiesgo === 1 ? 'equipo' : 'equipos'}`}
               >
-                <Plus size={13} aria-hidden />
-                Reportar incidencia
-              </Link>
-              <Link
-                to={`/soluciones/${dispositivo.categoriaId}/nuevo?dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
-                className={BTN_GHOST}
+                <ImpactoYDependencias dispositivo={dispositivo} sinCabecera />
+              </SeccionPlegable>
+            )}
+
+            <SeccionPlegable
+              id="conexiones"
+              titulo="Conexiones"
+              Icono={PlugsConnected}
+              conteo={totalConexiones === 0 ? 'Ninguna' : totalConexiones}
+            >
+              <ConexionesFicha dispositivo={dispositivo} sinCabecera />
+            </SeccionPlegable>
+
+            {perfil?.puedeVerBoveda && (
+              <SeccionPlegable
+                id="seguridad"
+                titulo="Datos protegidos"
+                Icono={LockSimple}
+                conteo={totalCamposProtegidos === 0 ? 'Ninguno' : totalCamposProtegidos}
+                // El nudge anti duplicidad de la Bóveda (fase P3) llega
+                // con el nombre ya sugerido: si la sección se quedara
+                // plegada, el editor precargado no se vería.
+                inicialAbierta={Boolean(nombreCampoSugerido)}
               >
-                <BookOpen size={13} aria-hidden />
-                Documentar procedimiento
-              </Link>
-              {perfil?.puedeVerBoveda && (
-                <Link
-                  to={`/boveda/nueva?titulo=${encodeURIComponent(`Acceso ${dispositivo.nombre}`)}&categoria=${encodeURIComponent(categoria?.nombre ?? '')}&dispositivoId=${dispositivo.id}&dispositivoNombre=${encodeURIComponent(dispositivo.nombre)}`}
-                  className={BTN_GHOST}
-                >
-                  <LockSimple size={13} aria-hidden />
-                  Guardar secreto
-                </Link>
+                <SeguridadDelEquipo
+                  dispositivoId={dispositivoId}
+                  puedeVerBoveda
+                  nombreSugerido={nombreCampoSugerido}
+                  sinCabecera
+                />
+              </SeccionPlegable>
+            )}
+
+            <SeccionPlegable
+              id="foto"
+              titulo="Adjuntos"
+              Icono={Paperclip}
+              conteo={totalAdjuntos === 0 ? 'Ninguno' : totalAdjuntos}
+            >
+              {dispositivo.foto && (
+                <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />
               )}
-            </div>
+              <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} sinCabecera />
+            </SeccionPlegable>
+
+            <SeccionPlegable
+              titulo="Intervenciones"
+              Icono={ClockCounterClockwise}
+              conteo={
+                intervenciones.total === 0
+                  ? 'Ninguna'
+                  : (tiempoRelativo(intervenciones.ultima) ?? intervenciones.total)
+              }
+            >
+              <div className="flex flex-col gap-2.5">
+                <RegistrarIntervencion dispositivoId={dispositivoId} />
+                <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
+              </div>
+            </SeccionPlegable>
           </div>
         </section>
 
-        <ImpactoYDependencias dispositivo={dispositivo} />
+        {/* La puerta única de documentar (M-016, M-031, regla M-R10).
+            Antes eran tres botones de creación en medio de un bloque de
+            consulta, más la línea de completitud arriba del todo: cuatro
+            invitaciones a escribir repartidas por una pantalla que se usa
+            de pie y con una mano. Aquí se reúnen, se nombran y se dice en
+            voz alta dónde se hacen mejor. */}
+        <PuertaDocumentar
+          dispositivo={dispositivo}
+          categoriaNombre={categoria?.nombre ?? ''}
+          puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
+          completitud={completitud}
+        />
 
-        {/* El id ancla el paso "conexiones" del bloque "Que sigue" (O1). */}
-        <div id="conexiones">
-          <ConexionesFicha dispositivo={dispositivo} />
-        </div>
-
-        <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} />
-
-        {/* Intervenciones: registro manual + línea de tiempo (Historial). */}
-        <section className="flex flex-col gap-2.5">
-          <div className="flex items-center justify-between">
-            <TituloSeccion>Intervenciones</TituloSeccion>
-          </div>
-          <RegistrarIntervencion dispositivoId={dispositivoId} />
-          <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
-        </section>
+        {/* Acción dominante fija al pie (M-R3). Solo si hay algo que
+            resolver: un control que lleva a una lista vacía es un control
+            muerto (R3). */}
+        {(totalResolver > 0 || totalProblemas > 0) && (
+          <AccionDominanteEquipo
+            categoriaId={dispositivo.categoriaId}
+            procedimientos={totalResolver}
+            problemas={totalProblemas}
+          />
+        )}
       </main>
 
       <DialogoEliminar
@@ -628,35 +781,136 @@ function BannerMigracionPendiente({ nuevoId, viejoId }: { nuevoId: string; viejo
   )
 }
 
-// Fila de la tarjeta de Información: etiqueta, valor y botón de copiar
-// con confirmación breve (mismo gesto que ValorCopiable, adaptado al
-// diseño de fila del mockup).
-function FilaCampo({ etiqueta, valor, mono = false }: { etiqueta: string; valor: string; mono?: boolean }) {
-  const [copiado, setCopiado] = useState(false)
-
-  async function copiar() {
-    if (await copiarAlPortapapeles(valor)) {
-      setCopiado(true)
-      setTimeout(() => setCopiado(false), 1400)
-    }
-  }
+// Acción dominante de la ficha de equipo (regla M-R3: una sola acción,
+// fija abajo, de 52 px, con su promesa escrita en una línea). Es el
+// mismo patrón que la ficha de artículo ya tenía aprobado desde la tarea
+// 172 (`BarraAccionFicha`), aplicado aquí: la ficha de equipo no tenía
+// acción dominante, tenía tres botones de CREACIÓN en medio del cuerpo.
+//
+// No reutiliza `BarraAccionFicha` porque esa barra habla de un
+// procedimiento y su avance ("Seguir en el paso 3 de 7"): sus tres
+// estados y su nota no significan nada sobre un equipo.
+function AccionDominanteEquipo({
+  categoriaId,
+  procedimientos,
+  problemas,
+}: {
+  categoriaId: string
+  procedimientos: number
+  problemas: number
+}) {
+  const partes = [
+    procedimientos > 0
+      ? `${procedimientos} ${procedimientos === 1 ? 'procedimiento' : 'procedimientos'}`
+      : null,
+    problemas > 0 ? `${problemas} ${problemas === 1 ? 'problema frecuente' : 'problemas frecuentes'}` : null,
+  ].filter(Boolean)
 
   return (
-    <div className="flex min-h-[46px] items-center gap-2.5 py-1.5">
-      <span className="w-[118px] shrink-0 text-[12px] text-noct-neutral-500">{etiqueta}</span>
-      <span className={`min-w-0 flex-1 truncate text-[13.5px] text-noct-text ${mono ? 'font-mono' : ''}`}>{valor}</span>
+    <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-4 pb-3 pt-2.5 backdrop-blur-[12px] lg:px-10">
+      <Link
+        to={`/diagnostico?categoria=${categoriaId}`}
+        className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+      >
+        <TreeStructure size={18} aria-hidden />
+        Resolver un problema con este equipo
+      </Link>
+      <p className="mt-1.5 text-center text-[11.5px] text-noct-neutral-400">
+        {partes.join(' y ')} {procedimientos + problemas === 1 ? 'aplica' : 'aplican'} aquí
+      </p>
+    </div>
+  )
+}
+
+// Puerta única de la autoría en la ficha de equipo (hallazgos M-016 y
+// M-031, regla M-R10: la autoría tiene una sola puerta por pantalla,
+// nombrada, al pie). Plegada de entrada: en el teléfono lo normal es
+// consultar, así que documentar se ofrece sin ocupar sitio, y al abrirse
+// da las cuatro puertas juntas en vez de repartidas por el cuerpo.
+function PuertaDocumentar({
+  dispositivo,
+  categoriaNombre,
+  puedeVerBoveda,
+  completitud,
+}: {
+  dispositivo: Dispositivo
+  categoriaNombre: string
+  puedeVerBoveda: boolean
+  completitud: { porcentaje: number; faltantes: string[] }
+}) {
+  const [abierta, setAbierta] = useState(false)
+  const nombreCodificado = encodeURIComponent(dispositivo.nombre)
+
+  return (
+    <div className="flex flex-col gap-2">
       <button
         type="button"
-        onClick={() => void copiar()}
-        aria-label={copiado ? 'Copiado' : `Copiar ${etiqueta.toLowerCase()}`}
-        className="flex min-h-11 w-9 shrink-0 items-center justify-center rounded-md hover:bg-noct-text/[.05]"
+        onClick={() => setAbierta((v) => !v)}
+        aria-expanded={abierta}
+        className="flex min-h-11 items-center gap-2 text-left text-[12px] leading-[1.5] text-noct-neutral-400 hover:text-noct-neutral-300"
       >
-        {copiado ? (
-          <Check size={16} className="text-noct-exito" aria-hidden />
-        ) : (
-          <Copy size={16} className="text-noct-neutral-500" aria-hidden />
-        )}
+        <PencilSimple size={14} className="shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1">
+          Documentar este equipo · foto, procedimiento o incidencia
+          <span className="text-noct-neutral-600"> se hace mejor desde el ordenador</span>
+        </span>
+        <CaretDown
+          size={13}
+          className={`shrink-0 transition-transform duration-150 motion-reduce:transition-none ${
+            abierta ? 'rotate-180' : ''
+          }`}
+          aria-hidden
+        />
       </button>
+
+      {/* La completitud deja de ser ámbar (regla M-R11: el ámbar es
+          advertencia y nada más; una ficha a medias no lo es) y deja de
+          encabezar la pantalla: vive donde se resuelve. */}
+      {abierta && (
+        <div className="flex flex-col gap-2">
+          {completitud.faltantes.length > 0 && (
+            <p className="text-[12px] leading-[1.5] text-noct-neutral-400">
+              Ficha al {completitud.porcentaje}%. Falta: {completitud.faltantes.join(', ')}.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/dispositivos/${dispositivo.id}/editar`} className={BTN_SECUNDARIO}>
+              <PencilSimple size={13} aria-hidden />
+              Editar la ficha
+            </Link>
+            {/* Creacion contextual (fase N2, punto 1): precarga la
+                categoria y el equipo afectado, asi ningun dato visible
+                aqui se vuelve a escribir a mano en el formulario.
+                "Documentar procedimiento" (hallazgo K6 de
+                AUDITORIA_FLUJOS_TI.md) es el mismo mecanismo de
+                "Reportar incidencia" pero sin forzar
+                tipo=problema_frecuente. */}
+            <Link
+              to={`/soluciones/${dispositivo.categoriaId}/nuevo?tipo=problema_frecuente&dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${nombreCodificado}`}
+              className={BTN_SECUNDARIO}
+            >
+              <Plus size={13} aria-hidden />
+              Reportar incidencia
+            </Link>
+            <Link
+              to={`/soluciones/${dispositivo.categoriaId}/nuevo?dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${nombreCodificado}`}
+              className={BTN_SECUNDARIO}
+            >
+              <BookOpen size={13} aria-hidden />
+              Documentar procedimiento
+            </Link>
+            {puedeVerBoveda && (
+              <Link
+                to={`/boveda/nueva?titulo=${encodeURIComponent(`Acceso ${dispositivo.nombre}`)}&categoria=${encodeURIComponent(categoriaNombre)}&dispositivoId=${dispositivo.id}&dispositivoNombre=${nombreCodificado}`}
+                className={BTN_SECUNDARIO}
+              >
+                <LockSimple size={13} aria-hidden />
+                Guardar secreto
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

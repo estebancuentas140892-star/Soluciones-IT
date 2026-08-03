@@ -7,6 +7,7 @@ import { eliminarRegistro } from '../../lib/repositorio'
 import { agruparConexiones, type ExtremoConexion } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
+import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
 import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { IconoNodo } from './IconoNodo'
 import { FormularioConexion } from './FormularioConexion'
@@ -147,7 +148,9 @@ export function TopologiaEquipoPage() {
               {equipo.ip && (
                 <>
                   <span className="text-noct-neutral-600">·</span>
-                  <span className="font-mono text-noct-neutral-500">{equipo.ip}</span>
+                  {/* Piso del dato técnico (M-R5): la IP no baja de 13 px
+                      ni de neutral-300. */}
+                  <span className={VALOR_TECNICO_COMPACTO}>{equipo.ip}</span>
                 </>
               )}
             </p>

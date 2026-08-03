@@ -41,7 +41,10 @@ export function AsistentePage() {
       vuelta={categoria?.nombre ? `Guías › ${categoria.nombre}` : 'Guías'}
       salidaEtiqueta="Salir del modo ejecución"
     >
-      <main className="flex flex-1 flex-col px-4 pb-10 pt-4">
+      {/* Sin relleno inferior propio: la acción dominante fija de
+          `AsistenteVista` (M-011) es el último elemento del flujo y ya
+          reserva su alto y el área segura del teléfono. */}
+      <main className="flex flex-1 flex-col px-4 pt-4">
         {/* Sin onCompletado: al nivel 0 no hay a quien avisar,
             AsistenteVista ya muestra su propio resumen de "completado" y
             el tecnico decide cuando salir con el boton de arriba. */}

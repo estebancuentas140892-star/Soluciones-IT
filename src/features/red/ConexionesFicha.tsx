@@ -14,7 +14,18 @@ import { FormularioConexion } from './FormularioConexion'
 // agregar o quitar conexiones. Re-autorizada al sistema Nocturne
 // (handoff "Rediseño de aplicación empresarial", Ficha de
 // Dispositivo.dc.html): la logica y los datos no cambian.
-export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
+export function ConexionesFicha({
+  dispositivo,
+  sinCabecera = false,
+}: {
+  dispositivo: Dispositivo
+  /**
+   * La sección va dentro de una `SeccionPlegable` que ya escribe el
+   * rótulo y su conteo (ficha de equipo, M-014). El enlace "Ver en
+   * topología" no se pierde: se queda solo, alineado a la derecha.
+   */
+  sinCabecera?: boolean
+}) {
   const conexiones = useLiveQuery(
     () =>
       db.conexiones
@@ -51,8 +62,8 @@ export function ConexionesFicha({ dispositivo }: { dispositivo: Dispositivo }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <TituloSeccion>Conexiones</TituloSeccion>
+      <div className={`flex items-center ${sinCabecera ? 'justify-end' : 'justify-between'}`}>
+        {!sinCabecera && <TituloSeccion>Conexiones</TituloSeccion>}
         <Link
           to={`/red/topologia/${dispositivo.id}`}
           className="inline-flex items-center gap-1 text-[12px] text-noct-accent-300 hover:text-noct-accent-400"

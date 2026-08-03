@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Dispositivo } from '../lib/db'
+import { VALOR_TECNICO_COMPACTO } from './FilaDato'
 import { MiniaturaPortada } from './MiniaturaPortada'
 import { IconoNodo } from '../features/red/IconoNodo'
 import { claseEstado, estadoConEtiqueta, tipoDeNodoVisual } from '../features/red/topologiaVisual'
@@ -60,9 +61,11 @@ export function FilaDispositivo({
           <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
           {estado.etiqueta}
         </span>
-        {dispositivo.ip && (
-          <span className="font-mono text-[11px] text-noct-neutral-600">{dispositivo.ip}</span>
-        )}
+        {/* Piso del dato técnico (M-R5): la IP era 11 px monoespaciado en
+            `noct-neutral-600`, unos 3,9:1 de contraste, el texto más
+            pequeño de toda la app justo para el dato que más se busca de
+            pie frente a un rack. Sube a 13 px y neutral-300. */}
+        {dispositivo.ip && <span className={VALOR_TECNICO_COMPACTO}>{dispositivo.ip}</span>}
       </div>
     </Link>
   )

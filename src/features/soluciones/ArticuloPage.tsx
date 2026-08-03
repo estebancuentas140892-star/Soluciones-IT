@@ -129,6 +129,10 @@ export function ArticuloPage() {
     <Chasis
       modo="documento"
       volverEtiqueta={categoria?.nombre ?? 'Guías'}
+      // Ancla permanente (M-001, M-R1): en un procedimiento de varias
+      // pantallas, el título dejaba de verse al primer desplazamiento.
+      titulo={articulo.titulo}
+      contexto={['Guías', categoria?.nombre].filter(Boolean).join(' · ')}
       acciones={
         // Decisión 2 de P2: tres controles de 44 px y ni uno más. Antes
         // eran cinco (volver + estrella + Ejecutar + Editar + "···") y

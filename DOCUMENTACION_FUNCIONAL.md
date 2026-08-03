@@ -91,7 +91,7 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 | Nivel | Qué pantallas | Qué se ve arriba | ¿Barra de pestañas? |
 |---|---|---|---|
 | **Sección** | Inicio, Guías, Equipos, Red, Más, Bóveda | título de la sección, estado del dato, buscar y cuenta | sí |
-| **Documento** | fichas y listas internas: categoría, artículo, equipo, secreto, topología, Ubicaciones, Personas, Diagnóstico, Estadísticas, Sugerencias, Mi cuenta, Seguridad | regreso con el nombre de a dónde vuelve, y a la derecha las acciones de la pantalla | sí |
+| **Documento** | fichas y listas internas: categoría, artículo, equipo, secreto, topología, Ubicaciones, Personas, Diagnóstico, Estadísticas, Sugerencias, Mi cuenta, Seguridad | en las **cinco fichas** (equipo, artículo, credencial, ubicación, persona), el **ancla permanente** de la tarea 201: chevron de 44 px, el origen a 11 px y el nombre de lo que se ve a 14 px, que no se va con el scroll (regla **M-R1**). En las listas internas, el regreso con el nombre de a dónde vuelve. A la derecha, las acciones de la pantalla | sí |
 | **Tarea** | lo que se hace y de lo que se sale: los cuatro editores, el asistente, el diagnóstico en ejecución, el escáner, las etiquetas, la importación y las tres migraciones | `BarraTarea`: rótulo ("Editando"), sobre qué, la ruta de vuelta escrita y una X | **no** |
 
 **Cuatro anchos, cuatro composiciones (desde la tarea 191, regla R30).** Cada punto de quiebre entrega una pantalla completa, y los define el chasis: ninguna pantalla los repite.
@@ -340,7 +340,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **Ruta:** `/soluciones/:categoriaId/:articuloId` · **Nivel:** Documento
 
-**Cabecera (rediseñada en la tarea 172):** "Volver" (a la lista con el chip de la categoría, y nombra la categoría) más **tres controles de 44 px**: **estrella de favorito**, **editar** (icono de lápiz) y menú **"···"** con **Compartir**, **Duplicar** (`?copiarDe`), **Reiniciar progreso** (si tiene procedimiento) y **Eliminar** (eliminación sensible, pide contraseña maestra). Antes eran cinco controles y con una categoría de nombre largo la fila se estrangulaba; "Ejecutar" bajó a la barra de acción.
+**Cabecera (rediseñada en la tarea 172; ancla permanente desde la tarea 201):** chevron de regreso de 44 px (a la lista con el chip de la categoría) y, a su lado, **"Guías · {categoría}" a 11 px con el título del artículo a 14 px**, que **se queda en pantalla al desplazarse** (regla **M-R1**). A la derecha, **tres controles de 44 px**: **estrella de favorito**, **editar** (icono de lápiz) y menú **"···"** con **Compartir**, **Duplicar** (`?copiarDe`), **Reiniciar progreso** (si tiene procedimiento) y **Eliminar** (eliminación sensible, pide contraseña maestra). Antes eran cinco controles y con una categoría de nombre largo la fila se estrangulaba; "Ejecutar" bajó a la barra de acción.
 
 **Barra de acción, fija abajo (tarea 172).** Una sola acción dominante, al alcance del pulgar, que dice qué va a pasar: **"Empezar"** sin avance, **"Seguir en el paso N de M"** a medias, **"Repetir"** cuando ya está todo hecho, con una nota debajo ("Tu avance se guarda en este teléfono"). Solo aparece si el artículo tiene un procedimiento con pasos. Antes "Ejecutar" y "Editar" pesaban lo mismo, estaban arriba y el botón decía "Ejecutar" incluso con 2 de 6 pasos hechos.
 
@@ -389,21 +389,23 @@ Ver detalle campo por campo en la sección 7 (Catálogo de formularios). Es un e
 
 **Ruta:** `/dispositivos/:dispositivoId` · **Nivel:** Documento. Vista 360°.
 
-**Cabecera:** "Volver" (a Equipos o a Red según `es_red` de su categoría), **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace), menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
+**Cabecera:** **ancla permanente** (tarea 201, regla M-R1): chevron de regreso de 44 px (a Equipos o a Red según `es_red` de su categoría), y a su lado el origen a 11 px ("Red · Rack 1") con el **nombre del equipo a 14 px**, que **se queda en pantalla al desplazarse**. A la derecha, **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace) y menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
 
-**Cuerpo:**
-- **Foto banner** (si tiene).
-- Título, línea meta (categoría · actualizado), **pastilla de estado** con punto de color.
-- **Aviso de completitud** (solo si falta algo): "Ficha al 70%. Falta: foto, serial." con enlace a Editar.
+**Cuerpo: cuatro capas** (rediseño del 2026-08-03, tarea 201, regla **M-R4**). Antes eran nueve secciones siempre abiertas, en orden de escritura y no de urgencia: a 360 px, "Conexiones" empezaba pasadas tres pantallas de scroll y la primera se iba entera en la foto de 150 px y la línea de completitud. No se quitó ningún dato; se repartió.
+
 - **Banner de migración pendiente** (si este equipo reemplaza a otro con dependencias sin migrar): enlaza a `/reemplazo`.
 - **"¿Qué sigue?"** (solo la primera vez tras crear el equipo): pasos sugeridos (agregar foto, seguridad, conexiones, documentar procedimiento) con enlaces directos.
-- **"Información"**: tarjeta de filas copiables (marca, modelo, serial, placa, IP), propiedades personalizadas (detalles clave/valor), **Ubicación** (enlace vivo a su ficha), **Responsable** (enlace vivo a la persona), **"Reemplaza a"** / **"Reemplazado por"** (enlaces), y observaciones.
-- **"Seguridad"** (`SeguridadDelEquipo`, solo con permiso de bóveda): datos protegidos propios del equipo (usuario, contraseña, PIN...). Ver sección 7.
-- **"Resolver con este equipo"**: botón "Iniciar diagnóstico" (si hay diagnóstico para su categoría); listas "Procedimientos de este equipo" y "Problemas frecuentes de este equipo" que muestran **tanto los específicos** (vinculados por `dispositivosAfectados`) **como los de su categoría** (procedimientos e incidencias publicados de la misma categoría, derivados por `categoria_id`, con sub-rótulo "De la categoría {X}" y "Ver todos" cuando hay más de 5, hallazgo H1), refinados además por el criterio **marca/modelo** del artículo si lo tiene (`aplicaA`, hallazgo H6: un artículo solo aparece si no restringe marca/modelo o si coincide con los de este equipo); "Credenciales de este equipo" (con permiso); y creación contextual: **"Reportar incidencia"**, **"Documentar procedimiento"**, **"Guardar secreto"** (con permiso), todos precargando el equipo.
-- **"Si este equipo falla"** (`ImpactoYDependencias`, si participa en conexiones): impacto de falla y dependencia ascendente.
-- **"Conexiones"** (`ConexionesFicha`): agrupadas en Instalado en / Contiene / Enlaces / Relacionados, con enlace "Ver en topología" y alta/baja de conexión.
-- **"Adjuntos"**.
-- **"Intervenciones"**: `RegistrarIntervencion` (bitácora manual) + Historial (línea de tiempo, incluye cambios de cableado).
+- **Capa 1, "Ahora"** (cabe en la primera pantalla): tarjeta con miniatura de foto (o icono de tipo de nodo), **nombre**, marca y modelo, **pastilla de estado** con punto de color; **Dirección IP** copiable con el piso de dato técnico (14 px monoespaciado tabular, botón de copiar de 44 px, regla **M-R5**); y la **Ubicación** como enlace vivo a su ficha.
+- **Capa 2, "Contexto"** (abierta): tarjeta con **Número de serie** y **Placa de inventario** (copiables, mismo piso técnico), propiedades personalizadas (detalles clave/valor), **Responsable** (enlace vivo a la persona), **"Reemplaza a"** / **"Reemplazado por"** (enlaces), **Categoría y fecha**, y las observaciones debajo. Por debajo de 380 px de contenedor la etiqueta pasa encima del valor en vez de robarle ancho (regla **M-R13**); ninguna etiqueta mide más de 96 px.
+- **Capa 3, "Acción"**: botón "Iniciar diagnóstico" (si hay diagnóstico para su categoría); listas "Procedimientos de este equipo" y "Problemas frecuentes de este equipo" que muestran **tanto los específicos** (vinculados por `dispositivosAfectados`) **como los de su categoría** (procedimientos e incidencias publicados de la misma categoría, derivados por `categoria_id`, con sub-rótulo "De la categoría {X}" y "Ver todos" cuando hay más de 5, hallazgo H1), refinados además por el criterio **marca/modelo** del artículo si lo tiene (`aplicaA`, hallazgo H6); y "Credenciales de este equipo" (con permiso). **Los tres botones de creación que se intercalaban aquí bajaron a la puerta única del pie** (regla **M-R10**).
+- **Capa 4, "Profundidad"**: cinco filas de 52 px, **plegadas y con su conteo a la vista** (plegar informa, no esconde). El contenido solo se monta al abrirse.
+  - **"Si falla, caen · N equipos"** (`ImpactoYDependencias`, solo si participa en conexiones): impacto de falla y dependencia ascendente. Es la única con tono de precaución, porque el dato en sí advierte.
+  - **"Conexiones · N"** (`ConexionesFicha`): agrupadas en Instalado en / Contiene / Enlaces / Relacionados, con enlace "Ver en topología" y alta/baja de conexión.
+  - **"Datos protegidos · N"** (`SeguridadDelEquipo`, solo con permiso de bóveda): datos protegidos propios del equipo (usuario, contraseña, PIN...). Ver sección 7. Llega abierta cuando se entra desde el aviso anti duplicidad de la Bóveda (`?nuevoCampoProtegido=`).
+  - **"Adjuntos · N"**: la fotografía del equipo a tamaño completo y la galería de adjuntos.
+  - **"Intervenciones · última hace X"**: `RegistrarIntervencion` (bitácora manual) + Historial (línea de tiempo, incluye cambios de cableado). El conteo cuenta el trabajo escrito a mano, no cada cambio de campo.
+- **Puerta única de documentar** (al pie, plegada): la línea "Documentar este equipo · foto, procedimiento o incidencia — se hace mejor desde el ordenador" abre **Editar la ficha**, **Reportar incidencia**, **Documentar procedimiento** y **Guardar secreto** (con permiso), todos precargando el equipo. El **aviso de completitud** ("Ficha al 70%. Falta: foto, serial.") vive aquí dentro, en neutro y no en ámbar: una ficha a medias no es una advertencia (regla **M-R11**).
+- **Acción dominante fija al pie** (52 px, regla **M-R3**), solo si hay algo que resolver: **"Resolver un problema con este equipo"** (→ `/diagnostico?categoria=`) con su promesa escrita debajo ("3 procedimientos y 2 problemas frecuentes aplican aquí").
 
 #### 5.3.2 Editor de dispositivo (`DispositivoForm`)
 
@@ -987,6 +989,13 @@ Guías > (categoría) > Artículo
  → Verificación final → banner "Procedimiento completado"
  (Progreso local en progresoPasos; "Continuar donde quedaste" en Inicio si se sale a medias)
 ```
+
+**Nada se va con el scroll (tarea 201, los dos hallazgos P0 de la auditoría móvil).** Era la única pantalla de la app sin nada fijo, y es donde el técnico trabaja de verdad:
+
+- **Ancla del paso, pegajosa** (44 px, hallazgo **M-010**, regla **M-R1**): dentro del mismo bloque que la barra de tarea, una banda con **"Paso 3 de 7"**, el título del paso truncado, las tareas marcadas de ese paso (**"2/4"**) y una barra de progreso de 3 px del procedimiento completo. Antes, al desplazarse dentro de un paso con seis instrucciones y una credencial, no quedaba en pantalla ni el número de paso ni qué llevaba marcado; al volver de una interrupción había que reconstruirlo de memoria.
+- **Acción dominante fija al pie** (52 px, hallazgo **M-011**, regla **M-R3**): **"Paso hecho · ir al 4"** (o "Ir al paso N" cuando se está revisando un paso ya completo, o "Paso hecho · terminar" en el último), con **"Atrás" reducido a un icono de 44 px** a su izquierda. Antes "Atrás / Siguiente" vivían al final del scroll del paso, así que avanzar exigía recorrer el paso entero con una mano, mientras la ficha de artículo sí fijaba su acción abajo desde la tarea 172.
+- **El botón dice por qué no se puede avanzar**, en una línea encima ("Falta 1 tarea de este paso para poder avanzar"), en vez de apagarse en silencio.
+- El título del paso deja de repetirse como encabezado del cuerpo (ya lo dice el ancla) y el **cronómetro** baja a una línea discreta bajo el objetivo. Los pasos **anidados** conservan su botón único en línea: su avance lo decide el paso que los contiene, y dos acciones dominantes en la misma pantalla dejarían de ser dominantes.
 
 ### 13.3 Diagnóstico inteligente
 

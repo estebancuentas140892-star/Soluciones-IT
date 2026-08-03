@@ -312,6 +312,11 @@ export function CredencialPage() {
     // como en el mockup.
     <Chasis
       modo="documento"
+      // Ancla permanente (M-001, M-R1): el título del secreto era un h1
+      // dentro del scroll y la ficha es larga (datos, equipos con acceso
+      // y auditoría de accesos).
+      titulo={credencial.titulo}
+      contexto={['Bóveda', credencial.categoria].filter(Boolean).join(' · ')}
       acciones={
         <>
           <Link to={`/boveda/${credencialId}/editar`} className={BTN_SECUNDARIO}>
@@ -333,7 +338,7 @@ export function CredencialPage() {
         <header>
           <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0">
-              <h1 className="text-pretty text-[21px] font-medium leading-[1.25]">{credencial.titulo}</h1>
+              <p className="text-pretty text-[19px] font-medium leading-[1.25]">{credencial.titulo}</p>
               {metaLinea && <p className="mt-1 text-[12.5px] text-noct-neutral-500">{metaLinea}</p>}
             </div>
             <IndicadorVencimiento venceEn={credencial.venceEn ?? null} variante="nocturne" />

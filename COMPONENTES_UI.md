@@ -82,9 +82,11 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 - **Props** (unión discriminada por `modo`, así cada nivel solo acepta lo suyo):
   - `seccion`: `{ titulo: string, barra?: ReactNode, children }`
-  - `documento`: `{ modo: 'documento', volverA?: string, volverEtiqueta?: string, acciones?: ReactNode, barra?: ReactNode, children }`
+  - `documento`: `{ modo: 'documento', volverA?: string, volverEtiqueta?: string, titulo?: string, contexto?: string, acciones?: ReactNode, barra?: ReactNode, children }`
   - `tarea`: `{ modo: 'tarea', rotulo: string, titulo: string, vuelta?: string, salidaA?: string, salidaEtiqueta?: string, alSalir?: () => void, barra?: ReactNode, children }`
   - `barra` es siempre la banda de controles propios de la pantalla, dentro del mismo bloque pegajoso que la cabecera (AD-023).
+- **Ancla permanente del nivel documento (tarea 201, hallazgo M-001, regla M-R1).** Con `titulo`, la fila superior pasa de `[regreso con etiqueta] [acciones]` a `[chevron de 44 px] [contexto a 11 px / nombre a 14 px] [acciones]`. Hasta la tarea 201 esa fila solo llevaba el regreso y los iconos: el nombre del equipo o del artículo era un `h1` dentro del scroll, así que en una ficha de tres o cuatro pantallas, tras el primer desplazamiento, lo único que orientaba era la pestaña iluminada, y esa dice "Equipos", no **qué** equipo. Sin `titulo` la fila se comporta como antes, que es lo correcto en las pantallas de documento que son listas y ya escriben su nombre en la banda de abajo (Ubicaciones, Personas, Diagnósticos, Estadísticas, Sugerencias, ficha de categoría, Mi cuenta, Seguridad, Topología). Lo usan las cinco fichas: equipo, artículo, credencial, ubicación y persona.
+- **Ranura pegajosa del nivel tarea (tarea 201):** dentro del bloque de `BarraTarea`, bajo `barra`, el chasis publica un hueco que un descendiente puede llenar por portal con `BandaTarea` (ver 2.10n). Lo usa el modo ejecución para su ancla de paso.
 - **Reserva su propio espacio (regla R22).** La columna de contenido lleva `pb-[calc(65px+env(safe-area-inset-bottom))] md:pb-0` en los niveles con pestañas, así que ninguna pantalla calcula a mano el alto de la barra. Los 65 px son **medidos** (63,6 de celda + 1 de borde), no los 53 que citaba la auditoría, un dato anterior a la tarea 182.
 - **Cuatro puntos de quiebre, cuatro composiciones (tarea 191, regla R30).** Los define el chasis y ninguna pantalla los repite. Medidos en el navegador:
 
@@ -113,7 +115,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 ### 2.2 `Adjuntos`
 - **Propósito:** galería de adjuntos de una ficha (subir desde cámara o archivo, ver, eliminar) con compresión, deduplicación por hash y cola offline.
-- **Props:** `{ entidadTipo: 'articulo' | 'dispositivo' | 'historial', entidadId }` (ambas obligatorias).
+- **Props:** `{ entidadTipo: 'articulo' | 'dispositivo' | 'historial', entidadId, sinCabecera?: boolean = false }`. `sinCabecera` oculta el rótulo "Adjuntos" cuando el bloque va dentro de una `SeccionPlegable` que ya lo escribe con su conteo (ficha de equipo, M-014); los dos botones de subida se conservan, alineados a la derecha.
 - **Variantes:** decide imagen vs archivo genérico según el `tipo`; usa `VisorImagen` para imágenes.
 - **Dónde:** `DispositivoPage`, `ArticuloPage`, `Historial` (adjuntos de una intervención), `RegistrarIntervencion`, `AsistenteVista`.
 
@@ -144,7 +146,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 ### 2.4 `BotonVolver`
 - **Propósito:** botón de regreso unificado; deriva destino y etiqueta de la fuente única `padreDe` (`src/lib/navegacion.ts`) en vez de cablearlos a mano.
-- **Props:** `{ to?, children? }`. `to` sobreescribe el destino derivado (contexto en runtime, ej. equipo de red vuelve a Red); `children` sobreescribe la etiqueta ("Salir", "Cancelar").
+- **Props:** `{ to?, children?, soloIcono?: boolean = false }`. `to` sobreescribe el destino derivado (contexto en runtime, ej. equipo de red vuelve a Red); `children` sobreescribe la etiqueta ("Salir", "Cancelar"); `soloIcono` lo reduce a un cuadrado de 44 px con el chevron, para la fila de nivel documento que ya lleva el ancla permanente de **M-R1** (la etiqueta viaja como `aria-label` y `title`, y el destino lo nombra la línea de contexto).
 - **Dónde:** desde la tarea 185, **solo dos sitios**: `Chasis` en `modo="documento"` y `BarraTarea` (para derivar el destino de la X). Antes lo llamaban 31 archivos, cada uno dentro de una cabecera propia; ahora la cabecera es del chasis y las pantallas solo pasan `volverA`/`volverEtiqueta` cuando el destino depende de datos en runtime (un equipo de red vuelve a Red).
 
 ### 2.5 `CampoContrasena`
@@ -181,6 +183,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Props:** `{ dispositivo, categoriaNombre, subtitulo, conFoto?: boolean = false }`.
 - **Variantes:** `conFoto` decide avatar de foto (`MiniaturaPortada`) vs siempre icono (`IconoNodo`, para Red).
 - **Dónde:** `DispositivosPage` (con foto), `RedPage` (sin foto). Nota: `CategoriaPage` reimplementa esta fila a mano (candidato CAND-2, sección 5).
+- **La IP cumple el piso de dato técnico** (**M-R5**, tarea 201): usa `VALOR_TECNICO_COMPACTO` de `FilaDato` (13 px monoespaciado, `neutral-300`, tabular). Antes iba a 11 px en `neutral-600`, unos 3,9:1 de contraste: el texto más pequeño de toda la app justo para el dato que más se busca de pie frente a un rack.
 
 ### 2.10b `HojaFiltro`
 - **Propósito:** hoja inferior para elegir UNA opción de una lista corta: el segundo eje de filtro de una pantalla de lista, o "en qué categoría" al crear. Implementa la regla R4 de la auditoría de Soluciones (un solo eje de filtro visible; el segundo se plega aquí con su contador).
@@ -246,13 +249,35 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** el título de la sección dentro de `BarraSuperior` (tarea 187, mockup `4e`). Al desplazarse pasa de 21 a 14 px y **se queda en pantalla**: la orientación no debe depender solo de la pestaña iluminada, que en escritorio está a 700 px de distancia y mide 10,5 px. El mockup lo mide como una cabecera que baja de 232 a 150 px sin perder el nombre.
 - **Props:** `{ titulo: string }`.
 - **Cómo:** un listener de `scroll` sobre `window`, con el trabajo diferido a `requestAnimationFrame` y un guardia para no encolar dos por fotograma. Umbral de 12 px, deliberadamente bajo: el mockup lo dibuja como "desplazado", no como un salto que tarde en notarse. La transición es solo de `font-size` y se anula con `motion-reduce`.
-- **Dónde:** solo `BarraSuperior` (y por tanto, el nivel `seccion` del chasis). El nivel `documento` contrae su propia cabecera en la tarea 188, junto con `MigaDePan`.
+- **Dónde:** solo `BarraSuperior` (y por tanto, el nivel `seccion` del chasis). Desde la tarea 201 el nivel `documento` tiene su propia ancla permanente, escrita directamente en el chasis (14 px fijos, sin contraerse: ahí no hay 21 px de los que bajar, ver 2.0). `MigaDePan` con los tramos completos sigue siendo la tarea 188.
 
 ### 2.10k `AvisoPestana`
 - **Propósito:** el aviso de una pestaña de la barra inferior (tarea 187, mockup `4e`). Aplica la regla **R23** (un aviso solo si hay un dato detrás, ningún punto decorativo): quien la usa decide **cuándo**, este componente solo dibuja.
 - **Props:** unión discriminada. `{ variante: 'punto' }` para Guías (hay un procedimiento a medias y la `BarraReanudar` está descartada) y `{ variante: 'numero', valor: number }` para Más (conteo real de `usePendientes()`). Con `valor <= 0` devuelve `null`; por encima de nueve muestra "9+".
 - **Variantes:** el punto es de acento y mide 7 px; el número va en `precaucion` sobre texto de fondo, con anillo de 2 px del color del fondo para separarse del icono. Los dos son `aria-hidden`: el texto accesible lo pone la pestaña ("hay un procedimiento a medias", "N pendientes").
 - **Dónde:** solo `Chasis`, en la barra de pestañas móvil.
+
+### 2.10l `FilaDato`
+
+- **Propósito:** la fila de etiqueta y valor de una ficha, y el **piso de legibilidad del dato técnico** (tarea 201, hallazgos M-015 y M-032, reglas **M-R5** y **M-R13**). Antes cada ficha la escribía a mano con una etiqueta de 118 px fijos, así que a 360 px de ancho quedaban unos 174 px para el valor y un serial o una MAC se truncaban justo en el teléfono más común del equipo.
+- **Props:** `{ etiqueta, valor?, tecnico?: boolean = false, children?, copiable?: string }`. `tecnico` marca IP, serial, placa, MAC, puerto o clave; `children` sustituye el valor de texto por un enlace vivo o una pastilla; `copiable` dibuja el botón de copiar con su confirmación breve.
+- **Variantes:** un dato **técnico** nunca comparte renglón con su etiqueta (va debajo, a ancho completo, en `VALOR_TECNICO`: 14 px monoespaciado tabular en `noct-text`) y su botón de copiar mide 44x44 con fondo propio. Un dato **corriente** comparte renglón solo si el contenedor da para ello: el umbral es una **container query de 380 px** sobre el contenedor de la ficha, no el ancho de la ventana, porque la misma fila vive en una columna de 328 px en el teléfono y en una de 720 en escritorio. La etiqueta nunca pasa de 96 px (`w-24`).
+- **Exporta dos constantes** para quien pinta un dato técnico fuera de una fila: `VALOR_TECNICO` (14 px, `noct-text`) y `VALOR_TECNICO_COMPACTO` (13 px, `neutral-300`, el piso exacto de M-R5, para listas donde el dato acompaña a un nombre).
+- **Dónde:** `DispositivoPage` (capas "Ahora" y "Contexto"); las constantes, en `FilaDispositivo` y `TopologiaEquipoPage`. Es el camino para retirar las copias a mano de la fila etiqueta-valor que quedan en `CredencialPage`, `UbicacionPage` y `PersonaPage`.
+
+### 2.10m `SeccionPlegable`
+
+- **Propósito:** una sección que **informa al plegarse** (tarea 201, hallazgo M-014, regla **M-R4**). La ficha 360° de un equipo pintaba nueve secciones siempre abiertas: plegar sin más habría cambiado un problema (todo a la vez) por otro (esconder), así que la cabecera plegada muestra **su conteo**: "Conexiones · 4" dice más que cuatro filas que hay que desplazar.
+- **Props:** `{ titulo, Icono, conteo: ReactNode, tono?: 'neutro' | 'precaucion' = 'neutro', inicialAbierta?: boolean = false, id?, children }`. `conteo` admite un número ("4"), una cantidad con unidad ("9 equipos") o una frase corta ("hace 6 d"); `tono` tiñe icono y conteo solo cuando el dato en sí es una advertencia; `id` sirve de ancla para los enlaces internos de la ficha.
+- **Detalles:** cabecera de 52 px con `aria-expanded`/`aria-controls`, chevron que rota y foco visible. **El contenido solo se monta cuando está abierta**: además de ahorrar trabajo, evita que cinco bloques con sus propias consultas en vivo se pinten enteros para quedar fuera de pantalla.
+- **Dónde:** `DispositivoPage`, capa "Profundidad". Prevista también para las fichas de artículo, credencial y Red (tareas 202 a 205).
+
+### 2.10n `BandaTarea` (`src/app/bandaTarea.tsx`)
+
+- **Propósito:** ranura pegajosa del nivel `tarea` del chasis (tarea 201, hallazgo M-010). `BarraTarea` ya es un bloque pegajoso y admite una banda debajo, pero el dato que el modo ejecución necesita ahí ("Paso 3 de 7 · Sustituir el cartucho", con su progreso) depende del paso actual, que vive dentro de `AsistenteVista`, varios niveles por debajo del `Chasis` que monta la barra.
+- **Props:** `{ children }`. Fuera del nivel `tarea` no dibuja nada (no falla), así que el mismo componente puede montarse en una pantalla de documento.
+- **Cómo:** el chasis publica un hueco dentro de su propio bloque pegajoso y lo expone por contexto; quien tiene el dato lo llena con `createPortal`. El hueco se guarda en **estado** (no en una ref) para que, al montarse, los hijos vuelvan a renderizar y el portal encuentre su destino. Las dos alternativas eran peores: subir todo el estado del asistente a la pantalla (un componente que además se anida en sí mismo), o poner un segundo bloque pegajoso con un `top` calculado contra el alto medido de la barra, que cambia con el largo del título.
+- **Dónde:** `Chasis` (provee) y `AsistenteVista` en nivel 0 (consume).
 
 ### 2.11 `MiniaturaPortada`
 - **Propósito:** miniatura de la portada de un procedimiento o la foto de un dispositivo en listados; si la imagen no está disponible offline, no muestra nada.
@@ -298,6 +323,11 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Props:** `{ entidadTipo: TipoEntidadHistorial, entidadId }`.
 - **Variantes:** por `entidadTipo` decide qué sub-eventos anexar (artículo suma `ejecuciones_diagnostico`; credencial o campo protegido suman `accesos_boveda`). `procedimiento` y `detalles` muestran un resumen en lenguaje natural con el JSON plegado en "Detalle técnico".
 - **Dónde:** `DispositivoPage`, `ArticuloPage`, `CredencialPage` (vía la ficha), `CategoriaPage`, `UbicacionPage`, `PersonaPage`, `DiagnosticoForm` (solo edición), `SeguridadDelEquipo` (por campo protegido). Cubre 8 tipos de entidad.
+
+### 3.1b `red/useImpactoEquipo` (hook)
+- **Propósito:** el impacto de una falla y la cadena de dependencia de un equipo, **como dato**. Devuelve `{ impacto, camino, nombreCategoria, totalEquipos }` a partir del mismo árbol de topología que la vista de mapa (`src/features/red/arbol.ts`), así que no duplica la lógica de "qué depende de qué".
+- **Por qué existe aparte del componente** (tarea 201): la ficha de equipo necesita el TOTAL **antes** de decidir si monta la sección y qué escribe en su cabecera plegada ("Si falla, caen · 9 equipos", regla **M-R4**). Sacar el cálculo del componente evita que la ficha lo copie.
+- **Dónde:** `ImpactoYDependencias` (que lo pinta) y `DispositivoPage` (que lo cuenta).
 
 ### 3.2 `boveda/CampoSecreto`
 - **Propósito:** fila de un dato descifrado (usuario, contraseña, IP) con botón de copiar y, si aplica, mostrar/ocultar. Es para **mostrar**, no para escribir.
