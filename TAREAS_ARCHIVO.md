@@ -35,6 +35,8 @@
 
 **Lo que NO se pudo capturar:** la captura de pantalla falla por timeout en este entorno cuando el panel del navegador no está a la vista (la página no compone fotogramas). No es señal de un defecto: toda la verificación de arriba se hizo midiendo el DOM real, que es más preciso que una captura. Si el usuario quiere la evidencia visual, basta abrir el panel y repetir la navegación.
 
+**Defecto encontrado al medir, y corregido aquí.** La acción dominante nueva de la ficha de equipo se pintaba **65 px detrás de la barra de pestañas** a mitad de scroll, y lo mismo le pasaba a `BarraAccionFicha` (ficha de artículo) desde la tarea 172. Causa: `sticky bottom-0` ancla el elemento al borde inferior del **viewport**, no al de su contenedor, mientras quede contenido por debajo; las pestañas son `fixed` y quedan encima. Medido a 360x640 sobre un artículo de 3.348 px: la barra ocupaba 541-640 y las pestañas empiezan en 575, así que quedaba tapado casi todo el botón de 52 px y su nota. **Al final del scroll la barra vuelve a su sitio en el flujo y se ve bien**, que es exactamente por qué la verificación de la tarea 172 no lo vio: hay que medir a **mitad** de un documento largo, no al final. Corregido con una constante única, `PEGADA_SOBRE_PESTANAS` en `nocturne.tsx` (`bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0`, el mismo valor medido que reserva `ALTO_PESTANAS`, AD-027), usada por las dos barras. Medido después: las dos terminan en 575, con 0 px tapados. La barra del modo ejecución no estaba afectada: vive en el nivel `tarea`, sin pestañas.
+
 **Sin cambios de datos ni de esquema.** Ninguna columna nueva, ningún permiso tocado, nada que aplicar en Supabase.
 
 

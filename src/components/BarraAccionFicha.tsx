@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowsClockwise, Play } from './iconos'
+import { PEGADA_SOBRE_PESTANAS } from './nocturne'
 
 // Barra inferior de UNA sola acción dominante (tarea 172, mockup `1f`).
 //
@@ -41,7 +42,9 @@ export function BarraAccionFicha({ to, estado, paso, total }: Props) {
         : 'Un paso a la vez, sin distracciones'
 
   return (
-    <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.92] px-4 pb-3 pt-2.5 backdrop-blur-[12px] lg:px-10">
+    <div
+      className={`sticky ${PEGADA_SOBRE_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.92] px-4 pb-3 pt-2.5 backdrop-blur-[12px] lg:px-10`}
+    >
       <Link
         to={to}
         className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"

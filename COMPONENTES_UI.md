@@ -211,6 +211,12 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Variantes:** tres mensajes por prioridad: cambios propios sin subir (ámbar, `CloudArrowUp`), sin sincronizar aún (`CloudSlash`) y al día (`CloudCheck` verde). Es de **solo lectura**: no abre el panel de sincronización, para no sumar un control a una cabecera que la auditoría pedía adelgazar.
 - **Dónde:** `SolucionesPage`. Lee el estado con `useSyncExternalStore(suscribirSync, obtenerEstadoSync)` y la antigüedad con `tiempoRelativo()` de `src/lib/tiempoRelativo.ts`.
 
+### 2.10e1 `PEGADA_SOBRE_PESTANAS` (constante de `nocturne.tsx`)
+- **Propósito:** el desplazamiento inferior de **cualquier barra pegajosa** en los niveles que conservan la barra de pestañas (sección y documento): `bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0`.
+- **Por qué existe** (corregido el 2026-08-03, tarea 201): `sticky bottom-0` ancla el elemento al borde inferior del **viewport**, no al de su contenedor, así que mientras quede contenido por debajo la barra se pinta **detrás** de las pestañas, que son `fixed`. Medido a 360x640 sobre un artículo de 3.348 px: 65 px tapados, casi todo el botón de 52 y su nota. Al llegar al final del scroll la barra vuelve a su sitio en el flujo y se ve bien, y por eso la verificación de la tarea 172 no lo detectó: **hay que medir a mitad de un documento largo, no al final.**
+- **El valor es el mismo** `ALTO_PESTANAS` que reserva el chasis (65 px medidos más el área segura, [DECISIONES.md](DECISIONES.md) AD-027), en una sola constante para que un cambio de alto de la barra no haya que perseguirlo por varios archivos.
+- **Dónde:** `BarraAccionFicha` y la acción dominante de `DispositivoPage`. **No** se usa en el nivel `tarea` (asistente, editores): ahí no hay pestañas y `bottom-0` es lo correcto.
+
 ### 2.10e2 `BarraAccionFicha`
 - **Propósito:** la única acción dominante de una ficha, fija abajo (tarea 172, mockup `1f`). Nace de la auditoría de la ficha de artículo: "Ejecutar" y "Editar" pesaban lo mismo (Nocturne pide el primario delineado, así que eran dos botones de borde uno al lado del otro), vivían arriba (la zona menos alcanzable del pulgar) y decían siempre "Ejecutar", incluso con 2 de 6 pasos hechos, donde lo que se hace es *seguir*.
 - **Props:** `{ to: string, estado: 'empezar' | 'seguir' | 'repetir', paso?: number, total?: number }`. El estado lo calcula quien la monta a partir del avance real; `paso` y `total` solo se usan en `seguir`.

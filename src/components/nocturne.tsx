@@ -28,6 +28,22 @@ export function TagNeutral({ children, className = '' }: { children: ReactNode; 
   )
 }
 
+// Desplazamiento inferior de una barra pegajosa en los niveles que
+// CONSERVAN la barra de pestañas (sección y documento). Corregido el
+// 2026-08-03 al medir la acción dominante de la ficha de equipo (tarea
+// 201) y encontrar el mismo defecto en la de la ficha de artículo (tarea
+// 172): `sticky bottom-0` ancla el elemento al borde inferior del
+// **viewport**, no al de su contenedor, así que mientras quedara
+// contenido por debajo la barra quedaba 65 px por detrás de las
+// pestañas, que son `fixed`. Al final del scroll volvía a su sitio en el
+// flujo, y por eso la revisión anterior no lo vio: hay que medir a
+// MITAD de un documento largo, no al final.
+//
+// El valor es el mismo `ALTO_PESTANAS` que reserva el chasis (65 px
+// medidos más el área segura, AD-027). Desde `md` no hay barra de
+// pestañas y la barra vuelve a pegarse al borde.
+export const PEGADA_SOBRE_PESTANAS = 'bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0'
+
 // Botones .btn del sistema: el primario va delineado en el acento
 // (nunca relleno, regla de Nocturne) y el secundario con el divisor.
 const BTN_BASE =

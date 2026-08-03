@@ -30,6 +30,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 **Verificación:** `tsc -b`, lint y build limpios; 1724 pruebas pasan (los 4 fallos de siempre, preexistentes y ajenos). **Medido en navegador real** con un banco temporal (retirado antes de commitear, `cambiosPendientes` en 0) a 360x640 y 360x420: el ancla del nivel documento sigue en pantalla con `scrollY = 415` (`top: 16`); la capa "Ahora" de la ficha de equipo termina a **265 px**, la primera pantalla, contra las tres que la auditoría midió para llegar a "Conexiones"; el bloque pegajoso del asistente mide 123 px y contiene "Paso 2 de 4 · Abrir la tapa · 1/2" mientras la barra de acción queda anclada al pie del viewport; la IP se lee a 14 px monoespaciado tabular en `noct-text`. Sin errores de consola.
 
+### Corregido (tarea 201): la acción dominante quedaba 65 px detrás de la barra de pestañas
+
+**Área modificada:** `src/components/nocturne.tsx` (constante nueva `PEGADA_SOBRE_PESTANAS`), `src/components/BarraAccionFicha.tsx`, `src/features/dispositivos/DispositivoPage.tsx`.
+**Motivo:** defecto encontrado **al medir** la acción dominante nueva de la ficha de equipo, y presente también en la de la ficha de artículo desde la tarea 172. `sticky bottom-0` ancla el elemento al borde inferior del **viewport**, no al de su contenedor, así que mientras quedara contenido por debajo la barra se pintaba detrás de la barra de pestañas, que es `fixed`. Medido a 360x640 sobre un artículo de 3.348 px: la barra ocupaba 541-640 y las pestañas empiezan en 575, es decir **65 px tapados**, casi todo el botón de 52 px y su nota. Al llegar al final del scroll la barra volvía a su sitio en el flujo y se veía bien, y por eso la verificación de la tarea 172 no lo detectó: hay que medir a **mitad** de un documento largo, no al final.
+**Impacto esperado:** la acción dominante de las dos fichas vuelve a ser tocable durante todo el recorrido, que es justo lo que pide la regla **M-R3**.
+
+- **Agregado** `PEGADA_SOBRE_PESTANAS` en `nocturne.tsx`: `bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0`, el mismo valor medido que el chasis reserva en `ALTO_PESTANAS` (AD-027). Vive en una sola constante para que un cambio de alto de la barra no haya que perseguirlo por dos archivos.
+- **Corregido** `BarraAccionFicha` (ficha de artículo) y `AccionDominanteEquipo` (ficha de equipo) usan esa constante. Medido después del cambio: las dos barras terminan exactamente en 575, donde empiezan las pestañas, con 0 px tapados y el botón en sus 52 px.
+- La acción dominante del **modo ejecución** no estaba afectada: vive en el nivel `tarea`, que no tiene barra de pestañas, y ahí `bottom-0` es lo correcto.
+
 ### Documentación (tarea 201): registro del handoff "Auditoría móvil"
 
 **Área modificada:** [TAREAS.md](TAREAS.md), [DECISIONES.md](DECISIONES.md).
