@@ -4,7 +4,11 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 201 se cerró el 2026-08-03. La siguiente es la 202, ver "Por hacer".)*
+*(vacío: la tarea 202 se cerró el 2026-08-03. La siguiente es la 203, ver "Por hacer".)*
+
+---
+
+La **tarea 202** (fase 2 de la auditoría móvil: el regreso recuerda el camino, M-002, M-020, M-029) quedó **terminada, verificada en navegador y archivada el 2026-08-03**. El regreso deja de subir siempre al padre teórico y pasa a deshacer el último salto (**M-R2**), con el padre declarado intacto como respaldo. **Medido en navegador real a 360 px**: el ciclo completo del escáner (leer, abrir la ficha, volver con la cámara viva y leer otro, "2 leídos"); la ficha abierta desde la topología vuelve al mismo nodo; la ubicación abierta desde un equipo dice de qué equipo viene; y una pestaña nueva sobre esa misma ubicación cae al padre declarado, así que **ninguna pantalla se queda sin salida**. Módulos nuevos: `origenNavegacion`, `useOrigen`, `sesionEscaneo`. Dos decisiones registradas: [DECISIONES.md](DECISIONES.md) **AD-030** (por qué el origen vive en `location.state` y no en la URL) y **AD-031** (por qué el conteo del escáner se reinicia a mano, tras encontrar que la primera versión no era idempotente). Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ---
 
@@ -203,16 +207,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 202. Auditoría móvil, fase 2: el regreso recuerda el camino (M-002, M-020, M-029, regla M-R2)
-
-- **Descripción:** hoy el regreso lleva al **padre declarado**, no al recorrido real, y eso convierte tres recorridos frecuentes en callejones: escanear un equipo y abrir su ficha deja al técnico en Equipos (no en el escáner, con la cámara viva); abrir un equipo desde la topología lo devuelve a la lista de Red; y un resultado de búsqueda vuelve a la lista de su sección. La regla **M-R2** matiza R13 y R20: volver es **deshacer el último salto**, y el rótulo nombra el destino real ("‹ Escáner"). El padre declarado se mantiene como respaldo para enlaces profundos y recargas, que es justo por lo que se eligió (`padreDe` no se retira). Incluye el contador de sesión del escáner ("3 leídos"), que es lo que da sentido a quedarse dentro (mockup `8b`).
-- **Motivo:** inventariar diez equipos de un rack cuesta **cuatro toques por equipo en vez de dos**, porque hay que volver a entrar al escáner por "Más". Y seguir una cadena de tres saltos de red rompe el hilo tres veces.
-- **Impacto:** alto en dos flujos de campo (inventariar un rack, recorrer la red). Riesgo medio: toca la fuente única de navegación, que hoy es determinista y tiene pruebas; el origen debe ser un **añadido** que nunca deje una pantalla sin salida.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/lib/navegacion.ts` (origen efímero además del padre declarado), `src/components/BotonVolver.tsx`, `src/app/Chasis.tsx` (la línea de contexto del ancla la escribe el origen cuando lo hay), `src/features/dispositivos/EscanerPage.tsx`, `src/features/red/TopologiaEquipoPage.tsx`, `src/features/dispositivos/DispositivoPage.tsx`.
-- **Dependencias:** la **201** (el ancla permanente ya existe y es donde se escribe el origen). Reglas que fija: **M-R2**. Se relaciona con la tarea **188** (`MigaDePan`), que sigue vigente para los tramos completos de escritorio.
-- **Modelo/esfuerzo:** Opus 5 / Alto (toca la fuente única de navegación de las 44 rutas).
 
 ### 203. Auditoría móvil, fase 2: Inicio en cinco bloques y dos pesos de fila (M-006, M-007, M-013, M-003)
 

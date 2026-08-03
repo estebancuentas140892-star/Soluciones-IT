@@ -169,6 +169,16 @@ Conviven tres sistemas de color sobre superficies distintas (no se mezclan):
 
 Fuente única: `src/lib/navegacion.ts` (`padreDe(pathname)`), con pruebas. Define el "padre lógico" (pantalla superior) de cada ruta y su etiqueta. `src/components/BotonVolver.tsx` deriva de ahí destino y texto. Es navegación "Up" declarada, no `history.back()` (hay flujos hacia adelante donde retroceder caería en el formulario recién enviado). Regla: creación y fichas de contenido suben a la pantalla-lista de su sección; edición y asistente suben a la ficha de la entidad. El filtro de la lista viaja por URL (`?categoria=<id>`, `?etiqueta=<x>`) para volver "exactamente como estaba".
 
+**Y el origen manda sobre el padre, cuando lo hay (tarea 202, regla M-R2).** El padre lógico no siempre es el sitio del que se vino, y eso convertía tres recorridos en callejones. Desde ahora, quien origina un salto lateral le pasa al destino de dónde viene, y el chasis usa ese origen para el regreso, su rótulo y la línea de contexto del ancla:
+
+| Vas de | a | El regreso decía | Ahora dice |
+|---|---|---|---|
+| Escáner | ficha de un equipo | "Equipos" (y el escáner se borraba del historial) | **"‹ Escáner"**, con la cámara viva |
+| Topología de un equipo | ficha de otro equipo | "Red" | **"‹ Topología"**, al mismo nodo |
+| Ficha de un equipo | Ubicación, Persona o el equipo al que reemplaza | "Ubicaciones", "Personas", "Equipos" | **el nombre del equipo del que vienes** |
+
+El padre declarado sigue siendo el respaldo y no se retira: al abrir un enlace compartido o entrar en frío no hay origen, y el regreso vuelve a ser el de siempre. Ninguna pantalla puede quedarse sin salida. El porqué del mecanismo, en [DECISIONES.md](DECISIONES.md) AD-030.
+
 ### 2.5 Sincronización y estado offline
 
 - Todas las lecturas/escrituras van primero a la base local (Dexie); la app nunca espera a la red.
@@ -546,14 +556,17 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 **Objetivo.** Leer códigos QR (URL de la ficha) y códigos de barras (placa/serial) con la cámara trasera para abrir la ficha de un dispositivo. Usa el detector nativo (`BarcodeDetector`) o cae a jsQR.
 
 **Elementos:**
-- Cabecera: "Volver", título "Escanear equipo", botón **"Linterna"** (si el dispositivo la soporta).
+- Cabecera: barra de tarea ("Escaneando · Código QR o de barras"), **contador de la sesión** y botón **"Linterna"** (si el dispositivo la soporta).
+- **Contador "N leídos"** (tarea 202, hallazgo M-029): cuántos equipos distintos se han identificado sin salir del escáner. Sobrevive a abrir una ficha y volver. **Se reinicia tocándolo**, y también al cerrar la aplicación; no se reinicia solo por entrar de nuevo ([DECISIONES.md](DECISIONES.md) AD-031). Los repetidos no suman: apuntar dos veces a la misma etiqueta no es haber inventariado dos equipos.
 - Marco de escaneo con línea animada y texto guía.
 - Estados de fallo: sin permiso / sin cámara / no soportado, cada uno con mensaje y la alternativa de búsqueda manual.
 - **Búsqueda manual** (barra inferior): input "O escribir la placa o el serial" + botón "Buscar".
 - **Tarjetas de aviso** (reemplazan la barra al haber resultado):
-  - **"Equipo identificado"** (encontrado): nombre y ubicación, botones **"Abrir la ficha"** y **"Seguir"**.
+  - **"Equipo identificado"** (encontrado): nombre y ubicación; **su estado y su IP** (tarea 202: muchas veces son lo único que se venía a mirar, y sacarlos aquí ahorra abrir la ficha entera); botones **"Abrir la ficha"** y **"Seguir"**, con la promesa escrita **"La ficha vuelve aquí al terminar"**.
   - **"Varios equipos comparten este código"**: lista de opciones + "Seguir escaneando".
   - **"Ningún equipo coincide con este código"**: muestra el código, botones "Seguir escaneando" y "Registrar equipo" (este último precarga el código leído como serial en el alta, `?serial=`, salvo que sea una URL de etiqueta; hallazgo H3).
+
+**El escáner queda como origen (tarea 202, hallazgo M-029).** Hasta ahora "Abrir la ficha" **reemplazaba** el escáner en el historial y la ficha volvía a Equipos, así que inventariar diez equipos de un rack costaba cuatro toques por equipo en vez de dos: había que volver a entrar por "Más". Ahora la ficha se apila encima y su regreso dice **"‹ Escáner"**, con la cámara viva y el conteo intacto. Lo mismo con "Registrar equipo" y con la lista de "Varios equipos".
 
 <a id="63-ubicaciones"></a>
 ### 6.3 Ubicaciones

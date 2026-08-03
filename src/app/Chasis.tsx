@@ -13,6 +13,7 @@ import { BotonVolver } from '../components/BotonVolver'
 import { Marca } from '../components/Marca'
 import { ProveedorBandaTarea } from './bandaTarea'
 import { direccionPara } from './direccionTransicion'
+import { useOrigen } from './useOrigen'
 import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
 import { useMemoriaScroll } from './memoriaScroll'
 import { RAICES_DE_PESTANA } from '../lib/navegacion'
@@ -220,6 +221,11 @@ export function Chasis(props: Props) {
   // el primer render llegaría con `null` y la banda no aparecería hasta
   // el siguiente cambio de estado del asistente.
   const [ranuraTarea, setRanuraTarea] = useState<HTMLDivElement | null>(null)
+  // De dónde vino el técnico cuando no vino de la lista padre (tarea
+  // 202, regla M-R2). Se resuelve aquí, en el chasis, y no en cada
+  // pantalla: así el regreso de las 44 rutas deshace el último salto sin
+  // que ninguna lo cablee, igual que ya pasa con `padreDe`.
+  const origen = useOrigen()
   const location = useLocation()
   const direccion = direccionPara(location)
   useMemoriaScroll(location.pathname)
@@ -249,8 +255,12 @@ export function Chasis(props: Props) {
           <BarraTarea
             rotulo={props.rotulo}
             titulo={props.titulo}
-            vuelta={props.vuelta}
-            salidaA={props.salidaA}
+            // El origen manda sobre la vuelta derivada, pero no sobre la
+            // que la pantalla escribe a mano: cuando una tarea sabe
+            // nombrar su vuelta ("Guías › Impresoras"), sabe más que el
+            // chasis.
+            vuelta={props.vuelta ?? origen?.etiqueta}
+            salidaA={props.salidaA ?? origen?.to}
             salidaEtiqueta={props.salidaEtiqueta}
             alSalir={props.alSalir}
           >
@@ -265,6 +275,26 @@ export function Chasis(props: Props) {
       </div>
     )
   }
+
+  // El regreso del nivel documento, con el origen por delante del padre
+  // declarado (tarea 202, regla M-R2). El orden importa y es este:
+  //
+  //   1. el origen, si lo hay: es el último salto real;
+  //   2. el override de la pantalla, para lo que depende de datos en
+  //      runtime (un equipo de red vuelve a Red);
+  //   3. `padreDe`, dentro de `BotonVolver`, que siempre existe.
+  //
+  // El origen va PRIMERO y no último a propósito: el override de la
+  // pantalla es una regla general ("los equipos de red vuelven a Red") y
+  // el origen es el hecho concreto de este recorrido ("vengo del
+  // escáner"). Cuando los dos hablan, gana el hecho.
+  //
+  // Y el contexto de 11 px pasa a nombrar de dónde se viene, que es
+  // exactamente lo que el mockup `6b` pide para Ubicaciones y Personas:
+  // "nada dice desde qué equipo llegaste".
+  const volverA = props.modo === 'documento' ? (origen?.to ?? props.volverA) : undefined
+  const volverEtiqueta = props.modo === 'documento' ? (origen?.etiqueta ?? props.volverEtiqueta) : undefined
+  const contexto = props.modo === 'documento' ? (origen?.etiqueta ?? props.contexto) : undefined
 
   // Niveles 1 y 2: los dos conservan las pestañas (R19, la barra solo
   // cede ante una tarea con salida). Solo cambia la fila superior.
@@ -292,20 +322,20 @@ export function Chasis(props: Props) {
         <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5">
           {props.titulo ? (
             <div className="flex min-w-0 flex-1 items-center gap-0.5">
-              <BotonVolver to={props.volverA} soloIcono>
-                {props.volverEtiqueta}
+              <BotonVolver to={volverA} soloIcono>
+                {volverEtiqueta}
               </BotonVolver>
               <h1 className="min-w-0 flex-1">
-                {props.contexto && (
+                {contexto && (
                   <span className="block truncate text-[11px] leading-[1.3] text-noct-neutral-500">
-                    {props.contexto}
+                    {contexto}
                   </span>
                 )}
                 <span className="block truncate text-[14px] font-medium leading-[1.25]">{props.titulo}</span>
               </h1>
             </div>
           ) : (
-            <BotonVolver to={props.volverA}>{props.volverEtiqueta}</BotonVolver>
+            <BotonVolver to={volverA}>{volverEtiqueta}</BotonVolver>
           )}
           {props.acciones && <div className="flex shrink-0 items-center gap-1.5">{props.acciones}</div>}
         </div>

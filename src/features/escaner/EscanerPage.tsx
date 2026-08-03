@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
 import { BarraTarea } from '../../components/BarraTarea'
+import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
+import { claseEstado, estadoConEtiqueta } from '../red/topologiaVisual'
 import {
   ArrowRight,
   CameraSlash,
@@ -13,7 +15,9 @@ import {
   Question,
 } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { resolverCodigo } from './resolverCodigo'
+import { codigosLeidos, registrarCodigoLeido, reiniciarConteo } from './sesionEscaneo'
 
 // Pantalla de escaneo a pantalla completa (sin la barra inferior),
 // re-autorizada en Nocturne (handoff "Rediseño de aplicación
@@ -93,7 +97,6 @@ async function crearLector(): Promise<Lector> {
 }
 
 export function EscanerPage() {
-  const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
   const pistaRef = useRef<MediaStreamTrack | null>(null)
 
@@ -101,6 +104,14 @@ export function EscanerPage() {
   const [aviso, setAviso] = useState<Aviso | null>(null)
   const [linterna, setLinterna] = useState({ disponible: false, encendida: false })
   const [codigoManual, setCodigoManual] = useState('')
+  // Contador de la sesión (M-029, mockup `8b`): sobrevive a ir a una
+  // ficha y volver, porque vive en `sessionStorage` y no en el estado de
+  // esta pantalla. Ver src/features/escaner/sesionEscaneo.ts.
+  const [leidos, setLeidos] = useState<string[]>(codigosLeidos)
+
+  // El origen que se le pasa a todo lo que sale del escáner, para que el
+  // regreso diga "‹ Escáner" y vuelva con la cámara viva (regla M-R2).
+  const origenEscaner = conOrigen('/escaner', 'Escáner')
 
   const dispositivos = useLiveQuery(() => db.dispositivos.toArray(), [], [])
   const dispositivosRef = useRef(dispositivos)
@@ -122,12 +133,14 @@ export function EscanerPage() {
       const dispositivo = porId.get(resultado.dispositivoId)
       if (dispositivo) {
         navigator.vibrate?.(60)
+        setLeidos(registrarCodigoLeido(codigo))
         setAviso({ tipo: 'encontrado', dispositivo })
         return
       }
     }
     if (resultado.tipo === 'varios') {
       navigator.vibrate?.(60)
+      setLeidos(registrarCodigoLeido(codigo))
       const encontrados = resultado.dispositivoIds
         .map((id) => porId.get(id))
         .filter((d): d is Dispositivo => Boolean(d))
@@ -285,8 +298,25 @@ export function EscanerPage() {
           pantalla completa, pero adopta la BarraTarea, que orienta y da
           la salida siempre en el mismo sitio (R19). */}
       <BarraTarea rotulo="Escaneando" titulo="Código QR o de barras" salidaEtiqueta="Salir del escáner">
-        {linterna.disponible && (
-          <div className="flex justify-end px-3 pb-2">
+        {(leidos.length > 0 || linterna.disponible) && (
+          <div className="flex items-center justify-between gap-2 px-3 pb-2">
+            {/* Contador de la sesión (M-029): es lo que da sentido a
+                quedarse dentro en vez de salir tras cada equipo. */}
+            {leidos.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setLeidos(reiniciarConteo())}
+                title="Reiniciar el conteo"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-noct-divider bg-noct-bg/65 px-3 text-[12px] font-medium text-noct-neutral-300 backdrop-blur-[8px] hover:text-noct-text"
+              >
+                <Check size={14} className="text-noct-exito" aria-hidden />
+                {leidos.length} {leidos.length === 1 ? 'leído' : 'leídos'}
+                <span className="sr-only"> en esta sesión de escaneo. Tocar para reiniciar el conteo</span>
+              </button>
+            ) : (
+              <span />
+            )}
+            {linterna.disponible && (
             <button
               type="button"
               onClick={() => void alternarLinterna()}
@@ -300,6 +330,7 @@ export function EscanerPage() {
               {linterna.encendida ? <FlashlightFill size={15} aria-hidden /> : <Flashlight size={15} aria-hidden />}
               Linterna
             </button>
+            )}
           </div>
         )}
       </BarraTarea>
@@ -371,7 +402,11 @@ export function EscanerPage() {
               >
                 {fallo ? 'Cerrar' : 'Seguir escaneando'}
               </button>
-              <Link to={rutaRegistrarEquipo} className={BTN_SECUNDARIO}>
+              <Link
+                to={rutaRegistrarEquipo}
+                state={origenEscaner}
+                className={BTN_SECUNDARIO}
+              >
                 Registrar equipo
               </Link>
             </div>
@@ -386,6 +421,7 @@ export function EscanerPage() {
                 <Link
                   key={dispositivo.id}
                   to={`/dispositivos/${dispositivo.id}`}
+                  state={origenEscaner}
                   className="flex min-h-[50px] items-center gap-[11px] rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-noct-text hover:border-noct-accent"
                 >
                   <Monitor size={17} className="shrink-0 text-noct-exito" aria-hidden />
@@ -430,19 +466,51 @@ export function EscanerPage() {
                 </p>
               </div>
             </div>
+
+            {/* El estado y la IP en el propio acuse (M-029): muchas veces
+                son lo único que se venía a mirar, y sacarlos aquí ahorra
+                abrir la ficha entera. La IP cumple el piso de dato
+                técnico (M-R5). */}
+            {(aviso.dispositivo.estado || aviso.dispositivo.ip) && (
+              <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-[47px]">
+                {aviso.dispositivo.estado && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${claseEstado(
+                      estadoConEtiqueta(aviso.dispositivo.estado).etiqueta,
+                    )}`}
+                  >
+                    <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
+                    {estadoConEtiqueta(aviso.dispositivo.estado).etiqueta}
+                  </span>
+                )}
+                {aviso.dispositivo.ip && (
+                  <span className={VALOR_TECNICO_COMPACTO}>{aviso.dispositivo.ip}</span>
+                )}
+              </p>
+            )}
+
             <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => navigate(`/dispositivos/${aviso.dispositivo.id}`, { replace: true })}
+              {/* Sin `replace: true` (M-029). Era literalmente lo que
+                  borraba el escáner del historial: la ficha se abría
+                  ENCIMA de él y luego volvía a Equipos, así que
+                  inventariar un rack costaba cuatro toques por equipo en
+                  vez de dos. Ahora la ficha se apila y su regreso dice
+                  "‹ Escáner". */}
+              <Link
+                to={`/dispositivos/${aviso.dispositivo.id}`}
+                state={origenEscaner}
                 className={`flex-1 justify-center ${BTN_PRIMARIO}`}
               >
                 <ArrowRight size={14} aria-hidden />
                 Abrir la ficha
-              </button>
+              </Link>
               <button type="button" onClick={() => setAviso(null)} className={BTN_GHOST}>
                 Seguir
               </button>
             </div>
+            {/* El compromiso escrito: sin él, "Abrir la ficha" sigue
+                pareciendo el final del escaneo. */}
+            <p className="text-center text-[11.5px] text-noct-neutral-500">La ficha vuelve aquí al terminar</p>
           </div>
         )}
       </div>

@@ -1,5 +1,45 @@
 # Historial de tareas finalizadas
 
+### 202. Auditoría móvil, fase 2: el regreso recuerda el camino (M-002, M-020, M-029)
+
+**Estado**: TERMINADA y **verificada en navegador real a 360 px** el 2026-08-03. `tsc -b`, lint y build limpios; 1739 pruebas pasan, 15 de ellas nuevas (los mismos 4 fallos preexistentes y ajenos de `archivosPendientes.test.ts`). **Prioridad**: Alta. **Origen**: handoff "Auditoría móvil", fase 2; mockups `8b` y `10b`/`10c`, más `6b` para Ubicaciones y Personas. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
+
+**El problema, y por qué no era un defecto tonto.** La regla 13 de [REGLAS.md](REGLAS.md) fijó en su día que el regreso es navegación "Up" a un **padre lógico declarado** (`padreDe`, con pruebas) y no `history.back()`. Esa decisión era y sigue siendo correcta: es determinista, aguanta enlaces profundos y recargas, y evita que "volver" caiga en un formulario recién enviado. Lo que la auditoría mide es que el padre lógico **no siempre es el sitio del que se vino**:
+
+1. **M-029, el escáner.** `EscanerPage` navegaba con `{ replace: true }`, así que "Abrir la ficha" **borraba el escáner del historial**, y la ficha volvía a Equipos. Inventariar diez equipos de un rack costaba **cuatro toques por equipo en vez de dos**: había que volver a entrar al escáner por "Más" cada vez.
+2. **M-020, la topología.** El equipo abierto desde la topología de otro volvía a la lista de Red, así que seguir una cadena de tres saltos rompía el hilo tres veces.
+3. **M-002, ubicación y persona.** Se llega tocando un enlace dentro de la ficha de un equipo, y al llegar nada decía desde cuál (mockup `6b`: "nada dice desde qué equipo llegaste, y «‹ Ubicaciones» lleva a una lista que nunca abriste").
+
+**La solución, en una frase:** un **origen efímero** que viaja en `location.state`, lo resuelve el **chasis** para las 44 rutas, y manda sobre el padre declarado cuando existe. El orden es origen → override de la pantalla → `padreDe`.
+
+- **Módulos nuevos.** `src/lib/origenNavegacion.ts` (`conOrigen` para escribirlo, `leerOrigen` para leerlo validándolo) y `src/app/useOrigen.ts` (lo resuelve para la pantalla actual). `padreDe` **no se toca** y sus pruebas siguen valiendo.
+- **Quién lo escribe:** el que ORIGINA el salto, nunca el destino (el destino no puede saber de dónde lo abrieron). `EscanerPage` ("Escáner"), `TopologiaEquipoPage` ("Topología", en sus cuatro clases de enlace: padres, nodos del árbol, conexiones y "Abrir la ficha") y `DispositivoPage` (el nombre del equipo, para ubicación, persona y los dos reemplazos).
+- **Quién lo consume:** solo el `Chasis`. Ninguna pantalla lo lee por su cuenta, igual que ya pasaba con `padreDe`.
+- **La línea de contexto de 11 px del ancla permanente (M-R1, tarea 201) pasa a nombrar el origen.** Es lo que hace que la ubicación diga "AP Recepción de prueba" arriba en vez de "Ubicaciones".
+- **El contador del escáner** ("N leídos", mockup `8b`), que es lo que da sentido a quedarse dentro, más **el estado y la IP en el acuse** (muchas veces son lo único que se venía a mirar) y el compromiso escrito "La ficha vuelve aquí al terminar".
+
+**Por qué el origen va en `location.state` y no en la query.** Es por **entrada de historial**, así que expresa exactamente "el último salto"; llega vacío en un enlace compartido y la pantalla cae sola al padre declarado; y no ensucia la URL. La alternativa (`?desde=escaner`) se descartó justo por lo último: el equipo guarda y comparte enlaces profundos, y arrastrarían de dónde venía quien los copió. Registrado en [DECISIONES.md](DECISIONES.md) **AD-030**.
+
+**Por qué el origen va POR DELANTE del override de la pantalla.** El override (`volverA`) expresa una regla general ("un equipo de red vuelve a Red") y el origen expresa el hecho concreto de este recorrido ("vengo del escáner"). Cuando los dos hablan, gana el hecho.
+
+**La trampa del `#hash`, evitada a propósito.** `useOrigen` recuerda el origen **por pathname**, no por montaje. React Router trata un cambio de hash como una navegación nueva **con `state: null`**, así que leer `location.state` en cada render habría borrado el origen en cuanto el técnico tocara un ancla interna de la propia ficha; es el mismo defecto que ya se corrigió en su día con el bloque "¿Qué sigue?" de `DispositivoPage`. Pero capturar solo al montar tampoco vale: al pasar de una ficha a otra del mismo tipo React reutiliza la instancia y no hay montaje nuevo, así que el origen del primer equipo quedaría pegado al segundo. Por pathname resuelve los dos casos. **Verificado en navegador** empujando un `#conexiones` sobre una ficha abierta desde el escáner: el ancla siguió diciendo "Escáner" y el regreso siguió apuntando a `/escaner`.
+
+**Defecto propio encontrado al verificar, y rehecho de raíz.** La primera versión del contador intentaba **adivinar** cuándo empieza y termina una sesión de escaneo con un marcador en `sessionStorage`: el escáner lo escribía antes de saltar a una ficha y lo consumía al volver. Medido en el navegador, el contador decía "1 leído" mientras el almacenamiento ya estaba en `[]`: consumir el marcador al montar **no es idempotente**, y el doble montaje que React hace en desarrollo (StrictMode) lo destapó, que es exactamente para lo que ese doble montaje existe. Se podía haber tapado con una ref, pero eso solo esconde el problema: lo que estaba mal era **leer con efectos**. La versión final no tiene marcador; el conteo vive mientras viva la pestaña y se reinicia **tocándolo**, una sola regla y visible. `codigosLeidos()` es una lectura pura, y una prueba lo fija llamándola tres veces seguidas. Registrado en [DECISIONES.md](DECISIONES.md) **AD-031**.
+
+**Pruebas nuevas:** 15. `src/lib/origenNavegacion.test.ts` (8) cubre sobre todo el respaldo: sin estado, con estado que no es un objeto, sin la clave, con tipos equivocados, con cadenas vacías o en blanco. Un regreso a `""` dejaría la pantalla sin salida, y ese es el único fallo inaceptable de esta tarea. `src/features/escaner/sesionEscaneo.test.ts` (7) sustituye `sessionStorage` por uno en memoria (las pruebas corren en Node) y cubre el conteo, los repetidos, el reinicio, la idempotencia de la lectura, el JSON corrupto y la ausencia total de almacenamiento.
+
+**Verificación en navegador real** (banco temporal con sesión simulada y datos sembrados en Dexie, **retirado antes de commitear**: `cambiosPendientes` en 0 y la clave de sesión borrada), a 360x640:
+
+- **Ciclo del escáner completo:** buscar la placa `MP-100` da "1 leído" y el acuse "Switch Core de prueba · Rack 1 · Operativo · 10.20.1.4 · La ficha vuelve aquí al terminar". "Abrir la ficha" lleva a `/dispositivos/disp-sw` con ancla **"Escáner | Switch Core de prueba"** y regreso a `/escaner`. Volver y buscar `MP-101` da **"2 leídos"**, con el almacenamiento en `["MP-100","MP-101"]`. Eso es inventariar un rack sin salir.
+- **Topología:** el nodo hijo abierto desde `/red/topologia/disp-sw` da ancla **"Topología | AP Recepción de prueba"** y regreso a `/red/topologia/disp-sw`.
+- **Ubicación desde un equipo:** ancla **"AP Recepción de prueba | Rack 1 de prueba"** y regreso a `/dispositivos/disp-ap`.
+- **El respaldo, que es lo que había que proteger:** la misma ubicación abierta en una **pestaña nueva** (historial en blanco, como un enlace compartido) da ancla "Ubicaciones | Rack 1 de prueba" y regreso a `/ubicaciones`, el padre declarado. Sin errores de consola.
+
+**Lo que NO incluye.** El recorrido por nodos de Red (que tocar un hijo **sustituya el nodo en su sitio** en vez de abrir su ficha, mockup `10c`) es la tarea **204**: aquí solo se arregla el regreso. Y la miga de pan con los tramos completos de escritorio sigue siendo la tarea **188**, que ahora tiene el dato que necesitaba.
+
+**Sin cambios de datos ni de esquema.** Ninguna columna nueva, ningún permiso tocado, nada que aplicar en Supabase.
+
+
 ### 201. Auditoría móvil, fase 1: lo que impide trabajar con el teléfono en la mano
 
 **Estado**: TERMINADA y **verificada en navegador real a 360 px** el 2026-08-03. `tsc -b`, lint y build limpios; 1724 pruebas pasan (los mismos 4 fallos preexistentes y ajenos de `archivosPendientes.test.ts`, RLS de Storage contra el `.env` real, duplicados por el worktree obsoleto de la tarea 178). **Prioridad**: Alta. **Origen**: handoff "Auditoría móvil: hallazgos y evidencia", fase 1 declarada por la propia auditoría; mockups `1b`, `3b`, `4b` y `5c`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode (los cinco cambios comparten archivos, repartirlos en agentes habría generado conflictos).

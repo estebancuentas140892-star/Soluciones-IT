@@ -10,6 +10,7 @@ import { registrarVisita } from '../../lib/recientes'
 import { textoVivo } from '../../lib/referencia'
 import { referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { Chasis } from '../../app/Chasis'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
@@ -245,6 +246,13 @@ export function DispositivoPage() {
   // buscar con el equipo delante; marca y modelo pasan a ser la línea
   // bajo el nombre, no dos filas; serial y placa se quedan en
   // "Contexto", que es donde se consultan.
+  // A Ubicaciones y a Personas se llega tocando un enlace DENTRO de esta
+  // ficha, y al llegar nada decía desde qué equipo (hallazgo M-002,
+  // mockup `6b`). Con el origen, su regreso vuelve aquí y su línea de
+  // contexto dice el nombre del equipo. Lo mismo entre equipos, para la
+  // cadena de reemplazos.
+  const origenEsteEquipo = conOrigen(`/dispositivos/${dispositivoId}`, dispositivo.nombre)
+
   const marcaModelo = [dispositivo.marca, dispositivo.modelo].filter(Boolean).join(' ')
   const camposContexto: { etiqueta: string; valor: string; tecnico?: boolean }[] = [
     { etiqueta: 'Número de serie', valor: dispositivo.serial, tecnico: true },
@@ -468,6 +476,7 @@ export function DispositivoPage() {
               (ubicacionViva ? (
                 <Link
                   to={`/ubicaciones/${ubicacionViva.id}`}
+                  state={origenEsteEquipo}
                   className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-accent-300 hover:bg-noct-text/[.04]"
                 >
                   <MapPin size={15} className="shrink-0" aria-hidden />
@@ -510,6 +519,7 @@ export function DispositivoPage() {
                   {responsableVivo ? (
                     <Link
                       to={`/personas/${responsableVivo.id}`}
+                      state={origenEsteEquipo}
                       className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
                     >
                       <User size={14} className="shrink-0" aria-hidden />
@@ -527,6 +537,7 @@ export function DispositivoPage() {
                 <FilaDato etiqueta="Reemplaza a">
                   <Link
                     to={`/dispositivos/${dispositivo.reemplazaA}`}
+                    state={origenEsteEquipo}
                     className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
                   >
                     <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
@@ -538,6 +549,7 @@ export function DispositivoPage() {
                 <FilaDato etiqueta="Reemplazado por">
                   <Link
                     to={`/dispositivos/${reemplazadoPor.id}`}
+                    state={origenEsteEquipo}
                     className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
                   >
                     <ArrowsClockwise size={14} className="shrink-0" aria-hidden />

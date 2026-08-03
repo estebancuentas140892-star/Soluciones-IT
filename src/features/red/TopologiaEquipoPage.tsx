@@ -8,6 +8,7 @@ import { agruparConexiones, type ExtremoConexion } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { CaretRight, CaretDown, Monitor, Plus, TreeStructure, Warning, X } from '../../components/iconos'
 import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
+import { conOrigen, type EstadoConOrigen } from '../../lib/origenNavegacion'
 import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { IconoNodo } from './IconoNodo'
 import { FormularioConexion } from './FormularioConexion'
@@ -120,6 +121,11 @@ export function TopologiaEquipoPage() {
 
   const estado = estadoConEtiqueta(equipo.estado)
 
+  // Seguir una conexión rompía el hilo en cada salto: el equipo abierto
+  // desde aquí volvía a la LISTA de Red, no a esta topología (hallazgo
+  // M-020). Con el origen, el regreso deshace un salto (regla M-R2).
+  const origenTopologia = conOrigen(`/red/topologia/${equipo.id}`, 'Topología')
+
   return (
     // Nivel 2 del chasis (tarea 185): documento. El chasis pone el
     // bloque pegajoso, el retorno a la topología y las pestañas; aquí
@@ -128,7 +134,7 @@ export function TopologiaEquipoPage() {
     <Chasis
       modo="documento"
       acciones={
-        <Link to={`/dispositivos/${equipo.id}`} className={`shrink-0 ${BTN_GHOST}`}>
+        <Link to={`/dispositivos/${equipo.id}`} state={origenTopologia} className={`shrink-0 ${BTN_GHOST}`}>
           <Monitor size={14} aria-hidden />
           Abrir la ficha
         </Link>
@@ -168,6 +174,7 @@ export function TopologiaEquipoPage() {
                 <Link
                   key={`${p.id}-${p.via}`}
                   to={`/dispositivos/${p.id}`}
+                  state={origenTopologia}
                   className="flex min-h-12 items-center gap-[11px] rounded-md px-1.5 py-2 text-noct-text hover:bg-noct-text/[.05]"
                 >
                   <FlechaCodoArriba className="w-6 shrink-0 text-noct-neutral-500" />
@@ -223,7 +230,7 @@ export function TopologiaEquipoPage() {
                 {totalDependientes} {totalDependientes === 1 ? 'equipo depende' : 'equipos dependen'}
               </span>
             </div>
-            <ArbolDependientes nodo={arbol} nombreCategoria={nombreCategoria} />
+            <ArbolDependientes nodo={arbol} nombreCategoria={nombreCategoria} origen={origenTopologia} />
           </section>
         )}
 
@@ -234,6 +241,7 @@ export function TopologiaEquipoPage() {
           nombrePorId={nombrePorId}
           agregando={agregando}
           onToggleAgregar={() => setAgregando((v) => !v)}
+          origen={origenTopologia}
         />
       </main>
     </Chasis>
@@ -248,9 +256,14 @@ export function TopologiaEquipoPage() {
 function ArbolDependientes({
   nodo,
   nombreCategoria,
+  origen,
 }: {
   nodo: NodoTopologia
   nombreCategoria: Map<string, string>
+  // Estado de navegación con el que salen los enlaces a una ficha, para
+  // que su regreso vuelva a ESTA topología y no a la lista de Red
+  // (tarea 202, hallazgo M-020, regla M-R2).
+  origen: EstadoConOrigen
 }) {
   const [contraidos, setContraidos] = useState<ReadonlySet<string>>(new Set())
 
@@ -274,6 +287,7 @@ function ArbolDependientes({
           contraidos={contraidos}
           alternar={alternar}
           nombreCategoria={nombreCategoria}
+          origen={origen}
         />
       ))}
     </div>
@@ -287,6 +301,7 @@ function FilaArbol({
   contraidos,
   alternar,
   nombreCategoria,
+  origen,
 }: {
   nodo: NodoTopologia
   nivel: number
@@ -294,6 +309,7 @@ function FilaArbol({
   contraidos: ReadonlySet<string>
   alternar: (clave: string) => void
   nombreCategoria: Map<string, string>
+  origen: EstadoConOrigen
 }) {
   const tieneHijos = nodo.hijos.length > 0
   const abierto = tieneHijos && !contraidos.has(clave)
@@ -325,7 +341,7 @@ function FilaArbol({
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-400">
           <IconoNodo tipo={tipoDeNodoVisual(categoria)} className="h-4 w-4" />
         </span>
-        <Link to={`/dispositivos/${nodo.dispositivoId}`} className="min-w-0 flex-1 text-noct-text">
+        <Link to={`/dispositivos/${nodo.dispositivoId}`} state={origen} className="min-w-0 flex-1 text-noct-text">
           <span className="block truncate text-[13.5px] font-medium leading-[1.3]">
             {nodo.nombre}
             {nodo.truncado && (
@@ -351,6 +367,7 @@ function FilaArbol({
             contraidos={contraidos}
             alternar={alternar}
             nombreCategoria={nombreCategoria}
+            origen={origen}
           />
         ))}
     </>
@@ -363,9 +380,11 @@ function ConexionesSeccion({
   nombrePorId,
   agregando,
   onToggleAgregar,
+  origen,
 }: {
   equipo: Dispositivo
   grupos: ReturnType<typeof agruparConexiones>
+  origen: EstadoConOrigen
   nombrePorId: Map<string, string>
   agregando: boolean
   onToggleAgregar: () => void
@@ -427,7 +446,7 @@ function ConexionesSeccion({
                   key={extremo.conexion.id}
                   className="flex min-h-[50px] items-center gap-2.5 rounded-lg border border-noct-divider bg-noct-surface py-1.5 pl-3 pr-1.5"
                 >
-                  <Link to={`/dispositivos/${extremo.otroId}`} className="min-w-0 flex-1 text-noct-text">
+                  <Link to={`/dispositivos/${extremo.otroId}`} state={origen} className="min-w-0 flex-1 text-noct-text">
                     <span className="block truncate text-[13.5px] font-medium leading-[1.3]">{nombre}</span>
                     {(detalle || extremo.conexion.notas) && (
                       <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">
