@@ -374,3 +374,59 @@ describe('adjuntos', () => {
     expect(entrada?.valorNuevo).toBe('manual-camara.pdf')
   })
 })
+
+describe('conexiones', () => {
+  const enlace = {
+    id: 'con-1',
+    tipo: 'enlace' as const,
+    origenId: 'eq-switch',
+    origenNombre: 'Switch D32',
+    origenPuerto: '18',
+    destinoId: 'eq-punto',
+    destinoNombre: 'Punto de red D80',
+    destinoPuerto: 'A',
+    medio: 'UTP',
+    notas: '',
+  }
+
+  it('invertir la dirección queda registrado en las fichas de los dos extremos', async () => {
+    await guardarRegistro('conexiones', enlace)
+    await db.historial.clear()
+
+    // Los extremos intercambiados, como los deja `extremosInvertidos`.
+    await guardarRegistro(
+      'conexiones',
+      {
+        ...enlace,
+        origenId: 'eq-punto',
+        origenNombre: 'Punto de red D80',
+        origenPuerto: 'A',
+        destinoId: 'eq-switch',
+        destinoNombre: 'Switch D32',
+        destinoPuerto: '18',
+      },
+      'Se invirtió la dirección del enlace',
+    )
+
+    const entradas = await db.historial.toArray()
+    expect(entradas).toHaveLength(2)
+    expect(entradas.map((e) => e.entidadId).sort()).toEqual(['eq-punto', 'eq-switch'])
+    for (const entrada of entradas) {
+      expect(entrada.entidadTipo).toBe('dispositivo')
+      expect(entrada.campo).toBe('conexion')
+      expect(entrada.valorAnterior).toBe('Switch D32 (puerto 18) → Punto de red D80 (puerto A)')
+      expect(entrada.valorNuevo).toBe('Punto de red D80 (puerto A) → Switch D32 (puerto 18)')
+      expect(entrada.motivo).toBe('Se invirtió la dirección del enlace')
+    }
+  })
+
+  it('editar una conexión sin cambiar lo que el resumen describe no genera historial', async () => {
+    await guardarRegistro('conexiones', enlace)
+    await db.historial.clear()
+
+    await guardarRegistro('conexiones', { ...enlace, notas: 'Backbone del piso 3' })
+
+    expect(await db.historial.count()).toBe(0)
+    expect((await db.conexiones.get('con-1'))?.notas).toBe('Backbone del piso 3')
+  })
+})

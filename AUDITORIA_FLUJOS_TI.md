@@ -79,10 +79,11 @@ El formulario de conexión colapsa al guardar (`src/features/red/ConexionesFicha
 
 ### D. Red y topología
 
-**N1 - Trampa de dirección: un enlace creado desde la ficha del punto de red invierte la topología. [ALTA] [NUEVO, riesgo de datos]**
+**N1 - Trampa de dirección: un enlace creado desde la ficha del punto de red invierte la topología. [ALTA] [NUEVO, riesgo de datos] [RESUELTO en las tareas 131 (registrar bien, 2026-07-22) y 208 (ver la dirección y reparar lo ya guardado, 2026-08-29)]**
 Desde la ficha del punto de red, el modo por defecto `enlace` fija `origenEsteDispositivo = true` (`ConexionesFicha.tsx:217`), y en el árbol el origen de un enlace es el padre (`src/features/red/arbol.ts:68`). Resultado: registrar "el switch alimenta a este punto" desde la ficha del punto lo convierte en padre del switch, es decir la topología queda al revés y "¿qué se cae si apago el switch?" responde mal. No hay un modo "recibe servicio de / uplink".
 - Arquitectura: agregar modo "Recibe servicio de (uplink)" que ponga al otro equipo como origen, o invertir automáticamente según categoría (rack/switch siempre es el padre).
 - Riesgo: es un error silencioso de modelado que corrompe la utilidad principal de la topología.
+- **Cómo se resolvió**: modo explícito, no inversión automática. La heurística por categoría se descartó dos veces (tareas 131 y 208) por la misma razón: un enlace invertido es indistinguible de uno correcto, así que reescribiría en silencio la topología de alguien, y falla en el uplink legítimo entre dos switches. La reparación de lo ya guardado es manual, visible y reversible, con el cambio anotado en el historial de los dos extremos.
 
 **N2 - "Crear" de Red no hereda ningún contexto de red. [MEDIA] [NUEVO, refuerza tarea 62] [RESUELTO en la tarea 152, 2026-07-23]**
 Va a `/dispositivos/nuevo` pelado (`src/features/red/RedPage.tsx:94`), sin priorizar categorías `es_red` ni preseleccionar ubicación, a diferencia de otras creaciones contextuales de la app (`DispositivoPage.tsx:326,334`).

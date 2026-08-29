@@ -57,6 +57,13 @@ export function descripcionEntrada(entrada: EntradaDescriptible): string {
   if (entrada.campo === 'detalles') return 'Se actualizaron los campos adicionales'
   if (entrada.campo === 'conexion') {
     if (!entrada.valorNuevo) return `Se quitó la conexión: ${entrada.valorAnterior}`
+    // Con los dos valores la conexion no se creo: se edito, y hoy la
+    // unica edicion posible es invertir su direccion (hallazgo N1).
+    // Sin esta rama el cambio se leia "Se agregó la conexión" y el
+    // historial afirmaba algo que no paso.
+    if (entrada.valorAnterior) {
+      return `Se invirtió la dirección: ${entrada.valorAnterior} pasó a ${entrada.valorNuevo}`
+    }
     return `Se agregó la conexión: ${entrada.valorNuevo}`
   }
 

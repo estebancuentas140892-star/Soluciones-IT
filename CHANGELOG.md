@@ -6,6 +6,27 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-08-29
+
+### Corregido (tarea 208): la dirección de un enlace se ve en la ficha y se puede reparar
+
+**Área modificada:** `src/lib/conexiones.ts`, `src/features/red/ConexionesFicha.tsx`, `src/components/iconos.tsx`, `src/lib/repositorio.ts`, `src/features/historial/textoHistorial.ts` (más sus cuatro archivos de prueba).
+**Motivo:** segunda mitad del hallazgo **N1** de [AUDITORIA_FLUJOS_TI.md](AUDITORIA_FLUJOS_TI.md) (ALTA, riesgo de datos). La tarea 131 lo cerró solo por el lado de **registrar** bien un uplink, con el modo "Recibe de". Quedaban los otros dos lados: la fila de un enlace no decía su dirección, así que uno invertido se veía idéntico a uno correcto y el error solo aparecía en el árbol de topología ya torcido; y los enlaces guardados al revés antes de la 131 solo se arreglaban borrándolos y recreándolos desde la ficha del otro equipo.
+**Impacto esperado:** alto en la topología, que es donde vive la pregunta "¿qué se cae si apago este equipo?". Sin cambios de datos ni de esquema: nada se reescribe solo.
+
+- **Agregado** `extremosInvertidos(conexion)` en `src/lib/conexiones.ts`: la misma conexión con los dos extremos intercambiados. Los **puertos viajan con su extremo, no con el campo**, así que ninguno acaba anotado en el equipo equivocado. Se pasa tal cual a `guardarRegistro`, que conserva el id y por tanto el rastro de la conexión.
+- **Agregado** el rótulo de dirección en cada fila de enlace: "Da servicio a" o "Recibe de", los mismos rótulos del formulario de alta, para que el técnico reconozca lo que eligió. Se decide por el tipo de la conexión y no por si llegan acciones, para que también se lea donde la fila se pinte sin ellas.
+- **Agregado** el botón "Invertir la dirección" en cada fila de enlace, con `aria-label` que dice a qué queda ("Switch D32 pasa a dar servicio a este equipo"), no qué hace. Sin confirmación: es reversible con el mismo botón y queda en el historial.
+- **Agregado** el icono `ArrowsLeftRight`, traído de `@phosphor-icons/core` con el `npm install --no-save` que documenta el propio `iconos.tsx` (desinstalado al terminar). No se reutilizó `ArrowsClockwise`, que en esta app ya significa "rotar/reemplazar".
+- **Corregido** invertir un enlace no dejaba **ningún rastro**: `construirHistorial` descartaba toda edición de conexión con `if (anterior) return []`, bajo el supuesto de que las conexiones solo se crean o se eliminan. Ese supuesto deja de ser cierto con este cambio. Ahora una edición que altere el resumen registra una entrada en las fichas de los dos extremos, con el antes, el después y el motivo; una que no lo altere (editar solo `notas`) sigue sin generar ruido. `sync.ts` escribe con `store.put` directo, así que lo que llega del servidor no genera historial espurio.
+- **Corregido** el historial leía la inversión como "**Se agregó** la conexión: ...", o sea afirmaba algo que no había pasado. `descripcionEntrada` ignoraba `valorAnterior` en el campo `conexion`; ahora dice "Se invirtió la dirección: X pasó a Y".
+- **Cambiado** los botones de la fila de conexión pasan de 32 px a **44 px**, el mínimo de toque que el resto de la app ya aplica (M-005 de la auditoría móvil). El de quitar medía 32 y aquí pasa a tener un vecino.
+- **Decisión mantenida:** sin migración automática por categoría, la alternativa que ofrecía la auditoría. Un enlace invertido es indistinguible de uno correcto, así que la regla automática reescribiría en silencio la topología documentada por alguien, y falla en el uplink legítimo entre dos switches. Mismo criterio que ya tomó la tarea 131.
+
+**Verificación:** `tsc -b`, `oxlint src` y `npm run build` limpios; `npx vitest run --dir src` da 961 pruebas, 959 pasan y **8 son nuevas** (los 2 restantes son los preexistentes y ajenos de `archivosPendientes.test.ts`, RLS de Storage, confirmados con `git stash` antes de tocar nada). **Medido en navegador real** a 375x812, con el escenario exacto del hallazgo sembrado y borrado al terminar: la ficha del punto decía "Si falla, caen **1 equipo**" (apagar un punto tumbaba el switch); tras un toque en invertir pasó a **0 equipos** y la del switch a **1 equipo**, con `origen = Switch D32 (puerto 18)` y `destino = Punto de red D80 (puerto A)` en la base, cada puerto con su equipo; dos entradas de historial, una por ficha; pulsar dos veces devuelve la conexión campo a campo. Los dos botones miden 44x44 y el rótulo 11 px.
+
+**Pendiente del usuario:** revisar en la topología real los enlaces registrados antes de la tarea 131. Los que quedaron al revés no se detectan solos; el botón de invertir los corrige de a uno.
+
 ## 2026-08-03
 
 ### Cambiado (tarea 202): el regreso deshace el último salto, no sube al padre teórico

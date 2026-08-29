@@ -38,6 +38,25 @@ describe('descripcionEntrada', () => {
     )
   })
 
+  it('describe una conexión agregada y una quitada', () => {
+    expect(
+      descripcionEntrada({ campo: 'conexion', valorAnterior: '', valorNuevo: 'Switch D32 → Punto D80' }),
+    ).toBe('Se agregó la conexión: Switch D32 → Punto D80')
+    expect(
+      descripcionEntrada({ campo: 'conexion', valorAnterior: 'Switch D32 → Punto D80', valorNuevo: '' }),
+    ).toBe('Se quitó la conexión: Switch D32 → Punto D80')
+  })
+
+  it('con los dos valores describe la inversión, no un alta', () => {
+    expect(
+      descripcionEntrada({
+        campo: 'conexion',
+        valorAnterior: 'Punto D80 → Switch D32',
+        valorNuevo: 'Switch D32 → Punto D80',
+      }),
+    ).toBe('Se invirtió la dirección: Punto D80 → Switch D32 pasó a Switch D32 → Punto D80')
+  })
+
   it('describe un cambio de campo con valor anterior y nuevo', () => {
     expect(
       descripcionEntrada({ campo: 'ip', valorAnterior: '192.168.1.50', valorNuevo: '192.168.1.60' }),

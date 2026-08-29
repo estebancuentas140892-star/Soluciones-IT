@@ -96,6 +96,36 @@ export function desdeExtremo(conexion: Conexion, dispositivoId: string): Extremo
   }
 }
 
+// La misma conexion con sus dos extremos intercambiados.
+//
+// La direccion de un enlace NO es decorativa: el arbol de topologia
+// toma el origen como el padre (`src/features/red/arbol.ts`), asi que
+// invertirla cambia por completo la respuesta a "que se cae si apago
+// este equipo". El modo 'recibeDe' (hallazgo N1) permite registrarla
+// bien desde el principio, pero no arregla las que ya se guardaron al
+// reves cuando el formulario solo ofrecia un sentido: hasta ahora la
+// unica salida era borrar la conexion y volver a crearla desde la
+// ficha del otro equipo, perdiendo su historial.
+//
+// Los puertos viajan con su extremo, no con el campo: el puerto que
+// estaba anotado en el origen queda anotado en el destino. Sin eso
+// cada puerto acabaria en el equipo equivocado.
+//
+// `tipo`, `medio` y `notas` no dependen de la direccion, y
+// `updatedAt`, `updatedBy` y el borrado logico los pone
+// `guardarRegistro`, asi que el resultado se le puede pasar tal cual.
+export function extremosInvertidos(conexion: Conexion): Conexion {
+  return {
+    ...conexion,
+    origenId: conexion.destinoId,
+    origenNombre: conexion.destinoNombre,
+    origenPuerto: conexion.destinoPuerto,
+    destinoId: conexion.origenId,
+    destinoNombre: conexion.origenNombre,
+    destinoPuerto: conexion.origenPuerto,
+  }
+}
+
 // Las conexiones de una ficha, agrupadas como las muestra la interfaz.
 export interface ConexionesAgrupadas {
   // Donde esta instalado este equipo (normalmente un rack, 0 o 1).

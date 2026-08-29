@@ -1,5 +1,41 @@
 # Historial de tareas finalizadas
 
+### 208. N1, segunda mitad: la dirección del enlace se ve en la ficha y se puede reparar
+
+**Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-29. `tsc -b`, `oxlint src` y `npm run build` limpios; `npx vitest run --dir src` da 961 pruebas, 959 pasan y **8 son nuevas** (los 2 fallos restantes son los preexistentes y ajenos de `archivosPendientes.test.ts`, RLS de Storage contra el Supabase real, confirmados con `git stash` antes de tocar nada). **Prioridad**: Alta. **Origen**: hallazgo **N1** de [AUDITORIA_FLUJOS_TI.md](AUDITORIA_FLUJOS_TI.md), marcado ALTA y "riesgo de datos". **Modelo/esfuerzo**: Opus 5 / Medio, sin Ultracode.
+
+**Por qué había una segunda mitad.** La tarea 131 cerró N1 solo en su primera parte: el modo `recibeDe` ("Recibe de") permite **registrar bien** un uplink desde la ficha del equipo que lo recibe. Pero eso no resuelve las otras dos caras del mismo hallazgo:
+
+1. **No se podía VER la dirección.** La fila de un enlace solo nombraba al otro extremo ("Switch D32"), así que uno invertido se veía **idéntico** a uno correcto. El error solo salía a la luz al abrir el árbol de topología, ya torcido.
+2. **No se podía REPARAR lo ya guardado.** Los enlaces creados antes de la tarea 131, cuando el único modo ponía siempre a esta ficha como origen, siguen invertidos en la base. La única salida era borrar la conexión y volver a crearla desde la ficha del otro equipo, perdiendo su rastro.
+
+**Lo que se hizo.**
+
+- **Agregado** `extremosInvertidos(conexion)` en `src/lib/conexiones.ts`: devuelve la misma conexión con sus dos extremos intercambiados. Los **puertos viajan con su extremo, no con el campo**: el puerto anotado en el origen queda anotado en el destino. Sin eso cada puerto acabaría en el equipo equivocado. `tipo`, `medio` y `notas` no dependen de la dirección y se conservan, así que el resultado se pasa tal cual a `guardarRegistro`.
+- **Agregado** el rótulo de dirección en cada fila de enlace de `src/features/red/ConexionesFicha.tsx`: "Da servicio a" o "Recibe de", los **mismos rótulos del formulario de alta** a propósito, para que el técnico reconozca lo que eligió al crearla. Se decide por `conexion.tipo === 'enlace'` y no por si llega el callback, para que la dirección también se lea donde la fila se pinte sin acciones.
+- **Agregado** el botón "Invertir la dirección" en cada fila de enlace, con `aria-label` que dice **a qué queda**, no qué hace: "Invertir la dirección: Switch D32 pasa a dar servicio a este equipo". Sin confirmación, porque es reversible con el mismo botón y queda registrado.
+- **Agregado** el icono `ArrowsLeftRight` en `src/components/iconos.tsx`, traído de `@phosphor-icons/core` con el `npm install --no-save` que el propio archivo documenta (el paquete se desinstaló al terminar; `package.json` y `package-lock.json` intactos). No se reutilizó `ArrowsClockwise` porque en esta app ya significa "rotar/reemplazar" (regla 189, un icono un significado).
+- **Corregido de paso**: los botones de la fila pasan de **32 px a 44 px**, que es el mínimo de toque que el resto de la app ya aplica (M-005 de la auditoría móvil). El de quitar medía 32 y aquí pasa a tener un vecino: dos objetivos pequeños y pegados eran un error de puntería esperando a pasar.
+
+**El defecto que apareció al verificar, y que también se corrigió.** `construirHistorial` (`src/lib/repositorio.ts`) descartaba toda edición de conexión con un `if (anterior) return []`, bajo el supuesto de que "las conexiones solo se crean o se eliminan". Mi cambio rompe ese supuesto: ahora **sí** se editan. Invertir un enlace no dejaba ningún rastro de quién lo hizo, justo en el dato que decide la topología. Corregido: con `anterior` y `nueva`, si el resumen cambia se registra una entrada en las fichas de **los dos extremos**, con el antes, el después y el motivo. Si el resumen no cambia (editar solo `notas`) sigue sin generar ruido, igual que antes. La sincronización no se ve afectada: `sync.ts` escribe con `store.put` directo, no por `guardarRegistro`, así que lo que llega del servidor no genera historial espurio.
+
+**Y un segundo defecto encontrado en el mismo camino.** Con el historial ya funcionando, la ficha mostraba "**Se agregó** la conexión: ..." para una inversión: el historial afirmaba algo que no había pasado. `descripcionEntrada` (`src/features/historial/textoHistorial.ts`) ignoraba `valorAnterior` en el campo `conexion`. Corregido: con los dos valores dice "Se invirtió la dirección: X pasó a Y".
+
+**Lo que NO se hizo, a propósito.** La auditoría ofrecía como alternativa "invertir automáticamente según categoría (rack/switch siempre es el padre)". No hay migración automática, por el mismo criterio que ya aplicó la tarea 131 al elegir un modo explícito: un enlace invertido es **idéntico** a uno correcto, no hay nada en el dato que delate la intención, así que cualquier regla automática sería una adivinanza que reescribe en silencio la topología documentada por alguien, y además falla en el caso legítimo del uplink entre dos switches (padre e hijo de la misma categoría). Se corrige a mano, viendo la dirección, y es reversible con el mismo botón.
+
+**Verificación en navegador real** (`.env` del proyecto, sesión simulada en `localStorage`, dos equipos y una conexión sembrados en IndexedDB; todo borrado al terminar, `cambiosPendientes` en 0), 375x812, reproduciendo el escenario exacto del hallazgo (enlace creado desde la ficha del PUNTO con el modo antiguo, o sea el punto como padre del switch):
+
+- **El defecto, en vivo**: la ficha del punto decía "Si falla, caen **1 equipo**". Apagar un punto de red tumbaba el switch.
+- **Se ve**: la fila mostró "Da servicio a | Switch D32 | Puerto A · → puerto 18 · UTP". Antes solo decía "Switch D32".
+- **Se repara**: un toque en invertir dejó en la base `origen = Switch D32 (puerto 18)` y `destino = Punto de red D80 (puerto A)`, cada puerto con su equipo. La ficha del punto pasó a "Si falla, caen **0 equipos**" y la del switch a "**1 equipo**", que es la respuesta correcta y la contraria a la que daba antes.
+- **Queda registrado**: dos entradas de historial, una en cada ficha, con "Se invirtió la dirección: Punto de red D80 (puerto A) → Switch D32 (puerto 18) pasó a Switch D32 (puerto 18) → Punto de red D80 (puerto A)" y el motivo.
+- **Es reversible**: pulsarlo dos veces devuelve la conexión byte a byte (comparación de todos los campos salvo `updatedAt`).
+- **Medidas reales**, no a ojo: los dos botones de la fila miden 44x44; el rótulo de dirección, 11 px en `noct-neutral-500`.
+
+**Ubicación**: `src/lib/conexiones.ts` (`extremosInvertidos`) y `src/lib/conexiones.test.ts` (4 pruebas); `src/features/red/ConexionesFicha.tsx` (`FilaConexion`, `invertir`, constante `BTN_FILA`); `src/components/iconos.tsx` (`ArrowsLeftRight`); `src/lib/repositorio.ts` (rama `conexiones` de `construirHistorial`) y `src/lib/repositorio.test.ts` (2 pruebas); `src/features/historial/textoHistorial.ts` (`descripcionEntrada`) y su prueba (2 pruebas).
+
+**PENDIENTE DEL USUARIO**: revisar en la topología real los enlaces ya registrados antes de la tarea 131. Los que quedaron al revés no se pueden detectar solos, por lo dicho arriba; el botón de invertir de cada fila de enlace los corrige de a uno, y es reversible.
+
 ### 202. Auditoría móvil, fase 2: el regreso recuerda el camino (M-002, M-020, M-029)
 
 **Estado**: TERMINADA y **verificada en navegador real a 360 px** el 2026-08-03. `tsc -b`, lint y build limpios; 1739 pruebas pasan, 15 de ellas nuevas (los mismos 4 fallos preexistentes y ajenos de `archivosPendientes.test.ts`). **Prioridad**: Alta. **Origen**: handoff "Auditoría móvil", fase 2; mockups `8b` y `10b`/`10c`, más `6b` para Ubicaciones y Personas. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.

@@ -60,7 +60,7 @@ Componentes:
 
 ### 1.3 `src/components/iconos.tsx` (set de iconos)
 
-93 iconos Phosphor (MIT) inlineados como SVG propios, para no depender de CDN (rompe offline) ni cargar el paquete completo. Suma desde la tarea 182: `DotsNine` (el glifo de "Más", una cuadrícula de 9 puntos; sin variante `Fill`, el mockup usa el mismo trazo activo e inactivo).
+93 iconos Phosphor (MIT) inlineados como SVG propios, para no depender de CDN (rompe offline) ni cargar el paquete completo. Suma desde la tarea 182: `DotsNine` (el glifo de "Más", una cuadrícula de 9 puntos; sin variante `Fill`, el mockup usa el mismo trazo activo e inactivo). Suma desde la tarea 208: `ArrowsLeftRight` (invertir la dirección de un enlace). No se reutilizó `ArrowsClockwise`, que en esta app ya significa "rotar/reemplazar" (un icono, un significado).
 
 - Props: `IconoProps = SVGProps<SVGSVGElement> & { size?: number }`. `size` por defecto 16, `fill="currentColor"` (hereda el color del texto), `aria-hidden` por defecto.
 - Variantes: el sufijo `Fill` marca la versión rellena (`Star`/`StarFill`, `House`/`HouseFill`, `Vault`/`VaultFill`...), usada típicamente para la pestaña activa.

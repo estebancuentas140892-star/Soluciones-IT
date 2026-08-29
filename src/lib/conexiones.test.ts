@@ -6,6 +6,7 @@ import {
   compararNatural,
   datosSegunModo,
   desdeExtremo,
+  extremosInvertidos,
   proximoPuertoLibre,
   resumenConexion,
   ubicacionHeredable,
@@ -97,6 +98,39 @@ describe('desdeExtremo', () => {
     expect(extremo.otroId).toBe('origen')
     expect(extremo.otroNombre).toBe('Switch D32')
     expect(extremo.puertoRemoto).toBe('18')
+  })
+})
+
+describe('extremosInvertidos', () => {
+  it('intercambia los extremos y sus puertos', () => {
+    const invertida = extremosInvertidos(conexion({ origenPuerto: '18', destinoPuerto: 'A' }))
+    expect(invertida.origenId).toBe('destino')
+    expect(invertida.origenNombre).toBe('Punto de red D80')
+    expect(invertida.origenPuerto).toBe('A')
+    expect(invertida.destinoId).toBe('origen')
+    expect(invertida.destinoNombre).toBe('Switch D32')
+    expect(invertida.destinoPuerto).toBe('18')
+  })
+
+  it('conserva lo que no depende de la dirección', () => {
+    const original = conexion({ id: 'c9', medio: 'Fibra óptica', notas: 'Backbone' })
+    const invertida = extremosInvertidos(original)
+    expect(invertida.id).toBe('c9')
+    expect(invertida.tipo).toBe('enlace')
+    expect(invertida.medio).toBe('Fibra óptica')
+    expect(invertida.notas).toBe('Backbone')
+  })
+
+  it('invertir dos veces deja la conexión igual que estaba', () => {
+    const original = conexion({ origenPuerto: '18', destinoPuerto: 'A', medio: 'UTP' })
+    expect(extremosInvertidos(extremosInvertidos(original))).toEqual(original)
+  })
+
+  it('no muta la conexión recibida', () => {
+    const original = conexion({ origenPuerto: '18' })
+    extremosInvertidos(original)
+    expect(original.origenId).toBe('origen')
+    expect(original.origenPuerto).toBe('18')
   })
 })
 

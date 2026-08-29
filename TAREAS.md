@@ -4,11 +4,17 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 202 se cerró el 2026-08-03. La siguiente es la 203, ver "Por hacer".)*
+*(vacío: la tarea 208 se cerró el 2026-08-29. La siguiente es la 203, ver "Por hacer".)*
 
 ---
 
-La **tarea 202** (fase 2 de la auditoría móvil: el regreso recuerda el camino, M-002, M-020, M-029) quedó **terminada, verificada en navegador y archivada el 2026-08-03**. El regreso deja de subir siempre al padre teórico y pasa a deshacer el último salto (**M-R2**), con el padre declarado intacto como respaldo. **Medido en navegador real a 360 px**: el ciclo completo del escáner (leer, abrir la ficha, volver con la cámara viva y leer otro, "2 leídos"); la ficha abierta desde la topología vuelve al mismo nodo; la ubicación abierta desde un equipo dice de qué equipo viene; y una pestaña nueva sobre esa misma ubicación cae al padre declarado, así que **ninguna pantalla se queda sin salida**. Módulos nuevos: `origenNavegacion`, `useOrigen`, `sesionEscaneo`. Dos decisiones registradas: [DECISIONES.md](DECISIONES.md) **AD-030** (por qué el origen vive en `location.state` y no en la URL) y **AD-031** (por qué el conteo del escáner se reinicia a mano, tras encontrar que la primera versión no era idempotente). Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+La **tarea 208** (segunda mitad del hallazgo **N1** de la auditoría de flujos: la dirección del enlace se ve en la ficha y se puede reparar) quedó **terminada, verificada en navegador y archivada el 2026-08-29**. La tarea 131 había cerrado N1 solo por un lado, el de **registrar** bien un uplink con el modo "Recibe de". Faltaban los otros dos: la fila de un enlace no decía su dirección, así que uno invertido se veía **idéntico** a uno correcto y el error solo aparecía en el árbol de topología ya torcido; y los enlaces guardados al revés antes de la 131 solo se podían arreglar borrándolos y recreándolos. Ahora cada fila de enlace dice "Da servicio a" o "Recibe de" y trae un botón de invertir de 44 px, reversible. **Sin migración automática, a propósito**: un enlace invertido es indistinguible de uno correcto, así que adivinar por categoría reescribiría en silencio la topología de alguien y fallaría en el uplink legítimo entre dos switches. De paso se corrigieron dos defectos encontrados al verificar: invertir no dejaba rastro en el historial (`construirHistorial` descartaba toda edición de conexión) y el historial leía la inversión como "Se agregó la conexión". Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+**PENDIENTE DEL USUARIO**: revisar en la topología real los enlaces registrados antes de la tarea 131. Los que quedaron al revés no se detectan solos; el botón de invertir de cada fila los corrige de a uno.
+
+---
+
+Antes, la **tarea 202** (fase 2 de la auditoría móvil: el regreso recuerda el camino, M-002, M-020, M-029) quedó **terminada, verificada en navegador y archivada el 2026-08-03**. El regreso deja de subir siempre al padre teórico y pasa a deshacer el último salto (**M-R2**), con el padre declarado intacto como respaldo. **Medido en navegador real a 360 px**: el ciclo completo del escáner (leer, abrir la ficha, volver con la cámara viva y leer otro, "2 leídos"); la ficha abierta desde la topología vuelve al mismo nodo; la ubicación abierta desde un equipo dice de qué equipo viene; y una pestaña nueva sobre esa misma ubicación cae al padre declarado, así que **ninguna pantalla se queda sin salida**. Módulos nuevos: `origenNavegacion`, `useOrigen`, `sesionEscaneo`. Dos decisiones registradas: [DECISIONES.md](DECISIONES.md) **AD-030** (por qué el origen vive en `location.state` y no en la URL) y **AD-031** (por qué el conteo del escáner se reinicia a mano, tras encontrar que la primera versión no era idempotente). Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ---
 

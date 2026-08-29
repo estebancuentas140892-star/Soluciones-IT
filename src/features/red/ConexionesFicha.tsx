@@ -2,10 +2,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type Conexion, type Dispositivo } from '../../lib/db'
-import { eliminarRegistro } from '../../lib/repositorio'
-import { agruparConexiones, type ExtremoConexion } from '../../lib/conexiones'
+import { eliminarRegistro, guardarRegistro } from '../../lib/repositorio'
+import { agruparConexiones, extremosInvertidos, type ExtremoConexion } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
-import { CaretRight, Plus, X } from '../../components/iconos'
+import { ArrowsLeftRight, CaretRight, Plus, X } from '../../components/iconos'
 import { BTN_GHOST_ACENTO, TituloSeccion } from '../../components/nocturne'
 import { FormularioConexion } from './FormularioConexion'
 
@@ -60,6 +60,14 @@ export function ConexionesFicha({
     await eliminarRegistro('conexiones', conexion.id)
   }
 
+  // Repara un enlace registrado al reves (hallazgo N1). Guarda la misma
+  // conexion con los extremos intercambiados en vez de borrarla y
+  // recrearla, asi conserva su id y su historial, y el motivo deja
+  // escrito quien la corrigio y cuando.
+  async function invertir(conexion: Conexion) {
+    await guardarRegistro('conexiones', extremosInvertidos(conexion), 'Se invirtió la dirección del enlace')
+  }
+
   return (
     <section className="flex flex-col gap-3">
       <div className={`flex items-center ${sinCabecera ? 'justify-end' : 'justify-between'}`}>
@@ -98,7 +106,13 @@ export function ConexionesFicha({
       {grupos.enlaces.length > 0 && (
         <GrupoConexiones titulo="Enlaces">
           {grupos.enlaces.map((extremo) => (
-            <FilaConexion key={extremo.conexion.id} extremo={extremo} nombrePorId={nombrePorId} onQuitar={quitar} />
+            <FilaConexion
+              key={extremo.conexion.id}
+              extremo={extremo}
+              nombrePorId={nombrePorId}
+              onQuitar={quitar}
+              onInvertir={invertir}
+            />
           ))}
         </GrupoConexiones>
       )}
@@ -137,16 +151,29 @@ function GrupoConexiones({ titulo, children }: { titulo: string; children: React
   )
 }
 
+// Acciones de la fila. 44 px es el minimo de toque que ya aplica el
+// resto de la app (M-005 de la auditoria movil); el boton de quitar
+// media 32 y aqui pasa a tener un vecino, asi que dos objetivos
+// pequeños y pegados se volvian un error de puntería.
+const BTN_FILA =
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-noct-neutral-500 hover:bg-noct-text/[.05] hover:text-noct-text'
+
 function FilaConexion({
   extremo,
   nombrePorId,
   onQuitar,
+  onInvertir,
 }: {
   extremo: ExtremoConexion
   nombrePorId: Map<string, string>
   onQuitar: (conexion: Conexion) => Promise<void>
+  /**
+   * Solo lo recibe el grupo "Enlaces": invertir una instalación o una
+   * relación no significa nada (hallazgo N1).
+   */
+  onInvertir?: (conexion: Conexion) => Promise<void>
 }) {
-  const { conexion, otroId, otroNombre, puertoLocal, puertoRemoto } = extremo
+  const { conexion, esOrigen, otroId, otroNombre, puertoLocal, puertoRemoto } = extremo
   const nombre = nombreVivo(nombrePorId, otroId, otroNombre)
   const detalle = [
     puertoLocal && `Puerto ${puertoLocal}`,
@@ -156,19 +183,44 @@ function FilaConexion({
     .filter(Boolean)
     .join(' · ')
 
+  // Hallazgo N1: la fila solo nombraba al otro extremo, asi que un
+  // enlace invertido se veia identico a uno correcto y el error solo
+  // salia a la luz en el arbol de topologia, ya torcido. Se decide por
+  // el tipo de la conexion y no por si llega `onInvertir`, para que la
+  // direccion tambien se lea donde la fila se pinte sin acciones. Los
+  // rotulos son los mismos del formulario de alta a proposito: el
+  // tecnico reconoce lo que eligio al crearla.
+  const esEnlace = conexion.tipo === 'enlace'
+  const direccion = esOrigen ? 'Da servicio a' : 'Recibe de'
+  const trasInvertir = esOrigen
+    ? `${nombre} pasa a dar servicio a este equipo`
+    : `este equipo pasa a dar servicio a ${nombre}`
+
   return (
-    <li className="flex items-center gap-2 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
-      <Link to={`/dispositivos/${otroId}`} className="min-w-0 flex-1">
+    <li className="flex items-center gap-1 rounded-md border border-noct-divider bg-noct-surface py-1.5 pl-3 pr-1.5">
+      <Link to={`/dispositivos/${otroId}`} className="min-w-0 flex-1 py-1">
+        {esEnlace && <p className="truncate text-[11px] text-noct-neutral-500">{direccion}</p>}
         <p className="truncate text-sm font-medium text-noct-text">{nombre}</p>
         {(detalle || conexion.notas) && (
           <p className="truncate text-xs text-noct-neutral-400">{detalle || conexion.notas}</p>
         )}
       </Link>
+      {esEnlace && onInvertir && (
+        <button
+          type="button"
+          onClick={() => void onInvertir(conexion)}
+          aria-label={`Invertir la dirección: ${trasInvertir}`}
+          title={`Invertir la dirección: ${trasInvertir}`}
+          className={BTN_FILA}
+        >
+          <ArrowsLeftRight size={15} aria-hidden />
+        </button>
+      )}
       <button
         type="button"
         onClick={() => void onQuitar(conexion)}
         aria-label="Quitar conexión"
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-noct-neutral-500 hover:bg-noct-text/[.05] hover:text-noct-text"
+        className={BTN_FILA}
       >
         <X size={14} aria-hidden />
       </button>

@@ -246,16 +246,26 @@ function construirHistorial(
 ): HistorialEntrada[] {
   // Una conexion se registra en el historial de sus dos extremos: al
   // abrir la ficha de cualquiera de los dos dispositivos se ve el
-  // cambio de cableado. Las conexiones solo se crean o se eliminan
-  // (para corregir un puerto se quita y se vuelve a agregar).
+  // cambio de cableado.
+  //
+  // Las conexiones casi siempre se crean o se eliminan (para corregir
+  // un puerto se quita y se vuelve a agregar), y por eso antes toda
+  // edicion salia sin historial. Invertir la direccion de un enlace
+  // (hallazgo N1 de AUDITORIA_FLUJOS_TI.md) es la excepcion: cambia
+  // quien es el padre en la topologia, o sea la respuesta a "que se
+  // cae si apago este equipo", y sin esto daba la vuelta a un enlace
+  // sin dejar rastro de quien lo hizo. Se compara por el resumen para
+  // que una edicion que no altere lo que el resumen describe siga sin
+  // generar ruido.
   if (tabla === 'conexiones') {
-    if (anterior) return []
     const conexion = nueva as unknown as Conexion
     const resumen = resumenConexion(conexion)
+    const resumenAnterior = anterior ? resumenConexion(anterior as unknown as Conexion) : ''
+    if (resumenAnterior === resumen) return []
     return extremosDispositivo(conexion).map((dispositivoId) =>
       crearEntrada({ tipo: 'dispositivo', id: dispositivoId }, usuario, ahora, motivo, {
         campo: 'conexion',
-        valorAnterior: '',
+        valorAnterior: resumenAnterior,
         valorNuevo: resumen,
       }),
     )
