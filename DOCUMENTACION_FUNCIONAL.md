@@ -225,7 +225,8 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/personas/migrar` | MigracionPersonas | Tarea | Convertir textos en personas |
 | `/personas/:personaId` | PersonaPage | Documento | Ficha 360° de una persona |
 | `/personas/:personaId/editar` | PersonaForm | Tarea | Editar persona |
-| `/red` | RedPage | Sección | Inventario de red por ubicación |
+| `/red` | RedPage | Sección | Recorrido por nodos: el equipo, de qué depende y qué cae si falla |
+| `/red/equipos` | EquiposRedPage | Documento | Todos los equipos de red, agrupados por ubicación |
 | `/red/topologia` | TopologiaPage | Documento | Mapa/bosque de toda la red |
 | `/red/topologia/:dispositivoId` | TopologiaEquipoPage | Documento | Topología centrada en un equipo |
 | `/boveda` | BovedaGuard > BovedaPage | Sección | Lista de secretos (tras desbloqueo) |
@@ -437,14 +438,25 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 
 **Objetivo.** Responder "¿cómo está conectada la infraestructura?". Reúne los equipos de las categorías marcadas `es_red` (racks, puntos de red, switches, access points, cámaras). No duplica el inventario: son dispositivos normales con la bandera de categoría.
 
-**Cabecera:** la fila superior es la **barra superior global** (título "Red", sincronización, lupa y cuenta; ver la sección 2). Debajo: subtítulo "Cómo está conectada la infraestructura", **botón "Crear"** (→ `/dispositivos/nuevo?red=1`, que prioriza las categorías de red en el selector) y **buscador** (placeholder "Equipo de red, IP, ubicación").
+**Red abre con el nodo, no con la lista (tarea 204, hallazgo M-018).** Hasta entonces esta pantalla era un **segundo inventario**: el mismo buscador, los mismos grupos y la misma fila de equipo que Equipos, con las relaciones apartadas detrás de una fila. La sección que existe para explicar dependencias no las mostraba en su primera pantalla. Ahora la pestaña abre con **un nodo y su vecindad**, que es la pantalla que ya estaba construida (la topología de un equipo) y estaba a tres toques.
+
+**Cabecera:** la **barra superior global** (título "Red", sincronización, lupa y cuenta; ver la sección 2). Debajo: subtítulo "Cómo está conectada la infraestructura", **botón "Crear"** (→ `/dispositivos/nuevo?red=1`, que prioriza las categorías de red en el selector) y una **puerta al buscador** con forma de campo (→ `/red/equipos?buscar=1`, que abre la lista con el teclado puesto). No es un campo de verdad: aquí se recorre, y filtrar filtraría algo que no está a la vista.
 
 **Cuerpo:**
-- **Entrada destacada a "Topología de red"** (tintada en acento, → `/red/topologia`): "Recorrer las conexiones desde el rack hasta cada equipo".
-- **Equipos agrupados por ubicación** (texto libre, orden natural; los sin ubicación al final): cada grupo con encabezado (icono MapPin, nombre, conteo) y filas `FilaDispositivo`.
-- Estados vacíos análogos a Equipos.
+- **"Estás recorriendo"**: tarjeta del nodo actual con su icono de tipo, nombre, estado (punto de color) e IP, más un botón de 44 px que abre su **topología completa** (`/red/topologia/:id`), donde están las conexiones y su editor.
+- **"Depende de"**, **"Si este equipo falla"** y **"Dependen de este equipo"**: el mismo bloque `NodoRed` que pinta la topología de un equipo. Aquí tocar un equipo **sustituye el nodo en su sitio** (`/red?nodo=<id>`) y el recorrido sigue en la misma pantalla; subir se hace por "Depende de", que es el camino real hacia arriba.
+- Si el equipo **no tiene conexiones registradas**, lo dice y ofrece registrarlas.
+- Al pie, dos filas-puerta: **"Todos los equipos de red por ubicación"** con su conteo (→ `/red/equipos`) y **"Mapa completo, desde cada raíz"** (→ `/red/topologia`). Las dos vuelven **al nodo que se estaba recorriendo**, no al nodo de entrada.
+
+**El nodo se recuerda sin almacenamiento nuevo.** Viaja en `/red?nodo=<id>`, así que la **memoria de pestaña** (tarea 187) lo repone al volver de otra sección igual que repone el filtro de Guías. Si el equipo recordado ya no existe, o no hay memoria, la pestaña abre por la **raíz del bosque con más equipos colgando**: el rack o el switch de núcleo, que es por donde empiezan casi todos los recorridos.
 
 **La ficha de un equipo de red es la misma** `DispositivoPage` (sección 5.3.1); solo cambia el retorno ("Volver" vuelve a Red).
+
+#### 5.4.0 Equipos de red por ubicación (`EquiposRedPage`)
+
+**Ruta:** `/red/equipos` · **Nivel:** Documento. Es la lista que antes era la raíz de la pestaña. Cabecera con título "Equipos de red", **"Crear"** y el **buscador** (placeholder "Equipo de red, IP, ubicación"); llegando por la puerta del buscador (`?buscar=1`) el campo arranca enfocado, llegando por la fila no, porque ahí se viene a mirar.
+
+**Agrupa por la ENTIDAD Ubicación, no por el texto libre (hallazgo M-019).** Antes los grupos se formaban con `d.ubicacion`, que es una copia de referencia: "Rack 1" y "rack 1 " eran dos sitios distintos y el técnico no encontraba el equipo donde lo buscaba. Ahora la clave es `ubicacionId` y el nombre del grupo lo pone la entidad. El texto sigue siendo el respaldo, y hace falta: un equipo puede tener id con la fila de `ubicaciones` aún sin sincronizar (se usa su copia), y otro puede no tener id (se agrupa por el texto normalizado, sin acentos ni mayúsculas ni espacios de más, y el grupo toma la grafía más repetida). Los equipos sin ubicación van al final. **Nada de esto reescribe datos:** es lectura.
 
 #### 5.4.1 Topología general (`TopologiaPage`)
 
@@ -1140,9 +1152,11 @@ Equipos (/dispositivos)
 # Ubicaciones y Personas se alcanzan también desde el "···" de aquí, pero
 # su padre real es "Más" desde la tarea 182: ver ese árbol más abajo.
 
-Red (/red)
- ├── Buscar · Crear (equipo de red) · agrupado por ubicación
- ├── Topología de red (/red/topologia) → bosque expandible · buscador
+Red (/red)  → abre con el NODO (memoria en ?nodo=<id>)
+ ├── Estás recorriendo · Depende de · Si este equipo falla · Dependen de este equipo
+ │    └── tocar un equipo SUSTITUYE el nodo (/red?nodo=<id>), no salta a la lista
+ ├── Todos los equipos de red por ubicación (/red/equipos) → buscar · Crear · agrupado por entidad Ubicación
+ ├── Mapa completo (/red/topologia) → bosque expandible · buscador
  └── Topología de un equipo (/red/topologia/:id)
       ├── Depende de · Si este equipo falla · Dependen de este equipo
       └── Conexiones (agregar/quitar) · Abrir la ficha

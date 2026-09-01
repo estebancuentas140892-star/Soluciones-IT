@@ -120,8 +120,10 @@ export function padreDe(pathname: string): Padre | null {
       // nuevo, sugerencias, :id (asistente) y :id/editar vuelven a la lista.
       return { to: '/diagnostico', etiqueta: 'Diagnósticos' }
     case 'red':
-      // Jerarquía de los mockups Nocturne: la topología de un equipo
-      // (topologia/:id) sube al mapa general, y este a Red.
+      // La topología de un equipo (topologia/:id) sube al mapa general,
+      // y este a Red. La lista de equipos (red/equipos) también sube a
+      // Red: desde la tarea 204 la raíz de la pestaña es el recorrido
+      // por nodos y la lista cuelga de ella (hallazgo M-018).
       if (a === 'topologia' && b) return { to: '/red/topologia', etiqueta: 'Topología' }
       return { to: '/red', etiqueta: 'Red' }
     case 'cuenta':

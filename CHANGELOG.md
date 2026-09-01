@@ -8,6 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Cambiado (tarea 204): Red abre con el nodo, no con la lista
+
+**Área modificada:** `src/features/red/RedPage.tsx`, `TopologiaEquipoPage.tsx`, `src/App.tsx`, `src/lib/navegacion.ts`, y cinco archivos nuevos: `NodoRed.tsx`, `useNodoRed.ts`, `nodoDeRed.ts`, `grupoUbicacion.ts`, `EquiposRedPage.tsx`.
+**Motivo:** hallazgos **M-018** y **M-019** de la auditoría móvil (fase 2, mockup `10c`). Red tenía la forma de un **segundo inventario**: el mismo buscador, los mismos grupos y la misma fila de equipo que Equipos, con las relaciones apartadas detrás de una fila. La sección que existe para explicar dependencias no las mostraba en su primera pantalla. Y los grupos se formaban con el **texto libre** de ubicación, no con la entidad, así que "Rack 1" y "rack 1" eran dos sitios distintos.
+**Impacto esperado:** alto, y barato: la pantalla que Red necesitaba **ya estaba construida** (la vecindad de un equipo), solo estaba a tres toques y no era la forma de la sección. **Sin esquema**, y M-019 es solo lectura: agrupa por id y usa el texto de respaldo, no reescribe nada.
+
+- **Cambiado** `/red` abre con **un nodo y su vecindad**: "Estás recorriendo", "Depende de", "Si este equipo falla" y "Dependen de este equipo". Tocar un equipo **sustituye el nodo en su sitio** (`/red?nodo=<id>`) y el recorrido sigue en la misma pantalla; subir se hace por "Depende de", que es el camino real hacia arriba.
+- **Agregado** `NodoRed`, extraído de `TopologiaEquipoPage` y compartido por las dos pantallas. Lo único que cambia entre ellas es a dónde lleva tocar un equipo, y por eso es una prop: en la topología abre la ficha (con origen, regla M-R2); en Red sustituye el nodo. Copiar el bloque habría dejado dos versiones condenadas a divergir.
+- **Agregado** `nodoDeRed.ts` (lógica pura, 9 pruebas): el nodo recordado solo vale si sigue en el bosque, y si no se abre por la **raíz con más equipos colgando**, que es por donde empiezan casi todos los recorridos. **El nodo se recuerda sin almacenamiento nuevo**: viaja en la query, así que lo repone la memoria de pestaña que ya existía (tarea 187).
+- **Agregado** `/red/equipos` con la lista de siempre, un nivel más abajo: se usa para encontrar UN equipo, no para entender la red. El buscador de `/red` es ahora una puerta a esa lista, con el teclado ya abierto; un campo de verdad en la raíz filtraría algo que no está a la vista.
+- **Corregido (M-019)** los grupos se forman con la **entidad Ubicación**. `grupoUbicacion.ts` (lógica pura, 11 pruebas) agrupa por `ubicacionId` y deja el texto de respaldo, que sigue haciendo falta: un equipo puede tener id con la fila de `ubicaciones` aún sin sincronizar, y otro puede no tener id. Sin id agrupa por el texto normalizado y el grupo toma la grafía más repetida.
+- **Cambiado** las dos filas-puerta del pie de `/red` vuelven **al nodo que se estaba recorriendo**, no al nodo de entrada: su padre lógico es `/red` pelado, que abriría por otro sitio (regla M-R2).
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **1013 de 1013** en verde (20 nuevas). **Medido en navegador real a 360 px** con ocho equipos, seis conexiones y una ubicación sembrados, y borrados al terminar: Red abre por "Rack 1" (6 dependientes) y no por el switch suelto; tocar "Switch Piso 2" lleva a `/red?nodo=sw2` y "Depende de" ofrece el camino de vuelta; atrás y adelante del navegador deshacen y rehacen un salto; salir a Equipos y volver por la pestaña repone `/red?nodo=core`; un `?nodo=` inexistente cae al nodo de entrada; el equipo sin conexiones lo dice y ofrece registrarlas. En `/red/equipos`, "Rack principal" reúne los tres equipos con `ubicacionId` u1 aunque estén escritos "Rack 1" y "rack 1 ", y "Bodegón Norte" reúne las tres grafías sin id. `/red/topologia` y `/red/topologia/:id` siguen intactas tras la extracción.
+
 ### Cambiado (tarea 215): la contingencia deja de esconderse
 
 **Área modificada:** `src/features/soluciones/AsistenteVista.tsx`, `ProcedimientoVista.tsx`, `ModoFoco.tsx`, y dos archivos nuevos: `HojaFalla.tsx`, `salidasFalla.ts` (con `salidasFalla.test.ts`).

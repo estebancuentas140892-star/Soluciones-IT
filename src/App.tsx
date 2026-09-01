@@ -125,6 +125,9 @@ const RedPage = lazy(() => import('./features/red/RedPage').then((m) => ({ defau
 const PantallaMas = lazy(() =>
   import('./features/mas/PantallaMas').then((m) => ({ default: m.PantallaMas })),
 )
+const EquiposRedPage = lazy(() =>
+  import('./features/red/EquiposRedPage').then((m) => ({ default: m.EquiposRedPage })),
+)
 const TopologiaPage = lazy(() =>
   import('./features/red/TopologiaPage').then((m) => ({ default: m.TopologiaPage })),
 )
@@ -449,6 +452,18 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <RedPage />
+                  </Suspense>
+                }
+              />
+              {/* La lista de equipos de red baja un nivel (tarea 204,
+                  hallazgo M-018): la raíz de la pestaña pasó a ser el
+                  recorrido por nodos, y la lista se usa para encontrar
+                  UN equipo, no para entender la red. */}
+              <Route
+                path="red/equipos"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <EquiposRedPage />
                   </Suspense>
                 }
               />

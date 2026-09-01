@@ -154,6 +154,12 @@ describe('padreDe', () => {
     it('la topología de un equipo sube al mapa general', () => {
       expect(padreDe('/red/topologia/sw-1')).toEqual({ to: '/red/topologia', etiqueta: 'Topología' })
     })
+
+    // Desde la tarea 204 la raíz de la pestaña es el recorrido por
+    // nodos, y la lista de equipos cuelga de ella (hallazgo M-018).
+    it('la lista de equipos de red vuelve a Red', () => {
+      expect(padreDe('/red/equipos')).toEqual({ to: '/red', etiqueta: 'Red' })
+    })
   })
 
   describe('Cuenta', () => {

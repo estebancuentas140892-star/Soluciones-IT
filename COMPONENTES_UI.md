@@ -479,6 +479,15 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Reparto:** el catálogo y los helpers sin JSX (`VISUAL_POR_TIPO`, `GRUPOS_BUSQUEDA`, `partirTitulo`, `agruparResultados`) viven en `busqueda/resultados.ts`; la presentación, en `busqueda/ResultadosBusqueda.tsx`. Están separados para no mezclar componentes y constantes en un mismo archivo (lo avisa `oxlint` por fast-refresh).
 - **Dónde:** `BarraSuperior` monta la capa (carga diferida con `lazy`); `InicioPage` reutiliza `ResultadosBusqueda` para su buscador en línea, que conserva porque esa pantalla **es** el buscador.
 
+### 3.8m `red/NodoRed`, `red/useNodoRed.ts`, `red/nodoDeRed.ts` y `red/grupoUbicacion.ts`
+- **Propósito:** la vecindad de un nodo de la topología ("Depende de", "Si este equipo falla", "Dependen de este equipo") y las reglas que la rodean (tarea 204, hallazgos M-018 y M-019).
+- **`NodoRed`** estaba dentro de `TopologiaEquipoPage`. Sale de ahí porque la pestaña **Red pasó a abrir con esta misma pantalla**: la auditoría lo llama "el hallazgo que ahorra trabajo", la pantalla que Red necesitaba ya estaba construida y solo estaba a tres toques. Copiarla habría dejado dos versiones condenadas a divergir (el mismo error que cerró `FilaArticulo`).
+- **Props:** `{ dependeDe, chipsImpacto, totalDependientes, arbol, nombreCategoria, enlaceANodo }`. Lo único que cambia entre las dos pantallas es **a dónde lleva tocar un equipo**, y por eso es una prop: en la topología de un equipo abre su ficha (con origen, regla M-R2); en la pestaña Red **sustituye el nodo en su sitio** y el recorrido sigue.
+- **`useNodoRed.ts`** parte los datos en dos: `useRedCargada()` lee las tablas y arma el bosque, y `useNodoRed(id, red)` calcula lo de UN nodo. El corte no es estético: la pestaña Red necesita el bosque **antes** de saber qué nodo abrir, mientras que la topología de un equipo ya trae su id en la ruta.
+- **`nodoDeRed.ts`** (lógica pura, 9 pruebas): `nodoInicial(pedido, bosque)` respeta el nodo que se estaba recorriendo solo si sigue existiendo (un enlace guardado a un equipo borrado no puede dejar la pestaña en blanco), y si no cae a `raizPrincipal`, la raíz con **más equipos colgando**. `contiene` recorre el bosque de forma iterativa, para que un ciclo mal registrado no reviente la pila.
+- **`grupoUbicacion.ts`** (lógica pura, 11 pruebas): `agruparPorUbicacion(dispositivos, nombreUbicacion)` agrupa por `ubicacionId` y deja el texto de respaldo. Sin id agrupa por el texto normalizado (sin acentos, mayúsculas ni espacios de más) y el grupo toma la **grafía más repetida**; el desempate es una comparación estricta, no `compararNatural`, que ignora acentos y mayúsculas a propósito y por tanto no desempata nada.
+- **Dónde:** `RedPage`, `TopologiaEquipoPage` (`NodoRed`, `useNodoRed`) y `EquiposRedPage` (`grupoUbicacion`).
+
 ### 3.8 `red/IconoNodo`
 - **Propósito:** icono del tipo de equipo de red (trazo estilo Lucide), compartido entre Topología y Red.
 - **Props:** `{ tipo: TipoNodoVisual, className?: string = 'h-4 w-4' }`. `TipoNodoVisual` cubre router, switch, ap, punto, pc, impresora, pos, rack, camara, servidor, ups, generico.

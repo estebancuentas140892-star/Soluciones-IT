@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 215 se cerró el 2026-09-01. Con ella **el `Paso 3` del handoff queda completo**: sus dos tableros implementables eran el `3b` (tarea 214) y el `3d` (tarea 215). Los **Pasos 1, 2 y 4** siguen sin registrar hasta que el usuario los pida. La siguiente pendiente es la **204**, ver "Por hacer".)*
+*(vacío: la tarea 204 se cerró el 2026-09-01. De la **fase 2 de la auditoría móvil** quedan la **205** (Bóveda y Diagnóstico) y la **206** (un color, un significado dentro del paso); hechas la 202, la 203 y la 204. La siguiente pendiente es la **205**, ver "Por hacer".)*
+
+*(la tarea 215 se cerró el 2026-09-01. Con ella **el `Paso 3` del handoff queda completo**: sus dos tableros implementables eran el `3b` (tarea 214) y el `3d` (tarea 215). Los **Pasos 1, 2 y 4** siguen sin registrar hasta que el usuario los pida.)*
 
 **Despliegue confirmado (regla 14).** El commit `e17d911` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `AsistenteVista-Bite7Bcm.js` de producción contiene "Algo va mal en el paso", "Abrir la contingencia vinculada", "Saltar el paso y seguir" y "no se pierden", y `ProcedimientoVista-B3-bt-sL.js` contiene "Sí, ver la contingencia" y las filas de tarea de `min-h-[56px]`. Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar, el más rápido hasta ahora (los anteriores fueron de 4, 7 y 15).
 
@@ -241,16 +243,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 204. Auditoría móvil, fase 2: Red abre con el nodo, no con la lista (M-018, M-019)
-
-- **Descripción:** Red tiene hoy la forma de un **segundo inventario** (el mismo buscador, los mismos grupos y la misma fila de equipo que Equipos, con la ubicación como título de grupo) y aparta las relaciones detrás de una fila. El hallazgo que ahorra trabajo: **la pantalla que Red necesita ya está construida** (la topología de un equipo, con "Depende de", "si falla, caen N equipos" y el árbol de dependientes), solo está a **tres toques** y no es la forma de la sección. Propuesta (mockup `10c`): esa misma pantalla en la raíz de la pestaña, recordando el último nodo visitado (memoria de pestaña, que ya existe), con la lista de equipos por ubicación debajo, en una fila. **Cero componentes nuevos.** Y **M-019**: los grupos se forman con el **texto libre** de ubicación, no con `ubicacionId`, así que "Rack 1" y "rack 1" son dos grupos distintos.
-- **Motivo:** la sección que existe para explicar dependencias no las muestra en su primera pantalla. Y el técnico no encuentra el equipo donde lo busca porque su rack aparece escrito de dos maneras.
-- **Impacto:** alto, y barato: es mover una pantalla ya construida y cambiar la clave de agrupación. **M-019 toca datos** solo en lectura (agrupar por id y usar el texto como respaldo); no reescribe nada.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/features/red/RedPage.tsx`, `TopologiaEquipoPage.tsx`, `TopologiaPage.tsx`, `src/app/memoriaPestana.ts`.
-- **Dependencias:** la **202** (el recorrido por nodos necesita que el regreso deshaga un salto, M-020). Se cruza con la tarea **194** (turno 8: unificar las dos fichas de Red y su formulario de conexión), que sigue vigente y se hace después: la 204 mueve la puerta, la 194 funde las fichas.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ### 205. Auditoría móvil, fase 2: Bóveda y Diagnóstico, la acción frecuente a la vista (M-021, M-026)
 
