@@ -28,6 +28,7 @@ import {
   Info,
   LinkSimple,
   Monitor,
+  Play,
   Plus,
   Sparkle,
   Warning,
@@ -44,6 +45,8 @@ import {
 } from './completitudArticulo'
 import { etiquetasFrecuentes, normalizarEtiquetas, type GrafiaEtiqueta } from './etiquetas'
 import { PasosEditor } from './PasosEditor'
+import { ProveedorAccionesPaso } from './ranuraAccionesPaso'
+import { DialogoProbarPaso } from './DialogoProbarPaso'
 import { hayPlantilla, pasosDePlantilla, plantillaDe } from './plantillas'
 import { colorIconoDeTipo, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
 import { tituloEditar, tituloNuevo } from './tiposArticulo'
@@ -219,6 +222,18 @@ export function ArticuloForm() {
   const [pestana, setPestana] = useState<PestanaEditor>('general')
   // Error de validacion del envio (hoy solo el titulo obligatorio).
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
+
+  // Tablero 6b del handoff "Diseño móvil". `pasoActivoId` es el paso
+  // sobre el que actúan la barra fija de añadir y "Probar"; vive aquí
+  // porque lo comparten el editor de pasos (que pinta la barra por
+  // portal) y esta barra (que pinta "Probar el paso N").
+  // `ranuraAcciones` es el hueco donde el editor pinta esa barra.
+  const [pasoActivoId, setPasoActivoId] = useState<string | null>(null)
+  const [ranuraAcciones, setRanuraAcciones] = useState<HTMLDivElement | null>(null)
+  const [dialogoProbar, setDialogoProbar] = useState(false)
+  // Paso que la vista previa abre y trae a la vista. null = la vista
+  // previa normal, desde el principio del artículo.
+  const [pasoDestacadoId, setPasoDestacadoId] = useState<string | null>(null)
 
   // Cambiar de pestaña lleva al principio del formulario: si no, se
   // entra a la pestaña nueva a la altura del scroll de la anterior.
@@ -417,6 +432,21 @@ export function ArticuloForm() {
   const resumenPasos =
     pasos.length === 0 ? 'ninguno todavía' : pasos.length === 1 ? '1 paso' : `${pasos.length} pasos`
   const guardarEtiqueta = pasos.length > 0 ? 'Guardar procedimiento' : 'Guardar artículo'
+
+  // Paso activo, con la misma regla que PasosEditor: si el declarado ya
+  // no existe manda el último, que es donde se está escribiendo. Aquí
+  // solo sirve para nombrar lo que "Probar" va a mostrar.
+  const indiceEncontrado = pasos.findIndex((p) => p.id === pasoActivoId)
+  const indicePasoActivo = indiceEncontrado >= 0 ? indiceEncontrado : pasos.length - 1
+  const pasoActivo = indicePasoActivo >= 0 ? pasos[indicePasoActivo] : null
+  // "Probar" solo tiene sentido dentro de la pestaña de pasos y con al
+  // menos un paso escrito; fuera de ahí sigue la vista previa completa.
+  const hayQueProbar = pestana === 'pasos' && pasoActivo !== null
+
+  function verComoTecnico(destacado: string | null) {
+    setPasoDestacadoId(destacado)
+    setMostrarVistaPrevia(true)
+  }
   const sugerenciasEtiqueta =
     completitud.sugerencias.length === 0
       ? 'Completo'
@@ -517,7 +547,7 @@ export function ArticuloForm() {
                   role="tab"
                   aria-selected={activa}
                   onClick={() => irA(p.valor)}
-                  className={`relative flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 px-1 text-[13px] font-medium transition-colors ${
+                  className={`relative flex h-[52px] flex-1 items-center justify-center gap-1.5 border-b-[2.5px] px-1 text-[13.5px] font-medium transition-colors ${
                     activa
                       ? 'border-noct-accent text-noct-accent-300'
                       : 'border-transparent text-noct-neutral-400 hover:text-noct-text'
@@ -541,7 +571,11 @@ export function ArticuloForm() {
         </>
       }
     >
-      <main className="flex flex-1 flex-col gap-6 px-4 pb-[190px] pt-[18px]">
+      {/* El editor de pasos pinta su barra de añadir dentro de la barra
+          fija de abajo (ver ranuraAccionesPaso.tsx); el proveedor tiene
+          que envolver a los dos. */}
+      <ProveedorAccionesPaso value={ranuraAcciones}>
+      <main className={`flex flex-1 flex-col gap-6 px-4 pt-[18px] ${pestana === 'pasos' ? 'pb-[250px]' : 'pb-[190px]'}`}>
         {/* PESTAÑA GENERAL: de qué trata el artículo y cómo se
             encuentra (tipo, título, portada, etiquetas, equipos). */}
         {pestana === 'general' && (
@@ -732,6 +766,8 @@ export function ArticuloForm() {
                 pasos={pasos}
                 onPasosChange={setPasos}
                 dispositivosAfectados={dispositivosAfectados}
+                pasoActivoId={pasoActivoId}
+                onPasoActivoChange={setPasoActivoId}
               />
             </section>
 
@@ -927,8 +963,15 @@ export function ArticuloForm() {
         )}
       </main>
 
-      {/* Barra inferior fija: completitud, sugerencias y acciones. */}
+      {/* Barra inferior fija: barra de añadir (solo en Pasos, la pinta
+          PasosEditor por portal), completitud, sugerencias y acciones. */}
       <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
+        {/* Hueco de la barra de añadir del editor de pasos (tablero 6b).
+            Va arriba del todo para que los cuatro objetivos de 56 px
+            queden juntos y siempre a la misma altura, y para que la
+            fila de completitud no se meta entre ellos y "Guardar". */}
+        <div ref={setRanuraAcciones} className="empty:hidden" />
+
         {sugerenciasAbiertas && completitud.sugerencias.length > 0 && (
           <div className="flex flex-col gap-[5px] pb-2.5 pt-0.5">
             {/* Cada sugerencia lleva a la pestaña donde se resuelve:
@@ -963,26 +1006,41 @@ export function ArticuloForm() {
           </span>
           <span className="shrink-0 text-xs text-noct-accent-300">{sugerenciasEtiqueta}</span>
         </button>
+        {/* 56 px, el mínimo de la acción dominante del sistema. Dentro
+            de Pasos, "Vista previa" se convierte en "Probar", que
+            enseña EL PASO que se está escribiendo tal como lo verá el
+            técnico: el autor nunca veía su propio trabajo sin cambiar
+            de modo (tablero 6b). */}
         <div className="flex gap-2.5">
           <button
             type="button"
-            onClick={() => setMostrarVistaPrevia(true)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-noct-divider px-2.5 py-[9px] text-[13px] font-medium text-noct-text hover:bg-noct-text/[.07]"
+            onClick={() => (hayQueProbar ? setDialogoProbar(true) : verComoTecnico(null))}
+            className="inline-flex min-h-14 shrink-0 items-center justify-center gap-1.5 rounded-[10px] border-[1.5px] border-noct-divider px-3.5 text-[14.5px] font-medium text-noct-text hover:bg-noct-text/[.07]"
           >
-            <Eye size={15} />
-            Vista previa
+            {hayQueProbar ? <Play size={17} /> : <Eye size={16} />}
+            {hayQueProbar ? 'Probar' : 'Vista previa'}
           </button>
           <button
             type="button"
             disabled={guardando}
             onClick={() => void manejarEnvio()}
-            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-noct-accent px-2.5 py-[9px] text-[13px] font-medium text-noct-accent hover:bg-noct-accent/10 disabled:opacity-50"
+            className="inline-flex min-h-14 flex-1 items-center justify-center gap-1.5 rounded-[10px] border-[1.5px] border-noct-accent bg-noct-accent/[.12] px-2.5 text-base font-semibold text-noct-accent-300 hover:bg-noct-accent/[.2] disabled:opacity-50"
           >
-            <FloppyDisk size={15} />
+            <FloppyDisk size={17} />
             {guardando ? 'Guardando...' : guardarEtiqueta}
           </button>
         </div>
       </div>
+
+      <DialogoProbarPaso
+        abierto={dialogoProbar}
+        numeroPaso={indicePasoActivo + 1}
+        onCerrar={() => setDialogoProbar(false)}
+        onVerComoTecnico={() => {
+          setDialogoProbar(false)
+          verComoTecnico(pasoActivo?.id ?? null)
+        }}
+      />
 
       {mostrarVistaPrevia && (
         <Suspense fallback={<p className="p-4 text-sm text-noct-neutral-400">Preparando la vista previa...</p>}>
@@ -993,10 +1051,15 @@ export function ArticuloForm() {
             etiquetas={etiquetas}
             procedimiento={procedimientoPreparado}
             contenido={contenido}
-            onCerrar={() => setMostrarVistaPrevia(false)}
+            pasoDestacadoId={pasoDestacadoId}
+            onCerrar={() => {
+              setMostrarVistaPrevia(false)
+              setPasoDestacadoId(null)
+            }}
           />
         </Suspense>
       )}
+      </ProveedorAccionesPaso>
     </Chasis>
   )
 }

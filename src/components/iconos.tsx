@@ -301,6 +301,17 @@ export function DotsNine(props: IconoProps) {
   )
 }
 
+// Asa de arrastre (dos columnas de tres puntos). Es el glifo universal
+// de "esto se agarra y se mueve": lo usa el editor de pasos para
+// reordenar arrastrando, en vez de subir y bajar de a uno.
+export function DotsSixVertical(props: IconoProps) {
+  return (
+    <IconoBase {...props}>
+      <path d="M100,60A16,16,0,1,1,84,44,16,16,0,0,1,100,60Zm72,16a16,16,0,1,0-16-16A16,16,0,0,0,172,76ZM84,112a16,16,0,1,0,16,16A16,16,0,0,0,84,112Zm88,0a16,16,0,1,0,16,16A16,16,0,0,0,172,112ZM84,180a16,16,0,1,0,16,16A16,16,0,0,0,84,180Zm88,0a16,16,0,1,0,16,16A16,16,0,0,0,172,180Z" />
+    </IconoBase>
+  )
+}
+
 export function DotsThreeOutlineVertical(props: IconoProps) {
   return (
     <IconoBase {...props}>

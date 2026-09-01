@@ -4,7 +4,23 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 208 se cerró el 2026-08-29. La siguiente es la 203, ver "Por hacer".)*
+### 210. Handoff "Diseño móvil", Paso 6c: el "3/7" se vuelve un destino, no un rótulo
+
+- **Descripción:** tablero `6c`. En el modo ejecución no hay forma de **saltar al paso N**: volver del paso 8 al 3 es desplazamiento a ciegas, y `AsistenteVista` solo ofrece "Atrás" de a uno. Lo que trae el mockup: el contador "Paso 3 de 7" de `CabeceraPaso` pasa a ser un **botón** que abre una hoja inferior con **los 7 pasos y su estado real** (hecho, aquí, pendiente, **saltado**, y si lleva un aviso de cuidado), en filas de 60 px que llevan directo al paso. La barra continua de 3 px se sustituye por **segmentos** (uno por paso), que ya existen como `IndicadorAvance variante="segmentos"`.
+- **Motivo:** el técnico que ya conoce el procedimiento quiere ir al paso que le falta, no recorrerlo. Hoy el "3/7" informa pero no lleva a ningún lado.
+- **Impacto:** alto en procedimientos largos. **Sin esquema**: "saltado" NO es un estado nuevo en `progresoPasos`, se **deriva** (paso no hecho que quedó por detrás del actual).
+- **Prioridad:** Alta. **Estado:** En progreso.
+- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx` (`CabeceraPaso` 440-474 y la barra de acción 388-414), `src/components/Modal.tsx`, `src/components/IndicadorAvance.tsx`, `src/lib/procedimiento.ts` (`tareasDe` para el conteo por fila).
+- **Dependencias:** ninguna. La **209** quedó terminada y archivada el 2026-08-31.
+---
+
+**HANDOFF NUEVO: "Soluciones IT, Diseño móvil" (importado el 2026-08-31).** Seis `.dc.html` en el proyecto de Claude Design `2f70dec0-abd8-4da5-8f2a-709e08102f5a`: `Paso 1 - Inicio y Onboarding`, `Paso 2 - Shell y Navegación`, `Paso 3 - Guías y Ejecución Guiada`, `Paso 4 - Dispositivos y Red`, `Paso 5 - Vinculación y Cero Duplicidad` y `Paso 6 - Guías a Fondo`. El usuario autorizó implementar **solo el Paso 6**; los cinco anteriores quedan sin registrar hasta que lo pida (excepción explícita a la regla 15, decidida por el usuario el 2026-08-31).
+
+**Cómo se leyó:** el MCP `claude_design` devolvió `DesignSync needs design-system authorization` (esta sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Diseño Mobile/Soluciones IT — Diseño móvil-handoff6.zip`, que trae el proyecto completo. Los recuentos de líneas que cita la auditoría del handoff (PasosEditor 1.036, ArticuloForm 1.388, ProcedimientoVista 1.019, AsistenteVista 744) coinciden con este repo, así que el diseño se hizo contra el código real.
+
+El Paso 6 audita **el llenado** de una guía y **la navegación entre pasos**, lo que el Paso 3 dejó fuera. Trae un tablero ANTES (`6a`, diagnóstico, no se implementa) y tres DESPUÉS, que son las tareas **209** (editor), **210** (navegador de pasos) y **211** (modo foco). Su tesis de fondo: *el paso no es la unidad de trabajo*. Todo el sistema está construido alrededor del paso (la banda, el avance, el plegado, la acción dominante), pero frente al rack, con una mano y guantes, la unidad real es la **tarea**. El modelo de datos ya la soporta (los bloques tienen id, tipo y progreso propio); falta una vista que la use, y esa es la 211.
+
+Lo que la auditoría marca como **bueno y no se toca**: el modelo de bloques con id estable (el progreso va por id, no por posición, así que reordenar no desalinea el avance), `tipoTarea`, el plegado salvo el paso actual, el avance como segmentos, el antiduplicado del título con rebote de 300 ms, la completitud consciente del tipo, el vocabulario de etiquetas derivado del uso y la composición por referencia.
 
 ---
 
@@ -213,6 +229,36 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 211. Handoff "Diseño móvil", Paso 6d: modo foco, una tarea a la vez
+
+- **Descripción:** tablero `6d`, la oportunidad grande del Paso 6. Hoy el técnico ve el paso entero (tres tareas, dos avisos y una imagen) y tiene que encontrar dentro de ese bloque cuál le toca. El modo foco muestra **una sola tarea**: la instrucción a **30 px** (legible de brazo estirado, a pleno sol, con el teléfono apoyado en el rack), su aviso pegado a ella y nada más; el botón de marcar mide **76 px** (imposible fallarlo con guantes) y es el único elemento grande de la pantalla, así que no hay que apuntar; los vínculos del paso quedan como chips de 52 px. Es un **modo, no un reemplazo**: "Ver todo" vuelve a la vista de la tarea 210. Se entra por el botón "Foco" de la barra de acción.
+- **Motivo:** la unidad de trabajo real es la tarea, no el paso. El modelo ya la soporta (los bloques tienen id, tipo y progreso propio, y `alternarTarea` ya marca de a una); falta la vista que la recorra.
+- **Impacto:** alto para quien ejecuta un procedimiento por primera vez o trabaja con guantes; el experto se queda en la lista. **Sin esquema**: reutiliza `instruccionesHechas` de `progresoPasos` tal cual.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** componente nuevo en `src/features/soluciones/` (modo foco), `src/features/soluciones/AsistenteVista.tsx` (el botón "Foco" de la barra y el estado del modo), `src/features/soluciones/useProcedimientoEjecucion.ts` (`alternarTarea`, sin cambios previstos), `src/lib/progresoPasos.ts`.
+- **Dependencias:** la **210** (el botón "Foco" vive en su barra de acción y "Ver todo" vuelve a ella).
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+### 212. Los cuatro `<select>` nativos del editor de pasos
+
+- **Descripción:** hallazgo del tablero `6b`, anotado al cerrar la tarea 209 y dejado fuera de ella por escala. El editor de un paso usa cuatro `<select>` nativos con el título concatenado dentro de la opción: información protegida (con `<optgroup>` y el valor codificado como `tipo:id`), procedimiento relacionado, solución si el paso falla, y el "Si responde No" de una tarea de decisión. En el teléfono un `<select>` largo abre la rueda del sistema, no se puede buscar dentro y el título se corta.
+- **Motivo:** el handoff los cita como uno de los cinco puntos de "qué no sirve en móvil". Con la biblioteca de guías creciendo, la lista de vinculables ya no cabe en una rueda.
+- **Impacto:** medio. **Sin esquema**: es sustituir el control, no el dato.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/PasosEditor.tsx` (`VinculoDelPaso`, `VinculoProtegidoDelPaso` y el select de decisión dentro de `BloqueEditor`).
+- **Dependencias:** ninguna. Puede reutilizar el patrón de hoja inferior de `HojaTipoBloque` con buscador.
+
+### 213. Tres pruebas rotas de antes, dos causas distintas
+
+- **Descripción:** `npm test` deja 3 fallos en `src/` que **no** los causó ningún cambio reciente (confirmado con `git stash` el 2026-08-31, antes de tocar nada). Son dos problemas distintos:
+  - `src/features/inicio/pendientes.test.ts:144` espera `'Vencida · Switch B'` y recibe `'Vence pronto · Switch B'`. La prueba fija fechas absolutas y las compara contra el reloj real, así que **caduca sola** con el paso del tiempo. Arreglo: fechas relativas a `Date.now()` o reloj falso (`vi.useFakeTimers`).
+  - `src/lib/archivosPendientes.test.ts:278` y `:288` fallan con `new row violates row-level security policy`. La prueba **alcanza el Supabase real** a través de `subirConDeduplicacion` en vez de quedarse en el doble; el resultado depende de que haya `.env` en la máquina. Arreglo: cortar esa ruta con un doble, para que la prueba no dependa de credenciales ni de la red.
+- **Motivo:** una suite con fallos conocidos deja de servir como red de seguridad, porque nadie distingue el fallo nuevo del de siempre.
+- **Impacto:** medio. No afecta a producción; afecta a la verificación de todo lo demás.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/inicio/pendientes.test.ts`, `src/lib/archivosPendientes.test.ts`.
+- **Dependencias:** ninguna. Relacionada con la **178** (el worktree obsoleto `.claude/worktrees/dazzling-benz-13478d` duplica cada fallo, así que `npm test` los reporta 6 veces en vez de 3).
 
 ### 203. Auditoría móvil, fase 2: Inicio en cinco bloques y dos pesos de fila (M-006, M-007, M-013, M-003)
 

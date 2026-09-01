@@ -1,5 +1,32 @@
 # Historial de tareas finalizadas
 
+### 209. Handoff "Diseño móvil", tablero 6b: el editor de pasos deja de ciclar a ciegas
+
+**Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-31. `tsc -b`, `oxlint` y `npm run build` limpios; `npm test` deja 3 fallos en `src/` **preexistentes y ajenos**, confirmados con `git stash` antes de tocar nada (quedan como tarea 213). **Prioridad**: Alta. **Origen**: tablero `6b` de `Paso 6 - Guías a Fondo.dc.html`, handoff de Claude Design "Soluciones IT, Diseño móvil" (proyecto `2f70dec0-abd8-4da5-8f2a-709e08102f5a`). **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
+
+**Cómo se leyó el handoff.** El MCP `claude_design` devolvió `DesignSync needs design-system authorization` (una sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Diseño Mobile/Soluciones IT — Diseño móvil-handoff6.zip`, que trae el proyecto completo. Los recuentos de líneas que cita la auditoría del handoff (PasosEditor 1.036, ArticuloForm 1.388, ProcedimientoVista 1.019, AsistenteVista 744) coinciden con este repo, así que el diseño se hizo contra el código real.
+
+**El diagnóstico del tablero.** Los controles más usados del editor eran sus objetivos más pequeños: botón de tipo de tarea `w-9` = **36 px de ancho**, X de quitar `w-8` = **32**, los cuatro "Agregar" (`px-1 py-[7px]`, icono 13) ≈ **31 de alto**, "Subir/Bajar/Eliminar" ≈ **32**. El mínimo del sistema es 48. Y los dos selectores que más se tocan al escribir una guía se cambiaban **ciclando a ciegas**: `CICLO_TIPO_TAREA` avanzaba acción -> verificación -> decisión con cada toque de un icono de 18 px sin decir qué venía, y `tonoSiguiente` hacía lo mismo con cinco tonos.
+
+**Lo que se hizo.**
+
+- **`HojaTipoBloque`** (nuevo): hoja inferior que elige el tipo de una línea, con los tres tipos de tarea o los cinco tonos **descritos**, en filas de 64 px. `CICLO_TIPO_TAREA` y `tonoSiguiente` se eliminan.
+- **Pastilla de 56 px con su palabra** en lugar del icono que ciclaba. Las palabras cortas ("Verif.", "Cuidado") viven en `TIPOS_TAREA` y en `tonos.ts` junto a las largas: la corta cabe en la pastilla, la larga es la que lee el técnico en ejecución.
+- **Asa de arrastre** para reordenar, con eventos de puntero. **No se usa la API de arrastre de HTML5**: no existe en los navegadores móviles, que es justo donde se escribe la guía. Durante el arrastre **no se reordena el array**: se miden las tarjetas al agarrar y se mueven con `transform`; el orden se aplica al soltar. Reordenar en vivo obligaría a volver a medir en cada movimiento, porque el propio reordenamiento cambia el sitio de la tarjeta que el dedo sujeta. El asa acepta también **flecha arriba / abajo** (±1), el camino sin puntero, y el menú "···" conserva Subir/Bajar.
+- **`ranuraAccionesPaso`** (nuevo): los cuatro "añadir" salen de la tarjeta y pasan a una **barra fija de 56 px** que actúa sobre el **paso activo** (el del borde de acento; si no se ha tocado ninguno, el último). Mismo patrón de ranura por portal que `BandaTarea`, para que siga habiendo **una sola** barra fija: la alternativa era calcular un `bottom` contra el alto de la de `ArticuloForm`, que cambia con las sugerencias de completitud abiertas.
+- **"Probar"** (`DialogoProbarPaso`, nuevo): dentro de la pestaña Pasos, "Vista previa" se convierte en "Probar", que abre la vista previa ya puesta en el paso que se acaba de escribir (`pasoDestacadoId`, nuevo en `VistaPreviaArticulo` y `ProcedimientoVista`). Se mantiene el diálogo intermedio a propósito: la vista previa tapa la pantalla entera y el editor tiene cambios sin guardar, así que "no sales del editor y no se guarda nada" evita el susto de creer que se perdió el trabajo.
+- **Tamaños**: X 32 -> **48x56**, menú del paso 32 -> **48**, filas de tarea y aviso -> **56**, objetivo 32 -> **44**, insignia 28 -> **30**, pestañas del editor 44 -> **52**, acciones del pie -> **56**. El área del aviso pasa de 2 a 3 líneas.
+- **Icono nuevo** `DotsSixVertical`.
+
+**Lo que NO se hizo, y por qué.**
+
+- **La cabecera del mockup.** El tablero sustituye "Guías › Redes · vuelves aquí al terminar" por "Borrador · 7 pasos · 68% completo". No se aplicó: la barra de tarea del chasis dice **a dónde se vuelve** por regla del sistema (R19, tarea 185), y una pantalla no puede quitarla por su cuenta. Sí se tomó la parte que no choca: las pestañas suben a 52 px.
+- **Los cuatro `<select>` nativos** (protegido, subprocedimiento, solución, decisión-No), que el tablero critica por concatenar el título. Es un cambio de otra escala; queda como tarea **212**.
+- **Colores del tipo de tarea**: se tomó la paleta del mockup (acción en acento sobre pastilla neutra, verificación en verde, decisión en ámbar) porque es **solo del editor**: la vista de ejecución distingue una verificación con la etiqueta neutra "Verificación", sin color, así que no pisa la regla M-R11 que la tarea 206 tiene pendiente ("un color, un significado dentro del paso").
+
+**Verificación en navegador** (sesión simulada y categoría sembrada, borradas al terminar; las llamadas al servidor devuelven 401 y no escriben nada): barra de añadir 4 x 56 px, asa 44x48, pastilla de tipo 88x56 con la palabra correcta, X 48x56, "Probar" 56, pestañas 52. La hoja de tipo lista los tres con su descripción en filas de 64 y al elegir "Verificación" la pastilla pasa a "Verif."; la de tono lista los cinco y al elegir "Precaución" la pastilla dice "Cuidado". Añadir desde la barra cae en el paso activo (el segundo, tras escribir en él). Arrastrar el paso 1 por debajo del 2 los intercambia, y la flecha arriba sobre el asa los devuelve. "Probar el paso 1" abre la vista previa con la cabecera "Como lo ve el técnico", ese paso abierto y el otro cerrado.
+
+
 ### 208. N1, segunda mitad: la dirección del enlace se ve en la ficha y se puede reparar
 
 **Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-29. `tsc -b`, `oxlint src` y `npm run build` limpios; `npx vitest run --dir src` da 961 pruebas, 959 pasan y **8 son nuevas** (los 2 fallos restantes son los preexistentes y ajenos de `archivosPendientes.test.ts`, RLS de Storage contra el Supabase real, confirmados con `git stash` antes de tocar nada). **Prioridad**: Alta. **Origen**: hallazgo **N1** de [AUDITORIA_FLUJOS_TI.md](AUDITORIA_FLUJOS_TI.md), marcado ALTA y "riesgo de datos". **Modelo/esfuerzo**: Opus 5 / Medio, sin Ultracode.

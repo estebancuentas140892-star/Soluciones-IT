@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
 import {
@@ -41,6 +41,10 @@ interface Props {
   // pendiente: asi un subprocedimiento o una solucion que terminan
   // completan tambien la tarea del paso que los vincula.
   onCompletado?: () => void
+  // Paso que hay que abrir y traer a la vista al montar. Lo usa
+  // "Probar" del editor (tablero 6b) para enseñar el paso que se acaba
+  // de escribir sin obligar a recorrer el artículo entero.
+  pasoDestacadoId?: string | null
 }
 // `progresoPegajoso` se retiró en la tarea 172: existía solo para que la
 // vista previa del editor apagara la barra pegajosa de progreso, y esa
@@ -61,6 +65,7 @@ export function ProcedimientoVista({
   procedimiento,
   nivel = 0,
   onCompletado,
+  pasoDestacadoId = null,
 }: Props) {
   const refsPasos = useRef<(HTMLLIElement | null)[]>([])
 
@@ -100,7 +105,19 @@ export function ProcedimientoVista({
   // Fuera de este mapa manda el estado por defecto: solo el paso actual
   // llega abierto, así que al marcarlo hecho se cierra solo y se abre el
   // siguiente, sin que nadie toque nada.
-  const [abiertoPorUsuario, setAbiertoPorUsuario] = useState<Record<string, boolean>>({})
+  // El paso destacado entra abierto aunque no sea el actual: es el que
+  // se ha pedido ver.
+  const [abiertoPorUsuario, setAbiertoPorUsuario] = useState<Record<string, boolean>>(() =>
+    pasoDestacadoId ? { [pasoDestacadoId]: true } : {},
+  )
+
+  useEffect(() => {
+    if (!pasoDestacadoId) return
+    const destino = pasos.findIndex((p) => p.id === pasoDestacadoId)
+    if (destino < 0) return
+    refsPasos.current[destino]?.scrollIntoView({ block: 'center' })
+  }, [pasoDestacadoId, pasos])
+
   function alternarAbierto(id: string, estaAbierto: boolean) {
     setAbiertoPorUsuario((previo) => ({ ...previo, [id]: !estaAbierto }))
   }

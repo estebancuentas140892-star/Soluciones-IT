@@ -1,5 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState, type ChangeEvent, type ComponentType } from 'react'
+import {
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ComponentType,
+  type KeyboardEvent as EventoTeclado,
+  type PointerEvent as EventoPuntero,
+} from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import {
   db,
@@ -31,6 +39,7 @@ import {
   Camera,
   CaretDown,
   CaretUp,
+  DotsSixVertical,
   DotsThreeOutline,
   type IconoProps,
   LinkSimple,
@@ -45,8 +54,10 @@ import {
   Wrench,
   X,
 } from '../../components/iconos'
-import { TONOS_AVISO } from './tonos'
+import { TONOS_AVISO, type TonoInfo } from './tonos'
 import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
+import { HojaTipoBloque, type OpcionTipoBloque } from './HojaTipoBloque'
+import { AccionesPaso } from './ranuraAccionesPaso'
 
 interface Props {
   articuloId: string
@@ -58,6 +69,12 @@ interface Props {
   // encargo: "Conectar impresora Lanier MP3050" -> "Contraseña
   // administrador del dispositivo").
   dispositivosAfectados: DispositivoAfectado[]
+  // Paso sobre el que actúa la barra fija de añadir (tablero 6b). Vive
+  // en el formulario porque el botón "Probar" de la misma barra también
+  // lo necesita ("Probar el paso 3"). null = todavía no se ha tocado
+  // ninguno; entonces manda el último, que es donde se está escribiendo.
+  pasoActivoId: string | null
+  onPasoActivoChange: (pasoId: string | null) => void
 }
 
 // Una opcion del selector polimorfico "Vincular informacion
@@ -69,14 +86,24 @@ interface OpcionVinculoProtegido {
   titulo: string
 }
 
-// Metadatos visuales de cada clasificacion de tarea (handoff "Editor de
-// Artículo": el icono se toca para ciclar entre los tipos). Icono,
-// color y placeholder calcan el mockup.
+// Metadatos visuales de cada clasificacion de tarea. Antes el icono se
+// tocaba para CICLAR entre los tipos; desde el tablero 6b del handoff
+// "Diseño móvil" el tipo se elige en una hoja, así que cada uno lleva
+// además su palabra corta (la que cabe en la pastilla) y una línea que
+// dice para qué sirve.
 interface TipoTareaInfo {
   valor: TipoTarea
   Icono: ComponentType<IconoProps>
   claseIcono: string
-  titulo: string
+  // Palabra de la pastilla. Compite por el ancho con el texto de la
+  // tarea, así que "Verificación" se abrevia y "Acción" no.
+  corto: string
+  etiqueta: string
+  descripcion: string
+  // Fondo y borde de la pastilla. La acción es la neutra (es el tipo
+  // por defecto y el más común); los otros dos se tiñen para que se
+  // reconozcan de un vistazo en una lista larga de tareas.
+  clasePastilla: string
   placeholder: string
 }
 
@@ -84,42 +111,63 @@ const TIPOS_TAREA: TipoTareaInfo[] = [
   {
     valor: 'accion',
     Icono: Square,
-    claseIcono: 'text-noct-neutral-500',
-    titulo: 'Acción con casilla. Tocar para cambiar el tipo',
+    claseIcono: 'text-noct-accent-300',
+    corto: 'Acción',
+    etiqueta: 'Acción',
+    descripcion: 'Algo que el técnico ejecuta',
+    clasePastilla: 'border-noct-divider bg-noct-bg',
     placeholder: 'Tarea (por ejemplo: Encender la impresora)',
   },
   {
     valor: 'verificacion',
     Icono: SealCheck,
-    claseIcono: 'text-noct-accent-300',
-    titulo: 'Verificación. Tocar para cambiar el tipo',
+    claseIcono: 'text-noct-exito',
+    corto: 'Verif.',
+    etiqueta: 'Verificación',
+    descripcion: 'Comprobar antes de continuar',
+    clasePastilla: 'border-noct-exito/45 bg-noct-exito/10',
     placeholder: 'Comprobación (por ejemplo: Verificar que aparece)',
   },
   {
     valor: 'decision',
     Icono: Question,
     claseIcono: 'text-noct-precaucion',
-    titulo: 'Decisión Sí/No. Tocar para cambiar el tipo',
+    corto: 'Decisión',
+    etiqueta: 'Decisión Sí / No',
+    descripcion: '«No» abre otra guía y vuelve aquí',
+    clasePastilla: 'border-noct-precaucion/45 bg-noct-precaucion/[.12]',
     placeholder: 'Pregunta de Sí/No',
   },
 ]
 
-const CICLO_TIPO_TAREA: Record<TipoTarea, TipoTarea> = {
-  accion: 'verificacion',
-  verificacion: 'decision',
-  decision: 'accion',
-}
+const OPCIONES_TIPO_TAREA: OpcionTipoBloque<TipoTarea>[] = TIPOS_TAREA.map((t) => ({
+  valor: t.valor,
+  etiqueta: t.etiqueta,
+  descripcion: t.descripcion,
+  Icono: t.Icono,
+  claseIcono: t.claseIcono,
+}))
+
+const OPCIONES_TONO: OpcionTipoBloque<TonoAviso>[] = TONOS_AVISO.map((t) => ({
+  valor: t.valor,
+  etiqueta: t.etiqueta,
+  descripcion: t.descripcion,
+  Icono: t.Icono,
+  claseIcono: t.claseIcono,
+}))
 
 function infoTipoTarea(tipo: TipoTarea | null): TipoTareaInfo {
   return TIPOS_TAREA.find((t) => t.valor === (tipo ?? 'accion')) ?? TIPOS_TAREA[0]
 }
 
-// El icono de la advertencia cicla entre los cinco tonos del sistema
-// (mismo orden que TONOS_AVISO), un tono por toque.
-function tonoSiguiente(tono: TonoAviso | null): TonoAviso {
-  const indice = TONOS_AVISO.findIndex((t) => t.valor === (tono ?? 'info'))
-  return TONOS_AVISO[(indice + 1) % TONOS_AVISO.length].valor
+function infoTono(tono: TonoAviso | null): TonoInfo {
+  return TONOS_AVISO.find((t) => t.valor === (tono ?? 'info')) ?? TONOS_AVISO[0]
 }
+
+// Separación vertical entre tarjetas de paso (`gap-3.5`). El arrastre
+// necesita el número para calcular cuánto se corre cada tarjeta al
+// dejar hueco, así que vive en un solo sitio.
+const HUECO_ENTRE_PASOS = 14
 
 // Bloque de imagen recien creado, sin adjunto todavia: el slot del
 // bloque permite subir la foto (a diferencia de tareas y avisos, que
@@ -145,7 +193,14 @@ function crearBloqueImagenVacio(): BloquePaso {
 // cuerpo de bloques (tareas con casilla, advertencias e imagenes), mas un
 // menu de reordenar/eliminar y los vinculos del paso (bóveda,
 // procedimiento y solución).
-export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfectados }: Props) {
+export function PasosEditor({
+  articuloId,
+  pasos,
+  onPasosChange,
+  dispositivosAfectados,
+  pasoActivoId,
+  onPasoActivoChange,
+}: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [menuPasoId, setMenuPasoId] = useState<string | null>(null)
@@ -270,12 +325,106 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
     actualizarPaso(indice, { bloques })
   }
 
-  function moverPaso(indice: number, direccion: -1 | 1) {
-    const destino = indice + direccion
-    if (destino < 0 || destino >= pasos.length) return
+  function moverPasoA(desde: number, hasta: number) {
+    if (desde === hasta || hasta < 0 || hasta >= pasos.length) return
     const copia = [...pasos]
-    ;[copia[indice], copia[destino]] = [copia[destino], copia[indice]]
+    const [movido] = copia.splice(desde, 1)
+    copia.splice(hasta, 0, movido)
     onPasosChange(copia)
+  }
+
+  function moverPaso(indice: number, direccion: -1 | 1) {
+    moverPasoA(indice, indice + direccion)
+  }
+
+  // ARRASTRE PARA REORDENAR (tablero 6b). Antes reordenar era ±1:
+  // `moverPaso` intercambia con el vecino, así que llevar el paso 6 al 2
+  // eran cuatro toques en un botón de 32 px. Ahora el asa arrastra.
+  //
+  // No se usa la API de arrastre de HTML5 (`draggable`) porque no
+  // existe en los navegadores móviles, que es justo donde se escribe la
+  // guía: se implementa con eventos de puntero, que sí cubren dedo,
+  // ratón y lápiz con el mismo código.
+  //
+  // Durante el arrastre NO se reordena el array. Se miden las tarjetas
+  // una vez, al agarrar, y se mueven con `transform`; el array se toca
+  // una sola vez al soltar. Reordenar en vivo obligaría a volver a medir
+  // en cada movimiento, porque el propio reordenamiento cambia el sitio
+  // de la tarjeta que el dedo está sujetando.
+  const contenedorRef = useRef<HTMLDivElement | null>(null)
+  const refsPasos = useRef<(HTMLDivElement | null)[]>([])
+  const medidasRef = useRef<{ arriba: number; alto: number }[]>([])
+  const inicioYRef = useRef(0)
+  const [arrastre, setArrastre] = useState<{ indice: number; destino: number; dy: number } | null>(null)
+
+  function iniciarArrastre(evento: EventoPuntero<HTMLButtonElement>, indice: number) {
+    const contenedor = contenedorRef.current
+    if (!contenedor) return
+    const base = contenedor.getBoundingClientRect().top
+    medidasRef.current = refsPasos.current.slice(0, pasos.length).map((elemento) => {
+      const caja = elemento?.getBoundingClientRect()
+      return caja ? { arriba: caja.top - base, alto: caja.height } : { arriba: 0, alto: 0 }
+    })
+    inicioYRef.current = evento.clientY
+    // La captura es lo que hace que el dedo siga mandando aunque salga
+    // del asa. Si el navegador la rechaza (puntero ya liberado) el
+    // arrastre sigue funcionando mientras el dedo no se salga, así que
+    // no vale la pena abortarlo.
+    try {
+      evento.currentTarget.setPointerCapture(evento.pointerId)
+    } catch {
+      // sin captura, pero el arrastre sigue
+    }
+    onPasoActivoChange(pasos[indice].id)
+    setArrastre({ indice, destino: indice, dy: 0 })
+  }
+
+  function moverArrastre(evento: EventoPuntero<HTMLButtonElement>) {
+    if (!arrastre) return
+    const medidas = medidasRef.current
+    const propia = medidas[arrastre.indice]
+    if (!propia) return
+    const dy = evento.clientY - inicioYRef.current
+    const centro = propia.arriba + propia.alto / 2 + dy
+    let destino = arrastre.indice
+    for (let j = 0; j < medidas.length; j += 1) {
+      if (j === arrastre.indice) continue
+      const centroJ = medidas[j].arriba + medidas[j].alto / 2
+      if (j < arrastre.indice && centro < centroJ) destino = Math.min(destino, j)
+      if (j > arrastre.indice && centro > centroJ) destino = Math.max(destino, j)
+    }
+    setArrastre({ indice: arrastre.indice, destino, dy })
+  }
+
+  function soltarArrastre() {
+    if (arrastre) moverPasoA(arrastre.indice, arrastre.destino)
+    setArrastre(null)
+  }
+
+  // Cuánto se corre cada tarjeta mientras dura el arrastre: la agarrada
+  // sigue al dedo, y las que quedan entre su sitio y el destino se
+  // apartan el alto de la agarrada para abrir el hueco donde va a caer.
+  function desplazamientoDe(indice: number): string | undefined {
+    if (!arrastre) return undefined
+    if (indice === arrastre.indice) return `translateY(${arrastre.dy}px)`
+    const propia = medidasRef.current[arrastre.indice]
+    if (!propia) return undefined
+    const salto = propia.alto + HUECO_ENTRE_PASOS
+    if (arrastre.destino > arrastre.indice && indice > arrastre.indice && indice <= arrastre.destino) {
+      return `translateY(${-salto}px)`
+    }
+    if (arrastre.destino < arrastre.indice && indice >= arrastre.destino && indice < arrastre.indice) {
+      return `translateY(${salto}px)`
+    }
+    return undefined
+  }
+
+  // El asa también responde al teclado (±1): sin esto reordenar sería
+  // imposible sin puntero, y la app se usa además en PC.
+  function tecladoAsa(evento: EventoTeclado<HTMLButtonElement>, indice: number) {
+    if (evento.key !== 'ArrowUp' && evento.key !== 'ArrowDown') return
+    evento.preventDefault()
+    moverPaso(indice, evento.key === 'ArrowUp' ? -1 : 1)
   }
 
   function confirmarEliminarPaso() {
@@ -365,8 +514,15 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
     })
   }
 
+  // Paso sobre el que actúa la barra fija de añadir. Si el activo
+  // declarado ya no existe (lo acaban de eliminar) o todavía no se ha
+  // tocado ninguno, manda el ÚLTIMO: es donde se está escribiendo.
+  const indiceEncontrado = pasos.findIndex((p) => p.id === pasoActivoId)
+  const indiceActivo = indiceEncontrado >= 0 ? indiceEncontrado : pasos.length - 1
+  const idPasoActivo = indiceActivo >= 0 ? pasos[indiceActivo].id : null
+
   return (
-    <div className="flex flex-col gap-3.5">
+    <div ref={contenedorRef} className="flex flex-col gap-3.5">
       {pasos.length === 0 && (
         <div className="mb-1 rounded-md border border-dashed border-noct-neutral-700 px-4 py-[22px] text-center">
           <p className="text-sm font-medium">Aún no hay pasos</p>
@@ -377,10 +533,43 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
       )}
 
       {pasos.map((paso, indice) => (
-        <div key={paso.id} className="flex flex-col rounded-md bg-noct-surface p-3">
-          {/* Cabecera: numero, titulo editable y menu de opciones. */}
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-noct-accent text-[12.5px] font-medium text-noct-accent-300">
+        <div
+          key={paso.id}
+          ref={(elemento) => {
+            refsPasos.current[indice] = elemento
+          }}
+          // El borde de acento marca el paso ACTIVO: el que reciben los
+          // cuatro botones de la barra fija y el que abre "Probar". Sin
+          // esa marca, una barra que actúa "sobre un paso" no diría
+          // sobre cuál.
+          onPointerDownCapture={() => onPasoActivoChange(paso.id)}
+          onFocusCapture={() => onPasoActivoChange(paso.id)}
+          style={{ transform: desplazamientoDe(indice) }}
+          className={`flex flex-col rounded-xl border p-3 ${
+            arrastre?.indice === indice
+              ? 'z-10 border-noct-accent bg-noct-surface shadow-[0_18px_50px_rgba(0,0,0,.5)]'
+              : `bg-noct-surface transition-transform ${
+                  paso.id === idPasoActivo ? 'border-noct-accent/40' : 'border-transparent'
+                }`
+          }`}
+        >
+          {/* Cabecera: asa de arrastre, numero, titulo editable y menu. */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              aria-label={`Reordenar el paso ${indice + 1}: arrastrar, o flechas arriba y abajo`}
+              onPointerDown={(evento) => iniciarArrastre(evento, indice)}
+              onPointerMove={moverArrastre}
+              onPointerUp={soltarArrastre}
+              onPointerCancel={soltarArrastre}
+              onKeyDown={(evento) => tecladoAsa(evento, indice)}
+              // `touch-none`: sin esto el gesto lo captura el scroll de
+              // la pagina y la tarjeta no llega a moverse.
+              className="flex h-12 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-[9px] text-noct-neutral-400 hover:bg-noct-text/[.06] hover:text-noct-text active:cursor-grabbing"
+            >
+              <DotsSixVertical size={19} />
+            </button>
+            <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-noct-accent font-mono text-[13px] font-semibold text-noct-accent-300">
               {indice + 1}
             </div>
             <input
@@ -388,20 +577,21 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
               value={paso.titulo}
               onChange={(e) => actualizarPaso(indice, { titulo: e.target.value })}
               placeholder="Qué hacer en este paso"
-              className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2.5 py-2 text-[14.5px] font-medium text-noct-text outline-none focus:border-noct-accent focus:bg-noct-surface"
+              className="min-h-12 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-base font-medium text-noct-text outline-none focus:border-noct-accent focus:bg-noct-bg"
             />
             <button
               type="button"
               onClick={() => setMenuPasoId((actual) => (actual === paso.id ? null : paso.id))}
               aria-label="Opciones del paso: mover o eliminar"
-              className="flex min-h-11 w-10 shrink-0 items-center justify-center rounded-md text-noct-neutral-500 hover:bg-noct-text/[.05] hover:text-noct-text"
+              aria-expanded={menuPasoId === paso.id}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[9px] text-noct-neutral-300 hover:bg-noct-text/[.06] hover:text-noct-text"
             >
-              <DotsThreeOutline size={18} />
+              <DotsThreeOutline size={20} />
             </button>
           </div>
 
           {menuPasoId === paso.id && (
-            <div className="flex gap-2 py-2 pl-[38px]">
+            <div className="flex flex-wrap gap-2 py-2 pl-[38px]">
               <BotonMenu Icono={ArrowUp} onClick={() => moverPaso(indice, -1)}>
                 Subir
               </BotonMenu>
@@ -418,12 +608,16 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
             type="text"
             value={paso.objetivo}
             onChange={(e) => actualizarPaso(indice, { objetivo: e.target.value })}
-            placeholder="Objetivo: qué se logra al terminar (opcional)"
-            className="mb-2.5 ml-[38px] mt-0.5 min-h-8 max-w-[calc(100%-38px)] border-none bg-transparent px-2.5 py-1 text-[12.5px] text-noct-neutral-400 outline-none"
+            placeholder="Objetivo: qué se logra al terminar"
+            className="mb-2.5 ml-[38px] mt-1 min-h-11 max-w-[calc(100%-38px)] border-none bg-transparent px-2 py-1 text-[13.5px] text-noct-neutral-400 outline-none"
           />
 
-          {/* Cuerpo del paso: tareas, advertencias e imagenes. */}
-          <div className="flex flex-col gap-2 border-t border-noct-divider pt-2.5">
+          {/* Cuerpo del paso: tareas, advertencias e imagenes. Los cuatro
+              botones de añadir ya no viven aquí: se fueron a la barra
+              fija del pie (ver AccionesPaso, más abajo), que está
+              siempre a la misma altura en el arco del pulgar en vez de
+              moverse según lo largo que sea el paso. */}
+          <div className="flex flex-col gap-1.5 border-t border-noct-divider pt-3">
             {paso.bloques.map((bloque) => (
               <BloqueEditor
                 key={bloque.id}
@@ -439,25 +633,11 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
                 vinculables={vinculablesOrdenados}
               />
             ))}
-
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
-              <BotonAgregar Icono={Plus} onClick={() => agregarBloque(indice, crearBloqueTarea())}>
-                Tarea
-              </BotonAgregar>
-              <BotonAgregar Icono={Warning} onClick={() => agregarBloque(indice, crearBloqueAviso())}>
-                Advertencia
-              </BotonAgregar>
-              <BotonAgregar Icono={Camera} onClick={() => agregarBloque(indice, crearBloqueImagenVacio())}>
-                Imagen
-              </BotonAgregar>
-              {/* Reutilizar (hallazgo H4): abre los vínculos del paso, donde
-                  vive "Procedimiento relacionado". La composición por
-                  referencia ya existía; este botón la hace descubrible
-                  junto a los bloques, en vez de esconderla en el plegable. */}
-              <BotonAgregar Icono={BookOpen} onClick={() => setVinculosPasoId(paso.id)}>
-                Reutilizar
-              </BotonAgregar>
-            </div>
+            {paso.bloques.length === 0 && (
+              <p className="py-1 text-[12.5px] text-noct-neutral-500">
+                Sin líneas todavía. Añade una con la barra de abajo.
+              </p>
+            )}
           </div>
 
           {/* Archivos del paso completo (manual, PDF, planilla). */}
@@ -533,11 +713,11 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
               <button
                 type="button"
                 onClick={() => setVinculosPasoId(paso.id)}
-                className="flex min-h-10 w-full items-center gap-2 rounded-md px-0.5 py-1 text-left text-[12.5px] text-noct-neutral-500 hover:text-noct-text"
+                className="flex min-h-14 w-full items-center gap-2.5 rounded-md px-0.5 py-1 text-left text-[13.5px] text-noct-neutral-400 hover:text-noct-text"
               >
-                <LinkSimple size={15} />
-                Vínculos del paso: información protegida, procedimiento o solución
-                <CaretDown size={12} className="ml-auto" />
+                <LinkSimple size={16} className="shrink-0" />
+                <span className="min-w-0 flex-1">Vínculos: dato protegido, procedimiento o solución</span>
+                <CaretDown size={14} className="shrink-0" />
               </button>
             )}
           </div>
@@ -552,13 +732,60 @@ export function PasosEditor({ articuloId, pasos, onPasosChange, dispositivosAfec
         onClick={() => {
           const nuevo = { ...crearPaso(), bloques: [crearBloqueTarea()] }
           onPasosChange([...pasos, nuevo])
+          onPasoActivoChange(nuevo.id)
           setFocoBloqueId(nuevo.bloques[0].id)
         }}
-        className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-dashed border-noct-neutral-700 text-sm font-medium text-noct-neutral-300 hover:border-noct-accent hover:text-noct-accent-300"
+        className="mt-3 flex min-h-[60px] w-full items-center justify-center gap-2.5 rounded-xl border-[1.5px] border-dashed border-noct-neutral-700 text-base font-medium text-noct-accent-300 hover:border-noct-accent hover:bg-noct-accent/[.08]"
       >
-        <Plus size={16} />
-        Agregar paso
+        <Plus size={18} />
+        Agregar paso {pasos.length + 1}
       </button>
+
+      {/* BARRA FIJA DE AÑADIR (tablero 6b). Cuatro objetivos de 56 px en
+          el arco del pulgar, siempre en el mismo sitio, que actúan sobre
+          el paso activo (el del borde de acento). Antes eran cuatro
+          botones de 31 px de alto dentro de la tarjeta, es decir los
+          controles más usados del editor en sus objetivos más pequeños,
+          y además cambiaban de altura con cada paso. Se pinta por portal
+          dentro de la barra del formulario para que siga habiendo UNA
+          sola barra fija (ver ranuraAccionesPaso.tsx). */}
+      {indiceActivo >= 0 && (
+        <AccionesPaso>
+          <div className="flex gap-1.5 border-b border-noct-divider pb-2">
+            <BotonAnadir
+              Icono={Plus}
+              onClick={() => agregarBloque(indiceActivo, crearBloqueTarea())}
+              descripcion={`Añadir una tarea al paso ${indiceActivo + 1}`}
+            >
+              Tarea
+            </BotonAnadir>
+            <BotonAnadir
+              Icono={Warning}
+              onClick={() => agregarBloque(indiceActivo, crearBloqueAviso())}
+              descripcion={`Añadir un aviso al paso ${indiceActivo + 1}`}
+            >
+              Aviso
+            </BotonAnadir>
+            <BotonAnadir
+              Icono={Camera}
+              onClick={() => agregarBloque(indiceActivo, crearBloqueImagenVacio())}
+              descripcion={`Añadir una foto al paso ${indiceActivo + 1}`}
+            >
+              Foto
+            </BotonAnadir>
+            {/* Reutilizar (hallazgo H4): abre los vínculos del paso, donde
+                vive "Procedimiento relacionado". La composición por
+                referencia ya existía; este botón la hace descubrible. */}
+            <BotonAnadir
+              Icono={BookOpen}
+              onClick={() => idPasoActivo && setVinculosPasoId(idPasoActivo)}
+              descripcion={`Reutilizar otra guía en el paso ${indiceActivo + 1}`}
+            >
+              Reusar
+            </BotonAnadir>
+          </div>
+        </AccionesPaso>
+      )}
 
       <DialogoEliminar
         abierto={pasoAEliminar !== null}
@@ -630,41 +857,51 @@ function BotonMenu({
   destructivo?: boolean
   children: string
 }) {
+  // 48 px, el mínimo táctil del sistema. Antes medían 32 y eran la
+  // única forma de reordenar; ahora el asa hace el grueso del trabajo y
+  // estos quedan como el camino accesible y el de eliminar.
   const base =
-    'inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-[7px] text-[13px] font-medium leading-tight'
+    'inline-flex min-h-12 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium leading-tight'
   return (
     <button
       type="button"
       onClick={onClick}
       className={
         destructivo
-          ? `${base} border-transparent px-1 text-noct-error hover:bg-noct-error/10`
+          ? `${base} border-transparent text-noct-error hover:bg-noct-error/10`
           : `${base} border-noct-divider text-noct-text hover:bg-noct-text/[.07]`
       }
     >
-      <Icono size={14} />
+      <Icono size={15} />
       {children}
     </button>
   )
 }
 
-// Boton fantasma de la barra "Agregar" (tarea, advertencia, imagen).
-function BotonAgregar({
+// Boton de la barra fija de añadir (tarea, aviso, foto, reusar). Icono
+// arriba y palabra debajo, 56 px de alto y un cuarto del ancho cada uno:
+// cuatro objetivos grandes, iguales y siempre en el mismo sitio. El
+// `descripcion` va al aria-label porque la palabra sola ("Tarea") no
+// dice a qué paso se añade.
+function BotonAnadir({
   Icono,
   onClick,
+  descripcion,
   children,
 }: {
   Icono: ComponentType<IconoProps>
   onClick: () => void
+  descripcion: string
   children: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-transparent px-1 py-[7px] text-[13px] font-medium leading-tight text-noct-accent hover:bg-noct-accent/10"
+      aria-label={descripcion}
+      className="flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-[3px] rounded-[9px] text-[11.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.12] active:bg-noct-accent/[.2]"
     >
-      <Icono size={13} />
+      <Icono size={20} />
       {children}
     </button>
   )
@@ -835,30 +1072,26 @@ function BloqueEditor({
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
   vinculables: Articulo[]
 }) {
+  // Una sola bandera para las dos hojas (tipo de tarea y tono de aviso):
+  // un bloque es de un tipo o del otro, nunca de los dos, así que no
+  // pueden abrirse a la vez.
+  const [hojaAbierta, setHojaAbierta] = useState(false)
+
   if (bloque.tipo === 'tarea') {
     const info = infoTipoTarea(bloque.tipoTarea)
     return (
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            title={info.titulo}
-            aria-label={info.titulo}
-            onClick={() =>
-              onCambiar(
-                CICLO_TIPO_TAREA[bloque.tipoTarea ?? 'accion'] === 'decision'
-                  ? { tipoTarea: CICLO_TIPO_TAREA[bloque.tipoTarea ?? 'accion'] }
-                  : {
-                      tipoTarea: CICLO_TIPO_TAREA[bloque.tipoTarea ?? 'accion'],
-                      decisionArticuloId: null,
-                      decisionArticuloTitulo: '',
-                    },
-              )
-            }
-            className={`flex min-h-11 w-9 shrink-0 items-center justify-center rounded-md hover:bg-noct-text/[.05] ${info.claseIcono}`}
-          >
-            <info.Icono size={18} />
-          </button>
+        <div className="flex items-center gap-2">
+          <PastillaTipo
+            Icono={info.Icono}
+            claseIcono={info.claseIcono}
+            clasePastilla={info.clasePastilla}
+            palabra={info.corto}
+            // El aria-label dice el tipo actual Y que se puede cambiar:
+            // la pastilla ya no cicla, abre la lista de los tres.
+            etiqueta={`Tipo de línea: ${info.etiqueta}. Tocar para cambiarlo`}
+            onClick={() => setHojaAbierta(true)}
+          />
           <input
             type="text"
             value={bloque.texto}
@@ -877,13 +1110,30 @@ function BloqueEditor({
             }}
             onPaste={(e) => onPegar(e.clipboardData.getData('text'), e)}
             placeholder={info.placeholder}
-            className={`min-h-11 min-w-0 flex-1 ${CLASE_CAMPO_SIN_ANCHO}`}
+            className={`min-h-14 min-w-0 flex-1 text-[15.5px] ${CLASE_CAMPO_SIN_ANCHO}`}
           />
           <BotonQuitar onClick={onQuitar} etiqueta="Quitar esta línea" />
+          <HojaTipoBloque
+            abierto={hojaAbierta}
+            onCerrar={() => setHojaAbierta(false)}
+            titulo="Tipo de línea"
+            opciones={OPCIONES_TIPO_TAREA}
+            seleccionado={bloque.tipoTarea ?? 'accion'}
+            // Salir de "decisión" suelta el vínculo del "No": es un dato
+            // que solo tiene sentido dentro de ese tipo, y dejarlo
+            // guardado en la sombra reaparecería al volver a decisión.
+            onElegir={(tipoTarea) =>
+              onCambiar(
+                tipoTarea === 'decision'
+                  ? { tipoTarea }
+                  : { tipoTarea, decisionArticuloId: null, decisionArticuloTitulo: '' },
+              )
+            }
+          />
         </div>
         {bloque.tipoTarea === 'decision' &&
           (bloque.decisionArticuloId ? (
-            <div className="ml-10 flex items-center justify-between gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/10 px-2.5 py-2">
+            <div className="ml-1 flex items-center justify-between gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/10 px-2.5 py-2">
               <p className="min-w-0 truncate text-[12.5px] leading-[1.45]">
                 <ArrowElbowDownRight size={13} className="mr-1 inline-block align-[-2px] text-noct-precaucion" />
                 Si responde No: {bloque.decisionArticuloTitulo}
@@ -898,7 +1148,7 @@ function BloqueEditor({
             </div>
           ) : (
             vinculables.length > 0 && (
-              <div className="relative ml-10">
+              <div className="relative ml-1">
                 <ArrowElbowDownRight
                   size={13}
                   className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-noct-neutral-500"
@@ -927,21 +1177,24 @@ function BloqueEditor({
   }
 
   if (bloque.tipo === 'aviso') {
-    const tono = TONOS_AVISO.find((t) => t.valor === (bloque.tono ?? 'info')) ?? TONOS_AVISO[0]
+    const tono = infoTono(bloque.tono)
     return (
-      <div className="flex items-start gap-1">
-        <button
-          type="button"
-          title={`${tono.etiqueta}. Tocar para cambiar el tono`}
-          aria-label={`${tono.etiqueta}. Tocar para cambiar el tono`}
-          onClick={() => onCambiar({ tono: tonoSiguiente(bloque.tono) })}
-          className={`flex min-h-11 w-9 shrink-0 items-center justify-center rounded-md hover:bg-noct-text/[.05] ${tono.claseIcono}`}
-        >
-          <tono.Icono size={18} />
-        </button>
-        <div className={`min-w-0 flex-1 rounded-md border ${tono.clasesPanel}`}>
+      <div className="flex items-start gap-2">
+        <PastillaTipo
+          Icono={tono.Icono}
+          claseIcono={tono.claseIcono}
+          clasePastilla={tono.clasesPanel}
+          palabra={tono.corto}
+          etiqueta={`Tono del aviso: ${tono.etiqueta}. Tocar para cambiarlo`}
+          onClick={() => setHojaAbierta(true)}
+        />
+        <div className={`min-w-0 flex-1 rounded-[9px] border-[1.5px] ${tono.clasesPanel}`}>
+          {/* Tres líneas: con la pastilla y la X comiendo ancho, un
+              aviso corriente ("El puerto 24 alimenta el teléfono de
+              recepción por PoE") ocupa tres a 14,5 px, y con dos se leía
+              cortado. */}
           <textarea
-            rows={2}
+            rows={3}
             value={bloque.texto}
             ref={(el) => {
               if (el && enfocar) {
@@ -950,11 +1203,19 @@ function BloqueEditor({
               }
             }}
             onChange={(e) => onCambiar({ texto: e.target.value })}
-            placeholder="Texto de la advertencia"
-            className="block w-full resize-y border-none bg-transparent px-3 py-2.5 text-[13px] leading-[1.5] text-noct-text outline-none"
+            placeholder="Texto del aviso"
+            className="block min-h-14 w-full resize-y border-none bg-transparent px-3 py-2.5 text-[14.5px] leading-[1.45] text-noct-text outline-none"
           />
         </div>
-        <BotonQuitar onClick={onQuitar} etiqueta="Quitar la advertencia" />
+        <BotonQuitar onClick={onQuitar} etiqueta="Quitar el aviso" />
+        <HojaTipoBloque
+          abierto={hojaAbierta}
+          onCerrar={() => setHojaAbierta(false)}
+          titulo="Tono del aviso"
+          opciones={OPCIONES_TONO}
+          seleccionado={bloque.tono ?? 'info'}
+          onElegir={(tono) => onCambiar({ tono })}
+        />
       </div>
     )
   }
@@ -970,16 +1231,57 @@ function BloqueEditor({
   )
 }
 
-// Boton de quitar (la X) comun a tareas y advertencias.
+// Pastilla que ABRE el selector de tipo de una línea: la clasificación
+// de una tarea o el tono de un aviso (tablero 6b).
+//
+// Es el cambio central del tablero. Antes era un icono de 18 px dentro
+// de un objetivo de 36 de ancho que CICLABA: cada toque avanzaba al
+// siguiente valor sin decir cuál venía, así que pasarse costaba dos
+// toques más (y en los avisos, con cinco tonos, cuatro). Ahora mide
+// 56 px, dice su palabra, y abre la lista con los valores descritos.
+function PastillaTipo({
+  Icono,
+  claseIcono,
+  clasePastilla,
+  palabra,
+  etiqueta,
+  onClick,
+}: {
+  Icono: ComponentType<IconoProps>
+  claseIcono: string
+  clasePastilla: string
+  palabra: string
+  etiqueta: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      title={etiqueta}
+      aria-label={etiqueta}
+      onClick={onClick}
+      className={`flex h-14 shrink-0 cursor-pointer items-center gap-1.5 rounded-[9px] border-[1.5px] px-[11px] hover:brightness-125 ${clasePastilla}`}
+    >
+      <Icono size={18} className={`shrink-0 ${claseIcono}`} />
+      <span className={`text-[9.5px] font-semibold uppercase tracking-[.04em] ${claseIcono}`}>
+        {palabra}
+      </span>
+    </button>
+  )
+}
+
+// Boton de quitar (la X) comun a tareas y avisos. 48 px: era 32, y es
+// el objetivo que está justo al lado del campo de texto que se acaba de
+// escribir, así que fallarlo borra la línea equivocada.
 function BotonQuitar({ onClick, etiqueta }: { onClick: () => void; etiqueta: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={etiqueta}
-      className="flex min-h-11 w-8 shrink-0 items-center justify-center rounded-md text-noct-neutral-600 hover:text-noct-text"
+      className="flex h-14 w-12 shrink-0 items-center justify-center rounded-[9px] text-noct-neutral-400 hover:bg-noct-text/[.08] hover:text-noct-text"
     >
-      <X size={14} />
+      <X size={17} />
     </button>
   )
 }
@@ -1004,7 +1306,7 @@ function ImagenBloque({
   const esImagen = bloque.adjunto?.tipo.startsWith('image/') ?? false
 
   return (
-    <div className="ml-10 flex flex-col gap-1.5">
+    <div className="ml-1 flex flex-col gap-1.5">
       <label className="flex h-[140px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-noct-neutral-700 text-center text-[12.5px] text-noct-neutral-400 hover:border-noct-neutral-500 hover:text-noct-text">
         {esImagen && url ? (
           <img src={url} alt={bloque.adjunto?.nombre ?? 'Imagen'} className="h-full w-full object-cover" />

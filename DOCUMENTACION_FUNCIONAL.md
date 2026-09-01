@@ -674,7 +674,9 @@ Barra inferior fija: aviso de validación + botón **"Guardar dispositivo"** (at
 
 ### 7.2 Editor de artículo (`ArticuloForm`)
 
-Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa con **cuatro pestañas** dentro de un contenedor pegajoso. El estado vive todo en el componente (cambiar de pestaña no pierde nada; un solo guardado). Cabecera de tarea ("Editando" o "Creando", el título del artículo y la ruta de vuelta escrita) y pastilla de estado en la banda de debajo. Cada pestaña marca con un punto si tiene algo pendiente. Barra inferior con **completitud %** (10 señales), lista de **sugerencias** tocables (cada una lleva a su pestaña), botón **"Vista previa"** y botón **"Guardar"**.
+Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa con **cuatro pestañas** de 52 px dentro de un contenedor pegajoso. El estado vive todo en el componente (cambiar de pestaña no pierde nada; un solo guardado). Cabecera de tarea ("Editando" o "Creando", el título del artículo y la ruta de vuelta escrita) y pastilla de estado en la banda de debajo. Cada pestaña marca con un punto si tiene algo pendiente. Barra inferior con la **barra de añadir** del editor de pasos (solo en la pestaña Pasos, ver 7.2.1), **completitud %** (10 señales), lista de **sugerencias** tocables (cada una lleva a su pestaña), y dos acciones de 56 px: **"Guardar"** y, a su izquierda, **"Vista previa"** o **"Probar"**.
+
+**"Probar"** (tarea 209): dentro de la pestaña Pasos y con al menos un paso escrito, "Vista previa" se convierte en "Probar", que abre un diálogo ("Probar el paso N", "sin salir del editor y sin guardar") y de ahí a la misma vista previa, ya **abierta y puesta en ese paso**. Cierra el hueco de que el autor nunca veía su propio trabajo como lo verá el técnico sin recorrer el artículo entero.
 
 **Pestaña General** (de qué trata y cómo se encuentra):
 
@@ -720,13 +722,20 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 
 #### 7.2.1 Editor de pasos (`PasosEditor`)
 
-Cada **paso** es una tarjeta con: número, **Título** ("Qué hacer en este paso"), **Objetivo** ("qué se logra al terminar", opcional) y un menú **"···"** (Subir / Bajar / Eliminar, con confirmación). El **cuerpo** del paso son **bloques** que se agregan con cuatro botones: **Tarea**, **Advertencia**, **Imagen** y **Reutilizar** (H4: abre los "Vínculos del paso", donde vive "Procedimiento relacionado"; hace visible la composición por referencia, que ya existía en el plegable).
+Cada **paso** es una tarjeta con: **asa de arrastre**, número, **Título** ("Qué hacer en este paso"), **Objetivo** ("qué se logra al terminar") y un menú **"···"** (Subir / Bajar / Eliminar, con confirmación). El **cuerpo** del paso son **bloques**.
 
-- **Bloque Tarea**: icono que se toca para ciclar el tipo (Acción con casilla → Verificación → Decisión Sí/No) + texto. Enter inserta otra tarea; pegar varias líneas las reparte. Una **Decisión** puede vincular "Si responde No" un artículo (select). Cada tarea puede llevar además un vínculo protegido.
-- **Bloque Advertencia**: icono que cicla el tono (información, precaución, importante, consejo, dato técnico) + área de texto.
+**Paso activo** (tarea 209): la tarjeta que se acaba de tocar lleva borde de acento. Es la que reciben la barra de añadir y "Probar". Si no se ha tocado ninguna, manda la última, que es donde se está escribiendo.
+
+**Reordenar** (tarea 209): se arrastra por el asa (44x48, con eventos de puntero, así que funciona con dedo, ratón y lápiz; no usa la API de arrastre de HTML5, que no existe en móvil). Durante el arrastre la tarjeta agarrada sigue al dedo y las de en medio se apartan para abrir el hueco; el orden se aplica al soltar. El asa también acepta **flecha arriba / flecha abajo** (±1), que es el camino sin puntero, y el menú "···" conserva Subir/Bajar. Antes reordenar era solo ±1: llevar el paso 6 al 2 eran cuatro toques en un botón de 32 px.
+
+**Barra de añadir** (tarea 209): cuatro botones de 56 px (**Tarea**, **Aviso**, **Foto**, **Reusar**) fijos al pie, dentro de la misma barra de la acción principal, que actúan sobre el paso activo. Antes vivían dentro de la tarjeta, en `flex-wrap`, con 31 px de alto y cambiando de sitio según lo largo que fuera el paso. "Reusar" (H4) abre los "Vínculos del paso", donde vive "Procedimiento relacionado".
+
+- **Bloque Tarea**: **pastilla etiquetada de 56 px** que dice el tipo ("Acción", "Verif.", "Decisión") y abre una hoja con los tres descritos (`HojaTipoBloque`), + texto. Antes era un icono de 18 px que **ciclaba a ciegas**: no decía qué venía después, así que pasarse costaba dos toques más. Enter inserta otra tarea; pegar varias líneas las reparte. Una **Decisión** puede vincular "Si responde No" un artículo (select); salir del tipo Decisión suelta ese vínculo. Cada tarea puede llevar además un vínculo protegido.
+- **Bloque Aviso**: pastilla con la palabra corta del tono ("Info", "Cuidado", "Alerta", "Consejo", "Dato") que abre la misma hoja con los cinco tonos y su explicación, + área de texto de 3 líneas. Antes el icono ciclaba los cinco tonos, uno por toque.
 - **Bloque Imagen**: slot para subir una captura + pie opcional.
+- **Quitar una línea**: la X mide **48x56** (antes 32).
 - **Archivos del paso completo**: "Adjuntar archivo del paso: manual, PDF o planilla" (distinto de las imágenes ancladas a una tarea).
-- **Vínculos del paso** (bloque plegable "Vínculos del paso"):
+- **Vínculos del paso** (bloque plegable "Vínculos: dato protegido, procedimiento o solución"):
   - **"Vincular información protegida"** (select con dos grupos): datos protegidos de los equipos del artículo, y secretos de la bóveda.
   - **"Procedimiento relacionado"** (subprocedimiento que se ejecuta en este paso).
   - **"Solución si el paso falla"**.

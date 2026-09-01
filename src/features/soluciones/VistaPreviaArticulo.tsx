@@ -17,6 +17,10 @@ interface Props {
   etiquetas: string[]
   procedimiento: Procedimiento | null
   contenido: string
+  // Paso que "Probar" quiere enseñar (tablero 6b): la vista previa
+  // entra abierta en ese paso y lo trae a la vista, en vez de empezar
+  // por la portada del articulo. null = vista previa normal.
+  pasoDestacadoId?: string | null
   onCerrar: () => void
 }
 
@@ -34,6 +38,7 @@ export function VistaPreviaArticulo({
   etiquetas,
   procedimiento,
   contenido,
+  pasoDestacadoId = null,
   onCerrar,
 }: Props) {
   const idEfimero = `vista-previa:${articuloId}`
@@ -58,7 +63,7 @@ export function VistaPreviaArticulo({
     <div className="nocturne fixed inset-0 z-[70] overflow-y-auto bg-noct-bg font-inter text-noct-text">
       <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-noct-divider bg-noct-bg/[.92] px-4 py-3 backdrop-blur-[12px]">
         <p className="text-sm font-medium text-noct-text">
-          Vista previa
+          {pasoDestacadoId ? 'Como lo ve el técnico' : 'Vista previa'}
           <span className="ml-2 rounded-full border border-noct-precaucion/50 bg-noct-precaucion/[.14] px-2 py-0.5 text-[10px] text-noct-precaucion">
             Sin guardar
           </span>
@@ -102,7 +107,11 @@ export function VistaPreviaArticulo({
         )}
 
         {procedimiento && (
-          <ProcedimientoVista articuloId={idEfimero} procedimiento={procedimiento} />
+          <ProcedimientoVista
+            articuloId={idEfimero}
+            procedimiento={procedimiento}
+            pasoDestacadoId={pasoDestacadoId}
+          />
         )}
 
         {contenido.trim() !== '' && (

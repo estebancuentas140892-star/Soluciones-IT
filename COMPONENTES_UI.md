@@ -60,7 +60,7 @@ Componentes:
 
 ### 1.3 `src/components/iconos.tsx` (set de iconos)
 
-93 iconos Phosphor (MIT) inlineados como SVG propios, para no depender de CDN (rompe offline) ni cargar el paquete completo. Suma desde la tarea 182: `DotsNine` (el glifo de "Más", una cuadrícula de 9 puntos; sin variante `Fill`, el mockup usa el mismo trazo activo e inactivo). Suma desde la tarea 208: `ArrowsLeftRight` (invertir la dirección de un enlace). No se reutilizó `ArrowsClockwise`, que en esta app ya significa "rotar/reemplazar" (un icono, un significado).
+94 iconos Phosphor (MIT) inlineados como SVG propios, para no depender de CDN (rompe offline) ni cargar el paquete completo. Suma desde la tarea 182: `DotsNine` (el glifo de "Más", una cuadrícula de 9 puntos; sin variante `Fill`, el mockup usa el mismo trazo activo e inactivo). Suma desde la tarea 208: `ArrowsLeftRight` (invertir la dirección de un enlace). Suma desde la tarea 209: `DotsSixVertical` (asa de arrastre del editor de pasos; es el glifo universal de "esto se agarra y se mueve"). No se reutilizó `ArrowsClockwise`, que en esta app ya significa "rotar/reemplazar" (un icono, un significado).
 
 - Props: `IconoProps = SVGProps<SVGSVGElement> & { size?: number }`. `size` por defecto 16, `fill="currentColor"` (hereda el color del texto), `aria-hidden` por defecto.
 - Variantes: el sufijo `Fill` marca la versión rellena (`Star`/`StarFill`, `House`/`HouseFill`, `Vault`/`VaultFill`...), usada típicamente para la pestaña activa.
@@ -385,6 +385,26 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Regla R1 ("color con oficio"):** el matiz del TIPO vive en el glifo y el recuadro va neutro (`text/6%`). Antes el recuadro entero iba relleno del color del tipo y, con seis tipos en la misma columna, la lista se leía como un arcoíris donde el color ya no informaba. El color de la CATEGORÍA sigue viviendo en los chips de filtro, nunca en la fila.
 - **Dónde:** `SolucionesPage`. **Pendiente:** migrar `CategoriaPage` al rediseñar P4.
 - **Relación con la decisión de la tarea 145** (que dijo "NO crear `<FilaArticulo>`"): ahí se comparaba la fila de artículo contra `FilaDispositivo` y la de Red, y sigue valiendo (esto **no** se unifica con la fila de dispositivo). Lo que se unifica son las **dos filas de artículo**, que divergían solo porque nadie las había mirado juntas y que el rediseño hace converger a propósito. Ver [DECISIONES.md](DECISIONES.md).
+
+### 3.8e `soluciones/HojaTipoBloque`
+- **Propósito:** hoja inferior que ELIGE el tipo de una línea de un paso: la clasificación de una tarea (acción / verificación / decisión) o el tono de un aviso (información / cuidado / alerta / consejo / dato). Tarea 209, tablero `6b` del handoff "Diseño móvil".
+- **Props:** `{ abierto, onCerrar, titulo, opciones: OpcionTipoBloque<T>[], seleccionado: T, onElegir }`. Genérico sobre `T extends string`.
+- **`OpcionTipoBloque<T>`:** `{ valor, etiqueta, descripcion, Icono, claseIcono }`. La `descripcion` es obligatoria a propósito: la hoja existe para decir qué significa cada valor.
+- **Diferencia con `HojaFiltro`:** aquella filtra una lista (rejilla de 2 columnas, opción con conteo, se puede limpiar); esta clasifica un dato (columna de filas de 64 px, cada una con su explicación, siempre hay un valor elegido).
+- **Qué cierra:** los dos selectores se cambiaban CICLANDO A CIEGAS (`CICLO_TIPO_TAREA` y `tonoSiguiente`, ambos eliminados): cada toque de un icono de 18 px avanzaba al siguiente valor sin decir cuál venía, así que pasarse costaba dos toques más, y en los avisos cuatro.
+- **Dónde:** `PasosEditor` (`BloqueEditor`, para tarea y para aviso). Usa `Modal` internamente.
+
+### 3.8f `soluciones/DialogoProbarPaso`
+- **Propósito:** confirmación de "Probar" en el editor de pasos (tarea 209). Dice qué paso se va a ver y que no se sale del editor ni se guarda nada, antes de que la vista previa tape la pantalla completa.
+- **Props:** `{ abierto, numeroPaso, onCerrar, onVerComoTecnico }`.
+- **Por qué el paso intermedio:** la vista previa es una capa a pantalla completa y el editor tiene cambios sin guardar; que todo desaparezca de golpe se lee como "se perdió el trabajo".
+- **Dónde:** `ArticuloForm`, solo dentro de la pestaña Pasos y con al menos un paso escrito. Fuera de ahí el botón sigue siendo "Vista previa" y abre el artículo entero.
+
+### 3.8g `soluciones/AccionesPaso` (`ranuraAccionesPaso.tsx`)
+- **Propósito:** ranura para la barra de "añadir" del editor de pasos (tarea 209). Mismo patrón y mismo motivo que `BandaTarea` (2.10n): los cuatro botones tienen que vivir en la barra fija del pie, que monta `ArticuloForm`, pero saben del paso activo y de cómo se crea un bloque, que es cosa de `PasosEditor`.
+- **Props:** `{ children }`. Fuera de la barra no dibuja nada (no falla).
+- **Cómo:** `ArticuloForm` publica un `<div ref={setRanuraAcciones} className="empty:hidden" />` dentro de su barra fija y lo expone con `ProveedorAccionesPaso`; `PasosEditor` lo llena con `createPortal`. El hueco va en estado (no en una ref) para que los hijos vuelvan a renderizar cuando exista. Resultado: **una sola barra fija**, sin calcular ningún `bottom` contra el alto de la otra (que además cambia con las sugerencias de completitud abiertas).
+- **Dónde:** `ArticuloForm` (provee) y `PasosEditor` (consume).
 
 ### 3.8d `inicio/BienvenidaPrimerDia`
 - **Propósito:** la primera impresión de la app para un técnico nuevo (tarea 184, mockup `3b`). Con la base vacía, seis de los nueve bloques de Inicio no se pintan, así que la entrada eran un buscador y tres atajos; y lo que de verdad hay que hacer el primer día (instalar la app y bajar los adjuntos, de lo que depende el trabajo sin señal) no se ofrecía en ninguna pantalla.
