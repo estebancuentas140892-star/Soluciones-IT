@@ -4,11 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 212 se cerró el 2026-08-31. **Con ella queda implementado el Paso 6 completo del handoff "Diseño móvil"** (6b tarea 209 + el hallazgo derivado 212, 6c tarea 210, 6d tarea 211); el tablero 6a es el diagnóstico del ANTES y no se implementa. Los Pasos 1 a 5 de la carpeta siguen sin registrar: el usuario autorizó solo el Paso 6. La siguiente pendiente es la 213, ver "Por hacer".)*
-
-**Despliegue confirmado (regla 14).** Los cuatro commits del Paso 6 (`111794b`, `e6a0244`, `a53e2dc`, `5ac73a1`) están servidos en **https://soluciones-it-psi.vercel.app**: el chunk `ArticuloForm-ChLKgMuL.js` de producción contiene "Buscar en ", "Ninguna coincidencia", "Tipo de línea" y "Reordenar el paso". Comprobado por HTTP contra `/sw.js` y los assets reales (el deploy de la 212 tardó ~4 minutos en aparecer tras el push; los hashes de Vercel difieren de los locales, así que no sirven para comparar).
-
-**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+*(vacío: la tarea 213 se cerró el 2026-09-01. La siguiente pendiente es la 203, ver "Por hacer".)*
 
 ---
 
@@ -227,17 +223,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 213. Tres pruebas rotas de antes, dos causas distintas
-
-- **Descripción:** `npm test` deja 3 fallos en `src/` que **no** los causó ningún cambio reciente (confirmado con `git stash` el 2026-08-31, antes de tocar nada). Son dos problemas distintos:
-  - `src/features/inicio/pendientes.test.ts:144` espera `'Vencida · Switch B'` y recibe `'Vence pronto · Switch B'`. La prueba fija fechas absolutas y las compara contra el reloj real, así que **caduca sola** con el paso del tiempo. Arreglo: fechas relativas a `Date.now()` o reloj falso (`vi.useFakeTimers`).
-  - `src/lib/archivosPendientes.test.ts:278` y `:288` fallan con `new row violates row-level security policy`. La prueba **alcanza el Supabase real** a través de `subirConDeduplicacion` en vez de quedarse en el doble; el resultado depende de que haya `.env` en la máquina. Arreglo: cortar esa ruta con un doble, para que la prueba no dependa de credenciales ni de la red.
-- **Motivo:** una suite con fallos conocidos deja de servir como red de seguridad, porque nadie distingue el fallo nuevo del de siempre.
-- **Impacto:** medio. No afecta a producción; afecta a la verificación de todo lo demás.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/inicio/pendientes.test.ts`, `src/lib/archivosPendientes.test.ts`.
-- **Dependencias:** ninguna. Relacionada con la **178** (el worktree obsoleto `.claude/worktrees/dazzling-benz-13478d` duplica cada fallo, así que `npm test` los reporta 6 veces en vez de 3).
 
 ### 203. Auditoría móvil, fase 2: Inicio en cinco bloques y dos pesos de fila (M-006, M-007, M-013, M-003)
 

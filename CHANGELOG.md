@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Corregido (tarea 213): tres pruebas rotas de antes, dos causas distintas
+
+**Área modificada:** `src/features/inicio/pendientes.test.ts`, `src/lib/archivosPendientes.test.ts`.
+**Motivo:** `npm test` dejaba 3 fallos en `src/` que ningún cambio reciente causó (confirmado con `git stash` el 2026-08-31). Una suite con fallos conocidos deja de servir como red de seguridad: nadie distingue el fallo nuevo del de siempre.
+**Impacto esperado:** medio. No toca producción; devuelve la fiabilidad de la suite.
+
+- **Corregido** `pendientes.test.ts:144` esperaba `'Vencida · Switch B'` y a veces recibía `'Vence pronto · Switch B'`. Causa real: las fechas relativas ("ayer", "en un mes") se armaban con `toISOString().slice(0, 10)`, que da la fecha en **UTC**, mientras `estadoVencimiento` (`vencimiento.ts`) interpreta `venceEn` como un día de calendario **local**. En un huso detrás de UTC (America/Bogota, UTC-5), la fecha UTC "adelanta" un día varias horas antes de la medianoche local, así que "ayer" calculado así podía coincidir con el "hoy" local (`diasRestantes = 0` en vez de negativo) y la prueba caducaba sola según la hora del día en que corriera. Arreglo: helper `fechaLocal(fecha)` que arma la fecha con `getFullYear/getMonth/getDate` (calendario local, igual que la interpreta el código), usado en los 8 sitios del archivo que antes llamaban `toISOString().slice(0, 10)`.
+- **Corregido** `archivosPendientes.test.ts:278` y `:288` fallaban con `new row violates row-level security policy`. Causa real: `subirConDeduplicacion` alcanza `subirOEncolarArchivo`, que solo encola sin conexión si `supabase` es `null`; en cualquier máquina con un `.env` real (este repo lo trae para desarrollo) el cliente existe y la prueba intentaba una subida anónima de verdad contra el Supabase real, rechazada por RLS. El resultado dependía de si había `.env`, no del código. Arreglo: `vi.mock('./supabase', () => ({ supabase: null, supabaseConfigured: false }))` al principio del archivo, para que la rama "sin conexión: encola" (que es justo lo que esas pruebas verifican) sea determinista, sin depender de credenciales ni de la red.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios. `npx vitest run --dir src`: **975 de 975 pruebas en verde** (excluye a propósito `.claude/worktrees/dazzling-benz-13478d`, un worktree obsoleto que duplica cada fallo, anotado en la tarea 178).
+
 ### Cambiado (tarea 212): los cuatro `<select>` nativos del editor de pasos ganan buscador
 
 **Área modificada:** `src/features/soluciones/PasosEditor.tsx`, `HojaVinculo.tsx` (nuevo).

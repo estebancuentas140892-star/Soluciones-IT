@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from './db'
 import {
   calcularHashArchivo,
@@ -11,6 +11,16 @@ import {
   subirConDeduplicacion,
 } from './archivosPendientes'
 import { nuevoId } from './repositorio'
+
+// Doble de './supabase' (tarea 213). Sin él, `subirOEncolarArchivo`
+// alcanza el Supabase REAL en cualquier máquina que tenga un `.env`
+// con credenciales válidas (este repo lo trae para desarrollo): la
+// subida anónima choca con la RLS de Storage ("new row violates
+// row-level security policy") y la prueba pasa o falla según si hay
+// `.env`, no según el código. `supabase: null` fuerza siempre la rama
+// sin conexión (encolar), que es justo lo que estas pruebas verifican,
+// sin depender de credenciales ni de la red.
+vi.mock('./supabase', () => ({ supabase: null, supabaseConfigured: false }))
 
 beforeEach(async () => {
   await Promise.all(db.tables.map((tabla) => tabla.clear()))

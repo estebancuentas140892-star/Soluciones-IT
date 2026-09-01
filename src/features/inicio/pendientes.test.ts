@@ -8,6 +8,21 @@ import {
   sugerenciasSinRevisar,
 } from './pendientes'
 
+// Fecha local en formato "YYYY-MM-DD", igual a como `estadoVencimiento`
+// (vencimiento.ts) interpreta `venceEn`: un día de calendario LOCAL, no
+// UTC. Las pruebas de más abajo usaban `toISOString().slice(0, 10)`,
+// que arma la fecha en UTC; en un huso detrás de UTC (America/Bogota,
+// UTC-5) esa fecha UTC "adelanta" al día siguiente varias horas antes
+// de medianoche local, así que "ayer" calculado así podía coincidir
+// con el "hoy" local (diasRestantes = 0, "Vence pronto") en vez de dar
+// negativo ("Vencida"): la prueba caducaba sola según la hora del día.
+function fechaLocal(fecha: Date): string {
+  const yyyy = fecha.getFullYear()
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dd = String(fecha.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 function articulo(cambios: Partial<Articulo> & { id: string }): Articulo {
   return {
     categoriaId: 'cat-1',
@@ -105,8 +120,8 @@ describe('borradoresPropios', () => {
 describe('credencialesPorVencer', () => {
   it('incluye vencidas y próximas, vencidas primero', () => {
     const hoy = new Date()
-    const enUnMes = new Date(hoy.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-    const ayer = new Date(hoy.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const enUnMes = fechaLocal(new Date(hoy.getTime() + 60 * 24 * 60 * 60 * 1000))
+    const ayer = fechaLocal(new Date(hoy.getTime() - 24 * 60 * 60 * 1000))
     const items = credencialesPorVencer([
       credencial({ id: 'c1', titulo: 'Lejana', venceEn: enUnMes }),
       credencial({ id: 'c2', titulo: 'Vencida', venceEn: ayer }),
@@ -115,7 +130,7 @@ describe('credencialesPorVencer', () => {
   })
 
   it('no incluye una credencial sin vencimiento ni una eliminada', () => {
-    const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const ayer = fechaLocal(new Date(Date.now() - 24 * 60 * 60 * 1000))
     expect(
       credencialesPorVencer([
         credencial({ id: 'c1', titulo: 'Sin fecha' }),
@@ -128,8 +143,8 @@ describe('credencialesPorVencer', () => {
 describe('camposProtegidosPorVencer', () => {
   it('incluye vencidos y próximos, vencidos primero, con el nombre vivo del equipo', () => {
     const hoy = new Date()
-    const enUnMes = new Date(hoy.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-    const ayer = new Date(hoy.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const enUnMes = fechaLocal(new Date(hoy.getTime() + 60 * 24 * 60 * 60 * 1000))
+    const ayer = fechaLocal(new Date(hoy.getTime() - 24 * 60 * 60 * 1000))
     const items = camposProtegidosPorVencer(
       [
         campoProtegido({ id: 'cp1', nombre: 'Lejana', dispositivoId: 'd1', venceEn: enUnMes }),
@@ -146,7 +161,7 @@ describe('camposProtegidosPorVencer', () => {
   })
 
   it('no incluye un campo sin vencimiento, eliminado o sin equipo', () => {
-    const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const ayer = fechaLocal(new Date(Date.now() - 24 * 60 * 60 * 1000))
     expect(
       camposProtegidosPorVencer(
         [
@@ -195,7 +210,7 @@ describe('sugerenciasSinRevisar', () => {
 
 describe('calcularPendientes', () => {
   it('combina las tres fuentes, credenciales primero, y respeta el límite', () => {
-    const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const ayer = fechaLocal(new Date(Date.now() - 24 * 60 * 60 * 1000))
     const items = calcularPendientes({
       articulos: [articulo({ id: 'a1', estado: 'borrador', updatedBy: 'yo', titulo: 'Mi borrador' })],
       credenciales: [credencial({ id: 'c1', titulo: 'Vencida', venceEn: ayer })],
@@ -212,7 +227,7 @@ describe('calcularPendientes', () => {
   })
 
   it('sin permiso de bóveda, no incluye credenciales aunque estén vencidas', () => {
-    const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const ayer = fechaLocal(new Date(Date.now() - 24 * 60 * 60 * 1000))
     const items = calcularPendientes({
       articulos: [],
       credenciales: [credencial({ id: 'c1', titulo: 'Vencida', venceEn: ayer })],

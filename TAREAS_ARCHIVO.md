@@ -1,5 +1,19 @@
 # Historial de tareas finalizadas
 
+### 213. Tres pruebas rotas de antes, dos causas distintas
+
+**Estado**: TERMINADA y **verificada** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **975 de 975** pruebas en verde. **Prioridad**: Media. **Origen**: detectado al cerrar la tarea 209, confirmado ajeno con `git stash` antes de tocar nada. **Modelo/esfuerzo**: Sonnet 5 / Medio.
+
+**Dos causas, dos archivos.**
+
+1. **`pendientes.test.ts:144`**, `'Vencida · Switch B'` vs `'Vence pronto · Switch B'`. Las fechas relativas de la prueba ("ayer", "en un mes") se armaban con `toISOString().slice(0, 10)` (fecha en **UTC**), mientras `estadoVencimiento` (`vencimiento.ts`) interpreta `venceEn` como un día de calendario **local**. En un huso detrás de UTC (America/Bogota, UTC-5, confirmado con `node -e "new Date().getTimezoneOffset()"` = 300), la fecha UTC ya es "mañana" durante varias horas cada noche local: "ayer" calculado en UTC podía coincidir con "hoy" en local (`diasRestantes = 0`, "Vence pronto") en vez de dar negativo ("Vencida"). La prueba caducaba sola según la hora del día en que corriera, no según el código. Arreglo: `fechaLocal(fecha)`, un helper de 4 líneas con `getFullYear/getMonth/getDate`, sustituye los 8 sitios del archivo que llamaban `toISOString().slice(0, 10)`.
+2. **`archivosPendientes.test.ts:278` y `:288`**, `new row violates row-level security policy`. `subirConDeduplicacion` alcanza `subirOEncolarArchivo`, que solo encola sin conexión si `supabase` es `null`. En cualquier máquina con un `.env` real (este repo lo trae para desarrollo) el cliente existe de verdad, así que la prueba intentaba una subida **anónima real** contra el Supabase del proyecto, y la RLS de Storage la rechazaba. El resultado dependía de si la máquina tenía `.env`, no del código bajo prueba. Arreglo: `vi.mock('./supabase', () => ({ supabase: null, supabaseConfigured: false }))` al principio del archivo, así la rama "sin conexión: encola" (que es justo lo que esas dos pruebas verifican) queda determinista, sin credenciales ni red.
+
+**Por qué no `vi.useFakeTimers`** (la otra opción que sugería la descripción original de la tarea): el reloj falso habría tapado el síntoma sin arreglar el defecto real, que era mezclar UTC y calendario local. `fechaLocal` corrige la causa: las fechas de la prueba ahora se arman exactamente como el código de producción las interpreta.
+
+**Verificación**: `npx vitest run --dir src` (excluye a propósito `.claude/worktrees/dazzling-benz-13478d`, el worktree obsoleto de la tarea 178, que duplica cada fallo) da 76 archivos y 975 pruebas, todas en verde. `npm test` sin filtrar sigue mostrando 2 fallos, ambos dentro de ese worktree, no en `src/`.
+
+
 ### 212. Los cuatro `<select>` nativos del editor de pasos
 
 **Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-31. `tsc -b`, `oxlint` y `npm run build` limpios; 141 pruebas de `src/features/soluciones` en verde. **Prioridad**: Media. **Origen**: hallazgo del tablero `6b` del handoff "Soluciones IT, Diseño móvil", anotado al cerrar la tarea 209 y dejado fuera por escala. **Modelo/esfuerzo**: Sonnet 5 / Alto.
