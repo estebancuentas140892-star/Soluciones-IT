@@ -6,6 +6,10 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(vacío: la tarea 215 se cerró el 2026-09-01. Con ella **el `Paso 3` del handoff queda completo**: sus dos tableros implementables eran el `3b` (tarea 214) y el `3d` (tarea 215). Los **Pasos 1, 2 y 4** siguen sin registrar hasta que el usuario los pida. La siguiente pendiente es la **204**, ver "Por hacer".)*
 
+**Despliegue confirmado (regla 14).** El commit `e17d911` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `AsistenteVista-Bite7Bcm.js` de producción contiene "Algo va mal en el paso", "Abrir la contingencia vinculada", "Saltar el paso y seguir" y "no se pierden", y `ProcedimientoVista-B3-bt-sL.js` contiene "Sí, ver la contingencia" y las filas de tarea de `min-h-[56px]`. Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar, el más rápido hasta ahora (los anteriores fueron de 4, 7 y 15).
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
 **Despliegue confirmado (regla 14).** El commit `71399b3` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `SolucionesPage-Mjkhvsem.js` de producción contiene "solo notas" (la línea de capacidad de una guía sin pasos). Comprobado por HTTP contra `/sw.js` y el asset real; el despliegue tardó unos 15 minutos en propagar, más que los 4-7 habituales.
 
 **Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
