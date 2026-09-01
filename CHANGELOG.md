@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Cambiado (tarea 212): los cuatro `<select>` nativos del editor de pasos ganan buscador
+
+**Área modificada:** `src/features/soluciones/PasosEditor.tsx`, `HojaVinculo.tsx` (nuevo).
+**Motivo:** hallazgo del tablero `6b`, anotado al cerrar la tarea 209 y dejado fuera por escala. El editor usaba cuatro `<select>` nativos (información protegida con `<optgroup>`, procedimiento relacionado, solución si el paso falla, "Si responde No" de una decisión), con el título concatenado dentro de la opción. En el teléfono un `<select>` largo abre la rueda del sistema, no se puede buscar dentro y el título se corta.
+**Impacto esperado:** medio. Sustituye el control, no el dato. **Sin esquema.**
+
+- **Agregado** `HojaVinculo`: hoja inferior con **buscador siempre visible** (filtra sin distinguir mayúsculas ni tildes, reutiliza `normalizarTexto` del buscador global) que elige un vínculo, con filas de 56 px. Admite grupos con encabezado (para el `<optgroup>` de información protegida) o lista plana (los otros tres).
+- **Cambiado** `VinculoDelPaso`, `VinculoProtegidoDelPaso` y el selector de decisión dentro de `BloqueEditor`: el `<select>` punteado pasa a ser un botón punteado que abre `HojaVinculo`. La codificación `"tipo:id"` de información protegida se conserva igual, ahora decodificada en el `onElegir` de `HojaVinculo`.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; 141 pruebas de `src/features/soluciones` en verde. **Medido en navegador real a 375x812** con 30 guías, 1 campo protegido y 1 credencial sembrados y borrados al terminar: los tres selectores de guías muestran "Buscar en 30 guías" y filtran a 1 fila con "17"; el de información protegida agrupa bajo "Secretos de la bóveda" y muestra "Buscar en 1 dato"; elegir una fila cierra la hoja y deja el vínculo aplicado ("Procedimiento relacionado: Guía de prueba 05...", "Si responde No: Guía de prueba 23...", "Información protegida: WiFi invitados (Redes)"); una búsqueda sin coincidencias muestra "Ninguna coincidencia para «zzz-no-existe»".
+
 ### Agregado (tarea 211): modo foco, una tarea a la vez
 
 **Área modificada:** `src/features/soluciones/ModoFoco.tsx` (nuevo), `AsistenteVista.tsx`, `src/components/iconos.tsx`.

@@ -404,6 +404,14 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dos canales, forma y color** (regla R16): hecho con check, actual y pendientes con su número, saltado con el número en un círculo de borde discontinuo.
 - **Dónde:** `AsistenteVista` en nivel 0. Usa `Modal` internamente.
 
+### 3.8j `soluciones/HojaVinculo`
+- **Propósito:** hoja inferior con buscador que elige un vínculo del paso (tarea 212, hallazgo del tablero 6b). Sustituye a los cuatro `<select>` nativos del editor de pasos: información protegida, procedimiento relacionado, solución si el paso falla, y el "Si responde No" de una tarea de decisión.
+- **Props:** `{ abierto, onCerrar, titulo, placeholderBuscar, grupos: GrupoVinculo[], onElegir }`.
+- **`GrupoVinculo`:** `{ etiqueta?, opciones: { id, titulo }[] }`. Sin `etiqueta`: lista plana, sin encabezado (los tres selects de guías). Con `etiqueta`: agrupa con un rótulo, como el `<optgroup>` que reemplaza (información protegida: "Datos protegidos del equipo" / "Secretos de la bóveda"). El id de una opción puede codificar más de un dato (`"tipo:id"`), decodificado por quien llama `onElegir`.
+- **Buscador siempre visible**, filtra sin distinguir mayúsculas ni tildes (`normalizarTexto`, ya usado por el buscador global). Se limpia solo al reabrir. Sin coincidencias: "Ninguna coincidencia para «...»".
+- **Qué cierra:** en el teléfono un `<select>` largo abre la rueda del sistema, no se puede buscar dentro y el título se corta. Con la biblioteca de guías creciendo, la lista de vinculables ya no cabe en una rueda.
+- **Dónde:** `PasosEditor` (`VinculoDelPaso`, `VinculoProtegidoDelPaso`, y el vínculo "Si responde No" dentro de `BloqueEditor`). Usa `Modal` internamente.
+
 ### 3.8e `soluciones/HojaTipoBloque`
 - **Propósito:** hoja inferior que ELIGE el tipo de una línea de un paso: la clasificación de una tarea (acción / verificación / decisión) o el tono de un aviso (información / cuidado / alerta / consejo / dato). Tarea 209, tablero `6b` del handoff "Diseño móvil".
 - **Props:** `{ abierto, onCerrar, titulo, opciones: OpcionTipoBloque<T>[], seleccionado: T, onElegir }`. Genérico sobre `T extends string`.

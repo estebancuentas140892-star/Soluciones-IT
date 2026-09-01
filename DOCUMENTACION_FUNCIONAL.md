@@ -730,13 +730,13 @@ Cada **paso** es una tarjeta con: **asa de arrastre**, número, **Título** ("Qu
 
 **Barra de añadir** (tarea 209): cuatro botones de 56 px (**Tarea**, **Aviso**, **Foto**, **Reusar**) fijos al pie, dentro de la misma barra de la acción principal, que actúan sobre el paso activo. Antes vivían dentro de la tarjeta, en `flex-wrap`, con 31 px de alto y cambiando de sitio según lo largo que fuera el paso. "Reusar" (H4) abre los "Vínculos del paso", donde vive "Procedimiento relacionado".
 
-- **Bloque Tarea**: **pastilla etiquetada de 56 px** que dice el tipo ("Acción", "Verif.", "Decisión") y abre una hoja con los tres descritos (`HojaTipoBloque`), + texto. Antes era un icono de 18 px que **ciclaba a ciegas**: no decía qué venía después, así que pasarse costaba dos toques más. Enter inserta otra tarea; pegar varias líneas las reparte. Una **Decisión** puede vincular "Si responde No" un artículo (select); salir del tipo Decisión suelta ese vínculo. Cada tarea puede llevar además un vínculo protegido.
+- **Bloque Tarea**: **pastilla etiquetada de 56 px** que dice el tipo ("Acción", "Verif.", "Decisión") y abre una hoja con los tres descritos (`HojaTipoBloque`), + texto. Antes era un icono de 18 px que **ciclaba a ciegas**: no decía qué venía después, así que pasarse costaba dos toques más. Enter inserta otra tarea; pegar varias líneas las reparte. Una **Decisión** puede vincular "Si responde No" un artículo, con buscador (`HojaVinculo`, tarea 212); salir del tipo Decisión suelta ese vínculo. Cada tarea puede llevar además un vínculo protegido.
 - **Bloque Aviso**: pastilla con la palabra corta del tono ("Info", "Cuidado", "Alerta", "Consejo", "Dato") que abre la misma hoja con los cinco tonos y su explicación, + área de texto de 3 líneas. Antes el icono ciclaba los cinco tonos, uno por toque.
 - **Bloque Imagen**: slot para subir una captura + pie opcional.
 - **Quitar una línea**: la X mide **48x56** (antes 32).
 - **Archivos del paso completo**: "Adjuntar archivo del paso: manual, PDF o planilla" (distinto de las imágenes ancladas a una tarea).
-- **Vínculos del paso** (bloque plegable "Vínculos: dato protegido, procedimiento o solución"):
-  - **"Vincular información protegida"** (select con dos grupos): datos protegidos de los equipos del artículo, y secretos de la bóveda.
+- **Vínculos del paso** (bloque plegable "Vínculos: dato protegido, procedimiento o solución"), cada uno abre `HojaVinculo` (tarea 212: hoja con buscador, en vez del `<select>` nativo que abría la rueda del sistema y no se podía filtrar):
+  - **"Vincular información protegida"**: datos protegidos de los equipos del artículo, y secretos de la bóveda, en dos grupos con encabezado.
   - **"Procedimiento relacionado"** (subprocedimiento que se ejecuta en este paso).
   - **"Solución si el paso falla"**.
 

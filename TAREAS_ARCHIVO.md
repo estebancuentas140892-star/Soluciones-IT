@@ -1,5 +1,20 @@
 # Historial de tareas finalizadas
 
+### 212. Los cuatro `<select>` nativos del editor de pasos
+
+**Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-31. `tsc -b`, `oxlint` y `npm run build` limpios; 141 pruebas de `src/features/soluciones` en verde. **Prioridad**: Media. **Origen**: hallazgo del tablero `6b` del handoff "Soluciones IT, Diseño móvil", anotado al cerrar la tarea 209 y dejado fuera por escala. **Modelo/esfuerzo**: Sonnet 5 / Alto.
+
+**El problema.** Cuatro `<select>` nativos con el título concatenado dentro de la opción: información protegida (con `<optgroup>` y el valor codificado `tipo:id`), procedimiento relacionado, solución si el paso falla, y el "Si responde No" de una tarea de decisión. En el teléfono un `<select>` largo abre la rueda del sistema, no se puede buscar dentro y el título se corta. Con la biblioteca de guías creciendo, la lista de vinculables ya no cabe en una rueda.
+
+**Lo que se hizo.**
+
+- **`HojaVinculo`** (nuevo, genérico para los cuatro casos): hoja inferior con **buscador siempre visible**, que filtra sin distinguir mayúsculas ni tildes reutilizando `normalizarTexto` del buscador global. Filas de 56 px. Admite `grupos: GrupoVinculo[]` con `etiqueta` opcional: sin ella, lista plana (los tres selectores de guías); con ella, encabezado de grupo (información protegida, que reemplaza al `<optgroup>` nativo).
+- Los tres botones punteados (`VinculoDelPaso` x2, el de decisión dentro de `BloqueEditor`) y `VinculoProtegidoDelPaso` cambian de `<select>` a **botón punteado que abre la hoja**. La codificación `"tipo:id"` de información protegida se conserva igual (el id no basta solo para saber a qué tabla apunta); se decodifica en el `onElegir` que pasa `VinculoProtegidoDelPaso`, no dentro de `HojaVinculo`, que se queda genérico y no sabe nada de campos protegidos ni credenciales.
+- Placeholder del buscador con el conteo real ("Buscar en 30 guías", "Buscar en 1 dato"), singular/plural correcto.
+
+**Verificación en navegador** (30 guías, 1 campo protegido y 1 credencial sembrados y borrados al terminar): los tres selectores de guías muestran "Buscar en 30 guías" y filtrar por "17" deja 1 fila ("Guía de prueba 17..."); el de información protegida agrupa bajo "Secretos de la bóveda" (el grupo "Datos protegidos del equipo" no aparece porque el artículo de prueba no estaba vinculado al equipo del campo protegido, comportamiento correcto de `idsEquiposVinculados`) y muestra "Buscar en 1 dato"; elegir una fila en cualquiera de los cuatro cierra la hoja y deja el vínculo aplicado con su título completo; una búsqueda sin coincidencias muestra "Ninguna coincidencia para «zzz-no-existe»".
+
+
 ### 211. Handoff "Diseño móvil", tablero 6d: modo foco, una tarea a la vez
 
 **Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-31. `tsc -b`, `oxlint` y `npm run build` limpios; 141 pruebas de `src/features/soluciones` en verde. **Prioridad**: Alta. **Origen**: tablero `6d` de `Paso 6 - Guías a Fondo.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode. **Con ella queda implementado el Paso 6 completo** (6b tarea 209, 6c tarea 210, 6d esta; el tablero 6a es el diagnóstico del ANTES y no se implementa).

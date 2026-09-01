@@ -57,6 +57,7 @@ import {
 import { TONOS_AVISO, type TonoInfo } from './tonos'
 import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
 import { HojaTipoBloque, type OpcionTipoBloque } from './HojaTipoBloque'
+import { HojaVinculo, type GrupoVinculo } from './HojaVinculo'
 import { AccionesPaso } from './ranuraAccionesPaso'
 
 interface Props {
@@ -907,11 +908,10 @@ function BotonAnadir({
   )
 }
 
-// Un vinculo del paso (credencial, subprocedimiento o solucion): sin
-// vinculo, un recuadro punteado con icono que en realidad es un select
-// (mismo aspecto que el mockup); vinculado, una fila solida con el
-// titulo de referencia y un botón para quitar. Sin candidatos para
-// elegir, no se muestra nada (nunca deja un select vacio).
+// Un vinculo del paso (subprocedimiento o solucion): sin vinculo, un
+// recuadro punteado que abre `HojaVinculo` (buscador, tarea 212);
+// vinculado, una fila solida con el titulo de referencia y un botón
+// para quitar. Sin candidatos para elegir, no se muestra nada.
 function VinculoDelPaso({
   Icono,
   etiqueta,
@@ -929,6 +929,8 @@ function VinculoDelPaso({
   onQuitar: () => void
   placeholderVacio: string
 }) {
+  const [abierta, setAbierta] = useState(false)
+
   if (vinculado) {
     return (
       <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-noct-divider bg-noct-surface px-3">
@@ -952,24 +954,24 @@ function VinculoDelPaso({
   if (opciones.length === 0) return null
 
   return (
-    <div className="relative">
-      <Icono size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400" />
-      <select
-        value=""
-        aria-label={placeholderVacio}
-        onChange={(e) => {
-          if (e.target.value) onElegir(e.target.value)
-        }}
-        className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierta(true)}
+        className="relative flex min-h-11 w-full items-center rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-left text-[13px] text-noct-neutral-400 hover:border-noct-neutral-500 hover:text-noct-text"
       >
-        <option value="">{placeholderVacio}</option>
-        {opciones.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.titulo}
-          </option>
-        ))}
-      </select>
-    </div>
+        <Icono size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400" />
+        <span className="min-w-0 flex-1 truncate">{placeholderVacio}</span>
+      </button>
+      <HojaVinculo
+        abierto={abierta}
+        onCerrar={() => setAbierta(false)}
+        titulo={etiqueta}
+        placeholderBuscar={`Buscar en ${opciones.length} ${opciones.length === 1 ? 'guía' : 'guías'}`}
+        grupos={[{ opciones }]}
+        onElegir={onElegir}
+      />
+    </>
   )
 }
 
@@ -977,9 +979,10 @@ function VinculoDelPaso({
 // protegida" reemplaza al viejo "Datos de la bóveda", que solo podía
 // apuntar a una credencial. Mismo aspecto que VinculoDelPaso, pero con
 // dos grupos de opciones (datos protegidos del equipo primero, secretos
-// globales después) que el <select> nativo separa con <optgroup>. El
-// valor de cada <option> codifica "tipo:id" porque el id por si solo
-// no basta para saber a que tabla apuntar.
+// globales después) que `HojaVinculo` separa con su encabezado de
+// grupo (tarea 212, antes un <optgroup> nativo). El id de cada opción
+// se codifica "tipo:id" porque el id por si solo no basta para saber a
+// que tabla apuntar; se decodifica al elegir.
 function VinculoProtegidoDelPaso({
   vinculo,
   gruposOpciones,
@@ -991,6 +994,8 @@ function VinculoProtegidoDelPaso({
   onElegir: (opcion: OpcionVinculoProtegido) => void
   onQuitar: () => void
 }) {
+  const [abierta, setAbierta] = useState(false)
+
   if (vinculo) {
     return (
       <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-noct-divider bg-noct-surface px-3">
@@ -1009,40 +1014,39 @@ function VinculoProtegidoDelPaso({
     )
   }
 
-  const hayOpciones = gruposOpciones.some((g) => g.opciones.length > 0)
-  if (!hayOpciones) return null
+  const totalOpciones = gruposOpciones.reduce((total, g) => total + g.opciones.length, 0)
+  if (totalOpciones === 0) return null
+
+  const grupos: GrupoVinculo[] = gruposOpciones.map((g) => ({
+    etiqueta: g.etiqueta,
+    opciones: g.opciones.map((o) => ({ id: `${o.tipo}:${o.id}`, titulo: o.titulo })),
+  }))
 
   return (
-    <div className="relative">
-      <LockSimple size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400" />
-      <select
-        value=""
-        aria-label="Vincular información protegida (opcional)"
-        onChange={(e) => {
-          if (!e.target.value) return
-          const separador = e.target.value.indexOf(':')
-          const tipo = e.target.value.slice(0, separador) as TipoVinculoProtegido
-          const id = e.target.value.slice(separador + 1)
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierta(true)}
+        className="relative flex min-h-11 w-full items-center rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-left text-[13px] text-noct-neutral-400 hover:border-noct-neutral-500 hover:text-noct-text"
+      >
+        <LockSimple size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-noct-neutral-400" />
+        <span className="min-w-0 flex-1 truncate">Vincular información protegida (opcional)</span>
+      </button>
+      <HojaVinculo
+        abierto={abierta}
+        onCerrar={() => setAbierta(false)}
+        titulo="Información protegida"
+        placeholderBuscar={`Buscar en ${totalOpciones} ${totalOpciones === 1 ? 'dato' : 'datos'}`}
+        grupos={grupos}
+        onElegir={(idCompuesto) => {
+          const separador = idCompuesto.indexOf(':')
+          const tipo = idCompuesto.slice(0, separador) as TipoVinculoProtegido
+          const id = idCompuesto.slice(separador + 1)
           const opcion = gruposOpciones.flatMap((g) => g.opciones).find((o) => o.tipo === tipo && o.id === id)
           if (opcion) onElegir(opcion)
         }}
-        className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
-      >
-        <option value="">Vincular información protegida (opcional)</option>
-        {gruposOpciones.map(
-          (grupo) =>
-            grupo.opciones.length > 0 && (
-              <optgroup key={grupo.etiqueta} label={grupo.etiqueta}>
-                {grupo.opciones.map((o) => (
-                  <option key={`${o.tipo}:${o.id}`} value={`${o.tipo}:${o.id}`}>
-                    {o.titulo}
-                  </option>
-                ))}
-              </optgroup>
-            ),
-        )}
-      </select>
-    </div>
+      />
+    </>
   )
 }
 
@@ -1072,10 +1076,13 @@ function BloqueEditor({
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
   vinculables: Articulo[]
 }) {
-  // Una sola bandera para las dos hojas (tipo de tarea y tono de aviso):
-  // un bloque es de un tipo o del otro, nunca de los dos, así que no
-  // pueden abrirse a la vez.
+  // Una sola bandera para las dos hojas de TIPO (tarea o tono): un
+  // bloque es de un tipo o del otro, nunca de los dos, así que no
+  // pueden abrirse a la vez. El vínculo "Si responde No" es un
+  // concepto aparte (puede convivir con la de tipo cerrada) y lleva su
+  // propia bandera.
   const [hojaAbierta, setHojaAbierta] = useState(false)
+  const [hojaDecisionAbierta, setHojaDecisionAbierta] = useState(false)
 
   if (bloque.tipo === 'tarea') {
     const info = infoTipoTarea(bloque.tipoTarea)
@@ -1148,28 +1155,32 @@ function BloqueEditor({
             </div>
           ) : (
             vinculables.length > 0 && (
-              <div className="relative ml-1">
-                <ArrowElbowDownRight
-                  size={13}
-                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-noct-neutral-500"
-                />
-                <select
-                  value=""
-                  aria-label="Vincular qué abrir si la respuesta es No"
-                  onChange={(e) => {
-                    const articulo = vinculables.find((a) => a.id === e.target.value)
+              <>
+                <button
+                  type="button"
+                  onClick={() => setHojaDecisionAbierta(true)}
+                  className="relative ml-1 flex min-h-9 w-[calc(100%-4px)] items-center rounded-md border border-dashed border-noct-neutral-700 bg-transparent py-1 pl-8 pr-3 text-left text-[12.5px] text-noct-neutral-500 hover:border-noct-neutral-500 hover:text-noct-text"
+                >
+                  <ArrowElbowDownRight
+                    size={13}
+                    className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-noct-neutral-500"
+                  />
+                  <span className="min-w-0 flex-1 truncate">
+                    Si responde No, vincular una solución o procedimiento (opcional)
+                  </span>
+                </button>
+                <HojaVinculo
+                  abierto={hojaDecisionAbierta}
+                  onCerrar={() => setHojaDecisionAbierta(false)}
+                  titulo="Si responde No"
+                  placeholderBuscar={`Buscar en ${vinculables.length} ${vinculables.length === 1 ? 'guía' : 'guías'}`}
+                  grupos={[{ opciones: vinculables.map((a) => ({ id: a.id, titulo: a.titulo })) }]}
+                  onElegir={(id) => {
+                    const articulo = vinculables.find((a) => a.id === id)
                     if (articulo) onCambiar({ decisionArticuloId: articulo.id, decisionArticuloTitulo: articulo.titulo })
                   }}
-                  className="flex min-h-9 w-[calc(100%-0px)] appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent py-1 pl-8 pr-3 text-[12.5px] text-noct-neutral-500 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
-                >
-                  <option value="">Si responde No, vincular una solución o procedimiento (opcional)</option>
-                  {vinculables.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.titulo}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                />
+              </>
             )
           ))}
       </div>
