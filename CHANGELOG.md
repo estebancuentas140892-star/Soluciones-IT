@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Agregado (tarea 210): el "3/7" del modo ejecución se vuelve un destino, no un rótulo
+
+**Área modificada:** `src/features/soluciones/AsistenteVista.tsx`, `src/components/IndicadorAvance.tsx`, y tres archivos nuevos: `HojaPasos.tsx`, `estadoPasos.ts`, `estadoPasos.test.ts`.
+**Motivo:** tablero `6c` del handoff "Soluciones IT, Diseño móvil". En el modo ejecución no había forma de **saltar al paso N**: el asistente solo ofrecía "Atrás", de uno en uno, así que volver del paso 8 al 3 eran cinco toques, y en la vista de lista era desplazamiento a ciegas. El contador "Paso 3 de 7" informaba pero no llevaba a ningún lado.
+**Impacto esperado:** alto en procedimientos largos, que son los que se ejecutan con el equipo delante. **Sin esquema y sin subir la versión de Dexie.**
+
+- **Agregado** `HojaPasos`: hoja inferior con los pasos en filas de **60 px** que llevan directo a cualquiera. Cada fila dice su **estado real** (hecho, aquí, pendiente, **saltado**) y si el paso **lleva un aviso de cuidado**, que es lo que conviene saber ANTES de saltar ahí. La cabecera resume "2 hechos · 1 saltado · quedan ~14 min".
+- **Agregado** `estadoPasos.ts`, lógica pura con 14 pruebas. **"Saltado" no se guarda en ninguna parte**: es un paso sin hacer que quedó POR DETRÁS del que se ejecuta. Guardarlo obligaría a migrar Dexie y `supabase/schema.sql` para un dato que se deduce sin error. Casos cubiertos: un paso hecho sigue hecho aunque se vuelva a él; sin paso actual nada es "saltado"; los avisos que no advierten de nada (información, consejo, dato) no marcan la fila; el tiempo restante nunca redondea a cero mientras quede trabajo.
+- **Cambiado** el ancla del paso pasa de 44 a **56 px** y toda ella es el botón que abre el índice: el "3/7" solo mide 30 y es lo que el dedo busca.
+- **Cambiado** la barra continua de porcentaje se sustituye por **segmentos, uno por paso**, con el del paso actual a media tinta. `IndicadorAvance` gana `expandido` (los segmentos se reparten todo el ancho) y `actual` (cuál se está haciendo). Sin `actual`, "cuál sigue" se deducía del primer segmento vacío, y eso deja de ser cierto en cuanto hay pasos saltados.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; 14 pruebas nuevas en verde. **Medido en navegador real a 375x812** con un procedimiento de 7 pasos sembrado y borrado al terminar: la banda mide 56 px y dice "Paso 2 de 7 ... Abrir el índice de pasos"; el índice lista los 7 en filas de 60 px con "AQUÍ" en el actual y "CUIDADO" en los dos que llevan un aviso de precaución; al saltar del 2 al 5, los pasos 2, 3 y 4 pasan a "SALTADO" y la cabecera a "1 hecho · 3 saltados · quedan ~17 min"; los siete segmentos miden 47x4 px, el primero relleno y el quinto al 50 %.
+
 ### Cambiado (tarea 209): el editor de pasos deja de ciclar a ciegas y saca sus acciones al pulgar
 
 **Área modificada:** `src/features/soluciones/PasosEditor.tsx`, `ArticuloForm.tsx`, `ProcedimientoVista.tsx`, `VistaPreviaArticulo.tsx`, `tonos.ts`, `src/components/iconos.tsx`, y tres archivos nuevos: `HojaTipoBloque.tsx`, `DialogoProbarPaso.tsx`, `ranuraAccionesPaso.tsx`.

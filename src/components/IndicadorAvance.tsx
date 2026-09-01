@@ -31,6 +31,16 @@ interface Props {
   variante?: VarianteAvance
   // Tamaño del anillo en px (ignorado por las otras variantes).
   size?: number
+  // Solo `segmentos` (tarea 210): los segmentos se reparten TODO el
+  // ancho disponible en vez de medir 14 px fijos. Es lo que pide una
+  // banda a pantalla completa, donde siete segmentos cortos alineados a
+  // la izquierda se leen como un fragmento de barra rota.
+  expandido?: boolean
+  // Solo `segmentos` (tarea 210): índice del paso que se está haciendo,
+  // que se pinta a medias. Sin esto el "cuál sigue" se deduce del primer
+  // segmento vacío, y eso deja de ser cierto en cuanto hay pasos
+  // saltados: el técnico puede estar en el 5 con el 3 sin hacer.
+  actual?: number | null
   className?: string
 }
 
@@ -43,7 +53,15 @@ function clasesDeAvance(completo: boolean) {
     : { trazo: 'text-noct-accent', relleno: 'bg-noct-accent', texto: 'text-noct-neutral-300' }
 }
 
-export function IndicadorAvance({ hechos, total, variante = 'anillo', size = 26, className = '' }: Props) {
+export function IndicadorAvance({
+  hechos,
+  total,
+  variante = 'anillo',
+  size = 26,
+  expandido = false,
+  actual = null,
+  className = '',
+}: Props) {
   // Se normaliza contra el total porque el procedimiento pudo editarse
   // después de marcar avance: `contarHechos` ya cruza contra los ids
   // vigentes, pero un total 0 (artículo sin pasos) llegaría igual y
@@ -85,8 +103,12 @@ export function IndicadorAvance({ hechos, total, variante = 'anillo', size = 26,
           <span
             key={i}
             aria-hidden
-            className={`h-[3px] w-[14px] rounded-full ${
-              i < hechosSeguro ? clases.relleno : 'bg-noct-neutral-800'
+            className={`${expandido ? 'h-1 flex-1' : 'h-[3px] w-[14px]'} rounded-full ${
+              i < hechosSeguro
+                ? clases.relleno
+                : i === actual
+                  ? `${clases.relleno} opacity-50`
+                  : 'bg-noct-neutral-800'
             }`}
           />
         ))}

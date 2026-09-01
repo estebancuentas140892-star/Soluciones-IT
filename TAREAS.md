@@ -4,14 +4,14 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-### 210. Handoff "Diseño móvil", Paso 6c: el "3/7" se vuelve un destino, no un rótulo
+### 211. Handoff "Diseño móvil", Paso 6d: modo foco, una tarea a la vez
 
-- **Descripción:** tablero `6c`. En el modo ejecución no hay forma de **saltar al paso N**: volver del paso 8 al 3 es desplazamiento a ciegas, y `AsistenteVista` solo ofrece "Atrás" de a uno. Lo que trae el mockup: el contador "Paso 3 de 7" de `CabeceraPaso` pasa a ser un **botón** que abre una hoja inferior con **los 7 pasos y su estado real** (hecho, aquí, pendiente, **saltado**, y si lleva un aviso de cuidado), en filas de 60 px que llevan directo al paso. La barra continua de 3 px se sustituye por **segmentos** (uno por paso), que ya existen como `IndicadorAvance variante="segmentos"`.
-- **Motivo:** el técnico que ya conoce el procedimiento quiere ir al paso que le falta, no recorrerlo. Hoy el "3/7" informa pero no lleva a ningún lado.
-- **Impacto:** alto en procedimientos largos. **Sin esquema**: "saltado" NO es un estado nuevo en `progresoPasos`, se **deriva** (paso no hecho que quedó por detrás del actual).
+- **Descripción:** tablero `6d`, la oportunidad grande del Paso 6. Hoy el técnico ve el paso entero (tres tareas, dos avisos y una imagen) y tiene que encontrar dentro de ese bloque cuál le toca. El modo foco muestra **una sola tarea**: la instrucción a **30 px** (legible de brazo estirado, a pleno sol, con el teléfono apoyado en el rack), su aviso pegado a ella y nada más; el botón de marcar mide **76 px** (imposible fallarlo con guantes) y es el único elemento grande de la pantalla, así que no hay que apuntar; los vínculos del paso quedan como chips de 52 px. Es un **modo, no un reemplazo**: "Ver todo" vuelve a la vista normal. Se entra por un botón "Foco" en la barra de acción.
+- **Motivo:** la unidad de trabajo real es la tarea, no el paso. El modelo ya la soporta (los bloques tienen id, tipo y progreso propio, y `alternarTarea` ya marca de a una); falta la vista que la recorra.
+- **Impacto:** alto para quien ejecuta un procedimiento por primera vez o trabaja con guantes; el experto se queda en la lista. **Sin esquema**: reutiliza `instruccionesHechas` de `progresoPasos` tal cual.
 - **Prioridad:** Alta. **Estado:** En progreso.
-- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx` (`CabeceraPaso` 440-474 y la barra de acción 388-414), `src/components/Modal.tsx`, `src/components/IndicadorAvance.tsx`, `src/lib/procedimiento.ts` (`tareasDe` para el conteo por fila).
-- **Dependencias:** ninguna. La **209** quedó terminada y archivada el 2026-08-31.
+- **Área afectada:** componente nuevo en `src/features/soluciones/`, `AsistenteVista.tsx` (el botón "Foco" de la barra y el estado del modo), `useProcedimientoEjecucion.ts` (`alternarTarea`, sin cambios previstos), `src/lib/progresoPasos.ts`.
+- **Dependencias:** la **210**, terminada y archivada el 2026-08-31.
 ---
 
 **HANDOFF NUEVO: "Soluciones IT, Diseño móvil" (importado el 2026-08-31).** Seis `.dc.html` en el proyecto de Claude Design `2f70dec0-abd8-4da5-8f2a-709e08102f5a`: `Paso 1 - Inicio y Onboarding`, `Paso 2 - Shell y Navegación`, `Paso 3 - Guías y Ejecución Guiada`, `Paso 4 - Dispositivos y Red`, `Paso 5 - Vinculación y Cero Duplicidad` y `Paso 6 - Guías a Fondo`. El usuario autorizó implementar **solo el Paso 6**; los cinco anteriores quedan sin registrar hasta que lo pida (excepción explícita a la regla 15, decidida por el usuario el 2026-08-31).
@@ -229,16 +229,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 211. Handoff "Diseño móvil", Paso 6d: modo foco, una tarea a la vez
-
-- **Descripción:** tablero `6d`, la oportunidad grande del Paso 6. Hoy el técnico ve el paso entero (tres tareas, dos avisos y una imagen) y tiene que encontrar dentro de ese bloque cuál le toca. El modo foco muestra **una sola tarea**: la instrucción a **30 px** (legible de brazo estirado, a pleno sol, con el teléfono apoyado en el rack), su aviso pegado a ella y nada más; el botón de marcar mide **76 px** (imposible fallarlo con guantes) y es el único elemento grande de la pantalla, así que no hay que apuntar; los vínculos del paso quedan como chips de 52 px. Es un **modo, no un reemplazo**: "Ver todo" vuelve a la vista de la tarea 210. Se entra por el botón "Foco" de la barra de acción.
-- **Motivo:** la unidad de trabajo real es la tarea, no el paso. El modelo ya la soporta (los bloques tienen id, tipo y progreso propio, y `alternarTarea` ya marca de a una); falta la vista que la recorra.
-- **Impacto:** alto para quien ejecuta un procedimiento por primera vez o trabaja con guantes; el experto se queda en la lista. **Sin esquema**: reutiliza `instruccionesHechas` de `progresoPasos` tal cual.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** componente nuevo en `src/features/soluciones/` (modo foco), `src/features/soluciones/AsistenteVista.tsx` (el botón "Foco" de la barra y el estado del modo), `src/features/soluciones/useProcedimientoEjecucion.ts` (`alternarTarea`, sin cambios previstos), `src/lib/progresoPasos.ts`.
-- **Dependencias:** la **210** (el botón "Foco" vive en su barra de acción y "Ver todo" vuelve a ella).
-- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ### 212. Los cuatro `<select>` nativos del editor de pasos
 

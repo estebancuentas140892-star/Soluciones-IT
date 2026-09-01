@@ -1,5 +1,26 @@
 # Historial de tareas finalizadas
 
+### 210. Handoff "Diseño móvil", tablero 6c: el "3/7" se vuelve un destino, no un rótulo
+
+**Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-31. `tsc -b`, `oxlint` y `npm run build` limpios; **14 pruebas nuevas** en `estadoPasos.test.ts`, todas en verde. **Prioridad**: Alta. **Origen**: tablero `6c` de `Paso 6 - Guías a Fondo.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
+
+**El hueco.** En el modo ejecución no había forma de **saltar al paso N**. `AsistenteVista` solo ofrecía "Atrás", de uno en uno (`AsistenteVista.tsx:394-402`), así que volver del paso 8 al 3 eran cinco toques; en la vista de lista era desplazamiento a ciegas. El contador "Paso 3 de 7" informaba, pero no llevaba a ningún lado.
+
+**Lo que se hizo.**
+
+- **`HojaPasos`** (nuevo): hoja inferior con los pasos en filas de **60 px** que llevan directo a cualquiera. Lo que aporta sobre una lista de títulos es el **estado real** de cada paso, incluido el que no se ve desde fuera (los saltados) y el que conviene saber ANTES de saltar ahí (que el paso lleva un aviso de cuidado). Cabecera "2 hechos · 1 saltado · quedan ~14 min".
+- **`estadoPasos.ts`** (nuevo, lógica pura con pruebas): `resumirPasos`, `minutosRestantes`, `resumenDeAvance`, `tituloDePaso`.
+- **"Saltado" NO es un estado guardado**, y a propósito: `progresoPasos` solo almacena qué está hecho, y añadir un tercer valor obligaría a migrar Dexie y `supabase/schema.sql` para un dato que se deduce sin error (un paso sin hacer que quedó POR DETRÁS del que se ejecuta). Reglas que las pruebas fijan: un paso hecho **sigue hecho** aunque se vuelva a él para revisarlo; **sin paso actual** (procedimiento terminado) nada es "saltado", lo que falte está pendiente.
+- **`tieneCuidado`** solo marca los avisos de **precaución** e **importante**. Información, consejo y dato técnico no advierten de nada; marcarlos convertiría la insignia en ruido.
+- **El tiempo restante es una regla de tres**, no una medida: el estimado del artículo repartido entre los pasos que faltan. Por eso se escribe con "~", no se muestra si el artículo no declara tiempo, y nunca redondea a 0 mientras quede trabajo.
+- **Ancla del paso de 44 a 56 px**, y toda ella es el botón que abre el índice: el "3/7" solo mide 30 y es lo que el dedo busca.
+- **Segmentos en vez de la barra de porcentaje**, con el del paso actual a media tinta. `IndicadorAvance` gana `expandido` y `actual`. Sin `actual`, "cuál sigue" se deducía del primer segmento vacío, y eso deja de ser cierto en cuanto hay pasos saltados.
+
+**Limitación conocida y anotada.** El relleno de los segmentos va por CANTIDAD (`i < hechos`), no por qué pasos concretos están hechos: con saltados, los segmentos llenos no coinciden uno a uno con las filas del índice. Es un indicador de avance, no un mapa; el mapa exacto es la hoja, que está a un toque.
+
+**Verificación en navegador** (procedimiento de 7 pasos sembrado y borrado al terminar): la banda mide 56 px y anuncia "Paso 2 de 7: Respaldar la configuración. Abrir el índice de pasos"; el índice lista los 7 en filas de 60 px, con "AQUÍ" en el actual y "CUIDADO" en los dos que llevan un aviso de precaución; al saltar del 2 al 5, los pasos 2, 3 y 4 pasan a "SALTADO" y la cabecera de "1 hecho · quedan ~17 min" a "1 hecho · 3 saltados · quedan ~17 min"; los siete segmentos miden 47x4 px, el primero relleno y el quinto al 50 %.
+
+
 ### 209. Handoff "Diseño móvil", tablero 6b: el editor de pasos deja de ciclar a ciegas
 
 **Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-31. `tsc -b`, `oxlint` y `npm run build` limpios; `npm test` deja 3 fallos en `src/` **preexistentes y ajenos**, confirmados con `git stash` antes de tocar nada (quedan como tarea 213). **Prioridad**: Alta. **Origen**: tablero `6b` de `Paso 6 - Guías a Fondo.dc.html`, handoff de Claude Design "Soluciones IT, Diseño móvil" (proyecto `2f70dec0-abd8-4da5-8f2a-709e08102f5a`). **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.

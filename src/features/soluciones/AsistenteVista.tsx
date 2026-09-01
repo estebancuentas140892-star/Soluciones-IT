@@ -19,11 +19,14 @@ import {
 import { registrarIntervencion } from '../../lib/repositorio'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
-import { Camera, CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning } from '../../components/iconos'
+import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning } from '../../components/iconos'
 import { BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
+import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
+import { HojaPasos } from './HojaPasos'
+import { minutosRestantes, resumenDeAvance, resumirPasos, type ResumenPaso } from './estadoPasos'
 
 interface Props {
   articuloId: string
@@ -69,6 +72,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
 
   const [indiceActual, setIndiceActual] = useState<number | null>(null)
   const [listo, setListo] = useState(false)
+  // Índice de los pasos (tablero 6c): se abre tocando el contador.
+  const [indiceAbierto, setIndiceAbierto] = useState(false)
 
   // Cronometro de la sesion de ejecucion (solo nivel 0): tiempo desde
   // que se abrio el asistente, para contrastar con el estimado. Es
@@ -269,8 +274,24 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
       ? `Paso hecho · ir al ${indiceActual + 2}`
       : 'Paso hecho · terminar'
 
+  // Estado de cada paso para el índice (tablero 6c). Se recalcula en
+  // cada render a propósito: son unas pocas decenas de pasos como mucho,
+  // y memorizarlo exigiría estabilizar dos Sets que el hook rehace en
+  // cada lectura del progreso.
+  const resumenes: ResumenPaso[] = resumirPasos(pasos, hechos, instruccionesHechas, indiceActual)
+  const subtituloIndice = resumenDeAvance(resumenes, minutosRestantes(tiempoEstimadoMin, resumenes))
+
   return (
     <div className={`flex flex-col gap-4 ${nivel === 0 ? 'flex-1' : ''}`}>
+      {nivel === 0 && (
+        <HojaPasos
+          abierto={indiceAbierto}
+          onCerrar={() => setIndiceAbierto(false)}
+          resumenes={resumenes}
+          subtitulo={subtituloIndice}
+          onIrAPaso={setIndiceActual}
+        />
+      )}
       {/* Ancla del paso (M-010, mockup `3b`): 44 px pegajosos dentro del
           mismo bloque de la barra de tarea. El modo ejecución era la
           única pantalla de la app sin nada fijo: el progreso, el "Paso 3
@@ -287,7 +308,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
             titulo={tituloPaso}
             tareasHechas={marcadas}
             tareasTotal={idsTareas.length}
-            porcentaje={porcentaje}
+            completados={completados}
+            onAbrirIndice={() => setIndiceAbierto(true)}
           />
         </BandaTarea>
       ) : (
@@ -443,32 +465,54 @@ function CabeceraPaso({
   titulo,
   tareasHechas,
   tareasTotal,
-  porcentaje,
+  completados,
+  onAbrirIndice,
 }: {
   indice: number
   total: number
   titulo: string
   tareasHechas: number
   tareasTotal: number
-  porcentaje: number
+  completados: number
+  onAbrirIndice: () => void
 }) {
   return (
     <div className="border-t border-noct-divider px-4">
-      <div className="flex min-h-[44px] items-center gap-2.5">
-        <span className="shrink-0 text-[12px] font-semibold text-noct-accent-300">
-          Paso {indice + 1} de {total}
+      {/* El contador deja de ser un rótulo y pasa a ser un DESTINO
+          (tablero 6c): abre el índice con el estado real de los siete
+          pasos. Toda la banda es el objetivo, 56 px de alto, porque el
+          "3/7" solo mide 30 y es lo que el dedo busca. */}
+      <button
+        type="button"
+        onClick={onAbrirIndice}
+        aria-haspopup="dialog"
+        aria-label={`Paso ${indice + 1} de ${total}: ${titulo}. Abrir el índice de pasos`}
+        className="flex min-h-[56px] w-full items-center gap-2.5 pb-1.5 pt-1 text-left"
+      >
+        <span className="flex shrink-0 items-center gap-1 font-mono text-[17px] font-semibold text-noct-accent-300">
+          {indice + 1}
+          <span className="text-[13px] font-normal text-noct-neutral-400">/{total}</span>
+          <CaretDown size={13} className="text-noct-neutral-400" aria-hidden />
         </span>
         <h2 className="min-w-0 flex-1 truncate text-[13px] font-normal text-noct-neutral-200">{titulo}</h2>
         {tareasTotal > 0 && (
-          <span className="shrink-0 text-[12px] tabular-nums text-noct-neutral-400">
+          <span className="shrink-0 font-mono text-[14px] tabular-nums text-noct-text">
             {tareasHechas}/{tareasTotal}
             <span className="sr-only"> tareas de este paso marcadas</span>
           </span>
         )}
-      </div>
-      <div className="-mb-px h-[3px] overflow-hidden rounded-full bg-noct-accent/20">
-        <div className="h-full rounded-full bg-noct-accent transition-all" style={{ width: `${porcentaje}%` }} />
-      </div>
+      </button>
+      {/* Segmentos, uno por paso, en vez de la barra continua de
+          porcentaje: dicen cuántos pasos hay y cuál es el que sigue,
+          que es lo que el técnico pregunta. */}
+      <IndicadorAvance
+        hechos={completados}
+        total={total}
+        variante="segmentos"
+        expandido
+        actual={indice}
+        className="-mb-px"
+      />
     </div>
   )
 }
