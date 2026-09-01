@@ -5,6 +5,10 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 ## En proceso
 
 *(vacío: la tarea 211 se cerró el 2026-08-31. **Con ella queda implementado el Paso 6 completo del handoff "Diseño móvil"**: 6b editor de pasos (tarea 209), 6c navegador de pasos (210) y 6d modo foco (211); el tablero 6a es el diagnóstico del ANTES y no se implementa. Los Pasos 1 a 5 de la carpeta siguen sin registrar: el usuario autorizó solo el Paso 6. La siguiente pendiente es la 212, ver "Por hacer".)*
+
+**Despliegue confirmado (regla 14).** Los tres commits (`111794b`, `e6a0244`, `a53e2dc`) están servidos en **https://soluciones-it-psi.vercel.app**: el chunk `ArticuloForm-*.js` de producción contiene "Tipo de línea", "Probar el paso" y "Reordenar el paso" (tarea 209), y el `AsistenteVista-*.js` contiene "Abrir el índice de pasos", "saltado", "quedan ~" (210) y "Marcar hecha", "Ver todo", "Marcaste una falla" (211). Comprobado por HTTP contra los assets reales, no por hash de build (los hashes de Vercel difieren de los locales).
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
 ---
 
 **HANDOFF NUEVO: "Soluciones IT, Diseño móvil" (importado el 2026-08-31).** Seis `.dc.html` en el proyecto de Claude Design `2f70dec0-abd8-4da5-8f2a-709e08102f5a`: `Paso 1 - Inicio y Onboarding`, `Paso 2 - Shell y Navegación`, `Paso 3 - Guías y Ejecución Guiada`, `Paso 4 - Dispositivos y Red`, `Paso 5 - Vinculación y Cero Duplicidad` y `Paso 6 - Guías a Fondo`. El usuario autorizó implementar **solo el Paso 6**; los cinco anteriores quedan sin registrar hasta que lo pida (excepción explícita a la regla 15, decidida por el usuario el 2026-08-31).
