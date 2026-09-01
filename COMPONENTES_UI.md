@@ -392,7 +392,9 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 ### 3.8b `soluciones/FilaArticulo`
 - **Propósito:** fila de un artículo en un listado: recuadro neutro con el glifo del tipo, título de 15 px, línea de metadatos y ranura de estado. Reemplaza el marcado que `SolucionesPage` y `CategoriaPage` copiaban por separado.
-- **Props:** `{ articulo, to, categoriaNombre?, consulta?, coincidencia?: CoincidenciaFila, conSeparador?: boolean = true }`.
+- **Props:** `{ articulo, to, categoriaNombre?, consulta?, coincidencia?: CoincidenciaFila }`. `conSeparador` **se retiró** en la tarea 214: la fila dejó de ser un renglón de una lista continua y pasó a ser una tarjeta con hueco.
+- **Línea de capacidad y botón "Ejecutar" (tarea 214, tablero `3b`).** La fila decía `categoría · tipo · min`, exactamente igual para una guía de 7 pasos con verificación final que para un borrador sin un solo paso, así que el técnico descubría que la guía estaba vacía **después de abrirla**, de pie y frente al equipo. Ahora dice **"7 pasos · ~25 min · verificación"** o **"Sin pasos · solo notas · no se puede ejecutar"** (ver `capacidadGuia.ts`, 3.8k), y si es ejecutable trae un botón de **52 px** que lleva directo a `/ejecutar`: un toque del listado al paso 1. **La ausencia del botón ES la señal** de que no hay procedimiento, así que no hace falta ningún cartel.
+- **No es un enlace que envuelva al botón**: un control dentro de otro control no es HTML válido y el lector de pantalla no sabría cuál anuncia. El cuerpo es el enlace y "Ejecutar" va a su lado, con `aria-label` que nombra la guía.
 - **Variantes:** `categoriaNombre` se pasa solo cuando la lista puede mezclar categorías (buscando, en "Todos" o por etiqueta); dentro de una categoría sería repetirlo en cada fila. `coincidencia` sustituye la línea de metadatos por "Coincide en la etiqueta X" cuando el término no acertó en el título. Un artículo obsoleto baja de jerarquía (título en neutral-300) sin desaparecer.
 - **Regla R1 ("color con oficio"):** el matiz del TIPO vive en el glifo y el recuadro va neutro (`text/6%`). Antes el recuadro entero iba relleno del color del tipo y, con seis tipos en la misma columna, la lista se leía como un arcoíris donde el color ya no informaba. El color de la CATEGORÍA sigue viviendo en los chips de filtro, nunca en la fila.
 - **Dónde:** `SolucionesPage`. **Pendiente:** migrar `CategoriaPage` al rediseñar P4.
@@ -443,6 +445,13 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Props:** `{ children }`. Fuera de la barra no dibuja nada (no falla).
 - **Cómo:** `ArticuloForm` publica un `<div ref={setRanuraAcciones} className="empty:hidden" />` dentro de su barra fija y lo expone con `ProveedorAccionesPaso`; `PasosEditor` lo llena con `createPortal`. El hueco va en estado (no en una ref) para que los hijos vuelvan a renderizar cuando exista. Resultado: **una sola barra fija**, sin calcular ningún `bottom` contra el alto de la otra (que además cambia con las sugerencias de completitud abiertas).
 - **Dónde:** `ArticuloForm` (provee) y `PasosEditor` (consume).
+
+### 3.8k `soluciones/capacidadGuia.ts`
+- **Propósito:** qué puede hacer una guía POR TI, para decirlo en su fila del listado (tarea 214, tablero `3b`). `capacidadDeGuia(articulo)` devuelve `{ ejecutable, pasos, minutos, tieneVerificacion }`; `lineaDeCapacidad(capacidad)` la redacta en trozos (`{ pasos, minutos, verificacion, aviso }`).
+- **Por qué no reutiliza `completitudArticulo.ts`:** son dos preguntas distintas, no dos vistas de la misma. El editor mide "cuánto te falta para publicarla" (diez señales, porcentaje, sugerencias); esto responde "¿me sirve ahora mismo?", que es lo que se pregunta en el listado.
+- **Trozos y no una cadena** porque el aviso de la guía no ejecutable se pinta en otro color que el resto: la fila necesita saber cuál es cuál.
+- **Lógica pura, con 9 pruebas.** Cubre el caso K1 (un `procedimiento` que existe solo por su metadata y no tiene ni un paso **no** es ejecutable), que sin tiempo estimado no se inventa uno, y que lo no ejecutable no promete tiempo ni verificación aunque el dato esté en la base.
+- **Dónde:** `FilaArticulo`.
 
 ### 3.8d `inicio/BienvenidaPrimerDia`
 - **Propósito:** la primera impresión de la app para un técnico nuevo (tarea 184, mockup `3b`). Con la base vacía, seis de los nueve bloques de Inicio no se pintan, así que la entrada eran un buscador y tres atajos; y lo que de verdad hay que hacer el primer día (instalar la app y bajar los adjuntos, de lo que depende el trabajo sin señal) no se ofrecía en ninguna pantalla.

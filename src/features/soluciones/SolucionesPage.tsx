@@ -329,8 +329,11 @@ export function SolucionesPage() {
   // fila para no dejar una regla colgando al final de la lista.
   function filasDe(articulosDelGrupo: Articulo[]) {
     return (
-      <div className="grid grid-cols-1 gap-x-3 @lg:grid-cols-2 @4xl:grid-cols-3">
-        {articulosDelGrupo.map((articulo, indice) => {
+      // Tarjetas separadas por hueco, no renglones con regla (tablero
+      // 3b): cada guía es una unidad con su propia acción, no un
+      // elemento de una lista continua.
+      <div className="grid grid-cols-1 gap-2 @lg:grid-cols-2 @4xl:grid-cols-3">
+        {articulosDelGrupo.map((articulo) => {
           const coincidencia = coincidencias.get(articulo.id)
           return (
             <FilaArticulo
@@ -346,7 +349,6 @@ export function SolucionesPage() {
                   ? { donde: coincidencia.donde, valor: coincidencia.valor }
                   : undefined
               }
-              conSeparador={indice < articulosDelGrupo.length - 1}
             />
           )
         })}
@@ -417,7 +419,9 @@ export function SolucionesPage() {
                     type="button"
                     aria-pressed={activo}
                     onClick={() => setCategoria(chip.id)}
-                    className={`inline-flex h-9 shrink-0 items-center gap-[7px] whitespace-nowrap rounded-full border px-3.5 text-[13px] font-medium transition-colors ${
+                    // 44 px y no 36 (tablero 3b): es el filtro que más se
+                    // toca de la sección y se toca de pie, con una mano.
+                    className={`inline-flex h-11 shrink-0 items-center gap-[7px] whitespace-nowrap rounded-full border-[1.5px] px-4 text-[14.5px] font-medium transition-colors ${
                       activo
                         ? (chip.claseActiva ?? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300')
                         : 'border-noct-divider text-noct-neutral-200 hover:bg-noct-text/[.05]'
@@ -433,7 +437,7 @@ export function SolucionesPage() {
                     {chip.nombre}
                     {/* neutral-400, no neutral-600: a 12 px ese paso daba
                         4.0:1 sobre el fondo y AA pide 4.5 (R2). */}
-                    <span className={`text-[12px] ${activo ? 'opacity-75' : 'text-noct-neutral-400'}`}>
+                    <span className={`text-[12.5px] ${activo ? 'opacity-75' : 'text-noct-neutral-400'}`}>
                       {chip.count}
                     </span>
                   </button>
@@ -445,7 +449,7 @@ export function SolucionesPage() {
                 type="button"
                 onClick={() => setHojaTipoAbierta(true)}
                 aria-haspopup="dialog"
-                className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border bg-noct-bg px-3 text-[13px] font-medium transition-colors ${
+                className={`inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-dashed bg-noct-bg px-4 text-[14.5px] font-medium transition-colors ${
                   tipoSel
                     ? 'border-noct-accent text-noct-accent-300'
                     : 'border-noct-divider text-noct-neutral-200 hover:bg-noct-text/[.05]'

@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom'
 import type { Articulo } from '../../lib/db'
-import { normalizarProcedimiento } from '../../lib/procedimiento'
-import { CaretRight, Clock } from '../../components/iconos'
+import { CaretRight, Check, Play } from '../../components/iconos'
 import { PastillaEstadoArticulo } from '../../components/PastillaEstado'
 import { colorIconoDeTipo, iconoDeTipo } from './iconosSoluciones'
 import { partirTitulo } from './coincidencia'
-import { etiquetaDeTipo } from './tiposArticulo'
+import { capacidadDeGuia, lineaDeCapacidad } from './capacidadGuia'
 
 // La fila de un artículo en un listado, compartida por SolucionesPage y
 // CategoriaPage. Sale de la auditoría de Soluciones, que la pedía como
@@ -27,6 +26,16 @@ import { etiquetaDeTipo } from './tiposArticulo'
 // la lista se leía como un arcoíris donde el color ya no informaba y
 // competía con el título, que es lo único que se lee de verdad. El color
 // de la CATEGORÍA sigue viviendo en los chips de filtro, no aquí.
+//
+// TABLERO 3b del handoff "Diseño móvil" (tarea 214). La fila deja de ser
+// un renglón con separador y pasa a ser una TARJETA, y sobre todo deja de
+// mentir: antes pintaba exactamente lo mismo para una guía de 7 pasos con
+// verificación final y para un borrador sin un solo paso (mismo recuadro
+// de 34 px, misma línea `categoría · tipo · min`), así que el técnico
+// descubría que la guía estaba vacía **después de abrirla**, de pie y
+// frente al equipo. Ahora cada fila dice **lo que la guía puede hacer por
+// ti** y, si es ejecutable, trae su propio botón: un toque del listado al
+// paso 1, en vez de abrir la guía y buscar "Ejecutar" dentro.
 
 // Dónde coincidió la búsqueda, cuando NO fue en el título. Sin esto la
 // lista muestra resultados sin explicación aparente ("¿por qué sale este
@@ -44,7 +53,6 @@ export function FilaArticulo({
   categoriaNombre,
   consulta = '',
   coincidencia,
-  conSeparador = true,
 }: {
   articulo: Articulo
   to: string
@@ -59,79 +67,96 @@ export function FilaArticulo({
   // Cuando la coincidencia no está en el título, sustituye la línea de
   // metadatos para explicar por qué aparece esta fila.
   coincidencia?: CoincidenciaFila
-  conSeparador?: boolean
 }) {
   const Icono = iconoDeTipo(articulo.tipo)
-  const tiempo = normalizarProcedimiento(articulo.procedimiento)?.tiempoEstimadoMin
   const { pre, match, post } = partirTitulo(articulo.titulo, consulta)
   // Un artículo obsoleto sigue siendo consultable (a veces es lo único
   // que hay), pero no debe pesar lo mismo que uno vigente: baja de
   // jerarquía sin desaparecer.
   const obsoleto = articulo.estado === 'obsoleto'
+  const capacidad = capacidadDeGuia(articulo)
+  const linea = lineaDeCapacidad(capacidad)
 
   return (
-    <Link
-      to={to}
-      className={`flex min-h-[60px] items-center gap-3 rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05] ${
-        conSeparador ? 'border-b border-noct-divider' : ''
+    // La tarjeta NO es un enlace que envuelva al botón: un control dentro
+    // de otro control no es HTML válido y el lector de pantalla no sabría
+    // cuál anuncia. El cuerpo es el enlace y "Ejecutar" va a su lado.
+    <div
+      className={`flex items-center gap-3 rounded-xl border p-3 ${
+        capacidad.ejecutable
+          ? 'border-noct-divider bg-noct-surface'
+          : 'border-dashed border-noct-neutral-700 bg-transparent'
       }`}
     >
-      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-text/[.06]">
-        <Icono size={17} className={colorIconoDeTipo(articulo.tipo)} aria-hidden />
-      </span>
-
-      <span className="min-w-0 flex-1">
-        <span
-          className={`block text-[15px] font-medium leading-[1.3] [text-wrap:pretty] ${
-            obsoleto ? 'text-noct-neutral-300' : ''
-          }`}
-        >
-          {pre}
-          {match && (
-            <span className="rounded-[3px] bg-noct-accent/[.22] px-0.5 text-noct-accent-200">{match}</span>
-          )}
-          {post}
+      <Link to={to} className="flex min-w-0 flex-1 items-center gap-3 text-noct-text">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-noct-text/[.06]">
+          <Icono size={21} className={colorIconoDeTipo(articulo.tipo)} aria-hidden />
         </span>
 
-        {coincidencia ? (
-          <span className="mt-1 flex items-center gap-1.5 text-[12px] text-noct-neutral-400">
-            Coincide en {coincidencia.donde}
-            <span className="rounded-full bg-noct-neutral-800 px-[7px] py-px text-[11px] text-noct-neutral-200">
-              {coincidencia.valor}
-            </span>
-          </span>
-        ) : (
-          // Metadatos a 12 px en neutral-400, nunca en neutral-600: con
-          // ese paso el contraste sobre el fondo es 4.0:1 y AA pide 4.5
-          // (regla R2). El separador "·" va un paso más abajo porque es
-          // decoración, no texto que haya que leer.
+        <span className="min-w-0 flex-1">
           <span
-            className={`mt-[3px] flex flex-wrap items-center gap-1.5 text-[12px] ${
-              obsoleto ? 'text-noct-neutral-500' : 'text-noct-neutral-400'
+            className={`block text-[16.5px] font-medium leading-[1.25] [text-wrap:pretty] ${
+              obsoleto ? 'text-noct-neutral-300' : ''
             }`}
           >
-            {categoriaNombre && (
-              <>
-                <span className="truncate">{categoriaNombre}</span>
-                <span className="text-noct-neutral-500">·</span>
-              </>
+            {pre}
+            {match && (
+              <span className="rounded-[3px] bg-noct-accent/[.22] px-0.5 text-noct-accent-200">{match}</span>
             )}
-            <span>{etiquetaDeTipo(articulo.tipo)}</span>
-            {tiempo != null && (
-              <>
-                <span className="text-noct-neutral-500">·</span>
-                <span className="inline-flex items-center gap-[3px]">
-                  <Clock size={12} aria-hidden />
-                  {tiempo} min
-                </span>
-              </>
-            )}
+            {post}
           </span>
-        )}
-      </span>
 
-      <PastillaEstadoArticulo estado={articulo.estado} />
-      <CaretRight size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
-    </Link>
+          {coincidencia ? (
+            <span className="mt-1 flex items-center gap-1.5 text-[12px] text-noct-neutral-400">
+              Coincide en {coincidencia.donde}
+              <span className="rounded-full bg-noct-neutral-800 px-[7px] py-px text-[11px] text-noct-neutral-200">
+                {coincidencia.valor}
+              </span>
+            </span>
+          ) : (
+            // LÍNEA DE CAPACIDAD (3b): qué puede hacer esta guía por ti.
+            // A 13,5 px en neutral-300, nunca en neutral-600: con ese paso
+            // el contraste sobre el fondo es 4.0:1 y AA pide 4.5 (R2).
+            <span
+              className={`mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13.5px] ${
+                linea.aviso ? 'text-noct-precaucion' : 'text-noct-neutral-300'
+              }`}
+            >
+              {categoriaNombre && <span className="truncate text-noct-neutral-400">{categoriaNombre}</span>}
+              <span className={linea.aviso ? '' : 'text-noct-text'}>{linea.pasos}</span>
+              {linea.minutos && <span>{linea.minutos}</span>}
+              {linea.verificacion && (
+                <span className="inline-flex items-center gap-1 text-noct-exito">
+                  <Check size={14} aria-hidden />
+                  verificación
+                </span>
+              )}
+              {/* En neutral-400 y no en ámbar: el ámbar ya lo puso "Sin
+                  pasos". Repetirlo en toda la línea la convertiría en una
+                  alarma, y un manual sin pasos no está roto. */}
+              {linea.aviso && <span className="text-noct-neutral-400">{linea.aviso}</span>}
+            </span>
+          )}
+        </span>
+
+        <PastillaEstadoArticulo estado={articulo.estado} />
+      </Link>
+
+      {/* "Ejecutar" de 52 px en la propia fila: un toque del listado al
+          paso 1. Y su AUSENCIA es la señal de que no hay procedimiento,
+          así que no hace falta ningún cartel que lo diga. */}
+      {capacidad.ejecutable ? (
+        <Link
+          to={`${to}/ejecutar`}
+          aria-label={`Ejecutar "${articulo.titulo}"`}
+          title="Ejecutar"
+          className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[10px] border-[1.5px] border-noct-accent bg-noct-accent/10 text-noct-accent-300 hover:bg-noct-accent/[.24]"
+        >
+          <Play size={18} aria-hidden />
+        </Link>
+      ) : (
+        <CaretRight size={17} className="shrink-0 text-noct-neutral-400" aria-hidden />
+      )}
+    </div>
   )
 }

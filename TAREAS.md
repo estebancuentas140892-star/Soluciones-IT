@@ -4,7 +4,11 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 203 se cerró el 2026-09-01. Con ella **la fase 2 de la auditoría móvil queda a medias**: hechas la 202 (el regreso deshace el último salto) y la 203 (Inicio); quedan la 204 (Red abre con el nodo), la 205 (Bóveda y Diagnóstico) y la 206 (un color, un significado dentro del paso). La siguiente pendiente es la 204, ver "Por hacer".)*
+*(vacío: la tarea 214 se cerró el 2026-09-01. Del `Paso 3` queda el tablero `3d`, que es la tarea **215**, la primera de "Por hacer". Los Pasos 1, 2 y 4 del handoff siguen sin registrar hasta que el usuario los pida.)*
+
+---
+
+*(la tarea 203 se cerró el 2026-09-01. Con ella **la fase 2 de la auditoría móvil queda a medias**: hechas la 202 (el regreso deshace el último salto) y la 203 (Inicio); quedan la 204 (Red abre con el nodo), la 205 (Bóveda y Diagnóstico) y la 206 (un color, un significado dentro del paso). La siguiente pendiente es la 204, ver "Por hacer".)*
 
 **Despliegue confirmado (regla 14).** El commit `8a5ebde` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `InicioPage-D331oXcp.js` de producción contiene "Te toca a ti" y "Lo que consultaste", y `Chasis-CNiV5C6f.js` contiene "Sigues en el paso" (la tarjeta de reanudar viaja con el chasis, no con Inicio). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 7 minutos en propagar.
 
@@ -15,6 +19,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 **HANDOFF NUEVO: "Soluciones IT, Diseño móvil" (importado el 2026-08-31).** Seis `.dc.html` en el proyecto de Claude Design `2f70dec0-abd8-4da5-8f2a-709e08102f5a`: `Paso 1 - Inicio y Onboarding`, `Paso 2 - Shell y Navegación`, `Paso 3 - Guías y Ejecución Guiada`, `Paso 4 - Dispositivos y Red`, `Paso 5 - Vinculación y Cero Duplicidad` y `Paso 6 - Guías a Fondo`. El usuario autorizó implementar **solo el Paso 6**; los cinco anteriores quedan sin registrar hasta que lo pida (excepción explícita a la regla 15, decidida por el usuario el 2026-08-31).
 
 **Cómo se leyó:** el MCP `claude_design` devolvió `DesignSync needs design-system authorization` (esta sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Diseño Mobile/Soluciones IT — Diseño móvil-handoff6.zip`, que trae el proyecto completo. Los recuentos de líneas que cita la auditoría del handoff (PasosEditor 1.036, ArticuloForm 1.388, ProcedimientoVista 1.019, AsistenteVista 744) coinciden con este repo, así que el diseño se hizo contra el código real.
+
+**AMPLIACIÓN (2026-09-01): el usuario autoriza también el `Paso 3`.** Llegó como `Soluciones IT — Diseño móvil-handoff3.zip`, que resultó ser un **subconjunto** del handoff6 ya registrado: trae los Pasos 1 a 4 y sus cuatro `.dc.html` son **byte a byte idénticos** a los del handoff6 (comprobado con `diff`), así que no hay proyecto nuevo que importar. Su README apunta a `Paso 3 - Guías y Ejecución Guiada`. El Paso 3 trae dos tableros ANTES (`3a`, `3c`, diagnóstico) y dos DESPUÉS implementables: **`3b`** el listado de guías (tarea **214**) y **`3d`** la ejecución guiada (tarea **215**). **Los Pasos 1, 2 y 4 siguen sin registrar** hasta que el usuario los pida.
 
 El Paso 6 audita **el llenado** de una guía y **la navegación entre pasos**, lo que el Paso 3 dejó fuera. Trae un tablero ANTES (`6a`, diagnóstico, no se implementa) y tres DESPUÉS, que son las tareas **209** (editor), **210** (navegador de pasos) y **211** (modo foco). Su tesis de fondo: *el paso no es la unidad de trabajo*. Todo el sistema está construido alrededor del paso (la banda, el avance, el plegado, la acción dominante), pero frente al rack, con una mano y guantes, la unidad real es la **tarea**. El modelo de datos ya la soporta (los bloques tienen id, tipo y progreso propio); falta una vista que la use, y esa es la 211.
 
@@ -227,6 +233,16 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 215. Handoff "Diseño móvil", Paso 3d: la contingencia deja de esconderse
+
+- **Descripción:** tablero `3d`. "¿Ocurrió algún error durante este paso?", la válvula de escape cuando la realidad no coincide con la guía, se dibuja hoy con dos botones de `px-3 py-1.5 text-xs` (**28 px de alto, texto de 12**): el control **más pequeño** de la pantalla. Y peor: solo aparece cuando `trabajoPrevio` es verdadero, es decir **cuando ya marcaste todas las tareas del paso**. Si el paso 3 falla no puedes marcarlas, **así que la salida de contingencia nunca se muestra**. Además, al mostrarse **reemplaza** la barra de acción fija, así que la pantalla se queda sin acción dominante y el layout salta. Lo que trae el mockup: un botón **"Falla" de 56 px permanente** junto a la acción principal (etiqueta corta a propósito, para que la acción dominante conserve su ancho), que abre una hoja "Algo va mal en el paso N" con las salidas reales, cada una de 56-60 px: abrir la contingencia vinculada, fotografiar y anotar el problema, saltar el paso y seguir, cancelar. Además: casillas de **28 px en filas de 56** con texto de 16, y el estado hecho en acento atenuado a `neutral-400` **sin tachado** (a 16 px y a pleno sol el tachado no se lee).
+- **Motivo:** una salida de emergencia que solo aparece cuando ya no hace falta no es una salida. Y `neutral-600` sobre el fondo da 4.0:1, por debajo del 4.5 que pide AA (regla R2).
+- **Impacto:** alto: es la pantalla donde el técnico trabaja de verdad. **Sin esquema.**
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx` (`SolucionEnAsistente` y la barra de acción), `src/features/soluciones/ProcedimientoVista.tsx` (`FilaTarea`, `SolucionEnPaso`), componente nuevo para la hoja de contingencia.
+- **Dependencias:** la **211** ya introdujo un botón "Falla" en el **modo foco**, con su aviso al salir; esta tarea lo lleva a la vista normal y le da la hoja con las cuatro salidas. Al tomarla hay que **unificar los dos**, no dejar dos "Falla" con comportamientos distintos.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ### 204. Auditoría móvil, fase 2: Red abre con el nodo, no con la lista (M-018, M-019)
 

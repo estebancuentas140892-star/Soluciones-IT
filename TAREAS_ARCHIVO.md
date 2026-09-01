@@ -1,5 +1,28 @@
 # Historial de tareas finalizadas
 
+### 214. Handoff "Diseño móvil", tablero 3b: la completitud sale del editor y llega al listado
+
+**Estado**: TERMINADA y **verificada en navegador real a 360 px** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **984 de 984** en verde, **9 nuevas**. **Prioridad**: Alta. **Origen**: tablero `3b` de `Paso 3 - Guías y Ejecución Guiada.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
+
+**Cómo llegó.** El usuario pasó `Soluciones IT — Diseño móvil-handoff3.zip`, que resultó **subconjunto** del handoff6 ya registrado: trae los Pasos 1 a 4 y sus cuatro `.dc.html` son **byte a byte idénticos** a los del handoff6 (comprobado con `diff`), así que no había proyecto nuevo que importar. Su README apunta al Paso 3.
+
+**El hallazgo.** La app **ya calcula** la completitud de una guía (`completitudArticulo.ts`), pero ese dato **solo vive en el editor**. En el listado, `FilaArticulo` pintaba exactamente la misma fila de 60 px para una guía de 7 pasos con verificación final y para un borrador sin un solo paso: mismo recuadro de 34 px, misma línea `categoría · tipo · min`. El técnico descubría que la guía estaba vacía **después de abrirla**, de pie y frente al equipo.
+
+**Lo que se hizo.**
+
+- **`capacidadGuia.ts`** (nuevo, lógica pura con 9 pruebas): `capacidadDeGuia` y `lineaDeCapacidad`. **No reutiliza `completitudArticulo.ts` a propósito**: el editor mide "cuánto te falta para publicarla" (diez señales, porcentaje, sugerencias) y esto responde "¿me sirve ahora mismo?". Son dos preguntas distintas, no dos vistas de la misma. Las pruebas fijan el caso K1 (un `procedimiento` que existe solo por su metadata y no tiene ni un paso **no** es ejecutable), que sin tiempo estimado no se inventa uno, y que lo no ejecutable no promete tiempo ni verificación aunque el dato esté en la base.
+- **Línea de capacidad** en cada fila: "7 pasos · ~25 min · verificación" o "Sin pasos · solo notas · no se puede ejecutar". El ámbar se reserva para "Sin pasos"; el resto del aviso va neutro, porque un manual sin pasos **no está roto**, es de otra clase, y teñir la línea entera lo convertiría en una alarma.
+- **Botón "Ejecutar" de 52 px en la propia fila**: un toque del listado al paso 1. **Su ausencia ES la señal** de que no hay procedimiento, así que no hace falta ningún cartel que lo diga. No va envuelto en el enlace de la fila (un control dentro de otro control no es HTML válido y el lector de pantalla no sabría cuál anuncia): el cuerpo es el enlace y el botón va a su lado, con `aria-label` que nombra la guía.
+- **La fila pasa a tarjeta** (borde, 12 px de radio, recuadro de 40 px, título de 16,5 px; punteada cuando no es ejecutable) y la lista, de renglones con regla a tarjetas con hueco. Se retiró la prop `conSeparador`.
+- **Chips de filtro de 36 a 44 px.**
+
+**Decisión registrada.** El cuarto punto del tablero, "Tipo y etiqueta se van a un sheet: un solo eje visible", **ya estaba cumplido**. El `3a` del handoff dibuja dos chips, "Tipo" y "Etiqueta", pero en el código real solo existe el de Tipo: la etiqueta **no es un chip sino un modo**, con su propia cinta de contexto ("Etiqueta: X · Ver todos"), al que se llega tocando una etiqueta en la ficha de un artículo. Es la decisión R4 de la tarea 171. De ese punto solo quedaba el tamaño de los chips, que sí se aplicó.
+
+**Fuera de alcance a propósito.** El mockup titula la pantalla **"Soluciones"** y la pestaña **"Dispositivos"**. No se aplicó: el usuario renombró esas dos secciones a **"Guías"** y **"Equipos"** por escrito en `Decisiones aprobadas.md` ([DECISIONES.md](DECISIONES.md) AD-022), y un mockup posterior no revierte una decisión suya. Se deja anotado porque volverá a aparecer en los Pasos 1, 2 y 4.
+
+**Verificación en navegador** (cuatro guías sembradas y borradas al terminar): los chips miden 44 px, los de categoría y el de Tipo; los botones "Ejecutar" miden 52x52, apuntan a `/soluciones/<categoria>/<id>/ejecutar` y aparecen en **las 3 guías con pasos y en ninguna más** (el manual sin pasos queda con su galón); las cuatro líneas de capacidad salen "7 pasos · ~25 min · verificación", "4 pasos · ~10 min · verificación", "7 pasos · ~20 min" (sin verificación, correcto) y "Sin pasos · solo notas · no se puede ejecutar".
+
+
 ### 203. Auditoría móvil, fase 2: Inicio en cinco bloques y dos pesos de fila (M-006, M-007, M-013, M-003)
 
 **Estado**: TERMINADA y **verificada en navegador real a 360 y a 412 px** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da 975 de 975 en verde. **Prioridad**: Alta. **Origen**: fase 2 de la auditoría móvil, mockup `2b` de `Evidencia móvil.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode. **Absorbe la tarea 195** (turno 9, "Inicio, las tres zonas").

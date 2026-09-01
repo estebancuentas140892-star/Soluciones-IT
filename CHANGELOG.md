@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Agregado (tarea 214): la completitud sale del editor y llega al listado de guías
+
+**Área modificada:** `src/features/soluciones/FilaArticulo.tsx`, `SolucionesPage.tsx`, y dos archivos nuevos: `capacidadGuia.ts`, `capacidadGuia.test.ts`.
+**Motivo:** tablero `3b` del handoff "Soluciones IT, Diseño móvil". La app **ya calcula** qué tan completa está una guía, pero ese dato **solo vivía en el editor**: en el listado, `FilaArticulo` pintaba exactamente la misma fila de 60 px para una guía de 7 pasos con verificación final y para un borrador sin un solo paso (mismo recuadro de 34 px, misma línea `categoría · tipo · min`). El técnico descubría que la guía estaba vacía **después de abrirla**, de pie y frente al equipo.
+**Impacto esperado:** alto, en la pantalla más usada de la app. **Sin esquema**: todo sale de `normalizarProcedimiento` y `procedimientoEjecutable`, que ya existían.
+
+- **Agregado** `capacidadGuia.ts` (lógica pura, 9 pruebas): `capacidadDeGuia` y `lineaDeCapacidad`. **No reutiliza `completitudArticulo.ts` a propósito**: el editor mide "cuánto te falta para publicarla" y esto responde "¿me sirve ahora mismo?". Son dos preguntas, no dos vistas de la misma.
+- **Agregado** la **línea de capacidad** en cada fila: "7 pasos · ~25 min · verificación", o "Sin pasos · solo notas · no se puede ejecutar" cuando no hay procedimiento. El ámbar se reserva para "Sin pasos"; el resto del aviso va neutro, porque un manual sin pasos no está roto, es de otra clase.
+- **Agregado** el botón **"Ejecutar" de 52 px en la propia fila**: un toque del listado al paso 1, en vez de abrir la guía y buscarlo dentro. **Su ausencia ES la señal** de que no hay procedimiento. No va envuelto en el enlace de la fila (un control dentro de otro no es HTML válido); el cuerpo es el enlace y el botón va a su lado con `aria-label` que nombra la guía.
+- **Cambiado** la fila pasa de renglón con separador a **tarjeta** (borde, 12 px de radio, recuadro de 40 px, título de 16,5 px), con borde punteado cuando no es ejecutable. Se retiró la prop `conSeparador`.
+- **Cambiado** los chips de filtro suben de 36 a **44 px**.
+- **Decisión registrada:** el cuarto punto del tablero ("Tipo y etiqueta se van a un sheet: un solo eje visible") **ya estaba cumplido**. El `3a` del handoff dibuja dos chips, "Tipo" y "Etiqueta", pero en el código real solo existe el de Tipo: la etiqueta no es un chip sino un **modo** con su propia cinta de contexto, decisión de la tarea 171 (R4). De ese punto solo quedaba el tamaño, que sí se aplicó.
+- **Fuera de alcance:** el mockup titula la pantalla "Soluciones" y la pestaña "Dispositivos". **No se aplicó**: el usuario renombró esas dos a "Guías" y "Equipos" por escrito ([DECISIONES.md](DECISIONES.md) AD-022), y un mockup no revierte una decisión suya.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **984 de 984** en verde (9 nuevas). **Medido en navegador real a 360 px** con cuatro guías sembradas y borradas al terminar: los chips miden 44 px (los de categoría y el de Tipo); los botones "Ejecutar" miden 52x52, apuntan a `/soluciones/<cat>/<id>/ejecutar` y aparecen en las **3 guías con pasos**, no en el manual sin pasos; las líneas de capacidad salen "7 pasos · ~25 min · verificación", "4 pasos · ~10 min · verificación", "7 pasos · ~20 min" (sin verificación) y "Sin pasos · solo notas · no se puede ejecutar".
+
 ### Cambiado (tarea 203): Inicio en cinco bloques y dos pesos de fila
 
 **Área modificada:** `src/features/inicio/InicioPage.tsx`, `src/components/BarraReanudar.tsx`, `src/components/BarraSuperior.tsx`, `src/app/Chasis.tsx`, `src/features/soluciones/useReanudar.ts`.
