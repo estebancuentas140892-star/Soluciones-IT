@@ -6,6 +6,10 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(vacío: la tarea 203 se cerró el 2026-09-01. Con ella **la fase 2 de la auditoría móvil queda a medias**: hechas la 202 (el regreso deshace el último salto) y la 203 (Inicio); quedan la 204 (Red abre con el nodo), la 205 (Bóveda y Diagnóstico) y la 206 (un color, un significado dentro del paso). La siguiente pendiente es la 204, ver "Por hacer".)*
 
+**Despliegue confirmado (regla 14).** El commit `8a5ebde` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `InicioPage-D331oXcp.js` de producción contiene "Te toca a ti" y "Lo que consultaste", y `Chasis-CNiV5C6f.js` contiene "Sigues en el paso" (la tarjeta de reanudar viaja con el chasis, no con Inicio). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 7 minutos en propagar.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
 ---
 
 **HANDOFF NUEVO: "Soluciones IT, Diseño móvil" (importado el 2026-08-31).** Seis `.dc.html` en el proyecto de Claude Design `2f70dec0-abd8-4da5-8f2a-709e08102f5a`: `Paso 1 - Inicio y Onboarding`, `Paso 2 - Shell y Navegación`, `Paso 3 - Guías y Ejecución Guiada`, `Paso 4 - Dispositivos y Red`, `Paso 5 - Vinculación y Cero Duplicidad` y `Paso 6 - Guías a Fondo`. El usuario autorizó implementar **solo el Paso 6**; los cinco anteriores quedan sin registrar hasta que lo pida (excepción explícita a la regla 15, decidida por el usuario el 2026-08-31).
