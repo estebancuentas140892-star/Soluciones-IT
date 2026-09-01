@@ -6,6 +6,10 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(vacío: la tarea 204 se cerró el 2026-09-01. De la **fase 2 de la auditoría móvil** quedan la **205** (Bóveda y Diagnóstico) y la **206** (un color, un significado dentro del paso); hechas la 202, la 203 y la 204. La siguiente pendiente es la **205**, ver "Por hacer".)*
 
+**Despliegue confirmado (regla 14).** El commit `436e749` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `RedPage-B2PL_I3X.js` de producción contiene "Estás recorriendo", `nodo=`, "Todos los equipos de red por ubicación" y "Mapa completo, desde cada raíz", y aparece el chunk nuevo `EquiposRedPage-BSXaUEzV.js` con "Equipos de red" y "Sin ubicación". Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
 *(la tarea 215 se cerró el 2026-09-01. Con ella **el `Paso 3` del handoff queda completo**: sus dos tableros implementables eran el `3b` (tarea 214) y el `3d` (tarea 215). Los **Pasos 1, 2 y 4** siguen sin registrar hasta que el usuario los pida.)*
 
 **Despliegue confirmado (regla 14).** El commit `e17d911` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `AsistenteVista-Bite7Bcm.js` de producción contiene "Algo va mal en el paso", "Abrir la contingencia vinculada", "Saltar el paso y seguir" y "no se pierden", y `ProcedimientoVista-B3-bt-sL.js` contiene "Sí, ver la contingencia" y las filas de tarea de `min-h-[56px]`. Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar, el más rápido hasta ahora (los anteriores fueron de 4, 7 y 15).
