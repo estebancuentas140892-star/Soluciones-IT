@@ -6,6 +6,10 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(vacío: la tarea 214 se cerró el 2026-09-01. Del `Paso 3` queda el tablero `3d`, que es la tarea **215**, la primera de "Por hacer". Los Pasos 1, 2 y 4 del handoff siguen sin registrar hasta que el usuario los pida.)*
 
+**Despliegue confirmado (regla 14).** El commit `71399b3` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `SolucionesPage-Mjkhvsem.js` de producción contiene "solo notas" (la línea de capacidad de una guía sin pasos). Comprobado por HTTP contra `/sw.js` y el asset real; el despliegue tardó unos 15 minutos en propagar, más que los 4-7 habituales.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
 ---
 
 *(la tarea 203 se cerró el 2026-09-01. Con ella **la fase 2 de la auditoría móvil queda a medias**: hechas la 202 (el regreso deshace el último salto) y la 203 (Inicio); quedan la 204 (Red abre con el nodo), la 205 (Bóveda y Diagnóstico) y la 206 (un color, un significado dentro del paso). La siguiente pendiente es la 204, ver "Por hacer".)*
