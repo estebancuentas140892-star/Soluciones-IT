@@ -11,20 +11,27 @@ import {
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
-import { ArrowSquareOut, CaretRight, Check, CheckCircleFill, Circle, SealCheck } from '../../components/iconos'
+import { ArrowSquareOut, CaretRight, Check, CheckCircleFill, Circle, SealCheck, Warning } from '../../components/iconos'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { tonoInfo } from './tonos'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 
-// Botones pequeños con tono de estado (respuestas Si/No de las
-// preguntas de error y decisiones): delineados como todo boton
-// Nocturne, en el color del estado que representan.
+// Botones con tono de estado (respuestas Sí/No de las contingencias y
+// de las decisiones): delineados como todo botón Nocturne, en el color
+// del estado que representan.
+//
+// Medían 28 px de alto con texto de 12: eran el control más pequeño de
+// la pantalla de ejecución, y uno de ellos era la única salida cuando
+// algo salía mal (tablero 3d). Ahora 44, el mínimo de toque de la regla
+// R6, con texto de 14.
+const BTN_ESTADO_BASE =
+  'inline-flex min-h-11 cursor-pointer items-center rounded-lg border px-3.5 text-[14px] font-medium'
 const BTN_EXITO =
-  'cursor-pointer rounded-lg border border-noct-exito/40 px-3 py-1.5 text-xs font-medium text-noct-exito hover:bg-noct-exito/10 active:bg-noct-exito/20'
+  `${BTN_ESTADO_BASE} border-noct-exito/50 text-noct-exito hover:bg-noct-exito/10 active:bg-noct-exito/20`
 const BTN_PRECAUCION =
-  'cursor-pointer rounded-lg border border-noct-precaucion/40 px-3 py-1.5 text-xs font-medium text-noct-precaucion hover:bg-noct-precaucion/10 active:bg-noct-precaucion/20'
+  `${BTN_ESTADO_BASE} border-noct-precaucion/50 text-noct-precaucion hover:bg-noct-precaucion/10 active:bg-noct-precaucion/20`
 
 // Panel de aviso reutilizado para vinculos rotos o no disponibles.
 const PANEL_PRECAUCION =
@@ -292,14 +299,18 @@ export function ProcedimientoVista({
                         </p>
                       )}
 
-                      {/* La pregunta de error solo aparece cuando el trabajo
-                          previo del paso (tareas y subprocedimiento) ya esta
-                          completo: asi el paso no avanza saltandose nada. */}
-                      {paso.solucionArticuloId && !hecho && trabajoPrevio && (
+                      {/* La contingencia deja de esconderse (tablero 3d).
+                          Antes esta pregunta solo aparecía con el trabajo
+                          previo del paso completo, o sea cuando ya no hacía
+                          falta: si el paso falla, sus tareas no se pueden
+                          marcar. Ahora se ve siempre, y lo que depende del
+                          trabajo previo es qué respuestas se ofrecen. */}
+                      {paso.solucionArticuloId && !hecho && (
                         <SolucionEnPaso
                           solucionArticuloId={paso.solucionArticuloId}
                           tituloReferencia={paso.solucionArticuloTitulo}
                           nivel={nivel}
+                          trabajoPrevio={trabajoPrevio}
                           onContinuar={() => void completarPasoYAvanzar(indice, paso)}
                         />
                       )}
@@ -360,7 +371,7 @@ export function ProcedimientoVista({
                     <Circle size={22} className="shrink-0 text-noct-accent-400" aria-hidden />
                   )}
                   <span
-                    className={`text-[15px] leading-[1.4] ${marcada ? 'text-noct-neutral-500 line-through' : ''}`}
+                    className={`text-[15px] leading-[1.4] ${marcada ? 'text-noct-neutral-400' : ''}`}
                   >
                     {item}
                   </span>
@@ -555,11 +566,15 @@ function SolucionEnPaso({
   solucionArticuloId,
   tituloReferencia,
   nivel,
+  trabajoPrevio,
   onContinuar,
 }: {
   solucionArticuloId: string
   tituloReferencia: string
   nivel: number
+  // Si el paso tiene todo su trabajo previo hecho. Decide si se ofrece
+  // "No, continuar", que completa el paso.
+  trabajoPrevio: boolean
   onContinuar: () => void
 }) {
   const articulo = useLiveQuery(
@@ -597,15 +612,21 @@ function SolucionEnPaso({
   if (!abierta) {
     return (
       <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
-        <p className="text-[13.5px] font-medium leading-normal">
+        <p className="flex items-center gap-2 text-[13.5px] font-medium leading-normal">
+          <Warning size={15} className="shrink-0 text-noct-precaucion" aria-hidden />
           ¿Ocurrió algún error durante este paso?
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <button type="button" onClick={onContinuar} className={BTN_EXITO}>
-            No, continuar
-          </button>
+          {/* "No, continuar" COMPLETA el paso, así que solo se ofrece
+              cuando no queda trabajo en él: con tareas sin marcar sería
+              darlas por hechas sin que nadie las hiciera. */}
+          {trabajoPrevio && (
+            <button type="button" onClick={onContinuar} className={BTN_EXITO}>
+              No, continuar
+            </button>
+          )}
           <button type="button" onClick={() => setMostrarSolucion(true)} className={BTN_PRECAUCION}>
-            Sí, ver la solución
+            Sí, ver la contingencia
           </button>
         </div>
       </div>
@@ -677,11 +698,11 @@ export type EjecutarArticuloInline = (opciones: {
   onCompletado: () => void
 }) => ReactNode
 
-// Fila de tarea con casilla (accion o verificacion): casilla de 18px
-// (marcada: relleno del acento con check en el color del fondo; las
-// verificaciones llevan su etiqueta a la derecha) y texto tachado al
-// completar. La comparten las tareas normales y las decisiones ya
-// respondidas.
+// Fila de tarea con casilla (acción o verificación): casilla rellena
+// del acento con el check en el color del fondo cuando está marcada, y
+// la etiqueta a la derecha en las verificaciones. La comparten las
+// tareas normales y las decisiones ya respondidas, y la usan las dos
+// vistas del procedimiento (lectura y asistente).
 function FilaTarea({
   marcada,
   esVerificacion,
@@ -695,9 +716,16 @@ function FilaTarea({
   onAlternar: () => void
   ariaLabel: string
 }) {
-  // Decisión 7 de P2: casilla de 24 px en una fila de 44 y texto a 15 px.
-  // Antes eran 18 px de casilla y 14 de texto: es lo que se lee agachado
-  // junto a un rack, y lo que se toca con guantes (R6, toque de 44).
+  // Casilla de 28 px en una fila de 56 y texto de 16 (tablero 3d).
+  // Venían de 24 en 44 con texto de 15 (decisión 7 de P2), y antes de
+  // eso de 18 con texto de 14. Es lo que se toca con guantes y lo que se
+  // lee agachado junto a un rack.
+  //
+  // El estado hecho NO va tachado: a 16 px, a pleno sol y con el
+  // teléfono apoyado en el rack, la línea del tachado no se distingue y
+  // solo emborrona el texto. Lo dicen la casilla en acento y el texto
+  // atenuado, que además sube de `neutral-600` (4.0:1 sobre el fondo,
+  // por debajo del 4.5 que pide AA, regla R2) a `neutral-400` (8.9:1).
   return (
     <button
       type="button"
@@ -705,29 +733,22 @@ function FilaTarea({
       aria-checked={marcada}
       aria-label={ariaLabel}
       onClick={onAlternar}
-      className="flex min-h-11 w-full cursor-pointer items-start gap-2.5 py-1 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
+      className="flex min-h-[56px] w-full cursor-pointer items-center gap-3 py-1 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
     >
       {marcada ? (
         <span
           aria-hidden
-          className="mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-noct-accent"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-noct-accent"
         >
-          <Check size={16} className="text-noct-bg" />
+          <Check size={18} className="text-noct-bg" />
         </span>
       ) : (
-        <span
-          aria-hidden
-          className="mt-px h-6 w-6 shrink-0 rounded-md border-[1.5px] border-noct-neutral-700"
-        />
+        <span aria-hidden className="h-7 w-7 shrink-0 rounded-lg border-[1.5px] border-noct-neutral-700" />
       )}
-      <span
-        className={`min-w-0 flex-1 self-center text-[15px] leading-[1.4] ${
-          marcada ? 'text-noct-neutral-600 line-through' : ''
-        }`}
-      >
+      <span className={`min-w-0 flex-1 text-[16px] leading-[1.35] ${marcada ? 'text-noct-neutral-400' : ''}`}>
         {texto}
       </span>
-      {esVerificacion && <TagNeutral className="shrink-0 self-center">Verificación</TagNeutral>}
+      {esVerificacion && <TagNeutral className="shrink-0">Verificación</TagNeutral>}
     </button>
   )
 }

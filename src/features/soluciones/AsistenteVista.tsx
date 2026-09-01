@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
@@ -19,7 +19,7 @@ import {
 import { registrarIntervencion } from '../../lib/repositorio'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
-import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, Crosshair, LinkSimple, SealCheck, Warning, Wrench } from '../../components/iconos'
+import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, Crosshair, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
 import { BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
@@ -27,6 +27,8 @@ import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
 import { ModoFoco } from './ModoFoco'
+import { HojaFalla } from './HojaFalla'
+import { destinoAlSaltar } from './salidasFalla'
 import { minutosRestantes, resumenDeAvance, resumirPasos, type ResumenPaso } from './estadoPasos'
 
 interface Props {
@@ -78,9 +80,29 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // Modo foco (tablero 6d): una tarea a la vez. Es un modo, no un
   // reemplazo, así que se entra y se sale a voluntad.
   const [enFoco, setEnFoco] = useState(false)
-  // Tarea en la que el técnico declaró que algo falló, para dejar el
-  // aviso puesto al volver a la vista completa del paso.
-  const [tareaFallida, setTareaFallida] = useState<string | null>(null)
+  // FALLA DEL PASO (tablero 3d). Tres estados distintos a propósito:
+  //
+  // - `falla`: qué paso falló y qué se pidió al declararlo. Va ATADO AL
+  //   PASO, así que avanzar retira el aviso solo. Antes el aviso del
+  //   modo foco se quedaba puesto en los pasos siguientes.
+  // - `hojaFalla`: la hoja de salidas abierta, con la tarea señalada si
+  //   viene del foco. Abrirla no declara nada todavía: "Cancelar" tiene
+  //   que poder no dejar rastro.
+  // - `contingenciaPasoId`: en qué paso se abrió la guía de
+  //   contingencia. Antes no hacía falta porque la contingencia solo
+  //   aparecía con el paso entero marcado, que es justo el defecto.
+  const [falla, setFalla] = useState<{ pasoId: string; tarea: string | null; conEvidencia: boolean } | null>(null)
+  const [hojaFalla, setHojaFalla] = useState<{ tarea: string | null } | null>(null)
+  const [contingenciaPasoId, setContingenciaPasoId] = useState<string | null>(null)
+  // Lleva al técnico hasta la cámara cuando elige "fotografiar y
+  // anotar": el bloque de evidencia vive al final del paso. Se desplaza
+  // la vista y nada más. Registrar una intervención en el historial del
+  // equipo es una escritura, y la decide el técnico tocando su botón,
+  // no un efecto secundario de haber elegido una salida.
+  const refEvidencia = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (falla?.conEvidencia) refEvidencia.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [falla])
 
   // Cronometro de la sesion de ejecucion (solo nivel 0): tiempo desde
   // que se abrio el asistente, para contrastar con el estimado. Es
@@ -193,7 +215,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
                     >
                       <Check size={12} />
                     </span>
-                    <span className={`text-sm ${marcada ? 'text-noct-neutral-500 line-through' : 'text-noct-neutral-300'}`}>
+                    <span className={`text-sm ${marcada ? 'text-noct-neutral-400' : 'text-noct-neutral-300'}`}>
                       {item}
                     </span>
                   </button>
@@ -238,11 +260,13 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   const subSatisfecho = subSatisfechoReactivo(paso)
   const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
   const pasoActualHecho = hechos.has(paso.id)
-  // La pregunta de error ocupa el lugar del boton "Siguiente" mientras
-  // no se responda; una vez respondida (o si no hay solucion vinculada,
-  // o si se esta revisando un paso ya completo), el boton vuelve a
-  // decidir el avance.
-  const mostrandoPreguntaError = !pasoActualHecho && Boolean(paso.solucionArticuloId) && trabajoPrevio
+  // La falla y la contingencia son de ESTE paso: al cambiar de paso no
+  // se arrastran.
+  const fallaDelPaso = falla?.pasoId === paso.id ? falla : null
+  const contingenciaAbierta = contingenciaPasoId === paso.id
+  // A dónde lleva "saltar el paso y seguir", o null si no hay a dónde y
+  // entonces esa salida no se ofrece (ver `salidasFalla.ts`).
+  const destinoSalto = destinoAlSaltar(indiceActual, idsPasos, hechos)
 
   // Avance del boton principal. En un paso pendiente: intenta completarlo
   // (valida el trabajo previo y avanza al siguiente pendiente). En un
@@ -295,22 +319,66 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // La barra de tarea del chasis se queda (dice qué se está haciendo y
   // a dónde se vuelve, regla R19); lo que no se monta es la banda del
   // paso, porque el foco trae su propia cabecera mínima.
+  // Elegir una salida deja el paso declarado como fallido y SALE DEL
+  // FOCO, porque las cuatro salidas ocurren en el paso completo (la
+  // contingencia, la evidencia y los archivos viven ahí). Cancelar no
+  // sale: devuelve al técnico exactamente donde estaba.
+  function elegirSalida(conEvidencia: boolean) {
+    setFalla({ pasoId: paso.id, tarea: hojaFalla?.tarea ?? null, conEvidencia })
+    setHojaFalla(null)
+    setEnFoco(false)
+  }
+
+  // UNA SOLA hoja para los dos "Falla" (tablero 3d): el del modo foco,
+  // que ya existía desde el 6d, y el nuevo de la barra de acción. Lo
+  // único que cambia entre los dos es que el foco sabe en qué tarea
+  // estaba el técnico.
+  const hojaDeFalla = (
+    <HojaFalla
+      abierto={hojaFalla !== null}
+      onCerrar={() => setHojaFalla(null)}
+      numeroPaso={indiceActual + 1}
+      pasosHechos={completados}
+      tarea={hojaFalla?.tarea ?? null}
+      solucionArticuloId={paso.solucionArticuloId || null}
+      solucionArticuloTitulo={paso.solucionArticuloTitulo}
+      onAbrirContingencia={() => {
+        elegirSalida(false)
+        setContingenciaPasoId(paso.id)
+      }}
+      onFotografiar={dispositivoEvidencia ? () => elegirSalida(true) : null}
+      onSaltar={
+        destinoSalto === null
+          ? null
+          : () => {
+              // Saltar no deja aviso puesto: el aviso es de este paso
+              // y el técnico se va a otro. Que quedó saltado ya lo dice
+              // el índice, que lo deriva de la posición
+              // (`estadoPasos.ts`).
+              setHojaFalla(null)
+              setEnFoco(false)
+              setIndiceActual(destinoSalto)
+            }
+      }
+    />
+  )
+
   if (enFoco && nivel === 0 && idsTareas.length > 0) {
     return (
-      <ModoFoco
-        key={paso.id}
-        paso={paso}
-        indicePaso={indiceActual}
-        totalPasos={pasos.length}
-        tituloPaso={tituloPaso}
-        instruccionesHechas={instruccionesHechas}
-        onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
-        onSalir={() => setEnFoco(false)}
-        onFalla={(texto) => {
-          setTareaFallida(texto)
-          setEnFoco(false)
-        }}
-      />
+      <>
+        <ModoFoco
+          key={paso.id}
+          paso={paso}
+          indicePaso={indiceActual}
+          totalPasos={pasos.length}
+          tituloPaso={tituloPaso}
+          instruccionesHechas={instruccionesHechas}
+          onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
+          onSalir={() => setEnFoco(false)}
+          onFalla={(texto) => setHojaFalla({ tarea: texto })}
+        />
+        {hojaDeFalla}
+      </>
     )
   }
 
@@ -367,28 +435,34 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         )}
       </div>
 
-      {/* Lo que el técnico declaró desde el modo foco (tablero 6d). No
-          toca el progreso ni completa nada: solo deja dicho qué falló y
-          pone a mano la solución del paso, si la tiene. */}
-      {tareaFallida && nivel === 0 && (
+      {/* Lo que el técnico declaró al elegir una salida (tablero 3d).
+          No toca el progreso ni completa nada: deja dicho que este paso
+          falló y pone a mano lo que hace falta. Se retira solo al
+          cambiar de paso, porque va atado al id del paso. */}
+      {fallaDelPaso && nivel === 0 && (
         <div className="flex flex-col gap-2.5 rounded-xl border border-noct-precaucion/45 bg-noct-precaucion/[.12] px-4 py-3">
           <p className="flex items-start gap-2.5 text-[13.5px] leading-snug">
             <Warning size={17} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
             <span className="min-w-0">
-              <span className="font-semibold text-noct-precaucion">Marcaste una falla</span> en
-              «{tareaFallida}». Aquí tienes el paso completo: sus avisos, sus fotos y sus archivos.
+              <span className="font-semibold text-noct-precaucion">Marcaste una falla</span>
+              {fallaDelPaso.tarea ? <> en «{fallaDelPaso.tarea}». </> : <> en este paso. </>}
+              Aquí tienes el paso completo: sus avisos, sus fotos y sus archivos.
             </span>
           </p>
           <div className="flex flex-wrap gap-2">
-            {paso.solucionArticuloId && (
-              <SolucionDelPasoEnlace
-                solucionArticuloId={paso.solucionArticuloId}
-                tituloReferencia={paso.solucionArticuloTitulo}
-              />
+            {paso.solucionArticuloId && !contingenciaAbierta && (
+              <button
+                type="button"
+                onClick={() => setContingenciaPasoId(paso.id)}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-noct-precaucion/50 px-3 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
+              >
+                <Wrench size={15} className="shrink-0" aria-hidden />
+                Abrir la contingencia
+              </button>
             )}
             <button
               type="button"
-              onClick={() => setTareaFallida(null)}
+              onClick={() => setFalla(null)}
               className="inline-flex min-h-11 items-center rounded-lg px-3 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.08]"
             >
               Quitar el aviso
@@ -433,25 +507,44 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         />
       )}
 
-      {paso.solucionArticuloId && trabajoPrevio && !pasoActualHecho && (
+      {/* La contingencia ya no depende de `trabajoPrevio` (tablero 3d):
+          se abre desde "Falla", que está disponible siempre. La `key`
+          la ata al paso para que no herede el estado de otro.
+
+          Qué pasa al resolverla depende de si el paso tenía trabajo
+          pendiente. Con todo marcado, resolverla completa el paso y el
+          avance sigue, que es como funcionaba. Con tareas sin marcar,
+          NO: darlo por hecho se saltaría trabajo que nadie hizo, así
+          que solo se cierra la contingencia y el técnico vuelve al paso
+          con su aviso puesto. */}
+      {paso.solucionArticuloId && !pasoActualHecho && (
         <SolucionEnAsistente
+          key={paso.id}
           solucionArticuloId={paso.solucionArticuloId}
           tituloReferencia={paso.solucionArticuloTitulo}
           nivel={nivel}
-          onContinuar={() => void completarPasoYAvanzar(indiceActual, paso)}
+          abrirDirecto={contingenciaAbierta}
+          onCerrar={() => setContingenciaPasoId(null)}
+          onResuelta={() => {
+            if (trabajoPrevio) void completarPasoYAvanzar(indiceActual, paso)
+            else setContingenciaPasoId(null)
+          }}
         />
       )}
 
       {/* Evidencia fotografica del paso (tarea 79): solo si el
           procedimiento tiene un equipo afectado donde registrarla. */}
       {nivel === 0 && dispositivoEvidencia && (
-        <EvidenciaPaso
-          articuloId={articuloId}
-          articuloTitulo={articulo?.titulo ?? ''}
-          dispositivoId={dispositivoEvidencia.id}
-          paso={paso}
-          entradaId={progreso?.evidenciasPorPaso?.[paso.id] ?? null}
-        />
+        <div ref={refEvidencia}>
+          <EvidenciaPaso
+            articuloId={articuloId}
+            articuloTitulo={articulo?.titulo ?? ''}
+            dispositivoId={dispositivoEvidencia.id}
+            paso={paso}
+            entradaId={progreso?.evidenciasPorPaso?.[paso.id] ?? null}
+            conFalla={Boolean(fallaDelPaso)}
+          />
+        </div>
       )}
 
       {/* Acción dominante fija al pie (M-011, regla M-R3, mockup `3b`).
@@ -470,7 +563,33 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           Los pasos anidados conservan su botón único en línea: su avance
           lo decide el paso que los contiene, y dos acciones dominantes
           en la misma pantalla dejarían de ser dominantes. */}
-      {!mostrandoPreguntaError && nivel === 0 && (
+      {/* Acción dominante fija al pie (M-011, regla M-R3, mockup `3b`).
+          Hasta ahora "Atrás / Siguiente" vivían al final del scroll del
+          paso, mientras la ficha de artículo sí fijaba su acción abajo
+          (tarea 172): la contradicción se pagaba justo en la pantalla
+          donde el pulgar trabaja de verdad, porque avanzar exigía
+          recorrer el paso entero con una mano.
+
+          Es `sticky`, no `fixed`: así reserva su propio hueco en el
+          flujo y no tapa el final del paso.
+
+          DOS FILAS desde el tablero 3d. La barra tiene ahora cuatro
+          controles, y en 360 px una sola fila dejaba la acción dominante
+          en 88 px, recortada a "Paso hecho · i...". Así que los dos que
+          no son trabajo (volver y entrar al foco) suben a una fila de 44
+          y la fila de abajo, la que cae bajo el pulgar, se queda con las
+          dos que sí lo son: la contingencia y el avance, a 56 px.
+
+          Y esta barra ya NO desaparece. Antes, cuando el paso tenía una
+          contingencia vinculada y el trabajo previo completo, la
+          pregunta "¿Ocurrió algún error?" la reemplazaba: la pantalla se
+          quedaba sin acción dominante y el layout saltaba. Esa pregunta
+          ya no existe, porque "Falla" es la pregunta, y está siempre.
+
+          Los pasos anidados conservan su fila en línea: su avance lo
+          decide el paso que los contiene, y dos acciones dominantes en
+          la misma pantalla dejarían de ser dominantes. */}
+      {nivel === 0 && (
         <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.96] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
           {motivoBloqueo && (
             <p className="mb-1.5 text-center text-[11.5px] text-noct-neutral-400">{motivoBloqueo}</p>
@@ -481,7 +600,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
               disabled={indiceActual === 0}
               onClick={() => setIndiceActual(Math.max(0, indiceActual - 1))}
               aria-label="Volver al paso anterior"
-              className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
+              className="flex h-11 w-14 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
             >
               <CaretLeft size={18} aria-hidden />
             </button>
@@ -491,17 +610,32 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
               <button
                 type="button"
                 onClick={() => setEnFoco(true)}
-                className="flex h-[52px] shrink-0 items-center gap-1.5 rounded-xl border-[1.5px] border-noct-accent/50 bg-noct-accent/10 px-3 text-[14.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.22]"
+                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-noct-accent/50 bg-noct-accent/10 px-3 text-[14.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.22]"
               >
                 <Crosshair size={18} className="shrink-0" aria-hidden />
                 Foco
               </button>
             )}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            {/* "Falla" de 56 px, permanente. La etiqueta es corta a
+                propósito: así la acción dominante conserva su ancho y
+                ninguna de las dos se recorta. */}
+            <button
+              type="button"
+              onClick={() => setHojaFalla({ tarea: null })}
+              aria-haspopup="dialog"
+              aria-label={`Algo va mal en el paso ${indiceActual + 1}`}
+              className="flex h-[56px] shrink-0 items-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/60 bg-noct-precaucion/10 px-3.5 text-[14.5px] font-medium text-noct-precaucion active:bg-noct-precaucion/[.24]"
+            >
+              <Warning size={19} className="shrink-0" aria-hidden />
+              Falla
+            </button>
             <button
               type="button"
               disabled={!pasoActualHecho && !trabajoPrevio}
               onClick={avanzar}
-              className="flex h-[52px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-3 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-30"
+              className="flex h-[56px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-3 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-30"
             >
               <Check size={17} className="shrink-0" aria-hidden />
               <span className="truncate">{etiquetaAvance}</span>
@@ -510,17 +644,35 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         </div>
       )}
 
-      {!mostrandoPreguntaError && nivel >= 1 && (
-        <button
-          type="button"
-          disabled={!trabajoPrevio}
-          onClick={() => void intentarCompletarPaso(indiceActual, paso)}
-          className={`mt-2 ${BTN_PRIMARIO} min-h-11 text-sm disabled:opacity-30`}
-        >
-          Siguiente
-          <CaretRight size={15} aria-hidden />
-        </button>
+      {/* El paso anidado también puede fallar, así que también tiene su
+          salida. No es la barra fija (no hay dos acciones dominantes en
+          una pantalla) sino la misma fila en línea de siempre, ahora con
+          "Falla" al lado. Sin evidencia: el equipo afectado es el del
+          procedimiento de nivel 0, no el de este. */}
+      {nivel >= 1 && (
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHojaFalla({ tarea: null })}
+            aria-haspopup="dialog"
+            aria-label={`Algo va mal en el paso ${indiceActual + 1}`}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-noct-precaucion/55 px-3 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
+          >
+            <Warning size={15} className="shrink-0" aria-hidden />
+            Falla
+          </button>
+          <button
+            type="button"
+            disabled={!trabajoPrevio}
+            onClick={() => void intentarCompletarPaso(indiceActual, paso)}
+            className={`${BTN_PRIMARIO} min-h-11 flex-1 text-sm disabled:opacity-30`}
+          >
+            Siguiente
+            <CaretRight size={15} aria-hidden />
+          </button>
+        </div>
       )}
+      {hojaDeFalla}
     </div>
   )
 }
@@ -646,26 +798,47 @@ function EvidenciaPaso({
   dispositivoId,
   paso,
   entradaId,
+  conFalla,
 }: {
   articuloId: string
   articuloTitulo: string
   dispositivoId: string
   paso: PasoProcedimiento
   entradaId: string | null
+  // El paso está declarado como fallido (tablero 3d): la evidencia deja
+  // de ser un extra y pasa a ser el registro de lo que salió mal, así
+  // que crece a 56 px y la intervención se titula como lo que es. La
+  // salida "Fotografiar y anotar el problema" de la hoja de falla trae
+  // la vista hasta aquí, pero NO toca el botón: crear la intervención
+  // escribe en el historial del equipo y esa es una decisión del
+  // técnico, no un efecto de haber abierto una hoja.
+  conFalla?: boolean
 }) {
   const [creando, setCreando] = useState(false)
 
   async function adjuntarEvidencia() {
     setCreando(true)
     const tituloPaso = paso.titulo || paso.subArticuloTitulo || 'paso sin título'
-    const descripcion = `Evidencia del paso "${tituloPaso}" (${articuloTitulo})`
+    const descripcion = conFalla
+      ? `Falla en el paso "${tituloPaso}" (${articuloTitulo})`
+      : `Evidencia del paso "${tituloPaso}" (${articuloTitulo})`
     const id = await registrarIntervencion(dispositivoId, descripcion)
     await registrarEvidenciaPaso(articuloId, paso.id, id)
     setCreando(false)
   }
 
   if (!entradaId) {
-    return (
+    return conFalla ? (
+      <button
+        type="button"
+        disabled={creando}
+        onClick={() => void adjuntarEvidencia()}
+        className="flex h-[56px] w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/60 bg-noct-precaucion/10 px-4 text-[15px] font-medium text-noct-precaucion active:bg-noct-precaucion/[.24] disabled:opacity-50"
+      >
+        <Camera size={19} className="shrink-0" aria-hidden />
+        {creando ? 'Preparando...' : 'Fotografiar y anotar la falla'}
+      </button>
+    ) : (
       <button
         type="button"
         disabled={creando}
@@ -757,50 +930,33 @@ function SubProcedimientoEnAsistente({
   )
 }
 
-// Enlace directo a la solución vinculada del paso, para el aviso de
-// "algo falló" que deja el modo foco (tablero 6d). Es un ENLACE, no la
-// pregunta de error: esa completa el paso al resolverse, y aquí el paso
-// puede tener tareas sin marcar, así que darlo por hecho se saltaría
-// trabajo. Abrir la guía es lo que el técnico necesita y no toca nada.
-function SolucionDelPasoEnlace({
-  solucionArticuloId,
-  tituloReferencia,
-}: {
-  solucionArticuloId: string
-  tituloReferencia: string
-}) {
-  const articulo = useLiveQuery(async () => (await db.articulos.get(solucionArticuloId)) ?? null, [solucionArticuloId])
-  if (!articulo || articulo.eliminadoEn) {
-    return (
-      <span className="inline-flex min-h-11 items-center text-[13px] text-noct-precaucion/85">
-        La solución vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está disponible.
-      </span>
-    )
-  }
-  return (
-    <Link
-      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
-      className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-noct-precaucion/50 px-3 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
-    >
-      <Wrench size={15} className="shrink-0" aria-hidden />
-      <span className="min-w-0 truncate">Ver la solución: {articulo.titulo}</span>
-    </Link>
-  )
-}
-
-// Pregunta de error del paso, en modo asistente: misma mecanica que
-// ProcedimientoVista (No completa y sigue; Sí anida el asistente de la
-// solucion), solo que la solucion tambien se ejecuta un paso a la vez.
+// LA CONTINGENCIA DEL PASO, abierta dentro del asistente (tablero 3d).
+//
+// Antes esto era una PREGUNTA ("¿Ocurrió algún error durante este
+// paso?") con dos botones de 28 px, y solo aparecía cuando el trabajo
+// previo del paso estaba completo: si el paso fallaba no se podían
+// marcar sus tareas, así que la pregunta no llegaba a hacerse nunca.
+// Ahora la pregunta la hace el botón "Falla" de la barra, que está
+// siempre, y esto es solo la respuesta: la guía de contingencia
+// ejecutándose un paso a la vez, sin salir del procedimiento.
+//
+// Se abre por dos caminos: porque el técnico la eligió en la hoja de
+// falla (`abrirDirecto`), o sola cuando quedó a medias, que es lo que
+// pasa al salir y volver a entrar en mitad de un error.
 function SolucionEnAsistente({
   solucionArticuloId,
   tituloReferencia,
   nivel,
-  onContinuar,
+  abrirDirecto,
+  onCerrar,
+  onResuelta,
 }: {
   solucionArticuloId: string
   tituloReferencia: string
   nivel: number
-  onContinuar: () => void
+  abrirDirecto: boolean
+  onCerrar: () => void
+  onResuelta: () => void
 }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(solucionArticuloId)) ?? null, [solucionArticuloId])
   const progreso = useLiveQuery(() => db.progresoPasos.get(solucionArticuloId), [solucionArticuloId])
@@ -808,80 +964,80 @@ function SolucionEnAsistente({
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
   )
-  const [mostrarSolucion, setMostrarSolucion] = useState<boolean | null>(null)
+  // Cerrarla a mano tiene que poder ganarle a la apertura automática
+  // por "quedó a medias"; volver a elegirla en la hoja tiene que poder
+  // ganarle a ese cierre. De ahí el efecto: cada vez que el técnico la
+  // pide otra vez, el cierre anterior deja de contar.
+  const [cerradaAMano, setCerradaAMano] = useState(false)
+  useEffect(() => {
+    if (abrirDirecto) setCerradaAMano(false)
+  }, [abrirDirecto])
 
   if (articulo === undefined) return null
-
-  if (articulo === null || articulo.eliminadoEn) {
-    return (
-      <div className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2">
-        <p className="text-xs text-noct-precaucion">
-          La solución vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
-          disponible. Edita el artículo para quitar el vínculo o vincular otra.
-        </p>
-      </div>
-    )
-  }
 
   const total = procedimiento?.pasos.length ?? 0
   const hechos = procedimiento
     ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((p) => p.id))
     : 0
   const aMedias = hechos > 0 && hechos < total
-  const abierta = mostrarSolucion ?? aMedias
+  if (cerradaAMano || (!abrirDirecto && !aMedias)) return null
 
-  if (!abierta) {
+  function cerrar() {
+    setCerradaAMano(true)
+    onCerrar()
+  }
+
+  if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
-        <p className="flex items-center gap-2 text-xs font-medium text-noct-neutral-300">
-          <Warning size={14} className="text-noct-precaucion" aria-hidden />
-          ¿Ocurrió algún error durante este paso?
+      <div className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2">
+        <p className="text-xs text-noct-precaucion">
+          La contingencia vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
+          disponible. Edita el artículo para quitar el vínculo o vincular otra.
         </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onContinuar}
-            className="rounded-lg border border-noct-exito/60 px-3 py-1.5 text-xs text-noct-exito hover:bg-noct-exito/10"
-          >
-            No, continuar
-          </button>
-          <button
-            type="button"
-            onClick={() => setMostrarSolucion(true)}
-            className="rounded-lg border border-noct-precaucion/60 px-3 py-1.5 text-xs text-noct-precaucion hover:bg-noct-precaucion/10"
-          >
-            Sí, ver la solución
-          </button>
-        </div>
       </div>
     )
   }
 
   const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
 
+  // Dentro de un nivel ya expandido, o si la contingencia no tiene
+  // pasos que ejecutar (K1), solo se enlaza: misma regla de un nivel que
+  // corta los ciclos en los subprocedimientos.
   if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
     return (
-      <Link
-        to={ruta}
-        className="flex items-center justify-between gap-2 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2"
-      >
-        <p className="min-w-0 truncate text-xs font-medium text-noct-precaucion">Solución: {articulo.titulo}</p>
-        <span className="shrink-0 text-xs text-noct-precaucion underline underline-offset-2">Abrir</span>
-      </Link>
+      <div className="flex items-center gap-2">
+        <Link
+          to={ruta}
+          className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2"
+        >
+          <p className="min-w-0 truncate text-xs font-medium text-noct-precaucion">
+            Contingencia: {articulo.titulo}
+          </p>
+          <span className="shrink-0 text-xs text-noct-precaucion underline underline-offset-2">Abrir</span>
+        </Link>
+        <BotonCerrarContingencia onCerrar={cerrar} />
+      </div>
     )
   }
 
+  // La contingencia resuelta devuelve el control al paso: qué pasa
+  // entonces lo decide quien la abrió (ver el comentario del punto de
+  // uso), y su progreso se reinicia para el próximo error, aquí o en
+  // cualquier otro procedimiento que la reutilice.
   async function resuelta() {
     await reiniciarProgreso(solucionArticuloId)
-    setMostrarSolucion(null)
-    onContinuar()
+    onResuelta()
   }
 
   return (
-    <div className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/[.07] p-3">
-      <p className="mb-3 min-w-0 truncate text-xs font-medium text-noct-precaucion">
-        Solución: {articulo.titulo}
-      </p>
+    <div className="rounded-xl border border-noct-precaucion/45 bg-noct-precaucion/[.07] p-3">
+      <div className="mb-3 flex items-center gap-2">
+        <Wrench size={16} className="shrink-0 text-noct-precaucion" aria-hidden />
+        <p className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-noct-precaucion">
+          Contingencia: {articulo.titulo}
+        </p>
+        <BotonCerrarContingencia onCerrar={cerrar} />
+      </div>
       <AsistenteVista
         articuloId={articulo.id}
         procedimiento={procedimiento}
@@ -889,5 +1045,21 @@ function SolucionEnAsistente({
         onCompletado={() => void resuelta()}
       />
     </div>
+  )
+}
+
+// Salir de la contingencia sin resolverla. Sin esto la contingencia es
+// una trampa: se entra desde la hoja de falla y no se sale más que
+// terminándola.
+function BotonCerrarContingencia({ onCerrar }: { onCerrar: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onCerrar}
+      aria-label="Cerrar la contingencia y volver al paso"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-precaucion hover:bg-noct-precaucion/15"
+    >
+      <X size={18} aria-hidden />
+    </button>
   )
 }

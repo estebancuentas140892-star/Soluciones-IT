@@ -406,7 +406,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Medidas que lo definen:** instrucción a **30 px** (lo que se lee de brazo estirado, a pleno sol, con el teléfono apoyado en el rack) y botón de marcar de **76 px**, el ÚNICO elemento grande de la pantalla, así que no hay que apuntar. Chips de vínculos a 52 px, flechas de tarea 64x56, "Falla" 56, "Ver todo" 44.
 - **Comportamiento:** entra en la primera tarea sin marcar. **Marcar avanza** a la siguiente sin marcar (el gesto es "ya está, dame la que sigue"); **desmarcar no mueve nada**, porque quien desmarca se está corrigiendo. Los avisos del paso van pegados a la tarea (un aviso que hay que ir a buscar no advierte). Los vínculos (clave, fotos, archivos) se despliegan como chips, sin ocupar la pantalla.
 - **No toca el modelo de datos:** los bloques ya tenían id, tipo y progreso propio (`instruccionesHechas`), y `alternarTarea` ya marcaba de a una. Esta vista solo los recorre.
-- **`onFalla`** sale del foco y deja un aviso ámbar en la vista completa del paso, con enlace a la solución vinculada si la tiene. Es un ENLACE, no la pregunta de error: esa completa el paso al resolverse, y aquí puede haber tareas sin marcar, así que darlo por hecho se saltaría trabajo.
+- **`onFalla`** abre la MISMA hoja de salidas que el "Falla" de la vista completa (`HojaFalla`, 3.8l; unificados en la tarea 215). Lo único que aporta el foco es saber en qué tarea estaba el técnico. **No sale del foco**: eso lo hace la salida que se elija, porque las salidas ocurren en el paso completo; cancelar devuelve al técnico donde estaba.
 - **Dónde:** `AsistenteVista` en nivel 0, con `key={paso.id}`: al completar el paso, el foco se remonta ya puesto en la primera tarea del siguiente. La barra de tarea del chasis se queda (regla R19); lo que no se monta es la banda del paso, porque el foco trae su propia cabecera.
 
 ### 3.8h `soluciones/HojaPasos` y `soluciones/estadoPasos.ts`
@@ -445,6 +445,16 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Props:** `{ children }`. Fuera de la barra no dibuja nada (no falla).
 - **Cómo:** `ArticuloForm` publica un `<div ref={setRanuraAcciones} className="empty:hidden" />` dentro de su barra fija y lo expone con `ProveedorAccionesPaso`; `PasosEditor` lo llena con `createPortal`. El hueco va en estado (no en una ref) para que los hijos vuelvan a renderizar cuando exista. Resultado: **una sola barra fija**, sin calcular ningún `bottom` contra el alto de la otra (que además cambia con las sugerencias de completitud abiertas).
 - **Dónde:** `ArticuloForm` (provee) y `PasosEditor` (consume).
+
+### 3.8l `soluciones/HojaFalla` y `soluciones/salidasFalla.ts`
+- **Propósito:** la hoja **"Algo va mal en el paso N"** (tarea 215, tablero `3d`): las salidas reales cuando la realidad no coincide con la guía. Cierra el defecto más grave de la pantalla de ejecución: la válvula de escape era el control **más pequeño** (28 px con texto de 12) y solo aparecía **cuando ya estaban marcadas todas las tareas del paso**. Si el paso fallaba no se podían marcar, así que la salida no llegaba a mostrarse nunca.
+- **Props:** `{ abierto, onCerrar, numeroPaso, pasosHechos, tarea, solucionArticuloId, solucionArticuloTitulo, onAbrirContingencia, onFotografiar, onSaltar }`.
+- **Las cuatro salidas**, de 56 a 60 px: abrir la contingencia vinculada (con su título y su número de pasos), fotografiar y anotar el problema, saltar el paso y seguir, cancelar.
+- **Dos salidas pueden faltar, y faltan a propósito.** `onFotografiar` llega `null` cuando el procedimiento no tiene equipo afectado: sin equipo no hay historial donde registrar la foto. `onSaltar` llega `null` cuando no hay a dónde saltar (ver `destinoAlSaltar`). Un botón que no lleva a ninguna parte estorba más de lo que ayuda.
+- **Sin vínculo de contingencia lo dice** ("Este paso no tiene una guía de contingencia vinculada") en vez de callarlo: así el técnico deja de buscarla.
+- **La promesa va arriba, antes de elegir:** "Los 4 pasos que llevas hechos no se pierden". El técnico está de pie frente al equipo con el procedimiento a medias, y la duda de "¿pierdo lo que llevo?" es lo que le hace no tocar el botón.
+- **`salidasFalla.ts`** (lógica pura, con 8 pruebas): `destinoAlSaltar(indiceActual, idsPasos, hechos)` y `fraseAvanceConservado(pasosHechos)`. Saltar es **avanzar sin marcar**, así que el destino es el siguiente en orden, esté hecho o no; devuelve `null` en el último paso pendiente, porque saltarlo dejaría el procedimiento sin nada por delante y la pantalla de cierre diría "completado" sobre un paso que falló.
+- **Dónde:** `AsistenteVista`, en los dos caminos (vista completa y modo foco), en todos los niveles. Usa `Modal` internamente.
 
 ### 3.8k `soluciones/capacidadGuia.ts`
 - **Propósito:** qué puede hacer una guía POR TI, para decirlo en su fila del listado (tarea 214, tablero `3b`). `capacidadDeGuia(articulo)` devuelve `{ ejecutable, pasos, minutos, tieneVerificacion }`; `lineaDeCapacidad(capacidad)` la redacta en trozos (`{ pasos, minutos, verificacion, aviso }`).

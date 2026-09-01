@@ -33,9 +33,11 @@ interface Props {
   instruccionesHechas: ReadonlySet<string>
   onAlternarTarea: (tareaId: string) => void
   onSalir: () => void
-  // El técnico declara que algo falló en esta tarea. Sale del foco y
-  // deja el aviso puesto en la vista completa del paso, que es donde
-  // vive todo lo que hace falta cuando algo sale mal.
+  // El técnico declara que algo va mal en esta tarea. Abre la MISMA
+  // hoja de salidas que el "Falla" de la vista completa (tablero 3d);
+  // lo único que aporta el foco es saber en qué tarea estaba. No sale
+  // del foco: eso lo hace la salida que se elija, porque las salidas
+  // ocurren en el paso completo. Cancelar deja al técnico donde estaba.
   onFalla: (textoTarea: string) => void
 }
 
@@ -117,9 +119,13 @@ export function ModoFoco({
 
         {/* 30 px: es lo que se lee de brazo estirado, a pleno sol, con
             el teléfono apoyado en el rack. */}
+        {/* Sin tachado, igual que las casillas del paso (tablero 3d):
+            si a 16 px la línea del tachado no se lee a pleno sol, a 30
+            solo emborrona más texto. Lo dice el atenuado, y el botón de
+            abajo dice "Hecha". */}
         <h2
           className={`text-[30px] font-medium leading-[1.25] tracking-[-.015em] text-pretty ${
-            hecha ? 'text-noct-neutral-500 line-through' : 'text-noct-text'
+            hecha ? 'text-noct-neutral-400' : 'text-noct-text'
           }`}
         >
           {tarea.texto || 'Tarea sin texto'}
@@ -201,7 +207,8 @@ export function ModoFoco({
           <button
             type="button"
             onClick={() => onFalla(tarea.texto)}
-            aria-label="Algo falló en esta tarea: ver el paso completo"
+            aria-haspopup="dialog"
+            aria-label="Algo va mal en esta tarea"
             className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/55 bg-noct-precaucion/10 text-[15.5px] font-medium text-noct-precaucion hover:bg-noct-precaucion/[.2]"
           >
             <Warning size={19} className="shrink-0" aria-hidden />

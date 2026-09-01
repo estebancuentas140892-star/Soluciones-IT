@@ -328,12 +328,17 @@ stateDiagram-v2
   Pendiente --> EnProgreso : marcar alguna tarea
   EnProgreso --> Pendiente : desmarcar (revierte)
   EnProgreso --> TrabajoPrevioListo : todas las tareas y el subprocedimiento completos
-  TrabajoPrevioListo --> Completo : sin solución de error vinculada
-  TrabajoPrevioListo --> PreguntaError : con solución de error ("¿Ocurrió algún error?")
-  PreguntaError --> Completo : responder "No"
-  PreguntaError --> Completo : responder "Sí", ejecutar la solución y terminarla
-  Completo --> [*] : se expande el siguiente pendiente
+  TrabajoPrevioListo --> Completo : acción dominante ("Paso hecho")
+  TrabajoPrevioListo --> Completo : resolver la contingencia vinculada
+  Pendiente --> Saltado : "Falla" › "Saltar el paso y seguir"
+  EnProgreso --> Saltado : "Falla" › "Saltar el paso y seguir"
+  Saltado --> EnProgreso : volver al paso desde el índice
+  Completo --> [*] : se abre el siguiente pendiente
 ```
+
+**La contingencia dejó de ser un estado del paso (tarea 215).** Hasta entonces, un paso con solución de error vinculada pasaba por `PreguntaError` ("¿Ocurrió algún error durante este paso?") antes de poder completarse, y esa pregunta **solo existía con el trabajo previo ya completo**: si el paso fallaba no se podían marcar sus tareas, así que la salida no llegaba a ofrecerse nunca. Ahora la contingencia se abre desde el botón **"Falla"**, disponible en cualquier estado del paso, y lo que cambia con el trabajo previo es solo **qué ocurre al resolverla**: con todo marcado completa el paso y el avance sigue; con tareas pendientes se cierra y el técnico vuelve al paso, porque darlo por hecho se saltaría trabajo que nadie hizo.
+
+**`Saltado` no se guarda**: se deduce de que el paso esté sin hacer y por detrás del actual (ver `estadoPasos.ts`). No toca el esquema.
 
 El `vinculoProtegido` de un paso es puramente informativo: no participa en ninguna condición de completado. Los subprocedimientos se ejecutan inline solo en el nivel 0; más profundo se muestran como enlace.
 

@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 214 se cerró el 2026-09-01. Del `Paso 3` queda el tablero `3d`, que es la tarea **215**, la primera de "Por hacer". Los Pasos 1, 2 y 4 del handoff siguen sin registrar hasta que el usuario los pida.)*
+*(vacío: la tarea 215 se cerró el 2026-09-01. Con ella **el `Paso 3` del handoff queda completo**: sus dos tableros implementables eran el `3b` (tarea 214) y el `3d` (tarea 215). Los **Pasos 1, 2 y 4** siguen sin registrar hasta que el usuario los pida. La siguiente pendiente es la **204**, ver "Por hacer".)*
 
 **Despliegue confirmado (regla 14).** El commit `71399b3` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `SolucionesPage-Mjkhvsem.js` de producción contiene "solo notas" (la línea de capacidad de una guía sin pasos). Comprobado por HTTP contra `/sw.js` y el asset real; el despliegue tardó unos 15 minutos en propagar, más que los 4-7 habituales.
 
@@ -237,16 +237,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 215. Handoff "Diseño móvil", Paso 3d: la contingencia deja de esconderse
-
-- **Descripción:** tablero `3d`. "¿Ocurrió algún error durante este paso?", la válvula de escape cuando la realidad no coincide con la guía, se dibuja hoy con dos botones de `px-3 py-1.5 text-xs` (**28 px de alto, texto de 12**): el control **más pequeño** de la pantalla. Y peor: solo aparece cuando `trabajoPrevio` es verdadero, es decir **cuando ya marcaste todas las tareas del paso**. Si el paso 3 falla no puedes marcarlas, **así que la salida de contingencia nunca se muestra**. Además, al mostrarse **reemplaza** la barra de acción fija, así que la pantalla se queda sin acción dominante y el layout salta. Lo que trae el mockup: un botón **"Falla" de 56 px permanente** junto a la acción principal (etiqueta corta a propósito, para que la acción dominante conserve su ancho), que abre una hoja "Algo va mal en el paso N" con las salidas reales, cada una de 56-60 px: abrir la contingencia vinculada, fotografiar y anotar el problema, saltar el paso y seguir, cancelar. Además: casillas de **28 px en filas de 56** con texto de 16, y el estado hecho en acento atenuado a `neutral-400` **sin tachado** (a 16 px y a pleno sol el tachado no se lee).
-- **Motivo:** una salida de emergencia que solo aparece cuando ya no hace falta no es una salida. Y `neutral-600` sobre el fondo da 4.0:1, por debajo del 4.5 que pide AA (regla R2).
-- **Impacto:** alto: es la pantalla donde el técnico trabaja de verdad. **Sin esquema.**
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx` (`SolucionEnAsistente` y la barra de acción), `src/features/soluciones/ProcedimientoVista.tsx` (`FilaTarea`, `SolucionEnPaso`), componente nuevo para la hoja de contingencia.
-- **Dependencias:** la **211** ya introdujo un botón "Falla" en el **modo foco**, con su aviso al salir; esta tarea lo lleva a la vista normal y le da la hoja con las cuatro salidas. Al tomarla hay que **unificar los dos**, no dejar dos "Falla" con comportamientos distintos.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ### 204. Auditoría móvil, fase 2: Red abre con el nodo, no con la lista (M-018, M-019)
 

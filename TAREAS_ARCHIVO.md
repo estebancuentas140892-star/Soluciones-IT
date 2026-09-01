@@ -1,5 +1,29 @@
 # Historial de tareas finalizadas
 
+### 215. Handoff "Diseño móvil", tablero 3d: la contingencia deja de esconderse
+
+**Estado**: TERMINADA y **verificada en navegador real a 360 px** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **992 de 992** en verde, **8 nuevas**. **Prioridad**: Alta. **Origen**: tablero `3d` de `Paso 3 - Guías y Ejecución Guiada.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
+
+**El defecto.** "¿Ocurrió algún error durante este paso?", la válvula de escape cuando la realidad no coincide con la guía, se dibujaba con dos botones de `px-3 py-1.5 text-xs`: **28 px de alto y texto de 12**, el control más pequeño de la pantalla. Y solo aparecía cuando `trabajoPrevio` era verdadero, o sea **cuando ya estaban marcadas todas las tareas del paso**. Si el paso falla no se pueden marcar, así que **la salida no llegaba a mostrarse nunca**. Además, al aparecer **reemplazaba** la barra de acción fija: la pantalla se quedaba sin acción dominante y el layout saltaba.
+
+**Lo que se hizo.**
+
+- **"Falla", 56 px, permanente**, junto a la acción dominante. Etiqueta corta a propósito, para que la acción dominante conserve su ancho.
+- **`HojaFalla`** (nuevo): la hoja "Algo va mal en el paso N" con las cuatro salidas de 56 a 60 px (abrir la contingencia vinculada con su título y sus pasos, fotografiar y anotar, saltar el paso y seguir, cancelar) y la promesa arriba: "Los 2 pasos que llevas hechos no se pierden". Sin vínculo de contingencia **lo dice**, en vez de callarlo.
+- **`salidasFalla.ts`** (nuevo, lógica pura con 8 pruebas): `destinoAlSaltar` y `fraseAvanceConservado`. Saltar es avanzar sin marcar, así que el destino es el siguiente en orden, esté hecho o no; devuelve `null` en el último paso pendiente y **esa salida entonces no se ofrece**, porque saltarlo dejaría el procedimiento sin nada por delante y la pantalla de cierre diría "completado" sobre un paso que falló.
+- **Los dos "Falla" se unificaron** (dependencia registrada con la tarea 211): el del modo foco abre la misma hoja y solo añade la tarea señalada. **Cancelar deja al técnico dentro del foco**; elegir una salida sale al paso completo, que es donde ocurren las salidas.
+- **La contingencia dejó de depender de `trabajoPrevio`.** Lo que sí depende de él es qué pasa al resolverla: con todo marcado completa el paso y el avance sigue (comportamiento de siempre); con tareas sin marcar se cierra y el técnico vuelve al paso, porque darlo por hecho se saltaría trabajo que nadie hizo. Se añadió además una salida para **cerrar la contingencia sin resolverla**: antes, una vez abierta, la única salida era terminarla.
+- **Barra de acción en dos filas.** Con "Atrás", "Foco", "Falla" y la acción dominante en una sola fila de 360 px, la dominante quedaba en 88 y se recortaba a "Paso hecho · i...". Arriba, a 44, lo que no es trabajo; abajo, bajo el pulgar, a 56, "Falla" y el avance. **La barra ya no desaparece nunca.**
+- **Casillas de 28 px en filas de 56 con texto de 16** (venían de 24 en 44 y 15), y las respuestas Sí/No de contingencias y decisiones de 28 a **44** con texto de 14.
+- **El estado hecho deja de ir tachado** y sube de `neutral-600` (4.0:1, por debajo de AA, regla R2) a `neutral-400` (8.9:1), en las tres vistas donde aparecía: la fila de tarea, la verificación final y el modo foco.
+
+**Dos defectos encontrados al hacerla, y corregidos.** El aviso de falla **no estaba atado al paso**: se declaraba en el paso 3 y seguía puesto en el 4 y en el 5. Y en la **vista de lectura** la pregunta de error tenía el mismo candado de `trabajoPrevio`; ahora se ve siempre, y lo que cambia es qué responde: **"No, continuar" solo aparece si el paso no tiene trabajo pendiente**, porque completa el paso.
+
+**Ya estaba hecho.** El tablero pedía además que el ancla del paso pasara a 56 px con el "3/7" a 17: lo hizo la tarea 210.
+
+**Verificación en navegador** (una guía de 3 pasos con su contingencia de 5, sembradas y borradas al terminar): casilla 28x28 en filas de 56 con texto de 16 px; "Falla" 56x89 y acción dominante 56x232, sin recorte; "Atrás" 44x56 y "Foco" 44. La hoja abre con **0 tareas marcadas**, lo que antes era imposible. La contingencia se ejecuta inline y **no completa** el paso si quedaban tareas; **sí** lo completa y avanza si no quedaban. Saltar el paso lo deja como "saltado" en el índice y la salida **desaparece** en el último paso pendiente. El "Falla" del foco abre la misma hoja, cancelar no saca del foco y elegir una salida sí. Texto hecho medido en `rgb(178, 182, 202)` con `text-decoration: none`.
+
+
 ### 214. Handoff "Diseño móvil", tablero 3b: la completitud sale del editor y llega al listado
 
 **Estado**: TERMINADA y **verificada en navegador real a 360 px** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **984 de 984** en verde, **9 nuevas**. **Prioridad**: Alta. **Origen**: tablero `3b` de `Paso 3 - Guías y Ejecución Guiada.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
