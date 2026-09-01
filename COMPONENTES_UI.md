@@ -280,12 +280,24 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Exporta dos constantes** para quien pinta un dato técnico fuera de una fila: `VALOR_TECNICO` (14 px, `noct-text`) y `VALOR_TECNICO_COMPACTO` (13 px, `neutral-300`, el piso exacto de M-R5, para listas donde el dato acompaña a un nombre).
 - **Dónde:** `DispositivoPage` (capas "Ahora" y "Contexto"); las constantes, en `FilaDispositivo` y `TopologiaEquipoPage`. Es el camino para retirar las copias a mano de la fila etiqueta-valor que quedan en `CredencialPage`, `UbicacionPage` y `PersonaPage`.
 
+### 2.10m1 `useReanudar` (`src/features/soluciones/useReanudar.ts`)
+- **Propósito:** el único dato de "procedimiento a medias" de la app. Lo consumen el chasis (barra flotante + punto de la pestaña Guías) e `InicioPage` (tarjeta).
+- **El descarte se comparte entre todas las instancias del hook** (tarea 203). Vivía en un `useState` por instancia y con un solo consumidor bastaba; desde que Inicio lee el mismo dato hay dos, y con estado local **descartar la barra flotante no llegaba a Inicio**: la barra desaparecía y la tarjeta no aparecía en su lugar. Ahora es una variable de módulo leída con `useSyncExternalStore`, así que las dos instancias ven lo mismo en el mismo render.
+- **Devuelve:** `{ actual, descartado, descartar }`.
+
 ### 2.10m `SeccionPlegable`
 
 - **Propósito:** una sección que **informa al plegarse** (tarea 201, hallazgo M-014, regla **M-R4**). La ficha 360° de un equipo pintaba nueve secciones siempre abiertas: plegar sin más habría cambiado un problema (todo a la vez) por otro (esconder), así que la cabecera plegada muestra **su conteo**: "Conexiones · 4" dice más que cuatro filas que hay que desplazar.
 - **Props:** `{ titulo, Icono, conteo: ReactNode, tono?: 'neutro' | 'precaucion' = 'neutro', inicialAbierta?: boolean = false, id?, children }`. `conteo` admite un número ("4"), una cantidad con unidad ("9 equipos") o una frase corta ("hace 6 d"); `tono` tiñe icono y conteo solo cuando el dato en sí es una advertencia; `id` sirve de ancla para los enlaces internos de la ficha.
 - **Detalles:** cabecera de 52 px con `aria-expanded`/`aria-controls`, chevron que rota y foco visible. **El contenido solo se monta cuando está abierta**: además de ahorrar trabajo, evita que cinco bloques con sus propias consultas en vivo se pinten enteros para quedar fuera de pantalla.
 - **Dónde:** `DispositivoPage`, capa "Profundidad". Prevista también para las fichas de artículo, credencial y Red (tareas 202 a 205).
+
+### 2.10ñ `BarraReanudar`, variante `tarjeta`
+- **Propósito:** el bloque grande de "reanudar" de Inicio (tarea 203, hallazgo **M-013**, mockup `2b`). El procedimiento a medias se dibujaba de **tres** formas que parecían tres cosas distintas y eran la misma: "Continuar donde quedaste" (con su propia consulta dentro de `InicioPage`), "Sin terminar" en Guías y la barra flotante del chasis; en Inicio se veían **dos a la vez**. Ahora las tres salen del mismo dato (`useReanudar` -> `articulosSinTerminar`) y las dos de reanudar, del mismo componente.
+- **Props:** las mismas, con `variante="tarjeta"`. Rótulo "Sigues en el paso N de M", título a 15 px, barra de avance y el tiempo restante.
+- **Sin botón de descartar**, a diferencia de `flotante` y `sidebar`: esas acompañan al técnico por toda la app y a veces estorban; esta vive dentro de Inicio, que es justo la pantalla a la que se va a retomar el trabajo, así que descartarla no tendría a dónde llevar el recordatorio.
+- **No se repite:** `InicioPage` la omite mientras la barra flotante esté visible.
+- **Dónde:** `InicioPage`.
 
 ### 2.10n `BandaTarea` (`src/app/bandaTarea.tsx`)
 

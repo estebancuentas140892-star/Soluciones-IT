@@ -14,9 +14,10 @@ interface Props {
   /**
    * `flotante` (por defecto) es la barra del teléfono, fija sobre las
    * pestañas. `sidebar` es la de escritorio (tarea 191): al pie del rail
-   * de navegación, encima de la cuenta. Ver la nota de la variante.
+   * de navegación, encima de la cuenta. `tarjeta` es el bloque grande
+   * de Inicio (tarea 203, mockup `2b`). Ver la nota de cada variante.
    */
-  variante?: 'flotante' | 'sidebar'
+  variante?: 'flotante' | 'sidebar' | 'tarjeta'
 }
 
 // Distancia de arrastre horizontal que cuenta como descarte (tarea 186,
@@ -100,6 +101,56 @@ export function BarraReanudar({
   // aquí el descarte lo hace el botón, que además siempre estuvo como
   // alternativa sin gesto. En el rail estrecho (768-1279) queda solo el
   // anillo de avance, del tamaño de los iconos que lo rodean.
+  // Variante de Inicio (tarea 203, hallazgo M-013, mockup `2b`). El
+  // procedimiento a medias se dibujaba de TRES formas que parecían tres
+  // cosas distintas y eran la misma: "Continuar donde quedaste" (una
+  // consulta propia de InicioPage), "Sin terminar" en Guías y esta
+  // barra. Ahora las tres salen del mismo dato (`articulosSinTerminar`)
+  // y del mismo componente, con dos tamaños: barra y tarjeta.
+  //
+  // Sin botón de descartar, a diferencia de las otras dos: la barra
+  // flotante y la del rail se cierran porque acompañan al técnico por
+  // toda la app y a veces estorban. Esta vive dentro de Inicio, que es
+  // justo la pantalla a la que se va a retomar el trabajo; descartarla
+  // ahí no tendría a dónde llevar el recordatorio.
+  if (variante === 'tarjeta') {
+    return (
+      <Link
+        to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
+        className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text hover:bg-noct-accent/[.13]"
+      >
+        <span className="flex items-center gap-[11px]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.16] text-noct-accent-300">
+            <Play size={18} aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            {/* El paso sube al rótulo (el mockup lo pone donde antes
+                decía "Continuar donde quedaste"): es el dato que decide
+                si vale la pena retomarlo ahora, y en el rótulo se lee
+                antes que en la línea del progreso. */}
+            <span className="block text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
+              Sigues en el paso {hechos + 1} de {total}
+            </span>
+            <span className="mt-[3px] block text-[15px] font-medium leading-[1.3] [text-wrap:pretty]">
+              {articulo.titulo}
+            </span>
+          </span>
+        </span>
+        <span className="flex items-center gap-2.5">
+          <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-accent/[.18]">
+            <span
+              className="block h-full rounded-full bg-noct-accent"
+              style={{ width: `${Math.round((hechos / total) * 100)}%` }}
+            />
+          </span>
+          {minutosRestantes != null && (
+            <span className="shrink-0 text-[12px] text-noct-neutral-400">~{minutosRestantes} min</span>
+          )}
+        </span>
+      </Link>
+    )
+  }
+
   if (variante === 'sidebar') {
     return (
       <div className="flex flex-col items-center gap-1 rounded-xl border border-noct-accent/40 bg-noct-bg/60 p-1.5 xl:flex-row xl:items-center xl:gap-1.5 xl:p-2">

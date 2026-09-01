@@ -157,6 +157,12 @@ interface PropsSeccion extends PropsComunes {
    * pegajoso (AD-023: no suben a la fila del título).
    */
   barra?: ReactNode
+  /**
+   * Lupa de la barra superior. Se apaga en la pantalla que ya trae su
+   * propio buscador en línea (Inicio), para no dejar dos buscadores en
+   * la misma pantalla (regla M-R8, tarea 203).
+   */
+  conLupa?: boolean
 }
 
 interface PropsDocumento extends PropsComunes {
@@ -342,7 +348,9 @@ export function Chasis(props: Props) {
         {props.barra}
       </div>
     ) : (
-      <BarraSuperior titulo={props.titulo}>{props.barra}</BarraSuperior>
+      <BarraSuperior titulo={props.titulo} conLupa={props.conLupa ?? true}>
+        {props.barra}
+      </BarraSuperior>
     )
 
   // Escritorio: los cinco módulos, Bóveda condicional al permiso. Los
@@ -495,10 +503,17 @@ export function Chasis(props: Props) {
           // Puntos y números de la pestaña (R23: un aviso solo si hay un
           // dato detrás, nunca decorativo). Guías (tarea 186): mientras
           // la BarraReanudar esté descartada para el procedimiento a
-          // medias vigente, la pestaña recuerda que sigue ahí. Más
-          // (tarea 187): el conteo real de `usePendientes`.
+          // medias vigente, la pestaña recuerda que sigue ahí.
+          //
+          // Inicio (tarea 187, corregido en la 203): el conteo real de
+          // `usePendientes`. El número vivía en "Más", donde incumplía
+          // su propia regla (M-003, regla M-R9): "Más" es un índice y no
+          // contiene ni un pendiente, así que tocar el aviso llevaba a
+          // un sitio donde no estaba lo avisado, y eso enseña al técnico
+          // a ignorar los avisos. Los pendientes viven en Inicio, así
+          // que el aviso se muda con el dato.
           const conPunto = to === '/soluciones' && Boolean(reanudar.actual) && reanudar.descartado
-          const numeroPendientes = to === '/mas' ? pendientes.length : 0
+          const numeroPendientes = to === '/' ? pendientes.length : 0
           return (
             <NavLink
               key={to}

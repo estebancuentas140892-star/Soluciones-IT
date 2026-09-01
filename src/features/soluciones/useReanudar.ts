@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { db } from '../../lib/db'
 import { articulosSinTerminar, type ArticuloSinTerminar } from './sinTerminar'
 
@@ -16,6 +16,43 @@ function leerDescartado(): string | null {
   } catch {
     return null
   }
+}
+
+// El descarte se comparte entre TODAS las instancias del hook (tarea
+// 203). Antes vivía en un `useState` por instancia, y con un solo
+// consumidor (el chasis) eso bastaba. Desde que Inicio lee el mismo dato
+// para no repetir la tarjeta (hallazgo M-013), hay dos instancias: con
+// estado local, descartar la barra flotante del chasis no llegaba a
+// Inicio, así que la barra desaparecía y la tarjeta no aparecía en su
+// lugar. `useSyncExternalStore` sobre una sola variable de módulo deja a
+// las dos leyendo lo mismo.
+let descartadoId: string | null = null
+let leido = false
+const oyentes = new Set<() => void>()
+
+function estadoDescartado(): string | null {
+  if (!leido) {
+    descartadoId = leerDescartado()
+    leido = true
+  }
+  return descartadoId
+}
+
+function suscribir(alCambiar: () => void): () => void {
+  oyentes.add(alCambiar)
+  return () => oyentes.delete(alCambiar)
+}
+
+function anotarDescarte(id: string): void {
+  descartadoId = id
+  leido = true
+  try {
+    localStorage.setItem(CLAVE_DESCARTADO, id)
+  } catch {
+    // Almacenamiento no disponible (navegacion privada): el descarte
+    // no sobrevive a un recargo, pero no rompe nada.
+  }
+  for (const alCambiar of oyentes) alCambiar()
 }
 
 interface Reanudar {
@@ -35,24 +72,18 @@ interface Reanudar {
 export function useReanudar(): Reanudar {
   const articulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
   const progresos = useLiveQuery(() => db.progresoPasos.toArray(), [], [])
-  const [descartadoId, setDescartadoId] = useState<string | null>(leerDescartado)
+  const descartado = useSyncExternalStore(suscribir, estadoDescartado, estadoDescartado)
 
   const actual = articulosSinTerminar(articulos, progresos)[0] ?? null
 
   function descartar() {
     if (!actual) return
-    try {
-      localStorage.setItem(CLAVE_DESCARTADO, actual.articulo.id)
-    } catch {
-      // Almacenamiento no disponible (navegacion privada): el descarte
-      // no sobrevive a un recargo, pero no rompe nada.
-    }
-    setDescartadoId(actual.articulo.id)
+    anotarDescarte(actual.articulo.id)
   }
 
   return {
     actual,
-    descartado: actual != null && actual.articulo.id === descartadoId,
+    descartado: actual != null && actual.articulo.id === descartado,
     descartar,
   }
 }

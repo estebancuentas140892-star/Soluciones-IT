@@ -1,18 +1,17 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { normalizarProcedimiento } from '../../lib/procedimiento'
-import { contarHechos } from '../../lib/progresoPasos'
 import { obtenerFavoritos } from '../../lib/favoritos'
 import { obtenerRecientes } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
+import { BarraReanudar } from '../../components/BarraReanudar'
 import { DescargarOffline } from '../../components/DescargarOffline'
+import { SeccionPlegable } from '../../components/SeccionPlegable'
 import {
+  CaretDown,
   CaretRight,
   ChartBar,
-  CheckCircle,
-  ClockCounterClockwise,
   FlagBanner,
   type IconoProps,
   Lightbulb,
@@ -20,7 +19,6 @@ import {
   MagnifyingGlass,
   Monitor,
   PencilSimple,
-  Play,
   Plus,
   QrCode,
   Star,
@@ -34,6 +32,7 @@ import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { agruparResultados, VISUAL_POR_TIPO } from '../busqueda/resultados'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
+import { useReanudar } from '../soluciones/useReanudar'
 import {
   ETIQUETA_ACCION_CAMBIO,
   obtenerActividadReciente,
@@ -47,20 +46,43 @@ import type { ItemPendiente } from './pendientes'
 import { usePendientes } from './usePendientes'
 import { problemasFrecuentesInicio } from './problemasFrecuentes'
 
-// Pantalla de Inicio en el sistema Nocturne (re-autoria del handoff
-// "Rediseño de aplicación empresarial", Inicio.dc.html). Un solo punto
-// de entrada al conocimiento del equipo: un buscador global que atraviesa
-// soluciones, dispositivos y boveda, y, cuando no se busca, los atajos de
-// trabajo (retomar un procedimiento a medias, diagnostico, escaner), lo
-// reciente y la ruta de aprendizaje. Declara nivel de sección en el
-// chasis unico (tarea 185), que le pone sidebar en escritorio y pestañas
-// en movil.
+// Pantalla de Inicio en el sistema Nocturne. Un buscador global que
+// atraviesa guías, equipos y bóveda, y, cuando no se busca, lo que el
+// técnico necesita al abrir la app. Declara nivel de sección en el
+// chasis único (tarea 185), que le pone sidebar en escritorio y
+// pestañas en móvil.
+//
+// CINCO BLOQUES, DOS PESOS DE FILA (tarea 203, auditoría móvil M-006 y
+// M-007, mockup `2b`, reglas M-R6 y M-R7). Con la base llena esta
+// pantalla medía más de 2.200 px a 360: cuatro pantallas de scroll. El
+// problema no era la cantidad de información sino que cinco bloques
+// usaban EXACTAMENTE la misma fila de 52 px, y solo un rótulo de 11 px
+// los distinguía: "Pendientes" (algo que debo hacer) pesaba igual que
+// "Actividad del equipo" (algo que hizo otro). Sin foco, el técnico
+// desplaza buscando en vez de reconocer.
+//
+// Lo que hay ahora, de arriba abajo:
+//   1. reanudar   4. "Te toca a ti"      (fila de ACCIÓN)
+//   2. buscar     5. "Lo que consultaste" (fila de INFORMACIÓN)
+//   3. dos atajos
+//
+// Y debajo, **nada se borra**: Problemas frecuentes, Favoritos, Para
+// empezar y Actividad del equipo se pliegan tras una línea con su
+// conteo (`SeccionPlegable`, regla M-R4). Cuatro líneas de 52 px en vez
+// de unos 1.200 px de filas, y el conteo sigue diciendo lo que hay
+// dentro sin abrirlas.
+//
+// Las DOS ÚNICAS formas de fila de la pantalla (M-R6, "una fila, un
+// significado"): `FilaAccion` para lo que el técnico debe resolver
+// (56 px, título de 15 px, la razón en el color de su estado) y
+// `FilaInfo` para lo que solo se consulta (44 px, 13,5 px, sin cuadrado
+// de color ni galón). Si dos bloques tienen la misma forma es porque
+// tienen la misma naturaleza.
 
-// VISUAL_POR_TIPO, GRUPOS_BUSQUEDA, partirTitulo y FilaResultado vivian
-// aqui porque Inicio era el unico sitio desde donde se podia buscar. La
-// tarea 181 saco el buscador al chasis, asi que esa presentacion se
-// comparte ahora desde features/busqueda/resultados.tsx. Inicio sigue
-// usando VISUAL_POR_TIPO para el bloque "Actividad del equipo".
+// Cuántas filas se ven antes de "Ver los otros N". Dos bastan para
+// reconocer si hay algo urgente; el resto está a un toque y sin cambiar
+// de pantalla.
+const FILAS_VISIBLES = 2
 
 export function InicioPage() {
   const [query, setQuery] = useState('')
@@ -94,15 +116,13 @@ export function InicioPage() {
     [ejecucionesDiagnostico, diagnosticosVivos],
   )
 
-  // Pendientes (fase J-D5 de PROPUESTA_JORNADA_TECNICO.md, decision
-  // aprobada por el usuario el 2026-07-21 con el contenido recomendado):
-  // bloque derivado de lo que ya significa "pendiente" en los datos
-  // reales, sin tabla ni esquema nuevos. Ver src/features/inicio/pendientes.ts.
-  // Las cinco consultas viven en `usePendientes` (tarea 187): el chasis
-  // también las necesita, para el número de la pestaña Más.
+  // Pendientes (fase J-D5 de PROPUESTA_JORNADA_TECNICO.md): bloque
+  // derivado de lo que ya significa "pendiente" en los datos reales, sin
+  // tabla ni esquema nuevos. Las cinco consultas viven en `usePendientes`
+  // (tarea 187): el chasis también las necesita, para el número de la
+  // pestaña Inicio.
   const perfil = usePerfilVivo()
-  const todosPendientes = usePendientes()
-  const pendientes = useMemo(() => todosPendientes.slice(0, 6), [todosPendientes])
+  const pendientes = usePendientes()
 
   // Articulos marcados por el equipo como "ruta de inicio" (ver
   // ArticuloForm): puerta de entrada para quien recien llega. Menor
@@ -122,80 +142,61 @@ export function InicioPage() {
     [],
   )
 
-  // "Continuar donde quedaste": el procedimiento con avance a medias mas
-  // reciente. Se recorre progresoPasos (avance local por dispositivo) de
-  // mas nuevo a mas viejo y se toma el primero con al menos un paso hecho
-  // pero sin terminar. actualizadoEn no esta indexado, asi que el orden se
-  // hace en memoria (son pocas filas: el avance de un equipo de 5). Un
-  // articulo eliminado o sin pasos se salta.
-  const enCurso = useLiveQuery(async () => {
-    const progresos = (await db.progresoPasos.toArray()).sort((a, b) =>
-      b.actualizadoEn.localeCompare(a.actualizadoEn),
-    )
-    for (const progreso of progresos) {
-      const articulo = await db.articulos.get(progreso.articuloId)
-      if (!articulo || articulo.eliminadoEn) continue
-      const proc = normalizarProcedimiento(articulo.procedimiento)
-      if (!proc || proc.pasos.length === 0) continue
-      const total = proc.pasos.length
-      const hechos = contarHechos(
-        progreso.pasosHechos ?? [],
-        proc.pasos.map((p) => p.id),
-      )
-      if (hechos === 0 || hechos >= total) continue
-      return {
-        titulo: articulo.titulo,
-        ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}`,
-        pct: Math.round((hechos / total) * 100),
-        detalle: `Paso ${Math.min(hechos + 1, total)} de ${total}`,
-      }
-    }
-    return null
-  }, [])
+  // UNA SOLA TARJETA DE REANUDAR (hallazgo M-013). El procedimiento a
+  // medias se dibujaba de tres formas que parecían tres cosas distintas
+  // y eran la misma: "Continuar donde quedaste" (una consulta propia de
+  // esta pantalla), "Sin terminar" en Guías y la barra flotante del
+  // chasis. Aquí se retiró la consulta propia: ahora Inicio lee el mismo
+  // `useReanudar` que el chasis y pinta el mismo componente en su
+  // tamaño grande.
+  //
+  // Y no se repite: si la barra flotante está visible, Inicio no dibuja
+  // su tarjeta. Se veían las dos a la vez, una encima de la otra.
+  const reanudar = useReanudar()
+  const barraFlotanteVisible = reanudar.actual != null && !reanudar.descartado
 
   const gruposResultado = useMemo(() => agruparResultados(resultados), [resultados])
 
   // Bienvenida del primer día (tarea 184): se muestra mientras falte
   // alguno de sus tres pasos Y esta pantalla no tenga todavía bloques
-  // propios. `enCurso` es `undefined` hasta que su consulta resuelve; se
-  // espera a saberlo para no mostrar la bienvenida un instante a quien sí
-  // tiene un procedimiento a medias.
-  const consultasListas = enCurso !== undefined
-  const hayBloquesReales = recientes.length > 0 || pendientes.length > 0 || enCurso != null
+  // propios. Sin valor por defecto, `useLiveQuery` devuelve `undefined`
+  // hasta que resuelve: es la señal de "ya sé lo que hay" que evita
+  // enseñar la bienvenida un instante a quien sí tiene trabajo a medias.
+  const consultasListas = useLiveQuery(() => db.progresoPasos.count(), []) !== undefined
+  const hayBloquesReales = recientes.length > 0 || pendientes.length > 0 || reanudar.actual != null
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila. El titulo
-    // ("Inicio", regla R12), el estado del dato, la lupa y la cuenta los
-    // aporta el chasis (tarea 181). Inicio conserva ademas su buscador
-    // en linea, porque esta pantalla ES el buscador: abrir y buscar
-    // sigue tomando dos toques.
+    // ("Inicio", regla R12), el estado del dato y la cuenta los aporta el
+    // chasis (tarea 181).
     //
-    // El saludo por hora ("Buenos días. Todo el conocimiento del equipo,
-    // al instante") se retiro en la tarea 184, decision aprobada por el
-    // usuario: ocupaba la linea de contexto con un eslogan que cambiaba
-    // tres veces al dia, asi que la entrada no se veia igual dos veces.
-    // Lo que hay que decir el primer dia lo dice ahora
-    // BienvenidaPrimerDia, y solo mientras haga falta.
-    <Chasis titulo="Inicio" barra={
-      <>
+    // `conLupa={false}` (regla M-R8, "un buscador por pantalla"): esta
+    // pantalla trae su propio campo de búsqueda en línea, con el alcance
+    // escrito, así que la lupa del chasis sería el segundo buscador de
+    // la misma pantalla. Se apaga aquí y solo aquí; en las otras cuatro
+    // secciones la lupa ES el buscador.
+    <Chasis
+      titulo="Inicio"
+      conLupa={false}
+      barra={
         <div className="px-4 pb-3 pt-2">
           <label
-            className={`flex h-11 items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
+            className={`flex h-[46px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
               buscando ? 'border-noct-accent' : 'border-noct-divider'
             }`}
           >
             <MagnifyingGlass
               size={18}
-              className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
+              className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-400'}`}
               aria-hidden
             />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar en todo: artículos, equipos, bóveda"
+              placeholder="Buscar en Guías, Equipos y Bóveda"
               aria-label="Buscar en todo el conocimiento del equipo"
-              className="ini-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
+              className="ini-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-400"
             />
             {buscando && (
               <button
@@ -209,8 +210,8 @@ export function InicioPage() {
             )}
           </label>
         </div>
-      </>
-    }>
+      }
+    >
       <main className="flex-1 px-4 pb-16 pt-4">
         {buscando ? (
           gruposResultado.length > 0 ? (
@@ -242,7 +243,7 @@ export function InicioPage() {
             </div>
           )
         ) : (
-          <div className="@container flex flex-col gap-[22px]">
+          <div className="@container flex flex-col gap-[18px]">
             {/* Bienvenida del primer día: los tres pasos que dejan al
                 técnico listo para trabajar sin señal. Se retira sola (no
                 se cierra a mano) cuando los cumple o cuando esta pantalla
@@ -251,53 +252,32 @@ export function InicioPage() {
               <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
             )}
 
-            {enCurso && (
-              <Link
-                to={enCurso.ruta}
-                className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3.5 text-noct-text hover:bg-noct-accent/[.13]"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-accent/[.16] text-noct-accent-300">
-                    <Play size={18} aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
-                      Continuar donde quedaste
-                    </span>
-                    <span className="mt-[3px] block text-[14.5px] font-medium leading-[1.3] [text-wrap:pretty]">
-                      {enCurso.titulo}
-                    </span>
-                  </span>
-                  <CaretRight size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-accent/[.18]">
-                    <span
-                      className="block h-full rounded-full bg-noct-accent"
-                      style={{ width: `${enCurso.pct}%` }}
-                    />
-                  </span>
-                  <span className="shrink-0 text-[12px] text-noct-neutral-400">{enCurso.detalle}</span>
-                </div>
-              </Link>
+            {/* BLOQUE 1 · Reanudar. */}
+            {reanudar.actual && !barraFlotanteVisible && (
+              <BarraReanudar
+                variante="tarjeta"
+                articulo={reanudar.actual.articulo}
+                hechos={reanudar.actual.hechos}
+                total={reanudar.actual.total}
+                minutosRestantes={reanudar.actual.minutosRestantes}
+                onDescartar={reanudar.descartar}
+              />
             )}
 
+            {/* BLOQUE 3 · Atajos. (El 2 es el buscador, arriba.) */}
             <div className="grid grid-cols-2 gap-2.5">
               <AtajoRapido
                 to="/diagnostico"
                 Icono={TreeStructure}
-                titulo="Diagnóstico inteligente"
-                detalle="Del problema a la solución"
+                titulo="Diagnóstico"
+                detalle="Del síntoma a la guía"
               />
-              <AtajoRapido
-                to="/escaner"
-                Icono={QrCode}
-                titulo="Escanear equipo"
-                detalle="Ficha por código QR"
-              />
-              {/* Registrar equipo (hallazgo H9): el arranque natural de
-                  quien recibe hardware nuevo. Va a lo ancho para no dejar
-                  un hueco impar en la rejilla de dos columnas. */}
+              <AtajoRapido to="/escaner" Icono={QrCode} titulo="Escanear" detalle="Ficha por QR" />
+              {/* "Registrar equipo" sigue aquí a propósito: retirarlo es
+                  el hallazgo M-008, que pertenece a la tarea 207 y trae
+                  su propia condición (que el alta viva tras un escaneo
+                  sin coincidencia). Adelantarlo aquí dejaría el alta sin
+                  puerta durante toda la fase. */}
               <AtajoRapido
                 to="/dispositivos/nuevo"
                 Icono={Monitor}
@@ -307,196 +287,134 @@ export function InicioPage() {
               />
             </div>
 
-            {/* Problemas frecuentes (decisión D4 de PROPUESTA_MODULOS.md):
-                los diagnósticos que más se ejecutan, o los más recientes
-                mientras no haya historial suficiente. Vista derivada,
-                colapsada a 4 filas; enlaza al tablero completo. */}
-            {problemasFrecuentes.length > 0 && (
-              <section>
-                <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
-                  <div className="flex items-center gap-2">
-                    <WarningCircle size={14} className="text-noct-neutral-400" aria-hidden />
-                    <TituloSeccion>Problemas frecuentes</TituloSeccion>
-                  </div>
-                  <Link
-                    to="/diagnostico/estadisticas"
-                    className="inline-flex shrink-0 items-center gap-1 text-[11.5px] text-noct-accent-300 underline-offset-2 hover:underline"
-                  >
-                    <ChartBar size={12} aria-hidden />
-                    Estadísticas
-                  </Link>
-                </div>
-                <div className="flex flex-col">
-                  {problemasFrecuentes.map((problema) => (
-                    <Link
-                      key={problema.diagnosticoId}
-                      to={`/diagnostico/${problema.diagnosticoId}`}
-                      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-                    >
-                      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">
-                        <WarningCircle size={17} aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-                        {problema.titulo}
-                      </span>
-                      <span className="shrink-0 text-[12px] text-noct-neutral-500">
-                        {problema.ejecuciones == null
-                          ? 'Nuevo'
-                          : problema.ejecuciones === 1
-                            ? '1 vez'
-                            : `${problema.ejecuciones} veces`}
-                      </span>
-                      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Pendientes (decisión D5 de PROPUESTA_JORNADA_TECNICO.md):
-                mis borradores, credenciales por vencer/vencidas (solo con
-                permiso de bóveda) y sugerencias del equipo sin revisar.
-                Bloque derivado, sin tabla ni escrituras nuevas. */}
+            {/* BLOQUE 4 · "Te toca a ti": lo único con fila de ACCIÓN.
+                Es lo que el técnico debe resolver, y por eso es lo único
+                que pesa 15 px y lleva la razón en color de estado. */}
             {pendientes.length > 0 && (
-              <section>
-                <div className="mb-1.5 flex items-center gap-2 px-0.5">
-                  <CheckCircle size={14} className="text-noct-neutral-400" aria-hidden />
-                  <TituloSeccion>Pendientes</TituloSeccion>
-                </div>
-                <div className="flex flex-col">
-                  {pendientes.map((item) => (
-                    <FilaPendiente key={item.clave} item={item} />
-                  ))}
-                </div>
-              </section>
+              <BloqueLista titulo="Te toca a ti" total={pendientes.length} etiquetaVerMas="pendientes">
+                {(visibles) =>
+                  pendientes.slice(0, visibles).map((item) => <FilaAccion key={item.clave} item={item} />)
+                }
+              </BloqueLista>
             )}
 
-            {/* Favoritos: la lista fija que el tecnico arma a mano con la
-                estrella de cada ficha. Solo se muestra si hay alguno; el
-                bloque no se anuncia vacio para no ensuciar Inicio. */}
-            {favoritos.length > 0 && (
-              <section>
-                <div className="mb-1.5 flex items-center gap-2 px-0.5">
-                  <Star size={14} className="text-noct-neutral-400" aria-hidden />
-                  <TituloSeccion>Favoritos</TituloSeccion>
-                </div>
-                <div className="grid grid-cols-1 @2xl:grid-cols-2">
-                  {favoritos.map((favorito) => {
-                    const { Icono, tono } = VISUAL_POR_TIPO[favorito.tipo]
-                    return (
-                      <Link
-                        key={favorito.clave}
-                        to={favorito.ruta}
-                        className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-                      >
-                        <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
-                          <Icono size={17} aria-hidden />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="mb-0.5 block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-                            {favorito.titulo}
-                          </span>
-                          <span className="block truncate text-[12px] text-noct-neutral-500">
-                            {favorito.subtitulo}
-                          </span>
-                        </span>
-                        <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-                      </Link>
-                    )
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* En ancho, Recientes y Para empezar se reparten en dos
-                columnas (container query); en móvil quedan apiladas. */}
-            <div className={`grid gap-[22px] @2xl:items-start ${rutas.length > 0 ? '@2xl:grid-cols-2' : ''}`}>
-            <section>
-              <div className="mb-1.5 flex items-center gap-2 px-0.5">
-                <ClockCounterClockwise size={14} className="text-noct-neutral-400" aria-hidden />
-                <TituloSeccion>Recientes</TituloSeccion>
-              </div>
-              {recientes.length > 0 ? (
-                <div className="flex flex-col">
-                  {recientes.map((reciente) => {
-                    const esDispositivo = reciente.clave.startsWith('dispositivo:')
-                    const { Icono, tono } = esDispositivo
+            {/* BLOQUE 5 · "Lo que consultaste": fila de INFORMACIÓN. */}
+            {recientes.length > 0 && (
+              <BloqueLista titulo="Lo que consultaste" total={recientes.length} etiquetaVerMas="recientes">
+                {(visibles) =>
+                  recientes.slice(0, visibles).map((reciente) => {
+                    const { Icono } = reciente.clave.startsWith('dispositivo:')
                       ? VISUAL_POR_TIPO.dispositivo
                       : VISUAL_POR_TIPO.articulo
                     return (
-                      <Link
+                      <FilaInfo
                         key={reciente.clave}
                         to={reciente.ruta}
-                        className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-                      >
-                        <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
-                          <Icono size={17} aria-hidden />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="mb-0.5 block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-                            {reciente.titulo}
-                          </span>
-                          <span className="block truncate text-[12px] text-noct-neutral-500">
-                            {reciente.subtitulo}
-                          </span>
-                        </span>
-                        <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-                      </Link>
+                        Icono={Icono}
+                        titulo={reciente.titulo}
+                        meta={reciente.subtitulo}
+                      />
                     )
-                  })}
-                </div>
-              ) : (
-                <p className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-5 text-center text-[13px] leading-normal text-noct-neutral-500">
-                  Aún no hay elementos recientes. Lo que se consulte aparece aquí.
-                </p>
-              )}
-            </section>
-
-            {rutas.length > 0 && (
-              <section>
-                <div className="mb-1.5 flex items-center gap-2 px-0.5">
-                  <FlagBanner size={14} className="text-noct-neutral-400" aria-hidden />
-                  <TituloSeccion>Para empezar</TituloSeccion>
-                  <span className="text-[11px] text-noct-neutral-600">ruta de aprendizaje</span>
-                </div>
-                <div className="flex flex-col">
-                  {rutas.map((articulo, indice) => (
-                    <Link
-                      key={articulo.id}
-                      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
-                      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-                    >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-noct-accent text-[12.5px] font-medium text-noct-accent-300">
-                        {indice + 1}
-                      </span>
-                      <span className="min-w-0 flex-1 text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-                        {articulo.titulo}
-                      </span>
-                      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-                    </Link>
-                  ))}
-                </div>
-              </section>
+                  })
+                }
+              </BloqueLista>
             )}
-            </div>
 
-            {/* Actividad del equipo (fase J2): "¿que cambio hoy?" sin
-                abrir ficha por ficha. Vista compartida (a diferencia de
-                Favoritos y Recientes, que son personales), colapsada a 5
-                renglones; decision D2 aplicada con la opcion recomendada
-                (solo bloque en Inicio, sin pantalla completa todavia). */}
-            {actividad.length > 0 && (
-              <section>
-                <div className="mb-1.5 flex items-center gap-2 px-0.5">
-                  <UsersThree size={14} className="text-noct-neutral-400" aria-hidden />
-                  <TituloSeccion>Actividad del equipo</TituloSeccion>
-                </div>
-                <div className="flex flex-col">
-                  {actividad.map((fila) => (
-                    <FilaActividadItem key={fila.clave} fila={fila} />
-                  ))}
-                </div>
-              </section>
+            {/* Lo que NO se borra pero deja de competir por la atención:
+                cuatro líneas de 52 px con su conteo (regla M-R4). Se
+                abren en el sitio, sin cambiar de pantalla. */}
+            {(problemasFrecuentes.length > 0 ||
+              favoritos.length > 0 ||
+              rutas.length > 0 ||
+              actividad.length > 0) && (
+              <div className="overflow-hidden rounded-lg border border-noct-divider [&>*+*]:border-t [&>*+*]:border-noct-divider">
+                {problemasFrecuentes.length > 0 && (
+                  <SeccionPlegable
+                    titulo="Problemas frecuentes"
+                    Icono={WarningCircle}
+                    conteo={problemasFrecuentes.length}
+                    tono="precaucion"
+                  >
+                    <div className="flex flex-col">
+                      {problemasFrecuentes.map((problema) => (
+                        <FilaInfo
+                          key={problema.diagnosticoId}
+                          to={`/diagnostico/${problema.diagnosticoId}`}
+                          Icono={WarningCircle}
+                          titulo={problema.titulo}
+                          meta={
+                            problema.ejecuciones == null
+                              ? 'Nuevo'
+                              : problema.ejecuciones === 1
+                                ? '1 vez'
+                                : `${problema.ejecuciones} veces`
+                          }
+                        />
+                      ))}
+                    </div>
+                    <Link
+                      to="/diagnostico/estadisticas"
+                      className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-[12.5px] font-medium text-noct-accent-300"
+                    >
+                      <ChartBar size={13} aria-hidden />
+                      Ver estadísticas
+                    </Link>
+                  </SeccionPlegable>
+                )}
+
+                {favoritos.length > 0 && (
+                  <SeccionPlegable titulo="Favoritos" Icono={Star} conteo={favoritos.length}>
+                    <div className="flex flex-col">
+                      {favoritos.map((favorito) => {
+                        const { Icono } = VISUAL_POR_TIPO[favorito.tipo]
+                        return (
+                          <FilaInfo
+                            key={favorito.clave}
+                            to={favorito.ruta}
+                            Icono={Icono}
+                            titulo={favorito.titulo}
+                            meta={favorito.subtitulo}
+                          />
+                        )
+                      })}
+                    </div>
+                  </SeccionPlegable>
+                )}
+
+                {rutas.length > 0 && (
+                  <SeccionPlegable titulo="Para empezar" Icono={FlagBanner} conteo={rutas.length}>
+                    <ol className="flex flex-col">
+                      {rutas.map((articulo, indice) => (
+                        <li key={articulo.id}>
+                          <Link
+                            to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+                            className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
+                          >
+                            <span className="w-4 shrink-0 text-center font-mono text-[12px] text-noct-neutral-400">
+                              {indice + 1}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate">{articulo.titulo}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ol>
+                  </SeccionPlegable>
+                )}
+
+                {actividad.length > 0 && (
+                  <SeccionPlegable
+                    titulo="Actividad del equipo"
+                    Icono={UsersThree}
+                    conteo={actividad.length}
+                  >
+                    <div className="flex flex-col">
+                      {actividad.map((fila) => (
+                        <FilaActividadItem key={fila.clave} fila={fila} />
+                      ))}
+                    </div>
+                  </SeccionPlegable>
+                )}
+              </div>
             )}
 
             <DescargarOffline />
@@ -507,15 +425,109 @@ export function InicioPage() {
   )
 }
 
-// Fila de un resultado de busqueda, con el termino resaltado.
+// Bloque de lista con cabecera de rótulo + conteo y un "Ver los otros N"
+// que despliega el resto EN EL SITIO (mockup `2b`). Antes cada bloque
+// pintaba sus filas completas: seis pendientes y cinco recientes son
+// once filas de 52 px que empujan todo lo demás fuera de la pantalla.
+function BloqueLista({
+  titulo,
+  total,
+  etiquetaVerMas,
+  children,
+}: {
+  titulo: string
+  total: number
+  // Qué son los que faltan, para que el texto accesible diga algo
+  // ("Ver los otros 4 pendientes") en vez de solo un número.
+  etiquetaVerMas: string
+  children: (visibles: number) => ReactNode
+}) {
+  const [desplegado, setDesplegado] = useState(false)
+  const ocultos = total - FILAS_VISIBLES
+
+  return (
+    <section>
+      <div className="mb-1.5 flex items-baseline justify-between gap-2 px-0.5">
+        <TituloSeccion>{titulo}</TituloSeccion>
+        <span className="shrink-0 text-[11px] tabular-nums text-noct-neutral-400">{total}</span>
+      </div>
+      <div className="flex flex-col">{children(desplegado ? total : FILAS_VISIBLES)}</div>
+      {ocultos > 0 && !desplegado && (
+        <button
+          type="button"
+          onClick={() => setDesplegado(true)}
+          className="mt-0.5 inline-flex min-h-11 items-center gap-1.5 px-1.5 text-[12.5px] font-medium text-noct-accent-300"
+        >
+          Ver los otros {ocultos}
+          <span className="sr-only"> {etiquetaVerMas}</span>
+          <CaretDown size={12} aria-hidden />
+        </button>
+      )}
+    </section>
+  )
+}
+
+// FILA DE ACCIÓN (M-R6). Lo que el técnico debe resolver: 56 px, título
+// de 15 px y, debajo, LA RAZÓN en el color de su estado ("Venció hace 3
+// días" en rojo). Es la única fila de la pantalla con cuadrado de color
+// y galón, porque es la única que pide actuar.
+function FilaAccion({ item }: { item: ItemPendiente }) {
+  const Icono = ICONO_PENDIENTE[item.categoria]
+  return (
+    <Link
+      to={item.ruta}
+      className={`flex min-h-14 items-center gap-3 rounded-md px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] ${
+        item.tono === 'error' ? 'bg-noct-error/[.07]' : ''
+      }`}
+    >
+      <span
+        className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md ${TONO_PENDIENTE[item.tono]}`}
+      >
+        <Icono size={17} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-medium leading-[1.3]">{item.titulo}</span>
+        <span className={`block truncate text-[12.5px] ${COLOR_RAZON[item.tono]}`}>{item.detalle}</span>
+      </span>
+      <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+    </Link>
+  )
+}
+
+// FILA DE INFORMACIÓN (M-R6). Lo que solo se consulta: 44 px, 13,5 px,
+// icono pequeño sin cuadrado de color, y el dato que sirve para
+// reconocerlo a la derecha. Sin galón: no promete una acción.
+function FilaInfo({
+  to,
+  Icono,
+  titulo,
+  meta,
+}: {
+  to: string
+  Icono: (props: IconoProps) => React.JSX.Element
+  titulo: string
+  meta?: string
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
+    >
+      <Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+      <span className="min-w-0 flex-1 truncate">{titulo}</span>
+      {meta && <span className="max-w-[45%] shrink-0 truncate text-[12px] text-noct-neutral-400">{meta}</span>}
+    </Link>
+  )
+}
+
 // Fila del bloque "Actividad del equipo": quien hizo que, sobre que
 // ficha, hace cuanto. Un cambio de campo dice "Ana editó X (3
 // cambios)"; una ejecucion de diagnostico dice "Ana ejecutó el
-// diagnostico X (Resuelto)". El tono visual reutiliza VISUAL_POR_TIPO
-// (ejecucion se pinta igual que un diagnostico: mismo destino, misma
-// naturaleza de contenido).
+// diagnostico X (Resuelto)". Es una FRASE, no un par título/subtítulo,
+// así que no encaja en `FilaInfo`; conserva su forma propia pero con el
+// peso de información (13,5 px, sin cuadrado de color).
 function FilaActividadItem({ fila }: { fila: FilaActividad }) {
-  const { Icono, tono } = VISUAL_POR_TIPO[fila.entidadTipo ?? 'diagnostico']
+  const { Icono } = VISUAL_POR_TIPO[fila.entidadTipo ?? 'diagnostico']
   const accionTexto =
     fila.tipo === 'ejecucion'
       ? `ejecutó el diagnóstico`
@@ -530,28 +542,21 @@ function FilaActividadItem({ fila }: { fila: FilaActividad }) {
   return (
     <Link
       to={fila.ruta}
-      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+      className="flex min-h-11 items-start gap-2.5 border-t border-noct-divider/60 py-2 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
     >
-      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
-        <Icono size={17} aria-hidden />
+      <Icono size={15} className="mt-[3px] shrink-0 text-noct-neutral-400" aria-hidden />
+      <span className="min-w-0 flex-1 leading-[1.35] [text-wrap:pretty]">
+        <span className="font-medium">{fila.usuarioNombre}</span> {accionTexto}{' '}
+        <span className="font-medium">{fila.titulo}</span> {detalle}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="mb-0.5 block text-sm leading-[1.3] [text-wrap:pretty]">
-          <span className="font-medium">{fila.usuarioNombre}</span> {accionTexto}{' '}
-          <span className="font-medium">{fila.titulo}</span> {detalle}
-        </span>
-        <span className="block truncate text-[12px] text-noct-neutral-500">
-          {tiempoRelativo(fila.fechaHora)}
-        </span>
-      </span>
-      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+      <span className="shrink-0 text-[12px] text-noct-neutral-400">{tiempoRelativo(fila.fechaHora)}</span>
     </Link>
   )
 }
 
-// Icono y tono de una fila de "Pendientes" según su categoría/urgencia:
-// una credencial vencida pesa distinto que un borrador propio, aunque
-// ambos sean "algo por resolver".
+// Icono y tono de una fila de "Te toca a ti" según su categoría: una
+// credencial vencida pesa distinto que un borrador propio, aunque ambos
+// sean "algo por resolver".
 const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) => React.JSX.Element> = {
   borrador: PencilSimple,
   credencial: LockSimple,
@@ -563,26 +568,14 @@ const TONO_PENDIENTE: Record<ItemPendiente['tono'], string> = {
   precaucion: 'text-noct-precaucion bg-noct-precaucion/[.12]',
   error: 'text-noct-error bg-noct-error/[.12]',
 }
-
-function FilaPendiente({ item }: { item: ItemPendiente }) {
-  const Icono = ICONO_PENDIENTE[item.categoria]
-  return (
-    <Link
-      to={item.ruta}
-      className="flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-    >
-      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${TONO_PENDIENTE[item.tono]}`}>
-        <Icono size={17} aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="mb-0.5 block truncate text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-          {item.titulo}
-        </span>
-        <span className="block truncate text-[12px] text-noct-neutral-500">{item.detalle}</span>
-      </span>
-      <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-    </Link>
-  )
+// La razón va en el color del estado, no en gris: es lo que distingue
+// "Venció hace 3 días" de "Borrador tuyo · hace 2 días" de un vistazo,
+// sin leer (M-R6). Lo neutro se queda neutro para que el color siga
+// significando algo.
+const COLOR_RAZON: Record<ItemPendiente['tono'], string> = {
+  neutro: 'text-noct-neutral-400',
+  precaucion: 'text-noct-precaucion',
+  error: 'text-noct-error',
 }
 
 // Atajo de la rejilla superior (diagnostico, escaner): icono en el
@@ -603,16 +596,15 @@ function AtajoRapido({
   return (
     <Link
       to={to}
-      className={`flex min-h-11 flex-col gap-2 rounded-lg border border-noct-divider bg-noct-surface p-3.5 text-noct-text hover:border-noct-accent hover:bg-noct-accent/[.06] ${className}`}
+      className={`flex min-h-12 flex-col gap-2 rounded-lg border border-noct-divider bg-noct-surface p-3.5 text-noct-text hover:border-noct-accent hover:bg-noct-accent/[.06] ${className}`}
     >
       <Icono size={21} className="text-noct-accent" aria-hidden />
       <span className="text-[13.5px] font-medium leading-[1.3]">
         {titulo}
-        <span className="mt-0.5 block text-[11.5px] font-normal leading-[1.4] text-noct-neutral-500">
+        <span className="mt-0.5 block text-[11.5px] font-normal leading-[1.4] text-noct-neutral-400">
           {detalle}
         </span>
       </span>
     </Link>
   )
 }
-

@@ -8,6 +8,25 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Cambiado (tarea 203): Inicio en cinco bloques y dos pesos de fila
+
+**Área modificada:** `src/features/inicio/InicioPage.tsx`, `src/components/BarraReanudar.tsx`, `src/components/BarraSuperior.tsx`, `src/app/Chasis.tsx`, `src/features/soluciones/useReanudar.ts`.
+**Motivo:** fase 2 de la auditoría móvil, hallazgos **M-006**, **M-007**, **M-013** y **M-003** (mockup `2b`, reglas **M-R6**, **M-R7**, **M-R8** y **M-R9**). Con la base llena Inicio medía **más de 2.200 px a 360 px**: cuatro pantallas. El problema no era la cantidad de información sino que **cinco bloques usaban exactamente la misma fila de 52 px** (cuadrado de 34, título de 14, subtítulo de 12, galón) y solo un rótulo de 11 px los distinguía: "Pendientes" (algo que debo hacer) pesaba igual que "Actividad del equipo" (algo que hizo otro). Sin foco, el técnico desplaza buscando en vez de reconocer.
+**Impacto esperado:** alto, en la primera pantalla de cada jornada. **Sin esquema nuevo:** los datos ya se calculaban.
+
+- **Cambiado** la pantalla pasa a **cinco bloques** (M-R7): reanudar, buscar, dos atajos, "Te toca a ti" y "Lo que consultaste". **Medido en navegador a 360 px: de 2.200 px a 1.035 px, 1,6 pantallas.**
+- **Agregado** **dos pesos de fila y solo dos** (M-R6, "una fila, un significado"): `FilaAccion` para lo que el técnico debe resolver (56 px, título de 15 px y **la razón en el color de su estado**) y `FilaInfo` para lo que solo se consulta (44 px, 13,5 px, sin cuadrado de color ni galón, con el dato de reconocimiento a la derecha).
+- **Cambiado** **nada se borra**: "Problemas frecuentes", "Favoritos", "Para empezar" y "Actividad del equipo" se pliegan tras una línea con su conteo (`SeccionPlegable`, regla M-R4). Cuatro líneas de 52 px en vez de unos 1.200 px de filas.
+- **Agregado** "Ver los otros N" en los dos bloques de lista: se ven 2 filas y el resto entra **en el sitio**, sin cambiar de pantalla.
+- **Corregido (M-013)** una sola tarjeta de reanudar. Se retiró la consulta propia de `InicioPage` (`enCurso`), que era un tercer cálculo del mismo dato, y ahora Inicio lee `useReanudar` y pinta `BarraReanudar` con la variante nueva `tarjeta`. **Y no se repite:** si la barra flotante está visible, Inicio no dibuja su tarjeta; antes se veían las dos a la vez.
+- **Corregido** un defecto que salió de lo anterior: el descarte de `useReanudar` vivía en un `useState` **por instancia**. Con dos consumidores (chasis e Inicio), descartar la barra flotante no llegaba a Inicio, así que la barra desaparecía y la tarjeta no aparecía en su lugar. Ahora es una variable de módulo con `useSyncExternalStore`.
+- **Corregido (M-003, regla M-R9)** el aviso numérico de la barra de pestañas se muda de **"Más"** a **Inicio**. "Más" es un índice y no contiene ni un pendiente: se tocaba el aviso, no había nada, y eso enseña al técnico a ignorar los avisos. El dato vive en Inicio, así que el aviso se muda con él.
+- **Cambiado (M-R8, "un buscador por pantalla")** la lupa de la barra superior se apaga **solo en Inicio** (`conLupa`, prop nueva de `Chasis` y `BarraSuperior`), que ya trae su propio campo en línea, ahora de **46 px** y con el alcance escrito ("Buscar en Guías, Equipos y Bóveda"). En las otras cuatro secciones la lupa ES el buscador y se queda.
+- **Decisión registrada:** el texto de la tarea decía retirar el campo en línea y dejar la lupa; el mockup `2b` dibuja lo contrario. Manda el mockup: M-R8 describe literalmente "un buscador de 46 px con el alcance escrito", que es el campo y no un icono, y un campo invita a escribir donde un icono hay que descubrirlo. El ahorro de altura real viene de plegar los bloques secundarios, no de esos 58 px.
+- **Fuera de alcance a propósito:** **M-008** (retirar "Registrar equipo" de los atajos) es de la tarea **207** y trae su propia condición, que el alta viva tras un escaneo sin coincidencia; adelantarlo aquí dejaría el alta sin puerta durante toda la fase.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da 975 de 975 en verde. **Medido en navegador real** con la base sembrada y borrada al terminar: **a 360 px, 1.035 px de alto (1,62 pantallas)** con todo plegado y 1.582 px con las dos listas desplegadas y una sección abierta; el buscador mide 46 px y la lupa del chasis no está (0 en el DOM); el aviso "5" aparece sobre **Inicio** y no sobre "Más"; con la barra flotante visible Inicio no dibuja la tarjeta, y al descartarla la barra desaparece y la tarjeta aparece con "SIGUES EN EL PASO 3 DE 7 · Cambiar el tóner de la HP M404 · ~14 min"; los cuatro plegables muestran su conteo ("Problemas frecuentes 1", "Favoritos 2", "Para empezar 2", "Actividad del equipo 2"). **Verificado también a 412 px** (regla M-R13): sin desborde horizontal, relleno lateral de 16 px y ningún texto truncado.
+
 ### Corregido (tarea 213): tres pruebas rotas de antes, dos causas distintas
 
 **Área modificada:** `src/features/inicio/pendientes.test.ts`, `src/lib/archivosPendientes.test.ts`.

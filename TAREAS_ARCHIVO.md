@@ -1,5 +1,33 @@
 # Historial de tareas finalizadas
 
+### 203. Auditoría móvil, fase 2: Inicio en cinco bloques y dos pesos de fila (M-006, M-007, M-013, M-003)
+
+**Estado**: TERMINADA y **verificada en navegador real a 360 y a 412 px** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da 975 de 975 en verde. **Prioridad**: Alta. **Origen**: fase 2 de la auditoría móvil, mockup `2b` de `Evidencia móvil.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode. **Absorbe la tarea 195** (turno 9, "Inicio, las tres zonas").
+
+**El diagnóstico.** Con la base llena Inicio medía **más de 2.200 px a 360 px**: cuatro pantallas. El problema no era la cantidad de información sino que **cinco bloques usaban EXACTAMENTE la misma fila de 52 px** (cuadrado de 34, título de 14, subtítulo de 12, galón) y solo un rótulo de 11 px los distinguía. "Pendientes" (algo que debo hacer) pesaba igual que "Actividad del equipo" (algo que hizo otro): lo urgente y lo anecdótico se leen igual, así que se salta todo por igual.
+
+**Decisiones tomadas al abrir la tarea** (la propia tarea pedía decidirlas y anotarlas).
+
+1. **Manda el reparto de `2b`, no las tres zonas de la 195.** La 195 proponía "Ahora / Tu trabajo / Del equipo" y subía además los equipos fuera de servicio a Inicio. Manda `2b` porque es la auditoría más reciente, es la única dibujada a escala real y su reparto ya cubre lo que la 195 buscaba. **Lo que la 195 pedía y aquí NO entra**: los equipos fuera de servicio en Inicio, que es alcance nuevo (hoy no se muestran en ninguna pantalla) y no un reordenamiento. Queda sin registrar hasta que el usuario lo pida.
+2. **El buscador que se queda en Inicio es el campo en línea, no la lupa del chasis.** El texto de la tarea decía lo contrario; el mockup `2b` dibuja el campo y quita la lupa. Manda el mockup: **M-R8 describe literalmente "un buscador por pantalla, de 46 px, con el alcance escrito"**, y eso es un campo, no un icono; además un campo invita a escribir donde un icono hay que descubrirlo, y esta pantalla es la puerta de entrada al conocimiento. El argumento de altura no decide: el ahorro real viene de plegar los bloques secundarios, no de esos 58 px. Se comprobó antes de decidir que el campo de Inicio y `BuscadorGlobal` son funcionalmente idénticos (mismo índice, mismos resultados y el mismo "Crear equipo" del vacío), así que no se pierde nada por ninguno de los dos lados.
+
+**Lo que se hizo.**
+
+- **Cinco bloques** (M-R7): reanudar, buscar, dos atajos, "Te toca a ti", "Lo que consultaste".
+- **Dos pesos de fila y solo dos** (M-R6): `FilaAccion` (56 px, título de 15 px, **la razón en el color de su estado**) para lo único que pide actuar, y `FilaInfo` (44 px, 13,5 px, sin cuadrado de color ni galón) para todo lo que solo se consulta.
+- **Nada se borra**: "Problemas frecuentes", "Favoritos", "Para empezar" y "Actividad del equipo" se pliegan tras una línea con su conteo (`SeccionPlegable`, M-R4). Cuatro líneas de 52 px en lugar de unos 1.200 px de filas.
+- **"Ver los otros N"** en los dos bloques de lista: 2 filas visibles y el resto **en el sitio**.
+- **M-013, una sola tarjeta de reanudar**: se retiró la consulta `enCurso` propia de `InicioPage`, que era un **tercer** cálculo del mismo dato, y ahora Inicio lee `useReanudar` y pinta `BarraReanudar variante="tarjeta"` (nueva). Y **no se repite**: con la barra flotante visible, Inicio no dibuja su tarjeta.
+- **M-003 / M-R9**: el aviso numérico de la barra de pestañas se muda de "Más" a **Inicio**. "Más" es un índice y no contiene ni un pendiente; tocar un aviso y no encontrar nada enseña a ignorar los avisos.
+- **M-R8**: `conLupa`, prop nueva de `Chasis` y `BarraSuperior`, apaga la lupa **solo en Inicio**. El campo sube a 46 px y adopta el alcance del mockup.
+
+**Defecto encontrado al verificar, y corregido.** Al leer `useReanudar` desde dos sitios salió a la luz que su descarte vivía en un `useState` **por instancia**: con un solo consumidor bastaba, pero con dos, descartar la barra flotante del chasis no llegaba a Inicio, así que la barra desaparecía y la tarjeta **no** aparecía en su lugar. Ahora el descarte es una variable de módulo leída con `useSyncExternalStore`, así que las dos instancias ven lo mismo en el mismo render.
+
+**Fuera de alcance a propósito.** **M-008** (retirar "Registrar equipo" de los atajos, que el mockup `2b` sí dibuja con solo dos) pertenece a la tarea **207** y trae su propia condición: que el alta viva tras un escaneo sin coincidencia. Adelantarlo aquí dejaría el alta sin puerta durante toda la fase. Lo mismo con **M-004/M-009** (normalizar los cuatro buscadores de la app y su redacción), que también son de la 207: aquí solo se resuelve el duplicado **de esta pantalla**.
+
+**Verificación en navegador** (sesión simulada y base sembrada, ambas borradas al terminar): **a 360 px, 1.035 px de alto, 1,62 pantallas** con todo plegado, y 1.582 px con las dos listas desplegadas y una sección abierta. El buscador mide 46 px con "Buscar en Guías, Equipos y Bóveda" y la lupa del chasis no está en el DOM. El aviso "5" sale sobre **Inicio**, no sobre "Más". Con la barra flotante visible Inicio no dibuja la tarjeta; al descartarla, la barra desaparece y la tarjeta aparece con "SIGUES EN EL PASO 3 DE 7 · Cambiar el tóner de la HP M404 · ~14 min". Los cuatro plegables muestran su conteo. **A 412 px** (M-R13): sin desborde horizontal, relleno lateral de 16 px y ningún texto truncado.
+
+
 ### 213. Tres pruebas rotas de antes, dos causas distintas
 
 **Estado**: TERMINADA y **verificada** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **975 de 975** pruebas en verde. **Prioridad**: Media. **Origen**: detectado al cerrar la tarea 209, confirmado ajeno con `git stash` antes de tocar nada. **Modelo/esfuerzo**: Sonnet 5 / Medio.

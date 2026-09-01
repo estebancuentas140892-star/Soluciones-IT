@@ -32,7 +32,20 @@ const BuscadorGlobal = lazy(() =>
 // documento y tarea, con regreso y miga, llegan con el chasis de tres
 // niveles (tarea 185) y la miga de pan (tarea 188).
 
-export function BarraSuperior({ titulo, children }: { titulo: string; children?: ReactNode }) {
+export function BarraSuperior({
+  titulo,
+  conLupa = true,
+  children,
+}: {
+  titulo: string
+  // Regla M-R8, "un buscador por pantalla" (tarea 203): Inicio tiene su
+  // propio campo de búsqueda en línea, con el alcance escrito, así que
+  // ahí la lupa de esta barra sería el segundo buscador de la misma
+  // pantalla. En el resto de las secciones la lupa ES el buscador y se
+  // queda. Se apaga por pantalla, no se borra del chasis.
+  conLupa?: boolean
+  children?: ReactNode
+}) {
   const { perfil } = useAuth()
   const perfilVivo = usePerfilVivo()
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
@@ -45,15 +58,17 @@ export function BarraSuperior({ titulo, children }: { titulo: string; children?:
         <CabeceraColapsable titulo={titulo} />
         <div className="flex shrink-0 items-center gap-0.5">
           <PastillaSync />
-          <button
-            type="button"
-            onClick={() => setBuscadorAbierto(true)}
-            aria-label="Buscar en todo"
-            title="Buscar en todo"
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
-          >
-            <MagnifyingGlass size={20} aria-hidden />
-          </button>
+          {conLupa && (
+            <button
+              type="button"
+              onClick={() => setBuscadorAbierto(true)}
+              aria-label="Buscar en todo"
+              title="Buscar en todo"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
+            >
+              <MagnifyingGlass size={20} aria-hidden />
+            </button>
+          )}
           {/* Mi cuenta deja de alcanzarse solo desde Inicio. En escritorio
               el sidebar ya la ofrece al pie, asi que aqui se oculta. */}
           <Link

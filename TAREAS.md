@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 213 se cerró el 2026-09-01. La siguiente pendiente es la 203, ver "Por hacer".)*
+*(vacío: la tarea 203 se cerró el 2026-09-01. Con ella **la fase 2 de la auditoría móvil queda a medias**: hechas la 202 (el regreso deshace el último salto) y la 203 (Inicio); quedan la 204 (Red abre con el nodo), la 205 (Bóveda y Diagnóstico) y la 206 (un color, un significado dentro del paso). La siguiente pendiente es la 204, ver "Por hacer".)*
 
 ---
 
@@ -224,16 +224,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 203. Auditoría móvil, fase 2: Inicio en cinco bloques y dos pesos de fila (M-006, M-007, M-013, M-003)
-
-- **Descripción:** con la base llena, Inicio mide más de **2.200 px** a 360 px: cuatro pantallas. El problema no es la cantidad de información sino que **cinco bloques usan exactamente la misma fila de 52 px** (cuadrado de 34, título de 14, subtítulo de 12, galón) y solo un rótulo de 11 px los distingue: "Pendientes" (algo que debo hacer) pesa igual que "Actividad del equipo" (algo que hizo otro). Propuesta (mockup `2b`): **cinco bloques máximo** (**M-R7**), **dos pesos de fila** (acción a 15 px con la razón en color de estado, información a 13,5 px sin cuadrado, **M-R6**), Actividad y "Para empezar" plegados tras una línea con su conteo, el segundo buscador retirado (la lupa del chasis ya busca en todo, **M-R8**) y **una sola tarjeta de reanudar** con dos tamaños, que no se repite si la barra flotante está visible (M-013). Cierra además **M-003**: el aviso numérico se muda de la pestaña "Más" a Inicio, que es donde vive el dato (**M-R9**).
-- **Motivo:** un aviso que lleva a un sitio donde no está lo avisado enseña al técnico a ignorar los avisos. Y sin foco, el técnico desplaza buscando en vez de reconocer.
-- **Impacto:** alto en la primera pantalla de cada jornada. Sin esquema nuevo: los datos ya se calculan.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/features/inicio/InicioPage.tsx`, `pendientes.ts`, `usePendientes.ts`, `src/app/Chasis.tsx` (el número deja la pestaña "Más"), `src/components/AvisoPestana.tsx`, `src/components/BarraReanudar.tsx`.
-- **Dependencias:** **absorbe la tarea 195** (turno 9 del handoff anterior, "Inicio, las tres zonas"), que pedía lo mismo con otro reparto: las tres zonas de la 195 y los cinco bloques de aquí son la misma pantalla, y hacerlas por separado obligaría a rehacerla dos veces. Al tomarla se decide qué reparto manda y se anota. Reglas que fija: **M-R6**, **M-R7**, **M-R9**.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
-
 ### 204. Auditoría móvil, fase 2: Red abre con el nodo, no con la lista (M-018, M-019)
 
 - **Descripción:** Red tiene hoy la forma de un **segundo inventario** (el mismo buscador, los mismos grupos y la misma fila de equipo que Equipos, con la ubicación como título de grupo) y aparta las relaciones detrás de una fila. El hallazgo que ahorra trabajo: **la pantalla que Red necesita ya está construida** (la topología de un equipo, con "Depende de", "si falla, caen N equipos" y el árbol de dependientes), solo está a **tres toques** y no es la forma de la sección. Propuesta (mockup `10c`): esa misma pantalla en la raíz de la pestaña, recordando el último nodo visitado (memoria de pestaña, que ya existe), con la lista de equipos por ubicación debajo, en una fila. **Cero componentes nuevos.** Y **M-019**: los grupos se forman con el **texto libre** de ubicación, no con `ubicacionId`, así que "Rack 1" y "rack 1" son dos grupos distintos.
@@ -369,7 +359,10 @@ La **tarea 191** (turno 5, parte 1: el chasis en cuatro puntos de quiebre) está
 - **Área afectada:** `src/features/red/RedPage.tsx`, `TopologiaPage.tsx`, `TopologiaEquipoPage.tsx`, `FormularioConexion.tsx`, `ConexionesFicha.tsx`, `src/lib/conexiones.ts` (`iconoDeVia`).
 - **Dependencias:** el turno 6 (tarea 192). Reglas que fija: **R42** (un formulario por entidad, sea cual sea la pantalla que lo abre) y **R43** (cada vista puede tener su gramática, pero no su vocabulario).
 
-### 195. Turno 9: sección Inicio, las tres zonas
+### 195. Turno 9: sección Inicio, las tres zonas (ABSORBIDA por la 203, cerrada el 2026-09-01)
+
+> **Cerrada sin implementar su reparto.** La tarea **203** rehízo Inicio con los cinco bloques del mockup `2b`, que es la auditoría más reciente y la única dibujada a escala real. De lo que pedía esta 195 queda **un solo punto sin hacer**: subir los **equipos fuera de servicio** a Inicio, para responder "¿hay algo caído ahora mismo?". Es alcance nuevo (hoy no se muestran en ninguna pantalla), no un reordenamiento, y queda sin registrar como tarea hasta que el usuario lo pida. El resto del turno 9 lo cubre la 203.
+
 
 - **Descripción:** `9a` los nueve bloques de hoy, `9b` los dos problemas estructurales medidos, `9c` las tres zonas propuestas, `9d` los tres estados y el destino de cada bloque actual. Inicio se titula "Inicio" y ya cedió buscador, sincronía y cuenta al chasis (tarea 181): el hueco lo ocupa lo que el técnico necesita al abrir, en tres zonas ("Ahora" con lo que está a medias y lo que está caído, "Tu trabajo" con los pendientes, "Del equipo" con lo que pasó desde ayer). Los equipos fuera de servicio y las credenciales por vencer suben a "Ahora": la primera pregunta del turno ("¿hay algo caído ahora mismo?") hoy no se responde. La bienvenida de tres pasos se apaga sola cuando cada paso se cumple y pasa a vivir dentro de la zona "Ahora" en vez de ser un bloque aparte.
 - **Motivo:** Inicio se diseñó como "un solo punto de entrada al conocimiento" y el turno 3 mudó ese punto de entrada al chasis; sin buscador, la pantalla se quedó sin propósito y con nueve bloques de igual peso.
