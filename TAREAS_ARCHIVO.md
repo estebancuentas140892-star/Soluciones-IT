@@ -1,5 +1,26 @@
 # Historial de tareas finalizadas
 
+### 211. Handoff "Diseño móvil", tablero 6d: modo foco, una tarea a la vez
+
+**Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-31. `tsc -b`, `oxlint` y `npm run build` limpios; 141 pruebas de `src/features/soluciones` en verde. **Prioridad**: Alta. **Origen**: tablero `6d` de `Paso 6 - Guías a Fondo.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode. **Con ella queda implementado el Paso 6 completo** (6b tarea 209, 6c tarea 210, 6d esta; el tablero 6a es el diagnóstico del ANTES y no se implementa).
+
+**La tesis del tablero.** Todo el sistema está construido alrededor del **paso**: la banda, el avance, el plegado, la acción dominante. Pero frente al equipo, con una mano y guantes, la unidad real de trabajo es la **tarea**: "desconecta el uplink del puerto 24". El técnico veía tres tareas, dos avisos y una imagen a la vez y tenía que encontrar en ese bloque cuál le tocaba. **El modelo ya soportaba la unidad fina** (los bloques tienen id, tipo y progreso propio en `instruccionesHechas`, y `alternarTarea` ya marca de a una): solo faltaba una vista que la usara.
+
+**Lo que se hizo.**
+
+- **`ModoFoco`** (nuevo): una instrucción a **30 px**, los avisos del paso pegados a ella y nada más. El botón de marcar mide **76 px** y es el ÚNICO elemento grande de la pantalla, así que no hay que apuntar. Flechas de tarea 64x56, "Falla" 56, "Ver todo" 44, chips de vínculo 52.
+- **Botón "Foco"** en la barra de acción, solo si el paso tiene tareas: sin ellas el foco no tendría nada que enfocar.
+- **Marcar avanza** a la siguiente tarea sin marcar (el gesto es "ya está, dame la que sigue"); **desmarcar no mueve nada**, porque quien desmarca se está corrigiendo y quiere quedarse donde está.
+- **`key={paso.id}`**: al completar el paso, el foco se remonta ya puesto en la primera tarea del siguiente, sin código de sincronización.
+- **Los avisos van pegados a la tarea**, no en otra pantalla: un aviso que hay que ir a buscar no advierte. Se muestran TODOS los del paso, no solo uno, para no esconder ninguno.
+- **"Falla"**: sale del foco y deja un aviso ámbar sobre el paso completo ("Marcaste una falla en «...»") con **enlace** a la solución vinculada del paso, si la tiene, y un "Quitar el aviso". Es un enlace y **no** la pregunta de error del paso, a propósito: esa completa el paso al resolverse (`completarPasoYAvanzar`), y en foco puede haber tareas sin marcar, así que reutilizarla se saltaría trabajo en silencio.
+- **Icono `Crosshair`**. El mockup dibujaba un compuesto propio (círculo con cuatro esquinas) que no existe en Phosphor; se usó el icono real más cercano en significado, para no inventar nombres fuera del set (un icono, un significado).
+
+**Decisión mantenida.** La barra de tarea del chasis se queda también en foco: dice qué se está haciendo y a dónde se vuelve, que es regla del sistema (R19, tarea 185). El mockup la quita. Lo que sí se retira es la banda del paso, porque el foco trae su propia cabecera mínima y las dos dirían lo mismo.
+
+**Verificación en navegador** (procedimiento de 7 pasos sembrado y borrado al terminar): instrucción a 30 px, botón de marcar 76, "Falla" 56, flechas 64x56, "Ver todo" 44, chips 52. El foco entra en "Tarea 2 de 3", que es la primera sin marcar del paso sembrado a medias; marcar avanza a "Tarea 3 de 3"; los chips "Foto" y "Archivo" aparecen solo cuando el paso los tiene y se despliegan con `aria-expanded`; "Falla" sale del foco dejando "Marcaste una falla en «Desconectar el uplink del puerto 24»".
+
+
 ### 210. Handoff "Diseño móvil", tablero 6c: el "3/7" se vuelve un destino, no un rótulo
 
 **Estado**: TERMINADA y **verificada en navegador real a 375x812** el 2026-08-31. `tsc -b`, `oxlint` y `npm run build` limpios; **14 pruebas nuevas** en `estadoPasos.test.ts`, todas en verde. **Prioridad**: Alta. **Origen**: tablero `6c` de `Paso 6 - Guías a Fondo.dc.html`. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.

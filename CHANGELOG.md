@@ -8,6 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Agregado (tarea 211): modo foco, una tarea a la vez
+
+**Área modificada:** `src/features/soluciones/ModoFoco.tsx` (nuevo), `AsistenteVista.tsx`, `src/components/iconos.tsx`.
+**Motivo:** tablero `6d` del handoff "Soluciones IT, Diseño móvil", la oportunidad grande que señala el Paso 6. Todo el sistema está construido alrededor del **paso** (la banda, el avance, el plegado, la acción dominante), pero frente al equipo, con una mano y guantes, la unidad real de trabajo es la **tarea**: "desconecta el uplink del puerto 24". El técnico veía tres tareas, dos avisos y una imagen a la vez y tenía que encontrar en ese bloque cuál le tocaba.
+**Impacto esperado:** alto para quien ejecuta un procedimiento por primera vez o trabaja con guantes; el experto se queda en la lista. **Sin esquema y sin tocar el modelo de datos**: los bloques ya tenían id, tipo y progreso propio (`instruccionesHechas`) y `alternarTarea` ya marcaba de a una. Esta vista solo los recorre.
+
+- **Agregado** `ModoFoco`: una instrucción a **30 px** (lo que se lee de brazo estirado, a pleno sol, con el teléfono apoyado en el rack), los avisos del paso pegados a ella y nada más. El botón de marcar mide **76 px** y es el único elemento grande de la pantalla, así que no hay que apuntar. Chips de 52 px para la clave, las fotos y los archivos, que se despliegan sin salir.
+- **Agregado** el botón **"Foco"** en la barra de acción del modo ejecución, solo si el paso tiene tareas: sin ellas el foco no tendría nada que enfocar.
+- **Comportamiento**: entra en la primera tarea sin marcar; marcar avanza a la siguiente sin marcar; desmarcar no mueve nada, porque quien desmarca se está corrigiendo. Con `key={paso.id}`, al completar el paso el foco se remonta en la primera tarea del siguiente.
+- **Agregado** "Falla": sale del foco y deja un aviso ámbar sobre el paso completo, con **enlace** a la solución vinculada si la tiene. Es un enlace y no la pregunta de error del paso, que completa el paso al resolverse: en foco puede haber tareas sin marcar, y darlo por hecho se saltaría trabajo.
+- **Agregado** el icono `Crosshair`. El mockup dibujaba un compuesto propio (círculo con cuatro esquinas) que no existe en Phosphor; se usó el icono real más cercano en significado, para no inventar nombres fuera del set.
+- **Decisión mantenida:** la barra de tarea del chasis se queda en foco (dice qué se está haciendo y a dónde se vuelve, regla R19). El mockup la quita; lo que sí se retira es la banda del paso, porque el foco trae su propia cabecera mínima.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; 141 pruebas de `src/features/soluciones` en verde. **Medido en navegador real a 375x812**: instrucción a 30 px, botón de marcar 76, "Falla" 56, flechas 64x56, "Ver todo" 44, chips 52; el foco entra en "Tarea 2 de 3" (la primera sin marcar del paso sembrado a medias), marcar avanza a "Tarea 3 de 3", los chips "Foto" y "Archivo" aparecen solo cuando el paso los tiene y se despliegan con `aria-expanded`, y "Falla" sale del foco dejando "Marcaste una falla en «Desconectar el uplink del puerto 24»".
+
 ### Agregado (tarea 210): el "3/7" del modo ejecución se vuelve un destino, no un rótulo
 
 **Área modificada:** `src/features/soluciones/AsistenteVista.tsx`, `src/components/IndicadorAvance.tsx`, y tres archivos nuevos: `HojaPasos.tsx`, `estadoPasos.ts`, `estadoPasos.test.ts`.

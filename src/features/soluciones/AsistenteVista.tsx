@@ -19,13 +19,14 @@ import {
 import { registrarIntervencion } from '../../lib/repositorio'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
-import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning } from '../../components/iconos'
+import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, Crosshair, LinkSimple, SealCheck, Warning, Wrench } from '../../components/iconos'
 import { BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
+import { ModoFoco } from './ModoFoco'
 import { minutosRestantes, resumenDeAvance, resumirPasos, type ResumenPaso } from './estadoPasos'
 
 interface Props {
@@ -74,6 +75,12 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   const [listo, setListo] = useState(false)
   // Índice de los pasos (tablero 6c): se abre tocando el contador.
   const [indiceAbierto, setIndiceAbierto] = useState(false)
+  // Modo foco (tablero 6d): una tarea a la vez. Es un modo, no un
+  // reemplazo, así que se entra y se sale a voluntad.
+  const [enFoco, setEnFoco] = useState(false)
+  // Tarea en la que el técnico declaró que algo falló, para dejar el
+  // aviso puesto al volver a la vista completa del paso.
+  const [tareaFallida, setTareaFallida] = useState<string | null>(null)
 
   // Cronometro de la sesion de ejecucion (solo nivel 0): tiempo desde
   // que se abrio el asistente, para contrastar con el estimado. Es
@@ -281,6 +288,32 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   const resumenes: ResumenPaso[] = resumirPasos(pasos, hechos, instruccionesHechas, indiceActual)
   const subtituloIndice = resumenDeAvance(resumenes, minutosRestantes(tiempoEstimadoMin, resumenes))
 
+  // MODO FOCO (tablero 6d): sustituye el cuerpo del paso, no lo
+  // acompaña. La `key` es el id del paso, así que al completarlo el
+  // foco se remonta ya puesto en la primera tarea del siguiente.
+  //
+  // La barra de tarea del chasis se queda (dice qué se está haciendo y
+  // a dónde se vuelve, regla R19); lo que no se monta es la banda del
+  // paso, porque el foco trae su propia cabecera mínima.
+  if (enFoco && nivel === 0 && idsTareas.length > 0) {
+    return (
+      <ModoFoco
+        key={paso.id}
+        paso={paso}
+        indicePaso={indiceActual}
+        totalPasos={pasos.length}
+        tituloPaso={tituloPaso}
+        instruccionesHechas={instruccionesHechas}
+        onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
+        onSalir={() => setEnFoco(false)}
+        onFalla={(texto) => {
+          setTareaFallida(texto)
+          setEnFoco(false)
+        }}
+      />
+    )
+  }
+
   return (
     <div className={`flex flex-col gap-4 ${nivel === 0 ? 'flex-1' : ''}`}>
       {nivel === 0 && (
@@ -333,6 +366,36 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           </p>
         )}
       </div>
+
+      {/* Lo que el técnico declaró desde el modo foco (tablero 6d). No
+          toca el progreso ni completa nada: solo deja dicho qué falló y
+          pone a mano la solución del paso, si la tiene. */}
+      {tareaFallida && nivel === 0 && (
+        <div className="flex flex-col gap-2.5 rounded-xl border border-noct-precaucion/45 bg-noct-precaucion/[.12] px-4 py-3">
+          <p className="flex items-start gap-2.5 text-[13.5px] leading-snug">
+            <Warning size={17} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+            <span className="min-w-0">
+              <span className="font-semibold text-noct-precaucion">Marcaste una falla</span> en
+              «{tareaFallida}». Aquí tienes el paso completo: sus avisos, sus fotos y sus archivos.
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {paso.solucionArticuloId && (
+              <SolucionDelPasoEnlace
+                solucionArticuloId={paso.solucionArticuloId}
+                tituloReferencia={paso.solucionArticuloTitulo}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setTareaFallida(null)}
+              className="inline-flex min-h-11 items-center rounded-lg px-3 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.08]"
+            >
+              Quitar el aviso
+            </button>
+          </div>
+        </div>
+      )}
 
       {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
@@ -422,6 +485,18 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
             >
               <CaretLeft size={18} aria-hidden />
             </button>
+            {/* Entrada al modo foco (tablero 6d). Solo si el paso tiene
+                tareas: sin ellas el foco no tendría nada que enfocar. */}
+            {idsTareas.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setEnFoco(true)}
+                className="flex h-[52px] shrink-0 items-center gap-1.5 rounded-xl border-[1.5px] border-noct-accent/50 bg-noct-accent/10 px-3 text-[14.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.22]"
+              >
+                <Crosshair size={18} className="shrink-0" aria-hidden />
+                Foco
+              </button>
+            )}
             <button
               type="button"
               disabled={!pasoActualHecho && !trabajoPrevio}
@@ -679,6 +754,37 @@ function SubProcedimientoEnAsistente({
         onCompletado={onCompletado}
       />
     </div>
+  )
+}
+
+// Enlace directo a la solución vinculada del paso, para el aviso de
+// "algo falló" que deja el modo foco (tablero 6d). Es un ENLACE, no la
+// pregunta de error: esa completa el paso al resolverse, y aquí el paso
+// puede tener tareas sin marcar, así que darlo por hecho se saltaría
+// trabajo. Abrir la guía es lo que el técnico necesita y no toca nada.
+function SolucionDelPasoEnlace({
+  solucionArticuloId,
+  tituloReferencia,
+}: {
+  solucionArticuloId: string
+  tituloReferencia: string
+}) {
+  const articulo = useLiveQuery(async () => (await db.articulos.get(solucionArticuloId)) ?? null, [solucionArticuloId])
+  if (!articulo || articulo.eliminadoEn) {
+    return (
+      <span className="inline-flex min-h-11 items-center text-[13px] text-noct-precaucion/85">
+        La solución vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está disponible.
+      </span>
+    )
+  }
+  return (
+    <Link
+      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+      className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-noct-precaucion/50 px-3 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
+    >
+      <Wrench size={15} className="shrink-0" aria-hidden />
+      <span className="min-w-0 truncate">Ver la solución: {articulo.titulo}</span>
+    </Link>
   )
 }
 

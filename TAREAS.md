@@ -4,14 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-### 211. Handoff "Diseño móvil", Paso 6d: modo foco, una tarea a la vez
-
-- **Descripción:** tablero `6d`, la oportunidad grande del Paso 6. Hoy el técnico ve el paso entero (tres tareas, dos avisos y una imagen) y tiene que encontrar dentro de ese bloque cuál le toca. El modo foco muestra **una sola tarea**: la instrucción a **30 px** (legible de brazo estirado, a pleno sol, con el teléfono apoyado en el rack), su aviso pegado a ella y nada más; el botón de marcar mide **76 px** (imposible fallarlo con guantes) y es el único elemento grande de la pantalla, así que no hay que apuntar; los vínculos del paso quedan como chips de 52 px. Es un **modo, no un reemplazo**: "Ver todo" vuelve a la vista normal. Se entra por un botón "Foco" en la barra de acción.
-- **Motivo:** la unidad de trabajo real es la tarea, no el paso. El modelo ya la soporta (los bloques tienen id, tipo y progreso propio, y `alternarTarea` ya marca de a una); falta la vista que la recorra.
-- **Impacto:** alto para quien ejecuta un procedimiento por primera vez o trabaja con guantes; el experto se queda en la lista. **Sin esquema**: reutiliza `instruccionesHechas` de `progresoPasos` tal cual.
-- **Prioridad:** Alta. **Estado:** En progreso.
-- **Área afectada:** componente nuevo en `src/features/soluciones/`, `AsistenteVista.tsx` (el botón "Foco" de la barra y el estado del modo), `useProcedimientoEjecucion.ts` (`alternarTarea`, sin cambios previstos), `src/lib/progresoPasos.ts`.
-- **Dependencias:** la **210**, terminada y archivada el 2026-08-31.
+*(vacío: la tarea 211 se cerró el 2026-08-31. **Con ella queda implementado el Paso 6 completo del handoff "Diseño móvil"**: 6b editor de pasos (tarea 209), 6c navegador de pasos (210) y 6d modo foco (211); el tablero 6a es el diagnóstico del ANTES y no se implementa. Los Pasos 1 a 5 de la carpeta siguen sin registrar: el usuario autorizó solo el Paso 6. La siguiente pendiente es la 212, ver "Por hacer".)*
 ---
 
 **HANDOFF NUEVO: "Soluciones IT, Diseño móvil" (importado el 2026-08-31).** Seis `.dc.html` en el proyecto de Claude Design `2f70dec0-abd8-4da5-8f2a-709e08102f5a`: `Paso 1 - Inicio y Onboarding`, `Paso 2 - Shell y Navegación`, `Paso 3 - Guías y Ejecución Guiada`, `Paso 4 - Dispositivos y Red`, `Paso 5 - Vinculación y Cero Duplicidad` y `Paso 6 - Guías a Fondo`. El usuario autorizó implementar **solo el Paso 6**; los cinco anteriores quedan sin registrar hasta que lo pida (excepción explícita a la regla 15, decidida por el usuario el 2026-08-31).
