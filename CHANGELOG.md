@@ -8,6 +8,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Cambiado (tarea 206): un color, un significado dentro del paso
+
+**Área modificada:** `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/tonos.ts`, `src/features/boveda/CredencialEnPaso.tsx`. **Nuevos:** `src/features/soluciones/FilaVinculo.tsx` y `src/features/soluciones/vinculoAnidado.ts`.
+**Motivo:** hallazgo **M-012** de la auditoría móvil (regla **M-R11**, tablero `3b`) y turno 12 de la auditoría de Soluciones (tablero `12b`), el mismo defecto desde dos encuadres. Dentro de un paso en ejecución el color no distinguía naturaleza: el **ámbar** era a la vez advertencia, pregunta de error y solución vinculada; el **acento**, subprocedimiento y credencial protegida. Un paso llegaba a mostrar **cinco marcos de color anidados**, dos de ellos del mismo tono con significados distintos, y la advertencia real dejaba de destacar entre ellos.
+**Impacto esperado:** medio, concentrado en los procedimientos compuestos, que son los más largos. **Sin esquema. No toca el progreso, el cifrado ni la regla de un solo nivel de anidamiento.**
+
+- **Cambiado** el **aviso** pasa a una **barra lateral de 2 px a color pleno** con su icono y su palabra, en vez de un marco completo, y queda como lo **único** del cuerpo del paso con fondo de color. `ModoFoco` adopta la misma barra a color pleno (venía al 30 %).
+- **Cambiado** la **profundidad se dibuja, no se colorea** (regla **R56**): lo que se despliega dentro de un paso va sangrado **13 px tras una línea vertical neutra de 2 px**, el patrón de una cita.
+- **Agregado** `FilaVinculo`, `EnlaceVinculo` y `AccionVinculo`: **una sola forma** de 44 px, con icono neutro y sin fondo, para el dato protegido, la guía anidada, la contingencia y la foto de evidencia. `vinculoAnidado.ts` (nuevo, 9 pruebas) concentra `ZONA_ANIDADA`, `modoVinculo` (la regla de un solo nivel, antes copiada en cuatro sitios), `PROMESA_REGRESO` y `fraseAvanceDocumento`.
+- **Cambiado** los **rótulos dicen qué es, no de dónde viene**: "Continúa en" pasa a **"Otra guía"** (sugería que el procedimiento no volvía), "Solución" a **"Si esto falla"**, y el dato protegido pierde su caja de borde discontinuo y su rótulo "Datos protegidos" (nombraba la categoría del dato, no lo que el técnico va a obtener): queda el candado, el título del secreto y la palabra "Mostrar".
+- **Agregado** un vínculo que **sale** de la pantalla se distingue de uno que se despliega aquí y lo promete por escrito, "Se abre aparte, vuelves aquí al terminar" (regla **R58**). Antes las dos tarjetas eran idénticas.
+- **Retirado** la pregunta "¿Ocurrió algún error durante este paso?" de la vista de lectura (regla **R59**): "No, continuar" completaba el paso, que es lo que ya hace su insignia numerada. La contingencia queda como una fila más, **disponible siempre**, sin depender del trabajo previo.
+- **Cambiado** el **verde deja de servir para elegir** (regla **R60**): significaba "No, no falló nada" en la pregunta de error y "Sí, continuar" en la decisión de al lado. Ahora el acento marca la vía que sigue y el ámbar la que se desvía; el verde queda solo para "completado".
+- **Retirado** el segundo y el tercer indicador de avance del documento anidado (regla **R57**): la cabecera "Pasos · 0 de 3" del nivel anidado y la barra con contador al pie. Lo dice una sola vez la fila que lo abre, con su anillo y "Paso 1 de 3 de esta guía". Con ellos se va el enlace "Reiniciar progreso" subrayado, que duplicaba el botón del panel de completado (regla **R61**), y desaparece `ContadorSubProgreso`.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **1025 de 1025** en verde (9 nuevas). **Medido en navegador real a 360 px** con un procedimiento sembrado que reproduce el caso de los cinco marcos (aviso + dato protegido + guía anidada + contingencia + decisión): en la vista de lectura, el paso queda con **un solo elemento con fondo de color**, el aviso, con su barra de 2 px a color pleno; las dos zonas anidadas miden 2 px de línea y 13 px de sangría; las filas de vínculo miden 44, 47 y 62 px; "Sí, continuar" sale en acento y "No, abrir ..." en ámbar. En el asistente, lo mismo, y con una falla declarada **todo lo ámbar de la pantalla significa lo mismo**: el aviso, el panel de falla, "Fotografiar y anotar la falla" y el botón "Falla". Datos de prueba borrados al terminar.
+
 ### Cambiado (tarea 205): Bóveda y Diagnóstico, la acción frecuente a la vista
 
 **Área modificada:** `src/features/boveda/BovedaPage.tsx`, `src/features/diagnostico/DiagnosticoRunPage.tsx`, `src/lib/vencimiento.ts`.

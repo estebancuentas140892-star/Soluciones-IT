@@ -2,21 +2,23 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
-import {
-  normalizarProcedimiento,
-  pasoTrabajoPrevioCompleto,
-  procedimientoEjecutable,
-  tareasDe,
-} from '../../lib/procedimiento'
+import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
-import { ArrowSquareOut, CaretRight, Check, CheckCircleFill, Circle, SealCheck, Warning } from '../../components/iconos'
+import { ArrowSquareOut, CaretRight, Check, CheckCircleFill, Circle, LinkSimple, SealCheck, Wrench } from '../../components/iconos'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
+import { EnlaceVinculo, FilaVinculo } from './FilaVinculo'
 import { tonoInfo } from './tonos'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
+import {
+  fraseAvanceDocumento,
+  modoVinculo,
+  PROMESA_REGRESO,
+  ZONA_ANIDADA,
+} from './vinculoAnidado'
 
 // Botones con tono de estado (respuestas Sí/No de las contingencias y
 // de las decisiones): delineados como todo botón Nocturne, en el color
@@ -32,6 +34,14 @@ const BTN_EXITO =
   `${BTN_ESTADO_BASE} border-noct-exito/50 text-noct-exito hover:bg-noct-exito/10 active:bg-noct-exito/20`
 const BTN_PRECAUCION =
   `${BTN_ESTADO_BASE} border-noct-precaucion/50 text-noct-precaucion hover:bg-noct-precaucion/10 active:bg-noct-precaucion/20`
+// El verde deja de servir para ELEGIR (regla R60 del turno 12): el
+// significado del éxito se invertía de un bloque al de al lado, porque
+// en la pregunta de error el verde era "No, no falló nada" y en una
+// decisión Sí/No era "Sí, continuar". Ahora el acento marca siempre la
+// vía que sigue y el ámbar la que se desvía, igual en los dos sitios.
+// El verde queda solo para decir "completado".
+const BTN_ACENTO =
+  `${BTN_ESTADO_BASE} border-noct-accent/50 text-noct-accent-300 hover:bg-noct-accent/10 active:bg-noct-accent/20`
 
 // Panel de aviso reutilizado para vinculos rotos o no disponibles.
 const PANEL_PRECAUCION =
@@ -103,7 +113,6 @@ export function ProcedimientoVista({
     },
   })
 
-  const progresoPct = pasos.length === 0 ? 0 : Math.round((completados / pasos.length) * 100)
   // La insignia "actual" (numero con glow) es el primer paso sin
   // completar; los siguientes pendientes van con el borde divisor.
   const indiceActual = pasos.findIndex((p) => !hechos.has(p.id))
@@ -160,13 +169,21 @@ export function ProcedimientoVista({
               pantalla y solo aparecía cuando ya se habían recorrido el
               objetivo y los requisitos; y con la acción dominante ya fija
               abajo (decisión 1), dos elementos fijos sobran. */}
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <TituloSeccion>Pasos</TituloSeccion>
-            <div className="flex shrink-0 items-center gap-2">
-              <IndicadorAvance hechos={completados} total={pasos.length} variante="segmentos" />
-              <IndicadorAvance hechos={completados} total={pasos.length} variante="texto" />
+          {/* En el documento anidado esta cabecera SOBRA (regla R57 del
+              turno 12): la fila que lo abre ya trae su anillo de avance
+              y la frase "Paso 1 de 3 de esta guía" justo encima, así que
+              repetir aquí "Pasos · 0 de 3" es el mismo dato dos veces
+              con dos formas distintas, y a 13 px de sangría se leía como
+              si fuera del procedimiento principal. */}
+          {nivel === 0 && (
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <TituloSeccion>Pasos</TituloSeccion>
+              <div className="flex shrink-0 items-center gap-2">
+                <IndicadorAvance hechos={completados} total={pasos.length} variante="segmentos" />
+                <IndicadorAvance hechos={completados} total={pasos.length} variante="texto" />
+              </div>
             </div>
-          </div>
+          )}
           <ol>
             {pasos.map((paso, indice) => {
               const hecho = hechos.has(paso.id)
@@ -282,37 +299,61 @@ export function ProcedimientoVista({
                         />
                       ))}
 
-                      {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} />}
+                      {/* LO QUE CUELGA DEL PASO, en filas y sin marcos
+                          de color (M-012, regla M-R11, tableros `3b` y
+                          `12b`). El dato protegido, la guía anidada y la
+                          contingencia traían cada uno su propia tarjeta
+                          con borde y fondo: acento los dos primeros,
+                          ámbar la tercera. Sumados al aviso y a la
+                          pregunta de error, un paso llegaba a mostrar
+                          cinco marcos anidados, dos de ellos del mismo
+                          tono con significados distintos, y la
+                          advertencia real dejaba de destacar.
 
-                      {paso.subArticuloId && (
-                        <SubProcedimientoEnPaso
-                          subArticuloId={paso.subArticuloId}
-                          tituloReferencia={paso.subArticuloTitulo}
-                          nivel={nivel}
-                          onCompletado={() => void intentarCompletarPaso(indice, paso)}
-                        />
-                      )}
+                          Ahora son tres filas de 44 px con icono neutro,
+                          y lo que se despliega de cada una va sangrado
+                          tras una línea vertical neutra. */}
+                      {(paso.vinculoProtegido || paso.subArticuloId || paso.solucionArticuloId) && (
+                        <div className="flex flex-col">
+                          {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} />}
 
-                      {paso.subArticuloId && nivel === 0 && !hecho && !subSatisfecho && (
-                        <p className="text-xs text-noct-precaucion/85">
-                          Termina el procedimiento vinculado para completar este paso.
-                        </p>
-                      )}
+                          {paso.subArticuloId && (
+                            <SubProcedimientoEnPaso
+                              subArticuloId={paso.subArticuloId}
+                              tituloReferencia={paso.subArticuloTitulo}
+                              nivel={nivel}
+                              onCompletado={() => void intentarCompletarPaso(indice, paso)}
+                            />
+                          )}
 
-                      {/* La contingencia deja de esconderse (tablero 3d).
-                          Antes esta pregunta solo aparecía con el trabajo
-                          previo del paso completo, o sea cuando ya no hacía
-                          falta: si el paso falla, sus tareas no se pueden
-                          marcar. Ahora se ve siempre, y lo que depende del
-                          trabajo previo es qué respuestas se ofrecen. */}
-                      {paso.solucionArticuloId && !hecho && (
-                        <SolucionEnPaso
-                          solucionArticuloId={paso.solucionArticuloId}
-                          tituloReferencia={paso.solucionArticuloTitulo}
-                          nivel={nivel}
-                          trabajoPrevio={trabajoPrevio}
-                          onContinuar={() => void completarPasoYAvanzar(indice, paso)}
-                        />
+                          {/* El aviso de dependencia dice qué hacer, no
+                              qué regla se está incumpliendo, y va en
+                              neutro: no advierte de ningún riesgo. */}
+                          {paso.subArticuloId && nivel === 0 && !hecho && !subSatisfecho && (
+                            <p className="pb-1 text-[12px] leading-normal text-noct-neutral-500">
+                              Este paso se completa al terminar la guía de arriba.
+                            </p>
+                          )}
+
+                          {/* La contingencia deja de esconderse (tablero
+                              3d) y deja de preguntar (regla R59 del turno
+                              12): no se pregunta lo que se puede deducir.
+                              "No, continuar" era completar el paso, que es
+                              lo que ya hace la insignia del paso, así que
+                              la pregunta con dos botones saturados se
+                              queda en una fila más: la salida por si algo
+                              falla, disponible siempre. */}
+                          {paso.solucionArticuloId && !hecho && (
+                            <ContingenciaEnPaso
+                              solucionArticuloId={paso.solucionArticuloId}
+                              tituloReferencia={paso.solucionArticuloTitulo}
+                              nivel={nivel}
+                              onResuelta={() => {
+                                if (trabajoPrevio) void completarPasoYAvanzar(indice, paso)
+                              }}
+                            />
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -398,91 +439,38 @@ export function ProcedimientoVista({
         </div>
       )}
 
-      {/* En los niveles anidados no hay barra pegajosa: el avance vive
-          en una barra compacta al pie de la tarjeta, con su reinicio. */}
-      {nivel >= 1 && pasos.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <div className="h-1 overflow-hidden rounded-full bg-noct-neutral-900">
-            <div
-              className="h-full rounded-full bg-noct-accent transition-[width] duration-150 ease-out"
-              style={{ width: `${progresoPct}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-noct-neutral-500">
-              {completados} de {pasos.length} pasos completados
-            </p>
-            {completados > 0 && !todoCompletado && (
-              <button
-                type="button"
-                onClick={() => void reiniciarProgreso(articuloId)}
-                className="cursor-pointer text-xs text-noct-neutral-400 underline underline-offset-2"
-              >
-                Reiniciar progreso
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* UN INDICADOR DE AVANCE POR DOCUMENTO (regla R57 del turno 12).
+          El nivel anidado traía aquí su propia barra de acento con su
+          "N de M pasos completados" y un enlace "Reiniciar progreso"
+          subrayado de 12 px. Eran dos barras de acento anidadas midiendo
+          cosas distintas (los pasos del principal y los del vinculado) y
+          la tercera forma del mismo dato. Ahora el avance del documento
+          anidado lo dice UNA sola vez la fila que lo abre: el anillo de
+          `IndicadorAvance` más "Paso 1 de 3 de esta guía", que además
+          nombra a qué documento pertenece.
+
+          De paso se cierra la duplicación de "Reiniciar" (regla R61): la
+          misma acción se dibujaba como botón de contorno en el panel de
+          completado y como enlace subrayado aquí. Queda solo el botón, y
+          el reinicio del documento anidado vive donde vive el documento,
+          en su propia ficha. */}
     </section>
   )
 }
 
-// Avance del subprocedimiento vinculado, visible en la tarjeta de
-// vinculo. Desde la tarea 172 lo dibuja `IndicadorAvance` en su variante
-// de anillo, la misma pieza que usan la lista de Guías, la barra de
-// reanudar y la cabecera de "Pasos": con esto se cierra **CAND-7**, el
-// candidato de las tres formas distintas de decir "vas por X de Y".
-// Antes era una pastilla "X/Y" propia con tres colores de fondo, que
-// además discrepaba del resto (aquí el intermedio era ámbar; en el resto
-// de la app, acento).
-function ContadorSubProgreso({ subArticuloId }: { subArticuloId: string }) {
-  const articulo = useLiveQuery(
-    async () => (await db.articulos.get(subArticuloId)) ?? null,
-    [subArticuloId],
-  )
-  const progreso = useLiveQuery(() => db.progresoPasos.get(subArticuloId), [subArticuloId])
-  const procedimiento = useMemo(
-    () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
-    [articulo],
-  )
-
-  if (!procedimientoEjecutable(procedimiento)) return null
-  const total = procedimiento.pasos.length
-  const hechos = contarHechos(
-    progreso?.pasosHechos ?? [],
-    procedimiento.pasos.map((p) => p.id),
-  )
-
-  return <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" />
-}
-
-// Encabezado de una tarjeta de vinculo a otra entidad (patron del
-// diseño): kicker en mayusculas + titulo truncable.
-function EncabezadoVinculo({
-  kicker,
-  titulo,
-  claseKicker,
-}: {
-  kicker: string
-  titulo: string
-  claseKicker: string
-}) {
-  return (
-    <span className="min-w-0 flex-1">
-      <span className={`block text-[10px] font-medium uppercase tracking-[0.08em] ${claseKicker}`}>
-        {kicker}
-      </span>
-      <span className="block truncate text-[13.5px] font-medium text-noct-text">{titulo}</span>
-    </span>
-  )
-}
-
-// Subprocedimiento vinculado a un paso: el paso a paso de otro
-// articulo, desplegado dentro del procedimiento principal. El
-// progreso usa el id del articulo vinculado, asi que es el mismo se
-// abra desde aqui o desde el articulo original. Al completarse avisa
-// al paso que lo contiene para que este se complete y avance solo.
+// Subprocedimiento vinculado a un paso: el paso a paso de otra guía,
+// desplegado dentro del procedimiento principal. El progreso usa el id
+// del articulo vinculado, asi que es el mismo se abra desde aqui o
+// desde la guía original. Al completarse avisa al paso que lo contiene
+// para que este se complete y avance solo.
+//
+// Antes era una TARJETA CON MARCO DE ACENTO, el mismo marco que traía
+// el dato protegido del paso (M-012). Ahora es una fila neutra que se
+// pliega: el tipo de vínculo lo dicen el icono y el rótulo, no el color.
+//
+// El rótulo cambió de "Continúa en" a "Otra guía" (turno 12): "continúa
+// en" sugiere que el procedimiento termina y sigue en otra parte,
+// cuando en realidad se despliega aquí y vuelve.
 function SubProcedimientoEnPaso({
   subArticuloId,
   tituloReferencia,
@@ -498,10 +486,17 @@ function SubProcedimientoEnPaso({
     async () => (await db.articulos.get(subArticuloId)) ?? null,
     [subArticuloId],
   )
+  const progreso = useLiveQuery(() => db.progresoPasos.get(subArticuloId), [subArticuloId])
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
   )
+  // La guía anidada llega ABIERTA: el paso no se completa hasta que ella
+  // termine, así que esconderla sería esconder el trabajo. Lo que cambia
+  // es que ahora se puede cerrar, con el mismo gesto con el que se
+  // cierra la contingencia (antes una tenía "Ocultar" y la otra no, sin
+  // razón visible).
+  const [cerrado, setCerrado] = useState(false)
 
   if (articulo === undefined) return null
 
@@ -515,67 +510,88 @@ function SubProcedimientoEnPaso({
   }
 
   const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
+  const total = procedimiento?.pasos.length ?? 0
+  const hechos = procedimiento
+    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
+    : 0
+  const anillo =
+    total > 0 ? <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" /> : undefined
 
-  // Mas alla del primer nivel de anidamiento solo se enlaza, sin
-  // expandir: evita la expansion infinita y corta cualquier ciclo
-  // (A vincula a B y B a A). Tambien cubre el caso de un articulo
-  // vinculado que ya no tiene pasos (o nunca los tuvo: K1).
-  if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
+  // Mas alla del primer nivel de anidamiento solo se enlaza: evita la
+  // expansion infinita y corta cualquier ciclo (A vincula a B y B a A).
+  // Tambien cubre el caso de una guía vinculada que ya no tiene pasos (o
+  // nunca los tuvo: K1). Y ahora SE NOTA que solo enlaza (regla R58).
+  if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
     return (
-      <Link
+      <EnlaceVinculo
+        Icono={LinkSimple}
+        kicker="Otra guía"
+        titulo={articulo.titulo}
+        nota={PROMESA_REGRESO}
+        extra={anillo}
         to={ruta}
-        className="flex min-h-11 items-center gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] px-3 py-[11px] hover:bg-noct-accent/[.14]"
-      >
-        <ArrowSquareOut size={17} className="shrink-0 text-noct-accent" aria-hidden />
-        <EncabezadoVinculo kicker="Continúa en" titulo={articulo.titulo} claseKicker="text-noct-accent" />
-        {procedimiento && <ContadorSubProgreso subArticuloId={subArticuloId} />}
-        <CaretRight size={14} className="shrink-0 text-noct-accent" aria-hidden />
-      </Link>
+      />
     )
   }
 
+  const abierto = !cerrado
+
   return (
-    <div className="rounded-lg border border-noct-accent/35 bg-noct-accent/[.08]">
-      <div className="flex min-h-11 items-center gap-2.5 px-3 py-[11px]">
-        <ArrowSquareOut size={17} className="shrink-0 text-noct-accent" aria-hidden />
-        <EncabezadoVinculo kicker="Continúa en" titulo={articulo.titulo} claseKicker="text-noct-accent" />
-        <ContadorSubProgreso subArticuloId={subArticuloId} />
-        <Link to={ruta} className="shrink-0 text-xs font-medium text-noct-accent">
-          Abrir
-        </Link>
-      </div>
-      <div className="border-t border-noct-accent/20 p-3">
-        <ProcedimientoVista
-          articuloId={articulo.id}
-          procedimiento={procedimiento}
-          nivel={nivel + 1}
-          onCompletado={onCompletado}
-        />
-      </div>
+    <div>
+      <FilaVinculo
+        Icono={LinkSimple}
+        kicker="Otra guía"
+        titulo={articulo.titulo}
+        nota={fraseAvanceDocumento(hechos, total, 'guía')}
+        extra={anillo}
+        abierto={abierto}
+        onAlternar={() => setCerrado((valor) => !valor)}
+      />
+      {abierto && (
+        <div className={`my-1 ${ZONA_ANIDADA}`}>
+          <ProcedimientoVista
+            articuloId={articulo.id}
+            procedimiento={procedimiento}
+            nivel={nivel + 1}
+            onCompletado={onCompletado}
+          />
+          <Link
+            to={ruta}
+            className="mt-2 inline-flex min-h-11 items-center text-[12.5px] font-medium text-noct-accent-300"
+          >
+            Abrir esta guía aparte
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
 
-// Pregunta de error del paso, visible solo cuando el editor vinculo
-// una solucion. "No" completa el paso y el flujo sigue solo; "Sí"
-// despliega la solucion ahi mismo y, al completarla, el paso se
-// completa, el avance continua desde ese punto y el progreso de la
-// solucion se reinicia para que quede lista para el proximo error
-// (aqui o en cualquier otro procedimiento que la reutilice).
-function SolucionEnPaso({
+// La contingencia del paso: qué hacer si esto falla. Se despliega ahi
+// mismo y, al completarla, el paso se completa (si no le quedaba trabajo
+// pendiente), el avance continua desde ese punto y el progreso de la
+// contingencia se reinicia para el proximo error, aqui o en cualquier
+// otro procedimiento que la reutilice.
+//
+// ANTES ERA UNA PREGUNTA: "¿Ocurrió algún error durante este paso?" en
+// un panel con dos botones saturados, verde "No, continuar" y ámbar
+// "Sí, ver la contingencia". Tres problemas de un golpe: el verde
+// significaba "No" aquí y "Sí" en el bloque de decisión de al lado
+// (R60); la pregunta casi siempre se responde "No" y responder "No" era
+// solo seguir, que es lo que ya hace la insignia del paso (R59); y el
+// ámbar del panel competía con el ámbar del aviso, que es el único que
+// advierte de un riesgo real (M-012). Queda una fila más entre los
+// vínculos del paso, disponible siempre.
+function ContingenciaEnPaso({
   solucionArticuloId,
   tituloReferencia,
   nivel,
-  trabajoPrevio,
-  onContinuar,
+  onResuelta,
 }: {
   solucionArticuloId: string
   tituloReferencia: string
   nivel: number
-  // Si el paso tiene todo su trabajo previo hecho. Decide si se ofrece
-  // "No, continuar", que completa el paso.
-  trabajoPrevio: boolean
-  onContinuar: () => void
+  onResuelta: () => void
 }) {
   const articulo = useLiveQuery(
     async () => (await db.articulos.get(solucionArticuloId)) ?? null,
@@ -586,104 +602,84 @@ function SolucionEnPaso({
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
   )
-  // null = sin responder: en ese caso la solucion se muestra abierta
-  // solo si quedo a medias (por ejemplo tras salir y volver a entrar
-  // a mitad de un error).
-  const [mostrarSolucion, setMostrarSolucion] = useState<boolean | null>(null)
+  // null = sin tocar: en ese caso la contingencia se muestra abierta solo
+  // si quedo a medias (por ejemplo tras salir y volver a entrar a mitad
+  // de un error).
+  const [mostrar, setMostrar] = useState<boolean | null>(null)
 
   if (articulo === undefined) return null
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
       <div className={PANEL_PRECAUCION}>
-        La solución vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
+        La contingencia vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
         disponible. Edita el artículo para quitar el vínculo o vincular otra.
       </div>
     )
   }
 
+  const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
   const total = procedimiento?.pasos.length ?? 0
   const hechos = procedimiento
-    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((p) => p.id))
+    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
     : 0
   const aMedias = hechos > 0 && hechos < total
-  const abierta = mostrarSolucion ?? aMedias
+  const abierta = mostrar ?? aMedias
 
-  if (!abierta) {
-    return (
-      <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
-        <p className="flex items-center gap-2 text-[13.5px] font-medium leading-normal">
-          <Warning size={15} className="shrink-0 text-noct-precaucion" aria-hidden />
-          ¿Ocurrió algún error durante este paso?
-        </p>
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          {/* "No, continuar" COMPLETA el paso, así que solo se ofrece
-              cuando no queda trabajo en él: con tareas sin marcar sería
-              darlas por hechas sin que nadie las hiciera. */}
-          {trabajoPrevio && (
-            <button type="button" onClick={onContinuar} className={BTN_EXITO}>
-              No, continuar
-            </button>
-          )}
-          <button type="button" onClick={() => setMostrarSolucion(true)} className={BTN_PRECAUCION}>
-            Sí, ver la contingencia
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
-
-  // Dentro de un subprocedimiento ya expandido (o si la solucion se
+  // Dentro de un subprocedimiento ya expandido (o si la contingencia se
   // quedo sin pasos, o nunca los tuvo: K1) solo se enlaza: misma regla
   // de un solo nivel que corta ciclos en los subprocedimientos.
-  if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
+  if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
     return (
-      <Link
+      <EnlaceVinculo
+        Icono={Wrench}
+        kicker="Si esto falla"
+        titulo={articulo.titulo}
+        nota={PROMESA_REGRESO}
         to={ruta}
-        className="flex min-h-11 items-center gap-2.5 rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-3 py-[11px] hover:bg-noct-precaucion/[.14]"
-      >
-        <ArrowSquareOut size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
-        <EncabezadoVinculo kicker="Solución" titulo={articulo.titulo} claseKicker="text-noct-precaucion" />
-        <CaretRight size={14} className="shrink-0 text-noct-precaucion" aria-hidden />
-      </Link>
+      />
     )
   }
 
-  // La solucion completada vuelve sola al flujo principal: completa
-  // el paso donde ocurrio el error, el avance sigue de largo y su
-  // progreso se reinicia para el proximo uso.
+  // La contingencia completada devuelve el control al paso donde ocurrio
+  // el error y su progreso se reinicia para el proximo uso.
   async function resuelta() {
     await reiniciarProgreso(solucionArticuloId)
-    setMostrarSolucion(null)
-    onContinuar()
+    setMostrar(null)
+    onResuelta()
   }
 
   return (
-    <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08]">
-      <div className="flex min-h-11 items-center gap-2.5 px-3 py-[11px]">
-        <ArrowSquareOut size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
-        <EncabezadoVinculo kicker="Solución" titulo={articulo.titulo} claseKicker="text-noct-precaucion" />
-        <Link to={ruta} className="shrink-0 text-xs font-medium text-noct-precaucion">
-          Abrir
-        </Link>
-        <button
-          type="button"
-          onClick={() => setMostrarSolucion(false)}
-          className="shrink-0 cursor-pointer text-xs text-noct-neutral-400 underline underline-offset-2"
-        >
-          Ocultar
-        </button>
-      </div>
-      <div className="border-t border-noct-precaucion/20 p-3">
-        <ProcedimientoVista
-          articuloId={articulo.id}
-          procedimiento={procedimiento}
-          nivel={nivel + 1}
-          onCompletado={() => void resuelta()}
-        />
-      </div>
+    <div>
+      <FilaVinculo
+        Icono={Wrench}
+        kicker="Si esto falla"
+        titulo={articulo.titulo}
+        nota={abierta ? fraseAvanceDocumento(hechos, total, 'contingencia') : null}
+        extra={
+          abierta && total > 0 ? (
+            <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" />
+          ) : undefined
+        }
+        abierto={abierta}
+        onAlternar={() => setMostrar(!abierta)}
+      />
+      {abierta && (
+        <div className={`my-1 ${ZONA_ANIDADA}`}>
+          <ProcedimientoVista
+            articuloId={articulo.id}
+            procedimiento={procedimiento}
+            nivel={nivel + 1}
+            onCompletado={() => void resuelta()}
+          />
+          <Link
+            to={ruta}
+            className="mt-2 inline-flex min-h-11 items-center text-[12.5px] font-medium text-noct-accent-300"
+          >
+            Abrir esta contingencia aparte
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
@@ -779,7 +775,14 @@ export function BloqueVista({
     // canales, nunca solo color). La palabra ya existía como
     // `etiqueta` en tonos.ts, solo la usaba el editor.
     return (
-      <div className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 ${tono.clasesPanel}`}>
+      // Barra lateral en vez de marco completo (M-012, regla M-R11,
+      // tablero `3b`), el mismo dibujo que ya usa el modo foco. El aviso
+      // es LO ÚNICO del cuerpo de un paso que conserva color de fondo,
+      // ahora que los vínculos son filas neutras: cuando había cinco
+      // marcos por paso, la advertencia real era uno más entre ellos.
+      <div
+        className={`flex items-start gap-2.5 rounded-r-lg border-l-2 px-3 py-2.5 ${tono.claseBarra} ${tono.claseFondo}`}
+      >
         <tono.Icono size={16} className={`mt-px shrink-0 ${tono.claseIcono}`} aria-hidden />
         <p className="min-w-0 text-[13px] leading-normal">
           <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span> {bloque.texto}
@@ -804,7 +807,13 @@ export function BloqueVista({
   // del tipo de tarea: se muestra debajo de la casilla o de la
   // pregunta, con el mismo bloque protegido contraido por defecto que
   // ya protege el vinculo de un paso completo.
-  const credencialInline = bloque.vinculoProtegido && <CredencialEnPaso vinculo={bloque.vinculoProtegido} />
+  // El dato protegido de una TAREA cuelga de esa tarea, así que va
+  // sangrado tras la línea, igual que lo que cuelga de un paso.
+  const credencialInline = bloque.vinculoProtegido && (
+    <div className={ZONA_ANIDADA}>
+      <CredencialEnPaso vinculo={bloque.vinculoProtegido} />
+    </div>
+  )
 
   if (bloque.tipoTarea === 'decision') {
     return (
@@ -898,7 +907,10 @@ function DecisionEnTarea({
       <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
         <p className="text-[13.5px] font-medium leading-normal">{bloque.texto}</p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <button type="button" onClick={onAlternar} className={BTN_EXITO}>
+          {/* Acento la vía que sigue, ámbar la que se desvía (R60). El
+              verde se retira: significaba "Sí" aquí y "No" en la
+              pregunta de error de al lado. */}
+          <button type="button" onClick={onAlternar} className={BTN_ACENTO}>
             Sí, continuar
           </button>
           <button
@@ -923,7 +935,7 @@ function DecisionEnTarea({
           {bloque.decisionArticuloTitulo ? ` "${bloque.decisionArticuloTitulo}"` : ''} ya no está
           disponible. Edita el artículo para quitar el vínculo o vincular otro.
         </p>
-        <button type="button" onClick={onAlternar} className={`mt-2.5 ${BTN_EXITO}`}>
+        <button type="button" onClick={onAlternar} className={`mt-2.5 ${BTN_ACENTO}`}>
           Marcar la decisión y continuar
         </button>
       </div>
@@ -935,17 +947,17 @@ function DecisionEnTarea({
   // Misma regla de un solo nivel de anidamiento que los
   // subprocedimientos y las soluciones: mas profundo solo se enlaza
   // (corta ciclos), y el tecnico marca la decision al volver.
-  if (nivel >= 1 || !procedimientoEjecutable(procedimiento) || !ejecutarInline) {
+  if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado' || !ejecutarInline) {
     return (
-      <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-3 py-[11px]">
-        <div className="flex items-center gap-2.5">
-          <ArrowSquareOut size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
-          <EncabezadoVinculo kicker="Solución" titulo={articulo.titulo} claseKicker="text-noct-precaucion" />
-          <Link to={ruta} className="shrink-0 text-xs font-medium text-noct-precaucion">
-            Abrir
-          </Link>
-        </div>
-        <button type="button" onClick={onAlternar} className={`mt-2.5 ${BTN_EXITO}`}>
+      <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
+        <EnlaceVinculo
+          Icono={Wrench}
+          kicker="Si esto falla"
+          titulo={articulo.titulo}
+          nota={PROMESA_REGRESO}
+          to={ruta}
+        />
+        <button type="button" onClick={onAlternar} className={`mt-1.5 ${BTN_ACENTO}`}>
           Ya quedó resuelto, continuar
         </button>
       </div>
@@ -963,27 +975,32 @@ function DecisionEnTarea({
   }
 
   return (
-    <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08]">
-      <div className="flex min-h-11 items-center gap-2.5 px-3 py-[11px]">
-        <ArrowSquareOut size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
-        <EncabezadoVinculo kicker="Solución" titulo={articulo.titulo} claseKicker="text-noct-precaucion" />
-        <Link to={ruta} className="shrink-0 text-xs font-medium text-noct-precaucion">
-          Abrir
-        </Link>
-        <button
-          type="button"
-          onClick={() => setMostrarVinculo(false)}
-          className="shrink-0 cursor-pointer text-xs text-noct-neutral-400 underline underline-offset-2"
-        >
-          Ocultar
-        </button>
-      </div>
-      <div className="border-t border-noct-precaucion/20 p-3">
+    <div>
+      <FilaVinculo
+        Icono={Wrench}
+        kicker="Si esto falla"
+        titulo={articulo.titulo}
+        nota={fraseAvanceDocumento(hechos, total, 'contingencia')}
+        extra={
+          total > 0 ? (
+            <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" />
+          ) : undefined
+        }
+        abierto
+        onAlternar={() => setMostrarVinculo(false)}
+      />
+      <div className={`my-1 ${ZONA_ANIDADA}`}>
         {ejecutarInline({
           articuloId: articulo.id,
           procedimiento,
           onCompletado: () => void resuelta(),
         })}
+        <Link
+          to={ruta}
+          className="mt-2 inline-flex min-h-11 items-center text-[12.5px] font-medium text-noct-accent-300"
+        >
+          Abrir esta contingencia aparte
+        </Link>
       </div>
     </div>
   )

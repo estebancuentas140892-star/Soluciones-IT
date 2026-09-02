@@ -25,6 +25,13 @@ export interface TonoInfo {
   Icono: ComponentType<IconoProps>
   clasesPanel: string
   claseIcono: string
+  // Barra lateral del aviso en la vista de ejecución (M-012, regla
+  // M-R11, tablero `3b`). El aviso es LO ÚNICO del cuerpo de un paso
+  // que conserva color de fondo, así que su borde va a color pleno y
+  // solo a la izquierda: se lee como una advertencia y no como otro
+  // marco más entre los marcos de los vínculos, que ya no existen.
+  claseBarra: string
+  claseFondo: string
 }
 
 export const TONOS_AVISO: TonoInfo[] = [
@@ -36,6 +43,8 @@ export const TONOS_AVISO: TonoInfo[] = [
     Icono: Info,
     clasesPanel: 'border-noct-accent/30 bg-noct-accent/10',
     claseIcono: 'text-noct-accent',
+    claseBarra: 'border-noct-accent',
+    claseFondo: 'bg-noct-accent/10',
   },
   {
     valor: 'precaucion',
@@ -45,6 +54,8 @@ export const TONOS_AVISO: TonoInfo[] = [
     Icono: Warning,
     clasesPanel: 'border-noct-precaucion/30 bg-noct-precaucion/10',
     claseIcono: 'text-noct-precaucion',
+    claseBarra: 'border-noct-precaucion',
+    claseFondo: 'bg-noct-precaucion/10',
   },
   {
     valor: 'importante',
@@ -54,6 +65,8 @@ export const TONOS_AVISO: TonoInfo[] = [
     Icono: WarningOctagon,
     clasesPanel: 'border-noct-error/30 bg-noct-error/10',
     claseIcono: 'text-noct-error',
+    claseBarra: 'border-noct-error',
+    claseFondo: 'bg-noct-error/10',
   },
   {
     valor: 'consejo',
@@ -63,6 +76,8 @@ export const TONOS_AVISO: TonoInfo[] = [
     Icono: Lightbulb,
     clasesPanel: 'border-noct-exito/30 bg-noct-exito/10',
     claseIcono: 'text-noct-exito',
+    claseBarra: 'border-noct-exito',
+    claseFondo: 'bg-noct-exito/10',
   },
   {
     valor: 'dato',
@@ -72,6 +87,8 @@ export const TONOS_AVISO: TonoInfo[] = [
     Icono: Code,
     clasesPanel: 'border-noct-neutral-500/30 bg-noct-neutral-500/10',
     claseIcono: 'text-noct-neutral-400',
+    claseBarra: 'border-noct-neutral-500',
+    claseFondo: 'bg-noct-neutral-500/10',
   },
 ]
 

@@ -235,7 +235,12 @@ export function ModoFoco({
 function AvisoFoco({ aviso }: { aviso: BloquePaso }) {
   const tono = tonoInfo(aviso.tono)
   return (
-    <div className={`flex items-start gap-3 rounded-r-[10px] border-l-[3px] px-4 py-3.5 ${tono.clasesPanel}`}>
+    // Misma barra lateral que la vista de ejecución (M-012): el borde a
+    // color pleno, no al 30 %, para que la advertencia se distinga de un
+    // vistazo ahora que es lo único con color de fondo en el paso.
+    <div
+      className={`flex items-start gap-3 rounded-r-[10px] border-l-[3px] px-4 py-3.5 ${tono.claseBarra} ${tono.claseFondo}`}
+    >
       <tono.Icono size={22} className={`mt-px shrink-0 ${tono.claseIcono}`} aria-hidden />
       <p className="min-w-0 text-base leading-[1.45] text-pretty">
         <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span> {aviso.texto}

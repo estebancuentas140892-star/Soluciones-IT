@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 205 se cerró el 2026-09-01. De la **fase 2 de la auditoría móvil** queda solo la **206** (un color, un significado dentro del paso); hechas la 202, la 203, la 204 y la 205. La siguiente pendiente es la **206**, ver "Por hacer".)*
+*(vacío: la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. Queda la **fase 3**, la tarea **207** (16 hallazgos P2 y P3), ver "Por hacer". La tarea 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
 **Despliegue confirmado (regla 14).** El commit `24afe1b` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `BovedaPage-0VU5KtF1.js` contiene "Copiar la contraseña" y "Más acciones de "; `DiagnosticoRunPage-CF8FR6S7.js` contiene "Salir guarda el avance", "Descartar este diagn[óstico]" y "Volver a la pregunta anterior"; y `descripcionVencida` (con "Venció hoy"/"Venció hace...") quedó en el chunk compartido `Chasis-DN6ikilk.js`, no en el de Bóveda (`vencimiento.ts` también lo usa `Chasis`, así que el bundler lo separó). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó menos de 2 minutos en propagar.
 
@@ -65,8 +65,8 @@ La auditoría propone **tres fases**, y se implementan como tres tareas (regla 1
 | Fase | Qué cubre | Hallazgos | Tarea |
 |---|---|---|---|
 | 1 | Lo que impide trabajar con el teléfono en la mano | M-010, M-011 (P0), M-014 (P0), M-001, M-015 | **201 (hecha)** |
-| 2 | Lo que hace perder tiempo todos los días | M-002, M-003, M-006, M-007, M-012, M-016*, M-018, M-019, M-021, M-026, M-029, M-032* | **202 a 205** |
-| 3 | Refinamiento y consistencia | M-004, M-005, M-008, M-009, M-013, M-017, M-020, M-022, M-024, M-025, M-027, M-028, M-030, M-031*, M-033, M-034 | **206** |
+| 2 | Lo que hace perder tiempo todos los días | M-002, M-003, M-006, M-007, M-012, M-016*, M-018, M-019, M-021, M-026, M-029, M-032* | **202 a 206 (hechas)** |
+| 3 | Refinamiento y consistencia | M-004, M-005, M-008, M-009, M-013, M-017, M-020, M-022, M-024, M-025, M-027, M-028, M-030, M-031*, M-033, M-034 | **207** |
 
 *(\*) M-016, M-031 y M-032 se cerraron dentro de la fase 1: los tres caían dentro de las pantallas que se rehacían y separarlos habría obligado a tocarlas dos veces.*
 
@@ -252,16 +252,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 206. Auditoría móvil, fase 2: un color, un significado dentro del paso (M-012, regla M-R11)
-
-- **Descripción:** dentro de un paso en ejecución, el color no distingue naturaleza: **ámbar** es a la vez "advertencia", "pregunta de error" y "solución vinculada"; el **acento** es a la vez "subprocedimiento" y "credencial protegida". Un paso puede llegar a mostrar **cinco marcos de color anidados**, dos de ellos del mismo tono con significado distinto, así que la advertencia real deja de destacar. Propuesta (mockup `3b`): **ámbar solo para advertencia**, con icono y borde; la **profundidad se dibuja con sangría y una línea vertical neutra**; los vínculos (credencial, subprocedimiento, evidencia) bajan a una lista sangrada con icono y sin fondo.
-- **Motivo:** es el mismo hallazgo que ya levantó el turno 12 de la auditoría anterior y sigue abierto. Un aviso del subprocedimiento y un aviso del paso padre se ven idénticos aunque pertenezcan a documentos distintos.
-- **Impacto:** medio, concentrado en los procedimientos compuestos, que son los más largos. Riesgo bajo: es composición y color, no lógica.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/soluciones/ProcedimientoVista.tsx` (959 líneas), `src/features/soluciones/AsistenteVista.tsx` (`SubProcedimientoEnAsistente` y `SolucionEnAsistente`), `src/features/boveda/CredencialEnPaso.tsx`.
-- **Dependencias:** **es el mismo trabajo que la tarea 198** (turno 12, procedimientos anidados), vista desde los dos handoffs: la 198 lo pide con "2 px de línea vertical neutra más 13 px de sangría" y esta con **M-R11**. Al tomar cualquiera de las dos se cierra la otra por absorción, como se hizo con la 176 y la 199. Reglas que fija: **M-R11**.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
-
 ### 207. Auditoría móvil, fase 3: refinamiento y consistencia (16 hallazgos P2 y P3)
 
 - **Descripción:** los hallazgos menores, que la propia auditoría agrupa y advierte que **varios se cierran solos** al hacer las fases anteriores. **M-004 y M-009** (un buscador por pantalla, de 46 px, con el alcance escrito y el mismo texto en toda la app: hoy hay cuatro en línea con tres alturas y cuatro alcances distintos, más la lupa global, y en Inicio y Guías se ven dos a la vez, **M-R8**). **M-005** (el borrar del buscador mide unos 26 px en Inicio y Red; Guías ya lo corrigió a 44, **M-R14**). **M-008** ("Registrar equipo" deja la rejilla de atajos de Inicio: el alta se hace mejor en el ordenador y ya tiene su sitio con contexto, tras un escaneo sin coincidencia, **M-R10**). **M-017** (cerrar la migración a `PastillaEstado` en las cinco pantallas que hoy copian el estado a mano: cierra **CAND-1**). **M-022** (los chips de la Bóveda cuentan sobre la bóveda completa, no sobre el filtro activo, al revés de lo aprobado para Equipos). **M-024 y M-025** ("Importar" y "Etiquetas QR" a un grupo "Mejor desde el ordenador" al final de "Más"; el conteo a la derecha, como en el resto de la app, mockup `7b`). **M-027** (una línea con la última respuesta bajo el progreso del diagnóstico, "Enciende: no → Sin luces", tocable para retroceder ahí). **M-028** (retirar el lápiz "Editar diagnóstico" de dentro de la ejecución: mide unos 27 px y es autoría en mitad de una ejecución). **M-030** (la instrucción del escáner a 14 px con fondo propio: a pleno sol, sobre un rack claro, la única instrucción de la pantalla desaparece). **M-033** (la barra de reanudar se reduce a 36 px al desplazarse hacia abajo: sumada a las pestañas deja unos 430 px de contenido en un teléfono de 360x640). **M-034** (vocabulario escrito: **guía** es el documento, **procedimiento** son sus pasos, **solución** es el bloque anidado; "artículo" se retira de la interfaz).
@@ -304,7 +294,7 @@ Las 24 reglas visuales R1 a R24 quedan como el criterio único de la app; las si
 | 9 | Sección Inicio | `9a` a `9d` | 195 |
 | 10 | Editor de pasos | `10a` a `10c` | 196 |
 | 11 | Historial | `11a`, `11b` | 197 |
-| 12 | Procedimientos anidados | `12a`, `12b` | 198 |
+| 12 | Procedimientos anidados | `12a`, `12b` | 198 (absorbida por la **206**, hecha) |
 
 Con esto **las cinco pestañas quedan auditadas** y lo que falta son pantallas internas. El propio handoff declara un solo pendiente sin cubrir tras el turno 12: **Etiquetas QR e Importar**.
 
@@ -397,14 +387,7 @@ La **tarea 191** (turno 5, parte 1: el chasis en cuatro puntos de quiebre) está
 - **Área afectada:** `src/features/historial/` (`Historial.tsx`, `lineaDeTiempo.ts`, `resumenCambios.ts`) y las ocho fichas que lo montan.
 - **Dependencias:** `FiltroEstado` del turno 6 (tarea 192). **Absorbe el punto (d) de la tarea 177.**
 
-### 198. Turno 12: procedimientos anidados
-
-- **Descripción:** `12a` el paso con cinco marcos de color, dos de ellos del mismo acento (barra de progreso, credencial, subprocedimiento, aviso y pregunta de error), sin señal de qué está dentro de qué; `12b` la propuesta: **la profundidad la marca la sangría con una línea vertical neutra de 2 px más 13 px de sangría** (el patrón de una cita), y el color vuelve a significar tipo, una sola vez por bloque. Queda un solo aviso de color, el ámbar, que es el único que advierte de algo. El avance se dice una sola vez con `IndicadorAvance` más una línea que nombra a qué documento pertenece ("Paso 1 de 3 de esta guía"), cerrando **CAND-3** también aquí. Un vínculo más allá del primer nivel **se enlaza en vez de expandirse** (decisión ya correcta, corta ciclos A→B→A), pero hoy la tarjeta enlazada se ve idéntica a la expandible: la versión enlazada tiene que advertirlo y prometer el regreso. Se corrigen dos rótulos ("Continúa en" sugiere que el procedimiento no vuelve; "Datos protegidos" nombra la categoría del dato y no lo que el técnico va a obtener) y el par de botones saturados con los colores intercambiados según el bloque.
-- **Motivo:** es el último pendiente de contenido del handoff, y hoy un aviso del subprocedimiento y un aviso del paso padre se ven idénticos aunque pertenezcan a documentos distintos.
-- **Impacto:** medio, concentrado en los procedimientos compuestos.
-- **Prioridad:** Baja. **Estado:** Pendiente.
-- **Área afectada:** `src/features/soluciones/ProcedimientoVista.tsx` (959 líneas), `ContadorSubProgreso` (migra a `IndicadorAvance`).
-- **Dependencias:** el turno 10 (tarea 196, editor de pasos) y la 172 (ficha de artículo). **Absorbe el punto (c) de la tarea 177.**
+La **tarea 198** (turno 12, procedimientos anidados) quedó **cerrada por absorción el 2026-09-02**: su contenido íntegro lo implementó la **tarea 206**, que es el mismo trabajo visto desde el otro handoff (la 198 venía del turno 12 de la auditoría de Soluciones, con el tablero `12b`; la 206 del hallazgo **M-012** de la auditoría móvil, con el tablero `3b`). Mantenerlas separadas habría obligado a rehacer dos veces el mismo cuerpo de paso. No se pierde nada: las cinco decisiones del `12b` están implementadas y sus seis reglas **R56 a R61** quedaron registradas en [DECISIONES.md](DECISIONES.md) **AD-032**. Mismo criterio que se aplicó a la 176 y la 199. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 La **tarea 172** (P2, ficha de artículo) está **archivada** y la **173** (P3, modo asistente) está **En proceso**, arriba. Quedan estas dos de las cinco pantallas móviles:
 

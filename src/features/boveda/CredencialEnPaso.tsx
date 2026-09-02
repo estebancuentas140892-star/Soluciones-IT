@@ -4,8 +4,10 @@ import { Link } from 'react-router-dom'
 import { db, type CampoProtegido, type VinculoProtegido } from '../../lib/db'
 import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
-import { CaretDown, CaretRight, CaretUp, Key, LockSimple } from '../../components/iconos'
+import { CaretRight, Key, LockSimple } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
+import { FilaVinculo } from '../soluciones/FilaVinculo'
+import { ZONA_ANIDADA } from '../soluciones/vinculoAnidado'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { esOcultoPorDefecto, etiquetaTipo } from '../dispositivos/camposProtegidos'
 import { CampoSecreto } from './CampoSecreto'
@@ -30,13 +32,21 @@ interface Props {
 }
 
 // Bloque protegido de un paso de procedimiento: la informacion
-// protegida vinculada al paso, con el patron Nocturne de "lo protegido
-// se diferencia de lo publico" (borde discontinuo, candado y kicker
-// "Datos protegidos"). Se muestra contraido y sin secretos; solo al
-// tocarlo se consulta la boveda, con las mismas protecciones que en su
-// propia seccion (permiso puedeVerBoveda del perfil, contrasena
-// maestra y autobloqueo). El secreto nunca vive en el articulo y quien
-// no este autorizado solo ve el titulo de referencia.
+// protegida vinculada al paso. Se muestra contraido y sin secretos;
+// solo al tocarlo se consulta la boveda, con las mismas protecciones
+// que en su propia seccion (permiso puedeVerBoveda del perfil,
+// contrasena maestra y autobloqueo). El secreto nunca vive en el
+// articulo y quien no este autorizado solo ve el titulo de referencia.
+//
+// LA CAJA DESAPARECE (M-012, regla M-R11, tablero `3b`). Antes esto era
+// una tarjeta con borde discontinuo, fondo propio y el kicker "Datos
+// protegidos": un marco más entre los cinco que podía llegar a mostrar
+// un paso. Ahora es una fila de 44 px como los demás vínculos, y lo que
+// dice que el dato está protegido es el candado, que es el signo que ya
+// significaba eso, más el hecho de que no aparezca nada hasta
+// desbloquear. El rótulo también cambia (turno 12): "Datos protegidos"
+// nombra la CATEGORÍA del dato; el título del secreto nombra lo que el
+// técnico va a obtener, que es lo que estaba buscando.
 export function CredencialEnPaso({ vinculo }: Props) {
   const desbloqueada = useBovedaDesbloqueada()
   // Contraido por defecto: los secretos no entran a la pantalla hasta
@@ -64,11 +74,22 @@ export function CredencialEnPaso({ vinculo }: Props) {
   const titulo = tituloVivo || vinculo.titulo
   const entidadTipo = vinculo.tipo === 'campo' ? 'campo_protegido' : 'credencial'
 
+  const nombre = titulo || 'Secreto'
+
   return (
-    <div className="rounded-lg border border-dashed border-noct-neutral-700 bg-noct-surface/55">
-      <button
-        type="button"
-        onClick={() => {
+    <div>
+      <FilaVinculo
+        Icono={LockSimple}
+        titulo={nombre}
+        abierto={abierto}
+        accion={abierto ? 'Ocultar' : 'Mostrar'}
+        ariaLabel={`Dato protegido: ${nombre}`}
+        extra={
+          vinculo.tipo === 'credencial' && credencial && !eliminada ? (
+            <IndicadorVencimiento venceEn={credencial.venceEn ?? null} />
+          ) : undefined
+        }
+        onAlternar={() => {
           // El registro va FUERA del actualizador de estado: React
           // puede invocarlo dos veces (modo estricto) y se registraria
           // el consulto por duplicado.
@@ -77,28 +98,10 @@ export function CredencialEnPaso({ vinculo }: Props) {
           }
           setAbierto((v) => !v)
         }}
-        aria-expanded={abierto}
-        className="flex min-h-11 w-full cursor-pointer items-center gap-2.5 px-3 py-[11px] text-left"
-      >
-        <LockSimple size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
-        <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
-            Datos protegidos
-          </span>
-          <span className="block truncate text-[13.5px] font-medium">{titulo || 'Secreto'}</span>
-        </span>
-        {vinculo.tipo === 'credencial' && credencial && !eliminada && (
-          <IndicadorVencimiento venceEn={credencial.venceEn ?? null} />
-        )}
-        {abierto ? (
-          <CaretUp size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
-        ) : (
-          <CaretDown size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
-        )}
-      </button>
+      />
 
       {abierto && (
-        <div className="flex flex-col gap-2.5 border-t border-noct-divider p-3">
+        <div className={`my-1 flex flex-col gap-2.5 ${ZONA_ANIDADA}`}>
           {!autorizado || !existe ? (
             <p className="text-[13px] leading-normal text-noct-neutral-400">
               Solo los usuarios autorizados pueden consultar los datos de este paso.

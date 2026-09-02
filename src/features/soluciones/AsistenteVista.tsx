@@ -1,11 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
   normalizarProcedimiento,
   pasoTrabajoPrevioCompleto,
-  procedimientoEjecutable,
   siguientePasoPendiente,
   tareasDe,
 } from '../../lib/procedimiento'
@@ -20,9 +18,11 @@ import { registrarIntervencion } from '../../lib/repositorio'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
 import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, Crosshair, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
-import { BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
+import { AccionVinculo, EnlaceVinculo, FilaVinculo } from './FilaVinculo'
+import { fraseAvanceDocumento, modoVinculo, PROMESA_REGRESO, ZONA_ANIDADA } from './vinculoAnidado'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
@@ -413,15 +413,13 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
             onAbrirIndice={() => setIndiceAbierto(true)}
           />
         </BandaTarea>
-      ) : (
-        <Encabezado
-          porcentaje={porcentaje}
-          completado={false}
-          cronometro={cronometro}
-          estimado={tiempoEstimadoMin}
-          contador={`Paso ${indiceActual + 1} de ${pasos.length}`}
-        />
-      )}
+      ) : null}
+      {/* El documento anidado ya NO repite su avance aquí (regla R57 del
+          turno 12). Traía una barra de acento con "Paso 1 de 2", justo
+          debajo de la fila que lo abre, que dice lo mismo con el anillo
+          y con la frase "Paso 1 de 2 de esta contingencia". Eran dos
+          barras de acento anidadas midiendo cosas distintas: los pasos
+          del procedimiento principal y los del vinculado. */}
 
       <div className="flex flex-col gap-1">
         {nivel >= 1 && <h2 className="text-lg font-semibold text-noct-text">{tituloPaso}</h2>}
@@ -496,16 +494,24 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         </ul>
       )}
 
-      {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} />}
+      {/* LO QUE CUELGA DEL PASO, en filas y sin marcos de color (M-012,
+          regla M-R11, tableros `3b` y `12b`). El dato protegido y la guía
+          anidada traían marco de acento; la contingencia, marco ámbar.
+          Con el aviso del paso encima, un paso llegaba a mostrar cinco
+          marcos anidados y dos de ellos del mismo tono con significados
+          distintos, así que la advertencia real dejaba de destacar.
+          Ahora el ámbar es de la falla y nada más. */}
+      <div className="flex flex-col">
+        {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} />}
 
-      {paso.subArticuloId && (
-        <SubProcedimientoEnAsistente
-          subArticuloId={paso.subArticuloId}
-          tituloReferencia={paso.subArticuloTitulo}
-          nivel={nivel}
-          onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
-        />
-      )}
+        {paso.subArticuloId && (
+          <SubProcedimientoEnAsistente
+            subArticuloId={paso.subArticuloId}
+            tituloReferencia={paso.subArticuloTitulo}
+            nivel={nivel}
+            onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
+          />
+        )}
 
       {/* La contingencia ya no depende de `trabajoPrevio` (tablero 3d):
           se abre desde "Falla", que está disponible siempre. La `key`
@@ -517,35 +523,36 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           NO: darlo por hecho se saltaría trabajo que nadie hizo, así
           que solo se cierra la contingencia y el técnico vuelve al paso
           con su aviso puesto. */}
-      {paso.solucionArticuloId && !pasoActualHecho && (
-        <SolucionEnAsistente
-          key={paso.id}
-          solucionArticuloId={paso.solucionArticuloId}
-          tituloReferencia={paso.solucionArticuloTitulo}
-          nivel={nivel}
-          abrirDirecto={contingenciaAbierta}
-          onCerrar={() => setContingenciaPasoId(null)}
-          onResuelta={() => {
-            if (trabajoPrevio) void completarPasoYAvanzar(indiceActual, paso)
-            else setContingenciaPasoId(null)
-          }}
-        />
-      )}
-
-      {/* Evidencia fotografica del paso (tarea 79): solo si el
-          procedimiento tiene un equipo afectado donde registrarla. */}
-      {nivel === 0 && dispositivoEvidencia && (
-        <div ref={refEvidencia}>
-          <EvidenciaPaso
-            articuloId={articuloId}
-            articuloTitulo={articulo?.titulo ?? ''}
-            dispositivoId={dispositivoEvidencia.id}
-            paso={paso}
-            entradaId={progreso?.evidenciasPorPaso?.[paso.id] ?? null}
-            conFalla={Boolean(fallaDelPaso)}
+        {paso.solucionArticuloId && !pasoActualHecho && (
+          <SolucionEnAsistente
+            key={paso.id}
+            solucionArticuloId={paso.solucionArticuloId}
+            tituloReferencia={paso.solucionArticuloTitulo}
+            nivel={nivel}
+            abrirDirecto={contingenciaAbierta}
+            onCerrar={() => setContingenciaPasoId(null)}
+            onResuelta={() => {
+              if (trabajoPrevio) void completarPasoYAvanzar(indiceActual, paso)
+              else setContingenciaPasoId(null)
+            }}
           />
-        </div>
-      )}
+        )}
+
+        {/* Evidencia fotografica del paso (tarea 79): solo si el
+            procedimiento tiene un equipo afectado donde registrarla. */}
+        {nivel === 0 && dispositivoEvidencia && (
+          <div ref={refEvidencia}>
+            <EvidenciaPaso
+              articuloId={articuloId}
+              articuloTitulo={articulo?.titulo ?? ''}
+              dispositivoId={dispositivoEvidencia.id}
+              paso={paso}
+              entradaId={progreso?.evidenciasPorPaso?.[paso.id] ?? null}
+              conFalla={Boolean(fallaDelPaso)}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Acción dominante fija al pie (M-011, regla M-R3, mockup `3b`).
           Hasta ahora "Atrás / Siguiente" vivían al final del scroll del
@@ -839,15 +846,18 @@ function EvidenciaPaso({
         {creando ? 'Preparando...' : 'Fotografiar y anotar la falla'}
       </button>
     ) : (
-      <button
-        type="button"
-        disabled={creando}
-        onClick={() => void adjuntarEvidencia()}
-        className={`self-start ${BTN_GHOST_ACENTO} disabled:opacity-50`}
-      >
-        <Camera size={14} aria-hidden />
-        {creando ? 'Preparando...' : 'Adjuntar evidencia de este paso'}
-      </button>
+      // Sin falla declarada la evidencia es un vínculo más del paso, así
+      // que se dibuja como los demás: fila de 44 px con icono neutro
+      // (tablero `3b`, "Foto de evidencia"). Antes era el único botón
+      // fantasma en acento del grupo.
+      <AccionVinculo
+        Icono={Camera}
+        kicker="Prueba del trabajo"
+        titulo="Foto de evidencia"
+        accion={creando ? 'Preparando...' : 'Agregar'}
+        onEjecutar={() => void adjuntarEvidencia()}
+        deshabilitado={creando}
+      />
     )
   }
 
@@ -865,6 +875,11 @@ function EvidenciaPaso({
 // Subprocedimiento vinculado, en modo asistente: en vez de la lista
 // completa (ProcedimientoVista), aqui se anida otro AsistenteVista, un
 // paso a la vez. Al completarse avisa al paso que lo contiene.
+//
+// El marco de acento se retira (M-012): era el mismo marco del dato
+// protegido, así que el color decía "hay algo vinculado" y no qué. Lo
+// que queda es una fila neutra que se pliega y, debajo, la línea
+// vertical que marca la profundidad.
 function SubProcedimientoEnAsistente({
   subArticuloId,
   tituloReferencia,
@@ -877,10 +892,15 @@ function SubProcedimientoEnAsistente({
   onCompletado: () => void
 }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(subArticuloId)) ?? null, [subArticuloId])
+  const progreso = useLiveQuery(() => db.progresoPasos.get(subArticuloId), [subArticuloId])
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
   )
+  // Llega abierta, como en la vista de lectura: el paso no se completa
+  // hasta que la guía anidada termine. Se puede cerrar con el mismo
+  // gesto con el que se cierra la contingencia.
+  const [cerrado, setCerrado] = useState(false)
 
   if (articulo === undefined) return null
 
@@ -896,36 +916,55 @@ function SubProcedimientoEnAsistente({
   }
 
   const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
+  const total = procedimiento?.pasos.length ?? 0
+  const hechos = procedimiento
+    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
+    : 0
+  const anillo =
+    total > 0 ? <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" /> : undefined
 
   // Misma regla de un solo nivel que ProcedimientoVista: mas alla se
-  // enlaza, sin ejecutar aqui, y evita cualquier ciclo de vinculos.
-  if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
+  // enlaza, sin ejecutar aqui, y evita cualquier ciclo de vinculos. Y
+  // ahora SE NOTA que solo enlaza (regla R58 del turno 12): antes la
+  // tarjeta enlazada y la desplegable eran el mismo marco de acento con
+  // el mismo icono, así que tocar una salía de la pantalla y tocar la
+  // otra no, sin nada que lo anunciara.
+  if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
     return (
-      <Link
+      <EnlaceVinculo
+        Icono={LinkSimple}
+        kicker="Otra guía"
+        titulo={articulo.titulo}
+        nota={PROMESA_REGRESO}
+        extra={anillo}
         to={ruta}
-        className="flex items-center justify-between gap-2 rounded-lg border border-noct-accent/30 bg-noct-accent/10 px-3 py-2"
-      >
-        <p className="inline-flex min-w-0 items-center gap-1.5 truncate text-xs font-medium text-noct-accent-300">
-          <LinkSimple size={13} aria-hidden />
-          Procedimiento: {articulo.titulo}
-        </p>
-        <span className="shrink-0 text-xs text-noct-accent-400 underline underline-offset-2">Abrir</span>
-      </Link>
+      />
     )
   }
 
+  const abierto = !cerrado
+
   return (
-    <div className="rounded-lg border border-noct-accent/30 bg-noct-accent/[.07] p-3">
-      <p className="mb-3 inline-flex min-w-0 items-center gap-1.5 truncate text-xs font-medium text-noct-accent-300">
-        <LinkSimple size={13} aria-hidden />
-        Procedimiento: {articulo.titulo}
-      </p>
-      <AsistenteVista
-        articuloId={articulo.id}
-        procedimiento={procedimiento}
-        nivel={nivel + 1}
-        onCompletado={onCompletado}
+    <div>
+      <FilaVinculo
+        Icono={LinkSimple}
+        kicker="Otra guía"
+        titulo={articulo.titulo}
+        nota={fraseAvanceDocumento(hechos, total, 'guía')}
+        extra={anillo}
+        abierto={abierto}
+        onAlternar={() => setCerrado((valor) => !valor)}
       />
+      {abierto && (
+        <div className={`my-1 ${ZONA_ANIDADA}`}>
+          <AsistenteVista
+            articuloId={articulo.id}
+            procedimiento={procedimiento}
+            nivel={nivel + 1}
+            onCompletado={onCompletado}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -943,6 +982,12 @@ function SubProcedimientoEnAsistente({
 // Se abre por dos caminos: porque el técnico la eligió en la hoja de
 // falla (`abrirDirecto`), o sola cuando quedó a medias, que es lo que
 // pasa al salir y volver a entrar en mitad de un error.
+//
+// Su marco ámbar se retira (M-012, regla M-R11). La contingencia es un
+// DOCUMENTO, no una advertencia: lo que advierte es el aviso del paso y
+// el panel de falla que la abre, y los tres compartían el mismo tono.
+// Aquí el ámbar se queda en la falla y la contingencia se dibuja como
+// cualquier otro documento anidado: fila neutra y línea de profundidad.
 function SolucionEnAsistente({
   solucionArticuloId,
   tituloReferencia,
@@ -1003,18 +1048,18 @@ function SolucionEnAsistente({
   // Dentro de un nivel ya expandido, o si la contingencia no tiene
   // pasos que ejecutar (K1), solo se enlaza: misma regla de un nivel que
   // corta los ciclos en los subprocedimientos.
-  if (nivel >= 1 || !procedimientoEjecutable(procedimiento)) {
+  if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
     return (
       <div className="flex items-center gap-2">
-        <Link
-          to={ruta}
-          className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2"
-        >
-          <p className="min-w-0 truncate text-xs font-medium text-noct-precaucion">
-            Contingencia: {articulo.titulo}
-          </p>
-          <span className="shrink-0 text-xs text-noct-precaucion underline underline-offset-2">Abrir</span>
-        </Link>
+        <div className="min-w-0 flex-1">
+          <EnlaceVinculo
+            Icono={Wrench}
+            kicker="Si esto falla"
+            titulo={articulo.titulo}
+            nota={PROMESA_REGRESO}
+            to={ruta}
+          />
+        </div>
         <BotonCerrarContingencia onCerrar={cerrar} />
       </div>
     )
@@ -1030,20 +1075,33 @@ function SolucionEnAsistente({
   }
 
   return (
-    <div className="rounded-xl border border-noct-precaucion/45 bg-noct-precaucion/[.07] p-3">
-      <div className="mb-3 flex items-center gap-2">
-        <Wrench size={16} className="shrink-0 text-noct-precaucion" aria-hidden />
-        <p className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-noct-precaucion">
-          Contingencia: {articulo.titulo}
-        </p>
+    <div>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <FilaVinculo
+            Icono={Wrench}
+            kicker="Si esto falla"
+            titulo={articulo.titulo}
+            nota={fraseAvanceDocumento(hechos, total, 'contingencia')}
+            extra={
+              total > 0 ? (
+                <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" />
+              ) : undefined
+            }
+            abierto
+            onAlternar={cerrar}
+          />
+        </div>
         <BotonCerrarContingencia onCerrar={cerrar} />
       </div>
-      <AsistenteVista
-        articuloId={articulo.id}
-        procedimiento={procedimiento}
-        nivel={nivel + 1}
-        onCompletado={() => void resuelta()}
-      />
+      <div className={`my-1 ${ZONA_ANIDADA}`}>
+        <AsistenteVista
+          articuloId={articulo.id}
+          procedimiento={procedimiento}
+          nivel={nivel + 1}
+          onCompletado={() => void resuelta()}
+        />
+      </div>
     </div>
   )
 }
@@ -1057,7 +1115,7 @@ function BotonCerrarContingencia({ onCerrar }: { onCerrar: () => void }) {
       type="button"
       onClick={onCerrar}
       aria-label="Cerrar la contingencia y volver al paso"
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-precaucion hover:bg-noct-precaucion/15"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-400 hover:bg-noct-text/[.07]"
     >
       <X size={18} aria-hidden />
     </button>
