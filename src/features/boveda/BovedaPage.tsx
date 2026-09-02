@@ -11,6 +11,7 @@ import {
   Check,
   ClockCountdown,
   Cloud,
+  Copy,
   DotsThreeOutlineVertical,
   Globe,
   HardDrives,
@@ -39,7 +40,7 @@ import { resumenImpacto } from '../../lib/grafo'
 import { iconoPorPalabraClave } from '../../lib/iconoPorPalabraClave'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
-import { estadoVencimiento, type EstadoVencimiento } from '../../lib/vencimiento'
+import { descripcionVencida, estadoVencimiento, type EstadoVencimiento } from '../../lib/vencimiento'
 import { detectarCandidatos } from './migracionSecretos'
 import {
   bloquear,
@@ -219,6 +220,13 @@ export function BovedaPage() {
   const [copiado, setCopiado] = useState<'usuario' | 'contrasena' | null>(null)
   const [avisoCopia, setAvisoCopia] = useState<string | null>(null)
   const temporizadorCopia = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // Copiar la contraseña directo desde la fila (hallazgo M-021): estado
+  // independiente del menú, porque aquí no hay una hoja abierta que
+  // sostenga el aviso. Se guarda por id de credencial (no un booleano
+  // suelto) para que el icono de "copiado" o de error aparezca en la
+  // fila correcta y no en la última que se tocó.
+  const [filaAccion, setFilaAccion] = useState<{ id: string; ok: boolean; mensaje?: string } | null>(null)
+  const temporizadorFila = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Grafo de referencias: para avisar, antes de eliminar, qué
   // procedimientos usan esta credencial (mismo aviso que la ficha).
@@ -297,42 +305,58 @@ export function BovedaPage() {
     }, 1400)
   }
 
-  // Copiar usuario o contraseña directo desde el menú de la lista, sin
-  // abrir la ficha: descifra al momento (la bóveda ya está desbloqueada)
-  // y, si copia, registra en la auditoría quién y cuándo (regla del
-  // mockup: "Copiar registra quién y cuándo"). La contraseña nunca se
+  // Descifra y copia un campo de la credencial, registra el acceso en
+  // la auditoría (regla del mockup: "Copiar registra quién y cuándo") y
+  // devuelve el resultado en vez de tocar estado directamente: la
+  // comparten el menú de la fila (`copiar`, con su propio aviso dentro
+  // de la hoja) y el botón nuevo en la fila misma (`copiarFila`, sin
+  // hoja donde mostrar un mensaje largo). La contraseña nunca se
   // muestra; solo va al portapapeles.
-  async function copiar(campo: 'usuario' | 'contrasena') {
-    const c = credencialMenu
-    if (!c) return
+  async function descifrarYCopiar(
+    c: (typeof filtradas)[number]['credencial'],
+    campo: 'usuario' | 'contrasena',
+  ): Promise<{ ok: boolean; mensaje?: string }> {
     const datos = await descifrarCredencial(c.datosCifrados)
-    if (!datos) {
-      setCopiado(null)
-      setAvisoCopia('No se pudo descifrar con la contraseña maestra actual.')
-      programarResetCopia()
-      return
-    }
+    if (!datos) return { ok: false, mensaje: 'No se pudo descifrar con la contraseña maestra actual.' }
     const valor = campo === 'usuario' ? datos.usuario : datos.contrasena
-    if (!valor) {
-      setCopiado(null)
-      setAvisoCopia(campo === 'usuario' ? 'Sin usuario guardado.' : 'Sin contraseña guardada.')
-      programarResetCopia()
-      return
-    }
-    if (!(await copiarAlPortapapeles(valor))) {
-      setCopiado(null)
-      setAvisoCopia('No se pudo copiar al portapapeles.')
-      programarResetCopia()
-      return
-    }
+    if (!valor) return { ok: false, mensaje: campo === 'usuario' ? 'Sin usuario guardado.' : 'Sin contraseña guardada.' }
+    if (!(await copiarAlPortapapeles(valor))) return { ok: false, mensaje: 'No se pudo copiar al portapapeles.' }
     void registrarAccesoBoveda({
       credencialId: c.id,
       credencialTitulo: c.titulo,
       accion: campo === 'usuario' ? 'copio_usuario' : 'copio_contrasena',
     })
+    return { ok: true }
+  }
+
+  // Copiar usuario o contraseña desde el menú de la lista, sin abrir la
+  // ficha: el aviso (éxito o motivo del fallo) se ve dentro de la hoja.
+  async function copiar(campo: 'usuario' | 'contrasena') {
+    const c = credencialMenu
+    if (!c) return
+    const resultado = await descifrarYCopiar(c, campo)
+    if (!resultado.ok) {
+      setCopiado(null)
+      setAvisoCopia(resultado.mensaje ?? null)
+      programarResetCopia()
+      return
+    }
     setAvisoCopia(null)
     setCopiado(campo)
     programarResetCopia()
+  }
+
+  // Copiar la CONTRASEÑA directo desde la fila (hallazgo M-021, mockup
+  // `9b`): es el gesto real y frecuente ("copiar la clave del switch"),
+  // y hasta ahora exigía abrir el menú "···" y una hoja inferior para
+  // el 80 % de las visitas a la sección. El usuario y el resto de
+  // acciones (abrir, editar, eliminar) se quedan en el menú: copiar la
+  // contraseña es el único gesto frecuente a diario, no todos lo son.
+  async function copiarFila(c: (typeof filtradas)[number]['credencial']) {
+    const resultado = await descifrarYCopiar(c, 'contrasena')
+    clearTimeout(temporizadorFila.current)
+    setFilaAccion({ id: c.id, ok: resultado.ok, mensaje: resultado.mensaje })
+    temporizadorFila.current = setTimeout(() => setFilaAccion(null), 1400)
   }
 
   function pedirEliminar() {
@@ -485,16 +509,27 @@ export function BovedaPage() {
             {filtradas.map(({ credencial: c, estado }) => {
               const Icono = iconoDeCategoria(c.categoria ?? '')
               const equipos = (c.dispositivos ?? []).length
-              const detalle = [
-                c.categoria || 'Sin categoría',
-                equipos > 0 && `${equipos} ${equipos === 1 ? 'equipo' : 'equipos'} con acceso`,
-              ]
-                .filter(Boolean)
-                .join(' · ')
+              // La fila vencida ya sube al principio de la lista
+              // (`severidad`, sin cambios). Lo que cambia (M-021) es que
+              // deja de decir solo "Vencida" y dice CUÁNTO hace: no es
+              // lo mismo venció ayer que hace medio año. La pastilla de
+              // la derecha desaparece para esa fila; la duración toma su
+              // sitio en la segunda línea, que es donde ya se leía la
+              // categoría.
+              const detalle =
+                estado === 'vencida' && c.venceEn
+                  ? [descripcionVencida(c.venceEn), c.categoria || 'Sin categoría'].join(' · ')
+                  : [
+                      c.categoria || 'Sin categoría',
+                      equipos > 0 && `${equipos} ${equipos === 1 ? 'equipo' : 'equipos'} con acceso`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')
+              const accionFila = filaAccion?.id === c.id ? filaAccion : null
               return (
                 <div
                   key={c.id}
-                  className="flex min-h-[56px] items-center rounded transition-colors hover:bg-noct-text/[.05]"
+                  className="flex min-h-[56px] items-center gap-2 rounded transition-colors hover:bg-noct-text/[.05]"
                 >
                   <Link
                     to={`/boveda/${c.id}`}
@@ -505,21 +540,44 @@ export function BovedaPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium leading-[1.3]">{c.titulo}</p>
-                      <p className="truncate text-[12px] text-noct-neutral-500">{detalle}</p>
-                    </div>
-                    {estado && (
-                      <span
-                        className={`inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap rounded-full border px-[9px] py-[3px] text-[11px] font-medium ${
-                          estado === 'vencida'
-                            ? 'border-noct-error/40 text-noct-error'
-                            : 'border-noct-precaucion/40 text-noct-precaucion'
-                        }`}
+                      <p
+                        className={`truncate text-[12px] ${estado === 'vencida' ? 'text-noct-error' : 'text-noct-neutral-500'}`}
                       >
+                        {estado === 'vencida' && <ClockCountdown size={11} className="mr-1 inline-block align-[-1px]" aria-hidden />}
+                        {detalle}
+                      </p>
+                    </div>
+                    {estado === 'proxima' && (
+                      <span className="inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap rounded-full border border-noct-precaucion/40 px-[9px] py-[3px] text-[11px] font-medium text-noct-precaucion">
                         <ClockCountdown size={12} aria-hidden />
-                        {estado === 'vencida' ? 'Vencida' : 'Vence pronto'}
+                        Vence pronto
                       </span>
                     )}
                   </Link>
+                  {/* Copiar la contraseña sin abrir el menú (M-021): el
+                      gesto real y frecuente del técnico en el sitio.
+                      44 px, separado 8 px de la fila enlazada (M-R14):
+                      no va DENTRO del enlace para no anidar un control
+                      dentro de otro. */}
+                  <button
+                    type="button"
+                    onClick={() => void copiarFila(c)}
+                    aria-label={
+                      accionFila && !accionFila.ok
+                        ? (accionFila.mensaje ?? `No se pudo copiar la contraseña de ${c.titulo}`)
+                        : `Copiar la contraseña de ${c.titulo}`
+                    }
+                    title="Copiar contraseña"
+                    className="flex min-h-[56px] w-11 shrink-0 items-center justify-center rounded text-noct-neutral-500 hover:text-noct-accent-300"
+                  >
+                    {accionFila?.ok ? (
+                      <Check size={17} className="text-noct-exito" aria-hidden />
+                    ) : accionFila && !accionFila.ok ? (
+                      <Warning size={17} className="text-noct-error" aria-hidden />
+                    ) : (
+                      <Copy size={17} aria-hidden />
+                    )}
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -527,7 +585,7 @@ export function BovedaPage() {
                       setCopiado(null)
                       setAvisoCopia(null)
                     }}
-                    aria-label={`Acciones de ${c.titulo}`}
+                    aria-label={`Más acciones de ${c.titulo}`}
                     className="flex min-h-[56px] w-11 shrink-0 items-center justify-center rounded text-noct-neutral-500 hover:text-noct-text"
                   >
                     <DotsThreeOutlineVertical size={16} aria-hidden />

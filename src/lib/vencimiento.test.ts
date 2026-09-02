@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estadoVencimiento, proximoVencimiento, vencimientoDesactualizado } from './vencimiento'
+import { descripcionVencida, estadoVencimiento, proximoVencimiento, vencimientoDesactualizado } from './vencimiento'
 
 const HOY = new Date('2026-07-09T12:00:00')
 
@@ -24,6 +24,24 @@ describe('estadoVencimiento', () => {
 
   it('ignora una fecha mal formada', () => {
     expect(estadoVencimiento('no-es-fecha', HOY)).toBeNull()
+  })
+})
+
+describe('descripcionVencida', () => {
+  it('dice "hoy" cuando vence justo el día de hoy', () => {
+    expect(descripcionVencida('2026-07-09', HOY)).toBe('Venció hoy')
+  })
+
+  it('concuerda el singular a 1 día', () => {
+    expect(descripcionVencida('2026-07-08', HOY)).toBe('Venció hace 1 día')
+  })
+
+  it('cuenta varios días', () => {
+    expect(descripcionVencida('2026-07-06', HOY)).toBe('Venció hace 3 días')
+  })
+
+  it('sigue contando aunque venciera hace mucho', () => {
+    expect(descripcionVencida('2026-01-01', HOY)).toBe('Venció hace 189 días')
   })
 })
 

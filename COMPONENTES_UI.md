@@ -372,7 +372,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** aviso de vencimiento de una credencial (ámbar si se acerca, rojo si venció); nada si no hay fecha o falta mucho. La lógica de cálculo vive en `src/lib/vencimiento.ts`.
 - **Props:** `{ venceEn: string | null, variante?: 'claro' | 'nocturne' = 'claro' }`.
 - **Variantes:** `'claro'` (pastilla rellena con emoji, en el paso de un procedimiento); `'nocturne'` (delineada, con icono `ClockCountdown`).
-- **Dónde:** `CredencialEnPaso` (claro), `CredencialPage` (nocturne).
+- **Dónde:** `CredencialEnPaso` (claro), `CredencialPage` (nocturne). **No es lo que pinta la fila de `BovedaPage`**: esa lista tiene su propio marcado (tarea 205), porque una fila vencida no lleva pastilla sino la duración escrita en la segunda línea (`descripcionVencida` en `vencimiento.ts`); solo la "próxima a vencer" conserva una pastilla, distinta de esta.
 
 ### 3.5 `dispositivos/estados.ts` y el estado visual
 - **Aclaración:** no existe un componente `IndicadorEstado`. `estados.ts` es solo un re-export de `ESTADOS_SUGERIDOS` (para el `datalist` del formulario).

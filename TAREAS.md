@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 204 se cerró el 2026-09-01. De la **fase 2 de la auditoría móvil** quedan la **205** (Bóveda y Diagnóstico) y la **206** (un color, un significado dentro del paso); hechas la 202, la 203 y la 204. La siguiente pendiente es la **205**, ver "Por hacer".)*
+*(vacío: la tarea 205 se cerró el 2026-09-01. De la **fase 2 de la auditoría móvil** queda solo la **206** (un color, un significado dentro del paso); hechas la 202, la 203, la 204 y la 205. La siguiente pendiente es la **206**, ver "Por hacer".)*
 
 **Despliegue confirmado (regla 14).** El commit `436e749` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `RedPage-B2PL_I3X.js` de producción contiene "Estás recorriendo", `nodo=`, "Todos los equipos de red por ubicación" y "Mapa completo, desde cada raíz", y aparece el chunk nuevo `EquiposRedPage-BSXaUEzV.js` con "Equipos de red" y "Sin ubicación". Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar.
 
@@ -247,16 +247,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 205. Auditoría móvil, fase 2: Bóveda y Diagnóstico, la acción frecuente a la vista (M-021, M-026)
-
-- **Descripción:** dos pantallas, dos arreglos pequeños de consecuencia grande. **(a) Bóveda (M-021, mockup `9b`):** el gesto real del técnico en el sitio es "copiar la clave del switch", y hoy vive dentro del menú "···" de la fila, que abre una hoja inferior: **tres toques y un cambio de superficie para el 80 % de las visitas**. La propuesta saca un botón "copiar" de 44 px a la fila, con la auditoría y el aviso de acceso que **ya existen** (nada de la arquitectura de seguridad se toca), y el menú conserva el resto. La fila vencida sube y dice **cuánto** hace que venció, en vez de una pastilla que solo dice "Vencida". **(b) Diagnóstico (M-026, mockup `5b`):** "Volver" (retrocede una pregunta) y "Cancelar" (descarta el avance y lo registra como abandono) comparten fila, tamaño y estilo fantasma de 13 px, en la zona del pulgar. "Atrás" pasa a icono junto a la pregunta; "Cancelar" sale de la zona del pulgar y deja de ser un botón (**M-R12**: lo irreversible no comparte forma con lo reversible).
-- **Motivo:** el menú "···" de la Bóveda está bien construido; lo que falla es que **sea el único camino**. Y en Diagnóstico se pierde un diagnóstico a medias por un toque a 8 px del correcto, sin que nada en la forma lo advierta.
-- **Impacto:** alto en la sección más usada en el sitio (Bóveda) y en el flujo con menos carga mental de la app (Diagnóstico). Sin esquema. **No toca cifrado, permisos, desbloqueo ni auditoría.**
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/boveda/BovedaPage.tsx`, `src/features/diagnostico/DiagnosticoRunPage.tsx`.
-- **Dependencias:** ninguna. Se cruza con la tarea **193** (turno 7, rediseño completo de la Bóveda), que es mucho más grande y sigue vigente: esta solo saca el botón de copiar a la fila. Reglas que fija: **M-R12**.
-- **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ### 206. Auditoría móvil, fase 2: un color, un significado dentro del paso (M-012, regla M-R11)
 

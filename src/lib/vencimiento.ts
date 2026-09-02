@@ -25,6 +25,21 @@ export function estadoVencimiento(venceEn: string | null, hoy: Date = new Date()
   return null
 }
 
+// Cuánto hace que venció, para la fila de la lista de la Bóveda
+// (hallazgo M-021 de la auditoría móvil, mockup `9b`). Antes la fila
+// vencida solo decía "Vencida", una pastilla que no distingue "venció
+// ayer" de "venció hace medio año", cuando la urgencia real es muy
+// distinta: solo se llama con un `venceEn` ya vencido, así que no
+// vuelve a validar el estado por su cuenta.
+export function descripcionVencida(venceEn: string, hoy: Date = new Date()): string {
+  const fechaVencimiento = new Date(`${venceEn}T00:00:00`)
+  const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
+  const dias = Math.floor((inicioHoy.getTime() - fechaVencimiento.getTime()) / (24 * 60 * 60 * 1000))
+  if (dias <= 0) return 'Venció hoy'
+  if (dias === 1) return 'Venció hace 1 día'
+  return `Venció hace ${dias} días`
+}
+
 // Dias sugeridos al renovar el vencimiento tras detectar que la
 // contraseña rotó (hallazgo S1 de AUDITORIA_FLUJOS_TI.md): 90 dias es
 // una politica de rotacion tipica; el tecnico puede ajustar la fecha a

@@ -26,7 +26,7 @@ import {
   XCircle,
   type IconoProps,
 } from '../../components/iconos'
-import { BTN_GHOST, BTN_GHOST_TENUE, BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import { AsistenteVista } from '../soluciones/AsistenteVista'
 import { ETIQUETA_MOTIVO, MOTIVOS_ORDEN, type MotivoConcreto } from './motivos'
 
@@ -211,6 +211,25 @@ function Sesion({
 
   return (
     <div className="flex flex-col gap-[18px]">
+      {/* "Atrás" junto a la pregunta, como icono (hallazgo M-026, regla
+          M-R12): antes compartía fila, tamaño y estilo fantasma con
+          "Cancelar", las dos a 13 px en la zona del pulgar, y un toque
+          8 px de diferencia entre "retrocede una pregunta" y "descarta
+          el diagnóstico y lo registra como abandono" no se distinguía
+          en la forma. Volver SÍ es reversible, así que se queda arriba,
+          junto al contenido; lo irreversible se aparta más abajo. */}
+      {estado.tipo !== 'final' && camino.length > 0 && (
+        <button
+          type="button"
+          onClick={() => void volverAtras(diagnosticoId)}
+          aria-label="Volver a la pregunta anterior"
+          title="Atrás"
+          className="flex h-11 w-11 shrink-0 items-center justify-center self-start rounded-lg text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text"
+        >
+          <ArrowLeft size={17} aria-hidden />
+        </button>
+      )}
+
       {estado.tipo === 'pregunta' && !nodoActual && (
         // El diagnóstico se editó a mitad de una sesión y la pregunta
         // actual ya no existe: no hay forma segura de continuar.
@@ -271,24 +290,23 @@ function Sesion({
 
       {estado.tipo === 'final' && <Resultado progreso={progreso} onCerrar={onCerrar} />}
 
+      {/* "Cancelar" deja de ser un botón (hallazgo M-026, regla M-R12:
+          lo irreversible no comparte forma con lo reversible). Pasa a
+          una frase en texto, fuera de la zona del pulgar donde caen
+          las opciones de arriba, y dice de entrada que salir SÍ guarda
+          el avance: la mayoría de las veces lo que el técnico quiere
+          es justamente eso, no descartar nada. */}
       {estado.tipo !== 'final' && !confirmandoCancelar && (
-        <div className="mt-1 flex items-center justify-between gap-2.5">
-          {camino.length > 0 ? (
-            <button type="button" onClick={() => void volverAtras(diagnosticoId)} className={BTN_GHOST}>
-              <ArrowLeft size={14} aria-hidden />
-              Volver
-            </button>
-          ) : (
-            <span />
-          )}
+        <p className="mt-1 text-center text-[12.5px] leading-relaxed text-noct-neutral-600">
+          Salir guarda el avance.{' '}
           <button
             type="button"
             onClick={() => onConfirmarCancelar(true)}
-            className={BTN_GHOST_TENUE}
+            className="min-h-11 text-noct-error/85 underline decoration-noct-error/40 underline-offset-2 hover:text-noct-error"
           >
-            Cancelar
+            Descartar este diagnóstico
           </button>
-        </div>
+        </p>
       )}
 
       {confirmandoCancelar && (

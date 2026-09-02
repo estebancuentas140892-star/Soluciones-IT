@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Cambiado (tarea 205): Bóveda y Diagnóstico, la acción frecuente a la vista
+
+**Área modificada:** `src/features/boveda/BovedaPage.tsx`, `src/features/diagnostico/DiagnosticoRunPage.tsx`, `src/lib/vencimiento.ts`.
+**Motivo:** hallazgos **M-021** y **M-026** de la auditoría móvil (fase 2, mockups `9b` y `5b`). En Bóveda, el gesto más frecuente ("copiar la clave del switch") exigía abrir un menú y una hoja inferior: tres toques para el 80 % de las visitas. En Diagnóstico, "Volver" (reversible) y "Cancelar" (irreversible, registra abandono) compartían fila, tamaño y estilo fantasma en la zona del pulgar: un toque a 8 px del correcto perdía un diagnóstico a medias.
+**Impacto esperado:** alto en la sección más usada (Bóveda) y en el flujo con menos carga mental de la app (Diagnóstico). **Sin esquema. No toca cifrado, permisos, desbloqueo ni auditoría.**
+
+- **Agregado** un botón de 44 px en cada fila de la Bóveda que copia la **contraseña** directo, sin abrir el menú: descifra al momento y registra el acceso, igual que siempre. Check verde al copiar, aviso rojo si falla (sin desbloqueo, sin dato, sin permiso del portapapeles), vuelve solo a los 1,4 s. El menú "···" (renombrado "Más acciones") conserva usuario, abrir, editar y eliminar.
+- **Cambiado** la fila vencida deja de decir solo "Vencida": dice **cuánto** hace ("Venció hace 3 días · CCTV"), en rojo, en el sitio donde antes iba la categoría sola. `descripcionVencida` (nuevo, en `vencimiento.ts`, 4 pruebas) calcula los días transcurridos. La fila "próxima a vencer" conserva su pastilla ámbar; el orden por urgencia no cambió, ya subía las vencidas.
+- **Cambiado** en Diagnóstico, "Atrás" pasa a icono de 44 px pegado a la pregunta (o al procedimiento en ejecución): reversible, se queda arriba, junto al contenido.
+- **Cambiado** "Cancelar" deja de ser un botón: pasa a la frase "Salir guarda el avance. **Descartar este diagnóstico**", en texto pequeño y apagado, fuera de la zona del pulgar (regla **M-R12**: lo irreversible no comparte forma ni fila con lo reversible). La confirmación ("El avance se descarta y queda registrado como abandonado") no cambió.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **1017 de 1017** en verde (4 nuevas). **Medido en navegador real a 360 px**: en Bóveda, con una bóveda de prueba desbloqueada localmente (contraseña maestra y credenciales cifradas generadas en el propio teléfono, sin tocar ningún servidor), el botón de copiar mide 44x56, separado 8 px del enlace de la fila; copiar sin permiso de portapapeles muestra el aviso rojo con su `aria-label` y se repone solo; la fila vencida muestra "Venció hace N días · CCTV" sin pastilla y la próxima conserva "Vence pronto"; el menú "···" sigue completo. En Diagnóstico: sin respuestas no aparece "Atrás"; tras responder aparece a 44 px sobre la pregunta y retrocede bien; "Descartar este diagnóstico" abre la confirmación de siempre y, al confirmar, vuelve a la lista; en el estado final no aparece ni "Atrás" ni "Descartar".
+
 ### Cambiado (tarea 204): Red abre con el nodo, no con la lista
 
 **Área modificada:** `src/features/red/RedPage.tsx`, `TopologiaEquipoPage.tsx`, `src/App.tsx`, `src/lib/navegacion.ts`, y cinco archivos nuevos: `NodoRed.tsx`, `useNodoRed.ts`, `nodoDeRed.ts`, `grupoUbicacion.ts`, `EquiposRedPage.tsx`.

@@ -1,5 +1,24 @@
 # Historial de tareas finalizadas
 
+### 205. Auditoría móvil, fase 2: Bóveda y Diagnóstico, la acción frecuente a la vista (M-021, M-026)
+
+**Estado**: TERMINADA y **verificada en navegador real a 360 px** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **1017 de 1017** en verde, **4 nuevas**. **Prioridad**: Media. **Modelo/esfuerzo**: Sonnet 5 / Alto, sin Ultracode.
+
+**Dos pantallas, dos arreglos pequeños de consecuencia grande.**
+
+**(a) Bóveda (M-021, mockup `9b`).** El menú "···" de la fila está bien construido (copia sin abrir la ficha y registra el acceso); lo que fallaba es que **fuera el único camino**: tres toques y una hoja inferior para el gesto más frecuente de la sección. Se agregó un botón de **copiar de 44 px directo en la fila**, separado 8 px del enlace (M-R14, sin anidar controles), que copia la **contraseña** (el gesto real: "copiar la clave del switch"). Comparte la lógica de descifrado con el menú (`descifrarYCopiar`, extraída de `copiar`), pero con su propio estado por credencial (`filaAccion`), porque no hay una hoja abierta donde mostrar un aviso: el icono pasa a check verde o a aviso rojo, y el `aria-label` lleva el motivo del fallo. El menú se queda con usuario, abrir, editar y eliminar; se renombra "Más acciones" para no repetir "Acciones" dos veces en la fila.
+
+La fila vencida ya subía al principio de la lista (`severidad`, sin cambios); lo que decía era solo "Vencida", sin distinguir venció ayer de hace medio año. `descripcionVencida` (nuevo en `vencimiento.ts`, 4 pruebas) calcula los días transcurridos y la fila los muestra en rojo, con icono de reloj, en el sitio donde antes iba la categoría sola: "Venció hace 3 días · CCTV". La pastilla desaparece SOLO para la fila vencida; "próxima a vencer" conserva su pastilla ámbar "Vence pronto", que no estaba en el alcance del hallazgo.
+
+**(b) Diagnóstico (M-026, mockup `5b`, regla M-R12).** "Volver" (retrocede una pregunta) y "Cancelar" (descarta el avance y lo registra como abandono) compartían fila, tamaño y estilo fantasma de 13 px, las dos en la zona del pulgar: un toque a 8 px del correcto perdía un diagnóstico a medias sin que nada en la forma lo advirtiera. Se separaron por CONSECUENCIA, no solo por estilo:
+- **"Atrás"** (reversible) sube junto al contenido: icono de 44 px sin texto, pegado a la pregunta o al procedimiento en ejecución. Se muestra cuando `camino.length > 0` en cualquier estado no final, así que conserva el comportamiento previo (también disponible ejecutando un procedimiento vinculado).
+- **"Cancelar"** (irreversible) deja de ser un botón: pasa a la frase "Salir guarda el avance. **Descartar este diagnóstico**", en texto pequeño y apagado, al pie de la pantalla. Dice primero lo que SÍ pasa (se guarda) antes de ofrecer lo que descarta. La confirmación que ya existía ("El avance se descarta y queda registrado como abandonado", con "Sí, cancelar" / "Seguir con el diagnóstico") no cambió.
+
+**Fuera de alcance a propósito.** M-027 ("Antes dijiste", una línea con la última respuesta bajo el progreso, tocable para retroceder) y M-028 (el lápiz "Editar diagnóstico" mide 27 px dentro de la ejecución) son hallazgos P2 de la **fase 3**, ya registrados dentro de la tarea **207**; no se tocaron aquí.
+
+**Verificación en navegador.** Bóveda no se puede probar con datos de producción reales (la contraseña maestra exige verificación real contra el servidor, por diseño, y el proyecto prohíbe manejar credenciales reales): se generó una bóveda de prueba **enteramente local** — contraseña maestra, verificador y tres credenciales cifradas, todo producido con las mismas funciones de cripto del propio código, sin tocar ningún servidor — y se desbloqueó por la pantalla real. Con eso: el botón de copiar mide 44x56 con 8 px de separación de la fila; al fallar el portapapeles (sin permiso en el entorno de prueba) el icono pasa a aviso rojo con el motivo en el `aria-label` y se repone a los 1,4 s; la fila vencida (sembrada a 3 días) muestra "Venció hace N días · CCTV" sin pastilla; la próxima a vencer conserva "Vence pronto"; el menú "···" sigue con sus cuatro acciones. En Diagnóstico, con un diagnóstico de dos preguntas sembrado: sin responder nada no aparece "Atrás"; tras responder aparece a 44 px sobre la pregunta 2 y retrocede a la 1; "Descartar este diagnóstico" abre la confirmación, y al confirmar vuelve a la lista; en el estado final ("Diagnóstico completado") no aparece ni "Atrás" ni "Descartar".
+
+
 ### 204. Auditoría móvil, fase 2: Red abre con el nodo, no con la lista (M-018, M-019)
 
 **Estado**: TERMINADA y **verificada en navegador real a 360 px** el 2026-09-01. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **1013 de 1013** en verde, **20 nuevas**. **Prioridad**: Alta. **Modelo/esfuerzo**: Opus 5 / Alto, sin Ultracode.
