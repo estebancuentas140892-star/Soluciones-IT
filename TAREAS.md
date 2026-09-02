@@ -4,7 +4,19 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. Queda la **fase 3**, la tarea **207** (16 hallazgos P2 y P3), ver "Por hacer". La tarea 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
+### 207. Auditoría móvil, fase 3: refinamiento y consistencia (15 hallazgos P2 y P3)
+
+- **Estado**: EN PROCESO desde el 2026-09-02. **Prioridad**: Baja (M-005 y M-030 suben a Media si el equipo reporta fallos de toque o de lectura a pleno sol). **Modelo/esfuerzo**: Sonnet 5 / Medio; la sesión corre con Opus 5, que la cubre de sobra.
+- **PARTIDA (2026-09-02).** La ficha original traía **16** hallazgos. **M-034 sale a la tarea 216**: es un cambio de vocabulario transversal que toca copy en muchas pantallas y conviene hacerlo de una pasada, con otro modelo y otro nivel de esfuerzo. Aquí quedan los **15 puntuales**.
+- **Descripción, motivo y ubicación**: los de la ficha que estaba en "Por hacer" (ver el detalle hallazgo por hallazgo en el párrafo de abajo, conservado íntegro salvo M-034).
+
+*(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
+
+**Despliegue confirmado (regla 14).** El commit `ffbf55c` (tarea 206) está servido en **https://soluciones-it-psi.vercel.app**: el chunk `ProcedimientoVista-BGOIZnvu.js` contiene "Se abre aparte, vuelves aquí al terminar", "Otra guía", "Si esto falla" y "Este paso se completa al terminar", y `AsistenteVista-BPBcRLu1.js` contiene "Otra guía" y "Si esto falla". Comprobado también **en negativo**, que es lo que prueba que el cambio entró y no solo que el archivo existe: en los dos chunks ya NO aparecen "error durante este paso" (la pregunta retirada), "Continúa en" ni "Datos protegidos".
+
+**Hallazgo de método (2026-09-02).** El guion de espera daba por no desplegado durante 15 minutos porque comparaba los **nombres de chunk del build local** contra `/sw.js`, y **Vercel produjo hashes distintos para el mismo commit** (`ProcedimientoVista-BGOIZnvu.js` en producción frente a `ProcedimientoVista-CzGbI3Pa.js` en local). En los despliegues anteriores coincidían, así que el guion se había apoyado en una coincidencia, no en una garantía: el hash depende del bundler y de la versión de Node del entorno de construcción, no solo del código. **La comprobación válida es la de contenido**, que es la que pide la regla 14; el nombre solo sirve para saber a qué archivo pedirle el contenido. Para el próximo despliegue: leer los nombres reales de `/sw.js` y buscar las cadenas dentro de ellos, sin comparar hashes con el build local.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
 
 **Despliegue confirmado (regla 14).** El commit `24afe1b` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `BovedaPage-0VU5KtF1.js` contiene "Copiar la contraseña" y "Más acciones de "; `DiagnosticoRunPage-CF8FR6S7.js` contiene "Salir guarda el avance", "Descartar este diagn[óstico]" y "Volver a la pregunta anterior"; y `descripcionVencida` (con "Venció hoy"/"Venció hace...") quedó en el chunk compartido `Chasis-DN6ikilk.js`, no en el de Bóveda (`vencimiento.ts` también lo usa `Chasis`, así que el bundler lo separó). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó menos de 2 minutos en propagar.
 
@@ -252,15 +264,15 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 207. Auditoría móvil, fase 3: refinamiento y consistencia (16 hallazgos P2 y P3)
+### 216. Auditoría móvil: un solo vocabulario escrito (M-034)
 
-- **Descripción:** los hallazgos menores, que la propia auditoría agrupa y advierte que **varios se cierran solos** al hacer las fases anteriores. **M-004 y M-009** (un buscador por pantalla, de 46 px, con el alcance escrito y el mismo texto en toda la app: hoy hay cuatro en línea con tres alturas y cuatro alcances distintos, más la lupa global, y en Inicio y Guías se ven dos a la vez, **M-R8**). **M-005** (el borrar del buscador mide unos 26 px en Inicio y Red; Guías ya lo corrigió a 44, **M-R14**). **M-008** ("Registrar equipo" deja la rejilla de atajos de Inicio: el alta se hace mejor en el ordenador y ya tiene su sitio con contexto, tras un escaneo sin coincidencia, **M-R10**). **M-017** (cerrar la migración a `PastillaEstado` en las cinco pantallas que hoy copian el estado a mano: cierra **CAND-1**). **M-022** (los chips de la Bóveda cuentan sobre la bóveda completa, no sobre el filtro activo, al revés de lo aprobado para Equipos). **M-024 y M-025** ("Importar" y "Etiquetas QR" a un grupo "Mejor desde el ordenador" al final de "Más"; el conteo a la derecha, como en el resto de la app, mockup `7b`). **M-027** (una línea con la última respuesta bajo el progreso del diagnóstico, "Enciende: no → Sin luces", tocable para retroceder ahí). **M-028** (retirar el lápiz "Editar diagnóstico" de dentro de la ejecución: mide unos 27 px y es autoría en mitad de una ejecución). **M-030** (la instrucción del escáner a 14 px con fondo propio: a pleno sol, sobre un rack claro, la única instrucción de la pantalla desaparece). **M-033** (la barra de reanudar se reduce a 36 px al desplazarse hacia abajo: sumada a las pestañas deja unos 430 px de contenido en un teléfono de 360x640). **M-034** (vocabulario escrito: **guía** es el documento, **procedimiento** son sus pasos, **solución** es el bloque anidado; "artículo" se retira de la interfaz).
-- **Motivo:** dejarlos registrados con su número para que no se pierdan al cerrar el handoff. Varios son de una línea.
-- **Impacto:** consistencia. **M-034 toca copy en muchas pantallas** y conviene hacerlo de una pasada; el resto es puntual.
-- **Prioridad:** Baja (M-005 y M-030 suben a Media si el equipo reporta fallos de toque o de lectura a pleno sol). **Estado:** Pendiente.
-- **Área afectada:** ver cada punto. Los cinco buscadores se cruzan con el punto (c) de la tarea **189**.
-- **Dependencias:** las fases 1 y 2. **M-017** cierra el resto de **CAND-1** (tarea 168) y se cruza con la tarea **174**.
-- **Modelo/esfuerzo:** Sonnet 5 / Medio, salvo M-034 (Opus 5 / Alto: es un cambio de vocabulario transversal).
+- **Descripción:** fijar por escrito el vocabulario de la sección y aplicarlo en toda la interfaz: **guía** es el documento, **procedimiento** son sus pasos, **solución** es el bloque anidado. **"Artículo" se retira de la interfaz** (sigue siendo el nombre del modelo de datos y del código, regla de estilo del proyecto: identificadores en inglés o en el término técnico, textos visibles en el idioma del equipo).
+- **Motivo:** hallazgo **M-034** de la auditoría móvil, fase 3. La sección se llama Guías desde la tarea 182, pero la interfaz sigue diciendo "artículo" en botones, avisos, menús, vacíos y confirmaciones, así que el técnico ve dos nombres para la misma cosa. La decisión de nombre ya está tomada y aprobada (`Decisiones aprobadas.md` del handoff, [DECISIONES.md](DECISIONES.md) AD-022); lo que falta es aplicarla.
+- **Impacto:** consistencia. **Toca copy en muchas pantallas** y conviene hacerlo de una pasada, no hallazgo a hallazgo.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** transversal en `src/features/soluciones/` (lista, ficha, editor, asistente, vistas de procedimiento), más los avisos y confirmaciones que nombran "artículo" en `src/features/inicio/`, `src/features/busqueda/`, `src/features/diagnostico/` y `src/features/historial/`. Ubicación exacta por archivo: pendiente de inventariar al tomarla (un `grep` de "artículo" sobre textos visibles es el primer paso, distinguiendo los que son identificadores de los que lee el técnico).
+- **Dependencias:** **salió de la tarea 207** el 2026-09-02, que se quedó con los 15 hallazgos puntuales. Ninguna otra.
+- **Modelo/esfuerzo:** Opus 5 / Alto (es un cambio de vocabulario transversal: el riesgo no es escribirlo, es dejar la mitad sin cambiar o renombrar un identificador por error).
 
 ---
 
