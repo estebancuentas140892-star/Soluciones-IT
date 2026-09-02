@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNod
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   ArrowElbowDownRight,
   ArrowSquareOut,
@@ -17,7 +18,6 @@ import {
   HardDrives,
   Key,
   LockSimple,
-  MagnifyingGlass,
   Note,
   Paperclip,
   PencilSimple,
@@ -30,7 +30,6 @@ import {
   Warning,
   WifiHigh,
   X,
-  XCircleFill,
   type IconoProps,
 } from '../../components/iconos'
 import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
@@ -232,33 +231,40 @@ export function BovedaPage() {
   // procedimientos usan esta credencial (mismo aviso que la ficha).
   const grafo = useGrafo()
 
-  // Categorías presentes, con su conteo, para los chips. El conteo va
-  // sobre la bóveda completa, no sobre el filtro actual.
+  const buscado = normalizar(texto.trim())
+
+  // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022). El
+  // conteo iba sobre la bóveda completa, así que con el buscador escrito
+  // el número prometía resultados que el filtro no podía dar. Ahora va
+  // sobre el ALCANCE VISIBLE: lo que deja la búsqueda, sin aplicar el
+  // propio eje de categoría, que es lo que el chip decide.
+  const alcanceChips = useMemo(() => {
+    return (credenciales ?? []).filter((c) => {
+      if (!buscado) return true
+      const equipos = (c.dispositivos ?? []).map((d) => d.nombre).join(' ')
+      return normalizar(`${c.titulo} ${c.categoria ?? ''} ${equipos}`).includes(buscado)
+    })
+  }, [credenciales, buscado])
+
+  // Categorías presentes, con su conteo, para los chips.
   const categorias = useMemo(() => {
     const conteo = new Map<string, number>()
-    for (const c of credenciales ?? []) {
+    for (const c of alcanceChips) {
       if (!c.categoria) continue
       conteo.set(c.categoria, (conteo.get(c.categoria) ?? 0) + 1)
     }
     return [...conteo.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [credenciales])
-
-  const buscado = normalizar(texto.trim())
+  }, [alcanceChips])
 
   const filtradas = useMemo(() => {
-    return (credenciales ?? [])
-      .filter((c) => {
-        if (categoria && c.categoria !== categoria) return false
-        if (!buscado) return true
-        const equipos = (c.dispositivos ?? []).map((d) => d.nombre).join(' ')
-        return normalizar(`${c.titulo} ${c.categoria ?? ''} ${equipos}`).includes(buscado)
-      })
+    return alcanceChips
+      .filter((c) => !categoria || c.categoria === categoria)
       .map((c) => ({ credencial: c, estado: estadoVencimiento(c.venceEn) }))
       .sort((a, b) => {
         const dif = severidad(a.estado) - severidad(b.estado)
         return dif !== 0 ? dif : a.credencial.titulo.localeCompare(b.credencial.titulo)
       })
-  }, [credenciales, categoria, buscado])
+  }, [alcanceChips, categoria])
 
   // Credenciales que ya vencieron o están por vencer, sobre el total.
   const porRotar = useMemo(
@@ -266,7 +272,6 @@ export function BovedaPage() {
     [credenciales],
   )
 
-  const buscando = buscado.length > 0
   const hayFiltrosActivos = Boolean(categoria || texto)
   const hayResultados = filtradas.length > 0
   // El aviso de rotación solo tiene sentido en la vista completa: al
@@ -383,7 +388,13 @@ export function BovedaPage() {
     // estado del dato, buscar y la cuenta los aporta el chasis (tarea
     // 181); en `barra` quedan las acciones propias de la sección, el
     // buscador y la fila de chips de categoría deslizable.
-    <Chasis titulo="Bóveda" barra={
+    // `conLupa={false}` (regla M-R8, "un buscador por pantalla", tarea
+    // 207): esta pantalla ya tiene su propio campo con el alcance
+    // escrito, así que la lupa de la barra superior sería el segundo
+    // buscador de la misma pantalla y con otro alcance. La duda que
+    // midió la auditoría era exactamente esa: "¿esto busca en todo o
+    // solo aquí?". Buscar en todo sigue a un toque, desde Inicio.
+    <Chasis titulo="Bóveda" conLupa={false} barra={
       <>
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
@@ -411,41 +422,17 @@ export function BovedaPage() {
         </header>
 
         <div className="px-4 pb-2.5 pt-2.5">
-          <label
-            className={`flex h-11 items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
-              buscando ? 'border-noct-accent' : 'border-noct-divider'
-            }`}
-          >
-            <MagnifyingGlass
-              size={18}
-              className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Título, categoría o equipo"
-              aria-label="Buscar secretos"
-              className="bov-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-600"
-            />
-            {buscando && (
-              <button
-                type="button"
-                onClick={() => setTexto('')}
-                aria-label="Borrar búsqueda"
-                className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
-              >
-                <XCircleFill size={18} aria-hidden />
-              </button>
-            )}
-          </label>
+          <CampoBusqueda
+            valor={texto}
+            onCambiar={setTexto}
+            alcance="la Bóveda"
+          />
         </div>
 
         {categorias.length > 0 && (
           <div className="flex gap-[7px] overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[
-              { valor: '', nombre: 'Todas', count: (credenciales ?? []).length },
+              { valor: '', nombre: 'Todas', count: alcanceChips.length },
               ...categorias.map(([nombre, count]) => ({ valor: nombre, nombre, count })),
             ].map((chip) => {
               const activa = chip.valor === categoria

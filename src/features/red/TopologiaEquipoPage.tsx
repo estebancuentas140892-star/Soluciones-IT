@@ -10,8 +10,9 @@ import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
 import { conOrigen, type EstadoConOrigen } from '../../lib/origenNavegacion'
 import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { FormularioConexion } from './FormularioConexion'
+import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { NodoRed } from './NodoRed'
-import { claseEstado, estadoConEtiqueta } from './topologiaVisual'
+
 import { useNodoRed, useRedCargada } from './useNodoRed'
 
 // Topología de un equipo re-autorizada en el sistema Nocturne (handoff
@@ -59,7 +60,6 @@ export function TopologiaEquipoPage() {
     )
   }
 
-  const estado = estadoConEtiqueta(equipo.estado)
 
   // Seguir una conexión rompía el hilo en cada salto: el equipo abierto
   // desde aquí volvía a la LISTA de Red, no a esta topología (hallazgo
@@ -87,10 +87,7 @@ export function TopologiaEquipoPage() {
           <div className="min-w-0">
             <h1 className="truncate text-[18px] font-medium leading-[1.3]">{equipo.nombre}</h1>
             <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-noct-neutral-500">
-              <span className={`inline-flex items-center gap-1.5 ${claseEstado(estado.etiqueta)}`}>
-                <span className="h-[7px] w-[7px] rounded-full bg-current" />
-                {estado.etiqueta}
-              </span>
+              <PastillaEstadoDispositivo estado={equipo.estado} />
               {equipo.ip && (
                 <>
                   <span className="text-noct-neutral-600">·</span>

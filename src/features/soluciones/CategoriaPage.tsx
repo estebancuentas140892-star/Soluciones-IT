@@ -7,7 +7,8 @@ import { Chasis } from '../../app/Chasis'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { CaretRight, Plus, WarningCircle } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
-import { claseEstado, estadoConEtiqueta, tipoDeNodoVisual } from '../red/topologiaVisual'
+import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
+import { tipoDeNodoVisual } from '../red/topologiaVisual'
 import { IconoNodo } from '../red/IconoNodo'
 import { Historial } from '../historial/Historial'
 import { claseTonoDeTipo, iconoDeCategoria, iconoDeTipo } from './iconosSoluciones'
@@ -151,7 +152,6 @@ export function CategoriaPage() {
             <TituloSeccion className="mb-2">Dispositivos de esta categoría</TituloSeccion>
             <div className="flex flex-col">
               {dispositivos.map((dispositivo) => {
-                const estado = estadoConEtiqueta(dispositivo.estado)
                 return (
                   <Link
                     key={dispositivo.id}
@@ -178,12 +178,7 @@ export function CategoriaPage() {
                         <p className="truncate text-[12px] text-noct-neutral-500">{dispositivo.ubicacion}</p>
                       )}
                     </div>
-                    <span
-                      className={`inline-flex shrink-0 items-center gap-1.5 text-[11.5px] font-medium ${claseEstado(estado.etiqueta)}`}
-                    >
-                      <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
-                      {estado.etiqueta}
-                    </span>
+                    <PastillaEstadoDispositivo estado={dispositivo.estado} />
                   </Link>
                 )
               })}

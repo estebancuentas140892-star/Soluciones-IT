@@ -56,17 +56,23 @@ export function tipoDeNodoVisual(nombreCategoria: string): TipoNodoVisual {
   return 'generico'
 }
 
+// Tono de la pastilla de estado (tarea 207, hallazgo M-017). Es el
+// mismo vocabulario de `PastillaEstado`, declarado aquí porque esta
+// lista es la única fuente de los estados: agregar o recolorear uno
+// sigue siendo tocar un solo sitio.
+export type TonoEstado = 'exito' | 'precaucion' | 'error' | 'neutro'
+
 // Lista canónica de estados conocidos de un dispositivo (el campo
 // sigue siendo texto libre: un valor que no coincida cae a "Sin
 // estado" / gris neutro, sin romper nada). Única fuente para toda la
 // app: agregar, renombrar o recolorear un estado solo requiere tocar
 // esta lista. features/dispositivos/estados.ts reexporta
 // ESTADOS_SUGERIDOS desde aquí para el datalist del formulario.
-const ESTADOS_CONOCIDOS: { etiqueta: string; clase: string }[] = [
-  { etiqueta: 'Operativo', clase: 'text-noct-exito' },
-  { etiqueta: 'En mantenimiento', clase: 'text-noct-precaucion' },
-  { etiqueta: 'Fuera de servicio', clase: 'text-noct-error' },
-  { etiqueta: 'De baja', clase: 'text-noct-neutral-500' },
+const ESTADOS_CONOCIDOS: { etiqueta: string; clase: string; tono: TonoEstado }[] = [
+  { etiqueta: 'Operativo', clase: 'text-noct-exito', tono: 'exito' },
+  { etiqueta: 'En mantenimiento', clase: 'text-noct-precaucion', tono: 'precaucion' },
+  { etiqueta: 'Fuera de servicio', clase: 'text-noct-error', tono: 'error' },
+  { etiqueta: 'De baja', clase: 'text-noct-neutral-500', tono: 'neutro' },
 ]
 
 export const ESTADOS_SUGERIDOS = ESTADOS_CONOCIDOS.map((e) => e.etiqueta)
@@ -93,6 +99,16 @@ export function claseEstado(etiqueta: string): string {
   const texto = normalizar(etiqueta)
   const conocido = ESTADOS_CONOCIDOS.find((e) => normalizar(e.etiqueta) === texto)
   return conocido ? conocido.clase : 'text-noct-neutral-500'
+}
+
+// Tono de pastilla para la etiqueta canónica (tarea 207, hallazgo
+// M-017). Mismo criterio que `claseEstado`, que sigue existiendo para
+// los puntos de color del árbol de topología, donde una pastilla por
+// nodo sería ruido.
+export function tonoEstado(etiqueta: string): TonoEstado {
+  const texto = normalizar(etiqueta)
+  const conocido = ESTADOS_CONOCIDOS.find((e) => normalizar(e.etiqueta) === texto)
+  return conocido ? conocido.tono : 'neutro'
 }
 
 // Línea de detalle de la fila, estilo "Switch 8 puertos · Puerto 02 ·

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
+import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual, tonoEstado } from './topologiaVisual'
 
 describe('tipoDeNodoVisual', () => {
   it('reconoce las categorías iniciales reales del esquema', () => {
@@ -93,5 +93,25 @@ describe('detalleDeNodo', () => {
     expect(detalleDeNodo({ categoria: 'Switches', via: 'Fibra óptica', medio: 'fibra óptica' })).toBe(
       'Switches · Fibra óptica',
     )
+  })
+})
+
+describe('tonoEstado', () => {
+  it('da a cada estado conocido el tono de su significado', () => {
+    expect(tonoEstado('Operativo')).toBe('exito')
+    expect(tonoEstado('En mantenimiento')).toBe('precaucion')
+    expect(tonoEstado('Fuera de servicio')).toBe('error')
+    expect(tonoEstado('De baja')).toBe('neutro')
+  })
+
+  it('no distingue mayúsculas ni acentos, igual que claseEstado', () => {
+    expect(tonoEstado('OPERATIVO')).toBe('exito')
+    expect(tonoEstado('en mantenimiento')).toBe('precaucion')
+  })
+
+  it('cae a neutro con un estado escrito a mano que no está en la lista', () => {
+    expect(tonoEstado('Prestado a contabilidad')).toBe('neutro')
+    expect(tonoEstado('Sin estado')).toBe('neutro')
+    expect(tonoEstado('')).toBe('neutro')
   })
 })

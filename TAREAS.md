@@ -4,11 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-### 207. Auditoría móvil, fase 3: refinamiento y consistencia (15 hallazgos P2 y P3)
-
-- **Estado**: EN PROCESO desde el 2026-09-02. **Prioridad**: Baja (M-005 y M-030 suben a Media si el equipo reporta fallos de toque o de lectura a pleno sol). **Modelo/esfuerzo**: Sonnet 5 / Medio; la sesión corre con Opus 5, que la cubre de sobra.
-- **PARTIDA (2026-09-02).** La ficha original traía **16** hallazgos. **M-034 sale a la tarea 216**: es un cambio de vocabulario transversal que toca copy en muchas pantallas y conviene hacerlo de una pasada, con otro modelo y otro nivel de esfuerzo. Aquí quedan los **15 puntuales**.
-- **Descripción, motivo y ubicación**: los de la ficha que estaba en "Por hacer" (ver el detalle hallazgo por hallazgo en el párrafo de abajo, conservado íntegro salvo M-034).
+*(vacío: la tarea 207 se cerró el 2026-09-02. Con ella **la auditoría móvil queda cerrada salvo el vocabulario**: fase 1 (201), fase 2 (202 a 206) y fase 3 (207). Queda la tarea **216** (M-034, un solo vocabulario escrito), que salió de la 207 el mismo día, y **M-023** (desbloqueo de la Bóveda), que sigue fuera de fase esperando decisión del usuario.)*
 
 *(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
@@ -78,9 +74,11 @@ La auditoría propone **tres fases**, y se implementan como tres tareas (regla 1
 |---|---|---|---|
 | 1 | Lo que impide trabajar con el teléfono en la mano | M-010, M-011 (P0), M-014 (P0), M-001, M-015 | **201 (hecha)** |
 | 2 | Lo que hace perder tiempo todos los días | M-002, M-003, M-006, M-007, M-012, M-016*, M-018, M-019, M-021, M-026, M-029, M-032* | **202 a 206 (hechas)** |
-| 3 | Refinamiento y consistencia | M-004, M-005, M-008, M-009, M-013, M-017, M-020, M-022, M-024, M-025, M-027, M-028, M-030, M-031*, M-033, M-034 | **207** |
+| 3 | Refinamiento y consistencia | M-004, M-005, M-008, M-009, M-013†, M-017, M-020†, M-022, M-024, M-025, M-027, M-028, M-030, M-031*, M-033, M-034 | **207 (hecha)** + **216** (M-034) |
 
 *(\*) M-016, M-031 y M-032 se cerraron dentro de la fase 1: los tres caían dentro de las pantallas que se rehacían y separarlos habría obligado a tocarlas dos veces.*
+
+*(†) M-013 se cerró en la tarea 203 y M-020 en las tareas 202 y 204, así que la fase 3 no volvió sobre ellos. **M-034 salió a la tarea 216** el 2026-09-02: es un cambio de vocabulario transversal y conviene hacerlo de una pasada.*
 
 **M-023 (desbloqueo de la Bóveda) queda fuera de fase a propósito:** la auditoría lo registra con su alternativa y **no se implementa sin decisión explícita del usuario** (AD-029).
 

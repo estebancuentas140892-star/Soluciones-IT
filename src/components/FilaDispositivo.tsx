@@ -3,7 +3,8 @@ import type { Dispositivo } from '../lib/db'
 import { VALOR_TECNICO_COMPACTO } from './FilaDato'
 import { MiniaturaPortada } from './MiniaturaPortada'
 import { IconoNodo } from '../features/red/IconoNodo'
-import { claseEstado, estadoConEtiqueta, tipoDeNodoVisual } from '../features/red/topologiaVisual'
+import { tipoDeNodoVisual } from '../features/red/topologiaVisual'
+import { PastillaEstadoDispositivo } from './PastillaEstado'
 
 // Fila de un dispositivo en un listado, compartida por Dispositivos y
 // Red (Fase 1 de PROPUESTA_REVISION_ARQUITECTURA.md): avatar (foto del
@@ -29,7 +30,6 @@ export function FilaDispositivo({
   // distingue un switch de un access point de un vistazo.
   conFoto?: boolean
 }) {
-  const estado = estadoConEtiqueta(dispositivo.estado)
   return (
     <Link
       to={`/dispositivos/${dispositivo.id}`}
@@ -55,12 +55,13 @@ export function FilaDispositivo({
         <p className="truncate text-[12px] text-noct-neutral-500">{subtitulo}</p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-[3px]">
-        <span
-          className={`inline-flex items-center gap-1.5 text-[11.5px] font-medium ${claseEstado(estado.etiqueta)}`}
-        >
-          <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
-          {estado.etiqueta}
-        </span>
+        {/* Una sola forma para el estado (tarea 207, hallazgo M-017,
+            cierra CAND-1): la misma pastilla de contorno que ya usaban
+            "Borrador" y "Obsoleto" en Guías. Antes esta fila lo dibujaba
+            como punto de color más texto teñido y la ficha del equipo
+            como pastilla con punto: el mismo dato cambiaba de forma al
+            cambiar de pantalla. */}
+        <PastillaEstadoDispositivo estado={dispositivo.estado} />
         {/* Piso del dato técnico (M-R5): la IP era 11 px monoespaciado en
             `noct-neutral-600`, unos 3,9:1 de contraste, el texto más
             pequeño de toda la app justo para el dato que más se busca de

@@ -33,6 +33,13 @@ export function PantallaMas() {
 
   const ubicaciones = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
   const personas = useLiveQuery(() => db.personas.filter((p) => !p.eliminadoEn).toArray(), [], [])
+  const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).count(), [])
+  // Sin permiso de bóveda la tabla local ni siquiera se sincroniza (RLS),
+  // así que contar sobre ella da 0 y la fila tampoco se muestra.
+  const credenciales = useLiveQuery(
+    () => db.credenciales.filter((c) => !c.eliminadoEn).count(),
+    [],
+  )
   const bloqueo = useLiveQuery(async () => (await db.seguridadApp.get(ID_BLOQUEO_APP)) ?? null, [])
 
   return (
@@ -44,38 +51,57 @@ export function PantallaMas() {
           {usuario?.puedeVerBoveda && (
             <section>
               <TituloGrupo>Consulta protegida</TituloGrupo>
-              <FilaDestacada to="/boveda" Icono={Vault} titulo="Bóveda" subtitulo="Claves y credenciales del equipo" />
+              <FilaDestacada
+                to="/boveda"
+                Icono={Vault}
+                titulo="Bóveda"
+                subtitulo="Claves y credenciales del equipo"
+                conteo={credenciales ?? null}
+              />
             </section>
           )}
 
+          {/* ORDENADO POR DÓNDE SE USA (tarea 207, hallazgos M-024 y
+              M-025, regla M-R10, mockup `7b`). "Herramientas" y
+              "Registros" eran dos grupos que decían de qué TIPO era cada
+              destino, no dónde sirve, así que "Importar" (carga masiva
+              desde Excel) pesaba lo mismo que "Escanear", que solo
+              existe con el teléfono en la mano. Ahora los dos grupos se
+              funden en uno y lo de ordenador baja al final, con la nota
+              escrita: no se esconde nada, se ordena. */}
           <section>
-            <TituloGrupo>Herramientas</TituloGrupo>
+            <TituloGrupo>Aquí, con el equipo delante</TituloGrupo>
             <div className="flex flex-col divide-y divide-noct-divider">
+              <Fila to="/escaner" Icono={QrCode} titulo="Escanear equipo" subtitulo="Abre la ficha por código QR" />
               <Fila
                 to="/diagnostico"
                 Icono={TreeStructure}
                 titulo="Diagnóstico"
                 subtitulo="Del síntoma a la guía, paso a paso"
+                conteo={diagnosticos ?? null}
               />
-              <Fila to="/escaner" Icono={QrCode} titulo="Escanear equipo" subtitulo="Abre la ficha por código QR" />
-            </div>
-          </section>
-
-          <section>
-            <TituloGrupo>Registros</TituloGrupo>
-            <div className="flex flex-col divide-y divide-noct-divider">
               <Fila
                 to="/ubicaciones"
                 Icono={MapPin}
                 titulo="Ubicaciones"
-                subtitulo={`Sedes, salas y racks${ubicaciones ? ` · ${ubicaciones.length}` : ''}`}
+                subtitulo="Sedes, salas y racks"
+                conteo={ubicaciones.length}
               />
               <Fila
                 to="/personas"
                 Icono={UsersThree}
                 titulo="Personas"
-                subtitulo={`Responsables de cada equipo${personas ? ` · ${personas.length}` : ''}`}
+                subtitulo="Responsables de cada equipo"
+                conteo={personas.length}
               />
+            </div>
+          </section>
+
+          <section>
+            <TituloGrupo nota="Se puede hacer aquí, pero pide teclado y pantalla grande.">
+              Mejor desde el ordenador
+            </TituloGrupo>
+            <div className="flex flex-col divide-y divide-noct-divider">
               <Fila
                 to="/dispositivos/etiquetas"
                 Icono={QrCode}
@@ -85,8 +111,8 @@ export function PantallaMas() {
               <Fila
                 to="/dispositivos/importar"
                 Icono={UploadSimple}
-                titulo="Importar"
-                subtitulo="Carga masiva de equipos desde Excel o CSV"
+                titulo="Importar equipos"
+                subtitulo="Carga masiva desde Excel o CSV"
               />
             </div>
           </section>
@@ -135,11 +161,28 @@ export function PantallaMas() {
   )
 }
 
-function TituloGrupo({ children }: { children: ReactNode }) {
+function TituloGrupo({ children, nota }: { children: ReactNode; nota?: string }) {
   return (
-    <h2 className="mb-1.5 px-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-400">
-      {children}
-    </h2>
+    <div className="mb-1.5 px-0.5">
+      <h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-400">
+        {children}
+      </h2>
+      {/* La nota dice POR QUÉ este grupo va al final, en vez de dejar
+          que el técnico lo interprete como "menos importante". */}
+      {nota && <p className="mt-1 text-[12px] leading-normal text-noct-neutral-500">{nota}</p>}
+    </div>
+  )
+}
+
+// EL CONTEO VA A LA DERECHA (tarea 207, hallazgo M-025). Iba pegado al
+// final del subtítulo ("Sedes, salas y racks · 12"), así que se leía
+// como parte de la descripción y no se podía comparar de un vistazo
+// entre filas. A la derecha, antes del galón, queda en la misma ranura
+// que en Guías y Equipos y las cifras se alinean solas.
+function ConteoFila({ valor }: { valor: number | null }) {
+  if (valor === null) return null
+  return (
+    <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-400">{valor}</span>
   )
 }
 
@@ -148,11 +191,13 @@ function Fila({
   Icono,
   titulo,
   subtitulo,
+  conteo = null,
 }: {
   to: string
   Icono: (props: IconoProps) => React.JSX.Element
   titulo: string
   subtitulo: string
+  conteo?: number | null
 }) {
   return (
     <Link
@@ -166,6 +211,7 @@ function Fila({
         <span className="block text-[15px] font-medium leading-[1.3]">{titulo}</span>
         <span className="mt-0.5 block truncate text-[12px] text-noct-neutral-400">{subtitulo}</span>
       </span>
+      <ConteoFila valor={conteo} />
       <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
     </Link>
   )
@@ -180,11 +226,13 @@ function FilaDestacada({
   Icono,
   titulo,
   subtitulo,
+  conteo = null,
 }: {
   to: string
   Icono: (props: IconoProps) => React.JSX.Element
   titulo: string
   subtitulo: string
+  conteo?: number | null
 }) {
   return (
     <Link
@@ -198,6 +246,7 @@ function FilaDestacada({
         <span className="block text-[15px] font-medium leading-[1.3]">{titulo}</span>
         <span className="mt-0.5 block text-[12px] text-noct-neutral-300">{subtitulo}</span>
       </span>
+      <ConteoFila valor={conteo} />
       <CaretRight size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
     </Link>
   )

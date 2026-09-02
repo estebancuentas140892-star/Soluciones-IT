@@ -116,6 +116,10 @@ export function DiagnosticoRunPage() {
   const esFinal = progreso?.estado.tipo === 'final'
   const porcentaje = progreso ? porcentajeDiagnostico(nodos, progreso.camino, progreso.estado) : 0
   const etiquetaProgreso = esFinal ? 'Completado' : `Pregunta ${(progreso?.camino.length ?? 0) + 1}`
+  // Última respuesta dada, para la línea que la muestra y permite
+  // volver a ella. En el resultado final no se ofrece: ahí el camino
+  // completo ya está escrito, y retroceder no tendría sentido.
+  const ultimaRespuesta = esFinal ? null : (progreso?.camino.at(-1) ?? null)
 
   return (
     // Nivel 3 del chasis (tarea 185): tarea con salida. La X guarda el
@@ -130,17 +134,14 @@ export function DiagnosticoRunPage() {
       alSalir={() => void salir()}
       barra={
         <>
-          <div className="flex justify-end px-3 pb-1">
-            <Link
-              to={`/diagnostico/${diagnosticoId}/editar`}
-              aria-label="Editar diagnóstico"
-              className="flex shrink-0 rounded-md p-1.5 text-noct-neutral-500 hover:bg-noct-text/5 hover:text-noct-text"
-            >
-              <PencilSimple size={15} aria-hidden />
-            </Link>
-          </div>
+          {/* SIN LÁPIZ AQUÍ (tarea 207, hallazgo M-028, regla M-R10). El
+              "Editar diagnóstico" vivía dentro del modo ejecución con un
+              objetivo de unos 27 px: autoría en mitad de una ejecución,
+              y por debajo del mínimo de toque. Editar se ofrece donde
+              tiene sentido: en la lista de diagnósticos y en la pantalla
+              de resultado, con el camino recorrido delante. */}
           {progreso && (
-            <div className="flex items-center gap-2.5 px-4 pb-3">
+            <div className="flex items-center gap-2.5 px-4 pb-2">
               <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-neutral-900">
                 <span
                   className={`block h-full rounded-full transition-[width] duration-200 ease-out ${
@@ -151,6 +152,32 @@ export function DiagnosticoRunPage() {
               </span>
               <span className="shrink-0 text-[11.5px] text-noct-neutral-500">{etiquetaProgreso}</span>
             </div>
+          )}
+          {/* LO QUE RESPONDISTE ANTES, A LA VISTA (tarea 207, hallazgo
+              M-027). Durante la sesión el camino recorrido no se veía:
+              aparecía solo al final, así que al dudar de una respuesta
+              anterior había que retroceder A CIEGAS. Esta línea dice la
+              última pregunta con su respuesta y lleva de vuelta a ella.
+
+              SUSTITUYE al icono "Atrás" que la tarea 205 puso junto a la
+              pregunta: hacían exactamente lo mismo y tener dos formas
+              para la misma acción es lo que prohíbe R61. La separación
+              que pedía M-R12 se conserva, y mejor: lo reversible vive
+              arriba, pegado al progreso y NOMBRANDO su destino; lo
+              irreversible sigue al pie, en texto y fuera del pulgar. */}
+          {ultimaRespuesta && (
+            <button
+              type="button"
+              onClick={() => void volverAtras(diagnosticoId)}
+              aria-label={`Volver a la pregunta anterior: ${ultimaRespuesta.pregunta}. Respondiste: ${ultimaRespuesta.etiqueta}`}
+              className="flex min-h-11 w-full items-center gap-2 px-4 pb-2.5 text-left hover:bg-noct-text/[.04]"
+            >
+              <ArrowLeft size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-[12.5px] leading-normal">
+                <span className="text-noct-neutral-500">{ultimaRespuesta.pregunta}: </span>
+                <span className="font-medium text-noct-neutral-300">{ultimaRespuesta.etiqueta}</span>
+              </span>
+            </button>
           )}
         </>
       }
@@ -204,31 +231,17 @@ function Sesion({
   onConfirmarCancelar: (valor: boolean) => void
   onCerrar: (resuelto: 'si' | 'no' | 'abandonado', motivo?: MotivoNoResuelto, solucionPropuesta?: string) => void
 }) {
-  const { estado, camino } = progreso
+  const { estado } = progreso
 
   const nodoActual =
     estado.tipo === 'pregunta' ? nodos.find((n) => n.id === estado.nodoId) ?? null : null
 
   return (
     <div className="flex flex-col gap-[18px]">
-      {/* "Atrás" junto a la pregunta, como icono (hallazgo M-026, regla
-          M-R12): antes compartía fila, tamaño y estilo fantasma con
-          "Cancelar", las dos a 13 px en la zona del pulgar, y un toque
-          8 px de diferencia entre "retrocede una pregunta" y "descarta
-          el diagnóstico y lo registra como abandono" no se distinguía
-          en la forma. Volver SÍ es reversible, así que se queda arriba,
-          junto al contenido; lo irreversible se aparta más abajo. */}
-      {estado.tipo !== 'final' && camino.length > 0 && (
-        <button
-          type="button"
-          onClick={() => void volverAtras(diagnosticoId)}
-          aria-label="Volver a la pregunta anterior"
-          title="Atrás"
-          className="flex h-11 w-11 shrink-0 items-center justify-center self-start rounded-lg text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text"
-        >
-          <ArrowLeft size={17} aria-hidden />
-        </button>
-      )}
+      {/* El "Atrás" de la tarea 205 (hallazgo M-026) subió a la banda
+          de progreso en la tarea 207, convertido en la línea que dice a
+          qué respuesta se vuelve (hallazgo M-027). Aquí no queda nada:
+          dos controles para la misma acción es lo que prohíbe R61. */}
 
       {estado.tipo === 'pregunta' && !nodoActual && (
         // El diagnóstico se editó a mitad de una sesión y la pregunta
@@ -288,7 +301,9 @@ function Sesion({
         />
       )}
 
-      {estado.tipo === 'final' && <Resultado progreso={progreso} onCerrar={onCerrar} />}
+      {estado.tipo === 'final' && (
+        <Resultado progreso={progreso} diagnosticoId={diagnosticoId} onCerrar={onCerrar} />
+      )}
 
       {/* "Cancelar" deja de ser un botón (hallazgo M-026, regla M-R12:
           lo irreversible no comparte forma con lo reversible). Pasa a
@@ -439,9 +454,11 @@ const ICONO_MOTIVO: Record<MotivoConcreto, (props: IconoProps) => React.JSX.Elem
 // equipo cuando el motivo es "encontré otra solución".
 function Resultado({
   progreso,
+  diagnosticoId,
   onCerrar,
 }: {
   progreso: ProgresoDiagnostico
+  diagnosticoId: string
   onCerrar: (resuelto: 'si' | 'no', motivo?: MotivoNoResuelto, solucionPropuesta?: string) => void
 }) {
   const { estado, camino, articulosEjecutados } = progreso
@@ -483,6 +500,17 @@ function Resultado({
               Procedimientos ejecutados: {articulosEjecutados.map((a) => a.titulo).join(', ')}
             </p>
           )}
+          {/* Editar, aquí sí (tarea 207, hallazgo M-028, regla M-R10):
+              con el camino recorrido delante es cuando el técnico sabe
+              qué pregunta faltaba o cuál sobraba. La ejecución ya no
+              ofrece esta puerta. */}
+          <Link
+            to={`/diagnostico/${diagnosticoId}/editar`}
+            className="mt-3 inline-flex min-h-11 items-center gap-2 text-[13px] font-medium text-noct-accent-300"
+          >
+            <PencilSimple size={15} aria-hidden />
+            Editar este diagnóstico
+          </Link>
         </section>
       )}
 

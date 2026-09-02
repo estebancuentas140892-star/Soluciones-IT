@@ -4,7 +4,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
-import { CaretDown, Info, MagnifyingGlass, Play, Plus, XCircleFill } from '../../components/iconos'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { CaretDown, Info, Play, Plus } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
@@ -107,15 +108,6 @@ export function SolucionesPage() {
   // una fila por procedimiento empezado.
   const progresos = useLiveQuery(() => db.progresoPasos.toArray(), [], [])
 
-  // Conteo de articulos por categoria para los chips ("N").
-  const conteos = useMemo(() => {
-    const mapa = new Map<string, number>()
-    for (const articulo of articulos) {
-      mapa.set(articulo.categoriaId, (mapa.get(articulo.categoriaId) ?? 0) + 1)
-    }
-    return mapa
-  }, [articulos])
-
   const nombreCat = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias])
   const ordenCat = useMemo(() => new Map(categorias.map((c, i) => [c.id, i])), [categorias])
   const categoriaActiva = categoriaSel ? categorias.find((c) => c.id === categoriaSel) : undefined
@@ -123,28 +115,6 @@ export function SolucionesPage() {
   const consultaCruda = query.trim()
   const consulta = normalizarTexto(consultaCruda)
   const buscando = consultaCruda.length > 0
-
-  const chips = useMemo<Chip[]>(
-    () => [
-      {
-        id: null,
-        nombre: 'Todos',
-        count: articulos.length,
-        Icono: null,
-        claseActiva: null,
-        claseTexto: null,
-      },
-      ...categorias.map((c) => ({
-        id: c.id,
-        nombre: c.nombre,
-        count: conteos.get(c.id) ?? 0,
-        Icono: iconoDeCategoria(c.nombre),
-        claseActiva: claseActivaDeCategoria(c),
-        claseTexto: claseTextoDeCategoria(c),
-      })),
-    ],
-    [articulos.length, categorias, conteos],
-  )
 
   // Tipos presentes en lo que se está mirando, con su conteo, para la hoja
   // del segundo eje. A diferencia de la versión anterior, el eje de tipo
@@ -199,6 +169,54 @@ export function SolucionesPage() {
     }
     return mapa
   }, [articulos, buscando, consulta, nombreCat])
+
+  // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022). Antes el
+  // número iba sobre la biblioteca entera, así que buscando "switch" un
+  // chip podía prometer "CCTV 12" y al tocarlo dar cero. Ahora se cuenta
+  // sobre el ALCANCE VISIBLE: lo que dejan los demás filtros activos
+  // (la búsqueda, la etiqueta, el tipo), sin aplicar el propio eje de
+  // categoría, que es lo que el chip decide. Es el criterio que ya usaba
+  // la hoja del segundo eje.
+  const alcanceChips = useMemo(() => {
+    return articulos.filter((articulo) => {
+      if (buscando) return coincidencias.has(articulo.id)
+      if (etiquetaSel) {
+        const clave = normalizarTexto(etiquetaSel)
+        return (articulo.etiquetas ?? []).some((e) => normalizarTexto(e) === clave)
+      }
+      return !tipoSel || articulo.tipo === tipoSel
+    })
+  }, [articulos, buscando, coincidencias, etiquetaSel, tipoSel])
+
+  const conteos = useMemo(() => {
+    const mapa = new Map<string, number>()
+    for (const articulo of alcanceChips) {
+      mapa.set(articulo.categoriaId, (mapa.get(articulo.categoriaId) ?? 0) + 1)
+    }
+    return mapa
+  }, [alcanceChips])
+
+  const chips = useMemo<Chip[]>(
+    () => [
+      {
+        id: null,
+        nombre: 'Todos',
+        count: alcanceChips.length,
+        Icono: null,
+        claseActiva: null,
+        claseTexto: null,
+      },
+      ...categorias.map((c) => ({
+        id: c.id,
+        nombre: c.nombre,
+        count: conteos.get(c.id) ?? 0,
+        Icono: iconoDeCategoria(c.nombre),
+        claseActiva: claseActivaDeCategoria(c),
+        claseTexto: claseTextoDeCategoria(c),
+      })),
+    ],
+    [alcanceChips.length, categorias, conteos],
+  )
 
   // Filtrado. Al buscar manda el término, acotado a la categoría solo si
   // el técnico lo pidió con "Solo ahí"; si hay una etiqueta activa (y no
@@ -363,7 +381,13 @@ export function SolucionesPage() {
     // `barra` quedan solo los controles propios de la sección: frescura,
     // "Crear", el buscador de artículos y UN solo eje de filtro visible
     // (categorías) más el botón que plega el segundo.
-    <Chasis titulo="Guías" barra={
+    // `conLupa={false}` (regla M-R8, "un buscador por pantalla", tarea
+    // 207): esta pantalla ya tiene su propio campo con el alcance
+    // escrito, así que la lupa de la barra superior sería el segundo
+    // buscador de la misma pantalla y con otro alcance. La duda que
+    // midió la auditoría era exactamente esa: "¿esto busca en todo o
+    // solo aquí?". Buscar en todo sigue a un toque, desde Inicio.
+    <Chasis titulo="Guías" conLupa={false} barra={
       <>
         <header className="flex items-center justify-between gap-2.5 px-4 pb-2 pt-1">
           <PastillaFrescura total={articulos.length} singular="artículo" plural="artículos" />
@@ -371,37 +395,11 @@ export function SolucionesPage() {
         </header>
 
         <div className="px-4 pb-2.5">
-          <label
-            className={`flex h-[46px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
-              buscando ? 'border-noct-accent' : 'border-noct-divider'
-            }`}
-          >
-            <MagnifyingGlass
-              size={18}
-              className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-400'}`}
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar equipo, síntoma o etiqueta"
-              aria-label="Buscar artículos"
-              className="sol-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
-            />
-            {buscando && (
-              // 44 px reales (R6): antes eran 26 y era el control que más
-              // se falla, porque se usa con el teclado abierto.
-              <button
-                type="button"
-                onClick={limpiarQuery}
-                aria-label="Borrar búsqueda"
-                className="-mr-3 flex h-11 w-11 shrink-0 items-center justify-center text-noct-neutral-300 hover:text-noct-text"
-              >
-                <XCircleFill size={18} aria-hidden />
-              </button>
-            )}
-          </label>
+          <CampoBusqueda
+            valor={query}
+            onCambiar={(v) => (v ? setQuery(v) : limpiarQuery())}
+            alcance="Guías"
+          />
         </div>
 
         {!buscando && (

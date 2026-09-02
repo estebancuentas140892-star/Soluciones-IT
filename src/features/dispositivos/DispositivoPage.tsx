@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
+import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { dependenciasDeBaja, sinDependencias } from './baja'
 import { completitudDispositivo, pasosSiguientes, type PasoSiguiente } from './completitud'
 import { compartirOCopiar } from '../../lib/portapapeles'
@@ -56,7 +57,7 @@ import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { useImpactoEquipo } from '../red/useImpactoEquipo'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { IconoNodo } from '../red/IconoNodo'
-import { estadoConEtiqueta, tipoDeNodoVisual } from '../red/topologiaVisual'
+import { tipoDeNodoVisual } from '../red/topologiaVisual'
 import { esDeRed } from '../../lib/categorias'
 import { procedimientosDeCategoria, procedimientosDeDispositivo } from './procedimientosDeDispositivo'
 import { problemasDeCategoria, problemasDeDispositivo } from './problemasDeDispositivo'
@@ -82,17 +83,6 @@ function fechaCorta(iso: string): string {
 // Pastilla de estado en Nocturne (mismo criterio de color que la lista,
 // tarea 85): operativo verde, mantenimiento ámbar, fuera de servicio
 // rojo, de baja/otro neutro. Se indexa por la etiqueta canónica.
-const PILL_ESTADO: Record<string, string> = {
-  operativo: 'border-noct-exito/40 bg-noct-exito/10 text-noct-exito',
-  'en mantenimiento': 'border-noct-precaucion/40 bg-noct-precaucion/10 text-noct-precaucion',
-  'fuera de servicio': 'border-noct-error/40 bg-noct-error/10 text-noct-error',
-  'de baja': 'border-noct-neutral-500/40 bg-noct-neutral-500/10 text-noct-neutral-400',
-}
-
-function pillEstado(etiqueta: string): string {
-  return PILL_ESTADO[etiqueta.toLowerCase()] ?? PILL_ESTADO['de baja']
-}
-
 // Ficha de un dispositivo re-autorizada al sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Ficha de Dispositivo.dc.html):
 // cabecera con regreso contextual, compartir y menú "···" (duplicar,
@@ -276,7 +266,6 @@ export function DispositivoPage() {
   const reemplazaNombre = reemplazaVinculado?.nombre ?? null
 
   const detalles = Object.entries(dispositivo.detalles).filter(([, valor]) => valor)
-  const estado = dispositivo.estado ? estadoConEtiqueta(dispositivo.estado) : null
   const metaLinea = [categoria?.nombre, `actualizado ${fechaCorta(dispositivo.updatedAt)}`]
     .filter(Boolean)
     .join(' · ')
@@ -456,14 +445,9 @@ export function DispositivoPage() {
                   {marcaModelo || metaLinea}
                 </span>
               </span>
-              {estado && (
-                <span
-                  className={`inline-flex min-h-[26px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[11.5px] font-medium ${pillEstado(estado.etiqueta)}`}
-                >
-                  <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
-                  {estado.etiqueta}
-                </span>
-              )}
+              {/* La misma pastilla que la fila (tarea 207, M-017). La
+                  ficha tenía la suya, con punto y borde propios. */}
+              {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} />}
             </div>
 
             {dispositivo.ip && (

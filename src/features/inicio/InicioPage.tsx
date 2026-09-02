@@ -8,6 +8,7 @@ import { Chasis } from '../../app/Chasis'
 import { BarraReanudar } from '../../components/BarraReanudar'
 import { DescargarOffline } from '../../components/DescargarOffline'
 import { SeccionPlegable } from '../../components/SeccionPlegable'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   CaretDown,
   CaretRight,
@@ -17,7 +18,6 @@ import {
   Lightbulb,
   LockSimple,
   MagnifyingGlass,
-  Monitor,
   PencilSimple,
   Plus,
   QrCode,
@@ -25,7 +25,6 @@ import {
   TreeStructure,
   UsersThree,
   WarningCircle,
-  XCircleFill,
 } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
@@ -180,35 +179,11 @@ export function InicioPage() {
       conLupa={false}
       barra={
         <div className="px-4 pb-3 pt-2">
-          <label
-            className={`flex h-[46px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
-              buscando ? 'border-noct-accent' : 'border-noct-divider'
-            }`}
-          >
-            <MagnifyingGlass
-              size={18}
-              className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-400'}`}
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar en Guías, Equipos y Bóveda"
-              aria-label="Buscar en todo el conocimiento del equipo"
-              className="ini-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-400"
-            />
-            {buscando && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                aria-label="Borrar búsqueda"
-                className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
-              >
-                <XCircleFill size={18} aria-hidden />
-              </button>
-            )}
-          </label>
+          <CampoBusqueda
+            valor={query}
+            onCambiar={setQuery}
+            alcance="Guías, Equipos y Bóveda"
+          />
         </div>
       }
     >
@@ -273,18 +248,18 @@ export function InicioPage() {
                 detalle="Del síntoma a la guía"
               />
               <AtajoRapido to="/escaner" Icono={QrCode} titulo="Escanear" detalle="Ficha por QR" />
-              {/* "Registrar equipo" sigue aquí a propósito: retirarlo es
-                  el hallazgo M-008, que pertenece a la tarea 207 y trae
-                  su propia condición (que el alta viva tras un escaneo
-                  sin coincidencia). Adelantarlo aquí dejaría el alta sin
-                  puerta durante toda la fase. */}
-              <AtajoRapido
-                to="/dispositivos/nuevo"
-                Icono={Monitor}
-                titulo="Registrar equipo"
-                detalle="Dar de alta un equipo nuevo"
-                className="col-span-2"
-              />
+              {/* DOS ATAJOS, NO TRES (tarea 207, hallazgo M-008, regla
+                  M-R10). "Registrar equipo" ocupaba una fila entera de
+                  esta rejilla, en un dispositivo cuyo criterio es la
+                  consulta: daba protagonismo a un alta que se hace mejor
+                  en el ordenador. Los dos que quedan solo existen aquí,
+                  con el teléfono en la mano.
+
+                  El alta NO se pierde, se queda donde tiene contexto:
+                  tras un escaneo sin coincidencia (`EscanerPage` ofrece
+                  "/dispositivos/nuevo?serial=" con el código ya leído),
+                  en el "Crear" de Equipos y de Red, y en el vacío del
+                  buscador global, que precarga el nombre buscado. */}
             </div>
 
             {/* BLOQUE 4 · "Te toca a ti": lo único con fila de ACCIÓN.

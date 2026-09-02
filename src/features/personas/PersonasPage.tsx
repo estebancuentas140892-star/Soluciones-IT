@@ -2,7 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
-import { ArrowElbowDownRight, CaretRight, MagnifyingGlass, Plus, User, XCircleFill } from '../../components/iconos'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { ArrowElbowDownRight, CaretRight, Plus, User } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -89,35 +90,11 @@ export function PersonasPage() {
             <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">Quién tiene asignado cada equipo</p>
           </div>
           <div className="px-4 pb-3">
-            <label
-              className={`flex h-11 items-center gap-2.5 rounded-md border bg-noct-surface px-3.5 transition-colors ${
-                hayFiltro ? 'border-noct-accent' : 'border-noct-divider'
-              }`}
-            >
-              <MagnifyingGlass
-                size={18}
-                className={`shrink-0 ${hayFiltro ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={filtro}
-                onChange={(e) => setFiltro(e.target.value)}
-                placeholder="Buscar una persona"
-                aria-label="Buscar persona"
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500 [&::-webkit-search-cancel-button]:hidden"
-              />
-              {hayFiltro && (
-                <button
-                  type="button"
-                  onClick={() => setFiltro('')}
-                  aria-label="Borrar búsqueda"
-                  className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
-                >
-                  <XCircleFill size={18} aria-hidden />
-                </button>
-              )}
-            </label>
+            <CampoBusqueda
+              valor={filtro}
+              onCambiar={setFiltro}
+              alcance="Personas"
+            />
           </div>
         </>
       }

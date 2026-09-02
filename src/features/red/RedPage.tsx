@@ -6,9 +6,10 @@ import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { IconoNodo } from './IconoNodo'
+import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { NodoRed } from './NodoRed'
 import { nodoInicial } from './nodoDeRed'
-import { claseEstado, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
+import { tipoDeNodoVisual } from './topologiaVisual'
 import { useNodoRed, useRedCargada } from './useNodoRed'
 
 // La pestaña Red abre con el NODO, no con la lista (hallazgo M-018 de
@@ -50,7 +51,6 @@ export function RedPage() {
   const nodo = useNodoRed(idNodo, red)
 
   const equipo = nodo.equipo
-  const estado = equipo ? estadoConEtiqueta(equipo.estado) : null
   const categoria = equipo ? (red.nombreCategoria.get(equipo.categoriaId) ?? '') : ''
   const totalEquiposRed = useMemo(
     () => red.dispositivos.filter((d) => red.idsRed.has(d.categoriaId)).length,
@@ -104,12 +104,7 @@ export function RedPage() {
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate text-[16.5px] font-medium leading-[1.25]">{equipo.nombre}</h2>
                   <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-noct-neutral-500">
-                    {estado && (
-                      <span className={`inline-flex items-center gap-1.5 ${claseEstado(estado.etiqueta)}`}>
-                        <span className="h-[7px] w-[7px] rounded-full bg-current" />
-                        {estado.etiqueta}
-                      </span>
-                    )}
+                    {equipo.estado && <PastillaEstadoDispositivo estado={equipo.estado} />}
                     {equipo.ip && (
                       <>
                         <span className="text-noct-neutral-600">·</span>

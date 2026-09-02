@@ -6,16 +6,15 @@ import { Chasis } from '../../app/Chasis'
 import { idsDeRed, esDeRed } from '../../lib/categorias'
 import { incluyeTexto } from '../../lib/texto'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   DotsThreeOutline,
-  MagnifyingGlass,
   MapPin,
   Monitor,
   Plus,
   QrCode,
   UploadSimple,
   User,
-  XCircleFill,
 } from '../../components/iconos'
 import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { estadoConEtiqueta } from '../red/topologiaVisual'
@@ -70,13 +69,21 @@ export function DispositivosPage() {
     })
   }, [generales, categoriaId, texto])
 
-  // Conteo de equipos por categoría para los chips ("N"), sobre el
-  // inventario general completo (no sobre el filtro actual).
+  // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022). El
+  // conteo iba sobre el inventario general completo, así que con el
+  // buscador escrito el número prometía resultados que el filtro no
+  // podía dar. Ahora va sobre el ALCANCE VISIBLE: lo que deja la
+  // búsqueda, sin aplicar el propio eje de categoría.
+  const alcanceChips = useMemo(
+    () => generales.filter((d) => incluyeTexto([d.nombre, d.ip, d.ubicacion, d.serial], texto)),
+    [generales, texto],
+  )
+
   const conteoPorCategoria = useMemo(() => {
     const mapa = new Map<string, number>()
-    for (const d of generales) mapa.set(d.categoriaId, (mapa.get(d.categoriaId) ?? 0) + 1)
+    for (const d of alcanceChips) mapa.set(d.categoriaId, (mapa.get(d.categoriaId) ?? 0) + 1)
     return mapa
-  }, [generales])
+  }, [alcanceChips])
 
   const resumen = useMemo(
     () => ({
@@ -92,7 +99,6 @@ export function DispositivosPage() {
     [generales],
   )
 
-  const buscando = texto.trim().length > 0
   const hayFiltrosActivos = Boolean(categoriaId || texto)
   const hayResultados = filtrados.length > 0
 
@@ -106,7 +112,13 @@ export function DispositivosPage() {
     // estado del dato, buscar y la cuenta los aporta el chasis (tarea
     // 181); en `barra` quedan las acciones propias de la sección, el
     // buscador de equipos y la fila de chips deslizable.
-    <Chasis titulo="Equipos" barra={
+    // `conLupa={false}` (regla M-R8, "un buscador por pantalla", tarea
+    // 207): esta pantalla ya tiene su propio campo con el alcance
+    // escrito, así que la lupa de la barra superior sería el segundo
+    // buscador de la misma pantalla y con otro alcance. La duda que
+    // midió la auditoría era exactamente esa: "¿esto busca en todo o
+    // solo aquí?". Buscar en todo sigue a un toque, desde Inicio.
+    <Chasis titulo="Equipos" conLupa={false} barra={
       <>
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
@@ -174,40 +186,16 @@ export function DispositivosPage() {
         )}
 
         <div className="px-4 pb-2.5 pt-2">
-          <label
-            className={`flex h-11 items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
-              buscando ? 'border-noct-accent' : 'border-noct-divider'
-            }`}
-          >
-            <MagnifyingGlass
-              size={18}
-              className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Nombre, IP, serial o ubicación"
-              aria-label="Buscar equipos"
-              className="dis-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
-            />
-            {buscando && (
-              <button
-                type="button"
-                onClick={() => setTexto('')}
-                aria-label="Borrar búsqueda"
-                className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
-              >
-                <XCircleFill size={18} aria-hidden />
-              </button>
-            )}
-          </label>
+          <CampoBusqueda
+            valor={texto}
+            onCambiar={setTexto}
+            alcance="Equipos"
+          />
         </div>
 
         {categoriasGenerales.length > 0 && (
           <div className="flex gap-2 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[{ id: '', nombre: 'Todos', count: generales.length }, ...categoriasGenerales.map((c) => ({
+            {[{ id: '', nombre: 'Todos', count: alcanceChips.length }, ...categoriasGenerales.map((c) => ({
               id: c.id,
               nombre: c.nombre,
               count: conteoPorCategoria.get(c.id) ?? 0,

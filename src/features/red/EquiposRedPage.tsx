@@ -6,7 +6,8 @@ import { Chasis } from '../../app/Chasis'
 import { esDeRed } from '../../lib/categorias'
 import { incluyeTexto } from '../../lib/texto'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
-import { MagnifyingGlass, MapPin, Plus, TreeStructure, XCircleFill } from '../../components/iconos'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { MapPin, Plus, TreeStructure } from '../../components/iconos'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { agruparPorUbicacion } from './grupoUbicacion'
 
@@ -90,36 +91,12 @@ export function EquiposRedPage() {
           </header>
 
           <div className="px-4 pb-2.5 pt-2">
-            <label
-              className={`flex h-11 items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
-                buscando ? 'border-noct-accent' : 'border-noct-divider'
-              }`}
-            >
-              <MagnifyingGlass
-                size={18}
-                className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
-                aria-hidden
-              />
-              <input
-                ref={refBuscador}
-                type="search"
-                value={texto}
-                onChange={(e) => setTexto(e.target.value)}
-                placeholder="Equipo de red, IP, ubicación"
-                aria-label="Buscar equipo de red"
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500 [&::-webkit-search-cancel-button]:hidden"
-              />
-              {buscando && (
-                <button
-                  type="button"
-                  onClick={() => setTexto('')}
-                  aria-label="Borrar búsqueda"
-                  className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
-                >
-                  <XCircleFill size={18} aria-hidden />
-                </button>
-              )}
-            </label>
+            <CampoBusqueda
+              valor={texto}
+              onCambiar={setTexto}
+              alcance="Equipos de red"
+              refCampo={refBuscador}
+            />
           </div>
         </>
       }

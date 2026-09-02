@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { idsDeRed } from '../../lib/categorias'
-import { CaretDown, CaretRight, MagnifyingGlass, TreeStructure, XCircleFill } from '../../components/iconos'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { CaretDown, CaretRight, TreeStructure } from '../../components/iconos'
 import { BTN_GHOST } from '../../components/nocturne'
 import { construirBosque, contarDescendientes, type NodoTopologia } from './arbol'
 import { IconoNodo } from './IconoNodo'
@@ -132,35 +133,11 @@ export function TopologiaPage() {
         </div>
         {hayContenido && (
           <div className="px-4 pb-2.5">
-            <label
-              className={`flex h-[42px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
-                buscando ? 'border-noct-accent' : 'border-noct-divider'
-              }`}
-            >
-              <MagnifyingGlass
-                size={17}
-                className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar un equipo en el mapa"
-                aria-label="Buscar un equipo en el mapa"
-                className="min-w-0 flex-1 bg-transparent text-[14.5px] text-noct-text outline-none placeholder:text-noct-neutral-500 [&::-webkit-search-cancel-button]:hidden"
-              />
-              {buscando && (
-                <button
-                  type="button"
-                  onClick={() => setBusqueda('')}
-                  aria-label="Borrar búsqueda"
-                  className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
-                >
-                  <XCircleFill size={17} aria-hidden />
-                </button>
-              )}
-            </label>
+            <CampoBusqueda
+              valor={busqueda}
+              onCambiar={setBusqueda}
+              alcance="el mapa"
+            />
           </div>
         )}
         <div className="flex items-center gap-3.5 px-4 pb-2.5">

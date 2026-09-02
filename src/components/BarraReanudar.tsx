@@ -1,7 +1,8 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link } from 'react-router-dom'
 import type { Articulo } from '../lib/db'
 import { colorIconoDeTipo, iconoDeTipo } from '../features/soluciones/iconosSoluciones'
+import { decidirContraida, type EstadoContraible } from './contraerAlBajar'
 import { IndicadorAvance } from './IndicadorAvance'
 import { Play, X } from './iconos'
 
@@ -33,6 +34,37 @@ const UMBRAL_DESCARTE_PX = 90
 // elemento que el dedo realmente toco).
 const UMBRAL_INICIO_ARRASTRE_PX = 6
 
+// LA BARRA SE ENCOGE AL BAJAR (tarea 207, hallazgo M-033). En un
+// teléfono de 360x640 las pestañas (65 px más área segura) y esta barra
+// se sumaban y dejaban unos 430 px de contenido: la pieza que existe
+// para no perder el hilo se comía la pantalla donde se trabaja.
+// Desplazarse hacia abajo es leer, y ahí la barra se reduce a una línea
+// de 36 px con lo imprescindible, el anillo de avance y el título;
+// desplazarse hacia arriba, o volver al principio, la devuelve entera.
+//
+// La REGLA vive en `contraerAlBajar.ts` como función pura y con
+// pruebas; aquí solo queda el cableado del evento.
+function useContraidaPorScroll(): boolean {
+  const [estado, setEstado] = useState<EstadoContraible>({ contraida: false, ultimo: 0 })
+  const pendiente = useRef(false)
+
+  useEffect(() => {
+    function alDesplazar() {
+      if (pendiente.current) return
+      pendiente.current = true
+      requestAnimationFrame(() => {
+        setEstado((previo) => decidirContraida(previo, window.scrollY))
+        pendiente.current = false
+      })
+    }
+    alDesplazar()
+    window.addEventListener('scroll', alDesplazar, { passive: true })
+    return () => window.removeEventListener('scroll', alDesplazar)
+  }, [])
+
+  return estado.contraida
+}
+
 // Barra flotante que seria el procedimiento a medias mas reciente por
 // toda la app (montada desde Chasis, solo en modo seccion/documento: ver
 // R19, la tarea ya tiene su propia BarraTarea y no necesita esta ademas).
@@ -55,6 +87,9 @@ export function BarraReanudar({
   const [arrastrando, setArrastrando] = useState(false)
   const inicioX = useRef(0)
   const capturado = useRef(false)
+  // Solo manda en la variante flotante; las otras dos no flotan sobre el
+  // contenido, así que no le quitan altura a nada.
+  const contraida = useContraidaPorScroll()
 
   function alBajarPuntero(evento: ReactPointerEvent<HTMLDivElement>) {
     inicioX.current = evento.clientX
@@ -193,34 +228,57 @@ export function BarraReanudar({
           opacity: opacidad,
           transition: arrastrando ? 'none' : 'transform 150ms ease, opacity 150ms ease',
         }}
-        className="pointer-events-auto flex w-full max-w-md touch-pan-y items-center gap-1.5 rounded-xl border border-noct-accent/40 bg-noct-surface/95 py-2 pl-2.5 pr-2 shadow-lg backdrop-blur-[12px] sm:max-w-xl"
+        className={`pointer-events-auto flex w-full max-w-md touch-pan-y items-center rounded-xl border border-noct-accent/40 bg-noct-surface/95 shadow-lg backdrop-blur-[12px] transition-[height,padding] duration-150 motion-reduce:transition-none sm:max-w-xl ${
+          contraida ? 'h-9 gap-2 px-2.5' : 'gap-1.5 py-2 pl-2.5 pr-2'
+        }`}
       >
-        <Link
-          to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
-          className="flex min-w-0 flex-1 items-center gap-2.5 text-noct-text"
-        >
-          <IndicadorAvance hechos={hechos} total={total} size={30} className="shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-medium leading-[1.25]">{articulo.titulo}</span>
-            <span className="mt-0.5 block truncate text-[11.5px] text-noct-neutral-400">
-              <Icono size={11} className={`mr-1 inline-block align-[-1px] ${colorIconoDeTipo(articulo.tipo)}`} aria-hidden />
-              Paso {hechos + 1} de {total}
-              {minutosRestantes != null && ` · ~${minutosRestantes} min`}
+        {contraida ? (
+          // Una línea de 36 px: el anillo dice cuánto llevas y el título
+          // qué es. El "Seguir" y la "X" se van con ella, pero toda la
+          // barra sigue siendo el enlace y el descarte por deslizamiento
+          // sigue funcionando; desplazarse hacia arriba la devuelve.
+          <Link
+            to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
+            className="flex min-w-0 flex-1 items-center gap-2 text-noct-text"
+          >
+            <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium leading-[1.25]">
+              {articulo.titulo}
             </span>
-          </span>
-          <span className="flex shrink-0 items-center gap-1 rounded-md border border-noct-accent px-2 py-1 text-[11.5px] font-medium text-noct-accent">
-            <Play size={11} aria-hidden />
-            Seguir
-          </span>
-        </Link>
-        <button
-          type="button"
-          onClick={onDescartar}
-          aria-label={`Descartar el aviso para continuar "${articulo.titulo}"`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-noct-neutral-500 hover:bg-noct-text/[.08] hover:text-noct-text"
-        >
-          <X size={14} aria-hidden />
-        </button>
+            <span className="shrink-0 text-[11.5px] tabular-nums text-noct-neutral-400">
+              Paso {hechos + 1} de {total}
+            </span>
+          </Link>
+        ) : (
+          <>
+            <Link
+              to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
+              className="flex min-w-0 flex-1 items-center gap-2.5 text-noct-text"
+            >
+              <IndicadorAvance hechos={hechos} total={total} size={30} className="shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium leading-[1.25]">{articulo.titulo}</span>
+                <span className="mt-0.5 block truncate text-[11.5px] text-noct-neutral-400">
+                  <Icono size={11} className={`mr-1 inline-block align-[-1px] ${colorIconoDeTipo(articulo.tipo)}`} aria-hidden />
+                  Paso {hechos + 1} de {total}
+                  {minutosRestantes != null && ` · ~${minutosRestantes} min`}
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1 rounded-md border border-noct-accent px-2 py-1 text-[11.5px] font-medium text-noct-accent">
+                <Play size={11} aria-hidden />
+                Seguir
+              </span>
+            </Link>
+            <button
+              type="button"
+              onClick={onDescartar}
+              aria-label={`Descartar el aviso para continuar "${articulo.titulo}"`}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-noct-neutral-500 hover:bg-noct-text/[.08] hover:text-noct-text"
+            >
+              <X size={14} aria-hidden />
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

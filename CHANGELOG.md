@@ -8,6 +8,27 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-08-31
 
+### Cambiado (tarea 207): refinamiento y consistencia, doce hallazgos de la fase 3
+
+**Área modificada:** transversal. **Nuevos:** `src/components/CampoBusqueda.tsx` y `src/components/contraerAlBajar.ts` (con pruebas).
+**Motivo:** los hallazgos P2 y P3 de la **fase 3** de la auditoría móvil. Ninguno impide trabajar; juntos son la diferencia entre una app coherente y una que obliga a reaprender cada pantalla.
+**Impacto esperado:** consistencia. **Sin esquema. Sin cambios de lógica de datos.**
+
+- **Agregado** `CampoBusqueda`: **un solo buscador** para toda la app (**M-004**, **M-005**, **M-009**, regla **M-R8**). Había nueve copias con cuatro alturas (46, 44, 42), dos radios y alcances redactados cada uno a su manera. Ahora 46 px, el alcance escrito con la misma fórmula ("Buscar en X") y el **borrar a 44 px reales**, antes unos 26 en todas menos Guías. Donde la pantalla tiene su campo, **la lupa global no se repite** (Guías, Equipos y Bóveda se suman a Inicio).
+- **Retirado** "Registrar equipo" de la rejilla de atajos de Inicio (**M-008**, regla **M-R10**): ocupaba una fila entera en un dispositivo cuyo criterio es la consulta. El alta se queda donde tiene contexto: tras un escaneo sin coincidencia, en el "Crear" de Equipos y de Red, y en el vacío del buscador.
+- **Agregado** `PastillaEstadoDispositivo` y `tonoEstado` (**M-017**): el estado del equipo pasa a **una sola forma** en las seis pantallas que lo copiaban a mano, más la ficha que tenía su propia `pillEstado`. **Cierra CAND-1.** El punto suelto se conserva en los árboles de topología y dependencias, donde no hay rótulo que acompañar.
+- **Cambiado** los chips de categoría **cuentan lo que van a dar** (**M-022**), en Guías, Equipos y Bóveda: sobre el alcance que dejan los demás filtros activos, no sobre la colección completa. Antes, buscando "bodega", un chip podía prometer "Cámaras 1" y al tocarlo dar cero.
+- **Cambiado** la pantalla "Más" se ordena **por dónde se usa** (**M-024**, mockup `7b`): "Herramientas" y "Registros" se funden en **"Aquí, con el equipo delante"**, y "Etiquetas QR" e "Importar equipos" bajan a **"Mejor desde el ordenador"**, con la nota escrita. No se esconde nada.
+- **Cambiado** el conteo de "Más" va **a la derecha**, antes del galón (**M-025**), en la misma ranura que en Guías y Equipos; iba pegado al final del subtítulo, donde se leía como parte de la descripción. Lo llevan Bóveda, Diagnóstico, Ubicaciones y Personas.
+- **Agregado** en Diagnóstico, **la última respuesta bajo el progreso** ("¿La impresora enciende?: Sí"), tocable para volver a ella (**M-027**). Sustituye al icono "Atrás" de la tarea 205: hacían lo mismo, y ahora además dice a dónde lleva.
+- **Retirado** el lápiz "Editar diagnóstico" de dentro de la ejecución (**M-028**, regla **M-R10**): medía unos 27 px y ofrecía autoría en mitad de un diagnóstico. Editar se ofrece en la **lista** (44 px por fila) y en la **pantalla de resultado**, bajo el camino recorrido.
+- **Cambiado** la instrucción del escáner sube a **14 px con fondo propio** (**M-030**): a pleno sol, sobre un rack claro, la única instrucción de la pantalla desaparecía contra el vídeo.
+- **Cambiado** la barra de reanudar **se encoge a 36 px al desplazarse hacia abajo** (**M-033**), con el anillo y el título; vuelve entera al subir. Sumada a las pestañas dejaba unos 430 px de contenido en un teléfono de 360x640.
+
+**M-013, M-020 y M-031 ya estaban cerrados** por las tareas 203, 202/204 y 201 respectivamente. **M-034** (vocabulario escrito) salió a la tarea **216**: toca copy en muchas pantallas y conviene hacerlo de una pasada.
+
+**Verificación:** `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run --dir src` da **1034 de 1034** en verde (9 nuevas). **Medido en navegador real a 360 px**: Inicio con un solo campo de 46 px y sin lupa global, y dos atajos; Equipos sin lupa global, campo de 46 px con "Buscar en Equipos", borrar de 44x44 y los chips pasando de "Todos 3 · Impresoras 2 · Cámaras 1" a "Todos 1 · Impresoras 1 · Cámaras 0" al escribir "bodega"; los estados de equipo con la pastilla compartida; "Más" con sus dos grupos y los conteos a la derecha; el diagnóstico mostrando "¿La impresora enciende?: Sí" bajo el progreso, sin lápiz en la ejecución y con "Editar este diagnóstico" en el resultado y a 44x44 en la lista; y la barra de reanudar pasando de 54 a 36 px al bajar y volviendo a 54 al subir. **M-030 no se pudo medir**: este entorno no tiene cámara, así que el escáner muestra su panel de fallo en vez de la instrucción.
+
 ### Cambiado (tarea 206): un color, un significado dentro del paso
 
 **Área modificada:** `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/tonos.ts`, `src/features/boveda/CredencialEnPaso.tsx`. **Nuevos:** `src/features/soluciones/FilaVinculo.tsx` y `src/features/soluciones/vinculoAnidado.ts`.

@@ -4,15 +4,15 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { db } from '../../lib/db'
 import { BotonFavorito } from '../../components/BotonFavorito'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   CaretRight,
   ChartBar,
-  MagnifyingGlass,
   Play,
   Plus,
+  PencilSimple,
   TreeStructure,
   WarningCircle,
-  XCircleFill,
 } from '../../components/iconos'
 import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
@@ -125,35 +125,12 @@ export function DiagnosticosPage() {
             </div>
           </div>
           <div className="px-4 pb-3">
-            <label
-              className={`flex h-11 items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
-                hayFiltro ? 'border-noct-accent' : 'border-noct-divider'
-              }`}
-            >
-              <MagnifyingGlass
-                size={18}
-                className={`shrink-0 ${hayFiltro ? 'text-noct-accent' : 'text-noct-neutral-500'}`}
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={filtro}
-                onChange={(e) => setFiltro(e.target.value)}
-                placeholder="Describir el problema: no imprime, sin red..."
-                aria-label="Describir el problema"
-                className="dg-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
-              />
-              {hayFiltro && (
-                <button
-                  type="button"
-                  onClick={() => setFiltro('')}
-                  aria-label="Borrar búsqueda"
-                  className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
-                >
-                  <XCircleFill size={18} aria-hidden />
-                </button>
-              )}
-            </label>
+            <CampoBusqueda
+              valor={filtro}
+              onCambiar={setFiltro}
+              alcance="Diagnósticos"
+              textoAlternativo="Describir el problema: no imprime, sin red..."
+            />
           </div>
         </>
       }
@@ -232,6 +209,17 @@ export function DiagnosticosPage() {
                     </span>
                   </Link>
                   <BotonFavorito tipo="diagnostico" entidadId={diagnostico.id} variante="fila" />
+                  {/* Editar vive AQUÍ (tarea 207, hallazgo M-028, regla
+                      M-R10), no dentro de la ejecución, donde medía unos
+                      27 px y ofrecía autoría en mitad de un diagnóstico.
+                      44 px reales, separado del enlace de la fila. */}
+                  <Link
+                    to={`/diagnostico/${diagnostico.id}/editar`}
+                    aria-label={`Editar el diagnóstico ${diagnostico.titulo}`}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-500 hover:bg-noct-text/[.07] hover:text-noct-text"
+                  >
+                    <PencilSimple size={16} aria-hidden />
+                  </Link>
                   <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
                 </div>
               ))}

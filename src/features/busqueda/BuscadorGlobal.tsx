@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { MagnifyingGlass, Plus, X } from '../../components/iconos'
+import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import { agruparResultados } from './resultados'
@@ -66,18 +67,17 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
   return createPortal(
     <div className="nocturne fixed inset-0 z-[60] flex flex-col bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
       <div className="flex items-center gap-2 border-b border-noct-divider px-3 py-2.5">
-        <label className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-noct-accent bg-noct-surface px-3.5">
-          <MagnifyingGlass size={18} className="shrink-0 text-noct-accent" aria-hidden />
-          <input
-            ref={campo}
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar en todo"
-            aria-label="Buscar en todo el conocimiento del equipo"
-            className="ini-search min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
-          />
-        </label>
+        {/* Mismo campo que el resto de la app (tarea 207, regla M-R8):
+            46 px, el alcance escrito y el borrar a 44 px reales, que
+            aquí ni siquiera existía. Lo que distingue a este buscador
+            del de cada sección es su alcance, no su forma. */}
+        <CampoBusqueda
+          valor={query}
+          onCambiar={setQuery}
+          alcance="todo"
+          refCampo={campo}
+          className="min-w-0 flex-1"
+        />
         <button
           type="button"
           onClick={onCerrar}

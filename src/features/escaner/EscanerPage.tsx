@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
 import { BarraTarea } from '../../components/BarraTarea'
 import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
-import { claseEstado, estadoConEtiqueta } from '../red/topologiaVisual'
+import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import {
   ArrowRight,
   CameraSlash,
@@ -355,7 +355,15 @@ export function EscanerPage() {
                 style={{ boxShadow: '0 0 14px color-mix(in srgb, var(--color-noct-accent) 60%, transparent)' }}
               />
             </div>
-            <p className="max-w-[260px] text-center text-[13px] leading-[1.5] text-noct-neutral-300">
+            {/* FONDO PROPIO BAJO LA INSTRUCCIÓN (tarea 207, hallazgo
+                M-030). Iba a 13 px directamente sobre el vídeo en vivo:
+                a pleno sol, apuntando a un rack claro o a una etiqueta
+                blanca, la ÚNICA instrucción de la pantalla desaparecía
+                contra la imagen. Sube a 14 px y se apoya en una pastilla
+                de superficie al 80 % con desenfoque, así que el
+                contraste deja de depender de a dónde apunte la cámara.
+                El marco de esquinas ya funciona y no se toca. */}
+            <p className="max-w-[280px] rounded-lg bg-noct-surface/80 px-3.5 py-2.5 text-center text-[14px] leading-[1.45] text-noct-text backdrop-blur-[6px]">
               {camara === 'iniciando'
                 ? 'Iniciando la cámara...'
                 : 'Apunta al código QR de la etiqueta o al código de barras del equipo'}
@@ -474,14 +482,7 @@ export function EscanerPage() {
             {(aviso.dispositivo.estado || aviso.dispositivo.ip) && (
               <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-[47px]">
                 {aviso.dispositivo.estado && (
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${claseEstado(
-                      estadoConEtiqueta(aviso.dispositivo.estado).etiqueta,
-                    )}`}
-                  >
-                    <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />
-                    {estadoConEtiqueta(aviso.dispositivo.estado).etiqueta}
-                  </span>
+                  <PastillaEstadoDispositivo estado={aviso.dispositivo.estado} />
                 )}
                 {aviso.dispositivo.ip && (
                   <span className={VALOR_TECNICO_COMPACTO}>{aviso.dispositivo.ip}</span>

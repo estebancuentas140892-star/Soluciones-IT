@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react'
 import type { EstadoArticulo } from '../lib/db'
+import { estadoConEtiqueta, tonoEstado } from '../features/red/topologiaVisual'
 import { PencilSimple, type IconoProps } from './iconos'
 
 // UNA sola forma para todo estado que acompaña a una fila: pastilla de
@@ -59,6 +60,31 @@ export function PastillaEstado({
       {Icono && <Icono size={10} aria-hidden />}
       {children}
     </span>
+  )
+}
+
+// EL ESTADO DE UN EQUIPO, en la misma pastilla (tarea 207, hallazgo
+// M-017). Se dibujaba a mano en seis sitios como punto de color más
+// texto teñido de 11,5 px, mientras la ficha usaba una pastilla con
+// punto: el mismo dato cambiaba de forma al cambiar de pantalla, y el
+// componente que los unifica llevaba desde la tarea 171 esperando (era
+// el candidato CAND-1 de COMPONENTES_UI.md).
+//
+// El punto suelto SIGUE existiendo en el árbol de topología y en el de
+// dependencias: ahí la fila no lleva el rótulo del estado, solo su
+// color, y una pastilla por nodo sería ruido en un árbol de veinte.
+export function PastillaEstadoDispositivo({
+  estado,
+  className = '',
+}: {
+  estado: string
+  className?: string
+}) {
+  const { etiqueta } = estadoConEtiqueta(estado)
+  return (
+    <PastillaEstado tono={tonoEstado(etiqueta)} className={className}>
+      {etiqueta}
+    </PastillaEstado>
   )
 }
 
