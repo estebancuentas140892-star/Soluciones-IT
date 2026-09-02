@@ -6,6 +6,10 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(vacío: la tarea 205 se cerró el 2026-09-01. De la **fase 2 de la auditoría móvil** queda solo la **206** (un color, un significado dentro del paso); hechas la 202, la 203, la 204 y la 205. La siguiente pendiente es la **206**, ver "Por hacer".)*
 
+**Despliegue confirmado (regla 14).** El commit `24afe1b` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `BovedaPage-0VU5KtF1.js` contiene "Copiar la contraseña" y "Más acciones de "; `DiagnosticoRunPage-CF8FR6S7.js` contiene "Salir guarda el avance", "Descartar este diagn[óstico]" y "Volver a la pregunta anterior"; y `descripcionVencida` (con "Venció hoy"/"Venció hace...") quedó en el chunk compartido `Chasis-DN6ikilk.js`, no en el de Bóveda (`vencimiento.ts` también lo usa `Chasis`, así que el bundler lo separó). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó menos de 2 minutos en propagar.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
 **Despliegue confirmado (regla 14).** El commit `436e749` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `RedPage-B2PL_I3X.js` de producción contiene "Estás recorriendo", `nodo=`, "Todos los equipos de red por ubicación" y "Mapa completo, desde cada raíz", y aparece el chunk nuevo `EquiposRedPage-BSXaUEzV.js` con "Equipos de red" y "Sin ubicación". Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar.
 
 **Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
