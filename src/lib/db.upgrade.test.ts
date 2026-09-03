@@ -114,7 +114,19 @@ describe('upgrade a la version 14', () => {
     expect(pendientes[0].payload).toEqual({ id: 'c1', titulo: 'Credencial vieja' })
   })
 
-  it('dejo la base en la version 14', () => {
-    expect(db.verno).toBe(14)
+  // La version que declara `db.ts`. Se actualiza con cada grupo de
+  // esquema nuevo; lo que la prueba cuida es que una base que venia de
+  // la 13 llegue hasta la ULTIMA sin quedarse por el camino, no el
+  // numero en si.
+  it('deja la base en la ultima version declarada', () => {
+    expect(db.verno).toBe(15)
+  })
+
+  // Version 15 (tarea 217): la tabla de preferencias del tecnico tiene
+  // que existir y quedar vacia en una base que venia de la 13, para que
+  // la ejecucion arranque en el modo por defecto y no en un valor a
+  // medias.
+  it('crea preferenciasTecnico vacia al subir desde la 13', async () => {
+    expect(await db.preferenciasTecnico.count()).toBe(0)
   })
 })

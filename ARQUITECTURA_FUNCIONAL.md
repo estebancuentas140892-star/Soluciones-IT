@@ -342,6 +342,12 @@ stateDiagram-v2
 
 **`Saltado` no se guarda**: se deduce de que el paso esté sin hacer y por detrás del actual (ver `estadoPasos.ts`). No toca el esquema.
 
+**Cómo se presenta el paso es una preferencia persistida, no un estado de la ejecución (tarea 217).** La máquina de arriba no cambia: la unidad que se completa sigue siendo el paso, y las transiciones son las mismas se mire por dónde se mire. Lo que cambió es la vista por defecto. `preferenciasTecnico.modoEjecucion` vale `'foco'` (una tarea a la vez) mientras el técnico no elija otra cosa, y `'pasoEntero'` si la elige; vive en el dispositivo, fuera de `progresoPasos`, porque expresa **cómo trabaja** y no **por dónde va**. Tres consecuencias de regla:
+
+- **Un paso sin tareas se ejecuta igual.** En la vista por tarea se presenta como una tarea única con el título del paso (`tareasParaFoco`), y su botón dominante completa el paso. La pseudo tarea lleva el id `paso:<id>` y **nunca se escribe en `instruccionesHechas`**: no hay bloque que marcar, así que el progreso guardado no cambia de forma.
+- **La condición para completar no depende de la vista.** Es la misma `pasoTrabajoPrevioCompleto` en los dos casos: todas las tareas marcadas (o ninguna que marcar) y el subprocedimiento satisfecho. La vista por tarea solo ofrece la acción cuando ya no queda ninguna tarea sin hacer, y escribe encima la misma razón del bloqueo.
+- **Declarar una falla muestra el paso entero sin cambiar la preferencia.** Es una excepción atada al id del paso, del mismo tipo que el aviso de falla: al pasar al siguiente deja de aplicar. Saltar un paso, en cambio, no cambia de vista.
+
 El `vinculoProtegido` de un paso es puramente informativo: no participa en ninguna condición de completado. Los subprocedimientos se ejecutan inline solo en el nivel 0; más profundo se muestran como enlace.
 
 ---

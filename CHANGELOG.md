@@ -6,6 +6,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-03
+
+### Cambiado (tarea 217): la ejecución de un procedimiento pasa a ser una tarea a la vez
+
+**Área modificada:** ejecución de Guías. **Nuevos:** `src/lib/preferenciasEjecucion.ts` y `src/features/soluciones/tareasFoco.ts` (con pruebas). **Modificados:** `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/lib/db.ts`.
+**Motivo:** hallazgos **G-16 a G-19** de la auditoría visual de la sección Guías (handoff "Auditoría visual sección Guía", proyecto de Claude Design `e6954590`). Es la recomendación principal de ese informe: la mejor pantalla de ejecución de la app era un modo opcional, escondido tras un botón secundario, que se perdía al salir y se caía solo en los pasos sin tareas.
+**Impacto esperado:** el área útil de la pantalla de ejecución sube de 378 a 446 px y la instrucción activa pasa de 15 px a 30 px siempre. **Con esquema:** versión **15** de Dexie.
+
+- **Cambiado** la vista de una tarea a la vez es ahora **la ejecución por defecto** (**G-16**). La vista de paso completo se conserva como "Ver el paso entero", y el botón "Foco" del pie se convierte en su regreso, "Volver a una tarea a la vez", que además ya no depende de que el paso tenga tareas.
+- **Agregado** `preferenciasEjecucion.ts` y la tabla local **`preferenciasTecnico`** (**G-17**): la elección del técnico se guarda, así que salir a la Bóveda a buscar una clave y volver ya no devuelve a una vista que él no eligió. Era lo único del flujo que no se persistía, mientras el avance sí. Una sola fila con id fijo, local a este dispositivo y sin sincronizar, mismo criterio que `favoritos` y `recientes` (decisión D1). Un valor ausente o desconocido cae en el defecto, así que la ejecución nunca se queda sin modo.
+- **Agregado** `tareasFoco.ts`: un **paso sin tareas** se presenta como una tarea única con el título del paso a 30 px (**G-18**). Antes expulsaba al técnico a la vista completa a mitad de procedimiento, sin explicación y sin forma de volver hasta el paso siguiente. La pseudo tarea lleva el id `paso:<id>` y nunca se escribe en `instruccionesHechas`: el progreso guardado no cambia de forma.
+- **Cambiado** el botón grande de 76 px **también cierra el paso**: marca la tarea mientras queden sin hacer y pasa a la acción dominante ("Paso hecho · ir al 4", con la razón del bloqueo escrita encima) cuando ya no queda ninguna. Antes había que salir al paso entero para avanzar, lo que con la ejecución por defecto habría dejado la pantalla sin salida. Con todo marcado aparece un **"Desmarcar"** de 44 px, para corregirse sin salir.
+- **Cambiado** declarar una falla muestra el paso entero **sin tocar la preferencia**: es una excepción atada al id del paso, que deja de aplicar al pasar al siguiente. **Saltar un paso ya no cambia de vista**, porque saltar es seguir trabajando.
+- **Estructura de datos:** tabla `preferenciasTecnico` (`id` clave primaria, campos `modoEjecucion` y `actualizadoEn`), Dexie versión 15, `.stores({ preferenciasTecnico: 'id' })`. Local pura, nunca sincroniza, no participa de `cambiosPendientes` ni de `TABLAS_SINCRONIZADAS`. Sin impacto sobre otros módulos: ninguna tabla existente cambia de forma. Se declara solo la clave a propósito, para que la tarea 226 (modo manos ocupadas) sume su campo sin abrir otra versión. Prueba de cableado en `db.upgrade.test.ts`: una base que venía de la versión 13 llega a la 15 con la tabla creada y vacía.
+- **Sin tocar** la barra de tarea de 68 px ni el índice de pasos, que siguen donde estaban: reducirla a 44 px y bajar el índice al pulgar es la **tarea 218**, que reescribe esa misma cabecera. Decisión de fondo en [DECISIONES.md](DECISIONES.md) **AD-033**.
+
 ## 2026-08-31
 
 ### Cambiado (tarea 207): refinamiento y consistencia, doce hallazgos de la fase 3

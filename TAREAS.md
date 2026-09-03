@@ -4,96 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea 207 se cerró el 2026-09-02. Con ella **la auditoría móvil queda cerrada salvo el vocabulario**: fase 1 (201), fase 2 (202 a 206) y fase 3 (207). Queda la tarea **216** (M-034, un solo vocabulario escrito), que salió de la 207 el mismo día, y **M-023** (desbloqueo de la Bóveda), que sigue fuera de fase esperando decisión del usuario.)*
-
-*(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
-
-**Despliegue confirmado (regla 14).** El commit `d8c6e03` (tarea 207) está servido en **https://soluciones-it-psi.vercel.app**, confirmado **33 segundos** después del push, el más rápido hasta ahora. Comprobado **por contenido sobre los 117 chunks reales** que declara `/sw.js`, con el método ya corregido (nombres leídos de `/sw.js`, nunca comparados con los del build local):
-
-- **En positivo:** `PantallaMas-ChGlC9as.js` contiene "Aquí, con el equipo delante", "Mejor desde el ordenador" y "Se puede hacer aquí, pero pide teclado y pantalla grande."; `DiagnosticoRunPage-0mGgojNC.js` contiene "Volver a la pregunta anterior: " y "Editar este diagnóstico"; y aparece el chunk nuevo **`CampoBusqueda-L2crl2hH.js`** con "Buscar en " y "Borrar la búsqueda".
-- **En negativo**, que es lo que prueba que el cambio entró: **ningún** chunk contiene ya "Dar de alta un equipo nuevo" (el atajo retirado de Inicio, M-008) ni "Sedes, salas y racks · " (el conteo pegado al subtítulo, M-025).
-
-**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
-
-**Despliegue confirmado (regla 14).** El commit `ffbf55c` (tarea 206) está servido en **https://soluciones-it-psi.vercel.app**: el chunk `ProcedimientoVista-BGOIZnvu.js` contiene "Se abre aparte, vuelves aquí al terminar", "Otra guía", "Si esto falla" y "Este paso se completa al terminar", y `AsistenteVista-BPBcRLu1.js` contiene "Otra guía" y "Si esto falla". Comprobado también **en negativo**, que es lo que prueba que el cambio entró y no solo que el archivo existe: en los dos chunks ya NO aparecen "error durante este paso" (la pregunta retirada), "Continúa en" ni "Datos protegidos".
-
-**Hallazgo de método (2026-09-02).** El guion de espera daba por no desplegado durante 15 minutos porque comparaba los **nombres de chunk del build local** contra `/sw.js`, y **Vercel produjo hashes distintos para el mismo commit** (`ProcedimientoVista-BGOIZnvu.js` en producción frente a `ProcedimientoVista-CzGbI3Pa.js` en local). En los despliegues anteriores coincidían, así que el guion se había apoyado en una coincidencia, no en una garantía: el hash depende del bundler y de la versión de Node del entorno de construcción, no solo del código. **La comprobación válida es la de contenido**, que es la que pide la regla 14; el nombre solo sirve para saber a qué archivo pedirle el contenido. Para el próximo despliegue: leer los nombres reales de `/sw.js` y buscar las cadenas dentro de ellos, sin comparar hashes con el build local.
-
-**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
-
-**Despliegue confirmado (regla 14).** El commit `24afe1b` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `BovedaPage-0VU5KtF1.js` contiene "Copiar la contraseña" y "Más acciones de "; `DiagnosticoRunPage-CF8FR6S7.js` contiene "Salir guarda el avance", "Descartar este diagn[óstico]" y "Volver a la pregunta anterior"; y `descripcionVencida` (con "Venció hoy"/"Venció hace...") quedó en el chunk compartido `Chasis-DN6ikilk.js`, no en el de Bóveda (`vencimiento.ts` también lo usa `Chasis`, así que el bundler lo separó). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó menos de 2 minutos en propagar.
-
-**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
-
-**Despliegue confirmado (regla 14).** El commit `436e749` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `RedPage-B2PL_I3X.js` de producción contiene "Estás recorriendo", `nodo=`, "Todos los equipos de red por ubicación" y "Mapa completo, desde cada raíz", y aparece el chunk nuevo `EquiposRedPage-BSXaUEzV.js` con "Equipos de red" y "Sin ubicación". Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar.
-
-**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
-
-*(la tarea 215 se cerró el 2026-09-01. Con ella **el `Paso 3` del handoff queda completo**: sus dos tableros implementables eran el `3b` (tarea 214) y el `3d` (tarea 215). Los **Pasos 1, 2 y 4** siguen sin registrar hasta que el usuario los pida.)*
-
-**Despliegue confirmado (regla 14).** El commit `e17d911` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `AsistenteVista-Bite7Bcm.js` de producción contiene "Algo va mal en el paso", "Abrir la contingencia vinculada", "Saltar el paso y seguir" y "no se pierden", y `ProcedimientoVista-B3-bt-sL.js` contiene "Sí, ver la contingencia" y las filas de tarea de `min-h-[56px]`. Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar, el más rápido hasta ahora (los anteriores fueron de 4, 7 y 15).
-
-**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
-
-**Despliegue confirmado (regla 14).** El commit `71399b3` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `SolucionesPage-Mjkhvsem.js` de producción contiene "solo notas" (la línea de capacidad de una guía sin pasos). Comprobado por HTTP contra `/sw.js` y el asset real; el despliegue tardó unos 15 minutos en propagar, más que los 4-7 habituales.
-
-**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
-
----
-
-*(la tarea 203 se cerró el 2026-09-01. Con ella **la fase 2 de la auditoría móvil queda a medias**: hechas la 202 (el regreso deshace el último salto) y la 203 (Inicio); quedan la 204 (Red abre con el nodo), la 205 (Bóveda y Diagnóstico) y la 206 (un color, un significado dentro del paso). La siguiente pendiente es la 204, ver "Por hacer".)*
-
-**Despliegue confirmado (regla 14).** El commit `8a5ebde` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `InicioPage-D331oXcp.js` de producción contiene "Te toca a ti" y "Lo que consultaste", y `Chasis-CNiV5C6f.js` contiene "Sigues en el paso" (la tarjeta de reanudar viaja con el chasis, no con Inicio). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 7 minutos en propagar.
-
-**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
-
----
-
-**HANDOFF NUEVO: "Soluciones IT, Diseño móvil" (importado el 2026-08-31).** Seis `.dc.html` en el proyecto de Claude Design `2f70dec0-abd8-4da5-8f2a-709e08102f5a`: `Paso 1 - Inicio y Onboarding`, `Paso 2 - Shell y Navegación`, `Paso 3 - Guías y Ejecución Guiada`, `Paso 4 - Dispositivos y Red`, `Paso 5 - Vinculación y Cero Duplicidad` y `Paso 6 - Guías a Fondo`. El usuario autorizó implementar **solo el Paso 6**; los cinco anteriores quedan sin registrar hasta que lo pida (excepción explícita a la regla 15, decidida por el usuario el 2026-08-31).
-
-**Cómo se leyó:** el MCP `claude_design` devolvió `DesignSync needs design-system authorization` (esta sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Diseño Mobile/Soluciones IT — Diseño móvil-handoff6.zip`, que trae el proyecto completo. Los recuentos de líneas que cita la auditoría del handoff (PasosEditor 1.036, ArticuloForm 1.388, ProcedimientoVista 1.019, AsistenteVista 744) coinciden con este repo, así que el diseño se hizo contra el código real.
-
-**AMPLIACIÓN (2026-09-01): el usuario autoriza también el `Paso 3`.** Llegó como `Soluciones IT — Diseño móvil-handoff3.zip`, que resultó ser un **subconjunto** del handoff6 ya registrado: trae los Pasos 1 a 4 y sus cuatro `.dc.html` son **byte a byte idénticos** a los del handoff6 (comprobado con `diff`), así que no hay proyecto nuevo que importar. Su README apunta a `Paso 3 - Guías y Ejecución Guiada`. El Paso 3 trae dos tableros ANTES (`3a`, `3c`, diagnóstico) y dos DESPUÉS implementables: **`3b`** el listado de guías (tarea **214**) y **`3d`** la ejecución guiada (tarea **215**). **Los Pasos 1, 2 y 4 siguen sin registrar** hasta que el usuario los pida.
-
-El Paso 6 audita **el llenado** de una guía y **la navegación entre pasos**, lo que el Paso 3 dejó fuera. Trae un tablero ANTES (`6a`, diagnóstico, no se implementa) y tres DESPUÉS, que son las tareas **209** (editor), **210** (navegador de pasos) y **211** (modo foco). Su tesis de fondo: *el paso no es la unidad de trabajo*. Todo el sistema está construido alrededor del paso (la banda, el avance, el plegado, la acción dominante), pero frente al rack, con una mano y guantes, la unidad real es la **tarea**. El modelo de datos ya la soporta (los bloques tienen id, tipo y progreso propio); falta una vista que la use, y esa es la 211.
-
-Lo que la auditoría marca como **bueno y no se toca**: el modelo de bloques con id estable (el progreso va por id, no por posición, así que reordenar no desalinea el avance), `tipoTarea`, el plegado salvo el paso actual, el avance como segmentos, el antiduplicado del título con rebote de 300 ms, la completitud consciente del tipo, el vocabulario de etiquetas derivado del uso y la composición por referencia.
-
----
-
-La **tarea 208** (segunda mitad del hallazgo **N1** de la auditoría de flujos: la dirección del enlace se ve en la ficha y se puede reparar) quedó **terminada, verificada en navegador y archivada el 2026-08-29**. La tarea 131 había cerrado N1 solo por un lado, el de **registrar** bien un uplink con el modo "Recibe de". Faltaban los otros dos: la fila de un enlace no decía su dirección, así que uno invertido se veía **idéntico** a uno correcto y el error solo aparecía en el árbol de topología ya torcido; y los enlaces guardados al revés antes de la 131 solo se podían arreglar borrándolos y recreándolos. Ahora cada fila de enlace dice "Da servicio a" o "Recibe de" y trae un botón de invertir de 44 px, reversible. **Sin migración automática, a propósito**: un enlace invertido es indistinguible de uno correcto, así que adivinar por categoría reescribiría en silencio la topología de alguien y fallaría en el uplink legítimo entre dos switches. De paso se corrigieron dos defectos encontrados al verificar: invertir no dejaba rastro en el historial (`construirHistorial` descartaba toda edición de conexión) y el historial leía la inversión como "Se agregó la conexión". Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
-
-**PENDIENTE DEL USUARIO**: revisar en la topología real los enlaces registrados antes de la tarea 131. Los que quedaron al revés no se detectan solos; el botón de invertir de cada fila los corrige de a uno.
-
----
-
-Antes, la **tarea 202** (fase 2 de la auditoría móvil: el regreso recuerda el camino, M-002, M-020, M-029) quedó **terminada, verificada en navegador y archivada el 2026-08-03**. El regreso deja de subir siempre al padre teórico y pasa a deshacer el último salto (**M-R2**), con el padre declarado intacto como respaldo. **Medido en navegador real a 360 px**: el ciclo completo del escáner (leer, abrir la ficha, volver con la cámara viva y leer otro, "2 leídos"); la ficha abierta desde la topología vuelve al mismo nodo; la ubicación abierta desde un equipo dice de qué equipo viene; y una pestaña nueva sobre esa misma ubicación cae al padre declarado, así que **ninguna pantalla se queda sin salida**. Módulos nuevos: `origenNavegacion`, `useOrigen`, `sesionEscaneo`. Dos decisiones registradas: [DECISIONES.md](DECISIONES.md) **AD-030** (por qué el origen vive en `location.state` y no en la URL) y **AD-031** (por qué el conteo del escáner se reinicia a mano, tras encontrar que la primera versión no era idempotente). Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
-
----
-
-**HANDOFF NUEVO: "Auditoría móvil: hallazgos y evidencia" (importado el 2026-08-03).** Dos `.dc.html` en `Auditoría móvil_ hallazgos y evidencia-handoff.zip`: `Auditoría móvil.dc.html` (el informe: 34 hallazgos, 3 de ellos P0, 13 áreas recorridas y 14 reglas nuevas) y `Evidencia móvil.dc.html` (el lienzo: 10 turnos, 22 mockups, todo dibujado a 360 px con los tokens Nocturne reales). Es una auditoría **de método distinto** a las anteriores: no pregunta si la app se ve bien, sino si un técnico de pie frente a un rack, con una mano y guantes, sabe **dónde está**, **qué está viendo** y **cuál es la siguiente acción** sin pensar en la interfaz.
-
-Su diagnóstico en una frase: **la orientación está resuelta en la entrada de cada pantalla y se disuelve al desplazarse**. Las catorce reglas M-R1 a M-R14 quedaron registradas en [DECISIONES.md](DECISIONES.md) **AD-029**, con los tres conflictos que declaraban contra R1-R41 ya resueltos.
-
-La auditoría propone **tres fases**, y se implementan como tres tareas (regla 15: una "En proceso" a la vez):
-
-| Fase | Qué cubre | Hallazgos | Tarea |
-|---|---|---|---|
-| 1 | Lo que impide trabajar con el teléfono en la mano | M-010, M-011 (P0), M-014 (P0), M-001, M-015 | **201 (hecha)** |
-| 2 | Lo que hace perder tiempo todos los días | M-002, M-003, M-006, M-007, M-012, M-016*, M-018, M-019, M-021, M-026, M-029, M-032* | **202 a 206 (hechas)** |
-| 3 | Refinamiento y consistencia | M-004, M-005, M-008, M-009, M-013†, M-017, M-020†, M-022, M-024, M-025, M-027, M-028, M-030, M-031*, M-033, M-034 | **207 (hecha)** + **216** (M-034) |
-
-*(\*) M-016, M-031 y M-032 se cerraron dentro de la fase 1: los tres caían dentro de las pantallas que se rehacían y separarlos habría obligado a tocarlas dos veces.*
-
-*(†) M-013 se cerró en la tarea 203 y M-020 en las tareas 202 y 204, así que la fase 3 no volvió sobre ellos. **M-034 salió a la tarea 216** el 2026-09-02: es un cambio de vocabulario transversal y conviene hacerlo de una pasada.*
-
-**M-023 (desbloqueo de la Bóveda) queda fuera de fase a propósito:** la auditoría lo registra con su alternativa y **no se implementa sin decisión explícita del usuario** (AD-029).
-
----
-
-La **tarea 201** (fase 1 de la auditoría móvil) quedó **terminada, verificada en navegador y archivada el 2026-08-03**. Los cinco hallazgos de la fase, más tres de la fase 2 y 3 que caían dentro de las mismas pantallas. **Medido en navegador real a 360 px** con un banco de pruebas temporal (retirado antes de commitear): el ancla del nivel documento sigue en pantalla tras 415 px de scroll; la capa "Ahora" de la ficha de equipo termina a **265 px** (la primera pantalla, contra las tres que la auditoría midió para llegar a "Conexiones"); el ancla del paso mide 48 px dentro del bloque pegajoso y la acción dominante queda anclada al pie del viewport; la IP se lee a 14 px monoespaciado tabular en `noct-text`. Componentes nuevos: `FilaDato`, `SeccionPlegable`, `BandaTarea`, `useImpactoEquipo`. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
-
----
+*(la tarea 217 se cerró el 2026-09-03 y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Es la **primera de las 13 recomendaciones** del handoff "Auditoría visual sección Guía", registradas abajo en "Por hacer" como tareas 217 a 231. La siguiente en el orden recomendado es la **218** (barra de ejecución de una línea y el índice de pasos al pulgar), que además cierra el **G-19** que la 217 dejó abierto a propósito: la barra de tarea de 68 px sigue puesta. El usuario las va tomando de una en una, así que la 218 no se pone "En proceso" hasta que la pida.)*
 
 ### Tarea 173. Rediseño P3: modo ejecución del asistente (`/soluciones/:cat/:art/ejecutar`)
 
@@ -285,7 +196,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 **Cómo se leyó:** el MCP `claude_design` volvió a devolver `DesignSync needs design-system authorization` (esta sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Auditoría visual sección Guía-handoff.zip`, en la raíz del repo, que trae el proyecto completo. La auditoría se hizo contra el código real: cita `index.css`, `Chasis.tsx`, `SolucionesPage.tsx`, `ArticuloPage.tsx`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `HojaFalla.tsx`, `HojaPasos.tsx` y `PasosEditor.tsx`, y sus medidas de cromo coinciden con lo que hay puesto.
 
-**Alcance autorizado (2026-09-03):** el usuario autoriza **registrar las 13 recomendaciones**, sin implementar nada todavía. Se irán tomando de una en una en mensajes posteriores, con el tablero funcionando como siempre (una sola tarea "En proceso").
+**Alcance autorizado (2026-09-03):** el usuario autoriza **registrar las 13 recomendaciones**, y luego irlas tomando **de una en una** en mensajes posteriores, con el tablero funcionando como siempre (una sola tarea "En proceso"). **Hecha hasta ahora: la 217** (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
 
 **La tesis del informe.** La sección está construida alrededor del **documento**; el técnico trabaja en la **tarea**. Para llegar a una instrucción hay que atravesar cuatro capas (lista, ficha, paso, bloque) y, una vez ahí, la instrucción comparte 640 px con 262 px de cromo que describe el documento que el técnico eligió hace cuatro segundos. La app ya tiene la respuesta escrita: se llama **Modo Foco**, resuelve exactamente eso, y está escondida tras un botón secundario, se pierde al salir y desaparece sola en los pasos sin tareas. Puntuación UX que calcula el informe: **61/100 hoy, 86/100 con las 13** (+25 puntos).
 
@@ -295,7 +206,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 | # | Recomendación | Cierra | Impacto | Esfuerzo | Tarea |
 |---|---|---|---|---|---|
-| 1 | Foco pasa a ser la ejecución por defecto, persistido por usuario | G-16 a G-19 | Alto | Bajo | **217** |
+| 1 | Foco pasa a ser la ejecución por defecto, persistido por usuario | G-16 a G-19 | Alto | Bajo | **217** HECHA (2026-09-03) |
 | 2 | Barra de ejecución de una línea (44 px) y el índice duplicado al pie | G-09, G-10, G-14 | Alto | Bajo | **218** |
 | 3 | Vocabulario único: "guía" | G-04 | Medio | Bajo | **216** (ya registrada arriba) |
 | 4 | Guardado continuo en el editor y tarjetas de paso plegadas | G-27, G-28, G-29 | Alto | Medio | **219** |
@@ -314,20 +225,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 **Orden recomendado, y por qué.** La 217 y la 218 son el mismo trozo de pantalla (`AsistenteVista.tsx` y su pie); hacerlas por separado obliga a reescribir dos veces la misma cabecera, así que conviene tomarlas seguidas y en ese orden. La 225 (tiempo honesto) cae dentro del mismo archivo y es barata: entra bien detrás de las dos. La 226 (manos ocupadas) reutiliza la tabla de preferencias que crea la 217, así que va después de ella o no va. La 227 y la 228 tocan el mismo pie de `ArticuloForm.tsx`, con la misma razón que la 217 y la 218.
 
 **Deuda de esquema que abren estas tareas.** La base local va por `this.version(14)` en `src/lib/db.ts` (líneas 886 a 1001). Las tareas 217, 219 y 226 piden dos tablas nuevas: **preferencias del técnico** (modo de ejecución, manos ocupadas) y **borrador de artículo** (guardado continuo). Conviene decidir si van en una sola versión nueva o en dos, y anotarlo en [DECISIONES.md](DECISIONES.md) al tomar la primera.
-
-### 217. Rediseño Guía: el Modo Foco pasa a ser la ejecución por defecto (G-16 a G-19)
-
-- **Descripción:** invertir la relación entre las dos vistas de ejecución. **Foco es la ejecución**; la vista de paso completo pasa a llamarse "Ver el paso entero" y es la excepción, alcanzable desde el contador del pie (ver la tarea 218). Cuatro piezas concretas: **(a)** la preferencia se guarda **por usuario**, no en estado de componente, así que sobrevive a salir a la Bóveda y volver; **(b)** un **paso sin tareas** se renderiza como una tarea única, con el título del paso a 30 px, de modo que el modo no se cae solo a mitad de procedimiento; **(c)** la barra de tarea de 68 px se reduce a la línea de 44 px que define la tarea 218; **(d)** se conserva "Ver el paso entero" como control de 44 px en la fila secundaria, y volver de él devuelve a Foco.
-- **Motivo:** hallazgos **G-16** (es opcional y está escondido tras un botón secundario de 44 px que compite con otros tres), **G-17** (no sobrevive a la interrupción: el modo vive en estado de componente y la preferencia del técnico es lo único del flujo que no se persiste, mientras el avance sí), **G-18** (desaparece solo y sin avisar en los pasos sin tareas) y **G-19** (la barra de 68 px sigue puesta encima del modo que existe para vaciar la pantalla). Es **la recomendación principal del informe**: la mejor pantalla de ejecución de la app es hoy un modo opcional que la mayoría de los técnicos nunca verá.
-- **Impacto:** alto. Devuelve 68 px de área útil (de 378 a 446 px), duplica el tamaño de la instrucción activa (de 15 px a 30 px siempre) y elimina una decisión que el técnico no debería tomar de pie frente a un rack.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:**
-  - `src/features/soluciones/AsistenteVista.tsx` (1.123 líneas): el estado del modo y su comentario de diseño están en las líneas ~80 a 90; el montaje de `ModoFoco` en ~369; el remonte al cambiar de paso en ~317 a 321; el botón "Foco" de entrada y su condición "solo si el paso tiene tareas" en ~586 y ~614 a 615.
-  - `src/features/soluciones/ModoFoco.tsx` (280 líneas): la ruta del paso sin tareas (b) es nueva aquí; los segmentos por tarea están en ~103.
-  - `src/lib/db.ts` (~886 a 1001): tabla nueva de preferencias del técnico y su versión de esquema.
-  - `src/features/soluciones/useProcedimientoEjecucion.ts` (198 líneas): si la preferencia se lee desde el hook y no desde la vista.
-- **Dependencias:** ninguna previa. **La 218 y la 226 dependen de esta** (la 218 reescribe la cabecera que esta reduce; la 226 reutiliza su tabla de preferencias).
-- **Modelo/esfuerzo:** Opus 5 / Alto. El informe la marca como esfuerzo bajo en líneas de código, pero es un cambio de modelo mental con persistencia nueva, un caso de borde real (paso sin tareas) y dos vistas que intercambian su papel: el riesgo está en el estado, no en el marcado.
 
 ### 218. Rediseño Guía: barra de ejecución de una línea y el índice de pasos al pulgar (G-09, G-10, G-14)
 

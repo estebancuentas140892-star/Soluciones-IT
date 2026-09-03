@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { BloquePaso, PasoProcedimiento } from '../../lib/db'
-import { tareasDe } from '../../lib/procedimiento'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { Camera, CaretLeft, CaretRight, Check, LockSimple, Paperclip, Warning } from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
+import { accionFoco, tareasParaFoco } from './tareasFoco'
 import { tonoInfo } from './tonos'
 
 // MODO FOCO: una tarea a la vez (handoff "Diseño móvil", tablero 6d).
@@ -20,10 +20,21 @@ import { tonoInfo } from './tonos'
 // bloques tienen id, tipo y progreso propio (`instruccionesHechas`), y
 // `alternarTarea` ya marca de a una. Esta vista solo los recorre.
 //
-// Es un MODO, no un reemplazo: "Ver todo" vuelve a la vista de paso
-// completo. El técnico experto se queda en la lista; el que hace el
-// procedimiento por primera vez, o el que trabaja con guantes, entra
-// aquí.
+// DESDE LA TAREA 217 ESTA VISTA ES LA EJECUCIÓN, no un modo opcional.
+// La auditoría visual de Guías (G-16 a G-19) lo resume así: la mejor
+// pantalla de ejecución de la app estaba escondida tras un botón
+// secundario, se perdía al salir y se caía sola en los pasos sin
+// tareas. Tres consecuencias aquí dentro:
+//
+//   - "Ver el paso entero" sustituye a "Ver todo". La vista completa
+//     deja de ser el sitio del que se sale y pasa a ser la excepción a
+//     la que se va, y la preferencia se guarda (`preferenciasEjecucion`).
+//   - Un paso SIN tareas ya no expulsa a nadie: se presenta como una
+//     sola tarea con el título del paso (ver `tareasFoco.ts`).
+//   - El botón grande completa el paso cuando ya no queda nada que
+//     marcar. Antes había que salir a la vista completa para avanzar,
+//     que con el foco por defecto habría dejado la ejecución sin
+//     salida.
 
 interface Props {
   paso: PasoProcedimiento
@@ -32,7 +43,18 @@ interface Props {
   tituloPaso: string
   instruccionesHechas: ReadonlySet<string>
   onAlternarTarea: (tareaId: string) => void
-  onSalir: () => void
+  // Cierra el paso y avanza. Es la misma acción dominante de la vista
+  // completa: el foco no decide cuándo se puede, solo la ofrece.
+  onCompletarPaso: () => void
+  // Rótulo de esa acción ("Paso hecho · ir al 4"), resuelto arriba para
+  // que las dos vistas digan exactamente lo mismo.
+  etiquetaAvance: string
+  // Razón escrita cuando el paso no puede cerrarse todavía (un
+  // procedimiento vinculado sin terminar). null cuando sí puede.
+  motivoBloqueo: string | null
+  // Va a la vista de paso entero, que desde la tarea 217 es la
+  // excepción y no el sitio del que se viene.
+  onVerPasoEntero: () => void
   // El técnico declara que algo va mal en esta tarea. Abre la MISMA
   // hoja de salidas que el "Falla" de la vista completa (tablero 3d);
   // lo único que aporta el foco es saber en qué tarea estaba. No sale
@@ -48,10 +70,13 @@ export function ModoFoco({
   tituloPaso,
   instruccionesHechas,
   onAlternarTarea,
-  onSalir,
+  onCompletarPaso,
+  etiquetaAvance,
+  motivoBloqueo,
+  onVerPasoEntero,
   onFalla,
 }: Props) {
-  const tareas = tareasDe(paso.bloques)
+  const tareas = tareasParaFoco(paso, tituloPaso)
   const avisos = paso.bloques.filter((b) => b.tipo === 'aviso')
   const imagenes = paso.bloques.filter((b) => b.tipo === 'imagen' && b.adjunto)
   const [indiceTarea, setIndiceTarea] = useState(() => {
@@ -67,7 +92,11 @@ export function ModoFoco({
   if (!tarea) return null
   const hecha = instruccionesHechas.has(tarea.id)
   const hechas = tareas.filter((t) => instruccionesHechas.has(t.id)).length
-  const vinculoProtegido = tarea.vinculoProtegido ?? paso.vinculoProtegido
+  const vinculoProtegido = tarea.vinculoProtegido
+  // Qué hace el botón grande: marcar la tarea que se está mirando, o
+  // cerrar el paso porque ya no queda ninguna sin hacer.
+  const accion = accionFoco(tareas, instruccionesHechas)
+  const cierraPaso = accion === 'completar'
 
   function marcar() {
     onAlternarTarea(tarea.id)
@@ -91,31 +120,54 @@ export function ModoFoco({
           </span>
           <span className="min-w-0 truncate text-[13.5px] text-noct-neutral-400">{tituloPaso}</span>
         </span>
+        {/* La vista de paso completo ya no es "todo lo demás" sino una
+            opción concreta con su nombre (tarea 217): se va a ella y se
+            vuelve, y la elección queda guardada. */}
         <button
           type="button"
-          onClick={onSalir}
+          onClick={onVerPasoEntero}
           className="flex h-11 shrink-0 items-center rounded-full border-[1.5px] border-noct-divider px-3.5 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.08]"
         >
-          Ver todo
+          Ver el paso entero
         </button>
       </div>
 
       {/* Un segmento por TAREA del paso, no por paso: dentro del foco la
-          unidad es la tarea. */}
-      <IndicadorAvance
-        hechos={hechas}
-        total={tareas.length}
-        variante="segmentos"
-        expandido
-        actual={indiceTarea}
-        className="flex-none"
-      />
+          unidad es la tarea. El paso sin tareas no lo monta: un solo
+          segmento no mide nada que la cabecera no diga ya. */}
+      {!tarea.esPasoEntero && (
+        <IndicadorAvance
+          hechos={hechas}
+          total={tareas.length}
+          variante="segmentos"
+          expandido
+          actual={indiceTarea}
+          className="flex-none"
+        />
+      )}
 
       <div className="flex flex-1 flex-col justify-center gap-[22px] py-7">
-        <span className="inline-flex h-[34px] self-start items-center gap-1.5 rounded-full bg-noct-accent/[.18] px-3.5 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
-          <Check size={14} aria-hidden />
-          Tarea {indiceTarea + 1} de {tareas.length}
-        </span>
+        {!tarea.esPasoEntero && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full bg-noct-accent/[.18] px-3.5 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
+              <Check size={14} aria-hidden />
+              Tarea {indiceTarea + 1} de {tareas.length}
+            </span>
+            {/* Cuando ya no queda ninguna tarea sin hacer, el botón
+                grande pasa a cerrar el paso: sin esta salida, quien se
+                pasó de marcado se quedaría sin forma de corregirse
+                dentro del foco. */}
+            {cierraPaso && hecha && (
+              <button
+                type="button"
+                onClick={() => onAlternarTarea(tarea.id)}
+                className="flex h-11 items-center rounded-full px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.08]"
+              >
+                Desmarcar
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 30 px: es lo que se lee de brazo estirado, a pleno sol, con
             el teléfono apoyado en el rack. */}
@@ -181,19 +233,40 @@ export function ModoFoco({
           pantalla, así que no hay que apuntar. Con guantes, fallarlo es
           casi imposible. */}
       <div className="sticky bottom-0 z-10 -mx-4 mt-auto flex flex-none flex-col gap-2.5 bg-gradient-to-t from-noct-bg from-55% to-transparent px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3">
-        <button
-          type="button"
-          onClick={marcar}
-          aria-pressed={hecha}
-          className={`flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 text-xl font-semibold ${
-            hecha
-              ? 'border-noct-exito bg-noct-exito/[.16] text-noct-exito'
-              : 'border-noct-accent bg-noct-accent/[.16] text-noct-accent-300 active:bg-noct-accent/[.34]'
-          }`}
-        >
-          <Check size={26} className="shrink-0" aria-hidden />
-          {hecha ? 'Hecha' : 'Marcar hecha'}
-        </button>
+        {/* Un solo objetivo de 76 px, el único elemento grande de la
+            pantalla: con guantes, fallarlo es casi imposible.
+            Cambia de trabajo, no de sitio: marca la tarea mientras
+            queden, y cierra el paso cuando ya no. Antes cerrar exigía
+            salir a la vista completa, que con el foco por defecto
+            habría dejado la ejecución sin salida (tarea 217). */}
+        {cierraPaso && motivoBloqueo && (
+          <p className="text-center text-[11.5px] text-noct-neutral-400">{motivoBloqueo}</p>
+        )}
+        {cierraPaso ? (
+          <button
+            type="button"
+            disabled={motivoBloqueo !== null}
+            onClick={onCompletarPaso}
+            className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30"
+          >
+            <Check size={26} className="shrink-0" aria-hidden />
+            <span className="truncate">{etiquetaAvance}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={marcar}
+            aria-pressed={hecha}
+            className={`flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 text-xl font-semibold ${
+              hecha
+                ? 'border-noct-exito bg-noct-exito/[.16] text-noct-exito'
+                : 'border-noct-accent bg-noct-accent/[.16] text-noct-accent-300 active:bg-noct-accent/[.34]'
+            }`}
+          >
+            <Check size={26} className="shrink-0" aria-hidden />
+            {hecha ? 'Hecha' : 'Marcar hecha'}
+          </button>
+        )}
         <div className="flex gap-2.5">
           <button
             type="button"

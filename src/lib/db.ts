@@ -544,6 +544,24 @@ export interface ConfigBloqueoApp {
   updatedAt: string
 }
 
+// Preferencias de trabajo del tecnico (tarea 217). Local a cada
+// dispositivo y NO se sincroniza, mismo criterio que `favoritos` y
+// `recientes` (decision D1): expresan como trabaja quien tiene este
+// telefono en la mano, no un dato del equipo. Una sola fila, con el id
+// fijo `ID_PREFERENCIAS_TECNICO`, igual que `seguridadApp`.
+//
+// Nace con `modoEjecucion` y esta pensada para crecer: la tarea 226
+// (modo manos ocupadas) suma un campo mas sin tocar el esquema, porque
+// Dexie solo indexa la clave y el resto vive dentro del objeto.
+export interface PreferenciasTecnico {
+  id: string
+  // 'foco': una tarea a la vez, la ejecucion por defecto desde la
+  // tarea 217. 'pasoEntero': la vista de paso completo, que pasa a ser
+  // la excepcion.
+  modoEjecucion: 'foco' | 'pasoEntero'
+  actualizadoEn: string
+}
+
 // ----------------------------------------------------------------
 // Modo Diagnostico Inteligente
 // ----------------------------------------------------------------
@@ -862,6 +880,7 @@ class SolucionesItDatabase extends Dexie {
   campos_protegidos!: EntityTable<CampoProtegido, 'id'>
   bovedaMeta!: EntityTable<BovedaMeta, 'id'>
   seguridadApp!: EntityTable<ConfigBloqueoApp, 'id'>
+  preferenciasTecnico!: EntityTable<PreferenciasTecnico, 'id'>
   historial!: EntityTable<HistorialEntrada, 'id'>
   adjuntos!: EntityTable<Adjunto, 'id'>
   diagnosticos!: EntityTable<Diagnostico, 'id'>
@@ -1007,6 +1026,15 @@ class SolucionesItDatabase extends Dexie {
             normalizarEntidad(tabla, fila)
           })
       }
+    })
+
+    // Preferencias de trabajo del tecnico (2026-09-03, tarea 217).
+    // Tabla local de una sola fila, no sincronizada, mismo patron que
+    // `seguridadApp`. Se declara solo la clave: los campos viven
+    // dentro del objeto, asi que la tarea 226 podra sumar el modo
+    // manos ocupadas sin abrir otra version.
+    this.version(15).stores({
+      preferenciasTecnico: 'id',
     })
   }
 }

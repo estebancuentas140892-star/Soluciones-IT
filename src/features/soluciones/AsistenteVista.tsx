@@ -14,6 +14,12 @@ import {
   registrarEvidenciaPaso,
   reiniciarProgreso,
 } from '../../lib/progresoPasos'
+import {
+  guardarModoEjecucion,
+  leerModoEjecucion,
+  MODO_EJECUCION_POR_DEFECTO,
+  type ModoEjecucion,
+} from '../../lib/preferenciasEjecucion'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
@@ -77,9 +83,24 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   const [listo, setListo] = useState(false)
   // Índice de los pasos (tablero 6c): se abre tocando el contador.
   const [indiceAbierto, setIndiceAbierto] = useState(false)
-  // Modo foco (tablero 6d): una tarea a la vez. Es un modo, no un
-  // reemplazo, así que se entra y se sale a voluntad.
-  const [enFoco, setEnFoco] = useState(false)
+  // CÓMO SE EJECUTA (tarea 217, hallazgos G-16 a G-19). Una tarea a la
+  // vez es la ejecución por defecto, y la elección del técnico se
+  // GUARDA: era lo único del flujo que no sobrevivía a salir de la
+  // pantalla, mientras el avance sí. Arranca en el defecto y se
+  // corrige en cuanto la preferencia guardada llega, dentro del mismo
+  // efecto que resuelve la posición inicial, así que no hay parpadeo.
+  const [modoEjecucion, setModoEjecucion] = useState<ModoEjecucion>(MODO_EJECUCION_POR_DEFECTO)
+  async function cambiarModoEjecucion(modo: ModoEjecucion) {
+    setModoEjecucion(modo)
+    setPasoEnteroPorFalla(null)
+    await guardarModoEjecucion(modo)
+  }
+  // Excepción efímera y atada a UN paso: al declarar una falla hay que
+  // ver el paso entero, porque las cuatro salidas (contingencia,
+  // evidencia, archivos) viven ahí. No toca la preferencia guardada:
+  // mirar una falla no es cambiar de forma de trabajar. Al cambiar de
+  // paso deja de aplicar sola, igual que `falla`.
+  const [pasoEnteroPorFalla, setPasoEnteroPorFalla] = useState<string | null>(null)
   // FALLA DEL PASO (tablero 3d). Tres estados distintos a propósito:
   //
   // - `falla`: qué paso falló y qué se pidió al declararlo. Va ATADO AL
@@ -125,10 +146,14 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   useEffect(() => {
     let vigente = true
     setListo(false)
-    void db.progresoPasos.get(articuloId).then((prog) => {
+    // La preferencia de modo se lee JUNTO con el avance y antes de
+    // marcar `listo`: si se leyera aparte, el técnico que trabaja con
+    // el paso entero vería medio segundo de foco al entrar.
+    void Promise.all([db.progresoPasos.get(articuloId), leerModoEjecucion()]).then(([prog, modo]) => {
       if (!vigente) return
       const hechosIniciales = new Set(prog?.pasosHechos ?? [])
       setIndiceActual(siguientePasoPendiente(idsPasos, hechosIniciales, -1))
+      setModoEjecucion(modo)
       setListo(true)
     })
     return () => {
@@ -319,14 +344,17 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // La barra de tarea del chasis se queda (dice qué se está haciendo y
   // a dónde se vuelve, regla R19); lo que no se monta es la banda del
   // paso, porque el foco trae su propia cabecera mínima.
-  // Elegir una salida deja el paso declarado como fallido y SALE DEL
-  // FOCO, porque las cuatro salidas ocurren en el paso completo (la
-  // contingencia, la evidencia y los archivos viven ahí). Cancelar no
-  // sale: devuelve al técnico exactamente donde estaba.
+  // Elegir una salida deja el paso declarado como fallido y muestra EL
+  // PASO ENTERO, porque las cuatro salidas ocurren ahí (la
+  // contingencia, la evidencia y los archivos viven en el paso
+  // completo). Es una excepción de este paso, no un cambio de
+  // preferencia: al pasar al siguiente se vuelve solo a como el
+  // técnico trabaja. Cancelar no sale: devuelve al técnico exactamente
+  // donde estaba.
   function elegirSalida(conEvidencia: boolean) {
     setFalla({ pasoId: paso.id, tarea: hojaFalla?.tarea ?? null, conEvidencia })
     setHojaFalla(null)
-    setEnFoco(false)
+    setPasoEnteroPorFalla(paso.id)
   }
 
   // UNA SOLA hoja para los dos "Falla" (tablero 3d): el del modo foco,
@@ -354,16 +382,24 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
               // Saltar no deja aviso puesto: el aviso es de este paso
               // y el técnico se va a otro. Que quedó saltado ya lo dice
               // el índice, que lo deriva de la posición
-              // (`estadoPasos.ts`).
+              // (`estadoPasos.ts`). Y no cambia de vista: saltar es
+              // seguir trabajando, así que el técnico sigue en el modo
+              // que eligió.
               setHojaFalla(null)
-              setEnFoco(false)
               setIndiceActual(destinoSalto)
             }
       }
     />
   )
 
-  if (enFoco && nivel === 0 && idsTareas.length > 0) {
+  // El foco ya no exige que el paso tenga tareas (G-18): un paso sin
+  // ellas se presenta como una sola tarea con su título, así que el
+  // modo no se cae solo a mitad de procedimiento. Lo único que lo
+  // aparta es la preferencia del técnico o la falla declarada en ESTE
+  // paso.
+  const enFoco = modoEjecucion === 'foco' && nivel === 0 && pasoEnteroPorFalla !== paso.id
+
+  if (enFoco) {
     return (
       <>
         <ModoFoco
@@ -374,7 +410,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           tituloPaso={tituloPaso}
           instruccionesHechas={instruccionesHechas}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
-          onSalir={() => setEnFoco(false)}
+          onCompletarPaso={avanzar}
+          etiquetaAvance={etiquetaAvance}
+          motivoBloqueo={motivoBloqueo}
+          onVerPasoEntero={() => void cambiarModoEjecucion('pasoEntero')}
           onFalla={(texto) => setHojaFalla({ tarea: texto })}
         />
         {hojaDeFalla}
@@ -611,18 +650,19 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
             >
               <CaretLeft size={18} aria-hidden />
             </button>
-            {/* Entrada al modo foco (tablero 6d). Solo si el paso tiene
-                tareas: sin ellas el foco no tendría nada que enfocar. */}
-            {idsTareas.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setEnFoco(true)}
-                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-noct-accent/50 bg-noct-accent/10 px-3 text-[14.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.22]"
-              >
-                <Crosshair size={18} className="shrink-0" aria-hidden />
-                Foco
-              </button>
-            )}
+            {/* El regreso a la ejecución normal (tarea 217). Ya no es
+                "Foco", un modo opcional que había que descubrir, sino
+                la vuelta a como se trabaja aquí: una tarea a la vez.
+                Está siempre, también en los pasos sin tareas, porque
+                el foco ya sabe presentarlos. */}
+            <button
+              type="button"
+              onClick={() => void cambiarModoEjecucion('foco')}
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-noct-accent/50 bg-noct-accent/10 px-3 text-[14.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.22]"
+            >
+              <Crosshair size={18} className="shrink-0" aria-hidden />
+              <span className="truncate">Volver a una tarea a la vez</span>
+            </button>
           </div>
           <div className="mt-2 flex items-center gap-2">
             {/* "Falla" de 56 px, permanente. La etiqueta es corta a
