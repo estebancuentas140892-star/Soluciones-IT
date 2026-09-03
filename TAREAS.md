@@ -281,6 +281,220 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ---
 
+**HANDOFF NUEVO: "Auditoría visual sección Guía" (importado el 2026-09-03).** Proyecto de Claude Design `e6954590-718c-4f61-a521-e1d5c2e1b803`, tres `.dc.html`: `Guías - Auditoría UX móvil` (el informe escrito, 40 hallazgos G-01 a G-40), `Guías - Antes y Después` (12 pantallas del estado actual recreadas desde el código y 7 del rediseño) y `Guías - Prototipo` (prototipo navegable de la ejecución). Sistema de diseño Nocturne (`_ds/nocturne-a3c535f5-.../styles.css`), sin ningún componente nuevo: el rediseño se construye con lo que el sistema ya tiene.
+
+**Cómo se leyó:** el MCP `claude_design` volvió a devolver `DesignSync needs design-system authorization` (esta sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Auditoría visual sección Guía-handoff.zip`, en la raíz del repo, que trae el proyecto completo. La auditoría se hizo contra el código real: cita `index.css`, `Chasis.tsx`, `SolucionesPage.tsx`, `ArticuloPage.tsx`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `HojaFalla.tsx`, `HojaPasos.tsx` y `PasosEditor.tsx`, y sus medidas de cromo coinciden con lo que hay puesto.
+
+**Alcance autorizado (2026-09-03):** el usuario autoriza **registrar las 13 recomendaciones**, sin implementar nada todavía. Se irán tomando de una en una en mensajes posteriores, con el tablero funcionando como siempre (una sola tarea "En proceso").
+
+**La tesis del informe.** La sección está construida alrededor del **documento**; el técnico trabaja en la **tarea**. Para llegar a una instrucción hay que atravesar cuatro capas (lista, ficha, paso, bloque) y, una vez ahí, la instrucción comparte 640 px con 262 px de cromo que describe el documento que el técnico eligió hace cuatro segundos. La app ya tiene la respuesta escrita: se llama **Modo Foco**, resuelve exactamente eso, y está escondida tras un botón secundario, se pierde al salir y desaparece sola en los pasos sin tareas. Puntuación UX que calcula el informe: **61/100 hoy, 86/100 con las 13** (+25 puntos).
+
+**Lo que el informe pide NO tocar, porque ya está bien:** la hoja de falla, el índice de pasos como contenido, la línea de capacidad de la fila, los tres estados vacíos, la barra de reanudar, los colores de tipo y categoría, el sistema de tres niveles del chasis, la disciplina de una sola acción dominante, el mecanismo de completitud con sus enlaces por pestaña, la detección de duplicados y todo el fondo de "Probar" (el diálogo que promete, el progreso efímero y la carga diferida). Y retira su propio hallazgo G-31: la jerarquía del pie del editor está bien resuelta.
+
+**Las 13 recomendaciones y su tarea.** Ordenadas como las ordena el informe, por impacto dividido entre esfuerzo. Las cuatro primeras son, según el propio informe, la mitad del beneficio.
+
+| # | Recomendación | Cierra | Impacto | Esfuerzo | Tarea |
+|---|---|---|---|---|---|
+| 1 | Foco pasa a ser la ejecución por defecto, persistido por usuario | G-16 a G-19 | Alto | Bajo | **217** |
+| 2 | Barra de ejecución de una línea (44 px) y el índice duplicado al pie | G-09, G-10, G-14 | Alto | Bajo | **218** |
+| 3 | Vocabulario único: "guía" | G-04 | Medio | Bajo | **216** (ya registrada arriba) |
+| 4 | Guardado continuo en el editor y tarjetas de paso plegadas | G-27, G-28, G-29 | Alto | Medio | **219** |
+| 5 | Cierre real: verificación en acento, resumen honesto, "Cerrar y registrar" | G-23 a G-26 | Alto | Medio | **220** |
+| 6 | Reordenar la lista: Sigues aquí, Lo que más usas, Toda la biblioteca | G-02, G-03 | Alto | Medio | **221** |
+| 7 | Cabecera de lista de dos alturas y "Crear" al pie | G-01 | Medio | Bajo | **222** |
+| 8 | Franja de sin conexión en ejecución y editor | G-15 | Medio | Bajo | **223** |
+| 9 | Dictado y QR en el buscador; dictado en el editor | G-05, G-30 | Medio | Alto | **224** |
+| 10 | Tiempo honesto: fuera el cronómetro de sesión | G-13, G-25 | Medio | Bajo | **225** |
+| 11 | Modo manos ocupadas como preferencia de cuenta | nuevo | Medio | Medio | **226** |
+| 12 | Publicar como acción propia, con confirmación, y completitud ponderada | G-32, G-34 | Alto | Bajo | **227** |
+| 13 | Listas de una línea en vez de los cinco `textarea`; foco en el campo del error | G-33, G-35 | Medio | Medio | **228** |
+
+**Tres tareas más, por los hallazgos que las 13 recomendaciones dejan fuera.** El informe los diagnostica en las pantallas P2, P5 y P9 pero no los sube a su lista priorizada: son las tareas **229** (ficha), **230** (hojas) y **231** (vista previa). Con ellas los 40 hallazgos quedan cubiertos, salvo el G-31, que el propio informe retira.
+
+**Orden recomendado, y por qué.** La 217 y la 218 son el mismo trozo de pantalla (`AsistenteVista.tsx` y su pie); hacerlas por separado obliga a reescribir dos veces la misma cabecera, así que conviene tomarlas seguidas y en ese orden. La 225 (tiempo honesto) cae dentro del mismo archivo y es barata: entra bien detrás de las dos. La 226 (manos ocupadas) reutiliza la tabla de preferencias que crea la 217, así que va después de ella o no va. La 227 y la 228 tocan el mismo pie de `ArticuloForm.tsx`, con la misma razón que la 217 y la 218.
+
+**Deuda de esquema que abren estas tareas.** La base local va por `this.version(14)` en `src/lib/db.ts` (líneas 886 a 1001). Las tareas 217, 219 y 226 piden dos tablas nuevas: **preferencias del técnico** (modo de ejecución, manos ocupadas) y **borrador de artículo** (guardado continuo). Conviene decidir si van en una sola versión nueva o en dos, y anotarlo en [DECISIONES.md](DECISIONES.md) al tomar la primera.
+
+### 217. Rediseño Guía: el Modo Foco pasa a ser la ejecución por defecto (G-16 a G-19)
+
+- **Descripción:** invertir la relación entre las dos vistas de ejecución. **Foco es la ejecución**; la vista de paso completo pasa a llamarse "Ver el paso entero" y es la excepción, alcanzable desde el contador del pie (ver la tarea 218). Cuatro piezas concretas: **(a)** la preferencia se guarda **por usuario**, no en estado de componente, así que sobrevive a salir a la Bóveda y volver; **(b)** un **paso sin tareas** se renderiza como una tarea única, con el título del paso a 30 px, de modo que el modo no se cae solo a mitad de procedimiento; **(c)** la barra de tarea de 68 px se reduce a la línea de 44 px que define la tarea 218; **(d)** se conserva "Ver el paso entero" como control de 44 px en la fila secundaria, y volver de él devuelve a Foco.
+- **Motivo:** hallazgos **G-16** (es opcional y está escondido tras un botón secundario de 44 px que compite con otros tres), **G-17** (no sobrevive a la interrupción: el modo vive en estado de componente y la preferencia del técnico es lo único del flujo que no se persiste, mientras el avance sí), **G-18** (desaparece solo y sin avisar en los pasos sin tareas) y **G-19** (la barra de 68 px sigue puesta encima del modo que existe para vaciar la pantalla). Es **la recomendación principal del informe**: la mejor pantalla de ejecución de la app es hoy un modo opcional que la mayoría de los técnicos nunca verá.
+- **Impacto:** alto. Devuelve 68 px de área útil (de 378 a 446 px), duplica el tamaño de la instrucción activa (de 15 px a 30 px siempre) y elimina una decisión que el técnico no debería tomar de pie frente a un rack.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:**
+  - `src/features/soluciones/AsistenteVista.tsx` (1.123 líneas): el estado del modo y su comentario de diseño están en las líneas ~80 a 90; el montaje de `ModoFoco` en ~369; el remonte al cambiar de paso en ~317 a 321; el botón "Foco" de entrada y su condición "solo si el paso tiene tareas" en ~586 y ~614 a 615.
+  - `src/features/soluciones/ModoFoco.tsx` (280 líneas): la ruta del paso sin tareas (b) es nueva aquí; los segmentos por tarea están en ~103.
+  - `src/lib/db.ts` (~886 a 1001): tabla nueva de preferencias del técnico y su versión de esquema.
+  - `src/features/soluciones/useProcedimientoEjecucion.ts` (198 líneas): si la preferencia se lee desde el hook y no desde la vista.
+- **Dependencias:** ninguna previa. **La 218 y la 226 dependen de esta** (la 218 reescribe la cabecera que esta reduce; la 226 reutiliza su tabla de preferencias).
+- **Modelo/esfuerzo:** Opus 5 / Alto. El informe la marca como esfuerzo bajo en líneas de código, pero es un cambio de modelo mental con persistencia nueva, un caso de borde real (paso sin tareas) y dos vistas que intercambian su papel: el riesgo está en el estado, no en el marcado.
+
+### 218. Rediseño Guía: barra de ejecución de una línea y el índice de pasos al pulgar (G-09, G-10, G-14)
+
+- **Descripción:** reducir el cromo de la pantalla de ejecución de 262 px a unos 132. Arriba, una **sola línea de 44 px**: cerrar, nombre corto del equipo y el contador "3/7" con su punta hacia abajo, donde el contador **es** el disparador del índice. Fuera "Ejecutando", el título largo y la ruta de vuelta durante la ejecución. Abajo, la acción dominante de 76 px y una fila de 52 px con anterior, el **contador duplicado que abre el índice**, "algo va mal" y siguiente. "Falla" baja a control neutro de 52 px con icono ámbar: deja de ir en ámbar pleno y deja de compartir tamaño con la acción principal.
+- **Motivo:** hallazgos **G-09** (262 px de cromo sobre 640: el paso trabaja en 378 px, el mismo defecto que el equipo ya midió y corrigió en M-033 para la barra de reanudar, sin aplicarlo a la pantalla donde el técnico pasa la mayor parte del tiempo), **G-10** (la barra repite en tres líneas lo que el técnico acaba de decidir: útil al volver de una interrupción, caro los otros 40 minutos), **G-14** (el índice, la navegación más valiosa de la ejecución, se abre desde el borde superior, la zona menos alcanzable con una mano). Arrastra también **G-11** (cuatro controles compiten al pie y el de error es el más visible cuando la acción está bloqueada) y **G-12** (la acción dominante se trunca: "Paso hecho · ir al 4" no cabe a 360 px junto a "Falla").
+- **Impacto:** alto. Es la otra mitad de los +68 px de área útil de la 217, y mueve el salto al paso N desde el techo hasta el arco del pulgar.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:**
+  - `src/features/soluciones/AsistenteVista.tsx`: la cabecera `Encabezado` en ~755 a 790; la fila secundaria de 44 px en ~586; la fila de acción dominante y "Falla" justo debajo.
+  - `src/app/Chasis.tsx` (590 líneas) y `src/app/bandaTarea.tsx` (35 líneas): el hueco de la banda pegajosa del nivel tarea se calcula en `Chasis.tsx` ~224; al encoger la banda hay que ajustar ese hueco o la pantalla queda con un espacio muerto.
+  - `src/features/soluciones/HojaPasos.tsx` (165 líneas): no cambia de contenido, solo de disparador.
+- **Dependencias:** **la 217**, que define quién es la vista por defecto y por tanto qué cabecera se está reduciendo.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio. Es sobre todo marcado y medidas, pero toca el cálculo del hueco pegajoso del chasis, que es compartido con otras pantallas de nivel tarea.
+
+### 219. Rediseño Guía: guardado continuo del editor y tarjetas de paso plegadas (G-27, G-28, G-29)
+
+- **Descripción:** tres cambios en la pestaña Pasos. **(a) Plegado:** las tarjetas de paso se pliegan por defecto a una línea de 56 px (número, título, "3 tareas") y solo la activa se despliega. Siete pasos pasan de más de 2.000 px de desplazamiento a unos 500, y el asa de arrastre vuelve a ser usable porque el destino cabe en pantalla. **(b) Guardado continuo:** el formulario deja de vivir en estado de componente hasta "Guardar cambios"; se escribe en la base local mientras se escribe, y la barra dice "Guardado" en lugar de ofrecer un botón. **(c) Cabecera de 44 px:** fuera la pastilla de estado de la cabecera fija (se va a la pestaña Detalles, o al pie con la acción de publicar según la tarea 227), fuera el título largo y la ruta de vuelta. La cabecera baja de 180 px a 44 más 48 de pestañas.
+- **Motivo:** hallazgos **G-27** (310 px de cromo y 320 de trabajo para tarjetas de paso que ya miden 300: nunca cabe una segunda en pantalla), **G-28** (todos los pasos van desplegados) y **G-29** (**no hay borrador automático**: en un dispositivo con llamadas entrantes y batería finita, escribir siete pasos de pie es una apuesta). G-29 es uno de los cinco problemas críticos del informe.
+- **Impacto:** alto. El editor pasa de 1 paso visible a 1 abierto y 4 plegados, y el riesgo de perder trabajo pasa de alto a nulo. El informe estima documentar una guía de cinco pasos en el teléfono de unos 9 a unos 6 minutos, sobre todo por no rehacer lo perdido.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:**
+  - `src/features/soluciones/PasosEditor.tsx` (1.348 líneas): el paso activo se sigue con `focoBloqueId` en ~212 y se propaga como `enfocar` en ~626; el plegado y la línea de 56 px son nuevos alrededor de ese punto.
+  - `src/features/soluciones/ArticuloForm.tsx` (1.450 líneas): es quien tiene el estado del formulario y el botón "Guardar"; el guardado continuo se decide aquí.
+  - `src/lib/db.ts` (~886 a 1001): tabla de borrador de artículo y su versión de esquema.
+- **Dependencias:** ninguna. Comparte archivo con la 227 y la 228; si se toman seguidas, se evita reescribir el pie tres veces.
+- **Modelo/esfuerzo:** Opus 5 / Alto. El guardado continuo cambia el ciclo de vida del formulario más grande del proyecto y tiene que convivir con el versionado y con la vista previa sin guardar; no es un cambio visual.
+
+### 220. Rediseño Guía: cierre real del procedimiento, con registro en el equipo (G-23 a G-26)
+
+- **Descripción:** convertir el final del procedimiento en un **cierre**. La verificación final pasa a **acento**, no a ámbar, y va arriba bajo el rótulo "Antes de cerrar". Debajo, un resumen honesto ("7 pasos · 1 saltado · 3 fotos · 38 min"). Si quedaron **pasos saltados**, el resumen los nombra y ofrece volver a ellos antes de cerrar. Y una sola acción dominante de 56 px, **"Cerrar y registrar en el equipo"**, que escribe la intervención en el historial del dispositivo con fecha, autor y fotos. "Repetir" y "Volver a Guías" quedan como secundarias.
+- **Motivo:** hallazgos **G-23** (la verificación es ámbar, contra la regla **M-R11** del propio equipo: "ámbar con icono y borde es advertencia y nada más"; teñir de ámbar una lista de comprobación erosiona el canal que la tarea 206 acababa de limpiar), **G-24** (**terminar no cierra nada**: la única acción del final es "Reiniciar", el procedimiento no deja constancia de que se completó, ni cuándo, ni quién), **G-25** (el cierre repite el cronómetro de sesión, ver la tarea 225) y **G-26** (los pasos saltados desaparecen del cierre). G-24 es uno de los cinco problemas críticos.
+- **Impacto:** alto. Cierra el hueco de trazabilidad de trabajo hecho: hoy la evidencia se registra paso a paso en el historial del equipo, pero el procedimiento en sí no. El resto de la app sí registra en el historial del equipo; terminar un procedimiento debería hacer lo mismo (consistencia, heurística 4).
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:**
+  - `src/features/soluciones/ProcedimientoVista.tsx` (1.073 líneas): la verificación final se pinta en ~367 a 410, con `alternarVerificacionFinal` importado en la línea 6; el ámbar está ahí.
+  - `src/features/soluciones/AsistenteVista.tsx`: la tarjeta de completado y el "Reiniciar" están en ~234 a 245.
+  - `src/lib/progresoPasos.ts` (158 líneas): de aquí salen los pasos saltados y el conteo de hechos que necesita el resumen.
+  - Historial del equipo: la escritura de la intervención reutiliza la tabla `historial` de `src/lib/db.ts` (`'id, [entidadTipo+entidadId], fechaHora'`, línea ~892).
+- **Dependencias:** conviene después de la **225**, porque el resumen honesto necesita el tiempo real, no el cronómetro de sesión.
+- **Modelo/esfuerzo:** Opus 5 / Alto. Escribe en el historial de otra entidad y tiene que decidir qué pasa cuando el procedimiento no está vinculado a ningún equipo.
+
+### 221. Rediseño Guía: la lista se ordena por uso, en tres bloques (G-02, G-03)
+
+- **Descripción:** reordenar la lista de Guías en tres bloques: **Sigues aquí** (lo que hoy es "Sin terminar", con puerta a "ver todos" cuando hay más de tres), **Lo que más usas** (recientes y frecuentes de este dispositivo) y **Toda la biblioteca** con su conteo. El orden por categoría y alfabético deja de ser el orden principal y queda dentro del tercer bloque.
+- **Motivo:** hallazgos **G-02** (el orden es de biblioteca, no de trabajo: un técnico que abre las mismas seis guías cada semana no tiene forma de que esas seis suban; "Recientes" existe en Inicio, pero no aquí, que es donde se busca una guía) y **G-03** ("Sin terminar" corta en 3 sin puerta: el contador dice 5 y la lista muestra 3). Justificación del informe: ley de Hick, ordenar por frecuencia convierte una lista de 46 en una de 6 más una reserva.
+- **Impacto:** alto. El informe estima que encontrar y arrancar la guía correcta baja de unos 22 a unos 9 segundos.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:**
+  - `src/features/soluciones/SolucionesPage.tsx` (740 líneas): el bloque "Sin terminar" se arma en ~152 con `articulosSinTerminar`; la agrupación por categoría y su encabezado, en ~256 a 270.
+  - `src/features/soluciones/sinTerminar.ts` (68 líneas) y su prueba: aquí vive el corte en 3.
+  - `src/lib/recientes.ts` (66 líneas) y la tabla `recientes` de `src/lib/db.ts` (línea ~901): ya existen y son la fuente de "Lo que más usas"; falta contar frecuencia, no solo última visita.
+- **Dependencias:** ninguna. Comparte archivo con la 222.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio. La parte delicada es definir "lo que más usas" (frecuencia contra recencia) y que el bloque no se pise con "Sigues aquí".
+
+### 222. Rediseño Guía: cabecera de lista de dos alturas y "Crear" al pie (G-01)
+
+- **Descripción:** cabecera de dos alturas. En reposo, buscador y fila de filtros: **118 px**, no 200. Al desplazarse, solo el buscador colapsado de **44 px**. "Crear" y la línea de frescura ("46 guías al día · hace 4 min") bajan **al pie de la lista**, donde no compiten con la consulta. Es la propia regla **M-R10** del equipo, aplicada aquí.
+- **Motivo:** hallazgo **G-01**: 200 px de cabecera fija sobre 640 de pantalla, más 64 de pestañas, dejan 376 px de contenido, es decir una guía y media. La cabecera contiene cuatro servicios que no son la tarea (frescura, Crear, cuenta, sincronización) y solo uno que sí lo es (buscar).
+- **Impacto:** medio. Cabecera de 200 px fijos a 144 px que colapsan a 44, y de 1,5 guías visibles a 3.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/SolucionesPage.tsx`: la cabecera y sus decisiones de diseño están comentadas en las líneas ~32 a 44 (el "Crear" siempre activo es la regla R3, la pastilla de frescura la R7); los chips se arman en ~199 a 215. La cabecera colapsable como patrón ya existe en el chasis desde la tarea 186, así que conviene reutilizarla y no escribir una segunda.
+- **Dependencias:** ninguna. Va bien junto a la **221**, que reordena el cuerpo de la misma pantalla.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+### 223. Rediseño Guía: franja de sin conexión durante la ejecución y la edición (G-15)
+
+- **Descripción:** una franja de **24 px que aparece solo cuando falta red**: "Sin conexión · lo que anotes se guarda y se sube solo". Va en la pantalla de ejecución y en el editor, que son los dos sitios donde el técnico captura datos (foto de evidencia, contingencia, clave de bóveda) y hoy no tiene ninguna señal de si eso se guardó.
+- **Motivo:** hallazgo **G-15**, uno de los cinco críticos: la pastilla de sincronización vive en la barra superior del **nivel sección**, que en ejecución no existe. Consecuencia real que anota el informe: el técnico no sabe si su foto se guardó.
+- **Impacto:** medio en esfuerzo, alto en confianza. La app ya funciona bien sin conexión; lo que falta es que se vea.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:**
+  - `src/components/PastillaSync.tsx`: ya resuelve la escucha de red con `useSyncExternalStore` sobre `navigator.onLine` (líneas ~26 a 47). La franja debe reutilizar esa suscripción, no crear otra.
+  - `src/features/soluciones/AsistenteVista.tsx` y `src/features/soluciones/ArticuloForm.tsx`: los dos puntos de montaje.
+  - `src/lib/archivosPendientes.ts` (líneas ~21, 53) y `src/lib/sync.ts` (~170, 195): son los que ya saben si algo quedó en cola; la promesa "se sube solo" tiene que ser cierta contra ellos.
+- **Dependencias:** conviene después de la **218**, que redefine la cabecera de ejecución donde la franja se apoya.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+### 224. Rediseño Guía: dictado y QR en el buscador, dictado en el editor (G-05, G-30)
+
+- **Descripción:** dos entradas nuevas de **44 px dentro del campo de búsqueda** de Guías: micrófono (dictado) y código QR. Dictar "la zebra no imprime" encuentra la guía sin teclear; apuntar a la etiqueta del rack devuelve las guías de ese equipo. Y dictado también en el campo de tarea del editor, que es donde documentar hablando gana más.
+- **Motivo:** hallazgos **G-05** (solo se busca escribiendo, y con guantes o en movimiento teclear es el gesto más caro de la pantalla) y **G-30** (escribir es la única entrada del editor). El informe las presenta como **oportunidades**, no como defectos: abren capacidad que hoy no existe. La infraestructura ya está: sinónimos y corrección ortográfica en el buscador, y el escáner ya resuelve códigos a equipos.
+- **Impacto:** medio. Es la recomendación de **esfuerzo alto** de la lista, la única.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:**
+  - `src/components/CampoBusqueda.tsx` (76 líneas): el campo compartido; aquí van los dos controles.
+  - `src/features/soluciones/SolucionesPage.tsx`: el buscador de la sección.
+  - `src/features/escaner/EscanerPage.tsx` (520 líneas): de aquí sale la resolución de código a equipo que necesita el botón de QR.
+  - `src/features/soluciones/sugerenciaBusqueda.ts` (118 líneas) y `src/features/soluciones/coincidencia.ts` (73 líneas): el dictado entra por el mismo camino que el texto escrito, no por uno paralelo.
+  - `src/features/soluciones/PasosEditor.tsx`: el botón "Dictar" sustituye a "Reusar" en la barra de añadir, y "Reusar" vuelve al menú de tres puntos del paso.
+- **Dependencias:** ninguna técnica. **Decisión pendiente del usuario:** el dictado depende de `SpeechRecognition`, que no está en todos los navegadores ni funciona sin conexión; hay que decidir si se acepta que sea una mejora que a veces no está, o si se descarta.
+- **Modelo/esfuerzo:** Opus 5 / Alto. Es integración con una API del navegador con permisos, estados de error y comportamiento distinto por plataforma, sobre una app que presume de funcionar sin red.
+
+### 225. Rediseño Guía: tiempo honesto, fuera el cronómetro de sesión (G-13, G-25)
+
+- **Descripción:** retirar el cronómetro de sesión y sustituirlo por **"~N min restantes"**, calculado sobre los pasos que faltan. En el cierre, el resumen usa el **tiempo real del trabajo** ("empezado hace 38 min"), no el de la sesión actual.
+- **Motivo:** hallazgos **G-13** (el cronómetro es de sesión y arranca de cero cada vez que se entra: tras una interrupción de media hora marca "0:12 / ~25 min", y en un flujo cuyo escenario declarado son las interrupciones es el único dato de la pantalla que no sobrevive a una) y **G-25** (el mismo error, en el momento en que más se mira). Justificación del informe: un cronómetro que se reinicia es peor que ningún cronómetro, porque el usuario le cree.
+- **Impacto:** medio, esfuerzo bajo. Cambia un dato que hoy miente.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/AsistenteVista.tsx`: el cronómetro se arma en las líneas ~110 a 117 (`inicio`, `ahora`, `setInterval` de 1 s, `transcurridoSeg`), se reinicia en ~169 a 170, se formatea en ~182 y se pinta en ~187, ~234, ~242 ("2:14 en esta sesión"), ~427 a 430 y ~777 a 785. El tiempo real de arranque, si se quiere persistir, va en `src/lib/progresoPasos.ts` (158 líneas) junto al avance, que sí sobrevive.
+- **Dependencias:** ninguna. **La 220 depende de esta** para su resumen honesto.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio. Lo barato es quitar; lo que hay que pensar es de dónde sale el "empezado hace 38 min" y si se persiste.
+
+### 226. Rediseño Guía: modo manos ocupadas como preferencia de cuenta (nuevo)
+
+- **Descripción:** una **preferencia**, no un botón por pantalla: sube la instrucción a **34 px**, los objetivos a **88 px** y fuerza el avance por tarea. Se activa una vez y vale para toda la sección.
+- **Motivo:** oportunidad nueva del informe, no un defecto. Nace del escenario real: guantes, poca luz, una mano ocupada, el teléfono a distancia de brazo. El propio informe la dibuja en el tablero `2c` del rediseño.
+- **Impacto:** medio. Accesibilidad real para el escenario declarado del producto.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/ModoFoco.tsx` (280 líneas) para las medidas; la tabla de preferencias del técnico que crea la tarea **217** en `src/lib/db.ts`; y la pantalla donde se activa, que hoy sería "Más" o Seguridad (`src/features/seguridad/SeguridadPage.tsx`), a decidir al tomarla.
+- **Dependencias:** **la 217**, que crea la persistencia de preferencias. Sin ella esta tarea tendría que inventar una segunda.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+### 227. Rediseño Guía: publicar es la acción, con freno, y completitud ponderada (G-32, G-34, G-37)
+
+- **Descripción:** tres cambios. **(a) Completitud ponderada:** título, un paso y descripción valen el **60 %**; el resto se reparte. Hoy las diez señales pesan lo mismo, así que una guía sin un solo paso puede marcar 70 %. **(b) Publicar como acción propia:** el pie deja de decir "Guardar" (el borrador ya es continuo desde la tarea 219) y pasa a decir **"Publicar la guía"**, con una hoja de confirmación cuando faltan los mínimos: "esta guía se publicará sin pasos: aparecerá como solo lectura". **(c)** El estado baja de la cabecera fija al pie, junto a la acción de publicar, que es donde se decide; la pestaña Publicación desaparece como pestaña.
+- **Motivo:** hallazgos **G-32** (**se puede publicar una guía vacía**: la única validación de todo el formulario es que el título no esté en blanco; con 10 % de completitud y cero pasos, "Guardar" funciona y el estado se puede poner en publicado, y ese artículo entra a la lista y al buscador; es uno de los cinco críticos), **G-34** (las diez señales de completitud pesan lo mismo, y el porcentaje es la única medida de calidad que el autor ve) y **G-37** (las decisiones más consecuentes viven en la cuarta pestaña, la que menos se abre, mientras el estado ocupa 28 px permanentes en la cabecera para un dato de una sola palabra). El informe la llama **de las más rentables de la lista: impacto alto, esfuerzo bajo**.
+- **Impacto:** alto. Evita que entre al buscador una guía que no se puede ejecutar.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:**
+  - `src/features/soluciones/completitudArticulo.ts` (137 líneas) y su prueba `completitudArticulo.test.ts` (154 líneas): aquí va la ponderación. La prueba **hay que reescribirla**, no solo ampliarla.
+  - `src/features/soluciones/ArticuloForm.tsx` (1.450 líneas): el pie, el selector de estado (`'borrador' | 'publicado' | 'obsoleto'`, opciones en ~78) y la hoja de confirmación.
+  - `src/features/soluciones/capacidadGuia.ts` (80 líneas): ya sabe si una guía es ejecutable; es la fuente natural de los mínimos, y evita escribir esa regla dos veces.
+- **Dependencias:** la **219** (el guardado continuo es lo que permite que "Guardar" desaparezca del pie). Se puede hacer antes, pero entonces el pie se reescribe dos veces.
+- **Modelo/esfuerzo:** Opus 5 / Alto. La ponderación es una regla de negocio nueva y el freno al publicar es la única puerta sin retorno del editor: conviene decidirla bien y dejarla en [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md).
+
+### 228. Rediseño Guía: listas de una línea en vez de los cinco `textarea`, y el error enfocado (G-33, G-35, G-36)
+
+- **Descripción:** **(a)** sustituir los cinco campos multilínea que significan "uno por línea" (requisitos, verificación, síntomas, causas y el que corresponda) por **listas con una fila por elemento** y un "+ Añadir" de 44 px. **(b)** Al fallar el guardado, **enfocar el campo** del error y traerlo a la vista, no solo saltar a su pestaña. **(c)** Dar a los vínculos (relacionados, equipos) aspecto de **control activo**: hoy son `select` con borde discontinuo y texto en neutral-400 sobre fondo transparente, y leen como campo inactivo; y cuando no hay opciones desaparecen sin decir por qué.
+- **Motivo:** hallazgos **G-35** (ocho campos multilínea con el mismo aspecto y un contrato invisible: cinco significan "uno por línea" y eso solo se dice en la etiqueta; con `rows=3` escribir cinco requisitos obliga a desplazar dentro del campo, sobre un formulario que ya se desplaza, que es el peor patrón táctil del formulario), **G-33** (el error de guardado se pinta arriba de la pestaña General mientras el botón que lo disparó está fijo abajo: en 360 px con el formulario desplazado, tocar "Guardar" puede no mostrar nada) y **G-36** (los vínculos parecen deshabilitados).
+- **Impacto:** medio. Es el trabajo de detalle del formulario, el que hace que documentar de pie deje de castigar.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/ArticuloForm.tsx` (1.450 líneas) para los campos y el foco del error; `src/features/soluciones/FilaVinculo.tsx` (138 líneas) y `src/features/soluciones/HojaVinculo.tsx` (120 líneas) para el aspecto de los vínculos; `src/components/campos.tsx` si la lista de una línea se hace componente compartido, que es lo suyo.
+- **Dependencias:** ninguna. Comparte archivo con la 219 y la 227.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+### 229. Rediseño Guía: la ficha deja de ser la puerta por defecto (G-06, G-07, G-08)
+
+- **Descripción:** **(a)** Mantener la ficha, pero que deje de ser la puerta: desde la lista el gesto principal es **empezar**, y la lectura pasa a un toque secundario explícito ("Ver la guía"). **(b)** Subir a **44 px** los tres iconos de la cabecera (estrella, lápiz y el menú de tres puntos), que hoy miden 34, o fundir estrella y lápiz dentro del menú. **(c)** Mover la promesa de propiedad del avance ("guardado en este teléfono") al bloque de progreso, siempre visible, y no solo al estado "seguir".
+- **Motivo:** hallazgos **G-06** (es una parada que en campo sobra: el técnico que ya sabe qué guía quiere entra aquí solo para tocar "Empezar", y la lista ya adelanta lo único que decide en campo), **G-07** (tres controles de 34 px en el borde superior, por debajo del mínimo de 44 que fija la propia regla **M-R14** "también para los controles que parecen decorativos", y en la zona menos alcanzable) y **G-08** (el avance no dice de quién es: se calcula sobre una tabla local del dispositivo, dos técnicos en el mismo trabajo ven cifras distintas y nada lo advierte).
+- **Impacto:** medio. Quita un toque del camino del 80 % de las visitas.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/ArticuloPage.tsx` (600 líneas) para la cabecera y la acción dominante; `src/features/soluciones/FilaArticulo.tsx` para el gesto principal de la fila; `src/lib/progresoPasos.ts` (tabla `progresoPasos: 'articuloId'`, `src/lib/db.ts` ~905) para la promesa de propiedad.
+- **Dependencias:** ninguna.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+### 230. Rediseño Guía: "Cancelar" con forma de botón y marcado múltiple desde el índice (G-21, G-22)
+
+- **Descripción:** **(a)** Dar forma de botón a "Cancelar" en la hoja de falla: 52 px, borde neutro. Hoy es texto plano en neutral-400 al pie, sin borde, y es la salida más frecuente de la hoja (abrirla para mirar y cerrarla) y la única sin forma de botón. **(b)** Añadir al índice de pasos un **gesto de marcado directo** para los pasos anteriores al actual: en un procedimiento repetido cien veces, marcar tres pasos rutinarios de una pasada ahorra minutos reales.
+- **Motivo:** hallazgos **G-21** y **G-22**. Justificación del informe: heurística 3 (la salida de una hoja debe tener el mismo peso visual que las entradas) y heurística 7 (el experto necesita una vía rápida que el novato no ve, y el índice es el sitio natural). Del resto de las hojas, el informe pide **no tocar nada**.
+- **Impacto:** bajo, esfuerzo bajo.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/HojaFalla.tsx` (200 líneas) para el "Cancelar"; `src/features/soluciones/HojaPasos.tsx` (165 líneas) para el marcado, apoyado en `src/lib/progresoPasos.ts`.
+- **Dependencias:** conviene después de la **218**, que cambia desde dónde se abre el índice.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+### 231. Rediseño Guía: la vista previa se llama siempre igual y se sale por abajo (G-38, G-39, G-40)
+
+- **Descripción:** **(a)** Un solo rótulo, **"Ver como técnico"**, siempre, y que el destino dependa del contexto sin cambiar el nombre. Hoy el mismo control es "Probar" o "Vista previa" según la pestaña y según si hay un paso escrito. **(b)** Salir con una **barra inferior de 52 px** que diga a dónde vuelve ("Volver al paso 3"), no con el enlace de 30 px de la esquina superior derecha, que es el control más pequeño y peor colocado de todo el flujo de creación. **(c)** **Encender la barra de progreso real** en la vista previa: es el punto exacto donde el autor puede descubrir que su instrucción no cabe.
+- **Motivo:** hallazgos **G-38**, **G-39** y **G-40**. El informe insiste en que **el fondo de "Probar" no se toca**: el diálogo que promete, el progreso efímero con identificador que se borra al cerrar, y la carga diferida de Markdown están bien construidos de punta a punta. Lo que se corrige es el rótulo, la salida y el cromo que la vista previa oculta.
+- **Impacto:** bajo, pero cierra la mejor idea del editor.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/VistaPreviaArticulo.tsx` (131 líneas) para la salida y el cromo; `src/features/soluciones/DialogoProbarPaso.tsx` para el diálogo previo, que no cambia de fondo; `src/features/soluciones/ArticuloForm.tsx` y `src/features/soluciones/PasosEditor.tsx` para el rótulo único del pie.
+- **Dependencias:** conviene después de la **218** (el cromo real que la vista previa debe mostrar es el que esa tarea define) y de la **219** (que reescribe el pie del editor).
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+---
+
 **REDISEÑO DEL FLUJO DEL TÉCNICO (auditoría del 2026-07-23, [AUDITORIA_FLUJO_INSTALACION.md](AUDITORIA_FLUJO_INSTALACION.md)).** Tareas registradas con el formato de la regla 19. **Fases 1, 2 y 3 IMPLEMENTADAS y verificadas el 2026-07-23** (H1 a H6 completadas; H5 es una decisión aplicada). El usuario pidió construir también H6 (deferida en la auditoría original) tras revisar el análisis. Verificación conjunta: lint, typecheck y build en verde; 1621 pruebas pasan (los mismos 4 fallos preexistentes y ajenos de `archivosPendientes.test.ts`, RLS de Storage con el `.env` real de esta sesión). DOCUMENTACION_FUNCIONAL.md e Historial de cambios actualizados en la misma tarea. **Sin verificar en navegador** (la app exige login de técnico real, no disponible en esta sesión).
 
 **Paso del usuario RESUELTO (2026-07-24)**: se aplicó `supabase/schema.sql` completo en el SQL Editor de Supabase. Verificado por REST que `articulos.aplica_a` ya existe (consulta a la columna ya no devuelve "column does not exist"). Con esto la tarea 166 (H6) queda sin ningún paso pendiente y el guardado de artículos vuelve a funcionar con normalidad.
