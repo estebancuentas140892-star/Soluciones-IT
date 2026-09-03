@@ -6,6 +6,105 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(la tarea 217 se cerró el 2026-09-03 y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Es la **primera de las 13 recomendaciones** del handoff "Auditoría visual sección Guía", registradas abajo en "Por hacer" como tareas 217 a 231. La siguiente en el orden recomendado es la **218** (barra de ejecución de una línea y el índice de pasos al pulgar), que además cierra el **G-19** que la 217 dejó abierto a propósito: la barra de tarea de 68 px sigue puesta. El usuario las va tomando de una en una, así que la 218 no se pone "En proceso" hasta que la pida.)*
 
+
+*(vacío: la tarea 207 se cerró el 2026-09-02. Con ella **la auditoría móvil queda cerrada salvo el vocabulario**: fase 1 (201), fase 2 (202 a 206) y fase 3 (207). Queda la tarea **216** (M-034, un solo vocabulario escrito), que salió de la 207 el mismo día, y **M-023** (desbloqueo de la Bóveda), que sigue fuera de fase esperando decisión del usuario.)*
+
+*(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
+
+**Despliegue confirmado (regla 14).** El commit `5f574f2` (tarea 217) está servido en **https://soluciones-it-psi.vercel.app**, confirmado **unos 15 segundos** después del push, el más rápido hasta ahora. Comprobado **por contenido** sobre el chunk real que declara `/sw.js`, con el método corregido de la tarea 206 (nombres leídos de `/sw.js`, nunca comparados con los del build local; aquí el nombre cambió de `AsistenteVista-BqsQ5ziL.js` a `AsistenteVista-CUdtQOV8.js`):
+
+- **En positivo:** `AsistenteVista-CUdtQOV8.js` contiene "Volver a una tarea a la vez", "Ver el paso entero" y "Desmarcar".
+- **En negativo**, que es lo que prueba que el cambio entró y no solo que el archivo existe: en ese chunk ya NO aparecen `children:"Foco"` (el botón que abría el modo opcional) ni `children:"Ver todo"` (la salida que tenía el foco cuando era un modo).
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
+**Despliegue confirmado (regla 14).** El commit `d8c6e03` (tarea 207) está servido en **https://soluciones-it-psi.vercel.app**, confirmado **33 segundos** después del push, el más rápido hasta ahora. Comprobado **por contenido sobre los 117 chunks reales** que declara `/sw.js`, con el método ya corregido (nombres leídos de `/sw.js`, nunca comparados con los del build local):
+
+- **En positivo:** `PantallaMas-ChGlC9as.js` contiene "Aquí, con el equipo delante", "Mejor desde el ordenador" y "Se puede hacer aquí, pero pide teclado y pantalla grande."; `DiagnosticoRunPage-0mGgojNC.js` contiene "Volver a la pregunta anterior: " y "Editar este diagnóstico"; y aparece el chunk nuevo **`CampoBusqueda-L2crl2hH.js`** con "Buscar en " y "Borrar la búsqueda".
+- **En negativo**, que es lo que prueba que el cambio entró: **ningún** chunk contiene ya "Dar de alta un equipo nuevo" (el atajo retirado de Inicio, M-008) ni "Sedes, salas y racks · " (el conteo pegado al subtítulo, M-025).
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
+**Despliegue confirmado (regla 14).** El commit `ffbf55c` (tarea 206) está servido en **https://soluciones-it-psi.vercel.app**: el chunk `ProcedimientoVista-BGOIZnvu.js` contiene "Se abre aparte, vuelves aquí al terminar", "Otra guía", "Si esto falla" y "Este paso se completa al terminar", y `AsistenteVista-BPBcRLu1.js` contiene "Otra guía" y "Si esto falla". Comprobado también **en negativo**, que es lo que prueba que el cambio entró y no solo que el archivo existe: en los dos chunks ya NO aparecen "error durante este paso" (la pregunta retirada), "Continúa en" ni "Datos protegidos".
+
+**Hallazgo de método (2026-09-02).** El guion de espera daba por no desplegado durante 15 minutos porque comparaba los **nombres de chunk del build local** contra `/sw.js`, y **Vercel produjo hashes distintos para el mismo commit** (`ProcedimientoVista-BGOIZnvu.js` en producción frente a `ProcedimientoVista-CzGbI3Pa.js` en local). En los despliegues anteriores coincidían, así que el guion se había apoyado en una coincidencia, no en una garantía: el hash depende del bundler y de la versión de Node del entorno de construcción, no solo del código. **La comprobación válida es la de contenido**, que es la que pide la regla 14; el nombre solo sirve para saber a qué archivo pedirle el contenido. Para el próximo despliegue: leer los nombres reales de `/sw.js` y buscar las cadenas dentro de ellos, sin comparar hashes con el build local.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
+**Despliegue confirmado (regla 14).** El commit `24afe1b` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `BovedaPage-0VU5KtF1.js` contiene "Copiar la contraseña" y "Más acciones de "; `DiagnosticoRunPage-CF8FR6S7.js` contiene "Salir guarda el avance", "Descartar este diagn[óstico]" y "Volver a la pregunta anterior"; y `descripcionVencida` (con "Venció hoy"/"Venció hace...") quedó en el chunk compartido `Chasis-DN6ikilk.js`, no en el de Bóveda (`vencimiento.ts` también lo usa `Chasis`, así que el bundler lo separó). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó menos de 2 minutos en propagar.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
+**Despliegue confirmado (regla 14).** El commit `436e749` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `RedPage-B2PL_I3X.js` de producción contiene "Estás recorriendo", `nodo=`, "Todos los equipos de red por ubicación" y "Mapa completo, desde cada raíz", y aparece el chunk nuevo `EquiposRedPage-BSXaUEzV.js` con "Equipos de red" y "Sin ubicación". Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
+*(la tarea 215 se cerró el 2026-09-01. Con ella **el `Paso 3` del handoff queda completo**: sus dos tableros implementables eran el `3b` (tarea 214) y el `3d` (tarea 215). Los **Pasos 1, 2 y 4** siguen sin registrar hasta que el usuario los pida.)*
+
+**Despliegue confirmado (regla 14).** El commit `e17d911` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `AsistenteVista-Bite7Bcm.js` de producción contiene "Algo va mal en el paso", "Abrir la contingencia vinculada", "Saltar el paso y seguir" y "no se pierden", y `ProcedimientoVista-B3-bt-sL.js` contiene "Sí, ver la contingencia" y las filas de tarea de `min-h-[56px]`. Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 2 minutos en propagar, el más rápido hasta ahora (los anteriores fueron de 4, 7 y 15).
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
+**Despliegue confirmado (regla 14).** El commit `71399b3` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `SolucionesPage-Mjkhvsem.js` de producción contiene "solo notas" (la línea de capacidad de una guía sin pasos). Comprobado por HTTP contra `/sw.js` y el asset real; el despliegue tardó unos 15 minutos en propagar, más que los 4-7 habituales.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
+---
+
+*(la tarea 203 se cerró el 2026-09-01. Con ella **la fase 2 de la auditoría móvil queda a medias**: hechas la 202 (el regreso deshace el último salto) y la 203 (Inicio); quedan la 204 (Red abre con el nodo), la 205 (Bóveda y Diagnóstico) y la 206 (un color, un significado dentro del paso). La siguiente pendiente es la 204, ver "Por hacer".)*
+
+**Despliegue confirmado (regla 14).** El commit `8a5ebde` está servido en **https://soluciones-it-psi.vercel.app**: el chunk `InicioPage-D331oXcp.js` de producción contiene "Te toca a ti" y "Lo que consultaste", y `Chasis-CNiV5C6f.js` contiene "Sigues en el paso" (la tarjeta de reanudar viaja con el chasis, no con Inicio). Comprobado por HTTP contra `/sw.js` y los assets reales; el despliegue tardó unos 7 minutos en propagar.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada.
+
+---
+
+**HANDOFF NUEVO: "Soluciones IT, Diseño móvil" (importado el 2026-08-31).** Seis `.dc.html` en el proyecto de Claude Design `2f70dec0-abd8-4da5-8f2a-709e08102f5a`: `Paso 1 - Inicio y Onboarding`, `Paso 2 - Shell y Navegación`, `Paso 3 - Guías y Ejecución Guiada`, `Paso 4 - Dispositivos y Red`, `Paso 5 - Vinculación y Cero Duplicidad` y `Paso 6 - Guías a Fondo`. El usuario autorizó implementar **solo el Paso 6**; los cinco anteriores quedan sin registrar hasta que lo pida (excepción explícita a la regla 15, decidida por el usuario el 2026-08-31).
+
+**Cómo se leyó:** el MCP `claude_design` devolvió `DesignSync needs design-system authorization` (esta sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Diseño Mobile/Soluciones IT — Diseño móvil-handoff6.zip`, que trae el proyecto completo. Los recuentos de líneas que cita la auditoría del handoff (PasosEditor 1.036, ArticuloForm 1.388, ProcedimientoVista 1.019, AsistenteVista 744) coinciden con este repo, así que el diseño se hizo contra el código real.
+
+**AMPLIACIÓN (2026-09-01): el usuario autoriza también el `Paso 3`.** Llegó como `Soluciones IT — Diseño móvil-handoff3.zip`, que resultó ser un **subconjunto** del handoff6 ya registrado: trae los Pasos 1 a 4 y sus cuatro `.dc.html` son **byte a byte idénticos** a los del handoff6 (comprobado con `diff`), así que no hay proyecto nuevo que importar. Su README apunta a `Paso 3 - Guías y Ejecución Guiada`. El Paso 3 trae dos tableros ANTES (`3a`, `3c`, diagnóstico) y dos DESPUÉS implementables: **`3b`** el listado de guías (tarea **214**) y **`3d`** la ejecución guiada (tarea **215**). **Los Pasos 1, 2 y 4 siguen sin registrar** hasta que el usuario los pida.
+
+El Paso 6 audita **el llenado** de una guía y **la navegación entre pasos**, lo que el Paso 3 dejó fuera. Trae un tablero ANTES (`6a`, diagnóstico, no se implementa) y tres DESPUÉS, que son las tareas **209** (editor), **210** (navegador de pasos) y **211** (modo foco). Su tesis de fondo: *el paso no es la unidad de trabajo*. Todo el sistema está construido alrededor del paso (la banda, el avance, el plegado, la acción dominante), pero frente al rack, con una mano y guantes, la unidad real es la **tarea**. El modelo de datos ya la soporta (los bloques tienen id, tipo y progreso propio); falta una vista que la use, y esa es la 211.
+
+Lo que la auditoría marca como **bueno y no se toca**: el modelo de bloques con id estable (el progreso va por id, no por posición, así que reordenar no desalinea el avance), `tipoTarea`, el plegado salvo el paso actual, el avance como segmentos, el antiduplicado del título con rebote de 300 ms, la completitud consciente del tipo, el vocabulario de etiquetas derivado del uso y la composición por referencia.
+
+---
+
+La **tarea 208** (segunda mitad del hallazgo **N1** de la auditoría de flujos: la dirección del enlace se ve en la ficha y se puede reparar) quedó **terminada, verificada en navegador y archivada el 2026-08-29**. La tarea 131 había cerrado N1 solo por un lado, el de **registrar** bien un uplink con el modo "Recibe de". Faltaban los otros dos: la fila de un enlace no decía su dirección, así que uno invertido se veía **idéntico** a uno correcto y el error solo aparecía en el árbol de topología ya torcido; y los enlaces guardados al revés antes de la 131 solo se podían arreglar borrándolos y recreándolos. Ahora cada fila de enlace dice "Da servicio a" o "Recibe de" y trae un botón de invertir de 44 px, reversible. **Sin migración automática, a propósito**: un enlace invertido es indistinguible de uno correcto, así que adivinar por categoría reescribiría en silencio la topología de alguien y fallaría en el uplink legítimo entre dos switches. De paso se corrigieron dos defectos encontrados al verificar: invertir no dejaba rastro en el historial (`construirHistorial` descartaba toda edición de conexión) y el historial leía la inversión como "Se agregó la conexión". Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+**PENDIENTE DEL USUARIO**: revisar en la topología real los enlaces registrados antes de la tarea 131. Los que quedaron al revés no se detectan solos; el botón de invertir de cada fila los corrige de a uno.
+
+---
+
+Antes, la **tarea 202** (fase 2 de la auditoría móvil: el regreso recuerda el camino, M-002, M-020, M-029) quedó **terminada, verificada en navegador y archivada el 2026-08-03**. El regreso deja de subir siempre al padre teórico y pasa a deshacer el último salto (**M-R2**), con el padre declarado intacto como respaldo. **Medido en navegador real a 360 px**: el ciclo completo del escáner (leer, abrir la ficha, volver con la cámara viva y leer otro, "2 leídos"); la ficha abierta desde la topología vuelve al mismo nodo; la ubicación abierta desde un equipo dice de qué equipo viene; y una pestaña nueva sobre esa misma ubicación cae al padre declarado, así que **ninguna pantalla se queda sin salida**. Módulos nuevos: `origenNavegacion`, `useOrigen`, `sesionEscaneo`. Dos decisiones registradas: [DECISIONES.md](DECISIONES.md) **AD-030** (por qué el origen vive en `location.state` y no en la URL) y **AD-031** (por qué el conteo del escáner se reinicia a mano, tras encontrar que la primera versión no era idempotente). Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+---
+
+**HANDOFF NUEVO: "Auditoría móvil: hallazgos y evidencia" (importado el 2026-08-03).** Dos `.dc.html` en `Auditoría móvil_ hallazgos y evidencia-handoff.zip`: `Auditoría móvil.dc.html` (el informe: 34 hallazgos, 3 de ellos P0, 13 áreas recorridas y 14 reglas nuevas) y `Evidencia móvil.dc.html` (el lienzo: 10 turnos, 22 mockups, todo dibujado a 360 px con los tokens Nocturne reales). Es una auditoría **de método distinto** a las anteriores: no pregunta si la app se ve bien, sino si un técnico de pie frente a un rack, con una mano y guantes, sabe **dónde está**, **qué está viendo** y **cuál es la siguiente acción** sin pensar en la interfaz.
+
+Su diagnóstico en una frase: **la orientación está resuelta en la entrada de cada pantalla y se disuelve al desplazarse**. Las catorce reglas M-R1 a M-R14 quedaron registradas en [DECISIONES.md](DECISIONES.md) **AD-029**, con los tres conflictos que declaraban contra R1-R41 ya resueltos.
+
+La auditoría propone **tres fases**, y se implementan como tres tareas (regla 15: una "En proceso" a la vez):
+
+| Fase | Qué cubre | Hallazgos | Tarea |
+|---|---|---|---|
+| 1 | Lo que impide trabajar con el teléfono en la mano | M-010, M-011 (P0), M-014 (P0), M-001, M-015 | **201 (hecha)** |
+| 2 | Lo que hace perder tiempo todos los días | M-002, M-003, M-006, M-007, M-012, M-016*, M-018, M-019, M-021, M-026, M-029, M-032* | **202 a 206 (hechas)** |
+| 3 | Refinamiento y consistencia | M-004, M-005, M-008, M-009, M-013†, M-017, M-020†, M-022, M-024, M-025, M-027, M-028, M-030, M-031*, M-033, M-034 | **207 (hecha)** + **216** (M-034) |
+
+*(\*) M-016, M-031 y M-032 se cerraron dentro de la fase 1: los tres caían dentro de las pantallas que se rehacían y separarlos habría obligado a tocarlas dos veces.*
+
+*(†) M-013 se cerró en la tarea 203 y M-020 en las tareas 202 y 204, así que la fase 3 no volvió sobre ellos. **M-034 salió a la tarea 216** el 2026-09-02: es un cambio de vocabulario transversal y conviene hacerlo de una pasada.*
+
+**M-023 (desbloqueo de la Bóveda) queda fuera de fase a propósito:** la auditoría lo registra con su alternativa y **no se implementa sin decisión explícita del usuario** (AD-029).
+
+---
+
+La **tarea 201** (fase 1 de la auditoría móvil) quedó **terminada, verificada en navegador y archivada el 2026-08-03**. Los cinco hallazgos de la fase, más tres de la fase 2 y 3 que caían dentro de las mismas pantallas. **Medido en navegador real a 360 px** con un banco de pruebas temporal (retirado antes de commitear): el ancla del nivel documento sigue en pantalla tras 415 px de scroll; la capa "Ahora" de la ficha de equipo termina a **265 px** (la primera pantalla, contra las tres que la auditoría midió para llegar a "Conexiones"); el ancla del paso mide 48 px dentro del bloque pegajoso y la acción dominante queda anclada al pie del viewport; la IP se lee a 14 px monoespaciado tabular en `noct-text`. Componentes nuevos: `FilaDato`, `SeccionPlegable`, `BandaTarea`, `useImpactoEquipo`. Ver el detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+---
+
 ### Tarea 173. Rediseño P3: modo ejecución del asistente (`/soluciones/:cat/:art/ejecutar`)
 
 > **Actualizada el 2026-08-03 (tarea 201).** De sus nueve decisiones, **tres ya están hechas** y salen de aquí: la navegación fija abajo (retroceso en cuadrado, avance ocupando el resto), el botón que dice qué falta en vez de apagarse mudo, y "Atrás" reducido a icono. Las trajo la fase 1 de la auditoría móvil, que pedía exactamente lo mismo con otro número (M-011). **Quedan seis:** "Guardar y salir" en lugar de "Salir"; progreso segmentado de N marcas que distinga hecho de actual y sirva para volver a un paso (hoy el ancla lleva una barra continua); escala de campo (título 21 px, tareas 16 px, casillas de 26 px en filas de 52); cronómetro en lenguaje humano ("7 min de 25"); una foto por fila a ancho completo; y la evidencia fotográfica como acción de bloque con borde punteado. La tarea completa **sigue pendiente**, con menos alcance.
