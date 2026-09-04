@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-04
 
+### Corregido (tarea 232): la app quedaba en bucle de "No se pudo cargar la aplicación" en el teléfono
+
+**Área modificada:** arranque de la app. **Modificados:** `src/lib/recargaChunk.ts`, `src/components/ErrorBoundary.tsx` (+ 3 pruebas).
+**Motivo:** el equipo reportó el bucle en un teléfono con la PWA instalada: el mensaje de error y un botón "Recargar" que devolvía el mismo mensaje.
+**Impacto esperado:** la app se recupera sola de una instalación rota. **Sin esquema. Sin cambio en el camino normal:** todo esto vive en la ruta de error.
+
+- **Causa.** El service worker sirve las navegaciones desde su `index.html` precacheado. Si a ese build le falta un trozo en la caché (Android desaloja cachés bajo presión de almacenamiento), la app lo pide a la red y ya no existe, porque cada despliegue retira los assets del anterior. El `ErrorBoundary` recargaba una vez, pero la recarga vuelve a leer el mismo `index.html` roto: el botón repetía el intento que ya había fallado. Defecto latente desde que existe la PWA; los cinco despliegues seguidos del 2026-09-03 y 04 lo dispararon.
+- **Descartado con evidencia**, antes de tocar código: el servidor (index.html, sus 6 assets y las 123 entradas del precache dan 200), la versión 15 de Dexie de la tarea 217 (se reprodujo la subida real de 140 a 150 con datos: limpia) y la carga fría (un navegador limpio funciona).
+- **Agregado** `reinstalarYRecargar()`: da de baja los service workers, borra las cachés y recarga. **No toca IndexedDB** (avance, favoritos, cola de subida y bóveda). Encadenado en el `ErrorBoundary` como segundo intento automático, con freno de 60 s.
+- **Cambiado** el botón de la pantalla de error: de "Recargar" a **"Reinstalar la aplicación"**, con la promesa escrita de que las guías y el avance no se tocan.
+
 ### Refactorizado: depuración del proyecto, sin tocar la aplicación
 
 **Área modificada:** tablero y disco. **Modificados:** `vite.config.ts` (solo el bloque `test`), `TAREAS.md`, `TAREAS_ARCHIVO.md`.

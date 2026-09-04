@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { esErrorDeChunk, recargarUnaVezPorChunk } from '../lib/recargaChunk'
+import { esErrorDeChunk, recargarUnaVezPorChunk, reinstalarYRecargar } from '../lib/recargaChunk'
 import { BTN_PRIMARIO } from './nocturne'
 
 interface Props {
@@ -40,10 +40,33 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: unknown, info: ErrorInfo): void {
     console.error('Error capturado por ErrorBoundary:', error, info)
-    if (esErrorDeChunk(error) && recargarUnaVezPorChunk()) return
-    // No hubo recarga (error normal, o ya se recargo hace poco): pasar a
-    // la pantalla de reintento manual.
+    if (esErrorDeChunk(error)) {
+      // Primer intento: recargar para tomar el index.html nuevo.
+      if (recargarUnaVezPorChunk()) return
+      // Ya se recargo y volvio a fallar. Entonces no es que el
+      // navegador tuviera el index.html viejo en memoria: es que la
+      // instalacion en si esta rota, porque el service worker sirve un
+      // index.html precacheado cuyos trozos ya no estan ni en la cache
+      // ni en el servidor. Reinstalar es lo unico que sale de ese
+      // bucle. Se hace solo, sin pedirle nada al tecnico, que esta de
+      // pie frente a un rack y no tiene por que saber esto.
+      void reinstalarYRecargar().then((seReinstalo) => {
+        if (!seReinstalo) this.setState({ recargando: false })
+      })
+      return
+    }
+    // Error normal: pasar a la pantalla de reintento manual.
     if (this.state.recargando) this.setState({ recargando: false })
+  }
+
+  // El boton de la pantalla de error. Una recarga a secas ya se probo
+  // sola antes de llegar aqui, asi que repetirla es el callejon sin
+  // salida que reporto el equipo: mismo mensaje una y otra vez. Este
+  // boton reinstala.
+  private reintentar = (): void => {
+    void reinstalarYRecargar().then((seReinstalo) => {
+      if (!seReinstalo) window.location.reload()
+    })
   }
 
   render(): ReactNode {
@@ -66,15 +89,16 @@ export class ErrorBoundary extends Component<Props, State> {
                 No se pudo cargar la aplicación
               </h1>
               <p className="text-[13.5px] leading-[1.5] text-noct-neutral-400">
-                Vuelve a intentarlo.
+                Vuelve a descargarla desde el servidor. Tus guías, tu avance y lo que esté esperando
+                para subir no se tocan.
               </p>
             </div>
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={this.reintentar}
               className={`${BTN_PRIMARIO} min-h-12 w-full max-w-[300px]`}
             >
-              Recargar
+              Reinstalar la aplicación
             </button>
           </>
         )}

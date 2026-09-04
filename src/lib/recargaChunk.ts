@@ -38,3 +38,70 @@ export function recargarUnaVezPorChunk(): boolean {
   window.location.reload()
   return true
 }
+
+// ----------------------------------------------------------------
+// Segundo intento: reinstalar la aplicacion desde el servidor
+// ----------------------------------------------------------------
+//
+// El caso que la recarga simple NO resuelve, y que dejaba el telefono
+// muerto en bucle: el service worker sirve las navegaciones desde SU
+// index.html precacheado (`NavigationRoute` + `createHandlerBoundToURL`).
+// Si a ese build le falta un trozo en la cache (Android desaloja caches
+// cuando aprieta el almacenamiento) la app lo pide a la red, y ahi ya no
+// existe: cada despliegue nuevo retira los assets del anterior. Entonces
+// recargar vuelve a leer el MISMO index.html roto de la cache, falla
+// igual, y el boton "Recargar" no lleva a ninguna parte.
+//
+// La salida es tirar la instalacion y bajarla de nuevo: dar de baja los
+// service workers y borrar las caches del navegador.
+//
+// NO SE TOCA INDEXEDDB, y es deliberado: ahi viven el avance de los
+// procedimientos, los favoritos, la cola de subida y la boveda. Se borra
+// solo lo que se puede volver a bajar del servidor.
+
+const CLAVE_REINSTALAR = 'reinstalacion-por-chunk'
+
+// Cuanto se espera antes de permitir otra reinstalacion. Mas larga que
+// VENTANA_MS a proposito: si tras reinstalar sigue fallando, el problema
+// no es la cache y repetirlo solo gasta datos del tecnico.
+const VENTANA_REINSTALAR_MS = 60_000
+
+export function yaSeIntentoReinstalar(): boolean {
+  try {
+    return Date.now() - Number(sessionStorage.getItem(CLAVE_REINSTALAR) ?? '0') < VENTANA_REINSTALAR_MS
+  } catch {
+    return false
+  }
+}
+
+// Da de baja los service workers, borra las caches y recarga. Devuelve
+// false sin hacer nada si ya se intento hace poco.
+export async function reinstalarYRecargar(): Promise<boolean> {
+  if (yaSeIntentoReinstalar()) return false
+  try {
+    sessionStorage.setItem(CLAVE_REINSTALAR, String(Date.now()))
+  } catch {
+    // Sin sessionStorage se pierde el freno, pero la recarga posterior
+    // es lo que importa.
+  }
+  // Cada paso va en su try: que falle uno (permisos, navegador viejo,
+  // modo privado) no puede impedir los demas ni la recarga final.
+  try {
+    if ('serviceWorker' in navigator) {
+      const registros = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(registros.map((r) => r.unregister()))
+    }
+  } catch {
+    // sin service worker que dar de baja
+  }
+  try {
+    if ('caches' in window) {
+      const nombres = await caches.keys()
+      await Promise.all(nombres.map((n) => caches.delete(n)))
+    }
+  } catch {
+    // sin Cache Storage disponible
+  }
+  window.location.reload()
+  return true
+}
