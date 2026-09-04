@@ -11,6 +11,13 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
+**Despliegue confirmado (regla 14).** El commit `6f2ddea` (tarea 219) está servido en **https://soluciones-it-psi.vercel.app**. Comprobado por contenido sobre `ArticuloForm-BVyMgJF7.js`, el chunk que declara `/sw.js`:
+
+- **En positivo:** contiene "Recuperamos lo que estabas escribiendo" y "Descartarlo y volver a lo guardado" (el borrador continuo), "Borrador a salvo" (el estado en la cabecera) y "Paso sin título" (el rótulo de una tarjeta plegada sin título, que solo existe con el plegado).
+- **En negativo**, que es lo que prueba que el cambio entró: ya no contiene "vuelves aquí al terminar", la tercera línea de la cabecera de 68 px que la cabecera compacta retira.
+
+**Recordatorio para el equipo:** la app es una PWA con `registerType: 'prompt'`. En un teléfono que ya la tiene instalada, la versión nueva NO se activa sola: aparece el aviso "Actualización disponible" y hay que aceptarlo. En escritorio, recarga forzada. **Esta versión sube el esquema local a la 16**: al abrirla, Dexie crea la tabla de borradores sola, sin perder nada de lo que ya hay en el teléfono.
+
 **Despliegue confirmado (regla 14).** El commit `fd70c9d` (tarea 218) está servido en **https://soluciones-it-psi.vercel.app**. Comprobado por contenido sobre tres chunks:
 
 - `AsistenteVista-DyhmX2k3.js` contiene "Paso anterior", "Paso siguiente", "Abrir el índice de pasos", "Volver a una tarea a la vez" y "Ver el paso entero" (una sola vez, prueba de que vive en el índice y no está duplicado en ModoFoco, empaquetado en el mismo chunk). **En negativo:** ya no contiene "Volver al paso anterior" (el aria-label viejo).
