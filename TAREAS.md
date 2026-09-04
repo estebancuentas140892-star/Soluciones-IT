@@ -257,6 +257,23 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
+**PROPUESTA RESCATADA EN LA DEPURACIÓN DEL 2026-09-04: biblioteca de pasos reutilizables.** [PROPUESTA_PASOS_REUTILIZABLES.md](PROPUESTA_PASOS_REUTILIZABLES.md), del 2026-08-24, **vivía solo en la copia obsoleta del proyecto** (la carpeta exterior), en un commit que este repositorio no tiene. Se copia aquí para que esa copia pueda retirarse sin perderla. **No se implementa nada**: el propio documento dice "plan, sin código escrito" y que cada fase espera confirmación explícita.
+
+**Por qué se conserva y no se descarta.** Es la única propuesta viva que lleva el principio rector del proyecto, "cada dato existe una sola vez", **al nivel de la tarea**. Hoy la reutilización llega hasta el PASO completo (`subArticuloId`, que ya funciona con referencia viva y avance propio) y se detiene ahí: una acción suelta que se repite en quince guías se escribe quince veces. Está contrastada contra el código real con ruta y línea, y de paso destapa un defecto que ninguna auditoría había nombrado: **`AsistenteVista` no muestra los requisitos**. `ProcedimientoVista` sí pinta "Antes de empezar"; el modo con el que el técnico trabaja en el sitio los omite por completo.
+
+**Seis fases, y no todas siguen vigentes:**
+
+| Fase | Qué | Esquema | Estado tras la depuración |
+|---|---|---|---|
+| 1 | Biblioteca de pasos reutilizables (nivel bloque `tarea`) | Sí, tabla nueva | **Viva.** Es el corazón de la propuesta |
+| 2 | Prerrequisitos estructurados | No | **Viva**, y repone los requisitos que faltan en el asistente |
+| 3 | Placeholders de datos del equipo | No | **Viva** |
+| 4 | Avisos heredados por categoría | Por revisar | **Viva** |
+| 5 | Guías relacionadas vía grafo | No | **Viva** |
+| 6 | UX de ejecución | No | **Superada en su mayor parte.** 6a (migas de anidamiento) la resolvió la tarea 206; 6b ("Continuar donde quedaste" en la lista) es hoy la tarea **221**; 6c se apoya en la pregunta "¿Ocurrió algún error durante este paso?", que las tareas 206 y 215 **retiraron** |
+
+**Antes de convertirla en tareas hay que decidir dos cosas** que el propio documento deja abiertas: si la biblioteca de tareas y `subArticuloId` conviven como dos formas distintas de reutilizar (documentando cuál es cuál) o si una absorbe a la otra; y el orden respecto de las 14 tareas del handoff de Guías, que tocan los mismos archivos (`PasosEditor.tsx`, `AsistenteVista.tsx`). La fase 1 pide tabla nueva en Supabase y versión de Dexie, así que no es barata.
+
 ### 173. Rediseño P3: una foto por fila en el paso (resto de la P3 original)
 
 > **Reducida en la depuración del 2026-09-04.** Nació con **nueve** decisiones para la pantalla de ejecución (turno 1, mockups `1g` y `1h`) y estaba mal colocada en "En proceso" con estado "Pendiente". De las nueve, **ocho ya no son trabajo**, y por eso la tarea se reescribe en vez de arrastrarse:
