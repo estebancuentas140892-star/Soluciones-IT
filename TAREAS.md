@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(las tareas 217 y 218 se cerraron el 2026-09-03 y el 2026-09-04 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Son la **primera y la segunda** de las 13 recomendaciones del handoff "Auditoría visual sección Guía", registradas abajo en "Por hacer" como tareas 219 a 231. La 218 cerró el **G-19** que la 217 había dejado abierto a propósito: la barra de tarea del chasis ya no sigue puesta encima del foco, se redujo a la línea compacta de 44 px. La siguiente en el orden recomendado es la **219** (guardado continuo del editor y tarjetas de paso plegadas). El usuario las va tomando de una en una, así que la 219 no se pone "En proceso" hasta que la pida.)*
+*(las tareas 217, 218 y 219 se cerraron entre el 2026-09-03 y el 2026-09-04 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Son las **tres primeras** de las 13 recomendaciones del handoff "Auditoría visual sección Guía"; quedan registradas abajo en "Por hacer" las tareas 220 a 231. La **219 es la primera de la serie verificada en navegador**, con un banco de pruebas temporal, y de paso destapó que el servidor de desarrollo servía la copia obsoleta del proyecto (ver su ficha en el archivo: invalida la comprobación de consola de la 218, no su verificación contra producción). La siguiente en el orden recomendado es la **220** (cierre real del procedimiento), que conviene después de la **225** (tiempo honesto), porque su resumen necesita el tiempo real. El usuario las va tomando de una en una.)*
 
 
 *(vacío: la tarea 207 se cerró el 2026-09-02. Con ella **la auditoría móvil queda cerrada salvo el vocabulario**: fase 1 (201), fase 2 (202 a 206) y fase 3 (207). Queda la tarea **216** (M-034, un solo vocabulario escrito), que salió de la 207 el mismo día, y **M-023** (desbloqueo de la Bóveda), que sigue fuera de fase esperando decisión del usuario.)*
@@ -326,7 +326,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 **Cómo se leyó:** el MCP `claude_design` volvió a devolver `DesignSync needs design-system authorization` (esta sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Auditoría visual sección Guía-handoff.zip`, en la raíz del repo, que trae el proyecto completo. La auditoría se hizo contra el código real: cita `index.css`, `Chasis.tsx`, `SolucionesPage.tsx`, `ArticuloPage.tsx`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `HojaFalla.tsx`, `HojaPasos.tsx` y `PasosEditor.tsx`, y sus medidas de cromo coinciden con lo que hay puesto.
 
-**Alcance autorizado (2026-09-03):** el usuario autoriza **registrar las 13 recomendaciones**, y luego irlas tomando **de una en una** en mensajes posteriores, con el tablero funcionando como siempre (una sola tarea "En proceso"). **Hechas hasta ahora: la 217 y la 218** (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
+**Alcance autorizado (2026-09-03):** el usuario autoriza **registrar las 13 recomendaciones**, y luego irlas tomando **de una en una** en mensajes posteriores, con el tablero funcionando como siempre (una sola tarea "En proceso"). **Hechas hasta ahora: la 217, la 218 y la 219** (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
 
 **La tesis del informe.** La sección está construida alrededor del **documento**; el técnico trabaja en la **tarea**. Para llegar a una instrucción hay que atravesar cuatro capas (lista, ficha, paso, bloque) y, una vez ahí, la instrucción comparte 640 px con 262 px de cromo que describe el documento que el técnico eligió hace cuatro segundos. La app ya tiene la respuesta escrita: se llama **Modo Foco**, resuelve exactamente eso, y está escondida tras un botón secundario, se pierde al salir y desaparece sola en los pasos sin tareas. Puntuación UX que calcula el informe: **61/100 hoy, 86/100 con las 13** (+25 puntos).
 
@@ -339,7 +339,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 | 1 | Foco pasa a ser la ejecución por defecto, persistido por usuario | G-16 a G-19 | Alto | Bajo | **217** HECHA (2026-09-03) |
 | 2 | Barra de ejecución de una línea (44 px) y el índice duplicado al pie | G-09, G-10, G-14 | Alto | Bajo | **218** HECHA (2026-09-04) |
 | 3 | Vocabulario único: "guía" | G-04 | Medio | Bajo | **216** (ya registrada arriba) |
-| 4 | Guardado continuo en el editor y tarjetas de paso plegadas | G-27, G-28, G-29 | Alto | Medio | **219** |
+| 4 | Guardado continuo en el editor y tarjetas de paso plegadas | G-27, G-28, G-29 | Alto | Medio | **219** HECHA (2026-09-04) |
 | 5 | Cierre real: verificación en acento, resumen honesto, "Cerrar y registrar" | G-23 a G-26 | Alto | Medio | **220** |
 | 6 | Reordenar la lista: Sigues aquí, Lo que más usas, Toda la biblioteca | G-02, G-03 | Alto | Medio | **221** |
 | 7 | Cabecera de lista de dos alturas y "Crear" al pie | G-01 | Medio | Bajo | **222** |
@@ -355,19 +355,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 **Orden recomendado, y por qué.** La 217 y la 218 son el mismo trozo de pantalla (`AsistenteVista.tsx` y su pie); hacerlas por separado obliga a reescribir dos veces la misma cabecera, así que conviene tomarlas seguidas y en ese orden. La 225 (tiempo honesto) cae dentro del mismo archivo y es barata: entra bien detrás de las dos. La 226 (manos ocupadas) reutiliza la tabla de preferencias que crea la 217, así que va después de ella o no va. La 227 y la 228 tocan el mismo pie de `ArticuloForm.tsx`, con la misma razón que la 217 y la 218.
 
 **Deuda de esquema que abren estas tareas.** La base local va por `this.version(14)` en `src/lib/db.ts` (líneas 886 a 1001). Las tareas 217, 219 y 226 piden dos tablas nuevas: **preferencias del técnico** (modo de ejecución, manos ocupadas) y **borrador de artículo** (guardado continuo). Conviene decidir si van en una sola versión nueva o en dos, y anotarlo en [DECISIONES.md](DECISIONES.md) al tomar la primera.
-
-### 219. Rediseño Guía: guardado continuo del editor y tarjetas de paso plegadas (G-27, G-28, G-29)
-
-- **Descripción:** tres cambios en la pestaña Pasos. **(a) Plegado:** las tarjetas de paso se pliegan por defecto a una línea de 56 px (número, título, "3 tareas") y solo la activa se despliega. Siete pasos pasan de más de 2.000 px de desplazamiento a unos 500, y el asa de arrastre vuelve a ser usable porque el destino cabe en pantalla. **(b) Guardado continuo:** el formulario deja de vivir en estado de componente hasta "Guardar cambios"; se escribe en la base local mientras se escribe, y la barra dice "Guardado" en lugar de ofrecer un botón. **(c) Cabecera de 44 px:** fuera la pastilla de estado de la cabecera fija (se va a la pestaña Detalles, o al pie con la acción de publicar según la tarea 227), fuera el título largo y la ruta de vuelta. La cabecera baja de 180 px a 44 más 48 de pestañas.
-- **Motivo:** hallazgos **G-27** (310 px de cromo y 320 de trabajo para tarjetas de paso que ya miden 300: nunca cabe una segunda en pantalla), **G-28** (todos los pasos van desplegados) y **G-29** (**no hay borrador automático**: en un dispositivo con llamadas entrantes y batería finita, escribir siete pasos de pie es una apuesta). G-29 es uno de los cinco problemas críticos del informe.
-- **Impacto:** alto. El editor pasa de 1 paso visible a 1 abierto y 4 plegados, y el riesgo de perder trabajo pasa de alto a nulo. El informe estima documentar una guía de cinco pasos en el teléfono de unos 9 a unos 6 minutos, sobre todo por no rehacer lo perdido.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:**
-  - `src/features/soluciones/PasosEditor.tsx` (1.348 líneas): el paso activo se sigue con `focoBloqueId` en ~212 y se propaga como `enfocar` en ~626; el plegado y la línea de 56 px son nuevos alrededor de ese punto.
-  - `src/features/soluciones/ArticuloForm.tsx` (1.450 líneas): es quien tiene el estado del formulario y el botón "Guardar"; el guardado continuo se decide aquí.
-  - `src/lib/db.ts` (~886 a 1001): tabla de borrador de artículo y su versión de esquema.
-- **Dependencias:** ninguna. Comparte archivo con la 227 y la 228; si se toman seguidas, se evita reescribir el pie tres veces.
-- **Modelo/esfuerzo:** Opus 5 / Alto. El guardado continuo cambia el ciclo de vida del formulario más grande del proyecto y tiene que convivir con el versionado y con la vista previa sin guardar; no es un cambio visual.
 
 ### 220. Rediseño Guía: cierre real del procedimiento, con registro en el equipo (G-23 a G-26)
 

@@ -45,13 +45,21 @@ interface Props {
   children?: ReactNode
   /**
    * Cabecera reducida a una sola línea de 44 px (tarea 218): sin
-   * rótulo ni ruta de vuelta, con `children` en la MISMA fila que el
-   * título y la X en vez de en un bloque debajo. Pensada para la
-   * ejecución de una guía, donde `children` es el disparador que abre
-   * el índice de pasos (G-14: la navegación más valiosa de la
-   * ejecución dejaba de estar donde el pulgar la alcanza).
+   * rótulo ni ruta de vuelta. Pensada para las pantallas donde el
+   * técnico acaba de decidir entrar y no hace falta repetírselo: la
+   * ejecución de una guía (tarea 218) y su editor (tarea 219).
    */
   compacta?: boolean
+  /**
+   * Contenido al final de la línea de 44 px, junto al título (solo en
+   * modo `compacta`). Es donde va lo que cambia con el trabajo y tiene
+   * que estar siempre a la vista: el contador que abre el índice de
+   * pasos en la ejecución (tarea 218), el estado del borrador en el
+   * editor (tarea 219). Se separa de `children` a propósito, porque
+   * `children` sigue siendo el bloque de DEBAJO (las pestañas del
+   * editor no caben en la misma fila que el título).
+   */
+  trailing?: ReactNode
 }
 
 export function BarraTarea({
@@ -63,6 +71,7 @@ export function BarraTarea({
   alSalir,
   children,
   compacta = false,
+  trailing,
 }: Props) {
   const { pathname } = useLocation()
   const destino = salidaA ?? padreDe(pathname)?.to ?? '/'
@@ -93,8 +102,9 @@ export function BarraTarea({
             </Link>
           )}
           <h1 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-tight">{titulo}</h1>
-          {children}
+          {trailing}
         </div>
+        {children}
       </div>
     )
   }

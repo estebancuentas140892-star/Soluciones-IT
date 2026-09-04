@@ -152,6 +152,38 @@ Ninguna de estas se implementó en esta fecha. Se trasladaron desde TAREAS.md, d
 
 **Archivos.** Nuevos: `src/lib/preferenciasEjecucion.ts` (+ prueba, 6 casos), `src/features/soluciones/tareasFoco.ts` (+ prueba, 7 casos). Modificados: `src/lib/db.ts` (interfaz `PreferenciasTecnico`, tabla y `version(15)`), `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/lib/db.upgrade.test.ts` (la aserción de versión pasa de 14 a 15 y se suma un caso: la tabla nueva se crea vacía al subir desde la 13). Documentación en la misma tarea: CHANGELOG.md, DECISIONES.md (AD-033), ARQUITECTURA.md (tabla y versión de esquema), ARQUITECTURA_FUNCIONAL.md (seccion 4.6), DOCUMENTACION_FUNCIONAL.md y COMPONENTES_UI.md (3.8i).
 
+### 219. Rediseño Guía: guardado continuo del editor y tarjetas de paso plegadas (G-27, G-28, G-29)
+
+**Estado**: TERMINADA el 2026-09-04. `tsc -b`, `oxlint` y `npm run build` limpios; `npm test` da **1066 de 1066** en verde, **15 nuevas**. **VERIFICADA EN NAVEGADOR** con un banco de pruebas temporal (ver abajo), lo que no había pasado en las tareas 217 y 218. **Prioridad**: Alta. **Modelo/esfuerzo**: Opus 5 / Alto (la sesión corrió con Opus 5).
+
+**Cuarta de las 13 recomendaciones del handoff "Auditoría visual sección Guía".** Decisiones de fondo en [DECISIONES.md](DECISIONES.md) **AD-035** (el borrador) y **AD-036** (el plegado).
+
+**(a) El editor guarda solo (G-29, uno de los cinco críticos).** Tabla local nueva `borradoresArticulo` (Dexie **versión 16**) y módulo `src/features/soluciones/borradorArticulo.ts`. Se escribe sola con un rebote de 800 ms mientras el técnico escribe, se restaura sola al volver a abrir y se borra al guardar, al descartarla desde el aviso y al salir con la X.
+
+**Lo que NO se hizo, y por qué.** La lectura literal de "el borrador es continuo" sería escribir en `articulos` con cada tecla, y está mal por dos razones que no son de estilo: encolaría decenas de cambios en `cambiosPendientes` por guía, y al editar un artículo **ya publicado** iría pisando en vivo, a medio redactar, lo que el resto del equipo está leyendo. Por eso el borrador es una tabla local aparte, no sincronizada, y `guardarRegistro` sigue siendo quien escribe en `articulos`.
+
+**Dos decisiones de diseño que conviene no revertir sin pensarlo.** (1) **El borrador existe exactamente mientras hay trabajo sin guardar**: el efecto compara el formulario contra lo guardado (`borradorDifiere`) y escribe o BORRA la fila según el resultado, así "hay borrador" ya significa "hay algo que recuperar", sin comparar fechas. (2) **Se restaura solo y se avisa después**: preguntar antes habría dejado la decisión más importante del editor detrás de un diálogo que se descarta sin leer.
+
+**(b) Solo el paso activo se despliega (G-28).** Los demás quedan en una línea de 56 px con asa, número, título y conteo de tareas. El cuerpo del paso plegado **no se oculta con CSS: no se monta** (siete editores de bloques vivos a la vez para que se viera uno).
+
+**Un choque que el plegado destapaba, corregido de paso.** Agarrar el asa llamaba a `onPasoActivoChange`. Con el plegado, el paso activo es el único desplegado, así que eso lo habría hecho crecer JUSTO DESPUÉS de que `iniciarArrastre` midiera las tarjetas, dejando mintiendo todas las posiciones que esa función calcula. El asa lleva ahora `data-asa` y el `onPointerDownCapture` de la tarjeta se la salta.
+
+**(c) Cabecera de 44 px (G-27).** El editor pasa a usar la cabecera compacta de la tarea 218. Eran 180 px fijos (68 de barra con título largo y ruta de vuelta, 28 de pastilla de estado, 52 de pestañas) para un área de trabajo de 320. La pastilla de estado se retira: el estado se ELIGE en la pestaña Publicación, y repetirlo arriba costaba 28 px permanentes para una palabra. En su sitio va `EstadoBorrador`, que dice lo que sí cambia mientras se trabaja.
+
+**Precisión sobre la tarea 218.** `BarraTarea` y `Chasis` separan ahora `trailing` (en la línea de 44 px) de `children` (el bloque de debajo). En la 218, con un solo hueco, todo iba junto; las pestañas del editor no caben en la misma fila que el título. La ranura de `BandaTarea` se monta dentro de `trailing` cuando la cabecera es compacta, así que la ejecución no cambia de aspecto.
+
+**VERIFICACIÓN EN NAVEGADOR**, con banco de pruebas temporal (bypass de `RequireAuth` + siembra de una guía de siete pasos en IndexedDB), **revertido y comprobado con `git diff` antes de commitear**:
+
+- **Plegado:** seis tarjetas de **58 px** más la abierta de 397 = **745 px** para siete pasos, frente a los cerca de 2.800 que suman siete desplegadas. Tocar el paso 3 lo abre (521 px, tiene 4 tareas) y pliega el 7. Siempre exactamente una abierta.
+- **Arrastre:** al agarrar una tarjeta plegada, las alturas de las siete son **idénticas antes y durante** el arrastre, y sigue reordenando (el paso 1 baja bajo el 2).
+- **Borrador:** se escribe 1,4 s después de teclear, con los siete pasos y el título editado; la cabecera dice "Borrador a salvo". **Tras recargar la página** (la interrupción), vuelve el texto sin guardar con su aviso. "Descartarlo" borra la fila, quita el aviso, devuelve el título guardado y la cabecera vuelve a "Guardado".
+
+**HALLAZGO DE MÉTODO, y afecta a lo que se dijo antes.** El servidor de desarrollo estaba sirviendo **la copia obsoleta** del proyecto (la carpeta exterior), no este repo: `_jsxFileName` apuntaba a `.../Soluciones-IT/src/...` en vez de `.../Soluciones-IT/Soluciones-IT/src/...`. `preview_start` arranca en el directorio de la sesión, y el `.claude/launch.json` de la carpeta exterior corría `npm run dev` allí mismo. **Se corrigió** ese `launch.json` (fuera de este repo) para que use `npm --prefix Soluciones-IT`. Consecuencia hacia atrás: la comprobación de "carga sin errores de consola" que se anotó en la **tarea 218** se hizo contra la copia equivocada y **no vale**; lo que sí vale de la 218 es su verificación por contenido contra producción.
+
+**Lo que NO entra, a propósito.** Convertir el botón del pie en "Publicar" con su hoja de confirmación es la **tarea 227**: hasta entonces el pie conserva su acción de guardar, que es la única forma de que el artículo llegue a `articulos` y a la biblioteca. Quitarla aquí habría dejado el editor sin salida entre una tarea y la otra.
+
+**Archivos.** Nuevos: `src/features/soluciones/borradorArticulo.ts` (+ prueba, 14 casos). Modificados: `src/lib/db.ts` (interfaces `BorradorArticulo`/`DatosBorradorArticulo`, tabla y `version(16)`), `src/features/soluciones/ArticuloForm.tsx`, `src/features/soluciones/PasosEditor.tsx`, `src/components/BarraTarea.tsx` (prop `trailing`), `src/app/Chasis.tsx`, `src/lib/db.upgrade.test.ts` (versión 15 a 16 y un caso más). Documentación en la misma tarea: CHANGELOG.md, DECISIONES.md (AD-035, AD-036), ARQUITECTURA.md, DOCUMENTACION_FUNCIONAL.md (7.2 y 7.2.1) y COMPONENTES_UI.md (3.8o y la entrada de Chasis/BarraTarea).
+
 ### 218. Rediseño Guía: barra de ejecución de una línea y el índice de pasos al pulgar (G-09, G-10, G-14)
 
 **Estado**: TERMINADA el 2026-09-04. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run` da **1051 de 1051** en verde (no suma pruebas nuevas: es reestructuración de JSX y de props, sin lógica pura nueva que probar). **Sin verificar en navegador**: el `.env` de esta sesión no lleva credenciales de Supabase reales, y la pantalla exige un login de técnico. **Prioridad**: Alta. **Modelo/esfuerzo**: Sonnet 5 / Medio (la sesión corrió con Sonnet 5).

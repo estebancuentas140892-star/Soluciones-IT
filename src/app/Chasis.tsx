@@ -211,6 +211,14 @@ interface PropsTarea extends PropsComunes {
    * haciendo y a dónde vuelve porque lo decidió hace cuatro segundos.
    */
   compacta?: boolean
+  /**
+   * Contenido al final de esa línea de 44 px, junto al título (solo con
+   * `compacta`). Lo que cambia con el trabajo y tiene que estar siempre
+   * a la vista: el estado del borrador en el editor (tarea 219). La
+   * ranura de `BandaTarea` se monta aquí también, para que el contador
+   * de paso de la ejecución quede en la misma fila (tarea 218).
+   */
+  trailing?: ReactNode
 }
 
 type Props = PropsSeccion | PropsDocumento | PropsTarea
@@ -278,12 +286,27 @@ export function Chasis(props: Props) {
             salidaEtiqueta={props.salidaEtiqueta}
             alSalir={props.alSalir}
             compacta={props.compacta}
+            // La ranura de `BandaTarea` cambia de sitio según la altura
+            // de la cabecera: en la compacta va en la MISMA línea que el
+            // título (ahí es donde el contador de paso de la ejecución
+            // tiene que estar, tarea 218); en la normal, como bloque
+            // debajo, que es donde nació. `compacta` no cambia en
+            // caliente para una pantalla dada, así que la ranura no se
+            // remonta por esto.
+            trailing={
+              props.compacta ? (
+                <>
+                  {props.trailing}
+                  <div ref={setRanuraTarea} className="contents" />
+                </>
+              ) : undefined
+            }
           >
             {props.barra}
             {/* Ranura para la banda pegajosa de quien tenga el dato del
                 momento (el paso actual del asistente): ver
                 src/app/bandaTarea.tsx. */}
-            <div ref={setRanuraTarea} />
+            {!props.compacta && <div ref={setRanuraTarea} />}
           </BarraTarea>
           <ProveedorBandaTarea value={ranuraTarea}>{props.children}</ProveedorBandaTarea>
         </div>

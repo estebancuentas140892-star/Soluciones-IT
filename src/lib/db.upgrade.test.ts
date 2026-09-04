@@ -119,7 +119,7 @@ describe('upgrade a la version 14', () => {
   // la 13 llegue hasta la ULTIMA sin quedarse por el camino, no el
   // numero en si.
   it('deja la base en la ultima version declarada', () => {
-    expect(db.verno).toBe(15)
+    expect(db.verno).toBe(16)
   })
 
   // Version 15 (tarea 217): la tabla de preferencias del tecnico tiene
@@ -128,5 +128,12 @@ describe('upgrade a la version 14', () => {
   // medias.
   it('crea preferenciasTecnico vacia al subir desde la 13', async () => {
     expect(await db.preferenciasTecnico.count()).toBe(0)
+  })
+
+  // Version 16 (tarea 219): la tabla de borradores del editor. Vacia al
+  // subir es lo correcto: no hay trabajo a medias que recuperar de una
+  // version que no lo guardaba.
+  it('crea borradoresArticulo vacia al subir desde la 13', async () => {
+    expect(await db.borradoresArticulo.count()).toBe(0)
   })
 })

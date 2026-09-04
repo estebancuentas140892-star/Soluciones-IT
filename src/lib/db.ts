@@ -562,6 +562,57 @@ export interface PreferenciasTecnico {
   actualizadoEn: string
 }
 
+// BORRADOR DEL EDITOR DE ARTICULOS (tarea 219, hallazgo G-29).
+//
+// El editor vivia entero en estado de componente hasta que alguien
+// tocaba "Guardar": una llamada entrante, un cambio de app o la bateria
+// se llevaban por delante siete pasos escritos de pie frente a un rack.
+// Esta tabla es la RED, no el guardado: se escribe sola mientras el
+// tecnico escribe y se borra en cuanto el articulo se guarda de verdad
+// en `articulos`.
+//
+// Local a este dispositivo y NO se sincroniza, por dos razones que van
+// mas alla de la convencion: un borrador a medias no es un dato del
+// equipo, y subirlo con cada tecla llenaria `cambiosPendientes` de
+// ruido. Guardar de verdad sigue siendo una decision del tecnico, y ahi
+// es donde entra el motor de sincronizacion.
+//
+// Guarda los campos TAL COMO LOS TIENE EL FORMULARIO, no como los
+// guarda `articulos`: los requisitos son el texto crudo del textarea,
+// no el array ya partido por lineas. Restaurar tiene que devolver lo
+// que se estaba escribiendo, incluida una linea a medio teclear.
+export interface BorradorArticulo {
+  articuloId: string
+  categoriaId: string
+  actualizadoEn: string
+  datos: DatosBorradorArticulo
+}
+
+export interface DatosBorradorArticulo {
+  titulo: string
+  tipo: string
+  contenido: string
+  etiquetas: string[]
+  descripcion: string
+  portada: PasoAdjunto | null
+  objetivoGeneral: string
+  requisitos: string
+  pasos: PasoProcedimiento[]
+  verificacionFinal: string
+  tiempoEstimadoMin: string
+  dificultad: string
+  sintomas: string
+  causas: string
+  esRutaInicio: boolean
+  ordenRutaInicio: number
+  estado: string
+  motivo: string
+  dispositivosAfectados: { id: string; nombre: string }[]
+  aplicaAMarca: string
+  aplicaAModelo: string
+  relacionados: { id: string; titulo: string }[]
+}
+
 // ----------------------------------------------------------------
 // Modo Diagnostico Inteligente
 // ----------------------------------------------------------------
@@ -881,6 +932,7 @@ class SolucionesItDatabase extends Dexie {
   bovedaMeta!: EntityTable<BovedaMeta, 'id'>
   seguridadApp!: EntityTable<ConfigBloqueoApp, 'id'>
   preferenciasTecnico!: EntityTable<PreferenciasTecnico, 'id'>
+  borradoresArticulo!: EntityTable<BorradorArticulo, 'articuloId'>
   historial!: EntityTable<HistorialEntrada, 'id'>
   adjuntos!: EntityTable<Adjunto, 'id'>
   diagnosticos!: EntityTable<Diagnostico, 'id'>
@@ -1035,6 +1087,15 @@ class SolucionesItDatabase extends Dexie {
     // manos ocupadas sin abrir otra version.
     this.version(15).stores({
       preferenciasTecnico: 'id',
+    })
+
+    // Borrador del editor de articulos (2026-09-04, tarea 219). Tabla
+    // local, no sincronizada. Se indexa tambien `actualizadoEn` para
+    // poder barrer los borradores viejos sin recorrer la tabla entera:
+    // un articulo nuevo que se abandona deja un borrador cuyo id no
+    // vuelve a abrirse nunca.
+    this.version(16).stores({
+      borradoresArticulo: 'articuloId, actualizadoEn',
     })
   }
 }

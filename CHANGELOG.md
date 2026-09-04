@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-04
 
+### Agregado (tarea 219): el editor guarda solo, y los pasos se pliegan
+
+**Área modificada:** editor de artículos. **Nuevos:** `src/features/soluciones/borradorArticulo.ts` (+ prueba, 14 casos). **Modificados:** `src/lib/db.ts`, `src/features/soluciones/ArticuloForm.tsx`, `src/features/soluciones/PasosEditor.tsx`, `src/components/BarraTarea.tsx`, `src/app/Chasis.tsx`.
+**Motivo:** hallazgos **G-27**, **G-28** y **G-29** de la auditoría visual de Guías. G-29 es uno de los cinco críticos del informe. Cuarta de las 13 recomendaciones.
+**Impacto esperado:** el riesgo de perder trabajo por una interrupción pasa de alto a nulo, y el editor pasa de 1 paso visible a 1 abierto y 6 plegados. **Con esquema:** versión **16** de Dexie.
+
+- **Agregado** el **borrador continuo** (**G-29**): tabla local `borradoresArticulo` y módulo `borradorArticulo.ts`. Se escribe sola con un rebote de 800 ms mientras el técnico escribe, se restaura sola al volver y se borra al guardar, al descartarla o al cancelar con la X. **No sustituye a `guardarRegistro`**: escribir en `articulos` con cada tecla llenaría `cambiosPendientes` de ruido y, al editar un artículo ya publicado, iría pisando en vivo lo que el resto del equipo lee. Decisión de fondo en [DECISIONES.md](DECISIONES.md) **AD-035**.
+- **Agregado** el aviso de recuperación en el editor. El trabajo vuelve solo al formulario y el aviso lo dice, con salida a mano ("Descartarlo y volver a lo guardado"): preguntar antes de restaurar habría dejado la decisión más importante del editor detrás de un diálogo que se descarta sin leer.
+- **Cambiado** las tarjetas de paso se **pliegan** a una línea de 56 px (asa, número, título y conteo de tareas) salvo la activa (**G-28**). El cuerpo no se oculta con CSS: no se monta. **Medido en navegador** sobre una guía de siete pasos: **de unos 2.800 px a 745**. Decisión de fondo en **AD-036**.
+- **Corregido de paso** un choque que el plegado destapaba: agarrar el asa ya no cambia el paso activo. Como el activo es el único desplegado, activarlo al agarrar lo habría hecho crecer justo después de que el arrastre midiera las tarjetas, dejando mintiendo todas sus posiciones.
+- **Cambiado** la cabecera del editor a la línea compacta de 44 px de la tarea 218 (**G-27**): eran 180 px fijos (68 de barra con título largo y ruta de vuelta, 28 de pastilla de estado, 52 de pestañas) para un área de trabajo de 320. La pastilla de estado no se pierde: el estado se **elige** en la pestaña Publicación, que es donde se decide. En su sitio va lo que sí cambia mientras se trabaja: si el borrador está a salvo.
+- **Cambiado** `BarraTarea` y `Chasis` separan `trailing` (en la línea de 44 px) de `children` (el bloque de debajo): las pestañas del editor no caben en la misma fila que el título, y en la tarea 218 todo iba junto.
+- **Sin tocar:** convertir el botón del pie en "Publicar" con su confirmación es la **tarea 227**; hasta entonces el pie conserva su acción de guardar, que es la única forma de que el artículo llegue a la biblioteca.
+
 ### Cambiado (tarea 218): la cabecera de ejecución se reduce a una línea de 44 px
 
 **Área modificada:** ejecución de Guías y el chasis compartido. **Modificados:** `src/app/Chasis.tsx`, `src/components/BarraTarea.tsx`, `src/features/soluciones/AsistentePage.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/HojaPasos.tsx`.

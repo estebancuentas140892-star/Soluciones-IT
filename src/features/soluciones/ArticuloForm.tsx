@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { lazy, Suspense, useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   db,
+  type DatosBorradorArticulo,
   type EstadoArticulo,
   type NivelDificultad,
   type PasoAdjunto,
@@ -15,6 +16,7 @@ import {
   prepararProcedimientoParaGuardar,
 } from '../../lib/procedimiento'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { padreDe } from '../../lib/navegacion'
 import { siguienteVersion } from '../../lib/version'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
@@ -23,6 +25,7 @@ import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
   Check,
   Circle,
+  CloudCheck,
   Eye,
   FloppyDisk,
   Info,
@@ -43,6 +46,16 @@ import {
   senalesDeArticulo,
   type PestanaEditor,
 } from './completitudArticulo'
+import {
+  borradorDifiere,
+  borradorTieneContenido,
+  borrarBorrador,
+  datosDesdeArticulo,
+  datosVacios,
+  guardarBorrador,
+  leerBorrador,
+  limpiarBorradoresViejos,
+} from './borradorArticulo'
 import { etiquetasFrecuentes, normalizarEtiquetas, type GrafiaEtiqueta } from './etiquetas'
 import { PasosEditor } from './PasosEditor'
 import { ProveedorAccionesPaso } from './ranuraAccionesPaso'
@@ -223,6 +236,21 @@ export function ArticuloForm() {
   // Error de validacion del envio (hoy solo el titulo obligatorio).
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
 
+  // A donde lleva la X. Se deriva igual que en `BarraTarea` para que
+  // cancelar acabe exactamente donde acababa antes; lo unico que se
+  // suma es borrar el borrador por el camino (ver `salirDelEditor`).
+  const { pathname } = useLocation()
+  const destinoAlSalir = padreDe(pathname)?.to ?? '/'
+
+  // Borrador continuo (tarea 219, hallazgo G-29). `borradorRevisado`
+  // marca que ya se miró si habia uno que recuperar, y es lo que
+  // habilita el guardado automatico: sin él, el primer rebote
+  // escribiria el formulario recien cargado encima del borrador que
+  // todavia no se ha leido.
+  const [borradorRevisado, setBorradorRevisado] = useState(false)
+  const [borradorRestaurado, setBorradorRestaurado] = useState(false)
+  const [borradorGuardadoEn, setBorradorGuardadoEn] = useState<number | null>(null)
+
   // Tablero 6b del handoff "Diseño móvil". `pasoActivoId` es el paso
   // sobre el que actúan la barra fija de añadir y "Probar"; vive aquí
   // porque lo comparten el editor de pasos (que pinta la barra por
@@ -353,6 +381,152 @@ export function ArticuloForm() {
     setCargadoInicial(true)
   }, [desdeSugerencia, sugerencia, cargadoInicial])
 
+  // ----------------------------------------------------------------
+  // BORRADOR CONTINUO (tarea 219, hallazgo G-29)
+  // ----------------------------------------------------------------
+  //
+  // Todo lo editable, en la forma exacta en que lo tiene el formulario.
+  // Es lo que se guarda solo y lo que se compara contra lo ya guardado
+  // (ver `borradorArticulo.ts`).
+  const datosActuales = useMemo<DatosBorradorArticulo>(
+    () => ({
+      titulo,
+      tipo,
+      contenido,
+      etiquetas,
+      descripcion,
+      portada,
+      objetivoGeneral,
+      requisitos,
+      pasos,
+      verificacionFinal,
+      tiempoEstimadoMin,
+      dificultad,
+      sintomas,
+      causas,
+      esRutaInicio,
+      ordenRutaInicio,
+      estado,
+      motivo,
+      dispositivosAfectados,
+      aplicaAMarca,
+      aplicaAModelo,
+      relacionados,
+    }),
+    [
+      titulo,
+      tipo,
+      contenido,
+      etiquetas,
+      descripcion,
+      portada,
+      objetivoGeneral,
+      requisitos,
+      pasos,
+      verificacionFinal,
+      tiempoEstimadoMin,
+      dificultad,
+      sintomas,
+      causas,
+      esRutaInicio,
+      ordenRutaInicio,
+      estado,
+      motivo,
+      dispositivosAfectados,
+      aplicaAMarca,
+      aplicaAModelo,
+      relacionados,
+    ],
+  )
+
+  // Lo que hay guardado de verdad, para contrastar. Un artículo nuevo
+  // no tiene contra qué: su referencia es el formulario vacío.
+  const datosGuardados = useMemo(
+    () => (esEdicion && articulo ? datosDesdeArticulo(articulo) : datosVacios()),
+    [esEdicion, articulo],
+  )
+  const hayCambiosSinGuardar = borradorDifiere(datosActuales, datosGuardados)
+
+  // Vuelca un borrador recuperado sobre el formulario. Los enumerados
+  // se contrastan contra las listas de HOY: el borrador es local y
+  // puede venir de una versión anterior del editor, así que un valor
+  // que ya no existe no debe llegar a un `Segmentado` que no lo tiene.
+  function aplicarBorrador(datos: DatosBorradorArticulo) {
+    setTitulo(datos.titulo)
+    if (TIPOS_GRID.some((t) => t.valor === datos.tipo)) setTipo(datos.tipo as TipoArticulo)
+    setContenido(datos.contenido)
+    setEtiquetas(datos.etiquetas)
+    setDescripcion(datos.descripcion)
+    setPortada(datos.portada)
+    setObjetivoGeneral(datos.objetivoGeneral)
+    setRequisitos(datos.requisitos)
+    setPasos(datos.pasos)
+    setVerificacionFinal(datos.verificacionFinal)
+    setTiempoEstimadoMin(datos.tiempoEstimadoMin)
+    setDificultad(
+      DIFICULTADES.some((d) => d.valor === datos.dificultad) ? (datos.dificultad as NivelDificultad) : '',
+    )
+    setSintomas(datos.sintomas)
+    setCausas(datos.causas)
+    setEsRutaInicio(datos.esRutaInicio)
+    setOrdenRutaInicio(datos.ordenRutaInicio)
+    if (ESTADOS.some((e) => e.valor === datos.estado)) setEstado(datos.estado as EstadoArticulo)
+    setMotivo(datos.motivo)
+    setDispositivosAfectados(datos.dispositivosAfectados)
+    setAplicaAMarca(datos.aplicaAMarca)
+    setAplicaAModelo(datos.aplicaAModelo)
+    setRelacionados(datos.relacionados)
+  }
+
+  // Se mira UNA vez, en cuanto el formulario terminó de cargar lo que
+  // le tocaba (artículo, copia o sugerencia). Va después a propósito:
+  // si el borrador se aplicara antes, la precarga lo pisaría.
+  useEffect(() => {
+    if (!cargadoInicial || borradorRevisado) return
+    let vigente = true
+    void (async () => {
+      // El barrido va aquí porque es el único sitio que garantiza que
+      // alguien toca la tabla, y cuesta una consulta por índice.
+      void limpiarBorradoresViejos()
+      const borrador = await leerBorrador(id)
+      if (!vigente) return
+      // Solo se restaura si dice algo distinto de lo guardado Y tiene
+      // contenido: un borrador idéntico al artículo no aporta nada y
+      // avisar de "cambios sin guardar" que no existen solo asusta.
+      if (borrador && borradorTieneContenido(borrador) && borradorDifiere(borrador, datosGuardados)) {
+        aplicarBorrador(borrador)
+        setBorradorRestaurado(true)
+      }
+      setBorradorRevisado(true)
+    })()
+    return () => {
+      vigente = false
+    }
+    // `datosGuardados` y `aplicarBorrador` cambian en cada render; lo
+    // que dispara esto es que la carga inicial termine, una sola vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cargadoInicial, borradorRevisado, id])
+
+  // El guardado continuo. Rebote de 800 ms: escribir en IndexedDB con
+  // cada tecla no hace falta, y una interrupción no llega en menos de
+  // un segundo.
+  //
+  // El borrador existe EXACTAMENTE mientras hay trabajo sin guardar:
+  // si el formulario vuelve a coincidir con lo guardado (se deshizo el
+  // cambio, o se acaba de guardar), la fila se borra. Así, al abrir,
+  // "hay borrador" ya significa "hay algo que recuperar".
+  useEffect(() => {
+    if (!cargadoInicial || !borradorRevisado || guardando) return
+    const temporizador = setTimeout(() => {
+      if (hayCambiosSinGuardar) {
+        void guardarBorrador(id, categoriaId, datosActuales).then(() => setBorradorGuardadoEn(Date.now()))
+      } else {
+        void borrarBorrador(id).then(() => setBorradorGuardadoEn(null))
+      }
+    }, 800)
+    return () => clearTimeout(temporizador)
+  }, [datosActuales, hayCambiosSinGuardar, cargadoInicial, borradorRevisado, guardando, id, categoriaId])
+
   const procedimientoPreparado = useMemo(
     () =>
       prepararProcedimientoParaGuardar({
@@ -428,7 +602,6 @@ export function ArticuloForm() {
     !esEdicion && !copiarDe && !similaresDescartados && similares.length > 0 && titulo.trim().length > 0
 
   const esProblema = tipo === 'problema_frecuente'
-  const estadoEtiqueta = ESTADOS.find((e) => e.valor === estado)?.etiqueta ?? 'Borrador'
   const resumenPasos =
     pasos.length === 0 ? 'ninguno todavía' : pasos.length === 1 ? '1 paso' : `${pasos.length} pasos`
   const guardarEtiqueta = pasos.length > 0 ? 'Guardar procedimiento' : 'Guardar artículo'
@@ -503,7 +676,22 @@ export function ArticuloForm() {
       motivo.trim(),
     )
 
+    // El borrador era la red mientras se escribia; ya no hay nada que
+    // recuperar (tarea 219).
+    await borrarBorrador(id)
     navigate(`/soluciones/${categoriaId}/${id}`)
+  }
+
+  // La X dice "Cancelar y volver", y eso incluye el borrador: quien
+  // cancela a proposito no quiere que su texto reaparezca la proxima
+  // vez. El borrador sobrevive a lo que NO pasa por aqui, que es
+  // justamente el caso de G-29: la llamada entrante, el cambio de app,
+  // la bateria. Y evita que cada articulo nuevo abandonado deje una
+  // fila que nadie va a volver a abrir (su id se genera de nuevo en
+  // cada entrada a "Crear").
+  function salirDelEditor() {
+    void borrarBorrador(id)
+    navigate(destinoAlSalir)
   }
 
   if (!cargadoInicial) {
@@ -517,22 +705,37 @@ export function ArticuloForm() {
   return (
     // Nivel 3 del chasis (tarea 185): tarea con salida. Es de los pocos
     // sitios donde la barra de pestañas cede, y a cambio la BarraTarea
-    // dice qué se está haciendo, sobre qué y a dónde se vuelve (R19).
+    // dice qué se está haciendo y deja salir (R19).
+    //
+    // CABECERA COMPACTA desde la tarea 219 (hallazgo G-27): eran 180 px
+    // fijos (68 de barra con el título largo y la ruta de vuelta, 28 de
+    // pastilla de estado, 52 de pestañas 4) para un área de trabajo de
+    // 320, con tarjetas de paso que ya medían 300. Ahora son 44 + 52.
+    // La pastilla de estado no se pierde: el estado se ELIGE en la
+    // pestaña Publicación, que es donde se decide; repetirlo fijo en la
+    // cabecera costaba 28 px permanentes para una sola palabra. En su
+    // sitio va lo que sí cambia mientras se trabaja: si el borrador
+    // está a salvo.
+    //
     // El destino de la X lo deriva la jerarquía central (padreDe): en
     // creación, la lista con el chip de la categoría; en edición, la
     // ficha del artículo.
     <Chasis
       modo="tarea"
+      compacta
       rotulo={esEdicion ? 'Editando' : 'Creando'}
       titulo={titulo.trim() || (esEdicion ? tituloEditar(tipo) : tituloNuevo(tipo))}
-      vuelta={categoria?.nombre ? `Guías › ${categoria.nombre}` : 'Guías'}
       salidaEtiqueta="Cancelar y volver"
+      alSalir={salirDelEditor}
+      trailing={
+        <EstadoBorrador
+          hayCambiosSinGuardar={hayCambiosSinGuardar}
+          guardadoEn={borradorGuardadoEn}
+          revisado={borradorRevisado}
+        />
+      }
       barra={
         <>
-          <div className="px-4 pb-2">
-            <TagNeutral>{estadoEtiqueta}</TagNeutral>
-          </div>
-
           {/* Pestañas del editor (J5). Van dentro del bloque pegajoso
               para que sigan a mano al desplazarse dentro de una pestaña
               larga, como la de Pasos. */}
@@ -576,6 +779,35 @@ export function ArticuloForm() {
           que envolver a los dos. */}
       <ProveedorAccionesPaso value={ranuraAcciones}>
       <main className={`flex flex-1 flex-col gap-6 px-4 pt-[18px] ${pestana === 'pasos' ? 'pb-[250px]' : 'pb-[190px]'}`}>
+        {/* Lo que se recuperó (tarea 219, hallazgo G-29). No es un
+            error ni una pregunta: el trabajo YA está de vuelta en el
+            formulario y esto solo lo dice, con la salida por si el
+            técnico prefiere lo que había guardado. Preguntar antes de
+            restaurar habría dejado la decisión más importante del
+            editor detrás de un diálogo que se descarta sin leer. */}
+        {borradorRestaurado && (
+          <div className="-mb-2 flex items-start gap-2.5 rounded-xl border border-noct-accent/40 bg-noct-accent/[.1] px-3.5 py-3">
+            <Sparkle size={17} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] leading-snug">
+                <span className="font-medium text-noct-accent-300">Recuperamos lo que estabas escribiendo.</span>{' '}
+                Se guarda solo mientras escribes, así que una llamada o un cierre de la app no se lo lleva.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  aplicarBorrador(datosGuardados)
+                  void borrarBorrador(id)
+                  setBorradorRestaurado(false)
+                }}
+                className="mt-1.5 inline-flex min-h-11 items-center text-[13px] font-medium text-noct-neutral-300 hover:text-noct-text"
+              >
+                {esEdicion ? 'Descartarlo y volver a lo guardado' : 'Descartarlo y empezar en blanco'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* PESTAÑA GENERAL: de qué trata el artículo y cómo se
             encuentra (tipo, título, portada, etiquetas, equipos). */}
         {pestana === 'general' && (
@@ -1446,5 +1678,57 @@ function PortadaEditor({
       {error && <p className="text-xs text-noct-error">{error}</p>}
       {aviso && <p className="text-xs text-noct-precaucion">{aviso}</p>}
     </div>
+  )
+}
+
+// El estado del borrador, en la línea de 44 px de la cabecera (tarea
+// 219, hallazgo G-29). Ocupa el sitio que dejó la pastilla de estado
+// del artículo, y dice algo más útil: no en qué estado está el
+// documento (eso se elige en Publicación), sino si lo que el técnico
+// acaba de escribir está a salvo.
+//
+// Tres estados y ni uno más, porque es una línea de cabecera:
+//
+//   - "Guardado": el artículo de la biblioteca dice lo mismo que esta
+//     pantalla. No hay nada pendiente.
+//   - "Borrador a salvo": hay cambios sin guardar, y ya están escritos
+//     en este teléfono. Es la promesa que cierra G-29.
+//   - "Guardando...": hay cambios y el rebote de 800 ms todavía no ha
+//     escrito. Dura menos de un segundo; existe para que el hueco no
+//     parpadee entre los otros dos.
+function EstadoBorrador({
+  hayCambiosSinGuardar,
+  guardadoEn,
+  revisado,
+}: {
+  hayCambiosSinGuardar: boolean
+  guardadoEn: number | null
+  revisado: boolean
+}) {
+  // Antes de mirar si había borrador no se afirma nada: decir
+  // "Guardado" mientras todavía se está leyendo el que hay sería
+  // exactamente la mentira que esta tarea viene a quitar.
+  if (!revisado) return null
+
+  if (!hayCambiosSinGuardar) {
+    return (
+      <span className="flex shrink-0 items-center gap-1 pr-1 text-[12.5px] text-noct-neutral-400">
+        <Check size={14} className="text-noct-exito" aria-hidden />
+        Guardado
+      </span>
+    )
+  }
+
+  return (
+    <span className="flex shrink-0 items-center gap-1 pr-1 text-[12.5px] text-noct-neutral-400">
+      {guardadoEn === null ? (
+        'Guardando...'
+      ) : (
+        <>
+          <CloudCheck size={14} className="text-noct-accent-300" aria-hidden />
+          Borrador a salvo
+        </>
+      )}
+    </span>
   )
 }

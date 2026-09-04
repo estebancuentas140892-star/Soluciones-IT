@@ -376,7 +376,12 @@ export function PasosEditor({
     } catch {
       // sin captura, pero el arrastre sigue
     }
-    onPasoActivoChange(pasos[indice].id)
+    // Agarrar el asa NO cambia el paso activo desde la tarea 219, y es
+    // una condición del plegado, no una preferencia: el paso activo es
+    // el único desplegado, así que activarlo aquí lo haría crecer
+    // JUSTO DESPUÉS de medir las tarjetas, y todas las posiciones que
+    // acaba de calcular esta función quedarían mintiendo. Por eso el
+    // `onPointerDownCapture` de la tarjeta también se salta el asa.
     setArrastre({ indice, destino: indice, dy: 0 })
   }
 
@@ -533,7 +538,16 @@ export function PasosEditor({
         </div>
       )}
 
-      {pasos.map((paso, indice) => (
+      {pasos.map((paso, indice) => {
+        // PLEGADO (tarea 219, hallazgo G-28). Solo el paso activo se
+        // despliega; los demás quedan en una línea. Siete pasos pasaban
+        // de más de 2.000 px de desplazamiento a unos 500, que es lo
+        // que además devuelve el sentido al asa de arrastre: de nada
+        // sirve poder agarrar una tarjeta si su destino está tres
+        // pantallas más abajo.
+        const desplegado = paso.id === idPasoActivo
+        const tareas = paso.bloques.filter((b) => b.tipo === 'tarea').length
+        return (
         <div
           key={paso.id}
           ref={(elemento) => {
@@ -542,15 +556,22 @@ export function PasosEditor({
           // El borde de acento marca el paso ACTIVO: el que reciben los
           // cuatro botones de la barra fija y el que abre "Probar". Sin
           // esa marca, una barra que actúa "sobre un paso" no diría
-          // sobre cuál.
-          onPointerDownCapture={() => onPasoActivoChange(paso.id)}
+          // sobre cuál. Desde el plegado marca además el único abierto.
+          //
+          // El asa se excluye a propósito: agarrarla para reordenar no
+          // debe desplegar la tarjeta, porque `iniciarArrastre` ya midió
+          // las posiciones con la altura que tenían (ver allí).
+          onPointerDownCapture={(evento) => {
+            if ((evento.target as HTMLElement).closest('[data-asa]')) return
+            onPasoActivoChange(paso.id)
+          }}
           onFocusCapture={() => onPasoActivoChange(paso.id)}
           style={{ transform: desplazamientoDe(indice) }}
-          className={`flex flex-col rounded-xl border p-3 ${
+          className={`flex flex-col rounded-xl border ${desplegado ? 'p-3' : 'px-3 py-1'} ${
             arrastre?.indice === indice
               ? 'z-10 border-noct-accent bg-noct-surface shadow-[0_18px_50px_rgba(0,0,0,.5)]'
               : `bg-noct-surface transition-transform ${
-                  paso.id === idPasoActivo ? 'border-noct-accent/40' : 'border-transparent'
+                  desplegado ? 'border-noct-accent/40' : 'border-transparent'
                 }`
           }`}
         >
@@ -558,6 +579,7 @@ export function PasosEditor({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
+              data-asa
               aria-label={`Reordenar el paso ${indice + 1}: arrastrar, o flechas arriba y abajo`}
               onPointerDown={(evento) => iniciarArrastre(evento, indice)}
               onPointerMove={moverArrastre}
@@ -570,16 +592,48 @@ export function PasosEditor({
             >
               <DotsSixVertical size={19} />
             </button>
-            <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-noct-accent font-mono text-[13px] font-semibold text-noct-accent-300">
+            <div
+              className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-[1.5px] font-mono text-[13px] font-semibold ${
+                desplegado
+                  ? 'border-noct-accent text-noct-accent-300'
+                  : 'border-noct-neutral-700 text-noct-neutral-400'
+              }`}
+            >
               {indice + 1}
             </div>
-            <input
-              type="text"
-              value={paso.titulo}
-              onChange={(e) => actualizarPaso(indice, { titulo: e.target.value })}
-              placeholder="Qué hacer en este paso"
-              className="min-h-12 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-base font-medium text-noct-text outline-none focus:border-noct-accent focus:bg-noct-bg"
-            />
+            {desplegado ? (
+              <input
+                type="text"
+                value={paso.titulo}
+                onChange={(e) => actualizarPaso(indice, { titulo: e.target.value })}
+                placeholder="Qué hacer en este paso"
+                className="min-h-12 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-base font-medium text-noct-text outline-none focus:border-noct-accent focus:bg-noct-bg"
+              />
+            ) : (
+              // Plegado: una línea que se lee y se toca. El título no es
+              // un campo aquí a propósito, para que tocar la tarjeta
+              // signifique "abrir este paso" y no "poner el cursor en su
+              // título"; al abrirse, el campo está donde siempre.
+              <button
+                type="button"
+                onClick={() => onPasoActivoChange(paso.id)}
+                aria-expanded={false}
+                className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left"
+              >
+                <span
+                  className={`min-w-0 flex-1 truncate text-[15px] ${
+                    paso.titulo.trim() === '' ? 'text-noct-neutral-500' : 'font-medium text-noct-text'
+                  }`}
+                >
+                  {paso.titulo.trim() === '' ? 'Paso sin título' : paso.titulo}
+                </span>
+                {tareas > 0 && (
+                  <span className="shrink-0 text-[12.5px] text-noct-neutral-400">
+                    {tareas} {tareas === 1 ? 'tarea' : 'tareas'}
+                  </span>
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setMenuPasoId((actual) => (actual === paso.id ? null : paso.id))}
@@ -605,6 +659,13 @@ export function PasosEditor({
             </div>
           )}
 
+          {/* EL CUERPO SOLO EXISTE EN EL PASO ABIERTO (tarea 219,
+              hallazgo G-28). No se oculta con CSS: no se monta. Un
+              procedimiento de siete pasos tenía siete editores de
+              bloques vivos a la vez, con sus campos y sus hojas, para
+              que se viera uno. */}
+          {desplegado && (
+          <>
           <input
             type="text"
             value={paso.objetivo}
@@ -722,8 +783,11 @@ export function PasosEditor({
               </button>
             )}
           </div>
+          </>
+          )}
         </div>
-      ))}
+        )
+      })}
 
       {error && <p className="text-xs text-noct-error">{error}</p>}
       {aviso && <p className="text-xs text-noct-precaucion">{aviso}</p>}
