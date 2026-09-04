@@ -83,5 +83,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     setupFiles: ['./src/pruebas/setup.ts'],
+    // Solo las pruebas de este arbol (tarea 178). Un worktree de
+    // sesion anterior bajo `.claude/` traia una copia entera de `src`,
+    // asi que vitest corria la suite DOS veces y reportaba el doble de
+    // fallos, sin decir de donde venian. El worktree se retiro; esto
+    // evita que vuelva a pasar con el siguiente.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
   },
 })

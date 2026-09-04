@@ -6,6 +6,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-04
+
+### Refactorizado: depuración del proyecto, sin tocar la aplicación
+
+**Área modificada:** tablero y disco. **Modificados:** `vite.config.ts` (solo el bloque `test`), `TAREAS.md`, `TAREAS_ARCHIVO.md`.
+**Motivo:** encargo del usuario de dejar una base limpia, sin diseños anteriores, experimentos ni pendientes que ya no lo son y que puedan confundirse con el funcionamiento real.
+**Impacto esperado:** ninguno sobre la aplicación. **Sin esquema. Sin cambios de comportamiento ni de interfaz.**
+
+- **Eliminado** el worktree `.claude/worktrees/dazzling-benz-13478d` (3,8 MB) y su rama `claude/dazzling-benz-13478d`, tras comprobar que **no tenía ni un commit sin integrar** en `main`. Se podó también su registro en `.git/worktrees`. Cierra la **tarea 178**.
+- **Cambiado** `vite.config.ts`: `test.include` acotado a `src/**` y `test.exclude` con `.claude/**`, para que un worktree futuro no vuelva a duplicar la suite. Es configuración de pruebas: no toca el build ni el runtime.
+- **Corregido un dato que el tablero repetía desde julio.** `npm test` pasa de **1838 pruebas con 2 fallos** a **1048 con 0**. Los "4 fallos preexistentes y ajenos de `archivosPendientes.test.ts` (RLS de Storage con el `.env` real)" que se citaron en el cierre de una docena de tareas **eran enteramente del worktree**. La suite real del proyecto está en verde y no hay nada que excusar.
+- **Trasladadas a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) once tareas que ya estaban cerradas** y seguían ocupando sitio en el tablero: **160 a 166** (los hallazgos H1 a H6 y H9, con su propio estado ya en "Completada" desde el 2026-07-23), **195** (absorbida por la 203), **39** (cubierta por las tareas 60 y 70, se conservaba "como referencia del origen"), **178** (cerrada hoy) y **la 167** (documentación: sus seis entregables existen y son los documentos clave que cita `CLAUDE.md`, pero su estado seguía en "En progreso").
+- **Reescrita la tarea 173**, que estaba en "En proceso" con estado "Pendiente". De sus nueve decisiones para la pantalla de ejecución, **ocho ya no son trabajo**: cuatro hechas (tareas 172, 201, 215 y 217), una sustituida por la 225, una muerta ("Guardar y salir": no existe tal botón y el avance se guarda solo) y una **descartada por contradecir el criterio actual** (evidencia con borde punteado, contra el hallazgo G-36). Queda un solo punto vivo: una foto por fila a ancho completo.
+- **"En proceso" queda vacío** por primera vez en el tablero, con las notas históricas intactas. El trabajo pendiente pasa de 47 entradas a 36.
+- **No se tocó `src/`.** Se buscaron archivos huérfanos y exportaciones muertas: **cero de ambos**. Los 15 símbolos exportados que ningún otro archivo importa se usan todos dentro del suyo.
+
 ## 2026-09-03
 
 ### Cambiado (tarea 217): la ejecución de un procedimiento pasa a ser una tarea a la vez

@@ -1,5 +1,137 @@
 # Historial de tareas finalizadas
 
+## Depuración del 2026-09-04: once tareas que ya estaban cerradas y seguían en el tablero
+
+Ninguna de estas se implementó en esta fecha. Se trasladaron desde TAREAS.md, donde ocupaban sitio en "Por hacer" o en "En proceso" pese a estar terminadas, absorbidas o cubiertas por otras. La única con trabajo real hecho hoy es la **178**.
+
+### 160. Procedimientos e incidencias por categoría en la ficha del equipo (hallazgo H1)
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-07-23 (hallazgo H1). Estaba en "Por hacer" con su propio estado ya en "Completada": se traslada aquí en la depuración del 2026-09-04.
+
+- Descripción: en la ficha del dispositivo, además de los procedimientos/incidencias vinculados por `dispositivosAfectados` ("específicos de este equipo"), mostrar "De esta categoría": los publicados cuyo `categoria_id` coincide con la categoría del equipo. Consulta derivada, sin esquema. Separar visualmente lo específico de lo general; "Ver todos" a `/soluciones?categoria=<id>`.
+- Motivo: hoy un procedimiento genérico ("Instalar impresora de red") no aparece en una impresora concreta salvo que se vincule equipo por equipo. El diagnóstico ya se ofrece por categoría (inconsistencia).
+- Impacto: cierra el paso 7 del caso de uso; el técnico resuelve desde la ficha sin cambiar de módulo; escala sin vínculos manuales.
+- Prioridad: **Alta**. Estado: **Completada** (2026-07-23): `procedimientosDeCategoria`/`problemasDeCategoria` + sub-rótulo "De la categoría {X}" con "Ver todos". 8 pruebas nuevas en verde.
+- Área afectada: `src/features/dispositivos/procedimientosDeDispositivo.ts`, `problemasDeDispositivo.ts`, `ProcedimientosDelEquipo.tsx`, `ProblemasDelEquipo.tsx`, `DispositivoPage.tsx`.
+- Dependencias: ninguna.
+
+### 161. El escáner precarga el código leído al registrar un equipo (hallazgo H3)
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-07-23 (hallazgo H3). Igual que la 160: llevaba meses en "Por hacer" declarándose completada.
+
+- Descripción: "Registrar equipo" desde el escáner abre `/dispositivos/nuevo?serial=<código>` y `DispositivoForm` precarga el serial (editable).
+- Motivo: hoy se reescribe el serial/placa que la app ya leyó (viola "nunca escribir dos veces").
+- Impacto: un dato menos que teclear; flujo escáner -> alta sin fricción.
+- Prioridad: **Media**. Estado: **Completada** (2026-07-23).
+- Área afectada: `EscanerPage.tsx`, `DispositivoForm.tsx`.
+- Dependencias: ninguna.
+
+### 162. Inicio: atajo "Registrar equipo" y "Crear" ante búsqueda sin resultados (hallazgo H9)
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-07-23 (hallazgo H9). **Ojo al leerla:** el atajo "Registrar equipo" que esta tarea añadió a Inicio lo RETIRÓ después la tarea 207 (hallazgo M-008, regla M-R10), porque ocupaba una fila entera en un dispositivo cuyo criterio es la consulta. El alta vive hoy tras un escaneo sin coincidencia, en el "Crear" de Equipos y de Red, y en el vacío del buscador. La otra mitad de la tarea ("Crear" ante búsqueda sin resultados) sigue en pie.
+
+- Descripción: añadir un atajo "Registrar equipo" a la rejilla de atajos de Inicio; en el estado "Sin coincidencias" del buscador global, ofrecer "Crear dispositivo" (con el texto buscado como nombre).
+- Motivo: el técnico que recibe hardware no tiene arranque directo; el buscador sin resultados no ofrece crear.
+- Impacto: menos clics y menos navegación al empezar un trabajo.
+- Prioridad: **Media**. Estado: **Completada** (2026-07-23).
+- Área afectada: `InicioPage.tsx`.
+- Dependencias: ninguna.
+
+### 163. Reutilización de procedimientos más visible en el editor (hallazgo H4)
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-07-23 (hallazgo H4). El botón "Reutilizar" del editor que esta tarea puso **cambia de sitio** en la tarea 224, que lo devuelve al menú del paso para dejar su hueco a "Dictar".
+
+- Descripción: subir la descubribilidad de "Reutilizar procedimiento" (subprocedimiento) en `PasosEditor`, hoy en la sección plegada "Vínculos del paso". Solo presentación; la composición ya existe y funciona.
+- Motivo: riesgo de copiar pasos en vez de referenciarlos por desconocimiento de la función.
+- Impacto: fomenta la composición; menos duplicación.
+- Prioridad: **Media**. Estado: **Completada** (2026-07-23): botón "Reutilizar" en la fila de bloques del paso.
+- Área afectada: `PasosEditor.tsx`.
+- Dependencias: ninguna.
+
+### 164. Elegir "para este equipo" o "para la categoría" al documentar desde la ficha (hallazgo H2)
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-07-23 (hallazgo H2).
+
+- Descripción: al "Documentar procedimiento" desde la ficha del equipo, ofrecer explícitamente crear el artículo vinculado al equipo o solo a su categoría. NO agregar marca/modelo como campos del artículo (sería duplicación; el artículo referencia el equipo).
+- Motivo: aprovechar H1 para que un procedimiento nazca ya aplicable a toda la categoría cuando corresponde.
+- Impacto: coherencia con el principio; menos campos que llenar.
+- Prioridad: **Media**. Estado: **Completada** (2026-07-23): la ayuda de "Equipos donde aplica" aclara la aplicación por categoría (aprovecha H1); no se agregaron marca/modelo al artículo (sería duplicación). Depende de la 160 (H1).
+- Área afectada: `DispositivoPage.tsx`, `ArticuloForm.tsx`.
+
+### 165. Decisión: mantener 4 pestañas en el editor de artículo (hallazgo H5)
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-07-23 (hallazgo H5). Es una DECISIÓN aplicada, no un cambio: mantener 4 pestañas. **La tarea 227 la revisa en parte**, porque retira Publicación como pestaña y la baja al pie con la acción de publicar.
+
+- Descripción: NO convertir el editor a 7 pestañas (empeoraría móvil; el flujo lineal ya existe dentro de las 4). Ajuste opcional: mover "Equipos donde aplica" de General a Detalles una vez implementado H1.
+- Motivo: mobile-first; evitar un retroceso de UX.
+- Impacto: se conserva la ergonomía móvil.
+- Prioridad: **Baja** (decisión, no cambio). Estado: **Completada** (2026-07-23): decisión aplicada de MANTENER 4 pestañas (registrada en la auditoría y en el Historial de cambios). No se movió "Equipos donde aplica" (ajuste opcional descartado por churn marginal).
+- Área afectada: `ArticuloForm.tsx`, `completitudArticulo.ts`.
+
+### 166. "Aplica a" por marca/modelo/versión (hallazgo H6, con esquema, DEFERIDA)
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-07-23 (hallazgo H6), con su paso de esquema aplicado en Supabase el 2026-07-24.
+
+- Descripción: criterio `aplica_a` (JSON con marca/modelo/versión opcionales) en el artículo, emparejado contra el equipo, para procedimientos que aplican a un modelo concreto dentro de una categoría.
+- Motivo: precisión fina de aplicabilidad más allá de la categoría (H1).
+- Impacto: marginal una vez implementado H1; la mayoría de procedimientos aplican a nivel categoría.
+- Prioridad: **Baja** (originalmente deferida; el usuario pidió construirla el mismo día). Estado: **Completada** (2026-07-23). Columna `articulos.aplica_a` (jsonb nullable `{marca, modelo}`) en `tablas.ts` y `supabase/schema.sql`; módulo puro `src/features/soluciones/aplicaA.ts` (`aplicaAlDispositivo`, `aplicaADesdeFormulario`, `describirAplicaA`, con 8 pruebas); `procedimientosDeCategoria`/`problemasDeCategoria` aceptan un criterio `{marca, modelo}` opcional (5 pruebas nuevas); editor con dos campos "Restringir a marca o modelo (opcional)" con sugerencias del inventario; ficha del artículo muestra una etiqueta cuando restringe; historial con texto legible. **Paso del usuario aplicado (2026-07-24)**: `supabase/schema.sql` ya está aplicado en Supabase, verificado por REST que `articulos.aplica_a` existe.
+- Área afectada: `src/lib/db.ts`, `src/lib/tablas.ts`, `supabase/schema.sql`, `src/lib/repositorio.ts`, `src/features/historial/textoHistorial.ts`, `src/features/soluciones/aplicaA.ts` (nuevo), `ArticuloForm.tsx`, `ArticuloPage.tsx`, `ProcedimientosDelEquipo.tsx`, `ProblemasDelEquipo.tsx`, `DispositivoPage.tsx`, `procedimientosDeDispositivo.ts`, `problemasDeDispositivo.ts`.
+- Dependencias: 160 (H1).
+
+### 195. Turno 9: sección Inicio, las tres zonas (ABSORBIDA por la 203, cerrada el 2026-09-01)
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-09-01 por ABSORCIÓN en la tarea 203. Ya estaba marcada como absorbida en su propio título y seguía ocupando sitio en "Por hacer".
+
+
+> **Cerrada sin implementar su reparto.** La tarea **203** rehízo Inicio con los cinco bloques del mockup `2b`, que es la auditoría más reciente y la única dibujada a escala real. De lo que pedía esta 195 queda **un solo punto sin hacer**: subir los **equipos fuera de servicio** a Inicio, para responder "¿hay algo caído ahora mismo?". Es alcance nuevo (hoy no se muestran en ninguna pantalla), no un reordenamiento, y queda sin registrar como tarea hasta que el usuario lo pida. El resto del turno 9 lo cubre la 203.
+
+
+- **Descripción:** `9a` los nueve bloques de hoy, `9b` los dos problemas estructurales medidos, `9c` las tres zonas propuestas, `9d` los tres estados y el destino de cada bloque actual. Inicio se titula "Inicio" y ya cedió buscador, sincronía y cuenta al chasis (tarea 181): el hueco lo ocupa lo que el técnico necesita al abrir, en tres zonas ("Ahora" con lo que está a medias y lo que está caído, "Tu trabajo" con los pendientes, "Del equipo" con lo que pasó desde ayer). Los equipos fuera de servicio y las credenciales por vencer suben a "Ahora": la primera pregunta del turno ("¿hay algo caído ahora mismo?") hoy no se responde. La bienvenida de tres pasos se apaga sola cuando cada paso se cumple y pasa a vivir dentro de la zona "Ahora" en vez de ser un bloque aparte.
+- **Motivo:** Inicio se diseñó como "un solo punto de entrada al conocimiento" y el turno 3 mudó ese punto de entrada al chasis; sin buscador, la pantalla se quedó sin propósito y con nueve bloques de igual peso.
+- **Impacto:** alto en la primera pantalla de cada jornada. Sin esquema nuevo: los datos ya se calculan.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/inicio/InicioPage.tsx`, `pendientes.ts`, `usePendientes.ts`, `BienvenidaPrimerDia.tsx`. Componente nuevo: `ZonaAhora`.
+- **Dependencias:** las 181 y 184 (hechas) y la 187 (`usePendientes`, en proceso).
+
+### 39. Dependencias por equipo (información conectada)
+
+**Cierre (depuración del 2026-09-04).** CERRADA por cobertura. El propio texto lo decía: "queda cubierta; se conserva aquí solo como referencia del origen". Sus dos fases las entregaron la tarea 60 (sin esquema) y el grupo N3 (tarea 70, con esquema).
+
+- Descripción: al abrir un dispositivo puntual, ver conectado todo lo suyo: procedimientos, credenciales autorizadas, ubicación, dispositivos conectados, historial y problemas frecuentes de ese equipo (no solo de su categoría). Para red ya existe gran parte (conexiones + topología); lo nuevo es vincular un equipo concreto a procedimientos, credenciales y problemas frecuentes específicos. La más ambiciosa; conviene hacerla por fases y apoyada en las tareas 36 y 38. Cubre la idea #7 del análisis del 2026-07-07.
+- Prioridad: Baja
+- Avance (2026-07-10, fase 1, SIN esquema, elegida por el usuario): la ficha del dispositivo (`src/features/dispositivos/DispositivoPage.tsx`) se reorganizó en vista 360° por secciones (Información, Procedimientos y diagnóstico, más los bloques autotitulados de Conexiones, Adjuntos e Historial) y se agregó "Problemas frecuentes de este equipo" (`ProblemasDelEquipo.tsx` + función pura `problemasDeDispositivo` en `problemasDeDispositivo.ts`, con 5 pruebas): el inverso del vínculo `dispositivosAfectados` (tarea 38), que hoy solo se veía del artículo hacia el equipo. Filtra a incidencias publicadas (excluye borrador/obsoleto/eliminado). Verificado en navegador real (sesión simulada, 4 artículos sembrados: 2 incidencias publicadas del equipo aparecen y enlazan bien, el borrador y el de otro equipo se excluyen; datos limpiados). 354 pruebas, typecheck, lint y build en verde.
+- Fase 2 ENTREGADA por otras tareas: la parte sin esquema (generalizar `dispositivosAfectados` a todo tipo de artículo + "Procedimientos de este equipo") se hizo en N2 (tarea 60); la parte con esquema (credenciales de la bóveda vinculadas por id a un equipo, con "Credenciales de este equipo" en la ficha protegido por permiso de bóveda; y el tipo 'relacionado' en `conexiones` para equipos no-red) se hizo en el grupo N3 (tarea 70, archivada 2026-07-17). Con esto la tarea 39 queda cubierta; se conserva aquí solo como referencia del origen.
+
+### 178. Worktree obsoleto que ensucia `npm test`
+
+**Cierre (depuración del 2026-09-04).** CERRADA el 2026-09-04 en la depuración del proyecto. Se retiró el worktree `.claude/worktrees/dazzling-benz-13478d` del disco (3,8 MB), se podó su registro en `.git/worktrees` y se borró la rama `claude/dazzling-benz-13478d` tras comprobar que **no tenía ni un commit sin integrar** en `main` (`git log claude/... --not main` devolvió 0). `vite.config.ts` gana `test.include` y `test.exclude` para que un worktree futuro no vuelva a colarse.
+
+**Hallazgo que cambia lo que creíamos.** `npm test` pasa de **1838 pruebas con 2 fallos** a **1048 con 0**. Los "4 fallos preexistentes y ajenos de `archivosPendientes.test.ts` (RLS de Storage con el `.env` real)" que este tablero venía citando desde la tarea 166, y que se repitieron en el cierre de una docena de tareas, **eran enteramente del worktree**: su copia vieja de esa prueba. La suite real del proyecto está y estaba en verde. Ninguna tarea futura tiene que volver a excusarlos.
+
+
+- **Descripción:** `.claude/worktrees/dazzling-benz-13478d` (rama `claude/dazzling-benz-13478d`, commit `330ab47`) es un worktree de una sesión anterior que sigue en el disco. Vitest recoge sus archivos de prueba, así que `npm test` ejecuta **toda la suite dos veces** y reporta 4 fallos en vez de 2 (los mismos de `archivosPendientes.test.ts`, duplicados). Revisar si la rama tiene trabajo que rescatar y, si no, retirar el worktree con `git worktree remove`; en cualquier caso, excluir `.claude/**` de `test.exclude` en `vite.config.ts`.
+- **Motivo:** hoy `npm test` tarda el doble y su salida confunde sobre cuántos fallos hay realmente y de dónde vienen.
+- **Impacto:** pruebas más rápidas y un informe de fallos fiable. Sin riesgo para producción.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `vite.config.ts` (bloque `test`, líneas ~84-85) y el worktree del disco.
+- **Dependencias:** ninguna. **Cuidado:** no borrar el worktree sin revisar antes que su rama no tenga commits sin integrar.
+
+### Tarea 167 - Mejora integral de la documentación y de la arquitectura funcional
+
+**Cierre (depuración del 2026-09-04).** CERRADA. Su estado decía "En progreso" desde julio, pero **los seis entregables existen y están en uso**: `ARQUITECTURA_FUNCIONAL.md`, `COMPONENTES_UI.md`, `BUSCADOR.md`, `DECISIONES.md`, `CHANGELOG.md` y el `DOCUMENTACION_FUNCIONAL.md` refactorizado, todos citados desde `CLAUDE.md` como documentos clave. El propio TAREAS.md ya hablaba de ella en pasado ("las discrepancias documentales se corrigieron en la misma tarea 167"). Se cierra en la depuración del 2026-09-04. La deuda de CÓDIGO que detectó de paso sigue viva y separada, en las tareas 168, 169 y 170.
+
+
+- **Descripción:** Convertir la documentación en la única fuente de verdad. Crear `ARQUITECTURA_FUNCIONAL.md` (reglas de negocio numeradas RN-xxx, modelo de permisos + matriz, ciclos de vida y máquinas de estado por entidad, eventos del sistema, dependencias entre entidades, arquitectura offline, manejo de conflictos, auditoría, rendimiento, accesibilidad, arquitectura de navegación, modelo entidad-relación, convenciones y roadmap), `COMPONENTES_UI.md` (catálogo de componentes reutilizables) y `BUSCADOR.md` (catálogo de búsqueda). Refactorizar `DOCUMENTACION_FUNCIONAL.md` para que quede solo con lo visible al usuario. Crear `DECISIONES.md` y `CHANGELOG.md` (hoy inexistentes). Auditoría final de duplicación, contradicciones y enlaces.
+- **Motivo:** La documentación mezcla lo interno con lo visible, está dispersa y no cubre de forma sistemática reglas de negocio, permisos, estados, eventos ni dependencias. Faltan `DECISIONES.md` y `CHANGELOG.md` pese a estar en la política de mantenimiento (REGLAS.md regla 19).
+- **Impacto:** Mejora mantenibilidad, escalabilidad e incorporación de nuevos desarrolladores; documentación como única fuente de verdad. Sin cambios de comportamiento del sistema (solo documentación; si se detecta un error evidente de código, se documenta y se propone antes de tocar nada).
+- **Prioridad:** Alta.
+- **Estado:** En progreso.
+- **Área afectada:** Documentación de la raíz del repo. Análisis de verificación sobre todo `src/` y `supabase/schema.sql` (se prioriza el código sobre la documentación).
+- **Dependencias:** Ninguna de código. Dos decisiones de arquitectura documental pendientes de confirmación del usuario (casa canónica de CHANGELOG/DECISIONES y alcance del traslado desde `DOCUMENTACION_FUNCIONAL.md`).
+- **Modelo/esfuerzo:** Opus 4.8 / Max + Ultracode (47/55).
+- **Método:** Fase 1 (en curso) analiza el código con 6 agentes en paralelo (datos, offline, búsqueda, permisos, componentes, navegación/eventos); Fase 2 sintetiza y redacta; Fase 3 audita duplicación, contradicciones y enlaces.
+
 ### 217. Rediseño Guía: el Modo Foco pasa a ser la ejecución por defecto (G-16 a G-19)
 
 **Estado**: TERMINADA el 2026-09-03. `tsc -b`, `oxlint` y `npm run build` limpios; `npx vitest run src/` da **1836 de 1838** en verde, **13 nuevas**. Los 2 fallos son los preexistentes y ajenos de `archivosPendientes.test.ts`, que viven en el worktree obsoleto `.claude/worktrees/dazzling-benz-13478d` (RLS de Storage con el `.env` real de esta sesión, anotado como tarea 178). **Sin verificar en navegador**: la pantalla exige un login de técnico real y un procedimiento con pasos, y esta sesión no tiene ninguno de los dos. **Prioridad**: Alta. **Modelo/esfuerzo**: Opus 5 / Alto (la sesión corrió con Opus 5).
