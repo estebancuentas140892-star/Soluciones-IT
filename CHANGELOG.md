@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-04
 
+### Cambiado (tarea 218): la cabecera de ejecución se reduce a una línea de 44 px
+
+**Área modificada:** ejecución de Guías y el chasis compartido. **Modificados:** `src/app/Chasis.tsx`, `src/components/BarraTarea.tsx`, `src/features/soluciones/AsistentePage.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/HojaPasos.tsx`.
+**Motivo:** hallazgos **G-09, G-10, G-11, G-12 y G-14** de la auditoría visual de Guías. Segunda de las 13 recomendaciones del handoff; dependía de la 217, que definió cuál de las dos vistas es la que se está reduciendo.
+**Impacto esperado:** el cromo fijo de la pantalla de ejecución baja de 124 px (68 de barra de tarea + 56 de banda del paso) a 44 px en la cabecera. **Sin esquema. Sin cambios de lógica de negocio ni del progreso guardado.**
+
+- **Agregado** `compacta?: boolean` en `Chasis` (modo `'tarea'`) y `BarraTarea`, **opt-in** y en `false` por defecto: solo `AsistentePage` la activa hoy, los otros 13 usos de `Chasis modo="tarea"` no cambian. Con ella, la cabecera de nivel tarea pasa de tres líneas (rótulo, título, ruta de vuelta) a una: la X, el título truncado y lo que se porte a la ranura, en la misma fila.
+- **Cambiado** `AsistentePage` activa `compacta` y deja de pasar `vuelta`: fuera el rótulo "Ejecutando" y "Guías › Impresoras · vuelves aquí al terminar" durante la ejecución (**G-10**), el técnico decidió entrar hace cuatro segundos.
+- **Cambiado** `AsistenteVista` sustituye la antigua `CabeceraPaso` (bloque propio de 56 px con segmentos) por `ContadorPaso`, portado a la cabecera compacta vía `BandaTarea`: solo el disparador "N/total ▾" que abre el índice de pasos. Cierra **G-09**.
+- **Cambiado** el índice de pasos (`HojaPasos`) **se abre también desde Foco**, algo que antes no existía (**G-14**): antes era inalcanzable sin salir primero a la vista completa.
+- **Movido** el cambio entre Foco y la vista completa, de un botón propio en cada vista a un control de 44 px al pie de `HojaPasos` ("Ver el paso entero" / "Volver a una tarea a la vez", según `modoEjecucion`). Consecuencia: `ModoFoco` pierde su cabecera propia de 56 px y las props `indicePaso`, `totalPasos` y `onVerPasoEntero`.
+- **Cambiado** la barra de acción de la vista completa: la acción dominante de 76 px pasa a ocupar sola su fila (antes compartía con "Falla" a 56 px y se truncaba en 360 px, **G-12**); debajo, una fila de 52 px con "anterior"/"siguiente" (paginación pura, sin validar ni completar), el contador duplicado (**G-14**) y "Falla" degradado a control neutro con icono ámbar, del mismo tamaño que sus vecinos en vez de competir con la acción dominante (**G-11**).
+- **Sin tocar:** las pantallas de "Verificación final" y "Procedimiento completado" del asistente (su propio `Encabezado`, fuera de esta tarea) y las otras 13 pantallas de nivel tarea del chasis. Decisión de fondo en [DECISIONES.md](DECISIONES.md) **AD-034**.
+
 ### Corregido (tarea 232): la app quedaba en bucle de "No se pudo cargar la aplicación" en el teléfono
 
 **Área modificada:** arranque de la app. **Modificados:** `src/lib/recargaChunk.ts`, `src/components/ErrorBoundary.tsx` (+ 3 pruebas).

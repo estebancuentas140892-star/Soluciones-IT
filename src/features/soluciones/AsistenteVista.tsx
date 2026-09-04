@@ -23,7 +23,7 @@ import {
 import { registrarIntervencion } from '../../lib/repositorio'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
-import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, Crosshair, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
+import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
@@ -341,9 +341,9 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // acompaña. La `key` es el id del paso, así que al completarlo el
   // foco se remonta ya puesto en la primera tarea del siguiente.
   //
-  // La barra de tarea del chasis se queda (dice qué se está haciendo y
-  // a dónde se vuelve, regla R19); lo que no se monta es la banda del
-  // paso, porque el foco trae su propia cabecera mínima.
+  // Desde la tarea 218 la barra de tarea del chasis (compacta, X +
+  // título + contador) y el índice de pasos son EXTERNOS al foco: se
+  // comparten con la vista completa a través de `indiceUI`, más abajo.
   // Elegir una salida deja el paso declarado como fallido y muestra EL
   // PASO ENTERO, porque las cuatro salidas ocurren ahí (la
   // contingencia, la evidencia y los archivos viven en el paso
@@ -399,21 +399,44 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // paso.
   const enFoco = modoEjecucion === 'foco' && nivel === 0 && pasoEnteroPorFalla !== paso.id
 
+  // El índice de pasos y su disparador (tarea 218, G-09, G-10, G-14):
+  // una línea compacta de 44 px que el chasis porta a su propia barra
+  // pegajosa (`BandaTarea`, sustituye los 124 px que sumaban la barra
+  // de tarea y la banda del paso), más la hoja del índice, que ahora
+  // ABRE TAMBIÉN desde aquí en Foco, algo que antes no existía: el
+  // índice era inalcanzable sin salir primero a la vista completa. Se
+  // arma una sola vez porque las dos vistas lo comparten por igual.
+  const indiceUI =
+    nivel === 0 ? (
+      <>
+        <BandaTarea>
+          <ContadorPaso indice={indiceActual} total={pasos.length} onAbrirIndice={() => setIndiceAbierto(true)} />
+        </BandaTarea>
+        <HojaPasos
+          abierto={indiceAbierto}
+          onCerrar={() => setIndiceAbierto(false)}
+          resumenes={resumenes}
+          subtitulo={subtituloIndice}
+          onIrAPaso={setIndiceActual}
+          modoEjecucion={modoEjecucion}
+          onCambiarModo={(modo) => void cambiarModoEjecucion(modo)}
+        />
+      </>
+    ) : null
+
   if (enFoco) {
     return (
       <>
+        {indiceUI}
         <ModoFoco
           key={paso.id}
           paso={paso}
-          indicePaso={indiceActual}
-          totalPasos={pasos.length}
           tituloPaso={tituloPaso}
           instruccionesHechas={instruccionesHechas}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
           onCompletarPaso={avanzar}
           etiquetaAvance={etiquetaAvance}
           motivoBloqueo={motivoBloqueo}
-          onVerPasoEntero={() => void cambiarModoEjecucion('pasoEntero')}
           onFalla={(texto) => setHojaFalla({ tarea: texto })}
         />
         {hojaDeFalla}
@@ -423,36 +446,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
 
   return (
     <div className={`flex flex-col gap-4 ${nivel === 0 ? 'flex-1' : ''}`}>
-      {nivel === 0 && (
-        <HojaPasos
-          abierto={indiceAbierto}
-          onCerrar={() => setIndiceAbierto(false)}
-          resumenes={resumenes}
-          subtitulo={subtituloIndice}
-          onIrAPaso={setIndiceActual}
-        />
-      )}
-      {/* Ancla del paso (M-010, mockup `3b`): 44 px pegajosos dentro del
-          mismo bloque de la barra de tarea. El modo ejecución era la
-          única pantalla de la app sin nada fijo: el progreso, el "Paso 3
-          de 7" y el título se iban con el scroll, así que al volver de
-          una interrupción (el escenario declarado del encargo) la
-          pantalla no decía ni en qué paso estaba ni qué llevaba marcado.
-          Los pasos anidados no la montan: su avance lo decide el paso
-          que los contiene. */}
-      {nivel === 0 ? (
-        <BandaTarea>
-          <CabeceraPaso
-            indice={indiceActual}
-            total={pasos.length}
-            titulo={tituloPaso}
-            tareasHechas={marcadas}
-            tareasTotal={idsTareas.length}
-            completados={completados}
-            onAbrirIndice={() => setIndiceAbierto(true)}
-          />
-        </BandaTarea>
-      ) : null}
+      {indiceUI}
       {/* El documento anidado ya NO repite su avance aquí (regla R57 del
           turno 12). Traía una barra de acento con "Paso 1 de 2", justo
           debajo de la fila que lo abre, que dice lo mismo con el anillo
@@ -593,99 +587,78 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         )}
       </div>
 
-      {/* Acción dominante fija al pie (M-011, regla M-R3, mockup `3b`).
-          Hasta ahora "Atrás / Siguiente" vivían al final del scroll del
-          paso, mientras la ficha de artículo sí fijaba su acción abajo
-          (tarea 172): la contradicción se pagaba justo en la pantalla
-          donde el pulgar trabaja de verdad, porque avanzar exigía
-          recorrer el paso entero con una mano. Aquí se aplica el patrón
-          ya aprobado: 52 px, "Atrás" reducido a icono de 44 a su
-          izquierda (M-R14 pide 8 px entre objetivos vecinos) y la razón
-          escrita encima cuando el avance está bloqueado.
+      {/* Acción dominante fija al pie (M-011, regla M-R3, mockup `3b`),
+          REDUCIDA en la tarea 218 (G-09, G-11, G-12). Hasta la 217 esta
+          barra tenía dos filas: una con "Atrás" y el botón de entrada al
+          foco, otra con "Falla" a 56 px compitiendo por ancho con la
+          acción dominante, que en 360 px llegaba a recortarse ("Paso
+          hecho · i..."). Ahora el dominante va SOLO en su fila, a todo
+          lo ancho, y "anterior"/"siguiente" pasan a ser paginación pura
+          (mueven el índice sin validar ni completar nada, para revisar
+          otros pasos sin arriesgar el avance), en la misma fila de 52
+          px que el contador —duplicado del de arriba, ya al alcance del
+          pulgar (G-14)— y "Falla", que baja a control neutro con icono
+          ámbar: deja de ir en ámbar pleno y de competir en tamaño con
+          el dominante (G-11).
 
           Es `sticky`, no `fixed`: así reserva su propio hueco en el
           flujo y no tapa el final del paso.
 
-          Los pasos anidados conservan su botón único en línea: su avance
-          lo decide el paso que los contiene, y dos acciones dominantes
-          en la misma pantalla dejarían de ser dominantes. */}
-      {/* Acción dominante fija al pie (M-011, regla M-R3, mockup `3b`).
-          Hasta ahora "Atrás / Siguiente" vivían al final del scroll del
-          paso, mientras la ficha de artículo sí fijaba su acción abajo
-          (tarea 172): la contradicción se pagaba justo en la pantalla
-          donde el pulgar trabaja de verdad, porque avanzar exigía
-          recorrer el paso entero con una mano.
-
-          Es `sticky`, no `fixed`: así reserva su propio hueco en el
-          flujo y no tapa el final del paso.
-
-          DOS FILAS desde el tablero 3d. La barra tiene ahora cuatro
-          controles, y en 360 px una sola fila dejaba la acción dominante
-          en 88 px, recortada a "Paso hecho · i...". Así que los dos que
-          no son trabajo (volver y entrar al foco) suben a una fila de 44
-          y la fila de abajo, la que cae bajo el pulgar, se queda con las
-          dos que sí lo son: la contingencia y el avance, a 56 px.
-
-          Y esta barra ya NO desaparece. Antes, cuando el paso tenía una
-          contingencia vinculada y el trabajo previo completo, la
-          pregunta "¿Ocurrió algún error?" la reemplazaba: la pantalla se
-          quedaba sin acción dominante y el layout saltaba. Esa pregunta
-          ya no existe, porque "Falla" es la pregunta, y está siempre.
-
-          Los pasos anidados conservan su fila en línea: su avance lo
-          decide el paso que los contiene, y dos acciones dominantes en
-          la misma pantalla dejarían de ser dominantes. */}
+          Los pasos anidados conservan su fila en línea (más abajo): su
+          avance lo decide el paso que los contiene, y dos acciones
+          dominantes en la misma pantalla dejarían de ser dominantes. */}
       {nivel === 0 && (
         <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.96] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
           {motivoBloqueo && (
             <p className="mb-1.5 text-center text-[11.5px] text-noct-neutral-400">{motivoBloqueo}</p>
           )}
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={!pasoActualHecho && !trabajoPrevio}
+            onClick={avanzar}
+            className="flex h-[76px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-[17px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.22] active:bg-noct-accent/[.3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-30"
+          >
+            <Check size={19} className="shrink-0" aria-hidden />
+            <span className="truncate">{etiquetaAvance}</span>
+          </button>
+          <div className="mt-2 flex items-center gap-2">
             <button
               type="button"
               disabled={indiceActual === 0}
               onClick={() => setIndiceActual(Math.max(0, indiceActual - 1))}
-              aria-label="Volver al paso anterior"
-              className="flex h-11 w-14 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
+              aria-label="Paso anterior"
+              className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
             >
               <CaretLeft size={18} aria-hidden />
             </button>
-            {/* El regreso a la ejecución normal (tarea 217). Ya no es
-                "Foco", un modo opcional que había que descubrir, sino
-                la vuelta a como se trabaja aquí: una tarea a la vez.
-                Está siempre, también en los pasos sin tareas, porque
-                el foco ya sabe presentarlos. */}
             <button
               type="button"
-              onClick={() => void cambiarModoEjecucion('foco')}
-              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-noct-accent/50 bg-noct-accent/10 px-3 text-[14.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.22]"
+              onClick={() => setIndiceAbierto(true)}
+              aria-haspopup="dialog"
+              aria-label={`Paso ${indiceActual + 1} de ${pasos.length}. Abrir el índice de pasos`}
+              className="flex h-[52px] flex-1 items-center justify-center gap-1 rounded-xl border border-noct-divider font-mono text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-text/[.07]"
             >
-              <Crosshair size={18} className="shrink-0" aria-hidden />
-              <span className="truncate">Volver a una tarea a la vez</span>
+              {indiceActual + 1}
+              <span className="text-[13px] font-normal text-noct-neutral-400">/{pasos.length}</span>
+              <CaretDown size={13} className="text-noct-neutral-400" aria-hidden />
             </button>
-          </div>
-          <div className="mt-2 flex items-center gap-2">
-            {/* "Falla" de 56 px, permanente. La etiqueta es corta a
-                propósito: así la acción dominante conserva su ancho y
-                ninguna de las dos se recorta. */}
             <button
               type="button"
               onClick={() => setHojaFalla({ tarea: null })}
               aria-haspopup="dialog"
               aria-label={`Algo va mal en el paso ${indiceActual + 1}`}
-              className="flex h-[56px] shrink-0 items-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/60 bg-noct-precaucion/10 px-3.5 text-[14.5px] font-medium text-noct-precaucion active:bg-noct-precaucion/[.24]"
+              className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-precaucion hover:bg-noct-text/[.07]"
             >
-              <Warning size={19} className="shrink-0" aria-hidden />
-              Falla
+              <Warning size={18} aria-hidden />
             </button>
             <button
               type="button"
-              disabled={!pasoActualHecho && !trabajoPrevio}
-              onClick={avanzar}
-              className="flex h-[56px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-3 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-30"
+              disabled={indiceActual + 1 >= pasos.length}
+              onClick={() => setIndiceActual(Math.min(pasos.length - 1, indiceActual + 1))}
+              aria-label="Paso siguiente"
+              className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
             >
-              <Check size={17} className="shrink-0" aria-hidden />
-              <span className="truncate">{etiquetaAvance}</span>
+              <CaretRight size={18} aria-hidden />
             </button>
           </div>
         </div>
@@ -724,70 +697,35 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   )
 }
 
-// Ancla del paso en ejecución (M-010, mockup `3b`): 44 px de alto con
-// "Paso 3 de 7", el título truncado y las tareas marcadas de este paso,
-// más una barra de progreso de 3 px del procedimiento completo. Vive
-// dentro del bloque pegajoso de la barra de tarea (ver
-// src/app/bandaTarea.tsx), así que no se va con el scroll.
-//
-// El contador de la derecha cuenta las tareas DEL PASO (2/4), no los
-// pasos: los pasos ya los dice la izquierda, y lo que se pierde al
-// desplazarse dentro de un paso largo es cuánto llevas marcado de él.
-function CabeceraPaso({
+// Contador de paso, DENTRO de la barra compacta de 44 px del chasis
+// (tarea 218, G-09, G-10, G-14). Antes era `CabeceraPaso`: un bloque
+// propio de 56 px con el título repetido, las tareas del paso y una
+// barra de segmentos, que sumado a los 68 px de la barra de tarea daba
+// 124 px de cromo fijo. Ahora es solo el DESTINO que abre el índice de
+// pasos ("3/7 ▾"), portado junto al título y la X mediante
+// `BandaTarea`; el título ya lo dice esa misma línea, y el estado de
+// cada paso vive en el propio índice (`HojaPasos`), no repetido aquí.
+function ContadorPaso({
   indice,
   total,
-  titulo,
-  tareasHechas,
-  tareasTotal,
-  completados,
   onAbrirIndice,
 }: {
   indice: number
   total: number
-  titulo: string
-  tareasHechas: number
-  tareasTotal: number
-  completados: number
   onAbrirIndice: () => void
 }) {
   return (
-    <div className="border-t border-noct-divider px-4">
-      {/* El contador deja de ser un rótulo y pasa a ser un DESTINO
-          (tablero 6c): abre el índice con el estado real de los siete
-          pasos. Toda la banda es el objetivo, 56 px de alto, porque el
-          "3/7" solo mide 30 y es lo que el dedo busca. */}
-      <button
-        type="button"
-        onClick={onAbrirIndice}
-        aria-haspopup="dialog"
-        aria-label={`Paso ${indice + 1} de ${total}: ${titulo}. Abrir el índice de pasos`}
-        className="flex min-h-[56px] w-full items-center gap-2.5 pb-1.5 pt-1 text-left"
-      >
-        <span className="flex shrink-0 items-center gap-1 font-mono text-[17px] font-semibold text-noct-accent-300">
-          {indice + 1}
-          <span className="text-[13px] font-normal text-noct-neutral-400">/{total}</span>
-          <CaretDown size={13} className="text-noct-neutral-400" aria-hidden />
-        </span>
-        <h2 className="min-w-0 flex-1 truncate text-[13px] font-normal text-noct-neutral-200">{titulo}</h2>
-        {tareasTotal > 0 && (
-          <span className="shrink-0 font-mono text-[14px] tabular-nums text-noct-text">
-            {tareasHechas}/{tareasTotal}
-            <span className="sr-only"> tareas de este paso marcadas</span>
-          </span>
-        )}
-      </button>
-      {/* Segmentos, uno por paso, en vez de la barra continua de
-          porcentaje: dicen cuántos pasos hay y cuál es el que sigue,
-          que es lo que el técnico pregunta. */}
-      <IndicadorAvance
-        hechos={completados}
-        total={total}
-        variante="segmentos"
-        expandido
-        actual={indice}
-        className="-mb-px"
-      />
-    </div>
+    <button
+      type="button"
+      onClick={onAbrirIndice}
+      aria-haspopup="dialog"
+      aria-label={`Paso ${indice + 1} de ${total}. Abrir el índice de pasos`}
+      className="flex h-11 shrink-0 items-center gap-1 rounded-lg px-2 font-mono text-[14px] font-semibold text-noct-accent-300 hover:bg-noct-text/[.07]"
+    >
+      {indice + 1}
+      <span className="text-[12px] font-normal text-noct-neutral-400">/{total}</span>
+      <CaretDown size={12} className="text-noct-neutral-400" aria-hidden />
+    </button>
   )
 }
 

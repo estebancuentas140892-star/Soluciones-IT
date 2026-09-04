@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Modal } from '../../components/Modal'
-import { Check, Warning, X } from '../../components/iconos'
+import { Check, Crosshair, Eye, Warning, X } from '../../components/iconos'
+import type { ModoEjecucion } from '../../lib/preferenciasEjecucion'
 import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 
 // Índice de los pasos del procedimiento en ejecución (handoff "Diseño
@@ -27,6 +28,16 @@ interface Props {
   resumenes: ResumenPaso[]
   subtitulo: string
   onIrAPaso: (indice: number) => void
+  // Tarea 218: el índice es también donde vive el cambio entre Foco y
+  // el paso entero. Antes cada vista tenía su propio control para
+  // pasar a la otra (el botón "Foco" del pie, luego "Ver el paso
+  // entero" dentro de ModoFoco); al reducir la cabecera de ejecución a
+  // una línea de 44 px ninguna de las dos tenía ya sitio para el suyo.
+  // El índice, que ahora se abre desde el contador duplicado arriba y
+  // abajo, es el sitio natural: ya es donde se piensa en pasos, no en
+  // tareas sueltas.
+  modoEjecucion: ModoEjecucion
+  onCambiarModo: (modo: ModoEjecucion) => void
 }
 
 const ID_TITULO = 'hoja-pasos-titulo'
@@ -107,7 +118,17 @@ function DetalleFila({ resumen }: { resumen: ResumenPaso }) {
   )
 }
 
-export function HojaPasos({ abierto, onCerrar, resumenes, subtitulo, onIrAPaso }: Props) {
+export function HojaPasos({
+  abierto,
+  onCerrar,
+  resumenes,
+  subtitulo,
+  onIrAPaso,
+  modoEjecucion,
+  onCambiarModo,
+}: Props) {
+  const enFoco = modoEjecucion === 'foco'
+
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
       <div className="mb-2.5 flex items-center justify-between gap-2">
@@ -160,6 +181,21 @@ export function HojaPasos({ abierto, onCerrar, resumenes, subtitulo, onIrAPaso }
           </li>
         ))}
       </ol>
+
+      {/* El cambio entre Foco y el paso entero (tarea 218): ver el
+          comentario de `modoEjecucion` en Props. Un solo control de 44
+          px cuyo rótulo dice a dónde lleva, no dónde está. */}
+      <button
+        type="button"
+        onClick={() => {
+          onCambiarModo(enFoco ? 'pasoEntero' : 'foco')
+          onCerrar()
+        }}
+        className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+      >
+        {enFoco ? <Eye size={17} aria-hidden /> : <Crosshair size={17} aria-hidden />}
+        {enFoco ? 'Ver el paso entero' : 'Volver a una tarea a la vez'}
+      </button>
     </Modal>
   )
 }

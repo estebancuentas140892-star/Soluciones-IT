@@ -26,20 +26,27 @@ import { tonoInfo } from './tonos'
 // secundario, se perdía al salir y se caía sola en los pasos sin
 // tareas. Tres consecuencias aquí dentro:
 //
-//   - "Ver el paso entero" sustituye a "Ver todo". La vista completa
-//     deja de ser el sitio del que se sale y pasa a ser la excepción a
-//     la que se va, y la preferencia se guarda (`preferenciasEjecucion`).
+//   - La vista completa deja de ser el sitio del que se sale y pasa a
+//     ser la excepción a la que se va, y la preferencia se guarda
+//     (`preferenciasEjecucion`).
 //   - Un paso SIN tareas ya no expulsa a nadie: se presenta como una
 //     sola tarea con el título del paso (ver `tareasFoco.ts`).
 //   - El botón grande completa el paso cuando ya no queda nada que
 //     marcar. Antes había que salir a la vista completa para avanzar,
 //     que con el foco por defecto habría dejado la ejecución sin
 //     salida.
+//
+// SIN CABECERA PROPIA desde la tarea 218: el "3/7 · título" y el
+// control para pasar a la vista completa vivían aquí arriba, en un
+// bloque de 56 px que duplicaba la barra de tarea del chasis (68 px)
+// justo encima. Los dos se fundieron en la línea compacta de 44 px que
+// `AsistenteVista` porta al chasis (`BandaTarea`), y el cambio de
+// vista se mudó al índice de pasos (`HojaPasos`), que ahora se abre
+// desde esa misma línea. Esta vista ya no necesita saber en qué paso
+// va (`indicePaso`/`totalPasos`) ni cómo salir: solo la tarea.
 
 interface Props {
   paso: PasoProcedimiento
-  indicePaso: number
-  totalPasos: number
   tituloPaso: string
   instruccionesHechas: ReadonlySet<string>
   onAlternarTarea: (tareaId: string) => void
@@ -52,9 +59,6 @@ interface Props {
   // Razón escrita cuando el paso no puede cerrarse todavía (un
   // procedimiento vinculado sin terminar). null cuando sí puede.
   motivoBloqueo: string | null
-  // Va a la vista de paso entero, que desde la tarea 217 es la
-  // excepción y no el sitio del que se viene.
-  onVerPasoEntero: () => void
   // El técnico declara que algo va mal en esta tarea. Abre la MISMA
   // hoja de salidas que el "Falla" de la vista completa (tablero 3d);
   // lo único que aporta el foco es saber en qué tarea estaba. No sale
@@ -65,15 +69,12 @@ interface Props {
 
 export function ModoFoco({
   paso,
-  indicePaso,
-  totalPasos,
   tituloPaso,
   instruccionesHechas,
   onAlternarTarea,
   onCompletarPaso,
   etiquetaAvance,
   motivoBloqueo,
-  onVerPasoEntero,
   onFalla,
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso)
@@ -110,31 +111,10 @@ export function ModoFoco({
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* Cabecera mínima: dónde estoy y cómo salgo. Nada más, porque el
-          modo existe para quitar de la pantalla todo lo que no es la
-          tarea. */}
-      <div className="flex h-14 flex-none items-center gap-2.5">
-        <span className="flex min-w-0 flex-1 items-center gap-2.5">
-          <span className="shrink-0 font-mono text-sm font-semibold text-noct-neutral-400">
-            {indicePaso + 1}/{totalPasos}
-          </span>
-          <span className="min-w-0 truncate text-[13.5px] text-noct-neutral-400">{tituloPaso}</span>
-        </span>
-        {/* La vista de paso completo ya no es "todo lo demás" sino una
-            opción concreta con su nombre (tarea 217): se va a ella y se
-            vuelve, y la elección queda guardada. */}
-        <button
-          type="button"
-          onClick={onVerPasoEntero}
-          className="flex h-11 shrink-0 items-center rounded-full border-[1.5px] border-noct-divider px-3.5 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.08]"
-        >
-          Ver el paso entero
-        </button>
-      </div>
-
       {/* Un segmento por TAREA del paso, no por paso: dentro del foco la
           unidad es la tarea. El paso sin tareas no lo monta: un solo
-          segmento no mide nada que la cabecera no diga ya. */}
+          segmento no mide nada, y ya no hay debajo un "Tarea 1 de 1"
+          repitiendo lo obvio. */}
       {!tarea.esPasoEntero && (
         <IndicadorAvance
           hechos={hechas}

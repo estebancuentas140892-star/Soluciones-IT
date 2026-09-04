@@ -43,6 +43,15 @@ interface Props {
   alSalir?: () => void
   /** Banda propia de la tarea: pestañas del editor, progreso, avisos. */
   children?: ReactNode
+  /**
+   * Cabecera reducida a una sola línea de 44 px (tarea 218): sin
+   * rótulo ni ruta de vuelta, con `children` en la MISMA fila que el
+   * título y la X en vez de en un bloque debajo. Pensada para la
+   * ejecución de una guía, donde `children` es el disparador que abre
+   * el índice de pasos (G-14: la navegación más valiosa de la
+   * ejecución dejaba de estar donde el pulgar la alcanza).
+   */
+  compacta?: boolean
 }
 
 export function BarraTarea({
@@ -53,10 +62,42 @@ export function BarraTarea({
   salidaEtiqueta = 'Salir sin guardar',
   alSalir,
   children,
+  compacta = false,
 }: Props) {
   const { pathname } = useLocation()
   const destino = salidaA ?? padreDe(pathname)?.to ?? '/'
   const rutaVuelta = vuelta ?? vueltaDeTarea(pathname)
+
+  if (compacta) {
+    return (
+      <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">
+        <div className="flex h-11 items-center gap-1 pl-1 pr-1">
+          {alSalir ? (
+            <button
+              type="button"
+              onClick={alSalir}
+              aria-label={salidaEtiqueta}
+              title={salidaEtiqueta}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"
+            >
+              <X size={19} aria-hidden />
+            </button>
+          ) : (
+            <Link
+              to={destino}
+              aria-label={salidaEtiqueta}
+              title={salidaEtiqueta}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"
+            >
+              <X size={19} aria-hidden />
+            </Link>
+          )}
+          <h1 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-tight">{titulo}</h1>
+          {children}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">

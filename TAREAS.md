@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(la tarea 217 se cerró el 2026-09-03 y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Es la **primera de las 13 recomendaciones** del handoff "Auditoría visual sección Guía", registradas abajo en "Por hacer" como tareas 217 a 231. La siguiente en el orden recomendado es la **218** (barra de ejecución de una línea y el índice de pasos al pulgar), que además cierra el **G-19** que la 217 dejó abierto a propósito: la barra de tarea de 68 px sigue puesta. El usuario las va tomando de una en una, así que la 218 no se pone "En proceso" hasta que la pida.)*
+*(las tareas 217 y 218 se cerraron el 2026-09-03 y el 2026-09-04 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Son la **primera y la segunda** de las 13 recomendaciones del handoff "Auditoría visual sección Guía", registradas abajo en "Por hacer" como tareas 219 a 231. La 218 cerró el **G-19** que la 217 había dejado abierto a propósito: la barra de tarea del chasis ya no sigue puesta encima del foco, se redujo a la línea compacta de 44 px. La siguiente en el orden recomendado es la **219** (guardado continuo del editor y tarjetas de paso plegadas). El usuario las va tomando de una en una, así que la 219 no se pone "En proceso" hasta que la pida.)*
 
 
 *(vacío: la tarea 207 se cerró el 2026-09-02. Con ella **la auditoría móvil queda cerrada salvo el vocabulario**: fase 1 (201), fase 2 (202 a 206) y fase 3 (207). Queda la tarea **216** (M-034, un solo vocabulario escrito), que salió de la 207 el mismo día, y **M-023** (desbloqueo de la Bóveda), que sigue fuera de fase esperando decisión del usuario.)*
@@ -319,7 +319,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 **Cómo se leyó:** el MCP `claude_design` volvió a devolver `DesignSync needs design-system authorization` (esta sesión no interactiva no puede correr `/design-login`). Se leyó del zip local `Auditoría visual sección Guía-handoff.zip`, en la raíz del repo, que trae el proyecto completo. La auditoría se hizo contra el código real: cita `index.css`, `Chasis.tsx`, `SolucionesPage.tsx`, `ArticuloPage.tsx`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `HojaFalla.tsx`, `HojaPasos.tsx` y `PasosEditor.tsx`, y sus medidas de cromo coinciden con lo que hay puesto.
 
-**Alcance autorizado (2026-09-03):** el usuario autoriza **registrar las 13 recomendaciones**, y luego irlas tomando **de una en una** en mensajes posteriores, con el tablero funcionando como siempre (una sola tarea "En proceso"). **Hecha hasta ahora: la 217** (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
+**Alcance autorizado (2026-09-03):** el usuario autoriza **registrar las 13 recomendaciones**, y luego irlas tomando **de una en una** en mensajes posteriores, con el tablero funcionando como siempre (una sola tarea "En proceso"). **Hechas hasta ahora: la 217 y la 218** (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
 
 **La tesis del informe.** La sección está construida alrededor del **documento**; el técnico trabaja en la **tarea**. Para llegar a una instrucción hay que atravesar cuatro capas (lista, ficha, paso, bloque) y, una vez ahí, la instrucción comparte 640 px con 262 px de cromo que describe el documento que el técnico eligió hace cuatro segundos. La app ya tiene la respuesta escrita: se llama **Modo Foco**, resuelve exactamente eso, y está escondida tras un botón secundario, se pierde al salir y desaparece sola en los pasos sin tareas. Puntuación UX que calcula el informe: **61/100 hoy, 86/100 con las 13** (+25 puntos).
 
@@ -330,7 +330,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 | # | Recomendación | Cierra | Impacto | Esfuerzo | Tarea |
 |---|---|---|---|---|---|
 | 1 | Foco pasa a ser la ejecución por defecto, persistido por usuario | G-16 a G-19 | Alto | Bajo | **217** HECHA (2026-09-03) |
-| 2 | Barra de ejecución de una línea (44 px) y el índice duplicado al pie | G-09, G-10, G-14 | Alto | Bajo | **218** |
+| 2 | Barra de ejecución de una línea (44 px) y el índice duplicado al pie | G-09, G-10, G-14 | Alto | Bajo | **218** HECHA (2026-09-04) |
 | 3 | Vocabulario único: "guía" | G-04 | Medio | Bajo | **216** (ya registrada arriba) |
 | 4 | Guardado continuo en el editor y tarjetas de paso plegadas | G-27, G-28, G-29 | Alto | Medio | **219** |
 | 5 | Cierre real: verificación en acento, resumen honesto, "Cerrar y registrar" | G-23 a G-26 | Alto | Medio | **220** |
@@ -348,19 +348,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 **Orden recomendado, y por qué.** La 217 y la 218 son el mismo trozo de pantalla (`AsistenteVista.tsx` y su pie); hacerlas por separado obliga a reescribir dos veces la misma cabecera, así que conviene tomarlas seguidas y en ese orden. La 225 (tiempo honesto) cae dentro del mismo archivo y es barata: entra bien detrás de las dos. La 226 (manos ocupadas) reutiliza la tabla de preferencias que crea la 217, así que va después de ella o no va. La 227 y la 228 tocan el mismo pie de `ArticuloForm.tsx`, con la misma razón que la 217 y la 218.
 
 **Deuda de esquema que abren estas tareas.** La base local va por `this.version(14)` en `src/lib/db.ts` (líneas 886 a 1001). Las tareas 217, 219 y 226 piden dos tablas nuevas: **preferencias del técnico** (modo de ejecución, manos ocupadas) y **borrador de artículo** (guardado continuo). Conviene decidir si van en una sola versión nueva o en dos, y anotarlo en [DECISIONES.md](DECISIONES.md) al tomar la primera.
-
-### 218. Rediseño Guía: barra de ejecución de una línea y el índice de pasos al pulgar (G-09, G-10, G-14)
-
-- **Descripción:** reducir el cromo de la pantalla de ejecución de 262 px a unos 132. Arriba, una **sola línea de 44 px**: cerrar, nombre corto del equipo y el contador "3/7" con su punta hacia abajo, donde el contador **es** el disparador del índice. Fuera "Ejecutando", el título largo y la ruta de vuelta durante la ejecución. Abajo, la acción dominante de 76 px y una fila de 52 px con anterior, el **contador duplicado que abre el índice**, "algo va mal" y siguiente. "Falla" baja a control neutro de 52 px con icono ámbar: deja de ir en ámbar pleno y deja de compartir tamaño con la acción principal.
-- **Motivo:** hallazgos **G-09** (262 px de cromo sobre 640: el paso trabaja en 378 px, el mismo defecto que el equipo ya midió y corrigió en M-033 para la barra de reanudar, sin aplicarlo a la pantalla donde el técnico pasa la mayor parte del tiempo), **G-10** (la barra repite en tres líneas lo que el técnico acaba de decidir: útil al volver de una interrupción, caro los otros 40 minutos), **G-14** (el índice, la navegación más valiosa de la ejecución, se abre desde el borde superior, la zona menos alcanzable con una mano). Arrastra también **G-11** (cuatro controles compiten al pie y el de error es el más visible cuando la acción está bloqueada) y **G-12** (la acción dominante se trunca: "Paso hecho · ir al 4" no cabe a 360 px junto a "Falla").
-- **Impacto:** alto. Es la otra mitad de los +68 px de área útil de la 217, y mueve el salto al paso N desde el techo hasta el arco del pulgar.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:**
-  - `src/features/soluciones/AsistenteVista.tsx`: la cabecera `Encabezado` en ~755 a 790; la fila secundaria de 44 px en ~586; la fila de acción dominante y "Falla" justo debajo.
-  - `src/app/Chasis.tsx` (590 líneas) y `src/app/bandaTarea.tsx` (35 líneas): el hueco de la banda pegajosa del nivel tarea se calcula en `Chasis.tsx` ~224; al encoger la banda hay que ajustar ese hueco o la pantalla queda con un espacio muerto.
-  - `src/features/soluciones/HojaPasos.tsx` (165 líneas): no cambia de contenido, solo de disparador.
-- **Dependencias:** **la 217**, que define quién es la vista por defecto y por tanto qué cabecera se está reduciendo.
-- **Modelo/esfuerzo:** Sonnet 5 / Medio. Es sobre todo marcado y medidas, pero toca el cálculo del hueco pegajoso del chasis, que es compartido con otras pantallas de nivel tarea.
 
 ### 219. Rediseño Guía: guardado continuo del editor y tarjetas de paso plegadas (G-27, G-28, G-29)
 

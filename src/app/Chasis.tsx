@@ -203,6 +203,14 @@ interface PropsTarea extends PropsComunes {
   alSalir?: () => void
   /** Banda bajo la barra de tarea: pestañas del editor, progreso. */
   barra?: ReactNode
+  /**
+   * Cabecera de una sola línea de 44 px, sin rótulo ni ruta de vuelta
+   * (tarea 218, hallazgos G-09 y G-10): el título comparte fila con la
+   * X y con lo que se porte a la ranura (`barra` o `BandaTarea`). Pensada
+   * para la ejecución de una guía, donde el técnico ya sabe qué está
+   * haciendo y a dónde vuelve porque lo decidió hace cuatro segundos.
+   */
+  compacta?: boolean
 }
 
 type Props = PropsSeccion | PropsDocumento | PropsTarea
@@ -269,6 +277,7 @@ export function Chasis(props: Props) {
             salidaA={props.salidaA ?? origen?.to}
             salidaEtiqueta={props.salidaEtiqueta}
             alSalir={props.alSalir}
+            compacta={props.compacta}
           >
             {props.barra}
             {/* Ranura para la banda pegajosa de quien tenga el dato del

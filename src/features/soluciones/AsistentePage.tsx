@@ -9,14 +9,16 @@ import { AsistenteVista } from './AsistenteVista'
 // Pantalla del modo ejecucion (asistente): nivel 3 del chasis (tarea
 // 185), una tarea con salida. Es de los pocos sitios donde la barra de
 // pestañas cede, para que el tecnico vea solo lo que necesita en el
-// momento exacto; a cambio, la BarraTarea dice que esta ejecutando, que
-// procedimiento y a donde vuelve (R19). Salir no pierde avance: el
+// momento exacto; a cambio, la BarraTarea dice que esta ejecutando y
+// deja salir (R19). Cabecera COMPACTA desde la tarea 218 (G-09, G-10):
+// una sola linea de 44 px con el titulo y la X, sin rotulo ni ruta de
+// vuelta ("vuelves aqui al terminar" ya no se repite: el tecnico acaba
+// de decidir entrar hace cuatro segundos). Salir no pierde avance: el
 // progreso vive en la base local, no en el estado de esta pantalla.
 export function AsistentePage() {
   const { categoriaId = '', articuloId = '' } = useParams()
 
   const articulo = useLiveQuery(() => db.articulos.get(articuloId), [articuloId])
-  const categoria = useLiveQuery(() => db.categorias.get(categoriaId), [categoriaId])
   const procedimiento = useMemo(() => normalizarProcedimiento(articulo?.procedimiento), [articulo])
 
   if (articulo === null) return <Navigate to="/soluciones" replace />
@@ -36,9 +38,9 @@ export function AsistentePage() {
   return (
     <Chasis
       modo="tarea"
+      compacta
       rotulo="Ejecutando"
       titulo={articulo.titulo}
-      vuelta={categoria?.nombre ? `Guías › ${categoria.nombre}` : 'Guías'}
       salidaEtiqueta="Salir del modo ejecución"
     >
       {/* Sin relleno inferior propio: la acción dominante fija de
