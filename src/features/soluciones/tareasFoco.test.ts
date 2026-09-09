@@ -181,3 +181,53 @@ describe('la guía vinculada del paso dentro del recorrido', () => {
     expect(tareasParaFoco(p, 'Paso')[0].guiaId).toBeNull()
   })
 })
+
+describe('guías obligatorias en el recorrido (encargo 2026-09-09, tarea 1)', () => {
+  function guia(id: string, tareaId: string, articuloId: string, titulo: string, intencion: BloquePaso['intencionGuia']) {
+    return bloque({
+      id,
+      tipo: 'guia',
+      alcance: 'tarea',
+      tareaId,
+      guiaArticuloId: articuloId,
+      guiaArticuloTitulo: titulo,
+      intencionGuia: intencion,
+    })
+  }
+
+  const p = paso({
+    bloques: [
+      bloque({ id: 't1', tipo: 'tarea', texto: 'Sin guías' }),
+      bloque({ id: 't2', tipo: 'tarea', texto: 'Con una' }),
+      guia('g1', 't2', 'art-a', 'Primera', 'necesario'),
+      bloque({ id: 't3', tipo: 'tarea', texto: 'Con dos' }),
+      guia('g2', 't3', 'art-b', 'Segunda', 'necesario'),
+      guia('g3', 't3', 'art-c', 'Apoyo', 'consulta'),
+      guia('g4', 't3', 'art-d', 'Tercera', 'necesario'),
+    ],
+  })
+
+  it('cero guías: la tarea no arrastra ninguna', () => {
+    const t = tareasParaFoco(p, 'Paso')[0]
+    expect(t.guiasObligatorias).toEqual([])
+    expect(t.guiaId).toBeNull()
+  })
+
+  it('una guía: la lleva y la nombra', () => {
+    const t = tareasParaFoco(p, 'Paso')[1]
+    expect(t.guiasObligatorias.map((g) => g.guiaArticuloId)).toEqual(['art-a'])
+    expect(t.guiaTitulo).toBe('Primera')
+  })
+
+  it('VARIAS guías: las lleva todas, en el orden del editor', () => {
+    // El defecto: `.find` se quedaba con 'art-b' y 'art-d' no existía
+    // para el recorrido, así que ni se veía ni se exigía.
+    const t = tareasParaFoco(p, 'Paso')[2]
+    expect(t.guiasObligatorias.map((g) => g.guiaArticuloId)).toEqual(['art-b', 'art-d'])
+  })
+
+  it('la de consulta no entra en las obligatorias', () => {
+    const t = tareasParaFoco(p, 'Paso')[2]
+    expect(t.guiasObligatorias.some((g) => g.guiaArticuloId === 'art-c')).toBe(false)
+  })
+})

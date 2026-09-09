@@ -33,6 +33,7 @@ import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { AccionVinculo, EnlaceVinculo, FilaVinculo } from './FilaVinculo'
 import { fraseAvanceDocumento, modoVinculo, PROMESA_REGRESO, ZONA_ANIDADA } from './vinculoAnidado'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
+import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
 import { ModoFoco } from './ModoFoco'
@@ -186,6 +187,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
+    guiasPendientesDeTarea,
     alternarTarea,
     intentarCompletarPaso,
     completarPasoYAvanzar,
@@ -477,6 +479,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           etiquetaAvance={etiquetaAvance}
           motivoBloqueo={motivoBloqueo}
           onFalla={(texto) => setHojaFalla({ tarea: texto })}
+          guiasPendientes={(tareaId) => guiasPendientesDeTarea(paso, tareaId)}
           // TERMINAR EL DESTINO DE UN "NO" RESPONDE LA DECISIÓN, no
           // cierra el paso (encargo del 2026-09-09, secciones 5 y 6).
           // Es el mismo trato que la vista completa: se marca la
@@ -587,6 +590,11 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
                 // esta vista para tratar una verificación distinto de
                 // una instrucción (cambio 2 del encargo).
                 onNoSeCumple={(texto) => setHojaFalla({ tarea: texto })}
+                // LA MISMA REGLA EN LA VISTA DE PASO ENTERO (encargo del
+                // 2026-09-09, tarea 1). Sin esto la validación existía
+                // solo en el modo de una tarea a la vez, y cambiar de
+                // vista era la ruta alternativa que la omitía.
+                bloqueadaPor={motivoGuiasPendientes(guiasPendientesDeTarea(paso, bloque.id))}
                 ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
                   <AsistenteVista
                     articuloId={vinculadoId}

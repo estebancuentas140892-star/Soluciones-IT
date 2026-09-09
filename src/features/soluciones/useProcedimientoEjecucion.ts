@@ -15,6 +15,11 @@ import {
   establecerPasoHecho,
   verificacionFinalCompleta,
 } from '../../lib/progresoPasos'
+import {
+  guiasObligatoriasDeTarea,
+  guiasObligatoriasPendientes,
+  idsGuiasObligatoriasDelPaso,
+} from './guiasObligatorias'
 
 interface Opciones {
   articuloId: string
@@ -63,10 +68,20 @@ export function useProcedimientoEjecucion({
   // paso no se da por terminado mientras su subprocedimiento siga
   // pendiente. Solo el nivel 0 los ejecuta inline; mas profundo se
   // muestran como enlace y no cuentan como trabajo del paso.
+  //
+  // Desde el 2026-09-09 la lista incluye tambien las guias con
+  // intencion 'necesario' colgadas de una TAREA: se mostraban pero no
+  // condicionaban nada, asi que "Marcar hecha" funcionaba con la guia
+  // sin empezar (encargo, tarea 1).
   const subIds = useMemo(
     () =>
       nivel === 0
-        ? [...new Set(pasos.map((p) => p.subArticuloId).filter((id): id is string => Boolean(id)))]
+        ? [
+            ...new Set([
+              ...pasos.map((p) => p.subArticuloId).filter((id): id is string => Boolean(id)),
+              ...pasos.flatMap((p) => idsGuiasObligatoriasDelPaso(p)),
+            ]),
+          ]
         : [],
     [pasos, nivel],
   )
@@ -79,10 +94,14 @@ export function useProcedimientoEjecucion({
   // vinculado quedo completo. Version reactiva (live query) para decidir
   // que se muestra; mientras cargan los datos devuelve false para no
   // dar el paso por terminado antes de tiempo.
-  function subSatisfechoReactivo(paso: PasoProcedimiento): boolean {
-    if (!paso.subArticuloId || nivel >= 1) return true
+  // ¿Esta guia vinculada ya no impone trabajo? Una guia que no esta en
+  // el dispositivo, o que no tiene pasos, cuenta como cumplida: no se
+  // puede exigir lo que no se puede abrir, y bloquear ahi dejaria la
+  // tarea sin salida (criterio A12).
+  function guiaCumplidaReactiva(guiaId: string): boolean {
+    if (nivel >= 1) return true
     if (subArticulos === undefined || subProgresos === undefined) return false
-    const idx = subIds.indexOf(paso.subArticuloId)
+    const idx = subIds.indexOf(guiaId)
     const articulo = idx >= 0 ? subArticulos[idx] : undefined
     if (!articulo || articulo.eliminadoEn) return true
     const proc = normalizarProcedimiento(articulo.procedimiento)
@@ -92,19 +111,53 @@ export function useProcedimientoEjecucion({
     return hechosSub === proc.pasos.length
   }
 
+  // La misma pregunta con lectura fresca, para decidir una escritura
+  // sin depender de cuando refresque la live query.
+  async function guiaCumplidaFresca(guiaId: string): Promise<boolean> {
+    if (nivel >= 1) return true
+    const articulo = await db.articulos.get(guiaId)
+    if (!articulo || articulo.eliminadoEn) return true
+    const proc = normalizarProcedimiento(articulo.procedimiento)
+    if (!proc) return true
+    const prog = await db.progresoPasos.get(guiaId)
+    const hechosSub = contarHechos(prog?.pasosHechos ?? [], proc.pasos.map((p) => p.id))
+    return hechosSub === proc.pasos.length
+  }
+
+  /**
+   * Las guias obligatorias que esta tarea todavia no ha cumplido, en el
+   * orden del editor. Vacio cuando la tarea no exige ninguna o cuando
+   * ya estan todas. Lo consultan las DOS vistas de ejecucion.
+   */
+  function guiasPendientesDeTarea(paso: PasoProcedimiento, tareaId: string) {
+    if (nivel >= 1) return []
+    return guiasObligatoriasPendientes(guiasObligatoriasDeTarea(paso, tareaId), guiaCumplidaReactiva)
+  }
+
+  function subSatisfechoReactivo(paso: PasoProcedimiento): boolean {
+    if (!paso.subArticuloId || nivel >= 1) return true
+    return guiaCumplidaReactiva(paso.subArticuloId)
+  }
+
   // Misma pregunta pero con lecturas frescas de la base, para decidir
   // el completado sin depender del momento en que refrescan las live
   // queries (por ejemplo, justo cuando el subprocedimiento termina y
   // avisa hacia arriba).
   async function subSatisfechoFresco(paso: PasoProcedimiento): Promise<boolean> {
     if (!paso.subArticuloId || nivel >= 1) return true
-    const articulo = await db.articulos.get(paso.subArticuloId)
-    if (!articulo || articulo.eliminadoEn) return true
-    const proc = normalizarProcedimiento(articulo.procedimiento)
-    if (!proc) return true
-    const prog = await db.progresoPasos.get(paso.subArticuloId)
-    const hechosSub = contarHechos(prog?.pasosHechos ?? [], proc.pasos.map((p) => p.id))
-    return hechosSub === proc.pasos.length
+    return guiaCumplidaFresca(paso.subArticuloId)
+  }
+
+  // ¿Se puede MARCAR esta tarea ahora mismo? Con lectura fresca, y con
+  // una sola respuesta para las dos vistas: si la regla viviera en cada
+  // pantalla, una podria validar y la otra no.
+  async function tareaMarcable(paso: PasoProcedimiento, tareaId: string): Promise<boolean> {
+    if (nivel >= 1) return true
+    const guias = guiasObligatoriasDeTarea(paso, tareaId)
+    for (const g of guias) {
+      if (g.guiaArticuloId && !(await guiaCumplidaFresca(g.guiaArticuloId))) return false
+    }
+    return true
   }
 
   // Avance automatico despues de completar el paso del indice dado. Si
@@ -130,6 +183,12 @@ export function useProcedimientoEjecucion({
   }
 
   async function alternarTarea(indice: number, paso: PasoProcedimiento, tareaId: string) {
+    // MARCAR exige tener hechas sus guias obligatorias; DESMARCAR no,
+    // porque quien desmarca se esta corrigiendo. La comprobacion vive
+    // aqui, en el unico punto por el que pasan las dos vistas, para que
+    // no quede una ruta alternativa que la omita.
+    if (!instruccionesHechas.has(tareaId) && !(await tareaMarcable(paso, tareaId))) return
+
     const tareasCompletas = await alternarInstruccionHecha(
       articuloId,
       paso.id,
@@ -204,6 +263,7 @@ export function useProcedimientoEjecucion({
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
+    guiasPendientesDeTarea,
     alternarPaso,
     alternarTarea,
     intentarCompletarPaso,

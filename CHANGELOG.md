@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Corregido (tarea 235, encargo 1): "necesario" no significaba nada, y con dos guías solo contaba la primera
+
+**Área modificada:** ejecución de Guías, las dos vistas, más el mapa del artículo. **Nuevos:** `src/features/soluciones/guiasObligatorias.ts` (+ 16 pruebas). **Modificados:** `useProcedimientoEjecucion.ts`, `tareasFoco.ts` (+ 4 pruebas), `ModoFoco.tsx`, `AsistenteVista.tsx`, `ProcedimientoVista.tsx`, `src/pruebas/semillaLocal.ts`.
+**Motivo:** tarea 1 del encargo del **9 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Corregido** un bloque `guia` con intención `necesario` colgado de una tarea se mostraba pero **no condicionaba nada**: "Marcar hecha" funcionaba con la guía sin empezar. Ahora la tarea no se puede marcar mientras quede una obligatoria pendiente.
+- **Corregido** con **dos guías necesarias** el recorrido tomaba solo la primera (`.find`), así que la segunda ni se veía ni se exigía. Ahora se listan **todas**, en el orden del editor.
+- **Agregado** el motivo escrito con el nombre: **"Completa «X» para marcar esta tarea"**, y con varias, **"Completa «X» y 2 guías más"**.
+- **Agregado** la validación vive en **un solo sitio**, `alternarTarea` del hook de ejecución, por donde pasan las dos vistas y el mapa del artículo: no queda ruta alternativa que la omita. Desmarcar sigue permitido, porque quien desmarca se está corrigiendo.
+- **Sin bloquear lo que no se puede abrir:** una guía obligatoria que no está en el dispositivo cuenta como cumplida (criterio A12), y las de intención `consulta` y `contingencia` no bloquean nunca.
+- **Comprobado en navegador** a 390 px con una tarea de cero, una y dos guías necesarias: la primera se marca, las otras dos no; al completar la primera guía el mensaje pasa a nombrar la que falta; con las dos completas se habilita. Igual en la vista de paso entero, donde las casillas quedan deshabilitadas con su motivo debajo. Barrido de 360, 390 y 430 px sin desbordamiento.
+
 ### Corregido (tarea 234, cambio 6): los vencimientos se contaban en horas y perdían un día con el horario de verano
 
 **Área modificada:** Bóveda (vencimiento de credenciales). **Modificados:** `src/lib/vencimiento.ts`, `src/lib/vencimiento.test.ts` (+ 7 pruebas).

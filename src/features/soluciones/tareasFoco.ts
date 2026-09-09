@@ -1,5 +1,6 @@
 import type { BloquePaso, IntencionGuia, PasoProcedimiento, TipoTarea, VinculoProtegido } from '../../lib/db'
 import { tareasDe } from '../../lib/procedimiento'
+import { guiasObligatoriasDeTarea } from './guiasObligatorias'
 
 // LO QUE EL MODO FOCO RECORRE (tarea 217, hallazgo G-18; ampliado el
 // 2026-09-09 con la correccion de H05).
@@ -59,28 +60,16 @@ export interface TareaFoco {
   // eran el mismo gesto y el destino del "no" no existia.
   decisionGuiaId: string | null
   decisionGuiaTitulo: string
+  // TODAS las guias con intencion 'necesario' colgadas de esta tarea,
+  // en el orden del editor (encargo del 2026-09-09, tarea 1). Antes se
+  // tomaba solo la primera con `.find`, asi que una tarea con dos guias
+  // necesarias enseñaba una y exigia ninguna.
+  guiasObligatorias: BloquePaso[]
 }
 
 /** Prefijo del id sintetico de la guia del paso dentro del recorrido. */
 export function idTareaGuiaDelPaso(pasoId: string): string {
   return `guia:${pasoId}`
-}
-
-// La guia 'necesario' que cuelga de una tarea concreta, si la hay. Las
-// de intencion 'consulta' y 'contingencia' NO se buscan aqui a
-// proposito: por definicion no condicionan el avance (punto 6 de la
-// seccion 5 del encargo), asi que son apoyo y no prerrequisito.
-function guiaNecesariaDe(bloques: BloquePaso[], tareaId: string): BloquePaso | null {
-  return (
-    bloques.find(
-      (b) =>
-        b.tipo === 'guia' &&
-        b.guiaArticuloId !== null &&
-        b.intencionGuia === 'necesario' &&
-        b.alcance === 'tarea' &&
-        b.tareaId === tareaId,
-    ) ?? null
-  )
 }
 
 // El titulo llega ya resuelto por quien llama (`paso.titulo` puede
@@ -105,12 +94,13 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
       intencionGuia: 'necesario',
       decisionGuiaId: null,
       decisionGuiaTitulo: '',
+      guiasObligatorias: [],
     })
   }
 
   const tareas = tareasDe(paso.bloques)
   for (const t of tareas) {
-    const guia = guiaNecesariaDe(paso.bloques, t.id)
+    const obligatorias = guiasObligatoriasDeTarea(paso, t.id)
     recorrido.push({
       id: t.id,
       texto: t.texto,
@@ -118,9 +108,10 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
       esPasoEntero: false,
       vinculoProtegido: t.vinculoProtegido ?? paso.vinculoProtegido,
       tipoTarea: t.tipoTarea ?? 'accion',
-      guiaId: guia?.guiaArticuloId ?? null,
-      guiaTitulo: guia?.guiaArticuloTitulo ?? '',
-      intencionGuia: guia ? 'necesario' : null,
+      guiaId: obligatorias[0]?.guiaArticuloId ?? null,
+      guiaTitulo: obligatorias[0]?.guiaArticuloTitulo ?? '',
+      intencionGuia: obligatorias.length > 0 ? 'necesario' : null,
+      guiasObligatorias: obligatorias,
       decisionGuiaId: t.tipoTarea === 'decision' ? t.decisionArticuloId : null,
       decisionGuiaTitulo: t.tipoTarea === 'decision' ? t.decisionArticuloTitulo : '',
     })
@@ -141,6 +132,7 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
       intencionGuia: null,
       decisionGuiaId: null,
       decisionGuiaTitulo: '',
+      guiasObligatorias: [],
     },
   ]
 }

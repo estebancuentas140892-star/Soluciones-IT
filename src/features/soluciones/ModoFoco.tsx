@@ -24,6 +24,7 @@ import {
   ubicacionApoyosDelPaso,
   type Apoyos,
 } from './apoyosTarea'
+import { motivoGuiasPendientes } from './guiasObligatorias'
 import { accionFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
 import { tonoInfo } from './tonos'
 
@@ -91,6 +92,11 @@ interface Props {
   // cualquier otra guía que lo reutilice. Lo resuelve `AsistenteVista`,
   // que es quien escribe en la base; esta vista no toca datos.
   onDecisionResuelta: (tareaId: string, guiaId: string) => void
+  // Las guias obligatorias que la tarea todavia no ha cumplido, en el
+  // orden del editor. Las resuelve `useProcedimientoEjecucion` con
+  // lectura en vivo; aqui deciden si la tarea se puede marcar y que se
+  // escribe debajo del boton (encargo del 2026-09-09, tarea 1).
+  guiasPendientes: (tareaId: string) => BloquePaso[]
   // Pinta una guía vinculada para ejecutarla aquí dentro. Lo aporta
   // `AsistenteVista`, que es quien sabe anidar otra ejecución y quien
   // conserva el punto de origen.
@@ -123,6 +129,7 @@ export function ModoFoco({
   motivoBloqueo,
   onFalla,
   onDecisionResuelta,
+  guiasPendientes,
   renderGuia,
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso)
@@ -188,10 +195,23 @@ export function ModoFoco({
   const esDecision = tarea.tipoTarea === 'decision'
   const destinoDelNo = esDecision ? tarea.decisionGuiaId : null
   const noAbierto = esDecision && decisionAbierta === tarea.id
-  // La guía vinculada de ESTA tarea, si la tiene. En la entrada
-  // 'guia-del-paso' es el trabajo entero de la tarea, así que se
-  // despliega sin pedir permiso: es lo que el técnico vino a hacer.
-  const guiaObligatoria = tarea.guiaId
+  // La guía vinculada de ESTA tarea. En la entrada 'guia-del-paso' es el
+  // trabajo entero de la tarea, así que se despliega sin pedir permiso:
+  // es lo que el técnico vino a hacer. En una tarea normal pueden ser
+  // VARIAS, y se muestran todas en el orden del editor.
+  const guiasDeLaTarea =
+    tarea.clase === 'guia-del-paso' && tarea.guiaId
+      ? [{ id: tarea.guiaId, titulo: tarea.guiaTitulo, clave: 'guia-del-paso' }]
+      : tarea.guiasObligatorias.map((g) => ({
+          id: g.guiaArticuloId ?? '',
+          titulo: g.guiaArticuloTitulo,
+          clave: g.id,
+        }))
+  // Cuáles de ellas siguen sin terminar. Mientras quede una, la tarea
+  // no se puede marcar: es lo que hacía que la palabra "necesario" del
+  // editor no significara nada en la ejecución.
+  const pendientes = tarea.clase === 'tarea' ? guiasPendientes(tarea.id) : []
+  const motivoGuias = motivoGuiasPendientes(pendientes)
   // Guías de consulta y contingencia asignadas a esta tarea: apoyo, no
   // prerrequisito, así que van entre los apoyos y nunca bloquean.
   const guiasDeApoyo = apoyos.guias.filter((g) => g.intencionGuia !== 'necesario')
@@ -233,6 +253,9 @@ export function ModoFoco({
       : ''
 
   function marcar() {
+    // La misma regla que aplica el hook al escribir, aquí solo para no
+    // ofrecer un gesto que no va a hacer nada.
+    if (!hecha && motivoGuias) return
     onAlternarTarea(tarea.id)
     // Marcar avanza a la siguiente tarea sin cumplir: es el gesto de
     // "ya está, dame la que sigue". Desmarcar no mueve nada, porque
@@ -381,15 +404,11 @@ export function ModoFoco({
         {/* LA GUÍA VINCULADA, AQUÍ Y AHORA (H05). Antes esto no
             existía: el paso decía que había que terminarla y no había
             forma de abrirla sin salir a la vista completa. */}
-        {guiaObligatoria && (
-          <div className="rounded-xl border border-noct-divider bg-noct-surface/60 p-3">
-            {renderGuia({
-              guiaId: guiaObligatoria,
-              tituloReferencia: tarea.guiaTitulo,
-              obligatoria: true,
-            })}
+        {guiasDeLaTarea.map((g) => (
+          <div key={g.clave} className="rounded-xl border border-noct-divider bg-noct-surface/60 p-3">
+            {renderGuia({ guiaId: g.id, tituloReferencia: g.titulo, obligatoria: true })}
           </div>
-        )}
+        ))}
 
         {/* EL DESTINO DEL "NO", ejecutado aquí mismo (secciones 5 y 6
             del encargo del 2026-09-09). Es el mismo trato que la vista
@@ -475,6 +494,12 @@ export function ModoFoco({
         {cierraPaso && motivoBloqueo && (
           <p className="text-center text-[11.5px] text-noct-neutral-400">{motivoBloqueo}</p>
         )}
+        {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
+            dice por qué, que es el defecto que el encargo llama "no se
+            muestra cuál guía falta completar". */}
+        {!cierraPaso && !hecha && motivoGuias && (
+          <p className="text-center text-[11.5px] text-noct-precaucion">{motivoGuias}</p>
+        )}
         {cierraPaso ? (
           <button
             type="button"
@@ -519,8 +544,9 @@ export function ModoFoco({
               <button
                 type="button"
                 onClick={responderSi}
+                disabled={motivoGuias !== null}
                 aria-label="Sí: seguir con la guía"
-                className="flex h-[76px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3 text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
+                className="flex h-[76px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3 text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30"
               >
                 <Check size={24} className="shrink-0" aria-hidden />
                 Sí
@@ -545,7 +571,8 @@ export function ModoFoco({
             type="button"
             onClick={marcar}
             aria-pressed={hecha}
-            className={`flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 text-xl font-semibold ${
+            disabled={!hecha && motivoGuias !== null}
+            className={`flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 text-xl font-semibold disabled:opacity-30 ${
               hecha
                 ? 'border-noct-exito bg-noct-exito/[.16] text-noct-exito'
                 : 'border-noct-accent bg-noct-accent/[.16] text-noct-accent-300 active:bg-noct-accent/[.34]'

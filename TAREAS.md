@@ -4,6 +4,20 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+### 235. Encargo del 2026-09-09 (segunda tanda): siete tareas de ejecución de Guías
+
+**Estado:** En progreso. **Prioridad:** Alta. **Origen:** encargo del usuario, siete tareas con un commit cada una.
+
+1. **Validar todas las guías obligatorias de una tarea. HECHO.** Módulo nuevo `guiasObligatorias.ts`; la validación vive en `alternarTarea` del hook, así que la aplican las dos vistas de ejecución y el mapa del artículo.
+2. **Aislar el progreso de los vínculos por ejecución.** Pendiente.
+3. **Unificar la validación y el cierre de pasos.** Pendiente.
+4. **Incluir las comprobaciones finales en los vínculos.** Pendiente.
+5. **Corregir "Empezar", "Continuar" y "Repetir".** Pendiente.
+6. **Aislar el progreso de la vista previa.** Pendiente.
+7. **Completar la asignación de apoyos heredados.** Pendiente.
+
+**Área afectada:** `src/features/soluciones/*`, `src/lib/progresoPasos.ts`, `src/lib/db.ts`. **Dependencias:** la tarea 234.
+
 ### 234. Encargo del 2026-09-09: repaso de lo entregado en la 233 y lo que quedó a medias
 
 **Estado:** En progreso. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-09, que revisa la aplicación desplegada tras la tarea 233 y pide completar **solo lo pendiente, incompleto o mal**. Diez secciones. La regla que las gobierna: no dar por hecho un cambio porque exista el botón; comprobar que se configura, se guarda, aparece donde toca, sobrevive al reordenar, funciona en ejecución, se comporta en móvil y no rompe las guías existentes.

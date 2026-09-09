@@ -497,6 +497,63 @@ const GUIA_CON_DECISION = articulo({
   },
 })
 
+// Caso de la tarea 1 del encargo del 2026-09-09: una tarea sin guias,
+// otra con UNA necesaria y otra con DOS, mas una de consulta que no
+// debe bloquear nada.
+const GUIA_SEGUNDA = articulo({
+  id: 'art-segunda-necesaria',
+  categoriaId: 'cat-software',
+  titulo: 'Abrir la consola de ejemplo',
+  tipo: 'conexion',
+  procedimiento: {
+    descripcion: 'Segunda guia necesaria del banco.',
+    portada: null,
+    objetivoGeneral: 'Dejar la consola de ejemplo abierta.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 2,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'consola-p1',
+        titulo: 'Abrir la consola de ejemplo',
+        bloques: [tarea('consola-p1-t1', 'Abrir la consola de ejemplo')],
+      }),
+    ],
+  },
+})
+
+const GUIA_VARIAS_OBLIGATORIAS = articulo({
+  id: 'art-varias-obligatorias',
+  categoriaId: 'cat-software',
+  titulo: 'Tarea con varias guias necesarias (ejemplo)',
+  tipo: 'configuracion',
+  procedimiento: {
+    descripcion: 'Caso de prueba de guias obligatorias por tarea.',
+    portada: null,
+    objetivoGeneral: 'Comprobar cero, una y varias guias necesarias.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 6,
+    dificultad: 'intermedio',
+    pasos: [
+      paso({
+        id: 'vo-p1',
+        titulo: 'Preparar el entorno de ejemplo',
+        bloques: [
+          tarea('vo-t1', 'Tarea sin guias necesarias'),
+          tarea('vo-t2', 'Tarea con UNA guia necesaria'),
+          guiaDeTarea('vo-g1', 'vo-t2', GUIA_VINCULADA.id, GUIA_VINCULADA.titulo, 'necesario'),
+          tarea('vo-t3', 'Tarea con DOS guias necesarias'),
+          guiaDeTarea('vo-g2', 'vo-t3', GUIA_VINCULADA.id, GUIA_VINCULADA.titulo, 'necesario'),
+          guiaDeTarea('vo-g3', 'vo-t3', 'art-que-no-existe-2', 'Consulta de ejemplo', 'consulta'),
+          guiaDeTarea('vo-g4', 'vo-t3', GUIA_SEGUNDA.id, GUIA_SEGUNDA.titulo, 'necesario'),
+        ],
+      }),
+    ],
+  },
+})
+
 const ARTICULOS: Articulo[] = [
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
@@ -506,6 +563,8 @@ const ARTICULOS: Articulo[] = [
   GUIA_TITULO_LARGO,
   GUIA_TITULO_LARGO_BORRADOR,
   GUIA_CON_DECISION,
+  GUIA_SEGUNDA,
+  GUIA_VARIAS_OBLIGATORIAS,
   ...RELLENO,
 ]
 

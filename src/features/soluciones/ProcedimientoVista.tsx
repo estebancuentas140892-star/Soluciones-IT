@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
+import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
 import { ArrowSquareOut, BookOpen, CaretRight, Check, CheckCircleFill, Circle, LinkSimple, SealCheck, Wrench } from '../../components/iconos'
@@ -96,6 +97,7 @@ export function ProcedimientoVista({
     pasosCompletados,
     todoCompletado,
     subSatisfechoReactivo,
+    guiasPendientesDeTarea,
     alternarPaso,
     alternarTarea,
     intentarCompletarPaso,
@@ -288,6 +290,11 @@ export function ProcedimientoVista({
                           marcada={instruccionesHechas.has(bloque.id)}
                           onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
                           nivel={nivel}
+                          // La misma validación que la ejecución: el
+                          // mapa del artículo también marca tareas, así
+                          // que también tiene que respetar las guías
+                          // obligatorias (encargo 2026-09-09, tarea 1).
+                          bloqueadaPor={motivoGuiasPendientes(guiasPendientesDeTarea(paso, bloque.id))}
                           ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
                             <ProcedimientoVista
                               articuloId={vinculadoId}
@@ -722,12 +729,16 @@ function FilaTarea({
   texto,
   onAlternar,
   ariaLabel,
+  bloqueadaPor = null,
 }: {
   marcada: boolean
   esVerificacion?: boolean
   texto: string
   onAlternar: () => void
   ariaLabel: string
+  // Cuando llega, la casilla no se puede marcar y debajo se escribe
+  // por qué. Hoy solo lo llena una guía obligatoria sin terminar.
+  bloqueadaPor?: string | null
 }) {
   // Casilla de 28 px en una fila de 56 y texto de 16 (tablero 3d).
   // Venían de 24 en 44 con texto de 15 (decisión 7 de P2), y antes de
@@ -740,13 +751,15 @@ function FilaTarea({
   // atenuado, que además sube de `neutral-600` (4.0:1 sobre el fondo,
   // por debajo del 4.5 que pide AA, regla R2) a `neutral-400` (8.9:1).
   return (
+    <span className="flex flex-col">
     <button
       type="button"
       role="checkbox"
       aria-checked={marcada}
-      aria-label={ariaLabel}
+      aria-label={bloqueadaPor ? `${ariaLabel}. ${bloqueadaPor}` : ariaLabel}
       onClick={onAlternar}
-      className="flex min-h-[56px] w-full cursor-pointer items-center gap-3 py-1 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
+      disabled={bloqueadaPor !== null}
+      className="flex min-h-[56px] w-full cursor-pointer items-center gap-3 py-1 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent disabled:cursor-default disabled:opacity-45"
     >
       {marcada ? (
         <span
@@ -763,6 +776,12 @@ function FilaTarea({
       </span>
       {esVerificacion && <TagNeutral className="shrink-0">Verificación</TagNeutral>}
     </button>
+      {/* Por qué no se puede marcar todavía, en su propia línea: al
+          lado de la casilla se partiría en renglones de dos palabras. */}
+      {bloqueadaPor && (
+        <span className="-mt-0.5 pl-10 text-[12px] leading-snug text-noct-precaucion">{bloqueadaPor}</span>
+      )}
+    </span>
   )
 }
 
@@ -778,6 +797,7 @@ export function BloqueVista({
   nivel = 0,
   ejecutarInline,
   onNoSeCumple,
+  bloqueadaPor,
 }: {
   bloque: BloquePaso
   marcada: boolean
@@ -788,6 +808,13 @@ export function BloqueVista({
   // la hoja de salidas a mano (la ejecución); en el mapa de lectura no
   // hay contingencia que abrir, así que ahí no se ofrece.
   onNoSeCumple?: (texto: string) => void
+  /**
+   * Motivo por el que esta tarea NO se puede marcar todavia, ya
+   * redactado (encargo del 2026-09-09, tarea 1). Hoy solo lo llenan las
+   * guias con intencion 'necesario' que cuelgan de la tarea. Cuando
+   * llega, la fila se ve pero no se puede marcar y dice que falta.
+   */
+  bloqueadaPor?: string | null
 }) {
   if (bloque.tipo === 'aviso') {
     const tono = tonoInfo(bloque.tono)
@@ -884,6 +911,9 @@ export function BloqueVista({
   }
 
   const esVerificacion = bloque.tipoTarea === 'verificacion'
+  // Una tarea ya marcada se puede DESMARCAR aunque le falte una guia:
+  // quien desmarca se esta corrigiendo, y dejarlo encerrado seria peor.
+  const bloqueo = marcada ? null : (bloqueadaPor ?? null)
 
   // UNA COMPROBACIÓN NO SE "MARCA HECHA" (2026-09-09, cambio 2 del
   // encargo). Aquí una verificación era la MISMA casilla que una
@@ -901,8 +931,14 @@ export function BloqueVista({
             <p className="min-w-0 flex-1 text-[13.5px] font-medium leading-normal">{bloque.texto}</p>
             <TagNeutral className="shrink-0">Verificación</TagNeutral>
           </div>
+          {bloqueo && <p className="mt-1.5 text-[12px] leading-snug text-noct-precaucion">{bloqueo}</p>}
           <div className="mt-2.5 flex flex-wrap gap-2">
-            <button type="button" onClick={onAlternar} className={BTN_ACENTO}>
+            <button
+              type="button"
+              onClick={onAlternar}
+              disabled={bloqueo !== null}
+              className={`${BTN_ACENTO} disabled:opacity-40`}
+            >
               Sí, lo comprobé
             </button>
             {onNoSeCumple && (
@@ -924,6 +960,7 @@ export function BloqueVista({
         esVerificacion={esVerificacion}
         texto={bloque.texto}
         onAlternar={onAlternar}
+        bloqueadaPor={bloqueo}
         ariaLabel={
           esVerificacion
             ? `Verificación confirmada: ${bloque.texto}. Tocar para deshacer`
