@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Agregado (tarea 234, sección 8): verificación móvil repetible a 360, 390 y 430 px
+
+**Área modificada:** ninguna de la aplicación. **Nuevos:** `scripts/capturas-moviles.mjs` (herramienta de desarrollo, fuera del paquete).
+**Motivo:** sección 8 del encargo del **9 de septiembre de 2026**, que pide probar en esos tres anchos con evidencia visual.
+**Impacto esperado:** la verificación deja de ser un recorrido a mano irrepetible. **Sin esquema. Sin cambios en la aplicación.**
+
+- **Agregado** un guion que levanta Chrome sin ventana por CDP, emula los tres anchos **con táctil** (`Emulation.setTouchEmulationEnabled`, 5 puntos) y recorre doce pantallas: catálogo, título largo, hoja de categorías, ficha con avance, apoyos de la tarea 1 y de la 2, el panel "Del paso" desplegado, guía vinculada, vínculo roto, decisión, comprobación y editor de pasos. **36 capturas** en `evidencia/` (carpeta ignorada por git) y, en cada parada, la comprobación de que `scrollWidth` no supera el ancho de la ventana.
+- **Resultado:** **sin desbordamiento horizontal en ninguno de los tres anchos**, en ninguna de las doce pantallas.
+- **Corregido de paso, visto en la captura de 360 px** el destino de una decisión iba DENTRO del botón ("No, abrir «Acceder al gestor de ejemplo»") y ahí se recortaba a «Acced…», que es lo contrario de "mostrar claramente el nombre de la guía vinculada". Ahora el destino va en su propia línea sobre los botones, donde cabe entero y puede pasar de línea, y los botones quedan en "Sí" y "No" con el destino en su `aria-label`.
+
 ### Corregido (tarea 234, sección 7): volver al catálogo aterrizaba arriba del todo
 
 **Área modificada:** chasis (memoria de scroll), transversal a las cinco pestañas. **Modificados:** `src/app/memoriaScroll.ts`.

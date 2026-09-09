@@ -504,27 +504,41 @@ export function ModoFoco({
           // "Marcar hecha" idéntico al de una instrucción, así que las
           // dos respuestas eran el mismo gesto y el destino del no no
           // aparecía en ninguna parte de la pantalla.
-          <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={responderSi}
-              className="flex h-[76px] min-w-[110px] shrink-0 items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-4 text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
-            >
-              <Check size={24} className="shrink-0" aria-hidden />
-              Sí
-            </button>
-            <button
-              type="button"
-              onClick={responderNo}
-              className="flex h-[76px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-noct-precaucion/60 bg-noct-precaucion/[.12] px-3 text-[16px] font-semibold leading-tight text-noct-precaucion active:bg-noct-precaucion/25"
-            >
-              <Warning size={20} className="shrink-0" aria-hidden />
-              <span className="min-w-0 truncate">
-                {destinoDelNo
-                  ? `No, abrir «${tarea.decisionGuiaTitulo || 'la salida'}»`
-                  : 'No, continuar'}
-              </span>
-            </button>
+          <div className="flex flex-col gap-2">
+            {/* EL DESTINO, EN SU PROPIA LÍNEA. Iba dentro del botón
+                ("No, abrir «Acceder al gestor de ejemplo»") y en 360 px
+                se recortaba a «Acced…», que es justo lo contrario de
+                "mostrar claramente el nombre de la guía vinculada". Aquí
+                cabe entero y en dos líneas si hace falta. */}
+            {destinoDelNo && (
+              <p className="text-center text-[13px] leading-snug text-noct-neutral-300 text-pretty">
+                Si respondes que no, se abre «{tarea.decisionGuiaTitulo || 'la salida'}»
+              </p>
+            )}
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={responderSi}
+                aria-label="Sí: seguir con la guía"
+                className="flex h-[76px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3 text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
+              >
+                <Check size={24} className="shrink-0" aria-hidden />
+                Sí
+              </button>
+              <button
+                type="button"
+                onClick={responderNo}
+                aria-label={
+                  destinoDelNo
+                    ? `No: abrir «${tarea.decisionGuiaTitulo || 'la salida'}»`
+                    : 'No: registrar la respuesta y seguir'
+                }
+                className="flex h-[76px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-noct-precaucion/60 bg-noct-precaucion/[.12] px-3 text-xl font-semibold text-noct-precaucion active:bg-noct-precaucion/25"
+              >
+                <Warning size={22} className="shrink-0" aria-hidden />
+                No
+              </button>
+            </div>
           </div>
         ) : (
           <button
