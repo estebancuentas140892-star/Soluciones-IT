@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { BloquePaso, PasoProcedimiento } from '../../lib/db'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import {
@@ -99,6 +99,27 @@ export function ModoFoco({
   // Qué panel está desplegado. Los apoyos siguen a mano pero no ocupan
   // la pantalla: lo que se lee de brazo estirado es la instrucción.
   const [panel, setPanel] = useState<'clave' | 'fotos' | 'archivos' | 'paso' | null>(null)
+
+  // TERMINAR LA GUÍA VINCULADA ADELANTA SOLO, como marcar una tarea.
+  //
+  // Sin esto el técnico completaba la guía de arriba y se quedaba
+  // mirando "Guía completada" con la tarea siguiente escondida detrás
+  // de una flecha: el único gesto que ya no puede hacer (marcar) es
+  // justo el que movía el recorrido. Solo se avanza en la TRANSICIÓN de
+  // pendiente a cumplida, así que volver luego a mirarla no expulsa a
+  // nadie de su sitio.
+  const guiaCumplidaAntes = useRef(subSatisfecho)
+  useEffect(() => {
+    const eraPendiente = !guiaCumplidaAntes.current
+    guiaCumplidaAntes.current = subSatisfecho
+    if (!subSatisfecho || !eraPendiente) return
+    const actual = Math.min(indiceTarea, tareas.length - 1)
+    if (tareas[actual]?.clase !== 'guia-del-paso') return
+    const siguiente = tareas.findIndex(
+      (t, i) => i !== actual && !tareaFocoHecha(t, instruccionesHechas, subSatisfecho),
+    )
+    if (siguiente >= 0) setIndiceTarea(siguiente)
+  }, [subSatisfecho, indiceTarea, tareas, instruccionesHechas])
 
   const indice = Math.min(indiceTarea, tareas.length - 1)
   const tarea = tareas[indice]

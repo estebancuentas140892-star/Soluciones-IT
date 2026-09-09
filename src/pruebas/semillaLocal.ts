@@ -364,8 +364,16 @@ const ARTICULOS: Articulo[] = [
 export async function sembrarBancoDePruebas({ conProgreso = true } = {}): Promise<void> {
   await db.perfiles.put(PERFIL_PRUEBA)
   await db.categorias.bulkPut(CATEGORIAS)
-  await db.articulos.bulkPut(ARTICULOS)
-  if (conProgreso) {
+  // Solo se siembra lo que NO existe todavia. Con `bulkPut` a secas, el
+  // banco se rescribia en cada carga y se llevaba por delante lo que se
+  // acabara de editar desde el propio editor, que es justo lo que hay
+  // que poder probar (reordenar una tarea, asignar un apoyo, guardar).
+  const existentes = new Set(
+    (await db.articulos.bulkGet(ARTICULOS.map((a) => a.id))).flatMap((a) => (a ? [a.id] : [])),
+  )
+  const faltantes = ARTICULOS.filter((a) => !existentes.has(a.id))
+  if (faltantes.length > 0) await db.articulos.bulkAdd(faltantes)
+  if (conProgreso && (await db.progresoPasos.count()) === 0) {
     await db.progresoPasos.put({
       articuloId: GUIA_TRES_TAREAS.id,
       pasosHechos: ['rec-p1'],
