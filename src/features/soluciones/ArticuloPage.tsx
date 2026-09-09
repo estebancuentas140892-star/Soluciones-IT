@@ -344,6 +344,7 @@ function AccionDominante({
       estado={estado}
       paso={hechos + 1}
       total={total}
+      onReiniciar={() => void reiniciarProgreso(articuloId)}
     />
   )
 }

@@ -5,17 +5,15 @@ import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import { CaretDown, Info, Play, Plus } from '../../components/iconos'
+import { CaretDown, Info, Plus, Sliders } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
-import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { PastillaFrescura } from '../../components/PastillaFrescura'
 import { TIPOS_ARTICULO, etiquetaDeTipo } from './tiposArticulo'
 import { colorIconoDeTipo, iconoDeCategoria, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from './coloresCategoria'
 import { FilaArticulo } from './FilaArticulo'
 import { coincidenciaArticulo } from './coincidencia'
-import { articulosSinTerminar } from './sinTerminar'
 import { sugerenciaBusqueda } from './sugerenciaBusqueda'
 
 // Pantalla Soluciones en el sistema Nocturne. Rediseñada a partir de la
@@ -33,8 +31,16 @@ import { sugerenciaBusqueda } from './sugerenciaBusqueda'
 //      elegir categoría y la razón vivía en un `title`, que en un teléfono
 //      nadie lee porque no hay hover. Ahora, sin categoría, abre una hoja
 //      que pregunta cuál.
-//   4. Bloque "Sin terminar" arriba: retomar un procedimiento
-//      interrumpido pasó de cuatro toques a uno.
+//   4. (RETIRADO el 2026-09-09, hallazgo H01 del informe del 8 de
+//      septiembre.) Aquí vivía el bloque "Sin terminar". Acumulaba
+//      procedimientos a medias sobre el catálogo, así que abrir una
+//      guía para consultarla acababa pareciendo una obligación
+//      pendiente y el catálogo perdía el primer plano. Lo que se
+//      conserva es el AVANCE, que no se toca: la ficha de cada guía
+//      sigue diciendo "Seguir en el paso N de M" y ahora ofrece
+//      también "Empezar de nuevo" al lado. Es la regla del encargo:
+//      la posición de lectura se guarda, pero no genera una lista
+//      global de pendientes.
 //   8. Cinta de contexto al buscar: antes buscar apagaba los filtros en
 //      silencio y el resultado salía de otra categoría sin explicación.
 //   9. Por qué coincidió cada resultado (ver coincidencia.ts).
@@ -59,11 +65,6 @@ interface Chip {
   claseTexto: string | null
 }
 
-// Cuántos procedimientos a medias se listan como máximo. El bloque es un
-// atajo, no una sección: si ocupa media pantalla deja de ayudar a lo que
-// el técnico vino a hacer.
-const MAX_SIN_TERMINAR = 3
-
 export function SolucionesPage() {
   // El parámetro ?categoria siembra el chip activo al volver desde el
   // editor tras Cancelar/Guardar (ArticuloForm), para reabrir la lista
@@ -76,7 +77,15 @@ export function SolucionesPage() {
   // lo borraba: la pestaña apuntaba a `/soluciones` pelado.
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const [query, setQuery] = useState('')
+  // EL TÉRMINO BUSCADO VIAJA A LA URL (criterio A03: volver desde una
+  // guía repone filtro, término y posición). Antes no viajaba a
+  // propósito, "porque es transitorio y reescribiría la URL en cada
+  // tecla"; el efecto secundario era que abrir un resultado y volver
+  // dejaba el catálogo entero y la búsqueda perdida. Se resuelve
+  // escribiéndolo con retardo (ver el efecto de sincronización), no
+  // quitándolo: una escritura cada 400 ms no ensucia el historial
+  // porque va con `replace`.
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
   const [categoriaSel, setCategoriaSel] = useState<string | null>(() => searchParams.get('categoria'))
   const [tipoSel, setTipoSel] = useState<TipoArticulo | null>(
     () => TIPOS_ARTICULO.find((t) => t.valor === searchParams.get('tipo'))?.valor ?? null,
@@ -92,6 +101,9 @@ export function SolucionesPage() {
   const [soloEnCategoria, setSoloEnCategoria] = useState(false)
   const [hojaTipoAbierta, setHojaTipoAbierta] = useState(false)
   const [hojaCrearAbierta, setHojaCrearAbierta] = useState(false)
+  // ACCESO A LAS CATEGORÍAS QUE NO SE ESCONDE (hallazgo H02). Ver la
+  // nota del control, más abajo.
+  const [hojaCategoriaAbierta, setHojaCategoriaAbierta] = useState(false)
 
   const categorias = useLiveQuery(
     () => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'),
@@ -103,11 +115,6 @@ export function SolucionesPage() {
     [],
     [],
   )
-  // Avance local del técnico, para el bloque "Sin terminar". Vive solo en
-  // este dispositivo (como los recientes), así que la tabla es pequeña:
-  // una fila por procedimiento empezado.
-  const progresos = useLiveQuery(() => db.progresoPasos.toArray(), [], [])
-
   const nombreCat = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias])
   const ordenCat = useMemo(() => new Map(categorias.map((c, i) => [c.id, i])), [categorias])
   const categoriaActiva = categoriaSel ? categorias.find((c) => c.id === categoriaSel) : undefined
@@ -147,11 +154,6 @@ export function SolucionesPage() {
         claseIcono: claseTextoDeCategoria(c),
       })),
     [categorias],
-  )
-
-  const sinTerminar = useMemo(
-    () => articulosSinTerminar(articulos, progresos),
-    [articulos, progresos],
   )
 
   // Coincidencia de cada artículo con la búsqueda, guardando POR DÓNDE
@@ -214,6 +216,27 @@ export function SolucionesPage() {
         claseActiva: claseActivaDeCategoria(c),
         claseTexto: claseTextoDeCategoria(c),
       })),
+    ],
+    [alcanceChips.length, categorias, conteos],
+  )
+
+  // OPCIONES DE LA HOJA DE CATEGORÍAS (hallazgo H02, criterios A01 y
+  // A02). Solo las que TIENEN contenido dentro del alcance visible: una
+  // categoría vacía en el primer plano de consulta es un camino que no
+  // lleva a ninguna parte (sigue existiendo en administración, que es
+  // lo que pide el encargo). "Todos" va siempre.
+  const opcionesCategoria = useMemo<OpcionHoja<string>[]>(
+    () => [
+      { valor: '__todos', etiqueta: 'Todas las categorías', count: alcanceChips.length },
+      ...categorias
+        .filter((c) => (conteos.get(c.id) ?? 0) > 0)
+        .map((c) => ({
+          valor: c.id,
+          etiqueta: c.nombre,
+          Icono: iconoDeCategoria(c.nombre),
+          claseIcono: claseTextoDeCategoria(c),
+          count: conteos.get(c.id) ?? 0,
+        })),
     ],
     [alcanceChips.length, categorias, conteos],
   )
@@ -298,13 +321,20 @@ export function SolucionesPage() {
   // mirada de otra forma. El texto buscado NO viaja: es transitorio y
   // reescribiría la URL en cada tecla.
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (categoriaSel) params.set('categoria', categoriaSel)
-    if (tipoSel) params.set('tipo', tipoSel)
-    if (etiquetaSel) params.set('etiqueta', etiquetaSel)
-    if (params.toString() === searchParams.toString()) return
-    setSearchParams(params, { replace: true })
-  }, [categoriaSel, tipoSel, etiquetaSel, searchParams, setSearchParams])
+    const escribir = () => {
+      const params = new URLSearchParams()
+      if (categoriaSel) params.set('categoria', categoriaSel)
+      if (tipoSel) params.set('tipo', tipoSel)
+      if (etiquetaSel) params.set('etiqueta', etiquetaSel)
+      if (query.trim()) params.set('q', query.trim())
+      if (params.toString() === searchParams.toString()) return
+      setSearchParams(params, { replace: true })
+    }
+    // Los ejes se escriben ya; el texto, con retardo, para no tocar la
+    // URL en cada tecla.
+    const id = setTimeout(escribir, 400)
+    return () => clearTimeout(id)
+  }, [categoriaSel, tipoSel, etiquetaSel, query, searchParams, setSearchParams])
 
   function setCategoria(id: string | null) {
     setCategoriaSel((actual) => (actual === id ? null : id))
@@ -402,63 +432,59 @@ export function SolucionesPage() {
           />
         </div>
 
-        {!buscando && (
-          <div className="flex items-center gap-2 px-4 pb-3 xl:hidden">
-            {/* El degradado del extremo derecho dice que hay más
-                categorías sin necesidad de barra de scroll (la barra está
-                oculta por CSS y antes nada lo indicaba). */}
-            <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto [-ms-overflow-style:none] [mask-image:linear-gradient(to_right,#000_82%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {chips.map((chip) => {
-                const activo = chip.id === categoriaSel
-                const Icono = chip.Icono
-                return (
-                  <button
-                    key={chip.id ?? '__todos'}
-                    type="button"
-                    aria-pressed={activo}
-                    onClick={() => setCategoria(chip.id)}
-                    // 44 px y no 36 (tablero 3b): es el filtro que más se
-                    // toca de la sección y se toca de pie, con una mano.
-                    className={`inline-flex h-11 shrink-0 items-center gap-[7px] whitespace-nowrap rounded-full border-[1.5px] px-4 text-[14.5px] font-medium transition-colors ${
-                      activo
-                        ? (chip.claseActiva ?? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300')
-                        : 'border-noct-divider text-noct-neutral-200 hover:bg-noct-text/[.05]'
-                    }`}
-                  >
-                    {Icono && (
-                      <Icono
-                        size={15}
-                        className={activo ? undefined : (chip.claseTexto ?? undefined)}
-                        aria-hidden
-                      />
-                    )}
-                    {chip.nombre}
-                    {/* neutral-400, no neutral-600: a 12 px ese paso daba
-                        4.0:1 sobre el fondo y AA pide 4.5 (R2). */}
-                    <span className={`text-[12.5px] ${activo ? 'opacity-75' : 'text-noct-neutral-400'}`}>
-                      {chip.count}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            {opcionesTipo.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setHojaTipoAbierta(true)}
-                aria-haspopup="dialog"
-                className={`inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-dashed bg-noct-bg px-4 text-[14.5px] font-medium transition-colors ${
-                  tipoSel
-                    ? 'border-noct-accent text-noct-accent-300'
-                    : 'border-noct-divider text-noct-neutral-200 hover:bg-noct-text/[.05]'
-                }`}
-              >
-                {tipoSel ? etiquetaDeTipo(tipoSel) : 'Tipo'}
-                <CaretDown size={12} className={tipoSel ? undefined : 'text-noct-neutral-400'} aria-hidden />
-              </button>
-            )}
-          </div>
-        )}
+        {/* CATEGORÍAS QUE NO SE PIERDEN (hallazgo H02, criterios A01,
+            A02 y A18).
+
+            Aquí había un carrusel horizontal: en 360 px cabían "Todos" y
+            una categoría y media, POS quedaba a medio cortar y Software,
+            Impresoras y las otras cinco solo se alcanzaban arrastrando
+            una fila sin barra de scroll visible. Encima desaparecía
+            entera al escribir en el buscador (`!buscando`), así que
+            justo cuando el técnico quería acotar por categoría, el
+            control ya no estaba.
+
+            Ahora son DOS controles fijos de 44 px, con el nombre
+            completo de lo que está activo, y las opciones se eligen en
+            una hoja donde todas caben con su nombre y su conteo. Una
+            sola fila: el encargo pide no apilar barras fijas. Y no se
+            oculta al buscar, así que acotar sigue a un toque. */}
+        <div className="flex items-center gap-2 px-4 pb-3 xl:hidden">
+          <button
+            type="button"
+            onClick={() => setHojaCategoriaAbierta(true)}
+            aria-haspopup="dialog"
+            className={`inline-flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full border-[1.5px] px-4 text-[14.5px] font-medium transition-colors ${
+              categoriaActiva
+                ? (claseActivaDeCategoria(categoriaActiva) ??
+                  'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300')
+                : 'border-noct-divider text-noct-neutral-200 hover:bg-noct-text/[.05]'
+            }`}
+          >
+            <Sliders size={15} className="shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-left">
+              {categoriaActiva ? categoriaActiva.nombre : 'Categorías'}
+            </span>
+            <span className={`shrink-0 text-[12.5px] ${categoriaActiva ? 'opacity-75' : 'text-noct-neutral-400'}`}>
+              {categoriaActiva ? (conteos.get(categoriaActiva.id) ?? 0) : alcanceChips.length}
+            </span>
+            <CaretDown size={12} className="shrink-0" aria-hidden />
+          </button>
+          {opcionesTipo.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setHojaTipoAbierta(true)}
+              aria-haspopup="dialog"
+              className={`inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-dashed bg-noct-bg px-4 text-[14.5px] font-medium transition-colors ${
+                tipoSel
+                  ? 'border-noct-accent text-noct-accent-300'
+                  : 'border-noct-divider text-noct-neutral-200 hover:bg-noct-text/[.05]'
+              }`}
+            >
+              <span className="max-w-[7.5rem] truncate">{tipoSel ? etiquetaDeTipo(tipoSel) : 'Tipo'}</span>
+              <CaretDown size={12} className={tipoSel ? undefined : 'text-noct-neutral-400'} aria-hidden />
+            </button>
+          )}
+        </div>
       </>
     }>
       <main className="flex-1 px-4 pb-16 pt-3.5">
@@ -559,50 +585,6 @@ export function SolucionesPage() {
                   Ver todos
                 </Link>
               </div>
-            )}
-
-            {/* Retomar es tan importante como buscar: lo que quedó a
-                medias va arriba, con el paso actual, lo que falta y una
-                sola acción. */}
-            {!buscando && !etiquetaSel && sinTerminar.length > 0 && (
-              <section className="mb-5">
-                <div className="mb-2 flex items-center justify-between px-0.5">
-                  <TituloSeccion>Sin terminar</TituloSeccion>
-                  <span className="text-[11px] text-noct-neutral-400">{sinTerminar.length}</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {sinTerminar.slice(0, MAX_SIN_TERMINAR).map(({ articulo, hechos, total: pasos, minutosRestantes }) => {
-                    const Icono = iconoDeTipo(articulo.tipo)
-                    return (
-                      <Link
-                        key={articulo.id}
-                        to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
-                        className="block rounded-lg border border-noct-accent/[.32] bg-noct-accent/[.08] px-3 py-2.5 text-noct-text hover:bg-noct-accent/[.12]"
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-text/[.06]">
-                            <Icono size={17} className={colorIconoDeTipo(articulo.tipo)} aria-hidden />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-                              {articulo.titulo}
-                            </span>
-                            <span className="mt-1 block text-[11.5px] text-noct-neutral-300">
-                              Paso {hechos + 1} de {pasos}
-                              {minutosRestantes != null && ` · te quedan ~${minutosRestantes} min`}
-                            </span>
-                          </span>
-                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-noct-accent px-2.5 py-1.5 text-[12px] font-medium text-noct-accent">
-                            <Play size={12} aria-hidden />
-                            Seguir
-                          </span>
-                        </span>
-                        <IndicadorAvance hechos={hechos} total={pasos} variante="barra" className="mt-2.5" />
-                      </Link>
-                    )
-                  })}
-                </div>
-              </section>
             )}
 
             {total > 0 && (
@@ -714,6 +696,23 @@ export function SolucionesPage() {
           </div>
         </div>
       </main>
+
+      {/* Todas las categorías con su nombre completo y su conteo. Es lo
+          que sustituye al carrusel que escondía la mitad. */}
+      <HojaFiltro
+        abierto={hojaCategoriaAbierta}
+        onCerrar={() => setHojaCategoriaAbierta(false)}
+        titulo="Categorías"
+        opciones={opcionesCategoria}
+        seleccionada={categoriaSel ?? '__todos'}
+        onElegir={(valor) => {
+          setCategoriaSel(valor === '__todos' ? null : valor)
+          setTipoSel(null)
+          setEtiquetaSel(null)
+          setSoloEnCategoria(false)
+          setHojaCategoriaAbierta(false)
+        }}
+      />
 
       {/* El segundo eje de filtro, plegado (R4). */}
       <HojaFiltro

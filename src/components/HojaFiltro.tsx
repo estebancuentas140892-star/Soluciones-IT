@@ -78,7 +78,13 @@ export function HojaFiltro<T extends string>({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      {/* UNA COLUMNA (2026-09-09). La rejilla de dos columnas recortaba
+          los nombres en 360 px: "Impresor...", "Control d...", "Todas
+          las ca...", justo los que el técnico necesita distinguir. El
+          encargo pide que la hoja abra "todas las opciones con sus
+          nombres completos", así que la lista pasa a una columna, que a
+          cambio da 56 px de alto y el nombre entero. */}
+      <div className="flex max-h-[62svh] flex-col gap-1.5 overflow-y-auto">
         {opciones.map((opcion) => {
           const activa = opcion.valor === seleccionada
           const Icono = opcion.Icono
@@ -93,14 +99,14 @@ export function HojaFiltro<T extends string>({
               }}
               // min-h-11 son los 44 px de la regla R6: la hoja se toca de
               // pie, con una mano, frente al equipo.
-              className={`flex min-h-11 items-center gap-2.5 rounded-lg border px-3 text-left text-[13px] font-medium transition-colors ${
+              className={`flex min-h-14 items-center gap-2.5 rounded-lg border px-3.5 text-left text-[14.5px] font-medium transition-colors ${
                 activa
                   ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
                   : 'border-noct-divider text-noct-neutral-200 hover:bg-noct-text/[.05]'
               }`}
             >
               {Icono && <Icono size={17} className={`shrink-0 ${opcion.claseIcono ?? ''}`} aria-hidden />}
-              <span className="min-w-0 flex-1 truncate">{opcion.etiqueta}</span>
+              <span className="min-w-0 flex-1 text-pretty">{opcion.etiqueta}</span>
               {opcion.count != null && (
                 <span className="shrink-0 text-[11.5px] text-noct-neutral-400">{opcion.count}</span>
               )}

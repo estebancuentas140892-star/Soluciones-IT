@@ -3,10 +3,8 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 import { usePendientes } from '../features/inicio/usePendientes'
-import { useReanudar } from '../features/soluciones/useReanudar'
 import { Avatar } from '../components/Avatar'
 import { AvisoPestana } from '../components/AvisoPestana'
-import { BarraReanudar } from '../components/BarraReanudar'
 import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
@@ -227,10 +225,23 @@ export function Chasis(props: Props) {
   const { perfil } = useAuth()
   const perfilVivo = usePerfilVivo()
   const usuario = perfilVivo ?? perfil
-  // Tarea 186: el mismo dato alimenta la barra flotante de aqui abajo y
-  // el punto de la pestaña Guías (nunca los dos a la vez: mientras se
-  // ve la barra no hace falta el punto, y viceversa).
-  const reanudar = useReanudar()
+  // AQUÍ VIVÍAN LA BARRA FLOTANTE "SEGUIR" Y EL PUNTO DE LA PESTAÑA
+  // GUÍAS (tarea 186). Se retiran el 2026-09-09 por el hallazgo H01 del
+  // informe del 8 de septiembre.
+  //
+  // Los dos salían del mismo dato que el bloque "Sin terminar": un
+  // procedimiento con avance a medias. Retirar solo el bloque de la
+  // lista habría dejado la misma obligación en otras dos formas, que es
+  // justo lo que el encargo prohíbe ("no sustituirlo por otra lista de
+  // pendientes con el mismo efecto", "sin generar una lista global de
+  // pendientes"). El punto sobre la pestaña era además el caso más
+  // claro: marcaba la SECCIÓN entera como si tuviera algo pendiente
+  // porque el técnico había dejado una guía a medias.
+  //
+  // Nada de esto borra avance: `progresoPasos` no se toca. Retomar
+  // sigue estando donde tiene sentido, dentro de la guía ("Seguir en el
+  // paso N de M" y "Empezar de nuevo" en su ficha) y en el bloque de
+  // Inicio, que es la pantalla cuyo trabajo es decir por dónde iba uno.
   // Tarea 187: cuenta real de pendientes para el número de "Más" (R23,
   // ningún aviso decorativo); dirección de la transición de entrada
   // (R21); y memoria de scroll y de filtros por pestaña (R20), todos
@@ -459,26 +470,7 @@ export function Chasis(props: Props) {
           </nav>
         </div>
 
-        {/* El procedimiento a medias vive aquí en escritorio (tarea 191),
-            encima de la cuenta, en vez de flotar sobre el contenido. */}
-        {reanudar.actual && !reanudar.descartado && (
-          <div className="mt-auto">
-            <BarraReanudar
-              variante="sidebar"
-              articulo={reanudar.actual.articulo}
-              hechos={reanudar.actual.hechos}
-              total={reanudar.actual.total}
-              minutosRestantes={reanudar.actual.minutosRestantes}
-              onDescartar={reanudar.descartar}
-            />
-          </div>
-        )}
-
-        <div
-          className={`border-t border-noct-divider pt-2.5 ${
-            reanudar.actual && !reanudar.descartado ? '' : 'mt-auto'
-          }`}
-        >
+        <div className="mt-auto border-t border-noct-divider pt-2.5">
           <Link
             to="/cuenta"
             title={usuario?.nombre || 'Mi cuenta'}
@@ -513,16 +505,6 @@ export function Chasis(props: Props) {
         </div>
       </div>
 
-      {reanudar.actual && !reanudar.descartado && (
-        <BarraReanudar
-          articulo={reanudar.actual.articulo}
-          hechos={reanudar.actual.hechos}
-          total={reanudar.actual.total}
-          minutosRestantes={reanudar.actual.minutosRestantes}
-          onDescartar={reanudar.descartar}
-        />
-      )}
-
       {/* Pestañas inferiores: solo móvil. Siempre 5 columnas, siempre las
           mismas 5 (R17). Rótulo a 12px en celdas de 52 (antes 10.5px en
           44: "por debajo de cualquier mínimo razonable" para navegación
@@ -533,9 +515,12 @@ export function Chasis(props: Props) {
       <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden">
         {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => {
           // Puntos y números de la pestaña (R23: un aviso solo si hay un
-          // dato detrás, nunca decorativo). Guías (tarea 186): mientras
-          // la BarraReanudar esté descartada para el procedimiento a
-          // medias vigente, la pestaña recuerda que sigue ahí.
+          // dato detrás, nunca decorativo).
+          //
+          // Guías ya NO lleva punto (2026-09-09, hallazgo H01): marcaba
+          // la sección entera como si tuviera algo pendiente solo porque
+          // el técnico había dejado una guía a medias. Consultar una
+          // guía no es contraer una obligación.
           //
           // Inicio (tarea 187, corregido en la 203): el conteo real de
           // `usePendientes`. El número vivía en "Más", donde incumplía
@@ -544,7 +529,6 @@ export function Chasis(props: Props) {
           // un sitio donde no estaba lo avisado, y eso enseña al técnico
           // a ignorar los avisos. Los pendientes viven en Inicio, así
           // que el aviso se muda con el dato.
-          const conPunto = to === '/soluciones' && Boolean(reanudar.actual) && reanudar.descartado
           const numeroPendientes = to === '/' ? pendientes.length : 0
           return (
             <NavLink
@@ -568,11 +552,9 @@ export function Chasis(props: Props) {
                   )}
                   <span className="relative">
                     {isActive ? <IconoActivo size={22} /> : <Icono size={22} />}
-                    {conPunto && <AvisoPestana variante="punto" />}
                     {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
                   </span>
                   {label}
-                  {conPunto && <span className="sr-only"> (hay un procedimiento a medias)</span>}
                   {numeroPendientes > 0 && (
                     <span className="sr-only"> ({numeroPendientes} pendientes)</span>
                   )}
