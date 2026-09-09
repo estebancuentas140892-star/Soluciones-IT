@@ -3,21 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
 import { db, type Perfil } from '../../lib/db'
 import { sincronizar } from '../../lib/sync'
-import { MODO_PRUEBA_LOCAL, PERFIL_PRUEBA } from '../../lib/modoPruebaLocal'
 import { AuthContext } from './authContext'
 import { traducirErrorAuth } from './erroresAuth'
-
-// Sesion ficticia del banco de pruebas local (solo desarrollo, ver
-// src/lib/modoPruebaLocal.ts). No lleva token de nada: sirve unicamente
-// para que `RequireAuth` deje pasar y se pueda mirar la interfaz en un
-// ancho de telefono sin credenciales del servidor.
-const SESION_PRUEBA = {
-  access_token: 'prueba-local',
-  refresh_token: 'prueba-local',
-  expires_in: 0,
-  token_type: 'bearer',
-  user: { id: PERFIL_PRUEBA.id, email: PERFIL_PRUEBA.correo },
-} as unknown as Session
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true)
@@ -26,18 +13,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) {
-      // Banco de pruebas local: sin servidor, con sesion ficticia y la
-      // base sembrada de datos inventados. La rama entera desaparece
-      // del build de produccion (`import.meta.env.DEV` es false), y la
-      // semilla se importa de forma dinamica para que ni siquiera se
-      // empaquete.
-      if (MODO_PRUEBA_LOCAL) {
+      // BANCO DE PRUEBAS LOCAL, SOLO EN DESARROLLO.
+      //
+      // La condicion se escribe INLINE y con `import.meta.env.DEV` como
+      // primer termino a proposito: en el build de produccion Vite lo
+      // sustituye por `false`, Rollup elimina la rama entera y con ella
+      // el import dinamico, asi que el modulo del banco ni siquiera
+      // llega a empaquetarse. Con la bandera en otro modulo el chunk
+      // `semillaLocal` SI aparecia en `dist`.
+      //
+      // Ademas hay que pedirlo a mano con VITE_MODO_PRUEBA_LOCAL=1 en un
+      // `.env.local`, que no se versiona.
+      if (import.meta.env.DEV && import.meta.env.VITE_MODO_PRUEBA_LOCAL === '1') {
         void import('../../pruebas/semillaLocal')
-          .then((m) => m.sembrarBancoDePruebas())
-          .finally(() => {
-            setSession(SESION_PRUEBA)
-            setCargando(false)
+          .then(async (m) => {
+            await m.sembrarBancoDePruebas()
+            setSession(m.SESION_PRUEBA)
           })
+          .finally(() => setCargando(false))
         return
       }
       setCargando(false)

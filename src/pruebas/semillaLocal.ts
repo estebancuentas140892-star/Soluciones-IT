@@ -1,5 +1,23 @@
+import type { Session } from '@supabase/supabase-js'
 import { db, type Articulo, type BloquePaso, type Categoria, type PasoProcedimiento } from '../lib/db'
-import { PERFIL_PRUEBA } from '../lib/modoPruebaLocal'
+
+/** Identidad ficticia del banco de pruebas. */
+export const PERFIL_PRUEBA = {
+  id: '00000000-0000-4000-8000-000000000001',
+  nombre: 'Tecnico de prueba',
+  correo: 'prueba@local',
+  puedeVerBoveda: true,
+}
+
+// Sesion ficticia: no lleva token de nada, solo hace que `RequireAuth`
+// deje pasar para poder mirar la interfaz sin credenciales del servidor.
+export const SESION_PRUEBA = {
+  access_token: 'prueba-local',
+  refresh_token: 'prueba-local',
+  expires_in: 0,
+  token_type: 'bearer',
+  user: { id: PERFIL_PRUEBA.id, email: PERFIL_PRUEBA.correo },
+} as unknown as Session
 
 // BANCO DE PRUEBAS LOCAL (solo desarrollo, ver src/lib/modoPruebaLocal.ts).
 //
@@ -323,6 +341,35 @@ const GUIA_ALCANCE_POR_TAREA = articulo({
   },
 })
 
+// Caso A12: un vinculo que apunta a una guia que no esta en este
+// dispositivo (eliminada, o todavia sin sincronizar). Sirve para
+// comprobar que la ejecucion explica el motivo y ofrece una salida en
+// vez de bloquear con una pantalla vacia.
+const GUIA_VINCULO_ROTO = articulo({
+  id: 'art-vinculo-roto',
+  categoriaId: 'cat-software',
+  titulo: 'Vinculo roto (ejemplo)',
+  tipo: 'configuracion',
+  procedimiento: {
+    descripcion: 'Caso de prueba de vinculo no disponible.',
+    portada: null,
+    objetivoGeneral: 'Comprobar el mensaje de vinculo roto.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 2,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'roto-p1',
+        titulo: 'Paso con vinculo que no existe',
+        subArticuloId: 'art-que-no-existe',
+        subArticuloTitulo: 'Guia que no llego a este dispositivo',
+        bloques: [tarea('roto-t1', 'Tarea normal del paso')],
+      }),
+    ],
+  },
+})
+
 // Relleno para que el catalogo tenga que desplazarse en 360 px.
 const RELLENO: Articulo[] = [
   articulo({ id: 'art-pos-1', categoriaId: 'cat-pos', titulo: 'Caja de ejemplo: apertura de turno' }),
@@ -351,6 +398,7 @@ const ARTICULOS: Articulo[] = [
   GUIA_CON_VINCULO,
   GUIA_TRES_TAREAS,
   GUIA_ALCANCE_POR_TAREA,
+  GUIA_VINCULO_ROTO,
   ...RELLENO,
 ]
 

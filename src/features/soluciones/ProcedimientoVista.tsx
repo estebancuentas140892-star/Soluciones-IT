@@ -6,7 +6,7 @@ import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '..
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
-import { ArrowSquareOut, CaretRight, Check, CheckCircleFill, Circle, LinkSimple, SealCheck, Wrench } from '../../components/iconos'
+import { ArrowSquareOut, BookOpen, CaretRight, Check, CheckCircleFill, Circle, LinkSimple, SealCheck, Wrench } from '../../components/iconos'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
@@ -820,6 +820,37 @@ export function BloqueVista({
     )
   }
 
+  // Archivo anclado a un punto de la secuencia (tipo nuevo, 2026-09-09).
+  // Sin esta rama caía en la de tarea y se dibujaba como una casilla con
+  // el texto vacío: la lectura completa y la vista previa tienen que
+  // mostrar lo mismo que la ejecución (criterio A08).
+  if (bloque.tipo === 'archivo') {
+    if (!bloque.adjunto) return null
+    return (
+      <figure className="flex flex-col gap-1.5">
+        <AdjuntoPaso adjunto={bloque.adjunto} titulo={bloque.texto || bloque.adjunto.nombre} />
+        {bloque.texto && (
+          <figcaption className="text-xs text-noct-neutral-500">{bloque.texto}</figcaption>
+        )}
+      </figure>
+    )
+  }
+
+  // Guía vinculada desde una tarea (tipo nuevo, 2026-09-09). En lectura
+  // se enlaza siempre: la lista es el mapa del procedimiento, y anidar
+  // aquí otra ejecución completa duplicaría lo que ya hace el modo de
+  // una tarea a la vez.
+  if (bloque.tipo === 'guia') {
+    if (!bloque.guiaArticuloId) return null
+    return (
+      <GuiaVinculadaEnBloque
+        articuloId={bloque.guiaArticuloId}
+        tituloReferencia={bloque.guiaArticuloTitulo}
+        intencion={bloque.intencionGuia}
+      />
+    )
+  }
+
   // El vinculo protegido (tarea 40, generalizado en P2) es independiente
   // del tipo de tarea: se muestra debajo de la casilla o de la
   // pregunta, con el mismo bloque protegido contraido por defecto que
@@ -1086,5 +1117,44 @@ function AdjuntoPaso({ adjunto, titulo }: { adjunto: PasoAdjunto; titulo: string
         />
       )}
     </>
+  )
+}
+
+// La guía vinculada de una TAREA, en la vista de lectura. El rótulo
+// dice para qué sirve el vínculo (necesaria, consulta o contingencia),
+// que es la distinción que pide la sección 5 del encargo: una consulta
+// opcional no puede leerse como un requisito.
+function GuiaVinculadaEnBloque({
+  articuloId,
+  tituloReferencia,
+  intencion,
+}: {
+  articuloId: string
+  tituloReferencia: string
+  intencion: BloquePaso['intencionGuia']
+}) {
+  const articulo = useLiveQuery(async () => (await db.articulos.get(articuloId)) ?? null, [articuloId])
+  if (articulo === undefined) return null
+
+  const kicker =
+    intencion === 'consulta' ? 'Consulta opcional' : intencion === 'contingencia' ? 'Si esto falla' : 'Otra guía'
+
+  if (articulo === null || articulo.eliminadoEn) {
+    return (
+      <p className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2 text-xs text-noct-precaucion">
+        La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
+        dispositivo.
+      </p>
+    )
+  }
+
+  return (
+    <EnlaceVinculo
+      Icono={BookOpen}
+      kicker={kicker}
+      titulo={articulo.titulo}
+      nota={PROMESA_REGRESO}
+      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+    />
   )
 }

@@ -181,6 +181,19 @@ export function useProcedimientoEjecucion({
     avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
   }
 
+  // ¿La guia vinculada del paso esta EN ESTE DISPOSITIVO? Distinta
+  // pregunta que `subSatisfechoReactivo`, que responde true tambien
+  // cuando el vinculo esta roto (para no dejar el paso sin salida).
+  // Quien pinta necesita separarlas: un vinculo roto no bloquea, pero
+  // tiene que verse y explicarse (criterio A12).
+  function guiaDelPasoDisponible(paso: PasoProcedimiento): boolean {
+    if (!paso.subArticuloId || nivel >= 1) return true
+    if (subArticulos === undefined) return true
+    const idx = subIds.indexOf(paso.subArticuloId)
+    const articulo = idx >= 0 ? subArticulos[idx] : undefined
+    return Boolean(articulo && !articulo.eliminadoEn)
+  }
+
   return {
     progreso,
     hechos,
@@ -190,6 +203,7 @@ export function useProcedimientoEjecucion({
     verificacionCompleta,
     todoCompletado,
     subSatisfechoReactivo,
+    guiaDelPasoDisponible,
     alternarPaso,
     alternarTarea,
     intentarCompletarPaso,

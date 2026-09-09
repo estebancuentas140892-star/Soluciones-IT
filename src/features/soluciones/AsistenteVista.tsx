@@ -185,6 +185,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     verificacionCompleta,
     todoCompletado,
     subSatisfechoReactivo,
+    guiaDelPasoDisponible,
     alternarTarea,
     intentarCompletarPaso,
     completarPasoYAvanzar,
@@ -469,6 +470,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           tituloPaso={tituloPaso}
           instruccionesHechas={instruccionesHechas}
           subSatisfecho={subSatisfecho}
+          guiaDelPasoDisponible={guiaDelPasoDisponible(paso)}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
           onCompletarPaso={avanzar}
           etiquetaAvance={etiquetaAvance}

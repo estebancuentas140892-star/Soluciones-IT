@@ -59,6 +59,12 @@ interface Props {
   // llama con lectura en vivo; aquí decide si la primera tarea del
   // recorrido está cumplida.
   subSatisfecho: boolean
+  // ¿La guía vinculada del paso está en este dispositivo? Un vínculo
+  // roto NO bloquea (el paso tiene que poder cerrarse igual), pero
+  // tampoco puede pasar por cumplido en silencio: sin esto el recorrido
+  // empezaba directamente en la tarea siguiente y el técnico nunca leía
+  // el motivo (criterio A12).
+  guiaDelPasoDisponible?: boolean
   onAlternarTarea: (tareaId: string) => void
   // Cierra el paso y avanza. Es la misma acción dominante de la vista
   // completa: el foco no decide cuándo se puede, solo la ofrece.
@@ -83,6 +89,7 @@ export function ModoFoco({
   tituloPaso,
   instruccionesHechas,
   subSatisfecho,
+  guiaDelPasoDisponible = true,
   onAlternarTarea,
   onCompletarPaso,
   etiquetaAvance,
@@ -93,7 +100,14 @@ export function ModoFoco({
   const tareas = tareasParaFoco(paso, tituloPaso)
   const delPaso = apoyosDelPaso(paso)
   const [indiceTarea, setIndiceTarea] = useState(() => {
-    const pendiente = tareas.findIndex((t) => !tareaFocoHecha(t, instruccionesHechas, subSatisfecho))
+    // La guía que no está disponible se lee ANTES de seguir: cuenta
+    // como cumplida para no bloquear, pero el recorrido empieza en ella
+    // para que su explicación no pase de largo (A12).
+    const pendiente = tareas.findIndex(
+      (t) =>
+        !tareaFocoHecha(t, instruccionesHechas, subSatisfecho) ||
+        (t.clase === 'guia-del-paso' && !guiaDelPasoDisponible),
+    )
     return pendiente >= 0 ? pendiente : 0
   })
   // Qué panel está desplegado. Los apoyos siguen a mano pero no ocupan
@@ -112,14 +126,14 @@ export function ModoFoco({
   useEffect(() => {
     const eraPendiente = !guiaCumplidaAntes.current
     guiaCumplidaAntes.current = subSatisfecho
-    if (!subSatisfecho || !eraPendiente) return
+    if (!subSatisfecho || !eraPendiente || !guiaDelPasoDisponible) return
     const actual = Math.min(indiceTarea, tareas.length - 1)
     if (tareas[actual]?.clase !== 'guia-del-paso') return
     const siguiente = tareas.findIndex(
       (t, i) => i !== actual && !tareaFocoHecha(t, instruccionesHechas, subSatisfecho),
     )
     if (siguiente >= 0) setIndiceTarea(siguiente)
-  }, [subSatisfecho, indiceTarea, tareas, instruccionesHechas])
+  }, [subSatisfecho, guiaDelPasoDisponible, indiceTarea, tareas, instruccionesHechas])
 
   const indice = Math.min(indiceTarea, tareas.length - 1)
   const tarea = tareas[indice]
@@ -228,9 +242,11 @@ export function ModoFoco({
           }`}
         >
           {tarea.clase === 'guia-del-paso'
-            ? hecha
-              ? 'Guía completada'
-              : 'Primero, completa esta guía'
+            ? !guiaDelPasoDisponible
+              ? 'Esta guía no está disponible'
+              : hecha
+                ? 'Guía completada'
+                : 'Primero, completa esta guía'
             : tarea.texto || 'Tarea sin texto'}
         </h2>
 
@@ -311,7 +327,9 @@ export function ModoFoco({
           // el criterio prohíbe, dar por hecha una guía sin hacerla.
           <p className="flex min-h-[76px] w-full items-center justify-center gap-2.5 rounded-2xl border-[1.5px] border-dashed border-noct-divider px-4 text-center text-[14px] leading-snug text-noct-neutral-300">
             <BookOpen size={18} className="shrink-0 text-noct-neutral-400" aria-hidden />
-            Esta tarea se cumple al terminar la guía de arriba
+            {guiaDelPasoDisponible
+              ? 'Esta tarea se cumple al terminar la guía de arriba'
+              : 'Sigue con el resto del paso: este vínculo no impide cerrarlo'}
           </p>
         ) : (
           <button
