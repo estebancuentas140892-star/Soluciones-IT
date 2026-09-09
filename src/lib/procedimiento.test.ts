@@ -21,12 +21,26 @@ const TAREA_ACCION = {
   decisionArticuloId: null,
   decisionArticuloTitulo: '',
   vinculoProtegido: null,
+  alcance: null,
+  tareaId: null,
+  guiaArticuloId: null,
+  guiaArticuloTitulo: '',
+  intencionGuia: null,
 } as const
+// Un apoyo (aviso, imagen, archivo, guía) guardado ANTES de que
+// existiera `alcance` no dice a qué tarea pertenece, así que al
+// normalizarlo queda en 'sin-asignar': se conserva entero y el editor
+// lo señala, en vez de repartirse por todas las tareas del paso.
 const SIN_TAREA = {
   tipoTarea: null,
   decisionArticuloId: null,
   decisionArticuloTitulo: '',
   vinculoProtegido: null,
+  alcance: 'sin-asignar',
+  tareaId: null,
+  guiaArticuloId: null,
+  guiaArticuloTitulo: '',
+  intencionGuia: null,
 } as const
 
 // Bloque 'tarea' de prueba con id fijo por texto (para asserts estables).
@@ -360,6 +374,11 @@ describe('normalizarProcedimiento', () => {
         decisionArticuloId: null,
         decisionArticuloTitulo: '',
         vinculoProtegido: null,
+        alcance: null,
+        tareaId: null,
+        guiaArticuloId: null,
+        guiaArticuloTitulo: '',
+        intencionGuia: null,
       },
       {
         id: 'b2',
@@ -371,6 +390,11 @@ describe('normalizarProcedimiento', () => {
         decisionArticuloId: 'art-9',
         decisionArticuloTitulo: 'Instalar impresora',
         vinculoProtegido: null,
+        alcance: null,
+        tareaId: null,
+        guiaArticuloId: null,
+        guiaArticuloTitulo: '',
+        intencionGuia: null,
       },
     ])
   })
@@ -434,6 +458,11 @@ describe('normalizarProcedimiento', () => {
               tipo: 'tarea',
               texto: 'Ingresar el PIN de impresión',
               vinculoProtegido: { tipo: 'campo', id: 'cp-1', titulo: 'PIN de impresión' },
+              alcance: null,
+              tareaId: null,
+              guiaArticuloId: null,
+              guiaArticuloTitulo: '',
+              intencionGuia: null,
             },
           ],
         },
@@ -470,6 +499,11 @@ describe('normalizarProcedimiento', () => {
       tipoTarea: 'decision',
       decisionArticuloId: 'art-9',
       vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server' },
+      alcance: null,
+      tareaId: null,
+      guiaArticuloId: null,
+      guiaArticuloTitulo: '',
+      intencionGuia: null,
     })
   })
 
@@ -801,6 +835,11 @@ describe('prepararProcedimientoParaGuardar', () => {
           {
             ...tarea('Ingresar usuario y contraseña'),
             vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: '  SQL Server  ' },
+            alcance: null,
+            tareaId: null,
+            guiaArticuloId: null,
+            guiaArticuloTitulo: '',
+            intencionGuia: null,
           },
         ],
       }),
@@ -944,5 +983,119 @@ describe('pasoSeCompletaSolo', () => {
 
   it('no se completa solo si hay una solución vinculada (la completa la pregunta de error)', () => {
     expect(pasoSeCompletaSolo(true, true)).toBe(false)
+  })
+})
+
+// COMPATIBILIDAD DE LO YA ESCRITO (sección 8 del encargo, criterio A17).
+//
+// El procedimiento viaja como JSON dentro de la columna `procedimiento`
+// del artículo, así que los campos nuevos no tocan el esquema de
+// Supabase; lo que hay que demostrar es que una guía guardada por la
+// versión anterior sobrevive al viaje completo (leer, editar, guardar,
+// volver a leer) sin perder adjuntos, vínculos ni avisos.
+describe('una guía escrita antes de estos cambios sobrevive intacta', () => {
+  const GUIA_ANTIGUA = {
+    descripcion: 'Cuando hay que conectar el recurso',
+    objetivoGeneral: 'Dejarlo accesible',
+    requisitos: ['Equipo encendido'],
+    verificacionFinal: ['Aparece en la lista'],
+    tiempoEstimadoMin: 6,
+    dificultad: 'principiante',
+    portada: { referencia: 'p/portada.jpg', nombre: 'portada.jpg', tipo: 'image/jpeg' },
+    pasos: [
+      {
+        id: 'p1',
+        titulo: 'Abrir los recursos',
+        objetivo: 'Ver la lista',
+        subArticuloId: 'art-gestor',
+        subArticuloTitulo: 'Acceder al gestor',
+        solucionArticuloId: 'art-falla',
+        solucionArticuloTitulo: 'Si no aparece',
+        credencialId: 'cred-1',
+        credencialTitulo: 'Admin del servidor',
+        adjuntos: [{ referencia: 'a/manual.pdf', nombre: 'manual.pdf', tipo: 'application/pdf' }],
+        bloques: [
+          { id: 't1', tipo: 'tarea', texto: 'Escribir la dirección' },
+          { id: 'a1', tipo: 'aviso', texto: 'Usa la dirección corta', tono: 'precaucion' },
+          { id: 'i1', tipo: 'imagen', texto: 'El campo', adjunto: { referencia: 'a/1.png', nombre: '1.png', tipo: 'image/png' } },
+          { id: 't2', tipo: 'tarea', texto: '¿Aparece?', tipoTarea: 'decision', decisionArticuloId: 'art-x', decisionArticuloTitulo: 'Revisar' },
+        ],
+      },
+    ],
+  }
+
+  function guardarComoLoHariaElEditor(proc: NonNullable<ReturnType<typeof normalizarProcedimiento>>) {
+    return prepararProcedimientoParaGuardar({
+      descripcion: proc.descripcion,
+      portada: proc.portada,
+      objetivoGeneral: proc.objetivoGeneral,
+      requisitosTexto: proc.requisitos.join('\n'),
+      pasos: proc.pasos,
+      verificacionFinalTexto: proc.verificacionFinal.join('\n'),
+      tiempoEstimadoMin: proc.tiempoEstimadoMin,
+      dificultad: proc.dificultad,
+    })
+  }
+
+  it('conserva portada, adjuntos, vínculos del paso y bloques al ir y volver', () => {
+    const leida = normalizarProcedimiento(GUIA_ANTIGUA)!
+    const guardada = guardarComoLoHariaElEditor(leida)!
+    const releida = normalizarProcedimiento(guardada)!
+
+    expect(releida.portada?.referencia).toBe('p/portada.jpg')
+    const paso = releida.pasos[0]
+    expect(paso.adjuntos.map((a) => a.referencia)).toEqual(['a/manual.pdf'])
+    expect(paso.subArticuloId).toBe('art-gestor')
+    expect(paso.solucionArticuloId).toBe('art-falla')
+    // El vínculo protegido viejo (credencialId) sigue migrando bien.
+    expect(paso.vinculoProtegido).toEqual({ tipo: 'credencial', id: 'cred-1', titulo: 'Admin del servidor' })
+    expect(paso.bloques.map((b) => b.id)).toEqual(['t1', 'a1', 'i1', 't2'])
+    expect(paso.bloques[2].adjunto?.referencia).toBe('a/1.png')
+    expect(paso.bloques[3].decisionArticuloId).toBe('art-x')
+  })
+
+  it('los apoyos heredados NO se reparten entre las tareas: quedan sin asignar', () => {
+    const releida = normalizarProcedimiento(guardarComoLoHariaElEditor(normalizarProcedimiento(GUIA_ANTIGUA)!)!)!
+    const apoyos = releida.pasos[0].bloques.filter((b) => b.tipo !== 'tarea')
+    expect(apoyos.map((b) => b.alcance)).toEqual(['sin-asignar', 'sin-asignar'])
+    expect(apoyos.every((b) => b.tareaId === null)).toBe(true)
+  })
+
+  it('un apoyo ya asignado conserva su tarea al ir y volver', () => {
+    const conAlcance = {
+      ...GUIA_ANTIGUA,
+      pasos: [
+        {
+          ...GUIA_ANTIGUA.pasos[0],
+          bloques: [
+            { id: 't1', tipo: 'tarea', texto: 'Escribir la dirección' },
+            { id: 'a1', tipo: 'aviso', texto: 'Cuidado', tono: 'precaucion', alcance: 'tarea', tareaId: 't1' },
+          ],
+        },
+      ],
+    }
+    const releida = normalizarProcedimiento(guardarComoLoHariaElEditor(normalizarProcedimiento(conAlcance)!)!)!
+    const aviso = releida.pasos[0].bloques[1]
+    expect(aviso.alcance).toBe('tarea')
+    expect(aviso.tareaId).toBe('t1')
+  })
+
+  it('duplicar una guía traduce las referencias a las tareas de la copia', () => {
+    const conAlcance = normalizarProcedimiento({
+      pasos: [
+        {
+          id: 'p1',
+          bloques: [
+            { id: 't1', tipo: 'tarea', texto: 'Una' },
+            { id: 'a1', tipo: 'aviso', texto: 'Suya', alcance: 'tarea', tareaId: 't1' },
+          ],
+        },
+      ],
+    })!
+    const copia = duplicarProcedimiento(conAlcance)
+    const [tarea, aviso] = copia.pasos[0].bloques
+    expect(tarea.id).not.toBe('t1')
+    expect(aviso.tareaId).toBe(tarea.id)
+    expect(aviso.alcance).toBe('tarea')
   })
 })

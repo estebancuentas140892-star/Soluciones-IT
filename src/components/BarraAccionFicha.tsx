@@ -24,9 +24,22 @@ interface Props {
   /** Paso actual (1-based) y total, solo para el estado `seguir`. */
   paso?: number
   total?: number
+  /**
+   * Borra el avance guardado de esta guía. Solo se ofrece en el estado
+   * `seguir`, y ahí SIEMPRE (2026-09-09, sección 3 del encargo).
+   *
+   * Es la otra mitad de haber retirado "Sin terminar" de la lista: la
+   * posición de lectura se conserva, pero deja de generar una lista
+   * global de pendientes, así que las dos salidas ("continuar donde
+   * estaba" y "empezar de nuevo") tienen que vivir DENTRO de la guía.
+   * Antes "empezar de nuevo" existía solo dentro del menú "···" de la
+   * cabecera, es decir en el sitio opuesto de la pantalla al de la
+   * acción con la que compite.
+   */
+  onReiniciar?: () => void
 }
 
-export function BarraAccionFicha({ to, estado, paso, total }: Props) {
+export function BarraAccionFicha({ to, estado, paso, total, onReiniciar }: Props) {
   const etiqueta =
     estado === 'seguir' && paso != null && total != null
       ? `Seguir en el paso ${paso} de ${total}`
@@ -45,14 +58,30 @@ export function BarraAccionFicha({ to, estado, paso, total }: Props) {
     <div
       className={`sticky ${PEGADA_SOBRE_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.92] px-4 pb-3 pt-2.5 backdrop-blur-[12px] lg:px-10`}
     >
-      <Link
-        to={to}
-        className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
-      >
-        <Icono size={17} aria-hidden />
-        {etiqueta}
-      </Link>
-      <p className="mt-1.5 text-center text-[11.5px] text-noct-neutral-500">{nota}</p>
+      <div className="flex items-center gap-2">
+        <Link
+          to={to}
+          className="flex min-h-[52px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+        >
+          <Icono size={17} className="shrink-0" aria-hidden />
+          <span className="truncate">{etiqueta}</span>
+        </Link>
+        {estado === 'seguir' && onReiniciar && (
+          <button
+            type="button"
+            onClick={onReiniciar}
+            aria-label="Empezar de nuevo: borra el avance de esta guía"
+            title="Empezar de nuevo"
+            className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+          >
+            <ArrowsClockwise size={17} aria-hidden />
+          </button>
+        )}
+      </div>
+      <p className="mt-1.5 text-center text-[11.5px] text-noct-neutral-500">
+        {nota}
+        {estado === 'seguir' && onReiniciar ? ' · el botón de al lado lo borra y empieza de cero' : ''}
+      </p>
     </div>
   )
 }

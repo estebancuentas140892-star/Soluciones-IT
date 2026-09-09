@@ -62,6 +62,11 @@ export interface DatosCompletitud {
   // Solo la puntua la señal de tipo 'manual': es su unico contenido
   // real, ya que un manual normalmente no tiene procedimiento.
   contenido: string
+  // Apoyos (imagenes, avisos, archivos o guias) que vienen de una
+  // version anterior y no dicen a que tarea pertenecen (2026-09-09,
+  // seccion 8 del encargo). No se les adivina un destino: se cuentan
+  // aqui para que el autor los vea listados y los asigne.
+  apoyosSinAsignar?: number
 }
 
 // Señales del handoff "Editor de Artículo", cada una con la pestaña
@@ -94,9 +99,33 @@ export function senalesDeArticulo(datos: DatosCompletitud): SenalCompletitud[] {
         },
       ]
 
+  // Contenido heredado que hay que repasar (seccion 8 del encargo). Un
+  // procedimiento escrito antes de que el apoyo dijera a que tarea
+  // pertenece se conserva entero y funciona; lo que falta es decidir
+  // donde va cada pieza, y eso solo lo sabe el autor.
+  //
+  // La señal solo EXISTE cuando hay algo que asignar: si se sumara
+  // siempre, los articulos que nunca tuvieron el problema veririan
+  // moverse su porcentaje por una regla que no les toca.
+  const pendientesDeAsignar = datos.apoyosSinAsignar ?? 0
+  const senalesHeredadas: SenalCompletitud[] =
+    pendientesDeAsignar > 0 && !esManual
+      ? [
+          {
+            cumplida: false,
+            pestana: 'pasos',
+            sugerencia:
+              pendientesDeAsignar === 1
+                ? 'Decir a qué tarea pertenece 1 apoyo heredado'
+                : `Decir a qué tarea pertenecen ${pendientesDeAsignar} apoyos heredados`,
+          },
+        ]
+      : []
+
   return [
     { cumplida: Boolean(datos.titulo.trim()), pestana: 'general', sugerencia: '' },
     ...senalesDePasos,
+    ...senalesHeredadas,
     {
       cumplida: Boolean(datos.descripcion.trim()),
       pestana: 'general',

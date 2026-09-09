@@ -1,5 +1,7 @@
 import type {
+  AlcanceApoyo,
   BloquePaso,
+  IntencionGuia,
   NivelDificultad,
   PasoAdjunto,
   PasoProcedimiento,
@@ -32,41 +34,78 @@ export function crearPaso(): PasoProcedimiento {
   }
 }
 
+// Campos comunes de un bloque nuevo: todo lo que no aplica al tipo
+// queda explicitamente en su valor vacio, para que el objeto tenga
+// siempre la misma forma venga de donde venga.
+export const CAMPOS_BLOQUE_VACIOS = {
+  texto: '',
+  tono: null,
+  adjunto: null,
+  tipoTarea: null,
+  decisionArticuloId: null,
+  decisionArticuloTitulo: '',
+  vinculoProtegido: null,
+  alcance: null,
+  tareaId: null,
+  guiaArticuloId: null,
+  guiaArticuloTitulo: '',
+  intencionGuia: null,
+} as const
+
 export function crearBloqueTarea(tipoTarea: TipoTarea = 'accion'): BloquePaso {
-  return {
-    id: crypto.randomUUID(),
-    tipo: 'tarea',
-    texto: '',
-    tono: null,
-    adjunto: null,
-    tipoTarea,
-    decisionArticuloId: null,
-    decisionArticuloTitulo: '',
-    vinculoProtegido: null,
-  }
+  return { ...CAMPOS_BLOQUE_VACIOS, id: crypto.randomUUID(), tipo: 'tarea', tipoTarea }
+}
+
+// Alcance por defecto de un apoyo nuevo: la tarea que el autor tiene
+// seleccionada (requisito 4 del editor). Sin tarea a la que colgarlo
+// (un paso que todavia no tiene ninguna) nace como apoyo del paso, que
+// es lo unico honesto: nunca 'sin-asignar', porque ese valor significa
+// "no se sabe" y aqui si se sabe.
+function alcanceNuevo(tareaId: string | null): { alcance: AlcanceApoyo; tareaId: string | null } {
+  return tareaId ? { alcance: 'tarea', tareaId } : { alcance: 'paso', tareaId: null }
 }
 
 // El boton del editor se llama "+ Advertencia", asi que el bloque
 // nuevo nace con el tono 'precaucion' (icono y color de advertencia);
 // el selector de tono permite suavizarlo a informacion o consejo.
-export function crearBloqueAviso(): BloquePaso {
+export function crearBloqueAviso(tareaId: string | null = null): BloquePaso {
   return {
+    ...CAMPOS_BLOQUE_VACIOS,
     id: crypto.randomUUID(),
     tipo: 'aviso',
-    texto: '',
     tono: 'precaucion',
-    adjunto: null,
-    tipoTarea: null,
-    decisionArticuloId: null,
-    decisionArticuloTitulo: '',
-    vinculoProtegido: null,
+    ...alcanceNuevo(tareaId),
+  }
+}
+
+export function crearBloqueImagen(tareaId: string | null = null): BloquePaso {
+  return { ...CAMPOS_BLOQUE_VACIOS, id: crypto.randomUUID(), tipo: 'imagen', ...alcanceNuevo(tareaId) }
+}
+
+export function crearBloqueArchivo(tareaId: string | null = null): BloquePaso {
+  return { ...CAMPOS_BLOQUE_VACIOS, id: crypto.randomUUID(), tipo: 'archivo', ...alcanceNuevo(tareaId) }
+}
+
+export function crearBloqueGuia(tareaId: string | null = null): BloquePaso {
+  return {
+    ...CAMPOS_BLOQUE_VACIOS,
+    id: crypto.randomUUID(),
+    tipo: 'guia',
+    intencionGuia: 'necesario',
+    ...alcanceNuevo(tareaId),
   }
 }
 
 // Las tareas (bloques con casilla) de un paso, en orden. Son las que
-// cuentan para completarlo; avisos e imagenes son contenido de lectura.
+// cuentan para completarlo; avisos, imagenes, archivos y guias
+// vinculadas son apoyos.
 export function tareasDe(bloques: BloquePaso[]): BloquePaso[] {
   return bloques.filter((b) => b.tipo === 'tarea')
+}
+
+// ¿Este bloque es un apoyo (todo lo que no es una tarea)?
+export function esApoyo(bloque: BloquePaso): boolean {
+  return bloque.tipo !== 'tarea'
 }
 
 // Devuelve un procedimiento bien formado o null si no queda ningun
@@ -189,7 +228,7 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
     titulo: texto(origen.titulo),
     objetivo: texto(origen.objetivo),
-    bloques: normalizarBloques(origen),
+    bloques: sanearReferenciasDeTarea(normalizarBloques(origen)),
     adjuntos: normalizarAdjuntos(origen),
     vinculoProtegido: normalizarVinculoProtegido(origen),
     subArticuloId,
@@ -216,27 +255,54 @@ function normalizarBloques(origen: Record<string, unknown>): BloquePaso[] {
     return origen.instrucciones
       .filter((i): i is string => typeof i === 'string' && i.trim() !== '')
       .map((textoTarea) => ({
+        ...CAMPOS_BLOQUE_VACIOS,
         id: crypto.randomUUID(),
         tipo: 'tarea' as const,
         texto: textoTarea,
-        tono: null,
-        adjunto: null,
         tipoTarea: 'accion' as const,
-        decisionArticuloId: null,
-        decisionArticuloTitulo: '',
-        vinculoProtegido: null,
       }))
   }
 
   return []
 }
 
-const TIPOS_BLOQUE: TipoBloque[] = ['tarea', 'aviso', 'imagen']
+const TIPOS_BLOQUE: TipoBloque[] = ['tarea', 'aviso', 'imagen', 'archivo', 'guia']
 const TONOS_AVISO_VALIDOS: TonoAviso[] = ['info', 'precaucion', 'importante', 'consejo', 'dato']
 const TIPOS_TAREA_VALIDOS: TipoTarea[] = ['accion', 'verificacion', 'decision']
+const ALCANCES_VALIDOS: AlcanceApoyo[] = ['tarea', 'paso', 'sin-asignar']
+const INTENCIONES_GUIA: IntencionGuia[] = ['necesario', 'consulta', 'contingencia']
+
+// A que pertenece un apoyo guardado, tolerando las dos epocas.
+//
+// LA REGLA DE COMPATIBILIDAD, que es la parte delicada: un apoyo SIN
+// `alcance` viene de una guia escrita cuando el campo no existia, asi
+// que no se sabe a que tarea pertenece. Queda 'sin-asignar': se
+// conserva entero, se muestra una sola vez al entrar al paso y el
+// editor lo marca para que el autor decida. NO se reparte entre todas
+// las tareas (que es el defecto que se esta corrigiendo) ni se adivina
+// por la posicion en el array (eso seria inventarle una intencion al
+// dato). Ver la seccion 8 del encargo.
+function normalizarAlcance(origen: Record<string, unknown>): {
+  alcance: AlcanceApoyo
+  tareaId: string | null
+} {
+  const declarado = (ALCANCES_VALIDOS as string[]).includes(origen.alcance as string)
+    ? (origen.alcance as AlcanceApoyo)
+    : null
+  const tareaId = typeof origen.tareaId === 'string' && origen.tareaId !== '' ? origen.tareaId : null
+  if (declarado === 'tarea') {
+    // Sin tarea a la que apuntar, "pertenece a una tarea" no dice cual:
+    // vuelve a ser un destino desconocido, no un apoyo del paso.
+    return tareaId ? { alcance: 'tarea', tareaId } : { alcance: 'sin-asignar', tareaId: null }
+  }
+  if (declarado === 'paso') return { alcance: 'paso', tareaId: null }
+  if (declarado === 'sin-asignar') return { alcance: 'sin-asignar', tareaId: null }
+  return { alcance: 'sin-asignar', tareaId: null }
+}
 
 // Un bloque valido o null (para descartarlo): una tarea o un aviso sin
-// texto no aporta nada, y una imagen sin adjunto valido tampoco.
+// texto no aporta nada, y una imagen o un archivo sin adjunto valido
+// tampoco. Una guia vinculada sin id de destino tampoco.
 function normalizarBloque(valor: unknown): BloquePaso | null {
   if (!valor || typeof valor !== 'object') return null
   const origen = valor as Record<string, unknown>
@@ -245,17 +311,32 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     ? (origen.tipo as TipoBloque)
     : 'tarea'
   const textoBloque = texto(origen.texto)
-  const sinTarea = {
-    tipoTarea: null,
-    decisionArticuloId: null,
-    decisionArticuloTitulo: '',
-    vinculoProtegido: null,
-  }
 
-  if (tipo === 'imagen') {
+  if (tipo === 'imagen' || tipo === 'archivo') {
     const adjunto = normalizarUnAdjunto(origen.adjunto)
     if (!adjunto) return null
-    return { id, tipo, texto: textoBloque, tono: null, adjunto, ...sinTarea }
+    return { ...CAMPOS_BLOQUE_VACIOS, id, tipo, texto: textoBloque, adjunto, ...normalizarAlcance(origen) }
+  }
+
+  if (tipo === 'guia') {
+    const guiaArticuloId =
+      typeof origen.guiaArticuloId === 'string' && origen.guiaArticuloId !== ''
+        ? origen.guiaArticuloId
+        : null
+    if (!guiaArticuloId) return null
+    const intencionGuia = (INTENCIONES_GUIA as string[]).includes(origen.intencionGuia as string)
+      ? (origen.intencionGuia as IntencionGuia)
+      : 'necesario'
+    return {
+      ...CAMPOS_BLOQUE_VACIOS,
+      id,
+      tipo,
+      texto: textoBloque,
+      guiaArticuloId,
+      guiaArticuloTitulo: texto(origen.guiaArticuloTitulo),
+      intencionGuia,
+      ...normalizarAlcance(origen),
+    }
   }
 
   if (textoBloque.trim() === '') return null
@@ -264,7 +345,7 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     const tono = (TONOS_AVISO_VALIDOS as string[]).includes(origen.tono as string)
       ? (origen.tono as TonoAviso)
       : 'info'
-    return { id, tipo, texto: textoBloque, tono, adjunto: null, ...sinTarea }
+    return { ...CAMPOS_BLOQUE_VACIOS, id, tipo, texto: textoBloque, tono, ...normalizarAlcance(origen) }
   }
 
   // Tareas guardadas antes de la clasificacion (o con un tipo invalido)
@@ -282,16 +363,30 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
   // Vinculo protegido (tarea 40, generalizado en P2): opcional en
   // cualquier tarea, sin depender del tipoTarea.
   return {
+    ...CAMPOS_BLOQUE_VACIOS,
     id,
     tipo: 'tarea',
     texto: textoBloque,
-    tono: null,
-    adjunto: null,
     tipoTarea,
     decisionArticuloId,
     decisionArticuloTitulo: decisionArticuloId ? texto(origen.decisionArticuloTitulo) : '',
     vinculoProtegido: normalizarVinculoProtegido(origen),
   }
+}
+
+// UN APOYO NUNCA SE PIERDE POR UN VINCULO ROTO. Si un apoyo apunta a
+// una tarea que ya no esta en el paso (el autor la borro despues de
+// colgarle la foto), el bloque se conserva y pasa a 'sin-asignar', que
+// es exactamente lo que ocurrio: su destino dejo de saberse. Asi el
+// contenido sigue visible al entrar al paso y el editor lo señala para
+// que el autor lo reasigne, en vez de desaparecer en silencio.
+export function sanearReferenciasDeTarea(bloques: BloquePaso[]): BloquePaso[] {
+  const idsTarea = new Set(bloques.filter((b) => b.tipo === 'tarea').map((b) => b.id))
+  return bloques.map((bloque) =>
+    bloque.alcance === 'tarea' && bloque.tareaId && !idsTarea.has(bloque.tareaId)
+      ? { ...bloque, alcance: 'sin-asignar' as const, tareaId: null }
+      : bloque,
+  )
 }
 
 // Adjuntos del paso (galeria), tolerando datos viejos: si el paso trae
@@ -375,12 +470,26 @@ export function duplicarProcedimiento(procedimiento: Procedimiento): Procedimien
       ...paso,
       id: crypto.randomUUID(),
       adjuntos: paso.adjuntos.map((adjunto) => ({ ...adjunto })),
-      bloques: paso.bloques.map((bloque) => ({ ...bloque, id: crypto.randomUUID() })),
+      bloques: duplicarBloques(paso.bloques),
     })),
     requisitos: [...procedimiento.requisitos],
     verificacionFinal: [...procedimiento.verificacionFinal],
     portada: procedimiento.portada ? { ...procedimiento.portada } : null,
   }
+}
+
+// Copia de los bloques de un paso con ids nuevos, TRADUCIENDO ademas
+// las referencias `tareaId` a los ids nuevos. Sin esto, duplicar una
+// guia dejaba cada apoyo apuntando a la tarea del ORIGINAL: en la
+// copia esa tarea no existe, asi que los apoyos habrian quedado todos
+// 'sin-asignar' y el autor tendria que reasignarlos uno por uno.
+function duplicarBloques(bloques: BloquePaso[]): BloquePaso[] {
+  const nuevosIds = new Map(bloques.map((bloque) => [bloque.id, crypto.randomUUID()]))
+  return bloques.map((bloque) => ({
+    ...bloque,
+    id: nuevosIds.get(bloque.id) ?? crypto.randomUUID(),
+    tareaId: bloque.tareaId ? (nuevosIds.get(bloque.tareaId) ?? null) : null,
+  }))
 }
 
 // Texto plano de un procedimiento para el indice de busqueda: asi
@@ -410,6 +519,13 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
     // procedimientos que incluyen esa tarea.
     partes.push(paso.subArticuloTitulo, paso.solucionArticuloTitulo)
     partes.push(...paso.bloques.map((b) => b.decisionArticuloTitulo))
+    // Titulo de las guias vinculadas desde una tarea: mismo criterio
+    // que los vinculos del paso, no son informacion protegida.
+    partes.push(...paso.bloques.map((b) => b.guiaArticuloTitulo))
+    // Nombre de los archivos anclados a una tarea: buscar por el
+    // nombre del manual encuentra la guia que lo usa, igual que ya
+    // pasaba con los adjuntos del paso.
+    partes.push(...paso.bloques.map((b) => (b.tipo === 'archivo' ? (b.adjunto?.nombre ?? '') : '')))
   }
   return partes.filter(Boolean).join(' ')
 }
@@ -555,17 +671,28 @@ export function prepararProcedimientoParaGuardar({
 // decision e informacion protegida (tarea 40) solo se conservan junto
 // a su id.
 function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
-  return bloques
+  const limpios = bloques
     .map((bloque) => ({
       ...bloque,
       texto: bloque.texto.trim(),
       decisionArticuloTitulo: bloque.decisionArticuloId ? bloque.decisionArticuloTitulo.trim() : '',
+      guiaArticuloTitulo: bloque.guiaArticuloId ? bloque.guiaArticuloTitulo.trim() : '',
       vinculoProtegido: bloque.vinculoProtegido
         ? { ...bloque.vinculoProtegido, titulo: bloque.vinculoProtegido.titulo.trim() }
         : null,
     }))
     .filter((bloque) => {
-      if (bloque.tipo === 'imagen') return bloque.adjunto !== null
+      // Una imagen o un archivo a medio subir (sin adjunto) se
+      // descartan; una guia vinculada sin destino, tambien. En los dos
+      // casos el bloque no llego a tener contenido: no hay nada que
+      // perder. Lo que SI se conserva siempre es el apoyo completo,
+      // aunque no diga a que tarea pertenece.
+      if (bloque.tipo === 'imagen' || bloque.tipo === 'archivo') return bloque.adjunto !== null
+      if (bloque.tipo === 'guia') return bloque.guiaArticuloId !== null
       return bloque.texto !== ''
     })
+  // Al guardar se vuelven a revisar las referencias: si el autor borro
+  // la tarea a la que colgaba una foto, la foto se queda 'sin-asignar'
+  // en vez de guardar un vinculo roto.
+  return sanearReferenciasDeTarea(limpios)
 }

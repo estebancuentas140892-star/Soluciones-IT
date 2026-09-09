@@ -1,4 +1,4 @@
-import { db } from './db'
+import { db, type ProgresoPasos } from './db'
 
 // Avance local de un tecnico dentro de un procedimiento: que pasos
 // marco como hechos y que instrucciones marco dentro de cada paso.
@@ -12,6 +12,33 @@ import { db } from './db'
 // vinculado y la solucion de error del paso; desmarcar una instruccion
 // vuelve el paso pendiente; marcar o desmarcar el paso entero arrastra
 // todas sus instrucciones.
+
+// GUARDA MEZCLANDO, NUNCA REEMPLAZANDO (2026-09-09).
+//
+// Cada escritor de este modulo armaba el registro entero a mano, asi que
+// cualquier campo que no listara desaparecia: `establecerPasoHecho` y
+// `alternarInstruccionHecha` no nombraban `evidenciasPorPaso`, de modo
+// que marcar un paso borraba el vinculo de TODA la evidencia fotografica
+// del articulo (las entradas del historial seguian ahi, pero el paso
+// dejaba de encontrarlas y la siguiente foto creaba otra intervencion).
+// Con el campo nuevo `pasosSaltados` el mismo descuido habria vuelto a
+// morder, asi que se centraliza: quien escribe dice SOLO lo que cambia.
+async function guardarProgreso(
+  articuloId: string,
+  cambios: Partial<Omit<ProgresoPasos, 'articuloId' | 'actualizadoEn'>>,
+): Promise<void> {
+  const actual = await db.progresoPasos.get(articuloId)
+  await db.progresoPasos.put({
+    articuloId,
+    pasosHechos: actual?.pasosHechos ?? [],
+    instruccionesHechas: actual?.instruccionesHechas ?? [],
+    verificacionHecha: actual?.verificacionHecha ?? [],
+    evidenciasPorPaso: actual?.evidenciasPorPaso,
+    pasosSaltados: actual?.pasosSaltados,
+    ...cambios,
+    actualizadoEn: new Date().toISOString(),
+  })
+}
 
 // Marca o desmarca un paso completo, arrastrando sus tareas (los
 // bloques con casilla). `tareaIds` son los ids de esos bloques.
@@ -33,12 +60,38 @@ export async function establecerPasoHecho(
     for (const tareaId of tareaIds) instrucciones.delete(tareaId)
   }
 
-  await db.progresoPasos.put({
-    articuloId,
+  // Un paso que se completa deja de estar saltado: son estados
+  // excluyentes, y el indice tiene que decir el ultimo que vale.
+  const saltados = (actual?.pasosSaltados ?? []).filter((id) => id !== pasoId)
+
+  await guardarProgreso(articuloId, {
     pasosHechos: [...pasos],
     instruccionesHechas: [...instrucciones],
-    verificacionHecha: actual?.verificacionHecha ?? [],
-    actualizadoEn: new Date().toISOString(),
+    pasosSaltados: saltados,
+  })
+}
+
+/**
+ * Deja constancia de que el tecnico SALTO este paso a proposito
+ * (hallazgo H07). Es un acto explicito, no una deduccion: hasta ahora
+ * el indice llamaba "saltado" a cualquier paso sin hacer que quedara
+ * por detras del actual, asi que mirar el paso siguiente con la flecha
+ * bastaba para marcar el anterior como saltado. Navegar es consultar;
+ * saltar es decidir seguir sin hacerlo.
+ */
+export async function marcarPasoSaltado(articuloId: string, pasoId: string): Promise<void> {
+  const actual = await db.progresoPasos.get(articuloId)
+  const saltados = new Set(actual?.pasosSaltados ?? [])
+  saltados.add(pasoId)
+  await guardarProgreso(articuloId, { pasosSaltados: [...saltados] })
+}
+
+/** Retira la marca de saltado (el tecnico vuelve y lo retoma). */
+export async function quitarPasoSaltado(articuloId: string, pasoId: string): Promise<void> {
+  const actual = await db.progresoPasos.get(articuloId)
+  if (!actual?.pasosSaltados?.includes(pasoId)) return
+  await guardarProgreso(articuloId, {
+    pasosSaltados: actual.pasosSaltados.filter((id) => id !== pasoId),
   })
 }
 
@@ -72,12 +125,13 @@ export async function alternarInstruccionHecha(
     pasos.delete(pasoId)
   }
 
-  await db.progresoPasos.put({
-    articuloId,
+  // Tocar una tarea de un paso saltado es retomarlo.
+  const saltados = (actual?.pasosSaltados ?? []).filter((id) => id !== pasoId)
+
+  await guardarProgreso(articuloId, {
     pasosHechos: [...pasos],
     instruccionesHechas: [...instrucciones],
-    verificacionHecha: actual?.verificacionHecha ?? [],
-    actualizadoEn: new Date().toISOString(),
+    pasosSaltados: saltados,
   })
   return completo
 }
@@ -97,13 +151,8 @@ export async function registrarEvidenciaPaso(
   entradaId: string,
 ): Promise<void> {
   const actual = await db.progresoPasos.get(articuloId)
-  await db.progresoPasos.put({
-    articuloId,
-    pasosHechos: actual?.pasosHechos ?? [],
-    instruccionesHechas: actual?.instruccionesHechas ?? [],
-    verificacionHecha: actual?.verificacionHecha ?? [],
+  await guardarProgreso(articuloId, {
     evidenciasPorPaso: { ...actual?.evidenciasPorPaso, [pasoId]: entradaId },
-    actualizadoEn: new Date().toISOString(),
   })
 }
 
@@ -137,13 +186,7 @@ export async function alternarVerificacionFinal(
   } else {
     marcadas.add(indice)
   }
-  await db.progresoPasos.put({
-    articuloId,
-    pasosHechos: actual?.pasosHechos ?? [],
-    instruccionesHechas: actual?.instruccionesHechas ?? [],
-    verificacionHecha: [...marcadas],
-    actualizadoEn: new Date().toISOString(),
-  })
+  await guardarProgreso(articuloId, { verificacionHecha: [...marcadas] })
 }
 
 // La verificacion final cuenta como completa cuando no hay items (no

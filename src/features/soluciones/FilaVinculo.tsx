@@ -84,10 +84,21 @@ export function EnlaceVinculo({
   nota,
   extra,
   to,
-}: Omit<Comun, 'Icono'> & { Icono?: ComponentType<IconoProps>; to: string }) {
+  state,
+}: Omit<Comun, 'Icono'> & {
+  Icono?: ComponentType<IconoProps>
+  to: string
+  // Estado de navegación del enlace. Es lo que hace REAL la promesa de
+  // la nota ("vuelves aquí al terminar"): quien abre el vínculo escribe
+  // aquí de dónde viene (`conOrigen`), y el chasis usa ese origen para
+  // que "volver" deshaga el salto en vez de caer en el padre declarado.
+  // Sin esto, la fila prometía un regreso que nadie implementaba.
+  state?: unknown
+}) {
   return (
     <Link
       to={to}
+      state={state}
       className="flex min-h-11 w-full items-center gap-2.5 py-1.5 outline-none hover:bg-noct-text/[.04] focus-visible:outline-2 focus-visible:outline-noct-accent"
     >
       <Icono size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />

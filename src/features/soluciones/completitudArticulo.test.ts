@@ -152,3 +152,33 @@ describe('calcularCompletitud', () => {
     })
   })
 })
+
+// Sección 8 del encargo: el contenido heredado que no dice a qué tarea
+// pertenece se señala al autor, sin adivinarle un destino.
+describe('apoyos heredados sin asignar', () => {
+  it('no cambia nada cuando no hay ninguno', () => {
+    const sin = calcularCompletitud(senalesDeArticulo(COMPLETO))
+    const cero = calcularCompletitud(senalesDeArticulo({ ...COMPLETO, apoyosSinAsignar: 0 }))
+    expect(cero.porcentaje).toBe(sin.porcentaje)
+    expect(cero.sugerencias).toEqual([])
+  })
+
+  it('cuando los hay, lo dice con su número y lleva a la pestaña Pasos', () => {
+    const con = calcularCompletitud(senalesDeArticulo({ ...COMPLETO, apoyosSinAsignar: 3 }))
+    expect(con.sugerencias.map((s) => s.texto)).toContain('Decir a qué tarea pertenecen 3 apoyos heredados')
+    expect(con.pestanasPendientes.has('pasos')).toBe(true)
+    expect(con.porcentaje).toBeLessThan(100)
+  })
+
+  it('concuerda el singular', () => {
+    const uno = calcularCompletitud(senalesDeArticulo({ ...COMPLETO, apoyosSinAsignar: 1 }))
+    expect(uno.sugerencias.map((s) => s.texto)).toContain('Decir a qué tarea pertenece 1 apoyo heredado')
+  })
+
+  it('un manual no tiene tareas, así que no se le pide asignar nada', () => {
+    const manual = calcularCompletitud(
+      senalesDeArticulo({ ...COMPLETO, tipo: 'manual', contenido: 'x', apoyosSinAsignar: 2 }),
+    )
+    expect(manual.sugerencias).toEqual([])
+  })
+})

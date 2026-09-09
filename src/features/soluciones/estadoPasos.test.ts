@@ -12,12 +12,31 @@ function paso(titulo: string, tareas = 0, aviso: 'precaucion' | 'importante' | '
 const vacio = new Set<string>()
 
 describe('resumirPasos', () => {
-  it('reparte los cuatro estados alrededor del paso actual', () => {
+  it('reparte los cuatro estados: saltado solo el que se saltó a propósito', () => {
     const pasos = [paso('Avisar'), paso('Respaldar'), paso('Desconectar'), paso('Montar')]
     const hechos = new Set([pasos[0].id])
-    const resumen = resumirPasos(pasos, hechos, vacio, 2)
+    const saltados = new Set([pasos[1].id])
+    const resumen = resumirPasos(pasos, hechos, vacio, 2, saltados)
 
     expect(resumen.map((r) => r.estado)).toEqual(['hecho', 'saltado', 'actual', 'pendiente'])
+  })
+
+  // Hallazgo H07: navegar con las flechas es consultar, no saltar.
+  it('mirar el paso siguiente NO deja el anterior como saltado', () => {
+    const pasos = [paso('Avisar'), paso('Respaldar'), paso('Desconectar')]
+    // El técnico está mirando el paso 3 sin haber hecho ni saltado nada.
+    const resumen = resumirPasos(pasos, vacio, vacio, 2)
+
+    expect(resumen.map((r) => r.estado)).toEqual(['pendiente', 'pendiente', 'actual'])
+  })
+
+  it('un paso saltado que se completa deja de estar saltado', () => {
+    const pasos = [paso('Avisar'), paso('Respaldar')]
+    // El estado guardado quedó con el paso 1 en las dos listas: hecho
+    // manda, porque es lo último que pasó.
+    const resumen = resumirPasos(pasos, new Set([pasos[0].id]), vacio, 1, new Set([pasos[0].id]))
+
+    expect(resumen[0].estado).toBe('hecho')
   })
 
   it('un paso hecho sigue hecho aunque se vuelva a él para revisarlo', () => {
@@ -29,11 +48,15 @@ describe('resumirPasos', () => {
     expect(resumen.map((r) => r.estado)).toEqual(['hecho', 'hecho'])
   })
 
-  it('sin paso actual nada queda "saltado": lo que falte está pendiente', () => {
+  it('sin paso actual, lo que falte está pendiente salvo lo saltado a propósito', () => {
     const pasos = [paso('Avisar'), paso('Respaldar')]
-    const resumen = resumirPasos(pasos, new Set([pasos[1].id]), vacio, null)
-
-    expect(resumen.map((r) => r.estado)).toEqual(['pendiente', 'hecho'])
+    expect(resumirPasos(pasos, new Set([pasos[1].id]), vacio, null).map((r) => r.estado)).toEqual([
+      'pendiente',
+      'hecho',
+    ])
+    expect(
+      resumirPasos(pasos, new Set([pasos[1].id]), vacio, null, new Set([pasos[0].id])).map((r) => r.estado),
+    ).toEqual(['saltado', 'hecho'])
   })
 
   it('cuenta las tareas del paso y cuántas van marcadas', () => {
@@ -100,7 +123,7 @@ describe('minutosRestantes', () => {
 describe('resumenDeAvance', () => {
   it('nombra los tres datos cuando los tres existen', () => {
     const pasos = [paso('a'), paso('b'), paso('c'), paso('d')]
-    const resumen = resumirPasos(pasos, new Set([pasos[0].id, pasos[1].id]), vacio, 3)
+    const resumen = resumirPasos(pasos, new Set([pasos[0].id, pasos[1].id]), vacio, 3, new Set([pasos[2].id]))
 
     expect(resumenDeAvance(resumen, 14)).toBe('2 hechos · 1 saltado · quedan ~14 min')
   })
@@ -114,7 +137,7 @@ describe('resumenDeAvance', () => {
 
   it('concuerda el singular y el plural', () => {
     const pasos = [paso('a'), paso('b'), paso('c')]
-    const resumen = resumirPasos(pasos, new Set([pasos[0].id]), vacio, 2)
+    const resumen = resumirPasos(pasos, new Set([pasos[0].id]), vacio, 2, new Set([pasos[1].id]))
 
     expect(resumenDeAvance(resumen, null)).toBe('1 hecho · 1 saltado')
   })

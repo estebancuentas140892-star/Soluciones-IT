@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { Modal } from '../../components/Modal'
-import { ArrowRight, Camera, CaretRight, Warning, Wrench } from '../../components/iconos'
+import { ArrowRight, Camera, CaretRight, Info, Warning, Wrench, X } from '../../components/iconos'
 import { fraseAvanceConservado } from './salidasFalla'
 
 // La hoja "Algo va mal en el paso N" (handoff "Diseño móvil", tablero
@@ -49,6 +49,17 @@ interface Props {
   onFotografiar: (() => void) | null
   // `null` cuando no hay a dónde saltar (ver `destinoAlSaltar`).
   onSaltar: (() => void) | null
+  /**
+   * Detenerse aquí: deja la falla anotada en el paso, conserva la
+   * posición y no avanza.
+   *
+   * Es la salida que faltaba (hallazgo H10). Sin contingencia
+   * vinculada, la hoja solo ofrecía "saltar el paso y seguir" o
+   * "cancelar", así que al técnico bloqueado se le presentaba el salto
+   * como si fuera la solución del fallo, y cancelar no dejaba rastro
+   * de que algo había salido mal.
+   */
+  onDetenerse: () => void
 }
 
 const ID_TITULO = 'hoja-falla-titulo'
@@ -103,6 +114,7 @@ export function HojaFalla({
   onAbrirContingencia,
   onFotografiar,
   onSaltar,
+  onDetenerse,
 }: Props) {
   // Solo se consulta con la hoja abierta: el paso en ejecución se
   // vuelve a pintar en cada marca de tarea y esta guía no se necesita
@@ -167,10 +179,16 @@ export function HojaFalla({
 
         {/* Sin vínculo la hoja lo dice en vez de callarlo: así el
             técnico sabe que no hay una guía esperándolo y deja de
-            buscarla. */}
+            buscarla. Y dice qué SÍ puede hacer, en vez de dejar el
+            salto como única salida (H10). */}
         {!solucionArticuloId && (
-          <p className="text-[12.5px] leading-normal text-noct-neutral-400">
-            Este paso no tiene una guía de contingencia vinculada.
+          <p className="flex items-start gap-2 rounded-[10px] border border-noct-divider px-3 py-2.5 text-[12.5px] leading-normal text-noct-neutral-300">
+            <Info size={15} className="mt-px shrink-0 text-noct-neutral-400" aria-hidden />
+            <span>
+              Este paso no tiene una guía de contingencia vinculada, así que aquí no hay una reparación
+              documentada que ofrecerte. Puedes detenerte y dejarlo anotado, o seguir con el resto del
+              procedimiento.
+            </span>
           </p>
         )}
 
@@ -178,10 +196,20 @@ export function HojaFalla({
           <Salida Icono={Camera} titulo="Fotografiar y anotar el problema" onClick={onFotografiar} />
         )}
 
+        {/* DETENERSE ES UNA SALIDA, Y VA ANTES QUE SALTAR: quien acaba
+            de declarar una falla lo más probable es que necesite parar,
+            no adelantar trabajo. */}
+        <Salida
+          Icono={X}
+          titulo="Detenerme aquí y dejarlo anotado"
+          detalle="No avanza ni marca nada. Vuelves a este mismo paso con la falla señalada"
+          onClick={onDetenerse}
+        />
+
         {onSaltar && (
           <Salida
             Icono={ArrowRight}
-            titulo="Saltar el paso y seguir"
+            titulo="Seguir con el paso siguiente, sin resolver este"
             detalle="Queda sin marcar y el índice lo señala como saltado"
             onClick={onSaltar}
           />

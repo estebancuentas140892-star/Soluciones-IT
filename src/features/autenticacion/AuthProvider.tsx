@@ -13,6 +13,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) {
+      // BANCO DE PRUEBAS LOCAL, SOLO EN DESARROLLO.
+      //
+      // La condicion se escribe INLINE y con `import.meta.env.DEV` como
+      // primer termino a proposito: en el build de produccion Vite lo
+      // sustituye por `false`, Rollup elimina la rama entera y con ella
+      // el import dinamico, asi que el modulo del banco ni siquiera
+      // llega a empaquetarse. Con la bandera en otro modulo el chunk
+      // `semillaLocal` SI aparecia en `dist`.
+      //
+      // Ademas hay que pedirlo a mano con VITE_MODO_PRUEBA_LOCAL=1 en un
+      // `.env.local`, que no se versiona.
+      if (import.meta.env.DEV && import.meta.env.VITE_MODO_PRUEBA_LOCAL === '1') {
+        void import('../../pruebas/semillaLocal')
+          .then(async (m) => {
+            await m.sembrarBancoDePruebas()
+            setSession(m.SESION_PRUEBA)
+          })
+          .finally(() => setCargando(false))
+        return
+      }
       setCargando(false)
       return
     }
