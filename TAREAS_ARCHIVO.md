@@ -4,6 +4,30 @@
 
 Ninguna de estas se implementó en esta fecha. Se trasladaron desde TAREAS.md, donde ocupaban sitio en "Por hacer" o en "En proceso" pese a estar terminadas, absorbidas o cubiertas por otras. La única con trabajo real hecho hoy es la **178**.
 
+### 233. Informe del 2026-09-08: alcance por tarea, guías vinculadas y catálogo móvil (H01 a H12, A01 a A18)
+
+**Estado:** finalizada y desplegada el 2026-09-09. **Prioridad:** alta. **Origen:** documento "Soluciones IT — Informe y encargo de implementación" (8 de septiembre de 2026), entregado por el usuario.
+
+**Qué se hizo,** en el orden que pedía el encargo:
+
+1. **Guías vinculadas.** `src/features/soluciones/tareasFoco.ts` (la guía del paso entra como primera tarea del recorrido), `ModoFoco.tsx` (la ejecuta ahí mismo), `AsistenteVista.tsx` (`SubProcedimientoEnAsistente` con `obligatoria`/`rutaOrigen`), `FilaVinculo.tsx` (acepta `state` para que el regreso deshaga el salto).
+2. **Contenido y apoyos por tarea.** `src/lib/db.ts` (`alcance`, `tareaId`, tipos `archivo` y `guia`, `IntencionGuia`), `src/lib/procedimiento.ts` (normalización, saneo de referencias, duplicado), `src/features/soluciones/apoyosTarea.ts` (nuevo, la partición), `bloquesEditor.ts` (nuevo, las operaciones del editor), `PasosEditor.tsx` (catálogo de ocho tipos, "Añadir" por tarea, selector de destino, mover con apoyos, dato protegido de tarea).
+3. **Catálogo, categorías móviles y "Sin terminar".** `SolucionesPage.tsx`, `Chasis.tsx` (fuera la barra flotante y el punto de la pestaña), `HojaFiltro.tsx` (una columna), `BarraAccionFicha.tsx` ("Empezar de nuevo"), `memoriaScroll.ts` (la limpieza ya no pisa la posición con un 0).
+4. **Navegación, verificaciones, decisiones y fallas.** `estadoPasos.ts` y `progresoPasos.ts` (`pasosSaltados`), `HojaFalla.tsx` ("Detenerme aquí"), `HojaPasos.tsx` y `ProcedimientoVista.tsx` (comprobaciones finales legibles desde el primer paso), `validacionVinculos.ts` (nuevo).
+5. **Búsqueda, compatibilidad y pruebas.** `InicioPage.tsx`, `ArticuloForm.tsx`, `ArticuloPage.tsx`, `completitudArticulo.ts` (los apoyos heredados se cuentan y se piden).
+
+**Esquema:** ninguno en `supabase/schema.sql`. Los campos nuevos del bloque viven dentro del JSON de `articulos.procedimiento`, y `pasosSaltados` dentro de `progresoPasos`, que es una tabla local y no se sincroniza. No hace falta ejecutar SQL.
+
+**Pruebas:** 88 archivos, 1118 casos, todo en verde; lint y build limpios. Módulos nuevos con prueba propia: `apoyosTarea` (11), `bloquesEditor` (14), `validacionVinculos` (11), más los casos añadidos a `tareasFoco`, `estadoPasos`, `completitudArticulo` y `procedimiento` (ida y vuelta de una guía escrita antes del cambio).
+
+**Verificación en navegador:** banco de pruebas local (`src/pruebas/semillaLocal.ts`, solo desarrollo) con Chrome headless por CDP a 360, 390 y 430 px. Recorridos comprobados: guía vinculada completa y regreso; abandono a medias sin marcarla completada; apoyo de la tarea 1 ausente en las tareas 2 y 3; reordenar una tarea conservando sus apoyos; volver al catálogo reponiendo categoría, búsqueda y posición; comprobaciones finales consultadas sin marcar nada; vínculo roto explicado. Sin desbordamiento horizontal en ninguno de los tres anchos.
+
+**Lo que queda fuera y por qué:**
+
+- **H12** (la decisión del paso 4 del diagnóstico de impresión bloqueada) no se tocó: el encargo pide verificar el destino "contra el contenido real", y el contenido real vive en Supabase, fuera del alcance de esta sesión. El mecanismo de decisión sí se revisó y se le añadió validación de destino.
+- La **exposición de borradores** en la lista de Guías se dejó como estaba: cambiarla es una decisión de permisos del equipo, no de interfaz. Lo que se corrigió es que el buscador de Inicio explique la diferencia.
+- La **prueba en dispositivo físico** no se hizo: toda la verificación móvil es emulación (viewport y touch emulados en Chrome).
+
 ### 160. Procedimientos e incidencias por categoría en la ficha del equipo (hallazgo H1)
 
 **Cierre (depuración del 2026-09-04).** CERRADA el 2026-07-23 (hallazgo H1). Estaba en "Por hacer" con su propio estado ya en "Completada": se traslada aquí en la depuración del 2026-09-04.

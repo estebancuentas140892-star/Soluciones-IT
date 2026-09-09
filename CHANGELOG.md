@@ -6,6 +6,36 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-09
+
+### Agregado (tarea 233): alcance por tarea, guías vinculadas alcanzables y catálogo móvil
+
+**Área modificada:** Guías (catálogo, editor y ejecución) y el chasis. **Nuevos:** `src/features/soluciones/apoyosTarea.ts`, `src/features/soluciones/bloquesEditor.ts`, `src/features/soluciones/validacionVinculos.ts` (los tres con prueba) y `src/pruebas/semillaLocal.ts` (banco de pruebas, solo desarrollo). **Modificados:** `src/lib/db.ts`, `src/lib/procedimiento.ts`, `src/lib/progresoPasos.ts`, `src/app/Chasis.tsx`, `src/app/memoriaScroll.ts`, `src/components/BarraAccionFicha.tsx`, `src/components/HojaFiltro.tsx`, `src/features/soluciones/{ModoFoco,AsistenteVista,ProcedimientoVista,PasosEditor,ArticuloForm,ArticuloPage,SolucionesPage,HojaPasos,HojaFalla,FilaVinculo,tareasFoco,estadoPasos,completitudArticulo}.*`, `src/features/inicio/InicioPage.tsx`, `src/features/autenticacion/AuthProvider.tsx`.
+**Motivo:** informe "Soluciones IT — Informe y encargo de implementación" del **8 de septiembre de 2026**, hallazgos **H01 a H12** y criterios de aceptación **A01 a A18**.
+**Impacto esperado:** un paso de tres tareas pasa de mostrar sus apoyos tres veces a mostrarlos donde corresponde; la guía vinculada de un paso pasa de inalcanzable en el modo por defecto a ser su primera tarea. **Sin cambios en `supabase/schema.sql`:** los campos nuevos viven dentro del JSON de `articulos.procedimiento` y de la tabla local `progresoPasos`.
+
+- **Agregado** el **alcance de un apoyo** (`BloquePaso.alcance` y `tareaId`) y dos tipos de bloque nuevos, `archivo` y `guia`. Un apoyo dice a qué tarea pertenece; `tareaId` es un id estable, así que reordenar no lo desengancha.
+- **Corregido (H03, H04; A04, A05)** el modo de una tarea a la vez tomaba `paso.bloques.filter(aviso)`, `filter(imagen)` y la galería del paso y los pintaba en TODAS las tareas. Ahora los reparte `apoyosTarea.ts`: los de la tarea van con ella, los del paso se muestran una vez al entrar y quedan tras el control "Del paso".
+- **Corregido (H05; A09, A10)** la guía vinculada de un paso (`subArticuloId`) no se mostraba en ninguna parte del modo por defecto: solo había un botón apagado con "Termina el procedimiento vinculado para poder avanzar". Ahora es la **primera tarea** del recorrido, se ejecuta ahí mismo, no se puede marcar a mano y terminarla adelanta sola.
+- **Corregido (A10)** los vínculos que salen de la pantalla prometían "vuelves aquí al terminar" con un `<Link>` sin estado, así que el regreso caía en la lista de Guías. Ahora viaja el origen (`conOrigen`) y el regreso deshace el salto.
+- **Corregido (A12)** una guía vinculada que no está en el dispositivo contaba como satisfecha y el recorrido arrancaba en la tarea siguiente, así que el motivo no se leía nunca. Ahora el foco empieza ahí, explica qué falta y aclara que no impide cerrar el paso.
+- **Agregado (H03, editor)** el catálogo de los **ocho tipos de contenido** en una hoja con su nombre y para qué sirve, y el control "Añadir" dentro de cada tarjeta de tarea. El alcance por defecto es la tarea seleccionada, y el título de la hoja lo dice antes de elegir.
+- **Agregado** el selector de destino de cada apoyo, el movimiento de una tarea **con sus apoyos** (`moverTareaConApoyos`) y el vínculo a un **dato protegido de una tarea**, que el modelo soportaba desde la tarea 40 y el editor nunca dejó rellenar.
+- **Corregido (editor, requisito 7)** salir del tipo "decisión" soltaba el vínculo del "No" en silencio. Ahora se aplica y se dice qué quedó fuera.
+- **Retirado (H01; A01)** el bloque "Sin terminar" del catálogo de Guías, **y con él** la barra flotante "Seguir" y el punto de la pestaña Guías: salían del mismo dato, y dejar dos de las tres formas habría conservado la misma obligación. No se borra ningún avance; "Empezar de nuevo" pasa a estar junto a "Seguir en el paso N de M", dentro de la guía.
+- **Cambiado (H02; A02)** el carrusel de categorías (en 360 px cabían una y media, y desaparecía al buscar) por un control fijo con el nombre de la categoría activa más una hoja con todas, nombre completo y conteo. `HojaFiltro` pasa a una columna: la rejilla de dos recortaba "Impresor…" y "Control d…".
+- **Corregido (A03)** volver desde una guía perdía la búsqueda y la posición. El término viaja a la URL con rebote de 400 ms, y la memoria de scroll deja de guardar el 0 al que el navegador recorta el scroll cuando la pantalla nueva ya sustituyó la lista.
+- **Corregido (H07; A13)** "saltado" se deducía de la posición, así que mirar el paso siguiente marcaba el anterior como saltado. Ahora es un acto anotado en `progresoPasos.pasosSaltados`, y las flechas se anuncian como consulta.
+- **Corregido (H08)** una verificación decía "Marcar hecha" igual que una instrucción. Ahora dice "Sí, lo comprobé" y su salida se llama "No se cumple".
+- **Corregido (H10)** la hoja de falla sin contingencia solo ofrecía saltar o cancelar. Ahora explica que no hay reparación documentada y ofrece detenerse dejándolo anotado.
+- **Corregido (H11; A15)** las comprobaciones finales solo existían tras marcar el último paso. Ahora se leen desde el primero, en el índice de pasos y en la ficha, en solo lectura.
+- **Corregido (H09; A16)** Inicio decía "Sin coincidencias" y ofrecía "Crear equipo" para un término que sí encontraba un borrador en Guías. Ahora explica la diferencia de alcance y ofrece ir a verlos. El aviso "no aparece en el buscador" pasa a decir la verdad completa.
+- **Agregado (sección 5, punto 10)** validación de destinos al configurar un vínculo: ciclo, borrador o guía que no está.
+- **Corregido de paso** marcar un paso borraba el vínculo de **toda la evidencia fotográfica** del artículo: cada escritor de `progresoPasos` rearmaba el registro a mano y `evidenciasPorPaso` no estaba en la lista. Ahora se guarda mezclando.
+- **Corregido de paso** los bloques `archivo` y `guia` caían en la rama de tarea de la lectura completa y salían como una casilla con el texto vacío.
+- **Compatibilidad (sección 8; A17):** el contenido anterior se conserva entero. Un apoyo sin `alcance` queda **'sin-asignar'**: se muestra una vez al entrar al paso, nunca se reparte entre las tareas, y el editor lo marca en ámbar con su explicación y lo cuenta como sugerencia de completitud. Duplicar una guía traduce las referencias `tareaId` a las tareas de la copia.
+- **Agregado (solo desarrollo)** un banco de pruebas local con datos inventados, tras `import.meta.env.DEV` y `VITE_MODO_PRUEBA_LOCAL=1`. Comprobado por `grep` sobre `dist` que no deja rastro en el build de producción.
+
 ## 2026-09-04
 
 ### Agregado (tarea 219): el editor guarda solo, y los pasos se pliegan
