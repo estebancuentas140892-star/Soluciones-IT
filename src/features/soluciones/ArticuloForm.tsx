@@ -57,6 +57,7 @@ import {
   limpiarBorradoresViejos,
 } from './borradorArticulo'
 import { etiquetasFrecuentes, normalizarEtiquetas, type GrafiaEtiqueta } from './etiquetas'
+import { apoyosSinAsignar } from './apoyosTarea'
 import { PasosEditor } from './PasosEditor'
 import { ProveedorAccionesPaso } from './ranuraAccionesPaso'
 import { DialogoProbarPaso } from './DialogoProbarPaso'
@@ -561,6 +562,7 @@ export function ArticuloForm() {
           verificacionFinal,
           objetivoGeneral,
           contenido,
+          apoyosSinAsignar: pasos.reduce((suma, paso) => suma + apoyosSinAsignar(paso).length, 0),
         }),
       ),
     [
@@ -1133,7 +1135,8 @@ export function ArticuloForm() {
               <span className={CLASE_ETIQUETA}>Estado</span>
               <Segmentado opciones={ESTADOS} valor={estado} onCambiar={(v) => setEstado(v)} />
               <p className="text-xs leading-[1.5] text-noct-neutral-500">
-                Un borrador u obsoleto no aparece en el buscador ni en el diagnóstico.
+                Un borrador u obsoleto no sale en el buscador global ni en el diagnóstico. Sí aparece en la
+                lista de Guías, marcado como borrador.
               </p>
             </div>
 

@@ -167,7 +167,8 @@ export function ArticuloPage() {
           <div className="flex items-start gap-2.5 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-3 py-2.5">
             <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
             <p className="text-[13px] leading-normal">
-              Borrador. No aparece en el buscador, las rutas de inicio ni el diagnóstico.
+              Borrador. No sale en el buscador global, las rutas de inicio ni el diagnóstico. Sí aparece en la
+              lista de Guías, marcado como borrador.
             </p>
           </div>
         )}

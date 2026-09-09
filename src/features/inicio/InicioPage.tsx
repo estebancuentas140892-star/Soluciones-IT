@@ -10,6 +10,7 @@ import { DescargarOffline } from '../../components/DescargarOffline'
 import { SeccionPlegable } from '../../components/SeccionPlegable'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
+  BookOpen,
   CaretDown,
   CaretRight,
   ChartBar,
@@ -31,6 +32,7 @@ import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { agruparResultados, VISUAL_POR_TIPO } from '../busqueda/resultados'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
+import { coincidenciaArticulo } from '../soluciones/coincidencia'
 import { useReanudar } from '../soluciones/useReanudar'
 import {
   ETIQUETA_ACCION_CAMBIO,
@@ -96,6 +98,28 @@ export function InicioPage() {
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
+
+  // ALCANCES DISTINTOS, DICHOS EN VOZ ALTA (hallazgo H09, criterio A16).
+  //
+  // El buscador global solo indexa lo PUBLICADO (`useIndiceBusqueda`
+  // filtra por estado), mientras que la lista de Guías muestra también
+  // los borradores marcados como tales. Buscar "almuerzo" aquí decía
+  // "Sin coincidencias" y ofrecía "Crear equipo", mientras que la misma
+  // palabra en Guías encontraba el borrador: la diferencia era real y
+  // no estaba explicada en ninguna parte.
+  //
+  // No se cambia el alcance (un borrador no debe aparecer como si fuera
+  // procedimiento oficial del equipo): se cuenta cuántos hay y se
+  // ofrece ir a verlos, identificados como borradores.
+  const borradores = useLiveQuery(
+    () => db.articulos.filter((a) => !a.eliminadoEn && (a.estado ?? 'publicado') !== 'publicado').toArray(),
+    [],
+    [],
+  )
+  const borradoresQueCoinciden = useMemo(
+    () => (consulta ? borradores.filter((a) => coincidenciaArticulo(a, consulta, '') !== null).length : 0),
+    [borradores, consulta],
+  )
 
   const recientes = useLiveQuery(() => obtenerRecientes(), [], [])
   const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
@@ -197,13 +221,39 @@ export function InicioPage() {
               <div>
                 <p className="text-[14.5px] font-medium">Sin coincidencias</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                  Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
+                  Nada coincide con "{consultaCruda}" en las guías publicadas, los equipos ni la bóveda. Prueba
+                  otra palabra o revisa la ortografía.
                 </p>
+                {/* La diferencia de alcance, dicha donde se nota
+                    (H09/A16). Solo aparece cuando de verdad hay algo que
+                    ofrecer, y dice qué es: un borrador, no una guía
+                    publicada. */}
+                {borradoresQueCoinciden > 0 && (
+                  <p className="mt-2 text-[13px] leading-relaxed text-noct-neutral-300">
+                    Hay{' '}
+                    {borradoresQueCoinciden === 1
+                      ? '1 borrador que coincide'
+                      : `${borradoresQueCoinciden} borradores que coinciden`}
+                    . Los borradores no entran en esta búsqueda porque todavía no son procedimientos del
+                    equipo, pero puedes verlos en Guías.
+                  </p>
+                )}
               </div>
-              {/* Crear desde el buscador sin resultados (hallazgo H9): si
-                  el equipo no existe, se registra sin cambiar de módulo,
-                  con el texto buscado precargado como nombre. */}
+              {/* Salidas del estado vacío (hallazgo H9 y H09). "Crear
+                  equipo" ya no es la única: primero se ofrece seguir
+                  buscando donde el alcance es otro, y solo después
+                  registrar algo nuevo. */}
               <div className="mt-0.5 flex flex-wrap justify-center gap-2">
+                {borradoresQueCoinciden > 0 && (
+                  <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
+                    <BookOpen size={15} aria-hidden />
+                    Ver los borradores en Guías
+                  </Link>
+                )}
+                <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
+                  <MagnifyingGlass size={15} aria-hidden />
+                  Buscar solo en Guías
+                </Link>
                 <Link
                   to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
                   className={BTN_SECUNDARIO}
