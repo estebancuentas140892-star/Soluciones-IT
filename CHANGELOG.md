@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Corregido (tarea 234, sección 3): la precaución del paso dejaba de verse una vez al abrir "Del paso"
+
+**Área modificada:** ejecución de Guías, modo de una tarea a la vez. **Modificados:** `src/features/soluciones/apoyosTarea.ts` (+ 6 pruebas), `src/features/soluciones/ModoFoco.tsx`.
+**Motivo:** sección 3 del encargo del **9 de septiembre de 2026**: "al desplegar el contenido 'Del paso', una misma precaución puede mostrarse dos veces".
+**Impacto esperado:** un contenido se renderiza **una sola vez**, en el lugar que le toca. **Sin esquema. Sin tocar ninguna guía existente.**
+
+- **Causa real, y no era la que parecía.** No venía del dato ni del reparto: `apoyosDeTarea` y `apoyosDelPaso` devuelven cada bloque una sola vez, y los apoyos heredados ('sin-asignar') caen en los del paso, también una sola vez. Venía de que **`ModoFoco` tenía dos sitios pintando la misma lista** y sus condiciones se solapaban: los avisos sueltos se mostraban si `enPrimeraTarea || panel === 'paso'`, y el panel "Del paso" pinta exactamente esos avisos. Abrir el control dibujaba la precaución arriba y otra vez dentro del panel.
+- **Corregido** la decisión de dónde va cada cosa sale del componente y pasa a **`ubicacionApoyosDelPaso`**, que devuelve un solo destino de tres ('sueltos', 'panel', 'ninguno'). Al ser excluyentes por construcción, la duplicación deja de ser representable; seis pruebas la fijan, incluida la vuelta a la tarea 1 con el panel abierto, que era el otro camino al mismo defecto.
+- **Corregido de paso** el chip "Del paso" se ocultaba en la **primera tarea**, con el argumento de que ahí los apoyos ya se ven. Solo se ven los **avisos**: la galería del paso, sus imágenes y su dato protegido no tenían ningún control que los abriera mientras el técnico estuviera en la tarea 1. Ahora el chip está siempre que haya algo del paso, y sirve además para cerrar el panel donde se abrió.
+- **Comprobado en navegador** con una guía escrita antes del campo `alcance`: el aviso heredado sale una vez con "Del paso" cerrado y una vez con él abierto (nunca dos); asignado desde el editor a la tarea 1, aparece solo en la tarea 1 y desaparece de la 2 y la 3.
+
 ### Cambiado (tarea 234, sección 1): la tarjeta de una guía se reparte en tres zonas y el título manda
 
 **Área modificada:** catálogo de Guías. **Modificados:** `src/features/soluciones/FilaArticulo.tsx`, `src/features/soluciones/SolucionesPage.tsx`, `src/pruebas/semillaLocal.ts` (banco de pruebas, solo desarrollo), `COMPONENTES_UI.md`, `DOCUMENTACION_FUNCIONAL.md`.

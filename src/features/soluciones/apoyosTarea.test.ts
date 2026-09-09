@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { BloquePaso, PasoProcedimiento } from '../../lib/db'
 import { CAMPOS_BLOQUE_VACIOS, normalizarProcedimiento } from '../../lib/procedimiento'
-import { apoyosDelPaso, apoyosDeTarea, apoyosSinAsignar, cuentaApoyos, hayApoyos } from './apoyosTarea'
+import {
+  apoyosDelPaso,
+  apoyosDeTarea,
+  apoyosSinAsignar,
+  cuentaApoyos,
+  hayApoyos,
+  ubicacionApoyosDelPaso,
+} from './apoyosTarea'
 
 function bloque(parcial: Partial<BloquePaso> & { id: string; tipo: BloquePaso['tipo'] }): BloquePaso {
   return { ...CAMPOS_BLOQUE_VACIOS, ...parcial }
@@ -156,5 +163,55 @@ describe('contenido heredado', () => {
     expect(apoyosDeTarea(p, 't1').avisos).toEqual([])
     expect(apoyosDelPaso(p).avisos.map((b) => b.texto)).toEqual(['Colgaba de la borrada'])
     expect(apoyosSinAsignar(p)).toHaveLength(1)
+  })
+})
+
+describe('ubicacionApoyosDelPaso', () => {
+  // La regla de la seccion 3 del encargo del 2026-09-09: un contenido se
+  // renderiza UNA sola vez, en el lugar que le corresponde. Estos casos
+  // fijan que los tres destinos son excluyentes, que es lo que hace
+  // imposible la duplicacion que se reporto.
+  it('al entrar al paso van pegados a la instruccion', () => {
+    expect(
+      ubicacionApoyosDelPaso({ esTareaReal: true, enPrimeraTarea: true, panelDelPasoAbierto: false }),
+    ).toBe('sueltos')
+  })
+
+  it('en las tareas siguientes no se repiten', () => {
+    expect(
+      ubicacionApoyosDelPaso({ esTareaReal: true, enPrimeraTarea: false, panelDelPasoAbierto: false }),
+    ).toBe('ninguno')
+  })
+
+  it('con el panel abierto viven SOLO dentro del panel', () => {
+    // Este es el caso que se duplicaba: la condicion de los sueltos
+    // incluia "o el panel esta abierto", y el panel pinta la misma
+    // lista, asi que la precaucion salia dos veces.
+    expect(
+      ubicacionApoyosDelPaso({ esTareaReal: true, enPrimeraTarea: false, panelDelPasoAbierto: true }),
+    ).toBe('panel')
+  })
+
+  it('abrir el panel en la tarea 2 y volver a la 1 tampoco los duplica', () => {
+    expect(
+      ubicacionApoyosDelPaso({ esTareaReal: true, enPrimeraTarea: true, panelDelPasoAbierto: true }),
+    ).toBe('panel')
+  })
+
+  it('un paso sin tareas los muestra sueltos: no hay entre que repartir', () => {
+    expect(
+      ubicacionApoyosDelPaso({ esTareaReal: false, enPrimeraTarea: false, panelDelPasoAbierto: false }),
+    ).toBe('sueltos')
+  })
+
+  it('nunca devuelve dos destinos a la vez', () => {
+    for (const esTareaReal of [true, false]) {
+      for (const enPrimeraTarea of [true, false]) {
+        for (const panelDelPasoAbierto of [true, false]) {
+          const donde = ubicacionApoyosDelPaso({ esTareaReal, enPrimeraTarea, panelDelPasoAbierto })
+          expect(['sueltos', 'panel', 'ninguno']).toContain(donde)
+        }
+      }
+    }
   })
 })

@@ -12,7 +12,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 1. **Presentación de los títulos de las guías. COMPLETADA.** `FilaArticulo` pasa de una fila de cuatro elementos a **tres zonas apiladas** (título / metadatos / acción) y `SolucionesPage` sube los cortes de columna a `@2xl` y `@5xl`. Detalle en [CHANGELOG.md](CHANGELOG.md).
 2. **Contenido asignado a cada tarea (recorrido completo).** Pendiente de verificación extremo a extremo.
-3. **Avisos duplicados y contenido antiguo "Sin asignar".** Pendiente.
+3. **Avisos duplicados y contenido antiguo "Sin asignar". COMPLETADA.** La duplicación no venía del dato: `ModoFoco` tenía dos sitios pintando la misma lista de avisos del paso y sus condiciones se solapaban con el panel abierto. La decisión pasa a `ubicacionApoyosDelPaso` (tres destinos excluyentes, seis pruebas). El contenido heredado ya se conservaba, se señalaba en ámbar y se podía asignar a mano; comprobado el recorrido entero en navegador.
 4. **Guías vinculadas, recorrido completo.** Pendiente.
 5. **Diferencia entre consultar, completar y saltar.** Pendiente.
 6. **Decisiones, verificaciones y fallas.** Pendiente.

@@ -15,7 +15,14 @@ import {
 } from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
-import { apoyosDelPaso, apoyosDeTarea, cuentaApoyos, hayApoyos, type Apoyos } from './apoyosTarea'
+import {
+  apoyosDelPaso,
+  apoyosDeTarea,
+  cuentaApoyos,
+  hayApoyos,
+  ubicacionApoyosDelPaso,
+  type Apoyos,
+} from './apoyosTarea'
 import { accionFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
 import { tonoInfo } from './tonos'
 
@@ -159,8 +166,22 @@ export function ModoFoco({
   // del editor). En la primera tarea van desplegados, que es "entrar al
   // paso"; a partir de ahí quedan detrás de su propio control, para
   // poder volver a consultarlos sin que reaparezcan solos.
-  const enPrimeraTarea = indice === 0
-  const mostrarApoyosDelPaso = tarea.clase !== 'tarea' || enPrimeraTarea || panel === 'paso'
+  //
+  // UNA VEZ, NO DOS (encargo del 2026-09-09, sección 3). La condición
+  // incluía `|| panel === 'paso'`, y el panel "Del paso" pinta ESOS
+  // MISMOS avisos: abrir el control dibujaba la precaución suelta arriba
+  // y otra vez dentro del panel. Es la duplicación que reportó el
+  // usuario, y no venía del dato ni del reparto de `apoyosTarea`, que
+  // devuelve cada bloque una sola vez: venía de dos sitios de esta vista
+  // pintando la misma lista a la vez. La decisión de dónde va cada cosa
+  // se mudó a `ubicacionApoyosDelPaso`, donde los tres destinos son
+  // excluyentes por construcción y hay prueba.
+  const ubicacionDelPaso = ubicacionApoyosDelPaso({
+    esTareaReal: tarea.clase === 'tarea',
+    enPrimeraTarea: indice === 0,
+    panelDelPasoAbierto: panel === 'paso',
+  })
+  const mostrarApoyosDelPaso = ubicacionDelPaso === 'sueltos'
   const hayApoyosDelPaso = hayApoyos(delPaso)
 
   function marcar() {
@@ -286,7 +307,15 @@ export function ModoFoco({
           apoyos={apoyos}
           delPaso={delPaso}
           conVinculoProtegido={Boolean(vinculoProtegido)}
-          mostrarChipDelPaso={hayApoyosDelPaso && tarea.clase === 'tarea' && !enPrimeraTarea}
+          // EL CHIP TAMBIÉN EN LA PRIMERA TAREA. Llevaba `!enPrimeraTarea`,
+          // y ahí los apoyos del paso se pintan sueltos, así que parecía
+          // redundante. No lo era: sueltos solo se pintan los AVISOS, de
+          // modo que la galería del paso, sus imágenes y su dato
+          // protegido no tenían ningún control que los abriera mientras
+          // el técnico estuviera en la tarea 1. Ahora el chip está
+          // siempre que haya algo del paso, y sirve además para cerrar
+          // el panel donde se abrió.
+          mostrarChipDelPaso={hayApoyosDelPaso && tarea.clase === 'tarea'}
           panel={panel}
           onPanel={(p) => setPanel(panel === p ? null : p)}
         />
