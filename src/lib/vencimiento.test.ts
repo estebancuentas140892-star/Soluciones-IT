@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { descripcionVencida, estadoVencimiento, proximoVencimiento, vencimientoDesactualizado } from './vencimiento'
+import { afterAll, describe, expect, it } from 'vitest'
+import {
+  descripcionVencida,
+  diasDeCalendario,
+  estadoVencimiento,
+  proximoVencimiento,
+  vencimientoDesactualizado,
+} from './vencimiento'
 
 const HOY = new Date('2026-07-09T12:00:00')
 
@@ -42,6 +48,93 @@ describe('descripcionVencida', () => {
 
   it('sigue contando aunque venciera hace mucho', () => {
     expect(descripcionVencida('2026-01-01', HOY)).toBe('Venció hace 189 días')
+  })
+
+  it('no inventa una antigüedad con una fecha ilegible', () => {
+    // Antes decía "Venció hace NaN días" en la fila de la Bóveda.
+    expect(descripcionVencida('no-es-fecha', HOY)).toBe('Venció')
+    expect(descripcionVencida('2026-02-31', HOY)).toBe('Venció')
+  })
+
+  it('no depende de la hora del día', () => {
+    const respuestas = new Set(
+      [0, 1, 6, 12, 18, 23].map((h) => descripcionVencida('2026-07-06', new Date(2026, 6, 9, h, 30))),
+    )
+    expect([...respuestas]).toEqual(['Venció hace 3 días'])
+  })
+})
+
+// EL DEFECTO DEL HUSO, REPRODUCIDO (encargo del 2026-09-09, cambio 6).
+//
+// Se cambia `process.env.TZ` dentro del propio archivo porque la máquina
+// de desarrollo está en America/Bogota, que NO tiene horario de verano:
+// sin un huso que lo tenga, el defecto no se manifiesta y la prueba no
+// probaría nada. Node relee la zona en cada operación de fecha, así que
+// basta con asignarla y devolverla al terminar. Vitest aísla cada
+// archivo en su propio proceso, así que esto no alcanza al resto.
+describe('días de calendario en un huso con horario de verano', () => {
+  const TZ_ORIGINAL = process.env.TZ
+  afterAll(() => {
+    process.env.TZ = TZ_ORIGINAL
+  })
+
+  // Santiago de Chile adelanta la hora en septiembre y la atrasa en
+  // abril: los dos sentidos del cambio caen dentro de estos rangos.
+  function conHuso<T>(zona: string, hacer: () => T): T {
+    const previo = process.env.TZ
+    process.env.TZ = zona
+    try {
+      return hacer()
+    } finally {
+      process.env.TZ = previo
+    }
+  }
+
+  it('cuenta 19 días donde la resta de horas contaba 18 (cambio de septiembre)', () => {
+    conHuso('America/Santiago', () => {
+      expect(diasDeCalendario('2026-09-01', new Date(2026, 8, 20, 12))).toBe(-19)
+      expect(descripcionVencida('2026-09-01', new Date(2026, 8, 20, 12))).toBe('Venció hace 19 días')
+    })
+  })
+
+  it('tampoco se pasa de largo en el cambio de abril', () => {
+    conHuso('America/Santiago', () => {
+      expect(descripcionVencida('2026-03-25', new Date(2026, 3, 10, 12))).toBe('Venció hace 16 días')
+    })
+  })
+
+  it('el huso del norte da exactamente lo mismo', () => {
+    conHuso('Europe/Madrid', () => {
+      expect(descripcionVencida('2026-03-20', new Date(2026, 3, 10, 12))).toBe('Venció hace 21 días')
+    })
+    conHuso('America/Bogota', () => {
+      expect(descripcionVencida('2026-03-20', new Date(2026, 3, 10, 12))).toBe('Venció hace 21 días')
+    })
+    conHuso('UTC', () => {
+      expect(descripcionVencida('2026-03-20', new Date(2026, 3, 10, 12))).toBe('Venció hace 21 días')
+    })
+  })
+
+  it('el estado de la pastilla tampoco se corre un día', () => {
+    conHuso('America/Santiago', () => {
+      // Con el conteo por horas, un vencimiento a 31 días de distancia
+      // pasaba a leerse como 30 y encendía el ámbar un día antes.
+      expect(estadoVencimiento('2026-10-21', new Date(2026, 8, 20, 12))).toBeNull()
+      expect(estadoVencimiento('2026-10-20', new Date(2026, 8, 20, 12))).toBe('proxima')
+    })
+  })
+
+  it('un año entero cuenta día a día sin desviarse en ningún huso', () => {
+    for (const zona of ['America/Santiago', 'Europe/Madrid', 'Pacific/Auckland', 'UTC']) {
+      conHuso(zona, () => {
+        const hoy = new Date(2026, 0, 1, 12)
+        for (let i = 0; i <= 365; i++) {
+          const fecha = new Date(Date.UTC(2026, 0, 1 + i))
+          const iso = fecha.toISOString().slice(0, 10)
+          expect(diasDeCalendario(iso, hoy)).toBe(i)
+        }
+      })
+    }
   })
 })
 

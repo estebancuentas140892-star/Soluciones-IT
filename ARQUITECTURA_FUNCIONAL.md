@@ -291,7 +291,7 @@ Reglas asociadas: RN-016 (visibilidad), RN-017 (versión).
 
 ### 4.3 Credencial y Campo protegido
 
-Sin máquina de estados. Ciclo: alta, edición, borrado lógico. Del vencimiento (`vence_en`) se **deriva** un estado en cada lectura (`vencida`, `proxima` dentro de 30 días, o ninguno); nada se escribe en la base por ese cálculo.
+Sin máquina de estados. Ciclo: alta, edición, borrado lógico. Del vencimiento (`vence_en`) se **deriva** un estado en cada lectura (`vencida`, `proxima` dentro de 30 días, o ninguno); nada se escribe en la base por ese cálculo. El conteo es de **días de calendario**, no de horas transcurridas: se comparan los tres campos de la fecha en UTC (`diasDeCalendario`, en `src/lib/vencimiento.ts`), porque restar dos medianoches locales da 23 o 25 horas el día del cambio de horario y perdía un día. De "hoy" se lee su fecha local, que es el día que el técnico tiene en el teléfono.
 
 ### 4.4 Conexión, Ubicación, Persona
 

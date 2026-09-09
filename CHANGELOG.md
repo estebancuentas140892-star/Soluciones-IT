@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Corregido (tarea 234, cambio 6): los vencimientos se contaban en horas y perdían un día con el horario de verano
+
+**Área modificada:** Bóveda (vencimiento de credenciales). **Modificados:** `src/lib/vencimiento.ts`, `src/lib/vencimiento.test.ts` (+ 7 pruebas).
+**Motivo:** cambio 6 del encargo del **9 de septiembre de 2026**: el cálculo debe trabajar con **días de calendario** y dar el mismo resultado en cualquier huso.
+**Impacto esperado:** "Venció hace N días" y la pastilla ámbar/roja dejan de correrse un día. **Sin esquema. Sin cambios en los datos.**
+
+- **Causa.** `descripcionVencida` y `estadoVencimiento` restaban dos instantes **locales** y dividían entre 24 horas. Entre dos medianoches locales no siempre hay 24 horas: el día del cambio de horario hay **23 o 25**, así que `Math.floor` se dejaba un día. **Medido:** de 2026-09-01 a 2026-09-20 hay 19 días, y en `America/Santiago` (que cambia la hora en septiembre) la fórmula devolvía **18**. La misma resta decidía la pastilla, así que el ámbar podía encenderse un día antes.
+- **Corregido** con aritmética de calendario en un helper nuevo, **`diasDeCalendario`**: se leen los tres campos de la fecha y se comparan en **UTC**, que no tiene horario de verano, así que la diferencia es siempre un múltiplo exacto de 24 horas. De `hoy` se sigue leyendo su fecha **local**, porque "hoy" es el día que el técnico tiene en el teléfono.
+- **Corregido de paso** una fecha ilegible daba **"Venció hace NaN días"** en la fila de la Bóveda. Ahora se valida el formato y se rechaza lo imposible (`2026-02-31` se desbordaba a marzo en silencio); sin fecha legible dice solo "Venció".
+- **Corregido `estadoVencimiento` en el mismo cambio**, y no se deja anotado como pendiente: es exactamente la misma resta, en la misma función de al lado, y el encargo pide que el cálculo no dependa del huso. Dejarla habría entregado el defecto a medio arreglar.
+- **Pruebas que reproducen el defecto de verdad:** el archivo cambia `process.env.TZ` a `America/Santiago`, `Europe/Madrid`, `Pacific/Auckland` y `UTC`, porque la máquina de desarrollo está en `America/Bogota`, **que no tiene horario de verano**: sin un huso que lo tenga, el defecto no se manifiesta y la prueba no probaría nada. Incluye un barrido de **366 días** comprobando que el conteo avanza de uno en uno en los cuatro husos.
+
 ### Agregado (tarea 234, cambio 5): el contenido heredado queda blindado como partición
 
 **Área modificada:** reparto de apoyos. **Modificados:** `src/features/soluciones/apoyosTarea.test.ts` (+ 6 pruebas).
