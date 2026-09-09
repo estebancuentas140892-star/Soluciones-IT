@@ -3,9 +3,13 @@ import { db } from './db'
 import {
   alternarInstruccionHecha,
   alternarVerificacionFinal,
+  avanceDe,
   contarHechos,
   contarInstruccionesHechas,
+  ejecucionAbierta,
+  empezarEjecucion,
   establecerPasoHecho,
+  leerAvance,
   marcarPasoSaltado,
   quitarPasoSaltado,
   registrarEvidenciaPaso,
@@ -213,5 +217,129 @@ describe('contadores', () => {
     expect(contarInstruccionesHechas(hechas, ['t1', 't2', 't3'])).toBe(2)
     expect(contarInstruccionesHechas(hechas, ['tx', 'ty'])).toBe(0)
     expect(contarInstruccionesHechas(undefined, ['t1', 't2'])).toBe(0)
+  })
+})
+
+// PROGRESO DE LOS VINCULOS, AISLADO POR EJECUCION (encargo del
+// 2026-09-09, tarea 2). Lo que se comprueba aqui es que el avance de
+// una guia vinculada pertenece a la ejecucion que la exige, y no a la
+// guia vinculada ni a cualquier otra que la reutilice.
+describe('progreso de un vinculo dentro de una ejecucion', () => {
+  const vinculo = { raizId: 'guia-principal', vinculoId: 'guia-vinculada' }
+
+  it('guarda el avance del vinculo dentro de la fila de la ejecucion', async () => {
+    await establecerPasoHecho(vinculo, 'paso-v1', true, ['tv1'])
+
+    const fila = await db.progresoPasos.get('guia-principal')
+    expect(fila?.vinculos?.['guia-vinculada']?.pasosHechos).toEqual(['paso-v1'])
+    expect(fila?.vinculos?.['guia-vinculada']?.instruccionesHechas).toEqual(['tv1'])
+    // La guia principal no se da por avanzada por lo que hizo su vinculo.
+    expect(fila?.pasosHechos).toEqual([])
+  })
+
+  it('no toca la fila propia de la guia vinculada', async () => {
+    await establecerPasoHecho(vinculo, 'paso-v1', true)
+    expect(await db.progresoPasos.get('guia-vinculada')).toBeUndefined()
+  })
+
+  it('no da por cumplido el vinculo porque esa guia se completara antes por su cuenta', async () => {
+    await establecerPasoHecho('guia-vinculada', 'paso-v1', true)
+    expect(await leerAvance(vinculo)).toBeUndefined()
+  })
+
+  it('separa el avance de dos guias principales que reutilizan el mismo procedimiento', async () => {
+    await establecerPasoHecho({ raizId: 'guia-a', vinculoId: 'compartida' }, 'paso-1', true)
+
+    expect((await leerAvance({ raizId: 'guia-a', vinculoId: 'compartida' }))?.pasosHechos).toEqual([
+      'paso-1',
+    ])
+    expect(await leerAvance({ raizId: 'guia-b', vinculoId: 'compartida' })).toBeUndefined()
+  })
+
+  it('conserva el avance del vinculo si se abandona y se vuelve', async () => {
+    await alternarInstruccionHecha(vinculo, 'paso-v1', 'tv1', ['tv1', 'tv2'])
+    // Salir y volver es releer: nada mas.
+    expect((await leerAvance(vinculo))?.instruccionesHechas).toEqual(['tv1'])
+  })
+
+  it('reiniciar la guia principal reinicia sus dependencias de esa ejecucion', async () => {
+    await establecerPasoHecho('guia-principal', 'paso-1', true)
+    await establecerPasoHecho(vinculo, 'paso-v1', true)
+
+    await reiniciarProgreso('guia-principal')
+
+    expect(await leerAvance(vinculo)).toBeUndefined()
+    expect(await db.progresoPasos.get('guia-principal')).toBeUndefined()
+  })
+
+  it('reiniciar un vinculo deja intacto el resto de la ejecucion', async () => {
+    await establecerPasoHecho('guia-principal', 'paso-1', true)
+    await establecerPasoHecho(vinculo, 'paso-v1', true)
+    await establecerPasoHecho({ raizId: 'guia-principal', vinculoId: 'otra' }, 'paso-o1', true)
+
+    await reiniciarProgreso(vinculo)
+
+    expect(await leerAvance(vinculo)).toBeUndefined()
+    expect((await leerAvance({ raizId: 'guia-principal', vinculoId: 'otra' }))?.pasosHechos).toEqual([
+      'paso-o1',
+    ])
+    expect((await leerAvance('guia-principal'))?.pasosHechos).toEqual(['paso-1'])
+  })
+
+  it('conserva el avance independiente de la guia vinculada fuera del procedimiento', async () => {
+    await establecerPasoHecho(vinculo, 'paso-v1', true)
+    await establecerPasoHecho('guia-vinculada', 'paso-v2', true)
+
+    expect((await leerAvance(vinculo))?.pasosHechos).toEqual(['paso-v1'])
+    expect((await leerAvance('guia-vinculada'))?.pasosHechos).toEqual(['paso-v2'])
+  })
+
+  it('una fila antigua sin vinculos no completa ninguno', async () => {
+    await db.progresoPasos.put({
+      articuloId: 'guia-principal',
+      pasosHechos: ['paso-1'],
+      actualizadoEn: new Date().toISOString(),
+    })
+    const fila = await db.progresoPasos.get('guia-principal')
+
+    expect(avanceDe(fila, 'guia-principal')?.pasosHechos).toEqual(['paso-1'])
+    expect(avanceDe(fila, vinculo)).toBeUndefined()
+  })
+})
+
+describe('identificador de la ejecucion', () => {
+  it('nace con la primera escritura y no cambia mientras dure', async () => {
+    await establecerPasoHecho('articulo-1', 'paso-a', true)
+    const primero = await ejecucionAbierta('articulo-1')
+    expect(primero).toBeTruthy()
+
+    await establecerPasoHecho('articulo-1', 'paso-b', true)
+    expect(await ejecucionAbierta('articulo-1')).toBe(primero)
+  })
+
+  it('empezar de nuevo estrena identificador y deja las dependencias pendientes', async () => {
+    await establecerPasoHecho('articulo-1', 'paso-a', true)
+    await establecerPasoHecho({ raizId: 'articulo-1', vinculoId: 'guia-vinculada' }, 'paso-v1', true)
+    const primero = await ejecucionAbierta('articulo-1')
+
+    const segundo = await empezarEjecucion('articulo-1')
+
+    expect(segundo).not.toBe(primero)
+    expect((await leerAvance('articulo-1'))?.pasosHechos).toEqual([])
+    expect(await leerAvance({ raizId: 'articulo-1', vinculoId: 'guia-vinculada' })).toBeUndefined()
+  })
+
+  it('una fila antigua sin identificador estrena uno sin perder lo marcado', async () => {
+    await db.progresoPasos.put({
+      articuloId: 'articulo-1',
+      pasosHechos: ['paso-a'],
+      actualizadoEn: new Date().toISOString(),
+    })
+
+    await establecerPasoHecho('articulo-1', 'paso-b', true)
+
+    const fila = await db.progresoPasos.get('articulo-1')
+    expect(fila?.ejecucionId).toBeTruthy()
+    expect(fila?.pasosHechos).toEqual(['paso-a', 'paso-b'])
   })
 })

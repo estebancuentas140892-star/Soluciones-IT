@@ -5,6 +5,7 @@ import { db } from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
 import { Chasis } from '../../app/Chasis'
 import { AsistenteVista } from './AsistenteVista'
+import { ProveedorEjecucion } from './ProveedorEjecucion'
 
 // Pantalla del modo ejecucion (asistente): nivel 3 del chasis (tarea
 // 185), una tarea con salida. Es de los pocos sitios donde la barra de
@@ -50,7 +51,12 @@ export function AsistentePage() {
         {/* Sin onCompletado: al nivel 0 no hay a quien avisar,
             AsistenteVista ya muestra su propio resumen de "completado" y
             el tecnico decide cuando salir con el boton de arriba. */}
-        <AsistenteVista articuloId={articuloId} procedimiento={procedimiento} nivel={0} />
+        {/* La ejecucion en curso: su fila de progreso es la raiz donde
+            se guarda tambien el avance de sus guias vinculadas (tarea 2
+            del encargo). */}
+        <ProveedorEjecucion raizId={articuloId}>
+          <AsistenteVista articuloId={articuloId} procedimiento={procedimiento} nivel={0} />
+        </ProveedorEjecucion>
       </main>
     </Chasis>
   )

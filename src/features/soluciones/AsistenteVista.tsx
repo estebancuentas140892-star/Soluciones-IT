@@ -12,9 +12,11 @@ import {
   alternarVerificacionFinal,
   contarHechos,
   contarInstruccionesHechas,
+  leerAvance,
   marcarPasoSaltado,
   registrarEvidenciaPaso,
   reiniciarProgreso,
+  type ClaveProgreso,
 } from '../../lib/progresoPasos'
 import {
   guardarModoEjecucion,
@@ -33,6 +35,7 @@ import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { AccionVinculo, EnlaceVinculo, FilaVinculo } from './FilaVinculo'
 import { fraseAvanceDocumento, modoVinculo, PROMESA_REGRESO, ZONA_ANIDADA } from './vinculoAnidado'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
+import { claveDeVinculo, useAvanceProgreso, useClaveProgreso, useClaveVinculo } from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
@@ -72,6 +75,10 @@ function formatoCronometro(segundos: number): string {
 // useProcedimientoEjecucion que la vista de lista, asi que entrar y
 // salir nunca pierde ni duplica progreso.
 export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado }: Props) {
+  // Donde vive el avance de ESTE documento (tarea 2 del encargo): la
+  // fila del articulo en el nivel 0, la entrada del vinculo dentro de
+  // la ejecucion en curso en un nivel anidado.
+  const clave = useClaveProgreso(articuloId, nivel)
   const { pasos, verificacionFinal, tiempoEstimadoMin } = procedimiento
   const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
 
@@ -161,7 +168,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     // La preferencia de modo se lee JUNTO con el avance y antes de
     // marcar `listo`: si se leyera aparte, el técnico que trabaja con
     // el paso entero vería medio segundo de foco al entrar.
-    void Promise.all([db.progresoPasos.get(articuloId), leerModoEjecucion()]).then(([prog, modo]) => {
+    void Promise.all([leerAvance(clave), leerModoEjecucion()]).then(([prog, modo]) => {
       if (!vigente) return
       const hechosIniciales = new Set(prog?.pasosHechos ?? [])
       setIndiceActual(siguientePasoPendiente(idsPasos, hechosIniciales, -1))
@@ -175,7 +182,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     // procedimiento a mitad de ejecucion, un caso raro que no amerita
     // recalcular la posicion (podria saltar el avance del tecnico).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articuloId])
+  }, [articuloId, nivel])
 
   const {
     progreso,
@@ -204,7 +211,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // a cero). Sin lo segundo, indiceActual seguiria en null y la pantalla
   // de cierre no cambiaria: el boton "no hacia nada".
   async function reiniciarYVolver() {
-    await reiniciarProgreso(articuloId)
+    await reiniciarProgreso(clave)
     setInicio(Date.now())
     setAhora(Date.now())
     setIndiceActual(siguientePasoPendiente(idsPasos, new Set<string>(), -1))
@@ -241,7 +248,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
                     type="button"
                     role="checkbox"
                     aria-checked={marcada}
-                    onClick={() => void alternarVerificacionFinal(articuloId, indice)}
+                    onClick={() => void alternarVerificacionFinal(clave, indice)}
                     className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
                   >
                     <span
@@ -411,7 +418,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
               // índice lo deducía de la posición, así que un paso que
               // solo se miró salía marcado como saltado y uno que se
               // saltó de verdad, al volver atrás, dejaba de estarlo.
-              void marcarPasoSaltado(articuloId, paso.id)
+              void marcarPasoSaltado(clave, paso.id)
               setHojaFalla(null)
               setIndiceActual(destinoSalto)
             }
@@ -487,7 +494,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           // próxima guía que lo reutilice lo encuentre limpio.
           onDecisionResuelta={(tareaId, guiaId) => {
             void (async () => {
-              await reiniciarProgreso(guiaId)
+              // El destino del "no" es un vinculo de ESTA ejecucion, asi
+              // que se reinicia ahi: el avance que esa guia lleve por su
+              // cuenta no es asunto de este procedimiento (tarea 2).
+              await reiniciarProgreso(claveDeVinculo(clave, guiaId))
               await alternarTarea(indiceActual, paso, tareaId)
             })()
           }}
@@ -660,7 +670,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
         {nivel === 0 && dispositivoEvidencia && (
           <div ref={refEvidencia}>
             <EvidenciaPaso
-              articuloId={articuloId}
+              clave={clave}
               articuloTitulo={articulo?.titulo ?? ''}
               dispositivoId={dispositivoEvidencia.id}
               paso={paso}
@@ -870,14 +880,14 @@ function Encabezado({
 // local): revisitar el paso reutiliza la misma galeria en vez de crear
 // intervenciones nuevas.
 function EvidenciaPaso({
-  articuloId,
+  clave,
   articuloTitulo,
   dispositivoId,
   paso,
   entradaId,
   conFalla,
 }: {
-  articuloId: string
+  clave: ClaveProgreso
   articuloTitulo: string
   dispositivoId: string
   paso: PasoProcedimiento
@@ -900,7 +910,7 @@ function EvidenciaPaso({
       ? `Falla en el paso "${tituloPaso}" (${articuloTitulo})`
       : `Evidencia del paso "${tituloPaso}" (${articuloTitulo})`
     const id = await registrarIntervencion(dispositivoId, descripcion)
-    await registrarEvidenciaPaso(articuloId, paso.id, id)
+    await registrarEvidenciaPaso(clave, paso.id, id)
     setCreando(false)
   }
 
@@ -981,7 +991,9 @@ function SubProcedimientoEnAsistente({
   onCompletado: () => void
 }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(guiaId)) ?? null, [guiaId])
-  const progreso = useLiveQuery(() => db.progresoPasos.get(guiaId), [guiaId])
+  // El avance del vinculo es el de ESTA ejecucion, no el que esa guia
+  // lleve por su cuenta ni el que dejo otra guia que la reutiliza.
+  const progreso = useAvanceProgreso(useClaveVinculo(guiaId))
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -1114,7 +1126,8 @@ function SolucionEnAsistente({
   onResuelta: () => void
 }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(solucionArticuloId)) ?? null, [solucionArticuloId])
-  const progreso = useLiveQuery(() => db.progresoPasos.get(solucionArticuloId), [solucionArticuloId])
+  const claveVinculo = useClaveVinculo(solucionArticuloId)
+  const progreso = useAvanceProgreso(claveVinculo)
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -1180,7 +1193,7 @@ function SolucionEnAsistente({
   // uso), y su progreso se reinicia para el próximo error, aquí o en
   // cualquier otro procedimiento que la reutilice.
   async function resuelta() {
-    await reiniciarProgreso(solucionArticuloId)
+    await reiniciarProgreso(claveVinculo)
     onResuelta()
   }
 

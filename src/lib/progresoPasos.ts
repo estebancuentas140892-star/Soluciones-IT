@@ -1,4 +1,4 @@
-import { db, type ProgresoPasos } from './db'
+import { db, type ProgresoPasos, type ProgresoVinculo } from './db'
 
 // Avance local de un tecnico dentro de un procedimiento: que pasos
 // marco como hechos y que instrucciones marco dentro de cada paso.
@@ -13,6 +13,61 @@ import { db, type ProgresoPasos } from './db'
 // vuelve el paso pendiente; marcar o desmarcar el paso entero arrastra
 // todas sus instrucciones.
 
+// DONDE SE GUARDA ESTE AVANCE (encargo del 2026-09-09, tarea 2).
+//
+// Dos sitios, porque son dos trabajos distintos:
+//
+// - Un id de articulo a secas: la guia ejecutandose POR SI SOLA. Es su
+//   fila de `progresoPasos`, la de toda la vida.
+// - `{ raizId, vinculoId }`: la guia ejecutandose COMO VINCULO dentro
+//   de otra. Vive dentro de la fila de la guia principal, en
+//   `vinculos[vinculoId]`, asi que pertenece a ESA ejecucion y nada
+//   mas.
+//
+// Antes solo existia lo primero, y por eso haber completado ayer una
+// guia (aqui, en otra guia o por su cuenta) daba por cumplido el
+// vinculo de hoy sin que el tecnico tocara nada.
+export type ClaveProgreso = string | { raizId: string; vinculoId: string }
+
+/** El articulo cuya FILA guarda este avance. */
+export function raizDe(clave: ClaveProgreso): string {
+  return typeof clave === 'string' ? clave : clave.raizId
+}
+
+/** El vinculo dentro de esa fila, o null si el avance es de la fila. */
+export function vinculoDe(clave: ClaveProgreso): string | null {
+  return typeof clave === 'string' ? null : clave.vinculoId
+}
+
+// La forma comun de los dos: lo que se marca dentro de un
+// procedimiento, se guarde donde se guarde.
+export interface AvanceProcedimiento {
+  pasosHechos: string[]
+  instruccionesHechas?: string[]
+  verificacionHecha?: number[]
+  evidenciasPorPaso?: Record<string, string>
+  pasosSaltados?: string[]
+}
+
+/**
+ * El avance que corresponde a `clave` dentro de una fila ya leida.
+ * Sirve a las live queries, que leen la fila raiz una sola vez y
+ * necesitan quedarse con la parte que les toca.
+ *
+ * Un vinculo SIN entrada devuelve undefined, nunca la fila propia del
+ * articulo vinculado: dar por cumplido lo que se hizo en otra
+ * ejecucion es exactamente el defecto que cierra la tarea 2.
+ */
+export function avanceDe(
+  fila: ProgresoPasos | undefined,
+  clave: ClaveProgreso,
+): AvanceProcedimiento | undefined {
+  if (!fila) return undefined
+  const vinculoId = vinculoDe(clave)
+  if (vinculoId === null) return fila
+  return fila.vinculos?.[vinculoId]
+}
+
 // GUARDA MEZCLANDO, NUNCA REEMPLAZANDO (2026-09-09).
 //
 // Cada escritor de este modulo armaba el registro entero a mano, asi que
@@ -24,31 +79,110 @@ import { db, type ProgresoPasos } from './db'
 // Con el campo nuevo `pasosSaltados` el mismo descuido habria vuelto a
 // morder, asi que se centraliza: quien escribe dice SOLO lo que cambia.
 async function guardarProgreso(
-  articuloId: string,
-  cambios: Partial<Omit<ProgresoPasos, 'articuloId' | 'actualizadoEn'>>,
+  clave: ClaveProgreso,
+  cambios: Partial<AvanceProcedimiento>,
 ): Promise<void> {
+  const articuloId = raizDe(clave)
+  const vinculoId = vinculoDe(clave)
   const actual = await db.progresoPasos.get(articuloId)
+  const ahora = new Date().toISOString()
+
+  if (vinculoId !== null) {
+    const previo = actual?.vinculos?.[vinculoId]
+    const vinculo: ProgresoVinculo = {
+      pasosHechos: previo?.pasosHechos ?? [],
+      instruccionesHechas: previo?.instruccionesHechas,
+      verificacionHecha: previo?.verificacionHecha,
+      evidenciasPorPaso: previo?.evidenciasPorPaso,
+      pasosSaltados: previo?.pasosSaltados,
+      ...cambios,
+      actualizadoEn: ahora,
+    }
+    await db.progresoPasos.put({
+      articuloId,
+      ejecucionId: actual?.ejecucionId ?? nuevoIdEjecucion(),
+      pasosHechos: actual?.pasosHechos ?? [],
+      instruccionesHechas: actual?.instruccionesHechas ?? [],
+      verificacionHecha: actual?.verificacionHecha ?? [],
+      evidenciasPorPaso: actual?.evidenciasPorPaso,
+      pasosSaltados: actual?.pasosSaltados,
+      vinculos: { ...actual?.vinculos, [vinculoId]: vinculo },
+      actualizadoEn: ahora,
+    })
+    return
+  }
+
   await db.progresoPasos.put({
     articuloId,
+    // La ejecucion se identifica desde la primera escritura. Las filas
+    // viejas la estrenan aqui sin perder nada de lo ya marcado.
+    ejecucionId: actual?.ejecucionId ?? nuevoIdEjecucion(),
+    vinculos: actual?.vinculos,
     pasosHechos: actual?.pasosHechos ?? [],
     instruccionesHechas: actual?.instruccionesHechas ?? [],
     verificacionHecha: actual?.verificacionHecha ?? [],
     evidenciasPorPaso: actual?.evidenciasPorPaso,
     pasosSaltados: actual?.pasosSaltados,
     ...cambios,
+    actualizadoEn: ahora,
+  })
+}
+
+/** Identificador de una ejecucion. Local y efimero, como el avance. */
+export function nuevoIdEjecucion(): string {
+  return crypto.randomUUID()
+}
+
+/**
+ * Lee el avance guardado para `clave` sin live query, para decidir una
+ * escritura sin depender de cuando refresque la interfaz.
+ */
+export async function leerAvance(clave: ClaveProgreso): Promise<AvanceProcedimiento | undefined> {
+  return avanceDe(await db.progresoPasos.get(raizDe(clave)), clave)
+}
+
+/**
+ * El identificador de la ejecucion abierta de un articulo, o null si no
+ * hay ninguna empezada. Lo usan los botones de la ficha para distinguir
+ * continuar de empezar de nuevo.
+ */
+export async function ejecucionAbierta(articuloId: string): Promise<string | null> {
+  return (await db.progresoPasos.get(articuloId))?.ejecucionId ?? null
+}
+
+/**
+ * Estrena una ejecucion del articulo: borra la fila entera (avance
+ * propio Y avance de sus vinculos) y devuelve el identificador nuevo,
+ * que nacera con la primera escritura.
+ *
+ * Reiniciar la guia principal reinicia sus dependencias DENTRO de esa
+ * ejecucion, no en la ficha de cada guia vinculada: el avance que esa
+ * guia lleve por su cuenta no es asunto de esta ejecucion.
+ */
+export async function empezarEjecucion(articuloId: string): Promise<string> {
+  await db.progresoPasos.delete(articuloId)
+  const ejecucionId = nuevoIdEjecucion()
+  await db.progresoPasos.put({
+    articuloId,
+    ejecucionId,
+    pasosHechos: [],
+    instruccionesHechas: [],
+    verificacionHecha: [],
+    vinculos: {},
     actualizadoEn: new Date().toISOString(),
   })
+  return ejecucionId
 }
 
 // Marca o desmarca un paso completo, arrastrando sus tareas (los
 // bloques con casilla). `tareaIds` son los ids de esos bloques.
 export async function establecerPasoHecho(
-  articuloId: string,
+  clave: ClaveProgreso,
   pasoId: string,
   hecho: boolean,
   tareaIds: string[] = [],
 ): Promise<void> {
-  const actual = await db.progresoPasos.get(articuloId)
+  const actual = await leerAvance(clave)
   const pasos = new Set(actual?.pasosHechos ?? [])
   const instrucciones = new Set(actual?.instruccionesHechas ?? [])
 
@@ -64,7 +198,7 @@ export async function establecerPasoHecho(
   // excluyentes, y el indice tiene que decir el ultimo que vale.
   const saltados = (actual?.pasosSaltados ?? []).filter((id) => id !== pasoId)
 
-  await guardarProgreso(articuloId, {
+  await guardarProgreso(clave, {
     pasosHechos: [...pasos],
     instruccionesHechas: [...instrucciones],
     pasosSaltados: saltados,
@@ -79,18 +213,18 @@ export async function establecerPasoHecho(
  * bastaba para marcar el anterior como saltado. Navegar es consultar;
  * saltar es decidir seguir sin hacerlo.
  */
-export async function marcarPasoSaltado(articuloId: string, pasoId: string): Promise<void> {
-  const actual = await db.progresoPasos.get(articuloId)
+export async function marcarPasoSaltado(clave: ClaveProgreso, pasoId: string): Promise<void> {
+  const actual = await leerAvance(clave)
   const saltados = new Set(actual?.pasosSaltados ?? [])
   saltados.add(pasoId)
-  await guardarProgreso(articuloId, { pasosSaltados: [...saltados] })
+  await guardarProgreso(clave, { pasosSaltados: [...saltados] })
 }
 
 /** Retira la marca de saltado (el tecnico vuelve y lo retoma). */
-export async function quitarPasoSaltado(articuloId: string, pasoId: string): Promise<void> {
-  const actual = await db.progresoPasos.get(articuloId)
+export async function quitarPasoSaltado(clave: ClaveProgreso, pasoId: string): Promise<void> {
+  const actual = await leerAvance(clave)
   if (!actual?.pasosSaltados?.includes(pasoId)) return
-  await guardarProgreso(articuloId, {
+  await guardarProgreso(clave, {
     pasosSaltados: actual.pasosSaltados.filter((id) => id !== pasoId),
   })
 }
@@ -105,12 +239,12 @@ export async function quitarPasoSaltado(articuloId: string, pasoId: string): Pro
 // vuelve el paso pendiente). `tareaIds` son todos los ids de tareas del
 // paso, para saber si quedaron todas marcadas.
 export async function alternarInstruccionHecha(
-  articuloId: string,
+  clave: ClaveProgreso,
   pasoId: string,
   tareaId: string,
   tareaIds: string[],
 ): Promise<boolean> {
-  const actual = await db.progresoPasos.get(articuloId)
+  const actual = await leerAvance(clave)
   const pasos = new Set(actual?.pasosHechos ?? [])
   const instrucciones = new Set(actual?.instruccionesHechas ?? [])
 
@@ -128,7 +262,7 @@ export async function alternarInstruccionHecha(
   // Tocar una tarea de un paso saltado es retomarlo.
   const saltados = (actual?.pasosSaltados ?? []).filter((id) => id !== pasoId)
 
-  await guardarProgreso(articuloId, {
+  await guardarProgreso(clave, {
     pasosHechos: [...pasos],
     instruccionesHechas: [...instrucciones],
     pasosSaltados: saltados,
@@ -136,8 +270,24 @@ export async function alternarInstruccionHecha(
   return completo
 }
 
-export async function reiniciarProgreso(articuloId: string): Promise<void> {
-  await db.progresoPasos.delete(articuloId)
+/**
+ * Borra el avance. Con un id de articulo borra su fila entera (lo suyo
+ * y el de sus vinculos, que son de esa ejecucion). Con un vinculo borra
+ * SOLO esa entrada: el resto de la ejecucion sigue intacto, y el avance
+ * que esa guia lleve por su cuenta ni se toca.
+ */
+export async function reiniciarProgreso(clave: ClaveProgreso): Promise<void> {
+  const vinculoId = vinculoDe(clave)
+  if (vinculoId === null) {
+    await db.progresoPasos.delete(raizDe(clave))
+    return
+  }
+  const articuloId = raizDe(clave)
+  const actual = await db.progresoPasos.get(articuloId)
+  if (!actual?.vinculos?.[vinculoId]) return
+  const vinculos = { ...actual.vinculos }
+  delete vinculos[vinculoId]
+  await db.progresoPasos.put({ ...actual, vinculos, actualizadoEn: new Date().toISOString() })
 }
 
 // Recuerda con que entrada de historial quedo asociada la evidencia
@@ -146,12 +296,12 @@ export async function reiniciarProgreso(articuloId: string): Promise<void> {
 // se reabre el paso se crearia una intervencion nueva y la evidencia
 // quedaria repartida en varias entradas del historial).
 export async function registrarEvidenciaPaso(
-  articuloId: string,
+  clave: ClaveProgreso,
   pasoId: string,
   entradaId: string,
 ): Promise<void> {
-  const actual = await db.progresoPasos.get(articuloId)
-  await guardarProgreso(articuloId, {
+  const actual = await leerAvance(clave)
+  await guardarProgreso(clave, {
     evidenciasPorPaso: { ...actual?.evidenciasPorPaso, [pasoId]: entradaId },
   })
 }
@@ -176,17 +326,17 @@ export function contarInstruccionesHechas(
 // Alterna una casilla de "Verificacion final" (por indice, igual que
 // las instrucciones de un paso: no tienen id propio).
 export async function alternarVerificacionFinal(
-  articuloId: string,
+  clave: ClaveProgreso,
   indice: number,
 ): Promise<void> {
-  const actual = await db.progresoPasos.get(articuloId)
+  const actual = await leerAvance(clave)
   const marcadas = new Set(actual?.verificacionHecha ?? [])
   if (marcadas.has(indice)) {
     marcadas.delete(indice)
   } else {
     marcadas.add(indice)
   }
-  await guardarProgreso(articuloId, { verificacionHecha: [...marcadas] })
+  await guardarProgreso(clave, { verificacionHecha: [...marcadas] })
 }
 
 // La verificacion final cuenta como completa cuando no hay items (no

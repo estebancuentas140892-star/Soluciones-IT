@@ -28,6 +28,7 @@ import {
 } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import { AsistenteVista } from '../soluciones/AsistenteVista'
+import { ProveedorEjecucion } from '../soluciones/ProveedorEjecucion'
 import { ETIQUETA_MOTIVO, MOTIVOS_ORDEN, type MotivoConcreto } from './motivos'
 
 // Asistente del Modo Diagnóstico Inteligente re-autorizado en Nocturne
@@ -431,7 +432,9 @@ function ArticuloEnDiagnostico({
           </p>
         )}
       </div>
-      <AsistenteVista articuloId={articuloId} procedimiento={procedimiento} nivel={0} />
+      <ProveedorEjecucion raizId={articuloId}>
+        <AsistenteVista articuloId={articuloId} procedimiento={procedimiento} nivel={0} />
+      </ProveedorEjecucion>
     </div>
   )
 }

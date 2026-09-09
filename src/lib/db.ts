@@ -917,11 +917,48 @@ export interface ArchivoPendiente {
   intentos: number
 }
 
+// Avance de UNA guia vinculada DENTRO de una ejecucion concreta de la
+// guia principal (encargo del 2026-09-09, tarea 2).
+//
+// El defecto que cierra: el progreso de un vinculo se guardaba en la
+// fila del articulo vinculado, la misma que usa esa guia cuando se
+// ejecuta por si sola. Consecuencia: haber hecho «Reiniciar el router»
+// ayer, en otra guia o por su cuenta, daba por cumplido el vinculo de
+// hoy sin que el tecnico tocara nada; y dos guias principales que
+// reutilizaran el mismo procedimiento se pisaban el avance.
+//
+// Ahora el avance del vinculo vive DENTRO de la ejecucion que lo
+// exige, en `ProgresoPasos.vinculos`, y la fila propia del articulo
+// vinculado queda para cuando se ejecuta por fuera de otro
+// procedimiento. Son dos avances distintos porque son dos trabajos
+// distintos.
+export interface ProgresoVinculo {
+  pasosHechos: string[]
+  instruccionesHechas?: string[]
+  verificacionHecha?: number[]
+  evidenciasPorPaso?: Record<string, string>
+  pasosSaltados?: string[]
+  actualizadoEn: string
+}
+
 // Pasos marcados como hechos por este tecnico en cada procedimiento.
 // Solo vive en el dispositivo: no se sincroniza, cada tecnico lleva
 // su propio avance (por ejemplo al retomar tras una interrupcion).
 export interface ProgresoPasos {
   articuloId: string
+  // Identificador de ESTA ejecucion (tarea 2 del encargo). Nace con la
+  // fila y muere con ella: reiniciar borra la fila, asi que empezar de
+  // nuevo estrena identificador y, con el, dependencias pendientes.
+  // Opcional porque las filas guardadas antes de este campo no lo
+  // traen; se rellena en la primera escritura que las toque.
+  ejecucionId?: string
+  // Avance de las guias vinculadas DENTRO de esta ejecucion, por id de
+  // articulo vinculado. Opcional: una fila sin este campo (todas las
+  // guardadas antes de la tarea 2) no tiene ningun vinculo cumplido,
+  // que es justo lo que debe entenderse. Nunca se rellena leyendo la
+  // fila propia del vinculado: eso es lo que daba por hecho un trabajo
+  // que nadie hizo en esta ejecucion.
+  vinculos?: Record<string, ProgresoVinculo>
   pasosHechos: string[]
   // Ids de los bloques 'tarea' marcados como hechos (las tareas con
   // casilla de cualquier paso). El id de cada bloque es unico, asi que

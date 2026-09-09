@@ -39,6 +39,7 @@ import { BotonFavorito } from '../../components/BotonFavorito'
 import { BarraAccionFicha, type EstadoAccion } from '../../components/BarraAccionFicha'
 import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
+import { ProveedorEjecucion } from './ProveedorEjecucion'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { colorIconoDeTipo } from './iconosSoluciones'
 import { etiquetaDeTipo } from './tiposArticulo'
@@ -229,7 +230,11 @@ export function ArticuloPage() {
 
         {articulo.tipo === 'problema_frecuente' && <IncidenciaResumen articulo={articulo} />}
 
-        {tieneProcedimiento && <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />}
+        {tieneProcedimiento && (
+          <ProveedorEjecucion raizId={articuloId}>
+            <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />
+          </ProveedorEjecucion>
+        )}
 
         {articulo.contenido.trim() !== '' && (
           <article className="prose prose-invert prose-sm max-w-none prose-headings:font-medium prose-headings:text-noct-text prose-p:text-noct-neutral-200 prose-li:text-noct-neutral-200 prose-strong:text-noct-text prose-a:text-noct-accent-400">

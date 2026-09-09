@@ -10,11 +10,15 @@ import {
 } from '../../lib/procedimiento'
 import {
   alternarInstruccionHecha,
+  avanceDe,
   contarHechos,
   contarInstruccionesHechas,
   establecerPasoHecho,
+  leerAvance,
+  raizDe,
   verificacionFinalCompleta,
 } from '../../lib/progresoPasos'
+import { useClaveProgreso } from './contextoEjecucion'
 import {
   guiasObligatoriasDeTarea,
   guiasObligatoriasPendientes,
@@ -52,7 +56,15 @@ export function useProcedimientoEjecucion({
   onCompletado,
   onAvanzar,
 }: Opciones) {
-  const progreso = useLiveQuery(() => db.progresoPasos.get(articuloId), [articuloId])
+  // DONDE VIVE ESTE AVANCE (tarea 2 del encargo). En el nivel 0 es la
+  // fila del articulo; en un nivel anidado, la entrada de ESTA
+  // ejecucion dentro de la fila de la guia principal. Nunca la fila
+  // propia del vinculado: eso hacia que una guia completada en otra
+  // ocasion diera por cumplido el vinculo de hoy.
+  const clave = useClaveProgreso(articuloId, nivel)
+  const raizId = raizDe(clave)
+  const filaRaiz = useLiveQuery(() => db.progresoPasos.get(raizId), [raizId])
+  const progreso = avanceDe(filaRaiz, clave)
   const { pasos, verificacionFinal } = procedimiento
   const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
 
@@ -86,7 +98,10 @@ export function useProcedimientoEjecucion({
     [pasos, nivel],
   )
   const subArticulos = useLiveQuery(() => db.articulos.bulkGet(subIds), [subIds])
-  const subProgresos = useLiveQuery(() => db.progresoPasos.bulkGet(subIds), [subIds])
+  // El avance de cada vinculo se lee de ESTA ejecucion, no de la fila
+  // del articulo vinculado (tarea 2). Un vinculo sin entrada aqui esta
+  // pendiente, aunque esa guia se haya completado antes en otro sitio.
+  const vinculos = filaRaiz?.vinculos
 
   // ¿El subprocedimiento vinculado del paso ya no impone trabajo
   // pendiente? True cuando no hay subprocedimiento que ejecutar aqui
@@ -100,13 +115,17 @@ export function useProcedimientoEjecucion({
   // tarea sin salida (criterio A12).
   function guiaCumplidaReactiva(guiaId: string): boolean {
     if (nivel >= 1) return true
-    if (subArticulos === undefined || subProgresos === undefined) return false
+    // Solo se espera al ARTICULO: sin el no se sabe si el vinculo
+    // existe, y un vinculo roto no bloquea (criterio A12). El avance
+    // ausente no es "cargando", es "sin empezar", que es la respuesta
+    // correcta mientras la fila de la ejecucion no exista todavia.
+    if (subArticulos === undefined) return false
     const idx = subIds.indexOf(guiaId)
     const articulo = idx >= 0 ? subArticulos[idx] : undefined
     if (!articulo || articulo.eliminadoEn) return true
     const proc = normalizarProcedimiento(articulo.procedimiento)
     if (!proc) return true
-    const prog = idx >= 0 ? subProgresos[idx] : undefined
+    const prog = vinculos?.[guiaId]
     const hechosSub = contarHechos(prog?.pasosHechos ?? [], proc.pasos.map((p) => p.id))
     return hechosSub === proc.pasos.length
   }
@@ -119,7 +138,7 @@ export function useProcedimientoEjecucion({
     if (!articulo || articulo.eliminadoEn) return true
     const proc = normalizarProcedimiento(articulo.procedimiento)
     if (!proc) return true
-    const prog = await db.progresoPasos.get(guiaId)
+    const prog = (await db.progresoPasos.get(raizId))?.vinculos?.[guiaId]
     const hechosSub = contarHechos(prog?.pasosHechos ?? [], proc.pasos.map((p) => p.id))
     return hechosSub === proc.pasos.length
   }
@@ -174,7 +193,7 @@ export function useProcedimientoEjecucion({
   async function alternarPaso(indice: number, paso: PasoProcedimiento) {
     const hecho = hechos.has(paso.id)
     await establecerPasoHecho(
-      articuloId,
+      clave,
       paso.id,
       !hecho,
       tareasDe(paso.bloques).map((t) => t.id),
@@ -190,7 +209,7 @@ export function useProcedimientoEjecucion({
     if (!instruccionesHechas.has(tareaId) && !(await tareaMarcable(paso, tareaId))) return
 
     const tareasCompletas = await alternarInstruccionHecha(
-      articuloId,
+      clave,
       paso.id,
       tareaId,
       tareasDe(paso.bloques).map((t) => t.id),
@@ -208,7 +227,7 @@ export function useProcedimientoEjecucion({
   // aparece la pregunta "¿Ocurrio algun error?" y el paso se completa
   // al responderla. Usa lecturas frescas de la base.
   async function intentarCompletarPaso(indice: number, paso: PasoProcedimiento) {
-    const progActual = await db.progresoPasos.get(articuloId)
+    const progActual = await leerAvance(clave)
     const hechosActuales = progActual?.pasosHechos ?? []
     if (hechosActuales.includes(paso.id)) return
 
@@ -221,7 +240,7 @@ export function useProcedimientoEjecucion({
     )
     if (!pasoSeCompletaSolo(trabajoPrevio, Boolean(paso.solucionArticuloId))) return
 
-    await establecerPasoHecho(articuloId, paso.id, true, idsTareas)
+    await establecerPasoHecho(clave, paso.id, true, idsTareas)
     avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]))
   }
 
@@ -232,7 +251,7 @@ export function useProcedimientoEjecucion({
   async function completarPasoYAvanzar(indice: number, paso: PasoProcedimiento) {
     if (hechos.has(paso.id)) return
     await establecerPasoHecho(
-      articuloId,
+      clave,
       paso.id,
       true,
       tareasDe(paso.bloques).map((t) => t.id),

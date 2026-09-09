@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
+import { useAvanceProgreso, useClaveProgreso, useClaveVinculo } from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
@@ -86,6 +87,10 @@ export function ProcedimientoVista({
   pasoDestacadoId = null,
 }: Props) {
   const refsPasos = useRef<(HTMLLIElement | null)[]>([])
+  // Donde vive el avance de ESTE documento (tarea 2 del encargo): la
+  // fila del articulo en el nivel 0, la entrada del vinculo dentro de
+  // la ejecucion en curso en un nivel anidado.
+  const clave = useClaveProgreso(articuloId, nivel)
 
   const { objetivoGeneral, requisitos, pasos, verificacionFinal } = procedimiento
 
@@ -427,7 +432,7 @@ export function ProcedimientoVista({
                   type="button"
                   role="checkbox"
                   aria-checked={marcada}
-                  onClick={() => void alternarVerificacionFinal(articuloId, indice)}
+                  onClick={() => void alternarVerificacionFinal(clave, indice)}
                   className="flex min-h-11 w-full cursor-pointer items-center gap-2.5 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
                 >
                   {marcada ? (
@@ -455,7 +460,7 @@ export function ProcedimientoVista({
           </p>
           <button
             type="button"
-            onClick={() => void reiniciarProgreso(articuloId)}
+            onClick={() => void reiniciarProgreso(clave)}
             className={`shrink-0 ${BTN_EXITO}`}
           >
             Reiniciar
@@ -510,7 +515,9 @@ function SubProcedimientoEnPaso({
     async () => (await db.articulos.get(subArticuloId)) ?? null,
     [subArticuloId],
   )
-  const progreso = useLiveQuery(() => db.progresoPasos.get(subArticuloId), [subArticuloId])
+  // El avance del vinculo es el de ESTA ejecucion, no el que esa guia
+  // lleve por su cuenta ni el que dejo otra guia que la reutiliza.
+  const progreso = useAvanceProgreso(useClaveVinculo(subArticuloId))
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -621,7 +628,8 @@ function ContingenciaEnPaso({
     async () => (await db.articulos.get(solucionArticuloId)) ?? null,
     [solucionArticuloId],
   )
-  const progreso = useLiveQuery(() => db.progresoPasos.get(solucionArticuloId), [solucionArticuloId])
+  const claveVinculo = useClaveVinculo(solucionArticuloId)
+  const progreso = useAvanceProgreso(claveVinculo)
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -668,7 +676,7 @@ function ContingenciaEnPaso({
   // La contingencia completada devuelve el control al paso donde ocurrio
   // el error y su progreso se reinicia para el proximo uso.
   async function resuelta() {
-    await reiniciarProgreso(solucionArticuloId)
+    await reiniciarProgreso(claveVinculo)
     setMostrar(null)
     onResuelta()
   }
@@ -997,10 +1005,8 @@ function DecisionEnTarea({
     async () => (vinculoId ? ((await db.articulos.get(vinculoId)) ?? null) : null),
     [vinculoId],
   )
-  const progreso = useLiveQuery(
-    () => (vinculoId ? db.progresoPasos.get(vinculoId) : undefined),
-    [vinculoId],
-  )
+  const claveVinculo = useClaveVinculo(vinculoId ?? '')
+  const progreso = useAvanceProgreso(vinculoId ? claveVinculo : null)
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -1096,7 +1102,7 @@ function DecisionEnTarea({
   // progreso del vinculado se reinicia para su proximo uso (aqui o en
   // cualquier otro procedimiento que lo reutilice).
   async function resuelta() {
-    if (vinculoId) await reiniciarProgreso(vinculoId)
+    if (vinculoId) await reiniciarProgreso(claveVinculo)
     setMostrarVinculo(null)
     onAlternar()
   }

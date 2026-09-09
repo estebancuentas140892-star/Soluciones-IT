@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { db, type Procedimiento, type TipoArticulo } from '../../lib/db'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { TagNeutral } from '../../components/nocturne'
+import { ProveedorEjecucion } from './ProveedorEjecucion'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { etiquetaDeTipo } from './tiposArticulo'
 
@@ -107,11 +108,16 @@ export function VistaPreviaArticulo({
         )}
 
         {procedimiento && (
-          <ProcedimientoVista
-            articuloId={idEfimero}
-            procedimiento={procedimiento}
-            pasoDestacadoId={pasoDestacadoId}
-          />
+          // Raiz efimera: lo que se marque aqui, incluido el avance de
+          // las guias vinculadas, vive dentro de esta fila de prueba y
+          // se borra al cerrar.
+          <ProveedorEjecucion raizId={idEfimero}>
+            <ProcedimientoVista
+              articuloId={idEfimero}
+              procedimiento={procedimiento}
+              pasoDestacadoId={pasoDestacadoId}
+            />
+          </ProveedorEjecucion>
         )}
 
         {contenido.trim() !== '' && (
