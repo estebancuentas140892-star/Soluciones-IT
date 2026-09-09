@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Corregido (tarea 234, sección 7): volver al catálogo aterrizaba arriba del todo
+
+**Área modificada:** chasis (memoria de scroll), transversal a las cinco pestañas. **Modificados:** `src/app/memoriaScroll.ts`.
+**Motivo:** sección 7 del encargo del **9 de septiembre de 2026**, "conservar categoría, búsqueda y **posición** al regresar desde una guía". Las dos primeras ya se conservaban; la tercera no.
+**Impacto esperado:** volver de una guía devuelve al técnico a la fila desde la que salió, en cualquiera de las pestañas. **Sin esquema. Sin cambios en los datos.**
+
+- **Causa medida.** El reintento de restauración colgaba **solo de `requestAnimationFrame`**, y el rAF no corre cuando el documento no se está pintando (ventana tapada, pestaña en segundo plano, app que vuelve de estar oculta). Con la lista todavía sin llegar de Dexie, el `scrollTo(1300)` inicial se ejecutaba contra un documento de 780 px de alto, el navegador lo recortaba a 0 y **no había un segundo intento nunca**. Medido: dos llamadas y ni una tercera, mientras la lista crecía a 4232 px poco después.
+- **Corregido** con un temporizador de respaldo cada 50 ms, con los mismos dos frenos que ya tenía el rAF: el tope de 1200 ms y, sobre todo, el primer gesto del técnico. **No es un `ResizeObserver`**: `html` y `body` miden exactamente la pantalla (lo que crece es el `scrollHeight` del documento, no la caja de ningún elemento), así que un observador de tamaño sobre ellos no se dispara nunca. Se probó y se descartó con la medición delante.
+- **Verificado sin cambios (sección 7)**: el bloque "Sin terminar" sigue fuera del catálogo; el buscador está siempre visible; las categorías se abren desde un control fijo con la lista completa en una hoja (sin depender del arrastre horizontal); volver conserva **categoría** (`?categoria=cat-impresoras`) y **búsqueda** (`?q=ejemplo`); y dentro de la guía, la opción discreta de continuar existe y dice **"Seguir en el paso 2 de 3"**, con "Empezar de nuevo" al lado.
+
 ### Agregado (tarea 234, secciones 5 y 6): una decisión se responde, y sus dos respuestas tienen destino
 
 **Área modificada:** ejecución de Guías, modo de una tarea a la vez. **Modificados:** `src/features/soluciones/tareasFoco.ts`, `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/pruebas/semillaLocal.ts` (banco de pruebas, solo desarrollo).

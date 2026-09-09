@@ -38,7 +38,28 @@ export function obtenerScroll(pathname: string): number | undefined {
 // Ahora se reintenta mientras el documento siga creciendo, con dos
 // frenos: un tope de tiempo y, sobre todo, el primer gesto del usuario.
 // Si toca la pantalla antes de que los datos lleguen, manda él.
+//
+// POR QUÉ NO BASTA CON `requestAnimationFrame` (medido el 2026-09-09,
+// sección 7 del encargo). El reintento colgaba SOLO del rAF, y el rAF
+// no corre cuando el documento no se está pintando: una ventana tapada,
+// una pestaña en segundo plano, la app que vuelve de estar oculta. En
+// esos casos se ejecutaba el `scrollTo` inicial contra un documento que
+// todavía medía una pantalla, el navegador lo recortaba a 0 y no había
+// un segundo intento NUNCA, así que volver al catálogo aterrizaba
+// arriba del todo. Medido aquí: dos llamadas a `scrollTo(1300)` con el
+// documento en 780 px de alto y ni una tercera, mientras la lista
+// crecía a 4232 poco después.
+//
+// El respaldo es un temporizador, no un `ResizeObserver`: `html` y
+// `body` miden exactamente la pantalla (el alto que crece es el
+// `scrollHeight` del documento, no la caja de ningún elemento), así que
+// un observador de tamaño sobre ellos no se dispara jamás.
 const MS_MAX_RESTAURACION = 1200
+
+// Cada cuánto reintenta el respaldo. 50 ms es imperceptible para quien
+// mira y suficientemente espaciado para no competir con el rAF cuando
+// el documento sí se está pintando.
+const MS_REINTENTO = 50
 
 // Margen de tolerancia: si la posición alcanzada queda a menos de esto
 // del objetivo, se da por buena (la lista puede haber cambiado de alto
@@ -65,12 +86,20 @@ export function useMemoriaScroll(pathname: string): void {
       if (!restaurando) return
       if (Math.abs(window.scrollY - objetivo) <= TOLERANCIA_PX || Date.now() > limite) {
         restaurando = false
+        clearInterval(reloj)
         return
       }
       window.scrollTo({ top: objetivo, behavior: 'auto' })
+      cancelAnimationFrame(cuadro)
       cuadro = requestAnimationFrame(insistir)
     }
     if (restaurando) cuadro = requestAnimationFrame(insistir)
+
+    // Respaldo que no depende de que se pinte: mientras el documento no
+    // haya crecido lo suficiente, se vuelve a intentar. `insistir` ya
+    // trae sus dos frenos (la tolerancia y el tope de tiempo), así que
+    // esto no puede pelearse con el técnico ni quedarse para siempre.
+    const reloj = restaurando ? setInterval(() => insistir(), MS_REINTENTO) : 0
 
     let pendiente = false
     function alDesplazar() {
@@ -98,6 +127,7 @@ export function useMemoriaScroll(pathname: string): void {
 
     return () => {
       cancelAnimationFrame(cuadro)
+      clearInterval(reloj)
       restaurando = false
       window.removeEventListener('scroll', alDesplazar)
       window.removeEventListener('wheel', alGesto)
