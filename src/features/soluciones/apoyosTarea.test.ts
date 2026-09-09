@@ -215,3 +215,82 @@ describe('ubicacionApoyosDelPaso', () => {
     }
   })
 })
+
+describe('compatibilidad con las guías escritas antes del campo alcance', () => {
+  // La garantía del cambio 5 del encargo del 2026-09-09: un apoyo
+  // heredado se CONSERVA, se muestra UNA sola vez y NO se reparte solo
+  // entre las tareas. Estas pruebas la comprueban como partición: cada
+  // bloque del paso cae en exactamente un sitio, sumando lo que ve cada
+  // tarea más lo que se muestra como del paso.
+  const PASO_HEREDADO = normalizarProcedimiento({
+    pasos: [
+      {
+        id: 'p1',
+        titulo: 'Paso escrito antes del campo',
+        bloques: [
+          { id: 't1', tipo: 'tarea', texto: 'Primera' },
+          { id: 'a1', tipo: 'aviso', texto: 'Precaución sin dueño' },
+          { id: 't2', tipo: 'tarea', texto: 'Segunda' },
+          { id: 'i1', tipo: 'imagen', adjunto: FOTO },
+          { id: 't3', tipo: 'tarea', texto: 'Tercera' },
+          { id: 'f1', tipo: 'archivo', adjunto: PDF },
+        ],
+      },
+    ],
+  })!.pasos[0]
+
+  function idsVistos(p: PasoProcedimiento, tareaId: string): string[] {
+    const a = apoyosDeTarea(p, tareaId)
+    return [...a.avisos, ...a.imagenes, ...a.archivos, ...a.guias].map((b) => b.id)
+  }
+
+  it('la normalización los deja como "sin asignar", no los tira ni los cuelga de una tarea', () => {
+    const apoyos = PASO_HEREDADO.bloques.filter((b) => b.tipo !== 'tarea')
+    expect(apoyos.map((b) => b.id)).toEqual(['a1', 'i1', 'f1'])
+    expect(apoyos.every((b) => b.alcance === 'sin-asignar' && b.tareaId === null)).toBe(true)
+  })
+
+  it('ninguna tarea se los queda: no se reparten solos', () => {
+    expect(idsVistos(PASO_HEREDADO, 't1')).toEqual([])
+    expect(idsVistos(PASO_HEREDADO, 't2')).toEqual([])
+    expect(idsVistos(PASO_HEREDADO, 't3')).toEqual([])
+  })
+
+  it('se muestran UNA vez, como apoyo del paso', () => {
+    const delPaso = apoyosDelPaso(PASO_HEREDADO)
+    expect([...delPaso.avisos, ...delPaso.imagenes, ...delPaso.archivos].map((b) => b.id)).toEqual([
+      'a1',
+      'i1',
+      'f1',
+    ])
+  })
+
+  it('cada bloque cae en exactamente un sitio (partición sin pérdidas ni duplicados)', () => {
+    const tareas = PASO_HEREDADO.bloques.filter((b) => b.tipo === 'tarea').map((b) => b.id)
+    const delPaso = apoyosDelPaso(PASO_HEREDADO)
+    const vistos = [
+      ...tareas.flatMap((id) => idsVistos(PASO_HEREDADO, id)),
+      ...[...delPaso.avisos, ...delPaso.imagenes, ...delPaso.archivos, ...delPaso.guias].map((b) => b.id),
+    ]
+    const apoyos = PASO_HEREDADO.bloques.filter((b) => b.tipo !== 'tarea').map((b) => b.id)
+    expect([...vistos].sort()).toEqual([...apoyos].sort())
+    expect(new Set(vistos).size).toBe(vistos.length)
+  })
+
+  it('el editor los señala uno a uno para que el autor los asigne', () => {
+    expect(apoyosSinAsignar(PASO_HEREDADO).map((b) => b.id)).toEqual(['a1', 'i1', 'f1'])
+  })
+
+  it('asignar uno a mano lo saca de los del paso y lo mete en su tarea', () => {
+    const asignado: PasoProcedimiento = {
+      ...PASO_HEREDADO,
+      bloques: PASO_HEREDADO.bloques.map((b) =>
+        b.id === 'a1' ? { ...b, alcance: 'tarea' as const, tareaId: 't2' } : b,
+      ),
+    }
+    expect(idsVistos(asignado, 't2')).toEqual(['a1'])
+    expect(idsVistos(asignado, 't1')).toEqual([])
+    expect(apoyosDelPaso(asignado).avisos).toEqual([])
+    expect(apoyosSinAsignar(asignado).map((b) => b.id)).toEqual(['i1', 'f1'])
+  })
+})

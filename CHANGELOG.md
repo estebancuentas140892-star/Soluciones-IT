@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Agregado (tarea 234, cambio 5): el contenido heredado queda blindado como partición
+
+**Área modificada:** reparto de apoyos. **Modificados:** `src/features/soluciones/apoyosTarea.test.ts` (+ 6 pruebas).
+**Motivo:** cambio 5 del encargo del **9 de septiembre de 2026**: los avisos, imágenes y archivos antiguos marcados "Sin asignar" se conservan y aparecen **una sola vez** hasta que el autor los asigne, sin repartirse solos.
+**Impacto esperado:** ninguno en la aplicación; la garantía deja de depender de leer el código. **Sin esquema. Sin cambios de comportamiento.**
+
+- **Agregado** seis pruebas sobre una guía escrita **antes** de que existiera el campo `alcance`: la normalización la deja en `'sin-asignar'` sin tirar nada ni colgarla de una tarea; **ninguna tarea se queda** con esos apoyos; se muestran **una vez** como apoyo del paso; el editor los señala uno a uno; y asignar uno a mano lo saca de los del paso y lo mete en su tarea.
+- **Agregado** la prueba que lo dice de una vez: **cada bloque cae en exactamente un sitio**. Se suma lo que ve cada tarea del paso más lo que se muestra como del paso, y el resultado tiene que ser el conjunto de apoyos **sin pérdidas y sin repetidos**. Es la formulación que hace imposibles a la vez los dos defectos del informe anterior: el que se pierde y el que sale tres veces.
+
 ### Corregido (tarea 234, cambio 4): el nombre de la guía se cortaba y no había forma de leerlo entero
 
 **Área modificada:** ejecución de Guías (índice de pasos) y la herramienta de verificación móvil. **Modificados:** `src/features/soluciones/HojaPasos.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `scripts/capturas-moviles.mjs`.
