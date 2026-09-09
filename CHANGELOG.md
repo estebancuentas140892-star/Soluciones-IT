@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Corregido (tarea 234, cambio 2): la vista de paso entero trataba una comprobación como una instrucción
+
+**Área modificada:** ejecución de Guías, vista de paso entero. **Modificados:** `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/AsistenteVista.tsx`.
+**Motivo:** cambio 2 del encargo del **9 de septiembre de 2026**: separar consultar, marcar, confirmar una verificación, decir que no se cumple, saltar y detenerse, **en todos los recorridos**. El modo de una tarea a la vez ya los separaba; la vista de paso entero no.
+**Impacto esperado:** los seis gestos tienen control propio en las dos vistas. **Sin esquema. Sin cambios en los datos ni en el progreso guardado.**
+
+- **Corregido** una **verificación** era la MISMA casilla que una instrucción, con una etiqueta al lado: decir "lo miré y salió" era el mismo gesto que decir "lo hice", y no había forma de decir que **no** salió salvo el "Falla" del paso entero, que no nombra la comprobación. Ahora se responde como una decisión: **"Sí, lo comprobé"** y **"No se cumple"**, y ya respondida vuelve a ser una fila con casilla para poder corregirse tocándola.
+- **Agregado** `BloqueVista` acepta `onNoSeCumple`. La ejecución lo conecta a la MISMA hoja de salidas que el "Falla" del paso, con la comprobación nombrada; el mapa de lectura del artículo no lo pasa, porque ahí no hay contingencia que abrir.
+- **Corregido** las flechas de paso decían "Paso anterior" y "Paso siguiente" a secas, en una pantalla cuya acción dominante es cerrar el paso, así que se leían como avanzar el trabajo. Ahora dicen que **solo mueven la vista** y no cambian lo marcado, igual que ya lo decían las del modo de una tarea a la vez.
+- **Comprobado en navegador**: "No se cumple" abre la hoja nombrando la comprobación, explica que ese paso no tiene contingencia documentada y ofrece **"Detenerme aquí y dejarlo anotado"**, que no avanza ni marca nada.
+
 ### Corregido (tarea 234, cambio 1): en escritorio las categorías desaparecían al buscar
 
 **Área modificada:** catálogo de Guías. **Modificados:** `src/features/soluciones/SolucionesPage.tsx`.

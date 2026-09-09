@@ -777,12 +777,17 @@ export function BloqueVista({
   onAlternar,
   nivel = 0,
   ejecutarInline,
+  onNoSeCumple,
 }: {
   bloque: BloquePaso
   marcada: boolean
   onAlternar: () => void
   nivel?: number
   ejecutarInline?: EjecutarArticuloInline
+  // Salida de una VERIFICACIÓN que no se cumple. La aporta quien tiene
+  // la hoja de salidas a mano (la ejecución); en el mapa de lectura no
+  // hay contingencia que abrir, así que ahí no se ofrece.
+  onNoSeCumple?: (texto: string) => void
 }) {
   if (bloque.tipo === 'aviso') {
     const tono = tonoInfo(bloque.tono)
@@ -879,6 +884,39 @@ export function BloqueVista({
   }
 
   const esVerificacion = bloque.tipoTarea === 'verificacion'
+
+  // UNA COMPROBACIÓN NO SE "MARCA HECHA" (2026-09-09, cambio 2 del
+  // encargo). Aquí una verificación era la MISMA casilla que una
+  // instrucción, con una etiqueta al lado: el gesto de decir "lo miré y
+  // salió" era idéntico al de decir "lo hice", y no había forma de
+  // decir que NO salió salvo el "Falla" del paso entero, que no nombra
+  // la comprobación. Ahora se responde, igual que una decisión: dos
+  // controles con su consecuencia. Ya respondida vuelve a ser una fila
+  // con casilla, para poder corregirse tocándola.
+  if (esVerificacion && !marcada) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
+          <div className="flex items-start gap-2">
+            <p className="min-w-0 flex-1 text-[13.5px] font-medium leading-normal">{bloque.texto}</p>
+            <TagNeutral className="shrink-0">Verificación</TagNeutral>
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <button type="button" onClick={onAlternar} className={BTN_ACENTO}>
+              Sí, lo comprobé
+            </button>
+            {onNoSeCumple && (
+              <button type="button" onClick={() => onNoSeCumple(bloque.texto)} className={BTN_PRECAUCION}>
+                No se cumple
+              </button>
+            )}
+          </div>
+        </div>
+        {credencialInline}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       <FilaTarea
@@ -886,7 +924,11 @@ export function BloqueVista({
         esVerificacion={esVerificacion}
         texto={bloque.texto}
         onAlternar={onAlternar}
-        ariaLabel={`${esVerificacion ? 'Verificación' : 'Tarea'}: ${bloque.texto}`}
+        ariaLabel={
+          esVerificacion
+            ? `Verificación confirmada: ${bloque.texto}. Tocar para deshacer`
+            : `Tarea: ${bloque.texto}`
+        }
       />
       {credencialInline}
     </div>

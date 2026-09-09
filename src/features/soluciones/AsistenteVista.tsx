@@ -580,6 +580,12 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
                 marcada={instruccionesHechas.has(bloque.id)}
                 onAlternar={() => void alternarTarea(indiceActual, paso, bloque.id)}
                 nivel={nivel}
+                // "No se cumple" de una comprobación abre la MISMA hoja
+                // de salidas que el "Falla" del paso, con la
+                // comprobación nombrada. Es lo único que le faltaba a
+                // esta vista para tratar una verificación distinto de
+                // una instrucción (cambio 2 del encargo).
+                onNoSeCumple={(texto) => setHojaFalla({ tarea: texto })}
                 ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
                   <AsistenteVista
                     articuloId={vinculadoId}
@@ -695,7 +701,14 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
               type="button"
               disabled={indiceActual === 0}
               onClick={() => setIndiceActual(Math.max(0, indiceActual - 1))}
-              aria-label="Paso anterior"
+              // CONSULTAR NO ES AVANZAR (cambio 2 del encargo). Decían
+              // "Paso anterior" y "Paso siguiente" a secas, en una
+              // pantalla cuya acción dominante es cerrar el paso: se
+              // leían como avanzar el trabajo. Mueven el índice y nada
+              // más, y ahora lo dicen, igual que ya lo decían las
+              // flechas del modo de una tarea a la vez.
+              aria-label="Ver el paso anterior. Solo mueve la vista, no cambia lo marcado"
+              title="Ver el anterior"
               className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
             >
               <CaretLeft size={18} aria-hidden />
@@ -724,7 +737,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
               type="button"
               disabled={indiceActual + 1 >= pasos.length}
               onClick={() => setIndiceActual(Math.min(pasos.length - 1, indiceActual + 1))}
-              aria-label="Paso siguiente"
+              aria-label="Ver el paso siguiente. Solo mueve la vista, no lo da por hecho"
+              title="Ver el siguiente"
               className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
             >
               <CaretRight size={18} aria-hidden />

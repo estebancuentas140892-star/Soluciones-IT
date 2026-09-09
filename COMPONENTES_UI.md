@@ -423,6 +423,10 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** `SolucionesPage`. **Pendiente:** migrar `CategoriaPage` al rediseñar P4.
 - **Relación con la decisión de la tarea 145** (que dijo "NO crear `<FilaArticulo>`"): ahí se comparaba la fila de artículo contra `FilaDispositivo` y la de Red, y sigue valiendo (esto **no** se unifica con la fila de dispositivo). Lo que se unifica son las **dos filas de artículo**, que divergían solo porque nadie las había mirado juntas y que el rediseño hace converger a propósito. Ver [DECISIONES.md](DECISIONES.md).
 
+### 3.8b-bis `soluciones/BloqueVista` (en `ProcedimientoVista`)
+- **Una VERIFICACIÓN no se marca, se responde (2026-09-09, cambio 2).** Era la misma casilla de 56 px que una instrucción, con la etiqueta "Verificación" al lado, así que "lo miré y salió" y "lo hice" eran el mismo gesto, y la única forma de decir que **no** salió era el "Falla" del paso entero, que no nombra la comprobación. Sin responder se dibuja como bloque con **"Sí, lo comprobé"** y **"No se cumple"** (el mismo patrón que `DecisionEnTarea`); ya respondida vuelve a ser fila con casilla, para corregirse tocándola.
+- **Prop `onNoSeCumple?(texto)`**: la aporta quien tiene la hoja de salidas a mano. `AsistenteVista` la conecta al MISMO `HojaFalla` que el "Falla" del paso, con la comprobación nombrada. `ProcedimientoVista` (mapa de lectura del artículo) no la pasa: ahí no hay contingencia que abrir, así que la comprobación solo se confirma.
+
 ### 3.8i `soluciones/ModoFoco` y `soluciones/tareasFoco.ts`
 - **Propósito:** **la ejecución** de un procedimiento, **una tarea a la vez** (tarea 211, tablero `6d`; promovida a modo por defecto en la **tarea 217**). Es la oportunidad grande que señala el Paso 6: todo el sistema está construido alrededor del PASO, pero frente al equipo, con una mano y guantes, la unidad real de trabajo es la TAREA. El técnico veía tres tareas, dos avisos y una imagen a la vez y tenía que encontrar cuál le tocaba.
 - **Props:** `{ paso, tituloPaso, instruccionesHechas, onAlternarTarea, onCompletarPaso, etiquetaAvance, motivoBloqueo, onFalla }`.
