@@ -61,6 +61,67 @@ const PARADAS = [
   { nombre: 'editor-pasos', ruta: '/soluciones/cat-impresoras/art-alcance-tarea/editar', guion: `[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Pasos')?.click();` },
 ]
 
+// AUDITORIA EN LA PAGINA (cambio 4 del encargo del 2026-09-09). Busca
+// lo que una captura no delata sola: texto recortado por overflow, un
+// control tapado por una barra fija, y areas tactiles por debajo de los
+// 44 px que pide la regla R6.
+const AUDITORIA = `JSON.stringify((() => {
+  const hallazgos = []
+  const vw = innerWidth
+  const vh = innerHeight
+  const visible = (el) => {
+    const e = getComputedStyle(el)
+    if (e.display === 'none' || e.visibility === 'hidden' || e.opacity === '0') return false
+    const r = el.getBoundingClientRect()
+    return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh
+  }
+  const nombre = (el) => (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 46) || el.tagName
+
+  for (const el of document.querySelectorAll('*')) {
+    if (!visible(el)) continue
+    const e = getComputedStyle(el)
+    const recorta = e.overflowX === 'hidden' || e.textOverflow === 'ellipsis'
+    if (!recorta) continue
+    // El texto solo para lectores de pantalla se recorta a proposito.
+    if (el.classList.contains('sr-only')) continue
+    if (el.scrollWidth > el.clientWidth + 2 && el.children.length === 0) {
+      hallazgos.push('texto recortado: ' + nombre(el))
+    }
+  }
+
+  const barras = [...document.querySelectorAll('*')].filter((el) => {
+    const e = getComputedStyle(el)
+    if (e.position !== 'fixed' && e.position !== 'sticky') return false
+    if (!visible(el)) return false
+    const r = el.getBoundingClientRect()
+    return r.bottom > vh - 4 && r.top > vh / 2
+  })
+  const controles = [...document.querySelectorAll('button, a, input, [role=checkbox]')].filter(visible)
+  for (const barra of barras) {
+    const rb = barra.getBoundingClientRect()
+    for (const c of controles) {
+      if (barra.contains(c) || c.contains(barra)) continue
+      const rc = c.getBoundingClientRect()
+      const solapa = rc.bottom > rb.top + 2 && rc.top < rb.bottom - 2 && rc.right > rb.left && rc.left < rb.right
+      if (solapa) hallazgos.push('control tapado por barra fija: ' + nombre(c))
+    }
+  }
+
+  for (const c of controles) {
+    const r = c.getBoundingClientRect()
+    if (r.height < 43.5 || r.width < 24) {
+      hallazgos.push('area tactil ' + Math.round(r.width) + 'x' + Math.round(r.height) + ': ' + nombre(c))
+    }
+  }
+
+  return {
+    ancho: vw,
+    scroll: document.documentElement.scrollWidth,
+    desborde: document.documentElement.scrollWidth > vw + 1,
+    hallazgos: [...new Set(hallazgos)],
+  }
+})())`
+
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function json(ruta, metodo = 'GET') {
@@ -128,6 +189,7 @@ async function main() {
   await esperar(4000)
 
   const desbordes = []
+  const hallazgos = []
   for (const ancho of ANCHOS) {
     await s.enviar('Emulation.setDeviceMetricsOverride', {
       width: ancho,
@@ -146,12 +208,20 @@ async function main() {
         })
         await esperar(1200)
       }
-      const medida = await s.enviar('Runtime.evaluate', {
-        expression: `JSON.stringify({ancho: innerWidth, scroll: document.documentElement.scrollWidth})`,
-        returnByValue: true,
+      // La auditoria se hace AL FINAL DEL SCROLL: un control que
+      // se cruza con la barra fija a mitad de recorrido es scroll
+      // normal, no un defecto. Lo que hay que cazar es lo que
+      // sigue tapado cuando ya no queda nada por bajar.
+      await s.enviar('Runtime.evaluate', {
+        expression: 'window.scrollTo(0, document.documentElement.scrollHeight)',
       })
-      const { ancho: w, scroll } = JSON.parse(medida.result.value)
-      if (scroll > w + 1) desbordes.push(`${ancho}px ${parada.nombre}: scrollWidth ${scroll} > ${w}`)
+      await esperar(600)
+      const medida = await s.enviar('Runtime.evaluate', { expression: AUDITORIA, returnByValue: true })
+      const informe = JSON.parse(medida.result.value)
+      if (informe.desborde) {
+        desbordes.push(`${ancho}px ${parada.nombre}: scrollWidth ${informe.scroll} > ${informe.ancho}`)
+      }
+      for (const h of informe.hallazgos) hallazgos.push(`${ancho}px ${parada.nombre}: ${h}`)
       const shot = await s.enviar('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
       writeFileSync(join(SALIDA, `m${ancho}-${parada.nombre}.png`), Buffer.from(shot.data, 'base64'))
       console.log(`ok  ${ancho}px  ${parada.nombre}`)
@@ -163,6 +233,12 @@ async function main() {
       ? '\nSin desbordamiento horizontal en ningun ancho.'
       : `\nDESBORDES:\n${desbordes.join('\n')}`,
   )
+  if (hallazgos.length === 0) {
+    console.log('Sin texto recortado, controles tapados ni areas tactiles por debajo de 44 px.')
+  } else {
+    console.log('HALLAZGOS (' + hallazgos.length + '):')
+    for (const h of hallazgos) console.log('  ' + h)
+  }
   ws.close()
   chrome.kill()
   await esperar(500)

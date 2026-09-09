@@ -450,6 +450,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           onCerrar={() => setIndiceAbierto(false)}
           resumenes={resumenes}
           subtitulo={subtituloIndice}
+          tituloGuia={articulo?.titulo}
           onIrAPaso={setIndiceActual}
           modoEjecucion={modoEjecucion}
           onCambiarModo={(modo) => void cambiarModoEjecucion(modo)}

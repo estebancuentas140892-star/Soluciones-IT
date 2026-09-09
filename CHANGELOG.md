@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Corregido (tarea 234, cambio 4): el nombre de la guía se cortaba y no había forma de leerlo entero
+
+**Área modificada:** ejecución de Guías (índice de pasos) y la herramienta de verificación móvil. **Modificados:** `src/features/soluciones/HojaPasos.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `scripts/capturas-moviles.mjs`.
+**Motivo:** cambio 4 del encargo del **9 de septiembre de 2026**: contenido cortado, controles tapados, desbordamiento horizontal y barras superpuestas en 360, 390 y 430 px.
+**Impacto esperado:** el nombre de la guía deja de ser irrecuperable durante la ejecución. **Sin esquema. Sin cambios en los datos.**
+
+- **Agregado** una **auditoría en la página** al guion de capturas: además del desbordamiento horizontal, ahora mide texto recortado por `overflow`, controles que siguen tapados por una barra fija **al final del scroll** (a mitad de recorrido el cruce es scroll normal, no un defecto) y áreas táctiles por debajo de 44 px. Corre en los tres anchos, sobre doce pantallas.
+- **Corregido** la cabecera de ejecución mide 44 px desde la tarea 218, así que trunca el título; en 360 px se corta de verdad ("Revisar la caja de ejemplo antes de abrir turn…") y durante la ejecución **ese es el único sitio donde aparece el nombre**. No hay `hover` en un teléfono y el `title` de HTML no se abre con el dedo. Ahora el **nombre completo encabeza el índice de pasos**, que ya se abre desde el contador de al lado.
+- **Corregido** el índice decía "Los 1 pasos" en una guía de un solo paso. Ahora dice "El único paso".
+- **Resultado de la auditoría:** **sin desbordamiento horizontal** y **sin controles inalcanzables** en ninguno de los tres anchos. Los dos avisos que quedan son conocidos y no son defectos: el texto de la hoja de categorías que el propio panel desplaza por dentro (la comprobación no distingue capas de apilamiento) y los títulos truncados de las cabeceras compactas, que ahora se leen enteros en el índice, en el cuerpo de la ficha y en la pestaña General del editor.
+- **Anotado como pendiente, no ampliado:** la auditoría encontró **áreas táctiles por debajo de 44 px** (regla R6) en la cabecera de la ficha de artículo (favorito, editar y "más acciones", 34x34), en las casillas de paso de su mapa (28x28), en "Crear" del catálogo (32 de alto) y en el resumen de completitud del editor (25). No entra en este cambio, que es sobre recortes y solapamientos.
+
 ### Agregado (tarea 234, cambio 3): saltar un paso queda blindado con pruebas
 
 **Área modificada:** avance guardado. **Modificados:** `src/lib/progresoPasos.test.ts` (+ 5 pruebas).

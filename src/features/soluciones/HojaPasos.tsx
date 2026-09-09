@@ -27,6 +27,19 @@ interface Props {
   onCerrar: () => void
   resumenes: ResumenPaso[]
   subtitulo: string
+  /**
+   * Nombre COMPLETO de la guía en ejecución (cambio 4 del encargo del
+   * 2026-09-09, "contenido cortado").
+   *
+   * La cabecera de ejecución mide 44 px desde la tarea 218, así que el
+   * título va truncado y en 360 px se corta de verdad ("Revisar la caja
+   * de ejemplo antes de abrir turn…"). Durante la ejecución ese es el
+   * ÚNICO sitio donde aparece el nombre, así que quedaba irrecuperable:
+   * en un teléfono no hay `hover` y el `title` de HTML no se abre con
+   * el dedo. Aquí se lee entero, en la hoja que ya se abre desde el
+   * contador de al lado.
+   */
+  tituloGuia?: string
   onIrAPaso: (indice: number) => void
   // Tarea 218: el índice es también donde vive el cambio entre Foco y
   // el paso entero. Antes cada vista tenía su propio control para
@@ -138,6 +151,7 @@ export function HojaPasos({
   onCerrar,
   resumenes,
   subtitulo,
+  tituloGuia,
   onIrAPaso,
   modoEjecucion,
   onCambiarModo,
@@ -149,8 +163,16 @@ export function HojaPasos({
     <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
       <div className="mb-2.5 flex items-center justify-between gap-2">
         <span className="min-w-0">
+          {/* El nombre entero de la guía, sin truncar y con permiso
+              para ocupar varias líneas: es lo que la cabecera de 44 px
+              recorta y aquí se recupera. */}
+          {tituloGuia && (
+            <span className="mb-1 block text-[12.5px] leading-snug text-noct-neutral-300 text-pretty">
+              {tituloGuia}
+            </span>
+          )}
           <span id={ID_TITULO} className="block text-[17px] font-medium leading-tight text-noct-text">
-            Los {resumenes.length} pasos
+            {resumenes.length === 1 ? 'El único paso' : `Los ${resumenes.length} pasos`}
           </span>
           <span className="mt-0.5 block text-[12.5px] text-noct-neutral-300">{subtitulo}</span>
         </span>
