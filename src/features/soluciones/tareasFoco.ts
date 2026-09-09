@@ -51,6 +51,14 @@ export interface TareaFoco {
   guiaId: string | null
   guiaTitulo: string
   intencionGuia: IntencionGuia | null
+  // A donde lleva el "No" de una tarea de tipo 'decision', si el autor
+  // le dio destino. El modo de una tarea a la vez lo necesita para
+  // ofrecer las DOS respuestas con su consecuencia escrita: hasta el
+  // 2026-09-09 una decision se pintaba ahi como una accion cualquiera,
+  // con "Marcar hecha", asi que responder que si y responder que no
+  // eran el mismo gesto y el destino del "no" no existia.
+  decisionGuiaId: string | null
+  decisionGuiaTitulo: string
 }
 
 /** Prefijo del id sintetico de la guia del paso dentro del recorrido. */
@@ -95,6 +103,8 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
       guiaId: paso.subArticuloId,
       guiaTitulo: paso.subArticuloTitulo,
       intencionGuia: 'necesario',
+      decisionGuiaId: null,
+      decisionGuiaTitulo: '',
     })
   }
 
@@ -111,6 +121,8 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
       guiaId: guia?.guiaArticuloId ?? null,
       guiaTitulo: guia?.guiaArticuloTitulo ?? '',
       intencionGuia: guia ? 'necesario' : null,
+      decisionGuiaId: t.tipoTarea === 'decision' ? t.decisionArticuloId : null,
+      decisionGuiaTitulo: t.tipoTarea === 'decision' ? t.decisionArticuloTitulo : '',
     })
   }
 
@@ -127,6 +139,8 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
       guiaId: null,
       guiaTitulo: '',
       intencionGuia: null,
+      decisionGuiaId: null,
+      decisionGuiaTitulo: '',
     },
   ]
 }

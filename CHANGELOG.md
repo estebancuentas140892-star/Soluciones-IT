@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Agregado (tarea 234, secciones 5 y 6): una decisión se responde, y sus dos respuestas tienen destino
+
+**Área modificada:** ejecución de Guías, modo de una tarea a la vez. **Modificados:** `src/features/soluciones/tareasFoco.ts`, `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/pruebas/semillaLocal.ts` (banco de pruebas, solo desarrollo).
+**Motivo:** secciones 5 y 6 del encargo del **9 de septiembre de 2026**: "las acciones normales no deben utilizar exactamente los mismos controles que las verificaciones o decisiones", "cada decisión muestre una pregunta clara", "cada respuesta tenga un destino definido".
+**Impacto esperado:** los **tres** tipos de tarea dejan de compartir controles en la ejecución por defecto. **Sin esquema. Sin cambios en los datos:** `decisionArticuloId` y `decisionArticuloTitulo` existen desde antes y el editor ya los rellenaba; lo que faltaba era mostrarlos.
+
+- **Corregido** el modo de una tarea a la vez, que es **la ejecución** desde la tarea 217, pintaba una **decisión igual que una instrucción**: mismo "Marcar hecha" y ninguna de sus dos respuestas. Marcarla equivalía a responder "sí" en silencio, y el destino del "no", que el editor deja configurar y la vista completa sí ofrece, no aparecía en ninguna parte de la pantalla.
+- **Agregado** la pastilla **"Decisión"** junto a la de "Comprobación" (regla R16, estado en dos canales) y **dos respuestas** en la barra de acción: **"Sí"** sigue por la vía prevista, marca y avanza; **"No, abrir «X»"** nombra el destino y lo abre. Sin destino configurado, "No, continuar" registra la decisión igual: no dejar salida sería obligar a mentir. Mismos colores que la vista completa (regla R60): acento la vía que continúa, ámbar la que se desvía.
+- **Agregado** el destino del "no" se **ejecuta ahí mismo**, con el rótulo "Si esto falla" y desplegado de entrada (es el trabajo que toca, no material de consulta). Al terminarlo, la decisión queda **respondida**, el avance del destino se reinicia para su próximo uso y el técnico **se queda en el mismo punto**. "Volver a la pregunta" deshace la respuesta sin dejar rastro.
+- **Agregado** `TareaFoco.decisionGuiaId` y `decisionGuiaTitulo`, y en `renderGuia` las opciones `kicker`, `abierta` y `alCompletar`, que es lo que permite que terminar una guía anidada signifique **una cosa u otra** según por qué se abrió: cerrar el paso si era su requisito, responder la decisión si era su salida.
+- **Comprobado en navegador** que los tres tipos usan controles distintos: acción "Marcar hecha" + "Falla"; decisión "Sí" + "No, abrir «X»"; comprobación "Sí, lo comprobé" + "No se cumple".
+
 ### Corregido (tarea 234, secciones 2 y 4): la guía vinculada dice para qué, y el vínculo roto deja de contradecirse
 
 **Área modificada:** ejecución de Guías. **Modificados:** `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`.

@@ -476,20 +476,33 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           etiquetaAvance={etiquetaAvance}
           motivoBloqueo={motivoBloqueo}
           onFalla={(texto) => setHojaFalla({ tarea: texto })}
+          // TERMINAR EL DESTINO DE UN "NO" RESPONDE LA DECISIÓN, no
+          // cierra el paso (encargo del 2026-09-09, secciones 5 y 6).
+          // Es el mismo trato que la vista completa: se marca la
+          // decisión y se reinicia el avance del destino, para que la
+          // próxima guía que lo reutilice lo encuentre limpio.
+          onDecisionResuelta={(tareaId, guiaId) => {
+            void (async () => {
+              await reiniciarProgreso(guiaId)
+              await alternarTarea(indiceActual, paso, tareaId)
+            })()
+          }}
           // LA GUÍA VINCULADA SE EJECUTA AQUÍ DENTRO (H05). Es el mismo
           // componente que ya usaba la vista completa, así que las dos
           // vistas ejecutan exactamente lo mismo (criterio A08) y el
           // regreso al origen es automático: el técnico nunca sale de
           // esta pantalla, así que no hay a dónde volver.
-          renderGuia={({ guiaId, tituloReferencia, obligatoria }) => (
+          renderGuia={({ guiaId, tituloReferencia, obligatoria, kicker, abierta, alCompletar }) => (
             <SubProcedimientoEnAsistente
               guiaId={guiaId}
               tituloReferencia={tituloReferencia}
               nivel={nivel}
               obligatoria={obligatoria}
+              kicker={kicker}
+              abierta={abierta}
               rutaOrigen={rutaOrigen}
               etiquetaOrigen={articulo?.titulo ?? 'la guía'}
-              onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
+              onCompletado={alCompletar ?? (() => void intentarCompletarPaso(indiceActual, paso))}
             />
           )}
         />
@@ -919,6 +932,8 @@ function SubProcedimientoEnAsistente({
   tituloReferencia,
   nivel,
   obligatoria = true,
+  kicker: kickerPropio,
+  abierta,
   rutaOrigen,
   etiquetaOrigen,
   onCompletado,
@@ -926,6 +941,13 @@ function SubProcedimientoEnAsistente({
   guiaId: string
   tituloReferencia: string
   nivel: number
+  // Rotulo de la fila cuando el papel de la guia no es ni requisito ni
+  // consulta: el destino del "no" de una decision se rotula "Si esto
+  // falla", igual que en la vista completa.
+  kicker?: string
+  // Llega desplegada. El destino de un "no" es el trabajo que toca
+  // ahora, no algo que se ojea si hace falta.
+  abierta?: boolean
   // false para una guia de consulta o contingencia: se ofrece, pero no
   // condiciona nada (punto 6 de la seccion 5 del encargo). Cambia lo
   // que se le promete al tecnico, no lo que se le deja hacer.
@@ -944,7 +966,7 @@ function SubProcedimientoEnAsistente({
   // Una guía necesaria llega abierta (es el trabajo de la tarea); una
   // de consulta llega cerrada, porque consultar es opcional y abrirla
   // sola le robaría la pantalla a la instrucción.
-  const [cerrado, setCerrado] = useState(!obligatoria)
+  const [cerrado, setCerrado] = useState(!(abierta ?? obligatoria))
 
   if (articulo === undefined) return null
 
@@ -982,7 +1004,7 @@ function SubProcedimientoEnAsistente({
     : 0
   const anillo =
     total > 0 ? <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" /> : undefined
-  const kicker = obligatoria ? 'Otra guía' : 'Consulta opcional'
+  const kicker = kickerPropio ?? (obligatoria ? 'Otra guía' : 'Consulta opcional')
 
   // Misma regla de un solo nivel que ProcedimientoVista: mas alla se
   // enlaza, sin ejecutar aqui, y evita cualquier ciclo de vinculos. Y

@@ -11,6 +11,7 @@ import {
   LockSimple,
   Paperclip,
   SealCheck,
+  Signpost,
   Warning,
 } from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
@@ -85,10 +86,29 @@ interface Props {
   // El técnico declara que algo va mal en esta tarea. Abre la MISMA
   // hoja de salidas que el "Falla" de la vista completa (tablero 3d).
   onFalla: (textoTarea: string) => void
+  // El destino de un "No" terminó: la decisión queda respondida y el
+  // avance del destino se reinicia para su próximo uso, aquí o en
+  // cualquier otra guía que lo reutilice. Lo resuelve `AsistenteVista`,
+  // que es quien escribe en la base; esta vista no toca datos.
+  onDecisionResuelta: (tareaId: string, guiaId: string) => void
   // Pinta una guía vinculada para ejecutarla aquí dentro. Lo aporta
   // `AsistenteVista`, que es quien sabe anidar otra ejecución y quien
   // conserva el punto de origen.
-  renderGuia: (opciones: { guiaId: string; tituloReferencia: string; obligatoria: boolean }) => ReactNode
+  renderGuia: (opciones: {
+    guiaId: string
+    tituloReferencia: string
+    obligatoria: boolean
+    // Rótulo de la fila, cuando el que se deduce de `obligatoria`
+    // ("Otra guía" / "Consulta opcional") no describe el papel.
+    kicker?: string
+    // Llega desplegada, sin esperar a que el técnico la abra.
+    abierta?: boolean
+    // Qué hacer cuando la guía anidada termina. Sin esto, el asistente
+    // intenta cerrar el paso, que es lo que corresponde a un requisito
+    // del paso. Una DECISIÓN respondida con "No" necesita lo otro: al
+    // terminar el destino, lo que queda respondido es la decisión.
+    alCompletar?: () => void
+  }) => ReactNode
 }
 
 export function ModoFoco({
@@ -102,6 +122,7 @@ export function ModoFoco({
   etiquetaAvance,
   motivoBloqueo,
   onFalla,
+  onDecisionResuelta,
   renderGuia,
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso)
@@ -120,6 +141,10 @@ export function ModoFoco({
   // Qué panel está desplegado. Los apoyos siguen a mano pero no ocupan
   // la pantalla: lo que se lee de brazo estirado es la instrucción.
   const [panel, setPanel] = useState<'clave' | 'fotos' | 'archivos' | 'paso' | null>(null)
+  // Id de la tarea de decisión cuyo "No" está abierto. Se guarda el id
+  // y no un booleano porque un paso puede tener más de una decisión, y
+  // un booleano las abriría todas a la vez.
+  const [decisionAbierta, setDecisionAbierta] = useState<string | null>(null)
 
   // TERMINAR LA GUÍA VINCULADA ADELANTA SOLO, como marcar una tarea.
   //
@@ -154,6 +179,15 @@ export function ModoFoco({
   const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho)
   const cierraPaso = accion === 'completar'
   const esVerificacion = tarea.tipoTarea === 'verificacion'
+  // UNA DECISIÓN NO ES UNA ACCIÓN (encargo del 2026-09-09, secciones 5
+  // y 6). Hasta hoy este modo, que es LA ejecución desde la tarea 217,
+  // pintaba una decisión igual que una instrucción: el mismo "Marcar
+  // hecha" y ninguna de sus dos respuestas. El destino del "No", que el
+  // editor sí deja configurar y la vista completa sí ofrece, no existía
+  // aquí, así que marcarla equivalía a responder "sí" en silencio.
+  const esDecision = tarea.tipoTarea === 'decision'
+  const destinoDelNo = esDecision ? tarea.decisionGuiaId : null
+  const noAbierto = esDecision && decisionAbierta === tarea.id
   // La guía vinculada de ESTA tarea, si la tiene. En la entrada
   // 'guia-del-paso' es el trabajo entero de la tarea, así que se
   // despliega sin pedir permiso: es lo que el técnico vino a hacer.
@@ -212,8 +246,35 @@ export function ModoFoco({
 
   // El rótulo de la acción dominante nombra lo que se cierra. Una
   // comprobación no se "hace": se comprueba (H08). Y una guía vinculada
-  // no se marca a mano: se cumple al terminarla (A10).
-  const etiquetaMarcar = esVerificacion ? (hecha ? 'Comprobado' : 'Sí, lo comprobé') : hecha ? 'Hecha' : 'Marcar hecha'
+  // no se marca a mano: se cumple al terminarla (A10). Una decisión ya
+  // respondida dice "Respondida", no "Hecha": lo que ocurrió ahí fue
+  // elegir un camino, no ejecutar una instrucción.
+  const etiquetaMarcar = esVerificacion
+    ? hecha
+      ? 'Comprobado'
+      : 'Sí, lo comprobé'
+    : esDecision
+      ? hecha
+        ? 'Respondida'
+        : 'Ya quedó resuelto, continuar'
+      : hecha
+        ? 'Hecha'
+        : 'Marcar hecha'
+
+  // Responder que sí es seguir por la vía prevista: marca y avanza,
+  // igual que cualquier tarea cumplida.
+  function responderSi() {
+    setDecisionAbierta(null)
+    marcar()
+  }
+
+  // Responder que no abre el destino si lo hay. Sin destino, la
+  // decisión se registra igual y el flujo sigue: es la misma salida que
+  // ofrece la vista completa, y no dejar salida sería obligar a mentir.
+  function responderNo() {
+    if (destinoDelNo) setDecisionAbierta(tarea.id)
+    else marcar()
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -243,6 +304,15 @@ export function ModoFoco({
               <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-exito/45 bg-noct-exito/10 px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-exito">
                 <SealCheck size={14} aria-hidden />
                 Comprobación
+              </span>
+            )}
+            {/* La palabra "Decisión", además de los dos botones: quien
+                mira la pantalla de lejos tiene que saber que ahí se
+                elige, no se ejecuta (regla R16, estado en dos canales). */}
+            {esDecision && (
+              <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-accent/45 bg-noct-accent/10 px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
+                <Signpost size={14} aria-hidden />
+                Decisión
               </span>
             )}
             {tarea.clase === 'guia-del-paso' && (
@@ -321,6 +391,43 @@ export function ModoFoco({
           </div>
         )}
 
+        {/* EL DESTINO DEL "NO", ejecutado aquí mismo (secciones 5 y 6
+            del encargo del 2026-09-09). Es el mismo trato que la vista
+            completa le da a una decisión: responder que no abre la guía
+            de salida, y terminarla responde la decisión y devuelve al
+            técnico a este punto exacto. Con el destino abierto, la
+            respuesta ya está tomada, así que la barra de abajo deja de
+            ofrecer las dos opciones. */}
+        {noAbierto && destinoDelNo && (
+          <div className="rounded-xl border border-noct-precaucion/45 bg-noct-precaucion/[.08] p-3">
+            <p className="mb-2 text-[12.5px] font-semibold uppercase tracking-[.06em] text-noct-precaucion">
+              Respondiste que no
+            </p>
+            {renderGuia({
+              guiaId: destinoDelNo,
+              tituloReferencia: tarea.decisionGuiaTitulo,
+              obligatoria: false,
+              // El destino de un "no" no es material de consulta: es el
+              // trabajo que toca ahora, así que llega ABIERTO y con el
+              // rótulo de la vista completa ("Si esto falla"), no con el
+              // de una guía que se ojea si hace falta.
+              kicker: 'Si esto falla',
+              abierta: true,
+              alCompletar: () => {
+                setDecisionAbierta(null)
+                onDecisionResuelta(tarea.id, destinoDelNo)
+              },
+            })}
+            <button
+              type="button"
+              onClick={() => setDecisionAbierta(null)}
+              className="mt-2 inline-flex min-h-11 items-center text-[13px] font-medium text-noct-neutral-300 hover:text-noct-text"
+            >
+              Volver a la pregunta
+            </button>
+          </div>
+        )}
+
         {guiasDeApoyo.map((g) => (
           <div key={g.id} className="rounded-xl border border-noct-divider bg-noct-surface/60 p-3">
             {renderGuia({
@@ -388,6 +495,37 @@ export function ModoFoco({
               ? 'Esta tarea se cumple al terminar la guía de arriba'
               : 'Sigue con el resto del paso: este vínculo no impide cerrarlo'}
           </p>
+        ) : esDecision && !hecha && !noAbierto ? (
+          // UNA DECISIÓN SE RESPONDE, NO SE MARCA (secciones 5 y 6). Las
+          // dos respuestas, con su consecuencia escrita: el sí sigue por
+          // la vía prevista y el no nombra a dónde lleva. Los mismos
+          // colores que la vista completa (regla R60): acento la vía que
+          // continúa, ámbar la que se desvía. Antes aquí había un
+          // "Marcar hecha" idéntico al de una instrucción, así que las
+          // dos respuestas eran el mismo gesto y el destino del no no
+          // aparecía en ninguna parte de la pantalla.
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={responderSi}
+              className="flex h-[76px] min-w-[110px] shrink-0 items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-4 text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
+            >
+              <Check size={24} className="shrink-0" aria-hidden />
+              Sí
+            </button>
+            <button
+              type="button"
+              onClick={responderNo}
+              className="flex h-[76px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-noct-precaucion/60 bg-noct-precaucion/[.12] px-3 text-[16px] font-semibold leading-tight text-noct-precaucion active:bg-noct-precaucion/25"
+            >
+              <Warning size={20} className="shrink-0" aria-hidden />
+              <span className="min-w-0 truncate">
+                {destinoDelNo
+                  ? `No, abrir «${tarea.decisionGuiaTitulo || 'la salida'}»`
+                  : 'No, continuar'}
+              </span>
+            </button>
+          </div>
         ) : (
           <button
             type="button"

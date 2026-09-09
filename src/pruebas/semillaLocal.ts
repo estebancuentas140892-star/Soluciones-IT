@@ -78,6 +78,16 @@ function tarea(id: string, texto: string, tipoTarea: 'accion' | 'verificacion' |
   }
 }
 
+// Decision CON destino para el "No", que es lo que ejercita la seccion
+// 6 del encargo: pregunta clara y respuesta con destino definido.
+function decision(id: string, texto: string, destinoId: string, destinoTitulo: string): BloquePaso {
+  return {
+    ...tarea(id, texto, 'decision'),
+    decisionArticuloId: destinoId,
+    decisionArticuloTitulo: destinoTitulo,
+  }
+}
+
 function aviso(id: string, texto: string): BloquePaso {
   return {
     id,
@@ -452,6 +462,41 @@ const GUIA_TITULO_LARGO_BORRADOR = articulo({
   },
 })
 
+// Caso de las secciones 5 y 6: una decision con pregunta y destino, y
+// una verificacion, para comprobar que los tres tipos de tarea usan
+// controles distintos en el modo de una tarea a la vez.
+const GUIA_CON_DECISION = articulo({
+  id: 'art-decision',
+  categoriaId: 'cat-pos',
+  titulo: 'Revisar la caja de ejemplo antes de abrir turno',
+  tipo: 'mantenimiento',
+  procedimiento: {
+    descripcion: 'Caso de prueba de decision con destino.',
+    portada: null,
+    objetivoGeneral: 'Comprobar los tres tipos de tarea.',
+    requisitos: [],
+    verificacionFinal: ['La caja de ejemplo queda lista'],
+    tiempoEstimadoMin: 4,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'dec-p1',
+        titulo: 'Comprobar el estado de la caja de ejemplo',
+        bloques: [
+          tarea('dec-p1-t1', 'Encender la caja de ejemplo'),
+          decision(
+            'dec-p1-t2',
+            '¿La caja de ejemplo enciende y llega a la pantalla principal?',
+            GUIA_VINCULADA.id,
+            GUIA_VINCULADA.titulo,
+          ),
+          tarea('dec-p1-t3', 'Comprobar que la fecha de ejemplo es la de hoy', 'verificacion'),
+        ],
+      }),
+    ],
+  },
+})
+
 const ARTICULOS: Articulo[] = [
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
@@ -460,6 +505,7 @@ const ARTICULOS: Articulo[] = [
   GUIA_VINCULO_ROTO,
   GUIA_TITULO_LARGO,
   GUIA_TITULO_LARGO_BORRADOR,
+  GUIA_CON_DECISION,
   ...RELLENO,
 ]
 
