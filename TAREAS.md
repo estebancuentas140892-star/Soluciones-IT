@@ -8,7 +8,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **Estado:** En progreso. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-09, que revisa la aplicación desplegada tras la tarea 233 y pide completar **solo lo pendiente, incompleto o mal**. Diez secciones. La regla que las gobierna: no dar por hecho un cambio porque exista el botón; comprobar que se configura, se guarda, aparece donde toca, sobrevive al reordenar, funciona en ejecución, se comporta en móvil y no rompe las guías existentes.
 
-**Estado por sección:**
+**Encargo del 2026-09-09 (segunda tanda, seis cambios, uno por commit):**
+
+1. **Categorías accesibles durante la búsqueda. HECHO.** El rail de escritorio colgaba de `!buscando`; ahora está siempre y elegir una categoría acota la búsqueda.
+2. **Diferenciar consultar / marcar / verificar / no se cumple / saltar / detenerse.** En curso.
+3. **Decisiones, verificaciones y fallas completas.** Pendiente.
+4. **Presentación móvil del catálogo y la ejecución (360, 390, 430).** Pendiente.
+5. **Apoyos heredados "Sin asignar": conservarlos y mostrarlos una vez.** Pendiente de revisión.
+6. **`descripcionVencida` por día calendario, sin depender del huso.** Pendiente.
+
+**Estado por sección (primera tanda):**
 
 1. **Presentación de los títulos de las guías. COMPLETADA.** `FilaArticulo` pasa de una fila de cuatro elementos a **tres zonas apiladas** (título / metadatos / acción) y `SolucionesPage` sube los cortes de columna a `@2xl` y `@5xl`. Detalle en [CHANGELOG.md](CHANGELOG.md).
 2. **Contenido asignado a cada tarea (recorrido completo). VERIFICADA, sin cambios.** Recorrido entero en navegador: crear el apoyo en una tarea, guardar, ejecutar (sale solo en su tarea), reordenar con "Bajar esta tarea con sus apoyos", guardar y volver a ejecutar con el reparto intacto. Nada repetido entre tareas.

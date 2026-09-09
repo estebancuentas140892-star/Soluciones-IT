@@ -362,10 +362,17 @@ export function SolucionesPage() {
   }, [categoriaSel, tipoSel, etiquetaSel, query, searchParams, setSearchParams])
 
   function setCategoria(id: string | null) {
-    setCategoriaSel((actual) => (actual === id ? null : id))
+    const quita = id === null || categoriaSel === id
+    setCategoriaSel(quita ? null : id)
     setTipoSel(null)
     setEtiquetaSel(null)
-    setSoloEnCategoria(false)
+    // ELEGIR UNA CATEGORÍA MIENTRAS SE BUSCA ES ACOTAR LA BÚSQUEDA. Sin
+    // esto, tocar "Impresoras" con un término escrito no cambiaba nada
+    // visible: la búsqueda manda sobre el eje de categoría salvo que se
+    // pida "Solo ahí", así que el control parecía roto. Elegirla ES
+    // pedirlo; la cinta de contexto sigue explicando en qué alcance se
+    // está buscando y permite volver a todas.
+    setSoloEnCategoria(!quita && buscando)
   }
   function limpiarQuery() {
     setQuery('')
@@ -524,9 +531,17 @@ export function SolucionesPage() {
       </>
     }>
       <main className="flex-1 px-4 pb-16 pt-3.5">
-        <div className={!buscando ? 'xl:grid xl:grid-cols-[220px_minmax(0,1fr)] xl:items-start xl:gap-6' : ''}>
-          {!buscando && (
-            <aside className="hidden min-w-0 xl:block">
+        {/* EL RAIL DE CATEGORÍAS NO SE VA AL BUSCAR (2026-09-09, cambio
+            1 del encargo). Tanto la rejilla como el `aside` colgaban de
+            `!buscando`, así que en escritorio las categorías
+            desaparecían al escribir en el buscador y el técnico se
+            quedaba sin forma de acotar justo cuando más falta hacía. En
+            móvil ya no pasaba (los dos controles de 44 px son fijos);
+            esto pone al escritorio a la par. Los conteos del rail ya se
+            calculaban sobre el alcance visible, así que durante una
+            búsqueda dicen cuántos resultados hay en cada categoría. */}
+        <div className="xl:grid xl:grid-cols-[220px_minmax(0,1fr)] xl:items-start xl:gap-6">
+          <aside className="hidden min-w-0 xl:block">
               <div className="sticky top-[104px] flex flex-col gap-1">
                 {chips.map((chip) => {
                   const activo = chip.id === categoriaSel
@@ -575,8 +590,7 @@ export function SolucionesPage() {
                   </button>
                 )}
               </div>
-            </aside>
-          )}
+          </aside>
 
           <div className="@container min-w-0">
             {/* Cinta de contexto al buscar: antes el chip activo

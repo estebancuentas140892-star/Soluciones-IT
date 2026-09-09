@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Corregido (tarea 234, cambio 1): en escritorio las categorías desaparecían al buscar
+
+**Área modificada:** catálogo de Guías. **Modificados:** `src/features/soluciones/SolucionesPage.tsx`.
+**Motivo:** cambio 1 del encargo del **9 de septiembre de 2026**: "mantener accesible el filtro de categorías mientras existe una búsqueda activa, tanto en móvil como en escritorio".
+**Impacto esperado:** acotar por categoría sigue a un toque mientras se busca, en las dos presentaciones. **Sin esquema. Sin cambios en los datos.**
+
+- **Corregido** tanto la rejilla de dos columnas como el `aside` del rail colgaban de `!buscando`, así que en escritorio el rail de categorías **desaparecía entero** al escribir en el buscador, justo cuando hace más falta. En móvil no pasaba (los dos controles de 44 px son fijos desde H02); esto pone al escritorio a la par.
+- **Cambiado** elegir una categoría **mientras se busca** acota la búsqueda a esa categoría. Antes no cambiaba nada visible: la búsqueda manda sobre el eje de categoría salvo que se pida "Solo ahí", así que el control parecía roto. La cinta de contexto sigue explicando el alcance ("Busco solo en Impresoras") y **"En todas"** lo deshace.
+- **Sin tocar** los conteos del rail, que ya se calculaban sobre el alcance visible: durante una búsqueda dicen cuántos resultados hay en cada categoría, que es lo que hace útil el control. Comprobado en navegador a 1400 px (20 resultados, 4 al acotar a Impresoras) y a 360 px.
+
 ### Agregado (tarea 234, sección 8): verificación móvil repetible a 360, 390 y 430 px
 
 **Área modificada:** ninguna de la aplicación. **Nuevos:** `scripts/capturas-moviles.mjs` (herramienta de desarrollo, fuera del paquete).
