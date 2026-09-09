@@ -11,9 +11,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 **Estado por sección:**
 
 1. **Presentación de los títulos de las guías. COMPLETADA.** `FilaArticulo` pasa de una fila de cuatro elementos a **tres zonas apiladas** (título / metadatos / acción) y `SolucionesPage` sube los cortes de columna a `@2xl` y `@5xl`. Detalle en [CHANGELOG.md](CHANGELOG.md).
-2. **Contenido asignado a cada tarea (recorrido completo).** Pendiente de verificación extremo a extremo.
+2. **Contenido asignado a cada tarea (recorrido completo). VERIFICADA, sin cambios.** Recorrido entero en navegador: crear el apoyo en una tarea, guardar, ejecutar (sale solo en su tarea), reordenar con "Bajar esta tarea con sus apoyos", guardar y volver a ejecutar con el reparto intacto. Nada repetido entre tareas.
 3. **Avisos duplicados y contenido antiguo "Sin asignar". COMPLETADA.** La duplicación no venía del dato: `ModoFoco` tenía dos sitios pintando la misma lista de avisos del paso y sus condiciones se solapaban con el panel abierto. La decisión pasa a `ubicacionApoyosDelPaso` (tres destinos excluyentes, seis pruebas). El contenido heredado ya se conservaba, se señalaba en ámbar y se podía asignar a mano; comprobado el recorrido entero en navegador.
-4. **Guías vinculadas, recorrido completo.** Pendiente.
+4. **Guías vinculadas, recorrido completo. COMPLETADA.** Faltaba el **motivo** ("El paso «X» depende de ella"), que ahora va bajo el titular; y el vínculo roto **se contradecía** con el pie de su propia pantalla. Verificados sin cambios: abandonar a medias conserva el punto y no da la guía por cumplida, completarla adelanta sola, y una guía de consulta no condiciona nada. **Queda fuera:** no existe un equivalente a "Ya tengo ICG abierto", y no se añadió: A10 prohíbe marcar a mano una guía vinculada, así que ofrecerlo sería justo lo que el criterio impide. Si el usuario lo quiere, es una decisión suya, no una corrección.
 5. **Diferencia entre consultar, completar y saltar.** Pendiente.
 6. **Decisiones, verificaciones y fallas.** Pendiente.
 7. **Catálogo de Guías en móvil.** Pendiente.

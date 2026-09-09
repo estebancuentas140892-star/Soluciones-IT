@@ -958,9 +958,17 @@ function SubProcedimientoEnAsistente({
           La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
           dispositivo. Puede haberse eliminado, o no haber llegado todavía por sincronización.
         </p>
+        {/* SIN CONTRADECIR A LA PANTALLA (encargo del 2026-09-09,
+            sección 5). Aquí decía "el cierre del paso queda pendiente de
+            este vínculo" mientras el pie de la misma pantalla decía
+            "este vínculo no impide cerrarlo", y el pie es el que dice la
+            verdad: `subSatisfechoReactivo` da por satisfecho el vínculo
+            roto justo para no dejar el paso sin salida. Dos frases
+            opuestas a cuatro centímetros de distancia es lo que la
+            sección 5 prohíbe. */}
         <p className="text-[12.5px] leading-snug text-noct-neutral-300">
           {obligatoria
-            ? 'Puedes seguir con el resto del paso. El cierre del paso queda pendiente de este vínculo: avisa a quien mantiene la guía.'
+            ? 'No impide cerrar el paso: sigue con el resto y avisa a quien mantiene la guía para que la reponga.'
             : 'Era material de consulta, así que puedes continuar sin ella.'}
         </p>
       </div>

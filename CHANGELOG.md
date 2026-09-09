@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Corregido (tarea 234, secciones 2 y 4): la guía vinculada dice para qué, y el vínculo roto deja de contradecirse
+
+**Área modificada:** ejecución de Guías. **Modificados:** `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`.
+**Motivo:** secciones 2 y 4 del encargo del **9 de septiembre de 2026**, recorridas de extremo a extremo en el navegador. **Sin esquema. Sin cambios en los datos.**
+
+- **Agregado (sección 4, "indicar por qué se está realizando esa guía")** el motivo bajo el titular de la tarea de guía vinculada: **"El paso «X» depende de ella"**, más el objetivo del paso si el autor lo escribió. Faltaba: en el modo de una tarea a la vez el título del paso solo vive en la cabecera compacta, detrás del contador "1/2", así que se leía "Primero, completa esta guía" sin saber para qué. Se omite cuando el paso no tiene título propio, porque ahí el respaldo es el nombre de la propia guía y la frase sería un espejo.
+- **Corregido (sección 5, aplicada al vínculo roto)** la tarjeta del vínculo que no está decía "el cierre del paso queda pendiente de este vínculo" mientras el pie de **la misma pantalla** decía "este vínculo no impide cerrarlo". El pie es el que dice la verdad: un vínculo roto se da por satisfecho justo para no dejar el paso sin salida. Ahora la tarjeta dice **"No impide cerrar el paso: sigue con el resto y avisa a quien mantiene la guía para que la reponga"**.
+- **Verificado sin cambios (sección 2)**, recorrido completo en navegador sobre el banco de pruebas: crear el apoyo en una tarea, guardar, ejecutar y ver que sale **solo** en su tarea (la precaución y la foto en la 1, la guía de consulta en la 2, el archivo en la 3, ninguna repetida); **reordenar** la tarea con "Bajar esta tarea con sus apoyos", guardar y comprobar que los apoyos siguen enganchados por `tareaId`, con las etiquetas del editor renumeradas; y ejecutar de nuevo con el reparto intacto.
+- **Verificado sin cambios (sección 4)**: la guía vinculada se ejecuta anidada mostrando su nombre y su avance; **abandonarla a medias conserva su punto y NO la da por cumplida** (el paso sigue bloqueado con "Para cerrar el paso falta terminar «X»"); **completarla adelanta sola** a la tarea siguiente del paso; y una guía de intención `consulta` se rotula "Consulta opcional", llega plegada y **no condiciona nada**.
+
 ### Corregido (tarea 234, sección 3): la precaución del paso dejaba de verse una vez al abrir "Del paso"
 
 **Área modificada:** ejecución de Guías, modo de una tarea a la vez. **Modificados:** `src/features/soluciones/apoyosTarea.ts` (+ 6 pruebas), `src/features/soluciones/ModoFoco.tsx`.

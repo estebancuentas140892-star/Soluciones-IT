@@ -183,6 +183,20 @@ export function ModoFoco({
   })
   const mostrarApoyosDelPaso = ubicacionDelPaso === 'sueltos'
   const hayApoyosDelPaso = hayApoyos(delPaso)
+  // El motivo de la guía vinculada, en las palabras del autor: el
+  // título del paso del que sale y su objetivo, si lo escribió. Se
+  // omite cuando el paso no tiene título propio, porque entonces
+  // `tituloPaso` cae en el nombre de la propia guía y la frase se
+  // volvería un espejo ("completa X porque X").
+  const motivoGuiaDelPaso =
+    tarea.clase === 'guia-del-paso'
+      ? [
+          paso.titulo ? `El paso «${paso.titulo}» depende de ella.` : null,
+          paso.objetivo || null,
+        ]
+          .filter(Boolean)
+          .join(' ')
+      : ''
 
   function marcar() {
     onAlternarTarea(tarea.id)
@@ -270,6 +284,20 @@ export function ModoFoco({
                 : 'Primero, completa esta guía'
             : tarea.texto || 'Tarea sin texto'}
         </h2>
+
+        {/* POR QUÉ ESTÁS HACIENDO ESTA GUÍA (encargo del 2026-09-09,
+            sección 4). El titular dice qué hacer y la fila de abajo dice
+            cuál es la guía, pero el MOTIVO se perdía: en el modo de una
+            tarea a la vez el título del paso solo vive en la cabecera
+            compacta, detrás del contador "1/2", así que el técnico veía
+            "Primero, completa esta guía" sin saber para qué. El motivo
+            es el paso del que sale, y es lo que evita que la guía
+            vinculada parezca un desvío arbitrario. */}
+        {motivoGuiaDelPaso && (
+          <p className="-mt-3 text-[15.5px] leading-snug text-noct-neutral-300 text-pretty">
+            {motivoGuiaDelPaso}
+          </p>
+        )}
 
         {/* Los avisos de ESTA tarea van pegados a ella: un aviso que hay
             que ir a buscar no advierte. Los del paso solo al entrar. */}
