@@ -12,7 +12,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 1. **Categorías accesibles durante la búsqueda. HECHO.** El rail de escritorio colgaba de `!buscando`; ahora está siempre y elegir una categoría acota la búsqueda.
 2. **Diferenciar consultar / marcar / verificar / no se cumple / saltar / detenerse. HECHO.** Faltaba en la vista de paso entero: la verificación era la misma casilla que una acción y las flechas no decían que solo consultan. Ahora responde con "Sí, lo comprobé" / "No se cumple", y esta última abre la hoja de salidas nombrando la comprobación.
-3. **Decisiones, verificaciones y fallas completas.** Pendiente.
+3. **Decisiones, verificaciones y fallas completas. HECHO.** Cuatro de los cinco puntos ya funcionaban y se comprobaron en navegador; el quinto (saltar no marca el paso como realizado) no tenía prueba: ahora son cinco casos en `progresoPasos.test.ts`. **Pendiente menor anotado:** `quitarPasoSaltado` no tiene camino en la interfaz (no hace falta, porque `establecerPasoHecho` ya retira la marca al completar).
 4. **Presentación móvil del catálogo y la ejecución (360, 390, 430).** Pendiente.
 5. **Apoyos heredados "Sin asignar": conservarlos y mostrarlos una vez.** Pendiente de revisión.
 6. **`descripcionVencida` por día calendario, sin depender del huso.** Pendiente.

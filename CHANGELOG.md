@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Agregado (tarea 234, cambio 3): saltar un paso queda blindado con pruebas
+
+**Área modificada:** avance guardado. **Modificados:** `src/lib/progresoPasos.test.ts` (+ 5 pruebas).
+**Motivo:** cambio 3 del encargo del **9 de septiembre de 2026**. De sus cinco puntos, cuatro ya funcionaban y se comprobaron uno a uno; el quinto no tenía prueba que lo sostuviera.
+**Impacto esperado:** ninguno en la aplicación. **Sin esquema. Sin cambios de comportamiento.**
+
+- **Agregado** cinco pruebas sobre `marcarPasoSaltado` y `quitarPasoSaltado`: saltar **anota el salto y no toca `pasosHechos` ni `instruccionesHechas`**, no borra lo ya hecho, no duplica el mismo paso, retomarlo retira la marca sin tocar nada más, y completar después un paso saltado sí lo marca como hecho. Sin ellas, la garantía "saltar no marca el paso como realizado" dependía de leer el código.
+- **Comprobado sin cambios**, en navegador y sobre el banco de pruebas: la decisión sigue el destino configurado y terminarlo la deja respondida en el punto exacto; **"No se cumple"** abre la hoja de salidas con la comprobación nombrada y, cuando el paso tiene contingencia vinculada, la ofrece como primera salida (`HojaFalla`); **sin contingencia** la hoja lo dice y ofrece **"Detenerme aquí y dejarlo anotado"**, que no avanza ni marca; y las **comprobaciones finales** se leen desde el índice de pasos en cualquier momento, en solo lectura, con la frase que separa leerlas de darlas por cumplidas.
+- **Anotado como pendiente, no ampliado:** `quitarPasoSaltado` no tiene camino en la interfaz. No hace falta, porque completar un paso ya retira su marca dentro de `establecerPasoHecho`; queda como recordatorio si alguna vez se quiere un "retomar" explícito.
+
 ### Corregido (tarea 234, cambio 2): la vista de paso entero trataba una comprobación como una instrucción
 
 **Área modificada:** ejecución de Guías, vista de paso entero. **Modificados:** `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/AsistenteVista.tsx`.

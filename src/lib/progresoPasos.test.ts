@@ -6,6 +6,8 @@ import {
   contarHechos,
   contarInstruccionesHechas,
   establecerPasoHecho,
+  marcarPasoSaltado,
+  quitarPasoSaltado,
   registrarEvidenciaPaso,
   reiniciarProgreso,
   verificacionFinalCompleta,
@@ -92,6 +94,51 @@ describe('alternarInstruccionHecha', () => {
     const quedaCompleto = await alternarInstruccionHecha('articulo-1', 'paso-a', 't2', ['t1', 't2'])
     expect(quedaCompleto).toBe(false)
     expect((await db.progresoPasos.get('articulo-1'))?.pasosHechos).toEqual([])
+  })
+})
+
+describe('saltar un paso', () => {
+  // La garantía que pide el encargo del 2026-09-09 (cambio 3): saltar
+  // es avanzar SIN resolver, así que el paso queda pendiente. Si
+  // acabara en `pasosHechos`, el resumen diría que el procedimiento se
+  // completó sobre un paso que nadie hizo.
+  it('anota el salto y NO marca el paso como hecho', async () => {
+    await marcarPasoSaltado('articulo-1', 'paso-b')
+    const fila = await db.progresoPasos.get('articulo-1')
+    expect(fila?.pasosSaltados).toEqual(['paso-b'])
+    expect(fila?.pasosHechos ?? []).toEqual([])
+    expect(fila?.instruccionesHechas ?? []).toEqual([])
+  })
+
+  it('no borra lo que ya estaba hecho', async () => {
+    await establecerPasoHecho('articulo-1', 'paso-a', true, ['t1'])
+    await marcarPasoSaltado('articulo-1', 'paso-b')
+    const fila = await db.progresoPasos.get('articulo-1')
+    expect(fila?.pasosHechos).toEqual(['paso-a'])
+    expect(fila?.instruccionesHechas).toEqual(['t1'])
+    expect(fila?.pasosSaltados).toEqual(['paso-b'])
+  })
+
+  it('saltar dos veces el mismo paso no lo duplica', async () => {
+    await marcarPasoSaltado('articulo-1', 'paso-b')
+    await marcarPasoSaltado('articulo-1', 'paso-b')
+    expect((await db.progresoPasos.get('articulo-1'))?.pasosSaltados).toEqual(['paso-b'])
+  })
+
+  it('retomarlo retira la marca sin tocar nada más', async () => {
+    await establecerPasoHecho('articulo-1', 'paso-a', true)
+    await marcarPasoSaltado('articulo-1', 'paso-b')
+    await quitarPasoSaltado('articulo-1', 'paso-b')
+    const fila = await db.progresoPasos.get('articulo-1')
+    expect(fila?.pasosSaltados).toEqual([])
+    expect(fila?.pasosHechos).toEqual(['paso-a'])
+  })
+
+  it('completar despues un paso saltado si lo marca como hecho', async () => {
+    await marcarPasoSaltado('articulo-1', 'paso-b')
+    await establecerPasoHecho('articulo-1', 'paso-b', true)
+    const fila = await db.progresoPasos.get('articulo-1')
+    expect(fila?.pasosHechos).toEqual(['paso-b'])
   })
 })
 
