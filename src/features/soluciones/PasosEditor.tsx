@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -7,6 +8,7 @@ import {
   type ComponentType,
   type KeyboardEvent as EventoTeclado,
   type PointerEvent as EventoPuntero,
+  type ReactNode,
 } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import {
@@ -14,6 +16,7 @@ import {
   type Articulo,
   type BloquePaso,
   type DispositivoAfectado,
+  type IntencionGuia,
   type PasoAdjunto,
   type PasoProcedimiento,
   type TipoTarea,
@@ -21,13 +24,26 @@ import {
   type TonoAviso,
 } from '../../lib/db'
 import {
+  crearBloqueArchivo,
   crearBloqueAviso,
+  crearBloqueGuia,
   crearBloqueImagen,
   crearBloqueTarea,
   crearPaso,
   normalizarProcedimiento,
   procedimientoEjecutable,
 } from '../../lib/procedimiento'
+import {
+  cambiarTipoTarea,
+  DESTINO_PASO,
+  destinoTarea,
+  etiquetaDestino,
+  insertarApoyo,
+  moverTareaConApoyos,
+  opcionesDestino,
+  reasignarApoyo,
+  type DestinoApoyo,
+} from './bloquesEditor'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
@@ -42,6 +58,7 @@ import {
   CaretUp,
   DotsSixVertical,
   DotsThreeOutline,
+  Info,
   type IconoProps,
   LinkSimple,
   LockSimple,
@@ -49,6 +66,7 @@ import {
   Plus,
   Question,
   SealCheck,
+  Signpost,
   Square,
   TrashSimple,
   Warning,
@@ -142,6 +160,36 @@ const TIPOS_TAREA: TipoTareaInfo[] = [
   },
 ]
 
+// LOS OCHO TIPOS DE CONTENIDO QUE EL AUTOR PUEDE INSERTAR (seccion 4
+// del encargo del 2026-09-08). Hasta ahora la barra del editor solo
+// ofrecia cuatro cosas (tarea, aviso, foto y "reusar"), y el archivo,
+// la guia vinculada y el dato protegido solo existian escondidos en
+// "Vinculos del paso", es decir a nivel de PASO y nunca de tarea.
+//
+// Accion, Verificacion y Decision son el mismo bloque 'tarea' con
+// distinto `tipoTarea`: el catalogo los ofrece por separado porque el
+// autor piensa en ellos como tipos, pero NO se duplican en el modelo.
+type ClaveContenido = 'accion' | 'verificacion' | 'decision' | 'imagen' | 'aviso' | 'archivo' | 'guia' | 'dato'
+
+const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
+  { valor: 'accion', etiqueta: 'Acción', descripcion: 'Algo que el técnico ejecuta', Icono: Square, claseIcono: 'text-noct-accent-300' },
+  { valor: 'verificacion', etiqueta: 'Verificación', descripcion: 'Comprobar antes de continuar', Icono: SealCheck, claseIcono: 'text-noct-exito' },
+  { valor: 'decision', etiqueta: 'Decisión Sí / No', descripcion: '«No» abre otra guía y vuelve aquí', Icono: Question, claseIcono: 'text-noct-precaucion' },
+  { valor: 'imagen', etiqueta: 'Imagen', descripcion: 'Una captura en este punto', Icono: Camera, claseIcono: 'text-noct-accent-300' },
+  { valor: 'aviso', etiqueta: 'Aviso', descripcion: 'Precaución, dato o consejo', Icono: Warning, claseIcono: 'text-noct-precaucion' },
+  { valor: 'archivo', etiqueta: 'Archivo', descripcion: 'Manual, PDF o planilla', Icono: Paperclip, claseIcono: 'text-noct-neutral-300' },
+  { valor: 'guia', etiqueta: 'Guía vinculada', descripcion: 'Otra guía que se hace aquí', Icono: BookOpen, claseIcono: 'text-noct-accent-300' },
+  { valor: 'dato', etiqueta: 'Dato protegido', descripcion: 'Clave o campo de la bóveda', Icono: LockSimple, claseIcono: 'text-noct-neutral-300' },
+]
+
+// Para que sirve una guia vinculada. La distincion es del encargo
+// (seccion 5, punto 6): una consulta opcional NO puede bloquear.
+const INTENCIONES_GUIA: OpcionTipoBloque<IntencionGuia>[] = [
+  { valor: 'necesario', etiqueta: 'Necesaria', descripcion: 'Hay que completarla para cerrar el paso', Icono: BookOpen, claseIcono: 'text-noct-accent-300' },
+  { valor: 'consulta', etiqueta: 'Consulta opcional', descripcion: 'Material de apoyo; no bloquea el avance', Icono: Info, claseIcono: 'text-noct-neutral-300' },
+  { valor: 'contingencia', etiqueta: 'Contingencia', descripcion: 'Qué hacer si esto falla', Icono: Wrench, claseIcono: 'text-noct-precaucion' },
+]
+
 const OPCIONES_TIPO_TAREA: OpcionTipoBloque<TipoTarea>[] = TIPOS_TAREA.map((t) => ({
   valor: t.valor,
   etiqueta: t.etiqueta,
@@ -164,6 +212,16 @@ function infoTipoTarea(tipo: TipoTarea | null): TipoTareaInfo {
 
 function infoTono(tono: TonoAviso | null): TonoInfo {
   return TONOS_AVISO.find((t) => t.valor === (tono ?? 'info')) ?? TONOS_AVISO[0]
+}
+
+// Como se nombra, en el titulo de la hoja de contenido, la tarea a la
+// que va a caer lo que el autor elija. El alcance por defecto es la
+// tarea seleccionada (requisito 4), asi que decirlo ANTES de elegir es
+// lo que evita el "¿y esto donde va a salir?".
+function etiquetaDestinoActivo(bloques: BloquePaso[], destino: DestinoApoyo): string {
+  if (destino.alcance === 'paso' || !destino.tareaId) return 'todo el paso'
+  const numero = bloques.filter((b) => b.tipo === 'tarea').findIndex((b) => b.id === destino.tareaId)
+  return numero >= 0 ? `la tarea ${numero + 1}` : 'todo el paso'
 }
 
 // Separación vertical entre tarjetas de paso (`gap-3.5`). El arrastre
@@ -193,6 +251,21 @@ export function PasosEditor({
   const [subiendoBloqueId, setSubiendoBloqueId] = useState<string | null>(null)
   const [subiendoAdjuntoPasoId, setSubiendoAdjuntoPasoId] = useState<string | null>(null)
   const [focoBloqueId, setFocoBloqueId] = useState<string | null>(null)
+  // TAREA ACTIVA: a que tarea se le cuelga lo que se añade (requisito 4
+  // del editor, "el alcance predeterminado de un apoyo sera la tarea
+  // seleccionada"). Se mueve sola al tocar o enfocar una tarea; sin
+  // ninguna tocada manda la ultima del paso, que es donde se escribe.
+  const [tareaActivaId, setTareaActivaId] = useState<string | null>(null)
+  // Hoja de "añadir contenido" (los ocho tipos) del paso activo.
+  const [hojaContenidoAbierta, setHojaContenidoAbierta] = useState(false)
+  // Apoyo cuyo destino se esta eligiendo, o null.
+  const [destinoDeBloqueId, setDestinoDeBloqueId] = useState<string | null>(null)
+  // Aviso de lo que se soltaria al cambiar el tipo de una linea
+  // (requisito 7): se dice ANTES, no se descubre despues.
+  const [avisoCambioTipo, setAvisoCambioTipo] = useState<string | null>(null)
+  // Tarea cuyo selector de dato protegido hay que abrir (lo pide el
+  // catalogo de contenido, que vive en la barra del pie).
+  const [datoDeTareaId, setDatoDeTareaId] = useState<string | null>(null)
 
   // Secretos de la boveda para vincular a un paso. Solo llegan a este
   // dispositivo los de usuarios con permiso de boveda (RLS); el titulo
@@ -276,9 +349,62 @@ export function PasosEditor({
     actualizarPaso(indice, { bloques: pasos[indice].bloques.filter((b) => b.id !== bloqueId) })
   }
 
-  function agregarBloque(indice: number, bloque: BloquePaso) {
-    actualizarPaso(indice, { bloques: [...pasos[indice].bloques, bloque] })
-    if (bloque.tipo !== 'imagen') setFocoBloqueId(bloque.id)
+  // Añade un bloque al paso. Una TAREA va al final (es trabajo nuevo);
+  // un APOYO se coloca junto a la tarea a la que pertenece, para que el
+  // orden de escritura sea el orden de lectura (ver `insertarApoyo`).
+  function agregarBloque(indice: number, bloque: BloquePaso, destino?: DestinoApoyo) {
+    const bloques = pasos[indice].bloques
+    if (bloque.tipo === 'tarea') {
+      actualizarPaso(indice, { bloques: [...bloques, bloque] })
+      setTareaActivaId(bloque.id)
+      setFocoBloqueId(bloque.id)
+      return
+    }
+    const destinoFinal = destino ?? destinoPorDefecto(indice)
+    actualizarPaso(indice, { bloques: insertarApoyo(bloques, bloque, destinoFinal) })
+    if (bloque.tipo === 'aviso') setFocoBloqueId(bloque.id)
+  }
+
+  // A que tarea se le cuelga un apoyo nuevo: la seleccionada; si el paso
+  // todavia no tiene ninguna, al paso completo.
+  function destinoPorDefecto(indice: number): DestinoApoyo {
+    const bloques = pasos[indice].bloques
+    const activa = bloques.find((b) => b.id === tareaActivaId && b.tipo === 'tarea')
+    if (activa) return destinoTarea(activa.id)
+    const ultima = [...bloques].reverse().find((b) => b.tipo === 'tarea')
+    return ultima ? destinoTarea(ultima.id) : DESTINO_PASO
+  }
+
+  // Inserta uno de los ocho tipos del catalogo. Accion, verificacion y
+  // decision son el mismo bloque 'tarea'; el dato protegido no es un
+  // bloque nuevo sino el vinculo de la tarea seleccionada, que ya
+  // existia (no se duplica el concepto, punto 3 de la seccion 4).
+  function agregarContenido(indice: number, clave: ClaveContenido) {
+    const tareaId = destinoPorDefecto(indice).tareaId
+    if (clave === 'accion' || clave === 'verificacion' || clave === 'decision') {
+      agregarBloque(indice, crearBloqueTarea(clave))
+      return
+    }
+    if (clave === 'imagen') return agregarBloque(indice, crearBloqueImagen(tareaId))
+    if (clave === 'aviso') return agregarBloque(indice, crearBloqueAviso(tareaId))
+    if (clave === 'archivo') return agregarBloque(indice, crearBloqueArchivo(tareaId))
+    if (clave === 'guia') return agregarBloque(indice, crearBloqueGuia(tareaId))
+    // DATO PROTEGIDO. No nace un bloque nuevo: se usa el vinculo que ya
+    // existe en el propio bloque 'tarea' (`vinculoProtegido`, tarea 40),
+    // que la ejecucion ya sabia mostrar pero el editor NO permitia
+    // rellenar (solo ofrecia el del paso completo). Con una tarea
+    // seleccionada se abre su selector; sin ninguna, el del paso.
+    if (tareaId) setDatoDeTareaId(tareaId)
+    else setVinculosPasoId(pasos[indice].id)
+  }
+
+  function moverTarea(indice: number, tareaId: string, direccion: -1 | 1) {
+    actualizarPaso(indice, { bloques: moverTareaConApoyos(pasos[indice].bloques, tareaId, direccion) })
+  }
+
+  function cambiarDestino(indice: number, bloqueId: string, destino: DestinoApoyo) {
+    actualizarPaso(indice, { bloques: reasignarApoyo(pasos[indice].bloques, bloqueId, destino) })
+    setDestinoDeBloqueId(null)
   }
 
   // Enter en una tarea inserta otra debajo y la enfoca; pegar varias
@@ -450,6 +576,40 @@ export function PasosEditor({
       actualizarBloque(indice, bloqueId, { adjunto })
     } catch {
       setError(`No se pudo subir la imagen: ${archivo.name}`)
+    }
+    setSubiendoBloqueId(null)
+  }
+
+  // Archivo de un bloque 'archivo': el manual o la planilla que hace
+  // falta EN ESTE PUNTO, a diferencia de la galeria del paso completo.
+  // Comparte la subida con la imagen (comprimirImagen deja pasar
+  // intactos los PDF y documentos), solo cambia el bloque destino.
+  async function subirArchivoBloque(indice: number, bloqueId: string, evento: ChangeEvent<HTMLInputElement>) {
+    const archivo = evento.target.files?.[0]
+    evento.target.value = ''
+    if (!archivo) return
+
+    setError(null)
+    setAviso(null)
+    if (!supabase || !supabaseConfigured) {
+      setError('La aplicación aún no está conectada al servidor.')
+      return
+    }
+
+    setSubiendoBloqueId(bloqueId)
+    try {
+      const archivoFinal = await comprimirImagen(archivo)
+      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
+      const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
+      const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
+      if (resultado === 'encolado') {
+        setAviso('Sin conexión: el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal.')
+      }
+      actualizarBloque(indice, bloqueId, {
+        adjunto: { referencia, nombre: archivoFinal.name, tipo: archivoFinal.type },
+      })
+    } catch {
+      setError(`No se pudo subir el archivo: ${archivo.name}`)
     }
     setSubiendoBloqueId(null)
   }
@@ -667,6 +827,8 @@ export function PasosEditor({
               <BloqueEditor
                 key={bloque.id}
                 bloque={bloque}
+                bloquesDelPaso={paso.bloques}
+                activa={bloque.id === tareaActivaId}
                 enfocar={focoBloqueId === bloque.id}
                 onEnfocado={() => setFocoBloqueId(null)}
                 subiendoImagen={subiendoBloqueId === bloque.id}
@@ -675,7 +837,25 @@ export function PasosEditor({
                 onEnter={() => insertarTareaDespues(indice, bloque.id)}
                 onPegar={(texto, evento) => pegarLineas(indice, bloque.id, texto, evento)}
                 onSubirImagen={(evento) => void subirImagen(indice, bloque.id, evento)}
+                onSubirArchivo={(evento) => void subirArchivoBloque(indice, bloque.id, evento)}
                 vinculables={vinculablesOrdenados}
+                gruposProtegidos={[
+                  { etiqueta: 'Datos protegidos del equipo', opciones: opcionesCampos },
+                  { etiqueta: 'Secretos de la bóveda', opciones: opcionesCredenciales },
+                ]}
+                abrirDatoProtegido={datoDeTareaId === bloque.id}
+                onDatoProtegidoAbierto={() => setDatoDeTareaId(null)}
+                onSeleccionar={() => bloque.tipo === 'tarea' && setTareaActivaId(bloque.id)}
+                onAnadirATarea={() => {
+                  setTareaActivaId(bloque.id)
+                  setHojaContenidoAbierta(true)
+                }}
+                onMover={(direccion) => moverTarea(indice, bloque.id, direccion)}
+                onCambiarDestino={() => setDestinoDeBloqueId(bloque.id)}
+                onAvisoCambioTipo={setAvisoCambioTipo}
+                destinoAbierto={destinoDeBloqueId === bloque.id}
+                onCerrarDestino={() => setDestinoDeBloqueId(null)}
+                onElegirDestino={(destino) => cambiarDestino(indice, bloque.id, destino)}
               />
             ))}
             {paso.bloques.length === 0 && (
@@ -821,18 +1001,55 @@ export function PasosEditor({
             >
               Foto
             </BotonAnadir>
-            {/* Reutilizar (hallazgo H4): abre los vínculos del paso, donde
-                vive "Procedimiento relacionado". La composición por
-                referencia ya existía; este botón la hace descubrible. */}
+            {/* EL MENÚ DE LOS OCHO TIPOS (sección 4 del encargo). Antes
+                aquí solo cabían cuatro cosas y el archivo, la guía
+                vinculada y el dato protegido vivían escondidos en
+                "Vínculos del paso", es decir a nivel de paso y nunca de
+                tarea. Ahora se eligen por su nombre y caen en la tarea
+                seleccionada. */}
             <BotonAnadir
-              Icono={BookOpen}
-              onClick={() => idPasoActivo && setVinculosPasoId(idPasoActivo)}
-              descripcion={`Reutilizar otra guía en el paso ${indiceActivo + 1}`}
+              Icono={Plus}
+              onClick={() => setHojaContenidoAbierta(true)}
+              descripcion={`Añadir otro tipo de contenido al paso ${indiceActivo + 1}`}
             >
-              Reusar
+              Más
             </BotonAnadir>
           </div>
         </AccionesPaso>
+      )}
+
+      {/* Catálogo de contenido. El subtítulo dice a qué tarea va a caer
+          lo que se elija, porque el alcance por defecto es la tarea
+          seleccionada y eso tiene que verse antes de elegir. */}
+      <HojaTipoBloque
+        abierto={hojaContenidoAbierta && indiceActivo >= 0}
+        onCerrar={() => setHojaContenidoAbierta(false)}
+        titulo={
+          indiceActivo >= 0
+            ? `Añadir a ${etiquetaDestinoActivo(pasos[indiceActivo].bloques, destinoPorDefecto(indiceActivo))}`
+            : 'Añadir contenido'
+        }
+        opciones={CONTENIDOS}
+        // Sin nada marcado: es un menú de lo que se puede AÑADIR, no un
+        // selector de estado. Con "Acción" marcada parecía que el
+        // bloque ya era de ese tipo.
+        seleccionado={'' as ClaveContenido}
+        onElegir={(clave) => indiceActivo >= 0 && agregarContenido(indiceActivo, clave)}
+      />
+
+      {/* Requisito 7: lo que se soltaría al cambiar de tipo se dice, no
+          se descubre después. */}
+      {avisoCambioTipo && (
+        <div className="fixed inset-x-3 bottom-[168px] z-30 rounded-xl border border-noct-precaucion/50 bg-noct-bg px-3.5 py-3 shadow-[0_10px_40px_rgba(0,0,0,.55)]">
+          <p className="text-[13px] leading-snug text-noct-precaucion">{avisoCambioTipo}</p>
+          <button
+            type="button"
+            onClick={() => setAvisoCambioTipo(null)}
+            className="mt-1.5 min-h-11 text-[13px] font-medium text-noct-accent-300"
+          >
+            Entendido
+          </button>
+        </div>
       )}
 
       <DialogoEliminar
@@ -1102,6 +1319,8 @@ function VinculoProtegidoDelPaso({
 // izquierda que cicla el tipo/tono, el contenido, y la X para quitar).
 function BloqueEditor({
   bloque,
+  bloquesDelPaso,
+  activa,
   enfocar,
   onEnfocado,
   subiendoImagen,
@@ -1110,9 +1329,25 @@ function BloqueEditor({
   onEnter,
   onPegar,
   onSubirImagen,
+  onSubirArchivo,
   vinculables,
+  gruposProtegidos,
+  abrirDatoProtegido,
+  onDatoProtegidoAbierto,
+  onSeleccionar,
+  onAnadirATarea,
+  onMover,
+  onCambiarDestino,
+  onAvisoCambioTipo,
+  destinoAbierto,
+  onCerrarDestino,
+  onElegirDestino,
 }: {
   bloque: BloquePaso
+  // Todo el paso: hace falta para numerar las tareas en el selector de
+  // destino y para saber a cuál pertenece este apoyo.
+  bloquesDelPaso: BloquePaso[]
+  activa: boolean
   enfocar: boolean
   onEnfocado: () => void
   subiendoImagen: boolean
@@ -1121,7 +1356,19 @@ function BloqueEditor({
   onEnter: () => void
   onPegar: (texto: string, evento: { preventDefault: () => void }) => void
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
+  onSubirArchivo: (evento: ChangeEvent<HTMLInputElement>) => void
   vinculables: Articulo[]
+  gruposProtegidos: { etiqueta?: string; opciones: OpcionVinculoProtegido[] }[]
+  abrirDatoProtegido: boolean
+  onDatoProtegidoAbierto: () => void
+  onSeleccionar: () => void
+  onAnadirATarea: () => void
+  onMover: (direccion: -1 | 1) => void
+  onCambiarDestino: () => void
+  onAvisoCambioTipo: (aviso: string) => void
+  destinoAbierto: boolean
+  onCerrarDestino: () => void
+  onElegirDestino: (destino: DestinoApoyo) => void
 }) {
   // Una sola bandera para las dos hojas de TIPO (tarea o tono): un
   // bloque es de un tipo o del otro, nunca de los dos, así que no
@@ -1130,19 +1377,64 @@ function BloqueEditor({
   // propia bandera.
   const [hojaAbierta, setHojaAbierta] = useState(false)
   const [hojaDecisionAbierta, setHojaDecisionAbierta] = useState(false)
+  const [hojaProtegidaAbierta, setHojaProtegidaAbierta] = useState(false)
+  const [hojaGuiaAbierta, setHojaGuiaAbierta] = useState(false)
+  const [hojaIntencionAbierta, setHojaIntencionAbierta] = useState(false)
+
+  // El catálogo del pie puede pedir que se abra el selector de dato
+  // protegido de ESTA tarea ("Añadir · Dato protegido").
+  useEffect(() => {
+    if (!abrirDatoProtegido) return
+    setHojaProtegidaAbierta(true)
+    onDatoProtegidoAbierto()
+  }, [abrirDatoProtegido, onDatoProtegidoAbierto])
+
+  // El selector de destino, común a todos los apoyos: dice a qué tarea
+  // pertenece y permite cambiarlo. Es lo que faltaba en el editor
+  // (hallazgo H03: los controles decían "al paso" y no había forma de
+  // señalar una tarea).
+  const selectorDestino = (
+    <HojaTipoBloque
+      abierto={destinoAbierto}
+      onCerrar={onCerrarDestino}
+      titulo="¿A qué pertenece?"
+      opciones={[
+        {
+          valor: '__paso',
+          etiqueta: 'Todo el paso',
+          descripcion: 'Se ve al entrar al paso, sin repetirse en cada tarea',
+          Icono: Signpost,
+          claseIcono: 'text-noct-neutral-300',
+        },
+        ...opcionesDestino(bloquesDelPaso).map((o) => ({
+          valor: o.id,
+          etiqueta: `Tarea ${o.numero}`,
+          descripcion: o.texto.trim() || 'Sin texto todavía',
+          Icono: Square,
+          claseIcono: 'text-noct-accent-300',
+        })),
+      ]}
+      seleccionado={bloque.alcance === 'paso' ? '__paso' : (bloque.tareaId ?? '')}
+      onElegir={(valor) => onElegirDestino(valor === '__paso' ? DESTINO_PASO : destinoTarea(valor))}
+    />
+  )
 
   if (bloque.tipo === 'tarea') {
     const info = infoTipoTarea(bloque.tipoTarea)
     return (
-      <div className="flex flex-col gap-1.5">
+      <div
+        onPointerDownCapture={onSeleccionar}
+        onFocusCapture={onSeleccionar}
+        className={`flex flex-col gap-1.5 rounded-[10px] ${
+          activa ? 'bg-noct-accent/[.06] ring-1 ring-inset ring-noct-accent/25' : ''
+        }`}
+      >
         <div className="flex items-center gap-2">
           <PastillaTipo
             Icono={info.Icono}
             claseIcono={info.claseIcono}
             clasePastilla={info.clasePastilla}
             palabra={info.corto}
-            // El aria-label dice el tipo actual Y que se puede cambiar:
-            // la pastilla ya no cicla, abre la lista de los tres.
             etiqueta={`Tipo de línea: ${info.etiqueta}. Tocar para cambiarlo`}
             onClick={() => setHojaAbierta(true)}
           />
@@ -1173,18 +1465,82 @@ function BloqueEditor({
             titulo="Tipo de línea"
             opciones={OPCIONES_TIPO_TAREA}
             seleccionado={bloque.tipoTarea ?? 'accion'}
-            // Salir de "decisión" suelta el vínculo del "No": es un dato
-            // que solo tiene sentido dentro de ese tipo, y dejarlo
-            // guardado en la sombra reaparecería al volver a decisión.
-            onElegir={(tipoTarea) =>
-              onCambiar(
-                tipoTarea === 'decision'
-                  ? { tipoTarea }
-                  : { tipoTarea, decisionArticuloId: null, decisionArticuloTitulo: '' },
-              )
-            }
+            // REQUISITO 7: cambiar de tipo no borra en silencio. Antes,
+            // salir de "decisión" soltaba el vínculo del "No" sin decir
+            // nada. Ahora se aplica el cambio Y se avisa de lo que
+            // quedó fuera, con el nombre de lo que se soltó.
+            onElegir={(tipoTarea) => {
+              const { bloque: nuevo, perdido } = cambiarTipoTarea(bloque, tipoTarea)
+              onCambiar({
+                tipoTarea: nuevo.tipoTarea,
+                decisionArticuloId: nuevo.decisionArticuloId,
+                decisionArticuloTitulo: nuevo.decisionArticuloTitulo,
+              })
+              if (perdido.length > 0) {
+                onAvisoCambioTipo(`Al pasar a «${infoTipoTarea(tipoTarea).etiqueta}» se soltó ${perdido.join(' y ')}.`)
+              }
+            }}
           />
         </div>
+
+        {/* AÑADIR CONTENIDO A ESTA TAREA (requisito 2 del editor). Es
+            el control que el informe pedía: los apoyos se cuelgan de la
+            tarea desde su propia tarjeta, no de un botón que dice "al
+            paso". Y el orden de tareas se cambia aquí mismo, con sus
+            apoyos pegados (criterio A06). */}
+        {/* Cuatro objetivos de 44 px en UNA fila a 360 px: el rótulo
+            largo ("Añadir a esta tarea") no cabía junto a las flechas y
+            partía la fila en dos. El destino lo dice el título de la
+            hoja que se abre ("Añadir a la tarea 2"), y el aria-label lo
+            dice para quien no la ve. */}
+        <div className="flex items-center gap-1.5 pl-1">
+          <BotonLinea Icono={Plus} onClick={onAnadirATarea} etiqueta="Añadir contenido a esta tarea">
+            Añadir
+          </BotonLinea>
+          <BotonLinea
+            Icono={LockSimple}
+            onClick={() => setHojaProtegidaAbierta(true)}
+            activo={bloque.vinculoProtegido !== null}
+            etiqueta="Vincular un dato protegido a esta tarea"
+          >
+            {bloque.vinculoProtegido ? bloque.vinculoProtegido.titulo || 'Dato protegido' : 'Dato'}
+          </BotonLinea>
+          <span className="ml-auto flex shrink-0 gap-1.5">
+            <BotonIconoLinea Icono={ArrowUp} etiqueta="Subir esta tarea con sus apoyos" onClick={() => onMover(-1)} />
+            <BotonIconoLinea Icono={ArrowDown} etiqueta="Bajar esta tarea con sus apoyos" onClick={() => onMover(1)} />
+          </span>
+        </div>
+
+        {bloque.vinculoProtegido && (
+          <div className="ml-1 flex items-center justify-between gap-2 rounded-md border border-noct-divider bg-noct-bg px-2.5 py-1.5">
+            <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-300">
+              <LockSimple size={12} className="mr-1 inline-block align-[-2px] text-noct-neutral-400" />
+              Dato protegido: {bloque.vinculoProtegido.titulo || 'sin título'}
+            </p>
+            <button
+              type="button"
+              onClick={() => onCambiar({ vinculoProtegido: null })}
+              className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
+            >
+              Quitar
+            </button>
+          </div>
+        )}
+
+        <HojaVinculo
+          abierto={hojaProtegidaAbierta}
+          onCerrar={() => setHojaProtegidaAbierta(false)}
+          titulo="Dato protegido de esta tarea"
+          placeholderBuscar="Buscar un secreto o un campo protegido"
+          grupos={gruposProtegidos}
+          onElegir={(id) => {
+            const opcion = gruposProtegidos.flatMap((g) => g.opciones).find((o) => o.id === id)
+            if (opcion) {
+              onCambiar({ vinculoProtegido: { tipo: opcion.tipo, id: opcion.id, titulo: opcion.titulo } })
+            }
+          }}
+        />
+
         {bloque.tipoTarea === 'decision' &&
           (bloque.decisionArticuloId ? (
             <div className="ml-1 flex items-center justify-between gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/10 px-2.5 py-2">
@@ -1234,38 +1590,47 @@ function BloqueEditor({
     )
   }
 
+  // A PARTIR DE AQUÍ, LOS APOYOS. Todos llevan la misma cabecera: a qué
+  // pertenecen, y el aviso cuando eso no se sabe.
+  const cabeceraApoyo = (
+    <CabeceraApoyo
+      bloque={bloque}
+      bloquesDelPaso={bloquesDelPaso}
+      onCambiarDestino={onCambiarDestino}
+      onQuitar={onQuitar}
+    />
+  )
+
   if (bloque.tipo === 'aviso') {
     const tono = infoTono(bloque.tono)
     return (
-      <div className="flex items-start gap-2">
-        <PastillaTipo
-          Icono={tono.Icono}
-          claseIcono={tono.claseIcono}
-          clasePastilla={tono.clasesPanel}
-          palabra={tono.corto}
-          etiqueta={`Tono del aviso: ${tono.etiqueta}. Tocar para cambiarlo`}
-          onClick={() => setHojaAbierta(true)}
-        />
-        <div className={`min-w-0 flex-1 rounded-[9px] border-[1.5px] ${tono.clasesPanel}`}>
-          {/* Tres líneas: con la pastilla y la X comiendo ancho, un
-              aviso corriente ("El puerto 24 alimenta el teléfono de
-              recepción por PoE") ocupa tres a 14,5 px, y con dos se leía
-              cortado. */}
-          <textarea
-            rows={3}
-            value={bloque.texto}
-            ref={(el) => {
-              if (el && enfocar) {
-                el.focus()
-                onEnfocado()
-              }
-            }}
-            onChange={(e) => onCambiar({ texto: e.target.value })}
-            placeholder="Texto del aviso"
-            className="block min-h-14 w-full resize-y border-none bg-transparent px-3 py-2.5 text-[14.5px] leading-[1.45] text-noct-text outline-none"
+      <div className="ml-1 flex flex-col gap-1.5">
+        {cabeceraApoyo}
+        <div className="flex items-start gap-2">
+          <PastillaTipo
+            Icono={tono.Icono}
+            claseIcono={tono.claseIcono}
+            clasePastilla={tono.clasesPanel}
+            palabra={tono.corto}
+            etiqueta={`Tono del aviso: ${tono.etiqueta}. Tocar para cambiarlo`}
+            onClick={() => setHojaAbierta(true)}
           />
+          <div className={`min-w-0 flex-1 rounded-[9px] border-[1.5px] ${tono.clasesPanel}`}>
+            <textarea
+              rows={3}
+              value={bloque.texto}
+              ref={(el) => {
+                if (el && enfocar) {
+                  el.focus()
+                  onEnfocado()
+                }
+              }}
+              onChange={(e) => onCambiar({ texto: e.target.value })}
+              placeholder="Texto del aviso"
+              className="block min-h-14 w-full resize-y border-none bg-transparent px-3 py-2.5 text-[14.5px] leading-[1.45] text-noct-text outline-none"
+            />
+          </div>
         </div>
-        <BotonQuitar onClick={onQuitar} etiqueta="Quitar el aviso" />
         <HojaTipoBloque
           abierto={hojaAbierta}
           onCerrar={() => setHojaAbierta(false)}
@@ -1274,18 +1639,213 @@ function BloqueEditor({
           seleccionado={bloque.tono ?? 'info'}
           onElegir={(tono) => onCambiar({ tono })}
         />
+        {selectorDestino}
+      </div>
+    )
+  }
+
+  if (bloque.tipo === 'archivo') {
+    return (
+      <div className="ml-1 flex flex-col gap-1.5">
+        {cabeceraApoyo}
+        <label className="flex min-h-14 cursor-pointer items-center gap-2.5 rounded-md border border-dashed border-noct-neutral-700 px-3 text-[13px] text-noct-neutral-300 hover:border-noct-neutral-500 hover:text-noct-text">
+          <Paperclip size={16} className="shrink-0 text-noct-neutral-400" />
+          <span className="min-w-0 flex-1 truncate">
+            {subiendoImagen ? 'Subiendo...' : (bloque.adjunto?.nombre ?? 'Elegir el archivo (manual, PDF o planilla)')}
+          </span>
+          <input type="file" className="hidden" disabled={subiendoImagen} onChange={onSubirArchivo} />
+        </label>
+        <input
+          type="text"
+          value={bloque.texto}
+          onChange={(e) => onCambiar({ texto: e.target.value })}
+          placeholder="Para qué sirve este archivo (opcional)"
+          className="min-h-11 border-none bg-transparent px-0.5 py-1 text-xs text-noct-neutral-400 outline-none"
+        />
+        {selectorDestino}
+      </div>
+    )
+  }
+
+  if (bloque.tipo === 'guia') {
+    const intencion = INTENCIONES_GUIA.find((i) => i.valor === (bloque.intencionGuia ?? 'necesario'))
+    return (
+      <div className="ml-1 flex flex-col gap-1.5">
+        {cabeceraApoyo}
+        <button
+          type="button"
+          onClick={() => setHojaGuiaAbierta(true)}
+          className="flex min-h-14 items-center gap-2.5 rounded-md border border-dashed border-noct-neutral-700 px-3 text-left text-[13px] text-noct-neutral-300 hover:border-noct-neutral-500 hover:text-noct-text"
+        >
+          <BookOpen size={16} className="shrink-0 text-noct-neutral-400" />
+          <span className="min-w-0 flex-1 truncate">
+            {bloque.guiaArticuloTitulo || 'Elegir la guía que se hace en este punto'}
+          </span>
+          <CaretDown size={13} className="shrink-0" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setHojaIntencionAbierta(true)}
+          className="flex min-h-11 items-center gap-2 self-start rounded-md border border-noct-divider px-2.5 text-[12.5px] text-noct-neutral-300 hover:text-noct-text"
+        >
+          {intencion?.Icono && <intencion.Icono size={13} className={intencion.claseIcono} />}
+          {intencion?.etiqueta ?? 'Necesaria'}
+          <CaretDown size={11} />
+        </button>
+        <HojaVinculo
+          abierto={hojaGuiaAbierta}
+          onCerrar={() => setHojaGuiaAbierta(false)}
+          titulo="Guía vinculada"
+          placeholderBuscar={`Buscar en ${vinculables.length} ${vinculables.length === 1 ? 'guía' : 'guías'}`}
+          grupos={[{ opciones: vinculables.map((a) => ({ id: a.id, titulo: a.titulo })) }]}
+          onElegir={(id) => {
+            const articulo = vinculables.find((a) => a.id === id)
+            if (articulo) onCambiar({ guiaArticuloId: articulo.id, guiaArticuloTitulo: articulo.titulo })
+          }}
+        />
+        <HojaTipoBloque
+          abierto={hojaIntencionAbierta}
+          onCerrar={() => setHojaIntencionAbierta(false)}
+          titulo="¿Para qué sirve este vínculo?"
+          opciones={INTENCIONES_GUIA}
+          seleccionado={bloque.intencionGuia ?? 'necesario'}
+          onElegir={(intencionGuia) => onCambiar({ intencionGuia })}
+        />
+        {selectorDestino}
       </div>
     )
   }
 
   return (
-    <ImagenBloque
-      bloque={bloque}
-      subiendo={subiendoImagen}
-      onCambiarPie={(texto) => onCambiar({ texto })}
-      onQuitar={onQuitar}
-      onSubir={onSubirImagen}
-    />
+    <div className="flex flex-col gap-1.5">
+      {cabeceraApoyo}
+      <ImagenBloque
+        bloque={bloque}
+        subiendo={subiendoImagen}
+        onCambiarPie={(texto) => onCambiar({ texto })}
+        onQuitar={onQuitar}
+        onSubir={onSubirImagen}
+      />
+      {selectorDestino}
+    </div>
+  )
+}
+
+// LA CABECERA DE UN APOYO: a qué pertenece, y el aviso cuando eso no se
+// sabe.
+//
+// Es la pieza que cierra el hallazgo H03. Los controles del editor
+// decían "Añadir una foto al paso", "Añadir un aviso al paso" y
+// "Adjuntar archivo del paso", así que el autor no tenía forma de
+// expresar a qué tarea pertenecía cada apoyo, y la ejecución los
+// mostraba en todas.
+//
+// El caso 'sin-asignar' se señala en ámbar y NO se resuelve solo: es
+// contenido escrito antes de que existiera el campo, y adivinarle un
+// destino sería inventarle una intención al dato (sección 8 del
+// encargo). Se conserva, se muestra una vez y se pide que lo asignen.
+function CabeceraApoyo({
+  bloque,
+  bloquesDelPaso,
+  onCambiarDestino,
+  onQuitar,
+}: {
+  bloque: BloquePaso
+  bloquesDelPaso: BloquePaso[]
+  onCambiarDestino: () => void
+  onQuitar: () => void
+}) {
+  const sinAsignar = bloque.alcance === 'sin-asignar'
+  const etiqueta = etiquetaDestino(bloquesDelPaso, bloque)
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onCambiarDestino}
+          aria-label={`Este apoyo pertenece a: ${etiqueta}. Tocar para cambiarlo`}
+          className={`inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium ${
+            sinAsignar
+              ? 'border-noct-precaucion/55 bg-noct-precaucion/10 text-noct-precaucion'
+              : 'border-noct-divider text-noct-neutral-300 hover:text-noct-text'
+          }`}
+        >
+          {sinAsignar ? <Warning size={13} className="shrink-0" /> : <Signpost size={13} className="shrink-0" />}
+          <span className="truncate">{etiqueta}</span>
+          <CaretDown size={11} className="shrink-0" />
+        </button>
+        <button
+          type="button"
+          onClick={onQuitar}
+          aria-label="Quitar este apoyo"
+          className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-[9px] text-noct-neutral-400 hover:bg-noct-text/[.08] hover:text-noct-text"
+        >
+          <X size={16} />
+        </button>
+      </div>
+      {/* La explicación va en su propia línea: a 360 px, al lado de la
+          pastilla, se partía en cinco renglones de dos palabras. */}
+      {sinAsignar && (
+        <p className="text-[11.5px] leading-snug text-noct-precaucion/90">
+          Viene de una versión anterior y no dice a qué tarea pertenece. Se muestra al entrar al paso hasta que
+          lo asignes.
+        </p>
+      )}
+    </div>
+  )
+}
+
+// Botón pequeño de la fila de acciones de una tarea. 44 px de alto
+// (regla R6): son controles que se tocan de pie y con una mano.
+function BotonLinea({
+  Icono,
+  onClick,
+  activo,
+  etiqueta,
+  children,
+}: {
+  Icono: ComponentType<IconoProps>
+  onClick: () => void
+  activo?: boolean
+  etiqueta?: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={etiqueta}
+      className={`inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-md border px-2.5 text-[12.5px] font-medium ${
+        activo
+          ? 'border-noct-accent/45 bg-noct-accent/[.1] text-noct-accent-300'
+          : 'border-noct-divider text-noct-neutral-300 hover:text-noct-text'
+      }`}
+    >
+      <Icono size={14} className="shrink-0" />
+      <span className="min-w-0 truncate">{children}</span>
+    </button>
+  )
+}
+
+function BotonIconoLinea({
+  Icono,
+  etiqueta,
+  onClick,
+}: {
+  Icono: ComponentType<IconoProps>
+  etiqueta: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={etiqueta}
+      title={etiqueta}
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-noct-divider text-noct-neutral-400 hover:text-noct-text"
+    >
+      <Icono size={15} />
+    </button>
   )
 }
 
