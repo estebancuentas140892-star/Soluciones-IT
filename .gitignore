@@ -29,3 +29,6 @@ diseno/
 *.njsproj
 *.sln
 *.sw?
+
+# Capturas de verificacion movil de esta sesion (no se versionan)
+evidencia/

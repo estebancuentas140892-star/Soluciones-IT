@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
   normalizarProcedimiento,
@@ -21,6 +22,7 @@ import {
   type ModoEjecucion,
 } from '../../lib/preferenciasEjecucion'
 import { registrarIntervencion } from '../../lib/repositorio'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
 import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
@@ -78,6 +80,14 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // interfaz a paneles ya densos.
   const articulo = useLiveQuery(() => (nivel === 0 ? db.articulos.get(articuloId) : undefined), [articuloId, nivel])
   const dispositivoEvidencia = articulo?.dispositivosAfectados?.[0] ?? null
+
+  // DÓNDE ESTÁ EL TÉCNICO AHORA MISMO. Una guía vinculada que no se
+  // puede desplegar aquí se abre en su propia pantalla, y hasta ahora
+  // prometía "vuelves aquí al terminar" con un enlace pelado: el
+  // regreso caía en el padre declarado (la lista de Guías), no en la
+  // ejecución de la que salió. Con el origen escrito en el `state`, el
+  // regreso deshace el salto de verdad (regla M-R2).
+  const rutaOrigen = useLocation().pathname
 
   const [indiceActual, setIndiceActual] = useState<number | null>(null)
   const [listo, setListo] = useState(false)
@@ -315,12 +325,18 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // encima. Antes el botón se apagaba al 30 % de opacidad sin decir por
   // qué, al final del scroll del paso.
   const faltanTareas = Math.max(0, idsTareas.length - marcadas)
+  // QUÉ FALTA, NO "NO PUEDES AVANZAR" (hallazgo H07). El mensaje
+  // nombra exactamente lo pendiente, y no niega la navegación: moverse
+  // entre pasos y tareas para consultar sigue disponible, lo que no se
+  // puede es DAR EL PASO POR HECHO. Antes decía "para poder avanzar"
+  // mientras la flecha de al lado avanzaba sin problema, así que la
+  // frase contradecía a la propia pantalla.
   const motivoBloqueo =
     pasoActualHecho || trabajoPrevio
       ? null
       : faltanTareas > 0
-        ? `Falta ${faltanTareas} ${faltanTareas === 1 ? 'tarea' : 'tareas'} de este paso para poder avanzar`
-        : 'Termina el procedimiento vinculado para poder avanzar'
+        ? `Para cerrar el paso falta marcar ${faltanTareas} ${faltanTareas === 1 ? 'tarea' : 'tareas'}`
+        : `Para cerrar el paso falta terminar «${paso.subArticuloTitulo || 'la guía vinculada'}»`
   const hayPasoSiguiente = indiceActual + 1 < pasos.length
   const etiquetaAvance = pasoActualHecho
     ? hayPasoSiguiente
@@ -433,11 +449,28 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           paso={paso}
           tituloPaso={tituloPaso}
           instruccionesHechas={instruccionesHechas}
+          subSatisfecho={subSatisfecho}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
           onCompletarPaso={avanzar}
           etiquetaAvance={etiquetaAvance}
           motivoBloqueo={motivoBloqueo}
           onFalla={(texto) => setHojaFalla({ tarea: texto })}
+          // LA GUÍA VINCULADA SE EJECUTA AQUÍ DENTRO (H05). Es el mismo
+          // componente que ya usaba la vista completa, así que las dos
+          // vistas ejecutan exactamente lo mismo (criterio A08) y el
+          // regreso al origen es automático: el técnico nunca sale de
+          // esta pantalla, así que no hay a dónde volver.
+          renderGuia={({ guiaId, tituloReferencia, obligatoria }) => (
+            <SubProcedimientoEnAsistente
+              guiaId={guiaId}
+              tituloReferencia={tituloReferencia}
+              nivel={nivel}
+              obligatoria={obligatoria}
+              rutaOrigen={rutaOrigen}
+              etiquetaOrigen={articulo?.titulo ?? 'la guía'}
+              onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
+            />
+          )}
         />
         {hojaDeFalla}
       </>
@@ -539,9 +572,11 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
 
         {paso.subArticuloId && (
           <SubProcedimientoEnAsistente
-            subArticuloId={paso.subArticuloId}
+            guiaId={paso.subArticuloId}
             tituloReferencia={paso.subArticuloTitulo}
             nivel={nivel}
+            rutaOrigen={rutaOrigen}
+            etiquetaOrigen={articulo?.titulo ?? 'la guía'}
             onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
           />
         )}
@@ -859,35 +894,53 @@ function EvidenciaPaso({
 // que queda es una fila neutra que se pliega y, debajo, la línea
 // vertical que marca la profundidad.
 function SubProcedimientoEnAsistente({
-  subArticuloId,
+  guiaId,
   tituloReferencia,
   nivel,
+  obligatoria = true,
+  rutaOrigen,
+  etiquetaOrigen,
   onCompletado,
 }: {
-  subArticuloId: string
+  guiaId: string
   tituloReferencia: string
   nivel: number
+  // false para una guia de consulta o contingencia: se ofrece, pero no
+  // condiciona nada (punto 6 de la seccion 5 del encargo). Cambia lo
+  // que se le promete al tecnico, no lo que se le deja hacer.
+  obligatoria?: boolean
+  // A donde vuelve el tecnico si la guia se abre en su propia pantalla.
+  rutaOrigen?: string
+  etiquetaOrigen?: string
   onCompletado: () => void
 }) {
-  const articulo = useLiveQuery(async () => (await db.articulos.get(subArticuloId)) ?? null, [subArticuloId])
-  const progreso = useLiveQuery(() => db.progresoPasos.get(subArticuloId), [subArticuloId])
+  const articulo = useLiveQuery(async () => (await db.articulos.get(guiaId)) ?? null, [guiaId])
+  const progreso = useLiveQuery(() => db.progresoPasos.get(guiaId), [guiaId])
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
   )
-  // Llega abierta, como en la vista de lectura: el paso no se completa
-  // hasta que la guía anidada termine. Se puede cerrar con el mismo
-  // gesto con el que se cierra la contingencia.
-  const [cerrado, setCerrado] = useState(false)
+  // Una guía necesaria llega abierta (es el trabajo de la tarea); una
+  // de consulta llega cerrada, porque consultar es opcional y abrirla
+  // sola le robaría la pantalla a la instrucción.
+  const [cerrado, setCerrado] = useState(!obligatoria)
 
   if (articulo === undefined) return null
 
+  // VÍNCULO ROTO CON SALIDA ÚTIL (criterio A12). Antes el aviso solo
+  // hablaba del editor, así que el técnico que está frente al equipo se
+  // quedaba sin nada que hacer y sin saber si podía continuar.
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2">
-        <p className="text-xs text-noct-precaucion">
-          El procedimiento vinculado{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
-          disponible. Edita el artículo para quitar el vínculo o vincular otro.
+      <div className="flex flex-col gap-2 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2.5">
+        <p className="text-[13px] leading-snug text-noct-precaucion">
+          La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
+          dispositivo. Puede haberse eliminado, o no haber llegado todavía por sincronización.
+        </p>
+        <p className="text-[12.5px] leading-snug text-noct-neutral-300">
+          {obligatoria
+            ? 'Puedes seguir con el resto del paso. El cierre del paso queda pendiente de este vínculo: avisa a quien mantiene la guía.'
+            : 'Era material de consulta, así que puedes continuar sin ella.'}
         </p>
       </div>
     )
@@ -900,22 +953,27 @@ function SubProcedimientoEnAsistente({
     : 0
   const anillo =
     total > 0 ? <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" /> : undefined
+  const kicker = obligatoria ? 'Otra guía' : 'Consulta opcional'
 
   // Misma regla de un solo nivel que ProcedimientoVista: mas alla se
   // enlaza, sin ejecutar aqui, y evita cualquier ciclo de vinculos. Y
-  // ahora SE NOTA que solo enlaza (regla R58 del turno 12): antes la
-  // tarjeta enlazada y la desplegable eran el mismo marco de acento con
-  // el mismo icono, así que tocar una salía de la pantalla y tocar la
-  // otra no, sin nada que lo anunciara.
+  // ahora SE NOTA que solo enlaza (regla R58 del turno 12).
+  //
+  // EL REGRESO AHORA ES REAL (criterio A10). La fila prometía "vuelves
+  // aquí al terminar" con un `<Link>` pelado, así que volver caía en el
+  // padre declarado (la lista de Guías) y no en la ejecución de la que
+  // se salió. Ahora el origen viaja en el `state` y el chasis lo usa
+  // para deshacer el último salto (regla M-R2).
   if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
     return (
       <EnlaceVinculo
         Icono={LinkSimple}
-        kicker="Otra guía"
+        kicker={kicker}
         titulo={articulo.titulo}
         nota={PROMESA_REGRESO}
         extra={anillo}
         to={ruta}
+        state={rutaOrigen ? conOrigen(rutaOrigen, etiquetaOrigen ?? 'la guía anterior') : undefined}
       />
     )
   }
@@ -926,7 +984,7 @@ function SubProcedimientoEnAsistente({
     <div>
       <FilaVinculo
         Icono={LinkSimple}
-        kicker="Otra guía"
+        kicker={kicker}
         titulo={articulo.titulo}
         nota={fraseAvanceDocumento(hechos, total, 'guía')}
         extra={anillo}

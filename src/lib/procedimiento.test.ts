@@ -21,12 +21,26 @@ const TAREA_ACCION = {
   decisionArticuloId: null,
   decisionArticuloTitulo: '',
   vinculoProtegido: null,
+  alcance: null,
+  tareaId: null,
+  guiaArticuloId: null,
+  guiaArticuloTitulo: '',
+  intencionGuia: null,
 } as const
+// Un apoyo (aviso, imagen, archivo, guía) guardado ANTES de que
+// existiera `alcance` no dice a qué tarea pertenece, así que al
+// normalizarlo queda en 'sin-asignar': se conserva entero y el editor
+// lo señala, en vez de repartirse por todas las tareas del paso.
 const SIN_TAREA = {
   tipoTarea: null,
   decisionArticuloId: null,
   decisionArticuloTitulo: '',
   vinculoProtegido: null,
+  alcance: 'sin-asignar',
+  tareaId: null,
+  guiaArticuloId: null,
+  guiaArticuloTitulo: '',
+  intencionGuia: null,
 } as const
 
 // Bloque 'tarea' de prueba con id fijo por texto (para asserts estables).
@@ -360,6 +374,11 @@ describe('normalizarProcedimiento', () => {
         decisionArticuloId: null,
         decisionArticuloTitulo: '',
         vinculoProtegido: null,
+        alcance: null,
+        tareaId: null,
+        guiaArticuloId: null,
+        guiaArticuloTitulo: '',
+        intencionGuia: null,
       },
       {
         id: 'b2',
@@ -371,6 +390,11 @@ describe('normalizarProcedimiento', () => {
         decisionArticuloId: 'art-9',
         decisionArticuloTitulo: 'Instalar impresora',
         vinculoProtegido: null,
+        alcance: null,
+        tareaId: null,
+        guiaArticuloId: null,
+        guiaArticuloTitulo: '',
+        intencionGuia: null,
       },
     ])
   })
@@ -434,6 +458,11 @@ describe('normalizarProcedimiento', () => {
               tipo: 'tarea',
               texto: 'Ingresar el PIN de impresión',
               vinculoProtegido: { tipo: 'campo', id: 'cp-1', titulo: 'PIN de impresión' },
+              alcance: null,
+              tareaId: null,
+              guiaArticuloId: null,
+              guiaArticuloTitulo: '',
+              intencionGuia: null,
             },
           ],
         },
@@ -470,6 +499,11 @@ describe('normalizarProcedimiento', () => {
       tipoTarea: 'decision',
       decisionArticuloId: 'art-9',
       vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server' },
+      alcance: null,
+      tareaId: null,
+      guiaArticuloId: null,
+      guiaArticuloTitulo: '',
+      intencionGuia: null,
     })
   })
 
@@ -801,6 +835,11 @@ describe('prepararProcedimientoParaGuardar', () => {
           {
             ...tarea('Ingresar usuario y contraseña'),
             vinculoProtegido: { tipo: 'credencial', id: 'cred-1', titulo: '  SQL Server  ' },
+            alcance: null,
+            tareaId: null,
+            guiaArticuloId: null,
+            guiaArticuloTitulo: '',
+            intencionGuia: null,
           },
         ],
       }),

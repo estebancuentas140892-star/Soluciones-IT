@@ -13,6 +13,11 @@ function tarea(texto: string): BloquePaso {
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
     vinculoProtegido: null,
+    alcance: null,
+    tareaId: null,
+    guiaArticuloId: null,
+    guiaArticuloTitulo: '',
+    intencionGuia: null,
   }
 }
 
@@ -27,6 +32,11 @@ function aviso(texto: string, tono: BloquePaso['tono'] = 'info'): BloquePaso {
     decisionArticuloId: null,
     decisionArticuloTitulo: '',
     vinculoProtegido: null,
+    alcance: null,
+    tareaId: null,
+    guiaArticuloId: null,
+    guiaArticuloTitulo: '',
+    intencionGuia: null,
   }
 }
 
@@ -327,6 +337,11 @@ describe('resumenProcedimiento', () => {
           decisionArticuloId: null,
           decisionArticuloTitulo: '',
           vinculoProtegido: null,
+          alcance: null,
+          tareaId: null,
+          guiaArticuloId: null,
+          guiaArticuloTitulo: '',
+          intencionGuia: null,
         },
       ],
     })

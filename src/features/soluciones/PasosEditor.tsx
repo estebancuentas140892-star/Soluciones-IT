@@ -22,6 +22,7 @@ import {
 } from '../../lib/db'
 import {
   crearBloqueAviso,
+  crearBloqueImagen,
   crearBloqueTarea,
   crearPaso,
   normalizarProcedimiento,
@@ -169,24 +170,6 @@ function infoTono(tono: TonoAviso | null): TonoInfo {
 // necesita el número para calcular cuánto se corre cada tarjeta al
 // dejar hueco, así que vive en un solo sitio.
 const HUECO_ENTRE_PASOS = 14
-
-// Bloque de imagen recien creado, sin adjunto todavia: el slot del
-// bloque permite subir la foto (a diferencia de tareas y avisos, que
-// nacen con su contenido en blanco listo para escribir). Se descarta al
-// guardar si no llega a tener imagen (limpiarBloques en procedimiento.ts).
-function crearBloqueImagenVacio(): BloquePaso {
-  return {
-    id: crypto.randomUUID(),
-    tipo: 'imagen',
-    texto: '',
-    tono: null,
-    adjunto: null,
-    tipoTarea: null,
-    decisionArticuloId: null,
-    decisionArticuloTitulo: '',
-    vinculoProtegido: null,
-  }
-}
 
 // Editor del procedimiento paso a paso (handoff "Editor de Artículo",
 // sistema Nocturne). Componente controlado: el estado vive en el
@@ -833,7 +816,7 @@ export function PasosEditor({
             </BotonAnadir>
             <BotonAnadir
               Icono={Camera}
-              onClick={() => agregarBloque(indiceActivo, crearBloqueImagenVacio())}
+              onClick={() => agregarBloque(indiceActivo, crearBloqueImagen())}
               descripcion={`Añadir una foto al paso ${indiceActivo + 1}`}
             >
               Foto

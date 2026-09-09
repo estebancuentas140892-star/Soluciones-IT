@@ -1,18 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { BloquePaso, PasoProcedimiento } from '../../lib/db'
-import { accionFoco, tareasParaFoco } from './tareasFoco'
+import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
+import { accionFoco, idTareaGuiaDelPaso, tareaFocoHecha, tareasParaFoco } from './tareasFoco'
 
 function bloque(parcial: Partial<BloquePaso> & { id: string; tipo: BloquePaso['tipo'] }): BloquePaso {
-  return {
-    texto: '',
-    tono: null,
-    adjunto: null,
-    tipoTarea: null,
-    decisionArticuloId: null,
-    decisionArticuloTitulo: '',
-    vinculoProtegido: null,
-    ...parcial,
-  }
+  return { ...CAMPOS_BLOQUE_VACIOS, ...parcial }
 }
 
 function paso(parcial: Partial<PasoProcedimiento> = {}): PasoProcedimiento {
@@ -103,5 +95,89 @@ describe('accionFoco', () => {
   it('el paso sin tareas cierra desde el principio: no hay nada intermedio que marcar', () => {
     const unica = tareasParaFoco(paso({ bloques: [] }), 'Desembalar')
     expect(accionFoco(unica, new Set())).toBe('completar')
+  })
+})
+
+// H05 / A09 / A10: la guía vinculada del paso deja de ser un mensaje de
+// bloqueo y pasa a ser la primera tarea del recorrido, que es lo que
+// permite abrirla, hacerla y volver.
+describe('la guía vinculada del paso dentro del recorrido', () => {
+  const conGuia = paso({
+    subArticuloId: 'art-gestor',
+    subArticuloTitulo: 'Acceder al gestor',
+    bloques: [
+      bloque({ id: 'b1', tipo: 'tarea', texto: 'Crear la ficha' }),
+      bloque({ id: 'b2', tipo: 'tarea', texto: 'Comprobar que aparece' }),
+    ],
+  })
+
+  it('entra como PRIMERA tarea, con el título de la guía', () => {
+    const tareas = tareasParaFoco(conGuia, 'Entrar al gestor')
+    expect(tareas.map((t) => t.texto)).toEqual(['Acceder al gestor', 'Crear la ficha', 'Comprobar que aparece'])
+    expect(tareas[0].clase).toBe('guia-del-paso')
+    expect(tareas[0].guiaId).toBe('art-gestor')
+    expect(tareas[0].id).toBe(idTareaGuiaDelPaso('p1'))
+  })
+
+  it('un paso cuyo único trabajo es la guía vinculada no cae en la tarea única del paso', () => {
+    const soloGuia = paso({ subArticuloId: 'art-gestor', subArticuloTitulo: 'Acceder al gestor', bloques: [] })
+    const tareas = tareasParaFoco(soloGuia, 'Entrar')
+    expect(tareas).toHaveLength(1)
+    expect(tareas[0].clase).toBe('guia-del-paso')
+    expect(tareas[0].esPasoEntero).toBe(false)
+  })
+
+  it('NO se cumple marcándola: se cumple cuando la guía vinculada está completa (A10)', () => {
+    const [guia] = tareasParaFoco(conGuia, 'Entrar al gestor')
+    // Aunque su id apareciera en el avance marcado, sin la guía hecha
+    // sigue pendiente: volver de ella a medias no la da por completada.
+    expect(tareaFocoHecha(guia, new Set([guia.id]), false)).toBe(false)
+    expect(tareaFocoHecha(guia, new Set(), true)).toBe(true)
+  })
+
+  it('el paso no se cierra mientras la guía vinculada siga pendiente', () => {
+    const tareas = tareasParaFoco(conGuia, 'Entrar al gestor')
+    const todasMarcadas = new Set(['b1', 'b2'])
+    expect(accionFoco(tareas, todasMarcadas, false)).toBe('marcar')
+    expect(accionFoco(tareas, todasMarcadas, true)).toBe('completar')
+  })
+
+  it('una guía "necesario" colgada de una tarea condiciona esa tarea, no el paso entero', () => {
+    const p = paso({
+      bloques: [
+        bloque({ id: 'b1', tipo: 'tarea', texto: 'Abrir la consola' }),
+        bloque({
+          id: 'g1',
+          tipo: 'guia',
+          alcance: 'tarea',
+          tareaId: 'b1',
+          guiaArticuloId: 'art-consola',
+          guiaArticuloTitulo: 'Abrir la consola de ejemplo',
+          intencionGuia: 'necesario',
+        }),
+        bloque({ id: 'b2', tipo: 'tarea', texto: 'Escribir el nombre' }),
+      ],
+    })
+    const tareas = tareasParaFoco(p, 'Paso')
+    expect(tareas.map((t) => t.guiaId)).toEqual(['art-consola', null])
+    expect(tareas[0].intencionGuia).toBe('necesario')
+  })
+
+  it('una guía de consulta NO condiciona la tarea (punto 6 de la sección 5)', () => {
+    const p = paso({
+      bloques: [
+        bloque({ id: 'b1', tipo: 'tarea', texto: 'Abrir la consola' }),
+        bloque({
+          id: 'g1',
+          tipo: 'guia',
+          alcance: 'tarea',
+          tareaId: 'b1',
+          guiaArticuloId: 'art-manual',
+          guiaArticuloTitulo: 'Manual de referencia',
+          intencionGuia: 'consulta',
+        }),
+      ],
+    })
+    expect(tareasParaFoco(p, 'Paso')[0].guiaId).toBeNull()
   })
 })

@@ -92,7 +92,42 @@ export type TonoAviso = 'info' | 'precaucion' | 'importante' | 'consejo' | 'dato
 //   inmediatamente antes de la tarea peligrosa).
 // - 'imagen': una imagen intercalada en el flujo (una captura
 //   despues de una tarea concreta), con pie de foto opcional.
-export type TipoBloque = 'tarea' | 'aviso' | 'imagen'
+// - 'archivo': un documento (manual, PDF, planilla) anclado al punto
+//   de la secuencia donde hace falta. Antes solo existia la galeria
+//   del paso completo (`PasoProcedimiento.adjuntos`), que la ejecucion
+//   ofrecia como un boton "Archivo" generico en TODAS las tareas.
+// - 'guia': otra guia vinculada desde este punto. Antes el vinculo
+//   solo existia a nivel de PASO (`subArticuloId`), asi que no habia
+//   forma de decir "esta tarea concreta se hace con esta otra guia".
+export type TipoBloque = 'tarea' | 'aviso' | 'imagen' | 'archivo' | 'guia'
+
+// A QUE PERTENECE UN APOYO (imagen, aviso, archivo o guia vinculada).
+//
+// Es el campo que faltaba: hasta ahora un apoyo vivia dentro del paso
+// y punto, asi que el modo de una tarea a la vez no tenia con que
+// decidir y los mostraba TODOS en TODAS las tareas (una precaucion de
+// la primera tarea reaparecia al confirmar y al comprobar).
+//
+// - 'tarea': pertenece a la tarea que nombra `tareaId`. Es el valor
+//   por defecto de todo apoyo creado desde el editor.
+// - 'paso': apoyo del paso completo. Se muestra UNA vez, al entrar al
+//   paso, y queda consultable; nunca se repite tarea por tarea.
+// - 'sin-asignar': viene de una guia escrita antes de que existiera
+//   este campo, asi que NO SE SABE a que tarea pertenece. Se conserva
+//   intacto y se comporta como 'paso' (se muestra una vez, no se
+//   reparte), y el editor lo señala para que el autor lo asigne. Nunca
+//   se adivina el destino: repartirlo por posicion seria inventar una
+//   intencion que el dato no tiene.
+export type AlcanceApoyo = 'tarea' | 'paso' | 'sin-asignar'
+
+// Para que sirve una guia vinculada desde un punto del procedimiento:
+// - 'necesario': hay que completarla para poder seguir (un
+//   prerrequisito real, como dejar abierto el programa donde se
+//   trabaja).
+// - 'consulta': material de apoyo opcional. NUNCA bloquea el avance.
+// - 'contingencia': que hacer si esto falla. No bloquea; se ofrece
+//   desde la hoja de "Algo va mal".
+export type IntencionGuia = 'necesario' | 'consulta' | 'contingencia'
 
 // Clasificacion de una tarea del checklist (solo bloques 'tarea'):
 // - 'accion': algo que el tecnico ejecuta ("Abrir SQL Server"). Es el
@@ -154,6 +189,21 @@ export interface BloquePaso {
   decisionArticuloId: string | null
   decisionArticuloTitulo: string
   vinculoProtegido: VinculoProtegido | null
+  // A QUE PERTENECE ESTE APOYO. Solo aplica a los bloques que NO son
+  // 'tarea' (una tarea no es apoyo de nadie: es el trabajo). null en
+  // los bloques 'tarea'. Ver `AlcanceApoyo`.
+  alcance: AlcanceApoyo | null
+  // Id del bloque 'tarea' al que pertenece, cuando `alcance` es
+  // 'tarea'. Es el ID del bloque, no su posicion: reordenar las tareas
+  // del paso no desengancha sus apoyos (requisito 6 del editor). Si el
+  // id apunta a una tarea que ya no existe (el autor la borro), el
+  // apoyo NO se pierde: se trata como 'sin-asignar' al leerlo.
+  tareaId: string | null
+  // Guia vinculada desde este punto (bloques 'guia'), con copia del
+  // titulo como el resto de vinculos del sistema.
+  guiaArticuloId: string | null
+  guiaArticuloTitulo: string
+  intencionGuia: IntencionGuia | null
 }
 
 export interface PasoProcedimiento {
