@@ -4,6 +4,25 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+### 234. Encargo del 2026-09-09: repaso de lo entregado en la 233 y lo que quedó a medias
+
+**Estado:** En progreso. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-09, que revisa la aplicación desplegada tras la tarea 233 y pide completar **solo lo pendiente, incompleto o mal**. Diez secciones. La regla que las gobierna: no dar por hecho un cambio porque exista el botón; comprobar que se configura, se guarda, aparece donde toca, sobrevive al reordenar, funciona en ejecución, se comporta en móvil y no rompe las guías existentes.
+
+**Estado por sección:**
+
+1. **Presentación de los títulos de las guías. COMPLETADA.** `FilaArticulo` pasa de una fila de cuatro elementos a **tres zonas apiladas** (título / metadatos / acción) y `SolucionesPage` sube los cortes de columna a `@2xl` y `@5xl`. Detalle en [CHANGELOG.md](CHANGELOG.md).
+2. **Contenido asignado a cada tarea (recorrido completo).** Pendiente de verificación extremo a extremo.
+3. **Avisos duplicados y contenido antiguo "Sin asignar".** Pendiente.
+4. **Guías vinculadas, recorrido completo.** Pendiente.
+5. **Diferencia entre consultar, completar y saltar.** Pendiente.
+6. **Decisiones, verificaciones y fallas.** Pendiente.
+7. **Catálogo de Guías en móvil.** Pendiente.
+8. **Verificación móvil obligatoria (360, 390 y 430 px) con evidencia.** Pendiente.
+9. **Compatibilidad y datos existentes.** Pendiente.
+10. **Commit y push por cada punto terminado.** En curso.
+
+**Área afectada:** `src/features/soluciones/{FilaArticulo,SolucionesPage,ModoFoco,AsistenteVista,PasosEditor,apoyosTarea}.*`, `src/pruebas/semillaLocal.ts`. **Dependencias:** la tarea 233, que es lo que este encargo revisa.
+
 *(las tareas 217, 218 y 219 se cerraron entre el 2026-09-03 y el 2026-09-04 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Son las **tres primeras** de las 13 recomendaciones del handoff "Auditoría visual sección Guía"; quedan registradas abajo en "Por hacer" las tareas 220 a 231. La **219 es la primera de la serie verificada en navegador**, con un banco de pruebas temporal, y de paso destapó que el servidor de desarrollo servía la copia obsoleta del proyecto (ver su ficha en el archivo: invalida la comprobación de consola de la 218, no su verificación contra producción). La siguiente en el orden recomendado es la **220** (cierre real del procedimiento), que conviene después de la **225** (tiempo honesto), porque su resumen necesita el tiempo real. El usuario las va tomando de una en una.)*
 
 

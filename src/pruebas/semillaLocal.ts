@@ -393,12 +393,73 @@ const RELLENO: Articulo[] = [
   }),
 ]
 
+// Caso de la seccion 1 del encargo del 2026-09-09: titulos largos en la
+// tarjeta del catalogo. El reportado por el usuario, palabra por
+// palabra, mas su variante en borrador y una tarjeta de titulo corto
+// para comparar en la misma lista.
+const GUIA_TITULO_LARGO = articulo({
+  id: 'art-titulo-largo',
+  categoriaId: 'cat-pos',
+  titulo: 'Configurar las paginas que abre Google Chrome al iniciar en un POS',
+  tipo: 'configuracion',
+  procedimiento: {
+    descripcion: 'Caso de prueba de titulo largo.',
+    portada: null,
+    objetivoGeneral: 'Comprobar el reparto de la tarjeta con un titulo largo.',
+    requisitos: [],
+    verificacionFinal: ['El navegador de ejemplo abre las paginas configuradas'],
+    tiempoEstimadoMin: 12,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'largo-p1',
+        titulo: 'Abrir la configuracion del navegador de ejemplo',
+        bloques: [tarea('largo-p1-t1', 'Abrir el menu de configuracion de ejemplo')],
+      }),
+      paso({
+        id: 'largo-p2',
+        titulo: 'Anotar las paginas de inicio de ejemplo',
+        bloques: [
+          tarea('largo-p2-t1', 'Escribir la primera pagina de ejemplo'),
+          tarea('largo-p2-t2', 'Comprobar que quedan guardadas', 'verificacion'),
+        ],
+      }),
+    ],
+  },
+})
+
+const GUIA_TITULO_LARGO_BORRADOR = articulo({
+  id: 'art-titulo-largo-borrador',
+  categoriaId: 'cat-software',
+  titulo: 'Restablecer el perfil del navegador de ejemplo cuando el POS arranca con pestanas equivocadas',
+  tipo: 'configuracion',
+  estado: 'borrador',
+  procedimiento: {
+    descripcion: 'Caso de prueba de titulo largo en borrador.',
+    portada: null,
+    objetivoGeneral: 'Comprobar la tarjeta con titulo largo y estado borrador.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 7,
+    dificultad: 'intermedio',
+    pasos: [
+      paso({
+        id: 'largo-b-p1',
+        titulo: 'Cerrar el navegador de ejemplo',
+        bloques: [tarea('largo-b-p1-t1', 'Cerrar todas las ventanas de ejemplo')],
+      }),
+    ],
+  },
+})
+
 const ARTICULOS: Articulo[] = [
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
   GUIA_TRES_TAREAS,
   GUIA_ALCANCE_POR_TAREA,
   GUIA_VINCULO_ROTO,
+  GUIA_TITULO_LARGO,
+  GUIA_TITULO_LARGO_BORRADOR,
   ...RELLENO,
 ]
 

@@ -15,6 +15,8 @@ import { claseActivaDeCategoria, claseTextoDeCategoria } from './coloresCategori
 import { FilaArticulo } from './FilaArticulo'
 import { coincidenciaArticulo } from './coincidencia'
 import { sugerenciaBusqueda } from './sugerenciaBusqueda'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { contarHechos } from '../../lib/progresoPasos'
 
 // Pantalla Soluciones en el sistema Nocturne. Rediseñada a partir de la
 // auditoría de la sección (handoff "Auditoría de Soluciones TI",
@@ -115,6 +117,29 @@ export function SolucionesPage() {
     [],
     [],
   )
+  // El avance guardado en ESTE teléfono, solo para que la acción de la
+  // tarjeta diga "Continuar · paso N de M" en vez de "Empezar" (encargo
+  // del 2026-09-09, sección 1: la tercera zona es "abrir, empezar o
+  // continuar"). No reaparece el bloque "Sin terminar" que retiró H01:
+  // esto no ordena, no filtra ni saca ninguna guía de su sitio en el
+  // catálogo; solo cambia el rótulo de la guía que ya estás mirando.
+  const progresos = useLiveQuery(() => db.progresoPasos.toArray(), [], [])
+  const avancePorArticulo = useMemo(() => {
+    const mapa = new Map<string, { hechos: number; total: number }>()
+    for (const progreso of progresos) {
+      const procedimiento = normalizarProcedimiento(
+        articulos.find((a) => a.id === progreso.articuloId)?.procedimiento ?? null,
+      )
+      if (!procedimiento) continue
+      const ids = procedimiento.pasos.map((p) => p.id)
+      if (ids.length === 0) continue
+      mapa.set(progreso.articuloId, {
+        hechos: contarHechos(progreso.pasosHechos, ids),
+        total: ids.length,
+      })
+    }
+    return mapa
+  }, [progresos, articulos])
   const nombreCat = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias])
   const ordenCat = useMemo(() => new Map(categorias.map((c, i) => [c.id, i])), [categorias])
   const categoriaActiva = categoriaSel ? categorias.find((c) => c.id === categoriaSel) : undefined
@@ -380,7 +405,17 @@ export function SolucionesPage() {
       // Tarjetas separadas por hueco, no renglones con regla (tablero
       // 3b): cada guía es una unidad con su propia acción, no un
       // elemento de una lista continua.
-      <div className="grid grid-cols-1 gap-2 @lg:grid-cols-2 @4xl:grid-cols-3">
+      //
+      // UNA COLUMNA HASTA QUE HAYA SITIO DE VERDAD (encargo del
+      // 2026-09-09, sección 1). Los cortes son de CONTENEDOR, no de
+      // pantalla, así que cuentan el ancho útil que queda después de las
+      // barras laterales de escritorio. Estaban en `@lg` (512 px) y
+      // `@4xl` (896): a 512 cada tarjeta se quedaba con unos 240 px de
+      // ancho, menos que un teléfono de 360, y el título largo volvía a
+      // partirse igual que en móvil. Con `@2xl` (672) la segunda columna
+      // entra a unos 325 px por tarjeta y la tercera, en `@5xl` (1024),
+      // a unos 330.
+      <div className="grid grid-cols-1 gap-2 @2xl:grid-cols-2 @5xl:grid-cols-3">
         {articulosDelGrupo.map((articulo) => {
           const coincidencia = coincidencias.get(articulo.id)
           return (
@@ -392,6 +427,7 @@ export function SolucionesPage() {
               // buscando, en "Todos" o filtrando por etiqueta.
               categoriaNombre={categoriaSel ? undefined : nombreCat.get(articulo.categoriaId)}
               consulta={consulta}
+              avance={avancePorArticulo.get(articulo.id) ?? null}
               coincidencia={
                 coincidencia && !coincidencia.enTitulo && coincidencia.donde && coincidencia.valor
                   ? { donde: coincidencia.donde, valor: coincidencia.valor }

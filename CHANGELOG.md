@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-09
 
+### Cambiado (tarea 234, sección 1): la tarjeta de una guía se reparte en tres zonas y el título manda
+
+**Área modificada:** catálogo de Guías. **Modificados:** `src/features/soluciones/FilaArticulo.tsx`, `src/features/soluciones/SolucionesPage.tsx`, `src/pruebas/semillaLocal.ts` (banco de pruebas, solo desarrollo), `COMPONENTES_UI.md`, `DOCUMENTACION_FUNCIONAL.md`.
+**Motivo:** sección 1 del encargo del **9 de septiembre de 2026**. Los títulos largos se leían "casi de forma vertical".
+**Impacto esperado:** en 360 px el título pasa de unos **150 px** de ancho a unos **252**, y "Configurar las páginas que abre Google Chrome al iniciar en un POS" de una columna de palabras sueltas a **tres líneas naturales**. **Sin esquema. Sin cambios en los datos de ninguna guía.**
+
+- **Cambiado** la tarjeta era **una fila** con cuatro elementos disputándose el ancho: glifo de 40 px, título, pastilla "Borrador" y botón de ejecutar de 52 px. Ahora se lee de arriba abajo: **(1) título** con el glifo al lado y nada más en su renglón; **(2) metadatos** (categoría, pasos, minutos, verificación y el estado) en una línea que envuelve; **(3) acción** en su propia fila. La causa no era el tamaño de letra ni la falta de recorte: era el reparto del renglón, así que **no se arregló con `line-clamp`** y el nombre completo se sigue leyendo entero, sin depender de `hover`.
+- **Cambiado** la pastilla "Borrador"/"Obsoleto" baja del renglón del título a la línea de metadatos, donde es un dato más y no le cuesta al título unos 90 px de ancho.
+- **Cambiado** la acción dice cuál de las tres cosas hace. **"Empezar"** a ancho completo y 48 px; **"Continuar · paso N de M"** cuando hay avance a medias en este teléfono; **"Abrir"** de 44 px, al ancho justo y a la derecha, para las guías que solo son notas (son la mayoría del catálogo, y darles el mismo peso llenaría la pantalla de botones que repiten el enlace del título).
+- **Agregado** `FilaArticulo` acepta `avance` y `SolucionesPage` lo lee de `progresoPasos` con `contarHechos`. **No resucita el bloque "Sin terminar"** que retiró H01: no ordena, no filtra ni saca ninguna guía de su sitio; solo cambia el rótulo de la guía que ya estás mirando, que es la tercera zona que pide el encargo.
+- **Cambiado** los cortes de columna de la rejilla, de `@lg` (512 px) y `@4xl` (896) a **`@2xl`** (672) y **`@5xl`** (1024). Son cortes de CONTENEDOR, así que miden el ancho útil que queda tras las barras laterales; a 512 px cada tarjeta se quedaba con unos 240, menos que un teléfono de 360, y el título largo volvía a partirse igual. En móvil sigue siendo **una tarjeta por fila**.
+- **Agregado (solo desarrollo)** al banco de pruebas dos guías de título largo, una ejecutable y otra en borrador, más el caso "Continuar" que ya sembraba el progreso. Comprobado en navegador a **360, 390 y 430 px**: sin desbordamiento horizontal en ninguno.
+
 ### Agregado (tarea 233): alcance por tarea, guías vinculadas alcanzables y catálogo móvil
 
 **Área modificada:** Guías (catálogo, editor y ejecución) y el chasis. **Nuevos:** `src/features/soluciones/apoyosTarea.ts`, `src/features/soluciones/bloquesEditor.ts`, `src/features/soluciones/validacionVinculos.ts` (los tres con prueba) y `src/pruebas/semillaLocal.ts` (banco de pruebas, solo desarrollo). **Modificados:** `src/lib/db.ts`, `src/lib/procedimiento.ts`, `src/lib/progresoPasos.ts`, `src/app/Chasis.tsx`, `src/app/memoriaScroll.ts`, `src/components/BarraAccionFicha.tsx`, `src/components/HojaFiltro.tsx`, `src/features/soluciones/{ModoFoco,AsistenteVista,ProcedimientoVista,PasosEditor,ArticuloForm,ArticuloPage,SolucionesPage,HojaPasos,HojaFalla,FilaVinculo,tareasFoco,estadoPasos,completitudArticulo}.*`, `src/features/inicio/InicioPage.tsx`, `src/features/autenticacion/AuthProvider.tsx`.
