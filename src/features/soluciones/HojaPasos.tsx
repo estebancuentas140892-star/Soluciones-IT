@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Modal } from '../../components/Modal'
-import { Check, Crosshair, Eye, Warning, X } from '../../components/iconos'
+import { Check, Circle, Crosshair, Eye, SealCheck, Warning, X } from '../../components/iconos'
 import type { ModoEjecucion } from '../../lib/preferenciasEjecucion'
 import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 
@@ -38,6 +38,21 @@ interface Props {
   // tareas sueltas.
   modoEjecucion: ModoEjecucion
   onCambiarModo: (modo: ModoEjecucion) => void
+  /**
+   * Las comprobaciones finales del procedimiento, para poder LEERLAS en
+   * cualquier momento (hallazgo H11, criterio A15).
+   *
+   * Hasta ahora solo existían al final: la ejecución las mostraba
+   * después de marcar el último paso y la ficha las anunciaba sin
+   * enseñarlas ("se abren cuando marques el paso 3"). Para un técnico
+   * que quiere saber si lo que acaba de arreglar quedó bien, eso obliga
+   * a marcar pasos que no hizo solo para leer la lista.
+   *
+   * Aquí van en SOLO LECTURA a propósito: consultarlas y registrarlas
+   * como satisfechas son operaciones distintas, y marcarlas sigue
+   * ocurriendo al cerrar el procedimiento.
+   */
+  verificacionFinal?: string[]
 }
 
 const ID_TITULO = 'hoja-pasos-titulo'
@@ -126,6 +141,7 @@ export function HojaPasos({
   onIrAPaso,
   modoEjecucion,
   onCambiarModo,
+  verificacionFinal = [],
 }: Props) {
   const enFoco = modoEjecucion === 'foco'
 
@@ -181,6 +197,29 @@ export function HojaPasos({
           </li>
         ))}
       </ol>
+
+      {/* Las comprobaciones finales, legibles desde el primer paso
+          (H11). No llevan casilla: aquí solo se leen. */}
+      {verificacionFinal.length > 0 && (
+        <section className="mt-3 rounded-[10px] border border-noct-divider px-3 py-2.5">
+          <h3 className="flex items-center gap-2 text-[13px] font-medium text-noct-text">
+            <SealCheck size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+            Al terminar se comprueba
+          </h3>
+          <ul className="mt-1.5 flex flex-col gap-1.5">
+            {verificacionFinal.map((item, indice) => (
+              <li key={indice} className="flex items-start gap-2 text-[13px] leading-snug text-noct-neutral-300">
+                <Circle size={13} className="mt-[3px] shrink-0 text-noct-neutral-600" aria-hidden />
+                <span className="min-w-0">{item}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11.5px] leading-snug text-noct-neutral-500">
+            Se leen aquí en cualquier momento. Marcarlas como cumplidas es otra cosa, y se hace al cerrar el
+            procedimiento.
+          </p>
+        </section>
+      )}
 
       {/* El cambio entre Foco y el paso entero (tarea 218): ver el
           comentario de `modoEjecucion` en Props. Un solo control de 44

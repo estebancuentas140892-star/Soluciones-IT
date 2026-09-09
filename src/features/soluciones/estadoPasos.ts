@@ -5,12 +5,23 @@ import { tareasDe } from '../../lib/procedimiento'
 // "Diseño móvil", tablero 6c). Lógica pura, aparte del componente, para
 // poder probar la parte delicada: qué cuenta como "saltado".
 //
-// SALTADO NO ES UN ESTADO GUARDADO, y a propósito. `progresoPasos` solo
-// almacena qué está hecho; añadir un tercer valor obligaría a migrar
-// Dexie y `supabase/schema.sql` para un dato que se deduce sin error:
-// un paso sin hacer que quedó POR DETRÁS del que se está ejecutando es
-// uno por el que el técnico ya pasó de largo. Lo mismo con distinto
-// nombre: "pendiente" es lo que todavía no ha visto.
+// SALTADO ES AHORA UN ESTADO GUARDADO (2026-09-09, hallazgo H07).
+//
+// Antes se DEDUCÍA de la posición: "un paso sin hacer que quedó por
+// detrás del que se está ejecutando es uno por el que el técnico ya
+// pasó de largo". La deducción parecía inofensiva y no lo era: la
+// barra de acción tiene flechas de paginación pura, que existen justo
+// para mirar hacia adelante sin tocar el avance, así que consultar el
+// paso siguiente bastaba para que el índice acusara al anterior de
+// saltado. El informe del 8 de septiembre lo describe: la interfaz
+// dice que faltan tareas "para poder avanzar", la flecha avanza igual,
+// y el índice acaba señalando como saltado un paso que solo se miró.
+//
+// Ahora saltar es un ACTO: se elige "Saltar el paso y seguir" en la
+// hoja de falla y queda anotado en `progresoPasos.pasosSaltados`, que
+// es local y no necesita migración de Supabase. Navegar no anota nada.
+// Retomar el paso (marcar una de sus tareas o completarlo) retira la
+// marca sola.
 
 export type EstadoPaso = 'hecho' | 'actual' | 'saltado' | 'pendiente'
 
@@ -40,6 +51,7 @@ export function resumirPasos(
   hechos: ReadonlySet<string>,
   instruccionesHechas: ReadonlySet<string>,
   indiceActual: number | null,
+  saltados: ReadonlySet<string> = new Set(),
 ): ResumenPaso[] {
   return pasos.map((paso, indice) => {
     const tareas = tareasDe(paso.bloques)
@@ -47,7 +59,7 @@ export function resumirPasos(
       id: paso.id,
       indice,
       titulo: tituloDePaso(paso, indice),
-      estado: estadoDe(paso, indice, hechos, indiceActual),
+      estado: estadoDe(paso, indice, hechos, indiceActual, saltados),
       tareas: tareas.length,
       tareasHechas: tareas.filter((t) => instruccionesHechas.has(t.id)).length,
       tieneCuidado: paso.bloques.some(
@@ -62,14 +74,15 @@ function estadoDe(
   indice: number,
   hechos: ReadonlySet<string>,
   indiceActual: number | null,
+  saltados: ReadonlySet<string>,
 ): EstadoPaso {
   // Hecho manda sobre todo: un paso completado sigue completado aunque
   // se vuelva a él para revisarlo.
   if (hechos.has(paso.id)) return 'hecho'
   if (indice === indiceActual) return 'actual'
-  // Sin paso actual (el procedimiento terminó o está en la pantalla de
-  // cierre) nada quedó "por detrás": lo que falte está pendiente.
-  if (indiceActual !== null && indice < indiceActual) return 'saltado'
+  // Saltado solo si el técnico lo saltó. Mirar el paso siguiente y
+  // volver no convierte nada en saltado.
+  if (saltados.has(paso.id)) return 'saltado'
   return 'pendiente'
 }
 

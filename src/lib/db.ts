@@ -940,6 +940,20 @@ export interface ProgresoPasos {
   // una entrada nueva por revisita); dato local como el resto de este
   // avance, pero la entrada de historial y sus fotos SI se sincronizan.
   evidenciasPorPaso?: Record<string, string>
+  // Pasos que el tecnico decidio SALTAR de forma explicita (eligiendo
+  // "Saltar el paso y seguir" en la hoja de falla), no los que
+  // simplemente dejo atras al mirar hacia adelante.
+  //
+  // Existe por el hallazgo H07: "saltado" se deducia de la POSICION
+  // (cualquier paso sin hacer por detras del actual), asi que consultar
+  // el paso siguiente con la flecha bastaba para que el indice
+  // etiquetara el anterior como saltado. Navegar, saltar y completar
+  // son tres cosas distintas y el indice tiene que poder distinguirlas.
+  //
+  // Opcional: las filas guardadas antes de este campo no lo traen, y
+  // entonces no hay ningun paso saltado, que es lo correcto. Como el
+  // resto de este registro, es local y no se sincroniza.
+  pasosSaltados?: string[]
   actualizadoEn: string
 }
 

@@ -78,6 +78,7 @@ import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
 import { HojaTipoBloque, type OpcionTipoBloque } from './HojaTipoBloque'
 import { HojaVinculo, type GrupoVinculo } from './HojaVinculo'
 import { AccionesPaso } from './ranuraAccionesPaso'
+import { avisoDeVinculo } from './validacionVinculos'
 
 interface Props {
   articuloId: string
@@ -334,6 +335,19 @@ export function PasosEditor({
     () => [...vinculables].sort((a, b) => a.titulo.localeCompare(b.titulo)),
     [vinculables],
   )
+  // Todos los articulos (no solo los vinculables) para poder seguir el
+  // grafo al validar un destino: un ciclo puede pasar por una guia que
+  // este pantalla no ofrece.
+  const todosLosArticulos = useLiveQuery(() => db.articulos.toArray(), [], [])
+  const articulosPorId = useMemo(
+    () => new Map(todosLosArticulos.map((a) => [a.id, a])),
+    [todosLosArticulos],
+  )
+  // Aviso al elegir un destino: ciclo, borrador o guia que ya no esta
+  // (seccion 5, punto 10). Describe, no bloquea (ver validacionVinculos.ts).
+  function revisarVinculo(destinoId: string) {
+    setAviso(avisoDeVinculo(articuloId, destinoId, articulosPorId))
+  }
 
   function actualizarPaso(indice: number, cambios: Partial<PasoProcedimiento>) {
     onPasosChange(pasos.map((paso, i) => (i === indice ? { ...paso, ...cambios } : paso)))
@@ -853,6 +867,7 @@ export function PasosEditor({
                 onMover={(direccion) => moverTarea(indice, bloque.id, direccion)}
                 onCambiarDestino={() => setDestinoDeBloqueId(bloque.id)}
                 onAvisoCambioTipo={setAvisoCambioTipo}
+                onRevisarVinculo={revisarVinculo}
                 destinoAbierto={destinoDeBloqueId === bloque.id}
                 onCerrarDestino={() => setDestinoDeBloqueId(null)}
                 onElegirDestino={(destino) => cambiarDestino(indice, bloque.id, destino)}
@@ -908,6 +923,7 @@ export function PasosEditor({
                   onElegir={(id) => {
                     const articulo = vinculablesOrdenados.find((a) => a.id === id)
                     if (articulo) {
+                      revisarVinculo(articulo.id)
                       actualizarPaso(indice, {
                         subArticuloId: articulo.id,
                         subArticuloTitulo: articulo.titulo,
@@ -928,7 +944,10 @@ export function PasosEditor({
                   opciones={vinculablesOrdenados.map((a) => ({ id: a.id, titulo: a.titulo }))}
                   onElegir={(id) => {
                     const articulo = vinculablesOrdenados.find((a) => a.id === id)
-                    if (articulo) actualizarPaso(indice, { solucionArticuloId: articulo.id, solucionArticuloTitulo: articulo.titulo })
+                    if (articulo) {
+                      revisarVinculo(articulo.id)
+                      actualizarPaso(indice, { solucionArticuloId: articulo.id, solucionArticuloTitulo: articulo.titulo })
+                    }
                   }}
                   onQuitar={() => actualizarPaso(indice, { solucionArticuloId: null, solucionArticuloTitulo: '' })}
                   placeholderVacio="Vincular solución por si el paso falla (opcional)"
@@ -1339,6 +1358,7 @@ function BloqueEditor({
   onMover,
   onCambiarDestino,
   onAvisoCambioTipo,
+  onRevisarVinculo,
   destinoAbierto,
   onCerrarDestino,
   onElegirDestino,
@@ -1366,6 +1386,7 @@ function BloqueEditor({
   onMover: (direccion: -1 | 1) => void
   onCambiarDestino: () => void
   onAvisoCambioTipo: (aviso: string) => void
+  onRevisarVinculo: (destinoId: string) => void
   destinoAbierto: boolean
   onCerrarDestino: () => void
   onElegirDestino: (destino: DestinoApoyo) => void
@@ -1580,7 +1601,10 @@ function BloqueEditor({
                   grupos={[{ opciones: vinculables.map((a) => ({ id: a.id, titulo: a.titulo })) }]}
                   onElegir={(id) => {
                     const articulo = vinculables.find((a) => a.id === id)
-                    if (articulo) onCambiar({ decisionArticuloId: articulo.id, decisionArticuloTitulo: articulo.titulo })
+                    if (articulo) {
+                      onRevisarVinculo(articulo.id)
+                      onCambiar({ decisionArticuloId: articulo.id, decisionArticuloTitulo: articulo.titulo })
+                    }
                   }}
                 />
               </>
@@ -1700,7 +1724,10 @@ function BloqueEditor({
           grupos={[{ opciones: vinculables.map((a) => ({ id: a.id, titulo: a.titulo })) }]}
           onElegir={(id) => {
             const articulo = vinculables.find((a) => a.id === id)
-            if (articulo) onCambiar({ guiaArticuloId: articulo.id, guiaArticuloTitulo: articulo.titulo })
+            if (articulo) {
+              onRevisarVinculo(articulo.id)
+              onCambiar({ guiaArticuloId: articulo.id, guiaArticuloTitulo: articulo.titulo })
+            }
           }}
         />
         <HojaTipoBloque

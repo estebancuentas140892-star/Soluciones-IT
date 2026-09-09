@@ -12,6 +12,7 @@ import {
   alternarVerificacionFinal,
   contarHechos,
   contarInstruccionesHechas,
+  marcarPasoSaltado,
   registrarEvidenciaPaso,
   reiniciarProgreso,
 } from '../../lib/progresoPasos'
@@ -350,7 +351,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // cada render a propósito: son unas pocas decenas de pasos como mucho,
   // y memorizarlo exigiría estabilizar dos Sets que el hook rehace en
   // cada lectura del progreso.
-  const resumenes: ResumenPaso[] = resumirPasos(pasos, hechos, instruccionesHechas, indiceActual)
+  // "Saltado" ahora se lee del avance guardado, no de la posición: ver
+  // la cabecera de estadoPasos.ts (hallazgo H07).
+  const saltados = new Set(progreso?.pasosSaltados ?? [])
+  const resumenes: ResumenPaso[] = resumirPasos(pasos, hechos, instruccionesHechas, indiceActual, saltados)
   const subtituloIndice = resumenDeAvance(resumenes, minutosRestantes(tiempoEstimadoMin, resumenes))
 
   // MODO FOCO (tablero 6d): sustituye el cuerpo del paso, no lo
@@ -396,15 +400,27 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           ? null
           : () => {
               // Saltar no deja aviso puesto: el aviso es de este paso
-              // y el técnico se va a otro. Que quedó saltado ya lo dice
-              // el índice, que lo deriva de la posición
-              // (`estadoPasos.ts`). Y no cambia de vista: saltar es
-              // seguir trabajando, así que el técnico sigue en el modo
-              // que eligió.
+              // y el técnico se va a otro. Y no cambia de vista: saltar
+              // es seguir trabajando, así que el técnico sigue en el
+              // modo que eligió.
+              //
+              // Lo que SÍ hace ahora es dejarlo anotado (H07): antes el
+              // índice lo deducía de la posición, así que un paso que
+              // solo se miró salía marcado como saltado y uno que se
+              // saltó de verdad, al volver atrás, dejaba de estarlo.
+              void marcarPasoSaltado(articuloId, paso.id)
               setHojaFalla(null)
               setIndiceActual(destinoSalto)
             }
       }
+      // Detenerse sin resolver ni saltar: deja la falla anotada en el
+      // paso y devuelve al técnico donde estaba. Es la salida que
+      // faltaba cuando el paso no tiene contingencia vinculada
+      // (hallazgo H10): sin ella, la hoja solo ofrecía saltar, es decir
+      // presentaba el salto como si fuera la solución del fallo.
+      onDetenerse={() => {
+        elegirSalida(false)
+      }}
     />
   )
 
@@ -436,6 +452,9 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           onIrAPaso={setIndiceActual}
           modoEjecucion={modoEjecucion}
           onCambiarModo={(modo) => void cambiarModoEjecucion(modo)}
+          // H11 / A15: se leen desde el primer paso, sin tener que
+          // marcar tareas que nadie hizo para llegar a ellas.
+          verificacionFinal={verificacionFinal}
         />
       </>
     ) : null

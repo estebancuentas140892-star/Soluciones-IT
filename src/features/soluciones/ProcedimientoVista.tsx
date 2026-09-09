@@ -382,9 +382,26 @@ export function ProcedimientoVista({
               Al terminar {verificacionFinal.length === 1 ? 'hay 1 comprobación' : `hay ${verificacionFinal.length} comprobaciones`}
             </h2>
           </div>
-          <p className="mt-1 text-[12.5px] leading-normal text-noct-neutral-400">
-            Se abren cuando marques {pasos.length === 1 ? 'el paso' : `el paso ${pasos.length}`}. Son la prueba de
-            que quedó funcionando.
+          {/* SE LEEN DESDE EL PRINCIPIO (hallazgo H11, criterio A15).
+              Antes esta tarjeta solo las ANUNCIABA ("se abren cuando
+              marques el paso 3"), así que para saber qué había que
+              comprobar tras un arreglo había que marcar pasos que nadie
+              hizo. Aquí van sin casilla a propósito: consultarlas y
+              registrarlas como cumplidas son operaciones distintas. */}
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {verificacionFinal.map((item, indice) => (
+              <li
+                key={indice}
+                className="flex items-start gap-2.5 text-[13.5px] leading-snug text-noct-neutral-300"
+              >
+                <Circle size={14} className="mt-[3px] shrink-0 text-noct-neutral-600" aria-hidden />
+                <span className="min-w-0">{item}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[12px] leading-normal text-noct-neutral-500">
+            Puedes leerlas ahora. Marcarlas como cumplidas se hace al terminar{' '}
+            {pasos.length === 1 ? 'el paso' : `el paso ${pasos.length}`}.
           </p>
         </section>
       )}
