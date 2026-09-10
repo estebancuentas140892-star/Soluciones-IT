@@ -206,6 +206,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
+    guiaDelPasoEnLinea,
     guiasPendientesDeTarea,
     alternarTarea,
     alternarVerificacion,
@@ -450,7 +451,14 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // modo no se cae solo a mitad de procedimiento. Lo único que lo
   // aparta es la preferencia del técnico o la falla declarada en ESTE
   // paso.
-  const enFoco = modoEjecucion === 'foco' && nivel === 0 && pasoEnteroPorFalla !== paso.id
+  //
+  // TAMPOCO EXIGE SER EL NIVEL 0. Llevaba `nivel === 0`, asi que una
+  // guia vinculada desplegada dentro de una ejecucion en foco caia a la
+  // vista de paso entero: la guia principal enseñaba una tarea a la vez
+  // y la vinculada, justo debajo, el checklist completo del paso. Dos
+  // formas de trabajar en la misma pantalla. La preferencia del tecnico
+  // es una sola, asi que vale tambien dentro del vinculo.
+  const enFoco = modoEjecucion === 'foco' && pasoEnteroPorFalla !== paso.id
 
   // El índice de pasos y su disparador (tarea 218, G-09, G-10, G-14):
   // una línea compacta de 44 px que el chasis porta a su propia barra
@@ -492,6 +500,11 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           instruccionesHechas={instruccionesHechas}
           subSatisfecho={subSatisfecho}
           guiaDelPasoDisponible={guiaDelPasoDisponible(paso)}
+          // La guia que se ejecuta aqui dentro trae su propia zona de
+          // acciones: el pie del paso principal se retira mientras siga
+          // abierta, para no tener dos acciones dominantes.
+          guiaDelPasoEnLinea={guiaDelPasoEnLinea(paso)}
+          anidado={nivel >= 1}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
           onCompletarPaso={avanzar}
           etiquetaAvance={cierre.etiqueta}

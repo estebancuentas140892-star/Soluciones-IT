@@ -74,6 +74,17 @@ interface Props {
   // empezaba directamente en la tarea siguiente y el técnico nunca leía
   // el motivo (criterio A12).
   guiaDelPasoDisponible?: boolean
+  // ¿Esa guía se EJECUTA aquí dentro (no solo se enlaza)? Cuando sí, la
+  // guía trae su propia zona de acciones dominante y el pie de este
+  // paso se retira mientras siga abierta: si no, la pantalla mostraba a
+  // la vez el pie de la guía vinculada y el cartel grande «Esta tarea
+  // se cumple al terminar la guía de arriba».
+  guiaDelPasoEnLinea?: boolean
+  // Este foco es el de una guía vinculada, dibujada DENTRO del paso de
+  // otra. Solo cambia el encuadre: el pie deja de sangrar hacia los
+  // lados, porque ahí ya no llega al borde de la pantalla sino al de la
+  // tarjeta que lo contiene.
+  anidado?: boolean
   onAlternarTarea: (tareaId: string) => void
   // Cierra el paso y avanza. Es la misma acción dominante de la vista
   // completa: el foco no decide cuándo se puede, solo la ofrece.
@@ -125,6 +136,8 @@ export function ModoFoco({
   instruccionesHechas,
   subSatisfecho,
   guiaDelPasoDisponible = true,
+  guiaDelPasoEnLinea = false,
+  anidado = false,
   onAlternarTarea,
   onCompletarPaso,
   etiquetaAvance,
@@ -195,6 +208,12 @@ export function ModoFoco({
   // editor sí deja configurar y la vista completa sí ofrece, no existía
   // aquí, así que marcarla equivalía a responder "sí" en silencio.
   const esDecision = tarea.tipoTarea === 'decision'
+  // UNA SOLA ZONA DE ACCIONES DOMINANTE. Mientras la guía vinculada se
+  // ejecuta aquí dentro, la suya es la que manda: este pie desaparece
+  // entero (cartel, flechas y «Falla»), y vuelve en cuanto la guía
+  // queda cumplida y el recorrido pasa a la tarea siguiente.
+  const pieCedidoAlVinculo =
+    tarea.clase === 'guia-del-paso' && guiaDelPasoEnLinea && guiaDelPasoDisponible && !hecha
   const destinoDelNo = esDecision ? tarea.decisionGuiaId : null
   const noAbierto = esDecision && decisionAbierta === tarea.id
   // La guía vinculada de ESTA tarea. En la entrada 'guia-del-paso' es el
@@ -492,7 +511,12 @@ export function ModoFoco({
 
       {/* Acción dominante de 76 px: es el ÚNICO elemento grande de la
           pantalla, así que no hay que apuntar. */}
-      <div className="sticky bottom-0 z-10 -mx-4 mt-auto flex flex-none flex-col gap-2.5 bg-gradient-to-t from-noct-bg from-55% to-transparent px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3">
+      {!pieCedidoAlVinculo && (
+      <div
+        className={`sticky bottom-0 z-10 mt-auto flex flex-none flex-col gap-2.5 bg-gradient-to-t from-noct-bg from-55% to-transparent pt-3 ${
+          anidado ? 'pb-3' : '-mx-4 px-4 pb-[calc(12px+env(safe-area-inset-bottom))]'
+        }`}
+      >
         {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
             dice por qué, que es el defecto que el encargo llama "no se
             muestra cuál guía falta completar". */}
@@ -621,6 +645,7 @@ export function ModoFoco({
           </button>
         </div>
       </div>
+      )}
     </div>
   )
 }
