@@ -196,6 +196,25 @@ export function ModoFoco({
   }, [subSatisfecho, guiaDelPasoDisponible, indiceTarea, tareas, instruccionesHechas])
 
   const indice = Math.min(indiceTarea, tareas.length - 1)
+
+  // EL PANEL ES DE LA TAREA QUE SE ESTA MIRANDO, no del paso entero.
+  //
+  // Dejarlo abierto y pulsar la flecha lo arrastraba a la tarea
+  // siguiente: sus fotos, su archivo o su clave aparecian desplegados
+  // sin que nadie los pidiera, y el contenido que se veia era el de la
+  // tarea anterior. Vale para los cuatro controles, y para cualquier
+  // motivo del cambio: las flechas, marcar una tarea o terminar la guia
+  // vinculada, que mueven `indiceTarea` por su cuenta.
+  //
+  // Se cierra AQUI, durante el render en el que cambia la tarea, y no
+  // en un efecto: un efecto corre despues de pintar, asi que el
+  // contenido de la tarea anterior alcanzaria a verse un instante.
+  const tareaMostrada = useRef(indice)
+  if (tareaMostrada.current !== indice) {
+    tareaMostrada.current = indice
+    if (panel !== null) setPanel(null)
+  }
+
   const tarea = tareas[indice]
   if (!tarea) return null
 
