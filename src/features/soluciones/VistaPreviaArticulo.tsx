@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Procedimiento, TipoArticulo } from '../../lib/db'
-import { claveVistaPrevia, limpiarProgresoVistaPrevia } from '../../lib/progresoPasos'
+import { claveVistaPrevia, limpiarProgresoVistaPrevia, reiniciarProgreso } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { TagNeutral } from '../../components/nocturne'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
@@ -51,24 +51,50 @@ export function VistaPreviaArticulo({
   const [idEfimero] = useState(() => claveVistaPrevia(articuloId))
   const urlPortada = useUrlAdjunto(procedimiento?.portada?.referencia ?? null)
 
+  // LA PRUEBA NO SE BORRA A SI MISMA A MITAD DE SESION.
+  //
+  // El efecto que limpiaba el progreso llevaba `onCerrar` en sus
+  // dependencias, y ese `onCerrar` nacia de nuevo en cada render del
+  // formulario: cualquier tecla escrita en el editor cambiaba la
+  // referencia, React ejecutaba la limpieza y la prueba en curso perdia
+  // su avance (3/4 -> 0/4 al terminar una guia vinculada). Ademas
+  // limpiaba TODAS las raices de prueba, no la suya.
+  //
+  // Se separa en dos efectos con dependencias distintas: el del teclado
+  // y el scroll puede volver a montarse sin consecuencias, y el del
+  // progreso depende SOLO de `idEfimero`, que no cambia mientras la
+  // vista previa este montada. `onCerrar` se lee por referencia, asi
+  // que el teclado siempre llama a la ultima version sin reengancharse.
+  const cerrarRef = useRef(onCerrar)
+  useEffect(() => {
+    cerrarRef.current = onCerrar
+  }, [onCerrar])
+
   useEffect(() => {
     function alTeclado(evento: KeyboardEvent) {
-      if (evento.key === 'Escape') onCerrar()
+      if (evento.key === 'Escape') cerrarRef.current()
     }
     document.addEventListener('keydown', alTeclado)
     const overflowPrevio = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    // Barre lo que dejaron pruebas anteriores que no se cerraron con el
-    // boton (un recargo a media prueba), sin tocar esta sesion.
-    void limpiarProgresoVistaPrevia(idEfimero)
     return () => {
       document.removeEventListener('keydown', alTeclado)
       document.body.style.overflow = overflowPrevio
-      // Al cerrar no queda rastro: la fila de la prueba se lleva consigo
-      // el avance de todas las guias vinculadas que se abrieron dentro.
-      void limpiarProgresoVistaPrevia()
     }
-  }, [onCerrar, idEfimero])
+  }, [])
+
+  useEffect(() => {
+    // Al abrir se barre lo que dejaron pruebas anteriores que no se
+    // cerraron con el boton (un recargo a media prueba), conservando
+    // esta sesion.
+    void limpiarProgresoVistaPrevia(idEfimero)
+    return () => {
+      // Al cerrar se borra SOLO esta raiz, que se lleva consigo el
+      // avance de las guias vinculadas abiertas dentro. Otras pruebas
+      // que pudieran estar abiertas no se tocan.
+      void reiniciarProgreso(idEfimero)
+    }
+  }, [idEfimero])
 
   return (
     <div className="nocturne fixed inset-0 z-[70] overflow-y-auto bg-noct-bg font-inter text-noct-text">

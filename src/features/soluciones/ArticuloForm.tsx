@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { lazy, Suspense, useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   db,
@@ -642,6 +642,14 @@ export function ArticuloForm() {
     setPasoDestacadoId(destacado)
     setMostrarVistaPrevia(true)
   }
+
+  // Referencia estable: la vista previa la recibe como prop y una
+  // funcion nueva en cada render la hacia remontar efectos. Con las dos
+  // actualizaciones de estado dentro, no depende de nada del render.
+  const cerrarVistaPrevia = useCallback(() => {
+    setMostrarVistaPrevia(false)
+    setPasoDestacadoId(null)
+  }, [])
   const sugerenciasEtiqueta =
     completitud.sugerencias.length === 0
       ? 'Completo'
@@ -1378,10 +1386,7 @@ export function ArticuloForm() {
             procedimiento={procedimientoPreparado}
             contenido={contenido}
             pasoDestacadoId={pasoDestacadoId}
-            onCerrar={() => {
-              setMostrarVistaPrevia(false)
-              setPasoDestacadoId(null)
-            }}
+            onCerrar={cerrarVistaPrevia}
           />
         </Suspense>
       )}

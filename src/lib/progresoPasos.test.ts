@@ -379,6 +379,21 @@ describe('progreso de la vista previa', () => {
     expect((await leerAvance('articulo-1'))?.pasosHechos).toEqual(['paso-a'])
   })
 
+  it('cerrar una prueba no borra otra que siga abierta', async () => {
+    const unaPrueba = claveVistaPrevia('articulo-1')
+    const otraPrueba = claveVistaPrevia('articulo-2')
+    await establecerPasoHecho(unaPrueba, 'paso-a', true)
+    await establecerPasoHecho({ raizId: otraPrueba, vinculoId: 'guia-vinculada' }, 'paso-v1', true)
+
+    // Cerrar es borrar SOLO la raiz propia.
+    await reiniciarProgreso(unaPrueba)
+
+    expect(await db.progresoPasos.get(unaPrueba)).toBeUndefined()
+    expect((await leerAvance({ raizId: otraPrueba, vinculoId: 'guia-vinculada' }))?.pasosHechos).toEqual([
+      'paso-v1',
+    ])
+  })
+
   it('barre las pruebas anteriores sin tocar la sesion en curso', async () => {
     const vieja = claveVistaPrevia('articulo-1')
     const actual = claveVistaPrevia('articulo-1')
