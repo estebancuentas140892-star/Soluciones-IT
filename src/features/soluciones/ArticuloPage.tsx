@@ -7,7 +7,6 @@ import {
   db,
   type Articulo,
   type ArticuloRelacionado,
-  type NivelDificultad,
   type Procedimiento,
 } from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
@@ -25,7 +24,6 @@ import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
   BookOpen,
   CaretRight,
-  Circle,
   ClockCounterClockwise,
   Copy,
   DotsThreeBold,
@@ -40,17 +38,10 @@ import { BarraAccionFicha, type EstadoAccion } from '../../components/BarraAccio
 import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
 import { accionDeGuia, estrenaEjecucion, etiquetaAccionGuia } from './accionGuia'
-import { ProveedorEjecucion } from './ProveedorEjecucion'
-import { ProcedimientoVista } from './ProcedimientoVista'
+import { IntroduccionGuia, ListaIntro, ResumenGuia, SeccionIntro } from './IntroduccionGuia'
 import { colorIconoDeTipo } from './iconosSoluciones'
 import { etiquetaDeTipo } from './tiposArticulo'
 import { describirAplicaA } from './aplicaA'
-
-const ETIQUETA_DIFICULTAD: Record<NivelDificultad, string> = {
-  principiante: 'Principiante',
-  intermedio: 'Intermedio',
-  avanzado: 'Avanzado',
-}
 
 // Fecha corta al estilo del diseño ("12 jul"); con el año solo cuando
 // no es el actual, para no perder informacion en articulos viejos.
@@ -66,9 +57,22 @@ function fechaCorta(iso: string): string {
 // Ficha de un articulo en el sistema Nocturne (handoff "Ficha de
 // Procedimiento.dc.html"): cabecera compacta con regreso contextual y
 // acciones (Asistente, Editar y el menu "···" con el resto, regla 4 de
-// 08_ESTILO.md), etiquetas de metadatos, titulo, y el procedimiento
-// como stepper con barra de progreso pegajosa (ProcedimientoVista).
-// Primera pantalla que estrena el shell movil Nocturne.
+// 08_ESTILO.md), etiquetas de metadatos, titulo y la PRESENTACION de la
+// guia. Primera pantalla que estrena el shell movil Nocturne.
+//
+// LA FICHA YA NO EJECUTA (encargo del 2026-09-10, tarea 2). Hasta hoy
+// montaba aqui el procedimiento entero (`ProcedimientoVista`): el
+// stepper con todos los pasos, sus tareas con casilla, sus
+// comprobaciones, los botones de cierre de paso, las guias vinculadas
+// desplegadas y el anuncio de las comprobaciones finales. Se podia
+// marcar trabajo sin haber empezado la ejecucion, desde una pantalla
+// que dice "Empecemos" al pie, y para decidir si esta era la guia
+// correcta habia que recorrer un documento de miles de pixeles.
+//
+// Ahora esta pantalla presenta y la barra inferior es la unica puerta:
+// portada, tipo, titulo, descripcion, objetivo, sintomas, causas,
+// equipos afectados, requisitos y el resumen de tiempo, dificultad y
+// pasos. Nada del procedimiento se pierde: se lee donde se hace.
 export function ArticuloPage() {
   const { categoriaId = '', articuloId = '' } = useParams()
   const navigate = useNavigate()
@@ -203,13 +207,22 @@ export function ArticuloPage() {
             </p>
           )}
           <MetadatosArticulo
-            tiempoMin={procedimiento?.tiempoEstimadoMin ?? null}
-            dificultad={procedimiento?.dificultad ?? null}
             aplicaA={describirAplicaA(articulo.aplicaA ?? null)}
             version={articulo.version ?? '1.0'}
           />
           <p className="text-xs text-noct-neutral-500">{metaLinea}</p>
         </header>
+
+        {/* Cuánto cuesta la guía, de un vistazo y antes de decidir
+            (encargo del 2026-09-10, tarea 2). Iba disuelto en la lista
+            de metadatos, junto a la versión. */}
+        {procedimiento && (
+          <ResumenGuia
+            tiempoMin={procedimiento.tiempoEstimadoMin}
+            dificultad={procedimiento.dificultad}
+            totalPasos={procedimiento.pasos.length}
+          />
+        )}
 
         <DialogoEliminar
           abierto={mostrarEliminar}
@@ -231,11 +244,10 @@ export function ArticuloPage() {
 
         {articulo.tipo === 'problema_frecuente' && <IncidenciaResumen articulo={articulo} />}
 
-        {tieneProcedimiento && (
-          <ProveedorEjecucion raizId={articuloId}>
-            <ProcedimientoVista articuloId={articuloId} procedimiento={procedimiento} />
-          </ProveedorEjecucion>
-        )}
+        {/* Objetivo y "Antes de empezar", que vivían dentro del
+            procedimiento y desaparecían con él. El paso a paso NO se
+            monta aquí: se ejecuta desde la barra de abajo. */}
+        {procedimiento && <IntroduccionGuia procedimiento={procedimiento} />}
 
         {articulo.contenido.trim() !== '' && (
           <article className="prose prose-invert prose-sm max-w-none prose-headings:font-medium prose-headings:text-noct-text prose-p:text-noct-neutral-200 prose-li:text-noct-neutral-200 prose-strong:text-noct-text prose-a:text-noct-accent-400">
@@ -291,26 +303,19 @@ export function ArticuloPage() {
   )
 }
 
-// Los cuatro metadatos con su rótulo (decisión 4 de P2). Antes eran
-// cuatro pastillas neutras idénticas ("Impresoras", "Zebra ZT411",
+// Los metadatos con su rótulo (decisión 4 de P2). Antes eran cuatro
+// pastillas neutras idénticas ("Impresoras", "Zebra ZT411",
 // "Intermedio", "25 min") donde nada decía que la segunda es una
 // restricción de aplicabilidad y no una etiqueta más. Como lista de
 // definición, cada dato dice qué es. Se omite el que no existe: una fila
 // "Dificultad: sin definir" no informa de nada.
-function MetadatosArticulo({
-  tiempoMin,
-  dificultad,
-  aplicaA,
-  version,
-}: {
-  tiempoMin: number | null
-  dificultad: NivelDificultad | null
-  aplicaA: string
-  version: string
-}) {
+//
+// Tiempo y dificultad se fueron de aquí en el encargo del 2026-09-10:
+// son lo que el técnico mira para decidir si empieza ahora, así que van
+// con el total de pasos en su propia banda (`ResumenGuia`) y no
+// disueltos junto a la versión.
+function MetadatosArticulo({ aplicaA, version }: { aplicaA: string; version: string }) {
   const filas: { rotulo: string; valor: string }[] = []
-  if (tiempoMin) filas.push({ rotulo: 'Tiempo', valor: `${tiempoMin} min` })
-  if (dificultad) filas.push({ rotulo: 'Dificultad', valor: ETIQUETA_DIFICULTAD[dificultad] })
   if (aplicaA) filas.push({ rotulo: 'Aplica a', valor: aplicaA })
   filas.push({ rotulo: 'Versión', valor: `v${version}` })
 
@@ -583,11 +588,10 @@ function IncidenciaResumen({ articulo }: { articulo: Articulo }) {
 
   return (
     <>
-      {sintomas.length > 0 && <ListaIncidencia titulo="Síntomas" items={sintomas} />}
-      {causas.length > 0 && <ListaIncidencia titulo="Posibles causas" items={causas} />}
+      <ListaIntro titulo="Síntomas" items={sintomas} />
+      <ListaIntro titulo="Posibles causas" items={causas} />
       {dispositivosAfectados.length > 0 && (
-        <section>
-          <TituloSeccion className="mb-2">Equipos afectados</TituloSeccion>
+        <SeccionIntro titulo="Equipos afectados">
           <div className="flex flex-wrap gap-1.5">
             {dispositivosAfectados.map((dispositivo) => (
               <Link
@@ -599,24 +603,8 @@ function IncidenciaResumen({ articulo }: { articulo: Articulo }) {
               </Link>
             ))}
           </div>
-        </section>
+        </SeccionIntro>
       )}
     </>
-  )
-}
-
-function ListaIncidencia({ titulo, items }: { titulo: string; items: string[] }) {
-  return (
-    <section>
-      <TituloSeccion className="mb-2">{titulo}</TituloSeccion>
-      <ul className="flex flex-col gap-1.5">
-        {items.map((item, indice) => (
-          <li key={indice} className="flex items-start gap-2.5">
-            <Circle size={14} className="mt-[3px] shrink-0 text-noct-neutral-600" aria-hidden />
-            <span className="text-sm leading-normal">{item}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
   )
 }

@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Cambiado (encargo 2026-09-10, tarea 2): la ficha de una guía presenta, ya no ejecuta
+
+**Área modificada:** ficha de artículo y vista previa del editor. **Nuevo:** `src/features/soluciones/IntroduccionGuia.tsx`. **Modificados:** `src/features/soluciones/ArticuloPage.tsx`, `src/features/soluciones/VistaPreviaArticulo.tsx`, `src/features/soluciones/ArticuloForm.tsx`, `src/features/soluciones/accionGuia.ts` (+ 1 prueba), `DOCUMENTACION_FUNCIONAL.md`, `COMPONENTES_UI.md`.
+**Motivo:** tarea 2 del encargo del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Causa.** La ficha montaba el procedimiento entero (`ProcedimientoVista`) debajo del título. Antes de empezar se veían el stepper con todos los pasos, **sus tareas con casilla**, sus verificaciones, los **botones de cierre de cada paso**, las guías vinculadas **desplegadas** y el anuncio de las **comprobaciones finales**. Dos consecuencias: se podía marcar trabajo sin haber empezado la ejecución, desde una pantalla que ofrece "Empecemos" al pie; y para decidir si esta era la guía correcta había que recorrer un documento de miles de píxeles, que en un teléfono es todo el procedimiento hacia abajo.
+- **Cambiado** la ficha se queda con lo que ayuda a **decidir**, en secciones breves y diferenciadas: portada, tipo y título, descripción ("cuándo usarla"), **resumen de tiempo, dificultad y total de pasos**, síntomas, posibles causas, equipos afectados, **objetivo** y **Antes de empezar**.
+- **Agregado** `IntroduccionGuia.tsx` con las cuatro piezas de esa presentación (`ResumenGuia`, `IntroduccionGuia`, `ListaIntro`, `SeccionIntro`), compartidas por la ficha y por la prueba del editor.
+- **Cambiado** los rótulos de la acción dominante: **"Empecemos"** sin ejecución empezada, **"Continuar en el paso X"** con una a medias y **"Repetir guía"** con una terminada. La tarjeta del catálogo conserva los suyos ("Empezar", "Continuar · paso N de M"), donde compite por ancho con el título.
+- **Cambiado** la vista previa del editor separa lo mismo: entra por la presentación y **"Empecemos"** abre el procedimiento, con "Volver a la presentación" para regresar sin perder lo marcado en la prueba. **"Probar" un paso concreto sigue entrando directo a ese paso**, que es lo que el autor acaba de pedir ver. La prueba recibe además síntomas, causas y equipos afectados, para enseñar la misma presentación inicial que verá el técnico.
+- **No se pierde información del procedimiento:** el paso a paso se lee donde se hace, en el modo ejecución, que abre una tarea a la vez en el primer elemento pendiente del recorrido.
+
 ### Cambiado (encargo 2026-09-10, tarea 1): los avisos dejan de ser adorno y pasan a ser elementos del recorrido
 
 **Área modificada:** ejecución de Guías, modo de una tarea a la vez. **Modificados:** `src/features/soluciones/tareasFoco.ts` (+ 9 pruebas en `tareasFoco.test.ts`), `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `DOCUMENTACION_FUNCIONAL.md`.

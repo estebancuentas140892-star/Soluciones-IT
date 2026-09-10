@@ -43,7 +43,7 @@ describe('accionDeGuia', () => {
     const accion = accionDeGuia(TRES, { pasosHechos: [] }, true)
     expect(accion.estado).toBe('continuar')
     expect(accion.pasosHechos).toBe(0)
-    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Continuar en el paso 1 de 3')
+    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Continuar en el paso 1')
   })
 
   it('con avance a medias continua en el primer paso pendiente', () => {
@@ -119,10 +119,18 @@ describe('accionDeGuia con comprobaciones finales', () => {
 })
 
 describe('etiquetaAccionGuia y estrenaEjecucion', () => {
-  it('la tarjeta abrevia y la barra escribe la frase entera', () => {
+  it('la tarjeta abrevia y la barra nombra el paso al que va', () => {
     const accion = accionDeGuia(TRES, { pasosHechos: ['p1'] }, true)
     expect(etiquetaAccionGuia(accion, 'tarjeta')).toBe('Continuar · paso 2 de 3')
-    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Continuar en el paso 2 de 3')
+    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Continuar en el paso 2')
+  })
+
+  // Encargo del 2026-09-10, tarea 2: en la ficha la barra es la unica
+  // accion y va detras de toda la introduccion, asi que invita.
+  it('la ficha invita a empezar y el catalogo se queda en el verbo', () => {
+    const accion = accionDeGuia(TRES, undefined, false)
+    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Empecemos')
+    expect(etiquetaAccionGuia(accion, 'tarjeta')).toBe('Empezar')
   })
 
   it('empezar y repetir estrenan ejecucion; continuar no', () => {

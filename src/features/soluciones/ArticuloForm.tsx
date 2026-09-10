@@ -108,6 +108,16 @@ const DIFICULTADES: { valor: NivelDificultad; etiqueta: string }[] = [
   { valor: 'avanzado', etiqueta: 'Avanzado' },
 ]
 
+// Los campos de varias lineas (sintomas, causas) se escriben en un solo
+// textarea y se guardan como lista. Mismo reparto al guardar y al
+// previsualizar, para que la prueba no enseñe otra cosa.
+function enLineas(texto: string): string[] {
+  return texto
+    .split('\n')
+    .map((linea) => linea.trim())
+    .filter(Boolean)
+}
+
 // Editor de articulos en el sistema Nocturne (handoff "Editor de
 // Artículo"): cabecera pegajosa con el tipo dinamico y, desde la fase
 // J5, cuatro pestañas fijas (General, Pasos, Detalles y Publicación) en
@@ -696,14 +706,8 @@ export function ArticuloForm() {
         contenido,
         etiquetas: normalizarEtiquetas(etiquetas, vocabularioEtiquetas),
         procedimiento: procedimientoPreparado,
-        sintomas: sintomas
-          .split('\n')
-          .map((s) => s.trim())
-          .filter(Boolean),
-        causas: causas
-          .split('\n')
-          .map((c) => c.trim())
-          .filter(Boolean),
+        sintomas: enLineas(sintomas),
+        causas: enLineas(causas),
         dispositivosAfectados,
         aplicaA: aplicaADesdeFormulario(aplicaAMarca, aplicaAModelo),
         esRutaInicio,
@@ -1385,6 +1389,12 @@ export function ArticuloForm() {
             etiquetas={etiquetas}
             procedimiento={procedimientoPreparado}
             contenido={contenido}
+            // La prueba enseña la MISMA presentación inicial que verá
+            // el técnico (encargo del 2026-09-10, tarea 2), así que
+            // también los datos de la incidencia.
+            sintomas={enLineas(sintomas)}
+            causas={enLineas(causas)}
+            dispositivosAfectados={dispositivosAfectados}
             pasoDestacadoId={pasoDestacadoId}
             onCerrar={cerrarVistaPrevia}
           />

@@ -105,12 +105,18 @@ export function accionDeGuia(
  */
 export function etiquetaAccionGuia(accion: AccionGuia, variante: 'barra' | 'tarjeta'): string {
   if (accion.estado === 'repetir') return 'Repetir guía'
-  if (accion.estado === 'empezar') return 'Empezar'
+  // LA FICHA INVITA, LA TARJETA ROTULA (encargo del 2026-09-10, tarea
+  // 2). En la ficha la barra es la unica accion y va detras de toda la
+  // introduccion, asi que dice "Empecemos"; en el catalogo compite por
+  // ancho con el titulo de la guia y se queda en "Empezar".
+  if (accion.estado === 'empezar') return variante === 'barra' ? 'Empecemos' : 'Empezar'
   if (accion.pendiente.tipo === 'verificacion') return 'Continuar con las comprobaciones finales'
   if (accion.pendiente.tipo === 'paso') {
+    // La barra nombra el paso al que va, sin el total: el total ya lo
+    // dice la ficha, en su resumen de tiempo, dificultad y pasos.
     return variante === 'tarjeta'
       ? `Continuar · paso ${accion.pendiente.numero} de ${accion.total}`
-      : `Continuar en el paso ${accion.pendiente.numero} de ${accion.total}`
+      : `Continuar en el paso ${accion.pendiente.numero}`
   }
   return 'Continuar'
 }
