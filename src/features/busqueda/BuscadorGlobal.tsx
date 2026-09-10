@@ -93,8 +93,9 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
           // Alcance declarado: es lo que distingue a este buscador de los
           // de seccion, que tienen la misma forma y otro limite.
           <p className="px-0.5 text-[13px] leading-relaxed text-noct-neutral-400">
-            Busca en todo a la vez: Guías, Equipos, Bóveda, Ubicaciones y Personas. Tolera errores de
-            escritura y entiende sinónimos ("backup" encuentra "copia de seguridad").
+            Busca en todo a la vez: Guías, Equipos, Bóveda, Ubicaciones, Personas y Referencia
+            (glosario, atajos y comandos). Tolera errores de escritura y entiende sinónimos ("backup"
+            encuentra "copia de seguridad").
           </p>
         ) : grupos.length > 0 ? (
           <ResultadosBusqueda grupos={grupos} consulta={consulta} onNavegar={onCerrar} />

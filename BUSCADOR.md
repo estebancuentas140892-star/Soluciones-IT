@@ -25,12 +25,17 @@ El índice es único para todos los tipos de documento. Cada documento tiene tre
 | **persona** | no eliminada | nombre | `Persona` | nombre + notas |
 | **adjunto** (galería de paso) | por cada `paso.adjuntos[]` de un artículo | nombre del archivo | `título del artículo · título del paso` | solo el nombre del archivo |
 | **adjunto** (tabla `adjuntos`) | dueño (artículo/dispositivo) resuelto localmente | nombre del archivo | título del dueño | solo el nombre del archivo |
+| **termino** | no eliminada | título, con la abreviatura entre paréntesis si la tiene | `Término · plataforma · categoría` (lo que exista) | `textoBuscable`: título, abreviatura, alias, definición, plataforma, valor, cuándo usarlo, resultado esperado y etiquetas |
+| **atajo** | no eliminada | ídem | `Atajo · plataforma · categoría` | ídem |
+| **comando** | no eliminada | ídem | `Comando · plataforma · categoría` | ídem |
 | **credencial** | **solo con la bóveda desbloqueada** | título | `categoría` (texto libre) | título + nombre del archivo seguro adjunto (nunca su contenido cifrado) |
 | **campo protegido** | **solo con la bóveda desbloqueada** y equipo dueño resuelto | `nombre del campo · nombre del equipo` | `Dato protegido del equipo` | nombre del campo + nombre del equipo (nunca el valor cifrado) |
 
 Notas importantes:
 
 - `textoDeProcedimiento` (`src/lib/procedimiento.ts`) aplana el JSON `procedimiento` a texto: descripción, objetivo general, requisitos, verificación final y, por cada paso, su título, objetivo, el texto de cada bloque (tareas, avisos, pies de imagen), el título del subprocedimiento, el de la solución vinculada y el de las decisiones. **Excluye a propósito** el título de un `vinculoProtegido` de paso o tarea: ese texto solo entra al índice como campo protegido independiente y solo con la bóveda desbloqueada.
+- Referencia usa **tres tipos de resultado** (`termino`, `atajo`, `comando`) y no uno solo: el encargo pide que el resultado diga de qué clase es, y "Referencia" a secas no distingue una palabra del glosario de algo que se teclea. Los tres comparten el grupo **Referencia** en la interfaz, con su propio glifo cada uno (regla R16: nunca solo el color). Abrir un resultado lleva directo a su ficha, `/referencia/<id>`.
+- El texto indexado de una referencia es exactamente el mismo `textoBuscable` (`src/features/referencia/referencias.ts`) que usa el buscador de la propia pantalla de Referencia: buscar dos veces lo mismo no puede dar dos resultados distintos.
 - El campo protegido se indexa con `tipo: 'dispositivo'` (no existe un tipo propio `campo_protegido` en el buscador); en la interfaz aparece dentro del grupo Dispositivos.
 - **Nunca** se indexa `datosCifrados` (credencial) ni `valorCifrado` (campo protegido): solo metadatos en claro. Esto es RN de la bóveda (ver [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md), sección de auditoría y cifrado).
 

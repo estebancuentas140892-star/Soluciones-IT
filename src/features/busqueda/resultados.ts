@@ -1,9 +1,12 @@
 import {
+  BookBookmark,
   BookOpen,
   type IconoProps,
+  Keyboard,
   LockSimple,
   MapPin,
   Monitor,
+  TerminalWindow,
   TreeStructure,
   User,
   Vault,
@@ -36,6 +39,12 @@ export const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
   credencial: { Icono: LockSimple, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
   ubicacion: { Icono: MapPin, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
   persona: { Icono: User, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
+  // Referencia: cada tipo con SU glifo, para distinguir de un vistazo
+  // una palabra del glosario de algo que se teclea (regla R16: nunca
+  // solo el color).
+  termino: { Icono: BookBookmark, tono: 'text-noct-accent bg-noct-accent/[.12]' },
+  atajo: { Icono: Keyboard, tono: 'text-noct-accent bg-noct-accent/[.12]' },
+  comando: { Icono: TerminalWindow, tono: 'text-noct-accent bg-noct-accent/[.12]' },
 }
 
 // Los resultados se agrupan por fuente (los modulos con contenido
@@ -55,6 +64,9 @@ export const GRUPOS_BUSQUEDA: {
   { id: 'ubicaciones', nombre: 'Ubicaciones', Icono: MapPin, tipos: ['ubicacion'] },
   // Personas en el buscador (hallazgo T1): mismo criterio que ubicaciones.
   { id: 'personas', nombre: 'Personas', Icono: User, tipos: ['persona'] },
+  // Referencia (2026-09-10): un grupo propio, con los tres tipos
+  // juntos. El tipo concreto lo dice el subtitulo de cada fila.
+  { id: 'referencia', nombre: 'Referencia', Icono: BookBookmark, tipos: ['termino', 'atajo', 'comando'] },
 ]
 
 /**

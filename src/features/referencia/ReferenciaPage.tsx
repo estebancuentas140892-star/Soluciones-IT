@@ -6,11 +6,14 @@ import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
 import {
   BookBookmark,
+  CaretDown,
   CaretRight,
+  CaretUp,
   Keyboard,
   Plus,
   Sliders,
   TerminalWindow,
+  Warning,
   X,
   type IconoProps,
 } from '../../components/iconos'
@@ -24,6 +27,7 @@ import {
   plataformasDe,
   resumenDeLista,
 } from './referencias'
+import { revisarCatalogo } from './consistencia'
 
 // REFERENCIA: EL VOCABULARIO Y LOS ATAJOS DEL EQUIPO, EN UN SOLO SITIO.
 //
@@ -61,12 +65,18 @@ export function ReferenciaPage() {
   const pestana: Pestana = params.get(CLAVE_PESTANA) === 'comandos' ? 'comandos' : 'glosario'
 
   const referencias = useLiveQuery(() => db.referencias.filter((r) => !r.eliminadoEn).toArray(), [], [])
+  // Para la revisión de consistencia hacen falta TODAS (incluidas las
+  // eliminadas, que es donde vive el último caso) y las guías, para
+  // saber cuáles siguen vinculadas.
+  const todasLasReferencias = useLiveQuery(() => db.referencias.toArray(), [], [])
+  const articulos = useLiveQuery(() => db.articulos.toArray(), [], [])
 
   const [consulta, setConsulta] = useState('')
   const [categoria, setCategoria] = useState<string | null>(null)
   const [tipo, setTipo] = useState<TipoReferencia | null>(null)
   const [plataforma, setPlataforma] = useState<string | null>(null)
   const [hoja, setHoja] = useState<'categoria' | 'tipo' | 'plataforma' | null>(null)
+  const [revisionAbierta, setRevisionAbierta] = useState(false)
 
   const terminos = useMemo(() => referencias.filter((r) => r.tipo === 'termino'), [referencias])
   const comandos = useMemo(() => referencias.filter((r) => r.tipo !== 'termino'), [referencias])
@@ -81,6 +91,11 @@ export function ReferenciaPage() {
   const visiblesComandos = useMemo(
     () => filtrarComandos(comandos, { consulta, tipo, plataforma }),
     [comandos, consulta, tipo, plataforma],
+  )
+
+  const revision = useMemo(
+    () => revisarCatalogo(todasLasReferencias, articulos),
+    [todasLasReferencias, articulos],
   )
 
   const visibles = pestana === 'glosario' ? visiblesGlosario : visiblesComandos
@@ -200,6 +215,52 @@ export function ReferenciaPage() {
       }
     >
       <main className="flex flex-1 flex-col gap-2 px-4 pb-12 pt-3.5">
+        {/* REVISIÓN DE CONSISTENCIA DEL CATÁLOGO. Solo aparece si hay
+            algo que revisar: un panel que dice "0 problemas" enseña a
+            ignorarlo. Incluye lo único que no se ve desde una ficha
+            suelta: las referencias eliminadas que siguen vinculadas a
+            una guía. */}
+        {revision.length > 0 && (
+          <div className="mb-1.5 flex flex-col gap-2 rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.08] p-3">
+            <button
+              type="button"
+              onClick={() => setRevisionAbierta((v) => !v)}
+              aria-expanded={revisionAbierta}
+              className="flex min-h-11 items-center gap-2.5 text-left"
+            >
+              <Warning size={16} className="shrink-0 text-noct-precaucion" aria-hidden />
+              <span className="min-w-0 flex-1 text-[13px] font-medium leading-snug">
+                {revision.length === 1
+                  ? 'Hay 1 inconsistencia por revisar'
+                  : `Hay ${revision.length} inconsistencias por revisar`}
+              </span>
+              {revisionAbierta ? (
+                <CaretUp size={14} className="shrink-0 text-noct-neutral-400" aria-hidden />
+              ) : (
+                <CaretDown size={14} className="shrink-0 text-noct-neutral-400" aria-hidden />
+              )}
+            </button>
+            {revisionAbierta && (
+              <div className="flex flex-col">
+                {revision.map((aviso, indice) => (
+                  <Link
+                    key={`${aviso.clave}-${aviso.referenciaId}-${indice}`}
+                    to={`/referencia/${aviso.referenciaId}`}
+                    className="flex min-h-[46px] flex-col justify-center rounded-md px-1.5 py-2 hover:bg-noct-text/[.06]"
+                  >
+                    <span className="text-[12.5px] font-medium text-noct-text">
+                      {aviso.referenciaTitulo}
+                    </span>
+                    <span className="mt-0.5 text-pretty text-[12px] leading-snug text-noct-neutral-300">
+                      {aviso.texto}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {visibles.length > 0 ? (
           visibles.map((referencia) => <TarjetaReferencia key={referencia.id} referencia={referencia} />)
         ) : (

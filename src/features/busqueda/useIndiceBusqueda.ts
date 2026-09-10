@@ -8,6 +8,7 @@ import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { expandirConsulta } from './sinonimos'
 import { cadenaNombres, mapaPorId } from '../ubicaciones/arbol'
+import { INFO_TIPO, textoBuscable } from '../referencia/referencias'
 
 export type TipoResultado =
   | 'articulo'
@@ -18,6 +19,13 @@ export type TipoResultado =
   | 'adjunto'
   | 'ubicacion'
   | 'persona'
+  // Referencia (2026-09-10). Son TRES tipos y no uno solo porque el
+  // resultado tiene que decir de que clase es: buscar "mstsc" y que
+  // salga "Referencia" no dice si es una palabra del glosario o algo
+  // que se teclea.
+  | 'termino'
+  | 'atajo'
+  | 'comando'
 
 export interface DocumentoBusqueda {
   id: string
@@ -62,6 +70,10 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
   // Personas (hallazgo T1): mismo criterio que ubicaciones, entidad
   // propia indexable desde el buscador global.
   const personas = useLiveQuery(() => db.personas.filter((p) => !p.eliminadoEn).toArray(), [], [])
+  // Referencia: glosario, atajos y comandos. Es contenido general del
+  // equipo (misma RLS que categorias o articulos), asi que entra al
+  // indice sin condiciones, a diferencia de la boveda.
+  const referencias = useLiveQuery(() => db.referencias.filter((r) => !r.eliminadoEn).toArray(), [], [])
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
   const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   // Adjuntos del articulo/dispositivo completo (fase N2, punto 2): la
@@ -127,6 +139,29 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
         subtitulo: 'Persona',
         ruta: `/personas/${persona.id}`,
         texto: [persona.nombre, persona.notas].join(' '),
+        portadaRef: '',
+      })
+    }
+
+    // Referencias (2026-09-10). El subtitulo empieza SIEMPRE por el
+    // tipo ("Término", "Atajo · Windows", "Comando · Windows"): es lo
+    // que el encargo pide que se vea sin abrir el resultado. El texto
+    // indexado es el mismo `textoBuscable` que usa la pantalla de
+    // Referencia (titulo, abreviatura, alias, definicion, plataforma,
+    // valor y etiquetas), para que buscar dos veces lo mismo no de dos
+    // resultados distintos.
+    for (const referencia of referencias ?? []) {
+      documentos.push({
+        id: `referencia:${referencia.id}`,
+        tipo: referencia.tipo,
+        titulo: referencia.abreviatura
+          ? `${referencia.titulo} (${referencia.abreviatura})`
+          : referencia.titulo,
+        subtitulo: [INFO_TIPO[referencia.tipo].etiqueta, referencia.plataforma, referencia.categoria]
+          .filter(Boolean)
+          .join(' · '),
+        ruta: `/referencia/${referencia.id}`,
+        texto: textoBuscable(referencia),
         portadaRef: '',
       })
     }
@@ -298,6 +333,7 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
     categorias,
     ubicaciones,
     personas,
+    referencias,
     credenciales,
     diagnosticos,
     adjuntosTabla,

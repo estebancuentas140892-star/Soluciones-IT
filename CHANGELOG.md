@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Agregado (Referencia, tarea 5): Referencia en el buscador global y revisión de consistencia
+
+**Área modificada:** buscador global y editor de Referencia. **Nuevos:** `src/features/referencia/consistencia.ts` (+ 22 pruebas), `AvisosConsistencia.tsx`. **Modificados:** `src/features/busqueda/useIndiceBusqueda.ts`, `resultados.ts`, `BuscadorGlobal.tsx`, `src/features/referencia/ReferenciaForm.tsx`, `ReferenciaPage.tsx`, `src/features/soluciones/PasosEditor.tsx`, `BUSCADOR.md`.
+**Motivo:** tarea 5 del encargo de Referencia del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Agregado** las referencias al **buscador global**, en su propio grupo. Se indexan **tres tipos** (`termino`, `atajo`, `comando`) y no uno solo: el resultado tiene que decir de qué clase es, y "Referencia" a secas no distingue una palabra del glosario de algo que se teclea. Cada tipo lleva su glifo (regla R16, nunca solo el color) y el subtítulo empieza por el tipo: **Término**, **Atajo · Windows**, **Comando · Windows**.
+- **La búsqueda considera** título, abreviatura, alias, definición, plataforma, valor del comando o atajo y etiquetas. Es el mismo `textoBuscable` que usa la pantalla de Referencia: buscar dos veces lo mismo no puede dar dos resultados distintos. **Abrir un resultado lleva directo a su ficha** en `/referencia/<id>`.
+- **Agregada** la **revisión de consistencia** (`consistencia.ts`, módulo puro y sin React), con los diez casos del encargo: términos duplicados, abreviaturas contradictorias, un alias que nombra a dos conceptos, uso ambiguo de la palabra "giga", comandos duplicados para la misma plataforma, un mismo comando con resultados esperados contradictorios, comandos sin plataforma, comandos sin resultado esperado, comandos potencialmente delicados sin advertencia, y referencias eliminadas que siguen vinculadas a una guía.
+- **Describe y nunca bloquea**, mismo criterio que la validación de vínculos entre guías: frenar a quien está documentando es peor que la deriva que se quiere evitar. Dos niveles, **contradicción** (dos fichas dicen cosas distintas de lo mismo, ámbar) e **incompleto** (falta un dato para usar la ficha con seguridad, neutro), y siempre con el nombre de la ficha con la que choca.
+- **Dónde aparece:** los avisos de una ficha, en su editor y **en vivo mientras se escribe**, justo antes del botón de guardar; los del catálogo entero, en un panel plegable en la pantalla de Referencia, que es donde vive el único caso que no se ve desde una ficha suelta (las eliminadas todavía vinculadas). El panel solo aparece si hay algo que revisar: uno que diga "0 problemas" enseña a ignorarlo.
+- **Agregada** la **sugerencia discreta de vínculo** en el editor de pasos: cuando el texto de una tarea nombra una palabra que está en el glosario y todavía no la tiene vinculada, aparece una fila con esos términos. **Nunca se toca el texto y nunca se crea el vínculo solo**; decide el autor con un toque. Coincide por **palabra entera** sobre el título, la abreviatura o cualquier alias, sin acentos ni mayúsculas, e ignora abreviaturas de una sola letra (la "B" de Byte coincidiría con media guía).
+- **Editar una referencia central actualiza su información en todas las guías que la usan:** el bloque guarda solo el id, y el título, la definición, el valor y el resto se resuelven en vivo contra la ficha (`useReferencias`). La **copia del título** guardada en el bloque se conserva como respaldo y solo manda cuando la ficha no está en este dispositivo.
+
 ### Agregado (Referencia, tarea 4): atajos y comandos dentro de las tareas de una guía
 
 **Área modificada:** editor de guías y ejecución. **Nuevo:** `src/features/referencia/TarjetaComando.tsx`. **Modificados:** `src/features/soluciones/PasosEditor.tsx`, `ModoFoco.tsx`, `ProcedimientoVista.tsx` (+ 5 pruebas en `apoyosTarea.test.ts`).

@@ -87,6 +87,7 @@ import { AccionesPaso } from './ranuraAccionesPaso'
 import { avisoDeVinculo } from './validacionVinculos'
 import { SelectorReferencia } from '../referencia/SelectorReferencia'
 import { INFO_TIPO } from '../referencia/referencias'
+import { terminosSugeridos } from '../referencia/consistencia'
 
 interface Props {
   articuloId: string
@@ -478,6 +479,20 @@ export function PasosEditor({
     // seleccionada se abre su selector; sin ninguna, el del paso.
     if (tareaId) setDatoDeTareaId(tareaId)
     else setVinculosPasoId(pasos[indice].id)
+  }
+
+  // VINCULAR UN TERMINO SUGERIDO. Solo ocurre cuando el autor lo pulsa:
+  // la sugerencia no toca el texto de la tarea ni crea el vinculo sola.
+  function vincularTermino(indice: number, tareaId: string, referencia: Referencia) {
+    agregarBloque(
+      indice,
+      {
+        ...crearBloqueReferencia(referencia.tipo),
+        referenciaId: referencia.id,
+        referenciaTitulo: referencia.titulo,
+      },
+      destinoTarea(tareaId),
+    )
   }
 
   function moverTarea(indice: number, tareaId: string, direccion: -1 | 1) {
@@ -942,6 +957,7 @@ export function PasosEditor({
                 onSubirArchivo={(evento) => void subirArchivoBloque(indice, bloque.id, evento)}
                 vinculables={vinculablesOrdenados}
                 referenciasDisponibles={referenciasDisponibles}
+                onVincularTermino={(referencia) => vincularTermino(indice, bloque.id, referencia)}
                 gruposProtegidos={[
                   { etiqueta: 'Datos protegidos del equipo', opciones: opcionesCampos },
                   { etiqueta: 'Secretos de la bóveda', opciones: opcionesCredenciales },
@@ -1466,6 +1482,7 @@ function BloqueEditor({
   onSubirArchivo,
   vinculables,
   referenciasDisponibles,
+  onVincularTermino,
   gruposProtegidos,
   abrirDatoProtegido,
   onDatoProtegidoAbierto,
@@ -1495,6 +1512,7 @@ function BloqueEditor({
   onSubirArchivo: (evento: ChangeEvent<HTMLInputElement>) => void
   vinculables: Articulo[]
   referenciasDisponibles: Referencia[]
+  onVincularTermino: (referencia: Referencia) => void
   gruposProtegidos: { etiqueta?: string; opciones: OpcionVinculoProtegido[] }[]
   abrirDatoProtegido: boolean
   onDatoProtegidoAbierto: () => void
@@ -1632,6 +1650,21 @@ function BloqueEditor({
             partía la fila en dos. El destino lo dice el título de la
             hoja que se abre ("Añadir a la tarea 2"), y el aria-label lo
             dice para quien no la ve. */}
+        {/* SUGERENCIA DISCRETA DE VÍNCULO (encargo del 2026-09-10,
+            tarea 5). La tarea ya nombra una palabra que está en el
+            glosario y todavía no la tiene vinculada. NO se toca el
+            texto y NO se crea el vínculo solo: subrayar cada palabra
+            técnica sería adivinar, y llenaría de enlaces una pantalla
+            que se lee a un brazo de distancia. Decide el autor, con un
+            toque. */}
+        <SugerenciasDeTermino
+          texto={bloque.texto}
+          tareaId={bloque.id}
+          bloquesDelPaso={bloquesDelPaso}
+          referencias={referenciasDisponibles}
+          onVincular={onVincularTermino}
+        />
+
         <div className="flex items-center gap-1.5 pl-1">
           <BotonLinea Icono={Plus} onClick={onAnadirATarea} etiqueta="Añadir contenido a esta tarea">
             Añadir
@@ -1924,6 +1957,51 @@ function BloqueEditor({
         onSubir={onSubirImagen}
       />
       {selectorDestino}
+    </div>
+  )
+}
+
+// La fila de sugerencias de una tarea. Vacía (y sin dibujar nada) en
+// cuanto no hay ninguna: una fila que dice "sin sugerencias" es ruido
+// permanente en el sitio donde se escribe.
+function SugerenciasDeTermino({
+  texto,
+  tareaId,
+  bloquesDelPaso,
+  referencias,
+  onVincular,
+}: {
+  texto: string
+  tareaId: string
+  bloquesDelPaso: BloquePaso[]
+  referencias: Referencia[]
+  onVincular: (referencia: Referencia) => void
+}) {
+  // Ya vinculados A ESTA TAREA: sugerir de nuevo lo que ya está puesto
+  // convertiría la ayuda en un duplicado.
+  const yaVinculados = new Set(
+    bloquesDelPaso
+      .filter((b) => b.tipo === 'referencia' && b.tareaId === tareaId && b.referenciaId)
+      .map((b) => b.referenciaId as string),
+  )
+  const sugeridos = terminosSugeridos(texto, referencias, yaVinculados)
+  if (sugeridos.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pl-1">
+      <span className="text-[11.5px] text-noct-neutral-500">Está en el glosario:</span>
+      {sugeridos.map((referencia) => (
+        <button
+          key={referencia.id}
+          type="button"
+          onClick={() => onVincular(referencia)}
+          aria-label={`Vincular el término ${referencia.titulo} a esta tarea`}
+          className="inline-flex min-h-9 items-center gap-1 rounded-full border border-dashed border-noct-neutral-700 px-2.5 text-[12px] text-noct-neutral-300 hover:border-noct-accent/60 hover:text-noct-text"
+        >
+          <Plus size={11} className="shrink-0 text-noct-accent-300" aria-hidden />
+          {referencia.titulo}
+        </button>
+      ))}
     </div>
   )
 }

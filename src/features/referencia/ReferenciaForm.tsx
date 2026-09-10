@@ -20,6 +20,8 @@ import { db, type ReferenciaRelacionada, type TipoReferencia } from '../../lib/d
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { valoresUnicos } from '../../lib/vocabulario'
 import { INFO_TIPO, TIPOS_REFERENCIA } from './referencias'
+import { AvisosConsistencia } from './AvisosConsistencia'
+import { revisarReferencia } from './consistencia'
 
 // CREAR O EDITAR UNA ENTRADA DE REFERENCIA.
 //
@@ -104,6 +106,57 @@ export function ReferenciaForm() {
     setRelacionadas(referencia.relacionadas ?? [])
     setCargadoInicial(true)
   }, [referencia, cargadoInicial])
+
+  // LA REVISION DE CONSISTENCIA, EN VIVO MIENTRAS SE ESCRIBE. Se
+  // calcula sobre el BORRADOR (lo que hay en el formulario ahora
+  // mismo), no sobre lo guardado: avisar despues de guardar llega
+  // tarde. Describe y no bloquea: guardar sigue disponible siempre.
+  const avisos = useMemo(
+    () =>
+      revisarReferencia(
+        {
+          id,
+          tipo,
+          titulo: titulo.trim(),
+          abreviatura: abreviatura.trim(),
+          alias: aLista(alias),
+          definicion: definicion.trim(),
+          ejemplo: ejemplo.trim(),
+          categoria: categoria.trim(),
+          plataforma: plataforma.trim(),
+          valor: valor.trim(),
+          cuandoUsar: cuandoUsar.trim(),
+          resultadoEsperado: resultadoEsperado.trim(),
+          requiereAdmin,
+          advertencia: advertencia.trim(),
+          relacionadas,
+          etiquetas: aLista(etiquetas),
+          updatedAt: '',
+          updatedBy: null,
+          eliminadoEn: null,
+        },
+        todas,
+      ),
+    [
+      id,
+      tipo,
+      titulo,
+      abreviatura,
+      alias,
+      definicion,
+      ejemplo,
+      categoria,
+      plataforma,
+      valor,
+      cuandoUsar,
+      resultadoEsperado,
+      requiereAdmin,
+      advertencia,
+      relacionadas,
+      etiquetas,
+      todas,
+    ],
+  )
 
   const categoriasUsadas = useMemo(() => valoresUnicos(todas.map((r) => r.categoria)), [todas])
   const plataformasUsadas = useMemo(() => valoresUnicos(todas.map((r) => r.plataforma)), [todas])
@@ -410,6 +463,10 @@ export function ReferenciaForm() {
               />
             </Campo>
           )}
+
+          {/* Justo antes de guardar, que es cuando se puede corregir sin
+              coste. Nunca impide guardar. */}
+          <AvisosConsistencia avisos={avisos} />
 
           <button
             type="submit"
