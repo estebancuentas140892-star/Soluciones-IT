@@ -1,5 +1,6 @@
 import type { BloquePaso, IntencionGuia, PasoProcedimiento, TipoTarea, VinculoProtegido } from '../../lib/db'
 import { tareasDe } from '../../lib/procedimiento'
+import { apoyosDelPaso, apoyosDeTarea } from './apoyosTarea'
 import { guiasObligatoriasDeTarea } from './guiasObligatorias'
 
 // LO QUE EL MODO FOCO RECORRE (tarea 217, hallazgo G-18; ampliado el
@@ -26,6 +27,28 @@ import { guiasObligatoriasDeTarea } from './guiasObligatorias'
 // 'necesario' (bloques 'guia'): no se convierten en tareas propias,
 // pero si condicionan la suya.
 
+// LOS AVISOS TAMBIEN SON ELEMENTOS DEL RECORRIDO (encargo del
+// 2026-09-10, tarea 1).
+//
+// Hasta ahora un aviso era un APOYO PASIVO: se pintaba pegado a la
+// tarea que lo llevaba (o dentro del panel "Informacion del paso") y el
+// recorrido pasaba por encima de el sin detenerse. Un aviso que
+// comparte pantalla con la instruccion siguiente no advierte: el ojo va
+// al titular de 30 px y al boton de 76.
+//
+// Ahora cada aviso ocupa su propio turno de la secuencia:
+//
+//   - el aviso del PASO va una sola vez, delante de todo lo demas;
+//   - el aviso de una TAREA va inmediatamente antes de esa tarea;
+//   - ninguno se repite en las demas tareas, y ninguno se deduplica por
+//     texto: el bloque conserva su identidad (`id`) y su posicion
+//     estable, porque el anclaje sigue siendo `alcance`/`tareaId`, no la
+//     posicion dentro de `bloques`.
+//
+// Confirmarlo deja pasar al elemento siguiente, pero NO cuenta como
+// tarea hecha: su id no es el de un bloque 'tarea', asi que no entra ni
+// en el avance guardado ni en el cierre del paso.
+
 export type ClaseTareaFoco =
   // Un bloque 'tarea' del paso.
   | 'tarea'
@@ -33,6 +56,8 @@ export type ClaseTareaFoco =
   | 'paso-entero'
   // La guia vinculada del paso (`subArticuloId`), como primera tarea.
   | 'guia-del-paso'
+  // Un bloque 'aviso', con su turno propio en la secuencia.
+  | 'aviso'
 
 export interface TareaFoco {
   id: string
@@ -65,6 +90,56 @@ export interface TareaFoco {
   // tomaba solo la primera con `.find`, asi que una tarea con dos guias
   // necesarias enseñaba una y exigia ninguna.
   guiasObligatorias: BloquePaso[]
+  // El bloque de aviso cuando `clase` es 'aviso'; null en el resto. Se
+  // lleva el bloque entero para no perder su tono ni su `alcance`.
+  aviso: BloquePaso | null
+}
+
+// Campos que no aplican a una entrada sintetica, para no repetirlos en
+// cada constructor.
+type CamposVacios = Pick<
+  TareaFoco,
+  | 'tipoTarea'
+  | 'guiaId'
+  | 'guiaTitulo'
+  | 'intencionGuia'
+  | 'decisionGuiaId'
+  | 'decisionGuiaTitulo'
+  | 'guiasObligatorias'
+  | 'aviso'
+>
+
+// Es una funcion y no una constante para que cada entrada reciba su
+// propio array: una constante compartida haria que todas apuntaran al
+// mismo `guiasObligatorias`.
+function camposVacios(): CamposVacios {
+  return {
+    tipoTarea: null,
+    guiaId: null,
+    guiaTitulo: '',
+    intencionGuia: null,
+    decisionGuiaId: null,
+    decisionGuiaTitulo: '',
+    guiasObligatorias: [],
+    aviso: null,
+  }
+}
+
+// La entrada de un aviso. El id ES el del bloque: identidad estable
+// aunque el autor reordene las tareas del paso, y sin choque posible
+// con el id de una tarea (el avance se guarda por id de bloque).
+function entradaAviso(aviso: BloquePaso): TareaFoco {
+  return {
+    ...camposVacios(),
+    id: aviso.id,
+    texto: aviso.texto,
+    clase: 'aviso',
+    esPasoEntero: false,
+    // Un aviso no abre una credencial: lo unico que ofrece es leerlo y
+    // confirmarlo.
+    vinculoProtegido: null,
+    aviso,
+  }
 }
 
 /** Prefijo del id sintetico de la guia del paso dentro del recorrido. */
@@ -76,32 +151,34 @@ export function idTareaGuiaDelPaso(pasoId: string): string {
 // estar vacio y caer en el del subarticulo o en "Paso N"), para no
 // duplicar aqui esa cadena de respaldos.
 export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): TareaFoco[] {
-  const recorrido: TareaFoco[] = []
+  // El TRABAJO del paso: la guia vinculada y sus tareas, cada una
+  // precedida por sus propios avisos.
+  const trabajo: TareaFoco[] = []
 
   // La guia vinculada del paso va PRIMERA: es lo que hay que tener
   // hecho para que el resto del paso tenga sentido, y es justo lo que
   // antes bloqueaba sin dejarse abrir.
   if (paso.subArticuloId) {
-    recorrido.push({
+    trabajo.push({
+      ...camposVacios(),
       id: idTareaGuiaDelPaso(paso.id),
       texto: paso.subArticuloTitulo || 'Completar la guía vinculada',
       clase: 'guia-del-paso',
       esPasoEntero: false,
       vinculoProtegido: paso.vinculoProtegido,
-      tipoTarea: null,
       guiaId: paso.subArticuloId,
       guiaTitulo: paso.subArticuloTitulo,
       intencionGuia: 'necesario',
-      decisionGuiaId: null,
-      decisionGuiaTitulo: '',
-      guiasObligatorias: [],
     })
   }
 
   const tareas = tareasDe(paso.bloques)
   for (const t of tareas) {
     const obligatorias = guiasObligatoriasDeTarea(paso, t.id)
-    recorrido.push({
+    // Los avisos de ESTA tarea, justo antes de ella: es el unico sitio
+    // donde advierten a tiempo.
+    for (const aviso of apoyosDeTarea(paso, t.id).avisos) trabajo.push(entradaAviso(aviso))
+    trabajo.push({
       id: t.id,
       texto: t.texto,
       clase: 'tarea',
@@ -114,27 +191,27 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
       guiasObligatorias: obligatorias,
       decisionGuiaId: t.tipoTarea === 'decision' ? t.decisionArticuloId : null,
       decisionGuiaTitulo: t.tipoTarea === 'decision' ? t.decisionArticuloTitulo : '',
+      aviso: null,
     })
   }
 
-  if (recorrido.length > 0) return recorrido
-
-  return [
-    {
+  // Un paso cuyo unico contenido son avisos NO se queda sin forma de
+  // cerrarse: sigue teniendo su tarea unica, detras de ellos.
+  if (trabajo.length === 0) {
+    trabajo.push({
+      ...camposVacios(),
       id: `paso:${paso.id}`,
       texto: tituloPaso,
       clase: 'paso-entero',
       esPasoEntero: true,
       vinculoProtegido: paso.vinculoProtegido,
-      tipoTarea: null,
-      guiaId: null,
-      guiaTitulo: '',
-      intencionGuia: null,
-      decisionGuiaId: null,
-      decisionGuiaTitulo: '',
-      guiasObligatorias: [],
-    },
-  ]
+    })
+  }
+
+  // Los avisos del paso completo, UNA sola vez y delante de todo: son
+  // las condiciones bajo las que se hace el paso entero, asi que se
+  // leen antes de la primera tarea y no vuelven a interrumpir.
+  return [...apoyosDelPaso(paso).avisos.map(entradaAviso), ...trabajo]
 }
 
 /**
@@ -145,13 +222,21 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
  * ese dato lo resuelve quien llama (`subSatisfecho`). Asi no existe
  * forma de dar por hecha una guia que no se hizo, que es el criterio
  * A10: volver de ella sin terminarla no la registra como completada.
+ *
+ * Un AVISO se cumple al confirmarlo, y esa confirmacion NO se guarda en
+ * el avance: vive en la ejecucion en curso (`avisosConfirmados`), asi
+ * que repetir la guia vuelve a mostrarlo. Dentro de la misma ejecucion
+ * se puede volver a el con las flechas sin que pida confirmarlo otra
+ * vez.
  */
 export function tareaFocoHecha(
   tarea: TareaFoco,
   hechas: ReadonlySet<string>,
   subSatisfecho: boolean,
+  avisosConfirmados?: ReadonlySet<string>,
 ): boolean {
   if (tarea.clase === 'guia-del-paso') return subSatisfecho
+  if (tarea.clase === 'aviso') return avisosConfirmados?.has(tarea.id) ?? false
   return hechas.has(tarea.id)
 }
 
@@ -166,7 +251,15 @@ export function accionFoco(
   tareas: TareaFoco[],
   hechas: ReadonlySet<string>,
   subSatisfecho = true,
+  avisosConfirmados?: ReadonlySet<string>,
 ): AccionFoco {
-  if (tareas.length === 1 && tareas[0].esPasoEntero) return 'completar'
-  return tareas.every((t) => tareaFocoHecha(t, hechas, subSatisfecho)) ? 'completar' : 'marcar'
+  // El paso sin tareas puede llevar avisos delante: lo que decide es
+  // que su unico TRABAJO sea la tarea unica, no que el recorrido tenga
+  // un solo elemento. Los avisos no cambian esa respuesta porque un
+  // aviso trae su propio boton, no el de cerrar el paso.
+  const trabajo = tareas.filter((t) => t.clase !== 'aviso')
+  if (trabajo.length === 1 && trabajo[0].esPasoEntero) return 'completar'
+  return tareas.every((t) => tareaFocoHecha(t, hechas, subSatisfecho, avisosConfirmados))
+    ? 'completar'
+    : 'marcar'
 }

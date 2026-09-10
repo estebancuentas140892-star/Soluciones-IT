@@ -20,11 +20,11 @@ function paso(parcial: Partial<PasoProcedimiento> = {}): PasoProcedimiento {
 }
 
 describe('tareasParaFoco', () => {
-  it('devuelve las tareas del paso en orden, ignorando avisos e imagenes', () => {
+  it('devuelve las tareas del paso en orden, ignorando imagenes y apoyos sin alcance', () => {
     const p = paso({
       bloques: [
         bloque({ id: 'b1', tipo: 'tarea', texto: 'Abrir la tapa lateral' }),
-        bloque({ id: 'b2', tipo: 'aviso', texto: 'No forzar la guia' }),
+        bloque({ id: 'b2', tipo: 'imagen', texto: 'La guia del rollo' }),
         bloque({ id: 'b3', tipo: 'tarea', texto: 'Colocar el rollo hacia arriba' }),
       ],
     })
@@ -45,9 +45,15 @@ describe('tareasParaFoco', () => {
     expect(tareas[0].id).toBe('paso:p1')
   })
 
-  it('un paso con solo avisos tambien cae en la tarea unica', () => {
-    const p = paso({ bloques: [bloque({ id: 'b1', tipo: 'aviso', texto: 'Cuidado' })] })
-    expect(tareasParaFoco(p, 'Revisar')[0].esPasoEntero).toBe(true)
+  it('un paso con solo avisos conserva su tarea unica detras de ellos', () => {
+    const p = paso({
+      bloques: [bloque({ id: 'b1', tipo: 'aviso', alcance: 'paso', texto: 'Cuidado' })],
+    })
+    const recorrido = tareasParaFoco(p, 'Revisar')
+    expect(recorrido.map((t) => t.clase)).toEqual(['aviso', 'paso-entero'])
+    // Sin esto el paso se quedaria sin forma de cerrarse: el boton
+    // grande cuelga de la entrada 'paso-entero'.
+    expect(recorrido[1].esPasoEntero).toBe(true)
   })
 
   it('el vinculo protegido de la tarea gana al del paso, y el del paso sirve de respaldo', () => {
@@ -69,6 +75,112 @@ describe('tareasParaFoco', () => {
     const vinculoPaso = { tipo: 'credencial', id: 'c2', titulo: 'Admin red' } as never
     const tareas = tareasParaFoco(paso({ bloques: [], vinculoProtegido: vinculoPaso }), 'Conectar')
     expect(tareas[0].vinculoProtegido).toBe(vinculoPaso)
+  })
+})
+
+// Encargo del 2026-09-10, tarea 1: un aviso deja de ser un apoyo pasivo
+// pegado a la instruccion y pasa a ocupar su propio turno del recorrido.
+describe('los avisos como elementos del recorrido', () => {
+  function aviso(id: string, texto: string, extra: Partial<BloquePaso> = {}) {
+    return bloque({ id, tipo: 'aviso', texto, tono: 'precaucion', ...extra })
+  }
+
+  const p = paso({
+    bloques: [
+      aviso('a-paso', 'Corta la energia antes de abrir', { alcance: 'paso' }),
+      bloque({ id: 't1', tipo: 'tarea', texto: 'Abrir la tapa' }),
+      aviso('a-t2', 'La guia se dobla si la fuerzas', { alcance: 'tarea', tareaId: 't2' }),
+      bloque({ id: 't2', tipo: 'tarea', texto: 'Colocar el rollo' }),
+    ],
+  })
+
+  it('el del paso va UNA vez, delante de la primera tarea', () => {
+    const recorrido = tareasParaFoco(p, 'Cargar el rollo')
+    expect(recorrido.map((t) => t.id)).toEqual(['a-paso', 't1', 'a-t2', 't2'])
+    expect(recorrido.filter((t) => t.id === 'a-paso')).toHaveLength(1)
+  })
+
+  it('el de una tarea va inmediatamente antes de ESA tarea y no se repite en las demas', () => {
+    const recorrido = tareasParaFoco(p, 'Cargar el rollo')
+    const posicionAviso = recorrido.findIndex((t) => t.id === 'a-t2')
+    expect(recorrido[posicionAviso + 1].id).toBe('t2')
+    expect(recorrido.filter((t) => t.id === 'a-t2')).toHaveLength(1)
+  })
+
+  it('conserva el bloque entero, con su tono y su alcance', () => {
+    const entrada = tareasParaFoco(p, 'Cargar el rollo')[0]
+    expect(entrada.clase).toBe('aviso')
+    expect(entrada.aviso?.tono).toBe('precaucion')
+    expect(entrada.aviso?.alcance).toBe('paso')
+    expect(entrada.texto).toBe('Corta la energia antes de abrir')
+  })
+
+  it('dos avisos con el MISMO texto siguen siendo dos elementos distintos', () => {
+    // No se deduplica por texto: cada bloque es del autor y tiene su
+    // sitio, aunque repita palabra por palabra.
+    const repetido = paso({
+      bloques: [
+        aviso('a1', 'Usa guantes', { alcance: 'tarea', tareaId: 't1' }),
+        bloque({ id: 't1', tipo: 'tarea', texto: 'Sacar el fusor' }),
+        aviso('a2', 'Usa guantes', { alcance: 'tarea', tareaId: 't2' }),
+        bloque({ id: 't2', tipo: 'tarea', texto: 'Montar el fusor nuevo' }),
+      ],
+    })
+    expect(tareasParaFoco(repetido, 'Cambiar el fusor').map((t) => t.id)).toEqual([
+      'a1',
+      't1',
+      'a2',
+      't2',
+    ])
+  })
+
+  it('la posicion es estable al reordenar las tareas: el aviso sigue a la suya', () => {
+    // El anclaje es `tareaId`, no la posicion dentro de `bloques`.
+    const reordenado = paso({
+      bloques: [
+        aviso('a-paso', 'Corta la energia antes de abrir', { alcance: 'paso' }),
+        aviso('a-t2', 'La guia se dobla si la fuerzas', { alcance: 'tarea', tareaId: 't2' }),
+        bloque({ id: 't2', tipo: 'tarea', texto: 'Colocar el rollo' }),
+        bloque({ id: 't1', tipo: 'tarea', texto: 'Abrir la tapa' }),
+      ],
+    })
+    expect(tareasParaFoco(reordenado, 'Cargar el rollo').map((t) => t.id)).toEqual([
+      'a-paso',
+      'a-t2',
+      't2',
+      't1',
+    ])
+  })
+
+  it('un aviso heredado sin asignar se comporta como el del paso', () => {
+    const heredado = paso({
+      bloques: [
+        aviso('a-viejo', 'Escrito antes del campo alcance', { alcance: 'sin-asignar' }),
+        bloque({ id: 't1', tipo: 'tarea', texto: 'Abrir la tapa' }),
+      ],
+    })
+    expect(tareasParaFoco(heredado, 'Paso').map((t) => t.id)).toEqual(['a-viejo', 't1'])
+  })
+
+  it('se cumple al confirmarlo, y la confirmacion NO viaja en el avance marcado', () => {
+    const [avisoPaso] = tareasParaFoco(p, 'Cargar el rollo')
+    // Aunque su id apareciera entre las tareas marcadas, sin la
+    // confirmacion de ESTA ejecucion sigue pendiente: repetir la guia
+    // vuelve a mostrarlo.
+    expect(tareaFocoHecha(avisoPaso, new Set(['a-paso']), true)).toBe(false)
+    expect(tareaFocoHecha(avisoPaso, new Set(), true, new Set(['a-paso']))).toBe(true)
+  })
+
+  it('confirmarlo no cierra el paso: el paso sigue esperando sus tareas', () => {
+    const recorrido = tareasParaFoco(p, 'Cargar el rollo')
+    const confirmados = new Set(['a-paso', 'a-t2'])
+    expect(accionFoco(recorrido, new Set(), true, confirmados)).toBe('marcar')
+    expect(accionFoco(recorrido, new Set(['t1', 't2']), true, confirmados)).toBe('completar')
+  })
+
+  it('un aviso sin confirmar mantiene el recorrido en marcha', () => {
+    const recorrido = tareasParaFoco(p, 'Cargar el rollo')
+    expect(accionFoco(recorrido, new Set(['t1', 't2']), true, new Set(['a-paso']))).toBe('marcar')
   })
 })
 

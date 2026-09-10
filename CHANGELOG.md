@@ -6,6 +6,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-10
+
+### Cambiado (encargo 2026-09-10, tarea 1): los avisos dejan de ser adorno y pasan a ser elementos del recorrido
+
+**Área modificada:** ejecución de Guías, modo de una tarea a la vez. **Modificados:** `src/features/soluciones/tareasFoco.ts` (+ 9 pruebas en `tareasFoco.test.ts`), `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `DOCUMENTACION_FUNCIONAL.md`.
+**Motivo:** tarea 1 del encargo del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Causa.** El aviso era un **apoyo pasivo**: se pintaba pegado a la tarea que lo llevaba, o dentro del panel "Información del paso", y el recorrido pasaba por encima sin detenerse. Compartiendo pantalla con un titular de 30 px y un botón de 76, el aviso no advierte de nada.
+- **Cambiado** cada aviso ocupa ahora **su propio turno del recorrido**, con el área principal para él solo y sin la tarea siguiente debajo. El de **todo el paso** va una sola vez, delante de la primera tarea; el de **una tarea**, inmediatamente antes de esa tarea, y no se repite en las demás.
+- **Conserva su significado en cuatro canales, no solo el color** (regla **R16**): icono del tono, palabra ("Información", "Precaución", "Importante"), barra lateral y fondo, más una pastilla que dice si es del paso o de la tarea que sigue.
+- **Agregado** el botón dice **"Entendido · continuar"** en una precaución o algo importante, y **"Continuar"** en el resto. Confirmarlo **deja pasar al elemento siguiente pero NO cuenta como tarea hecha**: el id del aviso no es el de un bloque `tarea`, así que no entra en el avance guardado ni acerca el cierre del paso. Mientras un aviso está en pantalla, la barra inferior no ofrece "Falla".
+- **La confirmación vive en la ejecución, no en el avance** (`avisosConfirmados` en `AsistenteVista`, por encima del `key={paso.id}` de `ModoFoco`): volver a un paso anterior dentro de la misma ejecución no vuelve a exigirla, y **repetir la guía muestra los avisos otra vez**.
+- **Sin deduplicar por texto y con posición estable:** el anclaje sigue siendo `alcance`/`tareaId` del editor, así que reordenar las tareas no desengancha ningún aviso y dos avisos con el mismo texto siguen siendo dos elementos distintos. Un aviso heredado "Sin asignar" se comporta como el del paso, igual que antes.
+- **Corregido de paso** el panel "Información del paso" ya no repite los avisos (quedaban en dos sitios a la vez), y la pastilla del foco vuelve a contar **tareas** ("Tarea 2 de 3"), no elementos del recorrido.
+
 ## 2026-09-09
 
 ### Corregido (tarea 235, encargo 1): "necesario" no significaba nada, y con dos guías solo contaba la primera

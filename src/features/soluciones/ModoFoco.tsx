@@ -78,6 +78,15 @@ interface Props {
   // lados, porque ahí ya no llega al borde de la pantalla sino al de la
   // tarjeta que lo contiene.
   anidado?: boolean
+  // AVISOS CONFIRMADOS EN ESTA EJECUCION (encargo del 2026-09-10,
+  // tarea 1). Vive arriba, en `AsistenteVista`, y no en el avance
+  // guardado, por dos razones: confirmar un aviso no es trabajo hecho
+  // (no puede contar como tarea) y la confirmacion caduca con la
+  // ejecucion, asi que repetir la guia vuelve a mostrarlo. Al vivir
+  // arriba, cambiar de paso y volver dentro de la MISMA ejecucion no
+  // pide confirmarlo otra vez.
+  avisosConfirmados: ReadonlySet<string>
+  onConfirmarAviso: (avisoId: string) => void
   onAlternarTarea: (tareaId: string) => void
   // Cierra el paso y avanza. Es la misma acción dominante de la vista
   // completa: el foco no decide cuándo se puede, solo la ofrece.
@@ -131,6 +140,8 @@ export function ModoFoco({
   guiaDelPasoDisponible = true,
   guiaDelPasoEnLinea = false,
   anidado = false,
+  avisosConfirmados,
+  onConfirmarAviso,
   onAlternarTarea,
   onCompletarPaso,
   etiquetaAvance,
@@ -141,19 +152,34 @@ export function ModoFoco({
   renderGuia,
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso)
-  const delPaso = apoyosDelPaso(paso)
+  // Los avisos del paso YA son elementos del recorrido: dejarlos
+  // tambien en el panel "Información del paso" seria enseñar el mismo
+  // bloque dos veces en la misma pantalla.
+  const delPaso: Apoyos = { ...apoyosDelPaso(paso), avisos: [] }
   const hayApoyosDelPaso = hayApoyos(delPaso)
+
+  function cumplida(tarea: TareaFoco): boolean {
+    return tareaFocoHecha(tarea, instruccionesHechas, subSatisfecho, avisosConfirmados)
+  }
 
   // La guía que no está disponible se lee ANTES de seguir: cuenta como
   // cumplida para no bloquear, pero el recorrido empieza en ella para
   // que su explicación no pase de largo (A12).
   function primeraPendiente(): number {
     const pendiente = tareas.findIndex(
-      (t) =>
-        !tareaFocoHecha(t, instruccionesHechas, subSatisfecho) ||
-        (t.clase === 'guia-del-paso' && !guiaDelPasoDisponible),
+      (t) => !cumplida(t) || (t.clase === 'guia-del-paso' && !guiaDelPasoDisponible),
     )
     return pendiente >= 0 ? pendiente : 0
+  }
+
+  // El siguiente elemento sin cumplir, mirando primero HACIA ADELANTE:
+  // marcar una tarea no puede devolver al tecnico a un aviso que dejo
+  // atras con las flechas. Si delante no queda nada, se vuelve al que
+  // siga pendiente donde sea.
+  function siguientePendiente(desde: number): number {
+    const adelante = tareas.findIndex((t, i) => i > desde && !cumplida(t))
+    if (adelante >= 0) return adelante
+    return tareas.findIndex((t, i) => i !== desde && !cumplida(t))
   }
 
   const [indiceTarea, setIndiceTarea] = useState(primeraPendiente)
@@ -190,10 +216,18 @@ export function ModoFoco({
     const actual = Math.min(indiceTarea, tareas.length - 1)
     if (tareas[actual]?.clase !== 'guia-del-paso') return
     const siguiente = tareas.findIndex(
-      (t, i) => i !== actual && !tareaFocoHecha(t, instruccionesHechas, subSatisfecho),
+      (t, i) =>
+        i !== actual && !tareaFocoHecha(t, instruccionesHechas, subSatisfecho, avisosConfirmados),
     )
     if (siguiente >= 0) setIndiceTarea(siguiente)
-  }, [subSatisfecho, guiaDelPasoDisponible, indiceTarea, tareas, instruccionesHechas])
+  }, [
+    subSatisfecho,
+    guiaDelPasoDisponible,
+    indiceTarea,
+    tareas,
+    instruccionesHechas,
+    avisosConfirmados,
+  ])
 
   const indice = Math.min(indiceTarea, tareas.length - 1)
 
@@ -218,13 +252,22 @@ export function ModoFoco({
   const tarea = tareas[indice]
   if (!tarea) return null
 
-  const hecha = tareaFocoHecha(tarea, instruccionesHechas, subSatisfecho)
-  const hechas = tareas.filter((t) => tareaFocoHecha(t, instruccionesHechas, subSatisfecho)).length
-  const apoyos: Apoyos =
+  const esAviso = tarea.clase === 'aviso' && tarea.aviso !== null
+  const hecha = cumplida(tarea)
+  const hechas = tareas.filter(cumplida).length
+  // Los avisos ya no acompañan a la tarea: tienen su propio turno, asi
+  // que se sacan de los apoyos para no pintarlos dos veces.
+  const apoyosCrudos: Apoyos =
     tarea.clase === 'tarea' ? apoyosDeTarea(paso, tarea.id) : { ...apoyosDelPaso(paso), adjuntosPaso: [] }
+  const apoyos: Apoyos = { ...apoyosCrudos, avisos: [] }
   const vinculoProtegido = apoyos.vinculoProtegido ?? tarea.vinculoProtegido
-  const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho)
+  const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho, avisosConfirmados)
   const cierraPaso = accion === 'completar'
+  // LA CUENTA VISIBLE SIGUE SIENDO DE TAREAS. Un aviso ocupa un turno
+  // del recorrido pero no es trabajo: contarlo diria "Tarea 2 de 5" en
+  // un paso de tres tareas.
+  const totalTareas = tareas.filter((t) => t.clase !== 'aviso').length
+  const numeroTarea = tareas.slice(0, indice + 1).filter((t) => t.clase !== 'aviso').length
   const esVerificacion = tarea.tipoTarea === 'verificacion'
   // UNA DECISIÓN NO ES UNA ACCIÓN (encargo del 2026-09-09, secciones 5
   // y 6). Hasta hoy este modo, que es LA ejecución desde la tarea 217,
@@ -286,10 +329,16 @@ export function ModoFoco({
     // "ya está, dame la que sigue". Desmarcar no mueve nada, porque
     // quien desmarca está corrigiéndose y quiere quedarse donde está.
     if (hecha) return
-    const siguiente = tareas.findIndex(
-      (t, i) => i !== indice && !tareaFocoHecha(t, instruccionesHechas, subSatisfecho),
-    )
+    const siguiente = siguientePendiente(indice)
     if (siguiente >= 0) setIndiceTarea(siguiente)
+  }
+
+  // CONFIRMAR UN AVISO DEJA PASAR, NO MARCA TRABAJO. La confirmación se
+  // guarda arriba (por ejecución) y el recorrido avanza al elemento
+  // siguiente, que es lo que el aviso estaba reteniendo.
+  function confirmarAviso() {
+    onConfirmarAviso(tarea.id)
+    if (indice + 1 < tareas.length) setIndiceTarea(indice + 1)
   }
 
   // El rótulo de la acción dominante nombra lo que se cierra. Una
@@ -339,11 +388,18 @@ export function ModoFoco({
       )}
 
       <div className="flex flex-1 flex-col justify-center gap-[22px] py-7">
+        {esAviso && tarea.aviso ? (
+          // EL AVISO OCUPA LA PANTALLA ENTERA, sin la tarea siguiente
+          // debajo: es el turno del recorrido en el que solo hay que
+          // leer.
+          <AvisoDelRecorrido aviso={tarea.aviso} confirmado={hecha} />
+        ) : (
+          <>
         {!tarea.esPasoEntero && (
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full bg-noct-accent/[.18] px-3.5 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
               <Check size={14} aria-hidden />
-              Tarea {indice + 1} de {tareas.length}
+              Tarea {numeroTarea} de {totalTareas}
             </span>
             {/* La palabra del tipo, además del color (regla R16). Una
                 comprobación se anuncia como tal ANTES de leerla, para
@@ -417,11 +473,10 @@ export function ModoFoco({
           </p>
         )}
 
-        {/* Los avisos de ESTA tarea van pegados a ella: un aviso que hay
-            que ir a buscar no advierte. Los del paso solo al entrar. */}
-        {apoyos.avisos.map((aviso) => (
-          <AvisoFoco key={aviso.id} aviso={aviso} />
-        ))}
+        {/* Los avisos de esta tarea ya no cuelgan de ella: son el
+            elemento del recorrido que viene JUSTO ANTES (encargo del
+            2026-09-10, tarea 1). Un aviso que comparte pantalla con la
+            instrucción y con un botón de 76 px no advierte. */}
 
         {/* LA GUÍA VINCULADA, AQUÍ Y AHORA (H05). Antes esto no
             existía: el paso decía que había que terminarla y no había
@@ -503,6 +558,8 @@ export function ModoFoco({
           />
         )}
         {panel === 'paso' && <ApoyosDelPasoPanel apoyos={delPaso} titulo={paso.titulo} />}
+          </>
+        )}
       </div>
 
       {/* Acción dominante de 76 px: es el ÚNICO elemento grande de la
@@ -516,10 +573,24 @@ export function ModoFoco({
         {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
             dice por qué, que es el defecto que el encargo llama "no se
             muestra cuál guía falta completar". */}
-        {!cierraPaso && !hecha && motivoGuias && (
+        {!esAviso && !cierraPaso && !hecha && motivoGuias && (
           <p className="text-center text-[11.5px] text-noct-precaucion">{motivoGuias}</p>
         )}
-        {cierraPaso ? (
+        {esAviso && tarea.aviso ? (
+          // CONFIRMAR, NO MARCAR. El rótulo dice lo que el aviso pide:
+          // una precaución o algo importante se dan por ENTENDIDOS antes
+          // de seguir; una información normal solo se continúa. Y el
+          // botón no lleva el verde de "hecha": confirmar no completa
+          // trabajo.
+          <button
+            type="button"
+            onClick={confirmarAviso}
+            className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
+          >
+            <Check size={26} className="shrink-0" aria-hidden />
+            {etiquetaAviso(tarea.aviso)}
+          </button>
+        ) : cierraPaso ? (
           <button
             type="button"
             disabled={!puedeCerrarPaso}
@@ -617,18 +688,25 @@ export function ModoFoco({
           >
             <CaretLeft size={20} aria-hidden />
           </button>
-          <button
-            type="button"
-            onClick={() => onFalla(tarea.texto)}
-            aria-haspopup="dialog"
-            aria-label={
-              esVerificacion ? 'La comprobación no se cumple: ver las salidas' : 'Algo va mal en esta tarea'
-            }
-            className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/55 bg-noct-precaucion/10 text-[15.5px] font-medium text-noct-precaucion hover:bg-noct-precaucion/[.2]"
-          >
-            <Warning size={19} className="shrink-0" aria-hidden />
-            <span className="truncate">{esVerificacion ? 'No se cumple' : 'Falla'}</span>
-          </button>
+          {/* "Falla" es de una TAREA: en un aviso no hay nada que pueda
+              salir mal todavía, así que la barra solo ofrece lo que
+              corresponde a lo que está en pantalla. */}
+          {esAviso ? (
+            <div className="min-w-0 flex-1" />
+          ) : (
+            <button
+              type="button"
+              onClick={() => onFalla(tarea.texto)}
+              aria-haspopup="dialog"
+              aria-label={
+                esVerificacion ? 'La comprobación no se cumple: ver las salidas' : 'Algo va mal en esta tarea'
+              }
+              className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/55 bg-noct-precaucion/10 text-[15.5px] font-medium text-noct-precaucion hover:bg-noct-precaucion/[.2]"
+            >
+              <Warning size={19} className="shrink-0" aria-hidden />
+              <span className="truncate">{esVerificacion ? 'No se cumple' : 'Falla'}</span>
+            </button>
+          )}
           <button
             type="button"
             disabled={indice >= tareas.length - 1}
@@ -708,9 +786,8 @@ function ApoyosDelPasoPanel({ apoyos, titulo }: { apoyos: Apoyos; titulo: string
       <p className="text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
         Apoyo de todo el paso
       </p>
-      {apoyos.avisos.map((aviso) => (
-        <AvisoFoco key={aviso.id} aviso={aviso} delPaso />
-      ))}
+      {/* Sin avisos: los del paso se leen una sola vez al principio del
+          recorrido, con su propia pantalla. */}
       {apoyos.imagenes.map((imagen) => (
         <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
       ))}
@@ -720,25 +797,58 @@ function ApoyosDelPasoPanel({ apoyos, titulo }: { apoyos: Apoyos; titulo: string
   )
 }
 
-// El aviso en foco: barra de color a la izquierda y texto a 16 px, más
-// grande que en la vista normal. Conserva su palabra además del color
-// (regla R16: estado en dos canales, nunca solo color).
-function AvisoFoco({ aviso, delPaso = false }: { aviso: BloquePaso; delPaso?: boolean }) {
+// EL RÓTULO DEL BOTÓN QUE CIERRA UN AVISO. Una precaución y algo
+// importante se dan por ENTENDIDOS antes de seguir; una información
+// normal (también un consejo o un dato técnico) solo se continúa.
+function etiquetaAviso(aviso: BloquePaso): string {
+  return aviso.tono === 'precaucion' || aviso.tono === 'importante'
+    ? 'Entendido · continuar'
+    : 'Continuar'
+}
+
+// EL AVISO COMO ELEMENTO DEL RECORRIDO (encargo del 2026-09-10, tarea
+// 1). Ocupa el área principal del modo foco, sin la tarea siguiente
+// debajo: hasta ahora era una tira de color pegada a la instrucción, y
+// competía con un titular de 30 px y un botón de 76.
+//
+// Conserva sus cuatro señales, y ninguna es solo el color (regla R16):
+// el icono del tono, la palabra ("Información", "Precaución",
+// "Importante"), la barra lateral y el fondo. Dice además de quién es,
+// porque un aviso del paso no se lee igual que uno de la tarea que
+// viene ahora.
+function AvisoDelRecorrido({ aviso, confirmado }: { aviso: BloquePaso; confirmado: boolean }) {
   const tono = tonoInfo(aviso.tono)
+  const delPaso = aviso.alcance !== 'tarea'
   return (
-    <div
-      className={`flex items-start gap-3 rounded-r-[10px] border-l-[3px] px-4 py-3.5 ${tono.claseBarra} ${tono.claseFondo}`}
-    >
-      <tono.Icono size={22} className={`mt-px shrink-0 ${tono.claseIcono}`} aria-hidden />
-      <p className="min-w-0 text-base leading-[1.45] text-pretty">
-        <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span> {aviso.texto}
-        {/* De quién es el aviso, cuando no es de esta tarea: sin esto,
-            un aviso del paso se lee como si fuera de la instrucción que
-            tiene encima. */}
-        {delPaso && (
-          <span className="ml-1 text-[12.5px] text-noct-neutral-400">(aviso de todo el paso)</span>
+    <div className="flex flex-col gap-[18px]">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex h-[34px] items-center gap-1.5 rounded-full border px-3.5 text-[11px] font-semibold uppercase tracking-[.06em] ${tono.clasesPanel} ${tono.claseIcono}`}
+        >
+          <tono.Icono size={15} aria-hidden />
+          {tono.etiqueta}
+        </span>
+        <span className="inline-flex h-[34px] items-center rounded-full border border-noct-divider px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
+          {delPaso ? 'De todo el paso' : 'De la tarea que sigue'}
+        </span>
+        {/* Ya leído en esta ejecución: volver con las flechas no vuelve
+            a exigir la confirmación, y la pantalla lo dice. */}
+        {confirmado && (
+          <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-exito/45 bg-noct-exito/10 px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-exito">
+            <Check size={14} aria-hidden />
+            Confirmado
+          </span>
         )}
-      </p>
+      </div>
+      <div
+        className={`flex items-start gap-3.5 rounded-r-[10px] border-l-[3px] px-4 py-4 ${tono.claseBarra} ${tono.claseFondo}`}
+      >
+        <tono.Icono size={26} className={`mt-0.5 shrink-0 ${tono.claseIcono}`} aria-hidden />
+        <p className="min-w-0 text-[19px] leading-[1.4] text-pretty">
+          <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span>{' '}
+          {aviso.texto || 'Aviso sin texto'}
+        </p>
+      </div>
     </div>
   )
 }

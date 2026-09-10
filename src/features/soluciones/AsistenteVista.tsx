@@ -126,6 +126,21 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     setPasoEnteroPorFalla(null)
     await guardarModoEjecucion(modo)
   }
+  // AVISOS YA CONFIRMADOS EN ESTA EJECUCIÓN (encargo del 2026-09-10,
+  // tarea 1). Un aviso es un elemento del recorrido, así que hay que
+  // saber cuáles quedaron leídos; pero NO va al avance guardado por dos
+  // razones: confirmarlo no es trabajo hecho (no puede contar como
+  // tarea) y la confirmación caduca con la ejecución, así que repetir
+  // la guía vuelve a mostrarlos. Vive aquí y no dentro de `ModoFoco`
+  // porque ese se remonta en cada paso (`key={paso.id}`): con el estado
+  // abajo, volver a un paso anterior pediría confirmar otra vez lo que
+  // ya se leyó en esta misma ejecución.
+  const [avisosConfirmados, setAvisosConfirmados] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  )
+  function confirmarAviso(avisoId: string) {
+    setAvisosConfirmados((previos) => new Set(previos).add(avisoId))
+  }
   // Excepción efímera y atada a UN paso: al declarar una falla hay que
   // ver el paso entero, porque las cuatro salidas (contingencia,
   // evidencia, archivos) viven ahí. No toca la preferencia guardada:
@@ -228,6 +243,9 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     await reiniciarProgreso(clave)
     setInicio(Date.now())
     setAhora(Date.now())
+    // Repetir la guía es una ejecución nueva: sus avisos se vuelven a
+    // leer, no se dan por confirmados de la vuelta anterior.
+    setAvisosConfirmados(new Set<string>())
     setIndiceActual(siguientePasoPendiente(idsPasos, new Set<string>(), -1))
   }
 
@@ -505,6 +523,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           // abierta, para no tener dos acciones dominantes.
           guiaDelPasoEnLinea={guiaDelPasoEnLinea(paso)}
           anidado={nivel >= 1}
+          avisosConfirmados={avisosConfirmados}
+          onConfirmarAviso={confirmarAviso}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
           onCompletarPaso={avanzar}
           etiquetaAvance={cierre.etiqueta}
