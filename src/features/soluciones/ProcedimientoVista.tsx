@@ -1,11 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { cierreDelPaso, guiaPendienteDelPaso } from './cierrePaso'
-import { useAvanceProgreso, useClaveProgreso, useClaveVinculo } from './contextoEjecucion'
+import {
+  useAvanceProgreso,
+  useClaveProgreso,
+  useClaveVinculo,
+  useEnVistaPrevia,
+} from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { VisorImagen } from '../../components/VisorImagen'
@@ -13,13 +17,14 @@ import { ArrowSquareOut, BookOpen, CaretRight, Check, CheckCircleFill, Circle, L
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
-import { EnlaceVinculo, FilaVinculo } from './FilaVinculo'
+import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
 import { tonoInfo } from './tonos'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import {
   fraseAvanceDocumento,
   modoVinculo,
-  PROMESA_REGRESO,
+  NOTA_CONSULTA,
+  NOTA_REFERENCIA,
   ZONA_ANIDADA,
 } from './vinculoAnidado'
 
@@ -565,6 +570,7 @@ function SubProcedimientoEnPaso({
   // El avance del vinculo es el de ESTA ejecucion, no el que esa guia
   // lleve por su cuenta ni el que dejo otra guia que la reutiliza.
   const progreso = useAvanceProgreso(useClaveVinculo(subArticuloId))
+  const enVistaPrevia = useEnVistaPrevia()
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -600,12 +606,26 @@ function SubProcedimientoEnPaso({
   // Tambien cubre el caso de una guía vinculada que ya no tiene pasos (o
   // nunca los tuvo: K1). Y ahora SE NOTA que solo enlaza (regla R58).
   if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
+    // Solo se puede CONSULTAR: terminarla en su ficha escribe en el
+    // avance propio de esa guia, no en esta ejecucion, asi que este paso
+    // seguiria bloqueado. En la prueba del editor ni siquiera se ofrece.
+    if (enVistaPrevia) {
+      return (
+        <VinculoInerte
+          Icono={LinkSimple}
+          kicker="Otra guía"
+          titulo={articulo.titulo}
+          nota="Durante la prueba no se sale del editor"
+          extra={anillo}
+        />
+      )
+    }
     return (
       <EnlaceVinculo
         Icono={LinkSimple}
-        kicker="Otra guía"
+        kicker="Otra guía · consultar aparte"
         titulo={articulo.titulo}
-        nota={PROMESA_REGRESO}
+        nota={NOTA_CONSULTA}
         extra={anillo}
         to={ruta}
       />
@@ -627,18 +647,18 @@ function SubProcedimientoEnPaso({
       />
       {abierto && (
         <div className={`my-1 ${ZONA_ANIDADA}`}>
+          {/* SIN "Abrir esta guia aparte" (encargo del 2026-09-09). Ese
+              enlace llevaba a la ficha independiente del articulo, cuyo
+              avance vive en OTRA clave: completar la guia alli no
+              desbloqueaba este paso, y el tecnico se quedaba mirando un
+              requisito que acababa de hacer. La guia obligatoria se
+              ejecuta aqui, dentro de su procedimiento de origen. */}
           <ProcedimientoVista
             articuloId={articulo.id}
             procedimiento={procedimiento}
             nivel={nivel + 1}
             onCompletado={onCompletado}
           />
-          <Link
-            to={ruta}
-            className="mt-2 inline-flex min-h-11 items-center text-[12.5px] font-medium text-noct-accent-300"
-          >
-            Abrir esta guía aparte
-          </Link>
         </div>
       )}
     </div>
@@ -677,6 +697,7 @@ function ContingenciaEnPaso({
   )
   const claveVinculo = useClaveVinculo(solucionArticuloId)
   const progreso = useAvanceProgreso(claveVinculo)
+  const enVistaPrevia = useEnVistaPrevia()
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -709,12 +730,22 @@ function ContingenciaEnPaso({
   // quedo sin pasos, o nunca los tuvo: K1) solo se enlaza: misma regla
   // de un solo nivel que corta ciclos en los subprocedimientos.
   if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
+    if (enVistaPrevia) {
+      return (
+        <VinculoInerte
+          Icono={Wrench}
+          kicker="Si esto falla"
+          titulo={articulo.titulo}
+          nota="Durante la prueba no se sale del editor"
+        />
+      )
+    }
     return (
       <EnlaceVinculo
         Icono={Wrench}
-        kicker="Si esto falla"
+        kicker="Si esto falla · consultar aparte"
         titulo={articulo.titulo}
-        nota={PROMESA_REGRESO}
+        nota={NOTA_REFERENCIA}
         to={ruta}
       />
     )
@@ -745,18 +776,15 @@ function ContingenciaEnPaso({
       />
       {abierta && (
         <div className={`my-1 ${ZONA_ANIDADA}`}>
+          {/* Sin enlace a la ficha independiente: su avance vive en
+              otra clave, asi que terminarla alli no cerraria este paso
+              (encargo del 2026-09-09). */}
           <ProcedimientoVista
             articuloId={articulo.id}
             procedimiento={procedimiento}
             nivel={nivel + 1}
             onCompletado={() => void resuelta()}
           />
-          <Link
-            to={ruta}
-            className="mt-2 inline-flex min-h-11 items-center text-[12.5px] font-medium text-noct-accent-300"
-          >
-            Abrir esta contingencia aparte
-          </Link>
         </div>
       )}
     </div>
@@ -1054,6 +1082,7 @@ function DecisionEnTarea({
   )
   const claveVinculo = useClaveVinculo(vinculoId ?? '')
   const progreso = useAvanceProgreso(vinculoId ? claveVinculo : null)
+  const enVistaPrevia = useEnVistaPrevia()
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -1130,13 +1159,22 @@ function DecisionEnTarea({
   if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado' || !ejecutarInline) {
     return (
       <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
-        <EnlaceVinculo
-          Icono={Wrench}
-          kicker="Si esto falla"
-          titulo={articulo.titulo}
-          nota={PROMESA_REGRESO}
-          to={ruta}
-        />
+        {enVistaPrevia ? (
+          <VinculoInerte
+            Icono={Wrench}
+            kicker="Si esto falla"
+            titulo={articulo.titulo}
+            nota="Durante la prueba no se sale del editor"
+          />
+        ) : (
+          <EnlaceVinculo
+            Icono={Wrench}
+            kicker="Si esto falla · consultar aparte"
+            titulo={articulo.titulo}
+            nota={NOTA_REFERENCIA}
+            to={ruta}
+          />
+        )}
         <button type="button" onClick={onAlternar} className={`mt-1.5 ${BTN_ACENTO}`}>
           Ya quedó resuelto, continuar
         </button>
@@ -1175,12 +1213,6 @@ function DecisionEnTarea({
           procedimiento,
           onCompletado: () => void resuelta(),
         })}
-        <Link
-          to={ruta}
-          className="mt-2 inline-flex min-h-11 items-center text-[12.5px] font-medium text-noct-accent-300"
-        >
-          Abrir esta contingencia aparte
-        </Link>
       </div>
     </div>
   )
@@ -1266,6 +1298,7 @@ function GuiaVinculadaEnBloque({
   intencion: BloquePaso['intencionGuia']
 }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(articuloId)) ?? null, [articuloId])
+  const enVistaPrevia = useEnVistaPrevia()
   if (articulo === undefined) return null
 
   const kicker =
@@ -1280,12 +1313,27 @@ function GuiaVinculadaEnBloque({
     )
   }
 
+  if (enVistaPrevia) {
+    return (
+      <VinculoInerte
+        Icono={BookOpen}
+        kicker={kicker}
+        titulo={articulo.titulo}
+        nota="Durante la prueba no se sale del editor"
+      />
+    )
+  }
+
+  // El mapa del articulo solo ENLAZA las guias de una tarea: la que es
+  // necesaria se ejecuta en el modo ejecucion, dentro de esta misma
+  // guia. Por eso aqui se ofrece como consulta y se dice que abrirla no
+  // cumple el requisito (encargo del 2026-09-09).
   return (
     <EnlaceVinculo
       Icono={BookOpen}
-      kicker={kicker}
+      kicker={`${kicker} · consultar aparte`}
       titulo={articulo.titulo}
-      nota={PROMESA_REGRESO}
+      nota={intencion === 'necesario' ? NOTA_CONSULTA : NOTA_REFERENCIA}
       to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
     />
   )

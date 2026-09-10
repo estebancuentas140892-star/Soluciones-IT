@@ -31,11 +31,23 @@ import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise,
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
-import { AccionVinculo, EnlaceVinculo, FilaVinculo } from './FilaVinculo'
-import { fraseAvanceDocumento, modoVinculo, PROMESA_REGRESO, ZONA_ANIDADA } from './vinculoAnidado'
+import { AccionVinculo, EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
+import {
+  fraseAvanceDocumento,
+  modoVinculo,
+  NOTA_CONSULTA,
+  NOTA_REFERENCIA,
+  ZONA_ANIDADA,
+} from './vinculoAnidado'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { cierreDelPaso, guiaPendienteDelPaso } from './cierrePaso'
-import { claveDeVinculo, useAvanceProgreso, useClaveProgreso, useClaveVinculo } from './contextoEjecucion'
+import {
+  claveDeVinculo,
+  useAvanceProgreso,
+  useClaveProgreso,
+  useClaveVinculo,
+  useEnVistaPrevia,
+} from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
@@ -993,6 +1005,7 @@ function SubProcedimientoEnAsistente({
   // El avance del vinculo es el de ESTA ejecucion, no el que esa guia
   // lleve por su cuenta ni el que dejo otra guia que la reutiliza.
   const progreso = useAvanceProgreso(useClaveVinculo(guiaId))
+  const enVistaPrevia = useEnVistaPrevia()
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -1050,12 +1063,28 @@ function SubProcedimientoEnAsistente({
   // se salió. Ahora el origen viaja en el `state` y el chasis lo usa
   // para deshacer el último salto (regla M-R2).
   if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
+    // Solo se puede CONSULTAR. El origen sigue viajando en el `state`
+    // para que volver deshaga el salto, pero ese regreso no sustituye a
+    // conservar la clave de progreso: terminar la guia en su ficha
+    // escribe en su avance propio y no cierra este paso, asi que la
+    // fila deja de prometerlo (encargo del 2026-09-09).
+    if (enVistaPrevia) {
+      return (
+        <VinculoInerte
+          Icono={LinkSimple}
+          kicker={kicker}
+          titulo={articulo.titulo}
+          nota="Durante la prueba no se sale del editor"
+          extra={anillo}
+        />
+      )
+    }
     return (
       <EnlaceVinculo
         Icono={LinkSimple}
-        kicker={kicker}
+        kicker={`${kicker} · consultar aparte`}
         titulo={articulo.titulo}
-        nota={PROMESA_REGRESO}
+        nota={obligatoria ? NOTA_CONSULTA : NOTA_REFERENCIA}
         extra={anillo}
         to={ruta}
         state={rutaOrigen ? conOrigen(rutaOrigen, etiquetaOrigen ?? 'la guía anterior') : undefined}
@@ -1127,6 +1156,7 @@ function SolucionEnAsistente({
   const articulo = useLiveQuery(async () => (await db.articulos.get(solucionArticuloId)) ?? null, [solucionArticuloId])
   const claveVinculo = useClaveVinculo(solucionArticuloId)
   const progreso = useAvanceProgreso(claveVinculo)
+  const enVistaPrevia = useEnVistaPrevia()
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
@@ -1174,13 +1204,22 @@ function SolucionEnAsistente({
     return (
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <EnlaceVinculo
-            Icono={Wrench}
-            kicker="Si esto falla"
-            titulo={articulo.titulo}
-            nota={PROMESA_REGRESO}
-            to={ruta}
-          />
+          {enVistaPrevia ? (
+            <VinculoInerte
+              Icono={Wrench}
+              kicker="Si esto falla"
+              titulo={articulo.titulo}
+              nota="Durante la prueba no se sale del editor"
+            />
+          ) : (
+            <EnlaceVinculo
+              Icono={Wrench}
+              kicker="Si esto falla · consultar aparte"
+              titulo={articulo.titulo}
+              nota={NOTA_REFERENCIA}
+              to={ruta}
+            />
+          )}
         </div>
         <BotonCerrarContingencia onCerrar={cerrar} />
       </div>

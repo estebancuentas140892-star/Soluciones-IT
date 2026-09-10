@@ -3,6 +3,7 @@ import { createContext, useContext, useMemo } from 'react'
 import { db } from '../../lib/db'
 import {
   avanceDe,
+  esVistaPrevia,
   raizDe,
   type AvanceProcedimiento,
   type ClaveProgreso,
@@ -91,4 +92,15 @@ export function useAvanceProgreso(clave: ClaveProgreso | null): AvanceProcedimie
     [raiz],
   )
   return clave === null ? undefined : avanceDe(fila, clave)
+}
+
+/**
+ * ¿Lo que se esta ejecutando es la PRUEBA del editor? Los vinculos que
+ * salen de la pantalla no se ofrecen ahi: sacarian al autor de su
+ * prueba y del editor, y lo que hiciera fuera no contaria para la
+ * prueba (encargo del 2026-09-09).
+ */
+export function useEnVistaPrevia(): boolean {
+  const ejecucion = useEjecucion()
+  return ejecucion !== null && esVistaPrevia(ejecucion.raizId)
 }

@@ -31,11 +31,23 @@ export function modoVinculo(nivel: number, procedimiento: Procedimiento | null):
 }
 
 // Regla R58 del turno 12: un control que SALE de la pantalla se ve
-// distinto de uno que despliega en el sitio, y promete el regreso.
-// Hasta ahora la tarjeta enlazada y la desplegable eran idénticas
-// (mismo marco, mismo icono), así que el técnico tocaba esperando ver
-// los pasos y salía de la pantalla.
-export const PROMESA_REGRESO = 'Se abre aparte, vuelves aquí al terminar'
+// distinto de uno que despliega en el sitio. Hasta ahora la tarjeta
+// enlazada y la desplegable eran idénticas (mismo marco, mismo icono),
+// así que el técnico tocaba esperando ver los pasos y salía de la
+// pantalla.
+//
+// LA PROMESA DE REGRESO SE RETIRA (encargo del 2026-09-09). Decía «Se
+// abre aparte, vuelves aquí al terminar», y desde que el avance de una
+// guía vinculada vive DENTRO de la ejecución que la exige, terminarla
+// en su ficha independiente escribe en otro sitio: el paso de origen
+// sigue bloqueado y la frase miente. Lo que se abre aparte es una
+// CONSULTA, y eso es lo que dice ahora.
+export const NOTA_CONSULTA = 'Se abre para consultar; terminarla ahí no cierra este paso'
+
+// Para lo que nunca condicionó nada (consultas y contingencias
+// enlazadas): no hay requisito que prometer, así que tampoco hay que
+// advertir de que no se cumple.
+export const NOTA_REFERENCIA = 'Se abre aparte, es material de consulta'
 
 // Regla R57 del turno 12: un indicador de avance por documento, y dice
 // A QUÉ DOCUMENTO pertenece. Antes el mismo dato se dibujaba tres

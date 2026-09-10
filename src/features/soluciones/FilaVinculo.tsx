@@ -109,6 +109,20 @@ export function EnlaceVinculo({
   )
 }
 
+// Fila que NO va a ninguna parte: el vinculo existe y se nombra, pero
+// aqui no se puede abrir. La usa la vista previa del editor, donde un
+// enlace sacaria al autor de su prueba y del editor (encargo del
+// 2026-09-09).
+export function VinculoInerte({ Icono, kicker, titulo, nota, extra }: Comun) {
+  return (
+    <div className="flex min-h-11 w-full items-center gap-2.5 py-1.5 opacity-80">
+      <Icono size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
+      <CuerpoFila kicker={kicker} titulo={titulo} nota={nota} />
+      {extra}
+    </div>
+  )
+}
+
 // Fila que EJECUTA algo en el sitio (la foto de evidencia): no
 // despliega ni sale, así que no lleva ni caret ni flecha, solo la
 // palabra de la acción. Antes era un botón fantasma en acento, la única

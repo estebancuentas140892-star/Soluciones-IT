@@ -145,6 +145,11 @@ export function claveVistaPrevia(articuloId: string): string {
   return `${PREFIJO_VISTA_PREVIA}${articuloId}:${crypto.randomUUID()}`
 }
 
+/** ¿Esta raiz es la de una prueba del editor y no la de un articulo? */
+export function esVistaPrevia(raizId: string): boolean {
+  return raizId.startsWith(PREFIJO_VISTA_PREVIA)
+}
+
 /**
  * Borra el progreso de prueba. Sin argumento borra todo el que haya
  * quedado suelto (una vista previa que se cerro con un recargo, no con
