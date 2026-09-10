@@ -12,11 +12,11 @@ import { PastillaFrescura } from '../../components/PastillaFrescura'
 import { TIPOS_ARTICULO, etiquetaDeTipo } from './tiposArticulo'
 import { colorIconoDeTipo, iconoDeCategoria, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from './coloresCategoria'
-import { FilaArticulo, type AvanceFila } from './FilaArticulo'
+import { accionDeGuia, type AccionGuia } from './accionGuia'
+import { FilaArticulo } from './FilaArticulo'
 import { coincidenciaArticulo } from './coincidencia'
 import { sugerenciaBusqueda } from './sugerenciaBusqueda'
-import { normalizarProcedimiento, siguientePasoPendiente } from '../../lib/procedimiento'
-import { contarHechos } from '../../lib/progresoPasos'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
 
 // Pantalla Soluciones en el sistema Nocturne. Rediseñada a partir de la
 // auditoría de la sección (handoff "Auditoría de Soluciones TI",
@@ -124,24 +124,19 @@ export function SolucionesPage() {
   // esto no ordena, no filtra ni saca ninguna guía de su sitio en el
   // catálogo; solo cambia el rótulo de la guía que ya estás mirando.
   const progresos = useLiveQuery(() => db.progresoPasos.toArray(), [], [])
-  const avancePorArticulo = useMemo(() => {
-    const mapa = new Map<string, AvanceFila>()
+  // Lo que ofrece cada tarjeta lo decide `accionDeGuia`, la MISMA
+  // funcion que la ficha de la guia: antes la tarjeta tenia su propia
+  // regla (`hechos > 0`) y por eso decia "Empezar" con una ejecucion
+  // abierta. Solo entran los articulos con fila de progreso; sin ella
+  // la tarjeta ofrece "Empezar", que es lo correcto.
+  const accionPorArticulo = useMemo(() => {
+    const mapa = new Map<string, AccionGuia>()
     for (const progreso of progresos) {
       const procedimiento = normalizarProcedimiento(
         articulos.find((a) => a.id === progreso.articuloId)?.procedimiento ?? null,
       )
-      if (!procedimiento) continue
-      const ids = procedimiento.pasos.map((p) => p.id)
-      if (ids.length === 0) continue
-      // El paso que se ofrece es el primer PENDIENTE, no `hechos + 1`
-      // (tarea 5 del encargo): con los pasos cerrados fuera de orden esa
-      // cuenta mandaba a uno ya hecho.
-      const destino = siguientePasoPendiente(ids, new Set(progreso.pasosHechos), -1)
-      mapa.set(progreso.articuloId, {
-        hechos: contarHechos(progreso.pasosHechos, ids),
-        total: ids.length,
-        pasoPendiente: destino === null ? null : destino + 1,
-      })
+      if (!procedimiento || procedimiento.pasos.length === 0) continue
+      mapa.set(progreso.articuloId, accionDeGuia(procedimiento, progreso, true))
     }
     return mapa
   }, [progresos, articulos])
@@ -439,7 +434,7 @@ export function SolucionesPage() {
               // buscando, en "Todos" o filtrando por etiqueta.
               categoriaNombre={categoriaSel ? undefined : nombreCat.get(articulo.categoriaId)}
               consulta={consulta}
-              avance={avancePorArticulo.get(articulo.id) ?? null}
+              accion={accionPorArticulo.get(articulo.id) ?? null}
               coincidencia={
                 coincidencia && !coincidencia.enTitulo && coincidencia.donde && coincidencia.valor
                   ? { donde: coincidencia.donde, valor: coincidencia.valor }

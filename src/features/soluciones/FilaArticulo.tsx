@@ -1,10 +1,13 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import type { Articulo } from '../../lib/db'
-import { ArrowRight, Check, Play } from '../../components/iconos'
+import { empezarEjecucion } from '../../lib/progresoPasos'
+import { ArrowRight, ArrowsClockwise, Check, Play } from '../../components/iconos'
 import { PastillaEstadoArticulo } from '../../components/PastillaEstado'
 import { colorIconoDeTipo, iconoDeTipo } from './iconosSoluciones'
 import { partirTitulo } from './coincidencia'
 import { capacidadDeGuia, lineaDeCapacidad } from './capacidadGuia'
+import { estrenaEjecucion, etiquetaAccionGuia, type AccionGuia } from './accionGuia'
 
 // La tarjeta de un artículo en un listado, compartida por SolucionesPage y
 // CategoriaPage. Sale de la auditoría de Soluciones, que la pedía como
@@ -67,25 +70,13 @@ export interface CoincidenciaFila {
   valor: string
 }
 
-/** Avance guardado de esta guía en este dispositivo, si lo hay. */
-export interface AvanceFila {
-  hechos: number
-  total: number
-  /**
-   * Primer paso PENDIENTE de verdad (1-based), o null si no queda
-   * ninguno. No es `hechos + 1`: con los pasos cerrados fuera de orden
-   * esa cuenta señalaba un paso ya hecho (tarea 5 del encargo).
-   */
-  pasoPendiente: number | null
-}
-
 export function FilaArticulo({
   articulo,
   to,
   categoriaNombre,
   consulta = '',
   coincidencia,
-  avance,
+  accion,
 }: {
   articulo: Articulo
   to: string
@@ -100,12 +91,13 @@ export function FilaArticulo({
   // Cuando la coincidencia no está en el título, sustituye la línea de
   // metadatos para explicar por qué aparece esta fila.
   coincidencia?: CoincidenciaFila
-  // Avance a medias, para que la acción diga "Continuar" en vez de
-  // "Empezar" y nombre el paso. Es la misma lectura que hace la ficha
-  // (`BarraAccionFicha`), traída a la tarjeta para que las dos digan lo
-  // mismo. Sin avance, o con la guía terminada, se omite.
-  avance?: AvanceFila | null
+  // Qué ofrece la tarjeta, resuelto por `accionDeGuia`: la MISMA
+  // decisión que toma la ficha de la guía, no una regla paralela. Sin
+  // ejecución guardada llega null, que es "Empezar".
+  accion?: AccionGuia | null
 }) {
+  const navegar = useNavigate()
+  const [preparando, setPreparando] = useState(false)
   const Icono = iconoDeTipo(articulo.tipo)
   const { pre, match, post } = partirTitulo(articulo.titulo, consulta)
   // Un artículo obsoleto sigue siendo consultable (a veces es lo único
@@ -114,11 +106,27 @@ export function FilaArticulo({
   const obsoleto = articulo.estado === 'obsoleto'
   const capacidad = capacidadDeGuia(articulo)
   const linea = lineaDeCapacidad(capacidad)
-  // "Continuar" solo con avance real y sin terminar: con 0 pasos hechos
-  // no hay nada que continuar, y con todos hechos lo honesto es volver a
-  // ofrecer "Empezar", porque repetir una guía es el caso normal de un
-  // mantenimiento.
-  const aMedias = avance != null && avance.hechos > 0 && avance.pasoPendiente !== null
+  // LA TARJETA HACE LO QUE DICE (encargo del 2026-09-09). Era un enlace
+  // directo a `/ejecutar` con una regla propia (`avance.hechos > 0`):
+  // decía "Empezar" con una ejecución abierta, y al tocarlo retomaba la
+  // anterior en vez de estrenar una. Ahora decide `accionDeGuia`, la
+  // misma que la ficha, y empezar y repetir ESTRENAN ejecución antes de
+  // navegar.
+  const etiquetaAccion = accion ? etiquetaAccionGuia(accion, 'tarjeta') : 'Empezar'
+  const preparaEjecucion = accion ? estrenaEjecucion(accion) : true
+  const rutaEjecutar = `${to}/ejecutar`
+
+  async function ejecutar() {
+    if (preparando) return
+    setPreparando(true)
+    try {
+      // Continuar no prepara nada: su progreso se conserva intacto.
+      if (preparaEjecucion) await empezarEjecucion(articulo.id)
+      navegar(rutaEjecutar)
+    } finally {
+      setPreparando(false)
+    }
+  }
 
   return (
     // La tarjeta NO es un enlace que envuelva a la acción: un control
@@ -196,20 +204,23 @@ export function FilaArticulo({
           ella. Nunca comparte renglón con el título. */}
       <div className={`flex ${capacidad.ejecutable ? 'mt-2.5' : 'mt-1'}`}>
         {capacidad.ejecutable ? (
-          <Link
-            to={`${to}/ejecutar`}
-            aria-label={
-              aMedias
-                ? `Continuar "${articulo.titulo}" en el paso ${avance.pasoPendiente} de ${avance.total}`
-                : `Empezar "${articulo.titulo}"`
-            }
-            className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-noct-accent bg-noct-accent/10 px-3 text-[14.5px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.24] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+          // Botón, no enlace: estrenar una ejecución es una escritura
+          // que tiene que terminar ANTES de navegar, y mientras corre el
+          // control queda ocupado para que un doble toque no cree dos.
+          <button
+            type="button"
+            disabled={preparando}
+            onClick={() => void ejecutar()}
+            aria-label={`${etiquetaAccion}: "${articulo.titulo}"`}
+            className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-noct-accent bg-noct-accent/10 px-3 text-[14.5px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.24] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-50"
           >
-            <Play size={17} className="shrink-0" aria-hidden />
-            <span className="truncate">
-              {aMedias ? `Continuar · paso ${avance.pasoPendiente} de ${avance.total}` : 'Empezar'}
-            </span>
-          </Link>
+            {accion?.estado === 'repetir' ? (
+              <ArrowsClockwise size={17} className="shrink-0" aria-hidden />
+            ) : (
+              <Play size={17} className="shrink-0" aria-hidden />
+            )}
+            <span className="truncate">{etiquetaAccion}</span>
+          </button>
         ) : (
           // La de "solo notas" va a la derecha y con el ancho justo, no
           // a lo ancho como la de ejecutar: son 13 tarjetas de 44 px en
