@@ -15,6 +15,7 @@ import {
 } from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { ChipReferencia } from '../referencia/ChipReferencia'
+import { TarjetaComando } from '../referencia/TarjetaComando'
 import { bloquesUnicos, tipoEfectivo } from '../referencia/referencias'
 import { useReferencias } from '../referencia/useReferencias'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
@@ -378,17 +379,24 @@ export function ModoFoco({
   // Los TÉRMINOS del glosario vinculados a esta tarea. Los atajos y los
   // comandos no entran aquí: se presentan enteros dentro de la tarea,
   // con las teclas o el comando delante.
-  const terminos = bloquesUnicos(apoyos.referencias).filter(
-    (bloque) =>
-      tipoEfectivo(
-        {
-          id: bloque.referenciaId as string,
-          titulo: bloque.referenciaTitulo,
-          tipoDeclarado: bloque.referenciaTipo,
-        },
-        referenciasVivas,
-      ) === 'termino',
-  )
+  const referenciasDeLaTarea = bloquesUnicos(apoyos.referencias).map((bloque) => ({
+    bloque,
+    tipo: tipoEfectivo(
+      {
+        id: bloque.referenciaId as string,
+        titulo: bloque.referenciaTitulo,
+        tipoDeclarado: bloque.referenciaTipo,
+      },
+      referenciasVivas,
+    ),
+  }))
+  const terminos = referenciasDeLaTarea.filter((r) => r.tipo === 'termino').map((r) => r.bloque)
+  // Un atajo o un comando SE USA en el momento, no se consulta: va
+  // entero y a la vista, no detrás de una etiqueta que haya que abrir
+  // con el teclado en una mano y el equipo en la otra.
+  const atajosYComandos = referenciasDeLaTarea
+    .filter((r) => r.tipo === 'atajo' || r.tipo === 'comando')
+    .map((r) => r.bloque)
 
   // El motivo de la guía vinculada, en las palabras del autor: el
   // título del paso del que sale y su objetivo, si lo escribió. Se
@@ -680,6 +688,19 @@ export function ModoFoco({
             ))}
           </div>
         )}
+
+        {/* ATAJOS Y COMANDOS DE ESTA TAREA. No ejecutan nada, no
+            marcan la tarea y no cuentan para cerrar el paso: su id no
+            es el de un bloque 'tarea', así que no entra en el avance
+            guardado. El comando trae "Copiar" con su confirmación
+            dentro del propio bloque. */}
+        {atajosYComandos.map((bloque) => (
+          <TarjetaComando
+            key={bloque.id}
+            referencia={referenciasVivas.get(bloque.referenciaId as string)}
+            tituloRespaldo={bloque.referenciaTitulo}
+          />
+        ))}
 
         {/* LA GUÍA VINCULADA, COMO TARJETA COMPACTA (encargo del
             2026-09-10, tarea 4). Antes se desplegaba entera debajo de

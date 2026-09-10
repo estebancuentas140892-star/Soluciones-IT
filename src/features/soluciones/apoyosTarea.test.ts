@@ -250,3 +250,66 @@ describe('compatibilidad con las guías escritas antes del campo alcance', () =>
     expect(apoyosSinAsignar(asignado).map((b) => b.id)).toEqual(['i1', 'f1'])
   })
 })
+
+// ATAJOS Y COMANDOS POR TAREA (encargo del 2026-09-10, tarea 4: "no
+// deben aparecer en otras tareas"). Es la misma particion que el resto
+// de apoyos, y estas pruebas la fijan para el tipo nuevo.
+describe('referencias vinculadas a una tarea', () => {
+  const PASO = paso({
+    bloques: [
+      bloque({ id: 't1', tipo: 'tarea', texto: 'Abrir Ejecutar' }),
+      bloque({
+        id: 'r1',
+        tipo: 'referencia',
+        referenciaId: 'ref-atajo',
+        referenciaTitulo: 'Abrir Ejecutar',
+        referenciaTipo: 'atajo',
+        alcance: 'tarea',
+        tareaId: 't1',
+      }),
+      bloque({ id: 't2', tipo: 'tarea', texto: 'Escribir el comando' }),
+      bloque({
+        id: 'r2',
+        tipo: 'referencia',
+        referenciaId: 'ref-comando',
+        referenciaTitulo: 'mstsc',
+        referenciaTipo: 'comando',
+        alcance: 'tarea',
+        tareaId: 't2',
+      }),
+    ],
+  })
+
+  it('cada referencia sale solo con su tarea', () => {
+    expect(apoyosDeTarea(PASO, 't1').referencias.map((b) => b.referenciaId)).toEqual(['ref-atajo'])
+    expect(apoyosDeTarea(PASO, 't2').referencias.map((b) => b.referenciaId)).toEqual(['ref-comando'])
+  })
+
+  it('ninguna cae en los apoyos del paso completo', () => {
+    expect(apoyosDelPaso(PASO).referencias).toEqual([])
+  })
+
+  it('cuentan como apoyo para el control plegado', () => {
+    expect(hayApoyos(apoyosDeTarea(PASO, 't1'))).toBe(true)
+    expect(cuentaApoyos(apoyosDeTarea(PASO, 't1'))).toBe(1)
+  })
+
+  it('una referencia sin destino no se cuenta como apoyo', () => {
+    const sinDestino = paso({
+      bloques: [
+        bloque({ id: 't1', tipo: 'tarea', texto: 'Tarea' }),
+        bloque({ id: 'r1', tipo: 'referencia', referenciaId: null, alcance: 'tarea', tareaId: 't1' }),
+      ],
+    })
+    expect(apoyosDeTarea(sinDestino, 't1').referencias).toEqual([])
+  })
+
+  it('sobrevive a normalizar el procedimiento con todos sus campos', () => {
+    const normalizado = normalizarProcedimiento({ pasos: [PASO] })
+    const bloques = normalizado?.pasos[0].bloques ?? []
+    const comando = bloques.find((b) => b.referenciaId === 'ref-comando')
+    expect(comando?.tipo).toBe('referencia')
+    expect(comando?.referenciaTipo).toBe('comando')
+    expect(comando?.tareaId).toBe('t2')
+  })
+})

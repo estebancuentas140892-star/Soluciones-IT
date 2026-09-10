@@ -57,6 +57,7 @@ import {
   ArrowUp,
   BookBookmark,
   BookOpen,
+  Keyboard,
   Camera,
   CaretDown,
   CaretUp,
@@ -72,6 +73,7 @@ import {
   SealCheck,
   Signpost,
   Square,
+  TerminalWindow,
   TrashSimple,
   Warning,
   Wrench,
@@ -194,6 +196,8 @@ type ClaveContenido =
   | 'guia'
   | 'dato'
   | 'termino'
+  | 'atajo'
+  | 'comando'
 
 const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
   { valor: 'accion', etiqueta: 'Acción', descripcion: 'Algo que el técnico ejecuta', Icono: Square, claseIcono: 'text-noct-accent-300' },
@@ -208,6 +212,8 @@ const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
   // bloque guarda el id de la ficha central mas una copia del titulo,
   // asi que editar el termino lo actualiza en todas las guias.
   { valor: 'termino', etiqueta: 'Término del glosario', descripcion: 'Una palabra del vocabulario del equipo', Icono: BookBookmark, claseIcono: 'text-noct-accent-300' },
+  { valor: 'atajo', etiqueta: 'Atajo de teclado', descripcion: 'Una combinación de teclas', Icono: Keyboard, claseIcono: 'text-noct-accent-300' },
+  { valor: 'comando', etiqueta: 'Comando', descripcion: 'Algo que se escribe en una consola o en Ejecutar', Icono: TerminalWindow, claseIcono: 'text-noct-accent-300' },
 ]
 
 // Que clase de referencia inserta cada clave del catalogo. Las tres
@@ -215,6 +221,8 @@ const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
 // que se resuelven en una sola rama en vez de tres.
 const REFERENCIA_POR_CLAVE: Partial<Record<ClaveContenido, TipoReferencia>> = {
   termino: 'termino',
+  atajo: 'atajo',
+  comando: 'comando',
 }
 
 // Para que sirve una guia vinculada. La distincion es del encargo

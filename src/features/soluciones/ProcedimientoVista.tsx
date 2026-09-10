@@ -1,6 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
+import {
+  db,
+  type BloquePaso,
+  type PasoAdjunto,
+  type Procedimiento,
+  type TipoReferencia,
+} from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { cierreDelPaso, guiaPendienteDelPaso } from './cierrePaso'
@@ -18,6 +24,7 @@ import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { ChipReferencia } from '../referencia/ChipReferencia'
+import { TarjetaComando } from '../referencia/TarjetaComando'
 import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
 import { tonoInfo } from './tonos'
@@ -957,12 +964,17 @@ export function BloqueVista({
   }
 
   // Referencia vinculada desde una tarea (glosario, atajo o comando).
-  // En el mapa de lectura basta la etiqueta discreta: tocarla abre la
-  // ficha en una hoja, sin sacar a nadie del documento.
+  // Un término se consulta, así que basta la etiqueta discreta; un
+  // atajo o un comando se usa, así que va entero, igual que en la
+  // ejecución (criterio: la lectura tiene que mostrar lo mismo).
   if (bloque.tipo === 'referencia') {
     if (!bloque.referenciaId) return null
     return (
-      <ChipReferenciaViva referenciaId={bloque.referenciaId} tituloRespaldo={bloque.referenciaTitulo} />
+      <ReferenciaEnBloque
+        referenciaId={bloque.referenciaId}
+        tituloRespaldo={bloque.referenciaTitulo}
+        tipoDeclarado={bloque.referenciaTipo}
+      />
     )
   }
 
@@ -1070,19 +1082,29 @@ export function BloqueVista({
   )
 }
 
-// La etiqueta de una referencia en la vista de lectura. Resuelve las
-// fichas vivas por su cuenta (mismo patron que `CredencialEnPaso`, que
-// tambien consulta la base desde dentro del bloque) porque este
-// componente se monta desde muchos sitios y no todos tienen el mapa a
-// mano.
-function ChipReferenciaViva({
+// Una referencia en la vista de lectura. Resuelve las fichas vivas por
+// su cuenta (mismo patron que `CredencialEnPaso`, que tambien consulta
+// la base desde dentro del bloque) porque este componente se monta
+// desde muchos sitios y no todos tienen el mapa a mano.
+//
+// `tipoDeclarado` solo decide la forma cuando la ficha no esta en este
+// dispositivo: con ella presente manda SU tipo, para que cambiarlo en
+// Referencia se refleje en todas las guias.
+function ReferenciaEnBloque({
   referenciaId,
   tituloRespaldo,
+  tipoDeclarado,
 }: {
   referenciaId: string
   tituloRespaldo: string
+  tipoDeclarado: TipoReferencia | null
 }) {
   const referencias = useReferencias()
+  const viva = referencias.get(referenciaId)
+  const tipo = viva?.tipo ?? tipoDeclarado
+  if (tipo === 'atajo' || tipo === 'comando') {
+    return <TarjetaComando referencia={viva} tituloRespaldo={tituloRespaldo} />
+  }
   return (
     <ChipReferencia
       referenciaId={referenciaId}

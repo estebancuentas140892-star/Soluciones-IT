@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Agregado (Referencia, tarea 4): atajos y comandos dentro de las tareas de una guía
+
+**Área modificada:** editor de guías y ejecución. **Nuevo:** `src/features/referencia/TarjetaComando.tsx`. **Modificados:** `src/features/soluciones/PasosEditor.tsx`, `ModoFoco.tsx`, `ProcedimientoVista.tsx` (+ 5 pruebas en `apoyosTarea.test.ts`).
+**Motivo:** tarea 4 del encargo de Referencia del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Agregados** `Atajo de teclado` y `Comando` al catálogo de **Editar guía > Pasos > Añadir contenido a esta tarea**. Comparten el flujo del término: se elige uno existente o **se crea desde la misma hoja**, sin salir del editor.
+- **El bloque pertenece solo a la tarea donde se agregó**, igual que una imagen o un aviso, y conserva su vínculo al reordenar (el anclaje es `tareaId`, un id estable).
+- **Un atajo se presenta** con su nombre, la combinación de teclas en monoespaciado de 15 px, la plataforma o programa, qué acción realiza y el resultado esperado.
+- **Un comando se presenta** con su nombre, el comando completo, la plataforma o herramienta, cuándo utilizarlo, el resultado esperado, si necesita permisos de administrador, la advertencia cuando exista, y un botón **Copiar**. Al copiar, la confirmación aparece **dentro del mismo bloque** (y se anuncia para el lector de pantalla), no en un aviso flotante que tape la instrucción siguiente.
+- **Van enteros y a la vista, no detrás de una etiqueta.** A diferencia de un término, que se consulta, un atajo o un comando se usa en el momento: esconderlo tras un toque obligaría a abrir y cerrar una hoja con el teclado en una mano y el equipo en la otra.
+- **Solo el comando lleva "Copiar".** Un atajo no se pega en ningún sitio, se teclea, así que ahí ese botón sería un control muerto (regla R3).
+- **Lo que estos bloques NO hacen:** no aparecen en otras tareas, no marcan la tarea como realizada, no cuentan para cerrar el paso ni tocan el progreso (su id no es el de un bloque `tarea`, así que no entra en el avance guardado), no ejecutan nada, y no abren ninguna aplicación externa, ni siquiera tras una acción explícita.
+- **Sin secretos.** La tabla la lee cualquier técnico autenticado, así que el editor lo dice donde se escribe el valor: las contraseñas, los tokens y las direcciones internas van a la Bóveda o a los datos protegidos del equipo.
+- **La lectura muestra lo mismo que la ejecución:** el mapa del procedimiento y la prueba del editor pintan la misma tarjeta, no un resumen distinto.
+- **Una referencia eliminada o sin sincronizar** se muestra como no disponible conservando el vínculo y la copia del título, igual que un término.
+
 ### Agregado (Referencia, tarea 3): el glosario dentro de las tareas de una guía
 
 **Área modificada:** editor de guías y ejecución. **Nuevos:** `src/features/referencia/useReferencias.ts`, `SelectorReferencia.tsx`, `HojaReferencia.tsx`, `ChipReferencia.tsx`, `TerminosDeLaGuia.tsx`. **Modificados:** `src/features/soluciones/PasosEditor.tsx`, `ModoFoco.tsx`, `ProcedimientoVista.tsx`, `ArticuloPage.tsx`, `VistaPreviaArticulo.tsx`, `src/features/referencia/referencias.ts` (+ 11 pruebas entre `referencias.test.ts` y `bloquesEditor.test.ts`).
