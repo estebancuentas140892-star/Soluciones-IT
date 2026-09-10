@@ -11,6 +11,7 @@ import { TagNeutral } from '../../components/nocturne'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { IntroduccionGuia, ListaIntro, ResumenGuia, SeccionIntro } from './IntroduccionGuia'
+import { TerminosDeLaGuia } from '../referencia/TerminosDeLaGuia'
 import { etiquetaDeTipo } from './tiposArticulo'
 
 interface Props {
@@ -226,6 +227,10 @@ export function VistaPreviaArticulo({
             )}
 
             {procedimiento && <IntroduccionGuia procedimiento={procedimiento} />}
+
+            {/* La prueba del editor enseña la MISMA presentacion que vera
+                el tecnico, incluidos los terminos vinculados. */}
+            <TerminosDeLaGuia procedimiento={procedimiento} />
 
             {contenido.trim() !== '' && (
               <article className="prose prose-invert prose-sm max-w-none prose-headings:font-medium prose-headings:text-noct-text prose-p:text-noct-neutral-200 prose-li:text-noct-neutral-200 prose-strong:text-noct-text prose-a:text-noct-accent-400">

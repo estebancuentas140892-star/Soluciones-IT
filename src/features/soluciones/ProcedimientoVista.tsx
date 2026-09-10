@@ -17,6 +17,8 @@ import { ArrowSquareOut, BookOpen, CaretRight, Check, CheckCircleFill, Circle, L
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
+import { ChipReferencia } from '../referencia/ChipReferencia'
+import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
 import { tonoInfo } from './tonos'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
@@ -954,6 +956,16 @@ export function BloqueVista({
     )
   }
 
+  // Referencia vinculada desde una tarea (glosario, atajo o comando).
+  // En el mapa de lectura basta la etiqueta discreta: tocarla abre la
+  // ficha en una hoja, sin sacar a nadie del documento.
+  if (bloque.tipo === 'referencia') {
+    if (!bloque.referenciaId) return null
+    return (
+      <ChipReferenciaViva referenciaId={bloque.referenciaId} tituloRespaldo={bloque.referenciaTitulo} />
+    )
+  }
+
   // Guía vinculada desde una tarea (tipo nuevo, 2026-09-09). En lectura
   // se enlaza siempre: la lista es el mapa del procedimiento, y anidar
   // aquí otra ejecución completa duplicaría lo que ya hace el modo de
@@ -1055,6 +1067,28 @@ export function BloqueVista({
       />
       {credencialInline}
     </div>
+  )
+}
+
+// La etiqueta de una referencia en la vista de lectura. Resuelve las
+// fichas vivas por su cuenta (mismo patron que `CredencialEnPaso`, que
+// tambien consulta la base desde dentro del bloque) porque este
+// componente se monta desde muchos sitios y no todos tienen el mapa a
+// mano.
+function ChipReferenciaViva({
+  referenciaId,
+  tituloRespaldo,
+}: {
+  referenciaId: string
+  tituloRespaldo: string
+}) {
+  const referencias = useReferencias()
+  return (
+    <ChipReferencia
+      referenciaId={referenciaId}
+      tituloRespaldo={tituloRespaldo}
+      referencias={referencias}
+    />
   )
 }
 

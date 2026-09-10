@@ -14,6 +14,9 @@ import {
   Warning,
 } from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
+import { ChipReferencia } from '../referencia/ChipReferencia'
+import { bloquesUnicos, tipoEfectivo } from '../referencia/referencias'
+import { useReferencias } from '../referencia/useReferencias'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { apoyosDelPaso, apoyosDeTarea, cuentaApoyos, hayApoyos, type Apoyos } from './apoyosTarea'
 import { motivoGuiasPendientes } from './guiasObligatorias'
@@ -245,6 +248,10 @@ export function ModoFoco({
   // Ahora sustituye el contenido de la tarea mientras dure, y salir
   // devuelve al mismo punto con el vínculo como estaba.
   const [vinculoAbierto, setVinculoAbierto] = useState<VinculoAbierto | null>(null)
+  // Las fichas de Referencia vivas. Se resuelven aqui, una sola vez por
+  // paso, en vez de en cada chip: asi editar un termino en Referencia
+  // actualiza al instante todas las tareas que lo nombran.
+  const referenciasVivas = useReferencias()
   // El encabezado del contenido activo: es donde va el foco al cambiar
   // de tarea, al completar una y al volver de un vínculo, para que el
   // lector de pantalla anuncie lo que toca y la vista arranque arriba.
@@ -368,6 +375,20 @@ export function ModoFoco({
   // Guías de consulta y contingencia asignadas a esta tarea: apoyo, no
   // prerrequisito, así que van entre los apoyos y nunca bloquean.
   const guiasDeApoyo = apoyos.guias.filter((g) => g.intencionGuia !== 'necesario')
+  // Los TÉRMINOS del glosario vinculados a esta tarea. Los atajos y los
+  // comandos no entran aquí: se presentan enteros dentro de la tarea,
+  // con las teclas o el comando delante.
+  const terminos = bloquesUnicos(apoyos.referencias).filter(
+    (bloque) =>
+      tipoEfectivo(
+        {
+          id: bloque.referenciaId as string,
+          titulo: bloque.referenciaTitulo,
+          tipoDeclarado: bloque.referenciaTipo,
+        },
+        referenciasVivas,
+      ) === 'termino',
+  )
 
   // El motivo de la guía vinculada, en las palabras del autor: el
   // título del paso del que sale y su objetivo, si lo escribió. Se
@@ -640,6 +661,25 @@ export function ModoFoco({
             elemento del recorrido que viene JUSTO ANTES (encargo del
             2026-09-10, tarea 1). Un aviso que comparte pantalla con la
             instrucción y con un botón de 76 px no advierte. */}
+
+        {/* LOS TÉRMINOS DE ESTA TAREA, COMO ETIQUETAS DISCRETAS.
+            Debajo de la instrucción y en una sola fila: no compiten con
+            el titular de 30 px y se tocan para leer la definición sin
+            salir de la guía ni tocar el avance. El mismo término
+            vinculado dos veces a la misma tarea sale UNA sola vez
+            (`bloquesUnicos`). */}
+        {terminos.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {terminos.map((bloque) => (
+              <ChipReferencia
+                key={bloque.id}
+                referenciaId={bloque.referenciaId as string}
+                tituloRespaldo={bloque.referenciaTitulo}
+                referencias={referenciasVivas}
+              />
+            ))}
+          </div>
+        )}
 
         {/* LA GUÍA VINCULADA, COMO TARJETA COMPACTA (encargo del
             2026-09-10, tarea 4). Antes se desplegaba entera debajo de

@@ -19,6 +19,8 @@ import {
   type IntencionGuia,
   type PasoAdjunto,
   type PasoProcedimiento,
+  type Referencia,
+  type TipoReferencia,
   type TipoTarea,
   type TipoVinculoProtegido,
   type TonoAviso,
@@ -28,6 +30,7 @@ import {
   crearBloqueAviso,
   crearBloqueGuia,
   crearBloqueImagen,
+  crearBloqueReferencia,
   crearBloqueTarea,
   crearPaso,
   normalizarProcedimiento,
@@ -52,6 +55,7 @@ import {
   ArrowDown,
   ArrowElbowDownRight,
   ArrowUp,
+  BookBookmark,
   BookOpen,
   Camera,
   CaretDown,
@@ -79,6 +83,8 @@ import { HojaTipoBloque, type OpcionTipoBloque } from './HojaTipoBloque'
 import { HojaVinculo, type GrupoVinculo } from './HojaVinculo'
 import { AccionesPaso } from './ranuraAccionesPaso'
 import { avisoDeVinculo } from './validacionVinculos'
+import { SelectorReferencia } from '../referencia/SelectorReferencia'
+import { INFO_TIPO } from '../referencia/referencias'
 
 interface Props {
   articuloId: string
@@ -178,7 +184,16 @@ const TIPOS_TAREA: TipoTareaInfo[] = [
 // Accion, Verificacion y Decision son el mismo bloque 'tarea' con
 // distinto `tipoTarea`: el catalogo los ofrece por separado porque el
 // autor piensa en ellos como tipos, pero NO se duplican en el modelo.
-type ClaveContenido = 'accion' | 'verificacion' | 'decision' | 'imagen' | 'aviso' | 'archivo' | 'guia' | 'dato'
+type ClaveContenido =
+  | 'accion'
+  | 'verificacion'
+  | 'decision'
+  | 'imagen'
+  | 'aviso'
+  | 'archivo'
+  | 'guia'
+  | 'dato'
+  | 'termino'
 
 const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
   { valor: 'accion', etiqueta: 'Acción', descripcion: 'Algo que el técnico ejecuta', Icono: Square, claseIcono: 'text-noct-accent-300' },
@@ -189,7 +204,18 @@ const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
   { valor: 'archivo', etiqueta: 'Archivo', descripcion: 'Manual, PDF o planilla', Icono: Paperclip, claseIcono: 'text-noct-neutral-300' },
   { valor: 'guia', etiqueta: 'Guía vinculada', descripcion: 'Otra guía que se hace aquí', Icono: BookOpen, claseIcono: 'text-noct-accent-300' },
   { valor: 'dato', etiqueta: 'Dato protegido', descripcion: 'Clave o campo de la bóveda', Icono: LockSimple, claseIcono: 'text-noct-neutral-300' },
+  // Referencia (encargo del 2026-09-10). No duplica el contenido: el
+  // bloque guarda el id de la ficha central mas una copia del titulo,
+  // asi que editar el termino lo actualiza en todas las guias.
+  { valor: 'termino', etiqueta: 'Término del glosario', descripcion: 'Una palabra del vocabulario del equipo', Icono: BookBookmark, claseIcono: 'text-noct-accent-300' },
 ]
+
+// Que clase de referencia inserta cada clave del catalogo. Las tres
+// comparten flujo (elegir o crear, y colgarse de la tarea activa), asi
+// que se resuelven en una sola rama en vez de tres.
+const REFERENCIA_POR_CLAVE: Partial<Record<ClaveContenido, TipoReferencia>> = {
+  termino: 'termino',
+}
 
 // Para que sirve una guia vinculada. La distincion es del encargo
 // (seccion 5, punto 6): una consulta opcional NO puede bloquear.
@@ -277,10 +303,26 @@ export function PasosEditor({
   // Tarea cuyo selector de dato protegido hay que abrir (lo pide el
   // catalogo de contenido, que vive en la barra del pie).
   const [datoDeTareaId, setDatoDeTareaId] = useState<string | null>(null)
+  // Referencia que se está eligiendo para INSERTAR un bloque nuevo (el
+  // paso al que va y de qué clase es). Cambiar la de un bloque que ya
+  // existe lo resuelve el propio bloque, con su selector.
+  const [referenciaNueva, setReferenciaNueva] = useState<{
+    indice: number
+    tipo: TipoReferencia
+  } | null>(null)
 
   // Secretos de la boveda para vincular a un paso. Solo llegan a este
   // dispositivo los de usuarios con permiso de boveda (RLS); el titulo
   // es visible sin desbloquear, los secretos no.
+  // Glosario, atajos y comandos disponibles para vincular. Las
+  // eliminadas quedan fuera: no se ofrece vincular algo que ya no
+  // existe (los bloques que YA apuntaban a una eliminada se conservan,
+  // eso lo resuelve la vista, no el selector).
+  const referenciasDisponibles = useLiveQuery(
+    () => db.referencias.filter((r) => !r.eliminadoEn).toArray(),
+    [],
+    [],
+  )
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
   // Campos protegidos de los equipos donde aplica este articulo (grupo
   // P2): misma RLS que las credenciales, asi que sin permiso de boveda
@@ -407,6 +449,14 @@ export function PasosEditor({
     const tareaId = destinoPorDefecto(indice).tareaId
     if (clave === 'accion' || clave === 'verificacion' || clave === 'decision') {
       agregarBloque(indice, crearBloqueTarea(clave))
+      return
+    }
+    const tipoReferencia = REFERENCIA_POR_CLAVE[clave]
+    if (tipoReferencia) {
+      // El bloque nace CUANDO se elige la referencia, no antes: un
+      // bloque de referencia sin destino no es nada y solo dejaría una
+      // fila vacía en el paso si el autor cancela.
+      setReferenciaNueva({ indice, tipo: tipoReferencia })
       return
     }
     if (clave === 'imagen') return agregarBloque(indice, crearBloqueImagen(tareaId))
@@ -883,6 +933,7 @@ export function PasosEditor({
                 onSubirImagen={(evento) => void subirImagen(indice, bloque.id, evento)}
                 onSubirArchivo={(evento) => void subirArchivoBloque(indice, bloque.id, evento)}
                 vinculables={vinculablesOrdenados}
+                referenciasDisponibles={referenciasDisponibles}
                 gruposProtegidos={[
                   { etiqueta: 'Datos protegidos del equipo', opciones: opcionesCampos },
                   { etiqueta: 'Secretos de la bóveda', opciones: opcionesCredenciales },
@@ -1099,6 +1150,32 @@ export function PasosEditor({
             Entendido
           </button>
         </div>
+      )}
+
+      {/* Elegir (o crear) la referencia que se va a insertar. Vive
+          aqui, en el editor completo, y no dentro de un bloque: el
+          bloque todavia no existe, y crearlo antes dejaria una fila
+          vacia en el paso si el autor cancela. */}
+      {referenciaNueva && (
+        <SelectorReferencia
+          abierto
+          onCerrar={() => setReferenciaNueva(null)}
+          tipo={referenciaNueva.tipo}
+          referencias={referenciasDisponibles}
+          onElegir={(referencia) => {
+            const { indice, tipo } = referenciaNueva
+            // `agregarBloque` resuelve el destino con la tarea activa,
+            // igual que una imagen o un aviso: la referencia se cuelga
+            // SOLO de la tarea seleccionada, nunca del paso entero
+            // mientras haya una tarea donde ponerla.
+            agregarBloque(indice, {
+              ...crearBloqueReferencia(referencia.tipo || tipo),
+              referenciaId: referencia.id,
+              referenciaTitulo: referencia.titulo,
+            })
+            setReferenciaNueva(null)
+          }}
+        />
       )}
 
       <DialogoEliminar
@@ -1380,6 +1457,7 @@ function BloqueEditor({
   onSubirImagen,
   onSubirArchivo,
   vinculables,
+  referenciasDisponibles,
   gruposProtegidos,
   abrirDatoProtegido,
   onDatoProtegidoAbierto,
@@ -1408,6 +1486,7 @@ function BloqueEditor({
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
   onSubirArchivo: (evento: ChangeEvent<HTMLInputElement>) => void
   vinculables: Articulo[]
+  referenciasDisponibles: Referencia[]
   gruposProtegidos: { etiqueta?: string; opciones: OpcionVinculoProtegido[] }[]
   abrirDatoProtegido: boolean
   onDatoProtegidoAbierto: () => void
@@ -1431,6 +1510,7 @@ function BloqueEditor({
   const [hojaProtegidaAbierta, setHojaProtegidaAbierta] = useState(false)
   const [hojaGuiaAbierta, setHojaGuiaAbierta] = useState(false)
   const [hojaIntencionAbierta, setHojaIntencionAbierta] = useState(false)
+  const [hojaReferenciaAbierta, setHojaReferenciaAbierta] = useState(false)
 
   // El catálogo del pie puede pedir que se abra el selector de dato
   // protegido de ESTA tarea ("Añadir · Dato protegido").
@@ -1715,6 +1795,58 @@ function BloqueEditor({
           onChange={(e) => onCambiar({ texto: e.target.value })}
           placeholder="Para qué sirve este archivo (opcional)"
           className="min-h-11 border-none bg-transparent px-0.5 py-1 text-xs text-noct-neutral-400 outline-none"
+        />
+        {selectorDestino}
+      </div>
+    )
+  }
+
+  // UNA REFERENCIA VINCULADA A ESTA TAREA (glosario, atajo o comando).
+  //
+  // Quitarla usa el mismo botón que el resto de apoyos (`cabeceraApoyo`)
+  // y solo borra el BLOQUE: la ficha central sigue intacta en
+  // Referencia, con todas las demás guías que la usan.
+  if (bloque.tipo === 'referencia') {
+    const viva = bloque.referenciaId
+      ? referenciasDisponibles.find((r) => r.id === bloque.referenciaId)
+      : undefined
+    const tipoReferencia: TipoReferencia = viva?.tipo ?? bloque.referenciaTipo ?? 'termino'
+    return (
+      <div className="ml-1 flex flex-col gap-1.5">
+        {cabeceraApoyo}
+        <button
+          type="button"
+          onClick={() => setHojaReferenciaAbierta(true)}
+          className="flex min-h-14 items-center gap-2.5 rounded-md border border-dashed border-noct-neutral-700 px-3 text-left text-[13px] text-noct-neutral-300 hover:border-noct-neutral-500 hover:text-noct-text"
+        >
+          <BookBookmark size={16} className="shrink-0 text-noct-neutral-400" />
+          <span className="min-w-0 flex-1 truncate">
+            {viva?.titulo || bloque.referenciaTitulo || `Elegir ${INFO_TIPO[tipoReferencia].etiqueta.toLowerCase()}`}
+          </span>
+          <CaretDown size={13} className="shrink-0" />
+        </button>
+        {/* El vínculo apunta a algo que no está en este dispositivo. Se
+            dice y se conserva: puede llegar en la próxima
+            sincronización, y borrarlo aquí destruiría el trabajo del
+            autor por un estado temporal. */}
+        {bloque.referenciaId && !viva && (
+          <p className="px-0.5 text-[12px] leading-snug text-noct-precaucion">
+            «{bloque.referenciaTitulo || 'Esta referencia'}» no está en este dispositivo. Se conserva el
+            vínculo; se puede cambiar por otra o quitarlo.
+          </p>
+        )}
+        <SelectorReferencia
+          abierto={hojaReferenciaAbierta}
+          onCerrar={() => setHojaReferenciaAbierta(false)}
+          tipo={tipoReferencia}
+          referencias={referenciasDisponibles}
+          onElegir={(referencia) =>
+            onCambiar({
+              referenciaId: referencia.id,
+              referenciaTitulo: referencia.titulo,
+              referenciaTipo: referencia.tipo,
+            })
+          }
         />
         {selectorDestino}
       </div>

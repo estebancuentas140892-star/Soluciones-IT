@@ -40,6 +40,7 @@ import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../component
 import { Historial } from '../historial/Historial'
 import { accionDeGuia, estrenaEjecucion, etiquetaAccionGuia } from './accionGuia'
 import { IntroduccionGuia, ListaIntro, ResumenGuia, SeccionIntro } from './IntroduccionGuia'
+import { TerminosDeLaGuia } from '../referencia/TerminosDeLaGuia'
 import { colorIconoDeTipo } from './iconosSoluciones'
 import { etiquetaDeTipo } from './tiposArticulo'
 import { describirAplicaA } from './aplicaA'
@@ -249,6 +250,13 @@ export function ArticuloPage() {
             procedimiento y desaparecían con él. El paso a paso NO se
             monta aquí: se ejecuta desde la barra de abajo. */}
         {procedimiento && <IntroduccionGuia procedimiento={procedimiento} />}
+
+        {/* "Terminos de esta guia" (encargo del 2026-09-10, tarea 3):
+            parte de decidir si esta es la guia correcta es saber si uno
+            entiende el vocabulario que va a encontrar. Solo aparece si
+            la guia tiene terminos vinculados, y al abrirlo muestra una
+            lista breve, nunca las tareas del procedimiento. */}
+        <TerminosDeLaGuia procedimiento={procedimiento} />
 
         {articulo.contenido.trim() !== '' && (
           <article className="prose prose-invert prose-sm max-w-none prose-headings:font-medium prose-headings:text-noct-text prose-p:text-noct-neutral-200 prose-li:text-noct-neutral-200 prose-strong:text-noct-text prose-a:text-noct-accent-400">

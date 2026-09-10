@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { Articulo, BloquePaso, Referencia } from '../../lib/db'
+import type { Articulo, BloquePaso, Procedimiento, Referencia } from '../../lib/db'
 import {
   bloquesUnicos,
+  referenciasDelProcedimiento,
+  tipoEfectivo,
+  tituloEfectivo,
   categoriasDe,
   coincide,
   filtrarComandos,
@@ -259,5 +262,58 @@ describe('deduplicación por tarea', () => {
 
   it('un bloque sin destino no cuenta', () => {
     expect(idsUnicos([bloqueReferencia('b1', null)])).toEqual([])
+  })
+})
+
+describe('referencias de una guía completa', () => {
+  function procedimiento(pasos: BloquePaso[][]): Procedimiento {
+    return {
+      descripcion: '',
+      portada: null,
+      objetivoGeneral: '',
+      requisitos: [],
+      pasos: pasos.map((bloques, i) => ({
+        id: `p${i}`,
+        titulo: `Paso ${i + 1}`,
+        objetivo: '',
+        bloques,
+        adjuntos: [],
+        vinculoProtegido: null,
+        subArticuloId: null,
+        subArticuloTitulo: '',
+        solucionArticuloId: null,
+        solucionArticuloTitulo: '',
+      })),
+      verificacionFinal: [],
+      tiempoEstimadoMin: null,
+      dificultad: null,
+    }
+  }
+
+  it('reúne los vínculos de todos los pasos, sin repetir', () => {
+    const vinculos = referenciasDelProcedimiento(
+      procedimiento([
+        [bloqueReferencia('b1', 'r1'), bloqueReferencia('b2', 'r2')],
+        [bloqueReferencia('b3', 'r1')],
+      ]),
+    )
+    expect(vinculos.map((v) => v.id)).toEqual(['r1', 'r2'])
+  })
+
+  it('una guía sin procedimiento no aporta ninguno', () => {
+    expect(referenciasDelProcedimiento(null)).toEqual([])
+  })
+
+  it('manda el tipo de la ficha viva sobre el declarado al insertarlo', () => {
+    const vivas = new Map([['r1', referencia({ id: 'r1', titulo: 'mstsc', tipo: 'comando' })]])
+    const vinculo = { id: 'r1', titulo: 'copia vieja', tipoDeclarado: 'termino' as const }
+    expect(tipoEfectivo(vinculo, vivas)).toBe('comando')
+    expect(tituloEfectivo(vinculo, vivas)).toBe('mstsc')
+  })
+
+  it('sin la ficha viva cae al tipo y al título guardados en el bloque', () => {
+    const vinculo = { id: 'r9', titulo: 'Gigabyte', tipoDeclarado: 'termino' as const }
+    expect(tipoEfectivo(vinculo, new Map())).toBe('termino')
+    expect(tituloEfectivo(vinculo, new Map())).toBe('Gigabyte')
   })
 })

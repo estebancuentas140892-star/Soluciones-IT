@@ -1,4 +1,4 @@
-import type { Articulo, BloquePaso, Referencia, TipoReferencia } from '../../lib/db'
+import type { Articulo, BloquePaso, Procedimiento, Referencia, TipoReferencia } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { valoresUnicos } from '../../lib/vocabulario'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
@@ -228,4 +228,61 @@ export function bloquesUnicos(bloques: BloquePaso[]): BloquePaso[] {
     vistos.add(id)
     return true
   })
+}
+
+/**
+ * Un vinculo a una referencia tal como lo guarda un bloque: el id, la
+ * copia del titulo (respaldo sin conexion) y el tipo que el autor
+ * eligio al insertarlo.
+ */
+export interface VinculoReferencia {
+  id: string
+  /** Copia guardada en el bloque. Solo manda si la fila viva no esta. */
+  titulo: string
+  /** Lo que el autor eligio insertar; null si el guardado no lo dice. */
+  tipoDeclarado: TipoReferencia | null
+}
+
+/**
+ * Todas las referencias vinculadas desde CUALQUIER tarea de la guia,
+ * sin repetir y en el orden en que aparecen.
+ *
+ * Alimenta el control "Terminos de esta guia" de la presentacion, que
+ * por eso no necesita recorrer los pasos ni nombrarlos: aqui solo
+ * quedan las referencias, nunca las tareas del procedimiento.
+ */
+export function referenciasDelProcedimiento(procedimiento: Procedimiento | null): VinculoReferencia[] {
+  if (!procedimiento) return []
+  const vistos = new Set<string>()
+  const vinculos: VinculoReferencia[] = []
+  for (const paso of procedimiento.pasos) {
+    for (const bloque of paso.bloques) {
+      if (bloque.tipo !== 'referencia') continue
+      const id = bloque.referenciaId
+      if (!id || vistos.has(id)) continue
+      vistos.add(id)
+      vinculos.push({ id, titulo: bloque.referenciaTitulo, tipoDeclarado: bloque.referenciaTipo })
+    }
+  }
+  return vinculos
+}
+
+/**
+ * De que tipo es realmente este vinculo.
+ *
+ * MANDA LA FILA VIVA, y solo si no esta se usa lo que el autor declaro
+ * al insertarlo: editar la ficha central es lo que debe cambiar como se
+ * presenta en todas las guias, y el tipo declarado existe unicamente
+ * para poder dibujar el hueco correcto sin conexion.
+ */
+export function tipoEfectivo(
+  vinculo: VinculoReferencia,
+  referencias: Map<string, Referencia>,
+): TipoReferencia | null {
+  return referencias.get(vinculo.id)?.tipo ?? vinculo.tipoDeclarado
+}
+
+/** El titulo que se muestra: el vivo si la fila esta, la copia si no. */
+export function tituloEfectivo(vinculo: VinculoReferencia, referencias: Map<string, Referencia>): string {
+  return referencias.get(vinculo.id)?.titulo || vinculo.titulo || 'Referencia'
 }

@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Agregado (Referencia, tarea 3): el glosario dentro de las tareas de una guía
+
+**Área modificada:** editor de guías y ejecución. **Nuevos:** `src/features/referencia/useReferencias.ts`, `SelectorReferencia.tsx`, `HojaReferencia.tsx`, `ChipReferencia.tsx`, `TerminosDeLaGuia.tsx`. **Modificados:** `src/features/soluciones/PasosEditor.tsx`, `ModoFoco.tsx`, `ProcedimientoVista.tsx`, `ArticuloPage.tsx`, `VistaPreviaArticulo.tsx`, `src/features/referencia/referencias.ts` (+ 11 pruebas entre `referencias.test.ts` y `bloquesEditor.test.ts`).
+**Motivo:** tarea 3 del encargo de Referencia del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Agregado** `Término del glosario` al catálogo de **Editar guía > Pasos > Añadir contenido a esta tarea**, junto a los ocho tipos que ya había.
+- **Elegir o crear, sin salir del editor.** La hoja busca entre los términos existentes y, con lo mismo que se escribió en el buscador, ofrece **crear uno nuevo** que se guarda directo en Referencia. No navega a otra pantalla, así que **no se pierde nada de lo escrito en el procedimiento**; y si el autor luego descarta la guía, el término que creó sigue ahí para el resto del equipo. Si ya existe uno con ese nombre exacto, no se ofrece duplicarlo.
+- **El vínculo es de la TAREA, no del paso:** el bloque nace con el alcance de la tarea seleccionada, igual que una imagen o un aviso, y **se mueve pegado a ella al reordenar** (el anclaje es `tareaId`, un id estable, no una posición). Se puede reasignar a otra tarea o a todo el paso desde el mismo selector de destino que el resto de apoyos.
+- **Quitar el vínculo no borra el término:** el botón de la cabecera del apoyo elimina el bloque y nada más; la ficha central sigue intacta en Referencia con todas las demás guías que la usan.
+- **En la ejecución, una etiqueta discreta con el nombre del término**, debajo de la instrucción y sin competir con el titular de 30 px. Al tocarla se abre una **hoja inferior en móvil y un diálogo en escritorio** (el mismo `Modal`, dos comportamientos) con la definición corta, el ejemplo, los alias y los términos relacionados, que se pueden recorrer dentro de la propia hoja.
+- **No se abandona la guía y no se toca el avance:** la hoja no lleva a ninguna pantalla, leer una definición no cuenta como trabajo hecho, y **al cerrarse el foco vuelve al chip** que la abrió, así que quien navega con teclado o lector de pantalla no pierde el sitio de la tarea.
+- **El mismo término vinculado dos veces a la misma tarea se muestra una sola vez.** Los dos bloques se conservan en el dato; lo que se colapsa es la presentación.
+- **No se convierten en enlace las palabras técnicas del texto.** El vínculo lo pone el autor, una vez: subrayar automáticamente cada palabra sería adivinar, y llenaría de enlaces una pantalla que se lee a un brazo de distancia.
+- **Agregado** el control **"Términos de esta guía"** en la presentación inicial (ficha y prueba del editor). Solo aparece si la guía tiene términos vinculados, y al abrirlo muestra una **lista breve** con el nombre y la definición corta: ni los pasos, ni las tareas, ni en qué punto se usa cada uno.
+- **Una referencia eliminada o sin sincronizar no rompe nada:** el bloque se conserva con su copia del título y se muestra como "no disponible", tanto en el editor como en la ejecución. El vínculo nunca se descuelga solo.
+
 ### Agregado (Referencia, tarea 2): el apartado Referencia, con glosario y atajos
 
 **Área modificada:** navegación y pantalla nueva. **Nuevos:** `src/features/referencia/referencias.ts` (+ 20 pruebas en `referencias.test.ts`), `src/features/referencia/ReferenciaPage.tsx`, `src/features/referencia/ReferenciaFicha.tsx`, `src/features/referencia/ReferenciaForm.tsx`. **Modificados:** `src/App.tsx`, `src/app/Chasis.tsx`, `src/features/mas/PantallaMas.tsx`, `src/lib/navegacion.ts`, `src/components/iconos.tsx` (+3 iconos).

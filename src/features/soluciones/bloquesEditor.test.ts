@@ -151,3 +151,52 @@ describe('etiquetas del selector de destino', () => {
     expect(opcionesDestino(pasoDePrueba()).map((o) => o.numero)).toEqual([1, 2, 3])
   })
 })
+
+// UN TERMINO VINCULADO SIGUE A SU TAREA (encargo del 2026-09-10, tarea
+// 3: "conserva su posicion al reordenar la tarea con sus apoyos"). No
+// hace falta logica nueva: el anclaje es `tareaId`, un id estable, no
+// una posicion, asi que el bloque de referencia se comporta como
+// cualquier otro apoyo. Esta prueba existe para demostrarlo.
+describe('bloques de referencia al reordenar', () => {
+  function pasoConTermino(): BloquePaso[] {
+    return [
+      bloque({ id: 't1', tipo: 'tarea', texto: 'Escribir la dirección', tipoTarea: 'accion' }),
+      bloque({ id: 'r1', tipo: 'referencia', referenciaId: 'ref-1', referenciaTitulo: 'DNS', alcance: 'tarea', tareaId: 't1' }),
+      bloque({ id: 't2', tipo: 'tarea', texto: 'Confirmar', tipoTarea: 'accion' }),
+    ]
+  }
+
+  it('se mueve pegado a su tarea', () => {
+    const resultado = moverTareaConApoyos(pasoConTermino(), 't1', 1)
+    expect(resultado.map((b) => b.id)).toEqual(['t2', 't1', 'r1'])
+    expect(resultado[2].tareaId).toBe('t1')
+  })
+
+  it('sigue perteneciendo a la misma tarea después de reordenar', () => {
+    const resultado = moverTareaConApoyos(pasoConTermino(), 't1', 1)
+    expect(apoyosDeTarea(pasoDeBloques(resultado), 't1').referencias.map((b) => b.id)).toEqual(['r1'])
+    expect(apoyosDeTarea(pasoDeBloques(resultado), 't2').referencias).toEqual([])
+  })
+
+  it('se puede reasignar a otra tarea o al paso completo', () => {
+    const aTarea2 = reasignarApoyo(pasoConTermino(), 'r1', destinoTarea('t2'))
+    expect(aTarea2.find((b) => b.id === 'r1')?.tareaId).toBe('t2')
+    const alPaso = reasignarApoyo(pasoConTermino(), 'r1', DESTINO_PASO)
+    expect(alPaso.find((b) => b.id === 'r1')?.alcance).toBe('paso')
+  })
+})
+
+function pasoDeBloques(bloques: BloquePaso[]) {
+  return {
+    id: 'p1',
+    titulo: 'Paso',
+    objetivo: '',
+    bloques,
+    adjuntos: [],
+    vinculoProtegido: null,
+    subArticuloId: null,
+    subArticuloTitulo: '',
+    solucionArticuloId: null,
+    solucionArticuloTitulo: '',
+  }
+}
