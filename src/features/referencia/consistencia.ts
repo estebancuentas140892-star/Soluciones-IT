@@ -48,6 +48,18 @@ function limpio(texto: string): string {
   return normalizarTexto(texto.trim())
 }
 
+// LA ABREVIATURA SE COMPARA RESPETANDO LA CAJA, a diferencia del resto.
+//
+// En las unidades informaticas la mayuscula SIGNIFICA: `b` es bit y `B`
+// es byte, `Gb` es gigabit y `GB` es gigabyte. Compararlas sin
+// distinguir mayusculas marcaria como "abreviatura contradictoria"
+// justo la distincion que el glosario existe para ensenar, y ese aviso
+// permanente en las cuatro fichas de medidas ensenaria al equipo a
+// ignorar el panel entero.
+function abreviaturaComparable(texto: string): string {
+  return texto.trim()
+}
+
 /** Todas las formas con las que se nombra una ficha: título, abreviatura y alias. */
 function nombresDe(referencia: Referencia): string[] {
   return [referencia.titulo, referencia.abreviatura, ...(referencia.alias ?? [])]
@@ -100,9 +112,15 @@ export function esComandoDelicado(valor: string): boolean {
  * gigabyte (almacenamiento), y confundirlos cambia el resultado por un
  * factor de ocho. Se detecta la palabra SUELTA, nunca dentro de
  * "gigabyte" ni "gigabits".
+ *
+ * Y no se marca cuando el MISMO texto ya dice cual de los dos es: esa
+ * es justamente la ficha que existe para explicar la ambiguedad, y
+ * senalarla seria pedirle que deje de mencionarla.
  */
 export function usaGigaAmbiguo(texto: string): boolean {
-  return /(^|[^a-z])giga([^a-z]|$)/.test(limpio(texto))
+  const normalizado = limpio(texto)
+  if (!/(^|[^a-z])giga([^a-z]|$)/.test(normalizado)) return false
+  return !/gigabit|gigabyte/.test(normalizado)
 }
 
 /**
@@ -116,7 +134,7 @@ export function revisarReferencia(borrador: Referencia, otras: Referencia[]): Av
   const avisos: AvisoConsistencia[] = []
   const resto = otras.filter((r) => r.id !== borrador.id && !r.eliminadoEn)
   const titulo = limpio(borrador.titulo)
-  const abreviatura = limpio(borrador.abreviatura)
+  const abreviatura = abreviaturaComparable(borrador.abreviatura)
   const valor = limpio(borrador.valor)
   const plataforma = limpio(borrador.plataforma)
 
@@ -136,7 +154,7 @@ export function revisarReferencia(borrador: Referencia, otras: Referencia[]): Av
   // 2. La misma abreviatura para dos conceptos distintos.
   if (abreviatura !== '') {
     const choque = resto.find(
-      (r) => limpio(r.abreviatura) === abreviatura && limpio(r.titulo) !== titulo,
+      (r) => abreviaturaComparable(r.abreviatura) === abreviatura && limpio(r.titulo) !== titulo,
     )
     if (choque) {
       avisos.push({

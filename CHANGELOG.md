@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Agregado (Referencia, tarea 7): el contenido inicial del glosario y de los comandos
+
+**Área modificada:** datos iniciales. **Modificados:** `supabase/schema.sql` (sección 5.1), `src/lib/esquema.test.ts` (+ 3 pruebas), `src/features/referencia/consistencia.ts` (+ 2 pruebas).
+**Motivo:** tarea 7 del encargo de Referencia del **10 de septiembre de 2026**. **CON datos: hay que ejecutar `supabase/schema.sql` completo en el SQL Editor de Supabase (es idempotente).**
+
+- **Agregadas 22 fichas** con identificadores estables escritos a mano (`2026090a-0000-4000-8000-0000000000xx`) y `on conflict (id) do nothing`: **16 términos** (Bit, Byte, Gigabit, Gigabyte, Gigabits por segundo, Switch, Router, Punto de acceso, Dirección IP, DNS, DHCP, Backup, Sincronización, Escritorio remoto, RDP y POS) y **6 atajos y comandos** (`Windows + R`, `Ctrl + L`, `Ctrl + Shift + T`, `mstsc`, `ipconfig` y `ping [dirección]`).
+- **Idempotente de verdad.** El archivo se aplica a mano y se vuelve a aplicar con cada grupo de esquema: con ids generados al vuelo, cada pasada habría creado 22 fichas repetidas. Con ids fijos, repetirlo no duplica nada y, lo que más importa, **no pisa lo que el equipo edite después**. Una prueba nueva lee el SQL y falla si algún insert de referencias pierde su `on conflict`.
+- **Queda explícito en las definiciones** que un byte son 8 bits; que `b` y `B` no significan lo mismo; que gigabit se usa para velocidades de red y gigabyte para almacenamiento; que decir solo "giga" es ambiguo; que un switch reparte dentro de una red y un router elige el camino entre redes, y no son intercambiables; y que sincronizar no es respaldar, porque la sincronización propaga también los borrados.
+- **En `ping`** queda escrito como advertencia que recibir respuesta ayuda a comprobar la conectividad pero **no garantiza que todos los servicios del equipo estén funcionando**: un servidor puede responder al ping con el servicio caído.
+- **Sin datos internos.** Ni una dirección IP real, ni un nombre de usuario, ni una contraseña, ni el nombre de un equipo del inventario: los ejemplos usan marcadores entre corchetes. Otra prueba lo comprueba sobre el propio SQL.
+- **Corregidos dos falsos positivos de la revisión de consistencia** que este contenido destapó: la **abreviatura ahora se compara respetando la caja** (en las unidades informáticas la mayúscula significa: `b` es bit y `B` es byte, `Gb` es gigabit y `GB` es gigabyte, así que compararlas sin distinguir marcaba como contradicción justo la distinción que el glosario existe para enseñar); y **"giga" ya no se marca cuando el mismo texto dice cuál de los dos es**, que es exactamente lo que hace la ficha escrita para explicar la ambigüedad.
+- **Migración aplicada** al proyecto de Supabase con el mecanismo autorizado: 16 términos, 3 atajos y 3 comandos, con sus referencias relacionadas.
+
 ### Agregado (Referencia, tarea 6): atajos de teclado propios de Soluciones IT
 
 **Área modificada:** chasis y apartado Referencia. **Nuevos:** `src/app/atajosApp.ts` (+ 13 pruebas), `src/app/CapaAtajos.tsx`, `src/app/AyudaAtajos.tsx`. **Modificados:** `src/app/Chasis.tsx`, `src/features/referencia/ReferenciaPage.tsx`, `src/features/busqueda/BuscadorGlobal.tsx`.

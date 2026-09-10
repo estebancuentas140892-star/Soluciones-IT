@@ -60,3 +60,37 @@ describe('schema.sql cubre todo lo que la app sincroniza', () => {
     expect(conDefault).toEqual([])
   })
 })
+
+// EL CONTENIDO INICIAL DE REFERENCIA TIENE QUE PODER APLICARSE DOS
+// VECES (encargo del 2026-09-10, tarea 7: "migracion idempotente,
+// identificadores estables, evitando duplicados").
+//
+// El archivo se aplica a mano en el SQL Editor y se vuelve a aplicar
+// cada vez que hay un grupo de esquema nuevo, asi que un insert sin
+// `on conflict` crearia 22 fichas repetidas en cada pasada. Esta
+// prueba lee el SQL como texto, igual que las de arriba, y no ejecuta
+// nada.
+describe('contenido inicial de Referencia', () => {
+  const inserts = esquema.split('insert into public.referencias').slice(1)
+
+  it('siembra las 22 fichas del encargo con identificadores estables', () => {
+    const ids = new Set(esquema.match(/2026090a-0000-4000-8000-[0-9a-f]{12}/g) ?? [])
+    expect(ids.size).toBe(22)
+  })
+
+  it('cada insert de referencias es idempotente', () => {
+    expect(inserts.length).toBeGreaterThan(0)
+    for (const bloque of inserts) {
+      expect(bloque).toContain('on conflict (id) do nothing')
+    }
+  })
+
+  it('no siembra ninguna direccion IP real ni credenciales', () => {
+    const bloque = esquema.slice(esquema.indexOf('5.1 Contenido inicial de Referencia'))
+    // Una IPv4 literal en el contenido seria un dato interno filtrado;
+    // los ejemplos usan marcadores entre corchetes.
+    expect(bloque).not.toMatch(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/)
+    expect(bloque.toLowerCase()).not.toContain('contraseña')
+    expect(bloque.toLowerCase()).not.toContain('password')
+  })
+})

@@ -124,6 +124,20 @@ describe('revisarReferencia', () => {
     expect(claves(avisos)).toContain('abreviatura_contradictoria')
   })
 
+  it('no marca b y B como contradictorias: en las unidades la mayúscula significa', () => {
+    // Es justo la distinción que el glosario existe para enseñar (bit
+    // frente a byte, Gb frente a GB). Marcarla dejaría un aviso
+    // permanente en las cuatro fichas de medidas.
+    const avisos = revisarReferencia(referencia({ id: 'r1', titulo: 'Byte', abreviatura: 'B' }), [
+      referencia({ id: 'r2', titulo: 'Bit', abreviatura: 'b' }),
+    ])
+    expect(claves(avisos)).not.toContain('abreviatura_contradictoria')
+    const gigas = revisarReferencia(referencia({ id: 'r3', titulo: 'Gigabyte', abreviatura: 'GB' }), [
+      referencia({ id: 'r4', titulo: 'Gigabit', abreviatura: 'Gb' }),
+    ])
+    expect(claves(gigas)).not.toContain('abreviatura_contradictoria')
+  })
+
   it('detecta un alias que ya nombra a otro concepto', () => {
     const avisos = revisarReferencia(referencia({ id: 'r1', titulo: 'Punto de acceso', alias: ['AP'] }), [
       referencia({ id: 'r2', titulo: 'Antivirus Pro', alias: ['AP'] }),
@@ -137,6 +151,9 @@ describe('revisarReferencia', () => {
     // Dentro de una palabra completa NO es ambiguo: ahí ya dice cuál es.
     expect(usaGigaAmbiguo('un disco de 500 gigabytes')).toBe(false)
     expect(usaGigaAmbiguo('enlace de 1 gigabit por segundo')).toBe(false)
+    // Y tampoco cuando el mismo texto explica la ambigüedad: esa es la
+    // ficha que existe justamente para eso.
+    expect(usaGigaAmbiguo('Decir solo giga es ambiguo: puede ser gigabit o gigabyte')).toBe(false)
     const avisos = revisarReferencia(
       referencia({ id: 'r1', titulo: 'Velocidad', definicion: 'La red va a 1 giga' }),
       [],

@@ -1025,6 +1025,187 @@ update public.categorias set es_red = true
     and es_red = false;
 
 -- ----------------------------------------------------------------
+-- 5.1 Contenido inicial de Referencia (2026-09-10)
+--
+--     IDENTIFICADORES ESTABLES Y ESCRITOS A MANO. La forma
+--     `2026090a-0000-4000-8000-0000000000xx` los hace reconocibles de
+--     un vistazo como contenido sembrado, y sobre todo permite que
+--     este bloque sea IDEMPOTENTE: `on conflict (id) do nothing`
+--     significa que ejecutar el archivo diez veces no duplica nada y,
+--     lo que mas importa, NO PISA lo que el equipo haya editado
+--     despues. Con ids generados al vuelo, cada ejecucion habria
+--     creado 22 fichas nuevas.
+--
+--     NADA DE DATOS INTERNOS. Ni una direccion IP real, ni un nombre
+--     de usuario, ni una contrasena, ni el nombre de un equipo del
+--     inventario: los ejemplos usan marcadores entre corchetes.
+-- ----------------------------------------------------------------
+
+insert into public.referencias
+  (id, tipo, titulo, abreviatura, alias, definicion, ejemplo, categoria, etiquetas)
+values
+  ('2026090a-0000-4000-8000-000000000001', 'termino', 'Bit', 'b',
+   array['bits'],
+   'La unidad mínima de información: un 0 o un 1. Se escribe con b minúscula. Ocho bits forman un byte.',
+   'Una conexión de 100 megabits por segundo transporta 100 millones de bits cada segundo, no 100 millones de bytes.',
+   'Medidas', array['medida']),
+
+  ('2026090a-0000-4000-8000-000000000002', 'termino', 'Byte', 'B',
+   array['octeto'],
+   'Un grupo de 8 bits. Es la unidad con la que se mide el almacenamiento. La B mayúscula es byte y la b minúscula es bit: no significan lo mismo y se diferencian por ocho.',
+   'Un archivo de 1 KB ocupa unos 1.000 bytes, es decir unos 8.000 bits.',
+   'Medidas', array['medida']),
+
+  ('2026090a-0000-4000-8000-000000000003', 'termino', 'Gigabit', 'Gb',
+   array['gigabits'],
+   'Mil millones de bits. Se usa sobre todo para VELOCIDADES DE RED. Se escribe Gb, con b minúscula, para distinguirlo del gigabyte (GB).',
+   'Un enlace de 1 Gb por segundo mueve unos 125 megabytes por segundo, porque un byte son 8 bits.',
+   'Medidas', array['medida', 'red']),
+
+  ('2026090a-0000-4000-8000-000000000004', 'termino', 'Gigabyte', 'GB',
+   array['gigabytes'],
+   'Mil millones de bytes. Se usa sobre todo para ALMACENAMIENTO. Se escribe GB, con B mayúscula, para distinguirlo del gigabit (Gb): un gigabyte son ocho gigabits.',
+   'Un disco de 500 GB almacena 500 gigabytes de datos.',
+   'Medidas', array['medida', 'almacenamiento']),
+
+  ('2026090a-0000-4000-8000-000000000005', 'termino', 'Gigabits por segundo', 'Gbps',
+   array['Gb/s'],
+   'Velocidad de transmisión de mil millones de bits cada segundo. Es la unidad con la que se venden y se configuran los enlaces de red. Decir solo giga es ambiguo: no dice si se habla de gigabits, que son velocidad, o de gigabytes, que son almacenamiento.',
+   'Un puerto de switch de 1 Gbps mueve hasta mil millones de bits por segundo, unos 125 MB por segundo.',
+   'Medidas', array['medida', 'red']),
+
+  ('2026090a-0000-4000-8000-000000000006', 'termino', 'Switch', '',
+   array['conmutador'],
+   'Equipo que reparte la red DENTRO de una misma zona: conecta entre sí los equipos de un área y les pasa el tráfico. No decide cómo salir a otras redes; eso es trabajo del router.',
+   'Los computadores de una oficina se conectan a un switch, y ese switch se conecta al router.',
+   'Redes', array['red', 'equipo']),
+
+  ('2026090a-0000-4000-8000-000000000007', 'termino', 'Router', '',
+   array['enrutador'],
+   'Equipo que une DOS REDES DISTINTAS y decide por dónde sale el tráfico, por ejemplo de la red interna a internet. Un switch reparte dentro de una red; un router elige el camino entre redes. No son intercambiables.',
+   'Si un equipo llega al switch pero no sale a internet, el problema suele estar del router hacia afuera.',
+   'Redes', array['red', 'equipo']),
+
+  ('2026090a-0000-4000-8000-000000000008', 'termino', 'Punto de acceso', 'AP',
+   array['Access Point', 'AP', 'antena wifi'],
+   'Equipo que da red inalámbrica a los dispositivos de una zona y los conecta a la red cableada. No reparte internet por sí solo: depende del switch y del router que tiene detrás.',
+   'Si el wifi de una sala se cae pero la red cableada funciona, el punto de acceso de esa sala es el primer sospechoso.',
+   'Redes', array['red', 'wifi', 'equipo']),
+
+  ('2026090a-0000-4000-8000-000000000009', 'termino', 'Dirección IP', 'IP',
+   array['IP'],
+   'El número que identifica a un equipo dentro de una red. Dos equipos de la misma red no pueden tener la misma, y sin ella un equipo no puede comunicarse.',
+   'En Windows se consulta con el comando ipconfig.',
+   'Redes', array['red']),
+
+  ('2026090a-0000-4000-8000-00000000000a', 'termino', 'DNS', '',
+   array['Sistema de nombres de dominio', 'servidor de nombres'],
+   'El servicio que traduce nombres a direcciones IP. Sin él, un equipo puede tener red y aun así no abrir ninguna página por su nombre.',
+   'Si el equipo responde al ping por IP pero no por nombre, lo que falla es el DNS.',
+   'Redes', array['red']),
+
+  ('2026090a-0000-4000-8000-00000000000b', 'termino', 'DHCP', '',
+   array['asignación automática de IP'],
+   'El servicio que reparte direcciones IP automáticamente a los equipos que se conectan. Con DHCP no hay que escribir la IP a mano en cada equipo.',
+   'Un equipo que se queda con una dirección de emergencia, sin salida a la red, no recibió respuesta del DHCP.',
+   'Redes', array['red']),
+
+  ('2026090a-0000-4000-8000-00000000000c', 'termino', 'Backup', '',
+   array['copia de seguridad', 'respaldo'],
+   'Una copia guardada aparte que sirve para RECUPERAR información perdida o dañada. Conserva el estado de un momento concreto, así que borrar algo hoy no borra la copia de ayer.',
+   'Un backup semanal permite volver al estado del sábado aunque el lunes se borre un archivo por error.',
+   'Respaldo', array['respaldo']),
+
+  ('2026090a-0000-4000-8000-00000000000d', 'termino', 'Sincronización', '',
+   array['sync', 'sincronizar'],
+   'Mantener dos sitios con el MISMO contenido: lo que cambia en uno cambia en el otro. NO es una copia de seguridad: si se borra o se daña un archivo, la sincronización propaga ese borrado al otro lado.',
+   'Una carpeta sincronizada en la nube no protege de un borrado por error; un backup sí.',
+   'Respaldo', array['respaldo']),
+
+  ('2026090a-0000-4000-8000-00000000000e', 'termino', 'Escritorio remoto', '',
+   array['Remote Desktop', 'control remoto'],
+   'Trabajar en otro equipo desde el propio, viendo su pantalla y usando su teclado y su ratón a través de la red.',
+   'En Windows se abre con el comando mstsc, escribiendo el nombre o la dirección del equipo destino.',
+   'Acceso remoto', array['acceso remoto']),
+
+  ('2026090a-0000-4000-8000-00000000000f', 'termino', 'RDP', '',
+   array['Remote Desktop Protocol'],
+   'El protocolo que usa el Escritorio remoto de Windows para transmitir la pantalla y los comandos entre los dos equipos. Escritorio remoto es la herramienta; RDP es cómo habla por dentro.',
+   'Si el escritorio remoto no conecta, suele ser porque el equipo destino no acepta RDP o porque algo lo bloquea en la red.',
+   'Acceso remoto', array['acceso remoto', 'red']),
+
+  ('2026090a-0000-4000-8000-000000000010', 'termino', 'POS', '',
+   array['punto de venta', 'caja'],
+   'El punto de venta: el equipo con el que se cobra en caja, normalmente con su impresora de tickets y su lector.',
+   'Cuando un POS no imprime, conviene revisar primero su impresora y su conexión antes que el sistema de cobro.',
+   'Equipos', array['pos', 'equipo'])
+on conflict (id) do nothing;
+
+insert into public.referencias
+  (id, tipo, titulo, valor, plataforma, cuando_usar, resultado_esperado, requiere_admin, advertencia, categoria, etiquetas)
+values
+  ('2026090a-0000-4000-8000-000000000011', 'atajo', 'Abrir la ventana Ejecutar', 'Windows + R', 'Windows',
+   'Abre la ventana Ejecutar, donde se escriben comandos cortos sin tener que abrir una consola.',
+   'Aparece una ventana pequeña en la esquina inferior izquierda, con un campo de texto y el botón Aceptar.',
+   false, '', 'Windows', array['windows']),
+
+  ('2026090a-0000-4000-8000-000000000012', 'atajo', 'Ir a la barra de direcciones', 'Ctrl + L', 'Navegador web',
+   'Lleva el cursor a la barra de direcciones del navegador y selecciona lo que ya hubiera escrito.',
+   'La dirección actual queda seleccionada, lista para escribir otra encima sin borrarla a mano.',
+   false, '', 'Navegador', array['navegador']),
+
+  ('2026090a-0000-4000-8000-000000000013', 'atajo', 'Reabrir la última pestaña cerrada', 'Ctrl + Shift + T', 'Navegador web',
+   'Recupera la última pestaña que se cerró. Repetirlo sigue abriendo las anteriores, de la más reciente a la más antigua.',
+   'La pestaña vuelve a abrirse con su historial de navegación.',
+   false, '', 'Navegador', array['navegador']),
+
+  ('2026090a-0000-4000-8000-000000000014', 'comando', 'Abrir Escritorio remoto', 'mstsc', 'Windows',
+   'Para conectarse al escritorio de otro equipo de la red. Se escribe en la ventana Ejecutar o en el buscador de Windows.',
+   'Se abre la ventana Conexión a Escritorio remoto, que pide el nombre o la dirección del equipo destino.',
+   false, '', 'Acceso remoto', array['acceso remoto', 'windows']),
+
+  ('2026090a-0000-4000-8000-000000000015', 'comando', 'Ver la configuración de red del equipo', 'ipconfig', 'Windows (símbolo del sistema)',
+   'Para saber qué dirección IP, máscara y puerta de enlace tiene el equipo, o para comprobar si recibió configuración del DHCP.',
+   'La consola lista los adaptadores de red con su dirección IPv4, su máscara de subred y su puerta de enlace.',
+   false, '', 'Redes', array['red', 'windows']),
+
+  ('2026090a-0000-4000-8000-000000000016', 'comando', 'Comprobar si un equipo responde', 'ping [dirección]', 'Windows, macOS y Linux',
+   'Para comprobar si hay camino de red hasta un equipo. Se sustituye [dirección] por el nombre o la dirección IP del destino.',
+   'Aparecen varias líneas de respuesta con el tiempo en milisegundos, o el aviso de que se agotó el tiempo de espera.',
+   false,
+   'Recibir respuesta ayuda a comprobar la conectividad, pero NO garantiza que todos los servicios del equipo estén funcionando: un servidor puede responder al ping con el servicio caído.',
+   'Redes', array['red', 'diagnóstico'])
+on conflict (id) do nothing;
+
+-- Referencias relacionadas. Va en un update aparte y no dentro de los
+-- insert de arriba porque cada ficha apunta a otras que solo existen
+-- despues de insertar el bloque completo. Se aplica solo donde todavia
+-- no hay ninguna, para no pisar lo que el equipo haya vinculado a mano.
+update public.referencias set relacionadas = datos.relacionadas
+from (values
+  ('2026090a-0000-4000-8000-000000000001'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000002","titulo":"Byte"},{"id":"2026090a-0000-4000-8000-000000000003","titulo":"Gigabit"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000002'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000001","titulo":"Bit"},{"id":"2026090a-0000-4000-8000-000000000004","titulo":"Gigabyte"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000003'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000004","titulo":"Gigabyte"},{"id":"2026090a-0000-4000-8000-000000000005","titulo":"Gigabits por segundo"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000004'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000003","titulo":"Gigabit"},{"id":"2026090a-0000-4000-8000-000000000002","titulo":"Byte"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000005'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000003","titulo":"Gigabit"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000006'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000007","titulo":"Router"},{"id":"2026090a-0000-4000-8000-000000000008","titulo":"Punto de acceso"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000007'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000006","titulo":"Switch"},{"id":"2026090a-0000-4000-8000-000000000009","titulo":"Dirección IP"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000008'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000006","titulo":"Switch"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000009'::uuid, '[{"id":"2026090a-0000-4000-8000-00000000000a","titulo":"DNS"},{"id":"2026090a-0000-4000-8000-00000000000b","titulo":"DHCP"}]'::jsonb),
+  ('2026090a-0000-4000-8000-00000000000a'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000009","titulo":"Dirección IP"}]'::jsonb),
+  ('2026090a-0000-4000-8000-00000000000b'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000009","titulo":"Dirección IP"}]'::jsonb),
+  ('2026090a-0000-4000-8000-00000000000c'::uuid, '[{"id":"2026090a-0000-4000-8000-00000000000d","titulo":"Sincronización"}]'::jsonb),
+  ('2026090a-0000-4000-8000-00000000000d'::uuid, '[{"id":"2026090a-0000-4000-8000-00000000000c","titulo":"Backup"}]'::jsonb),
+  ('2026090a-0000-4000-8000-00000000000e'::uuid, '[{"id":"2026090a-0000-4000-8000-00000000000f","titulo":"RDP"},{"id":"2026090a-0000-4000-8000-000000000014","titulo":"Abrir Escritorio remoto"}]'::jsonb),
+  ('2026090a-0000-4000-8000-00000000000f'::uuid, '[{"id":"2026090a-0000-4000-8000-00000000000e","titulo":"Escritorio remoto"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000014'::uuid, '[{"id":"2026090a-0000-4000-8000-00000000000e","titulo":"Escritorio remoto"},{"id":"2026090a-0000-4000-8000-000000000011","titulo":"Abrir la ventana Ejecutar"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000015'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000009","titulo":"Dirección IP"},{"id":"2026090a-0000-4000-8000-00000000000b","titulo":"DHCP"}]'::jsonb),
+  ('2026090a-0000-4000-8000-000000000016'::uuid, '[{"id":"2026090a-0000-4000-8000-000000000009","titulo":"Dirección IP"},{"id":"2026090a-0000-4000-8000-00000000000a","titulo":"DNS"}]'::jsonb)
+) as datos(id, relacionadas)
+where public.referencias.id = datos.id
+  and public.referencias.relacionadas = '[]'::jsonb;
+
+-- ----------------------------------------------------------------
 -- 6. Tiempo real (Supabase Realtime)
 -- ----------------------------------------------------------------
 
