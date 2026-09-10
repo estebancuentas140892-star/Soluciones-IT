@@ -25,6 +25,9 @@ const TAREA_ACCION = {
   guiaArticuloId: null,
   guiaArticuloTitulo: '',
   intencionGuia: null,
+  referenciaId: null,
+  referenciaTitulo: '',
+  referenciaTipo: null,
 } as const
 // Un apoyo (aviso, imagen, archivo, guía) guardado ANTES de que
 // existiera `alcance` no dice a qué tarea pertenece, así que al
@@ -40,6 +43,9 @@ const SIN_TAREA = {
   guiaArticuloId: null,
   guiaArticuloTitulo: '',
   intencionGuia: null,
+  referenciaId: null,
+  referenciaTitulo: '',
+  referenciaTipo: null,
 } as const
 
 // Bloque 'tarea' de prueba con id fijo por texto (para asserts estables).
@@ -378,6 +384,9 @@ describe('normalizarProcedimiento', () => {
         guiaArticuloId: null,
         guiaArticuloTitulo: '',
         intencionGuia: null,
+        referenciaId: null,
+        referenciaTitulo: '',
+        referenciaTipo: null,
       },
       {
         id: 'b2',
@@ -394,6 +403,9 @@ describe('normalizarProcedimiento', () => {
         guiaArticuloId: null,
         guiaArticuloTitulo: '',
         intencionGuia: null,
+        referenciaId: null,
+        referenciaTitulo: '',
+        referenciaTipo: null,
       },
     ])
   })
@@ -1082,5 +1094,117 @@ describe('una guía escrita antes de estos cambios sobrevive intacta', () => {
     expect(tarea.id).not.toBe('t1')
     expect(aviso.tareaId).toBe(tarea.id)
     expect(aviso.alcance).toBe('tarea')
+  })
+})
+
+// BLOQUES DE REFERENCIA (modulo Referencia, 2026-09-10). Lo que estas
+// pruebas fijan es la regla que el encargo pide explicitamente: si la
+// referencia vinculada se elimino o todavia no sincronizo, el bloque se
+// CONSERVA con su copia del titulo y el vinculo no se rompe solo.
+describe('bloques de referencia', () => {
+  it('conserva el vínculo y la copia del título al normalizar', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'Conectarse al POS',
+          bloques: [
+            { id: 'b1', tipo: 'tarea', texto: 'Abrir Ejecutar', tipoTarea: 'accion' },
+            {
+              id: 'b2',
+              tipo: 'referencia',
+              referenciaId: 'ref-1',
+              referenciaTitulo: 'mstsc',
+              referenciaTipo: 'comando',
+              alcance: 'tarea',
+              tareaId: 'b1',
+            },
+          ],
+        },
+      ],
+    })
+
+    const referencia = resultado?.pasos[0].bloques[1]
+    expect(referencia?.tipo).toBe('referencia')
+    expect(referencia?.referenciaId).toBe('ref-1')
+    expect(referencia?.referenciaTitulo).toBe('mstsc')
+    expect(referencia?.referenciaTipo).toBe('comando')
+    expect(referencia?.alcance).toBe('tarea')
+    expect(referencia?.tareaId).toBe('b1')
+  })
+
+  it('descarta solo el bloque que nunca llegó a tener referencia', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [
+            { id: 'b1', tipo: 'referencia', referenciaId: '', referenciaTitulo: 'Sin destino' },
+            { id: 'b2', tipo: 'referencia', referenciaId: 'ref-2', referenciaTitulo: 'DNS' },
+          ],
+        },
+      ],
+    })
+
+    expect(resultado?.pasos[0].bloques.map((b) => b.id)).toEqual(['b2'])
+  })
+
+  it('cae a un tipo nulo cuando el guardado no dice qué clase de referencia era', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [{ id: 'b1', tipo: 'referencia', referenciaId: 'ref-1', referenciaTipo: 'otro' }],
+        },
+      ],
+    })
+
+    expect(resultado?.pasos[0].bloques[0].referenciaTipo).toBeNull()
+  })
+
+  it('sobrevive al guardado, con el título recortado', () => {
+    const paso = crearPaso()
+    const bloque: BloquePaso = {
+      ...tarea('base'),
+      id: 'b2',
+      tipo: 'referencia',
+      texto: '',
+      referenciaId: 'ref-1',
+      referenciaTitulo: '  Gigabyte  ',
+      referenciaTipo: 'termino',
+      tipoTarea: null,
+      alcance: 'paso',
+      tareaId: null,
+    }
+    const guardado = preparar([{ ...paso, titulo: 'Paso', bloques: [bloque] }])
+
+    expect(guardado?.pasos[0].bloques[0].referenciaId).toBe('ref-1')
+    expect(guardado?.pasos[0].bloques[0].referenciaTitulo).toBe('Gigabyte')
+  })
+
+  it('el título de referencia entra al índice de búsqueda', () => {
+    const texto = textoDeProcedimiento(
+      procedimientoCompleto({
+        pasos: [
+          {
+            ...crearPaso(),
+            titulo: 'Probar la red',
+            bloques: [
+              {
+                ...tarea('base'),
+                id: 'b1',
+                tipo: 'referencia',
+                texto: '',
+                tipoTarea: null,
+                referenciaId: 'ref-1',
+                referenciaTitulo: 'ping',
+                referenciaTipo: 'comando',
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    expect(texto).toContain('ping')
   })
 })

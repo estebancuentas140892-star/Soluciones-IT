@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Agregado (Referencia, tarea 1): modelo central de glosario, atajos y comandos
+
+**Área modificada:** modelo de datos y sincronización. **Modificados:** `src/lib/db.ts`, `src/lib/tablas.ts`, `src/lib/procedimiento.ts` (+ 5 pruebas), `src/lib/repositorio.ts`, `src/features/soluciones/apoyosTarea.ts`, `supabase/schema.sql`, `src/lib/db.upgrade.test.ts`, `src/pruebas/semillaLocal.ts`.
+**Motivo:** tarea 1 del encargo de Referencia del **10 de septiembre de 2026**. **CON esquema: hay que ejecutar `supabase/schema.sql` completo en el SQL Editor de Supabase (es idempotente).**
+
+- **Agregado** la entidad sincronizada **`referencias`**, con tres tipos en una sola tabla: `termino`, `atajo` y `comando`. Comparten ciclo de vida, permisos, sincronización y forma de vincularse a una tarea, así que separarlos en tres tablas habría triplicado el motor de sincronización para tres variantes del mismo objeto.
+- **Campos:** identificador, tipo, título, abreviatura, alias, definición corta, ejemplo, categoría, plataforma o programa, valor del atajo o comando, cuándo utilizarlo, resultado esperado, si requiere permisos de administrador, advertencia, referencias relacionadas, etiquetas, fecha de actualización, usuario que actualizó y eliminación lógica.
+- **Integrada con la arquitectura existente:** versión **17 de Dexie** (solo `.stores()` de la tabla nueva, no se toca ni se pierde nada de lo guardado), configuración en `configTablas` con sus valores por defecto en ambas direcciones, operaciones del repositorio con historial (`entidad_tipo` = `'referencia'`), eliminación lógica por `eliminado_en`, cola de cambios sin conexión, Supabase Realtime, cuatro índices (`updated_at`, `tipo`, `categoria`, `plataforma`) y política **RLS idéntica a la del resto del contenido general** (categorías, artículos, ubicaciones, personas).
+- **Sin secretos, por diseño.** La tabla la lee cualquier técnico autenticado, así que `valor` es el comando o la combinación de teclas tal como se teclea, nunca una contraseña, un token ni una dirección privada: eso sigue viviendo en `credenciales` y `campos_protegidos`, que son las dos tablas con cifrado y con RLS de bóveda.
+- **Agregado** el bloque de apoyo **`referencia`** para los procedimientos: `referenciaId`, copia del título como respaldo, tipo esperado de referencia, y `alcance`/`tareaId`, reutilizando la asociación por tarea que ya existía (no se inventa un anclaje nuevo).
+- **Un vínculo roto NO se descuelga solo.** Si la referencia se eliminó o todavía no sincronizó, el bloque se conserva entero con su copia del título y la vista lo dice; solo se descarta el que nunca llegó a tener destino. Borrarlo en silencio destruiría trabajo del autor por un estado que puede ser temporal.
+- **Corregido de paso** el upgrade de la versión 14 recorría `TABLAS_SINCRONIZADAS`, que crece con cada tabla nueva: al sumar `referencias`, `tx.table()` lanzaba "Table referencias not part of transaction" y **abortaba el upgrade entero, dejando la base cerrada**. Ahora recorre la lista congelada de las tablas que existían en esa versión, que además es lo correcto de fondo (una tabla creada después no puede traer los huecos que esa reparación corrige).
+- **Migración aplicada** al proyecto de Supabase con el mecanismo autorizado: no destructiva e idempotente (`create table if not exists`, `add column if not exists`, ampliación del check de `historial` para admitir `'referencia'`, política y trigger recreados, alta en la publicación de Realtime).
+
 ### Corregido (encargo 2026-09-10, tarea 5): dos controles para continuar y solo uno registraba el trabajo
 
 **Área modificada:** ejecución de Guías, modo de una tarea a la vez. **Modificados:** `src/features/soluciones/ModoFoco.tsx`, `DOCUMENTACION_FUNCIONAL.md`, `COMPONENTES_UI.md`.

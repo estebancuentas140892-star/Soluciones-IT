@@ -27,6 +27,12 @@ export interface Apoyos {
   imagenes: BloquePaso[]
   archivos: BloquePaso[]
   guias: BloquePaso[]
+  /**
+   * Entradas de Referencia vinculadas (terminos del glosario, atajos y
+   * comandos). Se conservan aunque su fila central no este disponible:
+   * la vista lo dice, no se descuelga el vinculo.
+   */
+  referencias: BloquePaso[]
   /** Adjuntos de la galeria del paso completo (solo en los del paso). */
   adjuntosPaso: PasoAdjunto[]
   vinculoProtegido: VinculoProtegido | null
@@ -37,6 +43,7 @@ const VACIOS: Apoyos = {
   imagenes: [],
   archivos: [],
   guias: [],
+  referencias: [],
   adjuntosPaso: [],
   vinculoProtegido: null,
 }
@@ -49,6 +56,7 @@ function repartir(bloques: BloquePaso[]): Omit<Apoyos, 'adjuntosPaso' | 'vinculo
     imagenes: bloques.filter((b) => b.tipo === 'imagen' && b.adjunto !== null),
     archivos: bloques.filter((b) => b.tipo === 'archivo' && b.adjunto !== null),
     guias: bloques.filter((b) => b.tipo === 'guia' && b.guiaArticuloId !== null),
+    referencias: bloques.filter((b) => b.tipo === 'referencia' && b.referenciaId !== null),
   }
 }
 
@@ -89,6 +97,7 @@ export function hayApoyos(apoyos: Apoyos): boolean {
     apoyos.imagenes.length > 0 ||
     apoyos.archivos.length > 0 ||
     apoyos.guias.length > 0 ||
+    apoyos.referencias.length > 0 ||
     apoyos.adjuntosPaso.length > 0 ||
     apoyos.vinculoProtegido !== null
   )
@@ -101,6 +110,7 @@ export function cuentaApoyos(apoyos: Apoyos): number {
     apoyos.imagenes.length +
     apoyos.archivos.length +
     apoyos.guias.length +
+    apoyos.referencias.length +
     apoyos.adjuntosPaso.length +
     (apoyos.vinculoProtegido ? 1 : 0)
   )

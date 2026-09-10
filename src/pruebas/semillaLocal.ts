@@ -75,6 +75,9 @@ function tarea(id: string, texto: string, tipoTarea: 'accion' | 'verificacion' |
     guiaArticuloId: null,
     guiaArticuloTitulo: '',
     intencionGuia: null,
+    referenciaId: null,
+    referenciaTitulo: '',
+    referenciaTipo: null,
   }
 }
 
@@ -104,6 +107,9 @@ function aviso(id: string, texto: string): BloquePaso {
     guiaArticuloId: null,
     guiaArticuloTitulo: '',
     intencionGuia: null,
+    referenciaId: null,
+    referenciaTitulo: '',
+    referenciaTipo: null,
   }
 }
 

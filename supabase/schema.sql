@@ -589,6 +589,87 @@ create index if not exists idx_articulos_origen_sugerencia on public.articulos (
 alter table public.articulos add column if not exists aplica_a jsonb;
 
 -- ----------------------------------------------------------------
+-- 1.z Modulo Referencia (2026-09-10): glosario, atajos y comandos.
+--
+--     Una sola tabla para los tres tipos ('termino', 'atajo',
+--     'comando'), porque comparten ciclo de vida, permisos,
+--     sincronizacion y forma de vincularse a una tarea de una guia.
+--     Separarlos en tres tablas habria triplicado el motor de
+--     sincronizacion para tres variantes del mismo objeto.
+--
+--     NO GUARDA SECRETOS. `valor` es el comando o la combinacion de
+--     teclas tal como se teclea, nunca una contrasena, un token ni una
+--     direccion privada: eso vive en credenciales o campos_protegidos,
+--     que son las dos tablas con cifrado y con RLS de boveda. Esta la
+--     lee cualquier tecnico autenticado, igual que categorias o
+--     articulos, asi que meter aqui un secreto lo entregaria a todo el
+--     equipo.
+--
+--     Los campos que no aplican a un tipo quedan en su valor vacio (un
+--     termino no tiene `valor` ni `plataforma`, un comando no tiene
+--     `abreviatura`), mismo criterio que articulos.sintomas/causas. Por
+--     eso todos son NOT NULL con DEFAULT salvo `titulo`, que es NOT
+--     NULL de verdad. Del lado de la app se declaran los mismos
+--     defaults en `porDefecto` de src/lib/tablas.ts (regla 17 de
+--     REGLAS.md), y NINGUNO va en `camposOpcionales`: el tecnico puede
+--     vaciar cualquiera desde el editor, asi que tienen que viajar
+--     siempre.
+--
+--     `alias` es lo que hace que buscar por la palabra que uno usa
+--     encuentre la ficha que escribio otro ("AP" y "Punto de acceso").
+--     `relacionadas` guarda id y titulo por entrada vinculada, mismo
+--     patron de copia de referencia que articulos.relacionados.
+-- ----------------------------------------------------------------
+
+create table if not exists public.referencias (
+  id uuid primary key default gen_random_uuid(),
+  tipo text not null default 'termino' check (tipo in ('termino', 'atajo', 'comando')),
+  titulo text not null,
+  abreviatura text not null default '',
+  alias text[] not null default '{}',
+  definicion text not null default '',
+  ejemplo text not null default '',
+  categoria text not null default '',
+  plataforma text not null default '',
+  valor text not null default '',
+  cuando_usar text not null default '',
+  resultado_esperado text not null default '',
+  requiere_admin boolean not null default false,
+  advertencia text not null default '',
+  relacionadas jsonb not null default '[]'::jsonb,
+  etiquetas text[] not null default '{}',
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+-- Por si la tabla ya existia de una version anterior del esquema.
+alter table public.referencias add column if not exists abreviatura text not null default '';
+alter table public.referencias add column if not exists alias text[] not null default '{}';
+alter table public.referencias add column if not exists ejemplo text not null default '';
+alter table public.referencias add column if not exists categoria text not null default '';
+alter table public.referencias add column if not exists plataforma text not null default '';
+alter table public.referencias add column if not exists valor text not null default '';
+alter table public.referencias add column if not exists cuando_usar text not null default '';
+alter table public.referencias add column if not exists resultado_esperado text not null default '';
+alter table public.referencias add column if not exists requiere_admin boolean not null default false;
+alter table public.referencias add column if not exists advertencia text not null default '';
+alter table public.referencias add column if not exists relacionadas jsonb not null default '[]'::jsonb;
+alter table public.referencias add column if not exists etiquetas text[] not null default '{}';
+
+create index if not exists idx_referencias_updated on public.referencias (updated_at);
+create index if not exists idx_referencias_tipo on public.referencias (tipo);
+create index if not exists idx_referencias_categoria on public.referencias (categoria);
+create index if not exists idx_referencias_plataforma on public.referencias (plataforma);
+
+-- El historial ahora tambien registra cambios de referencias. Su
+-- lectura NO se restringe a la boveda: una referencia es contenido
+-- general del equipo, como una categoria o un articulo.
+alter table public.historial drop constraint if exists historial_entidad_tipo_check;
+alter table public.historial add constraint historial_entidad_tipo_check
+  check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico', 'ubicacion', 'campo_protegido', 'persona', 'referencia'));
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 
@@ -663,6 +744,11 @@ create trigger trg_personas_modificacion
   before insert or update on public.personas
   for each row execute function public.registrar_modificacion();
 
+drop trigger if exists trg_referencias_modificacion on public.referencias;
+create trigger trg_referencias_modificacion
+  before insert or update on public.referencias
+  for each row execute function public.registrar_modificacion();
+
 -- Crea el perfil automaticamente cuando se da de alta un usuario
 -- en Authentication.
 create or replace function public.crear_perfil()
@@ -719,6 +805,7 @@ alter table public.accesos_boveda enable row level security;
 alter table public.ubicaciones enable row level security;
 alter table public.campos_protegidos enable row level security;
 alter table public.personas enable row level security;
+alter table public.referencias enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -821,6 +908,17 @@ create policy ubicaciones_acceso on public.ubicaciones
 -- criterio que ubicaciones (contenido general, no boveda).
 drop policy if exists personas_acceso on public.personas;
 create policy personas_acceso on public.personas
+  for all to authenticated using (true) with check (true);
+
+-- Referencia (glosario, atajos y comandos): acceso completo para
+-- cualquier tecnico autenticado, EXACTAMENTE la misma politica que el
+-- resto del contenido general (categorias, articulos, ubicaciones,
+-- personas). No lleva la RLS de boveda a proposito, y por eso la tabla
+-- no puede contener secretos: un comando de diagnostico es
+-- conocimiento del equipo; una contrasena va a credenciales o a los
+-- campos protegidos del equipo, que si exigen puede_ver_boveda().
+drop policy if exists referencias_acceso on public.referencias;
+create policy referencias_acceso on public.referencias
   for all to authenticated using (true) with check (true);
 
 -- Ejecuciones de diagnostico: se pueden leer y agregar, nunca editar
@@ -946,7 +1044,7 @@ declare
     'categorias', 'articulos', 'dispositivos', 'credenciales', 'adjuntos',
     'historial', 'conexiones', 'diagnosticos', 'ejecuciones_diagnostico',
     'accesos_boveda', 'perfiles', 'boveda_meta', 'ubicaciones',
-    'campos_protegidos', 'personas'
+    'campos_protegidos', 'personas', 'referencias'
   ];
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then

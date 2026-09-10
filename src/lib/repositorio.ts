@@ -358,6 +358,7 @@ const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, 
     ubicaciones: 'ubicacion',
     campos_protegidos: 'campo_protegido',
     personas: 'persona',
+    referencias: 'referencia',
   }
 
 // No incluye 'adjuntos': el destino de un adjunto se resuelve aparte

@@ -1,10 +1,5 @@
 import Dexie, { type EntityTable, type Table } from 'dexie'
-import {
-  normalizarEntidad,
-  TABLAS_SINCRONIZADAS,
-  type EntidadPorTabla,
-  type TablaSincronizada,
-} from './tablas'
+import { normalizarEntidad, type EntidadPorTabla, type TablaSincronizada } from './tablas'
 
 export interface Perfil {
   id: string
@@ -99,7 +94,13 @@ export type TonoAviso = 'info' | 'precaucion' | 'importante' | 'consejo' | 'dato
 // - 'guia': otra guia vinculada desde este punto. Antes el vinculo
 //   solo existia a nivel de PASO (`subArticuloId`), asi que no habia
 //   forma de decir "esta tarea concreta se hace con esta otra guia".
-export type TipoBloque = 'tarea' | 'aviso' | 'imagen' | 'archivo' | 'guia'
+// - 'referencia': una entrada de Referencia (un termino del glosario,
+//   un atajo de teclado o un comando) mostrada como apoyo de esta
+//   tarea. NO duplica el contenido: guarda el id de la fila de
+//   `referencias` mas una copia del titulo, igual que el resto de
+//   vinculos del sistema, asi que editar la ficha central actualiza
+//   todas las guias que la usan.
+export type TipoBloque = 'tarea' | 'aviso' | 'imagen' | 'archivo' | 'guia' | 'referencia'
 
 // A QUE PERTENECE UN APOYO (imagen, aviso, archivo o guia vinculada).
 //
@@ -204,6 +205,19 @@ export interface BloquePaso {
   guiaArticuloId: string | null
   guiaArticuloTitulo: string
   intencionGuia: IntencionGuia | null
+  // Entrada de Referencia vinculada desde este punto (bloques
+  // 'referencia'). Mismo patron de copia de referencia: el id es el
+  // dato canonico y `referenciaTitulo` el respaldo para mostrar el
+  // bloque sin conexion o mientras la fila central aun no sincronizo.
+  //
+  // `referenciaTipo` es lo que el AUTOR esperaba insertar (eligio
+  // "Termino del glosario", "Atajo de teclado" o "Comando"), no lo que
+  // diga hoy la fila: sirve para dibujar el hueco correcto cuando la
+  // referencia todavia no esta en este dispositivo. Si la fila existe,
+  // manda su tipo real.
+  referenciaId: string | null
+  referenciaTitulo: string
+  referenciaTipo: TipoReferencia | null
 }
 
 export interface PasoProcedimiento {
@@ -801,6 +815,8 @@ export type TipoEntidadHistorial =
   | 'campo_protegido'
   // Hallazgo T1: persona/responsable.
   | 'persona'
+  // Modulo Referencia: glosario, atajos y comandos.
+  | 'referencia'
 
 export interface HistorialEntrada {
   id: string
@@ -1017,6 +1033,104 @@ export interface Favorito {
   marcadoEn: string
 }
 
+// ----------------------------------------------------------------
+// Referencia: glosario, atajos y comandos
+// ----------------------------------------------------------------
+
+// Que clase de entrada es. Los tres comparten tabla porque comparten
+// ciclo de vida, permisos, sincronizacion y forma de vincularse a una
+// tarea; separarlos en tres tablas habria triplicado el motor de
+// sincronizacion para tres variantes del mismo objeto.
+//
+// - 'termino': una palabra del vocabulario del equipo (Byte, DNS, POS).
+// - 'atajo': una combinacion de teclas (Windows + R).
+// - 'comando': algo que se escribe en una consola o en Ejecutar (ping).
+export type TipoReferencia = 'termino' | 'atajo' | 'comando'
+
+// Vinculo entre dos entradas de Referencia ("terminos relacionados"),
+// con el mismo patron de copia de referencia que
+// `ArticuloRelacionado`: id real mas una copia del titulo para poder
+// mostrarlo aunque la otra fila aun no haya sincronizado.
+export interface ReferenciaRelacionada {
+  id: string
+  titulo: string
+}
+
+// UNA ENTRADA DE REFERENCIA.
+//
+// Una sola entidad para los tres tipos, con los campos que no aplican
+// en su valor vacio (un termino no tiene `valor` ni `plataforma`; un
+// comando no tiene `abreviatura`). Es el mismo criterio que ya usa
+// `Articulo`, que guarda sintomas y causas aunque solo tengan sentido
+// en un problema frecuente: el objeto tiene siempre la misma forma
+// venga de donde venga, y las pantallas deciden que mostrar.
+//
+// NUNCA guarda secretos. `valor` es el comando o la combinacion de
+// teclas tal como se teclea, no una credencial: las contrasenas, los
+// tokens y las direcciones privadas viven en la Boveda o en los campos
+// protegidos de un equipo, con su cifrado y su RLS. Esta tabla la lee
+// cualquier tecnico autenticado.
+export interface Referencia {
+  id: string
+  tipo: TipoReferencia
+  titulo: string
+  // Forma corta ("B" para Byte, "Gbps" para Gigabits por segundo), o ''
+  // si no tiene. Se busca por ella igual que por el titulo.
+  abreviatura: string
+  // Otros nombres con los que el equipo llama a lo mismo ("Access
+  // Point", "AP", "punto de acceso"). Es lo que hace que buscar por la
+  // palabra que uno usa encuentre la ficha que otro escribio.
+  alias: string[]
+  // Definicion corta, practica y en una o dos frases. Es lo que se lee
+  // en la hoja que se abre desde una tarea, sin salir de la guia.
+  definicion: string
+  ejemplo: string
+  categoria: string
+  // Programa, sistema o herramienta donde aplica ("Windows",
+  // "Chrome"). Vacio en un termino, obligatorio en la practica para un
+  // atajo o un comando (la revision de consistencia lo senala).
+  plataforma: string
+  // El atajo o el comando tal cual se teclea. Vacio en un termino.
+  valor: string
+  cuandoUsar: string
+  resultadoEsperado: string
+  // Si ejecutarlo exige permisos de administrador. Se muestra ANTES de
+  // que el tecnico lo copie, no despues de que falle.
+  requiereAdmin: boolean
+  advertencia: string
+  relacionadas: ReferenciaRelacionada[]
+  etiquetas: string[]
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
+// LAS TABLAS SINCRONIZADAS QUE EXISTIAN EN LA VERSION 14.
+//
+// Se escriben aqui congeladas en vez de recorrer `TABLAS_SINCRONIZADAS`
+// porque esa lista CRECE: la version 17 le suma `referencias`. Una
+// tabla que todavia no existe en la transaccion del upgrade hace que
+// `tx.table()` lance "Table X not part of transaction", lo que aborta
+// el upgrade entero y deja la base cerrada, sin ninguna pantalla
+// utilizable. Congelarla ademas es lo correcto de fondo: una tabla
+// creada despues no puede traer los huecos que esta reparacion corrige,
+// porque nace con el contrato de hoy.
+const TABLAS_DE_LA_VERSION_14 = [
+  'categorias',
+  'articulos',
+  'dispositivos',
+  'credenciales',
+  'adjuntos',
+  'historial',
+  'conexiones',
+  'diagnosticos',
+  'ejecuciones_diagnostico',
+  'accesos_boveda',
+  'ubicaciones',
+  'campos_protegidos',
+  'personas',
+] as const satisfies readonly TablaSincronizada[]
+
 class SolucionesItDatabase extends Dexie {
   perfiles!: EntityTable<Perfil, 'id'>
   categorias!: EntityTable<Categoria, 'id'>
@@ -1041,6 +1155,7 @@ class SolucionesItDatabase extends Dexie {
   // el MISMO nombre para la tabla local y la remota (snake_case en
   // Postgres), igual que el resto de tablas sincronizadas.
   ejecuciones_diagnostico!: EntityTable<EjecucionDiagnostico, 'id'>
+  referencias!: EntityTable<Referencia, 'id'>
   progresoDiagnostico!: EntityTable<ProgresoDiagnostico, 'diagnosticoId'>
   // Mismo criterio de nombre que ejecuciones_diagnostico: igual en
   // local y remoto.
@@ -1171,7 +1286,7 @@ class SolucionesItDatabase extends Dexie {
     // rellena huecos, jamas pisa un valor existente ni toca los campos
     // cifrados.
     this.version(14).upgrade(async (tx) => {
-      for (const tabla of TABLAS_SINCRONIZADAS) {
+      for (const tabla of TABLAS_DE_LA_VERSION_14) {
         await tx
           .table(tabla)
           .toCollection()
@@ -1197,6 +1312,21 @@ class SolucionesItDatabase extends Dexie {
     // vuelve a abrirse nunca.
     this.version(16).stores({
       borradoresArticulo: 'articuloId, actualizadoEn',
+    })
+
+    // Modulo Referencia (2026-09-10): glosario, atajos y comandos como
+    // entidad sincronizada. Version NUEVA y solo con `.stores()` de la
+    // tabla nueva: Dexie conserva el esquema de las anteriores, asi que
+    // ninguna fila ya guardada se toca ni se pierde.
+    //
+    // Se indexa `tipo` para separar el glosario de los atajos y
+    // comandos sin recorrer la tabla entera, `categoria` y `plataforma`
+    // para los dos filtros de la pantalla, y `updatedAt` como el resto
+    // de tablas sincronizadas. Los demas campos viven dentro del objeto
+    // (Dexie solo necesita los indices), asi que sumar uno mas no
+    // exigira otra version.
+    this.version(17).stores({
+      referencias: 'id, tipo, categoria, plataforma, updatedAt',
     })
   }
 }

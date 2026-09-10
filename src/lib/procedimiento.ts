@@ -7,6 +7,7 @@ import type {
   PasoProcedimiento,
   Procedimiento,
   TipoBloque,
+  TipoReferencia,
   TipoTarea,
   TipoVinculoProtegido,
   TonoAviso,
@@ -50,6 +51,9 @@ export const CAMPOS_BLOQUE_VACIOS = {
   guiaArticuloId: null,
   guiaArticuloTitulo: '',
   intencionGuia: null,
+  referenciaId: null,
+  referenciaTitulo: '',
+  referenciaTipo: null,
 } as const
 
 export function crearBloqueTarea(tipoTarea: TipoTarea = 'accion'): BloquePaso {
@@ -92,6 +96,23 @@ export function crearBloqueGuia(tareaId: string | null = null): BloquePaso {
     id: crypto.randomUUID(),
     tipo: 'guia',
     intencionGuia: 'necesario',
+    ...alcanceNuevo(tareaId),
+  }
+}
+
+// Un bloque que vincula una entrada de Referencia (un termino del
+// glosario, un atajo o un comando) a esta tarea. `referenciaTipo`
+// guarda lo que el autor eligio insertar, para poder dibujar el hueco
+// correcto mientras la fila central no este en este dispositivo.
+export function crearBloqueReferencia(
+  referenciaTipo: TipoReferencia,
+  tareaId: string | null = null,
+): BloquePaso {
+  return {
+    ...CAMPOS_BLOQUE_VACIOS,
+    id: crypto.randomUUID(),
+    tipo: 'referencia',
+    referenciaTipo,
     ...alcanceNuevo(tareaId),
   }
 }
@@ -266,7 +287,8 @@ function normalizarBloques(origen: Record<string, unknown>): BloquePaso[] {
   return []
 }
 
-const TIPOS_BLOQUE: TipoBloque[] = ['tarea', 'aviso', 'imagen', 'archivo', 'guia']
+const TIPOS_BLOQUE: TipoBloque[] = ['tarea', 'aviso', 'imagen', 'archivo', 'guia', 'referencia']
+const TIPOS_REFERENCIA: TipoReferencia[] = ['termino', 'atajo', 'comando']
 const TONOS_AVISO_VALIDOS: TonoAviso[] = ['info', 'precaucion', 'importante', 'consejo', 'dato']
 const TIPOS_TAREA_VALIDOS: TipoTarea[] = ['accion', 'verificacion', 'decision']
 const ALCANCES_VALIDOS: AlcanceApoyo[] = ['tarea', 'paso', 'sin-asignar']
@@ -316,6 +338,34 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     const adjunto = normalizarUnAdjunto(origen.adjunto)
     if (!adjunto) return null
     return { ...CAMPOS_BLOQUE_VACIOS, id, tipo, texto: textoBloque, adjunto, ...normalizarAlcance(origen) }
+  }
+
+  // UN BLOQUE DE REFERENCIA SOBREVIVE A SU REFERENCIA. Solo se
+  // descarta si nunca llego a tener destino (`referenciaId` vacio): con
+  // id, el bloque se conserva SIEMPRE, aunque la fila central se haya
+  // eliminado o aun no haya sincronizado. Ahi la vista muestra que la
+  // referencia no esta disponible y conserva la copia del titulo; el
+  // vinculo NO se rompe solo, porque borrarlo en silencio destruiria
+  // trabajo del autor por un estado que puede ser temporal.
+  if (tipo === 'referencia') {
+    const referenciaId =
+      typeof origen.referenciaId === 'string' && origen.referenciaId !== ''
+        ? origen.referenciaId
+        : null
+    if (!referenciaId) return null
+    const referenciaTipo = (TIPOS_REFERENCIA as string[]).includes(origen.referenciaTipo as string)
+      ? (origen.referenciaTipo as TipoReferencia)
+      : null
+    return {
+      ...CAMPOS_BLOQUE_VACIOS,
+      id,
+      tipo,
+      texto: textoBloque,
+      referenciaId,
+      referenciaTitulo: texto(origen.referenciaTitulo),
+      referenciaTipo,
+      ...normalizarAlcance(origen),
+    }
   }
 
   if (tipo === 'guia') {
@@ -522,6 +572,11 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
     // Titulo de las guias vinculadas desde una tarea: mismo criterio
     // que los vinculos del paso, no son informacion protegida.
     partes.push(...paso.bloques.map((b) => b.guiaArticuloTitulo))
+    // Copia del titulo de las referencias vinculadas (un termino, un
+    // atajo o un comando): buscar "mstsc" encuentra tambien la guia que
+    // lo usa. Solo la copia de referencia, nunca el contenido central,
+    // que vive en su propia fila y se indexa por separado.
+    partes.push(...paso.bloques.map((b) => b.referenciaTitulo))
     // Nombre de los archivos anclados a una tarea: buscar por el
     // nombre del manual encuentra la guia que lo usa, igual que ya
     // pasaba con los adjuntos del paso.
@@ -672,6 +727,7 @@ function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
       texto: bloque.texto.trim(),
       decisionArticuloTitulo: bloque.decisionArticuloId ? bloque.decisionArticuloTitulo.trim() : '',
       guiaArticuloTitulo: bloque.guiaArticuloId ? bloque.guiaArticuloTitulo.trim() : '',
+      referenciaTitulo: bloque.referenciaId ? bloque.referenciaTitulo.trim() : '',
       vinculoProtegido: bloque.vinculoProtegido
         ? { ...bloque.vinculoProtegido, titulo: bloque.vinculoProtegido.titulo.trim() }
         : null,
@@ -684,6 +740,9 @@ function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
       // aunque no diga a que tarea pertenece.
       if (bloque.tipo === 'imagen' || bloque.tipo === 'archivo') return bloque.adjunto !== null
       if (bloque.tipo === 'guia') return bloque.guiaArticuloId !== null
+      // Una referencia sin destino nunca llego a ser nada; una CON
+      // destino se conserva siempre, aunque la fila central ya no este.
+      if (bloque.tipo === 'referencia') return bloque.referenciaId !== null
       return bloque.texto !== ''
     })
   // Al guardar se vuelven a revisar las referencias: si el autor borro

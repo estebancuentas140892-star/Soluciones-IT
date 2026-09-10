@@ -16,6 +16,7 @@ import type {
   EjecucionDiagnostico,
   HistorialEntrada,
   Persona,
+  Referencia,
   Ubicacion,
 } from './db'
 
@@ -37,6 +38,7 @@ export const TABLAS_SINCRONIZADAS = [
   'ubicaciones',
   'campos_protegidos',
   'personas',
+  'referencias',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
@@ -63,6 +65,7 @@ export interface EntidadPorTabla {
   ubicaciones: Ubicacion
   campos_protegidos: CampoProtegido
   personas: Persona
+  referencias: Referencia
 }
 
 interface ConfigTabla {
@@ -403,6 +406,56 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
     soloInsercion: false,
     campos: { ...camposComunes, nombre: 'nombre', notas: 'notas' },
     porDefecto: { notas: '' },
+  },
+  // Referencia (2026-09-10): glosario, atajos y comandos. Va al final
+  // de la lista de tablas sincronizadas, mismo criterio que ubicaciones,
+  // campos_protegidos y personas: si el esquema aun no se aplico en el
+  // servidor, su fallo no impide descargar las demas.
+  //
+  // TODOS los campos opcionales llevan valor por defecto declarado (''
+  // , [], false) y ninguno va en `camposOpcionales`: el tecnico puede
+  // vaciar cualquiera de ellos desde el editor (quitar una advertencia,
+  // borrar la plataforma), y `camposOpcionales` asume justo lo
+  // contrario (un valor que, una vez puesto, nunca vuelve a null). El
+  // unico sin default es `titulo`, que es NOT NULL de verdad: si falta
+  // es un error y debe verse.
+  referencias: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: {
+      ...camposComunes,
+      tipo: 'tipo',
+      titulo: 'titulo',
+      abreviatura: 'abreviatura',
+      alias: 'alias',
+      definicion: 'definicion',
+      ejemplo: 'ejemplo',
+      categoria: 'categoria',
+      plataforma: 'plataforma',
+      valor: 'valor',
+      cuandoUsar: 'cuando_usar',
+      resultadoEsperado: 'resultado_esperado',
+      requiereAdmin: 'requiere_admin',
+      advertencia: 'advertencia',
+      relacionadas: 'relacionadas',
+      etiquetas: 'etiquetas',
+    },
+    porDefecto: {
+      tipo: 'termino',
+      abreviatura: '',
+      alias: [],
+      definicion: '',
+      ejemplo: '',
+      categoria: '',
+      plataforma: '',
+      valor: '',
+      cuandoUsar: '',
+      resultadoEsperado: '',
+      requiereAdmin: false,
+      advertencia: '',
+      relacionadas: [],
+      etiquetas: [],
+    },
   },
 }
 

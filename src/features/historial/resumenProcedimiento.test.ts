@@ -18,6 +18,9 @@ function tarea(texto: string): BloquePaso {
     guiaArticuloId: null,
     guiaArticuloTitulo: '',
     intencionGuia: null,
+    referenciaId: null,
+    referenciaTitulo: '',
+    referenciaTipo: null,
   }
 }
 
@@ -37,6 +40,9 @@ function aviso(texto: string, tono: BloquePaso['tono'] = 'info'): BloquePaso {
     guiaArticuloId: null,
     guiaArticuloTitulo: '',
     intencionGuia: null,
+    referenciaId: null,
+    referenciaTitulo: '',
+    referenciaTipo: null,
   }
 }
 
@@ -342,6 +348,9 @@ describe('resumenProcedimiento', () => {
           guiaArticuloId: null,
           guiaArticuloTitulo: '',
           intencionGuia: null,
+          referenciaId: null,
+          referenciaTitulo: '',
+          referenciaTipo: null,
         },
       ],
     })
