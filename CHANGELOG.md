@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Corregido (encargo 2026-09-10, tarea 4): la guía vinculada dejaba de ser un vínculo y se volvía una página larga
+
+**Área modificada:** ejecución de Guías, vínculos. **Nuevos:** `src/features/soluciones/estadoVinculo.ts` (+ 6 pruebas), `src/features/soluciones/TarjetaGuiaVinculada.tsx`. **Modificados:** `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/FilaVinculo.tsx`, `src/features/soluciones/useProcedimientoEjecucion.ts`, `DOCUMENTACION_FUNCIONAL.md`, `COMPONENTES_UI.md`.
+**Motivo:** tarea 4 del encargo del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Causa.** Abrir un vínculo **desplegaba el procedimiento entero debajo de la tarea principal**: dos guías en la misma pantalla, con dos zonas de acciones y una página que no acababa. Y la fila del vínculo **truncaba el nombre** para hacerle sitio a un **anillo de avance de 22 px** que no dice ni cuántos pasos hay ni en cuál va, así que se perdía el dato que decide (cuál es la guía) por dibujar el que no se puede leer.
+- **Cambiado** el vínculo se presenta como **tarjeta compacta**: papel (**"Guía necesaria"** / **"Consulta opcional"**), **nombre completo sin truncar**, estado escrito (**"Sin iniciar"**, **"Paso X de Y"**, **"Completada"**) y una sola acción (**"Abrir guía"**, **"Continuar guía"**, **"Ver guía completada"**). Vale igual para el vínculo del paso (`subArticuloId`) y para los bloques `guia` de una tarea.
+- **Cambiado** al abrirla, la guía vinculada **sustituye el contenido de la tarea**, con la cabecera compacta **"Estás realizando «X» para continuar con «Y»"** y **"Volver a la guía principal"**. Mientras dure, **las acciones de la tarea principal desaparecen**: una sola zona de acciones por pantalla. El destino del "No" de una decisión se abre igual.
+- **Sin "Marcar hecha" para el vínculo:** una guía necesaria solo queda satisfecha al completarla de verdad. **Al completarla** se vuelve automáticamente al punto exacto y se muestra la siguiente tarea pendiente; **al salir sin terminarla**, el vínculo sigue pendiente.
+- **Agregado** al cambiar de tarea, al completar una y al volver de un vínculo se **restablece el desplazamiento del contenedor** y el foco va al **encabezado del contenido activo**. La ejecución no desplaza la ventana sino un contenedor del chasis, que conservaba el desplazamiento anterior: la tarea siguiente aparecía empezada por la mitad.
+- **Corregido** la barra inferior pasa a ser **opaca y con borde**: el degradado dejaba el texto a medio leer detrás de su mitad transparente. Al ser `sticky` reserva además su propio hueco en el flujo.
+- **Retirado** `guiaDelPasoEnLinea` del hook de ejecución: existía para arbitrar entre dos zonas de acciones cuando la guía vinculada compartía pantalla con la tarea, y ya nunca la comparte.
+- **Comprobado en navegador** a 375 px con el banco de pruebas local, en los tres casos: vínculo del paso, guía necesaria de una tarea y destino del "no" de una decisión. Completar el vínculo devuelve al punto exacto y avanza a la tarea siguiente; salir sin terminarlo lo deja pendiente con su motivo escrito. La vista de paso entero sigue mostrando el nombre completo y la frase de avance, ya sin anillo.
+
 ### Agregado (encargo 2026-09-10, tarea 3): todas las imágenes de una guía se pueden ampliar, y lo dicen
 
 **Área modificada:** imágenes de Guías. **Modificados:** `src/components/VisorImagen.tsx` (reescrito, más `ImagenAmpliable`), `src/components/iconos.tsx` (+2 iconos), `src/components/Adjuntos.tsx`, `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/ArticuloPage.tsx`, `src/features/soluciones/VistaPreviaArticulo.tsx`, `COMPONENTES_UI.md`, `DOCUMENTACION_FUNCIONAL.md`.

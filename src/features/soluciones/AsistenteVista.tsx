@@ -40,7 +40,7 @@ import {
   ZONA_ANIDADA,
 } from './vinculoAnidado'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
-import { cierreDelPaso, guiaPendienteDelPaso } from './cierrePaso'
+import { cierreDelPaso, guiaPendienteDelPaso, guiaTerminada } from './cierrePaso'
 import {
   claveDeVinculo,
   useAvanceProgreso,
@@ -49,6 +49,8 @@ import {
   useEnVistaPrevia,
 } from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
+import { estadoVinculo, kickerVinculo } from './estadoVinculo'
+import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
 import { ModoFoco } from './ModoFoco'
@@ -63,6 +65,12 @@ interface Props {
   // solucion de un paso de nivel 0 (misma regla que ProcedimientoVista:
   // mas alla no se ejecuta aqui, solo se enlaza).
   nivel: number
+  // Esta ejecucion SUSTITUYE el contenido de una tarea (una guia
+  // vinculada abierta desde el modo foco), en vez de ir sangrada dentro
+  // de ella. Cambia el encuadre del pie: aqui llega al borde de la
+  // pantalla y reserva el area segura del telefono, porque es la unica
+  // barra de acciones que hay (encargo del 2026-09-10, tarea 4).
+  sustituye?: boolean
   onCompletado?: () => void
 }
 
@@ -86,7 +94,7 @@ function formatoCronometro(segundos: number): string {
 // explicita y resumen final. Reutiliza el mismo avance de
 // useProcedimientoEjecucion que la vista de lista, asi que entrar y
 // salir nunca pierde ni duplica progreso.
-export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado }: Props) {
+export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = false, onCompletado }: Props) {
   // Donde vive el avance de ESTE documento (tarea 2 del encargo): la
   // fila del articulo en el nivel 0, la entrada del vinculo dentro de
   // la ejecucion en curso en un nivel anidado.
@@ -221,7 +229,6 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
-    guiaDelPasoEnLinea,
     guiasPendientesDeTarea,
     alternarTarea,
     alternarVerificacion,
@@ -518,11 +525,13 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           instruccionesHechas={instruccionesHechas}
           subSatisfecho={subSatisfecho}
           guiaDelPasoDisponible={guiaDelPasoDisponible(paso)}
-          // La guia que se ejecuta aqui dentro trae su propia zona de
-          // acciones: el pie del paso principal se retira mientras siga
-          // abierta, para no tener dos acciones dominantes.
-          guiaDelPasoEnLinea={guiaDelPasoEnLinea(paso)}
-          anidado={nivel >= 1}
+          anidado={nivel >= 1 && !sustituye}
+          tituloGuiaPrincipal={articulo?.titulo ?? ''}
+          // Al volver del vínculo se revisa si el paso ya se puede
+          // cerrar. No marca ninguna tarea: una guía necesaria solo
+          // queda satisfecha al completarla de verdad, y marcarla sigue
+          // siendo un gesto aparte del técnico.
+          onVinculoCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
           avisosConfirmados={avisosConfirmados}
           onConfirmarAviso={confirmarAviso}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
@@ -545,21 +554,31 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
               await alternarTarea(indiceActual, paso, tareaId)
             })()
           }}
-          // LA GUÍA VINCULADA SE EJECUTA AQUÍ DENTRO (H05). Es el mismo
-          // componente que ya usaba la vista completa, así que las dos
-          // vistas ejecutan exactamente lo mismo (criterio A08) y el
-          // regreso al origen es automático: el técnico nunca sale de
-          // esta pantalla, así que no hay a dónde volver.
-          renderGuia={({ guiaId, tituloReferencia, obligatoria, kicker, abierta, alCompletar }) => (
-            <SubProcedimientoEnAsistente
+          // LA TARJETA DEL VÍNCULO (encargo del 2026-09-10, tarea 4):
+          // papel, nombre completo, en qué va y una acción. Abrirla no
+          // despliega nada aquí: quien sustituye la pantalla es el
+          // propio `ModoFoco`.
+          renderTarjetaGuia={({ guiaId, tituloReferencia, obligatoria, kicker, onAbrir }) => (
+            <VinculoEnFoco
               guiaId={guiaId}
               tituloReferencia={tituloReferencia}
               nivel={nivel}
               obligatoria={obligatoria}
               kicker={kicker}
-              abierta={abierta}
               rutaOrigen={rutaOrigen}
               etiquetaOrigen={articulo?.titulo ?? 'la guía'}
+              onAbrir={onAbrir}
+            />
+          )}
+          // LA GUÍA VINCULADA SE EJECUTA AQUÍ DENTRO (H05). Es el mismo
+          // componente que ya usaba la vista completa, así que las dos
+          // vistas ejecutan exactamente lo mismo (criterio A08) y el
+          // regreso al origen es automático: el técnico nunca sale de
+          // esta pantalla, así que no hay a dónde volver.
+          renderGuia={({ guiaId, alCompletar }) => (
+            <EjecucionVinculada
+              guiaId={guiaId}
+              nivel={nivel}
               onCompletado={alCompletar ?? (() => void intentarCompletarPaso(indiceActual, paso))}
             />
           )}
@@ -996,9 +1015,160 @@ function EvidenciaPaso({
   )
 }
 
-// Subprocedimiento vinculado, en modo asistente: en vez de la lista
-// completa (ProcedimientoVista), aqui se anida otro AsistenteVista, un
-// paso a la vez. Al completarse avisa al paso que lo contiene.
+// LA TARJETA DE UN VÍNCULO DENTRO DEL MODO FOCO (encargo del
+// 2026-09-10, tarea 4).
+//
+// Lee el artículo y su avance en vivo, y decide qué se puede hacer con
+// él: ejecutarlo aquí (tarjeta con "Abrir guía" / "Continuar guía" /
+// "Ver guía completada"), solo consultarlo aparte (más de un nivel de
+// anidamiento, o una guía sin pasos) o avisar de que el vínculo está
+// roto. Lo que YA NO hace es desplegar el procedimiento debajo: eso lo
+// decide `ModoFoco`, que sustituye el contenido de la tarea.
+//
+// Sin anillo de avance: en su lugar va el estado escrito ("Sin
+// iniciar", "Paso 3 de 5", "Completada"), que es lo que un anillo de 22
+// px no llega a decir, y el nombre de la guía deja de recortarse para
+// hacerle sitio.
+function VinculoEnFoco({
+  guiaId,
+  tituloReferencia,
+  nivel,
+  obligatoria,
+  kicker: kickerPropio,
+  rutaOrigen,
+  etiquetaOrigen,
+  onAbrir,
+}: {
+  guiaId: string
+  tituloReferencia: string
+  nivel: number
+  obligatoria: boolean
+  kicker?: string
+  rutaOrigen?: string
+  etiquetaOrigen?: string
+  onAbrir: () => void
+}) {
+  const articulo = useLiveQuery(async () => (await db.articulos.get(guiaId)) ?? null, [guiaId])
+  // El avance del vinculo es el de ESTA ejecucion, no el que esa guia
+  // lleve por su cuenta ni el que dejo otra guia que la reutiliza.
+  const progreso = useAvanceProgreso(useClaveVinculo(guiaId))
+  const enVistaPrevia = useEnVistaPrevia()
+  const procedimiento = useMemo(
+    () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
+    [articulo],
+  )
+
+  if (articulo === undefined) return null
+
+  const kicker = kickerPropio ?? kickerVinculo(obligatoria)
+
+  // VÍNCULO ROTO CON SALIDA ÚTIL (criterio A12).
+  if (articulo === null || articulo.eliminadoEn) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2.5">
+        <p className="text-[13px] leading-snug text-noct-precaucion">
+          La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
+          dispositivo. Puede haberse eliminado, o no haber llegado todavía por sincronización.
+        </p>
+        <p className="text-[12.5px] leading-snug text-noct-neutral-300">
+          {obligatoria
+            ? 'No impide cerrar el paso: sigue con el resto y avisa a quien mantiene la guía para que la reponga.'
+            : 'Era material de consulta, así que puedes continuar sin ella.'}
+        </p>
+      </div>
+    )
+  }
+
+  const total = procedimiento?.pasos.length ?? 0
+  const hechos = procedimiento
+    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
+    : 0
+
+  // Mas alla del primer nivel, o sin pasos que ejecutar (K1), la guia
+  // solo se puede CONSULTAR: terminarla en su ficha escribe en su
+  // avance propio y no cierra este paso, asi que la fila no lo promete.
+  if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado') {
+    if (enVistaPrevia) {
+      return (
+        <VinculoInerte
+          Icono={LinkSimple}
+          kicker={kicker}
+          titulo={articulo.titulo}
+          nota="Durante la prueba no se sale del editor"
+        />
+      )
+    }
+    return (
+      <EnlaceVinculo
+        Icono={LinkSimple}
+        kicker={`${kicker} · consultar aparte`}
+        titulo={articulo.titulo}
+        nota={obligatoria ? NOTA_CONSULTA : NOTA_REFERENCIA}
+        to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+        state={rutaOrigen ? conOrigen(rutaOrigen, etiquetaOrigen ?? 'la guía anterior') : undefined}
+      />
+    )
+  }
+
+  // "Completada" con la MISMA regla que usa la ejecucion para dar el
+  // vinculo por cumplido: pasos cerrados Y comprobaciones finales.
+  const completada = guiaTerminada(procedimiento, progreso?.pasosHechos, progreso?.verificacionHecha)
+
+  return (
+    <TarjetaGuiaVinculada
+      kicker={kicker}
+      titulo={articulo.titulo}
+      estado={estadoVinculo(hechos, total, completada)}
+      onAbrir={onAbrir}
+    />
+  )
+}
+
+// La guía vinculada EJECUTÁNDOSE en lugar del contenido de la tarea.
+// Es el mismo `AsistenteVista` de siempre, un nivel más adentro, así
+// que conserva su avance dentro de esta ejecución y el contexto de la
+// guía principal.
+function EjecucionVinculada({
+  guiaId,
+  nivel,
+  onCompletado,
+}: {
+  guiaId: string
+  nivel: number
+  onCompletado: () => void
+}) {
+  const articulo = useLiveQuery(async () => (await db.articulos.get(guiaId)) ?? null, [guiaId])
+  const procedimiento = useMemo(
+    () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
+    [articulo],
+  )
+
+  if (articulo === undefined) return null
+
+  if (articulo === null || articulo.eliminadoEn || procedimiento === null) {
+    return (
+      <p className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2.5 text-[13px] leading-snug text-noct-precaucion">
+        Esta guía ya no está disponible en este dispositivo. Vuelve a la guía principal y sigue con el
+        resto del paso.
+      </p>
+    )
+  }
+
+  return (
+    <AsistenteVista
+      articuloId={articulo.id}
+      procedimiento={procedimiento}
+      nivel={nivel + 1}
+      sustituye
+      onCompletado={onCompletado}
+    />
+  )
+}
+
+// Subprocedimiento vinculado, en la vista de PASO ENTERO: en vez de la
+// lista completa (ProcedimientoVista), aqui se anida otro
+// AsistenteVista, un paso a la vez. Al completarse avisa al paso que lo
+// contiene.
 //
 // El marco de acento se retira (M-012): era el mismo marco del dato
 // protegido, así que el color decía "hay algo vinculado" y no qué. Lo
@@ -1082,9 +1252,10 @@ function SubProcedimientoEnAsistente({
   const hechos = procedimiento
     ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
     : 0
-  const anillo =
-    total > 0 ? <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" /> : undefined
-  const kicker = kickerPropio ?? (obligatoria ? 'Otra guía' : 'Consulta opcional')
+  // SIN ANILLO DE AVANCE (encargo del 2026-09-10, tarea 4): un anillo
+  // de 22 px no dice ni cuantos pasos hay ni en cual va, y encima
+  // obligaba a recortar el nombre. Lo dice la nota, con palabras.
+  const kicker = kickerPropio ?? kickerVinculo(obligatoria)
 
   // Misma regla de un solo nivel que ProcedimientoVista: mas alla se
   // enlaza, sin ejecutar aqui, y evita cualquier ciclo de vinculos. Y
@@ -1108,7 +1279,6 @@ function SubProcedimientoEnAsistente({
           kicker={kicker}
           titulo={articulo.titulo}
           nota="Durante la prueba no se sale del editor"
-          extra={anillo}
         />
       )
     }
@@ -1118,7 +1288,6 @@ function SubProcedimientoEnAsistente({
         kicker={`${kicker} · consultar aparte`}
         titulo={articulo.titulo}
         nota={obligatoria ? NOTA_CONSULTA : NOTA_REFERENCIA}
-        extra={anillo}
         to={ruta}
         state={rutaOrigen ? conOrigen(rutaOrigen, etiquetaOrigen ?? 'la guía anterior') : undefined}
       />
@@ -1134,7 +1303,6 @@ function SubProcedimientoEnAsistente({
         kicker={kicker}
         titulo={articulo.titulo}
         nota={fraseAvanceDocumento(hechos, total, 'guía')}
-        extra={anillo}
         abierto={abierto}
         onAlternar={() => setCerrado((valor) => !valor)}
       />

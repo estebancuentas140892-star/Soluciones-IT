@@ -20,7 +20,6 @@ import {
 } from '../../lib/progresoPasos'
 import { guiaTerminada } from './cierrePaso'
 import { useClaveProgreso } from './contextoEjecucion'
-import { modoVinculo } from './vinculoAnidado'
 import {
   guiasObligatoriasDeTarea,
   guiasObligatoriasPendientes,
@@ -294,19 +293,10 @@ export function useProcedimientoEjecucion({
     await avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
   }
 
-  /**
-   * ¿La guia vinculada del paso se EJECUTA aqui dentro, en vez de solo
-   * enlazarse? Lo necesita el modo de una tarea a la vez para saber que
-   * la guia trae su propia zona de acciones y no dibujar dos.
-   */
-  function guiaDelPasoEnLinea(paso: PasoProcedimiento): boolean {
-    if (!paso.subArticuloId || nivel >= 1) return false
-    if (subArticulos === undefined) return false
-    const idx = subIds.indexOf(paso.subArticuloId)
-    const articulo = idx >= 0 ? subArticulos[idx] : undefined
-    if (!articulo || articulo.eliminadoEn) return false
-    return modoVinculo(nivel, normalizarProcedimiento(articulo.procedimiento)) === 'expandible'
-  }
+  // `guiaDelPasoEnLinea` se retiro el 2026-09-10 (encargo, tarea 4):
+  // existia para saber si la guia vinculada traia su propia zona de
+  // acciones mientras compartia pantalla con la tarea. Ya no la
+  // comparte: la sustituye, asi que nunca hay dos zonas que arbitrar.
 
   // ¿La guia vinculada del paso esta EN ESTE DISPOSITIVO? Distinta
   // pregunta que `subSatisfechoReactivo`, que responde true tambien
@@ -331,7 +321,6 @@ export function useProcedimientoEjecucion({
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
-    guiaDelPasoEnLinea,
     guiasPendientesDeTarea,
     desmarcarPaso,
     alternarTarea,

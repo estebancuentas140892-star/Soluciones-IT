@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { BloquePaso, PasoProcedimiento } from '../../lib/db'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import {
@@ -67,12 +67,6 @@ interface Props {
   // empezaba directamente en la tarea siguiente y el técnico nunca leía
   // el motivo (criterio A12).
   guiaDelPasoDisponible?: boolean
-  // ¿Esa guía se EJECUTA aquí dentro (no solo se enlaza)? Cuando sí, la
-  // guía trae su propia zona de acciones dominante y el pie de este
-  // paso se retira mientras siga abierta: si no, la pantalla mostraba a
-  // la vez el pie de la guía vinculada y el cartel grande «Esta tarea
-  // se cumple al terminar la guía de arriba».
-  guiaDelPasoEnLinea?: boolean
   // Este foco es el de una guía vinculada, dibujada DENTRO del paso de
   // otra. Solo cambia el encuadre: el pie deja de sangrar hacia los
   // lados, porque ahí ya no llega al borde de la pantalla sino al de la
@@ -112,18 +106,34 @@ interface Props {
   // lectura en vivo; aqui deciden si la tarea se puede marcar y que se
   // escribe debajo del boton (encargo del 2026-09-09, tarea 1).
   guiasPendientes: (tareaId: string) => BloquePaso[]
-  // Pinta una guía vinculada para ejecutarla aquí dentro. Lo aporta
-  // `AsistenteVista`, que es quien sabe anidar otra ejecución y quien
-  // conserva el punto de origen.
+  // Nombre de la guía que se está ejecutando, para la cabecera compacta
+  // del vínculo ("Estás realizando X para continuar con Y").
+  tituloGuiaPrincipal?: string
+  // La guía vinculada terminó de verdad. Cerrar el vínculo lo hace esta
+  // vista; lo que hay que revisar arriba (si con eso el paso ya se
+  // puede cerrar) lo decide `AsistenteVista`, que es quien escribe.
+  onVinculoCompletado: () => void
+  // La TARJETA compacta de una guía vinculada: su papel, su nombre
+  // entero, en qué va y una acción. La aporta `AsistenteVista`, que es
+  // quien lee el artículo y su avance en vivo. `onAbrir` es de esta
+  // vista: abrir sustituye el contenido de la tarea, no despliega nada
+  // debajo (encargo del 2026-09-10, tarea 4).
+  renderTarjetaGuia: (opciones: {
+    guiaId: string
+    tituloReferencia: string
+    obligatoria: boolean
+    // Rótulo de la tarjeta, cuando el que se deduce de `obligatoria`
+    // ("Guía necesaria" / "Consulta opcional") no describe el papel.
+    kicker?: string
+    onAbrir: () => void
+  }) => ReactNode
+  // Ejecuta una guía vinculada EN LUGAR del contenido de la tarea. Lo
+  // aporta `AsistenteVista`, que es quien sabe anidar otra ejecución y
+  // quien conserva el punto de origen.
   renderGuia: (opciones: {
     guiaId: string
     tituloReferencia: string
     obligatoria: boolean
-    // Rótulo de la fila, cuando el que se deduce de `obligatoria`
-    // ("Otra guía" / "Consulta opcional") no describe el papel.
-    kicker?: string
-    // Llega desplegada, sin esperar a que el técnico la abra.
-    abierta?: boolean
     // Qué hacer cuando la guía anidada termina. Sin esto, el asistente
     // intenta cerrar el paso, que es lo que corresponde a un requisito
     // del paso. Una DECISIÓN respondida con "No" necesita lo otro: al
@@ -132,13 +142,41 @@ interface Props {
   }) => ReactNode
 }
 
+// EL CONTENIDO NUEVO EMPIEZA ARRIBA (encargo del 2026-09-10, tarea 4).
+//
+// La ejecución no scrollea la ventana: el contenido vive dentro de un
+// contenedor del chasis, y ese contenedor conservaba el desplazamiento
+// de la tarea anterior, así que la tarea siguiente aparecía empezada
+// por la mitad. Se sube el primer ancestro que de verdad puede
+// desplazarse, y también la ventana por si el chasis cambia.
+function subirElContenedor(desde: Element | null) {
+  for (let nodo = desde?.parentElement ?? null; nodo; nodo = nodo.parentElement) {
+    const desbordamiento = getComputedStyle(nodo).overflowY
+    const puedeDesplazarse =
+      (desbordamiento === 'auto' || desbordamiento === 'scroll') &&
+      nodo.scrollHeight > nodo.clientHeight
+    if (puedeDesplazarse) {
+      nodo.scrollTop = 0
+      return
+    }
+  }
+  window.scrollTo({ top: 0 })
+}
+
+// La guía vinculada que ocupa ahora mismo el sitio de la tarea.
+interface VinculoAbierto {
+  guiaId: string
+  titulo: string
+  obligatoria: boolean
+  alCompletar?: () => void
+}
+
 export function ModoFoco({
   paso,
   tituloPaso,
   instruccionesHechas,
   subSatisfecho,
   guiaDelPasoDisponible = true,
-  guiaDelPasoEnLinea = false,
   anidado = false,
   avisosConfirmados,
   onConfirmarAviso,
@@ -149,6 +187,9 @@ export function ModoFoco({
   onFalla,
   onDecisionResuelta,
   guiasPendientes,
+  tituloGuiaPrincipal = '',
+  onVinculoCompletado,
+  renderTarjetaGuia,
   renderGuia,
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso)
@@ -199,6 +240,16 @@ export function ModoFoco({
   // y no un booleano porque un paso puede tener más de una decisión, y
   // un booleano las abriría todas a la vez.
   const [decisionAbierta, setDecisionAbierta] = useState<string | null>(null)
+  // LA GUÍA VINCULADA QUE OCUPA AHORA EL SITIO DE LA TAREA (encargo del
+  // 2026-09-10, tarea 4). Antes se desplegaba DEBAJO: dos guías en una
+  // pantalla, con dos zonas de acciones y una página que no acababa.
+  // Ahora sustituye el contenido de la tarea mientras dure, y salir
+  // devuelve al mismo punto con el vínculo como estaba.
+  const [vinculoAbierto, setVinculoAbierto] = useState<VinculoAbierto | null>(null)
+  // El encabezado del contenido activo: es donde va el foco al cambiar
+  // de tarea, al completar una y al volver de un vínculo, para que el
+  // lector de pantalla anuncie lo que toca y la vista arranque arriba.
+  const encabezado = useRef<HTMLHeadingElement>(null)
 
   // TERMINAR LA GUÍA VINCULADA ADELANTA SOLO, como marcar una tarea.
   //
@@ -247,7 +298,21 @@ export function ModoFoco({
   if (tareaMostrada.current !== indice) {
     tareaMostrada.current = indice
     if (panel !== null) setPanel(null)
+    // El vínculo pertenece a la tarea que lo pide: cambiar de tarea lo
+    // cierra, igual que cierra su panel de apoyos.
+    if (vinculoAbierto !== null) setVinculoAbierto(null)
+    if (decisionAbierta !== null) setDecisionAbierta(null)
   }
+
+  // ARRIBA DEL TODO Y CON EL FOCO EN EL ENCABEZADO, cada vez que cambia
+  // lo que está en pantalla: al pasar de tarea, al completar una y al
+  // volver de un vínculo (encargo del 2026-09-10, tarea 4). Sin esto se
+  // llegaba a la tarea siguiente por la mitad, con el desplazamiento
+  // que había dejado la anterior.
+  useEffect(() => {
+    subirElContenedor(encabezado.current)
+    encabezado.current?.focus({ preventScroll: true })
+  }, [indice, vinculoAbierto])
 
   const tarea = tareas[indice]
   if (!tarea) return null
@@ -276,12 +341,12 @@ export function ModoFoco({
   // editor sí deja configurar y la vista completa sí ofrece, no existía
   // aquí, así que marcarla equivalía a responder "sí" en silencio.
   const esDecision = tarea.tipoTarea === 'decision'
-  // UNA SOLA ZONA DE ACCIONES DOMINANTE. Mientras la guía vinculada se
-  // ejecuta aquí dentro, la suya es la que manda: este pie desaparece
-  // entero (cartel, flechas y «Falla»), y vuelve en cuanto la guía
-  // queda cumplida y el recorrido pasa a la tarea siguiente.
-  const pieCedidoAlVinculo =
-    tarea.clase === 'guia-del-paso' && guiaDelPasoEnLinea && guiaDelPasoDisponible && !hecha
+  // UNA SOLA ZONA DE ACCIONES DOMINANTE. Mientras la guía vinculada
+  // ocupa la pantalla, la suya es la que manda: este pie desaparece
+  // entero (cartel, flechas y «Falla»), y vuelve al salir del vínculo o
+  // al terminarlo. Es el "oculta las acciones de la tarea principal"
+  // del encargo del 2026-09-10.
+  const pieCedidoAlVinculo = vinculoAbierto !== null
   const destinoDelNo = esDecision ? tarea.decisionGuiaId : null
   const noAbierto = esDecision && decisionAbierta === tarea.id
   // La guía vinculada de ESTA tarea. En la entrada 'guia-del-paso' es el
@@ -341,6 +406,19 @@ export function ModoFoco({
     if (indice + 1 < tareas.length) setIndiceTarea(indice + 1)
   }
 
+  // TERMINAR EL VÍNCULO DEVUELVE AL PUNTO EXACTO. Se cierra la guía y
+  // se sigue con el recorrido donde estaba: si la tarea ya quedó
+  // cumplida con eso, en la siguiente pendiente; si no (una consulta),
+  // en la misma tarea. El efecto de más arriba se encarga del
+  // desplazamiento y del foco.
+  function cerrarVinculo() {
+    setVinculoAbierto(null)
+    // Salir del destino de un "no" deshace la respuesta: quien vuelve
+    // sin terminarlo todavía no ha resuelto nada, así que la pregunta
+    // vuelve a ofrecer sus dos salidas.
+    setDecisionAbierta(null)
+  }
+
   // El rótulo de la acción dominante nombra lo que se cierra. Una
   // comprobación no se "hace": se comprueba (H08). Y una guía vinculada
   // no se marca a mano: se cumple al terminarla (A10). Una decisión ya
@@ -368,9 +446,86 @@ export function ModoFoco({
   // Responder que no abre el destino si lo hay. Sin destino, la
   // decisión se registra igual y el flujo sigue: es la misma salida que
   // ofrece la vista completa, y no dejar salida sería obligar a mentir.
+  //
+  // El destino del "no" es el TRABAJO que toca ahora, así que ocupa la
+  // pantalla como cualquier otra guía vinculada, en vez de desplegarse
+  // debajo de la pregunta.
   function responderNo() {
-    if (destinoDelNo) setDecisionAbierta(tarea.id)
-    else marcar()
+    if (!destinoDelNo) {
+      marcar()
+      return
+    }
+    const tareaId = tarea.id
+    setDecisionAbierta(tareaId)
+    setVinculoAbierto({
+      guiaId: destinoDelNo,
+      titulo: tarea.decisionGuiaTitulo || 'la salida',
+      obligatoria: false,
+      alCompletar: () => {
+        setDecisionAbierta(null)
+        setVinculoAbierto(null)
+        onDecisionResuelta(tareaId, destinoDelNo)
+      },
+    })
+  }
+
+  // LA GUÍA VINCULADA SUSTITUYE EL CONTENIDO DE LA TAREA (encargo del
+  // 2026-09-10, tarea 4). Ni una página larga con las dos guías, ni una
+  // pantalla nueva que saque al técnico de la ejecución: el mismo sitio,
+  // con una cabecera compacta que dice qué está haciendo y para qué, y
+  // una salida que devuelve al punto exacto con el vínculo como estaba.
+  if (vinculoAbierto) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <div className="flex flex-none flex-col gap-2.5 border-b border-noct-divider pb-3 pt-1">
+          <h2
+            ref={encabezado}
+            tabIndex={-1}
+            className="text-[15px] leading-snug text-pretty text-noct-neutral-200 outline-none"
+          >
+            Estás realizando <span className="font-semibold text-noct-text">«{vinculoAbierto.titulo}»</span>
+            {tituloGuiaPrincipal ? (
+              <>
+                {' '}para continuar con{' '}
+                <span className="font-semibold text-noct-text">«{tituloGuiaPrincipal}»</span>
+              </>
+            ) : (
+              ' para continuar con esta guía'
+            )}
+          </h2>
+          {/* SALIR SIN TERMINAR NO CUMPLE NADA: se vuelve a la guía
+              principal con el vínculo todavía pendiente. */}
+          <button
+            type="button"
+            onClick={cerrarVinculo}
+            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg border border-noct-divider px-3 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.07]"
+          >
+            <CaretLeft size={15} className="shrink-0" aria-hidden />
+            Volver a la guía principal
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col pt-3">
+          {renderGuia({
+            guiaId: vinculoAbierto.guiaId,
+            tituloReferencia: vinculoAbierto.titulo,
+            obligatoria: vinculoAbierto.obligatoria,
+            // TERMINARLA DEVUELVE AL PUNTO EXACTO. Se cierra el
+            // vinculo y se avisa arriba, que es quien revisa si con eso
+            // el paso ya se puede cerrar. El recorrido se queda donde
+            // estaba: si la tarea sigue pendiente (la guia era su
+            // requisito, pero marcarla es otro gesto) vuelve a ella; si
+            // ya quedo cumplida, el efecto de mas arriba pasa a la
+            // siguiente pendiente. En los dos casos, desde arriba.
+            alCompletar:
+              vinculoAbierto.alCompletar ??
+              (() => {
+                cerrarVinculo()
+                onVinculoCompletado()
+              }),
+          })}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -392,7 +547,7 @@ export function ModoFoco({
           // EL AVISO OCUPA LA PANTALLA ENTERA, sin la tarea siguiente
           // debajo: es el turno del recorrido en el que solo hay que
           // leer.
-          <AvisoDelRecorrido aviso={tarea.aviso} confirmado={hecha} />
+          <AvisoDelRecorrido aviso={tarea.aviso} confirmado={hecha} refEncabezado={encabezado} />
         ) : (
           <>
         {!tarea.esPasoEntero && (
@@ -446,7 +601,9 @@ export function ModoFoco({
             leer (hallazgo H06: hasta ahora la única forma de llegar a
             la guía vinculada era un camino oculto). */}
         <h2
-          className={`text-[30px] font-medium leading-[1.25] tracking-[-.015em] text-pretty ${
+          ref={encabezado}
+          tabIndex={-1}
+          className={`text-[30px] font-medium leading-[1.25] tracking-[-.015em] text-pretty outline-none ${
             hecha ? 'text-noct-neutral-400' : 'text-noct-text'
           }`}
         >
@@ -478,58 +635,35 @@ export function ModoFoco({
             2026-09-10, tarea 1). Un aviso que comparte pantalla con la
             instrucción y con un botón de 76 px no advierte. */}
 
-        {/* LA GUÍA VINCULADA, AQUÍ Y AHORA (H05). Antes esto no
-            existía: el paso decía que había que terminarla y no había
-            forma de abrirla sin salir a la vista completa. */}
+        {/* LA GUÍA VINCULADA, COMO TARJETA COMPACTA (encargo del
+            2026-09-10, tarea 4). Antes se desplegaba entera debajo de
+            la tarea: dos guías en una pantalla y una página que no
+            acababa. Ahora la tarjeta dice qué papel juega, el nombre
+            completo y en qué va; abrirla sustituye esta pantalla. */}
         {guiasDeLaTarea.map((g) => (
-          <div key={g.clave} className="rounded-xl border border-noct-divider bg-noct-surface/60 p-3">
-            {renderGuia({ guiaId: g.id, tituloReferencia: g.titulo, obligatoria: true })}
+          <div key={g.clave}>
+            {renderTarjetaGuia({
+              guiaId: g.id,
+              tituloReferencia: g.titulo,
+              obligatoria: true,
+              onAbrir: () =>
+                setVinculoAbierto({ guiaId: g.id, titulo: g.titulo, obligatoria: true }),
+            })}
           </div>
         ))}
 
-        {/* EL DESTINO DEL "NO", ejecutado aquí mismo (secciones 5 y 6
-            del encargo del 2026-09-09). Es el mismo trato que la vista
-            completa le da a una decisión: responder que no abre la guía
-            de salida, y terminarla responde la decisión y devuelve al
-            técnico a este punto exacto. Con el destino abierto, la
-            respuesta ya está tomada, así que la barra de abajo deja de
-            ofrecer las dos opciones. */}
-        {noAbierto && destinoDelNo && (
-          <div className="rounded-xl border border-noct-precaucion/45 bg-noct-precaucion/[.08] p-3">
-            <p className="mb-2 text-[12.5px] font-semibold uppercase tracking-[.06em] text-noct-precaucion">
-              Respondiste que no
-            </p>
-            {renderGuia({
-              guiaId: destinoDelNo,
-              tituloReferencia: tarea.decisionGuiaTitulo,
-              obligatoria: false,
-              // El destino de un "no" no es material de consulta: es el
-              // trabajo que toca ahora, así que llega ABIERTO y con el
-              // rótulo de la vista completa ("Si esto falla"), no con el
-              // de una guía que se ojea si hace falta.
-              kicker: 'Si esto falla',
-              abierta: true,
-              alCompletar: () => {
-                setDecisionAbierta(null)
-                onDecisionResuelta(tarea.id, destinoDelNo)
-              },
-            })}
-            <button
-              type="button"
-              onClick={() => setDecisionAbierta(null)}
-              className="mt-2 inline-flex min-h-11 items-center text-[13px] font-medium text-noct-neutral-300 hover:text-noct-text"
-            >
-              Volver a la pregunta
-            </button>
-          </div>
-        )}
-
         {guiasDeApoyo.map((g) => (
-          <div key={g.id} className="rounded-xl border border-noct-divider bg-noct-surface/60 p-3">
-            {renderGuia({
+          <div key={g.id}>
+            {renderTarjetaGuia({
               guiaId: g.guiaArticuloId ?? '',
               tituloReferencia: g.guiaArticuloTitulo,
               obligatoria: false,
+              onAbrir: () =>
+                setVinculoAbierto({
+                  guiaId: g.guiaArticuloId ?? '',
+                  titulo: g.guiaArticuloTitulo,
+                  obligatoria: false,
+                }),
             })}
           </div>
         ))}
@@ -566,7 +700,12 @@ export function ModoFoco({
           pantalla, así que no hay que apuntar. */}
       {!pieCedidoAlVinculo && (
       <div
-        className={`sticky bottom-0 z-10 mt-auto flex flex-none flex-col gap-2.5 bg-gradient-to-t from-noct-bg from-55% to-transparent pt-3 ${
+        // OPACA Y CON BORDE, no un degradado (encargo del 2026-09-10,
+        // tarea 4). El degradado dejaba el texto a medio leer detras de
+        // su mitad transparente: una instruccion medio escondida es una
+        // instruccion perdida. Es `sticky`, asi que ademas reserva su
+        // propio hueco en el flujo y no tapa el final del contenido.
+        className={`sticky bottom-0 z-10 mt-auto flex flex-none flex-col gap-2.5 border-t border-noct-divider bg-noct-bg pt-3 ${
           anidado ? 'pb-3' : '-mx-4 px-4 pb-[calc(12px+env(safe-area-inset-bottom))]'
         }`}
       >
@@ -816,7 +955,15 @@ function etiquetaAviso(aviso: BloquePaso): string {
 // "Importante"), la barra lateral y el fondo. Dice además de quién es,
 // porque un aviso del paso no se lee igual que uno de la tarea que
 // viene ahora.
-function AvisoDelRecorrido({ aviso, confirmado }: { aviso: BloquePaso; confirmado: boolean }) {
+function AvisoDelRecorrido({
+  aviso,
+  confirmado,
+  refEncabezado,
+}: {
+  aviso: BloquePaso
+  confirmado: boolean
+  refEncabezado: RefObject<HTMLHeadingElement | null>
+}) {
   const tono = tonoInfo(aviso.tono)
   const delPaso = aviso.alcance !== 'tarea'
   return (
@@ -844,10 +991,14 @@ function AvisoDelRecorrido({ aviso, confirmado }: { aviso: BloquePaso; confirmad
         className={`flex items-start gap-3.5 rounded-r-[10px] border-l-[3px] px-4 py-4 ${tono.claseBarra} ${tono.claseFondo}`}
       >
         <tono.Icono size={26} className={`mt-0.5 shrink-0 ${tono.claseIcono}`} aria-hidden />
-        <p className="min-w-0 text-[19px] leading-[1.4] text-pretty">
+        <h2
+          ref={refEncabezado}
+          tabIndex={-1}
+          className="min-w-0 text-[19px] font-normal leading-[1.4] text-pretty outline-none"
+        >
           <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span>{' '}
           {aviso.texto || 'Aviso sin texto'}
-        </p>
+        </h2>
       </div>
     </div>
   )

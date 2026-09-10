@@ -598,8 +598,10 @@ function SubProcedimientoEnPaso({
   const hechos = procedimiento
     ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
     : 0
-  const anillo =
-    total > 0 ? <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" /> : undefined
+  // SIN ANILLO DE AVANCE (encargo del 2026-09-10, tarea 4): lo que va
+  // junto al nombre es el estado escrito, que es lo que un anillo de 22
+  // px no llega a decir. El nombre deja de recortarse para hacerle
+  // sitio.
 
   // Mas alla del primer nivel de anidamiento solo se enlaza: evita la
   // expansion infinita y corta cualquier ciclo (A vincula a B y B a A).
@@ -616,7 +618,6 @@ function SubProcedimientoEnPaso({
           kicker="Otra guía"
           titulo={articulo.titulo}
           nota="Durante la prueba no se sale del editor"
-          extra={anillo}
         />
       )
     }
@@ -626,7 +627,6 @@ function SubProcedimientoEnPaso({
         kicker="Otra guía · consultar aparte"
         titulo={articulo.titulo}
         nota={NOTA_CONSULTA}
-        extra={anillo}
         to={ruta}
       />
     )
@@ -641,7 +641,6 @@ function SubProcedimientoEnPaso({
         kicker="Otra guía"
         titulo={articulo.titulo}
         nota={fraseAvanceDocumento(hechos, total, 'guía')}
-        extra={anillo}
         abierto={abierto}
         onAlternar={() => setCerrado((valor) => !valor)}
       />

@@ -156,7 +156,11 @@ function CuerpoFila({ kicker, titulo, nota }: Pick<Comun, 'kicker' | 'titulo' | 
       {kicker && (
         <span className="block text-[11px] leading-tight text-noct-neutral-500">{kicker}</span>
       )}
-      <span className="block truncate text-[13.5px] font-medium text-noct-text">{titulo}</span>
+      {/* EL NOMBRE ENTERO (encargo del 2026-09-10, tarea 4). Iba
+          truncado para hacerle sitio al anillo de avance, asi que en
+          360 px el dato que decide si el tecnico reconoce la guia era
+          justo el que se perdia. La fila crece de alto si hace falta. */}
+      <span className="block text-[13.5px] font-medium leading-snug text-pretty text-noct-text">{titulo}</span>
       {nota && <span className="mt-px block text-[11.5px] leading-tight text-noct-neutral-500">{nota}</span>}
     </span>
   )
