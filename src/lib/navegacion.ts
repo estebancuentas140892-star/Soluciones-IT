@@ -60,6 +60,9 @@ const RAICES_NO_TAB: Record<string, Padre> = {
   // ya tenía este par, detectado en la auditoría de la tarea 179-182).
   '/ubicaciones': { to: '/mas', etiqueta: 'Más' },
   '/personas': { to: '/mas', etiqueta: 'Más' },
+  // Referencia nace con su puerta en "Más" y en el grupo Herramientas
+  // del sidebar, igual que Ubicaciones y Personas.
+  '/referencia': { to: '/mas', etiqueta: 'Más' },
   '/cuenta': { to: '/', etiqueta: 'Inicio' },
 }
 
@@ -111,6 +114,12 @@ export function padreDe(pathname: string): Padre | null {
     case 'personas': {
       if (b === 'editar') return { to: `/personas/${a}`, etiqueta: 'Volver' }
       return { to: '/personas', etiqueta: 'Personas' }
+    }
+    case 'referencia': {
+      // Editar una ficha sube a la ficha; crear y la ficha misma suben
+      // a la lista (regla 13 de REGLAS.md).
+      if (b === 'editar') return { to: `/referencia/${a}`, etiqueta: 'Volver' }
+      return { to: '/referencia', etiqueta: 'Referencia' }
     }
     case 'boveda': {
       if (b === 'editar') return { to: `/boveda/${a}`, etiqueta: 'Volver' }

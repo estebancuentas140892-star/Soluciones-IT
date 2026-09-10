@@ -16,6 +16,7 @@ import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
 import { useMemoriaScroll } from './memoriaScroll'
 import { RAICES_DE_PESTANA } from '../lib/navegacion'
 import {
+  BookBookmark,
   BookOpen,
   BookOpenFill,
   CaretRight,
@@ -458,6 +459,7 @@ export function Chasis(props: Props) {
           <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Herramientas</TituloSeccion>
           <nav className="flex flex-col gap-0.5">
             <EnlaceGrupo to="/diagnostico" label="Diagnóstico" Icono={TreeStructure} />
+            <EnlaceGrupo to="/referencia" label="Referencia" Icono={BookBookmark} />
             <EnlaceGrupo to="/escaner" label="Escanear" Icono={QrCode} />
           </nav>
         </div>

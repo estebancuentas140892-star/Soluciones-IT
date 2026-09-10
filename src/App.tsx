@@ -121,6 +121,15 @@ const PersonaForm = lazy(() =>
 const MigracionPersonas = lazy(() =>
   import('./features/personas/MigracionPersonas').then((m) => ({ default: m.MigracionPersonas })),
 )
+const ReferenciaPage = lazy(() =>
+  import('./features/referencia/ReferenciaPage').then((m) => ({ default: m.ReferenciaPage })),
+)
+const ReferenciaFicha = lazy(() =>
+  import('./features/referencia/ReferenciaFicha').then((m) => ({ default: m.ReferenciaFicha })),
+)
+const ReferenciaForm = lazy(() =>
+  import('./features/referencia/ReferenciaForm').then((m) => ({ default: m.ReferenciaForm })),
+)
 const RedPage = lazy(() => import('./features/red/RedPage').then((m) => ({ default: m.RedPage })))
 const PantallaMas = lazy(() =>
   import('./features/mas/PantallaMas').then((m) => ({ default: m.PantallaMas })),
@@ -517,6 +526,45 @@ function App() {
                 <Route path=":credencialId/editar" element={<CredencialForm />} />
                 <Route path=":credencialId" element={<CredencialPage />} />
               </Route>
+              {/* Referencia (encargo del 2026-09-10): el glosario del
+                  equipo y sus atajos y comandos. La lista es nivel
+                  `documento` (un registro que se consulta y se recorre,
+                  como Ubicaciones o Personas), la ficha también, y el
+                  editor es nivel `tarea`. La ruta estática `nueva` va
+                  ANTES de `:referenciaId` para que el router no la lea
+                  como el id de una ficha. */}
+              <Route
+                path="referencia"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ReferenciaPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="referencia/nueva"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ReferenciaForm />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="referencia/:referenciaId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ReferenciaFicha />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="referencia/:referenciaId/editar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ReferenciaForm />
+                  </Suspense>
+                }
+              />
               {/* "Más" (tarea 182, mockup 3f): quinta pestaña, puerta de los
                   destinos que hoy no aparecen en la barra ni en el sidebar.
                   Nivel `seccion`, como el resto de pestañas. */}

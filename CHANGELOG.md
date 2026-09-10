@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Agregado (Referencia, tarea 2): el apartado Referencia, con glosario y atajos
+
+**Área modificada:** navegación y pantalla nueva. **Nuevos:** `src/features/referencia/referencias.ts` (+ 20 pruebas en `referencias.test.ts`), `src/features/referencia/ReferenciaPage.tsx`, `src/features/referencia/ReferenciaFicha.tsx`, `src/features/referencia/ReferenciaForm.tsx`. **Modificados:** `src/App.tsx`, `src/app/Chasis.tsx`, `src/features/mas/PantallaMas.tsx`, `src/lib/navegacion.ts`, `src/components/iconos.tsx` (+3 iconos).
+**Motivo:** tarea 2 del encargo de Referencia del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Agregado** la opción **Referencia** en el grupo Herramientas: en el sidebar de escritorio junto a Diagnóstico y Escanear, y en "Más" dentro de "Aquí, con el equipo delante", que es el grupo donde vive hoy lo que era Herramientas. Ruta **`/referencia`**, con su padre declarado en `navegacion.ts` (regla 13).
+- **Dos pestañas y ni una más.** **Glosario**: busca por nombre, abreviatura o alias, filtra por categoría, ordena alfabéticamente y abre la ficha del término. **Atajos y comandos**: busca por nombre, valor o programa, y filtra por `Atajo`/`Comando` y por plataforma. La pestaña viaja en la URL (`?tab=comandos`), así que volver desde una ficha cae donde estaba.
+- **Ficha de un término:** nombre, abreviatura, definición corta, ejemplo, alias, términos relacionados y las guías donde se utiliza. **Ficha de un atajo o comando:** nombre, tipo, plataforma, el atajo o el comando (monoespaciado y copiable, solo el comando: un atajo se teclea, no se pega), cuándo utilizarlo, resultado esperado, permisos necesarios, advertencia y las guías donde se utiliza.
+- **Crear, editar y eliminar** con los permisos actuales: Referencia es contenido general del equipo, como las categorías o las ubicaciones, así que cualquier técnico autenticado la mantiene. La eliminación es lógica y avisa cuántas guías la usan antes de confirmar.
+- **En móvil, tarjetas de una columna con el título a ancho completo:** el icono y los metadatos van en su propia línea arriba. Con el nombre compitiendo con una pastilla a su derecha, "Gigabits por segundo" se recortaba a "Gigabits por..." justo en los 360 px del teléfono del equipo. Los filtros viven en una **hoja inferior** (`HojaFiltro`), no en un carrusel de chips sobre una cabecera que ya lleva título, pestañas y buscador.
+- **Nada vacío se dibuja.** Sin categorías escritas no hay filtro de categoría; con un solo tipo no hay filtro de tipo; ningún contador aparece en cero; y una ficha sin ejemplo, sin alias o sin advertencia no muestra esos rótulos.
+- **Las reglas viven fuera de los componentes** (`referencias.ts`): qué texto hace encontrable una entrada, cómo se filtra cada pestaña, cómo se ordena, qué guías usan una referencia y cómo se deduplica un término vinculado dos veces a la misma tarea. Es lo que permite que la pantalla, el buscador global y el editor de guías usen la misma definición de "coincide".
+- **Agregados** tres iconos al set Nocturne: `BookBookmark` (Referencia), `Keyboard` (atajo) y `TerminalWindow` (comando). No se reutiliza `BookOpen`, que ya identifica a Guías (un icono, un significado).
+
 ### Agregado (Referencia, tarea 1): modelo central de glosario, atajos y comandos
 
 **Área modificada:** modelo de datos y sincronización. **Modificados:** `src/lib/db.ts`, `src/lib/tablas.ts`, `src/lib/procedimiento.ts` (+ 5 pruebas), `src/lib/repositorio.ts`, `src/features/soluciones/apoyosTarea.ts`, `supabase/schema.sql`, `src/lib/db.upgrade.test.ts`, `src/pruebas/semillaLocal.ts`.

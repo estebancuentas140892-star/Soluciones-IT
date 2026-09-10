@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { Avatar } from '../../components/Avatar'
 import {
+  BookBookmark,
   CaretRight,
   type IconoProps,
   LockSimple,
@@ -38,6 +39,10 @@ export function PantallaMas() {
   // así que contar sobre ella da 0 y la fila tampoco se muestra.
   const credenciales = useLiveQuery(
     () => db.credenciales.filter((c) => !c.eliminadoEn).count(),
+    [],
+  )
+  const referencias = useLiveQuery(
+    () => db.referencias.filter((r) => !r.eliminadoEn).count(),
     [],
   )
   const bloqueo = useLiveQuery(async () => (await db.seguridadApp.get(ID_BLOQUEO_APP)) ?? null, [])
@@ -79,6 +84,16 @@ export function PantallaMas() {
                 titulo="Diagnóstico"
                 subtitulo="Del síntoma a la guía, paso a paso"
                 conteo={diagnosticos ?? null}
+              />
+              {/* Referencia: se consulta con el equipo delante, en
+                  mitad de una guía o de una llamada, así que vive en
+                  este grupo y no en el de escritorio. */}
+              <Fila
+                to="/referencia"
+                Icono={BookBookmark}
+                titulo="Referencia"
+                subtitulo="Glosario, atajos y comandos"
+                conteo={referencias ?? null}
               />
               <Fila
                 to="/ubicaciones"
