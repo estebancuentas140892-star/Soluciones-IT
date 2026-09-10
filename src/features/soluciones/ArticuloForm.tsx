@@ -23,6 +23,8 @@ import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
+  CaretDown,
+  CaretRight,
   Check,
   Circle,
   CloudCheck,
@@ -58,6 +60,12 @@ import {
 } from './borradorArticulo'
 import { etiquetasFrecuentes, normalizarEtiquetas, type GrafiaEtiqueta } from './etiquetas'
 import { apoyosSinAsignar } from './apoyosTarea'
+import {
+  apoyosPendientes,
+  bloqueaPublicacion,
+  motivoBloqueoPublicacion,
+  resumenApoyosPendientes,
+} from './apoyosPendientes'
 import { PasosEditor } from './PasosEditor'
 import { ProveedorAccionesPaso } from './ranuraAccionesPaso'
 import { DialogoProbarPaso } from './DialogoProbarPaso'
@@ -167,6 +175,10 @@ export function ArticuloForm() {
   const [causas, setCausas] = useState('')
   const [esRutaInicio, setEsRutaInicio] = useState(false)
   const [estado, setEstado] = useState<EstadoArticulo>('borrador')
+  // Acceso a los apoyos heredados (tarea 7 del encargo): la lista
+  // desplegada y el apoyo que hay que abrir en el editor de pasos.
+  const [panelPendientes, setPanelPendientes] = useState(false)
+  const [apoyoDestacadoId, setApoyoDestacadoId] = useState<string | null>(null)
   const [motivo, setMotivo] = useState('')
   const [dispositivosAfectados, setDispositivosAfectados] = useState(
     dispositivoContextualId ? [{ id: dispositivoContextualId, nombre: dispositivoContextualNombre }] : [],
@@ -580,6 +592,14 @@ export function ArticuloForm() {
     ],
   )
 
+  // APOYOS HEREDADOS PENDIENTES (tarea 7 del encargo). La lista, no
+  // solo la cuenta: hasta ahora la pastilla ambar "Sin asignar" solo se
+  // veia abriendo el paso y bajando hasta el bloque, asi que en una
+  // guia de siete pasos no habia forma de saber cuantos quedaban ni
+  // donde estaban.
+  const pendientes = useMemo(() => apoyosPendientes(pasos), [pasos])
+  const yaPublicado = esEdicion && articulo?.estado === 'publicado'
+
   const plantilla = plantillaDe(tipo)
   const ofrecerPlantilla =
     !esEdicion &&
@@ -636,6 +656,18 @@ export function ArticuloForm() {
     if (titulo.trim() === '') {
       setErrorEnvio('Falta el título del artículo.')
       irA('general')
+      return
+    }
+    // NO SE PUBLICA UNA GUIA NUEVA CON DEBERES PENDIENTES (tarea 7 del
+    // encargo): el contenido heredado es una decision que el autor
+    // puede tomar ahora, y publicarlo sin tomarla la convierte en deuda
+    // de otro. Una guia YA publicada se sigue pudiendo guardar: ahi el
+    // contenido heredado ya esta en produccion y bloquear dejaria
+    // encerrado a quien solo venia a corregir una palabra.
+    if (bloqueaPublicacion({ publicando: estado === 'publicado', yaPublicado, pendientes: pendientes.length })) {
+      setErrorEnvio(motivoBloqueoPublicacion(pendientes.length))
+      irA('pasos')
+      setPanelPendientes(true)
       return
     }
     setErrorEnvio(null)
@@ -781,6 +813,63 @@ export function ArticuloForm() {
           que envolver a los dos. */}
       <ProveedorAccionesPaso value={ranuraAcciones}>
       <main className={`flex flex-1 flex-col gap-6 px-4 pt-[18px] ${pestana === 'pasos' ? 'pb-[250px]' : 'pb-[190px]'}`}>
+        {/* LOS APOYOS HEREDADOS, A LA VISTA Y CON PUERTA (tarea 7 del
+            encargo). Va fuera de las pestañas a proposito: es trabajo
+            de la guia entera, y esconderlo dentro de "Pasos" es lo que
+            hacia que nadie lo encontrara. Nada se asigna solo; esto
+            solo dice cuantos quedan y lleva hasta cada uno. */}
+        {pendientes.length > 0 && (
+          <section className="rounded-xl border border-noct-precaucion/45 bg-noct-precaucion/10">
+            <button
+              type="button"
+              onClick={() => setPanelPendientes((v) => !v)}
+              aria-expanded={panelPendientes}
+              className="flex min-h-12 w-full items-center gap-2.5 px-3.5 py-2 text-left"
+            >
+              <Warning size={16} className="shrink-0 text-noct-precaucion" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-medium text-noct-precaucion">
+                  {resumenApoyosPendientes(pendientes.length)}
+                </span>
+                <span className="block text-[11.5px] leading-snug text-noct-precaucion/85">
+                  {yaPublicado
+                    ? 'Contenido de una versión anterior. Sigue funcionando: se muestra al entrar al paso.'
+                    : 'Di si cada uno pertenece a una tarea o a todo el paso para poder publicar.'}
+                </span>
+              </span>
+              <CaretDown
+                size={13}
+                className={`shrink-0 text-noct-precaucion transition-transform ${panelPendientes ? 'rotate-180' : ''}`}
+                aria-hidden
+              />
+            </button>
+            {panelPendientes && (
+              <ul className="flex flex-col border-t border-noct-precaucion/30 px-1.5 py-1">
+                {pendientes.map((pendiente) => (
+                  <li key={pendiente.bloqueId}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        irA('pasos')
+                        setPasoActivoId(pendiente.pasoId)
+                        setApoyoDestacadoId(pendiente.bloqueId)
+                      }}
+                      className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left hover:bg-noct-precaucion/10"
+                    >
+                      <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-noct-precaucion/85">
+                        Paso {pendiente.numeroPaso}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[12.5px] text-noct-neutral-200">
+                        {pendiente.clase}: {pendiente.resumen}
+                      </span>
+                      <CaretRight size={12} className="shrink-0 text-noct-precaucion/80" aria-hidden />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
         {/* Lo que se recuperó (tarea 219, hallazgo G-29). No es un
             error ni una pregunta: el trabajo YA está de vuelta en el
             formulario y esto solo lo dice, con la salida por si el
@@ -1002,6 +1091,8 @@ export function ArticuloForm() {
                 dispositivosAfectados={dispositivosAfectados}
                 pasoActivoId={pasoActivoId}
                 onPasoActivoChange={setPasoActivoId}
+                apoyoDestacadoId={apoyoDestacadoId}
+                onApoyoDestacadoAbierto={() => setApoyoDestacadoId(null)}
               />
             </section>
 

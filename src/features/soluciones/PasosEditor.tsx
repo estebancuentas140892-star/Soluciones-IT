@@ -96,6 +96,14 @@ interface Props {
   // ninguno; entonces manda el último, que es donde se está escribiendo.
   pasoActivoId: string | null
   onPasoActivoChange: (pasoId: string | null) => void
+  // Apoyo heredado que hay que ABRIR ahora mismo (encargo del
+  // 2026-09-09, tarea 7). Llega del acceso "Sin asignar" del
+  // formulario: despliega su paso, lo trae a la vista y abre el
+  // selector de destino, que es la decision que falta. `onAbierto`
+  // avisa de vuelta para que el formulario lo olvide y el mismo apoyo
+  // se pueda volver a pedir mas tarde.
+  apoyoDestacadoId?: string | null
+  onApoyoDestacadoAbierto?: () => void
 }
 
 // Una opcion del selector polimorfico "Vincular informacion
@@ -243,6 +251,8 @@ export function PasosEditor({
   dispositivosAfectados,
   pasoActivoId,
   onPasoActivoChange,
+  apoyoDestacadoId = null,
+  onApoyoDestacadoAbierto,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -477,6 +487,26 @@ export function PasosEditor({
   // de la tarjeta que el dedo está sujetando.
   const contenedorRef = useRef<HTMLDivElement | null>(null)
   const refsPasos = useRef<(HTMLDivElement | null)[]>([])
+
+  // ABRIR UN APOYO HEREDADO DESDE EL ACCESO "SIN ASIGNAR" (tarea 7 del
+  // encargo). Despliega su paso, lo trae a la vista y abre el selector
+  // de destino: llegar hasta el bloque era justo lo que no habia forma
+  // de hacer en una guia de siete pasos.
+  useEffect(() => {
+    if (!apoyoDestacadoId) return
+    const indice = pasos.findIndex((paso) => paso.bloques.some((b) => b.id === apoyoDestacadoId))
+    if (indice < 0) {
+      onApoyoDestacadoAbierto?.()
+      return
+    }
+    onPasoActivoChange(pasos[indice].id)
+    setDestinoDeBloqueId(apoyoDestacadoId)
+    refsPasos.current[indice]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    onApoyoDestacadoAbierto?.()
+    // Solo reacciona al apoyo pedido: incluir `pasos` lo relanzaria en
+    // cada tecla que el autor escriba dentro del paso.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apoyoDestacadoId])
   const medidasRef = useRef<{ arriba: number; alto: number }[]>([])
   const inicioYRef = useRef(0)
   const [arrastre, setArrastre] = useState<{ indice: number; destino: number; dy: number } | null>(null)
