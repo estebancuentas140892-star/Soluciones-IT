@@ -342,11 +342,16 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Props:** `{ tipo: TipoEntidad, id, relaciones?: TipoRelacion[], titulo?: string = 'Referenciado por' }`. `relaciones` limita qué vínculos mostrar (para no duplicar bloques propios de la ficha).
 - **Dónde:** hoy solo `ArticuloPage`. Otras fichas (Dispositivo, Credencial) usan `useGrafo`/`referenciasHacia` directo.
 
-### 2.15 `VisorImagen`
-- **Propósito:** visor de imagen a pantalla completa con pellizco para zoom, doble toque y arrastre.
-- **Props:** `{ url, alt, onCerrar }` (las tres obligatorias).
-- **Variantes:** gestos: pellizco, doble toque (alterna 1 y 2.5), arrastre con `escala > 1`. Límites de escala 1 a 4.
-- **Dónde:** `Adjuntos`, `ProcedimientoVista` (imagen de un paso).
+### 2.15 `VisorImagen` e `ImagenAmpliable`
+- **Propósito:** visor de imagen a pantalla completa, y la miniatura que lo abre. **Reescrito el 2026-09-10** (encargo, tarea 3): existía, pero solo lo alcanzaban dos sitios y **los gestos no se veían** (acercar exigía saber de antemano que había pellizco y doble toque, que con un ratón no existen, y no había forma de volver al tamaño original salvo adivinar el gesto inverso).
+- **`VisorImagen`, props:** `{ url, alt, pie?, onCerrar }`.
+  - **Controles visibles de 52 px:** **alejar**, **restablecer** y **acercar**, más el **porcentaje** de zoom y un **botón de regreso** ("Volver") arriba a la izquierda. Los gestos siguen: pellizco, doble toque (alterna 1 y 2.5) y arrastre con `escala > 1`. Límites de escala **1 a 4**, paso de 0,5.
+  - **La imagen se ve COMPLETA** (`object-contain`), aunque la miniatura de origen vaya recortada.
+  - **Conserva el texto alternativo y el pie**, que se muestra bajo la imagen.
+  - **Cierra** con "Volver", con **Escape** o tocando fuera. El Escape va **en fase de captura y detiene la propagación**: la vista previa del editor también escucha Escape en `document`, así que sin eso una sola pulsación cerraba el visor **y** la prueba entera.
+  - **Devuelve el foco y la posición:** al abrir recuerda qué elemento tenía el foco y cuánto había desplazado la página, y los repone al cerrar. Es `role="dialog"` con `aria-modal`.
+- **`ImagenAmpliable`, props:** `{ url, alt, pie?, className?, claseBoton?, etiqueta? }`. La miniatura dentro de un control tocable con la invitación **"Toca para ampliar"** visible (icono de lupa con +) y `cursor-zoom-in`. `className` manda en el recorte de la miniatura; el visor abre **la misma URL**, que es el archivo original de Storage, nunca una miniatura estirada.
+- **Dónde:** portada de la ficha (`ArticuloPage`) y de la prueba (`VistaPreviaArticulo`), imágenes de un paso y de una tarea y adjuntos de la galería del paso (`ProcedimientoVista`), y adjuntos heredados (`Adjuntos`).
 
 ### 2.16 `useGrafo` (hook)
 - **Propósito:** reconstruye en memoria el grafo de referencias entre entidades cada vez que cambian los datos locales; lo comparten `ReferenciadoPor` y el aviso de impacto antes de eliminar.

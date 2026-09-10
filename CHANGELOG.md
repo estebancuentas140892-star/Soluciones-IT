@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Agregado (encargo 2026-09-10, tarea 3): todas las imágenes de una guía se pueden ampliar, y lo dicen
+
+**Área modificada:** imágenes de Guías. **Modificados:** `src/components/VisorImagen.tsx` (reescrito, más `ImagenAmpliable`), `src/components/iconos.tsx` (+2 iconos), `src/components/Adjuntos.tsx`, `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/ArticuloPage.tsx`, `src/features/soluciones/VistaPreviaArticulo.tsx`, `COMPONENTES_UI.md`, `DOCUMENTACION_FUNCIONAL.md`.
+**Motivo:** tarea 3 del encargo del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Causa.** El visor existía, pero solo lo alcanzaban dos sitios (la galería de adjuntos y la imagen de un paso): la **portada** no se ampliaba y la prueba del editor tampoco. Y donde sí llegaba, **nada lo anunciaba**: acercar exigía saber de antemano que había pellizco y doble toque, que con un ratón no existen, y no había forma de volver al tamaño original salvo adivinar el gesto inverso. Poder ampliar sin decirlo equivale a no poder.
+- **Agregado** `ImagenAmpliable`, la pieza reutilizable que envuelve cualquier imagen: control tocable, `cursor-zoom-in` y la invitación **"Toca para ampliar"** visible con icono de lupa. Aplicada a la **portada** de la ficha y de la prueba, a las imágenes **de un paso** y **de una tarea**, a la galería de adjuntos del paso y a los **adjuntos heredados** que son imágenes.
+- **Agregado** al visor: **botones de acercar, alejar y restablecer** de 52 px, el **porcentaje** de zoom y un **botón de regreso** ("Volver"). Los gestos siguen intactos (pellizco, doble toque, arrastre) para el teléfono.
+- **Agregado** el visor conserva el **texto alternativo** y muestra el **pie de imagen** debajo, y abre **la misma URL** que la miniatura, que es el archivo original de Storage: nunca una miniatura estirada. La portada **sigue recortada en la ficha** (el banner necesita altura fija) y **se ve completa** al ampliarla.
+- **Corregido** el foco: al abrir se recuerda qué elemento lo tenía y cuánto se había desplazado la página, y se reponen al cerrar, así que ampliar una foto a mitad de un paso devuelve a ese paso. El visor es `role="dialog"` con `aria-modal`.
+- **Corregido** **Escape cierra solo el visor.** Su escucha pasa a fase de captura y detiene la propagación: la vista previa del editor también escucha Escape en `document`, así que una sola pulsación cerraba el visor **y** la prueba entera.
+
 ### Cambiado (encargo 2026-09-10, tarea 2): la ficha de una guía presenta, ya no ejecuta
 
 **Área modificada:** ficha de artículo y vista previa del editor. **Nuevo:** `src/features/soluciones/IntroduccionGuia.tsx`. **Modificados:** `src/features/soluciones/ArticuloPage.tsx`, `src/features/soluciones/VistaPreviaArticulo.tsx`, `src/features/soluciones/ArticuloForm.tsx`, `src/features/soluciones/accionGuia.ts` (+ 1 prueba), `DOCUMENTACION_FUNCIONAL.md`, `COMPONENTES_UI.md`.

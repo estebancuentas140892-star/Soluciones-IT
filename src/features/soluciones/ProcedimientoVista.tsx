@@ -12,7 +12,7 @@ import {
 } from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
-import { VisorImagen } from '../../components/VisorImagen'
+import { ImagenAmpliable } from '../../components/VisorImagen'
 import { ArrowSquareOut, BookOpen, CaretRight, Check, CheckCircleFill, Circle, LinkSimple, SealCheck, Wrench } from '../../components/iconos'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
@@ -927,7 +927,7 @@ export function BloqueVista({
     if (!bloque.adjunto) return null
     return (
       <figure className="flex flex-col gap-1.5">
-        <AdjuntoPaso adjunto={bloque.adjunto} titulo={bloque.texto} />
+        <AdjuntoPaso adjunto={bloque.adjunto} titulo={bloque.texto} pie={bloque.texto || null} />
         {bloque.texto && (
           <figcaption className="text-xs text-noct-neutral-500">{bloque.texto}</figcaption>
         )}
@@ -943,7 +943,11 @@ export function BloqueVista({
     if (!bloque.adjunto) return null
     return (
       <figure className="flex flex-col gap-1.5">
-        <AdjuntoPaso adjunto={bloque.adjunto} titulo={bloque.texto || bloque.adjunto.nombre} />
+        <AdjuntoPaso
+          adjunto={bloque.adjunto}
+          titulo={bloque.texto || bloque.adjunto.nombre}
+          pie={bloque.texto || null}
+        />
         {bloque.texto && (
           <figcaption className="text-xs text-noct-neutral-500">{bloque.texto}</figcaption>
         )}
@@ -1235,10 +1239,19 @@ export function AdjuntosPaso({ adjuntos, titulo }: { adjuntos: PasoAdjunto[]; ti
   )
 }
 
-function AdjuntoPaso({ adjunto, titulo }: { adjunto: PasoAdjunto; titulo: string }) {
+function AdjuntoPaso({
+  adjunto,
+  titulo,
+  pie = null,
+}: {
+  adjunto: PasoAdjunto
+  titulo: string
+  // Pie escrito por el autor, para que viaje al visor junto con la
+  // imagen (encargo del 2026-09-10, tarea 3).
+  pie?: string | null
+}) {
   const url = useUrlAdjunto(adjunto.referencia)
   const esImagen = adjunto.tipo.startsWith('image/')
-  const [visorAbierto, setVisorAbierto] = useState(false)
 
   if (!url) {
     return (
@@ -1265,22 +1278,13 @@ function AdjuntoPaso({ adjunto, titulo }: { adjunto: PasoAdjunto; titulo: string
   }
 
   return (
-    <>
-      <button type="button" onClick={() => setVisorAbierto(true)} className="block w-full cursor-zoom-in">
-        <img
-          src={url}
-          alt={`Adjunto del paso: ${titulo}`}
-          className="max-h-72 w-full rounded-lg border border-noct-divider bg-noct-surface object-contain"
-        />
-      </button>
-      {visorAbierto && (
-        <VisorImagen
-          url={url}
-          alt={`Adjunto del paso: ${titulo}`}
-          onCerrar={() => setVisorAbierto(false)}
-        />
-      )}
-    </>
+    <ImagenAmpliable
+      url={url}
+      alt={pie || `Adjunto del paso: ${titulo}`}
+      pie={pie}
+      claseBoton="border border-noct-divider bg-noct-surface"
+      className="max-h-72 w-full object-contain"
+    />
   )
 }
 

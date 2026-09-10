@@ -485,6 +485,22 @@ export function MagnifyingGlass(props: IconoProps) {
   )
 }
 
+export function MagnifyingGlassPlus(props: IconoProps) {
+  return (
+    <IconoBase {...props}>
+      <path d="M229.66,218.34l-50.06-50.06a88.21,88.21,0,1,0-11.32,11.32l50.06,50.06a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Zm112,0a8,8,0,0,1-8,8H120v24a8,8,0,0,1-16,0V120H80a8,8,0,0,1,0-16h24V80a8,8,0,0,1,16,0v24h24A8,8,0,0,1,152,112Z" />
+    </IconoBase>
+  )
+}
+
+export function MagnifyingGlassMinus(props: IconoProps) {
+  return (
+    <IconoBase {...props}>
+      <path d="M229.66,218.34l-50.06-50.06a88.21,88.21,0,1,0-11.32,11.32l50.06,50.06a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Zm112,0a8,8,0,0,1-8,8H80a8,8,0,0,1,0-16h64A8,8,0,0,1,152,112Z" />
+    </IconoBase>
+  )
+}
+
 export function MapPin(props: IconoProps) {
   return (
     <IconoBase {...props}>

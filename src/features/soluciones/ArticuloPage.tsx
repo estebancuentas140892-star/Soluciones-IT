@@ -21,6 +21,7 @@ import { ReferenciadoPor } from '../../components/ReferenciadoPor'
 import { useGrafo } from '../../components/useGrafo'
 import { resumenImpacto } from '../../lib/grafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import { ImagenAmpliable } from '../../components/VisorImagen'
 import {
   BookOpen,
   CaretRight,
@@ -563,14 +564,20 @@ function FilaRelacionado({ to, titulo }: { to: string; titulo: string }) {
 // Imagen de portada del procedimiento como banner sobre el titulo.
 // Si la imagen aun no esta disponible (offline sin cache) no se
 // muestra nada: la pagina queda como la de un articulo sin portada.
+//
+// AQUI SIGUE RECORTADA, Y AMPLIADA SE VE ENTERA (encargo del
+// 2026-09-10, tarea 3): el banner necesita una altura fija para que el
+// titulo no se vaya de la pantalla, asi que recorta; el visor abre el
+// archivo original y lo muestra completo.
 function PortadaArticulo({ portada, titulo }: { portada: { referencia: string }; titulo: string }) {
   const url = useUrlAdjunto(portada.referencia)
   if (!url) return null
   return (
-    <img
-      src={url}
+    <ImagenAmpliable
+      url={url}
       alt={`Portada: ${titulo}`}
-      className="max-h-44 w-full rounded-lg border border-noct-divider object-cover"
+      claseBoton="border border-noct-divider"
+      className="max-h-44 w-full object-cover"
     />
   )
 }

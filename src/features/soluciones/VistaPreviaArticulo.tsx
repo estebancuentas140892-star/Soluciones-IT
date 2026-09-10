@@ -6,6 +6,7 @@ import { claveVistaPrevia, limpiarProgresoVistaPrevia, reiniciarProgreso } from 
 import { procedimientoEjecutable } from '../../lib/procedimiento'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { ArrowLeft, Play } from '../../components/iconos'
+import { ImagenAmpliable } from '../../components/VisorImagen'
 import { TagNeutral } from '../../components/nocturne'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
 import { ProcedimientoVista } from './ProcedimientoVista'
@@ -169,10 +170,11 @@ export function VistaPreviaArticulo({
         ) : (
           <>
             {urlPortada && (
-              <img
-                src={urlPortada}
+              <ImagenAmpliable
+                url={urlPortada}
                 alt={`Portada: ${titulo}`}
-                className="max-h-44 w-full rounded-xl border border-noct-divider object-cover"
+                claseBoton="rounded-xl border border-noct-divider"
+                className="max-h-44 w-full object-cover"
               />
             )}
 

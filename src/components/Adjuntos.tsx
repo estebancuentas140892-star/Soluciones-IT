@@ -7,7 +7,7 @@ import { comprimirImagen } from '../lib/comprimirImagen'
 import { eliminarArchivoPendiente, referenciaEnUso, subirConDeduplicacion } from '../lib/archivosPendientes'
 import { DialogoEliminar } from './DialogoEliminar'
 import { useUrlAdjunto } from './useUrlAdjunto'
-import { VisorImagen } from './VisorImagen'
+import { ImagenAmpliable } from './VisorImagen'
 
 interface Props {
   entidadTipo: Adjunto['entidadTipo']
@@ -181,7 +181,6 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
 function AdjuntoItem({ adjunto, onEliminar }: { adjunto: Adjunto; onEliminar: () => void }) {
   const url = useUrlAdjunto(adjunto.referencia)
   const esImagen = adjunto.tipo.startsWith('image/')
-  const [visorAbierto, setVisorAbierto] = useState(false)
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-noct-divider bg-noct-surface">
@@ -194,18 +193,23 @@ function AdjuntoItem({ adjunto, onEliminar }: { adjunto: Adjunto; onEliminar: ()
         ×
       </button>
       {esImagen && url ? (
-        <button type="button" onClick={() => setVisorAbierto(true)} className="block">
-          <img src={url} alt={adjunto.nombre} className="h-28 w-full object-cover" />
-        </button>
+        // Adjunto heredado que es una imagen: se amplía como cualquier
+        // otra imagen de una guía, y lo dice (encargo del 2026-09-10,
+        // tarea 3). Antes se podía tocar, pero nada lo anunciaba.
+        <ImagenAmpliable
+          url={url}
+          alt={adjunto.nombre}
+          pie={adjunto.nombre}
+          etiqueta="Ampliar"
+          claseBoton="rounded-none"
+          className="h-28 w-full object-cover"
+        />
       ) : (
         <a href={url ?? undefined} target="_blank" rel="noreferrer" className="block">
           <div className="flex h-28 items-center justify-center px-2 text-center text-xs text-noct-neutral-400">
             {adjunto.nombre}
           </div>
         </a>
-      )}
-      {esImagen && url && visorAbierto && (
-        <VisorImagen url={url} alt={adjunto.nombre} onCerrar={() => setVisorAbierto(false)} />
       )}
     </div>
   )
