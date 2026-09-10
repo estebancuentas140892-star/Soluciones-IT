@@ -3,7 +3,6 @@ import { useMemo } from 'react'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
   normalizarProcedimiento,
-  pasoSeCompletaSolo,
   pasoTrabajoPrevioCompleto,
   siguientePasoPendiente,
   tareasDe,
@@ -190,15 +189,25 @@ export function useProcedimientoEjecucion({
     onAvanzar(destino)
   }
 
-  async function alternarPaso(indice: number, paso: PasoProcedimiento) {
-    const hecho = hechos.has(paso.id)
+  /**
+   * Deshace el cierre de un paso ya hecho. Es lo UNICO que queda del
+   * antiguo `alternarPaso` (tarea 3 del encargo): marcarlo con un toque
+   * arrastraba tambien todas sus tareas, es decir daba por hecho un
+   * trabajo que nadie hizo. Cerrar un paso pasa siempre por
+   * `intentarCompletarPaso`, que exige lo que el paso exige.
+   *
+   * Desmarcar SI arrastra las tareas: quien desmarca se esta
+   * corrigiendo, y dejar el paso pendiente con todo marcado lo volveria
+   * a cerrar al primer cambio.
+   */
+  async function desmarcarPaso(paso: PasoProcedimiento) {
+    if (!hechos.has(paso.id)) return
     await establecerPasoHecho(
       clave,
       paso.id,
-      !hecho,
+      false,
       tareasDe(paso.bloques).map((t) => t.id),
     )
-    if (!hecho) avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
   }
 
   async function alternarTarea(indice: number, paso: PasoProcedimiento, tareaId: string) {
@@ -238,24 +247,21 @@ export function useProcedimientoEjecucion({
       tareasMarcadas,
       await subSatisfechoFresco(paso),
     )
-    if (!pasoSeCompletaSolo(trabajoPrevio, Boolean(paso.solucionArticuloId))) return
+    if (!trabajoPrevio) return
 
-    await establecerPasoHecho(clave, paso.id, true, idsTareas)
+    // Sin arrastrar tareas: llegado aqui ya estan todas marcadas, y
+    // pasarlas seria conservar la unica via que completaba trabajo sin
+    // hacerlo (tarea 3 del encargo).
+    await establecerPasoHecho(clave, paso.id, true)
     avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]))
   }
 
-  // Completa el paso y sigue de largo, sin la validacion previa: lo
-  // usan la respuesta "No" a la pregunta de error y la solucion que se
-  // completa despues de un error (la pregunta solo aparece cuando el
-  // trabajo previo del paso ya esta completo).
+  // Completa el paso y sigue de largo, sin la validacion previa: lo usa
+  // la contingencia que se resuelve cuando al paso ya no le quedaba
+  // trabajo (quien llama lo comprueba antes). Tampoco arrastra tareas.
   async function completarPasoYAvanzar(indice: number, paso: PasoProcedimiento) {
     if (hechos.has(paso.id)) return
-    await establecerPasoHecho(
-      clave,
-      paso.id,
-      true,
-      tareasDe(paso.bloques).map((t) => t.id),
-    )
+    await establecerPasoHecho(clave, paso.id, true)
     avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
   }
 
@@ -283,7 +289,7 @@ export function useProcedimientoEjecucion({
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
     guiasPendientesDeTarea,
-    alternarPaso,
+    desmarcarPaso,
     alternarTarea,
     intentarCompletarPaso,
     completarPasoYAvanzar,

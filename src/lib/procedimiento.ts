@@ -563,17 +563,12 @@ export function pasoTrabajoPrevioCompleto(
   return instruccionesOk && subProcedimientoSatisfecho
 }
 
-// ¿El paso puede completarse y avanzar por si solo? Solo cuando su
-// trabajo previo esta completo y NO tiene una solucion de error
-// vinculada. Si la tiene, el paso no avanza automaticamente: primero
-// aparece la pregunta "¿Ocurrio algun error?" y el paso se completa al
-// responderla (asi no se salta la validacion de errores del paso).
-export function pasoSeCompletaSolo(
-  trabajoPrevioCompleto: boolean,
-  tieneSolucionVinculada: boolean,
-): boolean {
-  return trabajoPrevioCompleto && !tieneSolucionVinculada
-}
+// `pasoSeCompletaSolo` se retiro en la tarea 3 del encargo del
+// 2026-09-09. Existia para no cerrar un paso con contingencia vinculada
+// antes de responder "¿Ocurrio algun error?", y esa pregunta ya no
+// existe: la contingencia es una fila disponible siempre (regla R59).
+// Lo unico que hacia era pedir un clic mas en "Paso hecho" despues de
+// terminar la guia del paso. Quien decide ahora es `cierreDelPaso`.
 
 export interface DatosProcedimientoParaGuardar {
   descripcion: string

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
+import { cierreDelPaso, guiaPendienteDelPaso } from './cierrePaso'
 import { useAvanceProgreso, useClaveProgreso, useClaveVinculo } from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
@@ -103,7 +104,7 @@ export function ProcedimientoVista({
     todoCompletado,
     subSatisfechoReactivo,
     guiasPendientesDeTarea,
-    alternarPaso,
+    desmarcarPaso,
     alternarTarea,
     intentarCompletarPaso,
     completarPasoYAvanzar,
@@ -143,6 +144,16 @@ export function ProcedimientoVista({
 
   function alternarAbierto(id: string, estaAbierto: boolean) {
     setAbiertoPorUsuario((previo) => ({ ...previo, [id]: !estaAbierto }))
+  }
+
+  // EL NUMERO DEL PASO SITUA, NO COMPLETA (tarea 3 del encargo). Antes
+  // la insignia numerada marcaba el paso hecho de un toque y arrastraba
+  // todas sus tareas: el control que sirve para orientarse era el unico
+  // capaz de dar por hecho trabajo que nadie hizo. Ahora abre el paso y
+  // lo trae a la vista, que es lo que su forma promete.
+  function abrirPaso(indice: number, id: string) {
+    setAbiertoPorUsuario((previo) => ({ ...previo, [id]: true }))
+    refsPasos.current[indice]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
   return (
@@ -198,6 +209,17 @@ export function ProcedimientoVista({
               const marcadas = contarInstruccionesHechas(progreso?.instruccionesHechas, idsTareas)
               const subSatisfecho = subSatisfechoReactivo(paso)
               const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
+              // La MISMA regla y el MISMO rotulo que el asistente
+              // (tarea 3 del encargo): si falta trabajo, el control lo
+              // nombra en vez de prometer "Paso hecho".
+              const cierre = cierreDelPaso({
+                pasoHecho: hecho,
+                totalTareas: idsTareas.length,
+                tareasMarcadas: marcadas,
+                guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho),
+                hayPasoSiguiente: indice + 1 < pasos.length,
+                numeroPasoSiguiente: indice + 2,
+              })
               const esUltimo = indice === pasos.length - 1
               // Solo el procedimiento principal plega. `abiertoPorUsuario`
               // guarda la elección explícita del técnico y, si no la hay,
@@ -215,10 +237,8 @@ export function ProcedimientoVista({
                   <div className="flex w-7 shrink-0 flex-col items-center">
                     <button
                       type="button"
-                      onClick={() => void alternarPaso(indice, paso)}
-                      aria-label={
-                        hecho ? `Desmarcar paso ${indice + 1}` : `Marcar paso ${indice + 1} como hecho`
-                      }
+                      onClick={() => abrirPaso(indice, paso.id)}
+                      aria-label={`Abrir el paso ${indice + 1}. Solo lo muestra, no lo da por hecho`}
                       className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border text-[12.5px] font-medium ${
                         hecho
                           ? 'border-noct-accent bg-noct-accent/15 text-noct-accent-300'
@@ -366,6 +386,32 @@ export function ProcedimientoVista({
                             />
                           )}
                         </div>
+                      )}
+
+                      {/* CERRAR EL PASO, con las mismas reglas que el
+                          asistente (tarea 3 del encargo). Este control
+                          no existia: cerrar un paso desde el mapa era
+                          tocar su numero, que ademas marcaba de golpe
+                          todas sus tareas. Consultar (el numero y la
+                          cabecera), completar (esto) y saltar (la
+                          contingencia) quedan separados. */}
+                      {hecho ? (
+                        <button
+                          type="button"
+                          onClick={() => void desmarcarPaso(paso)}
+                          className="inline-flex min-h-11 w-fit cursor-pointer items-center rounded-lg px-2 text-[12.5px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07]"
+                        >
+                          Desmarcar el paso
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={cierre.accion === 'bloqueado'}
+                          onClick={() => void intentarCompletarPaso(indice, paso)}
+                          className={`w-fit ${BTN_ACENTO} disabled:cursor-default disabled:opacity-45`}
+                        >
+                          {cierre.etiqueta}
+                        </button>
                       )}
                     </div>
                   </div>

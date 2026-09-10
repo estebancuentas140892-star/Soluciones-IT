@@ -4,7 +4,6 @@ import {
   crearPaso,
   duplicarProcedimiento,
   normalizarProcedimiento,
-  pasoSeCompletaSolo,
   pasoTrabajoPrevioCompleto,
   prepararProcedimientoParaGuardar,
   procedimientoEjecutable,
@@ -969,20 +968,6 @@ describe('pasoTrabajoPrevioCompleto', () => {
   it('exige el subprocedimiento vinculado satisfecho aunque las instrucciones estén listas', () => {
     expect(pasoTrabajoPrevioCompleto(2, 2, false)).toBe(false)
     expect(pasoTrabajoPrevioCompleto(0, 0, false)).toBe(false)
-  })
-})
-
-describe('pasoSeCompletaSolo', () => {
-  it('se completa solo cuando el trabajo previo está listo y no hay solución vinculada', () => {
-    expect(pasoSeCompletaSolo(true, false)).toBe(true)
-  })
-
-  it('no se completa solo si el trabajo previo no está listo', () => {
-    expect(pasoSeCompletaSolo(false, false)).toBe(false)
-  })
-
-  it('no se completa solo si hay una solución vinculada (la completa la pregunta de error)', () => {
-    expect(pasoSeCompletaSolo(true, true)).toBe(false)
   })
 })
 

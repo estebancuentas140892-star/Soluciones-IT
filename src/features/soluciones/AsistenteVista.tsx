@@ -35,6 +35,7 @@ import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { AccionVinculo, EnlaceVinculo, FilaVinculo } from './FilaVinculo'
 import { fraseAvanceDocumento, modoVinculo, PROMESA_REGRESO, ZONA_ANIDADA } from './vinculoAnidado'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
+import { cierreDelPaso, guiaPendienteDelPaso } from './cierrePaso'
 import { claveDeVinculo, useAvanceProgreso, useClaveProgreso, useClaveVinculo } from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
@@ -335,27 +336,19 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // dice qué va a pasar) y, cuando no se puede avanzar, la razón escrita
   // encima. Antes el botón se apagaba al 30 % de opacidad sin decir por
   // qué, al final del scroll del paso.
-  const faltanTareas = Math.max(0, idsTareas.length - marcadas)
-  // QUÉ FALTA, NO "NO PUEDES AVANZAR" (hallazgo H07). El mensaje
-  // nombra exactamente lo pendiente, y no niega la navegación: moverse
-  // entre pasos y tareas para consultar sigue disponible, lo que no se
-  // puede es DAR EL PASO POR HECHO. Antes decía "para poder avanzar"
-  // mientras la flecha de al lado avanzaba sin problema, así que la
-  // frase contradecía a la propia pantalla.
-  const motivoBloqueo =
-    pasoActualHecho || trabajoPrevio
-      ? null
-      : faltanTareas > 0
-        ? `Para cerrar el paso falta marcar ${faltanTareas} ${faltanTareas === 1 ? 'tarea' : 'tareas'}`
-        : `Para cerrar el paso falta terminar «${paso.subArticuloTitulo || 'la guía vinculada'}»`
-  const hayPasoSiguiente = indiceActual + 1 < pasos.length
-  const etiquetaAvance = pasoActualHecho
-    ? hayPasoSiguiente
-      ? `Ir al paso ${indiceActual + 2}`
-      : 'Continuar'
-    : hayPasoSiguiente
-      ? `Paso hecho · ir al ${indiceActual + 2}`
-      : 'Paso hecho · terminar'
+  // QUÉ FALTA, NO "NO PUEDES AVANZAR" (hallazgo H07), y con el MISMO
+  // rótulo y la misma regla en las tres vistas (tarea 3 del encargo):
+  // el botón nunca dice "Paso hecho" mientras queden tareas o una guía
+  // vinculada. Consultar sigue disponible: lo que no se puede es dar el
+  // paso por hecho.
+  const cierre = cierreDelPaso({
+    pasoHecho: pasoActualHecho,
+    totalTareas: idsTareas.length,
+    tareasMarcadas: marcadas,
+    guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho),
+    hayPasoSiguiente: indiceActual + 1 < pasos.length,
+    numeroPasoSiguiente: indiceActual + 2,
+  })
 
   // Estado de cada paso para el índice (tablero 6c). Se recalcula en
   // cada render a propósito: son unas pocas decenas de pasos como mucho,
@@ -483,8 +476,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           guiaDelPasoDisponible={guiaDelPasoDisponible(paso)}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
           onCompletarPaso={avanzar}
-          etiquetaAvance={etiquetaAvance}
-          motivoBloqueo={motivoBloqueo}
+          etiquetaAvance={cierre.etiqueta}
+          puedeCerrarPaso={cierre.accion !== 'bloqueado'}
           onFalla={(texto) => setHojaFalla({ tarea: texto })}
           guiasPendientes={(tareaId) => guiasPendientesDeTarea(paso, tareaId)}
           // TERMINAR EL DESTINO DE UN "NO" RESPONDE LA DECISIÓN, no
@@ -703,17 +696,14 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
           dominantes en la misma pantalla dejarían de ser dominantes. */}
       {nivel === 0 && (
         <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.96] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
-          {motivoBloqueo && (
-            <p className="mb-1.5 text-center text-[11.5px] text-noct-neutral-400">{motivoBloqueo}</p>
-          )}
           <button
             type="button"
-            disabled={!pasoActualHecho && !trabajoPrevio}
+            disabled={cierre.accion === 'bloqueado'}
             onClick={avanzar}
             className="flex h-[76px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-[17px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.22] active:bg-noct-accent/[.3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-30"
           >
             <Check size={19} className="shrink-0" aria-hidden />
-            <span className="truncate">{etiquetaAvance}</span>
+            <span className="truncate">{cierre.etiqueta}</span>
           </button>
           <div className="mt-2 flex items-center gap-2">
             <button
@@ -783,13 +773,16 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
             <Warning size={15} className="shrink-0" aria-hidden />
             Falla
           </button>
+          {/* El mismo control que el nivel 0, con el mismo rótulo y la
+              misma regla: decía "Siguiente" sin nombrar nunca lo que
+              faltaba (tarea 3 del encargo). */}
           <button
             type="button"
-            disabled={!trabajoPrevio}
-            onClick={() => void intentarCompletarPaso(indiceActual, paso)}
+            disabled={cierre.accion === 'bloqueado'}
+            onClick={avanzar}
             className={`${BTN_PRIMARIO} min-h-11 flex-1 text-sm disabled:opacity-30`}
           >
-            Siguiente
+            <span className="truncate">{cierre.etiqueta}</span>
             <CaretRight size={15} aria-hidden />
           </button>
         </div>

@@ -78,12 +78,14 @@ interface Props {
   // Cierra el paso y avanza. Es la misma acción dominante de la vista
   // completa: el foco no decide cuándo se puede, solo la ofrece.
   onCompletarPaso: () => void
-  // Rótulo de esa acción ("Paso hecho · ir al 4"), resuelto arriba para
-  // que las dos vistas digan exactamente lo mismo.
+  // Rótulo de esa acción ("Completar paso y continuar", "Faltan 2
+  // tareas", "Completa «X»"), resuelto arriba con `cierreDelPaso` para
+  // que las tres vistas digan exactamente lo mismo. El rótulo YA dice
+  // lo que falta: por eso no hay una segunda línea repitiéndolo.
   etiquetaAvance: string
-  // Razón escrita cuando el paso no puede cerrarse todavía. null cuando
-  // sí puede.
-  motivoBloqueo: string | null
+  // ¿El paso puede cerrarse ya? Misma regla para todos los controles de
+  // finalización (tarea 3 del encargo).
+  puedeCerrarPaso: boolean
   // El técnico declara que algo va mal en esta tarea. Abre la MISMA
   // hoja de salidas que el "Falla" de la vista completa (tablero 3d).
   onFalla: (textoTarea: string) => void
@@ -126,7 +128,7 @@ export function ModoFoco({
   onAlternarTarea,
   onCompletarPaso,
   etiquetaAvance,
-  motivoBloqueo,
+  puedeCerrarPaso,
   onFalla,
   onDecisionResuelta,
   guiasPendientes,
@@ -491,9 +493,6 @@ export function ModoFoco({
       {/* Acción dominante de 76 px: es el ÚNICO elemento grande de la
           pantalla, así que no hay que apuntar. */}
       <div className="sticky bottom-0 z-10 -mx-4 mt-auto flex flex-none flex-col gap-2.5 bg-gradient-to-t from-noct-bg from-55% to-transparent px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3">
-        {cierraPaso && motivoBloqueo && (
-          <p className="text-center text-[11.5px] text-noct-neutral-400">{motivoBloqueo}</p>
-        )}
         {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
             dice por qué, que es el defecto que el encargo llama "no se
             muestra cuál guía falta completar". */}
@@ -503,7 +502,7 @@ export function ModoFoco({
         {cierraPaso ? (
           <button
             type="button"
-            disabled={motivoBloqueo !== null}
+            disabled={!puedeCerrarPaso}
             onClick={onCompletarPaso}
             className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30"
           >
