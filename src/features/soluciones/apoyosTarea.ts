@@ -106,43 +106,12 @@ export function cuentaApoyos(apoyos: Apoyos): number {
   )
 }
 
-/**
- * DÓNDE se pintan los apoyos del PASO mientras se ejecuta una tarea, en
- * el modo de una tarea a la vez.
- *
- * Vive aquí y no dentro de `ModoFoco` porque es la regla que el encargo
- * del 2026-09-09 (sección 3) pide garantizar: **una sola vez, en el
- * lugar que le toca**. La duplicación que reportó el usuario ("al
- * desplegar el contenido 'Del paso', una misma precaución se muestra dos
- * veces") no venía del dato ni del reparto de `apoyosDeTarea` /
- * `apoyosDelPaso`, que devuelven cada bloque una sola vez: venía de que
- * la vista tenía DOS sitios que pintaban la misma lista y sus
- * condiciones se solapaban cuando el panel estaba abierto.
- *
- * Los tres destinos son excluyentes por construcción, así que la
- * duplicación deja de ser posible:
- *
- *   - 'sueltos': pegados a la instrucción, al ENTRAR al paso;
- *   - 'panel': dentro del control "Del paso", que es la consulta;
- *   - 'ninguno': en las tareas siguientes, para no repetirlos en todas.
- */
-export function ubicacionApoyosDelPaso({
-  esTareaReal,
-  enPrimeraTarea,
-  panelDelPasoAbierto,
-}: {
-  /** false en la pseudo tarea de un paso sin tareas y en la guía vinculada. */
-  esTareaReal: boolean
-  enPrimeraTarea: boolean
-  panelDelPasoAbierto: boolean
-}): 'sueltos' | 'panel' | 'ninguno' {
-  // El panel gana siempre: mientras está abierto, es el único sitio.
-  // Sin esta prioridad, abrir el control en la tarea 2 y volver con la
-  // flecha a la 1 volvía a pintar los avisos sueltos ADEMÁS del panel.
-  if (panelDelPasoAbierto) return 'panel'
-  if (!esTareaReal || enPrimeraTarea) return 'sueltos'
-  return 'ninguno'
-}
+// `ubicacionApoyosDelPaso` se retiro el 2026-09-09: repartia los apoyos
+// del paso entre "sueltos" y "panel" segun la tarea y el estado del
+// control. Ese reparto era el defecto: pulsar "Del paso" movia la
+// informacion de arriba abajo en vez de ocultarla. Ahora hay UN solo
+// contenedor, el panel, y quien decide si esta abierto es el propio
+// control (ver ModoFoco).
 
 /**
  * Apoyos heredados que hay que revisar a mano: los que se guardaron

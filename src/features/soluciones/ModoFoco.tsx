@@ -16,14 +16,7 @@ import {
 } from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
-import {
-  apoyosDelPaso,
-  apoyosDeTarea,
-  cuentaApoyos,
-  hayApoyos,
-  ubicacionApoyosDelPaso,
-  type Apoyos,
-} from './apoyosTarea'
+import { apoyosDelPaso, apoyosDeTarea, cuentaApoyos, hayApoyos, type Apoyos } from './apoyosTarea'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { accionFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
 import { tonoInfo } from './tonos'
@@ -149,20 +142,33 @@ export function ModoFoco({
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso)
   const delPaso = apoyosDelPaso(paso)
-  const [indiceTarea, setIndiceTarea] = useState(() => {
-    // La guía que no está disponible se lee ANTES de seguir: cuenta
-    // como cumplida para no bloquear, pero el recorrido empieza en ella
-    // para que su explicación no pase de largo (A12).
+  const hayApoyosDelPaso = hayApoyos(delPaso)
+
+  // La guía que no está disponible se lee ANTES de seguir: cuenta como
+  // cumplida para no bloquear, pero el recorrido empieza en ella para
+  // que su explicación no pase de largo (A12).
+  function primeraPendiente(): number {
     const pendiente = tareas.findIndex(
       (t) =>
         !tareaFocoHecha(t, instruccionesHechas, subSatisfecho) ||
         (t.clase === 'guia-del-paso' && !guiaDelPasoDisponible),
     )
     return pendiente >= 0 ? pendiente : 0
-  })
+  }
+
+  const [indiceTarea, setIndiceTarea] = useState(primeraPendiente)
   // Qué panel está desplegado. Los apoyos siguen a mano pero no ocupan
   // la pantalla: lo que se lee de brazo estirado es la instrucción.
-  const [panel, setPanel] = useState<'clave' | 'fotos' | 'archivos' | 'paso' | null>(null)
+  //
+  // UN SOLO CONTENEDOR PARA LOS APOYOS DEL PASO. Antes había dos: los
+  // avisos del paso se pintaban SUELTOS al entrar y el control "Del
+  // paso" los pintaba OTRA VEZ dentro de su panel, así que pulsarlo no
+  // ocultaba nada: la información desaparecía de arriba y reaparecía
+  // debajo, y cerrarla la devolvía arriba. Ahora hay un único sitio, el
+  // panel, que al entrar al paso llega abierto y se cierra de verdad.
+  const [panel, setPanel] = useState<'clave' | 'fotos' | 'archivos' | 'paso' | null>(() =>
+    hayApoyosDelPaso && tareas[primeraPendiente()]?.clase === 'tarea' ? 'paso' : null,
+  )
   // Id de la tarea de decisión cuyo "No" está abierto. Se guarda el id
   // y no un booleano porque un paso puede tener más de una decisión, y
   // un booleano las abriría todas a la vez.
@@ -237,27 +243,6 @@ export function ModoFoco({
   // prerrequisito, así que van entre los apoyos y nunca bloquean.
   const guiasDeApoyo = apoyos.guias.filter((g) => g.intencionGuia !== 'necesario')
 
-  // LOS APOYOS DEL PASO SE VEN AL ENTRAR, NO EN CADA TAREA (requisito 5
-  // del editor). En la primera tarea van desplegados, que es "entrar al
-  // paso"; a partir de ahí quedan detrás de su propio control, para
-  // poder volver a consultarlos sin que reaparezcan solos.
-  //
-  // UNA VEZ, NO DOS (encargo del 2026-09-09, sección 3). La condición
-  // incluía `|| panel === 'paso'`, y el panel "Del paso" pinta ESOS
-  // MISMOS avisos: abrir el control dibujaba la precaución suelta arriba
-  // y otra vez dentro del panel. Es la duplicación que reportó el
-  // usuario, y no venía del dato ni del reparto de `apoyosTarea`, que
-  // devuelve cada bloque una sola vez: venía de dos sitios de esta vista
-  // pintando la misma lista a la vez. La decisión de dónde va cada cosa
-  // se mudó a `ubicacionApoyosDelPaso`, donde los tres destinos son
-  // excluyentes por construcción y hay prueba.
-  const ubicacionDelPaso = ubicacionApoyosDelPaso({
-    esTareaReal: tarea.clase === 'tarea',
-    enPrimeraTarea: indice === 0,
-    panelDelPasoAbierto: panel === 'paso',
-  })
-  const mostrarApoyosDelPaso = ubicacionDelPaso === 'sueltos'
-  const hayApoyosDelPaso = hayApoyos(delPaso)
   // El motivo de la guía vinculada, en las palabras del autor: el
   // título del paso del que sale y su objetivo, si lo escribió. Se
   // omite cuando el paso no tiene título propio, porque entonces
@@ -418,9 +403,6 @@ export function ModoFoco({
         {apoyos.avisos.map((aviso) => (
           <AvisoFoco key={aviso.id} aviso={aviso} />
         ))}
-        {mostrarApoyosDelPaso &&
-          tarea.clase === 'tarea' &&
-          delPaso.avisos.map((aviso) => <AvisoFoco key={aviso.id} aviso={aviso} delPaso />)}
 
         {/* LA GUÍA VINCULADA, AQUÍ Y AHORA (H05). Antes esto no
             existía: el paso decía que había que terminarla y no había
@@ -482,14 +464,9 @@ export function ModoFoco({
           apoyos={apoyos}
           delPaso={delPaso}
           conVinculoProtegido={Boolean(vinculoProtegido)}
-          // EL CHIP TAMBIÉN EN LA PRIMERA TAREA. Llevaba `!enPrimeraTarea`,
-          // y ahí los apoyos del paso se pintan sueltos, así que parecía
-          // redundante. No lo era: sueltos solo se pintan los AVISOS, de
-          // modo que la galería del paso, sus imágenes y su dato
-          // protegido no tenían ningún control que los abriera mientras
-          // el técnico estuviera en la tarea 1. Ahora el chip está
-          // siempre que haya algo del paso, y sirve además para cerrar
-          // el panel donde se abrió.
+          // El chip está SIEMPRE que haya algo del paso: es el único
+          // control que abre y cierra ese contenido, incluso en la
+          // primera tarea, donde llega abierto.
           mostrarChipDelPaso={hayApoyosDelPaso && tarea.clase === 'tarea'}
           panel={panel}
           onPanel={(p) => setPanel(panel === p ? null : p)}
@@ -692,8 +669,11 @@ function ChipsApoyo({
         </ChipFoco>
       )}
       {mostrarChipDelPaso && (
+        // El rótulo dice lo que va a pasar al tocarlo, y con el panel
+        // abierto dice "ocultar": antes decía siempre "Del paso (N)",
+        // asi que el mismo texto servía para abrir y para cerrar.
         <ChipFoco Icono={Info} activo={panel === 'paso'} onClick={() => onPanel('paso')}>
-          {`Del paso (${delPasoCuenta})`}
+          {panel === 'paso' ? 'Ocultar información del paso' : `Información del paso (${delPasoCuenta})`}
         </ChipFoco>
       )}
     </div>
