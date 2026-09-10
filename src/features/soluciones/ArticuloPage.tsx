@@ -39,7 +39,7 @@ import { BotonFavorito } from '../../components/BotonFavorito'
 import { BarraAccionFicha, type EstadoAccion } from '../../components/BarraAccionFicha'
 import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
-import { accionDeGuia } from './accionGuia'
+import { accionDeGuia, estrenaEjecucion, etiquetaAccionGuia } from './accionGuia'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { colorIconoDeTipo } from './iconosSoluciones'
@@ -346,11 +346,11 @@ function AccionDominante({
     async () => (await db.progresoPasos.get(articuloId)) ?? null,
     [articuloId],
   )
-  const idsPasos = procedimiento.pasos.map((p) => p.id)
-  // EL DESTINO ES EL PRIMER PASO PENDIENTE DE VERDAD (tarea 5 del
-  // encargo). Antes era `pasosHechos + 1`, una cuenta que con los pasos
-  // cerrados fuera de orden señalaba uno ya hecho.
-  const accion = accionDeGuia(idsPasos, progreso?.pasosHechos, progreso != null)
+  // EL DESTINO ES EL PRIMER PASO PENDIENTE DE VERDAD, y "terminada"
+  // incluye las comprobaciones finales: ofrecer "Repetir guia" con
+  // comprobaciones sin marcar borraba una ejecucion que no habia
+  // acabado.
+  const accion = accionDeGuia(procedimiento, progreso, progreso != null)
   const estado: EstadoAccion = accion.estado
 
   if (progreso === undefined) return null
@@ -359,12 +359,11 @@ function AccionDominante({
     <BarraAccionFicha
       to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
       estado={estado}
-      paso={accion.numeroPaso ?? undefined}
-      total={accion.total}
+      etiqueta={etiquetaAccionGuia(accion, 'barra')}
       // Empezar y repetir ESTRENAN ejecucion; continuar conserva la
       // abierta y por eso no prepara nada.
       onIniciar={
-        estado === 'continuar' ? undefined : async () => void (await empezarEjecucion(articuloId))
+        estrenaEjecucion(accion) ? async () => void (await empezarEjecucion(articuloId)) : undefined
       }
       onReiniciar={() => void reiniciarProgreso(articuloId)}
     />

@@ -28,9 +28,13 @@ export type EstadoAccion = 'empezar' | 'continuar' | 'repetir'
 interface Props {
   to: string
   estado: EstadoAccion
-  /** Primer paso PENDIENTE (1-based) y total, solo para `continuar`. */
-  paso?: number
-  total?: number
+  /**
+   * Rotulo ya resuelto (`etiquetaAccionGuia`). Lo decide quien conoce
+   * el avance, no esta barra: con las comprobaciones finales pendientes
+   * no hay numero de paso que mostrar, y armar aqui la frase obligaria
+   * a mantener una segunda definicion de lo que falta.
+   */
+  etiqueta: string
   /**
    * Prepara la ejecucion antes de navegar (`empezar` y `repetir`
    * estrenan una). Mientras corre, el control queda ocupado: navegar
@@ -52,16 +56,10 @@ interface Props {
   onReiniciar?: () => void
 }
 
-export function BarraAccionFicha({ to, estado, paso, total, onIniciar, onReiniciar }: Props) {
+export function BarraAccionFicha({ to, estado, etiqueta, onIniciar, onReiniciar }: Props) {
   const navegar = useNavigate()
   const [ocupado, setOcupado] = useState(false)
 
-  const etiqueta =
-    estado === 'continuar' && paso != null && total != null
-      ? `Continuar en el paso ${paso} de ${total}`
-      : estado === 'repetir'
-        ? 'Repetir guía'
-        : 'Empezar'
   const Icono = estado === 'repetir' ? ArrowsClockwise : Play
   const nota =
     estado === 'continuar'
