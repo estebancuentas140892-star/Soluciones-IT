@@ -5,7 +5,6 @@ import {
   BookOpen,
   Camera,
   CaretLeft,
-  CaretRight,
   Check,
   Info,
   LockSimple,
@@ -385,17 +384,35 @@ export function ModoFoco({
           .join(' ')
       : ''
 
-  function marcar() {
+  // COMPLETAR Y AVANZAR SON UN SOLO GESTO (encargo del 2026-09-10,
+  // tarea 5). Había dos controles que parecían servir para continuar,
+  // "Marcar hecha" y la flecha derecha, y solo uno registraba el
+  // trabajo: con la flecha se recorría el paso entero sin marcar nada,
+  // el cierre aparecía bloqueado al final y había que volver hacia
+  // atrás tarea por tarea. La flecha se retira y el botón grande hace
+  // las dos cosas.
+  function completarYContinuar() {
     // La misma regla que aplica el hook al escribir, aquí solo para no
     // ofrecer un gesto que no va a hacer nada.
-    if (!hecha && motivoGuias) return
+    if (motivoGuias) return
     onAlternarTarea(tarea.id)
-    // Marcar avanza a la siguiente tarea sin cumplir: es el gesto de
-    // "ya está, dame la que sigue". Desmarcar no mueve nada, porque
-    // quien desmarca está corrigiéndose y quiere quedarse donde está.
-    if (hecha) return
     const siguiente = siguientePendiente(indice)
     if (siguiente >= 0) setIndiceTarea(siguiente)
+  }
+
+  // Corregirse es un gesto aparte y secundario: no mueve el recorrido,
+  // porque quien desmarca quiere quedarse donde está.
+  function desmarcar() {
+    onAlternarTarea(tarea.id)
+  }
+
+  // Seguir SIN tocar nada, desde una tarea que ya estaba cumplida (se
+  // llegó a ella con "Ver la anterior"). Es la única forma de volver
+  // hacia adelante ahora que no hay flecha derecha, y no registra nada.
+  function continuarSinMarcar() {
+    const pendiente = siguientePendiente(indice)
+    if (pendiente >= 0) setIndiceTarea(pendiente)
+    else if (indice + 1 < tareas.length) setIndiceTarea(indice + 1)
   }
 
   // CONFIRMAR UN AVISO DEJA PASAR, NO MARCA TRABAJO. La confirmación se
@@ -419,28 +436,16 @@ export function ModoFoco({
     setDecisionAbierta(null)
   }
 
-  // El rótulo de la acción dominante nombra lo que se cierra. Una
-  // comprobación no se "hace": se comprueba (H08). Y una guía vinculada
-  // no se marca a mano: se cumple al terminarla (A10). Una decisión ya
-  // respondida dice "Respondida", no "Hecha": lo que ocurrió ahí fue
-  // elegir un camino, no ejecutar una instrucción.
-  const etiquetaMarcar = esVerificacion
-    ? hecha
-      ? 'Comprobado'
-      : 'Sí, lo comprobé'
-    : esDecision
-      ? hecha
-        ? 'Respondida'
-        : 'Ya quedó resuelto, continuar'
-      : hecha
-        ? 'Hecha'
-        : 'Marcar hecha'
+  // EL RÓTULO DICE LAS DOS COSAS QUE HACE (encargo del 2026-09-10,
+  // tarea 5): registra la tarea Y trae la siguiente. Una comprobación
+  // no se "hace": se comprueba (H08).
+  const etiquetaPrincipal = esVerificacion ? 'Sí, lo comprobé · continuar' : 'Hecho · continuar'
 
   // Responder que sí es seguir por la vía prevista: marca y avanza,
   // igual que cualquier tarea cumplida.
   function responderSi() {
     setDecisionAbierta(null)
-    marcar()
+    completarYContinuar()
   }
 
   // Responder que no abre el destino si lo hay. Sin destino, la
@@ -452,7 +457,7 @@ export function ModoFoco({
   // debajo de la pregunta.
   function responderNo() {
     if (!destinoDelNo) {
-      marcar()
+      completarYContinuar()
       return
     }
     const tareaId = tarea.id
@@ -580,14 +585,15 @@ export function ModoFoco({
                 Otra guía
               </span>
             )}
-            {cierraPaso && hecha && tarea.clase !== 'guia-del-paso' && (
-              <button
-                type="button"
-                onClick={() => onAlternarTarea(tarea.id)}
-                className="flex h-11 items-center rounded-full px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.08]"
-              >
-                Desmarcar
-              </button>
+            {/* EL ESTADO DE UNA TAREA YA CUMPLIDA, junto a su número
+                (encargo del 2026-09-10, tarea 5). "Desmarcar" bajó al
+                pie, como control secundario: era un botón dentro de la
+                fila de pastillas y competía con la acción dominante. */}
+            {hecha && tarea.clase === 'tarea' && (
+              <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-exito/45 bg-noct-exito/10 px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-exito">
+                <Check size={14} aria-hidden />
+                Completada
+              </span>
             )}
           </div>
         )}
@@ -740,15 +746,30 @@ export function ModoFoco({
             <span className="truncate">{etiquetaAvance}</span>
           </button>
         ) : tarea.clase === 'guia-del-paso' ? (
-          // La guía vinculada NO tiene botón de marcar: se cumple sola
-          // al terminarla (A10). Poner uno sería ofrecer justo lo que
-          // el criterio prohíbe, dar por hecha una guía sin hacerla.
-          <p className="flex min-h-[76px] w-full items-center justify-center gap-2.5 rounded-2xl border-[1.5px] border-dashed border-noct-divider px-4 text-center text-[14px] leading-snug text-noct-neutral-300">
-            <BookOpen size={18} className="shrink-0 text-noct-neutral-400" aria-hidden />
-            {guiaDelPasoDisponible
-              ? 'Esta tarea se cumple al terminar la guía de arriba'
-              : 'Sigue con el resto del paso: este vínculo no impide cerrarlo'}
-          </p>
+          // LA ACCIÓN DOMINANTE ES LA DE LA TARJETA ("Abrir guía" /
+          // "Continuar guía"), así que aquí no va otra (encargo del
+          // 2026-09-10, tarea 5: una sola acción dominante a la vez).
+          // Antes había un cartel de 76 px con borde discontinuo que
+          // ocupaba el sitio del botón sin ser uno.
+          //
+          // Solo hay pie propio en los dos casos en los que la tarjeta
+          // no ofrece nada que hacer: la guía ya está completa, o no
+          // está en este dispositivo y el vínculo no bloquea (A12).
+          hecha || !guiaDelPasoDisponible ? (
+            <button
+              type="button"
+              onClick={continuarSinMarcar}
+              className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
+            >
+              <Check size={26} className="shrink-0" aria-hidden />
+              Continuar
+            </button>
+          ) : (
+            <p className="flex items-center justify-center gap-2 px-2 text-center text-[13px] leading-snug text-noct-neutral-400">
+              <BookOpen size={16} className="shrink-0" aria-hidden />
+              Esta tarea se cumple al terminar la guía de arriba
+            </p>
+          )
         ) : esDecision && !hecha && !noAbierto ? (
           // UNA DECISIÓN SE RESPONDE, NO SE MARCA (secciones 5 y 6). Las
           // dos respuestas, con su consecuencia escrita: el sí sigue por
@@ -795,28 +816,35 @@ export function ModoFoco({
               </button>
             </div>
           </div>
+        ) : hecha ? (
+          // YA CUMPLIDA: se llegó aquí con "Ver la anterior". El estado
+          // lo dice la pastilla "Completada" de arriba y el gesto que
+          // queda es seguir; deshacerlo es secundario y vive abajo.
+          <button
+            type="button"
+            onClick={continuarSinMarcar}
+            className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
+          >
+            <Check size={26} className="shrink-0" aria-hidden />
+            Continuar
+          </button>
         ) : (
           <button
             type="button"
-            onClick={marcar}
-            aria-pressed={hecha}
-            disabled={!hecha && motivoGuias !== null}
-            className={`flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 text-xl font-semibold disabled:opacity-30 ${
-              hecha
-                ? 'border-noct-exito bg-noct-exito/[.16] text-noct-exito'
-                : 'border-noct-accent bg-noct-accent/[.16] text-noct-accent-300 active:bg-noct-accent/[.34]'
-            }`}
+            onClick={completarYContinuar}
+            disabled={motivoGuias !== null}
+            className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30"
           >
             <Check size={26} className="shrink-0" aria-hidden />
-            {etiquetaMarcar}
+            <span className="truncate">{etiquetaPrincipal}</span>
           </button>
         )}
+        {/* CONTROLES SECUNDARIOS. La flecha derecha se retiró (encargo
+            del 2026-09-10, tarea 5): era el atajo que dejaba recorrer el
+            paso entero sin registrar nada, y el cierre aparecía
+            bloqueado al final. Queda solo el regreso, que consulta y no
+            toca el avance. */}
         <div className="flex gap-2.5">
-          {/* NAVEGAR NO ES MARCAR (H07, criterio A13). Las flechas se
-              anuncian como consulta: "ver la anterior", "ver la
-              siguiente". Antes decían solo "Tarea anterior" y "Tarea
-              siguiente", que en una pantalla cuya acción es marcar se
-              leía como avanzar el trabajo. */}
           <button
             type="button"
             disabled={indice === 0}
@@ -827,9 +855,13 @@ export function ModoFoco({
           >
             <CaretLeft size={20} aria-hidden />
           </button>
-          {/* "Falla" es de una TAREA: en un aviso no hay nada que pueda
-              salir mal todavía, así que la barra solo ofrece lo que
-              corresponde a lo que está en pantalla. */}
+          {/* "Tengo un problema" abre las salidas del paso (la
+              contingencia, la evidencia, saltar) SIN completar nada ni
+              cambiar de tarea. Se llamaba "Falla", que nombra el estado
+              y no lo que el técnico puede hacer, y en una comprobación
+              cambiaba a "No se cumple": dos rótulos para el mismo
+              control. En un aviso no se ofrece: todavía no hay nada
+              hecho que pueda haber salido mal. */}
           {esAviso ? (
             <div className="min-w-0 flex-1" />
           ) : (
@@ -837,26 +869,25 @@ export function ModoFoco({
               type="button"
               onClick={() => onFalla(tarea.texto)}
               aria-haspopup="dialog"
-              aria-label={
-                esVerificacion ? 'La comprobación no se cumple: ver las salidas' : 'Algo va mal en esta tarea'
-              }
+              aria-label="Tengo un problema con esta tarea: ver las salidas"
               className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/55 bg-noct-precaucion/10 text-[15.5px] font-medium text-noct-precaucion hover:bg-noct-precaucion/[.2]"
             >
               <Warning size={19} className="shrink-0" aria-hidden />
-              <span className="truncate">{esVerificacion ? 'No se cumple' : 'Falla'}</span>
+              <span className="truncate">Tengo un problema</span>
             </button>
           )}
+        </div>
+        {/* Deshacer lo marcado: secundario y discreto, para corregirse
+            sin que compita con la acción dominante. */}
+        {hecha && tarea.clase === 'tarea' && (
           <button
             type="button"
-            disabled={indice >= tareas.length - 1}
-            onClick={() => setIndiceTarea(Math.min(tareas.length - 1, indice + 1))}
-            aria-label="Ver la tarea siguiente. Solo mueve la vista, no la marca como hecha"
-            title="Ver la siguiente"
-            className="flex h-14 w-16 shrink-0 items-center justify-center rounded-xl border-[1.5px] border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-30"
+            onClick={desmarcar}
+            className="mx-auto flex min-h-11 items-center rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.08]"
           >
-            <CaretRight size={20} aria-hidden />
+            Desmarcar esta tarea
           </button>
-        </div>
+        )}
       </div>
       )}
     </div>

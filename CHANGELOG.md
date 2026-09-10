@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Corregido (encargo 2026-09-10, tarea 5): dos controles para continuar y solo uno registraba el trabajo
+
+**Área modificada:** ejecución de Guías, modo de una tarea a la vez. **Modificados:** `src/features/soluciones/ModoFoco.tsx`, `DOCUMENTACION_FUNCIONAL.md`, `COMPONENTES_UI.md`.
+**Motivo:** tarea 5 del encargo del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Causa.** La pantalla ofrecía **"Marcar hecha"** y una **flecha derecha**, y las dos parecían servir para continuar. Solo la primera registraba nada: con la flecha se recorría el paso entero sin marcar, el cierre aparecía **bloqueado** al final y había que volver hacia atrás tarea por tarea a marcar lo ya hecho.
+- **Cambiado** la **flecha derecha se retira** y la acción dominante hace las dos cosas: registra la tarea y trae la siguiente pendiente. El rótulo lo dice: **"Hecho · continuar"** en una acción y **"Sí, lo comprobé · continuar"** en una comprobación. Un aviso conserva su **"Entendido · continuar"**, una decisión sus dos respuestas **"Sí"** y **"No"**, y una guía vinculada **no dibuja botón aquí**: su acción dominante es la de su tarjeta (**"Abrir guía"** / **"Continuar guía"**), así que nunca hay dos.
+- **Sin segundo clic al cerrar:** completar la última tarea del paso **cierra el paso y abre el siguiente**; completar la última de la guía lleva directo a las **comprobaciones finales**.
+- **Con una guía necesaria pendiente** el botón queda apagado, con el nombre de la guía escrito encima y su **"Abrir guía"** a la vista.
+- **Cambiado** el único control secundario de navegación es el **regreso**, que consulta y no toca el avance. Al volver a una tarea cumplida, la pastilla dice **"Completada"**, la acción dominante pasa a **"Continuar"** y **"Desmarcar esta tarea"** baja al pie como secundaria: antes el botón de mayor superficie era el propio "Hecha", que al tocarlo **deshacía** el trabajo.
+- **Cambiado** **"Falla" pasa a llamarse "Tengo un problema"** y sale de entre las flechas. Abre las mismas salidas del paso sin completar nada ni cambiar de tarea. Nombraba el estado y no lo que el técnico puede hacer, y en una comprobación cambiaba a "No se cumple": dos rótulos para el mismo control.
+- **Comprobado en navegador** a 375 px con el banco de pruebas local: recorrido completo de una guía de tres pasos sin tocar nada más que la acción dominante, cierre encadenado de paso y salto a las comprobaciones finales; guía necesaria pendiente que bloquea con su nombre; regreso a una tarea cumplida con "Completada", "Continuar" y "Desmarcar esta tarea"; y "Tengo un problema" abriendo la hoja de salidas sin mover el recorrido.
+
 ### Corregido (encargo 2026-09-10, tarea 4): la guía vinculada dejaba de ser un vínculo y se volvía una página larga
 
 **Área modificada:** ejecución de Guías, vínculos. **Nuevos:** `src/features/soluciones/estadoVinculo.ts` (+ 6 pruebas), `src/features/soluciones/TarjetaGuiaVinculada.tsx`. **Modificados:** `src/features/soluciones/ModoFoco.tsx`, `src/features/soluciones/AsistenteVista.tsx`, `src/features/soluciones/ProcedimientoVista.tsx`, `src/features/soluciones/FilaVinculo.tsx`, `src/features/soluciones/useProcedimientoEjecucion.ts`, `DOCUMENTACION_FUNCIONAL.md`, `COMPONENTES_UI.md`.
