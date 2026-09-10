@@ -1,4 +1,5 @@
-import type { PasoProcedimiento } from '../../lib/db'
+import type { PasoProcedimiento, Procedimiento } from '../../lib/db'
+import { contarHechos, verificacionFinalCompleta } from '../../lib/progresoPasos'
 
 // COMO SE CIERRA UN PASO, DICHO UNA SOLA VEZ (encargo del 2026-09-09,
 // tarea 3).
@@ -119,4 +120,32 @@ export function cierreDelPaso({
     guiaPendiente: null,
     tareasPendientes: 0,
   }
+}
+
+/**
+ * CUANDO UNA GUIA ESTA TERMINADA DE VERDAD (encargo del 2026-09-09,
+ * tarea 4).
+ *
+ * Sus pasos cerrados Y sus comprobaciones finales hechas. Las tareas
+ * obligatorias de cada paso ya estan dentro de "pasos cerrados": un
+ * paso no se cierra sin ellas (`cierreDelPaso`).
+ *
+ * Antes bastaban los pasos, asi que una guia vinculada con
+ * comprobaciones finales daba por cerrado el paso que la exigia sin que
+ * nadie las hiciera. Una guia SIN comprobaciones termina al cerrar su
+ * ultimo paso, como siempre.
+ */
+export function guiaTerminada(
+  procedimiento: Procedimiento,
+  pasosHechos: string[] | undefined,
+  verificacionHecha: number[] | undefined,
+): boolean {
+  const ids = procedimiento.pasos.map((paso) => paso.id)
+  // Sin pasos que ejecutar no hay nada que cerrar (caso K1: una guia
+  // que es solo metadata). No bloquea, como no bloqueaba antes.
+  const pasosListos = contarHechos(pasosHechos ?? [], ids) === ids.length
+  return (
+    pasosListos &&
+    verificacionFinalCompleta(verificacionHecha, procedimiento.verificacionFinal.length)
+  )
 }

@@ -9,6 +9,7 @@ import {
 } from '../../lib/procedimiento'
 import {
   alternarInstruccionHecha,
+  alternarVerificacionFinal,
   avanceDe,
   contarHechos,
   contarInstruccionesHechas,
@@ -17,6 +18,7 @@ import {
   raizDe,
   verificacionFinalCompleta,
 } from '../../lib/progresoPasos'
+import { guiaTerminada } from './cierrePaso'
 import { useClaveProgreso } from './contextoEjecucion'
 import {
   guiasObligatoriasDeTarea,
@@ -125,8 +127,7 @@ export function useProcedimientoEjecucion({
     const proc = normalizarProcedimiento(articulo.procedimiento)
     if (!proc) return true
     const prog = vinculos?.[guiaId]
-    const hechosSub = contarHechos(prog?.pasosHechos ?? [], proc.pasos.map((p) => p.id))
-    return hechosSub === proc.pasos.length
+    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha)
   }
 
   // La misma pregunta con lectura fresca, para decidir una escritura
@@ -138,8 +139,7 @@ export function useProcedimientoEjecucion({
     const proc = normalizarProcedimiento(articulo.procedimiento)
     if (!proc) return true
     const prog = (await db.progresoPasos.get(raizId))?.vinculos?.[guiaId]
-    const hechosSub = contarHechos(prog?.pasosHechos ?? [], proc.pasos.map((p) => p.id))
-    return hechosSub === proc.pasos.length
+    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha)
   }
 
   /**
@@ -178,15 +178,43 @@ export function useProcedimientoEjecucion({
     return true
   }
 
-  // Avance automatico despues de completar el paso del indice dado. Si
-  // no queda ninguno pendiente, el procedimiento termino: se avisa al
-  // padre (por si este hook describe un subprocedimiento o solucion
-  // vinculados a un paso de otro procedimiento) y se avisa a quien usa
-  // el hook con destino null.
-  function avanzarDespuesDe(indice: number, hechosNuevos: ReadonlySet<string>) {
+  // Avance automatico despues de completar el paso del indice dado.
+  //
+  // SIN PASOS PENDIENTES TODAVIA NO SE TERMINO (encargo del 2026-09-09,
+  // tarea 4). Aqui se avisaba al padre en cuanto caia el ultimo paso,
+  // asi que una guia vinculada con comprobaciones finales daba por
+  // cerrado el paso que la exigia sin que nadie las hiciera, y el
+  // tecnico volvia al procedimiento principal sin haberlas visto. El
+  // aviso hacia arriba espera ahora a que esten hechas; mientras tanto
+  // `onAvanzar(null)` lleva a la pantalla que las pide.
+  async function avanzarDespuesDe(indice: number, hechosNuevos: ReadonlySet<string>) {
     const destino = siguientePasoPendiente(idsPasos, hechosNuevos, indice)
-    if (destino === null) onCompletado?.()
-    onAvanzar(destino)
+    if (destino !== null) {
+      onAvanzar(destino)
+      return
+    }
+    const prog = await leerAvance(clave)
+    if (verificacionFinalCompleta(prog?.verificacionHecha, verificacionFinal.length)) {
+      onCompletado?.()
+    }
+    onAvanzar(null)
+  }
+
+  /**
+   * Marca o desmarca una comprobacion final y, si con eso el documento
+   * queda terminado (pasos Y comprobaciones), avisa al procedimiento
+   * que lo vincula. Es el ultimo tramo de la tarea 4: sin esto, hacer
+   * la ultima comprobacion de una guia vinculada no devolvia el control
+   * a la guia principal.
+   */
+  async function alternarVerificacion(indice: number) {
+    await alternarVerificacionFinal(clave, indice)
+    const prog = await leerAvance(clave)
+    const pasosListos =
+      pasos.length > 0 && contarHechos(prog?.pasosHechos ?? [], idsPasos) === pasos.length
+    if (pasosListos && verificacionFinalCompleta(prog?.verificacionHecha, verificacionFinal.length)) {
+      onCompletado?.()
+    }
   }
 
   /**
@@ -253,7 +281,7 @@ export function useProcedimientoEjecucion({
     // pasarlas seria conservar la unica via que completaba trabajo sin
     // hacerlo (tarea 3 del encargo).
     await establecerPasoHecho(clave, paso.id, true)
-    avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]))
+    await avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]))
   }
 
   // Completa el paso y sigue de largo, sin la validacion previa: lo usa
@@ -262,7 +290,7 @@ export function useProcedimientoEjecucion({
   async function completarPasoYAvanzar(indice: number, paso: PasoProcedimiento) {
     if (hechos.has(paso.id)) return
     await establecerPasoHecho(clave, paso.id, true)
-    avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
+    await avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
   }
 
   // ¿La guia vinculada del paso esta EN ESTE DISPOSITIVO? Distinta
@@ -291,6 +319,7 @@ export function useProcedimientoEjecucion({
     guiasPendientesDeTarea,
     desmarcarPaso,
     alternarTarea,
+    alternarVerificacion,
     intentarCompletarPaso,
     completarPasoYAvanzar,
   }

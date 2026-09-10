@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { PasoProcedimiento } from '../../lib/db'
-import { cierreDelPaso, guiaPendienteDelPaso, type DatosCierrePaso } from './cierrePaso'
+import type { PasoProcedimiento, Procedimiento } from '../../lib/db'
+import {
+  cierreDelPaso,
+  guiaPendienteDelPaso,
+  guiaTerminada,
+  type DatosCierrePaso,
+} from './cierrePaso'
 
 function datos(cambios: Partial<DatosCierrePaso> = {}): DatosCierrePaso {
   return {
@@ -106,5 +111,44 @@ describe('guiaPendienteDelPaso', () => {
   it('sin titulo de referencia la nombra de forma generica', () => {
     const p = paso({ subArticuloId: 'guia-1', subArticuloTitulo: '' })
     expect(guiaPendienteDelPaso(p, false)).toBe('la guía vinculada')
+  })
+})
+
+// UNA GUIA VINCULADA TERMINA CUANDO TERMINA (encargo del 2026-09-09,
+// tarea 4): con sus pasos cerrados Y sus comprobaciones finales hechas.
+describe('guiaTerminada', () => {
+  function guia(pasos: string[], verificacionFinal: string[] = []): Procedimiento {
+    return {
+      descripcion: '',
+      portada: null,
+      objetivoGeneral: '',
+      requisitos: [],
+      pasos: pasos.map((id) => paso({ id })),
+      verificacionFinal,
+      tiempoEstimadoMin: null,
+      dificultad: null,
+    } as Procedimiento
+  }
+
+  it('sin comprobaciones finales termina al cerrar el ultimo paso', () => {
+    const g = guia(['p1', 'p2'])
+    expect(guiaTerminada(g, ['p1'], undefined)).toBe(false)
+    expect(guiaTerminada(g, ['p1', 'p2'], undefined)).toBe(true)
+  })
+
+  it('con comprobaciones finales no termina hasta hacerlas todas', () => {
+    const g = guia(['p1'], ['Comprobar A', 'Comprobar B'])
+    expect(guiaTerminada(g, ['p1'], undefined)).toBe(false)
+    expect(guiaTerminada(g, ['p1'], [0])).toBe(false)
+    expect(guiaTerminada(g, ['p1'], [0, 1])).toBe(true)
+  })
+
+  it('las comprobaciones no cuentan mientras queden pasos abiertos', () => {
+    const g = guia(['p1', 'p2'], ['Comprobar A'])
+    expect(guiaTerminada(g, ['p1'], [0])).toBe(false)
+  })
+
+  it('una guia sin pasos que ejecutar no bloquea (caso K1)', () => {
+    expect(guiaTerminada(guia([]), undefined, undefined)).toBe(true)
   })
 })

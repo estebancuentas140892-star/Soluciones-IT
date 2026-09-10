@@ -9,7 +9,6 @@ import {
   tareasDe,
 } from '../../lib/procedimiento'
 import {
-  alternarVerificacionFinal,
   contarHechos,
   contarInstruccionesHechas,
   leerAvance,
@@ -197,6 +196,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
     guiaDelPasoDisponible,
     guiasPendientesDeTarea,
     alternarTarea,
+    alternarVerificacion,
     intentarCompletarPaso,
     completarPasoYAvanzar,
   } = useProcedimientoEjecucion({
@@ -223,7 +223,13 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
   // Anidado (subprocedimiento o solucion de un paso de nivel 0): el
   // padre deja de renderizar este componente en cuanto queda
   // satisfecho, asi que aqui no hace falta pantalla de cierre propia.
-  if (indiceActual === null && nivel >= 1) return null
+  //
+  // SALVO SUS COMPROBACIONES FINALES (encargo del 2026-09-09, tarea 4).
+  // Con este `return null` sin condiciones, una guia vinculada con
+  // comprobaciones desaparecia al cerrar su ultimo paso y nadie llegaba
+  // a verlas nunca: el unico sitio donde se marcan es la pantalla que
+  // este return borraba. Ahora se va cuando esta terminada de verdad.
+  if (indiceActual === null && nivel >= 1 && verificacionCompleta) return null
 
   const porcentaje = pasos.length === 0 ? 0 : Math.round((completados / pasos.length) * 100)
   const cronometro = nivel === 0 ? formatoCronometro(transcurridoSeg) : null
@@ -249,7 +255,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, onCompletado 
                     type="button"
                     role="checkbox"
                     aria-checked={marcada}
-                    onClick={() => void alternarVerificacionFinal(clave, indice)}
+                    onClick={() => void alternarVerificacion(indice)}
                     className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
                   >
                     <span

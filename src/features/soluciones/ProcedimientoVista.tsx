@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type BloquePaso, type PasoAdjunto, type Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
-import { alternarVerificacionFinal, contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
+import { contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { cierreDelPaso, guiaPendienteDelPaso } from './cierrePaso'
 import { useAvanceProgreso, useClaveProgreso, useClaveVinculo } from './contextoEjecucion'
 import { motivoGuiasPendientes } from './guiasObligatorias'
@@ -106,6 +106,7 @@ export function ProcedimientoVista({
     guiasPendientesDeTarea,
     desmarcarPaso,
     alternarTarea,
+    alternarVerificacion,
     intentarCompletarPaso,
     completarPasoYAvanzar,
   } = useProcedimientoEjecucion({
@@ -478,7 +479,7 @@ export function ProcedimientoVista({
                   type="button"
                   role="checkbox"
                   aria-checked={marcada}
-                  onClick={() => void alternarVerificacionFinal(clave, indice)}
+                  onClick={() => void alternarVerificacion(indice)}
                   className="flex min-h-11 w-full cursor-pointer items-center gap-2.5 text-left outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
                 >
                   {marcada ? (
