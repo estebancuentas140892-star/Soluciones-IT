@@ -128,6 +128,37 @@ async function guardarProgreso(
   })
 }
 
+// PROGRESO DE PRUEBA, SEPARADO DEL DE VERDAD (encargo del 2026-09-09,
+// tarea 6). La vista previa del editor ejecuta el procedimiento con una
+// raiz efimera: lo que se marque ahi -y el avance de TODOS sus
+// vinculos, que desde la tarea 2 vive dentro de esa misma fila- no toca
+// el progreso real de ninguna guia.
+const PREFIJO_VISTA_PREVIA = 'vista-previa:'
+
+/**
+ * Raiz de UNA sesion de vista previa. Lleva identificador propio, no
+ * solo el id del articulo: dos pruebas del mismo articulo (cerrar y
+ * volver a abrir "Probar") son dos sesiones distintas y no deben
+ * heredarse el avance.
+ */
+export function claveVistaPrevia(articuloId: string): string {
+  return `${PREFIJO_VISTA_PREVIA}${articuloId}:${crypto.randomUUID()}`
+}
+
+/**
+ * Borra el progreso de prueba. Sin argumento borra todo el que haya
+ * quedado suelto (una vista previa que se cerro con un recargo, no con
+ * el boton); con `salvo` conserva la sesion en curso.
+ */
+export async function limpiarProgresoVistaPrevia(salvo?: string): Promise<void> {
+  const claves = await db.progresoPasos
+    .where('articuloId')
+    .startsWith(PREFIJO_VISTA_PREVIA)
+    .primaryKeys()
+  const aBorrar = claves.filter((clave) => clave !== salvo)
+  if (aBorrar.length > 0) await db.progresoPasos.bulkDelete(aBorrar)
+}
+
 /** Identificador de una ejecucion. Local y efimero, como el avance. */
 export function nuevoIdEjecucion(): string {
   return crypto.randomUUID()

@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { db, type Procedimiento, type TipoArticulo } from '../../lib/db'
+import type { Procedimiento, TipoArticulo } from '../../lib/db'
+import { claveVistaPrevia, limpiarProgresoVistaPrevia } from '../../lib/progresoPasos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { TagNeutral } from '../../components/nocturne'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
@@ -9,9 +10,10 @@ import { ProcedimientoVista } from './ProcedimientoVista'
 import { etiquetaDeTipo } from './tiposArticulo'
 
 interface Props {
-  // Id del articulo en edicion: la vista previa usa un id derivado
-  // ("vista-previa:<id>") para que las casillas que se marquen aqui
-  // jamas toquen el progreso real del articulo.
+  // Id del articulo en edicion. La vista previa NO ejecuta sobre el:
+  // estrena una raiz efimera por sesion, de modo que ni las casillas
+  // que se marquen aqui ni el avance de las guias vinculadas que se
+  // abran dentro tocan el progreso real de ninguna guia.
   articuloId: string
   titulo: string
   tipo: TipoArticulo
@@ -42,7 +44,11 @@ export function VistaPreviaArticulo({
   pasoDestacadoId = null,
   onCerrar,
 }: Props) {
-  const idEfimero = `vista-previa:${articuloId}`
+  // UNA RAIZ POR SESION DE PRUEBA (tarea 6 del encargo). Antes la raiz
+  // era `vista-previa:<id>`, fija: cerrar y volver a abrir "Probar"
+  // reencontraba lo marcado en la prueba anterior, con sus guias
+  // vinculadas ya dadas por hechas. Se calcula una sola vez por montaje.
+  const [idEfimero] = useState(() => claveVistaPrevia(articuloId))
   const urlPortada = useUrlAdjunto(procedimiento?.portada?.referencia ?? null)
 
   useEffect(() => {
@@ -52,11 +58,15 @@ export function VistaPreviaArticulo({
     document.addEventListener('keydown', alTeclado)
     const overflowPrevio = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    // Barre lo que dejaron pruebas anteriores que no se cerraron con el
+    // boton (un recargo a media prueba), sin tocar esta sesion.
+    void limpiarProgresoVistaPrevia(idEfimero)
     return () => {
       document.removeEventListener('keydown', alTeclado)
       document.body.style.overflow = overflowPrevio
-      // Limpia el progreso efimero de la prueba al cerrar.
-      void db.progresoPasos.delete(idEfimero)
+      // Al cerrar no queda rastro: la fila de la prueba se lleva consigo
+      // el avance de todas las guias vinculadas que se abrieron dentro.
+      void limpiarProgresoVistaPrevia()
     }
   }, [onCerrar, idEfimero])
 

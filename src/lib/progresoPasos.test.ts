@@ -6,8 +6,10 @@ import {
   avanceDe,
   contarHechos,
   contarInstruccionesHechas,
+  claveVistaPrevia,
   ejecucionAbierta,
   empezarEjecucion,
+  limpiarProgresoVistaPrevia,
   establecerPasoHecho,
   leerAvance,
   marcarPasoSaltado,
@@ -341,5 +343,51 @@ describe('identificador de la ejecucion', () => {
     const fila = await db.progresoPasos.get('articulo-1')
     expect(fila?.ejecucionId).toBeTruthy()
     expect(fila?.pasosHechos).toEqual(['paso-a', 'paso-b'])
+  })
+})
+
+// LA PRUEBA DEL EDITOR NO TOCA EL PROGRESO REAL (encargo del
+// 2026-09-09, tarea 6).
+describe('progreso de la vista previa', () => {
+  it('cada sesion de prueba estrena su propia raiz', () => {
+    const a = claveVistaPrevia('articulo-1')
+    const b = claveVistaPrevia('articulo-1')
+    expect(a).not.toBe(b)
+    expect(a.startsWith('vista-previa:articulo-1:')).toBe(true)
+  })
+
+  it('lo marcado en la prueba, y el avance de sus vinculos, vive fuera del progreso real', async () => {
+    const raiz = claveVistaPrevia('articulo-1')
+    await establecerPasoHecho(raiz, 'paso-a', true)
+    await establecerPasoHecho({ raizId: raiz, vinculoId: 'guia-vinculada' }, 'paso-v1', true)
+
+    expect(await db.progresoPasos.get('articulo-1')).toBeUndefined()
+    expect(await db.progresoPasos.get('guia-vinculada')).toBeUndefined()
+    expect((await leerAvance(raiz))?.pasosHechos).toEqual(['paso-a'])
+  })
+
+  it('cerrar la prueba no deja rastro', async () => {
+    const raiz = claveVistaPrevia('articulo-1')
+    await establecerPasoHecho(raiz, 'paso-a', true)
+    await establecerPasoHecho({ raizId: raiz, vinculoId: 'guia-vinculada' }, 'paso-v1', true)
+    await establecerPasoHecho('articulo-1', 'paso-a', true)
+
+    await limpiarProgresoVistaPrevia()
+
+    expect(await db.progresoPasos.get(raiz)).toBeUndefined()
+    // El progreso de verdad sigue donde estaba.
+    expect((await leerAvance('articulo-1'))?.pasosHechos).toEqual(['paso-a'])
+  })
+
+  it('barre las pruebas anteriores sin tocar la sesion en curso', async () => {
+    const vieja = claveVistaPrevia('articulo-1')
+    const actual = claveVistaPrevia('articulo-1')
+    await establecerPasoHecho(vieja, 'paso-a', true)
+    await establecerPasoHecho(actual, 'paso-a', true)
+
+    await limpiarProgresoVistaPrevia(actual)
+
+    expect(await db.progresoPasos.get(vieja)).toBeUndefined()
+    expect((await leerAvance(actual))?.pasosHechos).toEqual(['paso-a'])
   })
 })
