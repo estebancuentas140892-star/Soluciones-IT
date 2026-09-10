@@ -9,6 +9,7 @@ import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
 import { Marca } from '../components/Marca'
+import { CapaAtajos } from './CapaAtajos'
 import { ProveedorBandaTarea } from './bandaTarea'
 import { direccionPara } from './direccionTransicion'
 import { useOrigen } from './useOrigen'
@@ -322,6 +323,11 @@ export function Chasis(props: Props) {
           </BarraTarea>
           <ProveedorBandaTarea value={ranuraTarea}>{props.children}</ProveedorBandaTarea>
         </div>
+        {/* Los atajos de teclado también aquí, pero SIN los de navegar:
+            saltar a otra sección desde un editor o una ejecución sacaría
+            al técnico de un trabajo a medias sin pasar por su
+            confirmación de salida. Buscar y pedir ayuda sí siguen. */}
+        <CapaAtajos puedeVerBoveda={Boolean(usuario?.puedeVerBoveda)} navegacion={false} />
       </div>
     )
   }
@@ -566,6 +572,13 @@ export function Chasis(props: Props) {
           )
         })}
       </nav>
+
+      {/* Atajos de teclado (encargo del 2026-09-10, tarea 6). No dibuja
+          ningún control: son una mejora para quien tiene teclado, y
+          sumar un botón a la barra de un teléfono sería pagar espacio
+          por algo que ahí no se puede usar. La entrada visible vive en
+          Referencia. */}
+      <CapaAtajos puedeVerBoveda={Boolean(usuario?.puedeVerBoveda)} navegacion />
     </div>
   )
 }

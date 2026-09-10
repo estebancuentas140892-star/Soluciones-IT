@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-10
 
+### Agregado (Referencia, tarea 6): atajos de teclado propios de Soluciones IT
+
+**Área modificada:** chasis y apartado Referencia. **Nuevos:** `src/app/atajosApp.ts` (+ 13 pruebas), `src/app/CapaAtajos.tsx`, `src/app/AyudaAtajos.tsx`. **Modificados:** `src/app/Chasis.tsx`, `src/features/referencia/ReferenciaPage.tsx`, `src/features/busqueda/BuscadorGlobal.tsx`.
+**Motivo:** tarea 6 del encargo de Referencia del **10 de septiembre de 2026**. **Sin esquema. Sin cambios en los datos.**
+
+- **Agregados** los siete atajos: `/` enfoca el buscador global, `?` abre la ayuda, `G` y después `G`, `E`, `R` o `B` llevan a Guías, Equipos, Red o Bóveda, y `Esc` cierra el panel, diálogo, visor o ayuda de encima.
+- **No actúan mientras se escribe.** Un `input`, un `textarea`, un `select` o cualquier elemento editable se quedan la tecla: sin esto, escribir "guía" en el buscador de una lista saltaría a Guías en la primera letra.
+- **No se pisan los atajos del navegador.** Cualquier tecla con Ctrl, Cmd o Alt se deja pasar tal cual. Shift sí se admite, porque `?` se teclea con Shift en casi cualquier distribución.
+- **La secuencia que empieza con `G` caduca sola** a los 1.200 ms, y también la abandona cualquier segunda tecla que no sea una de las cuatro. Dejarla abierta convertiría cualquier "e" posterior en un salto a Equipos.
+- **`Esc` cierra solo la capa superior**, y lo hace porque la capa de atajos **no lo intercepta**: cada capa (buscador, diálogo, visor) ya cierra la suya con su propio oyente, así que capturarlo arriba cerraría dos a la vez. Mientras hay una capa abierta, la capa de atajos se aparta entera.
+- **`G` no navega mientras se edita o se ejecuta una guía** (nivel `tarea` del chasis): saltar a otra sección desde ahí sacaría al técnico de un trabajo a medias sin pasar por su confirmación de salida. Buscar y pedir ayuda sí siguen disponibles, porque ninguno de los dos abandona la pantalla. La ayuda lo dice por escrito.
+- **`G` y después `B` no existe sin permiso de bóveda**, ni en la ayuda: quien no lo tiene ni siquiera sabe que la sección está.
+- **Sin controles nuevos en la interfaz móvil.** La capa no dibuja nada: son una mejora para quien tiene teclado, y un botón "atajos" en la barra de un teléfono sería pagar espacio por algo que ahí no se puede usar.
+- **Agregada** la entrada visible **"Atajos de la aplicación"** en Referencia, dentro de la pestaña "Atajos y comandos", junto a los atajos del resto de programas: para el técnico son lo mismo, cosas que se teclean para ir más rápido. Es además la única puerta visible, porque `?` solo lo encuentra quien ya sabe que existe. Abre el mismo diálogo con la **lista completa**.
+- **Corregido de paso** la capa del buscador global se declara `role="dialog"` con `aria-modal`: además de ser lo correcto para un lector de pantalla, es la señal con la que la capa de atajos sabe que el teclado ya no es suyo.
+
 ### Agregado (Referencia, tarea 5): Referencia en el buscador global y revisión de consistencia
 
 **Área modificada:** buscador global y editor de Referencia. **Nuevos:** `src/features/referencia/consistencia.ts` (+ 22 pruebas), `AvisosConsistencia.tsx`. **Modificados:** `src/features/busqueda/useIndiceBusqueda.ts`, `resultados.ts`, `BuscadorGlobal.tsx`, `src/features/referencia/ReferenciaForm.tsx`, `ReferenciaPage.tsx`, `src/features/soluciones/PasosEditor.tsx`, `BUSCADOR.md`.

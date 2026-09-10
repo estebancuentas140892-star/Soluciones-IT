@@ -28,6 +28,9 @@ import {
   resumenDeLista,
 } from './referencias'
 import { revisarCatalogo } from './consistencia'
+import { AyudaAtajos } from '../../app/AyudaAtajos'
+import { useAuth } from '../autenticacion/authContext'
+import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 
 // REFERENCIA: EL VOCABULARIO Y LOS ATAJOS DEL EQUIPO, EN UN SOLO SITIO.
 //
@@ -61,6 +64,9 @@ const ICONO_POR_TIPO: Record<TipoReferencia, (props: IconoProps) => React.JSX.El
 }
 
 export function ReferenciaPage() {
+  const { perfil } = useAuth()
+  const perfilVivo = usePerfilVivo()
+  const usuario = perfilVivo ?? perfil
   const [params, setParams] = useSearchParams()
   const pestana: Pestana = params.get(CLAVE_PESTANA) === 'comandos' ? 'comandos' : 'glosario'
 
@@ -77,6 +83,7 @@ export function ReferenciaPage() {
   const [plataforma, setPlataforma] = useState<string | null>(null)
   const [hoja, setHoja] = useState<'categoria' | 'tipo' | 'plataforma' | null>(null)
   const [revisionAbierta, setRevisionAbierta] = useState(false)
+  const [ayudaAbierta, setAyudaAbierta] = useState(false)
 
   const terminos = useMemo(() => referencias.filter((r) => r.tipo === 'termino'), [referencias])
   const comandos = useMemo(() => referencias.filter((r) => r.tipo !== 'termino'), [referencias])
@@ -261,12 +268,47 @@ export function ReferenciaPage() {
           </div>
         )}
 
+        {/* LOS ATAJOS DE LA PROPIA APLICACIÓN, junto a los del resto de
+            programas: para el técnico son lo mismo, cosas que se teclean
+            para ir más rápido. Es además la única entrada visible que
+            tienen, porque "?" solo lo encuentra quien ya sabe que
+            existe. Sin filtro puesto, para no aparecer como si fuera un
+            resultado de la búsqueda. */}
+        {pestana === 'comandos' && !hayFiltro && (
+          <button
+            type="button"
+            onClick={() => setAyudaAbierta(true)}
+            aria-haspopup="dialog"
+            className="flex flex-col gap-1.5 rounded-lg border border-noct-divider bg-noct-surface p-3 text-left text-noct-text transition-colors hover:bg-noct-text/[.04]"
+          >
+            <span className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[.06em] text-noct-neutral-400">
+              <Keyboard size={14} className="shrink-0 text-noct-accent-300" aria-hidden />
+              Soluciones IT
+            </span>
+            <span className="flex items-start gap-2">
+              <span className="min-w-0 flex-1 text-pretty text-[15.5px] font-medium leading-[1.3]">
+                Atajos de la aplicación
+              </span>
+              <CaretRight size={14} className="mt-1 shrink-0 text-noct-neutral-600" aria-hidden />
+            </span>
+            <span className="text-pretty text-[13px] leading-normal text-noct-neutral-300">
+              Buscar, pedir ayuda e ir a una sección sin soltar el teclado
+            </span>
+          </button>
+        )}
+
         {visibles.length > 0 ? (
           visibles.map((referencia) => <TarjetaReferencia key={referencia.id} referencia={referencia} />)
         ) : (
           <Vacio pestana={pestana} hayFiltro={hayFiltro} />
         )}
       </main>
+
+      <AyudaAtajos
+        abierto={ayudaAbierta}
+        onCerrar={() => setAyudaAbierta(false)}
+        puedeVerBoveda={Boolean(usuario?.puedeVerBoveda)}
+      />
 
       <HojaFiltro
         abierto={hoja === 'categoria'}

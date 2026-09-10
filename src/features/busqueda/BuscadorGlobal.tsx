@@ -65,7 +65,12 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
   // desde la que se invoca lleva `backdrop-blur`, que crea bloque
   // contenedor y romperia `fixed inset-0`.
   return createPortal(
-    <div className="nocturne fixed inset-0 z-[60] flex flex-col bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Buscar en todo"
+      className="nocturne fixed inset-0 z-[60] flex flex-col bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text"
+    >
       <div className="flex items-center gap-2 border-b border-noct-divider px-3 py-2.5">
         {/* Mismo campo que el resto de la app (tarea 207, regla M-R8):
             46 px, el alcance escrito y el borrar a 44 px reales, que
