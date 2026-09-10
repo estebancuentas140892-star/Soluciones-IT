@@ -12,10 +12,10 @@ import { PastillaFrescura } from '../../components/PastillaFrescura'
 import { TIPOS_ARTICULO, etiquetaDeTipo } from './tiposArticulo'
 import { colorIconoDeTipo, iconoDeCategoria, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from './coloresCategoria'
-import { FilaArticulo } from './FilaArticulo'
+import { FilaArticulo, type AvanceFila } from './FilaArticulo'
 import { coincidenciaArticulo } from './coincidencia'
 import { sugerenciaBusqueda } from './sugerenciaBusqueda'
-import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { normalizarProcedimiento, siguientePasoPendiente } from '../../lib/procedimiento'
 import { contarHechos } from '../../lib/progresoPasos'
 
 // Pantalla Soluciones en el sistema Nocturne. Rediseñada a partir de la
@@ -125,7 +125,7 @@ export function SolucionesPage() {
   // catálogo; solo cambia el rótulo de la guía que ya estás mirando.
   const progresos = useLiveQuery(() => db.progresoPasos.toArray(), [], [])
   const avancePorArticulo = useMemo(() => {
-    const mapa = new Map<string, { hechos: number; total: number }>()
+    const mapa = new Map<string, AvanceFila>()
     for (const progreso of progresos) {
       const procedimiento = normalizarProcedimiento(
         articulos.find((a) => a.id === progreso.articuloId)?.procedimiento ?? null,
@@ -133,9 +133,14 @@ export function SolucionesPage() {
       if (!procedimiento) continue
       const ids = procedimiento.pasos.map((p) => p.id)
       if (ids.length === 0) continue
+      // El paso que se ofrece es el primer PENDIENTE, no `hechos + 1`
+      // (tarea 5 del encargo): con los pasos cerrados fuera de orden esa
+      // cuenta mandaba a uno ya hecho.
+      const destino = siguientePasoPendiente(ids, new Set(progreso.pasosHechos), -1)
       mapa.set(progreso.articuloId, {
         hechos: contarHechos(progreso.pasosHechos, ids),
         total: ids.length,
+        pasoPendiente: destino === null ? null : destino + 1,
       })
     }
     return mapa

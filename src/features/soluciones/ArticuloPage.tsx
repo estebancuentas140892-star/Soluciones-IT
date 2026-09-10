@@ -11,7 +11,7 @@ import {
   type Procedimiento,
 } from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
-import { contarHechos, reiniciarProgreso } from '../../lib/progresoPasos'
+import { empezarEjecucion, reiniciarProgreso } from '../../lib/progresoPasos'
 import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
@@ -39,6 +39,7 @@ import { BotonFavorito } from '../../components/BotonFavorito'
 import { BarraAccionFicha, type EstadoAccion } from '../../components/BarraAccionFicha'
 import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
+import { accionDeGuia } from './accionGuia'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
 import { ProcedimientoVista } from './ProcedimientoVista'
 import { colorIconoDeTipo } from './iconosSoluciones'
@@ -338,18 +339,33 @@ function AccionDominante({
   categoriaId: string
   procedimiento: Procedimiento
 }) {
-  const progreso = useLiveQuery(() => db.progresoPasos.get(articuloId), [articuloId])
+  // `null` = no hay ejecucion abierta; `undefined` = todavia se esta
+  // leyendo. Distinguirlos importa: mientras carga, el boton diria
+  // "Empezar" y tocarlo borraria el avance que aun no ha llegado.
+  const progreso = useLiveQuery(
+    async () => (await db.progresoPasos.get(articuloId)) ?? null,
+    [articuloId],
+  )
   const idsPasos = procedimiento.pasos.map((p) => p.id)
-  const hechos = contarHechos(progreso?.pasosHechos ?? [], idsPasos)
-  const total = idsPasos.length
-  const estado: EstadoAccion = hechos === 0 ? 'empezar' : hechos >= total ? 'repetir' : 'seguir'
+  // EL DESTINO ES EL PRIMER PASO PENDIENTE DE VERDAD (tarea 5 del
+  // encargo). Antes era `pasosHechos + 1`, una cuenta que con los pasos
+  // cerrados fuera de orden señalaba uno ya hecho.
+  const accion = accionDeGuia(idsPasos, progreso?.pasosHechos, progreso != null)
+  const estado: EstadoAccion = accion.estado
+
+  if (progreso === undefined) return null
 
   return (
     <BarraAccionFicha
       to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
       estado={estado}
-      paso={hechos + 1}
-      total={total}
+      paso={accion.numeroPaso ?? undefined}
+      total={accion.total}
+      // Empezar y repetir ESTRENAN ejecucion; continuar conserva la
+      // abierta y por eso no prepara nada.
+      onIniciar={
+        estado === 'continuar' ? undefined : async () => void (await empezarEjecucion(articuloId))
+      }
       onReiniciar={() => void reiniciarProgreso(articuloId)}
     />
   )

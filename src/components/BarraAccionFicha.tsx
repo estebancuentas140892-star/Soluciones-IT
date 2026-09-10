@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowsClockwise, Play } from './iconos'
 import { PEGADA_SOBRE_PESTANAS } from './nocturne'
 
@@ -16,14 +17,26 @@ import { PEGADA_SOBRE_PESTANAS } from './nocturne'
 // chasis reserva el de las pestañas, no el de esta barra: R22 cubre el
 // chasis, no las barras de una pantalla).
 
-export type EstadoAccion = 'empezar' | 'seguir' | 'repetir'
+// CADA BOTON HACE LO QUE DICE (encargo del 2026-09-09, tarea 5).
+// "Empezar" y "Repetir guia" ESTRENAN ejecucion antes de entrar (ver
+// `onIniciar`); "Continuar" conserva la abierta y entra sin tocar
+// nada. Antes los tres eran el mismo enlace y la ejecucion retomaba lo
+// que hubiera guardado, asi que "Empezar" continuaba y "Repetir"
+// enseñaba la pantalla de completado.
+export type EstadoAccion = 'empezar' | 'continuar' | 'repetir'
 
 interface Props {
   to: string
   estado: EstadoAccion
-  /** Paso actual (1-based) y total, solo para el estado `seguir`. */
+  /** Primer paso PENDIENTE (1-based) y total, solo para `continuar`. */
   paso?: number
   total?: number
+  /**
+   * Prepara la ejecucion antes de navegar (`empezar` y `repetir`
+   * estrenan una). Mientras corre, el control queda ocupado: navegar
+   * antes de que termine dejaria a la ejecucion leyendo el avance viejo.
+   */
+  onIniciar?: () => Promise<void>
   /**
    * Borra el avance guardado de esta guía. Solo se ofrece en el estado
    * `seguir`, y ahí SIEMPRE (2026-09-09, sección 3 del encargo).
@@ -39,34 +52,55 @@ interface Props {
   onReiniciar?: () => void
 }
 
-export function BarraAccionFicha({ to, estado, paso, total, onReiniciar }: Props) {
+export function BarraAccionFicha({ to, estado, paso, total, onIniciar, onReiniciar }: Props) {
+  const navegar = useNavigate()
+  const [ocupado, setOcupado] = useState(false)
+
   const etiqueta =
-    estado === 'seguir' && paso != null && total != null
-      ? `Seguir en el paso ${paso} de ${total}`
+    estado === 'continuar' && paso != null && total != null
+      ? `Continuar en el paso ${paso} de ${total}`
       : estado === 'repetir'
-        ? 'Repetir'
+        ? 'Repetir guía'
         : 'Empezar'
   const Icono = estado === 'repetir' ? ArrowsClockwise : Play
   const nota =
-    estado === 'seguir'
+    estado === 'continuar'
       ? 'Tu avance se guarda en este teléfono'
       : estado === 'repetir'
-        ? 'Vuelve a empezar desde el paso 1'
+        ? 'Empieza un caso nuevo desde el paso 1'
         : 'Un paso a la vez, sin distracciones'
+
+  async function iniciarYEntrar() {
+    if (ocupado) return
+    setOcupado(true)
+    try {
+      await onIniciar?.()
+      navegar(to)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  const claseAccion =
+    'flex min-h-[52px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent'
 
   return (
     <div
       className={`sticky ${PEGADA_SOBRE_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.92] px-4 pb-3 pt-2.5 backdrop-blur-[12px] lg:px-10`}
     >
       <div className="flex items-center gap-2">
-        <Link
-          to={to}
-          className="flex min-h-[52px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
-        >
-          <Icono size={17} className="shrink-0" aria-hidden />
-          <span className="truncate">{etiqueta}</span>
-        </Link>
-        {estado === 'seguir' && onReiniciar && (
+        {onIniciar ? (
+          <button type="button" disabled={ocupado} onClick={() => void iniciarYEntrar()} className={claseAccion}>
+            <Icono size={17} className="shrink-0" aria-hidden />
+            <span className="truncate">{etiqueta}</span>
+          </button>
+        ) : (
+          <Link to={to} className={claseAccion}>
+            <Icono size={17} className="shrink-0" aria-hidden />
+            <span className="truncate">{etiqueta}</span>
+          </Link>
+        )}
+        {estado === 'continuar' && onReiniciar && (
           <button
             type="button"
             onClick={onReiniciar}
@@ -80,7 +114,7 @@ export function BarraAccionFicha({ to, estado, paso, total, onReiniciar }: Props
       </div>
       <p className="mt-1.5 text-center text-[11.5px] text-noct-neutral-500">
         {nota}
-        {estado === 'seguir' && onReiniciar ? ' · el botón de al lado lo borra y empieza de cero' : ''}
+        {estado === 'continuar' && onReiniciar ? ' · el botón de al lado lo borra y empieza de cero' : ''}
       </p>
     </div>
   )

@@ -71,6 +71,12 @@ export interface CoincidenciaFila {
 export interface AvanceFila {
   hechos: number
   total: number
+  /**
+   * Primer paso PENDIENTE de verdad (1-based), o null si no queda
+   * ninguno. No es `hechos + 1`: con los pasos cerrados fuera de orden
+   * esa cuenta señalaba un paso ya hecho (tarea 5 del encargo).
+   */
+  pasoPendiente: number | null
 }
 
 export function FilaArticulo({
@@ -112,7 +118,7 @@ export function FilaArticulo({
   // no hay nada que continuar, y con todos hechos lo honesto es volver a
   // ofrecer "Empezar", porque repetir una guía es el caso normal de un
   // mantenimiento.
-  const aMedias = avance != null && avance.hechos > 0 && avance.hechos < avance.total
+  const aMedias = avance != null && avance.hechos > 0 && avance.pasoPendiente !== null
 
   return (
     // La tarjeta NO es un enlace que envuelva a la acción: un control
@@ -194,14 +200,14 @@ export function FilaArticulo({
             to={`${to}/ejecutar`}
             aria-label={
               aMedias
-                ? `Continuar "${articulo.titulo}" en el paso ${avance.hechos + 1} de ${avance.total}`
+                ? `Continuar "${articulo.titulo}" en el paso ${avance.pasoPendiente} de ${avance.total}`
                 : `Empezar "${articulo.titulo}"`
             }
             className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-noct-accent bg-noct-accent/10 px-3 text-[14.5px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.24] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
           >
             <Play size={17} className="shrink-0" aria-hidden />
             <span className="truncate">
-              {aMedias ? `Continuar · paso ${avance.hechos + 1} de ${avance.total}` : 'Empezar'}
+              {aMedias ? `Continuar · paso ${avance.pasoPendiente} de ${avance.total}` : 'Empezar'}
             </span>
           </Link>
         ) : (
