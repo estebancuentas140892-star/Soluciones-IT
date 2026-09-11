@@ -22,10 +22,9 @@ function leerDescartado(): string | null {
 // 203). Antes vivía en un `useState` por instancia, y con un solo
 // consumidor (el chasis) eso bastaba. Desde que Inicio lee el mismo dato
 // para no repetir la tarjeta (hallazgo M-013), hay dos instancias: con
-// estado local, descartar la barra flotante del chasis no llegaba a
-// Inicio, así que la barra desaparecía y la tarjeta no aparecía en su
-// lugar. `useSyncExternalStore` sobre una sola variable de módulo deja a
-// las dos leyendo lo mismo.
+// estado local, el descarte hecho en una pantalla no llegaba a la otra.
+// `useSyncExternalStore` sobre una sola variable de módulo deja a todas
+// las instancias leyendo lo mismo.
 let descartadoId: string | null = null
 let leido = false
 const oyentes = new Set<() => void>()
@@ -59,15 +58,14 @@ interface Reanudar {
   // El procedimiento a medias mas reciente de todo el equipo de
   // articulos, o null si no hay ninguno empezado sin terminar.
   actual: ArticuloSinTerminar | null
-  // True cuando `actual` es justo el que se descarto: la barra se
-  // oculta y la pestaña Guías muestra su punto en su lugar.
+  // True cuando `actual` es justo el que se descarto ("ahora no"): la
+  // tarjeta de reanudar deja de ofrecerse hasta que cambie el avance.
   descartado: boolean
   descartar: () => void
 }
 
-// Unico dato que alimenta tanto la BarraReanudar (chasis) como el punto
-// de aviso de la pestaña Guías: reutiliza `articulosSinTerminar`, ya
-// usado en el bloque "Sin terminar" de SolucionesPage, en vez de
+// Unico dato que alimenta la tarjeta de reanudar de Inicio y el bloque
+// "Sin terminar" de Guias: reutiliza `articulosSinTerminar` en vez de
 // duplicar la consulta a `progresoPasos`.
 export function useReanudar(): Reanudar {
   const articulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
@@ -86,4 +84,18 @@ export function useReanudar(): Reanudar {
     descartado: actual != null && actual.articulo.id === descartado,
     descartar,
   }
+}
+
+// ¿Se dibuja la tarjeta "Continuar guía" de Inicio?
+//
+// La regresión que cierra (encargo del 2026-09-11, tarea 1): la barra
+// flotante global se retiró, pero Inicio seguía comprobando si "la
+// barra está visible" para NO repetirse. Esa condición era exactamente
+// la misma que la de tener algo que reanudar, así que se anulaban entre
+// sí y la tarjeta no salía nunca. Ahora la regla es la única que queda
+// en pie: hay una guía a medias y el técnico no la descartó.
+//
+// Función pura y aparte del hook para poder probarla sin DOM.
+export function tarjetaReanudarVisible(reanudar: Pick<Reanudar, 'actual' | 'descartado'>): boolean {
+  return reanudar.actual != null && !reanudar.descartado
 }

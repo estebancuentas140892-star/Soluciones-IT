@@ -96,6 +96,41 @@ export function descripcionVencida(venceEn: string, hoy: Date = new Date()): str
   return `Venció hace ${dias} días`
 }
 
+// Meses en español, fijos y no localizados por el entorno: `Intl` con
+// locale 'es' devuelve "sept." o "sept" según la version de ICU, y la
+// agenda de Inicio necesita el mismo texto en todos los telefonos
+// ("Vence el 18 sep"), no uno distinto por dispositivo.
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
+/** "2026-09-18" como "18 sep". Cadena vacia si la fecha no es una fecha. */
+function fechaCorta(venceEn: string): string {
+  const partes = PATRON_FECHA.exec(venceEn)
+  if (!partes) return ''
+  const mes = MESES_CORTOS[Number(partes[2]) - 1]
+  if (!mes) return ''
+  return `${Number(partes[3])} ${mes}`
+}
+
+// Como se dice una fecha de vencimiento en la agenda de Inicio.
+//
+// `descripcionVencida` solo sabe hablar de lo ya vencido (se llama
+// unicamente desde la fila de la Boveda, que ya filtro por estado), asi
+// que decia "Venció hoy" para cualquier fecha no pasada. En una agenda
+// eso es un error visible: una clave que vence dentro de una semana
+// aparecia como si hubiera vencido hoy. Aqui cada caso tiene su frase y
+// "Venció hoy" no existe: una fecha anterior dice cuanto hace.
+export function textoVencimiento(venceEn: string, hoy: Date = new Date()): string {
+  const restantes = diasDeCalendario(venceEn, hoy)
+  if (restantes === null) return 'Sin fecha'
+  if (restantes < 0) {
+    const dias = -restantes
+    return dias === 1 ? 'Venció hace 1 día' : `Venció hace ${dias} días`
+  }
+  if (restantes === 0) return 'Vence hoy'
+  if (restantes === 1) return 'Vence mañana'
+  return `Vence el ${fechaCorta(venceEn)}`
+}
+
 // Dias sugeridos al renovar el vencimiento tras detectar que la
 // contraseña rotó (hallazgo S1 de AUDITORIA_FLUJOS_TI.md): 90 dias es
 // una politica de rotacion tipica; el tecnico puede ajustar la fecha a

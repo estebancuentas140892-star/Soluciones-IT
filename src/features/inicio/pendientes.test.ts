@@ -121,12 +121,26 @@ describe('credencialesPorVencer', () => {
   it('incluye vencidas y próximas, vencidas primero', () => {
     const hoy = new Date()
     const enUnMes = fechaLocal(new Date(hoy.getTime() + 60 * 24 * 60 * 60 * 1000))
+    const enUnaSemana = fechaLocal(new Date(hoy.getTime() + 7 * 24 * 60 * 60 * 1000))
     const ayer = fechaLocal(new Date(hoy.getTime() - 24 * 60 * 60 * 1000))
     const items = credencialesPorVencer([
       credencial({ id: 'c1', titulo: 'Lejana', venceEn: enUnMes }),
       credencial({ id: 'c2', titulo: 'Vencida', venceEn: ayer }),
+      credencial({ id: 'c3', titulo: 'Próxima', venceEn: enUnaSemana }),
     ])
-    expect(items.map((i) => i.titulo)).toEqual(['Vencida'])
+    // La lejana cae fuera del periodo de aviso; el resto sale por fecha.
+    expect(items.map((i) => i.titulo)).toEqual(['Vencida', 'Próxima'])
+  })
+
+  it('lleva la fecha real y los días de calendario en el ítem', () => {
+    const hoy = new Date(2026, 8, 11)
+    const items = credencialesPorVencer(
+      [credencial({ id: 'c1', titulo: 'Panel', venceEn: '2026-09-08' })],
+      hoy,
+    )
+    expect(items[0].fecha).toBe('2026-09-08')
+    expect(items[0].diasRestantes).toBe(-3)
+    expect(items[0].detalle).toBe('Venció hace 3 días')
   })
 
   it('no incluye una credencial sin vencimiento ni una eliminada', () => {
@@ -156,7 +170,7 @@ describe('camposProtegidosPorVencer', () => {
       ]),
     )
     expect(items.map((i) => i.titulo)).toEqual(['Vencida'])
-    expect(items[0].detalle).toBe('Vencida · Switch B')
+    expect(items[0].detalle).toBe('Venció hace 1 día · Switch B')
     expect(items[0].ruta).toBe('/dispositivos/d2')
   })
 
@@ -205,6 +219,88 @@ describe('sugerenciasSinRevisar', () => {
       [articulo({ id: 'a1', origenSugerenciaId: 'e1', eliminadoEn: '2026-07-20T00:00:00Z' })],
     )
     expect(items.map((i) => i.clave)).toEqual(['sugerencia:e1'])
+  })
+})
+
+describe('calcularPendientes · orden global por fecha', () => {
+  const hoy = new Date(2026, 8, 11)
+
+  // El defecto que cierra el encargo del 2026-09-11: TODAS las
+  // credenciales de la Bóveda salían antes que cualquier dato protegido
+  // de equipo, aunque la credencial venciera dentro de tres semanas y el
+  // dato protegido llevara medio año vencido.
+  it('una clave próxima nunca aparece antes que un dato protegido vencido', () => {
+    const items = calcularPendientes({
+      articulos: [],
+      credenciales: [credencial({ id: 'c1', titulo: 'Clave próxima', venceEn: '2026-09-30' })],
+      camposProtegidos: [campoProtegido({ id: 'cp1', nombre: 'Dato vencido', dispositivoId: 'd1', venceEn: '2026-03-01' })],
+      nombresDispositivosPorId: new Map([['d1', 'Switch A']]),
+      ejecuciones: [],
+      articulosDeSugerencia: [],
+      usuarioId: 'yo',
+      puedeVerBoveda: true,
+      hoy,
+    })
+    expect(items.map((i) => i.titulo)).toEqual(['Dato vencido', 'Clave próxima'])
+  })
+
+  it('ordena vencidos (más antiguo primero), luego hoy, luego próximos (más cercano primero)', () => {
+    const items = calcularPendientes({
+      articulos: [],
+      credenciales: [
+        credencial({ id: 'c1', titulo: 'Vence en 10 días', venceEn: '2026-09-21' }),
+        credencial({ id: 'c2', titulo: 'Vence hoy', venceEn: '2026-09-11' }),
+        credencial({ id: 'c3', titulo: 'Venció hace 2 días', venceEn: '2026-09-09' }),
+      ],
+      camposProtegidos: [
+        campoProtegido({ id: 'cp1', nombre: 'Venció hace 30 días', dispositivoId: 'd1', venceEn: '2026-08-12' }),
+        campoProtegido({ id: 'cp2', nombre: 'Vence en 3 días', dispositivoId: 'd1', venceEn: '2026-09-14' }),
+      ],
+      nombresDispositivosPorId: new Map([['d1', 'Switch A']]),
+      ejecuciones: [],
+      articulosDeSugerencia: [],
+      usuarioId: 'yo',
+      puedeVerBoveda: true,
+      hoy,
+    })
+    expect(items.map((i) => i.titulo)).toEqual([
+      'Venció hace 30 días',
+      'Venció hace 2 días',
+      'Vence hoy',
+      'Vence en 3 días',
+      'Vence en 10 días',
+    ])
+  })
+
+  it('los borradores y las sugerencias van después de todo lo que tiene fecha', () => {
+    const items = calcularPendientes({
+      articulos: [articulo({ id: 'a1', estado: 'borrador', updatedBy: 'yo', titulo: 'Mi borrador' })],
+      credenciales: [credencial({ id: 'c1', titulo: 'Vence en 10 días', venceEn: '2026-09-21' })],
+      camposProtegidos: [],
+      nombresDispositivosPorId: new Map(),
+      ejecuciones: [ejecucion({ id: 'e1' })],
+      articulosDeSugerencia: [],
+      usuarioId: 'yo',
+      puedeVerBoveda: true,
+      hoy,
+    })
+    expect(items.map((i) => i.categoria)).toEqual(['credencial', 'borrador', 'sugerencia'])
+    expect(items.filter((i) => i.fecha === null).map((i) => i.categoria)).toEqual(['borrador', 'sugerencia'])
+  })
+
+  it('sin permiso de bóveda no llega ni un título, tampoco de datos protegidos de equipo', () => {
+    const items = calcularPendientes({
+      articulos: [],
+      credenciales: [credencial({ id: 'c1', titulo: 'Secreto', venceEn: '2026-09-01' })],
+      camposProtegidos: [campoProtegido({ id: 'cp1', nombre: 'Dato del switch', dispositivoId: 'd1', venceEn: '2026-09-01' })],
+      nombresDispositivosPorId: new Map([['d1', 'Switch A']]),
+      ejecuciones: [],
+      articulosDeSugerencia: [],
+      usuarioId: 'yo',
+      puedeVerBoveda: false,
+      hoy,
+    })
+    expect(items).toEqual([])
   })
 })
 

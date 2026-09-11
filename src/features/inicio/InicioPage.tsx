@@ -33,7 +33,7 @@ import { agruparResultados, VISUAL_POR_TIPO } from '../busqueda/resultados'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import { coincidenciaArticulo } from '../soluciones/coincidencia'
-import { useReanudar } from '../soluciones/useReanudar'
+import { tarjetaReanudarVisible, useReanudar } from '../soluciones/useReanudar'
 import {
   ETIQUETA_ACCION_CAMBIO,
   obtenerActividadReciente,
@@ -166,17 +166,14 @@ export function InicioPage() {
   )
 
   // UNA SOLA TARJETA DE REANUDAR (hallazgo M-013). El procedimiento a
-  // medias se dibujaba de tres formas que parecían tres cosas distintas
-  // y eran la misma: "Continuar donde quedaste" (una consulta propia de
-  // esta pantalla), "Sin terminar" en Guías y la barra flotante del
-  // chasis. Aquí se retiró la consulta propia: ahora Inicio lee el mismo
-  // `useReanudar` que el chasis y pinta el mismo componente en su
-  // tamaño grande.
-  //
-  // Y no se repite: si la barra flotante está visible, Inicio no dibuja
-  // su tarjeta. Se veían las dos a la vez, una encima de la otra.
+  // medias se dibujaba de varias formas que parecían cosas distintas y
+  // eran la misma. Inicio lee `useReanudar`, el mismo dato que el
+  // bloque "Sin terminar" de Guías, y pinta el componente en su tamaño
+  // grande. La barra flotante global se retiró; la comprobación que
+  // preguntaba si estaba visible desaparece con ella (valía lo mismo
+  // que tener algo que reanudar, así que anulaba la tarjeta siempre).
   const reanudar = useReanudar()
-  const barraFlotanteVisible = reanudar.actual != null && !reanudar.descartado
+  const hayQueReanudar = tarjetaReanudarVisible(reanudar)
 
   const gruposResultado = useMemo(() => agruparResultados(resultados), [resultados])
 
@@ -278,7 +275,7 @@ export function InicioPage() {
             )}
 
             {/* BLOQUE 1 · Reanudar. */}
-            {reanudar.actual && !barraFlotanteVisible && (
+            {hayQueReanudar && reanudar.actual && (
               <BarraReanudar
                 variante="tarjeta"
                 articulo={reanudar.actual.articulo}

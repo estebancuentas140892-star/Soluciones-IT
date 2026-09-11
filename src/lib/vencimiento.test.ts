@@ -4,6 +4,7 @@ import {
   diasDeCalendario,
   estadoVencimiento,
   proximoVencimiento,
+  textoVencimiento,
   vencimientoDesactualizado,
 } from './vencimiento'
 
@@ -174,5 +175,31 @@ describe('vencimientoDesactualizado', () => {
 
   it('no avisa si la contraseña quedó vacía (no es una rotación real)', () => {
     expect(vencimientoDesactualizado({ ...base, contrasenaActual: '' })).toBe(false)
+  })
+})
+
+describe('textoVencimiento', () => {
+  const hoy = new Date(2026, 8, 11) // 11 de septiembre de 2026, hora local
+
+  it('dice "Vence hoy" el mismo día', () => {
+    expect(textoVencimiento('2026-09-11', hoy)).toBe('Vence hoy')
+  })
+
+  it('dice "Vence mañana" el día siguiente', () => {
+    expect(textoVencimiento('2026-09-12', hoy)).toBe('Vence mañana')
+  })
+
+  it('nunca dice "Venció hoy" para una fecha anterior', () => {
+    expect(textoVencimiento('2026-09-10', hoy)).toBe('Venció hace 1 día')
+    expect(textoVencimiento('2026-09-08', hoy)).toBe('Venció hace 3 días')
+  })
+
+  it('da la fecha corta en español para una fecha futura posterior', () => {
+    expect(textoVencimiento('2026-09-18', hoy)).toBe('Vence el 18 sep')
+    expect(textoVencimiento('2026-10-01', hoy)).toBe('Vence el 1 oct')
+  })
+
+  it('no inventa una fecha cuando el dato no es una fecha', () => {
+    expect(textoVencimiento('mañana', hoy)).toBe('Sin fecha')
   })
 })
