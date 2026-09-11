@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from '
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
-import { ArrowsClockwise, Eye, EyeSlash, LockSimple, Paperclip, Plus, X } from '../../components/iconos'
-import { BTN_GHOST, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { ArrowsClockwise, CaretDown, Eye, EyeSlash, LockSimple, Paperclip, Plus, X } from '../../components/iconos'
+import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import {
   Campo,
   CampoConSugerencias,
@@ -37,56 +37,72 @@ import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBo
 // acceso" más abajo), pero el secreto ya no puede REPRESENTAR al equipo.
 const TIPOS_SECRETO_VALIDOS = ['cuenta', 'red', 'llave', 'archivo', 'nota'] as const
 
-interface CamposVisibles {
+// Qué muestra la VISTA PRINCIPAL según el tipo. El formulario cotidiano
+// se lee como un formulario de acceso, no como un gestor genérico de
+// secretos: nombre, usuario (solo donde el tipo lo usa), contraseña,
+// categoría y notas. El resto —URL, otros datos protegidos,
+// vencimiento, equipos relacionados y motivo del cambio— sigue estando
+// completo dentro de "Más opciones", que empieza plegado.
+interface CamposPrincipales {
   usuario: boolean
   contrasena: boolean
-  url: boolean
-  extras: boolean
+  // Archivo seguro (fase P5): el propio archivo cifrado, con su editor
+  // aparte (ver más abajo).
+  archivo: boolean
 }
 
-const TODOS_LOS_CAMPOS: CamposVisibles = { usuario: true, contrasena: true, url: true, extras: true }
-
-const CAMPOS_POR_TIPO: Record<TipoSecreto, CamposVisibles> = {
-  cuenta: TODOS_LOS_CAMPOS,
-  red: { usuario: false, contrasena: true, url: false, extras: true },
-  llave: { usuario: false, contrasena: true, url: false, extras: true },
-  // Archivo seguro (fase P5): notas y datos protegidos de referencia,
-  // más el propio archivo cifrado (editor aparte, ver más abajo).
-  archivo: { usuario: false, contrasena: false, url: false, extras: true },
-  nota: { usuario: false, contrasena: false, url: false, extras: false },
+const CAMPOS_PRINCIPALES: Record<TipoSecreto, CamposPrincipales> = {
+  cuenta: { usuario: true, contrasena: true, archivo: false },
+  red: { usuario: false, contrasena: true, archivo: false },
+  llave: { usuario: false, contrasena: true, archivo: false },
+  archivo: { usuario: false, contrasena: false, archivo: true },
+  nota: { usuario: false, contrasena: false, archivo: false },
 }
 
+// Los nombres internos no cambian (`cuenta`, `red`, `llave`, `archivo`,
+// `nota`); lo que cambia es cómo se llaman en pantalla, para que sean
+// los mismos de la hoja "Nuevo acceso".
 const NOMBRE_TIPO: Record<TipoSecreto, string> = {
-  cuenta: 'Cuenta de sistema',
-  red: 'Red',
-  llave: 'Llave digital',
+  cuenta: 'Acceso (usuario y contraseña)',
+  red: 'Clave o PIN',
+  llave: 'Token, licencia o certificado',
   archivo: 'Archivo seguro',
   nota: 'Nota segura',
 }
 
 const DESCRIPCION_TIPO: Record<TipoSecreto, string> = {
   cuenta: 'Usuario y contraseña de un servicio o aplicación',
-  red: 'Clave de una red WiFi u otro acceso compartido',
-  llave: 'Token, licencia o certificado',
+  red: 'Una clave sin usuario: Wi-Fi, PIN, código administrativo u otro acceso compartido',
+  llave: 'Una clave larga que entrega un proveedor',
   archivo: 'Un archivo cifrado (licencia, certificado, config...) con sus datos de referencia',
   nota: 'Texto cifrado, sin usuario ni contraseña',
 }
 
 const PLACEHOLDER_TITULO: Record<TipoSecreto, string> = {
   cuenta: 'Servicio: Panel de Supabase, correo...',
-  red: 'Nombre de la red WiFi',
+  red: 'Wi-Fi de oficina, PIN de la alarma...',
   llave: 'Licencia de Windows, certificado SSL...',
   archivo: 'Qué es este archivo',
   nota: 'Título de la nota',
 }
 
-// Etiqueta del campo "contraseña": cada tipo llama distinto a lo mismo.
+// Etiqueta del campo de la clave: cada tipo llama distinto a lo mismo.
 const ETIQUETA_CONTRASENA: Record<TipoSecreto, string> = {
   cuenta: 'Contraseña',
-  red: 'Clave',
-  llave: 'Clave o token',
+  red: 'Clave o PIN',
+  llave: 'Token, licencia o clave',
   archivo: '',
   nota: '',
+}
+
+// Etiqueta del campo de notas: en "Nota segura" es el campo principal,
+// en el resto es un apunte opcional.
+const ETIQUETA_NOTAS: Record<TipoSecreto, string> = {
+  cuenta: 'Notas (opcional)',
+  red: 'Notas (opcional)',
+  llave: 'Notas (opcional)',
+  archivo: 'Notas (opcional)',
+  nota: 'Nota',
 }
 
 function esTipoSecretoValido(valor: string | null): valor is TipoSecreto {
@@ -215,11 +231,17 @@ export function CredencialForm() {
   const [guardando, setGuardando] = useState(false)
   const [intentoGuardar, setIntentoGuardar] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // El tipo oculta los campos que no suele tocar; este botón los
-  // revela sin perder nada, en cualquier tipo.
-  const [mostrarTodos, setMostrarTodos] = useState(false)
-  const visibles = mostrarTodos ? TODOS_LOS_CAMPOS : CAMPOS_POR_TIPO[tipo]
-  const hayCamposOcultos = !mostrarTodos && Object.values(CAMPOS_POR_TIPO[tipo]).includes(false)
+  // "Más opciones" reemplaza al antiguo botón "Mostrar todos los
+  // campos": un solo mecanismo, plegado de entrada, con todo lo que no
+  // se toca a diario. Nada se pierde ni se borra por estar ahí dentro.
+  const [masOpciones, setMasOpciones] = useState(false)
+  const principales = CAMPOS_PRINCIPALES[tipo]
+  // Datos heredados: un secreto guardado antes puede traer usuario o
+  // contraseña aunque su tipo ya no los muestre arriba. Se dejan ver y
+  // editar dentro de "Más opciones" para poder limpiarlos a mano; nunca
+  // se borran solos ni al cambiar de tipo.
+  const usuarioHeredado = !principales.usuario && usuario.trim().length > 0
+  const contrasenaHeredada = !principales.contrasena && contrasena.length > 0
 
   // Nudge anti duplicidad (fase P3, sección 3.2): si el título escrito
   // coincide con el nombre de un equipo del inventario, ese secreto
@@ -415,8 +437,8 @@ export function CredencialForm() {
     // vuelta escrita (R19).
     <Chasis
       modo="tarea"
-      rotulo={esEdicion ? 'Editando' : 'Creando'}
-      titulo={titulo.trim() || (esEdicion ? 'Editar secreto' : 'Nuevo secreto')}
+      rotulo={esEdicion ? 'Editar acceso' : 'Nuevo acceso'}
+      titulo={titulo.trim() || 'Sin nombre'}
       salidaEtiqueta="Cancelar y volver"
       barra={
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-4 pb-2.5">
@@ -425,8 +447,7 @@ export function CredencialForm() {
             Se guarda cifrada
           </span>
           <p className="min-w-0 flex-1 text-[12px] text-noct-neutral-500">
-            Solo el título es obligatorio; el vencimiento y los equipos no se cifran para poder
-            avisar sin desbloquear
+            El vencimiento y los equipos no se cifran para poder avisar sin desbloquear
           </p>
         </div>
       }
@@ -440,29 +461,14 @@ export function CredencialForm() {
 
       <form onSubmit={manejarEnvio} className="flex flex-1 flex-col">
         <main className="flex flex-1 flex-col gap-6 px-4 pb-[120px] pt-[18px]">
-          {/* Identificación: tipo, título + categoría. */}
+          {/* Vista principal: el acceso de todos los días. El tipo ya
+              llegó elegido desde la hoja "Nuevo acceso", así que aquí
+              no vuelve a pedirse; al editar se puede cambiar dentro de
+              "Más opciones". */}
           <section className="flex flex-col gap-3.5">
             <label className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>Tipo de secreto</span>
-              <select
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoSecreto)}
-                className={`min-h-11 ${CLASE_CAMPO}`}
-              >
-                {TIPOS_SECRETO_VALIDOS.map((t) => (
-                  <option key={t} value={t}>
-                    {NOMBRE_TIPO[t]}
-                  </option>
-                ))}
-              </select>
-              <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
-                {DESCRIPCION_TIPO[tipo]}
-              </span>
-            </label>
-
-            <label className="flex flex-col gap-1.5">
               <span className={CLASE_ETIQUETA}>
-                Título <span className="text-noct-accent-300">*</span>
+                Nombre del acceso <span className="text-noct-accent-300">*</span>
               </span>
               <input
                 type="text"
@@ -503,23 +509,6 @@ export function CredencialForm() {
               </div>
             )}
 
-            <Campo etiqueta="Categoría">
-              <CampoConSugerencias
-                valor={categoria}
-                onChange={setCategoria}
-                sugerencias={categorias}
-                placeholder="Redes, Servidores, CCTV..."
-                className="min-h-11"
-              />
-            </Campo>
-          </section>
-
-          {/* Secreto: todo lo que viaja cifrado en datosCifrados. El
-              tipo decide qué campos aparecen (fase P3); "Mostrar todos"
-              los revela sin perder nada. */}
-          <section className="flex flex-col gap-3.5">
-            <TituloSeccion>Secreto</TituloSeccion>
-
             {/* Dirección IP heredada de un secreto de tipo "equipo"
                 guardado antes de la fase P0: ya no se puede crear de
                 nuevo, solo se conserva hasta que se quite a mano. */}
@@ -527,7 +516,7 @@ export function CredencialForm() {
               <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
                 <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
                   Guarda una dirección IP heredada ({ipHeredada}). Vincula el equipo en
-                  &quot;Equipos con acceso&quot; y quita este dato: ya no se guarda en secretos
+                  &quot;Equipos relacionados&quot; y quita este dato: ya no se guarda en accesos
                   nuevos.
                 </p>
                 <button
@@ -540,9 +529,9 @@ export function CredencialForm() {
               </div>
             )}
 
-            {visibles.usuario && (
+            {principales.usuario && (
               <label className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Usuario</span>
+                <span className={CLASE_ETIQUETA}>Usuario (opcional)</span>
                 <input
                   type="text"
                   value={usuario}
@@ -553,9 +542,11 @@ export function CredencialForm() {
               </label>
             )}
 
-            {visibles.contrasena && (
+            {principales.contrasena && (
               <div className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>{etiquetaContrasena}</span>
+                <span className={CLASE_ETIQUETA}>
+                  {etiquetaContrasena} <span className="text-noct-accent-300">*</span>
+                </span>
                 <div className="flex gap-2">
                   <CampoContrasena
                     revelado={verContrasena}
@@ -589,57 +580,14 @@ export function CredencialForm() {
               </div>
             )}
 
-            {visibles.url && (
-              <label className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>URL</span>
-                <input
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://..."
-                  className={`min-h-11 ${CLASE_CAMPO_MONO}`}
-                />
-              </label>
-            )}
-
-            {equipoSugeridoPorIp && (
-              <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
-                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                  Esa dirección coincide con &quot;{equipoSugeridoPorIp.nombre}&quot; del inventario.
-                  ¿Vincular este secreto a ese equipo?
-                </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDispositivos((actuales) => [
-                      ...actuales,
-                      { id: equipoSugeridoPorIp.id, nombre: equipoSugeridoPorIp.nombre },
-                    ])
-                  }
-                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
-                >
-                  Vincular equipo
-                </button>
-              </div>
-            )}
-
-            {visibles.extras && (
-              <CamposClaveValor
-                titulo="Otros datos protegidos"
-                ayuda="Puerto, PIN, clave WiFi, usuario de respaldo... también van cifrados."
-                campos={extras}
-                onChange={setExtras}
-                valorMono
-                valorAutoComplete="off"
-              />
-            )}
-
             {/* Archivo cifrado (fase P5, tipo "Archivo seguro"): se
                 cifra y sube al elegirlo, no al guardar el formulario
                 completo (mismo patrón que la foto del dispositivo). */}
-            {tipo === 'archivo' && (
+            {principales.archivo && (
               <div className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Archivo</span>
+                <span className={CLASE_ETIQUETA}>
+                  Archivo <span className="text-noct-accent-300">*</span>
+                </span>
                 {archivo ? (
                   <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
                     <div className="flex min-w-0 items-center gap-2">
@@ -678,104 +626,236 @@ export function CredencialForm() {
               </div>
             )}
 
+            {/* La categoría se queda en la vista principal: es con lo
+                que se busca y se filtra la Bóveda. Sigue siendo texto
+                libre con las sugerencias ya existentes. */}
+            <Campo etiqueta="Categoría">
+              <CampoConSugerencias
+                valor={categoria}
+                onChange={setCategoria}
+                sugerencias={categorias}
+                placeholder="Redes, Servidores, CCTV..."
+                className="min-h-11"
+              />
+            </Campo>
+
             <label className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>Notas</span>
+              <span className={CLASE_ETIQUETA}>
+                {ETIQUETA_NOTAS[tipo]}
+                {tipo === 'nota' && <span className="text-noct-accent-300"> *</span>}
+              </span>
               <textarea
-                rows={2}
+                rows={tipo === 'nota' ? 5 : 2}
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
-                placeholder="Cómo y cuándo se usa"
+                placeholder={tipo === 'nota' ? 'El texto que hay que guardar cifrado' : 'Cómo y cuándo se usa'}
                 className={`resize-y ${CLASE_CAMPO}`}
               />
             </label>
-
-            {hayCamposOcultos && (
-              <button
-                type="button"
-                onClick={() => setMostrarTodos(true)}
-                className={`${BTN_GHOST} self-start`}
-              >
-                <Plus size={13} aria-hidden />
-                Mostrar todos los campos
-              </button>
-            )}
           </section>
 
-          {/* Visible sin desbloquear: vencimiento y equipos no son el
-              secreto; existen para avisar y navegar con la bóveda cerrada. */}
-          <section className="flex flex-col gap-3.5">
-            <div>
-              <TituloSeccion>Visible sin desbloquear</TituloSeccion>
-              <p className="mt-[3px] text-[12px] leading-relaxed text-noct-neutral-600">
-                El vencimiento y el vínculo con equipos no son el secreto: permiten avisos y
-                navegación con la bóveda cerrada
-              </p>
-            </div>
-
-            <label className="flex max-w-[220px] flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>Vencimiento (opcional)</span>
-              <input
-                type="date"
-                value={venceEn}
-                onChange={(e) => setVenceEn(e.target.value)}
-                className={`min-h-11 [color-scheme:dark] ${CLASE_CAMPO}`}
+          {/* "Más opciones": todo lo que no se toca a diario. Empieza
+              plegado y sustituye al antiguo "Mostrar todos los campos":
+              un solo mecanismo, no dos. Nada de lo que hay aquí dentro
+              se borra por estar plegado. */}
+          <section className="flex flex-col">
+            <button
+              type="button"
+              onClick={() => setMasOpciones((v) => !v)}
+              aria-expanded={masOpciones}
+              aria-controls="credencial-mas-opciones"
+              className="flex min-h-11 items-center gap-2 self-start rounded-md py-2 pr-2 text-left text-noct-neutral-400 hover:text-noct-text"
+            >
+              <span className="text-[13px] font-medium">Más opciones</span>
+              <CaretDown
+                size={13}
+                className={`shrink-0 transition-transform duration-150 motion-reduce:transition-none ${
+                  masOpciones ? 'rotate-180' : ''
+                }`}
+                aria-hidden
               />
-            </label>
+            </button>
 
-            {avisarVencimientoDesactualizado && (
-              <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
-                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                  La contraseña cambió pero el vencimiento sigue siendo el mismo. ¿Renovarlo?
-                </p>
-                <button
-                  type="button"
-                  onClick={renovarVencimiento}
-                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
-                >
-                  Renovar 90 días
-                </button>
-              </div>
-            )}
+            {masOpciones && (
+              <div id="credencial-mas-opciones" className="flex flex-col gap-3.5 pt-2">
+                {/* El tipo llega elegido desde la hoja "Nuevo acceso";
+                    al editar se puede corregir aquí sin perder nada de
+                    lo ya escrito. */}
+                {esEdicion && (
+                  <label className="flex flex-col gap-1.5">
+                    <span className={CLASE_ETIQUETA}>Tipo de secreto</span>
+                    <select
+                      value={tipo}
+                      onChange={(e) => setTipo(e.target.value as TipoSecreto)}
+                      className={`min-h-11 ${CLASE_CAMPO}`}
+                    >
+                      {TIPOS_SECRETO_VALIDOS.map((t) => (
+                        <option key={t} value={t}>
+                          {NOMBRE_TIPO[t]}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                      {DESCRIPCION_TIPO[tipo]}
+                    </span>
+                  </label>
+                )}
 
-            <div className="flex flex-col gap-2">
-              <span className={CLASE_ETIQUETA}>Equipos con acceso</span>
-              <EquiposVinculadosEditor
-                vinculados={dispositivos}
-                dispositivos={dispositivosOrdenados}
-                onVincular={(d) => setDispositivos((actuales) => [...actuales, { id: d.id, nombre: d.nombre }])}
-                onQuitar={(id) => setDispositivos((actuales) => actuales.filter((d) => d.id !== id))}
-              />
-            </div>
+                {/* Usuario o contraseña guardados en un tipo que ya no
+                    los muestra arriba: se dejan editar para poder
+                    limpiarlos, nunca se borran solos. */}
+                {usuarioHeredado && (
+                  <label className="flex flex-col gap-1.5">
+                    <span className={CLASE_ETIQUETA}>Usuario guardado</span>
+                    <input
+                      type="text"
+                      value={usuario}
+                      onChange={(e) => setUsuario(e.target.value)}
+                      autoComplete="off"
+                      className={`min-h-11 ${CLASE_CAMPO_MONO}`}
+                    />
+                    <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                      Este tipo no suele usar usuario. Se conserva tal cual hasta que lo quites.
+                    </span>
+                  </label>
+                )}
 
-            {equiposSolapados.map((equipo) => (
-              <div
-                key={equipo.id}
-                className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5"
-              >
-                <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                  &quot;{equipo.nombre}&quot; ya guarda una contraseña en Seguridad. Evita duplicarla: al
-                  rotar hay que acordarse de cambiarla en los dos lados.
-                </p>
-                <Link
-                  to={`/dispositivos/${equipo.id}`}
-                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
-                >
-                  Ir a la ficha
-                </Link>
-              </div>
-            ))}
+                {contrasenaHeredada && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className={CLASE_ETIQUETA}>Contraseña guardada</span>
+                    <div className="flex gap-2">
+                      <CampoContrasena
+                        revelado={verContrasena}
+                        value={contrasena}
+                        onChange={(e) => setContrasena(e.target.value)}
+                        className={`min-h-11 flex-1 ${CLASE_CAMPO_MONO}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setVerContrasena((v) => !v)}
+                        aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
+                      >
+                        {verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+                      </button>
+                    </div>
+                    <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                      Este tipo no suele usar contraseña. Se conserva tal cual hasta que la quites.
+                    </span>
+                  </div>
+                )}
 
-            {esEdicion && (
-              <label className="flex flex-col gap-1.5">
-                <span className={CLASE_ETIQUETA}>Motivo del cambio (opcional)</span>
-                <input
-                  type="text"
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="Por qué se actualizó: rotación, incidente..."
-                  className={`min-h-11 ${CLASE_CAMPO}`}
+                <label className="flex flex-col gap-1.5">
+                  <span className={CLASE_ETIQUETA}>URL</span>
+                  <input
+                    type="text"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://..."
+                    className={`min-h-11 ${CLASE_CAMPO_MONO}`}
+                  />
+                </label>
+
+                {equipoSugeridoPorIp && (
+                  <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                    <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                      Esa dirección coincide con &quot;{equipoSugeridoPorIp.nombre}&quot; del inventario.
+                      ¿Vincular este secreto a ese equipo?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDispositivos((actuales) => [
+                          ...actuales,
+                          { id: equipoSugeridoPorIp.id, nombre: equipoSugeridoPorIp.nombre },
+                        ])
+                      }
+                      className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                    >
+                      Vincular equipo
+                    </button>
+                  </div>
+                )}
+
+                <CamposClaveValor
+                  titulo="Otros datos protegidos"
+                  ayuda="Puerto, PIN, clave WiFi, usuario de respaldo... también van cifrados."
+                  campos={extras}
+                  onChange={setExtras}
+                  valorMono
+                  valorAutoComplete="off"
                 />
-              </label>
+
+                <label className="flex max-w-[220px] flex-col gap-1.5">
+                  <span className={CLASE_ETIQUETA}>Vencimiento (opcional)</span>
+                  <input
+                    type="date"
+                    value={venceEn}
+                    onChange={(e) => setVenceEn(e.target.value)}
+                    className={`min-h-11 [color-scheme:dark] ${CLASE_CAMPO}`}
+                  />
+                </label>
+
+                {avisarVencimientoDesactualizado && (
+                  <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+                    <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                      La contraseña cambió pero el vencimiento sigue siendo el mismo. ¿Renovarlo?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={renovarVencimiento}
+                      className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                    >
+                      Renovar 90 días
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <span className={CLASE_ETIQUETA}>Equipos relacionados</span>
+                  <EquiposVinculadosEditor
+                    vinculados={dispositivos}
+                    dispositivos={dispositivosOrdenados}
+                    onVincular={(d) => setDispositivos((actuales) => [...actuales, { id: d.id, nombre: d.nombre }])}
+                    onQuitar={(id) => setDispositivos((actuales) => actuales.filter((d) => d.id !== id))}
+                  />
+                  <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                    El vencimiento y el vínculo con equipos no son el secreto: no se cifran, para
+                    poder avisar y navegar con la bóveda cerrada.
+                  </p>
+                </div>
+
+                {equiposSolapados.map((equipo) => (
+                  <div
+                    key={equipo.id}
+                    className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5"
+                  >
+                    <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
+                      &quot;{equipo.nombre}&quot; ya guarda una contraseña en Seguridad. Evita duplicarla: al
+                      rotar hay que acordarse de cambiarla en los dos lados.
+                    </p>
+                    <Link
+                      to={`/dispositivos/${equipo.id}`}
+                      className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                    >
+                      Ir a la ficha
+                    </Link>
+                  </div>
+                ))}
+
+                {esEdicion && (
+                  <label className="flex flex-col gap-1.5">
+                    <span className={CLASE_ETIQUETA}>Motivo del cambio (opcional)</span>
+                    <input
+                      type="text"
+                      value={motivo}
+                      onChange={(e) => setMotivo(e.target.value)}
+                      placeholder="Por qué se actualizó: rotación, incidente..."
+                      className={`min-h-11 ${CLASE_CAMPO}`}
+                    />
+                  </label>
+                )}
+              </div>
             )}
           </section>
         </main>
@@ -795,7 +875,7 @@ export function CredencialForm() {
               style={{ opacity: valido ? undefined : 0.55 }}
             >
               <LockSimple size={15} aria-hidden />
-              {guardando ? 'Guardando...' : 'Guardar secreto'}
+              {guardando ? 'Guardando...' : 'Guardar acceso'}
             </button>
           </div>
         </div>
