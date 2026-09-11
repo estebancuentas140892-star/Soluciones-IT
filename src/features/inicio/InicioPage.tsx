@@ -44,6 +44,7 @@ import { etiquetaResuelto } from '../historial/lineaDeTiempo'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
 import type { ItemPendiente } from './pendientes'
+import { agruparAgenda, asuntosUrgentes, fechaDeHoy, resumenAgenda } from './agenda'
 import { usePendientes } from './usePendientes'
 import { problemasFrecuentesInicio } from './problemasFrecuentes'
 
@@ -53,37 +54,39 @@ import { problemasFrecuentesInicio } from './problemasFrecuentes'
 // chasis único (tarea 185), que le pone sidebar en escritorio y
 // pestañas en móvil.
 //
-// CINCO BLOQUES, DOS PESOS DE FILA (tarea 203, auditoría móvil M-006 y
-// M-007, mockup `2b`, reglas M-R6 y M-R7). Con la base llena esta
-// pantalla medía más de 2.200 px a 360: cuatro pantallas de scroll. El
-// problema no era la cantidad de información sino que cinco bloques
-// usaban EXACTAMENTE la misma fila de 52 px, y solo un rótulo de 11 px
-// los distinguía: "Pendientes" (algo que debo hacer) pesaba igual que
-// "Actividad del equipo" (algo que hizo otro). Sin foco, el técnico
-// desplaza buscando en vez de reconocer.
+// UNA AGENDA OPERATIVA, NO UNA COLECCIÓN DE BLOQUES (encargo del
+// 2026-09-11, tarea 2). Inicio apilaba cosas sin relación entre sí, y
+// la peor era "Te toca a ti": mezclaba una clave vencida hace medio
+// año, un borrador propio y una sugerencia de OTRO técnico bajo un
+// rótulo que además mentía. Al entrar no se podía responder la única
+// pregunta de las 8 de la mañana: ¿qué tengo que hacer hoy?
 //
-// Lo que hay ahora, de arriba abajo:
-//   1. reanudar   4. "Te toca a ti"      (fila de ACCIÓN)
-//   2. buscar     5. "Lo que consultaste" (fila de INFORMACIÓN)
-//   3. dos atajos
+// Ahora, de arriba abajo:
+//   1. buscador global        5. Para hoy
+//   2. fecha de hoy (es-CO)   6. Próximos
+//   3. resumen de una línea   7. En curso
+//   4. Vencidos               8. Por revisar del equipo
 //
-// Y debajo, **nada se borra**: Problemas frecuentes, Favoritos, Para
-// empezar y Actividad del equipo se pliegan tras una línea con su
-// conteo (`SeccionPlegable`, regla M-R4). Cuatro líneas de 52 px en vez
-// de unos 1.200 px de filas, y el conteo sigue diciendo lo que hay
-// dentro sin abrirlas.
+// El reparto en grupos es lógica pura y vive en `agenda.ts`: la fecha
+// manda, y cada ítem cae en UN grupo, así que nada se duplica. Sigue
+// sin haber entidad "tarea" ni tabla de recordatorios: es una vista
+// derivada de datos que ya existen.
 //
-// Las DOS ÚNICAS formas de fila de la pantalla (M-R6, "una fila, un
-// significado"): `FilaAccion` para lo que el técnico debe resolver
-// (56 px, título de 15 px, la razón en el color de su estado) y
+// Las DOS formas de fila (M-R6, "una fila, un significado"):
+// `FilaAgenda` para lo que el técnico debe resolver (56 px, título de
+// 15 px, la razón en el color de su estado y el origen al lado) y
 // `FilaInfo` para lo que solo se consulta (44 px, 13,5 px, sin cuadrado
-// de color ni galón). Si dos bloques tienen la misma forma es porque
-// tienen la misma naturaleza.
+// de color ni galón).
 
 // Cuántas filas se ven antes de "Ver los otros N". Dos bastan para
 // reconocer si hay algo urgente; el resto está a un toque y sin cambiar
 // de pantalla.
 const FILAS_VISIBLES = 2
+
+// "Próximos" muestra tres y guarda el resto tras "Ver los otros N": son
+// avisos, no urgencias, y una lista larga de fechas futuras empuja
+// fuera de pantalla lo que sí hay que hacer hoy.
+const PROXIMOS_VISIBLES = 3
 
 export function InicioPage() {
   const [query, setQuery] = useState('')
@@ -146,6 +149,13 @@ export function InicioPage() {
   // pestaña Inicio.
   const perfil = usePerfilVivo()
   const pendientes = usePendientes()
+  // La agenda del día: los mismos pendientes, repartidos por FECHA en
+  // los cinco grupos que el técnico usa para decidir (agenda.ts). Cada
+  // ítem cae en uno solo, así que nada se cuenta ni se pinta dos veces.
+  const agenda = useMemo(() => agruparAgenda(pendientes), [pendientes])
+  const resumen = resumenAgenda(agenda)
+  const urgentes = asuntosUrgentes(agenda)
+  const hoyTexto = useMemo(() => fechaDeHoy(), [])
 
   // Articulos marcados por el equipo como "ruta de inicio" (ver
   // ArticuloForm): puerta de entrada para quien recien llega. Menor
@@ -274,18 +284,6 @@ export function InicioPage() {
               <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
             )}
 
-            {/* BLOQUE 1 · Reanudar. */}
-            {hayQueReanudar && reanudar.actual && (
-              <BarraReanudar
-                variante="tarjeta"
-                articulo={reanudar.actual.articulo}
-                hechos={reanudar.actual.hechos}
-                total={reanudar.actual.total}
-                minutosRestantes={reanudar.actual.minutosRestantes}
-                onDescartar={reanudar.descartar}
-              />
-            )}
-
             {/* BLOQUE 3 · Atajos. (El 2 es el buscador, arriba.) */}
             <div className="grid grid-cols-2 gap-2.5">
               <AtajoRapido
@@ -309,13 +307,98 @@ export function InicioPage() {
                   buscador global, que precarga el nombre buscado. */}
             </div>
 
-            {/* BLOQUE 4 · "Te toca a ti": lo único con fila de ACCIÓN.
-                Es lo que el técnico debe resolver, y por eso es lo único
-                que pesa 15 px y lleva la razón en color de estado. */}
-            {pendientes.length > 0 && (
-              <BloqueLista titulo="Te toca a ti" total={pendientes.length} etiquetaVerMas="pendientes">
+            {/* LA AGENDA. Fecha de hoy y resumen de una línea; debajo,
+                los grupos, en el orden en que se decide el día: lo que
+                ya falló, lo de hoy, lo que viene, lo que tengo a medias
+                y lo que el equipo dejó por revisar. */}
+            <section className="flex flex-col gap-0.5 px-0.5">
+              <p className="text-[12.5px] text-noct-neutral-400">{hoyTexto}</p>
+              {resumen !== '' && (
+                <p
+                  className={`text-[15px] font-medium leading-[1.35] ${urgentes > 0 ? 'text-noct-text' : 'text-noct-neutral-300'}`}
+                >
+                  {resumen}
+                </p>
+              )}
+            </section>
+
+            {agenda.vencidos.length > 0 && (
+              <section>
+                <CabeceraAgenda titulo="Vencidos" total={agenda.vencidos.length} />
+                <div className="flex flex-col">
+                  {agenda.vencidos.map((item) => (
+                    <FilaAgenda key={item.clave} item={item} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {agenda.hoy.length > 0 && (
+              <section>
+                <CabeceraAgenda titulo="Para hoy" total={agenda.hoy.length} />
+                <div className="flex flex-col">
+                  {agenda.hoy.map((item) => (
+                    <FilaAgenda key={item.clave} item={item} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {agenda.proximos.length > 0 && (
+              <BloqueLista
+                titulo="Próximos"
+                total={agenda.proximos.length}
+                etiquetaVerMas="próximos"
+                visiblesIniciales={PROXIMOS_VISIBLES}
+              >
                 {(visibles) =>
-                  pendientes.slice(0, visibles).map((item) => <FilaAccion key={item.clave} item={item} />)
+                  agenda.proximos.slice(0, visibles).map((item) => <FilaAgenda key={item.clave} item={item} />)
+                }
+              </BloqueLista>
+            )}
+
+            {/* EN CURSO · trabajo propio empezado: la guía a medias y
+                los borradores. No son obligaciones con plazo, así que
+                no entran en "Vencidos" ni en "Para hoy". */}
+            {(hayQueReanudar || agenda.enCurso.length > 0) && (
+              <section>
+                <CabeceraAgenda
+                  titulo="En curso"
+                  total={agenda.enCurso.length + (hayQueReanudar ? 1 : 0)}
+                />
+                <div className="flex flex-col gap-2">
+                  {hayQueReanudar && reanudar.actual && (
+                    <BarraReanudar
+                      variante="tarjeta"
+                      articulo={reanudar.actual.articulo}
+                      hechos={reanudar.actual.hechos}
+                      total={reanudar.actual.total}
+                      minutosRestantes={reanudar.actual.minutosRestantes}
+                      onDescartar={reanudar.descartar}
+                    />
+                  )}
+                  {agenda.enCurso.length > 0 && (
+                    <div className="flex flex-col">
+                      {agenda.enCurso.map((item) => (
+                        <FilaAgenda key={item.clave} item={item} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* POR REVISAR DEL EQUIPO · sugerencias de diagnóstico que
+                nadie ha convertido en guía. No están asignadas a este
+                técnico, así que no se anuncian como algo que le toque. */}
+            {agenda.porRevisar.length > 0 && (
+              <BloqueLista
+                titulo="Por revisar del equipo"
+                total={agenda.porRevisar.length}
+                etiquetaVerMas="sugerencias del equipo"
+              >
+                {(visibles) =>
+                  agenda.porRevisar.slice(0, visibles).map((item) => <FilaAgenda key={item.clave} item={item} />)
                 }
               </BloqueLista>
             )}
@@ -455,6 +538,7 @@ function BloqueLista({
   titulo,
   total,
   etiquetaVerMas,
+  visiblesIniciales = FILAS_VISIBLES,
   children,
 }: {
   titulo: string
@@ -462,18 +546,16 @@ function BloqueLista({
   // Qué son los que faltan, para que el texto accesible diga algo
   // ("Ver los otros 4 pendientes") en vez de solo un número.
   etiquetaVerMas: string
+  visiblesIniciales?: number
   children: (visibles: number) => ReactNode
 }) {
   const [desplegado, setDesplegado] = useState(false)
-  const ocultos = total - FILAS_VISIBLES
+  const ocultos = total - visiblesIniciales
 
   return (
     <section>
-      <div className="mb-1.5 flex items-baseline justify-between gap-2 px-0.5">
-        <TituloSeccion>{titulo}</TituloSeccion>
-        <span className="shrink-0 text-[11px] tabular-nums text-noct-neutral-400">{total}</span>
-      </div>
-      <div className="flex flex-col">{children(desplegado ? total : FILAS_VISIBLES)}</div>
+      <CabeceraAgenda titulo={titulo} total={total} />
+      <div className="flex flex-col">{children(desplegado ? total : visiblesIniciales)}</div>
       {ocultos > 0 && !desplegado && (
         <button
           type="button"
@@ -489,11 +571,24 @@ function BloqueLista({
   )
 }
 
-// FILA DE ACCIÓN (M-R6). Lo que el técnico debe resolver: 56 px, título
-// de 15 px y, debajo, LA RAZÓN en el color de su estado ("Venció hace 3
-// días" en rojo). Es la única fila de la pantalla con cuadrado de color
-// y galón, porque es la única que pide actuar.
-function FilaAccion({ item }: { item: ItemPendiente }) {
+// Cabecera de un grupo de la agenda: qué es y cuántos hay. El conteo va
+// aquí y no dentro de cada fila, para que el grupo se pueda evaluar sin
+// leerlo entero.
+function CabeceraAgenda({ titulo, total }: { titulo: string; total: number }) {
+  return (
+    <div className="mb-1.5 flex items-baseline justify-between gap-2 px-0.5">
+      <TituloSeccion>{titulo}</TituloSeccion>
+      <span className="shrink-0 text-[11px] tabular-nums text-noct-neutral-400">{total}</span>
+    </div>
+  )
+}
+
+// FILA DE LA AGENDA (M-R6, fila de ACCIÓN). 56 px, título de 15 px y,
+// debajo, LA RAZÓN en el color de su estado ("Venció hace 3 días" en
+// rojo) y de dónde sale ("Bóveda", o el nombre del equipo). El origen
+// solo aparece cuando el ítem tiene fecha: en un borrador su detalle ya
+// dice de quién es y repetirlo sería la misma palabra dos veces.
+function FilaAgenda({ item }: { item: ItemPendiente }) {
   const Icono = ICONO_PENDIENTE[item.categoria]
   return (
     <Link
@@ -509,7 +604,12 @@ function FilaAccion({ item }: { item: ItemPendiente }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-medium leading-[1.3]">{item.titulo}</span>
-        <span className={`block truncate text-[12.5px] ${COLOR_RAZON[item.tono]}`}>{item.detalle}</span>
+        <span className="block truncate text-[12.5px]">
+          <span className={COLOR_RAZON[item.tono]}>{item.detalle}</span>
+          {item.fecha !== null && (
+            <span className="text-noct-neutral-400"> · {item.origen}</span>
+          )}
+        </span>
       </span>
       <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
     </Link>

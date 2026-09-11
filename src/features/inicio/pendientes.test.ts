@@ -170,7 +170,8 @@ describe('camposProtegidosPorVencer', () => {
       ]),
     )
     expect(items.map((i) => i.titulo)).toEqual(['Vencida'])
-    expect(items[0].detalle).toBe('Venció hace 1 día · Switch B')
+    expect(items[0].detalle).toBe('Venció hace 1 día')
+    expect(items[0].origen).toBe('Switch B')
     expect(items[0].ruta).toBe('/dispositivos/d2')
   })
 

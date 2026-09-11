@@ -37,6 +37,13 @@ export interface ItemPendiente {
    * una sugerencia no vencen).
    */
   diasRestantes: number | null
+  /**
+   * De dónde sale el dato, dicho como lo diría el técnico: "Bóveda" o
+   * el nombre del equipo. La agenda lo muestra en su propia columna,
+   * así que `detalle` se queda solo con el tiempo ("Venció hace 3
+   * días") y no repite el origen dentro de la misma frase.
+   */
+  origen: string
 }
 
 // Orden global de lo que TIENE fecha: el más vencido primero
@@ -73,6 +80,7 @@ export function borradoresPropios(
       categoria: 'borrador',
       fecha: null,
       diasRestantes: null,
+      origen: 'Borrador propio',
     }))
 }
 
@@ -94,6 +102,7 @@ export function credencialesPorVencer(credenciales: Credencial[], hoy: Date = ne
       categoria: 'credencial' as const,
       fecha: credencial.venceEn,
       diasRestantes: diasDeCalendario(credencial.venceEn as string, hoy),
+      origen: 'Bóveda',
     }))
     .sort(porFecha)
 }
@@ -114,12 +123,13 @@ export function camposProtegidosPorVencer(
     .map(({ campo, estado }) => ({
       clave: `campo_protegido:${campo.id}`,
       titulo: campo.nombre,
-      detalle: `${textoVencimiento(campo.venceEn as string, hoy)} · ${nombresPorId.get(campo.dispositivoId!) ?? 'Equipo eliminado'}`,
+      detalle: textoVencimiento(campo.venceEn as string, hoy),
       ruta: `/dispositivos/${campo.dispositivoId}`,
       tono: (estado === 'vencida' ? 'error' : 'precaucion') as ItemPendiente['tono'],
       categoria: 'campo_protegido' as const,
       fecha: campo.venceEn,
       diasRestantes: diasDeCalendario(campo.venceEn as string, hoy),
+      origen: nombresPorId.get(campo.dispositivoId!) ?? 'Equipo eliminado',
     }))
     .sort(porFecha)
 }
@@ -159,6 +169,7 @@ export function sugerenciasSinRevisar(
       categoria: 'sugerencia',
       fecha: null,
       diasRestantes: null,
+      origen: 'Sugerencia del equipo',
     }))
 }
 
