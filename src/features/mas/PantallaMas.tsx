@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { Avatar } from '../../components/Avatar'
+import { SeccionPlegable } from '../../components/SeccionPlegable'
 import {
   BookBookmark,
   CaretRight,
@@ -10,14 +11,24 @@ import {
   LockSimple,
   MapPin,
   QrCode,
+  Star,
   TreeStructure,
   UploadSimple,
   UsersThree,
   Vault,
 } from '../../components/iconos'
 import { db, ID_BLOQUEO_APP } from '../../lib/db'
+import { obtenerFavoritos } from '../../lib/favoritos'
 import { useAuth } from '../autenticacion/authContext'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
+import { VISUAL_POR_TIPO } from '../busqueda/resultados'
+import {
+  ETIQUETA_ACCION_CAMBIO,
+  obtenerActividadReciente,
+  tiempoRelativo,
+  type FilaActividad,
+} from '../historial/actividadEquipo'
+import { etiquetaResuelto } from '../historial/lineaDeTiempo'
 
 // Quinta pestaña (tarea 182, mockup 3f del handoff "Auditoría de
 // Soluciones TI"). Puerta de los destinos que hoy no aparecen en la
@@ -46,6 +57,13 @@ export function PantallaMas() {
     [],
   )
   const bloqueo = useLiveQuery(async () => (await db.seguridadApp.get(ID_BLOQUEO_APP)) ?? null, [])
+  // "Mis favoritos" y "Actividad del equipo" vivian en Inicio, donde no
+  // respondian a nada de lo que se pregunta al abrir la app (encargo del
+  // 2026-09-11, tarea 3). Aqui, en el indice de destinos, si: se
+  // consultan cuando uno los busca. Mismos datos, mismos enlaces, mismos
+  // estados vacios (si no hay nada, la seccion no se monta).
+  const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
+  const actividad = useLiveQuery(() => obtenerActividadReciente(), [], [])
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila, sin controles
@@ -132,6 +150,52 @@ export function PantallaMas() {
             </div>
           </section>
 
+          {(favoritos.length > 0 || actividad.length > 0) && (
+            <section>
+              <TituloGrupo>Lo mío y lo del equipo</TituloGrupo>
+              <div className="overflow-hidden rounded-lg border border-noct-divider [&>*+*]:border-t [&>*+*]:border-noct-divider">
+                {favoritos.length > 0 && (
+                  <SeccionPlegable titulo="Mis favoritos" Icono={Star} conteo={favoritos.length}>
+                    <div className="flex flex-col">
+                      {favoritos.map((favorito) => {
+                        const { Icono } = VISUAL_POR_TIPO[favorito.tipo]
+                        return (
+                          <Link
+                            key={favorito.clave}
+                            to={favorito.ruta}
+                            className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
+                          >
+                            <Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+                            <span className="min-w-0 flex-1 truncate">{favorito.titulo}</span>
+                            {favorito.subtitulo && (
+                              <span className="max-w-[45%] shrink-0 truncate text-[12px] text-noct-neutral-400">
+                                {favorito.subtitulo}
+                              </span>
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </SeccionPlegable>
+                )}
+
+                {actividad.length > 0 && (
+                  <SeccionPlegable
+                    titulo="Actividad del equipo"
+                    Icono={UsersThree}
+                    conteo={actividad.length}
+                  >
+                    <div className="flex flex-col">
+                      {actividad.map((fila) => (
+                        <FilaActividadItem key={fila.clave} fila={fila} />
+                      ))}
+                    </div>
+                  </SeccionPlegable>
+                )}
+              </div>
+            </section>
+          )}
+
           <section>
             <TituloGrupo>Mi cuenta</TituloGrupo>
             <div className="flex flex-col divide-y divide-noct-divider">
@@ -173,6 +237,35 @@ export function PantallaMas() {
         </div>
       </main>
     </Chasis>
+  )
+}
+
+// Fila de "Actividad del equipo": quien hizo que, sobre que ficha, hace
+// cuanto. Es una FRASE, no un par titulo/subtitulo, asi que conserva su
+// forma propia (misma que tenia en Inicio antes de la mudanza).
+function FilaActividadItem({ fila }: { fila: FilaActividad }) {
+  const { Icono } = VISUAL_POR_TIPO[fila.entidadTipo ?? 'diagnostico']
+  const accionTexto =
+    fila.tipo === 'ejecucion' ? `ejecutó el diagnóstico` : ETIQUETA_ACCION_CAMBIO[fila.accion ?? 'edito']
+  const detalle =
+    fila.tipo === 'ejecucion'
+      ? `(${etiquetaResuelto(fila.resuelto ?? 'abandonado')})`
+      : fila.accion === 'edito' && fila.cantidadCambios > 1
+        ? `(${fila.cantidadCambios} cambios)`
+        : ''
+
+  return (
+    <Link
+      to={fila.ruta}
+      className="flex min-h-11 items-start gap-2.5 border-t border-noct-divider/60 py-2 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
+    >
+      <Icono size={15} className="mt-[3px] shrink-0 text-noct-neutral-400" aria-hidden />
+      <span className="min-w-0 flex-1 leading-[1.35] [text-wrap:pretty]">
+        <span className="font-medium">{fila.usuarioNombre}</span> {accionTexto}{' '}
+        <span className="font-medium">{fila.titulo}</span> {detalle}
+      </span>
+      <span className="shrink-0 text-[12px] text-noct-neutral-400">{tiempoRelativo(fila.fechaHora)}</span>
+    </Link>
   )
 }
 

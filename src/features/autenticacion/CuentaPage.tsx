@@ -1,6 +1,7 @@
 import { useState, useSyncExternalStore, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { BotonInstalarApp } from '../../components/BotonInstalarApp'
+import { DescargarOffline } from '../../components/DescargarOffline'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { CaretRight, DownloadSimple, LockSimple, SignOut } from '../../components/iconos'
@@ -161,6 +162,13 @@ export function CuentaPage() {
             <BotonInstalarApp />
           </div>
         )}
+
+        {/* "Descargar todo para offline" (mudado desde Inicio, encargo
+            del 2026-09-11, tarea 3): es un ajuste de ESTE dispositivo,
+            como instalar la app o el bloqueo, no una noticia del dia.
+            Mismo componente y mismo estado que ofrece la bienvenida del
+            primer dia. */}
+        <DescargarOffline />
 
         <Link
           to="/cuenta/seguridad"

@@ -5,7 +5,7 @@ import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import { CaretDown, Info, Plus, Sliders } from '../../components/iconos'
+import { CaretDown, FlagBanner, Info, Plus, Sliders } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
 import { PastillaFrescura } from '../../components/PastillaFrescura'
@@ -124,6 +124,25 @@ export function SolucionesPage() {
   // esto no ordena, no filtra ni saca ninguna guía de su sitio en el
   // catálogo; solo cambia el rótulo de la guía que ya estás mirando.
   const progresos = useLiveQuery(() => db.progresoPasos.toArray(), [], [])
+  // "Para empezar" (mudado desde Inicio, encargo del 2026-09-11, tarea
+  // 3): los articulos que el equipo marco como ruta de inicio (ver
+  // ArticuloForm). Es una ruta de APRENDIZAJE sobre guias, asi que su
+  // sitio es Guias y no la portada. Menor orden primero; a igualdad,
+  // por titulo, para una lista estable.
+  const rutaAprendizaje = useLiveQuery(
+    async () => {
+      const marcados = await db.articulos
+        .filter((a) => a.esRutaInicio && !a.eliminadoEn && (a.estado ?? 'publicado') === 'publicado')
+        .toArray()
+      return marcados.sort(
+        (a, b) =>
+          (a.ordenRutaInicio ?? 0) - (b.ordenRutaInicio ?? 0) ||
+          a.titulo.localeCompare(b.titulo, 'es', { numeric: true }),
+      )
+    },
+    [],
+    [],
+  )
   // Lo que ofrece cada tarjeta lo decide `accionDeGuia`, la MISMA
   // funcion que la ficha de la guia: antes la tarjeta tenia su propia
   // regla (`hechos > 0`) y por eso decia "Empezar" con una ejecucion
@@ -620,6 +639,35 @@ export function SolucionesPage() {
                   {soloEnCategoria ? 'En todas' : 'Solo ahí'}
                 </button>
               </div>
+            )}
+
+            {/* PARA EMPEZAR (mudado desde Inicio, tarea 3). Ruta de
+                aprendizaje del equipo: por donde empieza quien acaba de
+                llegar. Solo fuera de la busqueda y sin filtro puesto:
+                quien busca algo concreto ya sabe que quiere. */}
+            {rutaAprendizaje.length > 0 && !buscando && !etiquetaSel && (
+              <section className="mb-[22px]">
+                <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                  <FlagBanner size={14} className="text-noct-neutral-400" aria-hidden />
+                  <TituloSeccion>Para empezar</TituloSeccion>
+                  <span className="text-[11px] text-noct-neutral-400">{rutaAprendizaje.length}</span>
+                </div>
+                <ol className="flex flex-col">
+                  {rutaAprendizaje.map((articulo, indice) => (
+                    <li key={articulo.id}>
+                      <Link
+                        to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+                        className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 px-2 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
+                      >
+                        <span className="w-4 shrink-0 text-center font-mono text-[12px] text-noct-neutral-400">
+                          {indice + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{articulo.titulo}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </section>
             )}
 
             {/* Filtro por etiqueta activo (fase J4): llegado desde una

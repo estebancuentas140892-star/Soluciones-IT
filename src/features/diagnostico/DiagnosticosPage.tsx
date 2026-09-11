@@ -16,6 +16,7 @@ import {
 } from '../../components/iconos'
 import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
+import { problemasFrecuentesInicio } from '../inicio/problemasFrecuentes'
 import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 
 // Modo Diagnóstico Inteligente re-autorizado en Nocturne (handoff
@@ -41,6 +42,18 @@ export function DiagnosticosPage() {
     [],
   )
   const categorias = useLiveQuery(() => db.categorias.orderBy('orden').toArray(), [], [])
+  // "Problemas frecuentes" (decision D4 de PROPUESTA_MODULOS.md, punto
+  // 10) vivia en Inicio, donde no tenia a que pertenecer: es la lectura
+  // agregada de este modulo, asi que se muda a su propia pantalla
+  // (encargo del 2026-09-11, tarea 3). Misma agregacion, mismos enlaces,
+  // mismo fallback: sin ninguna ejecucion registrada cae a los
+  // diagnosticos mas recientes y el rotulo lo dice.
+  const ejecucionesDiagnostico = useLiveQuery(() => db.ejecuciones_diagnostico.toArray(), [], [])
+  const frecuentes = useMemo(
+    () => problemasFrecuentesInicio(ejecucionesDiagnostico, diagnosticos),
+    [ejecucionesDiagnostico, diagnosticos],
+  )
+  const hayEjecuciones = ejecucionesDiagnostico.length > 0
 
   // Diagnóstico con una sesión a medias más reciente en este dispositivo,
   // para ofrecer retomarlo de un vistazo (misma idea que "Continuar donde
@@ -171,6 +184,49 @@ export function DiagnosticosPage() {
             </span>
             <CaretRight size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
           </Link>
+        )}
+
+        {/* PROBLEMAS FRECUENTES (mudado desde Inicio, encargo del
+            2026-09-11, tarea 3). Con ejecuciones registradas dice cuales
+            se repiten; sin ninguna todavia, el rotulo cambia a
+            "Diagnosticos recientes", porque un conteo de cero veces no
+            significa "frecuente". No se muestra mientras se filtra: el
+            filtro es para buscar uno concreto. */}
+        {frecuentes.length > 0 && !hayFiltro && (
+          <section>
+            <div className="mb-1.5 flex items-center gap-2 px-0.5">
+              <WarningCircle size={14} className="text-noct-precaucion" aria-hidden />
+              <TituloSeccion>
+                {hayEjecuciones ? 'Problemas frecuentes' : 'Diagnósticos recientes'}
+              </TituloSeccion>
+            </div>
+            <div className="flex flex-col">
+              {frecuentes.map((problema) => (
+                <Link
+                  key={problema.diagnosticoId}
+                  to={`/diagnostico/${problema.diagnosticoId}`}
+                  className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 px-2 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
+                >
+                  <WarningCircle size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{problema.titulo}</span>
+                  <span className="shrink-0 text-[12px] text-noct-neutral-400">
+                    {problema.ejecuciones == null
+                      ? 'Nuevo'
+                      : problema.ejecuciones === 1
+                        ? '1 vez'
+                        : `${problema.ejecuciones} veces`}
+                  </span>
+                </Link>
+              ))}
+            </div>
+            <Link
+              to="/diagnostico/estadisticas"
+              className="mt-0.5 inline-flex min-h-11 items-center gap-1.5 px-1.5 text-[12.5px] font-medium text-noct-accent-300"
+            >
+              <ChartBar size={13} aria-hidden />
+              Ver estadísticas
+            </Link>
+          </section>
         )}
 
         {grupos.map(({ categoria, Icono, delGrupo }) => (
