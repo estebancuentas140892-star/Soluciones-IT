@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { debeMostrarBienvenida, pasosBienvenida } from './bienvenida'
+import { bienvenidaCompleta, debeMostrarBienvenida, pasosBienvenida } from './bienvenida'
 
 describe('pasosBienvenida', () => {
   it('el primer paso siempre está hecho: la pantalla solo se ve con sesión', () => {
@@ -44,8 +44,23 @@ describe('debeMostrarBienvenida', () => {
     expect(debeMostrarBienvenida({ pasos, hayBloquesReales: false })).toBe(false)
   })
 
-  it('se retira sola cuando Inicio ya tiene bloques propios, aunque falten pasos', () => {
+  it('se retira sola cuando Inicio ya tiene agenda, aunque falten pasos', () => {
     const pasos = pasosBienvenida({ instalada: false, descargaHecha: false })
     expect(debeMostrarBienvenida({ pasos, hayBloquesReales: true })).toBe(false)
+  })
+
+  // Encargo del 2026-09-11, tarea 5: abrir la app desde el navegador en
+  // vez de la instalada devolvia el paso 2 a pendiente, y la bienvenida
+  // reaparecia meses despues como si el tecnico acabara de llegar.
+  it('no reaparece si ya se completó antes en este dispositivo', () => {
+    const pasos = pasosBienvenida({ instalada: false, descargaHecha: false })
+    expect(debeMostrarBienvenida({ pasos, hayBloquesReales: false, yaCompletada: true })).toBe(false)
+  })
+})
+
+describe('bienvenidaCompleta', () => {
+  it('es cierta solo con los tres pasos hechos', () => {
+    expect(bienvenidaCompleta(pasosBienvenida({ instalada: true, descargaHecha: true }))).toBe(true)
+    expect(bienvenidaCompleta(pasosBienvenida({ instalada: true, descargaHecha: false }))).toBe(false)
   })
 })

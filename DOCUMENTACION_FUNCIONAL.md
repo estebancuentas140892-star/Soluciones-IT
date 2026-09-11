@@ -288,35 +288,63 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **Ruta:** `/` · **Archivo:** `src/features/inicio/InicioPage.tsx` · **Nivel:** Sección
 
-**Objetivo.** Punto único de entrada al conocimiento del equipo. La pantalla principal ES el buscador global (el pilar de la app): abrir y buscar toma dos toques. Cuando no se busca, muestra atajos de trabajo y bloques derivados de la actividad reciente.
+**Objetivo.** Agenda operativa del día, más el buscador global. Al entrar, el técnico tiene que poder responder en un vistazo: **qué está vencido, qué toca hoy, qué viene, qué tengo a medias y qué dejó el equipo por revisar**. Buscar sigue a dos toques: la pantalla principal ES el buscador.
 
-> **Rediseñada el 2026-09-01** (tarea 203, auditoría móvil M-006, M-007, M-013 y M-003, mockup `2b`). Con la base llena medía **más de 2.200 px a 360 px**: cuatro pantallas. El problema no era la cantidad de información sino que **cinco bloques usaban exactamente la misma fila de 52 px** y solo un rótulo de 11 px los distinguía: "Pendientes" (algo que debo hacer) pesaba igual que "Actividad del equipo" (algo que hizo otro). Ahora son **cinco bloques y dos pesos de fila** (reglas **M-R6** y **M-R7**), y **medido en navegador a 360 px baja a 1.035 px, 1,6 pantallas**. **Nada se borra:** lo secundario se pliega tras una línea con su conteo.
+> **Convertida en agenda el 2026-09-11** (encargo "Inicio como agenda operativa"). Antes era una **colección de bloques sin relación**: atajos, "Te toca a ti", "Lo que consultaste" y cuatro secciones plegadas. La peor era "Te toca a ti", que mezclaba una clave vencida hace medio año, un borrador propio y una sugerencia de **otro** técnico bajo un rótulo que además mentía (una sugerencia del equipo no está asignada a nadie). Ahora todo lo que aparece aquí responde a la misma pregunta y se ordena por la misma dimensión: **la fecha**.
+
+**Qué NO es.** No hay entidad "tarea", ni tabla de recordatorios, ni calendario mensual. Es una **vista derivada** de datos que ya existen (credenciales, campos protegidos, borradores, progreso de guías, sugerencias de diagnóstico). El reparto en grupos es lógica pura y está en `src/features/inicio/agenda.ts`; el cálculo de los ítems, en `pendientes.ts`.
 
 **Cabecera fija (con desenfoque).** Desde la tarea 181 la fila superior es la **barra superior global** (ver la sección 2), común a las cinco pestañas: título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022), pastilla de sincronización y avatar de la cuenta. Debajo, lo propio de Inicio:
 - **Buscador en línea** (input `type="search"`), **de 46 px**: placeholder "Buscar en Guías, Equipos y Bóveda". Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
 - **La lupa del chasis se apaga aquí, y solo aquí** (`conLupa={false}`, regla **M-R8**, "un buscador por pantalla"): esta pantalla ya trae su campo con el alcance escrito, así que la lupa era el segundo buscador de la misma pantalla y además con el alcance redactado distinto. En las otras cuatro secciones la lupa ES el buscador y se queda.
-- **Sin saludo.** El saludo dinámico según la hora ("Buenos días/tardes/noches. Todo el conocimiento del equipo, al instante") **se retiró en la tarea 184** (decisión aprobada por el usuario): ocupaba la línea de contexto con un eslogan que cambiaba tres veces al día, así que la entrada nunca se veía igual dos veces. Lo que hay que decir el primer día lo dice ahora la bienvenida (bloque 0 de abajo), y solo mientras haga falta.
+- **Sin saludo.** El saludo dinámico según la hora se **retiró en la tarea 184** (decisión aprobada por el usuario): ocupaba la línea de contexto con un eslogan que cambiaba tres veces al día. Lo que hay que decir el primer día lo dice la bienvenida, y solo mientras haga falta.
 
 **Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas**. Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
 
-**Modo inicio (sin texto), bloques en orden:**
-0. **Bienvenida del primer día** (`BienvenidaPrimerDia`, tarea 184; solo mientras haga falta): "Bienvenido, {nombre de pila}", una línea de qué vive aquí, y **tres pasos que se apagan solos**, cada uno con su marca (check verde si está hecho, su número si falta; el primero que falta va en acento y el resto en neutro):
+**Modo agenda (sin texto), en orden:**
+
+0. **Bienvenida del primer día** (`BienvenidaPrimerDia`, tarea 184; solo mientras haga falta): "Bienvenido, {nombre de pila}", una línea de qué vive aquí, y **tres pasos que se apagan solos**:
    1. *Entraste con tu cuenta* (siempre hecho: esta pantalla solo se ve con sesión).
-   2. *Instala la app en el teléfono*, con botón **"Instalar"** (diálogo nativo del navegador) o **"Cómo instalar"** si el navegador no lo ofrece (Safari de iOS siempre), que abre un modal con los tres pasos manuales. Se marca hecho cuando la app corre instalada.
-   3. *Descarga todo para trabajar sin señal*, con botón **"Descargar"** que dispara la misma descarga que el bloque 9 (comparten estado, así que el progreso se ve en los dos). Se marca hecho tras la primera descarga.
-   **Se retira sola**, sin botón de cerrar: cuando los tres pasos están hechos, o cuando esta pantalla ya tiene bloques propios (recientes, pendientes o un procedimiento a medias). Un cierre a mano habría hecho falta guardar; el bloque desaparece porque deja de ser cierto. Consecuencia conocida: quien llega a un equipo con pendientes visibles no ve la bienvenida, y la instalación le queda ofrecida en Mi cuenta (sección 6.6).
-1. **Reanudar** (si aplica): tarjeta con el procedimiento a medias más reciente, "Sigues en el paso N de M" como rótulo, barra de progreso y el tiempo que queda ("~14 min"). **No se repite si la barra flotante de reanudar está visible** (hallazgo **M-013**): se veían las dos a la vez, una encima de la otra. Es el mismo componente (`BarraReanudar variante="tarjeta"`) y el mismo dato (`useReanudar`) que la barra flotante y que "Sin terminar" de Guías: antes eran **tres dibujos distintos de la misma cosa**, uno de ellos con su propia consulta dentro de esta pantalla.
-2. **Dos atajos rápidos**: "Diagnóstico" (→ `/diagnostico`) y "Escanear" (→ `/escaner`). **"Registrar equipo" salió de aquí en la tarea 207** (hallazgo **M-008**, regla **M-R10**): ocupaba una fila entera de la rejilla en un dispositivo cuyo criterio es la consulta, y daba protagonismo a un alta que se hace mejor en el ordenador. Los dos que quedan solo existen con el teléfono en la mano. **El alta no se pierde**, se queda donde tiene contexto: tras un escaneo sin coincidencia (el escáner ofrece el alta con el código ya leído), en el "Crear" de Equipos y de Red, y en el estado "Sin coincidencias" del buscador, que precarga el texto buscado como nombre (`?nombre=`).
-3. **"Te toca a ti"** (si hay), el único bloque con **fila de ACCIÓN**: mis borradores, credenciales/campos protegidos por vencer o vencidos (solo con permiso de bóveda) y sugerencias del equipo sin revisar. La fila mide **56 px**, el título va a **15 px** y debajo va **la razón en el color de su estado** ("Vencida" en rojo, "Borrador tuyo · hace 2 días" en neutro): es lo que distingue lo urgente de lo anecdótico sin leer. Se ven **2 filas** y el resto entra con "Ver los otros N", en el sitio y sin cambiar de pantalla. La cabecera lleva el conteo total a la derecha.
-4. **"Lo que consultaste"** (si hay), con **fila de INFORMACIÓN**: las últimas fichas consultadas. **44 px, 13,5 px, icono pequeño sin cuadrado de color y sin galón** (no promete una acción), con el dato para reconocerla a la derecha. Mismo patrón de 2 filas + "Ver los otros N".
-5. **Plegados, tras una línea con su conteo** (regla **M-R4**, componente `SeccionPlegable`): **"Problemas frecuentes"**, **"Favoritos"**, **"Para empezar"** y **"Actividad del equipo"**. Cuatro líneas de 52 px en vez de unos 1.200 px de filas; el conteo dice lo que hay dentro sin abrirlas, y se abren en el sitio. Dentro, todo va con fila de información, porque toda es de consulta.
-6. **Botón "Descargar todo para offline"** (`DescargarOffline`): deja el contenido de adjuntos en el teléfono antes de salir a un mantenimiento, con progreso.
+   2. *Instala la app en el teléfono*, con botón **"Instalar"** (diálogo nativo) o **"Cómo instalar"** si el navegador no lo ofrece (Safari de iOS siempre).
+   3. *Descarga todo para trabajar sin señal*, con botón **"Descargar"**. Es **el mismo estado** que "Descargar todo para offline" de Mi cuenta: los dos leen y escriben el mismo módulo (`adjuntosOffline.ts`), así que descargar en cualquiera de los dos apaga el paso y actualiza la fecha en el otro.
+   **No compite con la agenda y no vuelve:** se retira sola en cuanto hay algo que atender, y una vez cumplidos los tres pasos queda marcada como completada en el dispositivo, así que **no reaparece** aunque el estado real cambie (por ejemplo, abrir la app desde el navegador en vez de la versión instalada).
+1. **Fecha de hoy** en español de Colombia ("Viernes, 11 de septiembre"): dice respecto a qué se dice "hoy".
+2. **Resumen operativo** de una línea: "2 vencidos · 1 para hoy · 3 próximos". **Las categorías vacías no se nombran.**
+3. **Vencidos** — credenciales de la Bóveda y datos protegidos de equipo cuya fecha ya pasó. Cada fila: **nombre**, **cuánto lleva vencido** ("Venció hace 3 días") en rojo, **origen** ("Bóveda" o el nombre del equipo) y enlace a su ficha. Se muestran todas.
+4. **Para hoy** — únicamente vencimientos con fecha de hoy ("Vence hoy"). **No entran borradores, sugerencias ni nada sin fecha.**
+5. **Próximos** — vencimientos futuros dentro del periodo de aviso del sistema (`DIAS_AVISO_VENCIMIENTO`, 30 días). Se ven **3** y el resto entra con **"Ver los otros N"**, en el sitio.
+6. **En curso** — trabajo propio empezado: la **tarjeta de reanudar** la guía a medias (`BarraReanudar variante="tarjeta"`, el mismo dato que "Sin terminar" de Guías, descartable) y los **borradores propios** ("Borrador propio · actualizado hace 2 d"). No son obligaciones con plazo, así que **nunca aparecen en Vencidos ni en Para hoy**.
+7. **Por revisar del equipo** — sugerencias de diagnóstico que nadie ha convertido en guía. **No dice "Te toca a ti"**: no están asignadas a este técnico.
 
-**Las dos únicas formas de fila (regla M-R6, "una fila, un significado").** Si dos bloques tienen la misma forma es porque tienen la misma naturaleza. **Acción**: lo que el técnico debe resolver (solo "Te toca a ti"). **Información**: todo lo demás. Antes cinco bloques compartían la misma fila de 52 px, con cuadrado de color y galón, y el único distintivo era el rótulo de sección.
+**Ningún elemento cae en dos grupos.** El reparto es excluyente: primero manda la fecha, y lo que no tiene fecha se agrupa por a quién pertenece el trabajo.
 
-**El aviso numérico de la barra de pestañas vive ahora en Inicio** (hallazgo **M-003**, regla **M-R9**). Estaba sobre "Más", que es un índice y **no contiene ni un pendiente**: se tocaba el aviso, no había nada, y eso enseña al técnico a ignorar los avisos. Los pendientes viven en esta pantalla, así que el aviso se mudó con el dato.
+**Textos de tiempo** (`textoVencimiento`, `src/lib/vencimiento.ts`): "Vence hoy", "Vence mañana", "Venció hace N días" y "Vence el 18 sep". **"Venció hoy" no se usa nunca para una fecha anterior**, que era el defecto de la versión previa.
 
-**Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Guías, Equipos, Bóveda, Ubicaciones y Personas; los bloques enlazan a diagnósticos, artículos, credenciales, fichas de equipo, la pantalla de estadísticas y las sugerencias del equipo.
+**Orden global por fecha.** Vencidos primero (el más antiguo arriba), luego lo de hoy, luego lo próximo (la fecha más cercana arriba). **Da igual si el dato sale de la Bóveda o de los Datos protegidos de un equipo:** antes toda credencial salía antes que cualquier dato protegido, aunque venciera tres semanas después.
+
+**Permiso de bóveda.** Sin `puedeVerBoveda` no llega ni un título: ni de credenciales ni de campos protegidos de equipo, que llevan la misma RLS. El resto de la agenda (en curso, por revisar) se sigue viendo.
+
+**Estados.**
+- **"Todo al día por hoy"** / *"No hay accesos vencidos ni asuntos con fecha para hoy."* — cuando no hay vencidos ni asuntos de hoy. Si hay **próximos**, se muestran debajo, como aviso y no como alarma.
+- **Sin nada operativo**: la pantalla no queda en blanco. Se conservan el buscador y el estado anterior.
+
+**El aviso numérico de la pestaña Inicio cuenta solo lo urgente** (encargo del 2026-09-11): **vencidos + los de hoy**. No cuenta próximos, borradores, guías en curso, sugerencias del equipo, favoritos ni actividad. Con cero, no hay número; por encima de nueve, "9+". Antes contaba todos los pendientes, así que era un número que nunca bajaba y enseñaba a ignorarse. (El aviso ya se había mudado de "Más" a Inicio en la tarea 187, hallazgo **M-003**, regla **M-R9**: "Más" es un índice y no contiene ni un pendiente.)
+
+**Lo que se fue de Inicio y a dónde** (encargo del 2026-09-11, tarea 3). Nada se borró: cada bloque conserva sus datos, permisos, enlaces y estados vacíos, solo cambió de pantalla.
+
+| Bloque retirado de Inicio | Vive ahora en | Nota |
+|---|---|---|
+| **Problemas frecuentes** | Diagnóstico (`/diagnostico`) | Es la lectura agregada de ese módulo. Sin ninguna ejecución registrada el rótulo es **"Diagnósticos recientes"**, no "Problemas frecuentes" |
+| **Para empezar** | Guías (`/soluciones`) | Ruta de aprendizaje sobre guías; se oculta al buscar o con filtro de etiqueta |
+| **Favoritos** | Más (`/mas`), como **"Mis favoritos"** | Sección plegable con su conteo |
+| **Actividad del equipo** | Más (`/mas`) | Sección plegable con su conteo |
+| **Descargar todo para offline** | Mi cuenta (`/cuenta`) | Ajuste de este dispositivo, como instalar la app; mismo estado que el paso 3 de la bienvenida |
+| **Diagnóstico** y **Escanear** (atajos) | Ya estaban en la navegación | No se duplican en Inicio |
+| **Lo que consultaste** | — | Deja de mostrarse. El registro local de recientes (`recientes.ts`) **se conserva** y lo siguen usando otras funciones |
+
+**Formas de fila (regla M-R6, "una fila, un significado").** `FilaAgenda` (56 px, título de 15 px, la razón en el color de su estado y el origen al lado) es lo que el técnico debe resolver. Todos los controles táctiles miden 44 px o más y ninguna fila provoca desplazamiento horizontal: los textos largos se recortan.
+
+**Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Guías, Equipos, Bóveda, Ubicaciones y Personas; la agenda enlaza a la ficha de cada credencial, a la ficha del equipo dueño del dato protegido, al borrador propio, a la guía a medias y a las sugerencias del equipo.
 
 ---
 
@@ -340,6 +368,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 - **Botón "Tipo"**: el segundo eje de filtro ya no ocupa cabecera (regla R4). Abre la hoja inferior "Tipo de documento", con los tipos presentes y su conteo. Cuando hay uno elegido, el botón muestra su nombre en acento. Está disponible siempre, no solo dentro de una categoría, y se acota a la categoría activa cuando hay una.
 
 **Cuerpo (lista):**
+- **Bloque "Para empezar"** arriba (venido de Inicio el 2026-09-11; solo al navegar, sin buscar ni filtrar por etiqueta): la **ruta de aprendizaje** del equipo, es decir los artículos publicados marcados con `esRutaInicio`, numerados por `ordenRutaInicio`. Es una ruta sobre guías, así que su sitio es Guías y no la portada.
 - **Bloque "Sin terminar"** arriba (solo al navegar, sin buscar ni filtrar por etiqueta): hasta 3 procedimientos que este técnico dejó a medias, con el paso actual, los minutos que le quedan (~), una barra de avance y la acción "Seguir", que va directo al modo asistente. Retomar pasó de cuatro toques a uno. El avance es local del dispositivo.
 - Al **buscar**: resultados agrupados por categoría (encabezado con icono, nombre y conteo), término resaltado, y encabezado "N artículos coinciden". Si la coincidencia **no** fue en el título, la fila lo explica: "Coincide en la etiqueta *zebra*".
 - **El filtro de categorías no se va al buscar** (2026-09-09): en móvil son dos controles fijos de 44 px y en escritorio el rail lateral, y **ninguno se oculta** mientras hay término escrito. Elegir una categoría con una búsqueda activa **acota la búsqueda a esa categoría**, y los conteos del rail dicen cuántos resultados hay en cada una.
@@ -560,9 +589,10 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - **"Aquí, con el equipo delante"** (tarea 207, hallazgos **M-024** y **M-025**, regla **M-R10**, mockup `7b`): **Escanear equipo**, **Diagnóstico**, **Ubicaciones** y **Personas**. Antes eran dos grupos, "Herramientas" y "Registros", que decían de qué TIPO era cada destino y no dónde sirve, así que "Importar" pesaba lo mismo que "Escanear", que solo existe en el teléfono.
 - **"Mejor desde el ordenador"**, al final y con la nota escrita ("Se puede hacer aquí, pero pide teclado y pantalla grande."): **Etiquetas QR** e **Importar equipos**. **No se esconde nada**, se ordena por dónde se usa; las dos siguen abriéndose desde aquí y desde el menú "···" de Equipos.
 - **El conteo va a la derecha**, antes del galón, en la misma ranura que en Guías y Equipos (hallazgo **M-025**). Iba pegado al final del subtítulo ("Sedes, salas y racks · 12"), donde se leía como parte de la descripción y no se podía comparar de un vistazo entre filas. Lo llevan Bóveda, Diagnóstico, Ubicaciones y Personas, todos en vivo.
+- **"Lo mío y lo del equipo"** (desde el 2026-09-11, venido de Inicio): **"Mis favoritos"** y **"Actividad del equipo"**, plegados tras una línea con su conteo (`SeccionPlegable`). Se consultan cuando uno los busca, que es lo que hace en esta pantalla; en Inicio no respondían a ninguna pregunta de la jornada. El grupo entero no se monta si las dos listas están vacías.
 - **"Mi cuenta"**: fila de perfil (avatar con iniciales, nombre, correo → `/cuenta`) y **"Bloqueo y seguridad"** (→ `/cuenta/seguridad`), con subtítulo que dice el método configurado y si está activo o inactivo, leído en vivo de `db.seguridadApp`.
 
-**Volver.** Ubicaciones y Personas, alcanzadas ahora desde aquí, suben a "Más" (no a Equipos): antes su regreso llevaba a una sección que el técnico no había visitado si llegaba por un enlace o por esta pantalla (mismo defecto que el problema #3 del turno 3 de la auditoría). Diagnóstico y Escanear siguen subiendo a Inicio (su puerta original, que se conserva); Etiquetas e Importar siguen subiendo a Equipos, porque su camino principal sigue siendo el menú "···" de esa sección.
+**Volver.** Ubicaciones y Personas, alcanzadas ahora desde aquí, suben a "Más" (no a Equipos): antes su regreso llevaba a una sección que el técnico no había visitado si llegaba por un enlace o por esta pantalla (mismo defecto que el problema #3 del turno 3 de la auditoría). Diagnóstico y Escanear suben a "Más", que es su puerta desde que Inicio dejó de repetir sus atajos (2026-09-11); Etiquetas e Importar siguen subiendo a Equipos, porque su camino principal sigue siendo el menú "···" de esa sección.
 
 **Escritorio:** el sidebar no ofrece "Más" (no lo necesita: sigue mostrando Bóveda como destino propio en su nav principal). Desde la tarea 183 el sidebar completo de 14 destinos da puerta propia en escritorio a Diagnóstico, Escanear, Ubicaciones y Personas (grupos "Herramientas"/"Registros"), y Mi cuenta vive al pie. Etiquetas QR e Importar siguen alcanzándose solo desde el "···" de Equipos en ambas anchuras.
 
@@ -582,6 +612,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - Cabecera: "Volver a Inicio", **botón "Crear"** (→ `/diagnostico/nuevo`, hereda categoría si se llega filtrado), título "Diagnóstico inteligente", enlaces **"Sugerencias del equipo"** y **"Estadísticas"**, y **buscador** (placeholder "Describir el problema: no imprime, sin red...").
 - Banner "Solo: {Categoría}" cuando se llega filtrado (`?categoria=<id>`), con "Ver todos".
 - **"Diagnóstico en curso"** (si hay sesión a medias): tarjeta destacada para retomar.
+- **"Problemas frecuentes"** (venido de Inicio el 2026-09-11): los diagnósticos que más se han ejecutado, con su conteo ("4 veces"), y un enlace **"Ver estadísticas"**. Sin ninguna ejecución registrada todavía, el rótulo es **"Diagnósticos recientes"** y las filas dicen "Nuevo": un conteo de cero veces no significa "frecuente". No se muestra mientras se filtra.
 - **Problemas agrupados por categoría** (icono con color, filas con icono de alerta, título, descripción, **estrella de favorito** y flecha).
 - Estados vacíos: "Todavía no hay diagnósticos" (con "Crear diagnóstico") o "Ningún problema coincide" (con "Ir a Guías").
 
@@ -645,7 +676,7 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 <a id="66-mi-cuenta-y-seguridad"></a>
 ### 6.6 Mi cuenta y Seguridad de la aplicación
 
-**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, nivel Documento. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Tarjeta **"Instalar la app en este dispositivo"** (tarea 184) con el mismo botón que la bienvenida (`BotonInstalarApp`): solo aparece mientras la app **no** corra ya instalada, y es el segundo de los dos únicos sitios desde donde se ofrece instalar (nunca como banner). Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**. Desde la tarea 182 también se alcanza con un toque desde el avatar de la barra superior (en móvil) o desde la fila de perfil de "Más".
+**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, nivel Documento. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Tarjeta **"Instalar la app en este dispositivo"** (tarea 184) con el mismo botón que la bienvenida (`BotonInstalarApp`): solo aparece mientras la app **no** corra ya instalada, y es el segundo de los dos únicos sitios desde donde se ofrece instalar (nunca como banner). Bloque **"Descargar todo para offline"** (`DescargarOffline`, venido de Inicio el 2026-09-11): deja en el teléfono el contenido de los adjuntos antes de salir sin señal, con progreso y fecha de la última descarga. Comparte estado con el paso 3 de la bienvenida de Inicio. Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**. Desde la tarea 182 también se alcanza con un toque desde el avatar de la barra superior (en móvil) o desde la fila de perfil de "Más".
 
 **Seguridad de la aplicación (`SeguridadPage`).** Ruta `/cuenta/seguridad`, nivel Documento. Configura el **bloqueo del dispositivo** (patrón o contraseña, nunca biometría), una capa distinta de la sesión y de la contraseña maestra.
 - **Sin configurar:** invitación + selector de método (Patrón / Contraseña) + captura del secreto con confirmación.
@@ -770,8 +801,8 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 | Campo | Interno | Control | Notas |
 |-------|---------|---------|-------|
 | Estado | `estado` | Control segmentado | Borrador / Publicado / Obsoleto |
-| Destacar en Inicio como ruta de aprendizaje | `esRutaInicio` | Casilla | Al marcar aparece el orden |
-| Orden en la ruta de Inicio | `ordenRutaInicio` | Número | Menor primero; solo si es ruta de inicio |
+| Destacar en Guías como ruta de aprendizaje | `esRutaInicio` | Casilla | Al marcar aparece el orden. El bloque "Para empezar" vive en Guías desde el 2026-09-11 (antes, en Inicio) |
+| Orden en la ruta de aprendizaje | `ordenRutaInicio` | Número | Menor primero; solo si es ruta de inicio |
 | Es un cambio mayor | `cambioMayor` | Casilla | Solo al editar un publicado; sube la versión mayor |
 | Motivo del cambio | `motivo` | Texto | Solo edición; va al historial |
 
@@ -968,19 +999,19 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 | **Reemplazar** | Ficha de dispositivo (→ `/reemplazo`) | Crea el equipo entrante (`?reemplazaA`) y migra las dependencias del saliente, que queda "De baja" | Igual que baja + el equipo nuevo |
 | **Archivar** | (No existe como tal) | El equivalente es "Obsoleto" (artículos) y "De baja" (equipos) | - |
 | **Registrar intervención** | Ficha de dispositivo | Bitácora manual + foto opcional | `historial`, `adjuntos` |
-| **Escanear** | Inicio / Equipos → `/escaner` | Lee QR/código de barras y abre la ficha | (solo lectura) |
+| **Escanear** | Más / Equipos → `/escaner` | Lee QR/código de barras y abre la ficha | (solo lectura) |
 | **Importar** | Equipos → `/dispositivos/importar` | Carga masiva desde Excel/CSV, con revisión y omisión de duplicados | `dispositivos`, `historial` |
 | **Imprimir etiquetas** | Equipos → `/dispositivos/etiquetas` | Genera e imprime etiquetas QR seleccionadas | (solo lectura) |
 | **Compartir** | Fichas de dispositivo y artículo | Diálogo nativo o copia el enlace | (solo lectura) |
 | **Copiar** | Fichas de dispositivo y credencial | Copia un valor al portapapeles (con auditoría en la bóveda) | `accesos_boveda` (en la bóveda) |
-| **Descargar** | Ficha de credencial (archivo seguro) / Inicio ("Descargar todo para offline") | Descifra y descarga un archivo / precachea adjuntos | `accesos_boveda` (archivo); cache local |
+| **Descargar** | Ficha de credencial (archivo seguro) / Mi cuenta ("Descargar todo para offline") | Descifra y descarga un archivo / precachea adjuntos | `accesos_boveda` (archivo); cache local |
 | **Sincronizar** | Pastilla de sincronización / automático | Sube la cola y descarga novedades | Todas las sincronizadas |
 | **Buscar** | Inicio (global) y cada sección (local) | Filtra por texto, tolera errores y sinónimos | (solo lectura) |
 | **Filtrar / Ordenar** | Listas | Por categoría, tipo, etiqueta, estado, ubicación | (solo lectura) |
 | **Ejecutar procedimiento** | Ficha de artículo → `/ejecutar` | Modo asistente paso a paso | `progresoPasos` (local) |
 | **Ejecutar diagnóstico** | Lista de diagnósticos → `/:id` | Asistente de preguntas; registra la ejecución al cerrar | `progresoDiagnostico` (local), `ejecuciones_diagnostico` |
 | **Migrar** | Bóveda / Ubicaciones / Personas | Convierte datos antiguos (secretos que son de un equipo, textos en entidades) | Según el caso |
-| **Favorito** | Cabecera de fichas / filas de diagnóstico | Fija/quita de la lista de Favoritos de Inicio | `favoritos` (local) |
+| **Favorito** | Cabecera de fichas / filas de diagnóstico | Fija/quita de la lista "Mis favoritos" de Más | `favoritos` (local) |
 | **Reiniciar progreso** | Ficha/menú de artículo | Borra el avance local del procedimiento | `progresoPasos` (local) |
 
 ---
@@ -1010,7 +1041,7 @@ Artículo (Guías)
  ├── Pasos → vínculos: información protegida (credencial o campo), subprocedimiento, solución
  ├── Relacionados (otros artículos) + inverso
  ├── Referenciado por (subprocedimiento/solución/decisión/diagnóstico)
- ├── Ruta de inicio (aparece en Inicio "Para empezar")
+ ├── Ruta de inicio (aparece en Guías, "Para empezar")
  └── Historial (+ ejecuciones de diagnóstico que lo usaron)
 
 Diagnóstico
