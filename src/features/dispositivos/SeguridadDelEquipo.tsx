@@ -113,10 +113,15 @@ export function SeguridadDelEquipo({
 
       <div className="rounded-lg border border-dashed border-noct-neutral-700 bg-noct-surface/55 p-3">
         {campos.length === 0 && editando === null ? (
-          <p className="px-0.5 py-1 text-[13px] leading-relaxed text-noct-neutral-500">
-            Sin datos protegidos. Aquí van el usuario, la contraseña o el PIN de este equipo, en vez
-            de crearlos como un secreto aparte en la Bóveda.
-          </p>
+          <div className="flex flex-col gap-1.5 px-0.5 py-1">
+            <p className="text-[13px] leading-relaxed text-noct-neutral-500">
+              Aquí van el usuario, la contraseña, el PIN o la clave que pertenecen únicamente a este
+              equipo.
+            </p>
+            <p className="text-[12.5px] leading-relaxed text-noct-neutral-600">
+              Los accesos compartidos entre varios equipos o servicios deben guardarse en Bóveda.
+            </p>
+          </div>
         ) : (
           <div className="flex flex-col gap-2">
             {campos.map((campo) =>

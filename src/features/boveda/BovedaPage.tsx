@@ -505,7 +505,7 @@ export function BovedaPage() {
       <>
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
-            Usuarios y contraseñas del equipo
+            Accesos compartidos, cuentas y claves de servicios
           </p>
           <div className="flex shrink-0 gap-2">
             <button
@@ -530,6 +530,13 @@ export function BovedaPage() {
             </button>
           </div>
         </header>
+
+        {/* Dónde va cada clave (una línea, no una tarjeta): la Bóveda
+            guarda lo compartido; lo que es de un solo equipo vive en
+            "Datos protegidos" de su ficha. */}
+        <p className="px-4 pt-1 text-[11.5px] leading-relaxed text-noct-neutral-600">
+          Si la clave pertenece a un solo equipo, guárdala en Datos protegidos de su ficha.
+        </p>
 
         <div className="px-4 pb-2.5 pt-2.5">
           <CampoBusqueda

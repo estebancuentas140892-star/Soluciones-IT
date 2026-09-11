@@ -236,6 +236,12 @@ export function CredencialForm() {
   // campos": un solo mecanismo, plegado de entrada, con todo lo que no
   // se toca a diario. Nada se pierde ni se borra por estar ahí dentro.
   const [masOpciones, setMasOpciones] = useState(false)
+  // Advertencias de duplicidad (nombre de equipo, contraseña solapada):
+  // el técnico puede decidir que esto SÍ es un acceso compartido. Al
+  // decirlo, la advertencia se calla durante esta edición; no se crea
+  // ni se mueve ni se borra nada, solo deja de insistir.
+  const [conservarNombre, setConservarNombre] = useState(false)
+  const [equiposConservados, setEquiposConservados] = useState<Set<string>>(() => new Set())
   const principales = CAMPOS_PRINCIPALES[tipo]
   // Datos heredados: un secreto guardado antes puede traer usuario o
   // contraseña aunque su tipo ya no los muestre arriba. Se dejan ver y
@@ -250,10 +256,11 @@ export function CredencialForm() {
   // una entrada aparte en la Bóveda (la grieta que describe la
   // propuesta). Se compara sin distinguir mayúsculas ni acentos.
   const dispositivoCoincidente = useMemo(() => {
+    if (conservarNombre) return null
     const buscado = normalizar(titulo.trim())
     if (!buscado) return null
     return dispositivosOrdenados.find((d) => normalizar(d.nombre) === buscado) ?? null
-  }, [titulo, dispositivosOrdenados])
+  }, [conservarNombre, titulo, dispositivosOrdenados])
 
   // Título desactualizado (hallazgo S4): si el equipo vinculado se
   // renombró desde que se creó "Acceso {nombre}" y el técnico no
@@ -270,8 +277,13 @@ export function CredencialForm() {
   // que guarda usuario+contraseña representando la identidad de acceso
   // del equipo (el mismo dato que un CampoProtegido 'contrasena').
   const equiposSolapados = useMemo(
-    () => (tipo === 'cuenta' ? equiposConContrasenaProtegida(dispositivos, camposProtegidosConContrasena) : []),
-    [tipo, dispositivos, camposProtegidosConContrasena],
+    () =>
+      tipo === 'cuenta'
+        ? equiposConContrasenaProtegida(dispositivos, camposProtegidosConContrasena).filter(
+            (equipo) => !equiposConservados.has(equipo.id),
+          )
+        : [],
+    [tipo, dispositivos, camposProtegidosConContrasena, equiposConservados],
   )
 
   // Sugerencia por IP/URL (hallazgo S6): solo tiene sentido si todavía
@@ -504,18 +516,32 @@ export function CredencialForm() {
               )}
             </label>
 
+            {/* Nombre igual al de un equipo: la decisión es del técnico
+                y son dos caminos, no uno. "Guardar en Datos protegidos"
+                abre la ficha con el nombre ya escrito (no crea nada por
+                su cuenta); "Conservar como acceso compartido" acepta que
+                sí va en la Bóveda y calla el aviso en esta edición. */}
             {dispositivoCoincidente && (
-              <div className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
+              <div className="flex flex-col gap-2 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
                 <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                  &quot;{dispositivoCoincidente.nombre}&quot; ya es un equipo del inventario. ¿Esto
-                  pertenece a ese equipo? Guárdalo en su ficha en vez de un secreto aparte.
+                  &quot;{dispositivoCoincidente.nombre}&quot; ya es un equipo del inventario. Si esta
+                  clave es solo de ese equipo, va en sus Datos protegidos.
                 </p>
-                <Link
-                  to={`/dispositivos/${dispositivoCoincidente.id}?nuevoCampoProtegido=${encodeURIComponent(titulo.trim())}`}
-                  className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
-                >
-                  Ir a la ficha
-                </Link>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                  <Link
+                    to={`/dispositivos/${dispositivoCoincidente.id}?nuevoCampoProtegido=${encodeURIComponent(titulo.trim())}`}
+                    className="whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                  >
+                    Guardar en Datos protegidos
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setConservarNombre(true)}
+                    className="whitespace-nowrap text-[12px] font-medium text-noct-neutral-400 underline"
+                  >
+                    Conservar como acceso compartido
+                  </button>
+                </div>
               </div>
             )}
 
@@ -863,18 +889,29 @@ export function CredencialForm() {
                 {equiposSolapados.map((equipo) => (
                   <div
                     key={equipo.id}
-                    className="flex items-center justify-between gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5"
+                    className="flex flex-col gap-2 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5"
                   >
                     <p className="text-[12.5px] leading-relaxed text-noct-precaucion">
-                      &quot;{equipo.nombre}&quot; ya guarda una contraseña en Seguridad. Evita duplicarla: al
-                      rotar hay que acordarse de cambiarla en los dos lados.
+                      &quot;{equipo.nombre}&quot; ya guarda una contraseña en sus Datos protegidos. Evita
+                      duplicarla: al rotar hay que acordarse de cambiarla en los dos lados.
                     </p>
-                    <Link
-                      to={`/dispositivos/${equipo.id}`}
-                      className="shrink-0 whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
-                    >
-                      Ir a la ficha
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                      <Link
+                        to={`/dispositivos/${equipo.id}?nuevoCampoProtegido=${encodeURIComponent(titulo.trim())}`}
+                        className="whitespace-nowrap text-[12px] font-medium text-noct-precaucion underline"
+                      >
+                        Guardar en Datos protegidos
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEquiposConservados((actuales) => new Set(actuales).add(equipo.id))
+                        }
+                        className="whitespace-nowrap text-[12px] font-medium text-noct-neutral-400 underline"
+                      >
+                        Conservar como acceso compartido
+                      </button>
+                    </div>
                   </div>
                 ))}
 
