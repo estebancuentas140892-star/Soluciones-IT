@@ -24,6 +24,7 @@ import { BUCKET_ARCHIVOS_BOVEDA } from './archivoSeguro'
 import { equiposConContrasenaProtegida } from './solapamientoSecreto'
 import { equipoPorIpOUrl } from './sugerenciaEquipoPorIp'
 import { tituloAccesoSugerido } from './tituloAcceso'
+import { faltantesDeAcceso, type CampoFaltante } from './validacionAcceso'
 import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBoveda'
 
 // Cinco tipos de secreto (fase P3 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md,
@@ -378,7 +379,10 @@ export function CredencialForm() {
 
   async function manejarEnvio(evento: FormEvent) {
     evento.preventDefault()
-    if (!titulo.trim()) {
+    // Un acceso sin su dato no se guarda (ni al crear ni al reeditar
+    // uno viejo que quedó incompleto): la Bóveda existe para responder
+    // "¿cuál es la clave de esto?".
+    if (!valido) {
       setIntentoGuardar(true)
       return
     }
@@ -425,9 +429,26 @@ export function CredencialForm() {
     }
   }
 
-  const valido = titulo.trim().length > 0
-  // Aviso del pie: error de bloqueo primero, luego validación.
-  const aviso = error ?? (intentoGuardar && !valido ? 'Falta el título' : '')
+  // Lo que falta para poder guardar, según el tipo. Se recalcula en
+  // cada tecla, así que el error de un campo desaparece en cuanto se
+  // completa sin tener que reintentar el guardado.
+  const faltantes = faltantesDeAcceso({
+    tipo,
+    titulo,
+    contrasena,
+    notas,
+    tieneArchivo: Boolean(archivo),
+    extras,
+  })
+  const valido = faltantes.length === 0
+  // El error solo se pinta tras el primer intento de guardar: escribir
+  // un formulario en blanco no es un error todavía.
+  function errorDe(campo: CampoFaltante): string | null {
+    if (!intentoGuardar) return null
+    return faltantes.find((f) => f.campo === campo)?.mensaje ?? null
+  }
+  // Aviso del pie: error de bloqueo primero, luego qué dato falta.
+  const aviso = error ?? (intentoGuardar && !valido ? (faltantes[0]?.mensaje ?? '') : '')
   const avisoEsError = Boolean(error) || (intentoGuardar && !valido)
   const etiquetaContrasena = ETIQUETA_CONTRASENA[tipo]
 
@@ -475,8 +496,12 @@ export function CredencialForm() {
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
                 placeholder={PLACEHOLDER_TITULO[tipo]}
-                className={`min-h-11 ${CLASE_CAMPO}`}
+                aria-invalid={errorDe('titulo') ? true : undefined}
+                className={`min-h-11 ${CLASE_CAMPO} ${errorDe('titulo') ? 'border-noct-error' : ''}`}
               />
+              {errorDe('titulo') && (
+                <span className="text-[12px] text-noct-error">{errorDe('titulo')}</span>
+              )}
             </label>
 
             {dispositivoCoincidente && (
@@ -574,6 +599,9 @@ export function CredencialForm() {
                     Generar
                   </button>
                 </div>
+                {errorDe('contrasena') && (
+                  <span className="text-[12px] text-noct-error">{errorDe('contrasena')}</span>
+                )}
                 <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
                   Generar crea 16 caracteres sin los que se confunden entre sí (O/0, l/1).
                 </p>
@@ -619,6 +647,9 @@ export function CredencialForm() {
                   </label>
                 )}
                 {errorArchivo && <p className="text-[12px] text-noct-error">{errorArchivo}</p>}
+                {!errorArchivo && errorDe('archivo') && (
+                  <span className="text-[12px] text-noct-error">{errorDe('archivo')}</span>
+                )}
                 <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
                   Se cifra en este teléfono antes de subirse: ni el servidor ni un técnico sin acceso
                   a la Bóveda pueden leerlo.
@@ -649,8 +680,12 @@ export function CredencialForm() {
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
                 placeholder={tipo === 'nota' ? 'El texto que hay que guardar cifrado' : 'Cómo y cuándo se usa'}
-                className={`resize-y ${CLASE_CAMPO}`}
+                aria-invalid={errorDe('notas') ? true : undefined}
+                className={`resize-y ${CLASE_CAMPO} ${errorDe('notas') ? 'border-noct-error' : ''}`}
               />
+              {errorDe('notas') && (
+                <span className="text-[12px] text-noct-error">{errorDe('notas')}</span>
+              )}
             </label>
           </section>
 
