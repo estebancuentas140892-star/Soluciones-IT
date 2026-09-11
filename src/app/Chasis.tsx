@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
+import { agruparAgenda, asuntosUrgentes } from '../features/inicio/agenda'
 import { usePendientes } from '../features/inicio/usePendientes'
 import { Avatar } from '../components/Avatar'
 import { AvisoPestana } from '../components/AvisoPestana'
@@ -250,6 +251,12 @@ export function Chasis(props: Props) {
   // calculados aquí porque Chasis es el único envoltorio de TODAS las
   // pantallas.
   const pendientes = usePendientes()
+  // EL AVISO SOLO CUENTA LO QUE URGE HOY (encargo del 2026-09-11, tarea
+  // 4). Contaba TODOS los pendientes: borradores propios, sugerencias
+  // del equipo y claves que vencen dentro de tres semanas. Un número que
+  // nunca baja no avisa de nada y enseña a ignorarlo. Ahora son los
+  // vencidos y los de fecha de hoy: si está en cero, no hay número.
+  const urgentes = asuntosUrgentes(agruparAgenda(pendientes))
   // Hueco de la banda pegajosa del nivel tarea. Se guarda en estado (no
   // en una ref) a propósito: así, cuando el div se monta, los hijos
   // vuelven a renderizar y el portal encuentra su destino. Con una ref
@@ -530,14 +537,14 @@ export function Chasis(props: Props) {
           // el técnico había dejado una guía a medias. Consultar una
           // guía no es contraer una obligación.
           //
-          // Inicio (tarea 187, corregido en la 203): el conteo real de
-          // `usePendientes`. El número vivía en "Más", donde incumplía
-          // su propia regla (M-003, regla M-R9): "Más" es un índice y no
-          // contiene ni un pendiente, así que tocar el aviso llevaba a
-          // un sitio donde no estaba lo avisado, y eso enseña al técnico
-          // a ignorar los avisos. Los pendientes viven en Inicio, así
-          // que el aviso se muda con el dato.
-          const numeroPendientes = to === '/' ? pendientes.length : 0
+          // Inicio (tarea 187, corregido en la 203 y en el encargo del
+          // 2026-09-11): los asuntos URGENTES de la agenda, es decir lo
+          // vencido y lo de hoy. El número vivía en "Más", donde
+          // incumplía su propia regla (M-003, regla M-R9): "Más" es un
+          // índice y no contiene ni un pendiente, así que tocar el aviso
+          // llevaba a un sitio donde no estaba lo avisado. La agenda vive
+          // en Inicio, así que el aviso se muda con el dato.
+          const numeroPendientes = to === '/' ? urgentes : 0
           return (
             <NavLink
               key={to}
@@ -564,7 +571,10 @@ export function Chasis(props: Props) {
                   </span>
                   {label}
                   {numeroPendientes > 0 && (
-                    <span className="sr-only"> ({numeroPendientes} pendientes)</span>
+                    <span className="sr-only">
+                      {' '}
+                      ({numeroPendientes} {numeroPendientes === 1 ? 'asunto urgente' : 'asuntos urgentes'})
+                    </span>
                   )}
                 </>
               )}

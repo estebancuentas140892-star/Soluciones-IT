@@ -1,9 +1,10 @@
 // Aviso en una pestaña de la barra inferior (tarea 187, mockup `4e`,
 // regla R23: un aviso solo si hay un dato detrás, ningún punto
-// decorativo). Dos variantes: `punto` (Guías, hay un procedimiento a
-// medias descartado de `BarraReanudar`) y `numero` (Más, cuenta real de
-// `usePendientes`). Quien la usa decide cuándo mostrarla; este
-// componente solo dibuja.
+// decorativo). Dos variantes: `punto` (hay un procedimiento a medias
+// descartado de `BarraReanudar`) y `numero` (Inicio, los asuntos
+// URGENTES de la agenda: lo vencido y lo de hoy, nada más). Quien la
+// usa decide cuándo mostrarla; este componente solo dibuja, y con cero
+// no dibuja nada.
 
 interface PropsPunto {
   variante: 'punto'
