@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Modal } from '../../components/Modal'
-import { MagnifyingGlass, X } from '../../components/iconos'
+import { MagnifyingGlass, Plus, X } from '../../components/iconos'
 import { normalizarTexto } from './iconosSoluciones'
 
 // Hoja inferior que ELIGE un vínculo del paso, con buscador (tarea 212,
@@ -36,11 +36,25 @@ interface Props {
   placeholderBuscar: string
   grupos: GrupoVinculo[]
   onElegir: (id: string) => void
+  /**
+   * Acción primaria opcional, encima de la lista: lo que se hace cuando
+   * lo que se busca todavía no existe ("Crear acceso y vincular"). Cierra
+   * la hoja antes de ejecutarse, como elegir una opción.
+   */
+  accion?: { etiqueta: string; onAccion: () => void }
 }
 
 const ID_TITULO = 'hoja-vinculo-titulo'
 
-export function HojaVinculo({ abierto, onCerrar, titulo, placeholderBuscar, grupos, onElegir }: Props) {
+export function HojaVinculo({
+  abierto,
+  onCerrar,
+  titulo,
+  placeholderBuscar,
+  grupos,
+  onElegir,
+  accion,
+}: Props) {
   const [consulta, setConsulta] = useState('')
 
   // Cada apertura empieza sin filtro: arrastrar la búsqueda anterior
@@ -85,6 +99,20 @@ export function HojaVinculo({ abierto, onCerrar, titulo, placeholderBuscar, grup
           className="min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
         />
       </label>
+
+      {accion && (
+        <button
+          type="button"
+          onClick={() => {
+            onCerrar()
+            accion.onAccion()
+          }}
+          className="mb-1 flex min-h-14 w-full items-center gap-2.5 rounded-[10px] border border-dashed border-noct-neutral-700 px-3 text-left text-[14.5px] text-noct-accent-300 hover:border-noct-accent hover:bg-noct-accent/[.06]"
+        >
+          <Plus size={15} className="shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1 truncate">{accion.etiqueta}</span>
+        </button>
+      )}
 
       <div className="flex max-h-[50vh] flex-col overflow-y-auto">
         {gruposFiltrados.map((grupo, indice) => (

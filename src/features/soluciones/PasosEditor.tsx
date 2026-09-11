@@ -83,6 +83,8 @@ import { TONOS_AVISO, type TonoInfo } from './tonos'
 import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
 import { HojaTipoBloque, type OpcionTipoBloque } from './HojaTipoBloque'
 import { HojaVinculo, type GrupoVinculo } from './HojaVinculo'
+import { CrearAccesoRapido } from '../boveda/CrearAccesoRapido'
+import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { AccionesPaso } from './ranuraAccionesPaso'
 import { avisoDeVinculo } from './validacionVinculos'
 import { SelectorReferencia } from '../referencia/SelectorReferencia'
@@ -333,6 +335,10 @@ export function PasosEditor({
     [],
   )
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  // Permiso de bóveda (puede_ver_boveda): sin él, la tarea no ofrece
+  // "Crear acceso y vincular" (ni se insinúa que exista la Bóveda).
+  const perfil = usePerfilVivo()
+  const puedeVerBoveda = Boolean(perfil?.puedeVerBoveda)
   // Campos protegidos de los equipos donde aplica este articulo (grupo
   // P2): misma RLS que las credenciales, asi que sin permiso de boveda
   // esta lista llega vacia y el grupo "Datos protegidos del equipo"
@@ -962,6 +968,7 @@ export function PasosEditor({
                   { etiqueta: 'Datos protegidos del equipo', opciones: opcionesCampos },
                   { etiqueta: 'Secretos de la bóveda', opciones: opcionesCredenciales },
                 ]}
+                puedeVerBoveda={puedeVerBoveda}
                 abrirDatoProtegido={datoDeTareaId === bloque.id}
                 onDatoProtegidoAbierto={() => setDatoDeTareaId(null)}
                 onSeleccionar={() => bloque.tipo === 'tarea' && setTareaActivaId(bloque.id)}
@@ -1484,6 +1491,7 @@ function BloqueEditor({
   referenciasDisponibles,
   onVincularTermino,
   gruposProtegidos,
+  puedeVerBoveda,
   abrirDatoProtegido,
   onDatoProtegidoAbierto,
   onSeleccionar,
@@ -1514,6 +1522,7 @@ function BloqueEditor({
   referenciasDisponibles: Referencia[]
   onVincularTermino: (referencia: Referencia) => void
   gruposProtegidos: { etiqueta?: string; opciones: OpcionVinculoProtegido[] }[]
+  puedeVerBoveda: boolean
   abrirDatoProtegido: boolean
   onDatoProtegidoAbierto: () => void
   onSeleccionar: () => void
@@ -1534,6 +1543,10 @@ function BloqueEditor({
   const [hojaAbierta, setHojaAbierta] = useState(false)
   const [hojaDecisionAbierta, setHojaDecisionAbierta] = useState(false)
   const [hojaProtegidaAbierta, setHojaProtegidaAbierta] = useState(false)
+  // Crear un acceso desde esta tarea, sin salir del editor (tarea 6 del
+  // encargo del 2026-09-10). Se abre sobre el editor, así que la guía no
+  // se desmonta ni pierde lo escrito.
+  const [crearAccesoAbierto, setCrearAccesoAbierto] = useState(false)
   const [hojaGuiaAbierta, setHojaGuiaAbierta] = useState(false)
   const [hojaIntencionAbierta, setHojaIntencionAbierta] = useState(false)
   const [hojaReferenciaAbierta, setHojaReferenciaAbierta] = useState(false)
@@ -1711,7 +1724,32 @@ function BloqueEditor({
               onCambiar({ vinculoProtegido: { tipo: opcion.tipo, id: opcion.id, titulo: opcion.titulo } })
             }
           }}
+          // Lo que se busca puede no existir todavía: la clave se está
+          // escribiendo AHORA, mientras se redacta la guía. Sin permiso
+          // de bóveda la acción ni aparece.
+          accion={
+            puedeVerBoveda
+              ? { etiqueta: 'Crear acceso y vincular', onAccion: () => setCrearAccesoAbierto(true) }
+              : undefined
+          }
         />
+
+        {/* Crear el acceso encima del editor y vincularlo a ESTA tarea,
+            a ninguna otra. Al cerrarse, el editor sigue donde estaba:
+            mismo paso activo, mismo desplazamiento, cambios intactos.
+            Cancelar no crea ningún registro ni toca la guía. El vínculo
+            lo crea la guía; la ficha del acceso lo verá después en
+            "Usada en", por el grafo de referencias de siempre. */}
+        {puedeVerBoveda && (
+          <CrearAccesoRapido
+            abierto={crearAccesoAbierto}
+            onCerrar={() => setCrearAccesoAbierto(false)}
+            tituloInicial=""
+            onCreada={({ id, titulo }) =>
+              onCambiar({ vinculoProtegido: { tipo: 'credencial', id, titulo } })
+            }
+          />
+        )}
 
         {bloque.tipoTarea === 'decision' &&
           (bloque.decisionArticuloId ? (
