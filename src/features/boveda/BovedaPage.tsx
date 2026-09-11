@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { db } from '../../lib/db'
+import { db, type TipoSecreto } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
@@ -159,6 +159,56 @@ const PRESETS_AVANZADOS: Preset[] = [
   },
 ]
 
+// La acción rápida de cada fila depende de lo que la credencial
+// guarda de verdad. Antes toda fila ofrecía "Copiar contraseña",
+// incluso un Archivo seguro o una Nota segura, que no tienen ninguna:
+// el botón fallaba siempre y el técnico aprendía a no tocarlo.
+//
+// `null` = este tipo no se copia desde la lista; la fila abre la ficha,
+// que es donde el archivo se descarga y se descifra y donde la nota se
+// lee. Los tres tipos que sí guardan una clave la copian con su propio
+// nombre, sin mostrarla y registrando el acceso igual que antes.
+const ETIQUETA_COPIA: Record<TipoSecreto, string | null> = {
+  cuenta: 'Copiar contraseña',
+  red: 'Copiar clave o PIN',
+  llave: 'Copiar token, licencia o clave',
+  archivo: null,
+  nota: null,
+}
+
+const ETIQUETA_ABRIR: Record<TipoSecreto, string> = {
+  cuenta: 'Abrir la ficha',
+  red: 'Abrir la ficha',
+  llave: 'Abrir la ficha',
+  archivo: 'Abrir archivo seguro',
+  nota: 'Abrir nota segura',
+}
+
+// Motivo exacto cuando el descifrado sale bien pero no hay nada que
+// copiar (credencial vieja guardada sin clave).
+const SIN_VALOR: Record<TipoSecreto, string> = {
+  cuenta: 'Sin contraseña guardada.',
+  red: 'Sin clave o PIN guardado.',
+  llave: 'Sin token, licencia o clave guardada.',
+  archivo: 'Este archivo se abre desde su ficha.',
+  nota: 'Esta nota se lee desde su ficha.',
+}
+
+// Icono de la acción "abrir" según lo que hay al otro lado.
+const ICONO_ABRIR: Record<TipoSecreto, (props: IconoProps) => React.JSX.Element> = {
+  cuenta: ArrowSquareOut,
+  red: ArrowSquareOut,
+  llave: ArrowSquareOut,
+  archivo: Paperclip,
+  nota: Note,
+}
+
+// Las credenciales guardadas antes de la columna `tipo` llegan sin
+// valor; se leen como 'cuenta', igual que hace el editor.
+function tipoDe(credencial: { tipo?: TipoSecreto }): TipoSecreto {
+  return credencial.tipo ?? 'cuenta'
+}
+
 // Hoja inferior del sistema Nocturne (mockup Bóveda.dc.html): panel
 // pegado al borde inferior sobre un velo, con esquinas superiores
 // redondeadas y elevación de menú. Cierra al tocar fuera o con Escape y
@@ -268,6 +318,10 @@ export function BovedaPage() {
   // fila correcta y no en la última que se tocó.
   const [filaAccion, setFilaAccion] = useState<{ id: string; ok: boolean; mensaje?: string } | null>(null)
   const temporizadorFila = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // Credenciales viejas que resultaron no tener nada que copiar: en
+  // cuanto se comprueba una vez, su fila deja de ofrecer un botón que
+  // volvería a fallar y pasa a abrir la ficha.
+  const [sinValor, setSinValor] = useState<Set<string>>(() => new Set())
 
   // Grafo de referencias: para avisar, antes de eliminar, qué
   // procedimientos usan esta credencial (mismo aviso que la ficha).
@@ -362,11 +416,17 @@ export function BovedaPage() {
   async function descifrarYCopiar(
     c: (typeof filtradas)[number]['credencial'],
     campo: 'usuario' | 'contrasena',
-  ): Promise<{ ok: boolean; mensaje?: string }> {
+  ): Promise<{ ok: boolean; mensaje?: string; sinDato?: boolean }> {
     const datos = await descifrarCredencial(c.datosCifrados)
     if (!datos) return { ok: false, mensaje: 'No se pudo descifrar con la contraseña maestra actual.' }
     const valor = campo === 'usuario' ? datos.usuario : datos.contrasena
-    if (!valor) return { ok: false, mensaje: campo === 'usuario' ? 'Sin usuario guardado.' : 'Sin contraseña guardada.' }
+    if (!valor) {
+      return {
+        ok: false,
+        sinDato: true,
+        mensaje: campo === 'usuario' ? 'Sin usuario guardado.' : SIN_VALOR[tipoDe(c)],
+      }
+    }
     if (!(await copiarAlPortapapeles(valor))) return { ok: false, mensaje: 'No se pudo copiar al portapapeles.' }
     void registrarAccesoBoveda({
       credencialId: c.id,
@@ -403,6 +463,11 @@ export function BovedaPage() {
     const resultado = await descifrarYCopiar(c, 'contrasena')
     clearTimeout(temporizadorFila.current)
     setFilaAccion({ id: c.id, ok: resultado.ok, mensaje: resultado.mensaje })
+    // Credencial vieja sin clave guardada: la fila cambia a "abrir la
+    // ficha" en vez de dejar un botón de copia que no puede funcionar.
+    if (resultado.sinDato) {
+      setSinValor((actuales) => new Set(actuales).add(c.id))
+    }
     temporizadorFila.current = setTimeout(() => setFilaAccion(null), 1400)
   }
 
@@ -558,6 +623,13 @@ export function BovedaPage() {
                       .filter(Boolean)
                       .join(' · ')
               const accionFila = filaAccion?.id === c.id ? filaAccion : null
+              // Qué ofrece la fila: copiar la clave con el nombre que
+              // usa este tipo, o abrir la ficha cuando no hay clave que
+              // copiar (archivo, nota o credencial vieja vacía).
+              const tipoFila = tipoDe(c)
+              const etiquetaCopia = ETIQUETA_COPIA[tipoFila]
+              const puedeCopiar = etiquetaCopia !== null && !sinValor.has(c.id)
+              const IconoAbrir = ICONO_ABRIR[tipoFila]
               return (
                 <div
                   key={c.id}
@@ -591,25 +663,36 @@ export function BovedaPage() {
                       44 px, separado 8 px de la fila enlazada (M-R14):
                       no va DENTRO del enlace para no anidar un control
                       dentro de otro. */}
-                  <button
-                    type="button"
-                    onClick={() => void copiarFila(c)}
-                    aria-label={
-                      accionFila && !accionFila.ok
-                        ? (accionFila.mensaje ?? `No se pudo copiar la contraseña de ${c.titulo}`)
-                        : `Copiar la contraseña de ${c.titulo}`
-                    }
-                    title="Copiar contraseña"
-                    className="flex min-h-[56px] w-11 shrink-0 items-center justify-center rounded text-noct-neutral-500 hover:text-noct-accent-300"
-                  >
-                    {accionFila?.ok ? (
-                      <Check size={17} className="text-noct-exito" aria-hidden />
-                    ) : accionFila && !accionFila.ok ? (
-                      <Warning size={17} className="text-noct-error" aria-hidden />
-                    ) : (
-                      <Copy size={17} aria-hidden />
-                    )}
-                  </button>
+                  {puedeCopiar ? (
+                    <button
+                      type="button"
+                      onClick={() => void copiarFila(c)}
+                      aria-label={
+                        accionFila && !accionFila.ok
+                          ? (accionFila.mensaje ?? `No se pudo copiar: ${c.titulo}`)
+                          : `${etiquetaCopia} de ${c.titulo}`
+                      }
+                      title={etiquetaCopia ?? undefined}
+                      className="flex min-h-[56px] w-11 shrink-0 items-center justify-center rounded text-noct-neutral-500 hover:text-noct-accent-300"
+                    >
+                      {accionFila?.ok ? (
+                        <Check size={17} className="text-noct-exito" aria-hidden />
+                      ) : accionFila && !accionFila.ok ? (
+                        <Warning size={17} className="text-noct-error" aria-hidden />
+                      ) : (
+                        <Copy size={17} aria-hidden />
+                      )}
+                    </button>
+                  ) : (
+                    <Link
+                      to={`/boveda/${c.id}`}
+                      aria-label={`${ETIQUETA_ABRIR[tipoFila]}: ${c.titulo}`}
+                      title={ETIQUETA_ABRIR[tipoFila]}
+                      className="flex min-h-[56px] w-11 shrink-0 items-center justify-center rounded text-noct-neutral-500 hover:text-noct-accent-300"
+                    >
+                      <IconoAbrir size={17} aria-hidden />
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -733,7 +816,10 @@ export function BovedaPage() {
               <p
                 className={`mt-0.5 text-[11.5px] ${avisoCopia ? 'text-noct-precaucion' : 'text-noct-neutral-600'}`}
               >
-                {avisoCopia ?? 'Copiar registra quién y cuándo'}
+                {avisoCopia ??
+                  (ETIQUETA_COPIA[tipoDe(credencialMenu)]
+                    ? 'Copiar registra quién y cuándo'
+                    : 'Se abre y se descifra desde su ficha')}
               </p>
             </div>
             <button
@@ -746,39 +832,45 @@ export function BovedaPage() {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void copiar('usuario')}
-            className="flex min-h-[50px] w-full items-center gap-[13px] rounded-md p-1.5 text-left text-noct-text hover:bg-noct-text/[.05]"
-          >
-            {copiado === 'usuario' ? (
-              <Check size={18} className="w-[26px] shrink-0 text-center text-noct-exito" aria-hidden />
-            ) : (
-              <User size={18} className="w-[26px] shrink-0 text-center text-noct-neutral-400" aria-hidden />
-            )}
-            <span className="flex-1 text-sm font-medium">Copiar usuario</span>
-          </button>
+          {/* "Copiar usuario" solo donde el tipo usa usuario: una red,
+              una llave, un archivo o una nota no tienen uno. */}
+          {tipoDe(credencialMenu) === 'cuenta' && (
+            <button
+              type="button"
+              onClick={() => void copiar('usuario')}
+              className="flex min-h-[50px] w-full items-center gap-[13px] rounded-md p-1.5 text-left text-noct-text hover:bg-noct-text/[.05]"
+            >
+              {copiado === 'usuario' ? (
+                <Check size={18} className="w-[26px] shrink-0 text-center text-noct-exito" aria-hidden />
+              ) : (
+                <User size={18} className="w-[26px] shrink-0 text-center text-noct-neutral-400" aria-hidden />
+              )}
+              <span className="flex-1 text-sm font-medium">Copiar usuario</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => void copiar('contrasena')}
-            className="flex min-h-[50px] w-full items-center gap-[13px] rounded-md p-1.5 text-left text-noct-text hover:bg-noct-text/[.05]"
-          >
-            {copiado === 'contrasena' ? (
-              <Check size={18} className="w-[26px] shrink-0 text-center text-noct-exito" aria-hidden />
-            ) : (
-              <Key size={18} className="w-[26px] shrink-0 text-center text-noct-neutral-400" aria-hidden />
-            )}
-            <span className="flex-1 text-sm font-medium">Copiar contraseña</span>
-            <span className="text-[11.5px] text-noct-neutral-600">sin mostrarla</span>
-          </button>
+          {ETIQUETA_COPIA[tipoDe(credencialMenu)] && (
+            <button
+              type="button"
+              onClick={() => void copiar('contrasena')}
+              className="flex min-h-[50px] w-full items-center gap-[13px] rounded-md p-1.5 text-left text-noct-text hover:bg-noct-text/[.05]"
+            >
+              {copiado === 'contrasena' ? (
+                <Check size={18} className="w-[26px] shrink-0 text-center text-noct-exito" aria-hidden />
+              ) : (
+                <Key size={18} className="w-[26px] shrink-0 text-center text-noct-neutral-400" aria-hidden />
+              )}
+              <span className="flex-1 text-sm font-medium">{ETIQUETA_COPIA[tipoDe(credencialMenu)]}</span>
+              <span className="text-[11.5px] text-noct-neutral-600">sin mostrarla</span>
+            </button>
+          )}
 
           <Link
             to={`/boveda/${credencialMenu.id}`}
             className="flex min-h-[50px] items-center gap-[13px] rounded-md p-1.5 text-noct-text hover:bg-noct-text/[.05]"
           >
             <ArrowSquareOut size={18} className="w-[26px] shrink-0 text-center text-noct-neutral-400" aria-hidden />
-            <span className="flex-1 text-sm font-medium">Abrir la ficha</span>
+            <span className="flex-1 text-sm font-medium">{ETIQUETA_ABRIR[tipoDe(credencialMenu)]}</span>
           </Link>
 
           <Link
