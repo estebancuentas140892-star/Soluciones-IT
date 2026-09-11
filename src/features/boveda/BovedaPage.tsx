@@ -8,6 +8,7 @@ import {
   ArrowElbowDownRight,
   ArrowSquareOut,
   Broadcast,
+  CaretDown,
   CaretRight,
   Check,
   ClockCountdown,
@@ -101,32 +102,49 @@ function severidad(estado: EstadoVencimiento): number {
   return estado ? ORDEN_VENCIMIENTO[estado] : 2
 }
 
-// Atajos de la hoja "Crear": los cinco tipos de secreto de la fase P3
-// de PROPUESTA_SEGURIDAD_DISPOSITIVO.md (sección 3.2). Todos abren el
-// mismo editor; el `tipo` viaja en la URL y de ahí pasa a ser la columna
-// guardada (`credenciales.tipo`, grupo P1), ya no solo un preset que
-// precarga campos. El preset "Equipo o servicio" se eliminó en la fase
-// P0 (2026-07-21): un secreto ya no puede representar un equipo entero
-// (eso duplicaba datos que ya viven en la ficha del dispositivo); un
-// equipo se sigue pudiendo VINCULAR a un secreto desde "Equipos con
-// acceso". "Archivo seguro" (fase P5) cifra el archivo en el propio
-// teléfono antes de subirlo a un bucket de Storage propio y privado
-// (`archivos_boveda`, RLS de bóveda), distinto del bucket `adjuntos`
-// de fotos/manuales que cualquier autenticado puede leer.
-const PRESETS: {
+// Atajos de la hoja "Nuevo acceso": los cinco tipos de secreto de la
+// fase P3 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md (sección 3.2). Todos
+// abren el mismo editor; el `tipo` viaja en la URL y de ahí pasa a ser
+// la columna guardada (`credenciales.tipo`, grupo P1), ya no solo un
+// preset que precarga campos. El preset "Equipo o servicio" se eliminó
+// en la fase P0 (2026-07-21): un secreto ya no puede representar un
+// equipo entero (eso duplicaba datos que ya viven en la ficha del
+// dispositivo); un equipo se sigue pudiendo VINCULAR a un secreto desde
+// "Equipos con acceso". "Archivo seguro" (fase P5) cifra el archivo en
+// el propio teléfono antes de subirlo a un bucket de Storage propio y
+// privado (`archivos_boveda`, RLS de bóveda), distinto del bucket
+// `adjuntos` de fotos/manuales que cualquier autenticado puede leer.
+//
+// Los cinco tipos internos siguen existiendo, pero ya no pesan lo mismo
+// en la entrada: el trabajo diario es "un acceso con usuario y
+// contraseña" o "una clave suelta", así que esos dos van arriba con su
+// nombre de todos los días y los tres restantes quedan detrás de "Otros
+// tipos de dato protegido", plegado. Las palabras técnicas (token,
+// certificado) viven ahí dentro, no en el flujo principal.
+interface Preset {
   tipo: string
   nombre: string
   descripcion: string
   Icono: (props: IconoProps) => React.JSX.Element
-}[] = [
+}
+
+const PRESETS_PRINCIPALES: Preset[] = [
   {
     tipo: 'cuenta',
-    nombre: 'Cuenta de sistema',
+    nombre: 'Acceso',
     descripcion: 'Usuario y contraseña de un servicio o aplicación',
     Icono: Globe,
   },
-  { tipo: 'red', nombre: 'Red', descripcion: 'Clave de una red WiFi u otro acceso compartido', Icono: WifiHigh },
-  { tipo: 'llave', nombre: 'Llave digital', descripcion: 'Token, licencia o certificado', Icono: Key },
+  {
+    tipo: 'red',
+    nombre: 'Clave o PIN',
+    descripcion: 'Una clave sin usuario: Wi-Fi, PIN, código administrativo u otro acceso compartido',
+    Icono: WifiHigh,
+  },
+]
+
+const PRESETS_AVANZADOS: Preset[] = [
+  { tipo: 'llave', nombre: 'Token, licencia o certificado', descripcion: 'Una clave larga que entrega un proveedor', Icono: Key },
   {
     tipo: 'archivo',
     nombre: 'Archivo seguro',
@@ -186,6 +204,27 @@ function HojaInferior({
   )
 }
 
+// Una opción de la hoja "Nuevo acceso". Mismo icono y mismo alto táctil
+// (56 px) tanto arriba como dentro de las opciones especiales: lo que
+// cambia es dónde está, no cuánto cuesta tocarla.
+function OpcionPreset({ tipo, nombre, descripcion, Icono }: Preset) {
+  return (
+    <Link
+      to={`/boveda/nueva?tipo=${tipo}`}
+      className="flex min-h-[56px] items-center gap-[13px] rounded-md px-1.5 py-2 text-noct-text hover:bg-noct-text/[.05]"
+    >
+      <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent-300">
+        <Icono size={19} aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium leading-[1.3]">{nombre}</p>
+        <p className="mt-0.5 text-[12px] leading-[1.4] text-noct-neutral-500">{descripcion}</p>
+      </div>
+      <CaretRight size={14} className="shrink-0 text-noct-neutral-600" aria-hidden />
+    </Link>
+  )
+}
+
 export function BovedaPage() {
   const credenciales = useLiveQuery(
     () => db.credenciales.filter((c) => !c.eliminadoEn).toArray(),
@@ -211,6 +250,9 @@ export function BovedaPage() {
   // menú de acciones de una fila. `menuId` guarda la credencial cuyo
   // menú está abierto; `eliminarId`, la que se está por eliminar.
   const [crearAbierto, setCrearAbierto] = useState(false)
+  // "Otros tipos de dato protegido" arranca plegado en cada apertura de
+  // la hoja: lo especial no debe volverse el estado por defecto.
+  const [otrosTiposAbierto, setOtrosTiposAbierto] = useState(false)
   const [menuId, setMenuId] = useState<string | null>(null)
   const [eliminarId, setEliminarId] = useState<string | null>(null)
   // Feedback del menú al copiar: `copiado` marca el campo recién copiado
@@ -412,7 +454,10 @@ export function BovedaPage() {
             </button>
             <button
               type="button"
-              onClick={() => setCrearAbierto(true)}
+              onClick={() => {
+                setOtrosTiposAbierto(false)
+                setCrearAbierto(true)
+              }}
               className={`shrink-0 ${BTN_SECUNDARIO}`}
             >
               <Plus size={15} aria-hidden />
@@ -622,12 +667,14 @@ export function BovedaPage() {
         </div>
       </main>
 
-      {/* Hoja "Crear": los atajos de tipo de secreto. Todos abren el
-          mismo editor; el tipo solo adelanta el trabajo. */}
+      {/* Hoja "Nuevo acceso": arriba los dos gestos de todos los días
+          (un acceso con usuario y contraseña, una clave suelta); los
+          otros tres tipos siguen existiendo, plegados, para cuando de
+          verdad hagan falta. */}
       {crearAbierto && (
-        <HojaInferior etiqueta="Guardar en la bóveda" onCerrar={() => setCrearAbierto(false)}>
+        <HojaInferior etiqueta="Nuevo acceso" onCerrar={() => setCrearAbierto(false)}>
           <div className="flex items-center justify-between gap-2.5 px-1.5 pb-2.5">
-            <p className="text-[15px] font-medium">Guardar en la bóveda</p>
+            <p className="text-[15px] font-medium">Nuevo acceso</p>
             <button
               type="button"
               onClick={() => setCrearAbierto(false)}
@@ -637,26 +684,36 @@ export function BovedaPage() {
               <X size={18} aria-hidden />
             </button>
           </div>
-          {PRESETS.map(({ tipo, nombre, descripcion, Icono }) => (
-            <Link
-              key={tipo}
-              to={`/boveda/nueva?tipo=${tipo}`}
-              className="flex min-h-[56px] items-center gap-[13px] rounded-md px-1.5 py-2 text-noct-text hover:bg-noct-text/[.05]"
-            >
-              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent-300">
-                <Icono size={19} aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium leading-[1.3]">{nombre}</p>
-                <p className="mt-0.5 text-[12px] leading-[1.4] text-noct-neutral-500">
-                  {descripcion}
-                </p>
-              </div>
-              <CaretRight size={14} className="shrink-0 text-noct-neutral-600" aria-hidden />
-            </Link>
+          {PRESETS_PRINCIPALES.map((preset) => (
+            <OpcionPreset key={preset.tipo} {...preset} />
           ))}
+
+          <button
+            type="button"
+            onClick={() => setOtrosTiposAbierto((v) => !v)}
+            aria-expanded={otrosTiposAbierto}
+            aria-controls="boveda-otros-tipos"
+            className="mt-1 flex min-h-11 items-center gap-2 rounded-md px-1.5 py-2 text-left text-noct-neutral-400 hover:bg-noct-text/[.05] hover:text-noct-text"
+          >
+            <span className="min-w-0 flex-1 text-[13px] font-medium">Otros tipos de dato protegido</span>
+            <CaretDown
+              size={13}
+              className={`shrink-0 transition-transform duration-150 motion-reduce:transition-none ${
+                otrosTiposAbierto ? 'rotate-180' : ''
+              }`}
+              aria-hidden
+            />
+          </button>
+          {otrosTiposAbierto && (
+            <div id="boveda-otros-tipos" className="flex flex-col gap-0.5">
+              {PRESETS_AVANZADOS.map((preset) => (
+                <OpcionPreset key={preset.tipo} {...preset} />
+              ))}
+            </div>
+          )}
+
           <p className="mx-1.5 mt-1.5 text-[11.5px] leading-relaxed text-noct-neutral-600">
-            Todos usan el mismo editor; el tipo solo deja listos los campos que tocan.
+            Las opciones especiales están ahí solo cuando las necesites.
           </p>
         </HojaInferior>
       )}
