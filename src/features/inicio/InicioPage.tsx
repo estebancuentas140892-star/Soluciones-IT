@@ -9,6 +9,7 @@ import {
   BookOpen,
   CaretDown,
   CaretRight,
+  Check,
   type IconoProps,
   Lightbulb,
   LockSimple,
@@ -222,9 +223,10 @@ export function InicioPage() {
         ) : (
           <div className="@container flex flex-col gap-[18px]">
             {/* Bienvenida del primer día: los tres pasos que dejan al
-                técnico listo para trabajar sin señal. Se retira sola (no
-                se cierra a mano) cuando los cumple o cuando esta pantalla
-                ya tiene bloques propios que mostrar. */}
+                técnico listo para trabajar sin señal. No compite con la
+                agenda: se retira sola (no se cierra a mano) en cuanto hay
+                algo que atender, y una vez cumplidos los tres pasos no
+                vuelve a aparecer en este dispositivo. */}
             {consultasListas && (
               <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
             )}
@@ -243,6 +245,23 @@ export function InicioPage() {
                 </p>
               )}
             </section>
+
+            {/* ESTADO TRANQUILO (encargo del 2026-09-11, tarea 5). Sin
+                vencidos ni asuntos de hoy, la pantalla lo dice con todas
+                sus letras en vez de quedarse en blanco. Lo que viene
+                después (Próximos) se sigue viendo, pero como aviso, no
+                como alarma. */}
+            {urgentes === 0 && (
+              <section className="rounded-lg border border-noct-divider bg-noct-surface px-4 py-5">
+                <div className="flex items-center gap-2.5">
+                  <Check size={17} className="shrink-0 text-noct-exito" aria-hidden />
+                  <h2 className="text-[15px] font-medium leading-[1.3]">Todo al día por hoy</h2>
+                </div>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-noct-neutral-400">
+                  No hay accesos vencidos ni asuntos con fecha para hoy.
+                </p>
+              </section>
+            )}
 
             {agenda.vencidos.length > 0 && (
               <section>

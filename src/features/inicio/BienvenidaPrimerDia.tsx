@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   descargarTodoOffline,
   obtenerProgresoDescarga,
@@ -8,7 +8,32 @@ import { obtenerEstadoInstalacion, suscribirEstadoInstalacion } from '../../lib/
 import { BotonInstalarApp } from '../../components/BotonInstalarApp'
 import { Check } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
-import { debeMostrarBienvenida, pasosBienvenida, type PasoBienvenida } from './bienvenida'
+import { bienvenidaCompleta, debeMostrarBienvenida, pasosBienvenida, type PasoBienvenida } from './bienvenida'
+
+// Una vez completada, no vuelve (encargo del 2026-09-11, tarea 5). El
+// estado real del dispositivo puede "descumplir" un paso —abrir la app
+// desde el navegador en vez de la instalada devuelve `instalada` a
+// false—, y sin esta marca la bienvenida reaparecia meses despues. Vive
+// en localStorage porque es una decision de ESTE telefono, igual que el
+// descarte de la tarjeta de reanudar.
+const CLAVE_COMPLETADA = 'bienvenida_primer_dia_completada'
+
+function leerCompletada(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_COMPLETADA) === '1'
+  } catch {
+    return false
+  }
+}
+
+function anotarCompletada(): void {
+  try {
+    localStorage.setItem(CLAVE_COMPLETADA, '1')
+  } catch {
+    // Almacenamiento no disponible (navegacion privada): la marca no
+    // sobrevive al recargo, pero no rompe nada.
+  }
+}
 
 // Bienvenida del primer dia (tarea 184, mockup 3b del handoff): tres
 // pasos que se apagan solos, en vez de un tour modal que hay que cerrar.
@@ -18,12 +43,19 @@ import { debeMostrarBienvenida, pasosBienvenida, type PasoBienvenida } from './b
 // La regla de visibilidad vive aparte y probada en ./bienvenida.ts. Aqui
 // solo queda leer el estado real del dispositivo (¿corre instalada?
 // ¿hubo descarga?) y pintar.
+//
+// La descarga offline de aqui es EL MISMO estado que la opcion de Mi
+// cuenta (`DescargarOffline`): las dos leen `obtenerProgresoDescarga` y
+// llaman a `descargarTodoOffline` del mismo modulo, asi que bajar los
+// adjuntos en cualquiera de los dos sitios apaga el paso 3 y actualiza
+// la fecha de ultima descarga en el otro.
 export function BienvenidaPrimerDia({
   nombre,
   hayBloquesReales,
 }: {
   nombre?: string | null
-  // Inicio ya tiene recientes, pendientes o un procedimiento a medias.
+  // Inicio ya tiene agenda: algo con fecha, trabajo propio a medias o
+  // asuntos del equipo por revisar.
   hayBloquesReales: boolean
 }) {
   const instalacion = useSyncExternalStore(suscribirEstadoInstalacion, obtenerEstadoInstalacion)
@@ -33,8 +65,13 @@ export function BienvenidaPrimerDia({
     instalada: instalacion.instalada,
     descargaHecha: descarga.ultimaDescarga !== null,
   })
+  const completa = bienvenidaCompleta(pasos)
+  const [yaCompletada] = useState(leerCompletada)
+  useEffect(() => {
+    if (completa) anotarCompletada()
+  }, [completa])
 
-  if (!debeMostrarBienvenida({ pasos, hayBloquesReales })) return null
+  if (!debeMostrarBienvenida({ pasos, hayBloquesReales, yaCompletada })) return null
 
   // Nombre de pila: "Bienvenido, Andrés Vélez" en una tarjeta de 448px
   // roba la linea entera y suena a formulario.
@@ -79,8 +116,7 @@ export function BienvenidaPrimerDia({
       </ol>
 
       <p className="mt-3 text-[12px] leading-normal text-noct-neutral-400">
-        Cuando haya recientes, pendientes o un procedimiento a medias, esos bloques aparecen aquí y
-        esta bienvenida se retira sola.
+        En cuanto haya algo en la agenda del día, esta bienvenida se retira sola y no vuelve.
       </p>
     </section>
   )

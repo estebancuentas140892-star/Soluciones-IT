@@ -55,14 +55,30 @@ export function pasosBienvenida({ instalada, descargaHecha }: EntradaBienvenida)
 
 export interface EntradaVisibilidad {
   pasos: PasoBienvenida[]
-  // ¿Inicio ya tiene bloques propios que mostrar? Son exactamente los
-  // tres que nombra el handoff: recientes, pendientes y un procedimiento
-  // a medias. Cuando aparecen, la bienvenida deja de ser la primera
-  // impresion y se retira sin que nadie la cierre.
+  // ¿Inicio ya tiene agenda que mostrar? Es decir, algo con fecha,
+  // trabajo propio a medias o asuntos del equipo por revisar. Cuando
+  // aparecen, la bienvenida deja de ser la primera impresion y se retira
+  // sin que nadie la cierre: no compite con la agenda del dia.
   hayBloquesReales: boolean
+  // Ya se completo alguna vez en ESTE dispositivo (encargo del
+  // 2026-09-11, tarea 5). Sin esto, abrir la app desde el navegador en
+  // vez de la version instalada devolvia el paso "Instala la app" a
+  // pendiente y la bienvenida reaparecia meses despues, como si el
+  // tecnico acabara de llegar.
+  yaCompletada?: boolean
 }
 
-export function debeMostrarBienvenida({ pasos, hayBloquesReales }: EntradaVisibilidad): boolean {
+export function debeMostrarBienvenida({
+  pasos,
+  hayBloquesReales,
+  yaCompletada = false,
+}: EntradaVisibilidad): boolean {
+  if (yaCompletada) return false
   if (hayBloquesReales) return false
   return pasos.some((paso) => !paso.hecho)
+}
+
+/** Los tres pasos cumplidos: la bienvenida ya hizo su trabajo. */
+export function bienvenidaCompleta(pasos: PasoBienvenida[]): boolean {
+  return pasos.every((paso) => paso.hecho)
 }
