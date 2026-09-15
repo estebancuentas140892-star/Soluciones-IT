@@ -94,3 +94,89 @@ describe('contenido inicial de Referencia', () => {
     expect(bloque.toLowerCase()).not.toContain('password')
   })
 })
+
+// LAS HERRAMIENTAS DEL CENTRO DE CONSULTA (encargo del 2026-09-14). Mismo
+// contrato que el bloque anterior, mas lo propio de este encargo: solo
+// lo confirmado, lo historico nunca como uso actual, y ninguna ficha
+// para lo que no se sabe que es.
+describe('herramientas del Centro de consulta', () => {
+  const bloque = esquema.slice(esquema.indexOf('5.2 Herramientas del Centro de consulta'))
+
+  // La fila entera de una herramienta, desde su tipo hasta el cierre de
+  // su lista de etiquetas.
+  function filaDe(nombre: string): string {
+    const inicio = bloque.indexOf(`'herramienta', '${nombre}'`)
+    expect(inicio).toBeGreaterThanOrEqual(0)
+    const resto = bloque.slice(inicio)
+    return resto.slice(0, resto.search(/\]\)(,|\n)/))
+  }
+
+  it('siembra 20 fichas nuevas con identificadores estables propios', () => {
+    const ids = new Set(esquema.match(/2026090e-0000-4000-8000-[0-9a-f]{12}/g) ?? [])
+    expect(ids.size).toBe(20)
+  })
+
+  it('siembra las dieciséis herramientas del encargo', () => {
+    const nombres = [
+      'TightVNC',
+      'AnyDesk',
+      'Zabbix',
+      'SICOF ERP',
+      'ICG Manager',
+      'FrontRest',
+      'HKA Factura',
+      'DOCUMENT',
+      'WORKFLOW',
+      'SharePoint',
+      'SonicWall',
+      'Kaspersky',
+      'VMware ESXi',
+      'Issabel',
+      'Power BI',
+      'SQL Server Management Studio',
+    ]
+    expect(bloque.match(/'herramienta', '/g) ?? []).toHaveLength(nombres.length)
+    for (const nombre of nombres) expect(bloque).toContain(`'herramienta', '${nombre}'`)
+  })
+
+  it('no inventa una ficha para Software A.M.', () => {
+    expect(bloque).not.toMatch(/'herramienta', 'Software A\.M\.'/)
+  })
+
+  it('el esquema admite el tipo herramienta y los tres estados de uso', () => {
+    expect(esquema).toContain("check (tipo in ('herramienta', 'termino', 'atajo', 'comando'))")
+    expect(esquema).toContain("check (estado_uso in ('', 'confirmado', 'documentado'))")
+  })
+
+  it('lo que solo tiene evidencia historica nunca se siembra como confirmado', () => {
+    for (const nombre of ['VMware ESXi', 'Issabel', 'DOCUMENT', 'WORKFLOW', 'SonicWall', 'SICOF ERP']) {
+      expect(filaDe(nombre)).toContain("'documentado'")
+      expect(filaDe(nombre)).not.toContain("'confirmado'")
+    }
+    for (const nombre of ['TightVNC', 'AnyDesk', 'Zabbix', 'ICG Manager', 'FrontRest']) {
+      expect(filaDe(nombre)).toContain("'confirmado'")
+    }
+  })
+
+  it('SICOF es de ADA y DOCUMENT de Coldetec, nunca al reves', () => {
+    expect(filaDe('SICOF ERP')).toContain("'ADA'")
+    expect(filaDe('DOCUMENT')).toContain("'Coldetec'")
+    expect(filaDe('DOCUMENT')).not.toContain("'ADA'")
+  })
+
+  it('enlaza las guias por su titulo exacto y sin pisar lo que el equipo cambie', () => {
+    expect(bloque).toContain('join public.articulos a on a.titulo = datos.titulo and a.eliminado_en is null')
+    expect(bloque).toContain("r.guias_relacionadas = '[]'::jsonb")
+    for (const titulo of [
+      'Conectar de forma remota a un POS desde un computador',
+      'Acceder a ICG Manager mediante Escritorio remoto',
+      'Crear un cliente externo en ICG Manager',
+      'Crear un trabajador para almuerzo en ICG Manager',
+      'Crear un usuario de taquillero en ICG Manager',
+      'Actualizar la resolución DIAN para facturación electrónica en un POS',
+      'Crear copia de seguridad de una base de datos en SQL Server',
+    ]) {
+      expect(bloque).toContain(`'${titulo}'`)
+    }
+  })
+})

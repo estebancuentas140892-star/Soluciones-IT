@@ -288,7 +288,7 @@ function normalizarBloques(origen: Record<string, unknown>): BloquePaso[] {
 }
 
 const TIPOS_BLOQUE: TipoBloque[] = ['tarea', 'aviso', 'imagen', 'archivo', 'guia', 'referencia']
-const TIPOS_REFERENCIA: TipoReferencia[] = ['termino', 'atajo', 'comando']
+const TIPOS_REFERENCIA: TipoReferencia[] = ['herramienta', 'termino', 'atajo', 'comando']
 const TONOS_AVISO_VALIDOS: TonoAviso[] = ['info', 'precaucion', 'importante', 'consejo', 'dato']
 const TIPOS_TAREA_VALIDOS: TipoTarea[] = ['accion', 'verificacion', 'decision']
 const ALCANCES_VALIDOS: AlcanceApoyo[] = ['tarea', 'paso', 'sin-asignar']

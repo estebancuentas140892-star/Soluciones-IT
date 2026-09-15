@@ -407,7 +407,8 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
     campos: { ...camposComunes, nombre: 'nombre', notas: 'notas' },
     porDefecto: { notas: '' },
   },
-  // Referencia (2026-09-10): glosario, atajos y comandos. Va al final
+  // Referencia (2026-09-10): glosario, atajos y comandos, y desde el
+  // 2026-09-14 tambien herramientas (el "Centro de consulta"). Va al final
   // de la lista de tablas sincronizadas, mismo criterio que ubicaciones,
   // campos_protegidos y personas: si el esquema aun no se aplico en el
   // servidor, su fallo no impide descargar las demas.
@@ -439,6 +440,14 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       advertencia: 'advertencia',
       relacionadas: 'relacionadas',
       etiquetas: 'etiquetas',
+      // Herramienta (2026-09-14). Mismo criterio que el resto: default
+      // declarado y fuera de `camposOpcionales`, porque el tecnico puede
+      // vaciar cualquiera de ellos desde el editor.
+      proveedor: 'proveedor',
+      usoEnMetroparques: 'uso_metroparques',
+      estadoUso: 'estado_uso',
+      notas: 'notas',
+      guiasRelacionadas: 'guias_relacionadas',
     },
     porDefecto: {
       tipo: 'termino',
@@ -455,6 +464,11 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       advertencia: '',
       relacionadas: [],
       etiquetas: [],
+      proveedor: '',
+      usoEnMetroparques: '',
+      estadoUso: '',
+      notas: '',
+      guiasRelacionadas: [],
     },
   },
 }

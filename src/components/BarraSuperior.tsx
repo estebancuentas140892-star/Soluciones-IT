@@ -62,8 +62,8 @@ export function BarraSuperior({
             <button
               type="button"
               onClick={() => setBuscadorAbierto(true)}
-              aria-label="Buscar en todo"
-              title="Buscar en todo"
+              aria-label="Buscar en Soluciones IT"
+              title="Buscar en Soluciones IT"
               className="flex h-11 w-11 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
             >
               <MagnifyingGlass size={20} aria-hidden />

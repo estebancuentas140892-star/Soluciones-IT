@@ -328,6 +328,24 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
+### 237. Confirmar qué es "Software A.M." antes de darle ficha en el Centro de consulta
+
+- **Título:** ficha de "Software A.M." en Herramientas.
+- **Descripción:** existe una referencia histórica a una herramienta llamada "Software A.M.", pero no se sabe para qué sirve. El Centro de consulta ya admite una herramienta con solo el nombre (el resto de campos es opcional), así que en cuanto el equipo confirme su función se crea desde **Centro de consulta > Herramientas > Crear**, sin código ni esquema.
+- **Motivo:** el encargo del 2026-09-14 (cambio 13) prohíbe crearla inventando descripción o categoría.
+- **Impacto:** un técnico nuevo que la encuentre nombrada en un documento viejo no tendrá dónde consultarla hasta entonces.
+- **Prioridad:** Baja. **Estado:** Pendiente (espera información del usuario).
+- **Área afectada:** contenido de `referencias` (Supabase). **Dependencias:** la tarea 236.
+
+### 238. Confirmar la vigencia de las herramientas marcadas como "documentado"
+
+- **Título:** revisar el estado de uso de SICOF ERP, HKA Factura, DOCUMENT, WORKFLOW, SonicWall, VMware ESXi, Issabel y Power BI.
+- **Descripción:** se sembraron con `estado_uso = 'documentado'` porque solo hay evidencia de su uso, no confirmación de que sigan vigentes; la ficha lo dice ("estado actual pendiente de confirmar"). Cuando el equipo lo confirme, cambiarlo en **Editar > ¿Se usa hoy en Metroparques?** (a "Confirmado", o dejar la nota de que ya no se usa). SharePoint, Kaspersky y SQL Server Management Studio quedaron sin estado porque el encargo no daba información de uso.
+- **Motivo:** no convertir datos históricos en hechos actuales (cambio 14 del encargo), y a la vez no dejarlos pendientes para siempre.
+- **Impacto:** mientras tanto, la pastilla "Vigencia por confirmar" aparece en esas tarjetas.
+- **Prioridad:** Media. **Estado:** Pendiente (espera confirmación del equipo).
+- **Área afectada:** contenido de `referencias` (Supabase). **Dependencias:** la tarea 236.
+
 **INCIDENTE RESUELTO EL 2026-09-04 (tarea 232): la app no cargaba en el teléfono, en bucle.** El usuario reportó "No se pudo cargar la aplicación / Vuelve a intentarlo" con un botón "Recargar" que devolvía el mismo mensaje una y otra vez.
 
 **Lo que NO era, comprobado antes de tocar nada.** (a) No era el servidor: `index.html`, sus 6 assets de entrada y las **123 entradas del precache** de `/sw.js` devolvían 200 todas. (b) No era la tarea 217 ni la versión 15 de Dexie: se reprodujo la subida real creando a mano una base `soluciones-it` en la versión 140 con datos y recargando contra producción, y la base pasó limpia a 150 con `preferenciasTecnico` creada y la app pintó el login sin un solo error de consola. (c) No era una carga fría: un navegador limpio contra producción funciona.

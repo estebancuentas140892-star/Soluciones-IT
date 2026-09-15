@@ -469,10 +469,14 @@ export function Chasis(props: Props) {
         </nav>
 
         <div className="border-t border-noct-divider pt-2.5 xl:border-t-0 xl:pt-0">
-          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Herramientas</TituloSeccion>
+          {/* "Trabajo técnico" y no "Herramientas" desde el 2026-09-14:
+              el Centro de consulta tiene ahora una pestaña Herramientas
+              (Zabbix, TightVNC), y dos "Herramientas" con significados
+              distintos a un palmo confundían justo al técnico nuevo. */}
+          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Trabajo técnico</TituloSeccion>
           <nav className="flex flex-col gap-0.5">
             <EnlaceGrupo to="/diagnostico" label="Diagnóstico" Icono={TreeStructure} />
-            <EnlaceGrupo to="/referencia" label="Referencia" Icono={BookBookmark} />
+            <EnlaceGrupo to="/referencia" label="Centro de consulta" Icono={BookBookmark} />
             <EnlaceGrupo to="/escaner" label="Escanear" Icono={QrCode} />
           </nav>
         </div>
@@ -587,7 +591,7 @@ export function Chasis(props: Props) {
           ningún control: son una mejora para quien tiene teclado, y
           sumar un botón a la barra de un teléfono sería pagar espacio
           por algo que ahí no se puede usar. La entrada visible vive en
-          Referencia. */}
+          el Centro de consulta, pestaña Atajos. */}
       <CapaAtajos puedeVerBoveda={Boolean(usuario?.puedeVerBoveda)} navegacion />
     </div>
   )

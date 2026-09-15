@@ -186,6 +186,23 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: todas las sincronizadas. Verificada por la prueba automatizada `src/lib/esquema.test.ts`.
 - Impacto: es la regla 17 de [REGLAS.md](REGLAS.md), con guardián automático.
 
+### Centro de consulta
+
+**RN-031. Una herramienta explica qué es y para qué sirve; cómo hacer algo con ella es una guía enlazada, nunca copiada.**
+- Motivo: los pasos copiados en una ficha se desactualizan en cuanto alguien edita la guía, y un técnico nuevo tiene que distinguir "¿qué es esto?" (Centro de consulta) de "¿cómo lo hago?" (Guías).
+- Entidades: Referencia (tipo `herramienta`), Artículo. Blanda (el editor ofrece "Guías relacionadas" y ningún campo de pasos).
+- Impacto: `referencias.guias_relacionadas` guarda id y copia del título (RN-007, RN-008). Una guía en borrador se enlaza con su pastilla y sigue fuera del buscador global.
+
+**RN-032. El uso de una herramienta en Metroparques solo se presenta como actual si está confirmado.**
+- Motivo: no convertir evidencia histórica (VMware ESXi, Issabel, DOCUMENT) en un hecho actual.
+- Entidades: Referencia (tipo `herramienta`). Dura en los valores (`check (estado_uso in ('', 'confirmado', 'documentado'))`), blanda en la presentación.
+- Impacto: `'documentado'` se lee "Uso documentado en Metroparques; estado actual pendiente de confirmar." en la ficha y "Vigencia por confirmar" en la lista; `''` no afirma nada.
+
+**RN-033. El Centro de consulta nunca guarda credenciales.**
+- Motivo: la tabla `referencias` la lee cualquier técnico autenticado; contraseñas y accesos viven solo en la Bóveda (RN-024).
+- Entidades: Referencia. Blanda (ayudas escritas bajo el comando completo y bajo "Cómo se usa en Metroparques").
+- Impacto: el contenido inicial no lleva ni una dirección IP ni un acceso, y una prueba lo comprueba sobre el propio SQL.
+
 ---
 
 ## 3. Modelo entidad-relación
@@ -212,6 +229,9 @@ erDiagram
   EJECUCIONES_DIAGNOSTICO ||--o| ARTICULOS : "origina borrador"
   HISTORIAL }o--|| DISPOSITIVOS : "registra (polimórfico)"
   ACCESOS_BOVEDA }o--|| CREDENCIALES : "audita (polimórfico)"
+  REFERENCIAS }o--o{ REFERENCIAS : "relacionadas (JSON)"
+  REFERENCIAS }o--o{ ARTICULOS : "guías relacionadas (JSON)"
+  ARTICULOS }o--o{ REFERENCIAS : "bloque de referencia en una tarea (JSON)"
 ```
 
 ### 3.2 Tabla de relaciones y cardinalidades
@@ -231,6 +251,9 @@ erDiagram
 | Diagnóstico | ejecuta | Artículo | N : M | JSON `nodos[].opciones[].articuloId` |
 | Artículo (paso o tarea) | vínculo protegido | Credencial o Campo protegido | N : 1 | JSON `vinculoProtegido {tipo,id,titulo}` |
 | EjecuciónDiagnóstico | origina | Artículo | 1 : 0..1 | `articulos.origen_sugerencia_id` (uuid sin FK) |
+| Referencia (ficha del Centro de consulta) | relacionada | Referencia | N : M | JSON `referencias.relacionadas` `{id,titulo}[]` |
+| Herramienta | se hace con | Artículo (guía) | N : M | JSON `referencias.guias_relacionadas` `{id,titulo}[]` (copia de referencia; la ficha enlaza la guía y nunca copia sus pasos) |
+| Artículo (tarea) | vincula | Referencia | N : M | JSON `procedimiento.pasos[].bloques[]` de tipo `referencia` (`referenciaId`, `referenciaTitulo`, `referenciaTipo`) |
 
 Notas:
 - `conexiones` es una **tabla puente autorreferencial** dispositivo a dispositivo, con atributos propios (`tipo`, `puerto`, `medio`). El tipo `relacionado` no participa en la topología.
@@ -486,7 +509,7 @@ Vista funcional; el mecanismo técnico (motor de sync, canal de Realtime, cursor
 
 ### 8.2 Qué es local y qué se sincroniza
 
-- **Sincronizadas (13 tablas)** por el motor genérico, más `perfiles` y `boveda_meta` con un mecanismo propio de un solo sentido.
+- **Sincronizadas (14 tablas, `referencias` incluida)** por el motor genérico, más `perfiles` y `boveda_meta` con un mecanismo propio de un solo sentido.
 - **Locales puras (8):** `syncMeta` (cursores), `cambiosPendientes` (cola), `archivosPendientes` (cola de archivos), `seguridadApp` (bloqueo del dispositivo), `progresoDiagnostico`, `progresoPasos`, `recientes`, `favoritos`.
 
 ---

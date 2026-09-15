@@ -31,6 +31,7 @@ Fecha de redacción: 2026-07-23. Basado en una lectura directa del código en `s
    - 6.7 [Etiquetas QR e Importación](#67-etiquetas-e-importacion)
    - 6.8 [Estadísticas y Sugerencias del equipo](#68-estadisticas-y-sugerencias)
    - 6.9 [Autenticación (login) y actualización](#69-autenticacion)
+   - 6.10 [Centro de consulta](#610-centro-de-consulta)
 7. [Catálogo de formularios (campo por campo)](#7-catalogo-de-formularios)
 8. [Catálogo de modales, hojas y diálogos](#8-catalogo-de-modales)
 9. [Catálogo de botones y primitivas de interfaz](#9-catalogo-de-botones)
@@ -225,6 +226,10 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/personas/migrar` | MigracionPersonas | Tarea | Convertir textos en personas |
 | `/personas/:personaId` | PersonaPage | Documento | Ficha 360° de una persona |
 | `/personas/:personaId/editar` | PersonaForm | Tarea | Editar persona |
+| `/referencia` | ReferenciaPage | Documento | **Centro de consulta**: pestañas Herramientas, Glosario, Atajos y Comandos (`?tab=`, `?q=`, `?categoria=`, `?plataforma=`) |
+| `/referencia/nueva` | ReferenciaForm | Tarea | Crear ficha (`?tipo=herramienta\|termino\|atajo\|comando`) |
+| `/referencia/:referenciaId` | ReferenciaFicha | Documento | Ficha de una herramienta, término, atajo o comando |
+| `/referencia/:referenciaId/editar` | ReferenciaForm | Tarea | Editar ficha |
 | `/red` | RedPage | Sección | Recorrido por nodos: el equipo, de qué depende y qué cae si falla |
 | `/red/equipos` | EquiposRedPage | Documento | Todos los equipos de red, agrupados por ubicación |
 | `/red/topologia` | TopologiaPage | Documento | Mapa/bosque de toda la red |
@@ -259,6 +264,7 @@ Resumen de las entidades que la app maneja. Detalle completo de columnas y decis
 | `conexiones` | Enlaces entre equipos (enlace, instalación, relacionado) | Sí |
 | `ubicaciones` | Lugares físicos con jerarquía opcional | Sí |
 | `personas` | Responsables de equipos | Sí |
+| `referencias` | Fichas del **Centro de consulta**: herramientas, términos del glosario, atajos y comandos (una sola tabla, columna `tipo`) | Sí |
 | `credenciales` | Secretos de la bóveda (cifrados) | Sí |
 | `campos_protegidos` | Datos sensibles propios de un equipo (cifrados) | Sí |
 | `diagnosticos` | Árboles de preguntas del diagnóstico | Sí |
@@ -295,11 +301,11 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 **Qué NO es.** No hay entidad "tarea", ni tabla de recordatorios, ni calendario mensual. Es una **vista derivada** de datos que ya existen (credenciales, campos protegidos, borradores, progreso de guías, sugerencias de diagnóstico). El reparto en grupos es lógica pura y está en `src/features/inicio/agenda.ts`; el cálculo de los ítems, en `pendientes.ts`.
 
 **Cabecera fija (con desenfoque).** Desde la tarea 181 la fila superior es la **barra superior global** (ver la sección 2), común a las cinco pestañas: título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022), pastilla de sincronización y avatar de la cuenta. Debajo, lo propio de Inicio:
-- **Buscador en línea** (input `type="search"`), **de 46 px**: placeholder "Buscar en Guías, Equipos y Bóveda". Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
+- **Buscador en línea** (input `type="search"`), **de 46 px**: placeholder **"Buscar en Soluciones IT"** y, debajo, la frase de apoyo **"Guías, equipos, herramientas, glosario y más"** (2026-09-14; antes decía "Buscar en Guías, Equipos y Bóveda" y callaba el resto de lo que el índice ya encontraba). Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
 - **La lupa del chasis se apaga aquí, y solo aquí** (`conLupa={false}`, regla **M-R8**, "un buscador por pantalla"): esta pantalla ya trae su campo con el alcance escrito, así que la lupa era el segundo buscador de la misma pantalla y además con el alcance redactado distinto. En las otras cuatro secciones la lupa ES el buscador y se queda.
 - **Sin saludo.** El saludo dinámico según la hora se **retiró en la tarea 184** (decisión aprobada por el usuario): ocupaba la línea de contexto con un eslogan que cambiaba tres veces al día. Lo que hay que decir el primer día lo dice la bienvenida, y solo mientras haga falta.
 
-**Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas**. Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
+**Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas** y **Centro de consulta** (herramientas, términos, atajos y comandos; cada fila dice su tipo al principio del subtítulo, por ejemplo "Herramienta · Monitoreo"). Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
 
 **Modo agenda (sin texto), en orden:**
 
@@ -344,7 +350,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **Formas de fila (regla M-R6, "una fila, un significado").** `FilaAgenda` (56 px, título de 15 px, la razón en el color de su estado y el origen al lado) es lo que el técnico debe resolver. Todos los controles táctiles miden 44 px o más y ninguna fila provoca desplazamiento horizontal: los textos largos se recortan.
 
-**Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Guías, Equipos, Bóveda, Ubicaciones y Personas; la agenda enlaza a la ficha de cada credencial, a la ficha del equipo dueño del dato protegido, al borrador propio, a la guía a medias y a las sugerencias del equipo.
+**Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Guías, Equipos, Bóveda, Ubicaciones, Personas y el Centro de consulta; la agenda enlaza a la ficha de cada credencial, a la ficha del equipo dueño del dato protegido, al borrador propio, a la guía a medias y a las sugerencias del equipo.
 
 ---
 
@@ -586,7 +592,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Cuerpo, en grupos:**
 - **"Consulta protegida"** (solo con permiso `puede_ver_boveda`): fila destacada de **Bóveda** ("Claves y credenciales del equipo"), con el mismo tratamiento visual que la tarjeta de "Diagnóstico en curso" (borde y fondo en acento), porque es la única entrada que exige un permiso.
-- **"Aquí, con el equipo delante"** (tarea 207, hallazgos **M-024** y **M-025**, regla **M-R10**, mockup `7b`): **Escanear equipo**, **Diagnóstico**, **Ubicaciones** y **Personas**. Antes eran dos grupos, "Herramientas" y "Registros", que decían de qué TIPO era cada destino y no dónde sirve, así que "Importar" pesaba lo mismo que "Escanear", que solo existe en el teléfono.
+- **"Aquí, con el equipo delante"** (tarea 207, hallazgos **M-024** y **M-025**, regla **M-R10**, mockup `7b`): **Escanear equipo**, **Diagnóstico**, **Centro de consulta** ("Herramientas, glosario, atajos y comandos"; se llamaba "Referencia" hasta el 2026-09-14), **Ubicaciones** y **Personas**. Antes eran dos grupos, "Herramientas" y "Registros", que decían de qué TIPO era cada destino y no dónde sirve, así que "Importar" pesaba lo mismo que "Escanear", que solo existe en el teléfono.
 - **"Mejor desde el ordenador"**, al final y con la nota escrita ("Se puede hacer aquí, pero pide teclado y pantalla grande."): **Etiquetas QR** e **Importar equipos**. **No se esconde nada**, se ordena por dónde se usa; las dos siguen abriéndose desde aquí y desde el menú "···" de Equipos.
 - **El conteo va a la derecha**, antes del galón, en la misma ranura que en Guías y Equipos (hallazgo **M-025**). Iba pegado al final del subtítulo ("Sedes, salas y racks · 12"), donde se leía como parte de la descripción y no se podía comparar de un vistazo entre filas. Lo llevan Bóveda, Diagnóstico, Ubicaciones y Personas, todos en vivo.
 - **"Lo mío y lo del equipo"** (desde el 2026-09-11, venido de Inicio): **"Mis favoritos"** y **"Actividad del equipo"**, plegados tras una línea con su conteo (`SeccionPlegable`). Se consultan cuando uno los busca, que es lo que hace en esta pantalla; en Inicio no respondían a ninguna pregunta de la jornada. El grupo entero no se monta si las dos listas están vacías.
@@ -594,7 +600,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Volver.** Ubicaciones y Personas, alcanzadas ahora desde aquí, suben a "Más" (no a Equipos): antes su regreso llevaba a una sección que el técnico no había visitado si llegaba por un enlace o por esta pantalla (mismo defecto que el problema #3 del turno 3 de la auditoría). Diagnóstico y Escanear suben a "Más", que es su puerta desde que Inicio dejó de repetir sus atajos (2026-09-11); Etiquetas e Importar siguen subiendo a Equipos, porque su camino principal sigue siendo el menú "···" de esa sección.
 
-**Escritorio:** el sidebar no ofrece "Más" (no lo necesita: sigue mostrando Bóveda como destino propio en su nav principal). Desde la tarea 183 el sidebar completo de 14 destinos da puerta propia en escritorio a Diagnóstico, Escanear, Ubicaciones y Personas (grupos "Herramientas"/"Registros"), y Mi cuenta vive al pie. Etiquetas QR e Importar siguen alcanzándose solo desde el "···" de Equipos en ambas anchuras.
+**Escritorio:** el sidebar no ofrece "Más" (no lo necesita: sigue mostrando Bóveda como destino propio en su nav principal). Desde la tarea 183 el sidebar completo da puerta propia en escritorio a Diagnóstico, Centro de consulta, Escanear, Ubicaciones y Personas (grupos **"Trabajo técnico"** y "Registros"; el primero se llamaba "Herramientas" hasta el 2026-09-14, cuando el Centro de consulta estrenó su pestaña Herramientas), y Mi cuenta vive al pie. Etiquetas QR e Importar siguen alcanzándose solo desde el "···" de Equipos en ambas anchuras.
 
 ---
 
@@ -723,6 +729,51 @@ Ambas se alcanzaban solo desde el menú "···" de Equipos; desde la tarea 182 
 ---
 
 <a id="7-catalogo-de-formularios"></a>
+## 6.10 Centro de consulta
+
+**Ruta:** `/referencia` (nombre interno conservado) · **Archivos:** `src/features/referencia/ReferenciaPage.tsx`, `ReferenciaFicha.tsx`, `ReferenciaForm.tsx` · **Nivel:** Documento (la lista y la ficha), Tarea (el editor) · **Puerta:** Más > "Aquí, con el equipo delante" y, en escritorio, la barra lateral (grupo "Trabajo técnico").
+
+**Objetivo.** Responder **"¿qué es esto?"** a un técnico nuevo: qué es Zabbix, para qué se usa TightVNC, qué diferencia a SICOF de ICG, qué significa DHCP, cuál es el atajo para abrir Ejecutar o qué comando comprueba si un equipo responde. **"¿Cómo hago esto?"** son las Guías, **"¿qué pasa con este equipo?"** son Equipos, Diagnóstico y Red, y **"¿cuál es la clave?"** es la Bóveda. Se llamaba **Referencia** hasta el 2026-09-14.
+
+**Cabecera.** "‹ Más" y **Crear** (abre el editor con el tipo de la pestaña). Título **"Centro de consulta"** y subtítulo "Herramientas, conceptos, atajos y comandos del equipo". Debajo, **cuatro pestañas** en una fila (caben a 360 px; si no cupieran, la fila se desplaza en vez de recortar):
+
+| Pestaña | Qué lista | Buscador ("Buscar por...") | Filtro (hoja inferior) |
+|---|---|---|---|
+| **Herramientas** (por defecto) | Programas, sistemas y plataformas del equipo | nombre, uso o proveedor | Categoría |
+| **Glosario** | Conceptos técnicos | nombre, abreviatura o alias | Categoría |
+| **Atajos** | Combinaciones de teclas | lo que hace o las teclas | Programa |
+| **Comandos** | Órdenes escritas | propósito o el comando | Plataforma |
+
+- El filtro solo aparece si en esa pestaña hay categorías o plataformas escritas. Con uno elegido, el botón muestra el valor y una "x" de 44 px para quitarlo.
+- Cambiar de pestaña **conserva la búsqueda** y limpia el filtro (una plataforma no significa nada en Herramientas).
+- **Todo vive en la URL** (`?tab=glosario|atajos|comandos`, `?q=`, `?categoria=`, `?plataforma=`), y cada tarjeta lleva ese sitio como origen: el **"Volver" de la ficha y el atrás del navegador reponen la pestaña, la búsqueda y el filtro**. Un enlace viejo con `?tab=comandos` abre Comandos.
+- Panel ámbar **"Hay N inconsistencias por revisar"** (plegable) solo si la revisión de consistencia encuentra algo.
+
+**Tarjetas (una columna, título a ancho completo).**
+- **Herramienta:** llave inglesa + categoría y proveedor en versalitas, nombre (con la abreviatura en gris: "SQL Server Management Studio (SSMS)"), descripción breve y, si su uso solo está documentado, la pastilla **"Vigencia por confirmar"**. Toda la tarjeta abre la ficha.
+- **Término:** libro + abreviatura y categoría, nombre y definición.
+- **Atajo y comando:** teclado o consola + programa/plataforma; el **nombre dice qué hace** ("Abrir la ventana Ejecutar"); debajo, **la combinación o el comando** en monoespaciado de 14 px con el botón **"Copiar"** (44 px, "Copiado" al confirmar), y cuándo sirve. La tarjeta entera abre la ficha y el botón copia sin abrirla.
+- **Atajos de la aplicación:** primera tarjeta de la pestaña Atajos (sin búsqueda ni filtro); abre la ayuda con los atajos de Soluciones IT.
+- **Estado vacío:** "Todavía no hay..." con "Crear una herramienta / un término / un atajo / un comando"; con búsqueda sin resultados, **"Sí hay coincidencias en:"** con un botón por pestaña que sí las tiene y su conteo.
+
+**Ficha (`/referencia/:id`).** Cabecera con el tipo (y la categoría de una herramienta) y el nombre; "Volver" al Centro de consulta en la pestaña del tipo, o al sitio exacto de donde se vino. Botones **Editar** y **Eliminar** (con aviso si alguna guía la usa en una tarea).
+- **Herramienta**, en este orden y solo lo que exista: descripción breve (sin rótulo), **¿Para qué sirve?**, **En Metroparques** (texto y el estado: "Uso actual confirmado en Metroparques." en verde, o "Uso documentado en Metroparques; estado actual pendiente de confirmar."), datos (**Proveedor**, **Categoría**, **También se llama**), **Notas** ("No confundir con...").
+- **Término:** Definición, Ejemplo, "Cómo se nombra" (abreviatura, alias, categoría), advertencia.
+- **Atajo y comando:** la combinación o el comando con **copiar** (los dos se copian), "Dónde y para qué" (tipo, programa o plataforma, **Cuándo sirve** / Cuándo usarlo, resultado esperado, categoría), permisos de administrador y advertencia si aplican, notas.
+- **Guías relacionadas** ("Cómo hacerlo, paso a paso. Esta ficha solo explica qué es."): cada guía enlazada con su pastilla si es **Borrador** u **Obsoleta**; una que no está en el dispositivo aparece sin enlace y con "No disponible aquí". Abrir una guía desde aquí vuelve a esta ficha.
+- **Relacionado:** las otras fichas vinculadas, con su glifo y su tipo (Herramienta, Término, Atajo, Comando).
+- Etiquetas, **Guías donde se utiliza** (las que la vinculan desde una tarea y no están ya en "Guías relacionadas") e Historial.
+
+**Editor (`/referencia/nueva`, `/referencia/:id/editar`).** "Tipo de ficha" en una hoja con los cuatro tipos y su descripción; los campos cambian con el tipo:
+- **Herramienta:** Nombre*, Nombre corto o abreviatura, Categoría, Descripción breve, ¿Para qué sirve?, Cómo se usa en Metroparques ("Solo lo confirmado. Nunca contraseñas ni accesos: eso va a la Bóveda."), **¿Se usa hoy en Metroparques?** (hoja: Sin indicar / Confirmado / Documentado, por confirmar), Proveedor o fabricante, Notas, Alias, Etiquetas, **Guías relacionadas** ("Vincular": hoja con buscador y grupos Publicadas, Borradores y Obsoletas) y Relacionado.
+- **Término:** Nombre*, Abreviatura, Definición corta, Ejemplo, Advertencia, Categoría, Alias, Etiquetas, Relacionado.
+- **Atajo:** Qué hace*, Combinación de teclas, Programa o sistema, Cuándo sirve, Resultado esperado, Notas, Advertencia, Categoría, Alias, Etiquetas, Relacionado. **Comando:** igual con Nombre o propósito*, Comando completo, Plataforma, Cuándo utilizarlo y "Requiere permisos de administrador".
+- "Relacionado" abre una hoja agrupada por pestaña. Al editar, "Motivo del cambio". Los avisos de consistencia salen en vivo antes de **"Guardar ficha"** y nunca impiden guardar.
+
+**Contenido inicial.** 16 herramientas (TightVNC, AnyDesk, Zabbix, SICOF ERP, ICG Manager, FrontRest, HKA Factura, DOCUMENT, WORKFLOW, SharePoint, SonicWall, Kaspersky, VMware ESXi, Issabel, Power BI y SQL Server Management Studio) con sus guías relacionadas, más los términos VNC, Acceso remoto y PQRSD y el atajo Ctrl + Shift + Esc; ver `supabase/schema.sql`, sección 5.2. "Software A.M." no tiene ficha porque no se sabe para qué sirve (tarea 237).
+
+---
+
 ## 7. Catálogo de formularios (campo por campo)
 
 Convenciones: **Obligatorio** = validado antes de guardar. La app prioriza guardar sobre bloquear: casi todos los formularios exigen solo lo mínimo (un nombre o título) y el resto se completa después. Las primitivas de campo (`CLASE_CAMPO`, `<Campo>`, `<CampoConSugerencias>`, `<CamposClaveValor>`) viven en `src/components/campos.tsx`.
@@ -1203,7 +1254,7 @@ Login
  └── (autenticado) → Bloqueo de la app (patrón/contraseña, si está activo)
 
 Inicio (/)
- ├── Buscador global (Guías · Equipos · Bóveda · Ubicaciones · Personas)
+ ├── Buscador global "Buscar en Soluciones IT" (Guías · Equipos · Bóveda · Ubicaciones · Personas · Centro de consulta)
  ├── Bienvenida del primer día (entraste · instalar · descargar para offline)
  ├── Continuar donde quedaste → Ficha de artículo
  ├── Atajos: Diagnóstico inteligente · Escanear equipo
@@ -1267,8 +1318,15 @@ Bóveda (/boveda) [permiso puede_ver_boveda]
 
 Más (/mas) — quinta pestaña móvil desde la tarea 182
  ├── Consulta protegida: Bóveda (solo con permiso puede_ver_boveda)
- ├── Aquí, con el equipo delante: Escanear equipo · Diagnóstico · Ubicaciones · Personas
+ ├── Aquí, con el equipo delante: Escanear equipo · Diagnóstico · Centro de consulta · Ubicaciones · Personas
  ├── Registros: Ubicaciones (/ubicaciones) · Personas (/personas) · Etiquetas QR · Importar
+
+Centro de consulta (desde Más, /referencia)
+ ├── Herramientas · Glosario · Atajos · Comandos (pestañas; ?tab=, ?q=, ?categoria=, ?plataforma=)
+ ├── Buscar · Filtro por categoría o plataforma · "Sí hay coincidencias en" · Crear
+ ├── Atajos de la aplicación (pestaña Atajos) · Copiar en cada atajo y comando
+ ├── Ficha (/:id) → Editar · Eliminar · Guías relacionadas (→ guía, vuelve a la ficha) · Relacionado · Historial
+ └── Editor (/nueva?tipo=, /:id/editar) → campos por tipo · ¿Se usa hoy en Metroparques? · Vincular guía · Vincular ficha
  └── Mi cuenta: Perfil (/cuenta) · Bloqueo y seguridad (/cuenta/seguridad)
 
 Diagnóstico (desde Inicio y Más, /diagnostico)

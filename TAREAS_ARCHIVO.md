@@ -1,5 +1,32 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-14: Centro de consulta
+
+### 236. Convertir Referencia en el Centro de consulta: herramientas, glosario, atajos y comandos
+
+**Estado:** finalizada el 2026-09-14. **Prioridad:** alta. **Origen:** encargo del usuario del 14 de septiembre de 2026 (quince cambios con las decisiones ya aprobadas; sin auditoría general ni propuesta previa).
+
+**Qué se hizo:**
+
+1. **Nombre visible.** "Referencia" pasa a **Centro de consulta** ("Herramientas, conceptos, atajos y comandos del equipo") en la pantalla, en Más ("Herramientas, glosario, atajos y comandos", dentro de "Aquí, con el equipo delante"), en la barra lateral de escritorio (su grupo pasa de "Herramientas" a **"Trabajo técnico"** para no chocar con la pestaña Herramientas), en el "Volver" y en los textos del buscador y de las hojas de las guías. La ruta `/referencia`, la tabla y los tipos conservan su nombre.
+2. **Cuatro pestañas** (`src/features/referencia/ReferenciaPage.tsx`): Herramientas (por defecto), Glosario, Atajos y Comandos; atajos y comandos ya no se mezclan. Pestaña, búsqueda y filtro viven en la URL y las tarjetas llevan ese sitio como origen (`conOrigen`), así que Volver y el atrás del navegador reponen la lista. Estado vacío con "Sí hay coincidencias en" otras pestañas.
+3. **Tipo `herramienta`** (`src/lib/db.ts`, `tablas.ts`, `procedimiento.ts`, `supabase/schema.sql`): `proveedor`, `usoEnMetroparques`, `estadoUso` (`'' | 'confirmado' | 'documentado'`), `notas` y `guiasRelacionadas`; la descripción reutiliza `definicion` y el "para qué sirve", `cuandoUsar`. **Dexie versión 18** completa las fichas ya guardadas en cada teléfono.
+4. **Ficha** (`ReferenciaFicha.tsx`, `EstadoUso.tsx`, `iconosReferencia.ts`): descripción, ¿Para qué sirve?, En Metroparques con lo que se sabe del uso, proveedor, notas, **Guías relacionadas** (cómo hacerlo; enlazadas, nunca copiadas; borradores con su pastilla) y **Relacionado** con el tipo de cada ficha. Abrir una guía desde la ficha vuelve a la herramienta.
+5. **Editor** (`ReferenciaForm.tsx`): campos por tipo; hojas "¿Se usa hoy en Metroparques?", guías por estado y relacionadas por pestaña. Una sola "ficha tal como se guardaría" alimenta el guardado y la revisión de consistencia.
+6. **Atajos y comandos:** el nombre dice qué hace; la combinación o el comando en monoespaciado con **Copiar** (`BotonCopiar`, ahora exportado de `FilaDato`); cuándo sirve. La ficha copia también la combinación.
+7. **Buscador global** (`useIndiceBusqueda.ts`, `resultados.ts`, `BuscadorGlobal.tsx`, `InicioPage.tsx`, `BarraSuperior.tsx`): "Buscar en Soluciones IT" con "Guías, equipos, herramientas, glosario y más"; tipo `herramienta` y grupo "Centro de consulta"; qué entra al índice pasa a la función pura `documentosDeBusqueda`; una letra suelta junto a otras palabras ya no es prefijo ("windows r").
+8. **Sinónimos** (`sinonimos.ts`): siete grupos simétricos y siete de una vía para los nombres reales, con detección de frases escritas enteras; "red" sigue sin arrastrar herramientas.
+9. **Contenido inicial** (`schema.sql`, sección 5.2): 16 herramientas con el estado de uso fiel a lo confirmado, guías relacionadas enlazadas por título exacto, los términos VNC, Acceso remoto y PQRSD y el atajo Ctrl + Shift + Esc. Sin ficha para "Software A.M." (tarea 237).
+10. **Compatibilidad:** las pantallas y el índice ignoran fichas de un tipo desconocido en vez de romperse; `ModoFoco` y la hoja de consulta de las guías aceptan una herramienta como etiqueta.
+
+**Esquema:** sí. Cinco columnas nuevas en `referencias`, todas con valor por defecto, y la restricción de `tipo` ampliada; contenido idempotente con identificadores estables. Aplicado en Supabase: el esquema antes de publicar el código y el contenido después (AD-037).
+
+**Pruebas:** 100 archivos, 1398 casos en verde (antes 99 y 1345, ya integrada la agenda operativa de Inicio y la Bóveda simplificada que llegaron a `main` mientras tanto); lint y build limpios. Nuevas o ampliadas: `src/lib/db.upgrade18.test.ts`; tipos, pestañas, filtros por tipo, guías relacionadas y estado de uso en `referencias.test.ts`; búsqueda global de `zabbix`, `tightvnc`, `ada`, `sicof`, `windows r`, `ping`, `dhcp` y `ssms`, borradores y bóveda fuera del índice en `busqueda.test.ts`; sinónimos y contaminación en `sinonimos.test.ts`; contenido sembrado en `esquema.test.ts`; `navegacion.test.ts` y `procedimiento.test.ts`.
+
+**Verificación en navegador:** Chrome sin cabeza por CDP contra el banco de pruebas local (`src/pruebas/semillaLocal.ts`, que ahora siembra fichas del Centro de consulta dentro de una transacción; sin ella, el doble montaje de StrictMode fallaba con "Key already exists"). Comprobado: 360, 390, 448, 768 y 1280 px sin desbordamiento horizontal; las cuatro pestañas filtran y caben a 360 px; filtro por categoría; aviso de coincidencias en otras pestañas; Volver y atrás reponen pestaña y búsqueda; ficha de herramienta con guía que abre y vuelve; crear una herramienta con estado y guía; capa global y buscador de Inicio; un borrador no sale en la búsqueda global; el Centro de consulta funciona sin red. Sigue siendo emulación, no dispositivo físico.
+
+**Queda fuera y por qué:** qué es "Software A.M." (tarea 237) y la vigencia de las herramientas documentadas (tarea 238) dependen de información del equipo. Riesgo conocido (AD-037): un teléfono con la versión anterior que reciba las herramientas muestra "No se pudo cargar la aplicación" y se recupera tocando "Reinstalar la aplicación".
+
 ## Depuración del 2026-09-04: once tareas que ya estaban cerradas y seguían en el tablero
 
 Ninguna de estas se implementó en esta fecha. Se trasladaron desde TAREAS.md, donde ocupaban sitio en "Por hacer" o en "En proceso" pese a estar terminadas, absorbidas o cubiertas por otras. La única con trabajo real hecho hoy es la **178**.

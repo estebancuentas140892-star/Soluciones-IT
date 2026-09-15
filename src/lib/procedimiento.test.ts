@@ -1161,6 +1161,21 @@ describe('bloques de referencia', () => {
     expect(resultado?.pasos[0].bloques[0].referenciaTipo).toBeNull()
   })
 
+  it('conserva el tipo herramienta declarado en el bloque (2026-09-14)', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'x',
+          bloques: [
+            { id: 'b1', tipo: 'referencia', referenciaId: 'ref-1', referenciaTitulo: 'TightVNC', referenciaTipo: 'herramienta' },
+          ],
+        },
+      ],
+    })
+
+    expect(resultado?.pasos[0].bloques[0].referenciaTipo).toBe('herramienta')
+  })
+
   it('sobrevive al guardado, con el título recortado', () => {
     const paso = crearPaso()
     const bloque: BloquePaso = {

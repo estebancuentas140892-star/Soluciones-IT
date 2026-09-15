@@ -156,11 +156,14 @@ export function InicioPage() {
       conLupa={false}
       barra={
         <div className="px-4 pb-3 pt-2">
-          <CampoBusqueda
-            valor={query}
-            onCambiar={setQuery}
-            alcance="Guías, Equipos y Bóveda"
-          />
+          {/* "Buscar en Soluciones IT" y una frase de apoyo (2026-09-14):
+              el alcance anterior, "Guías, Equipos y Bóveda", callaba
+              todo lo demás que el índice ya encontraba (diagnósticos,
+              ubicaciones, personas y el Centro de consulta). */}
+          <CampoBusqueda valor={query} onCambiar={setQuery} alcance="Soluciones IT" />
+          <p className="mt-1.5 px-0.5 text-[12px] leading-snug text-noct-neutral-500">
+            Guías, equipos, herramientas, glosario y más
+          </p>
         </div>
       }
     >
@@ -174,8 +177,8 @@ export function InicioPage() {
               <div>
                 <p className="text-[14.5px] font-medium">Sin coincidencias</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                  Nada coincide con "{consultaCruda}" en las guías publicadas, los equipos ni la bóveda. Prueba
-                  otra palabra o revisa la ortografía.
+                  Nada coincide con "{consultaCruda}" en Soluciones IT. Prueba otra palabra o revisa la
+                  ortografía.
                 </p>
                 {/* La diferencia de alcance, dicha donde se nota
                     (H09/A16). Solo aparece cuando de verdad hay algo que

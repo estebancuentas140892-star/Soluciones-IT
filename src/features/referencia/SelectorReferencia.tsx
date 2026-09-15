@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Modal } from '../../components/Modal'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE, CLASE_ETIQUETA } from '../../components/campos'
-import { BookBookmark, Keyboard, MagnifyingGlass, Plus, TerminalWindow, X } from '../../components/iconos'
+import { MagnifyingGlass, Plus, X } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import type { Referencia, TipoReferencia } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { ICONO_POR_TIPO } from './iconosReferencia'
 import { coincide, INFO_TIPO, ordenarPorTitulo } from './referencias'
 
 // ELEGIR UNA REFERENCIA, O CREARLA SIN PERDER LO ESCRITO.
@@ -26,12 +27,6 @@ import { coincide, INFO_TIPO, ordenarPorTitulo } from './referencias'
 // campos en mitad de la escritura de un paso.
 
 const ID_TITULO = 'selector-referencia-titulo'
-
-const ICONO: Record<TipoReferencia, typeof BookBookmark> = {
-  termino: BookBookmark,
-  atajo: Keyboard,
-  comando: TerminalWindow,
-}
 
 interface Props {
   abierto: boolean
@@ -59,7 +54,7 @@ export function SelectorReferencia({ abierto, onCerrar, tipo, referencias, onEle
   }, [abierto])
 
   const info = INFO_TIPO[tipo]
-  const Icono = ICONO[tipo]
+  const Icono = ICONO_POR_TIPO[tipo]
 
   const candidatas = useMemo(
     () => ordenarPorTitulo(referencias.filter((r) => r.tipo === tipo)),
@@ -95,6 +90,11 @@ export function SelectorReferencia({ abierto, onCerrar, tipo, referencias, onEle
       advertencia: '',
       relacionadas: [],
       etiquetas: [],
+      proveedor: '',
+      usoEnMetroparques: '',
+      estadoUso: '',
+      notas: '',
+      guiasRelacionadas: [],
       updatedAt: '',
       updatedBy: null,
       eliminadoEn: null,
@@ -168,7 +168,7 @@ export function SelectorReferencia({ abierto, onCerrar, tipo, referencias, onEle
         {visibles.length === 0 && (
           <p className="px-1 py-6 text-center text-[13px] text-noct-neutral-500">
             {candidatas.length === 0
-              ? `Todavía no hay ${info.plural.toLowerCase()} en Referencia.`
+              ? `Todavía no hay ${info.plural.toLowerCase()} en el Centro de consulta.`
               : 'Ninguna coincidencia.'}
           </p>
         )}
@@ -208,8 +208,8 @@ export function SelectorReferencia({ abierto, onCerrar, tipo, referencias, onEle
             </button>
           </div>
           <p className="text-[12px] leading-[1.5] text-noct-neutral-500">
-            Se crea en Referencia con este nombre. La definición y el resto se completan luego en su ficha,
-            sin perder lo que llevas escrito aquí.
+            Se crea en el Centro de consulta con este nombre. La definición y el resto se completan luego en
+            su ficha, sin perder lo que llevas escrito aquí.
           </p>
         </div>
       </div>

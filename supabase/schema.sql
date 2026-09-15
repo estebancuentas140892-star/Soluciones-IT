@@ -589,13 +589,22 @@ create index if not exists idx_articulos_origen_sugerencia on public.articulos (
 alter table public.articulos add column if not exists aplica_a jsonb;
 
 -- ----------------------------------------------------------------
--- 1.z Modulo Referencia (2026-09-10): glosario, atajos y comandos.
+-- 1.z Modulo Referencia (2026-09-10): glosario, atajos y comandos. En la
+--     interfaz se llama "Centro de consulta" desde el 2026-09-14, cuando
+--     suma el tipo 'herramienta'; la tabla conserva su nombre.
 --
---     Una sola tabla para los tres tipos ('termino', 'atajo',
---     'comando'), porque comparten ciclo de vida, permisos,
---     sincronizacion y forma de vincularse a una tarea de una guia.
---     Separarlos en tres tablas habria triplicado el motor de
---     sincronizacion para tres variantes del mismo objeto.
+--     Una sola tabla para los cuatro tipos ('herramienta', 'termino',
+--     'atajo', 'comando'), porque comparten ciclo de vida, permisos,
+--     sincronizacion y forma de vincularse. Separarlos habria
+--     multiplicado el motor de sincronizacion para variantes del mismo
+--     objeto.
+--
+--     Una HERRAMIENTA explica que es un programa y para que sirve; el
+--     como hacerlo vive en las guias, que enlaza por id y copia del
+--     titulo en `guias_relacionadas` (mismo patron que
+--     articulos.relacionados). `estado_uso` separa lo confirmado
+--     ('confirmado') de lo que solo tiene evidencia historica
+--     ('documentado'), para no presentar un dato viejo como actual.
 --
 --     NO GUARDA SECRETOS. `valor` es el comando o la combinacion de
 --     teclas tal como se teclea, nunca una contrasena, un token ni una
@@ -623,7 +632,7 @@ alter table public.articulos add column if not exists aplica_a jsonb;
 
 create table if not exists public.referencias (
   id uuid primary key default gen_random_uuid(),
-  tipo text not null default 'termino' check (tipo in ('termino', 'atajo', 'comando')),
+  tipo text not null default 'termino' check (tipo in ('herramienta', 'termino', 'atajo', 'comando')),
   titulo text not null,
   abreviatura text not null default '',
   alias text[] not null default '{}',
@@ -638,6 +647,11 @@ create table if not exists public.referencias (
   advertencia text not null default '',
   relacionadas jsonb not null default '[]'::jsonb,
   etiquetas text[] not null default '{}',
+  proveedor text not null default '',
+  uso_metroparques text not null default '',
+  estado_uso text not null default '' check (estado_uso in ('', 'confirmado', 'documentado')),
+  notas text not null default '',
+  guias_relacionadas jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id),
   eliminado_en timestamptz
@@ -656,6 +670,24 @@ alter table public.referencias add column if not exists requiere_admin boolean n
 alter table public.referencias add column if not exists advertencia text not null default '';
 alter table public.referencias add column if not exists relacionadas jsonb not null default '[]'::jsonb;
 alter table public.referencias add column if not exists etiquetas text[] not null default '{}';
+
+-- Herramienta (2026-09-14). Columnas nuevas, todas con valor por defecto:
+-- las fichas que ya existen quedan validas sin tocarlas, y una version
+-- anterior de la app que no las envia sigue guardando igual.
+alter table public.referencias add column if not exists proveedor text not null default '';
+alter table public.referencias add column if not exists uso_metroparques text not null default '';
+alter table public.referencias add column if not exists estado_uso text not null default ''
+  check (estado_uso in ('', 'confirmado', 'documentado'));
+alter table public.referencias add column if not exists notas text not null default '';
+alter table public.referencias add column if not exists guias_relacionadas jsonb not null default '[]'::jsonb;
+
+-- El tipo 'herramienta' (2026-09-14). Postgres no edita un check: se
+-- borra y se vuelve a crear con los cuatro valores. Las filas existentes
+-- ya lo cumplen. Para revertir basta con recrearlo con los tres de antes
+-- (despues de retirar las herramientas) y borrar las cinco columnas.
+alter table public.referencias drop constraint if exists referencias_tipo_check;
+alter table public.referencias add constraint referencias_tipo_check
+  check (tipo in ('herramienta', 'termino', 'atajo', 'comando'));
 
 create index if not exists idx_referencias_updated on public.referencias (updated_at);
 create index if not exists idx_referencias_tipo on public.referencias (tipo);
@@ -1204,6 +1236,225 @@ from (values
 ) as datos(id, relacionadas)
 where public.referencias.id = datos.id
   and public.referencias.relacionadas = '[]'::jsonb;
+
+-- ----------------------------------------------------------------
+-- 5.2 Herramientas del Centro de consulta (2026-09-14)
+--
+--     Mismo contrato que 5.1: identificadores estables escritos a mano
+--     (`2026090e-0000-4000-8000-0000000000xx`) y `on conflict (id) do
+--     nothing`, asi que repetir el archivo no duplica nada ni pisa lo
+--     que el equipo edite despues.
+--
+--     SOLO LO CONFIRMADO. Cada ficha dice que es la herramienta y, cuando
+--     el equipo lo confirmo, como se usa en Metroparques. Lo que solo
+--     tiene evidencia historica va con estado_uso 'documentado', que la
+--     ficha presenta como "pendiente de confirmar" y nunca como uso
+--     actual. Ninguna ficha describe procedimientos internos, reglas ni
+--     configuraciones: el como hacerlo vive en las guias, que se enlazan,
+--     y los accesos viven en la boveda.
+--
+--     "Software A.M." no tiene ficha a proposito: se sabe que existio,
+--     pero no para que servia, y una ficha sin eso seria inventada.
+--
+--     Van tambien los tres terminos que las herramientas nombran como
+--     relacionados y todavia no existian (VNC, Acceso remoto y PQRSD) y
+--     el atajo Ctrl + Shift + Esc, el unico de los ejemplos de atajos que
+--     faltaba.
+-- ----------------------------------------------------------------
+
+insert into public.referencias
+  (id, tipo, titulo, abreviatura, alias, definicion, cuando_usar, uso_metroparques, estado_uso, proveedor, notas, categoria, etiquetas)
+values
+  ('2026090e-0000-4000-8000-000000000001', 'herramienta', 'TightVNC', '',
+   array['Tight VNC'],
+   'Herramienta de acceso remoto utilizada para controlar computadores a distancia.',
+   '',
+   'Es la herramienta principal utilizada por el equipo de TI para conectarse remotamente a POS y otros computadores compatibles.',
+   'confirmado', '', '', 'Acceso remoto', array['acceso remoto', 'pos']),
+
+  ('2026090e-0000-4000-8000-000000000002', 'herramienta', 'AnyDesk', '',
+   array['Any Desk'],
+   'Herramienta de acceso remoto entre computadores.',
+   '',
+   'Se utiliza como alternativa secundaria a TightVNC.',
+   'confirmado', '', '', 'Acceso remoto', array['acceso remoto']),
+
+  ('2026090e-0000-4000-8000-000000000003', 'herramienta', 'Zabbix', '',
+   array[]::text[],
+   'Plataforma de monitoreo de infraestructura tecnológica.',
+   'Permite supervisar disponibilidad, rendimiento y otros indicadores de servidores, equipos de red, servicios y dispositivos compatibles, y generar alertas ante problemas.',
+   'Confirmado internamente que el área utiliza Zabbix.',
+   'confirmado', '', '', 'Monitoreo', array['monitoreo']),
+
+  ('2026090e-0000-4000-8000-000000000004', 'herramienta', 'SICOF ERP', '',
+   array[]::text[],
+   'Sistema ERP administrativo y financiero.',
+   '',
+   'Se ha utilizado para procesos administrativos y financieros.',
+   'documentado', 'ADA', 'No confundir con ICG Manager ni con FrontRest, que pertenecen al entorno de los POS.',
+   'Administración', array['erp']),
+
+  ('2026090e-0000-4000-8000-000000000005', 'herramienta', 'ICG Manager', '',
+   array['ICG'],
+   'Aplicación utilizada para administrar diferentes configuraciones y registros relacionados con el entorno ICG/POS.',
+   '',
+   'Actualmente existen procedimientos documentados relacionados con clientes, trabajadores y taquilleros.',
+   'confirmado', '', 'No confundir con SICOF ERP, que es el sistema administrativo y financiero.',
+   'POS', array['pos', 'icg']),
+
+  ('2026090e-0000-4000-8000-000000000006', 'herramienta', 'FrontRest', '',
+   array['Front Rest'],
+   'Aplicación del ecosistema ICG utilizada en el entorno operativo de los POS.',
+   '',
+   'Se utiliza en procedimientos relacionados con taquilleros, terminales y configuración del POS.',
+   'confirmado', '', '', 'POS', array['pos', 'icg']),
+
+  ('2026090e-0000-4000-8000-000000000007', 'herramienta', 'HKA Factura', '',
+   array['HKA'],
+   'Plataforma utilizada en procesos relacionados con facturación electrónica y secuenciales.',
+   '',
+   'Forma parte del procedimiento documentado para resolución DIAN en el entorno POS.',
+   'documentado', '', 'No confundir con SICOF ERP.', 'Facturación electrónica', array['facturación electrónica', 'dian']),
+
+  ('2026090e-0000-4000-8000-000000000008', 'herramienta', 'DOCUMENT', '',
+   array[]::text[],
+   'Sistema de gestión documental.',
+   '',
+   'Utilizado históricamente por Metroparques para la gestión documental.',
+   'documentado', 'Coldetec', '', 'Gestión documental', array['gestión documental']),
+
+  ('2026090e-0000-4000-8000-000000000009', 'herramienta', 'WORKFLOW', '',
+   array[]::text[],
+   'Componente relacionado con flujos y recorrido de documentos dentro del ecosistema DOCUMENT.',
+   '', '',
+   'documentado', 'Coldetec / ecosistema DOCUMENT', '', 'Gestión documental', array['gestión documental']),
+
+  ('2026090e-0000-4000-8000-00000000000a', 'herramienta', 'SharePoint', '',
+   array['Share Point'],
+   'Plataforma de Microsoft utilizada para documentos, evidencias y colaboración.',
+   '', '',
+   '', 'Microsoft', 'No confundir con DOCUMENT.', 'Gestión documental y colaboración', array['documentos', 'colaboración']),
+
+  ('2026090e-0000-4000-8000-00000000000b', 'herramienta', 'SonicWall', '',
+   array[]::text[],
+   'Plataforma de firewall y seguridad perimetral.',
+   '',
+   'Existe evidencia de uso de SonicWall NSA 2700.',
+   'documentado', '', '', 'Redes y seguridad', array['firewall', 'seguridad']),
+
+  ('2026090e-0000-4000-8000-00000000000c', 'herramienta', 'Kaspersky', '',
+   array[]::text[],
+   'Solución de seguridad y antivirus para equipos/endpoints.',
+   '', '',
+   '', '', '', 'Seguridad', array['antivirus']),
+
+  ('2026090e-0000-4000-8000-00000000000d', 'herramienta', 'VMware ESXi', '',
+   array[]::text[],
+   'Plataforma de virtualización que permite ejecutar múltiples máquinas virtuales sobre infraestructura física.',
+   '',
+   'Existe evidencia histórica reciente de su uso. La versión y la configuración específicas no están confirmadas.',
+   'documentado', '', '', 'Servidores y virtualización', array['virtualización', 'servidores']),
+
+  ('2026090e-0000-4000-8000-00000000000e', 'herramienta', 'Issabel', '',
+   array[]::text[],
+   'Plataforma utilizada para telefonía IP/PBX.',
+   '',
+   'Existe evidencia histórica de su uso. No está confirmado que siga siendo la plataforma principal de telefonía.',
+   'documentado', '', '', 'Telefonía', array['telefonía', 'pbx']),
+
+  ('2026090e-0000-4000-8000-00000000000f', 'herramienta', 'Power BI', '',
+   array['PowerBI'],
+   'Herramienta para análisis de datos, indicadores y cuadros de mando.',
+   '',
+   'Se han documentado cuadros de mando financieros, de parques y logística.',
+   'documentado', 'Microsoft', '', 'Analítica', array['indicadores']),
+
+  ('2026090e-0000-4000-8000-000000000010', 'herramienta', 'SQL Server Management Studio', 'SSMS',
+   array[]::text[],
+   'Herramienta gráfica para administrar Microsoft SQL Server.',
+   '', '',
+   '', 'Microsoft', '', 'Bases de datos', array['sql server', 'bases de datos'])
+on conflict (id) do nothing;
+
+insert into public.referencias
+  (id, tipo, titulo, abreviatura, alias, definicion, ejemplo, categoria, etiquetas)
+values
+  ('2026090e-0000-4000-8000-000000000011', 'termino', 'VNC', '',
+   array['Virtual Network Computing'],
+   'Sistema para ver y controlar el escritorio de otro equipo a través de la red: en el equipo remoto funciona un servidor VNC y desde el propio se conecta un visor.',
+   'TightVNC es una herramienta basada en VNC.',
+   'Acceso remoto', array['acceso remoto']),
+
+  ('2026090e-0000-4000-8000-000000000012', 'termino', 'Acceso remoto', '',
+   array['conexión remota'],
+   'Conectarse a un equipo desde otro lugar, a través de la red, para verlo, usarlo o darle soporte sin estar delante de él.',
+   'TightVNC y AnyDesk son herramientas de acceso remoto.',
+   'Acceso remoto', array['acceso remoto']),
+
+  ('2026090e-0000-4000-8000-000000000013', 'termino', 'PQRSD', '',
+   array[]::text[],
+   'Sigla de peticiones, quejas, reclamos, sugerencias y denuncias: las solicitudes que la ciudadanía presenta a una entidad pública.',
+   '',
+   '', array[]::text[])
+on conflict (id) do nothing;
+
+insert into public.referencias
+  (id, tipo, titulo, valor, plataforma, cuando_usar, resultado_esperado, requiere_admin, advertencia, categoria, etiquetas)
+values
+  ('2026090e-0000-4000-8000-000000000014', 'atajo', 'Abrir el Administrador de tareas', 'Ctrl + Shift + Esc', 'Windows',
+   'Abre directamente el Administrador de tareas, sin pasar por la pantalla de Ctrl + Alt + Supr. Sirve para cerrar un programa que no responde o ver qué está consumiendo el equipo.',
+   'Se abre la ventana del Administrador de tareas con la lista de procesos.',
+   false, '', 'Windows', array['windows'])
+on conflict (id) do nothing;
+
+-- Relacionadas de las fichas nuevas, con el mismo criterio que 5.1: en un
+-- update aparte (apuntan a fichas del bloque) y solo donde todavia no
+-- hay ninguna, para no pisar lo que el equipo vincule a mano.
+update public.referencias set relacionadas = datos.relacionadas
+from (values
+  ('2026090e-0000-4000-8000-000000000001'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000011","titulo":"VNC"},{"id":"2026090a-0000-4000-8000-000000000009","titulo":"Dirección IP"},{"id":"2026090e-0000-4000-8000-000000000012","titulo":"Acceso remoto"},{"id":"2026090e-0000-4000-8000-000000000002","titulo":"AnyDesk"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000002'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000001","titulo":"TightVNC"},{"id":"2026090e-0000-4000-8000-000000000012","titulo":"Acceso remoto"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000004'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000005","titulo":"ICG Manager"},{"id":"2026090e-0000-4000-8000-000000000006","titulo":"FrontRest"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000005'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000006","titulo":"FrontRest"},{"id":"2026090e-0000-4000-8000-000000000004","titulo":"SICOF ERP"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000006'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000005","titulo":"ICG Manager"},{"id":"2026090e-0000-4000-8000-000000000007","titulo":"HKA Factura"},{"id":"2026090a-0000-4000-8000-000000000010","titulo":"POS"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000007'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000006","titulo":"FrontRest"},{"id":"2026090e-0000-4000-8000-000000000004","titulo":"SICOF ERP"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000008'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000009","titulo":"WORKFLOW"},{"id":"2026090e-0000-4000-8000-000000000013","titulo":"PQRSD"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000009'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000008","titulo":"DOCUMENT"}]'::jsonb),
+  ('2026090e-0000-4000-8000-00000000000a'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000008","titulo":"DOCUMENT"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000011'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000001","titulo":"TightVNC"},{"id":"2026090e-0000-4000-8000-000000000012","titulo":"Acceso remoto"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000012'::uuid, '[{"id":"2026090a-0000-4000-8000-00000000000e","titulo":"Escritorio remoto"},{"id":"2026090e-0000-4000-8000-000000000011","titulo":"VNC"},{"id":"2026090e-0000-4000-8000-000000000001","titulo":"TightVNC"},{"id":"2026090e-0000-4000-8000-000000000002","titulo":"AnyDesk"}]'::jsonb),
+  ('2026090e-0000-4000-8000-000000000013'::uuid, '[{"id":"2026090e-0000-4000-8000-000000000008","titulo":"DOCUMENT"}]'::jsonb)
+) as datos(id, relacionadas)
+where public.referencias.id = datos.id
+  and public.referencias.relacionadas = '[]'::jsonb;
+
+-- Guias relacionadas. Se buscan por su TITULO EXACTO y no por id: las
+-- guias las escribe el equipo y sus ids solo existen en cada base, asi
+-- que un id escrito aqui no serviria en otra. Una guia que todavia no
+-- exista simplemente no se enlaza, y la siguiente pasada del archivo lo
+-- vuelve a intentar; una vez enlazadas no se tocan, para no pisar lo que
+-- el equipo cambie a mano. Nunca se enlaza por palabras sueltas: cada
+-- pareja de esta lista es una relacion confirmada.
+update public.referencias as r
+set guias_relacionadas = guias.lista
+from (
+  select datos.id, jsonb_agg(jsonb_build_object('id', a.id, 'titulo', a.titulo) order by datos.orden) as lista
+  from (values
+    ('2026090e-0000-4000-8000-000000000001'::uuid, 1, 'Conectar de forma remota a un POS desde un computador'),
+    ('2026090e-0000-4000-8000-000000000005'::uuid, 1, 'Acceder a ICG Manager mediante Escritorio remoto'),
+    ('2026090e-0000-4000-8000-000000000005'::uuid, 2, 'Crear un cliente externo en ICG Manager'),
+    ('2026090e-0000-4000-8000-000000000005'::uuid, 3, 'Crear un trabajador para almuerzo en ICG Manager'),
+    ('2026090e-0000-4000-8000-000000000005'::uuid, 4, 'Crear un usuario de taquillero en ICG Manager'),
+    ('2026090e-0000-4000-8000-000000000006'::uuid, 1, 'Crear un usuario de taquillero en ICG Manager'),
+    ('2026090e-0000-4000-8000-000000000006'::uuid, 2, 'Actualizar la resolución DIAN para facturación electrónica en un POS'),
+    ('2026090e-0000-4000-8000-000000000007'::uuid, 1, 'Actualizar la resolución DIAN para facturación electrónica en un POS'),
+    ('2026090e-0000-4000-8000-000000000010'::uuid, 1, 'Crear copia de seguridad de una base de datos en SQL Server')
+  ) as datos(id, orden, titulo)
+  join public.articulos a on a.titulo = datos.titulo and a.eliminado_en is null
+  group by datos.id
+) as guias
+where r.id = guias.id
+  and r.guias_relacionadas = '[]'::jsonb;
 
 -- ----------------------------------------------------------------
 -- 6. Tiempo real (Supabase Realtime)

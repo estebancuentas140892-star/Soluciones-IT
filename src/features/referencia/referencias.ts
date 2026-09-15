@@ -1,66 +1,148 @@
-import type { Articulo, BloquePaso, Procedimiento, Referencia, TipoReferencia } from '../../lib/db'
+import type {
+  Articulo,
+  ArticuloRelacionado,
+  BloquePaso,
+  EstadoArticulo,
+  EstadoUsoHerramienta,
+  Procedimiento,
+  Referencia,
+  TipoReferencia,
+} from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { valoresUnicos } from '../../lib/vocabulario'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 
-// LAS REGLAS DE REFERENCIA, FUERA DE LOS COMPONENTES.
+// LAS REGLAS DEL CENTRO DE CONSULTA, FUERA DE LOS COMPONENTES.
 //
-// Buscar, filtrar y ordenar el glosario y los atajos son decisiones del
-// producto, no de la presentacion: viven aqui para poder probarlas sin
-// navegador y para que la pantalla, el buscador global y el editor de
-// guias usen exactamente la misma definicion de "coincide".
+// Buscar, filtrar y ordenar las herramientas, el glosario, los atajos y
+// los comandos son decisiones del producto, no de la presentacion: viven
+// aqui para poder probarlas sin navegador y para que la pantalla, el
+// buscador global y el editor de guias usen exactamente la misma
+// definicion de "coincide".
+//
+// El modulo conserva por dentro el nombre "referencia" (tabla, ruta
+// `/referencia`, tipos): renombrarlo no aportaba nada y obligaba a migrar
+// datos y enlaces guardados. Lo que cambio (2026-09-14) es lo visible:
+// para el tecnico la seccion es el "Centro de consulta".
 
-export const TIPOS_REFERENCIA: TipoReferencia[] = ['termino', 'atajo', 'comando']
+// El orden es el de las pestañas: primero lo que un tecnico nuevo
+// pregunta antes ("¿que es Zabbix?"), despues el vocabulario y al final
+// lo que se teclea. Atajos y comandos van separados: una combinacion de
+// teclas y una orden escrita no son lo mismo.
+export const TIPOS_REFERENCIA: TipoReferencia[] = ['herramienta', 'termino', 'atajo', 'comando']
+
+/** Clave de la URL que dice que pestaña esta abierta. */
+export const PARAMETRO_PESTANA = 'tab'
 
 export interface InfoTipo {
   valor: TipoReferencia
   /** Como se nombra una entrada de este tipo, en singular. */
   etiqueta: string
   plural: string
+  /** Rotulo de su pestaña en el Centro de consulta. */
+  pestana: string
+  /** Titulo del editor al crear una ("Nueva herramienta"). */
+  nueva: string
   /** Una linea que dice que es, para los selectores. */
   descripcion: string
+  /** Valor de `?tab=` que abre su pestaña. */
+  parametro: string
+  /**
+   * Por que eje se acota su lista: una herramienta o un termino por su
+   * categoria, un atajo o un comando por el programa donde funciona.
+   */
+  eje: 'categoria' | 'plataforma'
 }
 
 export const INFO_TIPO: Record<TipoReferencia, InfoTipo> = {
+  herramienta: {
+    valor: 'herramienta',
+    etiqueta: 'Herramienta',
+    plural: 'Herramientas',
+    pestana: 'Herramientas',
+    nueva: 'Nueva herramienta',
+    descripcion: 'Un programa, sistema o plataforma que usa el equipo',
+    parametro: 'herramientas',
+    eje: 'categoria',
+  },
   termino: {
     valor: 'termino',
     etiqueta: 'Término',
     plural: 'Términos',
-    descripcion: 'Una palabra del vocabulario del equipo',
+    pestana: 'Glosario',
+    nueva: 'Nuevo término',
+    descripcion: 'Un concepto técnico del vocabulario del equipo',
+    parametro: 'glosario',
+    eje: 'categoria',
   },
   atajo: {
     valor: 'atajo',
     etiqueta: 'Atajo',
     plural: 'Atajos',
+    pestana: 'Atajos',
+    nueva: 'Nuevo atajo',
     descripcion: 'Una combinación de teclas',
+    parametro: 'atajos',
+    eje: 'plataforma',
   },
   comando: {
     valor: 'comando',
     etiqueta: 'Comando',
     plural: 'Comandos',
+    pestana: 'Comandos',
+    nueva: 'Nuevo comando',
     descripcion: 'Algo que se escribe en una consola o en Ejecutar',
+    parametro: 'comandos',
+    eje: 'plataforma',
   },
 }
 
+/**
+ * ¿Es un tipo que esta version conoce?
+ *
+ * Una fila con un tipo que no esta en la lista la escribio una version
+ * MAS NUEVA de la app. Se ignora en vez de romper la pantalla: es
+ * exactamente el fallo que tendria un telefono sin actualizar si
+ * `INFO_TIPO[tipo]` devolviera undefined en mitad de un render.
+ */
+export function esTipoConocido(tipo: unknown): tipo is TipoReferencia {
+  return typeof tipo === 'string' && (TIPOS_REFERENCIA as string[]).includes(tipo)
+}
+
 export function etiquetaTipo(tipo: TipoReferencia | null): string {
-  return tipo ? INFO_TIPO[tipo].etiqueta : 'Referencia'
+  return esTipoConocido(tipo) ? INFO_TIPO[tipo].etiqueta : 'Ficha'
 }
 
-/** ¿Esta entrada pertenece al glosario? */
-export function esTermino(referencia: Referencia): boolean {
-  return referencia.tipo === 'termino'
+/** El tipo que abre `?tab=`. Sin parametro, o con uno desconocido, Herramientas. */
+export function tipoDePestana(parametro: string | null): TipoReferencia {
+  return TIPOS_REFERENCIA.find((tipo) => INFO_TIPO[tipo].parametro === parametro) ?? 'herramienta'
 }
 
-/** ¿Esta entrada pertenece a "Atajos y comandos"? */
-export function esAtajoOComando(referencia: Referencia): boolean {
-  return referencia.tipo === 'atajo' || referencia.tipo === 'comando'
+/**
+ * La lista de un tipo dentro del Centro de consulta. Herramientas es la
+ * pestaña por defecto, asi que va sin parametro; un enlace viejo con
+ * `?tab=comandos` sigue abriendo Comandos.
+ */
+export function rutaDeCatalogo(tipo: TipoReferencia): string {
+  return tipo === 'herramienta'
+    ? '/referencia'
+    : `/referencia?${PARAMETRO_PESTANA}=${INFO_TIPO[tipo].parametro}`
 }
 
-// TODO LO QUE HACE ENCONTRABLE UNA ENTRADA. Es la lista del encargo:
-// titulo, abreviatura, alias, definicion, plataforma, valor del comando
-// o atajo y etiquetas. La misma cadena alimenta la busqueda de la
-// pantalla y el indice global, para que buscar dos veces lo mismo no de
-// dos resultados distintos.
+/** "SQL Server Management Studio (SSMS)": el nombre con su forma corta, si la tiene. */
+export function tituloConAbreviatura(referencia: Referencia): string {
+  return referencia.abreviatura ? `${referencia.titulo} (${referencia.abreviatura})` : referencia.titulo
+}
+
+// TODO LO QUE HACE ENCONTRABLE UNA ENTRADA: titulo, abreviatura, alias,
+// definicion, plataforma, valor del comando o atajo, cuando usarlo, el
+// resultado esperado, lo propio de una herramienta (proveedor, su uso en
+// Metroparques y sus notas) y las etiquetas. La misma cadena alimenta la
+// busqueda de la pantalla y el indice global, para que buscar dos veces
+// lo mismo no de dos resultados distintos.
+//
+// Las guias relacionadas NO entran: buscar el titulo de un borrador no
+// debe devolver la herramienta que lo enlaza.
 export function textoBuscable(referencia: Referencia): string {
   return [
     referencia.titulo,
@@ -71,6 +153,9 @@ export function textoBuscable(referencia: Referencia): string {
     referencia.valor,
     referencia.cuandoUsar,
     referencia.resultadoEsperado,
+    referencia.proveedor,
+    referencia.usoEnMetroparques,
+    referencia.notas,
     ...(referencia.etiquetas ?? []),
   ]
     .filter(Boolean)
@@ -102,51 +187,137 @@ export function plataformasDe(referencias: Referencia[]): string[] {
   return valoresUnicos(referencias.map((r) => r.plataforma))
 }
 
-export interface FiltrosGlosario {
+export interface FiltrosCatalogo {
+  /** La pestaña: solo se listan fichas de este tipo. */
+  tipo: TipoReferencia
   consulta: string
-  /** null = todas. */
+  /** null = todas. Solo acota los tipos cuyo eje es la categoría. */
   categoria: string | null
-}
-
-export function filtrarGlosario(referencias: Referencia[], filtros: FiltrosGlosario): Referencia[] {
-  return ordenarPorTitulo(
-    referencias.filter(
-      (r) =>
-        esTermino(r) &&
-        (filtros.categoria === null || r.categoria === filtros.categoria) &&
-        coincide(r, filtros.consulta),
-    ),
-  )
-}
-
-export interface FiltrosComandos {
-  consulta: string
-  /** null = atajos y comandos juntos. */
-  tipo: TipoReferencia | null
-  /** null = todas las plataformas. */
+  /** null = todas. Solo acota los tipos cuyo eje es la plataforma. */
   plataforma: string | null
 }
 
-export function filtrarComandos(referencias: Referencia[], filtros: FiltrosComandos): Referencia[] {
+/**
+ * La lista de una pestaña. Un filtro del otro eje se ignora en vez de
+ * vaciar la lista: una plataforma no significa nada en Herramientas, y
+ * dejarla aplicada e invisible haría que la pestaña pareciera vacía.
+ */
+export function filtrarCatalogo(referencias: Referencia[], filtros: FiltrosCatalogo): Referencia[] {
+  const eje = INFO_TIPO[filtros.tipo].eje
   return ordenarPorTitulo(
     referencias.filter(
       (r) =>
-        esAtajoOComando(r) &&
-        (filtros.tipo === null || r.tipo === filtros.tipo) &&
-        (filtros.plataforma === null || r.plataforma === filtros.plataforma) &&
+        r.tipo === filtros.tipo &&
+        (eje !== 'categoria' || filtros.categoria === null || r.categoria === filtros.categoria) &&
+        (eje !== 'plataforma' || filtros.plataforma === null || r.plataforma === filtros.plataforma) &&
         coincide(r, filtros.consulta),
     ),
   )
 }
 
 /**
- * Lo que se lee bajo el título en la lista: la definición para un
- * término, el valor tecleado para un atajo o un comando. Vacío cuando
- * no hay nada que decir, para no dibujar una línea en blanco.
+ * Cuántas fichas de cada tipo coinciden con la búsqueda, sin filtros de
+ * eje. Alimenta el estado vacío: quien busca "zabbix" en el Glosario
+ * tiene que enterarse de que está en Herramientas.
+ */
+export function coincidenciasPorTipo(
+  referencias: Referencia[],
+  consulta: string,
+): Record<TipoReferencia, number> {
+  const cuentas: Record<TipoReferencia, number> = { herramienta: 0, termino: 0, atajo: 0, comando: 0 }
+  for (const referencia of referencias) {
+    if (referencia.eliminadoEn || !esTipoConocido(referencia.tipo)) continue
+    if (coincide(referencia, consulta)) cuentas[referencia.tipo] += 1
+  }
+  return cuentas
+}
+
+/**
+ * Lo que se lee bajo el título en la lista. Una herramienta y un término
+ * se resumen con su descripción; un atajo y un comando, con cuándo
+ * sirven, porque la combinación o el comando ya se pintan aparte en
+ * monoespaciado. Vacío cuando no hay nada que decir, para no dibujar una
+ * línea en blanco.
  */
 export function resumenDeLista(referencia: Referencia): string {
-  if (esTermino(referencia)) return referencia.definicion.trim()
-  return referencia.valor.trim() || referencia.definicion.trim()
+  if (referencia.tipo === 'atajo' || referencia.tipo === 'comando') {
+    return referencia.cuandoUsar.trim() || referencia.definicion.trim()
+  }
+  return referencia.definicion.trim()
+}
+
+// ----------------------------------------------------------------
+// Uso de una herramienta en Metroparques
+// ----------------------------------------------------------------
+
+/**
+ * Cómo se dice lo que se sabe del uso. Las palabras son deliberadas: lo
+ * documentado nunca se presenta como vigente, y sin estado no se afirma
+ * nada (por eso no hay texto para '').
+ */
+export const TEXTO_ESTADO_USO: Record<Exclude<EstadoUsoHerramienta, ''>, string> = {
+  confirmado: 'Uso actual confirmado en Metroparques.',
+  documentado: 'Uso documentado en Metroparques; estado actual pendiente de confirmar.',
+}
+
+export const OPCIONES_ESTADO_USO: { valor: EstadoUsoHerramienta; etiqueta: string; descripcion: string }[] = [
+  { valor: '', etiqueta: 'Sin indicar', descripcion: 'La ficha no dice si se usa hoy' },
+  { valor: 'confirmado', etiqueta: 'Confirmado', descripcion: 'El equipo confirmó que se usa actualmente' },
+  {
+    valor: 'documentado',
+    etiqueta: 'Documentado, por confirmar',
+    descripcion: 'Hay evidencia de uso, pero no se sabe si sigue vigente',
+  },
+]
+
+// ----------------------------------------------------------------
+// Guías relacionadas de una ficha
+// ----------------------------------------------------------------
+
+export interface GuiaDeFicha {
+  id: string
+  /** El título vivo si la guía está en este dispositivo; la copia guardada si no. */
+  titulo: string
+  /** Ruta de la guía, o null si no está disponible aquí. */
+  ruta: string | null
+  /** Estado de la guía viva; null si no está. */
+  estado: EstadoArticulo | null
+}
+
+/**
+ * Las guías relacionadas de una ficha, resueltas contra las guías vivas
+ * (regla de referencia viva, src/lib/referencia.ts).
+ *
+ * Una guía eliminada o que todavía no llegó se conserva con su copia del
+ * título y sin ruta: la ficha dice que no está, no la esconde. Un
+ * BORRADOR se lista con su estado, porque enlazar el procedimiento que
+ * se está escribiendo es útil para el equipo; lo que no hace es aparecer
+ * en el buscador global como procedimiento oficial, y eso lo decide el
+ * índice, no la ficha. Sin repetir, en el orden del autor.
+ */
+export function resolverGuiasRelacionadas(
+  guias: ArticuloRelacionado[] | undefined,
+  articulos: Articulo[],
+): GuiaDeFicha[] {
+  const vivas = new Map(articulos.filter((a) => !a.eliminadoEn).map((a) => [a.id, a]))
+  const vistas = new Set<string>()
+  const resultado: GuiaDeFicha[] = []
+  for (const guia of guias ?? []) {
+    if (!guia?.id || vistas.has(guia.id)) continue
+    vistas.add(guia.id)
+    const viva = vivas.get(guia.id)
+    resultado.push(
+      viva
+        ? {
+            id: viva.id,
+            titulo: viva.titulo,
+            ruta: `/soluciones/${viva.categoriaId}/${viva.id}`,
+            estado: viva.estado ?? 'publicado',
+          }
+        : { id: guia.id, titulo: guia.titulo || 'Guía', ruta: null, estado: null },
+    )
+  }
+  return resultado
 }
 
 // ----------------------------------------------------------------
@@ -284,5 +455,5 @@ export function tipoEfectivo(
 
 /** El titulo que se muestra: el vivo si la fila esta, la copia si no. */
 export function tituloEfectivo(vinculo: VinculoReferencia, referencias: Map<string, Referencia>): string {
-  return referencias.get(vinculo.id)?.titulo || vinculo.titulo || 'Referencia'
+  return referencias.get(vinculo.id)?.titulo || vinculo.titulo || 'Ficha'
 }

@@ -1037,15 +1037,29 @@ export interface Favorito {
 // Referencia: glosario, atajos y comandos
 // ----------------------------------------------------------------
 
-// Que clase de entrada es. Los tres comparten tabla porque comparten
-// ciclo de vida, permisos, sincronizacion y forma de vincularse a una
-// tarea; separarlos en tres tablas habria triplicado el motor de
-// sincronizacion para tres variantes del mismo objeto.
+// Que clase de entrada es. Los cuatro comparten tabla porque comparten
+// ciclo de vida, permisos, sincronizacion y forma de vincularse;
+// separarlos en cuatro tablas habria multiplicado el motor de
+// sincronizacion para variantes del mismo objeto. En la interfaz el
+// modulo se llama "Centro de consulta" (2026-09-14); la tabla, la ruta
+// y los tipos conservan el nombre "referencia" para no migrar nada.
 //
-// - 'termino': una palabra del vocabulario del equipo (Byte, DNS, POS).
+// - 'herramienta': un programa, sistema o plataforma que usa el equipo
+//   (Zabbix, TightVNC, SICOF ERP). Explica QUE ES y para que sirve; el
+//   COMO HACERLO vive en las guias, que la ficha enlaza.
+// - 'termino': un concepto tecnico del vocabulario del equipo (Byte, DNS).
 // - 'atajo': una combinacion de teclas (Windows + R).
 // - 'comando': algo que se escribe en una consola o en Ejecutar (ping).
-export type TipoReferencia = 'termino' | 'atajo' | 'comando'
+export type TipoReferencia = 'herramienta' | 'termino' | 'atajo' | 'comando'
+
+// Que se sabe del uso de una herramienta en Metroparques (2026-09-14).
+// Existe para no convertir un dato historico en un hecho actual:
+//
+// - 'confirmado': el equipo confirmo que hoy se usa.
+// - 'documentado': hay evidencia (documentos, guias, historia), pero no
+//   se sabe si sigue vigente. La ficha lo dice con esas palabras.
+// - '': nadie lo ha indicado, y la ficha no afirma nada.
+export type EstadoUsoHerramienta = '' | 'confirmado' | 'documentado'
 
 // Vinculo entre dos entradas de Referencia ("terminos relacionados"),
 // con el mismo patron de copia de referencia que
@@ -1058,7 +1072,7 @@ export interface ReferenciaRelacionada {
 
 // UNA ENTRADA DE REFERENCIA.
 //
-// Una sola entidad para los tres tipos, con los campos que no aplican
+// Una sola entidad para los cuatro tipos, con los campos que no aplican
 // en su valor vacio (un termino no tiene `valor` ni `plataforma`; un
 // comando no tiene `abreviatura`). Es el mismo criterio que ya usa
 // `Articulo`, que guarda sintomas y causas aunque solo tengan sentido
@@ -1100,6 +1114,22 @@ export interface Referencia {
   advertencia: string
   relacionadas: ReferenciaRelacionada[]
   etiquetas: string[]
+  // SOLO HERRAMIENTA (2026-09-14); vacios en los otros tres tipos. Una
+  // herramienta reutiliza `definicion` como su descripcion breve y
+  // `cuandoUsar` como su "para que sirve", igual que un comando ya
+  // reutiliza `definicion` como notas.
+  //
+  // Proveedor o fabricante, solo cuando se conoce ("ADA", "Microsoft").
+  proveedor: string
+  // Como se usa dentro de Metroparques. Solo lo confirmado.
+  usoEnMetroparques: string
+  estadoUso: EstadoUsoHerramienta
+  // Aclaraciones cortas ("No confundir con SICOF ERP").
+  notas: string
+  // Las guias que explican COMO hacer algo con esta herramienta. Mismo
+  // patron de copia de referencia que `ArticuloRelacionado`: id real mas
+  // copia del titulo, para nombrarla aunque la guia aun no haya llegado.
+  guiasRelacionadas: ArticuloRelacionado[]
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -1327,6 +1357,24 @@ class SolucionesItDatabase extends Dexie {
     // exigira otra version.
     this.version(17).stores({
       referencias: 'id, tipo, categoria, plataforma, updatedAt',
+    })
+
+    // Version 18 (2026-09-14, Centro de consulta): NO cambia el esquema,
+    // solo completa las referencias ya guardadas con los campos nuevos
+    // de la herramienta (proveedor, usoEnMetroparques, estadoUso, notas
+    // y guiasRelacionadas). Mismo mecanismo y mismo motivo que la
+    // version 14: agregar columnas en el servidor no cambia el
+    // `updated_at` de las filas, asi que las 22 fichas que ya viven en
+    // cada telefono no se vuelven a bajar y se quedarian sin esos campos
+    // para siempre. Solo rellena huecos, no encola cambios y termina
+    // antes de que ninguna pantalla lea la base.
+    this.version(18).upgrade(async (tx) => {
+      await tx
+        .table('referencias')
+        .toCollection()
+        .modify((fila: Record<string, unknown>) => {
+          normalizarEntidad('referencias', fila)
+        })
     })
   }
 }

@@ -68,7 +68,7 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Buscar en todo"
+      aria-label="Buscar en Soluciones IT"
       className="nocturne fixed inset-0 z-[60] flex flex-col bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text"
     >
       <div className="flex items-center gap-2 border-b border-noct-divider px-3 py-2.5">
@@ -79,7 +79,7 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
         <CampoBusqueda
           valor={query}
           onCambiar={setQuery}
-          alcance="todo"
+          alcance="Soluciones IT"
           refCampo={campo}
           className="min-w-0 flex-1"
         />
@@ -96,12 +96,19 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-4">
         {!buscando ? (
           // Alcance declarado: es lo que distingue a este buscador de los
-          // de seccion, que tienen la misma forma y otro limite.
-          <p className="px-0.5 text-[13px] leading-relaxed text-noct-neutral-400">
-            Busca en todo a la vez: Guías, Equipos, Bóveda, Ubicaciones, Personas y Referencia
-            (glosario, atajos y comandos). Tolera errores de escritura y entiende sinónimos ("backup"
-            encuentra "copia de seguridad").
-          </p>
+          // de seccion, que tienen la misma forma y otro limite. Se dice
+          // en una frase corta (2026-09-14) en vez de enumerar los diez
+          // tipos que indexa: la lista larga daba a entender que solo
+          // buscaba en los primeros que nombraba.
+          <div className="flex flex-col gap-1 px-0.5">
+            <p className="text-[14.5px] font-medium leading-snug">Buscar en Soluciones IT</p>
+            <p className="text-[13px] leading-relaxed text-noct-neutral-400">
+              Guías, equipos, herramientas, glosario y más.
+            </p>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-noct-neutral-500">
+              Tolera errores de escritura y entiende sinónimos: "backup" encuentra "copia de seguridad".
+            </p>
+          </div>
         ) : grupos.length > 0 ? (
           <ResultadosBusqueda grupos={grupos} consulta={consulta} onNavegar={onCerrar} />
         ) : (

@@ -43,7 +43,7 @@ export function TarjetaComando({
         <WarningCircle size={16} className="mt-px shrink-0 text-noct-neutral-500" aria-hidden />
         <p className="min-w-0 text-[13px] leading-normal text-noct-neutral-400">
           <span className="font-medium text-noct-neutral-300">
-            {tituloRespaldo || 'Esta referencia'}
+            {tituloRespaldo || 'Esta ficha'}
           </span>{' '}
           no está disponible en este dispositivo. Puede haberse eliminado o no haber llegado todavía.
         </p>

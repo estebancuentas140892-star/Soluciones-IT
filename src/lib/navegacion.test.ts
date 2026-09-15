@@ -114,6 +114,23 @@ describe('padreDe', () => {
     })
   })
 
+  describe('Centro de consulta (ruta /referencia, se alcanza desde "Más")', () => {
+    it('la lista sube a Más', () => {
+      expect(padreDe('/referencia')).toEqual({ to: '/mas', etiqueta: 'Más' })
+    })
+
+    it('nueva y la ficha vuelven a la lista, nombrada como la ve el técnico', () => {
+      const lista = { to: '/referencia', etiqueta: 'Centro de consulta' }
+      expect(padreDe('/referencia/nueva')).toEqual(lista)
+      expect(padreDe('/referencia/ref-1')).toEqual(lista)
+      expect(vueltaDeTarea('/referencia/nueva')).toBe('Centro de consulta')
+    })
+
+    it('editar vuelve a la ficha', () => {
+      expect(padreDe('/referencia/ref-1/editar')).toEqual({ to: '/referencia/ref-1', etiqueta: 'Volver' })
+    })
+  })
+
   describe('Bóveda', () => {
     it('nueva y la ficha vuelven a la lista', () => {
       const lista = { to: '/boveda', etiqueta: 'Bóveda' }

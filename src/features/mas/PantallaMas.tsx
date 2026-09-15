@@ -103,14 +103,15 @@ export function PantallaMas() {
                 subtitulo="Del síntoma a la guía, paso a paso"
                 conteo={diagnosticos ?? null}
               />
-              {/* Referencia: se consulta con el equipo delante, en
-                  mitad de una guía o de una llamada, así que vive en
-                  este grupo y no en el de escritorio. */}
+              {/* Centro de consulta (antes "Referencia"): responde "¿qué
+                  es esto?" con el equipo delante, en mitad de una guía o
+                  de una llamada, así que vive en este grupo de trabajo
+                  técnico y no en el de escritorio. */}
               <Fila
                 to="/referencia"
                 Icono={BookBookmark}
-                titulo="Referencia"
-                subtitulo="Glosario, atajos y comandos"
+                titulo="Centro de consulta"
+                subtitulo="Herramientas, glosario, atajos y comandos"
                 conteo={referencias ?? null}
               />
               <Fila

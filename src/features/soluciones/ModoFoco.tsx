@@ -390,7 +390,11 @@ export function ModoFoco({
       referenciasVivas,
     ),
   }))
-  const terminos = referenciasDeLaTarea.filter((r) => r.tipo === 'termino').map((r) => r.bloque)
+  // Una HERRAMIENTA también se consulta (qué es, para qué sirve), así
+  // que va como etiqueta igual que un término si alguien la enlaza.
+  const terminos = referenciasDeLaTarea
+    .filter((r) => r.tipo === 'termino' || r.tipo === 'herramienta')
+    .map((r) => r.bloque)
   // Un atajo o un comando SE USA en el momento, no se consulta: va
   // entero y a la vista, no detrás de una etiqueta que haya que abrir
   // con el teclado en una mano y el equipo en la otra.

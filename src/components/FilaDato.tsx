@@ -93,16 +93,23 @@ export function FilaDato({ etiqueta, valor, tecnico = false, children, copiable 
 }
 
 // Copiar con confirmación breve. El objetivo mide 44 px de alto en las
-// dos variantes (M-R14): la del dato técnico además lleva fondo propio,
+// tres variantes (M-R14): la del dato técnico además lleva fondo propio,
 // porque ahí copiar es la acción que se viene a hacer.
-function BotonCopiar({
+//
+// Exportado (2026-09-14) para las tarjetas de atajos y comandos del
+// Centro de consulta, que copian la combinación o el comando sin abrir
+// la ficha. `conTexto` escribe "Copiar" junto al icono: en una lista de
+// tarjetas un icono suelto no dice qué hace.
+export function BotonCopiar({
   etiqueta,
   texto,
   destacado = false,
+  conTexto = false,
 }: {
   etiqueta: string
   texto: string
   destacado?: boolean
+  conTexto?: boolean
 }) {
   const [copiado, setCopiado] = useState(false)
 
@@ -113,22 +120,26 @@ function BotonCopiar({
     }
   }
 
+  const clase = conTexto
+    ? 'gap-1.5 bg-noct-text/[.07] px-2.5 text-[12.5px] font-medium text-noct-neutral-200 hover:bg-noct-text/[.13]'
+    : destacado
+      ? 'w-11 bg-noct-text/[.06] text-noct-neutral-300 hover:bg-noct-text/[.11]'
+      : 'w-9 text-noct-neutral-400 hover:bg-noct-text/[.05]'
+  const tamano = destacado || conTexto ? 17 : 16
+
   return (
     <button
       type="button"
       onClick={() => void copiar()}
       aria-label={copiado ? 'Copiado' : `Copiar ${etiqueta.toLowerCase()}`}
-      className={`flex h-11 shrink-0 items-center justify-center rounded-lg ${
-        destacado
-          ? 'w-11 bg-noct-text/[.06] text-noct-neutral-300 hover:bg-noct-text/[.11]'
-          : 'w-9 text-noct-neutral-400 hover:bg-noct-text/[.05]'
-      }`}
+      className={`flex h-11 shrink-0 items-center justify-center rounded-lg ${clase}`}
     >
       {copiado ? (
-        <Check size={destacado ? 17 : 16} className="text-noct-exito" aria-hidden />
+        <Check size={tamano} className="text-noct-exito" aria-hidden />
       ) : (
-        <Copy size={destacado ? 17 : 16} aria-hidden />
+        <Copy size={tamano} aria-hidden />
       )}
+      {conTexto && (copiado ? 'Copiado' : 'Copiar')}
     </button>
   )
 }

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import { BookBookmark } from '../../components/iconos'
 import type { Referencia } from '../../lib/db'
 import { HojaReferencia } from './HojaReferencia'
+import { iconoDeReferencia } from './iconosReferencia'
 
 // LA ETIQUETA DISCRETA DE UN TERMINO DENTRO DE UNA TAREA.
 //
@@ -37,7 +37,11 @@ export function ChipReferencia({
 
   const referencia = referencias.get(referenciaId)
   const disponible = referencia !== undefined
-  const titulo = referencia?.titulo || tituloRespaldo || 'Referencia'
+  const titulo = referencia?.titulo || tituloRespaldo || 'Ficha'
+  // El chip lleva el glifo de lo que abre: una herramienta enlazada a una
+  // tarea no se dibuja con el libro del glosario.
+  const Icono = iconoDeReferencia(referencia?.tipo)
+  const pregunta = referencia?.tipo === 'herramienta' ? 'Ver qué es' : 'Ver qué significa'
 
   function cerrar() {
     setAbierta(false)
@@ -53,8 +57,8 @@ export function ChipReferencia({
         aria-haspopup="dialog"
         aria-label={
           disponible
-            ? `Ver qué significa ${titulo}`
-            : `${titulo}: esta referencia no está disponible en este dispositivo`
+            ? `${pregunta} ${titulo}`
+            : `${titulo}: esta ficha no está disponible en este dispositivo`
         }
         className={`inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium ${
           disponible
@@ -62,7 +66,7 @@ export function ChipReferencia({
             : 'border-dashed border-noct-neutral-700 text-noct-neutral-500'
         }`}
       >
-        <BookBookmark size={13} className="shrink-0 text-noct-accent-300" aria-hidden />
+        <Icono size={13} className="shrink-0 text-noct-accent-300" aria-hidden />
         <span className="min-w-0 truncate">{titulo}</span>
         {!disponible && <span className="shrink-0 text-[11px]">no disponible</span>}
       </button>

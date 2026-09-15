@@ -1,5 +1,12 @@
 import type { Session } from '@supabase/supabase-js'
-import { db, type Articulo, type BloquePaso, type Categoria, type PasoProcedimiento } from '../lib/db'
+import {
+  db,
+  type Articulo,
+  type BloquePaso,
+  type Categoria,
+  type PasoProcedimiento,
+  type Referencia,
+} from '../lib/db'
 
 /** Identidad ficticia del banco de pruebas. */
 export const PERFIL_PRUEBA = {
@@ -574,6 +581,124 @@ const ARTICULOS: Articulo[] = [
   ...RELLENO,
 ]
 
+function ficha(parcial: Partial<Referencia> & Pick<Referencia, 'id' | 'tipo' | 'titulo'>): Referencia {
+  return {
+    abreviatura: '',
+    alias: [],
+    definicion: '',
+    ejemplo: '',
+    categoria: '',
+    plataforma: '',
+    valor: '',
+    cuandoUsar: '',
+    resultadoEsperado: '',
+    requiereAdmin: false,
+    advertencia: '',
+    relacionadas: [],
+    etiquetas: [],
+    proveedor: '',
+    usoEnMetroparques: '',
+    estadoUso: '',
+    notas: '',
+    guiasRelacionadas: [],
+    updatedAt: AHORA,
+    updatedBy: PERFIL_PRUEBA.id,
+    eliminadoEn: null,
+    ...parcial,
+  }
+}
+
+// CENTRO DE CONSULTA (2026-09-14). Reproduce la FORMA del contenido que
+// siembra supabase/schema.sql (seccion 5.2) para poder mirar las cuatro
+// pestañas sin servidor: una herramienta con uso confirmado y una guia
+// publicada, otra que no llego a este telefono, una con uso solo
+// documentado, una con abreviatura y una guia en borrador, mas un
+// termino, un atajo y un comando. Solo descripciones publicas de cada
+// producto: ni un dato interno.
+const REFERENCIAS: Referencia[] = [
+  ficha({
+    id: 'ref-tightvnc',
+    tipo: 'herramienta',
+    titulo: 'TightVNC',
+    alias: ['Tight VNC'],
+    categoria: 'Acceso remoto',
+    definicion: 'Herramienta de acceso remoto utilizada para controlar computadores a distancia.',
+    usoEnMetroparques: 'Herramienta de ejemplo para conectarse a un equipo de prueba.',
+    estadoUso: 'confirmado',
+    relacionadas: [
+      { id: 'ref-vnc', titulo: 'VNC' },
+      { id: 'ref-dhcp', titulo: 'DHCP' },
+    ],
+    guiasRelacionadas: [
+      { id: 'art-alta-usuario', titulo: 'Dar de alta un usuario de ejemplo' },
+      { id: 'art-que-no-llego', titulo: 'Guia de ejemplo que no llego a este telefono' },
+    ],
+  }),
+  ficha({
+    id: 'ref-esxi',
+    tipo: 'herramienta',
+    titulo: 'VMware ESXi',
+    categoria: 'Servidores y virtualización',
+    definicion:
+      'Plataforma de virtualización que permite ejecutar múltiples máquinas virtuales sobre infraestructura física.',
+    usoEnMetroparques: 'Uso de ejemplo con evidencia histórica.',
+    estadoUso: 'documentado',
+  }),
+  ficha({
+    id: 'ref-ssms',
+    tipo: 'herramienta',
+    titulo: 'SQL Server Management Studio',
+    abreviatura: 'SSMS',
+    categoria: 'Bases de datos',
+    proveedor: 'Microsoft',
+    definicion: 'Herramienta gráfica para administrar Microsoft SQL Server.',
+    guiasRelacionadas: [{ id: GUIA_TITULO_LARGO_BORRADOR.id, titulo: GUIA_TITULO_LARGO_BORRADOR.titulo }],
+  }),
+  ficha({
+    id: 'ref-sicof',
+    tipo: 'herramienta',
+    titulo: 'SICOF ERP',
+    categoria: 'Administración',
+    proveedor: 'ADA',
+    definicion: 'Sistema ERP administrativo y financiero.',
+    notas: 'No confundir con las aplicaciones de ejemplo del POS.',
+    estadoUso: 'documentado',
+  }),
+  ficha({
+    id: 'ref-vnc',
+    tipo: 'termino',
+    titulo: 'VNC',
+    categoria: 'Acceso remoto',
+    definicion: 'Sistema para ver y controlar el escritorio de otro equipo a través de la red.',
+  }),
+  ficha({
+    id: 'ref-dhcp',
+    tipo: 'termino',
+    titulo: 'DHCP',
+    categoria: 'Redes',
+    definicion: 'El servicio que reparte direcciones IP automáticamente a los equipos que se conectan.',
+  }),
+  ficha({
+    id: 'ref-ejecutar',
+    tipo: 'atajo',
+    titulo: 'Abrir la ventana Ejecutar',
+    valor: 'Windows + R',
+    plataforma: 'Windows',
+    categoria: 'Windows',
+    cuandoUsar: 'Abre la ventana Ejecutar, donde se escriben comandos cortos sin abrir una consola.',
+  }),
+  ficha({
+    id: 'ref-ping',
+    tipo: 'comando',
+    titulo: 'Comprobar si un equipo responde',
+    valor: 'ping [dirección]',
+    plataforma: 'Windows, macOS y Linux',
+    categoria: 'Redes',
+    cuandoUsar: 'Para comprobar si hay camino de red hasta un equipo.',
+    resultadoEsperado: 'Aparecen líneas de respuesta con el tiempo en milisegundos.',
+  }),
+]
+
 /**
  * Deja la base local con el banco de pruebas. Idempotente: reescribe
  * siempre las mismas filas, asi que recargar no duplica nada.
@@ -588,11 +713,26 @@ export async function sembrarBancoDePruebas({ conProgreso = true } = {}): Promis
   // banco se rescribia en cada carga y se llevaba por delante lo que se
   // acabara de editar desde el propio editor, que es justo lo que hay
   // que poder probar (reordenar una tarea, asignar un apoyo, guardar).
-  const existentes = new Set(
-    (await db.articulos.bulkGet(ARTICULOS.map((a) => a.id))).flatMap((a) => (a ? [a.id] : [])),
-  )
-  const faltantes = ARTICULOS.filter((a) => !existentes.has(a.id))
-  if (faltantes.length > 0) await db.articulos.bulkAdd(faltantes)
+  //
+  // Dentro de UNA transaccion: en desarrollo StrictMode monta dos veces
+  // y siembra dos veces a la vez. Sin transaccion, las dos pasadas veian
+  // la tabla vacia y la segunda fallaba con "Key already exists" (asi
+  // aparecio al sembrar por primera vez las fichas del Centro de
+  // consulta); con ella, IndexedDB las ordena y la segunda ya las ve.
+  await db.transaction('rw', db.articulos, db.referencias, async () => {
+    const existentes = new Set(
+      (await db.articulos.bulkGet(ARTICULOS.map((a) => a.id))).flatMap((a) => (a ? [a.id] : [])),
+    )
+    const faltantes = ARTICULOS.filter((a) => !existentes.has(a.id))
+    if (faltantes.length > 0) await db.articulos.bulkAdd(faltantes)
+    // Mismo criterio para las fichas del Centro de consulta: lo editado
+    // desde la propia app no se pisa al recargar.
+    const fichasExistentes = new Set(
+      (await db.referencias.bulkGet(REFERENCIAS.map((r) => r.id))).flatMap((r) => (r ? [r.id] : [])),
+    )
+    const fichasFaltantes = REFERENCIAS.filter((r) => !fichasExistentes.has(r.id))
+    if (fichasFaltantes.length > 0) await db.referencias.bulkAdd(fichasFaltantes)
+  })
   if (conProgreso && (await db.progresoPasos.count()) === 0) {
     await db.progresoPasos.put({
       articuloId: GUIA_TRES_TAREAS.id,
