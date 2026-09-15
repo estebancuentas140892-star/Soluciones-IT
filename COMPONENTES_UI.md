@@ -381,6 +381,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** fila de un dato descifrado (usuario, contraseña, IP) con botón de copiar y, si aplica, mostrar/ocultar. Es para **mostrar**, no para escribir.
 - **Props:** `{ etiqueta, valor, oculto?: boolean = false, alternarOculto?, onCopiado? }`. `onCopiado` deja que quien lo use registre la auditoría de bóveda sin acoplar el componente a ella.
 - **Variantes:** la presencia de `alternarOculto` decide si aparece el botón de ojo (IP/URL no lo llevan). Botón interno "copiar + tilde 1.5 s".
+- **Valor largo (tarea 240):** mostrado, el valor se lee **entero**: ocupa el ancho que queda (`min-w-0 flex-1`) y parte en varias líneas aunque no tenga espacios (`whitespace-normal break-all`, monoespaciado). Oculto, los puntos siguen en una sola línea (`truncate`). La fila va alineada arriba, con un relleno que centra la primera línea con los botones, y las acciones no se encogen (`shrink-0`); la etiqueta no pasa del 45 % del ancho y parte si hace falta. Copiar copia siempre el valor completo. `FilaSecreto` de `CredencialPage` (la ficha de la Bóveda) sigue el mismo criterio.
 - **Dónde:** `CredencialEnPaso`, `MigracionCredenciales`, `SeguridadDelEquipo`.
 
 ### 3.3 `boveda/CredencialEnPaso`

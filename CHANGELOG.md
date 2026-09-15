@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-15
 
+### Corregido (Bóveda, tarea 240): los secretos largos se leen enteros al mostrarlos
+
+**Área modificada:** presentación de los valores protegidos. **Modificados:** `src/features/boveda/CampoSecreto.tsx` (dato vinculado en una guía, datos protegidos del equipo y migración de credenciales) y `FilaSecreto` en `src/features/boveda/CredencialPage.tsx` (ficha de la Bóveda). **Nuevo:** `src/features/boveda/CampoSecreto.test.ts`. Documentación: [COMPONENTES_UI.md](COMPONENTES_UI.md) (3.2) y [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (ficha de credencial).
+**Motivo:** encargo del usuario del **15 de septiembre de 2026**: una contraseña, un token, una licencia o un certificado largos se cortaban con "..." (`truncate`) justo cuando había que leerlos para escribirlos en otro sitio. **Sin cambios** de cifrado, auditoría, permisos, esquema ni lógica de copiado.
+**Impacto esperado:** el técnico lee el secreto completo en el teléfono, sin tener que pegarlo en otra app para verlo.
+
+- **Corregido** el valor mostrado: ocupa el ancho que queda (`min-w-0 flex-1`) y parte en varias líneas aunque no tenga espacios (`whitespace-normal break-all`), en monoespaciado. Oculto sigue siendo una línea de puntos, como antes, y nunca pone el valor en la pantalla.
+- **Corregida** la fila: alineada arriba, con un relleno que deja la primera línea a la altura de los botones; el ojo y copiar no se encogen (`shrink-0`) y siguen junto a la primera línea; la etiqueta parte en vez de desbordar (`break-words`; en la guía y en el equipo no pasa del 45 % del ancho). Sin alturas fijas.
+- **Sin cambios:** `truncate` sigue en títulos, filas de lista y navegación, la URL y el nombre del archivo seguro. Copiar sigue copiando el valor completo, con su confirmación de siempre.
+- **Pruebas:** `CampoSecreto.test.ts` (13 casos): contraseña corta, de más de 40 y de más de 100 caracteres con símbolos, token, licencia y certificado; mostrados enteros y sin "...", ocultos sin el valor en pantalla, con el ojo presente y copiar recibiendo el valor completo. 101 archivos y 1422 casos en verde; lint y build limpios. Verificado en Chrome sin cabeza contra el banco local con la bóveda abierta, a 360, 448, 768 y 1280 px, en la ficha de la Bóveda, los datos protegidos de un equipo y la credencial vinculada en una guía: sin scroll horizontal, valores largos en varias líneas, botones visibles y sin solapes, y copiar con el dato oculto copia el valor completo sin enseñarlo. Detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), tarea 240.
+
 ### Corregido (Centro de consulta, tarea 239): la búsqueda de HKA y el orden de los resultados por sinónimo
 
 **Área modificada:** buscador global y sus pruebas. **Modificados:** `src/features/busqueda/{sinonimos,useIndiceBusqueda}.ts`, `src/features/busqueda/{sinonimos,busqueda}.test.ts`, [BUSCADOR.md](BUSCADOR.md) (secciones 6 y 7) y [DECISIONES.md](DECISIONES.md) (AD-037, decisión 5).

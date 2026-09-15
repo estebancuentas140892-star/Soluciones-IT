@@ -571,7 +571,7 @@ Solo visible para usuarios con permiso `puede_ver_boveda`. La sección más sens
 
 **Cuerpo:**
 - Título, línea meta (categoría · modificada el DD mmm HH:MM), **indicador de vencimiento**, y línea "Último acceso" (cada consulta queda registrada).
-- **Tarjeta de campos**: cada fila con etiqueta, valor monoespaciado, **ojo** (mostrar/ocultar los secretos; mostrar la contraseña registra en auditoría) y **copiar** (con confirmación). Incluye Usuario, Contraseña (oculta), IP heredada (con aviso), extras cifrados, y **URL** como enlace, y **Archivo seguro** (botón descargar que descifra bajo demanda).
+- **Tarjeta de campos**: cada fila con etiqueta, valor monoespaciado, **ojo** (mostrar/ocultar los secretos; mostrar la contraseña registra en auditoría) y **copiar** (con confirmación). Incluye Usuario, Contraseña (oculta), IP heredada (con aviso), extras cifrados, y **URL** como enlace, y **Archivo seguro** (botón descargar que descifra bajo demanda). Un valor largo (token, licencia, certificado) se lee **entero** al mostrarlo: parte en varias líneas, también sin espacios, con el ojo y copiar siempre visibles junto a la primera línea; oculto sigue siendo una línea de puntos. Lo mismo al consultar el dato desde una guía o desde los datos protegidos de un equipo.
 - **Notas**.
 - **"Da acceso a"**: equipos vinculados (nombre vivo), navegables.
 - **"Usada en"**: procedimientos que muestran esta credencial en algún paso (derivado del grafo).

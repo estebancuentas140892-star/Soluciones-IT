@@ -25,10 +25,24 @@ export function CampoSecreto({
   onCopiado?: () => void
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded border border-noct-divider bg-noct-surface px-2.5 py-[7px]">
-      <dt className="shrink-0 text-xs text-noct-neutral-400">{etiqueta}</dt>
-      <dd className="flex min-w-0 items-center gap-1">
-        <span className={`truncate font-mono text-[13px] ${oculto ? 'tracking-[2px]' : ''}`}>
+    // UN SECRETO LARGO SE LEE ENTERO (2026-09-15). Un token, una licencia
+    // o un certificado se cortaba con "..." justo cuando había que leerlo
+    // para escribirlo en otro sitio. Mostrado, el valor ocupa el ancho que
+    // queda y parte en varias líneas aunque no tenga espacios; oculto, los
+    // puntos siguen en una sola línea, como antes. Las acciones nunca se
+    // encogen. La fila se alinea arriba para que el ojo y copiar sigan
+    // junto a la primera línea; con una sola, el relleno vertical deja
+    // etiqueta y valor centrados con los botones, como antes.
+    <div className="flex items-start justify-between gap-2 rounded border border-noct-divider bg-noct-surface px-2.5 py-[7px]">
+      <dt className="max-w-[45%] shrink-0 break-words py-[3px] text-xs leading-[17px] text-noct-neutral-400">
+        {etiqueta}
+      </dt>
+      <dd className="flex min-w-0 flex-1 items-start justify-end gap-1">
+        <span
+          className={`min-w-0 py-[3px] font-mono text-[13px] leading-[17px] ${
+            oculto ? 'truncate tracking-[2px]' : 'whitespace-normal break-all'
+          }`}
+        >
           {oculto ? '••••••••' : valor}
         </span>
         {alternarOculto && (

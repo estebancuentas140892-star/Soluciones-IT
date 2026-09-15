@@ -530,10 +530,20 @@ function FilaSecreto({
   }
 
   return (
-    <div className="flex min-h-12 items-center gap-2.5 py-1.5">
-      <span className="w-24 shrink-0 text-[12px] text-noct-neutral-500">{campo.etiqueta}</span>
+    // Mostrado, el valor se lee ENTERO (2026-09-15): parte en varias
+    // líneas aunque no tenga espacios, en vez de cortarse con "...".
+    // Oculto, los puntos siguen en una sola línea, como antes. La fila se
+    // alinea arriba para que los botones sigan junto a la primera línea;
+    // con una sola, el relleno vertical centra etiqueta y valor con los
+    // botones de 44 px, como antes.
+    <div className="flex min-h-12 items-start gap-2.5 py-1.5">
+      <span className="w-24 shrink-0 break-words py-3.5 text-[12px] leading-4 text-noct-neutral-500">
+        {campo.etiqueta}
+      </span>
       <span
-        className={`min-w-0 flex-1 truncate font-mono text-[13.5px] ${oculto ? 'tracking-[2px]' : ''}`}
+        className={`min-w-0 flex-1 py-3 font-mono text-[13.5px] leading-5 ${
+          oculto ? 'truncate tracking-[2px]' : 'whitespace-normal break-all'
+        }`}
       >
         {oculto ? '••••••••••••' : campo.valor}
       </span>

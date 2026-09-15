@@ -1,5 +1,23 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-15: secretos largos en la Bóveda
+
+### 240. Mostrar completos los secretos largos
+
+**Estado:** finalizada el 2026-09-15. **Prioridad:** alta. **Origen:** encargo del usuario del 15 de septiembre de 2026 (solo la visualización de secretos largos; sin tocar cifrado, auditoría, permisos, estructura ni el diseño general de la Bóveda).
+
+**Qué se hizo:**
+
+1. **Dónde se cortaba.** Dos puntos pintan un valor protegido y los dos llevaban `truncate`: `CampoSecreto` (`src/features/boveda/CampoSecreto.tsx`, que usan `CredencialEnPaso` en las guías, `SeguridadDelEquipo` en los datos protegidos del equipo y `MigracionCredenciales`) y `FilaSecreto` en `src/features/boveda/CredencialPage.tsx` (ficha de la Bóveda). El resto de `truncate` de la Bóveda (títulos, filas de lista, la URL, el nombre del archivo seguro, el aviso del formulario) no pinta un secreto y se deja. Los formularios escriben en campos de texto, que no cortan con "...", y no se tocaron.
+2. **Valor mostrado:** `min-w-0 flex-1 whitespace-normal break-all`, en monoespaciado: ocupa el ancho que queda y parte en varias líneas aunque no tenga espacios. **Oculto:** los puntos siguen en una línea (`truncate`), como antes.
+3. **Fila:** alineada arriba (antes centrada), con un relleno vertical que deja la primera línea del valor y la etiqueta a la altura de los botones; acciones `shrink-0`; etiqueta con `break-words` (y `max-w-[45%]` en `CampoSecreto`). Sin alturas fijas. La lógica de copiar, el aviso de copiado y la auditoría no cambian.
+
+**Esquema:** no.
+
+**Pruebas:** nuevo `src/features/boveda/CampoSecreto.test.ts` (13 casos) sobre el árbol de elementos del campo, sin montarlo ni mirar clases: mostrado sale la etiqueta y el valor entero; oculto, solo puntos; el ojo presente y copiar recibiendo el valor completo; para contraseña corta, de más de 40 y de más de 100 caracteres con símbolos, token, licencia y certificado. No usa `react-dom/server`: la app no usa esos archivos y OneDrive los tenía solo en la nube, así que la prueba fallaba al leerlos. 101 archivos, 1422 casos en verde (antes 100 y 1409); lint y build limpios.
+
+**Verificación en navegador:** Chrome sin cabeza por CDP contra el banco de pruebas local, con un verificador local de la contraseña maestra y datos inventados cifrados con los módulos de la propia app. A 360, 448, 768 y 1280 px, en la ficha de la Bóveda (contraseña de 128 caracteres, token, licencia, certificado, una etiqueta larga, contraseña corta y de 44), en los datos protegidos de un equipo (token, PIN, dato personalizado largo, usuario largo) y en la credencial vinculada a un paso de una guía (modo foco): sin scroll horizontal; mostrado, cada valor completo y en varias líneas cuando no cabe; oculto, una línea de puntos sin el valor en la pantalla; botones visibles, sin encogerse ni tapar el valor; etiquetas sin desbordar; primera línea alineada con los botones; copiar con el dato oculto copia el valor completo (128 y 336 caracteres) sin mostrarlo. Sigue siendo emulación, no dispositivo físico.
+
 ## Encargo del 2026-09-15: revisión técnica del Centro de consulta
 
 ### 239. Afinar la búsqueda y revisar el comportamiento del Centro de consulta
