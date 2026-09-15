@@ -1,5 +1,24 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-15: revisión técnica del Centro de consulta
+
+### 239. Afinar la búsqueda y revisar el comportamiento del Centro de consulta
+
+**Estado:** finalizada el 2026-09-15. **Prioridad:** alta. **Origen:** encargo del usuario del 15 de septiembre de 2026 (solo revisar y corregir código, búsqueda, comportamiento, responsive y pruebas; sin auditoría, sin contenido nuevo y sin cambios de diseño).
+
+**Qué se corrigió:**
+
+1. **HKA** (`src/features/busqueda/sinonimos.ts`): el grupo simétrico `hka`/`factura`/`facturación` pasa a la regla de una vía `facturación electrónica` → `hka`. Buscar "hka" ya no trae facturas y "factura" ya no trae HKA.
+2. **Lo escrito antes que el sinónimo** (`src/features/busqueda/useIndiceBusqueda.ts`, `buscarConSinonimos`): los sinónimos (`sinonimosDe`) se buscan aparte y sus resultados van detrás de los que coinciden con lo escrito; un resultado que coincide por las dos vías suma medio punto del sinónimo. `buscar` y `buscarSimilares` lo comparten: los dos dejaban que un resultado solo por sinónimo adelantara al exacto.
+
+**Revisado sin cambios:** pestañas y URL; búsqueda por pestaña; filtros por categoría y plataforma; Volver y atrás con pestaña, búsqueda y filtro; enlaces entre fichas y a guías (también a un borrador, y de la guía a la herramienta); Copiar en tarjetas y fichas de atajos y comandos; crear y editar (renombrar actualiza las relacionadas y editar una herramienta conserva su estado de uso); buscador de Inicio y capa global con cada tipo en su grupo y su tipo en el subtítulo, borradores fuera también a través de la ficha que los enlaza, y Escape o elegir un resultado cierran la capa. El filtro de la pestaña busca por subcadena ([BUSCADOR.md](BUSCADOR.md), sección 10): "ada" también muestra TightVNC por "utiliz**ada**", como está diseñado.
+
+**Esquema:** no. Sin cambios en Supabase ni en el contenido de las fichas.
+
+**Pruebas:** 100 archivos, 1409 casos en verde (antes 1398); lint y build limpios. Nuevas en `busqueda.test.ts`: `hka` y `facturación electrónica` en la tabla de búsquedas; grupo único y tipo al principio del subtítulo de cada ficha; prioridad y contaminación de los sinónimos (`buscar` y `buscarSimilares`); cada fuente en su grupo y la bóveda solo abierta. En `sinonimos.test.ts`: HKA no arrastra "factura" y solo "facturación electrónica" lleva a HKA.
+
+**Verificación en navegador:** Chrome sin cabeza por CDP contra el banco de pruebas local, a 300, 360, 448, 768, 1280 y 1680 px: sin scroll horizontal de página; las cuatro pestañas legibles y desplazables cuando no caben; títulos largos, también sin espacios, sin romper tarjetas ni fichas; Copiar dentro de su tarjeta; filtros dentro de su contenedor; la barra inferior no tapa el final del contenido; sin excepciones. Sigue siendo emulación, no dispositivo físico.
+
 ## Encargo del 2026-09-14: Centro de consulta
 
 ### 236. Convertir Referencia en el Centro de consulta: herramientas, glosario, atajos y comandos

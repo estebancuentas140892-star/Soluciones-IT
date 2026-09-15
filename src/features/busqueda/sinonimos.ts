@@ -5,9 +5,10 @@
 // impresoras, camaras, redes y las herramientas de Metroparques); si
 // crece mucho, puede moverse a datos editables.
 //
-// La expansion solo AGREGA palabras a la consulta, que MiniSearch
-// combina con OR: nunca resta resultados, y el orden por relevancia no
-// cambia para las coincidencias exactas.
+// Los sinonimos solo AGREGAN resultados, nunca restan. Y desde el
+// 2026-09-15 no pueden adelantarse a lo escrito: el indice pone primero
+// lo que coincide con lo que el tecnico tecleo y despues lo que solo
+// trae un sinonimo (`buscarConSinonimos`, en useIndiceBusqueda.ts).
 
 // GRUPOS SIMETRICOS: buscar cualquiera de sus entradas agrega las demas.
 // Una entrada de varias palabras ("copia de seguridad") aporta sus
@@ -31,7 +32,6 @@ const GRUPOS_SINONIMOS: string[][] = [
   // estorba: buscar "esxi" y ver VMware es encontrar lo que se buscaba.
   ['tightvnc', 'vnc'],
   ['icg', 'icg manager'],
-  ['hka', 'factura', 'facturación'],
   ['sonicwall', 'firewall'],
   ['vmware', 'esxi', 'virtualización'],
   ['issabel', 'pbx', 'telefonía'],
@@ -50,6 +50,11 @@ const GRUPOS_SINONIMOS: string[][] = [
 // "cada" y "adaptadores") o "workflow" ("document" encuentra cada
 // "documentado"). La palabra general lleva a la herramienta; la
 // herramienta no arrastra la palabra general.
+//
+// HKA (2026-09-15) era un grupo simetrico con "factura" y "facturacion":
+// buscar "hka" arrastraba cualquier guia que nombrara una factura, y
+// buscar "factura" metia a HKA por sinonimo. Ahora solo la frase entera
+// "facturación electrónica", que es a lo que HKA se dedica, lleva a HKA.
 const GRUPOS_DE_UNA_VIA: { claves: string[]; agrega: string[] }[] = [
   { claves: ['acceso remoto', 'control remoto'], agrega: ['tightvnc', 'vnc'] },
   { claves: ['acceso remoto'], agrega: ['anydesk'] },
@@ -58,6 +63,7 @@ const GRUPOS_DE_UNA_VIA: { claves: string[]; agrega: string[] }[] = [
   { claves: ['front rest'], agrega: ['frontrest'] },
   { claves: ['document', 'gestión documental'], agrega: ['workflow'] },
   { claves: ['documentos'], agrega: ['sharepoint'] },
+  { claves: ['facturación electrónica'], agrega: ['hka'] },
 ]
 
 // Palabras sin valor de busqueda que no vale la pena agregar cuando
@@ -116,20 +122,29 @@ function contieneFrase(palabras: string[], frase: string[]): boolean {
   return false
 }
 
-// Expande la consulta con los sinonimos de lo escrito.
-// "backup impresora" -> "backup impresora respaldo copia seguridad
-// impresion imprimir". Los terminos originales van primero y nunca se
-// pierden; sin sinonimos que aplicar, la consulta sale igual.
-export function expandirConsulta(consulta: string): string {
-  const terminos = consulta.trim().split(/\s+/).filter(Boolean)
+/**
+ * Las palabras que los sinonimos agregan a lo escrito, normalizadas y
+ * sin repetir nada de lo que ya se tecleo. Vacia si ninguno aplica.
+ *
+ * Separada de `expandirConsulta` para que el indice pueda buscarlas
+ * APARTE y ponerlas detras de lo escrito.
+ */
+export function sinonimosDe(consulta: string): string[] {
   const escritas = palabrasDe(consulta)
   const extra = new Set<string>()
   for (const regla of REGLAS) {
     if (!contieneFrase(escritas, regla.palabras)) continue
     for (const palabra of regla.agrega) extra.add(palabra)
   }
-  // No repetir palabras que el usuario ya escribio.
-  const yaEscritas = new Set(terminos.map(normalizar))
-  const agregadas = [...extra].filter((palabra) => !yaEscritas.has(palabra))
+  const yaEscritas = new Set(consulta.trim().split(/\s+/).filter(Boolean).map(normalizar))
+  return [...extra].filter((palabra) => !yaEscritas.has(palabra))
+}
+
+// Expande la consulta con los sinonimos de lo escrito.
+// "backup impresora" -> "backup impresora respaldo copia seguridad
+// impresion imprimir". Los terminos originales van primero y nunca se
+// pierden; sin sinonimos que aplicar, la consulta sale igual.
+export function expandirConsulta(consulta: string): string {
+  const agregadas = sinonimosDe(consulta)
   return agregadas.length === 0 ? consulta : `${consulta} ${agregadas.join(' ')}`
 }

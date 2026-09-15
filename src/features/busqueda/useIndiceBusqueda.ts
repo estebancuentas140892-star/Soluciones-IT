@@ -18,7 +18,7 @@ import { normalizarProcedimiento, textoDeProcedimiento } from '../../lib/procedi
 import { textoDeNodos } from '../../lib/diagnostico'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
-import { expandirConsulta } from './sinonimos'
+import { sinonimosDe } from './sinonimos'
 import { cadenaNombres, mapaPorId } from '../ubicaciones/arbol'
 import { esTipoConocido, INFO_TIPO, textoBuscable, tituloConAbreviatura } from '../referencia/referencias'
 
@@ -433,20 +433,67 @@ export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): Min
   return indice
 }
 
-export function buscar(indice: MiniSearch<DocumentoBusqueda>, consulta: string): ResultadoBusqueda[] {
+type ResultadoIndice = ReturnType<MiniSearch<DocumentoBusqueda>['search']>[number]
+
+// Cuánto suma un sinónimo a un resultado que YA coincide con lo escrito:
+// desempata a favor de lo que además nombra el sinónimo, sin pasar por
+// delante de nada.
+const PESO_SINONIMO = 0.5
+
+/**
+ * Busca lo escrito y, aparte, sus sinónimos (2026-09-15).
+ *
+ * LO ESCRITO MANDA. Van primero los documentos que coinciden con lo que
+ * el técnico tecleó (exacto, por prefijo o con una errata), ordenados por
+ * su puntuación más medio punto por sinónimo; y detrás, los que SOLO
+ * trae un sinónimo, en su propio orden. Antes la expansión viajaba en la
+ * misma consulta con el mismo peso, así que "Crear copia de seguridad"
+ * (dos palabras del sinónimo en el título) adelantaba a "Backup del
+ * servidor" buscando "backup". Los sinónimos siguen sumando resultados;
+ * lo que ya no pueden es tapar lo que se buscó.
+ */
+export function buscarConSinonimos(indice: MiniSearch<DocumentoBusqueda>, consulta: string): ResultadoIndice[] {
   const texto = consulta.trim()
   if (!texto) return []
-  // La consulta se expande con sinonimos ("backup" agrega "respaldo",
-  // "copia", "seguridad"). MiniSearch combina los terminos con OR, asi
-  // que la expansion solo AGREGA resultados.
-  return indice.search(expandirConsulta(texto)).map((resultado) => ({
+  const directos = indice.search(texto)
+  const agregadas = sinonimosDe(texto)
+  if (agregadas.length === 0) return directos
+
+  const porSinonimo = indice.search(agregadas.join(' '))
+  const deSinonimo = new Map(porSinonimo.map((resultado) => [resultado.id, resultado]))
+  const primeros = directos
+    .map((resultado) => {
+      const extra = deSinonimo.get(resultado.id)
+      if (!extra) return resultado
+      return {
+        ...resultado,
+        score: resultado.score + PESO_SINONIMO * extra.score,
+        terms: [...new Set([...resultado.terms, ...extra.terms])],
+        queryTerms: [...new Set([...resultado.queryTerms, ...extra.queryTerms])],
+        match: { ...extra.match, ...resultado.match },
+      }
+    })
+    .sort((a, b) => b.score - a.score)
+  const idsDirectos = new Set(directos.map((resultado) => resultado.id))
+  return [...primeros, ...porSinonimo.filter((resultado) => !idsDirectos.has(resultado.id))]
+}
+
+function aResultado(resultado: ResultadoIndice): ResultadoBusqueda {
+  return {
     id: String(resultado.id),
     tipo: resultado.tipo as TipoResultado,
     titulo: resultado.titulo as string,
     subtitulo: resultado.subtitulo as string,
     ruta: resultado.ruta as string,
     portadaRef: (resultado.portadaRef as string) ?? '',
-  }))
+  }
+}
+
+export function buscar(indice: MiniSearch<DocumentoBusqueda>, consulta: string): ResultadoBusqueda[] {
+  // La consulta se amplía con sinónimos ("backup" agrega "respaldo",
+  // "copia", "seguridad"), que solo AGREGAN resultados y nunca adelantan
+  // a lo escrito (`buscarConSinonimos`).
+  return buscarConSinonimos(indice, consulta).map(aResultado)
 }
 
 // Entradas con titulo parecido al texto dado, para avisar antes de
@@ -467,8 +514,10 @@ export function buscarSimilares(
 ): ResultadoBusqueda[] {
   const texto = titulo.trim()
   if (texto.length < 4) return []
-  return indice
-    .search(expandirConsulta(texto))
+  // Mismo orden que el buscador: el título exacto antes que el parecido
+  // solo por sinónimo, que es justo el que menos probablemente sea el
+  // duplicado.
+  return buscarConSinonimos(indice, texto)
     .filter(
       (resultado) =>
         tipos.includes(resultado.tipo as TipoResultado) &&
@@ -482,14 +531,7 @@ export function buscarSimilares(
         Object.values(resultado.match).some((campos) => campos.includes('titulo')),
     )
     .slice(0, limite)
-    .map((resultado) => ({
-      id: String(resultado.id),
-      tipo: resultado.tipo as TipoResultado,
-      titulo: resultado.titulo as string,
-      subtitulo: resultado.subtitulo as string,
-      ruta: resultado.ruta as string,
-      portadaRef: (resultado.portadaRef as string) ?? '',
-    }))
+    .map(aResultado)
 }
 
 export function buscarArticulosSimilares(

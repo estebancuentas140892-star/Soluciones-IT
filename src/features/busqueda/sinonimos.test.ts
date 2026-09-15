@@ -80,11 +80,21 @@ describe('sinónimos de las herramientas de Metroparques', () => {
     }
   })
 
+  // HKA (2026-09-15): era un grupo simétrico con "factura" y
+  // "facturación", así que buscar "hka" arrastraba cualquier ficha o guía
+  // que nombrara una factura, y buscar "factura" metía a HKA por sinónimo.
+  it('HKA no arrastra "factura", y solo "facturación electrónica" lleva a HKA', () => {
+    expect(expandirConsulta('hka')).toBe('hka')
+    expect(expandirConsulta('HKA')).toBe('HKA')
+    expect(expandirConsulta('factura')).toBe('factura')
+    expect(expandirConsulta('facturación')).toBe('facturación')
+    expect(palabras('facturación electrónica')).toContain('hka')
+    expect(palabras('facturacion electronica')).toContain('hka')
+    expect(palabras('actualizar la facturación electrónica del pos')).toContain('hka')
+  })
+
   it('los grupos simétricos acotados funcionan en los dos sentidos', () => {
     expect(palabras('icg')).toContain('manager')
-    expect(palabras('hka')).toContain('factura')
-    expect(palabras('facturación')).toContain('hka')
-    expect(palabras('facturacion')).toContain('hka')
     expect(palabras('sonicwall')).toContain('firewall')
     expect(palabras('firewall')).toContain('sonicwall')
     expect(palabras('esxi')).toContain('vmware')

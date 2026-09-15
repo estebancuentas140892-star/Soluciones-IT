@@ -3,9 +3,12 @@ import type {
   Articulo,
   CampoProtegido,
   Credencial,
+  Diagnostico,
   Dispositivo,
   EstadoArticulo,
+  Persona,
   Referencia,
+  Ubicacion,
 } from '../../lib/db'
 import { agruparResultados } from './resultados'
 import {
@@ -394,11 +397,23 @@ const FICHAS: Referencia[] = [
   }),
 ]
 
+const FICHA_HKA = ficha({
+  id: 'hka',
+  tipo: 'herramienta',
+  titulo: 'HKA Factura',
+  alias: ['HKA'],
+  categoria: 'Facturación electrónica',
+  definicion: 'Plataforma utilizada en procesos relacionados con facturación electrónica y secuenciales.',
+  usoEnMetroparques: 'Forma parte del procedimiento documentado para resolución DIAN en el entorno POS.',
+  notas: 'No confundir con SICOF ERP.',
+  etiquetas: ['facturación electrónica', 'dian'],
+})
+
 describe('Centro de consulta en el buscador global', () => {
   const indiceConsulta = crearIndiceDesdeDocumentos(
     documentosDeBusqueda(
       datosIndice({
-        referencias: FICHAS,
+        referencias: [...FICHAS, FICHA_HKA],
         articulos: [guia('a-router', 'Reiniciar el router de la sede', 'publicado', 'Revisar la red')],
       }),
     ),
@@ -419,10 +434,96 @@ describe('Centro de consulta en el buscador global', () => {
     ['ping', 'referencia:ping', 'comando'],
     ['dhcp', 'referencia:dhcp', 'termino'],
     ['ssms', 'referencia:ssms', 'herramienta'],
+    ['hka', 'referencia:hka', 'herramienta'],
+    ['facturación electrónica', 'referencia:hka', 'herramienta'],
   ])('"%s" encuentra primero %s, como %s', (consulta, id, tipo) => {
     const resultado = primeroDelCentro(consulta)
     expect(resultado?.id).toBe(id)
     expect(resultado?.tipo).toBe(tipo)
+  })
+
+  it('cada ficha sale en el grupo Centro de consulta con su tipo al principio del subtítulo', () => {
+    const etiquetas = { herramienta: 'Herramienta', termino: 'Término', atajo: 'Atajo', comando: 'Comando' }
+    for (const referencia of [...FICHAS, FICHA_HKA]) {
+      const grupos = agruparResultados(buscar(indiceConsulta, referencia.titulo))
+      const centro = grupos.find((grupo) => grupo.id === 'referencia')
+      const fila = centro?.items.find((item) => item.id === `referencia:${referencia.id}`)
+      expect({ id: referencia.id, tipo: fila?.tipo }).toEqual({ id: referencia.id, tipo: referencia.tipo })
+      expect(fila?.subtitulo.startsWith(etiquetas[referencia.tipo as keyof typeof etiquetas])).toBe(true)
+      // Y en ningún otro grupo.
+      for (const otro of grupos.filter((grupo) => grupo.id !== 'referencia')) {
+        expect(otro.items.some((item) => item.id === `referencia:${referencia.id}`)).toBe(false)
+      }
+    }
+  })
+
+  // LO ESCRITO MANDA SOBRE EL SINÓNIMO (2026-09-15). Los sinónimos amplían
+  // lo que se encuentra, pero una coincidencia con lo que el técnico
+  // tecleó va siempre por delante de una que solo trae un sinónimo, y un
+  // sinónimo no puede meter resultados que nada tienen que ver.
+  describe('prioridad y contaminación de los sinónimos', () => {
+    function equipo(id: string, nombre: string): Dispositivo {
+      return {
+        id,
+        nombre,
+        marca: '',
+        modelo: '',
+        serial: '',
+        placaInventario: '',
+        ubicacion: '',
+        responsable: '',
+        ip: '',
+        estado: 'Operativo',
+        observaciones: '',
+        detalles: {},
+        foto: null,
+        eliminadoEn: null,
+      } as unknown as Dispositivo
+    }
+
+    const indiceRanking = crearIndiceDesdeDocumentos(
+      documentosDeBusqueda(
+        datosIndice({
+          referencias: [FICHA_HKA],
+          articulos: [
+            guia('a-backup', 'Backup del servidor de archivos', 'publicado'),
+            guia('a-copia', 'Crear copia de seguridad de la base de datos', 'publicado'),
+            guia('a-factura', 'Anular una factura en el POS', 'publicado'),
+          ],
+          dispositivos: [equipo('d-hka', 'Servidor HKA de pruebas')],
+        }),
+      ),
+    )
+    const ids = (consulta: string) => buscar(indiceRanking, consulta).map((resultado) => resultado.id)
+
+    it('una coincidencia exacta va antes que una provocada solo por un sinónimo', () => {
+      const resultados = ids('backup')
+      expect(resultados[0]).toBe('articulo:a-backup')
+      // El sinónimo sigue sumando resultados, detrás.
+      expect(resultados).toContain('articulo:a-copia')
+    })
+
+    it('"hka" prioriza HKA y no arrastra lo que solo habla de facturas', () => {
+      const resultados = ids('hka')
+      expect(resultados[0]).toBe('referencia:hka')
+      expect(resultados).not.toContain('articulo:a-factura')
+    })
+
+    it('"factura" sola no mete por sinónimo lo que solo nombra a HKA', () => {
+      const resultados = ids('factura')
+      expect(resultados).toContain('articulo:a-factura')
+      expect(resultados).not.toContain('dispositivo:d-hka')
+    })
+
+    it('"facturación electrónica" conduce a HKA', () => {
+      expect(ids('facturación electrónica')[0]).toBe('referencia:hka')
+    })
+
+    it('las sugerencias anti duplicados también ponen primero el título exacto', () => {
+      const similares = buscarSimilares(indiceRanking, 'Backup nocturno', 'nuevo-id', ['articulo'])
+      expect(similares.map((resultado) => resultado.id)).toContain('articulo:a-copia')
+      expect(similares[0]?.id).toBe('articulo:a-backup')
+    })
   })
 
   it('el grupo se llama Centro de consulta y reúne los cuatro tipos', () => {
@@ -451,6 +552,65 @@ describe('Centro de consulta en el buscador global', () => {
   it('no indexa una ficha eliminada ni una de un tipo que esta versión no conoce', () => {
     expect(documentoDeReferencia(ficha({ id: 'x', tipo: 'herramienta', titulo: 'Vieja', eliminadoEn: '2026-01-01' }))).toBeNull()
     expect(documentoDeReferencia(ficha({ id: 'y', tipo: 'software' as never, titulo: 'Futura' }))).toBeNull()
+  })
+})
+
+// Las fuentes que el buscador global reúne, cada una en su grupo, pasando
+// por `documentosDeBusqueda` como en la app (2026-09-15).
+describe('lo que el buscador global reúne', () => {
+  const marca = { updatedAt: '2026-09-15T00:00:00.000Z', updatedBy: null, eliminadoEn: null }
+  const ubicacion: Ubicacion = { id: 'u1', nombre: 'Sala Zafiro', padreId: null, notas: '', ...marca }
+  const persona: Persona = { id: 'p1', nombre: 'Zafiro Gómez', notas: '', ...marca }
+  const diagnostico: Diagnostico = {
+    id: 'g1',
+    categoriaId: 'cat-1',
+    titulo: 'El equipo Zafiro no enciende',
+    descripcion: '',
+    nodos: [],
+    ...marca,
+  }
+  const datos = datosIndice({
+    articulos: [guia('a1', 'Reiniciar el servidor Zafiro', 'publicado'), guia('a2', 'Zafiro sin publicar', 'borrador')],
+    dispositivos: [{ id: 'd1', nombre: 'Servidor Zafiro', detalles: {}, eliminadoEn: null } as unknown as Dispositivo],
+    diagnosticos: [diagnostico],
+    ubicaciones: [ubicacion],
+    personas: [persona],
+    referencias: [ficha({ id: 'r1', tipo: 'herramienta', titulo: 'Consola Zafiro' })],
+    credenciales: [
+      { id: 'c1', titulo: 'Acceso al panel Zafiro', categoria: 'Redes', archivo: null, eliminadoEn: null } as unknown as Credencial,
+    ],
+    camposProtegidos: [
+      { id: 'cp1', dispositivoId: 'd1', nombre: 'PIN del Zafiro', eliminadoEn: null } as unknown as CampoProtegido,
+    ],
+  })
+
+  // Qué resultados caen en cada grupo, tal como los pinta el buscador.
+  function porGrupo(bovedaDesbloqueada: boolean) {
+    const indiceFuentes = crearIndiceDesdeDocumentos(documentosDeBusqueda({ ...datos, bovedaDesbloqueada }))
+    return Object.fromEntries(
+      agruparResultados(buscar(indiceFuentes, 'zafiro')).map((grupo) => [grupo.id, grupo.items.map((item) => item.id).sort()]),
+    )
+  }
+
+  it('guías publicadas y diagnósticos, equipos, ubicaciones, personas y Centro de consulta, cada uno en su grupo', () => {
+    expect(porGrupo(false)).toEqual({
+      soluciones: ['articulo:a1', 'diagnostico:g1'],
+      dispositivos: ['dispositivo:d1'],
+      ubicaciones: ['ubicacion:u1'],
+      personas: ['persona:p1'],
+      referencia: ['referencia:r1'],
+    })
+  })
+
+  it('la bóveda y los datos protegidos de un equipo solo se suman con la bóveda abierta', () => {
+    expect(porGrupo(true)).toEqual({
+      soluciones: ['articulo:a1', 'diagnostico:g1'],
+      dispositivos: ['campo:cp1', 'dispositivo:d1'],
+      boveda: ['credencial:c1'],
+      ubicaciones: ['ubicacion:u1'],
+      personas: ['persona:p1'],
+      referencia: ['referencia:r1'],
+    })
   })
 })
 

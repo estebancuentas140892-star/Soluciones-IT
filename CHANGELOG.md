@@ -6,6 +6,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-15
+
+### Corregido (Centro de consulta, tarea 239): la búsqueda de HKA y el orden de los resultados por sinónimo
+
+**Área modificada:** buscador global y sus pruebas. **Modificados:** `src/features/busqueda/{sinonimos,useIndiceBusqueda}.ts`, `src/features/busqueda/{sinonimos,busqueda}.test.ts`, [BUSCADOR.md](BUSCADOR.md) (secciones 6 y 7) y [DECISIONES.md](DECISIONES.md) (AD-037, decisión 5).
+**Motivo:** encargo del usuario del **15 de septiembre de 2026**: revisar y corregir código, búsqueda, comportamiento y responsive del Centro de consulta, sin tocar contenido ni diseño. **SIN esquema** y sin cambios en Supabase.
+**Impacto esperado:** buscar "hka" o "factura" ya no mezcla una cosa con la otra, y lo que el técnico escribió sale siempre antes que lo que solo trae un sinónimo.
+
+- **Corregido** el grupo simétrico `hka`/`factura`/`facturación`: buscar "hka" arrastraba cualquier guía que nombrara una factura, y buscar "factura" metía a HKA. Pasa a una regla **de una vía**: solo la frase "facturación electrónica" lleva a HKA; "hka" y "factura" no se expanden.
+- **Corregido** el orden de los resultados: el sinónimo iba en la misma consulta y con el mismo peso, así que un resultado que solo coincidía por sinónimo podía adelantar al exacto ("backup" daba primero la guía de "copia de seguridad"). Ahora `buscarConSinonimos` busca lo escrito y los sinónimos por separado: primero lo que coincide con lo escrito (que suma medio punto del sinónimo si también coincide por él) y detrás lo que solo trae el sinónimo. Lo usan el buscador global y el aviso de duplicados (`buscarSimilares`), que tenía el mismo fallo.
+- **Agregado** `sinonimosDe`, que devuelve solo las palabras que el diccionario añade; `expandirConsulta` la reutiliza.
+- **Agregadas** pruebas: `hka` y `facturación electrónica` junto a las ocho búsquedas que ya estaban; cada ficha sale en el grupo Centro de consulta, y en ningún otro, con su tipo (Herramienta, Término, Atajo o Comando) al principio del subtítulo; lo exacto antes que el sinónimo y sin contaminación en los dos sentidos de HKA; y guías publicadas, diagnósticos, equipos, ubicaciones, personas y Centro de consulta cada uno en su grupo, con la bóveda y los datos protegidos solo con la bóveda abierta.
+- **Pruebas:** 100 archivos y 1409 casos en verde (antes 1398); lint y build limpios. Verificado en Chrome sin cabeza contra el banco de pruebas local: pestañas, búsqueda y filtros con su URL, Volver y atrás, enlaces entre fichas y a guías, Copiar, crear y editar; buscador de Inicio y capa global; responsive a 300, 360, 448, 768, 1280 y 1680 px sin desbordamiento. Detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), tarea 239.
+
 ## 2026-09-14
 
 ### Modificado (Centro de consulta, tarea 236): Referencia pasa a ser el Centro de consulta, con herramientas y con atajos y comandos separados

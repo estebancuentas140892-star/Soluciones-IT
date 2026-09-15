@@ -76,13 +76,15 @@ La insensibilidad a mayúsculas sí es universal y consistente (las tres funcion
 
 `src/features/busqueda/sinonimos.ts`. Diccionario curado a mano, con dos clases de grupo desde el 2026-09-14.
 
-**Grupos simétricos (19):** buscar cualquiera de sus entradas agrega las demás.
+**Grupos simétricos (18):** buscar cualquiera de sus entradas agrega las demás.
 
-`backup/respaldo/copia de seguridad` · `internet/red/wifi/ip/conexion` · `impresora/impresion/imprimir` · `contraseña/clave/password` · `computador/computadora/pc/equipo` · `camara/cctv/video` · `pos/datafono/punto de venta` · `correo/email` · `servidor/server` · `pantalla/monitor` · `lento/lentitud/demorado` · `encender/prender` · `tightvnc/vnc` · `icg/icg manager` · `hka/factura/facturación` · `sonicwall/firewall` · `vmware/esxi/virtualización` · `issabel/pbx/telefonía` · `ssms/sql server management studio`
+`backup/respaldo/copia de seguridad` · `internet/red/wifi/ip/conexion` · `impresora/impresion/imprimir` · `contraseña/clave/password` · `computador/computadora/pc/equipo` · `camara/cctv/video` · `pos/datafono/punto de venta` · `correo/email` · `servidor/server` · `pantalla/monitor` · `lento/lentitud/demorado` · `encender/prender` · `tightvnc/vnc` · `icg/icg manager` · `sonicwall/firewall` · `vmware/esxi/virtualización` · `issabel/pbx/telefonía` · `ssms/sql server management studio`
 
-**Grupos de una vía (7):** las claves agregan la herramienta, pero buscar la herramienta **no** trae de vuelta la clave.
+**Grupos de una vía (8):** las claves agregan la herramienta, pero buscar la herramienta **no** trae de vuelta la clave.
 
-`acceso remoto`, `control remoto` → `tightvnc`, `vnc` · `acceso remoto` → `anydesk` · `monitoreo`, `monitorización` → `zabbix` · `ada`, `erp` → `sicof` · `front rest` → `frontrest` · `document`, `gestión documental` → `workflow` · `documentos` → `sharepoint`
+`acceso remoto`, `control remoto` → `tightvnc`, `vnc` · `acceso remoto` → `anydesk` · `monitoreo`, `monitorización` → `zabbix` · `ada`, `erp` → `sicof` · `front rest` → `frontrest` · `document`, `gestión documental` → `workflow` · `documentos` → `sharepoint` · `facturación electrónica` → `hka`
+
+**HKA (2026-09-15)** fue un grupo simétrico `hka/factura/facturación` hasta este cambio: buscar "hka" arrastraba cualquier guía que nombrara una factura, y buscar "factura" metía a HKA por sinónimo. Ahora "hka" y "factura" no se expanden, y solo la frase "facturación electrónica" (a lo que HKA se dedica) lleva a HKA.
 
 **Por qué existen los de una vía.** La palabra general lleva a la herramienta; la herramienta no arrastra la palabra general. Con los grupos simétricos de siempre, buscar "anydesk" habría agregado "acceso" y "remoto", que por prefijo traen "Punto de acceso" y cada ficha que diga "remotamente"; "zabbix" habría agregado "monitoreo", que por la tolerancia a erratas encuentra cada "monitor" del inventario; "sicof" habría agregado "ada", que encuentra "cada" y "adaptadores"; y "workflow", "document", que por prefijo encuentra cada "documentado". **Nada se agregó al grupo de "red"**: buscar "red" sigue sin arrastrar Zabbix, SonicWall, servidores ni switches.
 
@@ -90,14 +92,16 @@ Mecánica (`expandirConsulta`):
 
 - Cada entrada, de una palabra o de varias, funciona como clave. **Una clave de varias palabras se detecta escrita entera y seguida** ("acceso remoto", "copia de seguridad"; desde el 2026-09-14): "acceso al servidor remoto" no es la frase.
 - Lo que se agrega va en palabras sueltas: una entrada de varias palabras aporta sus palabras, sin las vacías (`de, la, el, a, y, en`); `pos` expande a `datafono, punto, venta`.
-- La consulta expandida mantiene los términos originales primero y agrega los sinónimos al final, sin repetir lo ya escrito. Como el índice combina con OR, la expansión nunca resta resultados.
+- Lo que se agrega nunca repite lo ya escrito (`sinonimosDe`). `expandirConsulta` devuelve la consulta con los sinónimos al final, para quien necesite el texto entero.
+- **Los sinónimos se buscan aparte y van detrás** (`buscarConSinonimos`, 2026-09-15; ver la sección 7). Nunca restan resultados y ya no pueden adelantarse a lo escrito.
 - Se aplica en toda consulta al índice: la búsqueda de Inicio, la capa global y las sugerencias anti duplicados de artículos y diagnósticos.
 
 El mismo diccionario **no** alimenta el selector de "vincular procedimiento" de un paso (sección 8) ni el buscador local del Centro de consulta.
 
 ## 7. Ranking y agrupación
 
-- **Orden interno**: MiniSearch devuelve por score descendente (BM25 + boost por campo + pesos difuso/prefijo). No hay desempate adicional configurado por la app; a score idéntico el orden no está garantizado.
+- **Lo escrito manda sobre el sinónimo** (`buscarConSinonimos` en `useIndiceBusqueda.ts`, 2026-09-15). Se hacen dos búsquedas: la de lo que el técnico tecleó y la de los sinónimos que eso agrega. **Primero** van todos los documentos que coinciden con lo escrito (exacto, por prefijo o con errata), ordenados por su score más la mitad del score que les dé el sinónimo (`PESO_SINONIMO = 0.5`); **detrás**, los que solo trae un sinónimo, en su propio orden. Antes la expansión viajaba en la misma consulta con el mismo peso, y "Crear copia de seguridad" (dos palabras del sinónimo en el título) adelantaba a "Backup del servidor" al buscar "backup". Lo usan `buscar` y `buscarSimilares`.
+- **Orden interno**: dentro de cada tramo, score descendente de MiniSearch (BM25 + boost por campo + pesos difuso/prefijo). No hay otro desempate configurado por la app; a score idéntico el orden no está garantizado.
 - **Agrupación**: los resultados no se muestran como lista plana. `GRUPOS_BUSQUEDA` (en `src/features/busqueda/resultados.ts` desde la tarea 181; antes vivía dentro de `InicioPage.tsx`) define seis grupos por fuente, en orden fijo: **Guías** (incluye diagnóstico, categoría, artículo y adjunto), **Equipos**, **Bóveda**, **Ubicaciones**, **Personas** y **Centro de consulta** (herramienta, término, atajo y comando). Lo aplican por igual Inicio y la capa global. Dentro de cada grupo se respeta el score; entre grupos el orden es siempre el mismo (Soluciones primero), aunque un resultado de otro grupo tenga mayor score.
 - **Sin tope ni paginación**: se pintan todos los resultados de cada grupo. Con el volumen del equipo no es un problema; queda anotado como ausencia de límite si el contenido crece (ver [TAREAS.md](TAREAS.md)).
 
