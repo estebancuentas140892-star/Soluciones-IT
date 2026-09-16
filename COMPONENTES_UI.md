@@ -70,6 +70,7 @@ Componentes:
 Convención: "Props" muestra la firma real; los opcionales llevan su default. "Dónde se usa" viene de los call sites reales.
 
 ### 2.0 `Chasis` (`src/app/Chasis.tsx`)
+- **`conBusqueda` (nivel tarea, tarea 241):** con `compacta`, pone la lupa en la cabecera y monta `BuscadorGlobal` (carga diferida) como capa sobre la tarea. Hoy solo lo usa `AsistentePage`. La capa es un portal a `<body>`, así que la tarea de debajo **no se vuelve a montar**: al cerrar se sigue en el mismo paso, con el mismo progreso y el mismo cronómetro.
 
 - **Propósito:** el chasis único de la app (tarea 185, mockup `4c`). Reemplaza a `ShellNocturne` (eliminado) y a los 15 contenedores `max-w-md` que cada pantalla montaba a mano. Aporta el marco completo: sidebar de escritorio de catorce destinos, columna de contenido de ancho progresivo, barra superior o de tarea, y barra de cinco pestañas en móvil.
 - **Tres niveles y ni uno más (regla R18).** Cada pantalla declara el suyo:
@@ -251,7 +252,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 ### 2.10h `BarraTarea`
 - **Propósito:** la cabecera del nivel 3 del chasis (tarea 185, mockup `4c`). El nivel `tarea` es el único que puede quedarse sin la barra de pestañas, y la regla **R19** exige que quien la quita ponga algo que oriente en su lugar: fondo de superficie (para que se note que el chasis cambió), rótulo de lo que se está haciendo ("Editando", "Ejecutando", "Migrando"), sobre qué, la ruta de vuelta **escrita** ("Guías › Impresoras · vuelves aquí al terminar") y una X de salida siempre en el mismo sitio.
-- **Props:** `{ rotulo, titulo, vuelta?, salidaA?, salidaEtiqueta = 'Salir sin guardar', alSalir?, children? }`. `vuelta` se deriva de `vueltaDeTarea(pathname)` si no se pasa; esa función devuelve `null` cuando la jerarquía solo sabe decir "Volver" (editar y ejecutar suben a una ficha cuyo nombre depende de datos en runtime), y entonces la pantalla escribe el texto. `alSalir` reemplaza la navegación de la X, para las tareas que guardan avance antes de salir.
+- **Props:** `{ rotulo, titulo, vuelta?, salidaA?, salidaEtiqueta = 'Salir sin guardar', alSalir?, children?, compacta?, trailing?, onBuscar? }`. `onBuscar` (tarea 241) añade una **lupa** de 44 px entre el título y `trailing`, **solo en modo `compacta`**: abre el buscador global como capa sobre la tarea, sin devolver la navegación principal. Sin la prop, el botón no existe. `vuelta` se deriva de `vueltaDeTarea(pathname)` si no se pasa; esa función devuelve `null` cuando la jerarquía solo sabe decir "Volver" (editar y ejecutar suben a una ficha cuyo nombre depende de datos en runtime), y entonces la pantalla escribe el texto. `alSalir` reemplaza la navegación de la X, para las tareas que guardan avance antes de salir.
 - **Dónde:** la monta `Chasis` en `modo="tarea"`. Tres pantallas la usan directamente porque conservan su contenedor propio: `EscanerPage` (el video va detrás a pantalla completa), `EtiquetasPage` (la hoja de impresión vive fuera de la columna) y, por herencia del chasis, el resto de editores.
 
 ### 2.10g `PastillaSync`
@@ -300,6 +301,11 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** el único dato de "procedimiento a medias" de la app. Lo consumen el chasis (barra flotante + punto de la pestaña Guías) e `InicioPage` (tarjeta).
 - **El descarte se comparte entre todas las instancias del hook** (tarea 203). Vivía en un `useState` por instancia y con un solo consumidor bastaba; desde que Inicio lee el mismo dato hay dos, y con estado local **descartar la barra flotante no llegaba a Inicio**: la barra desaparecía y la tarjeta no aparecía en su lugar. Ahora es una variable de módulo leída con `useSyncExternalStore`, así que las dos instancias ven lo mismo en el mismo render.
 - **Devuelve:** `{ actual, descartado, descartar }`.
+
+### 2.10m0 `useAccionesDeGuia` (`src/features/soluciones/useAccionesDeGuia.ts`)
+- **Propósito:** qué ofrece cada guía ejecutable en este teléfono ("Empezar", "Continuar · paso N de M", "Repetir guía"), resuelto por `accionDeGuia`, en **un solo sitio**. Nació al necesitarlo dos pantallas (tarea 241): el catálogo de Guías, que ya lo calculaba dentro de `SolucionesPage`, y las acciones directas del buscador global.
+- **API:** `accionesDeGuia(articulos, progresos)` es pura (para probarla sin React y para que el catálogo la use con los artículos que ya tiene cargados); `useAccionesDeGuia()` la alimenta con dos `useLiveQuery`. Una guía **sin pasos** no entra en el mapa: su ausencia es la señal de que no hay recorrido que ofrecer.
+- **Dónde:** `SolucionesPage` (tarjetas del catálogo) y `busqueda/AccionesResultado` (a través del contexto de resultados).
 
 ### 2.10m `SeccionPlegable`
 
@@ -558,11 +564,15 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 ### 3.8c `busqueda/BuscadorGlobal` y `busqueda/ResultadosBusqueda`
 - **Propósito:** el buscador global en capa (tarea 181, mockup `3d`). Hasta ahora buscar era global pero vivía **dentro** de Inicio: desde cualquier otra pestaña había que volver a Inicio y perder el sitio donde se estaba. Ahora la lupa vive en `BarraSuperior` y abre esta capa a pantalla completa sin abandonar la pantalla actual.
-- **Props:** `BuscadorGlobal` recibe `{ abierto, onCerrar }`; `ResultadosBusqueda`, `{ grupos, consulta, onNavegar? }`; `FilaResultado`, `{ resultado, consulta, onNavegar? }`.
+- **Props:** `BuscadorGlobal` recibe `{ abierto, onCerrar }`; `ResultadosBusqueda`, `{ resultados, consulta, consultaCruda, onNavegar?, onDesbloqueada?, huboDesbloqueo? }` (desde la tarea 241 recibe la **lista plana** que devuelve `buscar` y decide él mismo qué sube a "Mejores resultados" y qué queda en los grupos); `FilaResultado`, `{ resultado, consulta, conTipo?, conAcciones?, desdeMejores? }`.
 - **Alcance declarado:** la capa dice por escrito qué abarca ("Busca en todo a la vez: Guías, Equipos, Bóveda, Ubicaciones y Personas"). Era la otra mitad del problema que detectó la auditoría: cinco buscadores con la misma forma y cinco alcances distintos, sin nada que los distinguiera.
 - **Detalles:** portal a `document.body` por el mismo motivo que `Modal` (la barra desde la que se invoca lleva `backdrop-blur`, que crea bloque contenedor y rompería `fixed inset-0`); cierra con Escape, con la X o al elegir un resultado; enfoca el campo al abrir; la consulta **no** sobrevive al cierre.
-- **Reparto:** el catálogo y los helpers sin JSX (`VISUAL_POR_TIPO`, `GRUPOS_BUSQUEDA`, `partirTitulo`, `agruparResultados`) viven en `busqueda/resultados.ts`; la presentación, en `busqueda/ResultadosBusqueda.tsx`. Están separados para no mezclar componentes y constantes en un mismo archivo (lo avisa `oxlint` por fast-refresh).
-- **Dónde:** `BarraSuperior` monta la capa (carga diferida con `lazy`); `InicioPage` reutiliza `ResultadosBusqueda` para su buscador en línea, que conserva porque esa pantalla **es** el buscador.
+- **Reparto:** el catálogo y los helpers sin JSX (`VISUAL_POR_TIPO`, `GRUPOS_BUSQUEDA`, `partirTitulo`, `agruparResultados`) viven en `busqueda/resultados.ts`; el ranking global y la intención, en `busqueda/mejores.ts`; la regla del puente, en `busqueda/reglasPuenteBoveda.ts`; la presentación, en `busqueda/ResultadosBusqueda.tsx`. Están separados para no mezclar componentes y constantes en un mismo archivo (lo avisa `oxlint` por fast-refresh) y para poder probar las reglas sin navegador.
+- **Piezas nuevas (tarea 241):**
+  - **`busqueda/AccionesResultado.tsx`**: la acción directa de cada tipo de resultado (`AccionesDeResultado`). Guía y diagnóstico navegan; credencial, comando y atajo **copian sin navegar**. La de guía sale de `accionDeGuia`; la de credencial, de `copiarCampoCredencial`. Devuelve `null` en los tipos cuya acción ES abrir la ficha.
+  - **`busqueda/PuenteBoveda.tsx`**: la fila "Buscar «X» en Bóveda" con desbloqueo **en línea** (delega en `desbloquear()`, no recrea criptografía). Se auto-oculta sin permiso, con la bóveda abierta o sin consulta.
+  - **`busqueda/contextoResultados.ts`**: lo que toda fila necesita y ninguna debe recalcular: el mapa de acciones de guía (dos consultas vivas, una sola vez), la consulta, el cierre de la capa y el punto de medición.
+- **Dónde:** `BarraSuperior` monta la capa (carga diferida con `lazy`), y desde la tarea 241 también `Chasis` en modo tarea con `conBusqueda`; `InicioPage` reutiliza `ResultadosBusqueda` para su buscador en línea, que conserva porque esa pantalla **es** el buscador.
 
 ### 3.8m `red/NodoRed`, `red/useNodoRed.ts`, `red/nodoDeRed.ts` y `red/grupoUbicacion.ts`
 - **Propósito:** la vecindad de un nodo de la topología ("Depende de", "Si este equipo falla", "Dependen de este equipo") y las reglas que la rodean (tarea 204, hallazgos M-018 y M-019).

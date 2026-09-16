@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
@@ -17,6 +17,7 @@ import { BTN_GHOST_PELIGRO, BTN_SECUNDARIO, TagNeutral, TituloSeccion } from '..
 import { db, type Referencia } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { nombreVivo, mapaDeTextos } from '../../lib/referencia'
+import { registrarVisita } from '../../lib/recientes'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { Historial } from '../historial/Historial'
 import { EstadoUso } from './EstadoUso'
@@ -55,6 +56,13 @@ export function ReferenciaFicha() {
   )
   const articulos = useLiveQuery(() => db.articulos.toArray(), [], [])
   const referencias = useLiveQuery(() => db.referencias.toArray(), [], [])
+
+  // Queda anotada en los recientes de este teléfono (tarea 241), igual
+  // que una guía o un equipo: es lo que alimenta "Recientes" de Inicio.
+  const idVisitado = referencia && !referencia.eliminadoEn ? referencia.id : null
+  useEffect(() => {
+    if (idVisitado) void registrarVisita('referencia', idVisitado)
+  }, [idVisitado])
 
   const usos = useMemo(() => guiasQueUsan(referenciaId, articulos), [referenciaId, articulos])
   const guias = useMemo(

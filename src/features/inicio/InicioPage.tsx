@@ -2,24 +2,29 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { obtenerRecientes, type ElementoReciente } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { BarraReanudar } from '../../components/BarraReanudar'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
+  BookBookmark,
   BookOpen,
   CaretDown,
   CaretRight,
   Check,
+  ClockCounterClockwise,
   type IconoProps,
   Lightbulb,
   LockSimple,
   MagnifyingGlass,
+  Monitor,
   PencilSimple,
   Plus,
+  TreeStructure,
 } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
-import { agruparResultados } from '../busqueda/resultados'
+import { PuenteBoveda } from '../busqueda/PuenteBoveda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import { coincidenciaArticulo } from '../soluciones/coincidencia'
@@ -70,8 +75,15 @@ const FILAS_VISIBLES = 2
 // fuera de pantalla lo que sí hay que hacer hoy.
 const PROXIMOS_VISIBLES = 3
 
+// "Recientes" son tres y nunca más: es un atajo a lo que ya se usó, no
+// un historial. Cuatro filas empezarían a competir con la agenda.
+const MAX_RECIENTES_INICIO = 3
+
 export function InicioPage() {
   const [query, setQuery] = useState('')
+  // La bóveda se abrió desde el puente de la propia búsqueda, sin salir
+  // de Inicio: cuenta una interacción más en la medición del recorrido.
+  const [huboDesbloqueo, setHuboDesbloqueo] = useState(false)
   // El input usa `query` directo (nunca se atrasa); todo lo derivado de
   // buscar y pintar resultados usa la version diferida, para que
   // escribir se sienta instantaneo aunque la busqueda o la lista de
@@ -131,8 +143,6 @@ export function InicioPage() {
   const reanudar = useReanudar()
   const hayQueReanudar = tarjetaReanudarVisible(reanudar)
 
-  const gruposResultado = useMemo(() => agruparResultados(resultados), [resultados])
-
   // Bienvenida del primer día (tarea 184): se muestra mientras falte
   // alguno de sus tres pasos Y esta pantalla no tenga todavía bloques
   // propios. Sin valor por defecto, `useLiveQuery` devuelve `undefined`
@@ -140,6 +150,17 @@ export function InicioPage() {
   // enseñar la bienvenida un instante a quien sí tiene trabajo a medias.
   const consultasListas = useLiveQuery(() => db.progresoPasos.count(), []) !== undefined
   const hayBloquesReales = pendientes.length > 0 || reanudar.actual != null
+
+  // RECIENTES (encargo del 2026-09-15, tarea 241, sección 11). Tres
+  // como máximo, derivados de la actividad real de este teléfono
+  // (`recientes`, la tabla que ya se escribía al abrir una guía o un
+  // equipo y que desde esta tarea también anota diagnósticos y fichas
+  // del Centro de consulta). No hay tabla nueva ni favoritos a mano.
+  //
+  // La bóveda no aparece aquí, ni desbloqueada: `recientes` NO anota
+  // credenciales, así que no hay nada que filtrar ni que decidir. Es una
+  // garantía del dato, no una condición de la pantalla.
+  const recientes = useLiveQuery(() => obtenerRecientes(MAX_RECIENTES_INICIO), [], [])
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila. El titulo
@@ -156,22 +177,41 @@ export function InicioPage() {
       conLupa={false}
       barra={
         <div className="px-4 pb-3 pt-2">
-          {/* "Buscar en Soluciones IT" y una frase de apoyo (2026-09-14):
-              el alcance anterior, "Guías, Equipos y Bóveda", callaba
-              todo lo demás que el índice ya encontraba (diagnósticos,
-              ubicaciones, personas y el Centro de consulta). */}
-          <CampoBusqueda valor={query} onCambiar={setQuery} alcance="Soluciones IT" />
+          {/* LA PREGUNTA, NO EL MÓDULO (encargo del 2026-09-15, tarea
+              241, sección 1). El campo decía "Buscar en Soluciones IT",
+              que es cierto pero obliga a traducir: el técnico no llega
+              con ganas de buscar, llega con algo que resolver. La
+              etiqueta accesible sigue nombrando el alcance (regla M-R8),
+              que es lo que distingue este buscador de los de sección. */}
+          <CampoBusqueda
+            valor={query}
+            onCambiar={setQuery}
+            alcance="Soluciones IT"
+            textoAlternativo="¿Qué necesitas resolver?"
+          />
           <p className="mt-1.5 px-0.5 text-[12px] leading-snug text-noct-neutral-500">
-            Guías, equipos, herramientas, glosario y más
+            Busca una guía, equipo, acceso, herramienta, comando o problema
           </p>
         </div>
       }
     >
       <main className="flex-1 px-4 pb-16 pt-4">
         {buscando ? (
-          gruposResultado.length > 0 ? (
-            <ResultadosBusqueda grupos={gruposResultado} consulta={consulta} />
+          resultados.length > 0 ? (
+            <ResultadosBusqueda
+              resultados={resultados}
+              consulta={consulta}
+              consultaCruda={consultaCruda}
+              onDesbloqueada={() => setHuboDesbloqueo(true)}
+              huboDesbloqueo={huboDesbloqueo}
+            />
           ) : (
+            <div className="flex flex-col gap-4">
+            {/* Estado vacío más útil (sección 16 del encargo): con la
+                bóveda bloqueada, "no se encontró nada" no es toda la
+                verdad, porque sus accesos ni siquiera se buscaron. El
+                puente es genérico y no confirma que exista ninguno. */}
+            <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} />
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
               <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
               <div>
@@ -222,6 +262,7 @@ export function InicioPage() {
                 </button>
               </div>
             </div>
+            </div>
           )
         ) : (
           <div className="@container flex flex-col gap-[18px]">
@@ -232,6 +273,24 @@ export function InicioPage() {
                 vuelve a aparecer en este dispositivo. */}
             {consultasListas && (
               <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
+            )}
+
+            {/* RECIENTES, justo bajo el buscador: lo que este técnico ya
+                usó es lo que más probablemente vuelva a necesitar, y
+                llegar ahí no debería costar ni escribir. Sin historial
+                suficiente no se dibuja nada. */}
+            {recientes.length > 0 && (
+              <section>
+                <div className="mb-1 flex items-center gap-2 px-0.5">
+                  <ClockCounterClockwise size={13} className="text-noct-neutral-400" aria-hidden />
+                  <TituloSeccion>Recientes</TituloSeccion>
+                </div>
+                <div className="flex flex-col">
+                  {recientes.map((item) => (
+                    <FilaReciente key={item.clave} item={item} />
+                  ))}
+                </div>
+              </section>
             )}
 
             {/* LA AGENDA. Fecha de hoy y resumen de una línea; debajo,
@@ -438,6 +497,35 @@ function FilaAgenda({ item }: { item: ItemPendiente }) {
       <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
     </Link>
   )
+}
+
+// FILA DE RECIENTE (M-R6, fila de CONSULTA, no de acción): 44 px,
+// 13,5 px y sin cuadrado de color. No es algo que haya que resolver hoy,
+// así que no puede pesar lo mismo que una fila de la agenda.
+function FilaReciente({ item }: { item: ElementoReciente }) {
+  const Icono = ICONO_RECIENTE[item.tipo]
+  return (
+    <Link
+      to={item.ruta}
+      className="flex min-h-11 items-center gap-2.5 rounded-md px-2 py-2 text-noct-text hover:bg-noct-text/[.05]"
+    >
+      <Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13.5px] leading-[1.3]">{item.titulo}</span>
+        {item.subtitulo && (
+          <span className="block truncate text-[11.5px] text-noct-neutral-500">{item.subtitulo}</span>
+        )}
+      </span>
+      <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />
+    </Link>
+  )
+}
+
+const ICONO_RECIENTE: Record<ElementoReciente['tipo'], (props: IconoProps) => React.JSX.Element> = {
+  articulo: BookOpen,
+  dispositivo: Monitor,
+  diagnostico: TreeStructure,
+  referencia: BookBookmark,
 }
 
 // Icono y tono de una fila de "Te toca a ti" según su categoría: una

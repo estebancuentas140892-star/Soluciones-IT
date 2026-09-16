@@ -2,6 +2,37 @@
 
 ## Encargo del 2026-09-15: secretos largos en la Bóveda
 
+### 241. Acelerar la resolución: búsqueda que resuelve y acciones directas
+
+**Estado:** Completada (2026-09-15). **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-15. La aplicación debía pasar de "¿en qué módulo está lo que necesito?" a "¿qué necesito resolver ahora?", **sin** rediseñar módulos, sin tocar contenido de Supabase y sin nuevas dependencias.
+
+**Ubicación.** Nuevos: `src/features/busqueda/mejores.ts` (ranking global e intención), `medicion.ts` (medición preparada), `reglasPuenteBoveda.ts` (regla del puente), `contextoResultados.ts`, `AccionesResultado.tsx`, `PuenteBoveda.tsx`; `src/features/boveda/accionesCredencial.ts`; `src/features/soluciones/useAccionesDeGuia.ts`. Modificados: `busqueda/{ResultadosBusqueda.tsx,BuscadorGlobal.tsx,useIndiceBusqueda.ts,resultados.ts}`, `inicio/InicioPage.tsx`, `boveda/BovedaPage.tsx`, `soluciones/{SolucionesPage,AsistentePage}.tsx`, `referencia/ReferenciaFicha.tsx`, `diagnostico/DiagnosticoRunPage.tsx`, `components/BarraTarea.tsx`, `app/Chasis.tsx`, `lib/{recientes.ts,db.ts}`.
+
+**Las seis fases del encargo, en orden:**
+
+1. **Mejores resultados y acciones de guía, equipo y diagnóstico.** `mejoresResultados` elige de 3 a 5 resultados por relevancia global sobre lo que `buscar` ya devolvió: dos tramos (directo antes que sinónimo, sin que ningún bono cruce), coincidencia de título, peso operacional por tipo, intención, y el orden del buscador como desempate. Lo que sube se descuenta de su grupo. La acción de una guía la decide `accionDeGuia` a través de `useAccionesDeGuia`, extraído de `SolucionesPage` para que las dos pantallas compartan la MISMA regla de progreso.
+2. **Puente de Bóveda bloqueada y conservación de la consulta.** Fila genérica "Buscar «X» en Bóveda" con desbloqueo **en línea**, delegando en `desbloquear()`. La consulta no viaja: sigue en el campo, así que no hay nada que guardar ni que filtrar (ver AD-038, decisión 5).
+3. **Acciones rápidas con la bóveda desbloqueada.** `accionesRapidasDeCredencial` decide qué se ofrece según el tipo real del secreto y `copiarCampoCredencial` (extraído de `BovedaPage`) descifra, copia y **audita**. El registro pasa a esperarse en vez de lanzarse con `void`.
+4. **Búsqueda desde el modo ejecución.** Lupa en la cabecera compacta (`BarraTarea onBuscar`, `Chasis conBusqueda`, `AsistentePage conBusqueda`), que abre `BuscadorGlobal` como capa. La ejecución no se desmonta.
+5. **Recientes compactos en Inicio.** Tres filas como máximo, solo sin consulta activa, desde la tabla local `recientes`, ampliada a diagnósticos y fichas del Centro de consulta (`ReferenciaFicha` y `DiagnosticoRunPage` registran la visita, como ya hacían artículo y dispositivo). Nunca muestra credenciales porque esa tabla no las anota.
+6. **Pruebas, responsive y limpieza.** Ver abajo.
+
+**Decisión de diseño que cambió sobre la marcha.** Las acciones se probaron primero **en todas las filas**; la captura a 360 px mostró una búsqueda de ocho guías con ocho botones "Empezar" apilados, es decir exactamente la saturación que el encargo prohíbe. Se replegaron a "Mejores resultados" (cinco como mucho), con una excepción: el resultado único, donde no hay sección arriba y un solo botón no satura nada. El puente también se movió: de encabezar los resultados a ir **detrás de la primera sección**.
+
+**Pruebas añadidas (5 archivos nuevos y 3 bloques en `busqueda.test.ts`):**
+- `mejores.test.ts` (24 casos): cruce de módulos, título exacto, directo por delante de sinónimo, peso operacional, tope de cinco, estabilidad del orden, las seis intenciones, separación de la sección y subtítulo con tipo.
+- `reglasPuenteBoveda.test.ts`: sin permiso no se ofrece; con la bóveda abierta tampoco; el rótulo es **la misma frase** exista o no la credencial (no delata nada).
+- `accionesCredencial.test.ts` (13 casos, con cifrado real): con la bóveda bloqueada no se copia ni se audita nada; copiar deja su entrada de auditoría; una copia fallida **no** la deja; el resultado nunca lleva el valor copiado; un bloque cifrado con otra contraseña no se descifra.
+- `medicion.test.ts`: el evento solo tiene los cinco campos previstos y **no contiene la consulta**, solo su longitud.
+- `useAccionesDeGuia.test.ts`: empezar, continuar (con el primer paso SIN hacer, no "hechos + 1"), repetir, guía sin pasos fuera del mapa y progreso huérfano ignorado.
+- En `busqueda.test.ts`: "Mejores resultados" sobre el índice real; el sinónimo marcado y detrás; y con la bóveda bloqueada **ninguna credencial** aparece ni en resultados, ni en grupos, ni arriba, ni desbloqueada se filtra el bloque cifrado.
+
+**Verificación.** `npm test` 106 archivos y 1487 casos en verde; `npm run lint` y `npm run build` limpios. Recorrido completo en Chrome sin cabeza contra el banco local (`VITE_MODO_PRUEBA_LOCAL=1`, con un equipo, un diagnóstico y una credencial sembrados en la propia página) a **360, 448, 768 y 1280 px**: los ocho escenarios del encargo pasan en los cuatro anchos, sin desbordamiento horizontal. Los controles por debajo de 44 px que reporta la auditoría en página son previos a esta tarea (enlaces del sidebar a 1280, avatar a 768) o falsos positivos (el `input` dentro de la etiqueta de 46 px del buscador).
+
+**Lo que NO se tocó:** esquema, Supabase, RLS, sincronización, offline, navegación principal (Bóveda sigue dentro de Más en móvil), motor MiniSearch, sinónimos, diseño Nocturne, editores y formularios. Sin dependencias nuevas.
+
+**Pendiente anotado (no es esta tarea):** `registrarResolucion` está preparada y probada pero **no guarda en ningún sitio**; conectarla exige decidir antes dónde se mide sin ensuciar `accesos_boveda`, que es una auditoría de seguridad (ver BUSCADOR.md, sección 7.6).
+
 ### 240. Mostrar completos los secretos largos
 
 **Estado:** finalizada el 2026-09-15. **Prioridad:** alta. **Origen:** encargo del usuario del 15 de septiembre de 2026 (solo la visualización de secretos largos; sin tocar cifrado, auditoría, permisos, estructura ni el diseño general de la Bóveda).

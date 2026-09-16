@@ -8,7 +8,8 @@ Este documento reemplaza y amplía la sección 6 de [ARQUITECTURA.md](ARQUITECTU
 
 - Un **único índice [MiniSearch](https://github.com/lucaong/minisearch) en memoria** construido sobre los datos locales (Dexie). No hay búsqueda contra el servidor: al ser 100% local responde en milisegundos y sin internet.
 - El índice lo construye y consulta el hook `useIndiceBusqueda` (`src/features/busqueda/useIndiceBusqueda.ts`). Desde el 2026-09-14 el hook solo lee las tablas: **qué entra al índice lo decide la función pura `documentosDeBusqueda`**, en el mismo archivo, que se prueba sin navegador (borradores fuera, bóveda solo abierta). Lo consumen el buscador en línea de Inicio (`src/features/inicio/InicioPage.tsx`) y, desde la tarea 181, la capa global `BuscadorGlobal` (`src/features/busqueda/BuscadorGlobal.tsx`), que se abre con la lupa de la barra superior desde cualquiera de las cinco pestañas.
-- **Cómo se presenta (2026-09-14):** el campo dice **"Buscar en Soluciones IT"** y, como apoyo, **"Guías, equipos, herramientas, glosario y más"**. Antes el alcance escrito era "Guías, Equipos y Bóveda" (Inicio) o una lista de seis secciones (la capa), y los dos callaban o enumeraban de más lo que el índice ya encontraba.
+- **Cómo se presenta (2026-09-15):** el campo pregunta **"¿Qué necesitas resolver?"** y, como apoyo, **"Busca una guía, equipo, acceso, herramienta, comando o problema"**. La **etiqueta accesible sigue siendo "Buscar en Soluciones IT"**, que es lo que distingue este buscador de los de sección (regla M-R8); lo que cambia es el marcador de posición, mediante `textoAlternativo` de `CampoBusqueda`, que existe justo para el campo que es una pregunta y no un alcance. Antes decía "Buscar en Soluciones IT" con la frase "Guías, equipos, herramientas, glosario y más" (2026-09-14), y antes de eso enumeraba secciones.
+- **Desde el 2026-09-15 (tarea 241) el buscador no solo encuentra: RESUELVE.** Sobre lo que `buscar` devuelve hay una segunda lectura, "Mejores resultados" (sección 7.1), y cada uno de esos resultados trae su **acción directa** (empezar o continuar una guía, iniciar un diagnóstico, copiar una credencial o un comando; sección 7.2). El motor no cambió: MiniSearch, los sinónimos y el ranking son los mismos.
 - El mismo hook alimenta las sugerencias anti duplicados al crear un artículo o un diagnóstico (`buscarSimilares` / `buscarArticulosSimilares`).
 - Además del índice global existen varios **buscadores locales** más simples que filtran en el sitio la lista que una pantalla ya tiene cargada (Dispositivos, Red, Soluciones, Centro de consulta, alta de conexión). No pasan por MiniSearch (sección 10).
 
@@ -44,7 +45,9 @@ Notas importantes:
 
 ## 3. Qué devuelve cada resultado
 
-MiniSearch guarda `storeFields: ['tipo', 'titulo', 'subtitulo', 'ruta', 'portadaRef']` y devuelve además el `id`. El campo largo `texto` no se guarda ni se devuelve: solo sirve para indexar. Cada resultado se mapea a `ResultadoBusqueda { id, tipo, titulo, subtitulo, ruta, portadaRef }`.
+MiniSearch guarda `storeFields: ['tipo', 'titulo', 'subtitulo', 'ruta', 'portadaRef']` y devuelve además el `id`. El campo largo `texto` no se guarda ni se devuelve: solo sirve para indexar. Cada resultado se mapea a `ResultadoBusqueda { id, tipo, titulo, subtitulo, ruta, portadaRef, soloSinonimo }`.
+
+`soloSinonimo` (2026-09-15) marca el resultado que **no coincide con lo que se escribió**: lo trajo un sinónimo. El orden de `buscar` ya lo decía (los directos van primero), pero "Mejores resultados" reordena por relevancia operativa y necesita el dato explícito para no dejar que un sinónimo adelante a una coincidencia directa (sección 7.1).
 
 `portadaRef` es la referencia de Storage de una miniatura: portada del procedimiento (artículo), foto principal (dispositivo) o la propia referencia si el adjunto es una imagen. Es `''` para categoría, ubicación, persona, diagnóstico, fichas del Centro de consulta, credencial y campo protegido (la credencial nunca expone la referencia de su archivo, que apunta al bucket cifrado `archivos_boveda`).
 
@@ -104,6 +107,81 @@ El mismo diccionario **no** alimenta el selector de "vincular procedimiento" de 
 - **Orden interno**: dentro de cada tramo, score descendente de MiniSearch (BM25 + boost por campo + pesos difuso/prefijo). No hay otro desempate configurado por la app; a score idéntico el orden no está garantizado.
 - **Agrupación**: los resultados no se muestran como lista plana. `GRUPOS_BUSQUEDA` (en `src/features/busqueda/resultados.ts` desde la tarea 181; antes vivía dentro de `InicioPage.tsx`) define seis grupos por fuente, en orden fijo: **Guías** (incluye diagnóstico, categoría, artículo y adjunto), **Equipos**, **Bóveda**, **Ubicaciones**, **Personas** y **Centro de consulta** (herramienta, término, atajo y comando). Lo aplican por igual Inicio y la capa global. Dentro de cada grupo se respeta el score; entre grupos el orden es siempre el mismo (Soluciones primero), aunque un resultado de otro grupo tenga mayor score.
 - **Sin tope ni paginación**: se pintan todos los resultados de cada grupo. Con el volumen del equipo no es un problema; queda anotado como ausencia de límite si el contenido crece (ver [TAREAS.md](TAREAS.md)).
+
+### 7.1 Mejores resultados: la respuesta antes que el módulo (2026-09-15, tarea 241)
+
+`src/features/busqueda/mejores.ts`. Sobre la lista que devuelve `buscar` (en su orden), se eligen **de 3 a 5 resultados con la mayor relevancia global, sin importar el módulo**, y se pintan arriba, bajo el rótulo **"Mejores resultados"**.
+
+**El problema que cierra.** El agrupado por fuente (sección 7) decidía el orden principal, y el grupo mandaba sobre la relevancia: buscando "impresora caja 4", el equipo exacto aparecía **después de todas las guías**, porque Guías va primero en `GRUPOS_BUSQUEDA`. Eso obliga a preguntarse "¿en qué módulo está lo que necesito?" antes de poder resolver nada.
+
+Cómo se puntúa cada candidato (función `puntuacion`, pura y probada):
+
+1. **Dos tramos, no uno.** Primero TODOS los que coinciden con lo escrito; detrás, los que solo trae un sinónimo (`soloSinonimo`). **Ningún bono cruza de tramo**: un sinónimo no puede adelantar a una coincidencia directa por mucho que puntúe.
+2. **Coincidencia del título**: exacta (+100), por prefijo (+60), contenida (+40), todas las palabras sueltas (+25), alguna palabra (+10).
+3. **Relevancia operacional** (`PESO_OPERATIVO`): guía, diagnóstico, equipo y credencial 6; comando, herramienta y atajo 5; término 4; categoría, ubicación y persona 2; adjunto 1. A igualdad de coincidencia gana **lo que se resuelve**, no el escalón que lleva a otra cosa.
+4. **Intención** (+18, sección 7.3).
+5. **Desempate final**: el orden que ya traía el buscador, para que la lista no baile entre pulsaciones.
+
+**No se pinta nada dos veces.** Lo que sube arriba se **descuenta de su grupo** (`sinLosMejores`); un grupo que se queda sin filas desaparece. Con **un solo resultado** la sección no se dibuja (`hayQueSepararMejores`): una cabecera "Mejores resultados · 1" sobre una fila única es ruido, y ahí la acción la lleva la propia fila del grupo.
+
+**El tipo se escribe en la fila.** Fuera de los grupos no hay cabecera que lo diga, así que el subtítulo se antepone con el tipo: "Guía · ICG Manager", "Equipo · Epson · Caja 4", "Bóveda · Acceso" (`subtituloConTipo`, que no repite el tipo si el subtítulo ya empieza por él).
+
+### 7.2 Acciones directas en el resultado (2026-09-15, tarea 241)
+
+`src/features/busqueda/AccionesResultado.tsx`. Hasta esta tarea un resultado solo sabía **abrir su ficha**, así que el recorrido real era siempre buscar, abrir, buscar la acción dentro y ejecutarla.
+
+| Tipo | Acción | De dónde sale la regla |
+|---|---|---|
+| **articulo** (guía) | `Empezar` · `Continuar · paso N de M` · `Repetir guía` | `accionDeGuia`, la **misma** función que la ficha y el catálogo (vía `useAccionesDeGuia`, compartido con `SolucionesPage`). Empezar y repetir estrenan ejecución antes de navegar; continuar no toca el progreso |
+| **diagnostico** | `Iniciar` | La ruta del diagnóstico ya arranca la sesión sola |
+| **credencial** | `Copiar usuario` + `Copiar contraseña` (acceso) · `Copiar clave` (clave o PIN) · `Copiar` (token o licencia) · nada (archivo seguro y nota, que se abren en su ficha) | `accionesRapidasDeCredencial` y `copiarCampoCredencial` (`src/features/boveda/accionesCredencial.ts`), extraídos de `BovedaPage`: descifrado, permisos y **auditoría** son los de siempre |
+| **comando** y **atajo** | `Copiar comando` / `Copiar atajo` | El campo `valor` de la ficha. Esa tabla **nunca guarda secretos**, así que aquí no hay descifrado ni auditoría que hacer |
+| todo lo demás | ninguna | Abrir la ficha ES la acción, y la fila entera ya la abre |
+
+**Las acciones viven solo en "Mejores resultados"** (o en la fila única cuando no hay sección). Con la acción en todas las filas, una búsqueda de ocho guías dejaba ocho botones "Empezar" apilados y la pantalla se leía como una botonera: arriba son **cinco como mucho**, que es justo lo que se va a tocar. Cada fila tiene una acción primaria y, como mucho, dos.
+
+**Volver al sitio.** Cada fila viaja con `conOrigen(pathname, 'la búsqueda')`, así que abrir una credencial desde aquí y volver devuelve **a la búsqueda**, no a la lista raíz de la Bóveda. Es el sistema de origen que ya existía (AD-030), no un segundo mecanismo.
+
+### 7.3 Intención de la consulta, con los datos que ya hay (2026-09-15, tarea 241)
+
+`intencionesDeConsulta`. Sin IA generativa y sin servicios externos: se leen las palabras que el equipo ya usa y se suma un bono al tipo que suele resolver esa clase de pregunta. Pueden aplicar varias a la vez.
+
+| Intención | Se detecta por | Favorece |
+|---|---|---|
+| `procedimiento` | un verbo de procedimiento entre las palabras (crear, configurar, instalar, reiniciar, restablecer, conectar...) | guía, diagnóstico |
+| `glosario` | empieza por "qué es", "qué significa", "definición"... | término |
+| `equipo` | varias palabras y **una de ellas es un número** ("caja 4", "impresora taquilla 2") | equipo |
+| `problema` | "no ", "falla", "error", "lento", "se cae", "sin "... | diagnóstico, guía |
+| `acceso` | usuario, contraseña, clave, acceso, cuenta, PIN, token, licencia, administrador... | credencial |
+| `consola` | comando, consola, terminal, cmd, powershell, atajo, tecla | comando, atajo |
+
+El bono de intención (**+18**) es menor que cualquier coincidencia de título: **desempata entre cosas que ya coinciden, nunca inventa un resultado que no se buscó**. Casos como "ping" o "zabbix" no necesitan intención: los resuelve la coincidencia exacta de título (+100).
+
+### 7.4 El puente a la Bóveda bloqueada (2026-09-15, tarea 241)
+
+`src/features/busqueda/reglasPuenteBoveda.ts` (la regla) y `PuenteBoveda.tsx` (la pantalla).
+
+Con la bóveda bloqueada sus credenciales **no entran al índice**, y eso no cambia (sección 9). El efecto secundario era que buscar el nombre de un acceso devolvía "sin coincidencias" y había que acordarse solo de que eso vive en la Bóveda, entrar, escribir la contraseña maestra y **volver a escribir lo mismo**.
+
+Ahora, con permiso de bóveda y la bóveda cerrada, los resultados incluyen una fila genérica: **Buscar "{consulta}" en Bóveda**, con su candado y la acción **"Desbloquear y buscar"**.
+
+- **Es genérica y no delata nada.** Aparece igual escribiendo "administrador POS" que escribiendo "xyz": el rótulo es la misma frase para una consulta que existe y para una que no. **Sin permiso de bóveda no se dibuja**: quien no está autorizado no llega a saber que existe una sección protegida con contenido buscable.
+- **El desbloqueo es EN LÍNEA**, sobre el propio buscador, y delega entero en `desbloquear()`, la única fuente de verdad de la sesión (la misma de `BovedaGuard` y del bloque protegido de un paso). No se copia ni se recrea criptografía.
+- **La consulta no viaja a ninguna parte**: sigue escrita en el campo, así que "conservarla" no necesita estado de navegación, parámetro de URL ni sesión. Al desbloquear, el índice se reconstruye solo (depende de `useBovedaDesbloqueada`) y los accesos aparecen en **la misma búsqueda**, con sus acciones rápidas. Ver [DECISIONES.md](DECISIONES.md), AD-038.
+- **Definir la contraseña maestra por primera vez NO se puede hacer desde aquí**: si `estadoInicialBoveda()` no dice `verificar`, el puente enlaza a la sección Bóveda, que es donde esa decisión tiene su confirmación y su aviso.
+- **Dónde se coloca:** detrás de la **primera** sección de resultados. Lo que ya se encontró resuelve la mayoría de las búsquedas y no puede quedar por debajo de una puerta cerrada; pero tampoco puede enterrarse al final, porque cuando lo que se busca es un acceso ESTE es el resultado. En el estado vacío (sin resultados públicos) es lo único que se ofrece.
+
+### 7.5 Buscar durante la ejecución de una guía (2026-09-15, tarea 241)
+
+La cabecera compacta del modo ejecución (`BarraTarea compacta`) gana una **lupa** cuando el chasis recibe `conBusqueda` (hoy, solo `AsistentePage`). Abre `BuscadorGlobal` **como capa** sobre la ejecución.
+
+La navegación principal sigue fuera: lo que se añade no es navegación, es una consulta. Como la capa es un portal a `<body>`, la ejecución que hay debajo **no se vuelve a montar**: mismo paso activo, mismo progreso y mismo cronómetro al cerrar. Copiar un comando, un atajo o una credencial no navega, así que el recorrido entero (buscar, copiar, cerrar, seguir) ocurre sin salir del procedimiento; y si la bóveda está bloqueada, el puente la abre ahí mismo.
+
+### 7.6 Medición del recorrido (preparada, sin sistema nuevo)
+
+`src/features/busqueda/medicion.ts`. `registrarResolucion` es un punto de enganche único que recibe `{ accion, tipo, desdeMejores, interacciones, longitudConsulta }` cuando el técnico resuelve algo (empezar o continuar una guía, iniciar un diagnóstico, abrir un equipo, copiar una credencial).
+
+**Hoy no guarda nada a propósito.** La app no tiene un canal de analítica y `accesos_boveda` es una auditoría de seguridad, no una métrica de uso: meter ahí eventos de navegación ensuciaría el registro que el equipo revisa. Lo que sí queda fijado (y probado) es la **forma** del evento: **nunca** lleva la consulta, ni el título, ni el id, ni ningún texto libre. De la consulta solo viaja su **longitud**, que es un número.
 
 ## 8. Sugerencias anti duplicados
 
@@ -188,6 +266,7 @@ Cómo funciona:
 Todas registradas en [TAREAS.md](TAREAS.md):
 
 - Miniatura de portada en resultados: `portadaRef` viaja pero no se pinta.
+- Medicion del recorrido: `registrarResolucion` esta preparada y probada, pero todavia no guarda en ningun sitio (seccion 7.6).
 - Chips de filtro por tipo: descritos en la documentación previa pero inexistentes en el código. (El agrupado era inline en `InicioPage.tsx`; la tarea 181 lo extrajo a `busqueda/resultados.ts` y `busqueda/ResultadosBusqueda.tsx`, pero sigue sin haber chips de tipo.)
 - Tres normalizaciones de acentos sin unificar (`texto.ts`, `sinonimos.ts`, `iconosSoluciones.ts`).
 - Sin tope de resultados en el buscador global.

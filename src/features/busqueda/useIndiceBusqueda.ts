@@ -60,6 +60,15 @@ export interface ResultadoBusqueda {
   subtitulo: string
   ruta: string
   portadaRef: string
+  /**
+   * Este resultado NO coincide con lo que el tecnico escribio: lo trajo
+   * un sinonimo (2026-09-15, tarea 241). El orden de `buscar` ya lo dice
+   * (los directos van primero), pero `mejoresResultados` reordena por
+   * relevancia operativa y necesita el dato explicito para no dejar que
+   * un sinonimo adelante a una coincidencia directa (seccion 14 del
+   * encargo). Ausente equivale a false.
+   */
+  soloSinonimo?: boolean
 }
 
 /** Todo lo que alimenta el índice, tal como sale de la base local. */
@@ -475,7 +484,14 @@ export function buscarConSinonimos(indice: MiniSearch<DocumentoBusqueda>, consul
     })
     .sort((a, b) => b.score - a.score)
   const idsDirectos = new Set(directos.map((resultado) => resultado.id))
-  return [...primeros, ...porSinonimo.filter((resultado) => !idsDirectos.has(resultado.id))]
+  return [
+    ...primeros,
+    // Marcados para que quien reordene despues (`mejoresResultados`) no
+    // pueda colocarlos por delante de una coincidencia directa.
+    ...porSinonimo
+      .filter((resultado) => !idsDirectos.has(resultado.id))
+      .map((resultado) => ({ ...resultado, soloSinonimo: true })),
+  ]
 }
 
 function aResultado(resultado: ResultadoIndice): ResultadoBusqueda {
@@ -486,6 +502,7 @@ function aResultado(resultado: ResultadoIndice): ResultadoBusqueda {
     subtitulo: resultado.subtitulo as string,
     ruta: resultado.ruta as string,
     portadaRef: (resultado.portadaRef as string) ?? '',
+    soloSinonimo: resultado.soloSinonimo === true,
   }
 }
 

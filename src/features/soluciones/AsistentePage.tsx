@@ -40,6 +40,13 @@ export function AsistentePage() {
     <Chasis
       modo="tarea"
       compacta
+      // BUSCAR SIN ABANDONAR EL PROCEDIMIENTO (tarea 241, secciones 8 a
+      // 10). La navegación principal sigue fuera: lo que se añade es una
+      // lupa que abre el buscador global COMO CAPA. Consultar un
+      // comando, una herramienta o copiar una credencial de la bóveda
+      // (incluso desbloqueándola ahí mismo) deja la ejecución intacta
+      // debajo: mismo paso, mismo progreso, mismo cronómetro.
+      conBusqueda
       rotulo="Ejecutando"
       titulo={articulo.titulo}
       salidaEtiqueta="Salir del modo ejecución"

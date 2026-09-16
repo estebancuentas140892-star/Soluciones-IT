@@ -5,7 +5,7 @@ import { MagnifyingGlass, Plus, X } from '../../components/iconos'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
-import { agruparResultados } from './resultados'
+import { PuenteBoveda } from './PuenteBoveda'
 import { ResultadosBusqueda } from './ResultadosBusqueda'
 import { buscar, useIndiceBusqueda } from './useIndiceBusqueda'
 
@@ -21,6 +21,9 @@ import { buscar, useIndiceBusqueda } from './useIndiceBusqueda'
 
 export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerrar: () => void }) {
   const [query, setQuery] = useState('')
+  // La boveda se abrio desde el puente, sin salir de esta capa: cuenta
+  // una interaccion mas en la medicion del recorrido (seccion 17).
+  const [huboDesbloqueo, setHuboDesbloqueo] = useState(false)
   const campo = useRef<HTMLInputElement>(null)
 
   // Mismo criterio que Inicio: el input usa `query` directo y todo lo
@@ -33,7 +36,6 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
-  const grupos = useMemo(() => agruparResultados(resultados), [resultados])
 
   useEffect(() => {
     if (!abierto) return
@@ -56,7 +58,10 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
   // porque se invoca desde cualquier pestaña y arrastrar la busqueda
   // anterior confundiria mas de lo que ahorra.
   useEffect(() => {
-    if (!abierto) setQuery('')
+    if (!abierto) {
+      setQuery('')
+      setHuboDesbloqueo(false)
+    }
   }, [abierto])
 
   if (!abierto) return null
@@ -76,10 +81,16 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
             46 px, el alcance escrito y el borrar a 44 px reales, que
             aquí ni siquiera existía. Lo que distingue a este buscador
             del de cada sección es su alcance, no su forma. */}
+        {/* La pregunta, no el alcance (tarea 241, sección 1 del
+            encargo): el técnico no viene a "buscar en Soluciones IT",
+            viene a resolver algo. La etiqueta accesible sigue diciendo
+            el alcance, que es lo que distingue este buscador de los de
+            sección (regla M-R8). */}
         <CampoBusqueda
           valor={query}
           onCambiar={setQuery}
           alcance="Soluciones IT"
+          textoAlternativo="¿Qué necesitas resolver?"
           refCampo={campo}
           className="min-w-0 flex-1"
         />
@@ -101,37 +112,50 @@ export function BuscadorGlobal({ abierto, onCerrar }: { abierto: boolean; onCerr
           // tipos que indexa: la lista larga daba a entender que solo
           // buscaba en los primeros que nombraba.
           <div className="flex flex-col gap-1 px-0.5">
-            <p className="text-[14.5px] font-medium leading-snug">Buscar en Soluciones IT</p>
+            <p className="text-[14.5px] font-medium leading-snug">¿Qué necesitas resolver?</p>
             <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-              Guías, equipos, herramientas, glosario y más.
+              Busca una guía, equipo, acceso, herramienta, comando o problema.
             </p>
             <p className="mt-1 text-[12.5px] leading-relaxed text-noct-neutral-500">
               Tolera errores de escritura y entiende sinónimos: "backup" encuentra "copia de seguridad".
             </p>
           </div>
-        ) : grupos.length > 0 ? (
-          <ResultadosBusqueda grupos={grupos} consulta={consulta} onNavegar={onCerrar} />
+        ) : resultados.length > 0 ? (
+          <ResultadosBusqueda
+            resultados={resultados}
+            consulta={consulta}
+            consultaCruda={consultaCruda}
+            onNavegar={onCerrar}
+            onDesbloqueada={() => setHuboDesbloqueo(true)}
+            huboDesbloqueo={huboDesbloqueo}
+          />
         ) : (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
-            <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
-            <div>
-              <p className="text-[14.5px] font-medium">Sin coincidencias</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
-              </p>
-            </div>
-            <div className="mt-0.5 flex flex-wrap justify-center gap-2">
-              <Link
-                to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
-                onClick={onCerrar}
-                className={BTN_SECUNDARIO}
-              >
-                <Plus size={15} aria-hidden />
-                Crear equipo
-              </Link>
-              <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
-                Limpiar búsqueda
-              </button>
+          <div className="flex flex-col gap-4">
+            {/* Estado vacío más útil (sección 16 del encargo): con la
+                bóveda bloqueada, "no hay nada" no es toda la verdad.
+                Sigue sin confirmar que exista ninguna credencial. */}
+            <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} />
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
+              <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
+              <div>
+                <p className="text-[14.5px] font-medium">Sin coincidencias</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
+                  Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
+                </p>
+              </div>
+              <div className="mt-0.5 flex flex-wrap justify-center gap-2">
+                <Link
+                  to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
+                  onClick={onCerrar}
+                  className={BTN_SECUNDARIO}
+                >
+                  <Plus size={15} aria-hidden />
+                  Crear equipo
+                </Link>
+                <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
+                  Limpiar búsqueda
+                </button>
+              </div>
             </div>
           </div>
         )}

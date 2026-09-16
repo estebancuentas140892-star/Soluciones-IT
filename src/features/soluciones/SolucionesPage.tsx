@@ -12,11 +12,10 @@ import { PastillaFrescura } from '../../components/PastillaFrescura'
 import { TIPOS_ARTICULO, etiquetaDeTipo } from './tiposArticulo'
 import { colorIconoDeTipo, iconoDeCategoria, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from './coloresCategoria'
-import { accionDeGuia, type AccionGuia } from './accionGuia'
+import { accionesDeGuia } from './useAccionesDeGuia'
 import { FilaArticulo } from './FilaArticulo'
 import { coincidenciaArticulo } from './coincidencia'
 import { sugerenciaBusqueda } from './sugerenciaBusqueda'
-import { normalizarProcedimiento } from '../../lib/procedimiento'
 
 // Pantalla Soluciones en el sistema Nocturne. Rediseñada a partir de la
 // auditoría de la sección (handoff "Auditoría de Soluciones TI",
@@ -146,19 +145,9 @@ export function SolucionesPage() {
   // Lo que ofrece cada tarjeta lo decide `accionDeGuia`, la MISMA
   // funcion que la ficha de la guia: antes la tarjeta tenia su propia
   // regla (`hechos > 0`) y por eso decia "Empezar" con una ejecucion
-  // abierta. Solo entran los articulos con fila de progreso; sin ella
-  // la tarjeta ofrece "Empezar", que es lo correcto.
-  const accionPorArticulo = useMemo(() => {
-    const mapa = new Map<string, AccionGuia>()
-    for (const progreso of progresos) {
-      const procedimiento = normalizarProcedimiento(
-        articulos.find((a) => a.id === progreso.articuloId)?.procedimiento ?? null,
-      )
-      if (!procedimiento || procedimiento.pasos.length === 0) continue
-      mapa.set(progreso.articuloId, accionDeGuia(procedimiento, progreso, true))
-    }
-    return mapa
-  }, [progresos, articulos])
+  // abierta. Desde la tarea 241 el reparto vive en `accionesDeGuia`,
+  // compartido con las acciones directas del buscador global.
+  const accionPorArticulo = useMemo(() => accionesDeGuia(articulos, progresos), [articulos, progresos])
   const nombreCat = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias])
   const ordenCat = useMemo(() => new Map(categorias.map((c, i) => [c.id, i])), [categorias])
   const categoriaActiva = categoriaSel ? categorias.find((c) => c.id === categoriaSel) : undefined

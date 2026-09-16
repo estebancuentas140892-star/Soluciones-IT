@@ -1010,11 +1010,23 @@ export interface ProgresoPasos {
   actualizadoEn: string
 }
 
-// Ultimos articulos y dispositivos abiertos en este telefono. Solo
-// vive en el dispositivo: no se sincroniza con el resto del equipo.
+// Ultimas fichas abiertas en este telefono. Solo vive en el
+// dispositivo: no se sincroniza con el resto del equipo.
+//
+// Desde la tarea 241 tambien anota los diagnosticos y las fichas del
+// Centro de consulta, para que "Recientes" de Inicio pueda ofrecer lo
+// que el tecnico USA (una guia, un equipo, un diagnostico, una
+// herramienta) y no solo dos de las cuatro cosas. `tipo` no esta
+// indexado (el indice es `clave, visitadoEn`), asi que ampliarlo no
+// cambia el esquema de Dexie.
+//
+// NUNCA anota una credencial ni un campo protegido: el historial de la
+// boveda es su auditoria (`accesos_boveda`), y una lista de "recientes"
+// en la portada filtraria por la puerta de atras que existe un acceso
+// con cierto nombre (regla de seguridad del encargo, seccion 19).
 export interface Reciente {
   clave: string
-  tipo: 'articulo' | 'dispositivo'
+  tipo: 'articulo' | 'dispositivo' | 'diagnostico' | 'referencia'
   entidadId: string
   visitadoEn: string
 }

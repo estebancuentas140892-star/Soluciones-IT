@@ -13,6 +13,7 @@ import {
   volverAtras,
 } from '../../lib/progresoDiagnostico'
 import { contarHechos, verificacionFinalCompleta } from '../../lib/progresoPasos'
+import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { registrarEjecucionDiagnostico } from '../../lib/repositorio'
 import {
@@ -57,6 +58,14 @@ export function DiagnosticoRunPage() {
     () => normalizarNodos(diagnostico && !diagnostico.eliminadoEn ? diagnostico.nodos : []),
     [diagnostico],
   )
+
+  // Queda anotado en los recientes de este teléfono (tarea 241): es lo
+  // que alimenta "Recientes" de Inicio, junto a guías, equipos y fichas
+  // del Centro de consulta.
+  const idVisitado = diagnostico && !diagnostico.eliminadoEn ? diagnostico.id : null
+  useEffect(() => {
+    if (idVisitado) void registrarVisita('diagnostico', idVisitado)
+  }, [idVisitado])
 
   // Auto-inicio: al abrir un problema sin sesión previa se arranca en la
   // primera pregunta (sin pantalla intermedia). El ref evita un doble

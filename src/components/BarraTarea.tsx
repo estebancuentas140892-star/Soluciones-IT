@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { padreDe, vueltaDeTarea } from '../lib/navegacion'
-import { X } from './iconos'
+import { MagnifyingGlass, X } from './iconos'
 
 // Cabecera del nivel 3 del chasis (tarea 185, mockup 4c del handoff
 // "Auditoría de Soluciones TI"). Es la única pantalla que puede quedarse
@@ -60,6 +60,17 @@ interface Props {
    * editor no caben en la misma fila que el título).
    */
   trailing?: ReactNode
+  /**
+   * Abre el buscador global COMO CAPA sobre la tarea (tarea 241,
+   * secciones 8 a 10 del encargo). Solo en modo `compacta`, y solo donde
+   * consultar algo a mitad del trabajo es parte del trabajo: la
+   * ejecucion de una guia.
+   *
+   * La barra de pestañas sigue sin volver (esa decision no cambia): lo
+   * que se añade no es navegacion, es una consulta que no obliga a
+   * abandonar el procedimiento. Sin esta prop, el boton no existe.
+   */
+  onBuscar?: () => void
 }
 
 export function BarraTarea({
@@ -72,6 +83,7 @@ export function BarraTarea({
   children,
   compacta = false,
   trailing,
+  onBuscar,
 }: Props) {
   const { pathname } = useLocation()
   const destino = salidaA ?? padreDe(pathname)?.to ?? '/'
@@ -102,6 +114,17 @@ export function BarraTarea({
             </Link>
           )}
           <h1 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-tight">{titulo}</h1>
+          {onBuscar && (
+            <button
+              type="button"
+              onClick={onBuscar}
+              aria-label="Buscar sin salir de aquí"
+              title="Buscar sin salir de aquí"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"
+            >
+              <MagnifyingGlass size={18} aria-hidden />
+            </button>
+          )}
           {trailing}
         </div>
         {children}

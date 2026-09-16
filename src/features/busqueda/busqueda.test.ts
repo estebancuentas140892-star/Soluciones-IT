@@ -11,6 +11,7 @@ import type {
   Ubicacion,
 } from '../../lib/db'
 import { agruparResultados } from './resultados'
+import { hayQueSepararMejores, mejoresResultados } from './mejores'
 import {
   buscar,
   buscarArticulosSimilares,
@@ -677,5 +678,125 @@ describe('lo que el buscador global nunca muestra', () => {
     const texto = JSON.stringify(abierta)
     expect(texto).not.toContain('secreto-cifrado')
     expect(texto).not.toContain('valor-cifrado')
+  })
+})
+
+// ----------------------------------------------------------------
+// Resolver desde la búsqueda (encargo del 2026-09-15, tarea 241)
+// ----------------------------------------------------------------
+
+describe('mejores resultados sobre el índice real', () => {
+  const equipoCaja = {
+    id: 'd-caja',
+    nombre: 'Impresora caja 4',
+    marca: 'Epson',
+    modelo: 'TM-T88',
+    ubicacion: 'Caja 4',
+    detalles: {},
+    eliminadoEn: null,
+  } as unknown as Dispositivo
+  const indiceMixto = crearIndiceDesdeDocumentos(
+    documentosDeBusqueda(
+      datosIndice({
+        articulos: [
+          guia('a1', 'Cambiar el rodillo de una impresora', 'publicado'),
+          guia('a2', 'Crear cliente externo en ICG Manager', 'publicado'),
+        ],
+        dispositivos: [equipoCaja],
+      }),
+    ),
+  )
+
+  it('el equipo exacto encabeza aunque las guías fueran primero por grupo', () => {
+    const resultados = buscar(indiceMixto, 'impresora caja 4')
+    const mejores = mejoresResultados(resultados, 'impresora caja 4')
+    expect(mejores[0].id).toBe('dispositivo:d-caja')
+    // El agrupado de siempre sigue poniendo Guías delante: por eso hacía
+    // falta una lectura distinta arriba.
+    expect(agruparResultados(resultados)[0].id).toBe('soluciones')
+  })
+
+  it('"crear cliente externo" lleva directo a la guía', () => {
+    const consulta = 'crear cliente externo'
+    expect(mejoresResultados(buscar(indiceMixto, consulta), consulta)[0].id).toBe('articulo:a2')
+  })
+
+  it('lo que sube arriba no se repite abajo y los grupos siguen completos', () => {
+    const resultados = buscar(indiceMixto, 'impresora')
+    const mejores = mejoresResultados(resultados, 'impresora')
+    const restantes = resultados.filter((r) => !mejores.some((m) => m.id === r.id))
+    expect(mejores.length + restantes.length).toBe(resultados.length)
+    expect(new Set(resultados.map((r) => r.id)).size).toBe(resultados.length)
+  })
+})
+
+describe('el sinónimo se marca y nunca adelanta a lo escrito', () => {
+  const indiceSinonimo = crearIndiceDesdeDocumentos(
+    documentosDeBusqueda(
+      datosIndice({
+        articulos: [
+          guia('a-backup', 'Backup del servidor de archivos', 'publicado'),
+          guia('a-copia', 'Crear copia de seguridad del SQL Server', 'publicado'),
+        ],
+      }),
+    ),
+  )
+
+  it('"backup" pone primero lo que dice backup, y marca lo que llegó por sinónimo', () => {
+    const resultados = buscar(indiceSinonimo, 'backup')
+    expect(resultados[0].id).toBe('articulo:a-backup')
+    expect(resultados[0].soloSinonimo).toBe(false)
+    const porSinonimo = resultados.find((r) => r.id === 'articulo:a-copia')
+    expect(porSinonimo?.soloSinonimo).toBe(true)
+  })
+
+  it('y "Mejores resultados" respeta ese orden aunque el otro puntúe mejor por título', () => {
+    const consulta = 'backup'
+    expect(mejoresResultados(buscar(indiceSinonimo, consulta), consulta)[0].id).toBe('articulo:a-backup')
+  })
+})
+
+describe('con la bóveda bloqueada, ninguna credencial llega al técnico', () => {
+  const credencial = {
+    id: 'c-pos',
+    titulo: 'Administrador POS',
+    categoria: 'Punto de venta',
+    datosCifrados: 'bloque-cifrado',
+    archivo: null,
+    eliminadoEn: null,
+  } as unknown as Credencial
+  const conCredencial = {
+    articulos: [guia('a1', 'Configurar el POS de la taquilla', 'publicado')],
+    credenciales: [credencial],
+  }
+
+  function resultadosCon(bovedaDesbloqueada: boolean) {
+    const indice = crearIndiceDesdeDocumentos(
+      documentosDeBusqueda(datosIndice({ ...conCredencial, bovedaDesbloqueada })),
+    )
+    return buscar(indice, 'administrador POS')
+  }
+
+  it('ni en los resultados, ni en los grupos, ni en "Mejores resultados"', () => {
+    const resultados = resultadosCon(false)
+    const mejores = mejoresResultados(resultados, 'administrador POS')
+    for (const lista of [resultados, mejores]) {
+      expect(lista.some((r) => r.tipo === 'credencial')).toBe(false)
+      expect(JSON.stringify(lista)).not.toContain('Administrador POS')
+    }
+    expect(agruparResultados(resultados).some((grupo) => grupo.id === 'boveda')).toBe(false)
+  })
+
+  it('al desbloquear, la MISMA consulta ya la encuentra y la pone primero', () => {
+    // Es lo que hace que el puente no necesite guardar la consulta en
+    // ningún sitio: se desbloquea y la búsqueda escrita vuelve a correr.
+    const resultados = resultadosCon(true)
+    const mejores = mejoresResultados(resultados, 'administrador POS')
+    expect(mejores[0].id).toBe('credencial:c-pos')
+    expect(hayQueSepararMejores(resultados, mejores)).toBe(true)
+  })
+
+  it('ni desbloqueada entra el bloque cifrado en lo que se pinta', () => {
+    expect(JSON.stringify(resultadosCon(true))).not.toContain('bloque-cifrado')
   })
 })

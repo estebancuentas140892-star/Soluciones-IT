@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
@@ -37,6 +37,10 @@ import {
   type IconoProps,
 } from '../components/iconos'
 import { TituloSeccion } from '../components/nocturne'
+
+const BuscadorGlobal = lazy(() =>
+  import('../features/busqueda/BuscadorGlobal').then((m) => ({ default: m.BuscadorGlobal })),
+)
 
 // Chasis único de la app (tarea 185, mockup 4c del handoff "Auditoría de
 // Soluciones TI"). Nace del ShellNocturne (handoff "Herramienta IT para
@@ -220,6 +224,17 @@ interface PropsTarea extends PropsComunes {
    * de paso de la ejecución quede en la misma fila (tarea 218).
    */
   trailing?: ReactNode
+  /**
+   * Lupa en la cabecera compacta, que abre el buscador global COMO CAPA
+   * encima de la tarea (tarea 241, secciones 8 a 10 del encargo).
+   *
+   * No reabre la navegacion principal: la capa se cierra y la tarea
+   * sigue exactamente donde estaba, con su paso activo, su progreso y su
+   * cronometro intactos (la pantalla no se desmonta). Es lo que permite
+   * consultar un comando, una herramienta o una credencial a mitad de un
+   * procedimiento sin abandonarlo.
+   */
+  conBusqueda?: boolean
 }
 
 type Props = PropsSeccion | PropsDocumento | PropsTarea
@@ -263,6 +278,11 @@ export function Chasis(props: Props) {
   // el primer render llegaría con `null` y la banda no aparecería hasta
   // el siguiente cambio de estado del asistente.
   const [ranuraTarea, setRanuraTarea] = useState<HTMLDivElement | null>(null)
+  // Buscador en capa sobre una tarea (tarea 241). Vive aqui y no dentro
+  // de la pantalla porque la cabecera que lo invoca tambien es del
+  // chasis; la capa se monta en un portal a <body>, asi que abrirla no
+  // vuelve a montar nada de la tarea que hay debajo.
+  const [buscadorTarea, setBuscadorTarea] = useState(false)
   // De dónde vino el técnico cuando no vino de la lista padre (tarea
   // 202, regla M-R2). Se resuelve aquí, en el chasis, y no en cada
   // pantalla: así el regreso de las 44 rutas deshace el último salto sin
@@ -306,6 +326,7 @@ export function Chasis(props: Props) {
             salidaEtiqueta={props.salidaEtiqueta}
             alSalir={props.alSalir}
             compacta={props.compacta}
+            onBuscar={props.compacta && props.conBusqueda ? () => setBuscadorTarea(true) : undefined}
             // La ranura de `BandaTarea` cambia de sitio según la altura
             // de la cabecera: en la compacta va en la MISMA línea que el
             // título (ahí es donde el contador de paso de la ejecución
@@ -330,6 +351,11 @@ export function Chasis(props: Props) {
           </BarraTarea>
           <ProveedorBandaTarea value={ranuraTarea}>{props.children}</ProveedorBandaTarea>
         </div>
+        {buscadorTarea && (
+          <Suspense fallback={null}>
+            <BuscadorGlobal abierto onCerrar={() => setBuscadorTarea(false)} />
+          </Suspense>
+        )}
         {/* Los atajos de teclado también aquí, pero SIN los de navegar:
             saltar a otra sección desde un editor o una ejecución sacaría
             al técnico de un trabajo a medias sin pasar por su

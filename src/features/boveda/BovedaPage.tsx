@@ -38,14 +38,13 @@ import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { useGrafo } from '../../components/useGrafo'
 import { resumenImpacto } from '../../lib/grafo'
 import { iconoPorPalabraClave } from '../../lib/iconoPorPalabraClave'
-import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
 import { descripcionVencida, estadoVencimiento, type EstadoVencimiento } from '../../lib/vencimiento'
 import { detectarCandidatos } from './migracionSecretos'
+import { copiarCampoCredencial, ETIQUETA_COPIA, tipoDe, type CampoCopiable } from './accionesCredencial'
 import {
   bloquear,
   definirMinutosAutobloqueo,
-  descifrarCredencial,
   obtenerMinutosAutobloqueo,
   OPCIONES_AUTOBLOQUEO_MIN,
 } from './sesionBoveda'
@@ -162,19 +161,10 @@ const PRESETS_AVANZADOS: Preset[] = [
 // La acción rápida de cada fila depende de lo que la credencial
 // guarda de verdad. Antes toda fila ofrecía "Copiar contraseña",
 // incluso un Archivo seguro o una Nota segura, que no tienen ninguna:
-// el botón fallaba siempre y el técnico aprendía a no tocarlo.
-//
-// `null` = este tipo no se copia desde la lista; la fila abre la ficha,
-// que es donde el archivo se descarga y se descifra y donde la nota se
-// lee. Los tres tipos que sí guardan una clave la copian con su propio
-// nombre, sin mostrarla y registrando el acceso igual que antes.
-const ETIQUETA_COPIA: Record<TipoSecreto, string | null> = {
-  cuenta: 'Copiar contraseña',
-  red: 'Copiar clave o PIN',
-  llave: 'Copiar token, licencia o clave',
-  archivo: null,
-  nota: null,
-}
+// el botón fallaba siempre y el técnico aprendía a no tocarlo. Los
+// rótulos, el motivo del fallo, `tipoDe` y el propio copiado (descifrar,
+// copiar y auditar) viven desde la tarea 241 en `accionesCredencial.ts`,
+// compartidos con las acciones rápidas del buscador global.
 
 const ETIQUETA_ABRIR: Record<TipoSecreto, string> = {
   cuenta: 'Abrir la ficha',
@@ -184,16 +174,6 @@ const ETIQUETA_ABRIR: Record<TipoSecreto, string> = {
   nota: 'Abrir nota segura',
 }
 
-// Motivo exacto cuando el descifrado sale bien pero no hay nada que
-// copiar (credencial vieja guardada sin clave).
-const SIN_VALOR: Record<TipoSecreto, string> = {
-  cuenta: 'Sin contraseña guardada.',
-  red: 'Sin clave o PIN guardado.',
-  llave: 'Sin token, licencia o clave guardada.',
-  archivo: 'Este archivo se abre desde su ficha.',
-  nota: 'Esta nota se lee desde su ficha.',
-}
-
 // Icono de la acción "abrir" según lo que hay al otro lado.
 const ICONO_ABRIR: Record<TipoSecreto, (props: IconoProps) => React.JSX.Element> = {
   cuenta: ArrowSquareOut,
@@ -201,12 +181,6 @@ const ICONO_ABRIR: Record<TipoSecreto, (props: IconoProps) => React.JSX.Element>
   llave: ArrowSquareOut,
   archivo: Paperclip,
   nota: Note,
-}
-
-// Las credenciales guardadas antes de la columna `tipo` llegan sin
-// valor; se leen como 'cuenta', igual que hace el editor.
-function tipoDe(credencial: { tipo?: TipoSecreto }): TipoSecreto {
-  return credencial.tipo ?? 'cuenta'
 }
 
 // Hoja inferior del sistema Nocturne (mockup Bóveda.dc.html): panel
@@ -406,42 +380,14 @@ export function BovedaPage() {
     }, 1400)
   }
 
-  // Descifra y copia un campo de la credencial, registra el acceso en
-  // la auditoría (regla del mockup: "Copiar registra quién y cuándo") y
-  // devuelve el resultado en vez de tocar estado directamente: la
-  // comparten el menú de la fila (`copiar`, con su propio aviso dentro
-  // de la hoja) y el botón nuevo en la fila misma (`copiarFila`, sin
-  // hoja donde mostrar un mensaje largo). La contraseña nunca se
-  // muestra; solo va al portapapeles.
-  async function descifrarYCopiar(
-    c: (typeof filtradas)[number]['credencial'],
-    campo: 'usuario' | 'contrasena',
-  ): Promise<{ ok: boolean; mensaje?: string; sinDato?: boolean }> {
-    const datos = await descifrarCredencial(c.datosCifrados)
-    if (!datos) return { ok: false, mensaje: 'No se pudo descifrar con la contraseña maestra actual.' }
-    const valor = campo === 'usuario' ? datos.usuario : datos.contrasena
-    if (!valor) {
-      return {
-        ok: false,
-        sinDato: true,
-        mensaje: campo === 'usuario' ? 'Sin usuario guardado.' : SIN_VALOR[tipoDe(c)],
-      }
-    }
-    if (!(await copiarAlPortapapeles(valor))) return { ok: false, mensaje: 'No se pudo copiar al portapapeles.' }
-    void registrarAccesoBoveda({
-      credencialId: c.id,
-      credencialTitulo: c.titulo,
-      accion: campo === 'usuario' ? 'copio_usuario' : 'copio_contrasena',
-    })
-    return { ok: true }
-  }
-
   // Copiar usuario o contraseña desde el menú de la lista, sin abrir la
   // ficha: el aviso (éxito o motivo del fallo) se ve dentro de la hoja.
-  async function copiar(campo: 'usuario' | 'contrasena') {
+  // El descifrado, el copiado y la auditoría los hace
+  // `copiarCampoCredencial` (tarea 241), compartido con el buscador.
+  async function copiar(campo: CampoCopiable) {
     const c = credencialMenu
     if (!c) return
-    const resultado = await descifrarYCopiar(c, campo)
+    const resultado = await copiarCampoCredencial(c, campo)
     if (!resultado.ok) {
       setCopiado(null)
       setAvisoCopia(resultado.mensaje ?? null)
@@ -460,7 +406,7 @@ export function BovedaPage() {
   // acciones (abrir, editar, eliminar) se quedan en el menú: copiar la
   // contraseña es el único gesto frecuente a diario, no todos lo son.
   async function copiarFila(c: (typeof filtradas)[number]['credencial']) {
-    const resultado = await descifrarYCopiar(c, 'contrasena')
+    const resultado = await copiarCampoCredencial(c, 'contrasena')
     clearTimeout(temporizadorFila.current)
     setFilaAccion({ id: c.id, ok: resultado.ok, mensaje: resultado.mensaje })
     // Credencial vieja sin clave guardada: la fila cambia a "abrir la

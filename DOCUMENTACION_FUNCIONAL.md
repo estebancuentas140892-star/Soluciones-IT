@@ -301,11 +301,17 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 **Qué NO es.** No hay entidad "tarea", ni tabla de recordatorios, ni calendario mensual. Es una **vista derivada** de datos que ya existen (credenciales, campos protegidos, borradores, progreso de guías, sugerencias de diagnóstico). El reparto en grupos es lógica pura y está en `src/features/inicio/agenda.ts`; el cálculo de los ítems, en `pendientes.ts`.
 
 **Cabecera fija (con desenfoque).** Desde la tarea 181 la fila superior es la **barra superior global** (ver la sección 2), común a las cinco pestañas: título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022), pastilla de sincronización y avatar de la cuenta. Debajo, lo propio de Inicio:
-- **Buscador en línea** (input `type="search"`), **de 46 px**: placeholder **"Buscar en Soluciones IT"** y, debajo, la frase de apoyo **"Guías, equipos, herramientas, glosario y más"** (2026-09-14; antes decía "Buscar en Guías, Equipos y Bóveda" y callaba el resto de lo que el índice ya encontraba). Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
+- **Buscador en línea** (input `type="search"`), **de 46 px**: pregunta **"¿Qué necesitas resolver?"** y, debajo, la frase de apoyo **"Busca una guía, equipo, acceso, herramienta, comando o problema"** (2026-09-15, tarea 241). La **etiqueta accesible sigue siendo "Buscar en Soluciones IT"**, que es lo que distingue este buscador de los de sección (regla M-R8): lo que cambió es el marcador de posición, porque el técnico no llega con ganas de buscar, llega con algo que resolver. Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
 - **La lupa del chasis se apaga aquí, y solo aquí** (`conLupa={false}`, regla **M-R8**, "un buscador por pantalla"): esta pantalla ya trae su campo con el alcance escrito, así que la lupa era el segundo buscador de la misma pantalla y además con el alcance redactado distinto. En las otras cuatro secciones la lupa ES el buscador y se queda.
 - **Sin saludo.** El saludo dinámico según la hora se **retiró en la tarea 184** (decisión aprobada por el usuario): ocupaba la línea de contexto con un eslogan que cambiaba tres veces al día. Lo que hay que decir el primer día lo dice la bienvenida, y solo mientras haga falta.
 
-**Modo búsqueda (hay texto).** Resultados agrupados por fuente, en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas** y **Centro de consulta** (herramientas, términos, atajos y comandos; cada fila dice su tipo al principio del subtítulo, por ejemplo "Herramienta · Monitoreo"). Cada grupo muestra su conteo. Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda". El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
+**Modo búsqueda (hay texto).** Dos lecturas, de arriba abajo (tarea 241; el detalle completo, en [BUSCADOR.md](BUSCADOR.md), secciones 7.1 a 7.4):
+
+1. **Mejores resultados**: de 3 a 5 resultados con la mayor relevancia **global**, sin importar el módulo, cada uno con su **acción directa**: `Empezar` o `Continuar · paso N de M` en una guía, `Iniciar` en un diagnóstico, `Copiar usuario` / `Copiar contraseña` / `Copiar clave` en una credencial (solo con la bóveda desbloqueada) y `Copiar comando` / `Copiar atajo` en el Centro de consulta. Como aquí no hay cabecera de grupo, **el tipo se escribe en la propia fila**: "Guía · ICG Manager", "Equipo · Epson · Caja 4", "Bóveda · Acceso". Con un solo resultado la sección no se dibuja y la acción la lleva su fila.
+2. **Buscar "{consulta}" en Bóveda**: solo con permiso de bóveda y la bóveda **bloqueada**. Es una puerta genérica, **no confirma que exista ninguna credencial con ese nombre**; "Desbloquear y buscar" pide la contraseña maestra **ahí mismo** y, al abrirse, los accesos aparecen en la misma búsqueda sin volver a escribirla.
+3. **Los grupos de siempre**, para explorar por módulo y en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas** y **Centro de consulta** (cada fila dice su tipo al principio del subtítulo). Cada grupo muestra su conteo; **lo que subió a "Mejores resultados" no se repite aquí**. Estas filas **no llevan botón**: la fila entera abre la ficha, como siempre.
+
+Cada fila lleva icono con tono por tipo, título con el término **resaltado**, subtítulo y flecha. Si no hay coincidencias: estado vacío con botón "Limpiar búsqueda" (y el puente a la Bóveda, si aplica). El índice tolera errores de escritura y sinónimos ("backup" encuentra "copia de seguridad").
 
 **Modo agenda (sin texto), en orden:**
 
@@ -314,6 +320,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
    2. *Instala la app en el teléfono*, con botón **"Instalar"** (diálogo nativo) o **"Cómo instalar"** si el navegador no lo ofrece (Safari de iOS siempre).
    3. *Descarga todo para trabajar sin señal*, con botón **"Descargar"**. Es **el mismo estado** que "Descargar todo para offline" de Mi cuenta: los dos leen y escriben el mismo módulo (`adjuntosOffline.ts`), así que descargar en cualquiera de los dos apaga el paso y actualiza la fecha en el otro.
    **No compite con la agenda y no vuelve:** se retira sola en cuanto hay algo que atender, y una vez cumplidos los tres pasos queda marcada como completada en el dispositivo, así que **no reaparece** aunque el estado real cambie (por ejemplo, abrir la app desde el navegador en vez de la versión instalada).
+0-bis. **Recientes** (tarea 241), justo bajo el buscador y **solo sin consulta activa**: hasta **tres** filas de consulta (44 px) con lo último que se abrió en este teléfono, derivado de la tabla local `recientes`, que desde esta tarea anota también **diagnósticos** y **fichas del Centro de consulta** además de guías y equipos. Sin historial suficiente, se muestran menos filas o ninguna. **Nunca aparece una credencial**: `recientes` no las anota, ni con la bóveda abierta.
 1. **Fecha de hoy** en español de Colombia ("Viernes, 11 de septiembre"): dice respecto a qué se dice "hoy".
 2. **Resumen operativo** de una línea: "2 vencidos · 1 para hoy · 3 próximos". **Las categorías vacías no se nombran.**
 3. **Vencidos** — credenciales de la Bóveda y datos protegidos de equipo cuya fecha ya pasó. Cada fila: **nombre**, **cuánto lleva vencido** ("Venció hace 3 días") en rojo, **origen** ("Bóveda" o el nombre del equipo) y enlace a su ficha. Se muestran todas.
@@ -346,9 +353,9 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 | **Actividad del equipo** | Más (`/mas`) | Sección plegable con su conteo |
 | **Descargar todo para offline** | Mi cuenta (`/cuenta`) | Ajuste de este dispositivo, como instalar la app; mismo estado que el paso 3 de la bienvenida |
 | **Diagnóstico** y **Escanear** (atajos) | Ya estaban en la navegación | No se duplican en Inicio |
-| **Lo que consultaste** | — | Deja de mostrarse. El registro local de recientes (`recientes.ts`) **se conserva** y lo siguen usando otras funciones |
+| **Lo que consultaste** | Inicio, como **"Recientes"** (tarea 241) | Volvió en forma compacta: tres filas como máximo, bajo el buscador y solo sin consulta activa. Mismo registro local (`recientes.ts`), ampliado a diagnósticos y fichas del Centro de consulta |
 
-**Formas de fila (regla M-R6, "una fila, un significado").** `FilaAgenda` (56 px, título de 15 px, la razón en el color de su estado y el origen al lado) es lo que el técnico debe resolver. Todos los controles táctiles miden 44 px o más y ninguna fila provoca desplazamiento horizontal: los textos largos se recortan.
+**Formas de fila (regla M-R6, "una fila, un significado").** `FilaAgenda` (56 px, título de 15 px, la razón en el color de su estado y el origen al lado) es lo que el técnico debe resolver; `FilaReciente` (44 px, 13,5 px, sin cuadrado de color) es lo que solo se consulta. Todos los controles táctiles miden 44 px o más y ninguna fila provoca desplazamiento horizontal: los textos largos se recortan.
 
 **Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Guías, Equipos, Bóveda, Ubicaciones, Personas y el Centro de consulta; la agenda enlaza a la ficha de cada credencial, a la ficha del equipo dueño del dato protegido, al borrador propio, a la guía a medias y a las sugerencias del equipo.
 
@@ -1139,6 +1146,8 @@ Equipos > Crear
 ```
 
 ### 13.2 Ejecutar un procedimiento (modo asistente)
+
+**Consultar algo sin abandonar la guía (tarea 241).** La cabecera compacta trae una **lupa** ("Buscar sin salir de aquí") que abre el buscador global **como capa** encima de la ejecución. La barra de pestañas sigue sin volver: lo que se añade no es navegación, es una consulta. Al cerrar la capa se sigue **exactamente** en el mismo paso, con el mismo progreso y el mismo cronómetro (la pantalla de debajo nunca se desmonta). Desde ahí se puede copiar un comando o un atajo, y copiar el usuario o la contraseña de una credencial; si la bóveda está bloqueada, se desbloquea en la propia capa. Ver [BUSCADOR.md](BUSCADOR.md), sección 7.5.
 
 ```
 Guías > (categoría) > Artículo
