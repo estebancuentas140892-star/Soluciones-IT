@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-15
 
+### Agregado (compatibilidad, tareas 234 y 235): los datos que ya existen siguen funcionando
+
+**Área modificada:** lectura del avance de las guías y de las filas anteriores a los campos actuales. **Nuevo:** `src/lib/compatibilidadDatos.test.ts`. **Modificados:** `src/lib/progresoPasos.ts` (solo un comentario de contrato), [TAREAS.md](TAREAS.md) y [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Motivo:** punto 9 del encargo del 2026-09-09, el último que quedaba vivo de las tareas 234 y 235. Las tareas 233 a 241 agregaron campos y funciones sobre datos que el equipo lleva meses escribiendo, y esos datos **no se migran al leerlos**: la garantía tiene que ser que el código nuevo aguanta la forma vieja. **Sin cambios** de comportamiento, esquema, Supabase ni interfaz.
+**Impacto esperado:** un teléfono con avance guardado antes de estos cambios sigue continuando donde iba, sin perder nada ni dar por cumplido lo que no hizo.
+
+- **Agregadas 16 pruebas de compatibilidad.** Las filas se escriben **a mano**, sin pasar por los escritores actuales, para reproducir lo que hay hoy en los teléfonos: progreso sin `ejecucionId`, `vinculos`, `pasosSaltados`, `verificacionHecha` ni `instruccionesHechas`; guías con `instrucciones` en vez de bloques; artículos sin `estado`; credenciales sin `tipo`, `dispositivos` ni `archivo`; equipos sin `detalles`; fichas de un tipo desconocido; y recientes de los dos tipos que existían antes.
+- **Resultado: ningún defecto de comportamiento.** Una fila vieja ofrece "Continuar · paso N de M" en el primer paso **sin hacer** (no en "hechos + 1"), no da por cumplido ningún vínculo, estrena `ejecucionId` en la primera escritura sin perder lo marcado y se reinicia limpia; una guía sin comprobaciones finales se da por terminada con sus pasos; una credencial sin `tipo` se lee como acceso; una ficha de tipo desconocido se ignora en vez de romper el índice.
+- **Corregido un comentario que mentía.** `ejecucionAbierta` decía que "la usan los botones de la ficha para distinguir continuar de empezar de nuevo": no la llama ninguna pantalla, y devuelve `null` para una fila anterior a `ejecucionId` aunque lleve avance real. Quien pregunta por la existencia de la ejecución mira la FILA (`progreso != null` en `ArticuloPage`, que es lo que espera `accionDeGuia`). Se documenta el contrato real y se fija en una prueba; **la función no cambia**, porque su otro uso es leer el identificador.
+- **Cerradas las tareas 234 y 235.** Sus diecisiete puntos tenían commit y despliegue desde el 2026-09-11, pero el tablero seguía marcándolos "Pendiente". Verificados uno a uno contra el código y el historial, y archivados.
+- **Pruebas:** 107 archivos y 1503 casos en verde; lint y build limpios.
+
 ### Agregado (búsqueda y flujo de trabajo, tarea 241): resolver desde el buscador, con menos pasos
 
 **Área modificada:** buscador global, Inicio, acciones de resultado, puente a la Bóveda bloqueada y búsqueda durante la ejecución de una guía.

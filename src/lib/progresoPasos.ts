@@ -178,9 +178,15 @@ export async function leerAvance(clave: ClaveProgreso): Promise<AvanceProcedimie
 }
 
 /**
- * El identificador de la ejecucion abierta de un articulo, o null si no
- * hay ninguna empezada. Lo usan los botones de la ficha para distinguir
- * continuar de empezar de nuevo.
+ * El IDENTIFICADOR de la ejecucion abierta de un articulo, o null.
+ *
+ * OJO, no es "¿hay ejecucion abierta?" (precision del 2026-09-15, punto
+ * 9 del encargo del 2026-09-09): una fila escrita ANTES de que existiera
+ * `ejecucionId` lleva avance real y aun asi devuelve null, porque el id
+ * nace con la primera escritura de esta version. Quien pregunte por la
+ * existencia de la ejecucion mira la FILA, que es lo que hace la ficha
+ * de la guia (`progreso != null` en ArticuloPage) y lo que espera
+ * `accionDeGuia` en su tercer argumento.
  */
 export async function ejecucionAbierta(articuloId: string): Promise<string | null> {
   return (await db.progresoPasos.get(articuloId))?.ejecucionId ?? null

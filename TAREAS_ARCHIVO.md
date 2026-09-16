@@ -2,6 +2,70 @@
 
 ## Encargo del 2026-09-15: secretos largos en la Bóveda
 
+### 235 y 234. Encargo del 2026-09-09: ejecución de Guías (dos tandas)
+
+**Estado:** Completadas (2026-09-15). **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-09, en dos tandas.
+
+**Por qué se cierran juntas y tarde.** Los diecisiete puntos de las dos tandas se implementaron y desplegaron entre el 2026-09-09 y el 2026-09-11, cada uno con su commit (`843ae55`, `2381a92`, `9397774`, `ca65dd9`, `634df4a`, `29ce893`, `20ffdcb` para la segunda tanda; `88cdf7b`, `772982c`, `6eaba88`, `c509166`, `707263d`, `894dbd4`, `9ce4507`, `2308394`, `99efda3`, `cd750db`, `103e798`, `2ef9919` para la primera), pero el tablero se quedó sin actualizar: seguían figurando como "En proceso" con puntos marcados "Pendiente" que ya tenían módulo, pruebas y despliegue confirmado. Se verificó uno a uno contra el código y el historial antes de archivarlas.
+
+**El único punto que de verdad quedaba vivo: 234.9, compatibilidad y datos existentes.** Cerrado el 2026-09-15.
+
+- **Qué se comprobó.** Que el código nuevo (tareas 233 a 241) aguanta la forma VIEJA de los datos que el equipo lleva meses escribiendo, sin migrarla: filas de `progresoPasos` sin `ejecucionId`, sin `vinculos`, sin `pasosSaltados`, sin `verificacionHecha` ni `instruccionesHechas`; guías con `instrucciones` en vez de bloques; artículos sin `estado`; credenciales sin `tipo`, `dispositivos` ni `archivo`; equipos sin `detalles`; fichas de un tipo que esta versión no conoce; y recientes de los dos únicos tipos que existían antes de ampliar el registro.
+- **Cómo.** `src/lib/compatibilidadDatos.test.ts` (nuevo, 16 casos). Las filas se escriben **a mano**, sin pasar por los escritores actuales: reproducen lo que hay hoy en los teléfonos, no lo que produciría esta versión.
+- **Resultado: ningún defecto de comportamiento.** Una fila vieja se lee entera, ofrece "Continuar · paso N de M" en el primer paso **sin hacer** (no en "hechos + 1"), no da por cumplido ningún vínculo, estrena `ejecucionId` en la primera escritura sin perder lo marcado, y se reinicia limpia. Una guía sin comprobaciones finales se da por terminada con sus pasos. Una credencial sin `tipo` se lee como acceso y ofrece usuario y contraseña. Una ficha de tipo desconocido se ignora en vez de romper el índice.
+- **Sí apareció una trampa documental**, y se corrigió: `ejecucionAbierta` (`src/lib/progresoPasos.ts`) decía en su comentario que "la usan los botones de la ficha para distinguir continuar de empezar de nuevo". **No es cierto ni lo uno ni lo otro:** no la llama ninguna pantalla (solo pruebas), y devuelve `null` para una fila anterior a `ejecucionId` aunque esa fila lleve avance real. Quien pregunta por la existencia de la ejecución mira la FILA, que es lo que hace `ArticuloPage` (`progreso != null`) y lo que espera `accionDeGuia` en su tercer argumento. Se corrigió el comentario y se fijó el contrato real en una prueba. **No se cambió el comportamiento**: hacerla devolver un booleano habría roto su otro uso, que es leer el identificador.
+
+**Resumen de las dos tandas** (el detalle de cada punto está en [CHANGELOG.md](CHANGELOG.md), entradas del 2026-09-09 al 2026-09-11):
+
+- **Segunda tanda (235), siete puntos, todos HECHOS:** validar todas las guías obligatorias de una tarea (`guiasObligatorias.ts`); aislar el progreso de los vínculos por ejecución (`ClaveProgreso`, `{raizId, vinculoId}`); unificar la validación y el cierre de pasos (`cierrePaso.ts`); incluir las comprobaciones finales en los vínculos (`guiaTerminada`); corregir "Empezar", "Continuar" y "Repetir" (`accionGuia.ts`); aislar el progreso de la vista previa (`claveVistaPrevia`); y completar la asignación de apoyos heredados (`apoyosTarea.ts`).
+- **Primera tanda (234), diez puntos:** presentación de los títulos de las guías, contenido asignado por tarea, avisos duplicados, guías vinculadas, diferencia entre consultar/completar/saltar, decisiones y verificaciones, catálogo móvil, verificación móvil con evidencia (`scripts/capturas-moviles.mjs`), **compatibilidad y datos existentes** (cerrado ahora) y commit y push por punto.
+
+**Pendiente anotado, que NO es de código (H12):** comprobar que el destino de cada decisión real apunta a donde debe exige leer las guías de Supabase, fuera del alcance de estas tareas. El editor ya valida ciclo, borrador y guía ausente al configurarlo (`validacionVinculos.ts`).
+
+**Ficha original tal como quedó en el tablero, para no perder el detalle:**
+
+### 235. Encargo del 2026-09-09 (segunda tanda): siete tareas de ejecución de Guías
+
+**Estado:** En progreso. **Prioridad:** Alta. **Origen:** encargo del usuario, siete tareas con un commit cada una.
+
+1. **Validar todas las guías obligatorias de una tarea. HECHO.** Módulo nuevo `guiasObligatorias.ts`; la validación vive en `alternarTarea` del hook, así que la aplican las dos vistas de ejecución y el mapa del artículo.
+2. **Aislar el progreso de los vínculos por ejecución.** Pendiente.
+3. **Unificar la validación y el cierre de pasos.** Pendiente.
+4. **Incluir las comprobaciones finales en los vínculos.** Pendiente.
+5. **Corregir "Empezar", "Continuar" y "Repetir".** Pendiente.
+6. **Aislar el progreso de la vista previa.** Pendiente.
+7. **Completar la asignación de apoyos heredados.** Pendiente.
+
+**Área afectada:** `src/features/soluciones/*`, `src/lib/progresoPasos.ts`, `src/lib/db.ts`. **Dependencias:** la tarea 234.
+
+### 234. Encargo del 2026-09-09: repaso de lo entregado en la 233 y lo que quedó a medias
+
+**Estado:** En progreso. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-09, que revisa la aplicación desplegada tras la tarea 233 y pide completar **solo lo pendiente, incompleto o mal**. Diez secciones. La regla que las gobierna: no dar por hecho un cambio porque exista el botón; comprobar que se configura, se guarda, aparece donde toca, sobrevive al reordenar, funciona en ejecución, se comporta en móvil y no rompe las guías existentes.
+
+**Encargo del 2026-09-09 (segunda tanda, seis cambios, uno por commit):**
+
+1. **Categorías accesibles durante la búsqueda. HECHO.** El rail de escritorio colgaba de `!buscando`; ahora está siempre y elegir una categoría acota la búsqueda.
+2. **Diferenciar consultar / marcar / verificar / no se cumple / saltar / detenerse. HECHO.** Faltaba en la vista de paso entero: la verificación era la misma casilla que una acción y las flechas no decían que solo consultan. Ahora responde con "Sí, lo comprobé" / "No se cumple", y esta última abre la hoja de salidas nombrando la comprobación.
+3. **Decisiones, verificaciones y fallas completas. HECHO.** Cuatro de los cinco puntos ya funcionaban y se comprobaron en navegador; el quinto (saltar no marca el paso como realizado) no tenía prueba: ahora son cinco casos en `progresoPasos.test.ts`. **Pendiente menor anotado:** `quitarPasoSaltado` no tiene camino en la interfaz (no hace falta, porque `establecerPasoHecho` ya retira la marca al completar).
+4. **Presentación móvil del catálogo y la ejecución (360, 390, 430). HECHO.** La auditoría en página (nueva, dentro de `scripts/capturas-moviles.mjs`) no encontró desbordamiento horizontal ni controles inalcanzables. Lo que sí encontró: el título de la guía se corta en la cabecera de 44 px y durante la ejecución no había forma de leerlo entero; ahora encabeza el índice de pasos. **Pendiente anotado (no es este cambio):** áreas táctiles por debajo de 44 px en la cabecera de la ficha de artículo (34x34), las casillas de su mapa de pasos (28x28), "Crear" del catálogo (32 de alto) y el resumen de completitud del editor (25).
+5. **Apoyos heredados "Sin asignar": conservarlos y mostrarlos una vez. HECHO.** El comportamiento ya era correcto; lo que faltaba era la prueba. Seis casos nuevos, incluido el que lo dice todo: cada bloque cae en **exactamente un sitio** (partición sin pérdidas ni duplicados) sumando lo que ve cada tarea y lo que se muestra como del paso.
+6. **`descripcionVencida` por día calendario, sin depender del huso. HECHO.** Restaba instantes locales y dividía entre 24 h; el día del cambio de horario hay 23 o 25, así que perdía un día (medido: 19 días contados como 18 en `America/Santiago`). Ahora hay un helper `diasDeCalendario` que compara en UTC. **Se corrigió también `estadoVencimiento`**, que es la misma resta en la función de al lado. Las pruebas cambian `process.env.TZ` para reproducirlo, porque la máquina de desarrollo está en un huso sin horario de verano.
+
+**Estado por sección (primera tanda):**
+
+1. **Presentación de los títulos de las guías. COMPLETADA.** `FilaArticulo` pasa de una fila de cuatro elementos a **tres zonas apiladas** (título / metadatos / acción) y `SolucionesPage` sube los cortes de columna a `@2xl` y `@5xl`. Detalle en [CHANGELOG.md](CHANGELOG.md).
+2. **Contenido asignado a cada tarea (recorrido completo). VERIFICADA, sin cambios.** Recorrido entero en navegador: crear el apoyo en una tarea, guardar, ejecutar (sale solo en su tarea), reordenar con "Bajar esta tarea con sus apoyos", guardar y volver a ejecutar con el reparto intacto. Nada repetido entre tareas.
+3. **Avisos duplicados y contenido antiguo "Sin asignar". COMPLETADA.** La duplicación no venía del dato: `ModoFoco` tenía dos sitios pintando la misma lista de avisos del paso y sus condiciones se solapaban con el panel abierto. La decisión pasa a `ubicacionApoyosDelPaso` (tres destinos excluyentes, seis pruebas). El contenido heredado ya se conservaba, se señalaba en ámbar y se podía asignar a mano; comprobado el recorrido entero en navegador.
+4. **Guías vinculadas, recorrido completo. COMPLETADA.** Faltaba el **motivo** ("El paso «X» depende de ella"), que ahora va bajo el titular; y el vínculo roto **se contradecía** con el pie de su propia pantalla. Verificados sin cambios: abandonar a medias conserva el punto y no da la guía por cumplida, completarla adelanta sola, y una guía de consulta no condiciona nada. **Queda fuera:** no existe un equivalente a "Ya tengo ICG abierto", y no se añadió: A10 prohíbe marcar a mano una guía vinculada, así que ofrecerlo sería justo lo que el criterio impide. Si el usuario lo quiere, es una decisión suya, no una corrección.
+5. **Diferencia entre consultar, completar y saltar. COMPLETADA.** Las flechas ya se anunciaban como consulta y el mensaje de bloqueo ya decía qué falta sin negar la navegación (tarea 233). Lo que faltaba: una **decisión** usaba exactamente los mismos controles que una acción normal. Ahora responde con "Sí" / "No, abrir «X»".
+6. **Decisiones, verificaciones y fallas. COMPLETADA en lo que dependía del código.** La decisión muestra su pregunta y sus dos respuestas con destino, ejecuta el destino ahí mismo y conserva el punto. **Pendiente de contenido, no de código (H12):** comprobar que el destino de cada decisión real apunta a donde debe exige leer las guías de Supabase, fuera del alcance de esta sesión. El editor ya valida ciclo, borrador y guía ausente al configurarlo (`validacionVinculos.ts`).
+7. **Catálogo de Guías en móvil. COMPLETADA.** Único defecto real: la **posición** no se restauraba al volver (el reintento colgaba solo de `requestAnimationFrame`, que no corre si el documento no se pinta). Corregido con un temporizador de respaldo en `memoriaScroll.ts`. El resto (sin bloque "Sin terminar", buscador visible, hoja de categorías completa, categoría y búsqueda conservadas, "Seguir en el paso N de M" dentro de la guía) ya funcionaba y se verificó.
+8. **Verificación móvil obligatoria (360, 390 y 430 px) con evidencia. COMPLETADA.** `scripts/capturas-moviles.mjs` (nuevo) recorre doce pantallas en los tres anchos con táctil emulado: **36 capturas** en `evidencia/` y sin desbordamiento horizontal en ninguna. Destapó un recorte real: el destino de una decisión no cabía dentro de su botón en 360 px. **Sigue siendo emulación**, no dispositivo físico.
+9. **Compatibilidad y datos existentes.** Pendiente.
+10. **Commit y push por cada punto terminado.** En curso.
+
+**Área afectada:** `src/features/soluciones/{FilaArticulo,SolucionesPage,ModoFoco,AsistenteVista,PasosEditor,apoyosTarea}.*`, `src/pruebas/semillaLocal.ts`. **Dependencias:** la tarea 233, que es lo que este encargo revisa.
+
 ### 241. Acelerar la resolución: búsqueda que resuelve y acciones directas
 
 **Estado:** Completada (2026-09-15). **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-15. La aplicación debía pasar de "¿en qué módulo está lo que necesito?" a "¿qué necesito resolver ahora?", **sin** rediseñar módulos, sin tocar contenido de Supabase y sin nuevas dependencias.
