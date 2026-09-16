@@ -6,7 +6,8 @@ import { BTN_PRIMARIO } from '../../components/nocturne'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { desbloquear, estadoInicialBoveda, type EstadoInicialBoveda } from '../boveda/sesionBoveda'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
-import { debeOfrecerPuenteBoveda, etiquetaPuenteBoveda } from './reglasPuenteBoveda'
+import type { ModoBuscador } from './modoConsulta'
+import { debeOfrecerPuenteBoveda, etiquetaPuenteBoveda, type ProminenciaPuente } from './reglasPuenteBoveda'
 
 // EL PUENTE HACIA LA BOVEDA BLOQUEADA (encargo del 2026-09-15, tarea
 // 241, secciones 5, 6, 10 y 19).
@@ -43,15 +44,34 @@ import { debeOfrecerPuenteBoveda, etiquetaPuenteBoveda } from './reglasPuenteBov
 // Al desbloquear, el indice se reconstruye solo (`useIndiceBusqueda`
 // depende de `useBovedaDesbloqueada`) y los resultados protegidos
 // aparecen en la MISMA busqueda, con sus acciones rapidas.
+//
+// DESBLOQUEAR AQUI NO NAVEGA, NUNCA (encargo del 2026-09-16, seccion 1).
+// Ni a /boveda ni a ninguna otra parte: el tecnico sigue en la pantalla
+// desde la que buscaba (Inicio, una seccion o la guia en ejecucion), con
+// la consulta escrita y las credenciales que coinciden ya en la lista,
+// cada una con "Ver" y sus copias. Las pruebas de flujo lo fijan
+// (`flujoBovedaBuscador.test.tsx`).
+//
+// EL PESO VISUAL DEPENDE DE LO QUE YA SE ENCONTRO (seccion 14). Con una
+// coincidencia publica fuerte ("Zabbix" y la herramienta Zabbix arriba)
+// el puente se queda en una linea compacta que no compite con la
+// respuesta; sin ella, conserva su forma destacada. Lo decide
+// `prominenciaPuenteBoveda`, sin mirar nunca dentro de la boveda.
 
 export function PuenteBoveda({
   consulta,
   onDesbloqueada,
+  prominencia = 'destacado',
+  modo = 'normal',
 }: {
   /** Lo que el tecnico escribio, tal cual, para poder citarlo. */
   consulta: string
   /** La boveda acaba de abrirse desde aqui (para contar el recorrido). */
   onDesbloqueada?: () => void
+  /** Cuanto pesa en pantalla (ver `prominenciaPuenteBoveda`). */
+  prominencia?: ProminenciaPuente
+  /** En consulta no se ofrece ningun enlace que saque de la tarea. */
+  modo?: ModoBuscador
 }) {
   const perfil = usePerfilVivo()
   const desbloqueada = useBovedaDesbloqueada()
@@ -66,6 +86,38 @@ export function PuenteBoveda({
     consulta,
   })
   if (!ofrecer) return null
+
+  if (prominencia === 'secundario') {
+    return (
+      <section className="rounded-lg border border-noct-divider px-3 py-0.5">
+        <div className="flex min-h-11 flex-wrap items-center gap-x-2.5 gap-y-0.5">
+          <LockSimple size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+          <p className="min-w-0 flex-1 text-[13px] leading-snug text-noct-neutral-300 [overflow-wrap:anywhere]">
+            {etiquetaPuenteBoveda(consulta)}
+          </p>
+          {!abierto && (
+            // "Desbloquear" a secas en pantalla: la frase de al lado ya dice
+            // qué se busca, y a 360 px el rótulo largo partía la frase en
+            // tres renglones. El nombre accesible sigue diciendo las dos cosas.
+            <button
+              type="button"
+              onClick={() => setAbierto(true)}
+              aria-label="Desbloquear y buscar"
+              className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-[12.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+            >
+              <Key size={14} className="shrink-0" aria-hidden />
+              Desbloquear
+            </button>
+          )}
+        </div>
+        {abierto && (
+          <div className="pb-2.5">
+            <FormularioDesbloqueo onCerrar={() => setAbierto(false)} onDesbloqueada={onDesbloqueada} modoBuscador={modo} />
+          </div>
+        )}
+      </section>
+    )
+  }
 
   return (
     <section className="rounded-lg border border-dashed border-noct-neutral-700 px-3 py-3">
@@ -93,7 +145,7 @@ export function PuenteBoveda({
           Desbloquear y buscar
         </button>
       ) : (
-        <FormularioDesbloqueo onCerrar={() => setAbierto(false)} onDesbloqueada={onDesbloqueada} />
+        <FormularioDesbloqueo onCerrar={() => setAbierto(false)} onDesbloqueada={onDesbloqueada} modoBuscador={modo} />
       )}
     </section>
   )
@@ -114,9 +166,11 @@ const CAMPO =
 function FormularioDesbloqueo({
   onCerrar,
   onDesbloqueada,
+  modoBuscador,
 }: {
   onCerrar: () => void
   onDesbloqueada?: () => void
+  modoBuscador: ModoBuscador
 }) {
   const [modo, setModo] = useState<'cargando' | EstadoInicialBoveda>('cargando')
   const [contrasena, setContrasena] = useState('')
@@ -160,12 +214,24 @@ function FormularioDesbloqueo({
             ? 'La bóveda todavía no tiene contraseña maestra. Se define una sola vez, desde la sección Bóveda.'
             : 'No se pudo comprobar la contraseña maestra del equipo. Conéctate a internet, espera a que la aplicación sincronice y vuelve a intentarlo.'}
         </p>
-        <Link
-          to="/boveda"
-          className="flex min-h-11 items-center justify-center rounded-[9px] border border-noct-divider px-3 text-[13.5px] font-medium text-noct-text hover:bg-noct-text/[.07]"
-        >
-          Ir a Bóveda
-        </Link>
+        {/* En consulta no hay enlace: ir a la Bóveda sacaría al técnico
+            de la tarea que tiene debajo. Se hace al terminarla. */}
+        {modoBuscador === 'normal' ? (
+          <Link
+            to="/boveda"
+            className="flex min-h-11 items-center justify-center rounded-[9px] border border-noct-divider px-3 text-[13.5px] font-medium text-noct-text hover:bg-noct-text/[.07]"
+          >
+            Ir a Bóveda
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="min-h-11 self-start px-1 text-[12.5px] font-medium text-noct-neutral-400 hover:text-noct-text"
+          >
+            Entendido
+          </button>
+        )}
       </div>
     )
   }

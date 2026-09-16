@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useBusquedaRestaurada } from '../features/busqueda/busquedaEnHistorial'
 import { AyudaAtajos } from './AyudaAtajos'
 import { esCampoEditable, MS_SECUENCIA, resolverAtajo } from './atajosApp'
 
@@ -21,18 +22,60 @@ const BuscadorGlobal = lazy(() =>
 // aparta entera: cada uno cierra el suyo con su propio oyente de
 // Escape, que es lo que hace que Esc cierre SOLO la capa superior en
 // vez de dos a la vez.
+//
+// LA CAPA DEL BUSCADOR VUELVE ABIERTA (encargo del 2026-09-16, seccion
+// 13). Como esta capa esta en el chasis de TODAS las pantallas, es el
+// unico sitio que puede reponer el buscador global al volver de una
+// ficha que se abrio desde el, venga de la lupa de la barra o de "/".
+// Solo donde se puede navegar: sobre una tarea el buscador es de
+// consulta y no saca a nadie de la pantalla, asi que nunca hay nada que
+// reponer.
 
 export function CapaAtajos({
   puedeVerBoveda,
   navegacion,
 }: {
   puedeVerBoveda: boolean
-  /** Los atajos de navegación están permitidos en esta pantalla. */
+  /**
+   * Los atajos de navegación están permitidos en esta pantalla. Sin ellos
+   * (una tarea), el buscador que abre "/" es de consulta.
+   */
   navegacion: boolean
 }) {
   const navigate = useNavigate()
-  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
+  const { restaurada, llegada, descartar } = useBusquedaRestaurada()
+  const consultaRepuesta = navegacion && restaurada?.capa ? restaurada.consulta : ''
+  const [reponer, setReponer] = useState(consultaRepuesta)
+  const [buscadorAbierto, setBuscadorAbierto] = useState(consultaRepuesta !== '')
   const [ayudaAbierta, setAyudaAbierta] = useState(false)
+
+  // Una llegada nueva a esta pantalla SIN volver a montarla (de un equipo
+  // a otro y de vuelta: React reutiliza la pantalla) también repone.
+  const [llegadaAtendida, setLlegadaAtendida] = useState(llegada)
+  if (llegadaAtendida !== llegada) {
+    setLlegadaAtendida(llegada)
+    if (consultaRepuesta) {
+      setReponer(consultaRepuesta)
+      setBuscadorAbierto(true)
+    }
+  }
+
+  // Cerrar la capa es dar la búsqueda por terminada: se olvida también en
+  // el historial, para que volver más tarde a esta pantalla no la reabra.
+  function cerrarBuscador() {
+    setBuscadorAbierto(false)
+    if (reponer) {
+      setReponer('')
+      descartar()
+    }
+  }
+
+  // Irse a un resultado NO la da por terminada: el técnico va a mirar algo
+  // y va a volver a esta búsqueda.
+  function irAResultado() {
+    setBuscadorAbierto(false)
+    setReponer('')
+  }
   // La secuencia G vive en una ref y no en estado: cambia con cada
   // tecla y no pinta nada, así que guardarla en estado provocaría un
   // render por pulsación sin ningún efecto visible.
@@ -100,7 +143,13 @@ export function CapaAtajos({
     <>
       {buscadorAbierto && (
         <Suspense fallback={null}>
-          <BuscadorGlobal abierto onCerrar={() => setBuscadorAbierto(false)} />
+          <BuscadorGlobal
+            abierto
+            onCerrar={cerrarBuscador}
+            onNavegar={irAResultado}
+            modo={navegacion ? 'normal' : 'consulta'}
+            consultaInicial={reponer}
+          />
         </Suspense>
       )}
       <AyudaAtajos

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { conOrigen, leerOrigen } from './origenNavegacion'
+import {
+  anotarBusqueda,
+  conOrigen,
+  estadoDeRegreso,
+  leerBusquedaRestaurada,
+  leerOrigen,
+  sinBusqueda,
+} from './origenNavegacion'
 
 describe('conOrigen', () => {
   it('arma el estado que viaja en el enlace', () => {
@@ -56,5 +63,76 @@ describe('leerOrigen', () => {
       expect(leerOrigen({ origen: { to: '', etiqueta: 'Escáner' } })).toBeNull()
       expect(leerOrigen({ origen: { to: '/escaner', etiqueta: '   ' } })).toBeNull()
     })
+  })
+})
+
+// LA BÚSQUEDA VUELVE CON EL ORIGEN (encargo del 2026-09-16, sección 13).
+// Viaja por el mismo canal sin tipo que el origen, así que se valida con
+// el mismo cuidado: una búsqueda rota no puede dejar a nadie sin regreso.
+describe('la búsqueda que viaja con el origen', () => {
+  const busqueda = { consulta: 'servidor', capa: false }
+
+  it('conOrigen la lleva cuando el salto sale de un buscador', () => {
+    expect(conOrigen('/', 'la búsqueda', busqueda)).toEqual({
+      origen: { to: '/', etiqueta: 'la búsqueda', busqueda },
+    })
+  })
+
+  it('leerOrigen la devuelve junto al origen', () => {
+    const capa = { consulta: 'zabbix', capa: true }
+    expect(leerOrigen({ origen: { to: '/red', etiqueta: 'la búsqueda', busqueda: capa } })).toEqual({
+      to: '/red',
+      etiqueta: 'la búsqueda',
+      busqueda: capa,
+    })
+  })
+
+  it('una búsqueda mal formada no invalida el origen: se vuelve igual, sin reponer nada', () => {
+    const rotas = [
+      { consulta: '', capa: true },
+      { consulta: '   ', capa: false },
+      { consulta: 7, capa: true },
+      { consulta: 'x' },
+      'x',
+      null,
+    ]
+    for (const rota of rotas) {
+      expect(leerOrigen({ origen: { to: '/', etiqueta: 'la búsqueda', busqueda: rota } })).toEqual({
+        to: '/',
+        etiqueta: 'la búsqueda',
+      })
+    }
+  })
+
+  it('estadoDeRegreso entrega la búsqueda al regreso, y nada si no hubo búsqueda', () => {
+    expect(estadoDeRegreso({ to: '/', etiqueta: 'la búsqueda', busqueda })).toEqual({ busqueda })
+    expect(estadoDeRegreso({ to: '/escaner', etiqueta: 'Escáner' })).toBeUndefined()
+    expect(estadoDeRegreso(null)).toBeUndefined()
+  })
+
+  it('leerBusquedaRestaurada lee lo que trae el regreso, y null ante cualquier otra cosa', () => {
+    expect(leerBusquedaRestaurada({ busqueda })).toEqual(busqueda)
+    expect(leerBusquedaRestaurada({ busqueda: { consulta: 'zabbix', capa: 'si' } })).toBeNull()
+    expect(leerBusquedaRestaurada({ origen: { to: '/', etiqueta: 'x' } })).toBeNull()
+    expect(leerBusquedaRestaurada(null)).toBeNull()
+    expect(leerBusquedaRestaurada('servidor')).toBeNull()
+  })
+
+  it('anotarBusqueda conserva lo que la entrada ya llevaba (su propio origen)', () => {
+    const origen = { to: '/escaner', etiqueta: 'Escáner' }
+    expect(anotarBusqueda({ origen }, busqueda)).toEqual({ origen, busqueda })
+    expect(anotarBusqueda(null, busqueda)).toEqual({ busqueda })
+  })
+
+  it('sinBusqueda la quita y conserva el resto', () => {
+    const origen = { to: '/escaner', etiqueta: 'Escáner' }
+    expect(sinBusqueda({ origen, busqueda })).toEqual({ origen })
+    expect(sinBusqueda({ busqueda })).toBeNull()
+    expect(sinBusqueda(null)).toBeNull()
+  })
+
+  it('solo guarda lo que se tecleó y si la capa estaba abierta: nada más viaja', () => {
+    const estado = conOrigen('/', 'la búsqueda', busqueda)
+    expect(Object.keys(estado.origen?.busqueda ?? {}).sort()).toEqual(['capa', 'consulta'])
   })
 })

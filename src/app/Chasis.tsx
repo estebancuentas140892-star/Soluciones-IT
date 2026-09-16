@@ -17,6 +17,7 @@ import { useOrigen } from './useOrigen'
 import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
 import { useMemoriaScroll } from './memoriaScroll'
 import { RAICES_DE_PESTANA } from '../lib/navegacion'
+import { estadoDeRegreso } from '../lib/origenNavegacion'
 import {
   BookBookmark,
   BookOpen,
@@ -233,6 +234,10 @@ interface PropsTarea extends PropsComunes {
    * cronometro intactos (la pantalla no se desmonta). Es lo que permite
    * consultar un comando, una herramienta o una credencial a mitad de un
    * procedimiento sin abandonarlo.
+   *
+   * Desde el 2026-09-16 la capa se abre en MODO CONSULTA: antes era el
+   * buscador normal, y tocar un resultado (o "Empezar" otra guia) sacaba
+   * al tecnico de la ejecucion. Ver `modoConsulta.ts`.
    */
   conBusqueda?: boolean
 }
@@ -323,6 +328,9 @@ export function Chasis(props: Props) {
             // chasis.
             vuelta={props.vuelta ?? origen?.etiqueta}
             salidaA={props.salidaA ?? origen?.to}
+            // Si la X vuelve al origen y el salto salió de un buscador,
+            // la búsqueda vuelve con ella (encargo del 2026-09-16, sección 13).
+            salidaEstado={props.salidaA ? undefined : estadoDeRegreso(origen)}
             salidaEtiqueta={props.salidaEtiqueta}
             alSalir={props.alSalir}
             compacta={props.compacta}
@@ -351,15 +359,21 @@ export function Chasis(props: Props) {
           </BarraTarea>
           <ProveedorBandaTarea value={ranuraTarea}>{props.children}</ProveedorBandaTarea>
         </div>
+        {/* MODO CONSULTA (encargo del 2026-09-16, secciones 8 a 11): sobre
+            una tarea nada de la capa navega. Las fichas se consultan en su
+            vista rápida, la Bóveda se desbloquea y se copia ahí mismo, y
+            ninguna acción abre otra ejecución. Cerrarla deja la tarea
+            intacta: paso, progreso, avisos y cronómetro. */}
         {buscadorTarea && (
           <Suspense fallback={null}>
-            <BuscadorGlobal abierto onCerrar={() => setBuscadorTarea(false)} />
+            <BuscadorGlobal abierto modo="consulta" onCerrar={() => setBuscadorTarea(false)} />
           </Suspense>
         )}
         {/* Los atajos de teclado también aquí, pero SIN los de navegar:
             saltar a otra sección desde un editor o una ejecución sacaría
             al técnico de un trabajo a medias sin pasar por su
-            confirmación de salida. Buscar y pedir ayuda sí siguen. */}
+            confirmación de salida. Buscar y pedir ayuda sí siguen, y la
+            búsqueda que abre "/" es también de consulta. */}
         <CapaAtajos puedeVerBoveda={Boolean(usuario?.puedeVerBoveda)} navegacion={false} />
       </div>
     )
@@ -411,7 +425,7 @@ export function Chasis(props: Props) {
         <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5">
           {props.titulo ? (
             <div className="flex min-w-0 flex-1 items-center gap-0.5">
-              <BotonVolver to={volverA} soloIcono>
+              <BotonVolver to={volverA} soloIcono estado={estadoDeRegreso(origen)}>
                 {volverEtiqueta}
               </BotonVolver>
               <h1 className="min-w-0 flex-1">
@@ -424,7 +438,9 @@ export function Chasis(props: Props) {
               </h1>
             </div>
           ) : (
-            <BotonVolver to={volverA}>{volverEtiqueta}</BotonVolver>
+            <BotonVolver to={volverA} estado={estadoDeRegreso(origen)}>
+              {volverEtiqueta}
+            </BotonVolver>
           )}
           {props.acciones && <div className="flex shrink-0 items-center gap-1.5">{props.acciones}</div>}
         </div>

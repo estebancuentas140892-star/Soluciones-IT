@@ -1,10 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from '../../components/Modal'
 import { ArrowLeft, WarningCircle, X } from '../../components/iconos'
-import { TagNeutral } from '../../components/nocturne'
 import type { Referencia } from '../../lib/db'
 import { nombreVivo } from '../../lib/referencia'
-import { EstadoUso } from './EstadoUso'
+import { ContenidoReferencia } from './ContenidoReferencia'
 import { iconoDeReferencia } from './iconosReferencia'
 import { esTipoConocido, INFO_TIPO } from './referencias'
 
@@ -55,7 +54,6 @@ export function HojaReferencia({ abierto, onCerrar, referenciaId, tituloRespaldo
   const referencia = referencias.get(actualId)
   const tipo = referencia && esTipoConocido(referencia.tipo) ? referencia.tipo : null
   const Icono = iconoDeReferencia(tipo)
-  const esHerramienta = tipo === 'herramienta'
   const volvioDeUnaRelacionada = actualId !== referenciaId
 
   return (
@@ -108,106 +106,11 @@ export function HojaReferencia({ abierto, onCerrar, referenciaId, tituloRespaldo
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3.5">
-          {referencia.definicion && (
-            <p className="text-pretty text-[14.5px] leading-[1.55] text-noct-text">{referencia.definicion}</p>
-          )}
-
-          {esHerramienta && referencia.cuandoUsar && (
-            <Bloque titulo="¿Para qué sirve?">
-              <p className="text-pretty text-[13.5px] leading-[1.55] text-noct-neutral-200">
-                {referencia.cuandoUsar}
-              </p>
-            </Bloque>
-          )}
-
-          {esHerramienta && (referencia.usoEnMetroparques || referencia.estadoUso) && (
-            <Bloque titulo="En Metroparques">
-              <div className="flex flex-col gap-1.5">
-                {referencia.usoEnMetroparques && (
-                  <p className="text-pretty text-[13.5px] leading-[1.55] text-noct-neutral-200">
-                    {referencia.usoEnMetroparques}
-                  </p>
-                )}
-                <EstadoUso estado={referencia.estadoUso} />
-              </div>
-            </Bloque>
-          )}
-
-          {esHerramienta && referencia.notas && (
-            <Bloque titulo="Notas">
-              <p className="text-pretty text-[13.5px] leading-[1.55] text-noct-neutral-200">{referencia.notas}</p>
-            </Bloque>
-          )}
-
-          {referencia.valor && (
-            <p className="rounded-lg bg-noct-bg px-3 py-2.5 font-mono text-[13.5px] leading-normal text-noct-text">
-              {referencia.valor}
-            </p>
-          )}
-
-          {referencia.ejemplo && (
-            <Bloque titulo="Ejemplo">
-              <p className="text-pretty rounded-lg bg-noct-bg px-3 py-2.5 text-[13px] leading-[1.55] text-noct-neutral-200">
-                {referencia.ejemplo}
-              </p>
-            </Bloque>
-          )}
-
-          {(referencia.alias ?? []).length > 0 && (
-            <Bloque titulo="También se llama">
-              <div className="flex flex-wrap gap-1.5">
-                {referencia.alias.map((alias) => (
-                  <TagNeutral key={alias}>{alias}</TagNeutral>
-                ))}
-              </div>
-            </Bloque>
-          )}
-
-          {(referencia.relacionadas ?? []).length > 0 && (
-            <Bloque titulo="Relacionado">
-              <div className="flex flex-col">
-                {referencia.relacionadas.map((relacionada) => {
-                  const viva = referencias.get(relacionada.id)
-                  return (
-                    <button
-                      key={relacionada.id}
-                      type="button"
-                      disabled={!viva}
-                      onClick={() => setActualId(relacionada.id)}
-                      className="flex min-h-11 items-center rounded-md px-1.5 text-left text-[13.5px] text-noct-text hover:bg-noct-text/[.06] disabled:text-noct-neutral-500 disabled:hover:bg-transparent"
-                    >
-                      <span className="min-w-0 flex-1">
-                        {viva?.titulo || relacionada.titulo}
-                        {!viva && (
-                          <span className="text-[12px] text-noct-neutral-600"> (no disponible)</span>
-                        )}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </Bloque>
-          )}
-
-          {referencia.advertencia && (
-            <p className="rounded-r-lg border-l-2 border-noct-precaucion bg-noct-precaucion/10 px-3 py-2.5 text-[13px] leading-normal">
-              <span className="font-semibold text-noct-precaucion">Precaución.</span>{' '}
-              {referencia.advertencia}
-            </p>
-          )}
-        </div>
+        // El cuerpo es compartido con la vista rápida del buscador en modo
+        // consulta (2026-09-16): la misma ficha se lee igual en los dos.
+        <ContenidoReferencia referencia={referencia} referencias={referencias} onAbrirRelacionada={setActualId} />
       )}
     </Modal>
-  )
-}
-
-function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <div>
-      <p className="mb-1 text-[11px] font-medium uppercase tracking-[.08em] text-noct-neutral-500">{titulo}</p>
-      {children}
-    </div>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { obtenerRecientes, type ElementoReciente } from '../../lib/recientes'
@@ -24,6 +24,7 @@ import {
 } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
+import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
@@ -80,7 +81,21 @@ const PROXIMOS_VISIBLES = 3
 const MAX_RECIENTES_INICIO = 3
 
 export function InicioPage() {
-  const [query, setQuery] = useState('')
+  // VOLVER CON LA BÚSQUEDA ESCRITA (encargo del 2026-09-16, sección 13).
+  // Abrir una ficha desde un resultado y volver (con el regreso de la app
+  // o con el botón atrás del teléfono) repone lo que estaba escrito en
+  // este campo, en vez de dejar la agenda y obligar a teclearlo otra vez.
+  // Viaja en el estado de navegación, nunca en la URL ni en localStorage.
+  const { restaurada, descartar } = useBusquedaRestaurada()
+  const repuesta = restaurada && !restaurada.capa ? restaurada.consulta : ''
+  const [query, setQuery] = useState(repuesta)
+  // Vaciar el campo repuesto es dar la búsqueda por terminada: se olvida
+  // también en el historial, para que volver más tarde a Inicio no la
+  // reponga. Solo la de este campo: la de la capa global la gestiona la
+  // propia capa.
+  useEffect(() => {
+    if (repuesta !== '' && query === '') descartar()
+  }, [repuesta, query, descartar])
   // La bóveda se abrió desde el puente de la propia búsqueda, sin salir
   // de Inicio: cuenta una interacción más en la medición del recorrido.
   const [huboDesbloqueo, setHuboDesbloqueo] = useState(false)
@@ -212,6 +227,10 @@ export function InicioPage() {
                 verdad, porque sus accesos ni siquiera se buscaron. El
                 puente es genérico y no confirma que exista ninguno. */}
             <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} />
+            {/* Desbloquear aquí no lleva a ninguna parte (encargo del
+                2026-09-16, sección 1): Inicio se queda, con lo escrito,
+                y las credenciales que coinciden aparecen en esta misma
+                lista. */}
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
               <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
               <div>

@@ -34,6 +34,11 @@ interface Props {
   vuelta?: string
   /** Override del destino de la X (por defecto, el padre declarado). */
   salidaA?: string
+  /**
+   * `state` de la X cuando es un enlace: devuelve la búsqueda a la
+   * pantalla de la que se salió (encargo del 2026-09-16, sección 13).
+   */
+  salidaEstado?: unknown
   /** Texto accesible de la X. Por defecto "Salir sin guardar". */
   salidaEtiqueta?: string
   /**
@@ -78,6 +83,7 @@ export function BarraTarea({
   titulo,
   vuelta,
   salidaA,
+  salidaEstado,
   salidaEtiqueta = 'Salir sin guardar',
   alSalir,
   children,
@@ -106,6 +112,7 @@ export function BarraTarea({
           ) : (
             <Link
               to={destino}
+              state={salidaEstado}
               aria-label={salidaEtiqueta}
               title={salidaEtiqueta}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"
@@ -161,6 +168,7 @@ export function BarraTarea({
         ) : (
           <Link
             to={destino}
+            state={salidaEstado}
             aria-label={salidaEtiqueta}
             title={salidaEtiqueta}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"

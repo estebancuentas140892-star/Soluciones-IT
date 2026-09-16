@@ -203,6 +203,16 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Referencia. Blanda (ayudas escritas bajo el comando completo y bajo "Cómo se usa en Metroparques").
 - Impacto: el contenido inicial no lleva ni una dirección IP ni un acceso, y una prueba lo comprueba sobre el propio SQL.
 
+**RN-034. Consultar una credencial fuera de su ficha deja la misma auditoría que la ficha.**
+- Motivo: la vista rápida del buscador (2026-09-16, tarea 242) enseña el mismo secreto que la ficha; un segundo formato de registro dejaría huecos en la trazabilidad (RN-012).
+- Entidades: Credencial, AccesoBoveda. Dura en el código: la vista rápida solo usa `descifrarCredencial`, `copiarCampoCredencial` y `registrarAccesoBoveda`.
+- Impacto: desplegar la vista registra `consulto`; destapar la clave, `mostro`; copiar, `copio_usuario` o `copio_contrasena`. Ocultar no registra nada. Todo secreto arranca tapado aunque la bóveda esté abierta, y el descifrado no sale del estado de la vista (ni URL, ni almacenamiento, ni índice). Un archivo seguro no se descifra fuera de su ficha. Sin permiso de bóveda, el índice no cuenta la bóveda como abierta.
+
+**RN-035. Sobre una tarea, el buscador global no navega.**
+- Motivo: una guía en ejecución (o un editor) guarda en memoria su paso, sus avisos confirmados, sus fallas y su cronómetro; salir a otra pantalla los perdería (encargo del 2026-09-16).
+- Entidades: ninguna (comportamiento de interfaz). Dura en el código: `modoConsulta.ts` (`filaNavega`, `ofreceAccionDirecta`, `vistaRapidaDe`), con pruebas puras y de flujo.
+- Impacto: en el nivel `tarea` del chasis la capa se abre en modo consulta: las fichas que se pueden resolver ahí se consultan en su vista rápida, el resto queda como referencia sin enlace y no se ofrece empezar, continuar o repetir otra guía ni iniciar un diagnóstico.
+
 ---
 
 ## 3. Modelo entidad-relación
@@ -533,7 +543,7 @@ En la práctica, como cada dato vive una sola vez y los vínculos se resuelven p
 
 - **Historial** (`historial`): toda creación, edición y eliminación de las 10 entidades editables, más las conexiones (una entrada por extremo) y las intervenciones manuales. Guarda usuario, fecha, campo, valor anterior y nuevo, y motivo opcional. Los valores cifrados nunca entran en claro: se guardan como `"(cifrado)"`.
 - **Ejecuciones de diagnóstico** (`ejecuciones_diagnostico`): cada corrida terminada o abandonada del asistente (camino, artículos ejecutados, resultado, duración, motivo).
-- **Accesos de bóveda** (`accesos_boveda`): cada consulta, copia, muestra, modificación, eliminación o descarga de una credencial o campo protegido.
+- **Accesos de bóveda** (`accesos_boveda`): cada consulta, copia, muestra, modificación, eliminación o descarga de una credencial o campo protegido. Desde el 2026-09-16 también las de la vista rápida del buscador, con las mismas acciones que la ficha (RN-034).
 
 ### 10.2 Qué es inmutable y qué es mutable
 
@@ -571,6 +581,8 @@ Desde la tarea 187 el chasis suma cuatro comportamientos dinámicos, todos calcu
 - **Memoria por pestaña (regla R20).** Dos módulos: `memoriaScroll.ts` guarda la posición por ruta y la restaura al montar; `memoriaPestana.ts` guarda la cadena de búsqueda (los filtros) por raíz de pestaña y el enlace de la pestaña la repone al volver. Solo se recuerda la búsqueda de la **raíz**, nunca la de una ficha interna: los filtros son de la lista. Como corolario, el filtro tiene que existir en la URL para poder recordarse, así que `SolucionesPage` pasó de leerlo como semilla a escribirlo también (con `replace`, para no ensuciar el historial).
 - **Avisos solo con dato detrás (regla R23).** El punto de Guías sale de `useReanudar()` y el número de Más de `usePendientes()`, el conteo real y no los seis que Inicio muestra.
 - **Tocar la pestaña activa** en su raíz pelada sube al principio de la lista; con un filtro puesto, o desde una ficha interna, primero vuelve a la raíz.
+
+Desde el 2026-09-16 (tarea 242) el regreso del chasis devuelve además la **búsqueda** a la pantalla de la que se salió: el origen de un salto desde un resultado lleva `{ consulta, capa }`, `BotonVolver` y la X de `BarraTarea` la entregan en su `state` (`estadoDeRegreso`), y `CapaAtajos` (en todas las pantallas) reabre la capa global con ella, mientras Inicio la repone en su campo. Se relee en cada llegada, no en cada montaje, y vive solo en `location.state`. Ver [BUSCADOR.md](BUSCADOR.md), sección 7.8, y [DECISIONES.md](DECISIONES.md), AD-039.
 
 Desde la tarea 191 el chasis define además los **cuatro puntos de quiebre** de la app, con una composición completa en cada uno (regla **R30**): `<768` teléfono (columna de 448 y pestañas), `768` rail de iconos de 64 px sin pestañas, `1280` sidebar completa de 240, `1680` sidebar de 232 y hasta 1.294 px de contenido (322 de lista + 720 de documento + 252 de contexto, el presupuesto de las tres zonas que reparte la tarea 199). Se expresan con `md`, `xl` y un `3xl` propio declarado en `@theme`; `sm`, `lg` y `2xl` quedan libres para lo que reflujan las pantallas por dentro con container queries. El tope de la columna crece y nunca se estrecha. Antes los puntos eran los de Tailwind por defecto y solo el de 1024 cambiaba algo estructural, lo que dejaba huérfana la banda de 768 a 1023. Motivo y la trampa del punto de quiebre en px, en [DECISIONES.md](DECISIONES.md) AD-028.
 

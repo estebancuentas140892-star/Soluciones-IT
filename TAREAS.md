@@ -4,7 +4,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: las tareas **234** y **235** se cerraron el 2026-09-15 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Los siete puntos de la 235 y los diez de la 234 tienen su commit; el último que quedaba vivo, el **9 de la 234 (compatibilidad y datos existentes)**, se cerró ese día con `src/lib/compatibilidadDatos.test.ts`.*
+*(vacío: la tarea **242** (consultar y usar la Bóveda sin salir del flujo) se cerró el 2026-09-16 y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Dejó registrada la **243** en "Por hacer".)*
+
+*(las tareas **234** y **235** se cerraron el 2026-09-15 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Los siete puntos de la 235 y los diez de la 234 tienen su commit; el último que quedaba vivo, el **9 de la 234 (compatibilidad y datos existentes)**, se cerró ese día con `src/lib/compatibilidadDatos.test.ts`.*
 
 *Las dos primeras de "Por hacer" (**237** y **238**) esperan información del equipo, así que la siguiente accionable es la **173**.)*
 
@@ -289,6 +291,15 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 243. Vista rápida de un dato protegido de un equipo en el buscador de consulta
+
+- **Título:** consultar un dato protegido de un equipo (PIN, usuario administrador, token) sin salir de una guía.
+- **Descripción:** en modo consulta, un resultado "Dato protegido del equipo" (documento `campo:` del índice, con la bóveda abierta) queda hoy como **referencia sin control** (`vistaRapidaDe` devuelve null para `campo:`, `src/features/busqueda/modoConsulta.ts`). Fuera de una tarea lleva a la ficha del equipo, que es donde se consulta con su auditoría. Darle vista rápida exige reutilizar `descifrarValor` y la auditoría con `entidadTipo: 'campo_protegido'` (hoy dentro de `ValorCampoDescifrado`, `src/features/boveda/CredencialEnPaso.tsx`, ~líneas 275-338), con botones de 44 px en vez de los de `CampoSecreto`.
+- **Motivo:** detectado al cerrar la tarea 242; el encargo del 2026-09-16 enumeraba credencial, comando, atajo, término, herramienta y equipo, no este tipo.
+- **Impacto:** un técnico en mitad de una guía que busca "PIN impresora" ve el dato en la lista pero no lo puede consultar sin salir.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/busqueda/{modoConsulta.ts,VistaRapida.tsx}`, `src/features/boveda/CredencialEnPaso.tsx`. **Dependencias:** la tarea 242.
 
 ### 237. Confirmar qué es "Software A.M." antes de darle ficha en el Centro de consulta
 

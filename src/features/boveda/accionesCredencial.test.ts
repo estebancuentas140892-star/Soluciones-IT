@@ -4,6 +4,7 @@ import { cifrarTexto, derivarClave, ITERACIONES_PBKDF2, nuevaSal } from '../../l
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import {
   accionesRapidasDeCredencial,
+  camposVistaRapida,
   copiarCampoCredencial,
   ETIQUETA_COPIA,
   SIN_VALOR,
@@ -114,6 +115,53 @@ describe('accionesRapidasDeCredencial', () => {
   it('una credencial vieja sin columna `tipo` se lee como acceso', () => {
     expect(tipoDe({})).toBe('cuenta')
     expect(accionesRapidasDeCredencial({})).toHaveLength(2)
+  })
+})
+
+// LA VISTA RÁPIDA DEL BUSCADOR (encargo del 2026-09-16, secciones 2 y 4).
+describe('camposVistaRapida', () => {
+  it('un acceso muestra Usuario a la vista y Contraseña tapada, cada uno con su copia', () => {
+    expect(camposVistaRapida({ tipo: 'cuenta' })).toEqual([
+      { campo: 'usuario', etiqueta: 'Copiar usuario', rotulo: 'Usuario', secreto: false },
+      { campo: 'contrasena', etiqueta: 'Copiar contraseña', rotulo: 'Contraseña', secreto: true },
+    ])
+  })
+
+  it('una clave o PIN muestra solo la clave, tapada', () => {
+    expect(camposVistaRapida({ tipo: 'red' })).toEqual([
+      { campo: 'contrasena', etiqueta: 'Copiar clave', rotulo: 'Clave o PIN', secreto: true },
+    ])
+  })
+
+  it('un token, licencia o clave muestra su Valor, tapado', () => {
+    expect(camposVistaRapida({ tipo: 'llave' })).toEqual([
+      { campo: 'contrasena', etiqueta: 'Copiar', rotulo: 'Valor', secreto: true },
+    ])
+  })
+
+  it('una nota y un archivo seguro no tienen campos que destapar', () => {
+    expect(camposVistaRapida({ tipo: 'nota' })).toEqual([])
+    expect(camposVistaRapida({ tipo: 'archivo' })).toEqual([])
+  })
+
+  it('son EXACTAMENTE los datos que se pueden copiar desde la fila, en el mismo orden', () => {
+    const tipos: TipoSecreto[] = ['cuenta', 'red', 'llave', 'archivo', 'nota']
+    for (const tipo of tipos) {
+      expect(camposVistaRapida({ tipo }).map(({ campo, etiqueta }) => ({ campo, etiqueta }))).toEqual(
+        accionesRapidasDeCredencial({ tipo }),
+      )
+    }
+  })
+
+  it('todo lo secreto arranca tapado: solo el usuario se ve sin tocar "Mostrar"', () => {
+    const tipos: TipoSecreto[] = ['cuenta', 'red', 'llave']
+    for (const tipo of tipos) {
+      for (const campo of camposVistaRapida({ tipo })) expect(campo.secreto).toBe(campo.campo !== 'usuario')
+    }
+  })
+
+  it('una credencial vieja sin `tipo` se lee como acceso también aquí', () => {
+    expect(camposVistaRapida({}).map((c) => c.rotulo)).toEqual(['Usuario', 'Contraseña'])
   })
 })
 

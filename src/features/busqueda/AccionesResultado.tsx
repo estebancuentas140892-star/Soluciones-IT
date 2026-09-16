@@ -1,15 +1,18 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { empezarEjecucion } from '../../lib/progresoPasos'
-import { ArrowsClockwise, Check, Copy, Play, Warning } from '../../components/iconos'
-import { accionesRapidasDeCredencial, copiarCampoCredencial } from '../boveda/accionesCredencial'
+import { ArrowsClockwise, CaretRight, Check, Copy, Eye, Play, Warning } from '../../components/iconos'
+import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
+import { accionesRapidasDeCredencial, copiarCampoCredencial, tipoDe } from '../boveda/accionesCredencial'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { estrenaEjecucion, etiquetaAccionGuia } from '../soluciones/accionGuia'
+import { ACCION_PRIMARIA, ACCION_SECUNDARIA, MS_AVISO } from './clasesAcciones'
 import { idDeEntidad, useContextoResultados } from './contextoResultados'
 import { eventoDeResolucion } from './medicion'
+import { ofreceAccionDirecta } from './modoConsulta'
 import type { ResultadoBusqueda } from './useIndiceBusqueda'
 
 // ACTUAR DESDE EL RESULTADO (encargo del 2026-09-15, tarea 241,
@@ -28,7 +31,10 @@ import type { ResultadoBusqueda } from './useIndiceBusqueda'
 //   - DIAGNOSTICO: "Iniciar". La ruta del diagnostico ya arranca la
 //     sesion sola, asi que es la misma ruta con el verbo dicho.
 //   - CREDENCIAL: copiar lo que de verdad guarda, con el descifrado, los
-//     permisos y la AUDITORIA de siempre (`copiarCampoCredencial`).
+//     permisos y la AUDITORIA de siempre (`copiarCampoCredencial`), y
+//     desde el 2026-09-16 "Ver", que despliega su vista rapida debajo de
+//     la fila (`VistaRapidaCredencial`). Un archivo seguro solo lleva a
+//     su ficha.
 //   - COMANDO y ATAJO: copiar lo que se teclea. Es lo que se consulta a
 //     mitad de una guia, y asi no hay que salir de ella.
 //
@@ -37,17 +43,11 @@ import type { ResultadoBusqueda } from './useIndiceBusqueda'
 // una ficha del Centro de consulta, abrir la ficha ES la accion, y la
 // fila entera ya la abre. Un boton que repite el enlace de al lado solo
 // ocupa sitio.
-
-// Boton de accion de una fila: 44 px reales de alto (regla R6) sin
-// ensanchar la fila. El primario va delineado en el acento, como el
-// resto de la familia Nocturne.
-const ACCION_BASE =
-  'inline-flex min-h-11 max-w-full cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border px-3 text-[13.5px] font-medium leading-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-50'
-const ACCION_PRIMARIA = `${ACCION_BASE} border-noct-accent bg-noct-accent/10 text-noct-accent-300 hover:bg-noct-accent/[.22]`
-const ACCION_SECUNDARIA = `${ACCION_BASE} border-noct-divider text-noct-neutral-200 hover:bg-noct-text/[.07]`
-
-/** Cuanto dura el "Copiado" antes de volver al rotulo normal. */
-const MS_AVISO = 1400
+//
+// EN MODO CONSULTA (encima de una guia en ejecucion, encargo del
+// 2026-09-16, seccion 10) no se ofrece nada que abra OTRA ejecucion: ni
+// empezar o continuar una guia ni iniciar un diagnostico. Lo decide
+// `ofreceAccionDirecta`. Copiar si sigue: no saca a nadie de ningun sitio.
 
 /**
  * Las acciones directas de un resultado, o null si su tipo no tiene
@@ -61,6 +61,9 @@ export function AccionesDeResultado({
   /** Salio de "Mejores resultados" (solo para la medicion, seccion 17). */
   desdeMejores: boolean
 }) {
+  const { modo } = useContextoResultados()
+  if (!ofreceAccionDirecta(resultado.tipo, modo)) return null
+
   switch (resultado.tipo) {
     case 'articulo':
       return <AccionGuiaResultado resultado={resultado} desdeMejores={desdeMejores} />
@@ -87,7 +90,7 @@ function AccionGuiaResultado({
   resultado: ResultadoBusqueda
   desdeMejores: boolean
 }) {
-  const { accionesGuia, consulta, onNavegar, onResolver, huboDesbloqueo } = useContextoResultados()
+  const { accionesGuia, consulta, onNavegar, onResolver, huboDesbloqueo, alSaltar } = useContextoResultados()
   const navegar = useNavigate()
   const [preparando, setPreparando] = useState(false)
   const articuloId = idDeEntidad(resultado.id)
@@ -115,6 +118,9 @@ function AccionGuiaResultado({
           huboDesbloqueo,
         }),
       )
+      // El botón atrás del teléfono, desde la ejecución, vuelve a esta
+      // búsqueda (sección 13 del encargo del 2026-09-16).
+      alSaltar()
       onNavegar?.()
       navegar(`${resultado.ruta}/ejecutar`)
     } finally {
@@ -151,7 +157,7 @@ function AccionDiagnostico({
   resultado: ResultadoBusqueda
   desdeMejores: boolean
 }) {
-  const { consulta, onNavegar, onResolver, huboDesbloqueo } = useContextoResultados()
+  const { consulta, onNavegar, onResolver, huboDesbloqueo, alSaltar } = useContextoResultados()
   const navegar = useNavigate()
 
   // Boton y no enlace: es la misma ruta que abre la fila, pero con el
@@ -169,6 +175,7 @@ function AccionDiagnostico({
             huboDesbloqueo,
           }),
         )
+        alSaltar()
         onNavegar?.()
         navegar(resultado.ruta)
       }}
@@ -193,7 +200,9 @@ function AccionesCredencial({
   desdeMejores: boolean
 }) {
   const desbloqueada = useBovedaDesbloqueada()
-  const { consulta, onResolver, huboDesbloqueo } = useContextoResultados()
+  const perfil = usePerfilVivo()
+  const { consulta, onResolver, huboDesbloqueo, modo, alternarVista, estadoDeSalto, alSaltar, onNavegar } =
+    useContextoResultados()
   const credencialId = idDeEntidad(resultado.id)
   const credencial = useLiveQuery(() => db.credenciales.get(credencialId), [credencialId])
   const [aviso, setAviso] = useState<{ campo: string; ok: boolean; mensaje?: string } | null>(null)
@@ -204,11 +213,34 @@ function AccionesCredencial({
   // Doble guarda. Una credencial solo llega al indice con la boveda
   // abierta, pero el autobloqueo por inactividad puede cerrarla mientras
   // los resultados siguen en pantalla: sin esto quedaria un boton de
-  // copiar que ya no puede descifrar nada.
-  if (!desbloqueada || !credencial || credencial.eliminadoEn) return null
+  // copiar que ya no puede descifrar nada. Y sin el permiso del perfil no
+  // se ofrece nada, aunque quedara una fila vieja en este telefono.
+  if (!desbloqueada || !perfil?.puedeVerBoveda || !credencial || credencial.eliminadoEn) return null
+
+  // UN ARCHIVO SEGURO NO SE ABRE EN EL BUSCADOR (encargo del 2026-09-16,
+  // seccion 2): se descarga y se descifra en su ficha. Fuera de una tarea
+  // la accion es ir a ella; en modo consulta no hay accion (la fila
+  // despliega la nota que lo explica).
+  if (tipoDe(credencial) === 'archivo') {
+    if (modo !== 'normal') return null
+    return (
+      <Link
+        to={resultado.ruta}
+        state={estadoDeSalto}
+        onClick={() => {
+          alSaltar()
+          onNavegar?.()
+        }}
+        aria-label={`Abrir la ficha de "${resultado.titulo}"`}
+        className={ACCION_SECUNDARIA}
+      >
+        Abrir ficha
+        <CaretRight size={14} className="shrink-0" aria-hidden />
+      </Link>
+    )
+  }
 
   const acciones = accionesRapidasDeCredencial(credencial)
-  if (acciones.length === 0) return null
 
   async function copiar(campo: 'usuario' | 'contrasena', etiqueta: string) {
     if (!credencial) return
@@ -231,6 +263,19 @@ function AccionesCredencial({
 
   return (
     <>
+      {/* VER, SIN SALIR DE AQUÍ (encargo del 2026-09-16, sección 2): la
+          vista rápida se despliega debajo de esta fila, con la clave
+          tapada hasta que se pide. La fila sigue abriendo la ficha
+          completa fuera de una tarea. */}
+      <button
+        type="button"
+        onClick={() => alternarVista(resultado.id)}
+        aria-label={`Ver "${resultado.titulo}"`}
+        className={ACCION_SECUNDARIA}
+      >
+        <Eye size={16} className="shrink-0" aria-hidden />
+        <span className="truncate">Ver</span>
+      </button>
       {acciones.map(({ campo, etiqueta }) => {
         const avisando = aviso?.campo === etiqueta
         return (

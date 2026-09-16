@@ -30,6 +30,7 @@ Cuatro pilares: base de conocimiento por categorías, inventario de dispositivos
 | Backend | Supabase (plan gratuito) | Base de datos Postgres, autenticación, archivos y sincronización |
 | Cifrado de bóveda | WebCrypto (AES-256-GCM + PBKDF2) | Credenciales cifradas en el propio dispositivo |
 | Hosting | Vercel (plan gratuito) | Publicación en https://soluciones-it-psi.vercel.app, desplegado automáticamente desde GitHub. `vercel.json` reescribe todas las rutas a `index.html` (necesario para React Router) |
+| Pruebas | Vitest + fake-indexeddb, y happy-dom (solo desarrollo) | Lógica pura en Node; desde el 2026-09-16, los recorridos de pantalla (buscar, desbloquear, consultar y volver sin salir de una guía) montan las pantallas reales en un DOM simulado, pedido por archivo con `// @vitest-environment happy-dom` (AD-039). Nada de esto entra en el build |
 
 Todo es gratuito para un equipo de 5 personas. Supabase además es código abierto: si algún día su plan gratuito cambia, se puede autoalojar sin reescribir la aplicación.
 
@@ -97,6 +98,7 @@ Notas de navegación:
 - Tolera prefijos y errores de escritura: "zebr" encuentra Zebra, "epsom" encuentra Epson.
 - Sinónimos del dominio (diccionario curado en `src/features/busqueda/sinonimos.ts`): "backup" encuentra "copia de seguridad", "internet" encuentra los artículos de red. La expansión combina con OR, así que solo agrega resultados. El mismo mecanismo alimenta las sugerencias anti duplicados al crear un artículo o un diagnóstico (aviso de título parecido). El selector de "vincular procedimiento" de un paso NO usa el índice: es una lista alfabética completa de artículos vinculables.
 - Al ser 100 % local responde en milisegundos y sin internet.
+- Desde el 2026-09-16 una credencial desbloqueada se consulta en una **vista rápida** dentro del propio buscador, y sobre una tarea (la ejecución de una guía, un editor) la capa se abre en **modo consulta** y no navega. Volver de una ficha abierta desde un resultado repone la búsqueda. Detalle en BUSCADOR.md, secciones 7.5, 7.7 y 7.8.
 
 ## 7. Funcionamiento offline y sincronización
 

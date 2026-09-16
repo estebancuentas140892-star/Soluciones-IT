@@ -17,6 +17,7 @@ import {
 import { normalizarProcedimiento, textoDeProcedimiento } from '../../lib/procedimiento'
 import { textoDeNodos } from '../../lib/diagnostico'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
+import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { sinonimosDe } from './sinonimos'
 import { cadenaNombres, mapaPorId } from '../ubicaciones/arbol'
@@ -103,7 +104,12 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
   // Campos protegidos (grupo P1): solo llegan aqui si la RLS los
   // descargo, es decir si el perfil tiene permiso de boveda.
   const camposProtegidos = useLiveQuery(() => db.campos_protegidos.toArray(), [], [])
-  const bovedaDesbloqueada = useBovedaDesbloqueada()
+  // La bóveda solo cuenta como abierta para el índice con el PERMISO del
+  // perfil (encargo del 2026-09-16, caso J). Sin permiso la RLS ya no
+  // descarga nada y la interfaz no deja desbloquear; esto cubre además
+  // las filas que pudieran quedar en el teléfono de antes de retirarlo.
+  const perfil = usePerfilVivo()
+  const bovedaDesbloqueada = useBovedaDesbloqueada() && Boolean(perfil?.puedeVerBoveda)
 
   return useMemo(
     () =>

@@ -134,13 +134,15 @@ Cómo se puntúa cada candidato (función `puntuacion`, pura y probada):
 |---|---|---|
 | **articulo** (guía) | `Empezar` · `Continuar · paso N de M` · `Repetir guía` | `accionDeGuia`, la **misma** función que la ficha y el catálogo (vía `useAccionesDeGuia`, compartido con `SolucionesPage`). Empezar y repetir estrenan ejecución antes de navegar; continuar no toca el progreso |
 | **diagnostico** | `Iniciar` | La ruta del diagnóstico ya arranca la sesión sola |
-| **credencial** | `Copiar usuario` + `Copiar contraseña` (acceso) · `Copiar clave` (clave o PIN) · `Copiar` (token o licencia) · nada (archivo seguro y nota, que se abren en su ficha) | `accionesRapidasDeCredencial` y `copiarCampoCredencial` (`src/features/boveda/accionesCredencial.ts`), extraídos de `BovedaPage`: descifrado, permisos y **auditoría** son los de siempre |
+| **credencial** | `Ver` (vista rápida, sección 7.7) + `Copiar usuario` + `Copiar contraseña` (acceso) · `Ver` + `Copiar clave` (clave o PIN) · `Ver` + `Copiar` (token o licencia) · `Ver` (nota segura) · `Abrir ficha` (archivo seguro, que no se abre en el buscador; en modo consulta, nada) | `accionesRapidasDeCredencial` y `copiarCampoCredencial` (`src/features/boveda/accionesCredencial.ts`), extraídos de `BovedaPage`: descifrado, permisos y **auditoría** son los de siempre |
 | **comando** y **atajo** | `Copiar comando` / `Copiar atajo` | El campo `valor` de la ficha. Esa tabla **nunca guarda secretos**, así que aquí no hay descifrado ni auditoría que hacer |
 | todo lo demás | ninguna | Abrir la ficha ES la acción, y la fila entera ya la abre |
 
 **Las acciones viven solo en "Mejores resultados"** (o en la fila única cuando no hay sección). Con la acción en todas las filas, una búsqueda de ocho guías dejaba ocho botones "Empezar" apilados y la pantalla se leía como una botonera: arriba son **cinco como mucho**, que es justo lo que se va a tocar. Cada fila tiene una acción primaria y, como mucho, dos.
 
-**Volver al sitio.** Cada fila viaja con `conOrigen(pathname, 'la búsqueda')`, así que abrir una credencial desde aquí y volver devuelve **a la búsqueda**, no a la lista raíz de la Bóveda. Es el sistema de origen que ya existía (AD-030), no un segundo mecanismo.
+**Volver al sitio.** Cada fila viaja con `conOrigen(pathname, 'la búsqueda', { consulta, capa })`, así que abrir una ficha desde aquí y volver devuelve **a la búsqueda**, no a la lista raíz de su sección, y **con lo que estaba escrito** (sección 7.8, desde el 2026-09-16). Es el sistema de origen que ya existía (AD-030), no un segundo mecanismo.
+
+**En modo consulta** (encima de una guía en ejecución, sección 7.5) no se ofrece ninguna acción que abra otra ejecución: ni `Empezar`, `Continuar` o `Repetir guía`, ni `Iniciar`. La guía o el diagnóstico encontrados quedan como referencia. Copiar sí sigue. Lo decide `ofreceAccionDirecta` (`src/features/busqueda/modoConsulta.ts`).
 
 ### 7.3 Intención de la consulta, con los datos que ya hay (2026-09-15, tarea 241)
 
@@ -168,8 +170,10 @@ Ahora, con permiso de bóveda y la bóveda cerrada, los resultados incluyen una 
 - **Es genérica y no delata nada.** Aparece igual escribiendo "administrador POS" que escribiendo "xyz": el rótulo es la misma frase para una consulta que existe y para una que no. **Sin permiso de bóveda no se dibuja**: quien no está autorizado no llega a saber que existe una sección protegida con contenido buscable.
 - **El desbloqueo es EN LÍNEA**, sobre el propio buscador, y delega entero en `desbloquear()`, la única fuente de verdad de la sesión (la misma de `BovedaGuard` y del bloque protegido de un paso). No se copia ni se recrea criptografía.
 - **La consulta no viaja a ninguna parte**: sigue escrita en el campo, así que "conservarla" no necesita estado de navegación, parámetro de URL ni sesión. Al desbloquear, el índice se reconstruye solo (depende de `useBovedaDesbloqueada`) y los accesos aparecen en **la misma búsqueda**, con sus acciones rápidas. Ver [DECISIONES.md](DECISIONES.md), AD-038.
-- **Definir la contraseña maestra por primera vez NO se puede hacer desde aquí**: si `estadoInicialBoveda()` no dice `verificar`, el puente enlaza a la sección Bóveda, que es donde esa decisión tiene su confirmación y su aviso.
+- **Desbloquear aquí NO navega (2026-09-16).** Ni a `/boveda` ni a ninguna otra parte: el técnico sigue en Inicio, en la sección o en la guía desde la que buscaba, con la consulta escrita y las credenciales que coinciden ya en la lista, cada una con `Ver` y sus copias. Las pruebas de flujo lo fijan (`flujoBovedaBuscador.test.tsx`, casos A y B; `modoConsultaGuia.test.tsx`, caso E).
+- **Definir la contraseña maestra por primera vez NO se puede hacer desde aquí**: si `estadoInicialBoveda()` no dice `verificar`, el puente enlaza a la sección Bóveda, que es donde esa decisión tiene su confirmación y su aviso. En modo consulta no hay enlace (sacaría al técnico de la guía): se explica y se ofrece "Entendido".
 - **Dónde se coloca:** detrás de la **primera** sección de resultados. Lo que ya se encontró resuelve la mayoría de las búsquedas y no puede quedar por debajo de una puerta cerrada; pero tampoco puede enterrarse al final, porque cuando lo que se busca es un acceso ESTE es el resultado. En el estado vacío (sin resultados públicos) es lo único que se ofrece.
+- **Cuánto pesa (2026-09-16, `prominenciaPuenteBoveda`).** Si un resultado público coincide con fuerza (título exacto, o que empieza por la consulta entera como palabra, nunca un sinónimo), el puente pasa a una **línea compacta** con un botón pequeño ("Desbloquear"), para no competir con la respuesta: buscar "Zabbix" y tener la herramienta Zabbix arriba no pide una puerta cerrada del mismo tamaño. Sin resultados públicos, o sin ninguno que coincida de verdad, conserva su forma destacada. La regla mira solo lo que ya está en pantalla y **nunca** intenta adivinar si existe una credencial.
 
 ### 7.5 Buscar durante la ejecución de una guía (2026-09-15, tarea 241)
 
@@ -177,11 +181,51 @@ La cabecera compacta del modo ejecución (`BarraTarea compacta`) gana una **lupa
 
 La navegación principal sigue fuera: lo que se añade no es navegación, es una consulta. Como la capa es un portal a `<body>`, la ejecución que hay debajo **no se vuelve a montar**: mismo paso activo, mismo progreso y mismo cronómetro al cerrar. Copiar un comando, un atajo o una credencial no navega, así que el recorrido entero (buscar, copiar, cerrar, seguir) ocurre sin salir del procedimiento; y si la bóveda está bloqueada, el puente la abre ahí mismo.
 
+**Modo consulta (2026-09-16).** La primera versión abría el buscador **normal**, y tocar cualquier resultado (o "Empezar" otra guía) sacaba al técnico de la ejecución. Ahora, sobre cualquier pantalla de nivel tarea (la lupa de la ejecución y el atajo "/" de un editor o de la ejecución), `BuscadorGlobal` se abre con `modo="consulta"`, que lo dice en una línea bajo el campo ("Modo consulta: lo que abras aquí no te saca de lo que estás haciendo") y aplica las reglas puras de `src/features/busqueda/modoConsulta.ts`:
+
+| Tipo | En modo consulta |
+|---|---|
+| credencial | desbloquear en línea, `Ver`, mostrar u ocultar, copiar usuario y clave; un archivo seguro explica que se abre desde su ficha al terminar |
+| comando y atajo | la fila despliega la misma tarjeta que dentro de una tarea (`TarjetaComando`): se ve y se copia |
+| término y herramienta | la fila despliega la definición; en una herramienta, además, para qué sirve, su uso en Metroparques y su estado de uso (`ContenidoReferencia`, el mismo cuerpo que la hoja de un término en una guía) |
+| equipo | la fila despliega nombre, ubicación, marca y modelo, estado e IP, con los datos del teléfono; sus datos protegidos NO |
+| guía, diagnóstico, categoría, adjunto, ubicación, persona, dato protegido de un equipo | referencia: se ve la fila, no se puede abrir ni iniciar |
+
+**Ninguna fila navega** (`filaNavega`) y el estado vacío no ofrece "Crear equipo". No existe hoy un mecanismo seguro para "abrir al terminar", así que no se inventó uno: la guía encontrada es solo referencia.
+
 ### 7.6 Medición del recorrido (preparada, sin sistema nuevo)
 
 `src/features/busqueda/medicion.ts`. `registrarResolucion` es un punto de enganche único que recibe `{ accion, tipo, desdeMejores, interacciones, longitudConsulta }` cuando el técnico resuelve algo (empezar o continuar una guía, iniciar un diagnóstico, abrir un equipo, copiar una credencial).
 
-**Hoy no guarda nada a propósito.** La app no tiene un canal de analítica y `accesos_boveda` es una auditoría de seguridad, no una métrica de uso: meter ahí eventos de navegación ensuciaría el registro que el equipo revisa. Lo que sí queda fijado (y probado) es la **forma** del evento: **nunca** lleva la consulta, ni el título, ni el id, ni ningún texto libre. De la consulta solo viaja su **longitud**, que es un número.
+**Hoy no guarda nada a propósito.** La app no tiene un canal de analítica y `accesos_boveda` es una auditoría de seguridad, no una métrica de uso: meter ahí eventos de navegación ensuciaría el registro que el equipo revisa. Lo que sí queda fijado (y probado) es la **forma** del evento: **nunca** lleva la consulta, ni el título, ni el id, ni ningún texto libre. De la consulta solo viaja su **longitud**, que es un número. Copiar desde la vista rápida (sección 7.7) cuenta igual que copiar desde la fila.
+
+### 7.7 Vista rápida dentro del buscador (2026-09-16)
+
+`src/features/busqueda/{PanelVistaRapida,VistaRapida,VistaRapidaCredencial}.tsx`. Buscar un acceso, desbloquear y tener que abrir la ficha completa de la Bóveda para leer un usuario era justo el viaje que el buscador venía a ahorrar. La vista rápida se **despliega debajo del resultado**, dentro de la misma lista: no es otra capa, así que cerrarla (`Cerrar`, o Esc, que recoge la vista y nada más) devuelve a los mismos resultados con la consulta escrita y el buscador abierto. Hay una sola abierta a la vez, y se recoge sola si cambia la consulta.
+
+Qué tipo la tiene lo decide `vistaRapidaDe`: la credencial en los dos modos (con su botón `Ver`); el resto solo en modo consulta (sección 7.5), donde la fila entera la despliega.
+
+**La vista de una credencial no implementa nada de seguridad propio.** Descifra con `descifrarCredencial` (la sesión de siempre), enseña exactamente los datos que se pueden copiar desde la fila (`camposVistaRapida`, construida sobre `accionesRapidasDeCredencial`), copia con `copiarCampoCredencial` y audita con `registrarAccesoBoveda` usando **las mismas acciones que la ficha**: desplegar la vista es `consulto` (como abrir la ficha), destapar la clave es `mostro` (como su ojo) y copiar es `copio_usuario` o `copio_contrasena`. Ocultar no registra nada, igual que en la ficha.
+
+| Tipo de acceso | Qué muestra |
+|---|---|
+| Acceso | Usuario (a la vista) y Contraseña (tapada), con `Mostrar`/`Ocultar`, `Copiar usuario` y `Copiar contraseña` |
+| Clave o PIN | Clave o PIN (tapada), con `Mostrar`/`Ocultar` y `Copiar clave` |
+| Token, licencia o clave | Valor (tapado), con `Mostrar`/`Ocultar` y `Copiar` |
+| Nota segura | el texto, como lo muestra la ficha al abrirla |
+| Archivo seguro | no se abre ni se descifra: se dice que se descarga desde su ficha (con `Abrir ficha` fuera de una tarea) |
+
+- **Todo lo secreto arranca tapado**, aunque la bóveda esté abierta. Destapado, el valor sale **entero**: varias líneas, `break-all`, monoespaciado, sin `truncate` ni "..." (la corrección de la tarea 240), con los botones debajo del valor para que a 360 px no lo estrechen.
+- **El secreto no sale del componente.** No va a la URL, ni a localStorage, ni al índice, ni a un atributo, ni a la medición. Se borra del estado al cerrar la vista y también si la bóveda se bloquea con la vista abierta; con la bóveda cerrada o sin permiso la vista no existe.
+
+### 7.8 Volver de una ficha con la búsqueda escrita (2026-09-16)
+
+`src/lib/origenNavegacion.ts` (la forma) y `src/features/busqueda/busquedaEnHistorial.ts` (los dos hooks). Abrir una ficha desde un resultado ya devolvía a la pantalla correcta (sección 7.2), pero con el buscador **vacío**.
+
+- **Qué se guarda:** la consulta y si estaba en la capa global o en el buscador de Inicio (`BusquedaEnCurso`). Nada más: ni resultados, ni secretos, ni el scroll exacto (la memoria de scroll por ruta ya repone lo que puede).
+- **Dónde:** solo en `location.state`. Viaja en el origen del salto (`conOrigen(..., busqueda)`) y el regreso de la app la entrega a la pantalla de destino (`estadoDeRegreso`, que usan `BotonVolver` y la X de `BarraTarea` en el chasis). Además, en el mismo toque que salta, se anota en la entrada actual del historial (`useAnotarBusqueda`), así que **el botón atrás del teléfono** también la encuentra. Nunca en la URL ni en localStorage, y se pierde con la pestaña.
+- **Quién la repone:** Inicio, en su campo en línea; y la capa global, desde `CapaAtajos`, que vive en el chasis de todas las pantallas y por eso sirve venga de la lupa de la barra o de "/". Se relee en cada **llegada** a la entrada (ir o volver), no solo al montar: de un equipo a otro equipo React reutiliza la pantalla y volver al primero tiene que reponer igual.
+- **Cuándo se olvida:** al cerrar la capa repuesta o al vaciar el campo de Inicio, que es dar la búsqueda por terminada (`descartar`). Abrir la capa con la lupa sigue empezando limpio, como siempre.
 
 ## 8. Sugerencias anti duplicados
 
@@ -200,7 +244,7 @@ El **selector de "vincular procedimiento existente"** de un paso (`VinculoDelPas
 
 - **Artículos en `borrador` u `obsoleto`**: no son contenido oficial para sugerir al equipo. (Los borradores propios sí se ven en la pantalla de Soluciones, que tiene su propio filtro, ver sección 10; y una herramienta del Centro de consulta puede enlazar un borrador como guía relacionada, con su pastilla, sin que eso lo haga aparecer en el buscador.)
 - **Cualquier fila con `eliminadoEn`** (borrado suave): excluida en todas las entidades.
-- **Credenciales y campos protegidos sin la bóveda desbloqueada**: hay dos barreras distintas. La RLS del servidor decide si esas filas siquiera se sincronizan al dispositivo (sin permiso de bóveda, la tabla local ni las tiene); y `bovedaDesbloqueada` es un flag en memoria de la sesión que exige haber tecleado la contraseña maestra y se resetea por inactividad. Un técnico con permiso pero sin desbloquear no ve ningún resultado de bóveda.
+- **Credenciales y campos protegidos sin la bóveda desbloqueada**: hay dos barreras distintas. La RLS del servidor decide si esas filas siquiera se sincronizan al dispositivo (sin permiso de bóveda, la tabla local ni las tiene); y `bovedaDesbloqueada` es un flag en memoria de la sesión que exige haber tecleado la contraseña maestra y se resetea por inactividad. Un técnico con permiso pero sin desbloquear no ve ningún resultado de bóveda. Desde el 2026-09-16 el índice exige además el **permiso del perfil** (`puedeVerBoveda`) para contar la bóveda como abierta: la interfaz ya no dejaba desbloquear sin él, y esto cubre las filas que pudieran quedar en el teléfono de antes de retirar el permiso (caso J de `flujoBovedaBuscador.test.tsx`).
 - **Adjuntos huérfanos**: un adjunto cuyo dueño ya no resuelve localmente (o es un borrador) se descarta.
 - **Fichas del Centro de consulta de un tipo desconocido**: las escribió una versión más nueva de la app.
 - **Tablas no listadas** (historial, ejecuciones de diagnóstico, progreso, favoritos, recientes, conexiones, syncMeta): no alimentan el índice.
@@ -267,6 +311,7 @@ Todas registradas en [TAREAS.md](TAREAS.md):
 
 - Miniatura de portada en resultados: `portadaRef` viaja pero no se pinta.
 - Medicion del recorrido: `registrarResolucion` esta preparada y probada, pero todavia no guarda en ningun sitio (seccion 7.6).
+- Vista rápida de un **dato protegido de un equipo** en modo consulta: hoy queda como referencia (sección 7.5). Tarea 243.
 - Chips de filtro por tipo: descritos en la documentación previa pero inexistentes en el código. (El agrupado era inline en `InicioPage.tsx`; la tarea 181 lo extrajo a `busqueda/resultados.ts` y `busqueda/ResultadosBusqueda.tsx`, pero sigue sin haber chips de tipo.)
 - Tres normalizaciones de acentos sin unificar (`texto.ts`, `sinonimos.ts`, `iconosSoluciones.ts`).
 - Sin tope de resultados en el buscador global.

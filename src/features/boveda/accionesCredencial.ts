@@ -89,6 +89,50 @@ export function accionesRapidasDeCredencial(credencial: { tipo?: TipoSecreto }):
   }
 }
 
+/** Un dato de la vista rápida de una credencial en el buscador. */
+export interface CampoVistaRapida extends AccionCopia {
+  /** Cómo se nombra el dato encima de su valor. */
+  rotulo: string
+  /**
+   * Arranca tapado y solo se ve tras tocar "Mostrar" (encargo del
+   * 2026-09-16, sección 4), aunque la bóveda ya esté abierta.
+   */
+  secreto: boolean
+}
+
+// Cómo se nombra la clave según el tipo, dentro de la vista rápida. La
+// ficha dice "Contraseña" para todo; aquí el dato va sin la ficha
+// alrededor, así que dice lo que es.
+const ROTULO_SECRETO: Record<TipoSecreto, string> = {
+  cuenta: 'Contraseña',
+  red: 'Clave o PIN',
+  llave: 'Valor',
+  archivo: '',
+  nota: '',
+}
+
+/**
+ * Los datos que muestra la vista rápida de una credencial (encargo del
+ * 2026-09-16, sección 2). Son EXACTAMENTE los que se pueden copiar sin
+ * abrir la ficha (`accionesRapidasDeCredencial`), cada uno con su rótulo
+ * y su copia: la vista no puede enseñar un dato que la fila no sabría
+ * copiar, ni al revés.
+ *
+ *   - acceso: Usuario (a la vista) y Contraseña (tapada);
+ *   - clave o PIN: Clave o PIN (tapada);
+ *   - token, licencia o clave: Valor (tapado);
+ *   - nota segura y archivo seguro: ninguno (la nota se lee como texto; el
+ *     archivo no se abre en el buscador).
+ */
+export function camposVistaRapida(credencial: { tipo?: TipoSecreto }): CampoVistaRapida[] {
+  const tipo = tipoDe(credencial)
+  return accionesRapidasDeCredencial(credencial).map((accion) => ({
+    ...accion,
+    rotulo: accion.campo === 'usuario' ? 'Usuario' : ROTULO_SECRETO[tipo],
+    secreto: accion.campo === 'contrasena',
+  }))
+}
+
 export interface ResultadoCopia {
   ok: boolean
   /** Por que no se pudo, para decirlo donde el tecnico lo esta mirando. */

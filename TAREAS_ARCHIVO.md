@@ -1,5 +1,33 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-16: consultar sin abandonar lo que se estaba haciendo
+
+### 242. Mantener consultas y Bóveda dentro del flujo
+
+**Estado:** Completada (2026-09-16). **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-16, "buscar, consultar, resolver y seguir donde estaba", sobre lo entregado en la tarea 241 (commit `58d2dda`). Sin auditoría general, sin rediseñar Inicio ni el buscador, sin tocar Supabase ni la arquitectura.
+
+**Ubicación.** Nuevos: `src/features/busqueda/modoConsulta.ts` (reglas del modo consulta), `busquedaEnHistorial.ts` (anotar y reponer la búsqueda), `clasesAcciones.ts`, `PanelVistaRapida.tsx`, `VistaRapida.tsx`, `VistaRapidaCredencial.tsx`; `src/features/referencia/ContenidoReferencia.tsx` (cuerpo extraído de `HojaReferencia`); `src/pruebas/montaje.ts` (montaje de pantallas reales en pruebas). Modificados: `busqueda/{BuscadorGlobal,ResultadosBusqueda,AccionesResultado,PuenteBoveda}.tsx`, `busqueda/{contextoResultados,reglasPuenteBoveda,useIndiceBusqueda}.ts`, `boveda/accionesCredencial.ts`, `referencia/HojaReferencia.tsx`, `inicio/InicioPage.tsx`, `soluciones/AsistentePage.tsx`, `app/{Chasis,CapaAtajos}.tsx`, `components/{BotonVolver,BarraTarea}.tsx`, `lib/origenNavegacion.ts`.
+
+**Lo que se encontró antes de tocar nada.** Ningún código navegaba a `/boveda` al desbloquear desde el puente: el desbloqueo ya era en línea. Lo que sacaba al técnico era lo de después: para leer la credencial había que tocar su fila, que abría la ficha de la Bóveda; y sobre una guía la lupa abría el buscador normal, cuyas filas y acciones navegaban.
+
+**Qué se hizo, por sección del encargo:**
+
+1. **Bóveda desde el buscador (1).** Fijado con pruebas de flujo que desbloquear no navega y deja la misma consulta con las credenciales en la lista, desde Inicio, desde la capa y desde una guía.
+2. **Vista rápida (2 a 7).** `Ver` despliega la credencial debajo de su resultado. Reutiliza `descifrarCredencial`, `accionesRapidasDeCredencial` (vía `camposVistaRapida`), `copiarCampoCredencial` y `registrarAccesoBoveda`. **Auditoría verificada contra la ficha** (`CredencialPage`): abrir la ficha registra `consulto`, el ojo de la contraseña `mostro`, copiar `copio_*`; la vista rápida registra exactamente eso (RN-034). Todo secreto arranca tapado; mostrado, entero. El descifrado se borra al cerrar y al bloquearse la bóveda. Archivo seguro: no se abre en el buscador.
+3. **Modo consulta sobre una tarea (8 a 11).** `BuscadorGlobal modo="consulta"` desde la lupa de la ejecución y desde "/" en cualquier tarea. Nada navega; credencial, comando, atajo, término, herramienta y equipo se consultan en la capa; guías y diagnósticos quedan como referencia sin acciones. **"Abrir al terminar" no se construyó**: no existe un mecanismo seguro que preserve la ejecución y el encargo pedía no inventarlo.
+4. **Recientes (12).** `AsistentePage` anota la guía con la misma clave que su ficha (`put` por clave: se actualiza, no se duplica).
+5. **Volver con la búsqueda (13).** La consulta y si la capa estaba abierta viajan en el origen del salto y se anotan en la entrada actual del historial; Inicio y `CapaAtajos` la reponen. Solo `location.state`. Durante las pruebas apareció un caso que el primer intento no cubría: **entre dos fichas del mismo tipo React reutiliza la pantalla**, así que reponer solo al montar fallaba al volver del equipo B al equipo A. Se relee en cada llegada (PUSH o POP), nunca en un REPLACE.
+6. **Puente menos invasivo (14).** `prominenciaPuenteBoveda`: línea compacta ante una coincidencia pública fuerte; destacado sin resultados públicos.
+7. **De paso, un defecto real:** el efecto que enfoca el campo de la capa dependía de `onCerrar`, que llega nuevo en cada render del padre, y podía robar el foco a la contraseña maestra. Ahora depende solo de abrir y cerrar.
+
+**Pruebas (16).** Se añade `happy-dom` como dependencia de desarrollo para montar pantallas reales (Inicio, `AsistentePage`, el chasis con su lupa y su regreso) con router en memoria y la base de `fake-indexeddb`. Archivos nuevos: `flujoBovedaBuscador.test.tsx` (casos A, B, C, D, J y sección 14), `modoConsultaGuia.test.tsx` (E, F, G), `conservarBusqueda.test.tsx` (I, incluido el botón atrás y la reutilización entre fichas del mismo tipo), `recientesGuia.test.tsx` (H) y `modoConsulta.test.ts`; casos nuevos en `reglasPuenteBoveda.test.ts`, `accionesCredencial.test.ts` y `origenNavegacion.test.ts`. Para comprobar que las pruebas muerden se aplicaron **nueve mutaciones** temporales (secreto destapado por defecto, capa normal sobre la guía, sin Recientes, valor truncado, sin `consulto`, regreso sin búsqueda, puente siempre destacado, fila que navega en consulta y desbloqueo que navega a `/boveda`): todas hicieron fallar la suite, y se revirtieron.
+
+**Verificación (17 y 18).** `npm test`: 112 archivos y 1561 casos en verde (antes 107 y 1503). `npm run lint` y `npm run build` limpios; `compatibilidadDatos.test.ts` en verde. Chrome sin cabeza por CDP contra el banco local (`VITE_MODO_PRUEBA_LOCAL=1`, bóveda y tres accesos inventados sembrados en la página) a 360, 448, 768 y 1280 px: Inicio (contraseña maestra, vista rápida con usuario de 63 caracteres y contraseña de 99, token de 148, nota, puente compacto con "TightVNC") y guía en ejecución (contraseña maestra con alto útil de 420 px simulando el teclado, vista rápida, herramienta, cerrar). Resultado: sin desbordamiento horizontal ni en el documento ni en la capa, sin controles por debajo de 44 px, sin valores recortados, sin anillo de foco al tocar con puntero, ruta intacta y la guía en el mismo paso ("Paso 2 de 3") tras cerrar la capa. Sigue siendo emulación, no dispositivo físico.
+
+**Lo que NO se tocó:** Supabase, RLS, esquema, datos, contenido de guías y herramientas, Equipos, Red, Diagnóstico, navegación principal, offline, sincronización, permisos, criptografía, contraseña maestra, ranking, sinónimos, MiniSearch y diseño Nocturne.
+
+**Pendiente anotado (no es esta tarea):** la vista rápida de un **dato protegido de un equipo** en modo consulta (tarea 243, en [TAREAS.md](TAREAS.md)).
+
 ## Encargo del 2026-09-15: secretos largos en la Bóveda
 
 ### 235 y 234. Encargo del 2026-09-09: ejecución de Guías (dos tandas)

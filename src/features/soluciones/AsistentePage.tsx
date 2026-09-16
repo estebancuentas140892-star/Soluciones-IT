@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
+import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { AsistenteVista } from './AsistenteVista'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
@@ -21,6 +22,17 @@ export function AsistentePage() {
 
   const articulo = useLiveQuery(() => db.articulos.get(articuloId), [articuloId])
   const procedimiento = useMemo(() => normalizarProcedimiento(articulo?.procedimiento), [articulo])
+
+  // USAR UNA GUÍA LA SUBE A RECIENTES, entre por donde entre (encargo del
+  // 2026-09-16, sección 12). Hasta ahora solo lo anotaba su ficha
+  // (`ArticuloPage`), y "Empezar" desde el buscador se la salta: la guía
+  // que de verdad se estaba usando no aparecía en Inicio. Es la misma
+  // anotación que la ficha, por clave (`articulo:<id>`): pasar por las dos
+  // pantallas actualiza la fecha del mismo reciente, no crea otro.
+  const idVisitado = articulo && !articulo.eliminadoEn ? articulo.id : null
+  useEffect(() => {
+    if (idVisitado) void registrarVisita('articulo', idVisitado)
+  }, [idVisitado])
 
   if (articulo === null) return <Navigate to="/soluciones" replace />
   if (!articulo) {

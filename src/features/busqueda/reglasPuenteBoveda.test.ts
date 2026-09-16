@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { debeOfrecerPuenteBoveda, etiquetaPuenteBoveda } from './reglasPuenteBoveda'
+import {
+  debeOfrecerPuenteBoveda,
+  etiquetaPuenteBoveda,
+  hayCoincidenciaFuerte,
+  prominenciaPuenteBoveda,
+} from './reglasPuenteBoveda'
+import type { ResultadoBusqueda } from './useIndiceBusqueda'
 
 // El puente a la boveda bloqueada (tarea 241, secciones 5 y 19). Lo que
 // se comprueba aqui es de seguridad, no de maquetacion.
@@ -43,5 +49,43 @@ describe('etiquetaPuenteBoveda', () => {
   it('no afirma que haya resultados ni nombra ninguna credencial', () => {
     const etiqueta = etiquetaPuenteBoveda('administrador POS')
     expect(etiqueta).not.toMatch(/existe|encontrad|hay \d|coincidencia/i)
+  })
+})
+
+// EL PESO DEL PUENTE (encargo del 2026-09-16, sección 14): cede ante una
+// coincidencia pública fuerte y conserva su forma destacada sin ella.
+describe('prominenciaPuenteBoveda', () => {
+  function resultado(titulo: string, extra: Partial<ResultadoBusqueda> = {}): ResultadoBusqueda {
+    return { id: `herramienta:${titulo}`, tipo: 'herramienta', titulo, subtitulo: '', ruta: '/', portadaRef: '', ...extra }
+  }
+
+  it('con una coincidencia exacta del título ("Zabbix") pasa a secundario', () => {
+    expect(prominenciaPuenteBoveda([resultado('Zabbix')], 'zabbix')).toBe('secundario')
+    // Sin distinguir mayúsculas ni acentos, como el resto del buscador.
+    expect(prominenciaPuenteBoveda([resultado('Cámaras')], 'camaras')).toBe('secundario')
+  })
+
+  it('un título que empieza por la consulta entera también es coincidencia fuerte', () => {
+    expect(prominenciaPuenteBoveda([resultado('Zabbix (ZBX)')], 'Zabbix')).toBe('secundario')
+    expect(prominenciaPuenteBoveda([resultado('Servidor de archivos')], 'servidor')).toBe('secundario')
+  })
+
+  it('sin resultados públicos el puente se queda destacado', () => {
+    expect(prominenciaPuenteBoveda([], 'administrador POS')).toBe('destacado')
+  })
+
+  it('una coincidencia parcial o dentro de otra palabra no le quita protagonismo', () => {
+    expect(prominenciaPuenteBoveda([resultado('Monitoreo con Zabbix')], 'zabbix')).toBe('destacado')
+    expect(prominenciaPuenteBoveda([resultado('Servidores')], 'servidor')).toBe('destacado')
+  })
+
+  it('lo que solo trajo un sinónimo no cuenta: no es lo que se escribió', () => {
+    expect(prominenciaPuenteBoveda([resultado('Respaldo', { soloSinonimo: true })], 'respaldo')).toBe('destacado')
+  })
+
+  it('no depende de nada de la bóveda: la misma consulta y los mismos resultados dan lo mismo siempre', () => {
+    const publicos = [resultado('Zabbix')]
+    expect(prominenciaPuenteBoveda(publicos, 'zabbix')).toBe(prominenciaPuenteBoveda(publicos, 'zabbix'))
+    expect(hayCoincidenciaFuerte(publicos, '   ')).toBe(false)
   })
 })

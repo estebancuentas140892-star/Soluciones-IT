@@ -19,6 +19,13 @@ interface Props {
    * etiqueta no se pierde: viaja como `aria-label` y como `title`.
    */
   soloIcono?: boolean
+  /**
+   * `state` del regreso. Hoy solo lo usa el chasis para devolver una
+   * búsqueda a la pantalla de la que se salió (encargo del 2026-09-16,
+   * sección 13): volver no es solo volver al sitio, es volver con lo
+   * que estaba escrito.
+   */
+  estado?: unknown
 }
 
 // Botón de regreso unificado de toda la app. Deriva a qué pantalla sube
@@ -26,7 +33,7 @@ interface Props {
 // pantalla cablea su destino a mano y no puede volver a desincronizarse
 // con un rediseño (causa de las tareas 75 y 76). Los casos con contexto
 // en runtime pasan un `to`/`children` explícito.
-export function BotonVolver({ to, children, soloIcono = false }: Props) {
+export function BotonVolver({ to, children, soloIcono = false, estado }: Props) {
   const { pathname } = useLocation()
   const padre = padreDe(pathname)
   const destino = to ?? padre?.to ?? '/'
@@ -36,6 +43,7 @@ export function BotonVolver({ to, children, soloIcono = false }: Props) {
     return (
       <Link
         to={destino}
+        state={estado}
         aria-label={`Volver a ${etiqueta}`}
         title={`Volver a ${etiqueta}`}
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 transition-colors hover:bg-noct-text/5 hover:text-noct-text"
@@ -48,6 +56,7 @@ export function BotonVolver({ to, children, soloIcono = false }: Props) {
   return (
     <Link
       to={destino}
+      state={estado}
       className="inline-flex min-w-0 items-center gap-1 rounded-lg py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 transition-colors hover:bg-noct-text/5 hover:text-noct-text"
     >
       <CaretLeft size={16} className="shrink-0" aria-hidden />

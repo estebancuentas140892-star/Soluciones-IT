@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react'
+import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 import type { AccionGuia } from '../soluciones/accionGuia'
 import { registrarResolucion, type EventoResolucion } from './medicion'
+import type { ModoBuscador } from './modoConsulta'
 
 // Lo que toda fila de resultados necesita saber y NINGUNA deberia
 // recalcular por su cuenta (tarea 241): que ofrece cada guia, que se
@@ -23,6 +25,26 @@ export interface ValorContextoResultados {
   onResolver: (evento: EventoResolucion) => void
   /** Hubo que desbloquear la boveda en este mismo recorrido. */
   huboDesbloqueo: boolean
+  /**
+   * Normal, o consulta encima de una tarea (encargo del 2026-09-16,
+   * seccion 8): en consulta nada navega. Ver `modoConsulta.ts`.
+   */
+  modo: ModoBuscador
+  /** Id del resultado con la vista rapida desplegada, o null. */
+  vistaAbierta: string | null
+  /** Despliega o recoge la vista rapida de un resultado (una a la vez). */
+  alternarVista: (id: string) => void
+  /**
+   * El `state` de un salto desde un resultado: el origen, con la busqueda
+   * para reponerla al volver (seccion 13).
+   */
+  estadoDeSalto: EstadoConOrigen
+  /**
+   * Se llama en el mismo gesto que cualquier salto desde un resultado,
+   * antes de el: anota la busqueda en la entrada actual del historial,
+   * para que tambien el boton atras del telefono la encuentre.
+   */
+  alSaltar: () => void
 }
 
 const VALOR_POR_DEFECTO: ValorContextoResultados = {
@@ -30,6 +52,11 @@ const VALOR_POR_DEFECTO: ValorContextoResultados = {
   consulta: '',
   onResolver: registrarResolucion,
   huboDesbloqueo: false,
+  modo: 'normal',
+  vistaAbierta: null,
+  alternarVista: () => undefined,
+  estadoDeSalto: {},
+  alSaltar: () => undefined,
 }
 
 export const ContextoResultados = createContext<ValorContextoResultados>(VALOR_POR_DEFECTO)
