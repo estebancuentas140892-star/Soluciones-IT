@@ -16,25 +16,24 @@ import { direccionPara } from './direccionTransicion'
 import { useOrigen } from './useOrigen'
 import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
 import { useMemoriaScroll } from './memoriaScroll'
-import { RAICES_DE_PESTANA } from '../lib/navegacion'
+import { esSeccionEnMas, pestanaMovilDe, RAICES_DE_PESTANA } from '../lib/navegacion'
 import { estadoDeRegreso } from '../lib/origenNavegacion'
 import {
   BookBookmark,
   BookOpen,
   BookOpenFill,
   CaretRight,
+  ClockCountdown,
   DotsNine,
   House,
   HouseFill,
   MapPin,
   Monitor,
-  MonitorFill,
+  PlugsConnected,
   QrCode,
   TreeStructure,
-  TreeStructureFill,
   UsersThree,
   Vault,
-  VaultFill,
   type IconoProps,
 } from '../components/iconos'
 import { TituloSeccion } from '../components/nocturne'
@@ -77,31 +76,24 @@ interface Destino {
   end: boolean
 }
 
+// LAS GUÍAS EN EL CENTRO (encargo del 2026-09-17, secciones 1 y 10).
+//
+// La función principal de Soluciones IT es encontrar un procedimiento y
+// hacerlo, así que la navegación principal se queda con eso: Inicio (el
+// buscador y lo que se estaba haciendo) y Guías. Equipos, Red y la Bóveda
+// siguen enteros, pero dejan de pesar lo mismo que buscar y resolver:
+// en escritorio bajan a los grupos de la barra lateral y en el teléfono
+// se abren desde Más. Antes eran cinco pestañas del mismo tamaño y la de
+// Guías era una entre iguales.
 const DESTINOS_BASE: Destino[] = [
   { to: '/', label: 'Inicio', icono: House, iconoActivo: HouseFill, end: true },
   { to: '/soluciones', label: 'Guías', icono: BookOpen, iconoActivo: BookOpenFill, end: false },
-  { to: '/dispositivos', label: 'Equipos', icono: Monitor, iconoActivo: MonitorFill, end: false },
-  { to: '/red', label: 'Red', icono: TreeStructure, iconoActivo: TreeStructureFill, end: false },
 ]
 
-// La Bóveda solo aparece a quien tiene el permiso; el resto ni
-// siquiera sabe que existe. Sigue siendo un destino completo del
-// sidebar de escritorio, en su nav principal (no baja a "Herramientas"
-// ni a "Registros": ver DESTINO_MAS más abajo).
-const DESTINO_BOVEDA: Destino = {
-  to: '/boveda',
-  label: 'Bóveda',
-  icono: Vault,
-  iconoActivo: VaultFill,
-  end: false,
-}
-
-// Quinta pestaña móvil (tarea 182, mockup 3f): la Bóveda deja de ser
-// pestaña y pasa a encabezar "Más" (decisión aprobada por el usuario),
-// que además da puerta a los ocho destinos que hoy no aparecen en la
-// barra ni en el sidebar. Sin variante rellena: el mockup usa el mismo
-// glifo activo e inactivo, solo cambia el color (igual que hace el
-// resto del estado con la barra de 2px y el color de acento).
+// "Más" (tarea 182, mockup 3f): la puerta, en el teléfono, de todo lo que
+// no es buscar y resolver con guías. Desde el 2026-09-17 abre también
+// Equipos, Red y la Bóveda. Sin variante rellena: el mockup usa el mismo
+// glifo activo e inactivo, solo cambia el color.
 const DESTINO_MAS: Destino = {
   to: '/mas',
   label: 'Más',
@@ -447,19 +439,28 @@ export function Chasis(props: Props) {
         {props.barra}
       </div>
     ) : (
-      <BarraSuperior titulo={props.titulo} conLupa={props.conLupa ?? true}>
+      <BarraSuperior
+        titulo={props.titulo}
+        conLupa={props.conLupa ?? true}
+        // Equipos, Red y la Bóveda ya no son pestañas en el teléfono: se
+        // abren desde Más, y su cabecera lo dice con un regreso (encargo
+        // del 2026-09-17). En escritorio siguen siendo raíces de la barra
+        // lateral y no lo llevan.
+        volverEnMovilA={esSeccionEnMas(location.pathname) ? '/mas' : undefined}
+      >
         {props.barra}
       </BarraSuperior>
     )
 
-  // Escritorio: los cinco módulos, Bóveda condicional al permiso. Los
-  // grupos "Herramientas" y "Registros" se dibujan aparte, debajo de
-  // este nav (tarea 183).
-  const destinosDesktop = usuario?.puedeVerBoveda ? [...DESTINOS_BASE, DESTINO_BOVEDA] : DESTINOS_BASE
-  // Móvil: siempre las mismas cinco, para todos (regla R17). Antes la
-  // barra cambiaba de 4 a 5 columnas según el permiso de Bóveda, así
-  // que dos técnicos con el mismo teléfono veían barras distintas.
+  // Escritorio: Inicio y Guías arriba; el resto en los grupos de debajo
+  // (tarea 183, reordenados el 2026-09-17).
+  const destinosDesktop = DESTINOS_BASE
+  // Móvil: siempre las mismas tres, para todos (regla R17): la barra no
+  // cambia según el permiso de Bóveda.
   const destinosMobile = [...DESTINOS_BASE, DESTINO_MAS]
+  // Qué pestaña se ilumina: la que abre lo que se está viendo, aunque la
+  // ruta no cuelgue de ella (Equipos, dentro de Más).
+  const pestanaActiva = pestanaMovilDe(location.pathname)
 
   return (
     <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text md:flex">
@@ -510,24 +511,33 @@ export function Chasis(props: Props) {
           ))}
         </nav>
 
+        {/* LO QUE SE CONSULTA, debajo de lo que se resuelve (encargo del
+            2026-09-17). Equipos, Red y la Bóveda bajan del nav principal a
+            este grupo, con Ubicaciones, Personas y el Centro de consulta:
+            siguen a un clic, pero ya no pesan lo mismo que las Guías. Es
+            el mismo reparto que tiene "Más" en el teléfono. */}
         <div className="border-t border-noct-divider pt-2.5 xl:border-t-0 xl:pt-0">
-          {/* "Trabajo técnico" y no "Herramientas" desde el 2026-09-14:
-              el Centro de consulta tiene ahora una pestaña Herramientas
-              (Zabbix, TightVNC), y dos "Herramientas" con significados
-              distintos a un palmo confundían justo al técnico nuevo. */}
-          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Trabajo técnico</TituloSeccion>
+          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Consulta</TituloSeccion>
           <nav className="flex flex-col gap-0.5">
-            <EnlaceGrupo to="/diagnostico" label="Diagnóstico" Icono={TreeStructure} />
+            <EnlaceGrupo to="/dispositivos" label="Equipos" Icono={Monitor} />
+            <EnlaceGrupo to="/red" label="Red" Icono={PlugsConnected} />
+            {usuario?.puedeVerBoveda && <EnlaceGrupo to="/boveda" label="Bóveda" Icono={Vault} />}
             <EnlaceGrupo to="/referencia" label="Centro de consulta" Icono={BookBookmark} />
-            <EnlaceGrupo to="/escaner" label="Escanear" Icono={QrCode} />
+            <EnlaceGrupo to="/ubicaciones" label="Ubicaciones" Icono={MapPin} />
+            <EnlaceGrupo to="/personas" label="Personas" Icono={UsersThree} />
           </nav>
         </div>
 
         <div className="border-t border-noct-divider pt-2.5 xl:border-t-0 xl:pt-0">
-          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Registros</TituloSeccion>
+          {/* "Trabajo técnico" y no "Herramientas" desde el 2026-09-14:
+              el Centro de consulta tiene una pestaña Herramientas (Zabbix,
+              TightVNC), y dos "Herramientas" con significados distintos a
+              un palmo confundían justo al técnico nuevo. */}
+          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Trabajo técnico</TituloSeccion>
           <nav className="flex flex-col gap-0.5">
-            <EnlaceGrupo to="/ubicaciones" label="Ubicaciones" Icono={MapPin} />
-            <EnlaceGrupo to="/personas" label="Personas" Icono={UsersThree} />
+            <EnlaceGrupo to="/agenda" label="Agenda" Icono={ClockCountdown} />
+            <EnlaceGrupo to="/diagnostico" label="Diagnóstico" Icono={TreeStructure} />
+            <EnlaceGrupo to="/escaner" label="Escanear" Icono={QrCode} />
           </nav>
         </div>
 
@@ -566,65 +576,53 @@ export function Chasis(props: Props) {
         </div>
       </div>
 
-      {/* Pestañas inferiores: solo móvil. Siempre 5 columnas, siempre las
-          mismas 5 (R17). Rótulo a 12px en celdas de 52 (antes 10.5px en
-          44: "por debajo de cualquier mínimo razonable" para navegación
-          que se usa con guantes y a pleno sol). Estado en tres canales
-          (R16 pide al menos dos): barra de 2px sobre la pestaña activa,
-          icono relleno y color de acento; más presionado (fondo de acento
-          al 10%) y foco de teclado (anillo de 2px), que antes no existían. */}
-      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden">
-        {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => {
-          // Puntos y números de la pestaña (R23: un aviso solo si hay un
-          // dato detrás, nunca decorativo).
-          //
-          // Guías ya NO lleva punto (2026-09-09, hallazgo H01): marcaba
-          // la sección entera como si tuviera algo pendiente solo porque
-          // el técnico había dejado una guía a medias. Consultar una
-          // guía no es contraer una obligación.
-          //
-          // Inicio (tarea 187, corregido en la 203 y en el encargo del
-          // 2026-09-11): los asuntos URGENTES de la agenda, es decir lo
-          // vencido y lo de hoy. El número vivía en "Más", donde
-          // incumplía su propia regla (M-003, regla M-R9): "Más" es un
-          // índice y no contiene ni un pendiente, así que tocar el aviso
-          // llevaba a un sitio donde no estaba lo avisado. La agenda vive
-          // en Inicio, así que el aviso se muda con el dato.
+      {/* Pestañas inferiores: solo móvil. Siempre las mismas tres (R17):
+          Inicio, Guías y Más (encargo del 2026-09-17). Rótulo a 12px en
+          celdas de 52. Estado en tres canales (R16 pide al menos dos):
+          barra de 2px sobre la pestaña activa, icono relleno y color de
+          acento; más presionado y foco de teclado.
+
+          La pestaña activa la decide `pestanaMovilDe`, no la ruta del
+          enlace: Equipos, Red o Personas se abren desde Más, así que
+          dentro de ellas se ilumina Más. Con NavLink no se iluminaba
+          ninguna y nada decía dónde se estaba. */}
+      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-3 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden">
+        {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo }) => {
+          const activa = pestanaActiva === to
+          // Números de la pestaña (R23: un aviso solo si hay un dato
+          // detrás, nunca decorativo). Inicio cuenta los asuntos URGENTES
+          // de la agenda (vencidos y para hoy): es donde asoma su línea
+          // (regla M-R9). Guías no lleva punto (H01): consultar una guía
+          // no es contraer una obligación.
           const numeroPendientes = to === '/' ? urgentes : 0
           return (
-            <NavLink
+            <Link
               key={to}
               to={destinoDePestana(to, location.pathname, RAICES_DE_PESTANA)}
-              end={end}
               onClick={() => alTocarPestana(to)}
-              className={({ isActive }) =>
-                `relative flex min-h-[52px] flex-col items-center gap-1 pb-[10px] pt-[9px] text-[12px] font-medium outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
-                  isActive ? 'text-noct-accent-300' : 'text-noct-neutral-300'
-                }`
-              }
+              aria-current={activa ? 'page' : undefined}
+              className={`relative flex min-h-[52px] flex-col items-center gap-1 pb-[10px] pt-[9px] text-[12px] font-medium outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
+                activa ? 'text-noct-accent-300' : 'text-noct-neutral-300'
+              }`}
             >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <span
-                      className="absolute left-1/2 top-0 h-[2px] w-[26px] -translate-x-1/2 rounded-b-[2px] bg-noct-accent"
-                      aria-hidden
-                    />
-                  )}
-                  <span className="relative">
-                    {isActive ? <IconoActivo size={22} /> : <Icono size={22} />}
-                    {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
-                  </span>
-                  {label}
-                  {numeroPendientes > 0 && (
-                    <span className="sr-only">
-                      {' '}
-                      ({numeroPendientes} {numeroPendientes === 1 ? 'asunto urgente' : 'asuntos urgentes'})
-                    </span>
-                  )}
-                </>
+              {activa && (
+                <span
+                  className="absolute left-1/2 top-0 h-[2px] w-[26px] -translate-x-1/2 rounded-b-[2px] bg-noct-accent"
+                  aria-hidden
+                />
               )}
-            </NavLink>
+              <span className="relative">
+                {activa ? <IconoActivo size={22} /> : <Icono size={22} />}
+                {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
+              </span>
+              {label}
+              {numeroPendientes > 0 && (
+                <span className="sr-only">
+                  {' '}
+                  ({numeroPendientes} {numeroPendientes === 1 ? 'asunto urgente' : 'asuntos urgentes'})
+                </span>
+              )}
+            </Link>
           )
         })}
       </nav>

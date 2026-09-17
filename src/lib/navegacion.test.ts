@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { esRaizDePestana, padreDe, vueltaDeTarea } from './navegacion'
+import { esRaizDePestana, esSeccionEnMas, padreDe, pestanaMovilDe, vueltaDeTarea } from './navegacion'
 
 describe('padreDe', () => {
   it('las pestañas de la barra no tienen pantalla superior', () => {
@@ -28,10 +28,27 @@ describe('padreDe', () => {
       })
     })
 
-    it('editar y ejecutar vuelven a la ficha del artículo', () => {
-      const ficha = { to: '/soluciones/cat-pos/art-1', etiqueta: 'Volver' }
-      expect(padreDe('/soluciones/cat-pos/art-1/editar')).toEqual(ficha)
-      expect(padreDe('/soluciones/cat-pos/art-1/ejecutar')).toEqual(ficha)
+    // Encargo del 2026-09-17: la dirección de la guía es su ejecución y
+    // la ficha baja a /detalles.
+    it('editar vuelve a la ficha de la guía, que vive en /detalles', () => {
+      expect(padreDe('/soluciones/cat-pos/art-1/editar')).toEqual({
+        to: '/soluciones/cat-pos/art-1/detalles',
+        etiqueta: 'Volver',
+      })
+    })
+
+    it('los detalles vuelven a la guía', () => {
+      expect(padreDe('/soluciones/cat-pos/art-1/detalles')).toEqual({
+        to: '/soluciones/cat-pos/art-1',
+        etiqueta: 'Guía',
+      })
+    })
+
+    it('la dirección antigua /ejecutar sube como la guía, a la lista con su chip', () => {
+      expect(padreDe('/soluciones/cat-pos/art-1/ejecutar')).toEqual({
+        to: '/soluciones?categoria=cat-pos',
+        etiqueta: 'Guías',
+      })
     })
 
     it('la ficha de categoría vuelve a la lista principal (sin chip), no a sí misma', () => {
@@ -205,10 +222,9 @@ describe('vueltaDeTarea', () => {
   })
 
   it('devuelve null donde el padre solo sabe decir "Volver"', () => {
-    // Editar y ejecutar suben a la ficha de una entidad cuyo nombre
-    // depende de datos en runtime: ahí escribe la pantalla.
+    // Editar sube a la ficha de una entidad cuyo nombre depende de datos
+    // en runtime: ahí escribe la pantalla.
     expect(vueltaDeTarea('/soluciones/impresoras/zebra/editar')).toBeNull()
-    expect(vueltaDeTarea('/soluciones/impresoras/zebra/ejecutar')).toBeNull()
     expect(vueltaDeTarea('/dispositivos/pc-1/editar')).toBeNull()
     expect(vueltaDeTarea('/dispositivos/pc-1/baja')).toBeNull()
     expect(vueltaDeTarea('/boveda/wifi/editar')).toBeNull()
@@ -234,5 +250,39 @@ describe('esRaizDePestana', () => {
     expect(esRaizDePestana('/soluciones/cat-1')).toBe(false)
     expect(esRaizDePestana('/dispositivos/pc-1')).toBe(false)
     expect(esRaizDePestana('/diagnostico')).toBe(false)
+  })
+})
+
+// Encargo del 2026-09-17: en el teléfono, Inicio, Guías y Más.
+describe('pestanaMovilDe', () => {
+  it('Inicio cubre también su agenda', () => {
+    expect(pestanaMovilDe('/')).toBe('/')
+    expect(pestanaMovilDe('/agenda')).toBe('/')
+  })
+
+  it('Guías cubre todo lo que cuelga de /soluciones, la guía en ejecución incluida', () => {
+    expect(pestanaMovilDe('/soluciones')).toBe('/soluciones')
+    expect(pestanaMovilDe('/soluciones/cat-pos/art-1')).toBe('/soluciones')
+    expect(pestanaMovilDe('/soluciones/cat-pos/art-1/detalles')).toBe('/soluciones')
+  })
+
+  it('lo que se abre desde Más ilumina Más, también Equipos, Red y la Bóveda', () => {
+    for (const ruta of ['/mas', '/dispositivos', '/dispositivos/pc-1', '/red', '/boveda', '/referencia', '/personas']) {
+      expect(pestanaMovilDe(ruta)).toBe('/mas')
+    }
+  })
+})
+
+describe('esSeccionEnMas', () => {
+  it('Equipos, Red y la Bóveda, en su raíz, se abren desde Más', () => {
+    for (const ruta of ['/dispositivos', '/red', '/boveda', '/red/']) {
+      expect(esSeccionEnMas(ruta)).toBe(true)
+    }
+  })
+
+  it('ni sus fichas ni las pestañas que quedan lo son', () => {
+    for (const ruta of ['/', '/soluciones', '/mas', '/dispositivos/pc-1']) {
+      expect(esSeccionEnMas(ruta)).toBe(false)
+    }
   })
 })

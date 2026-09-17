@@ -3,14 +3,9 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import {
-  db,
-  type Articulo,
-  type ArticuloRelacionado,
-  type Procedimiento,
-} from '../../lib/db'
+import { db, type Articulo, type ArticuloRelacionado } from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
-import { empezarEjecucion, reiniciarProgreso } from '../../lib/progresoPasos'
+import { reiniciarProgreso } from '../../lib/progresoPasos'
 import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
@@ -35,10 +30,8 @@ import {
   WarningOctagon,
 } from '../../components/iconos'
 import { BotonFavorito } from '../../components/BotonFavorito'
-import { BarraAccionFicha, type EstadoAccion } from '../../components/BarraAccionFicha'
 import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
-import { accionDeGuia, estrenaEjecucion, etiquetaAccionGuia } from './accionGuia'
 import { IntroduccionGuia, ListaIntro, ResumenGuia, SeccionIntro } from './IntroduccionGuia'
 import { TerminosDeLaGuia } from '../referencia/TerminosDeLaGuia'
 import { colorIconoDeTipo } from './iconosSoluciones'
@@ -71,11 +64,21 @@ function fechaCorta(iso: string): string {
 // que dice "Empecemos" al pie, y para decidir si esta era la guia
 // correcta habia que recorrer un documento de miles de pixeles.
 //
-// Ahora esta pantalla presenta y la barra inferior es la unica puerta:
-// portada, tipo, titulo, descripcion, objetivo, sintomas, causas,
-// equipos afectados, requisitos y el resumen de tiempo, dificultad y
-// pasos. Nada del procedimiento se pierde: se lee donde se hace.
-export function ArticuloPage() {
+// Ahora esta pantalla presenta: portada, tipo, titulo, descripcion,
+// objetivo, sintomas, causas, equipos afectados, requisitos y el resumen
+// de tiempo, dificultad y pasos. Nada del procedimiento se pierde: se
+// lee donde se hace.
+//
+// Y DESDE EL 2026-09-17 YA NO ES LA PUERTA (encargo "resolver rápido con
+// guías", sección 3; absorbe la tarea 229). Abrir una guía con pasos
+// lleva directo a su primer paso pendiente (`GuiaPage`), así que esta
+// pantalla es lo que se abre a propósito desde el índice de pasos:
+// "Detalles de la guía" (`comoDetalles`). La barra "Empecemos" que la
+// cerraba se retiró con ello: aquí ya no se viene a empezar, y volver a
+// la guía es el regreso de arriba. Un artículo SIN pasos (un manual,
+// unas notas) sigue abriéndose aquí directamente, porque leerlo es todo
+// lo que se puede hacer con él.
+export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean }) {
   const { categoriaId = '', articuloId = '' } = useParams()
   const navigate = useNavigate()
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
@@ -127,28 +130,27 @@ export function ArticuloPage() {
   // metadatos (decisión 4), así que esta línea se queda solo con la
   // procedencia del dato: cuándo y quién.
   const metaLinea = `Actualizado el ${fechaCorta(articulo.updatedAt)}${autor?.nombre ? ` por ${autor.nombre}` : ''}`
+  // Los detalles de una guía con pasos vuelven a la guía; un artículo
+  // de lectura, a la lista de Guías con el chip de su categoría.
+  const detallesDeGuia = comoDetalles && tieneProcedimiento
 
   return (
     // Nivel 2 del chasis (tarea 185): documento. Conserva las pestañas
     // (R19: la barra solo cede ante una tarea con salida) y el regreso
-    // deriva de la jerarquía central (padreDe): la ficha de artículo
-    // sube a la lista de Guías con el chip de su categoría, y la
-    // etiqueta muestra el nombre de la categoría.
+    // deriva de la jerarquía central (padreDe).
     <Chasis
       modo="documento"
-      volverEtiqueta={categoria?.nombre ?? 'Guías'}
+      volverEtiqueta={detallesDeGuia ? 'la guía' : (categoria?.nombre ?? 'Guías')}
       // Ancla permanente (M-001, M-R1): en un procedimiento de varias
       // pantallas, el título dejaba de verse al primer desplazamiento.
       titulo={articulo.titulo}
-      contexto={['Guías', categoria?.nombre].filter(Boolean).join(' · ')}
+      contexto={
+        detallesDeGuia ? 'Detalles de la guía' : ['Guías', categoria?.nombre].filter(Boolean).join(' · ')
+      }
       acciones={
-        // Decisión 2 de P2: tres controles de 44 px y ni uno más. Antes
-        // eran cinco (volver + estrella + Ejecutar + Editar + "···") y
-        // con una categoría de nombre largo la fila se estrangulaba.
-        // "Ejecutar" se va a la barra inferior (decisión 1) y "Editar"
-        // pierde su rótulo: con la acción dominante abajo, un botón de
-        // borde aquí arriba volvería a competir con ella, que es
-        // exactamente lo que la auditoría señala.
+        // Decisión 2 de P2: tres controles y ni uno más. Antes eran cinco
+        // (volver + estrella + Ejecutar + Editar + "···") y con una
+        // categoría de nombre largo la fila se estrangulaba.
         <>
           <BotonFavorito tipo="articulo" entidadId={articuloId} />
           <Link
@@ -300,13 +302,6 @@ export function ArticuloPage() {
 
         <Historial entidadTipo="articulo" entidadId={articuloId} />
 
-        {/* Decisión 1 de P2: una sola acción dominante, fija abajo y con
-            etiqueta contextual. Solo si hay algo que ejecutar (R3: ningún
-            control muerto). El `mt-auto` de la barra la empuja al pie
-            cuando el documento es corto. */}
-        {tieneProcedimiento && (
-          <AccionDominante articuloId={articuloId} categoriaId={categoriaId} procedimiento={procedimiento} />
-        )}
       </main>
     </Chasis>
   )
@@ -337,50 +332,6 @@ function MetadatosArticulo({ aplicaA, version }: { aplicaA: string; version: str
         </Fragment>
       ))}
     </dl>
-  )
-}
-
-// Etiqueta contextual de la barra inferior: "Empezar" sin avance,
-// "Seguir en el paso N de M" a medias, "Repetir" cuando ya está todo
-// hecho. Antes decía "Ejecutar" siempre, incluso con 2 de 6 pasos
-// hechos, donde lo que se hace es seguir.
-function AccionDominante({
-  articuloId,
-  categoriaId,
-  procedimiento,
-}: {
-  articuloId: string
-  categoriaId: string
-  procedimiento: Procedimiento
-}) {
-  // `null` = no hay ejecucion abierta; `undefined` = todavia se esta
-  // leyendo. Distinguirlos importa: mientras carga, el boton diria
-  // "Empezar" y tocarlo borraria el avance que aun no ha llegado.
-  const progreso = useLiveQuery(
-    async () => (await db.progresoPasos.get(articuloId)) ?? null,
-    [articuloId],
-  )
-  // EL DESTINO ES EL PRIMER PASO PENDIENTE DE VERDAD, y "terminada"
-  // incluye las comprobaciones finales: ofrecer "Repetir guia" con
-  // comprobaciones sin marcar borraba una ejecucion que no habia
-  // acabado.
-  const accion = accionDeGuia(procedimiento, progreso, progreso != null)
-  const estado: EstadoAccion = accion.estado
-
-  if (progreso === undefined) return null
-
-  return (
-    <BarraAccionFicha
-      to={`/soluciones/${categoriaId}/${articuloId}/ejecutar`}
-      estado={estado}
-      etiqueta={etiquetaAccionGuia(accion, 'barra')}
-      // Empezar y repetir ESTRENAN ejecucion; continuar conserva la
-      // abierta y por eso no prepara nada.
-      onIniciar={
-        estrenaEjecucion(accion) ? async () => void (await empezarEjecucion(articuloId)) : undefined
-      }
-      onReiniciar={() => void reiniciarProgreso(articuloId)}
-    />
   )
 }
 

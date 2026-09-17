@@ -15,7 +15,11 @@ import type { ModoBuscador } from './modoConsulta'
 // por resultado.
 
 export interface ValorContextoResultados {
-  /** Accion de cada guia ejecutable, resuelta por `accionDeGuia`. */
+  /**
+   * Accion de cada guia ejecutable, resuelta por `accionDeGuia`. Desde el
+   * 2026-09-17 la guia no lleva boton en el resultado (abrirla ya empieza
+   * o retoma): solo decide con que verbo se mide el recorrido.
+   */
   accionesGuia: Map<string, AccionGuia>
   /** Lo que el tecnico escribio, sin normalizar. Solo para la medicion. */
   consulta: string

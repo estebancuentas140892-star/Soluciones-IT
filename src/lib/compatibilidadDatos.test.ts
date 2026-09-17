@@ -18,7 +18,7 @@ import {
   verificacionFinalCompleta,
 } from './progresoPasos'
 import { obtenerRecientes, registrarVisita } from './recientes'
-import { accionDeGuia, etiquetaAccionGuia } from '../features/soluciones/accionGuia'
+import { accionDeGuia, lineaAvanceGuia } from '../features/soluciones/accionGuia'
 import { guiaTerminada } from '../features/soluciones/cierrePaso'
 import { accionesDeGuia } from '../features/soluciones/useAccionesDeGuia'
 import { accionesRapidasDeCredencial, tipoDe } from '../features/boveda/accionesCredencial'
@@ -119,7 +119,7 @@ describe('progreso escrito por una versión anterior', () => {
     const accion = accionDeGuia(procedimiento, await leerAvance('a1'), true)
 
     expect(accion.estado).toBe('continuar')
-    expect(etiquetaAccionGuia(accion, 'tarjeta')).toBe('Continuar · paso 1 de 3')
+    expect(lineaAvanceGuia(accion)).toBe('Vas en el paso 1 de 3')
   })
 
   it('escribir sobre ella le estrena `ejecucionId` sin perder lo marcado', async () => {
@@ -159,7 +159,7 @@ describe('progreso escrito por una versión anterior', () => {
 describe('guías guardadas antes del editor actual', () => {
   it('sus pasos se leen y la tarjeta ofrece continuar donde iba', () => {
     const mapa = accionesDeGuia([guiaVieja('a1', ['p1', 'p2', 'p3'])], [progresoViejo('a1', ['p1'])])
-    expect(etiquetaAccionGuia(mapa.get('a1')!, 'tarjeta')).toBe('Continuar · paso 2 de 3')
+    expect(lineaAvanceGuia(mapa.get('a1'))).toBe('Vas en el paso 2 de 3')
   })
 
   it('las instrucciones antiguas se leen como tareas, sin perderse', () => {

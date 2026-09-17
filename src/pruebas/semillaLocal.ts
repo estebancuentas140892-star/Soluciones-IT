@@ -567,7 +567,58 @@ const GUIA_VARIAS_OBLIGATORIAS = articulo({
   },
 })
 
+// Caso del encargo del 2026-09-17 (secciones 4 a 8): una guía con
+// requisitos reales y un aviso de cada tono, para comprobar que solo los
+// riesgos se ven como alerta, que el dato va a la vista, que la
+// información y el consejo quedan plegados y que "Antes de empezar" sale
+// en el paso 1. Todo inventado.
+function avisoConTono(
+  id: string,
+  tareaId: string,
+  tono: 'info' | 'precaucion' | 'importante' | 'consejo' | 'dato',
+  texto: string,
+): BloquePaso {
+  return { ...aviso(id, texto), tono, alcance: 'tarea', tareaId }
+}
+
+const GUIA_TONOS = articulo({
+  id: 'art-tonos',
+  categoriaId: 'cat-pos',
+  titulo: 'Cambiar un dato de la caja de ejemplo',
+  tipo: 'configuracion',
+  procedimiento: {
+    descripcion: 'Caso de prueba de avisos por tono.',
+    portada: null,
+    objetivoGeneral: 'Dejar el dato de ejemplo cambiado.',
+    requisitos: ['Documento de ejemplo con el dato nuevo', 'Usuario de ejemplo con permisos'],
+    verificacionFinal: ['La caja de ejemplo muestra el dato nuevo'],
+    tiempoEstimadoMin: 5,
+    dificultad: 'intermedio',
+    pasos: [
+      paso({
+        id: 'tonos-p1',
+        titulo: 'Abrir el programa de ejemplo',
+        bloques: [tarea('tonos-p1-t1', 'Abre el programa de ejemplo en la caja')],
+      }),
+      paso({
+        id: 'tonos-p2',
+        titulo: 'Escribir el dato nuevo',
+        objetivo: 'Que la caja use el dato del documento',
+        bloques: [
+          tarea('tonos-p2-t1', 'Escribe el dato nuevo en el campo de ejemplo'),
+          avisoConTono('tonos-a-dato', 'tonos-p2-t1', 'dato', 'Formato del dato de ejemplo: EJ-0000'),
+          avisoConTono('tonos-a-info', 'tonos-p2-t1', 'info', 'Explicación de ejemplo de por qué el campo se llama así'),
+          tarea('tonos-p2-t2', 'Pulsa Guardar'),
+          avisoConTono('tonos-a-imp', 'tonos-p2-t2', 'importante', 'Guardar reemplaza el dato anterior de la caja de ejemplo'),
+          avisoConTono('tonos-a-consejo', 'tonos-p2-t2', 'consejo', 'Consejo de ejemplo: anota el dato viejo antes'),
+        ],
+      }),
+    ],
+  },
+})
+
 const ARTICULOS: Articulo[] = [
+  GUIA_TONOS,
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
   GUIA_TRES_TAREAS,

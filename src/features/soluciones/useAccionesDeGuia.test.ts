@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Articulo, ProgresoPasos } from '../../lib/db'
-import { etiquetaAccionGuia } from './accionGuia'
+import { lineaAvanceGuia } from './accionGuia'
 import { accionesDeGuia } from './useAccionesDeGuia'
 
 // El reparto que comparten el catalogo de Guias y las acciones directas
@@ -32,19 +32,19 @@ describe('accionesDeGuia', () => {
   it('sin avance guardado, una guía ejecutable ofrece empezar', () => {
     const mapa = accionesDeGuia([articulo('a', 3)], [])
     expect(mapa.get('a')?.estado).toBe('empezar')
-    expect(etiquetaAccionGuia(mapa.get('a')!, 'tarjeta')).toBe('Empezar')
+    expect(lineaAvanceGuia(mapa.get('a'))).toBeNull()
   })
 
   it('con avance a medias ofrece continuar, diciendo en qué paso va', () => {
     const mapa = accionesDeGuia([articulo('a', 3)], [progreso('a', ['p1'])])
     expect(mapa.get('a')?.estado).toBe('continuar')
-    expect(etiquetaAccionGuia(mapa.get('a')!, 'tarjeta')).toBe('Continuar · paso 2 de 3')
+    expect(lineaAvanceGuia(mapa.get('a'))).toBe('Vas en el paso 2 de 3')
   })
 
   it('el paso pendiente es el primero SIN hacer, no "hechos + 1"', () => {
     // Cerrar el 2 y el 3 saltándose el 1 debe seguir llevando al 1.
     const mapa = accionesDeGuia([articulo('a', 3)], [progreso('a', ['p2', 'p3'])])
-    expect(etiquetaAccionGuia(mapa.get('a')!, 'tarjeta')).toBe('Continuar · paso 1 de 3')
+    expect(lineaAvanceGuia(mapa.get('a'))).toBe('Vas en el paso 1 de 3')
   })
 
   it('con todo hecho ofrece repetir', () => {

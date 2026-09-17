@@ -34,12 +34,15 @@ export interface TonoInfo {
   claseFondo: string
 }
 
+// Las descripciones dicen también CÓMO se verá el aviso al ejecutar
+// (encargo del 2026-09-17): quien escribe la guía decide si algo
+// interrumpe o no eligiendo el tono, así que tiene que saberlo al elegir.
 export const TONOS_AVISO: TonoInfo[] = [
   {
     valor: 'info',
     etiqueta: 'Información',
     corto: 'Info',
-    descripcion: 'Contexto que ayuda a entender el paso',
+    descripcion: 'Explicación o contexto. Al ejecutar queda plegado en «Más información»',
     Icono: Info,
     clasesPanel: 'border-noct-accent/30 bg-noct-accent/10',
     claseIcono: 'text-noct-accent',
@@ -50,7 +53,7 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'precaucion',
     etiqueta: 'Precaución',
     corto: 'Cuidado',
-    descripcion: 'Algo que puede salir mal si no se tiene en cuenta',
+    descripcion: 'Algo que puede salir mal en esta acción. Se ve como alerta junto a ella',
     Icono: Warning,
     clasesPanel: 'border-noct-precaucion/30 bg-noct-precaucion/10',
     claseIcono: 'text-noct-precaucion',
@@ -61,7 +64,7 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'importante',
     etiqueta: 'Importante',
     corto: 'Alerta',
-    descripcion: 'Riesgo real: hay que leerlo antes de continuar',
+    descripcion: 'Riesgo real: pérdida de datos, ventas o facturación, o algo irreversible. Alerta destacada',
     Icono: WarningOctagon,
     clasesPanel: 'border-noct-error/30 bg-noct-error/10',
     claseIcono: 'text-noct-error',
@@ -72,7 +75,7 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'consejo',
     etiqueta: 'Consejo',
     corto: 'Consejo',
-    descripcion: 'Atajo o buena práctica del equipo',
+    descripcion: 'Atajo o buena práctica. Al ejecutar queda plegado en «Más información»',
     Icono: Lightbulb,
     clasesPanel: 'border-noct-exito/30 bg-noct-exito/10',
     claseIcono: 'text-noct-exito',
@@ -83,7 +86,7 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'dato',
     etiqueta: 'Dato técnico',
     corto: 'Dato',
-    descripcion: 'Un valor, un comando o una referencia exacta',
+    descripcion: 'Un valor exacto que hace falta para la acción. Se ve a la vista, sin color de alerta',
     Icono: Code,
     clasesPanel: 'border-noct-neutral-500/30 bg-noct-neutral-500/10',
     claseIcono: 'text-noct-neutral-400',
@@ -94,4 +97,30 @@ export const TONOS_AVISO: TonoInfo[] = [
 
 export function tonoInfo(tono: TonoAviso | null): TonoInfo {
   return TONOS_AVISO.find((t) => t.valor === tono) ?? TONOS_AVISO[0]
+}
+
+// CÓMO APARECE CADA AVISO MIENTRAS SE EJECUTA (encargo del 2026-09-17,
+// secciones 6 a 8).
+//
+// Hasta hoy todo aviso era una alerta: con fondo de color y, en la
+// ejecución, con su propia pantalla y un "Entendido · continuar" que
+// había que tocar antes de seguir, fuera una precaución o un consejo.
+// Con cinco o seis por guía el técnico aprendía a tocar sin leer, que
+// es justo lo contrario de lo que un aviso quiere.
+//
+// Ahora el tono decide el trato, y nada detiene el recorrido:
+//
+//   - 'alerta': precaución e importante. Riesgos reales. Se ven junto a
+//     la acción a la que pertenecen, antes de la instrucción y con su
+//     color, y como son pocos, destacan.
+//   - 'dato': un valor que hace falta para ejecutar la acción. A la
+//     vista, pero sin color de alerta.
+//   - 'plegado': información y consejo. Sirven para entender, no para
+//     hacer: quedan bajo "Más información", cerrado por defecto.
+export type PresenciaAviso = 'alerta' | 'dato' | 'plegado'
+
+export function presenciaDeAviso(tono: TonoAviso | null): PresenciaAviso {
+  if (tono === 'precaucion' || tono === 'importante') return 'alerta'
+  if (tono === 'dato') return 'dato'
+  return 'plegado'
 }

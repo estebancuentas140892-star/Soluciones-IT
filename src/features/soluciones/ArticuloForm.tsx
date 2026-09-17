@@ -725,7 +725,11 @@ export function ArticuloForm() {
     // El borrador era la red mientras se escribia; ya no hay nada que
     // recuperar (tarea 219).
     await borrarBorrador(id)
-    navigate(`/soluciones/${categoriaId}/${id}`)
+    // A LA FICHA, NO A LA EJECUCIÓN (2026-09-17). Desde que la dirección
+    // de la guía abre su paso 1, quien acaba de guardar caería dentro del
+    // procedimiento; lo que busca quien edita es ver lo guardado (versión,
+    // historial) y desde ahí volver a la guía si quiere probarla.
+    navigate(`/soluciones/${categoriaId}/${id}/detalles`)
   }
 
   // La X dice "Cancelar y volver", y eso incluye el borrador: quien
@@ -1086,9 +1090,19 @@ export function ArticuloForm() {
                 rows={3}
                 value={requisitos}
                 onChange={(e) => setRequisitos(e.target.value)}
-                placeholder={'Acceso a la red\nPermisos de administrador'}
+                placeholder={'Resolución de la DIAN en PDF\nUsuario con permisos de administrador'}
                 className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
               />
+              {/* LA REGLA, DONDE SE ESCRIBE (encargo del 2026-09-17,
+                  sección 4). "Antes de empezar" se llenaba con acciones
+                  que luego volvían a aparecer en los pasos, y el técnico
+                  las leía dos veces. Solo aparece, en el paso 1, si hay
+                  algo escrito aquí. */}
+              <p className="mt-1.5 text-[12px] leading-snug text-noct-neutral-400">
+                Solo lo que debe estar listo antes del paso 1: un documento, un acceso, una conexión o una
+                herramienta. Si es algo que se hace («entra», «abre», «selecciona»), es un paso. Si no hace
+                falta nada, déjalo vacío.
+              </p>
             </Campo>
 
             <section>

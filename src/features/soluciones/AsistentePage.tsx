@@ -1,10 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useParams } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { padreDe } from '../../lib/navegacion'
+import { estadoDeRegreso } from '../../lib/origenNavegacion'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
 import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
+import { useOrigen } from '../../app/useOrigen'
 import { AsistenteVista } from './AsistenteVista'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
 
@@ -19,6 +22,15 @@ import { ProveedorEjecucion } from './ProveedorEjecucion'
 // progreso vive en la base local, no en el estado de esta pantalla.
 export function AsistentePage() {
   const { categoriaId = '', articuloId = '' } = useParams()
+  // A dónde lleva "Salir de la guía" al terminar: el mismo sitio que la X
+  // de la cabecera, que deshace el último salto si lo hay (M-R2) y si no
+  // sube al padre declarado.
+  const { pathname } = useLocation()
+  const origen = useOrigen()
+  const salida = {
+    to: origen?.to ?? padreDe(pathname)?.to ?? '/soluciones',
+    estado: estadoDeRegreso(origen),
+  }
 
   const articulo = useLiveQuery(() => db.articulos.get(articuloId), [articuloId])
   const procedimiento = useMemo(() => normalizarProcedimiento(articulo?.procedimiento), [articulo])
@@ -43,9 +55,10 @@ export function AsistentePage() {
     )
   }
   // Un articulo sin pasos (sin procedimiento, o con metadata pero sin
-  // pasos: K1) no tiene modo ejecucion que ofrecer.
+  // pasos: K1) no tiene modo ejecucion que ofrecer: su direccion lo
+  // muestra como lectura (ver `GuiaPage`).
   if (!procedimientoEjecutable(procedimiento)) {
-    return <Navigate to={`/soluciones/${categoriaId}/${articuloId}`} replace />
+    return <Navigate to={`/soluciones/${categoriaId}/${articuloId}/detalles`} replace />
   }
 
   return (
@@ -61,20 +74,22 @@ export function AsistentePage() {
       conBusqueda
       rotulo="Ejecutando"
       titulo={articulo.titulo}
-      salidaEtiqueta="Salir del modo ejecución"
+      salidaEtiqueta="Salir de la guía"
     >
       {/* Sin relleno inferior propio: la acción dominante fija de
           `AsistenteVista` (M-011) es el último elemento del flujo y ya
-          reserva su alto y el área segura del teléfono. */}
-      <main className="flex flex-1 flex-col px-4 pt-4">
+          reserva su alto y el área segura del teléfono. Tampoco superior:
+          lo pone cada vista, para que el primer paso empiece pegado a la
+          cabecera. */}
+      <main className="flex flex-1 flex-col px-4">
         {/* Sin onCompletado: al nivel 0 no hay a quien avisar,
-            AsistenteVista ya muestra su propio resumen de "completado" y
-            el tecnico decide cuando salir con el boton de arriba. */}
+            AsistenteVista ya muestra su propia pantalla de terminada, con
+            la salida a donde el técnico estaba. */}
         {/* La ejecucion en curso: su fila de progreso es la raiz donde
             se guarda tambien el avance de sus guias vinculadas (tarea 2
             del encargo). */}
         <ProveedorEjecucion raizId={articuloId}>
-          <AsistenteVista articuloId={articuloId} procedimiento={procedimiento} nivel={0} />
+          <AsistenteVista articuloId={articuloId} procedimiento={procedimiento} nivel={0} salida={salida} />
         </ProveedorEjecucion>
       </main>
     </Chasis>

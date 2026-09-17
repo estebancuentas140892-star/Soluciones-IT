@@ -3,12 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
-import { empezarEjecucion } from '../../lib/progresoPasos'
-import { ArrowsClockwise, CaretRight, Check, Copy, Eye, Play, Warning } from '../../components/iconos'
+import { CaretRight, Check, Copy, Eye, Play, Warning } from '../../components/iconos'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { accionesRapidasDeCredencial, copiarCampoCredencial, tipoDe } from '../boveda/accionesCredencial'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
-import { estrenaEjecucion, etiquetaAccionGuia } from '../soluciones/accionGuia'
 import { ACCION_PRIMARIA, ACCION_SECUNDARIA, MS_AVISO } from './clasesAcciones'
 import { idDeEntidad, useContextoResultados } from './contextoResultados'
 import { eventoDeResolucion } from './medicion'
@@ -23,11 +21,10 @@ import type { ResultadoBusqueda } from './useIndiceBusqueda'
 // ejecutarla; cuatro pasos para lo que en campo es uno solo ("empieza
 // esta guia", "dame esa clave").
 //
-// Que ofrece cada tipo, y por que solo estos cuatro:
+// Que ofrece cada tipo, y por que solo estos:
 //
-//   - GUIA: "Empezar" o "Continuar · paso N de M". Lo decide
-//     `accionDeGuia`, la MISMA funcion que la ficha y el catalogo; aqui
-//     no hay ninguna regla de progreso nueva.
+//   - GUIA: nada desde el 2026-09-17. Abrir la guia ya la lleva a su
+//     primer paso pendiente, asi que "Empezar" repetia la fila.
 //   - DIAGNOSTICO: "Iniciar". La ruta del diagnostico ya arranca la
 //     sesion sola, asi que es la misma ruta con el verbo dicho.
 //   - CREDENCIAL: copiar lo que de verdad guarda, con el descifrado, los
@@ -65,8 +62,9 @@ export function AccionesDeResultado({
   if (!ofreceAccionDirecta(resultado.tipo, modo)) return null
 
   switch (resultado.tipo) {
-    case 'articulo':
-      return <AccionGuiaResultado resultado={resultado} desdeMejores={desdeMejores} />
+    // Una GUIA ya no lleva boton (encargo del 2026-09-17): abrirla desde
+    // la fila la lleva a su primer paso pendiente, que es lo que hacia
+    // "Empezar" / "Continuar". El boton repetia el enlace de al lado.
     case 'diagnostico':
       return <AccionDiagnostico resultado={resultado} desdeMejores={desdeMejores} />
     case 'credencial':
@@ -77,73 +75,6 @@ export function AccionesDeResultado({
     default:
       return null
   }
-}
-
-// ----------------------------------------------------------------
-// Guia
-// ----------------------------------------------------------------
-
-function AccionGuiaResultado({
-  resultado,
-  desdeMejores,
-}: {
-  resultado: ResultadoBusqueda
-  desdeMejores: boolean
-}) {
-  const { accionesGuia, consulta, onNavegar, onResolver, huboDesbloqueo, alSaltar } = useContextoResultados()
-  const navegar = useNavigate()
-  const [preparando, setPreparando] = useState(false)
-  const articuloId = idDeEntidad(resultado.id)
-  const accion = accionesGuia.get(articuloId)
-
-  // Sin entrada en el mapa la guia no tiene pasos (un manual, un
-  // borrador vacio): no hay ejecucion que ofrecer, solo abrir la ficha.
-  if (!accion) return null
-
-  const etiqueta = etiquetaAccionGuia(accion, 'tarjeta')
-  const prepara = estrenaEjecucion(accion)
-
-  async function ejecutar() {
-    if (preparando) return
-    setPreparando(true)
-    try {
-      // Continuar no prepara nada: su progreso se conserva intacto.
-      if (prepara) await empezarEjecucion(articuloId)
-      onResolver(
-        eventoDeResolucion({
-          accion: prepara ? 'empezar_guia' : 'continuar_guia',
-          tipo: resultado.tipo,
-          desdeMejores,
-          consulta,
-          huboDesbloqueo,
-        }),
-      )
-      // El botón atrás del teléfono, desde la ejecución, vuelve a esta
-      // búsqueda (sección 13 del encargo del 2026-09-16).
-      alSaltar()
-      onNavegar?.()
-      navegar(`${resultado.ruta}/ejecutar`)
-    } finally {
-      setPreparando(false)
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      disabled={preparando}
-      onClick={() => void ejecutar()}
-      aria-label={`${etiqueta}: "${resultado.titulo}"`}
-      className={ACCION_PRIMARIA}
-    >
-      {accion.estado === 'repetir' ? (
-        <ArrowsClockwise size={16} className="shrink-0" aria-hidden />
-      ) : (
-        <Play size={16} className="shrink-0" aria-hidden />
-      )}
-      <span className="truncate">{etiqueta}</span>
-    </button>
-  )
 }
 
 // ----------------------------------------------------------------

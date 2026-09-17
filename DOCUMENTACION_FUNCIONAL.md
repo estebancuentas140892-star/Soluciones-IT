@@ -91,15 +91,21 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 
 | Nivel | Qué pantallas | Qué se ve arriba | ¿Barra de pestañas? |
 |---|---|---|---|
-| **Sección** | Inicio, Guías, Equipos, Red, Más, Bóveda | título de la sección, estado del dato, buscar y cuenta | sí |
+| **Sección** | Inicio, Guías, Más (las pestañas del teléfono) y Equipos, Red y Bóveda (que en el teléfono se abren desde Más y llevan un regreso a Más) | título de la sección, estado del dato, buscar y cuenta | sí |
 | **Documento** | fichas y listas internas: categoría, artículo, equipo, secreto, topología, Ubicaciones, Personas, Diagnóstico, Estadísticas, Sugerencias, Mi cuenta, Seguridad | en las **cinco fichas** (equipo, artículo, credencial, ubicación, persona), el **ancla permanente** de la tarea 201: chevron de 44 px, el origen a 11 px y el nombre de lo que se ve a 14 px, que no se va con el scroll (regla **M-R1**). En las listas internas, el regreso con el nombre de a dónde vuelve. A la derecha, las acciones de la pantalla | sí |
-| **Tarea** | lo que se hace y de lo que se sale: los cuatro editores, el asistente, el diagnóstico en ejecución, el escáner, las etiquetas, la importación y las tres migraciones | `BarraTarea`: rótulo ("Editando"), sobre qué, la ruta de vuelta escrita y una X | **no** |
+| **Tarea** | lo que se hace y de lo que se sale: los cuatro editores, una guía abierta (su ejecución), el diagnóstico en ejecución, el escáner, las etiquetas, la importación y las tres migraciones | `BarraTarea`: rótulo ("Editando"), sobre qué, la ruta de vuelta escrita y una X | **no** |
+
+**LAS GUÍAS EN EL CENTRO (desde el 2026-09-17, tarea 244, [DECISIONES.md](DECISIONES.md) AD-040).** Soluciones IT se usa para encontrar un procedimiento y hacerlo, así que la navegación principal se queda con eso:
+
+- **Teléfono: tres pestañas, Inicio, Guías y Más** (antes cinco: Inicio, Guías, Equipos, Red y Más). **Equipos, Red y la Bóveda siguen completas** y se abren desde Más, en el grupo "Consulta"; su cabecera lleva un chevron de regreso a Más (solo en el teléfono) y, dentro de ellas, **se ilumina la pestaña Más**. Lo mismo en Personas, Ubicaciones, el Centro de consulta, Diagnóstico o Mi cuenta: la pestaña iluminada es la que abre lo que se está viendo (`pestanaMovilDe`). La agenda (`/agenda`) ilumina Inicio.
+- **Escritorio: Inicio y Guías arriba**; debajo, **"Consulta"** (Equipos, Red, Bóveda con permiso, Centro de consulta, Ubicaciones, Personas) y **"Trabajo técnico"** (Agenda, Diagnóstico, Escanear). En escritorio Equipos, Red y Bóveda no llevan regreso: son destinos de la barra lateral.
+- Las tablas de más abajo sobre las cinco pestañas y el nav principal de cinco o seis destinos describen **cómo era** hasta el 2026-09-16.
 
 **Cuatro anchos, cuatro composiciones (desde la tarea 191, regla R30).** Cada punto de quiebre entrega una pantalla completa, y los define el chasis: ninguna pantalla los repite.
 
 | Ventana | Qué se ve |
 |---|---|
-| Menos de 768px | Teléfono: columna de 448px y las 5 pestañas inferiores. |
+| Menos de 768px | Teléfono: columna de 448px y las 3 pestañas inferiores (Inicio, Guías, Más; eran 5 hasta el 2026-09-16). |
 | 768 a 1279px | Tableta: barra lateral estrecha de **solo iconos** (64px) y una columna de trabajo. Sin pestañas inferiores. |
 | 1280 a 1679px | Portátil: barra lateral completa de 240px con la marca "Soluciones IT", sus catorce destinos y el perfil al pie. |
 | 1680px o más | Monitor: barra lateral de 232px y hasta 1294px de contenido, el espacio de las tres zonas (lista, documento y contexto). |
@@ -199,15 +205,17 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | Ruta | Pantalla / Componente | Nivel del chasis | Descripción |
 |------|-----------------------|-------|-------------|
 | `/login` | LoginPage | Fuera del chasis | Inicio de sesión (fuera de RequireAuth) |
-| `/` (index) | InicioPage | Sección | Pantalla principal + buscador global |
+| `/` (index) | InicioPage | Sección | "¿Qué necesitas solucionar?": buscador global, lo urgente en una línea, Continuar, Favoritas y Recientes |
+| `/agenda` | AgendaPage | Documento | Agenda operativa: vencidos, para hoy, próximos, en curso y por revisar del equipo (fue Inicio hasta el 2026-09-16) |
 | `/cuenta` | CuentaPage | Documento | Mi cuenta (cambiar contraseña, cerrar sesión) |
 | `/cuenta/seguridad` | SeguridadPage | Documento | Bloqueo de la app (patrón/contraseña) |
 | `/soluciones` | SolucionesPage | Sección | Lista de artículos, chips de categoría, buscador, hoja de tipo, bloque "Sin terminar" |
 | `/soluciones/:categoriaId` | CategoriaPage | Documento | Ficha 360° de una categoría |
 | `/soluciones/:categoriaId/nuevo` | ArticuloForm | Tarea | Crear artículo (editor con 4 pestañas) |
-| `/soluciones/:categoriaId/:articuloId` | ArticuloPage | Documento | Ficha de un artículo/procedimiento |
-| `/soluciones/:categoriaId/:articuloId/editar` | ArticuloForm | Tarea | Editar artículo |
-| `/soluciones/:categoriaId/:articuloId/ejecutar` | AsistentePage | Tarea | Modo asistente (un paso a la vez) |
+| `/soluciones/:categoriaId/:articuloId` | GuiaPage > AsistentePage o ArticuloPage | Tarea (guía con pasos) / Documento (artículo sin pasos) | **La guía**: con pasos se abre ejecutándose, en su primer paso pendiente; sin pasos, se lee (desde el 2026-09-17) |
+| `/soluciones/:categoriaId/:articuloId/detalles` | ArticuloPage (`comoDetalles`) | Documento | Detalles de la guía: descripción, versión, objetivo, requisitos, términos, relacionados, etiquetas e historial |
+| `/soluciones/:categoriaId/:articuloId/editar` | ArticuloForm | Tarea | Editar artículo (al guardar o salir vuelve a los detalles) |
+| `/soluciones/:categoriaId/:articuloId/ejecutar` | RedireccionAGuia | - | Dirección antigua de la ejecución: redirige a la guía conservando el origen |
 | `/dispositivos` | DispositivosPage | Sección | Inventario general |
 | `/dispositivos/nuevo` | DispositivoForm | Tarea | Crear equipo (soporta `?copiarDe`, `?reemplazaA`, `?red=1`) |
 | `/dispositivos/:dispositivoId` | DispositivoPage | Documento | Ficha 360° de un equipo |
@@ -239,7 +247,7 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/boveda/migrar` | MigracionCredenciales | Tarea | Migrar secretos que son de un equipo |
 | `/boveda/:credencialId` | CredencialPage | Documento | Ficha de un secreto (descifrado local) |
 | `/boveda/:credencialId/editar` | CredencialForm | Tarea | Editar secreto |
-| `/mas` | PantallaMas | Sección | Quinta pestaña móvil: puerta de Bóveda, Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar y Mi cuenta (tarea 182) |
+| `/mas` | PantallaMas | Sección | Pestaña móvil "Más": puerta de Equipos, Red, Bóveda, Centro de consulta, Ubicaciones, Personas, Agenda, Diagnóstico, Escanear, Etiquetas QR, Importar y Mi cuenta (tareas 182 y 244) |
 | `/diagnostico` | DiagnosticosPage | Documento | Lista de problemas por categoría |
 | `/diagnostico/nuevo` | DiagnosticoForm | Tarea | Crear diagnóstico (árbol de preguntas) |
 | `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Tarea | Asistente de ejecución del diagnóstico |
@@ -294,20 +302,34 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **Ruta:** `/` · **Archivo:** `src/features/inicio/InicioPage.tsx` · **Nivel:** Sección
 
-**Objetivo.** Agenda operativa del día, más el buscador global. Al entrar, el técnico tiene que poder responder en un vistazo: **qué está vencido, qué toca hoy, qué viene, qué tengo a medias y qué dejó el equipo por revisar**. Buscar sigue a dos toques: la pantalla principal ES el buscador.
+**Objetivo (desde el 2026-09-17, tarea 244).** Resolver: **"¿Qué necesitas solucionar?"**. Al abrir la app se puede empezar a buscar de inmediato, y sin buscar aparece lo que más probablemente se vuelva a necesitar: la guía a medias, las guías favoritas y lo último abierto. Abrir una guía desde aquí lleva directo a su paso pendiente.
+
+**De arriba abajo, sin texto en el buscador:**
+
+1. **La pregunta y el buscador**: "¿Qué necesitas solucionar?" (17 px) sobre el campo de 46 px, con el marcador **"Procedimiento, error, equipo…"**. La etiqueta accesible sigue siendo "Buscar en Soluciones IT" (regla M-R8).
+2. **Bienvenida del primer día** (sin cambios, ver abajo), solo mientras haga falta.
+3. **Lo urgente, en una línea**, y **solo si hay algo vencido o para hoy**: "Agenda: 2 vencidos · 1 para hoy", en el tono de error, que lleva a la **agenda** (`/agenda`, `AgendaPage`). Sin nada urgente no se dibuja.
+4. **Continuar**: la tarjeta de la guía a medias ("Sigues en el paso N de M"), que la abre en ese paso.
+5. **Favoritas**: las **guías** marcadas con la estrella en este teléfono (los equipos y diagnósticos favoritos siguen en Más, "Mis favoritos"). Filas de 52 px.
+6. **Recientes**: hasta **cinco** filas con lo último abierto en este teléfono (guías, equipos, diagnósticos, fichas del Centro de consulta), **sin repetir** lo que ya está arriba (la guía de Continuar y las favoritas). Nunca una credencial.
+7. **Sin historial todavía**: "Aquí aparecerán las guías que uses y las que marques con la estrella. También puedes ver todas las guías", con enlace a Guías.
+
+**Lo que se fue de Inicio el 2026-09-17:** la **agenda** (fecha, resumen, "Todo al día por hoy", vencidos, para hoy, próximos, en curso y por revisar del equipo) pasa **entera y sin cambios de reglas** a su pantalla, `/agenda`, a la que se llega desde la línea de lo urgente, desde **Más** (fila "Agenda", en "Trabajo técnico", con lo urgente como subtítulo) y desde la barra lateral de escritorio. **El número de la pestaña Inicio no cambia**: sigue contando vencidos y para hoy, porque su línea está en Inicio (regla M-R9). Lo que sigue en esta sección describe la agenda donde vive ahora.
+
+**Objetivo de la agenda.** Al entrar, el técnico tiene que poder responder en un vistazo: **qué está vencido, qué toca hoy, qué viene, qué tengo a medias y qué dejó el equipo por revisar**.
 
 > **Convertida en agenda el 2026-09-11** (encargo "Inicio como agenda operativa"). Antes era una **colección de bloques sin relación**: atajos, "Te toca a ti", "Lo que consultaste" y cuatro secciones plegadas. La peor era "Te toca a ti", que mezclaba una clave vencida hace medio año, un borrador propio y una sugerencia de **otro** técnico bajo un rótulo que además mentía (una sugerencia del equipo no está asignada a nadie). Ahora todo lo que aparece aquí responde a la misma pregunta y se ordena por la misma dimensión: **la fecha**.
 
 **Qué NO es.** No hay entidad "tarea", ni tabla de recordatorios, ni calendario mensual. Es una **vista derivada** de datos que ya existen (credenciales, campos protegidos, borradores, progreso de guías, sugerencias de diagnóstico). El reparto en grupos es lógica pura y está en `src/features/inicio/agenda.ts`; el cálculo de los ítems, en `pendientes.ts`.
 
 **Cabecera fija (con desenfoque).** Desde la tarea 181 la fila superior es la **barra superior global** (ver la sección 2), común a las cinco pestañas: título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022), pastilla de sincronización y avatar de la cuenta. Debajo, lo propio de Inicio:
-- **Buscador en línea** (input `type="search"`), **de 46 px**: pregunta **"¿Qué necesitas resolver?"** y, debajo, la frase de apoyo **"Busca una guía, equipo, acceso, herramienta, comando o problema"** (2026-09-15, tarea 241). La **etiqueta accesible sigue siendo "Buscar en Soluciones IT"**, que es lo que distingue este buscador de los de sección (regla M-R8): lo que cambió es el marcador de posición, porque el técnico no llega con ganas de buscar, llega con algo que resolver. Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
+- **Buscador en línea** (input `type="search"`), **de 46 px**: desde el 2026-09-17 la pregunta **"¿Qué necesitas solucionar?"** va encima del campo y el marcador dice **"Procedimiento, error, equipo…"** (la frase de apoyo de debajo se retiró). Hasta entonces el marcador preguntaba **"¿Qué necesitas resolver?"** con la frase **"Busca una guía, equipo, acceso, herramienta, comando o problema"** (2026-09-15, tarea 241). La **etiqueta accesible sigue siendo "Buscar en Soluciones IT"**, que es lo que distingue este buscador de los de sección (regla M-R8): lo que cambió es el marcador de posición, porque el técnico no llega con ganas de buscar, llega con algo que resolver. Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
 - **La lupa del chasis se apaga aquí, y solo aquí** (`conLupa={false}`, regla **M-R8**, "un buscador por pantalla"): esta pantalla ya trae su campo con el alcance escrito, así que la lupa era el segundo buscador de la misma pantalla y además con el alcance redactado distinto. En las otras cuatro secciones la lupa ES el buscador y se queda.
 - **Sin saludo.** El saludo dinámico según la hora se **retiró en la tarea 184** (decisión aprobada por el usuario): ocupaba la línea de contexto con un eslogan que cambiaba tres veces al día. Lo que hay que decir el primer día lo dice la bienvenida, y solo mientras haga falta.
 
 **Modo búsqueda (hay texto).** Dos lecturas, de arriba abajo (tarea 241; el detalle completo, en [BUSCADOR.md](BUSCADOR.md), secciones 7.1 a 7.4):
 
-1. **Mejores resultados**: de 3 a 5 resultados con la mayor relevancia **global**, sin importar el módulo, cada uno con su **acción directa**: `Empezar` o `Continuar · paso N de M` en una guía, `Iniciar` en un diagnóstico, `Ver` más `Copiar usuario` / `Copiar contraseña` / `Copiar clave` / `Copiar` en una credencial (solo con la bóveda desbloqueada; un archivo seguro lleva `Abrir ficha`) y `Copiar comando` / `Copiar atajo` en el Centro de consulta. Como aquí no hay cabecera de grupo, **el tipo se escribe en la propia fila**: "Guía · ICG Manager", "Equipo · Epson · Caja 4", "Bóveda · Acceso". Con un solo resultado la sección no se dibuja y la acción la lleva su fila.
+1. **Mejores resultados**: de 3 a 5 resultados con la mayor relevancia **global**, sin importar el módulo, cada uno con su **acción directa**: una guía **no lleva botón desde el 2026-09-17** (tocar la fila la abre en su paso pendiente), `Iniciar` en un diagnóstico, `Ver` más `Copiar usuario` / `Copiar contraseña` / `Copiar clave` / `Copiar` en una credencial (solo con la bóveda desbloqueada; un archivo seguro lleva `Abrir ficha`) y `Copiar comando` / `Copiar atajo` en el Centro de consulta. Como aquí no hay cabecera de grupo, **el tipo se escribe en la propia fila**: "Guía · ICG Manager", "Equipo · Epson · Caja 4", "Bóveda · Acceso". Con un solo resultado la sección no se dibuja y la acción la lleva su fila.
 2. **Buscar "{consulta}" en Bóveda**: solo con permiso de bóveda y la bóveda **bloqueada**. Es una puerta genérica, **no confirma que exista ninguna credencial con ese nombre**; "Desbloquear y buscar" pide la contraseña maestra **ahí mismo** y, al abrirse, los accesos aparecen en la misma búsqueda sin volver a escribirla. **Desbloquear no lleva a ninguna parte** (2026-09-16): se sigue en Inicio, con la consulta escrita. Si un resultado público ya coincide con fuerza (buscar "Zabbix" y tener la herramienta Zabbix), el puente se reduce a una **línea compacta** con un botón "Desbloquear", para no competir con la respuesta; sin resultados públicos conserva su forma destacada.
 3. **Los grupos de siempre**, para explorar por módulo y en orden fijo: **Guías** (diagnósticos, categorías, artículos, adjuntos), **Equipos**, **Bóveda** (solo si está desbloqueada), **Ubicaciones**, **Personas** y **Centro de consulta** (cada fila dice su tipo al principio del subtítulo). Cada grupo muestra su conteo; **lo que subió a "Mejores resultados" no se repite aquí**. Estas filas **no llevan botón**: la fila entera abre la ficha, como siempre.
 
@@ -317,14 +339,14 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 
 **Volver con la búsqueda escrita (2026-09-16).** Abrir una ficha desde un resultado y volver, con el regreso de la app o con el atrás del teléfono, repone la consulta en este campo y sus resultados. Vaciar el campo la da por terminada. Nunca viaja en la URL. Ver [BUSCADOR.md](BUSCADOR.md), sección 7.8.
 
-**Modo agenda (sin texto), en orden:**
+**La agenda (`/agenda`, antes el modo sin texto de Inicio), en orden.** Los puntos 0 y 0-bis se quedaron en Inicio (arriba); del 1 en adelante es la pantalla de la agenda, cuyo encabezado lleva la fecha de hoy como contexto sobre el título "Agenda":
 
-0. **Bienvenida del primer día** (`BienvenidaPrimerDia`, tarea 184; solo mientras haga falta): "Bienvenido, {nombre de pila}", una línea de qué vive aquí, y **tres pasos que se apagan solos**:
+0. **Bienvenida del primer día** (en Inicio) (`BienvenidaPrimerDia`, tarea 184; solo mientras haga falta): "Bienvenido, {nombre de pila}", una línea de qué vive aquí, y **tres pasos que se apagan solos**:
    1. *Entraste con tu cuenta* (siempre hecho: esta pantalla solo se ve con sesión).
    2. *Instala la app en el teléfono*, con botón **"Instalar"** (diálogo nativo) o **"Cómo instalar"** si el navegador no lo ofrece (Safari de iOS siempre).
    3. *Descarga todo para trabajar sin señal*, con botón **"Descargar"**. Es **el mismo estado** que "Descargar todo para offline" de Mi cuenta: los dos leen y escriben el mismo módulo (`adjuntosOffline.ts`), así que descargar en cualquiera de los dos apaga el paso y actualiza la fecha en el otro.
    **No compite con la agenda y no vuelve:** se retira sola en cuanto hay algo que atender, y una vez cumplidos los tres pasos queda marcada como completada en el dispositivo, así que **no reaparece** aunque el estado real cambie (por ejemplo, abrir la app desde el navegador en vez de la versión instalada).
-0-bis. **Recientes** (tarea 241), justo bajo el buscador y **solo sin consulta activa**: hasta **tres** filas de consulta (44 px) con lo último que se abrió en este teléfono, derivado de la tabla local `recientes`, que desde esta tarea anota también **diagnósticos** y **fichas del Centro de consulta** además de guías y equipos. Una guía sube a Recientes tanto al abrir su ficha como al **ejecutarla** (2026-09-16): "Empezar" desde el buscador se salta la ficha, y aun así cuenta. Sin historial suficiente, se muestran menos filas o ninguna. **Nunca aparece una credencial**: `recientes` no las anota, ni con la bóveda abierta.
+0-bis. **Recientes** (en Inicio; tarea 241, desde el 2026-09-17 hasta **cinco** filas de 52 px sin repetir Continuar ni Favoritas), justo bajo el buscador y **solo sin consulta activa**: hasta tres filas de consulta (44 px) en la versión anterior con lo último que se abrió en este teléfono, derivado de la tabla local `recientes`, que desde esta tarea anota también **diagnósticos** y **fichas del Centro de consulta** además de guías y equipos. Una guía sube a Recientes tanto al abrir su ficha como al **ejecutarla** (2026-09-16): "Empezar" desde el buscador se salta la ficha, y aun así cuenta. Sin historial suficiente, se muestran menos filas o ninguna. **Nunca aparece una credencial**: `recientes` no las anota, ni con la bóveda abierta.
 1. **Fecha de hoy** en español de Colombia ("Viernes, 11 de septiembre"): dice respecto a qué se dice "hoy".
 2. **Resumen operativo** de una línea: "2 vencidos · 1 para hoy · 3 próximos". **Las categorías vacías no se nombran.**
 3. **Vencidos** — credenciales de la Bóveda y datos protegidos de equipo cuya fecha ya pasó. Cada fila: **nombre**, **cuánto lleva vencido** ("Venció hace 3 días") en rojo, **origen** ("Bóveda" o el nombre del equipo) y enlace a su ficha. Se muestran todas.
@@ -380,7 +402,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 - **Buscador** (`type="search"`): placeholder "Buscar equipo, síntoma o etiqueta". Busca por título, categoría, tipo y etiquetas (normalizado sin acentos). El botón de borrar mide **44 px** reales (regla R6; medía 26).
 - **Chips de categoría de 44 px** (tarea 214, tablero `3b`; medían 36) más el chip punteado **"Tipo"**, que abre su hoja. Un solo eje de filtro visible (R4): la **etiqueta** no es un chip sino un **modo** con su propia cinta de contexto ("Etiqueta: X · Ver todos"), al que se llega tocando una etiqueta en la ficha de un artículo.
 
-**La fila dice lo que la guía puede hacer por ti** (tarea 214, tablero `3b`). Cada guía es una **tarjeta** con recuadro de 40 px, título de 16,5 px y, debajo, su capacidad: **"7 pasos · ~25 min · verificación"**, o **"Sin pasos · solo notas · no se puede ejecutar"** cuando no hay procedimiento (la tarjeta va entonces con borde punteado). Si es ejecutable trae un botón de **52 px** que lleva directo al paso 1 (`/ejecutar`), y **su ausencia es la señal** de que no hay nada que ejecutar. Antes la fila pintaba `categoría · tipo · min` exactamente igual para una guía de 7 pasos con verificación y para un borrador sin un solo paso: el dato existía (lo calcula el editor) pero no llegaba a donde se decide, así que el técnico abría la guía para descubrir que estaba vacía.
+**La fila dice lo que la guía puede hacer por ti** (tarea 214, tablero `3b`). Cada guía es una **tarjeta** con recuadro de 40 px, título de 16,5 px y, debajo, su capacidad: **"7 pasos · ~25 min · verificación"**, o **"Sin pasos · solo notas · no se puede ejecutar"** cuando no hay procedimiento (la tarjeta va entonces con borde punteado). **Desde el 2026-09-17 la tarjeta entera es un solo enlace** que abre la guía en su paso pendiente (con pasos) o la lectura (sin pasos); el botón "Empezar" / "Continuar" que llevaba se retiró porque repetía ese enlace, y una guía a medias lo dice en una línea: **"Vas en el paso N de M"**. Antes la fila pintaba `categoría · tipo · min` exactamente igual para una guía de 7 pasos con verificación y para un borrador sin un solo paso: el dato existía (lo calcula el editor) pero no llegaba a donde se decide, así que el técnico abría la guía para descubrir que estaba vacía.
 - **Chips de categoría** (deslizables en móvil, con un degradado en el extremo derecho que indica que hay más sin necesidad de barra; en escritorio `xl`, rail lateral fijo de 220px): "Todos" + una por categoría, cada uno con su color de identidad, icono y conteo.
 - **Botón "Tipo"**: el segundo eje de filtro ya no ocupa cabecera (regla R4). Abre la hoja inferior "Tipo de documento", con los tipos presentes y su conteo. Cuando hay uno elegido, el botón muestra su nombre en acento. Está disponible siempre, no solo dentro de una categoría, y se acota a la categoría activa cuando hay una.
 
@@ -390,7 +412,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 - Al **buscar**: resultados agrupados por categoría (encabezado con icono, nombre y conteo), término resaltado, y encabezado "N artículos coinciden". Si la coincidencia **no** fue en el título, la fila lo explica: "Coincide en la etiqueta *zebra*".
 - **El filtro de categorías no se va al buscar** (2026-09-09): en móvil son dos controles fijos de 44 px y en escritorio el rail lateral, y **ninguno se oculta** mientras hay término escrito. Elegir una categoría con una búsqueda activa **acota la búsqueda a esa categoría**, y los conteos del rail dicen cuántos resultados hay en cada una.
 - **Cinta de contexto al buscar** con una categoría elegida: "Busco en todas las categorías. El filtro **X** queda en pausa", con el botón **"Solo ahí"** para acotar (y "En todas" para volver a abrir). Antes buscar descartaba los filtros en silencio.
-- Al **navegar**: lista de una columna (o rejilla cuando el contenedor da de sí: 2 columnas desde `@2xl`, 3 desde `@5xl`; los cortes son de contenedor, así que cuentan el ancho útil que queda tras las barras laterales), bajo el rótulo "Todos los artículos" con su conteo. Cada tarjeta (`FilaArticulo`) se lee **de arriba abajo en tres zonas**: (1) el **título completo**, con el **glifo del tipo en su color dentro de un recuadro neutro** al lado (regla R1; antes el recuadro entero iba relleno del color del tipo y seis tipos en columna hacían arcoíris) y nada más en su renglón; (2) la línea de **metadatos** (categoría · pasos · tiempo estimado · verificación) con la **pastilla de contorno** "Borrador"/"Obsoleto" si aplica; (3) la **acción**, en su propia fila: **"Empezar"**, **"Continuar · paso N de M"** si hay avance a medias en este teléfono, o **"Abrir"** cuando la guía solo son notas. El título **no se recorta**: se lee entero en la tarjeta, sin depender de `hover`.
+- Al **navegar**: lista de una columna (o rejilla cuando el contenedor da de sí: 2 columnas desde `@2xl`, 3 desde `@5xl`; los cortes son de contenedor, así que cuentan el ancho útil que queda tras las barras laterales), bajo el rótulo "Todos los artículos" con su conteo. Cada tarjeta (`FilaArticulo`) se lee **de arriba abajo en tres zonas**: (1) el **título completo**, con el **glifo del tipo en su color dentro de un recuadro neutro** al lado (regla R1; antes el recuadro entero iba relleno del color del tipo y seis tipos en columna hacían arcoíris) y nada más en su renglón; (2) la línea de **metadatos** (categoría · pasos · tiempo estimado · verificación) con la **pastilla de contorno** "Borrador"/"Obsoleto" si aplica; (3) desde el 2026-09-17, en vez de una acción, la línea **"Vas en el paso N de M"** (o "Faltan las comprobaciones finales") si hay avance a medias en este teléfono; tocar la tarjeta retoma ahí. El título **no se recorta**: se lee entero en la tarjeta, sin depender de `hover`.
 - **Filtro por etiqueta** (banner "Etiqueta: X · Ver todos"): se activa al tocar una etiqueta en la ficha de un artículo (`?etiqueta=<x>`). Ignora categoría y tipo mientras esté activo.
 - **Estados vacíos, todos con acción** (regla R5):
   - Primera vez: "Aquí va a vivir lo que el equipo sabe" + **"Crear el primero"**.
@@ -399,15 +421,17 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 
 **Acciones:** buscar (acotable a la categoría), filtrar por categoría/tipo/etiqueta, retomar un procedimiento a medias, crear artículo (con o sin categoría elegida), abrir un artículo, abrir una categoría (desde el buscador global, no desde esta lista).
 
-**Interacción.** Cada artículo abre su ficha; las categorías son un filtro (la ficha de categoría se alcanza desde el buscador global y desde la ficha de un dispositivo). Las fichas de dispositivos enlazan a los procedimientos de su categoría y viceversa.
+**Interacción.** Cada guía con pasos se abre ejecutándose, en su paso pendiente, y cada artículo sin pasos abre su lectura (desde el 2026-09-17); la X de la guía vuelve a la lista con el mismo filtro y término; las categorías son un filtro (la ficha de categoría se alcanza desde el buscador global y desde la ficha de un dispositivo). Las fichas de dispositivos enlazan a los procedimientos de su categoría y viceversa.
 
-#### 5.2.1 Ficha de artículo (`ArticuloPage`)
+#### 5.2.1 Detalles de la guía (`ArticuloPage`)
 
-**Ruta:** `/soluciones/:categoriaId/:articuloId` · **Nivel:** Documento
+**Ruta:** `/soluciones/:categoriaId/:articuloId/detalles` para una guía con pasos (se abre desde el índice de pasos, "Detalles de la guía"), y la propia `/soluciones/:categoriaId/:articuloId` para un artículo sin pasos · **Nivel:** Documento
+
+**YA NO ES LA PUERTA DE LA GUÍA (desde el 2026-09-17, tarea 244).** Abrir una guía con pasos lleva a su paso pendiente (13.2); esta pantalla se abre a propósito para leer la descripción, la versión, el objetivo, los requisitos, los términos, los relacionados, las etiquetas y el historial. Su regreso dice "la guía" y su contexto "Detalles de la guía". **La barra "Empecemos" se retiró** (ver abajo, histórico). Al guardar o salir del editor se vuelve aquí.
 
 **Cabecera (rediseñada en la tarea 172; ancla permanente desde la tarea 201):** chevron de regreso de 44 px (a la lista con el chip de la categoría) y, a su lado, **"Guías · {categoría}" a 11 px con el título del artículo a 14 px**, que **se queda en pantalla al desplazarse** (regla **M-R1**). A la derecha, **tres controles de 44 px**: **estrella de favorito**, **editar** (icono de lápiz) y menú **"···"** con **Compartir**, **Duplicar** (`?copiarDe`), **Reiniciar progreso** (si tiene procedimiento) y **Eliminar** (eliminación sensible, pide contraseña maestra). Antes eran cinco controles y con una categoría de nombre largo la fila se estrangulaba; "Ejecutar" bajó a la barra de acción.
 
-**Barra de acción, fija abajo (tarea 172; rótulos revisados el 2026-09-10).** Una sola acción dominante, al alcance del pulgar y **detrás de toda la información introductoria**, que dice qué va a pasar: **"Empecemos"** sin ejecución empezada, **"Continuar en el paso X"** con una a medias, **"Repetir guía"** con una terminada, con una nota debajo ("Tu avance se guarda en este teléfono"). Al pulsarla se entra al **modo ejecución**, que abre una tarea a la vez en el **primer elemento pendiente del recorrido** (avisos incluidos). Solo aparece si el artículo tiene un procedimiento con pasos. Antes "Ejecutar" y "Editar" pesaban lo mismo, estaban arriba y el botón decía "Ejecutar" incluso con 2 de 6 pasos hechos.
+**(Histórico, retirada el 2026-09-17) Barra de acción, fija abajo (tarea 172; rótulos revisados el 2026-09-10).** Una sola acción dominante, al alcance del pulgar y **detrás de toda la información introductoria**, que dice qué va a pasar: **"Empecemos"** sin ejecución empezada, **"Continuar en el paso X"** con una a medias, **"Repetir guía"** con una terminada, con una nota debajo ("Tu avance se guarda en este teléfono"). Al pulsarla se entra al **modo ejecución**, que abre una tarea a la vez en el **primer elemento pendiente del recorrido** (avisos incluidos). Solo aparece si el artículo tiene un procedimiento con pasos. Antes "Ejecutar" y "Editar" pesaban lo mismo, estaban arriba y el botón decía "Ejecutar" incluso con 2 de 6 pasos hechos.
 
 **Cuerpo:**
 - Avisos si es **Borrador** ("No aparece en el buscador, rutas de inicio ni diagnóstico") u **Obsoleto** ("Usar el procedimiento vigente"). El estado se dice **una sola vez**: desde la tarea 172 no se repite además como pastilla en el encabezado.
@@ -601,7 +625,12 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Cabecera:** la fila superior es la **barra superior global** (título "Más", sincronización, lupa y cuenta; ver la sección 2). Sin controles propios en la banda de debajo: esta pantalla es solo un índice.
 
-**Cuerpo, en grupos:**
+**Cuerpo, en grupos (desde el 2026-09-17, tarea 244):**
+- **"Consulta"**: **Equipos** ("Qué se sabe de cada equipo"), **Red** ("Cómo está conectada la infraestructura"), **Bóveda** (solo con permiso, ahora como fila normal con su conteo), **Centro de consulta**, **Ubicaciones** y **Personas**. Equipos, Red y Bóveda dejaron de ser pestañas del teléfono y se abren desde aquí; dentro de ellas se ilumina la pestaña Más y su cabecera lleva un regreso a Más.
+- **"Trabajo técnico"**: **Agenda** (subtítulo "Vencimientos, borradores y sugerencias del equipo", o lo urgente, "1 vencido · 2 para hoy", cuando lo hay), **Diagnóstico** y **Escanear equipo**.
+- **"Mejor desde el ordenador"**, **"Lo mío y lo del equipo"** y **"Mi cuenta"**, sin cambios (abajo).
+
+**Cuerpo, hasta el 2026-09-16:**
 - **"Consulta protegida"** (solo con permiso `puede_ver_boveda`): fila destacada de **Bóveda** ("Claves y credenciales del equipo"), con el mismo tratamiento visual que la tarjeta de "Diagnóstico en curso" (borde y fondo en acento), porque es la única entrada que exige un permiso.
 - **"Aquí, con el equipo delante"** (tarea 207, hallazgos **M-024** y **M-025**, regla **M-R10**, mockup `7b`): **Escanear equipo**, **Diagnóstico**, **Centro de consulta** ("Herramientas, glosario, atajos y comandos"; se llamaba "Referencia" hasta el 2026-09-14), **Ubicaciones** y **Personas**. Antes eran dos grupos, "Herramientas" y "Registros", que decían de qué TIPO era cada destino y no dónde sirve, así que "Importar" pesaba lo mismo que "Escanear", que solo existe en el teléfono.
 - **"Mejor desde el ordenador"**, al final y con la nota escrita ("Se puede hacer aquí, pero pide teclado y pantalla grande."): **Etiquetas QR** e **Importar equipos**. **No se esconde nada**, se ordena por dónde se usa; las dos siguen abriéndose desde aquí y desde el menú "···" de Equipos.
@@ -843,7 +872,7 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 
 | Campo | Interno | Control | Notas |
 |-------|---------|---------|-------|
-| Antes de empezar (un requisito por línea) | `requisitos` | Área de texto | Una línea = un requisito |
+| Antes de empezar (un requisito por línea) | `requisitos` | Área de texto | Una línea = un requisito. Desde el 2026-09-17 lleva debajo la regla: "Solo lo que debe estar listo antes del paso 1: un documento, un acceso, una conexión o una herramienta. Si es algo que se hace («entra», «abre», «selecciona»), es un paso. Si no hace falta nada, déjalo vacío." En la ejecución se muestra sobre la primera acción del paso 1, solo antes de empezar (regla 20b de REGLAS.md) |
 | Pasos | `pasos` | `PasosEditor` (ver 7.2.1) | Constructor de pasos con bloques |
 | Verificación final (una por línea) | `verificacionFinal` | Área de texto | Checklist final |
 
@@ -1070,7 +1099,7 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 | **Sincronizar** | Pastilla de sincronización / automático | Sube la cola y descarga novedades | Todas las sincronizadas |
 | **Buscar** | Inicio (global) y cada sección (local) | Filtra por texto, tolera errores y sinónimos | (solo lectura) |
 | **Filtrar / Ordenar** | Listas | Por categoría, tipo, etiqueta, estado, ubicación | (solo lectura) |
-| **Ejecutar procedimiento** | Ficha de artículo → `/ejecutar` | Modo asistente paso a paso | `progresoPasos` (local) |
+| **Ejecutar procedimiento** | Abrir la guía (`/soluciones/:cat/:art`) desde la lista, el buscador, Inicio o cualquier enlace; `/ejecutar` redirige ahí | Ejecución una acción a la vez, en el paso pendiente | `progresoPasos` (local) |
 | **Ejecutar diagnóstico** | Lista de diagnósticos → `/:id` | Asistente de preguntas; registra la ejecución al cerrar | `progresoDiagnostico` (local), `ejecuciones_diagnostico` |
 | **Migrar** | Bóveda / Ubicaciones / Personas | Convierte datos antiguos (secretos que son de un equipo, textos en entidades) | Según el caso |
 | **Favorito** | Cabecera de fichas / filas de diagnóstico | Fija/quita de la lista "Mis favoritos" de Más | `favoritos` (local) |
@@ -1127,7 +1156,7 @@ Categoría ── Artículos + Equipos + Diagnósticos (ficha 360°)
 Puntos de navegación cruzada destacados:
 - Desde la ficha de un **dispositivo** se llega en un toque a sus procedimientos, problemas, credenciales, ubicación, responsable, topología, diagnóstico de su categoría, y a crear una incidencia/procedimiento/secreto ya precargados.
 - Desde un **artículo** se navega a sus dispositivos afectados, relacionados, y quién lo referencia.
-- El **buscador global**, accesible desde la lupa de la barra superior en las cinco pestañas (y en línea dentro de Inicio), encuentra por igual artículos, equipos (generales y de red), credenciales (con permiso), ubicaciones y personas.
+- El **buscador global**, accesible desde la lupa de la barra superior de cada sección (y en línea dentro de Inicio), encuentra por igual artículos, equipos (generales y de red), credenciales (con permiso), ubicaciones y personas.
 - La **eliminación** de cualquier entidad avisa antes qué vínculos quedarían rotos (impacto derivado del grafo).
 
 ---
@@ -1151,11 +1180,43 @@ Equipos > Crear
 
 ### 13.2 Ejecutar un procedimiento (modo asistente)
 
+**RESOLVER RÁPIDO CON GUÍAS (desde el 2026-09-17, tarea 244, [DECISIONES.md](DECISIONES.md) AD-040).** Principio: la guía no enseña todo mientras se trabaja, dice qué hacer ahora. Lo que sigue manda sobre cualquier descripción anterior de esta sección:
+
+```
+Inicio: buscar  ─┐
+Guías: tarjeta  ─┼→ /soluciones/:cat/:art  (la guía)
+Recientes, etc. ─┘      │
+                        ├─ sin avance ............ paso 1 ("Antes de empezar" si hay requisitos)
+                        ├─ a medias .............. paso pendiente + "Retomas en el paso N · Empezar de nuevo"
+                        └─ terminada ............. se borra el avance y abre el paso 1
+   Paso N de M · título del paso
+   [alerta si hay un riesgo en esta acción]
+   INSTRUCCIÓN (26 px)
+   dato · comando · imagen · clave · archivo       (lo que hace falta para hacerla)
+   Más información ▾                               (por qué, consejos, apoyos del paso)
+   [‹]  [ Siguiente › ]  /  [ Terminar ✓ ]  /  [ Sí ] [ No ]
+            Tengo un problema
+ → Antes de terminar, comprueba (si hay comprobaciones finales)
+ → "Guía terminada": Salir de la guía · Empezar de nuevo
+```
+
+- **Abrir la guía es estar en el paso.** No hay portada ni "Empecemos": la ficha es **Detalles de la guía** (`/detalles`), a un toque desde el índice de pasos ("3/7 ▾"), donde están también **"Empezar de nuevo"** y el cambio a la vista de paso entero.
+- **"Antes de empezar, ten a mano"** aparece sobre la primera acción del paso 1, **solo si la guía tiene requisitos y solo antes de marcar nada**. Una guía sin requisitos no muestra la sección.
+- **Una acción por pantalla, con su contexto:** "Paso N de M" y el título del paso (si no repite la instrucción), segmentos cuando el paso tiene varias acciones, la instrucción a 26 px y **a la vista** lo que hace falta para hacerla: el dato técnico, el comando o atajo, la imagen (se toca para ampliar), la clave protegida y el archivo. Ya no hay chips "Foto", "Clave", "Archivo" ni "Información del paso".
+- **Los avisos acompañan, no detienen.** Ya no existe la pantalla de aviso con **"Entendido · continuar"**. **Precaución** e **Importante** se ven como alerta (icono, palabra, barra y fondo) **antes de la instrucción de SU acción**; el **dato técnico**, a la vista sin color de alerta; **Información** y **Consejo**, plegados en **"Más información"**, junto al objetivo del paso y, a partir de la segunda acción, las imágenes y archivos del paso. Los avisos del paso completo salen con la primera acción del paso y no se repiten.
+- **Abajo, "Anterior" y "Siguiente"** (64 px). "Siguiente" registra la acción y trae la siguiente; en la última de la guía dice **"Terminar"**; en una comprobación, **"Comprobado · siguiente"**; en una decisión, **"Sí"** y **"No"** (con "Si respondes que no, se abre «X»" encima). **"Anterior"** consulta sin deshacer y, desde la primera acción de un paso, lleva a **la última del paso anterior**. **"Tengo un problema"** va en una línea discreta debajo (y **"Desmarcar"** en una acción ya hecha).
+- **Al terminar:** "Guía terminada" con **"Salir de la guía"** (vuelve a donde se abrió: la búsqueda con lo escrito, la lista con su filtro) y **"Empezar de nuevo"**. Las comprobaciones finales dejaron el ámbar: "Antes de terminar, comprueba", en superficie neutra.
+- **Se retiraron** el cronómetro de sesión (se reiniciaba en cada entrada), las pastillas "Tarea N de M", "Comprobación", "Decisión" y "Completada", y la confirmación de avisos.
+- **La vista de paso entero** aplica el mismo criterio de tonos, muestra "Paso N de M" con el título del paso y los requisitos en el paso 1.
+
+**Lo que sigue en esta sección es la historia de cómo se llegó aquí.** Donde describe avisos como pantallas propias, "Entendido · continuar", "Hecho · continuar", la instrucción a 30 px, el botón de 76 px, los chips o el cronómetro, describe la versión anterior al 2026-09-17.
+
 **Consultar algo sin abandonar la guía (tarea 241).** La cabecera compacta trae una **lupa** ("Buscar sin salir de aquí") que abre el buscador global **como capa** encima de la ejecución. La barra de pestañas sigue sin volver: lo que se añade no es navegación, es una consulta. Al cerrar la capa se sigue **exactamente** en el mismo paso, con el mismo progreso y el mismo cronómetro (la pantalla de debajo nunca se desmonta). Desde ahí se puede copiar un comando o un atajo, y copiar el usuario o la contraseña de una credencial; si la bóveda está bloqueada, se desbloquea en la propia capa. Ver [BUSCADOR.md](BUSCADOR.md), sección 7.5.
 
 **Modo consulta (2026-09-16).** Encima de la ejecución, la capa dice "Modo consulta: lo que abras aquí no te saca de lo que estás haciendo" y **nada navega**: una credencial se ve (`Ver`), se destapa y se copia en la capa; un comando o un atajo se ve y se copia; un término del glosario muestra su definición y una herramienta, qué es, para qué sirve, su uso en Metroparques y su estado de uso; un equipo muestra nombre, ubicación, marca y modelo, estado e IP. Otra guía o un diagnóstico aparecen **solo como referencia**: sin `Empezar`, `Continuar`, `Repetir guía` ni `Iniciar`, y sin enlace. Cerrar la vista rápida vuelve a los resultados; cerrar la capa vuelve al mismo paso, con los avisos confirmados, las fallas y el cronómetro intactos. El atajo "/" en una ejecución o en un editor abre la capa en este mismo modo.
 
 ```
+(Versión anterior al 2026-09-17)
 Guías > (categoría) > Artículo
  → Ejecutar (/soluciones/:cat/:art/ejecutar)
  → AsistentePage: un paso a la vez, objetivo, checklist, cronómetro
@@ -1261,7 +1322,37 @@ Ficha de equipo > "···" > Dar de baja → resuelve cada dependencia (quitar/d
 <a id="14-arbol-de-navegacion"></a>
 ## 14. Árbol jerárquico de navegación
 
-Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de Mi cuenta viven en la barra superior de las **cinco** pestañas (Inicio, Guías, Equipos, Red, Más), no solo en Inicio: se omiten del resto de los árboles de abajo para no repetirlos.
+Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de Mi cuenta viven en la barra superior de todas las secciones (Inicio, Guías, Más, Equipos, Red, Bóveda), no solo en Inicio: se omiten del resto de los árboles de abajo para no repetirlos.
+
+**Desde el 2026-09-17 (tarea 244)** las pestañas del teléfono son **Inicio, Guías y Más**, y Equipos, Red y Bóveda cuelgan de Más. Donde el árbol de abajo difiere, manda este:
+
+```
+Inicio (/)
+ ├── ¿Qué necesitas solucionar? (buscador global: tocar una guía la abre en su paso pendiente)
+ ├── Bienvenida del primer día
+ ├── Agenda: N vencidos · N para hoy (solo si hay algo urgente) → Agenda (/agenda)
+ ├── Continuar → la guía a medias, en su paso
+ ├── Favoritas → guías con estrella
+ └── Recientes
+
+Guías (/soluciones)
+ ├── Buscar · Categorías · Tipo · Etiqueta · Crear
+ └── Tarjeta de guía → LA GUÍA (/:cat/:art), ejecutándose en su paso pendiente
+      ├── Índice de pasos (3/7 ▾) → ir a un paso · paso entero · Detalles de la guía (/:cat/:art/detalles) · Empezar de nuevo
+      ├── Buscar sin salir (modo consulta)
+      ├── Anterior · Siguiente / Terminar · Tengo un problema
+      └── Terminada → Salir de la guía · Empezar de nuevo
+     (un artículo sin pasos abre su lectura en /:cat/:art)
+
+Más (/mas)
+ ├── Consulta: Equipos (/dispositivos) · Red (/red) · Bóveda (/boveda) · Centro de consulta · Ubicaciones · Personas
+ ├── Trabajo técnico: Agenda (/agenda) · Diagnóstico · Escanear equipo
+ ├── Mejor desde el ordenador: Etiquetas QR · Importar equipos
+ ├── Lo mío y lo del equipo: Mis favoritos · Actividad del equipo
+ └── Mi cuenta · Bloqueo y seguridad
+```
+
+El árbol siguiente es el de la versión anterior, que se conserva porque lo que cuelga de cada sección no cambió.
 
 ```
 Login

@@ -17,6 +17,9 @@ const LoginPage = lazy(() =>
 const InicioPage = lazy(() =>
   import('./features/inicio/InicioPage').then((m) => ({ default: m.InicioPage })),
 )
+const AgendaPage = lazy(() =>
+  import('./features/inicio/AgendaPage').then((m) => ({ default: m.AgendaPage })),
+)
 const CuentaPage = lazy(() =>
   import('./features/autenticacion/CuentaPage').then((m) => ({ default: m.CuentaPage })),
 )
@@ -35,11 +38,14 @@ const CategoriaPage = lazy(() =>
 const ArticuloPage = lazy(() =>
   import('./features/soluciones/ArticuloPage').then((m) => ({ default: m.ArticuloPage })),
 )
+const GuiaPage = lazy(() =>
+  import('./features/soluciones/GuiaPage').then((m) => ({ default: m.GuiaPage })),
+)
+const RedireccionAGuia = lazy(() =>
+  import('./features/soluciones/GuiaPage').then((m) => ({ default: m.RedireccionAGuia })),
+)
 const ArticuloForm = lazy(() =>
   import('./features/soluciones/ArticuloForm').then((m) => ({ default: m.ArticuloForm })),
-)
-const AsistentePage = lazy(() =>
-  import('./features/soluciones/AsistentePage').then((m) => ({ default: m.AsistentePage })),
 )
 const DiagnosticosPage = lazy(() =>
   import('./features/diagnostico/DiagnosticosPage').then((m) => ({ default: m.DiagnosticosPage })),
@@ -210,11 +216,13 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* Dirección antigua de la ejecución: redirige a la guía,
+                  que desde el 2026-09-17 se abre ejecutándose. */}
               <Route
                 path="soluciones/:categoriaId/:articuloId/ejecutar"
                 element={
                   <Suspense fallback={<Cargando />}>
-                    <AsistentePage />
+                    <RedireccionAGuia />
                   </Suspense>
                 }
               />
@@ -264,7 +272,12 @@ function App() {
               />
               {/* Guias: la lista es nivel `seccion` (es pestaña); la
                   ficha de categoria y la de articulo, nivel `documento`;
-                  el editor y el asistente, nivel `tarea`. */}
+                  el editor y la ejecucion, nivel `tarea`.
+
+                  ABRIR UNA GUIA ES EJECUTARLA (encargo del 2026-09-17):
+                  la direccion de la guia la resuelve `GuiaPage`, que
+                  abre la ejecucion si tiene pasos y la lectura si no. La
+                  ficha de una guia con pasos vive en `/detalles`. */}
               <Route
                 path="soluciones"
                 element={
@@ -277,7 +290,15 @@ function App() {
                 path="soluciones/:categoriaId/:articuloId"
                 element={
                   <Suspense fallback={<Cargando />}>
-                    <ArticuloPage />
+                    <GuiaPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="soluciones/:categoriaId/:articuloId/detalles"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ArticuloPage comoDetalles />
                   </Suspense>
                 }
               />
@@ -506,6 +527,18 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <InicioPage />
+                  </Suspense>
+                }
+              />
+              {/* La agenda operativa (vencimientos, borradores y
+                  sugerencias del equipo) fue Inicio hasta el 2026-09-17;
+                  ahora es su propia pantalla, nivel `documento`, para
+                  que Inicio sea buscar y resolver con guías. */}
+              <Route
+                path="agenda"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <AgendaPage />
                   </Suspense>
                 }
               />

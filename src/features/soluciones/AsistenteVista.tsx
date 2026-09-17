@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
   normalizarProcedimiento,
@@ -27,7 +27,7 @@ import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
-import { Camera, CaretDown, CaretLeft, CaretRight, Check, ClockCounterClockwise, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
+import { ArrowsClockwise, Camera, CaretDown, CaretLeft, CaretRight, Check, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
@@ -53,7 +53,7 @@ import { estadoVinculo, kickerVinculo } from './estadoVinculo'
 import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
-import { ModoFoco } from './ModoFoco'
+import { AntesDeEmpezar, ModoFoco } from './ModoFoco'
 import { HojaFalla } from './HojaFalla'
 import { destinoAlSaltar } from './salidasFalla'
 import { minutosRestantes, resumenDeAvance, resumirPasos, type ResumenPaso } from './estadoPasos'
@@ -72,16 +72,10 @@ interface Props {
   // barra de acciones que hay (encargo del 2026-09-10, tarea 4).
   sustituye?: boolean
   onCompletado?: () => void
-}
-
-// Formatea segundos como MM:SS (o H:MM:SS si pasa de una hora).
-function formatoCronometro(segundos: number): string {
-  const s = Math.max(0, Math.floor(segundos))
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  const seg = s % 60
-  const dd = (n: number) => String(n).padStart(2, '0')
-  return h > 0 ? `${h}:${dd(m)}:${dd(seg)}` : `${m}:${dd(seg)}`
+  // A dónde lleva "Salir de la guía" en la pantalla de terminada (solo
+  // nivel 0). Es el mismo destino que la X de la cabecera: lo resuelve
+  // la página, que conoce el origen del salto.
+  salida?: { to: string; estado?: unknown }
 }
 
 // Modo ejecucion (asistente): en vez del "mapa" completo
@@ -90,16 +84,17 @@ function formatoCronometro(segundos: number): string {
 // distraerse con el resto del procedimiento. Rediseño Nocturne (tarea
 // 78): antes vivia fuera del Layout con estilos de tema claro y se veia
 // "en blanco" (texto claro sobre fondo blanco). Ahora: shell oscuro,
-// cronometro contra el tiempo estimado, navegacion Atras/Siguiente
-// explicita y resumen final. Reutiliza el mismo avance de
+// navegacion Anterior/Siguiente explicita y cierre con salida. Desde el
+// 2026-09-17 es tambien LA pagina de la guia: abrir una guia entra
+// aqui, directo al primer paso pendiente. Reutiliza el mismo avance de
 // useProcedimientoEjecucion que la vista de lista, asi que entrar y
 // salir nunca pierde ni duplica progreso.
-export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = false, onCompletado }: Props) {
+export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = false, onCompletado, salida }: Props) {
   // Donde vive el avance de ESTE documento (tarea 2 del encargo): la
   // fila del articulo en el nivel 0, la entrada del vinculo dentro de
   // la ejecucion en curso en un nivel anidado.
   const clave = useClaveProgreso(articuloId, nivel)
-  const { pasos, verificacionFinal, tiempoEstimadoMin } = procedimiento
+  const { pasos, verificacionFinal, tiempoEstimadoMin, requisitos } = procedimiento
   const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
 
   // Equipo afectado por ESTE procedimiento (tarea 79, solo nivel 0):
@@ -134,20 +129,25 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
     setPasoEnteroPorFalla(null)
     await guardarModoEjecucion(modo)
   }
-  // AVISOS YA CONFIRMADOS EN ESTA EJECUCIÓN (encargo del 2026-09-10,
-  // tarea 1). Un aviso es un elemento del recorrido, así que hay que
-  // saber cuáles quedaron leídos; pero NO va al avance guardado por dos
-  // razones: confirmarlo no es trabajo hecho (no puede contar como
-  // tarea) y la confirmación caduca con la ejecución, así que repetir
-  // la guía vuelve a mostrarlos. Vive aquí y no dentro de `ModoFoco`
-  // porque ese se remonta en cada paso (`key={paso.id}`): con el estado
-  // abajo, volver a un paso anterior pediría confirmar otra vez lo que
-  // ya se leyó en esta misma ejecución.
-  const [avisosConfirmados, setAvisosConfirmados] = useState<ReadonlySet<string>>(
-    () => new Set<string>(),
-  )
-  function confirmarAviso(avisoId: string) {
-    setAvisosConfirmados((previos) => new Set(previos).add(avisoId))
+  // (Aquí vivían los avisos confirmados de la ejecución: desde el
+  // 2026-09-17 un aviso ya no se confirma, acompaña a su acción. Ver la
+  // cabecera de tareasFoco.ts.)
+  //
+  // PASO AL QUE SE ENTRA POR SU ÚLTIMA ACCIÓN: se llegó a él con
+  // "Anterior" desde el paso siguiente, así que lo que el técnico quiere
+  // ver es lo que acaba de dejar atrás, no el principio del paso. Se
+  // guarda el id del paso para que no se aplique a otro, y cualquier
+  // otra forma de moverse lo borra.
+  const [entradaPorElFinal, setEntradaPorElFinal] = useState<string | null>(null)
+  // SE RETOMÓ UNA EJECUCIÓN A MEDIAS (encargo del 2026-09-17, sección
+  // 3). Abrir la guía lleva directo al primer paso pendiente; si había
+  // avance, una línea lo dice y ofrece empezar de nuevo, sin pedir nada
+  // antes. Guarda el paso en el que se retomó: al moverse, la línea ya
+  // no hace falta y se va sola.
+  const [retomadaEn, setRetomadaEn] = useState<number | null>(null)
+  function irAPaso(indice: number | null, porElFinal = false) {
+    setEntradaPorElFinal(porElFinal && indice !== null ? (pasos[indice]?.id ?? null) : null)
+    setIndiceActual(indice)
   }
   // Excepción efímera y atada a UN paso: al declarar una falla hay que
   // ver el paso entero, porque las cuatro salidas (contingencia,
@@ -179,17 +179,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
     if (falla?.conEvidencia) refEvidencia.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [falla])
 
-  // Cronometro de la sesion de ejecucion (solo nivel 0): tiempo desde
-  // que se abrio el asistente, para contrastar con el estimado. Es
-  // efimero (no se persiste): mide "cuanto llevo en esta sesion".
-  const [inicio, setInicio] = useState(() => Date.now())
-  const [ahora, setAhora] = useState(() => Date.now())
-  useEffect(() => {
-    if (nivel !== 0) return
-    const t = setInterval(() => setAhora(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [nivel])
-  const transcurridoSeg = Math.floor((ahora - inicio) / 1000)
+  // (Aquí vivía el cronómetro de la sesión, retirado el 2026-09-17: se
+  // reiniciaba cada vez que se entraba, así que tras una interrupción
+  // marcaba minutos que no eran los del trabajo. Lo que queda del tiempo
+  // es el estimado que falta, en el índice de pasos. Tarea 225.)
 
   // La posicion inicial se resuelve una sola vez con una lectura
   // directa (no en vivo) del avance guardado: asi, si el tecnico ya
@@ -203,10 +196,24 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
     // La preferencia de modo se lee JUNTO con el avance y antes de
     // marcar `listo`: si se leyera aparte, el técnico que trabaja con
     // el paso entero vería medio segundo de foco al entrar.
-    void Promise.all([leerAvance(clave), leerModoEjecucion()]).then(([prog, modo]) => {
+    void Promise.all([leerAvance(clave), leerModoEjecucion()]).then(async ([leido, modo]) => {
+      let prog = leido
+      // ABRIR UNA GUÍA YA TERMINADA ES EMPEZAR UN CASO NUEVO (encargo del
+      // 2026-09-17, sección 3). Antes se abría en la pantalla de
+      // "completado" y había que buscar "Reiniciar" para llegar al paso
+      // 1, que es lo que vino a hacer quien abre una guía que ya usó.
+      // Solo en la guía principal: dentro de una ejecución, una guía
+      // vinculada terminada está terminada para ESTE caso.
+      if (nivel === 0 && prog && guiaTerminada(procedimiento, prog.pasosHechos, prog.verificacionHecha)) {
+        await reiniciarProgreso(clave)
+        prog = undefined
+      }
       if (!vigente) return
       const hechosIniciales = new Set(prog?.pasosHechos ?? [])
-      setIndiceActual(siguientePasoPendiente(idsPasos, hechosIniciales, -1))
+      const inicial = siguientePasoPendiente(idsPasos, hechosIniciales, -1)
+      setIndiceActual(inicial)
+      const habiaAvance = (prog?.pasosHechos?.length ?? 0) > 0 || (prog?.instruccionesHechas?.length ?? 0) > 0
+      setRetomadaEn(nivel === 0 && habiaAvance ? inicial : null)
       setModoEjecucion(modo)
       setListo(true)
     })
@@ -220,6 +227,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   }, [articuloId, nivel])
 
   const {
+    avanceCargado,
     progreso,
     hechos,
     instruccionesHechas,
@@ -239,24 +247,24 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
     procedimiento,
     nivel,
     onCompletado,
-    onAvanzar: setIndiceActual,
+    onAvanzar: (destino) => irAPaso(destino),
   })
 
-  // Reiniciar desde la pantalla de "completado": borra el progreso
-  // guardado Y reposiciona la vista en el primer paso (con el cronometro
-  // a cero). Sin lo segundo, indiceActual seguiria en null y la pantalla
-  // de cierre no cambiaria: el boton "no hacia nada".
+  // Empezar de nuevo (desde la pantalla de terminada, desde la línea de
+  // "retomas donde lo dejaste" o desde el índice): borra el progreso
+  // guardado Y reposiciona la vista en el primer paso. Sin lo segundo,
+  // indiceActual seguiria donde estaba y el boton "no haria nada".
   async function reiniciarYVolver() {
     await reiniciarProgreso(clave)
-    setInicio(Date.now())
-    setAhora(Date.now())
-    // Repetir la guía es una ejecución nueva: sus avisos se vuelven a
-    // leer, no se dan por confirmados de la vuelta anterior.
-    setAvisosConfirmados(new Set<string>())
-    setIndiceActual(siguientePasoPendiente(idsPasos, new Set<string>(), -1))
+    setRetomadaEn(null)
+    setPasoEnteroPorFalla(null)
+    setFalla(null)
+    irAPaso(siguientePasoPendiente(idsPasos, new Set<string>(), -1))
   }
 
-  if (!listo) return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+  // Se espera también a la lectura EN VIVO del avance: la acción en la que
+  // arranca la vista se decide al montarse, con lo que ya esté marcado.
+  if (!listo || !avanceCargado) return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
 
   // Anidado (subprocedimiento o solucion de un paso de nivel 0): el
   // padre deja de renderizar este componente en cuanto queda
@@ -270,20 +278,19 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   if (indiceActual === null && nivel >= 1 && verificacionCompleta) return null
 
   const porcentaje = pasos.length === 0 ? 0 : Math.round((completados / pasos.length) * 100)
-  const cronometro = nivel === 0 ? formatoCronometro(transcurridoSeg) : null
 
   if (indiceActual === null && pasosCompletados && verificacionFinal.length > 0 && !verificacionCompleta) {
     return (
-      <div className="flex flex-col gap-4">
-        <Encabezado porcentaje={porcentaje} completado={false} cronometro={cronometro} estimado={tiempoEstimadoMin} />
-        <div className="rounded-xl border border-noct-precaucion/40 bg-noct-precaucion/10 px-4 py-3">
-          <h2 className="flex items-center gap-2 text-sm font-medium text-noct-precaucion">
-            <SealCheck size={16} aria-hidden />
-            Verificación final
+      <div className="flex flex-col gap-4 pt-3">
+        <Encabezado porcentaje={porcentaje} completado={false} />
+        {/* LA COMPROBACIÓN FINAL NO ES UNA ADVERTENCIA (G-23, regla
+            M-R11): iba en ámbar, el color de los riesgos. Es el último
+            vistazo antes de dar el trabajo por hecho. */}
+        <div className="rounded-xl border border-noct-divider bg-noct-surface px-4 py-3.5">
+          <h2 className="flex items-center gap-2 text-[16px] font-medium text-noct-text">
+            <SealCheck size={18} className="shrink-0 text-noct-accent-300" aria-hidden />
+            Antes de terminar, comprueba
           </h2>
-          <p className="mt-0.5 text-xs text-noct-precaucion/80">
-            Confirma que el objetivo realmente se cumplió antes de dar por terminado el procedimiento.
-          </p>
           <ul className="mt-2 flex flex-col gap-0.5">
             {verificacionFinal.map((item, indice) => {
               const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
@@ -294,19 +301,19 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
                     role="checkbox"
                     aria-checked={marcada}
                     onClick={() => void alternarVerificacion(indice)}
-                    className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left"
+                    className="flex min-h-12 w-full items-start gap-3 rounded-lg px-1 py-2 text-left"
                   >
                     <span
                       aria-hidden
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-[1.5px] ${
                         marcada
                           ? 'border-noct-exito bg-noct-exito/15 text-noct-exito'
-                          : 'border-noct-neutral-700 text-transparent'
+                          : 'border-noct-neutral-500 text-transparent'
                       }`}
                     >
-                      <Check size={12} />
+                      <Check size={14} />
                     </span>
-                    <span className={`text-sm ${marcada ? 'text-noct-neutral-400' : 'text-noct-neutral-300'}`}>
+                    <span className={`text-[15px] leading-snug ${marcada ? 'text-noct-neutral-400' : 'text-noct-text'}`}>
                       {item}
                     </span>
                   </button>
@@ -321,24 +328,35 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
 
   if (indiceActual === null || todoCompletado) {
     return (
-      <div className="flex flex-col gap-4">
-        <Encabezado porcentaje={100} completado cronometro={cronometro} estimado={tiempoEstimadoMin} />
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-noct-exito/50 bg-noct-exito/10 px-4 py-8 text-center">
+      <div className="flex flex-col gap-4 pt-3">
+        <Encabezado porcentaje={100} completado />
+        <div className="flex flex-col items-center gap-2.5 rounded-xl border border-noct-exito/50 bg-noct-exito/10 px-4 py-8 text-center">
           <span aria-hidden className="flex h-12 w-12 items-center justify-center rounded-full border border-noct-exito/60 text-noct-exito">
             <Check size={26} />
           </span>
-          <p className="text-base font-medium text-noct-exito">Procedimiento completado</p>
-          <p className="text-xs text-noct-neutral-400">
+          <p className="text-[17px] font-medium text-noct-exito">Guía terminada</p>
+          <p className="text-[13px] text-noct-neutral-400">
             {pasos.length} {pasos.length === 1 ? 'paso' : 'pasos'}
-            {cronometro ? ` · ${cronometro} en esta sesión` : ''}
           </p>
+          {/* LA SALIDA ES LA ACCIÓN DE ESTA PANTALLA (encargo del
+              2026-09-17): terminar es volver a lo que se estaba
+              haciendo. Empezar de nuevo queda como secundaria. */}
+          {nivel === 0 && salida && (
+            <Link
+              to={salida.to}
+              state={salida.estado}
+              className="mt-2 flex h-14 w-full max-w-xs items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-[16px] font-semibold text-noct-accent-300 active:bg-noct-accent/[.3]"
+            >
+              Salir de la guía
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => void reiniciarYVolver()}
-            className={`mt-2 ${BTN_SECUNDARIO}`}
+            className={`mt-1 ${BTN_SECUNDARIO} min-h-11`}
           >
-            <ClockCounterClockwise size={15} aria-hidden />
-            Reiniciar y volver a empezar
+            <ArrowsClockwise size={15} aria-hidden />
+            Empezar de nuevo
           </button>
         </div>
       </div>
@@ -366,9 +384,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   function avanzar() {
     if (indiceActual === null) return
     if (pasoActualHecho) {
-      setIndiceActual(
-        indiceActual + 1 < pasos.length ? indiceActual + 1 : siguientePasoPendiente(idsPasos, hechos, -1),
-      )
+      irAPaso(indiceActual + 1 < pasos.length ? indiceActual + 1 : siguientePasoPendiente(idsPasos, hechos, -1))
     } else {
       void intentarCompletarPaso(indiceActual, paso)
     }
@@ -457,7 +473,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
               // saltó de verdad, al volver atrás, dejaba de estarlo.
               void marcarPasoSaltado(clave, paso.id)
               setHojaFalla(null)
-              setIndiceActual(destinoSalto)
+              irAPaso(destinoSalto)
             }
       }
       // Detenerse sin resolver ni saltar: deja la falla anotada en el
@@ -485,6 +501,21 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // es una sola, asi que vale tambien dentro del vinculo.
   const enFoco = modoEjecucion === 'foco' && pasoEnteroPorFalla !== paso.id
 
+  // "ANTES DE EMPEZAR" SOLO DONDE SIRVE (encargo del 2026-09-17, sección
+  // 4): en el primer paso de una ejecución que todavía no tiene nada
+  // hecho, y solo si la guía declara requisitos. Una vez empezado el
+  // trabajo ya no tiene sentido volver a pedirlos.
+  const sinAvance =
+    (progreso?.pasosHechos?.length ?? 0) === 0 && (progreso?.instruccionesHechas?.length ?? 0) === 0
+  const requisitosVisibles = indiceActual === 0 && sinAvance ? requisitos : []
+
+  // La línea de "retomas donde lo dejaste", mientras el técnico siga en
+  // el paso en que se retomó.
+  const avisoRetomada =
+    nivel === 0 && retomadaEn !== null && retomadaEn === indiceActual ? (
+      <AvisoRetomada numeroPaso={indiceActual + 1} onEmpezarDeNuevo={() => void reiniciarYVolver()} />
+    ) : null
+
   // El índice de pasos y su disparador (tarea 218, G-09, G-10, G-14):
   // una línea compacta de 44 px que el chasis porta a su propia barra
   // pegajosa (`BandaTarea`, sustituye los 124 px que sumaban la barra
@@ -504,12 +535,18 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           resumenes={resumenes}
           subtitulo={subtituloIndice}
           tituloGuia={articulo?.titulo}
-          onIrAPaso={setIndiceActual}
+          onIrAPaso={(indice) => irAPaso(indice)}
           modoEjecucion={modoEjecucion}
           onCambiarModo={(modo) => void cambiarModoEjecucion(modo)}
           // H11 / A15: se leen desde el primer paso, sin tener que
           // marcar tareas que nadie hizo para llegar a ellas.
           verificacionFinal={verificacionFinal}
+          // LO QUE YA NO OCUPA LA PANTALLA DE LA GUÍA (encargo del
+          // 2026-09-17): la ficha con la descripción, la versión y el
+          // historial, y empezar de nuevo. A un toque, desde el índice.
+          rutaDetalles={articulo ? `/soluciones/${articulo.categoriaId}/${articulo.id}/detalles` : undefined}
+          estadoDetalles={articulo ? conOrigen(rutaOrigen, articulo.titulo) : undefined}
+          onEmpezarDeNuevo={sinAvance ? undefined : () => void reiniciarYVolver()}
         />
       </>
     ) : null
@@ -518,10 +555,17 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
     return (
       <>
         {indiceUI}
+        {avisoRetomada}
         <ModoFoco
           key={paso.id}
           paso={paso}
           tituloPaso={tituloPaso}
+          numeroPaso={indiceActual + 1}
+          totalPasos={pasos.length}
+          hayPasoSiguiente={indiceActual + 1 < pasos.length}
+          requisitos={requisitosVisibles}
+          entrarPorElFinal={entradaPorElFinal === paso.id}
+          onPasoAnterior={indiceActual > 0 ? () => irAPaso(indiceActual - 1, true) : undefined}
           instruccionesHechas={instruccionesHechas}
           subSatisfecho={subSatisfecho}
           guiaDelPasoDisponible={guiaDelPasoDisponible(paso)}
@@ -532,8 +576,6 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           // queda satisfecha al completarla de verdad, y marcarla sigue
           // siendo un gesto aparte del técnico.
           onVinculoCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
-          avisosConfirmados={avisosConfirmados}
-          onConfirmarAviso={confirmarAviso}
           onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
           onCompletarPaso={avanzar}
           etiquetaAvance={cierre.etiqueta}
@@ -589,8 +631,9 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   }
 
   return (
-    <div className={`flex flex-col gap-4 ${nivel === 0 ? 'flex-1' : ''}`}>
+    <div className={`flex flex-col gap-4 ${nivel === 0 ? 'flex-1 pt-3' : ''}`}>
       {indiceUI}
+      {avisoRetomada}
       {/* El documento anidado ya NO repite su avance aquí (regla R57 del
           turno 12). Traía una barra de acento con "Paso 1 de 2", justo
           debajo de la fila que lo abre, que dice lo mismo con el anillo
@@ -598,16 +641,17 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           barras de acento anidadas midiendo cosas distintas: los pasos
           del procedimiento principal y los del vinculado. */}
 
+      {requisitosVisibles.length > 0 && <AntesDeEmpezar requisitos={requisitosVisibles} />}
+
       <div className="flex flex-col gap-1">
         {nivel >= 1 && <h2 className="text-lg font-semibold text-noct-text">{tituloPaso}</h2>}
-        {paso.objetivo && <p className="text-sm text-noct-neutral-400">{paso.objetivo}</p>}
-        {cronometro && (
-          <p className="inline-flex items-center gap-1.5 text-[12px] tabular-nums text-noct-neutral-500">
-            <ClockCounterClockwise size={13} aria-hidden />
-            {cronometro}
-            {tiempoEstimadoMin ? <span className="text-noct-neutral-600">/ ~{tiempoEstimadoMin} min</span> : null}
+        {nivel === 0 && (
+          <p className="text-[13.5px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
+            Paso {indiceActual + 1} de {pasos.length}
           </p>
         )}
+        {nivel === 0 && paso.titulo && <h2 className="text-[20px] font-medium leading-snug text-noct-text">{paso.titulo}</h2>}
+        {paso.objetivo && <p className="text-sm text-noct-neutral-400">{paso.objetivo}</p>}
       </div>
 
       {/* Lo que el técnico declaró al elegir una salida (tablero 3d).
@@ -779,7 +823,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
             <button
               type="button"
               disabled={indiceActual === 0}
-              onClick={() => setIndiceActual(Math.max(0, indiceActual - 1))}
+              onClick={() => irAPaso(Math.max(0, indiceActual - 1))}
               // CONSULTAR NO ES AVANZAR (cambio 2 del encargo). Decían
               // "Paso anterior" y "Paso siguiente" a secas, en una
               // pantalla cuya acción dominante es cerrar el paso: se
@@ -815,7 +859,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
             <button
               type="button"
               disabled={indiceActual + 1 >= pasos.length}
-              onClick={() => setIndiceActual(Math.min(pasos.length - 1, indiceActual + 1))}
+              onClick={() => irAPaso(Math.min(pasos.length - 1, indiceActual + 1))}
               aria-label="Ver el paso siguiente. Solo mueve la vista, no lo da por hecho"
               title="Ver el siguiente"
               className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
@@ -894,41 +938,39 @@ function ContadorPaso({
   )
 }
 
-// Encabezado del asistente: barra de progreso, contador de paso y, en el
-// nivel 0, cronometro de la sesion contra el tiempo estimado.
-function Encabezado({
-  porcentaje,
-  completado,
-  cronometro,
-  estimado,
-  contador,
-}: {
-  porcentaje: number
-  completado: boolean
-  cronometro: string | null
-  estimado: number | null
-  contador?: string
-}) {
+// Encabezado de las pantallas de cierre: la barra de avance del
+// procedimiento. (El cronómetro de sesión que llevaba se retiró el
+// 2026-09-17: ver la nota donde vivía, más arriba.)
+function Encabezado({ porcentaje, completado }: { porcentaje: number; completado: boolean }) {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="h-1.5 overflow-hidden rounded-full bg-noct-neutral-800">
-        <div
-          className={`h-full rounded-full transition-all ${completado ? 'bg-noct-exito' : 'bg-noct-accent'}`}
-          style={{ width: `${porcentaje}%` }}
-        />
-      </div>
-      {(contador || cronometro) && (
-        <div className="flex items-center justify-between text-xs text-noct-neutral-500">
-          <span>{contador}</span>
-          {cronometro && (
-            <span className="inline-flex items-center gap-1.5 tabular-nums">
-              <ClockCounterClockwise size={13} aria-hidden />
-              {cronometro}
-              {estimado ? <span className="text-noct-neutral-600">/ ~{estimado} min</span> : null}
-            </span>
-          )}
-        </div>
-      )}
+    <div className="h-1.5 overflow-hidden rounded-full bg-noct-neutral-800">
+      <div
+        className={`h-full rounded-full transition-all ${completado ? 'bg-noct-exito' : 'bg-noct-accent'}`}
+        style={{ width: `${porcentaje}%` }}
+      />
+    </div>
+  )
+}
+
+// RETOMAR SIN PREGUNTAR (encargo del 2026-09-17, sección 3). Abrir una
+// guía a medias lleva directo al paso pendiente; esta línea lo dice y
+// deja empezar de nuevo con un toque, que es lo que hace falta cuando el
+// avance guardado era de otro caso. No detiene nada: se puede seguir sin
+// tocarla, y se va sola al cambiar de paso.
+function AvisoRetomada({ numeroPaso, onEmpezarDeNuevo }: { numeroPaso: number; onEmpezarDeNuevo: () => void }) {
+  return (
+    <div className="mt-3 flex items-center gap-2 rounded-lg border border-noct-divider bg-noct-surface py-1 pl-3 pr-1">
+      <p className="min-w-0 flex-1 text-[13px] leading-snug text-noct-neutral-300">
+        Retomas en el paso {numeroPaso}, donde lo dejaste.
+      </p>
+      <button
+        type="button"
+        onClick={onEmpezarDeNuevo}
+        className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-noct-accent-300 hover:bg-noct-text/[.07]"
+      >
+        <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
+        Empezar de nuevo
+      </button>
     </div>
   )
 }

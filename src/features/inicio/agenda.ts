@@ -95,6 +95,21 @@ export function resumenAgenda(agenda: Agenda): string {
 // Fecha de hoy tal como la escribiría alguien en Colombia: "viernes, 11
 // de septiembre". Se pone en Inicio porque una agenda sin su día es un
 // listado; con él, el técnico sabe respecto a qué se dice "hoy".
+/**
+ * Solo lo urgente, en una línea: "1 vencido · 2 para hoy". Es lo único
+ * de la agenda que sigue asomando en Inicio desde el 2026-09-17: Inicio
+ * es para resolver con guías, y la agenda completa vive en su pantalla.
+ * Cadena vacía si no hay nada urgente.
+ */
+export function resumenUrgente(agenda: Agenda): string {
+  return [
+    frase(agenda.vencidos.length, 'vencido', 'vencidos'),
+    frase(agenda.hoy.length, 'para hoy', 'para hoy'),
+  ]
+    .filter((parte): parte is string => parte !== null)
+    .join(' · ')
+}
+
 export function fechaDeHoy(hoy: Date = new Date()): string {
   const texto = new Intl.DateTimeFormat('es-CO', {
     weekday: 'long',

@@ -4,7 +4,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea **242** (consultar y usar la Bóveda sin salir del flujo) se cerró el 2026-09-16 y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Dejó registrada la **243** en "Por hacer".)*
+*(vacío: la tarea **244** (resolver rápido con guías, encargo del 2026-09-17) se cerró ese día y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Dejó registrada la **245** en "Por hacer": revisar el CONTENIDO de la guía de la resolución DIAN con el modelo nuevo, que necesita leer los datos del equipo con una sesión de la app.)*
+
 
 *(las tareas **234** y **235** se cerraron el 2026-09-15 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Los siete puntos de la 235 y los diez de la 234 tienen su commit; el último que quedaba vivo, el **9 de la 234 (compatibilidad y datos existentes)**, se cerró ese día con `src/lib/compatibilidadDatos.test.ts`.*
 
@@ -292,6 +293,17 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
+### 245. Revisar el CONTENIDO de la guía de la resolución DIAN con el modelo nuevo
+
+- **Título:** revisar, corregir y reestructurar la guía "Actualizar la resolución DIAN para facturación electrónica en un POS" según la regla 20 de [REGLAS.md](REGLAS.md).
+- **Descripción:** (1) separar cada acción en su propio paso (hoy un paso puede encadenar "entra al administrador, abre terminales, edita, ve a impresoras"); (2) dejar en "Antes de empezar" solo lo que debe estar listo antes del paso 1 (la resolución de la DIAN, el acceso al administrador) y quitar de ahí lo que sea una acción del procedimiento; (3) pasar a tono "Precaución" o "Importante" solo lo que sea riesgo real (afecta facturación o ventas, sobrescribe la resolución vigente), anclado a la tarea donde aplica; lo que explica, a "Información" o "Consejo"; los valores exactos (prefijo, rango, fechas), a "Dato técnico"; (4) revisar la lógica del procedimiento, sus nombres de opciones y sus huecos, y **marcar como "Por confirmar" lo que no se pueda verificar**, sin inventar nada; (5) ejecutarla de principio a fin en el teléfono para comprobar que ya no hace falta recurrir a apuntes personales.
+- **Motivo:** es el caso que originó el encargo del 2026-09-17. La tarea 244 cambió cómo se PRESENTA cualquier guía; lo que esta guía dice sigue siendo lo que se escribió en su momento.
+- **Impacto:** alto para el procedimiento que más se usa del POS.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** el contenido del artículo en Supabase (tabla `articulos`), editable desde el editor de la app (`/soluciones/:categoriaId/:articuloId/editar`). **No es código.**
+- **Dependencias:** **necesita una sesión de la app con los datos del equipo.** El contenido de las guías vive en Supabase con RLS: no se puede leer ni corregir sin iniciar sesión, y las contraseñas las escribe el usuario. Antes de tocar nada hay que leer la guía completa y proponer los cambios para que el usuario los apruebe (regla 20d: no inventar datos).
+- **Modelo/esfuerzo:** Opus 5 / Alto. Es revisión de contenido técnico con riesgo real (facturación), no interfaz.
+
 ### 243. Vista rápida de un dato protegido de un equipo en el buscador de consulta
 
 - **Título:** consultar un dato protegido de un equipo (PIN, usuario administrador, token) sin salir de una guía.
@@ -478,7 +490,8 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ### 225. Rediseño Guía: tiempo honesto, fuera el cronómetro de sesión (G-13, G-25)
 
-- **Descripción:** retirar el cronómetro de sesión y sustituirlo por **"~N min restantes"**, calculado sobre los pasos que faltan. En el cierre, el resumen usa el **tiempo real del trabajo** ("empezado hace 38 min"), no el de la sesión actual.
+- **Cronómetro RETIRADO el 2026-09-17 (tarea 244):** ya no aparece ni en la vista de paso entero ni en el cierre. El **"~N min restantes"** calculado sobre los pasos que faltan ya existía en el índice de pasos (`minutosRestantes`, subtítulo de `HojaPasos`). **Queda pendiente** el resumen del cierre con el **tiempo real del trabajo** ("empezado hace 38 min"), que exige persistir cuándo empezó la ejecución y va con la tarea 220.
+- **Descripción (lo que queda):** en el cierre, el resumen usa el tiempo real del trabajo, no el de la sesión actual.
 - **Motivo:** hallazgos **G-13** (el cronómetro es de sesión y arranca de cero cada vez que se entra: tras una interrupción de media hora marca "0:12 / ~25 min", y en un flujo cuyo escenario declarado son las interrupciones es el único dato de la pantalla que no sobrevive a una) y **G-25** (el mismo error, en el momento en que más se mira). Justificación del informe: un cronómetro que se reinicia es peor que ningún cronómetro, porque el usuario le cree.
 - **Impacto:** medio, esfuerzo bajo. Cambia un dato que hoy miente.
 - **Prioridad:** Media. **Estado:** Pendiente.
@@ -521,7 +534,8 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ### 229. Rediseño Guía: la ficha deja de ser la puerta por defecto (G-06, G-07, G-08)
 
-- **Descripción:** **(a)** Mantener la ficha, pero que deje de ser la puerta: desde la lista el gesto principal es **empezar**, y la lectura pasa a un toque secundario explícito ("Ver la guía"). **(b)** Subir a **44 px** los tres iconos de la cabecera (estrella, lápiz y el menú de tres puntos), que hoy miden 34, o fundir estrella y lápiz dentro del menú. **(c)** Mover la promesa de propiedad del avance ("guardado en este teléfono") al bloque de progreso, siempre visible, y no solo al estado "seguir".
+- **(a) HECHA el 2026-09-17 (tarea 244), y más allá de lo que pedía:** la ficha no es "un toque secundario" sino que **abrir la guía es ejecutarla** (`GuiaPage`), y la ficha pasó a "Detalles de la guía" (`/detalles`), accesible desde el índice de pasos. Quedan pendientes (b) y (c).
+- **Descripción:** **(b)** Subir a **44 px** los tres iconos de la cabecera de los detalles (estrella, lápiz y el menú de tres puntos), que hoy miden 34, o fundir estrella y lápiz dentro del menú. **(c)** Decir de quién es el avance ("guardado en este teléfono") donde se ve el avance: hoy la línea "Retomas en el paso N" no lo dice, y la nota que lo decía vivía en la barra "Empecemos", retirada con la 244.
 - **Motivo:** hallazgos **G-06** (es una parada que en campo sobra: el técnico que ya sabe qué guía quiere entra aquí solo para tocar "Empezar", y la lista ya adelanta lo único que decide en campo), **G-07** (tres controles de 34 px en el borde superior, por debajo del mínimo de 44 que fija la propia regla **M-R14** "también para los controles que parecen decorativos", y en la zona menos alcanzable) y **G-08** (el avance no dice de quién es: se calcula sobre una tabla local del dispositivo, dos técnicos en el mismo trabajo ven cifras distintas y nada lo advierte).
 - **Impacto:** medio. Quita un toque del camino del 80 % de las visitas.
 - **Prioridad:** Media. **Estado:** Pendiente.

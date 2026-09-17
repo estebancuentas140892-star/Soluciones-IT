@@ -6,6 +6,31 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-17
+
+### Cambiado (experiencia de uso, tarea 244): resolver rápido con guías
+
+**Área modificada:** navegación principal (pestañas y barra lateral), Inicio, agenda, Más, catálogo de Guías, resultados del buscador, apertura de una guía, ejecución (modo de una acción a la vez, paso entero y cierre), ficha de la guía, editor de artículo y prueba del editor.
+**Nuevos:** `src/features/soluciones/GuiaPage.tsx`, `src/features/inicio/AgendaPage.tsx` y las pruebas de flujo `src/features/soluciones/guiaDirecta.test.tsx`.
+**Modificados:** `src/App.tsx`, `src/app/Chasis.tsx`, `src/components/{BarraSuperior,BarraReanudar}.tsx`, `src/index.css`, `src/lib/navegacion.ts`, `src/features/inicio/{InicioPage.tsx,agenda.ts}`, `src/features/mas/PantallaMas.tsx`, `src/features/soluciones/{ModoFoco,AsistenteVista,AsistentePage,ArticuloPage,FilaArticulo,HojaPasos,ProcedimientoVista,VistaPreviaArticulo,ArticuloForm}.tsx`, `src/features/soluciones/{tareasFoco,tonos,accionGuia,useProcedimientoEjecucion}.ts`, `src/features/busqueda/{ResultadosBusqueda,AccionesResultado}.tsx`, `src/features/busqueda/contextoResultados.ts`, `src/pruebas/semillaLocal.ts`, `scripts/capturas-moviles.mjs` y sus pruebas.
+**Eliminado:** `src/components/BarraAccionFicha.tsx` (la barra "Empecemos" de la ficha, sin uso tras el cambio).
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (2.2, 3, 5.1, 5.2, 5.2.1, 5.6, 7.2, 13.2 y 14), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-036 a RN-039), [COMPONENTES_UI.md](COMPONENTES_UI.md), [BUSCADOR.md](BUSCADOR.md) (7.3), [DECISIONES.md](DECISIONES.md) (AD-040) y [REGLAS.md](REGLAS.md) (regla 20).
+**Motivo:** encargo del usuario del **17 de septiembre de 2026**. Al usar de verdad la guía de actualizar la resolución DIAN del POS hubo que volver a los apuntes personales. Entre abrir la app y hacer el paso 1 había una agenda de vencimientos, una ficha con portada y "Empecemos" al pie, y en la ejecución cada aviso era una pantalla que había que confirmar.
+**SIN cambios** de esquema (local ni Supabase), RLS, sincronización, datos o contenido de guías, reglas del avance (qué cuenta como hecho, guías necesarias, decisiones, contingencias), buscador y su ranking, Bóveda ni diseño Nocturne. **No hay que ejecutar SQL.**
+**Impacto esperado:** abrir la app, buscar, tocar la guía y estar en el paso 1; seguir con "Siguiente" sin confirmaciones; ver un riesgo real justo donde aplica.
+
+- **Cambiado, abrir una guía es ejecutarla.** La dirección de la guía (`/soluciones/:categoria/:articulo`) abre su primer paso pendiente (`GuiaPage`); un artículo sin pasos se sigue leyendo ahí. La ficha pasa a **Detalles de la guía** (`/detalles`), a un toque desde el índice de pasos. `/ejecutar` redirige a la guía conservando el origen. Guardar en el editor lleva a los detalles.
+- **Cambiado, retomar y empezar de nuevo sin pasos intermedios.** Una guía terminada se abre en un caso nuevo, desde el paso 1. Una a medias se abre en su paso pendiente con la línea "Retomas en el paso N" y "Empezar de nuevo" (también en el índice). Al terminar: "Guía terminada", "Salir de la guía" y "Empezar de nuevo".
+- **Cambiado, los avisos acompañan y no detienen.** Se retiran las pantallas de aviso con "Entendido · continuar". Precaución e importante se ven como alerta antes de la instrucción de SU acción; el dato técnico, a la vista sin color de alerta; información y consejo, plegados en "Más información". Los avisos del paso van solo con la primera acción del paso. Mismo criterio en la vista de paso entero y en la prueba del editor.
+- **Cambiado, una acción por pantalla.** "Paso N de M" y el título del paso sobre la instrucción (26 px); imágenes, clave y archivos de la acción a la vista, sin chips; "Anterior" (cruza al paso anterior) y "Siguiente" o "Terminar" de 64 px; "Tengo un problema" en una línea discreta. "Antes de empezar" aparece en el paso 1, solo si la guía tiene requisitos y solo antes de empezar.
+- **Cambiado, la navegación del teléfono es Inicio, Guías y Más.** Equipos, Red y Bóveda se abren desde Más, con regreso a Más en su cabecera; Más se ilumina dentro de ellas. En escritorio, Inicio y Guías arriba y el resto en los grupos "Consulta" y "Trabajo técnico".
+- **Cambiado, Inicio es buscar y retomar.** "¿Qué necesitas solucionar?" y el buscador; una línea solo si hay algo vencido o para hoy; "Continuar", "Favoritas" (guías con estrella) y "Recientes". La agenda completa pasa a su pantalla (`/agenda`), también en Más y en la barra lateral.
+- **Cambiado, el catálogo y el buscador sin botones repetidos.** La tarjeta de una guía es un solo enlace (dice "Vas en el paso N de M" si está a medias); el resultado de una guía ya no lleva "Empezar". La Bóveda pierde su tarjeta destacada en Más.
+- **Cambiado, el editor explica las reglas donde se escriben.** Ayuda bajo "Antes de empezar" (solo lo que debe estar listo antes del paso 1; las acciones son pasos) y la descripción de cada tono dice cómo se verá al ejecutar.
+- **Corregido, una guía retomada podía abrir en una acción ya hecha.** La acción inicial se decidía antes de que llegara la lectura en vivo del avance; ahora la ejecución espera a esa lectura (`avanceCargado`).
+- **Retirado, el cronómetro de sesión** de la vista de paso entero y del cierre (se reiniciaba en cada entrada; parte de la tarea 225). El tiempo que queda sigue en el índice de pasos.
+- **Pruebas:** 7 pruebas de flujo nuevas (entrar al paso 1, requisitos, avisos sin confirmación y plegados, guía terminada, retomar, "Anterior" entre pasos, dirección antigua) y las de avisos, avance, navegación y agenda al día. Suite completa, lint y build en verde. Capturas a 360, 390, 430 y 1366 px con el banco local.
+
 ## 2026-09-16
 
 ### Corregido (flujo de trabajo, tarea 242): consultar y usar la Bóveda sin salir de lo que se estaba haciendo

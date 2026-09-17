@@ -1,64 +1,59 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import type { BloquePaso, PasoProcedimiento } from '../../lib/db'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
+import { normalizarTexto } from './iconosSoluciones'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
-import {
-  BookOpen,
-  Camera,
-  CaretLeft,
-  Check,
-  Info,
-  LockSimple,
-  Paperclip,
-  SealCheck,
-  Signpost,
-  Warning,
-} from '../../components/iconos'
+import { BookOpen, CaretDown, CaretLeft, CaretRight, Check, Code, Info, Warning } from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { ChipReferencia } from '../referencia/ChipReferencia'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { bloquesUnicos, tipoEfectivo } from '../referencia/referencias'
 import { useReferencias } from '../referencia/useReferencias'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
-import { apoyosDelPaso, apoyosDeTarea, cuentaApoyos, hayApoyos, type Apoyos } from './apoyosTarea'
+import { apoyosDelPaso, apoyosDeTarea, type Apoyos } from './apoyosTarea'
 import { motivoGuiasPendientes } from './guiasObligatorias'
-import { accionFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
+import { accionFoco, avisosDeTareaFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
 import { tonoInfo } from './tonos'
 
-// MODO FOCO: una tarea a la vez (handoff "Diseño móvil", tablero 6d).
+// MODO FOCO: una acción a la vez (handoff "Diseño móvil", tablero 6d).
+// Desde la tarea 217 es LA ejecución de una guía, no un modo opcional.
 //
-// Es la oportunidad grande que señala el Paso 6: todo el sistema está
-// construido alrededor del PASO (la banda, el avance, el plegado, la
-// acción dominante), pero frente al equipo, con una mano y guantes, la
-// unidad real de trabajo es la TAREA ("desconecta el uplink del puerto
-// 24").
+// Frente al equipo, con una mano y a veces con guantes, la unidad real
+// de trabajo es la ACCIÓN ("pulsa Editar"), no el paso entero. Esta
+// vista enseña una sola y dice qué hacer ahora.
 //
-// DESDE LA TAREA 217 ESTA VISTA ES LA EJECUCIÓN, no un modo opcional.
+// QUÉ CAMBIA EL 2026-09-17 (encargo "resolver rápido con guías").
+// Principio: la guía no enseña todo mientras se trabaja; dice qué hacer
+// ahora, y la información correcta aparece en el momento correcto.
 //
-// LO QUE CAMBIA EL 2026-09-09 (informe del 8 de septiembre). Tres
-// defectos confirmados vivían aquí, y los tres eran el mismo error de
-// fondo: la vista no sabía a qué TAREA pertenecía cada cosa, así que
-// se lo daba todo a todas.
+//   - Nada detiene el recorrido salvo el trabajo. Los avisos dejaron de
+//     ser pantallas con "Entendido · continuar": van con su acción y el
+//     tono decide cómo (ver `presenciaDeAviso` en tonos.ts). Solo los
+//     riesgos reales se ven como alerta.
+//   - La pantalla se lee de arriba abajo en el orden en que se usa:
+//     dónde estoy (paso y título), qué riesgo hay, qué hago, con qué lo
+//     hago (dato, comando, imagen, clave, archivo) y, plegado, por qué.
+//   - Las imágenes y la clave de la acción se ven sin abrir nada. Antes
+//     estaban detrás de chips de 52 px ("Foto", "Clave") y la
+//     información del paso llegaba desplegada sobre la primera tarea.
+//   - Abajo, "Anterior" y "Siguiente". "Tengo un problema" baja a una
+//     línea discreta: tiene que estar cuando algo falla, pero no puede
+//     competir con la acción en cada pantalla.
 //
-//   - H04 (criterios A04, A05). `paso.bloques.filter(aviso)` y
-//     `filter(imagen)` se pintaban en TODAS las tareas, y la galería
-//     del paso salía como un botón "Archivo" en cada una. En el paso
-//     de tres tareas del informe, la misma precaución aparecía al
-//     escribir la dirección, al confirmar y al comprobar. Ahora los
-//     apoyos se reparten por `alcance`/`tareaId` (ver apoyosTarea.ts):
-//     los de la tarea van con ella; los del paso se muestran UNA vez,
-//     al entrar, y quedan consultables desde un control propio.
-//   - H05 (criterios A09, A10). La guía vinculada del paso no se
-//     mostraba en ningún sitio: solo había un botón apagado con
-//     "Termina el procedimiento vinculado para poder avanzar". Ahora
-//     es la PRIMERA tarea del recorrido y se abre aquí mismo.
-//   - H07, H08 (criterio A13). "Marcar hecha" era el único rótulo, y
-//     las flechas movían sin decir que no marcaban nada. Ahora la
-//     acción dice qué tipo de tarea cierra ("Comprobado" en una
-//     verificación) y las flechas se anuncian como consulta.
+// Las reglas de fondo no cambian: qué cuenta como hecho, qué bloquea una
+// tarea (guías necesarias), cómo se responde una decisión y cómo se
+// abre una guía vinculada siguen donde estaban.
 
 interface Props {
   paso: PasoProcedimiento
   tituloPaso: string
+  // Dónde está este paso dentro del procedimiento ("Paso 3 de 12"). Sin
+  // esto la acción de la pantalla no tenía contexto: el título del paso
+  // solo vivía en el índice.
+  numeroPaso: number
+  totalPasos: number
+  // ¿Queda algún paso después de este? Decide si la última acción dice
+  // "Siguiente" o "Terminar".
+  hayPasoSiguiente: boolean
   instruccionesHechas: ReadonlySet<string>
   // ¿La guía vinculada del paso ya está completa? La resuelve quien
   // llama con lectura en vivo; aquí decide si la primera tarea del
@@ -75,26 +70,26 @@ interface Props {
   // lados, porque ahí ya no llega al borde de la pantalla sino al de la
   // tarjeta que lo contiene.
   anidado?: boolean
-  // AVISOS CONFIRMADOS EN ESTA EJECUCION (encargo del 2026-09-10,
-  // tarea 1). Vive arriba, en `AsistenteVista`, y no en el avance
-  // guardado, por dos razones: confirmar un aviso no es trabajo hecho
-  // (no puede contar como tarea) y la confirmacion caduca con la
-  // ejecucion, asi que repetir la guia vuelve a mostrarlo. Al vivir
-  // arriba, cambiar de paso y volver dentro de la MISMA ejecucion no
-  // pide confirmarlo otra vez.
-  avisosConfirmados: ReadonlySet<string>
-  onConfirmarAviso: (avisoId: string) => void
+  // LO QUE HAY QUE TENER LISTO ANTES DEL PASO 1 (encargo del 2026-09-17,
+  // sección 4). Solo llega cuando toca enseñarlo: primer paso y sin
+  // avance. Una guía sin requisitos no dibuja nada.
+  requisitos?: string[]
+  // Se llegó a este paso con "Anterior" desde el siguiente: se entra por
+  // su última acción, que es la que el técnico acaba de dejar atrás.
+  entrarPorElFinal?: boolean
+  // "Anterior" desde la primera acción del paso. Sin paso anterior no
+  // llega, y el control se apaga.
+  onPasoAnterior?: () => void
   onAlternarTarea: (tareaId: string) => void
   // Cierra el paso y avanza. Es la misma acción dominante de la vista
   // completa: el foco no decide cuándo se puede, solo la ofrece.
   onCompletarPaso: () => void
-  // Rótulo de esa acción ("Completar paso y continuar", "Faltan 2
+  // Rótulo de esa acción cuando NO se puede cerrar todavía ("Faltan 2
   // tareas", "Completa «X»"), resuelto arriba con `cierreDelPaso` para
-  // que las tres vistas digan exactamente lo mismo. El rótulo YA dice
-  // lo que falta: por eso no hay una segunda línea repitiéndolo.
+  // que las vistas digan exactamente lo mismo.
   etiquetaAvance: string
   // ¿El paso puede cerrarse ya? Misma regla para todos los controles de
-  // finalización (tarea 3 del encargo).
+  // finalización (tarea 3 del encargo del 2026-09-09).
   puedeCerrarPaso: boolean
   // El técnico declara que algo va mal en esta tarea. Abre la MISMA
   // hoja de salidas que el "Falla" de la vista completa (tablero 3d).
@@ -174,15 +169,30 @@ interface VinculoAbierto {
   alCompletar?: () => void
 }
 
+function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
+  return bloques.flatMap((b) => (b.adjunto ? [b.adjunto] : []))
+}
+
+// Clases compartidas de los controles del pie. 64 px de alto: es lo que
+// se toca sin mirar, de pie frente al equipo.
+const BOTON_PRINCIPAL =
+  'flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3 text-[18px] font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30'
+const BOTON_ANTERIOR =
+  'flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-30'
+
 export function ModoFoco({
   paso,
   tituloPaso,
+  numeroPaso,
+  totalPasos,
+  hayPasoSiguiente,
   instruccionesHechas,
   subSatisfecho,
   guiaDelPasoDisponible = true,
   anidado = false,
-  avisosConfirmados,
-  onConfirmarAviso,
+  requisitos = [],
+  entrarPorElFinal = false,
+  onPasoAnterior,
   onAlternarTarea,
   onCompletarPaso,
   etiquetaAvance,
@@ -196,14 +206,9 @@ export function ModoFoco({
   renderGuia,
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso)
-  // Los avisos del paso YA son elementos del recorrido: dejarlos
-  // tambien en el panel "Información del paso" seria enseñar el mismo
-  // bloque dos veces en la misma pantalla.
-  const delPaso: Apoyos = { ...apoyosDelPaso(paso), avisos: [] }
-  const hayApoyosDelPaso = hayApoyos(delPaso)
 
   function cumplida(tarea: TareaFoco): boolean {
-    return tareaFocoHecha(tarea, instruccionesHechas, subSatisfecho, avisosConfirmados)
+    return tareaFocoHecha(tarea, instruccionesHechas, subSatisfecho)
   }
 
   // La guía que no está disponible se lee ANTES de seguir: cuenta como
@@ -216,38 +221,29 @@ export function ModoFoco({
     return pendiente >= 0 ? pendiente : 0
   }
 
-  // El siguiente elemento sin cumplir, mirando primero HACIA ADELANTE:
-  // marcar una tarea no puede devolver al tecnico a un aviso que dejo
-  // atras con las flechas. Si delante no queda nada, se vuelve al que
-  // siga pendiente donde sea.
+  // La siguiente acción sin cumplir, mirando primero HACIA ADELANTE:
+  // marcar una tarea no puede devolver al técnico a una que dejó atrás
+  // con "Anterior". Si delante no queda nada, se vuelve a la que siga
+  // pendiente donde sea.
   function siguientePendiente(desde: number): number {
     const adelante = tareas.findIndex((t, i) => i > desde && !cumplida(t))
     if (adelante >= 0) return adelante
     return tareas.findIndex((t, i) => i !== desde && !cumplida(t))
   }
 
-  const [indiceTarea, setIndiceTarea] = useState(primeraPendiente)
-  // Qué panel está desplegado. Los apoyos siguen a mano pero no ocupan
-  // la pantalla: lo que se lee de brazo estirado es la instrucción.
-  //
-  // UN SOLO CONTENEDOR PARA LOS APOYOS DEL PASO. Antes había dos: los
-  // avisos del paso se pintaban SUELTOS al entrar y el control "Del
-  // paso" los pintaba OTRA VEZ dentro de su panel, así que pulsarlo no
-  // ocultaba nada: la información desaparecía de arriba y reaparecía
-  // debajo, y cerrarla la devolvía arriba. Ahora hay un único sitio, el
-  // panel, que al entrar al paso llega abierto y se cierra de verdad.
-  const [panel, setPanel] = useState<'clave' | 'fotos' | 'archivos' | 'paso' | null>(() =>
-    hayApoyosDelPaso && tareas[primeraPendiente()]?.clase === 'tarea' ? 'paso' : null,
+  const [indiceTarea, setIndiceTarea] = useState(() =>
+    entrarPorElFinal ? tareas.length - 1 : primeraPendiente(),
   )
+  // "Más información" de la acción que se está mirando. Cerrado por
+  // defecto: lo que se lee de brazo estirado es la instrucción.
+  const [masInformacion, setMasInformacion] = useState(false)
   // Id de la tarea de decisión cuyo "No" está abierto. Se guarda el id
   // y no un booleano porque un paso puede tener más de una decisión, y
   // un booleano las abriría todas a la vez.
   const [decisionAbierta, setDecisionAbierta] = useState<string | null>(null)
   // LA GUÍA VINCULADA QUE OCUPA AHORA EL SITIO DE LA TAREA (encargo del
-  // 2026-09-10, tarea 4). Antes se desplegaba DEBAJO: dos guías en una
-  // pantalla, con dos zonas de acciones y una página que no acababa.
-  // Ahora sustituye el contenido de la tarea mientras dure, y salir
-  // devuelve al mismo punto con el vínculo como estaba.
+  // 2026-09-10, tarea 4). Sustituye el contenido de la tarea mientras
+  // dure, y salir devuelve al mismo punto con el vínculo como estaba.
   const [vinculoAbierto, setVinculoAbierto] = useState<VinculoAbierto | null>(null)
   // Las fichas de Referencia vivas. Se resuelven aqui, una sola vez por
   // paso, en vez de en cada chip: asi editar un termino en Referencia
@@ -261,11 +257,9 @@ export function ModoFoco({
   // TERMINAR LA GUÍA VINCULADA ADELANTA SOLO, como marcar una tarea.
   //
   // Sin esto el técnico completaba la guía de arriba y se quedaba
-  // mirando "Guía completada" con la tarea siguiente escondida detrás
-  // de una flecha: el único gesto que ya no puede hacer (marcar) es
-  // justo el que movía el recorrido. Solo se avanza en la TRANSICIÓN de
-  // pendiente a cumplida, así que volver luego a mirarla no expulsa a
-  // nadie de su sitio.
+  // mirando "Guía completada" con la tarea siguiente escondida. Solo se
+  // avanza en la TRANSICIÓN de pendiente a cumplida, así que volver
+  // luego a mirarla no expulsa a nadie de su sitio.
   const guiaCumplidaAntes = useRef(subSatisfecho)
   useEffect(() => {
     const eraPendiente = !guiaCumplidaAntes.current
@@ -274,48 +268,29 @@ export function ModoFoco({
     const actual = Math.min(indiceTarea, tareas.length - 1)
     if (tareas[actual]?.clase !== 'guia-del-paso') return
     const siguiente = tareas.findIndex(
-      (t, i) =>
-        i !== actual && !tareaFocoHecha(t, instruccionesHechas, subSatisfecho, avisosConfirmados),
+      (t, i) => i !== actual && !tareaFocoHecha(t, instruccionesHechas, subSatisfecho),
     )
     if (siguiente >= 0) setIndiceTarea(siguiente)
-  }, [
-    subSatisfecho,
-    guiaDelPasoDisponible,
-    indiceTarea,
-    tareas,
-    instruccionesHechas,
-    avisosConfirmados,
-  ])
+  }, [subSatisfecho, guiaDelPasoDisponible, indiceTarea, tareas, instruccionesHechas])
 
   const indice = Math.min(indiceTarea, tareas.length - 1)
 
-  // EL PANEL ES DE LA TAREA QUE SE ESTA MIRANDO, no del paso entero.
-  //
-  // Dejarlo abierto y pulsar la flecha lo arrastraba a la tarea
-  // siguiente: sus fotos, su archivo o su clave aparecian desplegados
-  // sin que nadie los pidiera, y el contenido que se veia era el de la
-  // tarea anterior. Vale para los cuatro controles, y para cualquier
-  // motivo del cambio: las flechas, marcar una tarea o terminar la guia
-  // vinculada, que mueven `indiceTarea` por su cuenta.
-  //
-  // Se cierra AQUI, durante el render en el que cambia la tarea, y no
-  // en un efecto: un efecto corre despues de pintar, asi que el
-  // contenido de la tarea anterior alcanzaria a verse un instante.
+  // LO DESPLEGADO ES DE LA ACCIÓN QUE SE ESTÁ MIRANDO, no del paso.
+  // Cambiar de acción (con "Anterior", al marcar o al terminar la guía
+  // vinculada) cierra "Más información", el vínculo y la decisión. Se
+  // cierra AQUÍ, en el mismo render, y no en un efecto: un efecto corre
+  // después de pintar y el contenido anterior alcanzaría a verse.
   const tareaMostrada = useRef(indice)
   if (tareaMostrada.current !== indice) {
     tareaMostrada.current = indice
-    if (panel !== null) setPanel(null)
-    // El vínculo pertenece a la tarea que lo pide: cambiar de tarea lo
-    // cierra, igual que cierra su panel de apoyos.
+    if (masInformacion) setMasInformacion(false)
     if (vinculoAbierto !== null) setVinculoAbierto(null)
     if (decisionAbierta !== null) setDecisionAbierta(null)
   }
 
   // ARRIBA DEL TODO Y CON EL FOCO EN EL ENCABEZADO, cada vez que cambia
-  // lo que está en pantalla: al pasar de tarea, al completar una y al
-  // volver de un vínculo (encargo del 2026-09-10, tarea 4). Sin esto se
-  // llegaba a la tarea siguiente por la mitad, con el desplazamiento
-  // que había dejado la anterior.
+  // lo que está en pantalla: al pasar de acción, al completar una y al
+  // volver de un vínculo (encargo del 2026-09-10, tarea 4).
   useEffect(() => {
     subirElContenedor(encabezado.current)
     encabezado.current?.focus({ preventScroll: true })
@@ -324,38 +299,56 @@ export function ModoFoco({
   const tarea = tareas[indice]
   if (!tarea) return null
 
-  const esAviso = tarea.clase === 'aviso' && tarea.aviso !== null
   const hecha = cumplida(tarea)
   const hechas = tareas.filter(cumplida).length
-  // Los avisos ya no acompañan a la tarea: tienen su propio turno, asi
-  // que se sacan de los apoyos para no pintarlos dos veces.
-  const apoyosCrudos: Apoyos =
-    tarea.clase === 'tarea' ? apoyosDeTarea(paso, tarea.id) : { ...apoyosDelPaso(paso), adjuntosPaso: [] }
-  const apoyos: Apoyos = { ...apoyosCrudos, avisos: [] }
-  const vinculoProtegido = apoyos.vinculoProtegido ?? tarea.vinculoProtegido
-  const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho, avisosConfirmados)
+  const esPrimeraDelPaso = indice === 0
+  const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho)
   const cierraPaso = accion === 'completar'
-  // LA CUENTA VISIBLE SIGUE SIENDO DE TAREAS. Un aviso ocupa un turno
-  // del recorrido pero no es trabajo: contarlo diria "Tarea 2 de 5" en
-  // un paso de tres tareas.
-  const totalTareas = tareas.filter((t) => t.clase !== 'aviso').length
-  const numeroTarea = tareas.slice(0, indice + 1).filter((t) => t.clase !== 'aviso').length
   const esVerificacion = tarea.tipoTarea === 'verificacion'
   // UNA DECISIÓN NO ES UNA ACCIÓN (encargo del 2026-09-09, secciones 5
-  // y 6). Hasta hoy este modo, que es LA ejecución desde la tarea 217,
-  // pintaba una decisión igual que una instrucción: el mismo "Marcar
-  // hecha" y ninguna de sus dos respuestas. El destino del "No", que el
-  // editor sí deja configurar y la vista completa sí ofrece, no existía
-  // aquí, así que marcarla equivalía a responder "sí" en silencio.
+  // y 6): se responde con sus dos salidas, nunca con "Siguiente".
   const esDecision = tarea.tipoTarea === 'decision'
   // UNA SOLA ZONA DE ACCIONES DOMINANTE. Mientras la guía vinculada
-  // ocupa la pantalla, la suya es la que manda: este pie desaparece
-  // entero (cartel, flechas y «Falla»), y vuelve al salir del vínculo o
-  // al terminarlo. Es el "oculta las acciones de la tarea principal"
-  // del encargo del 2026-09-10.
+  // ocupa la pantalla, la suya es la que manda y este pie desaparece.
   const pieCedidoAlVinculo = vinculoAbierto !== null
   const destinoDelNo = esDecision ? tarea.decisionGuiaId : null
   const noAbierto = esDecision && decisionAbierta === tarea.id
+
+  // LOS AVISOS DE ESTA ACCIÓN, repartidos por cómo se ven (ver
+  // `avisosDeTareaFoco`): las alertas antes de la instrucción, los
+  // datos a la vista y el resto plegado.
+  const avisos = avisosDeTareaFoco(paso, tareas, indice)
+
+  // LOS APOYOS DE ESTA ACCIÓN. Los de la tarea van siempre con ella. Los
+  // del paso completo (imágenes y archivos que el autor dejó para todo
+  // el paso, o heredados sin asignar) se ven a la vista UNA vez, con la
+  // primera acción del paso, y en las siguientes quedan consultables
+  // dentro de "Más información": nunca se repiten a la vista.
+  const delPaso = apoyosDelPaso(paso)
+  // La guía del paso y la tarea única no tienen apoyos propios: los
+  // suyos son los del paso, como hasta ahora.
+  const propios: Apoyos = tarea.clase === 'tarea' ? apoyosDeTarea(paso, tarea.id) : delPaso
+  const imagenesALaVista = [
+    ...(tarea.clase === 'tarea' && esPrimeraDelPaso ? delPaso.imagenes : []),
+    ...propios.imagenes,
+  ]
+  const archivosALaVista = [
+    ...(tarea.clase === 'tarea' && esPrimeraDelPaso ? [...adjuntosDe(delPaso.archivos), ...delPaso.adjuntosPaso] : []),
+    ...adjuntosDe(propios.archivos),
+    ...(tarea.clase === 'tarea' ? [] : delPaso.adjuntosPaso),
+  ]
+  const imagenesPlegadas = esPrimeraDelPaso ? [] : delPaso.imagenes
+  const archivosPlegados = esPrimeraDelPaso ? [] : [...adjuntosDe(delPaso.archivos), ...delPaso.adjuntosPaso]
+  const vinculoProtegido = propios.vinculoProtegido ?? tarea.vinculoProtegido
+  // Para qué sirve el paso: explica, no ordena, así que va plegado y solo
+  // con la primera acción del paso.
+  const objetivoPlegado = esPrimeraDelPaso ? paso.objetivo.trim() : ''
+  const hayMasInformacion =
+    avisos.plegados.length > 0 ||
+    imagenesPlegadas.length > 0 ||
+    archivosPlegados.length > 0 ||
+    objetivoPlegado !== ''
+
   // La guía vinculada de ESTA tarea. En la entrada 'guia-del-paso' es el
   // trabajo entero de la tarea, así que se despliega sin pedir permiso:
   // es lo que el técnico vino a hacer. En una tarea normal pueden ser
@@ -369,17 +362,14 @@ export function ModoFoco({
           clave: g.id,
         }))
   // Cuáles de ellas siguen sin terminar. Mientras quede una, la tarea
-  // no se puede marcar: es lo que hacía que la palabra "necesario" del
-  // editor no significara nada en la ejecución.
+  // no se puede marcar.
   const pendientes = tarea.clase === 'tarea' ? guiasPendientes(tarea.id) : []
   const motivoGuias = motivoGuiasPendientes(pendientes)
   // Guías de consulta y contingencia asignadas a esta tarea: apoyo, no
-  // prerrequisito, así que van entre los apoyos y nunca bloquean.
-  const guiasDeApoyo = apoyos.guias.filter((g) => g.intencionGuia !== 'necesario')
-  // Los TÉRMINOS del glosario vinculados a esta tarea. Los atajos y los
-  // comandos no entran aquí: se presentan enteros dentro de la tarea,
-  // con las teclas o el comando delante.
-  const referenciasDeLaTarea = bloquesUnicos(apoyos.referencias).map((bloque) => ({
+  // prerrequisito, así que nunca bloquean.
+  const guiasDeApoyo = propios.guias.filter((g) => g.intencionGuia !== 'necesario')
+  // Los TÉRMINOS del glosario y los ATAJOS o COMANDOS de esta acción.
+  const referenciasDeLaTarea = bloquesUnicos(propios.referencias).map((bloque) => ({
     bloque,
     tipo: tipoEfectivo(
       {
@@ -390,40 +380,49 @@ export function ModoFoco({
       referenciasVivas,
     ),
   }))
-  // Una HERRAMIENTA también se consulta (qué es, para qué sirve), así
-  // que va como etiqueta igual que un término si alguien la enlaza.
+  // Un término o una herramienta se CONSULTA: etiqueta discreta.
   const terminos = referenciasDeLaTarea
     .filter((r) => r.tipo === 'termino' || r.tipo === 'herramienta')
     .map((r) => r.bloque)
-  // Un atajo o un comando SE USA en el momento, no se consulta: va
-  // entero y a la vista, no detrás de una etiqueta que haya que abrir
-  // con el teclado en una mano y el equipo en la otra.
+  // Un atajo o un comando SE USA en el momento: entero y a la vista.
   const atajosYComandos = referenciasDeLaTarea
     .filter((r) => r.tipo === 'atajo' || r.tipo === 'comando')
     .map((r) => r.bloque)
 
-  // El motivo de la guía vinculada, en las palabras del autor: el
-  // título del paso del que sale y su objetivo, si lo escribió. Se
-  // omite cuando el paso no tiene título propio, porque entonces
-  // `tituloPaso` cae en el nombre de la propia guía y la frase se
-  // volvería un espejo ("completa X porque X").
+  // El motivo de la guía vinculada, en las palabras del autor. Se omite
+  // cuando el paso no tiene título propio: la frase se volvería un
+  // espejo ("completa X porque X").
   const motivoGuiaDelPaso =
     tarea.clase === 'guia-del-paso'
-      ? [
-          paso.titulo ? `El paso «${paso.titulo}» depende de ella.` : null,
-          paso.objetivo || null,
-        ]
+      ? [paso.titulo ? `El paso «${paso.titulo}» depende de ella.` : null, paso.objetivo || null]
           .filter(Boolean)
           .join(' ')
       : ''
 
+  // DÓNDE ESTOY: "Paso 3 de 12", y el título del paso cuando dice algo
+  // que la instrucción no dice ya. En un paso de una sola acción con el
+  // mismo texto sería la misma frase dos veces.
+  const tituloPropio = paso.titulo.trim()
+  const textoInstruccion =
+    tarea.clase === 'guia-del-paso'
+      ? !guiaDelPasoDisponible
+        ? 'Esta guía no está disponible'
+        : hecha
+          ? 'Guía completada'
+          : 'Primero, completa esta guía'
+      : tarea.texto || 'Tarea sin texto'
+  const tituloEnContexto =
+    tituloPropio !== '' && normalizarTexto(tituloPropio) !== normalizarTexto(textoInstruccion) ? tituloPropio : ''
+
+  // ¿Esta es la última acción pendiente de TODO el procedimiento? Solo
+  // cambia el rótulo: "Terminar" en vez de "Siguiente".
+  const quedaTrabajoEnElPaso = tareas.some((t) => t.id !== tarea.id && !cumplida(t))
+  const esUltimoTrabajo = !hayPasoSiguiente && !quedaTrabajoEnElPaso
+
+  const puedeRetroceder = indice > 0 || onPasoAnterior !== undefined
+
   // COMPLETAR Y AVANZAR SON UN SOLO GESTO (encargo del 2026-09-10,
-  // tarea 5). Había dos controles que parecían servir para continuar,
-  // "Marcar hecha" y la flecha derecha, y solo uno registraba el
-  // trabajo: con la flecha se recorría el paso entero sin marcar nada,
-  // el cierre aparecía bloqueado al final y había que volver hacia
-  // atrás tarea por tarea. La flecha se retira y el botón grande hace
-  // las dos cosas.
+  // tarea 5): "Siguiente" registra la acción Y trae la siguiente.
   function completarYContinuar() {
     // La misma regla que aplica el hook al escribir, aquí solo para no
     // ofrecer un gesto que no va a hacer nada.
@@ -439,55 +438,39 @@ export function ModoFoco({
     onAlternarTarea(tarea.id)
   }
 
-  // Seguir SIN tocar nada, desde una tarea que ya estaba cumplida (se
-  // llegó a ella con "Ver la anterior"). Es la única forma de volver
-  // hacia adelante ahora que no hay flecha derecha, y no registra nada.
+  // Seguir SIN tocar nada, desde una acción que ya estaba cumplida (se
+  // llegó a ella con "Anterior"). No registra nada.
   function continuarSinMarcar() {
     const pendiente = siguientePendiente(indice)
     if (pendiente >= 0) setIndiceTarea(pendiente)
     else if (indice + 1 < tareas.length) setIndiceTarea(indice + 1)
+    else onCompletarPaso()
   }
 
-  // CONFIRMAR UN AVISO DEJA PASAR, NO MARCA TRABAJO. La confirmación se
-  // guarda arriba (por ejecución) y el recorrido avanza al elemento
-  // siguiente, que es lo que el aviso estaba reteniendo.
-  function confirmarAviso() {
-    onConfirmarAviso(tarea.id)
-    if (indice + 1 < tareas.length) setIndiceTarea(indice + 1)
+  // "ANTERIOR" CONSULTA, NO DESHACE: mueve la vista a la acción de antes,
+  // y desde la primera del paso, a la última del paso anterior.
+  function retroceder() {
+    if (indice > 0) setIndiceTarea(indice - 1)
+    else onPasoAnterior?.()
   }
 
-  // TERMINAR EL VÍNCULO DEVUELVE AL PUNTO EXACTO. Se cierra la guía y
-  // se sigue con el recorrido donde estaba: si la tarea ya quedó
-  // cumplida con eso, en la siguiente pendiente; si no (una consulta),
-  // en la misma tarea. El efecto de más arriba se encarga del
-  // desplazamiento y del foco.
+  // TERMINAR EL VÍNCULO DEVUELVE AL PUNTO EXACTO.
   function cerrarVinculo() {
     setVinculoAbierto(null)
     // Salir del destino de un "no" deshace la respuesta: quien vuelve
-    // sin terminarlo todavía no ha resuelto nada, así que la pregunta
-    // vuelve a ofrecer sus dos salidas.
+    // sin terminarlo todavía no ha resuelto nada.
     setDecisionAbierta(null)
   }
 
-  // EL RÓTULO DICE LAS DOS COSAS QUE HACE (encargo del 2026-09-10,
-  // tarea 5): registra la tarea Y trae la siguiente. Una comprobación
-  // no se "hace": se comprueba (H08).
-  const etiquetaPrincipal = esVerificacion ? 'Sí, lo comprobé · continuar' : 'Hecho · continuar'
-
-  // Responder que sí es seguir por la vía prevista: marca y avanza,
-  // igual que cualquier tarea cumplida.
+  // Responder que sí es seguir por la vía prevista.
   function responderSi() {
     setDecisionAbierta(null)
     completarYContinuar()
   }
 
-  // Responder que no abre el destino si lo hay. Sin destino, la
-  // decisión se registra igual y el flujo sigue: es la misma salida que
-  // ofrece la vista completa, y no dejar salida sería obligar a mentir.
-  //
-  // El destino del "no" es el TRABAJO que toca ahora, así que ocupa la
-  // pantalla como cualquier otra guía vinculada, en vez de desplegarse
-  // debajo de la pregunta.
+  // Responder que no abre el destino si lo hay. Sin destino, la decisión
+  // se registra igual y el flujo sigue: no dejar salida sería obligar a
+  // mentir.
   function responderNo() {
     if (!destinoDelNo) {
       completarYContinuar()
@@ -508,10 +491,9 @@ export function ModoFoco({
   }
 
   // LA GUÍA VINCULADA SUSTITUYE EL CONTENIDO DE LA TAREA (encargo del
-  // 2026-09-10, tarea 4). Ni una página larga con las dos guías, ni una
-  // pantalla nueva que saque al técnico de la ejecución: el mismo sitio,
-  // con una cabecera compacta que dice qué está haciendo y para qué, y
-  // una salida que devuelve al punto exacto con el vínculo como estaba.
+  // 2026-09-10, tarea 4): el mismo sitio, con una cabecera compacta que
+  // dice qué se está haciendo y para qué, y una salida que devuelve al
+  // punto exacto.
   if (vinculoAbierto) {
     return (
       <div className="flex flex-1 flex-col">
@@ -519,6 +501,7 @@ export function ModoFoco({
           <h2
             ref={encabezado}
             tabIndex={-1}
+            data-foco-lectura
             className="text-[15px] leading-snug text-pretty text-noct-neutral-200 outline-none"
           >
             Estás realizando <span className="font-semibold text-noct-text">«{vinculoAbierto.titulo}»</span>
@@ -547,13 +530,6 @@ export function ModoFoco({
             guiaId: vinculoAbierto.guiaId,
             tituloReferencia: vinculoAbierto.titulo,
             obligatoria: vinculoAbierto.obligatoria,
-            // TERMINARLA DEVUELVE AL PUNTO EXACTO. Se cierra el
-            // vinculo y se avisa arriba, que es quien revisa si con eso
-            // el paso ya se puede cerrar. El recorrido se queda donde
-            // estaba: si la tarea sigue pendiente (la guia era su
-            // requisito, pero marcarla es otro gesto) vuelve a ella; si
-            // ya quedo cumplida, el efecto de mas arriba pasa a la
-            // siguiente pendiente. En los dos casos, desde arriba.
             alCompletar:
               vinculoAbierto.alCompletar ??
               (() => {
@@ -566,138 +542,178 @@ export function ModoFoco({
     )
   }
 
+  // El control grande del pie, según lo que toca ahora.
+  let principal: ReactNode
+  if (cierraPaso) {
+    // Con todo el paso hecho, "Siguiente" recorre primero las acciones
+    // que quedan delante en este mismo paso (se volvió a revisar con
+    // "Anterior") y solo desde la última pasa al paso siguiente.
+    const quedaDelante = indice + 1 < tareas.length
+    principal = (
+      <button
+        type="button"
+        disabled={!quedaDelante && !puedeCerrarPaso}
+        onClick={quedaDelante ? () => setIndiceTarea(indice + 1) : onCompletarPaso}
+        className={BOTON_PRINCIPAL}
+      >
+        {quedaDelante || puedeCerrarPaso ? (
+          hayPasoSiguiente || quedaDelante ? (
+            <>
+              <span className="truncate">Siguiente</span>
+              <CaretRight size={22} className="shrink-0" aria-hidden />
+            </>
+          ) : (
+            <>
+              <Check size={22} className="shrink-0" aria-hidden />
+              <span className="truncate">Terminar</span>
+            </>
+          )
+        ) : (
+          <span className="truncate text-[15px]">{etiquetaAvance}</span>
+        )}
+      </button>
+    )
+  } else if (tarea.clase === 'guia-del-paso') {
+    // LA ACCIÓN DOMINANTE ES LA DE LA TARJETA ("Abrir guía" /
+    // "Continuar guía"), así que aquí no va otra. Solo hay botón propio
+    // cuando la tarjeta no ofrece nada que hacer: la guía ya está
+    // completa, o no está en este dispositivo y no bloquea (A12).
+    principal =
+      hecha || !guiaDelPasoDisponible ? (
+        <button type="button" onClick={continuarSinMarcar} className={BOTON_PRINCIPAL}>
+          <span className="truncate">Siguiente</span>
+          <CaretRight size={22} className="shrink-0" aria-hidden />
+        </button>
+      ) : (
+        <p className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2 text-center text-[13px] leading-snug text-noct-neutral-400">
+          <BookOpen size={16} className="shrink-0" aria-hidden />
+          Se cumple al terminar la guía de arriba
+        </p>
+      )
+  } else if (esDecision && !hecha && !noAbierto) {
+    // UNA DECISIÓN SE RESPONDE, NO SE MARCA. Acento la vía que sigue,
+    // ámbar la que se desvía (regla R60).
+    principal = (
+      <>
+        <button
+          type="button"
+          onClick={responderSi}
+          disabled={motivoGuias !== null}
+          aria-label="Sí: seguir con la guía"
+          className={BOTON_PRINCIPAL}
+        >
+          <Check size={22} className="shrink-0" aria-hidden />
+          Sí
+        </button>
+        <button
+          type="button"
+          onClick={responderNo}
+          aria-label={
+            destinoDelNo
+              ? `No: abrir «${tarea.decisionGuiaTitulo || 'la salida'}»`
+              : 'No: registrar la respuesta y seguir'
+          }
+          className="flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-precaucion/60 bg-noct-precaucion/[.12] px-3 text-[18px] font-semibold text-noct-precaucion active:bg-noct-precaucion/25"
+        >
+          <Warning size={20} className="shrink-0" aria-hidden />
+          No
+        </button>
+      </>
+    )
+  } else if (hecha) {
+    // YA CUMPLIDA: se llegó aquí con "Anterior". Seguir no registra nada.
+    principal = (
+      <button type="button" onClick={continuarSinMarcar} className={BOTON_PRINCIPAL}>
+        <span className="truncate">Siguiente</span>
+        <CaretRight size={22} className="shrink-0" aria-hidden />
+      </button>
+    )
+  } else {
+    principal = (
+      <button
+        type="button"
+        onClick={completarYContinuar}
+        disabled={motivoGuias !== null}
+        className={BOTON_PRINCIPAL}
+      >
+        {esUltimoTrabajo ? (
+          <Check size={22} className="shrink-0" aria-hidden />
+        ) : esVerificacion ? (
+          <Check size={20} className="shrink-0" aria-hidden />
+        ) : null}
+        <span className="truncate">
+          {esVerificacion
+            ? esUltimoTrabajo
+              ? 'Comprobado · terminar'
+              : 'Comprobado · siguiente'
+            : esUltimoTrabajo
+              ? 'Terminar'
+              : 'Siguiente'}
+        </span>
+        {!esUltimoTrabajo && !esVerificacion && <CaretRight size={22} className="shrink-0" aria-hidden />}
+      </button>
+    )
+  }
+
   return (
     <div className="flex flex-1 flex-col">
-      {/* Un segmento por TAREA del paso, no por paso. */}
-      {!tarea.esPasoEntero && (
-        <IndicadorAvance
-          hechos={hechas}
-          total={tareas.length}
-          variante="segmentos"
-          expandido
-          actual={indice}
-          className="flex-none"
-        />
-      )}
+      <div className="flex flex-1 flex-col gap-4 pb-6 pt-3">
+        {requisitos.length > 0 && esPrimeraDelPaso && <AntesDeEmpezar requisitos={requisitos} />}
 
-      <div className="flex flex-1 flex-col justify-center gap-[22px] py-7">
-        {esAviso && tarea.aviso ? (
-          // EL AVISO OCUPA LA PANTALLA ENTERA, sin la tarea siguiente
-          // debajo: es el turno del recorrido en el que solo hay que
-          // leer.
-          <AvisoDelRecorrido aviso={tarea.aviso} confirmado={hecha} refEncabezado={encabezado} />
-        ) : (
-          <>
-        {!tarea.esPasoEntero && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full bg-noct-accent/[.18] px-3.5 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
-              <Check size={14} aria-hidden />
-              Tarea {numeroTarea} de {totalTareas}
-            </span>
-            {/* La palabra del tipo, además del color (regla R16). Una
-                comprobación se anuncia como tal ANTES de leerla, para
-                que el técnico sepa que ahí se mira, no se ejecuta. */}
-            {esVerificacion && (
-              <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-exito/45 bg-noct-exito/10 px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-exito">
-                <SealCheck size={14} aria-hidden />
-                Comprobación
-              </span>
-            )}
-            {/* La palabra "Decisión", además de los dos botones: quien
-                mira la pantalla de lejos tiene que saber que ahí se
-                elige, no se ejecuta (regla R16, estado en dos canales). */}
-            {esDecision && (
-              <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-accent/45 bg-noct-accent/10 px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
-                <Signpost size={14} aria-hidden />
-                Decisión
-              </span>
-            )}
-            {tarea.clase === 'guia-del-paso' && (
-              <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-divider px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
-                <BookOpen size={14} aria-hidden />
-                Otra guía
-              </span>
-            )}
-            {/* EL ESTADO DE UNA TAREA YA CUMPLIDA, junto a su número
-                (encargo del 2026-09-10, tarea 5). "Desmarcar" bajó al
-                pie, como control secundario: era un botón dentro de la
-                fila de pastillas y competía con la acción dominante. */}
-            {hecha && tarea.clase === 'tarea' && (
-              <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-exito/45 bg-noct-exito/10 px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-exito">
-                <Check size={14} aria-hidden />
-                Completada
-              </span>
-            )}
-          </div>
+        {/* Un segmento por acción del paso, solo si el paso tiene más de
+            una: con una sola, la barra no dice nada que no diga ya
+            "Paso 3 de 12". */}
+        {tareas.length > 1 && (
+          <IndicadorAvance
+            hechos={hechas}
+            total={tareas.length}
+            variante="segmentos"
+            expandido
+            actual={indice}
+            className="flex-none"
+          />
         )}
 
-        {/* 30 px: es lo que se lee de brazo estirado, a pleno sol, con
-            el teléfono apoyado en el rack. */}
-        {/* En la entrada de guía vinculada el titular NO repite el
-            nombre de la guía: ese nombre ya lo lleva la fila de abajo,
-            junto a su avance. El titular dice qué hay que hacer, que es
-            lo que un técnico que abre la guía por primera vez necesita
-            leer (hallazgo H06: hasta ahora la única forma de llegar a
-            la guía vinculada era un camino oculto). */}
+        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px] leading-snug text-noct-neutral-400">
+          <span className="font-semibold uppercase tracking-[.06em] text-noct-accent-300">
+            Paso {numeroPaso} de {totalPasos}
+          </span>
+          {tituloEnContexto && <span className="min-w-0 text-pretty text-noct-neutral-300">{tituloEnContexto}</span>}
+          {hecha && tarea.clase === 'tarea' && (
+            <span className="inline-flex items-center gap-1 text-noct-exito">
+              <Check size={13} aria-hidden />
+              hecha
+            </span>
+          )}
+        </p>
+
+        {/* LAS ALERTAS, ANTES DE LA INSTRUCCIÓN: un riesgo se lee antes
+            de actuar, no después. Solo precaución e importante. */}
+        {avisos.alertas.map((aviso) => (
+          <AlertaDeRiesgo key={aviso.id} aviso={aviso} />
+        ))}
+
         <h2
           ref={encabezado}
           tabIndex={-1}
-          className={`text-[30px] font-medium leading-[1.25] tracking-[-.015em] text-pretty outline-none ${
+          data-foco-lectura
+          className={`text-[26px] font-medium leading-[1.3] tracking-[-.01em] text-pretty outline-none ${
             hecha ? 'text-noct-neutral-400' : 'text-noct-text'
           }`}
         >
-          {tarea.clase === 'guia-del-paso'
-            ? !guiaDelPasoDisponible
-              ? 'Esta guía no está disponible'
-              : hecha
-                ? 'Guía completada'
-                : 'Primero, completa esta guía'
-            : tarea.texto || 'Tarea sin texto'}
+          {textoInstruccion}
         </h2>
 
-        {/* POR QUÉ ESTÁS HACIENDO ESTA GUÍA (encargo del 2026-09-09,
-            sección 4). El titular dice qué hacer y la fila de abajo dice
-            cuál es la guía, pero el MOTIVO se perdía: en el modo de una
-            tarea a la vez el título del paso solo vive en la cabecera
-            compacta, detrás del contador "1/2", así que el técnico veía
-            "Primero, completa esta guía" sin saber para qué. El motivo
-            es el paso del que sale, y es lo que evita que la guía
-            vinculada parezca un desvío arbitrario. */}
         {motivoGuiaDelPaso && (
-          <p className="-mt-3 text-[15.5px] leading-snug text-noct-neutral-300 text-pretty">
-            {motivoGuiaDelPaso}
-          </p>
+          <p className="-mt-2 text-[15px] leading-snug text-noct-neutral-300 text-pretty">{motivoGuiaDelPaso}</p>
         )}
 
-        {/* Los avisos de esta tarea ya no cuelgan de ella: son el
-            elemento del recorrido que viene JUSTO ANTES (encargo del
-            2026-09-10, tarea 1). Un aviso que comparte pantalla con la
-            instrucción y con un botón de 76 px no advierte. */}
+        {avisos.datos.map((aviso) => (
+          <DatoTecnico key={aviso.id} aviso={aviso} />
+        ))}
 
-        {/* LOS TÉRMINOS DE ESTA TAREA, COMO ETIQUETAS DISCRETAS.
-            Debajo de la instrucción y en una sola fila: no compiten con
-            el titular de 30 px y se tocan para leer la definición sin
-            salir de la guía ni tocar el avance. El mismo término
-            vinculado dos veces a la misma tarea sale UNA sola vez
-            (`bloquesUnicos`). */}
-        {terminos.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {terminos.map((bloque) => (
-              <ChipReferencia
-                key={bloque.id}
-                referenciaId={bloque.referenciaId as string}
-                tituloRespaldo={bloque.referenciaTitulo}
-                referencias={referenciasVivas}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* ATAJOS Y COMANDOS DE ESTA TAREA. No ejecutan nada, no
-            marcan la tarea y no cuentan para cerrar el paso: su id no
-            es el de un bloque 'tarea', así que no entra en el avance
-            guardado. El comando trae "Copiar" con su confirmación
-            dentro del propio bloque. */}
+        {/* ATAJOS Y COMANDOS DE ESTA ACCIÓN. No marcan la tarea ni
+            cuentan para cerrar el paso. */}
         {atajosYComandos.map((bloque) => (
           <TarjetaComando
             key={bloque.id}
@@ -706,19 +722,25 @@ export function ModoFoco({
           />
         ))}
 
-        {/* LA GUÍA VINCULADA, COMO TARJETA COMPACTA (encargo del
-            2026-09-10, tarea 4). Antes se desplegaba entera debajo de
-            la tarea: dos guías en una pantalla y una página que no
-            acababa. Ahora la tarjeta dice qué papel juega, el nombre
-            completo y en qué va; abrirla sustituye esta pantalla. */}
+        {/* LA IMAGEN, A LA VISTA. Si el autor la ancló a esta acción es
+            porque ayuda a hacerla; tocarla la amplía. */}
+        {imagenesALaVista.map((imagen) => (
+          <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
+        ))}
+
+        {vinculoProtegido && <CredencialEnPaso vinculo={vinculoProtegido} />}
+
+        {archivosALaVista.length > 0 && <AdjuntosPaso adjuntos={archivosALaVista} titulo={paso.titulo} />}
+
+        {/* LA GUÍA VINCULADA, COMO TARJETA COMPACTA: abrirla sustituye
+            esta pantalla (encargo del 2026-09-10, tarea 4). */}
         {guiasDeLaTarea.map((g) => (
           <div key={g.clave}>
             {renderTarjetaGuia({
               guiaId: g.id,
               tituloReferencia: g.titulo,
               obligatoria: true,
-              onAbrir: () =>
-                setVinculoAbierto({ guiaId: g.id, titulo: g.titulo, obligatoria: true }),
+              onAbrir: () => setVinculoAbierto({ guiaId: g.id, titulo: g.titulo, obligatoria: true }),
             })}
           </div>
         ))}
@@ -739,393 +761,195 @@ export function ModoFoco({
           </div>
         ))}
 
-        <ChipsApoyo
-          apoyos={apoyos}
-          delPaso={delPaso}
-          conVinculoProtegido={Boolean(vinculoProtegido)}
-          // El chip está SIEMPRE que haya algo del paso: es el único
-          // control que abre y cierra ese contenido, incluso en la
-          // primera tarea, donde llega abierto.
-          mostrarChipDelPaso={hayApoyosDelPaso && tarea.clase === 'tarea'}
-          panel={panel}
-          onPanel={(p) => setPanel(panel === p ? null : p)}
-        />
-
-        {panel === 'clave' && vinculoProtegido && <CredencialEnPaso vinculo={vinculoProtegido} />}
-        {panel === 'fotos' &&
-          apoyos.imagenes.map((imagen) => (
-            <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
-          ))}
-        {panel === 'archivos' && (
-          <AdjuntosPaso
-            adjuntos={apoyos.archivos.flatMap((a) => (a.adjunto ? [a.adjunto] : []))}
-            titulo={paso.titulo}
-          />
+        {/* LOS TÉRMINOS, COMO ETIQUETAS DISCRETAS: se tocan para leer la
+            definición sin salir de la guía ni tocar el avance. */}
+        {terminos.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {terminos.map((bloque) => (
+              <ChipReferencia
+                key={bloque.id}
+                referenciaId={bloque.referenciaId as string}
+                tituloRespaldo={bloque.referenciaTitulo}
+                referencias={referenciasVivas}
+              />
+            ))}
+          </div>
         )}
-        {panel === 'paso' && <ApoyosDelPasoPanel apoyos={delPaso} titulo={paso.titulo} />}
-          </>
+
+        {/* LO QUE SIRVE PARA ENTENDER, NO PARA HACER (sección 8 del
+            encargo): plegado y a un toque. */}
+        {hayMasInformacion && (
+          <MasInformacion abierta={masInformacion} onAlternar={() => setMasInformacion((v) => !v)}>
+            {objetivoPlegado && (
+              <p className="text-[14px] leading-normal text-noct-neutral-200">
+                <span className="font-medium text-noct-neutral-400">Para qué: </span>
+                {objetivoPlegado}
+              </p>
+            )}
+            {avisos.plegados.map((aviso) => (
+              <NotaPlegada key={aviso.id} aviso={aviso} />
+            ))}
+            {imagenesPlegadas.map((imagen) => (
+              <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
+            ))}
+            {archivosPlegados.length > 0 && <AdjuntosPaso adjuntos={archivosPlegados} titulo={paso.titulo} />}
+          </MasInformacion>
         )}
       </div>
 
-      {/* Acción dominante de 76 px: es el ÚNICO elemento grande de la
-          pantalla, así que no hay que apuntar. */}
       {!pieCedidoAlVinculo && (
-      <div
-        // OPACA Y CON BORDE, no un degradado (encargo del 2026-09-10,
-        // tarea 4). El degradado dejaba el texto a medio leer detras de
-        // su mitad transparente: una instruccion medio escondida es una
-        // instruccion perdida. Es `sticky`, asi que ademas reserva su
-        // propio hueco en el flujo y no tapa el final del contenido.
-        className={`sticky bottom-0 z-10 mt-auto flex flex-none flex-col gap-2.5 border-t border-noct-divider bg-noct-bg pt-3 ${
-          anidado ? 'pb-3' : '-mx-4 px-4 pb-[calc(12px+env(safe-area-inset-bottom))]'
-        }`}
-      >
-        {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
-            dice por qué, que es el defecto que el encargo llama "no se
-            muestra cuál guía falta completar". */}
-        {!esAviso && !cierraPaso && !hecha && motivoGuias && (
-          <p className="text-center text-[11.5px] text-noct-precaucion">{motivoGuias}</p>
-        )}
-        {esAviso && tarea.aviso ? (
-          // CONFIRMAR, NO MARCAR. El rótulo dice lo que el aviso pide:
-          // una precaución o algo importante se dan por ENTENDIDOS antes
-          // de seguir; una información normal solo se continúa. Y el
-          // botón no lleva el verde de "hecha": confirmar no completa
-          // trabajo.
-          <button
-            type="button"
-            onClick={confirmarAviso}
-            className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
-          >
-            <Check size={26} className="shrink-0" aria-hidden />
-            {etiquetaAviso(tarea.aviso)}
-          </button>
-        ) : cierraPaso ? (
-          <button
-            type="button"
-            disabled={!puedeCerrarPaso}
-            onClick={onCompletarPaso}
-            className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30"
-          >
-            <Check size={26} className="shrink-0" aria-hidden />
-            <span className="truncate">{etiquetaAvance}</span>
-          </button>
-        ) : tarea.clase === 'guia-del-paso' ? (
-          // LA ACCIÓN DOMINANTE ES LA DE LA TARJETA ("Abrir guía" /
-          // "Continuar guía"), así que aquí no va otra (encargo del
-          // 2026-09-10, tarea 5: una sola acción dominante a la vez).
-          // Antes había un cartel de 76 px con borde discontinuo que
-          // ocupaba el sitio del botón sin ser uno.
-          //
-          // Solo hay pie propio en los dos casos en los que la tarjeta
-          // no ofrece nada que hacer: la guía ya está completa, o no
-          // está en este dispositivo y el vínculo no bloquea (A12).
-          hecha || !guiaDelPasoDisponible ? (
+        <div
+          // OPACA Y CON BORDE, no un degradado (encargo del 2026-09-10,
+          // tarea 4): una instrucción medio escondida es una instrucción
+          // perdida. Es `sticky`, así que reserva su propio hueco.
+          className={`sticky bottom-0 z-10 mt-auto flex flex-none flex-col gap-1.5 border-t border-noct-divider bg-noct-bg pt-3 ${
+            anidado ? 'pb-2' : '-mx-4 px-4 pb-[calc(6px+env(safe-area-inset-bottom))]'
+          }`}
+        >
+          {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
+              dice por qué. */}
+          {!cierraPaso && !hecha && motivoGuias && (
+            <p className="text-center text-[12px] text-noct-precaucion">{motivoGuias}</p>
+          )}
+          {esDecision && !hecha && !noAbierto && destinoDelNo && (
+            <p className="text-center text-[13px] leading-snug text-noct-neutral-300 text-pretty">
+              Si respondes que no, se abre «{tarea.decisionGuiaTitulo || 'la salida'}»
+            </p>
+          )}
+          <div className="flex gap-2.5">
             <button
               type="button"
-              onClick={continuarSinMarcar}
-              className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
+              disabled={!puedeRetroceder}
+              onClick={retroceder}
+              aria-label="Anterior. Solo mueve la vista, no cambia lo marcado"
+              title="Anterior"
+              className={BOTON_ANTERIOR}
             >
-              <Check size={26} className="shrink-0" aria-hidden />
-              Continuar
+              <CaretLeft size={22} aria-hidden />
             </button>
-          ) : (
-            <p className="flex items-center justify-center gap-2 px-2 text-center text-[13px] leading-snug text-noct-neutral-400">
-              <BookOpen size={16} className="shrink-0" aria-hidden />
-              Esta tarea se cumple al terminar la guía de arriba
-            </p>
-          )
-        ) : esDecision && !hecha && !noAbierto ? (
-          // UNA DECISIÓN SE RESPONDE, NO SE MARCA (secciones 5 y 6). Las
-          // dos respuestas, con su consecuencia escrita: el sí sigue por
-          // la vía prevista y el no nombra a dónde lleva. Los mismos
-          // colores que la vista completa (regla R60): acento la vía que
-          // continúa, ámbar la que se desvía. Antes aquí había un
-          // "Marcar hecha" idéntico al de una instrucción, así que las
-          // dos respuestas eran el mismo gesto y el destino del no no
-          // aparecía en ninguna parte de la pantalla.
-          <div className="flex flex-col gap-2">
-            {/* EL DESTINO, EN SU PROPIA LÍNEA. Iba dentro del botón
-                ("No, abrir «Acceder al gestor de ejemplo»") y en 360 px
-                se recortaba a «Acced…», que es justo lo contrario de
-                "mostrar claramente el nombre de la guía vinculada". Aquí
-                cabe entero y en dos líneas si hace falta. */}
-            {destinoDelNo && (
-              <p className="text-center text-[13px] leading-snug text-noct-neutral-300 text-pretty">
-                Si respondes que no, se abre «{tarea.decisionGuiaTitulo || 'la salida'}»
-              </p>
-            )}
-            <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={responderSi}
-                disabled={motivoGuias !== null}
-                aria-label="Sí: seguir con la guía"
-                className="flex h-[76px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3 text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30"
-              >
-                <Check size={24} className="shrink-0" aria-hidden />
-                Sí
-              </button>
-              <button
-                type="button"
-                onClick={responderNo}
-                aria-label={
-                  destinoDelNo
-                    ? `No: abrir «${tarea.decisionGuiaTitulo || 'la salida'}»`
-                    : 'No: registrar la respuesta y seguir'
-                }
-                className="flex h-[76px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-noct-precaucion/60 bg-noct-precaucion/[.12] px-3 text-xl font-semibold text-noct-precaucion active:bg-noct-precaucion/25"
-              >
-                <Warning size={22} className="shrink-0" aria-hidden />
-                No
-              </button>
-            </div>
+            {principal}
           </div>
-        ) : hecha ? (
-          // YA CUMPLIDA: se llegó aquí con "Ver la anterior". El estado
-          // lo dice la pastilla "Completada" de arriba y el gesto que
-          // queda es seguir; deshacerlo es secundario y vive abajo.
-          <button
-            type="button"
-            onClick={continuarSinMarcar}
-            className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34]"
-          >
-            <Check size={26} className="shrink-0" aria-hidden />
-            Continuar
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={completarYContinuar}
-            disabled={motivoGuias !== null}
-            className="flex h-[76px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-xl font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30"
-          >
-            <Check size={26} className="shrink-0" aria-hidden />
-            <span className="truncate">{etiquetaPrincipal}</span>
-          </button>
-        )}
-        {/* CONTROLES SECUNDARIOS. La flecha derecha se retiró (encargo
-            del 2026-09-10, tarea 5): era el atajo que dejaba recorrer el
-            paso entero sin registrar nada, y el cierre aparecía
-            bloqueado al final. Queda solo el regreso, que consulta y no
-            toca el avance. */}
-        <div className="flex gap-2.5">
-          <button
-            type="button"
-            disabled={indice === 0}
-            onClick={() => setIndiceTarea(Math.max(0, indice - 1))}
-            aria-label="Ver la tarea anterior. Solo mueve la vista, no cambia lo marcado"
-            title="Ver la anterior"
-            className="flex h-14 w-16 shrink-0 items-center justify-center rounded-xl border-[1.5px] border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-30"
-          >
-            <CaretLeft size={20} aria-hidden />
-          </button>
-          {/* "Tengo un problema" abre las salidas del paso (la
-              contingencia, la evidencia, saltar) SIN completar nada ni
-              cambiar de tarea. Se llamaba "Falla", que nombra el estado
-              y no lo que el técnico puede hacer, y en una comprobación
-              cambiaba a "No se cumple": dos rótulos para el mismo
-              control. En un aviso no se ofrece: todavía no hay nada
-              hecho que pueda haber salido mal. */}
-          {esAviso ? (
-            <div className="min-w-0 flex-1" />
-          ) : (
+          {/* LO SECUNDARIO, EN UNA LÍNEA DISCRETA. "Tengo un problema" abre
+              las salidas del paso (contingencia, evidencia, saltar) sin
+              completar nada. */}
+          <div className="flex items-center justify-center gap-1">
             <button
               type="button"
               onClick={() => onFalla(tarea.texto)}
               aria-haspopup="dialog"
-              aria-label="Tengo un problema con esta tarea: ver las salidas"
-              className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/55 bg-noct-precaucion/10 text-[15.5px] font-medium text-noct-precaucion hover:bg-noct-precaucion/[.2]"
+              aria-label="Tengo un problema con esta acción: ver las salidas"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text"
             >
-              <Warning size={19} className="shrink-0" aria-hidden />
-              <span className="truncate">Tengo un problema</span>
+              <Warning size={15} className="shrink-0" aria-hidden />
+              Tengo un problema
             </button>
-          )}
+            {hecha && tarea.clase === 'tarea' && (
+              <button
+                type="button"
+                onClick={desmarcar}
+                className="inline-flex min-h-11 items-center rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text"
+              >
+                Desmarcar
+              </button>
+            )}
+          </div>
         </div>
-        {/* Deshacer lo marcado: secundario y discreto, para corregirse
-            sin que compita con la acción dominante. */}
-        {hecha && tarea.clase === 'tarea' && (
-          <button
-            type="button"
-            onClick={desmarcar}
-            className="mx-auto flex min-h-11 items-center rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.08]"
-          >
-            Desmarcar esta tarea
-          </button>
-        )}
-      </div>
       )}
     </div>
   )
 }
 
-// Los chips de 52 px que despliegan un apoyo sin sacarlo de la
-// pantalla. Solo se dibujan los que tienen algo detrás: un chip
-// "Archivo" que no lleva a ningún archivo de esta tarea era justo el
-// ruido que reportaba H04.
-function ChipsApoyo({
-  apoyos,
-  delPaso,
-  conVinculoProtegido,
-  mostrarChipDelPaso,
-  panel,
-  onPanel,
-}: {
-  apoyos: Apoyos
-  delPaso: Apoyos
-  conVinculoProtegido: boolean
-  mostrarChipDelPaso: boolean
-  panel: string | null
-  onPanel: (panel: 'clave' | 'fotos' | 'archivos' | 'paso') => void
-}) {
-  const fotos = apoyos.imagenes.length
-  const archivos = apoyos.archivos.length
-  if (!conVinculoProtegido && fotos === 0 && archivos === 0 && !mostrarChipDelPaso) return null
-  const delPasoCuenta = cuentaApoyos(delPaso)
-
+// "ANTES DE EMPEZAR", SOLO CON REQUISITOS REALES (encargo del 2026-09-17,
+// sección 4): lo que tiene que estar a mano antes de la primera acción.
+// Sin casillas: no es trabajo que marcar, es algo que comprobar de un
+// vistazo. Nunca aparece vacío.
+export function AntesDeEmpezar({ requisitos }: { requisitos: string[] }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {conVinculoProtegido && (
-        <ChipFoco Icono={LockSimple} activo={panel === 'clave'} onClick={() => onPanel('clave')}>
-          Clave
-        </ChipFoco>
-      )}
-      {fotos > 0 && (
-        <ChipFoco Icono={Camera} activo={panel === 'fotos'} onClick={() => onPanel('fotos')}>
-          {fotos === 1 ? 'Foto' : `${fotos} fotos`}
-        </ChipFoco>
-      )}
-      {archivos > 0 && (
-        <ChipFoco Icono={Paperclip} activo={panel === 'archivos'} onClick={() => onPanel('archivos')}>
-          {archivos === 1 ? 'Archivo' : `${archivos} archivos`}
-        </ChipFoco>
-      )}
-      {mostrarChipDelPaso && (
-        // El rótulo dice lo que va a pasar al tocarlo, y con el panel
-        // abierto dice "ocultar": antes decía siempre "Del paso (N)",
-        // asi que el mismo texto servía para abrir y para cerrar.
-        <ChipFoco Icono={Info} activo={panel === 'paso'} onClick={() => onPanel('paso')}>
-          {panel === 'paso' ? 'Ocultar información del paso' : `Información del paso (${delPasoCuenta})`}
-        </ChipFoco>
-      )}
-    </div>
+    <section className="rounded-xl border border-noct-divider bg-noct-surface px-3.5 py-3">
+      <h2 className="text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
+        Antes de empezar, ten a mano
+      </h2>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {requisitos.map((requisito, i) => (
+          <li key={i} className="flex items-start gap-2.5 text-[15px] leading-snug text-noct-text">
+            <span aria-hidden className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-noct-neutral-400" />
+            <span className="min-w-0">{requisito}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
-// Lo que acompaña al PASO completo, consultable desde cualquier tarea
-// sin repetirse en todas ellas.
-function ApoyosDelPasoPanel({ apoyos, titulo }: { apoyos: Apoyos; titulo: string }) {
-  const archivos = [...apoyos.archivos.flatMap((a) => (a.adjunto ? [a.adjunto] : [])), ...apoyos.adjuntosPaso]
-  return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-noct-divider bg-noct-surface/60 p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
-        Apoyo de todo el paso
-      </p>
-      {/* Sin avisos: los del paso se leen una sola vez al principio del
-          recorrido, con su propia pantalla. */}
-      {apoyos.imagenes.map((imagen) => (
-        <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
-      ))}
-      {archivos.length > 0 && <AdjuntosPaso adjuntos={archivos} titulo={titulo} />}
-      {apoyos.vinculoProtegido && <CredencialEnPaso vinculo={apoyos.vinculoProtegido} />}
-    </div>
-  )
-}
-
-// EL RÓTULO DEL BOTÓN QUE CIERRA UN AVISO. Una precaución y algo
-// importante se dan por ENTENDIDOS antes de seguir; una información
-// normal (también un consejo o un dato técnico) solo se continúa.
-function etiquetaAviso(aviso: BloquePaso): string {
-  return aviso.tono === 'precaucion' || aviso.tono === 'importante'
-    ? 'Entendido · continuar'
-    : 'Continuar'
-}
-
-// EL AVISO COMO ELEMENTO DEL RECORRIDO (encargo del 2026-09-10, tarea
-// 1). Ocupa el área principal del modo foco, sin la tarea siguiente
-// debajo: hasta ahora era una tira de color pegada a la instrucción, y
-// competía con un titular de 30 px y un botón de 76.
-//
-// Conserva sus cuatro señales, y ninguna es solo el color (regla R16):
-// el icono del tono, la palabra ("Información", "Precaución",
-// "Importante"), la barra lateral y el fondo. Dice además de quién es,
-// porque un aviso del paso no se lee igual que uno de la tarea que
-// viene ahora.
-function AvisoDelRecorrido({
-  aviso,
-  confirmado,
-  refEncabezado,
-}: {
-  aviso: BloquePaso
-  confirmado: boolean
-  refEncabezado: RefObject<HTMLHeadingElement | null>
-}) {
+// UN RIESGO REAL (precaución o importante), antes de la instrucción. Con
+// sus cuatro señales, ninguna solo de color (regla R16): icono, palabra,
+// barra lateral y fondo.
+function AlertaDeRiesgo({ aviso }: { aviso: BloquePaso }) {
   const tono = tonoInfo(aviso.tono)
-  const delPaso = aviso.alcance !== 'tarea'
   return (
-    <div className="flex flex-col gap-[18px]">
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={`inline-flex h-[34px] items-center gap-1.5 rounded-full border px-3.5 text-[11px] font-semibold uppercase tracking-[.06em] ${tono.clasesPanel} ${tono.claseIcono}`}
-        >
-          <tono.Icono size={15} aria-hidden />
-          {tono.etiqueta}
-        </span>
-        <span className="inline-flex h-[34px] items-center rounded-full border border-noct-divider px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
-          {delPaso ? 'De todo el paso' : 'De la tarea que sigue'}
-        </span>
-        {/* Ya leído en esta ejecución: volver con las flechas no vuelve
-            a exigir la confirmación, y la pantalla lo dice. */}
-        {confirmado && (
-          <span className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-noct-exito/45 bg-noct-exito/10 px-3 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-exito">
-            <Check size={14} aria-hidden />
-            Confirmado
-          </span>
-        )}
-      </div>
-      <div
-        className={`flex items-start gap-3.5 rounded-r-[10px] border-l-[3px] px-4 py-4 ${tono.claseBarra} ${tono.claseFondo}`}
-      >
-        <tono.Icono size={26} className={`mt-0.5 shrink-0 ${tono.claseIcono}`} aria-hidden />
-        <h2
-          ref={refEncabezado}
-          tabIndex={-1}
-          className="min-w-0 text-[19px] font-normal leading-[1.4] text-pretty outline-none"
-        >
-          <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span>{' '}
-          {aviso.texto || 'Aviso sin texto'}
-        </h2>
-      </div>
+    <div
+      role="note"
+      className={`flex items-start gap-3 rounded-r-[10px] border-l-[3px] px-3.5 py-3 ${tono.claseBarra} ${tono.claseFondo}`}
+    >
+      <tono.Icono size={21} className={`mt-0.5 shrink-0 ${tono.claseIcono}`} aria-hidden />
+      <p className="min-w-0 text-[15.5px] leading-[1.45] text-pretty">
+        <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span> {aviso.texto || 'Aviso sin texto'}
+      </p>
     </div>
   )
 }
 
-// Chip de 52 px que despliega un apoyo sin sacarlo de la pantalla.
-function ChipFoco({
-  Icono,
-  activo,
-  onClick,
+// UN DATO TÉCNICO que hace falta para la acción: a la vista, sin color de
+// alerta, para que no compita con los riesgos.
+function DatoTecnico({ aviso }: { aviso: BloquePaso }) {
+  return (
+    <p className="flex items-start gap-2.5 rounded-lg bg-noct-text/[.05] px-3 py-2.5 text-[15px] leading-snug text-noct-text">
+      <Code size={17} className="mt-0.5 shrink-0 text-noct-neutral-400" aria-hidden />
+      <span className="min-w-0 [overflow-wrap:anywhere]">{aviso.texto || 'Dato sin texto'}</span>
+    </p>
+  )
+}
+
+// Una información o un consejo, ya dentro de "Más información": con su
+// palabra, sin fondo de color.
+function NotaPlegada({ aviso }: { aviso: BloquePaso }) {
+  const tono = tonoInfo(aviso.tono)
+  return (
+    <p className="flex items-start gap-2 text-[14px] leading-normal text-noct-neutral-200">
+      <tono.Icono size={15} className="mt-[3px] shrink-0 text-noct-neutral-400" aria-hidden />
+      <span className="min-w-0">
+        <span className="font-medium text-noct-neutral-400">{tono.etiqueta}. </span>
+        {aviso.texto}
+      </span>
+    </p>
+  )
+}
+
+// "MÁS INFORMACIÓN": el sitio de lo que ayuda a entender la acción sin
+// ser necesario para hacerla. Cerrado por defecto.
+function MasInformacion({
+  abierta,
+  onAlternar,
   children,
 }: {
-  Icono: typeof LockSimple
-  activo: boolean
-  onClick: () => void
-  children: string
+  abierta: boolean
+  onAlternar: () => void
+  children: ReactNode
 }) {
   return (
-    <button
-      type="button"
-      aria-expanded={activo}
-      onClick={onClick}
-      className={`inline-flex h-[52px] items-center gap-2 rounded-[10px] border-[1.5px] px-4 text-[14.5px] font-medium ${
-        activo
-          ? 'border-noct-accent bg-noct-accent/[.16] text-noct-accent-300'
-          : 'border-noct-divider bg-noct-surface text-noct-text hover:bg-noct-text/[.06]'
-      }`}
-    >
-      <Icono size={19} className="shrink-0 text-noct-accent-300" aria-hidden />
-      {children}
-    </button>
+    <div>
+      <button
+        type="button"
+        aria-expanded={abierta}
+        onClick={onAlternar}
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-1 text-[14px] font-medium text-noct-neutral-300 hover:text-noct-text"
+      >
+        <Info size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
+        {abierta ? 'Menos información' : 'Más información'}
+        <CaretDown size={13} className={`shrink-0 transition-transform ${abierta ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {abierta && <div className="mt-1.5 flex flex-col gap-3 border-l-2 border-noct-divider pl-3">{children}</div>}
+    </div>
   )
 }
 

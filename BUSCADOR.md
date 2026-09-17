@@ -132,17 +132,17 @@ Cómo se puntúa cada candidato (función `puntuacion`, pura y probada):
 
 | Tipo | Acción | De dónde sale la regla |
 |---|---|---|
-| **articulo** (guía) | `Empezar` · `Continuar · paso N de M` · `Repetir guía` | `accionDeGuia`, la **misma** función que la ficha y el catálogo (vía `useAccionesDeGuia`, compartido con `SolucionesPage`). Empezar y repetir estrenan ejecución antes de navegar; continuar no toca el progreso |
+| **articulo** (guía) | **ninguna desde el 2026-09-17** (tarea 244) | Tocar la fila abre la guía **en su paso pendiente** (`GuiaPage`): una guía terminada empieza un caso nuevo y una a medias se retoma. El botón `Empezar` / `Continuar · paso N de M` / `Repetir guía` repetía ese enlace y se retiró. `accionDeGuia` (vía `useAccionesDeGuia`) solo decide con qué verbo se mide el recorrido (`empezar_guia` o `continuar_guia`) |
 | **diagnostico** | `Iniciar` | La ruta del diagnóstico ya arranca la sesión sola |
 | **credencial** | `Ver` (vista rápida, sección 7.7) + `Copiar usuario` + `Copiar contraseña` (acceso) · `Ver` + `Copiar clave` (clave o PIN) · `Ver` + `Copiar` (token o licencia) · `Ver` (nota segura) · `Abrir ficha` (archivo seguro, que no se abre en el buscador; en modo consulta, nada) | `accionesRapidasDeCredencial` y `copiarCampoCredencial` (`src/features/boveda/accionesCredencial.ts`), extraídos de `BovedaPage`: descifrado, permisos y **auditoría** son los de siempre |
 | **comando** y **atajo** | `Copiar comando` / `Copiar atajo` | El campo `valor` de la ficha. Esa tabla **nunca guarda secretos**, así que aquí no hay descifrado ni auditoría que hacer |
 | todo lo demás | ninguna | Abrir la ficha ES la acción, y la fila entera ya la abre |
 
-**Las acciones viven solo en "Mejores resultados"** (o en la fila única cuando no hay sección). Con la acción en todas las filas, una búsqueda de ocho guías dejaba ocho botones "Empezar" apilados y la pantalla se leía como una botonera: arriba son **cinco como mucho**, que es justo lo que se va a tocar. Cada fila tiene una acción primaria y, como mucho, dos.
+**Las acciones viven solo en "Mejores resultados"** (o en la fila única cuando no hay sección). Con la acción en todas las filas, una búsqueda de ocho guías dejaba ocho botones "Empezar" apilados y la pantalla se leía como una botonera: arriba son **cinco como mucho**, que es justo lo que se va a tocar. Cada fila tiene una acción primaria y, como mucho, dos. Desde el 2026-09-17 una guía no lleva ninguna: la fila ya lleva a su paso pendiente.
 
 **Volver al sitio.** Cada fila viaja con `conOrigen(pathname, 'la búsqueda', { consulta, capa })`, así que abrir una ficha desde aquí y volver devuelve **a la búsqueda**, no a la lista raíz de su sección, y **con lo que estaba escrito** (sección 7.8, desde el 2026-09-16). Es el sistema de origen que ya existía (AD-030), no un segundo mecanismo.
 
-**En modo consulta** (encima de una guía en ejecución, sección 7.5) no se ofrece ninguna acción que abra otra ejecución: ni `Empezar`, `Continuar` o `Repetir guía`, ni `Iniciar`. La guía o el diagnóstico encontrados quedan como referencia. Copiar sí sigue. Lo decide `ofreceAccionDirecta` (`src/features/busqueda/modoConsulta.ts`).
+**En modo consulta** (encima de una guía en ejecución, sección 7.5) no se ofrece nada que abra otra ejecución: la fila de una guía no navega (abrirla sería ejecutarla) y un diagnóstico no ofrece `Iniciar`. La guía o el diagnóstico encontrados quedan como referencia. Copiar sí sigue. Lo decide `ofreceAccionDirecta` (`src/features/busqueda/modoConsulta.ts`).
 
 ### 7.3 Intención de la consulta, con los datos que ya hay (2026-09-15, tarea 241)
 

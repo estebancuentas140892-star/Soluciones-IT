@@ -64,7 +64,13 @@ export function useProcedimientoEjecucion({
   // ocasion diera por cumplido el vinculo de hoy.
   const clave = useClaveProgreso(articuloId, nivel)
   const raizId = raizDe(clave)
-  const filaRaiz = useLiveQuery(() => db.progresoPasos.get(raizId), [raizId])
+  // `null` = no hay fila; `undefined` = todavía se está leyendo. Hay que
+  // distinguirlos (2026-09-17): la vista de una acción a la vez decide en
+  // qué acción arranca al montarse, y con la lectura a medias creía que
+  // no había nada hecho y abría una guía retomada en una acción ya hecha.
+  const filaLeida = useLiveQuery(async () => (await db.progresoPasos.get(raizId)) ?? null, [raizId])
+  const avanceCargado = filaLeida !== undefined
+  const filaRaiz = filaLeida ?? undefined
   const progreso = avanceDe(filaRaiz, clave)
   const { pasos, verificacionFinal } = procedimiento
   const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
@@ -312,6 +318,7 @@ export function useProcedimientoEjecucion({
   }
 
   return {
+    avanceCargado,
     progreso,
     hechos,
     instruccionesHechas,

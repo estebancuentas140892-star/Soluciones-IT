@@ -130,6 +130,13 @@ body,
   outline: 2px solid var(--color-noct-accent);
   outline-offset: 2px;
 }
+/* Un encabezado que recibe el foco solo para que el lector de pantalla
+   anuncie lo nuevo (la instrucción de la guía al cambiar de acción) no es
+   un control: sin anillo, que alrededor de la instrucción parecía una
+   selección (encargo del 2026-09-17). */
+.nocturne [data-foco-lectura]:focus-visible {
+  outline: none;
+}
 .nocturne ::selection {
   background: color-mix(in srgb, var(--color-noct-accent) 30%, transparent);
 }

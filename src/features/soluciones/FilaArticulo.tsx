@@ -1,13 +1,12 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type { Articulo } from '../../lib/db'
-import { empezarEjecucion } from '../../lib/progresoPasos'
-import { ArrowRight, ArrowsClockwise, Check, Play } from '../../components/iconos'
+import { conOrigen } from '../../lib/origenNavegacion'
+import { CaretRight, Check } from '../../components/iconos'
 import { PastillaEstadoArticulo } from '../../components/PastillaEstado'
 import { colorIconoDeTipo, iconoDeTipo } from './iconosSoluciones'
 import { partirTitulo } from './coincidencia'
 import { capacidadDeGuia, lineaDeCapacidad } from './capacidadGuia'
-import { estrenaEjecucion, etiquetaAccionGuia, type AccionGuia } from './accionGuia'
+import { lineaAvanceGuia, type AccionGuia } from './accionGuia'
 
 // La tarjeta de un artículo en un listado, compartida por SolucionesPage y
 // CategoriaPage. Sale de la auditoría de Soluciones, que la pedía como
@@ -19,46 +18,30 @@ import { estrenaEjecucion, etiquetaAccionGuia, type AccionGuia } from './accionG
 // Red ("no comparte interior con las otras dos filas"), y sigue siendo
 // cierto: esto NO se unifica con la fila de dispositivo. Lo que se
 // unifica son las DOS filas de artículo, que antes divergían solo porque
-// nadie las había mirado juntas, y que este rediseño hace converger a
-// propósito (mismo recuadro, misma línea de metadatos, misma ranura de
-// estado). Ese es el marcado duplicado que el componente cierra.
+// nadie las había mirado juntas.
 //
 // Regla R1 de la auditoría, "color con oficio": el matiz del TIPO vive en
-// el glifo y el recuadro va neutro (`text/6%`). Antes el recuadro entero
-// iba relleno del color del tipo y, con seis tipos en la misma columna,
-// la lista se leía como un arcoíris donde el color ya no informaba y
-// competía con el título, que es lo único que se lee de verdad. El color
-// de la CATEGORÍA sigue viviendo en los chips de filtro, no aquí.
+// el glifo y el recuadro va neutro (`text/6%`). El color de la CATEGORÍA
+// sigue viviendo en los chips de filtro, no aquí.
 //
-// TABLERO 3b del handoff "Diseño móvil" (tarea 214). La fila deja de ser
-// un renglón con separador y pasa a ser una TARJETA, y sobre todo deja de
-// mentir: antes pintaba exactamente lo mismo para una guía de 7 pasos con
-// verificación final y para un borrador sin un solo paso, así que el
-// técnico descubría que la guía estaba vacía **después de abrirla**, de
-// pie y frente al equipo. Ahora cada tarjeta dice **lo que la guía puede
-// hacer por ti** y, si es ejecutable, trae su propia acción: un toque del
-// listado al paso 1, en vez de abrir la guía y buscar "Ejecutar" dentro.
+// TABLERO 3b del handoff "Diseño móvil" (tarea 214): cada tarjeta dice
+// **lo que la guía puede hacer por ti** ("7 pasos · ~25 min ·
+// verificación", o "Sin pasos · solo notas"), para no descubrir que una
+// guía está vacía después de abrirla frente al equipo.
 //
-// EL REPARTO EN TRES ZONAS (encargo del 2026-09-09, sección 1). Hasta
-// hoy la tarjeta era UNA fila: glifo, título, pastilla "Borrador" y un
-// botón de ejecutar de 52 px, los cuatro repartiéndose el mismo ancho.
-// En 360 px al título le quedaban unos 150, así que
-// "Configurar las páginas que abre Google Chrome al iniciar en un POS"
-// se leía como una columna de palabras sueltas. La causa no era el
-// tamaño de letra ni la falta de recorte: era el reparto del renglón.
+// Se lee de arriba abajo, y cada zona tiene el ancho entero (encargo del
+// 2026-09-09, sección 1): el TÍTULO completo, sin recorte, con el glifo
+// al lado; y debajo los METADATOS, que pueden pasar a otra línea sin
+// estrechar el título.
 //
-// Ahora la tarjeta se lee de arriba abajo y cada zona tiene el ancho
-// entero:
-//
-//   1. el TÍTULO, con el glifo al lado y nada más que le quite sitio;
-//   2. los METADATOS (categoría, pasos, minutos, verificación y el
-//      estado "Borrador"), que pueden pasar a otra línea sin estrechar
-//      el título;
-//   3. la ACCIÓN (abrir, empezar o continuar), en su propia fila.
-//
-// Sin recorte ni `line-clamp`: el nombre completo se lee entero en la
-// propia tarjeta, así que no hace falta ningún gesto para recuperarlo, y
-// menos uno de `hover`, que en un teléfono no existe.
+// UNA TARJETA, UN TOQUE (encargo del 2026-09-17, sección 3). Hasta hoy
+// la tarjeta tenía dos destinos: el título abría la ficha y un botón de
+// 48 px ("Empezar", "Continuar · paso 2 de 3", "Repetir guía") abría la
+// ejecución. Desde que abrir una guía lleva directo al primer paso
+// pendiente, los dos hacían lo mismo, así que la tarjeta entera es el
+// enlace y el botón se retira: el catálogo pierde una fila de botones por
+// guía y el gesto principal no cambia. Lo que el botón decía de una guía
+// a medias sigue a la vista, como información ("Vas en el paso 2 de 3").
 
 // Dónde coincidió la búsqueda, cuando NO fue en el título. Sin esto la
 // lista muestra resultados sin explicación aparente ("¿por qué sale este
@@ -91,13 +74,12 @@ export function FilaArticulo({
   // Cuando la coincidencia no está en el título, sustituye la línea de
   // metadatos para explicar por qué aparece esta fila.
   coincidencia?: CoincidenciaFila
-  // Qué ofrece la tarjeta, resuelto por `accionDeGuia`: la MISMA
-  // decisión que toma la ficha de la guía, no una regla paralela. Sin
-  // ejecución guardada llega null, que es "Empezar".
+  // El avance de esta guía en este teléfono, resuelto por `accionDeGuia`
+  // (la misma decisión que usa la ejecución). Sin ejecución guardada
+  // llega null.
   accion?: AccionGuia | null
 }) {
-  const navegar = useNavigate()
-  const [preparando, setPreparando] = useState(false)
+  const { pathname, search } = useLocation()
   const Icono = iconoDeTipo(articulo.tipo)
   const { pre, match, post } = partirTitulo(articulo.titulo, consulta)
   // Un artículo obsoleto sigue siendo consultable (a veces es lo único
@@ -106,42 +88,23 @@ export function FilaArticulo({
   const obsoleto = articulo.estado === 'obsoleto'
   const capacidad = capacidadDeGuia(articulo)
   const linea = lineaDeCapacidad(capacidad)
-  // LA TARJETA HACE LO QUE DICE (encargo del 2026-09-09). Era un enlace
-  // directo a `/ejecutar` con una regla propia (`avance.hechos > 0`):
-  // decía "Empezar" con una ejecución abierta, y al tocarlo retomaba la
-  // anterior en vez de estrenar una. Ahora decide `accionDeGuia`, la
-  // misma que la ficha, y empezar y repetir ESTRENAN ejecución antes de
-  // navegar.
-  const etiquetaAccion = accion ? etiquetaAccionGuia(accion, 'tarjeta') : 'Empezar'
-  const preparaEjecucion = accion ? estrenaEjecucion(accion) : true
-  const rutaEjecutar = `${to}/ejecutar`
-
-  async function ejecutar() {
-    if (preparando) return
-    setPreparando(true)
-    try {
-      // Continuar no prepara nada: su progreso se conserva intacto.
-      if (preparaEjecucion) await empezarEjecucion(articulo.id)
-      navegar(rutaEjecutar)
-    } finally {
-      setPreparando(false)
-    }
-  }
+  const avance = capacidad.ejecutable ? lineaAvanceGuia(accion) : null
 
   return (
-    // La tarjeta NO es un enlace que envuelva a la acción: un control
-    // dentro de otro control no es HTML válido y el lector de pantalla no
-    // sabría cuál anuncia. El cuerpo (título y metadatos) es el enlace, y
-    // la acción vive en su propia fila, DEBAJO, para no quitarle ancho al
-    // título.
-    <div
-      className={`flex flex-col rounded-xl border p-3 ${
+    <Link
+      to={to}
+      // VOLVER A LA MISMA LISTA (criterio A03). La X de la guía y el
+      // regreso de la ficha deshacen este salto con el filtro y el término
+      // que había, no con el padre declarado, que solo repone la categoría.
+      state={conOrigen(`${pathname}${search}`, 'Guías')}
+      aria-label={capacidad.ejecutable ? `Abrir la guía "${articulo.titulo}"` : `Abrir "${articulo.titulo}"`}
+      className={`flex min-w-0 items-center gap-3 rounded-xl border p-3 text-noct-text hover:bg-noct-text/[.04] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-text/[.07] ${
         capacidad.ejecutable
           ? 'border-noct-divider bg-noct-surface'
           : 'border-dashed border-noct-neutral-700 bg-transparent'
       }`}
     >
-      <Link to={to} className="flex min-w-0 flex-col gap-2 text-noct-text">
+      <span className="flex min-w-0 flex-1 flex-col gap-2">
         {/* ZONA 1: el título, y nada más en su renglón. */}
         <span className="flex min-w-0 items-start gap-3">
           <span className="mt-px flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-noct-text/[.06]">
@@ -190,54 +153,15 @@ export function FilaArticulo({
                 pasos". Repetirlo en toda la línea la convertiría en una
                 alarma, y un manual sin pasos no está roto. */}
             {linea.aviso && <span className="text-noct-neutral-400">{linea.aviso}</span>}
-            {/* El estado baja aquí desde su antigua ranura propia en el
-                renglón del título, donde le costaba a ese título unos 90
-                px de ancho. Es un metadato más. */}
             <PastillaEstadoArticulo estado={articulo.estado} />
           </span>
         )}
-      </Link>
 
-      {/* ZONA 3: la acción, en su propia fila y a 48 px de alto. Una guía
-          ejecutable ofrece empezarla o continuarla; una que solo son
-          notas ofrece abrirla, que es todo lo que se puede hacer con
-          ella. Nunca comparte renglón con el título. */}
-      <div className={`flex ${capacidad.ejecutable ? 'mt-2.5' : 'mt-1'}`}>
-        {capacidad.ejecutable ? (
-          // Botón, no enlace: estrenar una ejecución es una escritura
-          // que tiene que terminar ANTES de navegar, y mientras corre el
-          // control queda ocupado para que un doble toque no cree dos.
-          <button
-            type="button"
-            disabled={preparando}
-            onClick={() => void ejecutar()}
-            aria-label={`${etiquetaAccion}: "${articulo.titulo}"`}
-            className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-noct-accent bg-noct-accent/10 px-3 text-[14.5px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.24] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-50"
-          >
-            {accion?.estado === 'repetir' ? (
-              <ArrowsClockwise size={17} className="shrink-0" aria-hidden />
-            ) : (
-              <Play size={17} className="shrink-0" aria-hidden />
-            )}
-            <span className="truncate">{etiquetaAccion}</span>
-          </button>
-        ) : (
-          // La de "solo notas" va a la derecha y con el ancho justo, no
-          // a lo ancho como la de ejecutar: son 13 tarjetas de 44 px en
-          // un catálogo de 20, y darles el mismo peso que a una guía
-          // ejecutable llenaría la pantalla de botones que solo
-          // repiten el enlace del título. Sigue midiendo 44 px de alto,
-          // que es lo que pide el dedo (R6).
-          <Link
-            to={to}
-            aria-label={`Abrir "${articulo.titulo}"`}
-            className="ml-auto flex h-11 min-w-0 items-center gap-2 rounded-[10px] px-3 text-[14.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
-          >
-            <span className="truncate">Abrir</span>
-            <ArrowRight size={17} className="shrink-0" aria-hidden />
-          </Link>
-        )}
-      </div>
-    </div>
+        {/* Dónde va una guía a medias en este teléfono. Es información,
+            no un botón: tocar la tarjeta ya retoma ahí. */}
+        {avance && <span className="text-[13px] font-medium text-noct-accent-300">{avance}</span>}
+      </span>
+      <CaretRight size={17} className="shrink-0 text-noct-neutral-500" aria-hidden />
+    </Link>
   )
 }

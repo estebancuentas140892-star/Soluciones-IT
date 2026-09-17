@@ -7,9 +7,12 @@ import { SeccionPlegable } from '../../components/SeccionPlegable'
 import {
   BookBookmark,
   CaretRight,
+  ClockCountdown,
   type IconoProps,
   LockSimple,
   MapPin,
+  Monitor,
+  PlugsConnected,
   QrCode,
   Star,
   TreeStructure,
@@ -29,14 +32,18 @@ import {
   type FilaActividad,
 } from '../historial/actividadEquipo'
 import { etiquetaResuelto } from '../historial/lineaDeTiempo'
+import { agruparAgenda, resumenUrgente } from '../inicio/agenda'
+import { usePendientes } from '../inicio/usePendientes'
 
-// Quinta pestaña (tarea 182, mockup 3f del handoff "Auditoría de
-// Soluciones TI"). Puerta de los destinos que hoy no aparecen en la
-// barra ni en el sidebar (regla R15): antes un técnico nuevo no podía
-// encontrarlos sin que alguien se los mostrara. La Bóveda deja de ser
-// pestaña y encabeza el primer grupo (decisión del usuario en
-// `Decisiones aprobadas.md`); el resto se agrupa en Herramientas,
-// Registros y Mi cuenta.
+// Pestaña "Más" (tarea 182, mockup 3f del handoff "Auditoría de
+// Soluciones TI"). Puerta de los destinos que no aparecen en la barra
+// (regla R15): antes un técnico nuevo no podía encontrarlos sin que
+// alguien se los mostrara.
+//
+// Desde el 2026-09-17 (encargo "resolver rápido con guías") la barra del
+// teléfono es Inicio, Guías y Más, así que aquí viven también Equipos,
+// Red y la Bóveda: todo lo que no es buscar y resolver con guías, a un
+// toque y sin competir con ellas.
 
 export function PantallaMas() {
   const { perfil } = useAuth()
@@ -64,6 +71,10 @@ export function PantallaMas() {
   // estados vacios (si no hay nada, la seccion no se monta).
   const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
   const actividad = useLiveQuery(() => obtenerActividadReciente(), [], [])
+  // Lo urgente de la agenda, como subtítulo de su fila: el mismo dato que
+  // el número de la pestaña Inicio.
+  const pendientes = usePendientes()
+  const urgentes = resumenUrgente(agruparAgenda(pendientes))
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila, sin controles
@@ -71,42 +82,37 @@ export function PantallaMas() {
     <Chasis titulo="Más">
       <main className="flex-1 px-4 pb-16 pt-4">
         <div className="flex flex-col gap-[22px]">
-          {usuario?.puedeVerBoveda && (
-            <section>
-              <TituloGrupo>Consulta protegida</TituloGrupo>
-              <FilaDestacada
-                to="/boveda"
-                Icono={Vault}
-                titulo="Bóveda"
-                subtitulo="Claves y credenciales del equipo"
-                conteo={credenciales ?? null}
-              />
-            </section>
-          )}
-
-          {/* ORDENADO POR DÓNDE SE USA (tarea 207, hallazgos M-024 y
-              M-025, regla M-R10, mockup `7b`). "Herramientas" y
-              "Registros" eran dos grupos que decían de qué TIPO era cada
-              destino, no dónde sirve, así que "Importar" (carga masiva
-              desde Excel) pesaba lo mismo que "Escanear", que solo
-              existe con el teléfono en la mano. Ahora los dos grupos se
-              funden en uno y lo de ordenador baja al final, con la nota
-              escrita: no se esconde nada, se ordena. */}
+          {/* TODO LO QUE NO ES RESOLVER CON GUÍAS, A UN TOQUE (encargo del
+              2026-09-17, secciones 1 y 10). Equipos, Red y la Bóveda
+              dejaron de ser pestañas en el teléfono y se abren desde aquí,
+              en el mismo reparto que la barra lateral de escritorio:
+              "Consulta" para lo que se mira y "Trabajo técnico" para lo que
+              se hace. La Bóveda pierde su tarjeta destacada: era la única
+              fila con marco de acento, y competía con las guías desde un
+              índice que existe para no competir. Lo de ordenador sigue al
+              final (regla M-R10). */}
           <section>
-            <TituloGrupo>Aquí, con el equipo delante</TituloGrupo>
+            <TituloGrupo>Consulta</TituloGrupo>
             <div className="flex flex-col divide-y divide-noct-divider">
-              <Fila to="/escaner" Icono={QrCode} titulo="Escanear equipo" subtitulo="Abre la ficha por código QR" />
+              <Fila to="/dispositivos" Icono={Monitor} titulo="Equipos" subtitulo="Qué se sabe de cada equipo" />
               <Fila
-                to="/diagnostico"
-                Icono={TreeStructure}
-                titulo="Diagnóstico"
-                subtitulo="Del síntoma a la guía, paso a paso"
-                conteo={diagnosticos ?? null}
+                to="/red"
+                Icono={PlugsConnected}
+                titulo="Red"
+                subtitulo="Cómo está conectada la infraestructura"
               />
+              {usuario?.puedeVerBoveda && (
+                <Fila
+                  to="/boveda"
+                  Icono={Vault}
+                  titulo="Bóveda"
+                  subtitulo="Claves y credenciales del equipo"
+                  conteo={credenciales ?? null}
+                />
+              )}
               {/* Centro de consulta (antes "Referencia"): responde "¿qué
                   es esto?" con el equipo delante, en mitad de una guía o
-                  de una llamada, así que vive en este grupo de trabajo
-                  técnico y no en el de escritorio. */}
+                  de una llamada. */}
               <Fila
                 to="/referencia"
                 Icono={BookBookmark}
@@ -128,6 +134,27 @@ export function PantallaMas() {
                 subtitulo="Responsables de cada equipo"
                 conteo={personas.length}
               />
+            </div>
+          </section>
+
+          <section>
+            <TituloGrupo>Trabajo técnico</TituloGrupo>
+            <div className="flex flex-col divide-y divide-noct-divider">
+              {/* La agenda operativa fue Inicio hasta el 2026-09-17. */}
+              <Fila
+                to="/agenda"
+                Icono={ClockCountdown}
+                titulo="Agenda"
+                subtitulo={urgentes || 'Vencimientos, borradores y sugerencias del equipo'}
+              />
+              <Fila
+                to="/diagnostico"
+                Icono={TreeStructure}
+                titulo="Diagnóstico"
+                subtitulo="Del síntoma a la guía, paso a paso"
+                conteo={diagnosticos ?? null}
+              />
+              <Fila to="/escaner" Icono={QrCode} titulo="Escanear equipo" subtitulo="Abre la ficha por código QR" />
             </div>
           </section>
 
@@ -322,41 +349,6 @@ function Fila({
       </span>
       <ConteoFila valor={conteo} />
       <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-    </Link>
-  )
-}
-
-// Fila destacada de "Consulta protegida": mismo tratamiento visual que
-// la tarjeta de "Diagnóstico en curso" de DiagnosticosPage (acento al
-// 35% de borde, 8% de fondo), porque la Bóveda es la única entrada de
-// esta pantalla que exige un permiso y merece distinguirse del resto.
-function FilaDestacada({
-  to,
-  Icono,
-  titulo,
-  subtitulo,
-  conteo = null,
-}: {
-  to: string
-  Icono: (props: IconoProps) => React.JSX.Element
-  titulo: string
-  subtitulo: string
-  conteo?: number | null
-}) {
-  return (
-    <Link
-      to={to}
-      className="flex min-h-[60px] items-center gap-[13px] rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text hover:bg-noct-accent/[.13]"
-    >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.16] text-noct-accent-300">
-        <Icono size={18} aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-medium leading-[1.3]">{titulo}</span>
-        <span className="mt-0.5 block text-[12px] text-noct-neutral-300">{subtitulo}</span>
-      </span>
-      <ConteoFila valor={conteo} />
-      <CaretRight size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
     </Link>
   )
 }

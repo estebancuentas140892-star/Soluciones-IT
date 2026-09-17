@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Modal } from '../../components/Modal'
-import { Check, Circle, Crosshair, Eye, SealCheck, Warning, X } from '../../components/iconos'
+import { ArrowsClockwise, Check, Circle, Crosshair, Eye, Info, SealCheck, Warning, X } from '../../components/iconos'
 import type { ModoEjecucion } from '../../lib/preferenciasEjecucion'
 import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 
@@ -66,6 +67,16 @@ interface Props {
    * ocurriendo al cerrar el procedimiento.
    */
   verificacionFinal?: string[]
+  /**
+   * La ficha de la guía (descripción, objetivo, requisitos, versión,
+   * historial), que desde el 2026-09-17 ya no es la puerta de entrada:
+   * abrir una guía lleva al paso 1, y la ficha queda a un toque desde
+   * aquí para quien la necesite.
+   */
+  rutaDetalles?: string
+  estadoDetalles?: unknown
+  /** Empezar de nuevo. Solo llega cuando hay avance que borrar. */
+  onEmpezarDeNuevo?: () => void
 }
 
 const ID_TITULO = 'hoja-pasos-titulo'
@@ -156,6 +167,9 @@ export function HojaPasos({
   modoEjecucion,
   onCambiarModo,
   verificacionFinal = [],
+  rutaDetalles,
+  estadoDetalles,
+  onEmpezarDeNuevo,
 }: Props) {
   const enFoco = modoEjecucion === 'foco'
 
@@ -255,8 +269,42 @@ export function HojaPasos({
         className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
       >
         {enFoco ? <Eye size={17} aria-hidden /> : <Crosshair size={17} aria-hidden />}
-        {enFoco ? 'Ver el paso entero' : 'Volver a una tarea a la vez'}
+        {enFoco ? 'Ver el paso entero' : 'Volver a una acción a la vez'}
       </button>
+
+      {/* LO QUE SALIÓ DE LA PANTALLA DE LA GUÍA (encargo del 2026-09-17):
+          la ficha y empezar de nuevo. Existen, pero no se interponen entre
+          abrir la guía y hacer el paso 1. */}
+      {(rutaDetalles || onEmpezarDeNuevo) && (
+        // Uno debajo del otro: lado a lado, en 360 px los dos rótulos se
+        // recortaban ("Detalles de la g…", "Empezar de nu…").
+        <div className="mt-2 flex flex-col gap-2">
+          {rutaDetalles && (
+            <Link
+              to={rutaDetalles}
+              state={estadoDetalles}
+              onClick={onCerrar}
+              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+            >
+              <Info size={17} className="shrink-0" aria-hidden />
+              <span className="truncate">Detalles de la guía</span>
+            </Link>
+          )}
+          {onEmpezarDeNuevo && (
+            <button
+              type="button"
+              onClick={() => {
+                onEmpezarDeNuevo()
+                onCerrar()
+              }}
+              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+            >
+              <ArrowsClockwise size={17} className="shrink-0" aria-hidden />
+              <span className="truncate">Empezar de nuevo</span>
+            </button>
+          )}
+        </div>
+      )}
     </Modal>
   )
 }

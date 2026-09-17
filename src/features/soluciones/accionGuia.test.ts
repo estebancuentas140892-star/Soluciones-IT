@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PasoProcedimiento, Procedimiento } from '../../lib/db'
-import { accionDeGuia, estrenaEjecucion, etiquetaAccionGuia } from './accionGuia'
+import { accionDeGuia, lineaAvanceGuia } from './accionGuia'
 
 function paso(id: string): PasoProcedimiento {
   return {
@@ -43,7 +43,6 @@ describe('accionDeGuia', () => {
     const accion = accionDeGuia(TRES, { pasosHechos: [] }, true)
     expect(accion.estado).toBe('continuar')
     expect(accion.pasosHechos).toBe(0)
-    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Continuar en el paso 1')
   })
 
   it('con avance a medias continua en el primer paso pendiente', () => {
@@ -99,8 +98,7 @@ describe('accionDeGuia con comprobaciones finales', () => {
       true,
     )
     expect(accion.pendiente).toEqual({ tipo: 'verificacion' })
-    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Continuar con las comprobaciones finales')
-    expect(etiquetaAccionGuia(accion, 'tarjeta')).toBe('Continuar con las comprobaciones finales')
+    expect(lineaAvanceGuia(accion)).toBe('Faltan las comprobaciones finales')
   })
 
   it('solo ofrece repetir cuando ademas estan todas marcadas', () => {
@@ -118,30 +116,33 @@ describe('accionDeGuia con comprobaciones finales', () => {
   })
 })
 
-describe('etiquetaAccionGuia y estrenaEjecucion', () => {
-  it('la tarjeta abrevia y la barra nombra el paso al que va', () => {
-    const accion = accionDeGuia(TRES, { pasosHechos: ['p1'] }, true)
-    expect(etiquetaAccionGuia(accion, 'tarjeta')).toBe('Continuar · paso 2 de 3')
-    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Continuar en el paso 2')
+// Encargo del 2026-09-17, sección 3: abrir la guía ya lleva al paso
+// pendiente, así que la tarjeta no necesita un botón con verbo. Queda la
+// información de dónde va, solo cuando hay algo que retomar.
+describe('lineaAvanceGuia', () => {
+  it('sin ejecucion abierta no dice nada: abrir la guia empieza en el paso 1', () => {
+    expect(lineaAvanceGuia(accionDeGuia(TRES, undefined, false))).toBeNull()
+    expect(lineaAvanceGuia(null)).toBeNull()
   })
 
-  // Encargo del 2026-09-10, tarea 2: en la ficha la barra es la unica
-  // accion y va detras de toda la introduccion, asi que invita.
-  it('la ficha invita a empezar y el catalogo se queda en el verbo', () => {
-    const accion = accionDeGuia(TRES, undefined, false)
-    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Empecemos')
-    expect(etiquetaAccionGuia(accion, 'tarjeta')).toBe('Empezar')
+  it('con pasos hechos dice en que paso va y cuantos hay', () => {
+    expect(lineaAvanceGuia(accionDeGuia(TRES, { pasosHechos: ['p1'] }, true))).toBe('Vas en el paso 2 de 3')
   })
 
-  it('empezar y repetir estrenan ejecucion; continuar no', () => {
-    expect(estrenaEjecucion(accionDeGuia(TRES, undefined, false))).toBe(true)
-    expect(estrenaEjecucion(accionDeGuia(TRES, { pasosHechos: ['p1', 'p2', 'p3'] }, true))).toBe(true)
-    expect(estrenaEjecucion(accionDeGuia(TRES, { pasosHechos: ['p1'] }, true))).toBe(false)
+  it('una ejecucion abierta sin ningun paso cerrado no inventa un paso en el que vas', () => {
+    expect(lineaAvanceGuia(accionDeGuia(TRES, { pasosHechos: [] }, true))).toBeNull()
   })
 
-  it('nombra repetir con la palabra guia', () => {
-    const accion = accionDeGuia(TRES, { pasosHechos: ['p1', 'p2', 'p3'] }, true)
-    expect(etiquetaAccionGuia(accion, 'barra')).toBe('Repetir guía')
-    expect(etiquetaAccionGuia(accion, 'tarjeta')).toBe('Repetir guía')
+  it('con los pasos cerrados fuera de orden nombra el pendiente de verdad', () => {
+    expect(lineaAvanceGuia(accionDeGuia(TRES, { pasosHechos: ['p2', 'p3'] }, true))).toBe('Vas en el paso 1 de 3')
+  })
+
+  it('con los pasos cerrados y las comprobaciones pendientes lo dice sin numero de paso', () => {
+    const accion = accionDeGuia(guia(['p1'], ['Comprobar A']), { pasosHechos: ['p1'] }, true)
+    expect(lineaAvanceGuia(accion)).toBe('Faltan las comprobaciones finales')
+  })
+
+  it('una guia terminada no lleva linea: abrirla estrena un caso nuevo', () => {
+    expect(lineaAvanceGuia(accionDeGuia(TRES, { pasosHechos: ['p1', 'p2', 'p3'] }, true))).toBeNull()
   })
 })

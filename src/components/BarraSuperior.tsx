@@ -4,7 +4,7 @@ import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 import { Avatar } from './Avatar'
 import { CabeceraColapsable } from './CabeceraColapsable'
-import { MagnifyingGlass } from './iconos'
+import { CaretLeft, MagnifyingGlass } from './iconos'
 import { PastillaSync } from './PastillaSync'
 
 const BuscadorGlobal = lazy(() =>
@@ -35,6 +35,7 @@ const BuscadorGlobal = lazy(() =>
 export function BarraSuperior({
   titulo,
   conLupa = true,
+  volverEnMovilA,
   children,
 }: {
   titulo: string
@@ -44,6 +45,11 @@ export function BarraSuperior({
   // pantalla. En el resto de las secciones la lupa ES el buscador y se
   // queda. Se apaga por pantalla, no se borra del chasis.
   conLupa?: boolean
+  // Regreso SOLO EN EL TELÉFONO, para las secciones que allí dejaron de
+  // ser pestaña y se abren desde Más (Equipos, Red, Bóveda; encargo del
+  // 2026-09-17). En escritorio son raíces de la barra lateral y no lo
+  // llevan.
+  volverEnMovilA?: string
   children?: ReactNode
 }) {
   const { perfil } = useAuth()
@@ -54,8 +60,20 @@ export function BarraSuperior({
 
   return (
     <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-      <div className="flex items-center justify-between gap-2 pl-4 pr-2 pt-2.5">
-        <CabeceraColapsable titulo={titulo} />
+      <div className={`flex items-center justify-between gap-2 pr-2 pt-2.5 ${volverEnMovilA ? 'pl-1 md:pl-4' : 'pl-4'}`}>
+        <div className="flex min-w-0 items-center gap-0.5">
+          {volverEnMovilA && (
+            <Link
+              to={volverEnMovilA}
+              aria-label="Volver a Más"
+              title="Volver a Más"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/5 hover:text-noct-text md:hidden"
+            >
+              <CaretLeft size={18} aria-hidden />
+            </Link>
+          )}
+          <CabeceraColapsable titulo={titulo} />
+        </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <PastillaSync />
           {conLupa && (

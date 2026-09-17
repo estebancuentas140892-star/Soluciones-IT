@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Articulo, CampoProtegido, Credencial, EjecucionDiagnostico } from '../../lib/db'
-import { agruparAgenda, asuntosUrgentes, fechaDeHoy, resumenAgenda } from './agenda'
+import { agruparAgenda, asuntosUrgentes, fechaDeHoy, resumenAgenda, resumenUrgente } from './agenda'
 import { calcularPendientes, type ItemPendiente } from './pendientes'
 import { tarjetaReanudarVisible } from '../soluciones/useReanudar'
 import type { ArticuloSinTerminar } from '../soluciones/sinTerminar'
@@ -215,6 +215,29 @@ describe('resumenAgenda', () => {
     const agenda = agruparAgenda([])
     expect(resumenAgenda(agenda)).toBe('')
     expect(asuntosUrgentes(agenda)).toBe(0)
+  })
+})
+
+// Encargo del 2026-09-17: de la agenda, en Inicio solo asoma lo urgente.
+describe('resumenUrgente', () => {
+  it('nombra solo vencidos y lo de hoy, nunca lo próximo', () => {
+    expect(resumenUrgente(agruparAgenda(pendientesDeEjemplo()))).toBe('2 vencidos · 1 para hoy')
+  })
+
+  it('queda vacío cuando solo hay próximos: no es una urgencia', () => {
+    const soloProximos = calcularPendientes({
+      articulos: [],
+      credenciales: [credencial({ id: 'c1', titulo: 'Hosting', venceEn: '2026-09-21' })],
+      camposProtegidos: [],
+      nombresDispositivosPorId: new Map(),
+      ejecuciones: [],
+      articulosDeSugerencia: [],
+      usuarioId: 'yo',
+      puedeVerBoveda: true,
+      limite: Infinity,
+      hoy: HOY,
+    })
+    expect(resumenUrgente(agruparAgenda(soloProximos))).toBe('')
   })
 })
 

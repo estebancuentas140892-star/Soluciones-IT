@@ -4,6 +4,7 @@ import { db } from '../../lib/db'
 import { obtenerRecientes, registrarVisita } from '../../lib/recientes'
 import {
   campoBuscador,
+  control,
   desmontarTodo,
   escribir,
   esperar,
@@ -14,22 +15,26 @@ import {
   pasoPrueba,
   sembrarGuia,
   sembrarPerfil,
+  textoPantalla,
   tocar,
   ubicacionActual,
 } from '../../pruebas/montaje'
 import { InicioPage } from '../inicio/InicioPage'
 import { AsistentePage } from './AsistentePage'
+import { GuiaPage } from './GuiaPage'
 
 // CUALQUIER USO REAL DE UNA GUÍA LA SUBE A RECIENTES (encargo del
 // 2026-09-16, caso H de la sección 16).
 //
 // Antes solo lo anotaba la ficha de la guía, y el "Empezar" del buscador
-// se la salta: la guía que de verdad se estaba ejecutando no aparecía en
+// se la saltaba: la guía que de verdad se estaba ejecutando no aparecía en
 // Inicio. Ahora la ejecución la anota también, con la misma clave, así
-// que pasar por las dos pantallas no crea dos recientes.
+// que pasar por las dos pantallas no crea dos recientes. Desde el
+// 2026-09-17 abrir la guía desde el resultado ES ejecutarla.
 
 const RUTAS = [
   { ruta: '/', elemento: <InicioPage /> },
+  { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> },
   { ruta: '/soluciones/:categoriaId/:articuloId/ejecutar', elemento: <AsistentePage /> },
 ]
 
@@ -50,14 +55,20 @@ afterEach(async () => {
 })
 
 describe('caso H: recientes de una guía que se empieza desde la búsqueda', () => {
-  it('Buscar y Empezar, sin pasar por la ficha, deja la guía en Recientes', async () => {
+  it('Buscar y abrir la guía la lleva a su paso 1 y la deja en Recientes', async () => {
     await montar(RUTAS, '/')
     const campo = await esperar(campoBuscador, 'el buscador de Inicio')
     await escribir(campo, 'impresora')
 
-    await tocar(await esperarControl(/^Empezar: "Configurar la impresora de prueba"/))
+    // La fila del resultado es la única puerta: ya no hay botón "Empezar".
+    expect(control(/^Empezar/)).toBeNull()
+    await tocar(await esperarControl(/^Configurar la impresora de prueba/))
 
-    await esperar(() => ubicacionActual().pathname.endsWith('/ejecutar'), 'la ejecución se abre')
+    await esperar(
+      () => ubicacionActual().pathname === '/soluciones/cat-pruebas/guia-impresora',
+      'la guía se abre en su propia dirección',
+    )
+    await esperar(() => textoPantalla().includes('Conectar el cable'), 'la guía abre directo en su paso 1')
     await esperarQue(async () => (await recientesDe('guia-impresora')) === 1, 'la guía queda en recientes')
     const recientes = await obtenerRecientes()
     expect(recientes.map((reciente) => reciente.titulo)).toContain('Configurar la impresora de prueba')

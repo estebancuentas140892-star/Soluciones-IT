@@ -99,32 +99,23 @@ export function accionDeGuia(
 }
 
 /**
- * El rotulo del control, para que la ficha y la tarjeta del catalogo
- * digan lo mismo. La tarjeta abrevia porque compite por ancho con el
- * titulo; la barra de la ficha tiene sitio para la frase entera.
+ * DONDE VA UNA GUIA A MEDIAS, dicho en la tarjeta del catalogo, o null
+ * si no hay nada que decir (encargo del 2026-09-17, sección 3).
+ *
+ * Hasta hoy esto era el rotulo de un BOTON ("Empecemos", "Continuar ·
+ * paso 2 de 3", "Repetir guía") que habia que tocar para entrar a la
+ * ejecucion, en la ficha y en cada tarjeta. Abrir la guia ya lleva al
+ * primer paso pendiente, y una guia terminada se abre en un caso nuevo,
+ * asi que el boton sobraba: queda la informacion, como una linea.
+ *
+ * Solo se dice cuando hay trabajo hecho que retomar. Una ejecucion
+ * abierta sin ningun paso cerrado no tiene "paso en el que vas".
  */
-export function etiquetaAccionGuia(accion: AccionGuia, variante: 'barra' | 'tarjeta'): string {
-  if (accion.estado === 'repetir') return 'Repetir guía'
-  // LA FICHA INVITA, LA TARJETA ROTULA (encargo del 2026-09-10, tarea
-  // 2). En la ficha la barra es la unica accion y va detras de toda la
-  // introduccion, asi que dice "Empecemos"; en el catalogo compite por
-  // ancho con el titulo de la guia y se queda en "Empezar".
-  if (accion.estado === 'empezar') return variante === 'barra' ? 'Empecemos' : 'Empezar'
-  if (accion.pendiente.tipo === 'verificacion') return 'Continuar con las comprobaciones finales'
-  if (accion.pendiente.tipo === 'paso') {
-    // La barra nombra el paso al que va, sin el total: el total ya lo
-    // dice la ficha, en su resumen de tiempo, dificultad y pasos.
-    return variante === 'tarjeta'
-      ? `Continuar · paso ${accion.pendiente.numero} de ${accion.total}`
-      : `Continuar en el paso ${accion.pendiente.numero}`
+export function lineaAvanceGuia(accion: AccionGuia | null | undefined): string | null {
+  if (!accion || accion.estado !== 'continuar') return null
+  if (accion.pendiente.tipo === 'verificacion') return 'Faltan las comprobaciones finales'
+  if (accion.pendiente.tipo === 'paso' && accion.pasosHechos > 0) {
+    return `Vas en el paso ${accion.pendiente.numero} de ${accion.total}`
   }
-  return 'Continuar'
-}
-
-/**
- * ¿Esta accion tiene que ESTRENAR ejecucion antes de navegar? Empezar y
- * repetir si; continuar conserva la abierta y no prepara nada.
- */
-export function estrenaEjecucion(accion: AccionGuia): boolean {
-  return accion.estado !== 'continuar'
+  return null
 }

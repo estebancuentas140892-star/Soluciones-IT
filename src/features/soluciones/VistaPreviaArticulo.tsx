@@ -50,9 +50,10 @@ interface Props {
 // 2026-09-10, tarea 2). La prueba montaba el procedimiento entero
 // debajo de la descripcion, que es justo lo que la ficha real dejo de
 // hacer: si la prueba no separa lo mismo, el autor no ve lo que vera el
-// tecnico. Ahora se entra por la presentacion y "Empecemos" abre el
-// procedimiento. "Probar" desde un paso del editor sigue entrando
-// directo a ese paso: ahi lo que se pide ver es el paso, no la ficha.
+// tecnico. Desde el 2026-09-17 se entra por los PASOS, como el tecnico
+// entra a la guia, y la presentacion queda a un toque ("Ver los detalles
+// de la guía"). "Probar" desde un paso del editor entra directo a ese
+// paso: ahi lo que se pide ver es el paso, no la ficha.
 export function VistaPreviaArticulo({
   articuloId,
   titulo,
@@ -72,10 +73,12 @@ export function VistaPreviaArticulo({
   // vinculadas ya dadas por hechas. Se calcula una sola vez por montaje.
   const [idEfimero] = useState(() => claveVistaPrevia(articuloId))
   const urlPortada = useUrlAdjunto(procedimiento?.portada?.referencia ?? null)
-  // "Probar" un paso concreto entra directo a la ejecución: lo que el
-  // autor acaba de pedir ver es ese paso, no la ficha.
-  const [enEjecucion, setEnEjecucion] = useState(pasoDestacadoId !== null)
   const hayPasos = procedimientoEjecutable(procedimiento)
+  // LA PRUEBA ENTRA COMO ENTRA EL TÉCNICO (encargo del 2026-09-17): abrir
+  // una guía con pasos lleva a los pasos, y la ficha queda a un toque.
+  // "Probar" un paso concreto también entra directo: lo que el autor
+  // acaba de pedir ver es ese paso.
+  const [enEjecucion, setEnEjecucion] = useState(() => pasoDestacadoId !== null || hayPasos)
 
   // LA PRUEBA NO SE BORRA A SI MISMA A MITAD DE SESION.
   //
@@ -143,16 +146,16 @@ export function VistaPreviaArticulo({
       <div className="mx-auto flex max-w-2xl flex-col gap-5 px-4 pt-5 pb-10">
         {enEjecucion ? (
           <>
-            {/* La salida de la ejecución de prueba: en la app real el
-                técnico sale con la X del modo ejecución, aquí vuelve a
-                la ficha sin cerrar la prueba ni perder lo marcado. */}
+            {/* Los detalles, a un toque: en la app real se abren desde el
+                índice de pasos; aquí se pasa a la presentación sin cerrar
+                la prueba ni perder lo marcado. */}
             <button
               type="button"
               onClick={() => setEnEjecucion(false)}
               className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg border border-noct-divider px-3 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.07]"
             >
               <ArrowLeft size={15} className="shrink-0" aria-hidden />
-              Volver a la presentación
+              Ver los detalles de la guía
             </button>
             <h1 className="text-xl font-semibold">{titulo || '(Sin título)'}</h1>
             {procedimiento && (
@@ -238,9 +241,7 @@ export function VistaPreviaArticulo({
               </article>
             )}
 
-            {/* La acción dominante, detrás de la información
-                introductoria: es la misma puerta que la barra inferior
-                de la ficha real. */}
+            {/* De vuelta a los pasos, que es por donde se entra. */}
             {hayPasos && (
               <button
                 type="button"
@@ -248,7 +249,7 @@ export function VistaPreviaArticulo({
                 className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18]"
               >
                 <Play size={17} className="shrink-0" aria-hidden />
-                Empecemos
+                Ver los pasos
               </button>
             )}
 

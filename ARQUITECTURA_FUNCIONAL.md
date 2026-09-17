@@ -213,6 +213,28 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: ninguna (comportamiento de interfaz). Dura en el código: `modoConsulta.ts` (`filaNavega`, `ofreceAccionDirecta`, `vistaRapidaDe`), con pruebas puras y de flujo.
 - Impacto: en el nivel `tarea` del chasis la capa se abre en modo consulta: las fichas que se pueden resolver ahí se consultan en su vista rápida, el resto queda como referencia sin enlace y no se ofrece empezar, continuar o repetir otra guía ni iniciar un diagnóstico.
 
+### Guías en ejecución (encargo del 2026-09-17, tarea 244)
+
+**RN-036. Abrir una guía con pasos es ejecutarla.**
+- Motivo: la app es un cuaderno operativo; entre abrir la guía y hacer el paso 1 no puede haber una portada con un botón (AD-040).
+- Entidades: Artículo, ProgresoPasos. Dura en el código: `GuiaPage` (dirección `/soluciones/:categoria/:articulo`), `procedimientoEjecutable`.
+- Impacto: con pasos, la dirección abre la ejecución en el primer paso pendiente; sin pasos, la lectura. La ficha de una guía con pasos vive en `/detalles`. `/ejecutar` redirige a la guía. Ninguna dirección cambia de significado para un enlace guardado: sigue llevando a la misma guía.
+
+**RN-037. Abrir una guía terminada estrena un caso; abrir una a medias la retoma.**
+- Motivo: quien abre una guía que ya terminó viene a hacerla otra vez; quien la dejó a medias, a seguir (AD-040, decisión 2).
+- Entidades: ProgresoPasos. Dura en el código: `AsistenteVista` (lectura inicial), `guiaTerminada`, `reiniciarProgreso`.
+- Impacto: solo en la guía principal (nivel 0). Si el avance guardado cumple `guiaTerminada` (pasos cerrados y comprobaciones finales hechas), se borra al abrir y se entra en el paso 1. Si hay avance a medias se entra en el primer paso pendiente y se ofrece empezar de nuevo; nada se borra sin ese gesto. Dentro de una ejecución, una guía vinculada terminada se respeta.
+
+**RN-038. Un aviso nunca detiene el recorrido, y su tono decide cómo se ve.**
+- Motivo: confirmar cada aviso enseñaba a no leerlos; una alerta solo destaca si hay pocas y están donde aplican (AD-040, decisión 3; regla 20 de REGLAS.md).
+- Entidades: BloquePaso (`tono`, `alcance`, `tareaId`). Dura en el código: `presenciaDeAviso` (tonos.ts), `tareasParaFoco` y `avisosDeTareaFoco` (tareasFoco.ts), con pruebas.
+- Impacto: precaución e importante, alerta antes de la instrucción de su tarea; dato técnico, a la vista sin color de alerta; información y consejo, plegados. Los avisos del paso (o heredados sin asignar) van solo con la primera acción del paso. Un aviso no cuenta como tarea, no se confirma, no se guarda en el avance y no se deduplica por texto.
+
+**RN-039. "Antes de empezar" solo se muestra al empezar, y solo si hay requisitos.**
+- Motivo: los requisitos son lo que debe estar listo antes del paso 1; repetirlos a mitad del trabajo, o enseñar una sección vacía, es lectura sin utilidad (regla 20b).
+- Entidades: Procedimiento (`requisitos`), ProgresoPasos. Dura en el código: `AsistenteVista` (`requisitosVisibles`), `AntesDeEmpezar`.
+- Impacto: se muestra sobre la primera acción del paso 1 cuando la ejecución no tiene ninguna tarea ni paso marcado, en las dos vistas de la ejecución. En los detalles de la guía se sigue leyendo siempre.
+
 ---
 
 ## 3. Modelo entidad-relación
@@ -382,6 +404,8 @@ stateDiagram-v2
 - **Declarar una falla muestra el paso entero sin cambiar la preferencia.** Es una excepción atada al id del paso, del mismo tipo que el aviso de falla: al pasar al siguiente deja de aplicar. Saltar un paso, en cambio, no cambia de vista.
 
 El `vinculoProtegido` de un paso es puramente informativo: no participa en ninguna condición de completado. Los subprocedimientos se ejecutan inline solo en el nivel 0; más profundo se muestran como enlace.
+
+**Entrada y salida de la ejecución (2026-09-17, tarea 244).** La máquina de estados no cambia; cambia cómo se llega a ella. Abrir la guía ES entrar a la ejecución (RN-036), una guía terminada se abre como caso nuevo y una a medias en su primer paso pendiente (RN-037). Los avisos ya no son elementos del recorrido ni se confirman (RN-038): el recorrido de la vista por acción es solo trabajo (guía del paso, tareas o tarea única). La acción en la que arranca la vista se decide con la lectura en vivo del avance ya resuelta (`avanceCargado`): antes podía decidirse con la lectura a medias y abrir una guía retomada en una acción ya hecha. Al terminar, la pantalla ofrece salir (al origen del salto, igual que la X) y empezar de nuevo. El cronómetro de sesión se retiró.
 
 ---
 
@@ -561,13 +585,17 @@ La auditoría es de buena fe del equipo: se registra desde el cliente en el mome
 
 ### 11.1 Fuente única de la jerarquía
 
-El botón "Volver"/"Cancelar" es navegación "Up" (padre lógico declarado), no `history.back()`. `src/lib/navegacion.ts` (`padreDe`) es la única fuente de qué pantalla es superior a cuál. Regla: la creación y las fichas de contenido suben a la lista de su sección; la edición y el asistente suben a la ficha de la entidad. Único override en tiempo de ejecución: la ficha de un equipo de red vuelve a `/red` en vez de a `/dispositivos`.
+El botón "Volver"/"Cancelar" es navegación "Up" (padre lógico declarado), no `history.back()`. `src/lib/navegacion.ts` (`padreDe`) es la única fuente de qué pantalla es superior a cuál. Regla: la creación y las fichas de contenido suben a la lista de su sección; la edición sube a la ficha de la entidad. Único override en tiempo de ejecución: la ficha de un equipo de red vuelve a `/red` en vez de a `/dispositivos`.
+
+**Guías, desde el 2026-09-17 (tarea 244).** La guía (`/soluciones/:cat/:art`, que se abre ejecutándose) sube a la lista con el chip de su categoría; sus detalles (`/detalles`) suben a la guía; la edición sube a los detalles; la dirección antigua `/ejecutar` sube como la guía. La agenda (`/agenda`) sube a Inicio.
+
+**Pestañas del teléfono, desde el 2026-09-17.** Tres: Inicio, Guías y Más. `pestanaMovilDe(pathname)` decide cuál se ilumina (Inicio cubre `/agenda`, Guías todo `/soluciones`, Más el resto). Equipos, Red y la Bóveda siguen en `RAICES_DE_PESTANA` (raíces en escritorio, filtros recordados, transición lateral) y además en `SECCIONES_EN_MAS`: en el teléfono su cabecera lleva un regreso a Más (`esSeccionEnMas`).
 
 ### 11.2 Chasis de tres niveles
 
 Un solo envoltorio de pantalla, `src/app/Chasis.tsx` (tarea 185), con `modo = seccion | documento | tarea`. Cada pantalla declara su nivel y ninguna inventa un cuarto (regla **R18**):
 
-- **`seccion`**: raíz de una pila (las cinco pestañas más la Bóveda). Barra superior de tres ranuras y barra de pestañas.
+- **`seccion`**: raíz de una pila (Inicio, Guías y Más, que son las pestañas del teléfono, más Equipos, Red y la Bóveda, que se abren desde Más). Barra superior de tres ranuras y barra de pestañas.
 - **`documento`**: algo que se lee o se recorre dentro de una sección. Fila de regreso y acciones propias; **conserva** la barra de pestañas.
 - **`tarea`**: algo que se hace y de lo que se sale (editor, asistente, escáner, importador, migración). Es el único nivel sin barra de pestañas, y en su lugar pone una `BarraTarea` que dice qué se hace, sobre qué y a dónde se vuelve (regla **R19**).
 

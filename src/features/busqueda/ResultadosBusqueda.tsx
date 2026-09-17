@@ -6,7 +6,7 @@ import { conOrigen } from '../../lib/origenNavegacion'
 import { useAccionesDeGuia } from '../soluciones/useAccionesDeGuia'
 import { AccionesDeResultado } from './AccionesResultado'
 import { useAnotarBusqueda } from './busquedaEnHistorial'
-import { ContextoResultados, useContextoResultados } from './contextoResultados'
+import { ContextoResultados, idDeEntidad, useContextoResultados } from './contextoResultados'
 import { hayQueSepararMejores, mejoresResultados, sinLosMejores, subtituloConTipo } from './mejores'
 import { eventoDeResolucion, registrarResolucion } from './medicion'
 import { filaNavega, vistaRapidaDe, type ModoBuscador } from './modoConsulta'
@@ -66,6 +66,7 @@ export function FilaResultado({
   desdeMejores?: boolean
 }) {
   const {
+    accionesGuia,
     onNavegar,
     onResolver,
     consulta: consultaCruda,
@@ -131,6 +132,22 @@ export function FilaResultado({
         // tambien la busqueda, que el regreso repone (seccion 13).
         state={estadoDeSalto}
         onClick={() => {
+          // ABRIR UNA GUIA ES EMPEZARLA O RETOMARLA (encargo del
+          // 2026-09-17): la guia se abre en su primer paso pendiente, asi
+          // que su antiguo boton "Empezar" repetia este enlace y se retiro.
+          // El recorrido cuenta igual, con el verbo que corresponde.
+          const accionGuia = resultado.tipo === 'articulo' ? accionesGuia.get(idDeEntidad(resultado.id)) : undefined
+          if (accionGuia) {
+            onResolver(
+              eventoDeResolucion({
+                accion: accionGuia.estado === 'continuar' ? 'continuar_guia' : 'empezar_guia',
+                tipo: resultado.tipo,
+                desdeMejores,
+                consulta: consultaCruda,
+                huboDesbloqueo,
+              }),
+            )
+          }
           // Abrir un equipo ES la accion de un equipo: no lleva boton
           // propio (seria repetir este enlace), pero el recorrido cuenta.
           if (resultado.tipo === 'dispositivo') {

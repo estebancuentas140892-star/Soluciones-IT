@@ -151,7 +151,7 @@ export function BarraReanudar({
   if (variante === 'tarjeta') {
     return (
       <Link
-        to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
+        to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
         className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text hover:bg-noct-accent/[.13]"
       >
         <span className="flex items-center gap-[11px]">
@@ -190,7 +190,7 @@ export function BarraReanudar({
     return (
       <div className="flex flex-col items-center gap-1 rounded-xl border border-noct-accent/40 bg-noct-bg/60 p-1.5 xl:flex-row xl:items-center xl:gap-1.5 xl:p-2">
         <Link
-          to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
+          to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
           title={`Seguir "${articulo.titulo}", paso ${hechos + 1} de ${total}`}
           className="flex min-w-0 items-center gap-2 text-noct-text xl:flex-1"
         >
@@ -238,7 +238,7 @@ export function BarraReanudar({
           // barra sigue siendo el enlace y el descarte por deslizamiento
           // sigue funcionando; desplazarse hacia arriba la devuelve.
           <Link
-            to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
+            to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
             className="flex min-w-0 flex-1 items-center gap-2 text-noct-text"
           >
             <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" />
@@ -252,7 +252,7 @@ export function BarraReanudar({
         ) : (
           <>
             <Link
-              to={`/soluciones/${articulo.categoriaId}/${articulo.id}/ejecutar`}
+              to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
               className="flex min-w-0 flex-1 items-center gap-2.5 text-noct-text"
             >
               <IndicadorAvance hechos={hechos} total={total} size={30} className="shrink-0" />

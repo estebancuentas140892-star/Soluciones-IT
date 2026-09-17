@@ -38,6 +38,40 @@ export interface Padre {
 export const RAICES_DE_PESTANA = ['/soluciones', '/dispositivos', '/red', '/boveda', '/mas', '/']
 const TABS = new Set(RAICES_DE_PESTANA)
 
+// LAS GUÍAS EN EL CENTRO (encargo del 2026-09-17, secciones 1 y 10).
+//
+// En el teléfono la barra de pestañas se queda con Inicio, Guías y Más.
+// Equipos, Red y la Bóveda siguen siendo secciones completas (en
+// escritorio, raíces de la barra lateral; aquí, raíces de su pila), pero
+// dejan de competir con buscar y resolver un procedimiento: se abren
+// desde Más. Por eso siguen en `RAICES_DE_PESTANA` (no muestran "Volver"
+// en escritorio, recuerdan su filtro, cambian de lado con un fundido) y
+// además se listan aquí, para que en el teléfono lleven un regreso a Más.
+export const SECCIONES_EN_MAS = ['/dispositivos', '/red', '/boveda']
+
+/**
+ * ¿Es la raíz de una sección que en el teléfono se abre desde Más? Su
+ * cabecera lleva entonces un regreso a Más, solo en el teléfono.
+ */
+export function esSeccionEnMas(pathname: string): boolean {
+  const ruta = pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
+  return SECCIONES_EN_MAS.includes(ruta)
+}
+
+/**
+ * Qué pestaña del teléfono se ilumina en esta ruta. Inicio cubre también
+ * su agenda; Guías, todo lo que cuelga de `/soluciones`; y Más, todo lo
+ * demás, porque todo lo demás se abre desde Más. Antes cada pestaña se
+ * iluminaba solo dentro de su propia ruta, así que en Personas o en el
+ * Centro de consulta no se encendía ninguna y nada decía dónde se estaba.
+ */
+export function pestanaMovilDe(pathname: string): '/' | '/soluciones' | '/mas' {
+  const ruta = pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
+  if (ruta === '/' || ruta === '/agenda') return '/'
+  if (ruta === '/soluciones' || ruta.startsWith('/soluciones/')) return '/soluciones'
+  return '/mas'
+}
+
 // ¿Es la raíz de una pestaña? La usa el cálculo de dirección de las
 // transiciones (tarea 187, R21): cambiar de una raíz a otra es un
 // movimiento lateral (fundido), no "entrar" ni "volver", aunque sus
@@ -82,11 +116,18 @@ export function padreDe(pathname: string): Padre | null {
   switch (seccion) {
     case 'soluciones': {
       // a = categoriaId. Rutas bajo una categoría:
-      //   /soluciones/:cat                 ficha de categoría  -> lista
-      //   /soluciones/:cat/nuevo           crear artículo      -> lista + chip
-      //   /soluciones/:cat/:art            ficha de artículo   -> lista + chip
-      //   /soluciones/:cat/:art/editar     editar artículo     -> ficha
-      //   /soluciones/:cat/:art/ejecutar   asistente           -> ficha
+      //   /soluciones/:cat                 ficha de categoría   -> lista
+      //   /soluciones/:cat/nuevo           crear artículo       -> lista + chip
+      //   /soluciones/:cat/:art            la guía (ejecución)  -> lista + chip
+      //   /soluciones/:cat/:art/detalles   ficha de la guía     -> la guía
+      //   /soluciones/:cat/:art/editar     editar artículo      -> ficha
+      //   /soluciones/:cat/:art/ejecutar   dirección antigua    -> lista + chip
+      //
+      // Desde el 2026-09-17 abrir una guía con pasos ES ejecutarla (ver
+      // `GuiaPage`): la dirección de la guía es la ejecución y la ficha
+      // baja a `/detalles`, que vuelve a la guía. Editar sube a la ficha,
+      // que es donde se decide editar y donde se ve la versión guardada.
+      // `/ejecutar` solo redirige a la guía; su padre es el de la guía.
       const lista: Padre = { to: '/soluciones', etiqueta: 'Guías' }
       if (!a) return lista
       // La categoría es un FILTRO de la lista (decisión del usuario,
@@ -94,8 +135,9 @@ export function padreDe(pathname: string): Padre | null {
       const listaConChip: Padre = { to: `/soluciones?categoria=${a}`, etiqueta: 'Guías' }
       if (!b) return lista // ficha de categoría -> lista principal
       if (b === 'nuevo') return listaConChip
-      if (!c) return listaConChip // ficha de artículo -> lista con su chip
-      return { to: `/soluciones/${a}/${b}`, etiqueta: 'Volver' } // editar/ejecutar -> ficha
+      if (!c || c === 'ejecutar') return listaConChip // la guía -> lista con su chip
+      if (c === 'detalles') return { to: `/soluciones/${a}/${b}`, etiqueta: 'Guía' }
+      return { to: `/soluciones/${a}/${b}/detalles`, etiqueta: 'Volver' } // editar -> ficha
     }
     case 'dispositivos': {
       // /dispositivos/:id/editar, /dispositivos/:id/baja y

@@ -27,7 +27,7 @@ import { ChipReferencia } from '../referencia/ChipReferencia'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
-import { tonoInfo } from './tonos'
+import { presenciaDeAviso, tonoInfo } from './tonos'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import {
   fraseAvanceDocumento,
@@ -909,6 +909,26 @@ export function BloqueVista({
 }) {
   if (bloque.tipo === 'aviso') {
     const tono = tonoInfo(bloque.tono)
+    const presencia = presenciaDeAviso(bloque.tono)
+    // SOLO LOS RIESGOS SE VEN COMO ALERTA (encargo del 2026-09-17,
+    // secciones 6 y 7): la misma regla que la ejecución de una acción a
+    // la vez. Una información o un consejo es una nota, y un dato técnico
+    // se lee a la vista pero sin el color de una advertencia; si todo va
+    // con fondo de color, la precaución real deja de destacar.
+    if (presencia !== 'alerta') {
+      return (
+        <p
+          className={`flex items-start gap-2.5 px-1 py-1 text-[13px] leading-normal ${
+            presencia === 'dato' ? 'rounded-lg bg-noct-text/[.05] px-3 py-2 text-noct-text' : 'text-noct-neutral-300'
+          }`}
+        >
+          <tono.Icono size={15} className="mt-[2px] shrink-0 text-noct-neutral-400" aria-hidden />
+          <span className="min-w-0">
+            <span className="font-medium text-noct-neutral-400">{tono.etiqueta}.</span> {bloque.texto}
+          </span>
+        </p>
+      )
+    }
     // Decisión 9 de P2: el aviso dice SU PALABRA además del color. Un
     // ámbar no significa nada por sí solo para quien no conoce el
     // sistema, y a pleno sol puede no distinguirse (R16: estado en dos

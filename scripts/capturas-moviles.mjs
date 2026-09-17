@@ -18,9 +18,17 @@ const PUERTO = 9333
 
 const ANCHOS = [360, 390, 430]
 
-// Cada parada: nombre del archivo, ruta y guion opcional que deja la
-// pantalla en el estado que hay que fotografiar.
+// Recorridos del encargo del 2026-09-17 ("resolver rápido con guías"):
+// abrir una guía entra a su paso pendiente (ya no hay `/ejecutar` ni
+// ficha por delante), los avisos acompañan a su acción y la navegación
+// del teléfono es Inicio, Guías y Más.
+const tocar = (texto) =>
+  `const el=[...document.querySelectorAll('button, a')].find(b=>((b.getAttribute('aria-label')||b.textContent||'').replace(/\\s+/g,' ').trim()).startsWith(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500));`
+const siguiente = `const s=[...document.querySelectorAll('button')].find(b=>b.textContent.replace(/\\s+/g,' ').trim()==='Siguiente'); s?.click(); await new Promise(r=>setTimeout(r,500));`
+
 const PARADAS = [
+  { nombre: 'inicio', ruta: '/' },
+  { nombre: 'inicio-buscando', ruta: '/', guion: `const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,'caja'); c.dispatchEvent(new Event('input',{bubbles:true}));` },
   { nombre: 'catalogo', ruta: '/soluciones' },
   {
     nombre: 'catalogo-titulo-largo',
@@ -28,38 +36,25 @@ const PARADAS = [
     guion: `const el=[...document.querySelectorAll('a')].find(a=>a.textContent.includes('Configurar las paginas'));
             el?.scrollIntoView({block:'center'});`,
   },
-  {
-    nombre: 'hoja-categorias',
-    ruta: '/soluciones',
-    guion: `[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Categorías'))?.click();`,
-  },
-  { nombre: 'ficha-con-avance', ruta: '/soluciones/cat-impresoras/art-recurso-compartido' },
-  { nombre: 'foco-apoyos-tarea-1', ruta: '/soluciones/cat-impresoras/art-alcance-tarea/ejecutar' },
-  {
-    nombre: 'foco-apoyos-tarea-2',
-    ruta: '/soluciones/cat-impresoras/art-alcance-tarea/ejecutar',
-    guion: `[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')||'').startsWith('Ver la tarea siguiente'))?.click();`,
-  },
-  {
-    nombre: 'foco-del-paso-desplegado',
-    ruta: '/soluciones/cat-impresoras/art-recurso-compartido/ejecutar',
-    guion: `[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Del paso'))?.click();`,
-  },
-  { nombre: 'guia-vinculada', ruta: '/soluciones/cat-software/art-alta-usuario/ejecutar' },
-  { nombre: 'vinculo-roto', ruta: '/soluciones/cat-software/art-vinculo-roto/ejecutar' },
-  {
-    nombre: 'decision',
-    ruta: '/soluciones/cat-pos/art-decision/ejecutar',
-    guion: `[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')||'').startsWith('Ver la tarea siguiente'))?.click();`,
-  },
-  {
-    nombre: 'verificacion',
-    ruta: '/soluciones/cat-pos/art-decision/ejecutar',
-    guion: `const sig=()=>[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')||'').startsWith('Ver la tarea siguiente'));
-            sig()?.click(); await new Promise(r=>setTimeout(r,300)); sig()?.click();`,
-  },
+  { nombre: 'mas', ruta: '/mas' },
+  { nombre: 'equipos-desde-mas', ruta: '/dispositivos' },
+  { nombre: 'agenda', ruta: '/agenda' },
+  { nombre: 'guia-paso-1-con-requisitos', ruta: '/soluciones/cat-pos/art-tonos' },
+  { nombre: 'guia-dato-y-plegado', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente },
+  { nombre: 'guia-mas-informacion', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente + tocar('Más información') },
+  { nombre: 'guia-alerta-importante', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente + siguiente },
+  { nombre: 'guia-retomada', ruta: '/soluciones/cat-impresoras/art-recurso-compartido' },
+  { nombre: 'guia-apoyos-tarea-1', ruta: '/soluciones/cat-impresoras/art-alcance-tarea' },
+  { nombre: 'guia-apoyos-tarea-2', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', guion: siguiente },
+  { nombre: 'guia-indice', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', guion: tocar('Paso 1 de 2. Abrir el índice') },
+  { nombre: 'guia-vinculada', ruta: '/soluciones/cat-software/art-alta-usuario' },
+  { nombre: 'vinculo-roto', ruta: '/soluciones/cat-software/art-vinculo-roto' },
+  { nombre: 'decision', ruta: '/soluciones/cat-pos/art-decision', guion: siguiente },
+  { nombre: 'problema', ruta: '/soluciones/cat-pos/art-decision', guion: tocar('Tengo un problema') },
+  { nombre: 'detalles', ruta: '/soluciones/cat-impresoras/art-recurso-compartido/detalles' },
   { nombre: 'editor-pasos', ruta: '/soluciones/cat-impresoras/art-alcance-tarea/editar', guion: `[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Pasos')?.click();` },
 ]
+
 
 // AUDITORIA EN LA PAGINA (cambio 4 del encargo del 2026-09-09). Busca
 // lo que una captura no delata sola: texto recortado por overflow, un

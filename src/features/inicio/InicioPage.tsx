@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import { obtenerFavoritos } from '../../lib/favoritos'
 import { obtenerRecientes, type ElementoReciente } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { BarraReanudar } from '../../components/BarraReanudar'
@@ -9,18 +10,15 @@ import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   BookBookmark,
   BookOpen,
-  CaretDown,
   CaretRight,
-  Check,
   ClockCounterClockwise,
   type IconoProps,
-  Lightbulb,
-  LockSimple,
   MagnifyingGlass,
   Monitor,
-  PencilSimple,
   Plus,
+  Star,
   TreeStructure,
+  WarningCircle,
 } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
@@ -32,67 +30,53 @@ import { coincidenciaArticulo } from '../soluciones/coincidencia'
 import { tarjetaReanudarVisible, useReanudar } from '../soluciones/useReanudar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
-import type { ItemPendiente } from './pendientes'
-import { agruparAgenda, asuntosUrgentes, fechaDeHoy, resumenAgenda } from './agenda'
+import { agruparAgenda, asuntosUrgentes, resumenUrgente } from './agenda'
 import { usePendientes } from './usePendientes'
 
-// Pantalla de Inicio en el sistema Nocturne. Un buscador global que
-// atraviesa guías, equipos y bóveda, y, cuando no se busca, lo que el
-// técnico necesita al abrir la app. Declara nivel de sección en el
-// chasis único (tarea 185), que le pone sidebar en escritorio y
+// Pantalla de Inicio en el sistema Nocturne. Declara nivel de sección en
+// el chasis único (tarea 185), que le pone sidebar en escritorio y
 // pestañas en móvil.
 //
-// UNA AGENDA OPERATIVA, NO UNA COLECCIÓN DE BLOQUES (encargo del
-// 2026-09-11, tarea 2). Inicio apilaba cosas sin relación entre sí, y
-// la peor era "Te toca a ti": mezclaba una clave vencida hace medio
-// año, un borrador propio y una sugerencia de OTRO técnico bajo un
-// rótulo que además mentía. Al entrar no se podía responder la única
-// pregunta de las 8 de la mañana: ¿qué tengo que hacer hoy?
+// INICIO ES PARA RESOLVER (encargo del 2026-09-17, secciones 1 y 2).
+//
+// Soluciones IT se abre con algo que hacer: "no recuerdo cómo se hace
+// esto". El recorrido que tiene que salir bien es abrir, buscar, entrar a
+// la guía, hacer el paso y seguir. Hasta hoy Inicio era la agenda
+// operativa (fecha, resumen, vencidos, para hoy, próximos, en curso y
+// sugerencias del equipo): útil, pero ocupaba la pantalla con
+// vencimientos de la Bóveda justo donde se venía a buscar un
+// procedimiento.
 //
 // Ahora, de arriba abajo:
-//   1. buscador global        5. Para hoy
-//   2. fecha de hoy (es-CO)   6. Próximos
-//   3. resumen de una línea   7. En curso
-//   4. Vencidos               8. Por revisar del equipo
 //
-// El reparto en grupos es lógica pura y vive en `agenda.ts`: la fecha
-// manda, y cada ítem cae en UN grupo, así que nada se duplica. Sigue
-// sin haber entidad "tarea" ni tabla de recordatorios: es una vista
-// derivada de datos que ya existen.
+//   1. la pregunta y el buscador global, lo primero y lo más grande;
+//   2. una línea SOLO si hay algo urgente (vencido o para hoy), que lleva
+//      a la agenda completa (`AgendaPage`);
+//   3. Continuar: la guía que quedó a medias, en el paso donde iba;
+//   4. Favoritas: las guías que el técnico marcó con la estrella, las que
+//      usa siempre;
+//   5. Recientes: lo último que abrió en este teléfono.
 //
-// Las DOS formas de fila (M-R6, "una fila, un significado"):
-// `FilaAgenda` para lo que el técnico debe resolver (56 px, título de
-// 15 px, la razón en el color de su estado y el origen al lado) y
-// `FilaInfo` para lo que solo se consulta (44 px, 13,5 px, sin cuadrado
-// de color ni galón).
+// Nada se inventa: favoritos, recientes y el avance ya existían. No hay
+// estadísticas ni "más usadas" (no hay un dato honesto detrás), ni
+// tarjetas de adorno.
 
-// Cuántas filas se ven antes de "Ver los otros N". Dos bastan para
-// reconocer si hay algo urgente; el resto está a un toque y sin cambiar
-// de pantalla.
-const FILAS_VISIBLES = 2
-
-// "Próximos" muestra tres y guarda el resto tras "Ver los otros N": son
-// avisos, no urgencias, y una lista larga de fechas futuras empuja
-// fuera de pantalla lo que sí hay que hacer hoy.
-const PROXIMOS_VISIBLES = 3
-
-// "Recientes" son tres y nunca más: es un atajo a lo que ya se usó, no
-// un historial. Cuatro filas empezarían a competir con la agenda.
-const MAX_RECIENTES_INICIO = 3
+// Cuántas filas de recientes. Cinco caben en un teléfono sin empujar la
+// pantalla, y son atajos, no un historial.
+const MAX_RECIENTES_INICIO = 5
 
 export function InicioPage() {
   // VOLVER CON LA BÚSQUEDA ESCRITA (encargo del 2026-09-16, sección 13).
   // Abrir una ficha desde un resultado y volver (con el regreso de la app
   // o con el botón atrás del teléfono) repone lo que estaba escrito en
-  // este campo, en vez de dejar la agenda y obligar a teclearlo otra vez.
-  // Viaja en el estado de navegación, nunca en la URL ni en localStorage.
+  // este campo. Viaja en el estado de navegación, nunca en la URL ni en
+  // localStorage.
   const { restaurada, descartar } = useBusquedaRestaurada()
   const repuesta = restaurada && !restaurada.capa ? restaurada.consulta : ''
   const [query, setQuery] = useState(repuesta)
   // Vaciar el campo repuesto es dar la búsqueda por terminada: se olvida
   // también en el historial, para que volver más tarde a Inicio no la
-  // reponga. Solo la de este campo: la de la capa global la gestiona la
-  // propia capa.
+  // reponga.
   useEffect(() => {
     if (repuesta !== '' && query === '') descartar()
   }, [repuesta, query, descartar])
@@ -101,8 +85,7 @@ export function InicioPage() {
   const [huboDesbloqueo, setHuboDesbloqueo] = useState(false)
   // El input usa `query` directo (nunca se atrasa); todo lo derivado de
   // buscar y pintar resultados usa la version diferida, para que
-  // escribir se sienta instantaneo aunque la busqueda o la lista de
-  // resultados tarden un poco mas en ponerse al dia.
+  // escribir se sienta instantaneo.
   const queryDiferida = useDeferredValue(query)
   const consultaCruda = queryDiferida.trim()
   const consulta = normalizarTexto(consultaCruda)
@@ -112,17 +95,9 @@ export function InicioPage() {
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
 
   // ALCANCES DISTINTOS, DICHOS EN VOZ ALTA (hallazgo H09, criterio A16).
-  //
-  // El buscador global solo indexa lo PUBLICADO (`useIndiceBusqueda`
-  // filtra por estado), mientras que la lista de Guías muestra también
-  // los borradores marcados como tales. Buscar "almuerzo" aquí decía
-  // "Sin coincidencias" y ofrecía "Crear equipo", mientras que la misma
-  // palabra en Guías encontraba el borrador: la diferencia era real y
-  // no estaba explicada en ninguna parte.
-  //
-  // No se cambia el alcance (un borrador no debe aparecer como si fuera
-  // procedimiento oficial del equipo): se cuenta cuántos hay y se
-  // ofrece ir a verlos, identificados como borradores.
+  // El buscador global solo indexa lo PUBLICADO; la lista de Guías
+  // muestra también los borradores marcados como tales. Si solo un
+  // borrador coincide, se dice y se ofrece ir a verlo.
   const borradores = useLiveQuery(
     () => db.articulos.filter((a) => !a.eliminadoEn && (a.estado ?? 'publicado') !== 'publicado').toArray(),
     [],
@@ -133,80 +108,72 @@ export function InicioPage() {
     [borradores, consulta],
   )
 
-  // Pendientes (fase J-D5 de PROPUESTA_JORNADA_TECNICO.md): bloque
-  // derivado de lo que ya significa "pendiente" en los datos reales, sin
-  // tabla ni esquema nuevos. Las cinco consultas viven en `usePendientes`
-  // (tarea 187): el chasis también las necesita, para el número de la
-  // pestaña Inicio.
+  // LO URGENTE DE LA AGENDA, Y NADA MÁS. Los mismos pendientes que cuenta
+  // el número de la pestaña (vencidos y para hoy); la agenda entera vive
+  // en su pantalla.
   const perfil = usePerfilVivo()
   const pendientes = usePendientes()
-  // La agenda del día: los mismos pendientes, repartidos por FECHA en
-  // los cinco grupos que el técnico usa para decidir (agenda.ts). Cada
-  // ítem cae en uno solo, así que nada se cuenta ni se pinta dos veces.
   const agenda = useMemo(() => agruparAgenda(pendientes), [pendientes])
-  const resumen = resumenAgenda(agenda)
   const urgentes = asuntosUrgentes(agenda)
-  const hoyTexto = useMemo(() => fechaDeHoy(), [])
 
-  // UNA SOLA TARJETA DE REANUDAR (hallazgo M-013). El procedimiento a
-  // medias se dibujaba de varias formas que parecían cosas distintas y
-  // eran la misma. Inicio lee `useReanudar`, el mismo dato que el
-  // bloque "Sin terminar" de Guías, y pinta el componente en su tamaño
-  // grande. La barra flotante global se retiró; la comprobación que
-  // preguntaba si estaba visible desaparece con ella (valía lo mismo
-  // que tener algo que reanudar, así que anulaba la tarjeta siempre).
+  // UNA SOLA TARJETA DE REANUDAR (hallazgo M-013): el mismo dato que la
+  // agenda, en su tamaño grande. Entra a la guía en el paso donde iba.
   const reanudar = useReanudar()
   const hayQueReanudar = tarjetaReanudarVisible(reanudar)
+  const idReanudar = hayQueReanudar ? (reanudar.actual?.articulo.id ?? null) : null
 
   // Bienvenida del primer día (tarea 184): se muestra mientras falte
-  // alguno de sus tres pasos Y esta pantalla no tenga todavía bloques
-  // propios. Sin valor por defecto, `useLiveQuery` devuelve `undefined`
-  // hasta que resuelve: es la señal de "ya sé lo que hay" que evita
-  // enseñar la bienvenida un instante a quien sí tiene trabajo a medias.
+  // alguno de sus tres pasos Y no haya todavía trabajo real. Sin valor
+  // por defecto, `useLiveQuery` devuelve `undefined` hasta que resuelve:
+  // es la señal de "ya sé lo que hay" que evita enseñarla un instante a
+  // quien sí tiene trabajo a medias.
   const consultasListas = useLiveQuery(() => db.progresoPasos.count(), []) !== undefined
   const hayBloquesReales = pendientes.length > 0 || reanudar.actual != null
 
-  // RECIENTES (encargo del 2026-09-15, tarea 241, sección 11). Tres
-  // como máximo, derivados de la actividad real de este teléfono
-  // (`recientes`, la tabla que ya se escribía al abrir una guía o un
-  // equipo y que desde esta tarea también anota diagnósticos y fichas
-  // del Centro de consulta). No hay tabla nueva ni favoritos a mano.
-  //
-  // La bóveda no aparece aquí, ni desbloqueada: `recientes` NO anota
-  // credenciales, así que no hay nada que filtrar ni que decidir. Es una
-  // garantía del dato, no una condición de la pantalla.
-  const recientes = useLiveQuery(() => obtenerRecientes(MAX_RECIENTES_INICIO), [], [])
+  // FAVORITAS: las guías marcadas con la estrella en ESTE teléfono (la
+  // misma marca de siempre, `favoritos`). Solo guías: Inicio es para
+  // resolver con guías, y los equipos y diagnósticos favoritos siguen en
+  // Más.
+  const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
+  const favoritas = useMemo(() => favoritos.filter((f) => f.tipo === 'articulo'), [favoritos])
+
+  // RECIENTES (tarea 241): lo último abierto en este teléfono. Se quita
+  // lo que ya está a la vista arriba (la guía de "Continuar" y las
+  // favoritas): la misma guía dos veces en la misma pantalla es ruido. La
+  // bóveda no aparece nunca: `recientes` no anota credenciales.
+  const recientesCrudos = useLiveQuery(() => obtenerRecientes(MAX_RECIENTES_INICIO + 8), [], [])
+  const recientes = useMemo(() => {
+    const yaVisibles = new Set(favoritas.map((f) => f.clave))
+    if (idReanudar) yaVisibles.add(`articulo:${idReanudar}`)
+    return recientesCrudos.filter((r) => !yaVisibles.has(r.clave)).slice(0, MAX_RECIENTES_INICIO)
+  }, [recientesCrudos, favoritas, idReanudar])
+
+  const sinNadaQueMostrar = !hayQueReanudar && favoritas.length === 0 && recientes.length === 0
 
   return (
-    // Nivel 1 del chasis (tarea 185): raíz de su pila. El titulo
-    // ("Inicio", regla R12), el estado del dato y la cuenta los aporta el
-    // chasis (tarea 181).
+    // Nivel 1 del chasis (tarea 185): raíz de su pila.
     //
     // `conLupa={false}` (regla M-R8, "un buscador por pantalla"): esta
-    // pantalla trae su propio campo de búsqueda en línea, con el alcance
-    // escrito, así que la lupa del chasis sería el segundo buscador de
-    // la misma pantalla. Se apaga aquí y solo aquí; en las otras cuatro
-    // secciones la lupa ES el buscador.
+    // pantalla trae su propio campo de búsqueda en línea, así que la lupa
+    // del chasis sería el segundo buscador de la misma pantalla.
     <Chasis
       titulo="Inicio"
       conLupa={false}
       barra={
-        <div className="px-4 pb-3 pt-2">
-          {/* LA PREGUNTA, NO EL MÓDULO (encargo del 2026-09-15, tarea
-              241, sección 1). El campo decía "Buscar en Soluciones IT",
-              que es cierto pero obliga a traducir: el técnico no llega
-              con ganas de buscar, llega con algo que resolver. La
-              etiqueta accesible sigue nombrando el alcance (regla M-R8),
-              que es lo que distingue este buscador de los de sección. */}
+        <div className="px-4 pb-3.5 pt-1.5">
+          {/* LA PREGUNTA, NO EL MÓDULO (tarea 241, sección 1; encargo del
+              2026-09-17). El técnico no llega con ganas de buscar, llega
+              con algo que solucionar. La etiqueta accesible sigue
+              nombrando el alcance (regla M-R8). */}
+          <p className="mb-2 px-0.5 text-[17px] font-medium leading-snug text-noct-text">
+            ¿Qué necesitas solucionar?
+          </p>
           <CampoBusqueda
             valor={query}
             onCambiar={setQuery}
             alcance="Soluciones IT"
-            textoAlternativo="¿Qué necesitas resolver?"
+            textoAlternativo="Procedimiento, error, equipo…"
           />
-          <p className="mt-1.5 px-0.5 text-[12px] leading-snug text-noct-neutral-500">
-            Busca una guía, equipo, acceso, herramienta, comando o problema
-          </p>
         </div>
       }
     >
@@ -222,82 +189,114 @@ export function InicioPage() {
             />
           ) : (
             <div className="flex flex-col gap-4">
-            {/* Estado vacío más útil (sección 16 del encargo): con la
-                bóveda bloqueada, "no se encontró nada" no es toda la
-                verdad, porque sus accesos ni siquiera se buscaron. El
-                puente es genérico y no confirma que exista ninguno. */}
-            <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} />
-            {/* Desbloquear aquí no lleva a ninguna parte (encargo del
-                2026-09-16, sección 1): Inicio se queda, con lo escrito,
-                y las credenciales que coinciden aparecen en esta misma
-                lista. */}
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
-              <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
-              <div>
-                <p className="text-[14.5px] font-medium">Sin coincidencias</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                  Nada coincide con "{consultaCruda}" en Soluciones IT. Prueba otra palabra o revisa la
-                  ortografía.
-                </p>
-                {/* La diferencia de alcance, dicha donde se nota
-                    (H09/A16). Solo aparece cuando de verdad hay algo que
-                    ofrecer, y dice qué es: un borrador, no una guía
-                    publicada. */}
-                {borradoresQueCoinciden > 0 && (
-                  <p className="mt-2 text-[13px] leading-relaxed text-noct-neutral-300">
-                    Hay{' '}
-                    {borradoresQueCoinciden === 1
-                      ? '1 borrador que coincide'
-                      : `${borradoresQueCoinciden} borradores que coinciden`}
-                    . Los borradores no entran en esta búsqueda porque todavía no son procedimientos del
-                    equipo, pero puedes verlos en Guías.
+              {/* Estado vacío más útil: con la bóveda bloqueada, "no se
+                  encontró nada" no es toda la verdad, porque sus accesos ni
+                  siquiera se buscaron. */}
+              <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} />
+              <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
+                <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
+                <div>
+                  <p className="text-[14.5px] font-medium">Sin coincidencias</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
+                    Nada coincide con "{consultaCruda}" en Soluciones IT. Prueba otra palabra o revisa la
+                    ortografía.
                   </p>
-                )}
-              </div>
-              {/* Salidas del estado vacío (hallazgo H9 y H09). "Crear
-                  equipo" ya no es la única: primero se ofrece seguir
-                  buscando donde el alcance es otro, y solo después
-                  registrar algo nuevo. */}
-              <div className="mt-0.5 flex flex-wrap justify-center gap-2">
-                {borradoresQueCoinciden > 0 && (
+                  {borradoresQueCoinciden > 0 && (
+                    <p className="mt-2 text-[13px] leading-relaxed text-noct-neutral-300">
+                      Hay{' '}
+                      {borradoresQueCoinciden === 1
+                        ? '1 borrador que coincide'
+                        : `${borradoresQueCoinciden} borradores que coinciden`}
+                      . Los borradores no entran en esta búsqueda porque todavía no son procedimientos del
+                      equipo, pero puedes verlos en Guías.
+                    </p>
+                  )}
+                </div>
+                <div className="mt-0.5 flex flex-wrap justify-center gap-2">
+                  {borradoresQueCoinciden > 0 && (
+                    <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
+                      <BookOpen size={15} aria-hidden />
+                      Ver los borradores en Guías
+                    </Link>
+                  )}
                   <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
-                    <BookOpen size={15} aria-hidden />
-                    Ver los borradores en Guías
+                    <MagnifyingGlass size={15} aria-hidden />
+                    Buscar solo en Guías
                   </Link>
-                )}
-                <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
-                  <MagnifyingGlass size={15} aria-hidden />
-                  Buscar solo en Guías
-                </Link>
-                <Link
-                  to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
-                  className={BTN_SECUNDARIO}
-                >
-                  <Plus size={15} aria-hidden />
-                  Crear equipo
-                </Link>
-                <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
-                  Limpiar búsqueda
-                </button>
+                  <Link
+                    to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
+                    className={BTN_SECUNDARIO}
+                  >
+                    <Plus size={15} aria-hidden />
+                    Crear equipo
+                  </Link>
+                  <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
+                    Limpiar búsqueda
+                  </button>
+                </div>
               </div>
-            </div>
             </div>
           )
         ) : (
-          <div className="@container flex flex-col gap-[18px]">
+          <div className="@container flex flex-col gap-[22px]">
             {/* Bienvenida del primer día: los tres pasos que dejan al
-                técnico listo para trabajar sin señal. No compite con la
-                agenda: se retira sola (no se cierra a mano) en cuanto hay
-                algo que atender, y una vez cumplidos los tres pasos no
-                vuelve a aparecer en este dispositivo. */}
+                técnico listo para trabajar sin señal. Se retira sola en
+                cuanto hay trabajo real y, cumplida, no vuelve. */}
             {consultasListas && (
               <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
             )}
 
-            {/* RECIENTES, justo bajo el buscador: lo que este técnico ya
-                usó es lo que más probablemente vuelva a necesitar, y
-                llegar ahí no debería costar ni escribir. Sin historial
-                suficiente no se dibuja nada. */}
+            {/* LO URGENTE, EN UNA LÍNEA. Solo existe cuando hay algo
+                vencido o para hoy, así que cuando aparece se ve. */}
+            {urgentes > 0 && (
+              <Link
+                to="/agenda"
+                className="flex min-h-12 items-center gap-2.5 rounded-lg border border-noct-error/35 bg-noct-error/[.08] px-3 py-2 text-noct-text hover:bg-noct-error/[.12]"
+              >
+                <WarningCircle size={18} className="shrink-0 text-noct-error" aria-hidden />
+                <span className="min-w-0 flex-1 text-[14px] leading-snug">
+                  <span className="font-medium">Agenda:</span> {resumenUrgente(agenda)}
+                </span>
+                <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+              </Link>
+            )}
+
+            {hayQueReanudar && reanudar.actual && (
+              <section>
+                <div className="mb-1.5 px-0.5">
+                  <TituloSeccion>Continuar</TituloSeccion>
+                </div>
+                <BarraReanudar
+                  variante="tarjeta"
+                  articulo={reanudar.actual.articulo}
+                  hechos={reanudar.actual.hechos}
+                  total={reanudar.actual.total}
+                  minutosRestantes={reanudar.actual.minutosRestantes}
+                  onDescartar={reanudar.descartar}
+                />
+              </section>
+            )}
+
+            {favoritas.length > 0 && (
+              <section>
+                <div className="mb-1 flex items-center gap-2 px-0.5">
+                  <Star size={13} className="text-noct-neutral-400" aria-hidden />
+                  <TituloSeccion>Favoritas</TituloSeccion>
+                </div>
+                <div className="flex flex-col">
+                  {favoritas.map((favorita) => (
+                    <FilaAtajo
+                      key={favorita.clave}
+                      ruta={favorita.ruta}
+                      Icono={BookOpen}
+                      titulo={favorita.titulo}
+                      subtitulo={favorita.subtitulo}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {recientes.length > 0 && (
               <section>
                 <div className="mb-1 flex items-center gap-2 px-0.5">
@@ -306,125 +305,30 @@ export function InicioPage() {
                 </div>
                 <div className="flex flex-col">
                   {recientes.map((item) => (
-                    <FilaReciente key={item.clave} item={item} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* LA AGENDA. Fecha de hoy y resumen de una línea; debajo,
-                los grupos, en el orden en que se decide el día: lo que
-                ya falló, lo de hoy, lo que viene, lo que tengo a medias
-                y lo que el equipo dejó por revisar. */}
-            <section className="flex flex-col gap-0.5 px-0.5">
-              <p className="text-[12.5px] text-noct-neutral-400">{hoyTexto}</p>
-              {resumen !== '' && (
-                <p
-                  className={`text-[15px] font-medium leading-[1.35] ${urgentes > 0 ? 'text-noct-text' : 'text-noct-neutral-300'}`}
-                >
-                  {resumen}
-                </p>
-              )}
-            </section>
-
-            {/* ESTADO TRANQUILO (encargo del 2026-09-11, tarea 5). Sin
-                vencidos ni asuntos de hoy, la pantalla lo dice con todas
-                sus letras en vez de quedarse en blanco. Lo que viene
-                después (Próximos) se sigue viendo, pero como aviso, no
-                como alarma. */}
-            {urgentes === 0 && (
-              <section className="rounded-lg border border-noct-divider bg-noct-surface px-4 py-5">
-                <div className="flex items-center gap-2.5">
-                  <Check size={17} className="shrink-0 text-noct-exito" aria-hidden />
-                  <h2 className="text-[15px] font-medium leading-[1.3]">Todo al día por hoy</h2>
-                </div>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-noct-neutral-400">
-                  No hay accesos vencidos ni asuntos con fecha para hoy.
-                </p>
-              </section>
-            )}
-
-            {agenda.vencidos.length > 0 && (
-              <section>
-                <CabeceraAgenda titulo="Vencidos" total={agenda.vencidos.length} />
-                <div className="flex flex-col">
-                  {agenda.vencidos.map((item) => (
-                    <FilaAgenda key={item.clave} item={item} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {agenda.hoy.length > 0 && (
-              <section>
-                <CabeceraAgenda titulo="Para hoy" total={agenda.hoy.length} />
-                <div className="flex flex-col">
-                  {agenda.hoy.map((item) => (
-                    <FilaAgenda key={item.clave} item={item} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {agenda.proximos.length > 0 && (
-              <BloqueLista
-                titulo="Próximos"
-                total={agenda.proximos.length}
-                etiquetaVerMas="próximos"
-                visiblesIniciales={PROXIMOS_VISIBLES}
-              >
-                {(visibles) =>
-                  agenda.proximos.slice(0, visibles).map((item) => <FilaAgenda key={item.clave} item={item} />)
-                }
-              </BloqueLista>
-            )}
-
-            {/* EN CURSO · trabajo propio empezado: la guía a medias y
-                los borradores. No son obligaciones con plazo, así que
-                no entran en "Vencidos" ni en "Para hoy". */}
-            {(hayQueReanudar || agenda.enCurso.length > 0) && (
-              <section>
-                <CabeceraAgenda
-                  titulo="En curso"
-                  total={agenda.enCurso.length + (hayQueReanudar ? 1 : 0)}
-                />
-                <div className="flex flex-col gap-2">
-                  {hayQueReanudar && reanudar.actual && (
-                    <BarraReanudar
-                      variante="tarjeta"
-                      articulo={reanudar.actual.articulo}
-                      hechos={reanudar.actual.hechos}
-                      total={reanudar.actual.total}
-                      minutosRestantes={reanudar.actual.minutosRestantes}
-                      onDescartar={reanudar.descartar}
+                    <FilaAtajo
+                      key={item.clave}
+                      ruta={item.ruta}
+                      Icono={ICONO_RECIENTE[item.tipo]}
+                      titulo={item.titulo}
+                      subtitulo={item.subtitulo}
                     />
-                  )}
-                  {agenda.enCurso.length > 0 && (
-                    <div className="flex flex-col">
-                      {agenda.enCurso.map((item) => (
-                        <FilaAgenda key={item.clave} item={item} />
-                      ))}
-                    </div>
-                  )}
+                  ))}
                 </div>
               </section>
             )}
 
-            {/* POR REVISAR DEL EQUIPO · sugerencias de diagnóstico que
-                nadie ha convertido en guía. No están asignadas a este
-                técnico, así que no se anuncian como algo que le toque. */}
-            {agenda.porRevisar.length > 0 && (
-              <BloqueLista
-                titulo="Por revisar del equipo"
-                total={agenda.porRevisar.length}
-                etiquetaVerMas="sugerencias del equipo"
-              >
-                {(visibles) =>
-                  agenda.porRevisar.slice(0, visibles).map((item) => <FilaAgenda key={item.clave} item={item} />)
-                }
-              </BloqueLista>
+            {/* SIN HISTORIAL TODAVÍA: la pantalla no se queda en blanco
+                debajo del buscador. Dice qué va a aparecer aquí y deja
+                explorar las guías. */}
+            {consultasListas && sinNadaQueMostrar && (
+              <p className="px-0.5 text-[13.5px] leading-relaxed text-noct-neutral-400">
+                Aquí aparecerán las guías que uses y las que marques con la estrella. También puedes{' '}
+                <Link to="/soluciones" className="font-medium text-noct-accent-300 underline underline-offset-[3px]">
+                  ver todas las guías
+                </Link>
+                .
+              </p>
             )}
-
           </div>
         )}
       </main>
@@ -432,110 +336,31 @@ export function InicioPage() {
   )
 }
 
-// Bloque de lista con cabecera de rótulo + conteo y un "Ver los otros N"
-// que despliega el resto EN EL SITIO (mockup `2b`). Antes cada bloque
-// pintaba sus filas completas: seis pendientes y cinco recientes son
-// once filas de 52 px que empujan todo lo demás fuera de la pantalla.
-function BloqueLista({
+// UNA FILA DE ATAJO (M-R6, fila de CONSULTA): 52 px, título de 15 px y
+// sin cuadrado de color. Lleva a lo que nombra; en una guía, directo a su
+// paso pendiente.
+function FilaAtajo({
+  ruta,
+  Icono,
   titulo,
-  total,
-  etiquetaVerMas,
-  visiblesIniciales = FILAS_VISIBLES,
-  children,
+  subtitulo,
 }: {
+  ruta: string
+  Icono: (props: IconoProps) => React.JSX.Element
   titulo: string
-  total: number
-  // Qué son los que faltan, para que el texto accesible diga algo
-  // ("Ver los otros 4 pendientes") en vez de solo un número.
-  etiquetaVerMas: string
-  visiblesIniciales?: number
-  children: (visibles: number) => ReactNode
+  subtitulo: string
 }) {
-  const [desplegado, setDesplegado] = useState(false)
-  const ocultos = total - visiblesIniciales
-
-  return (
-    <section>
-      <CabeceraAgenda titulo={titulo} total={total} />
-      <div className="flex flex-col">{children(desplegado ? total : visiblesIniciales)}</div>
-      {ocultos > 0 && !desplegado && (
-        <button
-          type="button"
-          onClick={() => setDesplegado(true)}
-          className="mt-0.5 inline-flex min-h-11 items-center gap-1.5 px-1.5 text-[12.5px] font-medium text-noct-accent-300"
-        >
-          Ver los otros {ocultos}
-          <span className="sr-only"> {etiquetaVerMas}</span>
-          <CaretDown size={12} aria-hidden />
-        </button>
-      )}
-    </section>
-  )
-}
-
-// Cabecera de un grupo de la agenda: qué es y cuántos hay. El conteo va
-// aquí y no dentro de cada fila, para que el grupo se pueda evaluar sin
-// leerlo entero.
-function CabeceraAgenda({ titulo, total }: { titulo: string; total: number }) {
-  return (
-    <div className="mb-1.5 flex items-baseline justify-between gap-2 px-0.5">
-      <TituloSeccion>{titulo}</TituloSeccion>
-      <span className="shrink-0 text-[11px] tabular-nums text-noct-neutral-400">{total}</span>
-    </div>
-  )
-}
-
-// FILA DE LA AGENDA (M-R6, fila de ACCIÓN). 56 px, título de 15 px y,
-// debajo, LA RAZÓN en el color de su estado ("Venció hace 3 días" en
-// rojo) y de dónde sale ("Bóveda", o el nombre del equipo). El origen
-// solo aparece cuando el ítem tiene fecha: en un borrador su detalle ya
-// dice de quién es y repetirlo sería la misma palabra dos veces.
-function FilaAgenda({ item }: { item: ItemPendiente }) {
-  const Icono = ICONO_PENDIENTE[item.categoria]
   return (
     <Link
-      to={item.ruta}
-      className={`flex min-h-14 items-center gap-3 rounded-md px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] ${
-        item.tono === 'error' ? 'bg-noct-error/[.07]' : ''
-      }`}
+      to={ruta}
+      className="flex min-h-[52px] items-center gap-3 rounded-md px-2 py-2 text-noct-text hover:bg-noct-text/[.05] active:bg-noct-text/[.08]"
     >
-      <span
-        className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md ${TONO_PENDIENTE[item.tono]}`}
-      >
-        <Icono size={17} aria-hidden />
-      </span>
+      <Icono size={17} className="shrink-0 text-noct-neutral-400" aria-hidden />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-medium leading-[1.3]">{item.titulo}</span>
-        <span className="block truncate text-[12.5px]">
-          <span className={COLOR_RAZON[item.tono]}>{item.detalle}</span>
-          {item.fecha !== null && (
-            <span className="text-noct-neutral-400"> · {item.origen}</span>
-          )}
-        </span>
+        <span className="block text-[15px] leading-[1.3] [text-wrap:pretty]">{titulo}</span>
+        {subtitulo && <span className="block truncate text-[12px] text-noct-neutral-500">{subtitulo}</span>}
       </span>
-      <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
-    </Link>
-  )
-}
-
-// FILA DE RECIENTE (M-R6, fila de CONSULTA, no de acción): 44 px,
-// 13,5 px y sin cuadrado de color. No es algo que haya que resolver hoy,
-// así que no puede pesar lo mismo que una fila de la agenda.
-function FilaReciente({ item }: { item: ElementoReciente }) {
-  const Icono = ICONO_RECIENTE[item.tipo]
-  return (
-    <Link
-      to={item.ruta}
-      className="flex min-h-11 items-center gap-2.5 rounded-md px-2 py-2 text-noct-text hover:bg-noct-text/[.05]"
-    >
-      <Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] leading-[1.3]">{item.titulo}</span>
-        {item.subtitulo && (
-          <span className="block truncate text-[11.5px] text-noct-neutral-500">{item.subtitulo}</span>
-        )}
-      </span>
-      <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />
+      <CaretRight size={14} className="shrink-0 text-noct-neutral-600" aria-hidden />
     </Link>
   )
 }
@@ -545,28 +370,4 @@ const ICONO_RECIENTE: Record<ElementoReciente['tipo'], (props: IconoProps) => Re
   dispositivo: Monitor,
   diagnostico: TreeStructure,
   referencia: BookBookmark,
-}
-
-// Icono y tono de una fila de "Te toca a ti" según su categoría: una
-// credencial vencida pesa distinto que un borrador propio, aunque ambos
-// sean "algo por resolver".
-const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) => React.JSX.Element> = {
-  borrador: PencilSimple,
-  credencial: LockSimple,
-  campo_protegido: LockSimple,
-  sugerencia: Lightbulb,
-}
-const TONO_PENDIENTE: Record<ItemPendiente['tono'], string> = {
-  neutro: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]',
-  precaucion: 'text-noct-precaucion bg-noct-precaucion/[.12]',
-  error: 'text-noct-error bg-noct-error/[.12]',
-}
-// La razón va en el color del estado, no en gris: es lo que distingue
-// "Venció hace 3 días" de "Borrador tuyo · hace 2 días" de un vistazo,
-// sin leer (M-R6). Lo neutro se queda neutro para que el color siga
-// significando algo.
-const COLOR_RAZON: Record<ItemPendiente['tono'], string> = {
-  neutro: 'text-noct-neutral-400',
-  precaucion: 'text-noct-precaucion',
-  error: 'text-noct-error',
 }
