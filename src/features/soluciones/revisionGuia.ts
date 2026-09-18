@@ -118,7 +118,16 @@ const OTROS_VERBOS_DE_ACCION = [
   'envia', 'envie', 'enviar',
 ]
 
-const DE_PANTALLA = new Set(VERBOS_DE_PANTALLA)
+// Formas que también son sustantivo, preposición o nombre propio, y con
+// las que se escribe un requisito legítimo: "Copia de la resolución DIAN
+// en PDF", "Marca y modelo del lector", "Cierre de caja hecho", "Entre 10
+// y 15 minutos sin ventas", "Active Directory con permisos", "Despliegue
+// aprobado". Como requisito NO delatan un paso. Dentro de una tarea sí
+// cuentan como acción (ahí "Entre al administrador" es un imperativo, y
+// hacen falta tres para marcar una cadena).
+const AMBIGUAS_EN_REQUISITOS = new Set(['copia', 'marca', 'cierre', 'entre', 'active', 'despliegue'])
+
+const DE_PANTALLA = new Set(VERBOS_DE_PANTALLA.filter((v) => !AMBIGUAS_EN_REQUISITOS.has(v)))
 const DE_ACCION = new Set([...VERBOS_DE_PANTALLA, ...OTROS_VERBOS_DE_ACCION])
 
 // "Ve a", "vaya a", "ir a": el verbo solo cuenta con su destino detrás,
@@ -152,11 +161,9 @@ function palabras(texto: string): string[] {
     .filter(Boolean)
 }
 
-// ¿El tramo EMPIEZA con una acción? Devuelve cuántas palabras ocupan los
-// conectores del principio (para poder quitarlos al dividir), o null si
-// no empieza con una acción.
-function inicioDeAccion(texto: string, verbos: ReadonlySet<string>): number | null {
-  const lista = palabras(texto)
+// Cuántas palabras del principio de la lista son conectores ("y luego",
+// "a continuación").
+function largoConectores(lista: string[]): number {
   let i = 0
   while (i < lista.length) {
     const doble = `${lista[i]} ${lista[i + 1] ?? ''}`
@@ -164,12 +171,49 @@ function inicioDeAccion(texto: string, verbos: ReadonlySet<string>): number | nu
     else if (CONECTORES.has(lista[i])) i += 1
     else break
   }
+  return i
+}
+
+// Un tramo hecho solo de conectores: el "Luego" de "Abre FrontRest.
+// Luego, entra…", que la coma dejó suelto. No es de ninguna acción.
+function soloConectores(texto: string): boolean {
+  const lista = palabras(texto)
+  return lista.length > 0 && largoConectores(lista) >= lista.length
+}
+
+// Pronombres que se pegan al verbo en los apuntes: "ábrelo", "guárdalo",
+// "cambiarla", "pégalo". Se prueban hasta dos ("dáselo").
+const CLITICOS = ['los', 'las', 'les', 'nos', 'lo', 'la', 'le', 'me', 'te', 'se']
+
+// ¿La palabra es uno de los verbos, sola o con pronombres pegados?
+function esVerbo(palabra: string, verbos: ReadonlySet<string>): boolean {
+  if (verbos.has(palabra)) return true
+  for (const primero of CLITICOS) {
+    if (!palabra.endsWith(primero)) continue
+    const sinUno = palabra.slice(0, -primero.length)
+    if (sinUno.length < 3) continue
+    if (verbos.has(sinUno)) return true
+    for (const segundo of CLITICOS) {
+      if (!sinUno.endsWith(segundo)) continue
+      const sinDos = sinUno.slice(0, -segundo.length)
+      if (sinDos.length >= 3 && verbos.has(sinDos)) return true
+    }
+  }
+  return false
+}
+
+// ¿El tramo EMPIEZA con una acción? Devuelve cuántas palabras ocupan los
+// conectores del principio (para poder quitarlos al dividir), o null si
+// no empieza con una acción.
+function inicioDeAccion(texto: string, verbos: ReadonlySet<string>): number | null {
+  const lista = palabras(texto)
+  const i = largoConectores(lista)
   const primera = lista[i]
   if (!primera) return null
   if (IR.has(primera)) return DESTINO_DE_IR.has(lista[i + 1] ?? '') ? i : null
   if (PREVIO_A_CLIC.has(primera)) return CLIC.has(lista[i + 1] ?? '') ? i : null
   if (CLIC.has(primera)) return i
-  return verbos.has(primera) ? i : null
+  return esVerbo(primera, verbos) ? i : null
 }
 
 /** ¿Este texto empieza con un gesto sobre una pantalla o un menú? */
@@ -221,7 +265,7 @@ export function accionesEncadenadas(texto: string): string[] | null {
   for (let i = 0; i < partes.length; i += 2) {
     const tramo = partes[i] ?? ''
     const separador = i > 0 ? (partes[i - 1] ?? '') : ''
-    if (!tramo.trim()) continue
+    if (!tramo.trim() || soloConectores(tramo)) continue
     const conectores = inicioDeAccion(tramo, DE_ACCION)
     if (conectores === null) {
       actual = actual ? `${actual}${separador}${tramo}` : tramo

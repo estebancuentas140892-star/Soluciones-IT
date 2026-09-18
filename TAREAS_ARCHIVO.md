@@ -32,6 +32,8 @@
 
 **Lo que NO se tocó:** esquema local y de Supabase, RLS, sincronización, datos guardados (nada se reescribe hasta que el autor toca y guarda), reglas del avance, buscador y ranking, Bóveda y criptografía, diseño Nocturne. No hay que ejecutar SQL.
 
+**Ajuste del mismo día (revisión propia antes de cerrar, sin el usuario disponible).** Probando la revisión con frases de apuntes reales apareció un falso positivo que habría golpeado justo a la guía DIAN: "Copia de la resolución DIAN en PDF" salía como acción, porque "copia" también es imperativo. En un requisito ya no cuentan las formas que también son sustantivo, preposición o nombre propio (copia, marca, cierre, entre, active, despliegue); dentro de una tarea siguen contando. Además: verbo con pronombre pegado ("ábrelo", "cambiarla"), el "Luego" suelto por la puntuación no se pega a la acción anterior, y el foco del buscador sube a 2 px (borde más `ring-1`). Suite: 115 archivos y 1611 casos en verde; lint y `tsc` limpios. Se comprobó también, con la clave pública del proyecto, que la tabla `articulos` no se lee sin sesión (RLS devuelve una lista vacía): los datos están protegidos, y la guía DIAN solo se puede leer con una sesión del equipo.
+
 ### 244. Abrir, buscar, entrar a la guía, ejecutar un paso, siguiente, solucionar
 
 **Estado:** Completada (2026-09-17) en lo que es código, interfaz y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-17, tras usar de verdad la guía de actualizar la resolución DIAN del POS y tener que volver a los apuntes personales. **Pendiente aparte:** el CONTENIDO de esa guía (tarea **245** en [TAREAS.md](TAREAS.md)), que necesita leer los datos del equipo con una sesión de la app.

@@ -27,6 +27,7 @@ Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.1, 5
 - **Cambiado, el índice de pasos** pierde la nota bajo "Al terminar se comprueba".
 - **Cambiado, el catálogo** dice "Sin pasos · para leer" en neutro (antes "Sin pasos · solo notas · no se puede ejecutar", con "Sin pasos" en ámbar).
 - **Cambiado, Inicio en escritorio** pone el foco en el buscador al llegar (en el teléfono no, para no tapar Continuar y Recientes con el teclado), y el buscador común marca el foco en el borde de su caja, sin un segundo anillo dentro.
+- **Corregido el mismo día (ajuste de la tarea 246, tras probar la revisión con frases de apuntes reales):** "Copia de la resolución DIAN en PDF" salía señalado como acción ("copia" también es sustantivo), igual que "Marca y modelo…", "Cierre de caja…", "Entre 10 y 15 minutos…", "Active Directory…" y "Despliegue…": en un requisito esas formas ya no cuentan. Se reconoce el verbo con el pronombre pegado ("ábrelo", "guárdalo", "cambiarla"), y un "Luego" suelto por la puntuación ya no se pega a la acción anterior al dividir. El foco del buscador pasa a 2 px de acento (borde más `ring-1`).
 
 ### Cambiado (experiencia de uso, tarea 244): resolver rápido con guías
 

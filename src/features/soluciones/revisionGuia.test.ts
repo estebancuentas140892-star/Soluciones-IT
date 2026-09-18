@@ -42,6 +42,14 @@ describe('accionesEncadenadas: una acción por tarea (regla 20a)', () => {
     ])
   })
 
+  it('un "Luego" que la puntuación dejó suelto no se pega a ninguna acción', () => {
+    expect(accionesEncadenadas('Abre FrontRest. Luego, entra en Administrador y selecciona Terminales')).toEqual([
+      'Abre FrontRest',
+      'Entra en Administrador',
+      'Selecciona Terminales',
+    ])
+  })
+
   it('el contexto del principio viaja con la primera acción', () => {
     expect(accionesEncadenadas('En el POS, abre FrontRest, entra en Administrador y abre Terminales')).toEqual([
       'En el POS, abre FrontRest',
@@ -61,6 +69,21 @@ describe('accionesEncadenadas: una acción por tarea (regla 20a)', () => {
       'Seleccionar Impresoras',
       'Pulsar Agregar',
     ])
+  })
+
+  it('reconoce el verbo con el pronombre pegado ("ábrelo", "cambiarla")', () => {
+    expect(accionesEncadenadas('Ábrelo, entra a Impresoras y guárdalo')).toEqual([
+      'Ábrelo',
+      'Entra a Impresoras',
+      'Guárdalo',
+    ])
+    expect(accionesEncadenadas('Busca el campo resolución, bórralo y escribe la nueva')).toEqual([
+      'Busca el campo resolución',
+      'Bórralo',
+      'Escribe la nueva',
+    ])
+    // Un sustantivo que termina como un pronombre no es un verbo.
+    expect(accionesEncadenadas('Consola, pantalla y tabla de resoluciones')).toBeNull()
   })
 
   it('las "y" entre cosas no son acciones', () => {
@@ -93,6 +116,27 @@ describe('esAccionDePantalla: lo que no es un requisito (regla 20b)', () => {
     // encargo), aunque se escriba como verbo.
     expect(esAccionDePantalla('Conectar el lector de códigos al POS')).toBe(false)
     expect(esAccionDePantalla('Se ve la pantalla de inicio')).toBe(false)
+  })
+
+  it('no confunde un sustantivo, una preposición o un nombre propio con un verbo', () => {
+    // El requisito típico de la guía DIAN no puede salir señalado.
+    expect(esAccionDePantalla('Copia de la resolución DIAN en PDF')).toBe(false)
+    expect(esAccionDePantalla('Marca y modelo del lector')).toBe(false)
+    expect(esAccionDePantalla('Cierre de caja hecho')).toBe(false)
+    expect(esAccionDePantalla('Entre 10 y 15 minutos sin ventas')).toBe(false)
+    expect(esAccionDePantalla('Active Directory: usuario con permisos')).toBe(false)
+    expect(esAccionDePantalla('Despliegue de la actualización aprobado')).toBe(false)
+    // Las formas que solo son verbo se siguen señalando.
+    expect(esAccionDePantalla('Copiar el archivo al escritorio del POS')).toBe(true)
+    expect(esAccionDePantalla('Cierra FrontRest')).toBe(true)
+  })
+
+  it('dentro de una tarea, "entre" en usted sí es una acción', () => {
+    expect(accionesEncadenadas('Entre al administrador, seleccione Terminales y pulse Editar')).toEqual([
+      'Entre al administrador',
+      'Seleccione Terminales',
+      'Pulse Editar',
+    ])
   })
 })
 

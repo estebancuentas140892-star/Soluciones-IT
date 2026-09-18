@@ -44,8 +44,11 @@ export function CampoBusqueda({
       // El borde de acento dice también DÓNDE va lo que se escriba: el
       // campo no dibuja anillo propio (`outline-none` y la regla de
       // `[data-campo-busqueda]` en index.css, que apaga el anillo global
-      // para no dibujar un segundo marco dentro de la caja).
-      className={`flex h-[46px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors focus-within:border-noct-accent ${
+      // para no dibujar un segundo marco dentro de la caja). Con el foco,
+      // borde más `ring-1`: 2 px de acento, tan visibles como el anillo
+      // global que sustituyen, y distintos del borde de 1 px que queda
+      // cuando hay texto escrito pero el foco está en otra parte.
+      className={`flex h-[46px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent ${
         buscando ? 'border-noct-accent' : 'border-noct-divider'
       } ${className}`}
     >
