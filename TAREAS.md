@@ -18,6 +18,13 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
+**Despliegue confirmado (regla 14).** El commit `6626d6f` (tarea 246, segunda pasada del encargo del 2026-09-17) está servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 140 chunks que declara `/sw.js`, leídos de ahí y nunca comparados con los del build local:
+
+- **En positivo:** `ArticuloForm-wzAYKfYD.js` contiene "Dividir en", "Pasar a Información", "Empieza como un recordatorio" y "Sacar de «Antes de empezar»"; `SolucionesPage-BomjJNRK.js`, "para leer"; `CampoBusqueda-B6mhCh_M.js` e `index-BduLXrA1.css`, "data-campo-busqueda".
+- **En negativo:** **ningún** chunk contiene ya "Anotar los requisitos previos", "no se puede ejecutar", "Se leen aquí en cualquier momento" ni "Precaución, dato o consejo".
+
+**Recordatorio para el equipo:** PWA con `registerType: 'prompt'`: en un teléfono que ya la tiene, hay que aceptar el aviso "Actualización disponible"; en escritorio, recarga forzada. **Sin cambios de esquema:** no hay que ejecutar SQL.
+
 **Despliegue confirmado (regla 14).** El commit `063c57e` (tarea 244, encargo del 2026-09-17) está servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 139 chunks que declara `/sw.js`, leídos de ahí y nunca comparados con los del build local:
 
 - **En positivo:** `InicioPage-CjrO1Q_l.js` contiene "necesitas solucionar", "Favoritas", "Recientes" y "Agenda:"; `AsistenteVista-DvpcjjYv.js` contiene "Antes de empezar, ten a mano", "Retomas en el paso", "Más información", "Antes de terminar, comprueba", "Guía terminada", "Salir de la guía", "Detalles de la guía" y "Comprobado · siguiente"; `Chasis-BJ7y39qc.js`, "Volver a Más", "Consulta" y "Trabajo técnico"; `PantallaMas-HKoi-7aW.js`, "Cómo está conectada" y "Vencimientos, borradores"; `useAccionesDeGuia-BYcYty8L.js`, "Vas en el paso". Aparecen además los chunks nuevos **`GuiaPage-lRGw269L.js`** y **`AgendaPage-DFlh_EF3.js`**.
