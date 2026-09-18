@@ -171,6 +171,29 @@ describe('retomar y volver a empezar', () => {
     expect(textoPantalla()).not.toContain('Retomas en el paso')
   })
 
+  it('la línea de "retomas" se va con la primera acción: ya se eligió seguir', async () => {
+    const p1 = pasoPrueba('largo-p1', 'Preparar la caja larga', ['Abrir el programa', 'Entrar en Caja', 'Pulsar Nueva'])
+    const p2 = pasoPrueba('largo-p2', 'Cerrar', ['Pulsar Cerrar'])
+    await sembrarGuia({ id: 'guia-larga', titulo: 'Caja larga de prueba', pasos: [p1, p2] })
+    await db.progresoPasos.put({
+      articuloId: 'guia-larga',
+      pasosHechos: [],
+      instruccionesHechas: ['largo-p1-t1'],
+      verificacionHecha: [],
+      actualizadoEn: '2026-09-16T12:00:00.000Z',
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-larga')
+
+    await esperar(() => textoPantalla().includes('Entrar en Caja'), 'retoma en la acción pendiente')
+    expect(textoPantalla()).toContain('Retomas en el paso 1')
+
+    await tocar((await esperar(() => principal('Siguiente'), 'Siguiente')) as HTMLElement)
+    // Sigue en el MISMO paso (tercera acción), pero la línea ya no está.
+    await esperar(() => textoPantalla().includes('Pulsar Nueva'), 'la acción siguiente del mismo paso')
+    expect(textoPantalla()).toContain('Paso 1 de 2')
+    expect(textoPantalla()).not.toContain('Retomas en el paso')
+  })
+
   it('"Anterior" desde la primera acción de un paso lleva a la última del paso anterior', async () => {
     await sembrarCaja()
     await db.progresoPasos.put({

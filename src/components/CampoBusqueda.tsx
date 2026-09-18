@@ -41,7 +41,11 @@ export function CampoBusqueda({
 
   return (
     <label
-      className={`flex h-[46px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors ${
+      // El borde de acento dice también DÓNDE va lo que se escriba: el
+      // campo no dibuja anillo propio (`outline-none` y la regla de
+      // `[data-campo-busqueda]` en index.css, que apaga el anillo global
+      // para no dibujar un segundo marco dentro de la caja).
+      className={`flex h-[46px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors focus-within:border-noct-accent ${
         buscando ? 'border-noct-accent' : 'border-noct-divider'
       } ${className}`}
     >
@@ -57,6 +61,7 @@ export function CampoBusqueda({
         onChange={(evento) => onCambiar(evento.target.value)}
         placeholder={textoAlternativo ?? `Buscar en ${alcance}`}
         aria-label={`Buscar en ${alcance}`}
+        data-campo-busqueda
         // La "x" nativa de WebKit se oculta siempre: duplicaba el botón
         // de borrar y medía la mitad.
         className="min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-400 [&::-webkit-search-cancel-button]:hidden"

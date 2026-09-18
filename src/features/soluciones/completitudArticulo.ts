@@ -53,7 +53,6 @@ export interface DatosCompletitud {
   cantidadPasos: number
   descripcion: string
   cantidadEtiquetas: number
-  requisitos: string
   tiempoEstimadoMin: string
   dificultad: string
   verificacionFinal: string
@@ -67,12 +66,31 @@ export interface DatosCompletitud {
   // seccion 8 del encargo). No se les adivina un destino: se cuentan
   // aqui para que el autor los vea listados y los asigne.
   apoyosSinAsignar?: number
+  // Lo que la revision del contenido encontro contra la regla 20 (ver
+  // revisionGuia.ts): requisitos que son acciones, tareas que encadenan
+  // varias acciones y alertas que solo recuerdan algo.
+  requisitosQueSonAcciones?: number
+  tareasEncadenadas?: number
+  alertasQueRecuerdan?: number
+}
+
+// Concordancia de las sugerencias con número ("1 tarea", "3 tareas").
+function contar(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`
 }
 
 // Señales del handoff "Editor de Artículo", cada una con la pestaña
-// donde vive su campo desde J5. Un `manual` cambia las cuatro señales
-// atadas a la pestaña "Pasos" (agregar paso, segundo paso, requisitos,
-// verificación final) por una sola: tener contenido escrito.
+// donde vive su campo desde J5. Un `manual` cambia las señales atadas a
+// la pestaña "Pasos" (agregar paso, segundo paso, verificación final)
+// por una sola: tener contenido escrito.
+//
+// LOS REQUISITOS YA NO PUNTÚAN (segunda pasada del encargo del
+// 2026-09-17). La barra pedía "Anotar los requisitos previos" a toda
+// guía y le restaba porcentaje si no los tenía, mientras la ayuda del
+// mismo campo decía "si no hace falta nada, déjalo vacío". Ganaba la
+// barra: para llegar al 100 % se escribían en "Antes de empezar"
+// acciones que luego volvían a estar en los pasos, que es exactamente
+// la duplicación del encargo. Una guía sin requisitos está completa.
 export function senalesDeArticulo(datos: DatosCompletitud): SenalCompletitud[] {
   const esManual = datos.tipo === 'manual'
 
@@ -88,15 +106,47 @@ export function senalesDeArticulo(datos: DatosCompletitud): SenalCompletitud[] {
         { cumplida: datos.cantidadPasos > 0, pestana: 'pasos', sugerencia: 'Agregar al menos un paso' },
         { cumplida: datos.cantidadPasos > 1, pestana: 'pasos', sugerencia: '' },
         {
-          cumplida: Boolean(datos.requisitos.trim()),
-          pestana: 'pasos',
-          sugerencia: 'Anotar los requisitos previos',
-        },
-        {
           cumplida: Boolean(datos.verificacionFinal.trim()),
           pestana: 'pasos',
           sugerencia: 'Escribir la verificación final',
         },
+      ]
+
+  // LO QUE LA REGLA 20 PIDE CORREGIR (ver revisionGuia.ts). Como los
+  // apoyos heredados, cada señal solo EXISTE cuando hay algo que
+  // corregir: una guía bien escrita no ve moverse su porcentaje por
+  // reglas que no le tocan. Todas se resuelven en la pestaña Pasos, donde
+  // el editor señala además la línea concreta.
+  const revision: SenalCompletitud[] = esManual
+    ? []
+    : [
+        ...((datos.requisitosQueSonAcciones ?? 0) > 0
+          ? [
+              {
+                cumplida: false,
+                pestana: 'pasos' as const,
+                sugerencia: `Sacar de «Antes de empezar» ${contar(datos.requisitosQueSonAcciones ?? 0, 'acción', 'acciones')}`,
+              },
+            ]
+          : []),
+        ...((datos.tareasEncadenadas ?? 0) > 0
+          ? [
+              {
+                cumplida: false,
+                pestana: 'pasos' as const,
+                sugerencia: `Dividir ${contar(datos.tareasEncadenadas ?? 0, 'tarea que encadena', 'tareas que encadenan')} varias acciones`,
+              },
+            ]
+          : []),
+        ...((datos.alertasQueRecuerdan ?? 0) > 0
+          ? [
+              {
+                cumplida: false,
+                pestana: 'pasos' as const,
+                sugerencia: `Revisar ${contar(datos.alertasQueRecuerdan ?? 0, 'alerta que solo recuerda', 'alertas que solo recuerdan')} algo`,
+              },
+            ]
+          : []),
       ]
 
   // Contenido heredado que hay que repasar (seccion 8 del encargo). Un
@@ -126,6 +176,7 @@ export function senalesDeArticulo(datos: DatosCompletitud): SenalCompletitud[] {
     { cumplida: Boolean(datos.titulo.trim()), pestana: 'general', sugerencia: '' },
     ...senalesDePasos,
     ...senalesHeredadas,
+    ...revision,
     {
       cumplida: Boolean(datos.descripcion.trim()),
       pestana: 'general',

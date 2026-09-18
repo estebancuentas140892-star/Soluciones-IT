@@ -576,7 +576,14 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           // queda satisfecha al completarla de verdad, y marcarla sigue
           // siendo un gesto aparte del técnico.
           onVinculoCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
-          onAlternarTarea={(tareaId) => void alternarTarea(indiceActual, paso, tareaId)}
+          // Tocar una acción es haber elegido seguir: la línea de
+          // "retomas donde lo dejaste" ya dijo lo suyo y se va, para no
+          // quedarse ocupando la pantalla en cada acción del paso.
+          // Empezar de nuevo sigue en el índice.
+          onAlternarTarea={(tareaId) => {
+            setRetomadaEn(null)
+            void alternarTarea(indiceActual, paso, tareaId)
+          }}
           onCompletarPaso={avanzar}
           etiquetaAvance={cierre.etiqueta}
           puedeCerrarPaso={cierre.accion !== 'bloqueado'}
@@ -699,7 +706,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
               <BloqueVista
                 bloque={bloque}
                 marcada={instruccionesHechas.has(bloque.id)}
-                onAlternar={() => void alternarTarea(indiceActual, paso, bloque.id)}
+                onAlternar={() => {
+                  setRetomadaEn(null)
+                  void alternarTarea(indiceActual, paso, bloque.id)
+                }}
                 nivel={nivel}
                 // "No se cumple" de una comprobación abre la MISMA hoja
                 // de salidas que el "Falla" del paso, con la

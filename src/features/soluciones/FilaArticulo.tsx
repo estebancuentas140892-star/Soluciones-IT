@@ -26,7 +26,7 @@ import { lineaAvanceGuia, type AccionGuia } from './accionGuia'
 //
 // TABLERO 3b del handoff "Diseño móvil" (tarea 214): cada tarjeta dice
 // **lo que la guía puede hacer por ti** ("7 pasos · ~25 min ·
-// verificación", o "Sin pasos · solo notas"), para no descubrir que una
+// verificación", o "Sin pasos · para leer"), para no descubrir que una
 // guía está vacía después de abrirla frente al equipo.
 //
 // Se lee de arriba abajo, y cada zona tiene el ancho entero (encargo del
@@ -135,11 +135,10 @@ export function FilaArticulo({
           // LÍNEA DE CAPACIDAD (3b): qué puede hacer esta guía por ti.
           // A 13,5 px en neutral-300, nunca en neutral-600: con ese paso
           // el contraste sobre el fondo es 4.0:1 y AA pide 4.5 (R2).
-          <span
-            className={`flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13.5px] ${
-              linea.aviso ? 'text-noct-precaucion' : 'text-noct-neutral-300'
-            }`}
-          >
+          // Sin ámbar (segunda pasada del encargo del 2026-09-17): un
+          // artículo para leer no es un riesgo, y el ámbar de la lista
+          // tiene que quedar libre para lo que sí lo es.
+          <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13.5px] text-noct-neutral-300">
             {categoriaNombre && <span className="text-noct-neutral-400">{categoriaNombre}</span>}
             <span className={linea.aviso ? '' : 'text-noct-text'}>{linea.pasos}</span>
             {linea.minutos && <span>{linea.minutos}</span>}
@@ -149,9 +148,6 @@ export function FilaArticulo({
                 verificación
               </span>
             )}
-            {/* En neutral-400 y no en ámbar: el ámbar ya lo puso "Sin
-                pasos". Repetirlo en toda la línea la convertiría en una
-                alarma, y un manual sin pasos no está roto. */}
             {linea.aviso && <span className="text-noct-neutral-400">{linea.aviso}</span>}
             <PastillaEstadoArticulo estado={articulo.estado} />
           </span>

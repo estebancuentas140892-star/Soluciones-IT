@@ -60,6 +60,7 @@ import {
 } from './borradorArticulo'
 import { etiquetasFrecuentes, normalizarEtiquetas, type GrafiaEtiqueta } from './etiquetas'
 import { apoyosSinAsignar } from './apoyosTarea'
+import { revisarGuia } from './revisionGuia'
 import {
   apoyosPendientes,
   bloqueaPublicacion,
@@ -565,7 +566,14 @@ export function ArticuloForm() {
     [descripcion, portada, objetivoGeneral, requisitos, pasos, verificacionFinal, tiempoEstimadoMin, dificultad],
   )
 
-  // Completitud como en el handoff "Editor de Artículo": diez señales
+  // LO QUE LA REGLA 20 PIDE CORREGIR, sobre lo que se está escribiendo
+  // (ver revisionGuia.ts): requisitos que son acciones, tareas que
+  // encadenan varias y alertas que solo recuerdan. Son pistas: se
+  // cuentan en la completitud y se señalan en su línea, nunca impiden
+  // guardar.
+  const revision = useMemo(() => revisarGuia(requisitos.split('\n'), pasos), [requisitos, pasos])
+
+  // Completitud como en el handoff "Editor de Artículo": las señales
   // tomadas de lo escrito, con la pestaña donde se resuelve cada una
   // (ver completitudArticulo.ts). Mira todo el formulario, no la
   // pestaña visible.
@@ -578,13 +586,15 @@ export function ArticuloForm() {
           cantidadPasos: pasos.length,
           descripcion,
           cantidadEtiquetas: etiquetas.length,
-          requisitos,
           tiempoEstimadoMin,
           dificultad,
           verificacionFinal,
           objetivoGeneral,
           contenido,
           apoyosSinAsignar: pasos.reduce((suma, paso) => suma + apoyosSinAsignar(paso).length, 0),
+          requisitosQueSonAcciones: revision.requisitosQueSonAcciones.length,
+          tareasEncadenadas: revision.tareasEncadenadas.length,
+          alertasQueRecuerdan: revision.alertasQueRecuerdan.length,
         }),
       ),
     [
@@ -593,12 +603,12 @@ export function ArticuloForm() {
       pasos,
       descripcion,
       etiquetas,
-      requisitos,
       tiempoEstimadoMin,
       dificultad,
       verificacionFinal,
       objetivoGeneral,
       contenido,
+      revision,
     ],
   )
 
@@ -1103,6 +1113,24 @@ export function ArticuloForm() {
                 herramienta. Si es algo que se hace («entra», «abre», «selecciona»), es un paso. Si no hace
                 falta nada, déjalo vacío.
               </p>
+              {/* LA LÍNEA CONCRETA QUE ES UNA ACCIÓN, y dónde está ya en
+                  los pasos si lo está: así se decide sin buscar si se
+                  borra de aquí (está repetida) o se lleva a un paso. */}
+              {revision.requisitosQueSonAcciones.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-1">
+                  {revision.requisitosQueSonAcciones.map((r, i) => (
+                    <li key={`${r.texto}-${i}`} className="flex items-start gap-2 text-[12.5px] leading-snug text-noct-neutral-200">
+                      <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+                      <span className="min-w-0">
+                        «{r.texto}» es una acción.{' '}
+                        {r.enPaso !== null
+                          ? `Ya está en el paso ${r.enPaso}: bórrala de aquí.`
+                          : 'Llévala a un paso.'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Campo>
 
             <section>

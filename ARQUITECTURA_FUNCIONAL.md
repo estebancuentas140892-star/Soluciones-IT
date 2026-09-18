@@ -233,7 +233,19 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 **RN-039. "Antes de empezar" solo se muestra al empezar, y solo si hay requisitos.**
 - Motivo: los requisitos son lo que debe estar listo antes del paso 1; repetirlos a mitad del trabajo, o enseñar una sección vacía, es lectura sin utilidad (regla 20b).
 - Entidades: Procedimiento (`requisitos`), ProgresoPasos. Dura en el código: `AsistenteVista` (`requisitosVisibles`), `AntesDeEmpezar`.
-- Impacto: se muestra sobre la primera acción del paso 1 cuando la ejecución no tiene ninguna tarea ni paso marcado, en las dos vistas de la ejecución. En los detalles de la guía se sigue leyendo siempre.
+- Impacto: se muestra sobre la primera acción del paso 1 cuando la ejecución no tiene ninguna tarea ni paso marcado, en las dos vistas de la ejecución. En los detalles de la guía se sigue leyendo siempre. La línea "Retomas en el paso N", en cambio, se va con la primera acción que se marca: quien toca "Siguiente" ya eligió seguir ("Empezar de nuevo" sigue en el índice).
+
+### Escribir una guía (segunda pasada del encargo del 2026-09-17)
+
+**RN-040. Un aviso nuevo nace como Información; la alerta la elige el autor.**
+- Motivo: nacía en Precaución (de cuando el botón era "+ Advertencia"), así que toda nota que el autor no se acordaba de suavizar salía como alerta de color y las alertas dejaban de destacar (regla 20c, AD-041).
+- Entidades: BloquePaso (`tono`). Dura en el código: `crearBloqueAviso` (`src/lib/procedimiento.ts`), con prueba en `revisionGuia.test.ts`.
+- Impacto: solo en los avisos que se crean desde ahora; los guardados conservan su tono. Al ejecutar, un aviso nuevo queda plegado en "Más información" hasta que el autor lo pase a Precaución o Importante.
+
+**RN-041. El editor señala lo que la regla 20 pide corregir, sin impedir guardar; los requisitos no puntúan.**
+- Motivo: la ejecución enseña lo que la guía dice; una tarea que encadena cinco acciones, un requisito que es un paso o un recordatorio vestido de alerta la hacen confusa aunque la pantalla esté bien (AD-041). La completitud pedía requisitos a toda guía y empujaba a rellenar "Antes de empezar" con acciones.
+- Entidades: Procedimiento (`requisitos`), BloquePaso (`texto`, `tono`, `tipoTarea`). Dura en el código: `revisionGuia.ts` (`revisarGuia`, `accionesEncadenadas`, `esAccionDePantalla`, `esRecordatorio`), `dividirTarea` (bloquesEditor.ts) y `senalesDeArticulo` (completitudArticulo.ts), con pruebas puras y de flujo.
+- Impacto: tres señales de completitud que solo existen cuando hay algo que corregir, pistas en la línea concreta, "Dividir en N tareas" (conserva la tarea original, su id, sus apoyos y su avance) y "Pasar a Información". Nada cambia en la ejecución ni en los datos guardados hasta que el autor toca y guarda. Una guía sin requisitos está completa.
 
 ---
 

@@ -617,8 +617,49 @@ const GUIA_TONOS = articulo({
   },
 })
 
+// Segunda pasada del encargo del 2026-09-17 (regla 20): una guía escrita
+// como un apunte sin revisar, con los tres problemas que el editor
+// señala (un requisito que es una acción y ya está en el paso 1, una
+// tarea que encadena cuatro acciones y una alerta que solo recuerda
+// algo), para ver sus pistas en /soluciones/cat-pos/art-apunte/editar.
+// Todo inventado.
+const GUIA_APUNTE = articulo({
+  id: 'art-apunte',
+  categoriaId: 'cat-pos',
+  titulo: 'Apunte sin revisar de la caja de ejemplo',
+  tipo: 'configuracion',
+  procedimiento: {
+    descripcion: 'Caso de prueba de la revisión del editor.',
+    portada: null,
+    objetivoGeneral: '',
+    requisitos: ['Documento de ejemplo con el dato nuevo', 'Entrar al administrador de ejemplo'],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 6,
+    dificultad: 'intermedio',
+    pasos: [
+      paso({
+        id: 'apunte-p1',
+        titulo: 'Entrar',
+        bloques: [tarea('apunte-p1-t1', 'Entra en el administrador de ejemplo')],
+      }),
+      paso({
+        id: 'apunte-p2',
+        titulo: 'Llegar a la configuración',
+        bloques: [
+          tarea(
+            'apunte-p2-t1',
+            'Ingresa a Terminales, selecciona la terminal de ejemplo, luego pulsa Editar y abre Impresoras',
+          ),
+          avisoConTono('apunte-a1', 'apunte-p2-t1', 'precaucion', 'Recuerda cerrar la caja de ejemplo al terminar'),
+        ],
+      }),
+    ],
+  },
+})
+
 const ARTICULOS: Articulo[] = [
   GUIA_TONOS,
+  GUIA_APUNTE,
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
   GUIA_TRES_TAREAS,

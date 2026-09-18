@@ -137,6 +137,12 @@ body,
 .nocturne [data-foco-lectura]:focus-visible {
   outline: none;
 }
+/* El buscador dibuja su foco en el borde de su propia caja redondeada
+   (CampoBusqueda, `focus-within`). Con el anillo global además, se veían
+   dos marcos, uno rectangular dentro del otro, como si fueran dos campos. */
+.nocturne [data-campo-busqueda]:focus-visible {
+  outline: none;
+}
 .nocturne ::selection {
   background: color-mix(in srgb, var(--color-noct-accent) 30%, transparent);
 }

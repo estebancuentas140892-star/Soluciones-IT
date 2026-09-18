@@ -98,7 +98,7 @@ describe('lineaDeCapacidad', () => {
   it('lo no ejecutable dice lo que SÍ hay, no solo lo que falta', () => {
     const linea = lineaDeCapacidad({ ejecutable: false, pasos: 0, minutos: null, tieneVerificacion: false })
     expect(linea.pasos).toBe('Sin pasos')
-    expect(linea.aviso).toBe('solo notas · no se puede ejecutar')
+    expect(linea.aviso).toBe('para leer')
   })
 
   it('lo no ejecutable no promete tiempo ni verificación', () => {

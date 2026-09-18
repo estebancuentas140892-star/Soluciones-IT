@@ -5,6 +5,7 @@ import { apoyosDeTarea } from './apoyosTarea'
 import {
   cambiarTipoTarea,
   DESTINO_PASO,
+  dividirTarea,
   destinoTarea,
   etiquetaDestino,
   insertarApoyo,
@@ -200,3 +201,35 @@ function pasoDeBloques(bloques: BloquePaso[]) {
     solucionArticuloTitulo: '',
   }
 }
+
+// Regla 20a: una acción por tarea. Dividir no inventa texto, conserva la
+// tarea original (y lo que ya se marcó de ella) y no reparte los apoyos.
+describe('dividirTarea', () => {
+  let contador = 0
+  const crear = () => bloque({ id: `n${++contador}`, tipo: 'tarea', tipoTarea: 'accion' })
+
+  it('la original se queda con la primera acción, su id y sus apoyos; las demás van detrás', () => {
+    contador = 0
+    const resultado = dividirTarea(pasoDePrueba(), 't1', ['Abre FrontRest', 'Entra en Administrador', 'Abre Terminales'], crear)
+    expect(resultado.map((b) => b.id)).toEqual(['t1', 'a1', 'n1', 'n2', 't2', 't3'])
+    expect(resultado.map((b) => b.texto)).toEqual([
+      'Abre FrontRest',
+      'Cuidado con la dirección',
+      'Entra en Administrador',
+      'Abre Terminales',
+      'Confirmar',
+      'Comprobar',
+    ])
+    // El aviso sigue perteneciendo a la tarea original: no se adivina.
+    expect(resultado[1].tareaId).toBe('t1')
+    expect(resultado[2].tipo).toBe('tarea')
+  })
+
+  it('sin tarea o con una sola acción no cambia nada', () => {
+    const bloques = pasoDePrueba()
+    expect(dividirTarea(bloques, 'no-existe', ['A', 'B'], crear)).toBe(bloques)
+    expect(dividirTarea(bloques, 't1', ['Solo una'], crear)).toBe(bloques)
+    // Un apoyo no es una tarea que dividir.
+    expect(dividirTarea(bloques, 'a1', ['A', 'B'], crear)).toBe(bloques)
+  })
+})

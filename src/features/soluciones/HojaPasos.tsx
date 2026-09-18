@@ -235,7 +235,11 @@ export function HojaPasos({
       </ol>
 
       {/* Las comprobaciones finales, legibles desde el primer paso
-          (H11). No llevan casilla: aquí solo se leen. */}
+          (H11). No llevan casilla: aquí solo se leen. Sin la nota que lo
+          explicaba debajo ("se leen aquí; marcarlas es otra cosa"): el
+          título ya dice cuándo se comprueban y la falta de casilla dice
+          que aquí no se marcan (segunda pasada del encargo del
+          2026-09-17, menos lectura). */}
       {verificacionFinal.length > 0 && (
         <section className="mt-3 rounded-[10px] border border-noct-divider px-3 py-2.5">
           <h3 className="flex items-center gap-2 text-[13px] font-medium text-noct-text">
@@ -250,10 +254,6 @@ export function HojaPasos({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[11.5px] leading-snug text-noct-neutral-500">
-            Se leen aquí en cualquier momento. Marcarlas como cumplidas es otra cosa, y se hace al cerrar el
-            procedimiento.
-          </p>
         </section>
       )}
 

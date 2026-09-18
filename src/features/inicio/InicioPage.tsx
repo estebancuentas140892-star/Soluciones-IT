@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { obtenerFavoritos } from '../../lib/favoritos'
@@ -80,6 +80,19 @@ export function InicioPage() {
   useEffect(() => {
     if (repuesta !== '' && query === '') descartar()
   }, [repuesta, query, descartar])
+  // BUSCAR NADA MÁS ABRIR, EN ESCRITORIO (segunda pasada del encargo del
+  // 2026-09-17, sección 2: "al abrir la aplicación, poder empezar a buscar
+  // inmediatamente"). Con ratón y teclado físico el campo recibe el foco
+  // al llegar a Inicio: se escribe sin tocar nada. En el teléfono NO: el
+  // teclado en pantalla taparía "Continuar" y "Recientes", que muchas
+  // veces es lo que se viene a tocar; ahí el campo ya es lo primero y lo
+  // más grande.
+  const refCampo = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const conPunteroFino =
+      typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    if (conPunteroFino) refCampo.current?.focus({ preventScroll: true })
+  }, [])
   // La bóveda se abrió desde el puente de la propia búsqueda, sin salir
   // de Inicio: cuenta una interacción más en la medición del recorrido.
   const [huboDesbloqueo, setHuboDesbloqueo] = useState(false)
@@ -173,6 +186,7 @@ export function InicioPage() {
             onCambiar={setQuery}
             alcance="Soluciones IT"
             textoAlternativo="Procedimiento, error, equipo…"
+            refCampo={refCampo}
           />
         </div>
       }

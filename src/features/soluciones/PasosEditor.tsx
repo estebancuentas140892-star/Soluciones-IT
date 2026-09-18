@@ -40,6 +40,7 @@ import {
   cambiarTipoTarea,
   DESTINO_PASO,
   destinoTarea,
+  dividirTarea,
   etiquetaDestino,
   insertarApoyo,
   moverTareaConApoyos,
@@ -47,6 +48,7 @@ import {
   reasignarApoyo,
   type DestinoApoyo,
 } from './bloquesEditor'
+import { accionesEncadenadas, esRecordatorio } from './revisionGuia'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
@@ -207,7 +209,9 @@ const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
   { valor: 'verificacion', etiqueta: 'Verificación', descripcion: 'Comprobar antes de continuar', Icono: SealCheck, claseIcono: 'text-noct-exito' },
   { valor: 'decision', etiqueta: 'Decisión Sí / No', descripcion: '«No» abre otra guía y vuelve aquí', Icono: Question, claseIcono: 'text-noct-precaucion' },
   { valor: 'imagen', etiqueta: 'Imagen', descripcion: 'Una captura en este punto', Icono: Camera, claseIcono: 'text-noct-accent-300' },
-  { valor: 'aviso', etiqueta: 'Aviso', descripcion: 'Precaución, dato o consejo', Icono: Warning, claseIcono: 'text-noct-precaucion' },
+  // Nace como Información (plegada al ejecutar): la alerta se elige en
+  // su tono, solo para un riesgo real (regla 20c).
+  { valor: 'aviso', etiqueta: 'Aviso', descripcion: 'Información, dato o riesgo: el tono decide cómo se ve', Icono: Info, claseIcono: 'text-noct-neutral-300' },
   { valor: 'archivo', etiqueta: 'Archivo', descripcion: 'Manual, PDF o planilla', Icono: Paperclip, claseIcono: 'text-noct-neutral-300' },
   { valor: 'guia', etiqueta: 'Guía vinculada', descripcion: 'Otra guía que se hace aquí', Icono: BookOpen, claseIcono: 'text-noct-accent-300' },
   { valor: 'dato', etiqueta: 'Dato protegido', descripcion: 'Clave o campo de la bóveda', Icono: LockSimple, claseIcono: 'text-noct-neutral-300' },
@@ -536,6 +540,13 @@ export function PasosEditor({
     const extra = lineas.slice(1).map((linea) => ({ ...crearBloqueTarea(), texto: linea }))
     bloques.splice(pos + 1, 0, ...extra)
     actualizarPaso(indice, { bloques })
+  }
+
+  // UNA ACCIÓN POR TAREA (regla 20a): la tarea que encadena varias se
+  // parte en las acciones que ya muestra su pista. La operación vive en
+  // bloquesEditor.ts; aquí solo se aplica al paso.
+  function dividir(indice: number, tareaId: string, acciones: string[]) {
+    actualizarPaso(indice, { bloques: dividirTarea(pasos[indice].bloques, tareaId, acciones, () => crearBloqueTarea()) })
   }
 
   function moverPasoA(desde: number, hasta: number) {
@@ -959,6 +970,7 @@ export function PasosEditor({
                 onQuitar={() => quitarBloque(indice, bloque.id)}
                 onEnter={() => insertarTareaDespues(indice, bloque.id)}
                 onPegar={(texto, evento) => pegarLineas(indice, bloque.id, texto, evento)}
+                onDividir={(acciones) => dividir(indice, bloque.id, acciones)}
                 onSubirImagen={(evento) => void subirImagen(indice, bloque.id, evento)}
                 onSubirArchivo={(evento) => void subirArchivoBloque(indice, bloque.id, evento)}
                 vinculables={vinculablesOrdenados}
@@ -1119,7 +1131,7 @@ export function PasosEditor({
               Tarea
             </BotonAnadir>
             <BotonAnadir
-              Icono={Warning}
+              Icono={Info}
               onClick={() => agregarBloque(indiceActivo, crearBloqueAviso())}
               descripcion={`Añadir un aviso al paso ${indiceActivo + 1}`}
             >
@@ -1485,6 +1497,7 @@ function BloqueEditor({
   onQuitar,
   onEnter,
   onPegar,
+  onDividir,
   onSubirImagen,
   onSubirArchivo,
   vinculables,
@@ -1516,6 +1529,7 @@ function BloqueEditor({
   onQuitar: () => void
   onEnter: () => void
   onPegar: (texto: string, evento: { preventDefault: () => void }) => void
+  onDividir: (acciones: string[]) => void
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
   onSubirArchivo: (evento: ChangeEvent<HTMLInputElement>) => void
   vinculables: Articulo[]
@@ -1677,6 +1691,15 @@ function BloqueEditor({
           referencias={referenciasDisponibles}
           onVincular={onVincularTermino}
         />
+
+        {/* UNA ACCIÓN POR TAREA (regla 20a). Si la línea encadena varias,
+            se dice aquí y se enseña cómo quedaría partida, con las
+            palabras del autor. No se parte sola: decide él. Una
+            comprobación o una decisión no se parten (su texto es una
+            condición, no una lista de gestos). */}
+        {bloque.tipoTarea !== 'verificacion' && bloque.tipoTarea !== 'decision' && (
+          <DivisionSugerida texto={bloque.texto} onDividir={onDividir} />
+        )}
 
         <div className="flex items-center gap-1.5 pl-1">
           <BotonLinea Icono={Plus} onClick={onAnadirATarea} etiqueta="Añadir contenido a esta tarea">
@@ -1844,6 +1867,28 @@ function BloqueEditor({
             />
           </div>
         </div>
+        {/* LA ALERTA ES PARA UN RIESGO (regla 20c). Una precaución o un
+            "importante" que empieza con "Recuerda…" o "No olvides…" no
+            avisa de nada que pueda salir mal: interrumpe. Se dice aquí,
+            con el cambio a un toque; decide el autor. */}
+        {(bloque.tono === 'precaucion' || bloque.tono === 'importante') && esRecordatorio(bloque.texto) && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pl-1">
+            <p className="flex min-w-0 items-start gap-1.5 text-[12px] leading-snug text-noct-neutral-300">
+              <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+              <span className="min-w-0">
+                Empieza como un recordatorio. Si no avisa de un riesgo real, va en Información y al ejecutar
+                queda plegada.
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={() => onCambiar({ tono: 'info' })}
+              className="inline-flex min-h-11 items-center rounded-lg border border-dashed border-noct-accent/50 px-3 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.08]"
+            >
+              Pasar a Información
+            </button>
+          </div>
+        )}
         <HojaTipoBloque
           abierto={hojaAbierta}
           onCerrar={() => setHojaAbierta(false)}
@@ -1995,6 +2040,37 @@ function BloqueEditor({
         onSubir={onSubirImagen}
       />
       {selectorDestino}
+    </div>
+  )
+}
+
+// LA TAREA QUE ENCADENA VARIAS ACCIONES (regla 20a), con la vista de
+// cómo quedaría partida. Nada se toca hasta que el autor pulsa: la
+// división usa solo sus palabras, sin los "luego" que las unían.
+function DivisionSugerida({ texto, onDividir }: { texto: string; onDividir: (acciones: string[]) => void }) {
+  const acciones = useMemo(() => accionesEncadenadas(texto), [texto])
+  if (!acciones) return null
+
+  return (
+    <div className="ml-1 flex flex-col gap-1.5 rounded-lg border border-dashed border-noct-neutral-700 px-3 py-2.5">
+      <p className="flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-neutral-200">
+        <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+        <span className="min-w-0">
+          Encadena {acciones.length} acciones. Una por tarea se sigue mejor frente al equipo:
+        </span>
+      </p>
+      <ol className="flex list-decimal flex-col gap-0.5 pl-9 text-[12.5px] leading-snug text-noct-neutral-300">
+        {acciones.map((accion, i) => (
+          <li key={i}>{accion}</li>
+        ))}
+      </ol>
+      <button
+        type="button"
+        onClick={() => onDividir(acciones)}
+        className="inline-flex min-h-11 w-fit items-center rounded-lg border border-noct-accent/50 px-3 text-[13px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.08]"
+      >
+        Dividir en {acciones.length} tareas
+      </button>
     </div>
   )
 }

@@ -163,3 +163,42 @@ export function opcionesDestino(bloques: BloquePaso[]): { id: string; numero: nu
     .filter((b) => b.tipo === 'tarea')
     .map((b, i) => ({ id: b.id, numero: i + 1, texto: b.texto }))
 }
+
+/**
+ * DIVIDIR UNA TAREA QUE ENCADENA VARIAS ACCIONES (regla 20a de
+ * REGLAS.md). Recibe las acciones ya separadas (`accionesEncadenadas`
+ * en revisionGuia.ts) y la tarea se convierte en una por acción:
+ *
+ * - la original CONSERVA su id, su tipo, su dato protegido y sus apoyos,
+ *   con el texto de la primera acción. Lo que el técnico ya marcó en
+ *   una ejecución a medias sigue apuntando a ella;
+ * - cada acción siguiente nace como tarea nueva, detrás del grupo de la
+ *   original (la tarea y los apoyos que la siguen) y en el orden en que
+ *   estaban escritas.
+ *
+ * Los apoyos NO se reparten: a qué acción pertenece una captura o una
+ * precaución solo lo sabe el autor, y adivinarlo sería inventar (el
+ * mismo criterio que con los apoyos heredados). Se quedan con la
+ * primera, a la vista, y el autor los reasigna con su pastilla.
+ */
+export function dividirTarea(
+  bloques: BloquePaso[],
+  tareaId: string,
+  acciones: string[],
+  crearTarea: () => BloquePaso,
+): BloquePaso[] {
+  const pos = bloques.findIndex((b) => b.id === tareaId && b.tipo === 'tarea')
+  if (pos < 0 || acciones.length < 2) return bloques
+
+  // Final del grupo: la tarea y los apoyos que la siguen hasta la
+  // próxima tarea (la misma unidad que mueve `moverTareaConApoyos`).
+  let fin = pos + 1
+  while (fin < bloques.length && bloques[fin].tipo !== 'tarea') fin++
+
+  const [primera, ...resto] = acciones
+  const nuevas = resto.map((texto) => ({ ...crearTarea(), texto }))
+  const copia = [...bloques]
+  copia[pos] = { ...copia[pos], texto: primera }
+  copia.splice(fin, 0, ...nuevas)
+  return copia
+}

@@ -30,9 +30,12 @@ const PLANTILLAS: Record<TipoArticulo, Plantilla> = {
     requisitos: ['Permisos de administrador', 'Instalador o medio de instalación', 'Acceso a la red'],
     pasos: [
       {
+        // Sin "Verificar los requisitos previos": los requisitos ya se
+        // ven en el paso 1 ("Antes de empezar"), y repetirlos como tarea
+        // es la duplicación que la regla 20b de REGLAS.md prohíbe.
         titulo: 'Preparar el equipo',
         objetivo: 'El equipo queda listo para la instalación',
-        tareas: ['Verificar los requisitos previos', 'Respaldar la información si aplica'],
+        tareas: ['Respaldar la información si aplica'],
       },
       {
         titulo: 'Instalar',

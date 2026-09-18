@@ -45,9 +45,11 @@ export function capacidadDeGuia(articulo: Articulo): CapacidadGuia {
 }
 
 // Los trozos de la línea de capacidad, en orden, ya redactados. Se
-// devuelven sueltos y no como una sola cadena porque el último ("no se
-// puede ejecutar") y el primero de una guía vacía se pintan en ámbar,
-// y el resto en neutro: la fila necesita saber cuál es cuál.
+// devuelven sueltos y no como una sola cadena porque la fila pinta cada
+// uno con su peso. Ninguno va en ámbar desde la segunda pasada del
+// encargo del 2026-09-17: el ámbar es de los riesgos (regla 20c), y un
+// artículo para leer no es un riesgo. Lo distinguen el borde punteado y
+// estas palabras.
 export interface LineaCapacidad {
   // "7 pasos", o "Sin pasos" cuando no hay procedimiento.
   pasos: string
@@ -66,9 +68,11 @@ export function lineaDeCapacidad(capacidad: CapacidadGuia): LineaCapacidad {
       pasos: 'Sin pasos',
       minutos: null,
       verificacion: false,
-      // "solo notas" dice lo que SÍ hay, no solo lo que falta: un manual
-      // sin pasos no está incompleto, es de otra clase.
-      aviso: 'solo notas · no se puede ejecutar',
+      // "para leer" dice lo que SÍ hay, no solo lo que falta: un manual
+      // sin pasos no está incompleto, es de otra clase. Decía "solo
+      // notas · no se puede ejecutar", con una palabra ("ejecutar") que
+      // ya no nombra ningún botón: abrir es lo único que se hace.
+      aviso: 'para leer',
     }
   }
   return {

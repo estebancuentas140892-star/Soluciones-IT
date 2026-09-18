@@ -8,6 +8,26 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-17
 
+### Cambiado (editor y ejecución, tarea 246): segunda pasada, las guías se escriben para ejecutarse
+
+**Área modificada:** editor de artículo (pestaña Pasos, completitud y sugerencias), editor de pasos (bloques Tarea y Aviso, barra y catálogo de añadir), plantilla de instalación, ejecución de una guía (línea de retomar), índice de pasos, catálogo de Guías, Inicio (escritorio) y el campo de búsqueda común.
+**Tipo:** Agregado (revisión del contenido en el editor), Modificado (completitud, tono inicial de un aviso, plantilla, retomar, índice, catálogo, foco del buscador).
+**Nuevos:** `src/features/soluciones/revisionGuia.ts` (+ `revisionGuia.test.ts`) y la prueba de flujo `src/features/soluciones/revisionEditor.test.tsx`.
+**Modificados:** `src/lib/procedimiento.ts` (`crearBloqueAviso`), `src/features/soluciones/{completitudArticulo,bloquesEditor,plantillas,capacidadGuia}.ts`, `src/features/soluciones/{ArticuloForm,PasosEditor,AsistenteVista,HojaPasos,FilaArticulo}.tsx`, `src/features/inicio/InicioPage.tsx`, `src/components/CampoBusqueda.tsx`, `src/index.css`, `src/pruebas/semillaLocal.ts` (guía de ejemplo "Apunte sin revisar", solo modo de prueba local) y sus pruebas.
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.1, 5.2, 5.2.3, 7.2, 7.2.1 y 13.2), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-039, RN-040 y RN-041), [COMPONENTES_UI.md](COMPONENTES_UI.md) (2.10d-bis, 3.8b, 3.8h y 3.8o-bis), [DECISIONES.md](DECISIONES.md) (AD-041) y [REGLAS.md](REGLAS.md) (regla 20).
+**Motivo:** el mismo encargo del 17 de septiembre, pedido otra vez para una revisión más a fondo. La ejecución ya enseñaba una acción a la vez, pero enseña lo que la guía dice, y el editor empujaba a escribir guías confusas: la completitud pedía requisitos a toda guía (se rellenaban con acciones que luego se repetían en los pasos), un aviso nuevo nacía como alerta y la plantilla de instalación repetía los requisitos como tarea.
+**SIN cambios** de esquema (local ni Supabase), RLS, sincronización, datos guardados, reglas del avance, buscador ni diseño Nocturne. **No hay que ejecutar SQL.** El contenido de la guía DIAN sigue pendiente (tarea 245): necesita una sesión con los datos del equipo.
+**Impacto esperado:** al abrir una guía como la de la DIAN en el editor, ver en su línea qué requisito es un paso (y dónde ya está), qué tarea encadena acciones (y dividirla con un toque) y qué alerta solo recuerda algo; y que las guías nuevas nazcan sin alertas de más.
+
+- **Agregado, el editor revisa la guía contra la regla 20.** Bajo "Antes de empezar": "«Entrar al administrador» es una acción. Ya está en el paso 2: bórrala de aquí." Bajo una tarea que encadena acciones: la lista de cómo quedaría y "Dividir en N tareas" (con las palabras del autor; la tarea original conserva id, apoyos y avance). Bajo una Precaución o Importante que empieza con "Recuerda…": "Pasar a Información". Tres sugerencias de completitud que solo existen si hay algo que corregir. Nada impide guardar.
+- **Cambiado, los requisitos ya no puntúan en la completitud.** Se retira "Anotar los requisitos previos": una guía sin requisitos está completa.
+- **Cambiado, un aviso nuevo nace como Información** (plegado al ejecutar), no como Precaución; "Aviso" se describe como "Información, dato o riesgo: el tono decide cómo se ve" y lleva el icono de información. Los avisos guardados conservan su tono.
+- **Cambiado, la plantilla de instalación** ya no trae la tarea "Verificar los requisitos previos" (los requisitos ya se ven en el paso 1).
+- **Cambiado, "Retomas en el paso N" se va con la primera acción** que se marca; "Empezar de nuevo" sigue en el índice.
+- **Cambiado, el índice de pasos** pierde la nota bajo "Al terminar se comprueba".
+- **Cambiado, el catálogo** dice "Sin pasos · para leer" en neutro (antes "Sin pasos · solo notas · no se puede ejecutar", con "Sin pasos" en ámbar).
+- **Cambiado, Inicio en escritorio** pone el foco en el buscador al llegar (en el teléfono no, para no tapar Continuar y Recientes con el teclado), y el buscador común marca el foco en el borde de su caja, sin un segundo anillo dentro.
+
 ### Cambiado (experiencia de uso, tarea 244): resolver rápido con guías
 
 **Área modificada:** navegación principal (pestañas y barra lateral), Inicio, agenda, Más, catálogo de Guías, resultados del buscador, apertura de una guía, ejecución (modo de una acción a la vez, paso entero y cierre), ficha de la guía, editor de artículo y prueba del editor.

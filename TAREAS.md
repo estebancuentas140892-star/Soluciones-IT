@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-*(vacío: la tarea **244** (resolver rápido con guías, encargo del 2026-09-17) se cerró ese día y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Dejó registrada la **245** en "Por hacer": revisar el CONTENIDO de la guía de la resolución DIAN con el modelo nuevo, que necesita leer los datos del equipo con una sesión de la app.)*
+*(vacío: las tareas **244** y **246** (resolver rápido con guías, encargo del 2026-09-17, y su segunda pasada del mismo día) se cerraron ese día y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Sigue en "Por hacer" la **245**: revisar el CONTENIDO de la guía de la resolución DIAN, que necesita leer los datos del equipo con una sesión de la app. Desde la 246 el editor señala en esa guía lo que hay que corregir.)*
 
 
 *(las tareas **234** y **235** se cerraron el 2026-09-15 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Los siete puntos de la 235 y los diez de la 234 tienen su commit; el último que quedaba vivo, el **9 de la 234 (compatibilidad y datos existentes)**, se cerró ese día con `src/lib/compatibilidadDatos.test.ts`.*
@@ -308,7 +308,8 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Impacto:** alto para el procedimiento que más se usa del POS.
 - **Prioridad:** Alta. **Estado:** Pendiente.
 - **Área afectada:** el contenido del artículo en Supabase (tabla `articulos`), editable desde el editor de la app (`/soluciones/:categoriaId/:articuloId/editar`). **No es código.**
-- **Dependencias:** **necesita una sesión de la app con los datos del equipo.** El contenido de las guías vive en Supabase con RLS: no se puede leer ni corregir sin iniciar sesión, y las contraseñas las escribe el usuario. Antes de tocar nada hay que leer la guía completa y proponer los cambios para que el usuario los apruebe (regla 20d: no inventar datos).
+- **Dependencias:** **necesita una sesión de la app con los datos del equipo.** El contenido de las guías vive en Supabase con RLS: no se puede leer ni corregir sin iniciar sesión, y las contraseñas las escribe el usuario (Claude no puede escribirlas aunque se las pasen). Antes de tocar nada hay que leer la guía completa y proponer los cambios para que el usuario los apruebe (regla 20d: no inventar datos). Intento del 2026-09-17 (tarea 246): la sesión no llegó al panel del navegador de Claude, y la copia sin conexión de Chrome en el PC es del 2026-09-08 y no contiene la guía. **Para retomarla basta con iniciar sesión en el panel del navegador de la app de Claude** (no en Chrome ni en el teléfono) y pedirlo.
+- **Cómo se hace ahora (desde la tarea 246):** abrir la guía en el editor (`…/editar`, pestaña Pasos). El editor ya señala en su línea (1) cada requisito que es una acción y el paso donde ya está ("bórrala de aquí"), (2) cada tarea que encadena acciones, con "Dividir en N tareas" usando las palabras escritas, y (3) cada Precaución o Importante que solo recuerda algo, con "Pasar a Información". Lo que el editor NO puede hacer es la parte (d): comprobar que cada paso y cada nombre de opción son correctos; lo dudoso se escribe como "Por confirmar: …". Después, "Probar" y ejecutarla en el teléfono de principio a fin.
 - **Modelo/esfuerzo:** Opus 5 / Alto. Es revisión de contenido técnico con riesgo real (facturación), no interfaz.
 
 ### 243. Vista rápida de un dato protegido de un equipo en el buscador de consulta

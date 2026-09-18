@@ -69,15 +69,19 @@ function alcanceNuevo(tareaId: string | null): { alcance: AlcanceApoyo; tareaId:
   return tareaId ? { alcance: 'tarea', tareaId } : { alcance: 'paso', tareaId: null }
 }
 
-// El boton del editor se llama "+ Advertencia", asi que el bloque
-// nuevo nace con el tono 'precaucion' (icono y color de advertencia);
-// el selector de tono permite suavizarlo a informacion o consejo.
+// UN AVISO NUEVO NACE COMO INFORMACIÓN, no como alerta (regla 20c de
+// REGLAS.md). Nacía en 'precaucion', de cuando el botón se llamaba
+// "+ Advertencia": cualquier nota que el autor no se acordara de
+// suavizar salía en la ejecución como alerta de color, y con cinco o
+// seis por guía las alertas dejaban de destacar. Ahora la alerta
+// (precaución o importante) es una decisión del autor, tomada con el
+// selector de tono, para un riesgo real.
 export function crearBloqueAviso(tareaId: string | null = null): BloquePaso {
   return {
     ...CAMPOS_BLOQUE_VACIOS,
     id: crypto.randomUUID(),
     tipo: 'aviso',
-    tono: 'precaucion',
+    tono: 'info',
     ...alcanceNuevo(tareaId),
   }
 }

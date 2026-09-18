@@ -12,7 +12,6 @@ const VACIO: DatosCompletitud = {
   cantidadPasos: 0,
   descripcion: '',
   cantidadEtiquetas: 0,
-  requisitos: '',
   tiempoEstimadoMin: '',
   dificultad: '',
   verificacionFinal: '',
@@ -26,7 +25,6 @@ const COMPLETO: DatosCompletitud = {
   cantidadPasos: 3,
   descripcion: 'Cuando llega una impresora nueva',
   cantidadEtiquetas: 2,
-  requisitos: 'Acceso a la red',
   tiempoEstimadoMin: '20',
   dificultad: 'intermedio',
   verificacionFinal: 'La impresión de prueba salió',
@@ -51,7 +49,7 @@ describe('calcularCompletitud', () => {
     // el título escrito el porcentaje sube, pero la pestaña General
     // sigue marcada por sus otras señales (descripción, etiquetas...).
     const soloTitulo = calcularCompletitud(senalesDeArticulo({ ...VACIO, titulo: 'Algo' }))
-    expect(soloTitulo.porcentaje).toBe(10)
+    expect(soloTitulo.porcentaje).toBe(11)
     expect(soloTitulo.sugerencias.some((s) => s.texto.toLowerCase().includes('título'))).toBe(false)
   })
 
@@ -67,7 +65,6 @@ describe('calcularCompletitud', () => {
     const porTexto = new Map(completitud.sugerencias.map((s) => [s.texto, s.pestana]))
     expect(porTexto.get('Agregar al menos un paso')).toBe('pasos')
     expect(porTexto.get('Escribir la verificación final')).toBe('pasos')
-    expect(porTexto.get('Anotar los requisitos previos')).toBe('pasos')
     expect(porTexto.get('Escribir cuándo usar este procedimiento')).toBe('general')
     expect(porTexto.get('Agregar etiquetas para el buscador')).toBe('general')
     expect(porTexto.get('Indicar el objetivo general')).toBe('general')
@@ -178,6 +175,52 @@ describe('apoyos heredados sin asignar', () => {
   it('un manual no tiene tareas, así que no se le pide asignar nada', () => {
     const manual = calcularCompletitud(
       senalesDeArticulo({ ...COMPLETO, tipo: 'manual', contenido: 'x', apoyosSinAsignar: 2 }),
+    )
+    expect(manual.sugerencias).toEqual([])
+  })
+})
+
+// Segunda pasada del encargo del 2026-09-17 (regla 20 de REGLAS.md).
+describe('requisitos y revisión del contenido', () => {
+  it('una guía sin requisitos está completa: la barra ya no los pide', () => {
+    const completo = calcularCompletitud(senalesDeArticulo(COMPLETO))
+    expect(completo.porcentaje).toBe(100)
+    const vacio = calcularCompletitud(senalesDeArticulo(VACIO))
+    expect(vacio.sugerencias.map((s) => s.texto)).not.toContain('Anotar los requisitos previos')
+  })
+
+  it('las señales de la revisión solo existen cuando hay algo que corregir', () => {
+    const sinNada = calcularCompletitud(
+      senalesDeArticulo({ ...COMPLETO, requisitosQueSonAcciones: 0, tareasEncadenadas: 0, alertasQueRecuerdan: 0 }),
+    )
+    expect(sinNada.porcentaje).toBe(100)
+    expect(sinNada.sugerencias).toEqual([])
+  })
+
+  it('cada problema tiene su sugerencia, con número y concordancia, en la pestaña Pasos', () => {
+    const uno = calcularCompletitud(
+      senalesDeArticulo({ ...COMPLETO, requisitosQueSonAcciones: 1, tareasEncadenadas: 1, alertasQueRecuerdan: 1 }),
+    )
+    expect(uno.sugerencias).toEqual([
+      { texto: 'Sacar de «Antes de empezar» 1 acción', pestana: 'pasos' },
+      { texto: 'Dividir 1 tarea que encadena varias acciones', pestana: 'pasos' },
+      { texto: 'Revisar 1 alerta que solo recuerda algo', pestana: 'pasos' },
+    ])
+    expect(uno.porcentaje).toBeLessThan(100)
+
+    const varios = calcularCompletitud(
+      senalesDeArticulo({ ...COMPLETO, requisitosQueSonAcciones: 2, tareasEncadenadas: 3, alertasQueRecuerdan: 2 }),
+    )
+    expect(varios.sugerencias.map((s) => s.texto)).toEqual([
+      'Sacar de «Antes de empezar» 2 acciones',
+      'Dividir 3 tareas que encadenan varias acciones',
+      'Revisar 2 alertas que solo recuerdan algo',
+    ])
+  })
+
+  it('un manual no tiene pasos que revisar', () => {
+    const manual = calcularCompletitud(
+      senalesDeArticulo({ ...COMPLETO, tipo: 'manual', contenido: 'x', tareasEncadenadas: 2 }),
     )
     expect(manual.sugerencias).toEqual([])
   })
