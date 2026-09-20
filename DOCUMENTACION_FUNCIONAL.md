@@ -205,8 +205,8 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | Ruta | Pantalla / Componente | Nivel del chasis | Descripción |
 |------|-----------------------|-------|-------------|
 | `/login` | LoginPage | Fuera del chasis | Inicio de sesión (fuera de RequireAuth) |
-| `/` (index) | InicioPage | Sección | "¿Qué necesitas solucionar?": buscador global, lo urgente en una línea, Continuar, Favoritas y Recientes |
-| `/agenda` | AgendaPage | Documento | Agenda operativa: vencidos, para hoy, próximos, en curso y por revisar del equipo (fue Inicio hasta el 2026-09-16) |
+| `/` (index) | InicioPage | Sección | "¿Qué necesitas solucionar?": buscador global y, debajo, la **agenda operativa resumida** (fecha, resumen, vencidos, para hoy, próximos, en curso y por revisar del equipo) |
+| `/agenda` | AgendaPage | Documento | **Vista completa** de la agenda: los mismos grupos que resume Inicio, dibujados con el mismo `SeccionesAgenda` |
 | `/cuenta` | CuentaPage | Documento | Mi cuenta (cambiar contraseña, cerrar sesión) |
 | `/cuenta/seguridad` | SeguridadPage | Documento | Bloqueo de la app (patrón/contraseña) |
 | `/soluciones` | SolucionesPage | Sección | Lista de artículos, chips de categoría, buscador, hoja de tipo, bloque "Sin terminar" |
@@ -302,19 +302,25 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **Ruta:** `/` · **Archivo:** `src/features/inicio/InicioPage.tsx` · **Nivel:** Sección
 
-**Objetivo (desde el 2026-09-17, tarea 244).** Resolver: **"¿Qué necesitas solucionar?"**. Al abrir la app se puede empezar a buscar de inmediato, y sin buscar aparece lo que más probablemente se vuelva a necesitar: la guía a medias, las guías favoritas y lo último abierto. Abrir una guía desde aquí lleva directo a su paso pendiente.
+**Objetivo (desde el 2026-09-20, tarea 247).** Entender la jornada y poder empezarla: **al abrir la app se ve qué está vencido, qué vence hoy, qué viene y qué trabajo está en curso**, con el buscador arriba como entrada rápida ("¿Qué necesitas solucionar?"). Entre el 2026-09-17 y el 2026-09-20 la agenda vivió solo en `/agenda` y en Inicio quedó una línea con lo urgente; se revirtió porque al abrir la app ya no se sabía qué había pendiente.
 
 **De arriba abajo, sin texto en el buscador:**
 
-1. **La pregunta y el buscador**: "¿Qué necesitas solucionar?" (17 px) sobre el campo de 46 px, con el marcador **"Procedimiento, error, equipo…"**. La etiqueta accesible sigue siendo "Buscar en Soluciones IT" (regla M-R8). **En escritorio (ratón y teclado físico) el campo recibe el foco al llegar**: se escribe sin tocar nada. En el teléfono no, a propósito: el teclado en pantalla taparía Continuar y Recientes.
-2. **Bienvenida del primer día** (sin cambios, ver abajo), solo mientras haga falta.
-3. **Lo urgente, en una línea**, y **solo si hay algo vencido o para hoy**: "Agenda: 2 vencidos · 1 para hoy", en el tono de error, que lleva a la **agenda** (`/agenda`, `AgendaPage`). Sin nada urgente no se dibuja.
-4. **Continuar**: la tarjeta de la guía a medias ("Sigues en el paso N de M"), que la abre en ese paso.
-5. **Favoritas**: las **guías** marcadas con la estrella en este teléfono (los equipos y diagnósticos favoritos siguen en Más, "Mis favoritos"). Filas de 52 px.
-6. **Recientes**: hasta **cinco** filas con lo último abierto en este teléfono (guías, equipos, diagnósticos, fichas del Centro de consulta), **sin repetir** lo que ya está arriba (la guía de Continuar y las favoritas). Nunca una credencial.
-7. **Sin historial todavía**: "Aquí aparecerán las guías que uses y las que marques con la estrella. También puedes ver todas las guías", con enlace a Guías.
+1. **La pregunta y el buscador**: "¿Qué necesitas solucionar?" (17 px) sobre el campo de 46 px, con el marcador **"Procedimiento, error, equipo…"**. La etiqueta accesible sigue siendo "Buscar en Soluciones IT" (regla M-R8). **En escritorio (ratón y teclado físico) el campo recibe el foco al llegar**: se escribe sin tocar nada. En el teléfono no, a propósito: el teclado en pantalla taparía la agenda.
+2. **Fecha de hoy y resumen de pendientes**: "Viernes, 11 de septiembre" y, debajo, "2 vencidos · 1 para hoy · 3 próximos". Las categorías vacías no se nombran; sin nada con fecha dice **"Nada con fecha"**, y mientras la base local responde, **"Revisando la agenda…"**.
+3. **Vencidos**: todos, sin tope.
+4. **Para hoy**: todos los asuntos del día.
+5. **Próximos**: **tres** al principio, el resto con "Ver los otros N" en el sitio.
+6. **En curso**: la tarjeta de la guía a medias y los borradores propios.
+7. **Por revisar del equipo**: sugerencias de diagnóstico sin convertir en guía.
+8. **"Ver agenda completa"**, que abre `/agenda`. Se ve siempre, también con la agenda vacía.
+9. **Bienvenida del primer día** (sin cambios, ver abajo), **debajo** de la agenda para no empujarla y solo mientras haga falta.
 
-**Lo que se fue de Inicio el 2026-09-17:** la **agenda** (fecha, resumen, "Todo al día por hoy", vencidos, para hoy, próximos, en curso y por revisar del equipo) pasa **entera y sin cambios de reglas** a su pantalla, `/agenda`, a la que se llega desde la línea de lo urgente, desde **Más** (fila "Agenda", en "Trabajo técnico", con lo urgente como subtítulo) y desde la barra lateral de escritorio. **El número de la pestaña Inicio no cambia**: sigue contando vencidos y para hoy, porque su línea está en Inicio (regla M-R9). Lo que sigue en esta sección describe la agenda donde vive ahora.
+Los grupos 3 a 7 los dibuja **`SeccionesAgenda`** (`src/features/inicio/SeccionesAgenda.tsx`), **el mismo componente que usa `/agenda`**, sobre el mismo `agruparAgenda(usePendientes())`: no hay dos maneras de calcular ni de pintar los pendientes.
+
+**Lo que se retiró de Inicio el 2026-09-20 (tarea 247):** **"Favoritas"**, **"Recientes"** y el texto de estado vacío que las anunciaba. **No se borró ningún dato**: los favoritos siguen en **Más** ("Mis favoritos"), la actividad del equipo también en **Más**, "Para empezar" en **Guías**, "Problemas frecuentes" en **Diagnóstico** y la descarga sin conexión en **Mi cuenta**; la tabla local `recientes` se sigue escribiendo (`registrarVisita`) aunque ya no se muestre en ninguna pantalla. Tampoco reaparecen los atajos de **Diagnosticar** y **Escanear**, que viven en Más y en la barra lateral.
+
+**Lo que NO trae este cambio (límites del encargo):** no hay **calendario** ni **recordatorios a mano**, ni tabla nueva. La agenda sigue siendo una vista derivada de datos que ya existen.
 
 **Objetivo de la agenda.** Al entrar, el técnico tiene que poder responder en un vistazo: **qué está vencido, qué toca hoy, qué viene, qué tengo a medias y qué dejó el equipo por revisar**.
 
@@ -339,14 +345,14 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 
 **Volver con la búsqueda escrita (2026-09-16).** Abrir una ficha desde un resultado y volver, con el regreso de la app o con el atrás del teléfono, repone la consulta en este campo y sus resultados. Vaciar el campo la da por terminada. Nunca viaja en la URL. Ver [BUSCADOR.md](BUSCADOR.md), sección 7.8.
 
-**La agenda (`/agenda`, antes el modo sin texto de Inicio), en orden.** Los puntos 0 y 0-bis se quedaron en Inicio (arriba); del 1 en adelante es la pantalla de la agenda, cuyo encabezado lleva la fecha de hoy como contexto sobre el título "Agenda":
+**La agenda, en orden.** Vale igual para el **resumen de Inicio** y para la **pantalla completa** (`/agenda`), que lleva la fecha de hoy como contexto sobre el título "Agenda" y por eso no la repite dentro. El punto 0 es la bienvenida, que solo existe en Inicio:
 
 0. **Bienvenida del primer día** (en Inicio) (`BienvenidaPrimerDia`, tarea 184; solo mientras haga falta): "Bienvenido, {nombre de pila}", una línea de qué vive aquí, y **tres pasos que se apagan solos**:
    1. *Entraste con tu cuenta* (siempre hecho: esta pantalla solo se ve con sesión).
    2. *Instala la app en el teléfono*, con botón **"Instalar"** (diálogo nativo) o **"Cómo instalar"** si el navegador no lo ofrece (Safari de iOS siempre).
    3. *Descarga todo para trabajar sin señal*, con botón **"Descargar"**. Es **el mismo estado** que "Descargar todo para offline" de Mi cuenta: los dos leen y escriben el mismo módulo (`adjuntosOffline.ts`), así que descargar en cualquiera de los dos apaga el paso y actualiza la fecha en el otro.
    **No compite con la agenda y no vuelve:** se retira sola en cuanto hay algo que atender, y una vez cumplidos los tres pasos queda marcada como completada en el dispositivo, así que **no reaparece** aunque el estado real cambie (por ejemplo, abrir la app desde el navegador en vez de la versión instalada).
-0-bis. **Recientes** (en Inicio; tarea 241, desde el 2026-09-17 hasta **cinco** filas de 52 px sin repetir Continuar ni Favoritas), justo bajo el buscador y **solo sin consulta activa**: hasta tres filas de consulta (44 px) en la versión anterior con lo último que se abrió en este teléfono, derivado de la tabla local `recientes`, que desde esta tarea anota también **diagnósticos** y **fichas del Centro de consulta** además de guías y equipos. Una guía sube a Recientes tanto al abrir su ficha como al **ejecutarla** (2026-09-16): "Empezar" desde el buscador se salta la ficha, y aun así cuenta. Sin historial suficiente, se muestran menos filas o ninguna. **Nunca aparece una credencial**: `recientes` no las anota, ni con la bóveda abierta.
+0-bis. **Recientes**: retirado de Inicio el **2026-09-20** (tarea 247). Estuvo ahí entre el 2026-09-17 y esa fecha, con hasta cinco filas de 52 px. El registro local (`recientes.ts`: guías, equipos, diagnósticos y fichas del Centro de consulta) **se conserva y se sigue escribiendo**, pero no se muestra en ninguna pantalla; nunca anotó credenciales.
 1. **Fecha de hoy** en español de Colombia ("Viernes, 11 de septiembre"): dice respecto a qué se dice "hoy".
 2. **Resumen operativo** de una línea: "2 vencidos · 1 para hoy · 3 próximos". **Las categorías vacías no se nombran.**
 3. **Vencidos** — credenciales de la Bóveda y datos protegidos de equipo cuya fecha ya pasó. Cada fila: **nombre**, **cuánto lleva vencido** ("Venció hace 3 días") en rojo, **origen** ("Bóveda" o el nombre del equipo) y enlace a su ficha. Se muestran todas.
@@ -364,8 +370,10 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 **Permiso de bóveda.** Sin `puedeVerBoveda` no llega ni un título: ni de credenciales ni de campos protegidos de equipo, que llevan la misma RLS. El resto de la agenda (en curso, por revisar) se sigue viendo.
 
 **Estados.**
-- **"Todo al día por hoy"** / *"No hay accesos vencidos ni asuntos con fecha para hoy."* — cuando no hay vencidos ni asuntos de hoy. Si hay **próximos**, se muestran debajo, como aviso y no como alarma.
-- **Sin nada operativo**: la pantalla no queda en blanco. Se conservan el buscador y el estado anterior.
+- **"Todo al día por hoy"**, en una sola línea con su visto: cuando no hay vencidos ni asuntos de hoy. **No se muestra si queda alguno de los dos.** Si hay **próximos**, en curso o por revisar, se listan debajo: son avisos, no alarmas.
+- **Agenda vacía**: no se dibuja ninguna cabecera de grupo; quedan el buscador, "Todo al día por hoy", "Nada con fecha" y "Ver agenda completa".
+- **Cargando** (2026-09-20): mientras la base local responde no se afirma nada. El resumen dice "Revisando la agenda…" y en lugar de los grupos, "Cargando la agenda…"; el número de la pestaña no aparece hasta que hay dato.
+- **Error**: una consulta que falle la recoge el `ErrorBoundary` de la app ("No se pudo cargar la aplicación"); la agenda no tiene estado de error propio.
 
 **El aviso numérico de la pestaña Inicio cuenta solo lo urgente** (encargo del 2026-09-11): **vencidos + los de hoy**. No cuenta próximos, borradores, guías en curso, sugerencias del equipo, favoritos ni actividad. Con cero, no hay número; por encima de nueve, "9+". Antes contaba todos los pendientes, así que era un número que nunca bajaba y enseñaba a ignorarse. (El aviso ya se había mudado de "Más" a Inicio en la tarea 187, hallazgo **M-003**, regla **M-R9**: "Más" es un índice y no contiene ni un pendiente.)
 
@@ -375,13 +383,13 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 |---|---|---|
 | **Problemas frecuentes** | Diagnóstico (`/diagnostico`) | Es la lectura agregada de ese módulo. Sin ninguna ejecución registrada el rótulo es **"Diagnósticos recientes"**, no "Problemas frecuentes" |
 | **Para empezar** | Guías (`/soluciones`) | Ruta de aprendizaje sobre guías; se oculta al buscar o con filtro de etiqueta |
-| **Favoritos** | Más (`/mas`), como **"Mis favoritos"** | Sección plegable con su conteo |
+| **Favoritos** | Más (`/mas`), como **"Mis favoritos"** | Sección plegable con su conteo. Inicio tuvo "Favoritas" (solo guías) entre el 2026-09-17 y el 2026-09-20 |
 | **Actividad del equipo** | Más (`/mas`) | Sección plegable con su conteo |
 | **Descargar todo para offline** | Mi cuenta (`/cuenta`) | Ajuste de este dispositivo, como instalar la app; mismo estado que el paso 3 de la bienvenida |
 | **Diagnóstico** y **Escanear** (atajos) | Ya estaban en la navegación | No se duplican en Inicio |
-| **Lo que consultaste** | Inicio, como **"Recientes"** (tarea 241) | Volvió en forma compacta: tres filas como máximo, bajo el buscador y solo sin consulta activa. Mismo registro local (`recientes.ts`), ampliado a diagnósticos y fichas del Centro de consulta |
+| **Lo que consultaste** | En ninguna pantalla desde el 2026-09-20 | Volvió a Inicio como "Recientes" (tarea 241) y se retiró con la tarea 247: Inicio es trabajo pendiente. El registro local (`recientes.ts`) se sigue escribiendo |
 
-**Formas de fila (regla M-R6, "una fila, un significado").** `FilaAgenda` (56 px, título de 15 px, la razón en el color de su estado y el origen al lado) es lo que el técnico debe resolver; `FilaReciente` (44 px, 13,5 px, sin cuadrado de color) es lo que solo se consulta. Todos los controles táctiles miden 44 px o más y ninguna fila provoca desplazamiento horizontal: los textos largos se recortan.
+**Formas de fila (regla M-R6, "una fila, un significado").** `FilaAgenda` (56 px, título de 15 px, la razón en el color de su estado, el origen al lado y **la acción en un verbo a la derecha**: Abrir, Continuar o Revisar) es la única forma que queda en Inicio: lo que el técnico debe resolver. Las filas de consulta (`FilaAtajo`, 52 px) se fueron con "Favoritas" y "Recientes". Todos los controles táctiles miden 44 px o más y ninguna fila provoca desplazamiento horizontal: los textos largos se recortan.
 
 **Interacción con otras secciones.** Es la puerta a todo: el buscador atraviesa Guías, Equipos, Bóveda, Ubicaciones, Personas y el Centro de consulta; la agenda enlaza a la ficha de cada credencial, a la ficha del equipo dueño del dato protegido, al borrador propio, a la guía a medias y a las sugerencias del equipo.
 

@@ -152,6 +152,11 @@ export function BarraReanudar({
     return (
       <Link
         to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+        // La acción, en un verbo (encargo del 2026-09-20, tarea 3): en
+        // la agenda esta tarjeta es la fila "En curso", y su nombre
+        // accesible decía "Sigues en el paso 2 de 5 …", que describe
+        // el estado, no lo que pasa al tocarla.
+        aria-label={`Continuar ${articulo.titulo} · paso ${hechos + 1} de ${total}`}
         className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text hover:bg-noct-accent/[.13]"
       >
         <span className="flex items-center gap-[11px]">

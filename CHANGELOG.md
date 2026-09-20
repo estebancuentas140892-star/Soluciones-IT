@@ -6,6 +6,28 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-20
+
+### Cambiado (Inicio, tarea 247): Inicio vuelve a ser la agenda operativa, con el buscador arriba
+
+**Área modificada:** Inicio, la pantalla de la agenda (`/agenda`), el número de la pestaña Inicio y la tarjeta de reanudar.
+**Tipo:** Modificado (Inicio y `/agenda`), Retirado (Favoritas y Recientes de Inicio).
+**Nuevos:** `src/features/inicio/SeccionesAgenda.tsx` y la prueba de flujo `src/features/inicio/agendaInicio.test.tsx`.
+**Modificados:** `src/features/inicio/{InicioPage,AgendaPage}.tsx`, `src/features/inicio/{agenda.ts,usePendientes.ts}`, `src/components/BarraReanudar.tsx`, `src/app/Chasis.tsx`, `src/features/mas/PantallaMas.tsx` y sus pruebas.
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (4 y 5.1) y [COMPONENTES_UI.md](COMPONENTES_UI.md) (2.10ñ, 3.8s y 3.8s-bis).
+**Motivo:** encargo del usuario del **20 de septiembre de 2026**. Desde el 2026-09-17 la agenda vivía solo en `/agenda` y en Inicio quedaba una línea con lo urgente: al abrir la app ya no se sabía qué había pendiente, qué vencía hoy ni qué trabajo estaba a medias.
+**SIN cambios** de esquema (local ni Supabase), RLS, sincronización, permisos, Bóveda, Diagnósticos ni equipos. **No hay que ejecutar SQL.**
+
+- **Cambiado, Inicio es la agenda operativa.** Debajo del buscador ("¿Qué necesitas solucionar?", que no se mueve): fecha de hoy y resumen, **Vencidos** (todos), **Para hoy** (todos), **Próximos** (tres, y "Ver los otros N"), **En curso** y **Por revisar del equipo**, con **"Ver agenda completa"** al final. La bienvenida del primer día pasa debajo de la agenda.
+- **Agregado `SeccionesAgenda`:** los grupos se dibujan **una sola vez** y los usan Inicio y `/agenda`. `AgendaPage` baja de 268 a 37 líneas y no queda ninguna regla de negocio duplicada: los dos leen `agruparAgenda(usePendientes().items)`.
+- **Corregido, la misma guía no sale dos veces.** Un borrador propio con avance guardado entraba por dos puertas (la tarjeta de reanudar y "En curso"): `agendaSinGuiaEnCurso` deja solo la tarjeta, que es la que lleva el paso donde iba.
+- **Retirado de Inicio: "Favoritas", "Recientes"** y el texto de estado vacío que las anunciaba. Ningún dato se borra: los favoritos y la actividad del equipo siguen en **Más**, "Para empezar" en **Guías**, "Problemas frecuentes" en **Diagnóstico** y la descarga sin conexión en **Mi cuenta**. La tabla local `recientes` se sigue escribiendo, aunque ya no se muestre en ninguna pantalla.
+- **Cambiado, los estados se distinguen sin leer:** un punto de color por grupo (vencido rojo, hoy ámbar, próximo gris, en curso acento) y la acción de cada fila en un verbo a la derecha: **Abrir**, **Continuar** o **Revisar**, también en su nombre accesible. "Ver el otro" concuerda en singular.
+- **Corregido, el estado de carga no miente.** `usePendientes` ya no arranca con listas vacías, así que la pantalla no llega a decir "Todo al día por hoy" un instante antes de pintar tres accesos vencidos; mientras la base local responde dice "Revisando la agenda…".
+- **Sin cambios, el número de la pestaña Inicio:** sigue contando **solo** vencidos y asuntos de hoy, nunca próximos, borradores ni guías en curso. Ahora está probado.
+- **Pruebas:** 17 casos nuevos de flujo en `agendaInicio.test.tsx` (orden de los grupos, orden global por fecha entre Bóveda y datos de equipo, tope de tres próximos y su desplegable, sin duplicados, continuar la guía, "Ver agenda completa", "Todo al día por hoy", agenda vacía, permisos, ausencia de Favoritas y Recientes, número de la pestaña, y teléfono frente a escritorio) y 5 de lógica pura en `agenda.test.ts`. **116 archivos y 1633 casos en verde** (antes 115 y 1611); lint, tipos y build de producción limpios.
+- **No se incorporaron** calendario ni recordatorios manuales: la agenda sigue siendo una vista derivada de datos que ya existen, sin tablas nuevas.
+
 ## 2026-09-17
 
 ### Cambiado (editor y ejecución, tarea 246): segunda pasada, las guías se escriben para ejecutarse

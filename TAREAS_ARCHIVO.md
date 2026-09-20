@@ -1,5 +1,30 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-20: Inicio vuelve a ser la agenda operativa
+
+### 247. Inicio vuelve a ser la agenda operativa, con el buscador arriba
+
+**Título:** devolver a Inicio el resumen de la agenda sin perder el buscador como entrada rápida. **Estado:** Completada (2026-09-20) en código, interfaz, pruebas y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-20, con el análisis ya hecho y cuatro tareas, cada una con su commit.
+
+**Descripción y motivo.** El 2026-09-17 (tarea 244) la agenda se mudó entera a `/agenda` y en Inicio quedó una línea con lo urgente, para que Inicio fuera buscar y resolver con guías. En el uso diario el efecto fue el contrario: al abrir la app ya no se sabía qué había pendiente, qué vencía hoy ni qué trabajo estaba a medias, porque todo eso estaba en otra pantalla. El buscador sigue arriba; debajo vuelve la agenda.
+
+**Impacto:** alto, es la primera pantalla de la jornada.
+
+**Área afectada y ubicación.** Nuevos: `src/features/inicio/SeccionesAgenda.tsx` (los cinco grupos, `ResumenDelDia` y `FilaAgenda`, compartidos por las dos pantallas) y `src/features/inicio/agendaInicio.test.tsx` (17 casos de flujo con las pantallas reales). Modificados: `src/features/inicio/InicioPage.tsx` (agenda debajo del buscador, sin Favoritas ni Recientes: de 387 a 237 líneas), `AgendaPage.tsx` (de 268 a 37 líneas, solo el chasis), `agenda.ts` (`EstadoAgenda`, `ETIQUETA_ESTADO`, `accionDeItem`, `agendaSinGuiaEnCurso`, `textoVerOtros`), `usePendientes.ts` (devuelve `{ items, cargando }`), `src/components/BarraReanudar.tsx` (nombre accesible "Continuar …"), `src/app/Chasis.tsx` y `src/features/mas/PantallaMas.tsx` (se adaptan al nuevo retorno del hook).
+
+**Qué se hizo, por commit:**
+
+1. `refactor(inicio): integrar la agenda operativa` - Inicio muestra, en orden: buscador, fecha y resumen, Vencidos (todos), Para hoy (todos), Próximos (tres y "Ver los otros N"), En curso, Por revisar del equipo y "Ver agenda completa". Los grupos salen de `SeccionesAgenda`, el mismo componente que usa `/agenda`, sobre el mismo `agruparAgenda(usePendientes())`: no hay una segunda manera de calcular pendientes. `agendaSinGuiaEnCurso` evita que un borrador propio con avance salga a la vez en la tarjeta de reanudar y en "En curso".
+2. `refactor(inicio): retirar favoritos y contenido reciente` - fuera "Favoritas", "Recientes" y el texto de estado vacío que las anunciaba, más `FilaAtajo` y sus consultas. Ningún dato se borra: favoritos y actividad del equipo siguen en Más, "Para empezar" en Guías, "Problemas frecuentes" en Diagnóstico y la descarga sin conexión en Cuenta; `recientes` se sigue escribiendo aunque ya no se muestre.
+3. `fix(inicio): aclarar estados y acciones de agenda` - un punto de color por grupo (vencido, hoy, próximo, en curso), la acción de cada fila en un verbo (Abrir, Continuar, Revisar) también en el nombre accesible, "Ver el otro" en singular, y un estado de carga honesto: `usePendientes` ya no arranca con listas vacías, así que la pantalla no llega a decir "Todo al día por hoy" antes de haber mirado.
+4. `test(inicio): cubrir agenda operativa y actualizar documentacion` - las pruebas de flujo y esta documentación.
+
+**Pruebas.** 116 archivos y 1633 casos en verde (antes 115 y 1611). Nuevos: `agendaInicio.test.tsx` (orden de los siete bloques, todos los vencidos y los de hoy, orden global por fecha mezclando Bóveda y datos protegidos de equipo, tope de tres próximos y su desplegable en singular, sin duplicados entre la tarjeta de reanudar y "En curso", continuar la guía, "Ver agenda completa" abre `/agenda` y allí no se enlaza a sí misma, "Todo al día por hoy" solo sin vencidos ni asuntos del día, agenda vacía, permiso de bóveda, ausencia de Favoritas y Recientes con los datos aún guardados, el número de la pestaña con singular y plural y sin contar próximos ni borradores, y el foco del buscador en escritorio frente al teléfono) y cinco casos puros en `agenda.test.ts`. `npx oxlint`, `tsc -b` y `vite build` limpios.
+
+**Lo que NO se hizo (límites del encargo):** ni calendario, ni recordatorios manuales, ni tablas nuevas; `/agenda` se conserva completa; no se tocaron Bóveda, Diagnósticos, equipos, autenticación ni permisos, más allá de adaptar dos llamadas al nuevo retorno de `usePendientes`. **Sin cambios de esquema: no hay que ejecutar SQL.**
+
+**Limitación conocida:** la tabla local `recientes` se sigue escribiendo pero ya no se muestra en ninguna pantalla (antes se veía en Inicio). El encargo pedía retirarla de Inicio y no pedía llevarla a Más; el dato queda guardado por si se decide mostrarla allí.
+
 ## Encargo del 2026-09-17: resolver rápido con guías
 
 ### 246. Segunda pasada: que las guías se escriban para ejecutarse

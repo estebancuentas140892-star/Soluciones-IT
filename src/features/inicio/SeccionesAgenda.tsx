@@ -314,10 +314,13 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
           {item.fecha !== null && <span className="text-noct-neutral-400"> · {item.origen}</span>}
         </span>
       </span>
+      {/* La acción en su palabra, SIN chevron detrás: los dos dicen lo
+          mismo ("esto lleva a otro sitio") y en 360 px el chevron se
+          come 20 px del título, que es el dato que de verdad hay que
+          leer. */}
       <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300" aria-hidden>
         {accion}
       </span>
-      <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
     </Link>
   )
 }

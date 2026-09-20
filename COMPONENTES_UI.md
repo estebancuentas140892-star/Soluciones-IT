@@ -320,9 +320,10 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.10ñ `BarraReanudar`, variante `tarjeta`
 - **Propósito:** el bloque grande de "reanudar" de Inicio (tarea 203, hallazgo **M-013**, mockup `2b`). El procedimiento a medias se dibujaba de **tres** formas que parecían tres cosas distintas y eran la misma: "Continuar donde quedaste" (con su propia consulta dentro de `InicioPage`), "Sin terminar" en Guías y la barra flotante del chasis; en Inicio se veían **dos a la vez**. Ahora las tres salen del mismo dato (`useReanudar` -> `articulosSinTerminar`) y las dos de reanudar, del mismo componente.
 - **Props:** las mismas, con `variante="tarjeta"`. Rótulo "Sigues en el paso N de M", título a 15 px, barra de avance y el tiempo restante.
-- **Sin botón de descartar**, a diferencia de `flotante` y `sidebar`: esas acompañan al técnico por toda la app y a veces estorban; esta vive dentro de Inicio, que es justo la pantalla a la que se va a retomar el trabajo, así que descartarla no tendría a dónde llevar el recordatorio.
-- **No se repite:** `InicioPage` la omite mientras la barra flotante esté visible.
-- **Dónde:** `InicioPage`.
+- **Sin botón de descartar**, a diferencia de `flotante` y `sidebar`: esas acompañan al técnico por toda la app y a veces estorban; esta vive dentro de la agenda, que es justo donde se va a retomar el trabajo, así que descartarla no tendría a dónde llevar el recordatorio.
+- **La acción, en un verbo (2026-09-20, tarea 247):** `aria-label="Continuar {título} · paso N de M"`. Su nombre accesible era "Sigues en el paso 2 de 5 …", que describe el estado y no lo que pasa al tocarla.
+- **No se repite:** es la fila de "En curso" de la agenda, y `agendaSinGuiaEnCurso` saca de ese grupo el borrador que ya representa.
+- **Dónde:** `SeccionesAgenda` (y con ella Inicio y `/agenda`).
 
 ### 2.10n `BandaTarea` (`src/app/bandaTarea.tsx`)
 
@@ -462,9 +463,19 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Sin props.** Cambiar lo que hay detrás de la dirección, y no la dirección, mantiene válidos los enlaces guardados, la lista, el buscador, los recientes, la ficha del equipo y las guías relacionadas.
 - **Relacionados:** `ArticuloPage` acepta `comoDetalles` (ruta `/detalles`): en una guía con pasos su regreso dice "la guía" y su contexto "Detalles de la guía"; ya no monta ninguna barra de acción. `AsistentePage` pasa a `AsistenteVista` la `salida` de la pantalla de terminada (origen o padre declarado).
 
-### 3.8s `inicio/AgendaPage` (2026-09-17, tarea 244)
-- **Propósito:** la agenda operativa (vencidos, para hoy, próximos, en curso y por revisar del equipo) en su propia pantalla, nivel `documento`, en `/agenda`. Fue Inicio desde el 2026-09-11; se mudó para que Inicio sea buscar y resolver con guías. Mismas filas (`FilaAgenda`, `BloqueLista`, `CabeceraAgenda`), mismos grupos (`agenda.ts`) y mismos permisos: solo cambia de sitio.
-- **Puertas:** la línea de lo urgente en Inicio (solo si hay vencidos o para hoy, texto de `resumenUrgente`), la fila "Agenda" de Más (con lo urgente como subtítulo) y el grupo "Trabajo técnico" de la barra lateral.
+### 3.8s `inicio/AgendaPage` (2026-09-17, tarea 244; reducida en la 247)
+- **Propósito:** la **vista completa** de la agenda (vencidos, para hoy, próximos, en curso y por revisar del equipo), nivel `documento`, en `/agenda`. Desde la tarea 247 (2026-09-20) Inicio vuelve a resumir esos mismos grupos, y esta pantalla se conserva entera como la vista sin buscador delante.
+- **Ya no dibuja nada por su cuenta:** monta `ResumenDelDia` (sin la fecha, que va en la cabecera del chasis como `contexto`) y `SeccionesAgenda`. Se quedó en 37 líneas: antes eran 268, con su propia copia de las filas.
+- **Puertas:** "Ver agenda completa" en Inicio, la fila "Agenda" de Más (con lo urgente como subtítulo) y el grupo "Trabajo técnico" de la barra lateral.
+
+### 3.8s-bis `inicio/SeccionesAgenda` (2026-09-20, tarea 247)
+- **Propósito:** los grupos de la agenda, **una sola vez**, para las dos pantallas que los muestran (Inicio y `/agenda`). Antes cada una tenía su copia de `FilaAgenda`, `CabeceraAgenda` y `BloqueLista`; dos copias del mismo dibujo es como empiezan a divergir (un tope distinto de "Próximos", un estado nuevo que solo entra en una).
+- **Exporta:** `SeccionesAgenda` (los cinco grupos, el estado "Todo al día por hoy" y, opcional, el enlace "Ver agenda completa"), `ResumenDelDia` (fecha y resumen de una línea) y `FilaAgenda`.
+- **Props de `SeccionesAgenda`:** `{ agenda, cargando?, conEnlaceCompleta? }`. La agenda se la pasa quien la calcula (`agruparAgenda(usePendientes().items)`): el componente no consulta la base, salvo `useReanudar()` para la tarjeta de "En curso".
+- **No repite la guía a medias:** `agendaSinGuiaEnCurso` (en `agenda.ts`, probada) saca de "En curso" el borrador que ya lleva la tarjeta de reanudar.
+- **Estados por grupo:** cada cabecera lleva un punto de color (`vencido` rojo, `hoy` ámbar, `proximo` y `porRevisar` gris, `enCurso` acento) y cada fila su acción en un verbo (`accionDeItem`: Abrir, Continuar o Revisar), también en el nombre accesible del enlace ("Abrir Panel del router · Vencido").
+- **Cargando:** con `cargando` no dice "Todo al día por hoy" (afirmaría que no hay nada vencido antes de mirarlo); muestra "Cargando la agenda…".
+- **Dónde:** `InicioPage` (con `conEnlaceCompleta`) y `AgendaPage`.
 
 ### 3.8j-bis `soluciones/HojaPasos`, prop `tituloGuia`
 - **El nombre completo de la guía encabeza el índice (2026-09-09, cambio 4).** La cabecera de ejecución mide 44 px desde la tarea 218 y trunca el título; en 360 px se corta de verdad, y durante la ejecución ese es el **único** sitio donde aparece el nombre, así que quedaba irrecuperable (no hay `hover` en un teléfono y el `title` de HTML no se abre con el dedo). Va sin truncar y puede ocupar varias líneas.
