@@ -800,3 +800,89 @@ describe('con la bóveda bloqueada, ninguna credencial llega al técnico', () =>
     expect(JSON.stringify(resultadosCon(true))).not.toContain('bloque-cifrado')
   })
 })
+
+// ----------------------------------------------------------------
+// LA GUÍA DE LA RESOLUCIÓN DIAN (encargo del 2026-09-20, tarea 3)
+// ----------------------------------------------------------------
+//
+// Regresión que se cierra: esa guía existía, con nueve pasos y sin
+// eliminar, pero en `borrador`. El índice solo lleva lo publicado (así
+// debe seguir), y como buscar "DIAN" SÍ encontraba la ficha de HKA
+// Factura, la pantalla nunca decía que hubiera un borrador y la guía
+// parecía no existir.
+//
+// Aquí se prueban las dos mitades de la garantía: publicada, se
+// encuentra como guía; en borrador, no entra en el índice oficial.
+
+const TITULO_DIAN = 'Actualizar la resolución DIAN para facturación electrónica en un POS'
+const ID_DIAN = 'a1ac8d0a-72e7-4dd1-a377-afd2a2ca1cc0'
+
+describe('la guía de la resolución DIAN en el buscador', () => {
+  function indiceCon(estado: EstadoArticulo) {
+    return crearIndiceDesdeDocumentos(
+      documentosDeBusqueda(
+        datosIndice({
+          referencias: [FICHA_HKA],
+          articulos: [guia(ID_DIAN, TITULO_DIAN, estado, 'Resolución, prefijo y rango del POS')],
+          categorias: [
+            { id: 'cat-1', nombre: 'POS', eliminadoEn: null } as unknown as DatosIndice['categorias'][number],
+          ],
+        }),
+      ),
+    )
+  }
+
+  const publicada = indiceCon('publicado')
+  const enBorrador = indiceCon('borrador')
+
+  it.each(['DIAN', 'resolución DIAN', 'resolucion dian', 'facturación electrónica', 'facturacion electronica', 'dian'])(
+    'publicada, "%s" la encuentra',
+    (consulta) => {
+      expect(buscar(publicada, consulta).map((r) => r.id)).toContain(`articulo:${ID_DIAN}`)
+    },
+  )
+
+  it('aparece como guía, no como ficha del Centro de consulta', () => {
+    const encontrada = buscar(publicada, 'DIAN').find((r) => r.id === `articulo:${ID_DIAN}`)
+    expect(encontrada?.tipo).toBe('articulo')
+    expect(encontrada?.ruta).toBe(`/soluciones/cat-1/${ID_DIAN}`)
+  })
+
+  it('la ficha de HKA Factura puede seguir apareciendo: no compiten', () => {
+    const ids = buscar(publicada, 'DIAN').map((r) => r.id)
+    expect(ids).toContain('referencia:hka')
+    expect(ids).toContain(`articulo:${ID_DIAN}`)
+  })
+
+  it('en borrador NO entra en el índice oficial, ni por DIAN ni por su título entero', () => {
+    for (const consulta of ['DIAN', TITULO_DIAN, 'facturación electrónica']) {
+      expect(buscar(enBorrador, consulta).map((r) => r.id)).not.toContain(`articulo:${ID_DIAN}`)
+    }
+    // Y lo que sí es oficial se sigue encontrando: el borrador no tapa nada.
+    expect(buscar(enBorrador, 'DIAN').map((r) => r.id)).toContain('referencia:hka')
+  })
+
+  it('un artículo obsoleto tampoco entra en el índice', () => {
+    expect(buscar(indiceCon('obsoleto'), 'DIAN').map((r) => r.id)).not.toContain(`articulo:${ID_DIAN}`)
+  })
+
+  it('publicarla la mete en el índice sin tocar nada más', () => {
+    // Es lo que hace que baste con publicar desde el editor: el índice
+    // se construye a partir de las mismas tablas, así que el cambio de
+    // estado es todo lo que separa "no existe" de "resultado oficial".
+    const antes = documentosDeBusqueda(
+      datosIndice({ articulos: [guia(ID_DIAN, TITULO_DIAN, 'borrador')] }),
+    ).map((d) => d.id)
+    const despues = documentosDeBusqueda(
+      datosIndice({ articulos: [guia(ID_DIAN, TITULO_DIAN, 'publicado')] }),
+    ).map((d) => d.id)
+    expect(antes).not.toContain(`articulo:${ID_DIAN}`)
+    expect(despues).toContain(`articulo:${ID_DIAN}`)
+  })
+
+  it('eliminada no aparece aunque esté publicada', () => {
+    const borrada = { ...guia(ID_DIAN, TITULO_DIAN, 'publicado'), eliminadoEn: '2026-09-19T00:00:00.000Z' }
+    const documentos = documentosDeBusqueda(datosIndice({ articulos: [borrada] })).map((d) => d.id)
+    expect(documentos).not.toContain(`articulo:${ID_DIAN}`)
+  })
+})
