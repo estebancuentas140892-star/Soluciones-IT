@@ -20,6 +20,14 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
+**Despliegue confirmado (regla 14).** El commit `7111c4e` (tarea 247, encargo del 2026-09-20: Inicio vuelve a ser la agenda operativa) está servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 140 chunks que declara `/sw.js`, leídos de ahí y nunca comparados con los del build local:
+
+- **En positivo:** el chunk NUEVO `SeccionesAgenda-BfhrEAgc.js` contiene "Ver agenda completa", "Todo al día por hoy", "Por revisar del equipo", "Nada con fecha", "Revisando la agenda" y "Cargando la agenda"; `Chasis-774vMKJv.js` contiene "Ver el otro".
+- **En negativo:** **ningún** chunk contiene ya "Favoritas" ni "Aquí aparecerán las guías que uses" (el estado vacío que la anunciaba). "Recientes" solo aparece dentro de `conflictosRecientes` (panel de sincronización) y como nombre de la tabla local, que se conserva a propósito.
+- **Que es el ÚLTIMO commit y no el anterior:** en `SeccionesAgenda-BfhrEAgc.js` no hay ningún `size:15` y sí dos `size:13`. El chevron de 15 px de la fila se retiró justamente en `7111c4e`; el de 13 px es el de "Ver agenda completa".
+
+**Recordatorio para el equipo:** PWA con `registerType: 'prompt'`: en un teléfono que ya la tiene, hay que aceptar el aviso "Actualización disponible"; en escritorio, recarga forzada. **Sin cambios de esquema:** no hay que ejecutar SQL.
+
 **Despliegue confirmado (regla 14).** El commit `6626d6f` (tarea 246, segunda pasada del encargo del 2026-09-17) está servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 140 chunks que declara `/sw.js`, leídos de ahí y nunca comparados con los del build local:
 
 - **En positivo:** `ArticuloForm-wzAYKfYD.js` contiene "Dividir en", "Pasar a Información", "Empieza como un recordatorio" y "Sacar de «Antes de empezar»"; `SolucionesPage-BomjJNRK.js`, "para leer"; `CampoBusqueda-B6mhCh_M.js` e `index-BduLXrA1.css`, "data-campo-busqueda".
