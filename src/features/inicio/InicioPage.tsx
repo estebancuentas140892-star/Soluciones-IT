@@ -5,7 +5,6 @@ import { db } from '../../lib/db'
 import { obtenerFavoritos } from '../../lib/favoritos'
 import { obtenerRecientes, type ElementoReciente } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
-import { BarraReanudar } from '../../components/BarraReanudar'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   BookBookmark,
@@ -18,7 +17,6 @@ import {
   Plus,
   Star,
   TreeStructure,
-  WarningCircle,
 } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
@@ -30,36 +28,38 @@ import { coincidenciaArticulo } from '../soluciones/coincidencia'
 import { tarjetaReanudarVisible, useReanudar } from '../soluciones/useReanudar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
-import { agruparAgenda, asuntosUrgentes, resumenUrgente } from './agenda'
+import { agruparAgenda } from './agenda'
+import { ResumenDelDia, SeccionesAgenda } from './SeccionesAgenda'
 import { usePendientes } from './usePendientes'
 
 // Pantalla de Inicio en el sistema Nocturne. Declara nivel de sección en
 // el chasis único (tarea 185), que le pone sidebar en escritorio y
 // pestañas en móvil.
 //
-// INICIO ES PARA RESOLVER (encargo del 2026-09-17, secciones 1 y 2).
+// INICIO ES LA AGENDA OPERATIVA, CON EL BUSCADOR ARRIBA (encargo del
+// 2026-09-20, tarea 1).
 //
-// Soluciones IT se abre con algo que hacer: "no recuerdo cómo se hace
-// esto". El recorrido que tiene que salir bien es abrir, buscar, entrar a
-// la guía, hacer el paso y seguir. Hasta hoy Inicio era la agenda
-// operativa (fecha, resumen, vencidos, para hoy, próximos, en curso y
-// sugerencias del equipo): útil, pero ocupaba la pantalla con
-// vencimientos de la Bóveda justo donde se venía a buscar un
-// procedimiento.
+// El 2026-09-17 la agenda se mudó entera a `/agenda` y en Inicio quedó
+// una línea con lo urgente. El efecto en el uso diario fue el contrario
+// del buscado: al abrir la app ya no se sabía qué había pendiente, qué
+// vencía hoy ni qué trabajo estaba a medias, porque todo eso estaba a un
+// toque de distancia en otra pantalla. Buscar sigue siendo la entrada
+// rápida y se queda arriba del todo; debajo vuelve la agenda.
 //
-// Ahora, de arriba abajo:
+// De arriba abajo:
 //
 //   1. la pregunta y el buscador global, lo primero y lo más grande;
-//   2. una línea SOLO si hay algo urgente (vencido o para hoy), que lleva
-//      a la agenda completa (`AgendaPage`);
-//   3. Continuar: la guía que quedó a medias, en el paso donde iba;
-//   4. Favoritas: las guías que el técnico marcó con la estrella, las que
-//      usa siempre;
-//   5. Recientes: lo último que abrió en este teléfono.
+//   2. la fecha de hoy y el resumen de lo que hay con fecha;
+//   3. Vencidos · 4. Para hoy · 5. Próximos (tres) · 6. En curso ·
+//      7. Por revisar del equipo, con "Ver agenda completa" al final.
 //
-// Nada se inventa: favoritos, recientes y el avance ya existían. No hay
-// estadísticas ni "más usadas" (no hay un dato honesto detrás), ni
-// tarjetas de adorno.
+// Los grupos NO se dibujan aquí: son `SeccionesAgenda`, el mismo
+// componente que usa `AgendaPage`, sobre el mismo `agruparAgenda` de los
+// mismos `usePendientes`. Una sola regla de negocio, dos sitios donde se
+// ve.
+//
+// Nada se inventa: no hay calendario, ni recordatorios a mano, ni tabla
+// nueva; la agenda es una vista de datos que ya existen.
 
 // Cuántas filas de recientes. Cinco caben en un teléfono sin empujar la
 // pantalla, y son atajos, no un historial.
@@ -121,16 +121,17 @@ export function InicioPage() {
     [borradores, consulta],
   )
 
-  // LO URGENTE DE LA AGENDA, Y NADA MÁS. Los mismos pendientes que cuenta
-  // el número de la pestaña (vencidos y para hoy); la agenda entera vive
-  // en su pantalla.
+  // LA AGENDA. Los mismos pendientes que cuenta el número de la pestaña,
+  // repartidos por fecha con la misma función que usa `/agenda`: aquí no
+  // se vuelve a decidir qué está vencido ni qué es de hoy.
   const perfil = usePerfilVivo()
   const pendientes = usePendientes()
   const agenda = useMemo(() => agruparAgenda(pendientes), [pendientes])
-  const urgentes = asuntosUrgentes(agenda)
 
-  // UNA SOLA TARJETA DE REANUDAR (hallazgo M-013): el mismo dato que la
-  // agenda, en su tamaño grande. Entra a la guía en el paso donde iba.
+  // UNA SOLA TARJETA DE REANUDAR (hallazgo M-013): la dibuja
+  // `SeccionesAgenda` dentro de "En curso". Aquí el dato se lee solo para
+  // saber si ya hay trabajo real (bienvenida) y para no repetir la guía
+  // en "Recientes".
   const reanudar = useReanudar()
   const hayQueReanudar = tarjetaReanudarVisible(reanudar)
   const idReanudar = hayQueReanudar ? (reanudar.actual?.articulo.id ?? null) : null
@@ -253,42 +254,21 @@ export function InicioPage() {
           )
         ) : (
           <div className="@container flex flex-col gap-[22px]">
+            {/* LA AGENDA OPERATIVA, JUSTO DEBAJO DEL BUSCADOR. El día y el
+                resumen primero, y debajo los grupos en el orden en que se
+                decide la jornada. La guía a medias entra en "En curso"
+                (con su tarjeta) y no se repite en ninguna otra sección. */}
+            <div className="flex flex-col gap-[18px]">
+              <ResumenDelDia agenda={agenda} />
+              <SeccionesAgenda agenda={agenda} conEnlaceCompleta />
+            </div>
+
             {/* Bienvenida del primer día: los tres pasos que dejan al
-                técnico listo para trabajar sin señal. Se retira sola en
-                cuanto hay trabajo real y, cumplida, no vuelve. */}
+                técnico listo para trabajar sin señal. Va DEBAJO de la
+                agenda para no empujarla, se retira sola en cuanto hay
+                trabajo real y, cumplida, no vuelve. */}
             {consultasListas && (
               <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
-            )}
-
-            {/* LO URGENTE, EN UNA LÍNEA. Solo existe cuando hay algo
-                vencido o para hoy, así que cuando aparece se ve. */}
-            {urgentes > 0 && (
-              <Link
-                to="/agenda"
-                className="flex min-h-12 items-center gap-2.5 rounded-lg border border-noct-error/35 bg-noct-error/[.08] px-3 py-2 text-noct-text hover:bg-noct-error/[.12]"
-              >
-                <WarningCircle size={18} className="shrink-0 text-noct-error" aria-hidden />
-                <span className="min-w-0 flex-1 text-[14px] leading-snug">
-                  <span className="font-medium">Agenda:</span> {resumenUrgente(agenda)}
-                </span>
-                <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
-              </Link>
-            )}
-
-            {hayQueReanudar && reanudar.actual && (
-              <section>
-                <div className="mb-1.5 px-0.5">
-                  <TituloSeccion>Continuar</TituloSeccion>
-                </div>
-                <BarraReanudar
-                  variante="tarjeta"
-                  articulo={reanudar.actual.articulo}
-                  hechos={reanudar.actual.hechos}
-                  total={reanudar.actual.total}
-                  minutosRestantes={reanudar.actual.minutosRestantes}
-                  onDescartar={reanudar.descartar}
-                />
-              </section>
             )}
 
             {favoritas.length > 0 && (

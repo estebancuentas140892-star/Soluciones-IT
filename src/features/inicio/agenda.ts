@@ -118,3 +118,56 @@ export function fechaDeHoy(hoy: Date = new Date()): string {
   }).format(hoy)
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
+
+// ----------------------------------------------------------------
+// ESTADO Y ACCIÓN DE CADA FILA (encargo del 2026-09-20, tarea 3)
+// ----------------------------------------------------------------
+//
+// Un ítem de la agenda ya dice su fecha ("Venció hace 3 días", "Vence el
+// 18 sep"), pero la fecha sola no distingue de un vistazo lo que hay que
+// resolver YA de lo que solo hay que tener en cuenta. Cada grupo tiene
+// su estado escrito con una palabra, y cada fila la acción que le
+// corresponde, para que "qué hago con esto" no haya que deducirlo.
+
+export type EstadoAgenda = 'vencido' | 'hoy' | 'proximo' | 'enCurso' | 'porRevisar'
+
+/** La palabra que se pinta en la fila. Una sola, en singular: describe ESE ítem. */
+export const ETIQUETA_ESTADO: Record<EstadoAgenda, string> = {
+  vencido: 'Vencido',
+  hoy: 'Hoy',
+  proximo: 'Próximo',
+  enCurso: 'En curso',
+  porRevisar: 'Por revisar',
+}
+
+/**
+ * Qué se hace con este ítem, dicho en un verbo: un borrador propio se
+ * CONTINÚA, una sugerencia del equipo se REVISA y un acceso con fecha se
+ * ABRE (para rotarlo donde vive). Es el nombre accesible del enlace de la
+ * fila, así que "Continuar «Guía a medias»" se lee entero.
+ */
+export function accionDeItem(item: ItemPendiente): string {
+  if (item.categoria === 'borrador') return 'Continuar'
+  if (item.categoria === 'sugerencia') return 'Revisar'
+  return 'Abrir'
+}
+
+/**
+ * Quita de "En curso" la guía que ya asoma en la tarjeta de reanudar.
+ *
+ * Un artículo en borrador que además tiene avance guardado entra por dos
+ * puertas: `borradoresPropios` lo mete en `enCurso` y `useReanudar` lo
+ * saca en su tarjeta. Es la MISMA guía dos veces en la misma pantalla.
+ * La tarjeta gana, porque lleva el paso donde iba.
+ */
+export function agendaSinGuiaEnCurso(agenda: Agenda, articuloIdEnCurso: string | null): Agenda {
+  if (!articuloIdEnCurso) return agenda
+  const clave = `borrador:${articuloIdEnCurso}`
+  if (!agenda.enCurso.some((item) => item.clave === clave)) return agenda
+  return { ...agenda, enCurso: agenda.enCurso.filter((item) => item.clave !== clave) }
+}
+
+/** "Ver el otro" / "Ver los otros 4": el desplegable también concuerda. */
+export function textoVerOtros(ocultos: number): string {
+  return ocultos === 1 ? 'Ver el otro' : `Ver los otros ${ocultos}`
+}

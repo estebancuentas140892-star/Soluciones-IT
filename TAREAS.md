@@ -4,6 +4,17 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+### 247. Inicio vuelve a ser la agenda operativa, con el buscador arriba
+
+- **Titulo:** devolver a Inicio el resumen de la agenda (vencidos, para hoy, proximos, en curso y por revisar) sin perder el buscador como entrada rapida.
+- **Descripcion:** encargo del 2026-09-20, cuatro partes con su propio commit: (1) integrar la agenda operativa en Inicio reutilizando `agruparAgenda`, `usePendientes` y `useReanudar`, con componentes compartidos con `/agenda` en vez de copiar `AgendaPage`; (2) retirar de Inicio "Favoritas", "Recientes" y cualquier acceso secundario; (3) aclarar estados ("Vencido", "Hoy", "Proximo", "En curso"), acciones directas, concordancia de los contadores y el mensaje "Todo al dia por hoy"; (4) pruebas y documentacion funcional.
+- **Motivo:** desde el 2026-09-17 la agenda vivia solo en `/agenda` y al abrir la app no se sabia que habia pendiente ni que vencia hoy.
+- **Impacto:** alto: es la primera pantalla de la jornada.
+- **Prioridad:** Alta. **Estado:** En proceso.
+- **Area afectada:** `src/features/inicio/{InicioPage.tsx,AgendaPage.tsx,SeccionesAgenda.tsx,agenda.ts}`, `src/app/Chasis.tsx` (numero de la pestana), `DOCUMENTACION_FUNCIONAL.md`.
+- **Limites del encargo:** sin calendario, sin recordatorios a mano y sin tablas nuevas; `/agenda` se conserva completa; los favoritos y la actividad del equipo siguen en Mas.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
 *(vacío: las tareas **244** y **246** (resolver rápido con guías, encargo del 2026-09-17, y su segunda pasada del mismo día) se cerraron ese día y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Sigue en "Por hacer" la **245**: revisar el CONTENIDO de la guía de la resolución DIAN, que necesita leer los datos del equipo con una sesión de la app. Desde la 246 el editor señala en esa guía lo que hay que corregir.)*
 
 
