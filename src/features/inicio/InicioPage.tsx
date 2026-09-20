@@ -2,30 +2,17 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
-import { obtenerFavoritos } from '../../lib/favoritos'
-import { obtenerRecientes, type ElementoReciente } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import {
-  BookBookmark,
-  BookOpen,
-  CaretRight,
-  ClockCounterClockwise,
-  type IconoProps,
-  MagnifyingGlass,
-  Monitor,
-  Plus,
-  Star,
-  TreeStructure,
-} from '../../components/iconos'
-import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { BookOpen, MagnifyingGlass, Plus } from '../../components/iconos'
+import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import { coincidenciaArticulo } from '../soluciones/coincidencia'
-import { tarjetaReanudarVisible, useReanudar } from '../soluciones/useReanudar'
+import { useReanudar } from '../soluciones/useReanudar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
 import { agruparAgenda } from './agenda'
@@ -61,10 +48,6 @@ import { usePendientes } from './usePendientes'
 // Nada se inventa: no hay calendario, ni recordatorios a mano, ni tabla
 // nueva; la agenda es una vista de datos que ya existen.
 
-// Cuántas filas de recientes. Cinco caben en un teléfono sin empujar la
-// pantalla, y son atajos, no un historial.
-const MAX_RECIENTES_INICIO = 5
-
 export function InicioPage() {
   // VOLVER CON LA BÚSQUEDA ESCRITA (encargo del 2026-09-16, sección 13).
   // Abrir una ficha desde un resultado y volver (con el regreso de la app
@@ -84,9 +67,8 @@ export function InicioPage() {
   // 2026-09-17, sección 2: "al abrir la aplicación, poder empezar a buscar
   // inmediatamente"). Con ratón y teclado físico el campo recibe el foco
   // al llegar a Inicio: se escribe sin tocar nada. En el teléfono NO: el
-  // teclado en pantalla taparía "Continuar" y "Recientes", que muchas
-  // veces es lo que se viene a tocar; ahí el campo ya es lo primero y lo
-  // más grande.
+  // teclado en pantalla taparía la agenda, que es justo lo que se viene a
+  // leer al abrir; ahí el campo ya es lo primero y lo más grande.
   const refCampo = useRef<HTMLInputElement>(null)
   useEffect(() => {
     const conPunteroFino =
@@ -128,13 +110,10 @@ export function InicioPage() {
   const pendientes = usePendientes()
   const agenda = useMemo(() => agruparAgenda(pendientes), [pendientes])
 
-  // UNA SOLA TARJETA DE REANUDAR (hallazgo M-013): la dibuja
-  // `SeccionesAgenda` dentro de "En curso". Aquí el dato se lee solo para
-  // saber si ya hay trabajo real (bienvenida) y para no repetir la guía
-  // en "Recientes".
+  // LA TARJETA DE REANUDAR la dibuja `SeccionesAgenda` dentro de "En
+  // curso". Aquí el dato se lee solo para saber si ya hay trabajo real,
+  // que es lo que retira la bienvenida del primer día.
   const reanudar = useReanudar()
-  const hayQueReanudar = tarjetaReanudarVisible(reanudar)
-  const idReanudar = hayQueReanudar ? (reanudar.actual?.articulo.id ?? null) : null
 
   // Bienvenida del primer día (tarea 184): se muestra mientras falte
   // alguno de sus tres pasos Y no haya todavía trabajo real. Sin valor
@@ -143,26 +122,6 @@ export function InicioPage() {
   // quien sí tiene trabajo a medias.
   const consultasListas = useLiveQuery(() => db.progresoPasos.count(), []) !== undefined
   const hayBloquesReales = pendientes.length > 0 || reanudar.actual != null
-
-  // FAVORITAS: las guías marcadas con la estrella en ESTE teléfono (la
-  // misma marca de siempre, `favoritos`). Solo guías: Inicio es para
-  // resolver con guías, y los equipos y diagnósticos favoritos siguen en
-  // Más.
-  const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
-  const favoritas = useMemo(() => favoritos.filter((f) => f.tipo === 'articulo'), [favoritos])
-
-  // RECIENTES (tarea 241): lo último abierto en este teléfono. Se quita
-  // lo que ya está a la vista arriba (la guía de "Continuar" y las
-  // favoritas): la misma guía dos veces en la misma pantalla es ruido. La
-  // bóveda no aparece nunca: `recientes` no anota credenciales.
-  const recientesCrudos = useLiveQuery(() => obtenerRecientes(MAX_RECIENTES_INICIO + 8), [], [])
-  const recientes = useMemo(() => {
-    const yaVisibles = new Set(favoritas.map((f) => f.clave))
-    if (idReanudar) yaVisibles.add(`articulo:${idReanudar}`)
-    return recientesCrudos.filter((r) => !yaVisibles.has(r.clave)).slice(0, MAX_RECIENTES_INICIO)
-  }, [recientesCrudos, favoritas, idReanudar])
-
-  const sinNadaQueMostrar = !hayQueReanudar && favoritas.length === 0 && recientes.length === 0
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila.
@@ -253,7 +212,7 @@ export function InicioPage() {
             </div>
           )
         ) : (
-          <div className="@container flex flex-col gap-[22px]">
+          <div className="flex flex-col gap-[22px]">
             {/* LA AGENDA OPERATIVA, JUSTO DEBAJO DEL BUSCADOR. El día y el
                 resumen primero, y debajo los grupos en el orden en que se
                 decide la jornada. La guía a medias entra en "En curso"
@@ -270,98 +229,9 @@ export function InicioPage() {
             {consultasListas && (
               <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
             )}
-
-            {favoritas.length > 0 && (
-              <section>
-                <div className="mb-1 flex items-center gap-2 px-0.5">
-                  <Star size={13} className="text-noct-neutral-400" aria-hidden />
-                  <TituloSeccion>Favoritas</TituloSeccion>
-                </div>
-                <div className="flex flex-col">
-                  {favoritas.map((favorita) => (
-                    <FilaAtajo
-                      key={favorita.clave}
-                      ruta={favorita.ruta}
-                      Icono={BookOpen}
-                      titulo={favorita.titulo}
-                      subtitulo={favorita.subtitulo}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {recientes.length > 0 && (
-              <section>
-                <div className="mb-1 flex items-center gap-2 px-0.5">
-                  <ClockCounterClockwise size={13} className="text-noct-neutral-400" aria-hidden />
-                  <TituloSeccion>Recientes</TituloSeccion>
-                </div>
-                <div className="flex flex-col">
-                  {recientes.map((item) => (
-                    <FilaAtajo
-                      key={item.clave}
-                      ruta={item.ruta}
-                      Icono={ICONO_RECIENTE[item.tipo]}
-                      titulo={item.titulo}
-                      subtitulo={item.subtitulo}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* SIN HISTORIAL TODAVÍA: la pantalla no se queda en blanco
-                debajo del buscador. Dice qué va a aparecer aquí y deja
-                explorar las guías. */}
-            {consultasListas && sinNadaQueMostrar && (
-              <p className="px-0.5 text-[13.5px] leading-relaxed text-noct-neutral-400">
-                Aquí aparecerán las guías que uses y las que marques con la estrella. También puedes{' '}
-                <Link to="/soluciones" className="font-medium text-noct-accent-300 underline underline-offset-[3px]">
-                  ver todas las guías
-                </Link>
-                .
-              </p>
-            )}
           </div>
         )}
       </main>
     </Chasis>
   )
-}
-
-// UNA FILA DE ATAJO (M-R6, fila de CONSULTA): 52 px, título de 15 px y
-// sin cuadrado de color. Lleva a lo que nombra; en una guía, directo a su
-// paso pendiente.
-function FilaAtajo({
-  ruta,
-  Icono,
-  titulo,
-  subtitulo,
-}: {
-  ruta: string
-  Icono: (props: IconoProps) => React.JSX.Element
-  titulo: string
-  subtitulo: string
-}) {
-  return (
-    <Link
-      to={ruta}
-      className="flex min-h-[52px] items-center gap-3 rounded-md px-2 py-2 text-noct-text hover:bg-noct-text/[.05] active:bg-noct-text/[.08]"
-    >
-      <Icono size={17} className="shrink-0 text-noct-neutral-400" aria-hidden />
-      <span className="min-w-0 flex-1">
-        <span className="block text-[15px] leading-[1.3] [text-wrap:pretty]">{titulo}</span>
-        {subtitulo && <span className="block truncate text-[12px] text-noct-neutral-500">{subtitulo}</span>}
-      </span>
-      <CaretRight size={14} className="shrink-0 text-noct-neutral-600" aria-hidden />
-    </Link>
-  )
-}
-
-const ICONO_RECIENTE: Record<ElementoReciente['tipo'], (props: IconoProps) => React.JSX.Element> = {
-  articulo: BookOpen,
-  dispositivo: Monitor,
-  diagnostico: TreeStructure,
-  referencia: BookBookmark,
 }
