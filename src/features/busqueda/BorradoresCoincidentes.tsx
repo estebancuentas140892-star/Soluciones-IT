@@ -99,13 +99,18 @@ function FilaBorrador({ borrador, consulta }: { borrador: BorradorCoincidente; c
           {match && <mark className="bg-transparent text-noct-accent-300">{match}</mark>}
           {post}
         </span>
-        <span className="mt-[3px] flex items-center gap-2 text-[12px] text-noct-neutral-400">
+        {/* La acción va en la SEGUNDA línea, no en una columna a la
+            derecha: "Revisar borrador" ocupa casi 100 px, y en un
+            teléfono de 360 se los quitaba al título, que es lo que hay
+            que reconocer ("Actualizar la re…"). Aquí el título se queda
+            con todo el ancho. */}
+        <span className="mt-[3px] flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-noct-neutral-400">
           <PastillaEstadoArticulo estado="borrador" />
           {borrador.categoriaNombre && <span className="truncate">{borrador.categoriaNombre}</span>}
+          <span className="font-medium text-noct-accent-300" aria-hidden>
+            Revisar borrador
+          </span>
         </span>
-      </span>
-      <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300" aria-hidden>
-        Revisar borrador
       </span>
     </Link>
   )
