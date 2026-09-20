@@ -20,6 +20,14 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
+**Despliegue confirmado (regla 14).** El commit `cff29d8` (tarea 248, los borradores que coinciden se ven en Inicio) esta servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 140 chunks que declara `/sw.js`, leidos de ahi y nunca comparados con los del build local:
+
+- **En positivo:** `InicioPage-woulfWqH.js` contiene "Borradores coincidentes", "No hay una guia publicada con esta busqueda", "Revisar borrador", "borrador coincide" y "Ver todos en Guias".
+- **En negativo:** **ningun** chunk contiene ya "Ver los borradores en Guias" ni la frase vieja del aviso dentro de "Sin coincidencias".
+- **Que es el ULTIMO commit y no el anterior:** ese chunk contiene `gap-y-1`, la clase que entro justo en `cff29d8` al bajar la accion a la segunda linea de la fila. El despliegue anterior (`InicioPage-DaBnJJv-.js`) no la tenia.
+
+**Ojo:** la comprobacion es del CODIGO desplegado. Que la guia DIAN aparezca de verdad en el bloque exige una sesion del equipo (el contenido vive en Supabase con RLS); en local, con la guia sembrada en borrador, buscar "DIAN" muestra la ficha HKA Factura y, debajo, el borrador con su pastilla y "Revisar borrador".
+
 **Despliegue confirmado (regla 14).** El commit `7111c4e` (tarea 247, encargo del 2026-09-20: Inicio vuelve a ser la agenda operativa) está servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 140 chunks que declara `/sw.js`, leídos de ahí y nunca comparados con los del build local:
 
 - **En positivo:** el chunk NUEVO `SeccionesAgenda-BfhrEAgc.js` contiene "Ver agenda completa", "Todo al día por hoy", "Por revisar del equipo", "Nada con fecha", "Revisando la agenda" y "Cargando la agenda"; `Chasis-774vMKJv.js` contiene "Ver el otro".
