@@ -8,6 +8,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-20
 
+### Corregido (buscador, tarea 248): los borradores que coinciden se ven, aunque haya otros resultados
+
+**Área modificada:** el buscador de Inicio (bloque nuevo y estado vacío).
+**Tipo:** Corregido (visibilidad de los borradores), Agregado (bloque "Borradores coincidentes").
+**Nuevos:** `src/features/busqueda/borradoresEnBusqueda.ts` (+ `borradoresEnBusqueda.test.ts`), `src/features/busqueda/BorradoresCoincidentes.tsx` y la prueba de flujo `src/features/busqueda/busquedaBorradores.test.tsx`.
+**Modificados:** `src/features/inicio/InicioPage.tsx` y `src/features/busqueda/busqueda.test.ts`.
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.1), [BUSCADOR.md](BUSCADOR.md) (sección 9) y [COMPONENTES_UI.md](COMPONENTES_UI.md) (3.8t).
+**Motivo:** encargo del usuario del **20 de septiembre de 2026**, tras buscar "DIAN" en Inicio y no encontrar una guía que existe. La guía `a1ac8d0a-72e7-4dd1-a377-afd2a2ca1cc0` ("Actualizar la resolución DIAN para facturación electrónica en un POS", categoría POS, nueve pasos, sin eliminar) está en **`borrador`**, y el índice solo lleva lo publicado. El aviso de "hay borradores que coinciden" existía, pero solo dentro del estado "Sin coincidencias": como "DIAN" sí encuentra la ficha **HKA Factura**, había resultados y ese aviso no se dibujaba nunca.
+**SIN cambios** de esquema, RLS, sincronización, permisos ni del índice del buscador. **No hay que ejecutar SQL.**
+
+- **Agregado el bloque "Borradores coincidentes"** en Inicio, siempre que haya búsqueda: rótulo propio, conteo, hasta tres filas y "Ver los otros N" / "Ver todos en Guías". Cada fila lleva título con el término resaltado, pastilla **"Borrador"**, categoría y **"Revisar borrador"**, que abre el **editor** del artículo. Nunca se mezcla con los resultados oficiales.
+- **Cambiado el estado vacío:** con algún borrador que coincida, Inicio ya no dice "Sin coincidencias" sino **"No hay una guía publicada con esta búsqueda."**, con el borrador debajo.
+- **Corregido el filtro de borradores:** era `estado !== 'publicado'`, así que un artículo **obsoleto** contaba como borrador. Ahora es `estado === 'borrador'` y sin eliminar.
+- **Sin cambios en el índice:** `documentosDeBusqueda` sigue indexando **solo lo publicado**. Una guía entra en los resultados oficiales cuando se publica, y no antes.
+- **Pruebas:** 20 casos nuevos (11 puros sobre `borradoresEnBusqueda`, 8 de flujo con Inicio montado y el resto en `busqueda.test.ts` sobre la guía DIAN publicada, en borrador, obsoleta y eliminada, con y sin tildes). **118 archivos y 1664 casos en verde** (antes 116 y 1633); lint, tipos y build limpios.
+- **Pendiente aparte (tarea 245):** el CONTENIDO de esa guía sigue sin revisar y la guía sigue en **borrador**. Las nueve confirmaciones críticas (ruta de FrontRest, campos, valores internos de HKA, ejecución en el teléfono) necesitan a alguien del equipo delante de esos sistemas; no se inventa ninguna.
+
 ### Cambiado (Inicio, tarea 247): Inicio vuelve a ser la agenda operativa, con el buscador arriba
 
 **Área modificada:** Inicio, la pantalla de la agenda (`/agenda`), el número de la pestaña Inicio y la tarjeta de reanudar.

@@ -463,6 +463,13 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Sin props.** Cambiar lo que hay detrás de la dirección, y no la dirección, mantiene válidos los enlaces guardados, la lista, el buscador, los recientes, la ficha del equipo y las guías relacionadas.
 - **Relacionados:** `ArticuloPage` acepta `comoDetalles` (ruta `/detalles`): en una guía con pasos su regreso dice "la guía" y su contexto "Detalles de la guía"; ya no monta ninguna barra de acción. `AsistentePage` pasa a `AsistenteVista` la `salida` de la pantalla de terminada (origen o padre declarado).
 
+### 3.8t `busqueda/BorradoresCoincidentes` (2026-09-20, tarea 248)
+- **Propósito:** enseñar en Inicio los artículos en `borrador` que coinciden con la búsqueda, **sin meterlos en el índice oficial**. Cierra el defecto de la guía de la resolución DIAN: existe, tiene nueve pasos y está en borrador, y como "DIAN" encuentra la ficha de HKA Factura, el viejo aviso (que solo vivía dentro de "Sin coincidencias") no se dibujaba nunca.
+- **Props:** `{ borradores, consulta, consultaCruda }`. La lista la calcula quien busca, con `borradoresCoincidentes` (`borradoresEnBusqueda.ts`, lógica pura y probada): `estado === 'borrador'`, sin eliminar, cruzado con la MISMA `coincidenciaArticulo` de la lista de Guías. Con la lista vacía devuelve `null`.
+- **Forma:** bloque con borde propio, rótulo "Borradores coincidentes" y conteo. Cada fila: título con el término resaltado, pastilla **"Borrador"** (`PastillaEstadoArticulo`), categoría y la acción **"Revisar borrador"**, que enlaza al **editor** del artículo. Tres visibles, "Ver los otros N" y "Ver todos en Guías".
+- **Por qué al editor y no a la guía:** revisar un borrador es corregirlo; abrirlo como si fuera un procedimiento del equipo es justo lo que no debe pasar.
+- **Dónde:** `InicioPage`, debajo de los resultados oficiales (o del aviso "No hay una guía publicada con esta búsqueda").
+
 ### 3.8s `inicio/AgendaPage` (2026-09-17, tarea 244; reducida en la 247)
 - **Propósito:** la **vista completa** de la agenda (vencidos, para hoy, próximos, en curso y por revisar del equipo), nivel `documento`, en `/agenda`. Desde la tarea 247 (2026-09-20) Inicio vuelve a resumir esos mismos grupos, y esta pantalla se conserva entera como la vista sin buscador delante.
 - **Ya no dibuja nada por su cuenta:** monta `ResumenDelDia` (sin la fecha, que va en la cabecera del chasis como `contexto`) y `SeccionesAgenda`. Se quedó en 37 líneas: antes eran 268, con su propia copia de las filas.

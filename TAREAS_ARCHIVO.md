@@ -2,6 +2,24 @@
 
 ## Encargo del 2026-09-20: Inicio vuelve a ser la agenda operativa
 
+### 248. Los borradores que coinciden se ven en el buscador de Inicio
+
+**Título:** encontrar desde Inicio un artículo en borrador aunque la búsqueda ya tenga otros resultados, sin presentarlo como guía oficial. **Estado:** Completada (2026-09-20) en código, interfaz, pruebas y documentación. **Prioridad:** Alta. **Origen:** el usuario buscó "DIAN" en Inicio y no encontró una guía que existe.
+
+**Causa.** La guía `a1ac8d0a-72e7-4dd1-a377-afd2a2ca1cc0` ("Actualizar la resolución DIAN para facturación electrónica en un POS", categoría POS, nueve pasos, sin eliminar) está en **`borrador`**. El índice del buscador solo lleva lo **publicado**, que es correcto y no se tocó. Inicio ya calculaba cuántos borradores coincidían, pero solo lo decía **dentro** del estado "Sin coincidencias"; como "DIAN" encuentra la ficha **HKA Factura** del Centro de consulta, siempre había resultados, el aviso no se dibujaba nunca y la guía parecía no existir.
+
+**Qué se hizo:**
+
+1. `fix(busqueda): mostrar borradores coincidentes en inicio` - bloque **"Borradores coincidentes"** en Inicio, siempre que haya búsqueda, debajo de los resultados oficiales y aparte de ellos: título con el término resaltado, pastilla "Borrador", categoría y "Revisar borrador" (al editor del artículo). Tres visibles, "Ver los otros N" y "Ver todos en Guías". Sin resultados oficiales la pantalla dice **"No hay una guía publicada con esta búsqueda."** en vez de "Sin coincidencias". La consulta de borradores pasa a `estado === 'borrador'` (antes `!== 'publicado'`, así que un **obsoleto** contaba como borrador). `documentosDeBusqueda` **no cambió**.
+2. `test(busqueda): cubrir la guia DIAN y los borradores coincidentes` - regresión del índice y del flujo.
+3. `docs(guias): registrar pendientes de la guia DIAN` - esta documentación, y la tarea 245 con sus nueve confirmaciones abiertas.
+
+**Área afectada y ubicación.** Nuevos: `src/features/busqueda/borradoresEnBusqueda.ts` (lógica pura: `esBorradorVivo`, `borradoresCoincidentes`, `fraseBorradores`, `BORRADORES_VISIBLES`), `BorradoresCoincidentes.tsx` (el bloque), `borradoresEnBusqueda.test.ts` y `busquedaBorradores.test.tsx`. Modificados: `src/features/inicio/InicioPage.tsx` (consultas y rama de búsqueda) y `src/features/busqueda/busqueda.test.ts`. El módulo puro se llama `borradoresEnBusqueda` y no `borradoresCoincidentes` a propósito: en Windows, dos archivos del mismo directorio que solo difieren en la mayúscula inicial son el mismo módulo para TypeScript.
+
+**Pruebas.** 118 archivos y 1664 casos en verde (antes 116 y 1633). `borradoresEnBusqueda.test.ts` (11 casos: solo borradores vivos, caja y tildes, los mismos campos que la lista de Guías, orden con el título primero, sin consulta no hay lista, categoría borrada); `busqueda.test.ts` (la guía DIAN publicada se encuentra por "DIAN", "resolución DIAN" y "facturación electrónica" y sale como guía y no como ficha; en borrador, obsoleta o eliminada no entra en el índice; publicarla la mete; HKA Factura convive con ella); `busquedaBorradores.test.tsx` (Inicio montado: el bloque sale CON HKA Factura delante, "Revisar borrador" enlaza al editor, el obsoleto no cuenta, el eliminado no aparece, y al cambiar el estado a publicado en la base local el índice reactivo lo recoge, la guía pasa a los resultados oficiales, sale del bloque y se puede abrir). `oxlint`, `tsc -b` y `vite build` limpios.
+
+**Lo que NO se hizo:** no se tocó el índice (`documentosDeBusqueda` sigue indexando solo lo publicado), ni el esquema, ni RLS, ni permisos, ni se publicó ninguna guía por SQL. **El contenido de la guía DIAN sigue sin revisar y la guía sigue en `borrador`:** es la tarea **245**, que queda abierta con sus nueve confirmaciones críticas escritas una por una en [TAREAS.md](TAREAS.md).
+
 ### 247. Inicio vuelve a ser la agenda operativa, con el buscador arriba
 
 **Título:** devolver a Inicio el resumen de la agenda sin perder el buscador como entrada rápida. **Estado:** Completada (2026-09-20) en código, interfaz, pruebas y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-20, con el análisis ya hecho y cuatro tareas, cada una con su commit.
