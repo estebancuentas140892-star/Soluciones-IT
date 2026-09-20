@@ -73,7 +73,7 @@ export function PantallaMas() {
   const actividad = useLiveQuery(() => obtenerActividadReciente(), [], [])
   // Lo urgente de la agenda, como subtítulo de su fila: el mismo dato que
   // el número de la pestaña Inicio.
-  const pendientes = usePendientes()
+  const { items: pendientes } = usePendientes()
   const urgentes = resumenUrgente(agruparAgenda(pendientes))
 
   return (

@@ -262,12 +262,13 @@ export function Chasis(props: Props) {
   // (R21); y memoria de scroll y de filtros por pestaña (R20), todos
   // calculados aquí porque Chasis es el único envoltorio de TODAS las
   // pantallas.
-  const pendientes = usePendientes()
+  const { items: pendientes } = usePendientes()
   // EL AVISO SOLO CUENTA LO QUE URGE HOY (encargo del 2026-09-11, tarea
   // 4). Contaba TODOS los pendientes: borradores propios, sugerencias
   // del equipo y claves que vencen dentro de tres semanas. Un número que
   // nunca baja no avisa de nada y enseña a ignorarlo. Ahora son los
-  // vencidos y los de fecha de hoy: si está en cero, no hay número.
+  // vencidos y los de fecha de hoy, NUNCA los próximos, los borradores
+  // ni lo que está en curso: si está en cero, no hay número.
   const urgentes = asuntosUrgentes(agruparAgenda(pendientes))
   // Hueco de la banda pegajosa del nivel tarea. Se guarda en estado (no
   // en una ref) a propósito: así, cuando el div se monta, los hijos

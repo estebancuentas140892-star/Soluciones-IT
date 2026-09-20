@@ -54,7 +54,16 @@ const FILAS_VISIBLES = 2
  * completa: sin el día, la palabra "hoy" de más abajo no dice respecto a
  * qué.
  */
-export function ResumenDelDia({ agenda, dia = fechaDeHoy() }: { agenda: Agenda; dia?: string | null }) {
+export function ResumenDelDia({
+  agenda,
+  dia = fechaDeHoy(),
+  cargando = false,
+}: {
+  agenda: Agenda
+  dia?: string | null
+  /** La base local todavía no respondió: no se afirma nada. */
+  cargando?: boolean
+}) {
   const resumen = resumenAgenda(agenda)
   const urgentes = asuntosUrgentes(agenda)
   return (
@@ -64,9 +73,9 @@ export function ResumenDelDia({ agenda, dia = fechaDeHoy() }: { agenda: Agenda; 
           una línea que hay que leer para descartarla. */}
       {dia !== null && <p className="text-[13px] leading-[1.35] text-noct-neutral-400">{dia}</p>}
       <p
-        className={`text-[15px] font-medium leading-[1.35] ${urgentes > 0 ? 'text-noct-text' : 'text-noct-neutral-300'}`}
+        className={`text-[15px] font-medium leading-[1.35] ${urgentes > 0 && !cargando ? 'text-noct-text' : 'text-noct-neutral-300'}`}
       >
-        {resumen !== '' ? resumen : 'Nada con fecha'}
+        {cargando ? 'Revisando la agenda…' : resumen !== '' ? resumen : 'Nada con fecha'}
       </p>
     </div>
   )
@@ -82,9 +91,16 @@ export function ResumenDelDia({ agenda, dia = fechaDeHoy() }: { agenda: Agenda; 
  */
 export function SeccionesAgenda({
   agenda,
+  cargando = false,
   conEnlaceCompleta = false,
 }: {
   agenda: Agenda
+  /**
+   * La base local todavía no respondió. Mientras tanto NO se dice "Todo
+   * al día por hoy": sería afirmar que no hay nada vencido antes de
+   * haberlo mirado, y el mensaje se desmentiría solo un instante después.
+   */
+  cargando?: boolean
   /** Inicio: enlace a `/agenda`. La propia `/agenda` no se enlaza a sí misma. */
   conEnlaceCompleta?: boolean
 }) {
@@ -93,6 +109,12 @@ export function SeccionesAgenda({
   const idEnCurso = hayQueReanudar ? (reanudar.actual?.articulo.id ?? null) : null
   const vista = agendaSinGuiaEnCurso(agenda, idEnCurso)
   const urgentes = asuntosUrgentes(vista)
+
+  if (cargando) {
+    return (
+      <p className="px-0.5 text-[13px] leading-relaxed text-noct-neutral-400">Cargando la agenda…</p>
+    )
+  }
 
   return (
     <>

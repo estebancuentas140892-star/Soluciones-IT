@@ -18,7 +18,7 @@ export function AgendaPage() {
   // Los mismos pendientes que cuenta el chasis para el número de la
   // pestaña, repartidos por FECHA en los cinco grupos (agenda.ts). Cada
   // ítem cae en uno solo, así que nada se cuenta ni se pinta dos veces.
-  const pendientes = usePendientes()
+  const { items: pendientes, cargando } = usePendientes()
   const agenda = useMemo(() => agruparAgenda(pendientes), [pendientes])
   const hoyTexto = useMemo(() => fechaDeHoy(), [])
 
@@ -28,8 +28,8 @@ export function AgendaPage() {
       <main className="flex-1 px-4 pb-16 pt-4">
         <div className="flex flex-col gap-[18px]">
           {/* El día ya está en la cabecera del chasis (`contexto`). */}
-          <ResumenDelDia agenda={agenda} dia={null} />
-          <SeccionesAgenda agenda={agenda} />
+          <ResumenDelDia agenda={agenda} dia={null} cargando={cargando} />
+          <SeccionesAgenda agenda={agenda} cargando={cargando} />
         </div>
       </main>
     </Chasis>

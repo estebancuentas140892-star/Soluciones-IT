@@ -107,7 +107,7 @@ export function InicioPage() {
   // repartidos por fecha con la misma función que usa `/agenda`: aquí no
   // se vuelve a decidir qué está vencido ni qué es de hoy.
   const perfil = usePerfilVivo()
-  const pendientes = usePendientes()
+  const { items: pendientes, cargando: agendaCargando } = usePendientes()
   const agenda = useMemo(() => agruparAgenda(pendientes), [pendientes])
 
   // LA TARJETA DE REANUDAR la dibuja `SeccionesAgenda` dentro de "En
@@ -218,8 +218,8 @@ export function InicioPage() {
                 decide la jornada. La guía a medias entra en "En curso"
                 (con su tarjeta) y no se repite en ninguna otra sección. */}
             <div className="flex flex-col gap-[18px]">
-              <ResumenDelDia agenda={agenda} />
-              <SeccionesAgenda agenda={agenda} conEnlaceCompleta />
+              <ResumenDelDia agenda={agenda} cargando={agendaCargando} />
+              <SeccionesAgenda agenda={agenda} cargando={agendaCargando} conEnlaceCompleta />
             </div>
 
             {/* Bienvenida del primer día: los tres pasos que dejan al
