@@ -478,14 +478,14 @@ export async function activarYRecargar(
 // ----------------------------------------------------------------
 
 export function reiniciarActualizacion(
-  opciones: { ahora?: () => number; recargar?: () => void } = {},
+  opciones: { ahora?: () => number; recargar?: () => void; versionInstalada?: string } = {},
 ): void {
   registro = null
   observado = null
   estado = {
     fase: 'inactivo',
     ultimaComprobacion: 0,
-    versionInstalada: versionApp(),
+    versionInstalada: opciones.versionInstalada ?? versionApp(),
     versionDisponible: null,
     estadoWorker: 'sin-worker',
   }

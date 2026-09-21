@@ -90,8 +90,73 @@ describe('la acción manual de Más', () => {
     await montar([{ ruta: '/', elemento: <BuscarActualizacion /> }], '/')
 
     await tocar(await esperar(() => control(/^Buscar actualización/), 'la fila de buscar'))
-    await esperar(() => textoPantalla().includes('Hay una versión nueva'), 'el aviso de versión nueva')
+    await esperar(() => textoPantalla().includes('Versión nueva disponible'), 'el aviso de versión nueva')
     expect(textoPantalla()).toContain('Actualizar')
+  })
+
+  it('pide /version.json de verdad, sin caché y con parámetro variable', async () => {
+    const pedidos: Array<[string, RequestInit | undefined]> = []
+    vi.stubGlobal('fetch', async (url: string, opciones?: RequestInit) => {
+      pedidos.push([url, opciones])
+      return new Response(JSON.stringify({ version: 'abc1234' }), { status: 200 })
+    })
+    const registro = registroFalso()
+    anotarRegistro(registro)
+    await montar([{ ruta: '/', elemento: <BuscarActualizacion /> }], '/')
+    await tocar(await esperar(() => control(/^Buscar actualización/), 'la fila de buscar'))
+
+    const consulta = pedidos.find(([url]) => url.startsWith('/version.json'))
+    expect(consulta).toBeDefined()
+    expect(consulta?.[0]).toMatch(/\/version\.json\?t=\d+/)
+    expect(consulta?.[1]?.cache).toBe('no-store')
+    // Y ademas llamo a update() del registro: no se queda en el texto.
+    expect(registro.llamadas).toBeGreaterThanOrEqual(1)
+  })
+
+  it('con el servidor anunciando otra versión, avisa aunque el worker calle', async () => {
+    // Este aparato lleva la abc1234 y el servidor anuncia la otra1234:
+    // aunque el service worker no diga nada (su script puede venir de la
+    // caché del navegador), la app se entera igual.
+    reiniciarActualizacion({ versionInstalada: 'abc1234' })
+    vi.stubGlobal(
+      'fetch',
+      async () => new Response(JSON.stringify({ version: 'otra1234' }), { status: 200 }),
+    )
+    anotarRegistro(registroFalso())
+    await montar([{ ruta: '/', elemento: <BuscarActualizacion /> }], '/')
+    await tocar(await esperar(() => control(/^Buscar actualización/), 'la fila de buscar'))
+    await esperar(() => textoPantalla().includes('Versión nueva disponible'), 'el aviso')
+    expect(textoPantalla()).toContain('otra123')
+  })
+
+  it('sin Internet lo dice, y la app sigue funcionando', async () => {
+    vi.stubGlobal('fetch', async () => {
+      throw new Error('sin conexión')
+    })
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+    anotarRegistro(registroFalso())
+    await montar([{ ruta: '/', elemento: <BuscarActualizacion /> }], '/')
+    await tocar(await esperar(() => control(/^Buscar actualización/), 'la fila de buscar'))
+    await esperar(
+      () => textoPantalla().includes('Sin conexión. Inténtalo cuando recuperes Internet'),
+      'el aviso de sin conexión',
+    )
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
+  })
+
+  it('enseña el diagnóstico: versión, estado del worker y última comprobación', async () => {
+    vi.stubGlobal(
+      'fetch',
+      async () => new Response(JSON.stringify({ version: 'desarrollo' }), { status: 200 }),
+    )
+    anotarRegistro(registroFalso())
+    await montar([{ ruta: '/', elemento: <BuscarActualizacion /> }], '/')
+    await tocar(await esperar(() => control(/^Buscar actualización/), 'la fila de buscar'))
+    await esperar(() => textoPantalla().includes('Última comprobación'), 'el diagnóstico')
+    const texto = textoPantalla()
+    expect(texto).toContain('Instalada')
+    expect(texto).toContain('En el servidor')
+    expect(texto).toContain('Service worker')
   })
 
   it('muestra la versión instalada ("desarrollo" fuera de Vercel)', async () => {

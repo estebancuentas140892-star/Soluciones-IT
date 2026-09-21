@@ -10,6 +10,36 @@ import { VitePWA } from 'vite-plugin-pwa'
 // que copia esta corriendo. En local no existe: entonces es "desarrollo".
 const versionApp = (process.env.VERCEL_GIT_COMMIT_SHA ?? '').trim().slice(0, 7)
 
+// /version.json: LA VERSION QUE HAY EN EL SERVIDOR, FUERA DEL SERVICE
+// WORKER (encargo del 2026-09-21, punto 3).
+//
+// El defecto que cierra: para enterarse de que hay version nueva, la app
+// dependia de que el navegador revalidara `sw.js`. Con la PWA instalada
+// eso puede no pasar en dias (el navegador cachea el script del worker),
+// asi que el telefono se quedaba en la version vieja y el aviso no
+// aparecia nunca. Este archivo es un dato independiente: se pide SIEMPRE
+// a la red (`cache: 'no-store'`), NO entra en el precache (no es .js ni
+// .css: `globPatterns` no lo recoge, y ademas se excluye a mano), y
+// comparar su contenido con la version horneada dice la verdad sin
+// depender de ningun cache.
+function pluginVersionJson(version: string) {
+  return {
+    name: 'soluciones-it-version-json',
+    apply: 'build' as const,
+    generateBundle(this: { emitFile: (archivo: Record<string, unknown>) => void }) {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify(
+          { version: version || 'desarrollo', compiladoEn: new Date().toISOString() },
+          null,
+          2,
+        ),
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   define: {
@@ -18,6 +48,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    pluginVersionJson(versionApp),
     VitePWA({
       // 'prompt' (en vez de 'autoUpdate'): la version nueva queda en
       // espera y el aviso ActualizacionDisponible deja que el tecnico
@@ -55,6 +86,12 @@ export default defineConfig({
         // quedan precacheados, asi las pantallas cargadas bajo demanda
         // tambien funcionan sin conexion.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // `version.json` NUNCA se precachea: es justo el archivo que
+        // tiene que llegar fresco de la red para detectar que hay
+        // version nueva. (Con estos `globPatterns` ya quedaria fuera por
+        // extension; se escribe explicito para que no se cuele si
+        // alguien agrega json a la lista.)
+        globIgnores: ['version.json'],
       },
     }),
   ],
