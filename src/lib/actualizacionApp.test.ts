@@ -260,6 +260,7 @@ function trabajadorFalso(estadoInicial = 'installing'): TrabajadorFalso {
 
 interface RegistroConEventos extends RegistroActualizable {
   emitir: (tipo: string) => void
+  addEventListener: (tipo: string, fn: () => void) => void
   installing?: unknown
 }
 
