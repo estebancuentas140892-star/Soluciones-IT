@@ -477,6 +477,13 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Adónde lleva:** a la guía (`/soluciones/:categoriaId/:articuloId`), con el origen y la búsqueda en el `state` (`conOrigen` + `useAnotarBusqueda`), así que salir de la guía vuelve a Inicio con lo escrito. Con pasos, `GuiaPage` abre la ejecución en el primer paso pendiente.
 - **Dónde:** `InicioPage`.
 
+### 3.8v `BuscarActualizacion` y `AvisoActualizacion` (2026-09-20, tarea 250)
+- **Propósito:** saber, cuando uno quiere, si el teléfono tiene la versión desplegada, y poder decir cuál lleva. `BuscarActualizacion` es la fila de Más; `AvisoActualizacion` es la pastilla flotante "Versión nueva disponible" con su botón.
+- **Por qué están separados de `ActualizacionDisponible`:** ese componente importa `virtual:pwa-register/react`, que solo existe con el plugin PWA corriendo y cuelga bajo vitest. Con el aviso y la recarga (`activarYRecargar`) en piezas propias, todo el comportamiento se prueba y el componente queda como cableado.
+- **`BuscarActualizacion`:** sin props. Lee el estado compartido con `useSyncExternalStore(suscribirActualizacion, estadoActualizacion)` y llama a `comprobarActualizacion(true)` (forzada: no espera el freno de un minuto). Textos: "Buscando actualización…", "Ya tienes la versión más reciente", "Hay una versión nueva: toca «Actualizar» en el aviso" y, sin service worker, lo dice. A la derecha, `versionApp()`: el commit corto del despliegue, o "desarrollo".
+- **`AvisoActualizacion`:** `{ visible, onActualizar }`. Al tocar, pasa a "Actualizando..." y se deshabilita. Sale con `needRefresh` de la librería **o** con la fase `disponible` que descubre una comprobación propia: `needRefresh` solo se enciende si el evento llega a esa ventana, y con la PWA instalada el worker puede quedar en espera sin que se vea.
+- **Dónde:** `PantallaMas` (grupo "Mi cuenta") y `ActualizacionDisponible` (global).
+
 ### 3.8s `inicio/AgendaPage` (2026-09-17, tarea 244; reducida en la 247)
 - **Propósito:** la **vista completa** de la agenda (vencidos, para hoy, próximos, en curso y por revisar del equipo), nivel `documento`, en `/agenda`. Desde la tarea 247 (2026-09-20) Inicio vuelve a resumir esos mismos grupos, y esta pantalla se conserva entera como la vista sin buscador delante.
 - **Ya no dibuja nada por su cuenta:** monta `ResumenDelDia` (sin la fecha, que va en la cabecera del chasis como `contexto`) y `SeccionesAgenda`. Se quedó en 37 líneas: antes eran 268, con su propia copia de las filas.

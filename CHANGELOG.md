@@ -8,6 +8,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-20
 
+### Corregido (PWA, tarea 250): la app comprueba si hay versión nueva cuando importa, y se puede preguntar a mano
+
+**Área modificada:** registro del service worker, aviso de actualización y la pestaña Más.
+**Tipo:** Corregido (cuándo se comprueba), Agregado ("Buscar actualización" y la versión instalada).
+**Nuevos:** `src/lib/actualizacionApp.ts` (+ `actualizacionApp.test.ts`), `src/lib/versionApp.ts` (+ `versionApp.test.ts`), `src/components/BuscarActualizacion.tsx`, `src/components/AvisoActualizacion.tsx` y `src/components/actualizacionFlujo.test.tsx`.
+**Modificados:** `src/components/ActualizacionDisponible.tsx`, `src/features/mas/PantallaMas.tsx`, `vite.config.ts` y `src/vite-env.d.ts`.
+Documentación: [ARQUITECTURA.md](ARQUITECTURA.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.6 y 8) y [COMPONENTES_UI.md](COMPONENTES_UI.md) (3.8v).
+**Motivo:** encargo del usuario del **20 de septiembre de 2026**. El despliegue llegaba bien a Vercel, pero la PWA instalada seguía con los archivos viejos: la única comprobación programada era un `setInterval` de una hora, y un teléfono que abre la app diez minutos nunca llegaba a preguntar.
+**SIN cambios** de esquema, RLS, permisos, datos locales ni contenido de guías. **No hay que ejecutar SQL.**
+
+- **Corregido, se comprueba al registrarse el service worker**, sin esperar la hora, y además **al volver a la app** (`visibilitychange`) y **al recuperar la conexión** (`online`). El intervalo de una hora se queda como respaldo. Entre comprobaciones automáticas pasa al menos un minuto (`debeComprobar`), así que alternar entre apps no dispara una consulta por cada cambio; el intervalo y los oyentes se instalan una sola vez y se pueden quitar.
+- **Agregado "Buscar actualización" en Más**: consulta en el momento (sin freno), dice "Buscando actualización…" mientras tanto y responde siempre: "Ya tienes la versión más reciente", el aviso de versión nueva, o que el navegador no tiene service worker.
+- **Agregada la versión instalada** a la derecha de esa fila: el commit corto que Vercel expone en `VERCEL_GIT_COMMIT_SHA`, horneado en el build por `vite.config.ts`. En desarrollo local dice "desarrollo", nunca un commit inventado.
+- **Cambiado el aviso:** sale también cuando lo descubre una comprobación propia (fase `disponible`), no solo con `needRefresh`, que puede no llegar a esa ventana con la PWA instalada.
+- **Sin cambios donde no tocaba:** actualizar no borra IndexedDB, ni la sesión, ni el avance de las guías, ni la cola de sincronización, y nada recarga por su cuenta: solo el botón "Actualizar", que sigue sin interrumpir una guía a medias.
+- **Pruebas:** **121 archivos y 1702 casos en verde** (antes 1671). El aviso y la recarga salieron de `ActualizacionDisponible` a piezas propias para poder montarlos (ese componente importa `virtual:pwa-register/react`, que cuelga bajo vitest).
+
 ### Corregido (buscador y guías, tarea 249): la guía que se llama como lo buscado va primero, y se abre con un toque
 
 **Área modificada:** orden de los resultados de Inicio, fila de un borrador y ejecución de una guía en borrador.

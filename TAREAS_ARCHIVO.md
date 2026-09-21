@@ -2,6 +2,23 @@
 
 ## Encargo del 2026-09-20: Inicio vuelve a ser la agenda operativa
 
+### 250. La PWA instalada se entera de que hay versión nueva
+
+**Título:** comprobar si hay actualización cuando de verdad importa, poder preguntarlo a mano y saber qué versión lleva el teléfono. **Estado:** Completada (2026-09-20) en código, interfaz, pruebas y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-20: el despliegue llegaba a Vercel pero el teléfono seguía con los archivos viejos.
+
+**Causa.** La única comprobación programada era `setInterval(..., 1 hora)` dentro de `onRegisteredSW`. Un teléfono con la PWA instalada se abre, se usa unos minutos y se cierra: esa primera vuelta no llegaba nunca, así que el aviso "Versión nueva disponible" no aparecía aunque el despliegue estuviera hecho.
+
+**Qué se hizo, por commit:**
+
+1. `fix(pwa): comprobar actualizacion al registrar y al volver a la app` - `src/lib/actualizacionApp.ts`: comprobación inmediata al registrarse, al volver a primer plano y al recuperar conexión, con el intervalo de una hora como respaldo y un mínimo de un minuto entre automáticas (`debeComprobar`). Intervalo y oyentes se instalan una vez y se pueden quitar.
+2. `feat(pwa): buscar actualizacion y ver la version desde Mas` - fila "Buscar actualización" en Más, con sus tres respuestas, y la versión instalada (commit corto de `VERCEL_GIT_COMMIT_SHA`, "desarrollo" en local) inyectada en el build desde `vite.config.ts`.
+3. `test(pwa): cubrir la comprobacion y el boton de actualizar` - el aviso y la recarga salen a `AvisoActualizacion` y `activarYRecargar` para poder probarlos (el componente original importa `virtual:pwa-register/react`, que cuelga bajo vitest).
+4. `docs(pwa): documentar la comprobacion inmediata y la version` - esta documentación.
+
+**Pruebas.** 121 archivos y 1702 casos en verde (antes 118 y 1671). `actualizacionApp.test.ts` (17 casos: comprobación inmediata, visibilidad, conexión, freno, sin duplicar intervalos ni oyentes, resultado al día / disponible / sin servicio, fallo de red, y que nada recarga ni toca el almacenamiento), `versionApp.test.ts` (recorte a siete caracteres y "desarrollo" sin variable) y `actualizacionFlujo.test.tsx` (12 casos con los componentes montados: la acción manual, el aviso, el botón y que la base local, la sesión y el avance siguen intactos). `oxlint`, `tsc -b` y `vite build` limpios.
+
+**Lo que NO se tocó:** esquema, RLS, permisos, sesión, datos locales, cola de sincronización y el contenido de las guías. La búsqueda de "DIAN" sigue igual que la dejó la tarea 249 (abre la ejecución, nunca `/editar`), y la guía sigue en `borrador` con la tarea **245** abierta.
+
 ### 249. La guía que se llama como lo buscado va primero, y se abre con un toque
 
 **Título:** que escribir "DIAN" en Inicio deje la guía a un toque de su procedimiento, sin pasar por Guías ni repetir la búsqueda. **Estado:** Completada (2026-09-20) en código, interfaz, pruebas y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-20, con la causa ya identificada en la tarea 248.
