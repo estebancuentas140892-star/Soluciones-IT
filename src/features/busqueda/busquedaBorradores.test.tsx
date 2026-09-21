@@ -273,3 +273,90 @@ describe('el bloque secundario es solo para las coincidencias débiles', () => {
     expect(control(/^Ver el otro/)).not.toBeNull()
   })
 })
+
+describe('abrir el borrador desde Inicio es hacerlo', () => {
+  it('un toque lleva a la ejecución, en el primer paso pendiente', async () => {
+    await sembrarFichaHka()
+    await sembrarGuiaDian('borrador')
+    // Avance guardado: el paso 1 ya está hecho.
+    await db.progresoPasos.put({
+      articuloId: ID_DIAN,
+      pasosHechos: ['dian-p1'],
+      instruccionesHechas: ['dian-p1-t1'],
+      verificacionHecha: [],
+      actualizadoEn: '2026-09-20T12:00:00.000Z',
+    })
+    await montar(RUTAS, '/')
+    await buscarEnInicio('DIAN')
+
+    const fila = await esperar(() => control(/^Abrir borrador/), 'la fila del borrador')
+    await tocar(fila)
+
+    expect(ubicacionActual().pathname).toBe(`/soluciones/cat-pos/${ID_DIAN}`)
+    // Está EJECUTÁNDOSE (no en la ficha ni en el editor) y en el paso pendiente.
+    const texto = await esperar(
+      () => (textoPantalla().includes('Registrar la resolución nueva') ? textoPantalla() : null),
+      'el paso 2, que es el pendiente',
+    )
+    expect(texto).toContain('Paso 2 de 2')
+    expect(texto).toContain('Retomas en el paso 2')
+    expect(ubicacionActual().pathname).not.toContain('/editar')
+    expect(ubicacionActual().pathname).not.toContain('/detalles')
+  })
+
+  it('la ejecución de un borrador avisa sin bloquear, y la de una publicada no', async () => {
+    await sembrarGuiaDian('borrador')
+    const montaje = await montar(RUTAS, `/soluciones/cat-pos/${ID_DIAN}`)
+    const texto = await esperar(
+      () => (textoPantalla().includes('Borrador · algunos datos') ? textoPantalla() : null),
+      'el aviso de borrador en la ejecución',
+    )
+    expect(texto).toContain('Borrador · algunos datos todavía están por confirmar.')
+    // No es un paso ni una confirmación: el trabajo del paso 1 está a la vista.
+    expect(texto).toContain('Abrir la configuración de resoluciones')
+    await montaje.desmontar()
+
+    await db.articulos.update(ID_DIAN, { estado: 'publicado' })
+    await montar(RUTAS, `/soluciones/cat-pos/${ID_DIAN}`)
+    await esperar(
+      () => textoPantalla().includes('Abrir la configuración de resoluciones'),
+      'la guía publicada en ejecución',
+    )
+    expect(textoPantalla()).not.toContain('Borrador · algunos datos')
+  })
+
+  it('salir de la guía vuelve a Inicio con la búsqueda escrita', async () => {
+    await sembrarFichaHka()
+    await sembrarGuiaDian('borrador')
+    await montar(RUTAS, '/')
+    await buscarEnInicio('DIAN')
+    await tocar(await esperar(() => control(/^Abrir borrador/), 'la fila del borrador'))
+    await esperar(() => textoPantalla().includes('Abrir la configuración de resoluciones'), 'la ejecución')
+
+    await tocar(await esperar(() => control('Salir de la guía'), 'la salida de la guía'))
+    expect(ubicacionActual().pathname).toBe('/')
+    const campo = await esperar(campoBuscador, 'el buscador de Inicio')
+    expect(campo.value).toBe('DIAN')
+  })
+
+  it('una guía publicada que coincide en el título manda sobre el borrador', async () => {
+    await sembrarFichaHka()
+    await sembrarGuiaDian('borrador')
+    await sembrarGuia({
+      id: 'guia-oficial',
+      titulo: 'Resolución DIAN: revisión mensual publicada',
+      categoriaId: 'cat-pos',
+      pasos: [pasoPrueba('of-p1', 'Un paso', ['Hacer algo'])],
+    })
+    await montar(RUTAS, '/')
+    await buscarEnInicio('DIAN')
+
+    const texto = await esperar(
+      () => (textoPantalla().includes('Resolución DIAN: revisión mensual') ? textoPantalla() : null),
+      'la guía publicada',
+    )
+    expect(texto.indexOf('Resolución DIAN: revisión mensual')).toBeLessThan(texto.indexOf(TITULO_DIAN))
+    // El borrador sigue visible, detrás y marcado.
+    expect(texto).toContain('Borrador · contenido por confirmar')
+  })
+})
