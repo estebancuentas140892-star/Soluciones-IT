@@ -22,6 +22,12 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
+**Despliegue confirmado (regla 14).** La tarea 251 esta servida en **https://soluciones-it-psi.vercel.app**, y desde ella comprobarlo es leer un archivo:
+
+- `GET /version.json` devuelve el commit desplegado y la fecha de compilacion, con `cache-control: no-cache, no-store, must-revalidate`. Lo mismo para `/sw.js` y `/manifest.webmanifest`; `index.html` conserva su `public, max-age=0, must-revalidate`.
+- El `sw.js` servido precachea el MISMO `index-*.js` que enlaza el `index.html` servido: los dos vienen de la misma compilacion.
+- En el telefono, la misma version se lee en **Mas > Buscar actualizacion**, junto a la que anuncia el servidor y el estado del service worker.
+
 **Despliegue confirmado (regla 14).** La tarea 250 (comprobacion inmediata de actualizaciones) esta servida en **https://soluciones-it-psi.vercel.app**. Desde esta tarea la identidad del despliegue **ya no hay que deducirla**: el build hornea `VERCEL_GIT_COMMIT_SHA` recortado y la app lo ensena en **Mas > Buscar actualizacion**.
 
 - **En positivo:** `PantallaMas-UDxIGe9a.js` contiene "Buscar actualizacion" y la version horneada `74b7ade` (con `desarrollo` como valor de reserva); `index-*.js` contiene "sin-servicio", el estado que solo existe desde `actualizacionApp.ts`.
