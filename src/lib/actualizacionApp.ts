@@ -200,3 +200,64 @@ export function reiniciarActualizacion(opciones: { ahora?: () => number } = {}):
 export function hayIntervaloVivo(): boolean {
   return intervalo !== null
 }
+
+// ----------------------------------------------------------------
+// ACTIVAR LA VERSIÓN NUEVA Y RECARGAR (el botón "Actualizar")
+// ----------------------------------------------------------------
+//
+// Vive aquí, y no dentro del componente, para poder probarlo sin service
+// worker: es la parte que el usuario reportó rota el 2026-07-27 ("le doy
+// al botón y no pasa nada").
+//
+// `updateServiceWorker` de la librería termina en
+// `registration.waiting && mensaje(registration.waiting)`. Si en ese
+// momento no hay worker en espera (otra pestaña ya lo activó, o el móvil
+// lo activó al reanudar la app), la llamada no hace NADA en silencio: ni
+// `skipWaiting`, ni `controllerchange`, ni recarga, y el aviso se queda
+// en pantalla para siempre.
+//
+// Contrato de esta función: recarga SIEMPRE, una sola vez. Si había
+// worker esperando, en cuanto toma el control; si no lo había, al vencer
+// la espera (y esa recarga trae igualmente la versión nueva, porque el
+// worker ya estaba activo).
+
+/** Si el worker nuevo no toma el control en este tiempo, se recarga igual. */
+export const ESPERA_MAX_MS = 2500
+
+export async function activarYRecargar(
+  updateServiceWorker: (recargar?: boolean) => Promise<void>,
+  opciones: {
+    recargar?: () => void
+    esperaMs?: number
+    servicio?: Pick<ServiceWorkerContainer, 'addEventListener'> | null
+    programar?: (fn: () => void, ms: number) => unknown
+  } = {},
+): Promise<void> {
+  const {
+    recargar: recargarReal = () => window.location.reload(),
+    esperaMs = ESPERA_MAX_MS,
+    servicio = typeof navigator !== 'undefined' ? (navigator.serviceWorker ?? null) : null,
+    programar = (fn: () => void, ms: number) => setTimeout(fn, ms),
+  } = opciones
+
+  let yaRecargado = false
+  function recargar() {
+    if (yaRecargado) return
+    yaRecargado = true
+    recargarReal()
+  }
+
+  // Camino normal: el worker nuevo toma el control y se recarga.
+  servicio?.addEventListener('controllerchange', recargar, { once: true })
+  // Red de seguridad para el caso de arriba.
+  programar(recargar, esperaMs)
+
+  try {
+    // `false` porque la recarga la controlamos aquí.
+    await updateServiceWorker(false)
+  } catch {
+    // Si el mensaje al worker falla, recargar es lo único útil que
+    // queda: nunca dejar el botón sin efecto.
+    recargar()
+  }
+}
