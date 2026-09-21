@@ -85,3 +85,64 @@ export const BORRADORES_VISIBLES = 3
 export function fraseBorradores(cantidad: number): string {
   return cantidad === 1 ? '1 borrador coincide' : `${cantidad} borradores coinciden`
 }
+
+// ----------------------------------------------------------------
+// COINCIDENCIA FUERTE: EL BORRADOR SUBE (encargo del 2026-09-20, tarea 1)
+// ----------------------------------------------------------------
+//
+// Enseñar el borrador en un bloque al final no bastaba. Buscando "DIAN"
+// el técnico ve primero la ficha de HKA Factura, que explica qué es la
+// herramienta, cuando lo que quiere es HACER el procedimiento. La guía
+// que lleva ese nombre en el título es la respuesta, aunque esté sin
+// publicar.
+//
+// La regla: si el borrador coincide EN EL TÍTULO, sube con los
+// resultados; si solo coincide por etiqueta, categoría o tipo, se queda
+// en el bloque de abajo. Nada de esto cambia el índice ni el estado del
+// artículo: es orden de presentación, y la fila dice en todo momento que
+// es un borrador.
+
+export interface RepartoBorradores {
+  /** Coincide en el título: se muestra arriba, con los resultados. */
+  destacados: BorradorCoincidente[]
+  /** Coincide por otro campo: se queda en "Borradores coincidentes". */
+  secundarios: BorradorCoincidente[]
+}
+
+export function repartirBorradores(borradores: BorradorCoincidente[]): RepartoBorradores {
+  return {
+    destacados: borradores.filter((b) => b.coincidencia.enTitulo),
+    secundarios: borradores.filter((b) => !b.coincidencia.enTitulo),
+  }
+}
+
+/**
+ * ¿Hay ya una GUÍA PUBLICADA que coincide en el título?
+ *
+ * Es lo que decide si el borrador se pone delante de los resultados o
+ * detrás: lo publicado manda siempre. Se mira sobre los resultados que
+ * ya están en pantalla (ids `articulo:<id>`), no sobre otra consulta.
+ */
+export function hayGuiaPublicadaEnTitulo(
+  resultados: { id: string; tipo: string; titulo: string }[],
+  consulta: string,
+  normalizar: (texto: string) => string,
+): boolean {
+  if (!consulta) return false
+  return resultados.some((r) => r.tipo === 'articulo' && normalizar(r.titulo).includes(consulta))
+}
+
+/**
+ * Quita los borradores cuyo artículo ya está entre los resultados
+ * oficiales. No debería pasar (el índice solo lleva lo publicado y la
+ * lista solo borradores), pero entre que Dexie responde a una consulta y
+ * a la otra hay un instante en el que un artículo recién publicado
+ * podría estar en las dos: la fila se pintaría dos veces.
+ */
+export function sinLosYaOficiales(
+  borradores: BorradorCoincidente[],
+  resultados: { id: string }[],
+): BorradorCoincidente[] {
+  const oficiales = new Set(resultados.map((r) => r.id))
+  return borradores.filter((b) => !oficiales.has(`articulo:${b.id}`))
+}

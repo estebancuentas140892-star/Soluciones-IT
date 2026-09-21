@@ -10,8 +10,14 @@ import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
-import { BorradoresCoincidentes } from '../busqueda/BorradoresCoincidentes'
-import { borradoresCoincidentes, esBorradorVivo } from '../busqueda/borradoresEnBusqueda'
+import { BorradoresCoincidentes, GuiasEnBorrador } from '../busqueda/BorradoresCoincidentes'
+import {
+  borradoresCoincidentes,
+  esBorradorVivo,
+  hayGuiaPublicadaEnTitulo,
+  repartirBorradores,
+  sinLosYaOficiales,
+} from '../busqueda/borradoresEnBusqueda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import { useReanudar } from '../soluciones/useReanudar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
@@ -115,8 +121,27 @@ export function InicioPage() {
     new Map<string, string>(),
   )
   const borradoresQueCoinciden = useMemo(
-    () => borradoresCoincidentes(borradores, nombresCategoriaPorId, consulta),
-    [borradores, nombresCategoriaPorId, consulta],
+    () =>
+      sinLosYaOficiales(borradoresCoincidentes(borradores, nombresCategoriaPorId, consulta), resultados),
+    [borradores, nombresCategoriaPorId, consulta, resultados],
+  )
+
+  // COINCIDENCIA FUERTE ARRIBA (encargo del 2026-09-20, tarea 1). Un
+  // borrador que coincide EN EL TÍTULO es la respuesta a lo que se
+  // escribió, aunque no esté publicado: buscando "DIAN" el técnico quiere
+  // HACER el procedimiento que se llama así, no leer la ficha de la
+  // herramienta que lo acompaña. Sube con los resultados, siempre
+  // marcado. El que solo coincide por etiqueta, categoría o tipo se queda
+  // en el bloque de abajo.
+  const { destacados, secundarios } = useMemo(
+    () => repartirBorradores(borradoresQueCoinciden),
+    [borradoresQueCoinciden],
+  )
+  // Lo PUBLICADO manda: si ya hay una guía oficial con la consulta en el
+  // título, el borrador va detrás de los resultados, no delante.
+  const hayPublicadaEnTitulo = useMemo(
+    () => hayGuiaPublicadaEnTitulo(resultados, consulta, normalizarTexto),
+    [resultados, consulta],
   )
 
   // LA AGENDA. Los mismos pendientes que cuenta el número de la pestaña,
@@ -170,6 +195,11 @@ export function InicioPage() {
       <main className="flex-1 px-4 pb-16 pt-4">
         {buscando ? (
           <div className="flex flex-col gap-4">
+            {/* La guía en borrador que coincide en el título, DELANTE de
+                todo lo demás, salvo que ya haya una publicada que también
+                coincida en el título: esa conserva la prioridad. */}
+            {!hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} />}
+
             {resultados.length > 0 ? (
               <ResultadosBusqueda
                 resultados={resultados}
@@ -191,7 +221,7 @@ export function InicioPage() {
                   <div className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-4">
                     <p className="text-[14.5px] font-medium">No hay una guía publicada con esta búsqueda.</p>
                     <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                      Lo que hay está sin publicar, aquí debajo.
+                      Lo que hay está sin publicar y lleva su aviso.
                     </p>
                   </div>
                 ) : (
@@ -209,11 +239,14 @@ export function InicioPage() {
               </>
             )}
 
-            {/* BORRADORES COINCIDENTES, SIEMPRE. Debajo de los resultados
-                oficiales cuando los hay, y en su propio bloque: nunca
-                mezclados con ellos. */}
+            {hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} />}
+
+            {/* BORRADORES COINCIDENTES: los que solo coinciden por
+                etiqueta, categoría o tipo. En su propio bloque, nunca
+                mezclados con los oficiales, y sin repetir los que ya
+                subieron arriba. */}
             <BorradoresCoincidentes
-              borradores={borradoresQueCoinciden}
+              borradores={secundarios}
               consulta={consulta}
               consultaCruda={consultaCruda}
             />

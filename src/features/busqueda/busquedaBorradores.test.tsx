@@ -88,25 +88,23 @@ afterEach(async () => {
 })
 
 describe('buscar "DIAN" con la guía en borrador', () => {
-  it('muestra la ficha de HKA Factura Y el borrador en su propio bloque', async () => {
+  it('pone la guía en borrador ANTES que la ficha de HKA Factura', async () => {
     await sembrarFichaHka()
     await sembrarGuiaDian('borrador')
     await montar(RUTAS, '/')
     await buscarEnInicio('DIAN')
 
     const texto = await esperar(
-      () => (textoPantalla().includes('Borradores coincidentes') ? textoPantalla() : null),
-      'el bloque de borradores coincidentes',
+      () => (textoPantalla().includes(TITULO_DIAN) ? textoPantalla() : null),
+      'la guía en borrador',
     )
-    // El resultado oficial sigue ahí: el bloque no lo sustituye.
-    expect(texto).toContain('HKA Factura')
-    // Y el borrador, con su título, su pastilla y su acción.
-    expect(texto).toContain(TITULO_DIAN)
-    expect(texto).toContain('Borrador')
-    expect(texto).toContain('Revisar borrador')
+    // Coincide en el TÍTULO, así que sube: es lo que se vino a hacer.
+    expect(texto.indexOf(TITULO_DIAN)).toBeLessThan(texto.indexOf('HKA Factura'))
+    // Y se sigue diciendo lo que es, sin presentarla como oficial.
+    expect(texto).toContain('Borrador · contenido por confirmar')
     expect(texto).toContain('POS')
-    // No se presenta como guía oficial.
-    expect(control(new RegExp(`^Revisar borrador ${TITULO_DIAN.slice(0, 20)}`))).not.toBeNull()
+    // Promovida arriba, no se repite en el bloque de abajo.
+    expect(texto).not.toContain('Borradores coincidentes')
   })
 
   it('"Revisar borrador" abre el editor del artículo, no su ejecución', async () => {
@@ -137,12 +135,12 @@ describe('buscar "DIAN" con la guía en borrador', () => {
     await buscarEnInicio('resolución')
 
     const texto = await esperar(
-      () => (textoPantalla().includes('Borradores coincidentes') ? textoPantalla() : null),
-      'el bloque de borradores',
+      () => (textoPantalla().includes('No hay una guía publicada') ? textoPantalla() : null),
+      'el aviso de que no hay guía publicada',
     )
-    expect(texto).toContain('No hay una guía publicada con esta búsqueda.')
     expect(texto).not.toContain('Sin coincidencias')
     expect(texto).toContain(TITULO_DIAN)
+    expect(texto).toContain('Borrador · contenido por confirmar')
   })
 })
 
@@ -177,18 +175,24 @@ describe('publicar la guía la pasa a los resultados oficiales', () => {
     await sembrarGuiaDian('borrador')
     await montar(RUTAS, '/')
     await buscarEnInicio('DIAN')
-    await esperar(() => textoPantalla().includes('Borradores coincidentes'), 'el bloque de borradores')
+    await esperar(
+      () => textoPantalla().includes('Borrador · contenido por confirmar'),
+      'la guía en borrador, arriba',
+    )
 
     // Publicar es lo que hace el editor de la app: cambiar el estado.
     await db.articulos.update(ID_DIAN, { estado: 'publicado' })
 
     await esperar(
-      () => !textoPantalla().includes('Borradores coincidentes'),
-      'el bloque de borradores desaparece',
+      () => !textoPantalla().includes('Borrador · contenido por confirmar'),
+      'el aviso de borrador desaparece',
     )
     const texto = textoPantalla()
     expect(texto).toContain(TITULO_DIAN)
     expect(texto).not.toContain('Revisar borrador')
+    expect(texto).not.toContain('Borradores coincidentes')
+    // Sin duplicar: el título sale una sola vez.
+    expect(texto.split(TITULO_DIAN)).toHaveLength(2)
     // Sigue conviviendo con la ficha de HKA Factura.
     expect(texto).toContain('HKA Factura')
   })

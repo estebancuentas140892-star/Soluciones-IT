@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PastillaEstadoArticulo } from '../../components/PastillaEstado'
-import { CaretDown, PencilSimple } from '../../components/iconos'
+import { CaretDown, CaretRight, PencilSimple } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
 import { partirTitulo } from '../soluciones/coincidencia'
 import {
@@ -112,6 +112,68 @@ function FilaBorrador({ borrador, consulta }: { borrador: BorradorCoincidente; c
           </span>
         </span>
       </span>
+    </Link>
+  )
+}
+
+// GUÍAS EN BORRADOR QUE COINCIDEN EN EL TÍTULO (encargo del 2026-09-20,
+// tarea 1). Van ARRIBA, con los resultados, no en el bloque del final:
+// buscando "DIAN" la respuesta es el procedimiento que se llama así,
+// aunque todavía no esté publicado, y no la ficha de la herramienta que
+// lo acompaña.
+//
+// Sin cabecera de sección a propósito: es la primera respuesta de la
+// pantalla y un rótulo la bajaría una línea. Lo que hay que saber va en
+// la propia fila, debajo del título: "Borrador · contenido por
+// confirmar".
+export function GuiasEnBorrador({
+  borradores,
+  consulta,
+}: {
+  borradores: BorradorCoincidente[]
+  consulta: string
+}) {
+  if (borradores.length === 0) return null
+  return (
+    <section className="flex flex-col">
+      {borradores.map((borrador) => (
+        <FilaBorradorDestacado key={borrador.id} borrador={borrador} consulta={consulta} />
+      ))}
+    </section>
+  )
+}
+
+function FilaBorradorDestacado({
+  borrador,
+  consulta,
+}: {
+  borrador: BorradorCoincidente
+  consulta: string
+}) {
+  const { pre, match, post } = partirTitulo(borrador.titulo, consulta)
+  return (
+    <Link
+      to={borrador.ruta}
+      aria-label={`Revisar borrador ${borrador.titulo}`}
+      className="flex min-h-[60px] items-center gap-3 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/[.06] px-3 py-2.5 text-noct-text hover:bg-noct-precaucion/[.1]"
+    >
+      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-precaucion/[.14] text-noct-precaucion">
+        <PencilSimple size={17} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-medium leading-[1.3] [text-wrap:pretty]">
+          {pre}
+          {match && <mark className="bg-transparent text-noct-accent-300">{match}</mark>}
+          {post}
+        </span>
+        <span className="mt-[3px] block truncate text-[12px] text-noct-precaucion">
+          Borrador · contenido por confirmar
+          {borrador.categoriaNombre && (
+            <span className="text-noct-neutral-400"> · {borrador.categoriaNombre}</span>
+          )}
+        </span>
+      </span>
+      <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
     </Link>
   )
 }
