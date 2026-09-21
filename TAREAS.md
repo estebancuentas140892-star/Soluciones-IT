@@ -20,6 +20,12 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
+**Despliegue confirmado (regla 14).** La tarea 250 (comprobacion inmediata de actualizaciones) esta servida en **https://soluciones-it-psi.vercel.app**. Desde esta tarea la identidad del despliegue **ya no hay que deducirla**: el build hornea `VERCEL_GIT_COMMIT_SHA` recortado y la app lo ensena en **Mas > Buscar actualizacion**.
+
+- **En positivo:** `PantallaMas-UDxIGe9a.js` contiene "Buscar actualizacion" y la version horneada `74b7ade` (con `desarrollo` como valor de reserva); `index-*.js` contiene "sin-servicio", el estado que solo existe desde `actualizacionApp.ts`.
+- **Como se comprueba desde ahora:** abrir Mas en el telefono y leer la version de la derecha; tiene que coincidir con el commit desplegado. Si no coincide, "Buscar actualizacion" y luego "Actualizar".
+- **Recordatorio:** el primer telefono que venga de una version anterior todavia necesita aceptar el aviso una vez; a partir de ahi la comprobacion es inmediata al abrir y al volver a la app.
+
 **Despliegue confirmado (regla 14).** El commit `606380b` (tarea 249, la guia que se llama como lo buscado va primero) esta servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 140 chunks que declara `/sw.js`, leidos de ahi y nunca comparados con los del build local:
 
 - **En positivo:** `InicioPage-CsKgbHPb.js` contiene "Borrador · contenido por confirmar", "Abrir borrador", "Borradores coincidentes" y "No hay una guia publicada con esta busqueda"; `AsistentePage-J-vIXYGG.js` contiene "Borrador · algunos datos todavia estan por confirmar."
