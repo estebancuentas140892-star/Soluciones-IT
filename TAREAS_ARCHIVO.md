@@ -1,5 +1,26 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-21: que la PWA instalada se actualice sola
+
+### 251. La app instalada detecta la versión nueva sin desinstalar nada
+
+**Título:** arreglar de raíz la actualización de la PWA instalada. **Estado:** Completada (2026-09-21) en código, build, cabeceras, pruebas y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-21: el teléfono seguía con la versión anterior y el aviso no aparecía, pese a las tareas 250 y 249.
+
+**Causa (la que las dos correcciones anteriores no tocaban).** `registration.update()` le pide al navegador que revalide `sw.js`, y el navegador puede servir ese script **desde su propia caché HTTP**. Sin cabeceras que lo prohíban, un teléfono con la app instalada podía pasar días con el mismo `sw.js`: no había `updatefound`, `needRefresh` no se encendía y, desde dentro de la app, era indistinguible de "ya estás al día".
+
+**Qué se hizo, por commit:**
+
+1. `fix(pwa): detectar actualizaciones en todos los estados del service worker` - el coordinador adopta con `getRegistration('/')` el worker que ya existe al arrancar (en la raíz, antes de iniciar sesión) y observa `waiting`, `installing`, `active`, `updatefound` y `statechange` hasta `installed`, distinguiendo la primera instalación de una actualización. `controllerchange` recarga una vez solo si la activación se pidió; si no, muestra el aviso (freno contra bucles). El botón manda `SKIP_WAITING` directo al worker en espera. Respaldo periódico de cinco minutos y evento `focus` añadido.
+2. `feat(pwa): comprobar version remota y ofrecer actualizacion manual` - `/version.json` emitido en el build (commit + fecha), fuera del precache, pedido siempre a la red; cabeceras `no-store` en `vercel.json` solo para `sw.js`, `registerSW.js`, `version.json` y el manifiesto; "Buscar actualización" con sus cinco estados y el diagnóstico (versión instalada, versión en el servidor, estado del worker, última comprobación).
+3. `test(pwa): validar actualizacion entre dos versiones sin perder datos` - `scripts/prueba-actualizacion-pwa.mjs`, la prueba A → B con navegador persistente.
+4. `docs(pwa): documentar recuperacion y verificacion de versiones instaladas` - esta documentación y la regla 14 con la verificación directa por `/version.json`.
+
+**Resultado de la prueba A → B** (corrida real): la versión A queda instalada y controlando; se guardan datos en `localStorage` e IndexedDB; el servidor pasa a B sin tocar el navegador; al reabrir, el worker viejo sirve su `index.html` (la página sigue siendo la A) y **aun así** aparece "Versión nueva disponible"; "Actualizar" deja corriendo el bundle de la B; `localStorage` e IndexedDB siguen intactos; cero navegaciones nuevas en los ocho segundos siguientes (sin bucle). Salida: `PRUEBA A->B: OK`.
+
+**Pruebas.** 121 archivos y 1720 casos en verde. `actualizacionApp.test.ts` cubre worker en espera al abrir, worker instalándose, `updatefound`, `controllerchange` (con y sin activación pedida), regreso del segundo plano, foco, conexión recuperada, freno entre comprobaciones, sin duplicar oyentes ni intervalos, `SKIP_WAITING` y la comparación de versiones. `actualizacionFlujo.test.tsx` cubre la acción manual (que pide `/version.json` sin caché y llama a `update()`), el fallo de red, el diagnóstico y que nada borra datos locales.
+
+**Lo que NO se tocó:** búsqueda de DIAN, estado y contenido de la guía DIAN, Supabase, Bóveda, guías y diseño de Inicio. Sigue abierta la tarea **245**.
+
 ## Encargo del 2026-09-20: Inicio vuelve a ser la agenda operativa
 
 ### 250. La PWA instalada se entera de que hay versión nueva

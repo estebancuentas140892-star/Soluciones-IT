@@ -4,6 +4,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+*(la tarea **251** (la app instalada detecta la version nueva) se cerro el 2026-09-21 y esta en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), con sus cuatro commits y la prueba A -> B. **Comprobar un despliegue ahora es leer https://soluciones-it-psi.vercel.app/version.json**, y en el telefono, Mas > Buscar actualizacion.)*
+
 *(las tareas **247** (Inicio vuelve a ser la agenda operativa), **248** (los borradores que coinciden se ven en el buscador) , **249** (la guía que se llama como lo buscado va primero y se abre con un toque) y **250** (la PWA instalada se entera de que hay versión nueva) se cerraron el 2026-09-20 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). La **245** sigue en "Por hacer" y BLOQUEADA: la tarea 248 explica por qué no se veía la guía DIAN, pero su contenido sigue sin revisar y la guía sigue en `borrador`, con nueve confirmaciones abiertas.)*
 
 *(vacío: las tareas **244** y **246** (resolver rápido con guías, encargo del 2026-09-17, y su segunda pasada del mismo día) se cerraron ese día y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Sigue en "Por hacer" la **245**: revisar el CONTENIDO de la guía de la resolución DIAN, que necesita leer los datos del equipo con una sesión de la app. Desde la 246 el editor señala en esa guía lo que hay que corregir.)*

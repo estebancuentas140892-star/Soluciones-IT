@@ -6,6 +6,29 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-21
+
+### Corregido (PWA, tarea 251): la app instalada se entera de la versión nueva, sin desinstalar nada
+
+**Área modificada:** coordinación del service worker, build (`/version.json`), cabeceras de Vercel y la fila de actualización de Más.
+**Tipo:** Corregido (detección de versiones), Agregado (`/version.json`, diagnóstico y prueba A → B).
+**Nuevos:** `scripts/prueba-actualizacion-pwa.mjs` (prueba de actualización con navegador persistente).
+**Modificados:** `src/lib/actualizacionApp.ts`, `src/components/{ActualizacionDisponible,BuscarActualizacion}.tsx`, `src/App.tsx`, `vite.config.ts`, `vercel.json`, `package.json`, `.gitignore` y sus pruebas.
+Documentación: [ARQUITECTURA.md](ARQUITECTURA.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.6), [COMPONENTES_UI.md](COMPONENTES_UI.md) (3.8v) y [REGLAS.md](REGLAS.md) (regla 14).
+**Motivo:** encargo del usuario del **21 de septiembre de 2026**: la app instalada en el teléfono seguía con la versión anterior y el aviso no aparecía, pese a las dos correcciones previas.
+**SIN cambios** de esquema, RLS, permisos, datos locales, Bóveda, guías ni la búsqueda de DIAN. **No hay que ejecutar SQL.**
+
+- **Causa:** comprobar con `registration.update()` no basta. Eso revalida `sw.js`, y el navegador puede servirlo **desde su propia caché HTTP**: sin cabeceras que lo impidan, un teléfono podía pasar días con el mismo `sw.js`, sin `updatefound`, sin `needRefresh` y sin aviso.
+- **Agregado `/version.json`**, emitido en el build con el commit y la fecha. **Fuera del precache**, pedido siempre a la red (`cache: 'no-store'` y `?t=<ahora>`) y comparado con la versión horneada: la app se entera aunque el service worker calle.
+- **Agregadas cabeceras `no-cache, no-store, must-revalidate`** en `vercel.json`, **solo** para `sw.js`, `registerSW.js`, `version.json` y `manifest.webmanifest`. El resto sigue cacheándose por hash.
+- **Corregida la detección:** `getRegistration('/')` al arrancar (en la raíz de la app, antes de iniciar sesión) y observación de `waiting`, `installing`, `active`, `updatefound` y `statechange` hasta `installed`. Si ya había un worker en espera, el aviso sale al abrir. La primera instalación no avisa de nada, que es lo correcto.
+- **Cambiado `controllerchange`:** con activación pedida, recarga una vez; sin pedirla, **no recarga** y muestra el aviso. Sin bucles.
+- **Cambiado el botón "Actualizar":** manda `SKIP_WAITING` directamente al worker en espera, espera `controllerchange` y conserva su plazo máximo y su salida alternativa.
+- **Cambiado el respaldo periódico** de una hora a **cinco minutos**, y se suma el evento `focus` a los disparadores.
+- **Agregado el diagnóstico en Más:** versión instalada, versión en el servidor, estado del service worker y hora de la última comprobación.
+- **Probado con dos versiones reales** (`npm run prueba:pwa`): A instalada y controlando, datos en IndexedDB y localStorage, el servidor pasa a B, al reabrir el worker viejo sigue sirviendo su `index.html` y **aun así** aparece "Versión nueva disponible"; "Actualizar" deja la B corriendo, los datos siguen intactos y no hay bucle de recargas. **1720 casos en verde**; lint, tipos y build limpios.
+- **No hace falta desinstalar ni reinstalar la app** para actualizar, ni borrar datos del sitio, ni cerrar sesión.
+
 ## 2026-09-20
 
 ### Corregido (PWA, tarea 250): la app comprueba si hay versión nueva cuando importa, y se puede preguntar a mano
