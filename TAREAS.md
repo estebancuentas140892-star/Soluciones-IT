@@ -20,6 +20,14 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 *(la tarea 206 se cerró el 2026-09-02. Con ella **la fase 2 de la auditoría móvil queda completa**: 202, 203, 204, 205 y 206. La 206 **cerró por absorción la 198**, el turno 12 del otro handoff, que pedía el mismo trabajo.)*
 
+**Despliegue confirmado (regla 14).** El commit `606380b` (tarea 249, la guia que se llama como lo buscado va primero) esta servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 140 chunks que declara `/sw.js`, leidos de ahi y nunca comparados con los del build local:
+
+- **En positivo:** `InicioPage-CsKgbHPb.js` contiene "Borrador · contenido por confirmar", "Abrir borrador", "Borradores coincidentes" y "No hay una guia publicada con esta busqueda"; `AsistentePage-J-vIXYGG.js` contiene "Borrador · algunos datos todavia estan por confirmar."
+- **En negativo:** **ningun** chunk contiene ya "Revisar borrador" (la fila abria el editor) ni "Ver los borradores en Guias".
+- **Que es el ULTIMO commit:** el chunk de Inicio ya no lleva el texto "Ver los otros " incrustado, porque desde `fdd06ce` el plural lo decide `textoVerOtros` (que vive en el chunk de Chasis). Los dos commits posteriores (`ac37a6d` y `606380b`) son pruebas y documentacion: no cambian ningun asset.
+
+**Ojo:** se comprueba el CODIGO desplegado. Ver la guia DIAN de verdad en produccion exige una sesion del equipo (su contenido vive en Supabase con RLS). En local, con la guia sembrada en borrador y a 360 px: la guia queda a 168 px del borde superior y HKA Factura a 310, un toque abre la ejecucion con el aviso de borrador, y salir vuelve a Inicio con "DIAN" escrito.
+
 **Despliegue confirmado (regla 14).** El commit `cff29d8` (tarea 248, los borradores que coinciden se ven en Inicio) esta servido en **https://soluciones-it-psi.vercel.app**. Comprobado **por contenido** sobre los 140 chunks que declara `/sw.js`, leidos de ahi y nunca comparados con los del build local:
 
 - **En positivo:** `InicioPage-woulfWqH.js` contiene "Borradores coincidentes", "No hay una guia publicada con esta busqueda", "Revisar borrador", "borrador coincide" y "Ver todos en Guias".
