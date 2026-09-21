@@ -466,9 +466,16 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 3.8t `busqueda/BorradoresCoincidentes` (2026-09-20, tarea 248)
 - **Propósito:** enseñar en Inicio los artículos en `borrador` que coinciden con la búsqueda, **sin meterlos en el índice oficial**. Cierra el defecto de la guía de la resolución DIAN: existe, tiene nueve pasos y está en borrador, y como "DIAN" encuentra la ficha de HKA Factura, el viejo aviso (que solo vivía dentro de "Sin coincidencias") no se dibujaba nunca.
 - **Props:** `{ borradores, consulta, consultaCruda }`. La lista la calcula quien busca, con `borradoresCoincidentes` (`borradoresEnBusqueda.ts`, lógica pura y probada): `estado === 'borrador'`, sin eliminar, cruzado con la MISMA `coincidenciaArticulo` de la lista de Guías. Con la lista vacía devuelve `null`.
-- **Forma:** bloque con borde propio, rótulo "Borradores coincidentes" y conteo. Cada fila: título con el término resaltado, pastilla **"Borrador"** (`PastillaEstadoArticulo`), categoría y la acción **"Revisar borrador"**, que enlaza al **editor** del artículo. Tres visibles, "Ver los otros N" y "Ver todos en Guías".
-- **Por qué al editor y no a la guía:** revisar un borrador es corregirlo; abrirlo como si fuera un procedimiento del equipo es justo lo que no debe pasar.
+- **Forma:** bloque con borde propio, rótulo "Borradores coincidentes" y conteo. Cada fila: título con el término resaltado, pastilla **"Borrador"** (`PastillaEstadoArticulo`), categoría y la acción **"Abrir borrador"**. Tres visibles, "Ver el otro" / "Ver los otros N" (`textoVerOtros`, la misma regla de plural que la agenda) y "Ver todos en Guías", que conserva la consulta. El desplegado va atado a la consulta que lo abrió: cambiar lo escrito lo repliega.
+- **Solo coincidencias DÉBILES desde la tarea 249:** lo que coincide en el título sube arriba (`GuiasEnBorrador`) y no se repite aquí. Sin débiles, el bloque no se dibuja.
 - **Dónde:** `InicioPage`, debajo de los resultados oficiales (o del aviso "No hay una guía publicada con esta búsqueda").
+
+### 3.8u `busqueda/GuiasEnBorrador` (2026-09-20, tarea 249)
+- **Propósito:** la guía en `borrador` que coincide **en el título**, pintada **encima de los resultados**: quien busca "DIAN" viene a hacer el procedimiento que se llama así, no a leer la ficha de la herramienta que lo acompaña (RN-042).
+- **Props:** `{ borradores, consulta, consultaCruda }`. La lista sale de `repartirBorradores(...).destacados`; quién va delante o detrás de los resultados lo decide `hayGuiaPublicadaEnTitulo` en `InicioPage`.
+- **Forma:** sin cabecera de sección (es la primera respuesta y un rótulo la bajaría una línea). Fila de 60 px con borde ámbar, título a 15 px con el término resaltado y, debajo, **"Borrador · contenido por confirmar · {categoría}"**.
+- **Adónde lleva:** a la guía (`/soluciones/:categoriaId/:articuloId`), con el origen y la búsqueda en el `state` (`conOrigen` + `useAnotarBusqueda`), así que salir de la guía vuelve a Inicio con lo escrito. Con pasos, `GuiaPage` abre la ejecución en el primer paso pendiente.
+- **Dónde:** `InicioPage`.
 
 ### 3.8s `inicio/AgendaPage` (2026-09-17, tarea 244; reducida en la 247)
 - **Propósito:** la **vista completa** de la agenda (vencidos, para hoy, próximos, en curso y por revisar del equipo), nivel `documento`, en `/agenda`. Desde la tarea 247 (2026-09-20) Inicio vuelve a resumir esos mismos grupos, y esta pantalla se conserva entera como la vista sin buscador delante.

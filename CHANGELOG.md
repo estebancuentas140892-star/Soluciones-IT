@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-20
 
+### Corregido (buscador y guías, tarea 249): la guía que se llama como lo buscado va primero, y se abre con un toque
+
+**Área modificada:** orden de los resultados de Inicio, fila de un borrador y ejecución de una guía en borrador.
+**Tipo:** Corregido (orden y destino de la fila), Agregado (aviso de borrador en la ejecución).
+**Modificados:** `src/features/busqueda/borradoresEnBusqueda.ts` (`repartirBorradores`, `hayGuiaPublicadaEnTitulo`, `sinLosYaOficiales`, `rutaEditor`), `src/features/busqueda/BorradoresCoincidentes.tsx` (nuevo `GuiasEnBorrador`), `src/features/inicio/InicioPage.tsx`, `src/features/soluciones/AsistentePage.tsx` y sus pruebas.
+Documentación: [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-042), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.1), [BUSCADOR.md](BUSCADOR.md) (sección 9) y [COMPONENTES_UI.md](COMPONENTES_UI.md) (3.8t y 3.8u).
+**Motivo:** encargo del usuario del **20 de septiembre de 2026**. Con la tarea 248 la guía de la resolución DIAN ya se encontraba, pero en un bloque al final y abriendo el editor: para hacer el procedimiento había que pasar por Guías o repetir la búsqueda.
+**SIN cambios** de esquema, RLS, permisos, índice del buscador ni del contenido o el estado de ninguna guía. **No hay que ejecutar SQL.**
+
+- **Cambiado el orden (RN-042):** guía publicada que coincide en el título, luego guía en borrador que coincide en el título, luego el resto de resultados oficiales, y al final los borradores que solo coinciden por etiqueta, categoría o tipo. Buscando "DIAN" la guía sale **antes** que la ficha de HKA Factura y se ve sin desplazarse en un teléfono de 360 px.
+- **Cambiado el destino de la fila:** abre **la guía** (`/soluciones/:categoriaId/:articuloId`), que con pasos es su ejecución en el primer paso pendiente. "Revisar borrador" pasa a **"Abrir borrador"**; editar sigue a mano desde los detalles. El salto lleva la búsqueda, así que salir de la guía vuelve a Inicio con "DIAN" escrito.
+- **Agregado el aviso de borrador en la ejecución:** "Borrador · algunos datos todavía están por confirmar.", una línea ámbar que no pide confirmar nada, no añade un paso, no tapa la acción y no existe en una guía publicada.
+- **Corregido el bloque secundario:** solo coincidencias débiles, sin repetir lo promovido, sin quedar vacío, con "Ver el otro" en singular (misma regla de plural que la agenda) y replegándose al cambiar la búsqueda.
+- **Pruebas:** **118 archivos y 1671 casos en verde** (antes 1664). Flujo completo con las pantallas reales, desde buscar hasta salir de la guía. Comprobado además en Chrome sin cabeza a 360 px: la guía queda a 168 px del borde superior y HKA Factura a 310; un toque abre la ejecución con el aviso; salir devuelve a Inicio con "DIAN" en el campo.
+- **La guía DIAN sigue en `borrador`** y la tarea **245** sigue abierta con sus nueve confirmaciones críticas: nada de su contenido se tocó.
+
 ### Corregido (buscador, tarea 248): los borradores que coinciden se ven, aunque haya otros resultados
 
 **Área modificada:** el buscador de Inicio (bloque nuevo y estado vacío).

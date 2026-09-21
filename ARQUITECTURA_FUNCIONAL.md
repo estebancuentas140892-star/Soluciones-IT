@@ -249,6 +249,12 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 
 ---
 
+**RN-042. El buscador prioriza la intención de resolver: una guía que coincide en el título va primero, publicada o no.**
+- Motivo: buscando "DIAN" el técnico quiere HACER el procedimiento que se llama así. El índice solo lleva lo publicado (y así sigue), así que la guía en borrador quedaba debajo de la ficha de la herramienta que la acompaña, o directamente parecía no existir. La coincidencia fuerte se promueve en la PRESENTACIÓN; el estado del artículo no se toca.
+- Orden: (1) guía publicada que coincide en el título; (2) guía en borrador que coincide en el título; (3) el resto de resultados oficiales (referencias, equipos, diagnósticos, categorías); (4) borradores que solo coinciden por etiqueta, categoría o tipo, en el bloque "Borradores coincidentes".
+- Entidades: Artículo (`estado`, `eliminadoEn`, `titulo`, `etiquetas`, `categoriaId`). Dura en el código: `borradoresEnBusqueda.ts` (`esBorradorVivo`, `borradoresCoincidentes`, `repartirBorradores`, `hayGuiaPublicadaEnTitulo`, `sinLosYaOficiales`) y `BorradoresCoincidentes.tsx`. `documentosDeBusqueda` NO cambia.
+- Impacto: un borrador promovido se abre con un toque en su procedimiento (`/soluciones/:categoriaId/:articuloId`, RN-036), lleva siempre "Borrador · contenido por confirmar" y su ejecución muestra un aviso no bloqueante. Publicarlo lo pasa al índice y retira ambas marcas, sin duplicarlo.
+
 ## 3. Modelo entidad-relación
 
 ### 3.1 Diagrama

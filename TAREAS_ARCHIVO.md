@@ -2,6 +2,24 @@
 
 ## Encargo del 2026-09-20: Inicio vuelve a ser la agenda operativa
 
+### 249. La guía que se llama como lo buscado va primero, y se abre con un toque
+
+**Título:** que escribir "DIAN" en Inicio deje la guía a un toque de su procedimiento, sin pasar por Guías ni repetir la búsqueda. **Estado:** Completada (2026-09-20) en código, interfaz, pruebas y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-20, con la causa ya identificada en la tarea 248.
+
+**Descripción.** La 248 hizo que el borrador se viera, pero en un bloque al final y con la fila abriendo el editor. El recorrido que se pidió es `Inicio → escribir DIAN → tocar la guía → hacer el paso`.
+
+**Qué se hizo, por commit:**
+
+1. `fix(busqueda): priorizar guias en borrador por titulo` - orden nuevo (RN-042): guía publicada que coincide en el título, guía en borrador que coincide en el título, resto de resultados oficiales, y al final los borradores que solo coinciden por otro campo. `repartirBorradores` separa fuertes y débiles, `hayGuiaPublicadaEnTitulo` decide el sitio y `sinLosYaOficiales` evita el doble pintado mientras las dos consultas de Dexie se ponen de acuerdo. La fila promovida dice "Borrador · contenido por confirmar · {categoría}".
+2. `fix(guias): abrir borradores directamente desde inicio` - la fila abre la guía (`/soluciones/:categoriaId/:articuloId`), no el editor; "Abrir borrador" en vez de "Revisar borrador"; el salto lleva origen y búsqueda (`conOrigen` + `useAnotarBusqueda`); y la ejecución de una guía en borrador muestra "Borrador · algunos datos todavía están por confirmar.", sin bloquear.
+3. `fix(busqueda): evitar duplicados entre resultados y borradores` - el bloque secundario se queda con las débiles, no se dibuja vacío, concuerda en singular con `textoVerOtros` y se repliega al cambiar la consulta.
+4. `test(busqueda): cubrir acceso directo a la guia DIAN` - 15 casos de flujo en `busquedaBorradores.test.tsx` más los puros de `borradoresEnBusqueda.test.ts`.
+5. `docs(busqueda): documentar prioridad de guias en inicio` - RN-042 y el resto de la documentación.
+
+**Verificación en móvil (Chrome sin cabeza, 360 px, banco local).** La guía queda a 168 px del borde superior y HKA Factura a 310 (guía primero, visible sin desplazar, `scrollY` 0, sin desborde horizontal); su `href` es `/soluciones/<categoria>/a1ac8d0a-72e7-4dd1-a377-afd2a2ca1cc0`, sin `/editar`; un toque con puntero real abre la ejecución en "PASO 1 DE 2" con el aviso de borrador a la vista y "Siguiente" sin tapar; salir devuelve a `/` con "DIAN" escrito en el campo.
+
+**Lo que NO se hizo:** no se publicó la guía, no se tocó su contenido, no se ejecutó SQL, no se cambió el índice (`documentosDeBusqueda` sigue solo con lo publicado) ni el esquema, RLS o permisos. **La guía DIAN sigue en `borrador` y la tarea 245 sigue abierta** con sus nueve confirmaciones críticas.
+
 ### 248. Los borradores que coinciden se ven en el buscador de Inicio
 
 **Título:** encontrar desde Inicio un artículo en borrador aunque la búsqueda ya tenga otros resultados, sin presentarlo como guía oficial. **Estado:** Completada (2026-09-20) en código, interfaz, pruebas y documentación. **Prioridad:** Alta. **Origen:** el usuario buscó "DIAN" en Inicio y no encontró una guía que existe.
