@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { conOrigen } from '../../lib/origenNavegacion'
+import { useAnotarBusqueda } from './busquedaEnHistorial'
 import { PastillaEstadoArticulo } from '../../components/PastillaEstado'
 import { CaretDown, CaretRight, PencilSimple } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
@@ -15,8 +17,12 @@ import {
 // Va SIEMPRE que haya búsqueda y algún borrador que coincida, con o sin
 // resultados oficiales, y siempre APARTE de ellos: su propio rótulo, su
 // propia pastilla "Borrador" en cada fila y su propia acción ("Revisar
-// borrador", que abre el editor). Un borrador no se puede confundir con
+// borrador", que abre la guía). Un borrador no se puede confundir con
 // una guía del equipo ni por un momento.
+//
+// Desde el 2026-09-20 (tarea 249) la fila abre la GUÍA, no el editor:
+// quien busca "DIAN" viene a hacer el procedimiento. El editor sigue a
+// un toque desde los detalles de la guía.
 //
 // Lo que este bloque NO hace: meter el borrador en el índice. El
 // buscador sigue indexando solo lo publicado (`useIndiceBusqueda`), que
@@ -52,7 +58,12 @@ export function BorradoresCoincidentes({
       </p>
       <div className="flex flex-col">
         {visibles.map((borrador) => (
-          <FilaBorrador key={borrador.id} borrador={borrador} consulta={consulta} />
+          <FilaBorrador
+            key={borrador.id}
+            borrador={borrador}
+            consulta={consulta}
+            consultaCruda={consultaCruda}
+          />
         ))}
       </div>
       <div className="mt-0.5 flex flex-wrap items-center gap-x-3">
@@ -82,12 +93,23 @@ export function BorradoresCoincidentes({
 // lista de Guías), la pastilla "Borrador", su categoría cuando existe, y
 // la acción. Abre el EDITOR: revisar un borrador es corregirlo, y
 // ejecutarlo como si fuera oficial es justo lo que no debe pasar.
-function FilaBorrador({ borrador, consulta }: { borrador: BorradorCoincidente; consulta: string }) {
+function FilaBorrador({
+  borrador,
+  consulta,
+  consultaCruda,
+}: {
+  borrador: BorradorCoincidente
+  consulta: string
+  consultaCruda: string
+}) {
   const { pre, match, post } = partirTitulo(borrador.titulo, consulta)
+  const salto = useSaltoConBusqueda(consultaCruda)
   return (
     <Link
       to={borrador.ruta}
-      aria-label={`Revisar borrador ${borrador.titulo}`}
+      state={salto.estado}
+      onClick={salto.alSaltar}
+      aria-label={`Abrir borrador ${borrador.titulo}`}
       className="flex min-h-14 items-center gap-3 rounded-md px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05]"
     >
       <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-precaucion/[.12] text-noct-precaucion">
@@ -108,7 +130,7 @@ function FilaBorrador({ borrador, consulta }: { borrador: BorradorCoincidente; c
           <PastillaEstadoArticulo estado="borrador" />
           {borrador.categoriaNombre && <span className="truncate">{borrador.categoriaNombre}</span>}
           <span className="font-medium text-noct-accent-300" aria-hidden>
-            Revisar borrador
+            Abrir borrador
           </span>
         </span>
       </span>
@@ -129,15 +151,22 @@ function FilaBorrador({ borrador, consulta }: { borrador: BorradorCoincidente; c
 export function GuiasEnBorrador({
   borradores,
   consulta,
+  consultaCruda,
 }: {
   borradores: BorradorCoincidente[]
   consulta: string
+  consultaCruda: string
 }) {
   if (borradores.length === 0) return null
   return (
     <section className="flex flex-col">
       {borradores.map((borrador) => (
-        <FilaBorradorDestacado key={borrador.id} borrador={borrador} consulta={consulta} />
+        <FilaBorradorDestacado
+          key={borrador.id}
+          borrador={borrador}
+          consulta={consulta}
+          consultaCruda={consultaCruda}
+        />
       ))}
     </section>
   )
@@ -146,15 +175,20 @@ export function GuiasEnBorrador({
 function FilaBorradorDestacado({
   borrador,
   consulta,
+  consultaCruda,
 }: {
   borrador: BorradorCoincidente
   consulta: string
+  consultaCruda: string
 }) {
   const { pre, match, post } = partirTitulo(borrador.titulo, consulta)
+  const salto = useSaltoConBusqueda(consultaCruda)
   return (
     <Link
       to={borrador.ruta}
-      aria-label={`Revisar borrador ${borrador.titulo}`}
+      state={salto.estado}
+      onClick={salto.alSaltar}
+      aria-label={`Abrir borrador ${borrador.titulo}`}
       className="flex min-h-[60px] items-center gap-3 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/[.06] px-3 py-2.5 text-noct-text hover:bg-noct-precaucion/[.1]"
     >
       <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-precaucion/[.14] text-noct-precaucion">
@@ -176,4 +210,26 @@ function FilaBorradorDestacado({
       <CaretRight size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
     </Link>
   )
+}
+
+// VOLVER A INICIO CON LA BÚSQUEDA ESCRITA. Es lo mismo que hace
+// `ResultadosBusqueda` con sus filas: el salto lleva de dónde vino y qué
+// se había escrito, así que la X de la guía devuelve a Inicio con "DIAN"
+// en el campo, en vez de subir al padre declarado. Se anota además en la
+// entrada actual del historial, para el botón atrás del teléfono.
+function useSaltoConBusqueda(consultaCruda: string): { estado: unknown; alSaltar: () => void } {
+  const { pathname, search } = useLocation()
+  const anotar = useAnotarBusqueda()
+  const busqueda = useMemo(
+    () => (consultaCruda ? { consulta: consultaCruda, capa: false } : undefined),
+    [consultaCruda],
+  )
+  const estado = useMemo(
+    () => conOrigen(`${pathname}${search}`, 'la búsqueda', busqueda),
+    [pathname, search, busqueda],
+  )
+  const alSaltar = useCallback(() => {
+    if (busqueda) anotar(busqueda)
+  }, [anotar, busqueda])
+  return { estado, alSaltar }
 }

@@ -8,6 +8,7 @@ import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/proc
 import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
+import { PencilSimple } from '../../components/iconos'
 import { AsistenteVista } from './AsistenteVista'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
 
@@ -82,6 +83,19 @@ export function AsistentePage() {
           lo pone cada vista, para que el primer paso empiece pegado a la
           cabecera. */}
       <main className="flex flex-1 flex-col px-4">
+        {/* EJECUTAR UN BORRADOR SE DICE, NO SE IMPIDE (encargo del
+            2026-09-20, tarea 2). Desde el buscador se puede abrir una guía
+            sin publicar, que es lo que se pidió: sirve aunque le falten
+            confirmaciones. Lo que no puede pasar es que se confunda con un
+            procedimiento del equipo, así que la ejecución lo dice en una
+            línea. No pide confirmar nada, no añade un paso y no tapa la
+            acción: solo está ahí. En una guía publicada no existe. */}
+        {(articulo.estado ?? 'publicado') === 'borrador' && (
+          <p className="mt-2 flex items-center gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/[.08] px-2.5 py-1.5 text-[12px] leading-snug text-noct-precaucion">
+            <PencilSimple size={13} className="shrink-0" aria-hidden />
+            Borrador · algunos datos todavía están por confirmar.
+          </p>
+        )}
         {/* Sin onCompletado: al nivel 0 no hay a quien avisar,
             AsistenteVista ya muestra su propia pantalla de terminada, con
             la salida a donde el técnico estaba. */}

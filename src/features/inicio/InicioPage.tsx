@@ -198,7 +198,7 @@ export function InicioPage() {
             {/* La guía en borrador que coincide en el título, DELANTE de
                 todo lo demás, salvo que ya haya una publicada que también
                 coincida en el título: esa conserva la prioridad. */}
-            {!hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} />}
+            {!hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
 
             {resultados.length > 0 ? (
               <ResultadosBusqueda
@@ -239,7 +239,7 @@ export function InicioPage() {
               </>
             )}
 
-            {hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} />}
+            {hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
 
             {/* BORRADORES COINCIDENTES: los que solo coinciden por
                 etiqueta, categoría o tipo. En su propio bloque, nunca

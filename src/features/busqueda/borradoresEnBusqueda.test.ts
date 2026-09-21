@@ -72,11 +72,16 @@ describe('borradoresCoincidentes', () => {
   const buscar = (articulos: Articulo[], texto: string) =>
     borradoresCoincidentes(articulos, CATEGORIAS, normalizarTexto(texto))
 
-  it('encuentra la guía DIAN en borrador, con su categoría y su ruta al editor', () => {
+  it('encuentra la guía DIAN en borrador, con su categoría y su ruta a la guía', () => {
     const [encontrado] = buscar([DIAN], 'DIAN')
     expect(encontrado.titulo).toContain('resolución DIAN')
     expect(encontrado.categoriaNombre).toBe('POS')
-    expect(encontrado.ruta).toBe(`/soluciones/cat-pos/${DIAN.id}/editar`)
+    // La acción principal abre la GUÍA (con pasos, su ejecución), no el
+    // editor: quien busca "DIAN" viene a hacer el procedimiento.
+    expect(encontrado.ruta).toBe(`/soluciones/cat-pos/${DIAN.id}`)
+    expect(encontrado.ruta.endsWith('/editar')).toBe(false)
+    // Editar sigue disponible, pero no es lo que hace la fila.
+    expect(encontrado.rutaEditor).toBe(`/soluciones/cat-pos/${DIAN.id}/editar`)
     expect(encontrado.coincidencia.enTitulo).toBe(true)
   })
 
@@ -118,7 +123,7 @@ describe('borradoresCoincidentes', () => {
     const huerfano = articulo({ id: 'b3', titulo: 'Resolución DIAN suelta', categoriaId: 'cat-borrada' })
     const [encontrado] = buscar([huerfano], 'dian')
     expect(encontrado.categoriaNombre).toBe('')
-    expect(encontrado.ruta).toBe('/soluciones/cat-borrada/b3/editar')
+    expect(encontrado.ruta).toBe('/soluciones/cat-borrada/b3')
   })
 })
 

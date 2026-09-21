@@ -107,14 +107,15 @@ describe('buscar "DIAN" con la guía en borrador', () => {
     expect(texto).not.toContain('Borradores coincidentes')
   })
 
-  it('"Revisar borrador" abre el editor del artículo, no su ejecución', async () => {
+  it('la fila entera abre la GUÍA, no el editor', async () => {
     await sembrarFichaHka()
     await sembrarGuiaDian('borrador')
     await montar(RUTAS, '/')
     await buscarEnInicio('DIAN')
 
-    const fila = await esperar(() => control(/^Revisar borrador/), 'la fila del borrador')
-    expect(fila.getAttribute('href')).toBe(`/soluciones/cat-pos/${ID_DIAN}/editar`)
+    const fila = await esperar(() => control(/^Abrir borrador/), 'la fila del borrador')
+    expect(fila.getAttribute('href')).toBe(`/soluciones/cat-pos/${ID_DIAN}`)
+    expect(fila.getAttribute('href')).not.toContain('/editar')
   })
 
   it('da igual la caja y las tildes', async () => {

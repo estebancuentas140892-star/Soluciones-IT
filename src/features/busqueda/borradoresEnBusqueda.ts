@@ -27,8 +27,16 @@ export interface BorradorCoincidente {
   categoriaId: string
   /** Nombre vivo de la categoría, o cadena vacía si ya no existe. */
   categoriaNombre: string
-  /** El editor del artículo: revisar un borrador es abrirlo donde se corrige. */
+  /**
+   * La guía, la MISMA dirección que usa la lista de Guías
+   * (`/soluciones/:categoriaId/:articuloId`). Abrir un borrador desde el
+   * buscador es hacer el procedimiento, no editarlo: con pasos entra en
+   * la ejecución, en el primer paso pendiente (ver `GuiaPage`). Editar
+   * sigue donde siempre, desde los detalles de la guía.
+   */
   ruta: string
+  /** El editor, para quien venga a corregirlo. No es la acción principal. */
+  rutaEditor: string
   /** Por dónde coincidió, para poder decirlo en la fila. */
   coincidencia: CoincidenciaArticulo
 }
@@ -65,7 +73,8 @@ export function borradoresCoincidentes(
           titulo: articulo.titulo || '(sin título)',
           categoriaId: articulo.categoriaId,
           categoriaNombre,
-          ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}/editar`,
+          ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}`,
+          rutaEditor: `/soluciones/${articulo.categoriaId}/${articulo.id}/editar`,
           coincidencia,
         },
       ]
