@@ -1,5 +1,19 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-21: revisar y corregir todas las guías
+
+### 252. Revisión integral de las 14 guías con el formato operativo acordado
+
+**Título:** revisar y corregir cada guía existente desde el editor real de Soluciones IT. **Estado:** Completada (2026-09-21). **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-21.
+
+**Qué se hizo:** se revisaron los 14 artículos activos con la regla 20 de [REGLAS.md](REGLAS.md). Las acciones encadenadas detectadas por el editor se dividieron en tareas; "Antes de empezar" se reescribió como condiciones previas reales; todas las guías recibieron tiempo estimado; y cada guardado se hizo desde la aplicación con motivo e historial, nunca mediante SQL.
+
+**Resultado:** 10 guías quedaron completas y publicadas. Cuatro quedaron completas en estructura pero conservan el estado `borrador` porque todavía contienen datos internos marcados como pendientes: resolución DIAN, cliente externo, trabajador para almuerzo y usuario de taquillero. No se inventaron rutas, nombres de campos ni reglas fiscales.
+
+**Verificación:** el editor mostró 100 % de completitud en las 14 guías; Supabase confirmó 14 artículos activos, 10 publicados, 4 borradores y 0 sin tiempo estimado. Todas tienen cambios de historial del 2026-09-21. Desde Inicio, buscar "DIAN" muestra la guía primero y abre su ejecución directamente en el paso 1 con el aviso de borrador.
+
+**Área afectada:** contenido de `articulos` e `historial` en Supabase, mediante el editor de producción. **Sin cambios de código, esquema, RLS, permisos ni despliegue.** La tarea 245 sigue abierta por las nueve confirmaciones técnicas de FrontRest/HKA.
+
 ## Encargo del 2026-09-21: que la PWA instalada se actualice sola
 
 ### 251. La app instalada detecta la versión nueva sin desinstalar nada

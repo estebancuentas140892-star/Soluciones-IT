@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-21
 
+### Cambiado (contenido de guías, tarea 252): revisión integral con el formato operativo
+
+**Área modificada:** contenido de los 14 artículos activos de Soluciones IT y su historial en Supabase.
+**Tipo:** Modificado (estructura, requisitos, tiempos y estado de publicación).
+**Motivo:** encargo del usuario del 21 de septiembre de 2026: corregir todas las guías para que sigan el formato operativo acordado.
+**Impacto esperado:** instrucciones más fáciles de ejecutar frente al equipo, sin acciones encadenadas ni requisitos redactados como pasos; los procedimientos técnicamente incompletos siguen identificados como borradores.
+
+- Se revisaron las 14 guías desde el editor de producción, conservando autor, fecha, motivo e historial.
+- Diez guías completas quedaron publicadas; cuatro permanecen en borrador por datos internos sin confirmar: DIAN, cliente externo, trabajador para almuerzo y taquillero.
+- Todas tienen tiempo estimado y el editor marca 100 % de completitud.
+- Se verificó en Supabase: 14 activas, 10 publicadas, 4 borradores y 0 sin tiempo estimado.
+- Se verificó el recorrido `Inicio -> buscar DIAN -> abrir la guía -> paso 1`; no abre el editor.
+- **Sin cambios de código, esquema, RLS, permisos ni despliegue de Vercel.**
+
 ### Corregido (PWA, tarea 251): la app instalada se entera de la versión nueva, sin desinstalar nada
 
 **Área modificada:** coordinación del service worker, build (`/version.json`), cabeceras de Vercel y la fila de actualización de Más.
