@@ -4,8 +4,17 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// LA VERSION QUE SE VE EN EL TELEFONO (encargo del 2026-09-20, punto 4).
+// Vercel expone el commit del despliegue en VERCEL_GIT_COMMIT_SHA; se
+// hornea recortado en el build para que "Mas" pueda decir exactamente
+// que copia esta corriendo. En local no existe: entonces es "desarrollo".
+const versionApp = (process.env.VERCEL_GIT_COMMIT_SHA ?? '').trim().slice(0, 7)
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_VERSION_APP': JSON.stringify(versionApp),
+  },
   plugins: [
     react(),
     tailwindcss(),

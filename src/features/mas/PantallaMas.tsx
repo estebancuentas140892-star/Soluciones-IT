@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { Avatar } from '../../components/Avatar'
+import { BuscarActualizacion } from '../../components/BuscarActualizacion'
 import { SeccionPlegable } from '../../components/SeccionPlegable'
 import {
   BookBookmark,
@@ -260,6 +261,11 @@ export function PantallaMas() {
                       }`
                 }
               />
+              {/* QUÉ VERSIÓN LLEVA ESTE TELÉFONO, Y BUSCAR UNA NUEVA
+                  (encargo del 2026-09-20). Va aquí y no en Cuenta porque
+                  Más es la pantalla que se abre cuando algo "no se ve
+                  como debería". */}
+              <BuscarActualizacion />
             </div>
           </section>
         </div>
