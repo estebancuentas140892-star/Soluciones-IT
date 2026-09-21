@@ -5,6 +5,7 @@ import { useAnotarBusqueda } from './busquedaEnHistorial'
 import { PastillaEstadoArticulo } from '../../components/PastillaEstado'
 import { CaretDown, CaretRight, PencilSimple } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
+import { textoVerOtros } from '../inicio/agenda'
 import { partirTitulo } from '../soluciones/coincidencia'
 import {
   BORRADORES_VISIBLES,
@@ -40,10 +41,16 @@ export function BorradoresCoincidentes({
   /** Consulta tal cual la escribió el técnico, para el enlace a Guías. */
   consultaCruda: string
 }) {
-  const [desplegado, setDesplegado] = useState(false)
+  // EL DESPLIEGUE ES DE ESTA CONSULTA, no de la pantalla (mismo patrón
+  // que la vista rápida de `ResultadosBusqueda`): al cambiar lo escrito,
+  // la lista es otra y dejarla desplegada mostraría de golpe borradores
+  // que el técnico no pidió ver.
+  const [desplegado, setDesplegado] = useState<string | null>(null)
+  if (desplegado !== null && desplegado !== consultaCruda) setDesplegado(null)
   if (borradores.length === 0) return null
 
-  const visibles = desplegado ? borradores : borradores.slice(0, BORRADORES_VISIBLES)
+  const visibles =
+    desplegado === consultaCruda ? borradores : borradores.slice(0, BORRADORES_VISIBLES)
   const ocultos = borradores.length - visibles.length
 
   return (
@@ -70,10 +77,10 @@ export function BorradoresCoincidentes({
         {ocultos > 0 && (
           <button
             type="button"
-            onClick={() => setDesplegado(true)}
+            onClick={() => setDesplegado(consultaCruda)}
             className="inline-flex min-h-11 items-center gap-1.5 px-1.5 text-[12.5px] font-medium text-noct-accent-300"
           >
-            Ver los otros {ocultos}
+            {textoVerOtros(ocultos)}
             <span className="sr-only"> borradores que coinciden</span>
             <CaretDown size={12} aria-hidden />
           </button>

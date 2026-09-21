@@ -212,3 +212,64 @@ describe('publicar la guía la pasa a los resultados oficiales', () => {
     expect(ubicacionActual().pathname).toContain(ID_DIAN)
   })
 })
+
+describe('el bloque secundario es solo para las coincidencias débiles', () => {
+  /** Un borrador que NO nombra la consulta en el título: coincide por etiqueta. */
+  async function sembrarBorradorPorEtiqueta(id: string, titulo: string): Promise<void> {
+    await sembrarGuia({
+      id,
+      titulo,
+      categoriaId: 'cat-pos',
+      pasos: [pasoPrueba(`${id}-p1`, 'Un paso', ['Hacer algo'])],
+    })
+    await db.articulos.update(id, { estado: 'borrador', etiquetas: ['dian'] })
+  }
+
+  it('el promovido no se repite abajo y el débil se queda en el bloque', async () => {
+    await sembrarGuiaDian('borrador')
+    await sembrarBorradorPorEtiqueta('b-debil', 'Alta de un usuario en el POS')
+    await montar(RUTAS, '/')
+    await buscarEnInicio('DIAN')
+
+    const texto = await esperar(
+      () => (textoPantalla().includes('Borradores coincidentes') ? textoPantalla() : null),
+      'el bloque de borradores',
+    )
+    // El fuerte, arriba y una sola vez.
+    expect(texto.split(TITULO_DIAN)).toHaveLength(2)
+    expect(texto.indexOf(TITULO_DIAN)).toBeLessThan(texto.indexOf('Borradores coincidentes'))
+    // El débil, abajo.
+    expect(texto.indexOf('Alta de un usuario en el POS')).toBeGreaterThan(
+      texto.indexOf('Borradores coincidentes'),
+    )
+    expect(texto).toContain('1 borrador coincide')
+  })
+
+  it('sin coincidencias débiles no queda un bloque vacío', async () => {
+    await sembrarGuiaDian('borrador')
+    await montar(RUTAS, '/')
+    await buscarEnInicio('DIAN')
+
+    await esperar(() => textoPantalla().includes(TITULO_DIAN), 'la guía en borrador')
+    expect(textoPantalla()).not.toContain('Borradores coincidentes')
+  })
+
+  it('"Ver el otro" concuerda en singular y se repliega al cambiar la búsqueda', async () => {
+    for (const n of [1, 2, 3, 4]) await sembrarBorradorPorEtiqueta(`b${n}`, `Borrador de ejemplo ${n}`)
+    await montar(RUTAS, '/')
+    await buscarEnInicio('DIAN')
+
+    await esperar(() => textoPantalla().includes('Borradores coincidentes'), 'el bloque de borradores')
+    expect(textoPantalla()).toContain('4 borradores coinciden')
+    expect(textoPantalla()).not.toContain('Borrador de ejemplo 4')
+
+    const verOtro = await esperar(() => control(/^Ver el otro/), 'el desplegable en singular')
+    await tocar(verOtro)
+    expect(textoPantalla()).toContain('Borrador de ejemplo 4')
+
+    // Cambiar lo escrito repliega el bloque: la lista ya es otra.
+    await buscarEnInicio('dia')
+    await esperar(() => !textoPantalla().includes('Borrador de ejemplo 4'), 'el bloque vuelve a plegarse')
+    expect(control(/^Ver el otro/)).not.toBeNull()
+  })
+})
