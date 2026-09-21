@@ -1,11 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { anotarRegistro, anotarVersionNueva } from '../lib/actualizacionApp'
 import { BTN_PRIMARIO } from './nocturne'
-
-// Comprobacion periodica de version nueva (ademas de al cargar la app):
-// un telefono que queda abierto durante horas se entera sin que el
-// tecnico recargue a mano.
-const INTERVALO_COMPROBACION_MS = 60 * 60 * 1000
 
 // Si el service worker nuevo no toma el control en este tiempo, se
 // recarga igual. Ver el comentario de `actualizar`: es la red que impide
@@ -22,11 +18,21 @@ export function ActualizacionDisponible() {
     needRefresh: [necesitaActualizar],
     updateServiceWorker,
   } = useRegisterSW({
+    // COMPROBAR YA, NO DENTRO DE UNA HORA (encargo del 2026-09-20). El
+    // intervalo de respaldo, los dos disparadores nuevos (volver a la
+    // app y recuperar la conexión) y el freno entre comprobaciones viven
+    // en `actualizacionApp.ts`, que ademas los instala UNA sola vez
+    // aunque este componente se vuelva a montar.
     onRegisteredSW(_url, registro) {
-      if (!registro) return
-      setInterval(() => void registro.update(), INTERVALO_COMPROBACION_MS)
+      anotarRegistro(registro ?? null)
     },
   })
+
+  // Que haya version esperando lo sabe la libreria; se comparte para que
+  // "Buscar actualizacion" de Mas pueda decir si hay algo o no.
+  useEffect(() => {
+    anotarVersionNueva(necesitaActualizar)
+  }, [necesitaActualizar])
 
   // La recarga se hace SIEMPRE desde aqui, y nunca se delega en la
   // libreria. Motivo (bug reportado por el usuario el 2026-07-27: "le doy
