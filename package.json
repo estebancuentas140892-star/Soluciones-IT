@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "vitest run",
+    "prueba:pwa": "node scripts/prueba-actualizacion-pwa.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

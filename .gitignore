@@ -10,6 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# Builds de la prueba de actualizacion A -> B (scripts/prueba-actualizacion-pwa.mjs)
+dist-pwa-a
+dist-pwa-b
 *.local
 .env
 .env.*
