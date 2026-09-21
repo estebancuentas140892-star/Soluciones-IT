@@ -45,6 +45,8 @@ function registroFalso(conEspera = false): RegistroActualizable & { llamadas: nu
 
 beforeEach(() => {
   reiniciarActualizacion()
+  // Sin `/version.json` en las pruebas: 404 en vez de salir a la red.
+  vi.stubGlobal('fetch', async () => new Response('', { status: 404 }))
 })
 
 afterEach(async () => {

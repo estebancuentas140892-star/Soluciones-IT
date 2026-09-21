@@ -3,7 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/autenticacion/AuthProvider'
 import { RequireAuth } from './features/autenticacion/RequireAuth'
 import { Cargando } from './components/Cargando'
+import { useEffect } from 'react'
 import { ActualizacionDisponible } from './components/ActualizacionDisponible'
+import { iniciarCoordinador } from './lib/actualizacionApp'
 
 // Cada pantalla se carga en su propio trozo (chunk) bajo demanda. Asi
 // la primera carga (la pantalla de login) no arrastra react-markdown
@@ -151,6 +153,14 @@ const TopologiaEquipoPage = lazy(() =>
 )
 
 function App() {
+  // EL COORDINADOR ARRANCA EN LA RAIZ, ANTES DE INICIAR SESION (encargo
+  // del 2026-09-21, punto 1): adopta el service worker que YA exista en
+  // este navegador, sin esperar a que la libreria avise. Si la PWA
+  // instalada tenia un worker en espera, el aviso sale al abrir.
+  useEffect(() => {
+    iniciarCoordinador()
+  }, [])
+
   return (
     <AuthProvider>
       <ActualizacionDisponible />

@@ -26,6 +26,7 @@ const TEXTO_FASE: Record<FaseActualizacion, string> = {
   buscando: 'Buscando actualización…',
   'al-dia': 'Ya tienes la versión más reciente',
   disponible: 'Hay una versión nueva: toca "Actualizar" en el aviso',
+  'sin-conexion': 'Sin conexión. Inténtalo cuando recuperes Internet',
   'sin-servicio': 'Este navegador no guarda la app para trabajar sin señal',
 }
 
