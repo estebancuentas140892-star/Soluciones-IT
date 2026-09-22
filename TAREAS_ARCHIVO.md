@@ -1,5 +1,19 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-22: Soluciones IT se organiza alrededor de Resolver
+
+### 253. Fase 1: analizar el estado actual y definir el mapa final de navegación
+
+**Título:** análisis del estado actual y mapa final del rediseño "Resolver". **Estado:** Completada (2026-09-22) en documentación; sin código. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22 ("Rediseño funcional completo"), fase 1 de 8.
+
+**Qué se hizo.** Se revisaron sobre el código la navegación (chasis de tres niveles, `padreDe`, origen del salto, las 44 rutas), Inicio y la agenda, la ejecución de guías (modo foco, avisos por tono, requisitos, dato protegido en el paso, modo consulta), Equipos y el escáner, Más, el modelo de datos del paso, Supabase y su RLS, la Bóveda y su cifrado, y el service worker con su precache (141 archivos, ~1,5 MB; `xlsx` solo ocupa casi un tercio). El resultado está en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md): estado actual, lo que ya cumple el encargo (puntos 6, 7, 8 y 19), el mapa de cuatro destinos (Resolver, Equipos, Bóveda y Más) en teléfono, tableta y escritorio, los padres que cambian, el lenguaje de color de las guías, los dos campos nuevos por paso ("Dónde" y "Debes ver"), Equipos + QR, los grupos de Más, la arquitectura del portal `/asistencia` con su análisis de Realtime, el plan de precache y las ocho decisiones tomadas sin preguntar con cómo revertirlas.
+
+**Línea base.** 121 archivos y 1720 casos de prueba en verde antes de tocar nada.
+
+**Numeración.** El plan se escribió primero como 252 a 259; la 252 ya la había tomado la revisión integral del contenido de las guías (commit `e984cb2`, del 2026-09-21), así que las fases van de la 253 a la 260.
+
+**Lo que no se tocó:** código, datos, esquema, RLS, rutas.
+
 ## Encargo del 2026-09-21: revisar y corregir todas las guías
 
 ### 252. Revisión integral de las 14 guías con el formato operativo acordado

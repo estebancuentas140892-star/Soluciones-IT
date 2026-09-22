@@ -6,6 +6,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-22
+
+### Documentación (tarea 253, Fase 1 del rediseño "Resolver"): estado actual y mapa final de navegación
+
+**Área modificada:** documentación del proyecto.
+**Tipo:** Agregado.
+**Nuevos:** [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md).
+**Modificados:** [TAREAS.md](TAREAS.md) (tareas 254 a 260) y [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (tarea 253).
+**Motivo:** encargo del usuario del **22 de septiembre de 2026**: Soluciones IT pasa a organizarse alrededor de buscar, encontrar, ejecutar y solucionar.
+**Impacto esperado:** ninguno en la app; fija el mapa (Resolver, Equipos, Bóveda y Más) y el orden de las siete fases con código.
+**SIN cambios** de código, esquema, RLS, datos ni rutas.
+
 ## 2026-09-21
 
 ### Cambiado (contenido de guías, tarea 252): revisión integral con el formato operativo

@@ -4,6 +4,21 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1, cerrada y archivada). Ocho fases, una tarea por fase, una "En proceso" a la vez: 254 (Resolver y navegación), 255 (ejecución visual), 256 (Equipos + QR), 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
+
+### 254. Fase 2: Resolver y navegación de cuatro destinos
+
+- **Título:** Resolver sustituye a Inicio y a la pestaña Guías; la navegación principal pasa a Resolver, Equipos, Bóveda y Más.
+- **Descripción:** (1) `src/lib/navegacion.ts`: raíces de pestaña, `pestanaMovilDe` (cuatro destinos), padres nuevos (`/soluciones`, `/agenda`, `/escaner`, `/diagnostico`, `/cuenta`, `/red`) y fin de `SECCIONES_EN_MAS`; (2) `src/app/Chasis.tsx`: cuatro destinos en la barra inferior, el rail y la barra lateral, sin los grupos "Consulta" y "Trabajo técnico"; el número de urgentes sobre Resolver; (3) `src/features/inicio/InicioPage.tsx` pasa a ser Resolver: la pregunta y el buscador, "Atención" (vencidos, hoy y próximos, hasta tres), "Continuar", "Recientes" (hasta tres, 14 días) y "Accesos rápidos" por categoría (solo con dos o más categorías con guías); la agenda completa sigue en `/agenda`; (4) la lista de guías (`SolucionesPage.tsx`) lleva regreso a Resolver en el teléfono; (5) atajos de teclado (`src/app/atajosApp.ts`); (6) pruebas de navegación, atajos y Resolver.
+- **Motivo:** sección 2 del encargo: la acción principal es buscar, encontrar, ejecutar y solucionar, y la navegación tenía dos puertas (Inicio y Guías) para lo mismo.
+- **Impacto:** alto, es lo primero que ve el técnico. Ninguna dirección cambia.
+- **Prioridad:** Alta. **Estado:** En progreso.
+- **Área afectada:** `src/lib/navegacion.ts`, `src/app/{Chasis,memoriaPestana,atajosApp,CapaAtajos,AyudaAtajos}.ts(x)`, `src/components/BarraSuperior.tsx`, `src/features/inicio/{InicioPage,AgendaPage,SeccionesAgenda}.tsx` y archivos nuevos de Resolver en `src/features/inicio/`, `src/features/soluciones/SolucionesPage.tsx`.
+- **Dependencias:** tarea 253 (el mapa).
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+---
+
 *(la tarea **251** (la app instalada detecta la version nueva) se cerro el 2026-09-21 y esta en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), con sus cuatro commits y la prueba A -> B. **Comprobar un despliegue ahora es leer https://soluciones-it-psi.vercel.app/version.json**, y en el telefono, Mas > Buscar actualizacion.)*
 
 *(las tareas **247** (Inicio vuelve a ser la agenda operativa), **248** (los borradores que coinciden se ven en el buscador) , **249** (la guía que se llama como lo buscado va primero y se abre con un toque) y **250** (la PWA instalada se entera de que hay versión nueva) se cerraron el 2026-09-20 y están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). La **252** revisó las 14 guías el 2026-09-21: 10 quedaron publicadas y 4 permanecen en borrador por datos internos sin confirmar. La **245** sigue en "Por hacer" y BLOQUEADA: la guía DIAN ya quedó reestructurada y completa en el editor, pero conserva nueve confirmaciones operativas abiertas.)*
@@ -348,6 +363,72 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 255. Fase 3: ejecución visual de las guías (ruta, colores con significado, dónde y debes ver)
+
+- **Título:** la guía se entiende leyendo poco: ruta del procedimiento, un color por significado y cada paso con qué hacer, dónde y qué debe verse.
+- **Descripción:** (1) componente de ruta (horizontal en escritorio y tableta, vertical y recortada en el teléfono) con estado por nodo y marca de riesgo; (2) tokens de color de guía (lugar amarillo, acción azul) y Precaución al rojo dentro de la ejecución; "No" y "Borrador" neutros; verificación con icono y palabra; (3) campos opcionales `lugar` y `resultado` por paso (normalizador, tipos, editor, vista de paso entero, lectura y vista previa, buscador); (4) "Requisitos" en vez de "Antes de empezar, ten a mano"; (5) "Credencial necesaria" en el paso; (6) la ejecución gana ancho en escritorio.
+- **Motivo:** secciones 3 a 8 del encargo.
+- **Impacto:** alto en la pantalla que más se usa. Sin SQL ni versión de Dexie: los campos viven en el JSON del procedimiento.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/{ModoFoco,AsistenteVista,AsistentePage,ProcedimientoVista,PasosEditor,HojaPasos,tonos}.tsx/ts`, `src/features/boveda/CredencialEnPaso.tsx`, `src/lib/{db,procedimiento}.ts`, `src/index.css`, `src/app/Chasis.tsx` (ancho de la tarea), `src/features/busqueda/useIndiceBusqueda.ts`.
+- **Dependencias:** 254.
+- **Riesgo anotado:** una copia de la app sin actualizar que edite una guía descarta `lugar` y `resultado`. Avisar al entregar.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+### 256. Fase 4: Equipos + QR
+
+- **Título:** Equipos responde "¿qué sabemos de este dispositivo?" y el QR es otra forma de buscar.
+- **Descripción:** (1) cabecera con Buscar equipo y Escanear QR al mismo peso; "Crear" secundario; fuera el menú "···" y el resumen de estados; (2) buscar incluye los equipos de red; (3) el escáner abre la ficha directamente con un solo resultado y reconoce el QR del portal de asistencia; (4) la ficha: nombre, tipo, ubicación, IP, responsable y "Conectado a" arriba; Problemas frecuentes y Procedimientos; datos técnicos plegados.
+- **Motivo:** secciones 16 a 18 del encargo.
+- **Impacto:** alto en la segunda pantalla más usada.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/escaner/{EscanerPage,resolverCodigo}.ts(x)`, `src/features/red/` (resumen de conexión).
+- **Dependencias:** 254.
+- **Modelo/esfuerzo:** Sonnet 5 / Alto (Opus 5 / Alto si se hace en la misma sesión).
+
+### 257. Fase 5: Más e Infraestructura
+
+- **Título:** Más con cuatro grupos (Consulta, Infraestructura, Herramientas, Configuración).
+- **Descripción:** reordenar `PantallaMas.tsx`; Mis favoritos solo si hay; Actividad del equipo al final de la Agenda; Red y Topología cambian de puerta, no de comportamiento; en pantallas anchas, columnas.
+- **Motivo:** secciones 18, 20 y 22 del encargo.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/features/red/RedPage.tsx` (regreso).
+- **Dependencias:** 254.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
+
+- **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
+- **Descripción:** (1) migración en `supabase/schema.sql`: tablas `asistencia_sesiones`, `asistencia_mensajes`, `asistencia_eventos`, RLS sin políticas y funciones `security definer` con permisos explícitos; (2) entrada propia `asistencia.html` sin service worker, Dexie ni cliente completo de Supabase; (3) `/conectar` y la hoja "Conectar equipo" (escanear o escribir el código); (4) "Enviar a este equipo" con vista previa desde el paso; (5) constructor de contenido que no puede recibir datos de la Bóveda y validación en el servidor; (6) indicador y "Desconectar equipo"; (7) pruebas del SQL, del constructor y de los estados del portal.
+- **Motivo:** secciones 9 a 15 del encargo.
+- **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`.
+- **Dependencias:** 255. **Paso del usuario:** ejecutar `supabase/schema.sql` en el SQL Editor.
+- **Modelo/esfuerzo:** Opus 5 / Extra (seguridad).
+
+### 259. Fase 7: precache, trozos y rendimiento
+
+- **Título:** que Resolver, Equipos y Bóveda arranquen rápido sin perder las guías sin conexión.
+- **Descripción:** sacar del precache Importar (`xlsx`), Etiquetas y el portal con caché en tiempo de ejecución; revisar qué arrastra el arranque (`index`, `Chasis`); medir antes y después.
+- **Motivo:** sección 21 del encargo.
+- **Impacto:** medio (casi un tercio menos de precache).
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `vite.config.ts`, `src/app/Chasis.tsx`, `src/lib/recargaChunk.ts`.
+- **Dependencias:** 258.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
+
+- **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
+- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible.
+- **Motivo:** secciones 25 y 26 del encargo.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
+- **Dependencias:** 254 a 259.
+- **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ### 245. Revisar el CONTENIDO de la guía de la resolución DIAN con el modelo nuevo
 
