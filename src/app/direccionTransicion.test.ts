@@ -38,9 +38,15 @@ describe('direccionPara', () => {
   it('cambiar entre raíces de pestaña es lateral, aunque tengan distinta profundidad', async () => {
     const { direccionPara } = await importarFresco()
     direccionPara(loc('/', 'k1'))
-    // "/" tiene 0 segmentos y "/soluciones" tiene 1: por profundidad
+    // "/" tiene 0 segmentos y "/dispositivos" tiene 1: por profundidad
     // parecería "entra", pero ambas son raíces de pestaña.
-    expect(direccionPara(loc('/soluciones', 'k2'))).toBe('lateral')
+    expect(direccionPara(loc('/dispositivos', 'k2'))).toBe('lateral')
+  })
+
+  it('el catálogo de guías ya no es raíz: abrirlo desde Resolver es entrar (encargo del 2026-09-22)', async () => {
+    const { direccionPara } = await importarFresco()
+    direccionPara(loc('/', 'k1'))
+    expect(direccionPara(loc('/soluciones', 'k2'))).toBe('entra')
   })
 
   it('misma profundidad entre no-raíces es lateral', async () => {

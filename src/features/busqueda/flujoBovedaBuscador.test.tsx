@@ -23,7 +23,7 @@ import {
   ubicacionActual,
 } from '../../pruebas/montaje'
 import { bloquear, bovedaDesbloqueada } from '../boveda/sesionBoveda'
-import { InicioPage } from '../inicio/InicioPage'
+import { ResolverPage } from '../inicio/ResolverPage'
 
 // LA BÓVEDA DESDE EL BUSCADOR, DE PRINCIPIO A FIN (encargo del
 // 2026-09-16, casos A, B, C, D y J de la sección 16).
@@ -42,7 +42,7 @@ const copiarMock = vi.mocked(copiarAlPortapapeles)
 const CLAVE = `Xq7#Lm2$Rt9@Vb4%${'Pr0ceso-De-Prueba_Largo.2026+Sin/Espacios'.repeat(3)}`
 
 const RUTAS = [
-  { ruta: '/', elemento: <InicioPage /> },
+  { ruta: '/', elemento: <ResolverPage /> },
   { ruta: '/boveda', elemento: <p>PANTALLA DE LA BOVEDA</p> },
   { ruta: '/boveda/:credencialId', elemento: <p>FICHA DE LA BOVEDA</p> },
 ]
@@ -247,7 +247,12 @@ describe('caso J: Bóveda sin permiso', () => {
     await esperar(() => textoPantalla().includes('Sin coincidencias'), 'el estado vacío')
 
     expect(control('Desbloquear y buscar')).toBeNull()
-    expect(textoPantalla()).not.toMatch(/b[oó]veda/i)
+    // En lo que responde la búsqueda. La pestaña "Bóveda" de la barra es
+    // la misma para todos desde el 2026-09-22 (regla R17: el permiso
+    // cambia lo que hay detrás de la puerta, no la barra), y nombrar la
+    // sección no dice nada de lo que guarda.
+    const respuesta = document.body.querySelector('main')?.textContent ?? ''
+    expect(respuesta).not.toMatch(/b[oó]veda/i)
     expect(textoPantalla()).not.toContain('Administrador POS')
     expect(document.body.querySelector('input[placeholder="Contraseña maestra"]')).toBeNull()
   })

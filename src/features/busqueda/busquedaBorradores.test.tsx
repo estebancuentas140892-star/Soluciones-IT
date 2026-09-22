@@ -17,7 +17,7 @@ import {
   tocar,
   ubicacionActual,
 } from '../../pruebas/montaje'
-import { InicioPage } from '../inicio/InicioPage'
+import { ResolverPage } from '../inicio/ResolverPage'
 import { GuiaPage } from '../soluciones/GuiaPage'
 
 // BUSCAR "DIAN" EN INICIO (encargo del 2026-09-20, tareas 1 y 3).
@@ -40,7 +40,7 @@ const ID_DIAN = 'a1ac8d0a-72e7-4dd1-a377-afd2a2ca1cc0'
 const TITULO_DIAN = 'Actualizar la resolución DIAN para facturación electrónica en un POS'
 
 const RUTAS = [
-  { ruta: '/', elemento: <InicioPage /> },
+  { ruta: '/', elemento: <ResolverPage /> },
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> },
 ]
 

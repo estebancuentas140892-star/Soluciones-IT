@@ -16,8 +16,8 @@ import { iniciarCoordinador } from './lib/actualizacionApp'
 const LoginPage = lazy(() =>
   import('./features/autenticacion/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
-const InicioPage = lazy(() =>
-  import('./features/inicio/InicioPage').then((m) => ({ default: m.InicioPage })),
+const ResolverPage = lazy(() =>
+  import('./features/inicio/ResolverPage').then((m) => ({ default: m.ResolverPage })),
 )
 const AgendaPage = lazy(() =>
   import('./features/inicio/AgendaPage').then((m) => ({ default: m.AgendaPage })),
@@ -528,22 +528,22 @@ function App() {
                   </Suspense>
                 }
               />
-              {/* Inicio (handoff "Rediseño de aplicación empresarial",
-                  Inicio.dc.html): nivel `seccion`, con la cabecera
-                  global del chasis (estado del dato, buscador y cuenta)
-                  y las pestañas. */}
+              {/* Resolver (encargo del 2026-09-22): el primero de los
+                  cuatro destinos principales, nivel `seccion`. Sustituye a
+                  Inicio y a la pestaña Guías: la pregunta y el buscador,
+                  y debajo solo lo que ayuda a resolver algo. */}
               <Route
                 index
                 element={
                   <Suspense fallback={<Cargando />}>
-                    <InicioPage />
+                    <ResolverPage />
                   </Suspense>
                 }
               />
-              {/* La agenda operativa (vencimientos, borradores y
-                  sugerencias del equipo) fue Inicio hasta el 2026-09-17;
-                  ahora es su propia pantalla, nivel `documento`, para
-                  que Inicio sea buscar y resolver con guías. */}
+              {/* La agenda operativa completa (vencimientos, borradores
+                  y sugerencias del equipo), nivel `documento`. Cuelga de
+                  Resolver, que enseña solo lo que tiene fecha ("Atención"),
+                  y se abre también desde Más (encargo del 2026-09-22). */}
               <Route
                 path="agenda"
                 element={

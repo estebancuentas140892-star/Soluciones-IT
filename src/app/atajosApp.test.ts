@@ -23,10 +23,12 @@ describe('resolverAtajo', () => {
   it('la G inicia la secuencia y la segunda tecla lleva a su sección', () => {
     expect(resolverAtajo(tecla('g'), NORMAL)).toEqual({ tipo: 'esperar' })
     const enSecuencia = { ...NORMAL, secuenciaActiva: true }
-    expect(resolverAtajo(tecla('g'), enSecuencia)).toEqual({ tipo: 'ir', ruta: '/soluciones' })
+    // Encargo del 2026-09-22: los cuatro destinos principales y el catálogo.
+    expect(resolverAtajo(tecla('r'), enSecuencia)).toEqual({ tipo: 'ir', ruta: '/' })
     expect(resolverAtajo(tecla('e'), enSecuencia)).toEqual({ tipo: 'ir', ruta: '/dispositivos' })
-    expect(resolverAtajo(tecla('r'), enSecuencia)).toEqual({ tipo: 'ir', ruta: '/red' })
     expect(resolverAtajo(tecla('b'), enSecuencia)).toEqual({ tipo: 'ir', ruta: '/boveda' })
+    expect(resolverAtajo(tecla('m'), enSecuencia)).toEqual({ tipo: 'ir', ruta: '/mas' })
+    expect(resolverAtajo(tecla('g'), enSecuencia)).toEqual({ tipo: 'ir', ruta: '/soluciones' })
   })
 
   it('la secuencia funciona igual en mayúsculas', () => {
@@ -101,9 +103,15 @@ describe('atajosVisibles', () => {
   })
 
   it('la ayuda enseña la lista completa, no una selección', () => {
-    // Los siete del encargo: barra, interrogación, Escape y las cuatro
-    // secuencias con G.
-    expect(ATAJOS_APP).toHaveLength(7)
-    expect(ATAJOS_APP.filter((a) => a.teclas[0] === 'G')).toHaveLength(4)
+    // Barra, interrogación, Escape y cinco secuencias con G: los cuatro
+    // destinos principales y el catálogo de guías (encargo del 2026-09-22).
+    expect(ATAJOS_APP).toHaveLength(8)
+    expect(ATAJOS_APP.filter((a) => a.teclas[0] === 'G').map((a) => a.ruta)).toEqual([
+      '/',
+      '/dispositivos',
+      '/boveda',
+      '/mas',
+      '/soluciones',
+    ])
   })
 })

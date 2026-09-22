@@ -38,9 +38,10 @@ export const ATAJOS_APP: AtajoApp[] = [
   { teclas: ['/'], descripcion: 'Enfocar el buscador global', grupo: 'Buscar y ayuda' },
   { teclas: ['?'], descripcion: 'Abrir esta ayuda de atajos', grupo: 'Buscar y ayuda' },
   { teclas: ['Esc'], descripcion: 'Cerrar el panel, diálogo, visor o ayuda de encima', grupo: 'Buscar y ayuda' },
-  { teclas: ['G', 'G'], descripcion: 'Ir a Guías', grupo: 'Ir a', ruta: '/soluciones', esNavegacion: true },
+  // Los cuatro destinos principales (encargo del 2026-09-22) y el
+  // catálogo de guías. Red pierde su atajo propio: vive en Más.
+  { teclas: ['G', 'R'], descripcion: 'Ir a Resolver', grupo: 'Ir a', ruta: '/', esNavegacion: true },
   { teclas: ['G', 'E'], descripcion: 'Ir a Equipos', grupo: 'Ir a', ruta: '/dispositivos', esNavegacion: true },
-  { teclas: ['G', 'R'], descripcion: 'Ir a Red', grupo: 'Ir a', ruta: '/red', esNavegacion: true },
   {
     teclas: ['G', 'B'],
     descripcion: 'Ir a Bóveda',
@@ -49,6 +50,8 @@ export const ATAJOS_APP: AtajoApp[] = [
     soloConBoveda: true,
     esNavegacion: true,
   },
+  { teclas: ['G', 'M'], descripcion: 'Ir a Más', grupo: 'Ir a', ruta: '/mas', esNavegacion: true },
+  { teclas: ['G', 'G'], descripcion: 'Ver todas las guías', grupo: 'Ir a', ruta: '/soluciones', esNavegacion: true },
 ]
 
 /** Los atajos que este usuario puede usar de verdad (R3: nada muerto). */
@@ -58,10 +61,11 @@ export function atajosVisibles(puedeVerBoveda: boolean): AtajoApp[] {
 
 /** Destino de la segunda tecla de la secuencia G, en minúscula. */
 const DESTINO_SECUENCIA: Record<string, string> = {
-  g: '/soluciones',
+  r: '/',
   e: '/dispositivos',
-  r: '/red',
   b: '/boveda',
+  m: '/mas',
+  g: '/soluciones',
 }
 
 export type AccionAtajo =

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
 import { agruparAgenda, asuntosUrgentes } from '../features/inicio/agenda'
@@ -16,27 +16,19 @@ import { direccionPara } from './direccionTransicion'
 import { useOrigen } from './useOrigen'
 import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
 import { useMemoriaScroll } from './memoriaScroll'
-import { esSeccionEnMas, pestanaMovilDe, RAICES_DE_PESTANA } from '../lib/navegacion'
+import { destinoPrincipalDe, padreDe, RAICES_DE_PESTANA, type DestinoPrincipal } from '../lib/navegacion'
 import { estadoDeRegreso } from '../lib/origenNavegacion'
 import {
-  BookBookmark,
-  BookOpen,
-  BookOpenFill,
   CaretRight,
-  ClockCountdown,
   DotsNine,
-  House,
-  HouseFill,
-  MapPin,
   Monitor,
-  PlugsConnected,
-  QrCode,
-  TreeStructure,
-  UsersThree,
+  MonitorFill,
   Vault,
+  VaultFill,
+  Wrench,
+  WrenchFill,
   type IconoProps,
 } from '../components/iconos'
-import { TituloSeccion } from '../components/nocturne'
 
 const BuscadorGlobal = lazy(() =>
   import('../features/busqueda/BuscadorGlobal').then((m) => ({ default: m.BuscadorGlobal })),
@@ -69,38 +61,38 @@ const BuscadorGlobal = lazy(() =>
 export type ModoChasis = 'seccion' | 'documento' | 'tarea'
 
 interface Destino {
-  to: string
+  to: DestinoPrincipal
   label: string
   icono: (props: IconoProps) => React.JSX.Element
   iconoActivo: (props: IconoProps) => React.JSX.Element
-  end: boolean
 }
 
-// LAS GUÍAS EN EL CENTRO (encargo del 2026-09-17, secciones 1 y 10).
+// CUATRO DESTINOS, LOS MISMOS EN TODOS LOS TAMAÑOS (encargo del
+// 2026-09-22, sección 2). La acción principal de Soluciones IT es buscar,
+// encontrar, ejecutar y solucionar, y la navegación la sirve con cuatro
+// puertas:
 //
-// La función principal de Soluciones IT es encontrar un procedimiento y
-// hacerlo, así que la navegación principal se queda con eso: Inicio (el
-// buscador y lo que se estaba haciendo) y Guías. Equipos, Red y la Bóveda
-// siguen enteros, pero dejan de pesar lo mismo que buscar y resolver:
-// en escritorio bajan a los grupos de la barra lateral y en el teléfono
-// se abren desde Más. Antes eran cinco pestañas del mismo tamaño y la de
-// Guías era una entre iguales.
-const DESTINOS_BASE: Destino[] = [
-  { to: '/', label: 'Inicio', icono: House, iconoActivo: HouseFill, end: true },
-  { to: '/soluciones', label: 'Guías', icono: BookOpen, iconoActivo: BookOpenFill, end: false },
+//   Resolver  el buscador y los procedimientos (absorbe Inicio y Guías:
+//             el catálogo cuelga de aquí).
+//   Equipos   qué se sabe de un dispositivo; el QR es otra forma de buscar.
+//   Bóveda    las claves.
+//   Más       consulta, infraestructura (Red, Topología), herramientas y
+//             cuenta.
+//
+// Antes eran Inicio, Guías y Más en el teléfono, y en escritorio Inicio y
+// Guías más dos grupos con nueve destinos que repetían Más. Resolver y
+// Guías eran dos puertas para lo mismo, y Equipos y la Bóveda, que se usan
+// a diario frente al puesto de trabajo, estaban a dos toques.
+//
+// La Bóveda es pestaña para todos (regla R17: la barra no cambia según el
+// permiso); sin permiso abre la pantalla de acceso restringido. Más no
+// tiene variante rellena: el mockup usa el mismo glifo activo e inactivo.
+const DESTINOS: Destino[] = [
+  { to: '/', label: 'Resolver', icono: Wrench, iconoActivo: WrenchFill },
+  { to: '/dispositivos', label: 'Equipos', icono: Monitor, iconoActivo: MonitorFill },
+  { to: '/boveda', label: 'Bóveda', icono: Vault, iconoActivo: VaultFill },
+  { to: '/mas', label: 'Más', icono: DotsNine, iconoActivo: DotsNine },
 ]
-
-// "Más" (tarea 182, mockup 3f): la puerta, en el teléfono, de todo lo que
-// no es buscar y resolver con guías. Desde el 2026-09-17 abre también
-// Equipos, Red y la Bóveda. Sin variante rellena: el mockup usa el mismo
-// glifo activo e inactivo, solo cambia el color.
-const DESTINO_MAS: Destino = {
-  to: '/mas',
-  label: 'Más',
-  icono: DotsNine,
-  iconoActivo: DotsNine,
-  end: false,
-}
 
 // Alto real de la barra de pestañas, MEDIDO en el navegador: 63.6px de
 // celda (el `min-h-[52px]` se queda corto frente a su contenido real,
@@ -257,7 +249,7 @@ export function Chasis(props: Props) {
   // sigue estando donde tiene sentido, dentro de la guía ("Seguir en el
   // paso N de M" y "Empezar de nuevo" en su ficha) y en el bloque de
   // Inicio, que es la pantalla cuyo trabajo es decir por dónde iba uno.
-  // Tarea 187: cuenta real de pendientes para el número de "Más" (R23,
+  // Tarea 187: cuenta real de pendientes para el número de la pestaña (R23,
   // ningún aviso decorativo); dirección de la transición de entrada
   // (R21); y memoria de scroll y de filtros por pestaña (R20), todos
   // calculados aquí porque Chasis es el único envoltorio de TODAS las
@@ -392,6 +384,16 @@ export function Chasis(props: Props) {
   const volverEtiqueta = props.modo === 'documento' ? (origen?.etiqueta ?? props.volverEtiqueta) : undefined
   const contexto = props.modo === 'documento' ? (origen?.etiqueta ?? props.contexto) : undefined
 
+  // El regreso de una sección que no es raíz de pestaña (ver arriba).
+  const padreSeccion = props.modo === 'documento' ? null : padreDe(location.pathname)
+  const volverDeSeccion = padreSeccion
+    ? {
+        to: origen?.to ?? padreSeccion.to,
+        etiqueta: origen?.etiqueta ?? padreSeccion.etiqueta,
+        estado: estadoDeRegreso(origen),
+      }
+    : undefined
+
   // Niveles 1 y 2: los dos conservan las pestañas (R19, la barra solo
   // cede ante una tarea con salida). Solo cambia la fila superior.
   const cabecera =
@@ -443,104 +445,71 @@ export function Chasis(props: Props) {
       <BarraSuperior
         titulo={props.titulo}
         conLupa={props.conLupa ?? true}
-        // Equipos, Red y la Bóveda ya no son pestañas en el teléfono: se
-        // abren desde Más, y su cabecera lo dice con un regreso (encargo
-        // del 2026-09-17). En escritorio siguen siendo raíces de la barra
-        // lateral y no lo llevan.
-        volverEnMovilA={esSeccionEnMas(location.pathname) ? '/mas' : undefined}
+        // Una sección que no es uno de los cuatro destinos (el catálogo de
+        // guías, Red) lleva regreso en todos los tamaños: ya no tiene su
+        // propia entrada en la barra. Mismo orden que el nivel documento:
+        // el último salto real si lo hay (M-R2) y si no el padre declarado.
+        volver={volverDeSeccion}
       >
         {props.barra}
       </BarraSuperior>
     )
 
-  // Escritorio: Inicio y Guías arriba; el resto en los grupos de debajo
-  // (tarea 183, reordenados el 2026-09-17).
-  const destinosDesktop = DESTINOS_BASE
-  // Móvil: siempre las mismas tres, para todos (regla R17): la barra no
-  // cambia según el permiso de Bóveda.
-  const destinosMobile = [...DESTINOS_BASE, DESTINO_MAS]
-  // Qué pestaña se ilumina: la que abre lo que se está viendo, aunque la
-  // ruta no cuelgue de ella (Equipos, dentro de Más).
-  const pestanaActiva = pestanaMovilDe(location.pathname)
+  // Qué destino se ilumina: el que abre lo que se está viendo, aunque la
+  // ruta no cuelgue de su enlace (una guía ilumina Resolver). Lo decide
+  // `destinoPrincipalDe` para la barra del teléfono y la lateral por igual.
+  const destinoActivo = destinoPrincipalDe(location.pathname)
 
   return (
     <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text md:flex">
-      {/* Sidebar de escritorio. Catorce destinos desde la tarea 183
-          (mockup 3e): los cinco módulos, "Herramientas" y "Registros"
-          (los ocho que hasta la 182 solo tenían puerta en "Más", que no
-          existe fuera de móvil), y el perfil al pie.
+      {/* Barra lateral de escritorio con los MISMOS cuatro destinos que la
+          del teléfono (encargo del 2026-09-22). Dos formas desde la tarea
+          191: rail de iconos de 64 px entre 768 y 1279, y completa de
+          240 px desde 1280 (232 desde 1680, ver ANCHO_CONTENIDO). En el
+          rail cada destino conserva su `title`, porque el rótulo no se
+          lee.
 
-          Dos formas desde la tarea 191 (turno 5): **rail de iconos** de
-          64 px entre 768 y 1279, y **completa** de 240 px desde 1280
-          (232 desde 1680, ver ANCHO_CONTENIDO). El rail estrecho es lo
-          que cierra el hueco de tableta: antes la sidebar no aparecía
-          hasta 1024 y en medio no había navegación de escritorio ni
-          barra de pestañas al ancho, solo una isla de 448 px.
-
-          En el rail, cada destino conserva su `title` porque el rótulo
-          no se lee; los dos grupos pierden su encabezado (un título de
-          sección no cabe ni se entiende en 64 px) pero mantienen el
-          separador, que es lo que agrupa. */}
+          Hasta ahora llevaba además dos grupos, "Consulta" y "Trabajo
+          técnico", con nueve destinos que repetían Más: dos puertas para
+          lo mismo en la misma pantalla. Ahora Más es una sola puerta en
+          todos los tamaños. */}
       <aside className="sticky top-0 hidden h-svh w-16 shrink-0 flex-col gap-[18px] overflow-y-auto border-r border-noct-divider bg-noct-surface px-2 py-5 md:flex xl:w-60 xl:px-3 3xl:w-[232px]">
         <div className="flex items-center justify-center gap-2 xl:justify-start xl:px-2">
           <Marca className="h-[22px] w-[22px] shrink-0 text-noct-accent" />
           <span className="hidden text-[15px] font-semibold xl:inline">Soluciones IT</span>
         </div>
-        <nav className="flex flex-col gap-0.5">
-          {destinosDesktop.map(({ to, label, icono: Icono, iconoActivo: IconoActivo, end }) => (
-            <NavLink
-              key={to}
-              to={destinoDePestana(to, location.pathname, RAICES_DE_PESTANA)}
-              end={end}
-              onClick={() => alTocarPestana(to)}
-              title={label}
-              className={({ isActive }) =>
-                `flex min-h-11 items-center justify-center gap-2.5 rounded-md text-sm outline-none focus-visible:outline-2 focus-visible:outline-noct-accent xl:justify-start xl:px-2.5 xl:py-[9px] ${
-                  isActive
+        <nav className="flex flex-col gap-0.5" aria-label="Navegación principal">
+          {DESTINOS.map(({ to, label, icono: Icono, iconoActivo: IconoActivo }) => {
+            const activo = destinoActivo === to
+            const numeroPendientes = to === '/' ? urgentes : 0
+            return (
+              <Link
+                key={to}
+                to={destinoDePestana(to, location.pathname, RAICES_DE_PESTANA)}
+                onClick={() => alTocarPestana(to)}
+                aria-current={activo ? 'page' : undefined}
+                title={label}
+                className={`flex min-h-11 items-center justify-center gap-2.5 rounded-md text-sm outline-none focus-visible:outline-2 focus-visible:outline-noct-accent xl:justify-start xl:px-2.5 xl:py-[9px] ${
+                  activo
                     ? 'bg-noct-accent/[.12] font-semibold text-noct-accent'
                     : 'font-medium text-noct-neutral-400 hover:bg-noct-text/[.05]'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive ? <IconoActivo size={18} /> : <Icono size={18} />}
-                  <span className="hidden xl:inline">{label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
+                }`}
+              >
+                <span className="relative">
+                  {activo ? <IconoActivo size={18} /> : <Icono size={18} />}
+                  {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
+                </span>
+                <span className="hidden xl:inline">{label}</span>
+                {numeroPendientes > 0 && (
+                  <span className="sr-only">
+                    {' '}
+                    ({numeroPendientes} {numeroPendientes === 1 ? 'asunto urgente' : 'asuntos urgentes'})
+                  </span>
+                )}
+              </Link>
+            )
+          })}
         </nav>
-
-        {/* LO QUE SE CONSULTA, debajo de lo que se resuelve (encargo del
-            2026-09-17). Equipos, Red y la Bóveda bajan del nav principal a
-            este grupo, con Ubicaciones, Personas y el Centro de consulta:
-            siguen a un clic, pero ya no pesan lo mismo que las Guías. Es
-            el mismo reparto que tiene "Más" en el teléfono. */}
-        <div className="border-t border-noct-divider pt-2.5 xl:border-t-0 xl:pt-0">
-          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Consulta</TituloSeccion>
-          <nav className="flex flex-col gap-0.5">
-            <EnlaceGrupo to="/dispositivos" label="Equipos" Icono={Monitor} />
-            <EnlaceGrupo to="/red" label="Red" Icono={PlugsConnected} />
-            {usuario?.puedeVerBoveda && <EnlaceGrupo to="/boveda" label="Bóveda" Icono={Vault} />}
-            <EnlaceGrupo to="/referencia" label="Centro de consulta" Icono={BookBookmark} />
-            <EnlaceGrupo to="/ubicaciones" label="Ubicaciones" Icono={MapPin} />
-            <EnlaceGrupo to="/personas" label="Personas" Icono={UsersThree} />
-          </nav>
-        </div>
-
-        <div className="border-t border-noct-divider pt-2.5 xl:border-t-0 xl:pt-0">
-          {/* "Trabajo técnico" y no "Herramientas" desde el 2026-09-14:
-              el Centro de consulta tiene una pestaña Herramientas (Zabbix,
-              TightVNC), y dos "Herramientas" con significados distintos a
-              un palmo confundían justo al técnico nuevo. */}
-          <TituloSeccion className="mb-1.5 hidden px-2.5 xl:block">Trabajo técnico</TituloSeccion>
-          <nav className="flex flex-col gap-0.5">
-            <EnlaceGrupo to="/agenda" label="Agenda" Icono={ClockCountdown} />
-            <EnlaceGrupo to="/diagnostico" label="Diagnóstico" Icono={TreeStructure} />
-            <EnlaceGrupo to="/escaner" label="Escanear" Icono={QrCode} />
-          </nav>
-        </div>
 
         <div className="mt-auto border-t border-noct-divider pt-2.5">
           <Link
@@ -577,24 +546,24 @@ export function Chasis(props: Props) {
         </div>
       </div>
 
-      {/* Pestañas inferiores: solo móvil. Siempre las mismas tres (R17):
-          Inicio, Guías y Más (encargo del 2026-09-17). Rótulo a 12px en
-          celdas de 52. Estado en tres canales (R16 pide al menos dos):
-          barra de 2px sobre la pestaña activa, icono relleno y color de
-          acento; más presionado y foco de teclado.
+      {/* Pestañas inferiores: solo móvil. Siempre las mismas cuatro (R17):
+          Resolver, Equipos, Bóveda y Más (encargo del 2026-09-22). Rótulo
+          a 12px en celdas de 52. Estado en tres canales (R16 pide al
+          menos dos): barra de 2px sobre la pestaña activa, icono relleno
+          y color de acento; más presionado y foco de teclado.
 
-          La pestaña activa la decide `pestanaMovilDe`, no la ruta del
-          enlace: Equipos, Red o Personas se abren desde Más, así que
-          dentro de ellas se ilumina Más. Con NavLink no se iluminaba
-          ninguna y nada decía dónde se estaba. */}
-      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-3 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden">
-        {destinosMobile.map(({ to, label, icono: Icono, iconoActivo: IconoActivo }) => {
-          const activa = pestanaActiva === to
+          La pestaña activa la decide `destinoPrincipalDe`, no la ruta del
+          enlace: una guía ilumina Resolver y Red ilumina Más. */}
+      <nav
+        aria-label="Navegación principal"
+        className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden"
+      >
+        {DESTINOS.map(({ to, label, icono: Icono, iconoActivo: IconoActivo }) => {
+          const activa = destinoActivo === to
           // Números de la pestaña (R23: un aviso solo si hay un dato
-          // detrás, nunca decorativo). Inicio cuenta los asuntos URGENTES
-          // de la agenda (vencidos y para hoy): es donde asoma su línea
-          // (regla M-R9). Guías no lleva punto (H01): consultar una guía
-          // no es contraer una obligación.
+          // detrás, nunca decorativo). Resolver cuenta los asuntos
+          // URGENTES de la agenda (vencidos y para hoy): es donde asoma su
+          // bloque "Atención" (regla M-R9).
           const numeroPendientes = to === '/' ? urgentes : 0
           return (
             <Link
@@ -635,40 +604,5 @@ export function Chasis(props: Props) {
           el Centro de consulta, pestaña Atajos. */}
       <CapaAtajos puedeVerBoveda={Boolean(usuario?.puedeVerBoveda)} navegacion />
     </div>
-  )
-}
-
-// Enlace de los grupos "Herramientas" y "Registros" del sidebar de
-// escritorio (tarea 183): un solo icono (sin variante rellena, para no
-// sumar más colisiones a las que ya tiene el set hoy, ver R24) que
-// recolorea a acento cuando está activo.
-function EnlaceGrupo({
-  to,
-  label,
-  Icono,
-}: {
-  to: string
-  label: string
-  Icono: (props: IconoProps) => React.JSX.Element
-}) {
-  return (
-    <NavLink
-      to={to}
-      title={label}
-      className={({ isActive }) =>
-        `flex min-h-11 items-center justify-center gap-2.5 rounded-md text-[13px] outline-none focus-visible:outline-2 focus-visible:outline-noct-accent xl:min-h-0 xl:justify-start xl:px-2.5 xl:py-[7px] ${
-          isActive
-            ? 'font-medium text-noct-accent-300'
-            : 'font-normal text-noct-neutral-300 hover:bg-noct-text/[.05]'
-        }`
-      }
-    >
-      {({ isActive }) => (
-        <>
-          <Icono size={17} className={isActive ? 'text-noct-accent' : 'text-noct-neutral-400'} aria-hidden />
-          <span className="hidden xl:inline">{label}</span>
-        </>
-      )}
-    </NavLink>
   )
 }

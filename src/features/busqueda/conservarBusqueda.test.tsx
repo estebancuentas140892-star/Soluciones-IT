@@ -19,7 +19,7 @@ import {
   tocar,
   ubicacionActual,
 } from '../../pruebas/montaje'
-import { InicioPage } from '../inicio/InicioPage'
+import { ResolverPage } from '../inicio/ResolverPage'
 
 // VOLVER DE UNA FICHA CON LA BÚSQUEDA ESCRITA (encargo del 2026-09-16,
 // caso I de la sección 16).
@@ -57,7 +57,7 @@ function FichaHerramienta() {
 }
 
 const RUTAS = [
-  { ruta: '/', elemento: <InicioPage /> },
+  { ruta: '/', elemento: <ResolverPage /> },
   { ruta: '/red', elemento: <PaginaRed /> },
   { ruta: '/dispositivos/:dispositivoId', elemento: <FichaEquipo /> },
   { ruta: '/referencia/:referenciaId', elemento: <FichaHerramienta /> },

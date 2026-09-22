@@ -1289,14 +1289,14 @@ export function ArticuloForm() {
               <Casilla
                 marcada={esRutaInicio}
                 onCambiar={() => setEsRutaInicio((v) => !v)}
-                titulo="Destacar en Inicio como ruta de aprendizaje"
+                titulo="Destacar en «Para empezar» como ruta de aprendizaje"
                 ayuda='Para guías como "Primer día en TI".'
               />
               {/* Orden dentro de la ruta de inicio (tarea 74): solo
                   tiene sentido si el artículo está destacado. */}
               {esRutaInicio && (
                 <label className="ml-[28px] flex flex-col gap-1.5">
-                  <span className={CLASE_ETIQUETA}>Orden en la ruta de Inicio</span>
+                  <span className={CLASE_ETIQUETA}>Orden en «Para empezar»</span>
                   <input
                     type="number"
                     min={0}

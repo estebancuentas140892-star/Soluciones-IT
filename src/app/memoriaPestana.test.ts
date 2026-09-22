@@ -7,10 +7,26 @@ import {
   recordarBusqueda,
 } from './memoriaPestana'
 
-const RAICES = RAICES_DE_PESTANA
+// El algoritmo se prueba con una lista de seis raíces (la que tuvo la app
+// hasta el 2026-09-22) porque ejercita más casos: raíces con fichas
+// internas, una raíz que es prefijo de otra ruta (`/red` y `/redes`).
+// Las funciones reciben las raíces, así que no dependen de la navegación
+// vigente; la de la app se comprueba aparte, abajo.
+const RAICES = ['/soluciones', '/dispositivos', '/red', '/boveda', '/mas', '/']
 
 beforeEach(() => {
   olvidarTodo()
+})
+
+describe('las raíces de la app (encargo del 2026-09-22)', () => {
+  it('son los cuatro destinos principales, con "/" al final', () => {
+    expect(RAICES_DE_PESTANA).toEqual(['/dispositivos', '/boveda', '/mas', '/'])
+  })
+
+  it('una guía y el catálogo caen en Resolver, que no recuerda filtro: su raíz es "/" exacta', () => {
+    expect(raizQueContiene('/soluciones', RAICES_DE_PESTANA)).toBeNull()
+    expect(raizQueContiene('/dispositivos/pc-1', RAICES_DE_PESTANA)).toBe('/dispositivos')
+  })
 })
 
 describe('raizQueContiene', () => {

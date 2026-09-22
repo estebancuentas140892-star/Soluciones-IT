@@ -27,48 +27,53 @@ export interface Padre {
 // etiquetas; los identificadores de código siguen en su idioma original
 // (regla 9 de REGLAS.md).
 
-// Pestañas de la barra inferior: son raíces de su pila, no muestran
-// "Volver" (se navega entre ellas por la barra, no retrocediendo).
-// `/mas` (tarea 182) reemplaza a `/boveda` como quinta pestaña móvil;
-// `/boveda` sigue siendo raíz aparte (pestaña de escritorio, y puerta
-// destacada dentro de "Más" en móvil), así que se queda en el set.
-// Orden significativo: `raizQueContiene` (memoria de filtros por
-// pestaña, tarea 187) recorre esta lista y devuelve la primera que
-// coincide, así que las raíces más específicas van antes que "/".
-export const RAICES_DE_PESTANA = ['/soluciones', '/dispositivos', '/red', '/boveda', '/mas', '/']
+// LOS CUATRO DESTINOS PRINCIPALES (encargo del 2026-09-22, sección 2).
+//
+// Soluciones IT se organiza alrededor de buscar, encontrar, ejecutar y
+// solucionar. La navegación principal es la misma en el teléfono, la
+// tableta y el escritorio, y solo tiene cuatro puertas:
+//
+//   Resolver  `/`             ¿Qué necesitas resolver? El buscador y los
+//                             procedimientos. Absorbe Inicio y la pestaña
+//                             Guías: el catálogo (`/soluciones`) cuelga de
+//                             aquí.
+//   Equipos   `/dispositivos` ¿Qué sabemos de este dispositivo? El
+//                             escáner es otra forma de buscar uno.
+//   Bóveda    `/boveda`       Las claves, con sus controles de siempre.
+//   Más       `/mas`          Todo lo demás: consulta, infraestructura
+//                             (Red y Topología), herramientas y cuenta.
+//
+// Son las raíces de pestaña: no muestran "Volver" (se navega entre ellas
+// por la barra), recuerdan su filtro (tarea 187) y cambiar de una a otra
+// es un movimiento lateral. Orden significativo: `raizQueContiene`
+// devuelve la primera que coincide, así que "/" va al final.
+export const RAICES_DE_PESTANA = ['/dispositivos', '/boveda', '/mas', '/']
 const TABS = new Set(RAICES_DE_PESTANA)
 
-// LAS GUÍAS EN EL CENTRO (encargo del 2026-09-17, secciones 1 y 10).
-//
-// En el teléfono la barra de pestañas se queda con Inicio, Guías y Más.
-// Equipos, Red y la Bóveda siguen siendo secciones completas (en
-// escritorio, raíces de la barra lateral; aquí, raíces de su pila), pero
-// dejan de competir con buscar y resolver un procedimiento: se abren
-// desde Más. Por eso siguen en `RAICES_DE_PESTANA` (no muestran "Volver"
-// en escritorio, recuerdan su filtro, cambian de lado con un fundido) y
-// además se listan aquí, para que en el teléfono lleven un regreso a Más.
-export const SECCIONES_EN_MAS = ['/dispositivos', '/red', '/boveda']
+export type DestinoPrincipal = '/' | '/dispositivos' | '/boveda' | '/mas'
 
-/**
- * ¿Es la raíz de una sección que en el teléfono se abre desde Más? Su
- * cabecera lleva entonces un regreso a Más, solo en el teléfono.
- */
-export function esSeccionEnMas(pathname: string): boolean {
-  const ruta = pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
-  return SECCIONES_EN_MAS.includes(ruta)
+function normalizarRuta(pathname: string): string {
+  return pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
+}
+
+function cuelgaDe(ruta: string, raiz: string): boolean {
+  return ruta === raiz || ruta.startsWith(`${raiz}/`)
 }
 
 /**
- * Qué pestaña del teléfono se ilumina en esta ruta. Inicio cubre también
- * su agenda; Guías, todo lo que cuelga de `/soluciones`; y Más, todo lo
- * demás, porque todo lo demás se abre desde Más. Antes cada pestaña se
- * iluminaba solo dentro de su propia ruta, así que en Personas o en el
- * Centro de consulta no se encendía ninguna y nada decía dónde se estaba.
+ * Qué destino principal se ilumina en esta ruta, en la barra del
+ * teléfono y en la lateral de escritorio por igual. Resolver cubre su
+ * agenda, el catálogo de guías con todo lo que cuelga de él (la guía en
+ * ejecución incluida) y el emparejamiento con un equipo atendido; Equipos
+ * cubre su escáner; y Más, todo lo demás, porque todo lo demás se abre
+ * desde Más. Antes la barra lateral iluminaba por su propio enlace y la
+ * del teléfono por esta función, así que podían no coincidir.
  */
-export function pestanaMovilDe(pathname: string): '/' | '/soluciones' | '/mas' {
-  const ruta = pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
-  if (ruta === '/' || ruta === '/agenda') return '/'
-  if (ruta === '/soluciones' || ruta.startsWith('/soluciones/')) return '/soluciones'
+export function destinoPrincipalDe(pathname: string): DestinoPrincipal {
+  const ruta = normalizarRuta(pathname)
+  if (ruta === '/' || ruta === '/agenda' || cuelgaDe(ruta, '/conectar') || cuelgaDe(ruta, '/soluciones')) return '/'
+  if (cuelgaDe(ruta, '/dispositivos') || cuelgaDe(ruta, '/escaner')) return '/dispositivos'
+  if (cuelgaDe(ruta, '/boveda')) return '/boveda'
   return '/mas'
 }
 
@@ -76,29 +81,28 @@ export function pestanaMovilDe(pathname: string): '/' | '/soluciones' | '/mas' {
 // transiciones (tarea 187, R21): cambiar de una raíz a otra es un
 // movimiento lateral (fundido), no "entrar" ni "volver", aunque sus
 // rutas tengan distinta profundidad (por ejemplo `/` tiene 0 segmentos
-// y `/soluciones` tiene 1).
+// y `/mas` tiene 1).
 export function esRaizDePestana(pathname: string): boolean {
-  const ruta = pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
-  return TABS.has(ruta)
+  return TABS.has(normalizarRuta(pathname))
 }
 
-// Raíces que no son pestañas pero se alcanzan desde otra sección: su
-// "Volver" sube a esa sección de origen.
+// Raíces que no son pestañas: su "Volver" sube al destino principal
+// desde el que se abren (encargo del 2026-09-22). El catálogo de guías y
+// la agenda cuelgan de Resolver; el escáner, de Equipos; y lo que dejó
+// de tener sitio en la barra (Red, Diagnóstico, Centro de consulta,
+// Ubicaciones, Personas y la cuenta), de Más.
 const RAICES_NO_TAB: Record<string, Padre> = {
-  '/diagnostico': { to: '/', etiqueta: 'Inicio' },
-  '/escaner': { to: '/', etiqueta: 'Inicio' },
-  // Antes subían a Equipos (de donde se alcanzaban por el menú "···").
-  // Desde la tarea 182 su puerta principal es "Más" (regla R15), así
-  // que ese es su padre real: subir a Equipos llevaría a una sección
-  // que el técnico no visitó si llegó por Más (el mismo problema que
-  // ya tenía este par, detectado en la auditoría de la tarea 179-182).
+  '/soluciones': { to: '/', etiqueta: 'Resolver' },
+  '/agenda': { to: '/', etiqueta: 'Resolver' },
+  '/conectar': { to: '/', etiqueta: 'Resolver' },
+  '/escaner': { to: '/dispositivos', etiqueta: 'Equipos' },
+  '/red': { to: '/mas', etiqueta: 'Más' },
+  '/diagnostico': { to: '/mas', etiqueta: 'Más' },
   '/ubicaciones': { to: '/mas', etiqueta: 'Más' },
   '/personas': { to: '/mas', etiqueta: 'Más' },
-  // El Centro de consulta (ruta `/referencia`, su nombre original) tiene
-  // su puerta en "Más" y en el grupo "Trabajo técnico" del sidebar, igual
-  // que Ubicaciones y Personas.
+  // El Centro de consulta (ruta `/referencia`, su nombre original).
   '/referencia': { to: '/mas', etiqueta: 'Más' },
-  '/cuenta': { to: '/', etiqueta: 'Inicio' },
+  '/cuenta': { to: '/mas', etiqueta: 'Más' },
 }
 
 // Devuelve la pantalla superior de `pathname`, o null si es una raíz
@@ -106,7 +110,7 @@ const RAICES_NO_TAB: Record<string, Padre> = {
 // destinos que reponen un filtro (Soluciones) llevan el id en la propia
 // ruta, así que se reconstruyen sin depender de la query entrante.
 export function padreDe(pathname: string): Padre | null {
-  const ruta = pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
+  const ruta = normalizarRuta(pathname)
   if (TABS.has(ruta)) return null
   if (ruta in RAICES_NO_TAB) return RAICES_NO_TAB[ruta]
 
@@ -182,7 +186,7 @@ export function padreDe(pathname: string): Padre | null {
       // /cuenta/seguridad -> Mi cuenta (/cuenta ya lo cubre RAICES_NO_TAB).
       return { to: '/cuenta', etiqueta: 'Mi cuenta' }
     default:
-      return { to: '/', etiqueta: 'Inicio' }
+      return { to: '/', etiqueta: 'Resolver' }
   }
 }
 

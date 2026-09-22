@@ -35,7 +35,7 @@ const BuscadorGlobal = lazy(() =>
 export function BarraSuperior({
   titulo,
   conLupa = true,
-  volverEnMovilA,
+  volver,
   children,
 }: {
   titulo: string
@@ -45,11 +45,12 @@ export function BarraSuperior({
   // pantalla. En el resto de las secciones la lupa ES el buscador y se
   // queda. Se apaga por pantalla, no se borra del chasis.
   conLupa?: boolean
-  // Regreso SOLO EN EL TELÉFONO, para las secciones que allí dejaron de
-  // ser pestaña y se abren desde Más (Equipos, Red, Bóveda; encargo del
-  // 2026-09-17). En escritorio son raíces de la barra lateral y no lo
-  // llevan.
-  volverEnMovilA?: string
+  // Regreso de una sección que NO es uno de los cuatro destinos
+  // principales (encargo del 2026-09-22): el catálogo de guías sube a
+  // Resolver y Red a Más. En todos los tamaños, porque ninguna de las dos
+  // tiene ya su propia entrada en la barra. Lo resuelve el chasis: el
+  // último salto real si lo hay (M-R2) y si no el padre declarado.
+  volver?: { to: string; etiqueta: string; estado?: unknown }
   children?: ReactNode
 }) {
   const { perfil } = useAuth()
@@ -60,14 +61,15 @@ export function BarraSuperior({
 
   return (
     <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
-      <div className={`flex items-center justify-between gap-2 pr-2 pt-2.5 ${volverEnMovilA ? 'pl-1 md:pl-4' : 'pl-4'}`}>
+      <div className={`flex items-center justify-between gap-2 pr-2 pt-2.5 ${volver ? 'pl-1' : 'pl-4'}`}>
         <div className="flex min-w-0 items-center gap-0.5">
-          {volverEnMovilA && (
+          {volver && (
             <Link
-              to={volverEnMovilA}
-              aria-label="Volver a Más"
-              title="Volver a Más"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/5 hover:text-noct-text md:hidden"
+              to={volver.to}
+              state={volver.estado}
+              aria-label={`Volver a ${volver.etiqueta}`}
+              title={`Volver a ${volver.etiqueta}`}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/5 hover:text-noct-text"
             >
               <CaretLeft size={18} aria-hidden />
             </Link>
@@ -87,13 +89,15 @@ export function BarraSuperior({
               <MagnifyingGlass size={20} aria-hidden />
             </button>
           )}
-          {/* Mi cuenta deja de alcanzarse solo desde Inicio. En escritorio
-              el sidebar ya la ofrece al pie, asi que aqui se oculta. */}
+          {/* Mi cuenta, en el teléfono. Desde 768 px la barra lateral (el
+              rail de iconos y la completa) ya la ofrece al pie, así que
+              aquí se oculta: con `lg:hidden` la tableta la enseñaba dos
+              veces en la misma pantalla. */}
           <Link
             to="/cuenta"
             aria-label="Mi cuenta"
             title={usuario?.nombre || 'Mi cuenta'}
-            className="flex h-11 w-11 items-center justify-center lg:hidden"
+            className="flex h-11 w-11 items-center justify-center md:hidden"
           >
             <Avatar nombre={usuario?.nombre} correo={usuario?.correo} />
           </Link>

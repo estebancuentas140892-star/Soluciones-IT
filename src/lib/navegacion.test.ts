@@ -1,16 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import { esRaizDePestana, esSeccionEnMas, padreDe, pestanaMovilDe, vueltaDeTarea } from './navegacion'
+import { destinoPrincipalDe, esRaizDePestana, padreDe, vueltaDeTarea } from './navegacion'
 
 describe('padreDe', () => {
-  it('las pestañas de la barra no tienen pantalla superior', () => {
-    for (const tab of ['/', '/soluciones', '/dispositivos', '/red', '/boveda', '/mas']) {
+  // Encargo del 2026-09-22: Resolver, Equipos, Bóveda y Más.
+  it('los cuatro destinos principales no tienen pantalla superior', () => {
+    for (const tab of ['/', '/dispositivos', '/boveda', '/mas']) {
       expect(padreDe(tab)).toBeNull()
     }
   })
 
   it('normaliza barras finales', () => {
-    expect(padreDe('/soluciones/')).toBeNull()
+    expect(padreDe('/mas/')).toBeNull()
     expect(padreDe('/dispositivos/cam-1/')).toEqual({ to: '/dispositivos', etiqueta: 'Equipos' })
+  })
+
+  it('el catálogo de guías y la agenda cuelgan de Resolver', () => {
+    expect(padreDe('/soluciones')).toEqual({ to: '/', etiqueta: 'Resolver' })
+    expect(padreDe('/soluciones/')).toEqual({ to: '/', etiqueta: 'Resolver' })
+    expect(padreDe('/agenda')).toEqual({ to: '/', etiqueta: 'Resolver' })
+    expect(padreDe('/conectar')).toEqual({ to: '/', etiqueta: 'Resolver' })
+  })
+
+  it('lo que no tiene padre declarado sube a Resolver, nunca a una pantalla que ya no existe', () => {
+    expect(padreDe('/una-ruta-desconocida')).toEqual({ to: '/', etiqueta: 'Resolver' })
   })
 
   describe('Guías: la categoría es un filtro de la lista', () => {
@@ -160,9 +172,9 @@ describe('padreDe', () => {
     })
   })
 
-  describe('Diagnóstico (se alcanza desde Inicio)', () => {
-    it('la lista sube a Inicio', () => {
-      expect(padreDe('/diagnostico')).toEqual({ to: '/', etiqueta: 'Inicio' })
+  describe('Diagnóstico (se alcanza desde Más, Herramientas)', () => {
+    it('la lista sube a Más', () => {
+      expect(padreDe('/diagnostico')).toEqual({ to: '/mas', etiqueta: 'Más' })
     })
 
     it('nuevo, editar, sugerencias y el asistente vuelven a la lista de diagnósticos', () => {
@@ -174,13 +186,17 @@ describe('padreDe', () => {
     })
   })
 
-  describe('Escáner (se alcanza desde Inicio)', () => {
-    it('sube a Inicio', () => {
-      expect(padreDe('/escaner')).toEqual({ to: '/', etiqueta: 'Inicio' })
+  describe('Escáner (otra forma de buscar un equipo)', () => {
+    it('sube a Equipos', () => {
+      expect(padreDe('/escaner')).toEqual({ to: '/dispositivos', etiqueta: 'Equipos' })
     })
   })
 
-  describe('Red', () => {
+  describe('Red (Más, Infraestructura)', () => {
+    it('Red deja de ser raíz de pestaña y sube a Más', () => {
+      expect(padreDe('/red')).toEqual({ to: '/mas', etiqueta: 'Más' })
+    })
+
     it('la topología general vuelve a Red', () => {
       expect(padreDe('/red/topologia')).toEqual({ to: '/red', etiqueta: 'Red' })
     })
@@ -197,8 +213,8 @@ describe('padreDe', () => {
   })
 
   describe('Cuenta', () => {
-    it('Mi cuenta sube a Inicio', () => {
-      expect(padreDe('/cuenta')).toEqual({ to: '/', etiqueta: 'Inicio' })
+    it('Mi cuenta sube a Más, donde está su puerta', () => {
+      expect(padreDe('/cuenta')).toEqual({ to: '/mas', etiqueta: 'Más' })
     })
 
     it('Seguridad sube a Mi cuenta', () => {
@@ -231,19 +247,29 @@ describe('vueltaDeTarea', () => {
   })
 
   it('devuelve null en una raíz, que no tiene a dónde volver', () => {
-    expect(vueltaDeTarea('/soluciones')).toBeNull()
+    expect(vueltaDeTarea('/dispositivos')).toBeNull()
+    expect(vueltaDeTarea('/')).toBeNull()
+  })
+
+  it('el catálogo de guías nombra Resolver, que es a donde sube', () => {
+    expect(vueltaDeTarea('/soluciones')).toBe('Resolver')
   })
 })
 
 describe('esRaizDePestana', () => {
-  it('las seis raíces (pestañas móviles y de escritorio) lo son', () => {
-    for (const tab of ['/', '/soluciones', '/dispositivos', '/red', '/boveda', '/mas']) {
+  it('los cuatro destinos principales lo son', () => {
+    for (const tab of ['/', '/dispositivos', '/boveda', '/mas']) {
       expect(esRaizDePestana(tab)).toBe(true)
     }
   })
 
   it('normaliza la barra final', () => {
-    expect(esRaizDePestana('/soluciones/')).toBe(true)
+    expect(esRaizDePestana('/mas/')).toBe(true)
+  })
+
+  it('el catálogo de guías y Red ya no son raíces', () => {
+    expect(esRaizDePestana('/soluciones')).toBe(false)
+    expect(esRaizDePestana('/red')).toBe(false)
   })
 
   it('una ficha o lista interna no es una raíz', () => {
@@ -253,36 +279,55 @@ describe('esRaizDePestana', () => {
   })
 })
 
-// Encargo del 2026-09-17: en el teléfono, Inicio, Guías y Más.
-describe('pestanaMovilDe', () => {
-  it('Inicio cubre también su agenda', () => {
-    expect(pestanaMovilDe('/')).toBe('/')
-    expect(pestanaMovilDe('/agenda')).toBe('/')
-  })
-
-  it('Guías cubre todo lo que cuelga de /soluciones, la guía en ejecución incluida', () => {
-    expect(pestanaMovilDe('/soluciones')).toBe('/soluciones')
-    expect(pestanaMovilDe('/soluciones/cat-pos/art-1')).toBe('/soluciones')
-    expect(pestanaMovilDe('/soluciones/cat-pos/art-1/detalles')).toBe('/soluciones')
-  })
-
-  it('lo que se abre desde Más ilumina Más, también Equipos, Red y la Bóveda', () => {
-    for (const ruta of ['/mas', '/dispositivos', '/dispositivos/pc-1', '/red', '/boveda', '/referencia', '/personas']) {
-      expect(pestanaMovilDe(ruta)).toBe('/mas')
-    }
-  })
-})
-
-describe('esSeccionEnMas', () => {
-  it('Equipos, Red y la Bóveda, en su raíz, se abren desde Más', () => {
-    for (const ruta of ['/dispositivos', '/red', '/boveda', '/red/']) {
-      expect(esSeccionEnMas(ruta)).toBe(true)
+// Encargo del 2026-09-22: Resolver, Equipos, Bóveda y Más, en el teléfono
+// y en la barra lateral por igual.
+describe('destinoPrincipalDe', () => {
+  it('Resolver cubre su agenda, el catálogo, la guía en ejecución y el emparejamiento', () => {
+    for (const ruta of [
+      '/',
+      '/agenda',
+      '/conectar',
+      '/soluciones',
+      '/soluciones/cat-pos',
+      '/soluciones/cat-pos/art-1',
+      '/soluciones/cat-pos/art-1/detalles',
+      '/soluciones/cat-pos/art-1/editar',
+    ]) {
+      expect(destinoPrincipalDe(ruta)).toBe('/')
     }
   })
 
-  it('ni sus fichas ni las pestañas que quedan lo son', () => {
-    for (const ruta of ['/', '/soluciones', '/mas', '/dispositivos/pc-1']) {
-      expect(esSeccionEnMas(ruta)).toBe(false)
+  it('Equipos cubre sus fichas y el escáner', () => {
+    for (const ruta of ['/dispositivos', '/dispositivos/pc-1', '/dispositivos/pc-1/editar', '/escaner']) {
+      expect(destinoPrincipalDe(ruta)).toBe('/dispositivos')
     }
+  })
+
+  it('la Bóveda es su propio destino', () => {
+    for (const ruta of ['/boveda', '/boveda/cred-1', '/boveda/nueva']) {
+      expect(destinoPrincipalDe(ruta)).toBe('/boveda')
+    }
+  })
+
+  it('lo que se abre desde Más ilumina Más: Red, consulta, herramientas y cuenta', () => {
+    for (const ruta of [
+      '/mas',
+      '/red',
+      '/red/topologia',
+      '/referencia',
+      '/referencia/ref-1',
+      '/ubicaciones',
+      '/personas/per-1',
+      '/diagnostico',
+      '/cuenta',
+      '/cuenta/seguridad',
+    ]) {
+      expect(destinoPrincipalDe(ruta)).toBe('/mas')
+    }
+  })
+
+  it('compara por segmento completo: /solucionesx no es Resolver', () => {
+    expect(destinoPrincipalDe('/solucionesx')).toBe('/mas')
+    expect(destinoPrincipalDe('/bovedas')).toBe('/mas')
   })
 })

@@ -19,7 +19,7 @@ import {
   tocar,
   ubicacionActual,
 } from '../../pruebas/montaje'
-import { InicioPage } from '../inicio/InicioPage'
+import { ResolverPage } from '../inicio/ResolverPage'
 import { AsistentePage } from './AsistentePage'
 import { GuiaPage } from './GuiaPage'
 
@@ -33,7 +33,7 @@ import { GuiaPage } from './GuiaPage'
 // 2026-09-17 abrir la guía desde el resultado ES ejecutarla.
 
 const RUTAS = [
-  { ruta: '/', elemento: <InicioPage /> },
+  { ruta: '/', elemento: <ResolverPage /> },
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> },
   { ruta: '/soluciones/:categoriaId/:articuloId/ejecutar', elemento: <AsistentePage /> },
 ]

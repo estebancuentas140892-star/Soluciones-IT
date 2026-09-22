@@ -12,14 +12,12 @@ import {
   type IconoProps,
   LockSimple,
   MapPin,
-  Monitor,
   PlugsConnected,
   QrCode,
   Star,
   TreeStructure,
   UploadSimple,
   UsersThree,
-  Vault,
 } from '../../components/iconos'
 import { db, ID_BLOQUEO_APP } from '../../lib/db'
 import { obtenerFavoritos } from '../../lib/favoritos'
@@ -54,12 +52,6 @@ export function PantallaMas() {
   const ubicaciones = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
   const personas = useLiveQuery(() => db.personas.filter((p) => !p.eliminadoEn).toArray(), [], [])
   const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).count(), [])
-  // Sin permiso de bóveda la tabla local ni siquiera se sincroniza (RLS),
-  // así que contar sobre ella da 0 y la fila tampoco se muestra.
-  const credenciales = useLiveQuery(
-    () => db.credenciales.filter((c) => !c.eliminadoEn).count(),
-    [],
-  )
   const referencias = useLiveQuery(
     () => db.referencias.filter((r) => !r.eliminadoEn).count(),
     [],
@@ -95,22 +87,14 @@ export function PantallaMas() {
           <section>
             <TituloGrupo>Consulta</TituloGrupo>
             <div className="flex flex-col divide-y divide-noct-divider">
-              <Fila to="/dispositivos" Icono={Monitor} titulo="Equipos" subtitulo="Qué se sabe de cada equipo" />
+              {/* Equipos y la Bóveda son pestañas desde el 2026-09-22: aquí
+                  serían la segunda puerta a lo mismo. */}
               <Fila
                 to="/red"
                 Icono={PlugsConnected}
                 titulo="Red"
                 subtitulo="Cómo está conectada la infraestructura"
               />
-              {usuario?.puedeVerBoveda && (
-                <Fila
-                  to="/boveda"
-                  Icono={Vault}
-                  titulo="Bóveda"
-                  subtitulo="Claves y credenciales del equipo"
-                  conteo={credenciales ?? null}
-                />
-              )}
               {/* Centro de consulta (antes "Referencia"): responde "¿qué
                   es esto?" con el equipo delante, en mitad de una guía o
                   de una llamada. */}
@@ -155,7 +139,6 @@ export function PantallaMas() {
                 subtitulo="Del síntoma a la guía, paso a paso"
                 conteo={diagnosticos ?? null}
               />
-              <Fila to="/escaner" Icono={QrCode} titulo="Escanear equipo" subtitulo="Abre la ficha por código QR" />
             </div>
           </section>
 
