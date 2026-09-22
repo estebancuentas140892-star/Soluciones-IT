@@ -1,22 +1,34 @@
-// Capturas de verificacion movil por CDP (solo desarrollo, no entra en el
-// build). Levanta Chrome headless, emula 360 / 390 / 430 px con touch y
-// recorre las pantallas que el encargo del 2026-09-09 pide comprobar,
-// dejando un PNG por recorrido en `evidencia/` (carpeta ignorada por git).
+// Capturas de verificacion por CDP (solo desarrollo, no entra en el
+// build). Levanta Chrome headless, emula cada tamaño (con touch por debajo
+// de 768 px) y recorre las pantallas, dejando en `evidencia/` (carpeta
+// ignorada por git) DOS PNG por parada: la pantalla tal como se abre
+// (`-arriba`) y el final del scroll, que es donde se hace la auditoria.
 //
-// Uso: node scripts/capturas-moviles.mjs [url-base]
+// Uso:
+//   node scripts/capturas-moviles.mjs [url-base] [--tamanos=390x844,1366x768] [--paradas=resolver,mas]
+//
+// Por defecto, los cuatro tamaños del encargo del 2026-09-22 (seccion 26):
+// telefono 390x844, tableta 768x1024, portatil 1366x768 y escritorio
+// 1920x1080. `--paradas` filtra por prefijo de nombre.
 // Requiere el servidor de desarrollo levantado con VITE_MODO_PRUEBA_LOCAL=1.
 
 import { spawn } from 'node:child_process'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
-const BASE = process.argv[2] ?? 'http://localhost:5173'
+const argumentos = process.argv.slice(2)
+const opcion = (nombre) => argumentos.find((a) => a.startsWith(`--${nombre}=`))?.split('=')[1]
+const BASE = argumentos.find((a) => !a.startsWith('--')) ?? 'http://localhost:5173'
 const SALIDA = 'evidencia'
 const PERFIL = join(process.env.TEMP ?? '.', `cdp-capturas-${Date.now()}`)
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe'
 const PUERTO = 9333
 
-const ANCHOS = [360, 390, 430]
+const TAMANOS = (opcion('tamanos') ?? '390x844,768x1024,1366x768,1920x1080').split(',').map((t) => {
+  const [ancho, alto] = t.split('x').map(Number)
+  return { ancho, alto }
+})
+const FILTRO_PARADAS = opcion('paradas')?.split(',') ?? null
 
 // Recorridos del encargo del 2026-09-17 ("resolver rápido con guías"):
 // abrir una guía entra a su paso pendiente (ya no hay `/ejecutar` ni
@@ -26,9 +38,12 @@ const tocar = (texto) =>
   `const el=[...document.querySelectorAll('button, a')].find(b=>((b.getAttribute('aria-label')||b.textContent||'').replace(/\\s+/g,' ').trim()).startsWith(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500));`
 const siguiente = `const s=[...document.querySelectorAll('button')].find(b=>b.textContent.replace(/\\s+/g,' ').trim()==='Siguiente'); s?.click(); await new Promise(r=>setTimeout(r,500));`
 
-const PARADAS = [
-  { nombre: 'inicio', ruta: '/' },
-  { nombre: 'inicio-buscando', ruta: '/', guion: `const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,'caja'); c.dispatchEvent(new Event('input',{bubbles:true}));` },
+const TODAS_LAS_PARADAS = [
+  // Encargo del 2026-09-22: Resolver, Equipos, Bóveda y Más.
+  { nombre: 'resolver', ruta: '/' },
+  { nombre: 'resolver-buscando', ruta: '/', guion: `const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,'caja'); c.dispatchEvent(new Event('input',{bubbles:true}));` },
+  { nombre: 'boveda', ruta: '/boveda' },
+  { nombre: 'red', ruta: '/red' },
   { nombre: 'catalogo', ruta: '/soluciones' },
   {
     nombre: 'catalogo-titulo-largo',
@@ -37,7 +52,7 @@ const PARADAS = [
             el?.scrollIntoView({block:'center'});`,
   },
   { nombre: 'mas', ruta: '/mas' },
-  { nombre: 'equipos-desde-mas', ruta: '/dispositivos' },
+  { nombre: 'equipos', ruta: '/dispositivos' },
   { nombre: 'agenda', ruta: '/agenda' },
   { nombre: 'guia-paso-1-con-requisitos', ruta: '/soluciones/cat-pos/art-tonos' },
   { nombre: 'guia-dato-y-plegado', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente },
@@ -54,6 +69,10 @@ const PARADAS = [
   { nombre: 'detalles', ruta: '/soluciones/cat-impresoras/art-recurso-compartido/detalles' },
   { nombre: 'editor-pasos', ruta: '/soluciones/cat-impresoras/art-alcance-tarea/editar', guion: `[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Pasos')?.click();` },
 ]
+
+const PARADAS = FILTRO_PARADAS
+  ? TODAS_LAS_PARADAS.filter((p) => FILTRO_PARADAS.some((f) => p.nombre.startsWith(f)))
+  : TODAS_LAS_PARADAS
 
 
 // AUDITORIA EN LA PAGINA (cambio 4 del encargo del 2026-09-09). Busca
@@ -185,14 +204,16 @@ async function main() {
 
   const desbordes = []
   const hallazgos = []
-  for (const ancho of ANCHOS) {
+  for (const { ancho, alto } of TAMANOS) {
+    const movil = ancho < 768
     await s.enviar('Emulation.setDeviceMetricsOverride', {
       width: ancho,
-      height: 800,
-      deviceScaleFactor: 2,
-      mobile: true,
+      height: alto,
+      deviceScaleFactor: movil ? 2 : 1,
+      mobile: movil,
     })
-    await s.enviar('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
+    await s.enviar('Emulation.setTouchEmulationEnabled', { enabled: movil, maxTouchPoints: movil ? 5 : 0 })
+    const etiqueta = `${ancho}x${alto}`
     for (const parada of PARADAS) {
       await s.enviar('Page.navigate', { url: BASE + parada.ruta })
       await esperar(2200)
@@ -203,6 +224,9 @@ async function main() {
         })
         await esperar(1200)
       }
+      // Como se abre: es lo que el tecnico ve primero.
+      const arriba = await s.enviar('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
+      writeFileSync(join(SALIDA, `${etiqueta}-${parada.nombre}-arriba.png`), Buffer.from(arriba.data, 'base64'))
       // La auditoria se hace AL FINAL DEL SCROLL: un control que
       // se cruza con la barra fija a mitad de recorrido es scroll
       // normal, no un defecto. Lo que hay que cazar es lo que
@@ -214,12 +238,12 @@ async function main() {
       const medida = await s.enviar('Runtime.evaluate', { expression: AUDITORIA, returnByValue: true })
       const informe = JSON.parse(medida.result.value)
       if (informe.desborde) {
-        desbordes.push(`${ancho}px ${parada.nombre}: scrollWidth ${informe.scroll} > ${informe.ancho}`)
+        desbordes.push(`${etiqueta} ${parada.nombre}: scrollWidth ${informe.scroll} > ${informe.ancho}`)
       }
-      for (const h of informe.hallazgos) hallazgos.push(`${ancho}px ${parada.nombre}: ${h}`)
+      for (const h of informe.hallazgos) hallazgos.push(`${etiqueta} ${parada.nombre}: ${h}`)
       const shot = await s.enviar('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
-      writeFileSync(join(SALIDA, `m${ancho}-${parada.nombre}.png`), Buffer.from(shot.data, 'base64'))
-      console.log(`ok  ${ancho}px  ${parada.nombre}`)
+      writeFileSync(join(SALIDA, `${etiqueta}-${parada.nombre}.png`), Buffer.from(shot.data, 'base64'))
+      console.log(`ok  ${etiqueta}  ${parada.nombre}`)
     }
   }
 

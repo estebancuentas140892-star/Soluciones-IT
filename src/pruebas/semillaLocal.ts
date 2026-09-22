@@ -4,6 +4,9 @@ import {
   type Articulo,
   type BloquePaso,
   type Categoria,
+  type Conexion,
+  type Credencial,
+  type Dispositivo,
   type PasoProcedimiento,
   type Referencia,
 } from '../lib/db'
@@ -64,6 +67,9 @@ const CATEGORIAS: Categoria[] = [
   categoria('cat-telefonia', 'Telefonia', 6),
   categoria('cat-accesos', 'Control de acceso', 7),
   categoria('cat-servidores', 'Servidores', 8),
+  // Una categoria de red (encargo del 2026-09-22): sus equipos van a
+  // Infraestructura, pero se encuentran tambien buscando en Equipos.
+  { ...categoria('cat-switches', 'Switches', 9), esRed: true },
 ]
 
 function tarea(id: string, texto: string, tipoTarea: 'accion' | 'verificacion' | 'decision' = 'accion'): BloquePaso {
@@ -791,6 +797,141 @@ const REFERENCIAS: Referencia[] = [
   }),
 ]
 
+// AGENDA, EQUIPOS Y RECIENTES DEL BANCO (encargo del 2026-09-22). Todo
+// INVENTADO: las direcciones son del rango de documentacion 192.0.2.0/24
+// (RFC 5737), que no existe en ninguna red, y las credenciales no llevan
+// ningun dato cifrado (solo su nombre y su fecha, que es lo que la agenda
+// lee). Las fechas se calculan desde hoy para que "vencido" y "proximo"
+// sigan siendo verdad el dia que se mire.
+
+function fechaEnDias(dias: number): string {
+  const fecha = new Date()
+  fecha.setDate(fecha.getDate() + dias)
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dia = String(fecha.getDate()).padStart(2, '0')
+  return `${fecha.getFullYear()}-${mes}-${dia}`
+}
+
+function credencial(id: string, titulo: string, venceEnDias: number): Credencial {
+  return {
+    id,
+    titulo,
+    categoria: 'Ejemplo',
+    tipo: 'cuenta',
+    datosCifrados: '',
+    venceEn: fechaEnDias(venceEnDias),
+    dispositivos: [],
+    archivo: null,
+    updatedAt: AHORA,
+    updatedBy: PERFIL_PRUEBA.id,
+    eliminadoEn: null,
+  }
+}
+
+const CREDENCIALES: Credencial[] = [
+  credencial('cred-resolucion-ejemplo', 'Resolucion POS de ejemplo', 12),
+  credencial('cred-wifi-ejemplo', 'Wifi de invitados de ejemplo', -3),
+]
+
+function dispositivo(datos: Partial<Dispositivo> & { id: string; nombre: string; categoriaId: string }): Dispositivo {
+  return {
+    marca: '',
+    modelo: '',
+    serial: '',
+    placaInventario: '',
+    ubicacion: '',
+    ubicacionId: null,
+    responsable: '',
+    responsableId: null,
+    reemplazaA: null,
+    ip: '',
+    estado: 'Operativo',
+    observaciones: '',
+    detalles: {},
+    foto: null,
+    updatedAt: AHORA,
+    updatedBy: PERFIL_PRUEBA.id,
+    eliminadoEn: null,
+    ...datos,
+  }
+}
+
+const DISPOSITIVOS: Dispositivo[] = [
+  dispositivo({
+    id: 'dis-impresora-ejemplo',
+    nombre: 'Impresora de ejemplo Administracion',
+    categoriaId: 'cat-impresoras',
+    marca: 'Marca de ejemplo',
+    modelo: 'Modelo A1',
+    ip: '192.0.2.40',
+    ubicacion: 'Oficina de ejemplo',
+    responsable: 'Persona de ejemplo',
+    placaInventario: 'EJ-0040',
+    detalles: { 'Bandeja': 'Carta y Oficio', 'Firmware': 'Version de ejemplo' },
+  }),
+  dispositivo({
+    id: 'dis-caja-ejemplo',
+    nombre: 'Caja de ejemplo 1',
+    categoriaId: 'cat-pos',
+    ip: '192.0.2.21',
+    ubicacion: 'Taquilla de ejemplo',
+    estado: 'En mantenimiento',
+    placaInventario: 'EJ-0021',
+  }),
+  dispositivo({
+    id: 'dis-switch-ejemplo',
+    nombre: 'SW-EJEMPLO-02',
+    categoriaId: 'cat-switches',
+    ip: '192.0.2.2',
+    ubicacion: 'Rack de ejemplo',
+    placaInventario: 'EJ-0002',
+  }),
+]
+
+const CONEXIONES: Conexion[] = [
+  {
+    id: 'con-switch-impresora-ejemplo',
+    tipo: 'enlace',
+    origenId: 'dis-switch-ejemplo',
+    origenNombre: 'SW-EJEMPLO-02',
+    origenPuerto: '18',
+    destinoId: 'dis-impresora-ejemplo',
+    destinoNombre: 'Impresora de ejemplo Administracion',
+    destinoPuerto: '',
+    medio: 'UTP',
+    notas: '',
+    updatedAt: AHORA,
+    updatedBy: PERFIL_PRUEBA.id,
+    eliminadoEn: null,
+  },
+]
+
+/** Solo lo que no existe todavia: lo editado desde la app no se pisa. */
+async function sembrarAgendaYEquipos(): Promise<void> {
+  await db.transaction('rw', [db.credenciales, db.dispositivos, db.conexiones, db.recientes], async () => {
+    const credencialesExistentes = new Set(
+      (await db.credenciales.bulkGet(CREDENCIALES.map((c) => c.id))).flatMap((c) => (c ? [c.id] : [])),
+    )
+    await db.credenciales.bulkAdd(CREDENCIALES.filter((c) => !credencialesExistentes.has(c.id)))
+    const equiposExistentes = new Set(
+      (await db.dispositivos.bulkGet(DISPOSITIVOS.map((d) => d.id))).flatMap((d) => (d ? [d.id] : [])),
+    )
+    await db.dispositivos.bulkAdd(DISPOSITIVOS.filter((d) => !equiposExistentes.has(d.id)))
+    const conexionesExistentes = new Set(
+      (await db.conexiones.bulkGet(CONEXIONES.map((c) => c.id))).flatMap((c) => (c ? [c.id] : [])),
+    )
+    await db.conexiones.bulkAdd(CONEXIONES.filter((c) => !conexionesExistentes.has(c.id)))
+    // Dos guias usadas hace poco, para que Resolver tenga "Recientes".
+    if ((await db.recientes.count()) === 0) {
+      const haceDias = (dias: number) => new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString()
+      await db.recientes.bulkPut([
+        { clave: 'articulo:art-recurso-compartido', tipo: 'articulo', entidadId: 'art-recurso-compartido', visitadoEn: haceDias(0.2) },
+        { clave: 'articulo:art-tonos', tipo: 'articulo', entidadId: 'art-tonos', visitadoEn: haceDias(2) },
+      ])
+    }
+  })
+}
+
 /**
  * Deja la base local con el banco de pruebas. Idempotente: reescribe
  * siempre las mismas filas, asi que recargar no duplica nada.
@@ -825,6 +966,7 @@ export async function sembrarBancoDePruebas({ conProgreso = true } = {}): Promis
     const fichasFaltantes = REFERENCIAS.filter((r) => !fichasExistentes.has(r.id))
     if (fichasFaltantes.length > 0) await db.referencias.bulkAdd(fichasFaltantes)
   })
+  await sembrarAgendaYEquipos()
   if (conProgreso && (await db.progresoPasos.count()) === 0) {
     await db.progresoPasos.put({
       articuloId: GUIA_TRES_TAREAS.id,
