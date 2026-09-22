@@ -4,17 +4,18 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1, cerrada y archivada). Ocho fases, una tarea por fase, una "En proceso" a la vez: 254 (Resolver y navegación), 255 (ejecución visual), 256 (Equipos + QR), 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
+**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa) y 254 (Resolver y navegación). **Siguen:** 255 (ejecución visual), 256 (Equipos + QR), 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
 
-### 254. Fase 2: Resolver y navegación de cuatro destinos
+### 255. Fase 3: ejecución visual de las guías (ruta, colores con significado, dónde y debes ver)
 
-- **Título:** Resolver sustituye a Inicio y a la pestaña Guías; la navegación principal pasa a Resolver, Equipos, Bóveda y Más.
-- **Descripción:** (1) `src/lib/navegacion.ts`: raíces de pestaña, `pestanaMovilDe` (cuatro destinos), padres nuevos (`/soluciones`, `/agenda`, `/escaner`, `/diagnostico`, `/cuenta`, `/red`) y fin de `SECCIONES_EN_MAS`; (2) `src/app/Chasis.tsx`: cuatro destinos en la barra inferior, el rail y la barra lateral, sin los grupos "Consulta" y "Trabajo técnico"; el número de urgentes sobre Resolver; (3) `src/features/inicio/InicioPage.tsx` pasa a ser Resolver: la pregunta y el buscador, "Atención" (vencidos, hoy y próximos, hasta tres), "Continuar", "Recientes" (hasta tres, 14 días) y "Accesos rápidos" por categoría (solo con dos o más categorías con guías); la agenda completa sigue en `/agenda`; (4) la lista de guías (`SolucionesPage.tsx`) lleva regreso a Resolver en el teléfono; (5) atajos de teclado (`src/app/atajosApp.ts`); (6) pruebas de navegación, atajos y Resolver.
-- **Motivo:** sección 2 del encargo: la acción principal es buscar, encontrar, ejecutar y solucionar, y la navegación tenía dos puertas (Inicio y Guías) para lo mismo.
-- **Impacto:** alto, es lo primero que ve el técnico. Ninguna dirección cambia.
+- **Título:** la guía se entiende leyendo poco: ruta del procedimiento, un color por significado y cada paso con qué hacer, dónde y qué debe verse.
+- **Descripción:** (1) componente de ruta (horizontal en escritorio y tableta, vertical y recortada en el teléfono) con estado por nodo y marca de riesgo; (2) tokens de color de guía (lugar amarillo, acción azul) y Precaución al rojo dentro de la ejecución; "No" y "Borrador" neutros; verificación con icono y palabra; (3) campos opcionales `lugar` y `resultado` por paso (normalizador, tipos, editor, vista de paso entero, lectura y vista previa, buscador); (4) "Requisitos" en vez de "Antes de empezar, ten a mano"; (5) "Credencial necesaria" en el paso; (6) la ejecución gana ancho en escritorio.
+- **Motivo:** secciones 3 a 8 del encargo.
+- **Impacto:** alto en la pantalla que más se usa. Sin SQL ni versión de Dexie: los campos viven en el JSON del procedimiento.
 - **Prioridad:** Alta. **Estado:** En progreso.
-- **Área afectada:** `src/lib/navegacion.ts`, `src/app/{Chasis,memoriaPestana,atajosApp,CapaAtajos,AyudaAtajos}.ts(x)`, `src/components/BarraSuperior.tsx`, `src/features/inicio/{InicioPage,AgendaPage,SeccionesAgenda}.tsx` y archivos nuevos de Resolver en `src/features/inicio/`, `src/features/soluciones/SolucionesPage.tsx`.
-- **Dependencias:** tarea 253 (el mapa).
+- **Área afectada:** `src/features/soluciones/{ModoFoco,AsistenteVista,AsistentePage,ProcedimientoVista,PasosEditor,HojaPasos,tonos}.tsx/ts`, `src/features/boveda/CredencialEnPaso.tsx`, `src/lib/{db,procedimiento}.ts`, `src/index.css`, `src/app/Chasis.tsx` (ancho de la tarea), `src/features/busqueda/useIndiceBusqueda.ts`.
+- **Dependencias:** 254.
+- **Riesgo anotado:** una copia de la app sin actualizar que edite una guía descarta `lugar` y `resultado`. Avisar al entregar.
 - **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ---
@@ -363,18 +364,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 255. Fase 3: ejecución visual de las guías (ruta, colores con significado, dónde y debes ver)
-
-- **Título:** la guía se entiende leyendo poco: ruta del procedimiento, un color por significado y cada paso con qué hacer, dónde y qué debe verse.
-- **Descripción:** (1) componente de ruta (horizontal en escritorio y tableta, vertical y recortada en el teléfono) con estado por nodo y marca de riesgo; (2) tokens de color de guía (lugar amarillo, acción azul) y Precaución al rojo dentro de la ejecución; "No" y "Borrador" neutros; verificación con icono y palabra; (3) campos opcionales `lugar` y `resultado` por paso (normalizador, tipos, editor, vista de paso entero, lectura y vista previa, buscador); (4) "Requisitos" en vez de "Antes de empezar, ten a mano"; (5) "Credencial necesaria" en el paso; (6) la ejecución gana ancho en escritorio.
-- **Motivo:** secciones 3 a 8 del encargo.
-- **Impacto:** alto en la pantalla que más se usa. Sin SQL ni versión de Dexie: los campos viven en el JSON del procedimiento.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/features/soluciones/{ModoFoco,AsistenteVista,AsistentePage,ProcedimientoVista,PasosEditor,HojaPasos,tonos}.tsx/ts`, `src/features/boveda/CredencialEnPaso.tsx`, `src/lib/{db,procedimiento}.ts`, `src/index.css`, `src/app/Chasis.tsx` (ancho de la tarea), `src/features/busqueda/useIndiceBusqueda.ts`.
-- **Dependencias:** 254.
-- **Riesgo anotado:** una copia de la app sin actualizar que edite una guía descarta `lugar` y `resultado`. Avisar al entregar.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ### 256. Fase 4: Equipos + QR
 

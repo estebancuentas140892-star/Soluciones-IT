@@ -2,6 +2,25 @@
 
 ## Encargo del 2026-09-22: Soluciones IT se organiza alrededor de Resolver
 
+### 254. Fase 2: Resolver y navegación de cuatro destinos
+
+**Título:** Resolver sustituye a Inicio y a la pestaña Guías; la navegación principal pasa a Resolver, Equipos, Bóveda y Más. **Estado:** Completada (2026-09-22) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22, sección 2.
+
+**Qué se hizo:**
+
+1. **Navegación** (`src/lib/navegacion.ts`): `RAICES_DE_PESTANA` pasa a los cuatro destinos (`['/dispositivos', '/boveda', '/mas', '/']`); `destinoPrincipalDe` sustituye a `pestanaMovilDe` y sirve a las dos barras; padres nuevos (`/soluciones`, `/agenda` y `/conectar` a Resolver; `/escaner` a Equipos; `/red`, `/diagnostico` y `/cuenta` a Más); se retiran `SECCIONES_EN_MAS` y `esSeccionEnMas`.
+2. **Chasis** (`src/app/Chasis.tsx`): una sola lista `DESTINOS` (Resolver, Equipos, Bóveda, Más) para la barra del teléfono (cuatro columnas), el rail y la barra lateral; fuera los grupos "Consulta" y "Trabajo técnico" y `EnlaceGrupo`; el número de urgentes sobre Resolver también en la barra lateral; las secciones que no son raíz reciben `volver` (origen o padre). `BarraSuperior` cambia `volverEnMovilA` por `volver` (todos los tamaños) y oculta el avatar desde 768 px. Icono nuevo `WrenchFill`.
+3. **Resolver** (`src/features/inicio/ResolverPage.tsx`, antes `InicioPage.tsx`, y `resolver.ts`): la pregunta y el buscador; Atención (hasta tres asuntos con fecha), Recientes (hasta tres guías en 14 días, con el paso donde se quedó) y Accesos rápidos (categorías con guías publicadas y ejecutables, solo con dos o más); "Todas las guías" siempre.
+4. **Atajos:** `G R` Resolver, `G E` Equipos, `G B` Bóveda, `G M` Más, `G G` el catálogo.
+5. **Más** deja de listar Equipos, la Bóveda y Escanear. **Editor:** "Destacar en «Para empezar»" en vez de "en Inicio".
+6. **Verificación:** banco local ampliado (accesos con fecha, equipos, una conexión y visitas recientes, todo inventado) y `scripts/capturas-moviles.mjs` con los cuatro tamaños del encargo, captura al abrir y auditoría al final del scroll.
+
+**Pruebas.** 122 archivos y 1748 casos en verde (antes 121 y 1720). Nuevas: `resolver.test.ts` (Atención, recientes, accesos rápidos) y `resolverYAgenda.test.tsx` (la agenda completa en `/agenda` y Resolver montado: solo lo que tiene fecha, recientes con "Continuar", accesos rápidos que filtran, número de la pestaña, permisos y foco). Ajustadas: navegación, memoria de pestañas, dirección de transición, atajos y el caso J del buscador sin permiso de Bóveda (la pestaña "Bóveda" es de todos; lo que se comprueba es que la búsqueda no la nombre).
+
+**Capturas** (390×844, 768×1024, 1366×768 y 1920×1080, en `evidencia/`, no se versiona): sin desbordamiento horizontal. Los hallazgos de área táctil que quedan son de Equipos y del catálogo (chips de 34 px, "Crear" de 32) y ya existían: los de Equipos entran en la tarea 256.
+
+**Lo que no se tocó:** rutas, esquema, RLS, datos, sincronización, Bóveda, buscador y ejecución de guías. **No hay que ejecutar SQL.**
+
 ### 253. Fase 1: analizar el estado actual y definir el mapa final de navegación
 
 **Título:** análisis del estado actual y mapa final del rediseño "Resolver". **Estado:** Completada (2026-09-22) en documentación; sin código. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22 ("Rediseño funcional completo"), fase 1 de 8.

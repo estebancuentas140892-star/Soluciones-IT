@@ -91,11 +91,27 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 
 | Nivel | Qué pantallas | Qué se ve arriba | ¿Barra de pestañas? |
 |---|---|---|---|
-| **Sección** | Inicio, Guías, Más (las pestañas del teléfono) y Equipos, Red y Bóveda (que en el teléfono se abren desde Más y llevan un regreso a Más) | título de la sección, estado del dato, buscar y cuenta | sí |
+| **Sección** | Los cuatro destinos (Resolver, Equipos, Bóveda y Más) y dos secciones que cuelgan de ellos y llevan regreso en todos los tamaños: el catálogo de guías (a Resolver) y Red (a Más) | título de la sección, estado del dato, buscar y cuenta | sí |
 | **Documento** | fichas y listas internas: categoría, artículo, equipo, secreto, topología, Ubicaciones, Personas, Diagnóstico, Estadísticas, Sugerencias, Mi cuenta, Seguridad | en las **cinco fichas** (equipo, artículo, credencial, ubicación, persona), el **ancla permanente** de la tarea 201: chevron de 44 px, el origen a 11 px y el nombre de lo que se ve a 14 px, que no se va con el scroll (regla **M-R1**). En las listas internas, el regreso con el nombre de a dónde vuelve. A la derecha, las acciones de la pantalla | sí |
 | **Tarea** | lo que se hace y de lo que se sale: los cuatro editores, una guía abierta (su ejecución), el diagnóstico en ejecución, el escáner, las etiquetas, la importación y las tres migraciones | `BarraTarea`: rótulo ("Editando"), sobre qué, la ruta de vuelta escrita y una X | **no** |
 
-**LAS GUÍAS EN EL CENTRO (desde el 2026-09-17, tarea 244, [DECISIONES.md](DECISIONES.md) AD-040).** Soluciones IT se usa para encontrar un procedimiento y hacerlo, así que la navegación principal se queda con eso:
+**CUATRO DESTINOS: RESOLVER, EQUIPOS, BÓVEDA Y MÁS (desde el 2026-09-22, tarea 254, [DECISIONES.md](DECISIONES.md) AD-042).** Soluciones IT acompaña al técnico hasta el puesto de trabajo: buscar, encontrar, ejecutar y solucionar. La navegación principal es **la misma en el teléfono, la tableta y el escritorio**:
+
+| Destino | Ruta | Icono | Se ilumina en |
+|---|---|---|---|
+| **Resolver** | `/` | Wrench / WrenchFill | Resolver, la agenda (`/agenda`), el catálogo de guías y todo lo que cuelga de él (la guía en ejecución incluida) |
+| **Equipos** | `/dispositivos` | Monitor / MonitorFill | la lista, las fichas, los editores y el escáner |
+| **Bóveda** | `/boveda` | Vault / VaultFill | todo `/boveda` |
+| **Más** | `/mas` | DotsNine | todo lo demás: Red y Topología, Centro de consulta, Ubicaciones, Personas, Diagnóstico y la cuenta |
+
+- **Teléfono:** barra inferior de cuatro pestañas, siempre las mismas para todos (regla R17). La Bóveda también es pestaña para quien no tiene el permiso: abre "Acceso restringido" (el permiso cambia lo que hay detrás de la puerta, no la barra). El número de asuntos urgentes (vencidos y de hoy) va sobre **Resolver**.
+- **Tableta (768 a 1279 px):** rail de 64 px con los mismos cuatro iconos. **Escritorio (1280 px o más):** barra lateral con los cuatro destinos y la cuenta al pie. **Ya no hay grupos "Consulta" ni "Trabajo técnico":** eran la segunda copia de Más.
+- **La pestaña Guías desaparece.** El catálogo (`/soluciones`) se abre desde Resolver ("Todas las guías" y los accesos rápidos por categoría) y su cabecera lleva un regreso a Resolver en todos los tamaños. **Red** deja de ser raíz: su cabecera lleva un regreso a Más.
+- Qué destino se ilumina lo decide `destinoPrincipalDe(pathname)`, para la barra del teléfono y la lateral por igual.
+- **Ninguna dirección cambia.** Los enlaces guardados, las etiquetas QR y `/ejecutar` siguen funcionando.
+- Lo que sigue en este apartado sobre "las guías en el centro" y las tablas de cinco pestañas describe **cómo era** antes del 2026-09-22.
+
+**LAS GUÍAS EN EL CENTRO (del 2026-09-17 al 2026-09-21, tarea 244, [DECISIONES.md](DECISIONES.md) AD-040; sustituido por los cuatro destinos).** Soluciones IT se usa para encontrar un procedimiento y hacerlo, así que la navegación principal se quedaba con eso:
 
 - **Teléfono: tres pestañas, Inicio, Guías y Más** (antes cinco: Inicio, Guías, Equipos, Red y Más). **Equipos, Red y la Bóveda siguen completas** y se abren desde Más, en el grupo "Consulta"; su cabecera lleva un chevron de regreso a Más (solo en el teléfono) y, dentro de ellas, **se ilumina la pestaña Más**. Lo mismo en Personas, Ubicaciones, el Centro de consulta, Diagnóstico o Mi cuenta: la pestaña iluminada es la que abre lo que se está viendo (`pestanaMovilDe`). La agenda (`/agenda`) ilumina Inicio.
 - **Escritorio: Inicio y Guías arriba**; debajo, **"Consulta"** (Equipos, Red, Bóveda con permiso, Centro de consulta, Ubicaciones, Personas) y **"Trabajo técnico"** (Agenda, Diagnóstico, Escanear). En escritorio Equipos, Red y Bóveda no llevan regreso: son destinos de la barra lateral.
@@ -105,9 +121,9 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 
 | Ventana | Qué se ve |
 |---|---|
-| Menos de 768px | Teléfono: columna de 448px y las 3 pestañas inferiores (Inicio, Guías, Más; eran 5 hasta el 2026-09-16). |
+| Menos de 768px | Teléfono: columna de 448px y las 4 pestañas inferiores (Resolver, Equipos, Bóveda y Más desde el 2026-09-22; antes Inicio, Guías y Más, y hasta el 2026-09-16, cinco). |
 | 768 a 1279px | Tableta: barra lateral estrecha de **solo iconos** (64px) y una columna de trabajo. Sin pestañas inferiores. |
-| 1280 a 1679px | Portátil: barra lateral completa de 240px con la marca "Soluciones IT", sus catorce destinos y el perfil al pie. |
+| 1280 a 1679px | Portátil: barra lateral completa de 240px con la marca "Soluciones IT", los cuatro destinos y el perfil al pie. |
 | 1680px o más | Monitor: barra lateral de 232px y hasta 1294px de contenido, el espacio de las tres zonas (lista, documento y contexto). |
 
 Antes la barra lateral no aparecía hasta 1024px, así que entre 768 y 1023 no había ni barra lateral ni pestañas al ancho: el contenido medía 768px y la barra de pestañas seguía anclada a 448px centrados, flotando debajo. Afectaba a un iPad en horizontal y a cualquier ventana a media pantalla. Las 5 pestañas de móvil son **siempre las mismas para todos** desde la tarea 182 (regla R17), y **el chasis reserva el espacio que la barra ocupa** (regla R22), así que ninguna pantalla lo calcula a mano. El nivel Tarea va sin barra y sin barra lateral, en columna de 448px.
@@ -205,11 +221,11 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | Ruta | Pantalla / Componente | Nivel del chasis | Descripción |
 |------|-----------------------|-------|-------------|
 | `/login` | LoginPage | Fuera del chasis | Inicio de sesión (fuera de RequireAuth) |
-| `/` (index) | InicioPage | Sección | "¿Qué necesitas solucionar?": buscador global y, debajo, la **agenda operativa resumida** (fecha, resumen, vencidos, para hoy, próximos, en curso y por revisar del equipo) |
-| `/agenda` | AgendaPage | Documento | **Vista completa** de la agenda: los mismos grupos que resume Inicio, dibujados con el mismo `SeccionesAgenda` |
-| `/cuenta` | CuentaPage | Documento | Mi cuenta (cambiar contraseña, cerrar sesión) |
+| `/` (index) | ResolverPage | Sección | **Resolver** (desde el 2026-09-22): "¿Qué necesitas resolver?", el buscador global y, debajo, solo lo que ayuda: Atención (hasta tres asuntos con fecha), Recientes (guías usadas en 14 días) y Accesos rápidos por categoría, con "Todas las guías" |
+| `/agenda` | AgendaPage | Documento | **Agenda completa**: fecha, resumen, vencidos, para hoy, próximos, en curso y por revisar del equipo. Sube a Resolver |
+| `/cuenta` | CuentaPage | Documento | Mi cuenta (cambiar contraseña, cerrar sesión). Sube a Más |
 | `/cuenta/seguridad` | SeguridadPage | Documento | Bloqueo de la app (patrón/contraseña) |
-| `/soluciones` | SolucionesPage | Sección | Lista de artículos, chips de categoría, buscador, hoja de tipo, bloque "Sin terminar" |
+| `/soluciones` | SolucionesPage | Sección | Catálogo de guías: lista, chips de categoría, buscador, hoja de tipo. Desde el 2026-09-22 no es pestaña: se abre desde Resolver y su cabecera lleva un regreso a Resolver |
 | `/soluciones/:categoriaId` | CategoriaPage | Documento | Ficha 360° de una categoría |
 | `/soluciones/:categoriaId/nuevo` | ArticuloForm | Tarea | Crear artículo (editor con 4 pestañas) |
 | `/soluciones/:categoriaId/:articuloId` | GuiaPage > AsistentePage o ArticuloPage | Tarea (guía con pasos) / Documento (artículo sin pasos) | **La guía**: con pasos se abre ejecutándose, en su primer paso pendiente; sin pasos, se lee (desde el 2026-09-17) |
@@ -238,7 +254,7 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/referencia/nueva` | ReferenciaForm | Tarea | Crear ficha (`?tipo=herramienta\|termino\|atajo\|comando`) |
 | `/referencia/:referenciaId` | ReferenciaFicha | Documento | Ficha de una herramienta, término, atajo o comando |
 | `/referencia/:referenciaId/editar` | ReferenciaForm | Tarea | Editar ficha |
-| `/red` | RedPage | Sección | Recorrido por nodos: el equipo, de qué depende y qué cae si falla |
+| `/red` | RedPage | Sección | Recorrido por nodos: el equipo, de qué depende y qué cae si falla. Desde el 2026-09-22 se abre desde Más y su cabecera lleva un regreso a Más |
 | `/red/equipos` | EquiposRedPage | Documento | Todos los equipos de red, agrupados por ubicación |
 | `/red/topologia` | TopologiaPage | Documento | Mapa/bosque de toda la red |
 | `/red/topologia/:dispositivoId` | TopologiaEquipoPage | Documento | Topología centrada en un equipo |
@@ -247,14 +263,14 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/boveda/migrar` | MigracionCredenciales | Tarea | Migrar secretos que son de un equipo |
 | `/boveda/:credencialId` | CredencialPage | Documento | Ficha de un secreto (descifrado local) |
 | `/boveda/:credencialId/editar` | CredencialForm | Tarea | Editar secreto |
-| `/mas` | PantallaMas | Sección | Pestaña móvil "Más": puerta de Equipos, Red, Bóveda, Centro de consulta, Ubicaciones, Personas, Agenda, Diagnóstico, Escanear, Etiquetas QR, Importar y Mi cuenta (tareas 182 y 244) |
-| `/diagnostico` | DiagnosticosPage | Documento | Lista de problemas por categoría |
+| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos: Red, Centro de consulta, Ubicaciones, Personas, Agenda, Diagnóstico, Etiquetas QR, Importar y Mi cuenta. Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
+| `/diagnostico` | DiagnosticosPage | Documento | Lista de problemas por categoría. Sube a Más |
 | `/diagnostico/nuevo` | DiagnosticoForm | Tarea | Crear diagnóstico (árbol de preguntas) |
 | `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Tarea | Asistente de ejecución del diagnóstico |
 | `/diagnostico/:diagnosticoId/editar` | DiagnosticoForm | Tarea | Editar diagnóstico |
 | `/diagnostico/estadisticas` | EstadisticasPage | Documento | Tablero de estadísticas |
 | `/diagnostico/sugerencias` | SugerenciasEquipoPage | Documento | Sugerencias del equipo (borrador de artículos) |
-| `/escaner` | EscanerPage | Tarea | Escaneo de QR y códigos de barras |
+| `/escaner` | EscanerPage | Tarea | Escaneo de QR y códigos de barras. Sube a Equipos |
 | `/notas/*` | (redirección) | - | Redirige a `/boveda` (nombre antiguo) |
 
 ---
@@ -298,29 +314,31 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 ## 5. Secciones del menú principal
 
 <a id="51-inicio"></a>
-### 5.1 Inicio
+<a id="51-resolver"></a>
+### 5.1 Resolver
 
-**Ruta:** `/` · **Archivo:** `src/features/inicio/InicioPage.tsx` · **Nivel:** Sección
+**Ruta:** `/` · **Archivo:** `src/features/inicio/ResolverPage.tsx` (lógica en `resolver.ts`) · **Nivel:** Sección, el primero de los cuatro destinos
 
-**Objetivo (desde el 2026-09-20, tarea 247).** Entender la jornada y poder empezarla: **al abrir la app se ve qué está vencido, qué vence hoy, qué viene y qué trabajo está en curso**, con el buscador arriba como entrada rápida ("¿Qué necesitas solucionar?"). Entre el 2026-09-17 y el 2026-09-20 la agenda vivió solo en `/agenda` y en Inicio quedó una línea con lo urgente; se revirtió porque al abrir la app ya no se sabía qué había pendiente.
+**Objetivo (desde el 2026-09-22, tarea 254, [DECISIONES.md](DECISIONES.md) AD-042).** Responder una sola pregunta: **"¿Qué necesitas resolver?"**. El técnico llega con un problema delante; esta pantalla lo lleva del problema al procedimiento. Sustituye a **Inicio** y a la pestaña **Guías**, que eran dos puertas para lo mismo. **No es un tablero:** sin estadísticas, actividad, favoritos ni tarjetas decorativas.
 
-**De arriba abajo, sin texto en el buscador:**
+**De arriba abajo, sin texto en el buscador.** Cada bloque aparece **solo si tiene algo que decir**:
 
-1. **La pregunta y el buscador**: "¿Qué necesitas solucionar?" (17 px) sobre el campo de 46 px, con el marcador **"Procedimiento, error, equipo…"**. La etiqueta accesible sigue siendo "Buscar en Soluciones IT" (regla M-R8). **En escritorio (ratón y teclado físico) el campo recibe el foco al llegar**: se escribe sin tocar nada. En el teléfono no, a propósito: el teclado en pantalla taparía la agenda.
-2. **Fecha de hoy y resumen de pendientes**: "Viernes, 11 de septiembre" y, debajo, "2 vencidos · 1 para hoy · 3 próximos". Las categorías vacías no se nombran; sin nada con fecha dice **"Nada con fecha"**, y mientras la base local responde, **"Revisando la agenda…"**.
-3. **Vencidos**: todos, sin tope.
-4. **Para hoy**: todos los asuntos del día.
-5. **Próximos**: **tres** al principio, el resto con "Ver los otros N" en el sitio.
-6. **En curso**: la tarjeta de la guía a medias y los borradores propios.
-7. **Por revisar del equipo**: sugerencias de diagnóstico sin convertir en guía.
-8. **"Ver agenda completa"**, que abre `/agenda`. Se ve siempre, también con la agenda vacía.
-9. **Bienvenida del primer día** (sin cambios, ver abajo), **debajo** de la agenda para no empujarla y solo mientras haga falta.
+1. **La pregunta y el buscador**: "¿Qué necesitas resolver?" (17 px) sobre el campo, con el marcador **"Buscar problema, equipo, comando…"**. La etiqueta accesible sigue siendo "Buscar en Soluciones IT" (regla M-R8). En escritorio (ratón y teclado físico) el campo recibe el foco al llegar; en el teléfono no, para que el teclado no tape lo de debajo.
+2. **Atención**: lo que tiene fecha y hay que atender (vencidos, de hoy y próximos a vencer), en el orden de la agenda y **hasta tres**, con la misma fila que la agenda completa (nombre, "Venció hace 3 días" o "Vence el 4 oct" en su color, el origen y la acción). Debajo, **"Ver la agenda completa"**, con el total entre paréntesis si hay más. **Los borradores propios y las sugerencias del equipo no salen aquí:** no tienen plazo y viven en la agenda completa. Sin nada con fecha, el bloque no existe (tampoco un "todo al día" de adorno).
+3. **Recientes**: hasta **tres** guías con pasos que este técnico usó en los **últimos 14 días** (registro local de este teléfono), la más reciente primero. La que está a medias dice **"Vas en el paso N de M"** y su acción es **"Continuar"**, que la abre en ese paso; las demás, la categoría y "hace 2 días", con "Abrir". Un borrador que el técnico abrió entra marcado ("Borrador ·").
+4. **Accesos rápidos**: las **categorías** que tienen al menos una guía publicada y ejecutable, **las más usadas** en los últimos 30 días primero y luego en el orden que les dio el equipo, **hasta seis**, como chips de 44 px con el icono en el color de la categoría. Cada chip abre el catálogo filtrado por esa categoría. **Con menos de dos categorías el bloque no se dibuja**: una sola sería lo mismo que "Todas las guías".
+5. **"Todas las guías"**, siempre, con o sin accesos rápidos: es la puerta al catálogo (`/soluciones`) desde que Guías dejó de ser pestaña.
+6. **Bienvenida del primer día** (sin cambios, ver abajo), al final y solo mientras haga falta.
 
-Los grupos 3 a 7 los dibuja **`SeccionesAgenda`** (`src/features/inicio/SeccionesAgenda.tsx`), **el mismo componente que usa `/agenda`**, sobre el mismo `agruparAgenda(usePendientes())`: no hay dos maneras de calcular ni de pintar los pendientes.
+**Mientras se escribe**, todo lo anterior deja paso a los resultados: el mismo buscador global de siempre (ver "Modo búsqueda" más abajo y [BUSCADOR.md](BUSCADOR.md)).
 
-**Lo que se retiró de Inicio el 2026-09-20 (tarea 247):** **"Favoritas"**, **"Recientes"** y el texto de estado vacío que las anunciaba. **No se borró ningún dato**: los favoritos siguen en **Más** ("Mis favoritos"), la actividad del equipo también en **Más**, "Para empezar" en **Guías**, "Problemas frecuentes" en **Diagnóstico** y la descarga sin conexión en **Mi cuenta**; la tabla local `recientes` se sigue escribiendo (`registrarVisita`) aunque ya no se muestre en ninguna pantalla. Tampoco reaparecen los atajos de **Diagnosticar** y **Escanear**, que viven en Más y en la barra lateral.
+**Todos los saltos llevan su origen:** la X de una guía abierta desde aquí y el regreso del catálogo vuelven a Resolver (con la búsqueda escrita, si el salto salió de un resultado).
 
-**Lo que NO trae este cambio (límites del encargo):** no hay **calendario** ni **recordatorios a mano**, ni tabla nueva. La agenda sigue siendo una vista derivada de datos que ya existen.
+**El número de la pestaña Resolver** cuenta solo lo urgente (vencidos y de hoy), igual que contaba el de Inicio.
+
+**Lo que dejó de estar aquí el 2026-09-22 y dónde está:** la **agenda completa** (fecha, resumen y los cinco grupos) vive en `/agenda`, a un toque desde "Atención" y desde Más; **Favoritos** y **Actividad del equipo** siguen en Más. **No se borró ningún dato.**
+
+> **Historia.** Hasta el 2026-09-21 esta pantalla era **Inicio**: "¿Qué necesitas solucionar?" con el buscador y, debajo, la agenda operativa completa (tarea 247, 2026-09-20). Entre el 2026-09-17 y el 2026-09-20 la agenda vivió solo en `/agenda` y en Inicio quedaban "Favoritas" y "Recientes". Lo que sigue en esta sección sobre la cabecera, el modo búsqueda, la bienvenida y la agenda **sigue vigente**, con Resolver donde dice Inicio; la agenda en orden es la de `/agenda`.
 
 **Objetivo de la agenda.** Al entrar, el técnico tiene que poder responder en un vistazo: **qué está vencido, qué toca hoy, qué viene, qué tengo a medias y qué dejó el equipo por revisar**.
 
@@ -328,8 +346,8 @@ Los grupos 3 a 7 los dibuja **`SeccionesAgenda`** (`src/features/inicio/Seccione
 
 **Qué NO es.** No hay entidad "tarea", ni tabla de recordatorios, ni calendario mensual. Es una **vista derivada** de datos que ya existen (credenciales, campos protegidos, borradores, progreso de guías, sugerencias de diagnóstico). El reparto en grupos es lógica pura y está en `src/features/inicio/agenda.ts`; el cálculo de los ítems, en `pendientes.ts`.
 
-**Cabecera fija (con desenfoque).** Desde la tarea 181 la fila superior es la **barra superior global** (ver la sección 2), común a las cinco pestañas: título "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022), pastilla de sincronización y avatar de la cuenta. Debajo, lo propio de Inicio:
-- **Buscador en línea** (input `type="search"`), **de 46 px**: desde el 2026-09-17 la pregunta **"¿Qué necesitas solucionar?"** va encima del campo y el marcador dice **"Procedimiento, error, equipo…"** (la frase de apoyo de debajo se retiró). Hasta entonces el marcador preguntaba **"¿Qué necesitas resolver?"** con la frase **"Busca una guía, equipo, acceso, herramienta, comando o problema"** (2026-09-15, tarea 241). La **etiqueta accesible sigue siendo "Buscar en Soluciones IT"**, que es lo que distingue este buscador de los de sección (regla M-R8): lo que cambió es el marcador de posición, porque el técnico no llega con ganas de buscar, llega con algo que resolver. Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
+**Cabecera fija (con desenfoque).** Desde la tarea 181 la fila superior es la **barra superior global** (ver la sección 2), común a las pestañas: título "Resolver" desde el 2026-09-22 (antes "Inicio" (antes decía "IT Brain": era la única pestaña cuyo encabezado no repetía su rótulo, ver [DECISIONES.md](DECISIONES.md) AD-022), pastilla de sincronización y avatar de la cuenta. Debajo, lo propio de Inicio:
+- **Buscador en línea** (input `type="search"`), **de 46 px**: desde el 2026-09-22 la pregunta es **"¿Qué necesitas resolver?"** y el marcador **"Buscar problema, equipo, comando…"**; desde el 2026-09-17 la pregunta **"¿Qué necesitas solucionar?"** va encima del campo y el marcador dice **"Procedimiento, error, equipo…"** (la frase de apoyo de debajo se retiró). Hasta entonces el marcador preguntaba **"¿Qué necesitas resolver?"** con la frase **"Busca una guía, equipo, acceso, herramienta, comando o problema"** (2026-09-15, tarea 241). La **etiqueta accesible sigue siendo "Buscar en Soluciones IT"**, que es lo que distingue este buscador de los de sección (regla M-R8): lo que cambió es el marcador de posición, porque el técnico no llega con ganas de buscar, llega con algo que resolver. Con botón "Borrar búsqueda" (X) cuando hay texto. Usa `useDeferredValue` para que escribir se sienta instantáneo.
 - **La lupa del chasis se apaga aquí, y solo aquí** (`conLupa={false}`, regla **M-R8**, "un buscador por pantalla"): esta pantalla ya trae su campo con el alcance escrito, así que la lupa era el segundo buscador de la misma pantalla y además con el alcance redactado distinto. En las otras cuatro secciones la lupa ES el buscador y se queda.
 - **Sin saludo.** El saludo dinámico según la hora se **retiró en la tarea 184** (decisión aprobada por el usuario): ocupaba la línea de contexto con un eslogan que cambiaba tres veces al día. Lo que hay que decir el primer día lo dice la bienvenida, y solo mientras haga falta.
 
@@ -356,7 +374,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 
 **Volver con la búsqueda escrita (2026-09-16).** Abrir una ficha desde un resultado y volver, con el regreso de la app o con el atrás del teléfono, repone la consulta en este campo y sus resultados. Vaciar el campo la da por terminada. Nunca viaja en la URL. Ver [BUSCADOR.md](BUSCADOR.md), sección 7.8.
 
-**La agenda, en orden.** Vale igual para el **resumen de Inicio** y para la **pantalla completa** (`/agenda`), que lleva la fecha de hoy como contexto sobre el título "Agenda" y por eso no la repite dentro. El punto 0 es la bienvenida, que solo existe en Inicio:
+**La agenda completa (`/agenda`), en orden.** Desde el 2026-09-22 es la única pantalla que pinta los grupos (Resolver solo enseña "Atención"). Lleva la fecha de hoy como contexto sobre el título "Agenda" y por eso no la repite dentro. El punto 0 es la bienvenida, que vive en Resolver:
 
 0. **Bienvenida del primer día** (en Inicio) (`BienvenidaPrimerDia`, tarea 184; solo mientras haga falta): "Bienvenido, {nombre de pila}", una línea de qué vive aquí, y **tres pasos que se apagan solos**:
    1. *Entraste con tu cuenta* (siempre hecho: esta pantalla solo se ve con sesión).
@@ -386,7 +404,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 - **Cargando** (2026-09-20): mientras la base local responde no se afirma nada. El resumen dice "Revisando la agenda…" y en lugar de los grupos, "Cargando la agenda…"; el número de la pestaña no aparece hasta que hay dato.
 - **Error**: una consulta que falle la recoge el `ErrorBoundary` de la app ("No se pudo cargar la aplicación"); la agenda no tiene estado de error propio.
 
-**El aviso numérico de la pestaña Inicio cuenta solo lo urgente** (encargo del 2026-09-11): **vencidos + los de hoy**. No cuenta próximos, borradores, guías en curso, sugerencias del equipo, favoritos ni actividad. Con cero, no hay número; por encima de nueve, "9+". Antes contaba todos los pendientes, así que era un número que nunca bajaba y enseñaba a ignorarse. (El aviso ya se había mudado de "Más" a Inicio en la tarea 187, hallazgo **M-003**, regla **M-R9**: "Más" es un índice y no contiene ni un pendiente.)
+**El aviso numérico de la pestaña Resolver (antes Inicio) cuenta solo lo urgente** (encargo del 2026-09-11): **vencidos + los de hoy**. No cuenta próximos, borradores, guías en curso, sugerencias del equipo, favoritos ni actividad. Con cero, no hay número; por encima de nueve, "9+". Antes contaba todos los pendientes, así que era un número que nunca bajaba y enseñaba a ignorarse. (El aviso ya se había mudado de "Más" a Inicio en la tarea 187, hallazgo **M-003**, regla **M-R9**: "Más" es un índice y no contiene ni un pendiente.)
 
 **Lo que se fue de Inicio y a dónde** (encargo del 2026-09-11, tarea 3). Nada se borró: cada bloque conserva sus datos, permisos, enlaces y estados vacíos, solo cambió de pantalla.
 
@@ -410,6 +428,8 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 ### 5.2 Guías
 
 **Ruta:** `/soluciones` · **Archivo:** `src/features/soluciones/SolucionesPage.tsx` · **Nivel:** Sección
+
+**Desde el 2026-09-22 (tarea 254) no es pestaña: es el catálogo de Resolver.** Se abre con "Todas las guías" o con un acceso rápido de Resolver (que llega con `?categoria=<id>` y deja el chip puesto), y su cabecera lleva un **regreso a Resolver en todos los tamaños**. Lo de dentro no cambia. Atajo de teclado: `G G`.
 
 **Objetivo.** Responder "¿cómo realizo este procedimiento?". Rejilla de artículos (procedimientos, manuales, incidencias) filtrable por categoría, tipo y etiqueta.
 
@@ -644,6 +664,8 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 **Nueva desde la tarea 182** (mockup `3f` del handoff "Auditoría de Soluciones TI"). Quinta pestaña móvil: la puerta de los ocho destinos que hasta esa tarea no aparecían ni en la barra ni en el sidebar, así que un técnico nuevo no podía encontrarlos sin que alguien se los mostrara (regla **R15**, "todo destino tiene puerta"). La Bóveda deja de ser pestaña y encabeza el primer grupo (decisión aprobada por el usuario en `Decisiones aprobadas.md`).
 
 **Cabecera:** la fila superior es la **barra superior global** (título "Más", sincronización, lupa y cuenta; ver la sección 2). Sin controles propios en la banda de debajo: esta pantalla es solo un índice.
+
+**Desde el 2026-09-22 (tarea 254) es uno de los cuatro destinos principales, en todos los tamaños**, y deja de listar lo que ya tiene su pestaña o su sitio: **Equipos y la Bóveda** (son pestañas) y **Escanear equipo** (vive en Equipos). Su reparto en cuatro grupos (Consulta, Infraestructura, Herramientas y Configuración) es la tarea 257.
 
 **Cuerpo, en grupos (desde el 2026-09-17, tarea 244):**
 - **"Consulta"**: **Equipos** ("Qué se sabe de cada equipo"), **Red** ("Cómo está conectada la infraestructura"), **Bóveda** (solo con permiso, ahora como fila normal con su conteo), **Centro de consulta**, **Ubicaciones** y **Personas**. Equipos, Red y Bóveda dejaron de ser pestañas del teléfono y se abren desde aquí; dentro de ellas se ilumina la pestaña Más y su cabecera lleva un regreso a Más.
@@ -1354,9 +1376,36 @@ Ficha de equipo > "···" > Dar de baja → resuelve cada dependencia (quitar/d
 <a id="14-arbol-de-navegacion"></a>
 ## 14. Árbol jerárquico de navegación
 
-Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de Mi cuenta viven en la barra superior de todas las secciones (Inicio, Guías, Más, Equipos, Red, Bóveda), no solo en Inicio: se omiten del resto de los árboles de abajo para no repetirlos.
+Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de Mi cuenta viven en la barra superior de todas las secciones, no solo en la primera: se omiten del resto de los árboles de abajo para no repetirlos.
 
-**Desde el 2026-09-17 (tarea 244)** las pestañas del teléfono son **Inicio, Guías y Más**, y Equipos, Red y Bóveda cuelgan de Más. Donde el árbol de abajo difiere, manda este:
+**Desde el 2026-09-22 (tarea 254)** la navegación principal son **cuatro destinos, los mismos en todos los tamaños: Resolver, Equipos, Bóveda y Más**. Donde los árboles de abajo difieren, manda este:
+
+```
+Resolver (/)
+ ├── ¿Qué necesitas resolver? (buscador global: tocar una guía la abre en su paso pendiente)
+ ├── Atención (hasta 3 con fecha) → Ver la agenda completa (/agenda)
+ ├── Recientes (hasta 3, 14 días) → la guía, en su paso pendiente
+ ├── Accesos rápidos (categorías con guías) → Guías (/soluciones?categoria=…)
+ ├── Todas las guías → Guías (/soluciones), con regreso a Resolver
+ │    └── Tarjeta de guía → LA GUÍA (/:cat/:art), ejecutándose (ver el árbol de Guías de abajo)
+ └── Bienvenida del primer día
+
+Equipos (/dispositivos)
+ ├── Buscar · Escanear (/escaner, sube a Equipos) · Crear · "···"
+ └── Ficha del equipo (/dispositivos/:id)
+
+Bóveda (/boveda)
+ └── (sin permiso: Acceso restringido; con permiso: desbloqueo y lista)
+
+Más (/mas)
+ ├── Consulta: Red (/red, con regreso a Más) · Centro de consulta · Ubicaciones · Personas
+ ├── Trabajo técnico: Agenda (/agenda) · Diagnóstico
+ ├── Mejor desde el ordenador: Etiquetas QR · Importar equipos
+ ├── Lo mío y lo del equipo: Mis favoritos · Actividad del equipo
+ └── Mi cuenta · Bloqueo y seguridad · Buscar actualización
+```
+
+**Del 2026-09-17 al 2026-09-21 (tarea 244)** las pestañas del teléfono eran **Inicio, Guías y Más**, y Equipos, Red y Bóveda colgaban de Más:
 
 ```
 Inicio (/)

@@ -44,7 +44,7 @@ Grupos "Consulta", "Trabajo técnico" y "Mejor desde el ordenador", más "Mis fa
 
 - Copia local en Dexie (IndexedDB) con cola de subida; Supabase con RLS **`to authenticated` en todas las tablas**: el rol anónimo no puede leer ni escribir nada.
 - Bóveda: permiso `puede_ver_boveda` por RLS, cifrado AES-256-GCM en el cliente (formato `v1.<iteraciones>.<sal>.<iv>.<cifrado>`), verificador de la contraseña maestra en `boveda_meta` y auditoría inmutable en `accesos_boveda`.
-- **No se usa Supabase Realtime.** La sincronización es por consulta periódica y por eventos de red.
+- **Supabase Realtime ya se usa, pero solo como señal y solo con sesión** (`src/lib/sync.ts`): un canal `cambios-equipo` escucha `postgres_changes` del esquema `public` y, ante cualquier evento, dispara una descarga normal (que respeta la RLS por consulta); nunca aplica el contenido del evento. Las tablas publicadas están en la sección 6 de `supabase/schema.sql`. El sondeo cada dos minutos queda de red de seguridad. *(Corregido el 2026-09-22: la primera versión de este documento decía que no se usaba.)*
 
 ### 1.7 PWA y rendimiento
 
@@ -250,7 +250,7 @@ Tres tablas nuevas, sin relación con las existentes salvo `auth.users`:
 
 ### 7.5 ¿Supabase Realtime? Análisis y decisión
 
-- **`postgres_changes`:** entrega filas según la RLS de quien se suscribe. El rol anónimo no tiene identidad, así que no hay forma de limitarlo a SU sesión sin abrir la tabla a todo anónimo (el filtro de la suscripción lo pone el cliente, no es una barrera). **Descartado.**
+- **`postgres_changes`:** es lo que ya usa la app del técnico, con sesión. Entrega filas según la RLS de quien se suscribe, y el rol anónimo no tiene identidad: no hay forma de limitarlo a SU sesión sin abrir la tabla a todo anónimo (el filtro de la suscripción lo pone el cliente, no es una barrera, y la RLS de Realtime no ve cabeceras de la petición). **Descartado para el portal.** Por lo mismo, las tablas nuevas **no** entran en la publicación `supabase_realtime`: ni el canal `cambios-equipo` de los técnicos recibe sus eventos.
 - **Broadcast directo:** el mensaje va de cliente a cliente sin pasar por el servidor, así que la validación del servidor (punto 12 del encargo) no existiría. **Descartado para el contenido.**
 - **Broadcast desde la base (`realtime.send`) con canales privados:** mantendría la validación en el servidor, pero exige activar la autorización de Realtime del proyecto y políticas en el esquema `realtime` (configuración global), y depende de WebSockets que algunas redes corporativas cortan. La ganancia (menos de un segundo frente a uno o dos) no hace falta para enseñar un paso.
 - **Decisión: RPC `security definer` con consulta corta y adaptativa** (cada 1,5 s mientras hay conexión y la pestaña está a la vista; más espaciada si no). Sin tablas abiertas, sin configuración global, validación entera en el servidor y funciona detrás de cualquier proxy. Si en el futuro hiciera falta inmediatez, se puede sumar un "timbre" sin contenido por Broadcast sin cambiar el modelo.

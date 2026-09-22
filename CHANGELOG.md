@@ -8,6 +8,27 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-22
 
+### Cambiado (navegación, tarea 254, Fase 2 del rediseño "Resolver"): cuatro destinos y la pantalla Resolver
+
+**Área modificada:** navegación principal (teléfono, tableta y escritorio), la pantalla de entrada, los atajos de teclado y Más.
+**Tipo:** Modificado (navegación, Inicio pasa a Resolver), Agregado (Atención, Recientes y Accesos rápidos), Eliminado (grupos "Consulta" y "Trabajo técnico" de la barra lateral; filas de Equipos, Bóveda y Escanear en Más).
+**Nuevos:** `src/features/inicio/resolver.ts` (+ `resolver.test.ts`), `src/features/inicio/resolverYAgenda.test.tsx` (sustituye a `agendaInicio.test.tsx`).
+**Renombrados:** `src/features/inicio/InicioPage.tsx` → `ResolverPage.tsx` (con `git mv`).
+**Modificados:** `src/lib/navegacion.ts`, `src/app/{Chasis,atajosApp}.ts(x)`, `src/components/{BarraSuperior,iconos}.tsx`, `src/features/mas/PantallaMas.tsx`, `src/features/soluciones/ArticuloForm.tsx` (dos rótulos), `src/App.tsx` y sus pruebas; `src/pruebas/semillaLocal.ts` y `scripts/capturas-moviles.mjs` (verificación).
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (2.2, 3, 5.1, 5.2, 5.6 y 14), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (11.1 y 11.2), [COMPONENTES_UI.md](COMPONENTES_UI.md) (1.3, 2.0, 2.10f, 3.8s, 3.8s-bis y 3.8w nuevo), [BUSCADOR.md](BUSCADOR.md) (1) y [DECISIONES.md](DECISIONES.md) AD-042.
+**Motivo:** encargo del usuario del **22 de septiembre de 2026**, sección 2: la navegación principal se orienta a Resolver, Equipos, Bóveda y Más.
+**Impacto esperado:** abrir la app es "¿qué necesitas resolver?" y el buscador; Equipos y la Bóveda quedan a un toque; en escritorio desaparece la segunda copia de Más.
+**SIN cambios** de rutas, esquema local o de Supabase, RLS, datos, sincronización, Bóveda, buscador ni ejecución de guías. **No hay que ejecutar SQL.**
+
+- **Cuatro destinos, una sola lista** para la barra del teléfono, el rail de tableta y la barra lateral: **Resolver** (`/`), **Equipos**, **Bóveda** y **Más**. Qué se ilumina lo decide `destinoPrincipalDe` en los tres (una guía ilumina Resolver; Red, Más). La Bóveda es pestaña para todos (R17); sin permiso abre "Acceso restringido".
+- **Resolver sustituye a Inicio y a la pestaña Guías.** La pregunta "¿Qué necesitas resolver?" y el buscador ("Buscar problema, equipo, comando…"); debajo, solo si tienen algo que decir: **Atención** (hasta tres asuntos con fecha, con "Ver la agenda completa"), **Recientes** (hasta tres guías usadas en 14 días, "Vas en el paso N de M" y "Continuar") y **Accesos rápidos** (categorías con guías publicadas y ejecutables, las más usadas primero, solo con dos o más). "Todas las guías" siempre. La agenda completa sigue en `/agenda`.
+- **El catálogo de guías y Red llevan regreso** en todos los tamaños (a Resolver y a Más): dejaron de ser raíces. `BarraSuperior` cambia `volverEnMovilA` por `volver`, y oculta el avatar desde 768 px (la tableta lo mostraba dos veces).
+- **Padres nuevos:** `/soluciones`, `/agenda` y `/conectar` suben a Resolver; `/escaner`, a Equipos; `/red`, `/diagnostico` y `/cuenta`, a Más.
+- **Atajos:** `G R` Resolver, `G E` Equipos, `G B` Bóveda, `G M` Más, `G G` todas las guías (Red pierde el suyo).
+- **Más** deja de listar Equipos, la Bóveda y Escanear (son pestaña o viven en Equipos). Su reparto en cuatro grupos es la tarea 257.
+- **Corregido:** el editor de guías decía "Destacar en Inicio" para la ruta de aprendizaje, que vive en «Para empezar» del catálogo desde el 2026-09-11.
+- **Verificación:** 122 archivos y 1748 casos en verde (antes 121 y 1720); lint, tipos y build limpios. Capturas por CDP en 390×844, 768×1024, 1366×768 y 1920×1080 con el banco local (ampliado con accesos con fecha, equipos, una conexión y visitas recientes, todo inventado).
+
 ### Documentación (tarea 253, Fase 1 del rediseño "Resolver"): estado actual y mapa final de navegación
 
 **Área modificada:** documentación del proyecto.
