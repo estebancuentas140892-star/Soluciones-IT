@@ -8,6 +8,25 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-23
 
+### Cambiado (más, tarea 257, Fase 5 del rediseño "Resolver"): Más e Infraestructura
+
+**Área modificada:** Más, la agenda completa y la memoria de Red.
+**Tipo:** Modificado (Más en cuatro grupos; "Mis favoritos" como fila que se despliega; "Mejor desde el ordenador" como nota de fila; dos columnas desde 1024 px), Agregado (fila Topología con el icono `Graph`, que vuelve a Más; "Actividad del equipo" al final de la agenda), Corregido (Red había perdido el nodo que se estaba recorriendo al dejar de ser pestaña), Eliminado (grupos "Trabajo técnico", "Mejor desde el ordenador" y "Lo mío y lo del equipo"; "Actividad del equipo" en Más).
+**Nuevos:** `src/features/historial/ActividadDelEquipo.tsx` y `src/features/mas/masInfraestructura.test.tsx`.
+**Modificados:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/app/memoriaPestana.ts` (+ `memoriaPestana.test.ts`), `src/components/iconos.tsx` (`Graph`) y el comentario de `src/features/red/RedPage.tsx`; `scripts/capturas-moviles.mjs` (verificación).
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.6, la agenda, 5.4, 6.7, 10 y el árbol de navegación), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-047 y memoria por pestaña), [COMPONENTES_UI.md](COMPONENTES_UI.md) (1.3, 2.0, 2.4b, 2.10m, 3.1c y 3.8s) y [DECISIONES.md](DECISIONES.md) (AD-046).
+**Motivo:** encargo del usuario del **22 de septiembre de 2026**, secciones 18, 20 y 22 ([PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md), sección 6).
+**Impacto esperado:** Más se lee como un índice, una pregunta por grupo y sin filas vacías; la infraestructura queda junta; volver a Red devuelve al equipo que se estaba recorriendo.
+**SIN cambios** de rutas, esquema local o de Supabase, RLS, datos ni sincronización. **No hay que ejecutar SQL.**
+
+- **Grupos:** Consulta (Centro de consulta, Agenda y Mis favoritos si hay), Infraestructura (Red, Topología, Ubicaciones, Personas), Herramientas (Diagnóstico, Importar equipos y Etiquetas QR, estas dos con la nota "Mejor desde el ordenador") y Configuración (Mi cuenta, Bloqueo y seguridad, Buscar actualización).
+- **Mis favoritos:** una fila con su conteo que se despliega en el sitio; sin favoritos, no hay fila.
+- **Actividad del equipo:** al final de `/agenda`, plegada y solo si hay; ya no está en Más.
+- **Red y Topología:** las mismas pantallas. La fila Red abre en el nodo donde se dejó (`RAICES_CON_MEMORIA`: la memoria que se perdió en la tarea 254); la fila Topología (icono `Graph`, no `TreeStructure`, que es la guía con preguntas) lleva el origen de Más y su regreso vuelve a Más.
+- **Pantallas anchas:** dos columnas desde 1024 px; una sola en el teléfono y la tableta.
+- **Verificación:** 128 archivos y 1847 casos en verde (antes 127 y 1831); lint y tipos limpios. Prueba de flujo con las pantallas reales (`masInfraestructura.test.tsx`, 12 casos, entre ellos el regreso de Topología) y 4 casos nuevos de la memoria de Red. Capturas por CDP en 390×844, 768×1024, 1366×768 y 1920×1080 con dos paradas nuevas (`mas-favoritos`, `agenda-actividad`): Más, sin hallazgos en los cuatro tamaños.
+- **Pendiente:** la Agenda, Bloqueo y seguridad, Importar y Etiquetas, abiertas desde Más, todavía no vuelven a Más (tarea 265). El generador de iconos ya no reproduce `iconos.tsx` (tarea 264).
+
 ### Cambiado (resolver, tarea 263): Resolución guiada, Resolver unifica guías y diagnósticos
 
 **Área modificada:** Resolver (buscador y Recientes), ejecución de los diagnósticos, editor de diagnósticos (solo "Cómo termina" y textos), consulta de credenciales en línea.

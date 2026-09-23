@@ -30,6 +30,37 @@
 
 ## Encargo del 2026-09-22: Soluciones IT se organiza alrededor de Resolver
 
+### 257. Fase 5: Más e Infraestructura
+
+**Título:** Más con cuatro grupos (Consulta, Infraestructura, Herramientas, Configuración). **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Media. **Origen:** encargo del usuario del 2026-09-22, secciones 18, 20 y 22 ([PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md), sección 6). **Decisión:** [DECISIONES.md](DECISIONES.md) AD-046. **Regla:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-047.
+
+**Qué se hizo:**
+
+1. **Más en cuatro grupos** (`PantallaMas.tsx`): Consulta (Centro de consulta, Agenda, Mis favoritos), Infraestructura (Red, Topología, Ubicaciones, Personas), Herramientas (Diagnóstico, Importar equipos, Etiquetas QR) y Configuración (Mi cuenta, Bloqueo y seguridad, Buscar actualización). Fuera "Trabajo técnico", "Mejor desde el ordenador" y "Lo mío y lo del equipo".
+2. **Mis favoritos, solo si hay** (`FilaFavoritos`): una fila con la forma de sus vecinas y su conteo, que se despliega en el sitio (botón con `aria-expanded`).
+3. **"Mejor desde el ordenador" como nota** de las filas Importar y Etiquetas (`Fila` gana `nota`).
+4. **Actividad del equipo al final de la Agenda** (`ActividadDelEquipo.tsx`, nuevo, con la fila de siempre): plegada y solo si hay; no en el resumen de Resolver.
+5. **Topología con fila propia** y un icono nuevo, `Graph` (copiado del SVG de Phosphor 2.1.1; no `TreeStructure`, R24). La fila lleva el origen de Más (`Fila` gana `estado`), así que el regreso de la topología vuelve a Más (M-R2).
+6. **Red recupera su memoria** (`RAICES_CON_MEMORIA` en `memoriaPestana.ts`): al dejar de ser pestaña en la 254 había perdido el nodo que se estaba recorriendo; la fila Red de Más lo repone. Su pantalla no cambia (solo su comentario).
+7. **Columnas:** una en el teléfono y la tableta, dos desde 1024 px.
+
+**Pruebas.** 128 archivos y 1847 casos en verde (la 263 cerró con 127 y 1831); tipos y lint limpios. Nueva: `masInfraestructura.test.tsx` (12 casos, con las pantallas reales): los cuatro grupos en orden y cada destino en el suyo; Topología abre el mapa y su regreso vuelve a Más; la nota en Importar y Etiquetas y no en Diagnóstico; Mis favoritos aparece con su conteo y se despliega, y sin favoritos no hay fila; la actividad ya no está en Más y está al final de la Agenda, plegada, y sin actividad no se monta; Red conserva su sección con regreso a Más; la fila Red abre el nodo donde se dejó, o Red a secas. `memoriaPestana.test.ts` suma 4 casos (Red recuerda su nodo sin ser pestaña). El caso del regreso de Topología falla sin la corrección (comprobado).
+
+**Capturas** (390×844, 768×1024, 1366×768 y 1920×1080, en `evidencia/`, no se versiona; paradas nuevas `mas-favoritos` y `agenda-actividad`). Dos defectos propios, encontrados y corregidos antes del commit: (a) a 768 px las dos columnas dejaban unos 340 px por grupo y recortaban los subtítulos, así que las columnas empiezan en 1024; (b) a 390 px la rejilla sin columnas declaradas crecía más que la pantalla (la columna implícita `auto` no se encoge por debajo de un texto `truncate`) y el conteo y el galón quedaban fuera del borde, recortados y sin barra de desplazamiento. **La auditoría del script no lo detectó**: se vio mirando la captura. `grid-cols-1` lo corrige. Después, Más sin hallazgos en los cuatro tamaños. Lo que queda ya existía: en Red, "Crear" a 32 px de alto y la fila de un equipo del recorrido a 36; en la Agenda, títulos sembrados recortados.
+
+**Verificación en navegador** (servidor local, 375×812): Más > Topología enseña "‹ Más" y vuelve a `/mas`.
+
+**Decisión revertida en el camino.** Se convirtió Red en documento, como sus vecinas de grupo, y se deshizo: la 254 la dejó como sección con regreso a propósito (comentario del `Chasis`) y la propuesta dice "no se tocan: cambian de puerta, no de comportamiento" (AD-046, decisión 6).
+
+**Observaciones (no se cambiaron):**
+- **Tarea 265:** la Agenda (sube a Resolver; el origen de Más le quitaría la fecha de la cabecera), Bloqueo y seguridad (a Mi cuenta), Importar y Etiquetas (a Equipos, escrito en la propia pantalla desde que su puerta era el "···" de Equipos, retirado en la 256), abiertas desde Más, no vuelven a Más.
+- **Tarea 264:** `scripts/generar-iconos.mjs` conoce 91 iconos y `iconos.tsx` tiene 105; ejecutarlo borraría los 14 añadidos a mano. `Graph` se añadió a mano, como los anteriores.
+- La cabecera de Red (sección) no es la de sus vecinas de grupo (documento): es la decisión de la 254, que se respeta.
+- En la cabecera documento de Ubicaciones y Personas, el regreso con texto mide 36 px de alto y "Crear" 32 (anotado en la tarea 262).
+- Las pantallas de Red siguen dibujando la topología con `TreeStructure` (anotado en la tarea 189).
+
+**Lo que no se tocó:** las pantallas de Red y Topología, las rutas, `padreDe`, el esquema local y el de Supabase, la RLS, la sincronización y los datos. **No hay que ejecutar SQL.**
+
 ### 256. Fase 4: Equipos + QR
 
 **Título:** Equipos responde "¿qué sabemos de este dispositivo?" y el QR es otra forma de buscar. **Estado:** Completada (2026-09-22) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22, secciones 16 a 18. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-044.

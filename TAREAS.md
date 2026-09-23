@@ -4,18 +4,19 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación), 255 (ejecución visual de las guías) y 256 (Equipos + QR), y la **263** (Resolución guiada, encargo nuevo del mismo día, cerrada el 2026-09-23). **En proceso:** 257 (Más e Infraestructura). **Siguen:** 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
+**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación), 255 (ejecución visual de las guías), 256 (Equipos + QR) y 257 (Más e Infraestructura, cerrada el 2026-09-23), y la **263** (Resolución guiada, encargo nuevo del mismo día, cerrada el 2026-09-23). **En proceso:** 258 (portal `/asistencia`). **Siguen:** 259 (precache y rendimiento) y 260 (pruebas completas).
 
-### 257. Fase 5: Más e Infraestructura
+### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
 
-- **Título:** Más con cuatro grupos (Consulta, Infraestructura, Herramientas, Configuración).
-- **Descripción:** reordenar `PantallaMas.tsx`; Mis favoritos solo si hay; Actividad del equipo al final de la Agenda; Red y Topología cambian de puerta, no de comportamiento; en pantallas anchas, columnas.
-- **Motivo:** secciones 18, 20 y 22 del encargo.
-- **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** En proceso (desde el 2026-09-23, al cerrarse la tarea 263; todavía sin empezar en el código).
-- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/features/red/RedPage.tsx` (regreso).
-- **Dependencias:** 254.
-- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+- **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
+- **Descripción:** (1) migración en `supabase/schema.sql`: tablas `asistencia_sesiones`, `asistencia_mensajes`, `asistencia_eventos`, RLS sin políticas y funciones `security definer` con permisos explícitos; (2) entrada propia `asistencia.html` sin service worker, Dexie ni cliente completo de Supabase; (3) `/conectar` y la hoja "Conectar equipo" (escanear o escribir el código); (4) "Enviar a este equipo" con vista previa desde el paso; (5) constructor de contenido que no puede recibir datos de la Bóveda y validación en el servidor; (6) indicador y "Desconectar equipo"; (7) pruebas del SQL, del constructor y de los estados del portal.
+- **Motivo:** secciones 9 a 15 del encargo.
+- **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
+- **Prioridad:** Alta. **Estado:** En proceso (desde el 2026-09-23, al cerrarse la tarea 257; todavía sin empezar en el código).
+- **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`.
+- **Ya hecho en la 256:** el escáner reconoce el QR del portal (`resolverCodigo` da `asistencia` para `/conectar?codigo=` con 6 cifras, de cualquier origen) y enseña una tarjeta neutra en `EscanerPage`. Aquí se cambia esa tarjeta por ir a `/conectar?codigo=…`.
+- **Dependencias:** 255. **Paso del usuario:** ejecutar `supabase/schema.sql` en el SQL Editor.
+- **Modelo/esfuerzo:** Opus 5 / Extra (seguridad).
 
 ---
 
@@ -374,18 +375,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
-
-- **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
-- **Descripción:** (1) migración en `supabase/schema.sql`: tablas `asistencia_sesiones`, `asistencia_mensajes`, `asistencia_eventos`, RLS sin políticas y funciones `security definer` con permisos explícitos; (2) entrada propia `asistencia.html` sin service worker, Dexie ni cliente completo de Supabase; (3) `/conectar` y la hoja "Conectar equipo" (escanear o escribir el código); (4) "Enviar a este equipo" con vista previa desde el paso; (5) constructor de contenido que no puede recibir datos de la Bóveda y validación en el servidor; (6) indicador y "Desconectar equipo"; (7) pruebas del SQL, del constructor y de los estados del portal.
-- **Motivo:** secciones 9 a 15 del encargo.
-- **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`.
-- **Ya hecho en la 256:** el escáner reconoce el QR del portal (`resolverCodigo` da `asistencia` para `/conectar?codigo=` con 6 cifras, de cualquier origen) y enseña una tarjeta neutra en `EscanerPage`. Aquí se cambia esa tarjeta por ir a `/conectar?codigo=…`.
-- **Dependencias:** 255. **Paso del usuario:** ejecutar `supabase/schema.sql` en el SQL Editor.
-- **Modelo/esfuerzo:** Opus 5 / Extra (seguridad).
-
 ### 259. Fase 7: precache, trozos y rendimiento
 
 - **Título:** que Resolver, Equipos y Bóveda arranquen rápido sin perder las guías sin conexión.
@@ -412,10 +401,22 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Título:** los iconos de la cabecera de una ficha miden 34 px (regla R6: 44 de dedo).
 - **Descripción:** `BTN_ICONO_SECUNDARIO` (`src/components/nocturne.tsx`, 34×34) es el botón de icono de las cabeceras de ficha: favorito (`BotonFavorito`), compartir y "···" en `DispositivoPage` (la auditoría de capturas del 2026-09-22 lo marca en `equipo-ficha`), y los mismos en `ArticuloPage` (que es la 229 b). También lo usan `BovedaPage`, `CredencialForm`, `CrearAccesoRapido` y `SeguridadDelEquipo`. Subir el área táctil a 44 px sin agrandar el dibujo (por ejemplo, con margen negativo, como el borrar de `CampoBusqueda`), o fundir favorito y compartir dentro del "···". Resolver junto con la 229 b.
 - **Motivo:** regla R6; detectado al verificar la tarea 256, ya existía.
+- **Visto también al verificar la 257:** en la cabecera documento de Ubicaciones y Personas el regreso con texto (`BotonVolver` sin `soloIcono`) mide 36 px de alto y "Crear" (`BTN_SECUNDARIO`) 32; en Red, el mismo "Crear". Es el mismo patrón compartido: conviene resolverlo aquí, junto con los iconos de las fichas.
 - **Impacto:** medio: son los controles del borde superior, la zona menos alcanzable con una mano.
 - **Prioridad:** Media. **Estado:** Pendiente.
 - **Área afectada:** `src/components/nocturne.tsx`, `src/components/BotonFavorito.tsx`, `src/features/dispositivos/DispositivoPage.tsx` (~cabecera), `src/features/soluciones/ArticuloPage.tsx`.
 - **Dependencias:** ninguna (conviene con la 229 b).
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+
+### 265. Más: que sus puertas laterales vuelvan a Más
+
+- **Título:** la Agenda, Bloqueo y seguridad, Importar equipos y Etiquetas QR, abiertas desde Más, no vuelven a Más (regla M-R2).
+- **Descripción:** detectado al cerrar la tarea 257, que resolvió el mismo caso para su fila nueva (Topología lleva `conOrigen('/mas', 'Más')`). Quedan cuatro filas de `PantallaMas.tsx` cuyo regreso lleva a otra parte: (a) **Agenda** sube a Resolver (`padreDe`, decidido en la 254), y pasarle el origen de Más no basta: el chasis pone la etiqueta del origen en la línea de contexto (`src/app/Chasis.tsx` ~395, `contexto = origen?.etiqueta ?? props.contexto`) y la Agenda usa esa línea para la fecha de hoy (`src/features/inicio/AgendaPage.tsx` ~28, `contexto={hoyTexto}`); (b) **Bloqueo y seguridad** (`/cuenta/seguridad`) sube a Mi cuenta; (c) **Importar equipos** y **Etiquetas QR** salen a Equipos porque lo llevan escrito (`salidaA="/dispositivos"` y `vuelta="Equipos"` en `ImportarDispositivosPage.tsx` ~118 y en la `BarraTarea` propia de `EtiquetasPage.tsx` ~76, que no pasa por el chasis y no lee el origen), desde que su camino principal era el menú "···" de Equipos, retirado en la 256. Decidir en cada una si vuelve a Más o si su padre actual es lo correcto, y que el rótulo nombre el destino real.
+- **Motivo:** regla M-R2 ("volver deshace el último salto").
+- **Impacto:** bajo a medio: al salir, una pantalla que no se había visitado y un toque de más.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/mas/PantallaMas.tsx` (filas), `src/app/Chasis.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/features/dispositivos/importar/ImportarDispositivosPage.tsx` (~118), `src/features/dispositivos/EtiquetasPage.tsx` (~76).
+- **Dependencias:** ninguna.
 - **Modelo/esfuerzo:** Sonnet 5 / Medio.
 
 ### 261. Editor: la línea de completitud se toca en 25 px de alto
@@ -427,6 +428,17 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Prioridad:** Baja. **Estado:** Pendiente.
 - **Área afectada:** `src/features/soluciones/ArticuloForm.tsx` (pie fijo del editor).
 - **Dependencias:** ninguna (conviene junto a la 227, que toca la completitud).
+- **Modelo/esfuerzo:** Sonnet 5 / Bajo.
+
+### 264. El generador de iconos ya no reproduce `iconos.tsx`
+
+- **Título:** `scripts/generar-iconos.mjs` conoce 91 iconos; `src/components/iconos.tsx` tiene 105.
+- **Descripción:** detectado en la tarea 257 al necesitar `Graph`. Catorce iconos se añadieron a mano, con sus comentarios (`ArrowsLeftRight`, `BookBookmark`, `ChartBar`, `Crosshair`, `CursorClick`, `DotsNine`, `DotsSixVertical`, `Graph`, `Keyboard`, `ListChecks`, `MagnifyingGlassMinus`, `MagnifyingGlassPlus`, `TerminalWindow` y `WrenchFill`), y ejecutar el generador (`node scripts/generar-iconos.mjs <ruta de @phosphor-icons/core> <salida>`) los borraría junto con los comentarios escritos a mano. Además, `@phosphor-icons/core` (2.1.1) se instala con `--no-save` y no figura en `package.json`. Poner al día la lista del generador y hacer que conserve los comentarios, o retirarlo y dejar documentada la copia a mano (hoy en `COMPONENTES_UI.md`, 1.3).
+- **Motivo:** una herramienta que destruye trabajo si se usa como dice su cabecera.
+- **Impacto:** bajo (herramienta de desarrollo).
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `scripts/generar-iconos.mjs`, `src/components/iconos.tsx`, `COMPONENTES_UI.md` (1.3).
+- **Dependencias:** ninguna (conviene antes de la 189, que cambia iconos).
 - **Modelo/esfuerzo:** Sonnet 5 / Bajo.
 
 ### 245. Revisar el CONTENIDO de la guía de la resolución DIAN con el modelo nuevo
@@ -890,6 +902,7 @@ La **tarea 185** (chasis en tres niveles y `BarraTarea`, reglas R18/R19/R22) que
 - **Prioridad:** Baja. **Estado:** Pendiente.
 - **Área afectada:** `src/components/iconos.tsx`, `src/features/soluciones/iconosSoluciones.ts`, los cinco buscadores y las pantallas que pintan resaltado de búsqueda.
 - **Dependencias:** conviene hacerla al final del chasis, cuando estén decididos los destinos definitivos. Regla que fija: **R24** (un icono, un significado en toda la app).
+- **Avance (tarea 257, 2026-09-23):** existe `Graph` (un grafo de nodos) para la topología, y la fila Topología de Más ya lo usa. `TreeStructure` quedó como "guía con preguntas" en toda la app (AD-045), pero las pantallas de Red siguen dibujando con él la topología: `RedPage.tsx` ~127 y ~160, `EquiposRedPage.tsx` ~135, `TopologiaPage.tsx` ~160 y `TopologiaEquipoPage.tsx` ~53 y ~85. Pasarlas a `Graph` cierra esa colisión.
 
 ### 177. Pendientes que la auditoría de Soluciones dejó fuera a propósito
 

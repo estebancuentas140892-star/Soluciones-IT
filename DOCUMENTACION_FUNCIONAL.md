@@ -233,7 +233,7 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 |------|-----------------------|-------|-------------|
 | `/login` | LoginPage | Fuera del chasis | Inicio de sesión (fuera de RequireAuth) |
 | `/` (index) | ResolverPage | Sección | **Resolver** (desde el 2026-09-22): "¿Qué necesitas resolver?", el buscador global y, debajo, solo lo que ayuda: Atención (hasta tres asuntos con fecha), Recientes (guías usadas en 14 días) y Accesos rápidos por categoría, con "Todas las guías" |
-| `/agenda` | AgendaPage | Documento | **Agenda completa**: fecha, resumen, vencidos, para hoy, próximos, en curso y por revisar del equipo. Sube a Resolver |
+| `/agenda` | AgendaPage | Documento | **Agenda completa**: fecha, resumen, vencidos, para hoy, próximos, en curso y por revisar del equipo, y al final, plegada, la actividad del equipo (desde el 2026-09-23). Sube a Resolver |
 | `/cuenta` | CuentaPage | Documento | Mi cuenta (cambiar contraseña, cerrar sesión). Sube a Más |
 | `/cuenta/seguridad` | SeguridadPage | Documento | Bloqueo de la app (patrón/contraseña) |
 | `/soluciones` | SolucionesPage | Sección | Catálogo de guías: lista, chips de categoría, buscador, hoja de tipo. Desde el 2026-09-22 no es pestaña: se abre desde Resolver y su cabecera lleva un regreso a Resolver |
@@ -265,16 +265,16 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/referencia/nueva` | ReferenciaForm | Tarea | Crear ficha (`?tipo=herramienta\|termino\|atajo\|comando`) |
 | `/referencia/:referenciaId` | ReferenciaFicha | Documento | Ficha de una herramienta, término, atajo o comando |
 | `/referencia/:referenciaId/editar` | ReferenciaForm | Tarea | Editar ficha |
-| `/red` | RedPage | Sección | Recorrido por nodos: el equipo, de qué depende y qué cae si falla. Desde el 2026-09-22 se abre desde Más y su cabecera lleva un regreso a Más |
+| `/red` | RedPage | Sección | Recorrido por nodos: el equipo, de qué depende y qué cae si falla. Desde el 2026-09-22 se abre desde Más y su cabecera lleva un regreso a Más; desde el 2026-09-23 la fila de Más la abre en el nodo donde se dejó |
 | `/red/equipos` | EquiposRedPage | Documento | Todos los equipos de red, agrupados por ubicación |
-| `/red/topologia` | TopologiaPage | Documento | Mapa/bosque de toda la red |
+| `/red/topologia` | TopologiaPage | Documento | Mapa/bosque de toda la red. Se abre desde el pie de Red y, desde el 2026-09-23, desde Más > Infraestructura > Topología, que vuelve a Más |
 | `/red/topologia/:dispositivoId` | TopologiaEquipoPage | Documento | Topología centrada en un equipo |
 | `/boveda` | BovedaGuard > BovedaPage | Sección | Lista de secretos (tras desbloqueo) |
 | `/boveda/nueva` | CredencialForm | Tarea | Crear secreto |
 | `/boveda/migrar` | MigracionCredenciales | Tarea | Migrar secretos que son de un equipo |
 | `/boveda/:credencialId` | CredencialPage | Documento | Ficha de un secreto (descifrado local) |
 | `/boveda/:credencialId/editar` | CredencialForm | Tarea | Editar secreto |
-| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos: Red, Centro de consulta, Ubicaciones, Personas, Agenda, Diagnóstico, Etiquetas QR, Importar y Mi cuenta. Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
+| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos, en cuatro grupos desde el 2026-09-23: Consulta (Centro de consulta, Agenda y Mis favoritos si hay), Infraestructura (Red, Topología, Ubicaciones, Personas), Herramientas (Diagnóstico, Importar equipos, Etiquetas QR) y Configuración (Mi cuenta, Bloqueo y seguridad, Buscar actualización). Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
 | `/diagnostico` | DiagnosticosPage | Documento | Lista de problemas por categoría. Sube a Más |
 | `/diagnostico/nuevo` | DiagnosticoForm | Tarea | Crear diagnóstico (árbol de preguntas) |
 | `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Tarea | Asistente de ejecución del diagnóstico |
@@ -347,7 +347,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **El número de la pestaña Resolver** cuenta solo lo urgente (vencidos y de hoy), igual que contaba el de Inicio.
 
-**Lo que dejó de estar aquí el 2026-09-22 y dónde está:** la **agenda completa** (fecha, resumen y los cinco grupos) vive en `/agenda`, a un toque desde "Atención" y desde Más; **Favoritos** y **Actividad del equipo** siguen en Más. **No se borró ningún dato.**
+**Lo que dejó de estar aquí el 2026-09-22 y dónde está:** la **agenda completa** (fecha, resumen y los cinco grupos) vive en `/agenda`, a un toque desde "Atención" y desde Más; **Favoritos** sigue en Más (la fila "Mis favoritos" de Consulta, solo si hay alguno) y **Actividad del equipo**, desde el 2026-09-23, está al final de la agenda completa, plegada. **No se borró ningún dato.**
 
 > **Historia.** Hasta el 2026-09-21 esta pantalla era **Inicio**: "¿Qué necesitas solucionar?" con el buscador y, debajo, la agenda operativa completa (tarea 247, 2026-09-20). Entre el 2026-09-17 y el 2026-09-20 la agenda vivió solo en `/agenda` y en Inicio quedaban "Favoritas" y "Recientes". Lo que sigue en esta sección sobre la cabecera, el modo búsqueda, la bienvenida y la agenda **sigue vigente**, con Resolver donde dice Inicio; la agenda en orden es la de `/agenda`.
 
@@ -400,6 +400,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 5. **Próximos** — vencimientos futuros dentro del periodo de aviso del sistema (`DIAS_AVISO_VENCIMIENTO`, 30 días). Se ven **3** y el resto entra con **"Ver los otros N"**, en el sitio.
 6. **En curso** — trabajo propio empezado: la **tarjeta de reanudar** la guía a medias (`BarraReanudar variante="tarjeta"`, el mismo dato que "Sin terminar" de Guías, descartable) y los **borradores propios** ("Borrador propio · actualizado hace 2 d"). No son obligaciones con plazo, así que **nunca aparecen en Vencidos ni en Para hoy**.
 7. **Por revisar del equipo** — sugerencias de diagnóstico que nadie ha convertido en guía. **No dice "Te toca a ti"**: no están asignadas a este técnico.
+8. **Actividad del equipo** (desde el 2026-09-23, tarea 257; antes en Más): lo último de la pantalla, **plegada** tras una línea con su conteo. Abierta, dice quién hizo qué y cuándo, con las cinco últimas: "Ana editó Reiniciar el switch · hace 2 h", "creó", "eliminó" o "ejecutó el diagnóstico", y cada frase abre su ficha. **No es un pendiente**, así que va después de todos ellos y no entra en el resumen ni en el número de la pestaña. **Solo aquí**: "Atención", en Resolver, no la enseña. Sin actividad, no aparece.
 
 **Ningún elemento cae en dos grupos.** El reparto es excluyente: primero manda la fecha, y lo que no tiene fecha se agrupa por a quién pertenece el trabajo.
 
@@ -423,8 +424,8 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 |---|---|---|
 | **Problemas frecuentes** | Diagnóstico (`/diagnostico`) | Es la lectura agregada de ese módulo. Sin ninguna ejecución registrada el rótulo es **"Diagnósticos recientes"**, no "Problemas frecuentes" |
 | **Para empezar** | Guías (`/soluciones`) | Ruta de aprendizaje sobre guías; se oculta al buscar o con filtro de etiqueta |
-| **Favoritos** | Más (`/mas`), como **"Mis favoritos"** | Sección plegable con su conteo. Inicio tuvo "Favoritas" (solo guías) entre el 2026-09-17 y el 2026-09-20 |
-| **Actividad del equipo** | Más (`/mas`) | Sección plegable con su conteo |
+| **Favoritos** | Más (`/mas`), como **"Mis favoritos"** | Desde el 2026-09-23, una fila de Consulta con su conteo que se despliega en el sitio y solo aparece si hay alguno (antes, una sección plegable propia). Inicio tuvo "Favoritas" (solo guías) entre el 2026-09-17 y el 2026-09-20 |
+| **Actividad del equipo** | Agenda completa (`/agenda`), al final | Sección plegable con su conteo. Estuvo en Más del 2026-09-11 al 2026-09-22 |
 | **Descargar todo para offline** | Mi cuenta (`/cuenta`) | Ajuste de este dispositivo, como instalar la app; mismo estado que el paso 3 de la bienvenida |
 | **Diagnóstico** y **Escanear** (atajos) | Ya estaban en la navegación | No se duplican en Inicio |
 | **Lo que consultaste** | En ninguna pantalla desde el 2026-09-20 | Volvió a Inicio como "Recientes" (tarea 241) y se retiró con la tarea 247: Inicio es trabajo pendiente. El registro local (`recientes.ts`) se sigue escribiendo |
@@ -590,13 +591,13 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 <a id="54-red"></a>
 ### 5.4 Red
 
-**Ruta:** `/red` · **Archivo:** `src/features/red/RedPage.tsx` · **Nivel:** Sección
+**Ruta:** `/red` · **Archivo:** `src/features/red/RedPage.tsx` · **Nivel:** Sección · **Puerta:** Más > Infraestructura (desde el 2026-09-23)
 
 **Objetivo.** Responder "¿cómo está conectada la infraestructura?". Reúne los equipos de las categorías marcadas `es_red` (racks, puntos de red, switches, access points, cámaras). No duplica el inventario: son dispositivos normales con la bandera de categoría.
 
 **Red abre con el nodo, no con la lista (tarea 204, hallazgo M-018).** Hasta entonces esta pantalla era un **segundo inventario**: el mismo buscador, los mismos grupos y la misma fila de equipo que Equipos, con las relaciones apartadas detrás de una fila. La sección que existe para explicar dependencias no las mostraba en su primera pantalla. Ahora la pestaña abre con **un nodo y su vecindad**, que es la pantalla que ya estaba construida (la topología de un equipo) y estaba a tres toques.
 
-**Cabecera:** la **barra superior global** (título "Red", sincronización, lupa y cuenta; ver la sección 2). Debajo: subtítulo "Cómo está conectada la infraestructura", **botón "Crear"** (→ `/dispositivos/nuevo?red=1`, que prioriza las categorías de red en el selector) y una **puerta al buscador** con forma de campo (→ `/red/equipos?buscar=1`, que abre la lista con el teclado puesto). No es un campo de verdad: aquí se recorre, y filtrar filtraría algo que no está a la vista.
+**Cabecera:** la **barra superior global** (título "Red", sincronización, lupa y cuenta; ver la sección 2) con, desde el 2026-09-22, el regreso a Más. Debajo: subtítulo "Cómo está conectada la infraestructura", **botón "Crear"** (→ `/dispositivos/nuevo?red=1`, que prioriza las categorías de red en el selector) y una **puerta al buscador** con forma de campo (→ `/red/equipos?buscar=1`, que abre la lista con el teclado puesto). No es un campo de verdad: aquí se recorre, y filtrar filtraría algo que no está a la vista.
 
 **Cuerpo:**
 - **"Estás recorriendo"**: tarjeta del nodo actual con su icono de tipo, nombre, estado (punto de color) e IP, más un botón de 44 px que abre su **topología completa** (`/red/topologia/:id`), donde están las conexiones y su editor.
@@ -604,7 +605,7 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 - Si el equipo **no tiene conexiones registradas**, lo dice y ofrece registrarlas.
 - Al pie, dos filas-puerta: **"Todos los equipos de red por ubicación"** con su conteo (→ `/red/equipos`) y **"Mapa completo, desde cada raíz"** (→ `/red/topologia`). Las dos vuelven **al nodo que se estaba recorriendo**, no al nodo de entrada.
 
-**El nodo se recuerda sin almacenamiento nuevo.** Viaja en `/red?nodo=<id>`, así que la **memoria de pestaña** (tarea 187) lo repone al volver de otra sección igual que repone el filtro de Guías. Si el equipo recordado ya no existe, o no hay memoria, la pestaña abre por la **raíz del bosque con más equipos colgando**: el rack o el switch de núcleo, que es por donde empiezan casi todos los recorridos.
+**El nodo se recuerda sin almacenamiento nuevo.** Viaja en `/red?nodo=<id>`, así que la **memoria de pestaña** (tarea 187) lo repone al volver de otra sección igual que repone el filtro de Guías. Al dejar de ser pestaña (2026-09-22) Red perdió esa memoria sin que se notara; desde el 2026-09-23 (tarea 257) la conserva, y quien la repone es la fila **Red** de Más. Si el equipo recordado ya no existe, o no hay memoria, la pestaña abre por la **raíz del bosque con más equipos colgando**: el rack o el switch de núcleo, que es por donde empiezan casi todos los recorridos.
 
 **La ficha de un equipo de red es la misma** `DispositivoPage` (sección 5.3.1); solo cambia el retorno ("Volver" vuelve a Red).
 
@@ -616,7 +617,7 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 
 #### 5.4.1 Topología general (`TopologiaPage`)
 
-**Ruta:** `/red/topologia` · **Nivel:** Documento. Árbol/bosque expandible de toda la red. Sin raíz muestra el bosque completo (racks y switches de núcleo). Buscador propio que expande las ramas necesarias, resalta coincidencias y hace scroll a la primera. Cada nodo lleva estado (punto de color) e icono según el medio de conexión con su padre. Enlace de impacto "+N" por fila que abre la topología de ese equipo.
+**Ruta:** `/red/topologia` · **Nivel:** Documento. Árbol/bosque expandible de toda la red. Sin raíz muestra el bosque completo (racks y switches de núcleo). Buscador propio que expande las ramas necesarias, resalta coincidencias y hace scroll a la primera. Cada nodo lleva estado (punto de color) e icono según el medio de conexión con su padre. Enlace de impacto "+N" por fila que abre la topología de ese equipo. **Puertas:** el pie de Red ("Mapa completo, desde cada raíz", que vuelve al nodo que se estaba recorriendo) y, desde el 2026-09-23, la fila **Topología** de Más, que vuelve a Más (regla **M-R2**). Sin origen (un enlace o una recarga), sube a Red.
 
 #### 5.4.2 Topología de un equipo (`TopologiaEquipoPage`)
 
@@ -688,9 +689,31 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Cabecera:** la fila superior es la **barra superior global** (título "Más", sincronización, lupa y cuenta; ver la sección 2). Sin controles propios en la banda de debajo: esta pantalla es solo un índice.
 
-**Desde el 2026-09-22 (tarea 254) es uno de los cuatro destinos principales, en todos los tamaños**, y deja de listar lo que ya tiene su pestaña o su sitio: **Equipos y la Bóveda** (son pestañas) y **Escanear equipo** (vive en Equipos). Su reparto en cuatro grupos (Consulta, Infraestructura, Herramientas y Configuración) es la tarea 257.
+**Desde el 2026-09-22 (tarea 254) es uno de los cuatro destinos principales, en todos los tamaños**, y deja de listar lo que ya tiene su pestaña o su sitio: **Equipos y la Bóveda** (son pestañas) y **Escanear equipo** (vive en Equipos).
 
-**Cuerpo, en grupos (desde el 2026-09-17, tarea 244):**
+**Cuerpo, en cuatro grupos (desde el 2026-09-23, tarea 257, [DECISIONES.md](DECISIONES.md) AD-046).** Uno por pregunta, en este orden:
+- **"Consulta"**, lo que se mira: **Centro de consulta** ("Herramientas, glosario, atajos y comandos"), **Agenda** (subtítulo "Vencimientos, borradores y sugerencias del equipo", o lo urgente, "1 vencido · 2 para hoy", cuando lo hay) y **Mis favoritos**, **solo si hay alguno**: una fila vacía sería un destino que no lleva a nada.
+- **"Infraestructura"**, cómo está montado todo: **Red** ("Cómo está conectada la infraestructura"), **Topología** ("El mapa completo, desde cada raíz", → `/red/topologia`, la misma pantalla que abre el pie de Red), **Ubicaciones** ("Sedes, salas y racks") y **Personas** ("Responsables de cada equipo").
+- **"Herramientas"**, lo que se hace de vez en cuando: **Diagnóstico** ("Del síntoma a la guía, paso a paso"), **Importar equipos** ("Carga masiva desde Excel o CSV") y **Etiquetas QR** ("Generar e imprimir etiquetas para el inventario"). Las dos últimas llevan debajo la nota **"Mejor desde el ordenador"**, que hasta ahora era el título de un grupo entero al final de la pantalla.
+- **"Configuración"**: la fila de perfil (avatar con iniciales, nombre y correo → `/cuenta`), **"Bloqueo y seguridad"** (→ `/cuenta/seguridad`, con el método y si está activo o inactivo, leído en vivo de `db.seguridadApp`) y **"Buscar actualización"** (2026-09-20, tarea 250):
+  - **"Buscar actualización"** hace el trabajo de verdad (2026-09-21): pide **`/version.json`** a la red (sin caché), llama a `registration.update()` y lee `waiting`, `installing` y `updatefound`. Mientras consulta dice **"Buscando actualización…"**; después, una de estas: **"Ya tienes la versión más reciente"**, **"Versión nueva disponible: toca «Actualizar» en el aviso"**, **"Sin conexión. Inténtalo cuando recuperes Internet"** o **"No se pudo comprobar: este navegador no guarda la app para trabajar sin señal"**.
+  - **Diagnóstico, en letra pequeña debajo** (2026-09-21): **versión instalada** (el commit corto del despliegue de Vercel, o "desarrollo" en local), **versión en el servidor** (la que anuncia `/version.json`), **estado del service worker** (activo, instalando, esperando para entrar o sin instalar) y **hora de la última comprobación**. Es lo que permite resolver un "no me actualizó" por teléfono sin adivinar.
+  - **Actualizar no borra nada**: ni IndexedDB, ni la sesión, ni el avance de las guías, ni la cola de sincronización. Solo se reemplazan los archivos de la app; desinstalar la PWA o borrar sus datos nunca es la solución.
+- **El conteo va a la derecha**, antes del galón (hallazgo **M-025**, detalle abajo): lo llevan el Centro de consulta, Mis favoritos, Ubicaciones, Personas y Diagnóstico, todos en vivo.
+
+**Mis favoritos se despliega en el sitio.** Tiene la forma de sus vecinas (icono, título, subtítulo "Lo que marcaste con la estrella" y el conteo a la derecha), pero en lugar del galón lleva una flecha hacia abajo que gira al abrir. Tocarla despliega la lista debajo, sangrada a la altura del título y sin pantalla nueva: cada favorito es un enlace de 44 px con el icono de su tipo, su nombre y, si lo tiene, su subtítulo. Es un botón que anuncia si está desplegado.
+
+**Red abre donde se dejó.** La fila Red lleva al nodo que se estaba recorriendo (`/red?nodo=…`), igual que cuando Red era pestaña: al dejar de serlo (2026-09-22) perdió esa memoria sin que se notara, y la tarea 257 se la devuelve. Sin haber pasado por Red, abre Red a secas. **Red y Topología no cambian:** son las mismas pantallas; lo que cambia es su puerta.
+
+**Lo que dejó de estar aquí el 2026-09-23:** **Actividad del equipo** se mudó al final de la agenda completa (`/agenda`), plegada: no es un sitio al que se va, es lo que pasa en el equipo. Los grupos **"Trabajo técnico"**, **"Mejor desde el ordenador"** y **"Lo mío y lo del equipo"** desaparecen; todo lo que tenían sigue aquí o en la agenda.
+
+**Una columna o dos.** En el teléfono y en la tableta, una columna. **Desde 1024 px**, dos: Consulta e Infraestructura arriba, Herramientas y Configuración debajo, y desplegar Mis favoritos no estira el grupo de al lado. A 768 px las dos columnas dejaban unos 340 px por grupo y recortaban los subtítulos.
+
+**Volver.** Lo que se abre desde aquí vuelve aquí. Red, el Centro de consulta, Ubicaciones, Personas, Diagnóstico y Mi cuenta suben a Más, que es su padre. **Topología** cuelga de Red, pero abierta desde aquí su regreso dice "Más" y vuelve a Más: la fila lleva su origen (regla **M-R2**); sin él, por un enlace o una recarga, sube a Red. **Cuatro filas todavía no vuelven aquí** (tarea 265): la **Agenda** sube a Resolver, su padre desde el 2026-09-22, y darle el origen de Más le quitaría la fecha de la cabecera, que ocupa la misma línea; **Bloqueo y seguridad** sube a Mi cuenta; **Importar equipos** y **Etiquetas QR** salen a Equipos, que llevan escrito a mano desde que su camino principal era el menú "···" de esa sección, retirado el 2026-09-22 (tarea 256).
+
+**Escritorio:** desde el 2026-09-22 Más es uno de los cuatro destinos también en la barra lateral, que ya no tiene grupos propios: esta pantalla es la puerta de todo lo que contiene, en todos los tamaños.
+
+**Cuerpo, del 2026-09-17 al 2026-09-22 (tarea 244; el último día, ya sin Equipos, la Bóveda ni Escanear):**
 - **"Consulta"**: **Equipos** ("Qué se sabe de cada equipo"), **Red** ("Cómo está conectada la infraestructura"), **Bóveda** (solo con permiso, ahora como fila normal con su conteo), **Centro de consulta**, **Ubicaciones** y **Personas**. Equipos, Red y Bóveda dejaron de ser pestañas del teléfono y se abren desde aquí; dentro de ellas se ilumina la pestaña Más y su cabecera lleva un regreso a Más.
 - **"Trabajo técnico"**: **Agenda** (subtítulo "Vencimientos, borradores y sugerencias del equipo", o lo urgente, "1 vencido · 2 para hoy", cuando lo hay), **Diagnóstico** y **Escanear equipo**.
 - **"Mejor desde el ordenador"**, **"Lo mío y lo del equipo"** y **"Mi cuenta"**, sin cambios (abajo).
@@ -701,14 +724,11 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - **"Mejor desde el ordenador"**, al final y con la nota escrita ("Se puede hacer aquí, pero pide teclado y pantalla grande."): **Etiquetas QR** e **Importar equipos**. **No se esconde nada**, se ordena por dónde se usa; las dos siguen abriéndose desde aquí y desde el menú "···" de Equipos.
 - **El conteo va a la derecha**, antes del galón, en la misma ranura que en Guías y Equipos (hallazgo **M-025**). Iba pegado al final del subtítulo ("Sedes, salas y racks · 12"), donde se leía como parte de la descripción y no se podía comparar de un vistazo entre filas. Lo llevan Bóveda, Diagnóstico, Ubicaciones y Personas, todos en vivo.
 - **"Lo mío y lo del equipo"** (desde el 2026-09-11, venido de Inicio): **"Mis favoritos"** y **"Actividad del equipo"**, plegados tras una línea con su conteo (`SeccionPlegable`). Se consultan cuando uno los busca, que es lo que hace en esta pantalla; en Inicio no respondían a ninguna pregunta de la jornada. El grupo entero no se monta si las dos listas están vacías.
-- **"Mi cuenta"**: fila de perfil (avatar con iniciales, nombre, correo → `/cuenta`), **"Bloqueo y seguridad"** (→ `/cuenta/seguridad`), con subtítulo que dice el método configurado y si está activo o inactivo, leído en vivo de `db.seguridadApp`, y **"Buscar actualización"** (2026-09-20, tarea 250).
-  - **"Buscar actualización"** hace el trabajo de verdad (2026-09-21): pide **`/version.json`** a la red (sin caché), llama a `registration.update()` y lee `waiting`, `installing` y `updatefound`. Mientras consulta dice **"Buscando actualización…"**; después, una de estas: **"Ya tienes la versión más reciente"**, **"Versión nueva disponible: toca «Actualizar» en el aviso"**, **"Sin conexión. Inténtalo cuando recuperes Internet"** o **"No se pudo comprobar: este navegador no guarda la app para trabajar sin señal"**.
-  - **Diagnóstico, en letra pequeña debajo** (2026-09-21): **versión instalada** (el commit corto del despliegue de Vercel, o "desarrollo" en local), **versión en el servidor** (la que anuncia `/version.json`), **estado del service worker** (activo, instalando, esperando para entrar o sin instalar) y **hora de la última comprobación**. Es lo que permite resolver un "no me actualizó" por teléfono sin adivinar.
-  - **Actualizar no borra nada**: ni IndexedDB, ni la sesión, ni el avance de las guías, ni la cola de sincronización. Solo se reemplazan los archivos de la app; desinstalar la PWA o borrar sus datos nunca es la solución.
+- **"Mi cuenta"**: fila de perfil (avatar con iniciales, nombre, correo → `/cuenta`) y **"Bloqueo y seguridad"** (→ `/cuenta/seguridad`), con subtítulo que dice el método configurado y si está activo o inactivo, leído en vivo de `db.seguridadApp`. Desde el 2026-09-20 sumó **"Buscar actualización"** (detalle arriba, en "Configuración").
 
-**Volver.** Ubicaciones y Personas, alcanzadas ahora desde aquí, suben a "Más" (no a Equipos): antes su regreso llevaba a una sección que el técnico no había visitado si llegaba por un enlace o por esta pantalla (mismo defecto que el problema #3 del turno 3 de la auditoría). Diagnóstico y Escanear suben a "Más", que es su puerta desde que Inicio dejó de repetir sus atajos (2026-09-11); Etiquetas e Importar siguen subiendo a Equipos, porque su camino principal sigue siendo el menú "···" de esa sección.
+**Volver, hasta el 2026-09-22.** Ubicaciones y Personas, alcanzadas desde aquí, suben a "Más" (no a Equipos): antes su regreso llevaba a una sección que el técnico no había visitado si llegaba por un enlace o por esta pantalla (mismo defecto que el problema #3 del turno 3 de la auditoría). Diagnóstico y Escanear suben a "Más", que es su puerta desde que Inicio dejó de repetir sus atajos (2026-09-11); Etiquetas e Importar siguen subiendo a Equipos, porque su camino principal sigue siendo el menú "···" de esa sección.
 
-**Escritorio:** el sidebar no ofrece "Más" (no lo necesita: sigue mostrando Bóveda como destino propio en su nav principal). Desde la tarea 183 el sidebar completo da puerta propia en escritorio a Diagnóstico, Centro de consulta, Escanear, Ubicaciones y Personas (grupos **"Trabajo técnico"** y "Registros"; el primero se llamaba "Herramientas" hasta el 2026-09-14, cuando el Centro de consulta estrenó su pestaña Herramientas), y Mi cuenta vive al pie. Etiquetas QR e Importar siguen alcanzándose solo desde el "···" de Equipos en ambas anchuras.
+**Escritorio, hasta el 2026-09-21:** el sidebar no ofrecía "Más" (no lo necesita: sigue mostrando Bóveda como destino propio en su nav principal). Desde la tarea 183 el sidebar completo da puerta propia en escritorio a Diagnóstico, Centro de consulta, Escanear, Ubicaciones y Personas (grupos **"Trabajo técnico"** y "Registros"; el primero se llamaba "Herramientas" hasta el 2026-09-14, cuando el Centro de consulta estrenó su pestaña Herramientas), y Mi cuenta vive al pie. Etiquetas QR e Importar siguen alcanzándose solo desde el "···" de Equipos en ambas anchuras.
 
 ---
 
@@ -808,7 +828,7 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 <a id="67-etiquetas-e-importacion"></a>
 ### 6.7 Etiquetas QR e Importación
 
-Ambas se alcanzaban solo desde el menú "···" de Equipos; desde la tarea 182 tienen además puerta propia en "Más" (grupo "Registros"). Su "Volver" sigue subiendo a Equipos, que sigue siendo su camino principal.
+**Puerta:** Más > Herramientas, con la nota "Mejor desde el ordenador" en su fila (desde el 2026-09-23); Etiquetas, también desde el menú "···" de la ficha de un equipo ("Etiqueta QR"). Hasta la tarea 182 solo se alcanzaban desde el menú "···" de Equipos, y ese menú se retiró el 2026-09-22 (tarea 256). **Su X sigue saliendo a Equipos**, escrita a mano desde que ese menú era su camino principal: abiertas desde Más, no vuelven a Más (pendiente en la tarea 265).
 
 **Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, nivel Tarea. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Barra de tarea ("Imprimiendo · Etiquetas QR", vuelve a Equipos) y **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
 
@@ -847,7 +867,7 @@ Ambas se alcanzaban solo desde el menú "···" de Equipos; desde la tarea 182 
 <a id="7-catalogo-de-formularios"></a>
 ## 6.10 Centro de consulta
 
-**Ruta:** `/referencia` (nombre interno conservado) · **Archivos:** `src/features/referencia/ReferenciaPage.tsx`, `ReferenciaFicha.tsx`, `ReferenciaForm.tsx` · **Nivel:** Documento (la lista y la ficha), Tarea (el editor) · **Puerta:** Más > "Aquí, con el equipo delante" y, en escritorio, la barra lateral (grupo "Trabajo técnico").
+**Ruta:** `/referencia` (nombre interno conservado) · **Archivos:** `src/features/referencia/ReferenciaPage.tsx`, `ReferenciaFicha.tsx`, `ReferenciaForm.tsx` · **Nivel:** Documento (la lista y la ficha), Tarea (el editor) · **Puerta:** Más > Consulta, en todos los tamaños (el grupo se llamó "Aquí, con el equipo delante" hasta el 2026-09-16, y la barra lateral de escritorio tuvo entrada propia hasta el 2026-09-21).
 
 **Objetivo.** Responder **"¿qué es esto?"** a un técnico nuevo: qué es Zabbix, para qué se usa TightVNC, qué diferencia a SICOF de ICG, qué significa DHCP, cuál es el atajo para abrir Ejecutar o qué comando comprueba si un equipo responde. **"¿Cómo hago esto?"** son las Guías, **"¿qué pasa con este equipo?"** son Equipos, Diagnóstico y Red, y **"¿cuál es la clave?"** es la Bóveda. Se llamaba **Referencia** hasta el 2026-09-14.
 
@@ -1149,8 +1169,8 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 |------|----------|---------------------|
 | **Barra de navegación** (`Chasis`), escritorio (tarea 183) | Inicio, Guías, Equipos, Red, (Bóveda con permiso); Herramientas: Diagnóstico, Escanear; Registros: Ubicaciones, Personas | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
 | **Barra de navegación** (`Chasis`), móvil (tarea 182) | Inicio, Guías, Equipos, Red, Más | Cambia de sección; siempre las mismas cinco, iguales para todos |
-| **"Más"** (tarea 182) | Bóveda (con permiso), Diagnóstico, Escanear, Ubicaciones, Personas, Etiquetas QR, Importar, Mi cuenta, Bloqueo y seguridad | Navega a cada pantalla; ver sección 5.6 |
-| **"···" de Equipos** | Ubicaciones, Personas, Etiquetas QR, Importar | Navega a cada pantalla |
+| **"Más"** (tarea 182; cuatro grupos desde la 257) | Consulta: Centro de consulta, Agenda, Mis favoritos (si hay). Infraestructura: Red, Topología, Ubicaciones, Personas. Herramientas: Diagnóstico, Importar equipos, Etiquetas QR. Configuración: Mi cuenta, Bloqueo y seguridad, Buscar actualización | Navega a cada pantalla (Mis favoritos se despliega en el sitio); ver sección 5.6 |
+| **"···" de Equipos** (hasta el 2026-09-21) | Ubicaciones, Personas, Etiquetas QR, Importar | Retirado en la tarea 256: las cuatro están en Más |
 | **"···" de la ficha de dispositivo** | Duplicar, Editar, Etiqueta QR, Reemplazar, Dar de baja, Eliminar | Acciones sobre el equipo |
 | **"···" de la ficha de artículo** | Compartir, Duplicar, Reiniciar progreso, Eliminar | Acciones sobre el artículo |
 | **"···" de la ficha de credencial (lista)** | Copiar usuario, Copiar contraseña, Abrir, Editar, Eliminar | Acciones rápidas sobre el secreto |
@@ -1424,7 +1444,7 @@ Ficha de equipo > "···" > Dar de baja → resuelve cada dependencia (quitar/d
 
 Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de Mi cuenta viven en la barra superior de todas las secciones, no solo en la primera: se omiten del resto de los árboles de abajo para no repetirlos.
 
-**Desde el 2026-09-22 (tarea 254)** la navegación principal son **cuatro destinos, los mismos en todos los tamaños: Resolver, Equipos, Bóveda y Más**. Donde los árboles de abajo difieren, manda este:
+**Desde el 2026-09-22 (tarea 254)** la navegación principal son **cuatro destinos, los mismos en todos los tamaños: Resolver, Equipos, Bóveda y Más**. Donde los árboles de abajo difieren, manda este (Más, con sus cuatro grupos desde el 2026-09-23, tarea 257):
 
 ```
 Resolver (/)
@@ -1437,18 +1457,17 @@ Resolver (/)
  └── Bienvenida del primer día
 
 Equipos (/dispositivos)
- ├── Buscar · Escanear (/escaner, sube a Equipos) · Crear · "···"
+ ├── Buscar · Escanear QR (/escaner, sube a Equipos) · Crear equipo
  └── Ficha del equipo (/dispositivos/:id)
 
 Bóveda (/boveda)
  └── (sin permiso: Acceso restringido; con permiso: desbloqueo y lista)
 
-Más (/mas)
- ├── Consulta: Red (/red, con regreso a Más) · Centro de consulta · Ubicaciones · Personas
- ├── Trabajo técnico: Agenda (/agenda) · Diagnóstico
- ├── Mejor desde el ordenador: Etiquetas QR · Importar equipos
- ├── Lo mío y lo del equipo: Mis favoritos · Actividad del equipo
- └── Mi cuenta · Bloqueo y seguridad · Buscar actualización
+Más (/mas): una columna; desde 1024 px, dos
+ ├── Consulta: Centro de consulta · Agenda (/agenda; al final, Actividad del equipo, plegada) · Mis favoritos (solo si hay; se despliega en el sitio)
+ ├── Infraestructura: Red (/red, en el nodo donde se dejó; regreso a Más) · Topología (/red/topologia; regreso a Más) · Ubicaciones · Personas
+ ├── Herramientas: Diagnóstico · Importar equipos · Etiquetas QR (las dos, "Mejor desde el ordenador")
+ └── Configuración: Mi cuenta · Bloqueo y seguridad · Buscar actualización
 ```
 
 **Del 2026-09-17 al 2026-09-21 (tarea 244)** las pestañas del teléfono eran **Inicio, Guías y Más**, y Equipos, Red y Bóveda colgaban de Más:
