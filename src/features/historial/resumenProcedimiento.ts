@@ -152,6 +152,21 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
     else cambios.push(`Se actualizó el objetivo del ${etiqueta}.`)
   }
 
+  // Dónde se hace y qué debe verse al terminar (2026-09-22), con las
+  // palabras con que los lee el técnico. Una guía guardada antes no los
+  // trae y el normalizador los deja vacíos: vacío contra vacío no es un
+  // cambio.
+  if (previo.lugar !== actual.lugar) {
+    if (!previo.lugar) cambios.push(`Se definió dónde se hace el ${etiqueta}: "${actual.lugar}".`)
+    else if (!actual.lugar) cambios.push(`Se quitó dónde se hace el ${etiqueta}.`)
+    else cambios.push(`Se cambió dónde se hace el ${etiqueta}: "${previo.lugar}" → "${actual.lugar}".`)
+  }
+  if (previo.resultado !== actual.resultado) {
+    if (!previo.resultado) cambios.push(`Se definió qué debe verse al terminar el ${etiqueta}: "${actual.resultado}".`)
+    else if (!actual.resultado) cambios.push(`Se quitó qué debe verse al terminar el ${etiqueta}.`)
+    else cambios.push(`Se cambió qué debe verse al terminar el ${etiqueta}: "${previo.resultado}" → "${actual.resultado}".`)
+  }
+
   const tareas = diffLista(textosDeBloque(previo, 'tarea'), textosDeBloque(actual, 'tarea'))
   agregarLineasInstrucciones(cambios, tareas, etiqueta)
 

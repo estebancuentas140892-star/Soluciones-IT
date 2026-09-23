@@ -126,6 +126,8 @@ describe('referenciasParaOffline', () => {
             id: 'p1',
             titulo: '',
             objetivo: '',
+            lugar: '',
+            resultado: '',
             bloques: [],
             adjuntos: [],
             vinculoProtegido: null,

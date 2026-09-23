@@ -202,7 +202,7 @@ describe('requisitos y revisión del contenido', () => {
       senalesDeArticulo({ ...COMPLETO, requisitosQueSonAcciones: 1, tareasEncadenadas: 1, alertasQueRecuerdan: 1 }),
     )
     expect(uno.sugerencias).toEqual([
-      { texto: 'Sacar de «Antes de empezar» 1 acción', pestana: 'pasos' },
+      { texto: 'Sacar de «Requisitos» 1 acción', pestana: 'pasos' },
       { texto: 'Dividir 1 tarea que encadena varias acciones', pestana: 'pasos' },
       { texto: 'Revisar 1 alerta que solo recuerda algo', pestana: 'pasos' },
     ])
@@ -212,7 +212,7 @@ describe('requisitos y revisión del contenido', () => {
       senalesDeArticulo({ ...COMPLETO, requisitosQueSonAcciones: 2, tareasEncadenadas: 3, alertasQueRecuerdan: 2 }),
     )
     expect(varios.sugerencias.map((s) => s.texto)).toEqual([
-      'Sacar de «Antes de empezar» 2 acciones',
+      'Sacar de «Requisitos» 2 acciones',
       'Dividir 3 tareas que encadenan varias acciones',
       'Revisar 2 alertas que solo recuerdan algo',
     ])

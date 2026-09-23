@@ -66,6 +66,9 @@ export function AsistentePage() {
     <Chasis
       modo="tarea"
       compacta
+      // La ruta del procedimiento en horizontal necesita ancho en
+      // escritorio y tableta (tarea 255). En el teléfono no cambia nada.
+      amplio
       // BUSCAR SIN ABANDONAR EL PROCEDIMIENTO (tarea 241, secciones 8 a
       // 10). La navegación principal sigue fuera: lo que se añade es una
       // lupa que abre el buscador global COMO CAPA. Consultar un
@@ -91,8 +94,11 @@ export function AsistentePage() {
             línea. No pide confirmar nada, no añade un paso y no tapa la
             acción: solo está ahí. En una guía publicada no existe. */}
         {(articulo.estado ?? 'publicado') === 'borrador' && (
-          <p className="mt-2 flex items-center gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/[.08] px-2.5 py-1.5 text-[12px] leading-snug text-noct-precaucion">
-            <PencilSimple size={13} className="shrink-0" aria-hidden />
+          // Neutro desde el 2026-09-22: un borrador no es un riesgo, y en
+          // una guía el ámbar significaría "lugar". Lo dice su icono y su
+          // palabra.
+          <p className="mt-2 flex items-center gap-2 rounded-md border border-noct-divider bg-noct-text/[.04] px-2.5 py-1.5 text-[12px] leading-snug text-noct-neutral-300">
+            <PencilSimple size={13} className="shrink-0 text-noct-neutral-400" aria-hidden />
             Borrador · algunos datos todavía están por confirmar.
           </p>
         )}

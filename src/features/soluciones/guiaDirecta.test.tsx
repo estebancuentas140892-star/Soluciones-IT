@@ -83,7 +83,7 @@ describe('abrir una guía', () => {
     await esperar(() => textoPantalla().includes('Abrir el programa de caja'), 'la primera acción a la vista')
     expect(textoPantalla()).toContain('Paso 1 de 2')
     expect(textoPantalla()).not.toContain('Empecemos')
-    expect(textoPantalla()).not.toContain('Antes de empezar')
+    expect(textoPantalla()).not.toContain('Ten esto listo antes de empezar')
     expect(principal('Siguiente')).not.toBeNull()
   })
 
@@ -99,7 +99,7 @@ describe('abrir una guía', () => {
     await montar(RUTAS, RUTA)
 
     await esperar(() => textoPantalla().includes('Resolución de prueba en PDF'), 'el requisito a la vista')
-    expect(textoPantalla()).toContain('Antes de empezar')
+    expect(textoPantalla()).toContain('Ten esto listo antes de empezar')
 
     await tocar((await esperar(() => principal('Siguiente'), 'el botón Siguiente')) as HTMLElement)
     await esperar(() => textoPantalla().includes('Entrar en Administración'), 'la segunda acción')

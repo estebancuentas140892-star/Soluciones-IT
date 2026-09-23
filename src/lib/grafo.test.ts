@@ -46,6 +46,8 @@ function paso(cambios: Partial<PasoProcedimiento>): PasoProcedimiento {
     id: cambios.id ?? crypto.randomUUID(),
     titulo: 'Paso',
     objetivo: '',
+    lugar: '',
+    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,

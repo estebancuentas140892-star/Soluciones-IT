@@ -224,6 +224,13 @@ interface PropsTarea extends PropsComunes {
    * al tecnico de la ejecucion. Ver `modoConsulta.ts`.
    */
   conBusqueda?: boolean
+  /**
+   * Más ancho en escritorio y tableta (tarea 255): la ejecución de una
+   * guía enseña arriba la RUTA del procedimiento en horizontal, y eso
+   * necesita sitio. En el teléfono no cambia nada (448 px). Los controles
+   * de dentro no se estiran: la vista los centra en 576 px.
+   */
+  amplio?: boolean
 }
 
 type Props = PropsSeccion | PropsDocumento | PropsTarea
@@ -303,7 +310,10 @@ export function Chasis(props: Props) {
   if (props.modo === 'tarea') {
     return (
       <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
-        <div className="mx-auto flex min-h-svh w-full max-w-md flex-col" data-transicion={direccion}>
+        <div
+          className={`mx-auto flex min-h-svh w-full flex-col ${props.amplio ? 'max-w-md md:max-w-3xl' : 'max-w-md'}`}
+          data-transicion={direccion}
+        >
           <BarraTarea
             rotulo={props.rotulo}
             titulo={props.titulo}

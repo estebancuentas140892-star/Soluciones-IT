@@ -18,6 +18,8 @@ function paso(parcial: Partial<PasoProcedimiento> = {}): PasoProcedimiento {
     id: 'p1',
     titulo: 'Abrir los recursos compartidos',
     objetivo: '',
+    lugar: '',
+    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,

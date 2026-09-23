@@ -2,7 +2,22 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
 import { normalizarTexto } from './iconosSoluciones'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
-import { BookOpen, CaretDown, CaretLeft, CaretRight, Check, Code, Info, Warning } from '../../components/iconos'
+import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
+import {
+  BookOpen,
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  Check,
+  Code,
+  CursorClick,
+  Info,
+  ListChecks,
+  Question,
+  SealCheck,
+  Warning,
+  X,
+} from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { ChipReferencia } from '../referencia/ChipReferencia'
 import { TarjetaComando } from '../referencia/TarjetaComando'
@@ -104,6 +119,11 @@ interface Props {
   // lectura en vivo; aqui deciden si la tarea se puede marcar y que se
   // escribe debajo del boton (encargo del 2026-09-09, tarea 1).
   guiasPendientes: (tareaId: string) => BloquePaso[]
+  // LA RUTA DEL PROCEDIMIENTO (encargo del 2026-09-22, sección 5). La
+  // aporta `AsistenteVista`, que es quien tiene los estados de todos los
+  // pasos. Cuando llega, ES la cabecera del paso: dice dónde se está
+  // ("Paso 3 de 7" y el título), así que esta vista no lo repite.
+  ruta?: ReactNode
   // Nombre de la guía que se está ejecutando, para la cabecera compacta
   // del vínculo ("Estás realizando X para continuar con Y").
   tituloGuiaPrincipal?: string
@@ -200,6 +220,7 @@ export function ModoFoco({
   onFalla,
   onDecisionResuelta,
   guiasPendientes,
+  ruta,
   tituloGuiaPrincipal = '',
   onVinculoCompletado,
   renderTarjetaGuia,
@@ -340,6 +361,14 @@ export function ModoFoco({
   const imagenesPlegadas = esPrimeraDelPaso ? [] : delPaso.imagenes
   const archivosPlegados = esPrimeraDelPaso ? [] : [...adjuntosDe(delPaso.archivos), ...delPaso.adjuntosPaso]
   const vinculoProtegido = propios.vinculoProtegido ?? tarea.vinculoProtegido
+  // QUÉ HACER, DÓNDE Y QUÉ DEBO VER DESPUÉS (encargo del 2026-09-22,
+  // sección 6). El lugar acompaña a la PRIMERA acción del paso (es donde
+  // hay que situarse antes de empezar) y lo que debe verse, a la ÚLTIMA
+  // (es lo que confirma que el paso salió). Los dos salen del paso, no de
+  // la tarea: son sus campos `lugar` y `resultado`.
+  const esUltimaDelPaso = indice === tareas.length - 1
+  const lugarDelPaso = esPrimeraDelPaso ? paso.lugar.trim() : ''
+  const debesVer = esUltimaDelPaso ? paso.resultado.trim() : ''
   // Para qué sirve el paso: explica, no ordena, así que va plegado y solo
   // con la primera acción del paso.
   const objetivoPlegado = esPrimeraDelPaso ? paso.objetivo.trim() : ''
@@ -605,6 +634,8 @@ export function ModoFoco({
           <Check size={22} className="shrink-0" aria-hidden />
           Sí
         </button>
+        {/* El "No" no es un riesgo, es la otra vía: desde el 2026-09-22
+            va neutro. En una guía el ámbar significaría "lugar". */}
         <button
           type="button"
           onClick={responderNo}
@@ -613,9 +644,9 @@ export function ModoFoco({
               ? `No: abrir «${tarea.decisionGuiaTitulo || 'la salida'}»`
               : 'No: registrar la respuesta y seguir'
           }
-          className="flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-precaucion/60 bg-noct-precaucion/[.12] px-3 text-[18px] font-semibold text-noct-precaucion active:bg-noct-precaucion/25"
+          className="flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-neutral-600 px-3 text-[18px] font-semibold text-noct-neutral-200 active:bg-noct-text/10"
         >
-          <Warning size={20} className="shrink-0" aria-hidden />
+          <X size={20} className="shrink-0" aria-hidden />
           No
         </button>
       </>
@@ -674,35 +705,47 @@ export function ModoFoco({
           />
         )}
 
-        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px] leading-snug text-noct-neutral-400">
-          <span className="font-semibold uppercase tracking-[.06em] text-noct-accent-300">
-            Paso {numeroPaso} de {totalPasos}
-          </span>
-          {tituloEnContexto && <span className="min-w-0 text-pretty text-noct-neutral-300">{tituloEnContexto}</span>}
-          {hecha && tarea.clase === 'tarea' && (
-            <span className="inline-flex items-center gap-1 text-noct-exito">
-              <Check size={13} aria-hidden />
-              hecha
+        {/* DÓNDE ESTOY: la ruta del procedimiento cuando la hay (nivel 0),
+            y si no, la línea de siempre. */}
+        {ruta ?? (
+          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px] leading-snug text-noct-neutral-400">
+            <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
+              Paso {numeroPaso} de {totalPasos}
             </span>
-          )}
-        </p>
+            {tituloEnContexto && <span className="min-w-0 text-pretty text-noct-neutral-300">{tituloEnContexto}</span>}
+          </p>
+        )}
 
         {/* LAS ALERTAS, ANTES DE LA INSTRUCCIÓN: un riesgo se lee antes
-            de actuar, no después. Solo precaución e importante. */}
+            de actuar, no después. Solo precaución e importante, y desde
+            el 2026-09-22 en rojo: en una guía el rojo es el riesgo. */}
         {avisos.alertas.map((aviso) => (
           <AlertaDeRiesgo key={aviso.id} aviso={aviso} />
         ))}
 
-        <h2
-          ref={encabezado}
-          tabIndex={-1}
-          data-foco-lectura
-          className={`text-[26px] font-medium leading-[1.3] tracking-[-.01em] text-pretty outline-none ${
-            hecha ? 'text-noct-neutral-400' : 'text-noct-text'
-          }`}
-        >
-          {textoInstruccion}
-        </h2>
+        {/* DÓNDE SE HACE: el lugar, menú o sección que hay que localizar.
+            Con la primera acción del paso, en amarillo, con su icono y su
+            palabra (el color nunca va solo). */}
+        {lugarDelPaso && <DondeSeHacePaso lugar={lugarDelPaso} />}
+
+        <div className="flex flex-col gap-1">
+          {/* Sin etiqueta cuando lo que se lee es un ESTADO de la guía del
+              paso ("Esta guía no está disponible", "Guía completada"), no
+              una instrucción: "Qué hacer" encima lo contradiría. */}
+          {!(tarea.clase === 'guia-del-paso' && (!guiaDelPasoDisponible || hecha)) && (
+            <EtiquetaDeAccion tipoTarea={tarea.tipoTarea} hecha={hecha} />
+          )}
+          <h2
+            ref={encabezado}
+            tabIndex={-1}
+            data-foco-lectura
+            className={`text-[26px] font-medium leading-[1.3] tracking-[-.01em] text-pretty outline-none ${
+              hecha ? 'text-noct-neutral-400' : 'text-noct-text'
+            }`}
+          >
+            {textoInstruccion}
+          </h2>
+        </div>
 
         {motivoGuiaDelPaso && (
           <p className="-mt-2 text-[15px] leading-snug text-noct-neutral-300 text-pretty">{motivoGuiaDelPaso}</p>
@@ -728,7 +771,7 @@ export function ModoFoco({
           <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
         ))}
 
-        {vinculoProtegido && <CredencialEnPaso vinculo={vinculoProtegido} />}
+        {vinculoProtegido && <CredencialEnPaso vinculo={vinculoProtegido} variante="bloque" />}
 
         {archivosALaVista.length > 0 && <AdjuntosPaso adjuntos={archivosALaVista} titulo={paso.titulo} />}
 
@@ -760,6 +803,10 @@ export function ModoFoco({
             })}
           </div>
         ))}
+
+        {/* QUÉ DEBO VER DESPUÉS: con la última acción del paso, en verde
+            (el `resultado` del paso). */}
+        {debesVer && <DebesVerPaso texto={debesVer} />}
 
         {/* LOS TÉRMINOS, COMO ETIQUETAS DISCRETAS: se tocan para leer la
             definición sin salir de la guía ni tocar el avance. */}
@@ -809,14 +856,17 @@ export function ModoFoco({
           {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
               dice por qué. */}
           {!cierraPaso && !hecha && motivoGuias && (
-            <p className="text-center text-[12px] text-noct-precaucion">{motivoGuias}</p>
+            <p className="text-center text-[12px] text-noct-neutral-300">{motivoGuias}</p>
           )}
           {esDecision && !hecha && !noAbierto && destinoDelNo && (
             <p className="text-center text-[13px] leading-snug text-noct-neutral-300 text-pretty">
               Si respondes que no, se abre «{tarea.decisionGuiaTitulo || 'la salida'}»
             </p>
           )}
-          <div className="flex gap-2.5">
+          {/* En escritorio la ejecución tiene más ancho (tarea 255), pero
+              los controles no se estiran: un botón de 700 px no se toca
+              mejor que uno de 600. */}
+          <div className="mx-auto flex w-full max-w-xl gap-2.5">
             <button
               type="button"
               disabled={!puedeRetroceder}
@@ -832,7 +882,7 @@ export function ModoFoco({
           {/* LO SECUNDARIO, EN UNA LÍNEA DISCRETA. "Tengo un problema" abre
               las salidas del paso (contingencia, evidencia, saltar) sin
               completar nada. */}
-          <div className="flex items-center justify-center gap-1">
+          <div className="mx-auto flex w-full max-w-xl items-center justify-center gap-1">
             <button
               type="button"
               onClick={() => onFalla(tarea.texto)}
@@ -866,9 +916,13 @@ export function ModoFoco({
 export function AntesDeEmpezar({ requisitos }: { requisitos: string[] }) {
   return (
     <section className="rounded-xl border border-noct-divider bg-noct-surface px-3.5 py-3">
-      <h2 className="text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
-        Antes de empezar, ten a mano
+      <h2 className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
+        <ListChecks size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+        Requisitos
       </h2>
+      <p className="mt-0.5 text-[12.5px] leading-snug text-noct-neutral-400">
+        Ten esto listo antes de empezar.
+      </p>
       <ul className="mt-2 flex flex-col gap-1.5">
         {requisitos.map((requisito, i) => (
           <li key={i} className="flex items-start gap-2.5 text-[15px] leading-snug text-noct-text">
@@ -878,6 +932,43 @@ export function AntesDeEmpezar({ requisitos }: { requisitos: string[] }) {
         ))}
       </ul>
     </section>
+  )
+}
+
+// QUÉ CLASE DE TRABAJO ES ESTA ACCIÓN (encargo del 2026-09-22, sección
+// 4). Una palabra y un icono, siempre los dos: azul para la acción
+// (entrar, abrir, seleccionar), verde para la comprobación y neutro para
+// la decisión. Una acción ya hecha lo dice en verde, con su marca.
+function EtiquetaDeAccion({ tipoTarea, hecha }: { tipoTarea: string | null; hecha: boolean }) {
+  if (hecha) {
+    return (
+      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-exito">
+        <Check size={13} className="shrink-0" aria-hidden />
+        Hecha
+      </p>
+    )
+  }
+  if (tipoTarea === 'verificacion') {
+    return (
+      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-exito">
+        <SealCheck size={13} className="shrink-0" aria-hidden />
+        Comprueba
+      </p>
+    )
+  }
+  if (tipoTarea === 'decision') {
+    return (
+      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
+        <Question size={13} className="shrink-0" aria-hidden />
+        Decide
+      </p>
+    )
+  }
+  return (
+    <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-accion">
+      <CursorClick size={13} className="shrink-0" aria-hidden />
+      Qué hacer
+    </p>
   )
 }
 

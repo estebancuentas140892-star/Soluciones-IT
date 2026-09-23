@@ -25,6 +25,8 @@ export function crearPaso(): PasoProcedimiento {
     id: crypto.randomUUID(),
     titulo: '',
     objetivo: '',
+    lugar: '',
+    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,
@@ -253,6 +255,10 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
     titulo: texto(origen.titulo),
     objetivo: texto(origen.objetivo),
+    // Opcionales desde el 2026-09-22: lo anterior no los trae y quedan
+    // vacíos.
+    lugar: texto(origen.lugar),
+    resultado: texto(origen.resultado),
     bloques: sanearReferenciasDeTarea(normalizarBloques(origen)),
     adjuntos: normalizarAdjuntos(origen),
     vinculoProtegido: normalizarVinculoProtegido(origen),
@@ -564,6 +570,10 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
   for (const paso of procedimiento.pasos) {
     partes.push(paso.titulo)
     partes.push(paso.objetivo)
+    // El lugar y el resultado del paso (2026-09-22): buscar "dispositivos
+    // e impresoras" encuentra la guía que se hace ahí, y buscar lo que
+    // aparece en la pantalla ("ventana ejecutar"), la que lo enseña.
+    partes.push(paso.lugar, paso.resultado)
     // Textos de tareas, avisos y pies de imagen (todo el cuerpo del
     // paso entra al indice para que "back up" encuentre el articulo).
     partes.push(...paso.bloques.map((b) => b.texto))
@@ -675,6 +685,8 @@ export function prepararProcedimientoParaGuardar({
       ...paso,
       titulo: paso.titulo.trim(),
       objetivo: paso.objetivo.trim(),
+      lugar: paso.lugar.trim(),
+      resultado: paso.resultado.trim(),
       bloques: limpiarBloques(paso.bloques),
       vinculoProtegido: paso.vinculoProtegido
         ? { ...paso.vinculoProtegido, titulo: paso.vinculoProtegido.titulo.trim() }

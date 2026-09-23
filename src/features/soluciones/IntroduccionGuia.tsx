@@ -133,7 +133,7 @@ export function IntroduccionGuia({ procedimiento }: { procedimiento: Procedimien
       )}
 
       {requisitos.length > 0 && (
-        <SeccionIntro titulo="Antes de empezar">
+        <SeccionIntro titulo="Requisitos">
           <div className="flex flex-col gap-2.5 rounded-lg bg-noct-surface p-3.5">
             {requisitos.map((requisito) => (
               <div key={requisito} className="flex items-start gap-2.5">

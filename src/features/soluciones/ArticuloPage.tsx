@@ -26,7 +26,6 @@ import {
   PencilSimple,
   ShareNetwork,
   TrashSimple,
-  Warning,
   WarningOctagon,
 } from '../../components/iconos'
 import { BotonFavorito } from '../../components/BotonFavorito'
@@ -174,8 +173,10 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
           las fichas hermanas de equipo y credencial (R26, tarea 191). */}
       <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-10">
         {estado === 'borrador' && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-3 py-2.5">
-            <Warning size={16} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+          // Neutro desde el 2026-09-22 (tarea 255): un borrador no es un
+          // riesgo, y dentro de una guía el amarillo significa "lugar".
+          <div className="flex items-start gap-2.5 rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5">
+            <PencilSimple size={16} className="mt-px shrink-0 text-noct-neutral-400" aria-hidden />
             <p className="text-[13px] leading-normal">
               Borrador. No sale en el buscador global, las rutas de inicio ni el diagnóstico. Sí aparece en la
               lista de Guías, marcado como borrador.

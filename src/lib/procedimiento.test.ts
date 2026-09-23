@@ -58,6 +58,8 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
     id: 'paso-1',
     titulo: 'Abrir SQL Server Management Studio',
     objetivo: '',
+    lugar: '',
+    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,
@@ -162,6 +164,8 @@ describe('normalizarProcedimiento', () => {
     expect(resultado?.pasos[0]).toMatchObject({
       titulo: 'Solo título',
       objetivo: '',
+      lugar: '',
+      resultado: '',
       bloques: [],
       adjuntos: [],
       vinculoProtegido: null,
@@ -728,6 +732,30 @@ describe('prepararProcedimientoParaGuardar', () => {
     expect(resultado?.pasos[0].titulo).toBe('Abrir la consola')
   })
 
+  // Tarea 255: "Para qué", "Dónde" y "Debes ver" son tres campos
+  // distintos, y guardar y volver a leer la guía no puede mezclarlos ni
+  // perder ninguno.
+  it('limpia y conserva objetivo, lugar y resultado de cada paso, sin mezclarlos', () => {
+    const resultado = preparar([
+      pasoCompleto({
+        objetivo: '  Dejar la impresora compartida  ',
+        lugar: '  Panel de control > Dispositivos e impresoras  ',
+        resultado: '  La impresora en la lista, con la marca verde  ',
+      }),
+    ])
+    expect(resultado?.pasos[0]).toMatchObject({
+      objetivo: 'Dejar la impresora compartida',
+      lugar: 'Panel de control > Dispositivos e impresoras',
+      resultado: 'La impresora en la lista, con la marca verde',
+    })
+    const releido = normalizarProcedimiento(JSON.parse(JSON.stringify(resultado)))
+    expect(releido?.pasos[0]).toMatchObject({
+      objetivo: 'Dejar la impresora compartida',
+      lugar: 'Panel de control > Dispositivos e impresoras',
+      resultado: 'La impresora en la lista, con la marca verde',
+    })
+  })
+
   it('limpia espacios en el objetivo general y conserva tiempo y dificultad', () => {
     const resultado = preparar([pasoCompleto()], {
       objetivoGeneral: '  Dejar todo operativo  ',
@@ -1004,6 +1032,8 @@ describe('una guía escrita antes de estos cambios sobrevive intacta', () => {
         id: 'p1',
         titulo: 'Abrir los recursos',
         objetivo: 'Ver la lista',
+        lugar: '',
+        resultado: '',
         subArticuloId: 'art-gestor',
         subArticuloTitulo: 'Acceder al gestor',
         solucionArticuloId: 'art-falla',

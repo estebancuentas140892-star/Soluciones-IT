@@ -178,6 +178,8 @@ function paso(parcial: Partial<PasoProcedimiento> & { id: string }): PasoProcedi
   return {
     titulo: '',
     objetivo: '',
+    lugar: '',
+    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,
@@ -300,12 +302,19 @@ const GUIA_TRES_TAREAS = articulo({
       paso({
         id: 'rec-p1',
         titulo: 'Preparar el equipo',
+        lugar: 'Puesto de trabajo de ejemplo',
+        resultado: 'El equipo de ejemplo encendido',
         bloques: [tarea('rec-p1-t1', 'Encender el equipo de ejemplo')],
       }),
       paso({
         id: 'rec-p2',
         titulo: 'Abrir los recursos compartidos de ejemplo',
         objetivo: 'Ver la lista de recursos del servidor de ejemplo',
+        lugar: 'Ventana Ejecutar de Windows',
+        resultado: 'La lista de recursos del servidor de ejemplo',
+        // "Credencial necesaria" (tarea 255). El id no existe en la
+        // bóveda de prueba: basta para ver el bloque y su rótulo.
+        vinculoProtegido: { tipo: 'credencial', id: 'cred-ejemplo-servidor', titulo: 'Acceso de ejemplo al servidor' },
         bloques: [
           tarea('rec-p2-t1', 'Escribir la direccion de ejemplo'),
           aviso('rec-p2-a1', 'Aviso de ejemplo que solo corresponde a la primera tarea.'),
@@ -319,6 +328,7 @@ const GUIA_TRES_TAREAS = articulo({
       paso({
         id: 'rec-p3',
         titulo: 'Dejar el recurso a mano',
+        lugar: 'Explorador de archivos de ejemplo',
         solucionArticuloId: GUIA_VINCULADA.id,
         solucionArticuloTitulo: GUIA_VINCULADA.titulo,
         bloques: [tarea('rec-p3-t1', 'Anclar el recurso de ejemplo')],
@@ -348,6 +358,8 @@ const GUIA_ALCANCE_POR_TAREA = articulo({
         id: 'alc-p1',
         titulo: 'Abrir los recursos compartidos de ejemplo',
         objetivo: 'Ver la lista de recursos del servidor de ejemplo',
+        lugar: '',
+        resultado: '',
         bloques: [
           tarea('alc-t1', 'Escribir la direccion de ejemplo'),
           avisoDeTarea('alc-a1', 'alc-t1', 'Precaucion que pertenece SOLO a la primera tarea.'),
@@ -610,6 +622,8 @@ const GUIA_TONOS = articulo({
         id: 'tonos-p2',
         titulo: 'Escribir el dato nuevo',
         objetivo: 'Que la caja use el dato del documento',
+        lugar: '',
+        resultado: '',
         bloques: [
           tarea('tonos-p2-t1', 'Escribe el dato nuevo en el campo de ejemplo'),
           avisoConTono('tonos-a-dato', 'tonos-p2-t1', 'dato', 'Formato del dato de ejemplo: EJ-0000'),

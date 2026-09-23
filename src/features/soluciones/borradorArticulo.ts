@@ -79,7 +79,19 @@ export function normalizarDatosBorrador(valor: unknown): DatosBorradorArticulo {
     portada: (origen.portada ?? null) as DatosBorradorArticulo['portada'],
     objetivoGeneral: texto('objetivoGeneral'),
     requisitos: texto('requisitos'),
-    pasos: lista<DatosBorradorArticulo['pasos'][number]>('pasos'),
+    // Un borrador escrito por un editor anterior a `lugar` y `resultado`
+    // (2026-09-22, tarea 255) no los trae, y el editor los lee y los
+    // recorta sin comprobar: sin esto, guardar la guía reventaba. Se
+    // completan vacíos sin tocar lo demás del paso; no se pasa por el
+    // normalizador completo, que descartaría lo que está a medio hacer
+    // (una imagen sin subir, una referencia sin elegir).
+    pasos: lista<DatosBorradorArticulo['pasos'][number]>('pasos')
+      .filter((paso) => Boolean(paso) && typeof paso === 'object')
+      .map((paso) => ({
+        ...paso,
+        lugar: typeof paso.lugar === 'string' ? paso.lugar : '',
+        resultado: typeof paso.resultado === 'string' ? paso.resultado : '',
+      })),
     verificacionFinal: texto('verificacionFinal'),
     tiempoEstimadoMin: texto('tiempoEstimadoMin'),
     dificultad: texto('dificultad'),

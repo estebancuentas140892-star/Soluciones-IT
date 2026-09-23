@@ -29,6 +29,8 @@ function paso(bloques: BloquePaso[]): PasoProcedimiento {
     id: 'p1',
     titulo: 'Paso',
     objetivo: '',
+    lugar: '',
+    resultado: '',
     bloques,
     adjuntos: [],
     vinculoProtegido: null,

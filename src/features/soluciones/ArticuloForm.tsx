@@ -1095,7 +1095,7 @@ export function ArticuloForm() {
             fin (requisitos previos, pasos y verificación final). */}
         {pestana === 'pasos' && (
           <>
-            <Campo etiqueta="Antes de empezar (un requisito por línea)">
+            <Campo etiqueta="Requisitos (uno por línea)">
               <textarea
                 rows={3}
                 value={requisitos}

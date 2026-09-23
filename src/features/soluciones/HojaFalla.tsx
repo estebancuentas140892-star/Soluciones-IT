@@ -76,12 +76,12 @@ function Salida({
   Icono: typeof Wrench
   titulo: string
   detalle?: ReactNode
-  tono?: 'precaucion' | 'neutro'
+  tono?: 'riesgo' | 'neutro'
   onClick: () => void
 }) {
   const clases =
-    tono === 'precaucion'
-      ? 'border-noct-precaucion/60 bg-noct-precaucion/10 active:bg-noct-precaucion/[.24]'
+    tono === 'riesgo'
+      ? 'border-noct-error/60 bg-noct-error/10 active:bg-noct-error/[.24]'
       : 'border-noct-text/[.26] active:bg-noct-text/10'
   return (
     <button
@@ -91,7 +91,7 @@ function Salida({
     >
       <Icono
         size={20}
-        className={`shrink-0 ${tono === 'precaucion' ? 'text-noct-precaucion' : 'text-noct-neutral-300'}`}
+        className={`shrink-0 ${tono === 'riesgo' ? 'text-noct-error' : 'text-noct-neutral-300'}`}
         aria-hidden
       />
       <span className="min-w-0 flex-1">
@@ -136,7 +136,7 @@ export function HojaFalla({
     <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
       <div className="flex flex-col gap-2">
         <span id={ID_TITULO} className="flex items-center gap-2 text-[18px] font-medium leading-tight text-noct-text">
-          <Warning size={20} className="shrink-0 text-noct-precaucion" aria-hidden />
+          <Warning size={20} className="shrink-0 text-noct-error" aria-hidden />
           Algo va mal en el paso {numeroPaso}
         </span>
 
@@ -156,7 +156,7 @@ export function HojaFalla({
         {contingencia && contingencia !== 'rota' && (
           <Salida
             Icono={Wrench}
-            tono="precaucion"
+            tono="riesgo"
             titulo="Abrir la contingencia vinculada"
             detalle={
               <>
@@ -171,7 +171,7 @@ export function HojaFalla({
         )}
 
         {contingencia === 'rota' && (
-          <p className="rounded-[10px] border border-noct-precaucion/35 bg-noct-precaucion/10 px-3 py-2.5 text-[13px] leading-normal text-noct-precaucion">
+          <p className="rounded-[10px] border border-noct-divider bg-noct-text/[.04] px-3 py-2.5 text-[13px] leading-normal text-noct-neutral-200">
             La contingencia vinculada{solucionArticuloTitulo ? ` "${solucionArticuloTitulo}"` : ''} ya no está
             disponible. Edita la guía para vincular otra.
           </p>

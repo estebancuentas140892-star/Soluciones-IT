@@ -173,6 +173,34 @@ describe('guías guardadas antes del editor actual', () => {
     const documentos = documentosDeBusqueda(datosIndice({ articulos: [sinEstado] }))
     expect(documentos.map((d) => d.id)).toContain('articulo:a1')
   })
+
+  // Campos nuevos del 2026-09-22 (tarea 255): un paso guardado antes no
+  // los trae, y la app no puede romperse ni inventarle un lugar o un
+  // resultado.
+  it('un paso anterior a `lugar` y `resultado` se lee con los dos vacíos', () => {
+    const procedimiento = normalizarProcedimiento(guiaVieja('a1', ['p1']).procedimiento)!
+    expect(procedimiento.pasos[0].lugar).toBe('')
+    expect(procedimiento.pasos[0].resultado).toBe('')
+  })
+
+  it('el `lugar` y el `resultado` de un paso entran al índice cuando existen', () => {
+    const vieja = guiaVieja('a1', ['p1'])
+    // El JSON crudo, como llega de Supabase: sin el tipo del editor actual.
+    const crudo = vieja.procedimiento as unknown as { pasos: Record<string, unknown>[] }
+    const conCampos = {
+      ...vieja,
+      procedimiento: {
+        ...crudo,
+        pasos: [
+          { ...crudo.pasos[0], lugar: 'Panel de control de prueba', resultado: 'Ventana de recursos de prueba' },
+        ],
+      },
+    } as unknown as Articulo
+    const documentos = documentosDeBusqueda(datosIndice({ articulos: [conCampos] }))
+    const texto = documentos.find((d) => d.id === 'articulo:a1')?.texto
+    expect(texto).toContain('Panel de control de prueba')
+    expect(texto).toContain('Ventana de recursos de prueba')
+  })
 })
 
 describe('credenciales guardadas antes de la columna `tipo`', () => {

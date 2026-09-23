@@ -27,6 +27,7 @@ import { ChipReferencia } from '../referencia/ChipReferencia'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
+import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { presenciaDeAviso, tonoInfo } from './tonos'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import {
@@ -49,20 +50,30 @@ const BTN_ESTADO_BASE =
   'inline-flex min-h-11 cursor-pointer items-center rounded-lg border px-3.5 text-[14px] font-medium'
 const BTN_EXITO =
   `${BTN_ESTADO_BASE} border-noct-exito/50 text-noct-exito hover:bg-noct-exito/10 active:bg-noct-exito/20`
-const BTN_PRECAUCION =
-  `${BTN_ESTADO_BASE} border-noct-precaucion/50 text-noct-precaucion hover:bg-noct-precaucion/10 active:bg-noct-precaucion/20`
+// LOS COLORES DE LA GUÍA (encargo del 2026-09-22, sección 4): el rojo es
+// el riesgo y el "detenerse" (una comprobación que no se cumple); la vía
+// que se desvía (el "No" de una decisión) es neutra, porque no es un
+// riesgo. El ámbar sale de las guías: dentro de una, el amarillo
+// significa "lugar".
+const BTN_RIESGO =
+  `${BTN_ESTADO_BASE} border-noct-error/55 text-noct-error hover:bg-noct-error/10 active:bg-noct-error/20`
+const BTN_OTRA_VIA =
+  `${BTN_ESTADO_BASE} border-noct-neutral-600 text-noct-neutral-200 hover:bg-noct-text/[.07] active:bg-noct-text/[.12]`
 // El verde deja de servir para ELEGIR (regla R60 del turno 12): el
 // significado del éxito se invertía de un bloque al de al lado, porque
 // en la pregunta de error el verde era "No, no falló nada" y en una
 // decisión Sí/No era "Sí, continuar". Ahora el acento marca siempre la
-// vía que sigue y el ámbar la que se desvía, igual en los dos sitios.
-// El verde queda solo para decir "completado".
+// vía que sigue y el neutro (antes el ámbar) la que se desvía, igual en
+// los dos sitios. El verde queda solo para decir "completado".
 const BTN_ACENTO =
   `${BTN_ESTADO_BASE} border-noct-accent/50 text-noct-accent-300 hover:bg-noct-accent/10 active:bg-noct-accent/20`
 
 // Panel de aviso reutilizado para vinculos rotos o no disponibles.
-const PANEL_PRECAUCION =
-  'rounded-lg border border-noct-precaucion/30 bg-noct-precaucion/10 px-3 py-2.5 text-[13px] leading-normal'
+// Neutro desde el 2026-09-22 (tarea 255): un vinculo roto no es un
+// riesgo del procedimiento, y dentro de una guia el amarillo significa
+// "lugar". Lo dice su texto.
+const PANEL_NO_DISPONIBLE =
+  'rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5 text-[13px] leading-normal text-noct-neutral-200'
 
 interface Props {
   articuloId: string
@@ -182,7 +193,7 @@ export function ProcedimientoVista({
 
       {requisitos.length > 0 && (
         <section>
-          <TituloSeccion className="mb-2">Antes de empezar</TituloSeccion>
+          <TituloSeccion className="mb-2">Requisitos</TituloSeccion>
           <div className="flex flex-col gap-2.5 rounded-lg bg-noct-surface p-3.5">
             {requisitos.map((requisito) => (
               <div key={requisito} className="flex items-start gap-2.5">
@@ -321,6 +332,10 @@ export function ProcedimientoVista({
                     )}
 
                     <div className={`flex flex-col gap-2.5 ${plegable ? 'mt-2' : ''} ${abierto ? '' : 'hidden'}`}>
+                      {/* DÓNDE SE HACE (encargo del 2026-09-22, sección 6):
+                          el mismo bloque que la ejecución, para que leer y
+                          hacer enseñen lo mismo (criterio A08). */}
+                      {paso.lugar.trim() !== '' && <DondeSeHacePaso lugar={paso.lugar.trim()} />}
                       {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
                       {paso.bloques.map((bloque) => (
@@ -346,6 +361,16 @@ export function ProcedimientoVista({
                         />
                       ))}
 
+                      {/* CREDENCIAL NECESARIA (encargo del 2026-09-22,
+                          sección 8): el dato protegido del paso deja de
+                          ser una fila más y se presenta con su rótulo, en
+                          un bloque neutro, igual que en la ejecución. */}
+                      {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} variante="bloque" />}
+
+                      {/* QUÉ DEBO VER DESPUÉS, tras el cuerpo del paso: el
+                          mismo bloque verde que la ejecución. */}
+                      {paso.resultado.trim() !== '' && <DebesVerPaso texto={paso.resultado.trim()} />}
+
                       {/* LO QUE CUELGA DEL PASO, en filas y sin marcos
                           de color (M-012, regla M-R11, tableros `3b` y
                           `12b`). El dato protegido, la guía anidada y la
@@ -357,13 +382,13 @@ export function ProcedimientoVista({
                           tono con significados distintos, y la
                           advertencia real dejaba de destacar.
 
-                          Ahora son tres filas de 44 px con icono neutro,
-                          y lo que se despliega de cada una va sangrado
-                          tras una línea vertical neutra. */}
-                      {(paso.vinculoProtegido || paso.subArticuloId || paso.solucionArticuloId) && (
+                          Ahora son filas de 44 px con icono neutro, y lo
+                          que se despliega de cada una va sangrado tras
+                          una línea vertical neutra. El dato protegido
+                          salió de aquí el 2026-09-22: es "Credencial
+                          necesaria", arriba. */}
+                      {(paso.subArticuloId || paso.solucionArticuloId) && (
                         <div className="flex flex-col">
-                          {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} />}
-
                           {paso.subArticuloId && (
                             <SubProcedimientoEnPaso
                               subArticuloId={paso.subArticuloId}
@@ -595,7 +620,7 @@ function SubProcedimientoEnPaso({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className={PANEL_PRECAUCION}>
+      <div className={PANEL_NO_DISPONIBLE}>
         El procedimiento vinculado{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
         disponible. Edita el artículo para quitar el vínculo o vincular otro.
       </div>
@@ -719,7 +744,7 @@ function ContingenciaEnPaso({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className={PANEL_PRECAUCION}>
+      <div className={PANEL_NO_DISPONIBLE}>
         La contingencia vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
         disponible. Edita el artículo para quitar el vínculo o vincular otra.
       </div>
@@ -870,7 +895,7 @@ function FilaTarea({
       {/* Por qué no se puede marcar todavía, en su propia línea: al
           lado de la casilla se partiría en renglones de dos palabras. */}
       {bloqueadaPor && (
-        <span className="-mt-0.5 pl-10 text-[12px] leading-snug text-noct-precaucion">{bloqueadaPor}</span>
+        <span className="-mt-0.5 pl-10 text-[12px] leading-snug text-noct-neutral-300">{bloqueadaPor}</span>
       )}
     </span>
   )
@@ -1018,10 +1043,11 @@ export function BloqueVista({
   // pregunta, con el mismo bloque protegido contraido por defecto que
   // ya protege el vinculo de un paso completo.
   // El dato protegido de una TAREA cuelga de esa tarea, así que va
-  // sangrado tras la línea, igual que lo que cuelga de un paso.
+  // sangrado tras la línea, igual que lo que cuelga de un paso. Desde el
+  // 2026-09-22 con su rótulo, "Credencial necesaria", como en la ejecución.
   const credencialInline = bloque.vinculoProtegido && (
     <div className={ZONA_ANIDADA}>
-      <CredencialEnPaso vinculo={bloque.vinculoProtegido} />
+      <CredencialEnPaso vinculo={bloque.vinculoProtegido} variante="bloque" />
     </div>
   )
 
@@ -1061,7 +1087,7 @@ export function BloqueVista({
             <p className="min-w-0 flex-1 text-[13.5px] font-medium leading-normal">{bloque.texto}</p>
             <TagNeutral className="shrink-0">Verificación</TagNeutral>
           </div>
-          {bloqueo && <p className="mt-1.5 text-[12px] leading-snug text-noct-precaucion">{bloqueo}</p>}
+          {bloqueo && <p className="mt-1.5 text-[12px] leading-snug text-noct-neutral-300">{bloqueo}</p>}
           <div className="mt-2.5 flex flex-wrap gap-2">
             <button
               type="button"
@@ -1072,7 +1098,7 @@ export function BloqueVista({
               Sí, lo comprobé
             </button>
             {onNoSeCumple && (
-              <button type="button" onClick={() => onNoSeCumple(bloque.texto)} className={BTN_PRECAUCION}>
+              <button type="button" onClick={() => onNoSeCumple(bloque.texto)} className={BTN_RIESGO}>
                 No se cumple
               </button>
             )}
@@ -1195,16 +1221,16 @@ function DecisionEnTarea({
       <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
         <p className="text-[13.5px] font-medium leading-normal">{bloque.texto}</p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          {/* Acento la vía que sigue, ámbar la que se desvía (R60). El
-              verde se retira: significaba "Sí" aquí y "No" en la
-              pregunta de error de al lado. */}
+          {/* Acento la vía que sigue y neutro la que se desvía (R60, con el
+              lenguaje de color del 2026-09-22). El verde se retira:
+              significaba "Sí" aquí y "No" en la pregunta de al lado. */}
           <button type="button" onClick={onAlternar} className={BTN_ACENTO}>
             Sí, continuar
           </button>
           <button
             type="button"
             onClick={() => (vinculoId ? setMostrarVinculo(true) : onAlternar())}
-            className={BTN_PRECAUCION}
+            className={BTN_OTRA_VIA}
           >
             {vinculoId ? `No, abrir "${bloque.decisionArticuloTitulo || 'la solución'}"` : 'No, continuar'}
           </button>
@@ -1217,7 +1243,7 @@ function DecisionEnTarea({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className={PANEL_PRECAUCION}>
+      <div className={PANEL_NO_DISPONIBLE}>
         <p className="m-0">
           El artículo vinculado a esta decisión
           {bloque.decisionArticuloTitulo ? ` "${bloque.decisionArticuloTitulo}"` : ''} ya no está
@@ -1385,7 +1411,7 @@ function GuiaVinculadaEnBloque({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <p className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2 text-xs text-noct-precaucion">
+      <p className="rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2 text-xs text-noct-neutral-200">
         La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
         dispositivo.
       </p>

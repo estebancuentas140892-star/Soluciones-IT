@@ -38,16 +38,20 @@ export interface TonoInfo {
 // (encargo del 2026-09-17): quien escribe la guía decide si algo
 // interrumpe o no eligiendo el tono, así que tiene que saberlo al elegir.
 export const TONOS_AVISO: TonoInfo[] = [
+  // Información y consejo NO llevan color (encargo del 2026-09-22,
+  // sección 4): en una guía los colores significan, y ni una explicación
+  // ni un consejo son un lugar, una acción, un resultado o un riesgo. Se
+  // distinguen por su icono y su palabra.
   {
     valor: 'info',
     etiqueta: 'Información',
     corto: 'Info',
     descripcion: 'Explicación o contexto. Al ejecutar queda plegado en «Más información»',
     Icono: Info,
-    clasesPanel: 'border-noct-accent/30 bg-noct-accent/10',
-    claseIcono: 'text-noct-accent',
-    claseBarra: 'border-noct-accent',
-    claseFondo: 'bg-noct-accent/10',
+    clasesPanel: 'border-noct-divider bg-noct-text/[.04]',
+    claseIcono: 'text-noct-neutral-300',
+    claseBarra: 'border-noct-neutral-500',
+    claseFondo: 'bg-noct-text/[.04]',
   },
   {
     valor: 'precaucion',
@@ -55,10 +59,16 @@ export const TONOS_AVISO: TonoInfo[] = [
     corto: 'Cuidado',
     descripcion: 'Algo que puede salir mal en esta acción. Se ve como alerta junto a ella',
     Icono: Warning,
-    clasesPanel: 'border-noct-precaucion/30 bg-noct-precaucion/10',
-    claseIcono: 'text-noct-precaucion',
-    claseBarra: 'border-noct-precaucion',
-    claseFondo: 'bg-noct-precaucion/10',
+    // UN RIESGO VA EN ROJO (encargo del 2026-09-22, sección 4). Era
+    // ámbar, y dentro de una guía el amarillo pasa a significar "lugar
+    // que hay que localizar". Precaución e Importante son los dos riesgos
+    // reales: la precaución lleva el rojo con borde y fondo suave; lo
+    // importante, el rojo pleno. Los distingue además su icono y su
+    // palabra, nunca solo el color.
+    clasesPanel: 'border-noct-error/35 bg-noct-error/[.07]',
+    claseIcono: 'text-noct-error',
+    claseBarra: 'border-noct-error/70',
+    claseFondo: 'bg-noct-error/[.07]',
   },
   {
     valor: 'importante',
@@ -66,10 +76,10 @@ export const TONOS_AVISO: TonoInfo[] = [
     corto: 'Alerta',
     descripcion: 'Riesgo real: pérdida de datos, ventas o facturación, o algo irreversible. Alerta destacada',
     Icono: WarningOctagon,
-    clasesPanel: 'border-noct-error/30 bg-noct-error/10',
+    clasesPanel: 'border-noct-error/60 bg-noct-error/[.16]',
     claseIcono: 'text-noct-error',
     claseBarra: 'border-noct-error',
-    claseFondo: 'bg-noct-error/10',
+    claseFondo: 'bg-noct-error/[.16]',
   },
   {
     valor: 'consejo',
@@ -77,10 +87,10 @@ export const TONOS_AVISO: TonoInfo[] = [
     corto: 'Consejo',
     descripcion: 'Atajo o buena práctica. Al ejecutar queda plegado en «Más información»',
     Icono: Lightbulb,
-    clasesPanel: 'border-noct-exito/30 bg-noct-exito/10',
-    claseIcono: 'text-noct-exito',
-    claseBarra: 'border-noct-exito',
-    claseFondo: 'bg-noct-exito/10',
+    clasesPanel: 'border-noct-divider bg-noct-text/[.04]',
+    claseIcono: 'text-noct-neutral-300',
+    claseBarra: 'border-noct-neutral-500',
+    claseFondo: 'bg-noct-text/[.04]',
   },
   {
     valor: 'dato',

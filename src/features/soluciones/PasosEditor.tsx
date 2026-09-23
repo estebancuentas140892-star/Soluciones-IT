@@ -943,12 +943,38 @@ export function PasosEditor({
               que se viera uno. */}
           {desplegado && (
           <>
+          {/* TRES LÍNEAS BAJO EL TÍTULO, todas opcionales. Para qué sirve
+              el paso (`objetivo`, plegado en la ejecución) y las dos
+              preguntas que faltaban (encargo del 2026-09-22, sección 6):
+              dónde se hace (`lugar`, en amarillo con la primera acción)
+              y qué tiene que verse al terminar (`resultado`, en verde con
+              la última). "Para qué" y "Debes ver" son campos distintos:
+              uno explica el propósito ("Dejar la impresora compartida"),
+              el otro describe lo que aparece en la pantalla ("La
+              impresora en la lista, con la marca verde"). AD-043. */}
           <input
             type="text"
             value={paso.objetivo}
             onChange={(e) => actualizarPaso(indice, { objetivo: e.target.value })}
-            placeholder="Objetivo: qué se logra al terminar"
-            className="mb-2.5 ml-[38px] mt-1 min-h-11 max-w-[calc(100%-38px)] border-none bg-transparent px-2 py-1 text-[13.5px] text-noct-neutral-400 outline-none"
+            placeholder="Para qué: qué se logra con este paso"
+            aria-label={`Para qué sirve el paso ${indice + 1}`}
+            className="ml-[38px] mt-1 min-h-11 max-w-[calc(100%-38px)] border-none bg-transparent px-2 py-1 text-[13.5px] text-noct-neutral-400 outline-none"
+          />
+          <input
+            type="text"
+            value={paso.lugar}
+            onChange={(e) => actualizarPaso(indice, { lugar: e.target.value })}
+            placeholder="Dónde se hace: menú, ventana o sección"
+            aria-label={`Dónde se hace el paso ${indice + 1}`}
+            className="ml-[38px] min-h-11 max-w-[calc(100%-38px)] border-none bg-transparent px-2 py-1 text-[13.5px] text-noct-neutral-400 outline-none"
+          />
+          <input
+            type="text"
+            value={paso.resultado}
+            onChange={(e) => actualizarPaso(indice, { resultado: e.target.value })}
+            placeholder="Debes ver: qué aparece al terminar"
+            aria-label={`Qué debe verse al terminar el paso ${indice + 1}`}
+            className="mb-2.5 ml-[38px] min-h-11 max-w-[calc(100%-38px)] border-none bg-transparent px-2 py-1 text-[13.5px] text-noct-neutral-400 outline-none"
           />
 
           {/* Cuerpo del paso: tareas, advertencias e imagenes. Los cuatro

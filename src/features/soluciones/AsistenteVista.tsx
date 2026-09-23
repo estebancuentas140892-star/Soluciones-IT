@@ -54,6 +54,8 @@ import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
 import { AntesDeEmpezar, ModoFoco } from './ModoFoco'
+import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
+import { RutaProcedimiento } from './RutaProcedimiento'
 import { HojaFalla } from './HojaFalla'
 import { destinoAlSaltar } from './salidasFalla'
 import { minutosRestantes, resumenDeAvance, resumirPasos, type ResumenPaso } from './estadoPasos'
@@ -516,6 +518,20 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
       <AvisoRetomada numeroPaso={indiceActual + 1} onEmpezarDeNuevo={() => void reiniciarYVolver()} />
     ) : null
 
+  // LA RUTA DEL PROCEDIMIENTO (encargo del 2026-09-22, sección 5): un
+  // nodo por paso, con su estado, sobre el paso actual. Solo en la guía
+  // principal: dentro de un vínculo la ruta que orienta es la de arriba.
+  // "Ver la ruta completa" abre la misma hoja del índice.
+  const rutaUI =
+    nivel === 0 ? (
+      <RutaProcedimiento
+        resumenes={resumenes}
+        indiceActual={indiceActual}
+        onIrAPaso={(indice: number) => irAPaso(indice)}
+        onVerRutaCompleta={() => setIndiceAbierto(true)}
+      />
+    ) : null
+
   // El índice de pasos y su disparador (tarea 218, G-09, G-10, G-14):
   // una línea compacta de 44 px que el chasis porta a su propia barra
   // pegajosa (`BandaTarea`, sustituye los 124 px que sumaban la barra
@@ -535,7 +551,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           resumenes={resumenes}
           subtitulo={subtituloIndice}
           tituloGuia={articulo?.titulo}
-          onIrAPaso={(indice) => irAPaso(indice)}
+          onIrAPaso={(indice: number) => irAPaso(indice)}
           modoEjecucion={modoEjecucion}
           onCambiarModo={(modo) => void cambiarModoEjecucion(modo)}
           // H11 / A15: se leen desde el primer paso, sin tener que
@@ -559,6 +575,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
         <ModoFoco
           key={paso.id}
           paso={paso}
+          ruta={rutaUI}
           tituloPaso={tituloPaso}
           numeroPaso={indiceActual + 1}
           totalPasos={pasos.length}
@@ -650,27 +667,28 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
 
       {requisitosVisibles.length > 0 && <AntesDeEmpezar requisitos={requisitosVisibles} />}
 
+      {/* DÓNDE ESTOY. En la guía principal, la ruta (que ya dice "Paso N
+          de M" y el título); dentro de un vínculo, su título a secas.
+          Debajo, para qué sirve el paso: en el paso entero se lee todo. */}
       <div className="flex flex-col gap-1">
-        {nivel >= 1 && <h2 className="text-lg font-semibold text-noct-text">{tituloPaso}</h2>}
-        {nivel === 0 && (
-          <p className="text-[13.5px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
-            Paso {indiceActual + 1} de {pasos.length}
-          </p>
-        )}
-        {nivel === 0 && paso.titulo && <h2 className="text-[20px] font-medium leading-snug text-noct-text">{paso.titulo}</h2>}
-        {paso.objetivo && <p className="text-sm text-noct-neutral-400">{paso.objetivo}</p>}
+        {rutaUI ?? <h2 className="text-lg font-semibold text-noct-text">{tituloPaso}</h2>}
+        {paso.objetivo.trim() !== '' && <p className="text-sm text-noct-neutral-400">{paso.objetivo}</p>}
       </div>
+
+      {/* DÓNDE SE HACE el paso, antes de su cuerpo (encargo del
+          2026-09-22, sección 6). */}
+      {paso.lugar.trim() !== '' && <DondeSeHacePaso lugar={paso.lugar.trim()} />}
 
       {/* Lo que el técnico declaró al elegir una salida (tablero 3d).
           No toca el progreso ni completa nada: deja dicho que este paso
           falló y pone a mano lo que hace falta. Se retira solo al
           cambiar de paso, porque va atado al id del paso. */}
       {fallaDelPaso && nivel === 0 && (
-        <div className="flex flex-col gap-2.5 rounded-xl border border-noct-precaucion/45 bg-noct-precaucion/[.12] px-4 py-3">
+        <div className="flex flex-col gap-2.5 rounded-xl border border-noct-error/45 bg-noct-error/[.1] px-4 py-3">
           <p className="flex items-start gap-2.5 text-[13.5px] leading-snug">
-            <Warning size={17} className="mt-px shrink-0 text-noct-precaucion" aria-hidden />
+            <Warning size={17} className="mt-px shrink-0 text-noct-error" aria-hidden />
             <span className="min-w-0">
-              <span className="font-semibold text-noct-precaucion">Marcaste una falla</span>
+              <span className="font-semibold text-noct-error">Marcaste una falla</span>
               {fallaDelPaso.tarea ? <> en «{fallaDelPaso.tarea}». </> : <> en este paso. </>}
               Aquí tienes el paso completo: sus avisos, sus fotos y sus archivos.
             </span>
@@ -680,7 +698,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
               <button
                 type="button"
                 onClick={() => setContingenciaPasoId(paso.id)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-noct-precaucion/50 px-3 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-noct-error/50 px-3 text-[13px] font-medium text-noct-error hover:bg-noct-error/10"
               >
                 <Wrench size={15} className="shrink-0" aria-hidden />
                 Abrir la contingencia
@@ -736,16 +754,23 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
         </ul>
       )}
 
+      {/* CREDENCIAL NECESARIA (encargo del 2026-09-22, sección 8): el dato
+          protegido del paso, con su rótulo y en un bloque neutro, como en
+          la vista de una acción a la vez. */}
+      {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} variante="bloque" />}
+
+      {/* QUÉ DEBO VER DESPUÉS: el resultado del paso, tras su cuerpo. */}
+      {paso.resultado.trim() !== '' && <DebesVerPaso texto={paso.resultado.trim()} />}
+
       {/* LO QUE CUELGA DEL PASO, en filas y sin marcos de color (M-012,
           regla M-R11, tableros `3b` y `12b`). El dato protegido y la guía
           anidada traían marco de acento; la contingencia, marco ámbar.
           Con el aviso del paso encima, un paso llegaba a mostrar cinco
           marcos anidados y dos de ellos del mismo tono con significados
           distintos, así que la advertencia real dejaba de destacar.
-          Ahora el ámbar es de la falla y nada más. */}
+          El dato protegido salió de aquí el 2026-09-22: es "Credencial
+          necesaria", arriba. */}
       <div className="flex flex-col">
-        {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} />}
-
         {paso.subArticuloId && (
           <SubProcedimientoEnAsistente
             guiaId={paso.subArticuloId}
@@ -819,7 +844,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           avance lo decide el paso que los contiene, y dos acciones
           dominantes en la misma pantalla dejarían de ser dominantes. */}
       {nivel === 0 && (
-        <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.96] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
+        <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.96] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px] [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-xl">
           <button
             type="button"
             disabled={cierre.accion === 'bloqueado'}
@@ -862,7 +887,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
               onClick={() => setHojaFalla({ tarea: null })}
               aria-haspopup="dialog"
               aria-label={`Algo va mal en el paso ${indiceActual + 1}`}
-              className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-precaucion hover:bg-noct-text/[.07]"
+              className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07]"
             >
               <Warning size={18} aria-hidden />
             </button>
@@ -892,7 +917,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
             onClick={() => setHojaFalla({ tarea: null })}
             aria-haspopup="dialog"
             aria-label={`Algo va mal en el paso ${indiceActual + 1}`}
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-noct-precaucion/55 px-3 text-[13px] font-medium text-noct-precaucion hover:bg-noct-precaucion/10"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-noct-divider px-3 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.07]"
           >
             <Warning size={15} className="shrink-0" aria-hidden />
             Falla
@@ -1035,7 +1060,7 @@ function EvidenciaPaso({
         type="button"
         disabled={creando}
         onClick={() => void adjuntarEvidencia()}
-        className="flex h-[56px] w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-precaucion/60 bg-noct-precaucion/10 px-4 text-[15px] font-medium text-noct-precaucion active:bg-noct-precaucion/[.24] disabled:opacity-50"
+        className="flex h-[56px] w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-error/60 bg-noct-error/10 px-4 text-[15px] font-medium text-noct-error active:bg-noct-error/[.24] disabled:opacity-50"
       >
         <Camera size={19} className="shrink-0" aria-hidden />
         {creando ? 'Preparando...' : 'Fotografiar y anotar la falla'}
@@ -1117,8 +1142,8 @@ function VinculoEnFoco({
   // VÍNCULO ROTO CON SALIDA ÚTIL (criterio A12).
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2.5">
-        <p className="text-[13px] leading-snug text-noct-precaucion">
+      <div className="flex flex-col gap-2 rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5">
+        <p className="text-[13px] leading-snug text-noct-neutral-200">
           La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
           dispositivo. Puede haberse eliminado, o no haber llegado todavía por sincronización.
         </p>
@@ -1199,7 +1224,7 @@ function EjecucionVinculada({
 
   if (articulo === null || articulo.eliminadoEn || procedimiento === null) {
     return (
-      <p className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2.5 text-[13px] leading-snug text-noct-precaucion">
+      <p className="rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5 text-[13px] leading-snug text-noct-neutral-200">
         Esta guía ya no está disponible en este dispositivo. Vuelve a la guía principal y sigue con el
         resto del paso.
       </p>
@@ -1277,8 +1302,8 @@ function SubProcedimientoEnAsistente({
   // quedaba sin nada que hacer y sin saber si podía continuar.
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2.5">
-        <p className="text-[13px] leading-snug text-noct-precaucion">
+      <div className="flex flex-col gap-2 rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5">
+        <p className="text-[13px] leading-snug text-noct-neutral-200">
           La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
           dispositivo. Puede haberse eliminado, o no haber llegado todavía por sincronización.
         </p>
@@ -1439,8 +1464,8 @@ function SolucionEnAsistente({
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
-      <div className="rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/10 px-3 py-2">
-        <p className="text-xs text-noct-precaucion">
+      <div className="rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2">
+        <p className="text-xs text-noct-neutral-200">
           La contingencia vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
           disponible. Edita el artículo para quitar el vínculo o vincular otra.
         </p>

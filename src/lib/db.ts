@@ -223,10 +223,33 @@ export interface BloquePaso {
 export interface PasoProcedimiento {
   id: string
   titulo: string
-  // Descripcion muy corta (1 linea) de que se logra al terminar el
-  // paso. Ayuda a entender el proposito antes de empezar; opcional,
-  // no se muestra si esta vacio.
+  // Descripcion muy corta (1 linea) de para que sirve el paso. Ayuda a
+  // entender el proposito antes de empezar; opcional, no se muestra si
+  // esta vacio. En la ejecucion va plegado como "Para qué" (explica, no
+  // ordena). NO es lo que se ve al terminar: eso es `resultado`.
   objetivo: string
+  // DÓNDE SE HACE (encargo del 2026-09-22, sección 6): el lugar, menú,
+  // ventana o sección que hay que localizar para hacer el paso ("Panel de
+  // control > Dispositivos e impresoras", "Menú lateral de SGC").
+  // Opcional; vacío en todo lo escrito antes de que existiera. La
+  // ejecución lo enseña con la primera acción del paso, en el amarillo
+  // de "lugar".
+  //
+  // `lugar` y `resultado` viven en el JSON del procedimiento, así que no
+  // necesitan columna en Supabase ni versión nueva de Dexie. Una copia de
+  // la app anterior a estos campos que edite y guarde la guía los
+  // descarta (su normalizador no los conoce): conviene actualizar los
+  // teléfonos antes de rellenarlos.
+  lugar: string
+  // QUÉ DEBO VER DESPUÉS (encargo del 2026-09-22, sección 6): lo que
+  // aparece o queda al terminar el paso y confirma que salió ("La ventana
+  // Ejecutar", "La impresora en la lista con la marca verde"). Opcional;
+  // vacío en todo lo escrito antes. La ejecución lo enseña como "Debes
+  // ver", en verde, con la última acción del paso. Es un campo aparte y no
+  // se reutiliza `objetivo`: un objetivo dice para qué sirve el paso
+  // ("Dejar la impresora compartida") y pintado como "Debes ver"
+  // convertiría objetivos correctos en frases sin sentido (AD-043).
+  resultado: string
   // Cuerpo del paso: tareas con casilla, avisos e imagenes en el orden
   // que definio el autor. Antes era `instrucciones: string[]`; al
   // normalizar, cada instruccion vieja se migra a un bloque 'tarea'.

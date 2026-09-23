@@ -55,6 +55,8 @@ function paso(
   return {
     titulo: '',
     objetivo: '',
+    lugar: '',
+    resultado: '',
     bloques: tareas ? tareas.map(tarea) : [],
     adjuntos: [],
     vinculoProtegido: null,
@@ -283,6 +285,51 @@ describe('resumenProcedimiento', () => {
     ])
     expect(resumenProcedimiento(json(proc([conObjetivo])), json(proc([sinObjetivo]))).cambios).toEqual([
       'Se quitó el objetivo del Paso 1: Uno.',
+    ])
+  })
+
+  it('detecta dónde se hace un paso (2026-09-22): definido, cambiado y quitado', () => {
+    const sinLugar = paso({ id: 'p1', titulo: 'Uno', tareas: ['a'] })
+    const conLugar = paso({ ...sinLugar, lugar: 'Panel de control' })
+    const otroLugar = paso({ ...sinLugar, lugar: 'Configuración' })
+
+    expect(resumenProcedimiento(json(proc([sinLugar])), json(proc([conLugar]))).cambios).toEqual([
+      'Se definió dónde se hace el Paso 1: Uno: "Panel de control".',
+    ])
+    expect(resumenProcedimiento(json(proc([conLugar])), json(proc([otroLugar]))).cambios).toEqual([
+      'Se cambió dónde se hace el Paso 1: Uno: "Panel de control" → "Configuración".',
+    ])
+    expect(resumenProcedimiento(json(proc([conLugar])), json(proc([sinLugar]))).cambios).toEqual([
+      'Se quitó dónde se hace el Paso 1: Uno.',
+    ])
+  })
+
+  it('detecta qué debe verse al terminar un paso (2026-09-22) sin confundirlo con el objetivo', () => {
+    const sinResultado = paso({ id: 'p1', titulo: 'Uno', tareas: ['a'], objetivo: 'Dejarlo listo' })
+    const conResultado = paso({ ...sinResultado, resultado: 'La ventana Ejecutar' })
+    const otroResultado = paso({ ...sinResultado, resultado: 'La consola de recursos' })
+
+    expect(resumenProcedimiento(json(proc([sinResultado])), json(proc([conResultado]))).cambios).toEqual([
+      'Se definió qué debe verse al terminar el Paso 1: Uno: "La ventana Ejecutar".',
+    ])
+    expect(resumenProcedimiento(json(proc([conResultado])), json(proc([otroResultado]))).cambios).toEqual([
+      'Se cambió qué debe verse al terminar el Paso 1: Uno: "La ventana Ejecutar" → "La consola de recursos".',
+    ])
+    expect(resumenProcedimiento(json(proc([conResultado])), json(proc([sinResultado]))).cambios).toEqual([
+      'Se quitó qué debe verse al terminar el Paso 1: Uno.',
+    ])
+  })
+
+  it('una guía guardada antes de `lugar` y `resultado` no cuenta como cambio de esos campos', () => {
+    const actual = paso({ id: 'p1', titulo: 'Uno', tareas: ['a'] })
+    // El JSON de antes no trae los campos: el normalizador los deja vacíos
+    // y vacío contra vacío no es un cambio (sin diferencias, el resumen cae
+    // en su frase genérica).
+    const viejo = JSON.parse(json(proc([actual]))) as { pasos: Record<string, unknown>[] }
+    delete viejo.pasos[0].lugar
+    delete viejo.pasos[0].resultado
+    expect(resumenProcedimiento(JSON.stringify(viejo), json(proc([actual]))).cambios).toEqual([
+      'Se actualizó el procedimiento.',
     ])
   })
 

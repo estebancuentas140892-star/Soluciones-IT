@@ -130,7 +130,7 @@ export function VistaPreviaArticulo({
       <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-noct-divider bg-noct-bg/[.92] px-4 py-3 backdrop-blur-[12px]">
         <p className="text-sm font-medium text-noct-text">
           {pasoDestacadoId ? 'Como lo ve el técnico' : 'Vista previa'}
-          <span className="ml-2 rounded-full border border-noct-precaucion/50 bg-noct-precaucion/[.14] px-2 py-0.5 text-[10px] text-noct-precaucion">
+          <span className="ml-2 rounded-full border border-noct-neutral-600 bg-noct-text/[.06] px-2 py-0.5 text-[10px] text-noct-neutral-300">
             Sin guardar
           </span>
         </p>

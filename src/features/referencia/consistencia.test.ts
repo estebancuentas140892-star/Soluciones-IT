@@ -79,6 +79,8 @@ function articuloCon(id: string, titulo: string, referenciaId: string): Articulo
           id: 'p1',
           titulo: 'Paso',
           objetivo: '',
+          lugar: '',
+          resultado: '',
           bloques: [{ ...CAMPOS_BLOQUE_VACIOS, id: 't1', tipo: 'tarea', texto: 'Hacer algo' }, bloque],
           adjuntos: [],
           vinculoProtegido: null,

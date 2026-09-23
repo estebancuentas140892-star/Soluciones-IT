@@ -112,6 +112,26 @@ describe('normalizarDatosBorrador', () => {
     expect(datos.estado).toBe('borrador')
   })
 
+  it('completa `lugar` y `resultado` en los pasos de un borrador anterior a esos campos', () => {
+    // Como lo dejaba el editor antes del 2026-09-22: sin los dos campos, y
+    // con una imagen a medio subir que el borrador tiene que conservar.
+    const pasoViejo = {
+      id: 'p1',
+      titulo: 'Abrir la consola',
+      objetivo: 'Dejarla lista',
+      bloques: [{ id: 'b1', tipo: 'imagen', texto: '', adjunto: null }],
+      adjuntos: [],
+      vinculoProtegido: null,
+    }
+    const datos = normalizarDatosBorrador({ titulo: 'Viejo', pasos: [pasoViejo] })
+    expect(datos.pasos[0]).toMatchObject({ titulo: 'Abrir la consola', objetivo: 'Dejarla lista', lugar: '', resultado: '' })
+    expect(datos.pasos[0].bloques).toHaveLength(1)
+    // Lo que ya traía se respeta.
+    const actual = normalizarDatosBorrador({ pasos: [{ ...pasoViejo, lugar: 'Escritorio', resultado: 'La consola' }] })
+    expect(datos.pasos[0].id).toBe('p1')
+    expect(actual.pasos[0]).toMatchObject({ lugar: 'Escritorio', resultado: 'La consola' })
+  })
+
   it('tolera basura sin romper la apertura del editor', () => {
     expect(normalizarDatosBorrador(null).titulo).toBe('')
     expect(normalizarDatosBorrador('lo que sea').titulo).toBe('')

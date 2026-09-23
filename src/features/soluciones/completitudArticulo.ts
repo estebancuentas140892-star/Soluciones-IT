@@ -125,7 +125,7 @@ export function senalesDeArticulo(datos: DatosCompletitud): SenalCompletitud[] {
               {
                 cumplida: false,
                 pestana: 'pasos' as const,
-                sugerencia: `Sacar de «Antes de empezar» ${contar(datos.requisitosQueSonAcciones ?? 0, 'acción', 'acciones')}`,
+                sugerencia: `Sacar de «Requisitos» ${contar(datos.requisitosQueSonAcciones ?? 0, 'acción', 'acciones')}`,
               },
             ]
           : []),

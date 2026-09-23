@@ -7,6 +7,8 @@ function paso(id: string): PasoProcedimiento {
     id,
     titulo: id,
     objetivo: '',
+    lugar: '',
+    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,

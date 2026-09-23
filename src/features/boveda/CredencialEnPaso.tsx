@@ -29,6 +29,15 @@ interface Props {
   // Reemplaza a las props sueltas `credencialId`/`tituloReferencia`
   // (unico vinculo que existia antes de P2).
   vinculo: VinculoProtegido
+  /**
+   * CREDENCIAL NECESARIA (encargo del 2026-09-22, sección 8). En la
+   * ejecución de una guía el dato protegido deja de ser una fila más
+   * entre los vínculos del paso y se presenta como lo que es: la
+   * credencial que hace falta AHÍ, con su rótulo. Los controles no
+   * cambian: sigue contraído, sigue exigiendo permiso, contraseña
+   * maestra y autobloqueo, y cada consulta se sigue registrando.
+   */
+  variante?: 'fila' | 'bloque'
 }
 
 // Bloque protegido de un paso de procedimiento: la informacion
@@ -47,7 +56,7 @@ interface Props {
 // desbloquear. El rótulo también cambia (turno 12): "Datos protegidos"
 // nombra la CATEGORÍA del dato; el título del secreto nombra lo que el
 // técnico va a obtener, que es lo que estaba buscando.
-export function CredencialEnPaso({ vinculo }: Props) {
+export function CredencialEnPaso({ vinculo, variante = 'fila' }: Props) {
   const desbloqueada = useBovedaDesbloqueada()
   // Contraido por defecto: los secretos no entran a la pantalla hasta
   // que el tecnico los pide, aunque la boveda ya este desbloqueada.
@@ -77,7 +86,19 @@ export function CredencialEnPaso({ vinculo }: Props) {
   const nombre = titulo || 'Secreto'
 
   return (
-    <div>
+    <div
+      className={
+        variante === 'bloque'
+          ? 'rounded-[10px] border border-noct-divider bg-noct-surface px-3 py-1.5'
+          : undefined
+      }
+    >
+      {variante === 'bloque' && (
+        <p className="flex items-center gap-1.5 pt-1 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
+          <Key size={13} className="shrink-0 text-noct-neutral-400" aria-hidden />
+          Credencial necesaria
+        </p>
+      )}
       <FilaVinculo
         Icono={LockSimple}
         titulo={nombre}
@@ -107,7 +128,7 @@ export function CredencialEnPaso({ vinculo }: Props) {
               Solo los usuarios autorizados pueden consultar los datos de este paso.
             </p>
           ) : eliminada ? (
-            <p className="text-[13px] leading-normal text-noct-precaucion">
+            <p className="text-[13px] leading-normal text-noct-neutral-200">
               Los datos vinculados fueron eliminados. Edita el artículo para quitar el vínculo o
               vincular otros.
             </p>
@@ -210,7 +231,7 @@ function DatosDescifrados({
   }
   if (datos === null) {
     return (
-      <p className="text-[13px] leading-normal text-noct-precaucion">
+      <p className="text-[13px] leading-normal text-noct-neutral-200">
         No se pudo descifrar este secreto con la contraseña maestra actual. Ábrelo en la sección
         Bóveda para ver los detalles.
       </p>
@@ -291,7 +312,7 @@ function ValorCampoDescifrado({ campo, titulo }: { campo: CampoProtegido; titulo
   if (valor === undefined) return <p className="text-xs text-noct-neutral-400">Descifrando...</p>
   if (valor === null) {
     return (
-      <p className="text-[13px] leading-normal text-noct-precaucion">
+      <p className="text-[13px] leading-normal text-noct-neutral-200">
         No se pudo descifrar con la contraseña maestra actual. Ábrelo en la ficha del equipo para
         ver los detalles.
       </p>

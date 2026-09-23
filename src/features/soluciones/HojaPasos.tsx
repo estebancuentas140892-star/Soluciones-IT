@@ -86,19 +86,23 @@ const ID_TITULO = 'hoja-pasos-titulo'
 // número con borde discontinuo, que se distingue sin depender del color.
 function InsigniaPaso({ estado, numero }: { estado: EstadoPaso; numero: number }) {
   const base = 'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-mono text-[13px] font-semibold'
+  // Colores del lenguaje de la guía (encargo del 2026-09-22, sección 4):
+  // verde lo hecho, azul lo que se está haciendo, neutro lo pendiente y lo
+  // saltado (saltar no es un riesgo; lo dice su borde discontinuo y su
+  // palabra).
   if (estado === 'hecho') {
     return (
-      <span aria-hidden className={`${base} bg-noct-accent/20 text-noct-accent-300`}>
+      <span aria-hidden className={`${base} bg-noct-exito/20 text-noct-exito`}>
         <Check size={16} />
       </span>
     )
   }
   if (estado === 'actual') {
-    return <span aria-hidden className={`${base} border-[1.5px] border-noct-accent text-noct-accent-300`}>{numero}</span>
+    return <span aria-hidden className={`${base} border-[1.5px] border-noct-accion text-noct-accion`}>{numero}</span>
   }
   if (estado === 'saltado') {
     return (
-      <span aria-hidden className={`${base} border-[1.5px] border-dashed border-noct-precaucion/60 text-noct-precaucion`}>
+      <span aria-hidden className={`${base} border-[1.5px] border-dashed border-noct-neutral-600 text-noct-neutral-400`}>
         {numero}
       </span>
     )
@@ -111,12 +115,14 @@ function Pastilla({
   tono,
 }: {
   children: ReactNode
-  tono: 'acento' | 'precaucion'
+  tono: 'aqui' | 'saltado' | 'riesgo'
 }) {
   const clases =
-    tono === 'acento'
-      ? 'bg-noct-accent/25 text-noct-accent-300'
-      : 'bg-noct-precaucion/[.18] text-noct-precaucion'
+    tono === 'aqui'
+      ? 'bg-noct-accion/25 text-noct-accion'
+      : tono === 'riesgo'
+        ? 'bg-noct-error/[.18] text-noct-error'
+        : 'bg-noct-text/[.08] text-noct-neutral-300'
   return (
     <span
       className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[.05em] ${clases}`}
@@ -144,10 +150,10 @@ function DetalleFila({ resumen }: { resumen: ResumenPaso }) {
 
   return (
     <span className="mt-[3px] flex items-center gap-[7px]">
-      {resumen.estado === 'actual' && <Pastilla tono="acento">aquí</Pastilla>}
-      {resumen.estado === 'saltado' && <Pastilla tono="precaucion">saltado</Pastilla>}
+      {resumen.estado === 'actual' && <Pastilla tono="aqui">aquí</Pastilla>}
+      {resumen.estado === 'saltado' && <Pastilla tono="saltado">saltado</Pastilla>}
       {resumen.tieneCuidado && (
-        <Pastilla tono="precaucion">
+        <Pastilla tono="riesgo">
           <Warning size={9} aria-hidden />
           cuidado
         </Pastilla>
@@ -186,7 +192,7 @@ export function HojaPasos({
             </span>
           )}
           <span id={ID_TITULO} className="block text-[17px] font-medium leading-tight text-noct-text">
-            {resumenes.length === 1 ? 'El único paso' : `Los ${resumenes.length} pasos`}
+            {resumenes.length === 1 ? 'El único paso' : `La ruta: ${resumenes.length} pasos`}
           </span>
           <span className="mt-0.5 block text-[12.5px] text-noct-neutral-300">{subtitulo}</span>
         </span>
@@ -212,7 +218,7 @@ export function HojaPasos({
               }}
               className={`flex min-h-[60px] w-full items-center gap-3 rounded-[10px] border px-2.5 py-1.5 text-left ${
                 resumen.estado === 'actual'
-                  ? 'border-noct-accent bg-noct-accent/[.14]'
+                  ? 'border-noct-accion bg-noct-accion/[.14]'
                   : 'border-transparent hover:bg-noct-text/[.06] active:bg-noct-text/[.1]'
               }`}
             >
