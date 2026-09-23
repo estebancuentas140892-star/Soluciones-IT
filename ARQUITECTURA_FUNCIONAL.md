@@ -255,6 +255,21 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Artículo (`estado`, `eliminadoEn`, `titulo`, `etiquetas`, `categoriaId`). Dura en el código: `borradoresEnBusqueda.ts` (`esBorradorVivo`, `borradoresCoincidentes`, `repartirBorradores`, `hayGuiaPublicadaEnTitulo`, `sinLosYaOficiales`) y `BorradoresCoincidentes.tsx`. `documentosDeBusqueda` NO cambia.
 - Impacto: un borrador promovido se abre con un toque en su procedimiento (`/soluciones/:categoriaId/:articuloId`, RN-036), lleva siempre "Borrador · contenido por confirmar" y su ejecución muestra un aviso no bloqueante. Publicarlo lo pasa al índice y retira ambas marcas, sin duplicarlo.
 
+---
+
+**RN-043. Con un solo equipo, el escáner abre su ficha; al volver, no reabre la misma etiqueta.**
+- Motivo: el QR es otra forma de buscar (encargo del 2026-09-22, sección 18, [DECISIONES.md](DECISIONES.md) AD-044). La tarjeta "Equipo identificado" con "Abrir la ficha" era un toque más para llegar a lo único que se quería ver.
+- Regla: `resolverCodigo` da `dispositivo` y el escáner navega a `/dispositivos/:id` con el origen `/escaner` ("Escáner"), apilado (sin `replace`). Antes anota el código (`marcarAbierto`). Al volver, `crearFiltroReapertura(ultimoAbierto())` ignora ese código mientras la cámara lo vea: cinco cuadros seguidos sin código (un segundo) o un código distinto lo liberan. Lo escrito a mano no pasa por el filtro.
+- `varios` y `no_encontrado` siguen con sus tarjetas. `asistencia` (una URL de cualquier origen con ruta `/conectar` y `codigo` de 6 cifras) da una tarjeta neutra: el emparejamiento es la tarea 258. Un número de 6 cifras escrito a mano sigue siendo una placa.
+- Estado: `sessionStorage` (`escaner:codigos-leidos`, `escaner:ultimo-abierto`), por pestaña y sin sincronizar. Dura en el código: `src/features/escaner/{resolverCodigo,sesionEscaneo}.ts`.
+
+---
+
+**RN-044. Buscar en Equipos incluye los equipos de red, aparte; "Conectado a" es el enlace de subida.**
+- Sin texto, Equipos es el inventario general (sin las categorías `es_red`). Con texto y sin chip de categoría, además, los equipos de red que coinciden, en el bloque "Equipos de red" (`buscarEquipos`). Campos: nombre, IP, ubicación, serial, placa, marca y modelo; orden natural por nombre. El chip "Todos" cuenta también los de red (`conteosDeChips`). Dura en el código: `src/features/dispositivos/busquedaEquipos.ts`.
+- La búsqueda sobrevive al salto a una ficha (estado de navegación, el mismo mecanismo que Resolver) y el chip va en la URL (`?categoria=`); un equipo de red abierto desde Equipos vuelve a Equipos.
+- "Conectado a" en la ficha: el primer enlace (`tipo = 'enlace'`, no eliminado) en el que el equipo es el DESTINO, porque el origen es su padre en la topología (`arbol.ts`), ordenado por puerto; se enseñan el nombre vivo del otro equipo y SU puerto (`conectadoA`, `textoConectadoA` en `src/lib/conexiones.ts`), y "y N más" si hay más subidas. `instalacion` y `relacionado` no cuentan.
+
 ## 3. Modelo entidad-relación
 
 ### 3.1 Diagrama
@@ -662,7 +677,8 @@ flowchart LR
   Ficha -->|?dispositivoAfectado| NuevoArt[Artículo nuevo]
   Ficha -->|?titulo &dispositivoId| NuevaCred[Credencial nueva]
   Ficha -->|?categoria| Diagnostico
-  Escaner -->|reconoce / ?serial=| Ficha
+  Escaner -->|un solo equipo: directo / ?serial=| Ficha
+  Ficha -->|Conectado a · Ver conexión| Topologia[Topología del equipo]
   Sugerencias -->|?desdeSugerencia| NuevoArt
   Red -->|?red=1| NuevoDisp
   Ubicacion -->|?padre=| NuevaUbic[Ubicación nueva]

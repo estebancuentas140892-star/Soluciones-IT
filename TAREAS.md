@@ -4,18 +4,18 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación) y 255 (ejecución visual de las guías). **Siguen:** 256 (Equipos + QR), 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
+**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación), 255 (ejecución visual de las guías) y 256 (Equipos + QR). **Siguen:** 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
 
-### 256. Fase 4: Equipos + QR
+### 257. Fase 5: Más e Infraestructura
 
-- **Título:** Equipos responde "¿qué sabemos de este dispositivo?" y el QR es otra forma de buscar.
-- **Descripción:** (1) cabecera con Buscar equipo y Escanear QR al mismo peso; "Crear" secundario; fuera el menú "···" y el resumen de estados; (2) buscar incluye los equipos de red; (3) el escáner abre la ficha directamente con un solo resultado y reconoce el QR del portal de asistencia; (4) la ficha: nombre, tipo, ubicación, IP, responsable y "Conectado a" arriba; Problemas frecuentes y Procedimientos; datos técnicos plegados.
-- **Motivo:** secciones 16 a 18 del encargo.
-- **Impacto:** alto en la segunda pantalla más usada.
-- **Prioridad:** Alta. **Estado:** En progreso (pasa a En proceso al cerrar la 255, el 2026-09-22; sin empezar).
-- **Área afectada:** `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/escaner/{EscanerPage,resolverCodigo}.ts(x)`, `src/features/red/` (resumen de conexión).
+- **Título:** Más con cuatro grupos (Consulta, Infraestructura, Herramientas, Configuración).
+- **Descripción:** reordenar `PantallaMas.tsx`; Mis favoritos solo si hay; Actividad del equipo al final de la Agenda; Red y Topología cambian de puerta, no de comportamiento; en pantallas anchas, columnas.
+- **Motivo:** secciones 18, 20 y 22 del encargo.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** En progreso (pasa a En proceso al cerrar la 256, el 2026-09-22; sin empezar).
+- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/features/red/RedPage.tsx` (regreso).
 - **Dependencias:** 254.
-- **Modelo/esfuerzo:** Sonnet 5 / Alto (Opus 5 / Alto si se hace en la misma sesión).
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
 
 ---
 
@@ -368,17 +368,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 257. Fase 5: Más e Infraestructura
-
-- **Título:** Más con cuatro grupos (Consulta, Infraestructura, Herramientas, Configuración).
-- **Descripción:** reordenar `PantallaMas.tsx`; Mis favoritos solo si hay; Actividad del equipo al final de la Agenda; Red y Topología cambian de puerta, no de comportamiento; en pantallas anchas, columnas.
-- **Motivo:** secciones 18, 20 y 22 del encargo.
-- **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/features/red/RedPage.tsx` (regreso).
-- **Dependencias:** 254.
-- **Modelo/esfuerzo:** Sonnet 5 / Medio.
-
 ### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
 
 - **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
@@ -387,6 +376,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
 - **Prioridad:** Alta. **Estado:** Pendiente.
 - **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`.
+- **Ya hecho en la 256:** el escáner reconoce el QR del portal (`resolverCodigo` da `asistencia` para `/conectar?codigo=` con 6 cifras, de cualquier origen) y enseña una tarjeta neutra en `EscanerPage`. Aquí se cambia esa tarjeta por ir a `/conectar?codigo=…`.
 - **Dependencias:** 255. **Paso del usuario:** ejecutar `supabase/schema.sql` en el SQL Editor.
 - **Modelo/esfuerzo:** Opus 5 / Extra (seguridad).
 
@@ -404,12 +394,23 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 ### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
 
 - **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
-- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista.
+- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista. Tampoco es un defecto el campo de un buscador medido por su `input` (23 px) cuando lo envuelve la `label` de 46 px de `CampoBusqueda`, que es la que se toca (`equipos`, `resolver`).
 - **Motivo:** secciones 25 y 26 del encargo.
 - **Prioridad:** Alta. **Estado:** Pendiente.
 - **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
 - **Dependencias:** 254 a 259.
 - **Modelo/esfuerzo:** Sonnet 5 / Alto.
+
+### 262. Cabecera de las fichas: favorito, compartir y "···" a 44 px
+
+- **Título:** los iconos de la cabecera de una ficha miden 34 px (regla R6: 44 de dedo).
+- **Descripción:** `BTN_ICONO_SECUNDARIO` (`src/components/nocturne.tsx`, 34×34) es el botón de icono de las cabeceras de ficha: favorito (`BotonFavorito`), compartir y "···" en `DispositivoPage` (la auditoría de capturas del 2026-09-22 lo marca en `equipo-ficha`), y los mismos en `ArticuloPage` (que es la 229 b). También lo usan `BovedaPage`, `CredencialForm`, `CrearAccesoRapido` y `SeguridadDelEquipo`. Subir el área táctil a 44 px sin agrandar el dibujo (por ejemplo, con margen negativo, como el borrar de `CampoBusqueda`), o fundir favorito y compartir dentro del "···". Resolver junto con la 229 b.
+- **Motivo:** regla R6; detectado al verificar la tarea 256, ya existía.
+- **Impacto:** medio: son los controles del borde superior, la zona menos alcanzable con una mano.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/components/nocturne.tsx`, `src/components/BotonFavorito.tsx`, `src/features/dispositivos/DispositivoPage.tsx` (~cabecera), `src/features/soluciones/ArticuloPage.tsx`.
+- **Dependencias:** ninguna (conviene con la 229 b).
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
 
 ### 261. Editor: la línea de completitud se toca en 25 px de alto
 

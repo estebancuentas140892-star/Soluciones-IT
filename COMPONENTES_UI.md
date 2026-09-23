@@ -194,7 +194,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 ### 2.10 `FilaDispositivo`
 - **Propósito:** fila de un dispositivo en un listado, compartida entre Dispositivos y Red: avatar (foto o icono de tipo de nodo), nombre, subtítulo y estado con punto de color + IP.
-- **Props:** `{ dispositivo, categoriaNombre, subtitulo, conFoto?: boolean = false }`.
+- **Props:** `{ dispositivo, categoriaNombre, subtitulo, conFoto?: boolean = false, estado?: unknown, alAbrir?: () => void }`. `estado` (tarea 256) es el `state` del salto a la ficha: Equipos pasa su origen con la búsqueda, para que el regreso vuelva a la lista con lo escrito aunque el equipo sea de red; `alAbrir` se llama en el mismo gesto, antes del salto, y Equipos anota ahí su búsqueda para el botón atrás del teléfono.
 - **Variantes:** `conFoto` decide avatar de foto (`MiniaturaPortada`) vs siempre icono (`IconoNodo`, para Red).
 - **Dónde:** `DispositivosPage` (con foto), `RedPage` (sin foto). Nota: `CategoriaPage` reimplementa esta fila a mano (candidato CAND-2, sección 5).
 - **La IP cumple el piso de dato técnico** (**M-R5**, tarea 201): usa `VALOR_TECNICO_COMPACTO` de `FilaDato` (13 px monoespaciado, `neutral-300`, tabular). Antes iba a 11 px en `neutral-600`, unos 3,9:1 de contraste: el texto más pequeño de toda la app justo para el dato que más se busca de pie frente a un rack.
@@ -508,6 +508,13 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
   - **Accesos rápidos** (`BloqueAccesos`): `accesosRapidos(categorias, articulos, visitas)` devuelve las categorías con al menos una guía publicada y ejecutable (`esGuiaPublicadaEjecutable`), las más usadas en 30 días primero y luego por su `orden`, hasta seis; con menos de dos devuelve `[]` y el bloque no se dibuja. Cada chip (44 px, icono de `iconoDeCategoria` en el color de la categoría) lleva a `/soluciones?categoria=<id>`. **"Todas las guías" está siempre**, con o sin accesos: es la única puerta al catálogo desde que Guías dejó de ser pestaña.
 - **Todos los saltos llevan origen** (`conOrigen('/', 'Resolver')`): la X de la guía y el regreso del catálogo vuelven aquí.
 - **Lo que conserva de Inicio:** el buscador con su lógica completa (borradores coincidentes, puente de la Bóveda, volver con la búsqueda escrita, foco automático solo con puntero fino) y la bienvenida del primer día al final.
+
+### 3.8z `dispositivos/busquedaEquipos.ts`, `lib/conexiones.ts` (`conectadoA`) y el escáner (2026-09-22, tarea 256)
+- **`busquedaEquipos.ts`** (lógica pura, con pruebas): `camposDeBusqueda(dispositivo)` (nombre, IP, ubicación, serial, placa, marca, modelo), `buscarEquipos(dispositivos, idsRed, { texto, categoriaId })` que devuelve `{ generales, deRed }` (los de red solo al escribir y sin chip; los dos en orden natural por nombre) y `conteosDeChips` ("Todos" incluye los de red). La usa `DispositivosPage`.
+- **`conectadoA(conexiones, dispositivoId)`** y **`textoConectadoA(nombre, puerto)`** en `src/lib/conexiones.ts`: el enlace de subida del equipo (el otro extremo es el origen) y la línea "SW-CENTRAL-02 · Puerto 18". Los usa `DispositivoPage` ("Conectado a", en "Ahora").
+- **Escáner:** `resolverCodigo` gana el resultado `asistencia` (`extraerCodigoAsistencia`: `/conectar?codigo=` con 6 cifras, de cualquier origen); `sesionEscaneo.ts` gana `ultimoAbierto`/`marcarAbierto` y `crearFiltroReapertura(bloqueado, cuadrosLibres = 5)`, que decide cuadro a cuadro si ignorar la etiqueta recién abierta. `EscanerPage` abre la ficha directamente con un solo equipo; la tarjeta "Equipo identificado" se retiró.
+- **`DispositivosPage`:** buscador y "Escanear QR" con el mismo peso, "Crear equipo" secundario, sin menú "···" ni resumen de estados, chips de 44 px, bloque "Equipos de red" y la búsqueda repuesta al volver (`useBusquedaRestaurada` / `useAnotarBusqueda`, el chip en `?categoria=`).
+- **`DispositivoPage`:** "Ahora" con tipo, IP, ubicación, responsable y "Conectado a"; "Problemas frecuentes", "Procedimientos" y "Credenciales" solo si tienen algo; "Más datos del equipo" plegado al principio de "Profundidad"; la puerta de documentar lleva `id="documentar"` y se abre sola con ese ancla.
 
 ### 3.8x `soluciones/RutaProcedimiento` y `soluciones/rutaVisual.ts` (2026-09-22, tarea 255)
 - **Propósito:** la ruta del procedimiento (sección 5 del encargo del 2026-09-22): orienta, dice de dónde se viene, dónde se está y qué viene, sin enseñar el contenido de ningún paso. Debajo sigue mandando el paso actual.

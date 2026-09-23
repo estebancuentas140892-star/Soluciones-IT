@@ -225,7 +225,7 @@ Qué tipo la tiene lo decide `vistaRapidaDe`: la credencial en los dos modos (co
 
 - **Qué se guarda:** la consulta y si estaba en la capa global o en el buscador de Inicio (`BusquedaEnCurso`). Nada más: ni resultados, ni secretos, ni el scroll exacto (la memoria de scroll por ruta ya repone lo que puede).
 - **Dónde:** solo en `location.state`. Viaja en el origen del salto (`conOrigen(..., busqueda)`) y el regreso de la app la entrega a la pantalla de destino (`estadoDeRegreso`, que usan `BotonVolver` y la X de `BarraTarea` en el chasis). Además, en el mismo toque que salta, se anota en la entrada actual del historial (`useAnotarBusqueda`), así que **el botón atrás del teléfono** también la encuentra. Nunca en la URL ni en localStorage, y se pierde con la pestaña.
-- **Quién la repone:** Inicio, en su campo en línea; y la capa global, desde `CapaAtajos`, que vive en el chasis de todas las pantallas y por eso sirve venga de la lupa de la barra o de "/". Se relee en cada **llegada** a la entrada (ir o volver), no solo al montar: de un equipo a otro equipo React reutiliza la pantalla y volver al primero tiene que reponer igual.
+- **Quién la repone:** Inicio (hoy Resolver), en su campo en línea; Equipos, en el suyo (desde el 2026-09-22, tarea 256); y la capa global, desde `CapaAtajos`, que vive en el chasis de todas las pantallas y por eso sirve venga de la lupa de la barra o de "/". Se relee en cada **llegada** a la entrada (ir o volver), no solo al montar: de un equipo a otro equipo React reutiliza la pantalla y volver al primero tiene que reponer igual.
 - **Cuándo se olvida:** al cerrar la capa repuesta o al vaciar el campo de Inicio, que es dar la búsqueda por terminada (`descartar`). Abrir la capa con la lupa sigue empezando limpio, como siempre.
 
 ## 8. Sugerencias anti duplicados
@@ -260,7 +260,7 @@ Filtran en el sitio la lista que la pantalla ya cargó. No usan MiniSearch.
 **Usan `incluyeTexto`** (subcadena, sensible a acentos, sin resaltado):
 
 - **Alta de conexión** (`candidatosConexion` en `src/lib/conexiones.ts`): filtra por subcadena en `[nombre, ubicacion, ip]`. Sin texto, en vez de mostrar todo, pre-sugiere candidatos por puntaje (+2 si comparte ubicación con el equipo actual, +1 si su categoría es de red) y ordena por ese puntaje.
-- **Dispositivos** (`DispositivosPage.tsx`): `[nombre, ip, ubicacion, serial]`.
+- **Equipos** (`DispositivosPage.tsx`, reglas en `busquedaEquipos.ts` desde el 2026-09-22, tarea 256): `[nombre, ip, ubicacion, serial, placaInventario, marca, modelo]`. Sin texto, solo el inventario general; **al escribir y sin chip de categoría, también los equipos de red**, aparte en "Equipos de red". Orden natural por nombre. La consulta vuelve al regresar de una ficha, con el mismo mecanismo de la sección 7.8 (`capa: false`), y el chip va en la URL (`?categoria=`).
 - **Red** (`RedPage.tsx`): `[nombre, ubicacion, ip, marca, modelo, categoría]`.
 
 **Centro de consulta** (`ReferenciaPage.tsx`, `coincide` y `filtrarCatalogo` en `src/features/referencia/referencias.ts`): subcadena sin acentos (`normalizarTexto`) sobre el mismo `textoBuscable` del índice global, **dentro de la pestaña abierta** (herramientas, glosario, atajos o comandos) y acotada por su eje (categoría o plataforma). Sin coincidencias en la pestaña, el estado vacío dice en qué otras pestañas sí las hay y lleva a ellas con la búsqueda puesta (`coincidenciasPorTipo`). La pestaña, el texto y el filtro viven en la URL (`?tab=`, `?q=`, `?categoria=` o `?plataforma=`).

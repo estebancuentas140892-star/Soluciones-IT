@@ -8,6 +8,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-22
 
+### Cambiado (equipos, tarea 256, Fase 4 del rediseño "Resolver"): Equipos + QR
+
+**Área modificada:** Equipos (lista), ficha del equipo y escáner.
+**Tipo:** Modificado (cabecera de Equipos, reparto de la ficha, escáner), Agregado (buscar también en la red, "Conectado a", reconocimiento del QR del portal), Eliminado (menú "···" y resumen de estados de Equipos; tarjeta "Equipo identificado").
+**Nuevos:** `src/features/dispositivos/busquedaEquipos.ts` (+ `busquedaEquipos.test.ts`) y `src/features/dispositivos/equiposYQr.test.tsx`.
+**Modificados:** `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/escaner/{EscanerPage.tsx,resolverCodigo.ts,sesionEscaneo.ts}` y sus pruebas, `src/lib/conexiones.ts` (+ pruebas), `src/components/FilaDispositivo.tsx`; `scripts/capturas-moviles.mjs` (verificación).
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (5.3, 5.3.1 y 6.2), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-043, RN-044 y 11.3), [COMPONENTES_UI.md](COMPONENTES_UI.md) (2.10 y 3.8z nuevo), [BUSCADOR.md](BUSCADOR.md) (7.8 y 10) y [DECISIONES.md](DECISIONES.md) AD-044.
+**Motivo:** encargo del usuario del **22 de septiembre de 2026**, secciones 16 a 18: Equipos responde "¿qué sabemos de este dispositivo?" y el QR es otra forma de buscar.
+**Impacto esperado:** encontrar un equipo (también un switch) escribiendo o escaneando, y ver en la primera pantalla de su ficha dónde está, quién responde y a qué puerto va.
+**SIN cambios** de rutas, esquema local o de Supabase, RLS, datos ni sincronización. **No hay que ejecutar SQL.**
+
+- **Equipos:** el buscador y "Escanear QR" en una fila y con el mismo peso; "Crear equipo" secundario (44 px); fuera el menú "···" (sus cuatro destinos siguen en Más) y el resumen de estados; chips de 44 px.
+- **Buscar incluye los equipos de red:** al escribir y sin chip, debajo, "Equipos de red" con los que coinciden. Se busca también por placa, marca y modelo, en orden natural por nombre. Volver de una ficha repone lo escrito y el chip (`?categoria=`), y un equipo de red abierto desde aquí vuelve a Equipos.
+- **Ficha:** arriba tipo, IP, ubicación, "Responsable" y "Conectado a · SW · Puerto · Ver conexión" (el enlace de subida; "Ver conexión" abre su topología); luego "Problemas frecuentes", "Procedimientos" y "Credenciales", solo si tienen algo; lo técnico, plegado en "Más datos del equipo". "¿Qué sigue?" lleva el paso del procedimiento a la puerta de documentar, que se abre sola.
+- **Escáner:** con un solo equipo abre la ficha directamente (vibra y suma al contador); al volver no reabre la etiqueta que la cámara sigue viendo; reconoce el QR del portal de asistencia (`/conectar?codigo=`) con una tarjeta neutra; botones de sus tarjetas a 44 px.
+- **Verificación:** 126 archivos y 1801 casos en verde (antes 124 y 1772); lint, tipos y build limpios. Capturas por CDP en 390×844, 768×1024, 1366×768 y 1920×1080 con cinco paradas nuevas (búsqueda con red, ficha, "Más datos del equipo", escáner y QR de asistencia): sin desbordes; los hallazgos que quedan ya existían (iconos de 34 px de la cabecera de la ficha, tarea 262 nueva; nombres recortados en filas; el campo del buscador medido dentro de su etiqueta de 46 px, anotado en la 260).
+
 ### Cambiado (guías, tarea 255, Fase 3 del rediseño "Resolver"): la guía se entiende leyendo poco
 
 **Área modificada:** ejecución de las guías (una acción a la vez y paso entero), lectura y vista previa, Detalles de la guía, editor de pasos, historial del procedimiento, índice de búsqueda y borradores locales del editor.

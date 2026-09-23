@@ -530,28 +530,40 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
 
 **Objetivo.** Responder "¿qué se sabe de cada equipo?" con el inventario **general** (los equipos de categorías de red van en la sección Red, no aquí).
 
+**EQUIPOS + QR (desde el 2026-09-22, tarea 256, [DECISIONES.md](DECISIONES.md) AD-044).** Manda sobre lo que sigue donde choquen:
+- Debajo del subtítulo, **el buscador ("Buscar en Equipos") y "Escanear QR" (→ `/escaner`) en una fila, con el mismo peso**: la misma altura (46 px), la misma superficie y el mismo borde. El QR es otra forma de buscar.
+- **"Crear equipo"** pasa a secundario: un enlace de 44 px a la derecha del subtítulo.
+- **Fuera el menú "···"**: Ubicaciones, Personas, Etiquetas QR e Importar equipos siguen en **Más**. **Fuera el resumen de estados**: cada fila ya lleva su pastilla.
+- **Buscar incluye los equipos de red.** Sin texto, la lista es el inventario general; **al escribir**, debajo aparece **"Equipos de red"** con los switches, cámaras o puntos de red que coinciden, con su categoría. Con un chip de categoría elegido no salen (los chips son de categorías generales). Se busca por nombre, IP, ubicación, serial, placa, marca y modelo, y la lista va en orden natural por nombre.
+- **Chips de 44 px.** "Todos" cuenta también los de red que salen al escribir.
+- **Volver de una ficha repone lo escrito** (con el regreso de la app o con el botón atrás del teléfono) y el chip elegido (va en la URL, `?categoria=`). Abrir un equipo de red desde aquí vuelve a Equipos, no a Red.
+
 **Cabecera fija:** la fila superior es la **barra superior global** (título "Equipos", sincronización, lupa y cuenta; ver la sección 2). **Renombrada el 2026-07-28** ([DECISIONES.md](DECISIONES.md) AD-022); la ruta sigue siendo `/dispositivos`. Debajo, lo propio de la sección:
 - Subtítulo "Qué se sabe de cada equipo".
-- **Botón "Escanear equipo"** (icono QR, → `/escaner`).
+- **Botón "Escanear equipo"** (icono QR, → `/escaner`). *(Hasta el 2026-09-22; ver el bloque de arriba: hoy "Escanear QR", junto al buscador.)*
 
 **La instrucción del escáner tiene fondo propio** (tarea 207, hallazgo **M-030**): iba a 13 px directamente sobre el vídeo en vivo, así que a pleno sol, apuntando a un rack claro o a una etiqueta blanca, la única instrucción de la pantalla desaparecía contra la imagen. Sube a **14 px** y se apoya en una pastilla de superficie al 80 % con desenfoque, de modo que el contraste deja de depender de a dónde apunte la cámara. El marco de esquinas ya funcionaba y no se toca.
-- **Botón "Crear"** (→ `/dispositivos/nuevo`).
-- Menú **"···"** con: **Ubicaciones** (→ `/ubicaciones`), **Personas** (→ `/personas`), **Etiquetas QR** (→ `/dispositivos/etiquetas`), **Importar** (→ `/dispositivos/importar`).
-- **Buscador** (`type="search"`): placeholder "Nombre, IP, serial o ubicación".
-- **Chips de categoría** deslizables (solo categorías generales): "Todos" + una por categoría con su conteo.
+- **"Crear equipo"** (→ `/dispositivos/nuevo`), secundario.
+- **Buscador** ("Buscar en Equipos") y **"Escanear QR"**, en la misma fila.
+- **Chips de categoría** deslizables (solo categorías generales), de 44 px: "Todos" + una por categoría con su conteo.
 
 **Cuerpo:**
-- **Resumen de estados** (siempre sobre el inventario completo, sin filtrar): "N equipos", "N operativos" (verde), "N en mantenimiento" (ámbar), "N fuera de servicio" (rojo).
-- **Lista de fichas** (`FilaDispositivo`): miniatura de foto (o icono), nombre, subtítulo (categoría · ubicación), indicador de estado.
-- Estados vacíos: "Ningún dispositivo coincide" (con filtros, botón "Quitar filtros") o "Aún no hay dispositivos registrados".
+- **Lista de fichas** (`FilaDispositivo`): miniatura de foto (o icono), nombre, subtítulo (categoría · ubicación), pastilla de estado e IP. Al escribir, debajo, **"Equipos de red"** con los que coinciden.
+- Estados vacíos: "Ningún equipo coincide" (con filtros, botón "Quitar filtros") o "Aún no hay equipos registrados" ("Agregarlos desde «Crear equipo»").
 
-**Acciones:** buscar, filtrar por categoría, crear, escanear, abrir ubicaciones/personas/etiquetas/importar, abrir una ficha.
+**Acciones:** buscar (también en la red), filtrar por categoría, escanear, crear, abrir una ficha. Ubicaciones, Personas, Etiquetas QR e Importar equipos, desde Más.
 
 #### 5.3.1 Ficha de dispositivo (`DispositivoPage`)
 
 **Ruta:** `/dispositivos/:dispositivoId` · **Nivel:** Documento. Vista 360°.
 
 **Cabecera:** **ancla permanente** (tarea 201, regla M-R1): chevron de regreso de 44 px (a Equipos o a Red según `es_red` de su categoría), y a su lado el origen a 11 px ("Red · Rack 1") con el **nombre del equipo a 14 px**, que **se queda en pantalla al desplazarse**. A la derecha, **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace) y menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
+
+**"¿QUÉ SABEMOS DE ESTE DISPOSITIVO?" (desde el 2026-09-22, tarea 256, [DECISIONES.md](DECISIONES.md) AD-044).** Manda sobre la descripción de capas de abajo:
+- **Ahora**, arriba: nombre, **tipo** (su categoría) con marca y modelo, estado, **IP** con Copiar, **ubicación**, **"Responsable: …"** (subió de "Contexto") y, si lo hay, **"Conectado a · SW-CENTRAL-02 · Puerto 18 · Ver conexión"**: el enlace por el que el equipo recibe servicio (el otro extremo es el origen del enlace), con el puerto del switch, que es el que se busca en el rack; si tiene más de una subida, "y N más". "Ver conexión" abre su topología (`/red/topologia/:id`).
+- Después, **"Problemas frecuentes"** (el diagnóstico de su categoría, si lo hay, y las incidencias), **"Procedimientos"** y, con permiso de bóveda, **"Credenciales"**. Cada bloque solo aparece si tiene algo; ya no hay un título "Acción" sobre una lista vacía.
+- **"Más datos del equipo"** (plegado, con su conteo): serial, placa, propiedades, reemplazos, categoría y fecha, y observaciones. Es la primera fila de **Profundidad**; la capa "Contexto" abierta desaparece.
+- En **"¿Qué sigue?"**, "Vincular un procedimiento o reportar una incidencia" lleva a la **puerta de documentar**, que se abre sola.
 
 **Cuerpo: cuatro capas** (rediseño del 2026-08-03, tarea 201, regla **M-R4**). Antes eran nueve secciones siempre abiertas, en orden de escritura y no de urgencia: a 360 px, "Conexiones" empezaba pasadas tres pantallas de scroll y la primera se iba entera en la foto de 150 px y la línea de completitud. No se quitó ningún dato; se repartió.
 
@@ -735,6 +747,13 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Objetivo.** Leer códigos QR (URL de la ficha) y códigos de barras (placa/serial) con la cámara trasera para abrir la ficha de un dispositivo. Usa el detector nativo (`BarcodeDetector`) o cae a jsQR.
 
+**EL QR ES OTRA FORMA DE BUSCAR (desde el 2026-09-22, tarea 256, [DECISIONES.md](DECISIONES.md) AD-044).** Manda sobre lo que sigue:
+- **Con un solo equipo, el escáner abre su ficha directamente** (vibra y suma al contador). Ya no existe la tarjeta "Equipo identificado" con "Abrir la ficha": la ficha enseña arriba el estado y la IP. La ficha se apila sobre el escáner y su regreso dice "‹ Escáner", con la cámara viva: inventariar varios sigue siendo **un toque por equipo**.
+- **No reabre la misma etiqueta al volver.** Si la cámara sigue apuntando a la etiqueta que se acaba de abrir, se ignora hasta que deja de verla un segundo o ve otro código. Lo escrito a mano siempre se atiende.
+- **Con varios equipos o ninguno**, las tarjetas de siempre.
+- **El QR del portal de asistencia** (`…/conectar?codigo=482731`) se reconoce: tarjeta neutra **"Código para conectar un computador"** con el código ("482 731") y la explicación de que enviar los pasos de una guía a un computador todavía no está disponible. Un número de 6 cifras escrito a mano sigue siendo una placa. Emparejar llega con la tarea 258.
+- Los botones de las tarjetas miden 44 px.
+
 **Elementos:**
 - Cabecera: barra de tarea ("Escaneando · Código QR o de barras"), **contador de la sesión** y botón **"Linterna"** (si el dispositivo la soporta).
 - **Contador "N leídos"** (tarea 202, hallazgo M-029): cuántos equipos distintos se han identificado sin salir del escáner. Sobrevive a abrir una ficha y volver. **Se reinicia tocándolo**, y también al cerrar la aplicación; no se reinicia solo por entrar de nuevo ([DECISIONES.md](DECISIONES.md) AD-031). Los repetidos no suman: apuntar dos veces a la misma etiqueta no es haber inventariado dos equipos.
@@ -742,7 +761,8 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - Estados de fallo: sin permiso / sin cámara / no soportado, cada uno con mensaje y la alternativa de búsqueda manual.
 - **Búsqueda manual** (barra inferior): input "O escribir la placa o el serial" + botón "Buscar".
 - **Tarjetas de aviso** (reemplazan la barra al haber resultado):
-  - **"Equipo identificado"** (encontrado): nombre y ubicación; **su estado y su IP** (tarea 202: muchas veces son lo único que se venía a mirar, y sacarlos aquí ahorra abrir la ficha entera); botones **"Abrir la ficha"** y **"Seguir"**, con la promesa escrita **"La ficha vuelve aquí al terminar"**.
+  - ~~**"Equipo identificado"**~~ (retirada el 2026-09-22, tarea 256: un solo equipo abre su ficha directamente).
+  - **"Código para conectar un computador"** (el QR del portal de asistencia): el código y "Seguir escaneando".
   - **"Varios equipos comparten este código"**: lista de opciones + "Seguir escaneando".
   - **"Ningún equipo coincide con este código"**: muestra el código, botones "Seguir escaneando" y "Registrar equipo" (este último precarga el código leído como serial en el alta, `?serial=`, salvo que sea una URL de etiqueta; hallazgo H3).
 

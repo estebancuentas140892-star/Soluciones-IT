@@ -2,6 +2,24 @@
 
 ## Encargo del 2026-09-22: Soluciones IT se organiza alrededor de Resolver
 
+### 256. Fase 4: Equipos + QR
+
+**Título:** Equipos responde "¿qué sabemos de este dispositivo?" y el QR es otra forma de buscar. **Estado:** Completada (2026-09-22) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22, secciones 16 a 18. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-044.
+
+**Qué se hizo:**
+
+1. **Equipos** (`DispositivosPage.tsx`): el buscador y "Escanear QR" en una fila y con el mismo peso; "Crear equipo" secundario; fuera el menú "···" (Ubicaciones, Personas, Etiquetas QR e Importar siguen en Más) y el resumen de estados; chips de 44 px.
+2. **Buscar incluye la red** (`busquedaEquipos.ts`, puro): al escribir y sin chip, el bloque "Equipos de red"; también por placa, marca y modelo; orden natural. La búsqueda vuelve al regresar de una ficha (estado de navegación, como Resolver) y el chip va en `?categoria=`; un equipo de red abierto desde aquí vuelve a Equipos (`FilaDispositivo` gana `estado` y `alAbrir`).
+3. **Ficha** (`DispositivoPage.tsx`): "Ahora" con tipo, IP, ubicación, responsable y "Conectado a" (`conectadoA` y `textoConectadoA` en `lib/conexiones.ts`; "Ver conexión" abre `/red/topologia/:id`); después "Problemas frecuentes" (con el diagnóstico), "Procedimientos" y "Credenciales", solo si tienen algo; "Más datos del equipo" plegado al principio de "Profundidad". El paso "procedimiento" de "¿Qué sigue?" apuntaba a la sección "Acción", que ya no existe: ahora abre la puerta de documentar (`#documentar`).
+4. **Escáner** (`EscanerPage.tsx`): un solo equipo abre la ficha directamente; `crearFiltroReapertura` evita reabrir la etiqueta que la cámara sigue viendo al volver; el QR del portal de asistencia (`/conectar?codigo=`) se reconoce con una tarjeta neutra (emparejar es la 258); botones de las tarjetas a 44 px.
+5. **Verificación:** cinco paradas nuevas en `scripts/capturas-moviles.mjs` (búsqueda con red, ficha, "Más datos del equipo", escáner y QR de asistencia).
+
+**Pruebas.** 126 archivos y 1801 casos en verde (la 255 cerró con 124 y 1772). Nuevas: `busquedaEquipos.test.ts`, `conectadoA` y `textoConectadoA` en `conexiones.test.ts`, el código de asistencia en `resolverCodigo.test.ts`, el filtro de reapertura en `sesionEscaneo.test.ts` y el flujo montado `equiposYQr.test.tsx` (cabecera sin "···" ni resumen, búsqueda con red, búsqueda repuesta con el botón atrás, ficha con "Conectado a", datos plegados, orden de secciones, sin títulos vacíos, escáner que abre la ficha y QR del portal).
+
+**Capturas** (cuatro tamaños, en `evidencia/`, no se versiona): sin desbordamiento horizontal. Lo que queda ya existía: iconos de 34 px en la cabecera de la ficha (tarea 262 nueva), nombres largos recortados en las filas y el campo del buscador medido dentro de su etiqueta de 46 px (anotado en la 260).
+
+**Lo que no se tocó:** rutas, esquema, RLS, datos, sincronización, Red y su topología, las etiquetas QR impresas. **No hay que ejecutar SQL.**
+
 ### 255. Fase 3: ejecución visual de las guías (ruta, colores con significado, dónde y debes ver)
 
 **Título:** la guía se entiende leyendo poco: ruta del procedimiento, un color por significado y cada paso con qué hacer, dónde y qué debe verse. **Estado:** Completada (2026-09-22) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22, secciones 3 a 8. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-043.
