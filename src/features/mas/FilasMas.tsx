@@ -64,7 +64,10 @@ export function FilaMas({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-medium leading-[1.3]">{titulo}</span>
-        <span className="mt-0.5 block truncate text-[12px] text-noct-neutral-400">{subtitulo}</span>
+        {/* Sin recortar (tarea 268): en un teléfono estrecho, el
+            subtítulo pasa a una segunda línea antes que esconder lo que
+            hay dentro de la puerta. */}
+        <span className="mt-0.5 block text-[12px] leading-[1.4] text-noct-neutral-400">{subtitulo}</span>
         {nota && <span className="mt-0.5 block text-[11.5px] text-noct-neutral-500">{nota}</span>}
       </span>
       <ConteoFila valor={conteo} />

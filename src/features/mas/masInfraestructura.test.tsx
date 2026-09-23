@@ -108,9 +108,10 @@ describe('Más en cinco grupos', () => {
     expect(grupos[2].filas).toEqual(['Red'])
     expect(grupos[3].filas).toEqual(['Herramientas de inventario', 'Diagnóstico'])
     // Mi cuenta, Bloqueo y seguridad y Buscar actualización son una sola
-    // puerta, con el nombre de quien tiene la sesión.
+    // puerta, y su subtítulo dice lo que hay dentro.
     expect(grupos[4].filas).toEqual(['Ajustes'])
-    expect(filaDeMas('Ajustes')?.textContent).toContain(PERFIL_PRUEBA.nombre)
+    expect(filaDeMas('Ajustes')?.textContent).toContain('bloqueo')
+    expect(filaDeMas('Ajustes')?.textContent).toContain('actualización')
     expect(filaDeMas('Ajustes')?.getAttribute('href')).toBe('/cuenta')
   })
 

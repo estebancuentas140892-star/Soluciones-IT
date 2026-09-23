@@ -66,6 +66,9 @@ const SIN_ACTIVIDAD = `{ const { db } = await import('/src/lib/db.ts'); await db
 // Tarea 266: repone las personas y los computadores inventados de la
 // semilla (una parada de retiro o de asignación los cambia).
 const PERSONAS_SEMBRADAS = `{ const { db } = await import('/src/lib/db.ts'); await db.personas.clear(); await db.dispositivos.bulkDelete(['dis-pc-ejemplo-62','dis-pc-ejemplo-15','dis-pc-ejemplo-41','dis-pc-ejemplo-07']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
+// Tarea 268: repone los estados escritos a mano de la semilla (la parada
+// que unifica los cambia).
+const ESTADOS_SEMBRADOS = `{ const { db } = await import('/src/lib/db.ts'); await db.dispositivos.bulkDelete(['dis-caja-ejemplo-2','dis-caja-ejemplo-3','dis-camara-ejemplo-1','dis-camara-ejemplo-2','dis-telefono-ejemplo-1','dis-telefono-ejemplo-2','dis-impresora-ejemplo-antigua']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
 const buscarEnResolver = (texto) =>
   `{ const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,${JSON.stringify(texto)}); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,700)); }`
 
@@ -231,6 +234,25 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'ubicaciones-migrar-mismo-lugar', ruta: '/ubicaciones/migrar', guion: tocar('Es el mismo lugar') },
   { nombre: 'ubicacion-ficha', ruta: '/ubicaciones/ubi-ejemplo-sistemas' },
   { nombre: 'ubicacion-ficha-rack', ruta: '/ubicaciones/ubi-ejemplo-rack' },
+  // Tarea 268 (Fase 3): Más en cinco grupos, Herramientas de inventario,
+  // los estados escritos a mano (mirar, elegir y unificar) y Ajustes.
+  { nombre: 'inventario', ruta: '/inventario', antes: ESTADOS_SEMBRADOS },
+  { nombre: 'inventario-estados', ruta: '/inventario/estados', antes: ESTADOS_SEMBRADOS },
+  {
+    nombre: 'inventario-estados-elegido',
+    ruta: '/inventario/estados',
+    antes: ESTADOS_SEMBRADOS,
+    guion: `{ const g=document.querySelector('[role=radiogroup][aria-label*="Activo"]'); [...g.querySelectorAll('[role=radio]')].find(b=>b.textContent.trim()==='Operativo')?.click(); await new Promise(r=>setTimeout(r,300)); }`,
+  },
+  {
+    nombre: 'inventario-estados-unificado',
+    ruta: '/inventario/estados',
+    antes: ESTADOS_SEMBRADOS,
+    guion: tocar('Unificar estados'),
+    despues: ESTADOS_SEMBRADOS,
+  },
+  { nombre: 'ajustes', ruta: '/cuenta' },
+  { nombre: 'ajustes-contrasena', ruta: '/cuenta', guion: tocar('Cambiar contraseña de inicio de sesión') },
 ]
 
 const PARADAS = FILTRO_PARADAS

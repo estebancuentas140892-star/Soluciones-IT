@@ -45,6 +45,11 @@ describe('estados escritos a mano', () => {
     expect(sugerenciaDeEstado('En reparación')).toBe('En mantenimiento')
     expect(sugerenciaDeEstado('Inactivo')).toBeNull()
     expect(sugerenciaDeEstado('Asignado')).toBeNull()
+    // Dónde está, o lo que PUEDE pasarle, no es su estado.
+    expect(sugerenciaDeEstado('En bodega')).toBeNull()
+    expect(sugerenciaDeEstado('Fuera de uso')).toBeNull()
+    expect(sugerenciaDeEstado('Para baja')).toBeNull()
+    expect(sugerenciaDeEstado('Obsoleto')).toBeNull()
   })
 
   it('solo cambia lo que el técnico eligió', () => {

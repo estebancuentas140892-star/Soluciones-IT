@@ -89,14 +89,14 @@ export function BarraSuperior({
               <MagnifyingGlass size={20} aria-hidden />
             </button>
           )}
-          {/* Mi cuenta, en el teléfono. Desde 768 px la barra lateral (el
+          {/* Ajustes (la cuenta, tarea 268), en el teléfono. Desde 768 px la barra lateral (el
               rail de iconos y la completa) ya la ofrece al pie, así que
               aquí se oculta: con `lg:hidden` la tableta la enseñaba dos
               veces en la misma pantalla. */}
           <Link
             to="/cuenta"
-            aria-label="Mi cuenta"
-            title={usuario?.nombre || 'Mi cuenta'}
+            aria-label="Ajustes"
+            title={usuario?.nombre || 'Ajustes'}
             className="flex h-11 w-11 items-center justify-center md:hidden"
           >
             <Avatar nombre={usuario?.nombre} correo={usuario?.correo} />

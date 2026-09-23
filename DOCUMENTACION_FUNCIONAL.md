@@ -27,8 +27,8 @@ Fecha de redacción: 2026-07-23. Basado en una lectura directa del código en `s
    - 6.3 [Ubicaciones](#63-ubicaciones)
    - 6.4 [Personas](#64-personas)
    - 6.5 [Ficha de categoría](#65-ficha-de-categoria)
-   - 6.6 [Mi cuenta y Seguridad de la aplicación](#66-mi-cuenta-y-seguridad)
-   - 6.7 [Etiquetas QR e Importación](#67-etiquetas-e-importacion)
+   - 6.6 [Ajustes y Seguridad de la aplicación](#66-mi-cuenta-y-seguridad)
+   - 6.7 [Herramientas de inventario: Etiquetas QR, Importación y datos por ordenar](#67-etiquetas-e-importacion)
    - 6.8 [Estadísticas y Sugerencias del equipo](#68-estadisticas-y-sugerencias)
    - 6.9 [Autenticación (login) y actualización](#69-autenticacion)
    - 6.10 [Centro de consulta](#610-centro-de-consulta)
@@ -92,7 +92,7 @@ La app monta rutas dentro de dos envoltorios de autorización y luego cada panta
 | Nivel | Qué pantallas | Qué se ve arriba | ¿Barra de pestañas? |
 |---|---|---|---|
 | **Sección** | Los cuatro destinos (Resolver, Equipos, Bóveda y Más) y dos secciones que cuelgan de ellos y llevan regreso en todos los tamaños: el catálogo de guías (a Resolver) y Red (a Más) | título de la sección, estado del dato, buscar y cuenta | sí |
-| **Documento** | fichas y listas internas: categoría, artículo, equipo, secreto, topología, Ubicaciones, Personas, Diagnóstico, Estadísticas, Sugerencias, Mi cuenta, Seguridad | en las **cinco fichas** (equipo, artículo, credencial, ubicación, persona), el **ancla permanente** de la tarea 201: chevron de 44 px, el origen a 11 px y el nombre de lo que se ve a 14 px, que no se va con el scroll (regla **M-R1**). En las listas internas, el regreso con el nombre de a dónde vuelve. A la derecha, las acciones de la pantalla | sí |
+| **Documento** | fichas y listas internas: categoría, artículo, equipo, secreto, topología, Ubicaciones, Personas, Diagnóstico, Estadísticas, Sugerencias, Ajustes, Seguridad, Herramientas de inventario | en las **cinco fichas** (equipo, artículo, credencial, ubicación, persona), el **ancla permanente** de la tarea 201: chevron de 44 px, el origen a 11 px y el nombre de lo que se ve a 14 px, que no se va con el scroll (regla **M-R1**). En las listas internas, el regreso con el nombre de a dónde vuelve. A la derecha, las acciones de la pantalla | sí |
 | **Tarea** | lo que se hace y de lo que se sale: los cuatro editores, una guía abierta (su ejecución), el diagnóstico en ejecución, el escáner, las etiquetas, la importación y las tres migraciones | `BarraTarea`: rótulo ("Editando"), sobre qué, la ruta de vuelta escrita y una X | **no** |
 
 **CUATRO DESTINOS: RESOLVER, EQUIPOS, BÓVEDA Y MÁS (desde el 2026-09-22, tarea 254, [DECISIONES.md](DECISIONES.md) AD-042).** Soluciones IT acompaña al técnico hasta el puesto de trabajo: buscar, encontrar, ejecutar y solucionar. La navegación principal es **la misma en el teléfono, la tableta y el escritorio**:
@@ -164,7 +164,7 @@ El **login** queda fuera del chasis (no hay sesión todavía) y trae su propia c
 
 Estos cuatro son los mismos destinos que "Más" da en móvil (menos Bóveda, Etiquetas, Importar y Mi cuenta, que en escritorio ya tienen puerta: Bóveda en el nav principal, Etiquetas e Importar en el "···" de Equipos, Mi cuenta al pie del sidebar). Icono sin variante rellena (evita sumar más colisiones a las que ya tiene el set, ver R24): solo recolorea a acento cuando está activo.
 
-**Perfil al pie**, ahora con `Avatar` (iniciales) y un caret, en vez de solo nombre y correo: nombre, subtítulo fijo "Mi cuenta", enlace a `/cuenta`.
+**Perfil al pie**, ahora con `Avatar` (iniciales) y un caret, en vez de solo nombre y correo: nombre, subtítulo fijo "Ajustes" ("Mi cuenta" hasta la tarea 268), enlace a `/cuenta`.
 
 Las **5 pestañas de móvil** (`DESTINOS_BASE` + `DESTINO_MAS`) son en cambio fijas, iguales para todos (regla R17: "los permisos cambian lo que hay detrás de una puerta, no la forma de la barra"). La Bóveda deja de ser pestaña móvil y pasa a encabezar "Más" (decisión aprobada por el usuario):
 
@@ -234,8 +234,8 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/login` | LoginPage | Fuera del chasis | Inicio de sesión (fuera de RequireAuth) |
 | `/` (index) | ResolverPage | Sección | **Resolver** (desde el 2026-09-22): "¿Qué necesitas resolver?", el buscador global y, debajo, solo lo que ayuda: Atención (hasta tres asuntos con fecha), Recientes (guías usadas en 14 días) y Accesos rápidos por categoría, con "Todas las guías" |
 | `/agenda` | AgendaPage | Documento | **Agenda completa**: fecha, resumen, vencidos, para hoy, próximos, en curso y por revisar del equipo, y al final, plegada, la actividad del equipo (desde el 2026-09-23). Sube a Resolver |
-| `/cuenta` | CuentaPage | Documento | Mi cuenta (cambiar contraseña, cerrar sesión). Sube a Más |
-| `/cuenta/seguridad` | SeguridadPage | Documento | Bloqueo de la app (patrón/contraseña) |
+| `/cuenta` | CuentaPage | Documento | **Ajustes** (se llamaba Mi cuenta hasta la tarea 268): cambiar la contraseña (plegado), instalar, descargar para offline, bloqueo y seguridad, buscar actualización y cerrar sesión. Sube a Más |
+| `/cuenta/seguridad` | SeguridadPage | Documento | Bloqueo de la app (patrón/contraseña). Sube a Ajustes |
 | `/soluciones` | SolucionesPage | Sección | Catálogo de guías: lista, chips de categoría, buscador, hoja de tipo. Desde el 2026-09-22 no es pestaña: se abre desde Resolver y su cabecera lleva un regreso a Resolver |
 | `/soluciones/:categoriaId` | CategoriaPage | Documento | Ficha 360° de una categoría |
 | `/soluciones/:categoriaId/nuevo` | ArticuloForm | Tarea | Crear artículo (editor con 4 pestañas) |
@@ -249,8 +249,8 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/dispositivos/:dispositivoId/editar` | DispositivoForm | Tarea | Editar equipo |
 | `/dispositivos/:dispositivoId/baja` | DarDeBajaPage | Tarea | Dar de baja con cascada |
 | `/dispositivos/:dispositivoId/reemplazo` | ReemplazoPage | Tarea | Migrar dependencias al reemplazar |
-| `/dispositivos/etiquetas` | EtiquetasPage | Tarea | Etiquetas QR imprimibles |
-| `/dispositivos/importar` | ImportarDispositivosPage | Tarea | Importación masiva Excel/CSV (3 pasos) |
+| `/dispositivos/etiquetas` | EtiquetasPage | Tarea | Etiquetas QR imprimibles. Su puerta es Herramientas de inventario (desde la tarea 268): vuelve a ella, o a la ficha del equipo si se abrió desde su "···" |
+| `/dispositivos/importar` | ImportarDispositivosPage | Tarea | Importación masiva Excel/CSV (3 pasos). Su puerta es Herramientas de inventario, a la que sube (desde la tarea 268) |
 | `/ubicaciones` | UbicacionesPage | Documento | Lista de ubicaciones (árbol) |
 | `/ubicaciones/nueva` | UbicacionForm | Tarea | Crear ubicación |
 | `/ubicaciones/migrar` | MigracionUbicaciones | Tarea | Convertir textos en ubicaciones |
@@ -269,14 +269,16 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/referencia/:referenciaId/editar` | ReferenciaForm | Tarea | Editar ficha |
 | `/red` | RedPage | Sección | Recorrido por nodos: el equipo, de qué depende y qué cae si falla. Desde el 2026-09-22 se abre desde Más y su cabecera lleva un regreso a Más; desde el 2026-09-23 la fila de Más la abre en el nodo donde se dejó |
 | `/red/equipos` | EquiposRedPage | Documento | Todos los equipos de red, agrupados por ubicación |
-| `/red/topologia` | TopologiaPage | Documento | Mapa/bosque de toda la red. Se abre desde el pie de Red y, desde el 2026-09-23, desde Más > Infraestructura > Topología, que vuelve a Más |
+| `/red/topologia` | TopologiaPage | Documento | Mapa/bosque de toda la red. Se abre desde el pie de Red ("Mapa completo, desde cada raíz") y sube a Red. Entre la tarea 257 y la 268 (2026-09-23) tuvo además fila propia en Más |
 | `/red/topologia/:dispositivoId` | TopologiaEquipoPage | Documento | Topología centrada en un equipo |
 | `/boveda` | BovedaGuard > BovedaPage | Sección | Lista de secretos (tras desbloqueo) |
 | `/boveda/nueva` | CredencialForm | Tarea | Crear secreto |
 | `/boveda/migrar` | MigracionCredenciales | Tarea | Migrar secretos que son de un equipo |
 | `/boveda/:credencialId` | CredencialPage | Documento | Ficha de un secreto (descifrado local) |
 | `/boveda/:credencialId/editar` | CredencialForm | Tarea | Editar secreto |
-| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos, en cuatro grupos desde el 2026-09-23: Consulta (Centro de consulta, Agenda y Mis favoritos si hay), Infraestructura (Red, Topología, Ubicaciones, Personas), Herramientas (Diagnóstico, Importar equipos, Etiquetas QR) y Configuración (Mi cuenta, Bloqueo y seguridad, Buscar actualización). Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
+| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos, en cinco grupos desde la tarea 268 (2026-09-23), una puerta por capacidad: Consulta (Centro de consulta, Agenda y Mis favoritos si hay), Organización (Personas, Ubicaciones), Infraestructura (Red), Herramientas (Herramientas de inventario, Diagnóstico) y Aplicación (Ajustes). Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
+| `/inventario` | HerramientasInventarioPage | Documento | **Herramientas de inventario** (tarea 268): Importar equipos, Etiquetas QR y, solo si hay, los datos por ordenar, con cuántos equipos son. Sube a Más |
+| `/inventario/estados` | EstadosPorUnificarPage | Tarea | **Estados escritos a mano** (tarea 268): llevarlos a la lista de cinco, con las equivalencias seguras propuestas y lo demás por validar. Sube a Herramientas de inventario |
 | `/diagnostico` | DiagnosticosPage | Documento | Lista de problemas por categoría. Sube a Más |
 | `/diagnostico/nuevo` | DiagnosticoForm | Tarea | Crear diagnóstico (árbol de preguntas) |
 | `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Tarea | Asistente de ejecución del diagnóstico |
@@ -392,7 +394,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 0. **Bienvenida del primer día** (en Inicio) (`BienvenidaPrimerDia`, tarea 184; solo mientras haga falta): "Bienvenido, {nombre de pila}", una línea de qué vive aquí, y **tres pasos que se apagan solos**:
    1. *Entraste con tu cuenta* (siempre hecho: esta pantalla solo se ve con sesión).
    2. *Instala la app en el teléfono*, con botón **"Instalar"** (diálogo nativo) o **"Cómo instalar"** si el navegador no lo ofrece (Safari de iOS siempre).
-   3. *Descarga todo para trabajar sin señal*, con botón **"Descargar"**. Es **el mismo estado** que "Descargar todo para offline" de Mi cuenta: los dos leen y escriben el mismo módulo (`adjuntosOffline.ts`), así que descargar en cualquiera de los dos apaga el paso y actualiza la fecha en el otro.
+   3. *Descarga todo para trabajar sin señal*, con botón **"Descargar"**. Es **el mismo estado** que "Descargar todo para offline" de Ajustes: los dos leen y escriben el mismo módulo (`adjuntosOffline.ts`), así que descargar en cualquiera de los dos apaga el paso y actualiza la fecha en el otro.
    **No compite con la agenda y no vuelve:** se retira sola en cuanto hay algo que atender, y una vez cumplidos los tres pasos queda marcada como completada en el dispositivo, así que **no reaparece** aunque el estado real cambie (por ejemplo, abrir la app desde el navegador en vez de la versión instalada).
 0-bis. **Recientes**: retirado de Inicio el **2026-09-20** (tarea 247). Estuvo ahí entre el 2026-09-17 y esa fecha, con hasta cinco filas de 52 px. El registro local (`recientes.ts`: guías, equipos, diagnósticos y fichas del Centro de consulta) **se conserva y se sigue escribiendo**, pero no se muestra en ninguna pantalla; nunca anotó credenciales.
 1. **Fecha de hoy** en español de Colombia ("Viernes, 11 de septiembre"): dice respecto a qué se dice "hoy".
@@ -428,7 +430,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 | **Para empezar** | Guías (`/soluciones`) | Ruta de aprendizaje sobre guías; se oculta al buscar o con filtro de etiqueta |
 | **Favoritos** | Más (`/mas`), como **"Mis favoritos"** | Desde el 2026-09-23, una fila de Consulta con su conteo que se despliega en el sitio y solo aparece si hay alguno (antes, una sección plegable propia). Inicio tuvo "Favoritas" (solo guías) entre el 2026-09-17 y el 2026-09-20 |
 | **Actividad del equipo** | Agenda completa (`/agenda`), al final | Sección plegable con su conteo. Estuvo en Más del 2026-09-11 al 2026-09-22 |
-| **Descargar todo para offline** | Mi cuenta (`/cuenta`) | Ajuste de este dispositivo, como instalar la app; mismo estado que el paso 3 de la bienvenida |
+| **Descargar todo para offline** | Ajustes (`/cuenta`), bloque "Este teléfono" | Ajuste de este dispositivo, como instalar la app; mismo estado que el paso 3 de la bienvenida |
 | **Diagnóstico** y **Escanear** (atajos) | Ya estaban en la navegación | No se duplican en Inicio |
 | **Lo que consultaste** | En ninguna pantalla desde el 2026-09-20 | Volvió a Inicio como "Recientes" (tarea 241) y se retiró con la tarea 247: Inicio es trabajo pendiente. El registro local (`recientes.ts`) se sigue escribiendo |
 
@@ -693,15 +695,18 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Desde el 2026-09-22 (tarea 254) es uno de los cuatro destinos principales, en todos los tamaños**, y deja de listar lo que ya tiene su pestaña o su sitio: **Equipos y la Bóveda** (son pestañas) y **Escanear equipo** (vive en Equipos).
 
-**Cuerpo, en cuatro grupos (desde el 2026-09-23, tarea 257, [DECISIONES.md](DECISIONES.md) AD-046).** Uno por pregunta, en este orden:
+**Cuerpo, en cinco grupos: una puerta por capacidad (desde el 2026-09-23, tarea 268, [DECISIONES.md](DECISIONES.md) AD-049).** En este orden:
 - **"Consulta"**, lo que se mira: **Centro de consulta** ("Herramientas, glosario, atajos y comandos"), **Agenda** (subtítulo "Vencimientos, borradores y sugerencias del equipo", o lo urgente, "1 vencido · 2 para hoy", cuando lo hay) y **Mis favoritos**, **solo si hay alguno**: una fila vacía sería un destino que no lleva a nada.
-- **"Infraestructura"**, cómo está montado todo: **Red** ("Cómo está conectada la infraestructura"), **Topología** ("El mapa completo, desde cada raíz", → `/red/topologia`, la misma pantalla que abre el pie de Red), **Ubicaciones** ("Sedes, salas y racks") y **Personas** ("Responsables de cada equipo").
-- **"Herramientas"**, lo que se hace de vez en cuando: **Diagnóstico** ("Del síntoma a la guía, paso a paso"), **Importar equipos** ("Carga masiva desde Excel o CSV") y **Etiquetas QR** ("Generar e imprimir etiquetas para el inventario"). Las dos últimas llevan debajo la nota **"Mejor desde el ordenador"**, que hasta ahora era el título de un grupo entero al final de la pantalla.
-- **"Configuración"**: la fila de perfil (avatar con iniciales, nombre y correo → `/cuenta`), **"Bloqueo y seguridad"** (→ `/cuenta/seguridad`, con el método y si está activo o inactivo, leído en vivo de `db.seguridadApp`) y **"Buscar actualización"** (2026-09-20, tarea 250):
-  - **"Buscar actualización"** hace el trabajo de verdad (2026-09-21): pide **`/version.json`** a la red (sin caché), llama a `registration.update()` y lee `waiting`, `installing` y `updatefound`. Mientras consulta dice **"Buscando actualización…"**; después, una de estas: **"Ya tienes la versión más reciente"**, **"Versión nueva disponible: toca «Actualizar» en el aviso"**, **"Sin conexión. Inténtalo cuando recuperes Internet"** o **"No se pudo comprobar: este navegador no guarda la app para trabajar sin señal"**.
-  - **Diagnóstico, en letra pequeña debajo** (2026-09-21): **versión instalada** (el commit corto del despliegue de Vercel, o "desarrollo" en local), **versión en el servidor** (la que anuncia `/version.json`), **estado del service worker** (activo, instalando, esperando para entrar o sin instalar) y **hora de la última comprobación**. Es lo que permite resolver un "no me actualizó" por teléfono sin adivinar.
-  - **Actualizar no borra nada**: ni IndexedDB, ni la sesión, ni el avance de las guías, ni la cola de sincronización. Solo se reemplazan los archivos de la app; desinstalar la PWA o borrar sus datos nunca es la solución.
-- **El conteo va a la derecha**, antes del galón (hallazgo **M-025**, detalle abajo): lo llevan el Centro de consulta, Mis favoritos, Ubicaciones, Personas y Diagnóstico, todos en vivo.
+- **"Organización"**, quién y dónde: **Personas** ("Quién tiene cada equipo, ingresos y retiros", con el número de personas activas) y **Ubicaciones** ("Qué hay en cada sede, área y rack").
+- **"Infraestructura"**: **Red** ("Conexiones, impacto y el mapa completo"). **Topología ya no es fila propia:** se abre desde Red ("Mapa completo, desde cada raíz", → `/red/topologia`); su pantalla, sus rutas y sus datos no cambian, y su regreso sube a Red.
+- **"Herramientas"**, lo que se hace de vez en cuando: **Herramientas de inventario** ("Importar, etiquetas QR y datos por ordenar", → `/inventario`, sección 6.7) y **Diagnóstico** ("Del síntoma a la guía, paso a paso"; deja Más en la tarea 269, cuando su administración tenga puerta en Guías).
+- **"Aplicación"**: **Ajustes** (el avatar con las iniciales y "Cuenta, bloqueo, sin conexión y actualización", → `/cuenta`, sección 6.6). Es una sola fila para lo que eran tres: Mi cuenta, Bloqueo y seguridad y Buscar actualización.
+- **El conteo va a la derecha**, antes del galón (hallazgo **M-025**, detalle abajo): lo llevan el Centro de consulta, Mis favoritos, Personas, Ubicaciones y Diagnóstico, todos en vivo.
+- **Los subtítulos no se recortan** (desde la tarea 268): en un teléfono estrecho pasan a una segunda línea antes que esconder lo que hay detrás de la puerta.
+
+**Ninguna función se perdió en la tarea 268:** Topología está en Red; Importar equipos y Etiquetas QR, en Herramientas de inventario, con su nota "Mejor desde el ordenador" y el flujo del QR intacto (imprimir, pegar, escanear, abrir la ficha); Mi cuenta, Bloqueo y seguridad y Buscar actualización, en Ajustes. Ninguna ruta se retiró.
+
+**Cuerpo, del 2026-09-23 (tarea 257) a la tarea 268, en cuatro grupos ([DECISIONES.md](DECISIONES.md) AD-046):** "Consulta" (Centro de consulta, Agenda, Mis favoritos), "Infraestructura" (Red, Topología, Ubicaciones, Personas), "Herramientas" (Diagnóstico, Importar equipos y Etiquetas QR, las dos con la nota "Mejor desde el ordenador") y "Configuración" (la fila de perfil → `/cuenta`, Bloqueo y seguridad y Buscar actualización, que hoy son parte de Ajustes).
 
 **Mis favoritos se despliega en el sitio.** Tiene la forma de sus vecinas (icono, título, subtítulo "Lo que marcaste con la estrella" y el conteo a la derecha), pero en lugar del galón lleva una flecha hacia abajo que gira al abrir. Tocarla despliega la lista debajo, sangrada a la altura del título y sin pantalla nueva: cada favorito es un enlace de 44 px con el icono de su tipo, su nombre y, si lo tiene, su subtítulo. Es un botón que anuncia si está desplegado.
 
@@ -709,9 +714,9 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Lo que dejó de estar aquí el 2026-09-23:** **Actividad del equipo** se mudó al final de la agenda completa (`/agenda`), plegada: no es un sitio al que se va, es lo que pasa en el equipo. Los grupos **"Trabajo técnico"**, **"Mejor desde el ordenador"** y **"Lo mío y lo del equipo"** desaparecen; todo lo que tenían sigue aquí o en la agenda.
 
-**Una columna o dos.** En el teléfono y en la tableta, una columna. **Desde 1024 px**, dos: Consulta e Infraestructura arriba, Herramientas y Configuración debajo, y desplegar Mis favoritos no estira el grupo de al lado. A 768 px las dos columnas dejaban unos 340 px por grupo y recortaban los subtítulos.
+**Una columna o dos.** En el teléfono y en la tableta, una columna. **Desde 1024 px**, dos: Consulta y Organización arriba, Infraestructura y Herramientas en medio y Aplicación debajo, y desplegar Mis favoritos no estira el grupo de al lado. A 768 px las dos columnas dejaban unos 340 px por grupo y recortaban los subtítulos.
 
-**Volver.** Lo que se abre desde aquí vuelve aquí. Red, el Centro de consulta, Ubicaciones, Personas, Diagnóstico y Mi cuenta suben a Más, que es su padre. **Topología** cuelga de Red, pero abierta desde aquí su regreso dice "Más" y vuelve a Más: la fila lleva su origen (regla **M-R2**); sin él, por un enlace o una recarga, sube a Red. **Cuatro filas todavía no vuelven aquí** (tarea 265): la **Agenda** sube a Resolver, su padre desde el 2026-09-22, y darle el origen de Más le quitaría la fecha de la cabecera, que ocupa la misma línea; **Bloqueo y seguridad** sube a Mi cuenta; **Importar equipos** y **Etiquetas QR** salen a Equipos, que llevan escrito a mano desde que su camino principal era el menú "···" de esa sección, retirado el 2026-09-22 (tarea 256).
+**Volver.** Lo que se abre desde aquí vuelve aquí: Red, el Centro de consulta, Personas, Ubicaciones, Herramientas de inventario, Diagnóstico y Ajustes suben a Más, que es su padre. Lo que se abre DENTRO de una puerta vuelve a esa puerta (desde la tarea 268): **Importar equipos** y **Etiquetas QR**, a Herramientas de inventario (hasta entonces salían a Equipos, escrito a mano); **Bloqueo y seguridad**, a Ajustes, donde está su fila; **Topología**, a Red. **Una fila todavía no vuelve aquí** (tarea 265): la **Agenda** sube a Resolver, su padre desde el 2026-09-22, y darle el origen de Más le quitaría la fecha de la cabecera, que ocupa la misma línea.
 
 **Escritorio:** desde el 2026-09-22 Más es uno de los cuatro destinos también en la barra lateral, que ya no tiene grupos propios: esta pantalla es la puerta de todo lo que contiene, en todos los tamaños.
 
@@ -837,9 +842,18 @@ Al pie, el resumen ("Se crearán 7 ubicaciones, se usará 1 que ya existe y se v
 Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con el icono en su color de identidad, nombre y resumen (N artículos · N equipos · N diagnósticos), **botón "Artículo"** para crear. Cuerpo: artículos agrupados por tipo (con chip de avance X/Y en los que están a medias), "Equipos de esta categoría" (con estado), "Diagnósticos de esta categoría", e historial. Se alcanza desde el buscador global y desde la ficha de un equipo.
 
 <a id="66-mi-cuenta-y-seguridad"></a>
-### 6.6 Mi cuenta y Seguridad de la aplicación
+### 6.6 Ajustes y Seguridad de la aplicación
 
-**Mi cuenta (`CuentaPage`).** Ruta `/cuenta`, nivel Documento. Muestra nombre y correo del técnico. **Formulario "Cambiar contraseña de inicio de sesión"** (requiere internet): campos Contraseña actual / Nueva / Confirmar, y botón "Cambiar contraseña". Tarjeta **"Instalar la app en este dispositivo"** (tarea 184) con el mismo botón que la bienvenida (`BotonInstalarApp`): solo aparece mientras la app **no** corra ya instalada, y es el segundo de los dos únicos sitios desde donde se ofrece instalar (nunca como banner). Bloque **"Descargar todo para offline"** (`DescargarOffline`, venido de Inicio el 2026-09-11): deja en el teléfono el contenido de los adjuntos antes de salir sin señal, con progreso y fecha de la última descarga. Comparte estado con el paso 3 de la bienvenida de Inicio. Enlace a **"Seguridad de la aplicación"**. Botón **"Cerrar sesión"**. Desde la tarea 182 también se alcanza con un toque desde el avatar de la barra superior (en móvil) o desde la fila de perfil de "Más".
+**Ajustes (`CuentaPage`).** Ruta `/cuenta`, nivel Documento. **Se llamaba "Mi cuenta" hasta la tarea 268**, que le sumó lo que Más enseñaba en filas aparte (Bloqueo y seguridad, Buscar actualización): una sola puerta para la cuenta, este teléfono y la aplicación ([DECISIONES.md](DECISIONES.md) AD-049). Cabecera: "Ajustes" y, debajo, el nombre y el correo del técnico. Tres bloques y el cierre de sesión:
+- **"Cuenta":** **"Cambiar contraseña de inicio de sesión"**, plegado porque se usa poco (un botón que anuncia si está abierto). Al tocarlo aparece el formulario (requiere internet): Contraseña actual / Nueva / Confirmar y el botón "Cambiar contraseña".
+- **"Este teléfono":** la tarjeta **"Instalar la app en este dispositivo"** (tarea 184, `BotonInstalarApp`), solo mientras la app **no** corra ya instalada, el segundo de los dos únicos sitios desde donde se ofrece instalar (nunca como banner); **"Descargar todo para offline"** (`DescargarOffline`, venido de Inicio el 2026-09-11), que deja en el teléfono el contenido de los adjuntos antes de salir sin señal, con progreso y fecha de la última descarga, comparte estado con el paso 3 de la bienvenida y, desde la tarea 268, tiene su botón "Descargar" de 44 px; y **"Bloqueo y seguridad"** (→ `/cuenta/seguridad`), con el método y si está activo ("Patrón de este teléfono · activo") o "Sin bloqueo: cualquiera que tome el teléfono entra a la app.", leído en vivo de `db.seguridadApp`.
+- **"Aplicación":** **"Buscar actualización"** (2026-09-20, tarea 250; vivía en Más hasta la tarea 268):
+  - Hace el trabajo de verdad (2026-09-21): pide **`/version.json`** a la red (sin caché), llama a `registration.update()` y lee `waiting`, `installing` y `updatefound`. Mientras consulta dice **"Buscando actualización…"**; después, una de estas: **"Ya tienes la versión más reciente"**, **"Versión nueva disponible: toca «Actualizar» en el aviso"**, **"Sin conexión. Inténtalo cuando recuperes Internet"** o **"No se pudo comprobar: este navegador no guarda la app para trabajar sin señal"**.
+  - **Diagnóstico, en letra pequeña debajo** (2026-09-21): **versión instalada** (el commit corto del despliegue de Vercel, o "desarrollo" en local), **versión en el servidor** (la que anuncia `/version.json`), **estado del service worker** (activo, instalando, esperando para entrar o sin instalar) y **hora de la última comprobación**. Es lo que permite resolver un "no me actualizó" por teléfono sin adivinar.
+  - **Actualizar no borra nada**: ni IndexedDB, ni la sesión, ni el avance de las guías, ni la cola de sincronización. Solo se reemplazan los archivos de la app; desinstalar la PWA o borrar sus datos nunca es la solución.
+- **"Cerrar sesión"**, al final.
+
+Se alcanza desde **Más > Aplicación > Ajustes**, desde el avatar de la barra superior en el teléfono (etiqueta accesible "Ajustes") y desde el perfil al pie de la barra lateral (subtítulo "Ajustes").
 
 **Seguridad de la aplicación (`SeguridadPage`).** Ruta `/cuenta/seguridad`, nivel Documento. Configura el **bloqueo del dispositivo** (patrón o contraseña, nunca biometría), una capa distinta de la sesión y de la contraseña maestra.
 - **Sin configurar:** invitación + selector de método (Patrón / Contraseña) + captura del secreto con confirmación.
@@ -847,11 +861,22 @@ Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con e
 - El patrón se dibuja en una cuadrícula 3x3 (`PatronInput`); la contraseña, mínimo 4 caracteres.
 
 <a id="67-etiquetas-e-importacion"></a>
-### 6.7 Etiquetas QR e Importación
+### 6.7 Herramientas de inventario: Etiquetas QR, Importación y datos por ordenar
 
-**Puerta:** Más > Herramientas, con la nota "Mejor desde el ordenador" en su fila (desde el 2026-09-23); Etiquetas, también desde el menú "···" de la ficha de un equipo ("Etiqueta QR"). Hasta la tarea 182 solo se alcanzaban desde el menú "···" de Equipos, y ese menú se retiró el 2026-09-22 (tarea 256). **Su X sigue saliendo a Equipos**, escrita a mano desde que ese menú era su camino principal: abiertas desde Más, no vuelven a Más (pendiente en la tarea 265).
+**Herramientas de inventario (`HerramientasInventarioPage`).** Ruta `/inventario`, nivel Documento, desde Más > Herramientas (tarea 268, [DECISIONES.md](DECISIONES.md) AD-049). Una sola puerta para lo que se hace de vez en cuando con el inventario, con las mismas filas que Más (`FilaMas`):
+- **"Cargar y etiquetar":** **Importar equipos** ("Carga masiva desde Excel o CSV") y **Etiquetas QR** ("Imprimir, pegar y escanear para abrir su ficha"), las dos con la nota **"Mejor desde el ordenador"**.
+- **"Por ordenar", solo si hay algo**, con el número de equipos a la derecha: **Ubicaciones escritas como texto** ("N lugares por convertir en fichas", → la migración de ubicaciones, sección 6.3), **Estados escritos a mano** ("Llevarlos a los cinco estados de la lista", → `/inventario/estados`), **Responsables en campos adicionales** (anotados en «Usuario asignado» u otra propiedad, → la migración de personas) y **Responsables por validar** ("Un área o dos nombres en vez de una persona", → Personas, con esa sección ya desplegada, `?porValidar=1`). **No es la Agenda:** la calidad del inventario no compite con lo que vence hoy (sección 15 del encargo del 2026-09-23).
+- Cada fila lleva el origen de esta pantalla, así que Importar, Etiquetas y las dos migraciones vuelven aquí (regla **M-R2**). Abiertas desde su pantalla de siempre (Ubicaciones, Personas), las migraciones vuelven a ella.
 
-**Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, nivel Tarea. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Barra de tarea ("Imprimiendo · Etiquetas QR", vuelve a Equipos) y **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
+**Estados escritos a mano (`EstadosPorUnificarPage`).** Ruta `/inventario/estados`, nivel Tarea ("Ordenando · Estados escritos a mano", sale a Herramientas de inventario con "Salir sin unificar"). Lleva los estados de texto libre a la lista de cinco (Operativo, Disponible, En mantenimiento, Fuera de servicio, De baja), con el técnico decidiendo (RN-053):
+- Una tarjeta por texto, agrupado sin distinguir mayúsculas ni espacios, con cuántos equipos lo usan y sus formas ("2 equipos · incluye «OPERATIVO» y «operativo»").
+- **Equivalencia segura** (el texto YA es un estado de la lista escrito de otra forma, o "Dado de baja"): "Es «Operativo» escrito de otra forma." y viene **propuesto**; se puede desmarcar.
+- **Por validar** (cualquier otro texto): "Por validar: ¿qué estado es?" y, si es una palabra conocida ("Activo", "En reparación", "Dañado"), "Parece «Operativo»."; viene en **"Dejar como está"**: nunca se elige solo. Lo que no dice cómo está el equipo ("Prestado", "Asignado", "En bodega", "Obsoleto") no sugiere nada.
+- Chips de 44 px con los cinco estados y "Dejar como está". Al pie, "Se cambiarán N equipos. El estado anterior queda en su historial." y **"Unificar estados"**, con el avance ("Unificando 10 de 37…"). Cada equipo se relee antes de escribir (si otro teléfono lo cambió, no se pisa) y el cambio queda en su historial con el motivo "Unificación de estados". Al terminar, "Se unificaron N equipos."; lo que se dejó sigue en la lista, tal como se dejó. Los equipos sin estado no aparecen. Sin nada que unificar, la ruta vuelve a Herramientas de inventario.
+
+**Puerta de Etiquetas e Importación:** Herramientas de inventario (desde la tarea 268; del 2026-09-23 a esa tarea, dos filas de Más > Herramientas; hasta la tarea 182, el menú "···" de Equipos, retirado el 2026-09-22 en la tarea 256); Etiquetas, también desde el menú "···" de la ficha de un equipo ("Etiqueta QR"). **Su X vuelve a su puerta:** a Herramientas de inventario, o a la ficha del equipo si se abrió desde ella (hasta la tarea 268 salía siempre a Equipos, escrito a mano). Mientras están abiertas se ilumina Más, aunque vivan bajo `/dispositivos`.
+
+**Etiquetas QR (`EtiquetasPage`).** Ruta `/dispositivos/etiquetas`, nivel Tarea. Genera etiquetas QR imprimibles (cada una codifica la URL de la ficha). Barra de tarea ("Imprimiendo · Etiquetas QR", vuelve a su puerta) y **chips de categoría**. Cada tarjeta es seleccionable (casilla): miniatura del QR, nombre, código (placa/serial) y ubicación. Botones **"Seleccionar/Quitar todas"** y, en la barra inferior, **"Imprimir N"** (3 etiquetas por fila en hoja carta, la hoja impresa pasa a blanco).
 
 **Importación masiva (`ImportarDispositivosPage`).** Ruta `/dispositivos/importar`, nivel Tarea. Flujo de **3 pasos**:
 1. **Elegir archivo** (.xlsx o .csv). Reconoce encabezados parecidos ("No. de serie" = Serial, "Sede" = Ubicación). Enlace **"Descargar plantilla CSV de ejemplo"**.
@@ -1119,8 +1144,9 @@ Botones: **"Guardar conexión"** y (variante ficha) **"Guardar y agregar otra"**
 - **Dar de baja (`DarDeBajaPage`).** Motivo (opcional, "Fin de vida útil..."). El botón "Confirmar baja" solo se habilita cuando se resolvieron las dependencias (conexiones, credenciales, campos protegidos). Desde el 2026-09-23 la baja **suelta también al responsable**, y la pantalla lo dice antes con su nombre ("Dejará de estar asignado a …"). Si se llegó desde la ficha de una persona, la X y el final vuelven a ella.
 - **Reemplazo (`ReemplazoPage`).** Motivo (opcional). Botón "Migrar todo y dar de baja".
 - **Login (`LoginPage`).** Correo (email, obligatorio, `autoComplete="username"`), Contraseña (obligatorio, fuera del gestor). Botón "Ingresar". Ver la sección 6.9.
-- **Mi cuenta (`CuentaPage`).** Contraseña actual / Nueva / Confirmar (los tres obligatorios). Botón "Cambiar contraseña".
+- **Ajustes (`CuentaPage`), tras tocar "Cambiar contraseña de inicio de sesión".** Contraseña actual / Nueva / Confirmar (los tres obligatorios). Botón "Cambiar contraseña".
 - **Importar (`ImportarDispositivosPage`).** Carga de archivo (.csv/.xlsx) y, en la revisión, "Categoría para las filas que no traen una" (select). Botón "Importar N equipos".
+- **Estados escritos a mano (`EstadosPorUnificarPage`).** Una elección por texto: uno de los cinco estados o "Dejar como está" (radios con forma de chip), con las equivalencias seguras ya elegidas. Botón "Unificar estados".
 
 ---
 
@@ -1148,8 +1174,8 @@ La app usa **modales** (centrados, `src/components/Modal.tsx`, renderizados con 
 | **Contingencia del paso** | Vista de lectura: fila "Si esto falla", siempre que el paso tenga contingencia vinculada y no esté hecho. Asistente: botón "Falla" | `ProcedimientoVista`, `AsistenteVista` | Fila de 44 px con llave inglesa, o la hoja "Algo va mal en el paso N" | Despliega la contingencia sangrada tras la línea. La pregunta "¿Ocurrió algún error durante este paso?" **se retiró en la tarea 206**: responder "No" era completar el paso, que es lo que ya hace su insignia (regla R59) |
 | **Desbloqueo de la bóveda** | Al entrar a la Bóveda o a un campo protegido | `BovedaGuard`, `CredencialEnPaso`, `SeguridadDelEquipo` | Campo contraseña maestra + "Desbloquear" | Deriva la clave en el teléfono; sesión compartida con autobloqueo |
 | **Pantalla de bloqueo de la app** (`BloqueoAppGuard`) | Al abrir la app / tras inactividad | Envuelve toda la zona autenticada | Patrón (cuadrícula 3x3) o contraseña; "Cerrar sesión y quitar el bloqueo" | Desbloquea la interfaz (no cifra datos) |
-| **"Olvidé mi contraseña"** (tarea 184) | Enlace "¿La olvidaste?" | `LoginPage` | Dice el camino real: pedirle al administrador una contraseña nueva desde el panel de Supabase, y cambiarla luego en Mi cuenta. Distingue esta contraseña del bloqueo del teléfono | Solo informa; botón "Entendido" |
-| **"Instalar la app en el teléfono"** (tarea 184) | Botón "Cómo instalar", o "Instalar" cuando el navegador rechaza su diálogo | `BotonInstalarApp` (bienvenida de Inicio y Mi cuenta) | Los tres pasos manuales (menú del navegador → "Añadir a pantalla de inicio" → confirmar) | Solo informa; botón "Entendido" |
+| **"Olvidé mi contraseña"** (tarea 184) | Enlace "¿La olvidaste?" | `LoginPage` | Dice el camino real: pedirle al administrador una contraseña nueva desde el panel de Supabase, y cambiarla luego en Ajustes. Distingue esta contraseña del bloqueo del teléfono | Solo informa; botón "Entendido" |
+| **"Instalar la app en el teléfono"** (tarea 184) | Botón "Cómo instalar", o "Instalar" cuando el navegador rechaza su diálogo | `BotonInstalarApp` (bienvenida de Inicio y Ajustes) | Los tres pasos manuales (menú del navegador → "Añadir a pantalla de inicio" → confirmar) | Solo informa; botón "Entendido" |
 
 ---
 
@@ -1193,7 +1219,7 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 |------|----------|---------------------|
 | **Barra de navegación** (`Chasis`), escritorio (tarea 183) | Inicio, Guías, Equipos, Red, (Bóveda con permiso); Herramientas: Diagnóstico, Escanear; Registros: Ubicaciones, Personas | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
 | **Barra de navegación** (`Chasis`), móvil (tarea 182) | Inicio, Guías, Equipos, Red, Más | Cambia de sección; siempre las mismas cinco, iguales para todos |
-| **"Más"** (tarea 182; cuatro grupos desde la 257) | Consulta: Centro de consulta, Agenda, Mis favoritos (si hay). Infraestructura: Red, Topología, Ubicaciones, Personas. Herramientas: Diagnóstico, Importar equipos, Etiquetas QR. Configuración: Mi cuenta, Bloqueo y seguridad, Buscar actualización | Navega a cada pantalla (Mis favoritos se despliega en el sitio); ver sección 5.6 |
+| **"Más"** (tarea 182; cinco grupos desde la 268) | Consulta: Centro de consulta, Agenda, Mis favoritos (si hay). Organización: Personas, Ubicaciones. Infraestructura: Red. Herramientas: Herramientas de inventario, Diagnóstico. Aplicación: Ajustes | Navega a cada pantalla (Mis favoritos se despliega en el sitio); ver sección 5.6 |
 | **"···" de Equipos** (hasta el 2026-09-21) | Ubicaciones, Personas, Etiquetas QR, Importar | Retirado en la tarea 256: las cuatro están en Más |
 | **"···" de la ficha de dispositivo** | Duplicar, Editar, Etiqueta QR, Reemplazar, Dar de baja, Eliminar | Acciones sobre el equipo |
 | **"···" de la ficha de artículo** | Compartir, Duplicar, Reiniciar progreso, Eliminar | Acciones sobre el artículo |
@@ -1223,7 +1249,7 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 | **Imprimir etiquetas** | Equipos → `/dispositivos/etiquetas` | Genera e imprime etiquetas QR seleccionadas | (solo lectura) |
 | **Compartir** | Fichas de dispositivo y artículo | Diálogo nativo o copia el enlace | (solo lectura) |
 | **Copiar** | Fichas de dispositivo y credencial | Copia un valor al portapapeles (con auditoría en la bóveda) | `accesos_boveda` (en la bóveda) |
-| **Descargar** | Ficha de credencial (archivo seguro) / Mi cuenta ("Descargar todo para offline") | Descifra y descarga un archivo / precachea adjuntos | `accesos_boveda` (archivo); cache local |
+| **Descargar** | Ficha de credencial (archivo seguro) / Ajustes ("Descargar todo para offline") | Descifra y descarga un archivo / precachea adjuntos | `accesos_boveda` (archivo); cache local |
 | **Sincronizar** | Pastilla de sincronización / automático | Sube la cola y descarga novedades | Todas las sincronizadas |
 | **Buscar** | Inicio (global) y cada sección (local) | Filtra por texto, tolera errores y sinónimos | (solo lectura) |
 | **Filtrar / Ordenar** | Listas | Por categoría, tipo, etiqueta, estado, ubicación | (solo lectura) |
@@ -1480,14 +1506,27 @@ Ficha de la persona > Retirar persona → fecha, motivo y una decisión por equi
 Ficha de una persona retirada > Reactivar → vuelve a activa (los datos del retiro quedan en su historial)
 ```
 
+### 13.8 Ordenar los datos del inventario (desde el 2026-09-23)
+
+```
+Más > Herramientas > Herramientas de inventario
+ → Cargar y etiquetar: Importar equipos · Etiquetas QR (imprimir → pegar → escanear abre la ficha)
+ → Por ordenar (solo si hay; cada fila con su número de equipos):
+    Ubicaciones escritas como texto → la migración (lo equivalente va junto; lo parecido lo decides) → vuelve aquí
+    Estados escritos a mano → lo propuesto (el mismo estado escrito distinto) y lo que elijas → Unificar estados
+      → cada equipo con su estado anterior en el historial; lo que dejaste, sigue como estaba
+    Responsables en campos adicionales → la migración de personas → vuelve aquí
+    Responsables por validar → Personas, con esa sección desplegada
+```
+
 ---
 
 <a id="14-arbol-de-navegacion"></a>
 ## 14. Árbol jerárquico de navegación
 
-Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de Mi cuenta viven en la barra superior de todas las secciones, no solo en la primera: se omiten del resto de los árboles de abajo para no repetirlos.
+Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de la cuenta (Ajustes desde la tarea 268) viven en la barra superior de todas las secciones, no solo en la primera: se omiten del resto de los árboles de abajo para no repetirlos.
 
-**Desde el 2026-09-22 (tarea 254)** la navegación principal son **cuatro destinos, los mismos en todos los tamaños: Resolver, Equipos, Bóveda y Más**. Donde los árboles de abajo difieren, manda este (Más, con sus cuatro grupos desde el 2026-09-23, tarea 257):
+**Desde el 2026-09-22 (tarea 254)** la navegación principal son **cuatro destinos, los mismos en todos los tamaños: Resolver, Equipos, Bóveda y Más**. Donde los árboles de abajo difieren, manda este (Más, con sus cinco grupos desde la tarea 268):
 
 ```
 Resolver (/)
@@ -1508,9 +1547,14 @@ Bóveda (/boveda)
 
 Más (/mas): una columna; desde 1024 px, dos
  ├── Consulta: Centro de consulta · Agenda (/agenda; al final, Actividad del equipo, plegada) · Mis favoritos (solo si hay; se despliega en el sitio)
- ├── Infraestructura: Red (/red, en el nodo donde se dejó; regreso a Más) · Topología (/red/topologia; regreso a Más) · Ubicaciones · Personas
- ├── Herramientas: Diagnóstico · Importar equipos · Etiquetas QR (las dos, "Mejor desde el ordenador")
- └── Configuración: Mi cuenta · Bloqueo y seguridad · Buscar actualización
+ ├── Organización: Personas · Ubicaciones
+ ├── Infraestructura: Red (/red, en el nodo donde se dejó; regreso a Más)
+ │    └── al pie: Mapa completo, desde cada raíz → Topología (/red/topologia; regreso a Red)
+ ├── Herramientas: Herramientas de inventario (/inventario) · Diagnóstico
+ │    └── Herramientas de inventario: Importar equipos · Etiquetas QR (las dos, "Mejor desde el ordenador")
+ │         └── Por ordenar (solo si hay): Ubicaciones escritas como texto · Estados escritos a mano (/inventario/estados) · Responsables en campos adicionales · Responsables por validar
+ └── Aplicación: Ajustes (/cuenta)
+      └── Cuenta (cambiar contraseña) · Este teléfono (instalar, descargar para offline, Bloqueo y seguridad) · Aplicación (Buscar actualización) · Cerrar sesión
 ```
 
 **Del 2026-09-17 al 2026-09-21 (tarea 244)** las pestañas del teléfono eran **Inicio, Guías y Más**, y Equipos, Red y Bóveda colgaban de Más:

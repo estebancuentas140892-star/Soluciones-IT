@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { Chasis } from '../../app/Chasis'
-import { MapPin, Monitor, QrCode, UploadSimple, User, UsersThree } from '../../components/iconos'
+import { MapPin, Pulse, QrCode, UploadSimple, User, UsersThree } from '../../components/iconos'
 import { db } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { cuantosEstadosPorUnificar } from '../dispositivos/estadosEscritos'
@@ -71,7 +71,7 @@ export function HerramientasInventarioPage() {
               to="/dispositivos/etiquetas"
               Icono={QrCode}
               titulo="Etiquetas QR"
-              subtitulo="Imprimir, pegar en el equipo y escanear para abrir su ficha"
+              subtitulo="Imprimir, pegar y escanear para abrir su ficha"
               nota="Mejor desde el ordenador"
               estado={origenAqui}
             />
@@ -97,9 +97,9 @@ export function HerramientasInventarioPage() {
               {pendientes.estados > 0 && (
                 <FilaMas
                   to="/inventario/estados"
-                  Icono={Monitor}
+                  Icono={Pulse}
                   titulo="Estados escritos a mano"
-                  subtitulo="Llevarlos a la lista: Operativo, Disponible, En mantenimiento..."
+                  subtitulo="Llevarlos a los cinco estados de la lista"
                   conteo={pendientes.estados}
                 />
               )}
@@ -118,7 +118,7 @@ export function HerramientasInventarioPage() {
                   to="/personas?porValidar=1"
                   Icono={User}
                   titulo="Responsables por validar"
-                  subtitulo="Un área, un estado o dos nombres donde va una persona"
+                  subtitulo="Un área o dos nombres en vez de una persona"
                   conteo={pendientes.porValidar}
                   estado={origenAqui}
                 />

@@ -51,14 +51,17 @@ function sinTildes(texto: string): string {
 }
 
 // Palabras que suelen decir un estado, a CONFIRMAR. Conservadoras a
-// propósito: "Inactivo" o "Asignado" no están porque no dicen si el
-// equipo funciona (un inactivo puede estar guardado o averiado).
+// propósito, porque el encargo prohíbe inferir un estado: no están
+// "Inactivo" ni "Asignado" (no dicen si el equipo funciona: un inactivo
+// puede estar guardado o averiado), "En bodega" ni "Stock" (dicen dónde
+// está, no cómo), "Fuera de uso" (guardado o dañado), "Para baja" (aún
+// no se dio de baja) ni "Obsoleto" (viejo, pero puede seguir en uso).
 const SUGERENCIAS: [string, string[]][] = [
   ['Operativo', ['activo', 'activa', 'en uso', 'funcionando', 'funcional', 'bueno', 'buen estado', 'en servicio', 'operativa']],
-  ['Disponible', ['libre', 'sin asignar', 'en bodega', 'stock', 'disponible para asignar']],
+  ['Disponible', ['libre', 'sin asignar', 'disponible para asignar']],
   ['En mantenimiento', ['mantenimiento', 'en reparacion', 'reparacion', 'en revision', 'revision']],
-  ['Fuera de servicio', ['danado', 'averiado', 'malo', 'no funciona', 'fuera de uso', 'dano']],
-  ['De baja', ['baja', 'para baja', 'obsoleto', 'desechado']],
+  ['Fuera de servicio', ['danado', 'averiado', 'malo', 'no funciona', 'dano']],
+  ['De baja', ['baja', 'desechado']],
 ]
 
 /** El estado que parece un texto que no es de la lista, o null si no se parece a ninguno. */

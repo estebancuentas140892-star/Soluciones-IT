@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-23: LAS ENTIDADES SE RELACIONAN.** Personas, equipos, ubicaciones, red, agenda, Centro de consulta, historial, Resolver y diagnóstico dejan de ser pantallas aisladas: sin rediseño general y conservando "Resolver → encontrar → ejecutar → solucionar". Cinco fases, una tarea por fase (266 a 270), una "En proceso" a la vez. **Cerradas y archivadas:** 266 (Personas) y 267 (Ubicaciones), las dos el 2026-09-23. **En proceso:** 268 (Más y herramientas de inventario). **Siguen:** 269 (Resolver + Diagnóstico) y 270 (Agenda y Centro de consulta en contexto). Restricciones del encargo que valen para las cinco: no inventar datos (persona desde un área, ubicación por parecido, fechas, estados, causas de baja), no duplicar verdades, no borrar historial y conservar compatibilidad con los 149 equipos, 94 personas, 31 conexiones, 31 guías y 42 fichas del Centro de consulta que ya existen.
+**ENCARGO DEL 2026-09-23: LAS ENTIDADES SE RELACIONAN.** Personas, equipos, ubicaciones, red, agenda, Centro de consulta, historial, Resolver y diagnóstico dejan de ser pantallas aisladas: sin rediseño general y conservando "Resolver → encontrar → ejecutar → solucionar". Cinco fases, una tarea por fase (266 a 270), una "En proceso" a la vez. **Cerradas y archivadas:** 266 (Personas), 267 (Ubicaciones) y 268 (Más y herramientas de inventario), las tres el 2026-09-23. **En proceso:** 269 (Resolver + Diagnóstico). **Sigue:** 270 (Agenda y Centro de consulta en contexto). Restricciones del encargo que valen para las cinco: no inventar datos (persona desde un área, ubicación por parecido, fechas, estados, causas de baja), no duplicar verdades, no borrar historial y conservar compatibilidad con los 149 equipos, 94 personas, 31 conexiones, 31 guías y 42 fichas del Centro de consulta que ya existen.
 
 **Auditoría previa (2026-09-23), lo que decide el diseño:**
 
@@ -14,16 +14,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Defecto:** la migración de ubicaciones (`src/features/ubicaciones/migracion.ts`) crea siempre ubicaciones nuevas, así que duplicaría las dos que ya existen, y no distingue una equivalencia segura de una posible coincidencia.
 - La tarea 263 ya integró el diagnóstico en Resolver ("Guía con preguntas"); en Más solo queda su administración.
 
-### 268. Fase 3: Más con una puerta por capacidad, y las herramientas de inventario juntas
+### 269. Fase 4: Diagnóstico dentro de Resolver y fuera de Más
 
-- **Título:** Más más corto sin perder funciones.
-- **Descripción:** (1) Topología deja de ser fila (se llega desde Red, que ya la enlaza, y su regreso sube a Red); (2) **"Herramientas de inventario"**, una sola puerta con Importar equipos, Etiquetas QR y las tareas asistidas pendientes (ubicaciones escritas como texto, responsables escritos como texto y, nuevo, **estados escritos a mano**: los valores fuera de la lista canónica se llevan a ella solo con equivalencias seguras propuestas y "posibles" que el técnico confirma, sin mover nunca un equipo a un estado que su texto no dice; movido aquí desde la 267); (3) **"Ajustes"** reúne Mi cuenta, contraseña, bloqueo y seguridad, trabajo sin conexión, instalar, buscar actualización y cerrar sesión; (4) grupos Consulta, Organización, Infraestructura, Herramientas y Aplicación. Absorbe la tarea 265 donde aplica (Importar y Etiquetas vuelven a su puerta).
-- **Motivo:** secciones 9, 13, 16, 18, 20, 21 y 22 del encargo.
-- **Impacto:** medio: navegación; ninguna ruta ni pantalla se retira.
-- **Prioridad:** Media. **Estado:** En progreso (desde el 2026-09-23, al cerrarse la 267).
-- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/autenticacion/CuentaPage.tsx`, `src/lib/navegacion.ts`, `src/features/dispositivos/` (herramientas de inventario y normalización de estados), `src/features/dispositivos/{EtiquetasPage.tsx,importar/ImportarDispositivosPage.tsx}`, `REGLAS.md` regla 14 (dónde se lee la versión).
-- **Dependencias:** 266 y 267.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
+- **Título:** el técnico no decide si busca una guía o un diagnóstico.
+- **Descripción:** comprobar con pruebas que Resolver cubre procedimiento directo, problema, síntoma y guía con preguntas (tarea 263); dar a la administración de las guías con preguntas (crear, editar, estadísticas, sugerencias) una puerta dentro de Guías; retirar la fila Diagnóstico de Más sin tocar tablas, rutas ni lógica.
+- **Motivo:** sección 17 del encargo.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** En progreso (desde el 2026-09-23, al cerrarse la 268).
+- **Área afectada:** `src/features/inicio/{ResolverPage.tsx,resolver.ts}`, `src/features/soluciones/SolucionesPage.tsx`, `src/features/diagnostico/DiagnosticosPage.tsx`, `src/lib/navegacion.ts`, `src/features/mas/PantallaMas.tsx`.
+- **Dependencias:** 268.
+- **Modelo/esfuerzo:** Opus 5 / Extra.
 
 **Despliegue confirmado (regla 14).** La tarea 267 (Ubicaciones vinculadas, commits `a6eabc4`, `de30379` y `a35a4c7`) está servida en **https://soluciones-it-psi.vercel.app**: `/version.json` responde `a35a4c7`. Por contenido: `MigracionUbicaciones-CD5prdpz.js` contiene "Posible coincidencia", "Es el mismo lugar" y "Se vincula a la ubicación que ya existe"; `UbicacionPage-wy1quwDr.js`, "Qué hay aquí" y "el resto en sus sub-ubicaciones"; `UbicacionesPage-DsaTH9AC.js`, "lugares distintos". **En negativo:** la ficha de ubicación ya no contiene "Renombrar". **Sin cambios de esquema:** no hay que ejecutar SQL. **Siguiente paso del equipo:** abrir Más > Ubicaciones > el aviso de textos, decidir las posibles coincidencias y aplicar.
 
@@ -392,17 +392,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 269. Fase 4: Diagnóstico dentro de Resolver y fuera de Más
-
-- **Título:** el técnico no decide si busca una guía o un diagnóstico.
-- **Descripción:** comprobar con pruebas que Resolver cubre procedimiento directo, problema, síntoma y guía con preguntas (tarea 263); dar a la administración de las guías con preguntas (crear, editar, estadísticas, sugerencias) una puerta dentro de Guías; retirar la fila Diagnóstico de Más sin tocar tablas, rutas ni lógica.
-- **Motivo:** sección 17 del encargo.
-- **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/inicio/{ResolverPage.tsx,resolver.ts}`, `src/features/soluciones/SolucionesPage.tsx`, `src/features/diagnostico/DiagnosticosPage.tsx`, `src/lib/navegacion.ts`, `src/features/mas/PantallaMas.tsx`.
-- **Dependencias:** 268.
-- **Modelo/esfuerzo:** Opus 5 / Extra.
-
 ### 270. Fase 5: la Agenda aprovecha ingresos y retiros, y el Centro de consulta aparece en contexto
 
 - **Título:** solo lo que requiere acción, y "¿qué hace este comando?" sin salir de la guía.
@@ -459,15 +448,16 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Dependencias:** ninguna (conviene con la 229 b).
 - **Modelo/esfuerzo:** Sonnet 5 / Medio.
 
-### 265. Más: que sus puertas laterales vuelvan a Más
+### 265. Más: que la Agenda, abierta desde Más, vuelva a Más
 
-- **Título:** la Agenda, Bloqueo y seguridad, Importar equipos y Etiquetas QR, abiertas desde Más, no vuelven a Más (regla M-R2).
-- **Descripción:** detectado al cerrar la tarea 257, que resolvió el mismo caso para su fila nueva (Topología lleva `conOrigen('/mas', 'Más')`). Quedan cuatro filas de `PantallaMas.tsx` cuyo regreso lleva a otra parte: (a) **Agenda** sube a Resolver (`padreDe`, decidido en la 254), y pasarle el origen de Más no basta: el chasis pone la etiqueta del origen en la línea de contexto (`src/app/Chasis.tsx` ~395, `contexto = origen?.etiqueta ?? props.contexto`) y la Agenda usa esa línea para la fecha de hoy (`src/features/inicio/AgendaPage.tsx` ~28, `contexto={hoyTexto}`); (b) **Bloqueo y seguridad** (`/cuenta/seguridad`) sube a Mi cuenta; (c) **Importar equipos** y **Etiquetas QR** salen a Equipos porque lo llevan escrito (`salidaA="/dispositivos"` y `vuelta="Equipos"` en `ImportarDispositivosPage.tsx` ~118 y en la `BarraTarea` propia de `EtiquetasPage.tsx` ~76, que no pasa por el chasis y no lee el origen), desde que su camino principal era el menú "···" de Equipos, retirado en la 256. Decidir en cada una si vuelve a Más o si su padre actual es lo correcto, y que el rótulo nombre el destino real.
+- **Título:** la Agenda, abierta desde Más, no vuelve a Más (regla M-R2).
+- **Resuelto en la tarea 268 (2026-09-23):** las partes (b) y (c). **Bloqueo y seguridad** es una fila de Ajustes y sube a Ajustes, que es su puerta; **Importar equipos** y **Etiquetas QR** viven en Herramientas de inventario y vuelven a ella (Etiquetas, al equipo si se abrió desde su ficha).
+- **Descripción (queda la parte a):** la **Agenda** sube a Resolver (`padreDe`, decidido en la 254), y pasarle el origen de Más no basta: el chasis pone la etiqueta del origen en la línea de contexto (`src/app/Chasis.tsx` ~395, `contexto = origen?.etiqueta ?? props.contexto`) y la Agenda usa esa línea para la fecha de hoy (`src/features/inicio/AgendaPage.tsx` ~28, `contexto={hoyTexto}`). Decidir si vuelve a Más o si su padre actual es lo correcto, y que el rótulo nombre el destino real. Conviene resolverla con la tarea 270, que toca la Agenda.
 - **Motivo:** regla M-R2 ("volver deshace el último salto").
-- **Impacto:** bajo a medio: al salir, una pantalla que no se había visitado y un toque de más.
+- **Impacto:** bajo: al salir, una pantalla que no se había visitado y un toque de más.
 - **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/mas/PantallaMas.tsx` (filas), `src/app/Chasis.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/features/dispositivos/importar/ImportarDispositivosPage.tsx` (~118), `src/features/dispositivos/EtiquetasPage.tsx` (~76).
-- **Dependencias:** ninguna.
+- **Área afectada:** `src/features/mas/PantallaMas.tsx` (fila Agenda), `src/app/Chasis.tsx` (~395), `src/features/inicio/AgendaPage.tsx` (~28).
+- **Dependencias:** ninguna (conviene con la 270).
 - **Modelo/esfuerzo:** Sonnet 5 / Medio.
 
 ### 261. Editor: la línea de completitud se toca en 25 px de alto

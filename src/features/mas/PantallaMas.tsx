@@ -162,7 +162,7 @@ export function PantallaMas() {
                 to="/inventario"
                 Icono={Package}
                 titulo="Herramientas de inventario"
-                subtitulo="Importar equipos, etiquetas QR y datos por ordenar"
+                subtitulo="Importar, etiquetas QR y datos por ordenar"
               />
               <Fila
                 to="/diagnostico"
@@ -181,7 +181,8 @@ export function PantallaMas() {
                   y seguridad y Buscar actualización eran tres filas, y Mi
                   cuenta ya enlazaba la seguridad y ofrecía instalar y
                   trabajar sin conexión. El avatar dice de quién es la
-                  cuenta abierta. */}
+                  cuenta abierta; el nombre completo y el correo, la
+                  cabecera de Ajustes. */}
               <Link
                 to="/cuenta"
                 className="flex min-h-[58px] items-center gap-[13px] rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
@@ -193,8 +194,8 @@ export function PantallaMas() {
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[15px] font-medium leading-[1.3]">Ajustes</span>
-                  <span className="mt-0.5 block truncate text-[12px] text-noct-neutral-400">
-                    {usuario?.nombre ? `${usuario.nombre} · ` : ''}cuenta, bloqueo, sin conexión y actualización
+                  <span className="mt-0.5 block text-[12px] leading-[1.4] text-noct-neutral-400">
+                    Cuenta, bloqueo, sin conexión y actualización
                   </span>
                 </span>
                 <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />

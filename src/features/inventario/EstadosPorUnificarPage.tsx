@@ -68,7 +68,8 @@ export function EstadosPorUnificarPage() {
     }
     setAplicando(null)
     setAplicados(cambios.length)
-    setElecciones({})
+    // Las elecciones se conservan: lo que se marcó "Dejar como está"
+    // sigue así, y no vuelve a salir propuesto después de unificar.
   }
 
   return (

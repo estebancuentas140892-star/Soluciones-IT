@@ -288,12 +288,12 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 
 ---
 
-**RN-047. Más reparte sus destinos en cuatro grupos, no enseña filas vacías y Red vuelve a donde se dejó.**
-- Motivo: encargo del 2026-09-22, sección 6 de `PROPUESTA_REDISENO_RESOLVER.md` ([DECISIONES.md](DECISIONES.md) AD-046). Más es un índice de destinos: cada grupo responde una pregunta y nada de lo que lista es un pendiente.
-- Regla: cuatro grupos, en este orden: Consulta (Centro de consulta, Agenda, Mis favoritos), Infraestructura (Red, Topología, Ubicaciones, Personas), Herramientas (Diagnóstico, Importar equipos, Etiquetas QR) y Configuración (Mi cuenta, Bloqueo y seguridad, Buscar actualización). "Mis favoritos" solo se monta con al menos un favorito (`obtenerFavoritos()`) y se despliega en el sitio. "Actividad del equipo" no está en Más: va al final de `/agenda`, plegada y solo si hay actividad; no cuenta en el resumen de la agenda ni en el número de Resolver.
+**RN-047. Más reparte sus destinos en cinco grupos, una puerta por capacidad; no enseña filas vacías y Red vuelve a donde se dejó.**
+- Motivo: encargo del 2026-09-22, sección 6 de `PROPUESTA_REDISENO_RESOLVER.md` ([DECISIONES.md](DECISIONES.md) AD-046), revisado por el encargo del 2026-09-23, secciones 16 a 22 (AD-049, tarea 268). Más es un índice de destinos: cada grupo responde una pregunta y nada de lo que lista es un pendiente.
+- Regla: cinco grupos, en este orden: Consulta (Centro de consulta, Agenda, Mis favoritos), Organización (Personas, Ubicaciones), Infraestructura (Red), Herramientas (Herramientas de inventario, Diagnóstico) y Aplicación (Ajustes). Una capacidad, una fila: Topología se abre desde Red; Importar equipos, Etiquetas QR y los datos por ordenar, desde Herramientas de inventario (`/inventario`); la cuenta, la contraseña, el bloqueo, el trabajo sin conexión, la instalación y la actualización, desde Ajustes (`/cuenta`). Ninguna ruta se retira. "Mis favoritos" solo se monta con al menos un favorito (`obtenerFavoritos()`) y se despliega en el sitio. "Actividad del equipo" no está en Más: va al final de `/agenda`, plegada y solo si hay actividad; no cuenta en el resumen de la agenda ni en el número de Resolver.
 - Red recuerda su nodo sin ser pestaña: `RAICES_CON_MEMORIA` (`RAICES_DE_PESTANA` más `/red`) es la lista con la que el chasis anota la búsqueda de cada raíz, y la fila Red de Más pide su destino con `destinoDePestana('/red', pathname, RAICES_CON_MEMORIA)`. `RAICES_DE_PESTANA` no cambia: sigue decidiendo qué es una pestaña.
-- Topología (`/red/topologia`) sube a Red por `padreDe`, pero la fila de Más la abre con el origen `/mas` ("Más"), así que su regreso vuelve a Más (M-R2). Sin origen, sube a Red. **Pendiente (tarea 265):** la Agenda (sube a Resolver), Bloqueo y seguridad (a Mi cuenta), Importar equipos y Etiquetas QR (a Equipos, escrito en la propia pantalla) no vuelven a Más cuando se abren desde Más.
-- Dura en el código: `src/features/mas/PantallaMas.tsx`, `src/app/memoriaPestana.ts` (`RAICES_CON_MEMORIA`), `src/features/historial/ActividadDelEquipo.tsx`, `src/features/inicio/AgendaPage.tsx`.
+- Lo que se abre DENTRO de una puerta vuelve a ella: Importar y Etiquetas suben a Herramientas de inventario (`padreDe`), y mientras están abiertas se ilumina Más aunque vivan bajo `/dispositivos` (`destinoPrincipalDe`, conjunto `HERRAMIENTAS_DE_INVENTARIO`); Etiquetas abierta desde la ficha de un equipo vuelve a él (origen); las migraciones de ubicaciones y personas vuelven a donde se abrieron; Bloqueo y seguridad sube a Ajustes; Topología, a Red. **Pendiente (tarea 265):** la Agenda sube a Resolver aunque se abra desde Más.
+- Dura en el código: `src/features/mas/{PantallaMas.tsx,FilasMas.tsx}`, `src/features/inventario/HerramientasInventarioPage.tsx`, `src/features/autenticacion/CuentaPage.tsx`, `src/lib/navegacion.ts` (`HERRAMIENTAS_DE_INVENTARIO`, `PUERTA_INVENTARIO`), `src/app/memoriaPestana.ts` (`RAICES_CON_MEMORIA`), `src/features/historial/ActividadDelEquipo.tsx`, `src/features/inicio/AgendaPage.tsx`.
 
 ---
 
@@ -335,6 +335,15 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - "¿Qué hay aquí?": la ficha agrupa por la categoría real del equipo (`contenidoDeUbicacion`), no por el parecido de su nombre; las cuentas de la lista y de las sub-ubicaciones suman toda la rama (`totalConSububicaciones`).
 - Entidades: Ubicación, Dispositivo, Historial.
 - Dura en el código: `src/features/ubicaciones/{migracion.ts,contenido.ts,MigracionUbicaciones.tsx,UbicacionPage.tsx}`.
+
+---
+
+**RN-053. Un estado escrito a mano se unifica solo con confirmación: lo equivalente viene propuesto, lo que se parece se valida y lo que no dice cómo está el equipo se queda como está.**
+- Motivo: sección 9 del encargo del 2026-09-23 ([DECISIONES.md](DECISIONES.md) AD-049). `estado` es texto libre y el inventario institucional trajo el suyo ("OPERATIVO", "Activo", "Dañado"); la lista canónica son cinco (RN-051), y el encargo prohíbe inferir el estado de un equipo.
+- Regla: los textos se agrupan sin distinguir mayúsculas ni espacios (`claveEstado`); los que ya están escritos exactamente como en la lista y los vacíos no entran (darle un estado a un equipo sin estado sería inventarlo). EQUIVALENCIA SEGURA es un texto que `estadoCanonico` reconoce (la lista con otras mayúsculas, tildes o espacios, o el sinónimo declarado "Dado de baja"): viene propuesto hacia su forma canónica y se puede desmarcar. Cualquier otro texto viene en "Dejar como está"; si es una palabra conocida (`sugerenciaDeEstado`: "Activo" o "En uso" → Operativo, "Libre" → Disponible, "En reparación" → En mantenimiento, "Dañado" → Fuera de servicio, "Baja" → De baja) se dice lo que parece, sin elegirlo. No sugieren nada las palabras que no dicen si el equipo funciona ni si ya salió: "Inactivo", "Asignado", "En bodega", "Stock", "Fuera de uso", "Para baja", "Obsoleto".
+- Al aplicar, cada equipo se relee y solo se escribe si su estado sigue siendo el que se vio (otro teléfono pudo cambiarlo); el cambio pasa por `guardarRegistro` (historial con el motivo "Unificación de estados" y cola de sincronización). Lo marcado "Dejar como está" sigue así después de unificar. Escribir bien "De baja" no es dar de baja: no suelta al responsable ni resuelve dependencias (eso es la pantalla de baja, RN-050); al leer, un equipo "De baja" que conserve el vínculo no cuenta como equipo actual de nadie.
+- Entidades: Dispositivo, Historial.
+- Dura en el código: `src/features/dispositivos/estadosEscritos.ts`, `src/features/inventario/EstadosPorUnificarPage.tsx`.
 
 ## 3. Modelo entidad-relación
 
@@ -422,6 +431,7 @@ stateDiagram-v2
 - **Dar de baja** exige resolver antes cada conexión (eliminar), credencial (desvincular o eliminar) y campo protegido (conservar sin equipo o eliminar); "Confirmar baja" solo se habilita sin dependencias vivas.
 - **Reemplazar** crea un equipo nuevo con `reemplaza_a = idViejo`, migra conexiones, credenciales y campos, y al final pone el saliente en `De baja` y sin responsable (RN-050; el entrante heredó la persona en el formulario). `reemplaza_a` nunca se limpia (RN-014).
 - **Asignar / liberar** (desde el 2026-09-23): cambiar `responsable_id` desde la ficha de la persona o la del equipo. Liberar deja el equipo sin responsable y, si funcionaba, `Disponible`; asignar pasa un `Disponible` a `Operativo` (RN-051).
+- **Unificar un estado escrito a mano** (desde la tarea 268): llevar un texto que no es de la lista a uno de los cinco, desde Más > Herramientas de inventario > Estados escritos a mano, y solo con la confirmación del técnico (RN-053). Es corregir cómo está escrito, no una transición: no resuelve dependencias ni suelta al responsable.
 - El borrado lógico (`eliminado_en`) es independiente del `estado`.
 
 ### 4.2 Artículo (procedimiento)

@@ -27,11 +27,13 @@ export function DescargarOffline() {
             </p>
           </div>
         </div>
+        {/* 44 px de alto (R6): desde la tarea 268 vive en Ajustes, junto a
+            las demás filas táctiles de este teléfono. */}
         <button
           type="button"
           onClick={() => void descargarTodoOffline()}
           disabled={progreso.enCurso}
-          className="shrink-0 rounded-lg border border-noct-divider px-3 py-1.5 text-[12.5px] text-noct-neutral-300 disabled:opacity-50"
+          className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-noct-divider px-3 text-[12.5px] text-noct-neutral-300 disabled:opacity-50"
         >
           {progreso.enCurso ? 'Descargando...' : 'Descargar'}
         </button>

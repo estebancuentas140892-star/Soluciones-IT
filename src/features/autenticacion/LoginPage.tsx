@@ -164,7 +164,7 @@ export function LoginPage() {
           desde el panel de Supabase, igual que hizo con la primera.
         </p>
         <p className="mt-2.5 text-[13px] leading-relaxed text-noct-neutral-400">
-          Cuando entres, cámbiala por una tuya en Mi cuenta. Si lo que no recuerdas es el bloqueo de
+          Cuando entres, cámbiala por una tuya en Ajustes. Si lo que no recuerdas es el bloqueo de
           este teléfono (el patrón o la clave que pide la app al abrirla), eso se resuelve desde la
           propia pantalla de bloqueo.
         </p>

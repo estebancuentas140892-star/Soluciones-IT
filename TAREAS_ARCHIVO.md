@@ -2,6 +2,25 @@
 
 ## Encargo del 2026-09-23: las entidades se relacionan
 
+### 268. Fase 3: Más con una puerta por capacidad, y las herramientas de inventario juntas
+
+**Título:** Más más corto sin perder funciones. **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Media. **Origen:** encargo del usuario del 2026-09-23, secciones 9, 13, 16, 18, 20, 21 y 22. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-049. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-047 (revisada) y RN-053. **Commits:** `83ee59f` (primera parte, desplegada y verificada) y el de cierre.
+
+**Qué se hizo:**
+
+1. **Más en cinco grupos** (`src/features/mas/PantallaMas.tsx`, filas en `FilasMas.tsx`): Consulta (Centro de consulta, Agenda, Mis favoritos si hay), Organización (Personas, Ubicaciones), Infraestructura (Red), Herramientas (Herramientas de inventario, Diagnóstico) y Aplicación (Ajustes). De doce filas a ocho sin perder ninguna función: Topología se abre desde Red (su ruta y su lógica no cambian); los subtítulos parten línea en vez de recortarse.
+2. **Herramientas de inventario** (`/inventario`, `src/features/inventario/HerramientasInventarioPage.tsx`): Importar equipos y Etiquetas QR (el flujo QR, intacto) y "Por ordenar" solo si hay algo, con cuántos equipos son: ubicaciones escritas como texto, estados escritos a mano, responsables en campos adicionales y responsables por validar (abre Personas con esa sección desplegada, `?porValidar=1`).
+3. **Estados escritos a mano** (`/inventario/estados`, `EstadosPorUnificarPage.tsx`, lógica en `src/features/dispositivos/estadosEscritos.ts`): equivalencias seguras propuestas; lo demás en "Dejar como está", con sugerencia solo si la palabra dice el estado (sin "Para baja", "Obsoleto", "En bodega" ni "Fuera de uso"); relee cada equipo antes de escribir; historial "Unificación de estados"; lo dejado sigue así tras unificar.
+4. **Ajustes** (`/cuenta`, `CuentaPage.tsx`): Cuenta (contraseña plegada), Este teléfono (instalar, descargar para offline con su botón a 44 px, bloqueo y seguridad con su estado) y Aplicación (buscar actualización), y Cerrar sesión. "Mi cuenta" pasa a "Ajustes" también en el pie de la barra lateral, el avatar de la barra superior, el aviso "¿La olvidaste?" e `INSTALACION.md`.
+5. **Volver** (`src/lib/navegacion.ts`): Importar y Etiquetas suben a Herramientas de inventario (con Más iluminada); Etiquetas abierta desde la ficha vuelve al equipo; las migraciones vuelven a donde se abrieron; Seguridad sube a Ajustes. **Absorbe las partes (b) y (c) de la tarea 265**; queda la (a), la Agenda.
+6. **Iconos** `Package` y `Pulse` (Phosphor 2.1.1, R24).
+
+**Pruebas.** 138 archivos y 1934 casos en verde (antes 136 y 1922). Nuevas: `estadosEscritos.test.ts` (agrupación, orden, sugerencias prudentes, solo lo elegido) y `herramientasInventario.test.tsx` (pantallas reales: la puerta sin y con pendientes, las propuestas, unificar con historial y cola de sincronización, lo dejado no vuelve a proponerse, Ajustes con la contraseña plegada). Actualizadas: `navegacion.test.ts` y `masInfraestructura.test.tsx` (cinco grupos, Topología desde Red, Importar y Etiquetas en su puerta).
+
+**Verificación:** despliegue de `83ee59f` confirmado (regla 14): `/version.json` y los trozos (`PantallaMas` con "Herramientas de inventario", "Organización" y "Ajustes", y sin "Topología", "Bloqueo y seguridad" ni "Etiquetas QR"; `HerramientasInventarioPage` con "Estados escritos a mano"; `EstadosPorUnificarPage` con "Unificación de estados"; `CuentaPage` con "Este teléfono"). Capturas por CDP en 390×844 y 1366×768 (`mas`, `mas-favoritos`, `inventario`, `inventario-estados`, `-elegido`, `-unificado`, `ajustes` y `ajustes-contrasena`): sin desbordamiento; unificación aplicada en el banco local (3 equipos) sin tocar lo dejado.
+
+**Lo que no se tocó:** esquema (no hace falta SQL), rutas existentes, RLS, sincronización. Ningún dato real se modificó desde esta sesión: la unificación la aplica el técnico.
+
 ### 267. Fase 2: Ubicaciones vinculadas (migración asistida y "¿Qué hay aquí?")
 
 **Título:** los textos de ubicación se convierten en fichas con ayuda del técnico, y la ficha de un lugar responde "¿qué hay aquí?". **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-23, secciones 10 a 12 y 24. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-048. **Regla:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-052.

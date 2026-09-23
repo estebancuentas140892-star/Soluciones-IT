@@ -1206,6 +1206,31 @@ const EQUIPOS_POR_UBICAR: Dispositivo[] = [
   dispositivo({ id: 'dis-pc-ejemplo-61', nombre: 'PC-EJEMPLO-61', categoriaId: 'cat-computadores', ubicacion: 'TESORERIA DE EJEMPLO' }),
 ]
 
+// ESTADOS ESCRITOS A MANO (tarea 268). Inventados: los casos de la
+// unificacion asistida. "OPERATIVO" y "operativo" (un solo grupo, con sus
+// dos formas) y "Dado de baja" son equivalencias seguras y vienen
+// propuestas; "Activo" y "En reparación" parecen un estado, pero se
+// confirman; "Prestado" no dice ninguno y se queda como esta.
+const EQUIPOS_CON_ESTADO_ESCRITO: Dispositivo[] = [
+  dispositivo({ id: 'dis-caja-ejemplo-2', nombre: 'Caja de ejemplo 2', categoriaId: 'cat-pos', estado: 'OPERATIVO' }),
+  dispositivo({ id: 'dis-caja-ejemplo-3', nombre: 'Caja de ejemplo 3', categoriaId: 'cat-pos', estado: 'operativo' }),
+  dispositivo({ id: 'dis-camara-ejemplo-1', nombre: 'Camara de ejemplo 1', categoriaId: 'cat-camaras', estado: 'Activo' }),
+  dispositivo({ id: 'dis-camara-ejemplo-2', nombre: 'Camara de ejemplo 2', categoriaId: 'cat-camaras', estado: 'Activo' }),
+  dispositivo({
+    id: 'dis-telefono-ejemplo-1',
+    nombre: 'Telefono de ejemplo 1',
+    categoriaId: 'cat-telefonia',
+    estado: 'En reparación',
+  }),
+  dispositivo({ id: 'dis-telefono-ejemplo-2', nombre: 'Telefono de ejemplo 2', categoriaId: 'cat-telefonia', estado: 'Prestado' }),
+  dispositivo({
+    id: 'dis-impresora-ejemplo-antigua',
+    nombre: 'Impresora de ejemplo antigua',
+    categoriaId: 'cat-impresoras',
+    estado: 'Dado de baja',
+  }),
+]
+
 // PERSONAS Y SUS EQUIPOS (tarea 266). Inventadas: tres personas (una
 // retirada), cuatro computadores (uno Disponible, uno con un responsable
 // escrito que no es una persona) y el historial de una asignación ya
@@ -1363,7 +1388,7 @@ async function sembrarAgendaYEquipos(): Promise<void> {
       (await db.credenciales.bulkGet(CREDENCIALES.map((c) => c.id))).flatMap((c) => (c ? [c.id] : [])),
     )
     await db.credenciales.bulkAdd(CREDENCIALES.filter((c) => !credencialesExistentes.has(c.id)))
-    const todosLosEquipos = [...DISPOSITIVOS, ...EQUIPOS_DE_PERSONAS, ...EQUIPOS_POR_UBICAR]
+    const todosLosEquipos = [...DISPOSITIVOS, ...EQUIPOS_DE_PERSONAS, ...EQUIPOS_POR_UBICAR, ...EQUIPOS_CON_ESTADO_ESCRITO]
     const equiposExistentes = new Set(
       (await db.dispositivos.bulkGet(todosLosEquipos.map((d) => d.id))).flatMap((d) => (d ? [d.id] : [])),
     )

@@ -65,8 +65,8 @@ update public.perfiles set nombre = 'Nombre Apellido' where correo = 'tecnico@em
 ```
 
 La contraseña que se asigna aquí es solo la inicial: cada técnico puede
-cambiarla después desde la app, tocando su nombre en la parte superior
-(página "Mi cuenta").
+cambiarla después desde la app, en **Más > Ajustes** (la página que antes
+se llamaba "Mi cuenta").
 
 ## 3. Autorizar el acceso a la bóveda
 

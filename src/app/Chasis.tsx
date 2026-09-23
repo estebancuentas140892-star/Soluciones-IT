@@ -522,17 +522,20 @@ export function Chasis(props: Props) {
         </nav>
 
         <div className="mt-auto border-t border-noct-divider pt-2.5">
+          {/* Desde la tarea 268 la pantalla de la cuenta se llama
+              "Ajustes": reúne la cuenta, el bloqueo, el trabajo sin
+              conexión y la actualización. */}
           <Link
             to="/cuenta"
-            title={usuario?.nombre || 'Mi cuenta'}
+            title={usuario?.nombre || 'Ajustes'}
             className="flex items-center justify-center gap-2.5 rounded-md p-1.5 hover:bg-noct-text/[.05] xl:justify-start"
           >
             <Avatar nombre={usuario?.nombre} correo={usuario?.correo} className="h-[30px] w-[30px] shrink-0 text-[11px]" />
             <span className="hidden min-w-0 flex-1 xl:block">
               <span className="block truncate text-[12.5px] font-medium leading-[1.2]">
-                {usuario?.nombre || 'Mi cuenta'}
+                {usuario?.nombre || 'Ajustes'}
               </span>
-              <span className="mt-0.5 block text-[11px] text-noct-neutral-400">Mi cuenta</span>
+              <span className="mt-0.5 block text-[11px] text-noct-neutral-400">Ajustes</span>
             </span>
             <CaretRight size={13} className="hidden shrink-0 text-noct-neutral-400 xl:block" aria-hidden />
           </Link>

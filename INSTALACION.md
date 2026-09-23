@@ -51,7 +51,7 @@ Una vez instalada, la app funciona sin internet para consultar soluciones,
 dispositivos y la bóveda. Lo único que puede faltar sin haberlo visto antes
 son las fotos y manuales adjuntos a los artículos y dispositivos.
 
-Antes de salir: abrir la pestaña **Inicio** y tocar **"Descargar"** en
+Antes de salir: abrir **Más > Ajustes** y tocar **"Descargar"** en
 "Descargar todo para offline". Deja todas las fotos y manuales guardados en
 el teléfono, listos para consultar sin señal.
 
@@ -60,9 +60,11 @@ el teléfono, listos para consultar sin señal.
 La primera contraseña la asigna el administrador. Para cambiarla por una
 propia:
 
-1. Tocar tu nombre en la parte superior de la app (o "Mi cuenta").
-2. Escribir la contraseña actual, la nueva y su confirmación.
-3. Tocar **"Cambiar contraseña"**.
+1. Abrir **Más > Ajustes** (o tocar tus iniciales en la parte superior de
+   la app).
+2. Tocar **"Cambiar contraseña de inicio de sesión"**.
+3. Escribir la contraseña actual, la nueva y su confirmación.
+4. Tocar **"Cambiar contraseña"**.
 
 Se necesita conexión a internet. La sesión del teléfono sigue abierta; la
 nueva contraseña se usa la próxima vez que la app pida iniciar sesión.
@@ -72,7 +74,9 @@ nueva contraseña se usa la próxima vez que la app pida iniciar sesión.
 La app se actualiza sola cuando hay internet: no hace falta desinstalar ni
 reinstalar nada. Si algo se ve raro después de una actualización, cerrar la
 app del todo (deslizarla para quitarla de las apps recientes) y volver a
-abrirla suele bastar.
+abrirla suele bastar. Para saber qué versión tiene el teléfono, o pedirle
+que busque una nueva en ese momento: **Más > Ajustes > Buscar
+actualización**.
 
 ## Problemas comunes
 
