@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { db, type AccesoBoveda, type EjecucionDiagnostico, type HistorialEntrada, type TipoEntidadHistorial } from '../../lib/db'
 import { Adjuntos } from '../../components/Adjuntos'
@@ -8,6 +8,7 @@ import { TituloSeccion } from '../../components/nocturne'
 import { combinarEventos, etiquetaAccesoBoveda, etiquetaResuelto, formatearDuracion, type EventoLinea } from './lineaDeTiempo'
 import { resumenDetalles } from './resumenDetalles'
 import { resumenProcedimiento, textoContexto } from './resumenProcedimiento'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { descripcionEntrada } from './textoHistorial'
 
 interface Props {
@@ -120,6 +121,8 @@ function EventoItem({ evento }: { evento: EventoLinea }) {
 // vistazo se ve si quedo resuelto, quien lo corrio y cuanto tardo, sin
 // tener que ir a buscarlo en las estadisticas del diagnostico.
 function EjecucionItem({ ejecucion }: { ejecucion: EjecucionDiagnostico }) {
+  // Abrir el recorrido desde el historial vuelve aquí al salir (tarea 263).
+  const { pathname } = useLocation()
   return (
     <li className="rounded-lg border border-noct-divider bg-noct-surface px-4 py-3">
       <div className="flex items-center justify-between gap-2 text-xs text-noct-neutral-500">
@@ -130,6 +133,7 @@ function EjecucionItem({ ejecucion }: { ejecucion: EjecucionDiagnostico }) {
         Ejecutó el diagnóstico{' '}
         <Link
           to={`/diagnostico/${ejecucion.diagnosticoId}`}
+          state={conOrigen(pathname, 'el historial')}
           className="text-noct-accent-300 underline decoration-dotted underline-offset-2 hover:text-noct-accent-400"
         >
           {ejecucion.diagnosticoTitulo}

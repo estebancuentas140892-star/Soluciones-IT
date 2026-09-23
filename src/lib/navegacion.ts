@@ -72,6 +72,9 @@ function cuelgaDe(ruta: string, raiz: string): boolean {
 export function destinoPrincipalDe(pathname: string): DestinoPrincipal {
   const ruta = normalizarRuta(pathname)
   if (ruta === '/' || ruta === '/agenda' || cuelgaDe(ruta, '/conectar') || cuelgaDe(ruta, '/soluciones')) return '/'
+  // Un recorrido con preguntas en ejecución es Resolver (tarea 263); su
+  // lista y su administración siguen en Más.
+  if (esRecorridoEnEjecucion(ruta)) return '/'
   if (cuelgaDe(ruta, '/dispositivos') || cuelgaDe(ruta, '/escaner')) return '/dispositivos'
   if (cuelgaDe(ruta, '/boveda')) return '/boveda'
   return '/mas'
@@ -109,6 +112,16 @@ const RAICES_NO_TAB: Record<string, Padre> = {
 // (pestaña) que no debe mostrar "Volver". Solo necesita el pathname: los
 // destinos que reponen un filtro (Soluciones) llevan el id en la propia
 // ruta, así que se reconstruyen sin depender de la query entrante.
+// Las pantallas de administración que cuelgan de /diagnostico con un
+// nombre fijo; cualquier otro segmento es el id de un recorrido.
+const ADMINISTRACION_DIAGNOSTICO = new Set(['nuevo', 'sugerencias', 'estadisticas'])
+
+/** ¿Es `/diagnostico/:id`, un recorrido con preguntas en ejecución? */
+export function esRecorridoEnEjecucion(pathname: string): boolean {
+  const [seccion, a, b] = normalizarRuta(pathname).split('/').filter(Boolean)
+  return seccion === 'diagnostico' && Boolean(a) && !b && !ADMINISTRACION_DIAGNOSTICO.has(a)
+}
+
 export function padreDe(pathname: string): Padre | null {
   const ruta = normalizarRuta(pathname)
   if (TABS.has(ruta)) return null
@@ -173,7 +186,11 @@ export function padreDe(pathname: string): Padre | null {
       return { to: '/boveda', etiqueta: 'Bóveda' }
     }
     case 'diagnostico':
-      // nuevo, sugerencias, :id (asistente) y :id/editar vuelven a la lista.
+      // RESOLUCIÓN GUIADA (tarea 263): el recorrido en ejecución
+      // (/diagnostico/:id) cuelga de Resolver, que es por donde se entra a
+      // resolver algo; la lista, crear, editar, sugerencias y estadísticas
+      // son la administración y vuelven a la lista de diagnósticos (Más).
+      if (esRecorridoEnEjecucion(ruta)) return { to: '/', etiqueta: 'Resolver' }
       return { to: '/diagnostico', etiqueta: 'Diagnósticos' }
     case 'red':
       // La topología de un equipo (topologia/:id) sube al mapa general,

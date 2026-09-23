@@ -148,6 +148,20 @@ export function FilaResultado({
               }),
             )
           }
+          // Abrir una guia con preguntas ES empezarla (arranca en su
+          // primera pregunta o la retoma, tarea 263): sin boton propio,
+          // como una guia, y el recorrido cuenta con su verbo de siempre.
+          if (resultado.tipo === 'diagnostico') {
+            onResolver(
+              eventoDeResolucion({
+                accion: 'iniciar_diagnostico',
+                tipo: resultado.tipo,
+                desdeMejores,
+                consulta: consultaCruda,
+                huboDesbloqueo,
+              }),
+            )
+          }
           // Abrir un equipo ES la accion de un equipo: no lleva boton
           // propio (seria repetir este enlace), pero el recorrido cuenta.
           if (resultado.tipo === 'dispositivo') {

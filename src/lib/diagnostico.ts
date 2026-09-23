@@ -1,4 +1,4 @@
-import type { EstadoDiagnostico, NodoDiagnostico, OpcionDiagnostico, PasoCamino } from './db'
+import type { EstadoDiagnostico, NodoDiagnostico, OpcionDiagnostico, PasoCamino, ResultadoRecorrido } from './db'
 import { texto } from './texto'
 
 // Logica pura del Modo Diagnostico Inteligente, separada de los
@@ -15,7 +15,36 @@ export function crearOpcion(etiqueta = ''): OpcionDiagnostico {
     articuloId: null,
     articuloTitulo: '',
     mensajeFinal: '',
+    resultado: '',
   }
+}
+
+// COMO SE LLAMA PARA QUIEN RESUELVE (tarea 263, encargo "Resolución
+// guiada", sección 4: nada de "árbol diagnóstico"). Para el técnico un
+// diagnóstico es una guía que le pregunta lo que ve hasta llegar a la
+// solución; "Diagnóstico" queda para su administración (Más).
+export const ROTULO_RECORRIDO = 'Guía con preguntas'
+
+// COMO TERMINA UNA RAMA (tarea 263): los valores, en el orden en que el
+// editor los ofrece, con el rotulo que lee el tecnico al final del
+// recorrido. '' ("sin indicar") es lo escrito antes: el final pregunta
+// si quedo resuelto, como siempre.
+export const RESULTADOS_RECORRIDO: { valor: ResultadoRecorrido; etiqueta: string; ayuda: string }[] = [
+  { valor: 'solucionado', etiqueta: 'Solucionado', ayuda: 'El problema queda resuelto: se pide confirmarlo' },
+  { valor: 'sin_resolver', etiqueta: 'Sigue sin resolverse', ayuda: 'No se encontró la causa por este camino' },
+  { valor: 'escalar', etiqueta: 'Hay que escalar', ayuda: 'Lo resuelve otra persona o el proveedor' },
+  {
+    valor: 'falta_informacion',
+    etiqueta: 'Falta información o un requisito',
+    ayuda: 'No se puede seguir hasta tener lo que falta',
+  },
+]
+
+const VALORES_RESULTADO = new Set<string>(RESULTADOS_RECORRIDO.map((r) => r.valor))
+
+/** El resultado guardado, o '' si no es uno de los conocidos. */
+export function resultadoValido(valor: unknown): ResultadoRecorrido {
+  return typeof valor === 'string' && VALORES_RESULTADO.has(valor) ? (valor as ResultadoRecorrido) : ''
 }
 
 // Un nodo nuevo arranca con Si/No prefilladas: es el caso mas comun
@@ -81,6 +110,8 @@ function normalizarOpciones(valor: unknown): OpcionDiagnostico[] {
         articuloTitulo: articuloId ? texto(origen.articuloTitulo) : '',
         // El mensaje final solo tiene sentido en una rama terminal.
         mensajeFinal: siguienteNodoId ? '' : texto(origen.mensajeFinal),
+        // Y como termina, tambien (tarea 263; '' en lo escrito antes).
+        resultado: siguienteNodoId ? '' : resultadoValido(origen.resultado),
       }
     })
 }
@@ -100,6 +131,7 @@ export function prepararNodosParaGuardar(nodos: NodoDiagnostico[]): NodoDiagnost
         etiqueta: opcion.etiqueta.trim(),
         articuloTitulo: opcion.articuloId ? opcion.articuloTitulo.trim() : '',
         mensajeFinal: opcion.siguienteNodoId ? '' : opcion.mensajeFinal.trim(),
+        resultado: opcion.siguienteNodoId ? '' : opcion.resultado,
       }))
       .filter((opcion) => opcion.etiqueta !== ''),
   }))
@@ -138,9 +170,11 @@ export function validarNodos(nodos: NodoDiagnostico[]): string[] {
       if (opcion.siguienteNodoId === nodo.id) {
         problemas.push(`La respuesta "${nombre}" de la pregunta ${numero} apunta a su propia pregunta.`)
       }
-      if (!opcion.siguienteNodoId && opcion.mensajeFinal.trim() === '' && !opcion.articuloId) {
+      // Un final con su resultado dicho ("Solucionado") ya es un final
+      // util aunque no lleve mensaje (tarea 263).
+      if (!opcion.siguienteNodoId && opcion.mensajeFinal.trim() === '' && !opcion.articuloId && !opcion.resultado) {
         problemas.push(
-          `La respuesta "${nombre}" de la pregunta ${numero} no lleva a ninguna parte: elige la siguiente pregunta, un procedimiento o escribe el mensaje final.`,
+          `La respuesta "${nombre}" de la pregunta ${numero} no lleva a ninguna parte: elige la siguiente pregunta, un procedimiento, cómo termina o escribe el mensaje final.`,
         )
       }
     }
@@ -270,11 +304,19 @@ export function avanceAlResponder(
       articuloTitulo: opcion.articuloTitulo,
       siguienteNodoId: opcion.siguienteNodoId,
       mensajeFinal: opcion.mensajeFinal,
+      // Cómo termina la rama cuando el procedimiento acabe (tarea 263).
+      resultado: opcion.siguienteNodoId ? '' : opcion.resultado,
     }
   } else if (opcion.siguienteNodoId) {
     estado = { tipo: 'pregunta', nodoId: opcion.siguienteNodoId }
   } else {
-    estado = { tipo: 'final', mensajeFinal: opcion.mensajeFinal, articuloId: null, articuloTitulo: '' }
+    estado = {
+      tipo: 'final',
+      mensajeFinal: opcion.mensajeFinal,
+      articuloId: null,
+      articuloTitulo: '',
+      resultado: opcion.resultado,
+    }
   }
 
   return { ...actual, camino: [...actual.camino, paso], estado }
@@ -288,7 +330,7 @@ export function avanceTrasArticulo(actual: AvanceDiagnostico): AvanceDiagnostico
   const { articuloId, articuloTitulo, siguienteNodoId, mensajeFinal } = actual.estado
   const estado: EstadoDiagnostico = siguienteNodoId
     ? { tipo: 'pregunta', nodoId: siguienteNodoId }
-    : { tipo: 'final', mensajeFinal, articuloId, articuloTitulo }
+    : { tipo: 'final', mensajeFinal, articuloId, articuloTitulo, resultado: actual.estado.resultado ?? '' }
   return {
     ...actual,
     estado,
@@ -343,4 +385,22 @@ export function textoDeNodos(nodos: NodoDiagnostico[]): string {
     }
   }
   return partes.filter(Boolean).join(' ')
+}
+
+/**
+ * El resultado de un final, tolerando el avance guardado antes de la
+ * tarea 263 (sin el campo) y cualquier valor desconocido.
+ */
+export function resultadoDelFinal(estado: EstadoDiagnostico): ResultadoRecorrido {
+  return estado.tipo === 'final' ? resultadoValido(estado.resultado) : ''
+}
+
+/**
+ * ¿Hay que preguntarle al técnico si quedó resuelto? Solo cuando el
+ * autor dice que la rama lo resuelve, o no dice nada (lo de antes): un
+ * final que ya declara que sigue sin resolverse, que hay que escalar o
+ * que falta información no se "confirma" como resuelto.
+ */
+export function pideConfirmacion(resultado: ResultadoRecorrido): boolean {
+  return resultado === '' || resultado === 'solucionado'
 }

@@ -6,6 +6,8 @@ import {
   avanceInicial,
   avanceTrasArticulo,
   porcentajeDiagnostico,
+  RESULTADOS_RECORRIDO,
+  resultadoDelFinal,
   type AvanceDiagnostico,
 } from '../../lib/diagnostico'
 
@@ -34,7 +36,11 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
   const [avance, setAvance] = useState<AvanceDiagnostico>(() =>
     nodos.length > 0
       ? avanceInicial(nodos[0].id)
-      : { camino: [], estado: { tipo: 'final', mensajeFinal: '', articuloId: null, articuloTitulo: '' }, articulosEjecutados: [] },
+      : {
+          camino: [],
+          estado: { tipo: 'final', mensajeFinal: '', articuloId: null, articuloTitulo: '', resultado: '' },
+          articulosEjecutados: [],
+        },
   )
 
   const reiniciar = () => setAvance(avanceInicial(nodos[0].id))
@@ -42,6 +48,9 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
   const { estado, camino } = avance
 
   const nodoActual = estado.tipo === 'pregunta' ? porId.get(estado.nodoId) ?? null : null
+  // Cómo termina la rama (tarea 263): el autor lo ve aquí igual que lo
+  // verá el técnico, para revisar que cada final diga lo que debe.
+  const comoTermina = RESULTADOS_RECORRIDO.find((r) => r.valor === resultadoDelFinal(estado))
 
   return (
     <div className="nocturne fixed inset-0 z-[70] overflow-y-auto bg-noct-bg font-inter text-noct-text">
@@ -174,6 +183,9 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
                   (estado.articuloTitulo
                     ? `Se ejecutó "${estado.articuloTitulo}".`
                     : 'Se recorrieron todas las preguntas.')}
+              </p>
+              <p className="mt-2 text-xs text-noct-neutral-400">
+                Cómo termina: {comoTermina ? comoTermina.etiqueta : 'sin indicar (se pregunta si quedó resuelto)'}
               </p>
             </div>
 

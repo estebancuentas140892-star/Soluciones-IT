@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import type { Articulo, Categoria, Reciente } from '../../lib/db'
+import type { Articulo, Categoria, Diagnostico, ProgresoDiagnostico, Reciente } from '../../lib/db'
 import { pasoPrueba } from '../../pruebas/montaje'
 import { AGENDA_VACIA, type Agenda } from './agenda'
 import type { ItemPendiente } from './pendientes'
 import {
   accesosRapidos,
   asuntosDeAtencion,
+  dondeVaElRecorrido,
   esGuiaPublicadaEjecutable,
   guiasRecientes,
+  juntarRecientes,
+  recorridosRecientes,
 } from './resolver'
 
 // Lo que acompaña al buscador de Resolver (encargo del 2026-09-22). Todo
@@ -173,6 +176,138 @@ describe('guiasRecientes', () => {
     const avances = new Map([['g1', { hechos: 2, total: 7 }]])
     const recientes = guiasRecientes([visita('g1', 1)], [guia('g1', 'imp')], categorias, avances, HOY)
     expect(recientes[0]?.avance).toEqual({ hechos: 2, total: 7 })
+    expect(recientes[0]).toMatchObject({ tipo: 'articulo', enCurso: null })
+  })
+})
+
+// Tarea 263: las guías con preguntas (diagnósticos) entran en Recientes.
+function recorrido(id: string, extra: Partial<Diagnostico> = {}): Diagnostico {
+  return {
+    id,
+    categoriaId: 'imp',
+    titulo: `Recorrido ${id}`,
+    descripcion: '',
+    nodos: [
+      {
+        id: `${id}-n1`,
+        tituloInterno: '',
+        pregunta: '¿Enciende?',
+        descripcion: '',
+        opciones: [],
+      },
+    ],
+    updatedAt: hace(1),
+    updatedBy: null,
+    eliminadoEn: null,
+    ...extra,
+  }
+}
+
+function sesion(diagnosticoId: string, extra: Partial<ProgresoDiagnostico> = {}): ProgresoDiagnostico {
+  return {
+    diagnosticoId,
+    camino: [],
+    estado: { tipo: 'pregunta', nodoId: `${diagnosticoId}-n1` },
+    articulosEjecutados: [],
+    iniciadoEn: hace(1),
+    actualizadoEn: hace(1),
+    ...extra,
+  }
+}
+
+const respuesta = { nodoId: 'n1', pregunta: '¿Enciende?', opcionId: 'o1', etiqueta: 'No' }
+
+describe('dondeVaElRecorrido', () => {
+  it('sin sesión, o recién abierta sin ninguna respuesta, no está a medias', () => {
+    expect(dondeVaElRecorrido(undefined)).toBeNull()
+    expect(dondeVaElRecorrido(sesion('d1'))).toBeNull()
+  })
+
+  it('dice la pregunta en la que va, el procedimiento que hace o que falta cerrarla', () => {
+    expect(dondeVaElRecorrido(sesion('d1', { camino: [respuesta] }))).toBe('Vas en la pregunta 2')
+    expect(
+      dondeVaElRecorrido(
+        sesion('d1', {
+          camino: [respuesta],
+          estado: {
+            tipo: 'articulo',
+            articuloId: 'a1',
+            articuloTitulo: 'Conectar impresora',
+            siguienteNodoId: null,
+            mensajeFinal: '',
+          },
+        }),
+      ),
+    ).toBe('Haciendo «Conectar impresora»')
+    expect(
+      dondeVaElRecorrido(
+        sesion('d1', {
+          camino: [respuesta],
+          estado: { tipo: 'final', mensajeFinal: '', articuloId: null, articuloTitulo: '', resultado: '' },
+        }),
+      ),
+    ).toBe('Llegaste al final: falta cerrarla')
+  })
+})
+
+describe('recorridosRecientes y juntarRecientes', () => {
+  const categorias = [categoria('imp', 'Impresoras', 1)]
+
+  it('lista las guías con preguntas usadas hace poco, con su ruta de ejecución y dónde van', () => {
+    const recientes = recorridosRecientes(
+      [visita('d1', 1, 'diagnostico'), visita('d2', 2, 'diagnostico')],
+      [recorrido('d1'), recorrido('d2')],
+      categorias,
+      new Map([['d2', sesion('d2', { camino: [respuesta] })]]),
+      HOY,
+    )
+    expect(recientes.map((r) => r.id)).toEqual(['d1', 'd2'])
+    expect(recientes[0]).toMatchObject({
+      tipo: 'diagnostico',
+      ruta: '/diagnostico/d1',
+      categoriaNombre: 'Impresoras',
+      avance: null,
+      enCurso: null,
+    })
+    expect(recientes[1]?.enCurso).toBe('Vas en la pregunta 2')
+  })
+
+  it('deja fuera las eliminadas, las que no tienen preguntas, las viejas y las visitas de otras fichas', () => {
+    const recientes = recorridosRecientes(
+      [
+        visita('borrado', 1, 'diagnostico'),
+        visita('vacio', 1, 'diagnostico'),
+        visita('viejo', 20, 'diagnostico'),
+        visita('d1', 1, 'articulo'),
+      ],
+      [recorrido('borrado', { eliminadoEn: hace(1) }), recorrido('vacio', { nodos: [] }), recorrido('viejo'), recorrido('d1')],
+      categorias,
+      new Map(),
+      HOY,
+    )
+    expect(recientes).toEqual([])
+  })
+
+  it('junta guías con pasos y con preguntas en una sola lista, la más reciente primero, hasta tres', () => {
+    const guias = guiasRecientes(
+      [visita('g1', 3), visita('g2', 1)],
+      [guia('g1', 'imp'), guia('g2', 'imp')],
+      categorias,
+      new Map(),
+      HOY,
+    )
+    const recorridos = recorridosRecientes(
+      [visita('d1', 2, 'diagnostico'), visita('d2', 5, 'diagnostico')],
+      [recorrido('d1'), recorrido('d2')],
+      categorias,
+      new Map(),
+      HOY,
+    )
+    expect(juntarRecientes(guias, recorridos).map((r) => `${r.tipo}:${r.id}`)).toEqual([
+      'articulo:g2',
+      'diagnostico:d1',
+      'articulo:g1',
+    ])
   })
 })
 

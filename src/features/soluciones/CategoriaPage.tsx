@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import { db, type Articulo } from '../../lib/db'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { contarHechos } from '../../lib/progresoPasos'
 import { Chasis } from '../../app/Chasis'
@@ -26,6 +27,7 @@ import { TIPOS_ARTICULO } from './tiposArticulo'
 // (tarea 185): la barra inferior sigue puesta y resaltando Guias.
 export function CategoriaPage() {
   const { categoriaId = '' } = useParams()
+  const { pathname } = useLocation()
 
   const categoria = useLiveQuery(() => db.categorias.get(categoriaId), [categoriaId])
   const articulos = useLiveQuery(
@@ -194,6 +196,8 @@ export function CategoriaPage() {
                 <Link
                   key={diagnostico.id}
                   to={`/diagnostico/${diagnostico.id}`}
+                  // La X del recorrido vuelve a esta categoría (tarea 263).
+                  state={conOrigen(pathname, categoria?.nombre || 'Guías')}
                   className="flex min-h-[56px] items-center gap-[13px] rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">

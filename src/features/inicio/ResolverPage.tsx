@@ -6,7 +6,17 @@ import { conOrigen } from '../../lib/origenNavegacion'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import { BookOpen, CaretRight, MagnifyingGlass, PencilSimple, Play, Plus, Warning } from '../../components/iconos'
+import {
+  BookOpen,
+  CaretRight,
+  MagnifyingGlass,
+  PencilSimple,
+  Play,
+  Plus,
+  TreeStructure,
+  Warning,
+} from '../../components/iconos'
+import { ROTULO_RECORRIDO } from '../../lib/diagnostico'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
@@ -30,6 +40,8 @@ import {
   accesosRapidos,
   asuntosDeAtencion,
   guiasRecientes,
+  juntarRecientes,
+  recorridosRecientes,
   type AccesoRapido,
   type GuiaReciente,
 } from './resolver'
@@ -144,9 +156,22 @@ export function ResolverPage() {
       new Map(articulosSinTerminar(articulos, progresos).map((s) => [s.articulo.id, { hechos: s.hechos, total: s.total }])),
     [articulos, progresos],
   )
+  // Las guías con preguntas (diagnósticos) entran en la misma lista (tarea
+  // 263): se resuelve sin elegir antes la herramienta, y tampoco hay que
+  // acordarse de cuál se usó para retomarla.
+  const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(), [], [])
+  const sesionesRecorrido = useLiveQuery(() => db.progresoDiagnostico.toArray(), [], [])
+  const recorridosEnCurso = useMemo(
+    () => new Map(sesionesRecorrido.map((s) => [s.diagnosticoId, s])),
+    [sesionesRecorrido],
+  )
   const recientes = useMemo(
-    () => guiasRecientes(visitas, articulos, categorias, avances),
-    [visitas, articulos, categorias, avances],
+    () =>
+      juntarRecientes(
+        guiasRecientes(visitas, articulos, categorias, avances),
+        recorridosRecientes(visitas, diagnosticos, categorias, recorridosEnCurso),
+      ),
+    [visitas, articulos, categorias, avances, diagnosticos, recorridosEnCurso],
   )
   const accesos = useMemo(() => accesosRapidos(categorias, articulos, visitas), [categorias, articulos, visitas])
 
@@ -156,7 +181,8 @@ export function ResolverPage() {
   // es la señal de "ya sé lo que hay" que evita enseñarla un instante a
   // quien sí tiene trabajo a medias.
   const consultasListas = useLiveQuery(() => db.progresoPasos.count(), []) !== undefined
-  const hayBloquesReales = pendientes.length > 0 || avances.size > 0
+  const hayBloquesReales =
+    pendientes.length > 0 || avances.size > 0 || recientes.some((r) => r.enCurso !== null)
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila, el primero de los
@@ -312,9 +338,10 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
   )
 }
 
-// RECIENTES: las guías que este técnico usó en los últimos días. La que
-// está a medias lo dice y se continúa en el paso donde iba (abrir una guía
-// ya la lleva al primer paso pendiente, AD-040).
+// RECIENTES: las guías que este técnico usó en los últimos días, con pasos
+// o con preguntas. La que está a medias lo dice y se continúa donde iba
+// (abrir una guía ya la lleva al primer paso pendiente, AD-040; una guía
+// con preguntas, a la pregunta o al procedimiento en que quedó).
 function BloqueRecientes({ recientes }: { recientes: GuiaReciente[] }) {
   if (recientes.length === 0) return null
   return (
@@ -324,7 +351,7 @@ function BloqueRecientes({ recientes }: { recientes: GuiaReciente[] }) {
       </TituloSeccion>
       <div className="flex flex-col">
         {recientes.map((guia) => (
-          <FilaReciente key={guia.id} guia={guia} />
+          <FilaReciente key={`${guia.tipo}:${guia.id}`} guia={guia} />
         ))}
       </div>
     </section>
@@ -332,13 +359,18 @@ function BloqueRecientes({ recientes }: { recientes: GuiaReciente[] }) {
 }
 
 function FilaReciente({ guia }: { guia: GuiaReciente }) {
-  const aMedias = guia.avance !== null
+  const conPreguntas = guia.tipo === 'diagnostico'
+  const aMedias = guia.avance !== null || guia.enCurso !== null
   const accion = aMedias ? 'Continuar' : 'Abrir'
   const cuando = tiempoRelativo(guia.visitadoEn)
-  const detalle = aMedias
-    ? `Vas en el paso ${Math.min(guia.avance!.hechos + 1, guia.avance!.total)} de ${guia.avance!.total}`
-    : [guia.categoriaNombre, cuando].filter(Boolean).join(' · ')
-  const Icono = aMedias ? Play : BookOpen
+  // Una guía con preguntas dice que lo es en vez de la categoría: es lo
+  // que la distingue en la lista, y así la línea cabe a 360 px.
+  const detalle =
+    guia.enCurso ??
+    (guia.avance
+      ? `Vas en el paso ${Math.min(guia.avance.hechos + 1, guia.avance.total)} de ${guia.avance.total}`
+      : [conPreguntas ? ROTULO_RECORRIDO : guia.categoriaNombre, cuando].filter(Boolean).join(' · '))
+  const Icono = aMedias ? Play : conPreguntas ? TreeStructure : BookOpen
   return (
     <Link
       to={guia.ruta}
@@ -354,15 +386,17 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
         <Icono size={17} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-medium leading-[1.3]">{guia.titulo}</span>
-        <span className="flex min-w-0 items-center gap-1.5 text-[12.5px]">
+        {/* HASTA DOS LÍNEAS, NO UNA CORTADA (tarea 263): a 360 px el
+            título de una guía se quedaba en "La impresora de ejemplo...". */}
+        <span className="line-clamp-2 text-[15px] font-medium leading-[1.3] text-pretty">{guia.titulo}</span>
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] leading-snug">
           {guia.borrador && (
             <span className="inline-flex shrink-0 items-center gap-1 text-noct-neutral-300">
               <PencilSimple size={11} aria-hidden />
               Borrador ·
             </span>
           )}
-          <span className={`truncate ${aMedias ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}>{detalle}</span>
+          <span className={`min-w-0 ${aMedias ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}>{detalle}</span>
         </span>
       </span>
       <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300" aria-hidden>

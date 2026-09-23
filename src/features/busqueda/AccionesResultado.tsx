@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
-import { CaretRight, Check, Copy, Eye, Play, Warning } from '../../components/iconos'
+import { CaretRight, Check, Copy, Eye, Warning } from '../../components/iconos'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { accionesRapidasDeCredencial, copiarCampoCredencial, tipoDe } from '../boveda/accionesCredencial'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
@@ -25,8 +25,10 @@ import type { ResultadoBusqueda } from './useIndiceBusqueda'
 //
 //   - GUIA: nada desde el 2026-09-17. Abrir la guia ya la lleva a su
 //     primer paso pendiente, asi que "Empezar" repetia la fila.
-//   - DIAGNOSTICO: "Iniciar". La ruta del diagnostico ya arranca la
-//     sesion sola, asi que es la misma ruta con el verbo dicho.
+//   - GUIA CON PREGUNTAS (diagnostico): nada desde la tarea 263, por lo
+//     mismo que la guia. Abrirla ya arranca en su primera pregunta (o la
+//     retoma donde iba), asi que "Iniciar" repetia la fila; y para quien
+//     resuelve, las dos se abren igual.
 //   - CREDENCIAL: copiar lo que de verdad guarda, con el descifrado, los
 //     permisos y la AUDITORIA de siempre (`copiarCampoCredencial`), y
 //     desde el 2026-09-16 "Ver", que despliega su vista rapida debajo de
@@ -64,9 +66,8 @@ export function AccionesDeResultado({
   switch (resultado.tipo) {
     // Una GUIA ya no lleva boton (encargo del 2026-09-17): abrirla desde
     // la fila la lleva a su primer paso pendiente, que es lo que hacia
-    // "Empezar" / "Continuar". El boton repetia el enlace de al lado.
-    case 'diagnostico':
-      return <AccionDiagnostico resultado={resultado} desdeMejores={desdeMejores} />
+    // "Empezar" / "Continuar". El boton repetia el enlace de al lado. Una
+    // guia con preguntas tampoco, desde la tarea 263.
     case 'credencial':
       return <AccionesCredencial resultado={resultado} desdeMejores={desdeMejores} />
     case 'comando':
@@ -75,48 +76,6 @@ export function AccionesDeResultado({
     default:
       return null
   }
-}
-
-// ----------------------------------------------------------------
-// Diagnostico
-// ----------------------------------------------------------------
-
-function AccionDiagnostico({
-  resultado,
-  desdeMejores,
-}: {
-  resultado: ResultadoBusqueda
-  desdeMejores: boolean
-}) {
-  const { consulta, onNavegar, onResolver, huboDesbloqueo, alSaltar } = useContextoResultados()
-  const navegar = useNavigate()
-
-  // Boton y no enlace: es la misma ruta que abre la fila, pero con el
-  // verbo dicho y registrando que el recorrido termino en resolver algo.
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        onResolver(
-          eventoDeResolucion({
-            accion: 'iniciar_diagnostico',
-            tipo: resultado.tipo,
-            desdeMejores,
-            consulta,
-            huboDesbloqueo,
-          }),
-        )
-        alSaltar()
-        onNavegar?.()
-        navegar(resultado.ruta)
-      }}
-      aria-label={`Iniciar el diagnóstico "${resultado.titulo}"`}
-      className={ACCION_PRIMARIA}
-    >
-      <Play size={16} className="shrink-0" aria-hidden />
-      <span className="truncate">Iniciar</span>
-    </button>
-  )
 }
 
 // ----------------------------------------------------------------

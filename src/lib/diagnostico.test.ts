@@ -7,6 +7,9 @@ import {
   avanceTrasArticulo,
   crearNodo,
   duplicarNodo,
+  pideConfirmacion,
+  resultadoDelFinal,
+  resultadoValido,
   normalizarNodos,
   porcentajeDiagnostico,
   prepararNodosParaGuardar,
@@ -22,6 +25,7 @@ function opcion(cambios: Partial<OpcionDiagnostico> & { id: string; etiqueta: st
     articuloId: null,
     articuloTitulo: '',
     mensajeFinal: '',
+    resultado: '',
     ...cambios,
   }
 }
@@ -366,5 +370,95 @@ describe('procedimientosVinculadosRotos', () => {
   it('devuelve vacío cuando todos los procedimientos existen', () => {
     const nodos = arbolImpresora()
     expect(procedimientosVinculadosRotos(nodos, () => true)).toEqual([])
+  })
+})
+
+// Tarea 263: cómo termina cada rama ("Resolución guiada").
+describe('el resultado de un final', () => {
+  it('se normaliza: lo de antes y lo desconocido quedan sin indicar, y solo vive en un final', () => {
+    const [nodo] = normalizarNodos([
+      {
+        id: 'n1',
+        pregunta: '¿Aparece en Windows?',
+        opciones: [
+          { id: 'a', etiqueta: 'Sí', resultado: 'solucionado' },
+          { id: 'b', etiqueta: 'No', resultado: 'inventado' },
+          { id: 'c', etiqueta: 'Otra', siguienteNodoId: 'n2', resultado: 'escalar' },
+          { id: 'd', etiqueta: 'Antigua' },
+        ],
+      },
+    ])
+    expect(nodo.opciones.map((o) => o.resultado)).toEqual(['solucionado', '', '', ''])
+    expect(resultadoValido('falta_informacion')).toBe('falta_informacion')
+    expect(resultadoValido(3)).toBe('')
+  })
+
+  it('guardar lo quita de una respuesta que sigue a otra pregunta', () => {
+    const [nodo] = prepararNodosParaGuardar([
+      {
+        id: 'n1',
+        tituloInterno: '',
+        pregunta: '¿Aparece?',
+        descripcion: '',
+        opciones: [
+          opcion({ id: 'a', etiqueta: 'Sí', siguienteNodoId: 'n2', resultado: 'escalar' }),
+          opcion({ id: 'b', etiqueta: 'No', resultado: 'escalar' }),
+        ],
+      },
+    ])
+    expect(nodo.opciones.map((o) => o.resultado)).toEqual(['', 'escalar'])
+  })
+
+  it('un final con su resultado dicho ya lleva a algún sitio, aunque no tenga mensaje', () => {
+    const nodos: NodoDiagnostico[] = [
+      {
+        id: 'n1',
+        tituloInterno: '',
+        pregunta: '¿Ahora funciona?',
+        descripcion: '',
+        opciones: [
+          opcion({ id: 'a', etiqueta: 'Sí', resultado: 'solucionado' }),
+          opcion({ id: 'b', etiqueta: 'No', resultado: 'escalar' }),
+        ],
+      },
+    ]
+    expect(validarNodos(nodos)).toEqual([])
+    // Sin resultado, sin mensaje, sin procedimiento y sin siguiente: sigue siendo un error.
+    nodos[0].opciones[1] = opcion({ id: 'b', etiqueta: 'No' })
+    expect(validarNodos(nodos).join(' ')).toMatch(/no lleva a ninguna parte/)
+  })
+
+  it('viaja al final, también cuando antes se ejecuta un procedimiento', () => {
+    const nodo: NodoDiagnostico = {
+      id: 'n1',
+      tituloInterno: '',
+      pregunta: '¿Aparece en Windows?',
+      descripcion: '',
+      opciones: [
+        opcion({ id: 'a', etiqueta: 'No', articuloId: 'art-1', articuloTitulo: 'Conectar', resultado: 'solucionado' }),
+        opcion({ id: 'b', etiqueta: 'Sin conexión', resultado: 'escalar', mensajeFinal: 'Llama al proveedor' }),
+      ],
+    }
+    const directo = avanceAlResponder(avanceInicial('n1'), nodo, nodo.opciones[1])
+    expect(resultadoDelFinal(directo.estado)).toBe('escalar')
+
+    const conProcedimiento = avanceAlResponder(avanceInicial('n1'), nodo, nodo.opciones[0])
+    expect(conProcedimiento.estado.tipo).toBe('articulo')
+    const tras = avanceTrasArticulo(conProcedimiento)
+    expect(tras.estado).toMatchObject({ tipo: 'final', articuloId: 'art-1', resultado: 'solucionado' })
+    expect(resultadoDelFinal(tras.estado)).toBe('solucionado')
+  })
+
+  it('un avance guardado antes (sin el campo) se lee sin indicar', () => {
+    expect(resultadoDelFinal({ tipo: 'final', mensajeFinal: 'x', articuloId: null, articuloTitulo: '' })).toBe('')
+    expect(resultadoDelFinal({ tipo: 'pregunta', nodoId: 'n1' })).toBe('')
+  })
+
+  it('solo se pide confirmar "resuelto" cuando la rama lo resuelve o no dice nada', () => {
+    expect(pideConfirmacion('')).toBe(true)
+    expect(pideConfirmacion('solucionado')).toBe(true)
+    expect(pideConfirmacion('sin_resolver')).toBe(false)
+    expect(pideConfirmacion('escalar')).toBe(false)
+    expect(pideConfirmacion('falta_informacion')).toBe(false)
   })
 })

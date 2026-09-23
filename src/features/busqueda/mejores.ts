@@ -1,3 +1,4 @@
+import { ROTULO_RECORRIDO } from '../../lib/diagnostico'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import type { ResultadoBusqueda, TipoResultado } from './useIndiceBusqueda'
 
@@ -34,7 +35,7 @@ export const MAXIMO_MEJORES = 5
 export const ETIQUETA_TIPO: Record<TipoResultado, string> = {
   articulo: 'Guía',
   categoria: 'Categoría',
-  diagnostico: 'Diagnóstico',
+  diagnostico: ROTULO_RECORRIDO,
   adjunto: 'Adjunto',
   dispositivo: 'Equipo',
   credencial: 'Bóveda',
@@ -49,13 +50,20 @@ export const ETIQUETA_TIPO: Record<TipoResultado, string> = {
 /**
  * El subtitulo de una fila suelta: el tipo por delante, sin repetirlo
  * cuando el subtitulo ya empieza por el ("Herramienta · Monitoreo" no
- * puede convertirse en "Herramienta · Herramienta · Monitoreo").
+ * puede convertirse en "Herramienta · Herramienta · Monitoreo") ni
+ * cuando ya es uno de sus tramos: "Impresoras · Guía con preguntas" pasa
+ * a "Guía con preguntas · Impresoras" (tarea 263; antes salia
+ * "Diagnóstico · Impresoras · Diagnóstico").
  */
 export function subtituloConTipo(resultado: ResultadoBusqueda): string {
   const etiqueta = ETIQUETA_TIPO[resultado.tipo]
   const subtitulo = resultado.subtitulo.trim()
   if (!subtitulo) return etiqueta
-  if (normalizarTexto(subtitulo).startsWith(normalizarTexto(etiqueta))) return subtitulo
+  const clave = normalizarTexto(etiqueta)
+  if (normalizarTexto(subtitulo).startsWith(clave)) return subtitulo
+  const tramos = subtitulo.split(' · ')
+  const resto = tramos.filter((tramo) => normalizarTexto(tramo.trim()) !== clave)
+  if (resto.length < tramos.length) return [etiqueta, ...resto].join(' · ')
   return `${etiqueta} · ${subtitulo}`
 }
 
@@ -115,6 +123,11 @@ const VERBOS_PROCEDIMIENTO = [
   'restablecer',
   'restaurar',
   'actualizar',
+  // "Desbloquear usuario" es un procedimiento concreto (tarea 263,
+  // ejemplo B): sin el verbo, la palabra "usuario" solo pedía un acceso y
+  // una credencial con ese nombre podía ganarle a la guía.
+  'desbloquear',
+  'bloquear',
   'quitar',
   'eliminar',
   'habilitar',
@@ -138,6 +151,8 @@ const PALABRAS_PROBLEMA = [
   'se apaga',
   'se cuelga',
   'sin ',
+  // "usuario bloqueado", "cuenta bloqueada": un síntoma (tarea 263).
+  'bloquead',
 ]
 
 const PALABRAS_ACCESO = [

@@ -1,4 +1,4 @@
-import type { Articulo, Categoria, Reciente } from '../../lib/db'
+import type { Articulo, Categoria, Diagnostico, ProgresoDiagnostico, Reciente } from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
 import type { Agenda, EstadoAgenda } from './agenda'
 import type { ItemPendiente } from './pendientes'
@@ -16,7 +16,10 @@ import type { ItemPendiente } from './pendientes'
 //                    equipo no tienen plazo, así que no salen aquí.
 //   Recientes        las guías que ESTE técnico usó hace poco, con el paso
 //                    donde se quedó si están a medias. Una guía de hace dos
-//                    meses no es "reciente": sería ruido.
+//                    meses no es "reciente": sería ruido. Desde la tarea
+//                    263 entran también las guías con preguntas (los
+//                    diagnósticos): para quien resuelve son lo mismo, y
+//                    una a medias dice en qué pregunta va.
 //   Accesos rápidos  las categorías que tienen guías para ejecutar, las más
 //                    usadas primero. Con una sola categoría el bloque no
 //                    aporta nada (sería lo mismo que "Todas las guías"), así
@@ -84,6 +87,8 @@ function haceMenosDe(fechaIso: string, dias: number, hoy: Date): boolean {
 
 export interface GuiaReciente {
   id: string
+  /** Guía con pasos o guía con preguntas (un diagnóstico, tarea 263). */
+  tipo: 'articulo' | 'diagnostico'
   titulo: string
   categoriaNombre: string
   ruta: string
@@ -92,6 +97,8 @@ export interface GuiaReciente {
   borrador: boolean
   /** El avance a medias en este teléfono, o null si no hay nada empezado. */
   avance: { hechos: number; total: number } | null
+  /** Dónde va una guía con preguntas a medias, con palabras; null si no hay nada empezado. */
+  enCurso: string | null
 }
 
 /**
@@ -125,16 +132,87 @@ export function guiasRecientes(
       return [
         {
           id: articulo.id,
+          tipo: 'articulo',
           titulo: articulo.titulo,
           categoriaNombre: nombreCategoria.get(articulo.categoriaId) ?? '',
           ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}`,
           visitadoEn: visita.visitadoEn,
           borrador: estado === 'borrador',
           avance: avances.get(articulo.id) ?? null,
+          enCurso: null,
         },
       ]
     })
     .slice(0, limite)
+}
+
+/**
+ * Dónde va una guía con preguntas a medias, dicho con palabras, o null si
+ * no hay nada empezado. Recién abierta, sin ninguna respuesta, todavía no
+ * cuenta: abrirla y salir no es dejarla a medias.
+ */
+export function dondeVaElRecorrido(progreso: ProgresoDiagnostico | undefined): string | null {
+  if (!progreso) return null
+  const { estado, camino } = progreso
+  if (estado.tipo === 'pregunta') return camino.length > 0 ? `Vas en la pregunta ${camino.length + 1}` : null
+  if (estado.tipo === 'articulo') return `Haciendo «${estado.articuloTitulo || 'una guía'}»`
+  return 'Llegaste al final: falta cerrarla'
+}
+
+/**
+ * Las guías con preguntas (diagnósticos) que este técnico usó en los
+ * últimos `dias`, la más reciente primero, con dónde va si quedó a
+ * medias. Solo las que existen y tienen preguntas.
+ */
+export function recorridosRecientes(
+  visitas: Reciente[],
+  diagnosticos: Diagnostico[],
+  categorias: Categoria[],
+  progresos: ReadonlyMap<string, ProgresoDiagnostico>,
+  hoy: Date = new Date(),
+  opciones: { dias?: number; limite?: number } = {},
+): GuiaReciente[] {
+  const dias = opciones.dias ?? DIAS_RECIENTES
+  const limite = opciones.limite ?? RECIENTES_VISIBLES
+  const porId = new Map(diagnosticos.map((d) => [d.id, d]))
+  const nombreCategoria = new Map(categorias.map((c) => [c.id, c.nombre]))
+
+  return [...visitas]
+    .filter((v) => v.tipo === 'diagnostico' && haceMenosDe(v.visitadoEn, dias, hoy))
+    .sort((a, b) => b.visitadoEn.localeCompare(a.visitadoEn))
+    .flatMap((visita): GuiaReciente[] => {
+      const diagnostico = porId.get(visita.entidadId)
+      if (!diagnostico || diagnostico.eliminadoEn) return []
+      if (!Array.isArray(diagnostico.nodos) || diagnostico.nodos.length === 0) return []
+      return [
+        {
+          id: diagnostico.id,
+          tipo: 'diagnostico',
+          titulo: diagnostico.titulo,
+          categoriaNombre: nombreCategoria.get(diagnostico.categoriaId) ?? '',
+          ruta: `/diagnostico/${diagnostico.id}`,
+          visitadoEn: visita.visitadoEn,
+          borrador: false,
+          avance: null,
+          enCurso: dondeVaElRecorrido(progresos.get(diagnostico.id)),
+        },
+      ]
+    })
+    .slice(0, limite)
+}
+
+/**
+ * Guías con pasos y guías con preguntas en UNA sola lista, la más
+ * reciente primero (tarea 263): el técnico no tiene que acordarse de qué
+ * herramienta usó. Cada lista llega ya recortada a `limite`, así que los
+ * `limite` más recientes de la unión están entre ellas.
+ */
+export function juntarRecientes(
+  guias: GuiaReciente[],
+  recorridos: GuiaReciente[],
+  limite: number = RECIENTES_VISIBLES,
+): GuiaReciente[] {
+  return [...guias, ...recorridos].sort((a, b) => b.visitadoEn.localeCompare(a.visitadoEn)).slice(0, limite)
 }
 
 export interface AccesoRapido {

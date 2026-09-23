@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { db } from '../../lib/db'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { BotonFavorito } from '../../components/BotonFavorito'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
@@ -30,6 +31,11 @@ import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 export function DiagnosticosPage() {
   const [filtro, setFiltro] = useState('')
   const [searchParams] = useSearchParams()
+  // Un recorrido abierto desde aquí vuelve aquí, con el filtro puesto
+  // (tarea 263): su padre declarado ahora es Resolver, que es por donde
+  // entra quien resuelve; la lista es la puerta de la administración.
+  const { search } = useLocation()
+  const origenLista = conOrigen(`/diagnostico${search}`, 'Diagnósticos')
   // Llegar con ?categoria=<id> (por ejemplo desde "Iniciar diagnóstico"
   // en la ficha de un equipo, fase R1) preselecciona esa categoría en
   // vez de mostrar todas: el técnico ve directo los problemas de SU
@@ -169,6 +175,7 @@ export function DiagnosticosPage() {
         {enCurso && !hayFiltro && (
           <Link
             to={`/diagnostico/${enCurso.id}`}
+            state={origenLista}
             className="flex items-center gap-3 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3.5 text-noct-text hover:bg-noct-accent/[.13]"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-accent/[.16] text-noct-accent-300">
@@ -205,6 +212,7 @@ export function DiagnosticosPage() {
                 <Link
                   key={problema.diagnosticoId}
                   to={`/diagnostico/${problema.diagnosticoId}`}
+                  state={origenLista}
                   className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 px-2 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
                 >
                   <WarningCircle size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
@@ -248,6 +256,7 @@ export function DiagnosticosPage() {
                 >
                   <Link
                     to={`/diagnostico/${diagnostico.id}`}
+                    state={origenLista}
                     className="flex min-w-0 flex-1 items-center gap-[13px] py-[11px] text-noct-text"
                   >
                     <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">

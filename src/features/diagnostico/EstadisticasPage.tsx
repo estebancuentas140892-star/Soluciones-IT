@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import {
@@ -30,6 +31,9 @@ import {
 // filtros por fecha: con el volumen de un equipo de 5 tecnicos, traer
 // todo a memoria y agregar en el cliente es instantaneo (mismo criterio
 // que actividadEquipo.ts).
+// Un recorrido abierto desde aquí vuelve aquí al salir (tarea 263).
+const ORIGEN_ESTADISTICAS = conOrigen('/diagnostico/estadisticas', 'Estadísticas')
+
 export function EstadisticasPage() {
   const ejecuciones = useLiveQuery(() => db.ejecuciones_diagnostico.toArray(), [], [])
   // Para resolver, si existe, el titulo VIVO del diagnostico (una
@@ -139,6 +143,7 @@ export function EstadisticasPage() {
                       <Link
                         key={fila.diagnosticoId}
                         to={`/diagnostico/${ruta}`}
+                        state={ORIGEN_ESTADISTICAS}
                         className="flex items-center gap-2.5 border-b border-noct-divider px-3.5 py-2.5 last:border-b-0 hover:bg-noct-text/[.05]"
                       >
                         {contenido}

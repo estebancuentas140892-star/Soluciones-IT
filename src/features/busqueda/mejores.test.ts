@@ -132,6 +132,23 @@ describe('intencionesDeConsulta', () => {
   it('una palabra suelta sin señales no fuerza ninguna intencion', () => {
     expect(intencionesDeConsulta('zabbix')).toEqual([])
   })
+
+  // Tarea 263, ejemplos B y D del encargo "Resolución guiada".
+  it('"desbloquear usuario" es un procedimiento; "usuario bloqueado", un problema', () => {
+    expect(intencionesDeConsulta('desbloquear usuario active directory')).toContain('procedimiento')
+    expect(intencionesDeConsulta('usuario bloqueado')).toContain('problema')
+    expect(intencionesDeConsulta('usuario bloqueado')).not.toContain('procedimiento')
+  })
+
+  it('"desbloquear usuario" pone la guía por delante de la credencial que se llama parecido', () => {
+    const entrada = [
+      resultado('c1', 'credencial', 'Usuario administrador del directorio'),
+      resultado('a1', 'articulo', 'Desbloquear usuario en el directorio activo'),
+    ]
+    expect(titulos(mejoresResultados(entrada, 'desbloquear usuario'))[0]).toBe(
+      'Desbloquear usuario en el directorio activo',
+    )
+  })
 })
 
 describe('la intencion desempata sin inventar resultados', () => {
@@ -202,5 +219,11 @@ describe('subtituloConTipo', () => {
 
   it('sin subtitulo se queda solo con el tipo', () => {
     expect(subtituloConTipo(resultado('d1', 'dispositivo', 'X'))).toBe('Equipo')
+  })
+
+  it('si el tipo ya es un tramo del subtitulo, pasa delante sin repetirse (tarea 263)', () => {
+    expect(
+      subtituloConTipo(resultado('g1', 'diagnostico', 'X', { subtitulo: 'Impresoras · Guía con preguntas' })),
+    ).toBe('Guía con preguntas · Impresoras')
   })
 })

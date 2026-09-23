@@ -15,7 +15,7 @@ import {
   type Ubicacion,
 } from '../../lib/db'
 import { normalizarProcedimiento, textoDeProcedimiento } from '../../lib/procedimiento'
-import { textoDeNodos } from '../../lib/diagnostico'
+import { ROTULO_RECORRIDO, textoDeNodos } from '../../lib/diagnostico'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
@@ -363,13 +363,15 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
   }
 
   // Los diagnosticos se encuentran por el problema ("la impresora
-  // no imprime"), por sus preguntas o por sus respuestas.
+  // no imprime"), por sus preguntas o por sus respuestas. Para quien
+  // resuelve son "guías con preguntas" (tarea 263): el subtitulo no le
+  // pide distinguir herramientas.
   for (const diagnostico of diagnosticos) {
     documentos.push({
       id: `diagnostico:${diagnostico.id}`,
       tipo: 'diagnostico',
       titulo: diagnostico.titulo,
-      subtitulo: [nombreCategoria.get(diagnostico.categoriaId), 'Diagnóstico'].filter(Boolean).join(' · '),
+      subtitulo: [nombreCategoria.get(diagnostico.categoriaId), ROTULO_RECORRIDO].filter(Boolean).join(' · '),
       ruta: `/diagnostico/${diagnostico.id}`,
       texto: [diagnostico.titulo, diagnostico.descripcion, textoDeNodos(diagnostico.nodos ?? [])].join(' '),
       portadaRef: '',

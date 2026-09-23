@@ -177,12 +177,20 @@ describe('padreDe', () => {
       expect(padreDe('/diagnostico')).toEqual({ to: '/mas', etiqueta: 'Más' })
     })
 
-    it('nuevo, editar, sugerencias y el asistente vuelven a la lista de diagnósticos', () => {
+    it('nuevo, editar, sugerencias y estadísticas vuelven a la lista de diagnósticos', () => {
       const lista = { to: '/diagnostico', etiqueta: 'Diagnósticos' }
       expect(padreDe('/diagnostico/nuevo')).toEqual(lista)
       expect(padreDe('/diagnostico/diag-1/editar')).toEqual(lista)
       expect(padreDe('/diagnostico/sugerencias')).toEqual(lista)
-      expect(padreDe('/diagnostico/diag-1')).toEqual(lista)
+      expect(padreDe('/diagnostico/estadisticas')).toEqual(lista)
+    })
+
+    // Tarea 263: se resuelve desde Resolver, sin elegir antes la herramienta.
+    it('el recorrido en ejecución cuelga de Resolver e ilumina Resolver', () => {
+      expect(padreDe('/diagnostico/diag-1')).toEqual({ to: '/', etiqueta: 'Resolver' })
+      expect(destinoPrincipalDe('/diagnostico/diag-1')).toBe('/')
+      expect(destinoPrincipalDe('/diagnostico/diag-1/editar')).toBe('/mas')
+      expect(destinoPrincipalDe('/diagnostico/nuevo')).toBe('/mas')
     })
   })
 

@@ -714,6 +714,15 @@ export interface DatosBorradorArticulo {
 //   sentido cuando siguienteNodoId es null).
 // Una opcion terminal debe tener mensaje o articulo (lo exige la
 // validacion al guardar): ninguna rama queda sin salida.
+// CÓMO TERMINA UNA RAMA (tarea 263, encargo del 2026-09-22 "Resolución
+// guiada", sección 5). Recorrer todos los pasos no es haber resuelto: el
+// autor dice en cada final qué pasó. '' es "sin indicar", lo escrito
+// antes de que existiera, y se lee como hasta ahora (se pregunta si
+// quedó resuelto). Vive en el JSON de la respuesta, así que no necesita
+// columna en Supabase; el registro de la ejecución sigue usando los
+// valores permitidos de `resuelto` y `motivo`.
+export type ResultadoRecorrido = '' | 'solucionado' | 'sin_resolver' | 'escalar' | 'falta_informacion'
+
 export interface OpcionDiagnostico {
   id: string
   etiqueta: string
@@ -721,6 +730,9 @@ export interface OpcionDiagnostico {
   articuloId: string | null
   articuloTitulo: string
   mensajeFinal: string
+  // Solo en una respuesta terminal (sin siguiente pregunta); si ejecuta
+  // un procedimiento, vale para cuando ese procedimiento termine.
+  resultado: ResultadoRecorrido
 }
 
 // Una pregunta del arbol de decisiones. En esta version las
@@ -769,6 +781,8 @@ export interface PasoCamino {
 // respondiendo una pregunta, ejecutando un procedimiento vinculado
 // (con la informacion para continuar al terminarlo) o en el resultado
 // final.
+// `resultado` es opcional en el tipo porque el avance vive en la base
+// local y uno guardado antes de la tarea 263 no lo trae: se lee como ''.
 export type EstadoDiagnostico =
   | { tipo: 'pregunta'; nodoId: string }
   | {
@@ -777,8 +791,15 @@ export type EstadoDiagnostico =
       articuloTitulo: string
       siguienteNodoId: string | null
       mensajeFinal: string
+      resultado?: ResultadoRecorrido
     }
-  | { tipo: 'final'; mensajeFinal: string; articuloId: string | null; articuloTitulo: string }
+  | {
+      tipo: 'final'
+      mensajeFinal: string
+      articuloId: string | null
+      articuloTitulo: string
+      resultado?: ResultadoRecorrido
+    }
 
 // Avance local de un diagnostico en curso. Solo vive en el
 // dispositivo (como progresoPasos): cerrar la app y volver retoma en
@@ -791,6 +812,11 @@ export interface ProgresoDiagnostico {
   articulosEjecutados: { id: string; titulo: string }[]
   iniciadoEn: string
   actualizadoEn: string
+  // El procedimiento cuyo avance guarda ahora la raíz propia del
+  // recorrido (tarea 263, ver `raizDelProcedimiento`): volver a él tras
+  // retroceder conserva lo hecho, y empezar otro distinto parte de cero.
+  // Opcional: el avance guardado antes no lo trae.
+  procedimientoEnCurso?: string | null
 }
 
 // Motivo de la retroalimentacion cuando el diagnostico NO quedo

@@ -1,4 +1,5 @@
 import { db, type Reciente } from './db'
+import { ROTULO_RECORRIDO } from './diagnostico'
 // Unica dependencia de esta capa hacia una funcionalidad: el nombre de
 // cada clase de ficha del Centro de consulta ("Herramienta", "Comando").
 // Se importa en vez de copiarlo para que un resultado reciente y el
@@ -78,7 +79,7 @@ async function resolverVisita(visita: Reciente): Promise<ElementoReciente | null
     return {
       ...base,
       titulo: diagnostico.titulo,
-      subtitulo: [categoria?.nombre, 'Diagnóstico'].filter(Boolean).join(' · '),
+      subtitulo: [categoria?.nombre, ROTULO_RECORRIDO].filter(Boolean).join(' · '),
       ruta: `/diagnostico/${diagnostico.id}`,
     }
   }

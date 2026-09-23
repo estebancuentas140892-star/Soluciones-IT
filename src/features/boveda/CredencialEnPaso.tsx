@@ -190,9 +190,10 @@ function FormularioDesbloqueo() {
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
           placeholder="Contraseña maestra"
-          className="min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
-        <button type="submit" disabled={abriendo} className={`shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
+        {/* De dedo, 44 px (R6): se desbloquea de pie, en medio de una guía. */}
+        <button type="submit" disabled={abriendo} className={`min-h-11 shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
           <Key size={14} aria-hidden />
           {abriendo ? 'Abriendo...' : 'Desbloquear'}
         </button>

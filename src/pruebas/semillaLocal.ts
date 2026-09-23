@@ -6,7 +6,10 @@ import {
   type Categoria,
   type Conexion,
   type Credencial,
+  type Diagnostico,
   type Dispositivo,
+  type NodoDiagnostico,
+  type OpcionDiagnostico,
   type PasoProcedimiento,
   type Referencia,
 } from '../lib/db'
@@ -677,7 +680,177 @@ const GUIA_APUNTE = articulo({
   },
 })
 
+// RESOLUCION GUIADA (tarea 263). Los cinco ejemplos del encargo, en
+// version de ejemplo: A y B son procedimientos directos (se abren en su
+// paso 1, sin preguntas); C y D son guias con preguntas que llevan al
+// procedimiento que toca; E es una guia con un incidente en medio (su
+// decision abre una rama y vuelve). El caso E de siempre sigue siendo
+// GUIA_CON_DECISION; aqui va el de la resolucion DIAN, que es el del
+// encargo.
+const GUIA_LOCALIZAR_RESOLUCION = articulo({
+  id: 'art-localizar-resolucion',
+  categoriaId: 'cat-pos',
+  titulo: 'Localizar la resolucion DIAN de ejemplo',
+  tipo: 'mantenimiento',
+  procedimiento: {
+    descripcion: 'Rama para cuando no aparece el numero de resolucion.',
+    portada: null,
+    objetivoGeneral: 'Tener el numero y la vigencia de la resolucion de ejemplo.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 3,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'loc-p1',
+        titulo: 'Buscar la resolucion',
+        lugar: 'Correo de facturacion de ejemplo',
+        bloques: [
+          tarea('loc-p1-t1', 'Buscar el PDF de la resolucion de ejemplo en el correo de facturacion'),
+          tarea('loc-p1-t2', 'Anotar el numero, el prefijo y la vigencia'),
+        ],
+      }),
+    ],
+  },
+})
+
+const GUIA_RESOLUCION_DIAN = articulo({
+  id: 'art-resolucion-dian',
+  categoriaId: 'cat-pos',
+  titulo: 'Actualizar la resolucion DIAN de ejemplo en el POS',
+  tipo: 'mantenimiento',
+  procedimiento: {
+    descripcion: 'Ejemplos A y E de la resolucion guiada.',
+    portada: null,
+    objetivoGeneral: 'Que el POS de ejemplo facture con la resolucion vigente.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 8,
+    dificultad: 'intermedio',
+    pasos: [
+      paso({
+        id: 'dian-p1',
+        titulo: 'Abrir la configuracion de facturacion',
+        lugar: 'POS de ejemplo, como administrador',
+        bloques: [
+          tarea('dian-p1-t1', 'Abrir el POS de ejemplo y entrar a Configuracion > Facturacion'),
+          decision(
+            'dian-p1-t2',
+            '¿Tienes el numero de la resolucion nueva?',
+            GUIA_LOCALIZAR_RESOLUCION.id,
+            GUIA_LOCALIZAR_RESOLUCION.titulo,
+          ),
+        ],
+      }),
+      paso({
+        id: 'dian-p2',
+        titulo: 'Escribir la resolucion nueva',
+        resultado: 'La factura de ejemplo muestra el numero y la vigencia nuevos',
+        bloques: [
+          tarea('dian-p2-t1', 'Escribir el numero, el prefijo y las fechas de vigencia'),
+          tarea('dian-p2-t2', 'Imprimir una factura de ejemplo y comprobar la resolucion', 'verificacion'),
+        ],
+      }),
+    ],
+  },
+})
+
+const GUIA_DESBLOQUEAR_USUARIO = articulo({
+  id: 'art-desbloquear-usuario',
+  categoriaId: 'cat-software',
+  titulo: 'Desbloquear un usuario de ejemplo en el directorio activo',
+  tipo: 'configuracion',
+  procedimiento: {
+    descripcion: 'Ejemplo B de la resolucion guiada.',
+    portada: null,
+    objetivoGeneral: 'Que el usuario de ejemplo pueda volver a entrar.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 3,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'desb-p1',
+        titulo: 'Buscar la cuenta',
+        lugar: 'Servidor de ejemplo, consola del directorio',
+        vinculoProtegido: { tipo: 'credencial', id: 'cred-directorio-ejemplo', titulo: 'Administrador del directorio de ejemplo' },
+        bloques: [
+          tarea('desb-p1-t1', 'Abrir Usuarios y equipos del directorio activo'),
+          tarea('desb-p1-t2', 'Buscar la cuenta del usuario de ejemplo'),
+        ],
+      }),
+      paso({
+        id: 'desb-p2',
+        titulo: 'Desbloquear',
+        resultado: 'La casilla Desbloquear cuenta queda sin marcar',
+        bloques: [
+          tarea('desb-p2-t1', 'Abrir Propiedades > Cuenta y marcar Desbloquear cuenta'),
+          tarea('desb-p2-t2', 'Comprobar que la opcion Desbloquear ya no aparece activa', 'verificacion'),
+        ],
+      }),
+    ],
+  },
+})
+
+const GUIA_CAMBIAR_CLAVE = articulo({
+  id: 'art-cambiar-clave',
+  categoriaId: 'cat-software',
+  titulo: 'Asignar una clave temporal a un usuario de ejemplo',
+  tipo: 'configuracion',
+  procedimiento: {
+    descripcion: 'Procedimiento al que lleva el ejemplo D.',
+    portada: null,
+    objetivoGeneral: 'Que el usuario de ejemplo entre con una clave temporal.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 2,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'clave-p1',
+        titulo: 'Restablecer la clave',
+        bloques: [
+          tarea('clave-p1-t1', 'Abrir la cuenta del usuario de ejemplo y elegir Restablecer contrasena'),
+          tarea('clave-p1-t2', 'Marcar que la cambie al iniciar sesion'),
+        ],
+      }),
+    ],
+  },
+})
+
+const GUIA_CONECTAR_IMPRESORA = articulo({
+  id: 'art-conectar-impresora',
+  categoriaId: 'cat-impresoras',
+  titulo: 'Conectar la impresora compartida de ejemplo',
+  tipo: 'conexion',
+  procedimiento: {
+    descripcion: 'Procedimiento al que lleva el ejemplo C.',
+    portada: null,
+    objetivoGeneral: 'Que la impresora de ejemplo aparezca en Windows.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 4,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'impr-p1',
+        titulo: 'Agregar la impresora',
+        lugar: 'Configuracion de Windows > Impresoras y escaneres',
+        bloques: [
+          tarea('impr-p1-t1', 'Pulsar Agregar dispositivo y esperar la lista'),
+          tarea('impr-p1-t2', 'Elegir la impresora compartida de ejemplo'),
+        ],
+      }),
+    ],
+  },
+})
+
 const ARTICULOS: Articulo[] = [
+  GUIA_LOCALIZAR_RESOLUCION,
+  GUIA_RESOLUCION_DIAN,
+  GUIA_DESBLOQUEAR_USUARIO,
+  GUIA_CAMBIAR_CLAVE,
+  GUIA_CONECTAR_IMPRESORA,
   GUIA_TONOS,
   GUIA_APUNTE,
   GUIA_VINCULADA,
@@ -845,6 +1018,88 @@ function credencial(id: string, titulo: string, venceEnDias: number): Credencial
 const CREDENCIALES: Credencial[] = [
   credencial('cred-resolucion-ejemplo', 'Resolucion POS de ejemplo', 12),
   credencial('cred-wifi-ejemplo', 'Wifi de invitados de ejemplo', -3),
+  credencial('cred-directorio-ejemplo', 'Administrador del directorio de ejemplo', 60),
+]
+
+function opcion(id: string, etiqueta: string, extra: Partial<OpcionDiagnostico> = {}): OpcionDiagnostico {
+  return {
+    id,
+    etiqueta,
+    siguienteNodoId: null,
+    articuloId: null,
+    articuloTitulo: '',
+    mensajeFinal: '',
+    resultado: '',
+    ...extra,
+  }
+}
+
+function pregunta(id: string, texto: string, descripcion: string, opciones: OpcionDiagnostico[]): NodoDiagnostico {
+  return { id, tituloInterno: '', pregunta: texto, descripcion, opciones }
+}
+
+function recorrido(id: string, categoriaId: string, titulo: string, nodos: NodoDiagnostico[]): Diagnostico {
+  return { id, categoriaId, titulo, descripcion: '', nodos, updatedAt: AHORA, updatedBy: PERFIL_PRUEBA.id, eliminadoEn: null }
+}
+
+// Ejemplos C y D (tarea 263): guias con preguntas cuyas respuestas llevan
+// a caminos distintos, a un procedimiento que se ejecuta dentro y vuelve,
+// y a finales que dicen como termina.
+const DIAGNOSTICOS: Diagnostico[] = [
+  recorrido('diag-impresora-ejemplo', 'cat-impresoras', 'La impresora de ejemplo no imprime', [
+    pregunta('imp-n1', '¿La impresora aparece en Windows?', 'Configuracion > Impresoras y escaneres', [
+      opcion('imp-n1-si', 'Si, aparece', { siguienteNodoId: 'imp-n2' }),
+      opcion('imp-n1-no', 'No aparece', {
+        siguienteNodoId: 'imp-n2',
+        articuloId: GUIA_CONECTAR_IMPRESORA.id,
+        articuloTitulo: GUIA_CONECTAR_IMPRESORA.titulo,
+      }),
+      opcion('imp-n1-sin', 'Aparece sin conexion', {
+        mensajeFinal: 'Avisar a la mesa de ayuda de ejemplo con el nombre de la impresora y la sede.',
+        resultado: 'escalar',
+      }),
+    ]),
+    pregunta('imp-n2', '¿Imprime una pagina de prueba?', '', [
+      opcion('imp-n2-si', 'Si', { mensajeFinal: 'La impresora de ejemplo quedo funcionando.', resultado: 'solucionado' }),
+      opcion('imp-n2-no', 'No', { siguienteNodoId: 'imp-n3' }),
+    ]),
+    pregunta('imp-n3', '¿La cola de impresion muestra un error?', 'Abre la cola desde el icono de la impresora', [
+      opcion('imp-n3-si', 'Si, muestra un error', {
+        mensajeFinal: 'Escalar al proveedor de ejemplo con el texto del error.',
+        resultado: 'escalar',
+      }),
+      opcion('imp-n3-no', 'No', { mensajeFinal: 'Revisar el controlador de ejemplo.', resultado: 'sin_resolver' }),
+    ]),
+  ]),
+  recorrido('diag-sesion-ejemplo', 'cat-software', 'El usuario de ejemplo no puede iniciar sesion', [
+    pregunta('ses-n1', '¿Que mensaje aparece al entrar?', '', [
+      opcion('ses-n1-bloq', 'La cuenta esta bloqueada', {
+        articuloId: GUIA_DESBLOQUEAR_USUARIO.id,
+        articuloTitulo: GUIA_DESBLOQUEAR_USUARIO.titulo,
+        mensajeFinal: 'Pedir al usuario de ejemplo que vuelva a entrar.',
+        resultado: 'solucionado',
+      }),
+      opcion('ses-n1-venc', 'La contrasena vencio', {
+        articuloId: GUIA_CAMBIAR_CLAVE.id,
+        articuloTitulo: GUIA_CAMBIAR_CLAVE.titulo,
+        mensajeFinal: 'Entregar la clave temporal por un canal seguro.',
+        resultado: 'solucionado',
+      }),
+      opcion('ses-n1-mal', 'Usuario o contrasena incorrectos', { siguienteNodoId: 'ses-n2' }),
+    ]),
+    pregunta('ses-n2', '¿El usuario recuerda su contrasena?', '', [
+      opcion('ses-n2-si', 'Si', {
+        mensajeFinal: 'Confirmar el nombre de usuario exacto y el dominio de ejemplo.',
+        resultado: 'falta_informacion',
+      }),
+      opcion('ses-n2-no', 'No', {
+        articuloId: GUIA_CAMBIAR_CLAVE.id,
+        articuloTitulo: GUIA_CAMBIAR_CLAVE.titulo,
+        mensajeFinal: 'Entregar la clave temporal por un canal seguro.',
+        resultado: 'solucionado',
+      }),
+    ]),
+  ]),
 ]
 
 function dispositivo(datos: Partial<Dispositivo> & { id: string; nombre: string; categoriaId: string }): Dispositivo {
@@ -941,6 +1196,13 @@ async function sembrarAgendaYEquipos(): Promise<void> {
       await db.recientes.bulkPut([
         { clave: 'articulo:art-recurso-compartido', tipo: 'articulo', entidadId: 'art-recurso-compartido', visitadoEn: haceDias(0.2) },
         { clave: 'articulo:art-tonos', tipo: 'articulo', entidadId: 'art-tonos', visitadoEn: haceDias(2) },
+        // Una guia con preguntas usada ayer (tarea 263): Recientes las junta.
+        {
+          clave: 'diagnostico:diag-impresora-ejemplo',
+          tipo: 'diagnostico',
+          entidadId: 'diag-impresora-ejemplo',
+          visitadoEn: haceDias(1),
+        },
       ])
     }
   })
@@ -966,7 +1228,7 @@ export async function sembrarBancoDePruebas({ conProgreso = true } = {}): Promis
   // la tabla vacia y la segunda fallaba con "Key already exists" (asi
   // aparecio al sembrar por primera vez las fichas del Centro de
   // consulta); con ella, IndexedDB las ordena y la segunda ya las ve.
-  await db.transaction('rw', db.articulos, db.referencias, async () => {
+  await db.transaction('rw', db.articulos, db.referencias, db.diagnosticos, async () => {
     const existentes = new Set(
       (await db.articulos.bulkGet(ARTICULOS.map((a) => a.id))).flatMap((a) => (a ? [a.id] : [])),
     )
@@ -979,6 +1241,12 @@ export async function sembrarBancoDePruebas({ conProgreso = true } = {}): Promis
     )
     const fichasFaltantes = REFERENCIAS.filter((r) => !fichasExistentes.has(r.id))
     if (fichasFaltantes.length > 0) await db.referencias.bulkAdd(fichasFaltantes)
+    // Y las guias con preguntas (tarea 263), con el mismo criterio.
+    const recorridosExistentes = new Set(
+      (await db.diagnosticos.bulkGet(DIAGNOSTICOS.map((r) => r.id))).flatMap((r) => (r ? [r.id] : [])),
+    )
+    const recorridosFaltantes = DIAGNOSTICOS.filter((r) => !recorridosExistentes.has(r.id))
+    if (recorridosFaltantes.length > 0) await db.diagnosticos.bulkAdd(recorridosFaltantes)
   })
   await sembrarAgendaYEquipos()
   if (conProgreso && (await db.progresoPasos.count()) === 0) {

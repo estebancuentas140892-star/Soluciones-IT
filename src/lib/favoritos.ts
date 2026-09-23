@@ -1,4 +1,5 @@
 import { db, type Favorito } from './db'
+import { ROTULO_RECORRIDO } from './diagnostico'
 
 // Favoritos del tecnico (fase J1 de la jornada): fichas fijadas a mano
 // que Inicio muestra siempre, a diferencia de "Recientes" que se
@@ -71,7 +72,7 @@ export async function obtenerFavoritos(): Promise<ElementoFavorito[]> {
         clave: marca.clave,
         tipo: marca.tipo,
         titulo: diagnostico.titulo,
-        subtitulo: categoria?.nombre ?? 'Diagnóstico',
+        subtitulo: categoria?.nombre ?? ROTULO_RECORRIDO,
         ruta: `/diagnostico/${diagnostico.id}`,
       })
     }

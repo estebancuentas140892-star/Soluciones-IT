@@ -9,6 +9,8 @@ import {
   normalizarNodos,
   prepararNodosParaGuardar,
   procedimientosVinculadosRotos,
+  RESULTADOS_RECORRIDO,
+  resultadoValido,
   validarNodos,
 } from '../../lib/diagnostico'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
@@ -21,6 +23,7 @@ import {
   ArrowUp,
   BookOpen,
   CaretDown,
+  CheckCircle,
   Copy,
   DotsThreeOutline,
   FlagCheckered,
@@ -204,7 +207,7 @@ export function DiagnosticoForm() {
       barra={
         <div className="flex items-center justify-between gap-2 px-4 pb-2.5">
           <p className="min-w-0 flex-1 text-[12px] text-noct-neutral-500">
-            Un árbol de preguntas que lleva del problema a la solución
+            Preguntas que llevan del problema a la solución
           </p>
           {esEdicion && (
             <button
@@ -385,7 +388,7 @@ export function DiagnosticoForm() {
         abierto={mostrarEliminar}
         sensible
         titulo={`¿Eliminar este diagnóstico?`}
-        descripcion="Se elimina el árbol de preguntas completo. Los procedimientos vinculados no se tocan."
+        descripcion="Se eliminan todas sus preguntas. Las guías vinculadas no se tocan."
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
@@ -492,7 +495,7 @@ function NodosEditor({
                 {indice + 1}
               </span>
               <span className="min-w-0 flex-1 truncate text-xs text-noct-neutral-500">
-                {indice === 0 ? 'Inicio del diagnóstico' : `Pregunta ${indice + 1}`}
+                {indice === 0 ? 'Primera pregunta' : `Pregunta ${indice + 1}`}
               </span>
               <button
                 type="button"
@@ -602,7 +605,7 @@ function NodosEditor({
                           }
                           className={`box-border min-h-[38px] w-full appearance-none rounded-md border border-transparent bg-transparent py-1.5 pl-2.5 pr-8 text-[12.5px] outline-none hover:border-noct-divider hover:bg-noct-surface focus:border-noct-accent ${destinoColor}`}
                         >
-                          <option value="">Termina aquí (mensaje final o procedimiento)</option>
+                          <option value="">Termina aquí (con un resultado, un mensaje o una guía)</option>
                           {nodos.map(
                             (destino, indiceDestino) =>
                               destino.id !== nodo.id && (
@@ -621,20 +624,56 @@ function NodosEditor({
                     </div>
 
                     {!opcion.siguienteNodoId && (
-                      <div className="flex items-center gap-1">
-                        <FlagCheckered
-                          size={14}
-                          className="w-[22px] shrink-0 text-center text-noct-neutral-500"
-                          aria-hidden
-                        />
-                        <input
-                          type="text"
-                          value={opcion.mensajeFinal}
-                          onChange={(e) => actualizarOpcion(indice, indiceOpcion, { mensajeFinal: e.target.value })}
-                          placeholder="Mensaje final: Encender y probar de nuevo"
-                          className="box-border min-h-[38px] min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-[13px] text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
-                        />
-                      </div>
+                      <>
+                        <div className="flex items-center gap-1">
+                          <FlagCheckered
+                            size={14}
+                            className="w-[22px] shrink-0 text-center text-noct-neutral-500"
+                            aria-hidden
+                          />
+                          <input
+                            type="text"
+                            value={opcion.mensajeFinal}
+                            onChange={(e) => actualizarOpcion(indice, indiceOpcion, { mensajeFinal: e.target.value })}
+                            placeholder="Mensaje final: Encender y probar de nuevo"
+                            className="box-border min-h-[38px] min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-[13px] text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
+                          />
+                        </div>
+                        {/* CÓMO TERMINA (tarea 263): llegar al final no es
+                            resolver. Solucionado pide confirmarlo; escalar,
+                            falta información o sin resolver se registran como
+                            no resueltos sin preguntar. Sin indicar se comporta
+                            como hasta ahora. */}
+                        <div className="flex items-center gap-1">
+                          <CheckCircle
+                            size={14}
+                            className={`w-[22px] shrink-0 text-center ${opcion.resultado ? 'text-noct-accent-300' : 'text-noct-neutral-500'}`}
+                            aria-hidden
+                          />
+                          <div className="relative min-w-0 flex-1">
+                            <select
+                              value={opcion.resultado}
+                              aria-label="Cómo termina esta respuesta"
+                              onChange={(e) =>
+                                actualizarOpcion(indice, indiceOpcion, { resultado: resultadoValido(e.target.value) })
+                              }
+                              className={`box-border min-h-[38px] w-full appearance-none rounded-md border border-transparent bg-transparent py-1.5 pl-2.5 pr-8 text-[12.5px] outline-none hover:border-noct-divider hover:bg-noct-surface focus:border-noct-accent ${opcion.resultado ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}
+                            >
+                              <option value="">Cómo termina: sin indicar</option>
+                              {RESULTADOS_RECORRIDO.map((r) => (
+                                <option key={r.valor} value={r.valor}>
+                                  Cómo termina: {r.etiqueta}
+                                </option>
+                              ))}
+                            </select>
+                            <CaretDown
+                              size={12}
+                              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-noct-neutral-500"
+                              aria-hidden
+                            />
+                          </div>
+                        </div>
+                      </>
                     )}
 
                     {opcion.articuloId ? (

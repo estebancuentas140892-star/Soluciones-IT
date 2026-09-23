@@ -101,7 +101,7 @@ const documentos: DocumentoBusqueda[] = [
     id: 'diagnostico:d1',
     tipo: 'diagnostico',
     titulo: 'La impresora no imprime',
-    subtitulo: 'Impresoras · Diagnóstico',
+    subtitulo: 'Impresoras · Guía con preguntas',
     ruta: '/diagnostico/d1',
     texto: 'La impresora no imprime revisar spooler y cable',
   },
