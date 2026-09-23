@@ -8,6 +8,24 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-23
 
+### Cambiado (guías con preguntas, tarea 269, Fase 4 del encargo "las entidades se relacionan"): su administración vive en Guías y Diagnóstico sale de Más
+
+**Área modificada:** Guías (catálogo), lista de guías con preguntas (antes "Diagnóstico inteligente"), Más, ficha del equipo, navegación.
+**Tipo:** Modificado (la lista `/diagnostico` se titula "Guías con preguntas", sube a Guías e ilumina Resolver; la fila Diagnóstico sale de Más), Agregado (la fila "Guías con preguntas" en Guías, con su número y respetando la categoría elegida; pruebas de Resolver con un síntoma y un procedimiento), Corregido (desde la ficha de un equipo, la lista de problemas volvía a Más, una pantalla que no se había visitado: ahora vuelve al equipo; "Sugerencias del equipo" y "Estadísticas" medían 19 px de alto).
+**Nuevos:** `src/features/diagnostico/guiasConPreguntasEnGuias.test.tsx`.
+**Modificados:** `src/lib/navegacion.ts`, `src/features/soluciones/SolucionesPage.tsx`, `src/features/diagnostico/DiagnosticosPage.tsx`, `src/features/mas/PantallaMas.tsx`, `src/features/dispositivos/{DispositivoPage.tsx,IniciarDiagnosticoBoton.tsx}`; pruebas `src/lib/navegacion.test.ts`, `src/features/mas/masInfraestructura.test.tsx` y `src/features/diagnostico/resolucionGuiada.test.tsx`; `scripts/capturas-moviles.mjs` (verificación).
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (rutas, 5.2, 5.3, 5.6, 6.1, 10, 13.3 y 14), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-045 y RN-047), [DECISIONES.md](DECISIONES.md) (AD-050), [COMPONENTES_UI.md](COMPONENTES_UI.md) (2.4b y 3.7e) y [ARQUITECTURA.md](ARQUITECTURA.md).
+**Motivo:** encargo del usuario del **23 de septiembre de 2026**, sección 17: que el técnico no decida si busca una guía o un diagnóstico, y quitar Diagnóstico de Más solo con la integración en Resolver probada.
+**Impacto esperado:** quien resuelve escribe el problema en Resolver y encuentra la guía con preguntas junto a las demás; quien las mantiene las encuentra en Guías, con el mismo nombre que en Resolver; y Más queda con siete filas.
+**SIN cambios** de tablas, rutas, editor, ejecución, estadísticas ni sugerencias. **No hay que ejecutar SQL.**
+
+- **Resolver, probado:** un síntoma ("no puede iniciar sesión") abre la guía con preguntas, presentada como "Guía con preguntas"; un procedimiento con las mismas palabras ("cambiar la clave vencida") abre la guía con pasos. Siguen probados los cinco ejemplos de la tarea 263.
+- **Guías:** primera fila del cuerpo, "Guías con preguntas" ("Diagnósticos: crear, editar, estadísticas y sugerencias", con cuántas hay); con una categoría elegida, las suyas; no sale al buscar ni con una etiqueta. La lista vuelve a Guías con el filtro puesto.
+- **La lista:** "Guías con preguntas" (subtítulo "Diagnósticos: empezar por el problema, llegar a la solución"), regreso a Guías, Resolver iluminado; "Sugerencias del equipo" y "Estadísticas" a 44 px de toque sin agrandar la cabecera. "Diagnóstico" sigue siendo el nombre de cada una en su editor.
+- **Ficha del equipo:** "Iniciar diagnóstico" y "Resolver un problema con este equipo" pasan su origen: la lista vuelve al equipo.
+- **Más:** sin la fila Diagnóstico; el grupo Herramientas queda con Herramientas de inventario.
+- **Verificación:** 139 archivos y 1941 casos en verde (antes 138 y 1934); lint y tipos limpios. Capturas por CDP en 390×844 y 1366×768 (`catalogo`, `mas`, `guias-con-preguntas` y `-categoria`): sin desbordamiento ni hallazgos nuevos; los que quedan son anteriores (tarea 262 y el campo de búsqueda medido por su `input`).
+
 ### Cambiado (Más, tarea 268, Fase 3 del encargo "las entidades se relacionan"): una puerta por capacidad, Herramientas de inventario y Ajustes
 
 **Área modificada:** Más, Ajustes (antes Mi cuenta), Importar equipos, Etiquetas QR, migraciones de ubicaciones y personas, estados de equipo, navegación.

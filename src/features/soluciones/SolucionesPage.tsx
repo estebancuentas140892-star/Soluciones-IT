@@ -5,7 +5,7 @@ import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import { CaretDown, FlagBanner, Info, Plus, Sliders } from '../../components/iconos'
+import { CaretDown, FlagBanner, Info, Plus, Sliders, TreeStructure } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
 import { PastillaFrescura } from '../../components/PastillaFrescura'
@@ -16,6 +16,8 @@ import { accionesDeGuia } from './useAccionesDeGuia'
 import { FilaArticulo } from './FilaArticulo'
 import { coincidenciaArticulo } from './coincidencia'
 import { sugerenciaBusqueda } from './sugerenciaBusqueda'
+import { conOrigen } from '../../lib/origenNavegacion'
+import { FilaMas } from '../mas/FilasMas'
 
 // Pantalla Soluciones en el sistema Nocturne. Rediseñada a partir de la
 // auditoría de la sección (handoff "Auditoría de Soluciones TI",
@@ -116,6 +118,13 @@ export function SolucionesPage() {
     [],
     [],
   )
+  // Las guías con preguntas (diagnósticos), solo para la puerta de su
+  // administración (tarea 269): se cuentan, no se listan aquí.
+  const diagnosticos = useLiveQuery(
+    () => db.diagnosticos.filter((d) => !d.eliminadoEn).toArray(),
+    [],
+    [],
+  )
   // El avance guardado en ESTE teléfono, solo para que la acción de la
   // tarjeta diga "Continuar · paso N de M" en vez de "Empezar" (encargo
   // del 2026-09-09, sección 1: la tercera zona es "abrir, empezar o
@@ -151,6 +160,13 @@ export function SolucionesPage() {
   const nombreCat = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias])
   const ordenCat = useMemo(() => new Map(categorias.map((c, i) => [c.id, i])), [categorias])
   const categoriaActiva = categoriaSel ? categorias.find((c) => c.id === categoriaSel) : undefined
+  const guiasConPreguntas = categoriaSel
+    ? diagnosticos.filter((d) => d.categoriaId === categoriaSel).length
+    : diagnosticos.length
+  // La consulta actual de la URL (categoría, tipo...), para volver a Guías
+  // con el mismo filtro. `toString()` y no `size`, que Safari no tiene
+  // antes de la versión 17.
+  const consultaUrl = searchParams.toString()
 
   const consultaCruda = query.trim()
   const consulta = normalizarTexto(consultaCruda)
@@ -671,6 +687,28 @@ export function SolucionesPage() {
                 >
                   Ver todos
                 </Link>
+              </div>
+            )}
+
+            {/* GUÍAS CON PREGUNTAS (tarea 269, sección 17 del encargo
+                del 2026-09-23). Se encuentran y se ejecutan desde
+                Resolver, junto a las demás guías (tarea 263); aquí está
+                la puerta de su administración (crear, editar,
+                estadísticas y sugerencias del equipo), que hasta esta
+                tarea era la fila Diagnóstico de Más. Con una categoría
+                elegida cuenta y abre las de esa categoría. No sale al
+                buscar ni con una etiqueta: esos filtros son de artículos. */}
+            {!buscando && !etiquetaSel && (
+              <div className="mb-[22px] rounded-lg border border-noct-divider">
+                <FilaMas
+                  to={categoriaSel ? `/diagnostico?categoria=${categoriaSel}` : '/diagnostico'}
+                  Icono={TreeStructure}
+                  titulo="Guías con preguntas"
+                  subtitulo="Diagnósticos: crear, editar, estadísticas y sugerencias"
+                  conteo={guiasConPreguntas > 0 ? guiasConPreguntas : null}
+                  // Vuelve a Guías con el mismo filtro puesto (M-R2).
+                  estado={conOrigen(`/soluciones${consultaUrl ? `?${consultaUrl}` : ''}`, 'Guías')}
+                />
               </div>
             )}
 

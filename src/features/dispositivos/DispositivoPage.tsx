@@ -12,7 +12,7 @@ import { textoVivo } from '../../lib/referencia'
 import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { conectadoA, textoConectadoA } from '../../lib/conexiones'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
-import { conOrigen } from '../../lib/origenNavegacion'
+import { conOrigen, type EstadoConOrigen } from '../../lib/origenNavegacion'
 import { Chasis } from '../../app/Chasis'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
@@ -577,7 +577,13 @@ export function DispositivoPage() {
           <section>
             <TituloSeccion className="mb-2">Problemas frecuentes</TituloSeccion>
             <div className="flex flex-col gap-2">
-              <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} categoriaNombre={categoria?.nombre} />
+              <IniciarDiagnosticoBoton
+                categoriaId={dispositivo.categoriaId}
+                categoriaNombre={categoria?.nombre}
+                // La lista de problemas vuelve a este equipo, no a Guías
+                // (su padre desde la tarea 269): M-R2.
+                estado={origenEsteEquipo}
+              />
               <div className="flex flex-col">
                 <ProblemasDelEquipo
                   dispositivoId={dispositivoId}
@@ -763,6 +769,7 @@ export function DispositivoPage() {
             categoriaId={dispositivo.categoriaId}
             procedimientos={totalResolver}
             problemas={totalProblemas}
+            estado={origenEsteEquipo}
           />
         )}
       </main>
@@ -879,10 +886,13 @@ function AccionDominanteEquipo({
   categoriaId,
   procedimientos,
   problemas,
+  estado,
 }: {
   categoriaId: string
   procedimientos: number
   problemas: number
+  /** El origen del salto: la lista de problemas vuelve a este equipo (M-R2, tarea 269). */
+  estado?: EstadoConOrigen
 }) {
   const partes = [
     procedimientos > 0
@@ -897,6 +907,7 @@ function AccionDominanteEquipo({
     >
       <Link
         to={`/diagnostico?categoria=${categoriaId}`}
+        state={estado}
         className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
       >
         <TreeStructure size={18} aria-hidden />

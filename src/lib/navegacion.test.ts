@@ -183,13 +183,14 @@ describe('padreDe', () => {
     })
   })
 
-  describe('Diagnóstico (se alcanza desde Más, Herramientas)', () => {
-    it('la lista sube a Más', () => {
-      expect(padreDe('/diagnostico')).toEqual({ to: '/mas', etiqueta: 'Más' })
+  // Tarea 269: su puerta es Guías ("Guías con preguntas"), ya no Más.
+  describe('Guías con preguntas (diagnósticos; se alcanzan desde Guías)', () => {
+    it('la lista sube a Guías', () => {
+      expect(padreDe('/diagnostico')).toEqual({ to: '/soluciones', etiqueta: 'Guías' })
     })
 
-    it('nuevo, editar, sugerencias y estadísticas vuelven a la lista de diagnósticos', () => {
-      const lista = { to: '/diagnostico', etiqueta: 'Diagnósticos' }
+    it('nuevo, editar, sugerencias y estadísticas vuelven a la lista de guías con preguntas', () => {
+      const lista = { to: '/diagnostico', etiqueta: 'Guías con preguntas' }
       expect(padreDe('/diagnostico/nuevo')).toEqual(lista)
       expect(padreDe('/diagnostico/diag-1/editar')).toEqual(lista)
       expect(padreDe('/diagnostico/sugerencias')).toEqual(lista)
@@ -200,8 +201,20 @@ describe('padreDe', () => {
     it('el recorrido en ejecución cuelga de Resolver e ilumina Resolver', () => {
       expect(padreDe('/diagnostico/diag-1')).toEqual({ to: '/', etiqueta: 'Resolver' })
       expect(destinoPrincipalDe('/diagnostico/diag-1')).toBe('/')
-      expect(destinoPrincipalDe('/diagnostico/diag-1/editar')).toBe('/mas')
-      expect(destinoPrincipalDe('/diagnostico/nuevo')).toBe('/mas')
+    })
+
+    // Tarea 269: la administración también es Resolver, porque su puerta
+    // es Guías, que cuelga de Resolver.
+    it('la lista y su administración iluminan Resolver, no Más', () => {
+      for (const ruta of [
+        '/diagnostico',
+        '/diagnostico/nuevo',
+        '/diagnostico/diag-1/editar',
+        '/diagnostico/sugerencias',
+        '/diagnostico/estadisticas',
+      ]) {
+        expect(destinoPrincipalDe(ruta)).toBe('/')
+      }
     })
   })
 
@@ -252,7 +265,7 @@ describe('vueltaDeTarea', () => {
     expect(vueltaDeTarea('/dispositivos/nuevo')).toBe('Equipos')
     expect(vueltaDeTarea('/soluciones/impresoras/nuevo')).toBe('Guías')
     expect(vueltaDeTarea('/boveda/nueva')).toBe('Bóveda')
-    expect(vueltaDeTarea('/diagnostico/nuevo')).toBe('Diagnósticos')
+    expect(vueltaDeTarea('/diagnostico/nuevo')).toBe('Guías con preguntas')
     expect(vueltaDeTarea('/personas/nueva')).toBe('Personas')
     expect(vueltaDeTarea('/ubicaciones/nueva')).toBe('Ubicaciones')
   })
@@ -338,7 +351,6 @@ describe('destinoPrincipalDe', () => {
       '/referencia/ref-1',
       '/ubicaciones',
       '/personas/per-1',
-      '/diagnostico',
       '/cuenta',
       '/cuenta/seguridad',
     ]) {

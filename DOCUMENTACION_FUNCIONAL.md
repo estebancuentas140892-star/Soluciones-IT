@@ -22,7 +22,7 @@ Fecha de redacción: 2026-07-23. Basado en una lectura directa del código en `s
    - 5.5 [Bóveda](#55-boveda)
    - 5.6 [Más](#56-mas)
 6. [Secciones secundarias](#6-secciones-secundarias)
-   - 6.1 [Diagnóstico Inteligente](#61-diagnostico-inteligente)
+   - 6.1 [Guías con preguntas (Diagnóstico)](#61-diagnostico-inteligente)
    - 6.2 [Escáner](#62-escaner)
    - 6.3 [Ubicaciones](#63-ubicaciones)
    - 6.4 [Personas](#64-personas)
@@ -276,10 +276,10 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/boveda/migrar` | MigracionCredenciales | Tarea | Migrar secretos que son de un equipo |
 | `/boveda/:credencialId` | CredencialPage | Documento | Ficha de un secreto (descifrado local) |
 | `/boveda/:credencialId/editar` | CredencialForm | Tarea | Editar secreto |
-| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos, en cinco grupos desde la tarea 268 (2026-09-23), una puerta por capacidad: Consulta (Centro de consulta, Agenda y Mis favoritos si hay), Organización (Personas, Ubicaciones), Infraestructura (Red), Herramientas (Herramientas de inventario, Diagnóstico) y Aplicación (Ajustes). Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
+| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos, en cinco grupos desde la tarea 268 (2026-09-23), una puerta por capacidad: Consulta (Centro de consulta, Agenda y Mis favoritos si hay), Organización (Personas, Ubicaciones), Infraestructura (Red), Herramientas (Herramientas de inventario; Diagnóstico salió en la tarea 269, con su puerta en Guías) y Aplicación (Ajustes). Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
 | `/inventario` | HerramientasInventarioPage | Documento | **Herramientas de inventario** (tarea 268): Importar equipos, Etiquetas QR y, solo si hay, los datos por ordenar, con cuántos equipos son. Sube a Más |
 | `/inventario/estados` | EstadosPorUnificarPage | Tarea | **Estados escritos a mano** (tarea 268): llevarlos a la lista de cinco, con las equivalencias seguras propuestas y lo demás por validar. Sube a Herramientas de inventario |
-| `/diagnostico` | DiagnosticosPage | Documento | Lista de problemas por categoría. Sube a Más |
+| `/diagnostico` | DiagnosticosPage | Documento | **Guías con preguntas** (se titulaba "Diagnóstico inteligente" hasta la tarea 269): la lista por problema y la administración (crear, editar, sugerencias del equipo, estadísticas). Se abre desde Guías ("Guías con preguntas") y desde la ficha de un equipo, que la recibe de vuelta; sube a Guías e ilumina Resolver (desde la tarea 269; antes, Más) |
 | `/diagnostico/nuevo` | DiagnosticoForm | Tarea | Crear diagnóstico (árbol de preguntas) |
 | `/diagnostico/:diagnosticoId` | DiagnosticoRunPage | Tarea | Asistente de ejecución del diagnóstico |
 | `/diagnostico/:diagnosticoId/editar` | DiagnosticoForm | Tarea | Editar diagnóstico |
@@ -426,7 +426,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 
 | Bloque retirado de Inicio | Vive ahora en | Nota |
 |---|---|---|
-| **Problemas frecuentes** | Diagnóstico (`/diagnostico`) | Es la lectura agregada de ese módulo. Sin ninguna ejecución registrada el rótulo es **"Diagnósticos recientes"**, no "Problemas frecuentes" |
+| **Problemas frecuentes** | Guías con preguntas (`/diagnostico`) | Es la lectura agregada de ese módulo. Sin ninguna ejecución registrada el rótulo es **"Diagnósticos recientes"**, no "Problemas frecuentes" |
 | **Para empezar** | Guías (`/soluciones`) | Ruta de aprendizaje sobre guías; se oculta al buscar o con filtro de etiqueta |
 | **Favoritos** | Más (`/mas`), como **"Mis favoritos"** | Desde el 2026-09-23, una fila de Consulta con su conteo que se despliega en el sitio y solo aparece si hay alguno (antes, una sección plegable propia). Inicio tuvo "Favoritas" (solo guías) entre el 2026-09-17 y el 2026-09-20 |
 | **Actividad del equipo** | Agenda completa (`/agenda`), al final | Sección plegable con su conteo. Estuvo en Más del 2026-09-11 al 2026-09-22 |
@@ -456,6 +456,8 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 - **Botón "Crear"**, siempre activo y en acento (regla R3). Con una categoría elegida abre `/soluciones/:categoriaId/nuevo`; **sin categoría abre la hoja "¿En qué categoría?"** y navega al editor de la que se elija. Antes estaba deshabilitado y la razón vivía en un `title`, que en un teléfono nadie lee porque no hay hover.
 - **Buscador** (`type="search"`): placeholder "Buscar equipo, síntoma o etiqueta". Busca por título, categoría, tipo y etiquetas (normalizado sin acentos). El botón de borrar mide **44 px** reales (regla R6; medía 26).
 - **Chips de categoría de 44 px** (tarea 214, tablero `3b`; medían 36) más el chip punteado **"Tipo"**, que abre su hoja. Un solo eje de filtro visible (R4): la **etiqueta** no es un chip sino un **modo** con su propia cinta de contexto ("Etiqueta: X · Ver todos"), al que se llega tocando una etiqueta en la ficha de un artículo.
+
+**"Guías con preguntas", la primera fila del cuerpo (desde el 2026-09-23, tarea 269, [DECISIONES.md](DECISIONES.md) AD-050).** Una tarjeta con el icono de la guía con preguntas, "Guías con preguntas", "Diagnósticos: crear, editar, estadísticas y sugerencias" y cuántas hay a la derecha (→ `/diagnostico`). Con una categoría elegida cuenta y abre las de esa categoría (`/diagnostico?categoria=…`), y la lista vuelve a Guías con el mismo filtro. No sale al buscar ni con una etiqueta puesta: esos filtros son de artículos. Las guías con preguntas se encuentran y se ejecutan desde Resolver, junto a las demás (tarea 263); esto es la puerta de su administración, que hasta esta tarea era la fila Diagnóstico de Más.
 
 **La fila dice lo que la guía puede hacer por ti** (tarea 214, tablero `3b`). Cada guía es una **tarjeta** con recuadro de 40 px, título de 16,5 px y, debajo, su capacidad: **"7 pasos · ~25 min · verificación"**, o **"Sin pasos · para leer"** cuando no hay procedimiento (la tarjeta va entonces con borde punteado; hasta la segunda pasada del 2026-09-17 decía "Sin pasos · solo notas · no se puede ejecutar" con "Sin pasos" en ámbar, el color de los riesgos, para algo que no lo es). **Desde el 2026-09-17 la tarjeta entera es un solo enlace** que abre la guía en su paso pendiente (con pasos) o la lectura (sin pasos); el botón "Empezar" / "Continuar" que llevaba se retiró porque repetía ese enlace, y una guía a medias lo dice en una línea: **"Vas en el paso N de M"**. Antes la fila pintaba `categoría · tipo · min` exactamente igual para una guía de 7 pasos con verificación y para un borrador sin un solo paso: el dato existía (lo calcula el editor) pero no llegaba a donde se decide, así que el técnico abría la guía para descubrir que estaba vacía.
 - **Chips de categoría** (deslizables en móvil, con un degradado en el extremo derecho que indica que hay más sin necesidad de barra; en escritorio `xl`, rail lateral fijo de 220px): "Todos" + una por categoría, cada uno con su color de identidad, icono y conteo.
@@ -584,7 +586,7 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
   - **"Adjuntos · N"**: la fotografía del equipo a tamaño completo y la galería de adjuntos.
   - **"Intervenciones · última hace X"**: `RegistrarIntervencion` (bitácora manual) + Historial (línea de tiempo, incluye cambios de cableado). El conteo cuenta el trabajo escrito a mano, no cada cambio de campo.
 - **Puerta única de documentar** (al pie, plegada): la línea "Documentar este equipo · foto, procedimiento o incidencia — se hace mejor desde el ordenador" abre **Editar la ficha**, **Reportar incidencia**, **Documentar procedimiento** y **Guardar secreto** (con permiso), todos precargando el equipo. El **aviso de completitud** ("Ficha al 70%. Falta: foto, serial.") vive aquí dentro, en neutro y no en ámbar: una ficha a medias no es una advertencia (regla **M-R11**).
-- **Acción dominante fija al pie** (52 px, regla **M-R3**), solo si hay algo que resolver: **"Resolver un problema con este equipo"** (→ `/diagnostico?categoria=`) con su promesa escrita debajo ("3 procedimientos y 2 problemas frecuentes aplican aquí").
+- **Acción dominante fija al pie** (52 px, regla **M-R3**), solo si hay algo que resolver: **"Resolver un problema con este equipo"** (→ `/diagnostico?categoria=`, cuya lista vuelve a este equipo desde la tarea 269, igual que la de "Iniciar diagnóstico") con su promesa escrita debajo ("3 procedimientos y 2 problemas frecuentes aplican aquí").
 
 #### 5.3.2 Editor de dispositivo (`DispositivoForm`)
 
@@ -699,9 +701,9 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - **"Consulta"**, lo que se mira: **Centro de consulta** ("Herramientas, glosario, atajos y comandos"), **Agenda** (subtítulo "Vencimientos, borradores y sugerencias del equipo", o lo urgente, "1 vencido · 2 para hoy", cuando lo hay) y **Mis favoritos**, **solo si hay alguno**: una fila vacía sería un destino que no lleva a nada.
 - **"Organización"**, quién y dónde: **Personas** ("Quién tiene cada equipo, ingresos y retiros", con el número de personas activas) y **Ubicaciones** ("Qué hay en cada sede, área y rack").
 - **"Infraestructura"**: **Red** ("Conexiones, impacto y el mapa completo"). **Topología ya no es fila propia:** se abre desde Red ("Mapa completo, desde cada raíz", → `/red/topologia`); su pantalla, sus rutas y sus datos no cambian, y su regreso sube a Red.
-- **"Herramientas"**, lo que se hace de vez en cuando: **Herramientas de inventario** ("Importar, etiquetas QR y datos por ordenar", → `/inventario`, sección 6.7) y **Diagnóstico** ("Del síntoma a la guía, paso a paso"; deja Más en la tarea 269, cuando su administración tenga puerta en Guías).
+- **"Herramientas"**, lo que se hace de vez en cuando: **Herramientas de inventario** ("Importar, etiquetas QR y datos por ordenar", → `/inventario`, sección 6.7). **Diagnóstico salió de Más en la tarea 269:** las guías con preguntas se encuentran y se ejecutan desde Resolver, y su administración tiene puerta en Guías ("Guías con preguntas", sección 5.2).
 - **"Aplicación"**: **Ajustes** (el avatar con las iniciales y "Cuenta, bloqueo, sin conexión y actualización", → `/cuenta`, sección 6.6). Es una sola fila para lo que eran tres: Mi cuenta, Bloqueo y seguridad y Buscar actualización.
-- **El conteo va a la derecha**, antes del galón (hallazgo **M-025**, detalle abajo): lo llevan el Centro de consulta, Mis favoritos, Personas, Ubicaciones y Diagnóstico, todos en vivo.
+- **El conteo va a la derecha**, antes del galón (hallazgo **M-025**, detalle abajo): lo llevan el Centro de consulta, Mis favoritos, Personas y Ubicaciones, todos en vivo.
 - **Los subtítulos no se recortan** (desde la tarea 268): en un teléfono estrecho pasan a una segunda línea antes que esconder lo que hay detrás de la puerta.
 
 **Ninguna función se perdió en la tarea 268:** Topología está en Red; Importar equipos y Etiquetas QR, en Herramientas de inventario, con su nota "Mejor desde el ordenador" y el flujo del QR intacto (imprimir, pegar, escanear, abrir la ficha); Mi cuenta, Bloqueo y seguridad y Buscar actualización, en Ajustes. Ninguna ruta se retiró.
@@ -716,7 +718,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Una columna o dos.** En el teléfono y en la tableta, una columna. **Desde 1024 px**, dos: Consulta y Organización arriba, Infraestructura y Herramientas en medio y Aplicación debajo, y desplegar Mis favoritos no estira el grupo de al lado. A 768 px las dos columnas dejaban unos 340 px por grupo y recortaban los subtítulos.
 
-**Volver.** Lo que se abre desde aquí vuelve aquí: Red, el Centro de consulta, Personas, Ubicaciones, Herramientas de inventario, Diagnóstico y Ajustes suben a Más, que es su padre. Lo que se abre DENTRO de una puerta vuelve a esa puerta (desde la tarea 268): **Importar equipos** y **Etiquetas QR**, a Herramientas de inventario (hasta entonces salían a Equipos, escrito a mano); **Bloqueo y seguridad**, a Ajustes, donde está su fila; **Topología**, a Red. **Una fila todavía no vuelve aquí** (tarea 265): la **Agenda** sube a Resolver, su padre desde el 2026-09-22, y darle el origen de Más le quitaría la fecha de la cabecera, que ocupa la misma línea.
+**Volver.** Lo que se abre desde aquí vuelve aquí: Red, el Centro de consulta, Personas, Ubicaciones, Herramientas de inventario y Ajustes suben a Más, que es su padre (la lista de guías con preguntas, desde la tarea 269, sube a Guías). Lo que se abre DENTRO de una puerta vuelve a esa puerta (desde la tarea 268): **Importar equipos** y **Etiquetas QR**, a Herramientas de inventario (hasta entonces salían a Equipos, escrito a mano); **Bloqueo y seguridad**, a Ajustes, donde está su fila; **Topología**, a Red. **Una fila todavía no vuelve aquí** (tarea 265): la **Agenda** sube a Resolver, su padre desde el 2026-09-22, y darle el origen de Más le quitaría la fecha de la cabecera, que ocupa la misma línea.
 
 **Escritorio:** desde el 2026-09-22 Más es uno de los cuatro destinos también en la barra lateral, que ya no tiene grupos propios: esta pantalla es la puerta de todo lo que contiene, en todos los tamaños.
 
@@ -743,21 +745,23 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 ## 6. Secciones secundarias
 
 <a id="61-diagnostico-inteligente"></a>
-### 6.1 Diagnóstico Inteligente
+### 6.1 Guías con preguntas (Diagnóstico)
 
-**Ruta:** `/diagnostico` · **Archivo:** `src/features/diagnostico/DiagnosticosPage.tsx` · **Shell:** centrado
+**Ruta:** `/diagnostico` · **Archivo:** `src/features/diagnostico/DiagnosticosPage.tsx` · **Nivel:** Documento
+
+**Desde el 2026-09-23 (tarea 269, [DECISIONES.md](DECISIONES.md) AD-050) la lista se llama "Guías con preguntas"**, como la llaman Resolver y el buscador desde la tarea 263 ("diagnóstico" sigue siendo el nombre de cada una en su editor). Quien resuelve no pasa por aquí: escribe el problema en Resolver y la guía con preguntas sale junto a las demás. Esta pantalla es la **administración** (crear, editar, estadísticas, sugerencias del equipo) y la lista por problema que abre la ficha de un equipo. **Su puerta es Guías** (la fila "Guías con preguntas", sección 5.2), ya no Más: sube a Guías, ilumina Resolver y, abierta desde la ficha de un equipo, vuelve al equipo.
 
 **Objetivo.** El técnico no piensa en el nombre de un procedimiento sino en el problema ("la impresora no imprime"). Cada fila ES un problema; tocarlo abre el asistente guiado.
 
 **Lista (`DiagnosticosPage`):**
-- Cabecera: "Volver a Inicio", **botón "Crear"** (→ `/diagnostico/nuevo`, hereda categoría si se llega filtrado), título "Diagnóstico inteligente", enlaces **"Sugerencias del equipo"** y **"Estadísticas"**, y **buscador** (placeholder "Describir el problema: no imprime, sin red...").
+- Cabecera: el regreso ("Guías", o el equipo si se llegó desde su ficha), **botón "Crear"** (→ `/diagnostico/nuevo`, hereda categoría si se llega filtrado), título **"Guías con preguntas"** con el subtítulo "Diagnósticos: empezar por el problema, llegar a la solución" (hasta la tarea 269, "Diagnóstico inteligente"), enlaces **"Sugerencias del equipo"** y **"Estadísticas"** (44 px de toque desde la tarea 269, sin agrandar la cabecera), y **buscador** ("Buscar en Guías con preguntas", placeholder "Describir el problema: no imprime, sin red...").
 - Banner "Solo: {Categoría}" cuando se llega filtrado (`?categoria=<id>`), con "Ver todos".
 - **"Diagnóstico en curso"** (si hay sesión a medias): tarjeta destacada para retomar.
 - **"Problemas frecuentes"** (venido de Inicio el 2026-09-11): los diagnósticos que más se han ejecutado, con su conteo ("4 veces"), y un enlace **"Ver estadísticas"**. Sin ninguna ejecución registrada todavía, el rótulo es **"Diagnósticos recientes"** y las filas dicen "Nuevo": un conteo de cero veces no significa "frecuente". No se muestra mientras se filtra.
 - **Problemas agrupados por categoría** (icono con color, filas con icono de alerta, título, descripción, **estrella de favorito** y flecha).
 - Estados vacíos: "Todavía no hay diagnósticos" (con "Crear diagnóstico") o "Ningún problema coincide" (con "Ir a Guías").
 
-**Asistente de ejecución (`DiagnosticoRunPage`): la "guía con preguntas" (desde el 2026-09-22, tarea 263, [DECISIONES.md](DECISIONES.md) AD-045).** Ruta `/diagnostico/:diagnosticoId`, nivel Tarea (sin barra de pestañas). Para quien resuelve **no es otra herramienta**: se encuentra en Resolver junto a las guías ("Guía con preguntas"), su padre es **Resolver** y su X vuelve **a donde se vino** (la búsqueda de Resolver, con lo escrito; la lista de Más › Diagnósticos, con su filtro; sus estadísticas; la categoría de guías; el historial) o, sin origen, a Resolver. Arranca directo en la primera pregunta (auto-inicio). Barra de tarea (**"Resolviendo"**, el problema, "Resolver · vuelves aquí al terminar"; la X guarda el avance) y **barra de progreso** ("Pregunta N" / "En la guía" / "Terminado"; verde solo si el final resuelve o está por confirmarse, neutra si escala, falta información o no resolvió).
+**Asistente de ejecución (`DiagnosticoRunPage`): la "guía con preguntas" (desde el 2026-09-22, tarea 263, [DECISIONES.md](DECISIONES.md) AD-045).** Ruta `/diagnostico/:diagnosticoId`, nivel Tarea (sin barra de pestañas). Para quien resuelve **no es otra herramienta**: se encuentra en Resolver junto a las guías ("Guía con preguntas"), su padre es **Resolver** y su X vuelve **a donde se vino** (la búsqueda de Resolver, con lo escrito; la lista "Guías con preguntas", con su filtro; sus estadísticas; la categoría de guías; el historial) o, sin origen, a Resolver. Arranca directo en la primera pregunta (auto-inicio). Barra de tarea (**"Resolviendo"**, el problema, "Resolver · vuelves aquí al terminar"; la X guarda el avance) y **barra de progreso** ("Pregunta N" / "En la guía" / "Terminado"; verde solo si el final resuelve o está por confirmarse, neutra si escala, falta información o no resolvió).
 - **Pregunta**: la etiqueta **"Decide"** con su icono (la misma de una decisión dentro de una guía), la pregunta a 22 px, la descripción opcional y las respuestas como **botones de 56 px**. La respuesta que lleva a una guía lo dice debajo, en el azul de la acción: **"Te lleva a «guía»"**.
 - **Guía dentro del recorrido** (`ProcedimientoEnRecorrido`): la cabecera de una guía vinculada, **"Estás realizando «guía» para continuar con «recorrido»"**, con **"Volver a la pregunta"** (deshace la respuesta; lo hecho se conserva si se vuelve a elegir la misma), y debajo la ejecución de siempre (`AsistenteVista`: paso a paso, "Dónde", "Credencial necesaria" consultable ahí mismo, "Debes ver"). **Tiene su propio avance** (`recorrido:<id>` en `progresoPasos`): la guía abierta por su cuenta no se entera, no se reinicia y no aparece como empezada. Al completarla (pasos y verificación final), el recorrido **vuelve solo** a la pregunta siguiente o al final. Si la guía ya no existe en el teléfono, se dice y se ofrece "Continuar con el recorrido".
 - **Lo que respondiste antes, a la vista, y es el "Atrás"** (tarea 207, hallazgo **M-027**). Bajo la barra de progreso, una línea de 44 px con la última pregunta y su respuesta ("¿La impresora enciende?: Sí"); tocarla vuelve a ella. Lo reversible vive arriba, nombrando su destino; lo irreversible, al pie y en texto (**M-R12**).
@@ -1219,7 +1223,7 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 |------|----------|---------------------|
 | **Barra de navegación** (`Chasis`), escritorio (tarea 183) | Inicio, Guías, Equipos, Red, (Bóveda con permiso); Herramientas: Diagnóstico, Escanear; Registros: Ubicaciones, Personas | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
 | **Barra de navegación** (`Chasis`), móvil (tarea 182) | Inicio, Guías, Equipos, Red, Más | Cambia de sección; siempre las mismas cinco, iguales para todos |
-| **"Más"** (tarea 182; cinco grupos desde la 268) | Consulta: Centro de consulta, Agenda, Mis favoritos (si hay). Organización: Personas, Ubicaciones. Infraestructura: Red. Herramientas: Herramientas de inventario, Diagnóstico. Aplicación: Ajustes | Navega a cada pantalla (Mis favoritos se despliega en el sitio); ver sección 5.6 |
+| **"Más"** (tarea 182; cinco grupos desde la 268) | Consulta: Centro de consulta, Agenda, Mis favoritos (si hay). Organización: Personas, Ubicaciones. Infraestructura: Red. Herramientas: Herramientas de inventario. Aplicación: Ajustes. Diagnóstico salió en la 269 (su puerta es Guías) | Navega a cada pantalla (Mis favoritos se despliega en el sitio); ver sección 5.6 |
 | **"···" de Equipos** (hasta el 2026-09-21) | Ubicaciones, Personas, Etiquetas QR, Importar | Retirado en la tarea 256: las cuatro están en Más |
 | **"···" de la ficha de dispositivo** | Duplicar, Editar, Etiqueta QR, Reemplazar, Dar de baja, Eliminar | Acciones sobre el equipo |
 | **"···" de la ficha de artículo** | Compartir, Duplicar, Reiniciar progreso, Eliminar | Acciones sobre el artículo |
@@ -1441,11 +1445,13 @@ Guías > (categoría) > Artículo
 - **El botón dice por qué no se puede avanzar**, en una línea encima ("Falta 1 tarea de este paso para poder avanzar"), en vez de apagarse en silencio.
 - El título del paso deja de repetirse como encabezado del cuerpo (ya lo dice el ancla) y el **cronómetro** baja a una línea discreta bajo el objetivo. Los pasos **anidados** conservan su botón único en línea: su avance lo decide el paso que los contiene, y dos acciones dominantes en la misma pantalla dejarían de ser dominantes.
 
-### 13.3 Diagnóstico inteligente
+### 13.3 Guías con preguntas (diagnóstico inteligente)
 
 ```
-Inicio > Diagnóstico inteligente (o Problemas frecuentes)
- → Lista de problemas por categoría > elegir un problema
+Resolver > escribir el problema ("no imprime", "no puede iniciar sesión")
+ → la guía con preguntas sale junto a las guías ("Guía con preguntas") > tocarla
+ (o Guías > Guías con preguntas > elegir un problema; o la ficha de un equipo >
+  Resolver un problema con este equipo > elegir uno de su categoría)
  → DiagnosticoRunPage: pregunta a la vez, opciones
       └── una opción puede ejecutar un procedimiento (AsistenteVista inline)
  → Resultado: "¿Quedó resuelto?"
@@ -1535,6 +1541,7 @@ Resolver (/)
  ├── Recientes (hasta 3, 14 días) → la guía, en su paso pendiente
  ├── Accesos rápidos (categorías con guías) → Guías (/soluciones?categoria=…)
  ├── Todas las guías → Guías (/soluciones), con regreso a Resolver
+ │    ├── Guías con preguntas (/diagnostico; con la categoría elegida, las suyas) → la lista por problema · Crear · Sugerencias del equipo · Estadísticas
  │    └── Tarjeta de guía → LA GUÍA (/:cat/:art), ejecutándose (ver el árbol de Guías de abajo)
  └── Bienvenida del primer día
 
@@ -1550,7 +1557,7 @@ Más (/mas): una columna; desde 1024 px, dos
  ├── Organización: Personas · Ubicaciones
  ├── Infraestructura: Red (/red, en el nodo donde se dejó; regreso a Más)
  │    └── al pie: Mapa completo, desde cada raíz → Topología (/red/topologia; regreso a Red)
- ├── Herramientas: Herramientas de inventario (/inventario) · Diagnóstico
+ ├── Herramientas: Herramientas de inventario (/inventario)
  │    └── Herramientas de inventario: Importar equipos · Etiquetas QR (las dos, "Mejor desde el ordenador")
  │         └── Por ordenar (solo si hay): Ubicaciones escritas como texto · Estados escritos a mano (/inventario/estados) · Responsables en campos adicionales · Responsables por validar
  └── Aplicación: Ajustes (/cuenta)
@@ -1668,7 +1675,7 @@ Centro de consulta (desde Más, /referencia)
  └── Editor (/nueva?tipo=, /:id/editar) → campos por tipo · ¿Se usa hoy en Metroparques? · Vincular guía · Vincular ficha
  └── Mi cuenta: Perfil (/cuenta) · Bloqueo y seguridad (/cuenta/seguridad)
 
-Diagnóstico (desde Inicio y Más, /diagnostico)
+Guías con preguntas (/diagnostico; desde Guías desde la tarea 269, antes desde Inicio y Más)
  ├── Buscar · Crear · Sugerencias del equipo · Estadísticas
  ├── Diagnóstico en curso (retomar)
  ├── Editor de diagnóstico (/nuevo, /:id/editar) → preguntas · respuestas · Probar · Guardar

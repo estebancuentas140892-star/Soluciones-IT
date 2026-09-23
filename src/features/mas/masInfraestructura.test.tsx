@@ -106,7 +106,9 @@ describe('Más en cinco grupos', () => {
     expect(grupos[0].filas).toEqual(['Centro de consulta', 'Agenda'])
     expect(grupos[1].filas).toEqual(['Personas', 'Ubicaciones'])
     expect(grupos[2].filas).toEqual(['Red'])
-    expect(grupos[3].filas).toEqual(['Herramientas de inventario', 'Diagnóstico'])
+    // Diagnóstico salió en la tarea 269: su puerta es Guías.
+    expect(grupos[3].filas).toEqual(['Herramientas de inventario'])
+    expect(filaDeMas('Diagnóstico')).toBeNull()
     // Mi cuenta, Bloqueo y seguridad y Buscar actualización son una sola
     // puerta, y su subtítulo dice lo que hay dentro.
     expect(grupos[4].filas).toEqual(['Ajustes'])

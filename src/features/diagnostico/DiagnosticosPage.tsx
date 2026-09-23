@@ -25,9 +25,17 @@ import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 // El técnico no piensa en el nombre de un procedimiento sino en el
 // problema que tiene delante: cada fila ES un problema ("La impresora
 // no imprime") agrupado por categoría, y tocarlo abre el diagnóstico
-// guiado. Se llega desde Inicio y desde "Más" (no es una pestaña), así
-// que declara nivel de documento en el chasis (tarea 185): regreso
-// arriba y barra de pestañas abajo, que hasta entonces no tenía.
+// guiado. No es una pestaña, así que declara nivel de documento en el
+// chasis (tarea 185): regreso arriba y barra de pestañas abajo.
+//
+// "GUÍAS CON PREGUNTAS" (tarea 269, sección 17 del encargo del
+// 2026-09-23). Quien resuelve ya no pasa por aquí: escribe el problema
+// en Resolver y la guía con preguntas sale junto a las demás (tarea
+// 263). Esta lista es la ADMINISTRACIÓN (crear, editar, estadísticas,
+// sugerencias del equipo) y la lista por problema de la ficha de un
+// equipo. Su puerta es Guías, no Más, y se llama como la llaman
+// Resolver y el buscador; "diagnóstico" sigue siendo el nombre de cada
+// una en su editor.
 export function DiagnosticosPage() {
   const [filtro, setFiltro] = useState('')
   const [searchParams] = useSearchParams()
@@ -35,7 +43,7 @@ export function DiagnosticosPage() {
   // (tarea 263): su padre declarado ahora es Resolver, que es por donde
   // entra quien resuelve; la lista es la puerta de la administración.
   const { search } = useLocation()
-  const origenLista = conOrigen(`/diagnostico${search}`, 'Diagnósticos')
+  const origenLista = conOrigen(`/diagnostico${search}`, 'Guías con preguntas')
   // Llegar con ?categoria=<id> (por ejemplo desde "Iniciar diagnóstico"
   // en la ficha de un equipo, fase R1) preselecciona esa categoría en
   // vez de mostrar todas: el técnico ve directo los problemas de SU
@@ -123,20 +131,23 @@ export function DiagnosticosPage() {
       barra={
         <>
           <div className="px-4 pb-2.5 pt-0.5">
-            <h1 className="text-[22px] font-medium leading-[1.25]">Diagnóstico inteligente</h1>
+            <h1 className="text-[22px] font-medium leading-[1.25]">Guías con preguntas</h1>
             <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
-              Empezar por el problema, llegar a la solución
+              Diagnósticos: empezar por el problema, llegar a la solución
             </p>
+            {/* La administración (tarea 269): 44 px de toque (R6) sin
+                agrandar la cabecera, con el margen negativo de las migas
+                de Ubicaciones. */}
             <div className="mt-1.5 flex items-center gap-3">
               <Link
                 to="/diagnostico/sugerencias"
-                className="text-[12px] text-noct-accent-300 underline-offset-2 hover:underline"
+                className="-my-3 inline-flex min-h-11 items-center text-[12px] text-noct-accent-300 underline-offset-2 hover:underline"
               >
                 Sugerencias del equipo
               </Link>
               <Link
                 to="/diagnostico/estadisticas"
-                className="inline-flex items-center gap-1 text-[12px] text-noct-accent-300 underline-offset-2 hover:underline"
+                className="-my-3 inline-flex min-h-11 items-center gap-1 text-[12px] text-noct-accent-300 underline-offset-2 hover:underline"
               >
                 <ChartBar size={12} aria-hidden />
                 Estadísticas
@@ -147,7 +158,7 @@ export function DiagnosticosPage() {
             <CampoBusqueda
               valor={filtro}
               onCambiar={setFiltro}
-              alcance="Diagnósticos"
+              alcance="Guías con preguntas"
               textoAlternativo="Describir el problema: no imprime, sin red..."
             />
           </div>

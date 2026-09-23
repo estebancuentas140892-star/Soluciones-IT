@@ -253,6 +253,10 @@ const TODAS_LAS_PARADAS = [
   },
   { nombre: 'ajustes', ruta: '/cuenta' },
   { nombre: 'ajustes-contrasena', ruta: '/cuenta', guion: tocar('Cambiar contraseña de inicio de sesión') },
+  // Tarea 269 (Fase 4): la puerta "Guías con preguntas" en Guías (la
+  // parada `catalogo` la enseña) y su lista, que ya no cuelga de Más.
+  { nombre: 'guias-con-preguntas', ruta: '/diagnostico' },
+  { nombre: 'guias-con-preguntas-categoria', ruta: '/soluciones?categoria=cat-impresoras' },
 ]
 
 const PARADAS = FILTRO_PARADAS

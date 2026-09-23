@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
+import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 import { CaretRight, TreeStructure } from '../../components/iconos'
 
 // Boton "Iniciar diagnóstico" desde la ficha de un equipo (fase R1,
@@ -14,9 +15,12 @@ import { CaretRight, TreeStructure } from '../../components/iconos'
 export function IniciarDiagnosticoBoton({
   categoriaId,
   categoriaNombre,
+  estado,
 }: {
   categoriaId: string
   categoriaNombre?: string
+  /** El origen del salto (la ficha del equipo): la lista vuelve a él (M-R2, tarea 269). */
+  estado?: EstadoConOrigen
 }) {
   const hayDiagnosticos = useLiveQuery(
     async () =>
@@ -29,6 +33,7 @@ export function IniciarDiagnosticoBoton({
   return (
     <Link
       to={`/diagnostico?categoria=${categoriaId}`}
+      state={estado}
       className="flex min-h-[52px] items-center gap-3 rounded-md border border-noct-accent/35 bg-noct-accent/[.08] px-[13px] py-2 text-noct-text transition-colors hover:bg-noct-accent/[.13]"
     >
       <TreeStructure size={19} className="shrink-0 text-noct-accent-300" aria-hidden />

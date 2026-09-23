@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-23: LAS ENTIDADES SE RELACIONAN.** Personas, equipos, ubicaciones, red, agenda, Centro de consulta, historial, Resolver y diagnóstico dejan de ser pantallas aisladas: sin rediseño general y conservando "Resolver → encontrar → ejecutar → solucionar". Cinco fases, una tarea por fase (266 a 270), una "En proceso" a la vez. **Cerradas y archivadas:** 266 (Personas), 267 (Ubicaciones) y 268 (Más y herramientas de inventario), las tres el 2026-09-23. **En proceso:** 269 (Resolver + Diagnóstico). **Sigue:** 270 (Agenda y Centro de consulta en contexto). Restricciones del encargo que valen para las cinco: no inventar datos (persona desde un área, ubicación por parecido, fechas, estados, causas de baja), no duplicar verdades, no borrar historial y conservar compatibilidad con los 149 equipos, 94 personas, 31 conexiones, 31 guías y 42 fichas del Centro de consulta que ya existen.
+**ENCARGO DEL 2026-09-23: LAS ENTIDADES SE RELACIONAN.** Personas, equipos, ubicaciones, red, agenda, Centro de consulta, historial, Resolver y diagnóstico dejan de ser pantallas aisladas: sin rediseño general y conservando "Resolver → encontrar → ejecutar → solucionar". Cinco fases, una tarea por fase (266 a 270), una "En proceso" a la vez. **Cerradas y archivadas:** 266 (Personas), 267 (Ubicaciones), 268 (Más y herramientas de inventario) y 269 (Resolver + Diagnóstico), las cuatro el 2026-09-23. **En proceso:** 270 (Agenda y Centro de consulta en contexto), la última. Restricciones del encargo que valen para las cinco: no inventar datos (persona desde un área, ubicación por parecido, fechas, estados, causas de baja), no duplicar verdades, no borrar historial y conservar compatibilidad con los 149 equipos, 94 personas, 31 conexiones, 31 guías y 42 fichas del Centro de consulta que ya existen.
 
 **Auditoría previa (2026-09-23), lo que decide el diseño:**
 
@@ -14,16 +14,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Defecto:** la migración de ubicaciones (`src/features/ubicaciones/migracion.ts`) crea siempre ubicaciones nuevas, así que duplicaría las dos que ya existen, y no distingue una equivalencia segura de una posible coincidencia.
 - La tarea 263 ya integró el diagnóstico en Resolver ("Guía con preguntas"); en Más solo queda su administración.
 
-### 269. Fase 4: Diagnóstico dentro de Resolver y fuera de Más
+### 270. Fase 5: la Agenda aprovecha ingresos y retiros, y el Centro de consulta aparece en contexto
 
-- **Título:** el técnico no decide si busca una guía o un diagnóstico.
-- **Descripción:** comprobar con pruebas que Resolver cubre procedimiento directo, problema, síntoma y guía con preguntas (tarea 263); dar a la administración de las guías con preguntas (crear, editar, estadísticas, sugerencias) una puerta dentro de Guías; retirar la fila Diagnóstico de Más sin tocar tablas, rutas ni lógica.
-- **Motivo:** sección 17 del encargo.
+- **Título:** solo lo que requiere acción, y "¿qué hace este comando?" sin salir de la guía.
+- **Descripción:** (1) la Agenda suma, derivados y sin tabla nueva: persona que ingresa sin equipo asignado, persona retirada con equipos aún a su nombre y equipo liberado hace poco que espera reasignación; nada de calidad de inventario ("N equipos sin foto"); (2) en una tarea de guía que escribe un comando o atajo que existe en el Centro de consulta, "¿Qué hace?" abre su ficha en la hoja de siempre, sin copiar su contenido.
+- **Motivo:** secciones 14 y 15 del encargo.
 - **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** En progreso (desde el 2026-09-23, al cerrarse la 268).
-- **Área afectada:** `src/features/inicio/{ResolverPage.tsx,resolver.ts}`, `src/features/soluciones/SolucionesPage.tsx`, `src/features/diagnostico/DiagnosticosPage.tsx`, `src/lib/navegacion.ts`, `src/features/mas/PantallaMas.tsx`.
-- **Dependencias:** 268.
-- **Modelo/esfuerzo:** Opus 5 / Extra.
+- **Prioridad:** Media. **Estado:** En progreso (desde el 2026-09-23, al cerrarse la 269).
+- **Área afectada:** `src/features/inicio/{pendientes.ts,agenda.ts,usePendientes.ts,SeccionesAgenda.tsx}`, `src/features/referencia/`, `src/features/soluciones/{ModoFoco.tsx,ProcedimientoVista.tsx}`.
+- **Dependencias:** 266.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 **Despliegue confirmado (regla 14).** La tarea 268 (Más con una puerta por capacidad, commits `83ee59f` y `2dcb3bc`) está servida en **https://soluciones-it-psi.vercel.app**: `/version.json` responde `2dcb3bc`. Por contenido, sobre los 149 trozos que declara `/sw.js`: `PantallaMas-CH0Y6y6v.js` contiene "Herramientas de inventario", "Organización" y "Cuenta, bloqueo, sin conexión y actualización"; `HerramientasInventarioPage-BDqAAmWN.js`, "Estados escritos a mano" y "Llevarlos a los cinco estados de la lista"; `EstadosPorUnificarPage-DHFgDmWx.js`, "Dejar como está" y "Unificación de estados"; `Chasis-C-_6biwN.js`, "Ajustes" en el avatar y en el pie de la barra lateral; `iconos-B65Ew6Zg.js`, el trazo de `Pulse`. **En negativo:** ningún trozo contiene ya "Mi cuenta"; `PantallaMas` no contiene "Topología", "Bloqueo y seguridad" ni "Etiquetas QR"; `estadosEscritos-CbHRrpxh.js` no sugiere "obsoleto" ni "en bodega". **Sin cambios de esquema:** no hay que ejecutar SQL. **Siguiente paso del equipo:** abrir Más > Herramientas de inventario y revisar "Por ordenar" (los estados escritos a mano se unifican solo con lo que se confirme).
 
@@ -393,17 +393,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 270. Fase 5: la Agenda aprovecha ingresos y retiros, y el Centro de consulta aparece en contexto
-
-- **Título:** solo lo que requiere acción, y "¿qué hace este comando?" sin salir de la guía.
-- **Descripción:** (1) la Agenda suma, derivados y sin tabla nueva: persona que ingresa sin equipo asignado, persona retirada con equipos aún a su nombre y equipo liberado hace poco que espera reasignación; nada de calidad de inventario ("N equipos sin foto"); (2) en una tarea de guía que escribe un comando o atajo que existe en el Centro de consulta, "¿Qué hace?" abre su ficha en la hoja de siempre, sin copiar su contenido.
-- **Motivo:** secciones 14 y 15 del encargo.
-- **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/inicio/{pendientes.ts,agenda.ts,usePendientes.ts,SeccionesAgenda.tsx}`, `src/features/referencia/`, `src/features/soluciones/{ModoFoco.tsx,ProcedimientoVista.tsx}`.
-- **Dependencias:** 266.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
 

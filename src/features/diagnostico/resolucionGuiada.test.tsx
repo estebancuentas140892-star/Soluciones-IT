@@ -479,14 +479,15 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
   })
 })
 
-describe('la administración sigue en Más', () => {
-  it('un recorrido abierto desde la lista de diagnósticos vuelve a la lista al salir', async () => {
+// Desde la tarea 269 la lista es "Guías con preguntas" y su puerta, Guías.
+describe('la administración vive en Guías', () => {
+  it('un recorrido abierto desde la lista de guías con preguntas vuelve a la lista al salir', async () => {
     await sembrarImpresora()
     await montar([...RUTAS, { ruta: '/diagnostico', elemento: <DiagnosticosPage /> }], '/diagnostico')
 
     await tocar(await esperar(() => enlaceDe(TITULO_IMPRESORA), 'el recorrido en la lista'))
     await esperar(() => textoPantalla().includes('¿La impresora aparece en Windows?'), 'la primera pregunta')
-    expect(textoPantalla()).toContain('Diagnósticos · vuelves aquí al terminar')
+    expect(textoPantalla()).toContain('Guías con preguntas · vuelves aquí al terminar')
 
     await tocar(await esperarControl('Guardar el avance y salir'))
     await esperar(() => ubicacionActual().pathname === '/diagnostico', 'vuelve a la lista')

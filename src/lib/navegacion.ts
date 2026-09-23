@@ -72,9 +72,10 @@ function cuelgaDe(ruta: string, raiz: string): boolean {
 export function destinoPrincipalDe(pathname: string): DestinoPrincipal {
   const ruta = normalizarRuta(pathname)
   if (ruta === '/' || ruta === '/agenda' || cuelgaDe(ruta, '/conectar') || cuelgaDe(ruta, '/soluciones')) return '/'
-  // Un recorrido con preguntas en ejecución es Resolver (tarea 263); su
-  // lista y su administración siguen en Más.
-  if (esRecorridoEnEjecucion(ruta)) return '/'
+  // Las guías con preguntas son Resolver: el recorrido en ejecución
+  // (tarea 263) y, desde la tarea 269, también su lista y su
+  // administración, cuya puerta está en Guías.
+  if (cuelgaDe(ruta, '/diagnostico')) return '/'
   // Importar y Etiquetas se abren desde Más > Herramientas de inventario
   // (tarea 268): aunque vivan bajo /dispositivos, se ilumina Más.
   if (HERRAMIENTAS_DE_INVENTARIO.has(ruta)) return '/mas'
@@ -99,16 +100,18 @@ const PUERTA_INVENTARIO: Padre = { to: '/inventario', etiqueta: 'Herramientas de
 
 // Raíces que no son pestañas: su "Volver" sube al destino principal
 // desde el que se abren (encargo del 2026-09-22). El catálogo de guías y
-// la agenda cuelgan de Resolver; el escáner, de Equipos; y lo que dejó
-// de tener sitio en la barra (Red, Diagnóstico, Centro de consulta,
-// Ubicaciones, Personas y la cuenta), de Más.
+// la agenda cuelgan de Resolver; la lista de guías con preguntas, del
+// catálogo de guías (tarea 269); el escáner, de Equipos; y lo que dejó
+// de tener sitio en la barra (Red, Centro de consulta, Ubicaciones,
+// Personas, la cuenta y las herramientas de inventario), de Más.
 const RAICES_NO_TAB: Record<string, Padre> = {
   '/soluciones': { to: '/', etiqueta: 'Resolver' },
   '/agenda': { to: '/', etiqueta: 'Resolver' },
   '/conectar': { to: '/', etiqueta: 'Resolver' },
   '/escaner': { to: '/dispositivos', etiqueta: 'Equipos' },
   '/red': { to: '/mas', etiqueta: 'Más' },
-  '/diagnostico': { to: '/mas', etiqueta: 'Más' },
+  // Tarea 269: su puerta es Guías ("Guías con preguntas"), ya no Más.
+  '/diagnostico': { to: '/soluciones', etiqueta: 'Guías' },
   '/ubicaciones': { to: '/mas', etiqueta: 'Más' },
   '/personas': { to: '/mas', etiqueta: 'Más' },
   // El Centro de consulta (ruta `/referencia`, su nombre original).
@@ -202,10 +205,11 @@ export function padreDe(pathname: string): Padre | null {
     case 'diagnostico':
       // RESOLUCIÓN GUIADA (tarea 263): el recorrido en ejecución
       // (/diagnostico/:id) cuelga de Resolver, que es por donde se entra a
-      // resolver algo; la lista, crear, editar, sugerencias y estadísticas
-      // son la administración y vuelven a la lista de diagnósticos (Más).
+      // resolver algo; crear, editar, sugerencias y estadísticas son la
+      // administración y vuelven a su lista, "Guías con preguntas", que
+      // desde la tarea 269 cuelga de Guías.
       if (esRecorridoEnEjecucion(ruta)) return { to: '/', etiqueta: 'Resolver' }
-      return { to: '/diagnostico', etiqueta: 'Diagnósticos' }
+      return { to: '/diagnostico', etiqueta: 'Guías con preguntas' }
     case 'red':
       // La topología de un equipo (topologia/:id) sube al mapa general,
       // y este a Red. La lista de equipos (red/equipos) también sube a

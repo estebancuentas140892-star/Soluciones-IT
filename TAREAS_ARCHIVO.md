@@ -2,6 +2,24 @@
 
 ## Encargo del 2026-09-23: las entidades se relacionan
 
+### 269. Fase 4: Diagnóstico dentro de Resolver y fuera de Más
+
+**Título:** el técnico no decide si busca una guía o un diagnóstico. **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Media. **Origen:** encargo del usuario del 2026-09-23, sección 17. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-050. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-045 y RN-047.
+
+**Qué se hizo:**
+
+1. **Resolver, probado antes de quitar nada** (`src/features/diagnostico/guiasConPreguntasEnGuias.test.tsx`): un síntoma abre la guía con preguntas, rotulada "Guía con preguntas", y un procedimiento con las mismas palabras abre la guía con pasos; los cinco ejemplos de la tarea 263 siguen en `resolucionGuiada.test.tsx`.
+2. **La puerta de la administración, en Guías** (`src/features/soluciones/SolucionesPage.tsx`): fila "Guías con preguntas" con su número, que respeta la categoría elegida y no sale al buscar ni con una etiqueta; la lista vuelve a Guías con el filtro puesto.
+3. **La lista se llama "Guías con preguntas"** (`DiagnosticosPage.tsx`), sube a Guías e ilumina Resolver (`src/lib/navegacion.ts`: `RAICES_NO_TAB`, `destinoPrincipalDe`, etiqueta de la administración); "Sugerencias del equipo" y "Estadísticas" a 44 px.
+4. **Desde la ficha de un equipo** (`DispositivoPage.tsx`, `IniciarDiagnosticoBoton.tsx`): la lista de problemas vuelve al equipo (origen, M-R2).
+5. **Más sin la fila Diagnóstico** (`PantallaMas.tsx`). Ninguna tabla, ruta ni lógica del diagnóstico cambió.
+
+**Pruebas.** 139 archivos y 1941 casos en verde (antes 138 y 1934). Nueva: `guiasConPreguntasEnGuias.test.tsx` (síntoma y procedimiento en Resolver; la puerta en Guías con y sin categoría y al buscar; la vuelta desde la ficha de un equipo). Actualizadas: `navegacion.test.ts`, `masInfraestructura.test.tsx` y `resolucionGuiada.test.tsx`.
+
+**Verificación:** capturas por CDP en 390×844 y 1366×768 (`catalogo`, `mas`, `guias-con-preguntas`, `guias-con-preguntas-categoria`): sin desbordamiento ni hallazgos nuevos.
+
+**Lo que no se tocó:** tablas, rutas, editor, ejecución, estadísticas y sugerencias; el nombre "diagnóstico" dentro del editor (lo unifica la tarea 216). No hace falta SQL.
+
 ### 268. Fase 3: Más con una puerta por capacidad, y las herramientas de inventario juntas
 
 **Título:** Más más corto sin perder funciones. **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Media. **Origen:** encargo del usuario del 2026-09-23, secciones 9, 13, 16, 18, 20, 21 y 22. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-049. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-047 (revisada) y RN-053. **Commits:** `83ee59f` (primera parte, desplegada y verificada) y el de cierre.

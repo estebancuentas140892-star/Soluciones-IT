@@ -13,7 +13,6 @@ import {
   Package,
   PlugsConnected,
   Star,
-  TreeStructure,
   UsersThree,
 } from '../../components/iconos'
 import { db } from '../../lib/db'
@@ -41,8 +40,10 @@ import { ConteoFila, FilaMas as Fila, TituloGrupo } from './FilasMas'
 //     desde Red ("Mapa completo, desde cada raíz"), que ya la enlazaba;
 //     su pantalla, sus rutas y sus datos no cambian.
 //   - Herramientas: "Herramientas de inventario" (Importar equipos,
-//     Etiquetas QR y los datos por ordenar, en una sola puerta) y, hasta
-//     la tarea 269, Diagnóstico.
+//     Etiquetas QR y los datos por ordenar, en una sola puerta).
+//     Diagnóstico salió en la tarea 269: las guías con preguntas se
+//     encuentran y se ejecutan desde Resolver, y su administración
+//     (crear, editar, estadísticas, sugerencias) tiene puerta en Guías.
 //   - Aplicación: "Ajustes" (cuenta, contraseña, bloqueo, sin conexión,
 //     instalar, buscar actualización y cerrar sesión, que antes eran tres
 //     filas).
@@ -61,7 +62,6 @@ export function PantallaMas() {
     () => db.personas.filter((p) => !p.eliminadoEn && estaActiva(p)).count(),
     [],
   )
-  const diagnosticos = useLiveQuery(() => db.diagnosticos.filter((d) => !d.eliminadoEn).count(), [])
   const referencias = useLiveQuery(
     () => db.referencias.filter((r) => !r.eliminadoEn).count(),
     [],
@@ -163,13 +163,6 @@ export function PantallaMas() {
                 Icono={Package}
                 titulo="Herramientas de inventario"
                 subtitulo="Importar, etiquetas QR y datos por ordenar"
-              />
-              <Fila
-                to="/diagnostico"
-                Icono={TreeStructure}
-                titulo="Diagnóstico"
-                subtitulo="Del síntoma a la guía, paso a paso"
-                conteo={diagnosticos ?? null}
               />
             </div>
           </section>
