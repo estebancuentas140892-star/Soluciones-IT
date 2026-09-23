@@ -223,6 +223,14 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'equipo-sin-responsable', ruta: '/dispositivos/dis-pc-ejemplo-07' },
   { nombre: 'equipo-asignar-persona', ruta: '/dispositivos/dis-pc-ejemplo-41', guion: tocar('Asignar') },
   { nombre: 'equipo-con-anteriores', ruta: '/dispositivos/dis-pc-ejemplo-41', guion: tocar('Más datos del equipo') },
+  // Tarea 267: ubicaciones. La migracion no se aplica en ninguna parada
+  // (solo se mira y se decide una coincidencia), asi que no hace falta
+  // reponer nada despues.
+  { nombre: 'ubicaciones', ruta: '/ubicaciones' },
+  { nombre: 'ubicaciones-migrar', ruta: '/ubicaciones/migrar' },
+  { nombre: 'ubicaciones-migrar-mismo-lugar', ruta: '/ubicaciones/migrar', guion: tocar('Es el mismo lugar') },
+  { nombre: 'ubicacion-ficha', ruta: '/ubicaciones/ubi-ejemplo-sistemas' },
+  { nombre: 'ubicacion-ficha-rack', ruta: '/ubicaciones/ubi-ejemplo-rack' },
 ]
 
 const PARADAS = FILTRO_PARADAS

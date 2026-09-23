@@ -14,6 +14,7 @@ import {
   type PasoProcedimiento,
   type Persona,
   type Referencia,
+  type Ubicacion,
 } from '../lib/db'
 
 /** Identidad ficticia del banco de pruebas. */
@@ -1157,8 +1158,52 @@ const DISPOSITIVOS: Dispositivo[] = [
     categoriaId: 'cat-switches',
     ip: '192.0.2.2',
     ubicacion: 'Rack de ejemplo',
+    // Ya vinculado a su ubicacion (tarea 267): la ficha de "Sistemas de
+    // ejemplo" lo enseña dentro de su sub-ubicacion "Rack de ejemplo".
+    ubicacionId: 'ubi-ejemplo-rack',
     placaInventario: 'EJ-0002',
   }),
+]
+
+// UBICACIONES Y TEXTOS PARA LA MIGRACION (tarea 267). Inventados: una
+// sede con un area y un rack (la jerarquia que ya existe), y equipos cuya
+// ubicacion es un texto con las variantes del encargo: mayusculas
+// ("COMPRAS DE EJEMPLO"), una abreviatura ("ADMINISTRACION PE") y tildes
+// ("TESORERIA DE EJEMPLO"). "Sistemas de ejemplo" ya existe como
+// ubicacion: la migracion la reutiliza en vez de duplicarla.
+function ubicacion(id: string, nombre: string, padreId: string | null): Ubicacion {
+  return { id, nombre, padreId, notas: '', updatedAt: AHORA, updatedBy: PERFIL_PRUEBA.id, eliminadoEn: null }
+}
+
+const UBICACIONES: Ubicacion[] = [
+  ubicacion('ubi-ejemplo-sede', 'Sede de ejemplo', null),
+  ubicacion('ubi-ejemplo-sistemas', 'Sistemas de ejemplo', 'ubi-ejemplo-sede'),
+  ubicacion('ubi-ejemplo-rack', 'Rack de ejemplo', 'ubi-ejemplo-sistemas'),
+]
+
+const EQUIPOS_POR_UBICAR: Dispositivo[] = [
+  dispositivo({ id: 'dis-pc-ejemplo-33', nombre: 'PC-EJEMPLO-33', categoriaId: 'cat-computadores', ubicacion: 'COMPRAS DE EJEMPLO' }),
+  dispositivo({
+    id: 'dis-imp-ejemplo-compras',
+    nombre: 'Impresora de ejemplo Compras',
+    categoriaId: 'cat-impresoras',
+    ubicacion: 'Compras de ejemplo',
+  }),
+  dispositivo({
+    id: 'dis-pc-ejemplo-50',
+    nombre: 'PC-EJEMPLO-50',
+    categoriaId: 'cat-computadores',
+    ubicacion: 'Administración Parque de Ejemplo',
+  }),
+  dispositivo({
+    id: 'dis-pc-ejemplo-52',
+    nombre: 'PC-EJEMPLO-52',
+    categoriaId: 'cat-computadores',
+    ubicacion: 'Administración Parque de Ejemplo',
+  }),
+  dispositivo({ id: 'dis-pc-ejemplo-51', nombre: 'PC-EJEMPLO-51', categoriaId: 'cat-computadores', ubicacion: 'ADMINISTRACION PE' }),
+  dispositivo({ id: 'dis-pc-ejemplo-60', nombre: 'PC-EJEMPLO-60', categoriaId: 'cat-computadores', ubicacion: 'Tesorería de ejemplo' }),
+  dispositivo({ id: 'dis-pc-ejemplo-61', nombre: 'PC-EJEMPLO-61', categoriaId: 'cat-computadores', ubicacion: 'TESORERIA DE EJEMPLO' }),
 ]
 
 // PERSONAS Y SUS EQUIPOS (tarea 266). Inventadas: tres personas (una
@@ -1298,7 +1343,12 @@ const CONEXIONES: Conexion[] = [
 
 /** Solo lo que no existe todavia: lo editado desde la app no se pisa. */
 async function sembrarAgendaYEquipos(): Promise<void> {
-  await db.transaction('rw', [db.credenciales, db.dispositivos, db.conexiones, db.recientes, db.personas, db.historial], async () => {
+  await db.transaction('rw', [db.credenciales, db.dispositivos, db.conexiones, db.recientes, db.personas, db.historial, db.ubicaciones], async () => {
+    // Ubicaciones (tarea 267), con el mismo criterio.
+    const ubicacionesExistentes = new Set(
+      (await db.ubicaciones.bulkGet(UBICACIONES.map((u) => u.id))).flatMap((u) => (u ? [u.id] : [])),
+    )
+    await db.ubicaciones.bulkAdd(UBICACIONES.filter((u) => !ubicacionesExistentes.has(u.id)))
     // Personas y su historial de asignación (tarea 266), con el mismo
     // criterio: solo lo que falta, para no pisar lo que se pruebe.
     const personasExistentes = new Set(
@@ -1313,7 +1363,7 @@ async function sembrarAgendaYEquipos(): Promise<void> {
       (await db.credenciales.bulkGet(CREDENCIALES.map((c) => c.id))).flatMap((c) => (c ? [c.id] : [])),
     )
     await db.credenciales.bulkAdd(CREDENCIALES.filter((c) => !credencialesExistentes.has(c.id)))
-    const todosLosEquipos = [...DISPOSITIVOS, ...EQUIPOS_DE_PERSONAS]
+    const todosLosEquipos = [...DISPOSITIVOS, ...EQUIPOS_DE_PERSONAS, ...EQUIPOS_POR_UBICAR]
     const equiposExistentes = new Set(
       (await db.dispositivos.bulkGet(todosLosEquipos.map((d) => d.id))).flatMap((d) => (d ? [d.id] : [])),
     )
