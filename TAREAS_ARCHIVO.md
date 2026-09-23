@@ -2,6 +2,30 @@
 
 ## Encargo del 2026-09-22: Soluciones IT se organiza alrededor de Resolver
 
+### 255. Fase 3: ejecución visual de las guías (ruta, colores con significado, dónde y debes ver)
+
+**Título:** la guía se entiende leyendo poco: ruta del procedimiento, un color por significado y cada paso con qué hacer, dónde y qué debe verse. **Estado:** Completada (2026-09-22) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22, secciones 3 a 8. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-043.
+
+**Cómo se hizo.** La empezó una sesión que se cortó por falta de tokens mientras documentaba, con todo sin commit (24 archivos habían pasado además de LF a CRLF, y `tsc` fallaba por un cast de una prueba). Otra sesión del mismo día dejó constancia del avance en el tablero y la terminó. En el camino el código se había apartado del plan: pintaba el `objetivo` del paso como "Debes ver". **El usuario decidió seguir el plan, con `resultado` como campo aparte**, y así quedó.
+
+**Qué se hizo:**
+
+1. **Ruta del procedimiento** (`RutaProcedimiento.tsx` sobre `rutaVisual.ts`): un nodo por paso con su estado y el aviso rojo en los pasos con un riesgo real; vertical y recortada en el teléfono con "Ver la ruta completa", horizontal desde 768 px. El nombre del nodo quita el verbo de navegación del título. Tocar un nodo mueve la vista. Es la cabecera de `ModoFoco` y de la vista de paso entero, solo en la guía principal.
+2. **Lenguaje de color** (`src/index.css`, `tonos.ts` y las vistas): tokens `noct-lugar` (amarillo) y `noct-accion` (azul); Precaución al rojo; Información y Consejo neutros; neutros también el "No", el saltado, el borrador (ejecución y ficha), lo no disponible (vínculos y contingencias rotas, datos protegidos eliminados o que no se descifran) y la línea de bloqueo; rojo el flujo de la falla. Etiqueta de la acción en `ModoFoco`: "Qué hacer", "Comprueba", "Decide" o "Hecha" (sin etiqueta cuando lo que se lee es un estado de la guía del paso).
+3. **`lugar` y `resultado`** en `PasoProcedimiento` (`db.ts`) y en `procedimiento.ts` (crear, normalizar, índice y guardado); editor con "Para qué", "Dónde se hace" y "Debes ver" bajo el título; "Dónde" con la primera acción y "Debes ver" con la última en `ModoFoco`, y en el paso entero y la lectura antes y después del cuerpo; "Para qué" plegado en "Más información"; historial con su valor; borradores locales de un editor anterior completados al recuperarlos (`normalizarDatosBorrador`), porque guardar habría fallado al recortar un campo ausente.
+4. **"Requisitos"** en la ejecución (`AntesDeEmpezar`, con `ListChecks`), la lectura, `IntroduccionGuia`, el editor y la sugerencia de completitud.
+5. **"Credencial necesaria"**: `CredencialEnPaso` con `variante="bloque"` en las tres vistas; en el paso entero y en la lectura sale del grupo de vínculos y va tras el cuerpo, antes de "Debes ver".
+6. **Ancho:** `Chasis` con `amplio` (`md:max-w-3xl`) en `AsistentePage`; los controles del pie, centrados en `max-w-xl`.
+7. **Verificación:** la semilla local lleva "Dónde", "Debes ver", "Para qué" y una credencial de ejemplo en la guía de tres tareas; `scripts/capturas-moviles.mjs` gana tres paradas (ruta con "Dónde" y credencial, "Debes ver", paso entero), ganchos `antes` y `despues` que reponen el avance y el modo para que los cuatro tamaños vean lo mismo, trozos de guion entre llaves (sumar dos redeclaraba una constante y la parada no avanzaba; le pasaba ya a `guia-alerta-importante`), la lista de guiones que fallan y la exención del recorte que trae el texto entero en `title`.
+
+**Pruebas.** 124 archivos y 1772 casos en verde (la 254 cerró con 122 y 1748). Nuevas: `rutaVisual.test.ts` y `guiaVisual.test.tsx` (la ruta orienta y no marca; "Dónde" con la primera acción y "Debes ver" con la última; el objetivo plegado como "Para qué" y nunca como "Debes ver"; el paso entero en orden: "Dónde", cuerpo, credencial y "Debes ver"; la comprobación con su palabra; el riesgo antes de la instrucción), historial (`lugar`, `resultado`, y un JSON anterior sin cambios), compatibilidad (campos vacíos y en el índice), guardar y releer sin mezclar los tres campos, y borradores. Ajustadas: `guiaDirecta` y la completitud ("Requisitos") y los datos de prueba con los campos nuevos.
+
+**Capturas** (390×844, 768×1024, 1366×768 y 1920×1080, en `evidencia/`, no se versiona): sin desbordamiento horizontal. Los hallazgos que quedan son previos: títulos recortados en la cabecera compacta y en el índice, los tres iconos de 34 px de Detalles de la guía (tarea 229 b), la línea de completitud del editor (tarea 261 nueva) y un falso positivo del auditor con las hojas modales (anotado en la 260).
+
+**Riesgo avisado al entregar:** una copia de la app sin actualizar que edite y guarde una guía descarta `lugar` y `resultado`: actualizar los teléfonos antes de rellenarlos.
+
+**Lo que no se tocó:** rutas, esquema local y de Supabase, RLS, sincronización, progreso guardado, reglas de la ejecución y navegación. **No hay que ejecutar SQL.**
+
 ### 254. Fase 2: Resolver y navegación de cuatro destinos
 
 **Título:** Resolver sustituye a Inicio y a la pestaña Guías; la navegación principal pasa a Resolver, Equipos, Bóveda y Más. **Estado:** Completada (2026-09-22) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22, sección 2.

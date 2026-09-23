@@ -180,9 +180,20 @@ Estado de la pestaña activa en tres canales (regla R16 exige al menos dos): bar
 
 La Bóveda **solo aparece a quien tiene el permiso**; el resto ni sabe que existe. Desde la tarea 182 esto ya no cambia la FORMA de ninguna barra: en móvil la pestaña "Más" siempre está (con o sin la fila de Bóveda dentro); en escritorio el nav principal del sidebar mide 5 o 6 filas según el permiso, pero los bloques "Herramientas"/"Registros"/perfil de abajo no varían.
 
-### 2.3 Los tres lenguajes de color
+### 2.3 Los lenguajes de color
 
-Conviven tres sistemas de color sobre superficies distintas (no se mezclan):
+**Dentro de una guía (desde el 2026-09-22, tarea 255, [DECISIONES.md](DECISIONES.md) AD-043) el color significa y nunca va solo** (siempre con icono y palabra):
+
+| Color | Significa | Dónde se ve |
+|---|---|---|
+| **Verde** | acción completada y resultado correcto | paso hecho en la ruta, "Hecha", "Comprueba" y **"Debes ver"** |
+| **Amarillo** | lugar, menú o sección que hay que localizar | **"Dónde"** |
+| **Azul** | la acción: entrar, abrir, seleccionar | "Paso N de M", "Qué hacer" y el nodo actual de la ruta |
+| **Rojo** | riesgo real, detenerse | **Precaución** e **Importante**, "No se cumple" y la falla declarada |
+
+Por eso **Precaución pasó del ámbar al rojo** (es un riesgo, y el amarillo ya significa "lugar"), **Información y Consejo quedaron neutros** (no deciden nada: se distinguen por su icono y su palabra) y también son neutros el **"No"** de una decisión, el **"saltado"** del índice y el aviso de **borrador** (en la ejecución y en la ficha): ninguno es un riesgo. **Dentro de una guía no queda ámbar:** lo que ya no está disponible (una guía o contingencia vinculada, un dato protegido eliminado o que no se pudo descifrar) y la línea que explica por qué una tarea no se puede marcar todavía van neutros, y lo dice su texto; el flujo de la falla ("Algo va mal en el paso N", su salida a la contingencia y "Fotografiar y anotar la falla") va en rojo, como "Marcaste una falla". Fuera de las guías, el ámbar sigue significando "atención" (vencimientos, equipo en mantenimiento, sincronización), y el editor conserva sus colores de tipo.
+
+Conviven además tres sistemas de color sobre superficies distintas (no se mezclan):
 
 - **Estado de un equipo** (`src/features/dispositivos/estados.ts` + `topologiaVisual.ts`): 🟢 operativo (verde/éxito), 🟡 en mantenimiento (ámbar/precaución), 🔴 fuera de servicio (rojo/error), ⚫ de baja (neutro), gris para cualquier texto libre.
 - **Tipo de documento** (`iconosSoluciones.ts`): tiñe el recuadro del icono de cada artículo según su tipo.
@@ -478,7 +489,7 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 - **Encabezado**: **kicker de tipo** sobre el título, en el matiz de su tipo; título; descripción ("cuándo usar"); **metadatos como lista con rótulo** (Aplica a, Versión), y línea meta con la procedencia del dato ("Actualizado el DD mmm por Autor"). "Aplica a" es la restricción de marca/modelo (hallazgo H6) y avisa de que el artículo no aparece en otros equipos de la misma categoría; antes iba como una pastilla neutra idéntica a las demás, donde nada decía que fuera una restricción. La categoría no se repite aquí: la nombra el botón de regreso.
 - Si es **problema_frecuente**: bloques "Síntomas", "Posibles causas" y "Equipos afectados" (pastillas navegables a la ficha de cada equipo).
 - **Resumen de la guía**, en tres fichas de una línea: **Tiempo**, **Dificultad** y **Pasos** (el total). Estaban disueltos en la lista de metadatos, junto a la versión; son lo que el técnico mira para decidir si empieza ahora.
-- **Objetivo** y **Antes de empezar** (los requisitos), cada uno en su propia sección corta. Vivían dentro del procedimiento, así que desaparecían con él.
+- **Objetivo** y **Requisitos** (hasta el 2026-09-22, "Antes de empezar"), cada uno en su propia sección corta. Vivían dentro del procedimiento, así que desaparecían con él.
 - **LA FICHA PRESENTA, NO EJECUTA** (encargo del **2026-09-10**, tarea 2). Hasta hoy esta pantalla montaba el procedimiento entero (`ProcedimientoVista`) debajo del título, así que **antes de empezar** se veían el stepper con todos los pasos, sus tareas con casilla, sus verificaciones, los botones de cierre de cada paso, las guías vinculadas desplegadas y el anuncio de las comprobaciones finales. Se podía marcar trabajo sin haber empezado la ejecución, desde una pantalla que dice "Empecemos" al pie, y para decidir si esta era la guía correcta había que recorrer un documento de miles de píxeles. Ahora **nada de eso aparece aquí**: el paso a paso se lee donde se hace, en el modo ejecución, y la barra inferior es la única puerta. **No se pierde información**, solo cambia de sitio.
 - **Un color, un significado dentro del paso** (tarea 206, hallazgo **M-012**, regla **M-R11**, tableros `3b` y `12b`). Desde el **2026-09-10** esto describe cómo se dibuja un paso **en la ejecución** (y en la prueba del editor), no en esta ficha, que ya no monta el procedimiento. Un paso podía mostrar **cinco marcos de color anidados**, y dos de ellos del mismo tono con significados distintos: el ámbar era a la vez la advertencia, la pregunta de error y la solución vinculada; el acento, el subprocedimiento y la credencial protegida. Con tres marcos de su color compitiendo, la advertencia real dejaba de destacar. Ahora:
   - **El ámbar es la advertencia y nada más.** El aviso pasa a una **barra lateral de 2 px a color pleno** con su icono y su palabra ("Precaución."), y es lo único del cuerpo del paso con fondo de color.
@@ -902,7 +913,7 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 
 **El editor revisa la guía contra la regla 20** (segunda pasada del encargo del 2026-09-17, `revisionGuia.ts`, [DECISIONES.md](DECISIONES.md) **AD-041**). Mientras se escribe, señala tres cosas, cada una en su línea y en la lista de sugerencias, y **ninguna impide guardar**:
 
-- **Un requisito que es una acción** ("Entrar al administrador"): debajo de "Antes de empezar" aparece "«Entrar al administrador» es una acción. **Ya está en el paso 2: bórrala de aquí.**" (o "Llévala a un paso." si no está en ninguno). Sugerencia: "Sacar de «Antes de empezar» N acciones". Solo se señalan los gestos sobre una pantalla o un menú (entra, abre, selecciona, pulsa, ve a, haz clic...): "Conectar el lector" o "Tener a mano la resolución" son preparaciones válidas y no se tocan, y tampoco "Copia de la resolución DIAN en PDF", "Marca y modelo del lector" o "Cierre de caja hecho", donde la primera palabra es un sustantivo.
+- **Un requisito que es una acción** ("Entrar al administrador"): debajo de "Requisitos" aparece "«Entrar al administrador» es una acción. **Ya está en el paso 2: bórrala de aquí.**" (o "Llévala a un paso." si no está en ninguno). Sugerencia: "Sacar de «Antes de empezar» N acciones". Solo se señalan los gestos sobre una pantalla o un menú (entra, abre, selecciona, pulsa, ve a, haz clic...): "Conectar el lector" o "Tener a mano la resolución" son preparaciones válidas y no se tocan, y tampoco "Copia de la resolución DIAN en PDF", "Marca y modelo del lector" o "Cierre de caja hecho", donde la primera palabra es un sustantivo.
 - **Una tarea que encadena varias acciones** (tres o más, o dos unidas por "luego", "después", "a continuación"): debajo de la tarea, "Encadena N acciones. Una por tarea se sigue mejor frente al equipo:" con la lista numerada de cómo quedaría y el botón **"Dividir en N tareas"**. Dividir usa solo las palabras del autor (sin los "luego" que las unían); la tarea original conserva su id, sus apoyos y lo ya marcado con la primera acción, y las demás nacen detrás. "Selecciona la terminal y pulsa Editar" **no** se señala: es una acción para quien la hace. Sugerencia: "Dividir N tareas que encadenan varias acciones".
 - **Una alerta que solo recuerda algo** (Precaución o Importante que empieza con "Recuerda", "No olvides", "Ten presente", "Ten en cuenta"): "Empieza como un recordatorio. Si no avisa de un riesgo real, va en Información y al ejecutar queda plegada." con el botón **"Pasar a Información"**. Sugerencia: "Revisar N alertas que solo recuerdan algo".
 
@@ -925,7 +936,7 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 
 | Campo | Interno | Control | Notas |
 |-------|---------|---------|-------|
-| Antes de empezar (un requisito por línea) | `requisitos` | Área de texto | Una línea = un requisito. Desde el 2026-09-17 lleva debajo la regla: "Solo lo que debe estar listo antes del paso 1: un documento, un acceso, una conexión o una herramienta. Si es algo que se hace («entra», «abre», «selecciona»), es un paso. Si no hace falta nada, déjalo vacío." En la ejecución se muestra sobre la primera acción del paso 1, solo antes de empezar (regla 20b de REGLAS.md). Si una línea es una acción, se dice debajo y en qué paso ya está (ver arriba, "El editor revisa la guía"). **No cuenta para la completitud** desde la segunda pasada del 2026-09-17 |
+| Requisitos (uno por línea; hasta el 2026-09-22, "Antes de empezar") | `requisitos` | Área de texto | Una línea = un requisito. Desde el 2026-09-17 lleva debajo la regla: "Solo lo que debe estar listo antes del paso 1: un documento, un acceso, una conexión o una herramienta. Si es algo que se hace («entra», «abre», «selecciona»), es un paso. Si no hace falta nada, déjalo vacío." En la ejecución se muestra sobre la primera acción del paso 1, solo antes de empezar (regla 20b de REGLAS.md). Si una línea es una acción, se dice debajo y en qué paso ya está (ver arriba, "El editor revisa la guía"). **No cuenta para la completitud** desde la segunda pasada del 2026-09-17 |
 | Pasos | `pasos` | `PasosEditor` (ver 7.2.1) | Constructor de pasos con bloques |
 | Verificación final (una por línea) | `verificacionFinal` | Área de texto | Checklist final |
 
@@ -952,7 +963,7 @@ Archivo `src/features/soluciones/ArticuloForm.tsx`. Editor a pantalla completa c
 
 #### 7.2.1 Editor de pasos (`PasosEditor`)
 
-Cada **paso** es una tarjeta con: **asa de arrastre**, número, **Título** ("Qué hacer en este paso"), **Objetivo** ("qué se logra al terminar") y un menú **"···"** (Subir / Bajar / Eliminar, con confirmación). El **cuerpo** del paso son **bloques**.
+Cada **paso** es una tarjeta con: **asa de arrastre**, número, **Título** ("Qué hacer en este paso"), tres líneas opcionales bajo el título (desde el 2026-09-22, tarea 255): **Para qué** (el objetivo del paso, "qué se logra con este paso"; en la ejecución queda plegado en "Más información"), **Dónde se hace** ("menú, ventana o sección", campo `lugar`; en la ejecución, **"Dónde"** en amarillo con la primera acción) y **Debes ver** ("qué aparece o queda al terminar", campo `resultado`; en la ejecución, en verde con la última acción), y un menú **"···"** (Subir / Bajar / Eliminar, con confirmación). El **cuerpo** del paso son **bloques**.
 
 **Paso activo** (tarea 209): la tarjeta que se acaba de tocar lleva borde de acento. Es la que reciben la barra de añadir y "Probar". Si no se ha tocado ninguna, manda la última, que es donde se está escribiendo. **Desde la tarea 219 es además la única desplegada.**
 
@@ -1233,21 +1244,36 @@ Equipos > Crear
 
 ### 13.2 Ejecutar un procedimiento (modo asistente)
 
+**LA GUÍA SE ENTIENDE LEYENDO POCO (desde el 2026-09-22, tarea 255, [DECISIONES.md](DECISIONES.md) AD-043).** Se suma a lo que sigue y manda sobre ello donde choquen:
+
+- **La ruta del procedimiento** encabeza la ejecución de la guía principal: un nodo por paso con su estado (hecho, con la marca en verde; el actual, en azul con su número; pendiente, neutro; saltado, con borde discontinuo) y el triángulo de aviso en rojo en los pasos que tienen un riesgo real, para saber de antemano dónde ir con cuidado. **En el teléfono** es vertical y recortada al paso anterior, el actual y el siguiente, con **"Ver la ruta completa · N pasos"** (abre el índice de pasos). **Desde 768 px** se ve entera en horizontal, con flechas, y la ejecución pasa de 448 a 768 px de ancho; los botones de abajo se quedan centrados en 576. El nombre de cada nodo es el título del paso sin el verbo de navegación ("Abrir SGC" se lee "SGC"). Tocar un nodo **mueve la vista**; nunca marca nada. La ruta es la cabecera del paso: dice "Paso N de M" y su título.
+- **Cada acción dice qué clase de trabajo es**, con icono y palabra: **"Qué hacer"** (azul), **"Comprueba"** (verde), **"Decide"** (neutro) o **"Hecha"** (verde, si ya se marcó).
+- **"Dónde"** (amarillo, con la chincheta) acompaña a la **primera** acción del paso y **"Debes ver"** (verde, con el ojo) a la **última**, cuando el paso los declara (campos "Dónde se hace" y "Debes ver" del editor). **"Para qué"** (el objetivo del paso) sigue plegado en "Más información".
+- **"Requisitos"** (antes "Antes de empezar, ten a mano"), con la línea "Ten esto listo antes de empezar.": solo en el paso 1 y solo si la guía los tiene.
+- **"Credencial necesaria":** el dato protegido del paso o de la acción se presenta en un bloque con ese rótulo y el nombre del acceso. Los controles no cambian: sigue contraído, exige permiso, contraseña maestra y autobloqueo, y cada consulta se registra.
+- **El "No"** de una decisión es neutro (con una X) y el botón de falla también; **"Marcaste una falla"**, "Fotografiar y anotar la falla" y la hoja "Algo va mal en el paso N" van en rojo. El aviso de borrador es neutro.
+- **La vista de paso entero** lleva la misma ruta arriba, el objetivo bajo la cabecera, "Dónde" antes del cuerpo del paso, "Credencial necesaria" después y "Debes ver" al final. **La lectura** (Detalles de la guía y la vista previa del editor) enseña "Requisitos", "Dónde", "Credencial necesaria" y "Debes ver" con los mismos bloques.
+
 **RESOLVER RÁPIDO CON GUÍAS (desde el 2026-09-17, tarea 244, [DECISIONES.md](DECISIONES.md) AD-040).** Principio: la guía no enseña todo mientras se trabaja, dice qué hacer ahora. Lo que sigue manda sobre cualquier descripción anterior de esta sección:
 
 ```
 Inicio: buscar  ─┐
 Guías: tarjeta  ─┼→ /soluciones/:cat/:art  (la guía)
 Recientes, etc. ─┘      │
-                        ├─ sin avance ............ paso 1 ("Antes de empezar" si hay requisitos)
+                        ├─ sin avance ............ paso 1 ("Requisitos" si los hay)
                         ├─ a medias .............. paso pendiente + "Retomas en el paso N · Empezar de nuevo"
                         │                          (la línea se va con la primera acción; Empezar de nuevo sigue en el índice)
                         └─ terminada ............. se borra el avance y abre el paso 1
+   Ruta: ✓ Navegador → ✓ Intranet → (3) SGC → Documentación   (teléfono: anterior, actual y siguiente)
    Paso N de M · título del paso
    [alerta si hay un riesgo en esta acción]
+   [Dónde] lugar del paso                          (primera acción, si el paso lo declara)
+   QUÉ HACER · COMPRUEBA · DECIDE
    INSTRUCCIÓN (26 px)
    dato · comando · imagen · clave · archivo       (lo que hace falta para hacerla)
-   Más información ▾                               (por qué, consejos, apoyos del paso)
+   [Credencial necesaria]                          (si la acción o el paso tiene un dato protegido)
+   [Debes ver] resultado del paso                  (última acción, si el paso lo declara)
+   Más información ▾                               (para qué, consejos, apoyos del paso)
    [‹]  [ Siguiente › ]  /  [ Terminar ✓ ]  /  [ Sí ] [ No ]
             Tengo un problema
  → Antes de terminar, comprueba (si hay comprobaciones finales)
@@ -1255,13 +1281,13 @@ Recientes, etc. ─┘      │
 ```
 
 - **Abrir la guía es estar en el paso.** No hay portada ni "Empecemos": la ficha es **Detalles de la guía** (`/detalles`), a un toque desde el índice de pasos ("3/7 ▾"), donde están también **"Empezar de nuevo"** y el cambio a la vista de paso entero.
-- **"Antes de empezar, ten a mano"** aparece sobre la primera acción del paso 1, **solo si la guía tiene requisitos y solo antes de marcar nada**. Una guía sin requisitos no muestra la sección.
+- **"Requisitos"** (hasta el 2026-09-22, "Antes de empezar, ten a mano") aparece sobre la primera acción del paso 1, **solo si la guía tiene requisitos y solo antes de marcar nada**. Una guía sin requisitos no muestra la sección.
 - **Una acción por pantalla, con su contexto:** "Paso N de M" y el título del paso (si no repite la instrucción), segmentos cuando el paso tiene varias acciones, la instrucción a 26 px y **a la vista** lo que hace falta para hacerla: el dato técnico, el comando o atajo, la imagen (se toca para ampliar), la clave protegida y el archivo. Ya no hay chips "Foto", "Clave", "Archivo" ni "Información del paso".
-- **Los avisos acompañan, no detienen.** Ya no existe la pantalla de aviso con **"Entendido · continuar"**. **Precaución** e **Importante** se ven como alerta (icono, palabra, barra y fondo) **antes de la instrucción de SU acción**; el **dato técnico**, a la vista sin color de alerta; **Información** y **Consejo**, plegados en **"Más información"**, junto al objetivo del paso y, a partir de la segunda acción, las imágenes y archivos del paso. Los avisos del paso completo salen con la primera acción del paso y no se repiten.
+- **Los avisos acompañan, no detienen.** Ya no existe la pantalla de aviso con **"Entendido · continuar"**. **Precaución** e **Importante** se ven como alerta (icono, palabra, barra y fondo) **antes de la instrucción de SU acción**; el **dato técnico**, a la vista sin color de alerta; **Información** y **Consejo**, plegados en **"Más información"**, junto al objetivo del paso ("Para qué") y, a partir de la segunda acción, las imágenes y archivos del paso. Los avisos del paso completo salen con la primera acción del paso y no se repiten.
 - **Abajo, "Anterior" y "Siguiente"** (64 px). "Siguiente" registra la acción y trae la siguiente; en la última de la guía dice **"Terminar"**; en una comprobación, **"Comprobado · siguiente"**; en una decisión, **"Sí"** y **"No"** (con "Si respondes que no, se abre «X»" encima). **"Anterior"** consulta sin deshacer y, desde la primera acción de un paso, lleva a **la última del paso anterior**. **"Tengo un problema"** va en una línea discreta debajo (y **"Desmarcar"** en una acción ya hecha).
 - **Al terminar:** "Guía terminada" con **"Salir de la guía"** (vuelve a donde se abrió: la búsqueda con lo escrito, la lista con su filtro) y **"Empezar de nuevo"**. Las comprobaciones finales dejaron el ámbar: "Antes de terminar, comprueba", en superficie neutra.
 - **Se retiraron** el cronómetro de sesión (se reiniciaba en cada entrada), las pastillas "Tarea N de M", "Comprobación", "Decisión" y "Completada", y la confirmación de avisos.
-- **La vista de paso entero** aplica el mismo criterio de tonos, muestra "Paso N de M" con el título del paso y los requisitos en el paso 1.
+- **La vista de paso entero** aplica el mismo criterio de tonos, muestra "Paso N de M" con el título del paso (desde el 2026-09-22, dentro de la ruta) y los requisitos en el paso 1.
 
 **Lo que sigue en esta sección es la historia de cómo se llegó aquí.** Donde describe avisos como pantallas propias, "Entendido · continuar", "Hecho · continuar", la instrucción a 30 px, el botón de 76 px, los chips o el cronómetro, describe la versión anterior al 2026-09-17.
 

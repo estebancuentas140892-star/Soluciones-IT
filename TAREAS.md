@@ -4,19 +4,18 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa) y 254 (Resolver y navegación). **Siguen:** 255 (ejecución visual), 256 (Equipos + QR), 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
+**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación) y 255 (ejecución visual de las guías). **Siguen:** 256 (Equipos + QR), 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
 
-### 255. Fase 3: ejecución visual de las guías (ruta, colores con significado, dónde y debes ver)
+### 256. Fase 4: Equipos + QR
 
-- **Título:** la guía se entiende leyendo poco: ruta del procedimiento, un color por significado y cada paso con qué hacer, dónde y qué debe verse.
-- **Descripción:** (1) componente de ruta (horizontal en escritorio y tableta, vertical y recortada en el teléfono) con estado por nodo y marca de riesgo; (2) tokens de color de guía (lugar amarillo, acción azul) y Precaución al rojo dentro de la ejecución; "No" y "Borrador" neutros; verificación con icono y palabra; (3) campos opcionales `lugar` y `resultado` por paso (normalizador, tipos, editor, vista de paso entero, lectura y vista previa, buscador); (4) "Requisitos" en vez de "Antes de empezar, ten a mano"; (5) "Credencial necesaria" en el paso; (6) la ejecución gana ancho en escritorio.
-- **Motivo:** secciones 3 a 8 del encargo.
-- **Impacto:** alto en la pantalla que más se usa. Sin SQL ni versión de Dexie: los campos viven en el JSON del procedimiento.
-- **Prioridad:** Alta. **Estado:** En progreso.
-- **Área afectada:** `src/features/soluciones/{ModoFoco,AsistenteVista,AsistentePage,ProcedimientoVista,PasosEditor,HojaPasos,tonos}.tsx/ts`, `src/features/boveda/CredencialEnPaso.tsx`, `src/lib/{db,procedimiento}.ts`, `src/index.css`, `src/app/Chasis.tsx` (ancho de la tarea), `src/features/busqueda/useIndiceBusqueda.ts`.
+- **Título:** Equipos responde "¿qué sabemos de este dispositivo?" y el QR es otra forma de buscar.
+- **Descripción:** (1) cabecera con Buscar equipo y Escanear QR al mismo peso; "Crear" secundario; fuera el menú "···" y el resumen de estados; (2) buscar incluye los equipos de red; (3) el escáner abre la ficha directamente con un solo resultado y reconoce el QR del portal de asistencia; (4) la ficha: nombre, tipo, ubicación, IP, responsable y "Conectado a" arriba; Problemas frecuentes y Procedimientos; datos técnicos plegados.
+- **Motivo:** secciones 16 a 18 del encargo.
+- **Impacto:** alto en la segunda pantalla más usada.
+- **Prioridad:** Alta. **Estado:** En progreso (pasa a En proceso al cerrar la 255, el 2026-09-22; sin empezar).
+- **Área afectada:** `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/escaner/{EscanerPage,resolverCodigo}.ts(x)`, `src/features/red/` (resumen de conexión).
 - **Dependencias:** 254.
-- **Riesgo anotado:** una copia de la app sin actualizar que edite una guía descarta `lugar` y `resultado`. Avisar al entregar.
-- **Modelo/esfuerzo:** Opus 5 / Alto.
+- **Modelo/esfuerzo:** Sonnet 5 / Alto (Opus 5 / Alto si se hace en la misma sesión).
 
 ---
 
@@ -367,17 +366,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 256. Fase 4: Equipos + QR
-
-- **Título:** Equipos responde "¿qué sabemos de este dispositivo?" y el QR es otra forma de buscar.
-- **Descripción:** (1) cabecera con Buscar equipo y Escanear QR al mismo peso; "Crear" secundario; fuera el menú "···" y el resumen de estados; (2) buscar incluye los equipos de red; (3) el escáner abre la ficha directamente con un solo resultado y reconoce el QR del portal de asistencia; (4) la ficha: nombre, tipo, ubicación, IP, responsable y "Conectado a" arriba; Problemas frecuentes y Procedimientos; datos técnicos plegados.
-- **Motivo:** secciones 16 a 18 del encargo.
-- **Impacto:** alto en la segunda pantalla más usada.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/escaner/{EscanerPage,resolverCodigo}.ts(x)`, `src/features/red/` (resumen de conexión).
-- **Dependencias:** 254.
-- **Modelo/esfuerzo:** Sonnet 5 / Alto (Opus 5 / Alto si se hace en la misma sesión).
-
 ### 257. Fase 5: Más e Infraestructura
 
 - **Título:** Más con cuatro grupos (Consulta, Infraestructura, Herramientas, Configuración).
@@ -414,12 +402,23 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 ### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
 
 - **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
-- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible.
+- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista.
 - **Motivo:** secciones 25 y 26 del encargo.
 - **Prioridad:** Alta. **Estado:** Pendiente.
 - **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
 - **Dependencias:** 254 a 259.
 - **Modelo/esfuerzo:** Sonnet 5 / Alto.
+
+### 261. Editor: la línea de completitud se toca en 25 px de alto
+
+- **Título:** la línea "Completitud N % · N sugerencias" del pie del editor es un botón de 25 px de alto.
+- **Descripción:** en `src/features/soluciones/ArticuloForm.tsx` (~1373, `onClick={() => setSugerenciasAbiertas(...)}`) el botón solo lleva `pb-[9px]` y texto de 12 px: en 390×844 mide 358×25 (auditoría de capturas del 2026-09-22, parada `editor-pasos`). Llevarlo a 44 px de alto sin engordar el pie (por ejemplo, con el área táctil ampliada hacia arriba), o fundirlo con la hoja de sugerencias.
+- **Motivo:** regla R6 (44 px de dedo por debajo de 768). Detectado al verificar la tarea 255; ya existía antes.
+- **Impacto:** bajo; el editor se usa sobre todo en escritorio, pero se escribe también desde el teléfono.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/ArticuloForm.tsx` (pie fijo del editor).
+- **Dependencias:** ninguna (conviene junto a la 227, que toca la completitud).
+- **Modelo/esfuerzo:** Sonnet 5 / Bajo.
 
 ### 245. Revisar el CONTENIDO de la guía de la resolución DIAN con el modelo nuevo
 
