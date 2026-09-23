@@ -198,20 +198,28 @@ export async function registrarAccesoBoveda(
 // Historial
 // ----------------------------------------------------------------
 
-// `ubicacionId` (grupo N3) y `responsableId` (hallazgo T1) no generan su
-// propia entrada: su companero legible (`ubicacion`/`responsable`, la
-// copia del nombre) ya registra el cambio de forma entendible, sin
-// volcar un UUID en el historial. `reemplazaA` (hallazgo L3) tampoco: se
-// fija una sola vez al crear el equipo (la propia "creacion" ya alcanza)
-// y su trazabilidad real es la fila "Reemplaza a" de la ficha, no el
-// historial.
+// `ubicacionId` (grupo N3) no genera su propia entrada: su companero
+// legible (`ubicacion`, la copia del nombre) ya registra el cambio de
+// forma entendible, sin volcar un UUID en el historial. `reemplazaA`
+// (hallazgo L3) tampoco: se fija una sola vez al crear el equipo (la
+// propia "creacion" ya alcanza) y su trazabilidad real es la fila
+// "Reemplaza a" de la ficha, no el historial.
+//
+// `responsableId` SI se registra desde la tarea 266, junto a su copia
+// legible `responsable`: el nombre dice quien tuvo el equipo, pero no
+// sirve para preguntar "que equipos tuvo esta persona" (dos personas
+// pueden llamarse igual, y una se puede renombrar). Con el id anterior y
+// el nuevo en la misma entrada, el historial basta para reconstruir las
+// asignaciones sin una tabla aparte (ver
+// src/features/personas/historialAsignaciones.ts). La entrada es
+// tecnica: el visor la oculta (`esEntradaTecnica`, textoHistorial.ts) y
+// muestra la del nombre.
 const CAMPOS_SIN_HISTORIAL = new Set([
   'id',
   'updatedAt',
   'updatedBy',
   'eliminadoEn',
   'ubicacionId',
-  'responsableId',
   'reemplazaA',
 ])
 

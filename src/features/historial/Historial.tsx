@@ -9,7 +9,7 @@ import { combinarEventos, etiquetaAccesoBoveda, etiquetaResuelto, formatearDurac
 import { resumenDetalles } from './resumenDetalles'
 import { resumenProcedimiento, textoContexto } from './resumenProcedimiento'
 import { conOrigen } from '../../lib/origenNavegacion'
-import { descripcionEntrada } from './textoHistorial'
+import { descripcionEntrada, esEntradaTecnica } from './textoHistorial'
 
 interface Props {
   entidadTipo: TipoEntidadHistorial
@@ -28,11 +28,15 @@ const formateadorFecha = new Intl.DateTimeFormat('es', { dateStyle: 'medium', ti
 export function Historial({ entidadTipo, entidadId }: Props) {
   const [abierto, setAbierto] = useState(false)
 
+  // Sin las entradas técnicas (tarea 266): el id del responsable se
+  // registra para reconstruir asignaciones, pero lo que se lee es la
+  // entrada del nombre que lo acompaña.
   const entradas = useLiveQuery(
     () =>
       db.historial
         .where('[entidadTipo+entidadId]')
         .equals([entidadTipo, entidadId])
+        .filter((entrada) => !esEntradaTecnica(entrada))
         .sortBy('fechaHora')
         .then((lista) => lista.reverse()),
     [entidadTipo, entidadId],

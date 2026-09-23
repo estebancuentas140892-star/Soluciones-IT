@@ -129,6 +129,12 @@ const PersonaForm = lazy(() =>
 const MigracionPersonas = lazy(() =>
   import('./features/personas/MigracionPersonas').then((m) => ({ default: m.MigracionPersonas })),
 )
+const AsignarEquipoPage = lazy(() =>
+  import('./features/personas/AsignarEquipoPage').then((m) => ({ default: m.AsignarEquipoPage })),
+)
+const RetirarPersonaPage = lazy(() =>
+  import('./features/personas/RetirarPersonaPage').then((m) => ({ default: m.RetirarPersonaPage })),
+)
 const ReferenciaPage = lazy(() =>
   import('./features/referencia/ReferenciaPage').then((m) => ({ default: m.ReferenciaPage })),
 )
@@ -443,6 +449,25 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <PersonaForm />
+                  </Suspense>
+                }
+              />
+              {/* Ciclo de vida de la persona (tarea 266): asignarle un
+                  equipo y retirarla. Tareas con salida que vuelven a su
+                  ficha. */}
+              <Route
+                path="personas/:personaId/asignar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <AsignarEquipoPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="personas/:personaId/retirar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <RetirarPersonaPage />
                   </Suspense>
                 }
               />

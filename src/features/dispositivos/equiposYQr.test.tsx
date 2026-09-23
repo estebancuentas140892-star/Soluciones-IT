@@ -48,6 +48,20 @@ async function sembrarCategorias() {
 
 async function sembrarInventario() {
   await sembrarCategorias()
+  // El responsable es una ficha de persona (tarea 266): un texto suelto
+  // sin ficha se ve "Sin responsable · por validar" (prueba propia abajo).
+  await db.personas.put({
+    id: 'per-prueba',
+    nombre: 'Persona de prueba',
+    notas: '',
+    estado: 'activa',
+    fechaIngreso: null,
+    fechaRetiro: null,
+    motivoRetiro: '',
+    updatedAt: AHORA,
+    updatedBy: null,
+    eliminadoEn: null,
+  })
   await sembrarEquipo({
     id: 'pc',
     nombre: 'PC Caja de prueba',
@@ -56,6 +70,7 @@ async function sembrarInventario() {
     ip: '10.9.9.21',
     ubicacion: 'Taquilla de prueba',
     responsable: 'Persona de prueba',
+    responsableId: 'per-prueba',
     serial: 'SERIE-PRUEBA-1',
     placaInventario: 'INV-PRUEBA-1',
     estado: 'operativo',
@@ -173,12 +188,29 @@ describe('la ficha del equipo', () => {
     // La categoría llega en su propia lectura, después del equipo.
     await esperar(() => textoPantalla().includes('Computadores · Marca de prueba Modelo X'), 'el tipo')
 
+    // La persona llega en su propia lectura, después del equipo.
+    await esperar(() => textoPantalla().includes('Responsable: Persona de prueba'), 'el responsable')
+
     const texto = textoPantalla()
     expect(texto).toContain('10.9.9.21')
     expect(texto).toContain('Taquilla de prueba')
     expect(texto).toContain('Responsable: Persona de prueba')
     expect(texto).toContain('SW-CENTRAL-PRUEBA · Puerto 18')
     expect(control('Conectado a SW-CENTRAL-PRUEBA · Puerto 18. Ver conexión')?.getAttribute('href')).toBe('/red/topologia/pc')
+  })
+
+  // Tarea 266, sección 8 del encargo: un responsable escrito que no es
+  // una ficha de persona ("Archivo", dos nombres) no se presenta como
+  // persona ni se resuelve solo.
+  it('un responsable escrito sin ficha se ve "Sin responsable" y queda por validar', async () => {
+    await sembrarCategorias()
+    await sembrarEquipo({ id: 'pc-archivo', nombre: 'PC Archivo de prueba', responsable: 'Archivo' })
+    await montar(RUTAS, '/dispositivos/pc-archivo')
+    await esperar(() => textoPantalla().includes('Sin responsable'), 'el responsable')
+
+    expect(textoPantalla()).toContain('Anotado: «Archivo» · por validar')
+    expect(textoPantalla()).not.toContain('Responsable: Archivo')
+    expect(control('Asignar')).not.toBeNull()
   })
 
   it('los datos técnicos van plegados en "Más datos del equipo"', async () => {

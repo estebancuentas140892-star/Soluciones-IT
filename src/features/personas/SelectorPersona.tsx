@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
-import { db } from '../../lib/db'
+import { db, type Persona } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { CLASE_CAMPO as CLASE_CAMPO_BASE } from '../../components/campos'
+import { estaActiva } from './cicloPersona'
 
 // El selector vive dentro del Editor de Dispositivo y comparte su campo;
 // solo fija el alto mínimo táctil (44px), que no compite con ninguna
@@ -13,9 +14,16 @@ const CLASE_CAMPO = `min-h-11 ${CLASE_CAMPO_BASE}`
 const TEXTO_LIBRE = '__texto__'
 const NUEVA = '__nueva__'
 
-function ordenarPorNombre<T extends { nombre: string; eliminadoEn: string | null }>(personas: T[]): T[] {
+// Solo las personas activas se ofrecen (tarea 266): a quien se retiró no
+// se le entrega un equipo. La que ya está vinculada se conserva aunque se
+// haya retirado, para que editar otro dato del equipo no la suelte sin
+// querer; se ve marcada como retirada.
+function ordenarPorNombre<T extends Pick<Persona, 'id' | 'nombre' | 'eliminadoEn' | 'estado'>>(
+  personas: T[],
+  vinculadaId: string | null,
+): T[] {
   return personas
-    .filter((p) => !p.eliminadoEn)
+    .filter((p) => !p.eliminadoEn && (estaActiva(p) || p.id === vinculadaId))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true }))
 }
 
@@ -36,7 +44,7 @@ export function SelectorPersona({
   onChange: (responsableId: string | null, responsableTexto: string) => void
 }) {
   const personas = useLiveQuery(() => db.personas.toArray(), [], [])
-  const ordenadas = useMemo(() => ordenarPorNombre(personas), [personas])
+  const ordenadas = useMemo(() => ordenarPorNombre(personas, responsableId), [personas, responsableId])
   const porId = useMemo(
     () => new Map(personas.filter((p) => !p.eliminadoEn).map((p) => [p.id, p])),
     [personas],
@@ -78,7 +86,15 @@ export function SelectorPersona({
     if (nombre === '') return
     setGuardandoNueva(true)
     const id = nuevoId()
-    await guardarRegistro('personas', { id, nombre, notas: '' })
+    await guardarRegistro('personas', {
+      id,
+      nombre,
+      notas: '',
+      estado: 'activa',
+      fechaIngreso: null,
+      fechaRetiro: null,
+      motivoRetiro: '',
+    })
     onChange(id, nombre)
     setCreando(false)
     setNombreNueva('')
@@ -91,7 +107,7 @@ export function SelectorPersona({
         <option value="">Sin responsable</option>
         {ordenadas.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.nombre}
+            {estaActiva(p) ? p.nombre : `${p.nombre} (retirada)`}
           </option>
         ))}
         <option value={TEXTO_LIBRE}>Otra (escribir manualmente)</option>

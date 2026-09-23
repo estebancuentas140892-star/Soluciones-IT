@@ -69,7 +69,16 @@ export function MigracionPersonas() {
     // Primero las personas, luego los vinculos: asi el dispositivo
     // siempre apunta a una fila que ya existe localmente.
     for (const p of resultado.personas) {
-      await guardarRegistro('personas', { id: p.id, nombre: p.nombre, notas: '' })
+      await guardarRegistro('personas', {
+        id: p.id,
+        nombre: p.nombre,
+        notas: '',
+        estado: 'activa',
+        // Sin fecha de ingreso: la migración no la conoce y no la inventa.
+        fechaIngreso: null,
+        fechaRetiro: null,
+        motivoRetiro: '',
+      })
     }
     const porId = new Map(dispositivos.map((d) => [d.id, d]))
     for (const asignacion of resultado.asignaciones) {

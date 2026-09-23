@@ -702,6 +702,45 @@ alter table public.historial add constraint historial_entidad_tipo_check
   check (entidad_tipo in ('categoria', 'articulo', 'dispositivo', 'credencial', 'diagnostico', 'ubicacion', 'campo_protegido', 'persona', 'referencia'));
 
 -- ----------------------------------------------------------------
+-- 1.w Ciclo de vida de la persona (2026-09-23, tarea 266).
+--
+--     Cuando alguien renuncia, termina contrato o es despedido, su
+--     ficha no se elimina: pasa a 'retirada' y conserva su historial.
+--     Eliminar queda para un registro creado por error o duplicado.
+--
+--     Solo los campos que usa la operacion de TI, a proposito: esto no
+--     es un sistema de Recursos Humanos. Cargo, area, correo o
+--     extension siguen en `notas`; documento, direccion, salario o
+--     datos medicos no pertenecen aqui.
+--
+--     Sin estado 'pendiente': una `fecha_ingreso` futura ya dice que
+--     alguien va a llegar, y un tercer estado habria que mantenerlo a
+--     mano.
+--
+--     El historial de asignaciones NO lleva tabla propia: el equipo
+--     actual es `dispositivos.responsable_id` y cada cambio queda en
+--     `historial` (entidad 'dispositivo', campo 'responsableId', con el
+--     id de la persona anterior y el de la nueva). Una tabla aparte
+--     habria guardado dos veces la misma verdad.
+--
+--     Del lado de la app, `estado` y `motivo_retiro` llevan su default
+--     en `porDefecto` de src/lib/tablas.ts; las dos fechas son
+--     nullables y NO van en `camposOpcionales` porque se pueden vaciar
+--     (corregir un ingreso, reactivar a alguien). Advertencia de
+--     despliegue (regla 17 de REGLAS.md): hasta aplicar este bloque, el
+--     guardado de una persona espera en la cola de sincronizacion (no
+--     se pierde); el resto de tablas sigue igual.
+-- ----------------------------------------------------------------
+
+alter table public.personas add column if not exists estado text not null default 'activa';
+alter table public.personas drop constraint if exists personas_estado_check;
+alter table public.personas add constraint personas_estado_check
+  check (estado in ('activa', 'retirada'));
+alter table public.personas add column if not exists fecha_ingreso date;
+alter table public.personas add column if not exists fecha_retiro date;
+alter table public.personas add column if not exists motivo_retiro text not null default '';
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 

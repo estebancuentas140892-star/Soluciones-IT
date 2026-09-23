@@ -237,13 +237,15 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
   }
 
   // Personas como resultado propio (hallazgo T1): "¿quién es Juan
-  // Pérez?" hoy solo se resolvía revisando cada dispositivo a mano.
+  // Pérez?" hoy solo se resolvía revisando cada dispositivo a mano. Una
+  // persona retirada sigue apareciendo (su ficha y su historial se
+  // conservan, tarea 266), pero lo dice antes de abrirla.
   for (const persona of personas) {
     documentos.push({
       id: `persona:${persona.id}`,
       tipo: 'persona',
       titulo: persona.nombre,
-      subtitulo: 'Persona',
+      subtitulo: persona.estado === 'retirada' ? 'Persona · Retirada' : 'Persona',
       ruta: `/personas/${persona.id}`,
       texto: [persona.nombre, persona.notas].join(' '),
       portadaRef: '',

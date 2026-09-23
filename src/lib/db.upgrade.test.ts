@@ -119,7 +119,7 @@ describe('upgrade a la version 14', () => {
   // la 13 llegue hasta la ULTIMA sin quedarse por el camino, no el
   // numero en si.
   it('deja la base en la ultima version declarada', () => {
-    expect(db.verno).toBe(18)
+    expect(db.verno).toBe(19)
   })
 
   // Version 15 (tarea 217): la tabla de preferencias del tecnico tiene

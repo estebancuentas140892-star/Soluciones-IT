@@ -68,14 +68,46 @@ export type TonoEstado = 'exito' | 'precaucion' | 'error' | 'neutro'
 // app: agregar, renombrar o recolorear un estado solo requiere tocar
 // esta lista. features/dispositivos/estados.ts reexporta
 // ESTADOS_SUGERIDOS desde aquí para el datalist del formulario.
-const ESTADOS_CONOCIDOS: { etiqueta: string; clase: string; tono: TonoEstado }[] = [
+//
+// EL CONJUNTO OPERATIVO (tarea 266, sección 9 del encargo del
+// 2026-09-23): cinco estados, uno por situación real.
+//   - Operativo: funciona y está en uso.
+//   - Disponible: funciona y no tiene a nadie; se puede asignar. Nace
+//     con el ciclo de vida de las personas: al liberar un equipo que
+//     funcionaba queda aquí, no "Operativo" a nombre de nadie.
+//   - En mantenimiento, Fuera de servicio y De baja, como estaban.
+// "De baja" conserva su texto, que es el que ya escriben la baja y el
+// reemplazo en los datos reales; "Dado de baja" se reconoce como el
+// mismo estado (`alias`) en vez de convertirse en un sexto. Un alias es
+// la misma situación dicha con otras palabras, nunca una deducción: un
+// texto que no dice su estado se queda como está.
+const ESTADOS_CONOCIDOS: { etiqueta: string; clase: string; tono: TonoEstado; alias?: string[] }[] = [
   { etiqueta: 'Operativo', clase: 'text-noct-exito', tono: 'exito' },
+  { etiqueta: 'Disponible', clase: 'text-noct-exito', tono: 'exito' },
   { etiqueta: 'En mantenimiento', clase: 'text-noct-precaucion', tono: 'precaucion' },
   { etiqueta: 'Fuera de servicio', clase: 'text-noct-error', tono: 'error' },
-  { etiqueta: 'De baja', clase: 'text-noct-neutral-500', tono: 'neutro' },
+  { etiqueta: 'De baja', clase: 'text-noct-neutral-500', tono: 'neutro', alias: ['Dado de baja'] },
 ]
 
 export const ESTADOS_SUGERIDOS = ESTADOS_CONOCIDOS.map((e) => e.etiqueta)
+
+function estadoConocido(texto: string) {
+  const buscado = normalizar(texto)
+  return ESTADOS_CONOCIDOS.find(
+    (e) => normalizar(e.etiqueta) === buscado || (e.alias ?? []).some((a) => normalizar(a) === buscado),
+  )
+}
+
+/**
+ * La etiqueta canónica si el texto es uno de los estados conocidos (sin
+ * distinguir mayúsculas, tildes ni espacios de los extremos, y aceptando
+ * sus sinónimos), o null si no lo es. Es lo que usa la lógica que DECIDE
+ * algo por el estado (un equipo de baja no es equipo actual de nadie);
+ * `estadoConEtiqueta` es lo que se pinta.
+ */
+export function estadoCanonico(estado: string): string | null {
+  return estadoConocido(estado)?.etiqueta ?? null
+}
 
 // Etiqueta canónica del estado del dispositivo (una de ESTADOS_CONOCIDOS
 // arriba; cualquier otro texto se conserva tal cual, o "Sin estado" si
@@ -87,8 +119,7 @@ export interface EstadoConEtiqueta {
 }
 
 export function estadoConEtiqueta(estado: string): EstadoConEtiqueta {
-  const texto = normalizar(estado)
-  const conocido = ESTADOS_CONOCIDOS.find((e) => normalizar(e.etiqueta) === texto)
+  const conocido = estadoConocido(estado)
   return { etiqueta: conocido ? conocido.etiqueta : estado.trim() || 'Sin estado' }
 }
 
@@ -96,9 +127,7 @@ export function estadoConEtiqueta(estado: string): EstadoConEtiqueta {
 // Dispositivos, Red, Topología y Topología de Equipo (antes cada
 // pantalla lo definía por su cuenta, calcado; unificado aquí).
 export function claseEstado(etiqueta: string): string {
-  const texto = normalizar(etiqueta)
-  const conocido = ESTADOS_CONOCIDOS.find((e) => normalizar(e.etiqueta) === texto)
-  return conocido ? conocido.clase : 'text-noct-neutral-500'
+  return estadoConocido(etiqueta)?.clase ?? 'text-noct-neutral-500'
 }
 
 // Tono de pastilla para la etiqueta canónica (tarea 207, hallazgo
@@ -106,9 +135,7 @@ export function claseEstado(etiqueta: string): string {
 // los puntos de color del árbol de topología, donde una pastilla por
 // nodo sería ruido.
 export function tonoEstado(etiqueta: string): TonoEstado {
-  const texto = normalizar(etiqueta)
-  const conocido = ESTADOS_CONOCIDOS.find((e) => normalizar(e.etiqueta) === texto)
-  return conocido ? conocido.tono : 'neutro'
+  return estadoConocido(etiqueta)?.tono ?? 'neutro'
 }
 
 // Línea de detalle de la fila, estilo "Switch 8 puertos · Puerto 02 ·

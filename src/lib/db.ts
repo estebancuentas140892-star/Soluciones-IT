@@ -42,14 +42,31 @@ export interface Ubicacion {
   eliminadoEn: string | null
 }
 
+// Momento de la persona en la organizacion (tarea 266). 'retirada' es
+// el camino normal cuando alguien renuncia o termina contrato: la ficha
+// y su historial se conservan, y sus equipos se resuelven uno por uno.
+// No hay 'pendiente': una `fechaIngreso` futura ya lo dice.
+export type EstadoPersona = 'activa' | 'retirada'
+
 // Una persona como entidad (hallazgo T1 de AUDITORIA_FLUJOS_TI.md):
 // reemplaza el texto libre que antes solo vivia como una clave suelta
 // dentro de `Dispositivo.detalles` (por ejemplo "Usuario asignado").
 // Sin jerarquia (no aplica a personas, a diferencia de ubicaciones).
+//
+// Solo lo que usa la operacion de TI (tarea 266): no es una ficha de
+// Recursos Humanos. Cargo, area, correo o extension van en `notas`.
 export interface Persona {
   id: string
   nombre: string
   notas: string
+  // Puede llegar undefined de una fila guardada antes de la version 19
+  // de la base local; se lee siempre con `?? 'activa'`.
+  estado: EstadoPersona
+  // "YYYY-MM-DD" o null, mismo formato que `Credencial.venceEn`. Solo la
+  // fecha que alguien anoto: nunca se deduce del alta de la ficha.
+  fechaIngreso: string | null
+  fechaRetiro: string | null
+  motivoRetiro: string
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -1435,6 +1452,24 @@ class SolucionesItDatabase extends Dexie {
         .toCollection()
         .modify((fila: Record<string, unknown>) => {
           normalizarEntidad('referencias', fila)
+        })
+    })
+
+    // Version 19 (2026-09-23, tarea 266): NO cambia el esquema, solo
+    // completa las personas ya guardadas con los campos de su ciclo de
+    // vida (estado, fechas y motivo de retiro). Mismo mecanismo y mismo
+    // motivo que las versiones 14 y 18: agregar columnas en el servidor
+    // no cambia el `updated_at` de las 94 personas que ya viven en cada
+    // telefono, asi que no se vuelven a bajar y se quedarian sin
+    // `estado` para siempre. Solo rellena huecos ('activa' y ''), no
+    // inventa fechas (quedan en null), no encola cambios y termina antes
+    // de que ninguna pantalla lea la base.
+    this.version(19).upgrade(async (tx) => {
+      await tx
+        .table('personas')
+        .toCollection()
+        .modify((fila: Record<string, unknown>) => {
+          normalizarEntidad('personas', fila)
         })
     })
   }

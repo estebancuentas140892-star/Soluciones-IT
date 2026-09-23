@@ -172,7 +172,9 @@ export function padreDe(pathname: string): Padre | null {
       return { to: '/ubicaciones', etiqueta: 'Ubicaciones' }
     }
     case 'personas': {
-      if (b === 'editar') return { to: `/personas/${a}`, etiqueta: 'Volver' }
+      // Editar, asignar un equipo y retirar (tarea 266) son tareas sobre
+      // la persona: vuelven a su ficha.
+      if (b === 'editar' || b === 'asignar' || b === 'retirar') return { to: `/personas/${a}`, etiqueta: 'Volver' }
       return { to: '/personas', etiqueta: 'Personas' }
     }
     case 'referencia': {

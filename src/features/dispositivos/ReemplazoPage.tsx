@@ -12,6 +12,7 @@ import { resumenConexion } from '../../lib/conexiones'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { dependenciasDeBaja } from './baja'
 import { migrarCampoProtegido, migrarConexion, migrarCredencial } from './reemplazo'
+import { darDeBajaEquipo } from '../personas/operaciones'
 
 // Migracion de "Reemplazar equipo" (hallazgos L2 y L3 de
 // AUDITORIA_FLUJOS_TI.md): tras crear el equipo entrante con
@@ -95,7 +96,10 @@ export function ReemplazoPage() {
         accion: 'modifico',
       })
     }
-    await guardarRegistro('dispositivos', { ...viejo, estado: 'De baja' }, motivoFinal)
+    // La baja del saliente suelta también a su responsable (tarea 266):
+    // la persona pasa al equipo entrante, que la heredó en el formulario,
+    // y el viejo deja de figurar como suyo.
+    await darDeBajaEquipo(viejo.id, motivoFinal)
 
     setMigrando(false)
     navigate(`/dispositivos/${nuevo!.id}`)

@@ -1,5 +1,6 @@
 import { db, type EjecucionDiagnostico, type HistorialEntrada, type TipoEntidadHistorial } from '../../lib/db'
 import { textoVivo } from '../../lib/referencia'
+import { esEntradaTecnica } from './textoHistorial'
 
 // Actividad reciente del equipo (fase J2 de la jornada del tecnico):
 // responde "¿que cambio hoy?" sin abrir ficha por ficha. Vista
@@ -81,8 +82,10 @@ export function agruparActividad(
   ejecuciones: EjecucionDiagnostico[],
   limite = 5,
 ): EventoActividad[] {
+  // Las entradas técnicas (el id del responsable, tarea 266) acompañan
+  // a la del nombre en el mismo guardado: contarlas duplicaría el cambio.
   const visibles = historial
-    .filter((e) => TIPOS_VISIBLES.includes(e.entidadTipo))
+    .filter((e) => TIPOS_VISIBLES.includes(e.entidadTipo) && !esEntradaTecnica(e))
     .slice()
     .sort((a, b) => (a.fechaHora < b.fechaHora ? 1 : -1))
 

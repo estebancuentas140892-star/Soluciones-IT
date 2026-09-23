@@ -96,7 +96,9 @@ describe('upgrade a la version 18', () => {
     expect(await db.cambiosPendientes.count()).toBe(0)
   })
 
-  it('deja la base en la version 18', () => {
-    expect(db.verno).toBe(18)
+  // Desde la tarea 266 la base sigue hasta la 19: lo que esta prueba
+  // cuida es que la 18 no se quede por el camino.
+  it('pasa por la version 18 hasta la ultima declarada', () => {
+    expect(db.verno).toBeGreaterThanOrEqual(18)
   })
 })

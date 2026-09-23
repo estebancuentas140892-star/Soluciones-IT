@@ -6,6 +6,7 @@ import { FloppyDisk } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
+import { esFechaValida, estadoDePersona } from './cicloPersona'
 
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 
@@ -13,6 +14,13 @@ import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 // nombre y notas, sin jerarquía (no aplica a personas, a diferencia de
 // ubicaciones). Trae su propio shell Nocturne, por eso sale del Layout
 // oscuro.
+//
+// Desde la tarea 266 suma la fecha de ingreso (opcional: solo la que
+// alguien sabe, nunca se rellena sola) y, en una persona retirada, la
+// fecha y el motivo del retiro para poder corregirlos. El estado no se
+// cambia aquí: retirar y reactivar son acciones de la ficha, porque
+// retirar decide además qué pasa con cada equipo. Al editar se conserva
+// todo lo que el formulario no toca.
 export function PersonaForm() {
   const { personaId } = useParams()
   const navigate = useNavigate()
@@ -26,6 +34,9 @@ export function PersonaForm() {
 
   const [nombre, setNombre] = useState('')
   const [notas, setNotas] = useState('')
+  const [fechaIngreso, setFechaIngreso] = useState('')
+  const [fechaRetiro, setFechaRetiro] = useState('')
+  const [motivoRetiro, setMotivoRetiro] = useState('')
   const [motivo, setMotivo] = useState('')
   const [cargadoInicial, setCargadoInicial] = useState(!esEdicion)
   const [guardando, setGuardando] = useState(false)
@@ -34,16 +45,40 @@ export function PersonaForm() {
     if (!persona || cargadoInicial) return
     setNombre(persona.nombre)
     setNotas(persona.notas)
+    setFechaIngreso(persona.fechaIngreso ?? '')
+    setFechaRetiro(persona.fechaRetiro ?? '')
+    setMotivoRetiro(persona.motivoRetiro ?? '')
     setCargadoInicial(true)
   }, [persona, cargadoInicial])
 
   if (esEdicion && persona === null) return <Navigate to="/personas" replace />
 
+  const retirada = Boolean(persona) && estadoDePersona(persona as NonNullable<typeof persona>) === 'retirada'
+  const ingresoInvalido = fechaIngreso !== '' && !esFechaValida(fechaIngreso)
+  const retiroInvalido = retirada && fechaRetiro !== '' && !esFechaValida(fechaRetiro)
+  const valido = nombre.trim() !== '' && !ingresoInvalido && !retiroInvalido
+
   async function manejarEnvio(evento: FormEvent) {
     evento.preventDefault()
-    if (nombre.trim() === '') return
+    if (!valido) return
     setGuardando(true)
-    await guardarRegistro('personas', { id, nombre: nombre.trim(), notas: notas.trim() }, motivo.trim())
+    const base = persona ?? {
+      estado: 'activa' as const,
+      fechaRetiro: null,
+      motivoRetiro: '',
+    }
+    await guardarRegistro(
+      'personas',
+      {
+        ...base,
+        id,
+        nombre: nombre.trim(),
+        notas: notas.trim(),
+        fechaIngreso: fechaIngreso || null,
+        ...(retirada ? { fechaRetiro: fechaRetiro || null, motivoRetiro: motivoRetiro.trim() } : {}),
+      },
+      motivo.trim(),
+    )
     navigate(`/personas/${id}`)
   }
 
@@ -79,6 +114,19 @@ export function PersonaForm() {
           </label>
 
           <label className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>Fecha de ingreso (opcional)</span>
+            <input
+              type="date"
+              value={fechaIngreso}
+              onChange={(e) => setFechaIngreso(e.target.value)}
+              className={`min-h-11 ${CLASE_CAMPO}`}
+            />
+            <span className="text-[12px] text-noct-neutral-500">
+              Solo si se sabe. Una fecha futura indica que todavía no ha llegado.
+            </span>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
             <span className={CLASE_ETIQUETA}>Notas (opcional)</span>
             <textarea
               rows={3}
@@ -88,6 +136,30 @@ export function PersonaForm() {
               className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
             />
           </label>
+
+          {retirada && (
+            <>
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Fecha de retiro</span>
+                <input
+                  type="date"
+                  value={fechaRetiro}
+                  onChange={(e) => setFechaRetiro(e.target.value)}
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Motivo del retiro (opcional)</span>
+                <input
+                  type="text"
+                  value={motivoRetiro}
+                  onChange={(e) => setMotivoRetiro(e.target.value)}
+                  placeholder="Renuncia, fin de contrato…"
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </label>
+            </>
+          )}
 
           {esEdicion && (
             <label className="flex flex-col gap-1.5">
@@ -104,7 +176,7 @@ export function PersonaForm() {
 
           <button
             type="submit"
-            disabled={guardando || nombre.trim() === ''}
+            disabled={guardando || !valido}
             className={`mt-1 ${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}
           >
             <FloppyDisk size={15} aria-hidden />

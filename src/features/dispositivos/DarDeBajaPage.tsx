@@ -7,6 +7,9 @@ import { CheckCircle, type IconoProps, LinkSimple, LockSimple, PlugsConnected, T
 import { BTN_GHOST_PELIGRO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { db, type CampoProtegido, type Conexion, type Credencial } from '../../lib/db'
 import { eliminarRegistro, guardarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
+import { useOrigen } from '../../app/useOrigen'
+import { darDeBajaEquipo } from '../personas/operaciones'
+import { esDeBaja } from '../personas/cicloPersona'
 import { resumenConexion } from '../../lib/conexiones'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { dependenciasDeBaja, sinDependencias, sinDispositivo } from './baja'
@@ -27,6 +30,7 @@ export function DarDeBajaPage() {
   const { dispositivoId = '' } = useParams()
   const navigate = useNavigate()
   const perfil = usePerfilVivo()
+  const origen = useOrigen()
 
   const dispositivo = useLiveQuery(() => db.dispositivos.get(dispositivoId), [dispositivoId])
   const conexiones = useLiveQuery(() => db.conexiones.filter((c) => !c.eliminadoEn).toArray(), [], [])
@@ -55,14 +59,20 @@ export function DarDeBajaPage() {
     )
   }
 
-  const yaDeBaja = dispositivo.estado.trim().toLowerCase() === 'de baja'
+  const yaDeBaja = esDeBaja(dispositivo)
+  // Desde la tarea 266 la baja suelta al responsable (antes el equipo
+  // retirado seguía siendo "equipo actual" de su persona). Se dice antes
+  // de confirmar, con el nombre, para que no sea una sorpresa.
+  const responsableActual = dispositivo.responsableId ? dispositivo.responsable.trim() || 'su responsable' : ''
 
   async function confirmarBaja() {
     if (!listo || !dispositivo) return
     setConfirmando(true)
-    await guardarRegistro('dispositivos', { ...dispositivo, estado: 'De baja' }, motivo.trim())
+    await darDeBajaEquipo(dispositivoId, motivo.trim())
     setConfirmando(false)
-    navigate(`/dispositivos/${dispositivoId}`)
+    // Si se llegó desde la ficha de una persona (liberar o retirar), se
+    // vuelve allí; si no, a la ficha del equipo, como siempre.
+    navigate(origen?.to ?? `/dispositivos/${dispositivoId}`)
   }
 
   return (
@@ -71,8 +81,10 @@ export function DarDeBajaPage() {
       modo="tarea"
       rotulo="Dando de baja"
       titulo={dispositivo.nombre}
-      salidaA={`/dispositivos/${dispositivoId}`}
-      vuelta="La ficha del equipo"
+      // Llegando desde la ficha de una persona (tarea 266), la X vuelve a
+      // ella; si no, a la ficha del equipo, como siempre.
+      salidaA={origen?.to ?? `/dispositivos/${dispositivoId}`}
+      vuelta={origen?.etiqueta ?? 'La ficha del equipo'}
       salidaEtiqueta="Salir sin dar de baja"
       barra={
         <p className="px-4 pb-2.5 text-[12px] leading-[1.5] text-noct-neutral-500">
@@ -116,6 +128,13 @@ export function DarDeBajaPage() {
           <p className="flex items-center gap-2 rounded-md border border-noct-exito/35 bg-noct-exito/[.08] px-3 py-2.5 text-[13px] text-noct-exito">
             <CheckCircle size={16} className="shrink-0" aria-hidden />
             Sin dependencias pendientes. Ya se puede confirmar la baja.
+          </p>
+        )}
+
+        {responsableActual && (
+          <p className="rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-[12.5px] leading-[1.5] text-noct-neutral-300">
+            Dejará de estar asignado a <strong className="text-noct-text">{responsableActual}</strong>. Su paso por
+            el equipo queda en el historial.
           </p>
         )}
 

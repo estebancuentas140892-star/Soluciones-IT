@@ -44,7 +44,6 @@ import {
   ShareNetwork,
   TrashSimple,
   TreeStructure,
-  User,
   WarningOctagon,
   XCircle,
 } from '../../components/iconos'
@@ -70,6 +69,8 @@ import { ProblemasDelEquipo } from './ProblemasDelEquipo'
 import { ProcedimientosDelEquipo } from './ProcedimientosDelEquipo'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
 import { SeguridadDelEquipo } from './SeguridadDelEquipo'
+import { ResponsableDelEquipo, ResponsablesAnteriores } from '../personas/ResponsableDelEquipo'
+import { useResponsablesAnteriores } from '../personas/useAsignaciones'
 
 // Fecha corta al estilo del diseño ("12 jul"), con el año solo cuando
 // no es el actual (mismo criterio que la ficha de artículo).
@@ -134,12 +135,11 @@ export function DispositivoPage() {
     () => (dispositivo?.ubicacionId ? db.ubicaciones.get(dispositivo.ubicacionId) : undefined),
     [dispositivo?.ubicacionId],
   )
-  // Responsable como entidad (hallazgo T1): mismo criterio de referencia
-  // viva que la ubicacion.
-  const responsableVinculado = useLiveQuery(
-    () => (dispositivo?.responsableId ? db.personas.get(dispositivo.responsableId) : undefined),
-    [dispositivo?.responsableId],
-  )
+  // Responsable como entidad (hallazgo T1): la fila vive en
+  // `ResponsableDelEquipo` desde la tarea 266 (persona activa o retirada,
+  // texto por validar o nadie). Aquí solo se cuentan los responsables
+  // anteriores, para la cabecera plegada de "Más datos del equipo".
+  const anterioresResponsables = useResponsablesAnteriores(dispositivoId)
   // Reemplazo (hallazgo L3): equipo al que este reemplaza (si lo hay) y
   // equipo que reemplazo a este (inverso, derivado con un filtro directo
   // ya que no hay copia de referencia que consultar sin ella).
@@ -283,11 +283,6 @@ export function DispositivoPage() {
   const ubicacionViva = ubicacionVinculada && !ubicacionVinculada.eliminadoEn ? ubicacionVinculada : null
   const ubicacionNombre = textoVivo(ubicacionViva?.nombre, dispositivo.ubicacion)
 
-  // Nombre a mostrar del responsable: el vivo de la persona enlazada si
-  // existe y no esta eliminada; si no, la copia de referencia guardada.
-  const responsableVivo = responsableVinculado && !responsableVinculado.eliminadoEn ? responsableVinculado : null
-  const responsableNombre = textoVivo(responsableVivo?.nombre, dispositivo.responsable)
-
   // Sin copia de referencia para reemplazaA (autorreferencia estricta,
   // fijada una sola vez al crear): si la fila vinculada no esta
   // disponible (aun sincronizando, o realmente no existe) la fila de la
@@ -303,7 +298,12 @@ export function DispositivoPage() {
   // Cuántos datos guarda "Más datos del equipo" (M-R4: plegar informa).
   // "Categoría y fecha" va siempre.
   const totalMasDatos =
-    camposContexto.length + detalles.length + (reemplazaNombre ? 1 : 0) + (reemplazadoPor ? 1 : 0) + 1
+    camposContexto.length +
+    detalles.length +
+    (reemplazaNombre ? 1 : 0) +
+    (reemplazadoPor ? 1 : 0) +
+    (anterioresResponsables.length > 0 ? 1 : 0) +
+    1
   const nombreSubida = subida
     ? textoVivo(equipoDeSubida && !equipoDeSubida.eliminadoEn ? equipoDeSubida.nombre : null, subida.extremo.otroNombre)
     : ''
@@ -523,30 +523,13 @@ export function DispositivoPage() {
                 </span>
               ))}
 
-            {/* Quién responde de él: subió de "Contexto" (tarea 256). */}
-            {responsableNombre &&
-              (responsableVivo ? (
-                <Link
-                  to={`/personas/${responsableVivo.id}`}
-                  state={origenEsteEquipo}
-                  className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-accent-300 hover:bg-noct-text/[.04]"
-                >
-                  <User size={15} className="shrink-0" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">
-                    <span className="text-noct-neutral-500">Responsable: </span>
-                    {responsableNombre}
-                  </span>
-                  <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                </Link>
-              ) : (
-                <span className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-neutral-200">
-                  <User size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">
-                    <span className="text-noct-neutral-500">Responsable: </span>
-                    {responsableNombre}
-                  </span>
-                </span>
-              ))}
+            {/* Quién responde de él: subió de "Contexto" (tarea 256). Desde
+                la tarea 266 dice también "Sin responsable" (y el texto
+                "por validar" si lo hay), con "Asignar" y "Cambiar". Un
+                equipo de red solo lleva la fila si alguien lo anotó. */}
+            {(!esRed || dispositivo.responsableId || dispositivo.responsable.trim() !== '') && (
+              <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} />
+            )}
 
             {/* A QUÉ ESTÁ CONECTADO (sección 18): el switch que le da
                 servicio y su puerto, que es lo que se busca en el rack.
@@ -672,6 +655,7 @@ export function DispositivoPage() {
                     </Link>
                   </FilaDato>
                 )}
+                <ResponsablesAnteriores periodos={anterioresResponsables} origen={origenEsteEquipo} />
                 <FilaDato etiqueta="Categoría y fecha">
                   <span className="min-w-0 flex-1 truncate text-[13.5px] text-noct-neutral-300">{metaLinea}</span>
                 </FilaDato>

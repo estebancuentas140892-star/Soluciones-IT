@@ -561,7 +561,16 @@ describe('Centro de consulta en el buscador global', () => {
 describe('lo que el buscador global reúne', () => {
   const marca = { updatedAt: '2026-09-15T00:00:00.000Z', updatedBy: null, eliminadoEn: null }
   const ubicacion: Ubicacion = { id: 'u1', nombre: 'Sala Zafiro', padreId: null, notas: '', ...marca }
-  const persona: Persona = { id: 'p1', nombre: 'Zafiro Gómez', notas: '', ...marca }
+  const persona: Persona = {
+    id: 'p1',
+    nombre: 'Zafiro Gómez',
+    notas: '',
+    estado: 'activa',
+    fechaIngreso: null,
+    fechaRetiro: null,
+    motivoRetiro: '',
+    ...marca,
+  }
   const diagnostico: Diagnostico = {
     id: 'g1',
     categoriaId: 'cat-1',

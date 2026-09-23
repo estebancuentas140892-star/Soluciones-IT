@@ -3,4 +3,4 @@
 // estado) vive en features/red/topologiaVisual.ts, única fuente para
 // toda la app; aquí solo se reexporta para que el resto de la feature
 // dispositivos no dependa directamente del módulo de red.
-export { ESTADOS_SUGERIDOS } from '../red/topologiaVisual'
+export { ESTADOS_SUGERIDOS, estadoCanonico } from '../red/topologiaVisual'

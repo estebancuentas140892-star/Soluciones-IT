@@ -24,13 +24,16 @@ import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { SelectorUbicacion } from '../ubicaciones/SelectorUbicacion'
 import { SelectorPersona } from '../personas/SelectorPersona'
-import { ESTADOS_SUGERIDOS } from './estados'
+import { ESTADOS_SUGERIDOS, estadoCanonico } from './estados'
 
 // Punto de color de cada estado sugerido (08_ESTILO: operativo verde,
 // mantenimiento ámbar, fuera de servicio rojo, de baja neutro). Se
-// indexa por la etiqueta canónica de ESTADOS_SUGERIDOS.
+// indexa por la etiqueta canónica de ESTADOS_SUGERIDOS. "Disponible"
+// (tarea 266) es verde como Operativo porque también funciona, pero
+// hueco: funciona y no lo tiene nadie.
 const PUNTO_ESTADO: Record<string, string> = {
   Operativo: 'bg-noct-exito',
+  Disponible: 'border border-noct-exito',
   'En mantenimiento': 'bg-noct-precaucion',
   'Fuera de servicio': 'bg-noct-error',
   'De baja': 'bg-noct-neutral-500',
@@ -512,7 +515,9 @@ export function DispositivoForm() {
             <span className={CLASE_ETIQUETA}>Estado</span>
             <div className="flex flex-wrap gap-[7px]">
               {ESTADOS_SUGERIDOS.map((valor) => {
-                const activo = estado.trim().toLowerCase() === valor.toLowerCase()
+                // Un sinónimo guardado ("Dado de baja") enciende su chip
+                // canónico ("De baja"), igual que se pinta en la ficha.
+                const activo = estadoCanonico(estado) === valor
                 return (
                   <button
                     key={valor}

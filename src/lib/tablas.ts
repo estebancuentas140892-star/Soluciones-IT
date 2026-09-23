@@ -401,11 +401,25 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
   // lista de tablas sincronizadas, mismo criterio que ubicaciones y
   // campos_protegidos: si el esquema aun no se aplico en el servidor, su
   // fallo no impide descargar las demas.
+  //
+  // Ciclo de vida (tarea 266): `estado` y `motivoRetiro` son NOT NULL con
+  // default en schema.sql y lo declaran aqui; las dos fechas son
+  // nullables y NO van en `camposOpcionales`, porque se pueden vaciar
+  // (corregir un ingreso mal anotado, reactivar a quien se retiro) y ese
+  // null tiene que viajar.
   personas: {
     columnaCursor: 'updated_at',
     soloInsercion: false,
-    campos: { ...camposComunes, nombre: 'nombre', notas: 'notas' },
-    porDefecto: { notas: '' },
+    campos: {
+      ...camposComunes,
+      nombre: 'nombre',
+      notas: 'notas',
+      estado: 'estado',
+      fechaIngreso: 'fecha_ingreso',
+      fechaRetiro: 'fecha_retiro',
+      motivoRetiro: 'motivo_retiro',
+    },
+    porDefecto: { notas: '', estado: 'activa', motivoRetiro: '' },
   },
   // Referencia (2026-09-10): glosario, atajos y comandos, y desde el
   // 2026-09-14 tambien herramientas (el "Centro de consulta"). Va al final
