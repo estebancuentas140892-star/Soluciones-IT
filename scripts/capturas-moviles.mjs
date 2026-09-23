@@ -57,6 +57,12 @@ const modo = (m) => `{ const { guardarModoEjecucion } = await import('/src/lib/p
 const RECORRIDOS_LIMPIOS = `{ const { db } = await import('/src/lib/db.ts'); await db.progresoDiagnostico.clear(); await db.progresoPasos.bulkDelete(['recorrido:diag-impresora-ejemplo', 'recorrido:diag-sesion-ejemplo', 'art-resolucion-dian']); }`
 // Un recorrido a medias (respondida la primera pregunta), para Recientes.
 const RECORRIDO_A_MEDIAS = `{ const { db } = await import('/src/lib/db.ts'); await db.progresoDiagnostico.put({ diagnosticoId: 'diag-impresora-ejemplo', camino: [{ nodoId: 'imp-n1', pregunta: '¿La impresora aparece en Windows?', opcionId: 'imp-n1-si', etiqueta: 'Si, aparece' }], estado: { tipo: 'pregunta', nodoId: 'imp-n2' }, articulosEjecutados: [], iniciadoEn: new Date().toISOString(), actualizadoEn: new Date().toISOString(), procedimientoEnCurso: null }); await db.recientes.put({ clave: 'diagnostico:diag-impresora-ejemplo', tipo: 'diagnostico', entidadId: 'diag-impresora-ejemplo', visitadoEn: new Date().toISOString() }); }`
+// Tarea 257: un favorito y una edicion en el historial, sobre una guia de
+// la semilla, para ver Mis favoritos y la Actividad del equipo.
+const FAVORITO_SEMBRADO = `{ const { db } = await import('/src/lib/db.ts'); await db.favoritos.put({ clave: 'articulo:art-recurso-compartido', tipo: 'articulo', entidadId: 'art-recurso-compartido', marcadoEn: new Date().toISOString() }); }`
+const SIN_FAVORITO = `{ const { db } = await import('/src/lib/db.ts'); await db.favoritos.delete('articulo:art-recurso-compartido'); }`
+const ACTIVIDAD_SEMBRADA = `{ const { db } = await import('/src/lib/db.ts'); await db.historial.put({ id: 'hist-captura-257', entidadTipo: 'articulo', entidadId: 'art-recurso-compartido', usuario: null, usuarioNombre: 'Tecnico de prueba', fechaHora: new Date().toISOString(), campo: 'titulo', valorAnterior: 'Titulo anterior', valorNuevo: 'Titulo nuevo', motivo: '' }); }`
+const SIN_ACTIVIDAD = `{ const { db } = await import('/src/lib/db.ts'); await db.historial.delete('hist-captura-257'); }`
 const buscarEnResolver = (texto) =>
   `{ const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,${JSON.stringify(texto)}); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,700)); }`
 
@@ -74,6 +80,24 @@ const TODAS_LAS_PARADAS = [
             el?.scrollIntoView({block:'center'});`,
   },
   { nombre: 'mas', ruta: '/mas' },
+  // Tarea 257 (Fase 5): Mis favoritos como fila de Consulta, abierta, y
+  // la Actividad del equipo al final de la Agenda, abierta. La semilla no
+  // trae ni favoritos ni historial: se siembran antes y se quitan despues,
+  // para que las demas paradas vean Mas y la Agenda como siempre.
+  {
+    nombre: 'mas-favoritos',
+    ruta: '/mas',
+    antes: FAVORITO_SEMBRADO,
+    guion: tocar('Mis favoritos'),
+    despues: SIN_FAVORITO,
+  },
+  {
+    nombre: 'agenda-actividad',
+    ruta: '/agenda',
+    antes: ACTIVIDAD_SEMBRADA,
+    guion: tocar('Actividad del equipo') + `{ document.querySelector('main')?.lastElementChild?.lastElementChild?.scrollIntoView({block:'end'}); await new Promise(r=>setTimeout(r,300)); }`,
+    despues: SIN_ACTIVIDAD,
+  },
   { nombre: 'equipos', ruta: '/dispositivos' },
   // Tarea 256 (secciones 16 a 18): al escribir salen tambien los de red;
   // la ficha con "Conectado a"; los datos tecnicos plegados; el escaner
