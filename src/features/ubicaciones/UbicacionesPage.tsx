@@ -14,6 +14,7 @@ import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/noctur
 import { db, type Ubicacion } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { hijosDirectos } from './arbol'
+import { totalConSububicaciones } from './contenido'
 import { textosSinUbicacion } from './migracion'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 
@@ -58,17 +59,19 @@ export function UbicacionesPage() {
   const [nuevoPadre, setNuevoPadre] = useState('')
   const [guardando, setGuardando] = useState(false)
 
-  const conteoPorUbicacion = useMemo(() => {
-    const conteo = new Map<string, number>()
-    for (const d of dispositivos) {
-      if (d.ubicacionId) conteo.set(d.ubicacionId, (conteo.get(d.ubicacionId) ?? 0) + 1)
-    }
-    return conteo
-  }, [dispositivos])
+  // Cada fila cuenta los equipos de TODA su rama (tarea 267): una sede
+  // cuyos equipos están en sus áreas no dice "0 equipos".
+  const conteoPorUbicacion = useMemo(
+    () => new Map(ubicaciones.map((u) => [u.id, totalConSububicaciones(u.id, ubicaciones, dispositivos)])),
+    [ubicaciones, dispositivos],
+  )
 
   const arbol = useMemo(() => ordenarConNivel(ubicaciones), [ubicaciones])
   const raices = useMemo(() => hijosDirectos(null, ubicaciones), [ubicaciones])
-  const porMigrar = useMemo(() => textosSinUbicacion(dispositivos).length, [dispositivos])
+  // Equipos (no textos) con la ubicación escrita a mano: antes el aviso
+  // decía "N equipos" contando los textos distintos (tarea 267).
+  const textosPorMigrar = useMemo(() => textosSinUbicacion(dispositivos), [dispositivos])
+  const porMigrar = textosPorMigrar.reduce((suma, t) => suma + t.cantidad, 0)
 
   const f = normalizar(filtro.trim())
   const hayFiltro = f.length > 0
@@ -179,8 +182,9 @@ export function UbicacionesPage() {
           >
             <ArrowElbowDownRight size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
             <span className="min-w-0 flex-1 text-[13px] leading-[1.45]">
-              {porMigrar} {porMigrar === 1 ? 'equipo tiene' : 'equipos tienen'} la ubicación escrita como texto.
-              Convertirlas en fichas para poder navegarlas.
+              {porMigrar} {porMigrar === 1 ? 'equipo tiene' : 'equipos tienen'} la ubicación escrita como texto
+              {textosPorMigrar.length > 1 ? ` (${textosPorMigrar.length} lugares distintos)` : ''}. Convertirlas en
+              fichas para poder navegarlas.
             </span>
             <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
           </button>
