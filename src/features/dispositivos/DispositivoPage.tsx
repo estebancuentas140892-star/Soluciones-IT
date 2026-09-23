@@ -9,7 +9,8 @@ import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { textoVivo } from '../../lib/referencia'
-import { referenciasHacia, resumenImpacto } from '../../lib/grafo'
+import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/grafo'
+import { conectadoA, textoConectadoA } from '../../lib/conexiones'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { Chasis } from '../../app/Chasis'
@@ -32,6 +33,7 @@ import {
   Copy,
   ClockCounterClockwise,
   DotsThreeOutline,
+  Info,
   LockSimple,
   MapPin,
   Paperclip,
@@ -92,7 +94,9 @@ function fechaCorta(iso: string): string {
 // problemas y credenciales vinculados + creación contextual), "Si este
 // equipo falla" (impacto y dependencias), conexiones e intervenciones.
 // Declara nivel de documento en el chasis (tarea 185), así que conserva
-// las pestañas, y toda la lógica y los datos de la vista 360°.
+// las pestañas, y toda la lógica y los datos de la vista 360°. El reparto
+// vigente de la ficha (tarea 256: Ahora, Problemas frecuentes,
+// Procedimientos, Credenciales y Profundidad) se explica en el cuerpo.
 export function DispositivoPage() {
   const { dispositivoId = '' } = useParams()
   const navigate = useNavigate()
@@ -197,6 +201,31 @@ export function DispositivoPage() {
     [dispositivoId],
     { total: 0, ultima: null as string | null },
   )
+  // "CONECTADO A" (tarea 256): el enlace por el que este equipo recibe
+  // servicio, y el nombre VIVO del otro extremo (la conexión guarda una
+  // copia de referencia que puede haberse quedado vieja).
+  const conexionesEntrantes = useLiveQuery(
+    () => db.conexiones.where('destinoId').equals(dispositivoId).filter((c) => !c.eliminadoEn).toArray(),
+    [dispositivoId],
+    [],
+  )
+  const subida = useMemo(() => conectadoA(conexionesEntrantes, dispositivoId), [conexionesEntrantes, dispositivoId])
+  const idEquipoDeSubida = subida?.extremo.otroId
+  const equipoDeSubida = useLiveQuery(
+    () => (idEquipoDeSubida ? db.dispositivos.get(idEquipoDeSubida) : undefined),
+    [idEquipoDeSubida],
+  )
+  // ¿Hay diagnósticos de su categoría? Decide si "Problemas frecuentes"
+  // tiene algo que enseñar aunque no haya incidencias escritas.
+  const categoriaDelEquipo = dispositivo?.categoriaId
+  const hayDiagnosticos = useLiveQuery(
+    async () =>
+      categoriaDelEquipo
+        ? (await db.diagnosticos.where('categoriaId').equals(categoriaDelEquipo).filter((x) => !x.eliminadoEn).count()) > 0
+        : false,
+    [categoriaDelEquipo],
+    false,
+  )
   const { totalEquipos: equiposEnRiesgo, camino: cadenaDependencia } = useImpactoEquipo(dispositivoId)
   const articulos = useLiveQuery(() => db.articulos.filter((a) => !a.eliminadoEn).toArray(), [], [])
 
@@ -231,11 +260,11 @@ export function DispositivoPage() {
     navigate(volverA)
   }
 
-  // Reparto de los datos entre las capas "Ahora" y "Contexto" (M-014,
-  // regla M-R4). La IP sube a "Ahora" porque es el dato que se viene a
-  // buscar con el equipo delante; marca y modelo pasan a ser la línea
-  // bajo el nombre, no dos filas; serial y placa se quedan en
-  // "Contexto", que es donde se consultan.
+  // Reparto de los datos (M-014, regla M-R4; revisado en la tarea 256).
+  // Arriba, lo que se viene a buscar con el equipo delante: qué es, su IP,
+  // dónde está, quién responde de él y a qué está conectado. Serial,
+  // placa, detalles, reemplazos y observaciones van plegados en "Más
+  // datos del equipo", que es donde se consultan.
   // A Ubicaciones y a Personas se llega tocando un enlace DENTRO de esta
   // ficha, y al llegar nada decía desde qué equipo (hallazgo M-002,
   // mockup `6b`). Con el origen, su regreso vuelve aquí y su línea de
@@ -269,6 +298,15 @@ export function DispositivoPage() {
   const metaLinea = [categoria?.nombre, `actualizado ${fechaCorta(dispositivo.updatedAt)}`]
     .filter(Boolean)
     .join(' · ')
+  // Bajo el nombre: el tipo (su categoría) y la marca y el modelo.
+  const lineaTipo = [categoria?.nombre, marcaModelo].filter(Boolean).join(' · ') || metaLinea
+  // Cuántos datos guarda "Más datos del equipo" (M-R4: plegar informa).
+  // "Categoría y fecha" va siempre.
+  const totalMasDatos =
+    camposContexto.length + detalles.length + (reemplazaNombre ? 1 : 0) + (reemplazadoPor ? 1 : 0) + 1
+  const nombreSubida = subida
+    ? textoVivo(equipoDeSubida && !equipoDeSubida.eliminadoEn ? equipoDeSubida.nombre : null, subida.extremo.otroNombre)
+    : ''
 
   // Lo que se puede resolver con este equipo, contado para la promesa de
   // la acción dominante (M-R3: la acción fija dice qué va a pasar).
@@ -287,6 +325,12 @@ export function DispositivoPage() {
     problemasPropios.length +
     problemasDeCategoria(articulos, dispositivo.categoriaId, new Set(problemasPropios.map((a) => a.id)), criterio)
       .length
+
+  // Las credenciales de la Bóveda que dan acceso a este equipo: solo
+  // con permiso, como la propia lista (`CredencialesDelEquipo`).
+  const totalCredenciales = perfil?.puedeVerBoveda
+    ? origenesDistintos(referenciasHacia(grafo, 'dispositivo', dispositivoId, ['credencial_dispositivo'])).length
+    : 0
 
   // Completitud de la ficha (fase J3): guia, nunca bloquea. Solo se
   // muestra cuando falta algo.
@@ -396,17 +440,21 @@ export function DispositivoPage() {
           trabajar con el equipo delante. "360°" se estaba leyendo como
           "todo a la vez".
 
-          El reparto no quita ni un dato:
+          El reparto no quita ni un dato (revisado en la tarea 256,
+          encargo del 2026-09-22, sección 18: "¿qué sabemos de este
+          dispositivo?"):
 
-            Ahora        qué es, en qué estado, su IP copiable y dónde
-                         está. Cabe en la primera pantalla.
-            Contexto     la información técnica completa, abierta.
-            Acción       lo que se puede resolver con este equipo, con
-                         UNA sola acción dominante fija al pie (M-R3).
-            Profundidad  impacto, conexiones, datos protegidos, adjuntos
-                         e intervenciones, plegados CON SU CONTEO a la
-                         vista: "Conexiones · 4" dice más que cuatro
-                         filas que hay que desplazar (M-R4).
+            Ahora        qué es, en qué estado, su IP copiable, dónde
+                         está, quién responde de él y a qué está
+                         conectado. Cabe en la primera pantalla.
+            Problemas frecuentes, Procedimientos y Credenciales
+                         lo que se resuelve con este equipo, con UNA sola
+                         acción dominante fija al pie (M-R3).
+            Profundidad  "Más datos del equipo" (la información técnica
+                         completa, que antes era la capa "Contexto",
+                         abierta), impacto, conexiones, datos
+                         protegidos, adjuntos e intervenciones,
+                         plegados CON SU CONTEO a la vista (M-R4).
 
           Un solo eje vertical (R26, tarea 191): `lg:px-10`, el mismo de
           las fichas hermanas de artículo y credencial. */}
@@ -421,9 +469,13 @@ export function DispositivoPage() {
 
         {pasos.length > 0 && <QueSigue pasos={pasos} dispositivoId={dispositivoId} />}
 
-        {/* CAPA 1 · AHORA. El nombre ya vive arriba, en el ancla
-            permanente del chasis (M-001), así que aquí no se repite a
-            21 px: la tarjeta lo da a 16 con lo que lo acompaña. */}
+        {/* AHORA (encargo del 2026-09-22, sección 18, tarea 256): lo que
+            se viene a saber con el equipo delante, en la primera
+            pantalla. Qué es (nombre, tipo, marca y modelo, estado), su IP
+            copiable, dónde está, quién responde de él y a qué está
+            conectado. El nombre ya vive arriba, en el ancla permanente
+            del chasis (M-001): la tarjeta lo da a 16 con lo que lo
+            acompaña. */}
         <section>
           <TituloSeccion className="mb-2">Ahora</TituloSeccion>
           <div className="divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
@@ -441,12 +493,9 @@ export function DispositivoPage() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[16px] font-medium leading-[1.25]">{dispositivo.nombre}</span>
-                <span className="mt-0.5 block truncate text-[12.5px] text-noct-neutral-400">
-                  {marcaModelo || metaLinea}
-                </span>
+                <span className="mt-0.5 block truncate text-[12.5px] text-noct-neutral-400">{lineaTipo}</span>
               </span>
-              {/* La misma pastilla que la fila (tarea 207, M-017). La
-                  ficha tenía la suya, con punto y borde propios. */}
+              {/* La misma pastilla que la fila (tarea 207, M-017). */}
               {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} />}
             </div>
 
@@ -473,95 +522,89 @@ export function DispositivoPage() {
                   <span className="min-w-0 flex-1 truncate">{ubicacionNombre}</span>
                 </span>
               ))}
+
+            {/* Quién responde de él: subió de "Contexto" (tarea 256). */}
+            {responsableNombre &&
+              (responsableVivo ? (
+                <Link
+                  to={`/personas/${responsableVivo.id}`}
+                  state={origenEsteEquipo}
+                  className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-accent-300 hover:bg-noct-text/[.04]"
+                >
+                  <User size={15} className="shrink-0" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="text-noct-neutral-500">Responsable: </span>
+                    {responsableNombre}
+                  </span>
+                  <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                </Link>
+              ) : (
+                <span className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-neutral-200">
+                  <User size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="text-noct-neutral-500">Responsable: </span>
+                    {responsableNombre}
+                  </span>
+                </span>
+              ))}
+
+            {/* A QUÉ ESTÁ CONECTADO (sección 18): el switch que le da
+                servicio y su puerto, que es lo que se busca en el rack.
+                "Ver conexión" abre la topología de este equipo. */}
+            {subida && (
+              <Link
+                to={`/red/topologia/${dispositivoId}`}
+                state={origenEsteEquipo}
+                aria-label={`Conectado a ${textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}${
+                  subida.otros > 0 ? ` y ${subida.otros} más` : ''
+                }. Ver conexión`}
+                className="flex min-h-12 items-center gap-2.5 px-3.5 py-2 hover:bg-noct-text/[.04]"
+              >
+                <PlugsConnected size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                {/* Rótulo arriba y valor abajo, como la IP: el nombre de un
+                    switch ("SW-CENTRAL-02") no se parte por su guion. */}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12px] text-noct-neutral-500">Conectado a</span>
+                  <span className="block truncate text-[13.5px] text-noct-text">
+                    {textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}
+                    {subida.otros > 0 && <span className="text-noct-neutral-500"> · y {subida.otros} más</span>}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300">Ver conexión</span>
+                <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              </Link>
+            )}
           </div>
         </section>
 
-        {/* CAPA 2 · CONTEXTO. Abierta, como manda M-R4. */}
-        {(camposContexto.length > 0 ||
-          detalles.length > 0 ||
-          responsableNombre ||
-          reemplazaNombre ||
-          reemplazadoPor ||
-          dispositivo.observaciones) && (
+        {/* LO QUE SE RESUELVE CON ESTE EQUIPO (sección 18): primero sus
+            problemas frecuentes (con el diagnóstico de su categoría, que
+            es otra forma de llegar a ellos), después sus procedimientos y,
+            con permiso, las credenciales que dan acceso a él. Cada bloque
+            solo existe si tiene algo: un título sobre una lista vacía no
+            ayuda (regla 20e). Los botones de creación viven en la puerta
+            única del pie (M-016, regla M-R10). */}
+        {(hayDiagnosticos || totalProblemas > 0) && (
           <section>
-            <TituloSeccion className="mb-2">Contexto</TituloSeccion>
-            <div className="divide-y divide-noct-divider rounded-lg border border-noct-divider bg-noct-surface px-3.5">
-              {camposContexto.map((campo) => (
-                <FilaDato
-                  key={campo.etiqueta}
-                  etiqueta={campo.etiqueta}
-                  valor={campo.valor}
-                  tecnico={campo.tecnico}
-                  copiable={campo.valor}
+            <TituloSeccion className="mb-2">Problemas frecuentes</TituloSeccion>
+            <div className="flex flex-col gap-2">
+              <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} categoriaNombre={categoria?.nombre} />
+              <div className="flex flex-col">
+                <ProblemasDelEquipo
+                  dispositivoId={dispositivoId}
+                  categoriaId={dispositivo.categoriaId}
+                  categoriaNombre={categoria?.nombre}
+                  marca={dispositivo.marca}
+                  modelo={dispositivo.modelo}
                 />
-              ))}
-              {detalles.map(([clave, valor]) => (
-                <FilaDato key={clave} etiqueta={clave} valor={valor} copiable={valor} />
-              ))}
-              {responsableNombre && (
-                <FilaDato etiqueta="Responsable">
-                  {responsableVivo ? (
-                    <Link
-                      to={`/personas/${responsableVivo.id}`}
-                      state={origenEsteEquipo}
-                      className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
-                    >
-                      <User size={14} className="shrink-0" aria-hidden />
-                      {responsableNombre}
-                    </Link>
-                  ) : (
-                    <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-neutral-200">
-                      <User size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                      {responsableNombre}
-                    </span>
-                  )}
-                </FilaDato>
-              )}
-              {reemplazaNombre && (
-                <FilaDato etiqueta="Reemplaza a">
-                  <Link
-                    to={`/dispositivos/${dispositivo.reemplazaA}`}
-                    state={origenEsteEquipo}
-                    className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
-                  >
-                    <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
-                    {reemplazaNombre}
-                  </Link>
-                </FilaDato>
-              )}
-              {reemplazadoPor && (
-                <FilaDato etiqueta="Reemplazado por">
-                  <Link
-                    to={`/dispositivos/${reemplazadoPor.id}`}
-                    state={origenEsteEquipo}
-                    className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
-                  >
-                    <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
-                    {reemplazadoPor.nombre}
-                  </Link>
-                </FilaDato>
-              )}
-              <FilaDato etiqueta="Categoría y fecha">
-                <span className="min-w-0 flex-1 truncate text-[13.5px] text-noct-neutral-300">{metaLinea}</span>
-              </FilaDato>
+              </div>
             </div>
-            {dispositivo.observaciones && (
-              <p className="mt-2.5 whitespace-pre-wrap px-0.5 text-[13px] leading-[1.55] text-noct-neutral-300">
-                {dispositivo.observaciones}
-              </p>
-            )}
           </section>
         )}
 
-        {/* CAPA 3 · ACCIÓN. Lo que se consulta con el equipo delante. Los
-            tres botones de creación que se intercalaban aquí bajaron a la
-            puerta única del pie (M-016, regla M-R10: el teléfono consulta
-            y ejecuta, el ordenador documenta). El id ancla el paso
-            "procedimiento" del bloque "Que sigue" (O1). */}
-        <section id="resolver">
-          <TituloSeccion className="mb-2">Acción</TituloSeccion>
-          <div className="flex flex-col gap-2">
-            <IniciarDiagnosticoBoton categoriaId={dispositivo.categoriaId} categoriaNombre={categoria?.nombre} />
+        {totalResolver > 0 && (
+          <section>
+            <TituloSeccion className="mb-2">Procedimientos</TituloSeccion>
             <div className="flex flex-col">
               <ProcedimientosDelEquipo
                 dispositivoId={dispositivoId}
@@ -570,24 +613,76 @@ export function DispositivoPage() {
                 marca={dispositivo.marca}
                 modelo={dispositivo.modelo}
               />
-              <ProblemasDelEquipo
-                dispositivoId={dispositivoId}
-                categoriaId={dispositivo.categoriaId}
-                categoriaNombre={categoria?.nombre}
-                marca={dispositivo.marca}
-                modelo={dispositivo.modelo}
-              />
+            </div>
+          </section>
+        )}
+
+        {totalCredenciales > 0 && (
+          <section>
+            <TituloSeccion className="mb-2">Credenciales</TituloSeccion>
+            <div className="flex flex-col">
               <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)} />
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        {/* CAPA 4 · PROFUNDIDAD. Cinco filas de 52 px con su conteo, en
-            vez de cinco secciones abiertas de varias pantallas. El
-            contenido solo se monta al abrirse. */}
+        {/* PROFUNDIDAD. Filas de 52 px con su conteo, en vez de secciones
+            abiertas de varias pantallas. El contenido solo se monta al
+            abrirse. Desde la tarea 256 empieza por "Más datos del
+            equipo": los datos técnicos completos, que antes ocupaban la
+            capa "Contexto" abierta. */}
         <section>
           <TituloSeccion className="mb-2">Profundidad</TituloSeccion>
           <div className="divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
+            <SeccionPlegable id="datos" titulo="Más datos del equipo" Icono={Info} conteo={totalMasDatos}>
+              <div className="divide-y divide-noct-divider">
+                {camposContexto.map((campo) => (
+                  <FilaDato
+                    key={campo.etiqueta}
+                    etiqueta={campo.etiqueta}
+                    valor={campo.valor}
+                    tecnico={campo.tecnico}
+                    copiable={campo.valor}
+                  />
+                ))}
+                {detalles.map(([clave, valor]) => (
+                  <FilaDato key={clave} etiqueta={clave} valor={valor} copiable={valor} />
+                ))}
+                {reemplazaNombre && (
+                  <FilaDato etiqueta="Reemplaza a">
+                    <Link
+                      to={`/dispositivos/${dispositivo.reemplazaA}`}
+                      state={origenEsteEquipo}
+                      className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
+                    >
+                      <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
+                      {reemplazaNombre}
+                    </Link>
+                  </FilaDato>
+                )}
+                {reemplazadoPor && (
+                  <FilaDato etiqueta="Reemplazado por">
+                    <Link
+                      to={`/dispositivos/${reemplazadoPor.id}`}
+                      state={origenEsteEquipo}
+                      className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
+                    >
+                      <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
+                      {reemplazadoPor.nombre}
+                    </Link>
+                  </FilaDato>
+                )}
+                <FilaDato etiqueta="Categoría y fecha">
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] text-noct-neutral-300">{metaLinea}</span>
+                </FilaDato>
+              </div>
+              {dispositivo.observaciones && (
+                <p className="mt-2.5 whitespace-pre-wrap text-[13px] leading-[1.55] text-noct-neutral-300">
+                  {dispositivo.observaciones}
+                </p>
+              )}
+            </SeccionPlegable>
+
             {(equiposEnRiesgo > 0 || cadenaDependencia.length > 0) && (
               <SeccionPlegable
                 titulo="Si falla, caen"
@@ -727,13 +822,16 @@ function QueSigue({ pasos, dispositivoId }: { pasos: PasoSiguiente[]; dispositiv
           // edita ahi); el resto es un ancla NATIVA (<a href="#...">,
           // no <Link>) a una seccion que ya esta mas abajo en esta misma
           // ficha: el salto lo resuelve el navegador, sin depender de
-          // que React Router reaccione al cambio de hash.
+          // que React Router reaccione al cambio de hash. Desde la tarea
+          // 256 "procedimiento" apunta a la puerta de documentar (que se
+          // abre sola con ese ancla): la seccion "Accion" a la que
+          // apuntaba ya no existe, y ahi es donde se vincula o reporta.
           return paso.clave === 'foto' ? (
             <Link key={paso.clave} to={`/dispositivos/${dispositivoId}/editar`} className={clase}>
               {fila}
             </Link>
           ) : (
-            <a key={paso.clave} href={`#${paso.clave === 'procedimiento' ? 'resolver' : paso.clave}`} className={clase}>
+            <a key={paso.clave} href={`#${paso.clave === 'procedimiento' ? 'documentar' : paso.clave}`} className={clase}>
               {fila}
             </a>
           )
@@ -837,11 +935,21 @@ function PuertaDocumentar({
   puedeVerBoveda: boolean
   completitud: { porcentaje: number; faltantes: string[] }
 }) {
-  const [abierta, setAbierta] = useState(false)
+  // El ancla #documentar (paso "procedimiento" del bloque "¿Qué sigue?",
+  // tarea 256) la abre: llegar a una puerta cerrada obligaría a buscar el
+  // control que la abre. Se ajusta en el render al cambiar el hash, sin
+  // efecto (patrón "estado derivado de una prop" de React).
+  const { hash } = useLocation()
+  const [abierta, setAbierta] = useState(hash === '#documentar')
+  const [hashVisto, setHashVisto] = useState(hash)
+  if (hash !== hashVisto) {
+    setHashVisto(hash)
+    if (hash === '#documentar') setAbierta(true)
+  }
   const nombreCodificado = encodeURIComponent(dispositivo.nombre)
 
   return (
-    <div className="flex flex-col gap-2">
+    <div id="documentar" className="flex flex-col gap-2">
       <button
         type="button"
         onClick={() => setAbierta((v) => !v)}

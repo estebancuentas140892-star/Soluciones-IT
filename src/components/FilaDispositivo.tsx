@@ -17,6 +17,8 @@ export function FilaDispositivo({
   categoriaNombre,
   subtitulo,
   conFoto = false,
+  estado,
+  alAbrir,
 }: {
   dispositivo: Dispositivo
   // Nombre de la categoria del equipo: decide el icono del avatar.
@@ -29,10 +31,19 @@ export function FilaDispositivo({
   // avatar es siempre el icono del tipo de nodo, que es lo que
   // distingue un switch de un access point de un vistazo.
   conFoto?: boolean
+  // El `state` del salto a la ficha (tarea 256): el origen, para que el
+  // regreso vuelva a la lista con su búsqueda aunque el equipo sea de
+  // red (su padre declarado es Red). Ver `conOrigen`.
+  estado?: unknown
+  // Se llama en el mismo gesto que el salto, antes de él: la lista anota
+  // ahí su búsqueda para el botón atrás del teléfono.
+  alAbrir?: () => void
 }) {
   return (
     <Link
       to={`/dispositivos/${dispositivo.id}`}
+      state={estado}
+      onClick={alAbrir}
       className="flex min-h-[56px] items-center gap-[13px] rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
     >
       <span

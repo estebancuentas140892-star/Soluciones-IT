@@ -80,3 +80,61 @@ export function reiniciarConteo(): string[] {
   guardar([])
   return []
 }
+
+// LA ETIQUETA QUE SE ACABA DE ABRIR (tarea 256, encargo del 2026-09-22,
+// sección 18). Con un solo equipo el escáner abre su ficha directamente,
+// y la ficha vuelve aquí con la cámara viva. Si al volver la cámara
+// sigue apuntando a la misma etiqueta, la leería otra vez y reabriría la
+// ficha: un bucle. Por eso se recuerda el último código abierto (en la
+// misma `sessionStorage`, con el mismo criterio que el contador) y, al
+// volver, se ignora hasta que la cámara deja de verlo un momento o ve
+// otro código.
+const CLAVE_ULTIMO_ABIERTO = 'escaner:ultimo-abierto'
+
+/** El código cuya ficha se abrió la última vez, o null. Lectura pura. */
+export function ultimoAbierto(): string | null {
+  try {
+    return sessionStorage.getItem(CLAVE_ULTIMO_ABIERTO)
+  } catch {
+    return null
+  }
+}
+
+/** Anota el código cuya ficha se va a abrir. */
+export function marcarAbierto(codigo: string): void {
+  try {
+    sessionStorage.setItem(CLAVE_ULTIMO_ABIERTO, codigo)
+  } catch {
+    // Sin almacenamiento, volver con la cámara sobre la misma etiqueta
+    // reabre la ficha: molesto, no grave.
+  }
+}
+
+/**
+ * Decide, cuadro a cuadro, si lo que lee la cámara se ignora por ser la
+ * etiqueta que se acaba de abrir. Recibe `null` en los cuadros sin
+ * código: `cuadrosLibres` seguidos (a 200 ms, un segundo) la liberan, y
+ * leer otro código también. Lo escrito a mano no pasa por aquí: es una
+ * orden explícita.
+ */
+export function crearFiltroReapertura(
+  bloqueado: string | null,
+  cuadrosLibres = 5,
+): (codigo: string | null) => boolean {
+  let pendiente = bloqueado
+  let vacios = 0
+  return (codigo) => {
+    if (pendiente === null) return false
+    if (codigo === null) {
+      vacios += 1
+      if (vacios >= cuadrosLibres) pendiente = null
+      return false
+    }
+    if (codigo === pendiente) {
+      vacios = 0
+      return true
+    }
+    pendiente = null
+    return false
+  }
+}

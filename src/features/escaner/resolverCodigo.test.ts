@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  extraerCodigoAsistencia,
   extraerIdDeEtiqueta,
   resolverCodigo,
   type DispositivoEscaneable,
@@ -103,5 +104,34 @@ describe('resolverCodigo', () => {
   it('un dispositivo sin placa ni serial no coincide con nada', () => {
     const lista = [dispositivo('d1')]
     expect(resolverCodigo('X', lista)).toEqual({ tipo: 'no_encontrado' })
+  })
+})
+
+// El QR del portal de asistencia (tarea 256; el emparejamiento es la 258).
+describe('extraerCodigoAsistencia', () => {
+  it('reconoce /conectar?codigo= con 6 cifras, sin importar el origen', () => {
+    expect(extraerCodigoAsistencia('https://soluciones-it-psi.vercel.app/conectar?codigo=482731')).toBe('482731')
+    expect(extraerCodigoAsistencia('http://localhost:5173/conectar/?codigo=482%20731')).toBe('482731')
+  })
+
+  it('rechaza lo que no es un código de asistencia', () => {
+    expect(extraerCodigoAsistencia('482731')).toBeNull()
+    expect(extraerCodigoAsistencia('https://app.com/conectar')).toBeNull()
+    expect(extraerCodigoAsistencia('https://app.com/conectar?codigo=4827')).toBeNull()
+    expect(extraerCodigoAsistencia('https://app.com/conectar?codigo=48273a')).toBeNull()
+    expect(extraerCodigoAsistencia('https://app.com/asistencia?codigo=482731')).toBeNull()
+    expect(extraerCodigoAsistencia('ftp://app.com/conectar?codigo=482731')).toBeNull()
+  })
+
+  it('resolverCodigo lo distingue de una placa o un serial', () => {
+    expect(resolverCodigo('https://app.com/conectar?codigo=482731', [dispositivo('a', { placaInventario: '482731' })])).toEqual({
+      tipo: 'asistencia',
+      codigo: '482731',
+    })
+    // Escrito a mano, el mismo número es una placa.
+    expect(resolverCodigo('482731', [dispositivo('a', { placaInventario: '482731' })])).toEqual({
+      tipo: 'dispositivo',
+      dispositivoId: 'a',
+    })
   })
 })

@@ -1,35 +1,37 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { idsDeRed, esDeRed } from '../../lib/categorias'
-import { incluyeTexto } from '../../lib/texto'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import {
-  DotsThreeOutline,
-  MapPin,
-  Monitor,
-  Plus,
-  QrCode,
-  UploadSimple,
-  User,
-} from '../../components/iconos'
-import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
-import { estadoConEtiqueta } from '../red/topologiaVisual'
+import { Monitor, Plus, QrCode } from '../../components/iconos'
+import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
+import { buscarEquipos, conteosDeChips } from './busquedaEquipos'
 
 // Pantalla Dispositivos re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Dispositivos.dc.html, entrada
 // R4): responde "¿qué se sabe de cada equipo?" con el inventario
 // general (las categorías de red van en la sección Red, no aquí:
-// decisión ya existente antes del rediseño). Buscador único, chips de
-// categoría deslizables con conteo (incluye "Todos") y un resumen de
-// estados siempre sobre el total, sin filtrar (vista general de un
-// vistazo). Declara nivel de sección en el chasis único (tarea 185),
-// que le pone sidebar en escritorio y pestañas en móvil. La lógica y
-// los datos no cambian respecto de la versión de tema claro: solo se
-// re-autoriza el aspecto a Nocturne.
+// decisión ya existente antes del rediseño). Declara nivel de sección en
+// el chasis único (tarea 185), que le pone sidebar en escritorio y
+// pestañas en móvil.
+//
+// EQUIPOS + QR (encargo del 2026-09-22, secciones 16 y 17, tarea 256):
+//
+//   - Buscar y Escanear QR van delante y con el mismo peso: el QR es
+//     otra forma de buscar. "Crear equipo" baja a secundario.
+//   - Fuera el menú "···" (Ubicaciones, Personas, Etiquetas QR e
+//     Importar ya viven en Más) y el resumen de estados (cada fila lleva
+//     el suyo).
+//   - Al escribir también salen los equipos de red, aparte ("Equipos de
+//     red"): ver `busquedaEquipos.ts`.
+//   - La búsqueda sobrevive al salto a una ficha: viaja en el estado de
+//     navegación como la del buscador de Resolver, y el chip de
+//     categoría en la URL (regla 13).
 
 export function DispositivosPage() {
   const dispositivos = useLiveQuery(
@@ -43,9 +45,32 @@ export function DispositivosPage() {
     [],
   )
 
-  const [categoriaId, setCategoriaId] = useState('')
-  const [texto, setTexto] = useState('')
-  const [menuAbierto, setMenuAbierto] = useState(false)
+  // El chip de categoría, en la URL: volver de una ficha lo repone.
+  const [parametros, setParametros] = useSearchParams()
+  const categoriaId = parametros.get('categoria') ?? ''
+  const elegirCategoria = useCallback(
+    (id: string) =>
+      setParametros(
+        (actuales) => {
+          const siguientes = new URLSearchParams(actuales)
+          if (id) siguientes.set('categoria', id)
+          else siguientes.delete('categoria')
+          return siguientes
+        },
+        { replace: true },
+      ),
+    [setParametros],
+  )
+
+  // Lo escrito vuelve con el regreso de la ficha o con el botón atrás
+  // del teléfono (mismo mecanismo que Resolver, sin URL ni localStorage).
+  const { restaurada, descartar } = useBusquedaRestaurada()
+  const repuesta = restaurada && !restaurada.capa ? restaurada.consulta : ''
+  const [texto, setTexto] = useState(repuesta)
+  // Vaciar el campo repuesto es dar la búsqueda por terminada.
+  useEffect(() => {
+    if (repuesta !== '' && texto === '') descartar()
+  }, [repuesta, texto, descartar])
 
   const categoriasGenerales = useMemo(
     () => (categorias ?? []).filter((c) => !esDeRed(c)),
@@ -57,148 +82,90 @@ export function DispositivosPage() {
     [categorias],
   )
 
-  const generales = useMemo(
-    () => (dispositivos ?? []).filter((d) => !idsRed.has(d.categoriaId)),
-    [dispositivos, idsRed],
+  const { generales, deRed } = useMemo(
+    () => buscarEquipos(dispositivos ?? [], idsRed, { texto, categoriaId }),
+    [dispositivos, idsRed, texto, categoriaId],
+  )
+  // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022): sobre lo
+  // que deja la búsqueda, sin aplicar el propio eje de categoría.
+  const conteos = useMemo(
+    () => conteosDeChips(dispositivos ?? [], idsRed, texto),
+    [dispositivos, idsRed, texto],
   )
 
-  const filtrados = useMemo(() => {
-    return generales.filter((d) => {
-      if (categoriaId && d.categoriaId !== categoriaId) return false
-      return incluyeTexto([d.nombre, d.ip, d.ubicacion, d.serial], texto)
-    })
-  }, [generales, categoriaId, texto])
+  const consulta = texto.trim()
+  const hayFiltrosActivos = Boolean(categoriaId || consulta)
+  const hayResultados = generales.length + deRed.length > 0
 
-  // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022). El
-  // conteo iba sobre el inventario general completo, así que con el
-  // buscador escrito el número prometía resultados que el filtro no
-  // podía dar. Ahora va sobre el ALCANCE VISIBLE: lo que deja la
-  // búsqueda, sin aplicar el propio eje de categoría.
-  const alcanceChips = useMemo(
-    () => generales.filter((d) => incluyeTexto([d.nombre, d.ip, d.ubicacion, d.serial], texto)),
-    [generales, texto],
+  // El salto a una ficha lleva el origen cuando hay algo que reponer al
+  // volver (la búsqueda o el chip) y SIEMPRE para un equipo de red: su
+  // padre declarado es Red, y el técnico vino de aquí.
+  const anotar = useAnotarBusqueda()
+  const busqueda = useMemo(() => (consulta ? { consulta, capa: false } : undefined), [consulta])
+  const estadoDeSalto = useMemo(
+    () =>
+      conOrigen(
+        categoriaId ? `/dispositivos?categoria=${encodeURIComponent(categoriaId)}` : '/dispositivos',
+        'Equipos',
+        busqueda,
+      ),
+    [categoriaId, busqueda],
   )
-
-  const conteoPorCategoria = useMemo(() => {
-    const mapa = new Map<string, number>()
-    for (const d of alcanceChips) mapa.set(d.categoriaId, (mapa.get(d.categoriaId) ?? 0) + 1)
-    return mapa
-  }, [alcanceChips])
-
-  const resumen = useMemo(
-    () => ({
-      total: generales.length,
-      operativos: generales.filter((d) => estadoConEtiqueta(d.estado).etiqueta === 'Operativo').length,
-      mantenimiento: generales.filter(
-        (d) => estadoConEtiqueta(d.estado).etiqueta === 'En mantenimiento',
-      ).length,
-      fueraDeServicio: generales.filter(
-        (d) => estadoConEtiqueta(d.estado).etiqueta === 'Fuera de servicio',
-      ).length,
-    }),
-    [generales],
-  )
-
-  const hayFiltrosActivos = Boolean(categoriaId || texto)
-  const hayResultados = filtrados.length > 0
+  const alAbrir = useCallback(() => {
+    if (busqueda) anotar(busqueda)
+  }, [busqueda, anotar])
 
   function quitarFiltros() {
-    setCategoriaId('')
+    elegirCategoria('')
     setTexto('')
   }
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila. El título, el
-    // estado del dato, buscar y la cuenta los aporta el chasis (tarea
-    // 181); en `barra` quedan las acciones propias de la sección, el
-    // buscador de equipos y la fila de chips deslizable.
+    // estado del dato y la cuenta los aporta el chasis (tarea 181); en
+    // `barra` quedan las acciones propias de la sección, el buscador de
+    // equipos y la fila de chips deslizable.
     // `conLupa={false}` (regla M-R8, "un buscador por pantalla", tarea
     // 207): esta pantalla ya tiene su propio campo con el alcance
     // escrito, así que la lupa de la barra superior sería el segundo
-    // buscador de la misma pantalla y con otro alcance. La duda que
-    // midió la auditoría era exactamente esa: "¿esto busca en todo o
-    // solo aquí?". Buscar en todo sigue a un toque, desde Inicio.
+    // buscador de la misma pantalla y con otro alcance. Buscar en todo
+    // sigue a un toque, desde Resolver.
     <Chasis titulo="Equipos" conLupa={false} barra={
       <>
-        <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
+        <header className="flex items-center justify-between gap-2 px-4 pt-0.5">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
             Qué se sabe de cada equipo
           </p>
-          <div className="flex shrink-0 gap-2">
-            <Link
-              to="/escaner"
-              aria-label="Escanear equipo"
-              className={BTN_ICONO_SECUNDARIO}
-            >
-              <QrCode size={17} aria-hidden />
-            </Link>
-            <Link to="/dispositivos/nuevo" className={`shrink-0 ${BTN_SECUNDARIO}`}>
-              <Plus size={15} aria-hidden />
-              Crear
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMenuAbierto((v) => !v)}
-              aria-label="Más acciones: ubicaciones, personas, etiquetas QR, importar"
-              aria-expanded={menuAbierto}
-              className={BTN_ICONO_SECUNDARIO}
-            >
-              <DotsThreeOutline size={17} aria-hidden />
-            </button>
-          </div>
+          {/* Secundario: se crea un equipo de vez en cuando; se busca
+              uno cada día. 44 px de dedo (regla R6). */}
+          <Link
+            to="/dispositivos/nuevo"
+            className="-mr-2 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-noct-accent-300 hover:bg-noct-text/[.05]"
+          >
+            <Plus size={14} aria-hidden />
+            Crear equipo
+          </Link>
         </header>
 
-        {menuAbierto && (
-          <div className="flex flex-wrap gap-2 px-4 pt-2">
-            <Link
-              to="/ubicaciones"
-              onClick={() => setMenuAbierto(false)}
-              className={`shrink-0 ${BTN_SECUNDARIO}`}
-            >
-              <MapPin size={14} aria-hidden />
-              Ubicaciones
-            </Link>
-            <Link
-              to="/personas"
-              onClick={() => setMenuAbierto(false)}
-              className={`shrink-0 ${BTN_SECUNDARIO}`}
-            >
-              <User size={14} aria-hidden />
-              Personas
-            </Link>
-            <Link
-              to="/dispositivos/etiquetas"
-              onClick={() => setMenuAbierto(false)}
-              className={`shrink-0 ${BTN_SECUNDARIO}`}
-            >
-              <QrCode size={14} aria-hidden />
-              Etiquetas QR
-            </Link>
-            <Link
-              to="/dispositivos/importar"
-              onClick={() => setMenuAbierto(false)}
-              className={`shrink-0 ${BTN_SECUNDARIO}`}
-            >
-              <UploadSimple size={14} aria-hidden />
-              Importar
-            </Link>
-          </div>
-        )}
-
-        <div className="px-4 pb-2.5 pt-2">
-          <CampoBusqueda
-            valor={texto}
-            onCambiar={setTexto}
-            alcance="Equipos"
-          />
+        {/* BUSCAR Y ESCANEAR, CON EL MISMO PESO: la misma altura (46 px),
+            la misma superficie y el mismo borde. */}
+        <div className="flex items-center gap-2 px-4 pb-2.5">
+          <CampoBusqueda valor={texto} onCambiar={setTexto} alcance="Equipos" className="min-w-0 flex-1" />
+          <Link
+            to="/escaner"
+            className="inline-flex h-[46px] shrink-0 items-center gap-2 rounded-lg border border-noct-divider bg-noct-surface px-3.5 text-[14px] font-medium text-noct-text hover:border-noct-neutral-600 hover:bg-noct-text/[.04]"
+          >
+            <QrCode size={18} className="shrink-0 text-noct-accent-300" aria-hidden />
+            Escanear QR
+          </Link>
         </div>
 
         {categoriasGenerales.length > 0 && (
           <div className="flex gap-2 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[{ id: '', nombre: 'Todos', count: alcanceChips.length }, ...categoriasGenerales.map((c) => ({
+            {[{ id: '', nombre: 'Todos', count: conteos.todos }, ...categoriasGenerales.map((c) => ({
               id: c.id,
               nombre: c.nombre,
-              count: conteoPorCategoria.get(c.id) ?? 0,
+              count: conteos.porCategoria.get(c.id) ?? 0,
             }))].map((chip) => {
               const activo = chip.id === categoriaId
               return (
@@ -206,8 +173,8 @@ export function DispositivosPage() {
                   key={chip.id || '__todos'}
                   type="button"
                   aria-pressed={activo}
-                  onClick={() => setCategoriaId((v) => (v === chip.id ? '' : chip.id))}
-                  className={`inline-flex h-[34px] shrink-0 items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                  onClick={() => elegirCategoria(activo ? '' : chip.id)}
+                  className={`inline-flex h-11 shrink-0 items-center gap-[7px] whitespace-nowrap rounded-full border px-[14px] text-[13px] font-medium transition-colors ${
                     activo
                       ? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300'
                       : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
@@ -227,27 +194,44 @@ export function DispositivosPage() {
       </>
     }>
       <main className="flex-1 px-4 pb-16 pt-3">
-        {/* Resumen de estados: total y desglose operativo/mantenimiento/
-            fuera de servicio, siempre sobre el inventario completo. */}
-        <div className="mb-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 px-0.5">
-          <span className="text-[12.5px] text-noct-neutral-500">{resumen.total} equipos</span>
-          <ResumenEstado clase="bg-noct-exito" texto={`${resumen.operativos} operativos`} />
-          <ResumenEstado clase="bg-noct-precaucion" texto={`${resumen.mantenimiento} en mantenimiento`} />
-          <ResumenEstado clase="bg-noct-error" texto={`${resumen.fueraDeServicio} fuera de servicio`} />
-        </div>
-
         {hayResultados ? (
-          <div className="flex flex-col">
-            {filtrados.map((d) => (
-              <FilaDispositivo
-                key={d.id}
-                dispositivo={d}
-                categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
-                subtitulo={[nombreCategoria.get(d.categoriaId), d.ubicacion].filter(Boolean).join(' · ')}
-                conFoto
-              />
-            ))}
-          </div>
+          <>
+            {generales.length > 0 && (
+              <div className="flex flex-col">
+                {generales.map((d) => (
+                  <FilaDispositivo
+                    key={d.id}
+                    dispositivo={d}
+                    categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
+                    subtitulo={[nombreCategoria.get(d.categoriaId), d.ubicacion].filter(Boolean).join(' · ')}
+                    conFoto
+                    estado={hayFiltrosActivos ? estadoDeSalto : undefined}
+                    alAbrir={alAbrir}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* LOS DE RED, APARTE (sección 17 del encargo): solo al
+                escribir, con su categoría, y su regreso vuelve aquí. */}
+            {deRed.length > 0 && (
+              <section className={generales.length > 0 ? 'mt-5' : ''}>
+                <TituloSeccion className="mb-1 px-0.5">Equipos de red</TituloSeccion>
+                <div className="flex flex-col">
+                  {deRed.map((d) => (
+                    <FilaDispositivo
+                      key={d.id}
+                      dispositivo={d}
+                      categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
+                      subtitulo={[nombreCategoria.get(d.categoriaId), d.ubicacion].filter(Boolean).join(' · ')}
+                      estado={estadoDeSalto}
+                      alAbrir={alAbrir}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-11 text-center">
             <Monitor size={30} className="text-noct-neutral-600" aria-hidden />
@@ -258,11 +242,11 @@ export function DispositivosPage() {
               <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
                 {hayFiltrosActivos
                   ? 'Probar con otra palabra o quitar el filtro de categoría.'
-                  : 'Agregarlos desde "Crear".'}
+                  : 'Agregarlos desde "Crear equipo".'}
               </p>
             </div>
             {hayFiltrosActivos && (
-              <button type="button" onClick={quitarFiltros} className={`mt-0.5 ${BTN_SECUNDARIO}`}>
+              <button type="button" onClick={quitarFiltros} className={`mt-0.5 min-h-11 ${BTN_SECUNDARIO}`}>
                 Quitar filtros
               </button>
             )}
@@ -270,14 +254,5 @@ export function DispositivosPage() {
         )}
       </main>
     </Chasis>
-  )
-}
-
-function ResumenEstado({ clase, texto }: { clase: string; texto: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[12.5px] text-noct-neutral-400">
-      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${clase}`} />
-      {texto}
-    </span>
   )
 }

@@ -4,11 +4,13 @@ import {
   agruparConexiones,
   candidatosConexion,
   compararNatural,
+  conectadoA,
   datosSegunModo,
   desdeExtremo,
   extremosInvertidos,
   proximoPuertoLibre,
   resumenConexion,
+  textoConectadoA,
   ubicacionHeredable,
   type ExtremoConexion,
 } from './conexiones'
@@ -324,5 +326,44 @@ describe('ubicacionHeredable', () => {
     const actual = dispositivo({ id: 'e1', nombre: 'Punto de red D80' })
     const otro = dispositivo({ id: 'r1', nombre: 'Rack A01' })
     expect(ubicacionHeredable(actual, otro)).toBeNull()
+  })
+})
+
+// Tarea 256: la línea "Conectado a" de la ficha del equipo.
+describe('conectadoA', () => {
+  it('es el enlace en el que el otro equipo es el origen (el que da servicio)', () => {
+    const subida = conexion({ id: 's', origenId: 'sw', origenNombre: 'SW-CENTRAL-02', origenPuerto: '18', destinoId: 'pc', destinoNombre: 'PC Caja 2' })
+    const bajada = conexion({ id: 'b', origenId: 'pc', origenNombre: 'PC Caja 2', destinoId: 'impresora', destinoNombre: 'Impresora' })
+    const resultado = conectadoA([bajada, subida], 'pc')
+    expect(resultado?.extremo.otroNombre).toBe('SW-CENTRAL-02')
+    expect(resultado?.extremo.puertoRemoto).toBe('18')
+    expect(resultado?.otros).toBe(0)
+  })
+
+  it('un equipo que solo da servicio, o solo está instalado en un rack, no está "conectado a" nadie', () => {
+    const bajada = conexion({ origenId: 'sw', destinoId: 'pc' })
+    const rack = conexion({ id: 'r', tipo: 'instalacion', origenId: 'sw', destinoId: 'rack' })
+    expect(conectadoA([bajada, rack], 'sw')).toBeNull()
+  })
+
+  it('ignora lo eliminado y cuenta las otras subidas', () => {
+    const a = conexion({ id: 'a', origenId: 'sw1', origenNombre: 'SW 1', origenPuerto: '2', destinoId: 'pc', destinoPuerto: '1' })
+    const b = conexion({ id: 'b', origenId: 'sw2', origenNombre: 'SW 2', origenPuerto: '5', destinoId: 'pc', destinoPuerto: '2' })
+    const borrada = conexion({ id: 'x', origenId: 'sw3', destinoId: 'pc', eliminadoEn: '2026-09-01T00:00:00.000Z' })
+    const resultado = conectadoA([b, borrada, a], 'pc')
+    expect(resultado?.extremo.otroNombre).toBe('SW 1')
+    expect(resultado?.otros).toBe(1)
+  })
+})
+
+describe('textoConectadoA', () => {
+  it('nombra el equipo y el puerto del otro extremo', () => {
+    expect(textoConectadoA('SW-CENTRAL-02', '18')).toBe('SW-CENTRAL-02 · Puerto 18')
+    expect(textoConectadoA('SW-CENTRAL-02', ' Gi1/0/18 ')).toBe('SW-CENTRAL-02 · Puerto Gi1/0/18')
+  })
+
+  it('sin puerto, solo el nombre; y no repite "Puerto"', () => {
+    expect(textoConectadoA('SW-CENTRAL-02', '')).toBe('SW-CENTRAL-02')
+    expect(textoConectadoA('SW-CENTRAL-02', 'puerto 7')).toBe('SW-CENTRAL-02 · puerto 7')
   })
 })

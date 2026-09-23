@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { codigosLeidos, registrarCodigoLeido, reiniciarConteo } from './sesionEscaneo'
+import {
+  codigosLeidos,
+  crearFiltroReapertura,
+  marcarAbierto,
+  registrarCodigoLeido,
+  reiniciarConteo,
+  ultimoAbierto,
+} from './sesionEscaneo'
 
 // Las pruebas corren en Node (ver `vite.config.ts`), donde no hay
 // `sessionStorage`. Se sustituye por uno en memoria con la misma
@@ -71,5 +78,43 @@ describe('sesión de escaneo', () => {
     expect(codigosLeidos()).toEqual([])
     expect(registrarCodigoLeido('MP-001')).toEqual(['MP-001'])
     expect(reiniciarConteo()).toEqual([])
+  })
+})
+
+// Tarea 256: con un solo equipo el escáner abre la ficha directamente, y
+// volver con la cámara sobre la misma etiqueta no puede reabrirla.
+describe('la etiqueta que se acaba de abrir', () => {
+  it('se recuerda en la sesión', () => {
+    expect(ultimoAbierto()).toBeNull()
+    marcarAbierto('https://app.com/dispositivos/pc-1')
+    expect(ultimoAbierto()).toBe('https://app.com/dispositivos/pc-1')
+  })
+
+  it('se ignora mientras la cámara la siga viendo', () => {
+    const ignorar = crearFiltroReapertura('ETIQUETA-1')
+    expect(ignorar('ETIQUETA-1')).toBe(true)
+    expect(ignorar('ETIQUETA-1')).toBe(true)
+    // Un par de cuadros sin código no bastan: la cámara parpadea.
+    expect(ignorar(null)).toBe(false)
+    expect(ignorar(null)).toBe(false)
+    expect(ignorar('ETIQUETA-1')).toBe(true)
+  })
+
+  it('se libera tras un momento sin verla', () => {
+    const ignorar = crearFiltroReapertura('ETIQUETA-1', 3)
+    ignorar(null)
+    ignorar(null)
+    ignorar(null)
+    expect(ignorar('ETIQUETA-1')).toBe(false)
+  })
+
+  it('otro código se atiende en seguida y libera la anterior', () => {
+    const ignorar = crearFiltroReapertura('ETIQUETA-1')
+    expect(ignorar('ETIQUETA-2')).toBe(false)
+    expect(ignorar('ETIQUETA-1')).toBe(false)
+  })
+
+  it('sin nada abierto antes no ignora nada', () => {
+    expect(crearFiltroReapertura(null)('ETIQUETA-1')).toBe(false)
   })
 })

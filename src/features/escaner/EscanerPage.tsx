@@ -1,23 +1,28 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
 import { BarraTarea } from '../../components/BarraTarea'
-import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
-import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import {
-  ArrowRight,
   CameraSlash,
   Check,
   Flashlight,
   FlashlightFill,
   Monitor,
+  PlugsConnected,
   Question,
 } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { resolverCodigo } from './resolverCodigo'
-import { codigosLeidos, registrarCodigoLeido, reiniciarConteo } from './sesionEscaneo'
+import {
+  codigosLeidos,
+  crearFiltroReapertura,
+  marcarAbierto,
+  registrarCodigoLeido,
+  reiniciarConteo,
+  ultimoAbierto,
+} from './sesionEscaneo'
 
 // Pantalla de escaneo a pantalla completa (sin la barra inferior),
 // re-autorizada en Nocturne (handoff "Rediseño de aplicación
@@ -26,13 +31,20 @@ import { codigosLeidos, registrarCodigoLeido, reiniciarConteo } from './sesionEs
 // Usa el detector nativo del navegador (BarcodeDetector, disponible en
 // Android) y cae a jsQR (solo QR, importado bajo demanda) donde no
 // exista, como en iPhone.
+//
+// EL QR ES OTRA FORMA DE BUSCAR (encargo del 2026-09-22, sección 18,
+// tarea 256). Con un solo equipo el escáner abre su ficha directamente;
+// la ficha vuelve aquí con la cámara viva, así que inventariar varios
+// sigue siendo un toque por equipo, y una etiqueta recién abierta no se
+// reabre sola al volver (ver `crearFiltroReapertura`). Con varios
+// equipos o ninguno, las tarjetas de siempre.
 
 type EstadoCamara = 'iniciando' | 'lista' | 'sin_permiso' | 'sin_camara' | 'no_soportado'
 
 type Aviso =
-  | { tipo: 'encontrado'; dispositivo: Dispositivo }
   | { tipo: 'no_encontrado'; codigo: string }
   | { tipo: 'varios'; codigo: string; dispositivos: Dispositivo[] }
+  | { tipo: 'asistencia'; codigo: string }
 
 // El detector nativo no figura en los tipos de TypeScript: se declara
 // solo lo que se usa.
@@ -97,6 +109,7 @@ async function crearLector(): Promise<Lector> {
 }
 
 export function EscanerPage() {
+  const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
   const pistaRef = useRef<MediaStreamTrack | null>(null)
 
@@ -122,21 +135,29 @@ export function EscanerPage() {
   const avisoRef = useRef(aviso)
   avisoRef.current = aviso
 
-  // Resuelve un codigo (escaneado o escrito) a un aviso. Un unico
-  // equipo ya no salta directo a su ficha: se confirma con la tarjeta
-  // "Equipo identificado" (fiel al diseño), para dar acuse de lo leido
-  // y poder seguir escaneando varios equipos seguidos.
+  // Resuelve un codigo (escaneado o escrito). UN SOLO EQUIPO ABRE SU
+  // FICHA (tarea 256): la tarjeta "Equipo identificado" con su "Abrir la
+  // ficha" era un toque más para llegar a lo único que se quería ver. El
+  // acuse de lo leído es la vibración y el contador, y la ficha se apila
+  // sobre el escáner (sin `replace`, M-029), así que su regreso dice
+  // "‹ Escáner" y vuelve con la cámara viva.
   function manejarCodigo(codigo: string) {
     const resultado = resolverCodigo(codigo, dispositivosRef.current)
     const porId = new Map(dispositivosRef.current.map((d) => [d.id, d]))
-    if (resultado.tipo === 'dispositivo') {
-      const dispositivo = porId.get(resultado.dispositivoId)
-      if (dispositivo) {
-        navigator.vibrate?.(60)
-        setLeidos(registrarCodigoLeido(codigo))
-        setAviso({ tipo: 'encontrado', dispositivo })
-        return
-      }
+    if (resultado.tipo === 'dispositivo' && porId.has(resultado.dispositivoId)) {
+      navigator.vibrate?.(60)
+      setLeidos(registrarCodigoLeido(codigo))
+      marcarAbierto(codigo)
+      navigate(`/dispositivos/${resultado.dispositivoId}`, { state: origenEscaner })
+      return
+    }
+    // El QR del portal de asistencia (sección 11 del encargo). Emparejar
+    // el teléfono con ese computador es la tarea 258: hasta entonces se
+    // reconoce y se dice, en vez de responder "ningún equipo coincide".
+    if (resultado.tipo === 'asistencia') {
+      navigator.vibrate?.(60)
+      setAviso({ tipo: 'asistencia', codigo: resultado.codigo })
+      return
     }
     if (resultado.tipo === 'varios') {
       navigator.vibrate?.(60)
@@ -208,6 +229,9 @@ export function EscanerPage() {
 
       const leer = await crearLector()
       if (cancelado) return
+      // Al volver de una ficha abierta desde aquí, esa etiqueta se ignora
+      // hasta que la cámara deja de verla (tarea 256).
+      const ignorar = crearFiltroReapertura(ultimoAbierto())
 
       const bucle = async () => {
         if (cancelado) return
@@ -219,7 +243,7 @@ export function EscanerPage() {
             // Un cuadro ilegible no detiene el escaneo.
           }
           if (cancelado) return
-          if (codigo) manejarCodigoRef.current(codigo)
+          if (!ignorar(codigo) && codigo) manejarCodigoRef.current(codigo)
         }
         temporizador = setTimeout(() => void bucle(), 200)
       }
@@ -406,14 +430,14 @@ export function EscanerPage() {
               <button
                 type="button"
                 onClick={() => setAviso(null)}
-                className={`flex-1 justify-center ${BTN_PRIMARIO}`}
+                className={`min-h-11 flex-1 justify-center ${BTN_PRIMARIO}`}
               >
                 {fallo ? 'Cerrar' : 'Seguir escaneando'}
               </button>
               <Link
                 to={rutaRegistrarEquipo}
                 state={origenEscaner}
-                className={BTN_SECUNDARIO}
+                className={`min-h-11 ${BTN_SECUNDARIO}`}
               >
                 Registrar equipo
               </Link>
@@ -449,69 +473,35 @@ export function EscanerPage() {
             <button
               type="button"
               onClick={() => setAviso(null)}
-              className={`justify-center ${BTN_PRIMARIO}`}
+              className={`min-h-11 justify-center ${BTN_PRIMARIO}`}
             >
               Seguir escaneando
             </button>
           </div>
         )}
 
-        {aviso?.tipo === 'encontrado' && (
-          <div className="flex flex-col gap-[11px] rounded-lg border border-noct-exito/40 bg-noct-surface p-3.5 shadow-lg">
-            <div className="flex items-center gap-[11px]">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-exito/[.14] text-noct-exito">
-                <Check size={18} aria-hidden />
-              </span>
+        {/* EL QR DEL PORTAL DE ASISTENCIA (tarea 256). Se reconoce y se
+            dice lo que es; conectar el teléfono con ese computador llega
+            con la tarea 258, y entonces esta tarjeta dará paso a
+            /conectar. Neutra: no es un error ni un riesgo. */}
+        {aviso?.tipo === 'asistencia' && (
+          <div className="flex flex-col gap-[11px] rounded-lg border border-noct-divider bg-noct-surface p-3.5 shadow-lg">
+            <div className="flex items-start gap-[11px]">
+              <PlugsConnected size={19} className="mt-px shrink-0 text-noct-neutral-300" aria-hidden />
               <div className="min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-noct-exito">
-                  Equipo identificado
+                <p className="text-sm font-medium">Código para conectar un computador</p>
+                <p className="mt-1 font-mono text-[15px] tracking-[.12em] text-noct-text">
+                  {aviso.codigo.slice(0, 3)} {aviso.codigo.slice(3)}
                 </p>
-                <p className="mt-[3px] truncate text-[14.5px] font-medium leading-[1.3]">
-                  {aviso.dispositivo.nombre}
-                  {aviso.dispositivo.ubicacion && (
-                    <span className="text-noct-neutral-400"> · {aviso.dispositivo.ubicacion}</span>
-                  )}
+                <p className="mt-1.5 text-[12.5px] leading-snug text-noct-neutral-400">
+                  Es el código de una asistencia remota. Enviar los pasos de una guía a un computador todavía no
+                  está disponible en esta versión de la app.
                 </p>
               </div>
             </div>
-
-            {/* El estado y la IP en el propio acuse (M-029): muchas veces
-                son lo único que se venía a mirar, y sacarlos aquí ahorra
-                abrir la ficha entera. La IP cumple el piso de dato
-                técnico (M-R5). */}
-            {(aviso.dispositivo.estado || aviso.dispositivo.ip) && (
-              <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-[47px]">
-                {aviso.dispositivo.estado && (
-                  <PastillaEstadoDispositivo estado={aviso.dispositivo.estado} />
-                )}
-                {aviso.dispositivo.ip && (
-                  <span className={VALOR_TECNICO_COMPACTO}>{aviso.dispositivo.ip}</span>
-                )}
-              </p>
-            )}
-
-            <div className="flex gap-2.5">
-              {/* Sin `replace: true` (M-029). Era literalmente lo que
-                  borraba el escáner del historial: la ficha se abría
-                  ENCIMA de él y luego volvía a Equipos, así que
-                  inventariar un rack costaba cuatro toques por equipo en
-                  vez de dos. Ahora la ficha se apila y su regreso dice
-                  "‹ Escáner". */}
-              <Link
-                to={`/dispositivos/${aviso.dispositivo.id}`}
-                state={origenEscaner}
-                className={`flex-1 justify-center ${BTN_PRIMARIO}`}
-              >
-                <ArrowRight size={14} aria-hidden />
-                Abrir la ficha
-              </Link>
-              <button type="button" onClick={() => setAviso(null)} className={BTN_GHOST}>
-                Seguir
-              </button>
-            </div>
-            {/* El compromiso escrito: sin él, "Abrir la ficha" sigue
-                pareciendo el final del escaneo. */}
-            <p className="text-center text-[11.5px] text-noct-neutral-500">La ficha vuelve aquí al terminar</p>
+            <button type="button" onClick={() => setAviso(null)} className={`min-h-11 justify-center ${BTN_PRIMARIO}`}>
+              {fallo ? 'Cerrar' : 'Seguir escaneando'}
+            </button>
           </div>
         )}
       </div>

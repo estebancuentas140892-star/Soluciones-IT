@@ -238,3 +238,33 @@ export function proximoPuertoLibre(enlaces: { puertoLocal: string }[]): string {
   while (usados.has(candidato)) candidato++
   return String(candidato)
 }
+
+// DE DÓNDE RECIBE SERVICIO ESTE EQUIPO (tarea 256, encargo del
+// 2026-09-22, sección 18): la línea "Conectado a: SW-CENTRAL-02 ·
+// Puerto 18" de la ficha. Es el enlace en el que el OTRO extremo es el
+// origen, que en la topología es el padre (ver `arbol.ts`): el switch
+// que le da servicio, no los equipos a los que este se lo da. Lo normal
+// es uno; si hay más, se enseña el primero (por puerto) y se cuentan
+// los demás.
+export interface ConectadoA {
+  extremo: ExtremoConexion
+  /** Otros enlaces de subida del mismo equipo. */
+  otros: number
+}
+
+export function conectadoA(conexiones: Conexion[], dispositivoId: string): ConectadoA | null {
+  const subidas = agruparConexiones(conexiones, dispositivoId).enlaces.filter((e) => !e.esOrigen)
+  if (subidas.length === 0) return null
+  return { extremo: subidas[0], otros: subidas.length - 1 }
+}
+
+/**
+ * "SW-CENTRAL-02 · Puerto 18". El puerto es el del OTRO equipo (el del
+ * switch), que es el que se busca en el rack; sin puerto anotado, solo
+ * el nombre. Un puerto escrito ya como "Puerto 18" no se repite.
+ */
+export function textoConectadoA(nombre: string, puertoRemoto: string): string {
+  const puerto = puertoRemoto.trim()
+  if (!puerto) return nombre
+  return `${nombre} · ${/^puerto\b/i.test(puerto) ? puerto : `Puerto ${puerto}`}`
+}
