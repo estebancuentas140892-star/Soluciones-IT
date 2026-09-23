@@ -1,5 +1,32 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-23: las entidades se relacionan
+
+### 266. Fase 1: Personas con ciclo de vida, asignaciones e historial
+
+**Título:** una persona ingresa, recibe un equipo, cambia de equipo y se retira sin que se pierda nada. **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-23, secciones 3 a 9 y 23 a 26. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-047. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-048 a RN-051.
+
+**Auditoría previa (lo que decidió el diseño).** El historial guarda campo, valor anterior y nuevo, fecha, usuario y motivo, pero `responsableId` estaba excluido a propósito (`CAMPOS_SIN_HISTORIAL`): de una asignación solo quedaba el NOMBRE, que no sirve para "¿qué equipos tuvo esta persona?". La baja ya dejaba fecha y motivo en el historial (sobran `fecha_baja`/`motivo_baja`). Defecto: la baja y el reemplazo no soltaban `responsable_id`.
+
+**Qué se hizo:**
+
+1. **Esquema** (`supabase/schema.sql`, bloque 1.w): `personas.estado` (`activa`/`retirada`, default `activa`), `fecha_ingreso`, `fecha_retiro` y `motivo_retiro`. `src/lib/tablas.ts` y `src/lib/db.ts` (tipo `Persona`, `EstadoPersona`, Dexie versión 19 que completa las personas guardadas sin encolar nada). Sin estado "pendiente" (una fecha de ingreso futura lo dice) y sin datos de Recursos Humanos.
+2. **Historial de asignaciones sin tabla nueva:** `responsableId` sale de `CAMPOS_SIN_HISTORIAL` (`src/lib/repositorio.ts`); `historialAsignaciones.ts` deriva los periodos (fechas solo si constan; "Hasta el …" cuando el comienzo es anterior a los registros; sin emparejar por nombre). El visor del historial y la actividad del equipo ocultan la entrada técnica (`esEntradaTecnica`).
+3. **Operaciones** (`src/features/personas/operaciones.ts`): `asignarEquipo`, `liberarEquipo`, `darDeBajaEquipo` (estado y vínculo en un solo guardado), `retirarPersona` (equipos primero, estado al final) y `reactivarPersona`. Cada una relee la fila antes de escribir.
+4. **Pantallas:** lista con Activas/Retiradas y "Responsable por validar"; ficha con estado, fechas, equipo actual ("Desde el …", "Liberar"), "Configurar el computador para …" (guía maestra por etiqueta o título, sin copiarla), equipos anteriores y "Eliminar (registro creado por error)"; `AsignarEquipoPage` (Disponibles, Sin responsable, De otra persona; "Reemplaza a …"); `RetirarPersonaPage` (fecha, motivo, una decisión por equipo, "Falta completar la baja"); hojas `HojaLiberarEquipo` y `HojaAsignarPersona`; formulario con fecha de ingreso (y datos del retiro en una retirada).
+5. **Ficha del equipo:** `ResponsableDelEquipo` ("Sin responsable" con "Asignar", texto "por validar", "Cambiar", persona retirada, "Último responsable" en un equipo de baja con vínculo antiguo) y "Responsables anteriores" en "Más datos del equipo".
+6. **Baja y reemplazo** sueltan al responsable (`DarDeBajaPage`, `ReemplazoPage`), y la baja lo anuncia con el nombre.
+7. **Estados:** "Disponible" en la lista canónica (`topologiaVisual.ts`), "Dado de baja" como sinónimo de "De baja" (`estadoCanonico`); liberar propone Disponible solo si el equipo funcionaba; asignar pasa un Disponible a Operativo.
+8. **Buscador:** una persona retirada dice "Persona · Retirada".
+
+**Pruebas.** 134 archivos y 1902 casos en verde (antes 128 y 1847). Nuevas: `cicloPersona.test.ts`, `historialAsignaciones.test.ts`, `guiaDeConfiguracion.test.ts`, `operaciones.test.ts` (sobre la base local: el historial guarda nombre e id, la baja suelta al responsable, el retiro aplica cada decisión, deja pendientes las bajas con dependencias, conserva la ficha, reactivar), `cicloDeVida.test.tsx` (pantallas reales: ficha, guía maestra, eliminar, asignar, retirar, reactivar, lista) y `db.upgrade19.test.ts`. Ajustadas: `db.upgrade*.test.ts` (versión), `busqueda.test.ts` y `equiposYQr.test.tsx` (un responsable es una ficha; texto sin ficha, "por validar").
+
+**Capturas** (390×844 y 1366×768, en `evidencia/`, no se versiona; catorce paradas nuevas `personas*`, `persona-*` y `equipo-*`, con personas y equipos inventados en `semillaLocal.ts`): sin desbordamiento; los controles nuevos a 44 px. Quedan hallazgos que ya existían (regreso y "Crear" de la cabecera de lista, tarea 262) y falsos positivos conocidos (tarea 260).
+
+**Paso del usuario:** ejecutar `supabase/schema.sql` completo en el SQL Editor. Hasta entonces, el guardado de una persona espera en la cola sin perderse.
+
+**Lo que no se tocó:** rutas existentes, la relación `responsable_id` y su copia, la migración de personas, RLS, orden de sincronización, las demás entidades del historial. Ningún dato real se modificó desde esta sesión.
+
 ## Encargo del 2026-09-22: Resolución guiada
 
 ### 263. Resolución guiada: Resolver unifica guías y diagnósticos

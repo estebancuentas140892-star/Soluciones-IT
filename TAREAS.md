@@ -4,19 +4,30 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación), 255 (ejecución visual de las guías), 256 (Equipos + QR) y 257 (Más e Infraestructura, cerrada el 2026-09-23), y la **263** (Resolución guiada, encargo nuevo del mismo día, cerrada el 2026-09-23). **En proceso:** 258 (portal `/asistencia`). **Siguen:** 259 (precache y rendimiento) y 260 (pruebas completas).
+**ENCARGO DEL 2026-09-23: LAS ENTIDADES SE RELACIONAN.** Personas, equipos, ubicaciones, red, agenda, Centro de consulta, historial, Resolver y diagnóstico dejan de ser pantallas aisladas: sin rediseño general y conservando "Resolver → encontrar → ejecutar → solucionar". Cinco fases, una tarea por fase (266 a 270), una "En proceso" a la vez. **Cerradas y archivadas:** 266 (Personas, 2026-09-23). **En proceso:** 267 (Ubicaciones y estados). **Siguen:** 268 (Más), 269 (Resolver + Diagnóstico) y 270 (Agenda y Centro de consulta en contexto). Restricciones del encargo que valen para las cinco: no inventar datos (persona desde un área, ubicación por parecido, fechas, estados, causas de baja), no duplicar verdades, no borrar historial y conservar compatibilidad con los 149 equipos, 94 personas, 31 conexiones, 31 guías y 42 fichas del Centro de consulta que ya existen.
 
-### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
+**Auditoría previa (2026-09-23), lo que decide el diseño:**
 
-- **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
-- **Descripción:** (1) migración en `supabase/schema.sql`: tablas `asistencia_sesiones`, `asistencia_mensajes`, `asistencia_eventos`, RLS sin políticas y funciones `security definer` con permisos explícitos; (2) entrada propia `asistencia.html` sin service worker, Dexie ni cliente completo de Supabase; (3) `/conectar` y la hoja "Conectar equipo" (escanear o escribir el código); (4) "Enviar a este equipo" con vista previa desde el paso; (5) constructor de contenido que no puede recibir datos de la Bóveda y validación en el servidor; (6) indicador y "Desconectar equipo"; (7) pruebas del SQL, del constructor y de los estados del portal.
-- **Motivo:** secciones 9 a 15 del encargo.
-- **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
-- **Prioridad:** Alta. **Estado:** En proceso (desde el 2026-09-23, al cerrarse la tarea 257; todavía sin empezar en el código).
-- **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`.
-- **Ya hecho en la 256:** el escáner reconoce el QR del portal (`resolverCodigo` da `asistencia` para `/conectar?codigo=` con 6 cifras, de cualquier origen) y enseña una tarjeta neutra en `EscanerPage`. Aquí se cambia esa tarjeta por ir a `/conectar?codigo=…`.
-- **Dependencias:** 255. **Paso del usuario:** ejecutar `supabase/schema.sql` en el SQL Editor.
-- **Modelo/esfuerzo:** Opus 5 / Extra (seguridad).
+- El historial registra campo, valor anterior y nuevo, fecha, usuario y motivo, pero `responsableId` se excluía a propósito (`CAMPOS_SIN_HISTORIAL`, `src/lib/repositorio.ts` ~208): de una asignación solo quedaba el NOMBRE. Eso responde "quién tuvo este equipo" como texto, pero no "qué equipos tuvo esta persona" de forma fiable (un nombre no es una identidad). Se reutiliza el historial registrando también el id, en vez de crear `asignaciones_dispositivo`.
+- La baja ya deja fecha y motivo en el historial (la entrada `estado → De baja` lleva el motivo): `fechaBaja`/`motivoBaja` no hacen falta.
+- **Defecto:** dar de baja (`DarDeBajaPage.tsx` ~63) y reemplazar (`ReemplazoPage.tsx` ~98) no tocan `responsableId`: el equipo dado de baja sigue siendo "equipo actual" de su persona, y tras un reemplazo los dos equipos quedan a su nombre.
+- **Defecto:** la migración de ubicaciones (`src/features/ubicaciones/migracion.ts`) crea siempre ubicaciones nuevas, así que duplicaría las dos que ya existen, y no distingue una equivalencia segura de una posible coincidencia.
+- La tarea 263 ya integró el diagnóstico en Resolver ("Guía con preguntas"); en Más solo queda su administración.
+
+### 267. Fase 2: Ubicaciones vinculadas y estados de equipo unificados
+
+- **Título:** los textos de ubicación se convierten en fichas con ayuda del técnico, y la ficha de un lugar responde "¿qué hay aquí?".
+- **Descripción:** (1) la migración asistida propone solo las equivalencias seguras (mayúsculas y espacios) y marca como "Posible coincidencia, por validar" lo que solo se parece (tildes, abreviaturas como "PN" y "Parque Norte"); (2) un texto que ya tiene ubicación con ese nombre se vincula a ella en vez de duplicarla; (3) vincular `ubicacionId` sin inventar jerarquías; (4) la ficha de ubicación agrupa lo que contiene por tipo (computadores, impresoras, switches, puntos de red, otros) y cada fila abre su ficha; (5) los estados escritos como texto libre (importados) se llevan al conjunto canónico con el mismo criterio asistido, sin mover nunca un equipo a un estado que su texto no dice.
+- **Motivo:** secciones 9 a 12 del encargo.
+- **Impacto:** alto: 0 de 149 equipos tienen hoy `ubicacionId`.
+- **Prioridad:** Alta. **Estado:** En progreso (desde el 2026-09-23, al cerrarse la 266).
+- **Área afectada:** `src/features/ubicaciones/{migracion.ts,MigracionUbicaciones.tsx,UbicacionPage.tsx}`, `src/features/dispositivos/` (normalización de estados), `src/features/red/topologiaVisual.ts`.
+- **Dependencias:** 266 (el estado "Disponible").
+- **Modelo/esfuerzo:** Opus 5 / Extra.
+
+---
+
+**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación), 255 (ejecución visual de las guías), 256 (Equipos + QR) y 257 (Más e Infraestructura, cerrada el 2026-09-23), y la **263** (Resolución guiada, encargo nuevo del mismo día, cerrada el 2026-09-23). **La 258 (portal `/asistencia`) vuelve a "Por hacer" el 2026-09-23 sin haber empezado en el código:** el usuario priorizó el encargo de las relaciones (266 a 270). **Siguen:** 258, 259 (precache y rendimiento) y 260 (pruebas completas).
 
 ---
 
@@ -376,6 +387,51 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 268. Fase 3: Más con una puerta por capacidad
+
+- **Título:** Más más corto sin perder funciones.
+- **Descripción:** (1) Topología deja de ser fila (se llega desde Red, que ya la enlaza); (2) "Herramientas de inventario" reúne Importar equipos y Etiquetas QR en una sola puerta; (3) "Ajustes" reúne Mi cuenta, contraseña, bloqueo, trabajo sin conexión, instalar, buscar actualización y cerrar sesión; (4) grupos Consulta, Organización, Infraestructura, Herramientas y Aplicación. Absorbe la tarea 265 donde aplique (Importar y Etiquetas vuelven a su puerta).
+- **Motivo:** secciones 13, 16, 18, 20, 21 y 22 del encargo.
+- **Impacto:** medio: navegación; ninguna ruta ni pantalla se retira.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/autenticacion/CuentaPage.tsx`, `src/lib/navegacion.ts`, `src/features/dispositivos/{EtiquetasPage.tsx,importar/ImportarDispositivosPage.tsx}`.
+- **Dependencias:** 266 y 267 (la puerta de inventario reúne también sus herramientas asistidas).
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+### 269. Fase 4: Diagnóstico dentro de Resolver y fuera de Más
+
+- **Título:** el técnico no decide si busca una guía o un diagnóstico.
+- **Descripción:** comprobar con pruebas que Resolver cubre procedimiento directo, problema, síntoma y guía con preguntas (tarea 263); dar a la administración de las guías con preguntas (crear, editar, estadísticas, sugerencias) una puerta dentro de Guías; retirar la fila Diagnóstico de Más sin tocar tablas, rutas ni lógica.
+- **Motivo:** sección 17 del encargo.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/inicio/{ResolverPage.tsx,resolver.ts}`, `src/features/soluciones/SolucionesPage.tsx`, `src/features/diagnostico/DiagnosticosPage.tsx`, `src/lib/navegacion.ts`, `src/features/mas/PantallaMas.tsx`.
+- **Dependencias:** 268.
+- **Modelo/esfuerzo:** Opus 5 / Extra.
+
+### 270. Fase 5: la Agenda aprovecha ingresos y retiros, y el Centro de consulta aparece en contexto
+
+- **Título:** solo lo que requiere acción, y "¿qué hace este comando?" sin salir de la guía.
+- **Descripción:** (1) la Agenda suma, derivados y sin tabla nueva: persona que ingresa sin equipo asignado, persona retirada con equipos aún a su nombre y equipo liberado hace poco que espera reasignación; nada de calidad de inventario ("N equipos sin foto"); (2) en una tarea de guía que escribe un comando o atajo que existe en el Centro de consulta, "¿Qué hace?" abre su ficha en la hoja de siempre, sin copiar su contenido.
+- **Motivo:** secciones 14 y 15 del encargo.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/inicio/{pendientes.ts,agenda.ts,usePendientes.ts,SeccionesAgenda.tsx}`, `src/features/referencia/`, `src/features/soluciones/{ModoFoco.tsx,ProcedimientoVista.tsx}`.
+- **Dependencias:** 266.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
+
+- **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
+- **Descripción:** (1) migración en `supabase/schema.sql`: tablas `asistencia_sesiones`, `asistencia_mensajes`, `asistencia_eventos`, RLS sin políticas y funciones `security definer` con permisos explícitos; (2) entrada propia `asistencia.html` sin service worker, Dexie ni cliente completo de Supabase; (3) `/conectar` y la hoja "Conectar equipo" (escanear o escribir el código); (4) "Enviar a este equipo" con vista previa desde el paso; (5) constructor de contenido que no puede recibir datos de la Bóveda y validación en el servidor; (6) indicador y "Desconectar equipo"; (7) pruebas del SQL, del constructor y de los estados del portal.
+- **Motivo:** secciones 9 a 15 del encargo del 2026-09-22.
+- **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
+- **Prioridad:** Alta. **Estado:** Pendiente (estuvo "En proceso" desde el 2026-09-23 sin empezar en el código; vuelve aquí el mismo día porque el usuario priorizó las tareas 266 a 270).
+- **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`.
+- **Ya hecho en la 256:** el escáner reconoce el QR del portal (`resolverCodigo` da `asistencia` para `/conectar?codigo=` con 6 cifras, de cualquier origen) y enseña una tarjeta neutra en `EscanerPage`. Aquí se cambia esa tarjeta por ir a `/conectar?codigo=…`.
+- **Dependencias:** 255. **Paso del usuario:** ejecutar `supabase/schema.sql` en el SQL Editor.
+- **Modelo/esfuerzo:** Opus 5 / Extra (seguridad).
 
 ### 259. Fase 7: precache, trozos y rendimiento
 

@@ -381,7 +381,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ## 3. Componentes compartidos de features
 
 ### 3.1 `historial/Historial`
-- **Propósito:** línea de tiempo unificada de una entidad: combina cambios de campos, intervenciones manuales, ejecuciones de diagnóstico y accesos de auditoría de bóveda en un solo componente plegable.
+- **Propósito:** línea de tiempo unificada de una entidad: combina cambios de campos, intervenciones manuales, ejecuciones de diagnóstico y accesos de auditoría de bóveda en un solo componente plegable. Desde la tarea 266 no enseña las entradas técnicas (`esEntradaTecnica`: el `responsableId` que acompaña al nombre del responsable).
 - **Props:** `{ entidadTipo: TipoEntidadHistorial, entidadId }`.
 - **Variantes:** por `entidadTipo` decide qué sub-eventos anexar (artículo suma `ejecuciones_diagnostico`; credencial o campo protegido suman `accesos_boveda`). `procedimiento` y `detalles` muestran un resumen en lenguaje natural con el JSON plegado en "Detalle técnico".
 - **Dónde:** `DispositivoPage`, `ArticuloPage`, `CredencialPage` (vía la ficha), `CategoriaPage`, `UbicacionPage`, `PersonaPage`, `DiagnosticoForm` (solo edición), `SeguridadDelEquipo` (por campo protegido). Cubre 8 tipos de entidad.
@@ -419,8 +419,9 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** `CredencialEnPaso` (claro), `CredencialPage` (nocturne). **No es lo que pinta la fila de `BovedaPage`**: esa lista tiene su propio marcado (tarea 205), porque una fila vencida no lleva pastilla sino la duración escrita en la segunda línea (`descripcionVencida` en `vencimiento.ts`); solo la "próxima a vencer" conserva una pastilla, distinta de esta.
 
 ### 3.5 `dispositivos/estados.ts` y el estado visual
-- **Aclaración:** no existe un componente `IndicadorEstado` con ese nombre; el que cumple ese papel es `PastillaEstado` (sección 2.10d). `estados.ts` es solo un re-export de `ESTADOS_SUGERIDOS` (para el `datalist` del formulario).
-- El VOCABULARIO del estado vive en `src/features/red/topologiaVisual.ts`, que es su única fuente: `ESTADOS_CONOCIDOS` (agregar, renombrar o recolorear un estado es tocar esa lista y nada más), `estadoConEtiqueta(estado)` (etiqueta canónica), `claseEstado(etiqueta)` (color Nocturne, para los puntos de los árboles) y `tonoEstado(etiqueta)` (tono de pastilla, tarea 207, con pruebas).
+- **Aclaración:** no existe un componente `IndicadorEstado` con ese nombre; el que cumple ese papel es `PastillaEstado` (sección 2.10d). `estados.ts` es solo un re-export de `ESTADOS_SUGERIDOS` (los chips del formulario) y, desde la tarea 266, de `estadoCanonico`.
+- El VOCABULARIO del estado vive en `src/features/red/topologiaVisual.ts`, que es su única fuente: `ESTADOS_CONOCIDOS` (agregar, renombrar o recolorear un estado es tocar esa lista y nada más; cada estado puede declarar `alias`), `estadoConEtiqueta(estado)` (etiqueta canónica), `estadoCanonico(estado)` (la etiqueta canónica o null, para la lógica que DECIDE por el estado, tarea 266), `claseEstado(etiqueta)` (color Nocturne, para los puntos de los árboles) y `tonoEstado(etiqueta)` (tono de pastilla, tarea 207, con pruebas).
+- **Cinco estados desde la tarea 266:** Operativo, **Disponible** (tono `exito`, como Operativo, porque también funciona; en el editor su punto va hueco), En mantenimiento, Fuera de servicio y De baja (con el alias "Dado de baja").
 - **Desde la tarea 207 la FORMA es una sola** (hallazgo M-017): `PastillaEstadoDispositivo`. Antes el marcado "punto de color + etiqueta" se repetía a mano en seis pantallas y la ficha del equipo tenía además su propia `pillEstado`, que mantenía a mano el mismo dominio de estados.
 
 ### 3.6 `ubicaciones/SelectorUbicacion`
@@ -432,7 +433,23 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 3.7 `personas/SelectorPersona`
 - **Propósito:** selector de persona, mismo patrón que `SelectorUbicacion` pero sin jerarquía; canónico `responsableId`, copia `responsable`.
 - **Props:** `{ responsableId: string | null, responsable, onChange(responsableId, responsableTexto) }`.
+- **Desde la tarea 266** solo ofrece personas activas; la ya vinculada se conserva aunque se haya retirado, marcada "(retirada)", para que editar otro dato del equipo no la suelte sin querer. Una persona creada aquí nace activa.
 - **Dónde:** solo `DispositivoForm`. (Nota: `FormularioConexion` reimplementa el mismo patrón por su cuenta, candidato CAND-6.)
+
+### 3.7b `personas/DecisionSobreEquipo` (`DecisionEquipo.tsx`, 2026-09-23, tarea 266)
+- **Propósito:** "¿Qué pasa con este equipo?" en un solo control, porque la misma pregunta aparece al retirar a una persona (una por equipo) y al liberar un equipo. Tres opciones de radio (`role="radio"`, 44 px): **Dejar sin responsable** (con la casilla "Marcar como Disponible", `role="checkbox"` con la forma de las casillas de las guías; marcada si el equipo funcionaba, desmarcada y con aviso si su estado no lo dice, oculta si está en mantenimiento o fuera de servicio, ver `sugerirDisponible`), **Asignar a otra persona** (un `select` de personas activas) y **Dar de baja** (con la explicación de que la baja se completa en su pantalla si hay dependencias).
+- **Props:** `{ dispositivo, eleccion: Eleccion, onCambiar, personas, permitirBaja? = true }` (controlado). `Eleccion`, `eleccionInicial` y `aDecision` (traduce a la `DecisionEquipo` que ejecuta `retirarPersona`, o null si falta la persona) viven en `eleccionEquipo.ts`, aparte, para que el archivo del componente solo exporte componentes.
+- **Dónde:** `RetirarPersonaPage` y `HojaLiberarEquipo`.
+
+### 3.7c `personas/HojaLiberarEquipo` y `personas/HojaAsignarPersona` (2026-09-23, tarea 266)
+- **`HojaLiberarEquipo`:** `Modal` con `DecisionSobreEquipo` y un motivo opcional. "Confirmar" libera o reasigna (`liberarEquipo`, `asignarEquipo`); con "Dar de baja", "Ir a dar de baja" abre la pantalla de baja de siempre. Props: `{ dispositivo: Dispositivo | null (null = cerrada), persona, otrasPersonas, onCerrar, desdeElEquipo? }`; con `desdeElEquipo` la pantalla de baja vuelve al equipo en vez de a la persona. Dónde: "Liberar" en `PersonaPage` y "Cambiar" en `ResponsableDelEquipo`.
+- **`HojaAsignarPersona`:** `Modal` con `CampoBusqueda` y la lista de personas activas (radio de 44 px); si lo escrito no existe, "Crear a «…» y asignarle el equipo". Props: `{ dispositivo, abierto, onCerrar }`. Dónde: "Asignar" en `ResponsableDelEquipo`.
+
+### 3.7d `personas/ResponsableDelEquipo`, `ResponsablesAnteriores` y `useAsignaciones` (2026-09-23, tarea 266)
+- **`ResponsableDelEquipo`:** la fila "Responsable" de la ficha del equipo, con sus cuatro casos: persona activa (enlace, "Desde el …" si el historial lo dice y "Cambiar"), persona retirada (el aviso para reasignar o liberar), texto que no es una persona ("Sin responsable" y "Anotado: «…» · por validar", con "Asignar") y nada ("Sin responsable" y "Asignar"). En un equipo de baja que conserva el vínculo de antes dice "Último responsable"; sin vínculo, no se dibuja. Props: `{ dispositivo, origen }`.
+- **`ResponsablesAnteriores`:** la fila de "Más datos del equipo" con quién lo tuvo y cuándo, cada persona como fila de 44 px que abre su ficha. Props: `{ periodos, origen }`; no dibuja nada sin periodos.
+- **`useAsignaciones.ts`:** `useEntradasDeAsignacion(dispositivoId)` (las entradas `responsableId` de un equipo, por el índice `[entidadTipo+entidadId]`) y `useResponsablesAnteriores(dispositivoId)`, que la ficha usa también para contar la fila en la cabecera plegada (M-R4).
+- **Dónde:** `DispositivoPage` (sección "Ahora" y "Más datos del equipo").
 
 ### 3.8b `soluciones/FilaArticulo`
 - **UNA TARJETA, UN TOQUE (2026-09-17, tarea 244).** La tarjeta entera es **un solo enlace** a la guía (que abre su paso pendiente), con `state` de origen (`conOrigen` de la lista con su filtro y término, criterio A03) y un galón a la derecha. **Se retira la zona de acción** ("Empezar", "Continuar · paso N de M", "Abrir"): con la tarjeta llevando a lo mismo, repetía el enlace. Lo que decía de una guía a medias queda como información en una línea de acento, **"Vas en el paso N de M"** o **"Faltan las comprobaciones finales"** (`lineaAvanceGuia`, en `accionGuia.ts`, que sustituye a `etiquetaAccionGuia` y `estrenaEjecucion`). Prop `accion?: AccionGuia | null`. Lo que sigue describe las zonas 1 y 2, que no cambian.

@@ -25,7 +25,7 @@ El índice es único para todos los tipos de documento. Cada documento tiene tre
 | **diagnostico** | no eliminado | título | `categoría · Diagnóstico` | título + descripción + `textoDeNodos` (preguntas, descripciones, etiquetas de opción, mensajes finales y títulos de artículos vinculados) |
 | **categoria** | no eliminada | nombre | `Categoría` | solo el nombre |
 | **ubicacion** | no eliminada | nombre | ruta de ancestros (`Sede > Área`) o `Ubicación` si es raíz | nombre + notas |
-| **persona** | no eliminada | nombre | `Persona` | nombre + notas |
+| **persona** | no eliminada (también las retiradas, tarea 266) | nombre | `Persona`, o `Persona · Retirada` | nombre + notas |
 | **adjunto** (galería de paso) | por cada `paso.adjuntos[]` de un artículo publicado | nombre del archivo | `título del artículo · título del paso` | solo el nombre del archivo |
 | **adjunto** (tabla `adjuntos`) | dueño (artículo publicado o dispositivo) resuelto localmente | nombre del archivo | título del dueño | solo el nombre del archivo |
 | **herramienta** | no eliminada y de un tipo conocido | título, con la abreviatura entre paréntesis si la tiene ("SQL Server Management Studio (SSMS)") | `Herramienta · categoría` | `textoBuscable`: título, abreviatura, alias, descripción, para qué sirve, proveedor, uso en Metroparques, notas y etiquetas |

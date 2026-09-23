@@ -295,6 +295,38 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Topología (`/red/topologia`) sube a Red por `padreDe`, pero la fila de Más la abre con el origen `/mas` ("Más"), así que su regreso vuelve a Más (M-R2). Sin origen, sube a Red. **Pendiente (tarea 265):** la Agenda (sube a Resolver), Bloqueo y seguridad (a Mi cuenta), Importar equipos y Etiquetas QR (a Equipos, escrito en la propia pantalla) no vuelven a Más cuando se abren desde Más.
 - Dura en el código: `src/features/mas/PantallaMas.tsx`, `src/app/memoriaPestana.ts` (`RAICES_CON_MEMORIA`), `src/features/historial/ActividadDelEquipo.tsx`, `src/features/inicio/AgendaPage.tsx`.
 
+---
+
+**RN-048. Una persona se retira, no se elimina; eliminar es para un registro creado por error.**
+- Motivo: encargo del 2026-09-23, secciones 3, 4 y 25 ([DECISIONES.md](DECISIONES.md) AD-047). Una salida de personal no debe borrar la historia.
+- Regla: `personas.estado` es `activa` o `retirada` (default `activa`; una fila sin la columna se lee como activa). Retirar guarda `fecha_retiro` y `motivo_retiro`, resuelve ANTES cada equipo que la persona tiene hoy (dejarlo sin responsable, pasarlo a otra persona activa o darlo de baja) y cambia el estado AL FINAL: si se interrumpe, la persona sigue activa con los equipos que faltan. Reactivar vacía los datos del retiro en la ficha (quedan en su historial) y no le devuelve ningún equipo. A una persona retirada no se le asignan equipos (el selector y "Asignar" solo ofrecen activas). Sin estado "pendiente": una `fecha_ingreso` futura ya lo dice. Solo datos de la operación de TI: nada de Recursos Humanos.
+- Entidades: Persona, Dispositivo, Historial.
+- Dura en el código: `src/features/personas/{cicloPersona.ts,operaciones.ts}` (`retirarPersona`, `reactivarPersona`).
+
+---
+
+**RN-049. Quién tuvo cada equipo se reconstruye del historial; ninguna fecha se inventa.**
+- Motivo: sección 5 del encargo. El historial ya es el registro inmutable de cambios; una tabla `asignaciones_dispositivo` habría guardado dos veces la misma verdad.
+- Regla: desde el 2026-09-23 el cambio de `responsable_id` de un equipo deja su propia entrada en `historial` (entidad `dispositivo`, campo `responsableId`, con el id de la persona anterior y el de la nueva), junto a la entrada `responsable` con los nombres. El equipo de HOY es `dispositivos.responsable_id`; los periodos pasados se derivan ordenando esas entradas por fecha (`periodosDeAsignacion`): una asignación anterior a los registros (inventario institucional, migración de personas) solo dice cuándo terminó ("Hasta el …"), nunca cuándo empezó. No se empareja por nombre: la entrada `responsable` anterior al cambio solo tiene nombres, y deducir de un nombre que dos personas son la misma sería inventar. La entrada `responsableId` es técnica: el visor del historial y la actividad del equipo la ocultan (`esEntradaTecnica`).
+- Entidades: Historial, Dispositivo, Persona.
+- Dura en el código: `src/lib/repositorio.ts` (`CAMPOS_SIN_HISTORIAL`), `src/features/personas/historialAsignaciones.ts`, `src/features/historial/textoHistorial.ts`.
+
+---
+
+**RN-050. Un equipo de baja no es equipo actual de nadie; la baja y el reemplazo sueltan al responsable.**
+- Motivo: secciones 4 y 9 del encargo. Hasta el 2026-09-23 la baja (y el final de un reemplazo) dejaba `responsable_id` puesto: el equipo retirado seguía siendo "equipo actual" de su persona, y tras un reemplazo los dos equipos quedaban a su nombre.
+- Regla: `darDeBajaEquipo` pone `estado = 'De baja'`, `responsable_id = null` y `responsable = ''` en un mismo guardado (el nombre queda en el historial, con el motivo). Lo usan la pantalla de baja, el reemplazo y el retiro de una persona (este solo cuando el equipo no tiene conexiones, credenciales ni datos protegidos; si los tiene, lo deja sin responsable y la baja se completa en su pantalla). Al leer, un equipo de baja que todavía conserve el vínculo (datos anteriores) no cuenta como equipo actual (`equiposActuales`) y su ficha dice "Último responsable". La fecha y el motivo de una baja son los de su entrada `estado → De baja` en el historial: no hay `fecha_baja` ni `motivo_baja`.
+- Entidades: Dispositivo, Persona, Historial.
+- Dura en el código: `src/features/personas/operaciones.ts` (`darDeBajaEquipo`), `src/features/dispositivos/{DarDeBajaPage,ReemplazoPage}.tsx`.
+
+---
+
+**RN-051. Cinco estados de equipo; "Disponible" solo cuando funciona; un texto que no es una persona queda "por validar".**
+- Motivo: secciones 8 y 9 del encargo.
+- Regla: la lista canónica (`topologiaVisual.ts`, única fuente) es Operativo, **Disponible**, En mantenimiento, Fuera de servicio y De baja. "De baja" conserva su texto (el que ya escriben la baja y el reemplazo) y reconoce "Dado de baja" como sinónimo (`estadoCanonico`); un texto que no está en la lista se conserva tal cual y no se interpreta. Al dejar un equipo sin responsable: si funcionaba (Operativo o Disponible) se ofrece Disponible marcado; si su estado no lo dice, se ofrece sin marcar; si está en mantenimiento, fuera de servicio o de baja, conserva su estado (`sugerirDisponible`). Al asignarlo, un Disponible pasa a Operativo y cualquier otro estado se conserva (`estadoAlAsignar`). Un `responsable` escrito sin `responsable_id` ("Archivo", "Disponible en…", dos nombres) se enseña como "Sin responsable · Anotado: «…» · por validar": nunca se convierte en persona ni se limpia solo.
+- Entidades: Dispositivo, Persona.
+- Dura en el código: `src/features/red/topologiaVisual.ts`, `src/features/personas/cicloPersona.ts`.
+
 ## 3. Modelo entidad-relación
 
 ### 3.1 Diagrama
@@ -331,7 +363,7 @@ erDiagram
 | Categoría | clasifica | Artículo / Dispositivo / Diagnóstico | 1 : N | FK dura NOT NULL |
 | Ubicación | ubica | Dispositivo | 1 : N | FK `ubicacion_id` (nullable) + copia `ubicacion` |
 | Ubicación | jerarquía | Ubicación | 1 : N | FK `padre_id` (autorreferencia, opcional) |
-| Persona | responsable | Dispositivo | 1 : N | FK `responsable_id` (nullable) + copia `responsable` |
+| Persona | responsable | Dispositivo | 1 : N | FK `responsable_id` (nullable) + copia `responsable`. Los periodos pasados se derivan de `historial` (campo `responsableId`, RN-049), sin tabla propia |
 | Dispositivo | reemplaza | Dispositivo | 1 : 0..1 | FK `reemplaza_a` (autorreferencia, fija una vez) |
 | Dispositivo | contiene | Campo protegido | 1 : N | `dispositivo_id` (nullable, sin FK) |
 | Dispositivo | conexión | Dispositivo | N : M | tabla puente `conexiones` (dos FK duras) con atributos |
@@ -360,11 +392,11 @@ Catálogo de campos entidad por entidad (tipos, nulabilidad, defaults): [ARQUITE
 
 ## 4. Ciclos de vida y máquinas de estado
 
-Distinción importante: solo dos entidades tienen un campo de estado persistido (`Articulo.estado`, enum real; `Dispositivo.estado`, texto libre). Las demás tienen un ciclo de vida simple (alta, edición, borrado lógico). Además existen dos máquinas de estado de **ejecución** (diagnóstico y procedimiento) que viven en tablas locales.
+Distinción importante: solo tres entidades tienen un campo de estado persistido (`Articulo.estado`, enum real; `Persona.estado`, enum real desde el 2026-09-23; `Dispositivo.estado`, texto libre). Las demás tienen un ciclo de vida simple (alta, edición, borrado lógico). Además existen dos máquinas de estado de **ejecución** (diagnóstico y procedimiento) que viven en tablas locales.
 
 ### 4.1 Dispositivo
 
-`estado` es **texto libre, sin CHECK en la base**. No es una máquina de estados formal: el formulario sugiere valores (`Operativo`, `En mantenimiento`, `Fuera de servicio`, `De baja`) pero acepta cualquier texto. El único valor con comportamiento especial es `De baja` (comparado sin distinguir mayúsculas). El ciclo de vida real lo dan dos flujos asistidos y el borrado lógico:
+`estado` es **texto libre, sin CHECK en la base**. No es una máquina de estados formal: el formulario sugiere valores (`Operativo`, `Disponible` desde el 2026-09-23, `En mantenimiento`, `Fuera de servicio`, `De baja`) pero acepta cualquier texto (RN-051). Valores con comportamiento especial: `De baja` (o su sinónimo "Dado de baja", sin distinguir mayúsculas ni tildes), que suelta al responsable y deja de ser equipo actual de nadie (RN-050), y `Disponible`, que pasa a `Operativo` al asignarlo. El ciclo de vida real lo dan dos flujos asistidos y el borrado lógico:
 
 ```mermaid
 stateDiagram-v2
@@ -379,7 +411,8 @@ stateDiagram-v2
 ```
 
 - **Dar de baja** exige resolver antes cada conexión (eliminar), credencial (desvincular o eliminar) y campo protegido (conservar sin equipo o eliminar); "Confirmar baja" solo se habilita sin dependencias vivas.
-- **Reemplazar** crea un equipo nuevo con `reemplaza_a = idViejo`, migra conexiones, credenciales y campos, y al final pone el saliente en `De baja`. `reemplaza_a` nunca se limpia (RN-014).
+- **Reemplazar** crea un equipo nuevo con `reemplaza_a = idViejo`, migra conexiones, credenciales y campos, y al final pone el saliente en `De baja` y sin responsable (RN-050; el entrante heredó la persona en el formulario). `reemplaza_a` nunca se limpia (RN-014).
+- **Asignar / liberar** (desde el 2026-09-23): cambiar `responsable_id` desde la ficha de la persona o la del equipo. Liberar deja el equipo sin responsable y, si funcionaba, `Disponible`; asignar pasa un `Disponible` a `Operativo` (RN-051).
 - El borrado lógico (`eliminado_en`) es independiente del `estado`.
 
 ### 4.2 Artículo (procedimiento)
@@ -409,7 +442,19 @@ Sin máquina de estados. Ciclo: alta, edición, borrado lógico. Del vencimiento
 ### 4.4 Conexión, Ubicación, Persona
 
 - **Conexión:** ciclo binario, existe o no existe (RN-028). No se edita.
-- **Ubicación y Persona:** alta, edición libre de nombre/notas (y padre en ubicaciones), borrado lógico. Cada una tiene una migración asistida idempotente que convierte texto libre histórico en filas de la entidad.
+- **Ubicación:** alta, edición libre de nombre, notas y padre, borrado lógico. Tiene una migración asistida idempotente que convierte texto libre histórico en filas de la entidad.
+- **Persona** (máquina de estados desde el 2026-09-23, RN-048): tiene además su migración asistida desde `detalles`.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Activa : crear (fecha de ingreso opcional)
+  Activa --> Activa : asignar / liberar / cambiar de equipo
+  Activa --> Retirada : retirar (fecha, motivo y una decisión por equipo)
+  Retirada --> Activa : reactivar (sin devolverle equipos)
+  Activa --> Eliminada : eliminar (registro creado por error)
+  Retirada --> Eliminada : eliminar (registro creado por error)
+  Eliminada --> [*]
+```
 
 ### 4.5 Máquina de estado: ejecución de un diagnóstico
 
@@ -585,6 +630,8 @@ Reemplazar (flujo asistido)
 
 No son nodos del grafo. Eliminar una ubicación o persona **no reasigna ni bloquea nada**: los dispositivos conservan su `ubicacion_id`/`responsable_id` (ahora huérfano) y su copia de texto sigue mostrándose. Cada pantalla calcula su propio aviso contando a mano los equipos afectados, no con `resumenImpacto`.
 
+Desde el 2026-09-23 la salida normal de una persona no es eliminarla sino **retirarla** (RN-048), y ahí sí se resuelve cada equipo: sin responsable, a otra persona o de baja. Dar de baja o reemplazar un equipo suelta a su responsable (RN-050).
+
 ---
 
 ## 8. Arquitectura offline y sincronización
@@ -623,7 +670,7 @@ En la práctica, como cada dato vive una sola vez y los vínculos se resuelven p
 
 ### 10.1 Qué genera qué
 
-- **Historial** (`historial`): toda creación, edición y eliminación de las 10 entidades editables, más las conexiones (una entrada por extremo) y las intervenciones manuales. Guarda usuario, fecha, campo, valor anterior y nuevo, y motivo opcional. Los valores cifrados nunca entran en claro: se guardan como `"(cifrado)"`.
+- **Historial** (`historial`): toda creación, edición y eliminación de las 10 entidades editables, más las conexiones (una entrada por extremo) y las intervenciones manuales. Guarda usuario, fecha, campo, valor anterior y nuevo, y motivo opcional. Los valores cifrados nunca entran en claro: se guardan como `"(cifrado)"`. Desde el 2026-09-23 un cambio de responsable deja además una entrada técnica `responsableId` con los dos ids de persona, que no se enseña y de la que se derivan las asignaciones pasadas (RN-049).
 - **Ejecuciones de diagnóstico** (`ejecuciones_diagnostico`): cada corrida terminada o abandonada del asistente (camino, artículos ejecutados, resultado, duración, motivo).
 - **Accesos de bóveda** (`accesos_boveda`): cada consulta, copia, muestra, modificación, eliminación o descarga de una credencial o campo protegido. Desde el 2026-09-16 también las de la vista rápida del buscador, con las mismas acciones que la ficha (RN-034).
 

@@ -256,11 +256,13 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/ubicaciones/migrar` | MigracionUbicaciones | Tarea | Convertir textos en ubicaciones |
 | `/ubicaciones/:ubicacionId` | UbicacionPage | Documento | Ficha 360° de una ubicación |
 | `/ubicaciones/:ubicacionId/editar` | UbicacionForm | Tarea | Editar ubicación |
-| `/personas` | PersonasPage | Documento | Lista de personas/responsables |
+| `/personas` | PersonasPage | Documento | Lista de personas: activas y retiradas (chips), equipos de hoy por persona y, plegado, lo que está "por validar" (desde el 2026-09-23) |
 | `/personas/nueva` | PersonaForm | Tarea | Crear persona |
 | `/personas/migrar` | MigracionPersonas | Tarea | Convertir textos en personas |
 | `/personas/:personaId` | PersonaPage | Documento | Ficha 360° de una persona |
 | `/personas/:personaId/editar` | PersonaForm | Tarea | Editar persona |
+| `/personas/:personaId/asignar` | AsignarEquipoPage | Tarea | Asignar un equipo a la persona (Disponibles primero); opcionalmente soltar el que reemplaza. Vuelve a su ficha (desde el 2026-09-23) |
+| `/personas/:personaId/retirar` | RetirarPersonaPage | Tarea | Retirar a la persona: fecha, motivo y qué pasa con cada equipo. Vuelve a su ficha (desde el 2026-09-23) |
 | `/referencia` | ReferenciaPage | Documento | **Centro de consulta**: pestañas Herramientas, Glosario, Atajos y Comandos (`?tab=`, `?q=`, `?categoria=`, `?plataforma=`) |
 | `/referencia/nueva` | ReferenciaForm | Tarea | Crear ficha (`?tipo=herramienta\|termino\|atajo\|comando`) |
 | `/referencia/:referenciaId` | ReferenciaFicha | Documento | Ficha de una herramienta, término, atajo o comando |
@@ -298,7 +300,7 @@ Resumen de las entidades que la app maneja. Detalle completo de columnas y decis
 | `dispositivos` | Inventario de equipos (generales y de red) | Sí |
 | `conexiones` | Enlaces entre equipos (enlace, instalación, relacionado) | Sí |
 | `ubicaciones` | Lugares físicos con jerarquía opcional | Sí |
-| `personas` | Responsables de equipos | Sí |
+| `personas` | Responsables de equipos, con ciclo de vida: `estado` (activa/retirada), `fecha_ingreso`, `fecha_retiro` y `motivo_retiro` (desde el 2026-09-23, tarea 266). El historial de asignaciones no tiene tabla: vive en `historial` | Sí |
 | `referencias` | Fichas del **Centro de consulta**: herramientas, términos del glosario, atajos y comandos (una sola tabla, columna `tipo`) | Sí |
 | `credenciales` | Secretos de la bóveda (cifrados) | Sí |
 | `campos_protegidos` | Datos sensibles propios de un equipo (cifrados) | Sí |
@@ -561,7 +563,7 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
 **Cabecera:** **ancla permanente** (tarea 201, regla M-R1): chevron de regreso de 44 px (a Equipos o a Red según `es_red` de su categoría), y a su lado el origen a 11 px ("Red · Rack 1") con el **nombre del equipo a 14 px**, que **se queda en pantalla al desplazarse**. A la derecha, **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace) y menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
 
 **"¿QUÉ SABEMOS DE ESTE DISPOSITIVO?" (desde el 2026-09-22, tarea 256, [DECISIONES.md](DECISIONES.md) AD-044).** Manda sobre la descripción de capas de abajo:
-- **Ahora**, arriba: nombre, **tipo** (su categoría) con marca y modelo, estado, **IP** con Copiar, **ubicación**, **"Responsable: …"** (subió de "Contexto") y, si lo hay, **"Conectado a · SW-CENTRAL-02 · Puerto 18 · Ver conexión"**: el enlace por el que el equipo recibe servicio (el otro extremo es el origen del enlace), con el puerto del switch, que es el que se busca en el rack; si tiene más de una subida, "y N más". "Ver conexión" abre su topología (`/red/topologia/:id`).
+- **Ahora**, arriba: nombre, **tipo** (su categoría) con marca y modelo, estado, **IP** con Copiar, **ubicación**, **"Responsable: …"** (subió de "Contexto"; desde el 2026-09-23 con "Desde el …" si el historial lo dice y "Cambiar", que abre "¿Qué pasa con este equipo?"; sin persona dice **"Sin responsable"** con "Asignar" y, si hay un texto que no es una persona, "Anotado: «…» · por validar"; con la persona retirada, el aviso "Se retiró: reasignar o liberar este equipo"; en un equipo de baja que conserva el vínculo de antes, "Último responsable") y, si lo hay, **"Conectado a · SW-CENTRAL-02 · Puerto 18 · Ver conexión"**: el enlace por el que el equipo recibe servicio (el otro extremo es el origen del enlace), con el puerto del switch, que es el que se busca en el rack; si tiene más de una subida, "y N más". "Ver conexión" abre su topología (`/red/topologia/:id`).
 - Después, **"Problemas frecuentes"** (el diagnóstico de su categoría, si lo hay, y las incidencias), **"Procedimientos"** y, con permiso de bóveda, **"Credenciales"**. Cada bloque solo aparece si tiene algo; ya no hay un título "Acción" sobre una lista vacía.
 - **"Más datos del equipo"** (plegado, con su conteo): serial, placa, propiedades, reemplazos, categoría y fecha, y observaciones. Es la primera fila de **Profundidad**; la capa "Contexto" abierta desaparece.
 - En **"¿Qué sigue?"**, "Vincular un procedimiento o reportar una incidencia" lleva a la **puerta de documentar**, que se abre sola.
@@ -808,6 +810,20 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 
 **Objetivo.** El responsable de un equipo como entidad propia (sin jerarquía, a diferencia de ubicaciones). Mismo patrón que Ubicaciones: lista plana con creación inline y buscador, aviso de migración, **ficha 360°** (`PersonaPage`) con los equipos asignados a esa persona e historial, **formulario** (`PersonaForm`, ver sección 7) y **migración asistida** (`MigracionPersonas`).
 
+**Ciclo de vida (desde el 2026-09-23, tarea 266).** Una persona está **Activa** o **Retirada**. Cuando alguien renuncia, termina contrato o es despedido no se elimina: se **retira**, conserva su ficha y su historial, y cada equipo que tenía se resuelve uno por uno. No hay estado "pendiente": una fecha de ingreso futura ya lo dice. Solo se guardan los datos de la operación de TI (nombre, notas, fechas de ingreso y retiro y motivo del retiro); cargo, área, correo o extensión van en las notas, y ningún dato de Recursos Humanos pertenece aquí.
+
+**Lista.** Cabecera con "Crear", buscador y dos chips: **"Activas · N"** (por defecto) y **"Retiradas · N"**. Con texto escrito busca en las dos. Cada fila: nombre, la pastilla "Retirada" si lo está y **sus equipos de hoy** ("1 equipo", "2 equipos" o "Sin equipo"; un equipo de baja ya no cuenta). "Crear" pide el nombre y, si se sabe, la fecha de ingreso, y lleva a la ficha nueva, donde sigue "Asignar equipo". Al final, plegado, **"Responsable por validar · N"**: los equipos con un responsable escrito que no es una ficha de persona (un área como "Archivo", un estado como "Disponible en…" o dos nombres en el mismo campo). Se ven con "Anotado: …" y abren la ficha del equipo; **no se convierten en personas ni se limpian solos**.
+
+**Ficha (`PersonaPage`).** Arriba, el nombre con la pastilla **Activa** o **Retirada** y la línea de fechas que alguien anotó ("Ingresó el 3 feb 2025 · Se retiró el 31 ago 2026 · Fin de contrato"). Acciones: **"Asignar equipo"**, "Editar" y **"Retirar persona"** (activa), o **"Reactivar"** y "Editar" (retirada). Después:
+
+- **Equipo actual** (o "Equipos actuales"): cada equipo con su placa, su lugar y "Desde el …" cuando el historial lo dice; abre la ficha del equipo, y **"Liberar"** abre "¿Qué pasa con este equipo?". Con al menos un equipo, **"Configurar el computador para …"** abre la guía maestra de usuario nuevo que el equipo ya escribió (se reconoce por la etiqueta "usuario nuevo" o por su título); si no aparece ninguna, "Buscar la guía de configuración de usuario nuevo" abre Resolver con esa búsqueda. Una persona retirada con equipos todavía a su nombre lo avisa.
+- **Equipos anteriores**, solo si constan en el historial: cada equipo con "1 jun 2025 → 31 ago 2026", o "Hasta el …" cuando el comienzo es anterior a los registros (el inventario institucional no dejó fecha de asignación, y la app no la inventa), el motivo con que terminó y el estado del equipo.
+- Historial de la ficha y, al final y sin peso, **"Eliminar (registro creado por error)"**, cuyo diálogo aclara que la salida normal es "Retirar persona".
+
+**Asignar equipo (`AsignarEquipoPage`).** Buscador (nombre, placa, serial, IP, ubicación, marca, modelo) y tres grupos en este orden: **Disponibles**, **Sin responsable** y **Asignados a otra persona** (con "Lo tiene …"). Dentro de cada grupo, primero los equipos de las categorías que ya se entregan a personas, luego los que funcionan. Fuera quedan los de baja y los de red. Al elegir, el pie dice "… pasa a …", avisa si lo tenía otra persona y ofrece, por cada equipo actual, **"Reemplaza a …: dejarlo sin responsable"** (cambiar de equipo en el mismo gesto). "Asignar equipo" guarda y vuelve a la ficha con "… quedó asignado. Siguiente paso: configurarlo para …".
+
+**Retirar persona (`RetirarPersonaPage`).** Fecha de retiro (hoy por defecto), motivo (opcional, con atajos) y, por cada equipo de hoy, las tres opciones de "¿Qué pasa con este equipo?", empezando en la más prudente (sin responsable, Disponible solo si funcionaba). "Confirmar retiro" resuelve cada equipo y deja a la persona retirada. Un equipo marcado para baja que tiene conexiones, credenciales o datos protegidos queda sin responsable y la pantalla dice **"Falta completar la baja"** con el enlace a su pantalla de baja.
+
 <a id="65-ficha-de-categoria"></a>
 ### 6.5 Ficha de categoría (`CategoriaPage`)
 
@@ -928,9 +944,9 @@ Archivo `src/features/dispositivos/DispositivoForm.tsx`. Título dinámico "Nuev
 | Número de serie | `serial` | Texto monoespaciado | No | vacío (o `?serial=`) | - | Aviso si ya existe en otro equipo (enlace a esa ficha). Se precarga con el código leído por el escáner (H3) |
 | Placa de inventario | `placaInventario` | Texto monoespaciado | No | vacío | - | - |
 | Ubicación | `ubicacionId` / `ubicacion` | Selector de ubicación (buscar/crear/texto) | No | null | `SelectorUbicacion` | Elige entidad registrada, crea inline o texto libre de respaldo |
-| Responsable | `responsableId` / `responsable` | Selector de persona (buscar/crear/texto) | No | null | `SelectorPersona` | Igual que ubicación |
+| Responsable | `responsableId` / `responsable` | Selector de persona (buscar/crear/texto) | No | null | `SelectorPersona` | Igual que ubicación. Desde el 2026-09-23 solo ofrece personas activas (la ya vinculada se conserva marcada "(retirada)") |
 | Dirección IP | `ip` | Texto (inputMode decimal) | No | vacío | "192.168.1.10" | Valida forma IPv4 (aviso, no bloquea); aviso si duplicada en otro equipo |
-| Estado | `estado` | Chips con punto de color | No | "Operativo" (nuevo) | Operativo / En mantenimiento / Fuera de servicio / De baja | Texto libre; los 4 sugeridos con color |
+| Estado | `estado` | Chips con punto de color | No | "Operativo" (nuevo) | Operativo / Disponible / En mantenimiento / Fuera de servicio / De baja | Texto libre; los 5 sugeridos con color. "Disponible" (desde el 2026-09-23) funciona y no lo tiene nadie: punto verde hueco. "Dado de baja" se reconoce como "De baja" y enciende su chip |
 | Observaciones | `observaciones` | Área de texto (plegable "Más información") | No | vacío | "Qué imprime, cada cuánto se mantiene..." | - |
 | Propiedades de {categoría} | `detalles` | Editor clave/valor (plegable) | No | {} | sugiere claves de otros equipos de la misma categoría | Pares libres; se descartan las claves vacías al guardar |
 | Motivo del cambio | `motivo` | Texto (plegable, solo edición) | No | vacío | "Por qué se actualizó esta ficha" | Va al historial |
@@ -1092,9 +1108,10 @@ Botones: **"Guardar conexión"** y (variante ficha) **"Guardar y agregar otra"**
 ### 7.7 Formularios simples
 
 - **Ubicación (`UbicacionForm`).** Nombre (**obligatorio**, "Taquilla 2, Bodega, Rack principal..."), "Dentro de" (select de ubicación padre; no puede ser ella misma ni una descendiente), Notas, Motivo (edición). Botón "Guardar ubicación".
-- **Persona (`PersonaForm`).** Nombre (**obligatorio**, "Juan Pérez"), Notas ("Cargo, área, extensión..."), Motivo (edición). Botón "Guardar persona".
+- **Persona (`PersonaForm`).** Nombre (**obligatorio**, "Juan Pérez"), Fecha de ingreso (opcional, "Solo si se sabe. Una fecha futura indica que todavía no ha llegado."), Notas ("Cargo, área, extensión...") y, solo en una persona retirada, Fecha de retiro y Motivo del retiro, para corregirlos. Motivo (edición). Botón "Guardar persona". El estado no se cambia aquí: retirar y reactivar son acciones de la ficha.
+- **Retirar persona (`RetirarPersonaPage`).** Fecha de retiro (**obligatoria**, hoy por defecto), Motivo (opcional, con los atajos "Renuncia", "Fin de contrato" y "Despido") y, por cada equipo que tiene hoy, "¿Qué pasa con este equipo?" (ver la sección 8). Botón "Confirmar retiro", que solo se habilita con la fecha y con persona elegida en cada "Asignar a otra persona".
 - **Registrar intervención (`RegistrarIntervencion`).** En la ficha del equipo. "Qué se hizo" (área de texto, **obligatorio**, "cambio de ribbon, limpieza de cabezal..."), "Motivo (opcional)". Botón "Guardar intervención"; tras guardar ofrece adjuntar una foto.
-- **Dar de baja (`DarDeBajaPage`).** Motivo (opcional, "Fin de vida útil..."). El botón "Confirmar baja" solo se habilita cuando se resolvieron las dependencias (conexiones, credenciales, campos protegidos).
+- **Dar de baja (`DarDeBajaPage`).** Motivo (opcional, "Fin de vida útil..."). El botón "Confirmar baja" solo se habilita cuando se resolvieron las dependencias (conexiones, credenciales, campos protegidos). Desde el 2026-09-23 la baja **suelta también al responsable**, y la pantalla lo dice antes con su nombre ("Dejará de estar asignado a …"). Si se llegó desde la ficha de una persona, la X y el final vuelven a ella.
 - **Reemplazo (`ReemplazoPage`).** Motivo (opcional). Botón "Migrar todo y dar de baja".
 - **Login (`LoginPage`).** Correo (email, obligatorio, `autoComplete="username"`), Contraseña (obligatorio, fuera del gestor). Botón "Ingresar". Ver la sección 6.9.
 - **Mi cuenta (`CuentaPage`).** Contraseña actual / Nueva / Confirmar (los tres obligatorios). Botón "Cambiar contraseña".
@@ -1117,6 +1134,8 @@ La app usa **modales** (centrados, `src/components/Modal.tsx`, renderizados con 
 | **Menú "···" de la ficha de artículo** | Botón "···" | `ArticuloPage` | Compartir / Duplicar / Reiniciar progreso / Eliminar | Menú flotante (cierra al hacer clic fuera) |
 | **Menú "···" de la ficha de dispositivo** | Botón "···" | `DispositivoPage` | Duplicar / Editar / Etiqueta QR / Reemplazar / Dar de baja / Eliminar | Fila de botones bajo la cabecera |
 | **Menú "···" de Equipos** | Botón "···" | `DispositivosPage` | Ubicaciones / Personas / Etiquetas QR / Importar | - |
+| **"¿Qué pasa con este equipo?"** (`HojaLiberarEquipo`, desde el 2026-09-23) | "Liberar" en una fila de "Equipo actual" de la persona, o "Cambiar" junto al responsable en la ficha del equipo | `PersonaPage`, `ResponsableDelEquipo` | Tres opciones (`DecisionSobreEquipo`): **Dejar sin responsable** (con "Marcar como Disponible": marcada si el equipo funcionaba, desmarcada con aviso si su estado no lo dice, oculta si está en mantenimiento o fuera de servicio), **Asignar a otra persona** (solo activas) y **Dar de baja**; Motivo (opcional) | "Confirmar" guarda; "Ir a dar de baja" abre la pantalla de baja de siempre |
+| **"¿A quién se asigna …?"** (`HojaAsignarPersona`, desde el 2026-09-23) | "Asignar" junto a "Sin responsable" | Ficha del equipo (`ResponsableDelEquipo`) | Buscador de personas y lista de las activas; si lo escrito no existe, "Crear a «…» y asignarle el equipo" | "Asignar" guarda la asignación (un Disponible pasa a Operativo) |
 | **Vista previa de artículo** (`VistaPreviaArticulo`) | Botón "Vista previa" | `ArticuloForm` | Render interactivo del artículo antes de guardar. Desde el **2026-09-10** entra por la **presentación** (portada, título y tipo, etiquetas, descripción, resumen de tiempo/dificultad/pasos, síntomas, causas, equipos afectados, objetivo y requisitos) y **"Empecemos"** abre el procedimiento, con "Volver a la presentación" para regresar. "Probar" desde un paso sigue entrando directo a ese paso | Progreso efímero que se borra al cerrar |
 | **Confirmación "Descartar el recorrido"** | Enlace "Descartar este recorrido" | `DiagnosticoRunPage` | "¿Descartar el recorrido? El avance se borra y queda registrado como abandonado" | "Sí, descartar" / "Seguir con el recorrido" |
 | **Hoja "Algo va mal en el paso N"** | Botón **"Falla"**, permanente en la ejecución | `HojaFalla` | Las cuatro salidas cuando el paso falla | Abrir la contingencia vinculada, fotografiar y anotar, saltar el paso, cancelar |
@@ -1434,7 +1453,26 @@ Ficha de equipo > "···" > Reemplazar → crea entrante (?reemplazaA) → Reem
  → migra conexiones/credenciales/campos protegidos → saliente queda "De baja"
 
 Ficha de equipo > "···" > Dar de baja → resuelve cada dependencia (quitar/desvincular/conservar)
- → Confirmar baja (estado "De baja")
+ → Confirmar baja (estado "De baja" y, desde el 2026-09-23, sin responsable)
+```
+
+Desde el 2026-09-23 el reemplazo también suelta al responsable del saliente: la persona pasa al entrante, que la heredó en el formulario.
+
+### 13.7 Ciclo de vida de una persona (desde el 2026-09-23)
+
+```
+Personas > Crear (nombre y, si se sabe, fecha de ingreso) → su ficha
+ → Asignar equipo → elegir (Disponibles primero) → vuelve a la ficha: "quedó asignado"
+ → Configurar el computador para … → la guía maestra de usuario nuevo (sin copiarla)
+
+Ficha de la persona > Liberar (un equipo) → dejar sin responsable / otra persona / dar de baja
+Ficha de la persona > Asignar equipo con "Reemplaza a …" marcado → cambiar de equipo en un gesto
+
+Ficha de la persona > Retirar persona → fecha, motivo y una decisión por equipo → Confirmar retiro
+ → la persona queda "Retirada" (no se elimina) y sus equipos, resueltos
+ → si un equipo marcado para baja tiene conexiones o datos protegidos: "Falta completar la baja"
+   con el enlace a su pantalla de baja
+Ficha de una persona retirada > Reactivar → vuelve a activa (los datos del retiro quedan en su historial)
 ```
 
 ---

@@ -44,6 +44,12 @@ Vuelve a ejecutar `schema.sql` completo (idempotente) para agregar la columna `v
 
 Para verificar: en **Table Editor**, la tabla `campos_protegidos` debe tener la columna `vence_en`.
 
+### Actualización del 2026-09-23 (tarea 266: ciclo de vida de las personas)
+
+Vuelve a ejecutar `schema.sql` completo (idempotente) para agregar a `personas` las columnas `estado` (`activa` o `retirada`, por defecto `activa`), `fecha_ingreso`, `fecha_retiro` y `motivo_retiro`. **Hazlo apenas se despliegue la versión**: hasta entonces, crear, editar, retirar o reactivar una persona queda guardado en el teléfono y esperando en la cola de sincronización (no se pierde, y sube solo cuando las columnas existan); los equipos y el historial se sincronizan igual. No hay tabla nueva: el historial de asignaciones se reconstruye de `historial`.
+
+Para verificar: en **Table Editor**, la tabla `personas` debe tener las cuatro columnas nuevas, y las 94 personas existentes deben aparecer con `estado = activa`.
+
 ## 2. Crear los 5 usuarios del equipo
 
 1. En el menú lateral, abrir **Authentication**, pestaña **Users**.
