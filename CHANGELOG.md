@@ -8,6 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-23
 
+### Cambiado (ubicaciones, tarea 267, Fase 2 del encargo "las entidades se relacionan"): migración asistida y "¿Qué hay aquí?"
+
+**Área modificada:** Ubicaciones (migración asistida, ficha y lista).
+**Tipo:** Modificado (la migración distingue equivalencias seguras de posibles coincidencias y reutiliza las ubicaciones existentes; la ficha responde "¿Qué hay aquí?" por categoría; las cuentas suman toda la rama), Corregido (la migración duplicaba una ubicación que ya existía con el mismo nombre; el aviso de la lista decía "N equipos" contando textos distintos).
+**Nuevos:** `src/features/ubicaciones/contenido.ts` (+ `contenido.test.ts`), `src/features/ubicaciones/ubicacionesVinculadas.test.tsx`.
+**Modificados:** `src/features/ubicaciones/{migracion.ts,MigracionUbicaciones.tsx,UbicacionPage.tsx,UbicacionesPage.tsx}` y `migracion.test.ts`; `src/pruebas/semillaLocal.ts` y `scripts/capturas-moviles.mjs` (verificación).
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (6.3), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-052 y 4.4) y [DECISIONES.md](DECISIONES.md) (AD-048).
+**Motivo:** encargo del usuario del **23 de septiembre de 2026**, secciones 10 a 12: aprovechar la jerarquía de ubicaciones que ya existe y vincular los 149 equipos, sin fusionar textos solo porque se parecen.
+**Impacto esperado:** "LOGISTICA" y "Logistica" pasan a ser un lugar sin pedir nada; "ADMINISTRACION PN" espera que alguien confirme que es "Administración Parque Norte"; ningún lugar se duplica; y abrir un lugar dice qué computadores, impresoras, switches y puntos de red hay ahí.
+**SIN cambios** de esquema, RLS ni sincronización. **No hay que ejecutar SQL.**
+
+- **Migración:** una tarjeta por texto con sus variantes, "Nombre de la ubicación" y lo que le pasará (nueva, existente con su ruta, unida a otro, omitida); "Posible coincidencia · por validar" con "Es el mismo lugar" y "Son distintos"; lo no decidido no se migra; resumen con creadas, reutilizadas y equipos, y avance al aplicar. Relee cada equipo antes de escribir y deja el texto anterior en el historial ("Migración de ubicaciones").
+- **Ficha:** "Qué hay aquí" por categoría real, con IP, responsable y estado, y los de baja aparte; "Contiene" con los equipos de cada rama; la cuenta dice cuántos están aquí y cuántos en sus sub-ubicaciones; migas de 44 px.
+- **Verificación:** 136 archivos y 1922 casos en verde (antes 134 y 1902); lint y tipos limpios. Migración aplicada de punta a punta en el banco local (7 creadas, 2 reutilizadas, 14 equipos, historial con el texto anterior). Capturas por CDP en 390×844 y 1366×768 con cinco paradas nuevas (`ubicaciones*`, `ubicacion-ficha*`): sin desbordamiento ni hallazgos nuevos.
+
 ### Agregado (personas, tarea 266, Fase 1 del encargo "las entidades se relacionan"): ciclo de vida de las personas y sus equipos
 
 **Área modificada:** Personas (lista, ficha, formulario, asignar, retirar), ficha del equipo (responsable y responsables anteriores), baja y reemplazo de equipos, estados de equipo, historial, buscador.

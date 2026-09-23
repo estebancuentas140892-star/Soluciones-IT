@@ -4,7 +4,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-23: LAS ENTIDADES SE RELACIONAN.** Personas, equipos, ubicaciones, red, agenda, Centro de consulta, historial, Resolver y diagnóstico dejan de ser pantallas aisladas: sin rediseño general y conservando "Resolver → encontrar → ejecutar → solucionar". Cinco fases, una tarea por fase (266 a 270), una "En proceso" a la vez. **Cerradas y archivadas:** 266 (Personas, 2026-09-23). **En proceso:** 267 (Ubicaciones y estados). **Siguen:** 268 (Más), 269 (Resolver + Diagnóstico) y 270 (Agenda y Centro de consulta en contexto). Restricciones del encargo que valen para las cinco: no inventar datos (persona desde un área, ubicación por parecido, fechas, estados, causas de baja), no duplicar verdades, no borrar historial y conservar compatibilidad con los 149 equipos, 94 personas, 31 conexiones, 31 guías y 42 fichas del Centro de consulta que ya existen.
+**ENCARGO DEL 2026-09-23: LAS ENTIDADES SE RELACIONAN.** Personas, equipos, ubicaciones, red, agenda, Centro de consulta, historial, Resolver y diagnóstico dejan de ser pantallas aisladas: sin rediseño general y conservando "Resolver → encontrar → ejecutar → solucionar". Cinco fases, una tarea por fase (266 a 270), una "En proceso" a la vez. **Cerradas y archivadas:** 266 (Personas) y 267 (Ubicaciones), las dos el 2026-09-23. **En proceso:** 268 (Más y herramientas de inventario). **Siguen:** 269 (Resolver + Diagnóstico) y 270 (Agenda y Centro de consulta en contexto). Restricciones del encargo que valen para las cinco: no inventar datos (persona desde un área, ubicación por parecido, fechas, estados, causas de baja), no duplicar verdades, no borrar historial y conservar compatibilidad con los 149 equipos, 94 personas, 31 conexiones, 31 guías y 42 fichas del Centro de consulta que ya existen.
 
 **Auditoría previa (2026-09-23), lo que decide el diseño:**
 
@@ -14,16 +14,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Defecto:** la migración de ubicaciones (`src/features/ubicaciones/migracion.ts`) crea siempre ubicaciones nuevas, así que duplicaría las dos que ya existen, y no distingue una equivalencia segura de una posible coincidencia.
 - La tarea 263 ya integró el diagnóstico en Resolver ("Guía con preguntas"); en Más solo queda su administración.
 
-### 267. Fase 2: Ubicaciones vinculadas y estados de equipo unificados
+### 268. Fase 3: Más con una puerta por capacidad, y las herramientas de inventario juntas
 
-- **Título:** los textos de ubicación se convierten en fichas con ayuda del técnico, y la ficha de un lugar responde "¿qué hay aquí?".
-- **Descripción:** (1) la migración asistida propone solo las equivalencias seguras (mayúsculas y espacios) y marca como "Posible coincidencia, por validar" lo que solo se parece (tildes, abreviaturas como "PN" y "Parque Norte"); (2) un texto que ya tiene ubicación con ese nombre se vincula a ella en vez de duplicarla; (3) vincular `ubicacionId` sin inventar jerarquías; (4) la ficha de ubicación agrupa lo que contiene por tipo (computadores, impresoras, switches, puntos de red, otros) y cada fila abre su ficha; (5) los estados escritos como texto libre (importados) se llevan al conjunto canónico con el mismo criterio asistido, sin mover nunca un equipo a un estado que su texto no dice.
-- **Motivo:** secciones 9 a 12 del encargo.
-- **Impacto:** alto: 0 de 149 equipos tienen hoy `ubicacionId`.
-- **Prioridad:** Alta. **Estado:** En progreso (desde el 2026-09-23, al cerrarse la 266).
-- **Área afectada:** `src/features/ubicaciones/{migracion.ts,MigracionUbicaciones.tsx,UbicacionPage.tsx}`, `src/features/dispositivos/` (normalización de estados), `src/features/red/topologiaVisual.ts`.
-- **Dependencias:** 266 (el estado "Disponible").
-- **Modelo/esfuerzo:** Opus 5 / Extra.
+- **Título:** Más más corto sin perder funciones.
+- **Descripción:** (1) Topología deja de ser fila (se llega desde Red, que ya la enlaza, y su regreso sube a Red); (2) **"Herramientas de inventario"**, una sola puerta con Importar equipos, Etiquetas QR y las tareas asistidas pendientes (ubicaciones escritas como texto, responsables escritos como texto y, nuevo, **estados escritos a mano**: los valores fuera de la lista canónica se llevan a ella solo con equivalencias seguras propuestas y "posibles" que el técnico confirma, sin mover nunca un equipo a un estado que su texto no dice; movido aquí desde la 267); (3) **"Ajustes"** reúne Mi cuenta, contraseña, bloqueo y seguridad, trabajo sin conexión, instalar, buscar actualización y cerrar sesión; (4) grupos Consulta, Organización, Infraestructura, Herramientas y Aplicación. Absorbe la tarea 265 donde aplica (Importar y Etiquetas vuelven a su puerta).
+- **Motivo:** secciones 9, 13, 16, 18, 20, 21 y 22 del encargo.
+- **Impacto:** medio: navegación; ninguna ruta ni pantalla se retira.
+- **Prioridad:** Media. **Estado:** En progreso (desde el 2026-09-23, al cerrarse la 267).
+- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/autenticacion/CuentaPage.tsx`, `src/lib/navegacion.ts`, `src/features/dispositivos/` (herramientas de inventario y normalización de estados), `src/features/dispositivos/{EtiquetasPage.tsx,importar/ImportarDispositivosPage.tsx}`, `REGLAS.md` regla 14 (dónde se lee la versión).
+- **Dependencias:** 266 y 267.
+- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 **Despliegue confirmado (regla 14).** La tarea 266 (Personas con ciclo de vida, commits `a431699`, `44e876d` y `603079e`) está servida en **https://soluciones-it-psi.vercel.app**: `/version.json` responde `603079e`. Por contenido, sobre los trozos que declara `/sw.js`: `PersonaPage-CTukHk_7.js` contiene "Equipos anteriores", "Retirar persona", "Configurar el computador para" y "registro creado por error"; `RetirarPersonaPage-hckz65_v.js`, "Confirmar retiro" y "Falta completar la baja"; `PersonasPage-D_64aHzM.js`, "Retiradas" y "Responsable por validar"; `DispositivoPage-CDytjb8x.js`, "Sin responsable", "por validar", "Último responsable" y "Responsables anteriores"; y aparecen los trozos nuevos `AsignarEquipoPage` y `cicloPersona`. **En negativo:** la ficha de persona ya no contiene "Ningún equipo tiene asignada esta persona.". **PASO DEL USUARIO PENDIENTE:** ejecutar `supabase/schema.sql` completo en el SQL Editor de Supabase (idempotente); hasta entonces, crear, editar, retirar o reactivar una persona espera en la cola de sincronización sin perderse. **Recordatorio:** PWA con `registerType: 'prompt'`: en un teléfono con la app instalada hay que aceptar "Versión nueva disponible" (o Más > Buscar actualización).
 
@@ -389,17 +389,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 268. Fase 3: Más con una puerta por capacidad
-
-- **Título:** Más más corto sin perder funciones.
-- **Descripción:** (1) Topología deja de ser fila (se llega desde Red, que ya la enlaza); (2) "Herramientas de inventario" reúne Importar equipos y Etiquetas QR en una sola puerta; (3) "Ajustes" reúne Mi cuenta, contraseña, bloqueo, trabajo sin conexión, instalar, buscar actualización y cerrar sesión; (4) grupos Consulta, Organización, Infraestructura, Herramientas y Aplicación. Absorbe la tarea 265 donde aplique (Importar y Etiquetas vuelven a su puerta).
-- **Motivo:** secciones 13, 16, 18, 20, 21 y 22 del encargo.
-- **Impacto:** medio: navegación; ninguna ruta ni pantalla se retira.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/autenticacion/CuentaPage.tsx`, `src/lib/navegacion.ts`, `src/features/dispositivos/{EtiquetasPage.tsx,importar/ImportarDispositivosPage.tsx}`.
-- **Dependencias:** 266 y 267 (la puerta de inventario reúne también sus herramientas asistidas).
-- **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ### 269. Fase 4: Diagnóstico dentro de Resolver y fuera de Más
 

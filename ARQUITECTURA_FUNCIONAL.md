@@ -327,6 +327,15 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Dispositivo, Persona.
 - Dura en el código: `src/features/red/topologiaVisual.ts`, `src/features/personas/cicloPersona.ts`.
 
+---
+
+**RN-052. La migración de ubicaciones solo une sola lo equivalente; lo que se parece lo decide el técnico, y lo que ya existe se reutiliza.**
+- Motivo: secciones 10 a 12 y 24 del encargo del 2026-09-23 ([DECISIONES.md](DECISIONES.md) AD-048). Con 0 de 149 equipos vinculados y solo 2 ubicaciones creadas, la migración es el paso que convierte el texto en entidades, y no puede inventar lugares.
+- Regla: EQUIVALENCIA SEGURA es la misma clave sin mayúsculas ni espacios de sobra (`claveUbicacion`, conserva las tildes): esos textos van juntos de entrada y la pantalla lo enseña. POSIBLE COINCIDENCIA (`coincidenciaDeUbicacion`) es solo tildes, una abreviatura palabra por palabra (iniciales de palabras seguidas como «PN» = «Parque Norte», o el comienzo de una palabra de al menos 3 letras) o una o dos letras cambiadas en un nombre largo sin números: se señala en el texto con menos equipos y ese texto no se migra hasta que el técnico dice "Es el mismo lugar" o "Son distintos". Un nombre final que coincide con UNA ubicación existente la reutiliza; si coincide con varias, el grupo no se aplica. Las nuevas nacen en la raíz: la migración no crea jerarquías. Un texto contenido en otro ("Archivo" y "Archivo Central") no se señala: suele ser un lugar dentro de otro, y eso se decide colgándolo desde su ficha.
+- "¿Qué hay aquí?": la ficha agrupa por la categoría real del equipo (`contenidoDeUbicacion`), no por el parecido de su nombre; las cuentas de la lista y de las sub-ubicaciones suman toda la rama (`totalConSububicaciones`).
+- Entidades: Ubicación, Dispositivo, Historial.
+- Dura en el código: `src/features/ubicaciones/{migracion.ts,contenido.ts,MigracionUbicaciones.tsx,UbicacionPage.tsx}`.
+
 ## 3. Modelo entidad-relación
 
 ### 3.1 Diagrama
@@ -442,7 +451,7 @@ Sin máquina de estados. Ciclo: alta, edición, borrado lógico. Del vencimiento
 ### 4.4 Conexión, Ubicación, Persona
 
 - **Conexión:** ciclo binario, existe o no existe (RN-028). No se edita.
-- **Ubicación:** alta, edición libre de nombre, notas y padre, borrado lógico. Tiene una migración asistida idempotente que convierte texto libre histórico en filas de la entidad.
+- **Ubicación:** alta, edición libre de nombre, notas y padre, borrado lógico. Tiene una migración asistida idempotente que convierte texto libre histórico en filas de la entidad, que desde el 2026-09-23 distingue la equivalencia segura de la posible coincidencia y reutiliza las ubicaciones existentes (RN-052).
 - **Persona** (máquina de estados desde el 2026-09-23, RN-048): tiene además su migración asistida desde `detalles`.
 
 ```mermaid

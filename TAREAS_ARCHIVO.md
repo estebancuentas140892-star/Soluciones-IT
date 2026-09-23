@@ -2,6 +2,24 @@
 
 ## Encargo del 2026-09-23: las entidades se relacionan
 
+### 267. Fase 2: Ubicaciones vinculadas (migración asistida y "¿Qué hay aquí?")
+
+**Título:** los textos de ubicación se convierten en fichas con ayuda del técnico, y la ficha de un lugar responde "¿qué hay aquí?". **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-23, secciones 10 a 12 y 24. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-048. **Regla:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-052.
+
+**Qué se hizo:**
+
+1. **Migración asistida** (`src/features/ubicaciones/migracion.ts`, `MigracionUbicaciones.tsx`): la equivalencia segura (mayúsculas y espacios) une sola y se enseña ("incluye «LOGISTICA» y «Logistica»"); la posible coincidencia (tildes, abreviatura palabra por palabra, una o dos letras en nombres largos) se señala como "Posible coincidencia · por validar" con "Es el mismo lugar" / "Son distintos", y el texto no se migra mientras no se decide; un nombre igual al de UNA ubicación existente la reutiliza (antes la duplicaba), y con varias iguales no elige; las nuevas nacen en la raíz. Relee cada equipo antes de escribir, enseña el avance y deja el texto anterior en el historial.
+2. **"¿Qué hay aquí?"** (`contenido.ts`, `UbicacionPage.tsx`): equipos agrupados por su categoría real, con IP, responsable y estado, cada uno abre su ficha (que vuelve aquí); los de baja, aparte y plegados; "Contiene" con los equipos de cada rama; la cuenta distingue los de aquí de los de las sub-ubicaciones; migas de 44 px; "Eliminar ubicación" al final y sin peso.
+3. **Lista** (`UbicacionesPage.tsx`): el aviso cuenta equipos (antes contaba textos y decía "equipos") y los lugares distintos; cada fila del árbol cuenta su rama.
+
+**Pruebas.** 136 archivos y 1922 casos en verde (antes 134 y 1902). Nuevas: `contenido.test.ts` y `ubicacionesVinculadas.test.tsx` (pantallas reales: une, señala, retiene, "Es el mismo lugar", "Son distintos", no duplica la existente, historial del texto anterior, "¿Qué hay aquí?" por categoría, sede con equipos en sus áreas, aviso que cuenta equipos); `migracion.test.ts` ampliada (ejemplos del encargo, coincidencias, reutilización, ambigüedad, eliminada). Una corrida completa tuvo un fallo aislado que no se repitió en cuatro corridas más (coincidió con el servidor de desarrollo y OneDrive a la vez); no se pudo identificar el caso.
+
+**Verificación en el banco local:** migración aplicada de punta a punta (7 ubicaciones creadas, 2 reutilizadas sin duplicar, 14 equipos vinculados, "ubicacion: ADMINISTRACION PE → Administración Parque de Ejemplo (Migración de ubicaciones)" en el historial). Capturas por CDP en 390×844 y 1366×768 (`ubicaciones`, `ubicaciones-migrar*`, `ubicacion-ficha*`): sin desbordamiento ni hallazgos nuevos.
+
+**Movido a la 268:** la normalización asistida de los estados escritos a mano (es trabajo de inventario y va con Importar y Etiquetas).
+
+**Lo que no se tocó:** esquema (no hace falta SQL), jerarquía `padre_id`, formulario de ubicación, RLS, sincronización. Ningún dato real se modificó desde esta sesión: la migración la aplica el técnico.
+
 ### 266. Fase 1: Personas con ciclo de vida, asignaciones e historial
 
 **Título:** una persona ingresa, recibe un equipo, cambia de equipo y se retira sin que se pierda nada. **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-23, secciones 3 a 9 y 23 a 26. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-047. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-048 a RN-051.
