@@ -34,9 +34,21 @@ const FILTRO_PARADAS = opcion('paradas')?.split(',') ?? null
 // abrir una guía entra a su paso pendiente (ya no hay `/ejecutar` ni
 // ficha por delante), los avisos acompañan a su acción y la navegación
 // del teléfono es Inicio, Guías y Más.
+// Cada trozo de guion va entre llaves: sumar dos (`siguiente + siguiente`)
+// redeclaraba `const s`, el SyntaxError se quedaba en la respuesta de
+// Runtime.evaluate sin que nadie lo mirara y la parada salia sin avanzar
+// (asi estuvo "guia-alerta-importante" hasta el 2026-09-22).
 const tocar = (texto) =>
-  `const el=[...document.querySelectorAll('button, a')].find(b=>((b.getAttribute('aria-label')||b.textContent||'').replace(/\\s+/g,' ').trim()).startsWith(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500));`
-const siguiente = `const s=[...document.querySelectorAll('button')].find(b=>b.textContent.replace(/\\s+/g,' ').trim()==='Siguiente'); s?.click(); await new Promise(r=>setTimeout(r,500));`
+  `{ const el=[...document.querySelectorAll('button, a')].find(b=>((b.getAttribute('aria-label')||b.textContent||'').replace(/\\s+/g,' ').trim()).startsWith(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500)); }`
+const siguiente = `{ const s=[...document.querySelectorAll('button')].find(b=>b.textContent.replace(/\\s+/g,' ').trim()==='Siguiente'); s?.click(); await new Promise(r=>setTimeout(r,500)); }`
+
+// Tarea 255: las paradas de la guia de tres tareas reponen su avance
+// sembrado (paso 1 hecho) y el modo de ejecucion ANTES de abrirse, porque
+// "Siguiente" marca y el modo se guarda: sin esto, cada tamaño veria la
+// guia como la dejo el anterior. Se importan los modulos de la app desde
+// el servidor de desarrollo (misma base IndexedDB).
+const AVANCE_SEMBRADO = `{ const { db } = await import('/src/lib/db.ts'); await db.progresoPasos.put({ articuloId: 'art-recurso-compartido', pasosHechos: ['rec-p1'], instruccionesHechas: ['rec-p1-t1'], verificacionHecha: [], actualizadoEn: new Date().toISOString() }); }`
+const modo = (m) => `{ const { guardarModoEjecucion } = await import('/src/lib/preferenciasEjecucion.ts'); await guardarModoEjecucion('${m}'); }`
 
 const TODAS_LAS_PARADAS = [
   // Encargo del 2026-09-22: Resolver, Equipos, Bóveda y Más.
@@ -59,6 +71,27 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'guia-mas-informacion', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente + tocar('Más información') },
   { nombre: 'guia-alerta-importante', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente + siguiente },
   { nombre: 'guia-retomada', ruta: '/soluciones/cat-impresoras/art-recurso-compartido' },
+  // Tarea 255 (encargo del 2026-09-22, secciones 3 a 8): la ruta con
+  // "Dónde" y "Credencial necesaria" en la primera accion del paso 2,
+  // "Debes ver" en la ultima, y el paso entero.
+  {
+    nombre: 'guia-ruta-donde',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco'),
+  },
+  {
+    nombre: 'guia-debes-ver',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco'),
+    guion: siguiente + siguiente,
+    despues: AVANCE_SEMBRADO,
+  },
+  {
+    nombre: 'guia-paso-entero',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('pasoEntero'),
+    despues: modo('foco'),
+  },
   { nombre: 'guia-apoyos-tarea-1', ruta: '/soluciones/cat-impresoras/art-alcance-tarea' },
   { nombre: 'guia-apoyos-tarea-2', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', guion: siguiente },
   { nombre: 'guia-indice', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', guion: tocar('Paso 1 de 2. Abrir el índice') },
@@ -98,6 +131,10 @@ const AUDITORIA = `JSON.stringify((() => {
     if (!recorta) continue
     // El texto solo para lectores de pantalla se recorta a proposito.
     if (el.classList.contains('sr-only')) continue
+    // Tambien lo que se recorta con el texto entero a mano en el \`title\`
+    // del control (los nodos de la ruta de una guia, tarea 255).
+    const conTitulo = el.closest('[title]')
+    if (conTitulo && conTitulo.getAttribute('title').trim().length >= el.textContent.trim().length) continue
     if (el.scrollWidth > el.clientWidth + 2 && el.children.length === 0) {
       hallazgos.push('texto recortado: ' + nombre(el))
     }
@@ -121,10 +158,15 @@ const AUDITORIA = `JSON.stringify((() => {
     }
   }
 
-  for (const c of controles) {
-    const r = c.getBoundingClientRect()
-    if (r.height < 43.5 || r.width < 24) {
-      hallazgos.push('area tactil ' + Math.round(r.width) + 'x' + Math.round(r.height) + ': ' + nombre(c))
+  // La regla R6 (44 px) es de DEDO: se exige por debajo de 768 px, que es
+  // donde se toca. En escritorio un control de 32 px con raton no es un
+  // defecto, y pedirlo ahi llenaba el informe de ruido.
+  if (vw < 768) {
+    for (const c of controles) {
+      const r = c.getBoundingClientRect()
+      if (r.height < 43.5 || r.width < 24) {
+        hallazgos.push('area tactil ' + Math.round(r.width) + 'x' + Math.round(r.height) + ': ' + nombre(c))
+      }
     }
   }
 
@@ -162,6 +204,15 @@ class Sesion {
     this.ws.send(JSON.stringify({ id, method, params }))
     return new Promise((r) => this.pendientes.set(id, r))
   }
+}
+
+// Corre un guion de parada y devuelve su error, o null. Runtime.evaluate
+// no falla cuando el guion lanza: lo deja en `exceptionDetails`, y sin
+// mirarlo una parada rota salia en el informe como si nada.
+async function correrGuion(s, codigo) {
+  const r = await s.enviar('Runtime.evaluate', { expression: `(async () => { ${codigo} })()`, awaitPromise: true })
+  if (!r?.exceptionDetails) return null
+  return r.exceptionDetails.exception?.description?.split('\n')[0] ?? r.exceptionDetails.text
 }
 
 async function main() {
@@ -204,6 +255,7 @@ async function main() {
 
   const desbordes = []
   const hallazgos = []
+  const fallosGuion = []
   for (const { ancho, alto } of TAMANOS) {
     const movil = ancho < 768
     await s.enviar('Emulation.setDeviceMetricsOverride', {
@@ -215,13 +267,16 @@ async function main() {
     await s.enviar('Emulation.setTouchEmulationEnabled', { enabled: movil, maxTouchPoints: movil ? 5 : 0 })
     const etiqueta = `${ancho}x${alto}`
     for (const parada of PARADAS) {
+      const anotar = (momento, error) => {
+        if (error) fallosGuion.push(`${etiqueta} ${parada.nombre} (${momento}): ${error}`)
+      }
+      // El estado que la parada necesita, puesto ANTES de abrirla (la
+      // pagina anterior es del mismo origen y usa la misma base).
+      if (parada.antes) anotar('antes', await correrGuion(s, parada.antes))
       await s.enviar('Page.navigate', { url: BASE + parada.ruta })
       await esperar(2200)
       if (parada.guion) {
-        await s.enviar('Runtime.evaluate', {
-          expression: `(async () => { ${parada.guion} })()`,
-          awaitPromise: true,
-        })
+        anotar('guion', await correrGuion(s, parada.guion))
         await esperar(1200)
       }
       // Como se abre: es lo que el tecnico ve primero.
@@ -244,6 +299,8 @@ async function main() {
       const shot = await s.enviar('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
       writeFileSync(join(SALIDA, `${etiqueta}-${parada.nombre}.png`), Buffer.from(shot.data, 'base64'))
       console.log(`ok  ${etiqueta}  ${parada.nombre}`)
+      // Y lo que la parada cambio, repuesto para las siguientes.
+      if (parada.despues) anotar('despues', await correrGuion(s, parada.despues))
     }
   }
 
@@ -257,6 +314,10 @@ async function main() {
   } else {
     console.log('HALLAZGOS (' + hallazgos.length + '):')
     for (const h of hallazgos) console.log('  ' + h)
+  }
+  if (fallosGuion.length > 0) {
+    console.log('\nGUIONES QUE FALLARON (esas capturas no muestran lo que dicen):')
+    for (const f of fallosGuion) console.log('  ' + f)
   }
   ws.close()
   chrome.kill()
