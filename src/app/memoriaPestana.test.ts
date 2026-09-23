@@ -3,6 +3,7 @@ import { RAICES_DE_PESTANA } from '../lib/navegacion'
 import {
   destinoDePestana,
   olvidarTodo,
+  RAICES_CON_MEMORIA,
   raizQueContiene,
   recordarBusqueda,
 } from './memoriaPestana'
@@ -97,5 +98,31 @@ describe('recordarBusqueda', () => {
   it('ignora una ruta que no pertenece a ninguna pestaña', () => {
     recordarBusqueda('/personas', '?orden=nombre', RAICES)
     expect(destinoDePestana('/', '/soluciones', RAICES)).toBe('/')
+  })
+})
+
+// Tarea 257: Red dejó de ser pestaña en la 254 y con eso perdió, sin que
+// nadie lo notara, la memoria de su nodo. Su puerta cambia (una fila de
+// Más), su comportamiento no: vuelve a recordar.
+describe('Red recuerda su nodo aunque ya no sea pestaña (tarea 257)', () => {
+  it('las raíces con memoria son las de las pestañas más /red, y /red sigue sin ser pestaña', () => {
+    expect(RAICES_CON_MEMORIA).toEqual([...RAICES_DE_PESTANA, '/red'])
+    expect(RAICES_DE_PESTANA).not.toContain('/red')
+  })
+
+  it('el nodo que se recorría en /red vuelve por la fila de Más', () => {
+    recordarBusqueda('/red', '?nodo=sw-bodega', RAICES_CON_MEMORIA)
+    expect(destinoDePestana('/red', '/mas', RAICES_CON_MEMORIA)).toBe('/red?nodo=sw-bodega')
+  })
+
+  it('una pantalla interna de Red (la lista de equipos) no pisa el nodo', () => {
+    recordarBusqueda('/red', '?nodo=sw-bodega', RAICES_CON_MEMORIA)
+    recordarBusqueda('/red/equipos', '?buscar=1', RAICES_CON_MEMORIA)
+    expect(destinoDePestana('/red', '/mas', RAICES_CON_MEMORIA)).toBe('/red?nodo=sw-bodega')
+  })
+
+  it('las pestañas no cambian: tocar Más desde Red lleva a /mas, no al nodo', () => {
+    recordarBusqueda('/red', '?nodo=sw-bodega', RAICES_CON_MEMORIA)
+    expect(destinoDePestana('/mas', '/red', RAICES_DE_PESTANA)).toBe('/mas')
   })
 })

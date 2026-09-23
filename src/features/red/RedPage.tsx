@@ -34,8 +34,11 @@ import { useNodoRed, useRedCargada } from './useNodoRed'
 //
 // El nodo que se está recorriendo viaja en `/red?nodo=<id>`, y por eso
 // la memoria de pestaña (tarea 187) lo repone sola al volver de otra
-// sección: para esta pestaña el nodo es lo que el filtro es para Guías.
-// Sin almacenamiento nuevo.
+// sección: para Red el nodo es lo que el filtro es para Guías. Sin
+// almacenamiento nuevo. Red dejó de ser pestaña en la tarea 254 y con
+// eso perdió la memoria sin que nadie lo notara; desde la 257 la
+// conserva igual, ahora a través de su fila en Más (ver
+// `RAICES_CON_MEMORIA` en memoriaPestana.ts).
 
 export function RedPage() {
   const [params] = useSearchParams()

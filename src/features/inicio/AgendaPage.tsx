@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Chasis } from '../../app/Chasis'
+import { ActividadDelEquipo } from '../historial/ActividadDelEquipo'
 import { agruparAgenda, fechaDeHoy } from './agenda'
 import { ResumenDelDia, SeccionesAgenda } from './SeccionesAgenda'
 import { usePendientes } from './usePendientes'
@@ -23,13 +24,18 @@ export function AgendaPage() {
   const hoyTexto = useMemo(() => fechaDeHoy(), [])
 
   return (
-    // Nivel documento: se consulta y se vuelve. Sube a Inicio (padreDe).
+    // Nivel documento: se consulta y se vuelve. Sube a Resolver (padreDe).
     <Chasis modo="documento" titulo="Agenda" contexto={hoyTexto}>
       <main className="flex-1 px-4 pb-16 pt-4">
         <div className="flex flex-col gap-[18px]">
           {/* El día ya está en la cabecera del chasis (`contexto`). */}
           <ResumenDelDia agenda={agenda} dia={null} cargando={cargando} />
           <SeccionesAgenda agenda={agenda} cargando={cargando} />
+          {/* Lo que pasa en el equipo, al final y plegado (tarea 257):
+              no es un pendiente, así que va después de todos ellos. Solo
+              aquí y no en el resumen de Resolver, que responde otra
+              pregunta. Si no hay actividad, no se monta. */}
+          <ActividadDelEquipo />
         </div>
       </main>
     </Chasis>

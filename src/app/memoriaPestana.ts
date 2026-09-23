@@ -55,12 +55,26 @@ export function destinoDePestana(raiz: string, pathnameActual: string, raices: s
   return search ? `${raiz}${search}` : raiz
 }
 
+// Qué raíces recuerdan su búsqueda: las de las pestañas, y Red.
+//
+// Red fue pestaña hasta la tarea 254, y su memoria era el NODO que se
+// estaba recorriendo (`/red?nodo=<id>`, ver RedPage.tsx): volver a Red
+// desde otra sección devolvía al mismo equipo. Al pasar a colgar de Más
+// perdió la memoria sin que nadie lo notara, porque solo se recordaban
+// las raíces de pestaña. La tarea 257 cambia su puerta, no su
+// comportamiento, así que Red vuelve a recordar, y la fila de Más la
+// abre donde se dejó (`destinoDePestana('/red', ...)` con esta lista).
+//
+// No se añade a RAICES_DE_PESTANA a propósito: esa lista decide qué es
+// una pestaña (la barra, el padre, qué se ilumina), y Red no lo es.
+export const RAICES_CON_MEMORIA = [...RAICES_DE_PESTANA, '/red']
+
 // Las funciones puras reciben las raíces para poder probarse con
 // cualquier lista; el hook usa directamente la de la app, que es la única
 // que tiene sentido en producción.
 export function useMemoriaPestana(pathname: string, search: string): void {
   useEffect(() => {
-    recordarBusqueda(pathname, search, RAICES_DE_PESTANA)
+    recordarBusqueda(pathname, search, RAICES_CON_MEMORIA)
   }, [pathname, search])
 }
 
