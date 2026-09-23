@@ -65,6 +65,22 @@ const TODAS_LAS_PARADAS = [
   },
   { nombre: 'mas', ruta: '/mas' },
   { nombre: 'equipos', ruta: '/dispositivos' },
+  // Tarea 256 (secciones 16 a 18): al escribir salen tambien los de red;
+  // la ficha con "Conectado a"; los datos tecnicos plegados; el escaner
+  // y el QR del portal de asistencia (escrito a mano, sin camara).
+  {
+    nombre: 'equipos-buscando-red',
+    ruta: '/dispositivos',
+    guion: `{ const c=document.querySelector('input[aria-label="Buscar en Equipos"]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,'ejemplo'); c.dispatchEvent(new Event('input',{bubbles:true})); }`,
+  },
+  { nombre: 'equipo-ficha', ruta: '/dispositivos/dis-impresora-ejemplo' },
+  { nombre: 'equipo-mas-datos', ruta: '/dispositivos/dis-impresora-ejemplo', guion: tocar('Más datos del equipo') },
+  { nombre: 'escaner', ruta: '/escaner' },
+  {
+    nombre: 'escaner-asistencia',
+    ruta: '/escaner',
+    guion: `{ const c=document.querySelector('input[aria-label="Buscar por placa o serial"]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,'https://soluciones-it-psi.vercel.app/conectar?codigo=482731'); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,200)); c.form.requestSubmit(); await new Promise(r=>setTimeout(r,500)); }`,
+  },
   { nombre: 'agenda', ruta: '/agenda' },
   { nombre: 'guia-paso-1-con-requisitos', ruta: '/soluciones/cat-pos/art-tonos' },
   { nombre: 'guia-dato-y-plegado', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente },
