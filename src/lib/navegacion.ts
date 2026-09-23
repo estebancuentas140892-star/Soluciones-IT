@@ -75,6 +75,9 @@ export function destinoPrincipalDe(pathname: string): DestinoPrincipal {
   // Un recorrido con preguntas en ejecución es Resolver (tarea 263); su
   // lista y su administración siguen en Más.
   if (esRecorridoEnEjecucion(ruta)) return '/'
+  // Importar y Etiquetas se abren desde Más > Herramientas de inventario
+  // (tarea 268): aunque vivan bajo /dispositivos, se ilumina Más.
+  if (HERRAMIENTAS_DE_INVENTARIO.has(ruta)) return '/mas'
   if (cuelgaDe(ruta, '/dispositivos') || cuelgaDe(ruta, '/escaner')) return '/dispositivos'
   if (cuelgaDe(ruta, '/boveda')) return '/boveda'
   return '/mas'
@@ -88,6 +91,11 @@ export function destinoPrincipalDe(pathname: string): DestinoPrincipal {
 export function esRaizDePestana(pathname: string): boolean {
   return TABS.has(normalizarRuta(pathname))
 }
+
+// Las pantallas de /dispositivos que son herramientas de inventario
+// (tarea 268): su puerta es /inventario, no la lista de Equipos.
+const HERRAMIENTAS_DE_INVENTARIO = new Set(['/dispositivos/importar', '/dispositivos/etiquetas'])
+const PUERTA_INVENTARIO: Padre = { to: '/inventario', etiqueta: 'Herramientas de inventario' }
 
 // Raíces que no son pestañas: su "Volver" sube al destino principal
 // desde el que se abren (encargo del 2026-09-22). El catálogo de guías y
@@ -106,6 +114,9 @@ const RAICES_NO_TAB: Record<string, Padre> = {
   // El Centro de consulta (ruta `/referencia`, su nombre original).
   '/referencia': { to: '/mas', etiqueta: 'Más' },
   '/cuenta': { to: '/mas', etiqueta: 'Más' },
+  // Herramientas de inventario (tarea 268): Importar, Etiquetas QR y los
+  // datos por ordenar, en una sola puerta de Más.
+  '/inventario': { to: '/mas', etiqueta: 'Más' },
 }
 
 // Devuelve la pantalla superior de `pathname`, o null si es una raíz
@@ -165,6 +176,7 @@ export function padreDe(pathname: string): Padre | null {
       if (b === 'editar' || b === 'baja' || b === 'reemplazo') {
         return { to: `/dispositivos/${a}`, etiqueta: 'Volver' }
       }
+      if (HERRAMIENTAS_DE_INVENTARIO.has(ruta)) return PUERTA_INVENTARIO
       return { to: '/dispositivos', etiqueta: 'Equipos' }
     }
     case 'ubicaciones': {
@@ -202,8 +214,12 @@ export function padreDe(pathname: string): Padre | null {
       if (a === 'topologia' && b) return { to: '/red/topologia', etiqueta: 'Topología' }
       return { to: '/red', etiqueta: 'Red' }
     case 'cuenta':
-      // /cuenta/seguridad -> Mi cuenta (/cuenta ya lo cubre RAICES_NO_TAB).
-      return { to: '/cuenta', etiqueta: 'Mi cuenta' }
+      // /cuenta/seguridad -> Ajustes (/cuenta ya lo cubre RAICES_NO_TAB).
+      // Desde la tarea 268 la pantalla se llama "Ajustes".
+      return { to: '/cuenta', etiqueta: 'Ajustes' }
+    case 'inventario':
+      // /inventario/estados -> la puerta de inventario (tarea 268).
+      return PUERTA_INVENTARIO
     default:
       return { to: '/', etiqueta: 'Resolver' }
   }

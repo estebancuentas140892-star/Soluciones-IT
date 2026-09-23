@@ -135,6 +135,14 @@ const AsignarEquipoPage = lazy(() =>
 const RetirarPersonaPage = lazy(() =>
   import('./features/personas/RetirarPersonaPage').then((m) => ({ default: m.RetirarPersonaPage })),
 )
+const HerramientasInventarioPage = lazy(() =>
+  import('./features/inventario/HerramientasInventarioPage').then((m) => ({
+    default: m.HerramientasInventarioPage,
+  })),
+)
+const EstadosPorUnificarPage = lazy(() =>
+  import('./features/inventario/EstadosPorUnificarPage').then((m) => ({ default: m.EstadosPorUnificarPage })),
+)
 const ReferenciaPage = lazy(() =>
   import('./features/referencia/ReferenciaPage').then((m) => ({ default: m.ReferenciaPage })),
 )
@@ -468,6 +476,25 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <RetirarPersonaPage />
+                  </Suspense>
+                }
+              />
+              {/* Herramientas de inventario (tarea 268): la puerta única
+                  de Importar, Etiquetas QR y los datos por ordenar, y la
+                  unificación de los estados escritos a mano. */}
+              <Route
+                path="inventario"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <HerramientasInventarioPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="inventario/estados"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <EstadosPorUnificarPage />
                   </Suspense>
                 }
               />

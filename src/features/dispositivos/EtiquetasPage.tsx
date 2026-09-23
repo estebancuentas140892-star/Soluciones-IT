@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
 import QRCode from 'qrcode'
+import { useOrigen } from '../../app/useOrigen'
 import { BarraTarea } from '../../components/BarraTarea'
 import { Check, Printer, QrCode } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
@@ -17,6 +18,8 @@ import { db, type Dispositivo } from '../../lib/db'
 // ve el sistema Nocturne y al imprimir la hoja pasa a blanco (3 por fila
 // en carta). La logica de generacion del QR y de impresion no cambia.
 export function EtiquetasPage() {
+  // De dónde se llegó: la ficha de un equipo o Herramientas de inventario.
+  const origen = useOrigen()
   const categorias = useLiveQuery(
     () => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'),
     [],
@@ -73,8 +76,10 @@ export function EtiquetasPage() {
         <BarraTarea
           rotulo="Imprimiendo"
           titulo="Etiquetas QR"
-          salidaA="/dispositivos"
-          vuelta="Equipos"
+          // Su puerta es Herramientas de inventario (tarea 268); abierta
+          // desde la ficha de un equipo ("···" > Etiqueta QR), vuelve a él.
+          salidaA={origen?.to ?? '/inventario'}
+          vuelta={origen?.etiqueta ?? 'Herramientas de inventario'}
           salidaEtiqueta="Salir sin imprimir"
         >
           <p className="px-4 pb-2.5 text-[12px] text-noct-neutral-500">

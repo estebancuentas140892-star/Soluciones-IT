@@ -17,24 +17,25 @@ import {
   ubicacionActual,
 } from '../../pruebas/montaje'
 import { AgendaPage } from '../inicio/AgendaPage'
+import { HerramientasInventarioPage } from '../inventario/HerramientasInventarioPage'
 import { RedPage } from '../red/RedPage'
 import { TopologiaPage } from '../red/TopologiaPage'
 import { PantallaMas } from './PantallaMas'
 
 // MÁS E INFRAESTRUCTURA (tarea 257, Fase 5 del encargo del 2026-09-22,
-// sección 6 de PROPUESTA_REDISENO_RESOLVER.md). Con las pantallas de
-// verdad:
+// sección 6 de PROPUESTA_REDISENO_RESOLVER.md; revisada en la tarea 268,
+// sección 22 del encargo del 2026-09-23). Con las pantallas de verdad:
 //
-//   - Más en cuatro grupos, en su orden, cada destino en el suyo.
+//   - Más en cinco grupos, en su orden, cada destino en el suyo: una
+//     puerta por capacidad.
 //   - "Mejor desde el ordenador" ya no es un grupo: es la nota de
-//     Importar y de Etiquetas.
+//     Importar y de Etiquetas, que viven en Herramientas de inventario.
 //   - Mis favoritos es una fila de Consulta, y solo si hay alguno.
 //   - Actividad del equipo salió de Más y está al final de la Agenda,
 //     plegada.
 //   - Red cuelga de Más con la pantalla que dejó la tarea 254, y la fila
 //     de Más la abre en el nodo donde se dejó (lo que perdió en la 254).
-//   - Topología, puerta nueva de Más, vuelve a Más aunque su padre sea
-//     Red (regla M-R2).
+//   - Topología ya no es fila de Más (tarea 268): se abre desde Red.
 //
 // Todo lo sembrado es INVENTADO.
 
@@ -44,6 +45,7 @@ const RUTAS = [
   { ruta: '/red', elemento: <RedPage /> },
   { ruta: '/red/topologia', elemento: <TopologiaPage /> },
   { ruta: '/red/equipos', elemento: <p>EQUIPOS DE RED</p> },
+  { ruta: '/inventario', elemento: <HerramientasInventarioPage /> },
   { ruta: '/referencia', elemento: <p>CENTRO DE CONSULTA</p> },
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <p>LA GUÍA</p> },
 ]
@@ -78,69 +80,69 @@ afterEach(async () => {
   await desmontarTodo()
 })
 
-describe('Más en cuatro grupos', () => {
-  it('Consulta, Infraestructura, Herramientas y Configuración, en ese orden', async () => {
+describe('Más en cinco grupos', () => {
+  it('Consulta, Organización, Infraestructura, Herramientas y Aplicación, en ese orden', async () => {
     await montar(RUTAS, '/mas')
     const grupos = await esperar(() => {
       const g = gruposDeMas()
-      return g.length === 4 ? g : null
-    }, 'Más pinta sus cuatro grupos')
+      return g.length === 5 ? g : null
+    }, 'Más pinta sus cinco grupos')
 
-    expect(grupos.map((g) => g.titulo)).toEqual(['Consulta', 'Infraestructura', 'Herramientas', 'Configuración'])
+    expect(grupos.map((g) => g.titulo)).toEqual(['Consulta', 'Organización', 'Infraestructura', 'Herramientas', 'Aplicación'])
     // Los grupos de antes ya no existen.
     const texto = textoPantalla()
     expect(texto).not.toContain('Trabajo técnico')
     expect(texto).not.toContain('Lo mío y lo del equipo')
   })
 
-  it('cada destino en su grupo', async () => {
+  it('cada destino en su grupo, sin perder ninguno', async () => {
     await montar(RUTAS, '/mas')
     const grupos = await esperar(() => {
       const g = gruposDeMas()
-      return g.length === 4 ? g : null
-    }, 'Más pinta sus cuatro grupos')
+      return g.length === 5 ? g : null
+    }, 'Más pinta sus cinco grupos')
 
     // Sin favoritos, Consulta no tiene fila de favoritos.
     expect(grupos[0].filas).toEqual(['Centro de consulta', 'Agenda'])
-    expect(grupos[1].filas).toEqual(['Red', 'Topología', 'Ubicaciones', 'Personas'])
-    expect(grupos[2].filas).toEqual(['Diagnóstico', 'Importar equipos', 'Etiquetas QR'])
-    expect(grupos[3].filas[0]).toBe(PERFIL_PRUEBA.nombre)
-    expect(grupos[3].filas).toContain('Bloqueo y seguridad')
+    expect(grupos[1].filas).toEqual(['Personas', 'Ubicaciones'])
+    expect(grupos[2].filas).toEqual(['Red'])
+    expect(grupos[3].filas).toEqual(['Herramientas de inventario', 'Diagnóstico'])
+    // Mi cuenta, Bloqueo y seguridad y Buscar actualización son una sola
+    // puerta, con el nombre de quien tiene la sesión.
+    expect(grupos[4].filas).toEqual(['Ajustes'])
+    expect(filaDeMas('Ajustes')?.textContent).toContain(PERFIL_PRUEBA.nombre)
+    expect(filaDeMas('Ajustes')?.getAttribute('href')).toBe('/cuenta')
   })
 
-  it('Topología abre el mapa completo de la red, y su regreso vuelve a Más', async () => {
+  it('Topología ya no es fila de Más: se abre desde Red, que la enlaza', async () => {
     await montar(RUTAS, '/mas')
-    const topologia = await esperar(() => filaDeMas('Topología'), 'aparece la fila Topología')
-    expect(topologia.getAttribute('href')).toBe('/red/topologia')
-    await tocar(topologia)
+    await esperar(() => filaDeMas('Red'), 'aparece la fila Red')
+    expect(filaDeMas('Topología')).toBeNull()
+
+    await tocar(filaDeMas('Red') as HTMLElement)
+    expect(ubicacionActual().pathname).toBe('/red')
+    const mapa = await esperarControl(/^Mapa completo, desde cada raíz/)
+    expect(mapa.getAttribute('href')).toBe('/red/topologia')
+    await tocar(mapa)
     expect(ubicacionActual().pathname).toBe('/red/topologia')
-
-    // Su padre es Red, pero se llegó desde Más: el salto lleva su origen,
-    // y el regreso de la topología lo nombra y vuelve ahí (regla M-R2).
-    const estado = ubicacionActual().state as { origen?: { to: string; etiqueta: string } }
-    expect(estado.origen).toEqual({ to: '/mas', etiqueta: 'Más' })
-    const titulo = await esperar(
-      () => Array.from(document.body.querySelectorAll('h1')).find((h) => h.textContent === 'Topología de red') ?? null,
-      'la topología pinta su cabecera',
-    )
-    const volver = titulo.closest('.sticky')?.querySelector<HTMLElement>('a')
-    expect(volver?.textContent?.trim()).toBe('Más')
-    expect(volver?.getAttribute('href')).toBe('/mas')
-
-    await tocar(volver as HTMLElement)
-    expect(ubicacionActual().pathname).toBe('/mas')
   })
 
-  it('"Mejor desde el ordenador" es la nota de Importar y de Etiquetas, no un grupo', async () => {
+  it('Importar y Etiquetas viven en Herramientas de inventario, con su nota', async () => {
     await montar(RUTAS, '/mas')
-    await esperar(() => filaDeMas('Etiquetas QR'), 'aparece la fila Etiquetas QR')
+    const puerta = await esperar(() => filaDeMas('Herramientas de inventario'), 'la puerta de inventario')
+    expect(filaDeMas('Importar equipos')).toBeNull()
+    expect(filaDeMas('Etiquetas QR')).toBeNull()
 
+    await tocar(puerta)
+    expect(ubicacionActual().pathname).toBe('/inventario')
+    await esperar(() => filaDeMas('Etiquetas QR'), 'aparece la fila Etiquetas QR')
     expect(filaDeMas('Importar equipos')?.textContent).toContain('Mejor desde el ordenador')
     expect(filaDeMas('Etiquetas QR')?.textContent).toContain('Mejor desde el ordenador')
-    expect(filaDeMas('Diagnóstico')?.textContent).not.toContain('Mejor desde el ordenador')
     // Ningún título de grupo lo dice.
     const titulos = Array.from(document.body.querySelectorAll('main h2')).map((h) => h.textContent)
     expect(titulos).not.toContain('Mejor desde el ordenador')
+    // Su regreso vuelve a esta puerta, no a Equipos.
+    expect(filaDeMas('Etiquetas QR')?.getAttribute('href')).toBe('/dispositivos/etiquetas')
   })
 })
 

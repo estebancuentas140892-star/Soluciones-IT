@@ -1,11 +1,14 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, useSyncExternalStore, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { BotonInstalarApp } from '../../components/BotonInstalarApp'
+import { BuscarActualizacion } from '../../components/BuscarActualizacion'
 import { DescargarOffline } from '../../components/DescargarOffline'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
-import { CaretRight, DownloadSimple, LockSimple, SignOut } from '../../components/iconos'
+import { CaretDown, CaretRight, CaretUp, DownloadSimple, LockSimple, SignOut } from '../../components/iconos'
 import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { db, ID_BLOQUEO_APP } from '../../lib/db'
 import { obtenerEstadoInstalacion, suscribirEstadoInstalacion } from '../../lib/instalacionPwa'
 import { useAuth } from './authContext'
 import { validarCambioContrasena } from './erroresAuth'
@@ -26,6 +29,16 @@ import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 // solo vivía en la cabecera del Layout heredado, y al sacar esta
 // pantalla de ahí no quedaba ningún lugar en Nocturne desde donde
 // cerrar sesión.
+//
+// AJUSTES, UNA SOLA PUERTA (tarea 268, sección 20 del encargo del
+// 2026-09-23). Más mostraba aparte Mi cuenta, Bloqueo y seguridad y
+// Buscar actualización, aunque esta pantalla ya enlazaba la seguridad y
+// ofrecía instalar y trabajar sin conexión. Ahora es "Ajustes" y reúne
+// todo en tres bloques: Cuenta (cambiar la contraseña, plegado porque se
+// usa poco), Este teléfono (bloqueo, sin conexión, instalar) y
+// Aplicación (buscar actualización, con la versión instalada). Nada se
+// quita: solo deja de ocupar tres filas en Más. La ruta sigue siendo
+// `/cuenta`.
 export function CuentaPage() {
   const { session, perfil, cambiarContrasena, cerrarSesion } = useAuth()
   const instalacion = useSyncExternalStore(suscribirEstadoInstalacion, obtenerEstadoInstalacion)
@@ -36,6 +49,9 @@ export function CuentaPage() {
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  const [cambiandoContrasena, setCambiandoContrasena] = useState(false)
+  // Lo que antes decía la fila "Bloqueo y seguridad" de Más.
+  const bloqueo = useLiveQuery(async () => (await db.seguridadApp.get(ID_BLOQUEO_APP)) ?? null, [])
 
   async function manejarEnvio(evento: FormEvent) {
     evento.preventDefault()
@@ -68,7 +84,7 @@ export function CuentaPage() {
       modo="documento"
       barra={
         <div className="px-4 pb-3 pt-0.5">
-          <h1 className="text-[22px] font-medium leading-[1.25]">Mi cuenta</h1>
+          <h1 className="text-[22px] font-medium leading-[1.25]">Ajustes</h1>
           {(perfil?.nombre || session?.user?.email) && (
             <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">
               {perfil?.nombre ? `${perfil.nombre} · ` : ''}
@@ -79,113 +95,144 @@ export function CuentaPage() {
       }
     >
       <main className="flex flex-1 flex-col gap-5 px-4 pb-10 pt-4">
-        <form
-          onSubmit={manejarEnvio}
-          className="flex flex-col gap-3.5 rounded-lg border border-noct-divider bg-noct-surface p-4"
-        >
-          <div>
-            <TituloSeccion>Cambiar contraseña de inicio de sesión</TituloSeccion>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-noct-neutral-500">
-              Es la contraseña con la que entras a la app. Necesitas conexión a internet para
-              cambiarla.
-            </p>
-          </div>
-
-          <label className="flex flex-col gap-1.5">
-            <span className={CLASE_ETIQUETA}>Contraseña actual</span>
-            <CampoContrasena
-              required
-              value={actual}
-              onChange={(e) => setActual(e.target.value)}
-              className={`min-h-11 ${CLASE_CAMPO}`}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className={CLASE_ETIQUETA}>Nueva contraseña</span>
-            <CampoContrasena
-              required
-              value={nueva}
-              onChange={(e) => setNueva(e.target.value)}
-              className={`min-h-11 ${CLASE_CAMPO}`}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className={CLASE_ETIQUETA}>Confirmar la nueva contraseña</span>
-            <CampoContrasena
-              required
-              value={confirmacion}
-              onChange={(e) => setConfirmacion(e.target.value)}
-              className={`min-h-11 ${CLASE_CAMPO}`}
-            />
-          </label>
-
-          {error && (
-            <p role="alert" className="text-[12.5px] text-noct-error">
-              {error}
-            </p>
-          )}
-          {exito && (
-            <p role="status" className="text-[12.5px] text-noct-exito">
-              Contraseña actualizada. Úsala la próxima vez que inicies sesión.
-            </p>
-          )}
-
+        <section className="flex flex-col gap-2.5">
+          <TituloSeccion>Cuenta</TituloSeccion>
           <button
-            type="submit"
-            disabled={guardando}
-            className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}
+            type="button"
+            onClick={() => setCambiandoContrasena((v) => !v)}
+            aria-expanded={cambiandoContrasena}
+            className="flex min-h-[52px] items-center gap-3 rounded-lg border border-noct-divider bg-noct-surface px-4 text-left text-noct-text hover:bg-noct-text/[.03]"
           >
-            {guardando ? 'Cambiando...' : 'Cambiar contraseña'}
+            <span className="min-w-0 flex-1 text-sm font-medium">Cambiar contraseña de inicio de sesión</span>
+            {cambiandoContrasena ? (
+              <CaretUp size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+            ) : (
+              <CaretDown size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+            )}
           </button>
-        </form>
+          {cambiandoContrasena && (
+            <form
+              onSubmit={manejarEnvio}
+              className="flex flex-col gap-3.5 rounded-lg border border-noct-divider bg-noct-surface p-4"
+            >
+              <p className="text-[12.5px] leading-relaxed text-noct-neutral-500">
+                Es la contraseña con la que entras a la app. Necesitas conexión a internet para cambiarla.
+              </p>
 
-        {/* Instalar la app (tarea 184): el segundo de los dos unicos
-            sitios desde donde se ofrece, junto con la bienvenida del
-            primer dia. Nunca como banner (decision del handoff), y solo
-            mientras no corra ya instalada: quien la tiene no necesita
-            una tarjeta que se lo recuerde. */}
-        {!instalacion.instalada && (
-          <div className="flex items-center gap-3 rounded-lg border border-noct-divider bg-noct-surface p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent">
-              <DownloadSimple size={17} aria-hidden />
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Contraseña actual</span>
+                <CampoContrasena
+                  required
+                  value={actual}
+                  onChange={(e) => setActual(e.target.value)}
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Nueva contraseña</span>
+                <CampoContrasena
+                  required
+                  value={nueva}
+                  onChange={(e) => setNueva(e.target.value)}
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1.5">
+                <span className={CLASE_ETIQUETA}>Confirmar la nueva contraseña</span>
+                <CampoContrasena
+                  required
+                  value={confirmacion}
+                  onChange={(e) => setConfirmacion(e.target.value)}
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </label>
+
+              {error && (
+                <p role="alert" className="text-[12.5px] text-noct-error">
+                  {error}
+                </p>
+              )}
+              {exito && (
+                <p role="status" className="text-[12.5px] text-noct-exito">
+                  Contraseña actualizada. Úsala la próxima vez que inicies sesión.
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={guardando}
+                className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}
+              >
+                {guardando ? 'Cambiando...' : 'Cambiar contraseña'}
+              </button>
+            </form>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-2.5">
+          <TituloSeccion>Este teléfono</TituloSeccion>
+
+          {/* Instalar la app (tarea 184): el segundo de los dos unicos
+              sitios desde donde se ofrece, junto con la bienvenida del
+              primer dia. Nunca como banner (decision del handoff), y solo
+              mientras no corra ya instalada: quien la tiene no necesita
+              una tarjeta que se lo recuerde. */}
+          {!instalacion.instalada && (
+            <div className="flex items-center gap-3 rounded-lg border border-noct-divider bg-noct-surface p-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent">
+                <DownloadSimple size={17} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium leading-tight">
+                  Instalar la app en este dispositivo
+                </span>
+                <span className="mt-0.5 block text-[12px] leading-relaxed text-noct-neutral-500">
+                  Abre con su propio icono, a pantalla completa y sin señal.
+                </span>
+              </span>
+              <BotonInstalarApp />
+            </div>
+          )}
+
+          {/* "Descargar todo para offline" (mudado desde Inicio, encargo
+              del 2026-09-11, tarea 3): es un ajuste de ESTE dispositivo,
+              como instalar la app o el bloqueo, no una noticia del dia.
+              Mismo componente y mismo estado que ofrece la bienvenida del
+              primer dia. */}
+          <DescargarOffline />
+
+          <Link
+            to="/cuenta/seguridad"
+            className="flex items-center gap-3 rounded-lg border border-noct-divider bg-noct-surface p-4 text-noct-text transition-colors hover:bg-noct-text/[.03]"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-neutral-400/[.12] text-noct-neutral-400">
+              <LockSimple size={17} aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium leading-tight">
-                Instalar la app en este dispositivo
-              </span>
+              <span className="block text-sm font-medium leading-tight">Bloqueo y seguridad</span>
               <span className="mt-0.5 block text-[12px] leading-relaxed text-noct-neutral-500">
-                Abre con su propio icono, a pantalla completa y sin señal.
+                {bloqueo === undefined
+                  ? 'Bloqueo de este dispositivo con patrón o contraseña.'
+                  : bloqueo
+                    ? `${bloqueo.metodo === 'contrasena' ? 'Contraseña' : 'Patrón'} de este teléfono · activo`
+                    : 'Sin bloqueo: cualquiera que tome el teléfono entra a la app.'}
               </span>
             </span>
-            <BotonInstalarApp />
+            <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
+          </Link>
+        </section>
+
+        {/* QUÉ VERSIÓN LLEVA ESTE TELÉFONO, Y BUSCAR UNA NUEVA (encargo
+            del 2026-09-20). Vivía en Más; desde la tarea 268 es parte de
+            Ajustes, junto a lo demás de la aplicación. */}
+        <section className="flex flex-col gap-1">
+          <TituloSeccion>Aplicación</TituloSeccion>
+          <div className="rounded-lg border border-noct-divider bg-noct-surface">
+            <BuscarActualizacion />
           </div>
-        )}
-
-        {/* "Descargar todo para offline" (mudado desde Inicio, encargo
-            del 2026-09-11, tarea 3): es un ajuste de ESTE dispositivo,
-            como instalar la app o el bloqueo, no una noticia del dia.
-            Mismo componente y mismo estado que ofrece la bienvenida del
-            primer dia. */}
-        <DescargarOffline />
-
-        <Link
-          to="/cuenta/seguridad"
-          className="flex items-center gap-3 rounded-lg border border-noct-divider bg-noct-surface p-4 text-noct-text transition-colors hover:bg-noct-text/[.03]"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-neutral-400/[.12] text-noct-neutral-400">
-            <LockSimple size={17} aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium leading-tight">Seguridad de la aplicación</span>
-            <span className="mt-0.5 block text-[12px] leading-relaxed text-noct-neutral-500">
-              Bloqueo de este dispositivo con patrón o contraseña, para que nadie entre con solo
-              tomar el teléfono.
-            </span>
-          </span>
-          <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-        </Link>
+        </section>
 
         <button
           type="button"

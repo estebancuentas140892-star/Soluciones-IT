@@ -115,8 +115,8 @@ export function ImportarDispositivosPage() {
       modo="tarea"
       rotulo="Importando"
       titulo="Inventario desde Excel o CSV"
-      salidaA="/dispositivos"
-      vuelta="Equipos"
+      // Su puerta es Herramientas de inventario (tarea 268): sin escribir
+      // la salida, la X sube a ella por `padreDe` o vuelve al origen.
       salidaEtiqueta="Salir sin importar"
       barra={
         <div className="flex items-center justify-between gap-2 px-4 pb-2.5">

@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { ArrowElbowDownRight, CaretDown, CaretRight, CaretUp, Monitor, Plus, User } from '../../components/iconos'
@@ -51,7 +51,10 @@ export function PersonasPage() {
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoIngreso, setNuevoIngreso] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const [porValidarAbierto, setPorValidarAbierto] = useState(false)
+  // "?porValidar=1" (la puerta de Herramientas de inventario, tarea 268)
+  // la abre ya desplegada.
+  const [searchParams] = useSearchParams()
+  const [porValidarAbierto, setPorValidarAbierto] = useState(() => searchParams.get('porValidar') === '1')
 
   const conteoPorPersona = useMemo(() => {
     const conteo = new Map<string, number>()

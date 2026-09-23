@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
+import { useOrigen } from '../../app/useOrigen'
 import { ArrowElbowDownRight } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
@@ -30,6 +31,10 @@ const CLASE_CAMPO = CLASE_CAMPO_SIN_ANCHO
 // solo se ejecuta. Al aplicar, cada dispositivo migrado tambien pierde la
 // clave de `detalles` que origino el dato, para no dejarlo duplicado.
 export function MigracionPersonas() {
+  // Se llega desde Personas o desde Herramientas de inventario (tarea
+  // 268): se vuelve a donde se vino.
+  const origen = useOrigen()
+  const salida = origen?.to ?? '/personas'
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
   const candidatos = useMemo(() => candidatosPersona(dispositivos), [dispositivos])
   const textos = useMemo(() => textosSinPersona(candidatos), [candidatos])
@@ -59,10 +64,10 @@ export function MigracionPersonas() {
 
   const resultado = useMemo(() => construirMigracion(candidatos, grupos), [candidatos, grupos])
 
-  if (listo) return <Navigate to="/personas" replace />
+  if (listo) return <Navigate to={salida} replace />
   // Si no queda nada por migrar (todo ya vinculado), no tiene sentido la
   // pantalla: se vuelve a la lista.
-  if (dispositivos.length > 0 && textos.length === 0) return <Navigate to="/personas" replace />
+  if (dispositivos.length > 0 && textos.length === 0) return <Navigate to={salida} replace />
 
   async function aplicar() {
     setAplicando(true)
@@ -105,8 +110,8 @@ export function MigracionPersonas() {
       modo="tarea"
       rotulo="Migrando"
       titulo="Personas escritas como texto"
-      salidaA="/personas"
-      vuelta="Personas"
+      salidaA={salida}
+      vuelta={origen?.etiqueta ?? 'Personas'}
       salidaEtiqueta="Salir sin migrar"
       barra={
         <p className="px-4 pb-2.5 text-[12px] leading-[1.5] text-noct-neutral-500">

@@ -73,12 +73,23 @@ describe('padreDe', () => {
   })
 
   describe('Equipos', () => {
-    it('nuevo, importar, etiquetas y la ficha vuelven a la lista', () => {
+    it('nuevo y la ficha vuelven a la lista', () => {
       const lista = { to: '/dispositivos', etiqueta: 'Equipos' }
       expect(padreDe('/dispositivos/nuevo')).toEqual(lista)
-      expect(padreDe('/dispositivos/importar')).toEqual(lista)
-      expect(padreDe('/dispositivos/etiquetas')).toEqual(lista)
       expect(padreDe('/dispositivos/cam-1')).toEqual(lista)
+    })
+
+    // Tarea 268: su puerta es Más > Herramientas de inventario.
+    it('importar y etiquetas suben a Herramientas de inventario, que sube a Más', () => {
+      const puerta = { to: '/inventario', etiqueta: 'Herramientas de inventario' }
+      expect(padreDe('/dispositivos/importar')).toEqual(puerta)
+      expect(padreDe('/dispositivos/etiquetas')).toEqual(puerta)
+      expect(padreDe('/inventario/estados')).toEqual(puerta)
+      expect(padreDe('/inventario')).toEqual({ to: '/mas', etiqueta: 'Más' })
+      expect(destinoPrincipalDe('/dispositivos/importar')).toBe('/mas')
+      expect(destinoPrincipalDe('/dispositivos/etiquetas')).toBe('/mas')
+      expect(destinoPrincipalDe('/inventario')).toBe('/mas')
+      expect(destinoPrincipalDe('/dispositivos/cam-1')).toBe('/dispositivos')
     })
 
     it('editar vuelve a la ficha del dispositivo', () => {
@@ -225,8 +236,9 @@ describe('padreDe', () => {
       expect(padreDe('/cuenta')).toEqual({ to: '/mas', etiqueta: 'Más' })
     })
 
-    it('Seguridad sube a Mi cuenta', () => {
-      expect(padreDe('/cuenta/seguridad')).toEqual({ to: '/cuenta', etiqueta: 'Mi cuenta' })
+    // Desde la tarea 268 la pantalla de la cuenta se llama "Ajustes".
+    it('Seguridad sube a Ajustes', () => {
+      expect(padreDe('/cuenta/seguridad')).toEqual({ to: '/cuenta', etiqueta: 'Ajustes' })
     })
   })
 })

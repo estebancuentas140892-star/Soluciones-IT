@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
+import { useOrigen } from '../../app/useOrigen'
 import { ArrowElbowDownRight, CheckCircle, MapPin, Warning } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
@@ -45,6 +46,10 @@ function claveCoincidencia(c: PosibleCoincidencia): string {
 }
 
 export function MigracionUbicaciones() {
+  // Se llega desde Ubicaciones o desde Herramientas de inventario (tarea
+  // 268): se vuelve a donde se vino.
+  const origen = useOrigen()
+  const salida = origen?.to ?? '/ubicaciones'
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [])
   const existentes = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
   const textos = useMemo(() => textosSinUbicacion(dispositivos ?? []), [dispositivos])
@@ -116,7 +121,7 @@ export function MigracionUbicaciones() {
   }
   // Si no queda nada por migrar (todo ya vinculado), no tiene sentido la
   // pantalla: se vuelve a la lista.
-  if (textos.length === 0 && !aplicando) return <Navigate to="/ubicaciones" replace />
+  if (textos.length === 0 && !aplicando) return <Navigate to={salida} replace />
 
   const cuantosPendientes = pendientesPorClave.size
 
@@ -180,8 +185,8 @@ export function MigracionUbicaciones() {
       modo="tarea"
       rotulo="Migrando"
       titulo="Ubicaciones escritas como texto"
-      salidaA="/ubicaciones"
-      vuelta="Ubicaciones"
+      salidaA={salida}
+      vuelta={origen?.etiqueta ?? 'Ubicaciones'}
       salidaEtiqueta="Salir sin migrar"
       barra={
         <p className="px-4 pb-2.5 text-[12px] leading-[1.5] text-noct-neutral-500">

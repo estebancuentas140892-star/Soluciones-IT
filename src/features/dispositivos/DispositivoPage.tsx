@@ -395,7 +395,13 @@ export function DispositivoPage() {
             <PencilSimple size={14} aria-hidden />
             Editar
           </Link>
-          <Link to="/dispositivos/etiquetas" onClick={() => setMenuAbierto(false)} className={`shrink-0 ${BTN_SECUNDARIO}`}>
+          <Link
+            to="/dispositivos/etiquetas"
+            // Etiquetas vuelve a este equipo, no a su puerta de inventario.
+            state={origenEsteEquipo}
+            onClick={() => setMenuAbierto(false)}
+            className={`shrink-0 ${BTN_SECUNDARIO}`}
+          >
             <QrCode size={14} aria-hidden />
             Etiqueta QR
           </Link>
