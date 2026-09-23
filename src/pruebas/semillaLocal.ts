@@ -8,9 +8,11 @@ import {
   type Credencial,
   type Diagnostico,
   type Dispositivo,
+  type HistorialEntrada,
   type NodoDiagnostico,
   type OpcionDiagnostico,
   type PasoProcedimiento,
+  type Persona,
   type Referencia,
 } from '../lib/db'
 
@@ -73,6 +75,8 @@ const CATEGORIAS: Categoria[] = [
   // Una categoria de red (encargo del 2026-09-22): sus equipos van a
   // Infraestructura, pero se encuentran tambien buscando en Equipos.
   { ...categoria('cat-switches', 'Switches', 9), esRed: true },
+  // Tarea 266: los computadores que se asignan a una persona.
+  categoria('cat-computadores', 'Computadores', 10),
 ]
 
 function tarea(id: string, texto: string, tipoTarea: 'accion' | 'verificacion' | 'decision' = 'accion'): BloquePaso {
@@ -1157,6 +1161,123 @@ const DISPOSITIVOS: Dispositivo[] = [
   }),
 ]
 
+// PERSONAS Y SUS EQUIPOS (tarea 266). Inventadas: tres personas (una
+// retirada), cuatro computadores (uno Disponible, uno con un responsable
+// escrito que no es una persona) y el historial de una asignación ya
+// terminada, para ver "Equipo actual", "Equipos anteriores", "Por
+// validar" y el retiro sin datos del equipo.
+function persona(id: string, nombre: string, datos: Partial<Persona> = {}): Persona {
+  return {
+    id,
+    nombre,
+    notas: '',
+    estado: 'activa',
+    fechaIngreso: null,
+    fechaRetiro: null,
+    motivoRetiro: '',
+    updatedAt: AHORA,
+    updatedBy: PERFIL_PRUEBA.id,
+    eliminadoEn: null,
+    ...datos,
+  }
+}
+
+const PERSONAS: Persona[] = [
+  persona('per-ejemplo-ana', 'Ana de Ejemplo', { fechaIngreso: '2025-02-03', notas: 'Area de ejemplo, ext. 000' }),
+  persona('per-ejemplo-luis', 'Luis de Ejemplo'),
+  persona('per-ejemplo-rita', 'Rita de Ejemplo', {
+    estado: 'retirada',
+    fechaIngreso: '2024-05-20',
+    fechaRetiro: '2026-08-31',
+    motivoRetiro: 'Fin de contrato',
+  }),
+]
+
+const EQUIPOS_DE_PERSONAS: Dispositivo[] = [
+  dispositivo({
+    id: 'dis-pc-ejemplo-62',
+    nombre: 'PC-EJEMPLO-62',
+    categoriaId: 'cat-computadores',
+    placaInventario: 'EJ-10561',
+    ubicacion: 'Sistemas de ejemplo',
+    responsable: 'Ana de Ejemplo',
+    responsableId: 'per-ejemplo-ana',
+  }),
+  dispositivo({
+    id: 'dis-pc-ejemplo-15',
+    nombre: 'PC-EJEMPLO-15',
+    categoriaId: 'cat-computadores',
+    placaInventario: 'EJ-10515',
+    ubicacion: 'Compras de ejemplo',
+    responsable: 'Luis de Ejemplo',
+    responsableId: 'per-ejemplo-luis',
+  }),
+  dispositivo({
+    id: 'dis-pc-ejemplo-41',
+    nombre: 'PC-EJEMPLO-41',
+    categoriaId: 'cat-computadores',
+    placaInventario: 'EJ-10541',
+    ubicacion: 'Bodega de ejemplo',
+    estado: 'Disponible',
+  }),
+  dispositivo({
+    id: 'dis-pc-ejemplo-07',
+    nombre: 'PC-EJEMPLO-07',
+    categoriaId: 'cat-computadores',
+    placaInventario: 'EJ-10507',
+    ubicacion: 'Archivo de ejemplo',
+    responsable: 'Archivo de ejemplo',
+    estado: '',
+  }),
+]
+
+function entradaAsignacion(
+  id: string,
+  dispositivoId: string,
+  campo: 'responsable' | 'responsableId',
+  valorAnterior: string,
+  valorNuevo: string,
+  fechaHora: string,
+  motivo = '',
+): HistorialEntrada {
+  return {
+    id,
+    entidadTipo: 'dispositivo',
+    entidadId: dispositivoId,
+    usuario: PERFIL_PRUEBA.id,
+    usuarioNombre: PERFIL_PRUEBA.nombre,
+    fechaHora,
+    campo,
+    valorAnterior,
+    valorNuevo,
+    motivo,
+  }
+}
+
+// Rita tuvo el PC-EJEMPLO-41 desde junio de 2025 hasta su retiro.
+const HISTORIAL_ASIGNACIONES: HistorialEntrada[] = [
+  entradaAsignacion('hist-ej-asig-1', 'dis-pc-ejemplo-41', 'responsable', '', 'Rita de Ejemplo', '2025-06-01T14:00:00.000Z'),
+  entradaAsignacion('hist-ej-asig-2', 'dis-pc-ejemplo-41', 'responsableId', '', 'per-ejemplo-rita', '2025-06-01T14:00:00.000Z'),
+  entradaAsignacion(
+    'hist-ej-asig-3',
+    'dis-pc-ejemplo-41',
+    'responsable',
+    'Rita de Ejemplo',
+    '',
+    '2026-08-31T21:00:00.000Z',
+    'Retiro de Rita de Ejemplo: Fin de contrato',
+  ),
+  entradaAsignacion(
+    'hist-ej-asig-4',
+    'dis-pc-ejemplo-41',
+    'responsableId',
+    'per-ejemplo-rita',
+    '',
+    '2026-08-31T21:00:00.000Z',
+    'Retiro de Rita de Ejemplo: Fin de contrato',
+  ),
+]
+
 const CONEXIONES: Conexion[] = [
   {
     id: 'con-switch-impresora-ejemplo',
@@ -1177,15 +1298,26 @@ const CONEXIONES: Conexion[] = [
 
 /** Solo lo que no existe todavia: lo editado desde la app no se pisa. */
 async function sembrarAgendaYEquipos(): Promise<void> {
-  await db.transaction('rw', [db.credenciales, db.dispositivos, db.conexiones, db.recientes], async () => {
+  await db.transaction('rw', [db.credenciales, db.dispositivos, db.conexiones, db.recientes, db.personas, db.historial], async () => {
+    // Personas y su historial de asignación (tarea 266), con el mismo
+    // criterio: solo lo que falta, para no pisar lo que se pruebe.
+    const personasExistentes = new Set(
+      (await db.personas.bulkGet(PERSONAS.map((p) => p.id))).flatMap((p) => (p ? [p.id] : [])),
+    )
+    await db.personas.bulkAdd(PERSONAS.filter((p) => !personasExistentes.has(p.id)))
+    const historialExistente = new Set(
+      (await db.historial.bulkGet(HISTORIAL_ASIGNACIONES.map((h) => h.id))).flatMap((h) => (h ? [h.id] : [])),
+    )
+    await db.historial.bulkAdd(HISTORIAL_ASIGNACIONES.filter((h) => !historialExistente.has(h.id)))
     const credencialesExistentes = new Set(
       (await db.credenciales.bulkGet(CREDENCIALES.map((c) => c.id))).flatMap((c) => (c ? [c.id] : [])),
     )
     await db.credenciales.bulkAdd(CREDENCIALES.filter((c) => !credencialesExistentes.has(c.id)))
+    const todosLosEquipos = [...DISPOSITIVOS, ...EQUIPOS_DE_PERSONAS]
     const equiposExistentes = new Set(
-      (await db.dispositivos.bulkGet(DISPOSITIVOS.map((d) => d.id))).flatMap((d) => (d ? [d.id] : [])),
+      (await db.dispositivos.bulkGet(todosLosEquipos.map((d) => d.id))).flatMap((d) => (d ? [d.id] : [])),
     )
-    await db.dispositivos.bulkAdd(DISPOSITIVOS.filter((d) => !equiposExistentes.has(d.id)))
+    await db.dispositivos.bulkAdd(todosLosEquipos.filter((d) => !equiposExistentes.has(d.id)))
     const conexionesExistentes = new Set(
       (await db.conexiones.bulkGet(CONEXIONES.map((c) => c.id))).flatMap((c) => (c ? [c.id] : [])),
     )

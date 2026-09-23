@@ -63,6 +63,9 @@ const FAVORITO_SEMBRADO = `{ const { db } = await import('/src/lib/db.ts'); awai
 const SIN_FAVORITO = `{ const { db } = await import('/src/lib/db.ts'); await db.favoritos.delete('articulo:art-recurso-compartido'); }`
 const ACTIVIDAD_SEMBRADA = `{ const { db } = await import('/src/lib/db.ts'); await db.historial.put({ id: 'hist-captura-257', entidadTipo: 'articulo', entidadId: 'art-recurso-compartido', usuario: null, usuarioNombre: 'Tecnico de prueba', fechaHora: new Date().toISOString(), campo: 'titulo', valorAnterior: 'Titulo anterior', valorNuevo: 'Titulo nuevo', motivo: '' }); }`
 const SIN_ACTIVIDAD = `{ const { db } = await import('/src/lib/db.ts'); await db.historial.delete('hist-captura-257'); }`
+// Tarea 266: repone las personas y los computadores inventados de la
+// semilla (una parada de retiro o de asignación los cambia).
+const PERSONAS_SEMBRADAS = `{ const { db } = await import('/src/lib/db.ts'); await db.personas.clear(); await db.dispositivos.bulkDelete(['dis-pc-ejemplo-62','dis-pc-ejemplo-15','dis-pc-ejemplo-41','dis-pc-ejemplo-07']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
 const buscarEnResolver = (texto) =>
   `{ const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,${JSON.stringify(texto)}); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,700)); }`
 
@@ -201,6 +204,25 @@ const TODAS_LAS_PARADAS = [
     despues: RECORRIDOS_LIMPIOS,
   },
   { nombre: 'recorrido-editor', ruta: '/diagnostico/diag-impresora-ejemplo/editar' },
+  // Tarea 266 (encargo del 2026-09-23): personas con ciclo de vida. Cada
+  // parada que escribe (retirar, asignar) repone antes la semilla de sus
+  // personas y equipos, para que la siguiente las vea igual.
+  { nombre: 'personas', ruta: '/personas', antes: PERSONAS_SEMBRADAS },
+  { nombre: 'personas-por-validar', ruta: '/personas', guion: tocar('Responsable por validar') },
+  { nombre: 'personas-retiradas', ruta: '/personas', guion: tocar('Retiradas') },
+  { nombre: 'persona-ficha', ruta: '/personas/per-ejemplo-ana' },
+  { nombre: 'persona-liberar', ruta: '/personas/per-ejemplo-ana', guion: tocar('Liberar PC-EJEMPLO-62') },
+  { nombre: 'persona-retirada', ruta: '/personas/per-ejemplo-rita' },
+  { nombre: 'persona-asignar', ruta: '/personas/per-ejemplo-luis/asignar' },
+  {
+    nombre: 'persona-asignar-elegido',
+    ruta: '/personas/per-ejemplo-luis/asignar',
+    guion: `{ [...document.querySelectorAll('[role=radio]')].find(b=>b.textContent.includes('PC-EJEMPLO-41'))?.click(); await new Promise(r=>setTimeout(r,400)); }`,
+  },
+  { nombre: 'persona-retirar', ruta: '/personas/per-ejemplo-ana/retirar' },
+  { nombre: 'equipo-sin-responsable', ruta: '/dispositivos/dis-pc-ejemplo-07' },
+  { nombre: 'equipo-asignar-persona', ruta: '/dispositivos/dis-pc-ejemplo-41', guion: tocar('Asignar') },
+  { nombre: 'equipo-con-anteriores', ruta: '/dispositivos/dis-pc-ejemplo-41', guion: tocar('Más datos del equipo') },
 ]
 
 const PARADAS = FILTRO_PARADAS
