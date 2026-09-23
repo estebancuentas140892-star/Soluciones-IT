@@ -50,6 +50,16 @@ const siguiente = `{ const s=[...document.querySelectorAll('button')].find(b=>b.
 const AVANCE_SEMBRADO = `{ const { db } = await import('/src/lib/db.ts'); await db.progresoPasos.put({ articuloId: 'art-recurso-compartido', pasosHechos: ['rec-p1'], instruccionesHechas: ['rec-p1-t1'], verificacionHecha: [], actualizadoEn: new Date().toISOString() }); }`
 const modo = (m) => `{ const { guardarModoEjecucion } = await import('/src/lib/preferenciasEjecucion.ts'); await guardarModoEjecucion('${m}'); }`
 
+// Tarea 263 (resolucion guiada): cada parada de un recorrido con
+// preguntas arranca limpia (sin sesion, sin avance de su procedimiento
+// ni de la guia DIAN), porque responder guarda y la siguiente parada
+// veria el recorrido donde lo dejo la anterior.
+const RECORRIDOS_LIMPIOS = `{ const { db } = await import('/src/lib/db.ts'); await db.progresoDiagnostico.clear(); await db.progresoPasos.bulkDelete(['recorrido:diag-impresora-ejemplo', 'recorrido:diag-sesion-ejemplo', 'art-resolucion-dian']); }`
+// Un recorrido a medias (respondida la primera pregunta), para Recientes.
+const RECORRIDO_A_MEDIAS = `{ const { db } = await import('/src/lib/db.ts'); await db.progresoDiagnostico.put({ diagnosticoId: 'diag-impresora-ejemplo', camino: [{ nodoId: 'imp-n1', pregunta: '¿La impresora aparece en Windows?', opcionId: 'imp-n1-si', etiqueta: 'Si, aparece' }], estado: { tipo: 'pregunta', nodoId: 'imp-n2' }, articulosEjecutados: [], iniciadoEn: new Date().toISOString(), actualizadoEn: new Date().toISOString(), procedimientoEnCurso: null }); await db.recientes.put({ clave: 'diagnostico:diag-impresora-ejemplo', tipo: 'diagnostico', entidadId: 'diag-impresora-ejemplo', visitadoEn: new Date().toISOString() }); }`
+const buscarEnResolver = (texto) =>
+  `{ const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,${JSON.stringify(texto)}); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,700)); }`
+
 const TODAS_LAS_PARADAS = [
   // Encargo del 2026-09-22: Resolver, Equipos, Bóveda y Más.
   { nombre: 'resolver', ruta: '/' },
@@ -117,6 +127,56 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'problema', ruta: '/soluciones/cat-pos/art-decision', guion: tocar('Tengo un problema') },
   { nombre: 'detalles', ruta: '/soluciones/cat-impresoras/art-recurso-compartido/detalles' },
   { nombre: 'editor-pasos', ruta: '/soluciones/cat-impresoras/art-alcance-tarea/editar', guion: `[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Pasos')?.click();` },
+  // Tarea 263 (encargo "Resolucion guiada"): los cinco ejemplos.
+  { nombre: 'recorrido-buscar-problema', ruta: '/', antes: RECORRIDOS_LIMPIOS, guion: buscarEnResolver('impresora no imprime') },
+  { nombre: 'recorrido-buscar-procedimiento', ruta: '/', guion: buscarEnResolver('desbloquear usuario') },
+  { nombre: 'recorrido-buscar-resolucion', ruta: '/', guion: buscarEnResolver('actualizar resolucion') },
+  { nombre: 'recorrido-pregunta', ruta: '/diagnostico/diag-impresora-ejemplo', antes: RECORRIDOS_LIMPIOS },
+  {
+    nombre: 'recorrido-procedimiento',
+    ruta: '/diagnostico/diag-impresora-ejemplo',
+    antes: RECORRIDOS_LIMPIOS,
+    guion: tocar('No aparece'),
+  },
+  {
+    nombre: 'recorrido-vuelve',
+    ruta: '/diagnostico/diag-impresora-ejemplo',
+    antes: RECORRIDOS_LIMPIOS,
+    guion: tocar('No aparece') + siguiente + tocar('Terminar'),
+  },
+  {
+    nombre: 'recorrido-escalar',
+    ruta: '/diagnostico/diag-impresora-ejemplo',
+    antes: RECORRIDOS_LIMPIOS,
+    guion: tocar('Aparece sin conexion'),
+  },
+  {
+    nombre: 'recorrido-solucionado',
+    ruta: '/diagnostico/diag-impresora-ejemplo',
+    antes: RECORRIDOS_LIMPIOS,
+    guion: tocar('Si, aparece') + tocar('Si'),
+  },
+  {
+    nombre: 'recorrido-credencial',
+    ruta: '/diagnostico/diag-sesion-ejemplo',
+    antes: RECORRIDOS_LIMPIOS,
+    guion: tocar('La cuenta esta bloqueada') + tocar('Dato protegido: Administrador del directorio de ejemplo'),
+  },
+  { nombre: 'recorrido-recientes', ruta: '/', antes: RECORRIDOS_LIMPIOS + RECORRIDO_A_MEDIAS, despues: RECORRIDOS_LIMPIOS },
+  {
+    nombre: 'recorrido-guia-decision',
+    ruta: '/soluciones/cat-pos/art-resolucion-dian',
+    antes: RECORRIDOS_LIMPIOS + modo('foco'),
+    guion: siguiente,
+  },
+  {
+    nombre: 'recorrido-guia-rama',
+    ruta: '/soluciones/cat-pos/art-resolucion-dian',
+    antes: RECORRIDOS_LIMPIOS + modo('foco'),
+    guion: siguiente + tocar('No: abrir'),
+    despues: RECORRIDOS_LIMPIOS,
+  },
+  { nombre: 'recorrido-editor', ruta: '/diagnostico/diag-impresora-ejemplo/editar' },
 ]
 
 const PARADAS = FILTRO_PARADAS
