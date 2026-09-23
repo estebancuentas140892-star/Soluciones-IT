@@ -1,5 +1,33 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-22: Resolución guiada
+
+### 263. Resolución guiada: Resolver unifica guías y diagnósticos
+
+**Título:** el técnico entra a Resolver con una necesidad o un problema y la app lo acompaña hasta la solución, sin decidir antes si busca una guía o un diagnóstico. **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22 ("Resolución guiada", puntos 1 a 20). **Decisión:** [DECISIONES.md](DECISIONES.md) AD-045. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-045 y RN-046.
+
+**Cómo se hizo.** Una sesión dejó registrado el análisis y el plan en este tablero (`9c208ae`) y empezó el código; se cortó por el límite de uso con todo sin commit. La misma sesión, al restablecerse, lo terminó.
+
+**Análisis (resumen).** El buscador de Resolver ya encontraba guías y diagnósticos, y la intención "problema" ya ponía el diagnóstico primero; pero la fila decía "Diagnóstico", la ejecución salía a Más › Diagnósticos, un recorrido a medias no estaba en Recientes, y el procedimiento dentro de un diagnóstico usaba y REINICIABA el avance global de la guía (defecto real). Decisión de alcance: sin tercer modelo ni SQL; se unifica la experiencia (AD-045).
+
+**Qué se hizo:**
+
+1. **Entrada por Resolver.** El diagnóstico se llama "Guía con preguntas" (`ROTULO_RECORRIDO`) en el buscador, Recientes y favoritos; su fila lo arranca o lo retoma, sin "Iniciar" (repetía la fila y perdía el origen; la medición pasa a la fila). `subtituloConTipo` ya no repite el tipo ("Diagnóstico · Impresoras · Diagnóstico"). "desbloquear" y "bloquear" son verbos de procedimiento y "bloquead" un síntoma (ejemplos B y D). Recientes junta guías y guías con preguntas (`recorridosRecientes`, `dondeVaElRecorrido`, `juntarRecientes`), con "Vas en la pregunta N" o "Haciendo «guía»", y títulos en hasta dos líneas.
+2. **Ejecución unificada** (`DiagnosticoRunPage.tsx`): "Resolviendo", "Decide", respuestas de 56 px con "Te lleva a «guía»"; cuelga de Resolver (`esRecorridoEnEjecucion` en `navegacion.ts`) y su X vuelve al origen: la búsqueda (con lo escrito), la lista de Más (con su filtro), las estadísticas, la categoría o el historial, que ahora pasan el origen.
+3. **Procedimiento con regreso fiable y avance propio** (`ProcedimientoEnRecorrido`, `raizDelProcedimiento` en `progresoDiagnostico.ts`): cabecera "Estás realizando «X» para continuar con «Y»", "Volver a la pregunta", la misma `AsistenteVista` (con "Credencial necesaria" consultable ahí mismo) y avance en `recorrido:<id>`; la guía suelta no se toca; al terminar, el recorrido sigue solo.
+4. **Resultados:** `resultado` en la opción terminal (Solucionado, Sigue sin resolverse, Hay que escalar, Falta información o un requisito); el editor lo pide ("Cómo termina") y "Probar" lo dice; solo Solucionado o sin indicar preguntan "¿Quedó resuelto?"; la barra se llena en verde solo si resuelve.
+5. **Editor, lo justo:** "Cómo termina", y "Primera pregunta" / "Preguntas que llevan del problema a la solución" en lugar de "árbol".
+6. **Credencial en contexto:** el desbloqueo en línea de `CredencialEnPaso` a 44 px.
+7. **Contenido de prueba** (`semillaLocal.ts`): las guías de los ejemplos A, B y E (resolución DIAN con la rama "Localizar la resolución", desbloqueo con credencial), la guía de la impresora y la de la clave temporal, y dos guías con preguntas (C, "La impresora de ejemplo no imprime"; D, "El usuario de ejemplo no puede iniciar sesión").
+
+**Pruebas.** 127 archivos y 1831 casos en verde (la 256 cerró con 126 y 1801). Nueva: `resolucionGuiada.test.tsx`, con las pantallas de verdad: ejemplo C desde Resolver (se presenta como guía con preguntas, sin "Iniciar", abre en su primera pregunta), salir vuelve a la búsqueda con lo escrito, ejemplos A y B (la guía primero, abierta en su paso 1, sin preguntas, aunque haya una credencial que se llame parecido), "No" hace la guía dentro y vuelve solo a la pregunta siguiente sin tocar el avance suelto, finales Solucionado, Sigue sin resolverse y Hay que escalar, "Volver a la pregunta" y Recientes retoman donde iba, el botón atrás no rompe el recorrido, la credencial se desbloquea sin salir, ejemplo D (cada causa, su guía), ejemplo E (la decisión abre la rama y vuelve al punto exacto), la lista de Más vuelve a la lista, y un recorrido guardado antes (sin `resultado`) sigue preguntando. Además: `resultado` en `diagnostico.test.ts` (6 casos), el avance propio en `progresoDiagnostico.test.ts`, Recientes en `resolver.test.ts`, el padre en `navegacion.test.ts`, la intención y el subtítulo en `mejores.test.ts`.
+
+**Capturas** (360×740, 390×844, 430×932 y 1366×768, en `evidencia/`, no se versiona; trece paradas nuevas `recorrido-*`): sin desbordamiento horizontal ni guiones fallidos. Lo que queda ya existía: el título de la barra de tarea recortado a una línea (el entero va en "Estás realizando..."), el subtítulo de un equipo en los resultados, los controles del editor de diagnósticos por debajo de 44 px y el campo del buscador medido dentro de su etiqueta.
+
+**Limitaciones que quedan:** las decisiones DENTRO de una guía siguen siendo Sí/No (el No abre otra guía y vuelve); una decisión de varias salidas se construye como guía con preguntas. Al volver de la rama, la guía se queda en la decisión ya respondida y el siguiente toque sigue: es el punto exacto, no un salto automático. Una copia de la app sin actualizar que guarde un diagnóstico descarta "Cómo termina".
+
+**Lo que no se tocó:** el modelo y la ejecución de las guías, rutas, esquema local y de Supabase, RLS, sincronización, registro de ejecuciones, y la administración de diagnósticos en Más. **No hay que ejecutar SQL.**
+
 ## Encargo del 2026-09-22: Soluciones IT se organiza alrededor de Resolver
 
 ### 256. Fase 4: Equipos + QR

@@ -125,7 +125,9 @@ Cómo se puntúa cada candidato (función `puntuacion`, pura y probada):
 
 **No se pinta nada dos veces.** Lo que sube arriba se **descuenta de su grupo** (`sinLosMejores`); un grupo que se queda sin filas desaparece. Con **un solo resultado** la sección no se dibuja (`hayQueSepararMejores`): una cabecera "Mejores resultados · 1" sobre una fila única es ruido, y ahí la acción la lleva la propia fila del grupo.
 
-**El tipo se escribe en la fila.** Fuera de los grupos no hay cabecera que lo diga, así que el subtítulo se antepone con el tipo: "Guía · ICG Manager", "Equipo · Epson · Caja 4", "Bóveda · Acceso" (`subtituloConTipo`, que no repite el tipo si el subtítulo ya empieza por él).
+**El tipo se escribe en la fila.** Fuera de los grupos no hay cabecera que lo diga, así que el subtítulo se antepone con el tipo: "Guía · ICG Manager", "Guía con preguntas · Impresoras", "Equipo · Epson · Caja 4", "Bóveda · Acceso" (`subtituloConTipo`, que no repite el tipo si el subtítulo ya empieza por él ni cuando ya es uno de sus tramos: "Impresoras · Guía con preguntas" pasa a "Guía con preguntas · Impresoras"; antes salía "Diagnóstico · Impresoras · Diagnóstico").
+
+**Un diagnóstico se llama "Guía con preguntas" (2026-09-22, tarea 263, AD-045).** Para quien resuelve no es otra herramienta: `ETIQUETA_TIPO.diagnostico` y el subtítulo del índice usan `ROTULO_RECORRIDO` (`src/lib/diagnostico.ts`), igual que los recientes y los favoritos. "Diagnóstico" queda para su administración (Más).
 
 ### 7.2 Acciones directas en el resultado (2026-09-15, tarea 241)
 
@@ -134,7 +136,7 @@ Cómo se puntúa cada candidato (función `puntuacion`, pura y probada):
 | Tipo | Acción | De dónde sale la regla |
 |---|---|---|
 | **articulo** (guía) | **ninguna desde el 2026-09-17** (tarea 244) | Tocar la fila abre la guía **en su paso pendiente** (`GuiaPage`): una guía terminada empieza un caso nuevo y una a medias se retoma. El botón `Empezar` / `Continuar · paso N de M` / `Repetir guía` repetía ese enlace y se retiró. `accionDeGuia` (vía `useAccionesDeGuia`) solo decide con qué verbo se mide el recorrido (`empezar_guia` o `continuar_guia`) |
-| **diagnostico** | `Iniciar` | La ruta del diagnóstico ya arranca la sesión sola |
+| **diagnostico** (guía con preguntas) | **ninguna desde el 2026-09-22** (tarea 263) | Tocar la fila la arranca en su primera pregunta o la retoma donde iba, igual que una guía. El `Iniciar` repetía ese enlace y navegaba sin el origen, así que salir del recorrido no devolvía a la búsqueda. La fila mide el recorrido con el verbo de siempre, `iniciar_diagnostico` |
 | **credencial** | `Ver` (vista rápida, sección 7.7) + `Copiar usuario` + `Copiar contraseña` (acceso) · `Ver` + `Copiar clave` (clave o PIN) · `Ver` + `Copiar` (token o licencia) · `Ver` (nota segura) · `Abrir ficha` (archivo seguro, que no se abre en el buscador; en modo consulta, nada) | `accionesRapidasDeCredencial` y `copiarCampoCredencial` (`src/features/boveda/accionesCredencial.ts`), extraídos de `BovedaPage`: descifrado, permisos y **auditoría** son los de siempre |
 | **comando** y **atajo** | `Copiar comando` / `Copiar atajo` | El campo `valor` de la ficha. Esa tabla **nunca guarda secretos**, así que aquí no hay descifrado ni auditoría que hacer |
 | todo lo demás | ninguna | Abrir la ficha ES la acción, y la fila entera ya la abre |
@@ -143,7 +145,7 @@ Cómo se puntúa cada candidato (función `puntuacion`, pura y probada):
 
 **Volver al sitio.** Cada fila viaja con `conOrigen(pathname, 'la búsqueda', { consulta, capa })`, así que abrir una ficha desde aquí y volver devuelve **a la búsqueda**, no a la lista raíz de su sección, y **con lo que estaba escrito** (sección 7.8, desde el 2026-09-16). Es el sistema de origen que ya existía (AD-030), no un segundo mecanismo.
 
-**En modo consulta** (encima de una guía en ejecución, sección 7.5) no se ofrece nada que abra otra ejecución: la fila de una guía no navega (abrirla sería ejecutarla) y un diagnóstico no ofrece `Iniciar`. La guía o el diagnóstico encontrados quedan como referencia. Copiar sí sigue. Lo decide `ofreceAccionDirecta` (`src/features/busqueda/modoConsulta.ts`).
+**En modo consulta** (encima de una guía en ejecución, sección 7.5) no se ofrece nada que abra otra ejecución: la fila de una guía o de una guía con preguntas no navega (abrirla sería ejecutarla). La guía o el diagnóstico encontrados quedan como referencia. Copiar sí sigue. Lo decide `ofreceAccionDirecta` (`src/features/busqueda/modoConsulta.ts`).
 
 ### 7.3 Intención de la consulta, con los datos que ya hay (2026-09-15, tarea 241)
 
@@ -151,12 +153,14 @@ Cómo se puntúa cada candidato (función `puntuacion`, pura y probada):
 
 | Intención | Se detecta por | Favorece |
 |---|---|---|
-| `procedimiento` | un verbo de procedimiento entre las palabras (crear, configurar, instalar, reiniciar, restablecer, conectar...) | guía, diagnóstico |
+| `procedimiento` | un verbo de procedimiento entre las palabras (crear, configurar, instalar, reiniciar, restablecer, conectar, desbloquear, bloquear...) | guía, diagnóstico |
 | `glosario` | empieza por "qué es", "qué significa", "definición"... | término |
 | `equipo` | varias palabras y **una de ellas es un número** ("caja 4", "impresora taquilla 2") | equipo |
-| `problema` | "no ", "falla", "error", "lento", "se cae", "sin "... | diagnóstico, guía |
+| `problema` | "no ", "falla", "error", "lento", "se cae", "sin ", "bloquead"... | diagnóstico, guía |
 | `acceso` | usuario, contraseña, clave, acceso, cuenta, PIN, token, licencia, administrador... | credencial |
 | `consola` | comando, consola, terminal, cmd, powershell, atajo, tecla | comando, atajo |
+
+**"desbloquear" y "bloqueado" (2026-09-22, tarea 263, ejemplos B y D del encargo).** Sin el verbo, "desbloquear usuario" solo pedía un acceso (por "usuario") y una credencial que se llamara parecido podía ganarle a la guía; ahora es un procedimiento. "usuario bloqueado" o "cuenta bloqueada" es un síntoma: problema.
 
 El bono de intención (**+18**) es menor que cualquier coincidencia de título: **desempata entre cosas que ya coinciden, nunca inventa un resultado que no se buscó**. Casos como "ping" o "zabbix" no necesitan intención: los resuelve la coincidencia exacta de título (+100).
 

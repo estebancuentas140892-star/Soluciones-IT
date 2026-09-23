@@ -270,6 +270,22 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - La búsqueda sobrevive al salto a una ficha (estado de navegación, el mismo mecanismo que Resolver) y el chip va en la URL (`?categoria=`); un equipo de red abierto desde Equipos vuelve a Equipos.
 - "Conectado a" en la ficha: el primer enlace (`tipo = 'enlace'`, no eliminado) en el que el equipo es el DESTINO, porque el origen es su padre en la topología (`arbol.ts`), ordenado por puerto; se enseñan el nombre vivo del otro equipo y SU puerto (`conectadoA`, `textoConectadoA` en `src/lib/conexiones.ts`), y "y N más" si hay más subidas. `instalacion` y `relacionado` no cuentan.
 
+---
+
+**RN-045. Una guía con preguntas se entra desde Resolver, se sale a donde se vino y su procedimiento tiene avance propio.**
+- Un diagnóstico es, para quien resuelve, una "guía con preguntas" (`ROTULO_RECORRIDO`): sale en el buscador de Resolver junto a las guías, la intención decide el orden (un problema pone primero la guía con preguntas; un procedimiento, la guía) y la fila la abre, sin botón aparte. Su ejecución (`/diagnostico/:id`) cuelga de Resolver; la X vuelve al origen del salto (la búsqueda, con lo escrito; la lista de Más con su filtro; las estadísticas; la categoría; el historial) o, sin origen, a Resolver. Salir sin haber respondido nada descarta la sesión.
+- El procedimiento de una respuesta se ejecuta dentro del recorrido con `AsistenteVista` y su avance vive en `recorrido:<diagnosticoId>` (`progresoPasos`). La fila de la guía no se lee ni se escribe: la guía no se reinicia ni aparece como empezada. Volver a elegir la misma respuesta tras "Volver a la pregunta" conserva lo hecho; otra guía empieza de cero; terminarla (todos sus pasos y la verificación final) o descartar el recorrido borra ese avance. Al terminarla, el recorrido sigue solo.
+- Recientes de Resolver lista guías y guías con preguntas juntas; una guía con preguntas a medias dice dónde va. Abrirla y salir sin responder no la deja a medias.
+- Dura en el código: `src/lib/progresoDiagnostico.ts`, `src/lib/navegacion.ts` (`esRecorridoEnEjecucion`), `src/features/diagnostico/DiagnosticoRunPage.tsx`, `src/features/inicio/resolver.ts` (`recorridosRecientes`, `dondeVaElRecorrido`, `juntarRecientes`).
+
+---
+
+**RN-046. Cada final dice cómo termina; recorrer todo no es resolver.**
+- Una respuesta terminal lleva `resultado`: sin indicar, Solucionado, Sigue sin resolverse, Hay que escalar o Falta información o un requisito. Solo en las terminales: en una que sigue a otra pregunta se descarta al normalizar y al guardar.
+- Sin indicar (todo el contenido anterior) y Solucionado preguntan "¿Quedó resuelto el problema?" (y, si no, el motivo). Los otros tres no preguntan: la ejecución se registra con `resuelto = 'no'` y `motivo = ''`. No hay valores nuevos en `ejecuciones_diagnostico`.
+- El validador de siempre (`validarNodos`: ciclos, destinos inexistentes, ramas sin salida, inalcanzables) acepta como salida útil una respuesta que solo dice cómo termina.
+- Dura en el código: `src/lib/diagnostico.ts` (`RESULTADOS_RECORRIDO`, `resultadoValido`, `resultadoDelFinal`, `pideConfirmacion`).
+
 ## 3. Modelo entidad-relación
 
 ### 3.1 Diagrama
@@ -404,7 +420,7 @@ stateDiagram-v2
   Final --> [*] : cerrar (registra ejecución inmutable)
 ```
 
-Al cerrar (resuelto `si`/`no`/`abandonado`) se inserta una fila en `ejecuciones_diagnostico` (salvo un abandono sin ninguna respuesta) y se borra el progreso local.
+Al cerrar (resuelto `si`/`no`/`abandonado`) se inserta una fila en `ejecuciones_diagnostico` (salvo un abandono sin ninguna respuesta) y se borra el progreso local, también el del procedimiento que se hacía dentro (`recorrido:<id>`, RN-045). Desde la tarea 263 el estado `Final` lleva `resultado` (RN-046): con Solucionado o sin indicar, "cerrar" pasa por "¿Quedó resuelto?"; con los otros, cierra como `no` directamente.
 
 ### 4.6 Máquina de estado: ejecución de un procedimiento (modo asistente)
 

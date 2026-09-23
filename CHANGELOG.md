@@ -6,6 +6,27 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-23
+
+### Cambiado (resolver, tarea 263): Resolución guiada, Resolver unifica guías y diagnósticos
+
+**Área modificada:** Resolver (buscador y Recientes), ejecución de los diagnósticos, editor de diagnósticos (solo "Cómo termina" y textos), consulta de credenciales en línea.
+**Tipo:** Modificado (el diagnóstico se presenta y se ejecuta como una "guía con preguntas", cuelga de Resolver y vuelve al origen), Agregado ("Cómo termina" en cada final, Recientes con guías con preguntas, verbos "desbloquear" y "bloquear"), Corregido (el procedimiento dentro de un diagnóstico reiniciaba el avance de la guía; "Diagnóstico · Impresoras · Diagnóstico" en los resultados; la X del diagnóstico desde la búsqueda no la reponía), Eliminado (botón "Iniciar" del resultado de un diagnóstico).
+**Nuevos:** `src/features/diagnostico/resolucionGuiada.test.tsx`.
+**Modificados:** `src/lib/{db,diagnostico,progresoDiagnostico,navegacion,recientes,favoritos}.ts` y sus pruebas, `src/features/diagnostico/{DiagnosticoRunPage,DiagnosticoForm,PruebaDiagnostico,DiagnosticosPage,EstadisticasPage}.tsx`, `src/features/busqueda/{mejores,useIndiceBusqueda}.ts`, `src/features/busqueda/{AccionesResultado,ResultadosBusqueda}.tsx`, `src/features/inicio/{resolver.ts,ResolverPage.tsx}`, `src/features/boveda/CredencialEnPaso.tsx`, `src/features/soluciones/CategoriaPage.tsx`, `src/features/historial/Historial.tsx`, `src/pruebas/semillaLocal.ts` y `scripts/capturas-moviles.mjs`.
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (Resolver, buscador, 6.1 y 7), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-045, RN-046 y 4.5), [ARQUITECTURA.md](ARQUITECTURA.md) (diagnósticos), [COMPONENTES_UI.md](COMPONENTES_UI.md), [BUSCADOR.md](BUSCADOR.md) (7.1 a 7.3) y [DECISIONES.md](DECISIONES.md) (AD-045).
+**Motivo:** encargo del usuario del **22 de septiembre de 2026**, "Resolución guiada": entrar a Resolver con una necesidad o un problema y llegar a la solución sin decidir antes si hace falta una guía o un diagnóstico.
+**Impacto esperado:** un solo lugar para empezar; el problema ambiguo lleva, pregunta a pregunta, a la guía que corresponde y vuelve; lo hecho dentro no ensucia la guía suelta; y el final dice si se resolvió, si hay que escalar o si falta algo.
+**SIN cambios** de rutas, esquema local o de Supabase, RLS, datos ni sincronización: `resultado` vive en el JSON `nodos`. **No hay que ejecutar SQL.** **Actualizar los teléfonos antes de rellenar "Cómo termina":** una copia anterior que guarde un diagnóstico lo descarta.
+
+- **Entrada:** el diagnóstico se llama "Guía con preguntas" en el buscador, Recientes y favoritos; su fila lo arranca o lo retoma (sin "Iniciar"); "desbloquear usuario" es un procedimiento y "usuario bloqueado" un problema.
+- **Ejecución:** "Resolviendo", "Decide", respuestas de 56 px y "Te lleva a «guía»"; la guía de una respuesta se hace dentro con la cabecera "Estás realizando «X» para continuar con «Y»", "Volver a la pregunta" y avance PROPIO (`recorrido:<id>`), y al terminarla el recorrido sigue solo; la X vuelve al origen (búsqueda con lo escrito, lista de Más con su filtro, estadísticas, categoría, historial) o a Resolver.
+- **Finales:** Solucionado o sin indicar preguntan "¿Quedó resuelto?"; Hay que escalar, Sigue sin resolverse y Falta información registran "no" sin preguntar; la barra se llena en verde solo si resuelve.
+- **Recientes:** guías y guías con preguntas juntas, con "Vas en la pregunta N" o "Haciendo «guía»"; títulos y detalle en hasta dos líneas (a 360 px ya no se cortaban solo por el ancho).
+- **Editor:** "Cómo termina" en cada respuesta final; "Primera pregunta" y "Preguntas que llevan del problema a la solución" en vez de "árbol"; "Probar" dice cómo termina.
+- **Credencial en contexto:** el desbloqueo en línea a 44 px.
+- **Verificación:** 127 archivos y 1831 casos en verde (antes 126 y 1801); lint, tipos y build limpios. Prueba de flujo con los cinco ejemplos del encargo (`resolucionGuiada.test.tsx`). Capturas por CDP en 360×740, 390×844, 430×932 y 1366×768 con trece paradas nuevas; sin desbordamiento horizontal.
+
 ## 2026-09-22
 
 ### Cambiado (equipos, tarea 256, Fase 4 del rediseño "Resolver"): Equipos + QR
