@@ -4,18 +4,31 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación), 255 (ejecución visual de las guías) y 256 (Equipos + QR). **Siguen:** 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas).
+**ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación), 255 (ejecución visual de las guías) y 256 (Equipos + QR). **Siguen:** 257 (Más e Infraestructura), 258 (portal `/asistencia`), 259 (precache y rendimiento) y 260 (pruebas completas). **En proceso, delante de la 257:** la tarea **263** (Resolución guiada), encargo nuevo del mismo día.
 
-### 257. Fase 5: Más e Infraestructura
+### 263. Resolución guiada: Resolver unifica guías y diagnósticos
 
-- **Título:** Más con cuatro grupos (Consulta, Infraestructura, Herramientas, Configuración).
-- **Descripción:** reordenar `PantallaMas.tsx`; Mis favoritos solo si hay; Actividad del equipo al final de la Agenda; Red y Topología cambian de puerta, no de comportamiento; en pantallas anchas, columnas.
-- **Motivo:** secciones 18, 20 y 22 del encargo.
-- **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** En progreso (pasa a En proceso al cerrar la 256, el 2026-09-22; sin empezar).
-- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/features/red/RedPage.tsx` (regreso).
-- **Dependencias:** 254.
-- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+- **Título:** el técnico entra a Resolver con una necesidad o un problema y la app lo acompaña hasta la solución, sin decidir antes si busca una guía o un diagnóstico.
+- **Origen:** encargo del usuario del 2026-09-22 ("Resolución guiada"), puntos 1 a 20.
+- **Análisis (2026-09-22, sobre el código):**
+  - Resolver (`src/features/inicio/ResolverPage.tsx`) busca con el índice global, que YA incluye guías y diagnósticos (`useIndiceBusqueda.ts`, tipo `diagnostico`, ruta `/diagnostico/:id`), y la intención "problema" ya pone los diagnósticos primero (`mejores.ts`). Pero la fila dice "Diagnóstico", el recorrido sale del mundo de Resolver (su regreso y su cierre llevan a Más > Diagnósticos, `navegacion.ts` y `DiagnosticoRunPage.tsx` ~90 y ~120) y un recorrido a medias no aparece en Recientes (`resolver.ts`, `guiasRecientes`, solo `articulo`).
+  - Guía: `procedimiento` JSON con pasos, acciones, comprobaciones y decisiones Sí/No (el No abre otra guía en el mismo sitio y vuelve, `ModoFoco.tsx` `responderNo`), guías vinculadas y dato protegido (`CredencialEnPaso`). Progreso local por ejecución (`progresoPasos`, vínculos dentro de la raíz, `contextoEjecucion.ts`).
+  - Diagnóstico: tabla `diagnosticos` con `nodos` JSON; cada respuesta va a otra pregunta, a un procedimiento que se ejecuta y continúa, o a un final con mensaje. Ejecutor propio (`DiagnosticoRunPage.tsx`), progreso local (`progresoDiagnostico`), registro (`ejecuciones_diagnostico`: `resuelto` y `motivo` con valores fijos por CHECK en Supabase) y validador completo (`validarNodos`: ciclos, destinos inexistentes, ramas sin salida, inalcanzables).
+  - Ya comparten: el procedimiento dentro de un diagnóstico se ejecuta con el mismo `AsistenteVista`.
+  - Defecto real: ese procedimiento usa y REINICIA el progreso global de la guía (`progresoDiagnostico.ts`, `reiniciarProgreso(opcion.articuloId)`): borra un avance propio del técnico y la marca como "en curso" fuera del recorrido.
+- **Decisión de alcance:** no hay un tercer modelo. El ramificado real ya existe (diagnóstico) y el lineal con desvío y regreso también (guía); se unifica la experiencia. Multi-respuesta dentro de las guías NO: duplicaría el modelo del diagnóstico y tocaría el progreso por paso, el "Paso N de M" y la ruta. Sin SQL ni versión de Dexie: todo cabe en el JSON que ya existe.
+- **Plan (y estado):**
+  1. Entrada: el diagnóstico se presenta como "Guía con preguntas", su ejecución cuelga de Resolver y su salida vuelve al origen (con la búsqueda). Recientes enseña también los recorridos, con "Vas en la pregunta N". *(pendiente)*
+  2. Ejecución unificada: el recorrido habla el mismo idioma que la guía ("Resolviendo", "Decide", respuestas grandes, colores de la guía) y el procedimiento vinculado se ejecuta con progreso PROPIO del recorrido (raíz `diagnostico:<id>`), con la misma cabecera que una guía vinculada y regreso automático. *(pendiente)*
+  3. Resultados: cada final dice cómo termina (Solucionado, Sigue sin resolverse, Hay que escalar, Falta información o un requisito); el editor lo pide. Sin columnas nuevas: el tipo vive en el JSON de la respuesta y la ejecución se registra con los valores permitidos. *(pendiente)*
+  4. Contenido de prueba equivalente a los ejemplos A a E en el banco local y pruebas de flujo; capturas a 360, 390, 430 y escritorio. *(pendiente)*
+  5. Documentación, commits, push y despliegue. *(pendiente)*
+- **Prioridad:** Alta. **Estado:** En progreso.
+- **Área afectada:** `src/features/diagnostico/{DiagnosticoRunPage,DiagnosticoForm}.tsx`, `src/lib/{diagnostico,progresoDiagnostico,navegacion,db}.ts`, `src/features/busqueda/{mejores,useIndiceBusqueda}.ts`, `src/features/inicio/{ResolverPage.tsx,resolver.ts}`, `src/pruebas/semillaLocal.ts`, `scripts/capturas-moviles.mjs`.
+- **Dependencias:** 254 (Resolver) y 255 (lenguaje de la guía).
+- **Modelo/esfuerzo:** Opus 5 / Alto.
+
+---
 
 ---
 
@@ -369,6 +382,17 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 257. Fase 5: Más e Infraestructura
+
+- **Título:** Más con cuatro grupos (Consulta, Infraestructura, Herramientas, Configuración).
+- **Descripción:** reordenar `PantallaMas.tsx`; Mis favoritos solo si hay; Actividad del equipo al final de la Agenda; Red y Topología cambian de puerta, no de comportamiento; en pantallas anchas, columnas.
+- **Motivo:** secciones 18, 20 y 22 del encargo.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Pendiente (vuelve a Por hacer el 2026-09-22 sin empezar: el encargo de la tarea 263 va delante).
+- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/AgendaPage.tsx`, `src/features/red/RedPage.tsx` (regreso).
+- **Dependencias:** 254.
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
 
 ### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
 
