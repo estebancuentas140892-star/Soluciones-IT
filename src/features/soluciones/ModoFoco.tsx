@@ -20,6 +20,8 @@ import {
 } from '../../components/iconos'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { ChipReferencia } from '../referencia/ChipReferencia'
+import { fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
+import { QueHaceEnTexto } from '../referencia/QueHaceEnTexto'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { bloquesUnicos, tipoEfectivo } from '../referencia/referencias'
 import { useReferencias } from '../referencia/useReferencias'
@@ -821,6 +823,17 @@ export function ModoFoco({
               />
             ))}
           </div>
+        )}
+
+        {/* "¿QUÉ HACE?" (tarea 270): la instrucción escribe un comando o
+            un atajo que tiene ficha en el Centro de consulta, sin que el
+            autor la enlazara. Se abre en la misma hoja que un término. */}
+        {tarea.clase === 'tarea' && (
+          <QueHaceEnTexto
+            texto={tarea.texto}
+            referencias={referenciasVivas}
+            excluir={fichasEnlazadasDelPaso(paso.bloques)}
+          />
         )}
 
         {/* LO QUE SIRVE PARA ENTENDER, NO PARA HACER (sección 8 del

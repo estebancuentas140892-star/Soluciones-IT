@@ -102,8 +102,12 @@ export function descripcionVencida(venceEn: string, hoy: Date = new Date()): str
 // ("Vence el 18 sep"), no uno distinto por dispositivo.
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
-/** "2026-09-18" como "18 sep". Cadena vacia si la fecha no es una fecha. */
-function fechaCorta(venceEn: string): string {
+/**
+ * "2026-09-18" como "18 sep". Cadena vacia si la fecha no es una fecha.
+ * Exportada desde la tarea 270: la agenda dice igual las fechas de
+ * ingreso y de retiro de una persona ("Ingresa el 30 sep").
+ */
+export function fechaCorta(venceEn: string): string {
   const partes = PATRON_FECHA.exec(venceEn)
   if (!partes) return ''
   const mes = MESES_CORTOS[Number(partes[2]) - 1]

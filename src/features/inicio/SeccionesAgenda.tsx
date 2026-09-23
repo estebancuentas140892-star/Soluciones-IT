@@ -8,7 +8,9 @@ import {
   type IconoProps,
   Lightbulb,
   LockSimple,
+  Monitor,
   PencilSimple,
+  User,
 } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
 import { tarjetaReanudarVisible, useReanudar } from '../soluciones/useReanudar'
@@ -198,14 +200,17 @@ export function SeccionesAgenda({
       )}
 
       {/* POR REVISAR DEL EQUIPO · sugerencias de diagnóstico que nadie ha
-          convertido en guía. No están asignadas a este técnico, y siguen
-          el permiso con el que ya se listan en Diagnósticos. */}
+          convertido en guía (siguen el permiso con el que ya se listan en
+          Guías con preguntas) y, desde la tarea 270, los equipos
+          liberados hace poco que esperan dueño y las personas retiradas
+          sin fecha que aún tienen equipos. Nada está asignado a este
+          técnico: son asuntos del equipo. */}
       {vista.porRevisar.length > 0 && (
         <BloqueLista
           titulo="Por revisar del equipo"
           total={vista.porRevisar.length}
           estado="porRevisar"
-          etiquetaVerMas="sugerencias del equipo"
+          etiquetaVerMas="asuntos por revisar"
         >
           {(visibles) =>
             vista.porRevisar
@@ -311,7 +316,7 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
         <span className="block truncate text-[15px] font-medium leading-[1.3]">{item.titulo}</span>
         <span className="block truncate text-[12.5px]">
           <span className={COLOR_RAZON[item.tono]}>{item.detalle}</span>
-          {item.fecha !== null && <span className="text-noct-neutral-400"> · {item.origen}</span>}
+          {item.fecha !== null && item.origen && <span className="text-noct-neutral-400"> · {item.origen}</span>}
         </span>
       </span>
       {/* La acción en su palabra, SIN chevron detrás: los dos dicen lo
@@ -333,6 +338,10 @@ const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) =>
   credencial: LockSimple,
   campo_protegido: LockSimple,
   sugerencia: Lightbulb,
+  // Tarea 270: una persona (su ingreso o su retiro) y un equipo.
+  persona_ingreso: User,
+  persona_retirada: User,
+  equipo_liberado: Monitor,
 }
 const TONO_PENDIENTE: Record<ItemPendiente['tono'], string> = {
   neutro: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]',

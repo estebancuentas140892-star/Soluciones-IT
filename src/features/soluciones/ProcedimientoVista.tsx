@@ -5,6 +5,7 @@ import {
   type BloquePaso,
   type PasoAdjunto,
   type Procedimiento,
+  type Referencia,
   type TipoReferencia,
 } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
@@ -24,6 +25,8 @@ import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { ChipReferencia } from '../referencia/ChipReferencia'
+import { fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
+import { QueHaceEnTexto } from '../referencia/QueHaceEnTexto'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
@@ -117,6 +120,10 @@ export function ProcedimientoVista({
   // fila del articulo en el nivel 0, la entrada del vinculo dentro de
   // la ejecucion en curso en un nivel anidado.
   const clave = useClaveProgreso(articuloId, nivel)
+  // Las fichas del Centro de consulta, UNA consulta para todo el
+  // documento: cada tarea mira si escribe un comando o un atajo que
+  // tenga ficha ("¿Qué hace?", tarea 270).
+  const referenciasVivas = useReferencias()
 
   const { objetivoGeneral, requisitos, pasos, verificacionFinal } = procedimiento
 
@@ -345,6 +352,8 @@ export function ProcedimientoVista({
                           marcada={instruccionesHechas.has(bloque.id)}
                           onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
                           nivel={nivel}
+                          referencias={referenciasVivas}
+                          fichasEnlazadas={fichasEnlazadasDelPaso(paso.bloques)}
                           // La misma validación que la ejecución: el
                           // mapa del artículo también marca tareas, así
                           // que también tiene que respetar las guías
@@ -914,12 +923,22 @@ export function BloqueVista({
   ejecutarInline,
   onNoSeCumple,
   bloqueadaPor,
+  referencias,
+  fichasEnlazadas,
 }: {
   bloque: BloquePaso
   marcada: boolean
   onAlternar: () => void
   nivel?: number
   ejecutarInline?: EjecutarArticuloInline
+  /**
+   * Las fichas del Centro de consulta (tarea 270). Con ellas, una tarea
+   * que ESCRIBE un comando o un atajo que tiene ficha ofrece "¿Qué
+   * hace?"; sin ellas (quien no las pasa), no se ofrece nada.
+   */
+  referencias?: Map<string, Referencia>
+  /** Las fichas que el paso ya enlaza: esas ya están a la vista. */
+  fichasEnlazadas?: ReadonlySet<string>
   // Salida de una VERIFICACIÓN que no se cumple. La aporta quien tiene
   // la hoja de salidas a mano (la ejecución); en el mapa de lectura no
   // hay contingencia que abrir, así que ahí no se ofrece.
@@ -1123,6 +1142,11 @@ export function BloqueVista({
             : `Tarea: ${bloque.texto}`
         }
       />
+      {/* "¿Qué hace?" (tarea 270): alineado con el texto de la tarea,
+          no con la casilla. */}
+      {referencias && (
+        <QueHaceEnTexto texto={bloque.texto} referencias={referencias} excluir={fichasEnlazadas} className="pl-10" />
+      )}
       {credencialInline}
     </div>
   )

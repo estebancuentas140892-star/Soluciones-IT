@@ -27,10 +27,17 @@ export function ChipReferencia({
   referenciaId,
   tituloRespaldo,
   referencias,
+  rotulo,
 }: {
   referenciaId: string
   tituloRespaldo: string
   referencias: Map<string, Referencia>
+  /**
+   * Lo que dice la etiqueta en lugar del título de la ficha (tarea 270):
+   * "¿Qué hace «ipconfig /flushdns»?" para un comando que la instrucción
+   * ya escribe. Es también su nombre accesible.
+   */
+  rotulo?: string
 }) {
   const [abierta, setAbierta] = useState(false)
   const boton = useRef<HTMLButtonElement>(null)
@@ -57,18 +64,25 @@ export function ChipReferencia({
         aria-haspopup="dialog"
         aria-label={
           disponible
-            ? `${pregunta} ${titulo}`
+            ? (rotulo ?? `${pregunta} ${titulo}`)
             : `${titulo}: esta ficha no está disponible en este dispositivo`
         }
-        className={`inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium ${
-          disponible
-            ? 'border-noct-divider bg-noct-surface text-noct-neutral-200 hover:border-noct-accent/60 hover:text-noct-text'
-            : 'border-dashed border-noct-neutral-700 text-noct-neutral-500'
-        }`}
+        // 44 px de toque (R6, tarea 270) con la pastilla de 36 que se ve:
+        // el botón es la zona que se toca y la pastilla, lo que se ve, así
+        // que la etiqueta sigue siendo discreta.
+        className="group inline-flex min-h-11 max-w-full items-center"
       >
-        <Icono size={13} className="shrink-0 text-noct-accent-300" aria-hidden />
-        <span className="min-w-0 truncate">{titulo}</span>
-        {!disponible && <span className="shrink-0 text-[11px]">no disponible</span>}
+        <span
+          className={`inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium ${
+            disponible
+              ? 'border-noct-divider bg-noct-surface text-noct-neutral-200 group-hover:border-noct-accent/60 group-hover:text-noct-text'
+              : 'border-dashed border-noct-neutral-700 text-noct-neutral-500'
+          }`}
+        >
+          <Icono size={13} className="shrink-0 text-noct-accent-300" aria-hidden />
+          <span className="min-w-0 truncate">{rotulo ?? titulo}</span>
+          {!disponible && <span className="shrink-0 text-[11px]">no disponible</span>}
+        </span>
       </button>
 
       <HojaReferencia

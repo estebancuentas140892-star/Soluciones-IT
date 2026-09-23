@@ -29,11 +29,17 @@ import { copiarAlPortapapeles } from '../../lib/portapapeles'
 export function TarjetaComando({
   referencia,
   tituloRespaldo,
+  sinTitulo = false,
 }: {
   /** La ficha viva, o undefined si no está en este dispositivo. */
   referencia: Referencia | undefined
   /** Copia del título guardada en el bloque. */
   tituloRespaldo: string
+  /**
+   * Sin el rótulo ni el título propios: dentro de `HojaReferencia` (tarea
+   * 270), cuya cabecera ya dice "Comando" y el nombre de la ficha.
+   */
+  sinTitulo?: boolean
 }) {
   const [copiado, setCopiado] = useState(false)
 
@@ -62,20 +68,22 @@ export function TarjetaComando({
 
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-noct-divider bg-noct-surface p-3">
-      <div className="flex flex-col gap-0.5">
-        <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
-          <Icono size={13} className="shrink-0" aria-hidden />
-          {esAtajo ? 'Atajo' : 'Comando'}
-          {referencia.plataforma && (
-            <span className="font-medium normal-case tracking-normal text-noct-neutral-400">
-              · {referencia.plataforma}
-            </span>
-          )}
-        </span>
-        <span className="text-pretty text-[15px] font-medium leading-[1.3] text-noct-text">
-          {referencia.titulo}
-        </span>
-      </div>
+      {!sinTitulo && (
+        <div className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
+            <Icono size={13} className="shrink-0" aria-hidden />
+            {esAtajo ? 'Atajo' : 'Comando'}
+            {referencia.plataforma && (
+              <span className="font-medium normal-case tracking-normal text-noct-neutral-400">
+                · {referencia.plataforma}
+              </span>
+            )}
+          </span>
+          <span className="text-pretty text-[15px] font-medium leading-[1.3] text-noct-text">
+            {referencia.titulo}
+          </span>
+        </div>
+      )}
 
       {referencia.valor && (
         <div className="flex items-center gap-2 rounded-lg bg-noct-bg px-3 py-2.5">

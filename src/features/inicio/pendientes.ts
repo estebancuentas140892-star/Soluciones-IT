@@ -1,6 +1,15 @@
-import type { Articulo, CampoProtegido, Credencial, EjecucionDiagnostico } from '../../lib/db'
+import type {
+  Articulo,
+  CampoProtegido,
+  Credencial,
+  Dispositivo,
+  EjecucionDiagnostico,
+  HistorialEntrada,
+  Persona,
+} from '../../lib/db'
 import { diasDeCalendario, estadoVencimiento, textoVencimiento } from '../../lib/vencimiento'
 import { tiempoRelativo } from '../historial/actividadEquipo'
+import { equiposLiberadosRecientes, personasPorRecibir, personasRetiradasConEquipos } from './asuntosDePersonas'
 
 // Bloque "Pendientes" de Inicio (decisión D5 de PROPUESTA_JORNADA_TECNICO.md,
 // aprobada por el usuario el 2026-07-21 con el contenido recomendado):
@@ -28,7 +37,16 @@ export interface ItemPendiente {
   detalle: string
   ruta: string
   tono: 'neutro' | 'precaucion' | 'error'
-  categoria: 'borrador' | 'credencial' | 'sugerencia' | 'campo_protegido'
+  categoria:
+    | 'borrador'
+    | 'credencial'
+    | 'sugerencia'
+    | 'campo_protegido'
+    // Desde la tarea 270: lo que piden los ingresos, los retiros y los
+    // equipos que se sueltan (ver asuntosDePersonas.ts).
+    | 'persona_ingreso'
+    | 'persona_retirada'
+    | 'equipo_liberado'
   /** Fecha de vencimiento "YYYY-MM-DD", o null si el ítem no tiene una. */
   fecha: string | null
   /**
@@ -173,11 +191,14 @@ export function sugerenciasSinRevisar(
     }))
 }
 
-// Combina las cuatro fuentes en un solo bloque. Primero TODO lo que
-// tiene fecha, ordenado globalmente por esa fecha (venga de la Bóveda o
-// de los Datos protegidos de un equipo: para quien lo tiene que rotar
-// son la misma obligación); después el trabajo sin plazo (borradores
-// propios y sugerencias del equipo).
+// Combina las fuentes en un solo bloque. Primero TODO lo que tiene
+// fecha, ordenado globalmente por esa fecha (venga de la Bóveda, de los
+// Datos protegidos de un equipo o, desde la tarea 270, del ingreso o el
+// retiro de una persona: para quien lo tiene que atender son la misma
+// clase de obligación); después el trabajo sin plazo (borradores
+// propios) y lo que el equipo tiene por revisar (una persona retirada
+// sin fecha que aún tiene equipos, un equipo liberado que espera dueño y
+// las sugerencias del equipo).
 export function calcularPendientes(datos: {
   articulos: Articulo[]
   credenciales: Credencial[]
@@ -190,6 +211,13 @@ export function calcularPendientes(datos: {
   // ahí, publicar el artículo (que es el cierre más fuerte posible)
   // devolvería la sugerencia a los pendientes para siempre.
   articulosDeSugerencia: Articulo[]
+  /** Tarea 270: personas, equipos y las entradas de asignación recientes. */
+  personas?: Pick<Persona, 'id' | 'nombre' | 'estado' | 'fechaIngreso' | 'fechaRetiro' | 'eliminadoEn'>[]
+  dispositivos?: Pick<Dispositivo, 'id' | 'nombre' | 'estado' | 'responsableId' | 'eliminadoEn'>[]
+  liberaciones?: Pick<
+    HistorialEntrada,
+    'entidadTipo' | 'entidadId' | 'campo' | 'valorAnterior' | 'valorNuevo' | 'fechaHora'
+  >[]
   usuarioId: string
   puedeVerBoveda: boolean
   limite?: number
@@ -202,21 +230,29 @@ export function calcularPendientes(datos: {
     nombresDispositivosPorId,
     ejecuciones,
     articulosDeSugerencia,
+    personas = [],
+    dispositivos = [],
+    liberaciones = [],
     usuarioId,
     puedeVerBoveda,
     limite = 6,
     hoy = new Date(),
   } = datos
+  const retiradas = personasRetiradasConEquipos(personas, dispositivos, hoy)
   // Sin permiso de bóveda no se filtra ni un título: ni de credenciales
   // ni de datos protegidos de equipo, que llevan la misma RLS.
   const conFecha = [
     ...credencialesPorVencer(puedeVerBoveda ? credenciales : [], hoy),
     ...camposProtegidosPorVencer(puedeVerBoveda ? camposProtegidos : [], nombresDispositivosPorId, hoy),
+    ...personasPorRecibir(personas, dispositivos, hoy),
+    ...retiradas.filter((item) => item.fecha !== null),
   ].sort(porFecha)
 
   const items = [
     ...conFecha,
     ...borradoresPropios(articulos, usuarioId, hoy),
+    ...retiradas.filter((item) => item.fecha === null),
+    ...equiposLiberadosRecientes(liberaciones, dispositivos, hoy),
     ...sugerenciasSinRevisar(ejecuciones, articulosDeSugerencia),
   ]
   return items.slice(0, limite)

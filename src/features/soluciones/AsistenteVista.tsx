@@ -40,6 +40,8 @@ import {
   ZONA_ANIDADA,
 } from './vinculoAnidado'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
+import { fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
+import { useReferencias } from '../referencia/useReferencias'
 import { cierreDelPaso, guiaPendienteDelPaso, guiaTerminada } from './cierrePaso'
 import {
   claveDeVinculo,
@@ -98,6 +100,9 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   const clave = useClaveProgreso(articuloId, nivel)
   const { pasos, verificacionFinal, tiempoEstimadoMin, requisitos } = procedimiento
   const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
+  // Las fichas del Centro de consulta, para el "¿Qué hace?" de las
+  // tareas del paso entero (tarea 270): una consulta, no una por tarea.
+  const referenciasVivas = useReferencias()
 
   // Equipo afectado por ESTE procedimiento (tarea 79, solo nivel 0):
   // determina si la captura de evidencia tiene donde registrarse. Un
@@ -723,6 +728,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
             <li key={bloque.id}>
               <BloqueVista
                 bloque={bloque}
+                referencias={referenciasVivas}
+                fichasEnlazadas={fichasEnlazadasDelPaso(paso.bloques)}
                 marcada={instruccionesHechas.has(bloque.id)}
                 onAlternar={() => {
                   setRetomadaEn(null)

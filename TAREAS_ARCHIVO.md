@@ -2,6 +2,25 @@
 
 ## Encargo del 2026-09-23: las entidades se relacionan
 
+**Encargo completo el 2026-09-23** (tareas 266 a 270). **Paso del usuario pendiente:** ejecutar `supabase/schema.sql` en el SQL Editor de Supabase (columnas de personas de la tarea 266); hasta entonces, crear, editar, retirar o reactivar una persona espera en la cola de sincronización sin perderse.
+
+### 270. Fase 5: la Agenda aprovecha ingresos y retiros, y el Centro de consulta aparece en contexto
+
+**Título:** solo lo que requiere acción, y "¿qué hace este comando?" sin salir de la guía. **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Media. **Origen:** encargo del usuario del 2026-09-23, secciones 14 y 15. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-051. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-054 y RN-055.
+
+**Qué se hizo:**
+
+1. **Agenda** (`src/features/inicio/asuntosDePersonas.ts`, `pendientes.ts`, `usePendientes.ts`): persona que ingresa sin equipo (con fecha de ingreso, ±30 días), persona retirada con equipos a su nombre (fecha del retiro, o "Por revisar") y equipo liberado en los últimos 14 días que sigue Disponible ("Por revisar del equipo"). Derivado, sin tabla nueva; el historial se lee solo reciente, por su índice de fecha. Nada de calidad del inventario.
+2. **Filas** (`SeccionesAgenda.tsx`, `agenda.ts`): iconos de persona y de equipo, "Revisar" para lo que se revisa, y el origen solo cuando aporta; textos cortos para que quepan en el teléfono.
+3. **"¿Qué hace?"** (`src/features/referencia/comandosEnTexto.ts`, `QueHaceEnTexto.tsx`): en la vista de una acción (`ModoFoco`) y en la de paso entero (`BloqueVista`, con el mapa de fichas pasado por `ProcedimientoVista` y `AsistenteVista`), una etiqueta por cada comando o atajo que la instrucción escribe y que tiene ficha, sin repetir las ya enlazadas.
+4. **La hoja de la ficha** (`HojaReferencia.tsx`): para un comando o un atajo pinta `TarjetaComando` (con `sinTitulo`), la misma que la guía y el buscador; `ChipReferencia` acepta `rotulo` y se toca en 44 px.
+
+**Pruebas.** 142 archivos y 1965 casos en verde (antes 139 y 1941). Nuevas: `asuntosDePersonas.test.ts` (cada asunto, lo que no inventa, el reparto en la agenda y el número de urgentes), `comandosEnTexto.test.ts` (valor exacto, atajos con "+", bordes de palabra, el más largo, huecos, caracteres especiales, duplicados y tope) y `queHaceEnGuia.test.tsx` (la hoja desde la vista de una acción sin tocar el avance; en paso entero, sin repetir la ficha enlazada). Ampliada: `resolverYAgenda.test.tsx` (la persona que llega mañana y el equipo liberado en la pantalla de verdad).
+
+**Verificación:** capturas por CDP en 390×844 y 1366×768 (`agenda`, `agenda-personas`, `guia-que-hace`, `guia-que-hace-hoja`, `guia-que-hace-paso-entero`): sin desbordamiento; se acortaron los detalles de la agenda que se cortaban y se llevó a 44 px el toque de las etiquetas de fichas.
+
+**Lo que no se tocó:** esquema, RLS, sincronización, editor de guías y Centro de consulta. No hace falta SQL. **Queda la tarea 265** (la Agenda abierta desde Más vuelve a Resolver): no se resolvió aquí porque exige cambiar cómo el chasis combina el origen con la fecha de la cabecera.
+
 ### 269. Fase 4: Diagnóstico dentro de Resolver y fuera de Más
 
 **Título:** el técnico no decide si busca una guía o un diagnóstico. **Estado:** Completada (2026-09-23) en código, pruebas, verificación visual y documentación. **Prioridad:** Media. **Origen:** encargo del usuario del 2026-09-23, sección 17. **Decisión:** [DECISIONES.md](DECISIONES.md) AD-050. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-045 y RN-047.

@@ -65,7 +65,7 @@ const ACTIVIDAD_SEMBRADA = `{ const { db } = await import('/src/lib/db.ts'); awa
 const SIN_ACTIVIDAD = `{ const { db } = await import('/src/lib/db.ts'); await db.historial.delete('hist-captura-257'); }`
 // Tarea 266: repone las personas y los computadores inventados de la
 // semilla (una parada de retiro o de asignación los cambia).
-const PERSONAS_SEMBRADAS = `{ const { db } = await import('/src/lib/db.ts'); await db.personas.clear(); await db.dispositivos.bulkDelete(['dis-pc-ejemplo-62','dis-pc-ejemplo-15','dis-pc-ejemplo-41','dis-pc-ejemplo-07']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
+const PERSONAS_SEMBRADAS = `{ const { db } = await import('/src/lib/db.ts'); await db.personas.clear(); await db.dispositivos.bulkDelete(['dis-pc-ejemplo-62','dis-pc-ejemplo-15','dis-pc-ejemplo-41','dis-pc-ejemplo-07','dis-pc-ejemplo-44','dis-pc-ejemplo-45']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
 // Tarea 268: repone los estados escritos a mano de la semilla (la parada
 // que unifica los cambia).
 const ESTADOS_SEMBRADOS = `{ const { db } = await import('/src/lib/db.ts'); await db.dispositivos.bulkDelete(['dis-caja-ejemplo-2','dis-caja-ejemplo-3','dis-camara-ejemplo-1','dis-camara-ejemplo-2','dis-telefono-ejemplo-1','dis-telefono-ejemplo-2','dis-impresora-ejemplo-antigua']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
@@ -257,6 +257,28 @@ const TODAS_LAS_PARADAS = [
   // parada `catalogo` la enseña) y su lista, que ya no cuelga de Más.
   { nombre: 'guias-con-preguntas', ruta: '/diagnostico' },
   { nombre: 'guias-con-preguntas-categoria', ruta: '/soluciones?categoria=cat-impresoras' },
+  // Tarea 270 (Fase 5): la agenda con los ingresos, los retiros y los
+  // equipos liberados (la parada `agenda` los enseña; esta baja al final),
+  // y "¿Qué hace?" en una guía que escribe un atajo y un comando.
+  {
+    nombre: 'agenda-personas',
+    ruta: '/agenda',
+    antes: PERSONAS_SEMBRADAS,
+    guion: `{ document.querySelector('main')?.lastElementChild?.scrollIntoView({block:'end'}); await new Promise(r=>setTimeout(r,300)); }`,
+  },
+  { nombre: 'guia-que-hace', ruta: '/soluciones/cat-redes/art-comprobar-red', antes: modo('foco') },
+  {
+    nombre: 'guia-que-hace-hoja',
+    ruta: '/soluciones/cat-redes/art-comprobar-red',
+    antes: modo('foco'),
+    guion: tocar('¿Qué hace «Windows + R»?'),
+  },
+  {
+    nombre: 'guia-que-hace-paso-entero',
+    ruta: '/soluciones/cat-redes/art-comprobar-red',
+    antes: modo('pasoEntero'),
+    despues: modo('foco'),
+  },
 ]
 
 const PARADAS = FILTRO_PARADAS

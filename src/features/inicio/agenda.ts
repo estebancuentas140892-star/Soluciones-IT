@@ -142,13 +142,17 @@ export const ETIQUETA_ESTADO: Record<EstadoAgenda, string> = {
 
 /**
  * Qué se hace con este ítem, dicho en un verbo: un borrador propio se
- * CONTINÚA, una sugerencia del equipo se REVISA y un acceso con fecha se
- * ABRE (para rotarlo donde vive). Es el nombre accesible del enlace de la
- * fila, así que "Continuar «Guía a medias»" se lee entero.
+ * CONTINÚA; una sugerencia del equipo, un equipo liberado que espera
+ * dueño y una persona retirada con equipos se REVISAN; un acceso con
+ * fecha o una persona que ingresa se ABREN (para atenderlos donde
+ * viven). Es el nombre accesible del enlace de la fila, así que
+ * "Continuar «Guía a medias»" se lee entero.
  */
 export function accionDeItem(item: ItemPendiente): string {
   if (item.categoria === 'borrador') return 'Continuar'
-  if (item.categoria === 'sugerencia') return 'Revisar'
+  if (item.categoria === 'sugerencia' || item.categoria === 'equipo_liberado' || item.categoria === 'persona_retirada') {
+    return 'Revisar'
+  }
   return 'Abrir'
 }
 

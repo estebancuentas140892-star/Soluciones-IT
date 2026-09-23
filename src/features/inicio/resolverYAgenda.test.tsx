@@ -39,6 +39,8 @@ import { ResolverPage } from './ResolverPage'
 const RUTAS = [
   { ruta: '/', elemento: <ResolverPage /> },
   { ruta: '/agenda', elemento: <AgendaPage /> },
+  { ruta: '/personas/:personaId', elemento: <p>Ficha de la persona</p> },
+  { ruta: '/dispositivos/:dispositivoId', elemento: <p>Ficha del equipo</p> },
   { ruta: '/soluciones', elemento: <p>Catálogo de guías</p> },
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <p>Guía abierta</p> },
 ]
@@ -247,6 +249,77 @@ describe('La agenda completa (/agenda)', () => {
     await montar(RUTAS, '/agenda')
     await esperarTexto('Vencidos')
     expect(control(/agenda completa/)).toBeNull()
+  })
+
+  // Tarea 270: lo que piden los ingresos, los retiros y los equipos que
+  // se sueltan, derivado de personas, equipos e historial.
+  it('la persona que llega mañana sin equipo es un próximo, y su fila abre su ficha', async () => {
+    await db.personas.put({
+      id: 'per-nora',
+      nombre: 'Nora de Prueba',
+      notas: '',
+      estado: 'activa',
+      fechaIngreso: fechaRelativa(1),
+      fechaRetiro: null,
+      motivoRetiro: '',
+      updatedAt: '2026-09-01T00:00:00.000Z',
+      updatedBy: null,
+      eliminadoEn: null,
+    })
+    await montar(RUTAS, '/agenda')
+
+    const texto = await esperarTexto('Nora de Prueba')
+    expect(texto).toContain('Ingresa mañana · sin equipo')
+    expect(texto.indexOf('Próximos')).toBeLessThan(texto.indexOf('Nora de Prueba'))
+    const fila = await esperar(() => control(/^Abrir Nora de Prueba/), 'la fila de la persona')
+    await tocar(fila)
+    expect(ubicacionActual().pathname).toBe('/personas/per-nora')
+  })
+
+  it('un equipo liberado hace poco y Disponible espera dueño en "Por revisar del equipo"', async () => {
+    await db.dispositivos.put({
+      id: 'pc-44',
+      categoriaId: 'cat-equipos',
+      nombre: 'PC-PRUEBA-44',
+      marca: '',
+      modelo: '',
+      serial: '',
+      placaInventario: '',
+      ubicacion: '',
+      ubicacionId: null,
+      responsable: '',
+      responsableId: null,
+      reemplazaA: null,
+      ip: '',
+      estado: 'Disponible',
+      observaciones: '',
+      detalles: {},
+      foto: null,
+      updatedAt: new Date().toISOString(),
+      updatedBy: null,
+      eliminadoEn: null,
+    })
+    await db.historial.put({
+      id: 'h-liberado',
+      entidadTipo: 'dispositivo',
+      entidadId: 'pc-44',
+      usuario: null,
+      usuarioNombre: 'Técnico de prueba',
+      fechaHora: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      campo: 'responsableId',
+      valorAnterior: 'per-luis',
+      valorNuevo: '',
+      motivo: '',
+    })
+    await montar(RUTAS, '/agenda')
+
+    const texto = await esperarTexto('PC-PRUEBA-44')
+    expect(texto).toContain('Liberado hace 2 d · Disponible')
+    expect(texto.indexOf('Por revisar del equipo')).toBeLessThan(texto.indexOf('PC-PRUEBA-44'))
+    // No es urgente: la agenda sigue "al día".
+    expect(texto).toContain('Todo al día por hoy')
+    await tocar(await esperar(() => control(/^Revisar PC-PRUEBA-44/), 'la fila del equipo'))
+    expect(ubicacionActual().pathname).toBe('/dispositivos/pc-44')
   })
 })
 

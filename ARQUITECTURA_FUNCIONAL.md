@@ -346,6 +346,24 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Dispositivo, Historial.
 - Dura en el código: `src/features/dispositivos/estadosEscritos.ts`, `src/features/inventario/EstadosPorUnificarPage.tsx`.
 
+---
+
+**RN-054. La agenda avisa lo que piden los ingresos, los retiros y los equipos que se sueltan, y nada de calidad del inventario.**
+- Motivo: secciones 14 y 15 del encargo del 2026-09-23 ([DECISIONES.md](DECISIONES.md) AD-051). La agenda es para lo que requiere una acción; una persona que llega sin computador, una retirada con equipos a su nombre o un equipo libre que espera dueño lo son.
+- Regla: tres asuntos derivados, sin tabla nueva (`asuntosDePersonas.ts`). (1) `persona_ingreso`: persona activa con `fecha_ingreso` entre +30 y -30 días de hoy (`DIAS_AVISO_VENCIMIENTO`, `DIAS_TRAS_INGRESO`) y sin equipos actuales (`equiposActuales`, que no cuenta los de baja); su fecha es la del ingreso. (2) `persona_retirada`: persona retirada con equipos actuales; su fecha es la del retiro (sin fecha, "Por revisar"; con un retiro a más de 30 días, nada). (3) `equipo_liberado`: la ÚLTIMA entrada de asignación del equipo en los últimos 14 días (`DIAS_LIBERADO_RECIENTE`) lo soltó (`responsableId` de alguien a vacío), y hoy sigue sin responsable y en estado canónico Disponible; sin fecha, "Por revisar". Una persona sin fecha de ingreso nunca es un asunto. Las entradas del historial se leen por su índice de fecha, solo las recientes.
+- Lo que tiene fecha se ordena con las credenciales y los datos protegidos (una sola lista por fecha, RN de la agenda); lo que no, va a "Por revisar del equipo". Solo lo vencido y lo de hoy suman al número de la pestaña Resolver.
+- Entidades: Persona, Dispositivo, Historial.
+- Dura en el código: `src/features/inicio/{asuntosDePersonas.ts,pendientes.ts,usePendientes.ts,agenda.ts,SeccionesAgenda.tsx}`.
+
+---
+
+**RN-055. "¿Qué hace?" solo con el valor exacto de un comando o un atajo que tiene ficha; la guía no copia la ficha.**
+- Motivo: sección 14 del encargo del 2026-09-23 (AD-051). Muchas instrucciones escriben el comando sin enlazar su ficha, y el técnico no sabe que el Centro de consulta lo explica.
+- Regla: `comandosEnTexto` busca en el texto de la tarea el `valor` de las fichas vivas de tipo comando o atajo, sin distinguir mayúsculas, con los espacios colapsados y sin espacios alrededor de "+", y con bordes de palabra ("ping" no está en "pingüino"). Un hueco del valor (`[dirección]`, `<usuario>`, `{x}`) vale por una palabra; los del final son opcionales. Un valor que queda con menos de dos caracteres literales no se busca. Si dos hallazgos se solapan gana el más largo; dos fichas con el mismo valor dan una sola etiqueta; como mucho tres por tarea. Los términos y las herramientas no se detectan (una palabra del glosario puede estar en otro sentido). No se ofrece una ficha que el paso ya enlaza con un bloque de referencia.
+- La etiqueta abre `HojaReferencia`, que para un comando o un atajo pinta `TarjetaComando` (lo mismo que la guía y la vista rápida del buscador): la ficha es la única fuente, y editarla cambia lo que se lee en todas las guías.
+- Entidades: Referencia, Artículo (sus tareas).
+- Dura en el código: `src/features/referencia/{comandosEnTexto.ts,QueHaceEnTexto.tsx,ChipReferencia.tsx,HojaReferencia.tsx,TarjetaComando.tsx}`, `src/features/soluciones/{ModoFoco.tsx,ProcedimientoVista.tsx,AsistenteVista.tsx}`.
+
 ## 3. Modelo entidad-relación
 
 ### 3.1 Diagrama

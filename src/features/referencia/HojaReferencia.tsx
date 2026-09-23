@@ -4,6 +4,7 @@ import { ArrowLeft, WarningCircle, X } from '../../components/iconos'
 import type { Referencia } from '../../lib/db'
 import { nombreVivo } from '../../lib/referencia'
 import { ContenidoReferencia } from './ContenidoReferencia'
+import { TarjetaComando } from './TarjetaComando'
 import { iconoDeReferencia } from './iconosReferencia'
 import { esTipoConocido, INFO_TIPO } from './referencias'
 
@@ -105,6 +106,11 @@ export function HojaReferencia({ abierto, onCerrar, referenciaId, tituloRespaldo
             llegado todavía. El vínculo se conserva.
           </p>
         </div>
+      ) : referencia.tipo === 'comando' || referencia.tipo === 'atajo' ? (
+        // Un comando o un atajo se lee como en la guía y en la vista
+        // rápida del buscador: su valor, copiar, qué hace o cuándo
+        // usarlo, el resultado y los permisos (tarea 270, "¿Qué hace?").
+        <TarjetaComando referencia={referencia} tituloRespaldo={tituloRespaldo} sinTitulo />
       ) : (
         // El cuerpo es compartido con la vista rápida del buscador en modo
         // consulta (2026-09-16): la misma ficha se lee igual en los dos.

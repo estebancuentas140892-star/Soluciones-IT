@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { db } from '../../lib/db'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
+import { DIAS_LIBERADO_RECIENTE } from './asuntosDePersonas'
 import { calcularPendientes, type ItemPendiente } from './pendientes'
 
 // Las seis consultas que alimentan la agenda (antes solo vivían en
@@ -38,10 +39,25 @@ export function usePendientes(): EstadoPendientes {
     () => db.campos_protegidos.filter((c) => !c.eliminadoEn && Boolean(c.venceEn)).toArray(),
     [],
   )
-  const nombresDispositivosPorId = useLiveQuery(
-    async () => new Map((await db.dispositivos.toArray()).map((d) => [d.id, d.nombre])),
-    [],
+  // Todos los equipos: dan el nombre vivo de un dato protegido y, desde
+  // la tarea 270, quién tiene qué (ingresos, retiros, equipos liberados).
+  const dispositivos = useLiveQuery(() => db.dispositivos.toArray(), [])
+  const nombresDispositivosPorId = useMemo(
+    () => (dispositivos ? new Map(dispositivos.map((d) => [d.id, d.nombre])) : undefined),
+    [dispositivos],
   )
+  const personas = useLiveQuery(() => db.personas.filter((p) => !p.eliminadoEn).toArray(), [])
+  // Solo las entradas de asignación de los últimos días, por el índice de
+  // fecha: el historial entero puede ser largo y esto corre en cada
+  // pantalla (el número de la pestaña Resolver).
+  const liberaciones = useLiveQuery(() => {
+    const desde = new Date(Date.now() - DIAS_LIBERADO_RECIENTE * 24 * 60 * 60 * 1000).toISOString()
+    return db.historial
+      .where('fechaHora')
+      .aboveOrEqual(desde)
+      .filter((h) => h.entidadTipo === 'dispositivo' && h.campo === 'responsableId')
+      .toArray()
+  }, [])
   const ejecucionesConSugerencia = useLiveQuery(
     () => db.ejecuciones_diagnostico.filter((e) => e.motivo === 'encontro_otra_solucion').toArray(),
     [],
@@ -60,6 +76,8 @@ export function usePendientes(): EstadoPendientes {
     credencialesConVencimiento === undefined ||
     camposProtegidosConVencimiento === undefined ||
     nombresDispositivosPorId === undefined ||
+    personas === undefined ||
+    liberaciones === undefined ||
     ejecucionesConSugerencia === undefined ||
     articulosDeSugerencia === undefined
 
@@ -73,6 +91,9 @@ export function usePendientes(): EstadoPendientes {
             nombresDispositivosPorId: nombresDispositivosPorId ?? new Map<string, string>(),
             ejecuciones: ejecucionesConSugerencia ?? [],
             articulosDeSugerencia: articulosDeSugerencia ?? [],
+            personas: personas ?? [],
+            dispositivos: dispositivos ?? [],
+            liberaciones: liberaciones ?? [],
             usuarioId: perfil.id,
             puedeVerBoveda: perfil.puedeVerBoveda,
             limite: Infinity,
@@ -84,6 +105,9 @@ export function usePendientes(): EstadoPendientes {
       credencialesConVencimiento,
       camposProtegidosConVencimiento,
       nombresDispositivosPorId,
+      personas,
+      dispositivos,
+      liberaciones,
       ejecucionesConSugerencia,
       articulosDeSugerencia,
     ],

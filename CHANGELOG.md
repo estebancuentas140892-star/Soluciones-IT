@@ -8,6 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-23
 
+### Agregado (agenda y Centro de consulta, tarea 270, Fase 5 del encargo "las entidades se relacionan"): los ingresos, los retiros y los equipos liberados en la agenda, y "¿Qué hace?" dentro de las guías
+
+**Área modificada:** Agenda (y "Atención" de Resolver, y el número de su pestaña), ejecución de las guías (vista de una acción y paso entero), hoja de una ficha del Centro de consulta.
+**Tipo:** Agregado (tres asuntos derivados en la agenda: persona que ingresa sin equipo, persona retirada con equipos a su nombre y equipo liberado hace poco que sigue Disponible; "¿Qué hace «…»?" para los comandos y atajos que una instrucción escribe y tienen ficha), Modificado (la hoja de una ficha de comando o atajo enseña la misma tarjeta que la guía y el buscador, con cuándo usarlo, el resultado y los permisos; la etiqueta de una ficha se toca en 44 px).
+**Nuevos:** `src/features/inicio/asuntosDePersonas.ts` (+ `asuntosDePersonas.test.ts`), `src/features/referencia/{comandosEnTexto.ts,QueHaceEnTexto.tsx}` (+ `comandosEnTexto.test.ts`, `queHaceEnGuia.test.tsx`).
+**Modificados:** `src/features/inicio/{pendientes.ts,usePendientes.ts,agenda.ts,SeccionesAgenda.tsx}`, `src/lib/vencimiento.ts` (`fechaCorta` exportada), `src/features/referencia/{ChipReferencia.tsx,HojaReferencia.tsx,TarjetaComando.tsx}`, `src/features/soluciones/{ModoFoco.tsx,ProcedimientoVista.tsx,AsistenteVista.tsx}`; prueba `src/features/inicio/resolverYAgenda.test.tsx`; `src/pruebas/semillaLocal.ts` y `scripts/capturas-moviles.mjs` (verificación).
+Documentación: [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (agenda, ejecución de la guía, ficha del Centro de consulta y 13.7), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-054 y RN-055), [DECISIONES.md](DECISIONES.md) (AD-051) y [COMPONENTES_UI.md](COMPONENTES_UI.md) (3.8s-bis y 3.8s-ter).
+**Motivo:** encargo del usuario del **23 de septiembre de 2026**, secciones 14 y 15: la agenda solo con lo accionable (y lo que traen los ingresos y los retiros), y el Centro de consulta en contexto sin duplicar su contenido.
+**Impacto esperado:** quien llega sin computador, quien se fue con equipos a su nombre y el equipo que quedó libre aparecen donde se decide el día; y quien lee "ejecutar ipconfig /flushdns" en una guía puede saber qué hace sin salir de ella. Ninguna persona sin fecha de ingreso, ni ningún equipo sin foto o sin ubicación, entra en la agenda.
+**SIN cambios** de esquema, RLS ni sincronización. **No hay que ejecutar SQL.**
+
+- **Agenda:** "Ingresa el 25 sep · sin equipo" (próximo), "Ingresa hoy · sin equipo" (para hoy), "Ingresó hace 3 días · sin equipo" (vencido), solo con fecha de ingreso entre 30 días antes y después y sin equipos a su nombre; "Se retiró hace 5 días · con 1 equipo" (vencido; sin fecha, por revisar); "Liberado hace 2 d · Disponible" (por revisar del equipo), si la última asignación de los últimos 14 días lo soltó y sigue Disponible. Solo lo vencido y lo de hoy suman al número de Resolver.
+- **"¿Qué hace?":** solo con el valor exacto de la ficha (mayúsculas, espacios y el "+" de un atajo no cuentan; los huecos como `[dirección]` valen por una palabra); nunca términos ni herramientas; nunca una ficha que el paso ya enlaza; tres como mucho por tarea. Abre la ficha en la hoja de siempre, sin tocar el avance.
+- **Verificación:** 142 archivos y 1965 casos en verde (antes 139 y 1941); lint y tipos limpios. Capturas por CDP en 390×844 y 1366×768 (`agenda`, `agenda-personas`, `guia-que-hace`, `-hoja` y `-paso-entero`): sin desbordamiento; los detalles de la agenda caben en el teléfono tras acortarlos; las etiquetas de fichas ya no salen como área táctil pequeña.
+
 ### Cambiado (guías con preguntas, tarea 269, Fase 4 del encargo "las entidades se relacionan"): su administración vive en Guías y Diagnóstico sale de Más
 
 **Área modificada:** Guías (catálogo), lista de guías con preguntas (antes "Diagnóstico inteligente"), Más, ficha del equipo, navegación.

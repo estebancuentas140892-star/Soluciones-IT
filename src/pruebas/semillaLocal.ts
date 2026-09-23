@@ -850,7 +850,37 @@ const GUIA_CONECTAR_IMPRESORA = articulo({
   },
 })
 
+// "¿Qué hace?" (tarea 270): una guía inventada cuyas instrucciones
+// ESCRIBEN el atajo "Windows + R" y el comando "ping [dirección]" del
+// Centro de consulta de la semilla, sin enlazar sus fichas.
+const GUIA_COMPROBAR_RED = articulo({
+  id: 'art-comprobar-red',
+  categoriaId: 'cat-redes',
+  titulo: 'Comprobar la red de un equipo de ejemplo',
+  tipo: 'problema_frecuente',
+  procedimiento: {
+    descripcion: 'Caso de prueba de "¿Qué hace?".',
+    portada: null,
+    objetivoGeneral: 'Saber si el equipo de ejemplo llega al servidor.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 3,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'red-p1',
+        titulo: 'Probar la conexión',
+        bloques: [
+          tarea('red-p1-t1', 'Pulsar Windows + R y escribir cmd'),
+          tarea('red-p1-t2', 'Escribir ping 192.0.2.40 y pulsar Intro'),
+        ],
+      }),
+    ],
+  },
+})
+
 const ARTICULOS: Articulo[] = [
+  GUIA_COMPROBAR_RED,
   GUIA_LOCALIZAR_RESOLUCION,
   GUIA_RESOLUCION_DIAN,
   GUIA_DESBLOQUEAR_USUARIO,
@@ -1261,6 +1291,15 @@ const PERSONAS: Persona[] = [
     fechaRetiro: '2026-08-31',
     motivoRetiro: 'Fin de contrato',
   }),
+  // Tarea 270: lo que la agenda pide de las personas, con fechas
+  // relativas a hoy. Nora llega en dos días sin equipo; Tomás se retiró
+  // hace cinco y todavía tiene el PC-EJEMPLO-45 a su nombre.
+  persona('per-ejemplo-nora', 'Nora de Ejemplo', { fechaIngreso: fechaEnDias(2) }),
+  persona('per-ejemplo-tomas', 'Tomás de Ejemplo', {
+    estado: 'retirada',
+    fechaIngreso: '2025-01-13',
+    fechaRetiro: fechaEnDias(-5),
+  }),
 ]
 
 const EQUIPOS_DE_PERSONAS: Dispositivo[] = [
@@ -1299,6 +1338,25 @@ const EQUIPOS_DE_PERSONAS: Dispositivo[] = [
     responsable: 'Archivo de ejemplo',
     estado: '',
   }),
+  // Tarea 270: uno liberado hace dos días (ver su historial) y otro que
+  // sigue a nombre de una persona retirada.
+  dispositivo({
+    id: 'dis-pc-ejemplo-44',
+    nombre: 'PC-EJEMPLO-44',
+    categoriaId: 'cat-computadores',
+    placaInventario: 'EJ-10544',
+    ubicacion: 'Bodega de ejemplo',
+    estado: 'Disponible',
+  }),
+  dispositivo({
+    id: 'dis-pc-ejemplo-45',
+    nombre: 'PC-EJEMPLO-45',
+    categoriaId: 'cat-computadores',
+    placaInventario: 'EJ-10545',
+    ubicacion: 'Tesorería de ejemplo',
+    responsable: 'Tomás de Ejemplo',
+    responsableId: 'per-ejemplo-tomas',
+  }),
 ]
 
 function entradaAsignacion(
@@ -1325,7 +1383,12 @@ function entradaAsignacion(
 }
 
 // Rita tuvo el PC-EJEMPLO-41 desde junio de 2025 hasta su retiro.
+const HACE_DOS_DIAS = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+
 const HISTORIAL_ASIGNACIONES: HistorialEntrada[] = [
+  // Tarea 270: Luis soltó el PC-EJEMPLO-44 hace dos días; quedó Disponible.
+  entradaAsignacion('hist-ej-asig-5', 'dis-pc-ejemplo-44', 'responsable', 'Luis de Ejemplo', '', HACE_DOS_DIAS),
+  entradaAsignacion('hist-ej-asig-6', 'dis-pc-ejemplo-44', 'responsableId', 'per-ejemplo-luis', '', HACE_DOS_DIAS),
   entradaAsignacion('hist-ej-asig-1', 'dis-pc-ejemplo-41', 'responsable', '', 'Rita de Ejemplo', '2025-06-01T14:00:00.000Z'),
   entradaAsignacion('hist-ej-asig-2', 'dis-pc-ejemplo-41', 'responsableId', '', 'per-ejemplo-rita', '2025-06-01T14:00:00.000Z'),
   entradaAsignacion(
