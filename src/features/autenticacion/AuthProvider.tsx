@@ -5,6 +5,7 @@ import { db, type Perfil } from '../../lib/db'
 import { sincronizar } from '../../lib/sync'
 import { AuthContext } from './authContext'
 import { traducirErrorAuth } from './erroresAuth'
+import { desconectarAlSalir } from '../asistencia/sesionAsistencia'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true)
@@ -96,6 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function cerrarSesion(): Promise<void> {
     if (!supabase) return
+    // Un computador conectado por asistencia remota (tarea 258) se
+    // desconecta antes de salir: la sesión es del técnico, no del
+    // teléfono. Nunca frena el cierre (como mucho un par de segundos).
+    await desconectarAlSalir()
     // No se borra la base local: puede haber cambios sin subir y el
     // equipo es de confianza, cada quien usa su propio teléfono.
     await supabase.auth.signOut()

@@ -1620,3 +1620,536 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ----------------------------------------------------------------
+-- 7. Asistencia remota: portal publico /asistencia (tarea 258,
+--    2026-09-24). Diseno en PROPUESTA_REDISENO_RESOLVER.md seccion 7
+--    y decision en DECISIONES.md AD-053.
+--
+--    El computador atendido abre /asistencia SIN iniciar sesion: pide
+--    un codigo de 6 cifras, un tecnico autenticado lo canjea desde su
+--    telefono y, mientras la sesion vive, el portal muestra SOLO lo que
+--    ese tecnico le envia. Tres tablas nuevas sin relacion con el resto
+--    del esquema (salvo auth.users), con RLS activada, SIN NINGUNA
+--    POLITICA y sin privilegios para anon ni authenticated: nadie las
+--    lee ni las escribe directamente. Todo pasa por las funciones de
+--    abajo, que son security definer (tienen que tocar tablas cerradas)
+--    con search_path vacio y EXECUTE solo para el rol que las usa. No
+--    entran en la publicacion de Realtime (seccion 6): el portal
+--    consulta cada pocos segundos.
+--
+--    Tiempos (constantes de estas funciones):
+--    - el codigo vence a los 10 minutos si nadie lo canjea;
+--    - una sesion conectada se cierra tras 15 minutos sin actividad del
+--      tecnico (envios o el latido de su app abierta con la sesion);
+--    - y nunca dura mas de 4 horas;
+--    - 5 codigos incorrectos por tecnico cada 10 minutos, y 30 en total,
+--      bloquean nuevos intentos hasta que pase la ventana;
+--    - como mucho 100 sesiones esperando a la vez.
+--    Cerrada o expirada, una sesion no vuelve a ningun otro estado, y
+--    su codigo no reconecta nada: hace falta un codigo nuevo.
+-- ----------------------------------------------------------------
+
+create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists public.asistencia_sesiones (
+  id uuid primary key default gen_random_uuid(),
+  codigo text not null check (codigo ~ '^[0-9]{6}$'),
+  -- SHA-256 (hex) del secreto de 256 bits que identifica al portal. El
+  -- secreto viaja una sola vez, al crear la sesion, y nunca se guarda
+  -- en claro.
+  secreto_hash text not null,
+  estado text not null default 'esperando'
+    check (estado in ('esperando', 'conectada', 'cerrada', 'expirada')),
+  tecnico uuid references auth.users (id) on delete set null,
+  creada_en timestamptz not null default now(),
+  codigo_vence_en timestamptz not null,
+  conectada_en timestamptz,
+  ultima_actividad timestamptz,
+  cerrada_en timestamptz,
+  motivo_cierre text
+    check (motivo_cierre in ('tecnico', 'portal', 'inactividad', 'codigo_vencido', 'maximo', 'reemplazada'))
+);
+-- Un codigo es unico entre las sesiones que esperan; una vez canjeada o
+-- vencida, el codigo queda libre para otra sesion.
+create unique index if not exists asistencia_sesiones_codigo_en_espera
+  on public.asistencia_sesiones (codigo) where estado = 'esperando';
+create index if not exists asistencia_sesiones_tecnico_conectada
+  on public.asistencia_sesiones (tecnico) where estado = 'conectada';
+
+-- Lo que el tecnico envio, ya validado. Se borra al cerrarse la sesion.
+create table if not exists public.asistencia_mensajes (
+  id bigint generated always as identity primary key,
+  sesion_id uuid not null references public.asistencia_sesiones (id) on delete cascade,
+  contenido jsonb not null,
+  creado_en timestamptz not null default now()
+);
+create index if not exists asistencia_mensajes_sesion on public.asistencia_mensajes (sesion_id, id);
+
+-- Auditoria minima, SIN contenido ni secretos: que paso, cuando y que
+-- tecnico. Sin FK a la sesion a proposito (mismo criterio que
+-- historial.entidad_id): el registro sobrevive a la sesion.
+create table if not exists public.asistencia_eventos (
+  id bigint generated always as identity primary key,
+  sesion_id uuid,
+  tipo text not null check (tipo in (
+    'creada', 'conectada', 'codigo_incorrecto', 'bloqueo_intentos',
+    'mensaje', 'mensaje_rechazado', 'cerrada', 'expirada'
+  )),
+  tecnico uuid,
+  fecha timestamptz not null default now(),
+  detalle text not null default ''
+);
+create index if not exists asistencia_eventos_tipo_fecha on public.asistencia_eventos (tipo, fecha);
+
+alter table public.asistencia_sesiones enable row level security;
+alter table public.asistencia_mensajes enable row level security;
+alter table public.asistencia_eventos enable row level security;
+-- Ninguna politica, y ademas sin privilegios: aunque alguien agregara
+-- una politica por error, anon y authenticated no tendrian con que leer.
+revoke all on table public.asistencia_sesiones from public, anon, authenticated;
+revoke all on table public.asistencia_mensajes from public, anon, authenticated;
+revoke all on table public.asistencia_eventos from public, anon, authenticated;
+
+-- ¿Este texto parece un secreto? Es la barrera del servidor: el
+-- constructor de la app ya no recibe datos de la boveda (por tipos) y
+-- la vista previa los aparta, pero el servidor no confia en el cliente.
+-- Busca un nombre de secreto seguido de un valor ("contraseña: x",
+-- "PIN=1234", "api key: ...", y con hasta dos palabras en medio:
+-- "contraseña del administrador: x", "clave de licencia: x"; pero no
+-- "escribe la contraseña y pulsa Aceptar: ..."), un bloque cifrado de la app
+-- (v1.<iteraciones>.<sal>.<iv>.<cifrado>), un JWT, una llave privada,
+-- una clave secreta de Supabase o una URL con usuario y contrasena. El
+-- mismo criterio vive en src/features/asistencia/contenido.ts
+-- (pareceSecreto) para avisar antes de enviar; una prueba compara las
+-- dos listas.
+create or replace function public.asistencia_parece_secreto(p_texto text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(p_texto, '') ~* '\y(contraseña|contrasena|password|passwd|pwd|clave|llave|pin|token|api[ _-]?key|secreto|secret)\y([[:space:]]+[[:alpha:]]+){0,2}[[:space:]]*[:=][[:space:]]*[^[:space:]]'
+      or coalesce(p_texto, '') ~ 'v1\.[0-9]+\.[A-Za-z0-9+/=]{8,}\.[A-Za-z0-9+/=]{8,}\.[A-Za-z0-9+/=]{8,}'
+      or coalesce(p_texto, '') ~ 'eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.'
+      or coalesce(p_texto, '') ~* '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+      or coalesce(p_texto, '') ~* 'sb_secret_[A-Za-z0-9_-]+'
+      or coalesce(p_texto, '') ~* '[a-z][a-z0-9+.-]*://[^/[:space:]:@]+:[^/[:space:]@]+@';
+$$;
+revoke execute on function public.asistencia_parece_secreto(text) from public, anon, authenticated;
+
+-- Estructura permitida de un envio (version 1). Devuelve null si es
+-- valido; si no, el motivo: 'estructura', 'tamano', 'url' o 'secreto'.
+-- Solo claves conocidas, solo textos, largos acotados y 16 KB en total.
+create or replace function public.asistencia_validar_contenido(p jsonb)
+returns text
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  b jsonb;
+  k text;
+  v_tipo text;
+  v_texto text;
+  v_max int;
+begin
+  if p is null or jsonb_typeof(p) is distinct from 'object' then return 'estructura'; end if;
+  if octet_length(p::text) > 16384 then return 'tamano'; end if;
+  for k in select jsonb_object_keys(p) loop
+    if k not in ('v', 'titulo', 'subtitulo', 'bloques') then return 'estructura'; end if;
+  end loop;
+  if (p ->> 'v') is distinct from '1' then return 'estructura'; end if;
+  if jsonb_typeof(p -> 'titulo') is distinct from 'string'
+     or length(p ->> 'titulo') not between 1 and 200 then
+    return 'estructura';
+  end if;
+  if p ? 'subtitulo' and (jsonb_typeof(p -> 'subtitulo') is distinct from 'string'
+     or length(p ->> 'subtitulo') > 200) then
+    return 'estructura';
+  end if;
+  if public.asistencia_parece_secreto(concat_ws(' ', p ->> 'titulo', p ->> 'subtitulo')) then
+    return 'secreto';
+  end if;
+  if jsonb_typeof(p -> 'bloques') is distinct from 'array'
+     or jsonb_array_length(p -> 'bloques') not between 1 and 40 then
+    return 'estructura';
+  end if;
+  for b in select value from jsonb_array_elements(p -> 'bloques') loop
+    if jsonb_typeof(b) is distinct from 'object' then return 'estructura'; end if;
+    for k in select jsonb_object_keys(b) loop
+      if k not in ('tipo', 'texto', 'titulo', 'plataforma', 'etiqueta') then return 'estructura'; end if;
+      if jsonb_typeof(b -> k) is distinct from 'string' then return 'estructura'; end if;
+    end loop;
+    v_tipo := b ->> 'tipo';
+    v_texto := b ->> 'texto';
+    if v_tipo is null or v_tipo not in (
+      'accion', 'comprobacion', 'donde', 'debes_ver', 'nota', 'dato', 'comando', 'atajo', 'url', 'archivo'
+    ) then
+      return 'estructura';
+    end if;
+    v_max := case when v_tipo in ('comando', 'atajo', 'url', 'archivo', 'dato') then 500 else 2000 end;
+    if v_texto is null or length(v_texto) not between 1 and v_max then return 'estructura'; end if;
+    if length(coalesce(b ->> 'titulo', '')) > 200
+       or length(coalesce(b ->> 'plataforma', '')) > 100
+       or length(coalesce(b ->> 'etiqueta', '')) > 200 then
+      return 'estructura';
+    end if;
+    if v_tipo = 'url' and v_texto !~* '^https?://[^[:space:]]+$' then return 'url'; end if;
+    if public.asistencia_parece_secreto(concat_ws(' ', v_texto, b ->> 'titulo', b ->> 'etiqueta', b ->> 'plataforma')) then
+      return 'secreto';
+    end if;
+  end loop;
+  return null;
+end;
+$$;
+revoke execute on function public.asistencia_validar_contenido(jsonb) from public, anon, authenticated;
+
+-- Cierra lo que ya vencio (una sesion o todas): el codigo sin canjear,
+-- la inactividad del tecnico y el maximo de 4 horas. Borra los mensajes
+-- de lo que cierra. No hay tarea programada: cada funcion de abajo la
+-- llama antes de mirar el estado, asi que nada vencido se sirve jamas.
+-- Sin EXECUTE para la API; la llaman solo las funciones de este bloque.
+create or replace function public.asistencia_vencer(p_sesion uuid)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+declare
+  s record;
+begin
+  for s in
+    select id, tecnico,
+      case
+        when estado = 'esperando' and codigo_vence_en <= now() then 'codigo_vencido'
+        when estado = 'conectada' and conectada_en <= now() - interval '4 hours' then 'maximo'
+        when estado = 'conectada' and ultima_actividad <= now() - interval '15 minutes' then 'inactividad'
+      end as motivo
+    from public.asistencia_sesiones
+    where estado in ('esperando', 'conectada')
+      and (p_sesion is null or id = p_sesion)
+    for update skip locked
+  loop
+    continue when s.motivo is null;
+    update public.asistencia_sesiones
+      set estado = 'expirada', cerrada_en = now(), motivo_cierre = s.motivo
+      where id = s.id;
+    delete from public.asistencia_mensajes where sesion_id = s.id;
+    insert into public.asistencia_eventos (sesion_id, tipo, tecnico, detalle)
+      values (s.id, 'expirada', s.tecnico, s.motivo);
+  end loop;
+end;
+$$;
+revoke execute on function public.asistencia_vencer(uuid) from public, anon, authenticated;
+
+-- PORTAL (anon). Crea una sesion en espera y devuelve, UNA sola vez, el
+-- secreto con el que el portal se identifica despues. Los rechazos
+-- devuelven {ok: false, error} en vez de lanzar una excepcion: una
+-- excepcion desharia tambien el registro del evento.
+create or replace function public.asistencia_crear()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_codigo text;
+  v_secreto text := encode(extensions.gen_random_bytes(32), 'hex');
+  v_vence timestamptz := now() + interval '10 minutes';
+  v_bytes bytea;
+  v_intento int := 0;
+begin
+  perform public.asistencia_vencer(null);
+  -- Lo cerrado hace mas de 30 dias ya no sirve: su auditoria sigue en
+  -- asistencia_eventos.
+  delete from public.asistencia_sesiones
+    where estado in ('cerrada', 'expirada') and cerrada_en < now() - interval '30 days';
+  if (select count(*) from public.asistencia_sesiones where estado = 'esperando') >= 100 then
+    return jsonb_build_object('ok', false, 'error', 'saturada');
+  end if;
+  loop
+    v_intento := v_intento + 1;
+    v_bytes := extensions.gen_random_bytes(4);
+    v_codigo := lpad((((get_byte(v_bytes, 0)::bigint << 24) | (get_byte(v_bytes, 1) << 16)
+      | (get_byte(v_bytes, 2) << 8) | get_byte(v_bytes, 3)) % 1000000)::text, 6, '0');
+    begin
+      insert into public.asistencia_sesiones (codigo, secreto_hash, codigo_vence_en)
+        values (v_codigo, encode(sha256(convert_to(v_secreto, 'UTF8')), 'hex'), v_vence)
+        returning id into v_id;
+      exit;
+    exception when unique_violation then
+      if v_intento >= 20 then
+        return jsonb_build_object('ok', false, 'error', 'saturada');
+      end if;
+    end;
+  end loop;
+  insert into public.asistencia_eventos (sesion_id, tipo) values (v_id, 'creada');
+  return jsonb_build_object('ok', true, 'id', v_id, 'secreto', v_secreto, 'codigo', v_codigo,
+    'codigo_vence_en', v_vence, 'ahora', now());
+end;
+$$;
+revoke execute on function public.asistencia_crear() from public, anon, authenticated;
+grant execute on function public.asistencia_crear() to anon;
+
+-- PORTAL (anon). Estado y mensajes nuevos de ESA sesion, solo con su
+-- secreto. Un id o un secreto equivocados responden igual que una sesion
+-- inexistente. Consultar desde el portal NO cuenta como actividad: el
+-- computador atendido no puede mantener viva una sesion por su cuenta.
+create or replace function public.asistencia_estado(p_id uuid, p_secreto text, p_desde bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  s public.asistencia_sesiones%rowtype;
+  v_mensajes jsonb := '[]'::jsonb;
+begin
+  if p_id is null or p_secreto is null or p_secreto !~ '^[0-9a-f]{64}$' then
+    return jsonb_build_object('ok', true, 'estado', 'no_encontrada', 'ahora', now());
+  end if;
+  perform public.asistencia_vencer(p_id);
+  select * into s from public.asistencia_sesiones
+    where id = p_id and secreto_hash = encode(sha256(convert_to(p_secreto, 'UTF8')), 'hex');
+  if not found then
+    return jsonb_build_object('ok', true, 'estado', 'no_encontrada', 'ahora', now());
+  end if;
+  if s.estado = 'conectada' then
+    select coalesce(jsonb_agg(jsonb_build_object('id', m.id, 'creado_en', m.creado_en, 'contenido', m.contenido)
+        order by m.id), '[]'::jsonb)
+      into v_mensajes
+      from public.asistencia_mensajes m
+      where m.sesion_id = s.id and m.id > coalesce(p_desde, 0);
+  end if;
+  return jsonb_build_object(
+    'ok', true,
+    'estado', s.estado,
+    'codigo', case when s.estado = 'esperando' then s.codigo end,
+    'codigo_vence_en', case when s.estado = 'esperando' then s.codigo_vence_en end,
+    'motivo', s.motivo_cierre,
+    'mensajes', v_mensajes,
+    'ahora', now()
+  );
+end;
+$$;
+revoke execute on function public.asistencia_estado(uuid, text, bigint) from public, anon, authenticated;
+grant execute on function public.asistencia_estado(uuid, text, bigint) to anon;
+
+-- PORTAL (anon). El computador termina la sesion ("Terminar").
+create or replace function public.asistencia_cerrar_portal(p_id uuid, p_secreto text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_tecnico uuid;
+begin
+  if p_id is null or p_secreto is null or p_secreto !~ '^[0-9a-f]{64}$' then
+    return jsonb_build_object('ok', true, 'estado', 'no_encontrada');
+  end if;
+  update public.asistencia_sesiones
+    set estado = 'cerrada', cerrada_en = now(), motivo_cierre = 'portal'
+    where id = p_id
+      and secreto_hash = encode(sha256(convert_to(p_secreto, 'UTF8')), 'hex')
+      and estado in ('esperando', 'conectada')
+    returning id, tecnico into v_id, v_tecnico;
+  if v_id is not null then
+    delete from public.asistencia_mensajes where sesion_id = v_id;
+    insert into public.asistencia_eventos (sesion_id, tipo, tecnico, detalle)
+      values (v_id, 'cerrada', v_tecnico, 'portal');
+  end if;
+  return jsonb_build_object('ok', true, 'estado', 'cerrada');
+end;
+$$;
+revoke execute on function public.asistencia_cerrar_portal(uuid, text) from public, anon, authenticated;
+grant execute on function public.asistencia_cerrar_portal(uuid, text) to anon;
+
+-- TECNICO (authenticated). Canjea el codigo: la sesion queda fijada a
+-- este tecnico una sola vez. Conectar otra cierra la anterior del mismo
+-- tecnico. Un codigo incorrecto, vencido o ya usado se registra y cuenta
+-- para el limite de intentos.
+create or replace function public.asistencia_conectar(p_codigo text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_codigo text := regexp_replace(coalesce(p_codigo, ''), '[[:space:]]', '', 'g');
+  v_fallos_tecnico int;
+  v_fallos_total int;
+  s public.asistencia_sesiones%rowtype;
+  v_reciente public.asistencia_sesiones%rowtype;
+  v_otra record;
+begin
+  if v_uid is null then
+    return jsonb_build_object('ok', false, 'error', 'sin_sesion');
+  end if;
+  if v_codigo !~ '^[0-9]{6}$' then
+    return jsonb_build_object('ok', false, 'error', 'codigo_invalido');
+  end if;
+  select count(*) filter (where tecnico = v_uid), count(*)
+    into v_fallos_tecnico, v_fallos_total
+    from public.asistencia_eventos
+    where tipo = 'codigo_incorrecto' and fecha > now() - interval '10 minutes';
+  if v_fallos_tecnico >= 5 or v_fallos_total >= 30 then
+    insert into public.asistencia_eventos (tipo, tecnico) values ('bloqueo_intentos', v_uid);
+    return jsonb_build_object('ok', false, 'error', 'demasiados_intentos');
+  end if;
+  perform public.asistencia_vencer(null);
+  select * into s from public.asistencia_sesiones
+    where codigo = v_codigo and estado = 'esperando'
+    for update;
+  if not found then
+    insert into public.asistencia_eventos (tipo, tecnico) values ('codigo_incorrecto', v_uid);
+    select * into v_reciente from public.asistencia_sesiones
+      where codigo = v_codigo and creada_en > now() - interval '1 hour'
+      order by creada_en desc limit 1;
+    if found and v_reciente.motivo_cierre = 'codigo_vencido' then
+      return jsonb_build_object('ok', false, 'error', 'codigo_vencido');
+    elsif found then
+      return jsonb_build_object('ok', false, 'error', 'codigo_usado');
+    end if;
+    return jsonb_build_object('ok', false, 'error', 'codigo_incorrecto');
+  end if;
+  for v_otra in
+    select id from public.asistencia_sesiones
+      where tecnico = v_uid and estado = 'conectada' and id <> s.id
+      for update
+  loop
+    update public.asistencia_sesiones
+      set estado = 'cerrada', cerrada_en = now(), motivo_cierre = 'reemplazada'
+      where id = v_otra.id;
+    delete from public.asistencia_mensajes where sesion_id = v_otra.id;
+    insert into public.asistencia_eventos (sesion_id, tipo, tecnico, detalle)
+      values (v_otra.id, 'cerrada', v_uid, 'reemplazada');
+  end loop;
+  update public.asistencia_sesiones
+    set estado = 'conectada', tecnico = v_uid, conectada_en = now(), ultima_actividad = now()
+    where id = s.id;
+  insert into public.asistencia_eventos (sesion_id, tipo, tecnico) values (s.id, 'conectada', v_uid);
+  return jsonb_build_object('ok', true, 'id', s.id, 'codigo', s.codigo, 'conectada_en', now(),
+    'vence_inactividad_en', now() + interval '15 minutes', 'vence_maximo_en', now() + interval '4 hours');
+end;
+$$;
+revoke execute on function public.asistencia_conectar(text) from public, anon, authenticated;
+grant execute on function public.asistencia_conectar(text) to authenticated;
+
+-- TECNICO (authenticated, dueno de la sesion). Valida y guarda lo que el
+-- portal mostrara. Un contenido con forma de secreto se rechaza y deja
+-- constancia (sin el contenido). Como mucho 20 envios por minuto y 200
+-- por sesion.
+create or replace function public.asistencia_enviar(p_id uuid, p_contenido jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  s public.asistencia_sesiones%rowtype;
+  v_error text;
+  v_ultimo_minuto int;
+  v_total int;
+  v_mensaje bigint;
+begin
+  if v_uid is null then
+    return jsonb_build_object('ok', false, 'error', 'sin_sesion');
+  end if;
+  perform public.asistencia_vencer(p_id);
+  select * into s from public.asistencia_sesiones where id = p_id and tecnico = v_uid for update;
+  if not found or s.estado <> 'conectada' then
+    return jsonb_build_object('ok', false, 'error', 'sesion_no_activa',
+      'estado', coalesce(s.estado, 'no_encontrada'), 'motivo', s.motivo_cierre);
+  end if;
+  v_error := public.asistencia_validar_contenido(p_contenido);
+  if v_error is not null then
+    insert into public.asistencia_eventos (sesion_id, tipo, tecnico, detalle)
+      values (s.id, 'mensaje_rechazado', v_uid, v_error);
+    return jsonb_build_object('ok', false,
+      'error', case when v_error = 'secreto' then 'contenido_protegido' else 'contenido_no_valido' end,
+      'motivo', v_error);
+  end if;
+  select count(*) filter (where creado_en > now() - interval '1 minute'), count(*)
+    into v_ultimo_minuto, v_total
+    from public.asistencia_mensajes where sesion_id = s.id;
+  if v_ultimo_minuto >= 20 or v_total >= 200 then
+    return jsonb_build_object('ok', false, 'error', 'demasiados_envios');
+  end if;
+  insert into public.asistencia_mensajes (sesion_id, contenido) values (s.id, p_contenido)
+    returning id into v_mensaje;
+  update public.asistencia_sesiones set ultima_actividad = now() where id = s.id;
+  insert into public.asistencia_eventos (sesion_id, tipo, tecnico, detalle)
+    values (s.id, 'mensaje', v_uid, jsonb_array_length(p_contenido -> 'bloques')::text || ' bloques');
+  return jsonb_build_object('ok', true, 'id', v_mensaje, 'vence_inactividad_en', now() + interval '15 minutes');
+end;
+$$;
+revoke execute on function public.asistencia_enviar(uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.asistencia_enviar(uuid, jsonb) to authenticated;
+
+-- TECNICO (authenticated, dueno). Estado para el indicador del telefono;
+-- de paso es el latido que mantiene viva la sesion mientras su app la
+-- tiene abierta.
+create or replace function public.asistencia_estado_tecnico(p_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  s public.asistencia_sesiones%rowtype;
+begin
+  if v_uid is null then
+    return jsonb_build_object('ok', false, 'error', 'sin_sesion');
+  end if;
+  perform public.asistencia_vencer(p_id);
+  select * into s from public.asistencia_sesiones where id = p_id and tecnico = v_uid for update;
+  if not found then
+    return jsonb_build_object('ok', true, 'estado', 'no_encontrada');
+  end if;
+  if s.estado = 'conectada' then
+    update public.asistencia_sesiones set ultima_actividad = now() where id = s.id;
+    s.ultima_actividad := now();
+  end if;
+  return jsonb_build_object('ok', true, 'estado', s.estado, 'codigo', s.codigo,
+    'conectada_en', s.conectada_en, 'motivo', s.motivo_cierre,
+    'vence_inactividad_en', s.ultima_actividad + interval '15 minutes',
+    'vence_maximo_en', s.conectada_en + interval '4 hours');
+end;
+$$;
+revoke execute on function public.asistencia_estado_tecnico(uuid) from public, anon, authenticated;
+grant execute on function public.asistencia_estado_tecnico(uuid) to authenticated;
+
+-- TECNICO (authenticated, dueno). "Desconectar equipo": revoca la sesion.
+create or replace function public.asistencia_desconectar(p_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_id uuid;
+begin
+  if v_uid is null then
+    return jsonb_build_object('ok', false, 'error', 'sin_sesion');
+  end if;
+  update public.asistencia_sesiones
+    set estado = 'cerrada', cerrada_en = now(), motivo_cierre = 'tecnico'
+    where id = p_id and tecnico = v_uid and estado = 'conectada'
+    returning id into v_id;
+  if v_id is not null then
+    delete from public.asistencia_mensajes where sesion_id = v_id;
+    insert into public.asistencia_eventos (sesion_id, tipo, tecnico, detalle)
+      values (v_id, 'cerrada', v_uid, 'tecnico');
+  end if;
+  return jsonb_build_object('ok', true, 'estado', 'cerrada');
+end;
+$$;
+revoke execute on function public.asistencia_desconectar(uuid) from public, anon, authenticated;
+grant execute on function public.asistencia_desconectar(uuid) to authenticated;

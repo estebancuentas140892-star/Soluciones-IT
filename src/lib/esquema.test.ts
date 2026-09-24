@@ -86,7 +86,13 @@ describe('contenido inicial de Referencia', () => {
   })
 
   it('no siembra ninguna direccion IP real ni credenciales', () => {
-    const bloque = esquema.slice(esquema.indexOf('5.1 Contenido inicial de Referencia'))
+    // Solo las semillas (secciones 5.x): desde la tarea 258 el esquema
+    // sigue con el detector de secretos del portal de asistencia, que
+    // nombra "contraseña" y "password" a proposito.
+    const bloque = esquema.slice(
+      esquema.indexOf('5.1 Contenido inicial de Referencia'),
+      esquema.indexOf('-- 6. Tiempo real'),
+    )
     // Una IPv4 literal en el contenido seria un dato interno filtrado;
     // los ejemplos usan marcadores entre corchetes.
     expect(bloque).not.toMatch(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/)
@@ -188,7 +194,14 @@ describe('herramientas del Centro de consulta', () => {
 describe('el respaldo cubre todas las tablas del esquema', () => {
   const script = readFileSync('scripts/respaldo-supabase.sh', 'utf8')
   const lista = /^TABLAS=\(([^)]*)\)/m.exec(script)?.[1].trim().split(/\s+/) ?? []
-  const tablasDelEsquema = [...esquema.matchAll(/create table if not exists public\.(\w+) \(/g)].map((m) => m[1])
+  // Tablas CERRADAS a la API a proposito (tarea 258): sin politicas ni
+  // privilegios para authenticated, asi que el usuario de respaldo no
+  // puede leerlas y el script fallaria. Sus sesiones y mensajes son
+  // efimeros, y su auditoria se consulta en el panel de Supabase.
+  const SIN_RESPALDO_POR_API = ['asistencia_sesiones', 'asistencia_mensajes', 'asistencia_eventos']
+  const tablasDelEsquema = [...esquema.matchAll(/create table if not exists public\.(\w+) \(/g)]
+    .map((m) => m[1])
+    .filter((tabla) => !SIN_RESPALDO_POR_API.includes(tabla))
 
   it('el script declara su lista de tablas', () => {
     expect(lista.length).toBeGreaterThan(0)
@@ -209,6 +222,17 @@ describe('las funciones del esquema tienen permisos explicitos', () => {
     // La dispara Auth (supabase_auth_admin), que no puede escribir en
     // public.perfiles; nadie la invoca por la API.
     'crear_perfil',
+    // El portal de asistencia (tarea 258): sus tablas no tienen
+    // politicas ni privilegios, asi que solo estas funciones las tocan.
+    // Las tres primeras son para anon (el computador atendido, sin
+    // sesion) y las cuatro ultimas para authenticated (el tecnico).
+    'asistencia_crear',
+    'asistencia_estado',
+    'asistencia_cerrar_portal',
+    'asistencia_conectar',
+    'asistencia_enviar',
+    'asistencia_estado_tecnico',
+    'asistencia_desconectar',
   ]
   const funciones = [...esquema.matchAll(/create or replace function public\.(\w+)\(([^)]*)\)([\s\S]*?)\nas \$\$/g)].map(
     (m) => ({ nombre: m[1], cabecera: m[3] }),
@@ -230,5 +254,48 @@ describe('las funciones del esquema tienen permisos explicitos', () => {
 
   it.each(funciones.map((f) => [f.nombre, f.cabecera]))('%s solo es security definer si esta justificada', (nombre, cabecera) => {
     if (/security definer/.test(cabecera)) expect(SECURITY_DEFINER_PERMITIDAS).toContain(nombre)
+  })
+})
+
+// EL PORTAL DE ASISTENCIA NO ABRE NADA (tarea 258). Es la primera
+// superficie publica de la app: sus tablas quedan cerradas a la API y
+// cada funcion se concede solo al rol que la usa.
+describe('el portal de asistencia no abre sus tablas', () => {
+  const TABLAS = ['asistencia_sesiones', 'asistencia_mensajes', 'asistencia_eventos']
+  const DEL_PORTAL = ['asistencia_crear()', 'asistencia_estado(uuid, text, bigint)', 'asistencia_cerrar_portal(uuid, text)']
+  const DEL_TECNICO = [
+    'asistencia_conectar(text)',
+    'asistencia_enviar(uuid, jsonb)',
+    'asistencia_estado_tecnico(uuid)',
+    'asistencia_desconectar(uuid)',
+  ]
+  const INTERNAS = ['asistencia_parece_secreto(text)', 'asistencia_validar_contenido(jsonb)', 'asistencia_vencer(uuid)']
+  const realtime = /tablas text\[\] := array\[([\s\S]*?)\];/.exec(esquema)?.[1] ?? ''
+
+  it.each(TABLAS)('%s tiene RLS, ninguna politica y ningun privilegio para la API', (tabla) => {
+    expect(esquema).toContain(`alter table public.${tabla} enable row level security;`)
+    expect(esquema).toContain(`revoke all on table public.${tabla} from public, anon, authenticated;`)
+    expect(esquema).not.toMatch(new RegExp(`create policy \\w+ on public\\.${tabla}\\b`))
+    expect(esquema).not.toMatch(new RegExp(`grant [^;]* on (table )?public\\.${tabla}\\b`))
+  })
+
+  it.each(TABLAS)('%s no se publica por Realtime', (tabla) => {
+    expect(realtime).not.toBe('')
+    expect(realtime).not.toContain(`'${tabla}'`)
+  })
+
+  it.each(DEL_PORTAL)('%s solo la ejecuta anon', (firma) => {
+    expect(esquema).toContain(`grant execute on function public.${firma} to anon;`)
+    expect(esquema).not.toContain(`grant execute on function public.${firma} to authenticated;`)
+  })
+
+  it.each(DEL_TECNICO)('%s solo la ejecuta authenticated', (firma) => {
+    expect(esquema).toContain(`grant execute on function public.${firma} to authenticated;`)
+    expect(esquema).not.toContain(`grant execute on function public.${firma} to anon;`)
+  })
+
+  it.each(INTERNAS)('%s no se concede a nadie', (firma) => {
+    expect(esquema).toContain(`revoke execute on function public.${firma} from public, anon, authenticated;`)
+    expect(esquema).not.toMatch(new RegExp(`grant execute on function public\\.${firma.replace(/[()]/g, '\\$&')}`))
   })
 })

@@ -42,6 +42,9 @@ import {
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
 import { useReferencias } from '../referencia/useReferencias'
+import { FranjaEquipoConectado } from '../asistencia/FranjaEquipoConectado'
+import { useSesionAsistencia } from '../asistencia/sesionAsistencia'
+import { useAuth } from '../autenticacion/authContext'
 import { cierreDelPaso, guiaPendienteDelPaso, guiaTerminada } from './cierrePaso'
 import {
   claveDeVinculo,
@@ -103,6 +106,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // Las fichas del Centro de consulta, para el "¿Qué hace?" de las
   // tareas del paso entero (tarea 270): una consulta, no una por tarea.
   const referenciasVivas = useReferencias()
+  // ASISTENCIA REMOTA (tarea 258): con un computador conectado, cada paso
+  // ofrece "Enviar a este equipo"; sin él, el índice ofrece conectarlo.
+  const { session: sesionAuth } = useAuth()
+  const equipoConectado = useSesionAsistencia(sesionAuth?.user?.id ?? null)
 
   // Equipo afectado por ESTE procedimiento (tarea 79, solo nivel 0):
   // determina si la captura de evidencia tiene donde registrarse. Un
@@ -568,6 +575,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           rutaDetalles={articulo ? `/soluciones/${articulo.categoriaId}/${articulo.id}/detalles` : undefined}
           estadoDetalles={articulo ? conOrigen(rutaOrigen, articulo.titulo) : undefined}
           onEmpezarDeNuevo={sinAvance ? undefined : () => void reiniciarYVolver()}
+          rutaConectar={equipoConectado ? undefined : '/conectar'}
+          estadoConectar={conOrigen(rutaOrigen, articulo?.titulo ?? 'la guía')}
         />
       </>
     ) : null
@@ -653,6 +662,19 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
               onCompletado={alCompletar ?? (() => void intentarCompletarPaso(indiceActual, paso))}
             />
           )}
+          renderEnvioAEquipo={
+            nivel === 0
+              ? (tareaId) => (
+                  <FranjaEquipoConectado
+                    paso={paso}
+                    numeroPaso={indiceActual + 1}
+                    tituloGuia={articulo?.titulo ?? ''}
+                    referencias={referenciasVivas}
+                    tareaId={tareaId}
+                  />
+                )
+              : undefined
+          }
         />
         {hojaDeFalla}
       </>
@@ -852,6 +874,17 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           dominantes en la misma pantalla dejarían de ser dominantes. */}
       {nivel === 0 && (
         <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.96] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px] [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-xl">
+          {equipoConectado && (
+            <div className="mb-2">
+              <FranjaEquipoConectado
+                paso={paso}
+                numeroPaso={indiceActual + 1}
+                tituloGuia={articulo?.titulo ?? ''}
+                referencias={referenciasVivas}
+                tareaId={null}
+              />
+            </div>
+          )}
           <button
             type="button"
             disabled={cierre.accion === 'bloqueado'}

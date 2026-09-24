@@ -160,6 +160,11 @@ interface Props {
     // terminar el destino, lo que queda respondido es la decisión.
     alCompletar?: () => void
   }) => ReactNode
+  // ASISTENCIA REMOTA (tarea 258): con un computador conectado, la franja
+  // "Equipo 482 731 · Enviar a este equipo" sobre los botones del pie. La
+  // aporta `AsistenteVista` (solo en la guía principal); recibe la acción
+  // a la vista para ofrecer "Solo esta acción". Sin conexión no pinta nada.
+  renderEnvioAEquipo?: (tareaId: string | null) => ReactNode
 }
 
 // EL CONTENIDO NUEVO EMPIEZA ARRIBA (encargo del 2026-09-10, tarea 4).
@@ -227,6 +232,7 @@ export function ModoFoco({
   onVinculoCompletado,
   renderTarjetaGuia,
   renderGuia,
+  renderEnvioAEquipo,
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso)
 
@@ -876,6 +882,7 @@ export function ModoFoco({
               Si respondes que no, se abre «{tarea.decisionGuiaTitulo || 'la salida'}»
             </p>
           )}
+          {!anidado && renderEnvioAEquipo?.(tarea.clase === 'tarea' ? tarea.id : null)}
           {/* En escritorio la ejecución tiene más ancho (tarea 255), pero
               los controles no se estiran: un botón de 700 px no se toca
               mejor que uno de 600. */}

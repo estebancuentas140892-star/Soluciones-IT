@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Modal } from '../../components/Modal'
-import { ArrowsClockwise, Check, Circle, Crosshair, Eye, Info, SealCheck, Warning, X } from '../../components/iconos'
+import { ArrowsClockwise, Check, Circle, Crosshair, Eye, Info, PlugsConnected, SealCheck, Warning, X } from '../../components/iconos'
 import type { ModoEjecucion } from '../../lib/preferenciasEjecucion'
 import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 
@@ -77,6 +77,14 @@ interface Props {
   estadoDetalles?: unknown
   /** Empezar de nuevo. Solo llega cuando hay avance que borrar. */
   onEmpezarDeNuevo?: () => void
+  /**
+   * "Conectar un equipo" (tarea 258): el computador que se atiende abre
+   * `/asistencia` y el técnico lo conecta para enviarle los pasos. Solo
+   * llega cuando no hay ninguno conectado; conectado, la guía enseña su
+   * franja en el pie.
+   */
+  rutaConectar?: string
+  estadoConectar?: unknown
 }
 
 const ID_TITULO = 'hoja-pasos-titulo'
@@ -176,6 +184,8 @@ export function HojaPasos({
   rutaDetalles,
   estadoDetalles,
   onEmpezarDeNuevo,
+  rutaConectar,
+  estadoConectar,
 }: Props) {
   const enFoco = modoEjecucion === 'foco'
 
@@ -281,7 +291,7 @@ export function HojaPasos({
       {/* LO QUE SALIÓ DE LA PANTALLA DE LA GUÍA (encargo del 2026-09-17):
           la ficha y empezar de nuevo. Existen, pero no se interponen entre
           abrir la guía y hacer el paso 1. */}
-      {(rutaDetalles || onEmpezarDeNuevo) && (
+      {(rutaDetalles || onEmpezarDeNuevo || rutaConectar) && (
         // Uno debajo del otro: lado a lado, en 360 px los dos rótulos se
         // recortaban ("Detalles de la g…", "Empezar de nu…").
         <div className="mt-2 flex flex-col gap-2">
@@ -294,6 +304,17 @@ export function HojaPasos({
             >
               <Info size={17} className="shrink-0" aria-hidden />
               <span className="truncate">Detalles de la guía</span>
+            </Link>
+          )}
+          {rutaConectar && (
+            <Link
+              to={rutaConectar}
+              state={estadoConectar}
+              onClick={onCerrar}
+              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+            >
+              <PlugsConnected size={17} className="shrink-0" aria-hidden />
+              <span className="truncate">Conectar un equipo</span>
             </Link>
           )}
           {onEmpezarDeNuevo && (

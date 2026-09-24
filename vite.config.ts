@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { fileURLToPath } from 'node:url'
 
 // LA VERSION QUE SE VE EN EL TELEFONO (encargo del 2026-09-20, punto 4).
 // Vercel expone el commit del despliegue en VERCEL_GIT_COMMIT_SHA; se
@@ -40,6 +41,44 @@ function pluginVersionJson(version: string) {
   }
 }
 
+// EL PORTAL DE ASISTENCIA EN DESARROLLO (tarea 258). En produccion,
+// `vercel.json` reescribe `/asistencia` a `asistencia.html`; el servidor
+// de desarrollo, en cambio, responderia con la app (su fallback de SPA),
+// asi que aqui se hace la misma reescritura.
+function pluginPortalAsistencia() {
+  return {
+    name: 'soluciones-it-portal-asistencia',
+    configureServer(servidor: { middlewares: { use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void } }) {
+      servidor.middlewares.use((req, _res, next) => {
+        if (req.url && /^\/asistencia\/?(\?|$)/.test(req.url)) {
+          req.url = req.url.replace(/^\/asistencia\/?/, '/asistencia.html')
+        }
+        next()
+      })
+    },
+  }
+}
+
+// VitePWA pone `<link rel="manifest">` en TODAS las paginas del build.
+// En el portal no: el computador atendido no debe ofrecer "Instalar
+// Soluciones IT" (la pagina no es la app ni registra su service worker).
+// Va con `enforce: 'post'` y DESPUES de VitePWA en la lista de plugins,
+// porque VitePWA inyecta el enlace en su propio paso final.
+function pluginPortalSinManifiesto() {
+  return {
+    name: 'soluciones-it-portal-sin-manifiesto',
+    enforce: 'post' as const,
+    apply: 'build' as const,
+    transformIndexHtml: {
+      order: 'post' as const,
+      handler(html: string, contexto: { filename: string }) {
+        if (!/[\\/]asistencia\.html$/.test(contexto.filename)) return html
+        return html.replace(/\s*<link rel="manifest"[^>]*>/g, '')
+      },
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   define: {
@@ -49,6 +88,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     pluginVersionJson(versionApp),
+    pluginPortalAsistencia(),
     VitePWA({
       // 'prompt' (en vez de 'autoUpdate'): la version nueva queda en
       // espera y el aviso ActualizacionDisponible deja que el tecnico
@@ -91,12 +131,32 @@ export default defineConfig({
         // version nueva. (Con estos `globPatterns` ya quedaria fuera por
         // extension; se escribe explicito para que no se cuele si
         // alguien agrega json a la lista.)
-        globIgnores: ['version.json'],
+        globIgnores: [
+          'version.json',
+          // EL PORTAL PUBLICO NO ES DE LA APP DEL TECNICO (tarea 258): ni
+          // su HTML ni su entrada ni sus estilos entran en el precache.
+          // Lo que comparte con la app (React, el componente que dibuja
+          // un envio) ya estaba en el precache por la app.
+          'asistencia.html',
+          'assets/asistencia-*',
+        ],
+        // Y el service worker de la app no sirve su `index.html` cuando
+        // el navegador pide `/asistencia`: esa navegacion va a la red,
+        // donde Vercel responde con el portal.
+        navigateFallbackDenylist: [/^\/asistencia(\.html)?(\/|\?|$)/],
       },
     }),
+    pluginPortalSinManifiesto(),
   ],
   build: {
     rollupOptions: {
+      // Dos entradas: la app del tecnico y el portal publico de
+      // asistencia (tarea 258), que no comparte con la app mas que React,
+      // los estilos y el componente que dibuja un envio.
+      input: {
+        index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        asistencia: fileURLToPath(new URL('./asistencia.html', import.meta.url)),
+      },
       output: {
         // Vendors pesados que se cargan al arranque (autenticacion y
         // sincronizacion) en trozos propios y estables: se cachean
@@ -106,6 +166,16 @@ export default defineConfig({
         // articulo y la de inicio, respectivamente).
         advancedChunks: {
           groups: [
+            {
+              // El ayudante de precarga de Vite (`__vitePreload`) en su
+              // propio trozo minimo. Sin esto caia dentro del de Supabase y
+              // todo trozo con una importacion diferida (React incluido)
+              // importaba supabase-js entero: el portal de asistencia lo
+              // descargaba sin usarlo (tarea 258).
+              name: 'precarga',
+              test: /vite\/preload-helper/,
+              priority: 30,
+            },
             {
               name: 'supabase',
               test: /[\\/]node_modules[\\/]@supabase[\\/]/,

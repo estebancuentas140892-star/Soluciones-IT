@@ -255,6 +255,7 @@ describe('el escáner', () => {
   const RUTAS = [
     { ruta: '/escaner', elemento: <EscanerPage /> },
     { ruta: '/dispositivos/:dispositivoId', elemento: <p>FICHA DEL EQUIPO</p> },
+    { ruta: '/conectar', elemento: <p>CONECTAR EQUIPO</p> },
   ]
 
   function campoManual(): HTMLInputElement | null {
@@ -277,17 +278,19 @@ describe('el escáner', () => {
     expect(sessionStorage.getItem('escaner:ultimo-abierto')).toBe('INV-PRUEBA-1')
   })
 
-  it('reconoce el QR del portal de asistencia y lo dice, sin tratarlo como un equipo', async () => {
+  // Desde la tarea 258 el QR del portal lleva a "Conectar equipo" con el
+  // código puesto (allí se pide confirmar); en la 256 solo se reconocía.
+  it('reconoce el QR del portal de asistencia y lleva a Conectar equipo, sin tratarlo como un equipo', async () => {
     await sembrarInventario()
     await montar(RUTAS, '/escaner')
     const campo = await esperar(() => campoManual(), 'la búsqueda manual')
 
     await escribir(campo, 'https://soluciones-it-psi.vercel.app/conectar?codigo=482731')
     await enviarFormulario(campo)
-    await esperar(() => textoPantalla().includes('Código para conectar un computador'), 'la tarjeta')
+    await esperar(() => textoPantalla().includes('CONECTAR EQUIPO'), 'la pantalla de conectar')
 
-    expect(textoPantalla()).toContain('482 731')
+    expect(ubicacionActual().pathname).toBe('/conectar')
+    expect(ubicacionActual().search).toBe('?codigo=482731')
     expect(textoPantalla()).not.toContain('Ningún equipo coincide')
-    expect(ubicacionActual().pathname).toBe('/escaner')
   })
 })

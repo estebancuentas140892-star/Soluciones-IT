@@ -22,6 +22,10 @@ const ResolverPage = lazy(() =>
 const AgendaPage = lazy(() =>
   import('./features/inicio/AgendaPage').then((m) => ({ default: m.AgendaPage })),
 )
+// Conectar el teléfono con un computador atendido (tarea 258).
+const ConectarPage = lazy(() =>
+  import('./features/asistencia/ConectarPage').then((m) => ({ default: m.ConectarPage })),
+)
 const CuentaPage = lazy(() =>
   import('./features/autenticacion/CuentaPage').then((m) => ({ default: m.CuentaPage })),
 )
@@ -601,6 +605,16 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <AgendaPage />
+                  </Suspense>
+                }
+              />
+              {/* Asistencia remota (tarea 258): el QR del portal lleva
+                  aquí con `?codigo=`, y se pide confirmar. */}
+              <Route
+                path="conectar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <ConectarPage />
                   </Suspense>
                 }
               />

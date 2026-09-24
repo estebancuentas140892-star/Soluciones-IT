@@ -9,11 +9,11 @@ import {
   Flashlight,
   FlashlightFill,
   Monitor,
-  PlugsConnected,
   Question,
 } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { conOrigen } from '../../lib/origenNavegacion'
+import { useOrigen } from '../../app/useOrigen'
 import { resolverCodigo } from './resolverCodigo'
 import {
   codigosLeidos,
@@ -44,7 +44,6 @@ type EstadoCamara = 'iniciando' | 'lista' | 'sin_permiso' | 'sin_camara' | 'no_s
 type Aviso =
   | { tipo: 'no_encontrado'; codigo: string }
   | { tipo: 'varios'; codigo: string; dispositivos: Dispositivo[] }
-  | { tipo: 'asistencia'; codigo: string }
 
 // El detector nativo no figura en los tipos de TypeScript: se declara
 // solo lo que se usa.
@@ -125,6 +124,10 @@ export function EscanerPage() {
   // El origen que se le pasa a todo lo que sale del escáner, para que el
   // regreso diga "‹ Escáner" y vuelva con la cámara viva (regla M-R2).
   const origenEscaner = conOrigen('/escaner', 'Escáner')
+  // El origen DEL PROPIO escáner (por ejemplo, la guía desde la que se
+  // abrió "Conectar equipo"): el QR del portal lo pasa a /conectar, para
+  // que al conectar se pueda volver directo a esa guía.
+  const origenPropio = useOrigen()
 
   const dispositivos = useLiveQuery(() => db.dispositivos.toArray(), [], [])
   const dispositivosRef = useRef(dispositivos)
@@ -151,12 +154,13 @@ export function EscanerPage() {
       navigate(`/dispositivos/${resultado.dispositivoId}`, { state: origenEscaner })
       return
     }
-    // El QR del portal de asistencia (sección 11 del encargo). Emparejar
-    // el teléfono con ese computador es la tarea 258: hasta entonces se
-    // reconoce y se dice, en vez de responder "ningún equipo coincide".
+    // El QR del portal de asistencia (tarea 258): lleva a "Conectar
+    // equipo" con el código puesto, que pide confirmar antes de conectar.
     if (resultado.tipo === 'asistencia') {
       navigator.vibrate?.(60)
-      setAviso({ tipo: 'asistencia', codigo: resultado.codigo })
+      navigate(`/conectar?codigo=${resultado.codigo}`, {
+        state: origenPropio ? conOrigen(origenPropio.to, origenPropio.etiqueta) : undefined,
+      })
       return
     }
     if (resultado.tipo === 'varios') {
@@ -480,30 +484,6 @@ export function EscanerPage() {
           </div>
         )}
 
-        {/* EL QR DEL PORTAL DE ASISTENCIA (tarea 256). Se reconoce y se
-            dice lo que es; conectar el teléfono con ese computador llega
-            con la tarea 258, y entonces esta tarjeta dará paso a
-            /conectar. Neutra: no es un error ni un riesgo. */}
-        {aviso?.tipo === 'asistencia' && (
-          <div className="flex flex-col gap-[11px] rounded-lg border border-noct-divider bg-noct-surface p-3.5 shadow-lg">
-            <div className="flex items-start gap-[11px]">
-              <PlugsConnected size={19} className="mt-px shrink-0 text-noct-neutral-300" aria-hidden />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">Código para conectar un computador</p>
-                <p className="mt-1 font-mono text-[15px] tracking-[.12em] text-noct-text">
-                  {aviso.codigo.slice(0, 3)} {aviso.codigo.slice(3)}
-                </p>
-                <p className="mt-1.5 text-[12.5px] leading-snug text-noct-neutral-400">
-                  Es el código de una asistencia remota. Enviar los pasos de una guía a un computador todavía no
-                  está disponible en esta versión de la app.
-                </p>
-              </div>
-            </div>
-            <button type="button" onClick={() => setAviso(null)} className={`min-h-11 justify-center ${BTN_PRIMARIO}`}>
-              {fallo ? 'Cerrar' : 'Seguir escaneando'}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )
