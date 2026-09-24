@@ -6,6 +6,24 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-24
+
+### Seguridad (Supabase, tarea 271): mínimo privilegio antes del portal `/asistencia`
+
+**Área modificada:** base de datos de Supabase (funciones, triggers, políticas de `historial` y de Storage), subida de archivos de la app.
+**Tipo:** Seguridad (ninguna función interna invocable por `/rest/v1/rpc`; `puede_ver_boveda()` pasa a `SECURITY INVOKER`; autoría de los registros inmutables sellada por el servidor; el historial de secretos se escribe con el mismo permiso que se lee; en Storage solo el dueño reemplaza, y en `adjuntos` borra, su archivo), Modificado (la app sube sin `upsert` y un "ya existe" cuenta como subido).
+**Migración aplicada en Supabase:** `seguridad_minimo_privilegio` (2026-09-24). `supabase/schema.sql` la contiene: **no hay que ejecutar SQL**.
+**Tablas, funciones y restricciones:** `registrar_modificacion()` y `crear_perfil()` quedan con `search_path` vacío y sin `EXECUTE` para PUBLIC, `anon` y `authenticated`. `crear_perfil()` sigue `SECURITY DEFINER` porque la dispara Auth. `puede_ver_boveda()` pasa a `SECURITY INVOKER`, sin `EXECUTE` para PUBLIC ni `anon`. Función nueva `sellar_registro_inmutable()`, con triggers `trg_historial_sello`, `trg_accesos_boveda_sello` y `trg_ejecuciones_sello` (BEFORE INSERT: `recibido_en`, `usuario`, `usuario_nombre`). Política `historial_insercion`: `entidad_tipo not in ('credencial','campo_protegido') or puede_ver_boveda()`. Políticas `adjuntos_storage_edicion`, `adjuntos_storage_borrado` y `archivos_boveda_storage_edicion`: además, `owner_id = auth.uid()`. Sin columnas nuevas; ningún dato cambió.
+**Modificados:** `supabase/schema.sql`, `src/lib/archivosPendientes.ts` (`esArchivoYaExistente`; subidas sin `upsert`), prueba `src/lib/archivosPendientes.test.ts`.
+Documentación: [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md) (actualización del 2026-09-24 y sección 4 con el registro público y las contraseñas filtradas), [ARQUITECTURA.md](ARQUITECTURA.md) (sección 8), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-012, 5.1, 5.2 y 10.3) y [DECISIONES.md](DECISIONES.md) (AD-052).
+**Motivo:** encargo del usuario del **23 de septiembre de 2026**, sección 3: auditar el Supabase real antes de crear una superficie pública, sin desactivar seguridad ni ampliar permisos. Cierra la tarea 169 (TD-1, INSERT de `historial`; TD-2, Storage de `adjuntos`).
+**Impacto esperado:** los asesores de seguridad pasan de 4 advertencias a 1 ("Leaked Password Protection", que exige el plan Pro). Nadie puede invocar funciones internas ni firmar una entrada de auditoría a nombre de otro, y ningún técnico puede reemplazar o destruir el archivo de otro. Para el técnico, la app funciona igual.
+
+- **Comprobado contra la base real antes de aplicar**, en transacciones que se revierten: un trigger sin `EXECUTE` se dispara igual (`authenticated_puede_ejecutar=f sello=disparado`); `puede_ver_boveda()` como INVOKER devuelve `true` para el usuario real y `false` para una cuenta ajena; la migración entera, ensayada, sella al autor real aunque la app mande otro, pone `recibido_en` en ahora y rechaza (42501) el historial de una credencial escrito por una cuenta sin permiso de bóveda.
+- **Comprobado después de aplicar:** Security Advisor con 1 advertencia; por REST con la clave publicable, las 16 tablas siguen devolviendo `[]`, las funciones internas responden `permission denied` o no existen para la API, y un INSERT anónimo en `historial` se rechaza; con la sesión del usuario real simulada, se leen las 16 tablas (Bóveda con 11 credenciales), se edita un equipo (sello `updated_by` correcto) y se escribe historial; en Storage el dueño puede reemplazar sus 18 archivos y una cuenta ajena, ninguno. Performance Advisor sin avisos nuevos.
+- **Encontrado y NO resuelto desde aquí (paso del usuario):** el registro público de Auth está abierto (`disable_signup: false`). Es un ajuste del panel: Authentication > Sign In / Providers > desactivar "Allow new users to sign up". Hoy hay 1 usuario y 0 sin confirmar, así que nadie lo aprovechó.
+- **Verificación del código:** 142 archivos y 1968 casos en verde (antes 1965); lint, tipos y build limpios.
+
 ## 2026-09-23
 
 ### Agregado (agenda y Centro de consulta, tarea 270, Fase 5 del encargo "las entidades se relacionan"): los ingresos, los retiros y los equipos liberados en la agenda, y "¿Qué hace?" dentro de las guías

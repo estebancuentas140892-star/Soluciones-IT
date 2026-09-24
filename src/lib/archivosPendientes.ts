@@ -23,6 +23,19 @@ export function esErrorDeRed(mensaje: string): boolean {
   return /fetch|network|conexi/i.test(mensaje)
 }
 
+// Storage responde 409 "The resource already exists" cuando la
+// referencia ya tiene un archivo. Para esta app eso es un exito, nunca
+// un choque: cada referencia es unica por subida (`articulos/<id>/...`,
+// `credenciales/<id>/...`) o es el hash del contenido
+// (`compartidos/<hash>`), asi que lo que ya esta ahi es el mismo archivo
+// (el primer intento de un reintento, o el mismo contenido que subio otro
+// tecnico). Por eso ninguna subida usa `upsert`: desde la tarea 271 solo
+// el dueno puede reemplazar un archivo en Storage, y reescribir el de
+// otro seria justo lo que esa politica impide.
+export function esArchivoYaExistente(mensaje: string): boolean {
+  return /already exists|duplicate/i.test(mensaje)
+}
+
 // Bucket por defecto (fotos y manuales de artículos/dispositivos). El
 // bóveda de archivos seguros (fase P5) usa uno propio y privado: ver
 // BUCKET_ARCHIVOS_BOVEDA en src/features/boveda/archivoSeguro.ts. La
@@ -37,26 +50,23 @@ const BUCKET_POR_DEFECTO = 'adjuntos'
 // Sube el archivo directo a Storage si hay conexion; si no la hay (o
 // se corta a mitad de camino), lo deja en la cola local. Un rechazo
 // real del servidor estando en linea se propaga para que la interfaz
-// lo muestre como error de subida, igual que antes. `upsert` solo lo
-// pasa en true la deduplicacion por hash (subirConDeduplicacion): ahi
-// la referencia ES el hash del contenido, asi que sobrescribir un
-// archivo con el mismo nombre siempre son los mismos bytes (cierra la
-// carrera de dos tecnicos subiendo el mismo archivo nuevo a la vez,
-// donde el segundo llegaria despues de que el primero ya lo creo).
+// lo muestre como error de subida, igual que antes. Si la referencia ya
+// tiene archivo (esArchivoYaExistente) cuenta como subido: cierra la
+// carrera de dos tecnicos subiendo el mismo archivo nuevo a la vez, donde
+// el segundo llega despues de que el primero ya lo creo.
 export async function subirOEncolarArchivo(
   referencia: string,
   archivo: Blob,
   nombre: string,
   bucket: string = BUCKET_POR_DEFECTO,
-  upsert = false,
 ): Promise<ResultadoSubida> {
   if (!supabase || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
     await encolarArchivo(referencia, archivo, nombre, bucket)
     return 'encolado'
   }
 
-  const { error } = await supabase.storage.from(bucket).upload(referencia, archivo, { upsert })
-  if (!error) return 'subido'
+  const { error } = await supabase.storage.from(bucket).upload(referencia, archivo, { upsert: false })
+  if (!error || esArchivoYaExistente(error.message)) return 'subido'
   if (esErrorDeRed(error.message)) {
     await encolarArchivo(referencia, archivo, nombre, bucket)
     return 'encolado'
@@ -130,8 +140,8 @@ function referenciaCompartida(hash: string): string {
 // ¿Ya existe un archivo con esta referencia en el bucket? Solo mira
 // metadatos (list), nunca descarga el contenido. Sin conexion (o si
 // el bucket no responde) se asume que no existe: la subida normal
-// sigue su curso: como mucho sube un archivo que ya estaba, y
-// subirUnoAStorage ya usa upsert para tolerarlo.
+// sigue su curso: como mucho intenta subir un archivo que ya estaba, y
+// esa respuesta (esArchivoYaExistente) cuenta como subido.
 async function existeEnStorage(referencia: string, bucket: string = BUCKET_POR_DEFECTO): Promise<boolean> {
   if (!supabase) return false
   const separador = referencia.lastIndexOf('/')
@@ -172,7 +182,8 @@ export interface ResultadoSubidaDeduplicada {
 // ningun adjunto local que lo confirme), sigue el camino normal de
 // subirOEncolarArchivo con esa misma referencia: si el contenido
 // resulta subirse dos veces desde telefonos distintos, el segundo
-// intento hace upsert sobre el mismo objeto en vez de duplicarlo.
+// intento encuentra el objeto ya creado y lo da por subido, sin
+// reescribirlo ni duplicarlo.
 export async function subirConDeduplicacion(archivo: Blob, nombre: string): Promise<ResultadoSubidaDeduplicada> {
   const hash = await calcularHashArchivo(archivo)
   const referencia = referenciaCompartida(hash)
@@ -184,7 +195,7 @@ export async function subirConDeduplicacion(archivo: Blob, nombre: string): Prom
     return { referencia, resultado: 'subido', reutilizado: true }
   }
 
-  const resultado = await subirOEncolarArchivo(referencia, archivo, nombre, BUCKET_POR_DEFECTO, true)
+  const resultado = await subirOEncolarArchivo(referencia, archivo, nombre, BUCKET_POR_DEFECTO)
   return { referencia, resultado, reutilizado: false }
 }
 
@@ -204,8 +215,9 @@ export type SubidorDeArchivos = (
   bucket: string,
 ) => Promise<{ message: string } | null>
 
-// upsert: si un intento anterior subio el archivo pero no alcanzo a
-// quitarlo de la cola, el reintento no debe fallar por duplicado.
+// Sin upsert: si un intento anterior subio el archivo pero no alcanzo a
+// quitarlo de la cola, el reintento recibe "ya existe", que
+// procesarArchivosPendientes cuenta como subido (esArchivoYaExistente).
 async function subirUnoAStorage(
   referencia: string,
   contenido: Blob,
@@ -215,7 +227,7 @@ async function subirUnoAStorage(
   if (!supabase) return { message: 'La aplicación aún no está conectada al servidor.' }
   const { error } = await supabase.storage
     .from(bucket)
-    .upload(referencia, contenido, { contentType: tipo || undefined, upsert: true })
+    .upload(referencia, contenido, { contentType: tipo || undefined, upsert: false })
   return error ? { message: error.message } : null
 }
 
@@ -228,7 +240,7 @@ export async function procesarArchivosPendientes(subirUno: SubidorDeArchivos = s
 
   for (const archivo of pendientes) {
     const error = await subirUno(archivo.referencia, archivo.contenido, archivo.tipo, archivo.bucket ?? BUCKET_POR_DEFECTO)
-    if (!error) {
+    if (!error || esArchivoYaExistente(error.message)) {
       await db.archivosPendientes.delete(archivo.referencia)
     } else if (esErrorDeRed(error.message)) {
       throw new Error('Sin conexión con el servidor')

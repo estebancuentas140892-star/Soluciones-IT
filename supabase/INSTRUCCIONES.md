@@ -46,9 +46,20 @@ Para verificar: en **Table Editor**, la tabla `campos_protegidos` debe tener la 
 
 ### Actualización del 2026-09-23 (tarea 266: ciclo de vida de las personas)
 
-Vuelve a ejecutar `schema.sql` completo (idempotente) para agregar a `personas` las columnas `estado` (`activa` o `retirada`, por defecto `activa`), `fecha_ingreso`, `fecha_retiro` y `motivo_retiro`. **Hazlo apenas se despliegue la versión**: hasta entonces, crear, editar, retirar o reactivar una persona queda guardado en el teléfono y esperando en la cola de sincronización (no se pierde, y sube solo cuando las columnas existan); los equipos y el historial se sincronizan igual. No hay tabla nueva: el historial de asignaciones se reconstruye de `historial`.
+**Ya aplicada** (comprobado el 2026-09-24 contra la base real: `personas` tiene `estado`, `fecha_ingreso`, `fecha_retiro` y `motivo_retiro`). No hay que volver a ejecutar nada por esta tarea.
 
-Para verificar: en **Table Editor**, la tabla `personas` debe tener las cuatro columnas nuevas, y las 94 personas existentes deben aparecer con `estado = activa`.
+Agregó a `personas` las columnas `estado` (`activa` o `retirada`, por defecto `activa`), `fecha_ingreso`, `fecha_retiro` y `motivo_retiro`. No hay tabla nueva: el historial de asignaciones se reconstruye de `historial`.
+
+### Actualización del 2026-09-24 (tarea 271: endurecimiento de seguridad)
+
+**Ya aplicada en la base real** (migración `seguridad_minimo_privilegio`); `schema.sql` la contiene para que el archivo siga siendo la fuente de verdad. No hay que ejecutar nada por esta tarea. Qué cambió:
+
+- Ninguna función interna se puede invocar desde la API (`/rest/v1/rpc`): `registrar_modificacion()`, `crear_perfil()` y `sellar_registro_inmutable()` son triggers y ya no conceden `EXECUTE` a los roles de la API; `puede_ver_boveda()` pasó a `SECURITY INVOKER` y solo la ejecuta `authenticated` (la usan las políticas de la bóveda). Todas con `search_path` fijo.
+- `crear_perfil()` es la única función `SECURITY DEFINER`, y debe seguir así: la dispara Auth al crear un usuario y ese rol no puede escribir en `perfiles`.
+- El historial de credenciales y campos protegidos solo lo escribe quien puede leerlo (`puede_ver_boveda`), y en `historial`, `accesos_boveda` y `ejecuciones_diagnostico` el servidor sella quién escribió la entrada (`usuario`, `usuario_nombre`) y cuándo llegó (`recibido_en`).
+- En Storage, reemplazar un archivo solo lo puede su dueño (los dos buckets), y en `adjuntos` también borrarlo. Un archivo que quede huérfano porque lo subió otro técnico lo reporta `scripts/huerfanos-storage.mjs` y se borra desde este panel.
+
+Para verificar: **Advisors > Security Advisor** ya no debe mostrar `function_search_path_mutable`, `anon_security_definer_function_executable` ni `authenticated_security_definer_function_executable`. Queda solo "Leaked Password Protection" (ver la sección 4).
 
 ## 2. Crear los 5 usuarios del equipo
 
@@ -82,12 +93,20 @@ Para quitar el acceso a alguien, lo mismo con `= false`.
 
 ## 4. Desactivar el registro público
 
+**PENDIENTE y URGENTE (comprobado el 2026-09-24):** `https://kwwxnmlprdivckqcgjws.supabase.co/auth/v1/settings` responde `"disable_signup": false`, es decir, el registro sigue abierto. Toda la seguridad de la app supone que "autenticado" es un técnico del equipo: con el registro abierto, cualquiera que tenga la URL del proyecto y la clave publicable (las dos viajan en el JavaScript público de la app) puede crearse una cuenta y, si confirma su correo, leer y modificar guías, equipos, personas y adjuntos. La Bóveda sigue a salvo porque exige `puede_ver_boveda`. El portal `/asistencia` (tarea 258) también depende de esto: solo un técnico real debe poder canjear un código.
+
 Como el equipo es fijo, nadie debe poder crear cuentas por su cuenta:
 
 1. En **Authentication**, abrir la sección de proveedores de inicio de sesión (**Sign In / Providers**).
-2. En el proveedor **Email**, desactivar la opción de permitir nuevos registros (**Allow new users to sign up**) y guardar.
+2. Desactivar la opción de permitir nuevos registros (**Allow new users to sign up**) y guardar.
 
-Los usuarios creados desde el panel seguirán funcionando con normalidad.
+Los usuarios creados desde el panel (**Authentication > Users > Add user**) seguirán funcionando con normalidad.
+
+Para verificar: abrir `https://kwwxnmlprdivckqcgjws.supabase.co/auth/v1/settings?apikey=<clave publicable>` debe mostrar `"disable_signup":true`.
+
+### Contraseñas filtradas (Leaked Password Protection)
+
+El Security Advisor avisa que la protección contra contraseñas filtradas (comprueba cada contraseña nueva contra HaveIBeenPwned) está desactivada. Se activa en **Authentication > Sign In / Providers > Email** (o **Auth > Password security**, según la versión del panel), **pero Supabase la ofrece solo desde el plan Pro**. En el plan gratuito queda como riesgo aceptado; lo que sí se puede subir en ese mismo lugar es el mínimo de la contraseña (**Minimum password length**, recomendado 12) y exigir letras y números (**Password requirements**). Con el registro desactivado, las contraseñas solo las crea este panel y cada técnico al cambiar la suya en **Más > Ajustes**.
 
 ## 5. Restablecer la contraseña maestra de la bóveda (si el equipo la olvida)
 

@@ -116,6 +116,7 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Motivo: son la base de confianza de la trazabilidad y de las estadísticas.
 - Entidades: Historial, EjecucionDiagnostico, AccesoBoveda.
 - Impacto: nunca se editan ni se eliminan desde la app.
+- Desde el 2026-09-24 (tarea 271) **el servidor sella la autoría y la llegada** de cada entrada: el trigger `sellar_registro_inmutable` pone `recibido_en` (el cursor de la sincronización) y, con sesión, `usuario` y `usuario_nombre` (el nombre del perfil, o el correo antes de la arroba, igual que la app). `fecha_hora`, el momento real del cambio, la sigue poniendo la app, porque puede ser antiguo si se hizo sin internet. Así nadie inserta una entrada firmada a nombre de otro ni la esconde de la sincronización. Y la entrada de historial de una credencial o de un campo protegido solo la escribe quien puede leerla (`puede_ver_boveda`).
 
 **RN-013. Eliminar un dispositivo no arrastra sus dependencias; el flujo "Dar de baja" las resuelve ítem por ítem.**
 - Motivo: evitar borrados en cascada silenciosos; el técnico decide qué hacer con cada conexión, credencial y campo protegido.
@@ -556,7 +557,7 @@ El `vinculoProtegido` de un paso es puramente informativo: no participa en ningu
 
 El sistema **no modela roles con nombre**. Existen tres actores:
 
-1. **Anónimo:** sin acceso. Toda política RLS es `to authenticated` y la app exige sesión antes de mostrar cualquier pantalla.
+1. **Anónimo:** sin acceso. Toda política RLS es `to authenticated` y la app exige sesión antes de mostrar cualquier pantalla. Desde el 2026-09-24 (tarea 271) tampoco puede invocar ninguna función interna por `/rest/v1/rpc`: los triggers no conceden `EXECUTE` a los roles de la API y `puede_ver_boveda()` solo la ejecuta `authenticated`. **Condición de todo el modelo:** el registro público de Auth tiene que estar desactivado (paso del usuario, [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md) sección 4). Si está abierto, cualquiera con la URL y la clave publicable, que viajan en el JavaScript público, puede crearse una cuenta y pasar a "técnico autenticado".
 2. **Técnico autenticado** (cualquiera de los 5): rol base. Único requisito para todo el contenido general (categorías, artículos incluido publicar, dispositivos, conexiones, adjuntos, diagnósticos, ubicaciones, personas, importación). Puede autorizar eliminaciones sensibles si conoce la contraseña maestra.
 3. **Técnico con `puede_ver_boveda = true`** (subconjunto): además, leer y escribir credenciales y campos protegidos, el bucket `archivos_boveda`, el historial de esas entidades y `accesos_boveda`.
 
@@ -577,6 +578,10 @@ Barrera real: **RLS** (Postgres, bloquea aunque se llame la API directo); **Maes
 | Crear/editar diagnóstico | Sí | Sí | Ninguna |
 | Eliminar diagnóstico | Sí | Sí | Maestra |
 | Editar/eliminar ubicación o persona | Sí | Sí | Ninguna (confirmación simple) |
+| Reemplazar en Storage un archivo que subió otro técnico | No | No | RLS (solo el dueño, desde la tarea 271) |
+| Borrar de Storage un adjunto que subió otro técnico | No | No | RLS (solo el dueño; queda huérfano y lo borra el administrador) |
+| Borrar el archivo cifrado de un secreto al eliminarlo | No | Sí | RLS (`puede_ver_boveda`, lo haya subido quien sea) |
+| Escribir historial de una credencial o campo protegido | No | Sí | RLS (el mismo permiso que para leerlo, desde la tarea 271) |
 | Acceder a la bóveda (leer/descifrar) | No | Sí | RLS + Maestra |
 | Ver la pestaña/ruta Bóveda | No | Sí | RLS + UI |
 | Crear/editar campo protegido | No | Sí | RLS + UI |
@@ -720,7 +725,7 @@ En la práctica, como cada dato vive una sola vez y los vínculos se resuelven p
 
 ### 10.3 Naturaleza de la trazabilidad
 
-La auditoría es de buena fe del equipo: se registra desde el cliente en el momento de la acción y no detiene a quien ya conoce la contraseña maestra. Existe una asimetría conocida (registrada como deuda técnica en [TAREAS.md](TAREAS.md)): la política de **lectura** del historial de secretos exige `puede_ver_boveda`, pero la de **inserción** no lo distingue.
+La auditoría es de buena fe del equipo: se registra desde el cliente en el momento de la acción y no detiene a quien ya conoce la contraseña maestra. Lo que el servidor sí garantiza desde el 2026-09-24 (tarea 271): quién escribió cada entrada y cuándo llegó los sella él (RN-012), las entradas existentes no se pueden editar ni borrar, y el historial de secretos se lee y se escribe con el mismo permiso (`puede_ver_boveda`). La asimetría que había entre lectura e inserción (tarea 169) quedó cerrada.
 
 ---
 

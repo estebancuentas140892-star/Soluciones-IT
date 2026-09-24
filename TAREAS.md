@@ -4,6 +4,23 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+**ENCARGO DEL 2026-09-23 (SEGUNDA PARTE): CONTINUAR DESDE EL ESTADO REAL.** Sin rediseño general y sin rehacer lo terminado (266 a 270). Orden fijado por el usuario: **A** seguridad de Supabase antes de `/asistencia` (tarea **271**); **B** tablero sin avisos comprobablemente obsoletos; **C** tarea **258** (portal `/asistencia`); **D** tarea **259** (precache); **E** tarea **260** (pruebas finales); **F** pequeñas: 262, 265, 261, 243 y 264; **G** revisión del backlog histórico (168 a 170, 173 a 175, 188 a 200, 216, 220 a 231), clasificando cada tarea sin borrar su historia. Reglas del encargo que valen para todas: no inventar datos, no duplicar verdades, no guardar secretos sin cifrar, no modificar datos productivos para probar (datos ficticios), respetar el funcionamiento sin conexión y conservar "Resolver → encontrar → ejecutar → solucionar".
+
+### 271. Seguridad de Supabase antes de `/asistencia`: mínimo privilegio
+
+- **Título:** auditar el Supabase real y cerrar lo que permita escalar privilegios, invocar funciones sin necesidad, alterar la auditoría, llegar a la Bóveda o modificar archivos ajenos, antes de abrir la primera superficie pública.
+- **Hecho el 2026-09-24:** asesores antes: 4 advertencias (`registrar_modificacion` con `search_path` mutable; `crear_perfil` y `puede_ver_boveda` `SECURITY DEFINER` ejecutables por `anon` y `authenticated`; Leaked Password Protection). Migración **`seguridad_minimo_privilegio`** aplicada tras ensayarla en transacciones revertidas: funciones de trigger sin `EXECUTE` para la API, `puede_ver_boveda()` como INVOKER, `crear_perfil()` única `SECURITY DEFINER` (justificada), `search_path` vacío en todas, autoría de los registros inmutables sellada por el servidor, INSERT de `historial` alineado con su SELECT y, en Storage, reemplazar (y en `adjuntos`, borrar) solo el archivo propio. La app sube sin `upsert`. Asesores después: 1 advertencia (Leaked Password Protection, plan Pro). Detalle y comprobaciones en [CHANGELOG.md](CHANGELOG.md) (2026-09-24) y [DECISIONES.md](DECISIONES.md) AD-052.
+- **Hallazgo de la auditoría, fuera de la base:** **el registro público de Auth está abierto** (`disable_signup: false` en `/auth/v1/settings`). Hoy hay 1 usuario y 0 sin confirmar, así que nadie lo aprovechó.
+- **Motivo:** sección 3 del encargo; absorbe la **169** (TD-1 y TD-2).
+- **Impacto:** alto en seguridad; la interfaz no cambia.
+- **Prioridad:** Crítica. **Estado:** En progreso: código, migración, verificación en la base y documentación hechos; falta confirmar el despliegue (regla 14).
+- **Área afectada:** `supabase/schema.sql` (sección 2, funciones y triggers; sección 3, `historial_insercion`; sección 4, Storage), `src/lib/archivosPendientes.ts` (`esArchivoYaExistente` ~26, `subirOEncolarArchivo` ~57, `subirUnoAStorage` y `procesarArchivosPendientes` ~229-255), `supabase/INSTRUCCIONES.md` (actualización del 2026-09-24 y sección 4).
+- **PASO DEL USUARIO (URGENTE):** en Supabase, Authentication > Sign In / Providers, desactivar **"Allow new users to sign up"**. Se comprueba cuando `/auth/v1/settings` responde `"disable_signup":true`. Opcional: subir el mínimo de las contraseñas (Leaked Password Protection exige el plan Pro).
+- **Dependencias:** ninguna. **La 258 depende de esta y de ese paso del usuario.**
+- **Modelo/esfuerzo:** Opus 5.5 / Max (seguridad).
+
+---
+
 **ENCARGO DEL 2026-09-23: LAS ENTIDADES SE RELACIONAN.** Personas, equipos, ubicaciones, red, agenda, Centro de consulta, historial, Resolver y diagnóstico dejan de ser pantallas aisladas: sin rediseño general y conservando "Resolver → encontrar → ejecutar → solucionar". Cinco fases, una tarea por fase (266 a 270), una "En proceso" a la vez. **Encargo completo el 2026-09-23:** 266 (Personas), 267 (Ubicaciones), 268 (Más y herramientas de inventario), 269 (Resolver + Diagnóstico) y 270 (Agenda y Centro de consulta en contexto), cerradas y archivadas. **Paso del usuario pendiente:** ejecutar `supabase/schema.sql` en el SQL Editor (columnas de personas de la 266). Restricciones del encargo que valen para las cinco: no inventar datos (persona desde un área, ubicación por parecido, fechas, estados, causas de baja), no duplicar verdades, no borrar historial y conservar compatibilidad con los 149 equipos, 94 personas, 31 conexiones, 31 guías y 42 fichas del Centro de consulta que ya existen.
 
 **Auditoría previa (2026-09-23), lo que decide el diseño:**
@@ -28,17 +45,6 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **ENCARGO DEL 2026-09-22: SOLUCIONES IT SE ORGANIZA ALREDEDOR DE RESOLVER.** El análisis y el mapa final están en [PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md) (tarea **253**, Fase 1). Ocho fases, una tarea por fase, una "En proceso" a la vez. **Cerradas y archivadas:** 253 (el mapa), 254 (Resolver y navegación), 255 (ejecución visual de las guías), 256 (Equipos + QR) y 257 (Más e Infraestructura, cerrada el 2026-09-23), y la **263** (Resolución guiada, encargo nuevo del mismo día, cerrada el 2026-09-23). **La 258 (portal `/asistencia`) volvió a "Por hacer" el 2026-09-23 sin haber empezado en el código,** porque el usuario priorizó el encargo de las relaciones (266 a 270), **y vuelve a "En proceso" al cerrarse la 270.** **Siguen:** 259 (precache y rendimiento) y 260 (pruebas completas).
 
-### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
-
-- **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
-- **Descripción:** (1) migración en `supabase/schema.sql`: tablas `asistencia_sesiones`, `asistencia_mensajes`, `asistencia_eventos`, RLS sin políticas y funciones `security definer` con permisos explícitos; (2) entrada propia `asistencia.html` sin service worker, Dexie ni cliente completo de Supabase; (3) `/conectar` y la hoja "Conectar equipo" (escanear o escribir el código); (4) "Enviar a este equipo" con vista previa desde el paso; (5) constructor de contenido que no puede recibir datos de la Bóveda y validación en el servidor; (6) indicador y "Desconectar equipo"; (7) pruebas del SQL, del constructor y de los estados del portal.
-- **Motivo:** secciones 9 a 15 del encargo del 2026-09-22.
-- **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
-- **Prioridad:** Alta. **Estado:** En progreso (retomada el 2026-09-23 al cerrarse la 270, la última del encargo de las relaciones; todavía sin empezar en el código).
-- **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`.
-- **Ya hecho en la 256:** el escáner reconoce el QR del portal (`resolverCodigo` da `asistencia` para `/conectar?codigo=` con 6 cifras, de cualquier origen) y enseña una tarjeta neutra en `EscanerPage`. Aquí se cambia esa tarjeta por ir a `/conectar?codigo=…`.
-- **Dependencias:** 255. **Paso del usuario:** ejecutar `supabase/schema.sql` en el SQL Editor.
-- **Modelo/esfuerzo:** Opus 5 / Extra (seguridad).
 
 
 ---
@@ -399,6 +405,18 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
+
+- **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
+- **Descripción:** (1) migración en `supabase/schema.sql`: tablas `asistencia_sesiones`, `asistencia_mensajes`, `asistencia_eventos`, RLS sin políticas y funciones `security definer` con permisos explícitos; (2) entrada propia `asistencia.html` sin service worker, Dexie ni cliente completo de Supabase; (3) `/conectar` y la hoja "Conectar equipo" (escanear o escribir el código); (4) "Enviar a este equipo" con vista previa desde el paso; (5) constructor de contenido que no puede recibir datos de la Bóveda y validación en el servidor; (6) indicador y "Desconectar equipo"; (7) pruebas del SQL, del constructor y de los estados del portal.
+- **Motivo:** secciones 9 a 15 del encargo del 2026-09-22.
+- **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
+- **Prioridad:** Alta. **Estado:** Pendiente: vuelve a "En proceso" al cerrar la **271** (seguridad de Supabase), por orden del usuario del 2026-09-23. **Comprobado el 2026-09-24 que no empezó:** en Supabase no existe `asistencia_sesiones` (REST responde 404) ni hay código de `asistencia` en `src/`.
+- **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`.
+- **Ya hecho en la 256:** el escáner reconoce el QR del portal (`resolverCodigo` da `asistencia` para `/conectar?codigo=` con 6 cifras, de cualquier origen) y enseña una tarjeta neutra en `EscanerPage`. Aquí se cambia esa tarjeta por ir a `/conectar?codigo=…`.
+- **Dependencias:** 255 y **271**. Antes de publicar el portal, el paso del usuario de la 271: el registro público de Auth desactivado, porque el diseño supone que solo un técnico real puede canjear un código. La migración se aplica desde la sesión con el MCP de Supabase (ya no es paso del usuario), y `schema.sql` la conserva.
+- **Modelo/esfuerzo:** Opus 5 / Extra (seguridad).
 
 ### 259. Fase 7: precache, trozos y rendimiento
 
@@ -953,6 +971,7 @@ La **tarea 185** (chasis en tres niveles y `BarraTarea`, reglas R18/R19/R22) que
 - Motivo: TD-1 es una grieta de integridad del registro de auditoría (no de confidencialidad); TD-2 es coherente con un equipo de confianza de 5 pero conviene decidirlo a conciencia, no como efecto colateral.
 - Impacto: robustez de la auditoría y de Storage. Cambios de RLS: requieren editar `schema.sql` y reaplicarlo (regla 17).
 - Prioridad: **Media**. Estado: **Pendiente**. Área afectada: `supabase/schema.sql` (políticas de `historial` y del bucket `adjuntos`). Dependencias: ninguna.
+- **Absorbida por la 271 (2026-09-24):** TD-1 resuelto (el INSERT de `historial` exige lo mismo que su SELECT, y la autoría la sella el servidor); TD-2 decidido y resuelto (en `adjuntos` solo el dueño reemplaza o borra su archivo). Se archiva junto con la 271.
 
 ### 170. Mejoras del buscador detectadas en la auditoría
 - Descripción: (a) pintar la miniatura de portada en los resultados: `portadaRef` ya se calcula y viaja en `ResultadoBusqueda` pero `FilaResultado` (`InicioPage.tsx`) usa solo un icono genérico (posible regresión respecto de lo documentado). (b) unificar las 3 funciones de normalización de acentos hoy separadas (`texto.ts`, `sinonimos.ts`, `iconosSoluciones.ts`). (c) evaluar un tope de resultados en el buscador global (hoy no hay `slice` ni paginación). Detalle en [BUSCADOR.md](BUSCADOR.md), sección 12.

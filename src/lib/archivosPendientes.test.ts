@@ -5,6 +5,7 @@ import {
   contarArchivosPendientes,
   eliminarArchivoPendiente,
   encolarArchivo,
+  esArchivoYaExistente,
   esErrorDeRed,
   procesarArchivosPendientes,
   referenciaEnUso,
@@ -155,6 +156,30 @@ describe('procesarArchivosPendientes', () => {
 
     await procesarArchivosPendientes(async () => null)
     expect((await contarArchivosPendientes()).total).toBe(0)
+  })
+
+  // Tarea 271: sin upsert, el reintento de un archivo que ya llegó (o el
+  // mismo contenido que subió otro técnico) recibe "ya existe". Es un
+  // éxito: si se anotara como error, quedaría en la cola para siempre.
+  it('"ya existe" cuenta como subido y saca el archivo de la cola', async () => {
+    await encolarArchivo('compartidos/hash-ya-subido', archivoDePrueba(), 'a.jpg')
+
+    await procesarArchivosPendientes(async () => ({ message: 'The resource already exists' }))
+
+    expect(await contarArchivosPendientes()).toEqual({ total: 0, conError: 0 })
+  })
+})
+
+describe('esArchivoYaExistente', () => {
+  it('reconoce la respuesta 409 de Storage', () => {
+    expect(esArchivoYaExistente('The resource already exists')).toBe(true)
+    expect(esArchivoYaExistente('Duplicate')).toBe(true)
+  })
+
+  it('no confunde un rechazo de permisos ni de tamaño con un duplicado', () => {
+    expect(esArchivoYaExistente('new row violates row-level security policy')).toBe(false)
+    expect(esArchivoYaExistente('Payload too large')).toBe(false)
+    expect(esArchivoYaExistente('Failed to fetch')).toBe(false)
   })
 })
 

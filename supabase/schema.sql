@@ -744,12 +744,23 @@ alter table public.personas add column if not exists motivo_retiro text not null
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 
+-- Permisos de las funciones (tarea 271, 2026-09-24): minimo privilegio.
+-- Postgres da EXECUTE a PUBLIC en toda funcion nueva y Supabase ademas a
+-- anon y authenticated, y todo lo que vive en public se puede invocar por
+-- /rest/v1/rpc. Por eso cada funcion de abajo revoca EXECUTE a quien no la
+-- necesita. Un trigger se dispara aunque el rol que escribe no tenga
+-- EXECUTE sobre su funcion (comprobado contra la base real): a las
+-- funciones de trigger se les quita a todos los roles de la API. El
+-- search_path queda vacio: pg_catalog (now(), coalesce...) se busca
+-- siempre primero y todo lo demas va calificado con su esquema.
+
 -- Mantiene updated_at y updated_by al dia en cada insercion o
 -- edicion. El sello de tiempo lo pone siempre el servidor para que
 -- la sincronizacion no dependa del reloj de cada telefono.
 create or replace function public.registrar_modificacion()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.updated_at = now();
@@ -759,6 +770,7 @@ begin
   return new;
 end;
 $$;
+revoke execute on function public.registrar_modificacion() from public, anon, authenticated;
 
 drop trigger if exists trg_categorias_modificacion on public.categorias;
 create trigger trg_categorias_modificacion
@@ -821,11 +833,15 @@ create trigger trg_referencias_modificacion
   for each row execute function public.registrar_modificacion();
 
 -- Crea el perfil automaticamente cuando se da de alta un usuario
--- en Authentication.
+-- en Authentication. Es security definer A PROPOSITO, y es la unica: la
+-- dispara Auth (rol supabase_auth_admin), que no tiene permiso sobre
+-- public.perfiles. Nadie la llama por la API, asi que ningun rol de la
+-- API conserva EXECUTE (el trigger se dispara igual).
 create or replace function public.crear_perfil()
 returns trigger
 language plpgsql
-security definer set search_path = public
+security definer
+set search_path = ''
 as $$
 begin
   insert into public.perfiles (id, nombre, correo)
@@ -838,24 +854,81 @@ begin
   return new;
 end;
 $$;
+revoke execute on function public.crear_perfil() from public, anon, authenticated;
 
 drop trigger if exists trg_crear_perfil on auth.users;
 create trigger trg_crear_perfil
   after insert on auth.users
   for each row execute function public.crear_perfil();
 
--- Indica si el usuario autenticado tiene acceso a la boveda.
+-- Indica si el usuario autenticado tiene acceso a la boveda. Security
+-- INVOKER desde la tarea 271 (antes definer): no necesita privilegios del
+-- propietario, porque perfiles ya es legible para authenticated
+-- (perfiles_lectura) y nadie puede escribirla desde la API. La usan las
+-- politicas RLS de la boveda y de archivos_boveda, que se evaluan como
+-- authenticated: ese rol conserva EXECUTE; anon y PUBLIC no (ninguna
+-- politica para anon la invoca). Si perfiles_lectura se restringe algun
+-- dia, esta funcion deja de ver el permiso: revisarla junto con ella.
 create or replace function public.puede_ver_boveda()
 returns boolean
 language sql
 stable
-security definer set search_path = public
+security invoker
+set search_path = ''
 as $$
   select coalesce(
     (select p.puede_ver_boveda from public.perfiles p where p.id = auth.uid()),
     false
   );
 $$;
+revoke execute on function public.puede_ver_boveda() from public, anon;
+grant execute on function public.puede_ver_boveda() to authenticated;
+
+-- Sello de autoria de los registros inmutables (tarea 271): historial,
+-- accesos a la boveda y ejecuciones de diagnostico. El servidor pone
+-- recibido_en (el cursor de la sincronizacion) y, con sesion, usuario y
+-- usuario_nombre (el mismo nombre que calcula la app: el del perfil, o el
+-- correo antes de la arroba). Asi nadie inserta una entrada firmada a
+-- nombre de otro, ni la esconde de la sincronizacion con un recibido_en
+-- antiguo. fecha_hora (el momento real del cambio, que puede ser antiguo
+-- si se hizo sin internet) la sigue poniendo la app.
+create or replace function public.sellar_registro_inmutable()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  nombre_perfil text;
+begin
+  new.recibido_en := now();
+  if auth.uid() is not null then
+    new.usuario := auth.uid();
+    select nullif(p.nombre, '') into nombre_perfil from public.perfiles p where p.id = auth.uid();
+    new.usuario_nombre := coalesce(
+      nombre_perfil,
+      nullif(split_part(coalesce(auth.jwt() ->> 'email', ''), '@', 1), ''),
+      new.usuario_nombre
+    );
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.sellar_registro_inmutable() from public, anon, authenticated;
+
+drop trigger if exists trg_historial_sello on public.historial;
+create trigger trg_historial_sello
+  before insert on public.historial
+  for each row execute function public.sellar_registro_inmutable();
+
+drop trigger if exists trg_accesos_boveda_sello on public.accesos_boveda;
+create trigger trg_accesos_boveda_sello
+  before insert on public.accesos_boveda
+  for each row execute function public.sellar_registro_inmutable();
+
+drop trigger if exists trg_ejecuciones_sello on public.ejecuciones_diagnostico;
+create trigger trg_ejecuciones_sello
+  before insert on public.ejecuciones_diagnostico
+  for each row execute function public.sellar_registro_inmutable();
 
 -- ----------------------------------------------------------------
 -- 3. Seguridad por filas (RLS)
@@ -953,7 +1026,9 @@ create policy boveda_meta_creacion on public.boveda_meta
 -- los usuarios con acceso a la boveda: el historial de un campo
 -- protegido nombra el dato ("PIN de impresion") y quien lo cambio, y
 -- eso ya es informacion de la boveda aunque el valor nunca se guarde
--- aqui (el repositorio escribe "(cifrado)").
+-- aqui (el repositorio escribe "(cifrado)"). Desde la tarea 271 escribir
+-- exige lo mismo que leer (antes el INSERT era `true`), y la autoria la
+-- sella el servidor (sellar_registro_inmutable).
 drop policy if exists historial_lectura on public.historial;
 create policy historial_lectura on public.historial
   for select to authenticated
@@ -961,7 +1036,8 @@ create policy historial_lectura on public.historial
 
 drop policy if exists historial_insercion on public.historial;
 create policy historial_insercion on public.historial
-  for insert to authenticated with check (true);
+  for insert to authenticated
+  with check (entidad_tipo not in ('credencial', 'campo_protegido') or public.puede_ver_boveda());
 
 -- Diagnosticos: acceso completo para cualquier tecnico autenticado,
 -- como el resto del contenido general.
@@ -1030,14 +1106,23 @@ drop policy if exists adjuntos_storage_subida on storage.objects;
 create policy adjuntos_storage_subida on storage.objects
   for insert to authenticated with check (bucket_id = 'adjuntos');
 
+-- Reemplazar y borrar un archivo, solo su dueno (tarea 271, antes
+-- cualquier autenticado). Ningun flujo de la app reescribe el archivo de
+-- otro: cada referencia es unica o es el hash del contenido, y la app ya
+-- no usa upsert (un "ya existe" cuenta como subido). Borrar: la app nunca
+-- borra un archivo que otra ficha usa (referenciaEnUso), y ahora el
+-- servidor tampoco deja borrar el de otro tecnico; lo que quede huerfano
+-- lo reporta scripts/huerfanos-storage.mjs y se borra desde este panel.
 drop policy if exists adjuntos_storage_edicion on storage.objects;
 create policy adjuntos_storage_edicion on storage.objects
   for update to authenticated
-  using (bucket_id = 'adjuntos') with check (bucket_id = 'adjuntos');
+  using (bucket_id = 'adjuntos' and owner_id = (select auth.uid())::text)
+  with check (bucket_id = 'adjuntos' and owner_id = (select auth.uid())::text);
 
 drop policy if exists adjuntos_storage_borrado on storage.objects;
 create policy adjuntos_storage_borrado on storage.objects
-  for delete to authenticated using (bucket_id = 'adjuntos');
+  for delete to authenticated
+  using (bucket_id = 'adjuntos' and owner_id = (select auth.uid())::text);
 
 -- Bucket PROPIO y privado para los archivos seguros de la boveda (fase
 -- P5), distinto del bucket 'adjuntos' de arriba. adjuntos_storage_lectura
@@ -1060,11 +1145,16 @@ drop policy if exists archivos_boveda_storage_subida on storage.objects;
 create policy archivos_boveda_storage_subida on storage.objects
   for insert to authenticated with check (bucket_id = 'archivos_boveda' and public.puede_ver_boveda());
 
+-- Reemplazar: solo el dueno (tarea 271). Borrar sigue abierto a quien
+-- tiene permiso de boveda, a proposito: eliminar un secreto (accion
+-- confirmada con la contrasena maestra) debe llevarse su archivo cifrado,
+-- lo haya subido quien sea; dejarlo huerfano conservaria un secreto
+-- eliminado.
 drop policy if exists archivos_boveda_storage_edicion on storage.objects;
 create policy archivos_boveda_storage_edicion on storage.objects
   for update to authenticated
-  using (bucket_id = 'archivos_boveda' and public.puede_ver_boveda())
-  with check (bucket_id = 'archivos_boveda' and public.puede_ver_boveda());
+  using (bucket_id = 'archivos_boveda' and public.puede_ver_boveda() and owner_id = (select auth.uid())::text)
+  with check (bucket_id = 'archivos_boveda' and public.puede_ver_boveda() and owner_id = (select auth.uid())::text);
 
 drop policy if exists archivos_boveda_storage_borrado on storage.objects;
 create policy archivos_boveda_storage_borrado on storage.objects

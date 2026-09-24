@@ -132,6 +132,13 @@ Desde el grupo P1 (2026-07-21) la bóveda protege DOS clases de dato con el mism
 
 Desde la fase P5 (2026-07-21) la misma regla de "la RLS es la única barrera real" se extiende a Supabase **Storage**, no solo a las tablas: el bucket `adjuntos` (fotos, manuales) lo puede leer CUALQUIER técnico autenticado, así que el archivo cifrado de un secreto tipo "Archivo seguro" vive en un bucket propio, `archivos_boveda`, cuyas 4 políticas exigen `puede_ver_boveda()` igual que `credenciales`/`campos_protegidos`. Detalle técnico en la sección 5, entrada de `credenciales`.
 
+**Mínimo privilegio en Supabase (2026-09-24, tarea 271, migración `seguridad_minimo_privilegio`).** Lo que dejó el endurecimiento, con el porqué de cada pieza en [DECISIONES.md](DECISIONES.md) AD-052:
+
+- **Funciones:** ninguna se puede invocar por `/rest/v1/rpc` salvo `puede_ver_boveda()`, y esa solo para `authenticated`. Pasó a `SECURITY INVOKER` porque `perfiles` ya es legible para ese rol. `crear_perfil()` es la única `SECURITY DEFINER`, porque la dispara Auth, que no puede escribir en `perfiles`. Las funciones de trigger (`registrar_modificacion`, `crear_perfil`, `sellar_registro_inmutable`) no conceden `EXECUTE` a los roles de la API: un trigger se dispara igual (comprobado contra la base real). Todas llevan `search_path` vacío.
+- **Auditoría:** `sellar_registro_inmutable` sella `recibido_en`, `usuario` y `usuario_nombre` en `historial`, `accesos_boveda` y `ejecuciones_diagnostico`. La inserción de historial de secretos exige `puede_ver_boveda()`, lo mismo que su lectura.
+- **Storage:** reemplazar un archivo solo lo puede su dueño (`owner_id`), en los dos buckets. En `adjuntos`, borrarlo también. En `archivos_boveda` borrar sigue abierto a quien tiene permiso de bóveda, porque eliminar un secreto debe llevarse su archivo cifrado. La app ya no sube con `upsert`: un "ya existe" cuenta como subido (`esArchivoYaExistente`, `src/lib/archivosPendientes.ts`), porque cada referencia es única o es el hash del contenido.
+- **Auth, fuera de la base:** el registro público debe estar desactivado (`disable_signup`), y es la condición de todo lo anterior. "Leaked Password Protection" exige el plan Pro. Ver [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md) sección 4.
+
 Doble capa de protección:
 
 1. **Autenticación de usuario** con Supabase Auth (correo y contraseña de cada técnico). Las políticas de seguridad por fila (RLS) hacen que solo los usuarios autorizados puedan siquiera descargar las credenciales cifradas. La contraseña inicial la asigna el administrador al crear la cuenta; cada técnico puede cambiarla desde la app (página "Ajustes", que se llamaba "Mi cuenta" hasta la tarea 268, previa verificación de la contraseña actual contra el servidor).
