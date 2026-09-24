@@ -22,7 +22,10 @@ set -euo pipefail
 SUPABASE_URL="${SUPABASE_URL:-https://kwwxnmlprdivckqcgjws.supabase.co}"
 SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-sb_publishable_yHHdmM4xeo34Eq0-FVVo9A_hh33nemO}"
 
-TABLAS=(categorias perfiles articulos dispositivos conexiones credenciales historial adjuntos diagnosticos ejecuciones_diagnostico accesos_boveda)
+# Todas las tablas de supabase/schema.sql, en el orden en que se restauran
+# (primero aquellas a las que otras apuntan). src/lib/esquema.test.ts falla
+# si el esquema crea una tabla que esta lista no respalda.
+TABLAS=(categorias ubicaciones personas perfiles articulos dispositivos conexiones credenciales campos_protegidos boveda_meta adjuntos historial diagnosticos ejecuciones_diagnostico accesos_boveda referencias)
 FILAS_POR_PAGINA=1000
 
 for herramienta in curl jq tar openssl; do
@@ -110,7 +113,7 @@ done
 # La bóveda vacía puede ser legítima, pero lo más probable es que el usuario
 # de respaldo no tenga puede_ver_boveda y RLS esté ocultando las filas.
 if [ "$(jq 'length' "$directorio/credenciales.json")" = "0" ]; then
-  echo "Aviso: credenciales exportó 0 filas. Si la bóveda no está vacía, el usuario de respaldo necesita puede_ver_boveda (ver supabase/RESPALDO.md)." >&2
+  echo "Aviso: credenciales exportó 0 filas. Si la bóveda no está vacía, el usuario de respaldo necesita puede_ver_boveda (ver supabase/RESPALDO.md); sin ese permiso también salen vacíos campos_protegidos, accesos_boveda y el historial de los secretos." >&2
 fi
 
 fecha_archivo=$(date -u +%Y-%m-%d)

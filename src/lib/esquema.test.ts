@@ -180,3 +180,55 @@ describe('herramientas del Centro de consulta', () => {
     }
   })
 })
+
+// El respaldo semanal (scripts/respaldo-supabase.sh) lista sus tablas a
+// mano. Hasta el 2026-09-24 respaldaba 11 de 16: las cinco creadas despues
+// de escribirlo (ubicaciones, campos_protegidos, personas, referencias y
+// boveda_meta) quedaban fuera sin que nada avisara.
+describe('el respaldo cubre todas las tablas del esquema', () => {
+  const script = readFileSync('scripts/respaldo-supabase.sh', 'utf8')
+  const lista = /^TABLAS=\(([^)]*)\)/m.exec(script)?.[1].trim().split(/\s+/) ?? []
+  const tablasDelEsquema = [...esquema.matchAll(/create table if not exists public\.(\w+) \(/g)].map((m) => m[1])
+
+  it('el script declara su lista de tablas', () => {
+    expect(lista.length).toBeGreaterThan(0)
+  })
+
+  it.each(tablasDelEsquema)('la tabla %s entra en el respaldo', (tabla) => {
+    expect(lista).toContain(tabla)
+  })
+})
+
+// Minimo privilegio en las funciones (tarea 271). Postgres da EXECUTE a
+// PUBLIC en toda funcion nueva y Supabase ademas a anon y authenticated,
+// y lo que vive en public se puede invocar por /rest/v1/rpc. Cada funcion
+// del esquema tiene que fijar su search_path y revocar EXECUTE de forma
+// explicita, y solo las de la lista pueden ser security definer.
+describe('las funciones del esquema tienen permisos explicitos', () => {
+  const SECURITY_DEFINER_PERMITIDAS = [
+    // La dispara Auth (supabase_auth_admin), que no puede escribir en
+    // public.perfiles; nadie la invoca por la API.
+    'crear_perfil',
+  ]
+  const funciones = [...esquema.matchAll(/create or replace function public\.(\w+)\(([^)]*)\)([\s\S]*?)\nas \$\$/g)].map(
+    (m) => ({ nombre: m[1], cabecera: m[3] }),
+  )
+
+  it('encuentra las funciones del esquema', () => {
+    expect(funciones.map((f) => f.nombre)).toEqual(
+      expect.arrayContaining(['registrar_modificacion', 'crear_perfil', 'puede_ver_boveda', 'sellar_registro_inmutable']),
+    )
+  })
+
+  it.each(funciones.map((f) => [f.nombre, f.cabecera]))('%s fija su search_path', (_nombre, cabecera) => {
+    expect(cabecera).toMatch(/set search_path = ''/)
+  })
+
+  it.each(funciones.map((f) => [f.nombre]))('%s revoca EXECUTE de forma explicita', (nombre) => {
+    expect(esquema).toMatch(new RegExp(`revoke execute on function public\\.${nombre}\\([^)]*\\) from public`))
+  })
+
+  it.each(funciones.map((f) => [f.nombre, f.cabecera]))('%s solo es security definer si esta justificada', (nombre, cabecera) => {
+    if (/security definer/.test(cabecera)) expect(SECURITY_DEFINER_PERMITIDAS).toContain(nombre)
+  })
+})

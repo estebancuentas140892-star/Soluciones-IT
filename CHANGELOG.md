@@ -24,6 +24,13 @@ Documentación: [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md) (actualiz
 - **Encontrado y NO resuelto desde aquí (paso del usuario):** el registro público de Auth está abierto (`disable_signup: false`). Es un ajuste del panel: Authentication > Sign In / Providers > desactivar "Allow new users to sign up". Hoy hay 1 usuario y 0 sin confirmar, así que nadie lo aprovechó.
 - **Verificación del código:** 142 archivos y 1968 casos en verde (antes 1965); lint, tipos y build limpios.
 
+### Corregido (respaldo, tarea 15): el respaldo semanal cubre las 16 tablas
+
+**Área modificada:** `scripts/respaldo-supabase.sh`, `supabase/RESPALDO.md`, prueba `src/lib/esquema.test.ts`.
+**Tipo:** Corregido (faltaban 5 tablas en el respaldo), Agregado (dos guardas automáticas).
+**Motivo:** al revisar el tablero (parte B) contra la base real: el script respaldaba 11 tablas y el esquema tiene 16. Quedaban fuera `ubicaciones`, `personas`, `campos_protegidos`, `referencias` y `boveda_meta`, sin ningún aviso.
+**Impacto esperado:** el día que el usuario active el respaldo (paso pendiente de la tarea 15), el archivo contendrá todo lo necesario para restaurar. Las dos guardas nuevas hacen que el problema no se repita: el respaldo tiene que cubrir cada tabla que cree `schema.sql`, y cada función del esquema tiene que fijar `search_path` y revocar `EXECUTE`, con `SECURITY DEFINER` solo en una lista justificada (hoy, `crear_perfil`). **SIN cambios** en la app ni en la base.
+
 ### Documentación (tablero, parte B del encargo): los avisos de "ejecutar `schema.sql`" reflejan la base real
 
 **Área modificada:** [TAREAS.md](TAREAS.md), cabecera del último encargo en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) y [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md).

@@ -2,7 +2,7 @@
 
 Cada domingo, un workflow de GitHub Actions exporta todas las tablas de Supabase, cifra el resultado y lo guarda por 90 días. Existe porque el plan gratuito de Supabase no incluye copias de seguridad: si algo se borra por error más allá de lo que cubre el historial, este respaldo es la única vuelta atrás.
 
-Qué incluye: las 11 tablas (`categorias`, `perfiles`, `articulos`, `dispositivos`, `conexiones`, `credenciales`, `historial`, `adjuntos`, `diagnosticos`, `ejecuciones_diagnostico`, `accesos_boveda`) en formato JSON, más un manifiesto con la fecha y el número de filas por tabla. Las credenciales de la bóveda van tal como viven en el servidor: cifradas; el respaldo nunca contiene contraseñas legibles.
+Qué incluye: las 16 tablas del esquema (`categorias`, `ubicaciones`, `personas`, `perfiles`, `articulos`, `dispositivos`, `conexiones`, `credenciales`, `campos_protegidos`, `boveda_meta`, `adjuntos`, `historial`, `diagnosticos`, `ejecuciones_diagnostico`, `accesos_boveda`, `referencias`) en formato JSON, más un manifiesto con la fecha y el número de filas por tabla. Hasta el 2026-09-24 el script respaldaba solo 11: faltaban las cinco que se crearon después de escribirlo, y ahora una prueba (`src/lib/esquema.test.ts`) falla si vuelve a faltar alguna. Las credenciales y los campos protegidos de la bóveda van tal como viven en el servidor, cifrados: el respaldo nunca contiene contraseñas legibles.
 
 Qué NO incluye: los archivos del bucket de Storage (fotos, manuales en PDF). Solo se respaldan sus referencias en la tabla `adjuntos`.
 
@@ -54,7 +54,7 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in respaldo-supabase-AAAA-MM-D
 tar -xzf respaldo.tar.gz
 ```
 
-3. Quedan los JSON por tabla y el `manifiesto.json`. Para restaurar datos puntuales, lo más simple es copiar los valores del JSON y reinsertarlos desde la app o con `insert`/`update` en el SQL Editor. Una restauración completa se hace tabla por tabla en este orden (por las referencias entre ellas): `categorias`, `articulos`, `dispositivos`, `credenciales`, `adjuntos`, `historial`; `perfiles` no se restaura por SQL porque depende de los usuarios de Authentication.
+3. Quedan los JSON por tabla y el `manifiesto.json`. Para restaurar datos puntuales, lo más simple es copiar los valores del JSON y reinsertarlos desde la app o con `insert`/`update` en el SQL Editor. Una restauración completa se hace tabla por tabla en el orden del manifiesto, que respeta las referencias entre ellas: `categorias`, `ubicaciones` y `personas` antes que `articulos` y `dispositivos`, y estas antes que `conexiones` y el resto. `perfiles` no se restaura por SQL porque depende de los usuarios de Authentication. Al restaurar `historial`, `accesos_boveda` o `ejecuciones_diagnostico` con una sesión de la app, el servidor vuelve a sellar el autor y `recibido_en` (tarea 271): se restauran desde el SQL Editor, que no tiene sesión y conserva los valores del respaldo.
 
 ## Detalles de seguridad
 
