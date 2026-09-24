@@ -24,6 +24,15 @@ Documentación: [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md) (actualiz
 - **Encontrado y NO resuelto desde aquí (paso del usuario):** el registro público de Auth está abierto (`disable_signup: false`). Es un ajuste del panel: Authentication > Sign In / Providers > desactivar "Allow new users to sign up". Hoy hay 1 usuario y 0 sin confirmar, así que nadie lo aprovechó.
 - **Verificación del código:** 142 archivos y 1968 casos en verde (antes 1965); lint, tipos y build limpios.
 
+### Documentación (tablero, parte B del encargo): los avisos de "ejecutar `schema.sql`" reflejan la base real
+
+**Área modificada:** [TAREAS.md](TAREAS.md), cabecera del último encargo en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) y [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md).
+**Tipo:** Modificado (documentación).
+**Motivo:** encargo del usuario del **23 de septiembre de 2026**, sección 4: el tablero seguía pidiendo ejecutar `schema.sql` (columnas de personas y grupos N3, P1 y P5) cuando eso ya estaba aplicado.
+**Cómo se comprobó:** un script comparó cada columna declarada en `supabase/schema.sql` con la base real (con el MCP de Supabase): 16 tablas y ninguna columna de más ni de menos; también existen las restricciones (`'descargo'`, `'persona'`, `'referencia'`) y el bucket `archivos_boveda`.
+**Qué cambió:** 14 avisos de "ejecutar `schema.sql`" quedaron **tachados** junto a su estado comprobado, sin borrar el texto original: la cabecera del encargo de las relaciones (en el tablero y en el archivo), las tareas 266, 143, 140, 132, 127, 121, 118 y 116, el aviso bloqueante de N3, P1 y P5 y los párrafos de las propuestas de seguridad, base de conocimiento y UX/diagnóstico. También se corrigieron tres avisos más que el código contradecía: el color de categoría "sin cablear" (lo cableó la tarea 126), F3 "por decidir" (lo hizo la tarea 146) y el estado de las tareas 2 y 10 (hoy hay 1 usuario en Auth, y el registro público sigue abierto). La 169 se archivó por absorción en la 271, y la 258 pasó a "En proceso".
+**Impacto esperado:** el tablero solo pide al usuario lo que de verdad falta: desactivar el registro público y, si el objetivo sigue siendo cinco técnicos, crear los usuarios restantes y darles permisos.
+
 ## 2026-09-23
 
 ### Agregado (agenda y Centro de consulta, tarea 270, Fase 5 del encargo "las entidades se relacionan"): los ingresos, los retiros y los equipos liberados en la agenda, y "¿Qué hace?" dentro de las guías

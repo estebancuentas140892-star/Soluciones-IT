@@ -1,8 +1,41 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-23 (segunda parte): continuar desde el estado real
+
+**En curso.** Orden fijado por el usuario: A seguridad de Supabase (tarea 271), B tablero, C tarea 258, D tarea 259, E tarea 260, F tareas 262, 265, 261, 243 y 264, G revisión del backlog histórico. **A y B hechas el 2026-09-24.**
+
+### 271. Seguridad de Supabase antes de `/asistencia`: mínimo privilegio
+
+**Título:** auditar el Supabase real y cerrar lo que permita escalar privilegios, invocar funciones sin necesidad, alterar la auditoría, llegar a la Bóveda o modificar archivos ajenos, antes de abrir la primera superficie pública. **Estado:** Completada (2026-09-24) en base de datos, código, pruebas, documentación y despliegue. **Prioridad:** Crítica. **Origen:** encargo del usuario del 2026-09-23 (segunda parte), sección 3. **Absorbe:** la 169 (abajo). **Decisión:** [DECISIONES.md](DECISIONES.md) AD-052. **Regla:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-012.
+
+**Auditoría del estado real (con el MCP de Supabase y por REST con la clave publicable):** 16 tablas con RLS, todas las políticas `to authenticated`, y `schema.sql` coincide con la base. Asesores: 4 advertencias (`registrar_modificacion` con `search_path` mutable; `crear_perfil` y `puede_ver_boveda`, `SECURITY DEFINER` ejecutables por `anon` y `authenticated`; Leaked Password Protection). Por REST anónimo, las tablas devolvían `[]`, Storage no listaba nada, GraphQL estaba desactivado y `puede_ver_boveda` respondía `false`. **Hallazgos que los asesores no marcan:** el INSERT de `historial` era `true`, así que cualquiera firmaba una entrada a nombre de otro y escribía la de un secreto sin permiso de bóveda; en Storage cualquier autenticado podía reemplazar o borrar el archivo de otro; y **el registro público de Auth estaba abierto** (`disable_signup: false`), con 1 usuario y 0 sin confirmar.
+
+**Qué se hizo** (migración `seguridad_minimo_privilegio`, ensayada antes en transacciones revertidas contra la base real):
+
+1. **Funciones:** `registrar_modificacion()`, `crear_perfil()` y la nueva `sellar_registro_inmutable()` sin `EXECUTE` para PUBLIC, `anon` y `authenticated` (un trigger se dispara igual: comprobado); `puede_ver_boveda()` pasa a `SECURITY INVOKER` y solo la ejecuta `authenticated`; `crear_perfil()` queda como única `SECURITY DEFINER`, porque la dispara Auth; `search_path` vacío en todas.
+2. **Auditoría:** el servidor sella `recibido_en`, `usuario` y `usuario_nombre` en `historial`, `accesos_boveda` y `ejecuciones_diagnostico`; la política `historial_insercion` exige lo mismo que `historial_lectura`.
+3. **Storage:** `adjuntos_storage_edicion`, `adjuntos_storage_borrado` y `archivos_boveda_storage_edicion` exigen además `owner_id = auth.uid()`. Borrar en `archivos_boveda` sigue abierto a quien tiene permiso de bóveda (eliminar un secreto se lleva su archivo).
+4. **App** (`src/lib/archivosPendientes.ts`): las subidas dejan `upsert` y un "ya existe" cuenta como subido (`esArchivoYaExistente`), así que ningún flujo necesita reescribir el archivo de otro.
+5. **Documentación:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md` (actualización del 2026-09-24 y sección 4), [ARQUITECTURA.md](ARQUITECTURA.md) sección 8, [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-012, 5.1, 5.2 y 10.3), AD-052 y [CHANGELOG.md](CHANGELOG.md).
+
+**Verificación.** Asesores de seguridad: de 4 advertencias a 1 (Leaked Password Protection, que exige el plan Pro); de rendimiento, sin avisos nuevos. Por REST anónimo: las 16 tablas siguen en `[]`, las funciones internas responden `permission denied` o no existen para la API, y un INSERT anónimo en `historial` se rechaza por RLS. Con la sesión del usuario real simulada: se leen las 16 tablas (11 credenciales), se edita un equipo con `updated_by` sellado y se escribe historial; una cuenta ajena ve 0 credenciales y no puede escribir el historial de una credencial (42501). En Storage el dueño reemplaza sus 18 archivos y una cuenta ajena, ninguno. Código: 142 archivos y 1968 casos en verde (dos pruebas nuevas en `archivosPendientes.test.ts`), lint, tipos y build limpios. **Login y Bóveda:** la autenticación no se tocó; la lectura de la Bóveda y la sincronización se comprobaron con la sesión simulada en la base, no con un inicio de sesión real (esta sesión no escribe la contraseña del usuario).
+
+**Despliegue confirmado (regla 14).** Commit `1eb0164`: `/version.json` responde `1eb0164`. Por contenido, sobre los 145 trozos que declara `/sw.js`: `index-k4Wxx0B0.js` contiene la expresión de `esArchivoYaExistente` (`already exists|duplicate`) y `upsert:!1`. **En negativo:** ningún trozo de la app contiene ya `upsert:!0` (la única aparición es interna de Dexie). **Sin SQL pendiente:** la migración ya está aplicada.
+
+**PASO DEL USUARIO PENDIENTE (urgente):** Supabase > Authentication > Sign In / Providers > desactivar **"Allow new users to sign up"**. Se comprueba cuando `/auth/v1/settings` responde `"disable_signup":true`. Opcional: mínimo de 12 caracteres en las contraseñas (Leaked Password Protection exige el plan Pro).
+
+**Lo que no se tocó:** las políticas del contenido general (siguen `true` para `authenticated`), la Bóveda y su cifrado, la sincronización y la interfaz.
+
+### 169. Deuda técnica de seguridad detectada en la auditoría (cerrada por absorción en la 271, 2026-09-24)
+- Descripción: (TD-1) la política INSERT de `historial` usa `with check (true)` sin distinguir `entidad_tipo`, mientras que su SELECT sí exige `puede_ver_boveda()` para `credencial`/`campo_protegido` (`supabase/schema.sql`); alinear el INSERT con el SELECT. (TD-2) el bucket de Storage `adjuntos` permite a cualquier autenticado actualizar o borrar objetos de otros sin comprobación de propietario; decidir explícitamente si se restringe.
+- Motivo: TD-1 es una grieta de integridad del registro de auditoría (no de confidencialidad); TD-2 es coherente con un equipo de confianza de 5 pero conviene decidirlo a conciencia, no como efecto colateral.
+- Impacto: robustez de la auditoría y de Storage. Cambios de RLS: requieren editar `schema.sql` y reaplicarlo (regla 17).
+- Prioridad: **Media**. Estado: ~~**Pendiente**~~ **Completada** (absorbida por la 271). Área afectada: `supabase/schema.sql` (políticas de `historial` y del bucket `adjuntos`). Dependencias: ninguna.
+- **Absorbida por la 271 (2026-09-24):** TD-1 resuelto (el INSERT de `historial` exige lo mismo que su SELECT, y la autoría la sella el servidor); TD-2 decidido y resuelto (en `adjuntos` solo el dueño reemplaza o borra su archivo). Se archiva junto con la 271.
+
 ## Encargo del 2026-09-23: las entidades se relacionan
 
-**Encargo completo el 2026-09-23** (tareas 266 a 270). **Paso del usuario pendiente:** ejecutar `supabase/schema.sql` en el SQL Editor de Supabase (columnas de personas de la tarea 266); hasta entonces, crear, editar, retirar o reactivar una persona espera en la cola de sincronización sin perderse.
+**Encargo completo el 2026-09-23** (tareas 266 a 270). ~~**Paso del usuario pendiente:** ejecutar `supabase/schema.sql` en el SQL Editor de Supabase (columnas de personas de la tarea 266); hasta entonces, crear, editar, retirar o reactivar una persona espera en la cola de sincronización sin perderse.~~ **Hecho** (comprobado el 2026-09-24 contra Supabase: `personas` tiene `estado`, `fecha_ingreso`, `fecha_retiro` y `motivo_retiro`).
 
 ### 270. Fase 5: la Agenda aprovecha ingresos y retiros, y el Centro de consulta aparece en contexto
 
