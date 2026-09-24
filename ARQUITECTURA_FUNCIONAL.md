@@ -365,6 +365,23 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Referencia, Artículo (sus tareas).
 - Dura en el código: `src/features/referencia/{comandosEnTexto.ts,QueHaceEnTexto.tsx,ChipReferencia.tsx,HojaReferencia.tsx,TarjetaComando.tsx}`, `src/features/soluciones/{ModoFoco.tsx,ProcedimientoVista.tsx,AsistenteVista.tsx}`.
 
+### Asistencia remota (tarea 258, 2026-09-24)
+
+**RN-056. El computador atendido no inicia sesión ni toca la app: solo ve lo que el técnico le envía.**
+- Motivo: secciones 7 a 9 del encargo del 2026-09-23 (AD-053). Es la primera superficie pública de la app.
+- Regla: `/asistencia` es una entrada propia del build (`asistencia.html`) que no carga Dexie, la sincronización, el cliente de Supabase, el service worker, la Bóveda, el buscador ni las guías; habla solo con `asistencia_crear`, `asistencia_estado` y `asistencia_cerrar_portal`, las únicas funciones concedidas a `anon`. Las tres tablas de la asistencia tienen RLS sin políticas y sin privilegios para `anon` ni `authenticated`, y no se publican por Realtime. El portal se identifica con un secreto de 256 bits que solo viaja al crear la sesión y del que el servidor guarda el SHA-256.
+- Entidades: AsistenciaSesion, AsistenciaMensaje, AsistenciaEvento.
+- Dura en el código: `supabase/schema.sql` sección 7, `src/asistencia/`, `vite.config.ts` (segunda entrada, `navigateFallbackDenylist`, `globIgnores`, grupo `precarga`), `vercel.json` (reescritura y cabeceras), `src/asistencia/aislamiento.test.ts`, `scripts/verificar-portal.mjs`.
+
+**RN-057. Una sesión de asistencia es temporal, de un solo técnico y no se reutiliza.**
+- Regla: el código (6 cifras de `gen_random_bytes`, único entre las sesiones que esperan) vence a los 10 minutos; lo canjea un técnico autenticado una sola vez; conectar otra sesión cierra la anterior del mismo técnico; una sesión conectada se cierra a los 15 minutos sin actividad del técnico (envíos o el latido de su app abierta con la sesión) y a las 4 horas; cerrada o expirada no vuelve a ningún estado, y su código no reconecta nada. Reconexión: el portal retoma su sesión al recargar la pestaña (secreto en `sessionStorage`), y el teléfono al reabrir la app (id en `localStorage` con el usuario), siempre que siga viva. 5 códigos incorrectos por técnico cada 10 minutos (30 en total) bloquean nuevos intentos; como mucho 100 sesiones esperando; 20 envíos por minuto y 200 por sesión.
+- Dura en el código: `asistencia_vencer`, `asistencia_conectar`, `asistencia_enviar`, `src/features/asistencia/sesionAsistencia.ts`, `src/asistencia/estadoPortal.ts`.
+
+**RN-058. Al computador solo viaja contenido permitido, y nunca un secreto.**
+- Regla, en tres barreras: (1) `construirContenidoDePaso` arma el envío solo con campos permitidos del paso y nunca lee el vínculo protegido; (2) la vista previa enseña exactamente lo que se enviará (el mismo componente del portal) y dice lo que aparta; (3) el servidor (`asistencia_validar_contenido`) acepta solo el formato v1 (claves conocidas, textos, largos acotados, 16 KB, URL solo http(s)) y rechaza cualquier texto con forma de secreto (`asistencia_parece_secreto`: un nombre de secreto seguido de un valor, un bloque cifrado de la app, un JWT, una llave privada, una clave de Supabase o una URL con credenciales). El cliente tiene el mismo criterio en `modelo.ts`, comprobado contra el del servidor.
+- Entidades: Paso, Referencia (comandos y atajos, que no pueden contener secretos).
+- Dura en el código: `src/features/asistencia/{modelo.ts,contenidoPaso.ts,VistaContenidoAsistencia.tsx,HojaEnviarAEquipo.tsx}`, `supabase/schema.sql` sección 7.
+
 ## 3. Modelo entidad-relación
 
 ### 3.1 Diagrama
@@ -551,13 +568,36 @@ El `vinculoProtegido` de un paso es puramente informativo: no participa en ningu
 
 ---
 
+### 4.7 Máquina de estado: sesión de asistencia remota (tarea 258)
+
+```
+            asistencia_crear (anon)
+                    │
+                    ▼
+             ┌─────────────┐  10 min sin canje          ┌──────────┐
+             │  esperando  │ ─────────────────────────► │ expirada │ (codigo_vencido)
+             └──────┬──────┘                            └──────────┘
+   asistencia_      │ asistencia_conectar (técnico)          ▲
+   cerrar_portal    ▼                                        │ 15 min sin actividad
+   (portal) ┌─────────────┐ ─────────────────────────────────┘ (inactividad) o 4 h (maximo)
+      ┌──── │  conectada  │
+      │     └──────┬──────┘
+      │            │ asistencia_desconectar (tecnico), asistencia_cerrar_portal (portal)
+      ▼            ▼ u otra conexión del mismo técnico (reemplazada)
+            ┌───────────┐
+            │  cerrada  │
+            └───────────┘
+```
+
+Estados finales: `cerrada` y `expirada`; ninguno vuelve atrás y al entrar en ellos se borran los mensajes. El vencimiento no depende de una tarea programada: `asistencia_vencer` se ejecuta al comienzo de cada función, así que nada vencido se sirve jamás.
+
 ## 5. Modelo de permisos
 
 ### 5.1 Actores
 
 El sistema **no modela roles con nombre**. Existen tres actores:
 
-1. **Anónimo:** sin acceso. Toda política RLS es `to authenticated` y la app exige sesión antes de mostrar cualquier pantalla. Desde el 2026-09-24 (tarea 271) tampoco puede invocar ninguna función interna por `/rest/v1/rpc`: los triggers no conceden `EXECUTE` a los roles de la API y `puede_ver_boveda()` solo la ejecuta `authenticated`. **Condición de todo el modelo:** el registro público de Auth tiene que estar desactivado (paso del usuario, [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md) sección 4). Si está abierto, cualquiera con la URL y la clave publicable, que viajan en el JavaScript público, puede crearse una cuenta y pasar a "técnico autenticado".
+1. **Anónimo:** sin acceso a los datos. Toda política RLS es `to authenticated` y la app exige sesión antes de mostrar cualquier pantalla. Desde el 2026-09-24 (tarea 258) el computador atendido, sin sesión, puede ejecutar SOLO `asistencia_crear`, `asistencia_estado` y `asistencia_cerrar_portal` (RN-056), que no leen nada fuera de su propia sesión. Desde el 2026-09-24 (tarea 271) tampoco puede invocar ninguna función interna por `/rest/v1/rpc`: los triggers no conceden `EXECUTE` a los roles de la API y `puede_ver_boveda()` solo la ejecuta `authenticated`. **Condición de todo el modelo:** el registro público de Auth tiene que estar desactivado (paso del usuario, [supabase/INSTRUCCIONES.md](supabase/INSTRUCCIONES.md) sección 4). Si está abierto, cualquiera con la URL y la clave publicable, que viajan en el JavaScript público, puede crearse una cuenta y pasar a "técnico autenticado".
 2. **Técnico autenticado** (cualquiera de los 5): rol base. Único requisito para todo el contenido general (categorías, artículos incluido publicar, dispositivos, conexiones, adjuntos, diagnósticos, ubicaciones, personas, importación). Puede autorizar eliminaciones sensibles si conoce la contraseña maestra.
 3. **Técnico con `puede_ver_boveda = true`** (subconjunto): además, leer y escribir credenciales y campos protegidos, el bucket `archivos_boveda`, el historial de esas entidades y `accesos_boveda`.
 
@@ -582,6 +622,8 @@ Barrera real: **RLS** (Postgres, bloquea aunque se llame la API directo); **Maes
 | Borrar de Storage un adjunto que subió otro técnico | No | No | RLS (solo el dueño; queda huérfano y lo borra el administrador) |
 | Borrar el archivo cifrado de un secreto al eliminarlo | No | Sí | RLS (`puede_ver_boveda`, lo haya subido quien sea) |
 | Escribir historial de una credencial o campo protegido | No | Sí | RLS (el mismo permiso que para leerlo, desde la tarea 271) |
+| Conectar un equipo por asistencia y enviarle pasos | Sí | Sí | Función `security definer` para `authenticated` (dueño de la sesión); el servidor rechaza secretos (RN-058) |
+| Abrir el portal `/asistencia` (sin sesión) | Cualquiera | Cualquiera | Solo tres funciones para `anon`, sobre su propia sesión (RN-056) |
 | Acceder a la bóveda (leer/descifrar) | No | Sí | RLS + Maestra |
 | Ver la pestaña/ruta Bóveda | No | Sí | RLS + UI |
 | Crear/editar campo protegido | No | Sí | RLS + UI |
@@ -715,6 +757,7 @@ En la práctica, como cada dato vive una sola vez y los vínculos se resuelven p
 
 - **Historial** (`historial`): toda creación, edición y eliminación de las 10 entidades editables, más las conexiones (una entrada por extremo) y las intervenciones manuales. Guarda usuario, fecha, campo, valor anterior y nuevo, y motivo opcional. Los valores cifrados nunca entran en claro: se guardan como `"(cifrado)"`. Desde el 2026-09-23 un cambio de responsable deja además una entrada técnica `responsableId` con los dos ids de persona, que no se enseña y de la que se derivan las asignaciones pasadas (RN-049).
 - **Ejecuciones de diagnóstico** (`ejecuciones_diagnostico`): cada corrida terminada o abandonada del asistente (camino, artículos ejecutados, resultado, duración, motivo).
+- **Asistencia remota** (`asistencia_eventos`, desde el 2026-09-24): creación, conexión, código incorrecto, bloqueo por intentos, envío (solo cuántos bloques), envío rechazado (solo el motivo: `secreto`, `estructura`, `url`, `tamano`), cierre y vencimiento, con la sesión y el técnico. **Sin contenido ni secretos.** No tiene políticas: se consulta desde el panel de Supabase.
 - **Accesos de bóveda** (`accesos_boveda`): cada consulta, copia, muestra, modificación, eliminación o descarga de una credencial o campo protegido. Desde el 2026-09-16 también las de la vista rápida del buscador, con las mismas acciones que la ficha (RN-034).
 
 ### 10.2 Qué es inmutable y qué es mutable

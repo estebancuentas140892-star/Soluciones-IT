@@ -234,6 +234,8 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/login` | LoginPage | Fuera del chasis | Inicio de sesión (fuera de RequireAuth) |
 | `/` (index) | ResolverPage | Sección | **Resolver** (desde el 2026-09-22): "¿Qué necesitas resolver?", el buscador global y, debajo, solo lo que ayuda: Atención (hasta tres asuntos con fecha), Recientes (guías usadas en 14 días) y Accesos rápidos por categoría, con "Todas las guías" |
 | `/agenda` | AgendaPage | Documento | **Agenda completa**: fecha, resumen, vencidos, para hoy, próximos, en curso y por revisar del equipo, y al final, plegada, la actividad del equipo (desde el 2026-09-23). Sube a Resolver |
+| `/conectar` | ConectarPage | Tarea | **Conectar equipo** (tarea 258): escribir el código de 6 cifras del computador atendido, o llegar con él desde su QR (`?codigo=`), que pide confirmar. Conectado, dice con qué equipo y desde qué hora, y ofrece volver a la guía o desconectar. Sube a Resolver, o vuelve a la guía desde la que se abrió |
+| `/asistencia` | Portal público (`asistencia.html`) | Fuera de la app | **Portal de asistencia** (tarea 258): lo abre el computador atendido SIN iniciar sesión. Código y QR, lo que el técnico envía y "Terminar la asistencia". Entrada propia del build: no carga la app, Dexie, Supabase ni el service worker (ver 6.11) |
 | `/cuenta` | CuentaPage | Documento | **Ajustes** (se llamaba Mi cuenta hasta la tarea 268): cambiar la contraseña (plegado), instalar, descargar para offline, bloqueo y seguridad, buscar actualización y cerrar sesión. Sube a Más |
 | `/cuenta/seguridad` | SeguridadPage | Documento | Bloqueo de la app (patrón/contraseña). Sube a Ajustes |
 | `/soluciones` | SolucionesPage | Sección | Catálogo de guías: lista, chips de categoría, buscador, hoja de tipo. Desde el 2026-09-22 no es pestaña: se abre desde Resolver y su cabecera lleva un regreso a Resolver |
@@ -788,7 +790,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - **Con un solo equipo, el escáner abre su ficha directamente** (vibra y suma al contador). Ya no existe la tarjeta "Equipo identificado" con "Abrir la ficha": la ficha enseña arriba el estado y la IP. La ficha se apila sobre el escáner y su regreso dice "‹ Escáner", con la cámara viva: inventariar varios sigue siendo **un toque por equipo**.
 - **No reabre la misma etiqueta al volver.** Si la cámara sigue apuntando a la etiqueta que se acaba de abrir, se ignora hasta que deja de verla un segundo o ve otro código. Lo escrito a mano siempre se atiende.
 - **Con varios equipos o ninguno**, las tarjetas de siempre.
-- **El QR del portal de asistencia** (`…/conectar?codigo=482731`) se reconoce: tarjeta neutra **"Código para conectar un computador"** con el código ("482 731") y la explicación de que enviar los pasos de una guía a un computador todavía no está disponible. Un número de 6 cifras escrito a mano sigue siendo una placa. Emparejar llega con la tarea 258.
+- **El QR del portal de asistencia** (`…/conectar?codigo=482731`) lleva a **Conectar equipo** con el código puesto, que pide confirmar antes de conectar (desde el 2026-09-24, tarea 258; en la 256 solo se reconocía con una tarjeta neutra). Si el escáner se abrió desde una guía, al conectar se vuelve a esa guía. Un número de 6 cifras escrito a mano sigue siendo una placa.
 - Los botones de las tarjetas miden 44 px.
 
 **Elementos:**
@@ -799,7 +801,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 - **Búsqueda manual** (barra inferior): input "O escribir la placa o el serial" + botón "Buscar".
 - **Tarjetas de aviso** (reemplazan la barra al haber resultado):
   - ~~**"Equipo identificado"**~~ (retirada el 2026-09-22, tarea 256: un solo equipo abre su ficha directamente).
-  - **"Código para conectar un computador"** (el QR del portal de asistencia): el código y "Seguir escaneando".
+  - ~~**"Código para conectar un computador"**~~ (retirada el 2026-09-24, tarea 258: el QR del portal lleva a Conectar equipo).
   - **"Varios equipos comparten este código"**: lista de opciones + "Seguir escaneando".
   - **"Ningún equipo coincide con este código"**: muestra el código, botones "Seguir escaneando" y "Registrar equipo" (este último precarga el código leído como serial en el alta, `?serial=`, salvo que sea una URL de etiqueta; hallazgo H3).
 
@@ -965,6 +967,32 @@ Se alcanza desde **Más > Aplicación > Ajustes**, desde el avatar de la barra s
 **Contenido inicial.** 16 herramientas (TightVNC, AnyDesk, Zabbix, SICOF ERP, ICG Manager, FrontRest, HKA Factura, DOCUMENT, WORKFLOW, SharePoint, SonicWall, Kaspersky, VMware ESXi, Issabel, Power BI y SQL Server Management Studio) con sus guías relacionadas, más los términos VNC, Acceso remoto y PQRSD y el atajo Ctrl + Shift + Esc; ver `supabase/schema.sql`, sección 5.2. "Software A.M." no tiene ficha porque no se sabe para qué sirve (tarea 237).
 
 ---
+
+## 6.11 Asistencia remota: el portal, Conectar equipo y Enviar a este equipo (desde el 2026-09-24, tarea 258)
+
+**Objetivo.** Que el técnico, desde su teléfono, envíe a la pantalla del computador que atiende lo que hace falta hacer allí (la acción, un comando para copiar, un enlace, un nombre de archivo, lo que debe verse), sin que ese computador inicie sesión ni reciba nunca un secreto. El portal es una ayuda, no una dependencia: la guía sigue entera en el teléfono, también sin conexión. Decisiones en [DECISIONES.md](DECISIONES.md) AD-053; reglas en [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-056 a RN-058.
+
+**El portal (`/asistencia`, computador atendido, sin sesión).** Una página aparte (`asistencia.html`), con su cabecera "Soluciones IT · Asistencia" y un pie fijo: "Esta página no pide contraseñas ni instala nada. Solo muestra lo que el técnico te envía mientras la sesión está abierta." Estados:
+- **Preparando la asistencia…** mientras pide un código.
+- **Esperando conexión:** "Dale este código al técnico", el código grande ("482 731"), su QR (lleva a `/conectar?codigo=…`), cómo conectarse desde el teléfono, "El código vence en 9:41" (cuenta atrás) y "Esperando al técnico…".
+- **Conectado:** pastilla "Conectado" en la cabecera; sin envíos todavía, "Conectado con el técnico · Aquí aparecerá lo que te envíe".
+- **Mensaje recibido:** cada envío es una tarjeta (el más reciente arriba y destacado, con su hora): título ("Paso 3 · Instalar el controlador"), nombre de la guía y sus bloques. Los comandos, datos técnicos, nombres de archivo y enlaces llevan **Copiar** (44 px); un enlace solo es enlace si es http(s) y se abre en otra pestaña sin enviar de dónde viene; un atajo se lee, no se copia. Nada se ejecuta nunca. Se ven los 30 envíos más recientes.
+- **Terminado**, con su motivo y siempre con **"Generar un código nuevo"**: "El técnico se desconectó", "Sesión finalizada" (se terminó aquí), "La sesión se cerró" (15 minutos sin actividad del técnico), "El código venció" (nadie se conectó en 10 minutos), "La sesión terminó" (4 horas), "El técnico se conectó a otro equipo" y "Esta asistencia ya no existe". Al terminar, lo recibido deja de verse.
+- **Sin conexión:** una franja "Sin conexión. Se reintenta sola; lo que ya llegó sigue aquí."; al volver la red, sigue sola.
+- **No disponible:** "La asistencia no está disponible ahora" con "Reintentar" (servidor caído o sin la migración).
+- **Abierta en otra pestaña:** si se duplica la pestaña, la copia dice "Esta asistencia ya está abierta en otra pestaña" y toma el relevo sola cuando la otra se cierra. Dos pestañas nuevas son dos asistencias distintas.
+- **"Terminar la asistencia"** (esperando o conectado) cierra la sesión en el servidor.
+- **Recargar** la pestaña retoma la misma sesión mientras siga viva (el secreto del portal vive solo en esa pestaña, `sessionStorage`).
+
+**Conectar equipo (`/conectar`, técnico).** Nivel tarea ("Asistencia remota · Conectar equipo"). Sin conexión activa: la explicación "En el computador que vas a atender, abre soluciones-it-psi.vercel.app/asistencia. Te dará un código de 6 cifras.", el campo del código (numérico, se escribe "000 000"), **"Conectar"** y **"Escanear el QR de la pantalla"** (al escáner). Llegando desde el QR, el campo trae el código, la etiqueta pregunta "¿Conectar con este equipo?" y el botón dice "Conectar con 482 731": **nunca conecta sin ese toque**. Errores, en rojo bajo el campo: "El código tiene 6 cifras.", "Ese código no corresponde a ningún equipo esperando…", "Ese código venció…", "Ese código ya se usó…", "Demasiados códigos incorrectos. Espera 10 minutos…" y, sin red, "Sin conexión: conectar un equipo necesita internet." Conectado: "Conectado al equipo 482 731", "Desde las 10:32…", **"Seguir con la guía"** (si se vino de una) o "Ir a Resolver para abrir una guía", y **"Desconectar equipo"**. Si la conexión terminó mientras tanto, lo dice una vez ("La conexión con el equipo 482 731 terminó. El computador terminó la asistencia.").
+
+**En la guía.**
+- **Sin equipo conectado** la ejecución no cambia; el índice de pasos (el contador "1 /N") suma **"Conectar un equipo"**, que abre Conectar equipo y vuelve a la guía.
+- **Con un equipo conectado**, una franja de 44 px sobre los botones del pie, en la vista de una acción a la vez y en la del paso entero: "Equipo 482 731 · **Enviar a este equipo**". Tras enviar dice "Enviado" unos segundos.
+- **"Enviar a este equipo"** abre la hoja de vista previa (ver sección 8): "Todo el paso" o "Solo esta acción", lo que no se envía y por qué, **"Así se verá en el equipo"** (el mismo componente que usa el portal), y las acciones fijas abajo: **Enviar**, **Cancelar** y **Desconectar equipo**. Sin conexión: "Sin conexión: la guía sigue aquí. Envía cuando vuelva la red."
+- **Qué se envía de un paso:** el lugar ("Dónde"), cada acción y cada comprobación en orden, los comandos y atajos que la tarea escribe o enlaza y tienen ficha en el Centro de consulta (su valor), las URL escritas en el texto (aparte, con Copiar), los avisos (el dato técnico como dato; los demás con su tono), los nombres de archivo y "Debes ver". **Nunca**: la credencial o el campo protegido vinculado al paso o a una tarea, imágenes, guías vinculadas ni términos del glosario. Lo que tenga forma de secreto ("Contraseña: …", "PIN=…", un bloque cifrado) se aparta y se dice ("No se envía un dato técnico: parece un dato protegido."), sin repetir su contenido; y el servidor lo rechaza igual aunque llegara.
+- **El latido:** mientras la guía o Conectar equipo están abiertas y a la vista, el teléfono avisa al servidor cada minuto que la sesión sigue en uso; si el servidor dice que terminó (el computador la cerró, venció), la franja desaparece.
+- **Cerrar sesión** en la app desconecta primero el equipo (si hay red).
 
 ## 7. Catálogo de formularios (campo por campo)
 
@@ -1180,6 +1208,7 @@ La app usa **modales** (centrados, `src/components/Modal.tsx`, renderizados con 
 | **Vista previa de artículo** (`VistaPreviaArticulo`) | Botón "Vista previa" | `ArticuloForm` | Render interactivo del artículo antes de guardar. Desde el **2026-09-10** entra por la **presentación** (portada, título y tipo, etiquetas, descripción, resumen de tiempo/dificultad/pasos, síntomas, causas, equipos afectados, objetivo y requisitos) y **"Empecemos"** abre el procedimiento, con "Volver a la presentación" para regresar. "Probar" desde un paso sigue entrando directo a ese paso | Progreso efímero que se borra al cerrar |
 | **Confirmación "Descartar el recorrido"** | Enlace "Descartar este recorrido" | `DiagnosticoRunPage` | "¿Descartar el recorrido? El avance se borra y queda registrado como abandonado" | "Sí, descartar" / "Seguir con el recorrido" |
 | **Hoja "Algo va mal en el paso N"** | Botón **"Falla"**, permanente en la ejecución | `HojaFalla` | Las cuatro salidas cuando el paso falla | Abrir la contingencia vinculada, fotografiar y anotar, saltar el paso, cancelar |
+| **"Enviar a este equipo"** (`HojaEnviarAEquipo`, desde el 2026-09-24, tarea 258) | "Enviar a este equipo" en la franja del equipo conectado | La ejecución de una guía (una acción a la vez o paso entero) | "Conectado al equipo 482 731", "Todo el paso" / "Solo esta acción", lo que no se envía y por qué, la vista previa "Así se verá en el equipo" y las acciones fijas abajo | "Enviar" (con su error si el servidor lo rechaza), "Cancelar", "Desconectar equipo" |
 | **Decisión de una tarea** | Al llegar a una tarea de tipo decisión | `ProcedimientoVista` | Pregunta Sí/No | "Sí, continuar" (acento) marca la tarea; "No, abrir ..." (ámbar) despliega el artículo vinculado. Desde la tarea 206 **no hay botón verde**: el acento es la vía que sigue y el ámbar la que se desvía (regla R60) |
 | **Contingencia del paso** | Vista de lectura: fila "Si esto falla", siempre que el paso tenga contingencia vinculada y no esté hecho. Asistente: botón "Falla" | `ProcedimientoVista`, `AsistenteVista` | Fila de 44 px con llave inglesa, o la hoja "Algo va mal en el paso N" | Despliega la contingencia sangrada tras la línea. La pregunta "¿Ocurrió algún error durante este paso?" **se retiró en la tarea 206**: responder "No" era completar el paso, que es lo que ya hace su insignia (regla R59) |
 | **Desbloqueo de la bóveda** | Al entrar a la Bóveda o a un campo protegido | `BovedaGuard`, `CredencialEnPaso`, `SeguridadDelEquipo` | Campo contraseña maestra + "Desbloquear" | Deriva la clave en el teléfono; sesión compartida con autobloqueo |
@@ -1540,6 +1569,14 @@ Más > Herramientas > Herramientas de inventario
 ---
 
 <a id="14-arbol-de-navegacion"></a>
+### 13.9 Asistencia remota a un computador (desde el 2026-09-24)
+
+1. En el computador que se atiende: abrir `soluciones-it-psi.vercel.app/asistencia`. Aparecen un código de 6 cifras y su QR (vencen a los 10 minutos).
+2. En el teléfono: escanear el QR (con la cámara o con el escáner de la app) y tocar "Conectar con 482 731"; o abrir la guía, el índice de pasos, "Conectar un equipo", y escribir el código.
+3. En la guía, en cada paso: "Enviar a este equipo", revisar la vista previa y "Enviar". El computador lo muestra con sus botones de Copiar.
+4. Al terminar: "Desconectar equipo" en el teléfono, o "Terminar la asistencia" en el computador. Si nadie hace nada, la sesión se cierra sola a los 15 minutos sin actividad del técnico, y nunca dura más de 4 horas.
+5. Para otra asistencia hace falta un código nuevo: el anterior no vuelve a conectar.
+
 ## 14. Árbol jerárquico de navegación
 
 Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de la cuenta (Ajustes desde la tarea 268) viven en la barra superior de todas las secciones, no solo en la primera: se omiten del resto de los árboles de abajo para no repetirlos.

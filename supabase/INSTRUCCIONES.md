@@ -59,7 +59,21 @@ Agregó a `personas` las columnas `estado` (`activa` o `retirada`, por defecto `
 - El historial de credenciales y campos protegidos solo lo escribe quien puede leerlo (`puede_ver_boveda`), y en `historial`, `accesos_boveda` y `ejecuciones_diagnostico` el servidor sella quién escribió la entrada (`usuario`, `usuario_nombre`) y cuándo llegó (`recibido_en`).
 - En Storage, reemplazar un archivo solo lo puede su dueño (los dos buckets), y en `adjuntos` también borrarlo. Un archivo que quede huérfano porque lo subió otro técnico lo reporta `scripts/huerfanos-storage.mjs` y se borra desde este panel.
 
-Para verificar: **Advisors > Security Advisor** ya no debe mostrar `function_search_path_mutable`, `anon_security_definer_function_executable` ni `authenticated_security_definer_function_executable`. Queda solo "Leaked Password Protection" (ver la sección 4).
+Para verificar: **Advisors > Security Advisor** ya no debe mostrar `function_search_path_mutable`, ni las advertencias de funciones `SECURITY DEFINER` para `crear_perfil` o `puede_ver_boveda`. Desde la tarea 258 esas advertencias SÍ aparecen, pero solo para las siete funciones `asistencia_*` (ver la actualización siguiente), junto con un aviso informativo "RLS Enabled No Policy" para sus tres tablas: las dos cosas son a propósito. Queda además "Leaked Password Protection" (ver la sección 4).
+
+### Actualización del 2026-09-24 (tarea 258: portal de asistencia remota)
+
+**Ya aplicada en la base real** (migración `asistencia_portal`); `schema.sql` la contiene en su sección 7. No hay que ejecutar nada. Agrega:
+
+- Tres tablas **cerradas**: `asistencia_sesiones`, `asistencia_mensajes` y `asistencia_eventos`, con RLS activada, sin ninguna política y sin privilegios para `anon` ni `authenticated`. No aparecen en Realtime. En **Table Editor** se ven con el candado de RLS y sin políticas: es a propósito.
+- Siete funciones `SECURITY DEFINER`: `asistencia_crear`, `asistencia_estado` y `asistencia_cerrar_portal` para `anon` (el computador atendido, sin sesión), y `asistencia_conectar`, `asistencia_enviar`, `asistencia_estado_tecnico` y `asistencia_desconectar` para `authenticated`. El **Security Advisor** las marca como "Public/Signed-In Users Can Execute SECURITY DEFINER Function": es la superficie pública prevista, justificada en DECISIONES.md AD-053. Cualquier otra función que aparezca ahí sí sería un problema.
+- La auditoría mínima de la asistencia está en `asistencia_eventos` (creada, conectada, código incorrecto, envío, rechazo, cierre, vencimiento), sin contenido ni secretos. Se consulta desde aquí:
+
+```sql
+select fecha, tipo, detalle, sesion_id, tecnico from public.asistencia_eventos order by fecha desc limit 50;
+```
+
+- Para probar las funciones contra la base sin dejar rastro, ejecutar `supabase/pruebas/asistencia.sql`: termina siempre con un error `RESULTADO_PRUEBA fallos=0 [...]` que revierte todo.
 
 ## 2. Crear los 5 usuarios del equipo
 
