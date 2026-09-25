@@ -2,7 +2,7 @@
 
 ## Encargo del 2026-09-23 (segunda parte): continuar desde el estado real
 
-**En curso.** Orden fijado por el usuario: A seguridad de Supabase (tarea 271), B tablero, C tarea 258, D tarea 259, E tarea 260, F tareas 262, 265, 261, 243 y 264, G revisión del backlog histórico. **A y B hechas el 2026-09-24; C, el 2026-09-25** (la 258, archivada junto a las fases de su encargo del 2026-09-22, más abajo).
+**En curso.** Orden fijado por el usuario: A seguridad de Supabase (tarea 271), B tablero, C tarea 258, D tarea 259, E tarea 260, F tareas 262, 265, 261, 243 y 264, G revisión del backlog histórico. **A y B hechas el 2026-09-24; C y D, el 2026-09-25** (la 258 y la 259, archivadas junto a las fases de su encargo del 2026-09-22, más abajo).
 
 ### 271. Seguridad de Supabase antes de `/asistencia`: mínimo privilegio
 
@@ -163,6 +163,29 @@
 **Lo que no se tocó:** el modelo y la ejecución de las guías, rutas, esquema local y de Supabase, RLS, sincronización, registro de ejecuciones, y la administración de diagnósticos en Más. **No hay que ejecutar SQL.**
 
 ## Encargo del 2026-09-22: Soluciones IT se organiza alrededor de Resolver
+
+### 259. Fase 7: precache, trozos y rendimiento
+
+**Título:** que Resolver, Equipos y Bóveda arranquen rápido sin perder las guías sin conexión. **Estado:** Completada (2026-09-25) en código, pruebas, documentación, despliegue y verificación en producción. **Prioridad:** Media. **Origen:** encargo del usuario del 2026-09-22, sección 21 ([PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md), sección 8); paso D del encargo del 2026-09-23 (segunda parte), hecho por orden del usuario del 2026-09-25 ("continuemos con las siguientes tareas"). **Decisión:** [DECISIONES.md](DECISIONES.md) AD-054.
+
+**Análisis (medido sobre el build, antes):** precache de 161 entradas y 2567 KiB. Exclusivo de Importar y Etiquetas, porque nada más en la app lo alcanza (comprobado recorriendo las importaciones estáticas y dinámicas de todos los trozos): `xlsx` 481,7 KiB, `qrcode` 22,9 KiB (salía como `browser-*`), `ImportarDispositivosPage` 16,8 KiB y `EtiquetasPage` 6,1 KiB. El portal ya estaba fuera desde la 258. Arranque: 7 trozos (585,7 KiB: `react-vendor`, `supabase`, `dexie`, `index` y tres mínimos) más 5 del chasis; ninguno trae pantallas de Infraestructura, y `procedimiento.ts` (en `index` por `adjuntosOffline.ts`) lo usa Resolver enseguida. **Riesgo encontrado:** abrir sin red una pantalla que no está en el teléfono terminaba en `reinstalarYRecargar`, que borraba el service worker y las cachés sin poder volver a bajarlos. Con la 259 habría pasado en cada primera apertura de Importar o Etiquetas sin conexión, y ya podía pasar si Android desalojaba un trozo.
+
+**Qué se hizo** (commit `f1f45bc`):
+
+1. `vite.config.ts`: los cuatro trozos fuera del precache (`globIgnores`) y guardados al primer uso (`runtimeCaching`, `CacheFirst`, caché `herramientas-bajo-demanda`, 12 entradas); `xlsx` y `qrcode` con nombre estable (`advancedChunks`).
+2. `src/lib/recargaChunk.ts`: `sinConexion()` y `servidorResponde()` (`/version.json` sin caché, 4 s de espera); sin red no se recarga, y sin servidor no se reinstala (`'sin_servidor'`).
+3. `src/components/ErrorBoundary.tsx`: estado "Sin conexión" con "Ir a Resolver", que se recarga solo con el evento `online`.
+4. Importar: baja el lector de Excel al abrirse y, sin red, lo dice en vez de culpar al archivo (un `.csv` se lee igual).
+5. `scripts/verificar-precache.mjs` (nuevo): nada precacheado puede importar de forma estática lo que quedó fuera, y `sw.js` debe guardarlo al usarse.
+6. Documentación: [ARQUITECTURA.md](ARQUITECTURA.md) sección 7, [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) 8.1, [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (Importar y la pantalla de error de la app), [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.9, AD-054 y [CHANGELOG.md](CHANGELOG.md).
+
+**Pruebas:** 149 archivos y 2140 casos (13 nuevos: `src/components/ErrorBoundary.test.tsx`, 7, con el límite montado de verdad; `src/lib/recargaChunk.test.ts`, 6), lint, tipos, build, `verificar-precache` (que falla sobre el build anterior, como debe) y `verificar-portal`. La prueba nueva encontró un defecto propio antes del commit: si el fallo llegaba en el primer montaje (un enlace directo a Importar abierto sin red), el reintento al volver la red no quedaba registrado. **Service worker real** en Chromium sobre el build de producción, con el servidor apagado para simular la falta de red: los cuatro trozos no están en el precache (155 entradas instaladas); sin red y antes de usarlos no se pueden bajar, mientras Resolver abre; al primer uso con red quedan en `herramientas-bajo-demanda`, y después se sirven sin red.
+
+**Resultado:** 157 entradas y 2041 KiB de precache (526 KiB menos, un 20,5 %).
+
+**Despliegue confirmado (regla 14):** `/version.json` responde `f1f45bc`. Por contenido, sobre una copia de lo que sirve producción (`index.html`, `sw.js` y los 153 trozos JS alcanzables): `scripts/verificar-precache.mjs` en verde (los cuatro trozos fuera del precache, nada precacheado los importa de forma estática y `sw.js` los guarda en `herramientas-bajo-demanda`); `index-Cx-HuXxe.js` contiene "Ir a Resolver", "se descarga la primera vez que se abre con conexión" y `sin_servidor`; `ImportarDispositivosPage-B0MgPTGH.js`, "Sin conexión: el lector de Excel". **En negativo:** ya no se sirve ningún trozo `browser-*`. El portal sigue en verde (`scripts/verificar-produccion-portal.mjs`, sin navegador): ahora carga `qrcode-B_X_RtOd.js`, con el mismo contenido que el `browser-B_X_RtOd.js` de antes. **Recordatorio:** PWA con `registerType: 'prompt'`; en un teléfono con la app instalada hay que aceptar "Versión nueva disponible" para recibir el precache nuevo.
+
+**Lo que no se tocó:** qué pantallas vienen instaladas aparte de las dos herramientas (Resolver, guías, Equipos con escáner y `jsQR`, Bóveda, Centro de consulta, Red y Topología), el arranque, la actualización de la PWA, el esquema y los datos. No hay que ejecutar SQL.
 
 ### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
 

@@ -6,20 +6,19 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **ENCARGO DEL 2026-09-23 (SEGUNDA PARTE): CONTINUAR DESDE EL ESTADO REAL.** Sin rediseño general y sin rehacer lo terminado (266 a 270). Orden fijado por el usuario: **A** seguridad de Supabase antes de `/asistencia` (tarea **271**); **B** tablero sin avisos comprobablemente obsoletos; **C** tarea **258** (portal `/asistencia`); **D** tarea **259** (precache); **E** tarea **260** (pruebas finales); **F** pequeñas: 262, 265, 261, 243 y 264; **G** revisión del backlog histórico (168 a 170, 173 a 175, 188 a 200, 216, 220 a 231), clasificando cada tarea sin borrar su historia. Reglas del encargo que valen para todas: no inventar datos, no duplicar verdades, no guardar secretos sin cifrar, no modificar datos productivos para probar (datos ficticios), respetar el funcionamiento sin conexión y conservar "Resolver → encontrar → ejecutar → solucionar".
 
-**Avance del encargo (2026-09-25):** **A y B hechas** el 2026-09-24 (la tarea 271, archivada, y el tablero al día con la base real). **C hecha el 2026-09-25:** la 258, verificada en producción y archivada, con la corrección de `/asistencia/` (`b3d697e`). **Sigue D:** la 259, abajo.
+**Avance del encargo (2026-09-25):** **A y B hechas** el 2026-09-24 (la tarea 271, archivada, y el tablero al día con la base real). **C y D hechas el 2026-09-25:** la 258, verificada en producción y archivada, con la corrección de `/asistencia/` (`b3d697e`), y la 259 (precache 526 KiB más liviano; sin conexión la app ya no se reinstala; `f1f45bc`). **Sigue E:** la 260, abajo.
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-### 259. Fase 7: precache, trozos y rendimiento
+### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
 
-- **Título:** que Resolver, Equipos y Bóveda arranquen rápido sin perder las guías sin conexión.
-- **Descripción:** sacar del precache Importar (`xlsx`), Etiquetas y el portal con caché en tiempo de ejecución; revisar qué arrastra el arranque (`index`, `Chasis`); medir antes y después.
-- **Motivo:** sección 21 del encargo.
-- **Impacto:** medio (casi un tercio menos de precache).
-- **Prioridad:** Media. **Estado:** En progreso (2026-09-25, por orden del usuario; la 258 quedó cerrada ese mismo día).
-- **Área afectada:** `vite.config.ts`, `src/app/Chasis.tsx`, `src/lib/recargaChunk.ts`.
-- **Dependencias:** 258 (cerrada el 2026-09-25).
-- **Modelo/esfuerzo:** Opus 5 / Alto.
+- **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
+- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista. Tampoco es un defecto el campo de un buscador medido por su `input` (23 px) cuando lo envuelve la `label` de 46 px de `CampoBusqueda`, que es la que se toca (`equipos`, `resolver`).
+- **Motivo:** secciones 25 y 26 del encargo.
+- **Prioridad:** Alta. **Estado:** En progreso (2026-09-25, al cerrarse la 259, por orden del usuario de seguir con las siguientes tareas).
+- **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
+- **Dependencias:** 254 a 259 (todas cerradas; la 258 y la 259 el 2026-09-25).
+- **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ## Historial que sigue en el tablero (no son tareas activas)
 
@@ -414,16 +413,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
-
-- **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
-- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista. Tampoco es un defecto el campo de un buscador medido por su `input` (23 px) cuando lo envuelve la `label` de 46 px de `CampoBusqueda`, que es la que se toca (`equipos`, `resolver`).
-- **Motivo:** secciones 25 y 26 del encargo.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
-- **Dependencias:** 254 a 259.
-- **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ### 262. Cabecera de las fichas: favorito, compartir y "···" a 44 px
 
