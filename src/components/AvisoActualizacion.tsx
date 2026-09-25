@@ -18,8 +18,9 @@ export function AvisoActualizacion({
   onActualizar: () => Promise<void>
 }) {
   const [actualizando, setActualizando] = useState(false)
-  // Con una guía en curso, el hueco de su barra de acciones (tarea 273,
-  // ver ranuraAvisoActualizacion.ts).
+  // Dónde va: el hueco de una barra de acciones de la pantalla (la de una
+  // guía, tarea 273) o, si no, la franja del chasis sobre las pestañas
+  // (tarea 274). Ver ranuraAvisoActualizacion.ts.
   const hueco = useHuecoAvisoActualizacion()
   if (!visible) return null
 
@@ -46,9 +47,10 @@ export function AvisoActualizacion({
   )
 
   if (hueco) {
-    // Dentro de la barra de la guía, encima de sus botones y en su mismo
-    // flujo: la barra crece hacia arriba, así que ningún control se mueve
-    // ni queda tapado, y el paso no se desplaza.
+    // En el flujo de la barra o de la franja, que reservan su sitio: la
+    // barra de una guía crece hacia arriba y la franja va detrás de lo
+    // último de la pantalla, así que ningún control queda tapado ni se
+    // mueve, y el contenido no se desplaza.
     return createPortal(
       <div className="flex items-center justify-between gap-3 rounded-xl border border-noct-accent/40 bg-noct-surface px-3.5 py-1.5">
         {contenido}
@@ -58,9 +60,9 @@ export function AvisoActualizacion({
   }
 
   return (
-    // Flota sobre la barra inferior (fixed bottom-0 z-20): por eso
-    // bottom-20 y z-50. Centrado como pastilla para verse igual en las
-    // pantallas sin barra (login, escaner).
+    // Sin hueco (fuera del chasis, como el inicio de sesión, o en una
+    // tarea que no es una guía) flota como siempre: sobre donde iría la
+    // barra inferior (fixed bottom-0 z-20), por eso bottom-20 y z-50.
     <div className="nocturne fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 font-inter">
       <div className="flex items-center gap-3 rounded-full border border-noct-accent/40 bg-noct-surface/95 px-4 py-2 shadow-lg backdrop-blur">
         {contenido}

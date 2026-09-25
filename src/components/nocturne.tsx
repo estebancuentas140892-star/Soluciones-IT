@@ -42,6 +42,10 @@ export function TagNeutral({ children, className = '' }: { children: ReactNode; 
 // El valor es el mismo `ALTO_PESTANAS` que reserva el chasis (65 px
 // medidos más el área segura, AD-027). Desde `md` no hay barra de
 // pestañas y la barra vuelve a pegarse al borde.
+//
+// Es también donde se pega la franja del aviso de versión nueva del
+// chasis (tarea 274): una barra que use esta clase publica su propio
+// hueco del aviso (`huecoAvisoActualizacion`), o una taparía a la otra.
 export const PEGADA_SOBRE_PESTANAS = 'bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0'
 
 // Botones .btn del sistema: el primario va delineado en el acento

@@ -22,9 +22,11 @@ import {
   tocar,
 } from '../pruebas/montaje'
 import { guardarModoEjecucion } from '../lib/preferenciasEjecucion'
+import { Chasis } from '../app/Chasis'
 import { GuiaPage } from '../features/soluciones/GuiaPage'
 import { AvisoActualizacion } from './AvisoActualizacion'
 import { BuscarActualizacion } from './BuscarActualizacion'
+import { huecoAvisoActualizacion } from './ranuraAvisoActualizacion'
 
 // BUSCAR ACTUALIZACIÓN A MANO Y ACTUALIZAR (encargo del 2026-09-20,
 // puntos 3, 5 y 7).
@@ -321,6 +323,112 @@ describe('con una guía en curso, el aviso no tapa sus controles', () => {
     await guia.desmontar()
     const flotante = await esperar(() => textoAviso()?.closest<HTMLElement>('.fixed'), 'el aviso flotante')
     expect(flotante.className).toContain('bottom-20')
+  })
+})
+
+// FUERA DE UNA GUÍA, LA FRANJA DEL CHASIS (tarea 274). La pastilla flotaba
+// sobre el contenido y, al final de Resolver, tapaba los accesos rápidos.
+// En una pantalla con pestañas el aviso va en una franja pegajosa del
+// chasis, en el flujo y detrás de lo último de la pantalla; una barra de
+// acciones de la pantalla que publique su hueco (la de una guía, la de la
+// ficha de un equipo) manda sobre ella.
+describe('fuera de una guía, el aviso va en la franja del chasis', () => {
+  function PantallaNormal() {
+    return (
+      <Chasis titulo="Pantalla de prueba">
+        <p>Contenido de prueba</p>
+        <button type="button">Acceso rápido de prueba</button>
+      </Chasis>
+    )
+  }
+
+  // Como la ficha de un equipo: una barra propia que publica su hueco.
+  function PantallaConBarra() {
+    return (
+      <Chasis modo="documento" titulo="Ficha de prueba">
+        <p>Ficha de prueba</p>
+        <div data-barra-de-prueba>
+          <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
+          <button type="button">Acción de la ficha de prueba</button>
+        </div>
+      </Chasis>
+    )
+  }
+
+  beforeEach(async () => {
+    await limpiarBase()
+    await sembrarPerfil(false)
+  })
+
+  function montarAviso() {
+    return montar([{ ruta: '*', elemento: <AvisoActualizacion visible onActualizar={async () => {}} /> }], '/')
+  }
+
+  function textoAviso(): HTMLElement | null {
+    return Array.from(document.body.querySelectorAll('p')).find((p) => p.textContent === 'Versión nueva disponible') ?? null
+  }
+
+  /** La franja: lo último de la columna de contenido del chasis. */
+  function franja(): HTMLElement | null {
+    return (
+      Array.from(document.body.querySelectorAll<HTMLElement>('[data-transicion] > .sticky')).find((el) =>
+        el.className.includes('empty:hidden'),
+      ) ?? null
+    )
+  }
+
+  it('en una pantalla con pestañas va en la franja, detrás de lo último, y no flota', async () => {
+    await montar([{ ruta: '/prueba', elemento: <PantallaNormal /> }], '/prueba')
+    await montarAviso()
+
+    const aviso = await esperar(textoAviso, 'el aviso')
+    const laFranja = franja()
+    expect(laFranja?.contains(aviso)).toBe(true)
+    expect(aviso.closest('.fixed')).toBeNull()
+    expect(laFranja?.parentElement?.lastElementChild).toBe(laFranja)
+    // En el flujo y detrás del contenido: el acceso rápido va antes y fuera.
+    const acceso = control('Acceso rápido de prueba')!
+    expect(acceso.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(laFranja?.contains(acceso)).toBe(false)
+  })
+
+  it('sin aviso, la franja no pinta nada', async () => {
+    await montar([{ ruta: '/prueba', elemento: <PantallaNormal /> }], '/prueba')
+
+    const laFranja = await esperar(franja, 'la franja del chasis')
+    expect(laFranja.childNodes.length).toBe(0)
+    expect(textoAviso()).toBeNull()
+  })
+
+  it('una barra de acciones de la pantalla manda: el aviso va en ella y la franja queda vacía', async () => {
+    await montar([{ ruta: '/prueba', elemento: <PantallaConBarra /> }], '/prueba')
+    await montarAviso()
+
+    const aviso = await esperar(textoAviso, 'el aviso')
+    expect(aviso.closest('[data-barra-de-prueba]')).not.toBeNull()
+    expect(franja()?.childNodes.length).toBe(0)
+  })
+
+  it('con una guía en curso manda la barra de la guía, no la franja (tarea 273)', async () => {
+    await sembrarGuia({
+      id: 'guia-franja',
+      titulo: 'Guía de prueba con franja',
+      pasos: [pasoPrueba('gf-p1', 'Paso de prueba', ['Hacer la prueba'])],
+    })
+    // La guía se monta ANTES que la franja: gana por rango, no por llegar
+    // la última.
+    await montar([{ ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> }], '/soluciones/cat-pruebas/guia-franja')
+    const barraGuia = await esperar(
+      () => control(/^Anterior\. Solo mueve la vista/)?.closest<HTMLElement>('.sticky'),
+      'la barra de la guía',
+    )
+    await montar([{ ruta: '/prueba', elemento: <PantallaNormal /> }], '/prueba')
+    await esperar(franja, 'la franja del chasis')
+    await montarAviso()
+
+    const aviso = await esperar(textoAviso, 'el aviso')
+    expect(barraGuia.contains(aviso)).toBe(true)
+    expect(franja()?.childNodes.length).toBe(0)
   })
 })
 

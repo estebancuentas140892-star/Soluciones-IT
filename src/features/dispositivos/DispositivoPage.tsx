@@ -54,6 +54,7 @@ import {
   PEGADA_SOBRE_PESTANAS,
   TituloSeccion,
 } from '../../components/nocturne'
+import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { useImpactoEquipo } from '../red/useImpactoEquipo'
 import { ConexionesFicha } from '../red/ConexionesFicha'
@@ -905,6 +906,10 @@ function AccionDominanteEquipo({
     <div
       className={`sticky ${PEGADA_SOBRE_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-4 pb-3 pt-2.5 backdrop-blur-[12px] lg:px-10`}
     >
+      {/* El aviso de versión nueva va aquí, encima del botón (tarea 274):
+          esta barra se pega a la misma altura que la franja del chasis, y
+          una de las dos taparía a la otra. Vacío no ocupa nada. */}
+      <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
       <Link
         to={`/diagnostico?categoria=${categoriaId}`}
         state={estado}

@@ -1,5 +1,28 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-25 (segunda corrección): el aviso de actualización fuera de la guía
+
+### 274. El aviso "Versión nueva disponible" tapaba el final de las pantallas normales
+
+**Título:** fuera de una guía, el aviso de versión nueva va en una franja del chasis y no flotando sobre el contenido. **Estado:** Completada (2026-09-25) en código, pruebas y documentación; el despliegue se comprueba tras el push. **Prioridad:** Alta. **Origen:** hallazgo al verificar la tarea 273 (ya asomaba en la batería de capturas de la 260), encargado por el usuario el 2026-09-25 como tarea única de implementación.
+
+**Problema:** fuera de una guía, `AvisoActualizacion` seguía flotando con `fixed bottom-20 z-50`. Sobre el contenido no reservaba sitio, así que al final de Resolver tapaba los accesos rápidos y "Todas las guías": en 1366×768, "Todas las guías" quedaba debajo del aviso incluso al final del scroll.
+
+**Solución:**
+
+1. `src/app/Chasis.tsx`: en los niveles sección y documento, una franja al final de la columna de contenido, pegajosa sobre las pestañas en el teléfono (`bottom-[calc(65px+env(safe-area-inset-bottom))]`) y al borde en escritorio (`md:bottom-0`), con el fondo y el borde de la barra de pestañas. Va en el flujo, detrás de lo último de la pantalla: reserva su sitio y al aparecer no mueve lo de arriba. Vacía no ocupa nada (`empty:hidden`).
+2. `src/components/ranuraAvisoActualizacion.ts`: dos rangos de hueco. `huecoAvisoActualizacion` (una barra de acciones de la pantalla) manda sobre `huecoAvisoActualizacionChasis` (la franja): con los dos a la vez, el aviso va en la barra y la franja queda vacía.
+3. `src/features/dispositivos/DispositivoPage.tsx`: la barra de "Resolver un problema con este equipo" se pega a la misma altura que la franja (`PEGADA_SOBRE_PESTANAS`), así que publica su propio hueco; si no, una taparía a la otra. La nota de `PEGADA_SOBRE_PESTANAS` (`src/components/nocturne.tsx`) lo deja dicho para las barras que vengan.
+4. Donde no hay hueco (el inicio de sesión, una tarea que no es una guía) sigue la pastilla de siempre. El texto, el botón y el flujo no cambian: `registerType: 'prompt'`, nada se actualiza solo y no hay modal.
+
+**Pruebas:** 149 archivos y 2149 casos; 4 nuevos en `src/components/actualizacionFlujo.test.tsx` (la franja con el chasis real, la franja vacía sin aviso, una barra de la pantalla manda y una guía manda aunque se monte antes), que fallan sin la franja o sin la prioridad. Lint y build. En Chromium contra el servidor de desarrollo con el banco de pruebas local, 40 comprobaciones: 390×844 en Resolver, Equipos, Red, Más y Agenda, y 1366×768 en Resolver y Equipos (aviso visible y en la franja, lo último por encima al final del scroll, ningún control tapado), la ficha de un equipo (en su barra, franja vacía), "Actualizar" responde y la guía de la 273 intacta. La misma comprobación con el comportamiento anterior falla. Sin aviso, Resolver, Equipos y Más en 390×844 salen idénticas byte a byte a las capturas del código anterior.
+
+**Commit:** `fix(actualizacion): evitar que el aviso tape controles del chasis` (este mismo cambio). **Despliegue:** se comprueba tras el push, con `/version.json` y el contenido de los trozos servidos.
+
+**Decisiones:** una franja en el flujo y no una pastilla con relleno añadido: `sticky` reserva su propio sitio sin medir nada, como la barra de una guía. Detrás de lo último de la pantalla y no delante, para que al aparecer no desplace nada. Rango para las barras de la pantalla por la misma razón que la 273: donde se trabaja manda.
+
+**Lo que no se tocó:** el comportamiento dentro de las guías (tarea 273), el tamaño del botón "Actualizar", las pantallas de tarea que no son guías, Supabase y ningún dato.
+
 ## Encargo del 2026-09-25: una sola corrección, el aviso de actualización en la guía
 
 ### 273. El aviso "Versión nueva disponible" tapaba la ejecución de una guía

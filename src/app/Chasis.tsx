@@ -10,6 +10,7 @@ import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
 import { Marca } from '../components/Marca'
+import { huecoAvisoActualizacionChasis } from '../components/ranuraAvisoActualizacion'
 import { CapaAtajos } from './CapaAtajos'
 import { ProveedorBandaTarea } from './bandaTarea'
 import { direccionPara } from './direccionTransicion'
@@ -556,6 +557,18 @@ export function Chasis(props: Props) {
         >
           {cabecera}
           {props.children}
+          {/* FRANJA DEL AVISO DE VERSIÓN NUEVA (tarea 274). La pastilla
+              flotaba sobre el contenido y al final de Resolver tapaba los
+              accesos rápidos. Aquí va en el flujo, detrás de lo último de
+              la pantalla y pegada sobre las pestañas (al borde en
+              escritorio): reserva su propio sitio, así que al final del
+              scroll no tapa nada, y al aparecer no mueve lo de arriba.
+              Vacía no ocupa nada. Una barra de acciones de la pantalla,
+              si publica su hueco, manda sobre esta franja. */}
+          <div
+            ref={huecoAvisoActualizacionChasis}
+            className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-20 mt-auto border-t border-noct-divider bg-noct-bg/[.88] px-4 py-2 backdrop-blur-[12px] empty:hidden md:bottom-0 [&>*]:mx-auto [&>*]:max-w-xl"
+          />
         </div>
       </div>
 

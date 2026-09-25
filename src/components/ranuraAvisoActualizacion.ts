@@ -19,8 +19,18 @@ import { useSyncExternalStore } from 'react'
 //
 // Se guarda una pila y no un solo hueco: una guía vinculada que ocupa la
 // pantalla trae su barra, y el último hueco que entra es el que vale.
+//
+// FUERA DE UNA GUÍA, EL CHASIS (tarea 274). En las pantallas normales la
+// pastilla flotaba sobre el contenido y, al final de Resolver, tapaba los
+// accesos rápidos. El chasis publica también su hueco, una franja pegajosa
+// sobre las pestañas, con menos rango que el de una barra de acciones de
+// la pantalla (la de una guía, o la de la ficha de un equipo, que se pega
+// a la misma altura que la franja): si los dos existen, manda la barra,
+// que es donde se trabaja, y la franja queda vacía.
 
-let huecos: HTMLElement[] = []
+type Lugar = 'barra' | 'chasis'
+
+let huecos: { elemento: HTMLElement; lugar: Lugar }[] = []
 const suscriptores = new Set<() => void>()
 
 function avisar(): void {
@@ -33,25 +43,41 @@ function suscribir(escucha: () => void): () => void {
 }
 
 function huecoActual(): HTMLElement | null {
-  return huecos.at(-1) ?? null
+  const deBarra = huecos.findLast((hueco) => hueco.lugar === 'barra')
+  return (deBarra ?? huecos.at(-1))?.elemento ?? null
 }
 
-/**
- * `ref` del hueco, en la barra de acciones de la guía. Es una función fija
- * y no una flecha en el JSX, para que React la llame una vez al montar el
- * hueco y su limpieza una vez al quitarlo.
- */
-export function huecoAvisoActualizacion(elemento: HTMLElement | null): (() => void) | undefined {
+function registrar(elemento: HTMLElement | null, lugar: Lugar): (() => void) | undefined {
   if (!elemento) return undefined
-  huecos = [...huecos, elemento]
+  const nuevo = { elemento, lugar }
+  huecos = [...huecos, nuevo]
   avisar()
   return () => {
-    huecos = huecos.filter((hueco) => hueco !== elemento)
+    huecos = huecos.filter((hueco) => hueco !== nuevo)
     avisar()
   }
 }
 
-/** Dónde pintar el aviso: el hueco de la guía en curso, o null fuera de ella. */
+/**
+ * `ref` del hueco, en una barra de acciones de la pantalla (la de una guía
+ * en curso, la de la ficha de un equipo). Es una función fija y no una
+ * flecha en el JSX, para que React la llame una vez al montar el hueco y
+ * su limpieza una vez al quitarlo.
+ */
+export function huecoAvisoActualizacion(elemento: HTMLElement | null): (() => void) | undefined {
+  return registrar(elemento, 'barra')
+}
+
+/** `ref` de la franja del chasis, para las pantallas normales (tarea 274). */
+export function huecoAvisoActualizacionChasis(elemento: HTMLElement | null): (() => void) | undefined {
+  return registrar(elemento, 'chasis')
+}
+
+/**
+ * Dónde pintar el aviso: el hueco de una barra de acciones, si no la
+ * franja del chasis, o null donde no hay ninguno (el inicio de sesión, una
+ * tarea que no es una guía), y entonces flota como siempre.
+ */
 export function useHuecoAvisoActualizacion(): HTMLElement | null {
   return useSyncExternalStore(suscribir, huecoActual, () => null)
 }
