@@ -23,9 +23,47 @@ export function esErrorDeChunk(error: unknown): boolean {
   return PATRON_CHUNK.test(mensaje)
 }
 
+// ----------------------------------------------------------------
+// Sin conexion no se recarga ni se reinstala (tarea 259)
+// ----------------------------------------------------------------
+//
+// Desde la 259, Importar y Etiquetas no vienen en el precache: se bajan
+// la primera vez que se abren con conexion. Abrirlas sin conexion antes de
+// eso falla por falta de red, no por una version vieja, y el remedio de
+// siempre seria contraproducente: recargar no trae nada, y reinstalar tira el service
+// worker y las caches justo cuando no se pueden volver a bajar, asi que
+// el telefono se quedaria sin la app entera. Lo mismo pasaba ya si
+// Android desalojaba un trozo de la cache y el tecnico estaba sin red.
+
+export function sinConexion(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
+const ESPERA_SERVIDOR_MS = 4000
+
+// `navigator.onLine` solo sabe si hay red, no si llega al servidor (un
+// portal cautivo, una red sin salida). /version.json sirve de prueba
+// porque nunca se sirve de una cache: va fuera del precache y con
+// `no-store` en vercel.json.
+export async function servidorResponde(): Promise<boolean> {
+  if (sinConexion()) return false
+  const controlador = typeof AbortController === 'undefined' ? null : new AbortController()
+  const temporizador = controlador ? setTimeout(() => controlador.abort(), ESPERA_SERVIDOR_MS) : null
+  try {
+    const respuesta = await fetch('/version.json', { cache: 'no-store', signal: controlador?.signal })
+    return respuesta.ok
+  } catch {
+    return false
+  } finally {
+    if (temporizador) clearTimeout(temporizador)
+  }
+}
+
 // Recarga la pagina una vez y devuelve si lo hizo. Si ya se recargo hace
-// poco, devuelve false para que el llamador muestre el reintento manual.
+// poco, o no hay conexion (recargar no traeria nada), devuelve false para
+// que el llamador decida.
 export function recargarUnaVezPorChunk(): boolean {
+  if (sinConexion()) return false
   try {
     const ahora = Date.now()
     const previo = Number(sessionStorage.getItem(CLAVE) ?? '0')
@@ -74,10 +112,16 @@ export function yaSeIntentoReinstalar(): boolean {
   }
 }
 
-// Da de baja los service workers, borra las caches y recarga. Devuelve
-// false sin hacer nada si ya se intento hace poco.
-export async function reinstalarYRecargar(): Promise<boolean> {
-  if (yaSeIntentoReinstalar()) return false
+// 'reinstalando': se dio de baja el service worker, se borraron las caches
+// y se esta recargando. 'ya_intentado': se hizo hace poco y no se repite.
+// 'sin_servidor': el servidor no responde y no se toco nada.
+export type ResultadoReinstalacion = 'reinstalando' | 'ya_intentado' | 'sin_servidor'
+
+// Da de baja los service workers, borra las caches y recarga, pero solo si
+// el servidor responde: sin el, la app no se podria volver a bajar.
+export async function reinstalarYRecargar(): Promise<ResultadoReinstalacion> {
+  if (yaSeIntentoReinstalar()) return 'ya_intentado'
+  if (!(await servidorResponde())) return 'sin_servidor'
   try {
     sessionStorage.setItem(CLAVE_REINSTALAR, String(Date.now()))
   } catch {
@@ -103,5 +147,5 @@ export async function reinstalarYRecargar(): Promise<boolean> {
     // sin Cache Storage disponible
   }
   window.location.reload()
-  return true
+  return 'reinstalando'
 }

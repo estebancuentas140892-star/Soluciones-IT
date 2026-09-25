@@ -139,6 +139,32 @@ export default defineConfig({
           // un envio) ya estaba en el precache por la app.
           'asistencia.html',
           'assets/asistencia-*',
+          // LAS HERRAMIENTAS DE ESCRITORIO TAMPOCO (tarea 259): Importar
+          // (con `xlsx`, casi medio mega) y Etiquetas (con `qrcode`) son el
+          // 20 % del precache y se usan con el computador delante, casi
+          // nunca en campo. Se bajan la primera vez que se abren y desde
+          // ahi las guarda `runtimeCaching` (abajo), asi que sin conexion
+          // funcionan desde su primer uso. Si se abren sin red antes de
+          // eso, `ErrorBoundary` lo dice sin tocar nada (recargaChunk.ts).
+          // Solo trozos que nada precacheado importa de forma estatica:
+          // lo comprueba scripts/verificar-precache.mjs sobre el build.
+          'assets/ImportarDispositivosPage-*',
+          'assets/xlsx-*',
+          'assets/EtiquetasPage-*',
+          'assets/qrcode-*',
+        ],
+        runtimeCaching: [
+          {
+            // Nombre con hash: el contenido de una direccion no cambia
+            // nunca, asi que la cache manda. Doce entradas dan para tres
+            // versiones de los cuatro trozos; las viejas salen solas.
+            urlPattern: /\/assets\/(?:ImportarDispositivosPage|xlsx|EtiquetasPage|qrcode)-[\w-]+\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'herramientas-bajo-demanda',
+              expiration: { maxEntries: 12, purgeOnQuotaError: true },
+            },
+          },
         ],
         // Y el service worker de la app no sirve su `index.html` cuando
         // el navegador pide `/asistencia`: esa navegacion va a la red,
@@ -179,6 +205,21 @@ export default defineConfig({
             {
               name: 'supabase',
               test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+              priority: 20,
+            },
+            {
+              // Nombres propios y estables para las dos librerias que solo
+              // usan Importar y Etiquetas (y el portal, `qrcode`): el
+              // precache las deja fuera por nombre (tarea 259). Sin esto,
+              // `qrcode` salia como `browser-*`, el nombre de su archivo
+              // de entrada.
+              name: 'xlsx',
+              test: /[\\/]node_modules[\\/]xlsx[\\/]/,
+              priority: 20,
+            },
+            {
+              name: 'qrcode',
+              test: /[\\/]node_modules[\\/](qrcode|dijkstrajs)[\\/]/,
               priority: 20,
             },
             {

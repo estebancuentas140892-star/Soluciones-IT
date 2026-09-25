@@ -895,6 +895,8 @@ Se alcanza desde **Más > Aplicación > Ajustes**, desde el avatar de la barra s
 2. **Revisar**: columnas detectadas (campo o "propiedad del equipo"), selector de categoría para filas sin ella, contadores "nuevos" / "se omiten" (por serial/placa ya registrados), lista desplegable de filas omitidas y vista previa de las primeras filas. Barra inferior: "Cancelar" / "Importar N dispositivos".
 3. **Importando / Terminado**: barra de progreso; al final "N dispositivos importados", botón "Ver dispositivos" e "Importar otro archivo". Cada equipo queda con la nota del archivo de origen en su historial.
 
+**Sin conexión (desde el 2026-09-25, tarea 259).** Importar no viene instalado con la app: se descarga la primera vez que se abre con conexión y desde ahí queda en el teléfono, junto con el lector de Excel (que se baja en segundo plano al abrir la pantalla). Si se elige un `.xlsx` sin conexión y el lector no llegó a bajarse, el aviso lo dice: "Sin conexión: el lector de Excel se descarga la primera vez que se abre Importar con conexión. Un archivo .csv sí se puede leer ahora." Etiquetas QR funciona igual. Abiertas sin red antes de su primer uso, sale la pantalla "Sin conexión" (abajo, Pantalla de error de la app).
+
 <a id="68-estadisticas-y-sugerencias"></a>
 ### 6.8 Estadísticas y Sugerencias del equipo
 
@@ -917,6 +919,11 @@ Se alcanza desde **Más > Aplicación > Ajustes**, desde el avatar de la barra s
 - **A quién pedir acceso:** "¿Sin cuenta? Pídesela al administrador de la app. Todo queda guardado en este teléfono, así que funciona sin señal."
 - **Autocompletado:** el **correo sí** se autocompleta (`autoComplete="username"`); la contraseña sigue fuera del gestor (lo garantiza `CampoContrasena`, que usa texto enmascarado por CSS para que el llavero no reconozca el formulario como un login). El `autoComplete="off"` que llevaba el `<form>` se retiró: puesto ahí anulaba también la pista del correo.
 - Aviso si Supabase no está configurado.
+
+**Pantalla de error de la app (`ErrorBoundary`).** Componente global, a pantalla completa, con tres estados:
+- **"Actualizando la aplicación..."**: una pantalla no se pudo descargar y hay red. Suele ser una versión vieja en memoria: recarga una vez sola y, si vuelve a fallar, reinstala la app desde el servidor (da de baja el service worker y borra las cachés; no toca IndexedDB).
+- **"Sin conexión"** (desde el 2026-09-25, tarea 259): la pantalla no está en el teléfono y no hay red para bajarla (Importar o Etiquetas abiertas por primera vez sin conexión). Texto: "Esta pantalla se descarga la primera vez que se abre con conexión. Lo demás de la app sigue funcionando sin ella, y esta se abre sola cuando vuelva la red." Botón **"Ir a Resolver"**. No recarga ni reinstala nada, y al volver la red se recarga sola.
+- **"No se pudo cargar la aplicación"**: cualquier otro error. Botón **"Reinstalar la aplicación"**; sin servidor, pasa a "Sin conexión" en vez de reinstalar.
 
 **Aviso de actualización (`ActualizacionDisponible`).** Componente global. Cuando se publica una versión nueva, muestra un aviso discreto "Versión nueva disponible" con botón "Actualizar" (activa el nuevo service worker y recarga sin interrumpir un procedimiento a medias). **Cuándo se comprueba (2026-09-20, tarea 250):** en cuanto el service worker queda registrado (ya no se espera una hora), **al volver a la app** desde segundo plano, **al recuperar la conexión**, cuando se pide a mano desde Más y, de respaldo, cada hora. Entre comprobaciones automáticas pasa al menos **un minuto**, así que alternar entre apps no dispara una consulta por cada cambio; la manual no espera. **Nunca se recarga sola**: la versión nueva queda en espera y solo entra con el botón, así que una guía a medias no se interrumpe. Al pulsar, el botón pasa a "Actualizando..." y queda deshabilitado; la recarga ocurre en cuanto el service worker nuevo toma el control, y de todos modos pasados 2,5 segundos, así que el botón nunca se queda sin efecto (corregido el 2026-07-27, ver [COMPONENTES_UI.md](COMPONENTES_UI.md) 2.1).
 

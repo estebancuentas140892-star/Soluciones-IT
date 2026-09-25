@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-25
 
+### Optimizado (PWA, tarea 259): Importar y Etiquetas salen del precache y, sin conexión, la app ya no se reinstala
+
+**Área modificada:** build y service worker (`vite.config.ts`), recuperación ante una pantalla que no se descarga (`src/lib/recargaChunk.ts`, `src/components/ErrorBoundary.tsx`), Importar (`src/features/dispositivos/importar/leerArchivo.ts` y `ImportarDispositivosPage.tsx`) y `scripts/verificar-precache.mjs` (nuevo).
+**Tipo:** Optimizado (precache un 20,5 % más liviano), Agregado (pantalla "Sin conexión", comprobación del precache), Corregido (sin red, una pantalla que no está en el teléfono ya no termina en una reinstalación que lo deja sin la app).
+**Motivo:** encargo del usuario del **22 de septiembre de 2026**, sección 21 ([PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md), sección 8), y la orden del 25 de septiembre de seguir con las siguientes tareas. Decisión: [DECISIONES.md](DECISIONES.md) AD-054.
+**Medido:** el precache pasa de 161 entradas y 2567 KiB a 157 y 2041 KiB (526 KiB menos): `xlsx` (481,7 KiB), `qrcode` (22,9 KiB; antes salía como `browser-*`), `ImportarDispositivosPage` (17,2 KiB) y `EtiquetasPage` (6,1 KiB) se guardan al primer uso en la caché `herramientas-bajo-demanda`. El arranque sigue en 7 trozos (585,7 KiB) y no trae pantallas de Infraestructura; el portal ya había salido del precache en la 258.
+**Cómo se comprobó:** 149 archivos y 2140 casos (13 nuevos: `src/components/ErrorBoundary.test.tsx` con 7, montando el límite de verdad, y 6 en `src/lib/recargaChunk.test.ts`), lint, tipos, build, `scripts/verificar-precache.mjs` (y falla sobre el build anterior, como debe) y `scripts/verificar-portal.mjs`. El service worker real, en Chromium, sobre el build de producción y con el servidor apagado para simular la falta de red: los cuatro trozos no están en el precache; sin red y antes de usarlos no se pueden bajar, mientras Resolver sí abre; al primer uso con red quedan en `herramientas-bajo-demanda`, y después se sirven sin red.
+**Impacto esperado:** cada versión nueva baja medio mega menos a cada teléfono. Importar y Etiquetas funcionan sin conexión desde su primer uso con conexión; antes de eso, la app lo dice y todo lo demás sigue funcionando.
+
 ### Corregido y verificado (asistencia remota, tarea 258): `/asistencia/` lleva al portal, y la 258 queda verificada en producción y cerrada
 
 **Área modificada:** `vercel.json` (redirección), `scripts/verificar-produccion-portal.mjs`, [TAREAS.md](TAREAS.md), [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), [ARQUITECTURA.md](ARQUITECTURA.md) (sección 8) y [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (tabla de rutas).

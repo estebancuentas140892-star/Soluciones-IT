@@ -13,6 +13,15 @@ export async function leerArchivoTabular(archivo: File): Promise<string[][]> {
   return parsearCsv(decodificarBytes(bytes))
 }
 
+// Importar no viene en el precache (tarea 259): se baja la primera vez
+// que se abre, y el service worker lo guarda desde ese momento. Para que
+// esa primera visita deje tambien el lector de Excel en el telefono (y
+// luego se pueda leer un .xlsx sin conexion), la pantalla lo pide en
+// segundo plano al abrirse. Sin red no pasa nada: se pedira al leer.
+export function precargarLectorExcel(): void {
+  void import('xlsx').catch(() => {})
+}
+
 export async function leerExcel(contenido: ArrayBuffer): Promise<string[][]> {
   const XLSX = await import('xlsx')
   const libro = XLSX.read(contenido, { type: 'array' })

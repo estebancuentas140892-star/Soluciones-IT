@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../../../lib/db'
 import { guardarRegistro, nuevoId } from '../../../lib/repositorio'
@@ -15,8 +15,9 @@ import {
   WarningOctagon,
 } from '../../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../../components/nocturne'
-import { leerArchivoTabular } from './leerArchivo'
+import { leerArchivoTabular, precargarLectorExcel } from './leerArchivo'
 import { CLASE_CAMPO } from '../../../components/campos'
+import { esErrorDeChunk } from '../../../lib/recargaChunk'
 import { ETIQUETA_CAMPO, generarPlantillaCsv, mapearFilas } from './mapearFilas'
 
 type Fase =
@@ -39,6 +40,11 @@ export function ImportarDispositivosPage() {
   const [categoriaPredeterminadaId, setCategoriaPredeterminadaId] = useState('')
   const [omitidasAbiertas, setOmitidasAbiertas] = useState(false)
   const entradaArchivo = useRef<HTMLInputElement>(null)
+
+  // Deja el lector de Excel guardado desde la primera visita (tarea 259).
+  useEffect(() => {
+    precargarLectorExcel()
+  }, [])
 
   const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
   const existentes = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
@@ -71,10 +77,14 @@ export function ImportarDispositivosPage() {
       const filas = await leerArchivoTabular(archivo)
       setOmitidasAbiertas(false)
       setFase({ paso: 'revisar', nombreArchivo: archivo.name, filas })
-    } catch {
+    } catch (error) {
       setFase({
         paso: 'elegir',
-        error: `No se pudo leer "${archivo.name}". Verificar que sea un archivo .xlsx o .csv válido.`,
+        // El lector de Excel no estaba en el teléfono y no hay red para
+        // bajarlo: el archivo no tiene la culpa (tarea 259).
+        error: esErrorDeChunk(error)
+          ? 'Sin conexión: el lector de Excel se descarga la primera vez que se abre Importar con conexión. Un archivo .csv sí se puede leer ahora.'
+          : `No se pudo leer "${archivo.name}". Verificar que sea un archivo .xlsx o .csv válido.`,
       })
     }
   }

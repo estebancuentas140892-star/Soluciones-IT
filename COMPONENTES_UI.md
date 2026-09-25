@@ -191,7 +191,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** Adjuntos, BovedaPage, UbicacionPage, CredencialPage, ArticuloPage, SeguridadDelEquipo, PersonaPage, PasosEditor, DispositivoPage, DiagnosticoForm.
 
 ### 2.9 `ErrorBoundary`
-- **Propósito:** límite de error de toda la app; si un import dinámico falla tras publicar una versión nueva, recarga una vez; cualquier otro error muestra pantalla de reintento.
+- **Propósito:** límite de error de toda la app; si un import dinámico falla tras publicar una versión nueva, recarga una vez; cualquier otro error muestra pantalla de reintento. **Desde la tarea 259:** si el import falla sin red (o sin servidor), muestra "Sin conexión" con "Ir a Resolver", no recarga ni reinstala, y se recarga sola con el evento `online`; `reinstalarYRecargar` devuelve `'reinstalando' | 'ya_intentado' | 'sin_servidor'`.
 - **Props:** `{ children }`.
 - **Nota de arquitectura:** a propósito no importa `iconos.tsx` (entraría al chunk de entrada); solo usa `BTN_PRIMARIO`.
 - **Dónde:** envuelve toda la app en `main.tsx`.

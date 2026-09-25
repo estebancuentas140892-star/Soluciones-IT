@@ -730,6 +730,7 @@ Vista funcional; el mecanismo técnico (motor de sync, canal de Realtime, cursor
 - **Sincronización bidireccional:** se suben los cambios pendientes y se descargan las novedades del equipo por cursor de tiempo.
 - **Tiempo real como señal:** un canal de Supabase Realtime avisa que algo cambió y dispara una descarga que respeta la RLS por consulta; nunca aplica el dato del evento (así nadie recibe un secreto que no debe ver). El sondeo cada 2 minutos es la red de seguridad.
 - **Progreso local:** el avance de procedimientos y diagnósticos vive solo en el dispositivo (RN-029).
+- **Pantallas sin conexión** (tarea 259, 2026-09-25): todas vienen instaladas con la app salvo las dos herramientas de escritorio, Importar y Etiquetas QR, que se guardan en el teléfono la primera vez que se abren con conexión. Abiertas sin red antes de eso, la app lo dice ("Sin conexión") y no recarga ni reinstala nada; se abren solas al volver la red. La app nunca borra su instalación si el servidor no responde.
 
 ### 8.2 Qué es local y qué se sincroniza
 
