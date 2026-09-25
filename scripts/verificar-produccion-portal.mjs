@@ -22,9 +22,11 @@
 // que ejecutarlo (SQL Editor o MCP de Supabase) para no dejar datos de
 // prueba. No toca ninguna otra tabla.
 //
-// Uso: node scripts/verificar-produccion-portal.mjs <sha corto esperado> [carpeta de salida]
+// Uso: node scripts/verificar-produccion-portal.mjs <sha corto esperado> [carpeta de salida] [--sin-navegador]
 //   En una sesion en la nube, con proxy: NODE_USE_ENV_PROXY=1 delante.
-//   Necesita Playwright (local o global) con Chromium.
+//   Necesita Playwright (local o global) con Chromium. Con --sin-navegador
+//   solo hace la parte HTTP y no crea ninguna sesion (para comprobar un
+//   despliegue que no cambia el portal).
 // Para probar el propio guion contra un build servido en local:
 //   BASE=http://localhost:4173 SIMULADOR=http://localhost:5199 ...
 //   (SIMULADOR = scripts/asistencia-simulada.mjs; con el, el guion ademas
@@ -38,8 +40,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const BASE = process.env.BASE ?? 'https://soluciones-it-psi.vercel.app'
 const SIMULADOR = process.env.SIMULADOR ?? null
-const SHA = process.argv[2]
-const SALIDA = process.argv[3] ?? mkdtempSync(join(tmpdir(), 'portal-'))
+const ARGUMENTOS = process.argv.slice(2).filter((a) => !a.startsWith('--'))
+const SIN_NAVEGADOR = process.argv.includes('--sin-navegador')
+const SHA = ARGUMENTOS[0]
+const SALIDA = ARGUMENTOS[1] ?? mkdtempSync(join(tmpdir(), 'portal-'))
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..')
 const RPC = 'https://kwwxnmlprdivckqcgjws.supabase.co/rest/v1/rpc/'
 const TITULO_ENVIO = 'Prueba de verificación del portal'
@@ -94,10 +98,14 @@ for (const ruta of ['/asistencia', '/asistencia.html', '/asistencia?origen=qr', 
   const r = await traer(ruta)
   const tipo = r.status === 200 ? tipoDeHtml(r.texto) : `${r.status} ${r.headers.get('location') ?? ''}`.trim()
   const encabezados = Object.fromEntries(Object.keys(ENCABEZADOS_PORTAL).map((k) => [k, r.headers.get(k)]))
-  informe.rutas[ruta] = { status: r.status, tipo, encabezados }
+  informe.rutas[ruta] = { status: r.status, tipo, encabezados, location: r.headers.get('location') }
   console.log(`  ${ruta} -> ${r.status} ${tipo}`)
   if (tipo === 'portal') htmlPortal[ruta] = r.texto
 }
+// Con barra final, la reescritura de /asistencia no aplica y la de la app
+// si: se redirige a la direccion canonica, que es la que lleva la CSP.
+const conBarra = informe.rutas['/asistencia/']
+comprobar([307, 308].includes(conBarra.status) && /\/asistencia$/.test(conBarra.location ?? ''), '/asistencia/ redirige a /asistencia (no cae en la app)')
 for (const ruta of ['/asistencia', '/asistencia.html', '/asistencia?origen=qr']) {
   const { tipo, encabezados } = informe.rutas[ruta]
   comprobar(tipo === 'portal', `${ruta} sirve el portal, no el index.html de la app`)
@@ -155,7 +163,23 @@ try {
   comprobar(false, 'scripts/verificar-portal.mjs sobre lo servido')
 }
 
+function terminar() {
+  writeFileSync(join(SALIDA, 'informe.json'), JSON.stringify(informe, null, 2))
+  console.log(`\nInforme y capturas en ${SALIDA}`)
+  if (informe.navegador.sesion && !SIMULADOR) {
+    console.log('\nBORRAR LA SESION DE PRUEBA (SQL Editor o MCP de Supabase):')
+    console.log(`  delete from public.asistencia_eventos where sesion_id = '${informe.navegador.sesion}';`)
+    console.log(`  delete from public.asistencia_sesiones where id = '${informe.navegador.sesion}';`)
+  }
+  console.log(fallos.length === 0 ? '\nTODO EN VERDE' : `\n${fallos.length} FALLO(S)`)
+  process.exit(fallos.length === 0 ? 0 : 1)
+}
+
 // ----------------------------------------------------------- navegador
+if (SIN_NAVEGADOR) {
+  console.log('5. Navegador: omitido (--sin-navegador; no se crea ninguna sesión)')
+  terminar()
+}
 console.log('5. El portal en Chromium')
 let playwright
 try {
@@ -246,12 +270,4 @@ try {
   await navegador.close()
 }
 
-writeFileSync(join(SALIDA, 'informe.json'), JSON.stringify(informe, null, 2))
-console.log(`\nInforme y capturas en ${SALIDA}`)
-if (nav.sesion && !SIMULADOR) {
-  console.log('\nBORRAR LA SESION DE PRUEBA (SQL Editor o MCP de Supabase):')
-  console.log(`  delete from public.asistencia_eventos where sesion_id = '${nav.sesion}';`)
-  console.log(`  delete from public.asistencia_sesiones where id = '${nav.sesion}';`)
-}
-console.log(fallos.length === 0 ? '\nTODO EN VERDE' : `\n${fallos.length} FALLO(S)`)
-process.exit(fallos.length === 0 ? 0 : 1)
+terminar()

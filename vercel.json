@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/asistencia/",
+      "destination": "/asistencia",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/asistencia",
