@@ -107,7 +107,7 @@ Para quitar el acceso a alguien, lo mismo con `= false`.
 
 ## 4. Desactivar el registro público
 
-**PENDIENTE y URGENTE (comprobado el 2026-09-24):** `https://kwwxnmlprdivckqcgjws.supabase.co/auth/v1/settings` responde `"disable_signup": false`, es decir, el registro sigue abierto. Toda la seguridad de la app supone que "autenticado" es un técnico del equipo: con el registro abierto, cualquiera que tenga la URL del proyecto y la clave publicable (las dos viajan en el JavaScript público de la app) puede crearse una cuenta y, si confirma su correo, leer y modificar guías, equipos, personas y adjuntos. La Bóveda sigue a salvo porque exige `puede_ver_boveda`. El portal `/asistencia` (tarea 258) también depende de esto: solo un técnico real debe poder canjear un código.
+**PENDIENTE y URGENTE (comprobado el 2026-09-24 y otra vez el 2026-09-25):** `https://kwwxnmlprdivckqcgjws.supabase.co/auth/v1/settings` responde `"disable_signup": false`, es decir, el registro sigue abierto. Toda la seguridad de la app supone que "autenticado" es un técnico del equipo: con el registro abierto, cualquiera que tenga la URL del proyecto y la clave publicable (las dos viajan en el JavaScript público de la app) puede crearse una cuenta y, si confirma su correo, leer y modificar guías, equipos, personas y adjuntos. La Bóveda sigue a salvo porque exige `puede_ver_boveda`. El portal `/asistencia` (tarea 258) también depende de esto: solo un técnico real debe poder canjear un código.
 
 Como el equipo es fijo, nadie debe poder crear cuentas por su cuenta:
 

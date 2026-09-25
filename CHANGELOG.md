@@ -8,13 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-25
 
+### Corregido y verificado (asistencia remota, tarea 258): `/asistencia/` lleva al portal, y la 258 queda verificada en producción y cerrada
+
+**Área modificada:** `vercel.json` (redirección), `scripts/verificar-produccion-portal.mjs`, [TAREAS.md](TAREAS.md), [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), [ARQUITECTURA.md](ARQUITECTURA.md) (sección 8) y [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (tabla de rutas).
+**Tipo:** Corregido (`/asistencia/` respondía la app con su inicio de sesión; ahora redirige a `/asistencia`), Modificado (el guion exige la redirección y acepta `--sin-navegador`), Documentación (la 258, archivada).
+**Motivo:** con la red del entorno abierta por el usuario, la verificación en producción (regla 14) se pudo hacer entera y encontró ese defecto de la propia 258.
+**Cómo se comprobó:** el guion contra producción, con navegador sobre `55bf80b` y sin navegador sobre `b3d697e` (307 hacia `/asistencia`, con la consulta intacta), y un recorrido completo con un técnico real conectado por SQL a través de las funciones del portal; las sesiones de prueba se borraron y las tres tablas quedaron en 0 filas. Detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md), tarea 258.
+**Impacto esperado:** quien escriba la dirección con barra final llega al portal y no a la pantalla de inicio de sesión. Nada más cambia para el técnico.
+
 ### Verificación (asistencia remota, tarea 258): todo comprobado salvo lo que sirve producción, y un guion para comprobarlo
 
 **Área modificada:** `scripts/verificar-produccion-portal.mjs` (nuevo), [TAREAS.md](TAREAS.md) y [ARQUITECTURA.md](ARQUITECTURA.md) (sección 8, el portal).
 **Tipo:** Agregado (guion de verificación), Modificado (documentación del tablero).
 **Motivo:** encargo del usuario del **25 de septiembre de 2026**: cerrar la 258 comprobando el despliegue real (regla 14) y sin dejar datos de prueba.
 **Qué se comprobó:** en Supabase, la migración `asistencia_portal`, las tres tablas (RLS sin políticas, sin privilegios y fuera de Realtime), las diez funciones con sus permisos, los asesores (solo lo previsto) y `supabase/pruebas/asistencia.sql` (21 escenarios, `fallos=0`, revertido), con las tres tablas en 0 filas antes y después; en Vercel, que el despliegue de producción de `086fb58` está READY y con el alias de producción; en el código, 148 archivos y 2127 casos, lint, tipos, build y `scripts/verificar-portal.mjs`; y el build de producción servido en local con las reglas de `vercel.json`, en Chromium y con el simulador: sin violaciones de la CSP real, sin service worker, sin manifiesto, sin inicio de sesión y con el envío del técnico dibujado.
-**Qué falta:** leer lo que sirve `https://soluciones-it-psi.vercel.app`, porque la red del entorno de las sesiones no llega a ese dominio, ni a Supabase, ni a `cdn.sheetjs.com` (de donde sale `xlsx`; en local se probó con la 0.18.5 del registro de npm). El guion nuevo lo hace en un minuto (`NODE_USE_ENV_PROXY=1 node scripts/verificar-produccion-portal.mjs <sha>`) y al final imprime el SQL que borra la sesión de prueba que crea.
+**Qué falta:** leer lo que sirve `https://soluciones-it-psi.vercel.app`, porque la red del entorno de las sesiones no llega a ese dominio, ni a Supabase, ni a `cdn.sheetjs.com` (de donde sale `xlsx`; en local se probó con la 0.18.5 del registro de npm). El guion nuevo lo hace en un minuto (`NODE_USE_ENV_PROXY=1 node scripts/verificar-produccion-portal.mjs <sha>`) y al final imprime el SQL que borra la sesión de prueba que crea. **Hecho el mismo día, al abrirse la red:** ver la entrada de arriba.
 **Impacto esperado:** ninguno en la app, que no cambia. La 258 queda primera en "Por hacer", bloqueada solo por esa verificación; la 259 pasa a "En proceso" por orden del usuario, y se registra la 272 (llevar al archivo el historial que sigue bajo "En proceso").
 
 ## 2026-09-24

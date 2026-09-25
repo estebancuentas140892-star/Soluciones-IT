@@ -2,7 +2,7 @@
 
 ## Encargo del 2026-09-23 (segunda parte): continuar desde el estado real
 
-**En curso.** Orden fijado por el usuario: A seguridad de Supabase (tarea 271), B tablero, C tarea 258, D tarea 259, E tarea 260, F tareas 262, 265, 261, 243 y 264, G revisión del backlog histórico. **A y B hechas el 2026-09-24.**
+**En curso.** Orden fijado por el usuario: A seguridad de Supabase (tarea 271), B tablero, C tarea 258, D tarea 259, E tarea 260, F tareas 262, 265, 261, 243 y 264, G revisión del backlog histórico. **A y B hechas el 2026-09-24; C, el 2026-09-25** (la 258, archivada junto a las fases de su encargo del 2026-09-22, más abajo).
 
 ### 271. Seguridad de Supabase antes de `/asistencia`: mínimo privilegio
 
@@ -163,6 +163,36 @@
 **Lo que no se tocó:** el modelo y la ejecución de las guías, rutas, esquema local y de Supabase, RLS, sincronización, registro de ejecuciones, y la administración de diagnósticos en Más. **No hay que ejecutar SQL.**
 
 ## Encargo del 2026-09-22: Soluciones IT se organiza alrededor de Resolver
+
+### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro
+
+**Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto. **Estado:** Completada (2026-09-25) en base de datos, código, pruebas, documentación, despliegue y verificación en producción. **Prioridad:** Alta. **Origen:** encargo del usuario del 2026-09-22, secciones 9 a 15 ([PROPUESTA_REDISENO_RESOLVER.md](PROPUESTA_REDISENO_RESOLVER.md), sección 7); cerrada dentro del paso C del encargo del 2026-09-23 (segunda parte). **Decisión:** [DECISIONES.md](DECISIONES.md) AD-053. **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-056 a RN-058.
+
+**Qué se hizo** (2026-09-24, commits `1e3e134` y `086fb58`; el detalle, en [CHANGELOG.md](CHANGELOG.md) de ese día):
+
+1. **Base de datos** (migración `asistencia_portal`, `20260924113640`, conservada en `supabase/schema.sql` sección 7): `asistencia_sesiones`, `asistencia_mensajes` y `asistencia_eventos` con RLS sin políticas ni privilegios y fuera de Realtime; siete funciones `security definer` con `search_path` vacío (`asistencia_crear`, `asistencia_estado` y `asistencia_cerrar_portal` para `anon`; `asistencia_conectar`, `asistencia_enviar`, `asistencia_estado_tecnico` y `asistencia_desconectar` para `authenticated`) y tres internas sin `EXECUTE`. El código de 6 cifras vence a los 10 minutos; la sesión se cierra tras 15 minutos sin actividad del técnico y a las 4 horas; hay límites de intentos y de envíos.
+2. **Portal** (`asistencia.html`, `src/asistencia/`): entrada propia sin Dexie, supabase-js, service worker ni manifiesto; código, QR en SVG, cuenta atrás, lo recibido con "Copiar" y "Terminar la asistencia"; retoma su sesión al recargar y cede entre pestañas.
+3. **Técnico** (`src/features/asistencia/`): `/conectar` y el QR del escáner; "Enviar a este equipo" con vista previa desde el paso, franja del equipo conectado, latido y "Desconectar equipo".
+4. **Contra los secretos, tres barreras:** el constructor no lee el vínculo protegido, la vista previa aparta lo que parece secreto y el servidor lo rechaza y lo registra sin contenido.
+5. **Build y Vercel:** dos entradas; el portal fuera del precache y de la navegación del service worker; trozo propio para el ayudante de precarga; cabeceras propias en `vercel.json` (CSP estricta, `no-store`, `DENY`, `nosniff`, `no-referrer`, `Permissions-Policy` y `noindex`).
+
+**Pruebas (2026-09-24):** 21 escenarios SQL contra la base real (revertidos), 148 archivos y 2127 casos, lint, tipos y build, y un recorrido E2E de 33 comprobaciones con el servidor de desarrollo y el simulador.
+
+**Verificación (2026-09-25):**
+
+- **Supabase real** (MCP): migración aplicada; tablas, RLS, privilegios y las diez funciones como se documentaron; asesores de seguridad solo con lo previsto (las 7 funciones del portal, las 3 tablas sin políticas y Leaked Password Protection, antes y después de las pruebas); `supabase/pruebas/asistencia.sql` otra vez con `fallos=0`, revertido.
+- **Código:** 148 archivos y 2127 casos, lint, tipos, build y `scripts/verificar-portal.mjs` en verde, con las dependencias reales (`xlsx` 0.20.3).
+- **Producción** (regla 14), con `scripts/verificar-produccion-portal.mjs` (nuevo, `55bf80b`): `/version.json` = `55bf80b`; `/asistencia`, `/asistencia.html` y `/asistencia?origen=qr` sirven el portal, no el `index.html` de la app, con las 7 cabeceras exactas; `/` y `/conectar` sirven la app sin la CSP del portal; los 12 archivos JS del portal se descargan y pasan `verificar-portal`; `sw.js` (161 entradas) no precachea el portal y le deja pasar la navegación; Conectar equipo está en el precache. En Chromium, el portal real genera un código de 6 cifras con QR y cuenta atrás, sin inicio de sesión, sin service worker, sin manifiesto, sin IndexedDB ni localStorage, con 0 violaciones de CSP y hablando solo con las 3 funciones del portal; "Terminar la asistencia" cierra.
+- **Recorrido completo en producción:** con el portal real abierto, se canjeó su código y se le envió un paso como el técnico real (por SQL, con la identidad del usuario y solo a través de `asistencia_conectar` y `asistencia_enviar`, porque la sesión no escribe su contraseña). El portal pasó a "Conectado", dibujó el paso con "Copiar" y, al terminar, el servidor ya había borrado el mensaje (evento `cerrada:portal`).
+- **Sin datos de prueba:** las dos sesiones que crearon las pruebas se borraron con sus 6 eventos; las tres tablas quedaron en 0 filas, como estaban antes.
+
+**Hallado y corregido al verificar** (`b3d697e`): `/asistencia/` (con barra final) respondía la app con su inicio de sesión, porque la reescritura de `vercel.json` solo cubría `/asistencia` (el servidor de desarrollo y el service worker ya lo trataban como el portal). Ahora Vercel responde 307 hacia `/asistencia` y conserva la consulta (`/asistencia/?origen=qr` va a `/asistencia?origen=qr`); el guion exige esa redirección y acepta `--sin-navegador` para comprobar un despliegue sin crear sesiones.
+
+**Despliegue confirmado (regla 14):** `/version.json` responde `b3d697e`; el guion, sin navegador, en verde sobre ese despliegue (redirección incluida). El código del portal no cambió desde `1e3e134`, así que vale la prueba en navegador hecha sobre `55bf80b`.
+
+**Pasos del usuario:** (1) **hecho el 2026-09-25:** la red del entorno "Soluciones IT - NUBE" en **Full**; sin ella la sesión no llegaba a producción, a Supabase ni a `cdn.sheetjs.com`. (2) **Pendiente:** desactivar el registro público de Auth; `disable_signup` seguía en `false` el 2026-09-25 (ver `supabase/INSTRUCCIONES.md` sección 4).
+
+**Lo que no se tocó:** ninguna tabla, política ni función existente, y ningún dato productivo (equipos, personas, credenciales ni guías).
 
 ### 257. Fase 5: Más e Infraestructura
 

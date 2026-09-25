@@ -6,12 +6,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **ENCARGO DEL 2026-09-23 (SEGUNDA PARTE): CONTINUAR DESDE EL ESTADO REAL.** Sin rediseño general y sin rehacer lo terminado (266 a 270). Orden fijado por el usuario: **A** seguridad de Supabase antes de `/asistencia` (tarea **271**); **B** tablero sin avisos comprobablemente obsoletos; **C** tarea **258** (portal `/asistencia`); **D** tarea **259** (precache); **E** tarea **260** (pruebas finales); **F** pequeñas: 262, 265, 261, 243 y 264; **G** revisión del backlog histórico (168 a 170, 173 a 175, 188 a 200, 216, 220 a 231), clasificando cada tarea sin borrar su historia. Reglas del encargo que valen para todas: no inventar datos, no duplicar verdades, no guardar secretos sin cifrar, no modificar datos productivos para probar (datos ficticios), respetar el funcionamiento sin conexión y conservar "Resolver → encontrar → ejecutar → solucionar".
 
-**Avance del encargo (2026-09-25):** **A y B hechas** el 2026-09-24 (la tarea 271, archivada, y el tablero al día con la base real). **C, la 258: implementada, probada y desplegada; solo falta verificar por contenido lo que sirve producción**, porque la red del entorno de las sesiones no llega a `soluciones-it-psi.vercel.app` ni a Supabase. Queda primera en "Por hacer", marcada como bloqueada. **Por orden del usuario (2026-09-25: "continuemos con las siguientes tareas") sigue D:** la 259, abajo.
+**Avance del encargo (2026-09-25):** **A y B hechas** el 2026-09-24 (la tarea 271, archivada, y el tablero al día con la base real). **C hecha el 2026-09-25:** la 258, verificada en producción y archivada, con la corrección de `/asistencia/` (`b3d697e`). **Sigue D:** la 259, abajo.
 
-**PASOS DEL USUARIO PENDIENTES:**
-
-1. **Abrir la red del entorno**, que es lo único que falta para cerrar la 258 y para verificar en producción lo que venga después: en claude.ai/code o en la app de escritorio, el botón de la nube "Soluciones IT - NUBE" que está sobre la caja de texto > icono de configuración del entorno > **Network access**: **Full**, o **Custom** con "Also include default list of common package managers" marcado y, uno por línea, `soluciones-it-psi.vercel.app`, `kwwxnmlprdivckqcgjws.supabase.co` y `cdn.sheetjs.com` (sin este último, `npm ci` no instala `xlsx`). Puede aplicar solo a las sesiones nuevas.
-2. **Desactivar el registro público de Auth** (urgente desde la 271; `supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-24; el 2026-09-25 no se pudo leer, por la misma red.
+**PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
 ### 259. Fase 7: precache, trozos y rendimiento
 
@@ -19,9 +16,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Descripción:** sacar del precache Importar (`xlsx`), Etiquetas y el portal con caché en tiempo de ejecución; revisar qué arrastra el arranque (`index`, `Chasis`); medir antes y después.
 - **Motivo:** sección 21 del encargo.
 - **Impacto:** medio (casi un tercio menos de precache).
-- **Prioridad:** Media. **Estado:** En progreso (2026-09-25, por orden del usuario, con la 258 pendiente solo de la verificación en producción).
+- **Prioridad:** Media. **Estado:** En progreso (2026-09-25, por orden del usuario; la 258 quedó cerrada ese mismo día).
 - **Área afectada:** `vite.config.ts`, `src/app/Chasis.tsx`, `src/lib/recargaChunk.ts`.
-- **Dependencias:** 258 (su código ya está desplegado; que falte verificarla en producción no bloquea esta tarea).
+- **Dependencias:** 258 (cerrada el 2026-09-25).
 - **Modelo/esfuerzo:** Opus 5 / Alto.
 
 ## Historial que sigue en el tablero (no son tareas activas)
@@ -417,26 +414,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 258. Fase 6: portal público `/asistencia` y emparejamiento seguro (BLOQUEADA: solo falta verificar producción)
-
-- **Título:** el computador atendido se conecta a una sesión temporal del técnico y muestra lo que este le envía, sin recibir nunca un secreto.
-- **Descripción:** (1) migración en `supabase/schema.sql`: tablas `asistencia_sesiones`, `asistencia_mensajes`, `asistencia_eventos`, RLS sin políticas y funciones `security definer` con permisos explícitos; (2) entrada propia `asistencia.html` sin service worker, Dexie ni cliente completo de Supabase; (3) `/conectar` y la hoja "Conectar equipo" (escanear o escribir el código); (4) "Enviar a este equipo" con vista previa desde el paso; (5) constructor de contenido que no puede recibir datos de la Bóveda y validación en el servidor; (6) indicador y "Desconectar equipo"; (7) pruebas del SQL, del constructor y de los estados del portal.
-- **Motivo:** secciones 9 a 15 del encargo del 2026-09-22.
-- **Impacto:** alto; primera superficie pública de la app. **No se toca** ninguna tabla, política ni función existente.
-- **Prioridad:** Alta. **Estado:** Bloqueada desde el 2026-09-25: hecha salvo verificar lo que sirve producción, que depende del paso del usuario 1 (red del entorno, arriba). Antes: En progreso (2026-09-24, al cerrarse la 271). **Comprobado ese día que no había empezado:** en Supabase no existía `asistencia_sesiones` (REST respondía 404) ni había código de `asistencia` en `src/`.
-- **Hecho el 2026-09-24:** migración `asistencia_portal` aplicada y probada contra la base real (21 escenarios, revertidos); portal `asistencia.html` aislado (sin Dexie, Supabase-js, service worker ni manifiesto); `/conectar` y el QR del escáner; "Enviar a este equipo" con vista previa, franja e índice de pasos; tres barreras contra secretos; desconexión, latido y cierre al salir. 2127 pruebas, lint, tipos y build en verde; recorrido E2E de 33 comprobaciones en Chrome sin cabeza. Detalle en [CHANGELOG.md](CHANGELOG.md) (2026-09-24) y AD-053.
-- **Comprobado el 2026-09-25, sin cambiar la app:**
-  - **Supabase real** (MCP): migración `asistencia_portal` aplicada (`20260924113640`); las 3 tablas con RLS, sin políticas, sin privilegios para `anon` ni `authenticated` y fuera de Realtime; las 10 funciones con `search_path` vacío y los permisos documentados (3 para `anon`, 4 para `authenticated`, 3 internas sin `EXECUTE`); asesores de seguridad solo con lo previsto (las 7 funciones del portal, las 3 tablas sin políticas y Leaked Password Protection). `supabase/pruebas/asistencia.sql` contra la base real: `fallos=0` en los 21 escenarios, revertido. Las 3 tablas quedaron en **0 filas**, como estaban, y sin usuarios ficticios.
-  - **Vercel** (API): el despliegue de producción de `086fb58` (`dpl_4pECBbs3wsxw7gqpPH1P8MiZKPXW`, que incluye `1e3e134`) está READY y tiene asignado `soluciones-it-psi.vercel.app`, sin error de alias. La API no deja leer los archivos ni el registro de compilación de ese equipo con la conexión actual.
-  - **Código** sobre `086fb58`: 148 archivos y 2127 casos en verde, lint y tipos limpios, build y `scripts/verificar-portal.mjs` OK (el portal carga 12 archivos JS y nada de la app). En local se usó `xlsx` 0.18.5 del registro de npm en lugar de la 0.20.3, porque `cdn.sheetjs.com` está bloqueado; solo la usa `leerArchivo`.
-  - **Build de producción servido en local** con las reescrituras y cabeceras de `vercel.json`, en Chromium y con `scripts/asistencia-simulada.mjs` en lugar de Supabase: todo en verde, **0 violaciones de la CSP real**, sin service worker, sin manifiesto, sin inicio de sesión y solo las 3 RPC del portal; el envío del técnico se dibuja con "Copiar" y "Terminar la asistencia" cierra. Es el mismo recorrido que `scripts/verificar-produccion-portal.mjs` hace contra producción.
-- **Falta (necesita la red):** `NODE_USE_ENV_PROXY=1 node scripts/verificar-produccion-portal.mjs <sha de /version.json>` (el portal no cambia desde `1e3e134`, así que vale el commit que esté desplegado); ejecutar el SQL que imprime al final, que borra la sesión de prueba y sus eventos, y comprobar que las 3 tablas vuelven a 0 filas; leer `/auth/v1/settings` (`disable_signup`). Con eso, archivar la 258.
-- **Área afectada:** `supabase/schema.sql`, `supabase/INSTRUCCIONES.md`, `asistencia.html`, `src/asistencia/` (nuevo), `src/features/asistencia/` (nuevo), `vite.config.ts`, `vercel.json`, `src/App.tsx`, `src/features/soluciones/ModoFoco.tsx`, `scripts/verificar-produccion-portal.mjs` (nuevo, 2026-09-25).
-- **Ya hecho en la 256:** el escáner reconoce el QR del portal (`resolverCodigo` da `asistencia` para `/conectar?codigo=` con 6 cifras, de cualquier origen) y enseña una tarjeta neutra en `EscanerPage`. Aquí se cambia esa tarjeta por ir a `/conectar?codigo=…`.
-- **Dependencias:** 255 y **271**. Antes de publicar el portal, el paso del usuario de la 271: el registro público de Auth desactivado, porque el diseño supone que solo un técnico real puede canjear un código. La migración se aplica desde la sesión con el MCP de Supabase (ya no es paso del usuario), y `schema.sql` la conserva.
-- **Modelo/esfuerzo:** Opus 5 / Extra (seguridad). Lo que falta (verificar y archivar): Sonnet 5 / Alto.
-
 
 ### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
 
