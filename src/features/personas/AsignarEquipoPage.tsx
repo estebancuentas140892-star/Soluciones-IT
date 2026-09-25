@@ -6,6 +6,7 @@ import { Cargando } from '../../components/Cargando'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { Check, Monitor, Warning } from '../../components/iconos'
 import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { db, type Dispositivo } from '../../lib/db'
 import { idsDeRed } from '../../lib/categorias'
@@ -179,6 +180,9 @@ export function AsignarEquipoPage() {
       {/* Confirmación fija al pie: el equipo elegido, a quién se quita si
           era de otra persona, y el equipo actual que se puede soltar. */}
       <div className="sticky bottom-0 z-10 border-t border-noct-divider bg-noct-bg/95 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm">
+        {/* El aviso de versión nueva va aquí, encima de la confirmación, y
+            no flotando sobre ella (tarea 275). Vacío no ocupa nada. */}
+        <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
         {elegido ? (
           <div className="flex flex-col gap-2">
             <p className="text-[13px] leading-[1.45] text-noct-neutral-300">

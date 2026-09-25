@@ -23,6 +23,7 @@ import {
 } from '../pruebas/montaje'
 import { guardarModoEjecucion } from '../lib/preferenciasEjecucion'
 import { Chasis } from '../app/Chasis'
+import { ArticuloForm } from '../features/soluciones/ArticuloForm'
 import { GuiaPage } from '../features/soluciones/GuiaPage'
 import { AvisoActualizacion } from './AvisoActualizacion'
 import { BuscarActualizacion } from './BuscarActualizacion'
@@ -429,6 +430,62 @@ describe('fuera de una guía, el aviso va en la franja del chasis', () => {
     const aviso = await esperar(textoAviso, 'el aviso')
     expect(barraGuia.contains(aviso)).toBe(true)
     expect(franja()?.childNodes.length).toBe(0)
+  })
+})
+
+// LAS BARRAS DE LAS PANTALLAS DE TAREA (tarea 275). En el editor de guías
+// la pastilla se cruzaba con su barra fija y tapaba la completitud. Ahora
+// el aviso va dentro de esa barra, encima de todo lo suyo.
+describe('en el editor de guías, el aviso va en su barra fija', () => {
+  const RUTA_EDITOR = '/soluciones/cat-pruebas/guia-editor-aviso/editar'
+  const RUTAS_EDITOR = [{ ruta: '/soluciones/:categoriaId/:articuloId/editar', elemento: <ArticuloForm /> }]
+
+  beforeEach(async () => {
+    await limpiarBase()
+    await sembrarPerfil(false)
+    await sembrarGuia({
+      id: 'guia-editor-aviso',
+      titulo: 'Guía de prueba en edición',
+      pasos: [pasoPrueba('gea-p1', 'Paso de prueba', ['Hacer la prueba'])],
+    })
+  })
+
+  function montarAviso() {
+    return montar([{ ruta: '*', elemento: <AvisoActualizacion visible onActualizar={async () => {}} /> }], '/')
+  }
+
+  function textoAviso(): HTMLElement | null {
+    return Array.from(document.body.querySelectorAll('p')).find((p) => p.textContent === 'Versión nueva disponible') ?? null
+  }
+
+  /** La barra fija del editor: la que lleva "Vista previa" o "Probar". */
+  function barraDelEditor(): HTMLElement | null {
+    return control(/^(Vista previa|Probar)$/)?.closest<HTMLElement>('.fixed') ?? null
+  }
+
+  it('va dentro de la barra, antes de sus controles, y no es la pastilla flotante', async () => {
+    await montar(RUTAS_EDITOR, RUTA_EDITOR)
+    await montarAviso()
+
+    const barra = await esperar(barraDelEditor, 'la barra del editor')
+    const aviso = await esperar(textoAviso, 'el aviso')
+    expect(barra.contains(aviso)).toBe(true)
+    expect(aviso.closest('.bottom-20')).toBeNull()
+    for (const nombre of [/^Completitud/, /^(Vista previa|Probar)$/]) {
+      const boton = control(nombre)
+      expect(boton && barra.contains(boton), String(nombre)).toBe(true)
+      expect(Boolean(aviso.compareDocumentPosition(boton!) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true)
+    }
+  })
+
+  it('sin aviso, el hueco de la barra no pinta nada', async () => {
+    await montar(RUTAS_EDITOR, RUTA_EDITOR)
+
+    const barra = await esperar(barraDelEditor, 'la barra del editor')
+    const hueco = barra.firstElementChild
+    expect(hueco?.className).toContain('empty:hidden')
+    expect(hueco?.childNodes.length).toBe(0)
+    expect(textoAviso()).toBeNull()
   })
 })
 

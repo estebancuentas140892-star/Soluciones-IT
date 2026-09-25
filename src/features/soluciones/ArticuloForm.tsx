@@ -41,6 +41,7 @@ import {
 } from '../../components/iconos'
 import { Chasis } from '../../app/Chasis'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
+import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { buscarArticulosSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import {
   calcularCompletitud,
@@ -1346,8 +1347,15 @@ export function ArticuloForm() {
       {/* Barra inferior fija: barra de añadir (solo en Pasos, la pinta
           PasosEditor por portal), completitud, sugerencias y acciones. */}
       <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
+        {/* El aviso de versión nueva va aquí, encima de todo lo de la
+            barra, y no flotando sobre ella (tarea 275): la barra crece
+            hacia arriba y nada de lo suyo cambia de altura. El relleno
+            inferior de `main` (190 px, 250 en Pasos) sigue bastando para
+            la barra con el aviso. Vacío no ocupa nada. */}
+        <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
         {/* Hueco de la barra de añadir del editor de pasos (tablero 6b).
-            Va arriba del todo para que los cuatro objetivos de 56 px
+            Va arriba (solo el aviso de versión nueva, si lo hay, va por
+            encima) para que los cuatro objetivos de 56 px
             queden juntos y siempre a la misma altura, y para que la
             fila de completitud no se meta entre ellos y "Guardar". */}
         <div ref={setRanuraAcciones} className="empty:hidden" />

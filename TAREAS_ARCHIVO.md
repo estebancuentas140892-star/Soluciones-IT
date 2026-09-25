@@ -1,5 +1,23 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-25 (tercera corrección): el aviso de actualización en las pantallas de tarea
+
+### 275. El aviso "Versión nueva disponible" se cruzaba con la barra de las pantallas de tarea
+
+**Título:** en las pantallas de tarea con barra propia que llega a la altura de la pastilla, el aviso va dentro de esa barra. **Estado:** Completada (2026-09-25) en código, pruebas y documentación; el despliegue se comprueba tras el push. **Prioridad:** Alta. **Origen:** hallazgo al verificar la tarea 274, encargado por el usuario el 2026-09-25 como tarea única de implementación.
+
+**Revisión limitada:** de las pantallas con `Chasis modo="tarea"` (más Etiquetas, que monta su propia `BarraTarea`), tienen barra de acciones propia el editor de guías, los editores de equipo, de diagnóstico y de credencial, Importar y Etiquetas (fijas), y asignar un equipo (pegajosa). Medido en 390×844 y 1366×768 con la pastilla (de 80 a 130 px del borde): se cruzan con ella el editor de guías (104 px, 169 en Pasos: tapaba "Completitud" y los botones de añadir) y asignar un equipo (148 px con uno elegido: tapaba la opción de reemplazo). Las demás miden de 65 a 71 px y la pastilla pasa por encima sin tocar nada.
+
+**Solución:** las dos barras en conflicto publican el hueco que ya existía (`huecoAvisoActualizacion`, el de más rango de `src/components/ranuraAvisoActualizacion.ts`), como la barra de una guía (273) y la de la ficha de un equipo (274): el aviso entra como una fila encima de todo lo suyo, la barra crece hacia arriba y nada de lo que ya tenía cambia de sitio. El editor reserva abajo 190 px (250 en Pasos) y con el aviso su barra mide 158 (223): lo último del contenido sigue quedando por encima. La barra de asignar es pegajosa y reserva su sitio. La nota del almacén deja dicha la regla para las barras que vengan. El orden no cambia: barra de la pantalla, franja del chasis y, solo donde no hay ninguna, la pastilla. `registerType: 'prompt'`, nada se actualiza solo y no hay modal.
+
+**Pruebas:** 149 archivos y 2151 casos; 2 nuevos en `src/components/actualizacionFlujo.test.tsx` con el editor real (el aviso en su barra, antes de "Completitud" y "Vista previa", y la barra sin aviso), el primero de los cuales falla sin el hueco. Lint y build. En Chromium contra el servidor de desarrollo con el banco de pruebas local, 43 comprobaciones en 390×844 y 1366×768: el editor en su pestaña de entrada y en Pasos y asignar un equipo con uno elegido, con y sin aviso (aviso en la barra y entero, ningún control tapado, lo último por encima de la barra al final del scroll, y sin aviso las barras miden lo de antes: 104 y 148 px); "Actualizar" responde, y la guía (273) y Resolver (274) siguen igual. La misma comprobación con el comportamiento anterior falla en los tres casos.
+
+**Commit:** `fix(actualizacion): respetar las barras de pantallas de tarea` (este mismo cambio). **Despliegue:** se comprueba tras el push, con `/version.json` y el contenido de los trozos servidos.
+
+**Decisiones:** no hay una solución limpia en el nivel `modo="tarea"` del chasis: las barras son de cada pantalla, un hueco del chasis abajo las taparía y arriba empujaría el formulario mientras se escribe. Tampoco un componente de barra nuevo: habría que rehacer seis pantallas, cuatro de ellas sin conflicto. Se reutiliza el hueco que ya existe en las dos barras que lo necesitan.
+
+**Lo que no se tocó:** las barras de una sola fila (no chocan), las guías (273), la franja del chasis (274), el tamaño del botón "Actualizar", Supabase y ningún dato.
+
 ## Encargo del 2026-09-25 (segunda corrección): el aviso de actualización fuera de la guía
 
 ### 274. El aviso "Versión nueva disponible" tapaba el final de las pantallas normales

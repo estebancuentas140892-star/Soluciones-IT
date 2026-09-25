@@ -61,8 +61,9 @@ export function AvisoActualizacion({
 
   return (
     // Sin hueco (fuera del chasis, como el inicio de sesión, o en una
-    // tarea que no es una guía) flota como siempre: sobre donde iría la
-    // barra inferior (fixed bottom-0 z-20), por eso bottom-20 y z-50.
+    // tarea sin barra que llegue a su altura, tarea 275) flota como
+    // siempre: sobre donde iría la barra inferior (fixed bottom-0 z-20),
+    // por eso bottom-20 y z-50.
     <div className="nocturne fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 font-inter">
       <div className="flex items-center gap-3 rounded-full border border-noct-accent/40 bg-noct-surface/95 px-4 py-2 shadow-lg backdrop-blur">
         {contenido}

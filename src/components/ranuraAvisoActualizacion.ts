@@ -27,6 +27,14 @@ import { useSyncExternalStore } from 'react'
 // la pantalla (la de una guía, o la de la ficha de un equipo, que se pega
 // a la misma altura que la franja): si los dos existen, manda la barra,
 // que es donde se trabaja, y la franja queda vacía.
+//
+// LAS BARRAS DE LAS PANTALLAS DE TAREA (tarea 275). Una tarea que no es
+// una guía no tiene franja del chasis, y ahí la pastilla sigue flotando a
+// 80 px del borde. Toda barra de acciones propia (fija o pegajosa) que
+// llegue a esa altura publica este hueco: hoy la del editor de guías y la
+// de asignar un equipo. Las de una sola fila (editores de equipo, de
+// diagnóstico y de credencial, Importar, Etiquetas) miden menos de 80 px
+// y la pastilla pasa por encima sin tocarlas.
 
 type Lugar = 'barra' | 'chasis'
 

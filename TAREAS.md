@@ -18,7 +18,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Alta. **Estado:** En progreso (2026-09-25, al cerrarse la 259, por orden del usuario de seguir con las siguientes tareas).
 - **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
 - **Dependencias:** 254 a 259 (todas cerradas; la 258 y la 259 el 2026-09-25).
-- **Hallazgo ya corregido aparte:** su batería de capturas del 2026-09-25 vio que el aviso "Versión nueva disponible" tapaba "Anterior" y "Siguiente" durante una guía, y el final de las pantallas normales (los accesos rápidos de Resolver); se resolvieron como tareas 273 y 274 ese mismo día (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
+- **Hallazgo ya corregido aparte:** su batería de capturas del 2026-09-25 vio que el aviso "Versión nueva disponible" tapaba "Anterior" y "Siguiente" durante una guía, y el final de las pantallas normales (los accesos rápidos de Resolver); se resolvieron como tareas 273 y 274 ese mismo día, y la 275 cubrió después las barras del editor de guías y de asignar un equipo (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
 - **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ## Historial que sigue en el tablero (no son tareas activas)
