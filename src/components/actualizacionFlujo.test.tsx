@@ -21,6 +21,8 @@ import {
   textoPantalla,
   tocar,
 } from '../pruebas/montaje'
+import { guardarModoEjecucion } from '../lib/preferenciasEjecucion'
+import { GuiaPage } from '../features/soluciones/GuiaPage'
 import { AvisoActualizacion } from './AvisoActualizacion'
 import { BuscarActualizacion } from './BuscarActualizacion'
 
@@ -199,6 +201,126 @@ describe('el aviso y el botón "Actualizar"', () => {
     await tocar(await esperar(() => control('Actualizar'), 'el botón de actualizar'))
     expect(activar).toHaveBeenCalledTimes(1)
     expect(textoPantalla()).toContain('Actualizando...')
+  })
+})
+
+// UNA VERSIÓN NUEVA NUNCA IMPIDE TRABAJAR EN UNA GUÍA (tarea 273). La
+// pastilla flotaba a 80 px del borde, justo encima de la barra de acciones
+// de la guía (Anterior, Siguiente, Falla, el índice...). Con una guía en
+// curso, el aviso va dentro de esa barra y en su flujo, antes de los
+// botones; fuera de una guía sigue siendo la pastilla de siempre.
+describe('con una guía en curso, el aviso no tapa sus controles', () => {
+  const RUTA_GUIA = '/soluciones/cat-pruebas/guia-aviso'
+  const RUTAS_GUIA = [{ ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> }]
+  const ANTERIOR_FOCO = /^Anterior\. Solo mueve la vista/
+  const ANTERIOR_PASO_ENTERO = /^Ver el paso anterior\./
+
+  beforeEach(async () => {
+    await limpiarBase()
+    await sembrarPerfil(false)
+    await sembrarGuia({
+      id: 'guia-aviso',
+      titulo: 'Guía de prueba con aviso',
+      pasos: [
+        pasoPrueba('ga-p1', 'Primer paso de prueba', ['Abrir el programa de prueba', 'Entrar en la sección de prueba']),
+        pasoPrueba('ga-p2', 'Segundo paso de prueba', ['Guardar la prueba']),
+      ],
+    })
+  })
+
+  // Como lo monta la app: en la raíz, fuera de la guía.
+  function montarAviso(onActualizar: () => Promise<void> = async () => {}) {
+    return montar([{ ruta: '*', elemento: <AvisoActualizacion visible onActualizar={onActualizar} /> }], '/')
+  }
+
+  function textoAviso(): HTMLElement | null {
+    return Array.from(document.body.querySelectorAll('p')).find((p) => p.textContent === 'Versión nueva disponible') ?? null
+  }
+
+  /** La barra pegajosa del pie de la guía: la que lleva "Anterior". */
+  function barraDeLaGuia(anterior: RegExp): HTMLElement | null {
+    return control(anterior)?.closest<HTMLElement>('.sticky') ?? null
+  }
+
+  /** El aviso va antes que el control en el documento, no encima. */
+  function vaAntesQue(aviso: HTMLElement, otro: HTMLElement): boolean {
+    return Boolean(aviso.compareDocumentPosition(otro) & Node.DOCUMENT_POSITION_FOLLOWING)
+  }
+
+  /** El botón de la barra con ese nombre (la cabecera repite alguno). */
+  function botonDeLaBarra(barra: HTMLElement, nombre: RegExp): HTMLElement | null {
+    return (
+      Array.from(barra.querySelectorAll<HTMLElement>('button')).find((boton) =>
+        nombre.test((boton.getAttribute('aria-label') ?? boton.textContent ?? '').replace(/\s+/g, ' ').trim()),
+      ) ?? null
+    )
+  }
+
+  it('una tarea a la vez: va dentro de la barra, antes de sus botones, y no flota', async () => {
+    await montar(RUTAS_GUIA, RUTA_GUIA)
+    await montarAviso()
+
+    const barra = await esperar(() => barraDeLaGuia(ANTERIOR_FOCO), 'la barra de la guía')
+    const aviso = await esperar(textoAviso, 'el aviso')
+    expect(barra.contains(aviso)).toBe(true)
+    expect(aviso.closest('.fixed')).toBeNull()
+    for (const nombre of [ANTERIOR_FOCO, /^Siguiente$/, /^Tengo un problema con esta acción/]) {
+      const boton = botonDeLaBarra(barra, nombre)
+      expect(boton, String(nombre)).not.toBeNull()
+      expect(vaAntesQue(aviso, boton!)).toBe(true)
+    }
+  })
+
+  it('vista del paso entero: igual, antes de Anterior, el índice, Falla y Siguiente', async () => {
+    await guardarModoEjecucion('pasoEntero')
+    await montar(RUTAS_GUIA, RUTA_GUIA)
+    await montarAviso()
+
+    const barra = await esperar(() => barraDeLaGuia(ANTERIOR_PASO_ENTERO), 'la barra del paso entero')
+    const aviso = await esperar(textoAviso, 'el aviso')
+    expect(barra.contains(aviso)).toBe(true)
+    expect(aviso.closest('.fixed')).toBeNull()
+    for (const nombre of [ANTERIOR_PASO_ENTERO, /Abrir el índice de pasos$/, /^Algo va mal en el paso/, /^Ver el paso siguiente\./]) {
+      const boton = botonDeLaBarra(barra, nombre)
+      expect(boton, String(nombre)).not.toBeNull()
+      expect(vaAntesQue(aviso, boton!)).toBe(true)
+    }
+  })
+
+  it('se sigue trabajando con el aviso puesto, y se actualiza solo cuando uno quiere', async () => {
+    const activar = vi.fn(async () => {})
+    await montar(RUTAS_GUIA, RUTA_GUIA)
+    await montarAviso(activar)
+    await esperar(textoAviso, 'el aviso')
+
+    await tocar(await esperar(() => control(/^Siguiente$/), 'Siguiente'))
+    await esperar(() => textoPantalla().includes('Entrar en la sección de prueba'), 'la acción 2')
+    expect(activar).not.toHaveBeenCalled()
+    expect(textoAviso()).not.toBeNull()
+
+    await tocar(await esperar(() => control('Actualizar'), 'el botón de actualizar'))
+    expect(activar).toHaveBeenCalledTimes(1)
+    expect(textoPantalla()).toContain('Actualizando...')
+  })
+
+  it('sin aviso, el hueco no pinta nada y la barra queda como siempre', async () => {
+    await montar(RUTAS_GUIA, RUTA_GUIA)
+
+    const barra = await esperar(() => barraDeLaGuia(ANTERIOR_FOCO), 'la barra de la guía')
+    const hueco = barra.firstElementChild
+    expect(hueco?.className).toContain('empty:hidden')
+    expect(hueco?.childNodes.length).toBe(0)
+    expect(textoAviso()).toBeNull()
+  })
+
+  it('al salir de la guía, y fuera de ella, es la pastilla flotante de siempre', async () => {
+    const guia = await montar(RUTAS_GUIA, RUTA_GUIA)
+    await montarAviso()
+    await esperar(() => textoAviso()?.closest('.sticky'), 'el aviso dentro de la barra')
+
+    await guia.desmontar()
+    const flotante = await esperar(() => textoAviso()?.closest<HTMLElement>('.fixed'), 'el aviso flotante')
+    expect(flotante.className).toContain('bottom-20')
   })
 })
 

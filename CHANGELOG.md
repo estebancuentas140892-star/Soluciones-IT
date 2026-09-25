@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-25
 
+### Corregido (actualización, tarea 273): el aviso "Versión nueva disponible" ya no tapa la ejecución de una guía
+
+**Área modificada:** `src/components/AvisoActualizacion.tsx`, `src/components/ranuraAvisoActualizacion.ts` (nuevo), las barras de acciones de la guía (`src/features/soluciones/AsistenteVista.tsx` y `ModoFoco.tsx`) y `src/components/actualizacionFlujo.test.tsx`.
+**Tipo:** Corregido.
+**Motivo:** hallazgo de la batería de capturas de la tarea 260 (2026-09-25). La pastilla flota a 80 px del borde (`fixed bottom-20 z-50`), pensada para quedar sobre la barra inferior del chasis; la ejecución de una guía no tiene esa barra sino la suya, más alta, y la pastilla quedaba encima de "Anterior" y "Siguiente" (o "Terminar") en todos los tamaños. Una versión nueva nunca debe impedir trabajar en una guía.
+**Qué cambia:** con una guía en curso, el aviso va DENTRO de su barra de acciones, como una fila encima de los botones y en el flujo de la barra, que es `sticky` y reserva su sitio: no tapa la acción dominante, Anterior, el índice, Falla, Siguiente ni "Enviar a este equipo"; ningún control cambia de sitio y el paso no se desplaza. La barra publica un hueco que vacío no ocupa nada (`empty:hidden`) y el aviso se pinta en él por portal; el hueco se comparte con un almacén de módulo porque el aviso se monta en la raíz de la app, fuera de la guía. Fuera de una guía sigue siendo la pastilla flotante de siempre. El texto, el botón y el flujo de actualización no cambian: `registerType: 'prompt'`, nada se actualiza solo y el técnico actualiza cuando quiere.
+**Cómo se comprobó:** 149 archivos y 2145 casos (5 nuevos en `actualizacionFlujo.test.tsx`; 3 de ellos fallan sin la corrección), lint y build. En Chromium, contra el servidor de desarrollo con el banco de pruebas local y el simulador de la asistencia (nada de producción ni de Supabase), 32 comprobaciones: en 390×844, en los dos modos de ejecución y con un equipo conectado, el aviso se ve entero, va en la barra, no se cruza con ningún control, todos siguen libres (`elementFromPoint`) y ninguno cambia de sitio; "Siguiente" avanza con el aviso puesto y el aviso sigue sin recargar. En 1366×768, igual dentro de una guía; en Resolver (390×844 y 1366×768), la pastilla flotante de siempre.
+
 ### Optimizado (PWA, tarea 259): Importar y Etiquetas salen del precache y, sin conexión, la app ya no se reinstala
 
 **Área modificada:** build y service worker (`vite.config.ts`), recuperación ante una pantalla que no se descarga (`src/lib/recargaChunk.ts`, `src/components/ErrorBoundary.tsx`), Importar (`src/features/dispositivos/importar/leerArchivo.ts` y `ImportarDispositivosPage.tsx`) y `scripts/verificar-precache.mjs` (nuevo).

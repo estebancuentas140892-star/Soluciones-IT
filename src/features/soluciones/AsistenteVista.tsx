@@ -29,6 +29,7 @@ import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
 import { ArrowsClockwise, Camera, CaretDown, CaretLeft, CaretRight, Check, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { AccionVinculo, EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
@@ -874,6 +875,9 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           dominantes en la misma pantalla dejarían de ser dominantes. */}
       {nivel === 0 && (
         <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.96] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px] [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-xl">
+          {/* El aviso de versión nueva va aquí, encima de los botones, y
+              no flotando sobre ellos (tarea 273). Vacío no ocupa nada. */}
+          <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
           {equipoConectado && (
             <div className="mb-2">
               <FranjaEquipoConectado
@@ -976,6 +980,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           </button>
         </div>
       )}
+      {/* Una guía vinculada que ocupa la pantalla, vista entera, no tiene
+          barra fija: su fila de acciones es esta, y el aviso de versión
+          nueva va detrás de ella para no taparla ni moverla (tarea 273). */}
+      {nivel >= 1 && sustituye && <div ref={huecoAvisoActualizacion} className="mt-2 empty:hidden" />}
       {hojaDeFalla}
     </div>
   )

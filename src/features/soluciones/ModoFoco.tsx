@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
 import { normalizarTexto } from './iconosSoluciones'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
+import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import {
   BookOpen,
@@ -872,6 +873,10 @@ export function ModoFoco({
             anidado ? 'pb-2' : '-mx-4 px-4 pb-[calc(6px+env(safe-area-inset-bottom))]'
           }`}
         >
+          {/* El aviso de versión nueva va aquí, encima de los botones, y
+              no flotando sobre ellos (tarea 273). Vacío no ocupa nada. La
+              barra anidada no lo lleva: lo lleva la de la guía de fuera. */}
+          {!anidado && <div ref={huecoAvisoActualizacion} className="mx-auto w-full max-w-xl empty:hidden" />}
           {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
               dice por qué. */}
           {!cierraPaso && !hecha && motivoGuias && (

@@ -1,5 +1,29 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-25: una sola corrección, el aviso de actualización en la guía
+
+### 273. El aviso "Versión nueva disponible" tapaba la ejecución de una guía
+
+**Título:** con una guía en curso, el aviso de versión nueva va dentro de su barra de acciones y no encima de ella. **Estado:** Completada (2026-09-25) en código, pruebas y documentación; el despliegue se comprueba tras el push. **Prioridad:** Alta. **Origen:** hallazgo de la batería de capturas de la tarea 260, encargado por el usuario el 2026-09-25 como tarea única de implementación.
+
+**Problema:** `AvisoActualizacion` flota con `fixed bottom-20 z-50`, a 80 px del borde, para quedar sobre la barra inferior del chasis. La ejecución de una guía no tiene esa barra sino la suya, pegajosa y más alta, y la pastilla quedaba encima de "Anterior" y "Siguiente" (o "Terminar") en 390×844, 390×664, 768×1024, 1366×768 y 1920×1080.
+
+**Solución:**
+
+1. `src/components/ranuraAvisoActualizacion.ts` (nuevo): el hueco del aviso. La barra de la guía lo registra con un `ref` fijo (`huecoAvisoActualizacion`) y el aviso lo lee con `useSyncExternalStore` (`useHuecoAvisoActualizacion`). Es una pila, porque una guía vinculada que ocupa la pantalla trae su propia barra.
+2. `src/components/AvisoActualizacion.tsx`: con hueco, se pinta en él por portal como una fila (el mismo texto y el mismo botón); sin hueco, la pastilla de siempre.
+3. Los huecos, que vacíos no ocupan nada (`empty:hidden`): arriba de la barra fija de `AsistenteVista` (nivel 0) y de la de `ModoFoco` (no anidada), y detrás de la fila en línea de una guía vinculada que ocupa la pantalla en la vista del paso entero.
+
+Sin cambios en el flujo de actualización: `registerType: 'prompt'`, nada se actualiza solo y no hay modal.
+
+**Pruebas:** 149 archivos y 2145 casos; 5 nuevos en `src/components/actualizacionFlujo.test.tsx` (una tarea a la vez, paso entero, seguir trabajando con el aviso puesto, la barra sin aviso y la pastilla al salir de la guía), 3 de los cuales fallan sin la corrección. Lint y build. En Chromium contra el servidor de desarrollo con el banco de pruebas local y el simulador, 32 comprobaciones en 390×844 (los dos modos y con un equipo conectado) y 1366×768: el aviso se ve entero y va en la barra, ningún control queda tapado (`elementFromPoint`) ni cambia de sitio, "Siguiente" avanza con el aviso puesto, y en Resolver sigue la pastilla flotante.
+
+**Commit:** `fix(actualizacion): evitar que el aviso tape la ejecución de guías` (este mismo cambio). **Despliegue:** se comprueba tras el push, con `/version.json` y el contenido del trozo servido.
+
+**Decisiones:** la fila va ARRIBA en la barra fija: la barra crece hacia arriba y ningún botón se mueve bajo el pulgar, mientras que debajo de los botones los habría subido. En la fila en línea va DETRÁS por la misma razón. El hueco se comparte por módulo y no por contexto, a diferencia de `bandaTarea` y `ranuraAccionesPaso`, porque quien pinta (el aviso, en la raíz) no está dentro de quien publica el hueco (la guía).
+
+**Lo que no se tocó:** el tamaño del botón "Actualizar", la pastilla en las demás pantallas, Supabase y ningún dato.
+
 ## Encargo del 2026-09-23 (segunda parte): continuar desde el estado real
 
 **En curso.** Orden fijado por el usuario: A seguridad de Supabase (tarea 271), B tablero, C tarea 258, D tarea 259, E tarea 260, F tareas 262, 265, 261, 243 y 264, G revisión del backlog histórico. **A y B hechas el 2026-09-24; C y D, el 2026-09-25** (la 258 y la 259, archivadas junto a las fases de su encargo del 2026-09-22, más abajo).
