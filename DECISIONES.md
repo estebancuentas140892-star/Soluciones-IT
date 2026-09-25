@@ -522,3 +522,18 @@ Cada decisión indica su estado (Vigente / Revisada / Descartada), su contexto, 
 - **Decisión 2, sin servidor no se recarga ni se reinstala.** Reinstalar solo arregla una instalación rota si el servidor puede volver a darla: antes de hacerlo se comprueba `/version.json`. Sin respuesta, la app dice "Sin conexión", no toca nada y se recarga sola al volver la red. Vale para cualquier trozo que falte, no solo para las dos herramientas (Android puede desalojar la caché).
 - **Decisión 3, el arranque no se reparte más.** Medido: no trae pantallas de Infraestructura, y lo que trae (sincronización, `procedimiento.ts`, la lógica que cuenta los asuntos urgentes de la agenda) lo usa la primera pantalla.
 - **Descartado:** sacar también `jsQR` (130 KiB), porque en iPhone es el único lector del escáner y el escáner se usa en campo; y `StaleWhileRevalidate` para las herramientas, porque con nombres con hash el contenido de una dirección no cambia nunca.
+
+## AD-055. Los botones de icono se tocan en su caja de 44; el dibujo no crece
+
+- **Estado:** Vigente (2026-09-25, tarea 262). Aplica la regla R6 (AD-019) a los botones de icono compartidos.
+- **Contexto:** `BTN_ICONO_SECUNDARIO` y `BTN_ICONO_PELIGRO` medían 34x34. Son el favorito, compartir y "···" de las cabeceras de ficha, el candado de la Bóveda y eliminar un secreto. La X del modal "Cómo instalar" medía 26x26 y "Actualizar", 32 de alto.
+- **Decisión 1, la caja visible pasa a 44.** Los dos tokens miden `h-11 w-11` y conservan el borde, el radio y el dibujo (de 16 a 18 px): el toque es lo que se ve. Ya lo hacían los cuatro consumidores que les sumaban `min-h-11 min-w-11`, y el regreso de la cabecera, que es un cuadrado de 44.
+  - **Descartado** un área invisible de 44 alrededor del cuadrado de 34: con los 6 px que separan los iconos de una cabecera, las áreas se solaparían.
+  - **Descartado** también fundir favorito y compartir en el "···": es un rediseño.
+- **Decisión 2, sin borde, la huella no cambia.** Un control sin borde junto a un título (la X de un modal) gana su caja de 44 con un margen negativo que le devuelve la huella del dibujo. Así el título no se mueve.
+- **Decisión 3, lo que es de un solo botón va en el botón.** "Actualizar" lleva `min-h-11` él solo. `BTN_PRIMARIO` se usa en toda la app, y subirlo entero sería otro cambio.
+- **Consecuencias:**
+  - En una cabecera de nivel documento con tres iconos, el título pierde 30 px en 390 (de 202 a 172) y se sigue cortando con puntos suspensivos. La fila no crece, porque ya medía 54.
+  - En la Bóveda, "Crear" crece con el candado.
+  - La fila del aviso de versión nueva pasa de 46 a 58 px.
+  - La separación de 6 px entre iconos vecinos sigue por debajo de los 8 que pide M-R14; esta tarea no la toca.

@@ -6,7 +6,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **ENCARGO DEL 2026-09-23 (SEGUNDA PARTE): CONTINUAR DESDE EL ESTADO REAL.** Sin rediseño general y sin rehacer lo terminado (266 a 270). Orden fijado por el usuario: **A** seguridad de Supabase antes de `/asistencia` (tarea **271**); **B** tablero sin avisos comprobablemente obsoletos; **C** tarea **258** (portal `/asistencia`); **D** tarea **259** (precache); **E** tarea **260** (pruebas finales); **F** pequeñas: 262, 265, 261, 243 y 264; **G** revisión del backlog histórico (168 a 170, 173 a 175, 188 a 200, 216, 220 a 231), clasificando cada tarea sin borrar su historia. Reglas del encargo que valen para todas: no inventar datos, no duplicar verdades, no guardar secretos sin cifrar, no modificar datos productivos para probar (datos ficticios), respetar el funcionamiento sin conexión y conservar "Resolver → encontrar → ejecutar → solucionar".
 
-**Avance del encargo (2026-09-25):** **A y B hechas** el 2026-09-24 (la tarea 271, archivada, y el tablero al día con la base real). **C y D hechas el 2026-09-25:** la 258, verificada en producción y archivada, con la corrección de `/asistencia/` (`b3d697e`), y la 259 (precache 526 KiB más liviano; sin conexión la app ya no se reinstala; `f1f45bc`). **Sigue E:** la 260, abajo.
+**Avance del encargo (2026-09-25):** **A y B hechas** el 2026-09-24 (la tarea 271, archivada, y el tablero al día con la base real). **C y D hechas el 2026-09-25:** la 258, verificada en producción y archivada, con la corrección de `/asistencia/` (`b3d697e`), y la 259 (precache 526 KiB más liviano; sin conexión la app ya no se reinstala; `f1f45bc`). **Sigue E:** la 260, abajo. **De F, la 262 hecha el 2026-09-25**, encargada aparte como tarea única (objetivos táctiles de 44 px; archivada).
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
@@ -415,18 +415,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 262. Cabecera de las fichas: favorito, compartir y "···" a 44 px
-
-- **Título:** los iconos de la cabecera de una ficha miden 34 px (regla R6: 44 de dedo).
-- **Descripción:** `BTN_ICONO_SECUNDARIO` (`src/components/nocturne.tsx`, 34×34) es el botón de icono de las cabeceras de ficha: favorito (`BotonFavorito`), compartir y "···" en `DispositivoPage` (la auditoría de capturas del 2026-09-22 lo marca en `equipo-ficha`), y los mismos en `ArticuloPage` (que es la 229 b). También lo usan `BovedaPage`, `CredencialForm`, `CrearAccesoRapido` y `SeguridadDelEquipo`. Subir el área táctil a 44 px sin agrandar el dibujo (por ejemplo, con margen negativo, como el borrar de `CampoBusqueda`), o fundir favorito y compartir dentro del "···". Resolver junto con la 229 b.
-- **Motivo:** regla R6; detectado al verificar la tarea 256, ya existía.
-- **Visto también al verificar la 257:** en la cabecera documento de Ubicaciones y Personas el regreso con texto (`BotonVolver` sin `soloIcono`) mide 36 px de alto y "Crear" (`BTN_SECUNDARIO`) 32; en Red, el mismo "Crear". Es el mismo patrón compartido: conviene resolverlo aquí, junto con los iconos de las fichas.
-- **Impacto:** medio: son los controles del borde superior, la zona menos alcanzable con una mano.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/components/nocturne.tsx`, `src/components/BotonFavorito.tsx`, `src/features/dispositivos/DispositivoPage.tsx` (~cabecera), `src/features/soluciones/ArticuloPage.tsx`.
-- **Dependencias:** ninguna (conviene con la 229 b).
-- **Modelo/esfuerzo:** Sonnet 5 / Medio.
-
 ### 265. Más: que la Agenda, abierta desde Más, vuelva a Más
 
 - **Título:** la Agenda, abierta desde Más, no vuelve a Más (regla M-R2).
@@ -728,8 +716,9 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ### 229. Rediseño Guía: la ficha deja de ser la puerta por defecto (G-06, G-07, G-08)
 
-- **(a) HECHA el 2026-09-17 (tarea 244), y más allá de lo que pedía:** la ficha no es "un toque secundario" sino que **abrir la guía es ejecutarla** (`GuiaPage`), y la ficha pasó a "Detalles de la guía" (`/detalles`), accesible desde el índice de pasos. Quedan pendientes (b) y (c).
-- **Descripción:** **(b)** Subir a **44 px** los tres iconos de la cabecera de los detalles (estrella, lápiz y el menú de tres puntos), que hoy miden 34, o fundir estrella y lápiz dentro del menú. **(c)** Decir de quién es el avance ("guardado en este teléfono") donde se ve el avance: hoy la línea "Retomas en el paso N" no lo dice, y la nota que lo decía vivía en la barra "Empecemos", retirada con la 244.
+- **(a) HECHA el 2026-09-17 (tarea 244), y más allá de lo que pedía:** la ficha no es "un toque secundario" sino que **abrir la guía es ejecutarla** (`GuiaPage`), y la ficha pasó a "Detalles de la guía" (`/detalles`), accesible desde el índice de pasos. Quedaban pendientes (b) y (c).
+- **(b) HECHA el 2026-09-25 (tarea 262):** la estrella, el lápiz y el menú de tres puntos de la cabecera de los detalles miden 44 px, porque su botón compartido (`BTN_ICONO_SECUNDARIO`) pasó de 34 a 44; el dibujo no cambió. Queda pendiente (c).
+- **Descripción:** **(c)** Decir de quién es el avance ("guardado en este teléfono") donde se ve el avance: hoy la línea "Retomas en el paso N" no lo dice, y la nota que lo decía vivía en la barra "Empecemos", retirada con la 244.
 - **Motivo:** hallazgos **G-06** (es una parada que en campo sobra: el técnico que ya sabe qué guía quiere entra aquí solo para tocar "Empezar", y la lista ya adelanta lo único que decide en campo), **G-07** (tres controles de 34 px en el borde superior, por debajo del mínimo de 44 que fija la propia regla **M-R14** "también para los controles que parecen decorativos", y en la zona menos alcanzable) y **G-08** (el avance no dice de quién es: se calcula sobre una tabla local del dispositivo, dos técnicos en el mismo trabajo ven cifras distintas y nada lo advierte).
 - **Impacto:** medio. Quita un toque del camino del 80 % de las visitas.
 - **Prioridad:** Media. **Estado:** Pendiente.

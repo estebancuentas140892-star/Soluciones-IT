@@ -869,7 +869,7 @@ Estado actual verificado en el código y objetivos a mantener:
 
 - **Tema:** oscuro único (decisión de diseño). Contraste mínimo medido en el sistema de color por categoría: 7.53:1 (supera holgadamente AA 4.5:1).
 - **Responsive:** la columna de contenido crece por tramos (móvil a escritorio) con container queries; las tablets dejan de recibir la interfaz de teléfono. Objetivo: ningún desbordamiento horizontal del cuerpo.
-- **Áreas táctiles:** los controles de icono son cuadrados de 34x34 px (`BTN_ICONO_*`); los objetivos táctiles de listas y pestañas se dimensionan para el uso con el teléfono en mano.
+- **Áreas táctiles:** los controles de icono son cuadrados de 44x44 px (`BTN_ICONO_*`, desde la tarea 262; antes 34x34), con el dibujo de 16 a 18 px (regla R6, AD-055); los objetivos táctiles de listas y pestañas se dimensionan para el uso con el teléfono en mano.
 - **Teclado:** los modales se cierran con Escape; los formularios son campos nativos (`<input>`, `<select>`, `<textarea>`) navegables con Tab.
 - **Lectores de pantalla:** los iconos llevan `aria-hidden` por defecto (son decorativos junto a texto); los modales usan `tituloId` para asociar su título.
 

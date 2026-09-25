@@ -57,11 +57,15 @@ export function BotonInstalarApp({ className = '' }: { className?: string }) {
           <h2 id="titulo-instalar-app" className="text-[17px] font-medium leading-[1.3]">
             Instalar la app en el teléfono
           </h2>
+          {/* 44 x 44 de toque con la X de 18 (tarea 262, regla R6). El
+              margen negativo devuelve la huella de 18 de antes, así que
+              el título no se mueve; la caja crece sobre el relleno del
+              modal, que es de 20. */}
           <button
             type="button"
             onClick={() => setInstruccionesAbiertas(false)}
             aria-label="Cerrar"
-            className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
+            className="-m-[13px] flex h-11 w-11 shrink-0 items-center justify-center text-noct-neutral-400 hover:text-noct-text"
           >
             <X size={18} aria-hidden />
           </button>

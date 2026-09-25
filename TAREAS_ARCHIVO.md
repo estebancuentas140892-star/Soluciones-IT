@@ -1,5 +1,69 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-25: objetivos táctiles de 44 px en los controles pequeños
+
+### 262. Objetivos táctiles de 44 px: botones de icono, "Actualizar" y la X de "Cómo instalar"
+
+**Título:** los controles pequeños ya identificados se tocan en unos 44×44 px, sin rediseñar las pantallas. **Estado:** Completada (2026-09-25) en código, pruebas y documentación; el despliegue se comprueba tras el push. **Prioridad:** Media. **Origen:** la tarea 262 del tablero ("Cabecera de las fichas: favorito, compartir y «···» a 44 px", parte F del encargo del 2026-09-23). El usuario la encargó el 2026-09-25 como tarea única de implementación y fijó su alcance en cuatro controles:
+- **A:** `BTN_ICONO_SECUNDARIO`;
+- **B:** `BTN_ICONO_PELIGRO`;
+- **C:** el botón "Actualizar";
+- **D:** la X del modal "Cómo instalar".
+
+**Problema, medido en 390×844:** los dos botones de icono compartidos medían 34×34, "Actualizar" 84×32 y la X del modal 26×26. La regla R6 pide 44 de dedo.
+
+**Revisión limitada de los consumidores, antes de tocar:**
+- **`BTN_ICONO_SECUNDARIO`:**
+  - `BotonFavorito` (variante `cabecera`), compartir y "···" en la cabecera de `DispositivoPage`;
+  - la estrella, el lápiz y "···" en la de `ArticuloPage` (los detalles de una guía, la 229 b);
+  - el candado de la barra de `BovedaPage`;
+  - el "ver" de `SeguridadDelEquipo`, de `CredencialForm` (dos) y de `CrearAccesoRapido`, que ya le sumaban `min-h-11 min-w-11` y medían 44.
+- **`BTN_ICONO_PELIGRO`:** eliminar en la cabecera de `CredencialPage`.
+- **Sin conflicto:**
+  - **Cabeceras de nivel documento:** la fila ya medía 54 px (el regreso es un cuadrado de 44 y la fila suma `pt-2.5`), así que con iconos de 44 no crecen. En 390 el título pierde 30 px (de 202 a 172) y se sigue cortando con puntos suspensivos; en 1366 sobra sitio.
+  - **Barra de la Bóveda:** "Crear" se estira con el candado, porque su fila no centra en vertical. Los dos pasan de 34 a 44 y la fila, de 40 a 50.
+  - Ningún contenedor necesitó cambios.
+
+**Solución:**
+
+1. `src/components/nocturne.tsx`: `BTN_ICONO_SECUNDARIO` y `BTN_ICONO_PELIGRO` pasan de `h-[34px] w-[34px]` a `h-11 w-11`. Conservan el borde, el radio, el color y el dibujo, que pone cada consumidor (de 16 a 18 px).
+2. `src/components/AvisoActualizacion.tsx`: "Actualizar" lleva `min-h-11`, solo él; `BTN_PRIMARIO` no cambia. Siguen igual "Actualizando...", el estado deshabilitado, `registerType: 'prompt'` y los huecos de las tareas 273 a 275.
+3. `src/components/BotonInstalarApp.tsx`: la X es una caja de 44×44 (`h-11 w-11`, centrada) con la X de 18. Un `-m-[13px]` le devuelve la huella de 18 de antes: el título no se mueve y la caja crece sobre el relleno de 20 del modal. Mantiene `aria-label="Cerrar"` y cierra el mismo modal.
+
+**Pruebas:**
+- **Automáticas:** 149 archivos y 2151 casos, lint y build. No hay casos nuevos: el tamaño lo mide el navegador, no happy-dom.
+- **En el navegador:** Chromium contra el servidor de desarrollo con el banco de pruebas local, sin Supabase. La Bóveda se abrió con la maestra de prueba en un perfil temporal.
+- **126 comprobaciones**, con las mismas medidas antes y después, en 390×844 y 1366×768:
+  - cada control mide al menos 44, y un toque en su centro o en el punto medio de cada borde cae en él;
+  - el dibujo, el borde y el radio no cambian;
+  - las cabeceras no crecen ni desbordan, y los iconos no se solapan;
+  - "···" abre sus acciones y su desplegable sigue a 4 px del botón;
+  - "Actualizar" y "Actualizando..." miden 44 en la franja del chasis, en la barra de una guía, en la barra del editor y en la pastilla, y cada contenedor queda a la misma distancia del borde;
+  - la X mide 44×44, su dibujo y el título no se mueven, un toque a 12 px del dibujo (antes fuera) ahora la acierta, y cierra el modal.
+- **Regresión:**
+  - las 43 comprobaciones de la 275 siguen en verde; con el aviso, lo último del editor queda 20 px por encima de su barra (15 en Pasos);
+  - la pastilla, de 80 a 142 px del borde, no se cruza con las barras de 65 y 71 px de los editores de diagnóstico y de equipo ni con la de Etiquetas, y no tapa ningún control.
+
+**Commit:** `fix(ui): ampliar objetivos táctiles de controles pequeños` (este mismo cambio). **Despliegue:** se comprueba tras el push, con `/version.json` y el contenido de los trozos servidos.
+
+**Decisiones** (ver [DECISIONES.md](DECISIONES.md) AD-055):
+- **La caja visible es el objetivo de 44,** no un área invisible alrededor del cuadrado de 34. Con 6 px entre iconos vecinos, las áreas se habrían solapado. Además es lo que ya hacían los consumidores con `min-h-11 min-w-11` y el regreso de 44.
+- **El margen negativo, solo donde no hay borde** (la X).
+- **"Actualizar" crece solo,** sin tocar `BTN_PRIMARIO`.
+
+**Lo que no se tocó:** los formularios, la Bóveda, las guías, la navegación y el resto de barras (reciben el token sin cambios en sus archivos); `BTN_PRIMARIO`; la posición del aviso (tareas 273 a 275); Supabase; ningún dato.
+
+**Queda fuera y sigue pendiente, sin tarea propia.** Lo anotaba la entrada de la 262 y el encargo lo dejó fuera:
+- el regreso con texto (`BotonVolver` sin `soloIcono`, 36 px de alto) de la cabecera documento de Ubicaciones y Personas;
+- "Crear" (`BTN_SECUNDARIO`, 32 px) en esas dos cabeceras y en Red.
+
+**Vistos al comprobar, tampoco tocados:**
+- la estrella de fila de Guías con preguntas (`BotonFavorito` variante `fila`, 34×34): no usa el token;
+- los chips de autobloqueo de la Bóveda: miden 32 de alto y en 390 parten "1 min" en dos líneas;
+- "Editar" en la ficha de una credencial (`BTN_SECUNDARIO`, 32);
+- la separación de 6 px entre iconos de cabecera (M-R14 pide 8);
+- los `min-h-11 min-w-11` que ya sobran en cuatro consumidores.
+
 ## Encargo del 2026-09-25 (tercera corrección): el aviso de actualización en las pantallas de tarea
 
 ### 275. El aviso "Versión nueva disponible" se cruzaba con la barra de las pantallas de tarea

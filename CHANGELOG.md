@@ -8,6 +8,30 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-25
 
+### Corregido (toque, tarea 262): los botones de icono, "Actualizar" y la X de "Cómo instalar" se tocan en 44 px
+
+**Área modificada:** `src/components/nocturne.tsx` (`BTN_ICONO_SECUNDARIO` y `BTN_ICONO_PELIGRO`), el botón "Actualizar" de `src/components/AvisoActualizacion.tsx` y la X del modal de `src/components/BotonInstalarApp.tsx`.
+**Tipo:** Corregido.
+**Motivo:** regla R6 (44 px de toque, aunque el icono mida 18). Los dos botones de icono compartidos medían 34×34: favorito, compartir y "···" en la ficha de un equipo; estrella, lápiz y "···" en los detalles de una guía (la 229 b); el candado de la Bóveda y eliminar un secreto. "Actualizar" medía 32 de alto y la X del modal "Cómo instalar", 26×26. Tarea 262 del tablero, con el alcance fijado por el usuario en esos cuatro controles.
+**Qué cambia:**
+- **Los dos tokens** miden 44×44 y conservan el dibujo (de 16 a 18 px), el borde y el radio. Donde ya se les sumaba `min-h-11 min-w-11` (junto a un campo de 44) no cambia nada.
+- **Cabeceras de nivel documento:** la fila ya medía 54 px, porque el regreso es un cuadrado de 44, así que no crece. El título pierde 30 px de ancho en 390 (de 202 a 172) y se sigue cortando con puntos suspensivos.
+- **Bóveda:** "Crear" crece con el candado (su fila no centra en vertical) y la fila sube 10 px.
+- **"Actualizar"** lleva `min-h-11` solo él; `BTN_PRIMARIO` no cambia. La fila del aviso pasa de 46 a 58 px y la pastilla ocupa de 80 a 142 px del borde, en vez de 80 a 130. Ningún aviso cambia de sitio.
+- **La X del modal** es una caja de 44×44 con la X de 18. Un margen negativo le devuelve la huella de antes, así que el título y el texto no se mueven.
+
+**Cómo se comprobó:**
+- **Pruebas:** 149 archivos y 2151 casos, lint y build. No hay casos nuevos, porque el tamaño solo lo mide el navegador.
+- **Navegador:** Chromium contra el servidor de desarrollo con el banco de pruebas local (nada de producción ni de Supabase). La Bóveda se abrió con la maestra de prueba en un perfil temporal.
+- **126 comprobaciones de antes y después** en 390×844 y 1366×768:
+  - cada control mide al menos 44 y un toque en el centro o en cualquiera de sus bordes cae en él;
+  - los dibujos, bordes y radios no cambian;
+  - las cabeceras no crecen, no desbordan y los iconos no se solapan;
+  - "···" abre sus acciones y su desplegable queda donde estaba;
+  - "Actualizar" y "Actualizando..." miden 44 en la franja del chasis, la barra de una guía, la barra del editor y la pastilla, y cada aviso sigue en su sitio a la misma distancia del borde;
+  - la X cierra el modal y un toque a 12 px de su dibujo, que antes no daba en nada, ahora la acierta.
+- **Regresión de la 275:** sus 43 comprobaciones siguen en verde. Al final del scroll, lo último del editor queda 20 px por encima de su barra (15 en Pasos). La pastilla no se cruza con las barras de 65 y 71 px ni tapa controles.
+
 ### Corregido (actualización, tarea 275): en las pantallas de tarea, el aviso "Versión nueva disponible" ya no se cruza con su barra de acciones
 
 **Área modificada:** las barras de acciones del editor de guías (`src/features/soluciones/ArticuloForm.tsx`) y de asignar un equipo (`src/features/personas/AsignarEquipoPage.tsx`), la nota de `src/components/ranuraAvisoActualizacion.ts`, un comentario de `src/components/AvisoActualizacion.tsx` y `src/components/actualizacionFlujo.test.tsx`.

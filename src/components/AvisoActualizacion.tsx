@@ -39,7 +39,9 @@ export function AvisoActualizacion({
         // respuesta visible: parte del reporte original era justamente
         // que el boton no daba ninguna señal de haberse pulsado.
         disabled={actualizando}
-        className={`shrink-0 disabled:opacity-60 ${BTN_PRIMARIO}`}
+        // 44 px de alto (tarea 262, regla R6) solo aquí: `BTN_PRIMARIO`
+        // no cambia para el resto de la app.
+        className={`min-h-11 shrink-0 disabled:opacity-60 ${BTN_PRIMARIO}`}
       >
         {actualizando ? 'Actualizando...' : 'Actualizar'}
       </button>
