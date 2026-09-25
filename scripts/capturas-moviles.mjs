@@ -10,18 +10,25 @@
 // Por defecto, los cuatro tamaños del encargo del 2026-09-22 (seccion 26):
 // telefono 390x844, tableta 768x1024, portatil 1366x768 y escritorio
 // 1920x1080. `--paradas` filtra por prefijo de nombre.
-// Requiere el servidor de desarrollo levantado con VITE_MODO_PRUEBA_LOCAL=1.
+// Requiere el servidor de desarrollo levantado con VITE_MODO_PRUEBA_LOCAL=1
+// y, para las paradas del portal y de Conectar equipo (tarea 260),
+// VITE_ASISTENCIA_SIMULADA_URL=http://localhost:5199 con
+// scripts/asistencia-simulada.mjs corriendo (otro puerto: SIMULADOR=...).
+// Fuera de Windows: CHROME=<ruta de Chrome o Chromium>.
 
 import { spawn } from 'node:child_process'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const argumentos = process.argv.slice(2)
 const opcion = (nombre) => argumentos.find((a) => a.startsWith(`--${nombre}=`))?.split('=')[1]
 const BASE = argumentos.find((a) => !a.startsWith('--')) ?? 'http://localhost:5173'
 const SALIDA = 'evidencia'
-const PERFIL = join(process.env.TEMP ?? '.', `cdp-capturas-${Date.now()}`)
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+const PERFIL = join(process.env.TEMP ?? tmpdir(), `cdp-capturas-${Date.now()}`)
+// En Windows, el Chrome instalado; en otro sistema (una sesion en la nube
+// con Chromium), CHROME=<ruta del ejecutable>.
+const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
 const PUERTO = 9333
 
 const TAMANOS = (opcion('tamanos') ?? '390x844,768x1024,1366x768,1920x1080').split(',').map((t) => {
@@ -69,6 +76,28 @@ const PERSONAS_SEMBRADAS = `{ const { db } = await import('/src/lib/db.ts'); awa
 // Tarea 268: repone los estados escritos a mano de la semilla (la parada
 // que unifica los cambia).
 const ESTADOS_SEMBRADOS = `{ const { db } = await import('/src/lib/db.ts'); await db.dispositivos.bulkDelete(['dis-caja-ejemplo-2','dis-caja-ejemplo-3','dis-camara-ejemplo-1','dis-camara-ejemplo-2','dis-telefono-ejemplo-1','dis-telefono-ejemplo-2','dis-impresora-ejemplo-antigua']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
+// Tarea 260: el portal y Conectar equipo contra el simulador de la
+// asistencia (el servidor de desarrollo con VITE_ASISTENCIA_SIMULADA_URL
+// apuntando a el). Cada parada del portal abre una sesion nueva, porque
+// el portal retoma la de su pestaña.
+const SIMULADOR = process.env.SIMULADOR ?? 'http://localhost:5199'
+const USUARIO_PRUEBA = '00000000-0000-4000-8000-000000000001'
+const PORTAL_NUEVO = `{ sessionStorage.removeItem('asistencia:portal'); }`
+const COMO_TECNICO = `const rpc=(f,a)=>fetch('${SIMULADOR}/rpc/'+f,{method:'POST',headers:{'content-type':'application/json','x-tecnico-prueba':'tecnico-prueba'},body:JSON.stringify(a)}).then(r=>r.json());`
+const CODIGO_DEL_PORTAL = `await new Promise(r=>setTimeout(r,800)); const cod=(document.querySelector('p[aria-label^="Código "]')?.textContent||'').replace(/\\D/g,''); const id=JSON.parse(sessionStorage.getItem('asistencia:portal')||'{}').id;`
+const PASO_DE_EJEMPLO = `{v:1,titulo:'Paso 2 · Vaciar la caché DNS',subtitulo:'Guía de ejemplo',bloques:[{tipo:'donde',texto:'Símbolo del sistema'},{tipo:'accion',texto:'Ejecuta el comando y espera la confirmación.'},{tipo:'comando',texto:'ipconfig /flushdns',plataforma:'Windows'},{tipo:'url',texto:'https://example.com/ayuda'},{tipo:'debes_ver',texto:'Se vació correctamente la caché de resolución de DNS.'}]}`
+const PORTAL_CONECTADO = `{ ${COMO_TECNICO} ${CODIGO_DEL_PORTAL} await rpc('asistencia_conectar',{p_codigo:cod}); await rpc('asistencia_enviar',{p_id:id,p_contenido:${PASO_DE_EJEMPLO}}); await new Promise(r=>setTimeout(r,3000)); }`
+const PORTAL_TERMINADO = `{ ${COMO_TECNICO} ${CODIGO_DEL_PORTAL} await rpc('asistencia_conectar',{p_codigo:cod}); await rpc('asistencia_desconectar',{p_id:id}); await new Promise(r=>setTimeout(r,3000)); }`
+// La app del tecnico, conectada a una sesion nueva del simulador (como
+// si hubiera escrito el codigo), y desconectada otra vez.
+const EQUIPO_CONECTADO = `{ const r=await fetch('${SIMULADOR}/rpc/asistencia_crear',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(r=>r.json()); const m=await import('/src/features/asistencia/sesionAsistencia.ts'); await m.conectarEquipo(r.codigo,'${USUARIO_PRUEBA}'); }`
+const SIN_EQUIPO_CONECTADO = `{ const m=await import('/src/features/asistencia/sesionAsistencia.ts'); await m.desconectarEquipo('${USUARIO_PRUEBA}'); m.olvidarCierreReciente(); }`
+// El simulador cierra la sesion abierta mas reciente con el motivo pedido.
+const PORTAL_CODIGO_VENCIDO = `{ await new Promise(r=>setTimeout(r,800)); await fetch('${SIMULADOR}/control/cerrar?motivo=codigo_vencido',{method:'POST'}); await new Promise(r=>setTimeout(r,3000)); }`
+const CODIGO_VENCIDO_EN_CONECTAR = `{ const r=await fetch('${SIMULADOR}/rpc/asistencia_crear',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(r=>r.json()); await fetch('${SIMULADOR}/control/cerrar?motivo=codigo_vencido',{method:'POST'}); const c=document.querySelector('input[inputmode=numeric]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,r.codigo); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,300)); } ${tocar('Conectar')}`
+// Sin red, dentro de la pagina ya cargada (el servidor de desarrollo no
+// puede servir modulos sin red): la app escucha `offline` y lee onLine.
+const SIN_RED_EN_LA_PAGINA = `{ Object.defineProperty(Navigator.prototype,'onLine',{get:()=>false,configurable:true}); window.dispatchEvent(new Event('offline')); await new Promise(r=>setTimeout(r,300)); }`
 const buscarEnResolver = (texto) =>
   `{ const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,${JSON.stringify(texto)}); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,700)); }`
 
@@ -279,6 +308,46 @@ const TODAS_LAS_PARADAS = [
     antes: modo('pasoEntero'),
     despues: modo('foco'),
   },
+  // Tarea 260 (encargo del 2026-09-22, seccion 26): las pantallas nuevas
+  // de la 258, contra scripts/asistencia-simulada.mjs. El portal
+  // (/asistencia, entrada propia) esperando, con un paso recibido y
+  // cerrado por el tecnico; Conectar equipo vacia, con un codigo que no
+  // existe y conectada; y la guia con el equipo conectado (la franja y la
+  // hoja "Enviar a este equipo").
+  { nombre: 'portal-esperando', ruta: '/asistencia', antes: PORTAL_NUEVO },
+  { nombre: 'portal-conectado', ruta: '/asistencia', antes: PORTAL_NUEVO, guion: PORTAL_CONECTADO },
+  { nombre: 'portal-terminado', ruta: '/asistencia', antes: PORTAL_NUEVO, guion: PORTAL_TERMINADO },
+  { nombre: 'conectar', ruta: '/conectar', antes: SIN_EQUIPO_CONECTADO },
+  {
+    nombre: 'conectar-codigo-incorrecto',
+    ruta: '/conectar?codigo=000000',
+    antes: SIN_EQUIPO_CONECTADO,
+    guion: tocar('Conectar con'),
+  },
+  {
+    nombre: 'conectar-conectado',
+    ruta: '/conectar',
+    antes: SIN_EQUIPO_CONECTADO + EQUIPO_CONECTADO,
+    despues: SIN_EQUIPO_CONECTADO,
+  },
+  {
+    nombre: 'guia-equipo-conectado',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco') + SIN_EQUIPO_CONECTADO + EQUIPO_CONECTADO,
+    despues: SIN_EQUIPO_CONECTADO + AVANCE_SEMBRADO,
+  },
+  {
+    nombre: 'guia-enviar-a-equipo',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco') + SIN_EQUIPO_CONECTADO + EQUIPO_CONECTADO,
+    guion: tocar('Enviar a este equipo'),
+    despues: SIN_EQUIPO_CONECTADO + AVANCE_SEMBRADO,
+  },
+  // Estados de la seccion 26: el codigo vencido (en el portal y al
+  // escribirlo en Conectar equipo) y Conectar equipo sin red.
+  { nombre: 'portal-codigo-vencido', ruta: '/asistencia', antes: PORTAL_NUEVO, guion: PORTAL_CODIGO_VENCIDO },
+  { nombre: 'conectar-codigo-vencido', ruta: '/conectar', antes: SIN_EQUIPO_CONECTADO, guion: CODIGO_VENCIDO_EN_CONECTAR },
+  { nombre: 'conectar-sin-red', ruta: '/conectar', antes: SIN_EQUIPO_CONECTADO, guion: SIN_RED_EN_LA_PAGINA },
 ]
 
 const PARADAS = FILTRO_PARADAS
@@ -332,7 +401,16 @@ const AUDITORIA = `JSON.stringify((() => {
       if (barra.contains(c) || c.contains(barra)) continue
       const rc = c.getBoundingClientRect()
       const solapa = rc.bottom > rb.top + 2 && rc.top < rb.bottom - 2 && rc.right > rb.left && rc.left < rb.right
-      if (solapa) hallazgos.push('control tapado por barra fija: ' + nombre(c))
+      if (!solapa) continue
+      // Tapado de verdad solo si en la zona de cruce lo que queda encima
+      // es la barra (tarea 260): un control dentro de una hoja modal se
+      // dibuja SOBRE la barra fija de la pantalla de debajo, y contarlo
+      // como tapado marcaba "Detalles de la guia" o "Cancelar" en
+      // guia-indice y problema, que en las capturas se ven enteros.
+      const x = (Math.max(rc.left, rb.left) + Math.min(rc.right, rb.right)) / 2
+      const y = (Math.max(rc.top, rb.top) + Math.min(rc.bottom, rb.bottom)) / 2
+      const encima = document.elementFromPoint(x, y)
+      if (encima && barra.contains(encima) && !c.contains(encima)) hallazgos.push('control tapado por barra fija: ' + nombre(c))
     }
   }
 
@@ -341,7 +419,10 @@ const AUDITORIA = `JSON.stringify((() => {
   // defecto, y pedirlo ahi llenaba el informe de ruido.
   if (vw < 768) {
     for (const c of controles) {
-      const r = c.getBoundingClientRect()
+      // Un campo dentro de su label se toca por el label entero (tarea
+      // 260): el input de CampoBusqueda mide 23 px, pero su label, 46.
+      const objetivo = (c.tagName === 'INPUT' && c.closest('label')) || c
+      const r = objetivo.getBoundingClientRect()
       if (r.height < 43.5 || r.width < 24) {
         hallazgos.push('area tactil ' + Math.round(r.width) + 'x' + Math.round(r.height) + ': ' + nombre(c))
       }
@@ -403,6 +484,8 @@ async function main() {
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-gpu',
+    // Como root (una sesion en la nube), Chromium no arranca sin esto.
+    ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []),
     'about:blank',
   ])
   chrome.on('error', (e) => {
