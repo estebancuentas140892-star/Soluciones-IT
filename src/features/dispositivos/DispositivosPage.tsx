@@ -1,10 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { db } from '../../lib/db'
+import { db, type Dispositivo } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { idsDeRed, esDeRed } from '../../lib/categorias'
 import { conOrigen } from '../../lib/origenNavegacion'
+import { lineaDeContexto } from '../../lib/contextoEquipo'
+import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { Monitor, Plus, QrCode } from '../../components/iconos'
@@ -44,6 +46,7 @@ export function DispositivosPage() {
     [],
     [],
   )
+  const ubicaciones = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
 
   // El chip de categoría, en la URL: volver de una ficha lo repone.
   const [parametros, setParametros] = useSearchParams()
@@ -80,6 +83,18 @@ export function DispositivosPage() {
   const nombreCategoria = useMemo(
     () => new Map((categorias ?? []).map((c) => [c.id, c.nombre])),
     [categorias],
+  )
+  const nombreUbicacion = useMemo(() => mapaDeTextos(ubicaciones, (u) => u.nombre), [ubicaciones])
+  // Bajo el nombre, solo lo que el nombre no dice ya (tarea 277):
+  // "Impresora Taquilla" no repite "Impresoras · Taquilla". La ubicación,
+  // viva si está vinculada (la copia de texto puede haber quedado vieja).
+  const subtituloDe = useCallback(
+    (d: Dispositivo) =>
+      lineaDeContexto(d.nombre, [
+        nombreCategoria.get(d.categoriaId),
+        nombreVivo(nombreUbicacion, d.ubicacionId ?? '', d.ubicacion),
+      ]),
+    [nombreCategoria, nombreUbicacion],
   )
 
   const { generales, deRed } = useMemo(
@@ -203,7 +218,7 @@ export function DispositivosPage() {
                     key={d.id}
                     dispositivo={d}
                     categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
-                    subtitulo={[nombreCategoria.get(d.categoriaId), d.ubicacion].filter(Boolean).join(' · ')}
+                    subtitulo={subtituloDe(d)}
                     conFoto
                     estado={hayFiltrosActivos ? estadoDeSalto : undefined}
                     alAbrir={alAbrir}
@@ -223,7 +238,7 @@ export function DispositivosPage() {
                       key={d.id}
                       dispositivo={d}
                       categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
-                      subtitulo={[nombreCategoria.get(d.categoriaId), d.ubicacion].filter(Boolean).join(' · ')}
+                      subtitulo={subtituloDe(d)}
                       estado={estadoDeSalto}
                       alAbrir={alAbrir}
                     />
