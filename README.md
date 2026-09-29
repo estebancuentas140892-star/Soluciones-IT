@@ -38,5 +38,7 @@ VITE_SUPABASE_ANON_KEY=
 - `npm run preview`: sirve el build de producción localmente
 - `npm test`: ejecuta las pruebas (Vitest)
 - `npm run lint`: analiza el código con Oxlint
+- `npm run prueba:pwa`: prueba de verdad la actualización de la app instalada (versión A a B, con Chrome)
+- `npm run prueba:sin-conexion`: prueba de verdad la app sin red (build de producción, service worker y sesión inventada, con Chrome)
 
 Cada push y cada pull request a `main` repite `npm ci`, `npm test`, `npm run lint` y `npm run build` en GitHub Actions (`.github/workflows/ci.yml`): un cambio no está listo hasta que ese workflow termina en verde.

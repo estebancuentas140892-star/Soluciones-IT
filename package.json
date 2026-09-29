@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "test": "vitest run",
     "prueba:pwa": "node scripts/prueba-actualizacion-pwa.mjs",
+    "prueba:sin-conexion": "node scripts/prueba-sin-conexion.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

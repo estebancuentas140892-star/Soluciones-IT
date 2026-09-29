@@ -2,6 +2,26 @@
 
 ## Encargo del 2026-09-29: consolidar, simplificar, fortalecer y optimizar
 
+### 260. Fase 8: validación real en teléfono, tableta y escritorio
+
+**Estado:** Completada (2026-09-29), retomada como fase 2 del encargo del 2026-09-29. **Prioridad:** Alta. **Área:** `scripts/capturas-moviles.mjs`, `scripts/prueba-sin-conexion.mjs` (nuevo), `package.json` (`prueba:sin-conexion`), `.gitignore`, `README.md`, y `evidencia/`, que no se versiona.
+
+**Antes de empezar:** `git stash` vacío en las tres copias locales; no había trabajo guardado de las capturas fuera de `main` (lo último era `7fc2916`, la auditoría sin falsos positivos del 2026-09-25), así que se siguió desde ahí.
+
+**Qué se probó y cómo:**
+
+- **Teléfono, tableta, portátil y escritorio** (390×844, 768×1024, 1366×768 y 1920×1080), con el banco de pruebas local y el simulador de asistencia: **99 paradas en 4 tamaños, 396 capturas**, con la auditoría al final del scroll. Paradas nuevas: los formularios principales (equipo nuevo y editar, persona, ubicación, guía nueva y su pestaña General, referencia, credencial con la Bóveda sin abrir), Seguridad, y la red que se pierde en mitad del trabajo (Resolver, una guía en curso, el editor y un equipo editándose). La navegación principal, la ejecución de guías, la resolución guiada, personas, ubicaciones, inventario, el portal y Conectar equipo ya estaban.
+  - **Sin desbordamiento horizontal en ningún ancho, y ningún guion falló.**
+  - 111 hallazgos. Los textos recortados son títulos de guía en la cabecera de 390 (diseño aceptado desde la 262: una línea con puntos suspensivos) y subtítulos largos de Equipos (`Computadores · ADMINISTRACION…`, que la 277 acorta al no repetir lo que el nombre ya dice). El resto son áreas táctiles por debajo de 44 px: **tarea 285**.
+- **Sin conexión, de verdad** (`scripts/prueba-sin-conexion.mjs`, nuevo; `npm run prueba:sin-conexion`): el build de producción, servido con las cabeceras de `vercel.json`, con el service worker instalado, la red cortada y el servidor apagado. Se compila contra un Supabase que no existe y la sesión es inventada y se escribe ya sin red: nada llega a ningún servidor.
+  - Primera carga con 3G (1,6 Mbit/s y 300 ms): el inicio de sesión se ve en **5,3 s**; la segunda, ya desde el worker, en **0,6 s**.
+  - Sin red y sin sesión, la app abre desde el precache.
+  - **Defecto crítico:** sin red y con la sesión guardada pero el token vencido (lo normal tras una hora sin abrir la app), la app se queda **26 s en "Cargando..." y termina en el inicio de sesión**, en cualquier pantalla. Y "Cerrar sesión" sin red no la cierra, lo que convierte la salida del bloqueo olvidado ("Cerrar sesión y quitar el bloqueo") en una forma de entrar sin el código estando sin red: **tarea 284**. Con este defecto no se pudieron probar las pantallas sin red con sesión ni el bloqueo; el guion ya los comprueba y la 284 los deja en verde.
+- **Actualización de la PWA** (`npm run prueba:pwa`, el guion A→B de la 251): **OK**. Aparece "Versión nueva disponible", "Actualizar" pasa a la versión B con una sola recarga, los datos siguen y no hay bucle.
+- **Sin conexión en la ejecución y en el editor:** nada avisa de que falta la red (capturas `sin-red-guia` y `sin-red-editor`). Es la premisa de la tarea 223, fase 9 del encargo.
+
+**Hallazgos y su tarea:** 284 (crítica) y 285 (áreas táctiles), nuevas. Ya tenían tarea: 261 (completitud de 25 px), 223 (sin conexión en la ejecución y el editor) y 277 (subtítulos que repiten el nombre).
+
 ### 276. CI obligatorio: pruebas, lint y build en cada cambio
 
 **Estado:** Completada (2026-09-29). **Prioridad:** Alta. **Área:** `.github/workflows/ci.yml` (nuevo), [REGLAS.md](REGLAS.md) (regla 21), `README.md` (Scripts), `ARQUITECTURA.md` (sección 3).

@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-29
 
+### Agregado (verificación, tarea 260): validación real en cuatro tamaños, sin conexión y con la actualización
+
+**Área modificada:** `scripts/capturas-moviles.mjs` (paradas nuevas), `scripts/prueba-sin-conexion.mjs` (nuevo), `package.json` (`prueba:sin-conexion`), `.gitignore` (`dist-sin-conexion`), `README.md` (Scripts).
+**Tipo:** Agregado (herramientas de desarrollo; la app no cambia).
+**Motivo:** encargo del 2026-09-29, fase 2: detectar problemas reales de uso en teléfono, tableta y escritorio, sin conexión, al actualizar, con la sesión, al navegar, al ejecutar una guía y en los formularios.
+**Qué cambia:**
+- Las capturas suman los formularios principales (equipo nuevo y editar, persona, ubicación, guía nueva y su pestaña General, referencia y credencial), Seguridad y la red que se pierde en mitad del trabajo (Resolver, una guía en curso, el editor y un equipo editándose): 99 paradas en 390×844, 768×1024, 1366×768 y 1920×1080.
+- `npm run prueba:sin-conexion` compila la app como en producción, la sirve con las cabeceras de `vercel.json`, instala el service worker, corta la red y comprueba: la carga con 3G y desde el worker, que abre sin red, que una sesión guardada con el token vencido abre la app, que las pantallas principales abren sin red, que olvidar el bloqueo sin red no deja entrar y que cerrar sesión sin red la cierra. Compila contra un Supabase que no existe y escribe la sesión inventada ya sin red: nada llega a ningún servidor.
+**Resultado:** 396 capturas sin desbordamiento horizontal y sin guiones rotos; la actualización A→B, bien. Hallazgos: un defecto crítico de la sesión sin red (tarea 284) y áreas táctiles por debajo de 44 px (tarea 285). Detalle en la tarea 260 de [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Impacto esperado:** lo que depende del service worker, de la red y de la sesión se comprueba con un comando, en vez de a mano en un teléfono.
+
 ### Agregado (calidad, tarea 276): integración continua en GitHub Actions
 
 **Área modificada:** `.github/workflows/ci.yml` (nuevo), `REGLAS.md` (regla 21), `README.md` (Scripts), `ARQUITECTURA.md` (sección 3).

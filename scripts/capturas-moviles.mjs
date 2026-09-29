@@ -348,6 +348,28 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'portal-codigo-vencido', ruta: '/asistencia', antes: PORTAL_NUEVO, guion: PORTAL_CODIGO_VENCIDO },
   { nombre: 'conectar-codigo-vencido', ruta: '/conectar', antes: SIN_EQUIPO_CONECTADO, guion: CODIGO_VENCIDO_EN_CONECTAR },
   { nombre: 'conectar-sin-red', ruta: '/conectar', antes: SIN_EQUIPO_CONECTADO, guion: SIN_RED_EN_LA_PAGINA },
+  // Tarea 260, encargo del 2026-09-29 (fase 2): los formularios
+  // principales tal como se abren, la Bóveda sin abrir y Seguridad.
+  { nombre: 'form-equipo-nuevo', ruta: '/dispositivos/nuevo' },
+  { nombre: 'form-equipo-editar', ruta: '/dispositivos/dis-impresora-ejemplo/editar' },
+  { nombre: 'form-persona-nueva', ruta: '/personas/nueva' },
+  { nombre: 'form-ubicacion-nueva', ruta: '/ubicaciones/nueva' },
+  { nombre: 'form-guia-nueva', ruta: '/soluciones/cat-pos/nuevo' },
+  { nombre: 'form-guia-general', ruta: '/soluciones/cat-pos/art-tonos/editar' },
+  { nombre: 'form-referencia-nueva', ruta: '/referencia/nueva' },
+  { nombre: 'form-credencial-nueva', ruta: '/boveda/nueva' },
+  { nombre: 'seguridad', ruta: '/cuenta/seguridad' },
+  // Y lo que se ve al perder la red en mitad del trabajo, con la página ya
+  // cargada: Resolver, una guía en curso, el editor y un equipo editándose.
+  { nombre: 'sin-red-resolver', ruta: '/', guion: SIN_RED_EN_LA_PAGINA },
+  {
+    nombre: 'sin-red-guia',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco'),
+    guion: SIN_RED_EN_LA_PAGINA,
+  },
+  { nombre: 'sin-red-editor', ruta: '/soluciones/cat-pos/art-tonos/editar', guion: SIN_RED_EN_LA_PAGINA },
+  { nombre: 'sin-red-equipo', ruta: '/dispositivos/dis-impresora-ejemplo/editar', guion: SIN_RED_EN_LA_PAGINA },
 ]
 
 const PARADAS = FILTRO_PARADAS

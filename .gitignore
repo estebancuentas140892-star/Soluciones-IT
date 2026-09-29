@@ -13,6 +13,8 @@ dist-ssr
 # Builds de la prueba de actualizacion A -> B (scripts/prueba-actualizacion-pwa.mjs)
 dist-pwa-a
 dist-pwa-b
+# Build de la prueba sin conexion (scripts/prueba-sin-conexion.mjs)
+dist-sin-conexion
 *.local
 .env
 .env.*
