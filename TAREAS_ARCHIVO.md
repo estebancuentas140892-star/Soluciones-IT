@@ -1,5 +1,19 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-09-29: consolidar, simplificar, fortalecer y optimizar
+
+### 276. CI obligatorio: pruebas, lint y build en cada cambio
+
+**Estado:** Completada (2026-09-29). **Prioridad:** Alta. **Área:** `.github/workflows/ci.yml` (nuevo), [REGLAS.md](REGLAS.md) (regla 21), `README.md` (Scripts), `ARQUITECTURA.md` (sección 3).
+
+**Qué había:** solo `ping-supabase.yml` y `respaldo-supabase.yml`. Las pruebas, el lint y el build solo se ejecutaban en la máquina de quien hacía el cambio (fase 1 del encargo: ningún cambio se da por sano solo porque compiló ahí).
+
+**Solución:** `ci.yml` corre en cada push y pull request a `main`, y a mano: Node 24, la versión con la que compila Vercel (`nodeVersion: 24.x` del proyecto), y `npm ci`, `npm test`, `npm run lint` y `npm run build`, en ese orden. Permisos de solo lectura, 15 minutos de tope y sin secretos: el build no necesita las variables de Supabase y las pruebas no tocan la base real. Usa `actions/checkout@v7` y `actions/setup-node@v7`, hechas para Node 24 (las v4 del respaldo avisan de Node 20). La regla 21 fija que un cambio no está entregado hasta que el CI de su commit queda en verde.
+
+**Verificación:** la suite completa pasa en local con la zona horaria de Bogotá y con `TZ=UTC`, la del runner. Primera ejecución en GitHub (run `36639507352`, commit `ab8815d`): **verde en 51 s** (instalación 6 s, pruebas 24 s, lint y build 10 s), sin avisos de Node 20; solo la nota de GitHub de que `ubuntu-latest` pasa a Ubuntu 26 desde el 2026-10-19. Producción sirve `ab8815d` (`/version.json`).
+
+**Opcional, del usuario:** si algún día se trabaja con pull requests, marcar "CI / comprobar" como obligatorio en Settings > Branches. Hoy los commits van directo a `main`: el workflow avisa, pero no puede frenar un push.
+
 ## Encargo del 2026-09-25: objetivos táctiles de 44 px en los controles pequeños
 
 ### 262. Objetivos táctiles de 44 px: botones de icono, "Actualizar" y la X de "Cómo instalar"

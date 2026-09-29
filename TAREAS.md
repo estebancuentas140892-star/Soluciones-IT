@@ -9,8 +9,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | Fase | Tarea del encargo | Tarea del tablero | Estado |
 |---|---|---|---|
 | 1 | Revisar el respaldo automático de Supabase | 15 | Revisada el 2026-09-29: código correcto, **bloqueada por tres secretos de GitHub** (configuración externa); restauración documentada y probada |
-| 1 | CI obligatorio en GitHub | 276 | **En proceso** |
-| 2 | Validación real en teléfono, tableta y escritorio | 260 | Pendiente |
+| 1 | CI obligatorio en GitHub | 276 | Hecha el 2026-09-29: primer CI en verde en 51 s (archivada) |
+| 2 | Validación real en teléfono, tableta y escritorio | 260 | **En proceso** |
 | 3 | La Agenda con una sola puerta (Resolver) | 265 | Pendiente |
 | 4 | Contexto inteligente del nombre de un equipo | 277 | Pendiente |
 | 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | Pendiente |
@@ -28,17 +28,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-### 276. CI obligatorio: pruebas, lint y build en cada cambio
+### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
 
-- **Título:** un workflow de GitHub Actions que valide la app en cada push y pull request.
-- **Descripción:** hoy solo existen `ping-supabase.yml` y `respaldo-supabase.yml`; nada comprueba en GitHub que un commit pasa las pruebas y compila. Crear `.github/workflows/ci.yml` con `npm ci`, `npm test`, `npm run lint` y `npm run build`, en ese orden, sin servicios ni pasos que no hagan falta.
-- **Motivo:** encargo del 2026-09-29, fase 1: ningún cambio se da por sano solo porque compiló en la máquina de quien lo hizo.
-- **Impacto:** alto en confianza; nulo en la app.
-- **Prioridad:** Alta. **Estado:** En progreso (2026-09-29). **Workflow creado**; se cierra y archiva al ver su primera ejecución en verde por la API de GitHub (regla 21, nueva).
-- **Hecho:** `.github/workflows/ci.yml` en push y pull request a `main` y a mano; Node 24 como Vercel (`nodeVersion: 24.x` del proyecto); `npm ci`, `npm test`, `npm run lint`, `npm run build`; permisos de solo lectura y 15 minutos de tope. Sin secretos: el build no necesita las variables de Supabase y las pruebas no tocan la base real. La suite pasa en local también con `TZ=UTC`, la zona del runner. Documentado en la regla 21 de [REGLAS.md](REGLAS.md), `README.md` y la sección 3 de `ARQUITECTURA.md`.
-- **Opcional, del usuario:** si algún día se trabaja con pull requests, marcar "CI / comprobar" como obligatorio en Settings > Branches (hoy los commits van directo a `main`, así que el workflow avisa pero no puede frenar un push).
-- **Área afectada:** `.github/workflows/ci.yml` (nuevo), [REGLAS.md](REGLAS.md) (regla 21), `README.md`, `ARQUITECTURA.md`.
-- **Dependencias:** ninguna.
+- **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
+- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista. Tampoco es un defecto el campo de un buscador medido por su `input` (23 px) cuando lo envuelve la `label` de 46 px de `CampoBusqueda`, que es la que se toca (`equipos`, `resolver`).
+- **Motivo:** secciones 25 y 26 del encargo.
+- **Prioridad:** Alta. **Estado:** En progreso (retomada el 2026-09-29 como fase 2 del encargo del 2026-09-29; antes, en progreso desde el 2026-09-25).
+- **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
+- **Dependencias:** 254 a 259 (todas cerradas; la 258 y la 259 el 2026-09-25).
+- **Hallazgo ya corregido aparte:** su batería de capturas del 2026-09-25 vio que el aviso "Versión nueva disponible" tapaba "Anterior" y "Siguiente" durante una guía, y el final de las pantallas normales (los accesos rápidos de Resolver); se resolvieron como tareas 273 y 274 ese mismo día, y la 275 cubrió después las barras del editor de guías y de asignar un equipo (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
+- **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ## Historial que sigue en el tablero (no son tareas activas)
 
@@ -433,17 +432,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
-
-- **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
-- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista. Tampoco es un defecto el campo de un buscador medido por su `input` (23 px) cuando lo envuelve la `label` de 46 px de `CampoBusqueda`, que es la que se toca (`equipos`, `resolver`).
-- **Motivo:** secciones 25 y 26 del encargo.
-- **Prioridad:** Alta. **Estado:** Pendiente (estaba en progreso desde el 2026-09-25; el encargo del 2026-09-29 la retoma como su fase 2, después de la 15 y la 276).
-- **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
-- **Dependencias:** 254 a 259 (todas cerradas; la 258 y la 259 el 2026-09-25).
-- **Hallazgo ya corregido aparte:** su batería de capturas del 2026-09-25 vio que el aviso "Versión nueva disponible" tapaba "Anterior" y "Siguiente" durante una guía, y el final de las pantallas normales (los accesos rápidos de Resolver); se resolvieron como tareas 273 y 274 ese mismo día, y la 275 cubrió después las barras del editor de guías y de asignar un equipo (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
-- **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ### 265. Más: que la Agenda, abierta desde Más, vuelva a Más
 
