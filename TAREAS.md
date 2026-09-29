@@ -4,22 +4,39 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-09-23 (SEGUNDA PARTE): CONTINUAR DESDE EL ESTADO REAL.** Sin rediseño general y sin rehacer lo terminado (266 a 270). Orden fijado por el usuario: **A** seguridad de Supabase antes de `/asistencia` (tarea **271**); **B** tablero sin avisos comprobablemente obsoletos; **C** tarea **258** (portal `/asistencia`); **D** tarea **259** (precache); **E** tarea **260** (pruebas finales); **F** pequeñas: 262, 265, 261, 243 y 264; **G** revisión del backlog histórico (168 a 170, 173 a 175, 188 a 200, 216, 220 a 231), clasificando cada tarea sin borrar su historia. Reglas del encargo que valen para todas: no inventar datos, no duplicar verdades, no guardar secretos sin cifrar, no modificar datos productivos para probar (datos ficticios), respetar el funcionamiento sin conexión y conservar "Resolver → encontrar → ejecutar → solucionar".
+**ENCARGO DEL 2026-09-29: CONSOLIDAR, SIMPLIFICAR, FORTALECER Y OPTIMIZAR.** Sin rediseño general ni módulos por agregar. Al principio "Resolver → encontrar → ejecutar → solucionar" se suma otro: **la aplicación sabe mucho, pero muestra solo lo necesario en cada momento**; lo que no aporta algo nuevo o útil se simplifica, se oculta o se retira. Tarea por tarea, cada una con sus pruebas, `npm test`, `npm run lint`, `npm run build`, tablero, commit y push propios. No se reimplementa lo que ya existe, no se descarta trabajo sin commit, no se cambian datos reales para que una pantalla se vea mejor, y una tarea que el código ya resuelve se cierra documentando la conclusión, sin fabricar cambios.
 
-**Avance del encargo (2026-09-25):** **A y B hechas** el 2026-09-24 (la tarea 271, archivada, y el tablero al día con la base real). **C y D hechas el 2026-09-25:** la 258, verificada en producción y archivada, con la corrección de `/asistencia/` (`b3d697e`), y la 259 (precache 526 KiB más liviano; sin conexión la app ya no se reinstala; `f1f45bc`). **Sigue E:** la 260, abajo. **De F, la 262 hecha el 2026-09-25**, encargada aparte como tarea única (objetivos táctiles de 44 px; archivada).
+| Fase | Tarea del encargo | Tarea del tablero | Estado |
+|---|---|---|---|
+| 1 | Revisar el respaldo automático de Supabase | 15 | Revisada el 2026-09-29: código correcto, **bloqueada por tres secretos de GitHub** (configuración externa); restauración documentada y probada |
+| 1 | CI obligatorio en GitHub | 276 | **En proceso** |
+| 2 | Validación real en teléfono, tableta y escritorio | 260 | Pendiente |
+| 3 | La Agenda con una sola puerta (Resolver) | 265 | Pendiente |
+| 4 | Contexto inteligente del nombre de un equipo | 277 | Pendiente |
+| 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | Pendiente |
+| 5 | Desbloqueo rápido de la Bóveda: solo si es igual de seguro | 279 | Pendiente |
+| 6 | Protagonismo del Diagnóstico | 280 | Pendiente |
+| 7 | Estados de equipo sin completarlos a la fuerza | 281 | Pendiente |
+| 8 | Auditoría real del backlog | 272 | Pendiente |
+| 9 | Guías: publicación, edición móvil y aviso sin conexión | 227, 228 y 223 | Pendiente |
+| 10 | Fortalecer "Por ordenar" | 282 | Pendiente |
+| 11 | Pendiente operativo mínimo (solo después de todo lo anterior) | 283 | Pendiente |
+
+**Lo que quedaba del encargo del 2026-09-23 (segunda parte)** pasa a este: la E (tarea 260) es la fase 2; de la F, la 265 entra en la fase 3, y la 261, la 243 y la 264 siguen en "Por hacer"; la G (revisión del backlog histórico) es la fase 8. Lo hecho de aquel encargo (271, 258, 259 y 262) está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+**Estado de partida (2026-09-29).** `main` en `dfc99b0`, igual que GitHub. `git stash` vacío en las tres copias locales del repositorio: no hay trabajo guardado de las capturas móviles fuera de `main` (lo último de la 260 es `7fc2916`). Hay cambios sin commit que no son de este encargo y no se tocan: en `dev/sit` (del 2026-09-09, sobre un `main` 128 commits atrás: `src/lib/ejecucionGuia.ts` y el avance de la ejecución) y en el worktree `dev/sit-243` (del 2026-09-25, posteriores al último commit: la vista rápida de un dato protegido, tarea 243, que lleva otra sesión). Este encargo trabaja en el worktree `dev/sit-consolidar`.
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
+### 276. CI obligatorio: pruebas, lint y build en cada cambio
 
-- **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
-- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista. Tampoco es un defecto el campo de un buscador medido por su `input` (23 px) cuando lo envuelve la `label` de 46 px de `CampoBusqueda`, que es la que se toca (`equipos`, `resolver`).
-- **Motivo:** secciones 25 y 26 del encargo.
-- **Prioridad:** Alta. **Estado:** En progreso (2026-09-25, al cerrarse la 259, por orden del usuario de seguir con las siguientes tareas).
-- **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
-- **Dependencias:** 254 a 259 (todas cerradas; la 258 y la 259 el 2026-09-25).
-- **Hallazgo ya corregido aparte:** su batería de capturas del 2026-09-25 vio que el aviso "Versión nueva disponible" tapaba "Anterior" y "Siguiente" durante una guía, y el final de las pantallas normales (los accesos rápidos de Resolver); se resolvieron como tareas 273 y 274 ese mismo día, y la 275 cubrió después las barras del editor de guías y de asignar un equipo (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
-- **Modelo/esfuerzo:** Sonnet 5 / Alto.
+- **Título:** un workflow de GitHub Actions que valide la app en cada push y pull request.
+- **Descripción:** hoy solo existen `ping-supabase.yml` y `respaldo-supabase.yml`; nada comprueba en GitHub que un commit pasa las pruebas y compila. Crear `.github/workflows/ci.yml` con `npm ci`, `npm test`, `npm run lint` y `npm run build`, en ese orden, sin servicios ni pasos que no hagan falta.
+- **Motivo:** encargo del 2026-09-29, fase 1: ningún cambio se da por sano solo porque compiló en la máquina de quien lo hizo.
+- **Impacto:** alto en confianza; nulo en la app.
+- **Prioridad:** Alta. **Estado:** En progreso (2026-09-29).
+- **Área afectada:** `.github/workflows/ci.yml` (nuevo).
+- **Dependencias:** ninguna.
 
 ## Historial que sigue en el tablero (no son tareas activas)
 
@@ -414,6 +431,17 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 260. Fase 8: pruebas completas en teléfono, tableta y escritorio
+
+- **Título:** verificar el rediseño entero en 390×844, 768×1024, 1366×768 y 1920×1080 y en los estados del punto 26.
+- **Descripción:** ampliar `scripts/capturas-moviles.mjs` a los cuatro tamaños y a las pantallas nuevas; probar conexión lenta, sin conexión, PWA instalada y navegador normal, sesión expirada, Bóveda bloqueada, portal sin sesión, código incorrecto y expirado, desconexión manual, reconexión y actualización disponible. Y enseñar a la auditoría del script que un control dentro de una hoja modal no está tapado por la barra fija de la pantalla de debajo: hoy lo marca en `guia-indice` ("Detalles de la guía", "Empezar de nuevo") y en `problema` ("Detenerme aquí", "Cancelar"), y las capturas del 2026-09-22 enseñan los dos controles a la vista. Tampoco es un defecto el campo de un buscador medido por su `input` (23 px) cuando lo envuelve la `label` de 46 px de `CampoBusqueda`, que es la que se toca (`equipos`, `resolver`).
+- **Motivo:** secciones 25 y 26 del encargo.
+- **Prioridad:** Alta. **Estado:** Pendiente (estaba en progreso desde el 2026-09-25; el encargo del 2026-09-29 la retoma como su fase 2, después de la 15 y la 276).
+- **Área afectada:** `scripts/`, `evidencia/` (no se versiona).
+- **Dependencias:** 254 a 259 (todas cerradas; la 258 y la 259 el 2026-09-25).
+- **Hallazgo ya corregido aparte:** su batería de capturas del 2026-09-25 vio que el aviso "Versión nueva disponible" tapaba "Anterior" y "Siguiente" durante una guía, y el final de las pantallas normales (los accesos rápidos de Resolver); se resolvieron como tareas 273 y 274 ese mismo día, y la 275 cubrió después las barras del editor de guías y de asignar un equipo (ver [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md)).
+- **Modelo/esfuerzo:** Sonnet 5 / Alto.
 
 ### 265. Más: que la Agenda, abierta desde Más, vuelva a Más
 
@@ -963,12 +991,22 @@ Pregunta abierta desde la tarea 62, nunca resuelta: decidir si el botón "Crear"
 
 ### 15. Respaldo automático de datos
 - Descripción: workflow de GitHub Actions que cada domingo exporta las tablas de Supabase (el plan gratuito no tiene copias de seguridad), cifra el resultado con AES-256 y lo guarda como artefacto del workflow por 90 días. Lee los datos con un usuario dedicado de respaldo (respetando RLS, sin usar jamás la clave service_role, prohibida por REGLAS.md) cuyas credenciales viven en los secretos de GitHub Actions. El cifrado es obligatorio porque el repositorio es público y sus artefactos son descargables por cualquier usuario de GitHub.
-- Prioridad: Media
-- Ubicación: `scripts/respaldo-supabase.sh`, `.github/workflows/respaldo-supabase.yml`, guía en `supabase/RESPALDO.md`, nota en `ARQUITECTURA.md` sección 10.
+- Prioridad: Alta (subida el 2026-09-29; ver el estado al final)
+- Ubicación: `scripts/respaldo-supabase.sh`, `.github/workflows/respaldo-supabase.yml`, `scripts/restauracion-sql.mjs` (restauración), guía en `supabase/RESPALDO.md`, nota en `ARQUITECTURA.md` sección 10.
 - Avance: código completo y subido a GitHub (2026-07-03). Script `scripts/respaldo-supabase.sh` (inicio de sesión por la API de auth, exportación paginada de las tablas ordenadas por id, manifiesto con conteos, tar.gz cifrado con AES-256-CBC + PBKDF2 600k iteraciones; aviso si credenciales sale vacía por falta de puede_ver_boveda). Workflow con cron dominical, disparo manual y artefacto con retención de 90 días. Verificado localmente: sintaxis, fallo limpio sin variables, fallo limpio con credenciales falsas (HTTP 400 real contra Supabase), fusión de páginas, manifiesto, y ciclo completo de cifrado/descifrado con rechazo de clave equivocada (jq descargado temporalmente al scratchpad, no quedó en el proyecto).
 - Avance (2026-07-10): la lista de tablas se actualizó a las 11 actuales (`conexiones`, `diagnosticos`, `ejecuciones_diagnostico` y `accesos_boveda` habían quedado fuera desde que se agregaron esas tablas); sintaxis verificada de nuevo.
 - Avance (2026-09-24): la lista había vuelto a quedarse atrás. Respaldaba 11 de las 16 tablas: faltaban `ubicaciones`, `personas`, `campos_protegidos`, `referencias` y `boveda_meta`. Ahora las respalda todas, en orden de restauración, y `src/lib/esquema.test.ts` falla si el esquema crea una tabla que el script no respalda. El aviso de "0 credenciales" nombra también lo demás que oculta la falta de `puede_ver_boveda`. `supabase/RESPALDO.md` al día (incluido que el historial se restaura desde el SQL Editor, porque con sesión el servidor vuelve a sellar el autor, tarea 271).
-- Bloqueada por (usuario): crear el usuario de respaldo en Supabase, darle puede_ver_boveda, cargar los 3 secretos en GitHub y disparar la primera ejecución manual, siguiendo `supabase/RESPALDO.md`. Al hacerlo, verificar desde aquí la ejecución real por la API de GitHub y archivar la tarea.
+- **Revisión del 2026-09-29 (encargo del 2026-09-29, fase 1). El código está bien; lo que falla es configuración externa.** El workflow se ha ejecutado 13 veces (del 2026-07-05 al 2026-09-27) y las 13 fallaron: **todavía no existe ningún respaldo**. En las tres últimas, el paso "Exportar y cifrar los datos" termina en 0 segundos, que es la comprobación de variables del script: GitHub le pasa vacíos los tres secretos. Revisado además: las 16 tablas tienen `id` (la paginación ordena por él), la RLS deja leerlas todas a un usuario con `puede_ver_boveda`, y las tres `asistencia_*` quedan fuera a propósito (cerradas a la API). No se tocó el workflow para que "deje de fallar": falla porque no puede respaldar nada.
+- **Lo que sí faltaba: poder restaurar.** La guía no decía cómo cargar los JSON, afirmaba que el SQL Editor conserva `recibido_en` (el sello de la tarea 271 lo reescribe siempre) y una carga en un proyecto nuevo habría fallado (las categorías sembradas tienen nombre único) o dejado guías y equipos apuntando a categorías inexistentes. Nuevo `scripts/restauracion-sql.mjs` (recupera lo que falte sin pisar nada; con `--proyecto-nuevo` vacía antes las tablas y se niega si el proyecto ya tiene datos propios) con su prueba `src/lib/restauracionRespaldo.test.ts`, y `supabase/RESPALDO.md` con la recuperación paso a paso y el simulacro. Probado contra el `schema.sql` real en un PostgreSQL local con datos ficticios: 29 comprobaciones de ida y vuelta.
+- **BLOQUEADA POR CONFIGURACIÓN EXTERNA (paso del usuario).** Nadie más puede hacerlo: los valores no existen en el repositorio ni deben existir.
+  1. Supabase > Authentication > Users > Add user: el usuario de respaldo, con Auto Confirm, y en el SQL Editor `puede_ver_boveda = true` para él (`supabase/RESPALDO.md`, paso 1).
+  2. GitHub > Settings > Secrets and variables > Actions > New repository secret, exactamente estos tres:
+     - `RESPALDO_CORREO`: el correo de ese usuario.
+     - `RESPALDO_CONTRASENA`: su contraseña.
+     - `RESPALDO_CLAVE_CIFRADO`: una frase larga con la que se cifra cada respaldo. Sin ella no se abre ninguno: va al gestor de contraseñas.
+- **Para cerrarla:** (1) Actions > "Respaldo de Supabase" > Run workflow, y comprobar desde aquí, por la API de GitHub, que termina en verde con su artefacto; (2) el simulacro de restauración con ese artefacto (`supabase/RESPALDO.md`), anotando aquí la fecha y el resultado. Sin el (2), el respaldo no se da por comprobado.
+- **De paso, al hacer la primera ejecución:** GitHub avisa que `actions/checkout@v4` y `actions/upload-artifact@v4` están hechas para Node 20 (hoy las fuerza a Node 24 y funcionan). Subirlas a su versión actual (v7) en ese momento, cuando se puede comprobar el resultado; no se cambia un workflow que hoy no se puede ejecutar.
+- Estado: **Bloqueada (configuración externa)**. Prioridad: **Alta** (un respaldo que nunca ha corrido no protege nada).
 
 Propuestas presentadas al usuario el 2026-07-03, pendientes de que elija cuáles convertir en tareas: recordatorios de mantenimiento preventivo por dispositivo y reporte mensual de actividad desde el historial. (La tercera propuesta, cola de subida para adjuntos offline, ya se hizo: tarea 17 en el archivo.)
 

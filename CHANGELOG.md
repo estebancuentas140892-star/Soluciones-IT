@@ -6,6 +6,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-29
+
+### Agregado (respaldo, tarea 15): el respaldo de Supabase ya se puede restaurar de verdad
+
+**Área modificada:** `scripts/restauracion-sql.mjs` (nuevo), `src/lib/restauracionRespaldo.test.ts` (nuevo), `supabase/RESPALDO.md`, `ARQUITECTURA.md` (sección 10).
+**Tipo:** Agregado y Documentación.
+**Motivo:** encargo del 2026-09-29, fase 1. Al revisar por qué el respaldo semanal falla (13 de 13 ejecuciones desde el 2026-07-05), el workflow y el script resultaron correctos: GitHub les pasa vacíos los tres secretos, que son configuración del usuario. Lo que sí estaba mal era la restauración, que solo existía en teoría: la guía no decía cómo cargar los JSON, afirmaba que el SQL Editor conserva `recibido_en` (el sello de la tarea 271 lo reescribe siempre) y una carga en un proyecto nuevo chocaba con las categorías que siembra `schema.sql` (nombre único) o dejaba guías y equipos apuntando a categorías que no existen.
+**Qué cambia:**
+- `node scripts/restauracion-sql.mjs <carpeta>` convierte un respaldo descifrado en un SQL de una sola transacción, con `session_replication_role = replica` (sin triggers: autoría, `updated_at` y `recibido_en` quedan como en el respaldo), columnas explícitas (una columna posterior al respaldo toma su valor por defecto) y `on conflict (id) do nothing` (nunca pisa una fila existente). Termina mostrando las filas de cada tabla frente a las del manifiesto, y rechaza un JSON que no cuadra con el manifiesto o un nombre que no es un identificador simple. `perfiles` no se carga: nace con cada cuenta.
+- `--proyecto-nuevo` vacía antes las tablas que va a cargar, para un proyecto recién creado, y se niega sin tocar nada si ese proyecto ya tiene datos propios.
+- `supabase/RESPALDO.md`: recuperación paso a paso, los dos casos, qué conserva y por qué, el simulacro de restauración y las tablas del portal de asistencia que quedan fuera a propósito.
+**Impacto esperado:** cuando el usuario cargue los tres secretos, el primer respaldo se podrá comprobar con un simulacro real, y un borrado por error o la pérdida del proyecto tendrán un camino de vuelta probado. La app no cambia.
+**Cómo se comprobó:** 9 casos nuevos del script y la suite completa; y una ida y vuelta contra el `schema.sql` real en un PostgreSQL local (PGlite) con datos ficticios: 29 comprobaciones (proyecto nuevo idéntico fila por fila, sin `--proyecto-nuevo` choca con `categorias_nombre_key`, la guarda protege una base con datos, la recuperación parcial no pisa lo editado, repetirla no cambia nada y un respaldo sin una columna nueva toma su valor por defecto).
+
 ## 2026-09-25
 
 ### Corregido (toque, tarea 262): los botones de icono, "Actualizar" y la X de "Cómo instalar" se tocan en 44 px
