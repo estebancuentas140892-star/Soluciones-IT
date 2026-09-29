@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-29
 
+### Corregido y Seguridad (sesión, tarea 284): sin red la app abre con la sesión guardada, y cerrar sesión la cierra siempre
+
+**Área modificada:** `src/features/autenticacion/AuthProvider.tsx`, `src/lib/supabase.ts` (`CLAVE_SESION`), `src/lib/sesionGuardada.ts` (nuevo), `src/features/seguridad/BloqueoAppGuard.tsx`, sus pruebas (`src/lib/sesionGuardada.test.ts`, `src/features/autenticacion/sesionSinConexion.test.tsx`, `src/features/seguridad/salidaBloqueo.test.tsx`), `scripts/prueba-sin-conexion.mjs`, [DECISIONES.md](DECISIONES.md) AD-056, `ARQUITECTURA.md` (sección 14) y `DOCUMENTACION_FUNCIONAL.md` (Ajustes y pantalla de bloqueo).
+**Tipo:** Corregido y Seguridad.
+**Motivo:** hallazgo de la validación real (tarea 260). Sin red y con el token vencido (dura una hora), supabase-js tarda unos 25 s en rendirse y contesta "sin sesión" aunque la sigue guardando: la app pasaba 26 s en "Cargando" y terminaba en el inicio de sesión, sin dejar abrir lo que ya estaba en el teléfono. Y cerrar sesión sin red no la cerraba, así que "Cerrar sesión y quitar el bloqueo" dejaba entrar sin el código en modo avión.
+**Qué cambia:**
+- La sesión guardada abre la app desde el primer momento, y se conserva si supabase-js no pudo renovarla solo por falta de red; si el servidor la rechaza, fuera.
+- Cerrar sesión la cierra siempre: sin red al instante, con red si el servidor no contesta en 4 s. Después supabase-js avisa `SIGNED_OUT` sin ir al servidor y se corta el canal de tiempo real.
+- La salida del bloqueo cierra la sesión antes de quitar el bloqueo.
+**Impacto esperado:** un técnico sin señal abre sus guías y sus equipos en medio segundo aunque no haya abierto la app en horas; el bloqueo del teléfono ya no se salta sin red.
+**Cómo se comprobó:** 18 pruebas nuevas (la del orden de la salida del bloqueo falla con el orden anterior) y la suite completa; `npm run prueba:sin-conexion` sobre un build real con service worker y la red cortada: **OK** en los siete pasos (antes fallaban del 3 al 6): abre en 0,5 s con la sesión vencida, las siete pantallas principales abren, olvidar el bloqueo sin red termina en el inicio de sesión y con la sesión borrada, y cerrar sesión sin red la borra. El banco de pruebas local (sin Supabase) arranca igual.
+
 ### Agregado (verificación, tarea 260): validación real en cuatro tamaños, sin conexión y con la actualización
 
 **Área modificada:** `scripts/capturas-moviles.mjs` (paradas nuevas), `scripts/prueba-sin-conexion.mjs` (nuevo), `package.json` (`prueba:sin-conexion`), `.gitignore` (`dist-sin-conexion`), `README.md` (Scripts).

@@ -9,11 +9,12 @@
 //   2. sin red y sin sesion, abre desde el precache (el inicio de sesion);
 //   3. sin red y con una sesion cuyo token ya vencio (lo normal tras mas de
 //      una hora sin abrir la app), abre la app y no el inicio de sesion;
-//   4. las pantallas principales abren sin red, y las dos que salen del
-//      precache (Importar y Etiquetas, tarea 259) dicen que necesitan red;
+//   4. las pantallas principales abren sin red;
 //   5. con el bloqueo de la app puesto, "Cerrar sesion y quitar el bloqueo"
 //      sin red cierra la sesion de verdad: no deja entrar sin el codigo;
-//   6. "Cerrar sesion" sin red cierra la sesion.
+//   6. "Cerrar sesion" sin red cierra la sesion;
+//   7. una pantalla que sale del precache (Importar, tarea 259) dice que
+//      necesita red, sin reinstalar nada.
 // Se compila contra un Supabase que no existe (prueba-sin-conexion): la
 // sesion es inventada y se escribe con la red ya cortada, asi que nada
 // llega a ningun servidor.
@@ -300,11 +301,6 @@ async function main() {
       pagina = await s.ir(ruta)
       comprobar(pagina.app && pagina.ruta === ruta && !PANTALLA_ROTA.test(pagina.texto), `${ruta} (${pagina.ruta}, ${pagina.ms} ms)`)
     }
-    for (const ruta of ['/dispositivos/importar', '/dispositivos/etiquetas']) {
-      pagina = await s.abrir(ruta, 4000)
-      const linea = pagina.texto.split('\n').find((l) => /conexi|red|No se pudo/i.test(l)) ?? pagina.texto.slice(0, 80)
-      comprobar(!/Reinstalar la aplicación/.test(pagina.texto), `${ruta} fuera del precache: "${linea.trim()}"`)
-    }
 
     paso('5. Bloqueo de la app: olvidar el código sin red no deja entrar')
     pagina = await s.ir('/cuenta/seguridad')
@@ -332,6 +328,21 @@ async function main() {
     pagina = await s.evaluar(`return { ruta: location.pathname }`)
     comprobar(pagina.ruta === '/login', `termina en el inicio de sesión (ruta: ${pagina.ruta})`)
     comprobar(!(await s.evaluar(HAY_SESION)), 'la sesión se borró de este teléfono')
+
+    // Al final a proposito: con la red cortada por emulacion (la de CDP),
+    // Chrome recarga la pantalla "Sin conexion" de un trozo que fallo en
+    // vez de dejar salir de ella. Con el servidor apagado y sin emulacion
+    // se sale sin problema (comprobado el 2026-09-29): es de la emulacion,
+    // no de la app, pero deja inservible cualquier paso que venga detras.
+    // Por lo mismo, solo Importar: Etiquetas sale del precache igual y usa
+    // la misma pantalla (tarea 259), y quedaria detras del mismo rebote.
+    paso('7. Una pantalla fuera del precache dice que necesita red, sin reinstalar nada')
+    await s.evaluar(PONER_SESION)
+    pagina = await s.abrir('/dispositivos/importar', 4000)
+    comprobar(
+      pagina.ruta === '/dispositivos/importar' && pagina.texto.includes('Sin conexión') && !/Reinstalar la aplicación/.test(pagina.texto),
+      `/dispositivos/importar: "${pagina.texto.split('\n')[0]}"`,
+    )
   } finally {
     ws.close()
     chrome.kill()

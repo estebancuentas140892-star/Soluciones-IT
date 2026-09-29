@@ -54,9 +54,12 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
     await intentar(contrasena)
   }
 
+  // Primero se cierra la sesión y después se quita el bloqueo (tarea 284).
+  // Al revés, mientras la sesión se cerraba (hasta unos segundos sin red)
+  // la app ya no tenía bloqueo y se veía entera sin el código.
   async function restablecerYCerrar() {
-    await restablecerBloqueoApp()
     await cerrarSesion()
+    await restablecerBloqueoApp()
   }
 
   return (

@@ -1,15 +1,32 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from '../../lib/supabase'
+import { CLAVE_SESION, supabase } from '../../lib/supabase'
+import { borrarSesionGuardada, leerSesionGuardada, sesionTrasComprobar } from '../../lib/sesionGuardada'
 import { db, type Perfil } from '../../lib/db'
 import { sincronizar } from '../../lib/sync'
 import { AuthContext } from './authContext'
 import { traducirErrorAuth } from './erroresAuth'
 import { desconectarAlSalir } from '../asistencia/sesionAsistencia'
 
+// Lo que se le da al servidor para cerrar la sesión antes de cerrarla solo
+// en este teléfono (tarea 284).
+const ESPERA_CIERRE_MS = 4000
+
+function sesionGuardadaAlAbrir(): Session | null {
+  if (!supabase || !CLAVE_SESION || typeof localStorage === 'undefined') return null
+  return leerSesionGuardada(localStorage, CLAVE_SESION)
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [cargando, setCargando] = useState(true)
-  const [session, setSession] = useState<Session | null>(null)
+  // SIN CONEXIÓN, LA SESIÓN GUARDADA ABRE LA APP (tarea 284). Con el token
+  // vencido y sin red, supabase-js tarda unos 25 s en rendirse y al final
+  // contesta "sin sesión" aunque la sigue guardando: la app se quedaba en
+  // "Cargando" y acababa en el inicio de sesión, sin dejar abrir lo que ya
+  // está en el teléfono. La sesión guardada se usa desde el primer momento
+  // y la comprobación de supabase-js decide después (`sesionTrasComprobar`).
+  const [sesionInicial] = useState(sesionGuardadaAlAbrir)
+  const [cargando, setCargando] = useState(sesionInicial === null)
+  const [session, setSession] = useState<Session | null>(sesionInicial)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
 
   useEffect(() => {
@@ -38,12 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
+    supabase.auth.getSession().then(({ data, error }) => {
+      setSession((actual) => sesionTrasComprobar(data.session, error, actual))
       setCargando(false)
     })
 
-    const { data: suscripcion } = supabase.auth.onAuthStateChange((_evento, nuevaSession) => {
+    const { data: suscripcion } = supabase.auth.onAuthStateChange((evento, nuevaSession) => {
+      // La sesión inicial la decide getSession, arriba: sin red y con el
+      // token vencido, este aviso llega sin sesión aunque siga guardada.
+      if (evento === 'INITIAL_SESSION' && !nuevaSession) return
       setSession(nuevaSession)
       // Sincroniza de inmediato al iniciar sesión, sin esperar al
       // siguiente intervalo o evento de red.
@@ -103,7 +123,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await desconectarAlSalir()
     // No se borra la base local: puede haber cambios sin subir y el
     // equipo es de confianza, cada quien usa su propio teléfono.
-    await supabase.auth.signOut()
+    //
+    // Sin red, supabase-js no llega al servidor: devuelve el error y deja
+    // la sesión guardada (y con el token vencido tarda unos 25 s en
+    // rendirse). Cerrar sesión tiene que cerrarla SIEMPRE, porque es la
+    // salida del bloqueo olvidado (tarea 284): sin red se borra al
+    // instante la de este teléfono, y con red se le dan unos segundos al
+    // servidor. La del servidor vence sola; aquí ya no queda con qué usarla.
+    const sinRed = typeof navigator !== 'undefined' && navigator.onLine === false
+    const { error } = sinRed
+      ? { error: new Error('Sin conexión.') }
+      : await Promise.race([
+          supabase.auth.signOut(),
+          new Promise<{ error: Error }>((listo) =>
+            setTimeout(() => listo({ error: new Error('El servidor no contestó a tiempo.') }), ESPERA_CIERRE_MS),
+          ),
+        ])
+    if (error && CLAVE_SESION) {
+      borrarSesionGuardada(localStorage, CLAVE_SESION)
+      setSession(null)
+      // Ya sin nada guardado, supabase-js la cierra sin ir al servidor y
+      // avisa SIGNED_OUT a quien escucha (el canal de tiempo real de sync.ts).
+      void supabase.auth.signOut().catch(() => {})
+    }
   }
 
   return (

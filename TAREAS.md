@@ -11,7 +11,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 1 | Revisar el respaldo automático de Supabase | 15 | Revisada el 2026-09-29: código correcto, **bloqueada por tres secretos de GitHub** (configuración externa); restauración documentada y probada |
 | 1 | CI obligatorio en GitHub | 276 | Hecha el 2026-09-29: primer CI en verde en 51 s (archivada) |
 | 2 | Validación real en teléfono, tableta y escritorio | 260 | Hecha el 2026-09-29 (archivada): 396 capturas, sin conexión real y actualización real; hallazgos en la 284 y la 285 |
-| 3 | La Agenda con una sola puerta (Resolver) | 265 | Pendiente |
+| 3 | La Agenda con una sola puerta (Resolver) | 265 | **En proceso** |
 | 4 | Contexto inteligente del nombre de un equipo | 277 | Pendiente |
 | 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | Pendiente |
 | 5 | Desbloqueo rápido de la Bóveda: solo si es igual de seguro | 279 | Pendiente |
@@ -22,7 +22,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 10 | Fortalecer "Por ordenar" | 282 | Pendiente |
 | 11 | Pendiente operativo mínimo (solo después de todo lo anterior) | 283 | Pendiente |
 
-**Hallazgos de la fase 2:** la **284** (crítica: sin red y con el token vencido la app no abre, y cerrar sesión sin red no cierra, lo que salta el bloqueo) está **en proceso** y se corrige antes de seguir con la fase 3; la **285** (áreas táctiles) queda en "Por hacer" para que el usuario decida su alcance.
+**Hallazgos de la fase 2:** la **284** (crítica: sin red y con el token vencido la app no abre, y cerrar sesión sin red no cierra, lo que salta el bloqueo) **se corrigió el 2026-09-29** antes de seguir con la fase 3 (archivada); la **285** (áreas táctiles) queda en "Por hacer" para que el usuario decida su alcance.
 
 **Lo que quedaba del encargo del 2026-09-23 (segunda parte)** pasa a este: la E (tarea 260) es la fase 2; de la F, la 265 entra en la fase 3, y la 261, la 243 y la 264 siguen en "Por hacer"; la G (revisión del backlog histórico) es la fase 8. Lo hecho de aquel encargo (271, 258, 259 y 262) está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
@@ -30,16 +30,17 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-### 284. Sin red, la sesión guardada tiene que abrir la app y "Cerrar sesión" tiene que cerrarla
+### 265. Más: que la Agenda, abierta desde Más, vuelva a Más
 
-- **Título:** la app funciona sin conexión también cuando el token de la sesión ya venció, y cerrar sesión sin red la cierra de verdad.
-- **Descripción:** supabase-js guarda la sesión en localStorage. Al abrir la app con el token vencido (dura una hora) intenta renovarlo y, sin red, reintenta con esperas crecientes unos 25 segundos y contesta "sin sesión" aunque la sigue guardando. `AuthProvider` le cree y `RequireAuth` manda al inicio de sesión: medido en un build real con `npm run prueba:sin-conexion`, **26 s de "Cargando..." y luego el inicio de sesión**, en cualquier pantalla, sin poder abrir lo que ya está en el teléfono. Además `supabase.auth.signOut()` sin red devuelve un error y no borra nada, y `cerrarSesion` lo ignora: "Cerrar sesión" no cierra, y en la pantalla de bloqueo "Cerrar sesión y quitar el bloqueo" borra el bloqueo pero deja la sesión, así que **sin red cualquiera entra sin el código**.
-- **Solución prevista:** la sesión guardada abre la app al instante, sin esperar a supabase-js, y se conserva si supabase-js no pudo renovarla solo por falta de red; se descarta si el servidor la rechaza. Cerrar sesión le da unos segundos al servidor y, si no contesta, borra la sesión de este teléfono. La salida del bloqueo cierra la sesión ANTES de quitar el bloqueo, para que la app no se vea ni un instante sin el código.
-- **Motivo:** fase 2 del encargo del 2026-09-29 (validación real). La app promete funcionar sin señal ("Todo queda guardado en este teléfono, así que funciona sin señal", dice el inicio de sesión) y el bloqueo es la protección local del teléfono.
-- **Impacto:** crítico. Un técnico sin señal (un sótano, un cuarto de racks) que no abrió la app en la última hora no puede consultar sus guías ni sus equipos; y el bloqueo se salta con el modo avión.
-- **Prioridad:** Crítica. **Estado:** En progreso (2026-09-29): se corrige antes de seguir con la fase 3.
-- **Área afectada:** `src/features/autenticacion/AuthProvider.tsx`, `src/lib/supabase.ts`, `src/features/seguridad/BloqueoAppGuard.tsx` y el nuevo `src/features/autenticacion/sesionGuardada.ts`.
-- **Dependencias:** ninguna. La 278 (desbloqueo con el autenticador del dispositivo) se apoya en esta salida del bloqueo.
+- **Título:** la Agenda, abierta desde Más, no vuelve a Más (regla M-R2).
+- **Resuelto en la tarea 268 (2026-09-23):** las partes (b) y (c). **Bloqueo y seguridad** es una fila de Ajustes y sube a Ajustes, que es su puerta; **Importar equipos** y **Etiquetas QR** viven en Herramientas de inventario y vuelven a ella (Etiquetas, al equipo si se abrió desde su ficha).
+- **Descripción (queda la parte a):** la **Agenda** sube a Resolver (`padreDe`, decidido en la 254), y pasarle el origen de Más no basta: el chasis pone la etiqueta del origen en la línea de contexto (`src/app/Chasis.tsx` ~395, `contexto = origen?.etiqueta ?? props.contexto`) y la Agenda usa esa línea para la fecha de hoy (`src/features/inicio/AgendaPage.tsx` ~28, `contexto={hoyTexto}`). Decidir si vuelve a Más o si su padre actual es lo correcto, y que el rótulo nombre el destino real. Conviene resolverla con la tarea 270, que toca la Agenda.
+- **Motivo:** regla M-R2 ("volver deshace el último salto").
+- **Impacto:** bajo: al salir, una pantalla que no se había visitado y un toque de más.
+- **Prioridad:** Media. **Estado:** En progreso (2026-09-29, fase 3 del encargo del 2026-09-29: se reescribe al tomarla).
+- **Área afectada:** `src/features/mas/PantallaMas.tsx` (fila Agenda), `src/app/Chasis.tsx` (~395), `src/features/inicio/AgendaPage.tsx` (~28).
+- **Dependencias:** ninguna (conviene con la 270).
+- **Modelo/esfuerzo:** Sonnet 5 / Medio.
 
 ## Historial que sigue en el tablero (no son tareas activas)
 
@@ -434,18 +435,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 265. Más: que la Agenda, abierta desde Más, vuelva a Más
-
-- **Título:** la Agenda, abierta desde Más, no vuelve a Más (regla M-R2).
-- **Resuelto en la tarea 268 (2026-09-23):** las partes (b) y (c). **Bloqueo y seguridad** es una fila de Ajustes y sube a Ajustes, que es su puerta; **Importar equipos** y **Etiquetas QR** viven en Herramientas de inventario y vuelven a ella (Etiquetas, al equipo si se abrió desde su ficha).
-- **Descripción (queda la parte a):** la **Agenda** sube a Resolver (`padreDe`, decidido en la 254), y pasarle el origen de Más no basta: el chasis pone la etiqueta del origen en la línea de contexto (`src/app/Chasis.tsx` ~395, `contexto = origen?.etiqueta ?? props.contexto`) y la Agenda usa esa línea para la fecha de hoy (`src/features/inicio/AgendaPage.tsx` ~28, `contexto={hoyTexto}`). Decidir si vuelve a Más o si su padre actual es lo correcto, y que el rótulo nombre el destino real. Conviene resolverla con la tarea 270, que toca la Agenda.
-- **Motivo:** regla M-R2 ("volver deshace el último salto").
-- **Impacto:** bajo: al salir, una pantalla que no se había visitado y un toque de más.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/mas/PantallaMas.tsx` (fila Agenda), `src/app/Chasis.tsx` (~395), `src/features/inicio/AgendaPage.tsx` (~28).
-- **Dependencias:** ninguna (conviene con la 270).
-- **Modelo/esfuerzo:** Sonnet 5 / Medio.
 
 ### 285. Áreas táctiles por debajo de 44 px que encontró la validación de la 260
 

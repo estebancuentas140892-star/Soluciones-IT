@@ -2,6 +2,30 @@
 
 ## Encargo del 2026-09-29: consolidar, simplificar, fortalecer y optimizar
 
+### 284. Sin red, la sesión guardada abre la app y "Cerrar sesión" la cierra siempre
+
+**Estado:** Completada (2026-09-29), hallazgo de la validación real (tarea 260). **Prioridad:** Crítica. **Área:** `src/features/autenticacion/AuthProvider.tsx`, `src/lib/supabase.ts`, `src/lib/sesionGuardada.ts` (nuevo), `src/features/seguridad/BloqueoAppGuard.tsx`, `scripts/prueba-sin-conexion.mjs`; decisión en [DECISIONES.md](DECISIONES.md) AD-056.
+
+**Problema, medido en un build real con service worker y la red cortada:**
+
+- Con la sesión guardada pero el token vencido (dura una hora), supabase-js reintenta renovarlo con esperas crecientes unos 25 s y contesta "sin sesión", aunque la sigue guardando. `AuthProvider` le creía: **26 s de "Cargando..." y el inicio de sesión**, en cualquier pantalla.
+- `signOut()` sin red devuelve el error sin borrar nada, y `cerrarSesion` lo ignoraba: "Cerrar sesión" no cerraba.
+- Por eso "Cerrar sesión y quitar el bloqueo" (que además quitaba el bloqueo primero) dejaba la app abierta y sin bloqueo: **en modo avión se entraba sin el código**.
+
+**Solución:**
+
+1. `src/lib/supabase.ts` fija la clave con la que supabase-js guarda la sesión (`CLAVE_SESION`, la misma que usa por defecto) para poder leerla y borrarla. `src/lib/sesionGuardada.ts`, lógica pura: `claveSesionDe`, `leerSesionGuardada` (con la forma que supabase-js da por válida, sin lanzar nunca), `borrarSesionGuardada` y `sesionTrasComprobar`.
+2. `AuthProvider` arranca con la sesión guardada, sin "Cargando", y la comprobación de supabase-js decide después: la suya si la trae; la guardada si solo faltó la red (`isAuthRetryableFetchError`); ninguna si el servidor la rechazó. El aviso inicial "sin sesión" de supabase-js ya no la pisa; un `SIGNED_OUT` de verdad, sí.
+3. `cerrarSesion` la cierra siempre: sin red borra al instante la de este teléfono; con red, si el servidor no contesta en 4 s. Después llama otra vez a `signOut()`, que ya sin nada guardado cierra sin ir al servidor y avisa `SIGNED_OUT`, así `sync.ts` corta el canal de tiempo real.
+4. La salida del bloqueo cierra la sesión y después quita el bloqueo.
+
+**Verificación:**
+
+- 18 pruebas nuevas: la lógica pura, el `AuthProvider` de verdad sobre un supabase-js simulado que se comporta como el real sin red, y la salida del bloqueo montada con el bloqueo configurado. Esta última **falla con el orden anterior** (comprobado).
+- `npm run prueba:sin-conexion`: **OK en los siete pasos** (antes fallaban del 3 al 6). Con la sesión vencida la app abre en **0,5 s**; las siete pantallas principales abren; olvidar el bloqueo sin red termina en el inicio de sesión con la sesión borrada y sigue fuera al recargar; cerrar sesión sin red la borra.
+- El banco de pruebas local (sin Supabase) arranca igual y sin errores de consola.
+- **Hallazgo de método:** con la red cortada por la emulación de Chrome (CDP), Chrome recarga la pantalla "Sin conexión" de un trozo que falló en vez de dejar salir de ella (navegación de tipo `reload` que no pide ningún script). Con el servidor apagado y sin emulación se sale sin problema, así que es de la emulación y no de la app; el guion deja ese paso para el final y lo explica.
+
 ### 260. Fase 8: validación real en teléfono, tableta y escritorio
 
 **Estado:** Completada (2026-09-29), retomada como fase 2 del encargo del 2026-09-29. **Prioridad:** Alta. **Área:** `scripts/capturas-moviles.mjs`, `scripts/prueba-sin-conexion.mjs` (nuevo), `package.json` (`prueba:sin-conexion`), `.gitignore`, `README.md`, y `evidencia/`, que no se versiona.
