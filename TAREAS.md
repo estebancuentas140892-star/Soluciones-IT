@@ -34,8 +34,10 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Descripción:** hoy solo existen `ping-supabase.yml` y `respaldo-supabase.yml`; nada comprueba en GitHub que un commit pasa las pruebas y compila. Crear `.github/workflows/ci.yml` con `npm ci`, `npm test`, `npm run lint` y `npm run build`, en ese orden, sin servicios ni pasos que no hagan falta.
 - **Motivo:** encargo del 2026-09-29, fase 1: ningún cambio se da por sano solo porque compiló en la máquina de quien lo hizo.
 - **Impacto:** alto en confianza; nulo en la app.
-- **Prioridad:** Alta. **Estado:** En progreso (2026-09-29).
-- **Área afectada:** `.github/workflows/ci.yml` (nuevo).
+- **Prioridad:** Alta. **Estado:** En progreso (2026-09-29). **Workflow creado**; se cierra y archiva al ver su primera ejecución en verde por la API de GitHub (regla 21, nueva).
+- **Hecho:** `.github/workflows/ci.yml` en push y pull request a `main` y a mano; Node 24 como Vercel (`nodeVersion: 24.x` del proyecto); `npm ci`, `npm test`, `npm run lint`, `npm run build`; permisos de solo lectura y 15 minutos de tope. Sin secretos: el build no necesita las variables de Supabase y las pruebas no tocan la base real. La suite pasa en local también con `TZ=UTC`, la zona del runner. Documentado en la regla 21 de [REGLAS.md](REGLAS.md), `README.md` y la sección 3 de `ARQUITECTURA.md`.
+- **Opcional, del usuario:** si algún día se trabaja con pull requests, marcar "CI / comprobar" como obligatorio en Settings > Branches (hoy los commits van directo a `main`, así que el workflow avisa pero no puede frenar un push).
+- **Área afectada:** `.github/workflows/ci.yml` (nuevo), [REGLAS.md](REGLAS.md) (regla 21), `README.md`, `ARQUITECTURA.md`.
 - **Dependencias:** ninguna.
 
 ## Historial que sigue en el tablero (no son tareas activas)

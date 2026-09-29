@@ -1,0 +1,48 @@
+# Integración continua: cada cambio que llega a main, y cada pull request
+# hacia main, pasa por las mismas comprobaciones que se exigen antes de cada
+# commit (REGLAS.md, regla 11): dependencias exactas del lockfile, pruebas,
+# lint y build. Así ningún cambio se da por sano solo porque compiló en la
+# máquina de quien lo hizo.
+#
+# No usa secretos ni servicios: el build no necesita las variables de
+# Supabase y las pruebas no tocan la base real. Node 24, el mismo con el que
+# compila Vercel.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Permite ejecutarlo a mano desde la pestaña Actions de GitHub.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v7
+
+      - name: Preparar Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar las dependencias del lockfile
+        run: npm ci
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

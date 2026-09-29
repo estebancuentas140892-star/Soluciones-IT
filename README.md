@@ -36,4 +36,7 @@ VITE_SUPABASE_ANON_KEY=
 - `npm run dev`: servidor de desarrollo
 - `npm run build`: compila TypeScript y genera el build de producción
 - `npm run preview`: sirve el build de producción localmente
+- `npm test`: ejecuta las pruebas (Vitest)
 - `npm run lint`: analiza el código con Oxlint
+
+Cada push y cada pull request a `main` repite `npm ci`, `npm test`, `npm run lint` y `npm run build` en GitHub Actions (`.github/workflows/ci.yml`): un cambio no está listo hasta que ese workflow termina en verde.

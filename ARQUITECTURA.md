@@ -31,6 +31,7 @@ Cuatro pilares: base de conocimiento por categorías, inventario de dispositivos
 | Cifrado de bóveda | WebCrypto (AES-256-GCM + PBKDF2) | Credenciales cifradas en el propio dispositivo |
 | Hosting | Vercel (plan gratuito) | Publicación en https://soluciones-it-psi.vercel.app, desplegado automáticamente desde GitHub. `vercel.json` reescribe todas las rutas a `index.html` (necesario para React Router) |
 | Pruebas | Vitest + fake-indexeddb, y happy-dom (solo desarrollo) | Lógica pura en Node; desde el 2026-09-16, los recorridos de pantalla (buscar, desbloquear, consultar y volver sin salir de una guía) montan las pantallas reales en un DOM simulado, pedido por archivo con `// @vitest-environment happy-dom` (AD-039). Nada de esto entra en el build |
+| Integración continua | GitHub Actions (`.github/workflows/ci.yml`) | Desde el 2026-09-29 (tarea 276): cada push y pull request a `main` corre `npm ci`, `npm test`, `npm run lint` y `npm run build` con Node 24, el mismo de Vercel. Sin secretos ni servicios |
 
 Todo es gratuito para un equipo de 5 personas. Supabase además es código abierto: si algún día su plan gratuito cambia, se puede autoalojar sin reescribir la aplicación.
 

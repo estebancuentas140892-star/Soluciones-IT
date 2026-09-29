@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-29
 
+### Agregado (calidad, tarea 276): integración continua en GitHub Actions
+
+**Área modificada:** `.github/workflows/ci.yml` (nuevo), `REGLAS.md` (regla 21), `README.md` (Scripts), `ARQUITECTURA.md` (sección 3).
+**Tipo:** Agregado.
+**Motivo:** encargo del 2026-09-29, fase 1: las pruebas solo se ejecutaban en la máquina de quien hacía el cambio, y GitHub no tenía ningún workflow que validara la app.
+**Qué cambia:** cada push y cada pull request a `main` (y a mano, desde Actions) ejecuta `npm ci`, `npm test`, `npm run lint` y `npm run build` con Node 24, la versión con la que compila Vercel. Sin secretos ni servicios; permisos de solo lectura. La regla 21 fija que un cambio no está entregado hasta que ese workflow queda en verde para su commit.
+**Impacto esperado:** un commit que rompe las pruebas, el lint o el build se ve en GitHub, sin depender de que alguien lo haya ejecutado. La app no cambia.
+**Cómo se comprobó:** la suite completa pasa en local con la zona horaria de Bogotá y con `TZ=UTC` (la del runner de GitHub), y la primera ejecución del workflow se comprueba por la API de GitHub.
+
 ### Agregado (respaldo, tarea 15): el respaldo de Supabase ya se puede restaurar de verdad
 
 **Área modificada:** `scripts/restauracion-sql.mjs` (nuevo), `src/lib/restauracionRespaldo.test.ts` (nuevo), `supabase/RESPALDO.md`, `ARQUITECTURA.md` (sección 10).
