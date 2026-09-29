@@ -9,8 +9,10 @@ import { usePendientes } from './usePendientes'
 //
 // Desde el 2026-09-20 el resumen de la agenda vuelve a estar en Inicio
 // (encargo de ese día, tarea 1), pero esta pantalla se conserva entera:
-// es a donde lleva "Ver agenda completa" y la fila "Agenda" de Más, y es
-// donde la agenda se lee sin el buscador delante.
+// es a donde lleva "Ver la agenda completa" de Resolver, y es donde la
+// agenda se lee sin el buscador delante. Desde la tarea 265 es su única
+// puerta: Más ya no tiene fila de Agenda, y sin nada con fecha Resolver
+// deja una línea que la abre si guarda algo más.
 //
 // No hay dos implementaciones: los grupos, las filas, los desplegables y
 // el estado "Todo al día por hoy" los dibuja `SeccionesAgenda`, que es el

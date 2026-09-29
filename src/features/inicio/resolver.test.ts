@@ -6,6 +6,7 @@ import type { ItemPendiente } from './pendientes'
 import {
   accesosRapidos,
   asuntosDeAtencion,
+  detallePuertaAgenda,
   dondeVaElRecorrido,
   esGuiaPublicadaEjecutable,
   guiasRecientes,
@@ -117,6 +118,28 @@ describe('asuntosDeAtencion', () => {
   it('un próximo solo también es atención: "próxima a vencer"', () => {
     const agenda: Agenda = { ...AGENDA_VACIA, proximos: [pendiente('p1', 12)] }
     expect(asuntosDeAtencion(agenda).visibles).toEqual([{ item: agenda.proximos[0], estado: 'proximo' }])
+  })
+})
+
+describe('detallePuertaAgenda', () => {
+  // Resolver es la única puerta de la Agenda (tarea 265). Sin nada con
+  // fecha, la línea que la abre dice qué hay, o no se dibuja.
+  it('cuenta lo que no tiene fecha: en curso y por revisar', () => {
+    const agenda: Agenda = {
+      ...AGENDA_VACIA,
+      enCurso: [pendiente('b1', null, 'borrador')],
+      porRevisar: [pendiente('s1', null, 'sugerencia'), pendiente('s2', null, 'sugerencia')],
+    }
+    expect(detallePuertaAgenda(agenda, true)).toBe('1 en curso · 2 por revisar')
+    expect(detallePuertaAgenda({ ...AGENDA_VACIA, porRevisar: agenda.porRevisar }, false)).toBe('2 por revisar')
+  })
+
+  it('sin pendientes, la actividad del equipo basta para abrirla', () => {
+    expect(detallePuertaAgenda(AGENDA_VACIA, true)).toBe('actividad del equipo')
+  })
+
+  it('con la agenda vacía no hay puerta', () => {
+    expect(detallePuertaAgenda(AGENDA_VACIA, false)).toBeNull()
   })
 })
 

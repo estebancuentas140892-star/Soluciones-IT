@@ -103,7 +103,8 @@ describe('Más en cinco grupos', () => {
     }, 'Más pinta sus cinco grupos')
 
     // Sin favoritos, Consulta no tiene fila de favoritos.
-    expect(grupos[0].filas).toEqual(['Centro de consulta', 'Agenda'])
+    // La Agenda salió en la tarea 265: su puerta es Resolver.
+    expect(grupos[0].filas).toEqual(['Centro de consulta'])
     expect(grupos[1].filas).toEqual(['Personas', 'Ubicaciones'])
     expect(grupos[2].filas).toEqual(['Red'])
     // Diagnóstico salió en la tarea 269: su puerta es Guías.
@@ -169,7 +170,7 @@ describe('Mis favoritos, una fila de Consulta solo si hay', () => {
     // Es la última de Consulta, y cuenta uno.
     const consulta = gruposDeMas()[0]
     expect(consulta.titulo).toBe('Consulta')
-    expect(consulta.filas).toEqual(['Centro de consulta', 'Agenda', 'Mis favoritos'])
+    expect(consulta.filas).toEqual(['Centro de consulta', 'Mis favoritos'])
     expect(fila.getAttribute('aria-expanded')).toBe('false')
     expect(fila.textContent).toContain('1')
     // Plegada, el favorito no está en pantalla.
@@ -183,7 +184,7 @@ describe('Mis favoritos, una fila de Consulta solo si hay', () => {
 
   it('sin favoritos no hay fila: un destino vacío no lleva a nada', async () => {
     await montar(RUTAS, '/mas')
-    await esperar(() => filaDeMas('Agenda'), 'aparece la fila Agenda')
+    await esperar(() => filaDeMas('Centro de consulta'), 'Más pinta sus filas')
     expect(filaDeMas('Mis favoritos')).toBeNull()
   })
 })
@@ -212,7 +213,7 @@ describe('Actividad del equipo, al final de la Agenda', () => {
   it('ya no está en Más', async () => {
     await sembrarActividad()
     await montar(RUTAS, '/mas')
-    await esperar(() => filaDeMas('Agenda'), 'aparece la fila Agenda')
+    await esperar(() => filaDeMas('Centro de consulta'), 'Más pinta sus filas')
     expect(textoPantalla()).not.toContain('Actividad del equipo')
   })
 

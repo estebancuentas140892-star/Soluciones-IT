@@ -9,6 +9,7 @@ import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   BookOpen,
   CaretRight,
+  ClockCountdown,
   MagnifyingGlass,
   PencilSimple,
   Play,
@@ -34,11 +35,13 @@ import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSolucione
 import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { articulosSinTerminar } from '../soluciones/sinTerminar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
+import { obtenerActividadReciente } from '../historial/actividadEquipo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
 import { agruparAgenda, type Agenda } from './agenda'
 import {
   accesosRapidos,
   asuntosDeAtencion,
+  detallePuertaAgenda,
   guiasRecientes,
   juntarRecientes,
   recorridosRecientes,
@@ -309,10 +312,12 @@ export function ResolverPage() {
 // ATENCIÓN: lo que tiene fecha y hay que atender, con la misma fila que la
 // agenda completa (`FilaAgenda`, que ya dice el estado con palabra y color
 // y la acción con un verbo). Si no hay nada con fecha, no hay bloque: un
-// "todo al día" aquí sería un adorno que empuja lo demás.
+// "todo al día" aquí sería un adorno que empuja lo demás. Resolver es la
+// única puerta de la Agenda (tarea 265): sin nada con fecha, queda una sola
+// línea que la abre si guarda algo más, y nada si está vacía.
 function BloqueAtencion({ agenda }: { agenda: Agenda }) {
   const { visibles, total } = asuntosDeAtencion(agenda)
-  if (total === 0) return null
+  if (total === 0) return <PuertaAgendaSinFecha agenda={agenda} />
   return (
     <section aria-labelledby="resolver-atencion">
       <div className="mb-1.5 flex items-center gap-2 px-0.5">
@@ -328,13 +333,33 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
       </div>
       <Link
         to="/agenda"
-        state={ORIGEN_RESOLVER}
+        // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe) y
+        // el origen taparía la fecha de hoy de su cabecera (tarea 265).
         className="mt-0.5 inline-flex min-h-11 items-center gap-1.5 px-1.5 text-[13px] font-medium text-noct-accent-300 hover:underline"
       >
         {total > visibles.length ? `Ver la agenda completa (${total})` : 'Ver la agenda completa'}
         <CaretRight size={13} aria-hidden />
       </Link>
     </section>
+  )
+}
+
+// La actividad del equipo solo se consulta aquí, cuando no hay nada con
+// fecha: con Atención a la vista, la agenda ya tiene su puerta.
+function PuertaAgendaSinFecha({ agenda }: { agenda: Agenda }) {
+  const hayActividad = useLiveQuery(async () => (await obtenerActividadReciente(1)).length > 0, [], false)
+  const detalle = detallePuertaAgenda(agenda, hayActividad)
+  if (!detalle) return null
+  return (
+    <Link
+      to="/agenda"
+      className="inline-flex min-h-11 items-center gap-1.5 self-start px-1.5 text-[13px] font-medium text-noct-accent-300 hover:underline"
+    >
+      <ClockCountdown size={14} aria-hidden />
+      Agenda{' '}
+      <span className="font-normal text-noct-neutral-400">· {detalle}</span>
+      <CaretRight size={13} aria-hidden />
+    </Link>
   )
 }
 

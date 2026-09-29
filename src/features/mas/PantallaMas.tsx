@@ -8,7 +8,6 @@ import {
   BookBookmark,
   CaretDown,
   CaretRight,
-  ClockCountdown,
   MapPin,
   Package,
   PlugsConnected,
@@ -20,8 +19,6 @@ import { obtenerFavoritos, type ElementoFavorito } from '../../lib/favoritos'
 import { useAuth } from '../autenticacion/authContext'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { VISUAL_POR_TIPO } from '../busqueda/resultados'
-import { agruparAgenda, resumenUrgente } from '../inicio/agenda'
-import { usePendientes } from '../inicio/usePendientes'
 import { estaActiva } from '../personas/cicloPersona'
 import { ConteoFila, FilaMas as Fila, TituloGrupo } from './FilasMas'
 
@@ -33,8 +30,10 @@ import { ConteoFila, FilaMas as Fila, TituloGrupo } from './FilasMas'
 // CINCO GRUPOS desde la tarea 268 (sección 22 del encargo del
 // 2026-09-23), una puerta por capacidad y ninguna función perdida:
 //
-//   - Consulta: lo que se mira (Centro de consulta, Agenda y, solo si
-//     hay, Mis favoritos).
+//   - Consulta: lo que se mira (Centro de consulta y, solo si hay, Mis
+//     favoritos). La Agenda salió en la tarea 265 (encargo del
+//     2026-09-29): pertenece a Resolver, que la abre desde Atención, y
+//     dos puertas para lo mismo confundían a dónde volver.
 //   - Organización: quién y dónde (Personas, Ubicaciones).
 //   - Infraestructura: Red. Topología dejó de ser fila propia: se abre
 //     desde Red ("Mapa completo, desde cada raíz"), que ya la enlazaba;
@@ -69,10 +68,6 @@ export function PantallaMas() {
   // Mis favoritos solo aparece si hay alguno: una fila vacía sería un
   // destino que no lleva a nada.
   const favoritos = useLiveQuery(() => obtenerFavoritos(), [], [])
-  // Lo urgente de la agenda, como subtítulo de su fila: el mismo dato que
-  // el número de la pestaña Resolver.
-  const { items: pendientes } = usePendientes()
-  const urgentes = resumenUrgente(agruparAgenda(pendientes))
   // Red abre en el nodo donde se dejó, como cuando era pestaña (tarea
   // 257, ver `RAICES_CON_MEMORIA`).
   const { pathname } = useLocation()
@@ -109,12 +104,6 @@ export function PantallaMas() {
                 titulo="Centro de consulta"
                 subtitulo="Herramientas, glosario, atajos y comandos"
                 conteo={referencias ?? null}
-              />
-              <Fila
-                to="/agenda"
-                Icono={ClockCountdown}
-                titulo="Agenda"
-                subtitulo={urgentes || 'Vencimientos, borradores y sugerencias del equipo'}
               />
               {favoritos.length > 0 && <FilaFavoritos favoritos={favoritos} />}
             </div>

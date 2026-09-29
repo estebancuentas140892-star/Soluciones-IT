@@ -11,8 +11,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 1 | Revisar el respaldo automático de Supabase | 15 | Revisada el 2026-09-29: código correcto, **bloqueada por tres secretos de GitHub** (configuración externa); restauración documentada y probada |
 | 1 | CI obligatorio en GitHub | 276 | Hecha el 2026-09-29: primer CI en verde en 51 s (archivada) |
 | 2 | Validación real en teléfono, tableta y escritorio | 260 | Hecha el 2026-09-29 (archivada): 396 capturas, sin conexión real y actualización real; hallazgos en la 284 y la 285 |
-| 3 | La Agenda con una sola puerta (Resolver) | 265 | **En proceso** |
-| 4 | Contexto inteligente del nombre de un equipo | 277 | Pendiente |
+| 3 | La Agenda con una sola puerta (Resolver) | 265 | Hecha el 2026-09-29 (archivada) |
+| 4 | Contexto inteligente del nombre de un equipo | 277 | **En proceso** |
 | 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | Pendiente |
 | 5 | Desbloqueo rápido de la Bóveda: solo si es igual de seguro | 279 | Pendiente |
 | 6 | Protagonismo del Diagnóstico | 280 | Pendiente |
@@ -24,23 +24,21 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **Hallazgos de la fase 2:** la **284** (crítica: sin red y con el token vencido la app no abre, y cerrar sesión sin red no cierra, lo que salta el bloqueo) **se corrigió el 2026-09-29** antes de seguir con la fase 3 (archivada); la **285** (áreas táctiles) queda en "Por hacer" para que el usuario decida su alcance.
 
-**Lo que quedaba del encargo del 2026-09-23 (segunda parte)** pasa a este: la E (tarea 260) es la fase 2; de la F, la 265 entra en la fase 3, y la 261, la 243 y la 264 siguen en "Por hacer"; la G (revisión del backlog histórico) es la fase 8. Lo hecho de aquel encargo (271, 258, 259 y 262) está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Lo que quedaba del encargo del 2026-09-23 (segunda parte)** pasa a este: la E (tarea 260) es la fase 2; de la F, la 265 entró en la fase 3 (hecha), y la 261, la 243 y la 264 siguen en "Por hacer"; la G (revisión del backlog histórico) es la fase 8. Lo hecho de aquel encargo (271, 258, 259 y 262) está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 **Estado de partida (2026-09-29).** `main` en `dfc99b0`, igual que GitHub. `git stash` vacío en las tres copias locales del repositorio: no hay trabajo guardado de las capturas móviles fuera de `main` (lo último de la 260 es `7fc2916`). Hay cambios sin commit que no son de este encargo y no se tocan: en `dev/sit` (del 2026-09-09, sobre un `main` 128 commits atrás: `src/lib/ejecucionGuia.ts` y el avance de la ejecución) y en el worktree `dev/sit-243` (del 2026-09-25, posteriores al último commit: la vista rápida de un dato protegido, tarea 243, que lleva otra sesión). Este encargo trabaja en el worktree `dev/sit-consolidar`.
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-### 265. Más: que la Agenda, abierta desde Más, vuelva a Más
+### 277. Contexto inteligente del nombre de un equipo: el subtítulo solo dice lo nuevo
 
-- **Título:** la Agenda, abierta desde Más, no vuelve a Más (regla M-R2).
-- **Resuelto en la tarea 268 (2026-09-23):** las partes (b) y (c). **Bloqueo y seguridad** es una fila de Ajustes y sube a Ajustes, que es su puerta; **Importar equipos** y **Etiquetas QR** viven en Herramientas de inventario y vuelven a ella (Etiquetas, al equipo si se abrió desde su ficha).
-- **Descripción (queda la parte a):** la **Agenda** sube a Resolver (`padreDe`, decidido en la 254), y pasarle el origen de Más no basta: el chasis pone la etiqueta del origen en la línea de contexto (`src/app/Chasis.tsx` ~395, `contexto = origen?.etiqueta ?? props.contexto`) y la Agenda usa esa línea para la fecha de hoy (`src/features/inicio/AgendaPage.tsx` ~28, `contexto={hoyTexto}`). Decidir si vuelve a Más o si su padre actual es lo correcto, y que el rótulo nombre el destino real. Conviene resolverla con la tarea 270, que toca la Agenda.
-- **Motivo:** regla M-R2 ("volver deshace el último salto").
-- **Impacto:** bajo: al salir, una pantalla que no se había visitado y un toque de más.
-- **Prioridad:** Media. **Estado:** En progreso (2026-09-29, fase 3 del encargo del 2026-09-29: se reescribe al tomarla).
-- **Área afectada:** `src/features/mas/PantallaMas.tsx` (fila Agenda), `src/app/Chasis.tsx` (~395), `src/features/inicio/AgendaPage.tsx` (~28).
-- **Dependencias:** ninguna (conviene con la 270).
-- **Modelo/esfuerzo:** Sonnet 5 / Medio.
+- **Título:** "Impresora Taquilla" no repite debajo "Impresoras · Taquilla"; "HP M404" sí lo necesita.
+- **Descripción:** una utilidad pura y reutilizable que construye el contexto visible de un equipo (categoría, ubicación, marca, modelo) callando lo que el nombre ya dice, aplicada donde hoy aparecen juntos: la lista de Equipos, los resultados del buscador, las listas relacionadas (persona, asignar, favoritos y recientes) y Red cuando corresponda; no donde el contexto de la pantalla ya cambia el significado (la ficha de una ubicación ya no la repite). Tolera mayúsculas, tildes, espacios y el plural simple, y ante la duda muestra. Es presentación: no cambia nombres guardados, ni categorías, ni ubicaciones.
+- **Motivo:** encargo del 2026-09-29, fase 4: el nombre es la información principal y el subtítulo solo aporta lo nuevo. El campo Nombre del formulario pide justamente "Qué es y dónde está", así que muchos nombres ya traen el lugar.
+- **Impacto:** medio, en todas las listas de equipos; en 390 px además acorta los subtítulos que hoy se cortan (validación de la 260).
+- **Prioridad:** Media. **Estado:** En progreso (2026-09-29).
+- **Área afectada:** nuevo `src/lib/contextoEquipo.ts`; `src/features/dispositivos/DispositivosPage.tsx`, `src/features/busqueda/useIndiceBusqueda.ts` y los demás consumidores que se confirmen al tomarla.
+- **Dependencias:** ninguna.
 
 ## Historial que sigue en el tablero (no son tareas activas)
 

@@ -68,6 +68,27 @@ export function asuntosDeAtencion(
 }
 
 /**
+ * LA AGENDA SIN NADA CON FECHA (tarea 265, encargo del 2026-09-29, fase 3).
+ * Resolver es la única puerta de la Agenda: Atención la abre, y Más ya no
+ * tiene fila propia. Pero Atención solo se dibuja con algo que tenga fecha,
+ * y la agenda guarda también lo que no la tiene (los borradores propios,
+ * lo que el equipo dejó por revisar) y la actividad del equipo. Sin este
+ * detalle, en ese caso la agenda se quedaba sin puerta.
+ *
+ * Devuelve lo que dice la línea que la abre ("1 en curso · 2 por revisar",
+ * o "actividad del equipo"), o null si no hay nada que ver: una puerta a
+ * una pantalla vacía no se dibuja.
+ */
+export function detallePuertaAgenda(agenda: Agenda, hayActividad: boolean): string | null {
+  const partes = [
+    agenda.enCurso.length > 0 ? `${agenda.enCurso.length} en curso` : null,
+    agenda.porRevisar.length > 0 ? `${agenda.porRevisar.length} por revisar` : null,
+  ].filter((parte): parte is string => parte !== null)
+  if (partes.length > 0) return partes.join(' · ')
+  return hayActividad ? 'actividad del equipo' : null
+}
+
+/**
  * ¿Es una guía que se puede ejecutar y que el equipo da por buena? Viva,
  * publicada (lo que no trae estado es anterior al campo y era oficial) y
  * con pasos. Es el criterio de los accesos rápidos: una categoría que

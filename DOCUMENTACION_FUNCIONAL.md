@@ -278,7 +278,7 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/boveda/migrar` | MigracionCredenciales | Tarea | Migrar secretos que son de un equipo |
 | `/boveda/:credencialId` | CredencialPage | Documento | Ficha de un secreto (descifrado local) |
 | `/boveda/:credencialId/editar` | CredencialForm | Tarea | Editar secreto |
-| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos, en cinco grupos desde la tarea 268 (2026-09-23), una puerta por capacidad: Consulta (Centro de consulta, Agenda y Mis favoritos si hay), Organización (Personas, Ubicaciones), Infraestructura (Red), Herramientas (Herramientas de inventario; Diagnóstico salió en la tarea 269, con su puerta en Guías) y Aplicación (Ajustes). Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
+| `/mas` | PantallaMas | Sección | "Más", uno de los cuatro destinos, en cinco grupos desde la tarea 268 (2026-09-23), una puerta por capacidad: Consulta (Centro de consulta y Mis favoritos si hay; la Agenda salió en la tarea 265, su puerta es Resolver), Organización (Personas, Ubicaciones), Infraestructura (Red), Herramientas (Herramientas de inventario; Diagnóstico salió en la tarea 269, con su puerta en Guías) y Aplicación (Ajustes). Equipos, la Bóveda y el escáner salieron de aquí el 2026-09-22 (son pestaña o viven en Equipos) |
 | `/inventario` | HerramientasInventarioPage | Documento | **Herramientas de inventario** (tarea 268): Importar equipos, Etiquetas QR y, solo si hay, los datos por ordenar, con cuántos equipos son. Sube a Más |
 | `/inventario/estados` | EstadosPorUnificarPage | Tarea | **Estados escritos a mano** (tarea 268): llevarlos a la lista de cinco, con las equivalencias seguras propuestas y lo demás por validar. Sube a Herramientas de inventario |
 | `/diagnostico` | DiagnosticosPage | Documento | **Guías con preguntas** (se titulaba "Diagnóstico inteligente" hasta la tarea 269): la lista por problema y la administración (crear, editar, sugerencias del equipo, estadísticas). Se abre desde Guías ("Guías con preguntas") y desde la ficha de un equipo, que la recibe de vuelta; sube a Guías e ilumina Resolver (desde la tarea 269; antes, Más) |
@@ -341,7 +341,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 **De arriba abajo, sin texto en el buscador.** Cada bloque aparece **solo si tiene algo que decir**:
 
 1. **La pregunta y el buscador**: "¿Qué necesitas resolver?" (17 px) sobre el campo, con el marcador **"Buscar problema, equipo, comando…"**. La etiqueta accesible sigue siendo "Buscar en Soluciones IT" (regla M-R8). En escritorio (ratón y teclado físico) el campo recibe el foco al llegar; en el teléfono no, para que el teclado no tape lo de debajo.
-2. **Atención**: lo que tiene fecha y hay que atender (vencidos, de hoy y próximos a vencer), en el orden de la agenda y **hasta tres**, con la misma fila que la agenda completa (nombre, "Venció hace 3 días" o "Vence el 4 oct" en su color, el origen y la acción). Debajo, **"Ver la agenda completa"**, con el total entre paréntesis si hay más. **Los borradores propios y las sugerencias del equipo no salen aquí:** no tienen plazo y viven en la agenda completa. Sin nada con fecha, el bloque no existe (tampoco un "todo al día" de adorno).
+2. **Atención**: lo que tiene fecha y hay que atender (vencidos, de hoy y próximos a vencer), en el orden de la agenda y **hasta tres**, con la misma fila que la agenda completa (nombre, "Venció hace 3 días" o "Vence el 4 oct" en su color, el origen y la acción). Debajo, **"Ver la agenda completa"**, con el total entre paréntesis si hay más. **Los borradores propios y las sugerencias del equipo no salen aquí:** no tienen plazo y viven en la agenda completa. Sin nada con fecha, el bloque no existe (tampoco un "todo al día" de adorno). **Resolver es la única puerta de la Agenda** (tarea 265, 2026-09-29): sin nada con fecha, en su lugar queda una sola línea, **"Agenda · 1 en curso · 2 por revisar"** (o **"Agenda · actividad del equipo"** si solo hay eso), que la abre; con la agenda vacía no hay nada. Ninguno de los dos enlaces lleva origen: la Agenda sube a Resolver por su padre declarado y su cabecera dice siempre la fecha de hoy.
 3. **Recientes**: hasta **tres** guías que este técnico usó en los **últimos 14 días** (registro local de este teléfono), la más reciente primero: **con pasos y, desde el 2026-09-22 (tarea 263), también las guías con preguntas** (los diagnósticos), en la misma lista, porque para quien resuelve son lo mismo. La que está a medias dice dónde va, **"Vas en el paso N de M"** o, en una guía con preguntas, **"Vas en la pregunta N"** o **"Haciendo «guía»"** (el procedimiento que ejecuta dentro), y su acción es **"Continuar"**, que la abre ahí; las demás, la categoría (o "Guía con preguntas") y "hace 2 días", con "Abrir". Un borrador que el técnico abrió entra marcado ("Borrador ·"). El título y la línea de detalle ocupan **hasta dos líneas**: a 360 px ya no se cortan. Una guía con preguntas recién abierta y cerrada sin responder nada no cuenta como a medias, y el procedimiento que se hizo DENTRO de un recorrido no aparece como guía empezada.
 4. **Accesos rápidos**: las **categorías** que tienen al menos una guía publicada y ejecutable, **las más usadas** en los últimos 30 días primero y luego en el orden que les dio el equipo, **hasta seis**, como chips de 44 px con el icono en el color de la categoría. Cada chip abre el catálogo filtrado por esa categoría. **Con menos de dos categorías el bloque no se dibuja**: una sola sería lo mismo que "Todas las guías".
 5. **"Todas las guías"**, siempre, con o sin accesos rápidos: es la puerta al catálogo (`/soluciones`) desde que Guías dejó de ser pestaña.
@@ -353,7 +353,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **El número de la pestaña Resolver** cuenta solo lo urgente (vencidos y de hoy), igual que contaba el de Inicio.
 
-**Lo que dejó de estar aquí el 2026-09-22 y dónde está:** la **agenda completa** (fecha, resumen y los cinco grupos) vive en `/agenda`, a un toque desde "Atención" y desde Más; **Favoritos** sigue en Más (la fila "Mis favoritos" de Consulta, solo si hay alguno) y **Actividad del equipo**, desde el 2026-09-23, está al final de la agenda completa, plegada. **No se borró ningún dato.**
+**Lo que dejó de estar aquí el 2026-09-22 y dónde está:** la **agenda completa** (fecha, resumen y los cinco grupos) vive en `/agenda`, a un toque desde "Atención" (y, sin nada con fecha, desde la línea "Agenda"; la fila de Más se retiró en la tarea 265); **Favoritos** sigue en Más (la fila "Mis favoritos" de Consulta, solo si hay alguno) y **Actividad del equipo**, desde el 2026-09-23, está al final de la agenda completa, plegada. **No se borró ningún dato.**
 
 > **Historia.** Hasta el 2026-09-21 esta pantalla era **Inicio**: "¿Qué necesitas solucionar?" con el buscador y, debajo, la agenda operativa completa (tarea 247, 2026-09-20). Entre el 2026-09-17 y el 2026-09-20 la agenda vivió solo en `/agenda` y en Inicio quedaban "Favoritas" y "Recientes". Lo que sigue en esta sección sobre la cabecera, el modo búsqueda, la bienvenida y la agenda **sigue vigente**, con Resolver donde dice Inicio; la agenda en orden es la de `/agenda`.
 
@@ -706,7 +706,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 **Desde el 2026-09-22 (tarea 254) es uno de los cuatro destinos principales, en todos los tamaños**, y deja de listar lo que ya tiene su pestaña o su sitio: **Equipos y la Bóveda** (son pestañas) y **Escanear equipo** (vive en Equipos).
 
 **Cuerpo, en cinco grupos: una puerta por capacidad (desde el 2026-09-23, tarea 268, [DECISIONES.md](DECISIONES.md) AD-049).** En este orden:
-- **"Consulta"**, lo que se mira: **Centro de consulta** ("Herramientas, glosario, atajos y comandos"), **Agenda** (subtítulo "Vencimientos, borradores y sugerencias del equipo", o lo urgente, "1 vencido · 2 para hoy", cuando lo hay) y **Mis favoritos**, **solo si hay alguno**: una fila vacía sería un destino que no lleva a nada.
+- **"Consulta"**, lo que se mira: **Centro de consulta** ("Herramientas, glosario, atajos y comandos") y **Mis favoritos**, **solo si hay alguno**: una fila vacía sería un destino que no lleva a nada. **La fila "Agenda" se retiró el 2026-09-29 (tarea 265):** la Agenda pertenece a Resolver, que la abre desde "Atención", y dos puertas para lo mismo confundían a dónde volver.
 - **"Organización"**, quién y dónde: **Personas** ("Quién tiene cada equipo, ingresos y retiros", con el número de personas activas) y **Ubicaciones** ("Qué hay en cada sede, área y rack").
 - **"Infraestructura"**: **Red** ("Conexiones, impacto y el mapa completo"). **Topología ya no es fila propia:** se abre desde Red ("Mapa completo, desde cada raíz", → `/red/topologia`); su pantalla, sus rutas y sus datos no cambian, y su regreso sube a Red.
 - **"Herramientas"**, lo que se hace de vez en cuando: **Herramientas de inventario** ("Importar, etiquetas QR y datos por ordenar", → `/inventario`, sección 6.7). **Diagnóstico salió de Más en la tarea 269:** las guías con preguntas se encuentran y se ejecutan desde Resolver, y su administración tiene puerta en Guías ("Guías con preguntas", sección 5.2).
@@ -1265,7 +1265,7 @@ Los botones concretos de cada pantalla están detallados en las secciones 5, 6, 
 |------|----------|---------------------|
 | **Barra de navegación** (`Chasis`), escritorio (tarea 183) | Inicio, Guías, Equipos, Red, (Bóveda con permiso); Herramientas: Diagnóstico, Escanear; Registros: Ubicaciones, Personas | Cambia de sección; incluye el perfil (→ Cuenta) al pie |
 | **Barra de navegación** (`Chasis`), móvil (tarea 182) | Inicio, Guías, Equipos, Red, Más | Cambia de sección; siempre las mismas cinco, iguales para todos |
-| **"Más"** (tarea 182; cinco grupos desde la 268) | Consulta: Centro de consulta, Agenda, Mis favoritos (si hay). Organización: Personas, Ubicaciones. Infraestructura: Red. Herramientas: Herramientas de inventario. Aplicación: Ajustes. Diagnóstico salió en la 269 (su puerta es Guías) | Navega a cada pantalla (Mis favoritos se despliega en el sitio); ver sección 5.6 |
+| **"Más"** (tarea 182; cinco grupos desde la 268) | Consulta: Centro de consulta, Mis favoritos (si hay). Organización: Personas, Ubicaciones. Infraestructura: Red. Herramientas: Herramientas de inventario. Aplicación: Ajustes. Diagnóstico salió en la 269 (su puerta es Guías) | Navega a cada pantalla (Mis favoritos se despliega en el sitio); ver sección 5.6 |
 | **"···" de Equipos** (hasta el 2026-09-21) | Ubicaciones, Personas, Etiquetas QR, Importar | Retirado en la tarea 256: las cuatro están en Más |
 | **"···" de la ficha de dispositivo** | Duplicar, Editar, Etiqueta QR, Reemplazar, Dar de baja, Eliminar | Acciones sobre el equipo |
 | **"···" de la ficha de artículo** | Compartir, Duplicar, Reiniciar progreso, Eliminar | Acciones sobre el artículo |
@@ -1593,7 +1593,7 @@ Desde la tarea 181, la pastilla de sincronización, la lupa y el avatar de la cu
 ```
 Resolver (/)
  ├── ¿Qué necesitas resolver? (buscador global: tocar una guía la abre en su paso pendiente)
- ├── Atención (hasta 3 con fecha) → Ver la agenda completa (/agenda)
+ ├── Atención (hasta 3 con fecha) → Ver la agenda completa (/agenda); sin nada con fecha, la línea "Agenda · …" si guarda algo más
  ├── Recientes (hasta 3, 14 días) → la guía, en su paso pendiente
  ├── Accesos rápidos (categorías con guías) → Guías (/soluciones?categoria=…)
  ├── Todas las guías → Guías (/soluciones), con regreso a Resolver
@@ -1609,7 +1609,7 @@ Bóveda (/boveda)
  └── (sin permiso: Acceso restringido; con permiso: desbloqueo y lista)
 
 Más (/mas): una columna; desde 1024 px, dos
- ├── Consulta: Centro de consulta · Agenda (/agenda; al final, Actividad del equipo, plegada) · Mis favoritos (solo si hay; se despliega en el sitio)
+ ├── Consulta: Centro de consulta · Mis favoritos (solo si hay; se despliega en el sitio). La Agenda se abre desde Resolver (tarea 265)
  ├── Organización: Personas · Ubicaciones
  ├── Infraestructura: Red (/red, en el nodo donde se dejó; regreso a Más)
  │    └── al pie: Mapa completo, desde cada raíz → Topología (/red/topologia; regreso a Red)

@@ -18,6 +18,7 @@ import {
   tocar,
   ubicacionActual,
 } from '../../pruebas/montaje'
+import { fechaDeHoy } from './agenda'
 import { AgendaPage } from './AgendaPage'
 import { ResolverPage } from './ResolverPage'
 
@@ -365,6 +366,48 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
     const texto = await esperarTexto('Todas las guías')
     expect(texto).not.toContain('Cambiar el tóner')
     expect(texto).not.toContain('La impresora no imprime')
+    expect(texto).not.toContain('Atención')
+  })
+
+  // La Agenda tiene una sola puerta, Resolver (tarea 265): Más ya no tiene
+  // fila propia. Sin nada con fecha no hay "Atención", pero la agenda
+  // guarda también lo que no tiene fecha, y no puede quedarse sin puerta.
+  it('sin nada con fecha, una sola línea abre la agenda si guarda algo más', async () => {
+    await sembrarBorradorPropio('b1', 'Cambiar el tóner')
+    await sembrarSugerenciaDelEquipo('e1', 'La impresora no imprime')
+    await montar(RUTAS, '/')
+    await esperarTexto('1 en curso · 1 por revisar')
+    const enlace = await esperar(() => control(/^Agenda · 1 en curso · 1 por revisar/), 'la línea de la agenda')
+    expect(enlace.getAttribute('href')).toBe('/agenda')
+    await tocar(enlace)
+    expect(ubicacionActual().pathname).toBe('/agenda')
+    // La cabecera dice el día, no "Resolver": el regreso ya lo nombra.
+    expect(await esperarTexto('Por revisar del equipo')).toContain(fechaDeHoy())
+  })
+
+  it('con solo actividad del equipo, la línea lo dice', async () => {
+    const guia = await sembrarGuia({ id: 'g-editada', titulo: 'Reiniciar el switch de prueba', pasos: [pasoPrueba('p1', 'Apagar', ['Desconectar'])] })
+    await db.historial.put({
+      id: 'hist-1',
+      entidadTipo: 'articulo',
+      entidadId: guia.id,
+      usuario: PERFIL_PRUEBA.id,
+      usuarioNombre: PERFIL_PRUEBA.nombre,
+      fechaHora: new Date().toISOString(),
+      campo: 'titulo',
+      valorAnterior: 'Reiniciar el switch',
+      valorNuevo: guia.titulo,
+      motivo: '',
+    })
+    await montar(RUTAS, '/')
+    await esperarTexto('actividad del equipo')
+    expect(control(/^Agenda · actividad del equipo/)?.getAttribute('href')).toBe('/agenda')
+  })
+
+  it('con la agenda vacía no hay puerta: nada que abrir', async () => {
+    await montar(RUTAS, '/')
+    const texto = await esperarTexto('Todas las guías')
+    expect(texto).not.toContain('Agenda')
     expect(texto).not.toContain('Atención')
   })
 

@@ -2,6 +2,22 @@
 
 ## Encargo del 2026-09-29: consolidar, simplificar, fortalecer y optimizar
 
+### 265. La Agenda con una sola puerta: Resolver
+
+**Estado:** Completada (2026-09-29), fase 3 del encargo del 2026-09-29. **Prioridad:** Media. **Área:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/{ResolverPage.tsx,resolver.ts,AgendaPage.tsx}`, sus pruebas (`masInfraestructura.test.tsx`, `resolver.test.ts`, `resolverYAgenda.test.tsx`), `DOCUMENTACION_FUNCIONAL.md` y `ARQUITECTURA_FUNCIONAL.md` (RN-047).
+
+**De dónde venía:** nació el 2026-09-23 como "que la Agenda, abierta desde Más, vuelva a Más" (regla M-R2). Sus partes (b) y (c) las resolvió la 268; quedaba la (a): la Agenda sube a Resolver (`padreDe`) aunque se abra desde Más, y pasarle el origen no bastaba porque el chasis pone la etiqueta del origen en la línea de contexto, donde la Agenda escribe la fecha de hoy.
+
+**Decisión del encargo del 2026-09-29:** la Agenda pertenece a Resolver. Con eso la parte (a) deja de existir en vez de resolverse: sin puerta en Más no hay nada que devolver a Más. Se retira solo la puerta redundante; la ruta `/agenda`, la pantalla, sus datos, el bloque Atención, el número de la pestaña y la lógica de la agenda no cambian.
+
+**Qué cambió:**
+
+- **Más** ya no tiene la fila "Agenda" (Consulta: Centro de consulta y, solo si hay, Mis favoritos).
+- **Resolver** sigue abriéndola desde "Atención" ("Ver la agenda completa"). Hallazgo al quitar la fila: "Atención" solo se dibuja con algo que tenga fecha, y la agenda guarda también lo que no la tiene (los borradores propios, lo que el equipo dejó por revisar) y la actividad del equipo. Sin nada con fecha, la Agenda se quedaba sin puerta. Ahora, en ese caso, Resolver deja **una sola línea** que la abre: "Agenda · 1 en curso · 2 por revisar", o "Agenda · actividad del equipo" (`detallePuertaAgenda`, lógica pura); con la agenda vacía, nada. La actividad del equipo solo se consulta en ese caso.
+- **Los enlaces a la Agenda no llevan origen:** sube a Resolver por su padre declarado, y el origen tapaba la fecha de hoy de su cabecera con la palabra "Resolver" (el resto de la parte (a)). Ahora dice siempre la fecha.
+
+**Verificación:** 6 pruebas nuevas o cambiadas: las de Más (la fila ya no está), la lógica pura de la línea, y en pantalla la línea que abre la agenda, la de solo actividad, la agenda vacía sin puerta y la fecha en la cabecera al llegar desde Resolver (esta última **falla si vuelve el origen**, comprobado). En el banco local: Más sin la fila y Resolver → "Ver la agenda completa (4)" → cabecera "Martes, 29 de septiembre · Agenda".
+
 ### 284. Sin red, la sesión guardada abre la app y "Cerrar sesión" la cierra siempre
 
 **Estado:** Completada (2026-09-29), hallazgo de la validación real (tarea 260). **Prioridad:** Crítica. **Área:** `src/features/autenticacion/AuthProvider.tsx`, `src/lib/supabase.ts`, `src/lib/sesionGuardada.ts` (nuevo), `src/features/seguridad/BloqueoAppGuard.tsx`, `scripts/prueba-sin-conexion.mjs`; decisión en [DECISIONES.md](DECISIONES.md) AD-056.

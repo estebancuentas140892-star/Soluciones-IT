@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-29
 
+### Cambiado (navegación, tarea 265): la Agenda tiene una sola puerta, Resolver
+
+**Área modificada:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/{ResolverPage.tsx,resolver.ts,AgendaPage.tsx}` y sus pruebas, `DOCUMENTACION_FUNCIONAL.md`, `ARQUITECTURA_FUNCIONAL.md` (RN-047).
+**Tipo:** Cambiado (se retira una puerta; ninguna pantalla ni dato).
+**Motivo:** encargo del 2026-09-29, fase 3: la Agenda se abría desde Resolver y desde Más, dos puertas para lo mismo que ya confundían a dónde volver. Decisión del usuario: pertenece a Resolver.
+**Qué cambia:**
+- Más ya no tiene la fila "Agenda". La ruta `/agenda`, la pantalla, sus datos, el bloque Atención y el número de la pestaña no cambian.
+- Sin nada con fecha no hay "Atención", pero la agenda guarda también los borradores propios, lo que el equipo dejó por revisar y la actividad del equipo: en ese caso Resolver deja una sola línea que la abre ("Agenda · 1 en curso · 2 por revisar" o "Agenda · actividad del equipo"). Con la agenda vacía, nada.
+- Los enlaces a la Agenda ya no llevan origen: sube a Resolver por su padre declarado y su cabecera dice siempre la fecha de hoy (antes, llegando desde Resolver, decía "Resolver").
+**Impacto esperado:** Resolver → Atención → Agenda es el único recorrido, y la agenda nunca se queda sin puerta. La tarea 265 (que pedía que la Agenda abierta desde Más volviera a Más) queda resuelta porque esa puerta ya no existe.
+
 ### Corregido y Seguridad (sesión, tarea 284): sin red la app abre con la sesión guardada, y cerrar sesión la cierra siempre
 
 **Área modificada:** `src/features/autenticacion/AuthProvider.tsx`, `src/lib/supabase.ts` (`CLAVE_SESION`), `src/lib/sesionGuardada.ts` (nuevo), `src/features/seguridad/BloqueoAppGuard.tsx`, sus pruebas (`src/lib/sesionGuardada.test.ts`, `src/features/autenticacion/sesionSinConexion.test.tsx`, `src/features/seguridad/salidaBloqueo.test.tsx`), `scripts/prueba-sin-conexion.mjs`, [DECISIONES.md](DECISIONES.md) AD-056, `ARQUITECTURA.md` (sección 14) y `DOCUMENTACION_FUNCIONAL.md` (Ajustes y pantalla de bloqueo).
