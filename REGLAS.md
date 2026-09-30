@@ -47,6 +47,12 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 
 12. La aplicación es de tema oscuro únicamente (decisión del usuario, 2026-07-17). No se ofrece modo claro ni conmutador de tema. El sistema de diseño vigente es Nocturne (oscuro, fondo `#161826`); las pantallas que aún queden en el tema claro heredado (Dispositivos, Red, Topología) se migran a Nocturne oscuro, no se conservan en claro. Si un handoff de diseño llega en tema claro, se traduce a Nocturne oscuro antes de implementarlo (mismo criterio que ya se aplicó con Soluciones).
 
+22. **No mostrar un dato solo porque está disponible** (regla acordada con el usuario el 2026-09-29, tarea 277). Si el título, nombre o contexto inmediato ya comunica claramente esa información, no repetirla. El contenido secundario existe para aportar contexto nuevo. Ante la duda, se conserva.
+    - Es presentación: no se renombra, no se migra ni se borra ningún dato, y la búsqueda sigue encontrando por todo lo que ya indexaba.
+    - Donde hay que elegir entre varios (asignar un equipo, conectar dos), callar nunca vuelve iguales dos filas que no lo son.
+    - Una línea que queda vacía no se dibuja: la fila se compacta.
+    - Primera aplicación: el subtítulo de los equipos, con `src/lib/contextoEquipo.ts`; el criterio técnico está en [DECISIONES.md](DECISIONES.md) AD-057.
+
 ## Navegación
 
 13. Comportamiento unificado de "Cancelar" y "Volver" (regla registrada al corregir la tarea 75 y consolidada en la tarea 76, 2026-07-18):

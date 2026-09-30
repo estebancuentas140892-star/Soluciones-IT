@@ -1,12 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { db, type Dispositivo } from '../../lib/db'
+import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { idsDeRed, esDeRed } from '../../lib/categorias'
 import { conOrigen } from '../../lib/origenNavegacion'
-import { lineaDeContexto } from '../../lib/contextoEquipo'
-import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
+import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { Monitor, Plus, QrCode } from '../../components/iconos'
@@ -84,23 +83,29 @@ export function DispositivosPage() {
     () => new Map((categorias ?? []).map((c) => [c.id, c.nombre])),
     [categorias],
   )
-  const nombreUbicacion = useMemo(() => mapaDeTextos(ubicaciones, (u) => u.nombre), [ubicaciones])
-  // Bajo el nombre, solo lo que el nombre no dice ya (tarea 277):
-  // "Impresora Taquilla" no repite "Impresoras · Taquilla". La ubicación,
-  // viva si está vinculada (la copia de texto puede haber quedado vieja).
-  const subtituloDe = useCallback(
-    (d: Dispositivo) =>
-      lineaDeContexto(d.nombre, [
-        nombreCategoria.get(d.categoriaId),
-        nombreVivo(nombreUbicacion, d.ubicacionId ?? '', d.ubicacion),
-      ]),
-    [nombreCategoria, nombreUbicacion],
-  )
+  const ubicacionPorId = useMemo(() => new Map(ubicaciones.map((u) => [u.id, u])), [ubicaciones])
 
   const { generales, deRed } = useMemo(
     () => buscarEquipos(dispositivos ?? [], idsRed, { texto, categoriaId }),
     [dispositivos, idsRed, texto, categoriaId],
   )
+  // Bajo el nombre, solo lo que el nombre no dice ya (tarea 277):
+  // "Impresora Taquilla" no repite "Impresoras · Taquilla". La ubicación,
+  // la de su ficha si está vinculada. Se calcula por lista: si callar
+  // dejara iguales dos equipos distintos, esos dos lo dicen todo.
+  const subtitulos = useMemo(() => {
+    const lineas = new Map<string, string>()
+    for (const lista of [generales, deRed]) {
+      const textos = lineasDeContexto(
+        lista.map((d) => ({
+          nombre: d.nombre,
+          partes: [nombreCategoria.get(d.categoriaId), ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? ''))],
+        })),
+      )
+      lista.forEach((d, i) => lineas.set(d.id, textos[i]))
+    }
+    return lineas
+  }, [generales, deRed, nombreCategoria, ubicacionPorId])
   // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022): sobre lo
   // que deja la búsqueda, sin aplicar el propio eje de categoría.
   const conteos = useMemo(
@@ -218,7 +223,7 @@ export function DispositivosPage() {
                     key={d.id}
                     dispositivo={d}
                     categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
-                    subtitulo={subtituloDe(d)}
+                    subtitulo={subtitulos.get(d.id) ?? ''}
                     conFoto
                     estado={hayFiltrosActivos ? estadoDeSalto : undefined}
                     alAbrir={alAbrir}
@@ -238,7 +243,7 @@ export function DispositivosPage() {
                       key={d.id}
                       dispositivo={d}
                       categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
-                      subtitulo={subtituloDe(d)}
+                      subtitulo={subtitulos.get(d.id) ?? ''}
                       estado={estadoDeSalto}
                       alAbrir={alAbrir}
                     />

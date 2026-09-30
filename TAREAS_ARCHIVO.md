@@ -2,6 +2,25 @@
 
 ## Encargo del 2026-09-29: consolidar, simplificar, fortalecer y optimizar
 
+### 277. Contexto inteligente del nombre de un equipo: el subtítulo solo dice lo nuevo
+
+**Estado:** Completada (2026-09-29), fase 4 del encargo del 2026-09-29, en dos commits: `1974340` (la utilidad y la lista de Equipos) y el de cierre (el resto de la app). **Prioridad:** Media. **Área:** `src/lib/contextoEquipo.ts`, `src/components/FilaDispositivo.tsx`, `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/red/{EquiposRedPage,FormularioConexion}.tsx`, `src/features/personas/{PersonaPage,AsignarEquipoPage}.tsx`, `src/features/busqueda/useIndiceBusqueda.ts`, `src/lib/{favoritos,recientes}.ts` y sus pruebas.
+
+**Motivo:** el nombre es la información principal y el subtítulo solo aporta lo nuevo. El campo Nombre pide "Qué es y dónde está", así que muchos nombres ya traían el tipo y el lugar, y las listas los repetían debajo: "Impresora Taquilla" sobre "Impresoras · Taquilla".
+
+**Qué cambió:**
+
+- **Una sola regla, prudente** (`contextoEquipo.ts`): una parte se calla solo si todas sus palabras significativas están en el nombre como palabras enteras, sin distinguir mayúsculas ni tildes y con el plural simple. Los números, las letras sueltas y las IP nunca se callan; "Red" no se calla por "Redondo". Ante la duda, se muestra.
+- **Donde se elige, nada queda ambiguo** (`lineasDeContexto`): si callar deja iguales dos filas que no lo son (mismo nombre, lugares "Taquilla" y "Taquilla Norte"), esas dos dicen todo su contexto.
+- **La ubicación vinculada es la fuente viva** (`ubicacionDeEquipo`): el nombre de la ficha de Ubicación; el texto heredado, solo para los que no están vinculados. Sustituye las dos copias de esa lógica (ficha del equipo y `lugarDe` de la persona).
+- **Pantallas:** lista de Equipos, ficha del equipo (solo la línea bajo el nombre: `metaLinea` no cambia), Equipos de red, equipos de una persona, Asignar equipo, candidatos de la alta de conexión, buscador, Mis favoritos y recientes. Sin nada que añadir, la fila no reserva la línea.
+- **Buscador:** cambia solo el subtítulo que se ve. El texto indexado conserva todo y suma el nombre vivo de la ubicación.
+- **Documentación:** regla 22 de `REGLAS.md` (la fuente canónica), AD-057, `DOCUMENTACION_FUNCIONAL.md`, `BUSCADOR.md`, `COMPONENTES_UI.md` y `CHANGELOG.md`.
+
+**Dónde no se aplica, a propósito:** la cabecera de la ficha ("Equipos · lugar"), la fila de ubicación y "Más datos del equipo" (son los datos mismos), la ficha de una ubicación (ya no repetía el lugar), la topología y la variante de topología de la alta de conexión (solo la IP).
+
+**Verificación:** 20 pruebas de la regla (las 13 de la primera parte y 7 nuevas: la IP y los códigos, la ambigüedad y la ubicación viva), 7 de pantalla montando las cinco pantallas (`contextoEquipoPantallas.test.tsx`), 1 del buscador ("se ve menos, se encuentra igual": por lugar, serial, placa, IP, responsable y el nombre viejo del lugar) y las de favoritos y recientes. Tres mutaciones comprobadas: sin `ubicacionDeEquipo`, sin la protección de ambigüedad y con la línea vacía dibujada, las pruebas fallan.
+
 ### 265. La Agenda con una sola puerta: Resolver
 
 **Estado:** Completada (2026-09-29), fase 3 del encargo del 2026-09-29. **Prioridad:** Media. **Área:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/{ResolverPage.tsx,resolver.ts,AgendaPage.tsx}`, sus pruebas (`masInfraestructura.test.tsx`, `resolver.test.ts`, `resolverYAgenda.test.tsx`), `DOCUMENTACION_FUNCIONAL.md` y `ARQUITECTURA_FUNCIONAL.md` (RN-047).

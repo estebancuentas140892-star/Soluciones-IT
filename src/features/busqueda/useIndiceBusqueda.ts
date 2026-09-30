@@ -21,6 +21,7 @@ import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { sinonimosDe } from './sinonimos'
 import { cadenaNombres, mapaPorId } from '../ubicaciones/arbol'
+import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { esTipoConocido, INFO_TIPO, textoBuscable, tituloConAbreviatura } from '../referencia/referencias'
 
 export type TipoResultado =
@@ -304,12 +305,21 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
     })
   }
 
-  for (const dispositivo of dispositivos) {
+  // Un equipo lleva debajo solo lo que su nombre no dice ya (tarea 277),
+  // con el lugar de su ficha de Ubicación si está vinculada: es lo que se
+  // VE. Lo que se busca no pierde nada: lo que se calla está en el título
+  // (por eso se calla), y el texto indexado sigue llevando todos los datos,
+  // también el texto de ubicación heredado junto al nombre vivo.
+  const lugarDeEquipo = dispositivos.map((d) => ubicacionDeEquipo(d, porIdUbicacion.get(d.ubicacionId ?? '')))
+  const subtitulosDeEquipo = lineasDeContexto(
+    dispositivos.map((d, i) => ({ nombre: d.nombre, partes: [d.marca, d.modelo, lugarDeEquipo[i]] })),
+  )
+  for (const [indice, dispositivo] of dispositivos.entries()) {
     documentos.push({
       id: `dispositivo:${dispositivo.id}`,
       tipo: 'dispositivo',
       titulo: dispositivo.nombre,
-      subtitulo: [dispositivo.marca, dispositivo.modelo, dispositivo.ubicacion].filter(Boolean).join(' · '),
+      subtitulo: subtitulosDeEquipo[indice],
       ruta: `/dispositivos/${dispositivo.id}`,
       texto: [
         dispositivo.nombre,
@@ -317,7 +327,7 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
         dispositivo.modelo,
         dispositivo.serial,
         dispositivo.placaInventario,
-        dispositivo.ubicacion,
+        ...new Set([dispositivo.ubicacion, lugarDeEquipo[indice]]),
         dispositivo.responsable,
         dispositivo.ip,
         dispositivo.estado,

@@ -9,6 +9,7 @@ import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { MapPin, Plus, TreeStructure } from '../../components/iconos'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
+import { lineasDeContexto } from '../../lib/contextoEquipo'
 import { agruparPorUbicacion } from './grupoUbicacion'
 
 // Todos los equipos de red, agrupados por ubicación.
@@ -70,6 +71,22 @@ export function EquiposRedPage() {
     () => agruparPorUbicacion(filtrados, nombreUbicacion),
     [filtrados, nombreUbicacion],
   )
+  // Bajo el nombre, la categoría y la marca y el modelo, pero solo lo que
+  // el nombre no dice ya (tarea 277): "Switch Rack 1" no repite
+  // "Switches". La ubicación no va: es el título del grupo.
+  const subtitulos = useMemo(() => {
+    const lineas = new Map<string, string>()
+    for (const grupo of grupos) {
+      const textos = lineasDeContexto(
+        grupo.equipos.map((d) => ({
+          nombre: d.nombre,
+          partes: [nombreCategoria.get(d.categoriaId), [d.marca, d.modelo].filter(Boolean).join(' ')],
+        })),
+      )
+      grupo.equipos.forEach((d, i) => lineas.set(d.id, textos[i]))
+    }
+    return lineas
+  }, [grupos, nombreCategoria])
 
   const buscando = texto.trim().length > 0
   const hayResultados = filtrados.length > 0
@@ -114,19 +131,14 @@ export function EquiposRedPage() {
                   <span className="text-[11px] text-noct-neutral-500">{grupo.cuenta}</span>
                 </div>
                 <div className="flex flex-col">
-                  {grupo.equipos.map((d) => {
-                    const marcaModelo = [d.marca, d.modelo].filter(Boolean).join(' ')
-                    return (
-                      <FilaDispositivo
-                        key={d.id}
-                        dispositivo={d}
-                        categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
-                        subtitulo={[nombreCategoria.get(d.categoriaId), marcaModelo]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      />
-                    )
-                  })}
+                  {grupo.equipos.map((d) => (
+                    <FilaDispositivo
+                      key={d.id}
+                      dispositivo={d}
+                      categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
+                      subtitulo={subtitulos.get(d.id) ?? ''}
+                    />
+                  ))}
                 </div>
               </section>
             ))

@@ -25,7 +25,9 @@ export function FilaDispositivo({
   categoriaNombre: string
   // Linea de contexto bajo el nombre, ya armada por la pantalla:
   // Dispositivos muestra categoria y ubicacion; Red, categoria y
-  // marca/modelo (ahi la ubicacion ya es el titulo del grupo).
+  // marca/modelo (ahi la ubicacion ya es el titulo del grupo). Solo con
+  // lo que el nombre no dice (tarea 277, `lineasDeContexto`): puede
+  // quedar vacia, y entonces la fila no reserva la linea.
   subtitulo: string
   // Solo Dispositivos muestra la fotografia del equipo. En Red el
   // avatar es siempre el icono del tipo de nodo, que es lo que
@@ -63,7 +65,7 @@ export function FilaDispositivo({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium leading-[1.3]">{dispositivo.nombre}</p>
-        <p className="truncate text-[12px] text-noct-neutral-500">{subtitulo}</p>
+        {subtitulo && <p className="truncate text-[12px] text-noct-neutral-500">{subtitulo}</p>}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-[3px]">
         {/* Una sola forma para el estado (tarea 207, hallazgo M-017,

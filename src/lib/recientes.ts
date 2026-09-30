@@ -1,5 +1,6 @@
 import { db, type Reciente } from './db'
 import { ROTULO_RECORRIDO } from './diagnostico'
+import { lineaDeContexto, ubicacionDeEquipo } from './contextoEquipo'
 // Unica dependencia de esta capa hacia una funcionalidad: el nombre de
 // cada clase de ficha del Centro de consulta ("Herramienta", "Comando").
 // Se importa en vez de copiarlo para que un resultado reciente y el
@@ -99,10 +100,14 @@ async function resolverVisita(visita: Reciente): Promise<ElementoReciente | null
 
   const dispositivo = await db.dispositivos.get(visita.entidadId)
   if (!dispositivo || dispositivo.eliminadoEn) return null
+  const ubicacion = dispositivo.ubicacionId ? await db.ubicaciones.get(dispositivo.ubicacionId) : undefined
   return {
     ...base,
     titulo: dispositivo.nombre,
-    subtitulo: [dispositivo.marca, dispositivo.ubicacion].filter(Boolean).join(' · ') || 'Dispositivo',
+    // Solo lo que el nombre no dice ya (tarea 277), con el lugar de su
+    // ficha de Ubicación si está vinculada. Sin relleno: el icono ya dice
+    // que es un equipo.
+    subtitulo: lineaDeContexto(dispositivo.nombre, [dispositivo.marca, ubicacionDeEquipo(dispositivo, ubicacion)]),
     ruta: `/dispositivos/${dispositivo.id}`,
   }
 }

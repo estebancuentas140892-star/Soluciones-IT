@@ -1,5 +1,6 @@
 import { db, type Favorito } from './db'
 import { ROTULO_RECORRIDO } from './diagnostico'
+import { lineaDeContexto, ubicacionDeEquipo } from './contextoEquipo'
 
 // Favoritos del tecnico (fase J1 de la jornada): fichas fijadas a mano
 // que Inicio muestra siempre, a diferencia de "Recientes" que se
@@ -57,11 +58,15 @@ export async function obtenerFavoritos(): Promise<ElementoFavorito[]> {
     } else if (marca.tipo === 'dispositivo') {
       const dispositivo = await db.dispositivos.get(marca.entidadId)
       if (!dispositivo || dispositivo.eliminadoEn) continue
+      const ubicacion = dispositivo.ubicacionId ? await db.ubicaciones.get(dispositivo.ubicacionId) : undefined
       elementos.push({
         clave: marca.clave,
         tipo: marca.tipo,
         titulo: dispositivo.nombre,
-        subtitulo: [dispositivo.marca, dispositivo.ubicacion].filter(Boolean).join(' · ') || 'Dispositivo',
+        // Solo lo que el nombre no dice ya (tarea 277), con el lugar de su
+        // ficha de Ubicación si está vinculada. Sin relleno: el icono ya
+        // dice que es un equipo.
+        subtitulo: lineaDeContexto(dispositivo.nombre, [dispositivo.marca, ubicacionDeEquipo(dispositivo, ubicacion)]),
         ruta: `/dispositivos/${dispositivo.id}`,
       })
     } else {

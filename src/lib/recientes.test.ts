@@ -83,7 +83,8 @@ describe('recientes', () => {
     expect(recientes).toHaveLength(2)
     expect(recientes[0]).toMatchObject({
       titulo: 'Cámara bodega',
-      subtitulo: 'Hikvision · Bodega',
+      // "Bodega" ya lo dice el nombre (tarea 277): solo queda la marca.
+      subtitulo: 'Hikvision',
       ruta: `/dispositivos/${dispositivoId}`,
     })
     expect(recientes[1]).toMatchObject({

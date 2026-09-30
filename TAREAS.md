@@ -12,8 +12,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 1 | CI obligatorio en GitHub | 276 | Hecha el 2026-09-29: primer CI en verde en 51 s (archivada) |
 | 2 | Validación real en teléfono, tableta y escritorio | 260 | Hecha el 2026-09-29 (archivada): 396 capturas, sin conexión real y actualización real; hallazgos en la 284 y la 285 |
 | 3 | La Agenda con una sola puerta (Resolver) | 265 | Hecha el 2026-09-29 (archivada) |
-| 4 | Contexto inteligente del nombre de un equipo | 277 | **En proceso** |
-| 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | Pendiente |
+| 4 | Contexto inteligente del nombre de un equipo | 277 | Hecha el 2026-09-29 (archivada) |
+| 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | **Siguiente**, sin empezar: antes el usuario revisa la 277 |
 | 5 | Desbloqueo rápido de la Bóveda: solo si es igual de seguro | 279 | Pendiente |
 | 6 | Protagonismo del Diagnóstico | 280 | Pendiente |
 | 7 | Estados de equipo sin completarlos a la fuerza | 281 | Pendiente |
@@ -30,15 +30,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-### 277. Contexto inteligente del nombre de un equipo: el subtítulo solo dice lo nuevo
-
-- **Título:** "Impresora Taquilla" no repite debajo "Impresoras · Taquilla"; "HP M404" sí lo necesita.
-- **Descripción:** una utilidad pura y reutilizable que construye el contexto visible de un equipo (categoría, ubicación, marca, modelo) callando lo que el nombre ya dice, aplicada donde hoy aparecen juntos: la lista de Equipos, los resultados del buscador, las listas relacionadas (persona, asignar, favoritos y recientes) y Red cuando corresponda; no donde el contexto de la pantalla ya cambia el significado (la ficha de una ubicación ya no la repite). Tolera mayúsculas, tildes, espacios y el plural simple, y ante la duda muestra. Es presentación: no cambia nombres guardados, ni categorías, ni ubicaciones.
-- **Motivo:** encargo del 2026-09-29, fase 4: el nombre es la información principal y el subtítulo solo aporta lo nuevo. El campo Nombre del formulario pide justamente "Qué es y dónde está", así que muchos nombres ya traen el lugar.
-- **Impacto:** medio, en todas las listas de equipos; en 390 px además acorta los subtítulos que hoy se cortan (validación de la 260).
-- **Prioridad:** Media. **Estado:** En progreso (2026-09-29). **Avance:** hecha la utilidad pura `src/lib/contextoEquipo.ts` (`nombreYaLoDice`, `contextoVisible`, `lineaDeContexto`) con 13 pruebas (`src/lib/contextoEquipo.test.ts`, los cuatro ejemplos del encargo incluidos), y aplicada en la lista de Equipos (`DispositivosPage.tsx`), que además muestra la ubicación viva si está vinculada. **Falta aplicarla en:** resultados del buscador (`src/features/busqueda/useIndiceBusqueda.ts` ~312), equipos de una persona (`PersonaPage.tsx` ~220, `lugarDe`), asignar equipo (`AsignarEquipoPage.tsx` ~133), favoritos y recientes (`src/lib/favoritos.ts` ~64, `src/lib/recientes.ts` ~105), equipos de red (`EquiposRedPage.tsx` ~124), candidatos de conexión (`FormularioConexion.tsx` ~347) y la línea bajo el nombre en la ficha (`DispositivoPage.tsx` ~298, sin tocar `metaLinea`); después, la regla "no mostrar un dato solo porque está disponible" en REGLAS.md, la documentación y el CHANGELOG.
-- **Área afectada:** nuevo `src/lib/contextoEquipo.ts`; `src/features/dispositivos/DispositivosPage.tsx`, `src/features/busqueda/useIndiceBusqueda.ts` y los demás consumidores que se confirmen al tomarla.
-- **Dependencias:** ninguna.
+**Ninguna tarea en proceso** (2026-09-29): la 277 terminó y el usuario la revisa antes de abrir la fase 5. La siguiente es la **278**, registrada en "Por hacer".
 
 ## Historial que sigue en el tablero (no son tareas activas)
 
@@ -433,6 +425,17 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 278. Desbloqueo rápido de la app con el autenticador del dispositivo
+
+- **Título:** abrir Soluciones IT con la huella, el rostro o Windows Hello, y el patrón como alternativa rápida.
+- **Descripción:** el bloqueo local ya tiene patrón y contraseña (`src/features/seguridad/`), que no se recrean. Se suma el autenticador de plataforma por WebAuthn, solo donde el navegador y el dispositivo lo soportan, con este orden: autenticador del dispositivo, patrón, contraseña. Sin soporte, la opción no se muestra y queda patrón o contraseña. Con él configurado, abrir la app es tocar el sensor y entrar.
+- **Límites de seguridad:** el bloqueo es una capa local adicional y no reemplaza la autenticación de Supabase, los permisos ni la seguridad de la Bóveda. Nada de simular la biometría ni de un botón "huella" que se salte el bloqueo; ningún secreto en texto plano, ninguna contraseña reutilizable en `localStorage`, y que no se pueda desbloquear cambiando un booleano local. La salida sigue siendo cerrar sesión y volver a autenticarse.
+- **Motivo:** encargo del 2026-09-29, fase 5: desbloquear la app tiene que ser mucho más rápido en el día a día.
+- **Impacto:** alto: se abre la app muchas veces al día.
+- **Prioridad:** Alta (fase 5). **Estado:** Pendiente, **la siguiente**; no se empieza hasta que el usuario revise la 277.
+- **Área afectada:** `src/features/seguridad/{bloqueoApp.ts,useBloqueoApp.ts,BloqueoAppGuard.tsx,SeguridadPage.tsx,PatronInput.tsx}` y lo que haga falta en `src/lib/db.ts`. Primer paso: revisar la implementación actual.
+- **Dependencias:** ninguna. La 285 espera esta tarea para "Patrón" y "Contraseña" en Seguridad; la 279 (Bóveda) va después y aparte, porque la contraseña maestra no puede cambiarse por una huella.
 
 ### 285. Áreas táctiles por debajo de 44 px que encontró la validación de la 260
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contextoVisible, lineaDeContexto, nombreYaLoDice } from './contextoEquipo'
+import { contextoVisible, lineaDeContexto, lineasDeContexto, nombreYaLoDice, ubicacionDeEquipo } from './contextoEquipo'
 
 describe('los ejemplos del encargo del 2026-09-29', () => {
   it('"Impresora Taquilla" no repite "Impresoras · Taquilla"', () => {
@@ -16,6 +16,10 @@ describe('los ejemplos del encargo del 2026-09-29', () => {
 
   it('"Cámara Restaurante" no repite lo que ya dice', () => {
     expect(lineaDeContexto('Cámara Restaurante', ['Cámaras', 'Restaurante'])).toBe('')
+  })
+
+  it('"Impresora HP" dice la categoría pero no el lugar: queda la ubicación', () => {
+    expect(lineaDeContexto('Impresora HP', ['Impresoras', 'Taquilla'])).toBe('Taquilla')
   })
 })
 
@@ -70,5 +74,52 @@ describe('contextoVisible', () => {
   it('sirve para cualquier parte, no solo categoría y ubicación', () => {
     expect(lineaDeContexto('HP M404 Taquilla', ['HP', 'M404', 'Taquilla'])).toBe('')
     expect(lineaDeContexto('Impresora de caja', ['HP', 'M404'])).toBe('HP · M404')
+  })
+
+  it('una IP o un código nunca se callan, aunque sus números estén en el nombre', () => {
+    expect(lineaDeContexto('Switch 192 168', ['192.168.1.20'])).toBe('192.168.1.20')
+    expect(lineaDeContexto('Caja 2 Taquilla', ['Placa 2'])).toBe('Placa 2')
+  })
+})
+
+describe('lineasDeContexto: en una lista, callar nunca vuelve iguales dos equipos distintos', () => {
+  it('fila por fila, lo mismo que lineaDeContexto', () => {
+    expect(
+      lineasDeContexto([
+        { nombre: 'Impresora Taquilla', partes: ['Impresoras', 'Taquilla'] },
+        { nombre: 'HP M404', partes: ['Impresoras', 'Taquilla'] },
+      ]),
+    ).toEqual(['', 'Impresoras · Taquilla'])
+  })
+
+  it('dos con el mismo nombre en lugares que el nombre ya dice: se muestran los lugares', () => {
+    const filas = [
+      { nombre: 'Switch Taquilla Norte', partes: ['Taquilla'] },
+      { nombre: 'Switch Taquilla Norte', partes: ['Taquilla Norte'] },
+    ]
+    expect(filas.map((f) => lineaDeContexto(f.nombre, f.partes))).toEqual(['', ''])
+    expect(lineasDeContexto(filas)).toEqual(['Taquilla', 'Taquilla Norte'])
+  })
+
+  it('dos iguales de verdad (mismo nombre y mismo contexto) se quedan cortos: mostrar no los distinguiría', () => {
+    const fila = { nombre: 'Impresora Taquilla', partes: ['Impresoras', 'Taquilla'] }
+    expect(lineasDeContexto([fila, fila])).toEqual(['', ''])
+  })
+})
+
+describe('ubicacionDeEquipo: la ubicación vinculada manda', () => {
+  it('vinculada y viva: su nombre de hoy, aunque el texto del equipo sea viejo', () => {
+    expect(ubicacionDeEquipo({ ubicacion: 'taquilla' }, { nombre: 'Taquilla Principal', eliminadoEn: null })).toBe(
+      'Taquilla Principal',
+    )
+  })
+
+  it('sin vínculo, eliminada o aún sin sincronizar: el texto heredado', () => {
+    expect(ubicacionDeEquipo({ ubicacion: 'Bodega' }, null)).toBe('Bodega')
+    expect(ubicacionDeEquipo({ ubicacion: 'Bodega' }, undefined)).toBe('Bodega')
+    expect(ubicacionDeEquipo({ ubicacion: 'Bodega' }, { nombre: 'Bodega 2', eliminadoEn: '2026-09-01T00:00:00Z' })).toBe(
+      'Bodega',
+    )
+    expect(ubicacionDeEquipo({ ubicacion: '' }, null)).toBe('')
   })
 })

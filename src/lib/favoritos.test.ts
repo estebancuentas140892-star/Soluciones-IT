@@ -107,7 +107,8 @@ describe('favoritos', () => {
     expect(favoritos[1]).toMatchObject({
       tipo: 'dispositivo',
       titulo: 'Cámara bodega',
-      subtitulo: 'Hikvision · Bodega',
+      // "Bodega" ya lo dice el nombre (tarea 277): solo queda la marca.
+      subtitulo: 'Hikvision',
       ruta: `/dispositivos/${dispositivoId}`,
     })
     expect(favoritos[2]).toMatchObject({

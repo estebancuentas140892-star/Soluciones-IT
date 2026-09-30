@@ -27,6 +27,7 @@ import { anotarBusqueda, conOrigen } from '../../lib/origenNavegacion'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { Historial } from '../historial/Historial'
 import { equiposActuales, estaActiva, estadoDePersona, fechaLegible } from './cicloPersona'
+import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { BUSQUEDA_GUIA_CONFIGURACION, guiaDeConfiguracion } from './guiaDeConfiguracion'
 import { HojaLiberarEquipo } from './HojaLiberarEquipo'
 import {
@@ -107,10 +108,25 @@ export function PersonaPage() {
   const origenEstaFicha = conOrigen(`/personas/${personaId}`, persona.nombre)
   const equipoRecienAsignado = recienAsignado ? actuales.find((d) => d.id === recienAsignado) : undefined
 
-  function lugarDe(d: Dispositivo): string {
-    const vivo = d.ubicacionId ? ubicacionPorId.get(d.ubicacionId) : undefined
-    return vivo && !vivo.eliminadoEn ? vivo.nombre : d.ubicacion
-  }
+  // Bajo cada equipo actual, la placa, el lugar (el de su ficha de
+  // Ubicación si está vinculada) y desde cuándo lo tiene, pero solo lo que
+  // el nombre del equipo no dice ya (tarea 277): "PC Tesorería" en
+  // Tesorería no repite el lugar. La persona ya la dice la pantalla.
+  const detallePorEquipo = new Map(
+    lineasDeContexto(
+      actuales.map((d) => {
+        const desde = asignadoDesde(personaId, d.id, periodos)
+        return {
+          nombre: d.nombre,
+          partes: [
+            d.placaInventario && `Placa ${d.placaInventario}`,
+            ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? '')),
+            desde && `Desde el ${fechaLegible(desde)}`,
+          ],
+        }
+      }),
+    ).map((linea, i): [string, string] => [actuales[i].id, linea]),
+  )
 
   async function eliminar() {
     await eliminarRegistro('personas', personaId)
@@ -215,14 +231,7 @@ export function PersonaPage() {
           ) : (
             <div className="flex flex-col divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
               {actuales.map((d) => {
-                const desde = asignadoDesde(personaId, d.id, periodos)
-                const detalle = [
-                  d.placaInventario && `Placa ${d.placaInventario}`,
-                  lugarDe(d),
-                  desde && `Desde el ${fechaLegible(desde)}`,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
+                const detalle = detallePorEquipo.get(d.id) ?? ''
                 return (
                   <div key={d.id} className="flex items-center gap-1 pr-1.5">
                     <Link

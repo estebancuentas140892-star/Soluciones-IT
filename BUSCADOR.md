@@ -21,7 +21,7 @@ El índice es único para todos los tipos de documento. Cada documento tiene tre
 | Tipo | Condición para indexarse | `titulo` | `subtitulo` | `texto` (se tokeniza, no se muestra) |
 |---|---|---|---|---|
 | **articulo** | `estado === 'publicado'` y no eliminado | título | `categoría · tipo` | título + contenido Markdown + `textoDeProcedimiento` + etiquetas + síntomas + causas + nombres de dispositivos afectados |
-| **dispositivo** | no eliminado (sin filtro de estado) | nombre | `marca · modelo · ubicación` | nombre, marca, modelo, serial, placa, ubicación (texto libre), responsable, IP, estado, observaciones y **todos los valores** de `detalles` (propiedades personalizadas) |
+| **dispositivo** | no eliminado (sin filtro de estado) | nombre | `marca · modelo · ubicación`, solo lo que el nombre no dice ya y con la ubicación de su ficha si está vinculada (tarea 277, `lineasDeContexto`) | nombre, marca, modelo, serial, placa, ubicación (el texto heredado y, si está vinculada, el nombre de su ficha), responsable, IP, estado, observaciones y **todos los valores** de `detalles` (propiedades personalizadas). Lo que el subtítulo calla sigue en el título, así que se encuentra igual |
 | **diagnostico** | no eliminado | título | `categoría · Diagnóstico` | título + descripción + `textoDeNodos` (preguntas, descripciones, etiquetas de opción, mensajes finales y títulos de artículos vinculados) |
 | **categoria** | no eliminada | nombre | `Categoría` | solo el nombre |
 | **ubicacion** | no eliminada | nombre | ruta de ancestros (`Sede > Área`) o `Ubicación` si es raíz | nombre + notas |

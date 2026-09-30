@@ -207,7 +207,8 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** fila de un dispositivo en un listado, compartida entre Dispositivos y Red: avatar (foto o icono de tipo de nodo), nombre, subtítulo y estado con punto de color + IP.
 - **Props:** `{ dispositivo, categoriaNombre, subtitulo, conFoto?: boolean = false, estado?: unknown, alAbrir?: () => void }`. `estado` (tarea 256) es el `state` del salto a la ficha: Equipos pasa su origen con la búsqueda, para que el regreso vuelva a la lista con lo escrito aunque el equipo sea de red; `alAbrir` se llama en el mismo gesto, antes del salto, y Equipos anota ahí su búsqueda para el botón atrás del teléfono.
 - **Variantes:** `conFoto` decide avatar de foto (`MiniaturaPortada`) vs siempre icono (`IconoNodo`, para Red).
-- **Dónde:** `DispositivosPage` (con foto), `RedPage` (sin foto). Nota: `CategoriaPage` reimplementa esta fila a mano (candidato CAND-2, sección 5).
+- **Dónde:** `DispositivosPage` (con foto), `EquiposRedPage` (sin foto). Nota: `CategoriaPage` reimplementa esta fila a mano (candidato CAND-2, sección 5).
+- **`subtitulo` puede venir vacío** (tarea 277): cada pantalla lo arma con `lineasDeContexto` (`src/lib/contextoEquipo.ts`), que calla lo que el nombre ya dice; vacío, la fila no dibuja la línea.
 - **La IP cumple el piso de dato técnico** (**M-R5**, tarea 201): usa `VALOR_TECNICO_COMPACTO` de `FilaDato` (13 px monoespaciado, `neutral-300`, tabular). Antes iba a 11 px en `neutral-600`, unos 3,9:1 de contraste: el texto más pequeño de toda la app justo para el dato que más se busca de pie frente a un rack.
 
 ### 2.10b `HojaFiltro`

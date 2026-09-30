@@ -10,6 +10,7 @@ import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizaci
 import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { db, type Dispositivo } from '../../lib/db'
 import { idsDeRed } from '../../lib/categorias'
+import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import {
   candidatosParaAsignar,
@@ -59,6 +60,7 @@ export function AsignarEquipoPage() {
   const persona = useLiveQuery(async () => (await db.personas.get(personaId)) ?? null, [personaId])
   const dispositivos = useLiveQuery(() => db.dispositivos.toArray(), [])
   const categorias = useLiveQuery(() => db.categorias.toArray(), [], [])
+  const ubicaciones = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
 
   const [consulta, setConsulta] = useState('')
   const [elegidoId, setElegidoId] = useState<string | null>(null)
@@ -66,6 +68,7 @@ export function AsignarEquipoPage() {
   const [guardando, setGuardando] = useState(false)
 
   const categoriasDeRed = useMemo(() => idsDeRed(categorias), [categorias])
+  const ubicacionPorId = useMemo(() => new Map(ubicaciones.map((u) => [u.id, u])), [ubicaciones])
   const actuales = useMemo(() => equiposActuales(personaId, dispositivos ?? []), [personaId, dispositivos])
   const candidatos = useMemo(() => {
     const todos = dispositivos ?? []
@@ -83,6 +86,21 @@ export function AsignarEquipoPage() {
   const duenoActual = elegido?.responsableId ? elegido.responsable || 'otra persona' : null
   const recortado = !q && visibles.length > MAXIMO_SIN_BUSCAR
   const mostrados = recortado ? visibles.slice(0, MAXIMO_SIN_BUSCAR) : visibles
+  // Bajo cada candidato, la placa y el lugar (el de su ficha de Ubicación
+  // si está vinculada), pero solo lo que su nombre no dice ya (tarea 277).
+  // Sobre toda la lista a la vista: si callar dejara iguales dos equipos
+  // distintos, esos dos lo dicen todo, porque aquí hay que elegir uno.
+  const detallePorEquipo = new Map(
+    lineasDeContexto(
+      mostrados.map(({ dispositivo: d }) => ({
+        nombre: d.nombre,
+        partes: [
+          d.placaInventario && `Placa ${d.placaInventario}`,
+          ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? '')),
+        ],
+      })),
+    ).map((linea, i): [string, string] => [mostrados[i].dispositivo.id, linea]),
+  )
 
   async function confirmar() {
     if (!elegido || !persona) return
@@ -130,9 +148,7 @@ export function AsignarEquipoPage() {
                   {delGrupo.map(({ dispositivo: d }) => {
                     const activo = d.id === elegidoId
                     const porValidar = responsablePorValidar(d)
-                    const detalle = [d.placaInventario && `Placa ${d.placaInventario}`, d.ubicacion]
-                      .filter(Boolean)
-                      .join(' · ')
+                    const detalle = detallePorEquipo.get(d.id) ?? ''
                     // A quién pertenece hoy, en su propia línea: es lo que
                     // decide si elegirlo, y recortado no se leía.
                     const pertenencia =

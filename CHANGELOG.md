@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-29
 
+### Cambiado (equipos, tarea 277): el subtítulo de un equipo solo dice lo que su nombre no dice ya
+
+**Área modificada:** `src/lib/contextoEquipo.ts` (nuevo en `1974340`, ampliado ahora), `src/components/FilaDispositivo.tsx`, `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/red/{EquiposRedPage,FormularioConexion}.tsx`, `src/features/personas/{PersonaPage,AsignarEquipoPage}.tsx`, `src/features/busqueda/useIndiceBusqueda.ts`, `src/lib/{favoritos,recientes}.ts`, sus pruebas, `REGLAS.md` (regla 22), `DECISIONES.md` (AD-057), `DOCUMENTACION_FUNCIONAL.md`, `BUSCADOR.md` y `COMPONENTES_UI.md`.
+**Tipo:** Cambiado (presentación; ningún dato cambia).
+**Motivo:** encargo del 2026-09-29, fase 4: el nombre es la información principal y el subtítulo solo aporta lo nuevo. "Impresora Taquilla" llevaba debajo "Impresoras · Taquilla" y se leía dos veces lo mismo.
+**Qué cambia:**
+- Regla nueva y general (regla 22): no mostrar un dato solo porque está disponible; ante la duda, se conserva.
+- Lista de Equipos, ficha del equipo (la línea bajo el nombre), Equipos de red, equipos de una persona, Asignar equipo, candidatos de la alta de conexión, buscador, Mis favoritos y recientes callan lo que el nombre ya dice: "Impresora Taquilla" va sin subtítulo, "HP M404 Taquilla" con "Impresoras" y "HP M404" con "Impresoras · Taquilla".
+- La comparación es prudente: palabras enteras, sin mayúsculas ni tildes y con el plural simple; los números, las letras sueltas y las IP nunca se callan.
+- Donde se elige, callar nunca deja iguales dos equipos distintos: esas filas dicen todo su contexto.
+- La ubicación vinculada se lee con el nombre de su ficha en todas esas pantallas (antes, en varias, con el texto guardado en el equipo).
+- Sin nada que añadir, la fila no reserva la línea vacía, y los favoritos de equipo pierden el relleno "Dispositivo".
+- El buscador encuentra igual: el texto indexado no pierde nada y suma el nombre vivo de la ubicación.
+**Impacto esperado:** listas más cortas de leer y, en 390 px, menos subtítulos cortados; ningún nombre, categoría, ubicación ni relación se toca.
+**Cómo se comprobó:** 20 pruebas de la regla, 7 de pantalla montando las cinco pantallas, 1 del buscador (se encuentra por lugar, serial, placa, IP, responsable y el nombre viejo del lugar) y las de favoritos y recientes; tres mutaciones (sin la ubicación viva, sin la protección de ambigüedad, con la línea vacía) hacen fallar las pruebas. Suite completa, lint y build en verde.
+
 ### Cambiado (navegación, tarea 265): la Agenda tiene una sola puerta, Resolver
 
 **Área modificada:** `src/features/mas/PantallaMas.tsx`, `src/features/inicio/{ResolverPage.tsx,resolver.ts,AgendaPage.tsx}` y sus pruebas, `DOCUMENTACION_FUNCIONAL.md`, `ARQUITECTURA_FUNCIONAL.md` (RN-047).

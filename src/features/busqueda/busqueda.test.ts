@@ -895,3 +895,68 @@ describe('la guía de la resolución DIAN en el buscador', () => {
     expect(documentos).not.toContain(`articulo:${ID_DIAN}`)
   })
 })
+
+// El subtítulo de un equipo solo dice lo que su nombre no dice ya (tarea
+// 277). Es lo que se VE: lo que se busca no pierde nada.
+describe('equipos en el buscador: se ve menos, se encuentra igual', () => {
+  const marca = { updatedAt: '2026-09-29T00:00:00.000Z', updatedBy: null, eliminadoEn: null }
+  function equipo(parcial: Partial<Dispositivo> & Pick<Dispositivo, 'id' | 'nombre'>): Dispositivo {
+    return {
+      categoriaId: 'cat-imp',
+      marca: '',
+      modelo: '',
+      serial: '',
+      placaInventario: '',
+      ubicacion: '',
+      ubicacionId: null,
+      responsable: '',
+      responsableId: null,
+      reemplazaA: null,
+      ip: '',
+      estado: '',
+      observaciones: '',
+      detalles: {},
+      foto: null,
+      ...marca,
+      ...parcial,
+    } as Dispositivo
+  }
+  const taquillaPrincipal: Ubicacion = { id: 'u-taq', nombre: 'Taquilla Principal', padreId: null, notas: '', ...marca }
+  const documentosEquipos = documentosDeBusqueda(
+    datosIndice({
+      ubicaciones: [taquillaPrincipal],
+      dispositivos: [
+        equipo({
+          id: 'impresora-taquilla',
+          nombre: 'Impresora Taquilla',
+          ubicacion: 'Taquilla',
+          serial: 'SER-77',
+          placaInventario: 'PLACA-77',
+          ip: '10.0.0.77',
+          responsable: 'Ana de Prueba',
+        }),
+        // Vinculado a una ubicación renombrada: el texto heredado quedó viejo.
+        equipo({ id: 'hp', nombre: 'HP M404', marca: 'HP', modelo: 'M404', ubicacion: 'taquilla vieja', ubicacionId: 'u-taq' }),
+      ],
+    }),
+  )
+  const subtitulo = (id: string) => documentosEquipos.find((d) => d.id === `dispositivo:${id}`)?.subtitulo
+  const indiceEquipos = crearIndiceDesdeDocumentos(documentosEquipos)
+  const encuentra = (consulta: string) => buscar(indiceEquipos, consulta).map((r) => r.id)
+
+  it('no repite en el subtítulo lo que el nombre ya dice', () => {
+    expect(subtitulo('impresora-taquilla')).toBe('')
+    // Marca y modelo están en "HP M404"; el lugar es el de su ficha, vivo.
+    expect(subtitulo('hp')).toBe('Taquilla Principal')
+  })
+
+  it('y lo sigue encontrando por el lugar y por cada dato indexado', () => {
+    expect(encuentra('taquilla')).toEqual(expect.arrayContaining(['dispositivo:impresora-taquilla', 'dispositivo:hp']))
+    for (const consulta of ['SER-77', 'PLACA-77', '10.0.0.77', 'Ana de Prueba']) {
+      expect(encuentra(consulta)).toContain('dispositivo:impresora-taquilla')
+    }
+    // El nombre vivo de la ubicación se busca, y el texto heredado también.
+    expect(encuentra('principal')).toContain('dispositivo:hp')
+    expect(encuentra('vieja')).toContain('dispositivo:hp')
+  })
+})

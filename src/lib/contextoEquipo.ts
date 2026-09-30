@@ -14,6 +14,8 @@
 // Norte" no se calla por un nombre que solo dice "Taquilla", y una parte
 // hecha solo de números o de una letra suelta ("2", "B") nunca se calla.
 
+import { textoVivo } from './referencia'
+
 // Palabras que no identifican nada por sí solas: "Puntos de red" y
 // "Punto de red Taquilla" dicen lo mismo aunque el nombre no repita "de".
 const VACIAS = new Set(['de', 'del', 'la', 'el', 'los', 'las', 'y', 'en', 'e', 'a'])
@@ -63,4 +65,50 @@ export function contextoVisible(nombre: string, partes: ReadonlyArray<string | n
 /** El subtítulo de una fila: `contextoVisible` unido con " · ". */
 export function lineaDeContexto(nombre: string, partes: ReadonlyArray<string | null | undefined>): string {
   return contextoVisible(nombre, partes).join(' · ')
+}
+
+export interface FilaConContexto {
+  nombre: string
+  partes: ReadonlyArray<string | null | undefined>
+}
+
+// Clave para comparar dos textos como los lee la persona: sin mayúsculas,
+// tildes ni signos de sobra.
+function comparable(texto: string): string {
+  return palabras(texto).join(' ')
+}
+
+/**
+ * `lineaDeContexto` para cada fila de una LISTA donde hay que elegir, con
+ * una salvedad: si callar lo repetido deja dos filas con el mismo nombre y
+ * la misma línea, pero su contexto completo es distinto, esas filas
+ * muestran el contexto completo. Se quita redundancia, nunca lo que
+ * distingue un equipo de otro.
+ */
+export function lineasDeContexto(filas: ReadonlyArray<FilaConContexto>): string[] {
+  const cortas = filas.map((fila) => lineaDeContexto(fila.nombre, fila.partes))
+  // Con el nombre vacío nada se calla: es el contexto entero, sin repetidos.
+  const completas = filas.map((fila) => lineaDeContexto('', fila.partes))
+  const clave = (i: number) => `${comparable(filas[i].nombre)}|${comparable(cortas[i])}`
+  const porClave = new Map<string, number[]>()
+  filas.forEach((_, i) => porClave.set(clave(i), [...(porClave.get(clave(i)) ?? []), i]))
+  return filas.map((_, i) => {
+    const iguales = porClave.get(clave(i)) ?? []
+    const ambigua = iguales.some((j) => j !== i && comparable(completas[j]) !== comparable(completas[i]))
+    return ambigua ? completas[i] : cortas[i]
+  })
+}
+
+/**
+ * La ubicación que se muestra de un equipo: el nombre de su ficha de
+ * Ubicación si está vinculada y viva, que es la fuente de verdad; si no, el
+ * texto heredado del equipo, que queda solo como compatibilidad para los
+ * que no están vinculados. Así un lugar renombrado se lee igual en todas
+ * partes y no hay dos versiones de la misma ubicación.
+ */
+export function ubicacionDeEquipo(
+  dispositivo: { ubicacion?: string | null },
+  vinculada: { nombre: string; eliminadoEn?: string | null } | null | undefined,
+): string {
+  return textoVivo(vinculada && !vinculada.eliminadoEn ? vinculada.nombre : null, dispositivo.ubicacion ?? '')
 }

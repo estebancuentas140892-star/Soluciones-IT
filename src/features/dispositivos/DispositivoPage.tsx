@@ -9,6 +9,7 @@ import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
 import { textoVivo } from '../../lib/referencia'
+import { lineaDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { conectadoA, textoConectadoA } from '../../lib/conexiones'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
@@ -282,7 +283,7 @@ export function DispositivoPage() {
   // Nombre a mostrar de la ubicacion: el vivo de la fila enlazada si
   // existe y no esta eliminada; si no, la copia de referencia guardada.
   const ubicacionViva = ubicacionVinculada && !ubicacionVinculada.eliminadoEn ? ubicacionVinculada : null
-  const ubicacionNombre = textoVivo(ubicacionViva?.nombre, dispositivo.ubicacion)
+  const ubicacionNombre = ubicacionDeEquipo(dispositivo, ubicacionViva)
 
   // Sin copia de referencia para reemplazaA (autorreferencia estricta,
   // fijada una sola vez al crear): si la fila vinculada no esta
@@ -294,8 +295,13 @@ export function DispositivoPage() {
   const metaLinea = [categoria?.nombre, `actualizado ${fechaCorta(dispositivo.updatedAt)}`]
     .filter(Boolean)
     .join(' · ')
-  // Bajo el nombre: el tipo (su categoría) y la marca y el modelo.
-  const lineaTipo = [categoria?.nombre, marcaModelo].filter(Boolean).join(' · ') || metaLinea
+  // Bajo el nombre: el tipo (su categoría) y la marca y el modelo, pero
+  // solo lo que el nombre no dice ya (tarea 277): "Impresora Taquilla"
+  // no repite "Impresoras". Si no hay nada que decir, no hay línea; la
+  // fecha de `metaLinea` solo ocupa su sitio cuando el equipo no tiene ni
+  // categoría ni marca ni modelo, como antes.
+  const tipoCompleto = [categoria?.nombre, marcaModelo].filter(Boolean).join(' · ')
+  const lineaTipo = tipoCompleto ? lineaDeContexto(dispositivo.nombre, [categoria?.nombre, marcaModelo]) : metaLinea
   // Cuántos datos guarda "Más datos del equipo" (M-R4: plegar informa).
   // "Categoría y fecha" va siempre.
   const totalMasDatos =
@@ -500,7 +506,7 @@ export function DispositivoPage() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[16px] font-medium leading-[1.25]">{dispositivo.nombre}</span>
-                <span className="mt-0.5 block truncate text-[12.5px] text-noct-neutral-400">{lineaTipo}</span>
+                {lineaTipo && <span className="mt-0.5 block truncate text-[12.5px] text-noct-neutral-400">{lineaTipo}</span>}
               </span>
               {/* La misma pastilla que la fila (tarea 207, M-017). */}
               {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} />}

@@ -12,6 +12,7 @@ import {
   type ModoConexion,
 } from '../../lib/conexiones'
 import { idsDeRed } from '../../lib/categorias'
+import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { Monitor, Plus } from '../../components/iconos'
 import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CLASE_CAMPO, CLASE_CAMPO_SOBRE_SUPERFICIE, CLASE_ETIQUETA as CLASE_ETIQUETA_BASE } from '../../components/campos'
@@ -65,6 +66,7 @@ export function FormularioConexion({
   // que usa DispositivoForm, categoria_id es NOT NULL en el esquema asi
   // que hace falta elegir una.
   const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
+  const ubicaciones = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
 
   const [modo, setModo] = useState<ModoConexion>('enlace')
   const [busqueda, setBusqueda] = useState('')
@@ -98,6 +100,20 @@ export function FormularioConexion({
     () => candidatosConexion(todos ?? [], busqueda, dispositivo, idsRed),
     [todos, busqueda, dispositivo, idsRed],
   )
+  // Bajo cada candidato, el lugar (el de su ficha de Ubicación si está
+  // vinculada) y la IP, pero solo lo que su nombre no dice ya (tarea 277).
+  // Si callar dejara iguales dos candidatos distintos (dos switches con el
+  // mismo nombre), esos dos lo dicen todo: aquí hay que elegir el bueno.
+  const detallePorCandidato = useMemo(() => {
+    const ubicacionPorId = new Map(ubicaciones.map((u) => [u.id, u]))
+    const lineas = lineasDeContexto(
+      coincidencias.map((d) => ({
+        nombre: d.nombre,
+        partes: [ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? '')), d.ip],
+      })),
+    )
+    return new Map(coincidencias.map((d, i) => [d.id, lineas[i]]))
+  }, [coincidencias, ubicaciones])
 
   // Hallazgo N3: si este equipo todavía no tiene ubicación y el otro
   // extremo sí, se ofrece copiarla (nunca se pisa una ya cargada).
@@ -342,10 +358,8 @@ export function FormularioConexion({
                     className="w-full rounded-md border border-noct-divider bg-noct-bg px-3 py-2 text-left hover:border-noct-accent"
                   >
                     <p className="text-sm text-noct-text">{d.nombre}</p>
-                    {(d.ubicacion || d.ip) && (
-                      <p className="text-xs text-noct-neutral-400">
-                        {[d.ubicacion, d.ip].filter(Boolean).join(' · ')}
-                      </p>
+                    {detallePorCandidato.get(d.id) && (
+                      <p className="text-xs text-noct-neutral-400">{detallePorCandidato.get(d.id)}</p>
                     )}
                   </button>
                 ) : (
