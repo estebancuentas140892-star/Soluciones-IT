@@ -6,6 +6,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-09-30
+
+### Documentación (Bóveda, tarea 279): análisis del desbloqueo rápido; no se implementa
+
+**Área modificada:** `ANALISIS_DESBLOQUEO_RAPIDO_BOVEDA.md` (nuevo), `scripts/experimento-prf.mjs` (nuevo, solo investigación), `DECISIONES.md` (AD-059; título de AD-058 aclarado), `ARQUITECTURA.md`, `TAREAS.md`, `TAREAS_ARCHIVO.md`.
+**Tipo:** Documentación. La app no cambia: ni la Bóveda, ni su criptografía, ni sus datos.
+**Motivo:** encargo del 2026-09-29, fase 5: abrir la Bóveda sin escribir la maestra, solo si mantiene el nivel de seguridad actual.
+**Qué cambia:**
+- Un análisis con la arquitectura actual de la Bóveda, el modelo de amenazas, la extensión PRF, la compatibilidad por plataforma con sus fuentes, un experimento y cuatro opciones comparadas. Resultado D: el PIN o el código del dispositivo abriría la Bóveda, así que no se implementa y la maestra sigue siendo el único camino (AD-059).
+- `scripts/experimento-prf.mjs` prueba la primitiva con el autenticador virtual de Chromium, sin conectarla a la Bóveda: salida estable en 100 evaluaciones, distinta por entrada y por credencial, solo con el usuario verificado, sin red y sin estado previo; y que la clave de hoy no se puede envolver (no es extraíble) mientras que `deriveBits` y `unwrapKey` sí permiten la opción C.
+- La documentación de la 278 decía "verificado en el propio teléfono": ahora dice que la app verifica en el dispositivo sin servidor y que se probó con el autenticador virtual de Chromium, no con una huella física.
+- Hallazgo registrado: el procedimiento para restablecer la maestra no menciona los campos protegidos ni los archivos seguros (tarea 286).
+**Impacto esperado:** ninguno en la app; la decisión queda en manos del usuario con las preguntas de la sección 15 del análisis.
+**Cómo se comprobó:** `node scripts/experimento-prf.mjs` (23 de 23); suite completa, lint y build.
+
 ## 2026-09-29
 
 ### Agregado y Seguridad (bloqueo, tarea 278): desbloqueo del dispositivo sobre el patrón o la contraseña
@@ -17,10 +32,10 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 - La autenticación del dispositivo protege el bloqueo local de la aplicación. No reemplaza el inicio de sesión de Supabase ni desbloquea la Bóveda. Soluciones IT no recibe datos biométricos; el sistema operativo/autenticador decide cómo verificar al usuario.
 - En Seguridad, "Desbloqueo del dispositivo": se activa confirmando el patrón o la contraseña, creando la credencial y comprobándola. Donde el dispositivo no puede, lo dice en una línea y no ofrece nada.
 - La pantalla de bloqueo lo ofrece primero ("Desbloquear") con el patrón o la contraseña a un toque; cancelar o fallar pasa al respaldo sin reabrir el diálogo.
-- Cada desbloqueo se verifica en el teléfono, sin red: firma sobre un desafío nuevo, origen, RP ID, usuario verificado y credencial registrada. Solo se guarda material público.
+- La app verifica cada desbloqueo en el propio dispositivo, sin servidor ni red: firma sobre un desafío nuevo, origen, RP ID, usuario verificado y credencial registrada. Solo se guarda material público.
 - El freno de intentos también cuenta en Cambiar y Quitar.
 **Impacto esperado:** abrir la app es tocar "Desbloquear" y el sensor; sin soporte, todo sigue exactamente como antes.
-**Cómo se comprobó:** 108 pruebas nuevas (2321 en total), con vectores reales de Chromium y 19 mutaciones de seguridad detectadas; `npm run prueba:sin-conexion` con el autenticador virtual de Chromium (credencial y firmas reales, sin red); lint, build y CI.
+**Cómo se comprobó:** 108 pruebas nuevas (2321 en total), con vectores reales de Chromium y 19 mutaciones de seguridad detectadas; `npm run prueba:sin-conexion` con el autenticador virtual de Chromium (credencial y firmas reales, sin red; no con una huella física); lint, build y CI.
 
 ### Cambiado (equipos, tarea 277): el subtítulo de un equipo solo dice lo que su nombre no dice ya
 

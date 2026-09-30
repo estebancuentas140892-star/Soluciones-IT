@@ -14,7 +14,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 3 | La Agenda con una sola puerta (Resolver) | 265 | Hecha el 2026-09-29 (archivada) |
 | 4 | Contexto inteligente del nombre de un equipo | 277 | Hecha el 2026-09-29 (archivada) |
 | 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | Hecha el 2026-09-29 (archivada) |
-| 5 | Desbloqueo rápido de la Bóveda: solo si es igual de seguro | 279 | **Siguiente**, sin empezar: antes el usuario revisa la 278 |
+| 5 | Desbloqueo rápido de la Bóveda: solo si es igual de seguro | 279 | **En proceso**: analizada el 2026-09-30 (resultado D, no se implementa); espera la decisión del usuario |
 | 6 | Protagonismo del Diagnóstico | 280 | Pendiente |
 | 7 | Estados de equipo sin completarlos a la fuerza | 281 | Pendiente |
 | 8 | Auditoría real del backlog | 272 | Pendiente |
@@ -30,7 +30,19 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-**Ninguna tarea en proceso** (2026-09-29): la 278 terminó y el usuario la revisa antes de seguir. La siguiente es la **279**, registrada en "Por hacer".
+**En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso.
+
+### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
+
+- **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.
+- **Descripción:** empezó como auditoría criptográfica y de compatibilidad, sin tocar la Bóveda.
+- **Resultado (2026-09-30): D, no se implementa.** Detalle en [ANALISIS_DESBLOQUEO_RAPIDO_BOVEDA.md](ANALISIS_DESBLOQUEO_RAPIDO_BOVEDA.md) y AD-059. La primitiva PRF funciona (experimento con el autenticador virtual de Chromium, `scripts/experimento-prf.mjs`, 23 de 23) y la opción C se podría hacer sin guardar la maestra ni migrar datos, pero el PIN del dispositivo abriría la Bóveda (amenazas D, F y K del análisis) y el soporte real de PRF en los dispositivos del equipo está por confirmar.
+- **Falta:** la decisión del usuario sobre las preguntas de la sección 15 del análisis, sobre todo si acepta que el PIN o el código del dispositivo abra la Bóveda. Si no lo acepta, la tarea se archiva como descartada. Si lo acepta, primero se confirma PRF en los dispositivos reales del equipo y después se implementa la opción C.
+- **Motivo:** encargo del 2026-09-29, fase 5 (tarea 7 del encargo).
+- **Impacto:** alto si se hiciera (la maestra se escribe en cada apertura); el riesgo de hacerlo mal también es alto.
+- **Prioridad:** Alta (fase 5). **Estado:** En progreso: análisis hecho, espera decisión.
+- **Área afectada:** ninguna todavía. Si se implementara: `src/features/boveda/sesionBoveda.ts` (una función nueva; `desbloquear()` no cambia), un módulo nuevo `src/features/boveda/desbloqueoRapidoBoveda.ts`, `src/lib/db.ts` (tabla local nueva), los cinco puntos de desbloqueo de la Bóveda y Ajustes.
+- **Dependencias:** la 278 (hecha).
 
 ## Historial que sigue en el tablero (no son tareas activas)
 
@@ -426,19 +438,15 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
+### 286. Restablecer la maestra: el procedimiento no dice qué pasa con los campos protegidos ni los archivos seguros
 
-- **Título:** "Desbloqueo rápido en este dispositivo" para la Bóveda, después de haber escrito bien la contraseña maestra al menos una vez, y solo si mantiene el nivel de seguridad actual.
-- **Descripción:** la Bóveda es distinta del bloqueo de la app: la contraseña maestra deriva (PBKDF2) la clave que descifra el contenido AES y no se conserva en claro, así que no se puede cambiar por una huella sin romper el modelo criptográfico. Se analiza WebAuthn con el autenticador de plataforma, la extensión PRF cuando haya soporte adecuado o una envoltura segura de una clave local ligada al autenticador. Requisitos absolutos: no guardar la contraseña maestra en texto plano, ni la clave AES sin protección, ni secretos reutilizables en `localStorage`, y no cambiar la criptografía existente sin necesidad. Si no se puede demostrar que se mantiene el nivel de seguridad actual, NO se implementa: se documenta el diseño, la limitación real y una tarea futura bien definida. Es preferible seguir pidiendo la maestra a degradar la Bóveda. Commit solo si hay una implementación segura real.
-- **Hallazgos de la 278 (la Bóveda no se tocó):**
-  - La credencial del desbloqueo del dispositivo no sirve para la Bóveda y no debe reutilizarse: se crea sin extensiones (sin PRF) y verificarla solo prueba que el dispositivo verificó a la persona; no entrega ningún secreto con el que derivar o desenvolver la clave de la Bóveda. Una Bóveda rápida necesitaría su propia credencial, creada con PRF, y un diseño de envoltura de su clave.
-  - PRF no se comprueba con una firma: la seguridad dependería del secreto que devuelve el autenticador. La verificación de la 278 (`src/lib/webauthn.ts`) y el autenticador falso de las pruebas (`src/pruebas/autenticadorFalso.ts`) sirven para las ceremonias, no para eso.
-  - El autenticador virtual de Chromium declara PRF en el protocolo de DevTools (`hasPrf`), así que una prueba real como la de la 278 sería posible. El soporte de PRF en los autenticadores de plataforma de los teléfonos y computadores del equipo (Android, iPhone, Windows Hello) está por confirmar con documentación actual antes de decidir nada.
-- **Motivo:** encargo del 2026-09-29, fase 5 (tarea 7 del encargo).
-- **Impacto:** alto si es viable (la maestra se escribe en cada apertura de la Bóveda); el riesgo de hacerlo mal también es alto.
-- **Prioridad:** Alta (fase 5). **Estado:** Pendiente, **la siguiente**; no se empieza hasta que el usuario revise la 278.
-- **Área afectada:** `src/features/boveda/sesionBoveda.ts` y `src/lib/crypto.ts` (solo lectura hasta que el análisis diga si es viable). Primer paso: un análisis escrito.
-- **Dependencias:** la 278 (hecha).
+- **Título:** completar `supabase/INSTRUCCIONES.md` § 5 (restablecer la contraseña maestra).
+- **Descripción:** el procedimiento borra `boveda_meta` y `credenciales`, pero no menciona `campos_protegidos` (desde el grupo P1, 2026-07-21) ni los archivos del bucket `archivos_boveda` (fase P5): cifrados con la maestra perdida, quedarían ilegibles para siempre. Hay que decidir si se borran también o se dejan, y decirlo.
+- **Motivo:** hallazgo del análisis de la 279 (sección 1.5).
+- **Impacto:** bajo: es un procedimiento de emergencia que no se ha usado.
+- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Área afectada:** `supabase/INSTRUCCIONES.md` § 5 (líneas ~125-150) y la mención en `ARQUITECTURA.md` § 8.
+- **Dependencias:** ninguna.
 
 ### 285. Áreas táctiles por debajo de 44 px que encontró la validación de la 260
 
