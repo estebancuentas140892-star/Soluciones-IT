@@ -22,7 +22,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 - Sin nada que añadir, la fila no reserva la línea vacía, y los favoritos de equipo pierden el relleno "Dispositivo".
 - El buscador encuentra igual: el texto indexado no pierde nada y suma el nombre vivo de la ubicación.
 **Impacto esperado:** listas más cortas de leer y, en 390 px, menos subtítulos cortados; ningún nombre, categoría, ubicación ni relación se toca.
-**Cómo se comprobó:** 20 pruebas de la regla, 7 de pantalla montando las cinco pantallas, 1 del buscador (se encuentra por lugar, serial, placa, IP, responsable y el nombre viejo del lugar) y las de favoritos y recientes; tres mutaciones (sin la ubicación viva, sin la protección de ambigüedad, con la línea vacía) hacen fallar las pruebas. Suite completa, lint y build en verde.
+**Cómo se comprobó:** 20 pruebas de la regla, 7 de pantalla montando las cinco pantallas, 2 del buscador (no repite lo que el nombre dice, y se encuentra por lugar, serial, placa, IP, responsable y el nombre viejo del lugar) y las de favoritos y recientes; tres mutaciones (sin la ubicación viva, sin la protección de ambigüedad, con la línea vacía) hacen fallar las pruebas. Suite completa (2213 pruebas), lint, build y CI en verde.
 
 ### Cambiado (navegación, tarea 265): la Agenda tiene una sola puerta, Resolver
 

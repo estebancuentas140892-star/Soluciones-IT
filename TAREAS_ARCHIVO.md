@@ -4,7 +4,7 @@
 
 ### 277. Contexto inteligente del nombre de un equipo: el subtítulo solo dice lo nuevo
 
-**Estado:** Completada (2026-09-29), fase 4 del encargo del 2026-09-29, en dos commits: `1974340` (la utilidad y la lista de Equipos) y el de cierre (el resto de la app). **Prioridad:** Media. **Área:** `src/lib/contextoEquipo.ts`, `src/components/FilaDispositivo.tsx`, `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/red/{EquiposRedPage,FormularioConexion}.tsx`, `src/features/personas/{PersonaPage,AsignarEquipoPage}.tsx`, `src/features/busqueda/useIndiceBusqueda.ts`, `src/lib/{favoritos,recientes}.ts` y sus pruebas.
+**Estado:** Completada (2026-09-29), fase 4 del encargo del 2026-09-29, en dos commits: `1974340` (la utilidad y la lista de Equipos) y `00e2ea2` (el resto de la app), más una corrección del conteo de pruebas en este registro. **Prioridad:** Media. **Área:** `src/lib/contextoEquipo.ts`, `src/components/FilaDispositivo.tsx`, `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/red/{EquiposRedPage,FormularioConexion}.tsx`, `src/features/personas/{PersonaPage,AsignarEquipoPage}.tsx`, `src/features/busqueda/useIndiceBusqueda.ts`, `src/lib/{favoritos,recientes}.ts` y sus pruebas.
 
 **Motivo:** el nombre es la información principal y el subtítulo solo aporta lo nuevo. El campo Nombre pide "Qué es y dónde está", así que muchos nombres ya traían el tipo y el lugar, y las listas los repetían debajo: "Impresora Taquilla" sobre "Impresoras · Taquilla".
 
@@ -19,7 +19,7 @@
 
 **Dónde no se aplica, a propósito:** la cabecera de la ficha ("Equipos · lugar"), la fila de ubicación y "Más datos del equipo" (son los datos mismos), la ficha de una ubicación (ya no repetía el lugar), la topología y la variante de topología de la alta de conexión (solo la IP).
 
-**Verificación:** 20 pruebas de la regla (las 13 de la primera parte y 7 nuevas: la IP y los códigos, la ambigüedad y la ubicación viva), 7 de pantalla montando las cinco pantallas (`contextoEquipoPantallas.test.tsx`), 1 del buscador ("se ve menos, se encuentra igual": por lugar, serial, placa, IP, responsable y el nombre viejo del lugar) y las de favoritos y recientes. Tres mutaciones comprobadas: sin `ubicacionDeEquipo`, sin la protección de ambigüedad y con la línea vacía dibujada, las pruebas fallan.
+**Verificación:** 20 pruebas de la regla (las 13 de la primera parte y 7 nuevas: solo la categoría, la IP y los códigos, la lista y su ambigüedad, y la ubicación viva), 7 de pantalla montando las cinco pantallas (`contextoEquipoPantallas.test.tsx`), 2 del buscador ("se ve menos, se encuentra igual": no repite lo que el nombre dice, y encuentra por lugar, serial, placa, IP, responsable y el nombre viejo del lugar) y las de favoritos y recientes. Tres mutaciones comprobadas: sin `ubicacionDeEquipo`, sin la protección de ambigüedad y con la línea vacía dibujada, las pruebas fallan. Suite completa (2213 pruebas), lint, build y CI en verde; producción sirve `00e2ea2`.
 
 ### 265. La Agenda con una sola puerta: Resolver
 
