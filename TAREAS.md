@@ -13,8 +13,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 2 | Validación real en teléfono, tableta y escritorio | 260 | Hecha el 2026-09-29 (archivada): 396 capturas, sin conexión real y actualización real; hallazgos en la 284 y la 285 |
 | 3 | La Agenda con una sola puerta (Resolver) | 265 | Hecha el 2026-09-29 (archivada) |
 | 4 | Contexto inteligente del nombre de un equipo | 277 | Hecha el 2026-09-29 (archivada) |
-| 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | **Siguiente**, sin empezar: antes el usuario revisa la 277 |
-| 5 | Desbloqueo rápido de la Bóveda: solo si es igual de seguro | 279 | Pendiente |
+| 5 | Desbloqueo rápido de la app (autenticador del dispositivo) | 278 | Hecha el 2026-09-29 (archivada) |
+| 5 | Desbloqueo rápido de la Bóveda: solo si es igual de seguro | 279 | **Siguiente**, sin empezar: antes el usuario revisa la 278 |
 | 6 | Protagonismo del Diagnóstico | 280 | Pendiente |
 | 7 | Estados de equipo sin completarlos a la fuerza | 281 | Pendiente |
 | 8 | Auditoría real del backlog | 272 | Pendiente |
@@ -30,7 +30,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-**Ninguna tarea en proceso** (2026-09-29): la 277 terminó y el usuario la revisa antes de abrir la fase 5. La siguiente es la **278**, registrada en "Por hacer".
+**Ninguna tarea en proceso** (2026-09-29): la 278 terminó y el usuario la revisa antes de seguir. La siguiente es la **279**, registrada en "Por hacer".
 
 ## Historial que sigue en el tablero (no son tareas activas)
 
@@ -426,16 +426,19 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
-### 278. Desbloqueo rápido de la app con el autenticador del dispositivo
+### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
-- **Título:** abrir Soluciones IT con la huella, el rostro o Windows Hello, y el patrón como alternativa rápida.
-- **Descripción:** el bloqueo local ya tiene patrón y contraseña (`src/features/seguridad/`), que no se recrean. Se suma el autenticador de plataforma por WebAuthn, solo donde el navegador y el dispositivo lo soportan, con este orden: autenticador del dispositivo, patrón, contraseña. Sin soporte, la opción no se muestra y queda patrón o contraseña. Con él configurado, abrir la app es tocar el sensor y entrar.
-- **Límites de seguridad:** el bloqueo es una capa local adicional y no reemplaza la autenticación de Supabase, los permisos ni la seguridad de la Bóveda. Nada de simular la biometría ni de un botón "huella" que se salte el bloqueo; ningún secreto en texto plano, ninguna contraseña reutilizable en `localStorage`, y que no se pueda desbloquear cambiando un booleano local. La salida sigue siendo cerrar sesión y volver a autenticarse.
-- **Motivo:** encargo del 2026-09-29, fase 5: desbloquear la app tiene que ser mucho más rápido en el día a día.
-- **Impacto:** alto: se abre la app muchas veces al día.
-- **Prioridad:** Alta (fase 5). **Estado:** Pendiente, **la siguiente**; no se empieza hasta que el usuario revise la 277.
-- **Área afectada:** `src/features/seguridad/{bloqueoApp.ts,useBloqueoApp.ts,BloqueoAppGuard.tsx,SeguridadPage.tsx,PatronInput.tsx}` y lo que haga falta en `src/lib/db.ts`. Primer paso: revisar la implementación actual.
-- **Dependencias:** ninguna. La 285 espera esta tarea para "Patrón" y "Contraseña" en Seguridad; la 279 (Bóveda) va después y aparte, porque la contraseña maestra no puede cambiarse por una huella.
+- **Título:** "Desbloqueo rápido en este dispositivo" para la Bóveda, después de haber escrito bien la contraseña maestra al menos una vez, y solo si mantiene el nivel de seguridad actual.
+- **Descripción:** la Bóveda es distinta del bloqueo de la app: la contraseña maestra deriva (PBKDF2) la clave que descifra el contenido AES y no se conserva en claro, así que no se puede cambiar por una huella sin romper el modelo criptográfico. Se analiza WebAuthn con el autenticador de plataforma, la extensión PRF cuando haya soporte adecuado o una envoltura segura de una clave local ligada al autenticador. Requisitos absolutos: no guardar la contraseña maestra en texto plano, ni la clave AES sin protección, ni secretos reutilizables en `localStorage`, y no cambiar la criptografía existente sin necesidad. Si no se puede demostrar que se mantiene el nivel de seguridad actual, NO se implementa: se documenta el diseño, la limitación real y una tarea futura bien definida. Es preferible seguir pidiendo la maestra a degradar la Bóveda. Commit solo si hay una implementación segura real.
+- **Hallazgos de la 278 (la Bóveda no se tocó):**
+  - La credencial del desbloqueo del dispositivo no sirve para la Bóveda y no debe reutilizarse: se crea sin extensiones (sin PRF) y verificarla solo prueba que el dispositivo verificó a la persona; no entrega ningún secreto con el que derivar o desenvolver la clave de la Bóveda. Una Bóveda rápida necesitaría su propia credencial, creada con PRF, y un diseño de envoltura de su clave.
+  - PRF no se comprueba con una firma: la seguridad dependería del secreto que devuelve el autenticador. La verificación de la 278 (`src/lib/webauthn.ts`) y el autenticador falso de las pruebas (`src/pruebas/autenticadorFalso.ts`) sirven para las ceremonias, no para eso.
+  - El autenticador virtual de Chromium declara PRF en el protocolo de DevTools (`hasPrf`), así que una prueba real como la de la 278 sería posible. El soporte de PRF en los autenticadores de plataforma de los teléfonos y computadores del equipo (Android, iPhone, Windows Hello) está por confirmar con documentación actual antes de decidir nada.
+- **Motivo:** encargo del 2026-09-29, fase 5 (tarea 7 del encargo).
+- **Impacto:** alto si es viable (la maestra se escribe en cada apertura de la Bóveda); el riesgo de hacerlo mal también es alto.
+- **Prioridad:** Alta (fase 5). **Estado:** Pendiente, **la siguiente**; no se empieza hasta que el usuario revise la 278.
+- **Área afectada:** `src/features/boveda/sesionBoveda.ts` y `src/lib/crypto.ts` (solo lectura hasta que el análisis diga si es viable). Primer paso: un análisis escrito.
+- **Dependencias:** la 278 (hecha).
 
 ### 285. Áreas táctiles por debajo de 44 px que encontró la validación de la 260
 
@@ -444,7 +447,8 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
   - "Crear" de la cabecera de sección, 77×32: Guías, Personas, Ubicaciones, Red y Guías con preguntas (un solo estilo compartido).
   - El regreso con rótulo, 36 px de alto: "Más" (62×36) en Personas, Ubicaciones, Herramientas de inventario y Ajustes; "Ajustes" en Seguridad; "Guías" en Guías con preguntas.
   - Los cinco estados del formulario de equipo, 38 px (nuevo y editar).
-  - "Patrón" y "Contraseña" en Seguridad, 32 px (los rehace la tarea 278).
+  - ~~"Patrón" y "Contraseña" en Seguridad, 32 px~~: hechos en la tarea 278 (44 px).
+  - Medidos en la 278 (2026-09-29, 390x844), controles de antes que esa tarea no tocó: en Seguridad, "Bloquear ahora" 32, "Cambiar" y "Quitar bloqueo" 36 y "Cancelar" de los flujos 32; en la pantalla de bloqueo, "¿Olvidaste tu código de desbloqueo?" 19 px de alto.
   - "Vincular" en el formulario de referencia, 92×32.
   - La estrella de favorito en la lista de guías con preguntas, 34×34.
   - El editor de guías con preguntas: "Respuesta" 32, "Vincular procedimiento" 34, "Eliminar" 35, "Probar" y "Guardar diagnóstico" 40, y sus campos de 38 y 40.
@@ -454,7 +458,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Impacto:** medio: los dos primeros están en casi todas las pantallas de sección y de documento.
 - **Prioridad:** Media. **Estado:** Pendiente; el alcance lo decide el usuario, como en la 262.
 - **Área afectada:** a inventariar al tomarla; los dos primeros son estilos compartidos del chasis y de `src/components/nocturne.tsx`.
-- **Dependencias:** la 278 para "Patrón" y "Contraseña".
+- **Dependencias:** ninguna (la 278 ya dejó "Patrón" y "Contraseña" en 44 px).
 
 ### 261. Editor: la línea de completitud se toca en 25 px de alto
 

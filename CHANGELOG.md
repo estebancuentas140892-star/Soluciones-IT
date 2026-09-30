@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-09-29
 
+### Agregado y Seguridad (bloqueo, tarea 278): desbloqueo del dispositivo sobre el patrón o la contraseña
+
+**Área modificada:** `src/lib/webauthn.ts` (nuevo), `src/features/seguridad/desbloqueoDispositivo.ts` (nuevo), `src/features/seguridad/{bloqueoApp.ts,BloqueoAppGuard.tsx,SeguridadPage.tsx,useBloqueoApp.ts}`, `src/lib/db.ts` (`ConfigBloqueoApp.desbloqueoDispositivo`, opcional), `src/features/autenticacion/CuentaPage.tsx`, pruebas, `scripts/prueba-sin-conexion.mjs`, `scripts/vectores-webauthn.mjs` (nuevo), `DECISIONES.md` (AD-058, revisa AD-012), `ARQUITECTURA.md` (sección 14), `ARQUITECTURA_FUNCIONAL.md`, `DOCUMENTACION_FUNCIONAL.md`, `README.md`.
+**Tipo:** Agregado y Seguridad. **Estructura de datos:** un campo opcional en la fila local `seguridadApp` (no se sincroniza, no es un índice, sin versión nueva de Dexie); ninguna tabla ni columna de Supabase.
+**Motivo:** encargo del 2026-09-29, fase 5: desbloquear la app tiene que ser mucho más rápido en el día a día.
+**Qué cambia:**
+- La autenticación del dispositivo protege el bloqueo local de la aplicación. No reemplaza el inicio de sesión de Supabase ni desbloquea la Bóveda. Soluciones IT no recibe datos biométricos; el sistema operativo/autenticador decide cómo verificar al usuario.
+- En Seguridad, "Desbloqueo del dispositivo": se activa confirmando el patrón o la contraseña, creando la credencial y comprobándola. Donde el dispositivo no puede, lo dice en una línea y no ofrece nada.
+- La pantalla de bloqueo lo ofrece primero ("Desbloquear") con el patrón o la contraseña a un toque; cancelar o fallar pasa al respaldo sin reabrir el diálogo.
+- Cada desbloqueo se verifica en el teléfono, sin red: firma sobre un desafío nuevo, origen, RP ID, usuario verificado y credencial registrada. Solo se guarda material público.
+- El freno de intentos también cuenta en Cambiar y Quitar.
+**Impacto esperado:** abrir la app es tocar "Desbloquear" y el sensor; sin soporte, todo sigue exactamente como antes.
+**Cómo se comprobó:** 108 pruebas nuevas (2321 en total), con vectores reales de Chromium y 19 mutaciones de seguridad detectadas; `npm run prueba:sin-conexion` con el autenticador virtual de Chromium (credencial y firmas reales, sin red); lint, build y CI.
+
 ### Cambiado (equipos, tarea 277): el subtítulo de un equipo solo dice lo que su nombre no dice ya
 
 **Área modificada:** `src/lib/contextoEquipo.ts` (nuevo en `1974340`, ampliado ahora), `src/components/FilaDispositivo.tsx`, `src/features/dispositivos/{DispositivosPage,DispositivoPage}.tsx`, `src/features/red/{EquiposRedPage,FormularioConexion}.tsx`, `src/features/personas/{PersonaPage,AsignarEquipoPage}.tsx`, `src/features/busqueda/useIndiceBusqueda.ts`, `src/lib/{favoritos,recientes}.ts`, sus pruebas, `REGLAS.md` (regla 22), `DECISIONES.md` (AD-057), `DOCUMENTACION_FUNCIONAL.md`, `BUSCADOR.md` y `COMPONENTES_UI.md`.

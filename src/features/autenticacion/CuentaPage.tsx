@@ -216,7 +216,7 @@ export function CuentaPage() {
                 {bloqueo === undefined
                   ? 'Bloqueo de este dispositivo con patrón o contraseña.'
                   : bloqueo
-                    ? `${bloqueo.metodo === 'contrasena' ? 'Contraseña' : 'Patrón'} de este teléfono · activo`
+                    ? `${bloqueo.metodo === 'contrasena' ? 'Contraseña' : 'Patrón'} de este teléfono${bloqueo.desbloqueoDispositivo ? ' y desbloqueo del dispositivo' : ''} · activo`
                     : 'Sin bloqueo: cualquiera que tome el teléfono entra a la app.'}
               </span>
             </span>

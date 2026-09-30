@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable, type Table } from 'dexie'
 import { normalizarEntidad, type EntidadPorTabla, type TablaSincronizada } from './tablas'
+import type { CredencialRegistrada } from './webauthn'
 
 export interface Perfil {
   id: string
@@ -624,8 +625,9 @@ export interface BovedaMeta {
 }
 
 // Metodo con el que el tecnico desbloquea la app en su dispositivo:
-// un patron de puntos (estilo movil) o una contrasena. Nunca se usa
-// biometria (dato personal sensible que no todos quieren entregar).
+// un patron de puntos (estilo movil) o una contrasena. Es siempre el
+// RESPALDO: el desbloqueo del dispositivo (tarea 278, abajo) es una via
+// rapida que se suma, nunca un tercer metodo que lo reemplace.
 export type MetodoBloqueoApp = 'patron' | 'contrasena'
 
 // Id de la unica fila de configuracion del bloqueo de la app.
@@ -646,6 +648,21 @@ export interface ConfigBloqueoApp {
   minutosAutobloqueo: number
   bloqueadoHasta: string | null
   updatedAt: string
+  // Opcional: las filas de antes de la tarea 278 no lo tienen y siguen
+  // valiendo igual (el campo no es un indice, asi que no hace falta otra
+  // version del esquema).
+  desbloqueoDispositivo?: DesbloqueoDispositivo
+}
+
+// Desbloqueo del dispositivo (tarea 278): la credencial WebAuthn que el
+// autenticador de ESTE dispositivo (huella, rostro, Windows Hello o su
+// codigo) creo para la app. Solo material PUBLICO: el identificador, la
+// clave publica y con que se creo. La clave privada nunca sale del
+// autenticador, y ningun dato biometrico, PIN ni "ya se verifico" llega a
+// la app: cada desbloqueo es una firma nueva que se verifica aqui. Local,
+// como el resto de la fila: no se sincroniza.
+export interface DesbloqueoDispositivo extends CredencialRegistrada {
+  creadoEn: string
 }
 
 // Preferencias de trabajo del tecnico (tarea 217). Local a cada

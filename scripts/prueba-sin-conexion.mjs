@@ -10,10 +10,15 @@
 //   3. sin red y con una sesion cuyo token ya vencio (lo normal tras mas de
 //      una hora sin abrir la app), abre la app y no el inicio de sesion;
 //   4. las pantallas principales abren sin red;
-//   5. con el bloqueo de la app puesto, "Cerrar sesion y quitar el bloqueo"
-//      sin red cierra la sesion de verdad: no deja entrar sin el codigo;
-//   6. "Cerrar sesion" sin red cierra la sesion;
-//   7. una pantalla que sale del precache (Importar, tarea 259) dice que
+//   5. desbloqueo del dispositivo (tarea 278) con el autenticador virtual
+//      de Chromium: se activa sobre la contrasena, abre la app sin red con
+//      una credencial y una firma reales, y sin verificar al usuario o con
+//      la credencial borrada NO abre, y la contrasena sigue entrando;
+//   6. con el bloqueo de la app puesto, "Cerrar sesion y quitar el bloqueo"
+//      sin red cierra la sesion de verdad: no deja entrar sin el codigo, y
+//      se lleva tambien el desbloqueo del dispositivo;
+//   7. "Cerrar sesion" sin red cierra la sesion;
+//   8. una pantalla que sale del precache (Importar, tarea 259) dice que
 //      necesita red, sin reinstalar nada.
 // Se compila contra un Supabase que no existe (prueba-sin-conexion): la
 // sesion es inventada y se escribe con la red ya cortada, asi que nada
@@ -181,9 +186,11 @@ class Sesion {
       return true
     `)
   }
+  // Los campos de secreto son texto enmascarado por CSS (CampoContrasena),
+  // no type=password: se reconocen por su placeholder.
   async escribirYEnviar(valor) {
     return this.evaluar(`
-      const c = document.querySelector('input[type=password], input[placeholder="Contraseña"]')
+      const c = document.querySelector('input[type=password], input[placeholder="Contraseña"], input[placeholder="Contraseña de desbloqueo"]')
       if (!c) return false
       const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
       set.call(c, ${JSON.stringify(valor)})
@@ -220,6 +227,23 @@ const SESION_VENCIDA = `(() => {
 const PONER_SESION = `localStorage.setItem(${JSON.stringify(CLAVE_SESION)}, ${SESION_VENCIDA}); return true`
 const HAY_SESION = `return localStorage.getItem(${JSON.stringify(CLAVE_SESION)}) !== null`
 const PANTALLA_ROTA = /No se pudo cargar|Reinstalar la aplicación/
+// La fila del bloqueo tal como la guarda la app (IndexedDB de Dexie), o null.
+const FILA_BLOQUEO = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  const fila = await new Promise((ok, mal) => {
+    const r = base.transaction('seguridadApp').objectStore('seguridadApp').get('principal')
+    r.onsuccess = () => ok(r.result ?? null)
+    r.onerror = () => mal(r.error)
+  })
+  base.close()
+  return fila
+`
+const HAY_APP = `document.querySelector('nav[aria-label="Navegación principal"]') != null`
+const AVISO_DISPOSITIVO = 'No se pudo usar el desbloqueo del dispositivo.'
 
 async function main() {
   compilar()
@@ -302,24 +326,104 @@ async function main() {
       comprobar(pagina.app && pagina.ruta === ruta && !PANTALLA_ROTA.test(pagina.texto), `${ruta} (${pagina.ruta}, ${pagina.ms} ms)`)
     }
 
-    paso('5. Bloqueo de la app: olvidar el código sin red no deja entrar')
+    // Un autenticador de plataforma VIRTUAL de Chromium (DevTools
+    // Protocol, dominio WebAuthn): crea credenciales y firma de verdad, con
+    // la verificacion del usuario simulada. No es una huella fisica.
+    paso('5. Desbloqueo del dispositivo sin red (autenticador virtual de Chromium)')
+    await s.enviar('WebAuthn.enable', { enableUI: false })
+    const { authenticatorId } = await s.enviar('WebAuthn.addVirtualAuthenticator', {
+      options: {
+        protocol: 'ctap2',
+        ctap2Version: 'ctap2_1',
+        transport: 'internal',
+        hasResidentKey: true,
+        hasUserVerification: true,
+        isUserVerified: true,
+        automaticPresenceSimulation: true,
+      },
+    })
+    comprobar(Boolean(authenticatorId), 'autenticador de plataforma virtual, con verificación del usuario')
     pagina = await s.ir('/cuenta/seguridad')
     await s.tocar('Contraseña')
     await s.escribirYEnviar(CONTRASENA_BLOQUEO)
     await s.escribirYEnviar(CONTRASENA_BLOQUEO)
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Desbloqueo del dispositivo') && document.body.innerText.includes('Desactivado.')`, 'la opción')),
+      'con autenticador de plataforma, Seguridad ofrece el desbloqueo del dispositivo',
+    )
+    await s.tocar('Activar')
+    await s.escribirYEnviar(CONTRASENA_BLOQUEO)
+    await s.hasta(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Activar en este dispositivo')`, 'crear')
+    await s.tocar('Activar en este dispositivo')
+    await s.hasta(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Comprobar')`, 'comprobar')
+    await s.tocar('Comprobar')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Activo en este dispositivo.')`, 'activo')),
+      'se activa tras crear la credencial y comprobarla',
+    )
+    const fila = await s.evaluar(FILA_BLOQUEO)
+    const campos = Object.keys(fila?.desbloqueoDispositivo ?? {}).sort().join(',')
+    comprobar(
+      campos === 'algoritmo,clavePublica,creadoEn,credencialId,respaldable,rpId,usuarioId' &&
+        fila.desbloqueoDispositivo.rpId === 'localhost' &&
+        !JSON.stringify(fila).includes(CONTRASENA_BLOQUEO),
+      `la app guarda solo material público (${campos}; algoritmo ${fila?.desbloqueoDispositivo?.algoritmo})`,
+    )
+    const { credentials } = await s.enviar('WebAuthn.getCredentials', { authenticatorId })
+    comprobar(
+      credentials?.length === 1 && credentials[0].rpId === 'localhost' &&
+        credentials[0].credentialId.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') === fila?.desbloqueoDispositivo?.credencialId,
+      'la clave privada vive en el autenticador, con la misma credencial que guardó la app',
+    )
+
     await s.enviar('Page.navigate', { url: BASE + '/' })
-    const bloqueada = await s.hasta(`document.body.innerText.includes('Ingresa tu contraseña de desbloqueo')`, 'pide el código', 45000)
-    comprobar(Boolean(bloqueada), 'con el bloqueo puesto, la app pide el código')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Desbloquea con este dispositivo')`, 'la vía rápida', 45000)),
+      'al abrir, la pantalla de bloqueo ofrece primero el dispositivo',
+    )
+    comprobar(await s.evaluar(`return !(${HAY_APP})`), 'y la app sigue tapada')
+    await s.tocar('Desbloquear')
+    comprobar(Boolean(await s.hasta(HAY_APP, 'abre')), 'sin red, una firma real del autenticador abre la app')
+
+    await s.enviar('WebAuthn.setUserVerified', { authenticatorId, isUserVerified: false })
+    await s.enviar('Page.navigate', { url: BASE + '/' })
+    await s.hasta(`document.body.innerText.includes('Desbloquea con este dispositivo')`, 'la vía rápida', 45000)
+    await s.tocar('Desbloquear')
+    const sinUV = await s.hasta(`document.body.innerText.includes(${JSON.stringify(AVISO_DISPOSITIVO)})`, 'el aviso')
+    comprobar(Boolean(sinUV) && (await s.evaluar(`return !(${HAY_APP})`)), 'sin verificar al usuario, NO abre: avisa y pasa a la contraseña')
+    comprobar(await s.escribirYEnviar(CONTRASENA_BLOQUEO), 'el campo de la contraseña está a la vista')
+    comprobar(Boolean(await s.hasta(HAY_APP, 'abre con la contraseña')), 'la contraseña entra igual')
+
+    await s.enviar('WebAuthn.setUserVerified', { authenticatorId, isUserVerified: true })
+    await s.enviar('WebAuthn.clearCredentials', { authenticatorId })
+    await s.enviar('Page.navigate', { url: BASE + '/' })
+    await s.hasta(`document.body.innerText.includes('Desbloquea con este dispositivo')`, 'la vía rápida', 45000)
+    await s.tocar('Desbloquear')
+    const borrada = await s.hasta(`document.body.innerText.includes(${JSON.stringify(AVISO_DISPOSITIVO)})`, 'el aviso')
+    comprobar(Boolean(borrada) && (await s.evaluar(`return !(${HAY_APP})`)), 'con la credencial borrada del dispositivo, NO abre: avisa')
+    comprobar(await s.escribirYEnviar(CONTRASENA_BLOQUEO), 'el campo de la contraseña está a la vista')
+    comprobar(Boolean(await s.hasta(HAY_APP, 'abre con la contraseña')), 'y la contraseña entra igual')
+
+    paso('6. Bloqueo de la app: olvidar el código sin red no deja entrar')
+    // El bloqueo (contraseña y desbloqueo del dispositivo) viene del paso 5.
+    await s.enviar('Page.navigate', { url: BASE + '/' })
+    const bloqueada = await s.hasta(
+      `/Desbloquea con este dispositivo|Ingresa tu contraseña de desbloqueo/.test(document.body.innerText)`,
+      'pide el código',
+      45000,
+    )
+    comprobar(Boolean(bloqueada), 'con el bloqueo puesto, la app pide desbloquear')
     await s.tocar('¿Olvidaste tu código')
     await s.tocar('Cerrar sesión y quitar el bloqueo')
     await esperar(2500)
     pagina = await s.evaluar(`return { ruta: location.pathname, texto: document.body.innerText }`)
     comprobar(pagina.ruta === '/login', `termina en el inicio de sesión, no dentro de la app (ruta: ${pagina.ruta})`)
     comprobar(!(await s.evaluar(HAY_SESION)), 'la sesión se borró de este teléfono')
+    comprobar((await s.evaluar(FILA_BLOQUEO)) === null, 'el bloqueo y su desbloqueo del dispositivo se quitaron')
     pagina = await s.ir('/')
     comprobar(pagina.ruta === '/login', `al recargar sigue fuera (ruta: ${pagina.ruta})`)
 
-    paso('6. "Cerrar sesión" sin red cierra la sesión')
+    paso('7. "Cerrar sesión" sin red cierra la sesión')
     await s.evaluar(PONER_SESION)
     pagina = await s.ir('/cuenta')
     comprobar(pagina.app, `Ajustes abre con la sesión guardada (${pagina.ms} ms)`)
@@ -336,7 +440,7 @@ async function main() {
     // no de la app, pero deja inservible cualquier paso que venga detras.
     // Por lo mismo, solo Importar: Etiquetas sale del precache igual y usa
     // la misma pantalla (tarea 259), y quedaria detras del mismo rebote.
-    paso('7. Una pantalla fuera del precache dice que necesita red, sin reinstalar nada')
+    paso('8. Una pantalla fuera del precache dice que necesita red, sin reinstalar nada')
     await s.evaluar(PONER_SESION)
     pagina = await s.abrir('/dispositivos/importar', 4000)
     comprobar(

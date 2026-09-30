@@ -1,19 +1,28 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
-import { db, ID_BLOQUEO_APP, type MetodoBloqueoApp } from '../../lib/db'
+import { db, ID_BLOQUEO_APP, type ConfigBloqueoApp, type MetodoBloqueoApp } from '../../lib/db'
+import type { CredencialRegistrada } from '../../lib/webauthn'
 import {
   bloquearApp,
   cambiarBloqueoApp,
+  completarDesbloqueoDispositivo,
   configurarBloqueoApp,
+  confirmarBloqueoActual,
+  crearDesbloqueoDispositivo,
   definirMinutosAutobloqueoApp,
+  desactivarDesbloqueoDispositivo,
+  descartarDesbloqueoPendiente,
+  MENSAJE_DISPOSITIVO_NO_SE_PUDO,
   OPCIONES_AUTOBLOQUEO_APP_MIN,
+  probarDesbloqueoDispositivo,
   quitarBloqueoApp,
   validarSecreto,
 } from './bloqueoApp'
+import { useDesbloqueoDispositivoDisponible } from './useBloqueoApp'
 import { serializarPatron } from './patron'
 import { PatronInput } from './PatronInput'
 import { CLASE_CAMPO as CLASE_CAMPO_BASE } from '../../components/campos'
@@ -25,7 +34,8 @@ const CLASE_CAMPO = `${CLASE_CAMPO_BASE} text-center`
 // "Seguridad de la aplicación" re-autorizada al sistema Nocturne
 // (tarea 97, sin mockup: se traduce el diseño heredado siguiendo el
 // patrón ya establecido, regla 12): activa, cambia o quita el bloqueo
-// de este dispositivo (patrón o contraseña, sin biometría). Es una
+// de este dispositivo (patrón o contraseña) y, desde la tarea 278, el
+// desbloqueo del dispositivo como vía rápida sobre ese respaldo. Es una
 // capa adicional a la sesión de inicio; para las credenciales de la
 // bóveda sigue rigiendo la contraseña maestra. Mismo shell centrado
 // "alcanzada desde Inicio" que CuentaPage y DiagnosticosPage.
@@ -51,7 +61,7 @@ export function SeguridadPage() {
         ) : config === null ? (
           <PanelSinConfigurar />
         ) : (
-          <PanelConfigurado metodo={config.metodo} minutos={config.minutosAutobloqueo} />
+          <PanelConfigurado config={config} />
         )}
       </main>
     </Chasis>
@@ -105,9 +115,11 @@ function PanelSinConfigurar() {
 // Con bloqueo: estado y acciones
 // ----------------------------------------------------------------
 
-type Accion = 'inicio' | 'cambiar' | 'quitar'
+type Accion = 'inicio' | 'cambiar' | 'quitar' | 'dispositivo'
 
-function PanelConfigurado({ metodo, minutos }: { metodo: MetodoBloqueoApp; minutos: number }) {
+function PanelConfigurado({ config }: { config: ConfigBloqueoApp }) {
+  const metodo = config.metodo
+  const minutos = config.minutosAutobloqueo
   const [accion, setAccion] = useState<Accion>('inicio')
   const [minutosSel, setMinutosSel] = useState(
     OPCIONES_AUTOBLOQUEO_APP_MIN.includes(minutos) ? minutos : OPCIONES_AUTOBLOQUEO_APP_MIN[1],
@@ -119,7 +131,26 @@ function PanelConfigurado({ metodo, minutos }: { metodo: MetodoBloqueoApp; minut
   }
 
   if (accion === 'cambiar') return <FlujoCambiar metodoActual={metodo} onListo={() => setAccion('inicio')} />
-  if (accion === 'quitar') return <FlujoQuitar metodoActual={metodo} onListo={() => setAccion('inicio')} />
+  if (accion === 'quitar') {
+    return (
+      <FlujoQuitar
+        metodoActual={metodo}
+        conDispositivo={Boolean(config.desbloqueoDispositivo)}
+        onListo={() => setAccion('inicio')}
+      />
+    )
+  }
+  if (accion === 'dispositivo') {
+    return (
+      // Al volver, la tarjeta dice "Activo en este dispositivo.": no hace
+      // falta otro aviso que repita lo mismo (regla 22).
+      <FlujoActivarDispositivo
+        metodoActual={metodo}
+        reemplazo={Boolean(config.desbloqueoDispositivo)}
+        onListo={() => setAccion('inicio')}
+      />
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -137,6 +168,8 @@ function PanelConfigurado({ metodo, minutos }: { metodo: MetodoBloqueoApp; minut
           Bloquear ahora
         </button>
       </div>
+
+      <SeccionDispositivo config={config} onActivar={() => setAccion('dispositivo')} />
 
       <label className="flex items-center justify-between gap-2 rounded-lg border border-noct-divider bg-noct-surface px-4 py-3 text-sm text-noct-neutral-300">
         Autobloqueo por inactividad
@@ -216,7 +249,15 @@ function FlujoCambiar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoAp
   )
 }
 
-function FlujoQuitar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoApp; onListo: () => void }) {
+function FlujoQuitar({
+  metodoActual,
+  conDispositivo,
+  onListo,
+}: {
+  metodoActual: MetodoBloqueoApp
+  conDispositivo: boolean
+  onListo: () => void
+}) {
   const [error, setError] = useState<string | null>(null)
   const [procesando, setProcesando] = useState(false)
 
@@ -240,6 +281,7 @@ function FlujoQuitar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoApp
       <p className="text-[12.5px] text-noct-neutral-500">
         Confirma con tu {metodoActual === 'patron' ? 'patrón' : 'contraseña'} actual. La app dejará
         de pedir desbloqueo en este dispositivo.
+        {conDispositivo && ' También se desactiva el desbloqueo del dispositivo.'}
       </p>
       <EntradaSecreto
         metodo={metodoActual}
@@ -256,15 +298,253 @@ function FlujoQuitar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoApp
 // Piezas reutilizables
 // ----------------------------------------------------------------
 
+// A 44 px de alto (regla R6): la validación de la 260 los midió en 32
+// (tarea 285, que dejó estos dos para esta pantalla).
 function SelectorMetodo({ onElegir }: { onElegir: (metodo: MetodoBloqueoApp) => void }) {
   return (
     <div className="flex gap-2">
-      <button type="button" onClick={() => onElegir('patron')} className={`flex-1 justify-center ${BTN_SECUNDARIO}`}>
+      <button type="button" onClick={() => onElegir('patron')} className={`min-h-11 flex-1 justify-center ${BTN_SECUNDARIO}`}>
         Patrón
       </button>
-      <button type="button" onClick={() => onElegir('contrasena')} className={`flex-1 justify-center ${BTN_SECUNDARIO}`}>
+      <button
+        type="button"
+        onClick={() => onElegir('contrasena')}
+        className={`min-h-11 flex-1 justify-center ${BTN_SECUNDARIO}`}
+      >
         Contraseña
       </button>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------
+// Desbloqueo del dispositivo (tarea 278)
+// ----------------------------------------------------------------
+
+const EXPLICACION_DISPOSITIVO =
+  'Usa la huella, rostro, Windows Hello o código seguro disponible en este dispositivo. La verificación la hace el dispositivo: Soluciones IT no recibe datos biométricos.'
+
+function nombreRespaldo(metodo: MetodoBloqueoApp): string {
+  return metodo === 'patron' ? 'patrón' : 'contraseña'
+}
+
+// Estado y acciones de la vía rápida. Sin términos técnicos: ni
+// credencial, ni clave pública, ni algoritmo. Si el navegador no lo
+// permite, se dice en una línea y no se ofrece nada.
+function SeccionDispositivo({ config, onActivar }: { config: ConfigBloqueoApp; onActivar: () => void }) {
+  const disponible = useDesbloqueoDispositivoDisponible()
+  const activo = Boolean(config.desbloqueoDispositivo)
+  const [probando, setProbando] = useState(false)
+  const [prueba, setPrueba] = useState<'ok' | 'fallo' | null>(null)
+
+  async function probar() {
+    setPrueba(null)
+    setProbando(true)
+    const resultado = await probarDesbloqueoDispositivo()
+    setProbando(false)
+    setPrueba(resultado === 'ok' ? 'ok' : 'fallo')
+  }
+
+  if (disponible === null) return null
+
+  const estado = !disponible
+    ? 'No disponible en este dispositivo.'
+    : activo
+      ? 'Activo en este dispositivo.'
+      : 'Desactivado.'
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-surface p-4">
+      <div>
+        <p className="text-sm font-medium text-noct-text">Desbloqueo del dispositivo</p>
+        <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{estado}</p>
+      </div>
+      {disponible && !activo && (
+        <p className="text-[12.5px] leading-relaxed text-noct-neutral-400">
+          {EXPLICACION_DISPOSITIVO} Tu {nombreRespaldo(config.metodo)} sigue sirviendo.
+        </p>
+      )}
+      {prueba === 'ok' && <p className="text-[12.5px] text-noct-exito">Funciona en este dispositivo.</p>}
+      {prueba === 'fallo' && (
+        <p className="text-[12.5px] text-noct-neutral-300">
+          {MENSAJE_DISPOSITIVO_NO_SE_PUDO} Si borraste la huella o los datos del navegador, regístralo de nuevo.
+        </p>
+      )}
+
+      {disponible && !activo && (
+        <button type="button" onClick={onActivar} className={`min-h-11 justify-center ${BTN_SECUNDARIO}`}>
+          Activar
+        </button>
+      )}
+      {activo && (
+        <div className="flex flex-wrap gap-2">
+          {disponible && (
+            <button
+              type="button"
+              onClick={() => void probar()}
+              disabled={probando}
+              className={`min-h-11 flex-1 justify-center ${BTN_SECUNDARIO} disabled:opacity-50`}
+            >
+              {probando ? 'Esperando al dispositivo...' : 'Probar'}
+            </button>
+          )}
+          {disponible && prueba === 'fallo' && (
+            <button type="button" onClick={onActivar} className={`min-h-11 flex-1 justify-center ${BTN_SECUNDARIO}`}>
+              Registrar de nuevo
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void desactivarDesbloqueoDispositivo()}
+            className={`min-h-11 flex-1 justify-center ${BTN_GHOST}`}
+          >
+            Desactivar
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+type PasoDispositivo = 'confirmar' | 'crear' | 'comprobar'
+
+// Activar (o registrar de nuevo) en tres pasos, cada uno con su toque:
+// 1. confirmar el patrón o la contraseña actual (quien encuentre la app
+//    abierta no puede registrar su propia huella);
+// 2. "Activar en este dispositivo": el sistema crea la credencial;
+// 3. "Comprobar": el sistema la usa una vez y la app verifica la firma.
+// Solo tras el paso 3 se guarda. Cancelar en cualquier punto deja todo
+// como estaba.
+function FlujoActivarDispositivo({
+  metodoActual,
+  reemplazo,
+  onListo,
+}: {
+  metodoActual: MetodoBloqueoApp
+  reemplazo: boolean
+  onListo: () => void
+}) {
+  const [paso, setPaso] = useState<PasoDispositivo>('confirmar')
+  const [pendiente, setPendiente] = useState<CredencialRegistrada | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [procesando, setProcesando] = useState(false)
+  const [reinicio, setReinicio] = useState(0)
+  const pendienteRef = useRef<CredencialRegistrada | null>(null)
+  const respaldo = nombreRespaldo(metodoActual)
+  const noSePudo = `No se pudo activar el desbloqueo del dispositivo. Tu ${respaldo} sigue igual.`
+  const confirmaDeNuevo = `Vuelve a confirmar tu ${respaldo}.`
+
+  function fijarPendiente(valor: CredencialRegistrada | null) {
+    pendienteRef.current = valor
+    setPendiente(valor)
+  }
+
+  // Una credencial creada que no se llegó a guardar (se salió a la mitad).
+  useEffect(
+    () => () => {
+      if (pendienteRef.current) descartarDesbloqueoPendiente(pendienteRef.current)
+    },
+    [],
+  )
+
+  async function confirmar(secreto: string) {
+    setProcesando(true)
+    const mensaje = await confirmarBloqueoActual(secreto)
+    setProcesando(false)
+    if (mensaje) {
+      setError(mensaje)
+      setReinicio((n) => n + 1)
+      return
+    }
+    setError(null)
+    setPaso('crear')
+  }
+
+  async function crear() {
+    setError(null)
+    setProcesando(true)
+    const resultado = await crearDesbloqueoDispositivo()
+    setProcesando(false)
+    if (resultado.ok) {
+      fijarPendiente(resultado.pendiente)
+      setPaso('comprobar')
+      return
+    }
+    if (resultado.motivo === 'sin-confirmar') {
+      setError(confirmaDeNuevo)
+      setPaso('confirmar')
+      return
+    }
+    setError(noSePudo)
+  }
+
+  async function comprobar() {
+    if (!pendiente) return
+    setError(null)
+    setProcesando(true)
+    const resultado = await completarDesbloqueoDispositivo(pendiente)
+    setProcesando(false)
+    if (resultado === 'ok') {
+      pendienteRef.current = null
+      onListo()
+      return
+    }
+    if (resultado === 'sin-confirmar') {
+      descartarDesbloqueoPendiente(pendiente)
+      fijarPendiente(null)
+      setError(confirmaDeNuevo)
+      setPaso('confirmar')
+      return
+    }
+    setError(noSePudo)
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <button type="button" onClick={onListo} className={`${BTN_GHOST} self-start`}>
+        Cancelar
+      </button>
+      <h2 className="text-sm font-medium text-noct-text">
+        {reemplazo ? 'Registrar de nuevo el desbloqueo del dispositivo' : 'Activar el desbloqueo del dispositivo'}
+      </h2>
+
+      {paso === 'confirmar' ? (
+        <EntradaSecreto
+          metodo={metodoActual}
+          etiqueta={metodoActual === 'patron' ? 'Dibuja tu patrón actual' : 'Escribe tu contraseña actual'}
+          onCompletar={(s) => void confirmar(s)}
+          deshabilitado={procesando}
+          reinicio={reinicio}
+        />
+      ) : paso === 'crear' ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-[12.5px] leading-relaxed text-noct-neutral-400">{EXPLICACION_DISPOSITIVO}</p>
+          <button
+            type="button"
+            onClick={() => void crear()}
+            disabled={procesando}
+            className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}
+          >
+            {procesando ? 'Esperando al dispositivo...' : 'Activar en este dispositivo'}
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-[12.5px] leading-relaxed text-noct-neutral-400">
+            Último paso: comprueba que funciona. El dispositivo te lo pedirá una vez más.
+          </p>
+          <button
+            type="button"
+            onClick={() => void comprobar()}
+            disabled={procesando}
+            className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}
+          >
+            {procesando ? 'Esperando al dispositivo...' : 'Comprobar'}
+          </button>
+        </div>
+      )}
+
+      {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
     </div>
   )
 }

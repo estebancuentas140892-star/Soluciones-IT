@@ -1,0 +1,61 @@
+{
+  "generadoCon": "Chrome/154.0.8037.58",
+  "origen": "http://localhost:5187",
+  "rpId": "localhost",
+  "credenciales": [
+    {
+      "registro": {
+        "desafio": "dpee9Kgd9BhLC2sS8BNbFO2Mbwpm5NZvJxM8dgvYUYw",
+        "usuarioId": "FJJII9NM286aG8-rKg0-7g",
+        "rawId": "cf36sSwT55kOMxXdFTTe8aHo6n6wOznodJgj-1RLdsE",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiZHBlZTlLZ2Q5QmhMQzJzUzhCTmJGTzJNYndwbTVOWnZKeE04ZGd2WVVZdyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTE4NyIsImNyb3NzT3JpZ2luIjpmYWxzZX0",
+        "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIHH9-rEsE-eZDjMV3RU03vGh6Op-sDs56HSYI_tUS3bBpQECAyYgASFYIG92Wa-YP2KPeXbf8Ro_9sHuR-7ZwGI-9BNvc_h7xuztIlgg9ijF8BCKLDu7hb-9raI7ZaWb-zLn9JLJweSJmfIVOqg",
+        "clavePublica": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEb3ZZr5g_Yo95dt_xGj_2we5H7tnAYj70E29z-HvG7O32KMXwEIosO7uFv72tojtlpZv7Muf0ksnB5ImZ8hU6qA",
+        "algoritmo": -7
+      },
+      "conUV": {
+        "desafio": "g807QT81ZugSgvGpOu-8KyRBeXpSCg8ohvxhV34tcQg",
+        "rawId": "cf36sSwT55kOMxXdFTTe8aHo6n6wOznodJgj-1RLdsE",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiZzgwN1FUODFadWdTZ3ZHcE91LThLeVJCZVhwU0NnOG9odnhoVjM0dGNRZyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTE4NyIsImNyb3NzT3JpZ2luIjpmYWxzZX0",
+        "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
+        "signature": "MEYCIQCTbSVJyiaJF-Pp5holVOKAwKJqS0hQWEwJ2d94Ukt4yQIhAIg1K3ikKzDDHSpu2PpQbrLjife89C_TZq--aN4XVbVn",
+        "userHandle": null
+      },
+      "sinUV": {
+        "desafio": "uFBuesv1ECzTFDfmfyF2TQt8a7AXZmt_W94-7LmNBSA",
+        "rawId": "cf36sSwT55kOMxXdFTTe8aHo6n6wOznodJgj-1RLdsE",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoidUZCdWVzdjFFQ3pURkRmbWZ5RjJUUXQ4YTdBWFptdF9XOTQtN0xtTkJTQSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTE4NyIsImNyb3NzT3JpZ2luIjpmYWxzZX0",
+        "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MBAAAAAw",
+        "signature": "MEUCIQDuF1tNVfTjFZ-9rQVMTMy7OD_spQD0LqG4PwvbYvh3nAIgOXD2S8TFTfnucPXOg2dDl_bFjtChQ5SySh6nEh3bV7E",
+        "userHandle": null
+      }
+    },
+    {
+      "registro": {
+        "desafio": "2R7lleabqVMfJYTmhcsXf6fOfzHzLbo3KWGu2DiZItU",
+        "usuarioId": "kCRRz9e7FudwSVZoqcT0fQ",
+        "rawId": "tXH9aAh3bgHUs1Fn3tcZc_Ac-xER9IsBA6PuTvHugYY",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiMlI3bGxlYWJxVk1mSllUbWhjc1hmNmZPZnpIekxibzNLV0d1MkRpWkl0VSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTE4NyIsImNyb3NzT3JpZ2luIjpmYWxzZX0",
+        "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAILVx_WgId24B1LNRZ97XGXPwHPsREfSLAQOj7k7x7oGGpAEDAzkBACBZAQD251v1o6Zh4OvBnjCGTS3q-tUrP4hB8KAjDE9vRa6Co4a83nkucNSsBzJZtJ1J8is4n6SVmu7XRerZIPxzqJUcB3_YrZURETEANY32pzJmRCLWMXjgvi89k1MPLlxrPjAzZ0HwwL7sanj2BRaKSF7QLtTrU9eisipELR5xjl0gG5FyI3-wVtqFOZsWSJdVLZZsrCIlUwiOxFwGNCh46yDvRmQr7_TzwTwYvUrD4mseyd4FfgPwS5vbqYhe5yurjlfLXEY-U--C629ONuDv64_uuOIRorntop8q843cKBSi7tUS2yzU7g1n4wQTz65EG-eyH3b90JzGK8GUPiY_sqK9IUMBAAE",
+        "clavePublica": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9udb9aOmYeDrwZ4whk0t6vrVKz-IQfCgIwxPb0WugqOGvN55LnDUrAcyWbSdSfIrOJ-klZru10Xq2SD8c6iVHAd_2K2VERExADWN9qcyZkQi1jF44L4vPZNTDy5caz4wM2dB8MC-7Gp49gUWikhe0C7U61PXorIqRC0ecY5dIBuRciN_sFbahTmbFkiXVS2WbKwiJVMIjsRcBjQoeOsg70ZkK-_088E8GL1Kw-JrHsneBX4D8Eub26mIXucrq45Xy1xGPlPvgutvTjbg7-uP7rjiEaK57aKfKvON3CgUou7VEtss1O4NZ-MEE8-uRBvnsh92_dCcxivBlD4mP7KivQIDAQAB",
+        "algoritmo": -257
+      },
+      "conUV": {
+        "desafio": "0_gkWmgr05M5msrCfQFn2r8Ij0MlI4dkVto8kP_dm2c",
+        "rawId": "tXH9aAh3bgHUs1Fn3tcZc_Ac-xER9IsBA6PuTvHugYY",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiMF9na1dtZ3IwNU01bXNyQ2ZRRm4ycjhJajBNbEk0ZGtWdG84a1BfZG0yYyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTE4NyIsImNyb3NzT3JpZ2luIjpmYWxzZX0",
+        "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
+        "signature": "QCr9hYWVzZx_Qy_KYEJm21r1NIjgSK2tea6Z5b9BZLanIfvpdcjN4N_VbySurtt-NmlaBFAMADOMk0DOcajzTZ-2iOBmfMBW6s-oAPg0fpuSNK01tKslzE8WGx6YeS477i6Xlnse7sftirzxFNJxSnaw6sfO960Wl-yECBJE1QT7XbJoGXvngi3-0kId0bU4HQX7BybbmitIjq4eRVTfvckeBwebe_iahTLsoJv08yxrZg9F7OxGOSOxR86Ovub8ZbijDWpBPQ-phMpgHjK0VF9L-piybFprvaNQ4Beltk7VZVQSzIl_kJCDOp6U5CzIp21uhHOWijI6xugQEsTTUg",
+        "userHandle": null
+      },
+      "sinUV": {
+        "desafio": "_nWieYpKeGkFn6YuVR447wOxMSuLW8zsMIH-BTDJ4hQ",
+        "rawId": "tXH9aAh3bgHUs1Fn3tcZc_Ac-xER9IsBA6PuTvHugYY",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiX25XaWVZcEtlR2tGbjZZdVZSNDQ3d094TVN1TFc4enNNSUgtQlRESjRoUSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTE4NyIsImNyb3NzT3JpZ2luIjpmYWxzZX0",
+        "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MBAAAAAw",
+        "signature": "IM3dGLsk55_ELdJn3oI6Pr7qrngVG56h62Vbdak7Ep6u-jaRMfTTZojRB4WpcWUmSaftrGNexRvmUxvDAxWtStbDQ0-3F166QhhHPeTYLKqsXPt5OPlM0elabOUMON6ydZnAURN_v6rTMBt6wKq5RWc1ZKxMtrAidcf-mQ22fGgVttmAFTtobjjQNDslV8PmwbqG_rY3MsN_V_bUnG3wBK_ouwTYn-bMz68ayA89uV_nRuyhWNWpkxzlys1T60vI54LUaq5kmzAjmaadNc5S49EOZroqgXeY4C7kd0GYtYOy0jcFrp2pwAqLL6c0PdmKMp8xQCIdDLAsTUpXjKkx8Q",
+        "userHandle": null
+      }
+    }
+  ]
+}

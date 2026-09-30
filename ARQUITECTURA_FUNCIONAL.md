@@ -635,6 +635,7 @@ Barrera real: **RLS** (Postgres, bloquea aunque se llame la API directo); **Maes
 | Restablecer la contraseña maestra | No | No | Fuera |
 | Exportar datos | No existe | No existe | N/A |
 | Configurar el bloqueo de la app | Sí (cada quien el suyo) | Sí | Local al dispositivo |
+| Activar el desbloqueo del dispositivo (tarea 278) | Sí (cada quien el suyo, confirmando su patrón o contraseña) | Sí | Local al dispositivo; no abre la Bóveda |
 
 ### 5.3 Consecuencia de diseño
 

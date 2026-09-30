@@ -1,16 +1,21 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Outlet } from 'react-router-dom'
-import { db, ID_BLOQUEO_APP, type MetodoBloqueoApp } from '../../lib/db'
+import { db, ID_BLOQUEO_APP, type ConfigBloqueoApp } from '../../lib/db'
 import { Cargando } from '../../components/Cargando'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_GHOST_TENUE } from '../../components/nocturne'
 import { useAuth } from '../autenticacion/authContext'
-import { desbloquearApp, restablecerBloqueoApp } from './bloqueoApp'
+import {
+  desbloquearApp,
+  desbloquearAppConDispositivo,
+  MENSAJE_DISPOSITIVO_NO_SE_PUDO,
+  restablecerBloqueoApp,
+} from './bloqueoApp'
 import { serializarPatron } from './patron'
 import { PatronInput } from './PatronInput'
-import { useBloqueoAppDesbloqueado } from './useBloqueoApp'
+import { useBloqueoAppDesbloqueado, useDesbloqueoDispositivoDisponible } from './useBloqueoApp'
 
 // Envuelve TODAS las rutas autenticadas: si el dispositivo tiene un
 // bloqueo configurado y aun no se ha desbloqueado en esta apertura de
@@ -25,16 +30,38 @@ export function BloqueoAppGuard() {
   if (config === undefined) return <Cargando />
   if (config === null) return <Outlet />
   if (desbloqueada) return <Outlet />
-  return <PantallaBloqueo metodo={config.metodo} />
+  return <PantallaBloqueo config={config} />
 }
 
-function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
+// Con el desbloqueo del dispositivo activo (tarea 278), la pantalla tiene
+// UNA accion principal, "Desbloquear", que abre el dialogo del sistema, y
+// el patron o la contrasena a un toque. El dialogo nunca se abre solo: la
+// pantalla aparece tras la inactividad, con nadie mirando, y Safari limita
+// las llamadas sin un gesto. Si se cancela o falla, se pasa al patron o
+// la contrasena con un aviso, sin volver a abrir el dialogo.
+function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
+  const metodo = config.metodo
   const { cerrarSesion } = useAuth()
+  const disponible = useDesbloqueoDispositivoDisponible()
   const [contrasena, setContrasena] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [abriendo, setAbriendo] = useState(false)
   const [reinicioPatron, setReinicioPatron] = useState(0)
   const [mostrarAyuda, setMostrarAyuda] = useState(false)
+  const [usarCodigo, setUsarCodigo] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [esperandoDispositivo, setEsperandoDispositivo] = useState(false)
+  const ceremonia = useRef<AbortController | null>(null)
+
+  // Si la pantalla se va (se desbloqueo de otra forma), el dialogo pendiente se cancela.
+  useEffect(() => () => ceremonia.current?.abort(), [])
+
+  const conDispositivo = Boolean(config.desbloqueoDispositivo) && disponible === true
+  // Mientras se averigua si el dispositivo puede (un instante), no se
+  // dibuja ninguna de las dos vias: ni un boton que no funcionara ni un
+  // patron que enseguida cambiaria de lugar.
+  const decidiendo = Boolean(config.desbloqueoDispositivo) && disponible === null
+  const vistaDispositivo = conDispositivo && !usarCodigo
 
   async function intentar(secreto: string) {
     setError(null)
@@ -47,6 +74,23 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
       setReinicioPatron((n) => n + 1)
     }
     // Si es correcto, el estado observable cambia y el guard muestra la app.
+  }
+
+  async function usarDispositivo() {
+    setAviso(null)
+    setError(null)
+    setEsperandoDispositivo(true)
+    const controlador = new AbortController()
+    ceremonia.current = controlador
+    const resultado = await desbloquearAppConDispositivo(controlador.signal)
+    if (controlador.signal.aborted) return
+    ceremonia.current = null
+    setEsperandoDispositivo(false)
+    // Si es correcto, el guard muestra la app. Si no, el respaldo, ya.
+    if (resultado !== 'ok') {
+      setAviso(MENSAJE_DISPOSITIVO_NO_SE_PUDO)
+      setUsarCodigo(true)
+    }
   }
 
   async function manejarEnvioContrasena(evento: FormEvent) {
@@ -62,6 +106,14 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
     await restablecerBloqueoApp()
   }
 
+  const subtitulo = decidiendo
+    ? ''
+    : vistaDispositivo
+      ? 'Desbloquea con este dispositivo'
+      : metodo === 'patron'
+        ? 'Dibuja tu patrón para continuar'
+        : 'Ingresa tu contraseña de desbloqueo'
+
   return (
     <div className="nocturne flex min-h-svh flex-col items-center justify-center gap-6 bg-noct-bg px-6 font-inter text-noct-text">
       <div className="flex flex-col items-center gap-[18px] text-center">
@@ -70,15 +122,31 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
         </div>
         <div>
           <h1 className="text-[22px] font-medium leading-tight">Soluciones IT</h1>
-          <p className="mt-1.5 text-[13.5px] text-noct-neutral-400">
-            {metodo === 'patron'
-              ? 'Dibuja tu patrón para continuar'
-              : 'Ingresa tu contraseña de desbloqueo'}
-          </p>
+          {subtitulo && <p className="mt-1.5 text-[13.5px] text-noct-neutral-400">{subtitulo}</p>}
+          {aviso && !vistaDispositivo && <p className="mt-2 text-[12.5px] text-noct-neutral-300">{aviso}</p>}
         </div>
       </div>
 
-      {metodo === 'patron' ? (
+      {decidiendo ? null : vistaDispositivo ? (
+        <div className="flex w-full max-w-[300px] flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={() => void usarDispositivo()}
+            disabled={esperandoDispositivo}
+            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
+          >
+            {esperandoDispositivo ? 'Esperando al dispositivo...' : 'Desbloquear'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setUsarCodigo(true)}
+            disabled={esperandoDispositivo}
+            className={`${BTN_GHOST_TENUE} min-h-11 justify-center`}
+          >
+            {metodo === 'patron' ? 'Usar patrón' : 'Usar contraseña'}
+          </button>
+        </div>
+      ) : metodo === 'patron' ? (
         <div className="flex flex-col items-center gap-3">
           <PatronInput
             onCompletar={(secuencia) => void intentar(serializarPatron(secuencia))}
@@ -106,6 +174,20 @@ function PantallaBloqueo({ metodo }: { metodo: MetodoBloqueoApp }) {
             {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
           </button>
         </form>
+      )}
+
+      {conDispositivo && usarCodigo && (
+        <button
+          type="button"
+          onClick={() => {
+            setAviso(null)
+            setError(null)
+            setUsarCodigo(false)
+          }}
+          className={`${BTN_GHOST_TENUE} min-h-11 justify-center`}
+        >
+          Usar el desbloqueo del dispositivo
+        </button>
       )}
 
       <div className="flex flex-col items-center gap-2 text-center">
