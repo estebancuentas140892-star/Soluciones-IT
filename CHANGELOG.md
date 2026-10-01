@@ -6,6 +6,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-01
+
+### Cambiado (guías, tarea 287, bloque 1): la ejecución de una guía según la propuesta final de Claude Design
+
+**Área modificada:** `src/features/soluciones/{ModoFoco,AsistenteVista,HojaPasos,RutaProcedimiento,TarjetaGuiaVinculada,AsistentePage}.tsx`, `src/features/soluciones/EstadoEjecucion.tsx` (nuevo), `src/features/soluciones/{cierrePaso,estadoPasos}.ts`, sus pruebas (`ejecucionPropuestaFinal.test.tsx` nueva), `scripts/capturas-moviles.mjs`, `DECISIONES.md` (AD-060), `DOCUMENTACION_FUNCIONAL.md` (13.2), `COMPONENTES_UI.md`.
+**Tipo:** Cambiado (presentación y navegación de la ejecución). Ningún dato, tabla ni regla de qué cuenta como hecho cambia.
+**Motivo:** implementación cerrada del diseño aprobado "SOLUCIONES IT, PROPUESTA FINAL" (Claude Design, "Soluciones IT Antes y Despues"): la pantalla de la guía tiene que responder "¿qué tengo que hacer ahora?".
+**Qué cambia:**
+- En el teléfono, la acción manda: fuera la ruta vertical y el rótulo "PASO 3 DE 8"; arriba quedan un segmento por paso, "acción 2 de 2" y el título del paso en gris. En escritorio y tableta sigue la ruta horizontal.
+- Retomar es una línea: "Retomando · paso N de M" con "Empezar de nuevo" a un toque. El aviso de borrador vive en esa misma línea y en la cabecera del índice.
+- El botón dice la consecuencia: "Completar y seguir", "Completar y terminar" (solo si no queda otro paso, ni uno saltado), "Ir al paso N", "Ir a la acción N", "Falta 1 tarea", "Faltan N tareas" o "Completa «X»", inactivo y legible. El nombre de una guía largo se acorta dentro de las comillas y el verbo nunca se corta; el nombre accesible lo lleva entero. Se retiran "Siguiente", "Terminar" y "Comprobado · siguiente / terminar".
+- El índice es "Ruta de la guía": nombres hasta en dos líneas, "Aquí vas" en el paso de trabajo y "Abrir un paso solo lo muestra. No marca nada como hecho."
+- Consultar otro paso: un paso pendiente de más adelante abierto desde el índice se lee en modo consulta ("Solo consulta · no se marca nada") y "Ir al paso N" devuelve al paso de trabajo.
+- La lupa sigue abriendo la capa de consulta de siempre: nada navega fuera y al cerrarla se sigue en el mismo paso.
+**Impacto esperado:** menos lectura por pantalla y un botón que no deja dudas; quien quería marcar un paso de más adelante antes del actual lo salta con "Tengo un problema" o usa la vista de paso entero.
+**Cómo se comprobó:** 14 pruebas nuevas (consulta, índice, botón con nombre largo, "terminar" con un paso saltado, acortado del nombre) y las de la ejecución actualizadas al rótulo nuevo; suite completa (2335 pruebas), lint y build; capturas con `scripts/capturas-moviles.mjs` a 390×844 y 1366×768 (paradas nuevas `guia-indice-ruta` y `guia-consulta`), sin desbordamiento horizontal.
+
 ## 2026-09-30
 
 ### Documentación (Bóveda, tarea 279): análisis del desbloqueo rápido; no se implementa

@@ -246,9 +246,9 @@ describe('ejemplo C: las respuestas cambian el camino', () => {
     // Empieza de cero DENTRO del recorrido: no hereda el avance suelto.
     await esperar(() => textoPantalla().includes('Abrir Impresoras y escáneres'), 'la primera acción del procedimiento')
 
-    await tocar(await esperar(() => principal('Siguiente'), 'Siguiente'))
+    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'la segunda acción')
-    await tocar(await esperar(() => principal('Terminar'), 'Terminar'))
+    await tocar(await esperar(() => principal('Completar y terminar'), 'Completar y terminar'))
 
     // Regreso automático al punto exacto del recorrido.
     await esperar(() => textoPantalla().includes('¿Ahora imprime una página de prueba?'), 'la pregunta siguiente')
@@ -310,7 +310,7 @@ describe('el procedimiento dentro del recorrido no se pierde', () => {
     await montar(RUTAS, '/diagnostico/rec-impresora')
 
     await tocar(await esperar(() => respuesta('No'), 'la respuesta No'))
-    await tocar(await esperar(() => principal('Siguiente'), 'Siguiente en la primera acción'))
+    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir en la primera acción'))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'la segunda acción')
 
     // Volver a la pregunta deshace la respuesta, no lo hecho.
@@ -416,7 +416,7 @@ describe('ejemplo D: distinguir la causa lleva al procedimiento que corresponde'
     await tocar(await esperar(() => respuesta('Contraseña vencida'), 'la causa'))
     await esperar(() => textoPantalla().includes('Asignar una clave temporal de prueba'), 'el procedimiento de la clave')
     expect(textoPantalla()).not.toContain('Marcar Desbloquear cuenta de prueba')
-    await tocar(await esperar(() => principal('Terminar'), 'Terminar'))
+    await tocar(await esperar(() => principal('Completar y terminar'), 'Completar y terminar'))
 
     await esperar(() => textoPantalla().includes('Entregar la clave temporal.'), 'el final de esa rama')
     expect(textoPantalla()).toContain('¿Quedó resuelto el problema?')
@@ -453,7 +453,7 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-dian')
 
     await esperar(() => textoPantalla().includes('Abrir el POS de prueba'), 'la primera acción')
-    await tocar(await esperar(() => principal('Siguiente'), 'Siguiente'))
+    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('¿Encontraste el número de resolución?'), 'la decisión')
 
     await tocar(await esperarControl('No: abrir «Localizar la resolución de prueba»'))
@@ -461,7 +461,7 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     expect(textoPantalla()).toContain(
       'Estás realizando «Localizar la resolución de prueba» para continuar con «Actualizar la resolución de prueba en el POS»',
     )
-    await tocar(await esperar(() => principal('Terminar'), 'Terminar la rama'))
+    await tocar(await esperar(() => principal('Completar y terminar'), 'Completar y terminar la rama'))
 
     // De vuelta en la principal, en el punto exacto: la decisión, ya
     // respondida, y de ahí a la acción que la seguía.
@@ -471,7 +471,7 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     )
     expect(textoPantalla()).toContain('Hecha')
     expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-dian')
-    await tocar(await esperar(() => principal('Siguiente'), 'Siguiente tras la decisión'))
+    await tocar(await esperar(() => principal('Ir a la acción 3'), 'Ir a la acción 3 tras la decisión'))
     await esperar(() => textoPantalla().includes('Escribir el número en el POS de prueba'), 'la acción siguiente')
     const avance = await db.progresoPasos.get('guia-dian')
     expect(avance?.instruccionesHechas).toEqual(expect.arrayContaining(['dian-p1-t1', 'dian-p1-t2']))

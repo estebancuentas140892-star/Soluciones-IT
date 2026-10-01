@@ -1,4 +1,4 @@
-import { ArrowRight, CaretDown, Check, Warning } from '../../components/iconos'
+import { ArrowRight, Check, Warning } from '../../components/iconos'
 import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 import { descripcionDeNodo, etiquetaDeRuta, vecinosDeRuta } from './rutaVisual'
 
@@ -9,8 +9,12 @@ import { descripcionDeNodo, etiquetaDeRuta, vecinosDeRuta } from './rutaVisual'
 //
 //   Escritorio y tableta: horizontal, con flechas, partiendo línea si
 //   hace falta, y debajo "PASO 3 DE 7" con el título del paso.
-//   Teléfono: vertical y recortada al paso anterior, el actual y el
-//   siguiente, con "Ver la ruta completa" para el índice entero.
+//   Teléfono: NADA desde la propuesta final de Claude Design
+//   (2026-10-01). La versión vertical (paso anterior, actual y siguiente,
+//   con "Ver la ruta completa") ocupaba un tercio de la pantalla y
+//   competía con la acción; ahí orientan el contador "3/8" de la
+//   cabecera, que abre el índice entero, y los segmentos de
+//   `EstadoEjecucion.tsx`.
 //
 // Los colores dicen ESTADO y nunca van solos (regla R16): hecho lleva su
 // marca en verde, el actual va en el azul de la acción y con su número, y
@@ -23,8 +27,6 @@ interface Props {
   indiceActual: number
   /** Mover la vista a un paso. No marca ni completa nada. */
   onIrAPaso: (indice: number) => void
-  /** Abrir el índice de pasos, que es la ruta completa. */
-  onVerRutaCompleta: () => void
 }
 
 function clasesNodo(estado: EstadoPaso): string {
@@ -50,128 +52,49 @@ function MarcaNodo({ resumen }: { resumen: ResumenPaso }) {
   )
 }
 
-export function RutaProcedimiento({ resumenes, indiceActual, onIrAPaso, onVerRutaCompleta }: Props) {
+export function RutaProcedimiento({ resumenes, indiceActual, onIrAPaso }: Props) {
   const total = resumenes.length
   if (total === 0) return null
-  const { previo, actual, siguiente } = vecinosDeRuta(resumenes, indiceActual)
+  const { actual } = vecinosDeRuta(resumenes, indiceActual)
   if (!actual) return null
 
   return (
-    <nav aria-label="Ruta del procedimiento" className="flex-none">
-      {/* TELÉFONO: el paso anterior, este y el siguiente. El nodo actual
-          ES la cabecera del paso, así que la vista de debajo no repite
-          "Paso N de M". */}
-      <ol className="flex flex-col md:hidden">
-        {previo && <NodoVecino resumen={previo} total={total} papel="previo" onIr={() => onIrAPaso(previo.indice)} />}
-        <li>
-          <p className="flex flex-wrap items-baseline gap-x-2 text-[13.5px] leading-snug">
-            <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
-              Paso {actual.indice + 1} de {total}
-            </span>
-            {actual.estado === 'hecho' && (
-              <span className="inline-flex items-center gap-1 text-noct-exito">
-                <Check size={13} aria-hidden />
-                hecho
-              </span>
-            )}
-          </p>
-          <p className="mt-0.5 text-[17px] font-medium leading-snug text-pretty text-noct-text">
-            {actual.titulo}
-          </p>
-        </li>
-        {siguiente && (
-          <NodoVecino resumen={siguiente} total={total} papel="siguiente" onIr={() => onIrAPaso(siguiente.indice)} />
-        )}
-        {total > (previo ? 1 : 0) + 1 + (siguiente ? 1 : 0) && (
-          <li>
+    <nav aria-label="Ruta del procedimiento" className="hidden flex-none md:block">
+      <ol className="flex flex-wrap items-center gap-x-1 gap-y-1.5">
+        {resumenes.map((resumen, indice) => (
+          <li key={resumen.id} className="flex items-center gap-1">
+            {indice > 0 && <ArrowRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />}
             <button
               type="button"
-              onClick={onVerRutaCompleta}
-              aria-haspopup="dialog"
-              className="-ml-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-1.5 text-[12.5px] font-medium text-noct-neutral-400 hover:text-noct-text"
+              onClick={() => onIrAPaso(resumen.indice)}
+              aria-current={resumen.estado === 'actual' ? 'step' : undefined}
+              aria-label={descripcionDeNodo(resumen, total)}
+              title={resumen.titulo}
+              // Tope de ancho para que la ruta siga siendo compacta; más
+              // holgado desde `lg`, donde sobra sitio. Lo que no quepa se
+              // lee entero en `title`, en el nombre accesible y, para el
+              // paso actual, justo debajo.
+              className={`inline-flex min-h-8 max-w-[24ch] items-center gap-1.5 rounded-full border px-2.5 text-[13px] hover:bg-noct-text/[.06] lg:max-w-[34ch] ${clasesNodo(resumen.estado)}`}
             >
-              Ver la ruta completa · {total} pasos
-              <CaretDown size={12} aria-hidden />
+              <MarcaNodo resumen={resumen} />
+              <span className="truncate">{etiquetaDeRuta(resumen.titulo)}</span>
+              {resumen.tieneCuidado && <Warning size={12} className="shrink-0 text-noct-error" aria-hidden />}
             </button>
           </li>
-        )}
+        ))}
       </ol>
-
-      {/* ESCRITORIO Y TABLETA: la ruta entera, en horizontal. */}
-      <div className="hidden md:block">
-        <ol className="flex flex-wrap items-center gap-x-1 gap-y-1.5">
-          {resumenes.map((resumen, indice) => (
-            <li key={resumen.id} className="flex items-center gap-1">
-              {indice > 0 && <ArrowRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />}
-              <button
-                type="button"
-                onClick={() => onIrAPaso(resumen.indice)}
-                aria-current={resumen.estado === 'actual' ? 'step' : undefined}
-                aria-label={descripcionDeNodo(resumen, total)}
-                title={resumen.titulo}
-                // Tope de ancho para que la ruta siga siendo compacta; más
-                // holgado desde `lg`, donde sobra sitio. Lo que no quepa se
-                // lee entero en `title`, en el nombre accesible y, para el
-                // paso actual, justo debajo.
-                className={`inline-flex min-h-8 max-w-[24ch] items-center gap-1.5 rounded-full border px-2.5 text-[13px] hover:bg-noct-text/[.06] lg:max-w-[34ch] ${clasesNodo(resumen.estado)}`}
-              >
-                <MarcaNodo resumen={resumen} />
-                <span className="truncate">{etiquetaDeRuta(resumen.titulo)}</span>
-                {resumen.tieneCuidado && <Warning size={12} className="shrink-0 text-noct-error" aria-hidden />}
-              </button>
-            </li>
-          ))}
-        </ol>
-        <p className="mt-2.5 flex flex-wrap items-baseline gap-x-2 text-[13.5px] leading-snug">
-          <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
-            Paso {actual.indice + 1} de {total}
+      <p className="mt-2.5 flex flex-wrap items-baseline gap-x-2 text-[13.5px] leading-snug">
+        <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
+          Paso {actual.indice + 1} de {total}
+        </span>
+        <span className="text-[17px] font-medium text-noct-text">{actual.titulo}</span>
+        {actual.estado === 'hecho' && (
+          <span className="inline-flex items-center gap-1 text-noct-exito">
+            <Check size={13} aria-hidden />
+            hecho
           </span>
-          <span className="text-[17px] font-medium text-noct-text">{actual.titulo}</span>
-          {actual.estado === 'hecho' && (
-            <span className="inline-flex items-center gap-1 text-noct-exito">
-              <Check size={13} aria-hidden />
-              hecho
-            </span>
-          )}
-        </p>
-      </div>
+        )}
+      </p>
     </nav>
   )
-}
-
-// Un vecino del paso actual en el teléfono: una línea de 44 px que mueve
-// la vista a ese paso (consultar, nunca marcar).
-function NodoVecino({
-  resumen,
-  total,
-  papel,
-  onIr,
-}: {
-  resumen: ResumenPaso
-  total: number
-  papel: 'previo' | 'siguiente'
-  onIr: () => void
-}) {
-  return (
-    <li className="flex flex-col">
-      {papel === 'siguiente' && <LineaConectora />}
-      <button
-        type="button"
-        onClick={onIr}
-        aria-label={descripcionDeNodo(resumen, total)}
-        className="-ml-1.5 flex min-h-11 items-center gap-2 rounded-lg px-1.5 text-left hover:bg-noct-text/[.05]"
-      >
-        <MarcaNodo resumen={resumen} />
-        <span className="min-w-0 flex-1 truncate text-[13.5px] text-noct-neutral-400">
-          {etiquetaDeRuta(resumen.titulo)}
-        </span>
-        {resumen.tieneCuidado && <Warning size={13} className="shrink-0 text-noct-error" aria-hidden />}
-      </button>
-      {papel === 'previo' && <LineaConectora />}
-    </li>
-  )
-}
-
-function LineaConectora() {
-  return <span aria-hidden className="ml-[7px] h-2.5 w-px bg-noct-neutral-700" />
 }

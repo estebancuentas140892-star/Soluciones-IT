@@ -86,6 +86,36 @@ function estadoDe(
   return 'pendiente'
 }
 
+/**
+ * EL PASO DONDE ESTÁ EL TRABAJO (propuesta final de Claude Design,
+ * 2026-10-01).
+ *
+ * La ejecución distingue el paso que se VE del paso en el que se trabaja:
+ * abrir otro desde el índice es consultarlo, y "Ir al paso N" devuelve al
+ * de trabajo. La ejecución anota cuál es (`preferido`) al avanzar, al
+ * saltar o al marcar; esta función solo lo valida contra el avance real:
+ *
+ *   - el anotado, mientras siga pendiente;
+ *   - si ya se hizo (o no hay ninguno anotado), el primer paso pendiente
+ *     que no se saltó, que es por donde sigue el recorrido;
+ *   - si solo quedan pasos saltados, el primero de ellos;
+ *   - null cuando no queda ningún paso por hacer.
+ */
+export function pasoDeTrabajo(
+  ids: string[],
+  hechos: ReadonlySet<string>,
+  saltados: ReadonlySet<string>,
+  preferido: number | null = null,
+): number | null {
+  if (preferido !== null && preferido >= 0 && preferido < ids.length && !hechos.has(ids[preferido])) {
+    return preferido
+  }
+  const sinSaltar = ids.findIndex((id) => !hechos.has(id) && !saltados.has(id))
+  if (sinSaltar >= 0) return sinSaltar
+  const pendiente = ids.findIndex((id) => !hechos.has(id))
+  return pendiente >= 0 ? pendiente : null
+}
+
 // Minutos que faltan, repartiendo el tiempo estimado del procedimiento
 // entre los pasos que quedan por hacer. Es una regla de tres, no una
 // medida: por eso quien lo pinta escribe "~". Devuelve null cuando el

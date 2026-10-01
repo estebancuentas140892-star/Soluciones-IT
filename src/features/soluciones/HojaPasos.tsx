@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Modal } from '../../components/Modal'
 import { ArrowsClockwise, Check, Circle, Crosshair, Eye, Info, PlugsConnected, SealCheck, Warning, X } from '../../components/iconos'
@@ -22,12 +21,22 @@ import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 //
 // Se apoya en `Modal`, como `HojaFiltro` y `HojaTipoBloque`: portal a
 // <body>, Escape, toque fuera y bloqueo del scroll del fondo.
+//
+// "RUTA DE LA GUÍA" (propuesta final de Claude Design, 2026-10-01). En el
+// teléfono es el único sitio donde se ven todos los pasos: la ruta dejó de
+// ocupar la pantalla de la ejecución. Por eso cada nombre se lee hasta en
+// DOS líneas (antes se cortaba en una), el paso de trabajo dice "Aquí vas"
+// y una nota recuerda lo que hace tocar una fila: abrir un paso solo lo
+// muestra, no marca nada. Si el paso es de más adelante, se consulta.
 
 interface Props {
   abierto: boolean
   onCerrar: () => void
+  /** Con el estado 'actual' en el paso de TRABAJO, que es el que dice "Aquí vas". */
   resumenes: ResumenPaso[]
   subtitulo: string
+  /** La guía es un borrador: se dice en la cabecera de la hoja. */
+  borrador?: boolean
   /**
    * Nombre COMPLETO de la guía en ejecución (cambio 4 del encargo del
    * 2026-09-09, "contenido cortado").
@@ -90,23 +99,21 @@ interface Props {
 const ID_TITULO = 'hoja-pasos-titulo'
 
 // Marca de estado (dos canales, forma y color, regla R16): el hecho
-// lleva check, el actual y los pendientes su número, y el saltado el
+// lleva check, el de trabajo y los pendientes su número, y el saltado el
 // número con borde discontinuo, que se distingue sin depender del color.
+// En el acento de la ruta (propuesta final): lo hecho relleno, el paso de
+// trabajo con borde, lo pendiente neutro.
 function InsigniaPaso({ estado, numero }: { estado: EstadoPaso; numero: number }) {
-  const base = 'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-mono text-[13px] font-semibold'
-  // Colores del lenguaje de la guía (encargo del 2026-09-22, sección 4):
-  // verde lo hecho, azul lo que se está haciendo, neutro lo pendiente y lo
-  // saltado (saltar no es un riesgo; lo dice su borde discontinuo y su
-  // palabra).
+  const base = 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-medium'
   if (estado === 'hecho') {
     return (
-      <span aria-hidden className={`${base} bg-noct-exito/20 text-noct-exito`}>
-        <Check size={16} />
+      <span aria-hidden className={`${base} border-[1.5px] border-noct-accent bg-noct-accent/20 text-noct-accent-200`}>
+        <Check size={13} />
       </span>
     )
   }
   if (estado === 'actual') {
-    return <span aria-hidden className={`${base} border-[1.5px] border-noct-accion text-noct-accion`}>{numero}</span>
+    return <span aria-hidden className={`${base} border-[1.5px] border-noct-accent text-noct-accent-200`}>{numero}</span>
   }
   if (estado === 'saltado') {
     return (
@@ -115,58 +122,29 @@ function InsigniaPaso({ estado, numero }: { estado: EstadoPaso; numero: number }
       </span>
     )
   }
-  return <span aria-hidden className={`${base} border-[1.5px] border-noct-neutral-700 text-noct-neutral-400`}>{numero}</span>
+  return <span aria-hidden className={`${base} border-[1.5px] border-noct-neutral-600 text-noct-neutral-400`}>{numero}</span>
 }
 
-function Pastilla({
-  children,
-  tono,
-}: {
-  children: ReactNode
-  tono: 'aqui' | 'saltado' | 'riesgo'
-}) {
-  const clases =
-    tono === 'aqui'
-      ? 'bg-noct-accion/25 text-noct-accion'
-      : tono === 'riesgo'
-        ? 'bg-noct-error/[.18] text-noct-error'
-        : 'bg-noct-text/[.08] text-noct-neutral-300'
+// Lo que dice la fila a la derecha, solo cuando hay algo que decir: dónde
+// va el trabajo, que el paso se saltó o que lleva un riesgo que conviene
+// saber ANTES de ir. El número de tareas ya no se repite en cada fila: el
+// nombre del paso es lo que se busca aquí (regla 22, no mostrar un dato
+// solo porque está disponible).
+function NotaFila({ resumen }: { resumen: ResumenPaso }) {
+  const nota = resumen.estado === 'actual' ? 'Aquí vas' : resumen.estado === 'saltado' ? 'Saltado' : ''
+  if (!nota && !resumen.tieneCuidado) return null
   return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[.05em] ${clases}`}
-    >
-      {children}
-    </span>
-  )
-}
-
-// Segunda línea de la fila: las pastillas de estado y el conteo de
-// tareas. Un paso hecho no la lleva: su check ya lo dice todo, y
-// repetir "3 tareas" en cada fila terminada solo añade ruido.
-function DetalleFila({ resumen }: { resumen: ResumenPaso }) {
-  // El check ya lo dice todo, y su aviso de cuidado ya pasó: repetir
-  // "3 tareas" en cada fila terminada solo estorba a la que importa.
-  if (resumen.estado === 'hecho') return null
-  const conteo =
-    resumen.estado === 'actual' && resumen.tareas > 0
-      ? `${resumen.tareasHechas} de ${resumen.tareas} ${resumen.tareas === 1 ? 'tarea' : 'tareas'}`
-      : resumen.tareas > 0
-        ? `${resumen.tareas} ${resumen.tareas === 1 ? 'tarea' : 'tareas'}`
-        : ''
-  const pastillas = resumen.estado === 'actual' || resumen.estado === 'saltado' || resumen.tieneCuidado
-  if (!pastillas && !conteo) return null
-
-  return (
-    <span className="mt-[3px] flex items-center gap-[7px]">
-      {resumen.estado === 'actual' && <Pastilla tono="aqui">aquí</Pastilla>}
-      {resumen.estado === 'saltado' && <Pastilla tono="saltado">saltado</Pastilla>}
-      {resumen.tieneCuidado && (
-        <Pastilla tono="riesgo">
-          <Warning size={9} aria-hidden />
-          cuidado
-        </Pastilla>
+    <span className="flex shrink-0 items-center gap-1.5">
+      {resumen.tieneCuidado && resumen.estado !== 'hecho' && (
+        <Warning size={14} className="shrink-0 text-noct-error" aria-label="Con un riesgo que atender" />
       )}
-      {conteo && <span className="text-[12.5px] text-noct-neutral-300">{conteo}</span>}
+      {nota && (
+        <span
+          className={`text-[12px] ${resumen.estado === 'actual' ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}
+        >
+          {nota}
+        </span>
+      )}
     </span>
   )
 }
@@ -176,6 +154,7 @@ export function HojaPasos({
   onCerrar,
   resumenes,
   subtitulo,
+  borrador = false,
   tituloGuia,
   onIrAPaso,
   modoEjecucion,
@@ -191,32 +170,39 @@ export function HojaPasos({
 
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <span className="min-w-0">
+      <div className="mb-1.5 flex items-start gap-2">
+        <span className="min-w-0 flex-1 pt-2.5">
+          <span className="flex flex-wrap items-center gap-2">
+            <span id={ID_TITULO} className="text-[16px] font-medium leading-tight text-noct-text">
+              Ruta de la guía
+            </span>
+            {borrador && (
+              <span className="inline-flex h-6 items-center rounded-full bg-noct-neutral-800 px-2 text-[12px] text-noct-neutral-300">
+                Borrador
+              </span>
+            )}
+          </span>
           {/* El nombre entero de la guía, sin truncar y con permiso
               para ocupar varias líneas: es lo que la cabecera de 44 px
               recorta y aquí se recupera. */}
           {tituloGuia && (
-            <span className="mb-1 block text-[12.5px] leading-snug text-noct-neutral-300 text-pretty">
+            <span className="mt-1 block text-[12.5px] leading-snug text-noct-neutral-300 text-pretty">
               {tituloGuia}
             </span>
           )}
-          <span id={ID_TITULO} className="block text-[17px] font-medium leading-tight text-noct-text">
-            {resumenes.length === 1 ? 'El único paso' : `La ruta: ${resumenes.length} pasos`}
-          </span>
-          <span className="mt-0.5 block text-[12.5px] text-noct-neutral-300">{subtitulo}</span>
+          <span className="mt-0.5 block text-[12.5px] text-noct-neutral-400">{subtitulo}</span>
         </span>
         <button
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar el índice de pasos"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.08] text-noct-text hover:bg-noct-text/[.14]"
+          className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.08] hover:text-noct-text"
         >
-          <X size={20} aria-hidden />
+          <X size={19} aria-hidden />
         </button>
       </div>
 
-      <ol className="flex flex-col gap-0.5">
+      <ol className="flex flex-col">
         {resumenes.map((resumen) => (
           <li key={resumen.id}>
             <button
@@ -226,29 +212,31 @@ export function HojaPasos({
                 onIrAPaso(resumen.indice)
                 onCerrar()
               }}
-              className={`flex min-h-[60px] w-full items-center gap-3 rounded-[10px] border px-2.5 py-1.5 text-left ${
+              className={`-mx-2 flex min-h-12 w-[calc(100%+16px)] items-center gap-3 rounded-lg px-2 text-left ${
                 resumen.estado === 'actual'
-                  ? 'border-noct-accion bg-noct-accion/[.14]'
-                  : 'border-transparent hover:bg-noct-text/[.06] active:bg-noct-text/[.1]'
+                  ? 'bg-noct-accent/10'
+                  : 'hover:bg-noct-text/[.06] active:bg-noct-text/[.1]'
               }`}
             >
               <InsigniaPaso estado={resumen.estado} numero={resumen.indice + 1} />
-              <span className="min-w-0 flex-1">
-                <span
-                  className={`block truncate text-[15.5px] leading-tight ${
-                    resumen.estado === 'hecho'
-                      ? 'font-normal text-noct-neutral-400'
-                      : 'font-medium text-noct-text'
-                  }`}
-                >
-                  {resumen.titulo}
-                </span>
-                <DetalleFila resumen={resumen} />
+              {/* HASTA DOS LÍNEAS: el nombre del paso es lo que se busca
+                  aquí, y en una sola se cortaba en 360 px. */}
+              <span
+                className={`line-clamp-2 min-w-0 flex-1 py-1.5 text-[14px] leading-[1.35] text-pretty ${
+                  resumen.estado === 'actual' ? 'font-medium text-noct-text' : 'text-noct-neutral-300'
+                }`}
+              >
+                {resumen.titulo}
               </span>
+              <NotaFila resumen={resumen} />
             </button>
           </li>
         ))}
       </ol>
+
+      <p className="pt-2 text-[12.5px] leading-snug text-noct-neutral-400">
+        Abrir un paso solo lo muestra. No marca nada como hecho.
+      </p>
 
       {/* Las comprobaciones finales, legibles desde el primer paso
           (H11). No llevan casilla: aquí solo se leen. Sin la nota que lo

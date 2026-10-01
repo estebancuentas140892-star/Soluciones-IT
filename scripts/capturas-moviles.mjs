@@ -47,7 +47,12 @@ const FILTRO_PARADAS = opcion('paradas')?.split(',') ?? null
 // (asi estuvo "guia-alerta-importante" hasta el 2026-09-22).
 const tocar = (texto) =>
   `{ const el=[...document.querySelectorAll('button, a')].find(b=>((b.getAttribute('aria-label')||b.textContent||'').replace(/\\s+/g,' ').trim()).startsWith(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500)); }`
-const siguiente = `{ const s=[...document.querySelectorAll('button')].find(b=>b.textContent.replace(/\\s+/g,' ').trim()==='Siguiente'); s?.click(); await new Promise(r=>setTimeout(r,500)); }`
+// "Completar y seguir" es el boton de la ejecucion desde la propuesta final
+// de Claude Design (2026-10-01); antes decia "Siguiente".
+const siguiente = `{ const s=[...document.querySelectorAll('button')].find(b=>b.textContent.replace(/\\s+/g,' ').trim()==='Completar y seguir'); s?.click(); await new Promise(r=>setTimeout(r,500)); }`
+// Una fila de la hoja del indice ("Ruta de la guia"), por el nombre del paso.
+const tocarFilaIndice = (texto) =>
+  `{ const el=[...document.querySelectorAll('[role="dialog"] button')].find(b=>b.textContent.includes(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500)); }`
 
 // Tarea 255: las paradas de la guia de tres tareas reponen su avance
 // sembrado (paso 1 hecho) y el modo de ejecucion ANTES de abrirse, porque
@@ -180,6 +185,20 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'guia-apoyos-tarea-1', ruta: '/soluciones/cat-impresoras/art-alcance-tarea' },
   { nombre: 'guia-apoyos-tarea-2', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', guion: siguiente },
   { nombre: 'guia-indice', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', guion: tocar('Paso 1 de 2. Abrir el índice') },
+  // Propuesta final de Claude Design (2026-10-01): la Ruta de la guia y un
+  // paso de mas adelante consultado desde ella (nada se marca).
+  {
+    nombre: 'guia-indice-ruta',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco'),
+    guion: tocar('Paso 2 de 3. Abrir el índice'),
+  },
+  {
+    nombre: 'guia-consulta',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco'),
+    guion: tocar('Paso 2 de 3. Abrir el índice') + tocarFilaIndice('Dejar el recurso a mano'),
+  },
   { nombre: 'guia-vinculada', ruta: '/soluciones/cat-software/art-alta-usuario' },
   { nombre: 'vinculo-roto', ruta: '/soluciones/cat-software/art-vinculo-roto' },
   { nombre: 'decision', ruta: '/soluciones/cat-pos/art-decision', guion: siguiente },
@@ -201,7 +220,7 @@ const TODAS_LAS_PARADAS = [
     nombre: 'recorrido-vuelve',
     ruta: '/diagnostico/diag-impresora-ejemplo',
     antes: RECORRIDOS_LIMPIOS,
-    guion: tocar('No aparece') + siguiente + tocar('Terminar'),
+    guion: tocar('No aparece') + siguiente + tocar('Completar y terminar'),
   },
   {
     nombre: 'recorrido-escalar',

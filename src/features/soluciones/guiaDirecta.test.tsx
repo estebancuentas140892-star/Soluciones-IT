@@ -84,7 +84,7 @@ describe('abrir una guía', () => {
     expect(textoPantalla()).toContain('Paso 1 de 2')
     expect(textoPantalla()).not.toContain('Empecemos')
     expect(textoPantalla()).not.toContain('Ten esto listo antes de empezar')
-    expect(principal('Siguiente')).not.toBeNull()
+    expect(principal('Completar y seguir')).not.toBeNull()
   })
 
   it('la dirección antigua /ejecutar lleva a la misma guía', async () => {
@@ -101,7 +101,7 @@ describe('abrir una guía', () => {
     await esperar(() => textoPantalla().includes('Resolución de prueba en PDF'), 'el requisito a la vista')
     expect(textoPantalla()).toContain('Ten esto listo antes de empezar')
 
-    await tocar((await esperar(() => principal('Siguiente'), 'el botón Siguiente')) as HTMLElement)
+    await tocar((await esperar(() => principal('Completar y seguir'), 'el botón Completar y seguir')) as HTMLElement)
     await esperar(() => textoPantalla().includes('Entrar en Administración'), 'la segunda acción')
     expect(textoPantalla()).not.toContain('Resolución de prueba en PDF')
   })
@@ -113,10 +113,10 @@ describe('los avisos acompañan, no detienen', () => {
     await montar(RUTAS, RUTA)
 
     // Paso 1: dos acciones, ningún aviso.
-    await tocar((await esperar(() => principal('Siguiente'), 'Siguiente en la acción 1')) as HTMLElement)
+    await tocar((await esperar(() => principal('Completar y seguir'), 'Completar y seguir en la acción 1')) as HTMLElement)
     await esperar(() => textoPantalla().includes('Entrar en Administración'), 'la acción 2')
     expect(textoPantalla()).not.toContain('Guardar reemplaza')
-    await tocar((await esperar(() => principal('Siguiente'), 'Siguiente en la acción 2')) as HTMLElement)
+    await tocar((await esperar(() => principal('Completar y seguir'), 'Completar y seguir en la acción 2')) as HTMLElement)
 
     // Paso 2: la alerta y la instrucción en la MISMA pantalla.
     await esperar(() => textoPantalla().includes('Pulsar Guardar'), 'la acción del paso 2')
@@ -129,7 +129,7 @@ describe('los avisos acompañan, no detienen', () => {
     expect(textoPantalla()).toContain('Explicación de por qué se guarda aquí')
 
     // Y la acción se hace sin confirmar nada antes: es la última, así que termina.
-    await tocar((await esperar(() => principal('Terminar'), 'Terminar en la última acción')) as HTMLElement)
+    await tocar((await esperar(() => principal('Completar y terminar'), 'Completar y terminar en la última acción')) as HTMLElement)
     await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía queda terminada')
     expect(control('Salir de la guía')).not.toBeNull()
   })
@@ -164,14 +164,14 @@ describe('retomar y volver a empezar', () => {
     await montar(RUTAS, RUTA)
 
     await esperar(() => textoPantalla().includes('Pulsar Guardar'), 'retoma en el paso 2')
-    expect(textoPantalla()).toContain('Retomas en el paso 2')
+    expect(textoPantalla()).toContain('Retomando · paso 2 de 2')
 
     await tocar(await esperarControl('Empezar de nuevo'))
     await esperar(() => textoPantalla().includes('Abrir el programa de caja'), 'vuelve al paso 1')
-    expect(textoPantalla()).not.toContain('Retomas en el paso')
+    expect(textoPantalla()).not.toContain('Retomando ·')
   })
 
-  it('la línea de "retomas" se va con la primera acción: ya se eligió seguir', async () => {
+  it('la línea de "Retomando" se va con la primera acción: ya se eligió seguir', async () => {
     const p1 = pasoPrueba('largo-p1', 'Preparar la caja larga', ['Abrir el programa', 'Entrar en Caja', 'Pulsar Nueva'])
     const p2 = pasoPrueba('largo-p2', 'Cerrar', ['Pulsar Cerrar'])
     await sembrarGuia({ id: 'guia-larga', titulo: 'Caja larga de prueba', pasos: [p1, p2] })
@@ -185,13 +185,13 @@ describe('retomar y volver a empezar', () => {
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-larga')
 
     await esperar(() => textoPantalla().includes('Entrar en Caja'), 'retoma en la acción pendiente')
-    expect(textoPantalla()).toContain('Retomas en el paso 1')
+    expect(textoPantalla()).toContain('Retomando · paso 1 de 2')
 
-    await tocar((await esperar(() => principal('Siguiente'), 'Siguiente')) as HTMLElement)
+    await tocar((await esperar(() => principal('Completar y seguir'), 'Completar y seguir')) as HTMLElement)
     // Sigue en el MISMO paso (tercera acción), pero la línea ya no está.
     await esperar(() => textoPantalla().includes('Pulsar Nueva'), 'la acción siguiente del mismo paso')
     expect(textoPantalla()).toContain('Paso 1 de 2')
-    expect(textoPantalla()).not.toContain('Retomas en el paso')
+    expect(textoPantalla()).not.toContain('Retomando ·')
   })
 
   it('"Anterior" desde la primera acción de un paso lleva a la última del paso anterior', async () => {

@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { PasoProcedimiento, Procedimiento } from '../../lib/db'
 import {
+  acortarNombreGuia,
   cierreDelPaso,
   guiaPendienteDelPaso,
   guiaTerminada,
+  LARGO_MAXIMO_NOMBRE_GUIA,
+  rotuloCompletaGuia,
   type DatosCierrePaso,
 } from './cierrePaso'
 
@@ -36,16 +39,30 @@ function paso(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimiento {
 }
 
 describe('cierreDelPaso', () => {
-  it('deja cerrar el paso cuando no queda trabajo, y lo dice', () => {
+  // La gramatica de la propuesta final de Claude Design (2026-10-01): el
+  // rotulo dice la consecuencia, nunca "Comprobado" o "Hecho" a secas.
+  it('deja cerrar el paso cuando no queda trabajo, y dice que sigue', () => {
     const cierre = cierreDelPaso(datos({ totalTareas: 2, tareasMarcadas: 2 }))
     expect(cierre.accion).toBe('completar')
-    expect(cierre.etiqueta).toBe('Completar paso y continuar')
+    expect(cierre.etiqueta).toBe('Completar y seguir')
+    expect(cierre.etiquetaCompleta).toBe('Completar y seguir')
   })
 
-  it('en el ultimo paso promete terminar, no continuar', () => {
+  it('cuando cerrarlo termina la guia promete terminar, no seguir', () => {
     const cierre = cierreDelPaso(datos({ hayPasoSiguiente: false }))
     expect(cierre.accion).toBe('completar')
-    expect(cierre.etiqueta).toBe('Completar paso y terminar')
+    expect(cierre.etiqueta).toBe('Completar y terminar')
+  })
+
+  it('ningun rotulo se queda en "Comprobado" o "Hecho" a secas', () => {
+    const rotulos = [
+      cierreDelPaso(datos()),
+      cierreDelPaso(datos({ hayPasoSiguiente: false })),
+      cierreDelPaso(datos({ pasoHecho: true })),
+      cierreDelPaso(datos({ totalTareas: 1 })),
+      cierreDelPaso(datos({ guiaPendiente: 'Reiniciar el router' })),
+    ].map((cierre) => cierre.etiqueta)
+    for (const rotulo of rotulos) expect(rotulo).not.toMatch(/^(Comprobado|Hecho)\b/)
   })
 
   it('nunca dice "Paso hecho" mientras falten tareas: dice cuantas', () => {
@@ -60,6 +77,16 @@ describe('cierreDelPaso', () => {
     const cierre = cierreDelPaso(datos({ guiaPendiente: 'Reiniciar el router' }))
     expect(cierre.accion).toBe('bloqueado')
     expect(cierre.etiqueta).toBe('Completa «Reiniciar el router»')
+    expect(cierre.etiquetaCompleta).toBe('Completa «Reiniciar el router»')
+  })
+
+  it('con un nombre largo acorta DENTRO de las comillas y conserva el nombre entero para el lector', () => {
+    const largo = 'Configurar las paginas que abre Google Chrome al iniciar en un POS de taquilla'
+    const cierre = cierreDelPaso(datos({ guiaPendiente: largo }))
+    expect(cierre.etiqueta.startsWith('Completa «')).toBe(true)
+    expect(cierre.etiqueta.endsWith('…»')).toBe(true)
+    expect(cierre.etiqueta.length).toBeLessThan(`Completa «${largo}»`.length)
+    expect(cierre.etiquetaCompleta).toBe(`Completa «${largo}»`)
   })
 
   it('con guia y tareas pendientes nombra la guia, que es el trabajo que va primero', () => {
@@ -93,6 +120,42 @@ describe('cierreDelPaso', () => {
     )
     expect(cierre.accion).toBe('navegar')
     expect(cierre.guiaPendiente).toBeNull()
+  })
+})
+
+describe('acortarNombreGuia', () => {
+  it('un nombre que cabe sale intacto', () => {
+    expect(acortarNombreGuia('Reiniciar el router')).toBe('Reiniciar el router')
+    expect(acortarNombreGuia('  Reiniciar   el router ')).toBe('Reiniciar el router')
+  })
+
+  it('un nombre largo se corta por palabras, con puntos suspensivos y sin pasar del tope', () => {
+    const corto = acortarNombreGuia('Configurar las paginas que abre Google Chrome al iniciar en un POS')
+    expect(corto).toBe('Configurar las paginas que…')
+    expect(corto.length).toBeLessThanOrEqual(LARGO_MAXIMO_NOMBRE_GUIA + 1)
+  })
+
+  it('no deja puntuacion colgando antes de los puntos suspensivos', () => {
+    expect(acortarNombreGuia('Abrir caja, revisar tickets, imprimir cierre del dia', 20)).toBe('Abrir caja, revisar…')
+    expect(acortarNombreGuia('Abrir caja, revisar tickets', 12)).toBe('Abrir caja…')
+  })
+
+  it('una sola palabra enorme se corta dentro de ella: nunca devuelve solo los puntos', () => {
+    expect(acortarNombreGuia('Supercalifragilisticoespialidoso', 10)).toBe('Supercalif…')
+  })
+})
+
+describe('rotuloCompletaGuia', () => {
+  it('el verbo va siempre entero y el nombre entero queda para el nombre accesible', () => {
+    const largo = 'Restablecer el perfil del navegador cuando el POS arranca con pestanas equivocadas'
+    const rotulo = rotuloCompletaGuia(largo)
+    expect(rotulo.visible.startsWith('Completa «')).toBe(true)
+    expect(rotulo.visible.endsWith('…»')).toBe(true)
+    expect(rotulo.completo).toBe(`Completa «${largo}»`)
+  })
+
+  it('sin nombre nombra la guia de forma generica', () => {
+    expect(rotuloCompletaGuia('  ').visible).toBe('Completa «la guía vinculada»')
   })
 })
 

@@ -27,7 +27,20 @@ import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
-import { ArrowsClockwise, Camera, CaretDown, CaretLeft, CaretRight, Check, LinkSimple, SealCheck, Warning, Wrench, X } from '../../components/iconos'
+import {
+  ArrowRight,
+  ArrowsClockwise,
+  Camera,
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  Check,
+  LinkSimple,
+  SealCheck,
+  Warning,
+  Wrench,
+  X,
+} from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
@@ -64,7 +77,14 @@ import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { RutaProcedimiento } from './RutaProcedimiento'
 import { HojaFalla } from './HojaFalla'
 import { destinoAlSaltar } from './salidasFalla'
-import { minutosRestantes, resumenDeAvance, resumirPasos, type ResumenPaso } from './estadoPasos'
+import { LineaDeEstado, SegmentosDePasos, type EstadoLinea } from './EstadoEjecucion'
+import {
+  minutosRestantes,
+  pasoDeTrabajo,
+  resumenDeAvance,
+  resumirPasos,
+  type ResumenPaso,
+} from './estadoPasos'
 
 interface Props {
   articuloId: string
@@ -128,7 +148,17 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // regreso deshace el salto de verdad (regla M-R2).
   const rutaOrigen = useLocation().pathname
 
+  // El paso que se está VIENDO.
   const [indiceActual, setIndiceActual] = useState<number | null>(null)
+  // EL PASO DONDE ESTÁ EL TRABAJO, que no siempre es el que se ve
+  // (propuesta final de Claude Design, 2026-10-01). Abrir un paso desde
+  // el índice, desde la ruta o con "Anterior" solo mueve la VISTA; lo que
+  // mueve el trabajo es avanzar al cerrar un paso, saltarlo desde "Tengo
+  // un problema", empezar de nuevo o marcar una tarea del paso a la vista.
+  // Así, un paso de más adelante que se abre desde el índice se CONSULTA
+  // (no se marca nada) y "Ir al paso N" devuelve a este. Ver
+  // `pasoDeTrabajo` en estadoPasos.ts.
+  const [indiceTrabajo, setIndiceTrabajo] = useState<number | null>(null)
   const [listo, setListo] = useState(false)
   // Índice de los pasos (tablero 6c): se abre tocando el contador.
   const [indiceAbierto, setIndiceAbierto] = useState(false)
@@ -160,9 +190,16 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // antes. Guarda el paso en el que se retomó: al moverse, la línea ya
   // no hace falta y se va sola.
   const [retomadaEn, setRetomadaEn] = useState<number | null>(null)
-  function irAPaso(indice: number | null, porElFinal = false) {
+  // Mover la VISTA a un paso: consultar, revisar, volver atrás. No toca
+  // ni el avance ni el paso de trabajo.
+  function verPaso(indice: number | null, porElFinal = false) {
     setEntradaPorElFinal(porElFinal && indice !== null ? (pasos[indice]?.id ?? null) : null)
     setIndiceActual(indice)
+  }
+  // Mover el TRABAJO a un paso (y la vista con él).
+  function irAPaso(indice: number | null) {
+    verPaso(indice)
+    setIndiceTrabajo(indice)
   }
   // Excepción efímera y atada a UN paso: al declarar una falla hay que
   // ver el paso entero, porque las cuatro salidas (contingencia,
@@ -227,6 +264,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
       const hechosIniciales = new Set(prog?.pasosHechos ?? [])
       const inicial = siguientePasoPendiente(idsPasos, hechosIniciales, -1)
       setIndiceActual(inicial)
+      // El trabajo sigue por el primer paso pendiente que no se saltó: si
+      // se entra en uno saltado (el primer pendiente), se puede retomar
+      // ahí mismo, y el recorrido continúa donde iba.
+      setIndiceTrabajo(pasoDeTrabajo(idsPasos, hechosIniciales, new Set(prog?.pasosSaltados ?? [])))
       const habiaAvance = (prog?.pasosHechos?.length ?? 0) > 0 || (prog?.instruccionesHechas?.length ?? 0) > 0
       setRetomadaEn(nivel === 0 && habiaAvance ? inicial : null)
       setModoEjecucion(modo)
@@ -396,14 +437,32 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // (valida el trabajo previo y avanza al siguiente pendiente). En un
   // paso ya completo (al que se llego con "Atrás" para revisar): navega
   // linealmente hacia adelante, o al primer pendiente / al cierre.
+  //
+  // Desde un paso hecho al siguiente es REVISAR, así que solo se mueve la
+  // vista; desde el último hecho se vuelve al primer paso pendiente, que es
+  // volver al trabajo.
   function avanzar() {
     if (indiceActual === null) return
     if (pasoActualHecho) {
-      irAPaso(indiceActual + 1 < pasos.length ? indiceActual + 1 : siguientePasoPendiente(idsPasos, hechos, -1))
+      if (indiceActual + 1 < pasos.length) verPaso(indiceActual + 1)
+      else irAPaso(siguientePasoPendiente(idsPasos, hechos, -1))
     } else {
       void intentarCompletarPaso(indiceActual, paso)
     }
   }
+
+  // A DÓNDE LLEVA EL BOTÓN, para que su rótulo diga la consecuencia exacta
+  // (propuesta final de Claude Design, 2026-10-01). Desde un paso hecho, la
+  // misma navegación que `avanzar`. Desde uno pendiente, a donde saltará el
+  // avance al cerrarlo (`avanzarDespuesDe`, que vuelve también a un paso
+  // saltado): si no queda ninguno, cerrarlo TERMINA la guía. Antes se
+  // miraba solo si había un paso después, así que el último paso decía
+  // "Terminar" aunque quedara uno saltado por hacer.
+  const destinoTrasEste = pasoActualHecho
+    ? indiceActual + 1 < pasos.length
+      ? indiceActual + 1
+      : siguientePasoPendiente(idsPasos, hechos, -1)
+    : siguientePasoPendiente(idsPasos, new Set([...hechos, paso.id]), indiceActual)
 
   const tituloPaso = paso.titulo || paso.subArticuloTitulo || `Paso ${indiceActual + 1}`
 
@@ -421,8 +480,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
     totalTareas: idsTareas.length,
     tareasMarcadas: marcadas,
     guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho),
-    hayPasoSiguiente: indiceActual + 1 < pasos.length,
-    numeroPasoSiguiente: indiceActual + 2,
+    hayPasoSiguiente: destinoTrasEste !== null,
+    numeroPasoSiguiente: (destinoTrasEste ?? indiceActual) + 1,
   })
 
   // Estado de cada paso para el índice (tablero 6c). Se recalcula en
@@ -432,8 +491,16 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // "Saltado" ahora se lee del avance guardado, no de la posición: ver
   // la cabecera de estadoPasos.ts (hallazgo H07).
   const saltados = new Set(progreso?.pasosSaltados ?? [])
+  // El paso de trabajo efectivo: el que la ejecución tiene anotado
+  // mientras siga pendiente, y si no, el que toca según el avance.
+  const trabajo = pasoDeTrabajo(idsPasos, hechos, saltados, indiceTrabajo)
+  // La ruta de escritorio se orienta por lo que se VE ("Paso 3 de 7" y su
+  // título); el índice, por dónde está el trabajo ("Aquí vas").
   const resumenes: ResumenPaso[] = resumirPasos(pasos, hechos, instruccionesHechas, indiceActual, saltados)
+  const resumenesIndice: ResumenPaso[] =
+    trabajo === indiceActual ? resumenes : resumirPasos(pasos, hechos, instruccionesHechas, trabajo, saltados)
   const subtituloIndice = resumenDeAvance(resumenes, minutosRestantes(tiempoEstimadoMin, resumenes))
+  const esBorrador = nivel === 0 && (articulo?.estado ?? 'publicado') === 'borrador'
 
   // MODO FOCO (tablero 6d): sustituye el cuerpo del paso, no lo
   // acompaña. La `key` es el id del paso, así que al completarlo el
@@ -524,25 +591,67 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
     (progreso?.pasosHechos?.length ?? 0) === 0 && (progreso?.instruccionesHechas?.length ?? 0) === 0
   const requisitosVisibles = indiceActual === 0 && sinAvance ? requisitos : []
 
-  // La línea de "retomas donde lo dejaste", mientras el técnico siga en
-  // el paso en que se retomó.
-  const avisoRetomada =
-    nivel === 0 && retomadaEn !== null && retomadaEn === indiceActual ? (
-      <AvisoRetomada numeroPaso={indiceActual + 1} onEmpezarDeNuevo={() => void reiniciarYVolver()} />
+  // CONSULTAR OTRO PASO NO MARCA NADA (propuesta final de Claude Design,
+  // 2026-10-01). Un paso pendiente de MÁS ADELANTE que el de trabajo,
+  // abierto desde el índice o desde la ruta, se enseña en modo consulta:
+  // se lee entero, pero no se marca ni se cierra, y el botón principal
+  // devuelve al paso de trabajo. Volver atrás nunca es consulta: un paso
+  // hecho ya solo navega ("Ir al paso N"), y uno pendiente de antes (un
+  // paso saltado) se retoma ahí mismo, como siempre. Saltar adelante sigue
+  // siendo un acto aparte: "Tengo un problema" > saltar el paso.
+  //
+  // Solo en la vista de una acción a la vez, que es la que la propuesta
+  // redibuja; la vista de paso entero conserva su paginación de siempre.
+  const consultando =
+    nivel === 0 &&
+    enFoco &&
+    trabajo !== null &&
+    indiceActual > trabajo &&
+    !pasoActualHecho &&
+    !saltados.has(paso.id)
+
+  // LA LÍNEA DE ESTADO, una sola cosa a la vez: la consulta manda, luego
+  // la ejecución retomada (mientras el técnico siga en el paso en que se
+  // retomó y no haya tocado nada) y, si no, el aviso de borrador.
+  const estadoLinea: EstadoLinea | null =
+    nivel !== 0
+      ? null
+      : consultando
+        ? { tipo: 'consulta' }
+        : retomadaEn !== null && retomadaEn === indiceActual
+          ? {
+              tipo: 'retomada',
+              numeroPaso: indiceActual + 1,
+              totalPasos: pasos.length,
+              onEmpezarDeNuevo: () => void reiniciarYVolver(),
+            }
+          : esBorrador
+            ? { tipo: 'borrador' }
+            : null
+
+  // Lo que va entre la cabecera y el paso: los segmentos de la guía (solo
+  // en el teléfono) y la línea de estado. Solo en la guía principal.
+  const estadoUI =
+    nivel === 0 ? (
+      <div className="flex flex-none flex-col">
+        <SegmentosDePasos
+          resumenes={resumenes}
+          indiceVisto={indiceActual}
+          indiceTrabajo={trabajo}
+          consultando={consultando}
+        />
+        <LineaDeEstado estado={estadoLinea} />
+      </div>
     ) : null
 
-  // LA RUTA DEL PROCEDIMIENTO (encargo del 2026-09-22, sección 5): un
-  // nodo por paso, con su estado, sobre el paso actual. Solo en la guía
-  // principal: dentro de un vínculo la ruta que orienta es la de arriba.
-  // "Ver la ruta completa" abre la misma hoja del índice.
+  // LA RUTA DEL PROCEDIMIENTO (encargo del 2026-09-22, sección 5), SOLO EN
+  // ESCRITORIO Y TABLETA desde la propuesta final de Claude Design
+  // (2026-10-01): en el teléfono ocupaba un tercio de la pantalla con el
+  // paso anterior, el actual y el siguiente, y competía con la acción. Ahí
+  // la orientan el contador "3/8" (que abre el índice) y los segmentos.
   const rutaUI =
     nivel === 0 ? (
-      <RutaProcedimiento
-        resumenes={resumenes}
-        indiceActual={indiceActual}
-        onIrAPaso={(indice: number) => irAPaso(indice)}
-        onVerRutaCompleta={() => setIndiceAbierto(true)}
-      />
+      <RutaProcedimiento resumenes={resumenes} indiceActual={indiceActual} onIrAPaso={(indice: number) => verPaso(indice)} />
     ) : null
 
   // El índice de pasos y su disparador (tarea 218, G-09, G-10, G-14):
@@ -561,10 +670,13 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
         <HojaPasos
           abierto={indiceAbierto}
           onCerrar={() => setIndiceAbierto(false)}
-          resumenes={resumenes}
+          resumenes={resumenesIndice}
           subtitulo={subtituloIndice}
           tituloGuia={articulo?.titulo}
-          onIrAPaso={(indice: number) => irAPaso(indice)}
+          borrador={esBorrador}
+          // Abrir un paso desde el índice solo lo MUESTRA: si es uno
+          // pendiente de más adelante, se consulta sin marcar nada.
+          onIrAPaso={(indice: number) => verPaso(indice)}
           modoEjecucion={modoEjecucion}
           onCambiarModo={(modo) => void cambiarModoEjecucion(modo)}
           // H11 / A15: se leen desde el primer paso, sin tener que
@@ -586,7 +698,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
     return (
       <>
         {indiceUI}
-        {avisoRetomada}
+        {estadoUI}
         <ModoFoco
           key={paso.id}
           paso={paso}
@@ -594,10 +706,16 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           tituloPaso={tituloPaso}
           numeroPaso={indiceActual + 1}
           totalPasos={pasos.length}
-          hayPasoSiguiente={indiceActual + 1 < pasos.length}
+          cierraLaGuia={!pasoActualHecho && destinoTrasEste === null}
           requisitos={requisitosVisibles}
           entrarPorElFinal={entradaPorElFinal === paso.id}
-          onPasoAnterior={indiceActual > 0 ? () => irAPaso(indiceActual - 1, true) : undefined}
+          onPasoAnterior={indiceActual > 0 ? () => verPaso(indiceActual - 1, true) : undefined}
+          // EL PASO SE CONSULTA: el botón principal devuelve al de trabajo.
+          consulta={
+            consultando && trabajo !== null
+              ? { numeroPasoTrabajo: trabajo + 1, onVolver: () => irAPaso(trabajo) }
+              : null
+          }
           instruccionesHechas={instruccionesHechas}
           subSatisfecho={subSatisfecho}
           guiaDelPasoDisponible={guiaDelPasoDisponible(paso)}
@@ -609,16 +727,16 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           // siendo un gesto aparte del técnico.
           onVinculoCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
           // Tocar una acción es haber elegido seguir: la línea de
-          // "retomas donde lo dejaste" ya dijo lo suyo y se va, para no
-          // quedarse ocupando la pantalla en cada acción del paso.
-          // Empezar de nuevo sigue en el índice.
+          // "Retomando" ya dijo lo suyo y se va, para no quedarse
+          // ocupando la pantalla en cada acción del paso. Empezar de
+          // nuevo sigue en el índice. Y el trabajo está donde se marca.
           onAlternarTarea={(tareaId) => {
             setRetomadaEn(null)
+            setIndiceTrabajo(indiceActual)
             void alternarTarea(indiceActual, paso, tareaId)
           }}
           onCompletarPaso={avanzar}
-          etiquetaAvance={cierre.etiqueta}
-          puedeCerrarPaso={cierre.accion !== 'bloqueado'}
+          cierre={cierre}
           onFalla={(texto) => setHojaFalla({ tarea: texto })}
           guiasPendientes={(tareaId) => guiasPendientesDeTarea(paso, tareaId)}
           // TERMINAR EL DESTINO DE UN "NO" RESPONDE LA DECISIÓN, no
@@ -627,6 +745,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           // decisión y se reinicia el avance del destino, para que la
           // próxima guía que lo reutilice lo encuentre limpio.
           onDecisionResuelta={(tareaId, guiaId) => {
+            setIndiceTrabajo(indiceActual)
             void (async () => {
               // El destino del "no" es un vinculo de ESTA ejecucion, asi
               // que se reinicia ahi: el avance que esa guia lleve por su
@@ -683,9 +802,10 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   }
 
   return (
+    <div className={`flex flex-col ${nivel === 0 ? 'flex-1' : ''}`}>
+    {indiceUI}
+    {estadoUI}
     <div className={`flex flex-col gap-4 ${nivel === 0 ? 'flex-1 pt-3' : ''}`}>
-      {indiceUI}
-      {avisoRetomada}
       {/* El documento anidado ya NO repite su avance aquí (regla R57 del
           turno 12). Traía una barra de acento con "Paso 1 de 2", justo
           debajo de la fila que lo abre, que dice lo mismo con el anillo
@@ -695,11 +815,13 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
 
       {requisitosVisibles.length > 0 && <AntesDeEmpezar requisitos={requisitosVisibles} />}
 
-      {/* DÓNDE ESTOY. En la guía principal, la ruta (que ya dice "Paso N
-          de M" y el título); dentro de un vínculo, su título a secas.
-          Debajo, para qué sirve el paso: en el paso entero se lee todo. */}
+      {/* DÓNDE ESTOY. En escritorio, la ruta de la guía principal (que ya
+          dice "Paso N de M" y el título); en el teléfono y dentro de un
+          vínculo, el título a secas. Debajo, para qué sirve el paso: en el
+          paso entero se lee todo. */}
       <div className="flex flex-col gap-1">
-        {rutaUI ?? <h2 className="text-lg font-semibold text-noct-text">{tituloPaso}</h2>}
+        {rutaUI}
+        <h2 className={`text-lg font-semibold text-noct-text ${rutaUI ? 'md:hidden' : ''}`}>{tituloPaso}</h2>
         {paso.objetivo.trim() !== '' && <p className="text-sm text-noct-neutral-400">{paso.objetivo}</p>}
       </div>
 
@@ -756,6 +878,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
                 marcada={instruccionesHechas.has(bloque.id)}
                 onAlternar={() => {
                   setRetomadaEn(null)
+                  setIndiceTrabajo(indiceActual)
                   void alternarTarea(indiceActual, paso, bloque.id)
                 }}
                 nivel={nivel}
@@ -889,20 +1012,27 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
               />
             </div>
           )}
+          {/* EL ROTULO DICE LA CONSECUENCIA (propuesta final de Claude
+              Design): el icono también. La marca cierra, la flecha solo
+              navega y sin trabajo hecho el control queda inactivo, legible
+              y sin icono. */}
           <button
             type="button"
             disabled={cierre.accion === 'bloqueado'}
             onClick={avanzar}
-            className="flex h-[76px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-[17px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.22] active:bg-noct-accent/[.3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:opacity-30"
+            aria-label={cierre.etiquetaCompleta !== cierre.etiqueta ? cierre.etiquetaCompleta : undefined}
+            title={cierre.etiquetaCompleta !== cierre.etiqueta ? cierre.etiquetaCompleta : undefined}
+            className="flex h-[76px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-4 text-[17px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.22] active:bg-noct-accent/[.3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:border-noct-neutral-700 disabled:bg-noct-text/[.04] disabled:text-noct-neutral-400"
           >
-            <Check size={19} className="shrink-0" aria-hidden />
-            <span className="truncate">{cierre.etiqueta}</span>
+            {cierre.accion === 'completar' && <Check size={19} className="shrink-0" aria-hidden />}
+            <span className="line-clamp-2 min-w-0 text-center leading-tight">{cierre.etiqueta}</span>
+            {cierre.accion === 'navegar' && <ArrowRight size={19} className="shrink-0" aria-hidden />}
           </button>
           <div className="mt-2 flex items-center gap-2">
             <button
               type="button"
               disabled={indiceActual === 0}
-              onClick={() => irAPaso(Math.max(0, indiceActual - 1))}
+              onClick={() => verPaso(Math.max(0, indiceActual - 1))}
               // CONSULTAR NO ES AVANZAR (cambio 2 del encargo). Decían
               // "Paso anterior" y "Paso siguiente" a secas, en una
               // pantalla cuya acción dominante es cerrar el paso: se
@@ -938,7 +1068,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
             <button
               type="button"
               disabled={indiceActual + 1 >= pasos.length}
-              onClick={() => irAPaso(Math.min(pasos.length - 1, indiceActual + 1))}
+              onClick={() => verPaso(Math.min(pasos.length - 1, indiceActual + 1))}
               aria-label="Ver el paso siguiente. Solo mueve la vista, no lo da por hecho"
               title="Ver el siguiente"
               className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
@@ -973,6 +1103,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
             type="button"
             disabled={cierre.accion === 'bloqueado'}
             onClick={avanzar}
+            aria-label={cierre.etiquetaCompleta !== cierre.etiqueta ? cierre.etiquetaCompleta : undefined}
             className={`${BTN_PRIMARIO} min-h-11 flex-1 text-sm disabled:opacity-30`}
           >
             <span className="truncate">{cierre.etiqueta}</span>
@@ -985,6 +1116,7 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
           nueva va detrás de ella para no taparla ni moverla (tarea 273). */}
       {nivel >= 1 && sustituye && <div ref={huecoAvisoActualizacion} className="mt-2 empty:hidden" />}
       {hojaDeFalla}
+    </div>
     </div>
   )
 }
@@ -1035,28 +1167,10 @@ function Encabezado({ porcentaje, completado }: { porcentaje: number; completado
   )
 }
 
-// RETOMAR SIN PREGUNTAR (encargo del 2026-09-17, sección 3). Abrir una
-// guía a medias lleva directo al paso pendiente; esta línea lo dice y
-// deja empezar de nuevo con un toque, que es lo que hace falta cuando el
-// avance guardado era de otro caso. No detiene nada: se puede seguir sin
-// tocarla, y se va sola al cambiar de paso.
-function AvisoRetomada({ numeroPaso, onEmpezarDeNuevo }: { numeroPaso: number; onEmpezarDeNuevo: () => void }) {
-  return (
-    <div className="mt-3 flex items-center gap-2 rounded-lg border border-noct-divider bg-noct-surface py-1 pl-3 pr-1">
-      <p className="min-w-0 flex-1 text-[13px] leading-snug text-noct-neutral-300">
-        Retomas en el paso {numeroPaso}, donde lo dejaste.
-      </p>
-      <button
-        type="button"
-        onClick={onEmpezarDeNuevo}
-        className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-noct-accent-300 hover:bg-noct-text/[.07]"
-      >
-        <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
-        Empezar de nuevo
-      </button>
-    </div>
-  )
-}
+// (Aquí vivía `AvisoRetomada`, la tarjeta "Retomas en el paso N, donde lo
+// dejaste". Desde la propuesta final de Claude Design, 2026-10-01, es una
+// línea de estado, "Retomando · paso N de M", con "Empezar de nuevo" a un
+// toque: ver EstadoEjecucion.tsx. Retomar sigue sin preguntar, AD-040.)
 
 // Evidencia fotografica del trabajo (tarea 79): "prueba de trabajo" que
 // el tecnico documenta en el sitio al completar un paso. Reutiliza la
@@ -1171,7 +1285,9 @@ function VinculoEnFoco({
   kicker?: string
   rutaOrigen?: string
   etiquetaOrigen?: string
-  onAbrir: () => void
+  // Sin ella, la tarjeta se lee pero no se abre: el paso se está
+  // CONSULTANDO y abrir la guía sería empezar su trabajo.
+  onAbrir?: () => void
 }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(guiaId)) ?? null, [guiaId])
   // El avance del vinculo es el de ESTA ejecucion, no el que esa guia

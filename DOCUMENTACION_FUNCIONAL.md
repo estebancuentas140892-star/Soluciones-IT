@@ -1389,6 +1389,31 @@ Equipos > Crear
 
 ### 13.2 Ejecutar un procedimiento (modo asistente)
 
+**PROPUESTA FINAL DE CLAUDE DESIGN (desde el 2026-10-01, tarea 287, [DECISIONES.md](DECISIONES.md) AD-060).** La pantalla responde "¿qué tengo que hacer ahora?" y la acción manda. Manda sobre todo lo que sigue en esta sección donde choquen:
+
+```
+ ✕  Título de la guía…            🔍  3/8 ▾      (cabecera: el contador abre "Ruta de la guía")
+ ▬▬▬ ▬▬▬ ▬▬▬ ▭▭▭ …                               (un segmento por paso; solo en el teléfono)
+ ↺ Retomando · paso 3 de 8      Empezar de nuevo  (o "👁 Solo consulta · no se marca nada",
+                                                    o "Borrador · algunos datos…"; una sola cosa)
+ ▬ ▭  acción 2 de 2                               (si el paso tiene varias acciones)
+ Título del paso, en gris                         (si no repite la instrucción)
+
+ [alerta] [Dónde]
+ QUÉ HACER · COMPRUEBA · DECIDE
+ INSTRUCCIÓN (26 px)
+ dato · comando · imagen · credencial · archivo · guía vinculada · Debes ver · Más información ▾
+ [‹]  [ ✓ Completar y seguir ]                    (64 px, hasta dos líneas)
+          Tengo un problema
+```
+
+- **Fuera de la pantalla del paso, en el teléfono:** el rótulo "PASO 3 DE 8" (lo dice el contador "3/8") y la ruta vertical con el paso de antes y el de después. **En escritorio y tableta** se conserva la ruta horizontal (con "Paso N de M" y el título); los segmentos no se dibujan ahí.
+- **Retomar** es una línea, ya no una tarjeta: **"Retomando · paso N de M"** con **"Empezar de nuevo"** a un toque (sin confirmación, como decidió AD-040). Se va con la primera acción que se marca o al cambiar de paso. El aviso de **borrador** vive en esa misma línea cuando no hay nada más que decir, y en la cabecera del índice.
+- **El botón dice la consecuencia:** **"Completar y seguir"** (marca la acción y trae la siguiente, o cierra el paso y abre el siguiente), **"Completar y terminar"** (solo cuando no queda ningún otro paso por hacer, ni siquiera uno saltado), **"Ir al paso N"** (paso ya hecho: solo navega), **"Ir a la acción N"** (acción ya hecha: solo lleva a otra), y si falta trabajo, inactivo y legible: **"Falta 1 tarea"**, **"Faltan N tareas"** o **"Completa «nombre de la guía»"**. Ya no existen "Siguiente", "Terminar", "Comprobado · siguiente" ni "Comprobado · terminar": una comprobación usa los mismos rótulos, y "Comprueba" sobre la instrucción dice qué clase de trabajo es. Con un nombre de guía largo, el nombre se acorta **dentro de las comillas** y por palabras ("Completa «Configurar las páginas que…»"): el verbo nunca se corta, el botón admite dos líneas y su nombre accesible lleva el nombre entero. Una decisión sigue respondiéndose con **"Sí"** y **"No"**.
+- **"Ruta de la guía"** (el índice, desde el contador): cada paso con su marca (hecho, el de trabajo, pendiente o saltado), su nombre **hasta en dos líneas**, **"Aquí vas"** en el paso donde está el trabajo, "Saltado" y el triángulo rojo de un paso con riesgo. Debajo, **"Abrir un paso solo lo muestra. No marca nada como hecho."**, y después lo de siempre: comprobaciones finales, la vista de paso entero, Detalles de la guía, Conectar un equipo y Empezar de nuevo. Con una guía en borrador, la cabecera dice "Borrador".
+- **Consultar otro paso:** un paso pendiente **de más adelante** que el de trabajo, abierto desde el índice (o desde la ruta de escritorio), se enseña en **modo consulta**: la línea dice **"Solo consulta · no se marca nada"**, su segmento va en ámbar, no hay "Anterior", ni "Tengo un problema", ni se puede abrir su guía vinculada, y el botón es **"Ir al paso N"**, que devuelve al paso de trabajo. Si el paso consultado tiene varias acciones, **"Acción anterior"** y **"Acción siguiente"** permiten leerlo entero. Nada se marca. Volver atrás nunca es consulta: un paso hecho solo navega y uno saltado se retoma ahí mismo. Saltar adelante sigue siendo un acto aparte ("Tengo un problema" > saltar el paso). La vista de paso entero conserva su paginación de siempre.
+- **La lupa** sigue abriendo el buscador en modo consulta como capa encima de la guía (ver abajo): nada navega fuera y al cerrarla se sigue en el mismo paso.
+
 **LA GUÍA SE ENTIENDE LEYENDO POCO (desde el 2026-09-22, tarea 255, [DECISIONES.md](DECISIONES.md) AD-043).** Se suma a lo que sigue y manda sobre ello donde choquen:
 
 - **La ruta del procedimiento** encabeza la ejecución de la guía principal: un nodo por paso con su estado (hecho, con la marca en verde; el actual, en azul con su número; pendiente, neutro; saltado, con borde discontinuo) y el triángulo de aviso en rojo en los pasos que tienen un riesgo real, para saber de antemano dónde ir con cuidado. **En el teléfono** es vertical y recortada al paso anterior, el actual y el siguiente, con **"Ver la ruta completa · N pasos"** (abre el índice de pasos). **Desde 768 px** se ve entera en horizontal, con flechas, y la ejecución pasa de 448 a 768 px de ancho; los botones de abajo se quedan centrados en 576. El nombre de cada nodo es el título del paso sin el verbo de navegación ("Abrir SGC" se lee "SGC"). Tocar un nodo **mueve la vista**; nunca marca nada. La ruta es la cabecera del paso: dice "Paso N de M" y su título.

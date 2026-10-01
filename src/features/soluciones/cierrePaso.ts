@@ -34,10 +34,54 @@ export interface CierrePaso {
   accion: AccionPaso
   /** Rotulo del control de finalizacion. Nunca promete lo que no hara. */
   etiqueta: string
+  /**
+   * El mismo rotulo sin acortar. Solo difiere de `etiqueta` cuando el
+   * nombre de una guia vinculada es largo y se abrevio dentro de las
+   * comillas: es el nombre accesible del control, para que nadie pierda
+   * el nombre entero (propuesta final de Claude Design, 2026-10-01).
+   */
+  etiquetaCompleta: string
   /** Guia vinculada que falta terminar, si es eso lo que bloquea. */
   guiaPendiente: string | null
   /** Tareas del paso sin marcar. */
   tareasPendientes: number
+}
+
+// EL ROTULO DICE LA CONSECUENCIA (propuesta final de Claude Design,
+// 2026-10-01). "Completar y seguir" cierra y abre lo siguiente,
+// "Completar y terminar" cierra lo ultimo, "Ir al paso N" solo navega
+// y, si falta trabajo, el rotulo dice cuanto y el control queda
+// inactivo. "Comprobado" o "Hecho" a secas no decian que iba a pasar.
+//
+// El nombre de una guia vinculada puede ser largo y el boton de la
+// ejecucion admite dos lineas como mucho. Se acorta DENTRO de las
+// comillas y por palabras: el verbo ("Completa") va siempre entero, y
+// el nombre completo viaja en `etiquetaCompleta`.
+
+/** Caracteres del nombre de una guia que caben en el boton sin pasar de dos lineas a 360 px. */
+export const LARGO_MAXIMO_NOMBRE_GUIA = 30
+
+/**
+ * El nombre de una guia, acortado por palabras a `maximo` caracteres con
+ * "…" al final. Un nombre que ya cabe sale intacto. Si la primera
+ * palabra sola ya no cabe, se corta dentro de ella: nunca devuelve solo
+ * los puntos suspensivos.
+ */
+export function acortarNombreGuia(nombre: string, maximo = LARGO_MAXIMO_NOMBRE_GUIA): string {
+  const limpio = nombre.trim().replace(/\s+/g, ' ')
+  if (limpio.length <= maximo) return limpio
+  const corte = limpio.slice(0, maximo)
+  const ultimoEspacio = corte.lastIndexOf(' ')
+  // Cortar por palabra solo si no deja el nombre en un muñon: con menos
+  // de la mitad del espacio usado, se corta dentro de la palabra.
+  const base = ultimoEspacio >= maximo / 2 ? corte.slice(0, ultimoEspacio) : corte
+  return `${base.replace(/[\s.,;:·-]+$/, '')}…`
+}
+
+/** "Completa «nombre»", con el nombre acortado para la vista y entero para el nombre accesible. */
+export function rotuloCompletaGuia(nombre: string): { visible: string; completo: string } {
+  const limpio = nombre.trim() || 'la guía vinculada'
+  return { visible: `Completa «${acortarNombreGuia(limpio)}»`, completo: `Completa «${limpio}»` }
 }
 
 export interface DatosCierrePaso {
@@ -51,8 +95,13 @@ export interface DatosCierrePaso {
    * A12).
    */
   guiaPendiente: string | null
+  /**
+   * ¿Queda a donde ir despues de este paso? En un paso pendiente: si al
+   * cerrarlo queda otro paso por hacer (si no, cerrarlo termina la
+   * guia). En un paso ya hecho: si navegar lleva a otro paso.
+   */
   hayPasoSiguiente: boolean
-  /** Numero (1..n) del paso al que se ira al cerrar este. */
+  /** Numero (1..n) del paso al que se ira desde este. */
   numeroPasoSiguiente: number
 }
 
@@ -88,35 +137,43 @@ export function cierreDelPaso({
   const tareasPendientes = Math.max(0, totalTareas - tareasMarcadas)
 
   if (pasoHecho) {
+    const etiqueta = hayPasoSiguiente ? `Ir al paso ${numeroPasoSiguiente}` : 'Continuar'
     return {
       accion: 'navegar',
-      etiqueta: hayPasoSiguiente ? `Ir al paso ${numeroPasoSiguiente}` : 'Continuar',
+      etiqueta,
+      etiquetaCompleta: etiqueta,
       guiaPendiente: null,
       tareasPendientes,
     }
   }
 
   if (guiaPendiente !== null) {
+    const rotulo = rotuloCompletaGuia(guiaPendiente)
     return {
       accion: 'bloqueado',
-      etiqueta: `Completa «${guiaPendiente}»`,
+      etiqueta: rotulo.visible,
+      etiquetaCompleta: rotulo.completo,
       guiaPendiente,
       tareasPendientes,
     }
   }
 
   if (tareasPendientes > 0) {
+    const etiqueta = tareasPendientes === 1 ? 'Falta 1 tarea' : `Faltan ${tareasPendientes} tareas`
     return {
       accion: 'bloqueado',
-      etiqueta: tareasPendientes === 1 ? 'Falta 1 tarea' : `Faltan ${tareasPendientes} tareas`,
+      etiqueta,
+      etiquetaCompleta: etiqueta,
       guiaPendiente: null,
       tareasPendientes,
     }
   }
 
+  const etiqueta = hayPasoSiguiente ? 'Completar y seguir' : 'Completar y terminar'
   return {
     accion: 'completar',
-    etiqueta: hayPasoSiguiente ? 'Completar paso y continuar' : 'Completar paso y terminar',
+    etiqueta,
+    etiquetaCompleta: etiqueta,
     guiaPendiente: null,
     tareasPendientes: 0,
   }

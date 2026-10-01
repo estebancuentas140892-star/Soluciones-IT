@@ -26,7 +26,10 @@ export function TarjetaGuiaVinculada({
   kicker: string
   titulo: string
   estado: EstadoVinculo
-  onAbrir: () => void
+  // Sin ella la tarjeta no ofrece abrir nada: se está CONSULTANDO un paso
+  // que no es el de trabajo, y abrir la guía sería empezar su trabajo
+  // (propuesta final de Claude Design, 2026-10-01).
+  onAbrir?: () => void
 }) {
   const claseEstado =
     estado.clase === 'completada'
@@ -55,15 +58,17 @@ export function TarjetaGuiaVinculada({
           reconoce la guía. */}
       <p className="text-[16px] font-medium leading-snug text-pretty text-noct-text">{titulo}</p>
 
-      <button
-        type="button"
-        onClick={onAbrir}
-        aria-label={`${estado.accion}: ${titulo}`}
-        className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
-      >
-        <span className="truncate">{estado.accion}</span>
-        <CaretRight size={16} className="shrink-0" aria-hidden />
-      </button>
+      {onAbrir && (
+        <button
+          type="button"
+          onClick={onAbrir}
+          aria-label={`${estado.accion}: ${titulo}`}
+          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+        >
+          <span className="truncate">{estado.accion}</span>
+          <CaretRight size={16} className="shrink-0" aria-hidden />
+        </button>
+      )}
     </div>
   )
 }

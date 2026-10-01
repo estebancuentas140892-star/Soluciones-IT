@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
 import { normalizarTexto } from './iconosSoluciones'
-import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import {
-  BookOpen,
+  ArrowRight,
   CaretDown,
   CaretLeft,
   CaretRight,
@@ -28,6 +27,7 @@ import { bloquesUnicos, tipoEfectivo } from '../referencia/referencias'
 import { useReferencias } from '../referencia/useReferencias'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
 import { apoyosDelPaso, apoyosDeTarea, type Apoyos } from './apoyosTarea'
+import { rotuloCompletaGuia, type CierrePaso } from './cierrePaso'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { accionFoco, avisosDeTareaFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
 import { tonoInfo } from './tonos'
@@ -60,6 +60,22 @@ import { tonoInfo } from './tonos'
 // Las reglas de fondo no cambian: qué cuenta como hecho, qué bloquea una
 // tarea (guías necesarias), cómo se responde una decisión y cómo se
 // abre una guía vinculada siguen donde estaban.
+//
+// PROPUESTA FINAL DE CLAUDE DESIGN (2026-10-01). La pantalla responde
+// "¿qué tengo que hacer ahora?" y la acción manda:
+//
+//   - Lo que orienta va en voz baja: "acción 2 de 2" y el título del
+//     paso en una línea gris. Fuera el rótulo "PASO 3 DE 8" (lo dice el
+//     contador "3/8" de la cabecera) y la ruta con el paso de antes y el
+//     de después (en el teléfono; en escritorio sigue la horizontal).
+//   - El botón dice la CONSECUENCIA: "Completar y seguir", "Completar y
+//     terminar", "Ir al paso N", "Ir a la acción N"; si falta trabajo,
+//     cuánto ("Falta 1 tarea") o qué guía ("Completa «X»"), inactivo y
+//     legible. Hasta dos líneas: el verbo no se corta nunca y un nombre
+//     largo se acorta dentro de las comillas (`rotuloCompletaGuia`).
+//   - Un paso que no es el de trabajo, abierto desde el índice, se
+//     CONSULTA: se lee entero, nada se marca y el botón devuelve al paso
+//     de trabajo.
 
 interface Props {
   paso: PasoProcedimiento
@@ -69,9 +85,11 @@ interface Props {
   // solo vivía en el índice.
   numeroPaso: number
   totalPasos: number
-  // ¿Queda algún paso después de este? Decide si la última acción dice
-  // "Siguiente" o "Terminar".
-  hayPasoSiguiente: boolean
+  // ¿Cerrar este paso TERMINA la guía? Lo decide `AsistenteVista` con el
+  // mismo cálculo que el avance (`avanzarDespuesDe`, que vuelve también a
+  // un paso saltado): sin otro paso por hacer, la última acción dice
+  // "Completar y terminar"; si no, "Completar y seguir".
+  cierraLaGuia: boolean
   instruccionesHechas: ReadonlySet<string>
   // ¿La guía vinculada del paso ya está completa? La resuelve quien
   // llama con lectura en vivo; aquí decide si la primera tarea del
@@ -99,16 +117,21 @@ interface Props {
   // llega, y el control se apaga.
   onPasoAnterior?: () => void
   onAlternarTarea: (tareaId: string) => void
-  // Cierra el paso y avanza. Es la misma acción dominante de la vista
-  // completa: el foco no decide cuándo se puede, solo la ofrece.
+  // Cierra el paso y avanza (o, en un paso hecho, navega). Es la misma
+  // acción dominante de la vista completa: el foco no decide cuándo se
+  // puede, solo la ofrece.
   onCompletarPaso: () => void
-  // Rótulo de esa acción cuando NO se puede cerrar todavía ("Faltan 2
-  // tareas", "Completa «X»"), resuelto arriba con `cierreDelPaso` para
-  // que las vistas digan exactamente lo mismo.
-  etiquetaAvance: string
-  // ¿El paso puede cerrarse ya? Misma regla para todos los controles de
-  // finalización (tarea 3 del encargo del 2026-09-09).
-  puedeCerrarPaso: boolean
+  // Qué puede hacer ahora el control que cierra el paso y cómo se llama
+  // ("Completar y seguir", "Ir al paso 4", "Faltan 2 tareas",
+  // "Completa «X»"), resuelto arriba con `cierreDelPaso` para que las
+  // vistas digan exactamente lo mismo (tarea 3 del encargo del
+  // 2026-09-09).
+  cierre: CierrePaso
+  // EL PASO SE ESTÁ CONSULTANDO (propuesta final de Claude Design,
+  // 2026-10-01): no es el paso de trabajo y se abrió desde el índice o la
+  // ruta. Se lee entero, nada se marca y el botón principal devuelve al
+  // paso de trabajo ("Ir al paso N"). null fuera de la consulta.
+  consulta?: { numeroPasoTrabajo: number; onVolver: () => void } | null
   // El técnico declara que algo va mal en esta tarea. Abre la MISMA
   // hoja de salidas que el "Falla" de la vista completa (tablero 3d).
   onFalla: (textoTarea: string) => void
@@ -146,7 +169,9 @@ interface Props {
     // Rótulo de la tarjeta, cuando el que se deduce de `obligatoria`
     // ("Guía necesaria" / "Consulta opcional") no describe el papel.
     kicker?: string
-    onAbrir: () => void
+    // Sin ella la tarjeta se lee pero no se abre: en la consulta, abrir
+    // la guía sería empezar su trabajo.
+    onAbrir?: () => void
   }) => ReactNode
   // Ejecuta una guía vinculada EN LUGAR del contenido de la tarea. Lo
   // aporta `AsistenteVista`, que es quien sabe anidar otra ejecución y
@@ -202,18 +227,74 @@ function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
 }
 
 // Clases compartidas de los controles del pie. 64 px de alto: es lo que
-// se toca sin mirar, de pie frente al equipo.
+// se toca sin mirar, de pie frente al equipo. Inactivo NO es transparente:
+// el rótulo dice qué falta y tiene que leerse (borde y texto neutros).
 const BOTON_PRINCIPAL =
-  'flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3 text-[18px] font-semibold text-noct-accent-300 active:bg-noct-accent/[.34] disabled:opacity-30'
+  'flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3.5 text-[17px] font-semibold text-noct-accent-200 active:bg-noct-accent/[.3] disabled:border-noct-neutral-700 disabled:bg-noct-text/[.04] disabled:text-noct-neutral-400'
 const BOTON_ANTERIOR =
   'flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-30'
+
+// EL CONTROL GRANDE DEL PIE, con la gramática de la propuesta final: el
+// icono y el rótulo dicen la consecuencia (la marca cierra, la flecha solo
+// lleva). Hasta dos líneas, centradas; cuando el rótulo visible abrevia el
+// nombre de una guía, el nombre accesible lo lleva entero.
+function BotonPrincipal({
+  etiqueta,
+  etiquetaCompleta,
+  icono = null,
+  onClick,
+  disabled = false,
+}: {
+  etiqueta: string
+  etiquetaCompleta?: string
+  icono?: 'marca' | 'flecha' | null
+  onClick?: () => void
+  disabled?: boolean
+}) {
+  const abreviada = etiquetaCompleta !== undefined && etiquetaCompleta !== etiqueta
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={abreviada ? etiquetaCompleta : undefined}
+      title={abreviada ? etiquetaCompleta : undefined}
+      className={BOTON_PRINCIPAL}
+    >
+      {icono === 'marca' && <Check size={20} className="shrink-0" aria-hidden />}
+      {icono === 'flecha' && <ArrowRight size={20} className="shrink-0" aria-hidden />}
+      <span className="line-clamp-2 min-w-0 text-center leading-[1.25] [overflow-wrap:anywhere]">{etiqueta}</span>
+    </button>
+  )
+}
+
+// "acción 2 de 2": dónde está la acción dentro del paso, en voz baja. Un
+// trazo por acción (hecha en acento, la que se ve un poco más clara) y la
+// frase, que es lo que lee el lector de pantalla.
+function AccionesDelPaso({ hechas, actual }: { hechas: boolean[]; actual: number }) {
+  return (
+    <p className="flex items-center gap-2 text-[12px] leading-snug text-noct-neutral-500">
+      <span aria-hidden className="flex gap-[3px]">
+        {hechas.map((hecha, i) => (
+          <span
+            key={i}
+            className={`h-[3px] w-3.5 rounded-sm ${
+              hecha ? 'bg-noct-accent-300' : i === actual ? 'bg-noct-neutral-500' : 'bg-noct-neutral-700'
+            }`}
+          />
+        ))}
+      </span>
+      acción {actual + 1} de {hechas.length}
+    </p>
+  )
+}
 
 export function ModoFoco({
   paso,
   tituloPaso,
   numeroPaso,
   totalPasos,
-  hayPasoSiguiente,
+  cierraLaGuia,
   instruccionesHechas,
   subSatisfecho,
   guiaDelPasoDisponible = true,
@@ -223,8 +304,8 @@ export function ModoFoco({
   onPasoAnterior,
   onAlternarTarea,
   onCompletarPaso,
-  etiquetaAvance,
-  puedeCerrarPaso,
+  cierre,
+  consulta = null,
   onFalla,
   onDecisionResuelta,
   guiasPendientes,
@@ -330,13 +411,11 @@ export function ModoFoco({
   if (!tarea) return null
 
   const hecha = cumplida(tarea)
-  const hechas = tareas.filter(cumplida).length
   const esPrimeraDelPaso = indice === 0
   const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho)
   const cierraPaso = accion === 'completar'
-  const esVerificacion = tarea.tipoTarea === 'verificacion'
   // UNA DECISIÓN NO ES UNA ACCIÓN (encargo del 2026-09-09, secciones 5
-  // y 6): se responde con sus dos salidas, nunca con "Siguiente".
+  // y 6): se responde con sus dos salidas, nunca con "Completar".
   const esDecision = tarea.tipoTarea === 'decision'
   // UNA SOLA ZONA DE ACCIONES DOMINANTE. Mientras la guía vinculada
   // ocupa la pantalla, la suya es la que manda y este pie desaparece.
@@ -453,11 +532,23 @@ export function ModoFoco({
     tituloPropio !== '' && normalizarTexto(tituloPropio) !== normalizarTexto(textoInstruccion) ? tituloPropio : ''
 
   // ¿Esta es la última acción pendiente de TODO el procedimiento? Solo
-  // cambia el rótulo: "Terminar" en vez de "Siguiente".
+  // cambia el rótulo: "Completar y terminar" en vez de "Completar y
+  // seguir".
   const quedaTrabajoEnElPaso = tareas.some((t) => t.id !== tarea.id && !cumplida(t))
-  const esUltimoTrabajo = !hayPasoSiguiente && !quedaTrabajoEnElPaso
+  const esUltimoTrabajo = cierraLaGuia && !quedaTrabajoEnElPaso
 
   const puedeRetroceder = indice > 0 || onPasoAnterior !== undefined
+
+  // A qué acción lleva seguir SIN marcar (desde una ya cumplida): la
+  // siguiente pendiente mirando hacia adelante, si no la de al lado, y si
+  // no queda ninguna, el control del paso. Es la misma regla que
+  // `continuarSinMarcar`, aquí para que el rótulo diga a dónde va.
+  function destinoSinMarcar(): number | null {
+    const pendiente = siguientePendiente(indice)
+    if (pendiente >= 0) return pendiente
+    if (indice + 1 < tareas.length) return indice + 1
+    return null
+  }
 
   // COMPLETAR Y AVANZAR SON UN SOLO GESTO (encargo del 2026-09-10,
   // tarea 5): "Siguiente" registra la acción Y trae la siguiente.
@@ -479,9 +570,8 @@ export function ModoFoco({
   // Seguir SIN tocar nada, desde una acción que ya estaba cumplida (se
   // llegó a ella con "Anterior"). No registra nada.
   function continuarSinMarcar() {
-    const pendiente = siguientePendiente(indice)
-    if (pendiente >= 0) setIndiceTarea(pendiente)
-    else if (indice + 1 < tareas.length) setIndiceTarea(indice + 1)
+    const destino = destinoSinMarcar()
+    if (destino !== null) setIndiceTarea(destino)
     else onCompletarPaso()
   }
 
@@ -580,53 +670,60 @@ export function ModoFoco({
     )
   }
 
+  // Seguir sin marcar lleva a otra acción del paso: el rótulo la nombra.
+  // Sin ninguna a la que ir, el control es el del paso.
+  const destinoSinTocar = destinoSinMarcar()
+  const botonSinMarcar =
+    destinoSinTocar !== null ? (
+      <BotonPrincipal etiqueta={`Ir a la acción ${destinoSinTocar + 1}`} icono="flecha" onClick={continuarSinMarcar} />
+    ) : (
+      <BotonPrincipal
+        etiqueta={cierre.etiqueta}
+        etiquetaCompleta={cierre.etiquetaCompleta}
+        icono={cierre.accion === 'completar' ? 'marca' : cierre.accion === 'navegar' ? 'flecha' : null}
+        disabled={cierre.accion === 'bloqueado'}
+        onClick={continuarSinMarcar}
+      />
+    )
+
   // El control grande del pie, según lo que toca ahora.
   let principal: ReactNode
-  if (cierraPaso) {
-    // Con todo el paso hecho, "Siguiente" recorre primero las acciones
-    // que quedan delante en este mismo paso (se volvió a revisar con
-    // "Anterior") y solo desde la última pasa al paso siguiente.
-    const quedaDelante = indice + 1 < tareas.length
+  if (consulta) {
+    // CONSULTANDO: lo único que se ofrece es volver al paso de trabajo.
     principal = (
-      <button
-        type="button"
-        disabled={!quedaDelante && !puedeCerrarPaso}
-        onClick={quedaDelante ? () => setIndiceTarea(indice + 1) : onCompletarPaso}
-        className={BOTON_PRINCIPAL}
-      >
-        {quedaDelante || puedeCerrarPaso ? (
-          hayPasoSiguiente || quedaDelante ? (
-            <>
-              <span className="truncate">Siguiente</span>
-              <CaretRight size={22} className="shrink-0" aria-hidden />
-            </>
-          ) : (
-            <>
-              <Check size={22} className="shrink-0" aria-hidden />
-              <span className="truncate">Terminar</span>
-            </>
-          )
-        ) : (
-          <span className="truncate text-[15px]">{etiquetaAvance}</span>
-        )}
-      </button>
+      <BotonPrincipal etiqueta={`Ir al paso ${consulta.numeroPasoTrabajo}`} icono="flecha" onClick={consulta.onVolver} />
+    )
+  } else if (cierraPaso) {
+    // Con todo el paso hecho, el control recorre primero las acciones que
+    // quedan delante en este mismo paso (se volvió a revisar con
+    // "Anterior") y solo desde la última pasa al control del paso: cerrar
+    // y seguir, cerrar y terminar, o ir al paso siguiente si ya estaba
+    // hecho.
+    const quedaDelante = indice + 1 < tareas.length
+    principal = quedaDelante ? (
+      <BotonPrincipal etiqueta={`Ir a la acción ${indice + 2}`} icono="flecha" onClick={() => setIndiceTarea(indice + 1)} />
+    ) : (
+      <BotonPrincipal
+        etiqueta={cierre.etiqueta}
+        etiquetaCompleta={cierre.etiquetaCompleta}
+        icono={cierre.accion === 'completar' ? 'marca' : cierre.accion === 'navegar' ? 'flecha' : null}
+        disabled={cierre.accion === 'bloqueado'}
+        onClick={onCompletarPaso}
+      />
     )
   } else if (tarea.clase === 'guia-del-paso') {
-    // LA ACCIÓN DOMINANTE ES LA DE LA TARJETA ("Abrir guía" /
-    // "Continuar guía"), así que aquí no va otra. Solo hay botón propio
-    // cuando la tarjeta no ofrece nada que hacer: la guía ya está
-    // completa, o no está en este dispositivo y no bloquea (A12).
+    // LA ACCIÓN QUE SE PUEDE HACER ES LA DE LA TARJETA ("Abrir guía" /
+    // "Continuar guía"). El control del pie dice qué falta para cerrar
+    // el paso, "Completa «X»", inactivo: es la misma gramática de todos
+    // los bloqueos. Se puede seguir cuando la tarjeta no ofrece nada que
+    // hacer: la guía ya está completa, o no está en este dispositivo y no
+    // bloquea (A12).
+    const rotulo = rotuloCompletaGuia(tarea.guiaTitulo || tarea.texto)
     principal =
       hecha || !guiaDelPasoDisponible ? (
-        <button type="button" onClick={continuarSinMarcar} className={BOTON_PRINCIPAL}>
-          <span className="truncate">Siguiente</span>
-          <CaretRight size={22} className="shrink-0" aria-hidden />
-        </button>
+        botonSinMarcar
       ) : (
-        <p className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2 text-center text-[13px] leading-snug text-noct-neutral-400">
-          <BookOpen size={16} className="shrink-0" aria-hidden />
-          Se cumple al terminar la guía de arriba
-        </p>
+        <BotonPrincipal etiqueta={rotulo.visible} etiquetaCompleta={rotulo.completo} disabled />
       )
   } else if (esDecision && !hecha && !noAbierto) {
     // UNA DECISIÓN SE RESPONDE, NO SE MARCA. Acento la vía que sigue,
@@ -662,69 +759,63 @@ export function ModoFoco({
     )
   } else if (hecha) {
     // YA CUMPLIDA: se llegó aquí con "Anterior". Seguir no registra nada.
-    principal = (
-      <button type="button" onClick={continuarSinMarcar} className={BOTON_PRINCIPAL}>
-        <span className="truncate">Siguiente</span>
-        <CaretRight size={22} className="shrink-0" aria-hidden />
-      </button>
-    )
+    principal = botonSinMarcar
+  } else if (pendientes.length > 0) {
+    // UNA GUÍA NECESARIA DE ESTA TAREA SIN TERMINAR: el control dice cuál
+    // y queda inactivo. Su tarjeta, arriba, es la que se abre.
+    const rotulo = rotuloCompletaGuia(pendientes[0].guiaArticuloTitulo || 'la guía vinculada')
+    principal = <BotonPrincipal etiqueta={rotulo.visible} etiquetaCompleta={rotulo.completo} disabled />
   } else {
+    // COMPLETAR Y AVANZAR SON UN SOLO GESTO: marca la acción y trae la
+    // siguiente. Una comprobación usa el mismo rótulo: "Comprueba", sobre
+    // la instrucción, ya dice qué clase de trabajo es.
     principal = (
-      <button
-        type="button"
+      <BotonPrincipal
+        etiqueta={esUltimoTrabajo ? 'Completar y terminar' : 'Completar y seguir'}
+        icono="marca"
         onClick={completarYContinuar}
-        disabled={motivoGuias !== null}
-        className={BOTON_PRINCIPAL}
-      >
-        {esUltimoTrabajo ? (
-          <Check size={22} className="shrink-0" aria-hidden />
-        ) : esVerificacion ? (
-          <Check size={20} className="shrink-0" aria-hidden />
-        ) : null}
-        <span className="truncate">
-          {esVerificacion
-            ? esUltimoTrabajo
-              ? 'Comprobado · terminar'
-              : 'Comprobado · siguiente'
-            : esUltimoTrabajo
-              ? 'Terminar'
-              : 'Siguiente'}
-        </span>
-        {!esUltimoTrabajo && !esVerificacion && <CaretRight size={22} className="shrink-0" aria-hidden />}
-      </button>
+      />
     )
   }
 
+  // DÓNDE ESTOY, EN VOZ BAJA (propuesta final). En el teléfono, "acción 2
+  // de 2" y el título del paso; en escritorio, la ruta horizontal. Dentro
+  // de una guía vinculada, la línea de siempre ("Paso 1 de 3" y el
+  // título), porque ahí no hay contador que lo diga. Entre esto y la
+  // acción, aire: lo que orienta no se lee como parte de lo que se hace.
+  const contextoEnTelefono = tareas.length > 1 || tituloEnContexto !== ''
+  const separacionAccion = ruta ? (contextoEnTelefono ? 'mt-7' : 'md:mt-7') : 'mt-4'
+
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col gap-4 pb-6 pt-3">
-        {requisitos.length > 0 && esPrimeraDelPaso && <AntesDeEmpezar requisitos={requisitos} />}
-
-        {/* Un segmento por acción del paso, solo si el paso tiene más de
-            una: con una sola, la barra no dice nada que no diga ya
-            "Paso 3 de 12". */}
-        {tareas.length > 1 && (
-          <IndicadorAvance
-            hechos={hechas}
-            total={tareas.length}
-            variante="segmentos"
-            expandido
-            actual={indice}
-            className="flex-none"
-          />
+      <div className="flex flex-1 flex-col pb-6 pt-2.5">
+        {requisitos.length > 0 && esPrimeraDelPaso && (
+          <div className="mb-4">
+            <AntesDeEmpezar requisitos={requisitos} />
+          </div>
         )}
 
-        {/* DÓNDE ESTOY: la ruta del procedimiento cuando la hay (nivel 0),
-            y si no, la línea de siempre. */}
-        {ruta ?? (
-          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px] leading-snug text-noct-neutral-400">
-            <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
-              Paso {numeroPaso} de {totalPasos}
-            </span>
-            {tituloEnContexto && <span className="min-w-0 text-pretty text-noct-neutral-300">{tituloEnContexto}</span>}
-          </p>
-        )}
+        <div className="flex flex-col gap-1.5">
+          {/* Un trazo por acción del paso, solo si tiene más de una. */}
+          {tareas.length > 1 && <AccionesDelPaso hechas={tareas.map(cumplida)} actual={indice} />}
+          {ruta ? (
+            <>
+              {ruta}
+              {tituloEnContexto && (
+                <p className="text-[15px] leading-snug text-noct-neutral-300 text-pretty md:hidden">{tituloEnContexto}</p>
+              )}
+            </>
+          ) : (
+            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px] leading-snug text-noct-neutral-400">
+              <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
+                Paso {numeroPaso} de {totalPasos}
+              </span>
+              {tituloEnContexto && <span className="min-w-0 text-pretty text-noct-neutral-300">{tituloEnContexto}</span>}
+            </p>
+          )}
+        </div>
 
+        <div className={`flex flex-col gap-4 ${separacionAccion}`}>
         {/* LAS ALERTAS, ANTES DE LA INSTRUCCIÓN: un riesgo se lee antes
             de actuar, no después. Solo precaución e importante, y desde
             el 2026-09-22 en rojo: en una guía el rojo es el riesgo. */}
@@ -786,13 +877,17 @@ export function ModoFoco({
 
         {/* LA GUÍA VINCULADA, COMO TARJETA COMPACTA: abrirla sustituye
             esta pantalla (encargo del 2026-09-10, tarea 4). */}
+        {/* En la consulta se leen, pero no se abren: abrir una guía es
+            empezar su trabajo, y en un paso consultado no se trabaja. */}
         {guiasDeLaTarea.map((g) => (
           <div key={g.clave}>
             {renderTarjetaGuia({
               guiaId: g.id,
               tituloReferencia: g.titulo,
               obligatoria: true,
-              onAbrir: () => setVinculoAbierto({ guiaId: g.id, titulo: g.titulo, obligatoria: true }),
+              onAbrir: consulta
+                ? undefined
+                : () => setVinculoAbierto({ guiaId: g.id, titulo: g.titulo, obligatoria: true }),
             })}
           </div>
         ))}
@@ -803,12 +898,14 @@ export function ModoFoco({
               guiaId: g.guiaArticuloId ?? '',
               tituloReferencia: g.guiaArticuloTitulo,
               obligatoria: false,
-              onAbrir: () =>
-                setVinculoAbierto({
-                  guiaId: g.guiaArticuloId ?? '',
-                  titulo: g.guiaArticuloTitulo,
-                  obligatoria: false,
-                }),
+              onAbrir: consulta
+                ? undefined
+                : () =>
+                    setVinculoAbierto({
+                      guiaId: g.guiaArticuloId ?? '',
+                      titulo: g.guiaArticuloTitulo,
+                      obligatoria: false,
+                    }),
             })}
           </div>
         ))}
@@ -862,6 +959,7 @@ export function ModoFoco({
             {archivosPlegados.length > 0 && <AdjuntosPaso adjuntos={archivosPlegados} titulo={paso.titulo} />}
           </MasInformacion>
         )}
+        </div>
       </div>
 
       {!pieCedidoAlVinculo && (
@@ -877,36 +975,65 @@ export function ModoFoco({
               no flotando sobre ellos (tarea 273). Vacío no ocupa nada. La
               barra anidada no lo lleva: lo lleva la de la guía de fuera. */}
           {!anidado && <div ref={huecoAvisoActualizacion} className="mx-auto w-full max-w-xl empty:hidden" />}
-          {/* QUÉ GUÍA FALTA, con su nombre. Sin esto el botón apagado no
-              dice por qué. */}
-          {!cierraPaso && !hecha && motivoGuias && (
+          {/* QUÉ GUÍAS FALTAN, cuando son más de una. Con una sola, el
+              botón ya la nombra ("Completa «X»"). */}
+          {!consulta && !cierraPaso && !hecha && pendientes.length > 1 && motivoGuias && (
             <p className="text-center text-[12px] text-noct-neutral-300">{motivoGuias}</p>
           )}
-          {esDecision && !hecha && !noAbierto && destinoDelNo && (
+          {!consulta && esDecision && !hecha && !noAbierto && destinoDelNo && (
             <p className="text-center text-[13px] leading-snug text-noct-neutral-300 text-pretty">
               Si respondes que no, se abre «{tarea.decisionGuiaTitulo || 'la salida'}»
             </p>
           )}
-          {!anidado && renderEnvioAEquipo?.(tarea.clase === 'tarea' ? tarea.id : null)}
+          {!consulta && !anidado && renderEnvioAEquipo?.(tarea.clase === 'tarea' ? tarea.id : null)}
           {/* En escritorio la ejecución tiene más ancho (tarea 255), pero
               los controles no se estiran: un botón de 700 px no se toca
-              mejor que uno de 600. */}
+              mejor que uno de 600. En la consulta no hay "Anterior": el
+              único gesto es volver al paso de trabajo. */}
           <div className="mx-auto flex w-full max-w-xl gap-2.5">
-            <button
-              type="button"
-              disabled={!puedeRetroceder}
-              onClick={retroceder}
-              aria-label="Anterior. Solo mueve la vista, no cambia lo marcado"
-              title="Anterior"
-              className={BOTON_ANTERIOR}
-            >
-              <CaretLeft size={22} aria-hidden />
-            </button>
+            {!consulta && (
+              <button
+                type="button"
+                disabled={!puedeRetroceder}
+                onClick={retroceder}
+                aria-label="Anterior. Solo mueve la vista, no cambia lo marcado"
+                title="Anterior"
+                className={BOTON_ANTERIOR}
+              >
+                <CaretLeft size={22} aria-hidden />
+              </button>
+            )}
             {principal}
           </div>
-          {/* LO SECUNDARIO, EN UNA LÍNEA DISCRETA. "Tengo un problema" abre
-              las salidas del paso (contingencia, evidencia, saltar) sin
-              completar nada. */}
+          {/* LO SECUNDARIO, EN UNA LÍNEA DISCRETA. En la consulta, moverse
+              entre las acciones del paso consultado (leerlo entero sin
+              marcar nada); si no, "Tengo un problema", que abre las salidas
+              del paso (contingencia, evidencia, saltar) sin completar
+              nada. */}
+          {consulta ? (
+            tareas.length > 1 && (
+              <div className="mx-auto flex w-full max-w-xl items-center justify-center gap-1">
+                <button
+                  type="button"
+                  disabled={indice === 0}
+                  onClick={() => setIndiceTarea(indice - 1)}
+                  className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text disabled:opacity-40"
+                >
+                  <CaretLeft size={14} className="shrink-0" aria-hidden />
+                  Acción anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={indice + 1 >= tareas.length}
+                  onClick={() => setIndiceTarea(indice + 1)}
+                  className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text disabled:opacity-40"
+                >
+                  Acción siguiente
+                  <CaretRight size={14} className="shrink-0" aria-hidden />
+                </button>
+              </div>
+            )
+          ) : (
           <div className="mx-auto flex w-full max-w-xl items-center justify-center gap-1">
             <button
               type="button"
@@ -928,6 +1055,7 @@ export function ModoFoco({
               </button>
             )}
           </div>
+          )}
         </div>
       )}
     </div>
@@ -1007,8 +1135,8 @@ function AlertaDeRiesgo({ aviso }: { aviso: BloquePaso }) {
       role="note"
       className={`flex items-start gap-3 rounded-r-[10px] border-l-[3px] px-3.5 py-3 ${tono.claseBarra} ${tono.claseFondo}`}
     >
-      <tono.Icono size={21} className={`mt-0.5 shrink-0 ${tono.claseIcono}`} aria-hidden />
-      <p className="min-w-0 text-[15.5px] leading-[1.45] text-pretty">
+      <tono.Icono size={19} className={`mt-0.5 shrink-0 ${tono.claseIcono}`} aria-hidden />
+      <p className="min-w-0 text-[14.5px] leading-[1.45] text-pretty">
         <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span> {aviso.texto || 'Aviso sin texto'}
       </p>
     </div>

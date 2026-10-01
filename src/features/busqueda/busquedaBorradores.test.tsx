@@ -299,7 +299,7 @@ describe('abrir el borrador desde Inicio es hacerlo', () => {
       'el paso 2, que es el pendiente',
     )
     expect(texto).toContain('Paso 2 de 2')
-    expect(texto).toContain('Retomas en el paso 2')
+    expect(texto).toContain('Retomando · paso 2 de 2')
     expect(ubicacionActual().pathname).not.toContain('/editar')
     expect(ubicacionActual().pathname).not.toContain('/detalles')
   })

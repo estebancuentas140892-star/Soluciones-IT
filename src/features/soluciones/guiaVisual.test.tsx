@@ -136,7 +136,7 @@ describe('qué hacer, dónde y qué debo ver', () => {
     expect(textoPantalla()).toContain('Acceso de prueba al equipo')
 
     // Última acción del paso: al revés.
-    await tocar(await esperar(() => control(/^Siguiente$/), 'siguiente'))
+    await tocar(await esperar(() => control(/^Completar y seguir$/), 'completar y seguir'))
     await esperar(() => textoPantalla().includes('Escribe control printers'), 'la segunda acción')
     expect(textoPantalla()).toContain('Debes ver:')
     expect(textoPantalla()).toContain('La ventana Dispositivos e impresoras')
@@ -155,7 +155,7 @@ describe('qué hacer, dónde y qué debo ver', () => {
     expect(textoPantalla()).toContain('Llegar a la lista de impresoras de prueba')
 
     // Y en la última acción, "Debes ver" dice el resultado, no el objetivo.
-    await tocar(await esperar(() => control(/^Siguiente$/), 'siguiente'))
+    await tocar(await esperar(() => control(/^Completar y seguir$/), 'completar y seguir'))
     await esperar(() => textoPantalla().includes('Debes ver:'), 'debes ver')
     const texto = textoPantalla()
     expect(texto).toContain('Debes ver: La ventana Dispositivos e impresoras')
@@ -167,7 +167,7 @@ describe('qué hacer, dónde y qué debo ver', () => {
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes('Paso 1 de 3'), 'el paso 1')
 
-    await tocar(await esperar(() => control(/^Ver la ruta completa/), 'ver la ruta completa'))
+    await tocar(await esperar(() => control(/^Paso 1 de 3\. Abrir el índice de pasos$/), 'el contador que abre el índice'))
     await tocar(await esperar(() => control(/^Ver el paso entero$/), 'ver el paso entero'))
     await esperar(
       () => textoPantalla().includes('Presiona Windows + R') && textoPantalla().includes('Escribe control printers'),
@@ -190,13 +190,22 @@ describe('qué hacer, dónde y qué debo ver', () => {
 
   it('una comprobación se anuncia con su palabra, no solo con un color', async () => {
     await sembrarRuta()
+    // Los pasos 1 y 2 hechos: el 3, la comprobación, es el de trabajo.
+    await db.progresoPasos.put({
+      articuloId: 'guia-ruta',
+      pasosHechos: ['ruta-p1', 'ruta-p2'],
+      instruccionesHechas: ['ruta-p1-t1', 'ruta-p1-t2', 'ruta-p2-t1'],
+      verificacionHecha: [],
+      actualizadoEn: new Date().toISOString(),
+    })
     await montar(RUTAS, RUTA)
-    await esperar(() => textoPantalla().includes('Paso 1 de 3'), 'el paso 1')
 
-    await tocar(await esperar(() => control(/^Paso 3 de 3: Comprobar la impresora/), 'el nodo del paso 3'))
     await esperar(() => textoPantalla().includes('Imprime una página de prueba'), 'la comprobación')
     expect(textoPantalla()).toContain('Comprueba')
-    expect(control(/^Comprobado · terminar$/)).not.toBeNull()
+    // El botón dice la consecuencia y no "Comprobado" (propuesta final de
+    // Claude Design): es lo último que queda, así que termina.
+    expect(control(/^Completar y terminar$/)).not.toBeNull()
+    expect(control(/^Comprobado/)).toBeNull()
   })
 
   it('un riesgo real se lee antes de la instrucción, con su palabra', async () => {

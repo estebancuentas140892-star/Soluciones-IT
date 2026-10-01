@@ -8,7 +8,6 @@ import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/proc
 import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
-import { PencilSimple } from '../../components/iconos'
 import { AsistenteVista } from './AsistenteVista'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
 
@@ -91,17 +90,10 @@ export function AsistentePage() {
             sin publicar, que es lo que se pidió: sirve aunque le falten
             confirmaciones. Lo que no puede pasar es que se confunda con un
             procedimiento del equipo, así que la ejecución lo dice en una
-            línea. No pide confirmar nada, no añade un paso y no tapa la
-            acción: solo está ahí. En una guía publicada no existe. */}
-        {(articulo.estado ?? 'publicado') === 'borrador' && (
-          // Neutro desde el 2026-09-22: un borrador no es un riesgo, y en
-          // una guía el ámbar significaría "lugar". Lo dice su icono y su
-          // palabra.
-          <p className="mt-2 flex items-center gap-2 rounded-md border border-noct-divider bg-noct-text/[.04] px-2.5 py-1.5 text-[12px] leading-snug text-noct-neutral-300">
-            <PencilSimple size={13} className="shrink-0 text-noct-neutral-400" aria-hidden />
-            Borrador · algunos datos todavía están por confirmar.
-          </p>
-        )}
+            línea, sin pedir confirmar nada ni tapar la acción. Desde la
+            propuesta final de Claude Design (2026-10-01) esa línea es la
+            de estado de la ejecución (`EstadoEjecucion.tsx`), debajo de los
+            segmentos, y el índice lo dice también en su cabecera. */}
         {/* Sin onCompletado: al nivel 0 no hay a quien avisar,
             AsistenteVista ya muestra su propia pantalla de terminada, con
             la salida a donde el técnico estaba. */}
