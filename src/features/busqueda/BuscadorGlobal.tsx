@@ -137,7 +137,10 @@ export function BuscadorGlobal({
           valor={query}
           onCambiar={setQuery}
           alcance="Soluciones IT"
-          textoAlternativo="¿Qué necesitas resolver?"
+          // El mismo marcador que el campo de Resolver (propuesta final
+          // de Claude Design): dice qué se escribe. La pregunta queda
+          // debajo, en el estado vacío.
+          textoAlternativo="Problema, equipo o comando"
           refCampo={campo}
           className="min-w-0 flex-1"
         />

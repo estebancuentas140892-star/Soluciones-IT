@@ -16,12 +16,19 @@ import { MagnifyingGlass, XCircleFill } from './iconos'
 // marcador de posición con la misma fórmula en toda la app ("Buscar en
 // X") y el borrar a **44 px reales** con margen negativo, para que el
 // objetivo táctil crezca sin ensanchar la fila (regla R6, regla M-R14).
+//
+// UNA EXCEPCIÓN, CON NOMBRE (propuesta final de Claude Design,
+// 2026-10-01): en Resolver el campo ES la pantalla ("Tengo un problema,
+// lo escribo aquí"), así que la variante `destacada` mide 52 px, con el
+// texto a 16 px (sin el zoom de iOS al enfocar) y el borde neutro un
+// punto más visible en reposo. El resto de la app sigue con los 46 px.
 export function CampoBusqueda({
   valor,
   onCambiar,
   alcance,
   textoAlternativo,
   refCampo,
+  variante = 'normal',
   className = '',
 }: {
   valor: string
@@ -35,9 +42,11 @@ export function CampoBusqueda({
   // sin red..."). La etiqueta accesible sigue diciendo el alcance.
   textoAlternativo?: string
   refCampo?: Ref<HTMLInputElement>
+  variante?: 'normal' | 'destacada'
   className?: string
 }) {
   const buscando = valor.trim().length > 0
+  const destacada = variante === 'destacada'
 
   return (
     <label
@@ -48,13 +57,13 @@ export function CampoBusqueda({
       // borde más `ring-1`: 2 px de acento, tan visibles como el anillo
       // global que sustituyen, y distintos del borde de 1 px que queda
       // cuando hay texto escrito pero el foco está en otra parte.
-      className={`flex h-[46px] items-center gap-2.5 rounded-lg border bg-noct-surface px-3.5 transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent ${
-        buscando ? 'border-noct-accent' : 'border-noct-divider'
-      } ${className}`}
+      className={`flex items-center border bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent ${
+        destacada ? 'h-[52px] gap-3 rounded-[10px] pl-4 pr-3.5' : 'h-[46px] gap-2.5 rounded-lg px-3.5'
+      } ${buscando ? 'border-noct-accent' : destacada ? 'border-noct-neutral-600' : 'border-noct-divider'} ${className}`}
     >
       <MagnifyingGlass
-        size={18}
-        className={`shrink-0 ${buscando ? 'text-noct-accent' : 'text-noct-neutral-400'}`}
+        size={destacada ? 20 : 18}
+        className={`shrink-0 ${buscando ? 'text-noct-accent' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
         aria-hidden
       />
       <input
@@ -67,7 +76,9 @@ export function CampoBusqueda({
         data-campo-busqueda
         // La "x" nativa de WebKit se oculta siempre: duplicaba el botón
         // de borrar y medía la mitad.
-        className="min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-400 [&::-webkit-search-cancel-button]:hidden"
+        className={`min-w-0 flex-1 bg-transparent text-noct-text outline-none placeholder:text-noct-neutral-400 [&::-webkit-search-cancel-button]:hidden ${
+          destacada ? 'text-[16px]' : 'text-[15px]'
+        }`}
       />
       {buscando && (
         <button
@@ -76,7 +87,7 @@ export function CampoBusqueda({
           aria-label="Borrar la búsqueda"
           className="-mr-3 flex h-11 w-11 shrink-0 items-center justify-center text-noct-neutral-300 hover:text-noct-text"
         >
-          <XCircleFill size={18} aria-hidden />
+          <XCircleFill size={destacada ? 19 : 18} aria-hidden />
         </button>
       )}
     </label>

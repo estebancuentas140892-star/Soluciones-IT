@@ -10,8 +10,13 @@ const UMBRAL_PX = 12
 // desplazarse, sin desaparecer nunca de pantalla (la orientación no debe
 // depender solo de la pestaña iluminada, a 700 px de distancia en
 // escritorio y a 10,5 px de tamaño).
-export function CabeceraColapsable({ titulo }: { titulo: string }) {
-  const [contraida, setContraida] = useState(false)
+//
+// `forzarContraida` lo deja a 14 px sin desplazamiento: Resolver mientras
+// se escribe (propuesta final de Claude Design, 2026-10-01). La misma
+// transición de 150 ms, así que plegar y desplazar se ven igual.
+export function CabeceraColapsable({ titulo, forzarContraida = false }: { titulo: string; forzarContraida?: boolean }) {
+  const [desplazada, setContraida] = useState(false)
+  const contraida = desplazada || forzarContraida
   const pendiente = useRef(false)
 
   useEffect(() => {

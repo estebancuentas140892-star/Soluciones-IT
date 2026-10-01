@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
@@ -12,7 +12,6 @@ import {
   ClockCountdown,
   MagnifyingGlass,
   PencilSimple,
-  Play,
   Plus,
   TreeStructure,
   Warning,
@@ -41,9 +40,9 @@ import { agruparAgenda, type Agenda } from './agenda'
 import {
   accesosRapidos,
   asuntosDeAtencion,
-  detallePuertaAgenda,
   guiasRecientes,
   juntarRecientes,
+  partesPuertaAgenda,
   recorridosRecientes,
   type AccesoRapido,
   type GuiaReciente,
@@ -113,6 +112,13 @@ export function ResolverPage() {
   const consultaCruda = queryDiferida.trim()
   const consulta = normalizarTexto(consultaCruda)
   const buscando = consultaCruda.length > 0
+  // CON EL PRIMER CARÁCTER (propuesta final de Claude Design, 2026-10-01)
+  // la pregunta se pliega y el título baja a 14 px: el campo sube UNA sola
+  // vez, en el mismo gesto, antes de que haya resultados. Después solo
+  // cambia la lista, que nunca se mueve bajo el dedo. Se mira lo escrito
+  // al instante, no la versión diferida, para que el pliegue no llegue
+  // tarde y mueva el campo con los resultados ya a la vista.
+  const escribiendo = query.trim().length > 0
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
@@ -195,20 +201,33 @@ export function ResolverPage() {
     <Chasis
       titulo="Resolver"
       conLupa={false}
+      tituloContraido={escribiendo}
       barra={
         <div className="px-4 pb-3.5 pt-1.5">
           {/* LA PREGUNTA, NO EL MÓDULO. El técnico no llega con ganas de
               buscar, llega con algo que resolver. La etiqueta accesible
-              sigue nombrando el alcance (regla M-R8). */}
-          <p className="mb-2 px-0.5 text-[17px] font-medium leading-snug text-noct-text">
-            ¿Qué necesitas resolver?
-          </p>
+              sigue nombrando el alcance (regla M-R8). Se pliega con el
+              primer carácter (alto y opacidad, 180 ms; sin animación si
+              el sistema pide menos movimiento). */}
+          <div
+            aria-hidden={escribiendo}
+            className={`grid transition-[grid-template-rows,opacity] duration-[180ms] ease-out motion-reduce:transition-none ${
+              escribiendo ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+            }`}
+          >
+            <div className="overflow-hidden">
+              <p className="px-0.5 pb-2.5 text-[22px] font-medium leading-[1.25] tracking-[-.01em] text-noct-text">
+                ¿Qué necesitas resolver?
+              </p>
+            </div>
+          </div>
           <CampoBusqueda
             valor={query}
             onCambiar={setQuery}
             alcance="Soluciones IT"
-            textoAlternativo="Buscar problema, equipo, comando…"
+            textoAlternativo="Problema, equipo o comando"
             refCampo={refCampo}
+            variante="destacada"
           />
         </div>
       }
@@ -346,19 +365,32 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
 
 // La actividad del equipo solo se consulta aquí, cuando no hay nada con
 // fecha: con Atención a la vista, la agenda ya tiene su puerta.
+//
+// Una línea de índice, no un botón (propuesta final de Claude Design,
+// 2026-10-01): "Agenda" en claro, lo que está en curso en gris y en acento
+// solo lo que pide una acción ("2 por revisar").
 function PuertaAgendaSinFecha({ agenda }: { agenda: Agenda }) {
   const hayActividad = useLiveQuery(async () => (await obtenerActividadReciente(1)).length > 0, [], false)
-  const detalle = detallePuertaAgenda(agenda, hayActividad)
-  if (!detalle) return null
+  const partes = partesPuertaAgenda(agenda, hayActividad)
+  if (!partes) return null
   return (
     <Link
       to="/agenda"
-      className="inline-flex min-h-11 items-center gap-1.5 self-start px-1.5 text-[13px] font-medium text-noct-accent-300 hover:underline"
+      className="inline-flex min-h-11 items-center gap-[7px] self-start px-0.5 text-[13.5px] hover:underline"
     >
-      <ClockCountdown size={14} aria-hidden />
-      Agenda{' '}
-      <span className="font-normal text-noct-neutral-400">· {detalle}</span>
-      <CaretRight size={13} aria-hidden />
+      <ClockCountdown size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+      <span className="min-w-0">
+        <span className="font-medium text-noct-neutral-200">Agenda</span>
+        {partes.map((parte) => (
+          <Fragment key={parte.texto}>
+            <span className="text-noct-neutral-400"> · </span>
+            <span className={parte.pideAccion ? 'font-medium text-noct-accent-300' : 'text-noct-neutral-400'}>
+              {parte.texto}
+            </span>
+          </Fragment>
+        ))}
+      </span>
+      <CaretRight size={12} className="shrink-0 text-noct-neutral-500" aria-hidden />
     </Link>
   )
 }
@@ -383,6 +415,11 @@ function BloqueRecientes({ recientes }: { recientes: GuiaReciente[] }) {
   )
 }
 
+// LA FILA DE RECIENTES (propuesta final de Claude Design, 2026-10-01). El
+// título manda, hasta en dos líneas. La guía a medias es la que se retoma:
+// su avance va en acento ("paso 3 de 8") y lleva "Continuar" con forma de
+// botón; las demás no repiten "Abrir" (toda la fila se abre). El icono
+// dice qué clase de guía es: con pasos o con preguntas.
 function FilaReciente({ guia }: { guia: GuiaReciente }) {
   const conPreguntas = guia.tipo === 'diagnostico'
   const aMedias = guia.avance !== null || guia.enCurso !== null
@@ -393,40 +430,41 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
   const detalle =
     guia.enCurso ??
     (guia.avance
-      ? `Vas en el paso ${Math.min(guia.avance.hechos + 1, guia.avance.total)} de ${guia.avance.total}`
+      ? `paso ${Math.min(guia.avance.hechos + 1, guia.avance.total)} de ${guia.avance.total}`
       : [conPreguntas ? ROTULO_RECORRIDO : guia.categoriaNombre, cuando].filter(Boolean).join(' · '))
-  const Icono = aMedias ? Play : conPreguntas ? TreeStructure : BookOpen
+  const Icono = conPreguntas ? TreeStructure : BookOpen
   return (
     <Link
       to={guia.ruta}
       state={ORIGEN_RESOLVER}
       aria-label={`${accion} ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
-      className="flex min-h-14 items-center gap-3 rounded-md px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05]"
+      className="-mx-2 flex min-h-14 items-center gap-3 rounded-lg px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05]"
     >
-      <span
-        className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md ${
-          aMedias ? 'bg-noct-accent/[.14] text-noct-accent-300' : 'bg-noct-text/[.06] text-noct-neutral-300'
-        }`}
-      >
+      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent-300">
         <Icono size={17} aria-hidden />
       </span>
-      <span className="min-w-0 flex-1">
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {/* HASTA DOS LÍNEAS, NO UNA CORTADA (tarea 263): a 360 px el
             título de una guía se quedaba en "La impresora de ejemplo...". */}
         <span className="line-clamp-2 text-[15px] font-medium leading-[1.3] text-pretty">{guia.titulo}</span>
-        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] leading-snug">
+        <span className="flex min-w-0 items-center gap-1 text-[12.5px] leading-[1.4] text-noct-neutral-400">
           {guia.borrador && (
-            <span className="inline-flex shrink-0 items-center gap-1 text-noct-neutral-300">
+            <span className="inline-flex shrink-0 items-center gap-1">
               <PencilSimple size={11} aria-hidden />
               Borrador ·
             </span>
           )}
-          <span className={`min-w-0 ${aMedias ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}>{detalle}</span>
+          <span className={`min-w-0 ${aMedias ? 'text-noct-accent-300' : ''}`}>{detalle}</span>
         </span>
       </span>
-      <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300" aria-hidden>
-        {accion}
-      </span>
+      {aMedias && (
+        <span
+          aria-hidden
+          className="flex h-9 shrink-0 items-center rounded-lg border border-noct-accent px-3 text-[13px] font-medium text-noct-accent-300"
+        >
+          Continuar
+        </span>
+      )}
     </Link>
   )
 }
@@ -473,7 +511,7 @@ function BloqueAccesos({
       <Link
         to="/soluciones"
         state={ORIGEN_RESOLVER}
-        className={`${accesos.length > 0 ? 'mt-2' : ''} inline-flex min-h-11 items-center gap-1.5 px-1.5 text-[13px] font-medium text-noct-accent-300 hover:underline`}
+        className={`${accesos.length > 0 ? 'mt-1.5' : ''} inline-flex min-h-11 items-center gap-1.5 px-1 text-[13.5px] font-medium text-noct-accent-300 hover:underline`}
       >
         <BookOpen size={14} aria-hidden />
         Todas las guías

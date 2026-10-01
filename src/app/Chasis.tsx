@@ -154,6 +154,13 @@ interface PropsSeccion extends PropsComunes {
    * la misma pantalla (regla M-R8, tarea 203).
    */
   conLupa?: boolean
+  /**
+   * El nombre de la sección a 14 px aunque no se haya desplazado nada.
+   * Resolver lo pide mientras se escribe (propuesta final de Claude
+   * Design, 2026-10-01): con la pregunta plegada, el campo sube una sola
+   * vez y los resultados empiezan más arriba.
+   */
+  tituloContraido?: boolean
 }
 
 interface PropsDocumento extends PropsComunes {
@@ -456,6 +463,7 @@ export function Chasis(props: Props) {
       <BarraSuperior
         titulo={props.titulo}
         conLupa={props.conLupa ?? true}
+        tituloContraido={props.tituloContraido}
         // Una sección que no es uno de los cuatro destinos (el catálogo de
         // guías, Red) lleva regreso en todos los tamaños: ya no tiene su
         // propia entrada en la barra. Mismo orden que el nivel documento:

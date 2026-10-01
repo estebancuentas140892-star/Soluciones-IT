@@ -35,10 +35,14 @@ const BuscadorGlobal = lazy(() =>
 export function BarraSuperior({
   titulo,
   conLupa = true,
+  tituloContraido = false,
   volver,
   children,
 }: {
   titulo: string
+  // El título a 14 px aunque no haya desplazamiento (Resolver mientras se
+  // escribe, propuesta final de Claude Design).
+  tituloContraido?: boolean
   // Regla M-R8, "un buscador por pantalla" (tarea 203): Inicio tiene su
   // propio campo de búsqueda en línea, con el alcance escrito, así que
   // ahí la lupa de esta barra sería el segundo buscador de la misma
@@ -74,7 +78,7 @@ export function BarraSuperior({
               <CaretLeft size={18} aria-hidden />
             </Link>
           )}
-          <CabeceraColapsable titulo={titulo} />
+          <CabeceraColapsable titulo={titulo} forzarContraida={tituloContraido} />
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <PastillaSync />

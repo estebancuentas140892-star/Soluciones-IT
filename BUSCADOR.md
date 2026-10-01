@@ -127,6 +127,13 @@ Cómo se puntúa cada candidato (función `puntuacion`, pura y probada):
 
 **El tipo se escribe en la fila.** Fuera de los grupos no hay cabecera que lo diga, así que el subtítulo se antepone con el tipo: "Guía · ICG Manager", "Guía con preguntas · Impresoras", "Equipo · Epson · Caja 4", "Bóveda · Acceso" (`subtituloConTipo`, que no repite el tipo si el subtítulo ya empieza por él ni cuando ya es uno de sus tramos: "Impresoras · Guía con preguntas" pasa a "Guía con preguntas · Impresoras"; antes salía "Diagnóstico · Impresoras · Diagnóstico").
 
+**Cómo se pinta la lista (2026-10-01, tarea 287, propuesta final de Claude Design).** Solo presentación, en `src/features/busqueda/presentacionResultados.ts` (lógica pura, con pruebas): ni el motor, ni el ranking, ni los sinónimos, ni el difuso, ni el modo consulta, ni las reglas de la Bóveda cambian, y ningún título se reescribe.
+
+- **Lista homogénea** (`filasConPrefijoComun`, `partirPorPrefijo`): si 3 o más filas de una MISMA sección empiezan por lo buscado como palabra entera, ese comienzo se pinta en gris con subrayado punteado (sigue siendo la coincidencia) y el resto del título en claro. No se aplica a una fila cuyo título es justo lo buscado, ni a medias de palabra ("Impresoras" buscando "impresora"), ni con menos de 3 filas.
+- **El tipo sube al encabezado** (`tipoComun`, `cuentaDeTipo`): si TODOS los mejores resultados son del mismo tipo, el rótulo dice "Mejores resultados · 5 equipos" y las filas llevan su subtítulo sin el tipo. Si no, la regla de arriba (el tipo en la fila) sigue, con el tipo más claro que el resto (`partesSubtituloConTipo`).
+- **Tinte por tipo** (`VISUAL_POR_TIPO`): guía en acento, guía con preguntas en el azul de la acción, equipo en verde, persona en violeta y ubicación en ámbar; Bóveda y adjuntos, neutros.
+- Título a 15 px hasta en dos líneas; filas de 56 px.
+
 **Un diagnóstico se llama "Guía con preguntas" (2026-09-22, tarea 263, AD-045).** Para quien resuelve no es otra herramienta: `ETIQUETA_TIPO.diagnostico` y el subtítulo del índice usan `ROTULO_RECORRIDO` (`src/lib/diagnostico.ts`), igual que los recientes y los favoritos. "Diagnóstico" queda para su administración (Más).
 
 ### 7.2 Acciones directas en el resultado (2026-09-15, tarea 241)

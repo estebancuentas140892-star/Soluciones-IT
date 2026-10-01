@@ -37,7 +37,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | Bloque | Qué | Estado |
 |---|---|---|
 | 1 | Ejecución de guías | Hecho (AD-060) |
-| 2 | Resolver y resultados | Pendiente |
+| 2 | Resolver y resultados | Hecho |
 | 3 | Equipos y ficha | Pendiente |
 | 4 | Más, coherencia y QA | Pendiente |
 

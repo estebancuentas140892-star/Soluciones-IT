@@ -7,10 +7,17 @@ import { useAccionesDeGuia } from '../soluciones/useAccionesDeGuia'
 import { AccionesDeResultado } from './AccionesResultado'
 import { useAnotarBusqueda } from './busquedaEnHistorial'
 import { ContextoResultados, idDeEntidad, useContextoResultados } from './contextoResultados'
-import { hayQueSepararMejores, mejoresResultados, sinLosMejores, subtituloConTipo } from './mejores'
+import { hayQueSepararMejores, mejoresResultados, sinLosMejores } from './mejores'
 import { eventoDeResolucion, registrarResolucion } from './medicion'
 import { filaNavega, vistaRapidaDe, type ModoBuscador } from './modoConsulta'
 import { PuenteBoveda } from './PuenteBoveda'
+import {
+  cuentaDeTipo,
+  filasConPrefijoComun,
+  partesSubtituloConTipo,
+  partirPorPrefijo,
+  tipoComun,
+} from './presentacionResultados'
 import { prominenciaPuenteBoveda } from './reglasPuenteBoveda'
 import { agruparResultados, partirTitulo, VISUAL_POR_TIPO } from './resultados'
 import type { ResultadoBusqueda } from './useIndiceBusqueda'
@@ -39,6 +46,7 @@ export function FilaResultado({
   resultado,
   consulta,
   conTipo = false,
+  prefijoAtenuado = false,
   conAcciones = false,
   desdeMejores = false,
 }: {
@@ -49,6 +57,13 @@ export function FilaResultado({
    * Acceso"). Se usa fuera de los grupos, donde nada mas lo dice.
    */
   conTipo?: boolean
+  /**
+   * La fila es parte de una lista HOMOGÉNEA (propuesta final de Claude
+   * Design): su título empieza por lo buscado, igual que otras dos o más
+   * de la sección, así que ese comienzo va atenuado y lo que la distingue
+   * en claro. Ver `presentacionResultados.ts`.
+   */
+  prefijoAtenuado?: boolean
   /**
    * Pinta la accion directa (empezar, continuar, iniciar, copiar).
    *
@@ -79,7 +94,8 @@ export function FilaResultado({
   } = useContextoResultados()
   const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
   const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
-  const subtitulo = conTipo ? subtituloConTipo(resultado) : resultado.subtitulo
+  const conPrefijo = prefijoAtenuado ? partirPorPrefijo(resultado.titulo, consulta) : null
+  const conSuTipo = conTipo ? partesSubtituloConTipo(resultado) : null
   const idPanel = useId()
   const fila = useRef<HTMLElement | null>(null)
   const vista = vistaRapidaDe(resultado, modo)
@@ -101,18 +117,42 @@ export function FilaResultado({
     cerrarVista()
   }
 
+  // El título manda, hasta en dos líneas (propuesta final). En una lista
+  // homogénea, lo buscado en gris con subrayado punteado (sigue siendo la
+  // coincidencia) y lo que distingue a la fila en claro; si no, la
+  // coincidencia resaltada en acento. El título real no cambia.
   const cuerpo = (
     <>
-      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded ${tono}`}>
+      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md ${tono}`}>
         <Icono size={17} aria-hidden />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="mb-0.5 block text-sm font-medium leading-[1.3] [text-wrap:pretty]">
-          {pre}
-          {match && <span className="rounded-[3px] bg-noct-accent/[.18] text-noct-accent-300">{match}</span>}
-          {post}
-        </span>
-        {subtitulo && <span className="block truncate text-[12px] text-noct-neutral-500">{subtitulo}</span>}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        {conPrefijo ? (
+          <span className="line-clamp-2 text-[15px] leading-[1.3] [text-wrap:pretty]">
+            <span className="text-noct-neutral-400 underline decoration-noct-accent-600 decoration-dotted underline-offset-4">
+              {conPrefijo.prefijo}
+            </span>
+            <span className="font-medium text-noct-neutral-100">{conPrefijo.resto}</span>
+          </span>
+        ) : (
+          <span className="line-clamp-2 text-[15px] font-medium leading-[1.3] [text-wrap:pretty]">
+            {pre}
+            {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
+            {post}
+          </span>
+        )}
+        {conSuTipo ? (
+          // LISTA MIXTA: el tipo, más claro, y el resto del contexto.
+          <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-500">
+            {conSuTipo.tipo && <span className="font-medium text-noct-neutral-300">{conSuTipo.tipo}</span>}
+            {conSuTipo.tipo && conSuTipo.detalle && ' · '}
+            {conSuTipo.detalle}
+          </span>
+        ) : (
+          resultado.subtitulo && (
+            <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-400">{resultado.subtitulo}</span>
+          )
+        )}
       </span>
     </>
   )
@@ -244,7 +284,7 @@ export function FilaResultado({
   )
 }
 
-const CLASE_FILA = 'flex min-h-[52px] items-center gap-[13px] rounded px-2 py-[11px] text-noct-text'
+const CLASE_FILA = 'flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 text-noct-text'
 
 export function ResultadosBusqueda({
   resultados,
@@ -338,6 +378,11 @@ export function ResultadosBusqueda({
   // Las secciones, en orden: "Mejores resultados" (si aporta algo) y los
   // grupos de siempre. Se arma la lista para poder intercalar el puente
   // de la Bóveda DESPUÉS de la primera, sin repetir el marcado.
+  //
+  // Si todos los mejores son del MISMO tipo, el tipo sube al encabezado
+  // ("Mejores resultados · 5 equipos") y no se repite en cada fila
+  // (propuesta final de Claude Design); si no, cada fila dice el suyo.
+  const tipoDeLosMejores = tipoComun(mejores)
   const secciones = [
     ...(separar
       ? [
@@ -347,8 +392,10 @@ export function ResultadosBusqueda({
             Icono: Crosshair,
             tonoIcono: 'text-noct-accent-300',
             items: mejores,
-            conTipo: true,
+            conTipo: tipoDeLosMejores === null,
+            cuenta: tipoDeLosMejores ? `· ${cuentaDeTipo(tipoDeLosMejores, mejores.length)}` : null,
             conAcciones: true,
+            desdeMejores: true,
           },
         ]
       : []),
@@ -359,32 +406,43 @@ export function ResultadosBusqueda({
       tonoIcono: 'text-noct-neutral-400',
       items: grupo.items,
       conTipo: false,
+      cuenta: null,
       // Un resultado unico no tiene seccion de mejores encima: su fila
       // es la que lleva la accion.
       conAcciones: !separar,
+      desdeMejores: false,
     })),
   ]
 
   return (
     <ContextoResultados.Provider value={contexto}>
       <div className="@container flex flex-col gap-5">
-        {secciones.map((seccion, indice) => (
+        {secciones.map((seccion, indice) => {
+          // LISTA HOMOGÉNEA, sección por sección: 3 o más filas que
+          // empiezan por lo buscado llevan ese comienzo atenuado.
+          const conPrefijo = filasConPrefijoComun(seccion.items, consulta)
+          return (
           <Fragment key={seccion.clave}>
             <section>
-              <div className="mb-1.5 flex items-center gap-2 px-0.5">
+              <div className="mb-1 flex items-center gap-2 px-0.5">
                 <seccion.Icono size={14} className={seccion.tonoIcono} aria-hidden />
                 <TituloSeccion>{seccion.nombre}</TituloSeccion>
-                <span className="text-[11px] text-noct-neutral-600">{seccion.items.length}</span>
+                {seccion.cuenta ? (
+                  <span className="text-[11px] text-noct-neutral-500">{seccion.cuenta}</span>
+                ) : (
+                  <span className="text-[11px] text-noct-neutral-600">{seccion.items.length}</span>
+                )}
               </div>
-              <div className="grid grid-cols-1 @2xl:grid-cols-2">
+              <div className="-mx-2 grid grid-cols-1 @2xl:grid-cols-2">
                 {seccion.items.map((item) => (
                   <FilaResultado
                     key={item.id}
                     resultado={item}
                     consulta={consulta}
                     conTipo={seccion.conTipo}
+                    prefijoAtenuado={conPrefijo.has(item.id)}
                     conAcciones={seccion.conAcciones}
-                    desdeMejores={seccion.conTipo}
+                    desdeMejores={seccion.desdeMejores}
                   />
                 ))}
               </div>
@@ -407,7 +465,8 @@ export function ResultadosBusqueda({
               />
             )}
           </Fragment>
-        ))}
+          )
+        })}
       </div>
     </ContextoResultados.Provider>
   )

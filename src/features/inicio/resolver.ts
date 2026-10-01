@@ -80,12 +80,25 @@ export function asuntosDeAtencion(
  * una pantalla vacía no se dibuja.
  */
 export function detallePuertaAgenda(agenda: Agenda, hayActividad: boolean): string | null {
+  const partes = partesPuertaAgenda(agenda, hayActividad)
+  return partes ? partes.map((parte) => parte.texto).join(' · ') : null
+}
+
+/**
+ * Lo mismo, por tramos, para pintarlo (propuesta final de Claude Design,
+ * 2026-10-01): el acento solo en lo que pide una acción ("2 por revisar");
+ * lo que ya está en curso va en gris.
+ */
+export function partesPuertaAgenda(
+  agenda: Agenda,
+  hayActividad: boolean,
+): { texto: string; pideAccion: boolean }[] | null {
   const partes = [
-    agenda.enCurso.length > 0 ? `${agenda.enCurso.length} en curso` : null,
-    agenda.porRevisar.length > 0 ? `${agenda.porRevisar.length} por revisar` : null,
-  ].filter((parte): parte is string => parte !== null)
-  if (partes.length > 0) return partes.join(' · ')
-  return hayActividad ? 'actividad del equipo' : null
+    agenda.enCurso.length > 0 ? { texto: `${agenda.enCurso.length} en curso`, pideAccion: false } : null,
+    agenda.porRevisar.length > 0 ? { texto: `${agenda.porRevisar.length} por revisar`, pideAccion: true } : null,
+  ].filter((parte): parte is { texto: string; pideAccion: boolean } => parte !== null)
+  if (partes.length > 0) return partes
+  return hayActividad ? [{ texto: 'actividad del equipo', pideAccion: false }] : null
 }
 
 /**

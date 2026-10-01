@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-01
 
+### Cambiado (Resolver y buscador, tarea 287, bloque 2): Resolver y los resultados según la propuesta final de Claude Design
+
+**Área modificada:** `src/features/inicio/{ResolverPage.tsx,resolver.ts}`, `src/features/busqueda/{ResultadosBusqueda.tsx,resultados.ts,BuscadorGlobal.tsx}`, `src/features/busqueda/presentacionResultados.ts` (nuevo), `src/components/{CampoBusqueda,BarraSuperior,CabeceraColapsable}.tsx`, `src/app/Chasis.tsx` (prop `tituloContraido`), pruebas (`presentacionResultados.test.ts` y `resultadosPropuestaFinal.test.tsx` nuevas), `scripts/capturas-moviles.mjs`, `DOCUMENTACION_FUNCIONAL.md` (5.1), `BUSCADOR.md` (7.1), `COMPONENTES_UI.md`.
+**Tipo:** Cambiado (solo presentación). El buscador, MiniSearch, el ranking, los sinónimos, el difuso, el modo consulta y las reglas de la Bóveda no cambian; ningún título se reescribe.
+**Motivo:** implementación cerrada del diseño aprobado (bloque 2): que sea evidente "tengo un problema, lo escribo aquí" y que una lista de resultados se compare de un vistazo.
+**Qué cambia:**
+- Resolver: la pregunta a 22 px y el campo destacado (52 px, texto a 16 px) con el marcador "Problema, equipo o comando"; la etiqueta accesible sigue siendo "Buscar en Soluciones IT". El mismo marcador en la capa del buscador.
+- Con el primer carácter la pregunta se pliega en 180 ms y el título baja a 14 px: el campo sube una sola vez, antes de los resultados, y vuelve al borrar.
+- La puerta de la Agenda es una línea de índice con el acento solo en "N por revisar". Recientes: icono por clase de guía, "paso N de M" en acento y "Continuar" con forma de botón en la guía a medias; las demás sin "Abrir".
+- Resultados: título a 15 px hasta en dos líneas y filas de 56 px. Lista homogénea: con 3 o más filas que empiezan por lo buscado, ese comienzo en gris con subrayado punteado y lo que distingue en claro. Con todos los mejores del mismo tipo, el tipo sube al encabezado ("· 5 equipos"); si no, cada fila dice su tipo, más claro, con su tinte (guía, guía con preguntas, equipo, persona y ubicación, cada uno el suyo).
+**Impacto esperado:** escribir el problema sin dudar dónde, y elegir entre "Mercadeo" y "Caja PN" sin leer "Impresora" cinco veces.
+**Cómo se comprobó:** 15 pruebas nuevas (las reglas de la lista homogénea y la mixta, el pliegue de la pregunta y la pantalla de verdad buscando) y las de Resolver al marcador y a la fila nuevos; suite completa, lint y build; capturas a 390×844 y 1366×768 (paradas nuevas `resolver-homogenea` y `resolver-mixta`), sin desbordamiento horizontal.
+
 ### Cambiado (guías, tarea 287, bloque 1): la ejecución de una guía según la propuesta final de Claude Design
 
 **Área modificada:** `src/features/soluciones/{ModoFoco,AsistenteVista,HojaPasos,RutaProcedimiento,TarjetaGuiaVinculada,AsistentePage}.tsx`, `src/features/soluciones/EstadoEjecucion.tsx` (nuevo), `src/features/soluciones/{cierrePaso,estadoPasos}.ts`, sus pruebas (`ejecucionPropuestaFinal.test.tsx` nueva), `scripts/capturas-moviles.mjs`, `DECISIONES.md` (AD-060), `DOCUMENTACION_FUNCIONAL.md` (13.2), `COMPONENTES_UI.md`.

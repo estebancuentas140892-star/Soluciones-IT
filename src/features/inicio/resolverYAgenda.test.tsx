@@ -329,7 +329,10 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
     await montar(RUTAS, '/')
     const texto = await esperarTexto('¿Qué necesitas resolver?')
     expect(campoBuscador()).not.toBeNull()
-    expect(campoBuscador()?.placeholder).toBe('Buscar problema, equipo, comando…')
+    // El marcador dice qué se escribe (propuesta final de Claude Design) y
+    // el nombre accesible sigue diciendo el alcance.
+    expect(campoBuscador()?.placeholder).toBe('Problema, equipo o comando')
+    expect(campoBuscador()?.getAttribute('aria-label')).toBe('Buscar en Soluciones IT')
     // Sin nada que atender no hay bloque "Atención" (ni un "todo al día"
     // de adorno), pero el catálogo sigue a un toque.
     expect(texto).not.toContain('Atención')
@@ -429,7 +432,10 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
 
     const texto = await esperarTexto('Recientes')
     expect(texto).toContain('Instalar la impresora de prueba')
-    expect(texto).toContain('Vas en el paso 2 de 2')
+    // El avance, en acento y sin rodeos, junto a "Continuar" (propuesta
+    // final de Claude Design).
+    expect(texto).toContain('paso 2 de 2')
+    expect(texto).toContain('Continuar')
     await tocar(await esperar(() => control(/^Continuar Instalar la impresora/), 'la fila de la guía a medias'))
     expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-1')
   })

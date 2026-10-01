@@ -110,6 +110,10 @@ const TODAS_LAS_PARADAS = [
   // Encargo del 2026-09-22: Resolver, Equipos, Bóveda y Más.
   { nombre: 'resolver', ruta: '/' },
   { nombre: 'resolver-buscando', ruta: '/', guion: `const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,'caja'); c.dispatchEvent(new Event('input',{bubbles:true}));` },
+  // Propuesta final de Claude Design (2026-10-01): una lista que comparte
+  // el comienzo ("Impresora de ejemplo...") y una mezcla de tipos.
+  { nombre: 'resolver-homogenea', ruta: '/', guion: buscarEnResolver('impresora de ejemplo') },
+  { nombre: 'resolver-mixta', ruta: '/', guion: buscarEnResolver('resolucion') },
   { nombre: 'boveda', ruta: '/boveda' },
   { nombre: 'red', ruta: '/red' },
   { nombre: 'catalogo', ruta: '/soluciones' },
