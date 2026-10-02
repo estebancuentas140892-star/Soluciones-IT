@@ -11,6 +11,7 @@ import {
 import {
   contarHechos,
   contarInstruccionesHechas,
+  hayAvanceEnEjecucion,
   leerAvance,
   marcarPasoSaltado,
   registrarEvidenciaPaso,
@@ -76,6 +77,9 @@ import { AntesDeEmpezar, ModoFoco } from './ModoFoco'
 import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { RutaProcedimiento } from './RutaProcedimiento'
 import { HojaFalla } from './HojaFalla'
+import { PantallaPreparacion } from './PantallaPreparacion'
+import { orientacionDe, pantallasDePreparacion } from './preparacionGuia'
+import { useRequisitosEfectivos } from './useRequisitosEfectivos'
 import { destinoAlSaltar } from './salidasFalla'
 import { LineaDeEstado, SegmentosDePasos, type EstadoLinea } from './EstadoEjecucion'
 import {
@@ -104,6 +108,13 @@ interface Props {
   // nivel 0). Es el mismo destino que la X de la cabecera: lo resuelve
   // la página, que conoce el origen del salto.
   salida?: { to: string; estado?: unknown }
+  // ANTES DEL PRIMER PASO, ORIENTAR Y PREPARAR (tarea 289, fase 2). Lo
+  // pide quien abre la ejecución principal: la página de la guía
+  // (`AsistentePage`) orienta y prepara ('completa'); el recorrido de una
+  // guía con preguntas solo prepara ('requisitos'), porque la guía ya la
+  // eligieron sus respuestas y el "cuándo usarla" no añade nada. Con
+  // preparación, los requisitos ya no van junto a la primera acción.
+  preparacion?: 'completa' | 'requisitos'
 }
 
 // Modo ejecucion (asistente): en vez del "mapa" completo
@@ -117,7 +128,15 @@ interface Props {
 // aqui, directo al primer paso pendiente. Reutiliza el mismo avance de
 // useProcedimientoEjecucion que la vista de lista, asi que entrar y
 // salir nunca pierde ni duplica progreso.
-export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = false, onCompletado, salida }: Props) {
+export function AsistenteVista({
+  articuloId,
+  procedimiento,
+  nivel,
+  sustituye = false,
+  onCompletado,
+  salida,
+  preparacion,
+}: Props) {
   // Donde vive el avance de ESTE documento (tarea 2 del encargo): la
   // fila del articulo en el nivel 0, la entrada del vinculo dentro de
   // la ejecucion en curso en un nivel anidado.
@@ -190,6 +209,19 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // antes. Guarda el paso en el que se retomó: al moverse, la línea ya
   // no hace falta y se va sola.
   const [retomadaEn, setRetomadaEn] = useState<number | null>(null)
+  // LA PREPARACIÓN EN CURSO (tarea 289, fase 2): en qué pantalla de las de
+  // `pantallasDePreparacion` está una ejecución nueva, o null cuando ya
+  // empezó (o retoma, que no se prepara otra vez). No se guarda: leer no es
+  // avanzar, así que salir y volver antes de la primera acción la enseña de
+  // nuevo.
+  const [pasoPreparacion, setPasoPreparacion] = useState<number | null>(null)
+  // Solo la ejecución principal se prepara: lo de dentro forma parte de ella.
+  const conPreparacion = preparacion !== undefined && nivel === 0
+  const orientacion = useMemo(
+    () => (conPreparacion && preparacion === 'completa' ? orientacionDe(procedimiento) : null),
+    [conPreparacion, preparacion, procedimiento],
+  )
+  const requisitosPrevios = useRequisitosEfectivos(conPreparacion ? procedimiento : null)
   // Mover la VISTA a un paso: consultar, revisar, volver atrás. No toca
   // ni el avance ni el paso de trabajo.
   function verPaso(indice: number | null, porElFinal = false) {
@@ -268,8 +300,12 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
       // se entra en uno saltado (el primer pendiente), se puede retomar
       // ahí mismo, y el recorrido continúa donde iba.
       setIndiceTrabajo(pasoDeTrabajo(idsPasos, hechosIniciales, new Set(prog?.pasosSaltados ?? [])))
-      const habiaAvance = (prog?.pasosHechos?.length ?? 0) > 0 || (prog?.instruccionesHechas?.length ?? 0) > 0
+      // Cuenta también lo hecho dentro de las guías que esta reutiliza: a
+      // mitad del acceso del paso 1 se retoma, no se vuelve a preparar.
+      const habiaAvance = hayAvanceEnEjecucion(prog)
       setRetomadaEn(nivel === 0 && habiaAvance ? inicial : null)
+      // Una ejecución NUEVA de la página de la guía empieza preparándose.
+      setPasoPreparacion(conPreparacion && !habiaAvance ? 0 : null)
       setModoEjecucion(modo)
       setListo(true)
     })
@@ -313,6 +349,8 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   async function reiniciarYVolver() {
     await reiniciarProgreso(clave)
     setRetomadaEn(null)
+    // Empezar de nuevo es una ejecución nueva: vuelve a prepararse.
+    setPasoPreparacion(conPreparacion ? 0 : null)
     setPasoEnteroPorFalla(null)
     setFalla(null)
     irAPaso(siguientePasoPendiente(idsPasos, new Set<string>(), -1))
@@ -321,6 +359,33 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // Se espera también a la lectura EN VIVO del avance: la acción en la que
   // arranca la vista se decide al montarse, con lo que ya esté marcado.
   if (!listo || !avanceCargado) return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+
+  // ORIENTAR Y PREPARAR ANTES DE LA PRIMERA ACCIÓN (tarea 289, fase 2). Se
+  // espera a los requisitos de la guía del paso 1: decidir qué pantalla
+  // enseñar con la mitad de los datos haría saltar de una a otra.
+  if (pasoPreparacion !== null) {
+    if (requisitosPrevios === undefined || articulo === undefined) {
+      return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+    }
+    const pantallas = pantallasDePreparacion(orientacion, requisitosPrevios)
+    const pantalla = pantallas[pasoPreparacion]
+    if (pantalla) {
+      return (
+        <PantallaPreparacion
+          key={pantalla}
+          pantalla={pantalla}
+          titulo={articulo?.titulo ?? ''}
+          orientacion={orientacion}
+          requisitos={requisitosPrevios}
+          totalPasos={pasos.length}
+          tiempoMin={tiempoEstimadoMin}
+          siguienteEsRequisitos={pantallas[pasoPreparacion + 1] === 'requisitos'}
+          onSeguir={() => setPasoPreparacion(pasoPreparacion + 1 < pantallas.length ? pasoPreparacion + 1 : null)}
+          onAnterior={pasoPreparacion > 0 ? () => setPasoPreparacion(pasoPreparacion - 1) : undefined}
+        />
+      )
+    }
+  }
 
   // Anidado (subprocedimiento o solucion de un paso de nivel 0): el
   // padre deja de renderizar este componente en cuanto queda
@@ -587,9 +652,12 @@ export function AsistenteVista({ articuloId, procedimiento, nivel, sustituye = f
   // 4): en el primer paso de una ejecución que todavía no tiene nada
   // hecho, y solo si la guía declara requisitos. Una vez empezado el
   // trabajo ya no tiene sentido volver a pedirlos.
-  const sinAvance =
-    (progreso?.pasosHechos?.length ?? 0) === 0 && (progreso?.instruccionesHechas?.length ?? 0) === 0
-  const requisitosVisibles = indiceActual === 0 && sinAvance ? requisitos : []
+  //
+  // Con preparación (la página de la guía, tarea 289) ya se enseñaron en
+  // su propia pantalla, antes de empezar, así que aquí no vuelven: los
+  // requisitos no se mezclan con la primera acción ni reaparecen después.
+  const sinAvance = !hayAvanceEnEjecucion(progreso)
+  const requisitosVisibles = !conPreparacion && indiceActual === 0 && sinAvance ? requisitos : []
 
   // CONSULTAR OTRO PASO NO MARCA NADA (propuesta final de Claude Design,
   // 2026-10-01). Un paso pendiente de MÁS ADELANTE que el de trabajo,

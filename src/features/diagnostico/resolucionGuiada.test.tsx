@@ -304,6 +304,32 @@ describe('ejemplo C: las respuestas cambian el camino', () => {
   })
 })
 
+describe('antes del procedimiento del recorrido (tarea 289)', () => {
+  it('sus requisitos salen juntos antes de la primera acción, sin orientación: las respuestas ya eligieron la guía', async () => {
+    await sembrarImpresora()
+    const guia = await db.articulos.get('guia-conectar')
+    await db.articulos.put({
+      ...guia!,
+      procedimiento: {
+        ...guia!.procedimiento!,
+        descripcion: 'Usa esta guía cuando la impresora compartida no aparezca en Windows.',
+        requisitos: ['Nombre de la impresora compartida de prueba.'],
+      },
+    })
+    await montar(RUTAS, '/diagnostico/rec-impresora')
+
+    await tocar(await esperar(() => respuesta('No'), 'la respuesta No'))
+    await esperar(() => textoPantalla().includes('Antes de empezar'), 'los requisitos del procedimiento')
+    expect(textoPantalla()).toContain('Nombre de la impresora compartida de prueba.')
+    expect(textoPantalla()).not.toContain('Cuándo usarla')
+    expect(textoPantalla()).not.toContain('Abrir Impresoras y escáneres')
+
+    await tocar(await esperarControl('Todo listo, empezar'))
+    await esperar(() => textoPantalla().includes('Abrir Impresoras y escáneres'), 'la primera acción')
+    expect(textoPantalla()).not.toContain('Nombre de la impresora compartida de prueba.')
+  })
+})
+
 describe('el procedimiento dentro del recorrido no se pierde', () => {
   it('volver a la pregunta y elegir lo mismo retoma donde iba; salir y volver desde Recientes, también', async () => {
     await sembrarImpresora()

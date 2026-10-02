@@ -348,6 +348,22 @@ export async function registrarEvidenciaPaso(
   })
 }
 
+/**
+ * ¿Hay algo hecho en esta ejecucion? Cuenta lo de la guia Y lo de las
+ * guias que reutiliza, que vive en `vinculos` (tarea 289): quien sale a
+ * mitad del acceso de una guia que empieza por otra tiene un trabajo a
+ * medias aunque la guia principal todavia no tenga nada marcado, y al
+ * volver tiene que retomarlo, no volver a la preparacion.
+ */
+export function hayAvanceEnEjecucion(
+  avance: (AvanceProcedimiento & { vinculos?: Record<string, AvanceProcedimiento> }) | undefined,
+): boolean {
+  if (!avance) return false
+  const conAlgo = (a: AvanceProcedimiento) =>
+    (a.pasosHechos?.length ?? 0) > 0 || (a.instruccionesHechas?.length ?? 0) > 0
+  return conAlgo(avance) || Object.values(avance.vinculos ?? {}).some(conAlgo)
+}
+
 // Cuantos de los pasos actuales estan hechos. Se cruza contra los
 // ids vigentes porque el procedimiento pudo editarse despues de
 // marcar avance (los pasos eliminados no deben contar).

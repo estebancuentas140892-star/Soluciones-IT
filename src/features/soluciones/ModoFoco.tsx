@@ -31,6 +31,7 @@ import { rotuloCompletaGuia, type CierrePaso } from './cierrePaso'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { accionFoco, avisosDeTareaFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
 import { tonoInfo } from './tonos'
+import { subirElContenedor } from './subirElContenedor'
 
 // MODO FOCO: una acción a la vez (handoff "Diseño móvil", tablero 6d).
 // Desde la tarea 217 es LA ejecución de una guía, no un modo opcional.
@@ -193,27 +194,6 @@ interface Props {
   renderEnvioAEquipo?: (tareaId: string | null) => ReactNode
 }
 
-// EL CONTENIDO NUEVO EMPIEZA ARRIBA (encargo del 2026-09-10, tarea 4).
-//
-// La ejecución no scrollea la ventana: el contenido vive dentro de un
-// contenedor del chasis, y ese contenedor conservaba el desplazamiento
-// de la tarea anterior, así que la tarea siguiente aparecía empezada
-// por la mitad. Se sube el primer ancestro que de verdad puede
-// desplazarse, y también la ventana por si el chasis cambia.
-function subirElContenedor(desde: Element | null) {
-  for (let nodo = desde?.parentElement ?? null; nodo; nodo = nodo.parentElement) {
-    const desbordamiento = getComputedStyle(nodo).overflowY
-    const puedeDesplazarse =
-      (desbordamiento === 'auto' || desbordamiento === 'scroll') &&
-      nodo.scrollHeight > nodo.clientHeight
-    if (puedeDesplazarse) {
-      nodo.scrollTop = 0
-      return
-    }
-  }
-  window.scrollTo({ top: 0 })
-}
-
 // La guía vinculada que ocupa ahora mismo el sitio de la tarea.
 interface VinculoAbierto {
   guiaId: string
@@ -231,14 +211,14 @@ function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
 // el rótulo dice qué falta y tiene que leerse (borde y texto neutros).
 const BOTON_PRINCIPAL =
   'flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3.5 text-[17px] font-semibold text-noct-accent-200 active:bg-noct-accent/[.3] disabled:border-noct-neutral-700 disabled:bg-noct-text/[.04] disabled:text-noct-neutral-400'
-const BOTON_ANTERIOR =
+export const BOTON_ANTERIOR =
   'flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-30'
 
 // EL CONTROL GRANDE DEL PIE, con la gramática de la propuesta final: el
 // icono y el rótulo dicen la consecuencia (la marca cierra, la flecha solo
 // lleva). Hasta dos líneas, centradas; cuando el rótulo visible abrevia el
 // nombre de una guía, el nombre accesible lo lleva entero.
-function BotonPrincipal({
+export function BotonPrincipal({
   etiqueta,
   etiquetaCompleta,
   icono = null,

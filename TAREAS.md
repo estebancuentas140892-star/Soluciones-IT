@@ -37,7 +37,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | Fase | Qué | Estado |
 |---|---|---|
 | 1 | Auditoría de las guías reales y pruebas del comportamiento actual, sin cambios funcionales | Hecha: [AUDITORIA_GUIAS_FLUJO_NATURAL.md](AUDITORIA_GUIAS_FLUJO_NATURAL.md) (36 guías, 149 pasos) y 7 pruebas que fijan el comportamiento de hoy (`guiasFlujoNatural.test.tsx`) |
-| 2 | Orientación y requisitos previos, compatibles con las guías actuales | Pendiente |
+| 2 | Orientación y requisitos previos, compatibles con las guías actuales | Hecha: antes de la primera acción, "Qué vas a hacer" (título, cuándo usarla y objetivo) y "Antes de empezar" (los requisitos, juntos), cada una solo si tiene algo que decir; los requisitos ya no salen junto a la primera acción; requisitos efectivos = los de la guía más los de la guía del paso 1, sin repetidos; retomar no vuelve a preparar y empezar de nuevo sí; dentro de una guía con preguntas, solo "Antes de empezar". 26 pruebas nuevas |
 | 3 | Procedimientos vinculados dentro de un flujo continuo, sin exponer la arquitectura | Pendiente |
 | 4 | Editor: separar requisito, acción, advertencia y verificación | Pendiente |
 | 5 | QA, documentación, sin conexión, build y cierre | Pendiente |

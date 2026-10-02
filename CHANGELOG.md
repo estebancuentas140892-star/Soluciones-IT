@@ -8,6 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-02
 
+### Cambiado (guías, tarea 289, fase 2): orientar y preparar antes de la primera acción
+
+**Área modificada:** `src/features/soluciones/` (`preparacionGuia.ts`, `useRequisitosEfectivos.ts`, `PantallaPreparacion.tsx` y `subirElContenedor.ts`, nuevos; `AsistenteVista.tsx`, `AsistentePage.tsx`, `IntroduccionGuia.tsx` y `ModoFoco.tsx`), `src/features/diagnostico/DiagnosticoRunPage.tsx`, `src/lib/progresoPasos.ts` (`hayAvanceEnEjecucion`); pruebas (`preparacionGuia.test.ts`, nueva; `guiasFlujoNatural.test.tsx`, `guiaDirecta.test.tsx`, `resolucionGuiada.test.tsx` y `progresoPasos.test.ts`) y `TAREAS.md`.
+**Tipo:** Cambiado (lo que se ve al abrir una guía) y Agregado (reglas de preparación).
+**Motivo:** encargo "las guías como un solo flujo natural": cada pantalla con un solo propósito. Hasta ahora abrir una guía era estar en su primera acción con los requisitos encima: preparar y ejecutar mezclados, y sin decir para qué era la guía.
+**Qué cambia:**
+- **"Qué vas a hacer":** el nombre de la guía, cuántos pasos y minutos, "Cuándo usarla" y el objetivo, con los campos que ya existían (`descripcion` y `objetivoGeneral`). "Usa esta guía cuando…" se lee "Cuando…", porque el rótulo ya lo dice. Sin pasos, requisitos ni credenciales.
+- **"Antes de empezar":** los requisitos, juntos y en su propia pantalla, con "Todo listo, empezar". Ya no salen junto a la primera acción.
+- Cada pantalla aparece solo si tiene algo que decir: sin "cuándo usar" ni objetivo no hay orientación; sin requisitos, "Empezar" lleva directo a la primera acción; sin nada, la guía abre en su primera acción como siempre.
+- **Requisitos efectivos:** los de la guía más los de la guía que se reutiliza en el paso 1 (nada se hace antes que ella), sin repetidos. Los de las guías de más adelante no se suman solos: un paso anterior puede producirlos. Los detalles de la guía enseñan la misma lista.
+- Dentro de una guía con preguntas, la guía que eligieron las respuestas solo enseña "Antes de empezar": el "cuándo usarla" ya no añade nada.
+- Retomar una ejecución a medias (también a mitad de una guía reutilizada) va directo a donde iba; "Empezar de nuevo" vuelve a orientar. Leer la preparación no guarda avance.
+- El foco del lector de pantalla y del teclado empieza en el encabezado de cada pantalla.
+**Impacto esperado:** quien abre una guía sabe para qué es y qué tener a mano antes de tocar nada. Las guías sin estos datos no cambian. Sin datos nuevos ni migración; todo sale de la base local.
+
 ### Agregado (guías, tarea 289, fase 1): auditoría de las guías reales y pruebas del comportamiento actual, sin cambios funcionales
 
 **Área modificada:** `AUDITORIA_GUIAS_FLUJO_NATURAL.md` (nuevo), `src/features/soluciones/guiasFlujoNatural.test.tsx` (nuevo), `src/pruebas/montaje.ts` (`sembrarGuia` acepta cuándo usar, objetivo, requisitos y verificación final) y `TAREAS.md`.

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type BloquePaso, type PasoProcedimiento } from '../../lib/db'
 import {
   control,
@@ -14,6 +14,7 @@ import {
   textoPantalla,
   tocar,
 } from '../../pruebas/montaje'
+import { ArticuloPage } from './ArticuloPage'
 import { GuiaPage } from './GuiaPage'
 
 // LAS GUÍAS COMO UN SOLO FLUJO (tarea 289, fase 1): EL COMPORTAMIENTO DE
@@ -31,14 +32,19 @@ import { GuiaPage } from './GuiaPage'
 //   - una guía de diagnóstico con guías de consulta en una tarea;
 //   - una decisión cuyo "No" abre otra guía.
 //
-// Lo que hoy se ve y la tarea 289 cambia queda escrito como tal: los
-// requisitos en la misma pantalla que la primera acción, la tarjeta
-// "Guía necesaria" con "Abrir guía", la cabecera "Estás realizando «X»
-// para continuar con «Y»", "Volver a la guía principal", el "Paso 1 de 3"
-// y los requisitos propios de la guía de dentro.
+// Lo que hoy se ve y la tarea 289 cambia queda escrito como tal: la
+// tarjeta "Guía necesaria" con "Abrir guía", la cabecera "Estás
+// realizando «X» para continuar con «Y»", "Volver a la guía principal", el
+// "Paso 1 de 3" y los requisitos propios de la guía de dentro.
+//
+// FASE 2: antes de la primera acción, la guía orienta (qué vas a hacer,
+// cuándo usarla, objetivo) y prepara (los requisitos, juntos, en su propia
+// pantalla). Las pruebas de los vínculos atraviesan esa preparación con
+// `empezarGuia` y siguen fijando lo de hoy hasta la fase 3.
 
 const RUTAS = [
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> },
+  { ruta: '/soluciones/:categoriaId/:articuloId/detalles', elemento: <ArticuloPage comoDetalles /> },
   { ruta: '/soluciones', elemento: <p>LISTA DE GUÍAS</p> },
 ]
 
@@ -247,6 +253,17 @@ async function completarHasta(texto: string, intentos = 12): Promise<void> {
   await esperar(() => textoPantalla().includes(texto), `aparece «${texto}»`)
 }
 
+/** Atraviesa la orientación y los requisitos de una ejecución nueva hasta la primera acción. */
+async function empezarGuia(): Promise<void> {
+  const boton = await esperar(
+    () => control('Ver lo que necesitas') ?? control('Todo listo, empezar') ?? control('Empezar'),
+    'la preparación de la guía',
+  )
+  await tocar(boton)
+  const siguiente = control('Todo listo, empezar')
+  if (siguiente) await tocar(siguiente)
+}
+
 beforeEach(async () => {
   await limpiarBase()
   await sembrarPerfil(false)
@@ -256,23 +273,171 @@ afterEach(async () => {
   await desmontarTodo()
 })
 
-describe('hoy: requisitos y orientación', () => {
-  it('una guía sin requisitos ni orientación abre directamente en su primera acción', async () => {
+describe('una guía sin nada que orientar ni preparar', () => {
+  it('abre directamente en su primera acción, como siempre: ninguna pantalla vacía', async () => {
     await sembrarGuiaSinRequisitos()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-lector')
     await esperar(() => textoPantalla().includes('Desconecta el lector de prueba'), 'la primera acción')
-    expect(textoPantalla()).not.toContain('Ten esto listo antes de empezar')
+    expect(textoPantalla()).not.toContain('Antes de empezar')
+    expect(textoPantalla()).not.toContain('Cuándo usarla')
+    expect(textoPantalla()).not.toContain('Ten esto listo')
   })
 
-  it('los requisitos salen en la misma pantalla que la primera acción, y la orientación no sale', async () => {
+})
+
+describe('antes del primer paso: orientar y preparar (fase 2)', () => {
+  it('orienta primero: qué vas a hacer, cuándo usarla y el objetivo, sin ninguna acción', async () => {
     await sembrarGuiaConRequisitos()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-ip')
-    await esperar(() => textoPantalla().includes('Abre Impresoras y escáneres'), 'la primera acción')
+    await esperar(() => textoPantalla().includes('Cuándo usarla'), 'la orientación')
     const texto = textoPantalla()
-    expect(texto).toContain('Ten esto listo antes de empezar')
-    expect(texto).toContain('Dirección confirmada de la impresora.')
-    // El "cuándo usarla" y el objetivo solo viven en los detalles de la guía.
-    expect(texto).not.toContain('agregar una impresora de red usando su propia dirección')
+    expect(texto).toContain('Qué vas a hacer')
+    expect(texto).toContain('Agregar una impresora de prueba por su dirección')
+    expect(texto).toContain('2 pasos · unos 10 min')
+    // "Usa esta guía cuando…" no repite lo que ya dice "Cuándo usarla".
+    expect(texto).toContain('Cuando necesites agregar una impresora de red usando su propia dirección.')
+    expect(texto).not.toContain('Usa esta guía cuando')
+    expect(texto).toContain('Objetivo')
+    expect(texto).toContain('Dejar la impresora agregada y comprobada con una impresión de prueba.')
+    // Orientar no es preparar ni ejecutar: ni requisitos ni acciones todavía.
+    expect(texto).not.toContain('Dirección confirmada de la impresora.')
+    expect(texto).not.toContain('Abre Impresoras y escáneres')
+    // El lector de pantalla y el teclado empiezan en el nombre de la guía.
+    expect(document.activeElement?.tagName).toBe('H2')
+    expect(document.activeElement?.textContent).toBe('Agregar una impresora de prueba por su dirección')
+    // Una sola acción, que dice a dónde lleva.
+    expect(control('Ver lo que necesitas')).not.toBeNull()
+    expect(control('Anterior')).toBeNull()
+  })
+
+  it('prepara después: los requisitos juntos; "Anterior" vuelve y "Todo listo, empezar" lleva a la primera acción', async () => {
+    await sembrarGuiaConRequisitos()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-ip')
+    await tocar(await esperarControl('Ver lo que necesitas'))
+    await esperar(() => textoPantalla().includes('Antes de empezar'), 'los requisitos')
+    expect(textoPantalla()).toContain('Impresora encendida y conectada a la red.')
+    expect(textoPantalla()).toContain('Dirección confirmada de la impresora.')
+    expect(textoPantalla()).not.toContain('Abre Impresoras y escáneres')
+    expect(textoPantalla()).not.toContain('Cuándo usarla')
+    expect(document.activeElement?.textContent).toBe('Antes de empezar')
+
+    await tocar(await esperarControl('Anterior'))
+    await esperar(() => textoPantalla().includes('Cuándo usarla'), 'de vuelta en la orientación')
+    await tocar(await esperarControl('Ver lo que necesitas'))
+    await tocar(await esperarControl('Todo listo, empezar'))
+    await esperar(() => textoPantalla().includes('Abre Impresoras y escáneres'), 'la primera acción')
+    // Los requisitos no vuelven junto a la acción.
+    expect(textoPantalla()).not.toContain('Dirección confirmada de la impresora.')
+    expect(textoPantalla()).not.toContain('Ten esto listo')
+    // Leer la preparación no es avanzar: no se guarda nada.
+    expect(await db.progresoPasos.get('guia-ip')).toBeUndefined()
+  })
+
+  it('con orientación y sin requisitos, "Empezar" lleva directo a la primera acción', async () => {
+    await sembrarGuia({
+      id: 'guia-vpn',
+      titulo: 'Desconectarse de la conexión de prueba',
+      pasos: [pasoPrueba('vpn-p1', 'Desconectar', ['Selecciona Desconectar'])],
+      procedimiento: { descripcion: 'Usa esta guía cuando termines de trabajar desde fuera.' },
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-vpn')
+    await esperar(() => textoPantalla().includes('Cuando termines de trabajar desde fuera.'), 'la orientación')
+    // Sin objetivo, no hay sección vacía.
+    expect(textoPantalla()).not.toContain('Objetivo')
+    await tocar(await esperarControl('Empezar'))
+    await esperar(() => textoPantalla().includes('Selecciona Desconectar'), 'la primera acción')
+    expect(textoPantalla()).not.toContain('Antes de empezar')
+  })
+
+  it('una ejecución a medias se retoma donde iba, sin volver a prepararse', async () => {
+    await sembrarGuiaConRequisitos()
+    await db.progresoPasos.put({
+      articuloId: 'guia-ip',
+      pasosHechos: ['ip-p1'],
+      instruccionesHechas: ['ip-p1-t1', 'ip-p1-t2'],
+      verificacionHecha: [],
+      actualizadoEn: '2026-10-02T12:00:00.000Z',
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-ip')
+    await esperar(() => textoPantalla().includes('Imprime una página de prueba'), 'el paso 2')
+    expect(textoPantalla()).toContain('Retomando · paso 2 de 2')
+    expect(textoPantalla()).not.toContain('Cuándo usarla')
+    expect(textoPantalla()).not.toContain('Antes de empezar')
+  })
+
+  it('empezar de nuevo es una ejecución nueva: vuelve a orientar', async () => {
+    await sembrarGuiaConRequisitos()
+    await db.progresoPasos.put({
+      articuloId: 'guia-ip',
+      pasosHechos: ['ip-p1'],
+      instruccionesHechas: ['ip-p1-t1', 'ip-p1-t2'],
+      verificacionHecha: [],
+      actualizadoEn: '2026-10-02T12:00:00.000Z',
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-ip')
+    await tocar(await esperarControl('Empezar de nuevo'))
+    await esperar(() => textoPantalla().includes('Cuándo usarla'), 'la orientación otra vez')
+    expect(await db.progresoPasos.get('guia-ip')).toBeUndefined()
+  })
+})
+
+describe('lo que hace falta antes de una guía que reutiliza otras (fase 2)', () => {
+  it('suma los requisitos de la guía del paso 1, que se hace antes que nada', async () => {
+    await sembrarCasoAlimentacion()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+    await tocar(await esperarControl('Ver lo que necesitas'))
+    await esperar(() => textoPantalla().includes('Antes de empezar'), 'los requisitos')
+    const texto = textoPantalla()
+    expect(texto).toContain('Autorización para crear al trabajador.')
+    expect(texto).toContain('Nombre completo, cédula y celular de la persona.')
+    expect(texto).toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
+    expect(texto).toContain('Tener autorización para entrar al programa de caja.')
+  })
+
+  it('no suma los de las guías de más adelante: un paso anterior puede producirlos', async () => {
+    await sembrarCasoComputador()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-computador')
+    await tocar(await esperarControl('Ver lo que necesitas'))
+    await esperar(() => textoPantalla().includes('Antes de empezar'), 'los requisitos')
+    const texto = textoPantalla()
+    expect(texto).toContain('Cuenta de la persona creada.')
+    expect(texto).toContain('Impresora que usará la persona identificada.')
+    // El paso 1 es otra guía: lo que ella pide hace falta antes de empezar.
+    expect(texto).toContain('Correo de la persona y contraseña vigente.')
+    // Lo deja hecho el paso 1 de esta misma guía: no es un requisito previo.
+    expect(texto).not.toContain('Correo de prueba configurado.')
+    expect(texto).not.toContain('Impresora de prueba encendida.')
+  })
+
+  it('los detalles de la guía enseñan la misma lista: una sola verdad para "qué hace falta"', async () => {
+    await sembrarCasoAlimentacion()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion/detalles')
+    await esperar(
+      () => textoPantalla().includes('Estar conectado a la red desde la que se permite el escritorio remoto.'),
+      'los requisitos de la guía del paso 1 en los detalles',
+    )
+    expect(textoPantalla()).toContain('Autorización para crear al trabajador.')
+  })
+
+  it('sin conexión: orientar y preparar salen de lo guardado en el dispositivo, sin pedir nada a la red', async () => {
+    const red = vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    vi.stubGlobal('fetch', red)
+    try {
+      await sembrarCasoAlimentacion()
+      await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+      await tocar(await esperarControl('Ver lo que necesitas'))
+      await esperar(
+        () => textoPantalla().includes('Tener autorización para entrar al programa de caja.'),
+        'los requisitos, leídos de la base local',
+      )
+      await tocar(await esperarControl('Todo listo, empezar'))
+      await esperar(() => textoPantalla().includes('Primero, completa esta guía'), 'la primera acción')
+      expect(red).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 
@@ -280,6 +445,7 @@ describe('hoy: una guía que reutiliza otra en su paso 1 (el caso de alimentaci�
   it('el paso 1 es una tarjeta que hay que abrir, y dentro se ve otra guía con su numeración y sus requisitos', async () => {
     await sembrarCasoAlimentacion()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+    await empezarGuia()
     await esperar(() => textoPantalla().includes('Primero, completa esta guía'), 'la guía del paso 1')
     await esperar(() => textoPantalla().includes('Guía necesaria'), 'la tarjeta de la guía')
     expect(textoPantalla()).toContain('Acceder al programa de caja por escritorio remoto')
@@ -299,6 +465,7 @@ describe('hoy: una guía que reutiliza otra en su paso 1 (el caso de alimentaci�
   it('terminarla pide "terminar" y sus comprobaciones a mitad del recorrido, y después sigue el paso 2', async () => {
     await sembrarCasoAlimentacion()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+    await empezarGuia()
     await tocar(await esperarControl('Abrir guía: Acceder al programa de caja por escritorio remoto'))
     await completarHasta('Abre el programa de caja e ingresa su contraseña')
     expect(control('Completar y terminar')).not.toBeNull()
@@ -316,6 +483,7 @@ describe('hoy: una guía hecha de otras guías (el computador nuevo)', () => {
   it('cada paso es una tarjeta distinta que hay que abrir y de la que hay que volver', async () => {
     await sembrarCasoComputador()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-computador')
+    await empezarGuia()
     await tocar(await esperarControl('Abrir guía: Configurar el correo de prueba'))
     await esperar(() => textoPantalla().includes('Abre el correo de prueba e inicia sesión'), 'la primera guía')
     // Su única acción "termina" aunque la guía de fuera siga.

@@ -505,7 +505,8 @@ function ProcedimientoEnRecorrido({
         </button>
       </div>
       <ProveedorEjecucion raizId={raiz}>
-        <AsistenteVista articuloId={articulo.id} procedimiento={procedimiento} nivel={0} />
+        {/* Las respuestas ya eligieron la guía: solo se prepara (tarea 289). */}
+        <AsistenteVista articuloId={articulo.id} procedimiento={procedimiento} nivel={0} preparacion="requisitos" />
       </ProveedorEjecucion>
     </div>
   )

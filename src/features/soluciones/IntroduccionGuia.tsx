@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { NivelDificultad, Procedimiento } from '../../lib/db'
 import { ChartBar, Circle, Clock, ListPlus, type IconoProps } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
+import { useRequisitosEfectivos } from './useRequisitosEfectivos'
 
 // LA FICHA PRESENTA, LA EJECUCIÓN EJECUTA (encargo del 2026-09-10,
 // tarea 2).
@@ -121,7 +122,11 @@ export function ResumenGuia({
  * paso: eso es la ejecución.
  */
 export function IntroduccionGuia({ procedimiento }: { procedimiento: Procedimiento }) {
-  const { objetivoGeneral, requisitos } = procedimiento
+  const { objetivoGeneral } = procedimiento
+  // LOS MISMOS REQUISITOS QUE PIDE LA EJECUCIÓN ANTES DE EMPEZAR (tarea
+  // 289): los de la guía y los de la guía que reutiliza en su paso 1, sin
+  // repetir. Mientras esa lectura llega, los de la guía.
+  const requisitos = useRequisitosEfectivos(procedimiento) ?? procedimiento.requisitos
   if (!objetivoGeneral && requisitos.length === 0) return null
 
   return (

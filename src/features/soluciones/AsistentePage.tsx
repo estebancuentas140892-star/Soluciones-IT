@@ -101,7 +101,13 @@ export function AsistentePage() {
             se guarda tambien el avance de sus guias vinculadas (tarea 2
             del encargo). */}
         <ProveedorEjecucion raizId={articuloId}>
-          <AsistenteVista articuloId={articuloId} procedimiento={procedimiento} nivel={0} salida={salida} />
+          <AsistenteVista
+            articuloId={articuloId}
+            procedimiento={procedimiento}
+            nivel={0}
+            salida={salida}
+            preparacion="completa"
+          />
         </ProveedorEjecucion>
       </main>
     </Chasis>

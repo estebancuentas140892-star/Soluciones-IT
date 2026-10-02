@@ -23,7 +23,9 @@ import { GuiaPage, RedireccionAGuia } from './GuiaPage'
 // 13). Lo que se comprueba es el RECORRIDO, con la pantalla de verdad:
 //
 //   - abrir una guía es estar en su paso 1, sin portada ni "Empecemos";
-//   - "Antes de empezar" solo aparece si hay requisitos, y solo al empezar;
+//   - "Antes de empezar" solo aparece si hay requisitos, y solo al empezar
+//     (desde la tarea 289, en su propia pantalla, antes de la primera
+//     acción y nunca junto a ella);
 //   - un aviso acompaña a su acción y no detiene nada: sin "Entendido";
 //   - la información secundaria queda plegada;
 //   - una guía terminada se abre en un caso nuevo, y una a medias se
@@ -94,13 +96,19 @@ describe('abrir una guía', () => {
     await esperar(() => textoPantalla().includes('Abrir el programa de caja'), 'y abre en el paso 1')
   })
 
-  it('con requisitos, los muestra en el paso 1 y desaparecen al empezar el trabajo', async () => {
+  it('con requisitos, los muestra antes de la primera acción, en su pantalla, y no vuelven', async () => {
     await sembrarCaja(['Resolución de prueba en PDF'])
     await montar(RUTAS, RUTA)
 
+    // Sin "cuándo usar" ni objetivo no hay orientación: se prepara directamente.
     await esperar(() => textoPantalla().includes('Resolución de prueba en PDF'), 'el requisito a la vista')
-    expect(textoPantalla()).toContain('Ten esto listo antes de empezar')
+    expect(textoPantalla()).toContain('Antes de empezar')
+    // Preparar no es ejecutar: ninguna acción a la vista todavía.
+    expect(textoPantalla()).not.toContain('Abrir el programa de caja')
 
+    await tocar(await esperarControl('Todo listo, empezar'))
+    await esperar(() => textoPantalla().includes('Abrir el programa de caja'), 'la primera acción')
+    expect(textoPantalla()).not.toContain('Resolución de prueba en PDF')
     await tocar((await esperar(() => principal('Completar y seguir'), 'el botón Completar y seguir')) as HTMLElement)
     await esperar(() => textoPantalla().includes('Entrar en Administración'), 'la segunda acción')
     expect(textoPantalla()).not.toContain('Resolución de prueba en PDF')

@@ -1,0 +1,125 @@
+import type { Procedimiento } from '../../lib/db'
+import { normalizarTexto } from './iconosSoluciones'
+
+// ANTES DEL PRIMER PASO: QUÉ VOY A RESOLVER Y QUÉ NECESITO (tarea 289,
+// fase 2).
+//
+// Hasta ahora abrir una guía era empezarla en su primera acción (AD-040), y
+// los requisitos salían en esa misma pantalla, junto a la acción: preparar y
+// ejecutar mezclados. El técnico nuevo no sabía, antes de tocar nada, para
+// qué era la guía ni qué tenía que tener a mano.
+//
+// La preparación son dos pantallas, cada una con un solo propósito, y solo
+// cuando tienen algo que decir:
+//
+//   1. ORIENTAR: qué vas a hacer (el título), cuándo usarla (el "¿Cuándo
+//      usar este procedimiento?" que ya escribe el autor, `descripcion`) y
+//      el objetivo (`objetivoGeneral`). Sin pasos, sin requisitos, sin
+//      credenciales: se lee en un vistazo.
+//   2. PREPARAR: los requisitos reales, juntos, y una sola acción para
+//      empezar.
+//
+// No hay campos nuevos: se componen con los que ya existen, así que no hay
+// dos verdades para lo mismo. Una guía sin "cuándo usar" ni objetivo no
+// tiene orientación; una sin requisitos no tiene preparación; una sin
+// ninguna de las dos abre en su primera acción, como siempre.
+
+// "Usa esta guía cuando…", "Usar cuando…", "Utiliza este procedimiento
+// únicamente cuando…": el comienzo que repite lo que ya dice el rótulo
+// "Cuándo usarla". Solo al principio del texto y solo esa forma; cualquier
+// otro comienzo se muestra tal cual.
+const COMIENZO_CUANDO =
+  /^(?:usa|usar|utiliza|utilizar|úsala|usala|úsalo|usalo)\s+(?:(?:esta|la)\s+gu[ií]a\s+|este\s+procedimiento\s+)?(únicamente\s+|unicamente\s+|solo\s+|sólo\s+|solamente\s+)?cuando\s+/i
+
+function mayuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+/**
+ * El "cuándo usar" de una guía tal como se lee bajo "Cuándo usarla":
+ * "Usa esta guía cuando necesites X" pasa a "Cuando necesites X"; el resto
+ * del texto no se toca. Nunca inventa: solo quita la fórmula repetida.
+ */
+export function cuandoUsarParaMostrar(descripcion: string): string {
+  const limpio = descripcion.trim()
+  const coincidencia = COMIENZO_CUANDO.exec(limpio)
+  if (!coincidencia) return limpio
+  const adverbio = coincidencia[1]?.trim()
+  const resto = limpio.slice(coincidencia[0].length)
+  return adverbio ? `${mayuscula(adverbio)} cuando ${resto}` : `Cuando ${resto}`
+}
+
+export interface Orientacion {
+  /** Lo que va bajo "Cuándo usarla", o '' si la guía no lo dice. */
+  cuandoUsar: string
+  /** El objetivo general, o '' si la guía no lo tiene. */
+  objetivo: string
+}
+
+/** La orientación de una guía, o null si no tiene nada que orientar. */
+export function orientacionDe(procedimiento: Procedimiento): Orientacion | null {
+  const cuandoUsar = cuandoUsarParaMostrar(procedimiento.descripcion)
+  const objetivo = procedimiento.objetivoGeneral.trim()
+  if (cuandoUsar === '' && objetivo === '') return null
+  return { cuandoUsar, objetivo }
+}
+
+// Dos requisitos son el mismo si solo cambian mayúsculas, tildes, espacios o
+// el punto final.
+function claveRequisito(texto: string): string {
+  return normalizarTexto(texto).replace(/[\s.;:,]+$/u, '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * La guía que se ejecuta ANTES QUE NADA dentro de esta: la del paso 1,
+ * cuando el paso 1 reutiliza otra guía. Es la única cuyos requisitos se
+ * pueden sumar sin riesgo (ver `requisitosEfectivos`).
+ */
+export function guiaDelPrimerPaso(procedimiento: Procedimiento): string | null {
+  return procedimiento.pasos[0]?.subArticuloId || null
+}
+
+/**
+ * LO QUE HAY QUE TENER ANTES DE EMPEZAR LA GUÍA ENTERA, sin repetir.
+ *
+ * Los de la propia guía mandan: el autor de una guía que reutiliza otras
+ * escribe lo que hace falta para el procedimiento completo (así está
+ * escrita "Configurar el computador para un usuario nuevo"). A ellos se
+ * suman los de la guía que se ejecuta en el PASO 1, porque nada de este
+ * procedimiento corre antes que ella: lo que pide no puede haberlo
+ * producido un paso anterior, así que de verdad hay que tenerlo antes.
+ *
+ * Los de las guías que se reutilizan MÁS ADELANTE no se suman solos, a
+ * propósito: un paso anterior puede producirlos ("Outlook configurado"
+ * lo deja hecho el paso que configura Outlook) y sumarlos pediría como
+ * requisito lo que el propio procedimiento hace. Eso no se puede decidir
+ * sin entender el texto, así que lo decide el autor: el editor le enseña
+ * esos requisitos para que añada a los suyos los que apliquen (tarea 289,
+ * fase 4).
+ *
+ * Se quitan los repetidos (mismo texto salvo mayúsculas, tildes, espacios
+ * y punto final), conservando la primera forma y el orden: primero los de
+ * la guía, después los del paso 1.
+ */
+export function requisitosEfectivos(propios: string[], delPrimerPaso: string[] | null): string[] {
+  const vistos = new Set<string>()
+  const resultado: string[] = []
+  for (const requisito of [...propios, ...(delPrimerPaso ?? [])]) {
+    const texto = requisito.trim()
+    const clave = claveRequisito(texto)
+    if (clave === '' || vistos.has(clave)) continue
+    vistos.add(clave)
+    resultado.push(texto)
+  }
+  return resultado
+}
+
+export type PantallaPreparacion = 'orientacion' | 'requisitos'
+
+/** Las pantallas de preparación que tiene una guía, en orden. Vacío: abre en su primera acción. */
+export function pantallasDePreparacion(orientacion: Orientacion | null, requisitos: string[]): PantallaPreparacion[] {
+  const pantallas: PantallaPreparacion[] = []
+  if (orientacion) pantallas.push('orientacion')
+  if (requisitos.length > 0) pantallas.push('requisitos')
+  return pantallas
+}

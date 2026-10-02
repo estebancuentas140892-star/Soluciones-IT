@@ -11,6 +11,7 @@ import {
   empezarEjecucion,
   limpiarProgresoVistaPrevia,
   establecerPasoHecho,
+  hayAvanceEnEjecucion,
   leerAvance,
   marcarPasoSaltado,
   quitarPasoSaltado,
@@ -404,5 +405,24 @@ describe('progreso de la vista previa', () => {
 
     expect(await db.progresoPasos.get(vieja)).toBeUndefined()
     expect((await leerAvance(actual))?.pasosHechos).toEqual(['paso-a'])
+  })
+})
+
+describe('hayAvanceEnEjecucion', () => {
+  const vacio = { pasosHechos: [], instruccionesHechas: [], verificacionHecha: [] }
+
+  it('sin fila o sin nada marcado, la ejecucion es nueva', () => {
+    expect(hayAvanceEnEjecucion(undefined)).toBe(false)
+    expect(hayAvanceEnEjecucion(vacio)).toBe(false)
+    expect(hayAvanceEnEjecucion({ ...vacio, vinculos: { acceso: vacio } })).toBe(false)
+  })
+
+  it('una tarea o un paso marcados son avance', () => {
+    expect(hayAvanceEnEjecucion({ ...vacio, instruccionesHechas: ['t1'] })).toBe(true)
+    expect(hayAvanceEnEjecucion({ ...vacio, pasosHechos: ['p1'] })).toBe(true)
+  })
+
+  it('cuenta lo hecho dentro de una guia reutilizada: a mitad del paso 1 se retoma', () => {
+    expect(hayAvanceEnEjecucion({ ...vacio, vinculos: { acceso: { ...vacio, instruccionesHechas: ['a1'] } } })).toBe(true)
   })
 })
