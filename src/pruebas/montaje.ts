@@ -20,6 +20,7 @@ import {
   type Credencial,
   type Dispositivo,
   type PasoProcedimiento,
+  type Procedimiento,
   type Referencia,
   type TipoReferencia,
   type TipoSecreto,
@@ -350,12 +351,18 @@ export function pasoPrueba(id: string, titulo: string, tareas: string[]): PasoPr
   }
 }
 
-/** Una guía publicada con los pasos dados, en su categoría. */
+/**
+ * Una guía publicada con los pasos dados, en su categoría. Lo que se pase
+ * en `procedimiento` (cuándo usarla, objetivo, requisitos, verificación
+ * final) reemplaza el valor vacío de siempre; sin él, la guía es la misma
+ * de antes.
+ */
 export async function sembrarGuia(datos: {
   id: string
   titulo: string
   categoriaId?: string
   pasos: PasoProcedimiento[]
+  procedimiento?: Partial<Pick<Procedimiento, 'descripcion' | 'objetivoGeneral' | 'requisitos' | 'verificacionFinal'>>
 }): Promise<Articulo> {
   const categoriaId = datos.categoriaId ?? 'cat-pruebas'
   await db.categorias.put({
@@ -385,6 +392,7 @@ export async function sembrarGuia(datos: {
       tiempoEstimadoMin: 10,
       dificultad: 'principiante',
       pasos: datos.pasos,
+      ...datos.procedimiento,
     },
     sintomas: [],
     causas: [],

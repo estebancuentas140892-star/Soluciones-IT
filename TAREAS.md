@@ -32,6 +32,26 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso.
 
+**LAS GUÍAS COMO UN SOLO FLUJO NATURAL (2026-10-02, tarea 289).** Encargo aparte del usuario: que un técnico nuevo, que no conoce cómo está construida la aplicación, abra una guía y entienda qué resuelve, cuándo usarla, qué necesita antes, qué hacer ahora, dónde, qué debe ver y cuándo terminó. Principio: **la complejidad pertenece al sistema, no al técnico**; un procedimiento puede reutilizar otros por dentro, pero el técnico recorre un único flujo continuo. Sin rediseño general, sin tocar Resolver (288), Supabase, RLS, autenticación ni la Bóveda, y todo sin conexión. Se trabaja en la rama `feat/guias-flujo-natural` (desde `069f0a2`, worktree `dev/sit-289`); `main` no se toca hasta validar la tarea entera. No se corrigen todavía las guías reales: eso es la etapa siguiente, con esta arquitectura ya validada.
+
+| Fase | Qué | Estado |
+|---|---|---|
+| 1 | Auditoría de las guías reales y pruebas del comportamiento actual, sin cambios funcionales | Hecha: [AUDITORIA_GUIAS_FLUJO_NATURAL.md](AUDITORIA_GUIAS_FLUJO_NATURAL.md) (36 guías, 149 pasos) y 7 pruebas que fijan el comportamiento de hoy (`guiasFlujoNatural.test.tsx`) |
+| 2 | Orientación y requisitos previos, compatibles con las guías actuales | Pendiente |
+| 3 | Procedimientos vinculados dentro de un flujo continuo, sin exponer la arquitectura | Pendiente |
+| 4 | Editor: separar requisito, acción, advertencia y verificación | Pendiente |
+| 5 | QA, documentación, sin conexión, build y cierre | Pendiente |
+
+### 289. Las guías como un solo flujo natural
+
+- **Título:** que una guía se recorra como un único procedimiento: qué voy a resolver, qué necesito, qué hago ahora, dónde, qué debo ver y cuándo terminé, aunque por dentro reutilice otras guías.
+- **Descripción:** auditar las guías reales; una orientación breve antes del primer paso (cuándo usarla y qué se consigue, con los campos que ya existen); los requisitos reales juntos y antes de empezar, nunca mezclados con la primera acción ni repetidos durante la ejecución; los procedimientos vinculados ejecutándose dentro del flujo de la guía que el técnico abrió, sin tarjetas, cabeceras ni regresos que hablen de otra guía; pistas deterministas en el editor para separar requisito de acción.
+- **Motivo:** encargo del usuario del 2026-10-02.
+- **Impacto:** alto: es la experiencia de ejecutar cualquier guía, empezando por las que reutilizan otras (las de ICG y "Configurar el computador para un usuario nuevo").
+- **Prioridad:** Alta. **Estado:** En progreso.
+- **Área afectada:** `src/features/soluciones/` (`AsistentePage.tsx`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `tareasFoco.ts`, `estadoVinculo.ts`, `cierrePaso.ts`, `revisionGuia.ts`, `ArticuloForm.tsx`, `PasosEditor.tsx` y módulos nuevos de preparación), la documentación funcional y de arquitectura.
+- **Dependencias:** ninguna. No cambia el modelo de datos ni el progreso guardado.
+
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.

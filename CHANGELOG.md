@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-02
 
+### Agregado (guías, tarea 289, fase 1): auditoría de las guías reales y pruebas del comportamiento actual, sin cambios funcionales
+
+**Área modificada:** `AUDITORIA_GUIAS_FLUJO_NATURAL.md` (nuevo), `src/features/soluciones/guiasFlujoNatural.test.tsx` (nuevo), `src/pruebas/montaje.ts` (`sembrarGuia` acepta cuándo usar, objetivo, requisitos y verificación final) y `TAREAS.md`.
+**Tipo:** Agregado (documentación y pruebas). La aplicación no cambia en esta fase.
+**Motivo:** el encargo "las guías como un solo flujo natural" pide auditar el comportamiento real y fijarlo en pruebas antes de tocar la ejecución.
+**Qué cambia:**
+- La auditoría de las 36 guías vivas (149 pasos), con las reglas que ya usa el editor y una revisión manual: 101 de 136 pasos propios sin "Dónde" ni "Debes ver", 9 tareas encadenadas, 4 pasos de más de cinco tareas, 7 requisitos y 2 "cuándo usar" que hablan de la arquitectura ("procedimiento relacionado", "información protegida", "otra guía"), 2 verificaciones finales que piden lo que la guía no hace, condiciones escritas como tareas y 8 guías que reutilizan otras (13 pasos que son otra guía entera). Sin IP, URL ni nombres de credenciales: el repositorio es público.
+- Siete pruebas de flujo con datos inventados que copian la estructura de los casos representativos (alimentación con el acceso reutilizado en el paso 1, el computador nuevo hecho de guías, una guía sin requisitos, otra con requisitos, consultas en una tarea y una decisión con destino) y fijan lo que hoy se ve: los requisitos junto a la primera acción, la tarjeta "Guía necesaria" con "Abrir guía", "Estás realizando «X» para continuar con «Y»", "Volver a la guía principal", la numeración y los requisitos de la guía de dentro y su "Completar y terminar".
+**Impacto esperado:** ninguno en la app. Es la base de las fases 2 y 3, que cambian estas pruebas a propósito.
+
 ### Cambiado (buscador, tarea 288, fases 2 a 10 y cierre): Resolver entiende la intención de la consulta
 
 **Área modificada:** `src/features/busqueda/` (`consultaNatural.ts`, nuevo; `useIndiceBusqueda.ts`, `mejores.ts`, `sinonimos.ts`, `resultados.ts`, `ResultadosBusqueda.tsx`, `BuscadorGlobal.tsx`, `BorradoresCoincidentes.tsx`), `src/features/inicio/{ResolverPage,SeccionesAgenda}.tsx`, `src/lib/{db,procedimiento}.ts`, `src/features/soluciones/{ArticuloForm.tsx,borradorArticulo.ts}`, `src/features/historial/resumenProcedimiento.ts`; pruebas (`consultaNatural.test.ts`, `resultadosIntencion.test.tsx`, `formasBusquedaEditor.test.tsx` y `nombresSinRecorte.test.tsx`, nuevas; `busqueda.test.ts`, `mejores.test.ts`, `benchmarkResolver.test.ts`, `procedimiento.test.ts`, `borradorArticulo.test.ts`, `resumenProcedimiento.test.ts` y `resolverYAgenda.test.tsx`); `BUSCADOR.md`, `DOCUMENTACION_FUNCIONAL.md`, `ARQUITECTURA.md`, `ARQUITECTURA_FUNCIONAL.md` (RN-059), `DECISIONES.md` (AD-062), `COMPONENTES_UI.md`, `REGLAS.md` (reglas 23 y 24) y `TAREAS.md`.
