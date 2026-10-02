@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-01
 
+### Cambiado (equipos, tarea 287, bloque 3): la lista de Equipos y la ficha según la propuesta final de Claude Design
+
+**Área modificada:** `src/components/FilaDispositivo.tsx`, `src/components/FilaDeslizable.tsx` (nuevo), `src/features/dispositivos/{DispositivosPage,DispositivoPage,ProcedimientosDelEquipo}.tsx`, `src/features/personas/ResponsableDelEquipo.tsx`, `src/features/red/topologiaVisual.ts` (`estadoEnLista`), pruebas (`equiposPropuestaFinal.test.tsx` nueva, `topologiaVisual.test.ts`, `contextoEquipoPantallas.test.tsx`, `equiposYQr.test.tsx`), `scripts/capturas-moviles.mjs`, `DECISIONES.md` (AD-061), `DOCUMENTACION_FUNCIONAL.md` (5.3), `COMPONENTES_UI.md`.
+**Tipo:** Cambiado (presentación). Ningún dato, estado ni responsable se cambia, completa o inventa; el buscador de Equipos busca lo mismo que antes.
+**Motivo:** implementación cerrada del diseño aprobado (bloque 3): el nombre del equipo manda y el estado solo se dice cuando es una excepción.
+**Qué cambia:**
+- Lista: nombre a 15 px con lo buscado resaltado dentro; el estado solo si es En mantenimiento, Fuera de servicio o De baja (punto y palabra, fila atenuada); fuera "Operativo", "Disponible" y "Sin estado" de cada fila. Un estado escrito a mano que no se reconoce se muestra tal cual.
+- Buscador con el marcador "Nombre, IP, lugar o serial" y "Escanear QR" como cuadrado de 46 px. Los chips se deslizan con el borde desvanecido: ninguno queda cortado en seco.
+- Ficha en cuatro partes: identidad (nombre a 24 px entero, "sin responsable" con "Asignar" en su línea, el estado debajo si está registrado), datos para trabajar (IP, lugar, responsable o nombre anotado por validar, "Conectado a"), procedimientos con títulos en dos líneas y el tinte de su tipo, y "Más del equipo" (antes "Profundidad") plegado en una fila que dice qué guarda.
+**Impacto esperado:** una lista que se lee por nombre y donde un equipo que no está para usarse se ve sin buscarlo; una ficha cuya primera pantalla es lo que se usa.
+**Cómo se comprobó:** 8 pruebas nuevas (la regla del estado en lista, la lista montada con sus estados, el marcador y el resaltado, la línea de identidad y el pliegue) y las de la ficha al orden nuevo; suite completa, lint y build; capturas a 390×844 y 1366×768, sin desbordamiento horizontal.
+
 ### Cambiado (Resolver y buscador, tarea 287, bloque 2): Resolver y los resultados según la propuesta final de Claude Design
 
 **Área modificada:** `src/features/inicio/{ResolverPage.tsx,resolver.ts}`, `src/features/busqueda/{ResultadosBusqueda.tsx,resultados.ts,BuscadorGlobal.tsx}`, `src/features/busqueda/presentacionResultados.ts` (nuevo), `src/components/{CampoBusqueda,BarraSuperior,CabeceraColapsable}.tsx`, `src/app/Chasis.tsx` (prop `tituloContraido`), pruebas (`presentacionResultados.test.ts` y `resultadosPropuestaFinal.test.tsx` nuevas), `scripts/capturas-moviles.mjs`, `DOCUMENTACION_FUNCIONAL.md` (5.1), `BUSCADOR.md` (7.1), `COMPONENTES_UI.md`.

@@ -100,33 +100,55 @@ describe('Equipos', () => {
 })
 
 describe('la ficha del equipo', () => {
-  function lineaBajoElNombre(nombre: string): string | null {
-    const titulo = Array.from(document.body.querySelectorAll('span')).find(
-      (s) => s.textContent === nombre && s.className.includes('text-[16px]'),
+  // La identidad (propuesta final de Claude Design, 2026-10-01): el nombre
+  // a 24 px y, debajo, la línea de identidad.
+  function nombreEnIdentidad(nombre: string): HTMLElement | null {
+    return (
+      Array.from(document.body.querySelectorAll<HTMLElement>('span')).find(
+        (s) => s.textContent === nombre && s.className.includes('text-[24px]'),
+      ) ?? null
     )
-    return titulo?.nextElementSibling?.textContent ?? null
+  }
+  function lineaBajoElNombre(nombre: string): string | null {
+    return nombreEnIdentidad(nombre)?.nextElementSibling?.textContent ?? null
+  }
+  // Con una persona a cargo, la línea solo dice lo que el nombre no dice.
+  async function conResponsable(id: string) {
+    await sembrarPersonas()
+    await db.dispositivos.update(id, { responsableId: 'ana', responsable: 'Ana de Prueba' })
   }
 
   it('bajo el nombre calla la categoría que el nombre ya dice y deja la marca y el modelo', async () => {
     await sembrarEquipo({ id: 'imp', nombre: 'Impresora Taquilla', categoriaId: 'cat-imp', marca: 'HP', modelo: 'LaserJet' })
+    await conResponsable('imp')
     await montar(RUTAS, '/dispositivos/imp')
-    await esperar(() => lineaBajoElNombre('Impresora Taquilla') !== null, 'la cabecera')
-    expect(lineaBajoElNombre('Impresora Taquilla')).toBe('HP LaserJet')
+    await esperar(() => lineaBajoElNombre('Impresora Taquilla') === 'HP LaserJet', 'la línea de identidad')
   })
 
   it('si no queda nada que decir, no hay línea', async () => {
     await sembrarEquipo({ id: 'imp', nombre: 'Impresora Taquilla', categoriaId: 'cat-imp' })
+    await conResponsable('imp')
     await montar(RUTAS, '/dispositivos/imp')
     // Mientras la categoría carga se ve un instante la fecha (como antes de
     // esta tarea); con la categoría ya leída, "Impresoras" se calla y no
     // queda ninguna línea. Si quedara, la espera vence y la prueba falla.
     const titulo = await esperar(() => {
-      const nombre = Array.from(document.body.querySelectorAll('span')).find(
-        (s) => s.textContent === 'Impresora Taquilla' && s.className.includes('text-[16px]'),
-      )
+      const nombre = nombreEnIdentidad('Impresora Taquilla')
       return nombre && nombre.nextElementSibling === null ? nombre : null
     }, 'sin línea bajo el nombre')
     expect(titulo.parentElement?.textContent).toBe('Impresora Taquilla')
+  })
+
+  it('sin nadie a cargo lo dice la línea de identidad, con "Asignar", y no una fila de datos', async () => {
+    await sembrarEquipo({ id: 'imp', nombre: 'Impresora Taquilla', categoriaId: 'cat-imp', marca: 'HP', modelo: 'LaserJet' })
+    await montar(RUTAS, '/dispositivos/imp')
+    // "HP LaserJet · sin responsable" (el separador va pegado al primer tramo) y "Asignar".
+    await esperar(
+      () => lineaBajoElNombre('Impresora Taquilla')?.replace(/\s+/g, ' ').startsWith('HP LaserJet ·sin responsable'),
+      'la línea de identidad',
+    )
+    expect(textoPantalla()).not.toContain('Sin responsable')
+    expect(document.body.querySelector('button[aria-label="Asignar un responsable"]')).not.toBeNull()
   })
 })
 

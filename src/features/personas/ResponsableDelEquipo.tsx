@@ -30,10 +30,13 @@ import { useEntradasDeAsignacion } from './useAsignaciones'
 export function ResponsableDelEquipo({
   dispositivo,
   origen,
+  ocultarSiNoHay = false,
 }: {
   dispositivo: Dispositivo
   /** El `state` para que la ficha de la persona vuelva a este equipo. */
   origen: EstadoConOrigen
+  /** Sin persona ni nombre anotado, no dibuja nada (lo dice la línea de identidad). */
+  ocultarSiNoHay?: boolean
 }) {
   const persona = useLiveQuery(
     async () => (dispositivo.responsableId ? ((await db.personas.get(dispositivo.responsableId)) ?? null) : null),
@@ -123,18 +126,25 @@ export function ResponsableDelEquipo({
   // Sin persona vinculada: un equipo de baja no se entrega a nadie.
   if (esDeBaja(dispositivo)) return null
 
+  // SIN NADIE, LA FICHA LO DICE EN SU LÍNEA DE IDENTIDAD (propuesta final
+  // de Claude Design, 2026-10-01): "Sin responsable" no es un dato para
+  // trabajar, es un dato que falta. Con `ocultarSiNoHay` esta fila no se
+  // dibuja y quien la monta ofrece "Asignar" junto a esa línea. Un nombre
+  // ANOTADO sí es un dato (por validar), y la fila se queda para decirlo.
+  if (!porValidar && ocultarSiNoHay) return null
+
   return (
     <div className="flex items-center gap-1 pr-2">
       <span className="flex min-h-12 min-w-0 flex-1 items-center gap-2.5 px-3.5 py-1.5 text-[13.5px] text-noct-neutral-200">
         <User size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate">Sin responsable</span>
-          {porValidar && (
-            <span className="block text-[12px] leading-[1.4] text-noct-neutral-500">
-              Anotado: «{porValidar}» · por validar
-            </span>
-          )}
-        </span>
+        {/* Un nombre escrito que no es una ficha de persona no se
+            presenta como persona ni se resuelve solo (tarea 266): se dice
+            que está anotado y por validar. */}
+        {porValidar ? (
+          <span className="min-w-0 flex-1 leading-[1.4]">Anotado: «{porValidar}» · por validar</span>
+        ) : (
+          <span className="block min-w-0 flex-1 truncate">Sin responsable</span>
+        )}
       </span>
       <button
         type="button"

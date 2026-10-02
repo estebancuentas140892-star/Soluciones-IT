@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import type { Articulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { BookOpen, CaretRight } from '../../components/iconos'
+import { claseTonoDeTipo } from '../soluciones/iconosSoluciones'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { procedimientosDeCategoria, procedimientosDeDispositivo } from './procedimientosDeDispositivo'
 
@@ -79,18 +80,24 @@ export function ProcedimientosDelEquipo({
   )
 }
 
+// UNA FILA DE PROCEDIMIENTO (propuesta final de Claude Design,
+// 2026-10-01): el título a 15 px y HASTA EN DOS LÍNEAS (cortado en una se
+// quedaba en "Conectar la impresora compartida de ej..."), y el icono con
+// el tinte de su tipo, que es lo que la segunda línea nombra.
 function FilaProcedimiento({ articulo }: { articulo: Articulo }) {
   return (
     <Link
       to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
-      className="flex min-h-[50px] items-center gap-[13px] rounded-md px-2 py-2.5 text-noct-text transition-colors hover:bg-noct-text/[.05]"
+      className="flex min-h-[54px] items-center gap-3 rounded-lg px-2 py-1.5 text-noct-text transition-colors hover:bg-noct-text/[.05]"
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent-300">
-        <BookOpen size={16} aria-hidden />
+      <span
+        className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md ${claseTonoDeTipo(articulo.tipo)}`}
+      >
+        <BookOpen size={17} aria-hidden />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-medium leading-tight">{articulo.titulo}</span>
-        <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">
+      <span className="flex min-w-0 flex-1 flex-col gap-px">
+        <span className="line-clamp-2 text-[15px] font-medium leading-[1.3] text-pretty">{articulo.titulo}</span>
+        <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-400">
           {etiquetaDeTipo(articulo.tipo)}
         </span>
       </span>

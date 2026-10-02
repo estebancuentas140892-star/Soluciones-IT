@@ -202,20 +202,28 @@ describe('la ficha del equipo', () => {
   // Tarea 266, sección 8 del encargo: un responsable escrito que no es
   // una ficha de persona ("Archivo", dos nombres) no se presenta como
   // persona ni se resuelve solo.
-  it('un responsable escrito sin ficha se ve "Sin responsable" y queda por validar', async () => {
+  it('un responsable escrito sin ficha se ve anotado y por validar, sin pasar por persona', async () => {
     await sembrarCategorias()
     await sembrarEquipo({ id: 'pc-archivo', nombre: 'PC Archivo de prueba', responsable: 'Archivo' })
     await montar(RUTAS, '/dispositivos/pc-archivo')
-    await esperar(() => textoPantalla().includes('Sin responsable'), 'el responsable')
+    await esperar(() => textoPantalla().includes('Anotado: «Archivo» · por validar'), 'el responsable')
 
-    expect(textoPantalla()).toContain('Anotado: «Archivo» · por validar')
+    // La identidad dice que no hay nadie a cargo; la fila, lo anotado.
+    expect(textoPantalla()).toContain('sin responsable')
     expect(textoPantalla()).not.toContain('Responsable: Archivo')
     expect(control('Asignar')).not.toBeNull()
   })
 
-  it('los datos técnicos van plegados en "Más datos del equipo"', async () => {
+  it('los datos técnicos van plegados en "Más datos del equipo", dentro de "Más del equipo"', async () => {
     await sembrarInventario()
     await montar(RUTAS, '/dispositivos/pc')
+    // "Más del equipo" es una sola fila que dice qué guarda (propuesta
+    // final de Claude Design); abierta, sus secciones siguen plegadas.
+    const mas = await esperar(() => control(/^Más del equipo/), 'la fila Más del equipo')
+    // Lo dice de corrido, con lo que este equipo tiene (aquí, su impacto).
+    expect(mas.textContent).toContain('Datos, impacto, conexiones, adjuntos e intervenciones')
+    expect(control(/^Más datos del equipo/)).toBeNull()
+    await tocar(mas)
     const plegado = await esperar(() => control(/^Más datos del equipo/), 'la sección plegada')
 
     expect(textoPantalla()).not.toContain('SERIE-PRUEBA-1')
@@ -235,11 +243,13 @@ describe('la ficha del equipo', () => {
     const conectado = texto.indexOf('conectado a')
     const problemas = texto.indexOf('problemas frecuentes')
     const procedimientos = texto.indexOf('procedimientos')
-    const profundidad = texto.indexOf('profundidad')
+    const masDelEquipo = texto.indexOf('más del equipo')
     expect(conectado).toBeGreaterThan(-1)
     expect(conectado).toBeLessThan(problemas)
     expect(problemas).toBeLessThan(procedimientos)
-    expect(procedimientos).toBeLessThan(profundidad)
+    expect(procedimientos).toBeLessThan(masDelEquipo)
+    // "Profundidad" se llama ahora "Más del equipo".
+    expect(texto).not.toContain('profundidad')
   })
 
   it('sin problemas ni procedimientos no quedan títulos vacíos', async () => {

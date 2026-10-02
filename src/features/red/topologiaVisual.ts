@@ -138,6 +138,32 @@ export function tonoEstado(etiqueta: string): TonoEstado {
   return estadoConocido(etiqueta)?.tono ?? 'neutro'
 }
 
+// EL ESTADO EN UNA LISTA DE EQUIPOS (propuesta final de Claude Design,
+// 2026-10-01). Solo cuando es una EXCEPCIÓN (En mantenimiento, Fuera de
+// servicio, De baja): entonces se ve y la fila se atenúa, porque ese equipo
+// no está para usarse. Lo normal (Operativo, Disponible) no ocupa la fila,
+// y un estado vacío no se rellena con "Sin estado": no se inventa nada.
+// Un texto propio que no es ninguno de los conocidos se conserva tal cual
+// (no se sabe si es normal o no; ante la duda, regla 22). La ficha del
+// equipo sigue diciendo siempre el estado registrado.
+export interface EstadoEnLista {
+  etiqueta: string
+  tono: TonoEstado
+  /** Uno de los tres estados que dicen que el equipo no está para usarse. */
+  excepcion: boolean
+}
+
+const ESTADOS_DE_EXCEPCION = new Set(['En mantenimiento', 'Fuera de servicio', 'De baja'])
+
+export function estadoEnLista(estado: string): EstadoEnLista | null {
+  const texto = estado.trim()
+  if (texto === '') return null
+  const conocido = estadoConocido(texto)
+  if (!conocido) return { etiqueta: texto, tono: 'neutro', excepcion: false }
+  if (!ESTADOS_DE_EXCEPCION.has(conocido.etiqueta)) return null
+  return { etiqueta: conocido.etiqueta, tono: conocido.tono, excepcion: true }
+}
+
 // Línea de detalle de la fila, estilo "Switch 8 puertos · Puerto 02 ·
 // UTP" del diseño: categoría, marca y modelo, cómo se llega desde el
 // padre (via) y el medio físico. El medio se omite si ya es lo que

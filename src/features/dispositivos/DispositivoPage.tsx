@@ -72,7 +72,22 @@ import { ProcedimientosDelEquipo } from './ProcedimientosDelEquipo'
 import { RegistrarIntervencion } from './RegistrarIntervencion'
 import { SeguridadDelEquipo } from './SeguridadDelEquipo'
 import { ResponsableDelEquipo, ResponsablesAnteriores } from '../personas/ResponsableDelEquipo'
+import { HojaAsignarPersona } from '../personas/HojaAsignarPersona'
+import { esDeBaja, responsablePorValidar } from '../personas/cicloPersona'
 import { useResponsablesAnteriores } from '../personas/useAsignaciones'
+
+// Las anclas que viven dentro de "Más del equipo": llegar a una abre el
+// pliegue (si no, el salto no encontraría su destino).
+const ANCLAS_MAS_DEL_EQUIPO = ['#datos', '#conexiones', '#seguridad', '#foto']
+
+/** "Datos, conexiones, adjuntos e intervenciones": lo que guarda el pliegue, dicho de corrido. */
+function enumerar(partes: string[]): string {
+  if (partes.length <= 1) return partes.join('')
+  const ultima = partes[partes.length - 1]
+  // "e" delante de un sonido "i" ("e intervenciones"), "y" en el resto.
+  const y = /^(i|hi)[^aeou]/i.test(ultima) ? 'e' : 'y'
+  return `${partes.slice(0, -1).join(', ')} ${y} ${ultima}`
+}
 
 // Fecha corta al estilo del diseño ("12 jul"), con el año solo cuando
 // no es el actual (mismo criterio que la ficha de artículo).
@@ -142,6 +157,23 @@ export function DispositivoPage() {
   // texto por validar o nadie). Aquí solo se cuentan los responsables
   // anteriores, para la cabecera plegada de "Más datos del equipo".
   const anterioresResponsables = useResponsablesAnteriores(dispositivoId)
+  // ¿Hay una persona viva a cargo? Decide si la línea de identidad dice
+  // "sin responsable" (propuesta final de Claude Design, 2026-10-01).
+  // `undefined` mientras se lee: no se afirma nada hasta saberlo.
+  const personaResponsable = useLiveQuery(
+    async () => (dispositivo?.responsableId ? ((await db.personas.get(dispositivo.responsableId)) ?? null) : null),
+    [dispositivo?.responsableId],
+  )
+  const [asignando, setAsignando] = useState(false)
+  // "MÁS DEL EQUIPO", plegado en una sola fila salvo cuando se llega a una
+  // de sus secciones: el bloque "¿Qué sigue?" (equipo recién creado), el
+  // nombre sugerido de un dato protegido o un enlace con su ancla.
+  const [masAbierto, setMasAbierto] = useState(
+    () => recienCreado || Boolean(nombreCampoSugerido) || ANCLAS_MAS_DEL_EQUIPO.includes(location.hash),
+  )
+  useEffect(() => {
+    if (ANCLAS_MAS_DEL_EQUIPO.includes(location.hash)) setMasAbierto(true)
+  }, [location.hash])
   // Reemplazo (hallazgo L3): equipo al que este reemplaza (si lo hay) y
   // equipo que reemplazo a este (inverso, derivado con un filtro directo
   // ya que no hay copia de referencia que consultar sin ella).
@@ -302,6 +334,16 @@ export function DispositivoPage() {
   // categoría ni marca ni modelo, como antes.
   const tipoCompleto = [categoria?.nombre, marcaModelo].filter(Boolean).join(' · ')
   const lineaTipo = tipoCompleto ? lineaDeContexto(dispositivo.nombre, [categoria?.nombre, marcaModelo]) : metaLinea
+  // LA LÍNEA DE IDENTIDAD (propuesta final de Claude Design, 2026-10-01):
+  // qué es y, si nadie responde de él, "sin responsable" aquí, como el
+  // dato que falta, y no como una fila más de los datos para trabajar. Un
+  // equipo de baja o de red sin nada anotado no lo dice (no aplica).
+  const personaVivaACargo = personaResponsable && !personaResponsable.eliminadoEn ? personaResponsable : null
+  const aplicaResponsable = !esRed || Boolean(dispositivo.responsableId) || dispositivo.responsable.trim() !== ''
+  const sinResponsable =
+    aplicaResponsable && !esDeBaja(dispositivo) && personaResponsable !== undefined && personaVivaACargo === null
+  // Con un nombre anotado (por validar) la fila lo dice y trae su "Asignar".
+  const anotadoPorValidar = responsablePorValidar(dispositivo)
   // Cuántos datos guarda "Más datos del equipo" (M-R4: plegar informa).
   // "Categoría y fecha" va siempre.
   const totalMasDatos =
@@ -489,29 +531,69 @@ export function DispositivoPage() {
             conectado. El nombre ya vive arriba, en el ancla permanente
             del chasis (M-001): la tarjeta lo da a 16 con lo que lo
             acompaña. */}
-        <section>
-          <TituloSeccion className="mb-2">Ahora</TituloSeccion>
-          <div className="divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
-            <div className="flex items-center gap-3 px-3.5 py-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-noct-text/[.06] text-noct-neutral-400">
-                {dispositivo.foto ? (
-                  <MiniaturaPortada
-                    referencia={dispositivo.foto.referencia}
-                    alt={dispositivo.nombre}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-5 w-5" />
+        {/* IDENTIDAD (propuesta final de Claude Design, 2026-10-01): qué
+            es, a la vista y sin caja. El nombre a 24 px (hasta dos líneas),
+            debajo lo que el nombre no dice ya y, si nadie responde de él,
+            "sin responsable" con su "Asignar". El estado, solo si está
+            registrado. */}
+        <section aria-label="Identidad del equipo" className="flex items-start gap-3.5 pt-2">
+          <span className="flex h-[46px] w-[46px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300">
+            {dispositivo.foto ? (
+              <MiniaturaPortada
+                referencia={dispositivo.foto.referencia}
+                alt={dispositivo.nombre}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-[22px] w-[22px]" />
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            {/* Entero: es la identidad del equipo, y se lee aunque ocupe
+                varias líneas. */}
+            <span className="block text-[24px] font-medium leading-[1.2] tracking-[-.01em] text-pretty [overflow-wrap:anywhere]">
+              {dispositivo.nombre}
+            </span>
+            {(lineaTipo || sinResponsable) && (
+              <span
+                data-linea-identidad
+                className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13.5px] leading-[1.4] text-noct-neutral-400"
+              >
+                {/* El separador va pegado al final del primer tramo: si la
+                    línea parte, "sin responsable" no empieza con un punto. */}
+                {lineaTipo && (
+                  <span className="min-w-0">
+                    {lineaTipo}
+                    {sinResponsable ? ' ·' : ''}
+                  </span>
+                )}
+                {sinResponsable && <span>sin responsable</span>}
+                {sinResponsable && !anotadoPorValidar && (
+                  <button
+                    type="button"
+                    onClick={() => setAsignando(true)}
+                    aria-label="Asignar un responsable"
+                    className="-my-3 inline-flex min-h-11 items-center rounded-md px-1 text-[13.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/10"
+                  >
+                    Asignar
+                  </button>
                 )}
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[16px] font-medium leading-[1.25]">{dispositivo.nombre}</span>
-                {lineaTipo && <span className="mt-0.5 block truncate text-[12.5px] text-noct-neutral-400">{lineaTipo}</span>}
-              </span>
-              {/* La misma pastilla que la fila (tarea 207, M-017). */}
-              {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} />}
-            </div>
+            )}
+            {/* El estado, solo si está registrado, debajo: así el nombre
+                tiene todo el ancho. La misma pastilla de siempre (M-017). */}
+            {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} className="mt-2" />}
+          </span>
+        </section>
+        <HojaAsignarPersona dispositivo={dispositivo} abierto={asignando} onCerrar={() => setAsignando(false)} />
 
+        {/* DATOS PARA TRABAJAR: lo que se usa con el equipo delante. Su IP
+            copiable, dónde está, quién responde de él (si hay alguien o un
+            nombre anotado) y a qué está conectado. Sin ninguno, no hay
+            caja. */}
+        {(dispositivo.ip || ubicacionNombre || personaVivaACargo || anotadoPorValidar || subida) && (
+        <section aria-label="Datos para trabajar">
+          <div className="divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
             {dispositivo.ip && (
               <div className="px-3.5">
                 <FilaDato etiqueta="Dirección IP" valor={dispositivo.ip} tecnico copiable={dispositivo.ip} />
@@ -536,12 +618,14 @@ export function DispositivoPage() {
                 </span>
               ))}
 
-            {/* Quién responde de él: subió de "Contexto" (tarea 256). Desde
-                la tarea 266 dice también "Sin responsable" (y el texto
-                "por validar" si lo hay), con "Asignar" y "Cambiar". Un
-                equipo de red solo lleva la fila si alguien lo anotó. */}
-            {(!esRed || dispositivo.responsableId || dispositivo.responsable.trim() !== '') && (
-              <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} />
+            {/* Quién responde de él: subió de "Contexto" (tarea 256), con
+                "Cambiar"; o el nombre anotado por validar, con "Asignar".
+                Sin nadie, desde la propuesta final de Claude Design la fila
+                no se dibuja: lo dice la línea de identidad, con su
+                "Asignar". Un equipo de red solo lleva la fila si alguien lo
+                anotó. */}
+            {aplicaResponsable && (
+              <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} ocultarSiNoHay />
             )}
 
             {/* A QUÉ ESTÁ CONECTADO (sección 18): el switch que le da
@@ -572,6 +656,7 @@ export function DispositivoPage() {
             )}
           </div>
         </section>
+        )}
 
         {/* LO QUE SE RESUELVE CON ESTE EQUIPO (sección 18): primero sus
             problemas frecuentes (con el diagnóstico de su categoría, que
@@ -606,7 +691,10 @@ export function DispositivoPage() {
 
         {totalResolver > 0 && (
           <section>
-            <TituloSeccion className="mb-2">Procedimientos</TituloSeccion>
+            <div className="mb-1 flex items-center gap-2">
+              <TituloSeccion>Procedimientos</TituloSeccion>
+              <span className="text-[11px] text-noct-neutral-600">{totalResolver}</span>
+            </div>
             <div className="flex flex-col">
               <ProcedimientosDelEquipo
                 dispositivoId={dispositivoId}
@@ -628,14 +716,50 @@ export function DispositivoPage() {
           </section>
         )}
 
-        {/* PROFUNDIDAD. Filas de 52 px con su conteo, en vez de secciones
-            abiertas de varias pantallas. El contenido solo se monta al
-            abrirse. Desde la tarea 256 empieza por "Más datos del
-            equipo": los datos técnicos completos, que antes ocupaban la
-            capa "Contexto" abierta. */}
+        {/* MÁS DEL EQUIPO (hasta el 2026-10-01, "Profundidad"). Lo
+            secundario, plegado en UNA fila que dice qué guarda (propuesta
+            final de Claude Design); abierta, las filas de 52 px de siempre,
+            cada una con su conteo y plegada a su vez. El contenido solo se
+            monta al abrirse. Empieza por "Más datos del equipo": los datos
+            técnicos completos (tarea 256). */}
         <section>
-          <TituloSeccion className="mb-2">Profundidad</TituloSeccion>
-          <div className="divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
+          <button
+            type="button"
+            onClick={() => setMasAbierto((v) => !v)}
+            aria-expanded={masAbierto}
+            aria-controls="mas-del-equipo"
+            className="flex min-h-[52px] w-full items-center gap-3 border-y border-noct-divider text-left outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-noct-accent"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-medium leading-[1.3]">Más del equipo</span>
+              {!masAbierto && (
+                <span className="block text-[12.5px] leading-[1.4] text-noct-neutral-500">
+                  {enumerar(
+                    [
+                      'datos',
+                      equiposEnRiesgo > 0 || cadenaDependencia.length > 0 ? 'impacto' : null,
+                      'conexiones',
+                      perfil?.puedeVerBoveda ? 'datos protegidos' : null,
+                      'adjuntos',
+                      'intervenciones',
+                    ].filter((parte): parte is string => parte !== null),
+                  ).replace(/^./, (letra) => letra.toUpperCase())}
+                </span>
+              )}
+            </span>
+            <CaretDown
+              size={14}
+              className={`shrink-0 text-noct-neutral-400 transition-transform duration-150 motion-reduce:transition-none ${
+                masAbierto ? 'rotate-180' : ''
+              }`}
+              aria-hidden
+            />
+          </button>
+          {masAbierto && (
+          <div
+            id="mas-del-equipo"
+            className="mt-2.5 divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface"
+          >
             <SeccionPlegable id="datos" titulo="Más datos del equipo" Icono={Info} conteo={totalMasDatos}>
               <div className="divide-y divide-noct-divider">
                 {camposContexto.map((campo) => (
@@ -753,6 +877,7 @@ export function DispositivoPage() {
               </div>
             </SeccionPlegable>
           </div>
+          )}
         </section>
 
         {/* La puerta única de documentar (M-016, M-031, regla M-R10).

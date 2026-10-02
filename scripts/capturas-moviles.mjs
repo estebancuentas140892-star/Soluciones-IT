@@ -152,7 +152,9 @@ const TODAS_LAS_PARADAS = [
     guion: `{ const c=document.querySelector('input[aria-label="Buscar en Equipos"]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,'ejemplo'); c.dispatchEvent(new Event('input',{bubbles:true})); }`,
   },
   { nombre: 'equipo-ficha', ruta: '/dispositivos/dis-impresora-ejemplo' },
-  { nombre: 'equipo-mas-datos', ruta: '/dispositivos/dis-impresora-ejemplo', guion: tocar('Más datos del equipo') },
+  // "Más datos del equipo" vive dentro de "Más del equipo" desde la propuesta
+  // final de Claude Design (2026-10-01): primero se abre el pliegue.
+  { nombre: 'equipo-mas-datos', ruta: '/dispositivos/dis-impresora-ejemplo', guion: tocar('Más del equipo') + tocar('Más datos del equipo') },
   { nombre: 'escaner', ruta: '/escaner' },
   {
     nombre: 'escaner-asistencia',
@@ -277,7 +279,7 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'persona-retirar', ruta: '/personas/per-ejemplo-ana/retirar' },
   { nombre: 'equipo-sin-responsable', ruta: '/dispositivos/dis-pc-ejemplo-07' },
   { nombre: 'equipo-asignar-persona', ruta: '/dispositivos/dis-pc-ejemplo-41', guion: tocar('Asignar') },
-  { nombre: 'equipo-con-anteriores', ruta: '/dispositivos/dis-pc-ejemplo-41', guion: tocar('Más datos del equipo') },
+  { nombre: 'equipo-con-anteriores', ruta: '/dispositivos/dis-pc-ejemplo-41', guion: tocar('Más del equipo') + tocar('Más datos del equipo') },
   // Tarea 267: ubicaciones. La migracion no se aplica en ninguna parada
   // (solo se mira y se decide una coincidencia), asi que no hace falta
   // reponer nada despues.

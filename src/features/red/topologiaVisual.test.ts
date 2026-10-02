@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual, tonoEstado } from './topologiaVisual'
+import { claseEstado, detalleDeNodo, estadoConEtiqueta, estadoEnLista, tipoDeNodoVisual, tonoEstado } from './topologiaVisual'
 
 describe('tipoDeNodoVisual', () => {
   it('reconoce las categorías iniciales reales del esquema', () => {
@@ -113,5 +113,34 @@ describe('tonoEstado', () => {
     expect(tonoEstado('Prestado a contabilidad')).toBe('neutro')
     expect(tonoEstado('Sin estado')).toBe('neutro')
     expect(tonoEstado('')).toBe('neutro')
+  })
+})
+
+// El estado en una lista de equipos (propuesta final de Claude Design,
+// 2026-10-01): solo la excepción, nunca lo normal ni un relleno inventado.
+describe('estadoEnLista', () => {
+  it('lo normal no ocupa la fila: Operativo y Disponible, escritos como sea', () => {
+    expect(estadoEnLista('Operativo')).toBeNull()
+    expect(estadoEnLista('OPERATIVO ')).toBeNull()
+    expect(estadoEnLista('disponible')).toBeNull()
+  })
+
+  it('un estado vacío no se rellena con "Sin estado"', () => {
+    expect(estadoEnLista('')).toBeNull()
+    expect(estadoEnLista('   ')).toBeNull()
+  })
+
+  it('las tres excepciones se ven, con su tono, y atenúan la fila', () => {
+    expect(estadoEnLista('En mantenimiento')).toEqual({ etiqueta: 'En mantenimiento', tono: 'precaucion', excepcion: true })
+    expect(estadoEnLista('fuera de servicio')).toEqual({ etiqueta: 'Fuera de servicio', tono: 'error', excepcion: true })
+    expect(estadoEnLista('Dado de baja')).toEqual({ etiqueta: 'De baja', tono: 'neutro', excepcion: true })
+  })
+
+  it('un texto propio se conserva tal cual: no se sabe si es normal', () => {
+    expect(estadoEnLista('Prestado a contabilidad')).toEqual({
+      etiqueta: 'Prestado a contabilidad',
+      tono: 'neutro',
+      excepcion: false,
+    })
   })
 })

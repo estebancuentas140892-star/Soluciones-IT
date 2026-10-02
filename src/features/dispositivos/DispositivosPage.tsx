@@ -8,6 +8,7 @@ import { conOrigen } from '../../lib/origenNavegacion'
 import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { FilaDeslizable } from '../../components/FilaDeslizable'
 import { Monitor, Plus, QrCode } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
@@ -170,18 +171,36 @@ export function DispositivosPage() {
         {/* BUSCAR Y ESCANEAR, CON EL MISMO PESO: la misma altura (46 px),
             la misma superficie y el mismo borde. */}
         <div className="flex items-center gap-2 px-4 pb-2.5">
-          <CampoBusqueda valor={texto} onCambiar={setTexto} alcance="Equipos" className="min-w-0 flex-1" />
+          {/* El marcador dice qué se puede buscar (propuesta final de
+              Claude Design), solo con lo que este buscador busca de verdad
+              (`camposDeBusqueda`): nombre, IP, lugar, serial, placa, marca y
+              modelo. La etiqueta accesible sigue siendo "Buscar en Equipos". */}
+          <CampoBusqueda
+            valor={texto}
+            onCambiar={setTexto}
+            alcance="Equipos"
+            textoAlternativo="Nombre, IP, lugar o serial"
+            className="min-w-0 flex-1"
+          />
+          {/* Cuadrado de 46 px con el mismo peso que el campo (propuesta
+              final de Claude Design): el rótulo "Escanear QR" le quitaba al
+              campo el ancho que necesita su marcador. El nombre accesible
+              sigue diciéndolo. */}
           <Link
             to="/escaner"
-            className="inline-flex h-[46px] shrink-0 items-center gap-2 rounded-lg border border-noct-divider bg-noct-surface px-3.5 text-[14px] font-medium text-noct-text hover:border-noct-neutral-600 hover:bg-noct-text/[.04]"
+            aria-label="Escanear QR"
+            title="Escanear QR"
+            className="inline-flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-noct-divider bg-noct-surface text-noct-neutral-200 hover:border-noct-neutral-600 hover:bg-noct-text/[.04]"
           >
-            <QrCode size={18} className="shrink-0 text-noct-accent-300" aria-hidden />
-            Escanear QR
+            <QrCode size={20} className="shrink-0" aria-hidden />
           </Link>
         </div>
 
         {categoriasGenerales.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          // LA ÚNICA FILA QUE SE DESLIZA EN HORIZONTAL: si no cabe, el borde
+          // con más chips detrás se desvanece (`FilaDeslizable`) en vez de
+          // dejar un chip cortado en seco ("Co"), y al final se lee entero.
+          <FilaDeslizable etiqueta="Filtrar por categoría" className="gap-2 px-4 pb-3">
             {[{ id: '', nombre: 'Todos', count: conteos.todos }, ...categoriasGenerales.map((c) => ({
               id: c.id,
               nombre: c.nombre,
@@ -209,7 +228,7 @@ export function DispositivosPage() {
                 </button>
               )
             })}
-          </div>
+          </FilaDeslizable>
         )}
       </>
     }>
@@ -227,6 +246,7 @@ export function DispositivosPage() {
                     conFoto
                     estado={hayFiltrosActivos ? estadoDeSalto : undefined}
                     alAbrir={alAbrir}
+                    resaltar={consulta}
                   />
                 ))}
               </div>
@@ -246,6 +266,7 @@ export function DispositivosPage() {
                       subtitulo={subtitulos.get(d.id) ?? ''}
                       estado={estadoDeSalto}
                       alAbrir={alAbrir}
+                      resaltar={consulta}
                     />
                   ))}
                 </div>
