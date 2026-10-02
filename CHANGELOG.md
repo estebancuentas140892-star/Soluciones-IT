@@ -6,6 +6,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-02
+
+### Agregado (buscador, tarea 288, fase 1): benchmark de consultas naturales de Resolver, medido ANTES de tocar el algoritmo
+
+**Área modificada:** `src/features/busqueda/benchmarkResolver.ts` (nuevo), `src/features/busqueda/benchmarkResolver.test.ts` (nuevo), `BUSCADOR.md` (sección 14), `TAREAS.md`.
+**Tipo:** Agregado (pruebas). El buscador no cambia en esta fase.
+**Motivo:** el encargo "Resolver debe entender la intención de la consulta" pide medir con una vara fija, antes de cambiar el ranking, si una consulta natural ("la impresora de mercadeo no imprime", "llegó una persona nueva") lleva a la clase de resultado que la resuelve.
+**Qué cambia:**
+- 35 casos: las 20 consultas del encargo y 15 más (equipo por ubicación, nombre, marca y modelo, serial y placa; procedimiento contra equipo; errata; título exacto; sinónimo; una segunda consulta ambigua; y las variantes con la Bóveda abierta y cerrada). Cada uno registra las intenciones esperadas y prohibidas, qué tiene que quedar primero, qué contexto tiene que seguir en "Mejores resultados", si es ambigua y, cuando corresponde, la certeza esperada y el peso del puente a la Bóveda.
+- Datos sintéticos con la estructura de los reales (ningún dato de la base), que pasan por el mismo camino que en la app. El banco recibe las piezas del buscador, así que mide con la misma vara el de antes y el de después; la prueba fija los casos que fallan hoy y avisa si alguno cambia sin tocar el buscador.
+**Impacto esperado:** ninguno en la app. Es la medida de partida de la tarea 288.
+**Cómo se comprobó:** el buscador de `70a7e0e` cumple **13 de 35** casos. Una guía sin relación tapa al equipo en "ip impresora mercadeo" y "windows r". En "llegó una persona nueva", la palabra "una" arrastra guías que no tienen que ver. "ping" pone la guía antes que el comando. Con la Bóveda abierta, "clave impresora mercadeo" pone primero "Clave wifi invitados". En "la impresora de mercadeo no imprime" el equipo sale de los mejores. "impresora" llena los mejores de equipos sin ninguna guía, y ninguna consulta clara recibe "Mejor coincidencia". La tabla completa está en `BUSCADOR.md`, sección 14.1.
+
 ## 2026-10-01
 
 ### Cambiado (Más, tarea 287, bloque 4): Más por intención; cierre de la propuesta final de Claude Design

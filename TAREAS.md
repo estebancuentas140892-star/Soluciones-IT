@@ -32,6 +32,31 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso.
 
+**RESOLVER ENTIENDE LA INTENCIÓN DE LA CONSULTA (2026-10-02, tarea 288).** Encargo aparte del usuario: que Resolver comprenda qué intenta conseguir el técnico y no dependa de que conozca el nombre exacto de una guía. Sin rediseño visual, sin reemplazar MiniSearch, sin IA generativa ni servicios externos, y todo sigue funcionando sin conexión. Se trabaja en la rama `feat/resolver-intencion` (creada desde `70a7e0e`); `main` no se toca hasta validar la tarea entera. La sesión anterior que empezó este encargo se quedó sin tokens en otro equipo y su trabajo no llegó a ningún sitio recuperable, así que se empezó de cero desde `70a7e0e`. El benchmark se fijó ANTES de tocar el ranking y sus expectativas no se ajustan después. Al cerrar, la tarea se archiva entera en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+| Fase | Qué | Estado |
+|---|---|---|
+| 1 | Benchmark de consultas naturales, ANTES | Hecha: 13 de 35 casos cumplen ([BUSCADOR.md](BUSCADOR.md), sección 14) |
+| 2 | Campos semánticos del índice | Pendiente |
+| 3 | Metadata de la coincidencia | Pendiente |
+| 4 | `intencionesDeConsulta` | Pendiente |
+| 5 | Formas de búsqueda en las guías | Pendiente |
+| 6 | Ranking nuevo | Pendiente |
+| 7 | Consultas mixtas | Pendiente |
+| 8 | Confianza ("Mejor coincidencia") | Pendiente |
+| 9 | Marcador y ayuda de Resolver | Pendiente |
+| 10 | El mismo benchmark, DESPUÉS | Pendiente |
+
+### 288. Resolver entiende la intención de la consulta
+
+- **Título:** que Resolver decida qué clase de información resuelve lo que el técnico describe ("la impresora de mercadeo no imprime" es un problema sobre un equipo concreto).
+- **Descripción:** benchmark de consultas naturales antes y después; campos semánticos en el índice (formas de búsqueda, síntomas, cuándo usar, identidad, texto); metadata mínima de qué campos coincidieron; `intencionesDeConsulta` con evidencia de los datos; ranking por evidencia, intención, tipo y puntaje del índice; consultas mixtas; regla de confianza ("Mejor coincidencia" solo cuando una opción es claramente superior); formas de búsqueda como campo editorial opcional de las guías; marcador y ayuda de Resolver.
+- **Motivo:** encargo del usuario del 2026-10-02 ("Resolver debe entender la intención de la consulta").
+- **Impacto:** alto: es la puerta principal de la aplicación.
+- **Prioridad:** Alta. **Estado:** En progreso (fase 1 hecha).
+- **Área afectada:** `src/features/busqueda/` (`benchmarkResolver.ts` y su prueba, nuevos; `useIndiceBusqueda.ts`, `mejores.ts`, `sinonimos.ts`, `ResultadosBusqueda.tsx`, `BuscadorGlobal.tsx`), `src/lib/{db,procedimiento}.ts`, `src/features/soluciones/{ArticuloForm.tsx,borradorArticulo.ts}`, `src/features/historial/resumenProcedimiento.ts`, `src/features/inicio/ResolverPage.tsx` y la documentación del buscador.
+- **Dependencias:** ninguna.
+
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.

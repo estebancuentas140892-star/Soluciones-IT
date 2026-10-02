@@ -338,3 +338,52 @@ Todas registradas en [TAREAS.md](TAREAS.md):
 - Reglas de negocio y objetivos de rendimiento: [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md).
 - Stack y decisiones técnicas: [ARQUITECTURA.md](ARQUITECTURA.md) y [DECISIONES.md](DECISIONES.md) (AD-037 para los sinónimos de una vía y la letra suelta).
 - Archivos clave: `src/features/busqueda/useIndiceBusqueda.ts`, `sinonimos.ts`, `resultados.ts`; `src/features/referencia/referencias.ts`; `src/lib/texto.ts`, `procedimiento.ts`, `diagnostico.ts`; `src/features/inicio/InicioPage.tsx`.
+
+## 14. Benchmark de consultas naturales (tarea 288)
+
+`src/features/busqueda/benchmarkResolver.ts` (los datos, los casos y la vara de medir) y `benchmarkResolver.test.ts` (lo ejecuta). Encargo del 2026-10-02: Resolver tiene que entender **qué intenta conseguir** el técnico y no depender de que conozca el nombre exacto de una guía. Antes de tocar el ranking se fijó con qué medirlo.
+
+- **Las expectativas se escribieron antes de cambiar el algoritmo y no se ajustan para que coincidan con él.** El commit de la fase 1 las ejecutó contra el buscador de entonces y dejó en la prueba la lista de los casos que fallaban (`FALLAN_ANTES`); el resto de la tarea mide con el mismo banco, sin tocar un caso.
+- **Datos sintéticos con la estructura de los reales.** Ningún dato sale de la base: 10 equipos (con marca, modelo, serial, placa, IP, ubicación vinculada y responsable), 12 guías (una en borrador) con procedimiento, "cuándo usar", síntomas y causas, 2 guías con preguntas, 7 fichas del Centro de consulta, 4 credenciales y un dato protegido de un equipo, 6 ubicaciones, 4 personas y 7 categorías. Pasan por el mismo camino que en la app: `documentosDeBusqueda`, `crearIndiceDesdeDocumentos`, `buscar` y "Mejores resultados". La Bóveda solo entra abierta, y sus "valores cifrados" son marcas que el banco busca en lo que se pinta.
+- **35 casos:** las 20 consultas del encargo y 15 más (equipo por ubicación, por nombre, por marca y modelo, por serial y por placa; procedimiento contra equipo; una errata; un título exacto; un sinónimo; una segunda consulta ambigua; y las variantes con la Bóveda abierta y cerrada). Cada caso dice qué intenciones tienen que detectarse y cuáles no, qué tiene que quedar primero cuando la consulta es clara, qué contexto tiene que seguir dentro de "Mejores resultados", si es deliberadamente ambigua (sin intención forzada y sin certeza) y, cuando corresponde, la certeza esperada y el peso del puente a la Bóveda.
+- **Cómo leer el informe completo:** `BENCHMARK_INFORME=1 npx vitest run src/features/busqueda/benchmarkResolver.test.ts --reporter=verbose` imprime una fila por consulta, y con `BENCHMARK_INFORME=detalle`, además, los títulos de "Mejores resultados" en orden.
+
+### 14.1 ANTES (2026-10-02, buscador de `70a7e0e`): 13 de 35 casos cumplen
+
+El buscador de entonces no tenía regla de confianza: la interfaz decía siempre "Mejores resultados".
+
+| Consulta | Intenciones | Primero | Resultado |
+|---|---|---|---|
+| impresora | ninguna | Impresora Mercadeo (equipo) | Falla: los cinco mejores son equipos y la categoría, ninguna guía |
+| impresora mercadeo | ninguna | Impresora Mercadeo | Falla: no detecta equipo; sin "Mejor coincidencia" |
+| impresora caja 2 | equipo | Impresora Caja 2 | Falla: sin "Mejor coincidencia" |
+| la impresora no imprime | problema | La impresora no imprime (guía con preguntas) | Cumple |
+| la impresora de mercadeo no imprime | problema | La impresora no imprime | Falla: no detecta equipo y el equipo de Mercadeo sale de los mejores |
+| word imprime pero pdf no | ninguna | Imprimir un PDF que no sale | Falla: no detecta el problema ("no" al final) |
+| no imprime el pdf | problema | Imprimir un PDF que no sale | Cumple |
+| ip impresora mercadeo | ninguna | Conectar una impresora de red en Windows | Falla: no detecta equipo y una guía tapa al equipo |
+| 10.10.6.8 | ninguna | Impresora Mercadeo | Falla: no detecta equipo; sin "Mejor coincidencia" |
+| crear usuario nuevo | procedimiento, acceso | Crear usuario en Active Directory | Falla: "usuario" se lee como acceso |
+| crear usuario nuevo (Bóveda abierta) | procedimiento, acceso | Crear usuario en Active Directory | Falla: "usuario" se lee como acceso |
+| llegó una persona nueva | ninguna | Conectar una impresora de red en Windows | Falla: la palabra "una" del título arrastra guías sin relación |
+| usuario bloqueado (cerrada y abierta) | problema, acceso | Desbloquear usuario en Active Directory | Cumple |
+| no puede entrar después de varios intentos | problema | El usuario no puede iniciar sesión | Cumple |
+| no me deja enviar archivo pesado | problema | Enviar archivos pesados por correo | Cumple |
+| archivo grande por correo | ninguna | Enviar archivos pesados por correo | Cumple |
+| poner backup del correo | ninguna | Configurar el backup del servidor de archivos | Falla: no ve el procedimiento y gana el backup del servidor |
+| qué es DHCP | glosario | DHCP | Falla: sin "Mejor coincidencia" |
+| ping | ninguna | Diagnosticar la red con ping y tracert | Falla: no ve el comando y la guía tapa al comando |
+| windows r | ninguna | Conectar una impresora de red en Windows | Falla: no ve el atajo, que ni sale primero |
+| clave impresora mercadeo (cerrada) | acceso | Impresora Mercadeo | Falla: no detecta equipo |
+| clave impresora mercadeo (abierta) | acceso | Clave wifi invitados | Falla: una credencial ajena tapa la clave del equipo |
+| usuario administrador servidor (cerrada y abierta) | acceso | una credencial (abierta) | Cumple |
+| pc contabilidad | ninguna | PC-CONT-01 | Falla: no detecta equipo |
+| servidor facturación | ninguna | Servidor de facturación | Falla: no detecta equipo |
+| ricoh mp 501 | equipo | Impresora Mercadeo | Cumple |
+| serial ABC123 | ninguna | Lector de huella Taquilla | Falla: no detecta equipo; sin "Mejor coincidencia" |
+| placa 456 | equipo | UPS Cuarto de sistemas | Falla: sin "Mejor coincidencia" |
+| conectar impresora de red | procedimiento | Conectar una impresora de red en Windows | Cumple |
+| impresora mercadep | ninguna | Impresora Mercadeo | Falla: no detecta equipo |
+| reiniciar la cola de impresión | procedimiento | Reiniciar la cola de impresión | Falla: sin "Mejor coincidencia" |
+| respaldo del servidor | ninguna | Configurar el backup del servidor de archivos | Cumple |
+| correo | ninguna | Correo (categoría) | Cumple |
