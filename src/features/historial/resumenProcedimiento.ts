@@ -112,6 +112,16 @@ function diffProcedimiento(anterior: Procedimiento, nueva: Procedimiento): strin
     else cambios.push('Se actualizó la descripción del procedimiento.')
   }
 
+  // "¿Cómo buscaría alguien esta guía?" (tarea 288): ausente equivale a
+  // ninguna, así que una versión de antes del campo no cuenta como cambio.
+  const formasAntes = anterior.formasBusqueda ?? []
+  const formasAhora = nueva.formasBusqueda ?? []
+  if (formasAntes.join('\n') !== formasAhora.join('\n')) {
+    if (formasAntes.length === 0) cambios.push('Se definieron las formas de búsqueda de la guía.')
+    else if (formasAhora.length === 0) cambios.push('Se quitaron las formas de búsqueda de la guía.')
+    else cambios.push('Se actualizaron las formas de búsqueda de la guía.')
+  }
+
   // La portada se compara por referencia de Storage: cada subida
   // genera una referencia unica, asi que cambiarla es un reemplazo.
   const portadaAnterior = anterior.portada?.referencia ?? null

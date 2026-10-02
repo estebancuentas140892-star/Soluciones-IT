@@ -19,10 +19,12 @@ import { ROTULO_RECORRIDO, textoDeNodos } from '../../lib/diagnostico'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
-import { sinonimosDe } from './sinonimos'
+import { normalizarTexto } from '../soluciones/iconosSoluciones'
+import { derivaDe, FRACCION_DIFUSA, palabrasDeContenido, usaPrefijo } from './consultaNatural'
+import { sinonimosDe, sinonimosPorPalabra } from './sinonimos'
 import { cadenaNombres, mapaPorId } from '../ubicaciones/arbol'
 import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
-import { esTipoConocido, INFO_TIPO, textoBuscable, tituloConAbreviatura } from '../referencia/referencias'
+import { esTipoConocido, INFO_TIPO, tituloConAbreviatura } from '../referencia/referencias'
 
 export type TipoResultado =
   | 'articulo'
@@ -42,12 +44,63 @@ export type TipoResultado =
   | 'atajo'
   | 'comando'
 
+/**
+ * LOS CAMPOS DEL ÍNDICE, CADA UNO CON SU SIGNIFICADO (tarea 288, fase 2).
+ *
+ * Hasta la tarea 288 eran tres (`titulo`, `subtitulo` y `texto`) y casi
+ * todo iba revuelto en `texto`: la descripción de "cuándo usar" una guía,
+ * sus síntomas, la IP y el serial de un equipo, una palabra suelta de un
+ * paso. El buscador encontraba igual, pero no podía saber POR QUÉ
+ * coincidía un resultado, y no es lo mismo que "no imprime" esté en los
+ * síntomas de una guía que en el paso 7 de otra.
+ *
+ * - `titulo`: el nombre canónico.
+ * - `subtitulo`: el contexto que se ve bajo el nombre (categoría y tipo,
+ *   marca y lugar de un equipo, la ruta de una ubicación).
+ * - `formasBusqueda`: cómo lo buscaría una persona que no sabe su nombre
+ *   (campo editorial de las guías, fase 5).
+ * - `sintomas`: qué ocurre (los síntomas de un problema frecuente).
+ * - `cuandoUsar`: cuándo corresponde usarlo (la descripción del
+ *   procedimiento; la de una guía con preguntas; el "cuándo usar" de un
+ *   comando, un atajo o una herramienta).
+ * - `identidad`: con qué se identifica. De un equipo: marca, modelo,
+ *   serial, placa, IP, lugar y responsable. De un comando o un atajo: lo
+ *   que se teclea. De una ficha: sus otros nombres. De una credencial: los
+ *   equipos a los que da acceso. Nunca un valor protegido.
+ * - `texto`: el contenido general. Sigue encontrando, con menos autoridad.
+ *
+ * Cada dato vive en UN campo: separarlos no duplica nada.
+ */
+export type CampoIndice =
+  | 'titulo'
+  | 'subtitulo'
+  | 'formasBusqueda'
+  | 'sintomas'
+  | 'cuandoUsar'
+  | 'identidad'
+  | 'texto'
+
+export const CAMPOS_INDICE: readonly CampoIndice[] = [
+  'titulo',
+  'subtitulo',
+  'formasBusqueda',
+  'sintomas',
+  'cuandoUsar',
+  'identidad',
+  'texto',
+]
+
 export interface DocumentoBusqueda {
   id: string
   tipo: TipoResultado
   titulo: string
   subtitulo: string
   ruta: string
+  /** Las frases de "¿Cómo buscaría alguien esta guía?", una por línea. */
+  formasBusqueda?: string
+  sintomas?: string
+  cuandoUsar?: string
+  identidad?: string
   texto: string
   // Referencia de Storage de la imagen de portada del procedimiento
   // (opcional, '' si no tiene): permite mostrar la miniatura en los
@@ -71,6 +124,26 @@ export interface ResultadoBusqueda {
    * encargo). Ausente equivale a false.
    */
   soloSinonimo?: boolean
+  // METADATA MÍNIMA DE LA COINCIDENCIA (tarea 288, fase 3). MiniSearch ya
+  // sabe en qué campos coincidió cada término y `buscar` lo descartaba.
+  // Se conserva solo lo que el ranking necesita: CAMPOS y PUNTAJE. Nunca
+  // la consulta, ni las palabras, ni los términos del documento; no se
+  // guarda en ninguna parte (vive lo que vive la lista) ni se mide. Los
+  // tres faltan en un resultado armado a mano (pruebas antiguas); el
+  // ranking lo tolera.
+  /** Los campos donde coincidió lo escrito (sin contar los sinónimos). */
+  camposCoincidentes?: CampoIndice[]
+  /**
+   * Para cada palabra que dice algo de la consulta (`palabrasDeContenido`,
+   * en el mismo orden), los campos donde coincidió ella misma: [] si no
+   * coincidió. Es lo que permite medir cuánto de la consulta explica un
+   * resultado y con qué autoridad.
+   */
+  camposPorPalabra?: CampoIndice[][]
+  /** Igual, pero por un sinónimo de esa palabra ("backup" por "respaldo"). */
+  camposPorSinonimo?: CampoIndice[][]
+  /** Puntaje de MiniSearch: BM25 con el peso de cada campo. */
+  puntajeIndice?: number
 }
 
 /** Todo lo que alimenta el índice, tal como sale de la base local. */
@@ -151,9 +224,11 @@ export function useIndiceBusqueda(): MiniSearch<DocumentoBusqueda> {
  *
  * El subtítulo empieza SIEMPRE por el tipo ("Herramienta · Acceso
  * remoto", "Atajo · Windows"): es lo que el resultado tiene que decir
- * sin abrirlo. El texto indexado es el mismo `textoBuscable` que usa la
- * pantalla del Centro de consulta, para que buscar dos veces lo mismo no
- * dé dos resultados distintos.
+ * sin abrirlo. Lo indexado son exactamente las palabras del mismo
+ * `textoBuscable` que usa la pantalla del Centro de consulta (buscar dos
+ * veces lo mismo no puede dar dos resultados distintos), repartidas
+ * desde la tarea 288 por lo que significan: lo que se teclea y los otros
+ * nombres son su identidad, y el "cuándo usar" es su cuándo usar.
  */
 export function documentoDeReferencia(referencia: Referencia): DocumentoBusqueda | null {
   if (referencia.eliminadoEn || !esTipoConocido(referencia.tipo)) return null
@@ -166,9 +241,57 @@ export function documentoDeReferencia(referencia: Referencia): DocumentoBusqueda
     titulo: tituloConAbreviatura(referencia),
     subtitulo: [...new Set(partes)].join(' · '),
     ruta: `/referencia/${referencia.id}`,
-    texto: textoBuscable(referencia),
+    // "ping [dirección]" o "Windows + R" ES el comando o el atajo; los
+    // alias ("AP", "punto de acceso") son la misma ficha con otro nombre.
+    identidad: unidos([referencia.valor, ...(referencia.alias ?? [])]),
+    cuandoUsar: unidos([referencia.cuandoUsar]),
+    texto: [
+      referencia.definicion,
+      referencia.plataforma,
+      referencia.resultadoEsperado,
+      referencia.proveedor,
+      referencia.usoEnMetroparques,
+      referencia.notas,
+      ...(referencia.etiquetas ?? []),
+    ]
+      .filter(Boolean)
+      .join(' '),
     portadaRef: '',
   }
+}
+
+/**
+ * La identidad de un equipo en el índice (tarea 288): todo lo que lo
+ * identifica salvo el nombre, que ya es el título. El serial, la placa y
+ * la IP llevan su rótulo ("serial ABC123", "placa 456", "ip 10.10.6.8")
+ * porque así los pide el técnico, y "serial ABC123" tiene que explicarse
+ * entero con ESTE equipo, no a medias. Un rótulo solo se escribe si hay
+ * valor. Los datos protegidos del equipo no entran aquí: viven cifrados en
+ * `campos_protegidos`.
+ */
+function identidadDeEquipo(dispositivo: Dispositivo, lugarVivo: string): string | undefined {
+  return unidos([
+    dispositivo.marca,
+    dispositivo.modelo,
+    dispositivo.serial ? `serial ${dispositivo.serial}` : '',
+    dispositivo.placaInventario ? `placa ${dispositivo.placaInventario}` : '',
+    dispositivo.ip ? `ip ${dispositivo.ip}` : '',
+    // El lugar vivo de su ficha de Ubicación y el texto heredado, sin
+    // repetirlo cuando coinciden (tarea 277).
+    ...new Set([dispositivo.ubicacion, lugarVivo]),
+    dispositivo.responsable,
+  ])
+}
+
+// Un campo opcional del índice: el texto, o nada si no hay texto. Un
+// campo vacío no se indexa (MiniSearch se lo salta), y así no cuenta como
+// un campo de una palabra al medir longitudes.
+function unidos(partes: (string | null | undefined)[], separador = ' '): string | undefined {
+  const texto = partes
+    .map((parte) => (parte ?? '').trim())
+    .filter(Boolean)
+    .join(separador)
+  return texto === '' ? undefined : texto
 }
 
 /**
@@ -213,7 +336,8 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
       titulo: categoria.nombre,
       subtitulo: 'Categoría',
       ruta: `/soluciones/${categoria.id}`,
-      texto: categoria.nombre,
+      // El nombre ya es el título (tarea 288: cada dato en un campo).
+      texto: '',
       portadaRef: '',
     })
   }
@@ -232,7 +356,7 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
       titulo: ubicacion.nombre,
       subtitulo: ruta.slice(0, -1).join(' > ') || 'Ubicación',
       ruta: `/ubicaciones/${ubicacion.id}`,
-      texto: [ubicacion.nombre, ubicacion.notas].join(' '),
+      texto: ubicacion.notas ?? '',
       portadaRef: '',
     })
   }
@@ -248,7 +372,7 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
       titulo: persona.nombre,
       subtitulo: persona.estado === 'retirada' ? 'Persona · Retirada' : 'Persona',
       ruta: `/personas/${persona.id}`,
-      texto: [persona.nombre, persona.notas].join(' '),
+      texto: persona.notas ?? '',
       portadaRef: '',
     })
   }
@@ -271,17 +395,26 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
         .filter(Boolean)
         .join(' · '),
       ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}`,
+      // Cada parte de la guía en el campo que dice lo que es (tarea 288).
+      // Una frase por línea: el salto separa las frases sin pegar la
+      // última palabra de una con la primera de la siguiente.
+      formasBusqueda: unidos(procedimiento?.formasBusqueda ?? [], '\n'),
+      sintomas: unidos(articulo.sintomas ?? [], '\n'),
+      // "¿Cuándo usar este procedimiento?": ya entraba al índice dentro de
+      // `textoDeProcedimiento`; ahora va aparte, no además.
+      cuandoUsar: unidos([procedimiento?.descripcion]),
       texto: [
-        articulo.titulo,
         articulo.contenido,
         textoDeProcedimiento(procedimiento),
         // Etiquetas reactivadas el 2026-07-09 (fase S1): vuelven a
         // alimentar el indice para mejorar los resultados.
         ...(articulo.etiquetas ?? []),
-        ...(articulo.sintomas ?? []),
         ...(articulo.causas ?? []),
+        // Los equipos donde aplica: contexto de la guía, no su identidad.
         ...(articulo.dispositivosAfectados ?? []).map((d) => d.nombre),
-      ].join(' '),
+      ]
+        .filter(Boolean)
+        .join(' '),
       portadaRef: procedimiento?.portada?.referencia ?? '',
     })
 
@@ -298,7 +431,7 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
           titulo: adjunto.nombre,
           subtitulo: `${articulo.titulo} · ${paso.titulo || `Paso ${indice + 1}`}`,
           ruta: `/soluciones/${articulo.categoriaId}/${articulo.id}`,
-          texto: adjunto.nombre,
+          texto: '',
           portadaRef: adjunto.tipo.startsWith('image/') ? adjunto.referencia : '',
         })
       }
@@ -321,22 +454,19 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
       titulo: dispositivo.nombre,
       subtitulo: subtitulosDeEquipo[indice],
       ruta: `/dispositivos/${dispositivo.id}`,
+      identidad: identidadDeEquipo(dispositivo, lugarDeEquipo[indice]),
       texto: [
-        dispositivo.nombre,
-        dispositivo.marca,
-        dispositivo.modelo,
-        dispositivo.serial,
-        dispositivo.placaInventario,
-        ...new Set([dispositivo.ubicacion, lugarDeEquipo[indice]]),
-        dispositivo.responsable,
-        dispositivo.ip,
         dispositivo.estado,
         dispositivo.observaciones,
         // Propiedades personalizadas (fase Dis1, punto 9): un
         // tecnico que solo recuerda un dato propio del equipo
         // (por ejemplo el usuario asignado) tambien lo encuentra.
+        // Van con el contenido general y no con la identidad: son
+        // texto libre de cualquier clase ("Windows 11 Pro").
         ...Object.values(dispositivo.detalles ?? {}),
-      ].join(' '),
+      ]
+        .filter(Boolean)
+        .join(' '),
       // Fotografia principal (fase Dis2): identifica el equipo de
       // un vistazo en los resultados, igual que la portada de un
       // procedimiento.
@@ -369,7 +499,7 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
       titulo: adjunto.nombre,
       subtitulo: dueno.titulo,
       ruta: dueno.ruta,
-      texto: adjunto.nombre,
+      texto: '',
       portadaRef: adjunto.tipo.startsWith('image/') ? adjunto.referencia : '',
     })
   }
@@ -385,7 +515,10 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
       titulo: diagnostico.titulo,
       subtitulo: [nombreCategoria.get(diagnostico.categoriaId), ROTULO_RECORRIDO].filter(Boolean).join(' · '),
       ruta: `/diagnostico/${diagnostico.id}`,
-      texto: [diagnostico.titulo, diagnostico.descripcion, textoDeNodos(diagnostico.nodos ?? [])].join(' '),
+      // Su descripción ("una línea que ayude a reconocer el problema")
+      // dice cuándo corresponde recorrerla.
+      cuandoUsar: unidos([diagnostico.descripcion]),
+      texto: textoDeNodos(diagnostico.nodos ?? []),
       portadaRef: '',
     })
   }
@@ -403,11 +536,15 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
         titulo: credencial.titulo,
         subtitulo: credencial.categoria,
         ruta: `/boveda/${credencial.id}`,
+        // A qué equipos da acceso (grupo N3): va en claro a propósito
+        // (no es el secreto) y es lo que hace que "clave impresora
+        // mercadeo" encuentre la credencial de ESE equipo (tarea 288).
+        identidad: unidos((credencial.dispositivos ?? []).map((d) => d.nombre)),
         // NUNCA portadaRef: credencial.archivo?.referencia, aunque el
         // tipo MIME sea imagen. Esa referencia apunta al bucket
         // cifrado (archivos_boveda) y no se puede renderizar directo
         // como <img>, a diferencia de los adjuntos normales.
-        texto: [credencial.titulo, credencial.archivo?.nombre ?? ''].join(' '),
+        texto: credencial.archivo?.nombre ?? '',
         portadaRef: '',
       })
     }
@@ -429,7 +566,8 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
         titulo: `${campo.nombre} · ${equipo}`,
         subtitulo: 'Dato protegido del equipo',
         ruta: `/dispositivos/${campo.dispositivoId}`,
-        texto: `${campo.nombre} ${equipo}`,
+        // El nombre del dato y el del equipo ya son el título.
+        texto: '',
         portadaRef: '',
       })
     }
@@ -438,24 +576,47 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
   return documentos
 }
 
+/**
+ * Cuánto pesa cada campo en el puntaje de MiniSearch (tarea 288). Los
+ * tres niveles del encargo: lo que nombra o identifica (título, identidad,
+ * formas de búsqueda) pesa como el título de siempre; lo que describe la
+ * situación (síntomas, cuándo usar), algo menos; el contexto, como el
+ * subtítulo de siempre; y el contenido general, lo mínimo. Es el orden de
+ * `buscar` (y el de cada grupo); "Mejores resultados" mide además QUÉ
+ * campos coincidieron (`mejores.ts`).
+ */
+export const PESO_EN_INDICE: Record<CampoIndice, number> = {
+  titulo: 3,
+  identidad: 3,
+  formasBusqueda: 3,
+  sintomas: 2,
+  cuandoUsar: 2,
+  subtitulo: 1.5,
+  texto: 1,
+}
+
 // Separado del hook para poder probarlo sin depender de React ni de
 // la base local.
 export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): MiniSearch<DocumentoBusqueda> {
   const indice = new MiniSearch<DocumentoBusqueda>({
     idField: 'id',
-    fields: ['titulo', 'subtitulo', 'texto'],
+    fields: [...CAMPOS_INDICE],
     storeFields: ['tipo', 'titulo', 'subtitulo', 'ruta', 'portadaRef'],
+    // SIN TILDES, EN LOS DOS LADOS (tarea 288). Hasta ahora el índice solo
+    // bajaba a minúsculas y la tolerancia a tildes era un efecto del
+    // difuso, que no alcanza a las palabras cortas ("qué", "llegó") ni a
+    // la ñ escrita como n. Se aplica igual al indexar y al buscar.
+    processTerm: (termino: string) => normalizarTexto(termino),
     searchOptions: {
-      boost: { titulo: 3, subtitulo: 1.5 },
-      fuzzy: 0.2,
+      boost: PESO_EN_INDICE,
+      fuzzy: FRACCION_DIFUSA,
       // Por prefijo mientras se escribe ("impre" encuentra "impresora"),
       // salvo una letra suelta que ACOMPAÑA a otras palabras (2026-09-14).
       // En "windows r" la "r" es la tecla, no el comienzo de "router",
       // "red" y "respaldo": como prefijo traía media base de datos y el
       // atajo que se buscaba quedaba enterrado. Sola ("r"), se sigue
       // tratando como prefijo, que es lo que se espera al empezar a teclear.
-      prefix: (termino: string, _indice: number, terminos: string[]) =>
-        termino.length > 1 || terminos.length === 1,
+      prefix: (termino: string, _indice: number, terminos: string[]) => usaPrefijo(termino, terminos),
     },
   })
   indice.addAll(documentos)
@@ -464,10 +625,37 @@ export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): Min
 
 type ResultadoIndice = ReturnType<MiniSearch<DocumentoBusqueda>['search']>[number]
 
+/** Un resultado del índice con lo que la tarea 288 anota de su coincidencia. */
+type ResultadoAnotado = ResultadoIndice & {
+  soloSinonimo?: boolean
+  camposPorPalabra: CampoIndice[][]
+  camposPorSinonimo: CampoIndice[][]
+}
+
 // Cuánto suma un sinónimo a un resultado que YA coincide con lo escrito:
 // desempata a favor de lo que además nombra el sinónimo, sin pasar por
 // delante de nada.
 const PESO_SINONIMO = 0.5
+
+/**
+ * En qué campos del documento coincidió alguna de las palabras `buscadas`
+ * (tarea 288). MiniSearch dice qué términos DEL DOCUMENTO coincidieron y
+ * en qué campos, no de qué palabra salió cada uno; se reconstruye con su
+ * misma regla (`derivaDe`): idéntico, por prefijo o con errata.
+ */
+function camposDe(
+  coincidencias: ResultadoIndice['match'],
+  buscadas: readonly string[],
+  terminosDeLaBusqueda: readonly string[],
+): CampoIndice[] {
+  if (buscadas.length === 0) return []
+  const campos = new Set<string>()
+  for (const [termino, enCampos] of Object.entries(coincidencias)) {
+    const salio = buscadas.some((buscada) => derivaDe(termino, buscada, usaPrefijo(buscada, terminosDeLaBusqueda)))
+    if (salio) for (const campo of enCampos) campos.add(campo)
+  }
+  return CAMPOS_INDICE.filter((campo) => campos.has(campo))
+}
 
 /**
  * Busca lo escrito y, aparte, sus sinónimos (2026-09-15).
@@ -480,22 +668,36 @@ const PESO_SINONIMO = 0.5
  * (dos palabras del sinónimo en el título) adelantaba a "Backup del
  * servidor" buscando "backup". Los sinónimos siguen sumando resultados;
  * lo que ya no pueden es tapar lo que se buscó.
+ *
+ * SE BUSCA LO QUE DICE ALGO (tarea 288): las palabras vacías de una frase
+ * ("la", "de", "una", "me") no se buscan; con prefijo y OR traían medio
+ * índice. Y cada resultado lleva anotado en qué campos coincidió cada
+ * palabra, por sí misma o por un sinónimo suyo.
  */
-export function buscarConSinonimos(indice: MiniSearch<DocumentoBusqueda>, consulta: string): ResultadoIndice[] {
-  const texto = consulta.trim()
-  if (!texto) return []
-  const directos = indice.search(texto)
-  const agregadas = sinonimosDe(texto)
-  if (agregadas.length === 0) return directos
-
-  const porSinonimo = indice.search(agregadas.join(' '))
+export function buscarConSinonimos(indice: MiniSearch<DocumentoBusqueda>, consulta: string): ResultadoAnotado[] {
+  const palabras = palabrasDeContenido(consulta)
+  if (palabras.length === 0) return []
+  const directos = indice.search(palabras.join(' '))
+  const agregadas = sinonimosDe(consulta)
+  const porSinonimo = agregadas.length > 0 ? indice.search(agregadas.join(' ')) : []
+  const sinonimosDePalabra = sinonimosPorPalabra(consulta)
   const deSinonimo = new Map(porSinonimo.map((resultado) => [resultado.id, resultado]))
-  const primeros = directos
+  const porSinonimoDe = (resultado: ResultadoIndice | undefined): CampoIndice[][] =>
+    palabras.map((palabra) =>
+      resultado ? camposDe(resultado.match, sinonimosDePalabra.get(palabra) ?? [], agregadas) : [],
+    )
+
+  const primeros: ResultadoAnotado[] = directos
     .map((resultado) => {
       const extra = deSinonimo.get(resultado.id)
-      if (!extra) return resultado
-      return {
+      const anotado = {
         ...resultado,
+        camposPorPalabra: palabras.map((palabra) => camposDe(resultado.match, [palabra], palabras)),
+        camposPorSinonimo: porSinonimoDe(extra),
+      }
+      if (!extra) return anotado
+      return {
+        ...anotado,
         score: resultado.score + PESO_SINONIMO * extra.score,
         terms: [...new Set([...resultado.terms, ...extra.terms])],
         queryTerms: [...new Set([...resultado.queryTerms, ...extra.queryTerms])],
@@ -510,11 +712,17 @@ export function buscarConSinonimos(indice: MiniSearch<DocumentoBusqueda>, consul
     // pueda colocarlos por delante de una coincidencia directa.
     ...porSinonimo
       .filter((resultado) => !idsDirectos.has(resultado.id))
-      .map((resultado) => ({ ...resultado, soloSinonimo: true })),
+      .map((resultado) => ({
+        ...resultado,
+        soloSinonimo: true,
+        camposPorPalabra: palabras.map((): CampoIndice[] => []),
+        camposPorSinonimo: porSinonimoDe(resultado),
+      })),
   ]
 }
 
-function aResultado(resultado: ResultadoIndice): ResultadoBusqueda {
+function aResultado(resultado: ResultadoAnotado): ResultadoBusqueda {
+  const coincidentes = new Set(resultado.camposPorPalabra.flat())
   return {
     id: String(resultado.id),
     tipo: resultado.tipo as TipoResultado,
@@ -523,6 +731,10 @@ function aResultado(resultado: ResultadoIndice): ResultadoBusqueda {
     ruta: resultado.ruta as string,
     portadaRef: (resultado.portadaRef as string) ?? '',
     soloSinonimo: resultado.soloSinonimo === true,
+    camposCoincidentes: CAMPOS_INDICE.filter((campo) => coincidentes.has(campo)),
+    camposPorPalabra: resultado.camposPorPalabra,
+    camposPorSinonimo: resultado.camposPorSinonimo,
+    puntajeIndice: resultado.score,
   }
 }
 

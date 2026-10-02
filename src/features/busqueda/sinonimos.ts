@@ -140,6 +140,29 @@ export function sinonimosDe(consulta: string): string[] {
   return [...extra].filter((palabra) => !yaEscritas.has(palabra))
 }
 
+/**
+ * Los mismos sinónimos que `sinonimosDe`, pero repartidos por la palabra
+ * ESCRITA que los trae (tarea 288): "poner backup del correo" da
+ * backup -> respaldo, copia, seguridad y correo -> email. Una frase de
+ * varias palabras ("copia de seguridad") se los da a cada palabra suya.
+ * Es lo que permite decir que "backup" quedó explicado por un sinónimo en
+ * un resultado y "correo" por sí misma, en vez de una bolsa sin dueño.
+ */
+export function sinonimosPorPalabra(consulta: string): Map<string, string[]> {
+  const escritas = palabrasDe(consulta)
+  const yaEscritas = new Set(consulta.trim().split(/\s+/).filter(Boolean).map(normalizar))
+  const porPalabra = new Map<string, Set<string>>()
+  for (const regla of REGLAS) {
+    if (!contieneFrase(escritas, regla.palabras)) continue
+    for (const palabra of regla.palabras) {
+      const traidas = porPalabra.get(palabra) ?? new Set<string>()
+      for (const agregada of regla.agrega) if (!yaEscritas.has(agregada)) traidas.add(agregada)
+      porPalabra.set(palabra, traidas)
+    }
+  }
+  return new Map([...porPalabra].map(([palabra, traidas]) => [palabra, [...traidas]]))
+}
+
 // Expande la consulta con los sinonimos de lo escrito.
 // "backup impresora" -> "backup impresora respaldo copia seguridad
 // impresion imprimir". Los terminos originales van primero y nunca se

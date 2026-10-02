@@ -37,15 +37,17 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | Fase | Qué | Estado |
 |---|---|---|
 | 1 | Benchmark de consultas naturales, ANTES | Hecha: 13 de 35 casos cumplen ([BUSCADOR.md](BUSCADOR.md), sección 14) |
-| 2 | Campos semánticos del índice | Pendiente |
-| 3 | Metadata de la coincidencia | Pendiente |
-| 4 | `intencionesDeConsulta` | Pendiente |
-| 5 | Formas de búsqueda en las guías | Pendiente |
-| 6 | Ranking nuevo | Pendiente |
-| 7 | Consultas mixtas | Pendiente |
-| 8 | Confianza ("Mejor coincidencia") | Pendiente |
-| 9 | Marcador y ayuda de Resolver | Pendiente |
-| 10 | El mismo benchmark, DESPUÉS | Pendiente |
+| 2 | Campos semánticos del índice | Hecha en la rama: `formasBusqueda`, `sintomas`, `cuandoUsar`, `identidad` y `texto`; índice sin tildes |
+| 3 | Metadata de la coincidencia | Hecha en la rama: `camposCoincidentes`, `camposPorPalabra`, `camposPorSinonimo`, `puntajeIndice` |
+| 4 | `intencionesDeConsulta` | Hecha en la rama: marcas por palabra, prioridad y evidencia de equipo |
+| 5 | Formas de búsqueda en las guías | Hecha en la rama: campo del editor, en el JSON del procedimiento, sin migración |
+| 6 | Ranking nuevo | Hecho en la rama: evidencia, nombre, intención, tipo y puntaje del índice |
+| 7 | Consultas mixtas | Hecha en la rama |
+| 8 | Confianza ("Mejor coincidencia") | Hecha en la rama: frontera de 100 / palabras |
+| 9 | Marcador y ayuda de Resolver | Hecha en la rama |
+| 10 | El mismo benchmark, DESPUÉS | **35 de 35** casos cumplen, sin tocar un caso |
+
+**Pausa del 2026-10-02 (a pedido del usuario).** Código, pruebas, tipos y lint en verde en la rama `feat/resolver-intencion` (2511 pruebas, 115 nuevas; 7 mutaciones de las reglas clave, todas detectadas). **Falta, en este orden:** la documentación (BUSCADOR.md secciones 1 a 5, 7.1, 7.3, una sección nueva de confianza, 12 y 14.2 con el DESPUÉS; DOCUMENTACION_FUNCIONAL.md: marcador y ayuda de Resolver, "Mejor coincidencia" y el campo del editor; ARQUITECTURA_FUNCIONAL.md y ARQUITECTURA.md: `formasBusqueda` en el JSON del procedimiento; DECISIONES.md AD-062; COMPONENTES_UI.md; CHANGELOG.md), `npm run build`, `npm run prueba:sin-conexion`, QA de Resolver a 390×844 (comprobar que la ayuda cabe en una línea), commit final, push, CI, llevar la rama a `main`, despliegue y comprobación en producción, y archivar la tarea.
 
 ### 288. Resolver entiende la intención de la consulta
 
@@ -53,7 +55,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Descripción:** benchmark de consultas naturales antes y después; campos semánticos en el índice (formas de búsqueda, síntomas, cuándo usar, identidad, texto); metadata mínima de qué campos coincidieron; `intencionesDeConsulta` con evidencia de los datos; ranking por evidencia, intención, tipo y puntaje del índice; consultas mixtas; regla de confianza ("Mejor coincidencia" solo cuando una opción es claramente superior); formas de búsqueda como campo editorial opcional de las guías; marcador y ayuda de Resolver.
 - **Motivo:** encargo del usuario del 2026-10-02 ("Resolver debe entender la intención de la consulta").
 - **Impacto:** alto: es la puerta principal de la aplicación.
-- **Prioridad:** Alta. **Estado:** En progreso (fase 1 hecha).
+- **Prioridad:** Alta. **Estado:** En progreso (fases 1 a 10 hechas en la rama; falta documentación, build, prueba sin conexión, QA, CI y despliegue).
 - **Área afectada:** `src/features/busqueda/` (`benchmarkResolver.ts` y su prueba, nuevos; `useIndiceBusqueda.ts`, `mejores.ts`, `sinonimos.ts`, `ResultadosBusqueda.tsx`, `BuscadorGlobal.tsx`), `src/lib/{db,procedimiento}.ts`, `src/features/soluciones/{ArticuloForm.tsx,borradorArticulo.ts}`, `src/features/historial/resumenProcedimiento.ts`, `src/features/inicio/ResolverPage.tsx` y la documentación del buscador.
 - **Dependencias:** ninguna.
 

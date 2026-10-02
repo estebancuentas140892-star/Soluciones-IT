@@ -334,6 +334,21 @@ export interface Procedimiento {
   // objetivo general, que dice que se LOGRA al completarlo; ambos
   // conviven y no se reemplazan. Opcional.
   descripcion: string
+  // "¿Cómo buscaría alguien esta guía?" (tarea 288): frases con las que
+  // una persona la buscaría sin saber su nombre ("no me deja enviar
+  // archivo pesado", "archivo grande por correo"). Solo alimentan el
+  // buscador (campo `formasBusqueda` del índice): nunca se muestran al
+  // ejecutar la guía, no son obligatorias ni cuentan para publicar.
+  // Distintas del título (el nombre canónico), de la descripción (cuándo
+  // corresponde), de los síntomas (qué ocurre) y de las causas (por qué).
+  //
+  // Viven en este JSON, así que no necesitan columna en Supabase ni
+  // versión nueva de Dexie. Ausente equivale a ninguna: lo guardado antes
+  // no la trae, y solo se escribe cuando hay alguna. Una copia de la app
+  // anterior a este campo que edite y guarde la guía la descarta (su
+  // normalizador no la conoce): conviene actualizar los teléfonos antes de
+  // rellenarlas.
+  formasBusqueda?: string[]
   // Imagen de portada opcional para identificar el procedimiento de
   // un vistazo en el listado, el buscador, las rutas de aprendizaje y
   // las recomendaciones. Mismo formato que los adjuntos de paso (solo
@@ -715,6 +730,8 @@ export interface DatosBorradorArticulo {
   contenido: string
   etiquetas: string[]
   descripcion: string
+  // "¿Cómo buscaría alguien esta guía?", una frase por línea (tarea 288).
+  formasBusqueda: string
   portada: PasoAdjunto | null
   objetivoGeneral: string
   requisitos: string

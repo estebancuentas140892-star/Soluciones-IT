@@ -55,6 +55,14 @@ export const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
   comando: { Icono: TerminalWindow, tono: 'text-noct-accent bg-noct-accent/[.12]' },
 }
 
+// LO QUE INVITA A ESCRIBIR (tarea 288, fase 9). Desde que el buscador
+// entiende qué se pide, el marcador invita a contarlo en vez de pedir una
+// categoría (antes, "Problema, equipo o comando"). Lo comparten el campo de
+// Resolver y la capa de la lupa, que es el mismo buscador.
+export const MARCADOR_BUSCADOR = 'Describe qué necesitas resolver…'
+/** La ayuda bajo el campo vacío: tres maneras reales de escribir. */
+export const AYUDA_BUSCADOR = 'Ej.: no imprime el PDF, usuario bloqueado, impresora mercadeo'
+
 // Los resultados se agrupan por fuente (los modulos con contenido
 // buscable), no por los tipos internos: el tecnico piensa en "donde
 // esta", no en el tipo de dato. Cada tipo cae en su grupo.

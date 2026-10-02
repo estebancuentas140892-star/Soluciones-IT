@@ -412,3 +412,26 @@ describe('resumenProcedimiento', () => {
     expect(resumen.cambios).toEqual(['Se actualizó el procedimiento.'])
   })
 })
+
+// "¿Cómo buscaría alguien esta guía?" (tarea 288) en el historial.
+describe('resumenProcedimiento: formas de búsqueda', () => {
+  const base = proc([paso({ id: 'p1', tareas: ['a'] })])
+
+  it('dice si se definieron, se cambiaron o se quitaron', () => {
+    const con = { ...base, formasBusqueda: ['impresora atascada'] }
+    const otras = { ...base, formasBusqueda: ['impresora atascada', 'no saca hojas'] }
+    expect(resumenProcedimiento(json(base), json(con)).cambios).toEqual([
+      'Se definieron las formas de búsqueda de la guía.',
+    ])
+    expect(resumenProcedimiento(json(con), json(otras)).cambios).toEqual([
+      'Se actualizaron las formas de búsqueda de la guía.',
+    ])
+    expect(resumenProcedimiento(json(otras), json(base)).cambios).toEqual([
+      'Se quitaron las formas de búsqueda de la guía.',
+    ])
+  })
+
+  it('una versión de antes del campo no cuenta como cambio', () => {
+    expect(resumenProcedimiento(json(base), json(base)).cambios).toEqual(['Se actualizó el procedimiento.'])
+  })
+})

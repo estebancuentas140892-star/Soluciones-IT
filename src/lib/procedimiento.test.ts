@@ -632,7 +632,10 @@ describe('tareasDe', () => {
 })
 
 describe('textoDeProcedimiento', () => {
-  it('junta descripción, requisitos, títulos y textos de los bloques para el índice de búsqueda', () => {
+  // La descripción ("cuándo usar") sigue en el índice, pero en su propio
+  // campo (`cuandoUsar`) desde la tarea 288: aquí ya no se repite. Lo que
+  // entra por ese campo lo prueba `busqueda.test.ts`.
+  it('junta requisitos, títulos y textos de los bloques para el índice; la descripción va aparte', () => {
     const texto = textoDeProcedimiento(
       procedimientoCompleto({
         descripcion: 'Usar cuando el respaldo nocturno falla',
@@ -647,7 +650,7 @@ describe('textoDeProcedimiento', () => {
         ],
       }),
     )
-    expect(texto).toContain('Usar cuando el respaldo nocturno falla')
+    expect(texto).not.toContain('Usar cuando el respaldo nocturno falla')
     expect(texto).toContain('Credenciales del SQL Server')
     expect(texto).toContain('Abrir SQL Server Management Studio')
     expect(texto).toContain('Verificar el espacio en disco')
@@ -1251,5 +1254,54 @@ describe('bloques de referencia', () => {
     )
 
     expect(texto).toContain('ping')
+  })
+})
+
+// "¿CÓMO BUSCARÍA ALGUIEN ESTA GUÍA?" (tarea 288, fase 5). Viven en el JSON
+// del procedimiento: sin columna nueva en Supabase ni versión de Dexie.
+describe('formas de búsqueda de una guía', () => {
+  it('se leen limpias: sin vacías, sin repetidas y sin lo que no es texto', () => {
+    const procedimiento = normalizarProcedimiento({
+      ...procedimientoCompleto(),
+      formasBusqueda: ['  no me deja enviar archivo pesado ', '', 'No me deja enviar archivo pesado', 42, 'mandar archivo pesado'],
+    })
+    expect(procedimiento?.formasBusqueda).toEqual(['no me deja enviar archivo pesado', 'mandar archivo pesado'])
+  })
+
+  it('lo guardado antes no las trae, y leerlo no inventa la clave', () => {
+    const procedimiento = normalizarProcedimiento(procedimientoCompleto())
+    expect(procedimiento).not.toHaveProperty('formasBusqueda')
+  })
+
+  it('una guía sin pasos con solo formas de búsqueda no pierde lo escrito', () => {
+    expect(normalizarProcedimiento({ pasos: [], formasBusqueda: ['impresora atascada'] })?.formasBusqueda).toEqual([
+      'impresora atascada',
+    ])
+  })
+
+  it('al guardar: una frase por línea, y sin ninguna no se escribe la clave', () => {
+    const conFormas = preparar([pasoCompleto()], {
+      formasBusquedaTexto: 'archivo grande por correo\n\n  no puedo adjuntar archivo  \n',
+    })
+    expect(conFormas?.formasBusqueda).toEqual(['archivo grande por correo', 'no puedo adjuntar archivo'])
+    // El JSON de una guía que no las usa queda exactamente como antes.
+    expect(preparar([pasoCompleto()])).not.toHaveProperty('formasBusqueda')
+    expect(preparar([pasoCompleto()], { formasBusquedaTexto: '  \n ' })).not.toHaveProperty('formasBusqueda')
+  })
+
+  it('solo con formas de búsqueda ya hay algo que guardar', () => {
+    expect(preparar([], { formasBusquedaTexto: 'impresora atascada' })?.formasBusqueda).toEqual(['impresora atascada'])
+  })
+
+  it('duplicar la guía las copia, sin compartir la lista con el original', () => {
+    const original = procedimientoCompleto({ formasBusqueda: ['impresora atascada'] })
+    const copia = duplicarProcedimiento(original)
+    expect(copia.formasBusqueda).toEqual(['impresora atascada'])
+    expect(copia.formasBusqueda).not.toBe(original.formasBusqueda)
+  })
+
+  it('no entran al contenido general del índice: tienen su propio campo', () => {
+    const texto = textoDeProcedimiento(procedimientoCompleto({ formasBusqueda: ['impresora atascada'] }))
+    expect(texto).not.toContain('impresora atascada')
   })
 })

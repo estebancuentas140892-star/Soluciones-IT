@@ -153,6 +153,8 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
   const descripcion = texto(origen.descripcion)
   const portada = normalizarUnAdjunto(origen.portada)
   const objetivoGeneral = texto(origen.objetivoGeneral)
+  // Ausentes en todo lo guardado antes de la tarea 288.
+  const formasBusqueda = frasesDeBusqueda(origen.formasBusqueda)
 
   const requisitos = Array.isArray(origen.requisitos)
     ? origen.requisitos.filter((r): r is string => typeof r === 'string' && r.trim() !== '')
@@ -173,6 +175,7 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
 
   const sinContenido =
     descripcion === '' &&
+    formasBusqueda.length === 0 &&
     !portada &&
     objetivoGeneral === '' &&
     requisitos.length === 0 &&
@@ -184,6 +187,7 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
 
   return {
     descripcion,
+    ...conFormasBusqueda(formasBusqueda),
     portada,
     objetivoGeneral,
     requisitos,
@@ -192,6 +196,30 @@ export function normalizarProcedimiento(valor: unknown): Procedimiento | null {
     tiempoEstimadoMin,
     dificultad,
   }
+}
+
+// Las frases de "¿Cómo buscaría alguien esta guía?" (tarea 288): texto no
+// vacío, recortado y sin repetir la misma frase (sin distinguir
+// mayúsculas). Tolera lo que llegue de una versión anterior o corrupta.
+function frasesDeBusqueda(valor: unknown): string[] {
+  if (!Array.isArray(valor)) return []
+  const vistas = new Set<string>()
+  const frases: string[] = []
+  for (const frase of valor) {
+    if (typeof frase !== 'string') continue
+    const limpia = frase.trim()
+    const clave = limpia.toLowerCase()
+    if (limpia === '' || vistas.has(clave)) continue
+    vistas.add(clave)
+    frases.push(limpia)
+  }
+  return frases
+}
+
+// La clave solo se escribe cuando hay alguna frase: el JSON de las guías
+// que no las usan queda exactamente como antes de la tarea 288.
+function conFormasBusqueda(formasBusqueda: string[]): Pick<Procedimiento, 'formasBusqueda'> {
+  return formasBusqueda.length > 0 ? { formasBusqueda } : {}
 }
 
 // ¿Este procedimiento tiene pasos que ejecutar? Un procedimiento no
@@ -535,6 +563,9 @@ export function duplicarProcedimiento(procedimiento: Procedimiento): Procedimien
     requisitos: [...procedimiento.requisitos],
     verificacionFinal: [...procedimiento.verificacionFinal],
     portada: procedimiento.portada ? { ...procedimiento.portada } : null,
+    // Las formas de búsqueda se copian como cualquier otro texto de la
+    // guía: la copia nace en borrador y su autor las ajusta.
+    ...conFormasBusqueda([...(procedimiento.formasBusqueda ?? [])]),
   }
 }
 
@@ -557,12 +588,15 @@ function duplicarBloques(bloques: BloquePaso[]): BloquePaso[] {
 // El titulo de la informacion protegida vinculada (credencial o campo
 // protegido) queda fuera a proposito: esos titulos solo entran al
 // indice cuando la boveda esta desbloqueada (ARQUITECTURA.md, seccion 6).
+//
+// Es el CONTENIDO GENERAL de la guia (tarea 288). La descripcion ("cuando
+// usar este procedimiento") y las formas de busqueda NO van aqui: el
+// indice las lleva en sus propios campos (`cuandoUsar` y
+// `formasBusqueda`), porque coincidir ahi dice mas que coincidir con una
+// palabra suelta de un paso. Siguen encontrandose igual, sin duplicarse.
 export function textoDeProcedimiento(procedimiento: Procedimiento | null): string {
   if (!procedimiento) return ''
-  // La descripcion ("cuando usar este procedimiento") entra al indice:
-  // buscar por la situacion ("impresora de red") encuentra el articulo.
   const partes = [
-    procedimiento.descripcion,
     procedimiento.objetivoGeneral,
     ...procedimiento.requisitos,
     ...procedimiento.verificacionFinal,
@@ -641,6 +675,9 @@ export function pasoTrabajoPrevioCompleto(
 
 export interface DatosProcedimientoParaGuardar {
   descripcion: string
+  // "¿Cómo buscaría alguien esta guía?", una frase por línea (tarea 288).
+  // Opcional: quien no lo pasa guarda sin formas de búsqueda.
+  formasBusquedaTexto?: string
   portada: PasoAdjunto | null
   objetivoGeneral: string
   requisitosTexto: string
@@ -662,6 +699,7 @@ export interface DatosProcedimientoParaGuardar {
 // guardados desde entonces igual los conservan.
 export function prepararProcedimientoParaGuardar({
   descripcion,
+  formasBusquedaTexto = '',
   portada,
   objetivoGeneral,
   requisitosTexto,
@@ -679,6 +717,8 @@ export function prepararProcedimientoParaGuardar({
     .split('\n')
     .map((linea) => linea.trim())
     .filter(Boolean)
+
+  const formasBusqueda = frasesDeBusqueda(formasBusquedaTexto.split('\n'))
 
   const pasosLimpios = pasos
     .map((paso) => ({
@@ -709,6 +749,7 @@ export function prepararProcedimientoParaGuardar({
 
   const sinContenido =
     descripcionLimpia === '' &&
+    formasBusqueda.length === 0 &&
     !portada &&
     objetivoGeneralLimpio === '' &&
     requisitos.length === 0 &&
@@ -720,6 +761,7 @@ export function prepararProcedimientoParaGuardar({
 
   return {
     descripcion: descripcionLimpia,
+    ...conFormasBusqueda(formasBusqueda),
     portada,
     objetivoGeneral: objetivoGeneralLimpio,
     requisitos,

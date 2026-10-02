@@ -7,6 +7,7 @@ import {
   campoBuscador,
   control,
   desmontarTodo,
+  escribir,
   esperar,
   limpiarBase,
   montar,
@@ -329,14 +330,31 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
     await montar(RUTAS, '/')
     const texto = await esperarTexto('¿Qué necesitas resolver?')
     expect(campoBuscador()).not.toBeNull()
-    // El marcador dice qué se escribe (propuesta final de Claude Design) y
-    // el nombre accesible sigue diciendo el alcance.
-    expect(campoBuscador()?.placeholder).toBe('Problema, equipo o comando')
+    // El marcador invita a contar lo que pasa (tarea 288; antes "Problema,
+    // equipo o comando") y el nombre accesible sigue diciendo el alcance.
+    expect(campoBuscador()?.placeholder).toBe('Describe qué necesitas resolver…')
     expect(campoBuscador()?.getAttribute('aria-label')).toBe('Buscar en Soluciones IT')
     // Sin nada que atender no hay bloque "Atención" (ni un "todo al día"
     // de adorno), pero el catálogo sigue a un toque.
     expect(texto).not.toContain('Atención')
     expect(control('Todas las guías')).not.toBeNull()
+  })
+
+  it('con el campo vacío hay una ayuda de una línea, y se va al escribir (tarea 288)', async () => {
+    await montar(RUTAS, '/')
+    const ayuda = 'Ej.: no imprime el PDF, usuario bloqueado, impresora mercadeo'
+    await esperarTexto(ayuda)
+    const parrafo = () =>
+      Array.from(document.body.querySelectorAll('p')).find((p) => p.textContent === ayuda) ?? null
+    // Un párrafo de texto: ni tarjeta, ni botón, ni tutorial.
+    expect(parrafo()?.closest('button, a, [role="dialog"]')).toBeNull()
+    expect(parrafo()?.closest('[aria-hidden="true"]')).toBeNull()
+
+    await escribir(campoBuscador()!, 'impresora')
+    // Se pliega con la pregunta y deja de leerse.
+    expect(parrafo()?.closest('[aria-hidden="true"]')).not.toBeNull()
+    await escribir(campoBuscador()!, '')
+    expect(parrafo()?.closest('[aria-hidden="true"]')).toBeNull()
   })
 
   it('"Atención" enseña hasta tres asuntos con fecha y lleva a la agenda completa', async () => {

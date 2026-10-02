@@ -23,6 +23,7 @@ import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { BorradoresCoincidentes, GuiasEnBorrador } from '../busqueda/BorradoresCoincidentes'
+import { AYUDA_BUSCADOR, MARCADOR_BUSCADOR } from '../busqueda/resultados'
 import {
   borradoresCoincidentes,
   esBorradorVivo,
@@ -221,14 +222,31 @@ export function ResolverPage() {
               </p>
             </div>
           </div>
+          {/* SE DESCRIBE, NO SE NOMBRA (tarea 288, fase 9). Desde que el
+              buscador entiende qué se pide, el marcador invita a contarlo
+              ("Describe qué necesitas resolver…") en vez de pedir una
+              categoría ("Problema, equipo o comando"). */}
           <CampoBusqueda
             valor={query}
             onCambiar={setQuery}
             alcance="Soluciones IT"
-            textoAlternativo="Problema, equipo o comando"
+            textoAlternativo={MARCADOR_BUSCADOR}
             refCampo={refCampo}
             variante="destacada"
           />
+          {/* Con el campo vacío, una ayuda discreta con tres maneras reales
+              de escribir; se pliega con el primer carácter, igual que la
+              pregunta. Sin tarjeta ni tutorial: una línea de texto. */}
+          <div
+            aria-hidden={escribiendo}
+            className={`grid transition-[grid-template-rows,opacity] duration-[180ms] ease-out motion-reduce:transition-none ${
+              escribiendo ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+            }`}
+          >
+            <div className="overflow-hidden">
+              <p className="px-1 pt-2 text-[12.5px] leading-snug text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
+            </div>
+          </div>
         </div>
       }
     >

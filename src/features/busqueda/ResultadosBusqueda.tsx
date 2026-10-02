@@ -7,7 +7,7 @@ import { useAccionesDeGuia } from '../soluciones/useAccionesDeGuia'
 import { AccionesDeResultado } from './AccionesResultado'
 import { useAnotarBusqueda } from './busquedaEnHistorial'
 import { ContextoResultados, idDeEntidad, useContextoResultados } from './contextoResultados'
-import { hayQueSepararMejores, mejoresResultados, sinLosMejores } from './mejores'
+import { hayQueSepararMejores, leerResultados, sinLosMejores } from './mejores'
 import { eventoDeResolucion, registrarResolucion } from './medicion'
 import { filaNavega, vistaRapidaDe, type ModoBuscador } from './modoConsulta'
 import { PuenteBoveda } from './PuenteBoveda'
@@ -41,6 +41,13 @@ import { VistaRapidaResultado } from './VistaRapida'
 // su grupo. Y cuando la seleccion se llevaria TODO lo encontrado dentro
 // de un mismo grupo, la seccion no se dibuja: seria el mismo contenido
 // con otro rotulo (`hayQueSepararMejores`).
+//
+// SIN FINGIR CERTEZA (tarea 288, fase 8). Cuando una opción es claramente
+// superior (la regla de confianza de `mejores.ts`), la sección de arriba
+// se parte en "Mejor coincidencia" (esa sola) y "Otras coincidencias" (el
+// resto de los mejores). Si las primeras están cerca, sigue siendo
+// "Mejores resultados", como siempre. Son los mismos resultados, en el
+// mismo orden y con las mismas acciones: solo cambia lo que se afirma.
 
 export function FilaResultado({
   resultado,
@@ -321,8 +328,10 @@ export function ResultadosBusqueda({
   enCapa?: boolean
 }) {
   const accionesGuia = useAccionesDeGuia()
-  const mejores = useMemo(() => mejoresResultados(resultados, consulta), [resultados, consulta])
+  const lectura = useMemo(() => leerResultados(resultados, consulta), [resultados, consulta])
+  const mejores = lectura.mejores
   const separar = hayQueSepararMejores(resultados, mejores)
+  const mejorCoincidencia = separar && lectura.confianza === 'alta'
   const grupos = useMemo(
     () => agruparResultados(separar ? sinLosMejores(resultados, mejores) : resultados),
     [resultados, mejores, separar],
@@ -383,22 +392,57 @@ export function ResultadosBusqueda({
   // ("Mejores resultados · 5 equipos") y no se repite en cada fila
   // (propuesta final de Claude Design); si no, cada fila dice el suyo.
   const tipoDeLosMejores = tipoComun(mejores)
+  const otras = mejores.slice(1)
+  const tipoDeLasOtras = tipoComun(otras)
   const secciones = [
-    ...(separar
+    ...(mejorCoincidencia
       ? [
+          // Una sola fila: dice su tipo y no lleva cuenta ("· 1" es ruido).
           {
-            clave: 'mejores',
-            nombre: 'Mejores resultados',
+            clave: 'mejor',
+            nombre: 'Mejor coincidencia',
             Icono: Crosshair,
             tonoIcono: 'text-noct-accent-300',
-            items: mejores,
-            conTipo: tipoDeLosMejores === null,
-            cuenta: tipoDeLosMejores ? `· ${cuentaDeTipo(tipoDeLosMejores, mejores.length)}` : null,
+            items: mejores.slice(0, 1),
+            conTipo: true,
+            cuenta: null,
+            sinCuenta: true,
             conAcciones: true,
             desdeMejores: true,
           },
+          ...(otras.length > 0
+            ? [
+                {
+                  clave: 'otras',
+                  nombre: 'Otras coincidencias',
+                  Icono: Crosshair,
+                  tonoIcono: 'text-noct-neutral-400',
+                  items: otras,
+                  conTipo: tipoDeLasOtras === null,
+                  cuenta: tipoDeLasOtras ? `· ${cuentaDeTipo(tipoDeLasOtras, otras.length)}` : null,
+                  sinCuenta: false,
+                  conAcciones: true,
+                  desdeMejores: true,
+                },
+              ]
+            : []),
         ]
-      : []),
+      : separar
+        ? [
+            {
+              clave: 'mejores',
+              nombre: 'Mejores resultados',
+              Icono: Crosshair,
+              tonoIcono: 'text-noct-accent-300',
+              items: mejores,
+              conTipo: tipoDeLosMejores === null,
+              cuenta: tipoDeLosMejores ? `· ${cuentaDeTipo(tipoDeLosMejores, mejores.length)}` : null,
+              sinCuenta: false,
+              conAcciones: true,
+              desdeMejores: true,
+            },
+          ]
+        : []),
     ...grupos.map((grupo) => ({
       clave: grupo.id,
       nombre: grupo.nombre,
@@ -407,12 +451,17 @@ export function ResultadosBusqueda({
       items: grupo.items,
       conTipo: false,
       cuenta: null,
+      sinCuenta: false,
       // Un resultado unico no tiene seccion de mejores encima: su fila
       // es la que lleva la accion.
       conAcciones: !separar,
       desdeMejores: false,
     })),
   ]
+  // El puente va detrás del bloque de arriba ENTERO: con "Mejor
+  // coincidencia" y "Otras coincidencias", detrás de las dos, para no
+  // partir en dos la misma lectura. Sin ese bloque, detrás del primer grupo.
+  const despuesDe = Math.max(0, secciones.findLastIndex((seccion) => seccion.desdeMejores))
 
   return (
     <ContextoResultados.Provider value={contexto}>
@@ -427,7 +476,7 @@ export function ResultadosBusqueda({
               <div className="mb-1 flex items-center gap-2 px-0.5">
                 <seccion.Icono size={14} className={seccion.tonoIcono} aria-hidden />
                 <TituloSeccion>{seccion.nombre}</TituloSeccion>
-                {seccion.cuenta ? (
+                {seccion.sinCuenta ? null : seccion.cuenta ? (
                   <span className="text-[11px] text-noct-neutral-500">{seccion.cuenta}</span>
                 ) : (
                   <span className="text-[11px] text-noct-neutral-600">{seccion.items.length}</span>
@@ -456,7 +505,7 @@ export function ResultadosBusqueda({
                 ESTE es el resultado. Se dibuja solo cuando aplica, y en
                 su forma compacta cuando lo público ya responde con
                 fuerza (sección 14 del encargo del 2026-09-16). */}
-            {indice === 0 && (
+            {indice === despuesDe && (
               <PuenteBoveda
                 consulta={consultaCruda}
                 onDesbloqueada={onDesbloqueada}

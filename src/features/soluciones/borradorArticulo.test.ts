@@ -190,3 +190,24 @@ describe('la tabla de borradores', () => {
     expect(await db.borradoresArticulo.get('reciente')).toBeDefined()
   })
 })
+
+// Las formas de búsqueda (tarea 288) viajan en el borrador continuo como el
+// resto del formulario: una frase por línea.
+describe('formas de búsqueda en el borrador del editor', () => {
+  it('el formulario de una guía guardada las trae una por línea', () => {
+    const articulo = articuloDePrueba()
+    articulo.procedimiento = { ...articulo.procedimiento!, formasBusqueda: ['impresora atascada', 'no saca hojas'] }
+    expect(datosDesdeArticulo(articulo).formasBusqueda).toBe('impresora atascada\nno saca hojas')
+    expect(datosDesdeArticulo(articuloDePrueba()).formasBusqueda).toBe('')
+  })
+
+  it('un borrador de antes del campo se abre con el campo vacío', () => {
+    expect(normalizarDatosBorrador({ titulo: 'Viejo' }).formasBusqueda).toBe('')
+  })
+
+  it('escribir solo una forma de búsqueda ya es un cambio que recuperar', () => {
+    const guardado = datosDesdeArticulo(articuloDePrueba())
+    expect(borradorDifiere({ ...guardado, formasBusqueda: 'impresora atascada' }, guardado)).toBe(true)
+    expect(borradorTieneContenido({ ...datosVacios(), formasBusqueda: 'impresora atascada' })).toBe(true)
+  })
+})

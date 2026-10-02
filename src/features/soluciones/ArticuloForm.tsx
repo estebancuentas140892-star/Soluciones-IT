@@ -176,6 +176,8 @@ export function ArticuloForm() {
   const [contenido, setContenido] = useState('')
   const [etiquetas, setEtiquetas] = useState<string[]>([])
   const [descripcion, setDescripcion] = useState('')
+  // "¿Cómo buscaría alguien esta guía?", una frase por línea (tarea 288).
+  const [formasBusqueda, setFormasBusqueda] = useState('')
   const [portada, setPortada] = useState<PasoAdjunto | null>(null)
   const [objetivoGeneral, setObjetivoGeneral] = useState('')
   const [requisitos, setRequisitos] = useState('')
@@ -327,6 +329,7 @@ export function ArticuloForm() {
     setContenido(articulo.contenido)
     const procedimiento = normalizarProcedimiento(articulo.procedimiento)
     setDescripcion(procedimiento?.descripcion ?? '')
+    setFormasBusqueda((procedimiento?.formasBusqueda ?? []).join('\n'))
     setPortada(procedimiento?.portada ?? null)
     setObjetivoGeneral(procedimiento?.objetivoGeneral ?? '')
     setRequisitos(procedimiento?.requisitos.join('\n') ?? '')
@@ -362,6 +365,7 @@ export function ArticuloForm() {
     const procedimiento = normalizarProcedimiento(original.procedimiento)
     const copia = procedimiento ? duplicarProcedimiento(procedimiento) : null
     setDescripcion(copia?.descripcion ?? '')
+    setFormasBusqueda((copia?.formasBusqueda ?? []).join('\n'))
     setPortada(copia?.portada ?? null)
     setObjetivoGeneral(copia?.objetivoGeneral ?? '')
     setRequisitos(copia?.requisitos.join('\n') ?? '')
@@ -420,6 +424,7 @@ export function ArticuloForm() {
       contenido,
       etiquetas,
       descripcion,
+      formasBusqueda,
       portada,
       objetivoGeneral,
       requisitos,
@@ -444,6 +449,7 @@ export function ArticuloForm() {
       contenido,
       etiquetas,
       descripcion,
+      formasBusqueda,
       portada,
       objetivoGeneral,
       requisitos,
@@ -482,6 +488,7 @@ export function ArticuloForm() {
     setContenido(datos.contenido)
     setEtiquetas(datos.etiquetas)
     setDescripcion(datos.descripcion)
+    setFormasBusqueda(datos.formasBusqueda)
     setPortada(datos.portada)
     setObjetivoGeneral(datos.objetivoGeneral)
     setRequisitos(datos.requisitos)
@@ -556,6 +563,7 @@ export function ArticuloForm() {
     () =>
       prepararProcedimientoParaGuardar({
         descripcion,
+        formasBusquedaTexto: formasBusqueda,
         portada,
         objetivoGeneral,
         requisitosTexto: requisitos,
@@ -564,7 +572,17 @@ export function ArticuloForm() {
         tiempoEstimadoMin: tiempoEstimadoMin.trim() === '' ? null : Number(tiempoEstimadoMin),
         dificultad: dificultad === '' ? null : dificultad,
       }),
-    [descripcion, portada, objetivoGeneral, requisitos, pasos, verificacionFinal, tiempoEstimadoMin, dificultad],
+    [
+      descripcion,
+      formasBusqueda,
+      portada,
+      objetivoGeneral,
+      requisitos,
+      pasos,
+      verificacionFinal,
+      tiempoEstimadoMin,
+      dificultad,
+    ],
   )
 
   // LO QUE LA REGLA 20 PIDE CORREGIR, sobre lo que se está escribiendo
@@ -1064,6 +1082,26 @@ export function ArticuloForm() {
                 placeholder="Qué se logra al completar todo el procedimiento"
                 className={`min-h-11 ${CLASE_CAMPO}`}
               />
+            </Campo>
+
+            {/* CÓMO SE BUSCA (tarea 288, fase 5). El título es el nombre
+                canónico, "cuándo usar" dice cuándo corresponde y los
+                síntomas qué ocurre; esto es cómo lo diría alguien que no
+                sabe cómo se llama la guía. Alimenta solo al buscador: no
+                se ve al ejecutar la guía, no es obligatorio y no cuenta
+                para publicar ni para la completitud. */}
+            <Campo etiqueta="¿Cómo buscaría alguien esta guía?">
+              <textarea
+                rows={3}
+                value={formasBusqueda}
+                onChange={(e) => setFormasBusqueda(e.target.value)}
+                placeholder={'no me deja enviar archivo pesado\narchivo grande por correo'}
+                className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+              />
+              <p className="mt-1.5 text-[12px] leading-snug text-noct-neutral-400">
+                Frases que alguien escribiría sin saber el nombre de la guía, una por línea. Solo sirven para
+                encontrarla: no se ven al ejecutarla.
+              </p>
             </Campo>
 
             <EtiquetasEditor

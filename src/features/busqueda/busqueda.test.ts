@@ -10,6 +10,9 @@ import type {
   Referencia,
   Ubicacion,
 } from '../../lib/db'
+import { textoBuscable } from '../referencia/referencias'
+import { datosBenchmark } from './benchmarkResolver'
+import { palabrasDeConsulta } from './consultaNatural'
 import { agruparResultados } from './resultados'
 import { hayQueSepararMejores, mejoresResultados } from './mejores'
 import {
@@ -958,5 +961,162 @@ describe('equipos en el buscador: se ve menos, se encuentra igual', () => {
     // El nombre vivo de la ubicación se busca, y el texto heredado también.
     expect(encuentra('principal')).toContain('dispositivo:hp')
     expect(encuentra('vieja')).toContain('dispositivo:hp')
+  })
+})
+
+// ----------------------------------------------------------------
+// CAMPOS SEMÁNTICOS Y METADATA DE LA COINCIDENCIA (tarea 288, fases 2 y 3)
+// ----------------------------------------------------------------
+//
+// Sobre los datos sintéticos del benchmark (`benchmarkResolver.ts`), que
+// tienen la estructura de los reales.
+
+describe('cada dato del índice en el campo que dice lo que es (tarea 288)', () => {
+  const documentos = documentosDeBusqueda(datosBenchmark(false))
+  const documento = (id: string) => {
+    const encontrado = documentos.find((d) => d.id === id)
+    if (!encontrado) throw new Error(`no está ${id}`)
+    return encontrado
+  }
+
+  it('una guía: formas de búsqueda, síntomas y cuándo usar van aparte del contenido, sin duplicarse', () => {
+    const adjunto = documento('articulo:a-adjunto')
+    expect(adjunto.formasBusqueda?.split('\n')).toEqual([
+      'no me deja enviar archivo pesado',
+      'archivo grande por correo',
+      'no puedo adjuntar archivo',
+      'mandar archivo pesado',
+    ])
+    expect(adjunto.cuandoUsar).toBe('Usar cuando Outlook no deja adjuntar un archivo porque supera el tamaño permitido.')
+    const cola = documento('articulo:a-cola')
+    expect(cola.sintomas?.split('\n')).toEqual(['No imprime nada', 'Los documentos se quedan en cola'])
+    // Ni el título, ni el cuándo usar, ni los síntomas, ni las formas se
+    // repiten en el contenido general.
+    for (const guia of [adjunto, cola]) {
+      expect(guia.texto).not.toContain(guia.titulo)
+      expect(guia.texto).not.toContain(guia.cuandoUsar)
+    }
+    expect(cola.texto).not.toContain('No imprime nada')
+    expect(adjunto.texto).not.toContain('archivo grande por correo')
+    // Las causas, los pasos y los equipos donde aplica siguen en el contenido.
+    expect(cola.texto).toContain('El servicio Cola de impresión se detuvo')
+    expect(cola.texto).toContain('Detén el servicio')
+    expect(documento('articulo:a-toner').texto).toContain('Impresora Mercadeo')
+  })
+
+  it('un equipo: su identidad aparte, con el serial, la placa y la IP rotulados', () => {
+    const equipo = documento('dispositivo:d-imp-mercadeo')
+    expect(equipo.identidad).toBe('Ricoh MP 501 serial W3089500123 placa 1123 ip 10.10.6.8 Mercadeo Carlos Restrepo')
+    expect(equipo.texto).toContain('Operativo')
+    expect(equipo.texto).toContain('Multifuncional del área')
+    expect(equipo.texto).not.toContain('10.10.6.8')
+    // Las propiedades personalizadas son texto libre: contenido general.
+    const pc = documento('dispositivo:d-pc-contabilidad')
+    expect(pc.texto).toContain('Windows 11 Pro')
+    expect(pc.identidad).not.toContain('Windows')
+  })
+
+  it('un rótulo de identidad solo se escribe si el equipo tiene ese dato', () => {
+    const ups = documento('dispositivo:d-ups-sistemas')
+    expect(ups.identidad).toContain('placa 456')
+    expect(ups.identidad).not.toMatch(/\bip\b/)
+  })
+
+  it('una guía con preguntas: su descripción es su cuándo usar', () => {
+    const recorrido = documento('diagnostico:dg-imprime')
+    expect(recorrido.cuandoUsar).toBe('Para cuando una impresora no saca las hojas o las deja en cola.')
+    expect(recorrido.texto).toContain('¿Los documentos se quedan en la cola?')
+  })
+
+  it('una ficha del Centro de consulta: lo que se teclea es su identidad, y no se pierde ninguna palabra', () => {
+    const ping = documento('referencia:r-ping')
+    expect(ping.identidad).toBe('ping [dirección]')
+    expect(ping.cuandoUsar).toBe('Para comprobar si hay camino de red hasta un equipo.')
+    // Lo indexado son las palabras del mismo `textoBuscable` de la pantalla
+    // del Centro de consulta: repartidas por campos, ninguna se queda fuera.
+    for (const ficha of FICHAS) {
+      const indexado = documentoDeReferencia(ficha)!
+      const palabras = new Set(
+        palabrasDeConsulta(
+          [indexado.titulo, indexado.identidad, indexado.cuandoUsar, indexado.texto].filter(Boolean).join(' '),
+        ),
+      )
+      const faltan = palabrasDeConsulta(textoBuscable(ficha)).filter((palabra) => !palabras.has(palabra))
+      expect({ ficha: ficha.id, faltan }).toEqual({ ficha: ficha.id, faltan: [] })
+    }
+  })
+
+  it('una credencial: los equipos a los que da acceso, y solo con la Bóveda abierta', () => {
+    const abierta = documentosDeBusqueda(datosBenchmark(true))
+    expect(abierta.find((d) => d.id === 'credencial:c-srv-admin')?.identidad).toBe('Servidor de facturación')
+    expect(documentos.some((d) => d.tipo === 'credencial' || d.id.startsWith('campo:'))).toBe(false)
+    expect(JSON.stringify(abierta)).not.toContain('cifrado-')
+  })
+
+  it('un campo vacío no se indexa: lo que no tiene "cuándo usar" no lo lleva', () => {
+    expect(documento('referencia:r-dhcp').cuandoUsar).toBeUndefined()
+    expect(documento('dispositivo:d-imp-mercadeo').sintomas).toBeUndefined()
+  })
+})
+
+describe('la coincidencia se anota por campo y por palabra (tarea 288)', () => {
+  const indice = crearIndiceDesdeDocumentos(documentosDeBusqueda(datosBenchmark(false)))
+  const encontrado = (consulta: string, id: string) => {
+    const resultado = buscar(indice, consulta).find((r) => r.id === id)
+    if (!resultado) throw new Error(`"${consulta}" no encuentra ${id}`)
+    return resultado
+  }
+
+  it('dice en qué campos coincidió cada palabra que dice algo', () => {
+    const guia = encontrado('usuario bloqueado', 'articulo:a-desbloquear')
+    // "usuario" está en el nombre; "bloqueado", en sus formas de búsqueda
+    // ("cuenta bloqueada") y en su cuándo usar, con la errata de género.
+    expect(guia.camposPorPalabra?.[0]).toContain('titulo')
+    expect(guia.camposPorPalabra?.[1]).toEqual(['formasBusqueda', 'cuandoUsar'])
+    expect(guia.camposCoincidentes).toEqual(expect.arrayContaining(['titulo', 'formasBusqueda', 'cuandoUsar']))
+    expect(guia.puntajeIndice).toBeGreaterThan(0)
+  })
+
+  it('un equipo encontrado por su IP coincide en su identidad, no en el contenido', () => {
+    expect(encontrado('10.10.6.8', 'dispositivo:d-imp-mercadeo').camposCoincidentes).toEqual(['identidad'])
+  })
+
+  it('una palabra vacía no se busca ni se anota: "la impresora" es "impresora"', () => {
+    const ids = (consulta: string) => buscar(indice, consulta).map((r) => r.id)
+    expect(ids('la impresora')).toEqual(ids('impresora'))
+    expect(encontrado('la impresora', 'diagnostico:dg-imprime').camposPorPalabra).toHaveLength(1)
+  })
+
+  it('lo que trae un sinónimo se anota aparte de lo escrito', () => {
+    const pst = encontrado('poner backup del correo', 'articulo:a-pst')
+    // "backup" no está en la guía; la explican "respaldo" y "copia de seguridad".
+    expect(pst.camposPorPalabra?.[1]).toEqual([])
+    expect(pst.camposPorSinonimo?.[1]).toEqual(expect.arrayContaining(['formasBusqueda', 'cuandoUsar']))
+    // "correo" sí está, por sí misma.
+    expect(pst.camposPorPalabra?.[2]).toContain('formasBusqueda')
+    // Lo que SOLO trae un sinónimo no explica ninguna palabra escrita.
+    const soloSinonimo = buscar(indice, 'backup').find((r) => r.soloSinonimo)
+    expect(soloSinonimo?.camposCoincidentes).toEqual([])
+  })
+
+  it('con tilde o sin ella es la misma búsqueda, con el mismo puntaje', () => {
+    const resumen = (consulta: string) => buscar(indice, consulta).map((r) => [r.id, r.puntajeIndice])
+    expect(resumen('facturación')).toEqual(resumen('facturacion'))
+    expect(resumen('contraseña')).toEqual(resumen('contrasena'))
+    expect(resumen('después')).toEqual(resumen('despues'))
+  })
+
+  it('el índice guarda las palabras sin tilde: lo escrito con tilde se encuentra exacto, no por errata', () => {
+    const conTilde = { id: 'dispositivo:a', tipo: 'dispositivo' as const, titulo: 'Servidor de facturación', subtitulo: '', ruta: '/a', texto: '' }
+    const sinTilde = { ...conTilde, id: 'dispositivo:b', titulo: 'Servidor de facturacion', ruta: '/b' }
+    const puntajes = buscar(crearIndiceDesdeDocumentos([conTilde, sinTilde]), 'facturacion').map((r) => r.puntajeIndice)
+    expect(puntajes).toHaveLength(2)
+    expect(puntajes[0]).toBe(puntajes[1])
+  })
+
+  it('no guarda la consulta: un resultado lleva campos y un número, nunca lo escrito', () => {
+    const resultados = buscar(indice, 'impresora zzqqsecreto')
+    expect(resultados.length).toBeGreaterThan(0)
+    expect(JSON.stringify(resultados)).not.toContain('zzqqsecreto')
   })
 })

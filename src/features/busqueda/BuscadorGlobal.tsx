@@ -7,6 +7,7 @@ import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import type { ModoBuscador } from './modoConsulta'
 import { PuenteBoveda } from './PuenteBoveda'
+import { AYUDA_BUSCADOR, MARCADOR_BUSCADOR } from './resultados'
 import { ResultadosBusqueda } from './ResultadosBusqueda'
 import { buscar, useIndiceBusqueda } from './useIndiceBusqueda'
 
@@ -138,9 +139,9 @@ export function BuscadorGlobal({
           onCambiar={setQuery}
           alcance="Soluciones IT"
           // El mismo marcador que el campo de Resolver (propuesta final
-          // de Claude Design): dice qué se escribe. La pregunta queda
-          // debajo, en el estado vacío.
-          textoAlternativo="Problema, equipo o comando"
+          // de Claude Design; desde la tarea 288, una invitación a contar
+          // lo que pasa). La pregunta queda debajo, en el estado vacío.
+          textoAlternativo={MARCADOR_BUSCADOR}
           refCampo={campo}
           className="min-w-0 flex-1"
         />
@@ -165,16 +166,14 @@ export function BuscadorGlobal({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-4">
         {!buscando ? (
-          // Alcance declarado: es lo que distingue a este buscador de los
-          // de seccion, que tienen la misma forma y otro limite. Se dice
-          // en una frase corta (2026-09-14) en vez de enumerar los diez
-          // tipos que indexa: la lista larga daba a entender que solo
-          // buscaba en los primeros que nombraba.
+          // La pregunta y, en vez de la lista de lo que indexa, las mismas
+          // tres maneras de escribir que enseña Resolver (tarea 288): el
+          // técnico describe lo que pasa y el buscador decide qué lo
+          // resuelve. Antes decía "Busca una guía, equipo, acceso,
+          // herramienta, comando o problema".
           <div className="flex flex-col gap-1 px-0.5">
             <p className="text-[14.5px] font-medium leading-snug">¿Qué necesitas resolver?</p>
-            <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-              Busca una guía, equipo, acceso, herramienta, comando o problema.
-            </p>
+            <p className="text-[13px] leading-relaxed text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
             <p className="mt-1 text-[12.5px] leading-relaxed text-noct-neutral-500">
               Tolera errores de escritura y entiende sinónimos: "backup" encuentra "copia de seguridad".
             </p>
