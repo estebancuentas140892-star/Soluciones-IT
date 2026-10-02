@@ -1,5 +1,31 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-02: Resolver entiende la intención de la consulta
+
+### 288. Resolver entiende la intención de la consulta
+
+**Estado:** Completada (2026-10-02). Encargo aparte del usuario: que Resolver comprenda qué intenta conseguir el técnico y no dependa de que conozca el nombre exacto de una guía ("la impresora de mercadeo no imprime" es un problema sobre un equipo concreto). Sin rediseño visual, sin reemplazar MiniSearch, sin IA generativa ni servicios externos, y todo sin conexión. Se trabajó en la rama `feat/resolver-intencion`, creada desde `70a7e0e`; `main` no se tocó hasta validar la tarea entera y la rama entró por avance rápido. Commits: `81b8787` (fase 1, el benchmark ANTES), `1ea7dd3` (fases 2 a 10) y `7215c73` (cierre), más el de este archivo. Una primera sesión se quedó sin tokens antes de llegar a ningún commit y su trabajo no se usó: la tarea empezó de cero desde `70a7e0e`. Ese primer intento sigue **sin commit** en `dev/sit-work` (cambios del 2026-10-02 entre las 06:21 y las 06:52, sobre `main`): no se usó ni se borró.
+
+**Qué cambió:**
+
+- **Fase 1, la vara de medir** (`src/features/busqueda/benchmarkResolver.ts` y su prueba): 35 consultas naturales sobre datos sintéticos con la estructura de los reales, escritas antes de tocar el algoritmo y sin ajustar después. ANTES: 13 de 35.
+- **Fases 2 y 3, el índice y la metadata** (`useIndiceBusqueda.ts`, `consultaNatural.ts`): siete campos con significado (`titulo`, `subtitulo`, `formasBusqueda`, `sintomas`, `cuandoUsar`, `identidad`, `texto`), sin tildes al indexar y al buscar, sin buscar las palabras vacías de una frase, y en cada resultado los campos donde coincidió cada palabra (por sí misma o por un sinónimo) y su puntaje, nunca la consulta.
+- **Fases 4, 6 y 7, la intención y el ranking** (`mejores.ts`): marcas leídas como palabras, una intención que manda (lo que se pide antes que el equipo) y "equipo" deducido también de una coincidencia real con la identidad de un equipo; ranking por evidencia, nombre, intención, tipo y puntaje del índice; consultas mixtas; sin intención, ninguna clase se lleva más de tres de los cinco puestos.
+- **Fase 5, las formas de búsqueda** (`ArticuloForm.tsx`, `procedimiento.ts`, `borradorArticulo.ts`, `resumenProcedimiento.ts`): "¿Cómo buscaría alguien esta guía?", frases en el JSON del procedimiento, sin columna ni migración; no se ven al ejecutar ni cuentan para publicar.
+- **Fase 8, la confianza** (`mejores.ts`, `ResultadosBusqueda.tsx`): "Mejor coincidencia" y "Otras coincidencias" solo cuando una opción explica todo lo escrito y le saca a la segunda `100 / palabras`; si no, "Mejores resultados".
+- **Fase 9, Resolver**: el marcador "Describe qué necesitas resolver…" y la ayuda de ejemplos bajo el campo vacío, también en la capa de la lupa.
+- **Cierre**: el nombre principal de un resultado ya no se recorta (regla 23 nueva): `FilaResultado` llevaba `line-clamp-2` en sus dos formas y a 390 px "Agregar una impresora al computador mediante su dirección IP" se quedaba en "…mediante su…"; ahora el título ocupa las líneas que necesite y la fila crece, lo mismo en los borradores que coinciden, Recientes y Atención, con lo secundario recortado. La QA encontró que la ayuda de ejemplos se partía en dos a 390 px (375 px de 350) y quedó en "Ej.: no imprime, usuario bloqueado, impresora mercadeo" (334 px). Documentación completa: BUSCADOR.md, DOCUMENTACION_FUNCIONAL.md, ARQUITECTURA.md, ARQUITECTURA_FUNCIONAL.md (RN-059), DECISIONES.md (AD-062), COMPONENTES_UI.md, REGLAS.md (reglas 23 y 24) y CHANGELOG.md.
+
+**No se hizo, a propósito:**
+
+- Ninguna migración de Supabase ni lógica de servidor para la compatibilidad de `formasBusqueda`: una versión anterior de la app que edite y guarde una guía con el campo lo descarta, y eso se evita con el orden de la regla 24.
+- No se rellenó ninguna forma de búsqueda en las guías reales ni se generaron frases en masa: es trabajo editorial posterior, basado en la auditoría de contenido (sin tarea abierta todavía, por decisión del usuario). El benchmark sintético sigue siendo la prueba estable del algoritmo.
+- Fuera de Resolver no se tocó ninguna lista: la de Equipos conserva su tope de dos líneas (tarea 287).
+
+**Verificación:** benchmark ANTES 13 de 35 (vuelto a ejecutar sobre `81b8787`) y DESPUÉS 35 de 35, sin tocar un caso. Suite completa: 167 archivos y 2520 pruebas (2360 en `main` antes de la tarea: 160 nuevas, 9 de ellas en `nombresSinRecorte.test.tsx`, que falla con cada una de 7 mutaciones). `tsc -b`, lint y `npm run build` en verde; `npm run prueba:sin-conexion` OK (38 comprobaciones). QA a 390×844 con Chrome sin cabeza en 18 paradas (campo vacío y con teclado abierto, títulos de 2, 3, 4 y 7 líneas, listas homogénea, mixta y ambigua, consultas de problema, de equipo y mixta, "Mejor coincidencia", "Otras coincidencias", "Mejores resultados" y modo consulta dentro de una guía, con y sin vista rápida): sin desplazamiento horizontal, sin texto bajo el icono, sin galón fuera de pantalla, sin acciones superpuestas ni saltos entre filas. CI en verde para `7215c73` (run 37063973229, 63 s). **Producción (regla 14):** `/version.json` respondió `7215c73` (compilado 2026-10-02T20:59:41Z) y, por contenido, los chunks servidos llevan la ayuda nueva, `data-nombre-principal`, "Mejor coincidencia", "Otras coincidencias", el marcador nuevo y el campo del editor, y ya no llevan el `line-clamp-2` del título de `FilaResultado`, "no imprime el PDF" ni el marcador "Problema, equipo o comando".
+
+**Paso del usuario (regla 24):** antes de rellenar formas de búsqueda en las guías reales, actualizar o reabrir la app en los teléfonos de los técnicos (aceptar "Actualización disponible"; en escritorio, recargar). La PWA no se actualiza sola en un aparato que ya la tiene instalada.
+
 ## Encargo del 2026-10-01: implementación cerrada de la propuesta final de Claude Design
 
 ### 287. Aplicar la "PROPUESTA FINAL" de Claude Design en cuatro bloques cerrados

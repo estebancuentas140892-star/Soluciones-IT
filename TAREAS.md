@@ -32,44 +32,6 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso.
 
-**RESOLVER ENTIENDE LA INTENCIÓN DE LA CONSULTA (2026-10-02, tarea 288).** Encargo aparte del usuario: que Resolver comprenda qué intenta conseguir el técnico y no dependa de que conozca el nombre exacto de una guía. Sin rediseño visual, sin reemplazar MiniSearch, sin IA generativa ni servicios externos, y todo sigue funcionando sin conexión. Se trabaja en la rama `feat/resolver-intencion` (creada desde `70a7e0e`); `main` no se toca hasta validar la tarea entera. La sesión anterior que empezó este encargo se quedó sin tokens y su trabajo no llegó a ningún commit, así que se empezó de cero desde `70a7e0e`. (Ese primer intento sigue **sin commit** en `dev/sit-work`, sobre `main`, con cambios del 2026-10-02 entre las 06:21 y las 06:52: `coincidencia.ts`, `BENCHMARK_RESOLVER.md`, `benchmarkResolver.datos.ts` y otros. No se usó ni se descartó; la tarea se cerró en el worktree `dev/sit-288`.) El benchmark se fijó ANTES de tocar el ranking y sus expectativas no se ajustan después. Al cerrar, la tarea se archiva entera en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
-
-| Fase | Qué | Estado |
-|---|---|---|
-| 1 | Benchmark de consultas naturales, ANTES | Hecha: 13 de 35 casos cumplen ([BUSCADOR.md](BUSCADOR.md), sección 14) |
-| 2 | Campos semánticos del índice | Hecha en la rama: `formasBusqueda`, `sintomas`, `cuandoUsar`, `identidad` y `texto`; índice sin tildes |
-| 3 | Metadata de la coincidencia | Hecha en la rama: `camposCoincidentes`, `camposPorPalabra`, `camposPorSinonimo`, `puntajeIndice` |
-| 4 | `intencionesDeConsulta` | Hecha en la rama: marcas por palabra, prioridad y evidencia de equipo |
-| 5 | Formas de búsqueda en las guías | Hecha en la rama: campo del editor, en el JSON del procedimiento, sin migración |
-| 6 | Ranking nuevo | Hecho en la rama: evidencia, nombre, intención, tipo y puntaje del índice |
-| 7 | Consultas mixtas | Hecha en la rama |
-| 8 | Confianza ("Mejor coincidencia") | Hecha en la rama: frontera de 100 / palabras |
-| 9 | Marcador y ayuda de Resolver | Hecha en la rama |
-| 10 | El mismo benchmark, DESPUÉS | **35 de 35** casos cumplen, sin tocar un caso |
-| 11 | Cierre: títulos enteros, QA, documentación y validaciones | Hecho en la rama (abajo) |
-
-**Pausa del 2026-10-02 (a pedido del usuario).** Código, pruebas, tipos y lint en verde en la rama, con `1ea7dd3`; faltaban la documentación, el build, la prueba sin conexión, la QA a 390×844, el commit final, CI, `main`, despliegue y archivo.
-
-**Cierre del 2026-10-02 (rama `feat/resolver-intencion`, worktree `dev/sit-288`).** Sin funcionalidades nuevas:
-
-- **Defecto confirmado, corregido:** `FilaResultado` (`src/features/busqueda/ResultadosBusqueda.tsx`, líneas 127 a 170) llevaba `line-clamp-2` en las dos formas del título, y a 390 px "Agregar una impresora al computador mediante su dirección IP" se leía "…mediante su…". El título ocupa ahora las líneas que necesite (`min-w-0`, `overflow-wrap:anywhere`, `text-wrap:pretty`, como `FilaArticulo`) y la fila crece. El mismo principio en el resto de filas de Resolver: `BorradoresCoincidentes.tsx` (las dos filas de borrador), `ResolverPage.tsx` (`FilaReciente`) y `SeccionesAgenda.tsx` (`FilaAgenda`, Atención). Lo secundario sigue recortado. Nueva regla 23 de [REGLAS.md](REGLAS.md), solo para la identidad principal. Prueba nueva `src/features/busqueda/nombresSinRecorte.test.tsx` (9 casos, con el título largo de verdad), que falla con cada una de 7 mutaciones.
-- **Hallazgo de la QA, corregido:** la ayuda "Ej.: no imprime el PDF, usuario bloqueado, impresora mercadeo" medía 375 px de los 350 útiles a 390 px y se partía en dos. Pasa a "Ej.: no imprime, usuario bloqueado, impresora mercadeo" (334 px), en `src/features/busqueda/resultados.ts` (`AYUDA_BUSCADOR`); `resolverYAgenda.test.tsx` vigila el largo.
-- **Documentación:** BUSCADOR.md (secciones 1 a 5, 7, 7.1, 7.3, la nueva 7.9 de confianza, 12, 13 y 14.2 con el DESPUÉS), DOCUMENTACION_FUNCIONAL.md (marcador y ayuda, "Mejor coincidencia", títulos enteros y el campo del editor), ARQUITECTURA.md y ARQUITECTURA_FUNCIONAL.md (`formasBusqueda` en el JSON, RN-059), DECISIONES.md (AD-062), COMPONENTES_UI.md, REGLAS.md (reglas 23 y 24) y CHANGELOG.md.
-- **Compatibilidad de `formasBusqueda`, registrada:** una versión anterior de la app que edite y guarde una guía con el campo lo descarta. Sin migración ni lógica de servidor; regla operativa 24: desplegar, actualizar o reabrir los teléfonos de los técnicos y solo después rellenar las guías reales. No se rellenó ninguna: es trabajo editorial posterior, basado en la auditoría de contenido.
-- **Validaciones en la rama:** benchmark ANTES 13 de 35 (vuelto a ejecutar sobre `81b8787`) y DESPUÉS 35 de 35; 2520 pruebas (2360 en `main` antes de la tarea: 160 nuevas; la nota de la pausa decía 115 por error), `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` (38 comprobaciones) en verde; QA a 390×844 en 18 paradas, sin hallazgos tras la corrección de la ayuda.
-
-**Falta:** llevar la rama a `main` (avance rápido, sin commits nuevos en `main`), CI en verde, despliegue y `version.json`, y archivar la tarea entera.
-
-### 288. Resolver entiende la intención de la consulta
-
-- **Título:** que Resolver decida qué clase de información resuelve lo que el técnico describe ("la impresora de mercadeo no imprime" es un problema sobre un equipo concreto).
-- **Descripción:** benchmark de consultas naturales antes y después; campos semánticos en el índice (formas de búsqueda, síntomas, cuándo usar, identidad, texto); metadata mínima de qué campos coincidieron; `intencionesDeConsulta` con evidencia de los datos; ranking por evidencia, intención, tipo y puntaje del índice; consultas mixtas; regla de confianza ("Mejor coincidencia" solo cuando una opción es claramente superior); formas de búsqueda como campo editorial opcional de las guías; marcador y ayuda de Resolver.
-- **Motivo:** encargo del usuario del 2026-10-02 ("Resolver debe entender la intención de la consulta").
-- **Impacto:** alto: es la puerta principal de la aplicación.
-- **Prioridad:** Alta. **Estado:** En progreso: todo hecho y verificado en la rama; falta llevarla a `main`, CI, despliegue y archivo.
-- **Área afectada:** `src/features/busqueda/` (`benchmarkResolver.ts`, `consultaNatural.ts` y sus pruebas, nuevos; `useIndiceBusqueda.ts`, `mejores.ts`, `sinonimos.ts`, `resultados.ts`, `ResultadosBusqueda.tsx`, `BuscadorGlobal.tsx`, `BorradoresCoincidentes.tsx`; `nombresSinRecorte.test.tsx`, nueva), `src/features/inicio/SeccionesAgenda.tsx`, `src/lib/{db,procedimiento}.ts`, `src/features/soluciones/{ArticuloForm.tsx,borradorArticulo.ts}`, `src/features/historial/resumenProcedimiento.ts`, `src/features/inicio/ResolverPage.tsx` y la documentación del buscador.
-- **Dependencias:** ninguna.
-
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.
