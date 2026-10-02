@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-01
 
+### Cambiado (Más, tarea 287, bloque 4): Más por intención; cierre de la propuesta final de Claude Design
+
+**Área modificada:** `src/features/mas/{PantallaMas,FilasMas}.tsx`, `src/components/iconos.tsx` (`UserCircle`), `src/components/FilaDispositivo.tsx` (nombre y contexto en dos líneas), `src/features/dispositivos/equiposPropuestaFinal.test.tsx`, `src/features/soluciones/SolucionesPage.tsx` (la puerta "Guías con preguntas" conserva la fila con recuadro), `src/features/mas/masInfraestructura.test.tsx`, `DOCUMENTACION_FUNCIONAL.md` (5.6), `COMPONENTES_UI.md` (3.7e), `TAREAS.md`, `TAREAS_ARCHIVO.md`.
+**Tipo:** Cambiado (presentación). Más lleva a los mismos destinos que antes, ni uno más ni uno menos.
+**Motivo:** bloque 4 y último de la implementación cerrada del diseño aprobado: Más ordenado por intención, revisión de coherencia entre los cuatro bloques y QA.
+**Qué cambia:**
+- Más agrupa por intención: **Consultar** (Centro de consulta y, si hay, Mis favoritos), **Personas y lugares**, **Infraestructura** (Red), **Inventario** (Herramientas de inventario) y **Cuenta y aplicación** (Ajustes).
+- Filas de índice: icono de línea sin recuadro, título, una línea de qué contiene, conteo y galón, a 52 px. Ajustes lleva el icono de cuenta (`UserCircle`, nuevo en `iconos.tsx`) en vez del avatar, que sigue en la barra superior. Herramientas de inventario usa las mismas filas.
+- Coherencia: en las listas de equipos (Equipos y Equipos de red) el nombre y su línea de contexto parten línea, hasta dos, como los títulos de Resolver y de los procedimientos; recortados a una ("Impresora de ejemplo Adm…" junto a su IP, "Administración Parque de Ejempl…") escondían el dato principal y el lugar, y el prototipo no los recorta. Lo mismo el título de cada favorito en Más.
+- Con esto la tarea 287 queda cerrada y archivada: los cuatro bloques de la propuesta final están en producción.
+**Impacto esperado:** Más se lee como un índice de a dónde ir según lo que se quiere hacer, sin que cada puerta pese como una pantalla principal.
+**Cómo se comprobó:** 2 pruebas nuevas (las filas de índice de Más; el nombre y el contexto de un equipo en dos líneas), la de Mis favoritos ampliada y las de Más a los grupos nuevos; suite completa (2360 pruebas), lint, build y `npm run prueba:sin-conexion` (38 comprobaciones, OK). QA final con `scripts/capturas-moviles.mjs` a 390×844 y 1366×768 (206 capturas, sin desbordamiento horizontal) y a 390×480 como teclado abierto (Resolver escribiendo, la capa de la lupa sobre una guía, parada nueva `guia-lupa`, y Equipos buscando). Lo que queda en el informe es anterior a esta tarea o es así en el prototipo: las áreas táctiles de la tarea 285, el título de la guía recortado en su barra y los textos de Agenda, Diagnósticos y Asignar; las 7 paradas del portal y de Conectar equipo necesitan el simulador de asistencia (tarea 260) y no se corrieron.
+
 ### Cambiado (equipos, tarea 287, bloque 3): la lista de Equipos y la ficha según la propuesta final de Claude Design
 
 **Área modificada:** `src/components/FilaDispositivo.tsx`, `src/components/FilaDeslizable.tsx` (nuevo), `src/features/dispositivos/{DispositivosPage,DispositivoPage,ProcedimientosDelEquipo}.tsx`, `src/features/personas/ResponsableDelEquipo.tsx`, `src/features/red/topologiaVisual.ts` (`estadoEnLista`), pruebas (`equiposPropuestaFinal.test.tsx` nueva, `topologiaVisual.test.ts`, `contextoEquipoPantallas.test.tsx`, `equiposYQr.test.tsx`), `scripts/capturas-moviles.mjs`, `DECISIONES.md` (AD-061), `DOCUMENTACION_FUNCIONAL.md` (5.3), `COMPONENTES_UI.md`.

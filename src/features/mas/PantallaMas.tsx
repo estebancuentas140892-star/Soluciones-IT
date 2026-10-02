@@ -3,21 +3,18 @@ import { useId, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { destinoDePestana, RAICES_CON_MEMORIA } from '../../app/memoriaPestana'
-import { Avatar } from '../../components/Avatar'
 import {
   BookBookmark,
   CaretDown,
-  CaretRight,
   MapPin,
   Package,
   PlugsConnected,
   Star,
+  UserCircle,
   UsersThree,
 } from '../../components/iconos'
 import { db } from '../../lib/db'
 import { obtenerFavoritos, type ElementoFavorito } from '../../lib/favoritos'
-import { useAuth } from '../autenticacion/authContext'
-import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { VISUAL_POR_TIPO } from '../busqueda/resultados'
 import { estaActiva } from '../personas/cicloPersona'
 import { ConteoFila, FilaMas as Fila, TituloGrupo } from './FilasMas'
@@ -49,12 +46,15 @@ import { ConteoFila, FilaMas as Fila, TituloGrupo } from './FilasMas'
 //
 // En pantallas anchas los grupos se reparten en dos columnas: Más es una
 // sola puerta en todos los tamaños.
+//
+// PROPUESTA FINAL DE CLAUDE DESIGN (2026-10-01): los grupos se nombran por
+// INTENCIÓN (Consultar, Personas y lugares, Infraestructura, Inventario,
+// Cuenta y aplicación) y las filas son de índice: icono de línea, título,
+// una línea de qué contiene y galón, sin cajas (`FilaMas`). Mismos
+// destinos, ni uno más ni uno menos. "Cuenta y aplicación" porque Ajustes
+// guarda también el trabajo sin conexión y la actualización.
 
 export function PantallaMas() {
-  const { perfil } = useAuth()
-  const perfilVivo = usePerfilVivo()
-  const usuario = perfilVivo ?? perfil
-
   const ubicaciones = useLiveQuery(() => db.ubicaciones.filter((u) => !u.eliminadoEn).count(), [])
   // Las activas: una persona retirada no es alguien con quien trabajar hoy.
   const personasActivas = useLiveQuery(
@@ -93,7 +93,7 @@ export function PantallaMas() {
             `minmax(0, 1fr)`, que sí se encoge. */}
         <div className="grid grid-cols-1 items-start gap-[22px] lg:grid-cols-2 lg:gap-x-8">
           <section>
-            <TituloGrupo>Consulta</TituloGrupo>
+            <TituloGrupo>Consultar</TituloGrupo>
             <div className="flex flex-col divide-y divide-noct-divider">
               {/* Centro de consulta (antes "Referencia"): responde "¿qué
                   es esto?" con el equipo delante, en mitad de una guía o
@@ -110,7 +110,7 @@ export function PantallaMas() {
           </section>
 
           <section>
-            <TituloGrupo>Organización</TituloGrupo>
+            <TituloGrupo>Personas y lugares</TituloGrupo>
             <div className="flex flex-col divide-y divide-noct-divider">
               <Fila
                 to="/personas"
@@ -145,7 +145,7 @@ export function PantallaMas() {
           </section>
 
           <section>
-            <TituloGrupo>Herramientas</TituloGrupo>
+            <TituloGrupo>Inventario</TituloGrupo>
             <div className="flex flex-col divide-y divide-noct-divider">
               <Fila
                 to="/inventario"
@@ -157,31 +157,20 @@ export function PantallaMas() {
           </section>
 
           <section>
-            <TituloGrupo>Aplicación</TituloGrupo>
+            <TituloGrupo>Cuenta y aplicación</TituloGrupo>
             <div className="flex flex-col divide-y divide-noct-divider">
               {/* AJUSTES, una sola puerta (tarea 268): Mi cuenta, Bloqueo
                   y seguridad y Buscar actualización eran tres filas, y Mi
                   cuenta ya enlazaba la seguridad y ofrecía instalar y
-                  trabajar sin conexión. El avatar dice de quién es la
-                  cuenta abierta; el nombre completo y el correo, la
-                  cabecera de Ajustes. */}
-              <Link
+                  trabajar sin conexión. Desde la propuesta final, una fila
+                  de índice como las demás: de quién es la cuenta lo dice el
+                  avatar de la barra superior y la cabecera de Ajustes. */}
+              <Fila
                 to="/cuenta"
-                className="flex min-h-[58px] items-center gap-[13px] rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
-              >
-                <Avatar
-                  nombre={usuario?.nombre}
-                  correo={usuario?.correo}
-                  className="h-[34px] w-[34px] text-[12px]"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium leading-[1.3]">Ajustes</span>
-                  <span className="mt-0.5 block text-[12px] leading-[1.4] text-noct-neutral-400">
-                    Cuenta, bloqueo, sin conexión y actualización
-                  </span>
-                </span>
-                <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
-              </Link>
+                Icono={UserCircle}
+                titulo="Ajustes"
+                subtitulo="Cuenta, bloqueo, sin conexión y actualización"
+              />
             </div>
           </section>
         </div>
@@ -207,14 +196,12 @@ function FilaFavoritos({ favoritos }: { favoritos: ElementoFavorito[] }) {
         onClick={() => setAbierta((valor) => !valor)}
         aria-expanded={abierta}
         aria-controls={idCuerpo}
-        className="flex min-h-[58px] w-full items-center gap-[13px] rounded-md px-2 py-[11px] text-left text-noct-text hover:bg-noct-text/[.05]"
+        className="flex min-h-[52px] w-full items-center gap-3.5 px-0.5 py-2 text-left text-noct-text hover:bg-noct-text/[.04]"
       >
-        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-300">
-          <Star size={17} aria-hidden />
-        </span>
+        <Star size={19} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-medium leading-[1.3]">Mis favoritos</span>
-          <span className="mt-0.5 block truncate text-[12px] text-noct-neutral-400">
+          <span className="block text-[15px] leading-[1.35]">Mis favoritos</span>
+          <span className="block truncate text-[12.5px] leading-[1.35] text-noct-neutral-500">
             Lo que marcaste con la estrella
           </span>
         </span>
@@ -228,9 +215,9 @@ function FilaFavoritos({ favoritos }: { favoritos: ElementoFavorito[] }) {
         />
       </button>
       {abierta && (
-        // Sangría alineada con el título de la fila (8 de margen + 34 de
-        // icono + 13 de separación), para que se lea como su contenido.
-        <div id={idCuerpo} className="flex flex-col pb-1.5 pl-[55px] pr-2">
+        // Sangría alineada con el título de la fila (2 de margen + 20 de
+        // icono + 14 de separación), para que se lea como su contenido.
+        <div id={idCuerpo} className="flex flex-col pb-1.5 pl-9 pr-0.5">
           {favoritos.map((favorito) => {
             const { Icono } = VISUAL_POR_TIPO[favorito.tipo]
             return (
@@ -240,7 +227,10 @@ function FilaFavoritos({ favoritos }: { favoritos: ElementoFavorito[] }) {
                 className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 text-[13.5px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
               >
                 <Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{favorito.titulo}</span>
+                {/* Hasta dos líneas, como los títulos de Recientes y de los
+                    resultados: recortado, "Conectar un recurso compartido…"
+                    no decía cuál era. */}
+                <span className="line-clamp-2 min-w-0 flex-1 break-words py-1.5">{favorito.titulo}</span>
                 {favorito.subtitulo && (
                   <span className="max-w-[45%] shrink-0 truncate text-[12px] text-noct-neutral-400">
                     {favorito.subtitulo}

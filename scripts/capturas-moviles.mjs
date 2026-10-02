@@ -106,6 +106,10 @@ const SIN_RED_EN_LA_PAGINA = `{ Object.defineProperty(Navigator.prototype,'onLin
 const buscarEnResolver = (texto) =>
   `{ const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,${JSON.stringify(texto)}); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,700)); }`
 
+// Escribe en el campo de la capa del buscador (la lupa de una tarea).
+const escribirEnCapa = (texto) =>
+  `{ const c=document.querySelector('[role="dialog"] input'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,${JSON.stringify(texto)}); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,700)); }`
+
 const TODAS_LAS_PARADAS = [
   // Encargo del 2026-09-22: Resolver, Equipos, Bóveda y Más.
   { nombre: 'resolver', ruta: '/' },
@@ -204,6 +208,15 @@ const TODAS_LAS_PARADAS = [
     ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
     antes: AVANCE_SEMBRADO + modo('foco'),
     guion: tocar('Paso 2 de 3. Abrir el índice') + tocarFilaIndice('Dejar el recurso a mano'),
+  },
+  // Bloque 4 de la propuesta final (QA del teclado): la lupa abre la capa
+  // de consulta sobre la guia y se escribe en ella. Con --tamanos=390x480
+  // se ve como queda con el teclado del telefono abierto.
+  {
+    nombre: 'guia-lupa',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco'),
+    guion: tocar('Buscar sin salir de aquí') + escribirEnCapa('impresora'),
   },
   { nombre: 'guia-vinculada', ruta: '/soluciones/cat-software/art-alta-usuario' },
   { nombre: 'vinculo-roto', ruta: '/soluciones/cat-software/art-vinculo-roto' },

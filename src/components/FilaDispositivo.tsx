@@ -96,12 +96,19 @@ export function FilaDispositivo({
         )}
       </span>
       <div className={`min-w-0 flex-1 ${atenuada ? 'opacity-60' : ''}`}>
-        <p className="truncate text-[15px] font-medium leading-[1.3]">
+        {/* El nombre parte línea, hasta dos, como los títulos de Resolver y
+            de los procedimientos: recortado a una ("Impresora de ejemplo
+            Adm…" junto a su IP) escondía justo el dato principal. La línea
+            de contexto tampoco se recorta (el prototipo no lo hace): solo
+            dice lo que el nombre no dice, y cortada perdía el lugar. */}
+        <p className="line-clamp-2 break-words text-[15px] font-medium leading-[1.3] text-pretty">
           {pre}
           {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
           {post}
         </p>
-        {subtitulo && <p className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-500">{subtitulo}</p>}
+        {subtitulo && (
+          <p className="line-clamp-2 break-words text-[12.5px] leading-[1.4] text-noct-neutral-500">{subtitulo}</p>
+        )}
       </div>
       {(estadoVisible || dispositivo.ip) && (
         <div className="flex shrink-0 flex-col items-end gap-[3px]">

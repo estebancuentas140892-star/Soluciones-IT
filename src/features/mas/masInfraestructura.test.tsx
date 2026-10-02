@@ -81,18 +81,27 @@ afterEach(async () => {
 })
 
 describe('Más en cinco grupos', () => {
-  it('Consulta, Organización, Infraestructura, Herramientas y Aplicación, en ese orden', async () => {
+  // Los grupos se nombran por intención desde la propuesta final de
+  // Claude Design (2026-10-01); los destinos de cada uno no cambian.
+  it('Consultar, Personas y lugares, Infraestructura, Inventario y Cuenta y aplicación, en ese orden', async () => {
     await montar(RUTAS, '/mas')
     const grupos = await esperar(() => {
       const g = gruposDeMas()
       return g.length === 5 ? g : null
     }, 'Más pinta sus cinco grupos')
 
-    expect(grupos.map((g) => g.titulo)).toEqual(['Consulta', 'Organización', 'Infraestructura', 'Herramientas', 'Aplicación'])
+    expect(grupos.map((g) => g.titulo)).toEqual([
+      'Consultar',
+      'Personas y lugares',
+      'Infraestructura',
+      'Inventario',
+      'Cuenta y aplicación',
+    ])
     // Los grupos de antes ya no existen.
     const texto = textoPantalla()
     expect(texto).not.toContain('Trabajo técnico')
     expect(texto).not.toContain('Lo mío y lo del equipo')
+    expect(texto).not.toContain('Organización')
   })
 
   it('cada destino en su grupo, sin perder ninguno', async () => {
@@ -116,6 +125,15 @@ describe('Más en cinco grupos', () => {
     expect(filaDeMas('Ajustes')?.textContent).toContain('bloqueo')
     expect(filaDeMas('Ajustes')?.textContent).toContain('actualización')
     expect(filaDeMas('Ajustes')?.getAttribute('href')).toBe('/cuenta')
+  })
+
+  it('las filas son de índice: icono de línea, sin caja, con lo que guardan y su galón', async () => {
+    await montar(RUTAS, '/mas')
+    const fila = await esperar(() => filaDeMas('Personas'), 'la fila Personas')
+    // Sin el recuadro de 34 px alrededor del icono (propuesta final).
+    expect(fila.querySelector('.h-\\[34px\\]')).toBeNull()
+    expect(fila.querySelector('svg')).not.toBeNull()
+    expect(fila.textContent).toContain('Quién tiene cada equipo, ingresos y retiros')
   })
 
   it('Topología ya no es fila de Más: se abre desde Red, que la enlaza', async () => {
@@ -151,7 +169,7 @@ describe('Más en cinco grupos', () => {
 })
 
 describe('Mis favoritos, una fila de Consulta solo si hay', () => {
-  it('con un favorito aparece en Consulta, con su conteo, y se despliega en el sitio', async () => {
+  it('con un favorito aparece en Consultar, con su conteo, y se despliega en el sitio', async () => {
     const guia = await sembrarGuia({
       id: 'guia-favorita',
       titulo: 'Configurar la impresora de ejemplo',
@@ -169,7 +187,7 @@ describe('Mis favoritos, una fila de Consulta solo si hay', () => {
 
     // Es la última de Consulta, y cuenta uno.
     const consulta = gruposDeMas()[0]
-    expect(consulta.titulo).toBe('Consulta')
+    expect(consulta.titulo).toBe('Consultar')
     expect(consulta.filas).toEqual(['Centro de consulta', 'Mis favoritos'])
     expect(fila.getAttribute('aria-expanded')).toBe('false')
     expect(fila.textContent).toContain('1')
@@ -180,6 +198,10 @@ describe('Mis favoritos, una fila de Consulta solo si hay', () => {
     expect(fila.getAttribute('aria-expanded')).toBe('true')
     const enlace = await esperarControl(/Configurar la impresora de ejemplo/)
     expect(enlace.getAttribute('href')).toBe(`/soluciones/${guia.categoriaId}/${guia.id}`)
+    // El título parte línea, hasta dos, en vez de recortarse a una.
+    const titulo = Array.from(enlace.querySelectorAll('span')).find((s) => s.textContent === 'Configurar la impresora de ejemplo')
+    expect(titulo?.className).toContain('line-clamp-2')
+    expect(titulo?.className).not.toContain('truncate')
   })
 
   it('sin favoritos no hay fila: un destino vacío no lleva a nada', async () => {

@@ -92,6 +92,27 @@ describe('la lista de Equipos', () => {
     expect(filaDe('caja-3')?.textContent).toContain('Caja de prueba 3')
   })
 
+  it('un nombre largo y su línea de contexto parten línea, hasta dos, y no se recortan a una', async () => {
+    await sembrarEquipo({
+      id: 'imp-larga',
+      nombre: 'Impresora de prueba Administración del segundo piso',
+      categoriaId: 'cat-pos',
+      ubicacion: 'Oficina de prueba del parque norte',
+      ip: '10.9.9.40',
+    })
+    await montar(RUTAS, '/dispositivos')
+    const lineas = await esperar(() => {
+      const ps = filaDe('imp-larga')?.querySelectorAll('p')
+      return ps && ps.length === 2 ? Array.from(ps) : null
+    }, 'la fila del nombre largo con su contexto')
+    expect(lineas[0].textContent).toBe('Impresora de prueba Administración del segundo piso')
+    expect(lineas[1].textContent).toBe('POS · Oficina de prueba del parque norte')
+    for (const linea of lineas) {
+      expect(linea.className).toContain('line-clamp-2')
+      expect(linea.className).not.toContain('truncate')
+    }
+  })
+
   it('los chips son un grupo con nombre', async () => {
     await montar(RUTAS, '/dispositivos')
     const grupo = await esperar(

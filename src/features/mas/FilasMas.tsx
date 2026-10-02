@@ -7,10 +7,16 @@ import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 // Herramientas de inventario). Vivían dentro de `PantallaMas`; salen a su
 // propio módulo para que la puerta de inventario tenga exactamente la
 // misma forma que Más, sin copiarla.
+//
+// FILAS DE ÍNDICE (propuesta final de Claude Design, 2026-10-01): icono de
+// línea, título, una línea de qué contiene y galón. Sin cajas: la caja de
+// 34 px alrededor del icono hacía que cada puerta pesara como una pantalla
+// principal. La variante `caja` conserva la forma de antes para quien la
+// monta dentro de otra lista (la puerta de Guías con preguntas en Guías).
 
 export function TituloGrupo({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mb-1.5 px-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-400">
+    <h2 className="mb-0.5 px-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
       {children}
     </h2>
   )
@@ -34,6 +40,7 @@ export function FilaMas({
   conteo = null,
   nota,
   estado,
+  variante = 'indice',
 }: {
   to: string
   Icono: (props: IconoProps) => React.JSX.Element
@@ -52,7 +59,29 @@ export function FilaMas({
    * salto).
    */
   estado?: EstadoConOrigen
+  /** `indice`: icono de línea y sin caja (Más, inventario). `caja`: el icono en su recuadro. */
+  variante?: 'indice' | 'caja'
 }) {
+  if (variante === 'indice') {
+    return (
+      <Link
+        to={to}
+        state={estado}
+        className="flex min-h-[52px] items-center gap-3.5 px-0.5 py-2 text-noct-text hover:bg-noct-text/[.04]"
+      >
+        <Icono size={19} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] leading-[1.35]">{titulo}</span>
+          {/* Sin recortar (tarea 268): en un teléfono estrecho, la línea
+              pasa a una segunda antes que esconder lo que hay dentro. */}
+          <span className="block text-[12.5px] leading-[1.35] text-noct-neutral-500">{subtitulo}</span>
+          {nota && <span className="mt-0.5 block text-[11.5px] text-noct-neutral-500">{nota}</span>}
+        </span>
+        <ConteoFila valor={conteo} />
+        <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />
+      </Link>
+    )
+  }
   return (
     <Link
       to={to}

@@ -701,6 +701,7 @@ export function SolucionesPage() {
             {!buscando && !etiquetaSel && (
               <div className="mb-[22px] rounded-lg border border-noct-divider">
                 <FilaMas
+                  variante="caja"
                   to={categoriaSel ? `/diagnostico?categoria=${categoriaSel}` : '/diagnostico'}
                   Icono={TreeStructure}
                   titulo="Guías con preguntas"

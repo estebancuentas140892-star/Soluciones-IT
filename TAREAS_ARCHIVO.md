@@ -1,5 +1,32 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-01: implementación cerrada de la propuesta final de Claude Design
+
+### 287. Aplicar la "PROPUESTA FINAL" de Claude Design en cuatro bloques cerrados
+
+**Estado:** Completada (2026-10-01). Encargo aparte del usuario, fuera de las fases del encargo del 2026-09-29: aplicar el diseño aprobado "SOLUCIONES IT, PROPUESTA FINAL" (proyecto de Claude Design "Soluciones IT Antes y Despues", prototipo `Final.dc.html`) en cuatro bloques cerrados, sin auditoría nueva, sin funcionalidades nuevas, sin rediseño y sin convertir hallazgos en tareas. El diseño fue la fuente visual y el código del repositorio la del comportamiento; nada del paquete de diseño (`_ds_bundle.js`, `styles.css`, `support.js`, los `.dc.html`) entró en producción. Commits: `a74bb44` (bloque 1), `f85d299` (bloque 2), `f21d9a9` (bloque 3) y el del bloque 4, que archiva esta tarea. **Prioridad:** Alta. **Decisiones:** AD-060 y AD-061.
+
+**Qué cambió:**
+
+- **Bloque 1, ejecución de guías** (`src/features/soluciones/{ModoFoco,AsistenteVista,HojaPasos,RutaProcedimiento,TarjetaGuiaVinculada,AsistentePage,EstadoEjecucion}.tsx`, `cierrePaso.ts`, `estadoPasos.ts`): en el teléfono manda la acción (un segmento por paso, "acción N de M" y el título del paso en gris). Retomar es una línea, "Retomando · paso N de M", con "Empezar de nuevo". El botón dice la consecuencia ("Completar y seguir", "Completar y terminar", "Ir al paso N", "Ir a la acción N", "Falta 1 tarea", "Faltan N tareas", "Completa «X»"), con el nombre de la guía acortado dentro de las comillas y entero en el nombre accesible. El índice es "Ruta de la guía", con nombres en dos líneas y "Aquí vas". Un paso pendiente de más adelante se consulta sin marcar nada e "Ir al paso N" vuelve al paso de trabajo. La lupa sigue abriendo la misma capa de consulta, sin salir de la guía.
+- **Bloque 2, Resolver y resultados** (`src/features/inicio/{ResolverPage.tsx,resolver.ts}`, `src/features/busqueda/{ResultadosBusqueda,BuscadorGlobal}.tsx`, `presentacionResultados.ts`, `resultados.ts`, `src/components/{CampoBusqueda,BarraSuperior,CabeceraColapsable}.tsx`, `src/app/Chasis.tsx`): campo destacado con el marcador "Problema, equipo o comando" (la etiqueta accesible no cambia); la pregunta se pliega al escribir sin saltos; la Agenda como línea de índice; Recientes con "paso N de M" y "Continuar"; resultados con títulos hasta en dos líneas, lista homogénea (el comienzo común atenuado y el tipo en el encabezado) y mixta (cada fila con su tipo y su tinte). El buscador y su algoritmo no cambiaron.
+- **Bloque 3, Equipos y ficha** (`src/components/{FilaDispositivo,FilaDeslizable}.tsx`, `src/features/dispositivos/{DispositivosPage,DispositivoPage,ProcedimientosDelEquipo}.tsx`, `src/features/personas/ResponsableDelEquipo.tsx`, `src/features/red/topologiaVisual.ts`): el nombre manda y el estado solo se dice si es En mantenimiento, Fuera de servicio o De baja; los chips se deslizan sin quedar cortados; la ficha se ordena en identidad, datos para trabajar, procedimientos y "Más del equipo" (antes "Profundidad"); "sin responsable" va con "Asignar" en la identidad; los procedimientos usan dos líneas.
+- **Bloque 4, Más, coherencia y QA** (`src/features/mas/{PantallaMas,FilasMas}.tsx`, `src/components/{iconos,FilaDispositivo}.tsx`): Más agrupa los mismos destinos por intención (Consultar, Personas y lugares, Infraestructura, Inventario, Cuenta y aplicación) en filas de índice. Por coherencia, en las listas de equipos el nombre y su línea de contexto parten línea (hasta dos) en vez de recortarse, y lo mismo el título de cada favorito en Más.
+
+**Diferencias con el diseño, a propósito:**
+
+- "Empezar de nuevo" sigue a un toque, sin la confirmación que anotaba el prototipo (AD-040 y AD-060).
+- En escritorio y tableta la guía conserva la ruta horizontal (AD-043): el encargo no pedía rediseñar el escritorio.
+- El marcador de Equipos es "Nombre, IP, lugar o serial" y no "Nombre, IP, persona o lugar": el buscador de Equipos no busca por persona (AD-061).
+- "Escanear QR" es un cuadrado de 46 px con nombre accesible y sin texto: con texto, el marcador se recortaba a 390 px.
+- En la ficha, el estado registrado va debajo del nombre y no a su lado: a su lado recortaba el nombre.
+- Un responsable anotado que no es una ficha de persona sigue en los datos para trabajar como "Anotado: «X» · por validar" (tarea 266).
+- En Más, la línea de qué contiene cada puerta parte línea en vez de recortarse con puntos suspensivos (decisión de la tarea 268). Mis favoritos solo aparece en Consultar cuando hay alguno, y la puerta "Guías con preguntas" de Guías conserva la fila con recuadro porque va dentro de un marco.
+
+**No se implementó, a propósito:** la franja "Volver a…" (orden del encargo); ningún cambio en el buscador (algoritmo, MiniSearch, ranking, sinónimos, difuso, modo consulta), en la Bóveda (que el propio prototipo deja fuera) ni en la seguridad (Auth, RLS, PBKDF2, AES-GCM, WebAuthn, permisos, sesiones, sincronización); ni tablas ni migraciones.
+
+**Verificación:** 39 pruebas nuevas en los cuatro bloques (14, 15, 8 y 2) y las existentes al rótulo, al marcador y a los grupos nuevos, sin quitar ninguna; suite completa en el cierre: 162 archivos y 2360 pruebas. Lint y build en verde en cada bloque. `npm run prueba:sin-conexion` OK (38 comprobaciones). QA con `scripts/capturas-moviles.mjs` (paradas nuevas `guia-indice-ruta`, `guia-consulta`, `resolver-homogenea`, `resolver-mixta` y `guia-lupa`): 206 capturas a 390×844 y 1366×768 sin desbordamiento horizontal, y 390×480 como teclado abierto. Los hallazgos que quedan son anteriores (áreas táctiles de la tarea 285, títulos de Agenda, Diagnósticos y Asignar) o son así en el prototipo (el título de la guía recortado en su barra); las paradas del portal y de Conectar equipo necesitan el simulador de asistencia de la tarea 260 y no se corrieron. CI en verde y producción comprobada por `/version.json` y por contenido en cada bloque.
+
 ## Encargo del 2026-09-29: consolidar, simplificar, fortalecer y optimizar
 
 ### 278. Desbloqueo rápido de la app con el autenticador del dispositivo

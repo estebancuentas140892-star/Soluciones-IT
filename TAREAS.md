@@ -32,15 +32,6 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso.
 
-**IMPLEMENTACIÓN CERRADA DEL DISEÑO APROBADO (2026-10-01, tarea 287).** Encargo aparte del usuario: aplicar la sección "SOLUCIONES IT, PROPUESTA FINAL" del proyecto de Claude Design "Soluciones IT Antes y Despues" en cuatro bloques cerrados, sin auditoría nueva, sin funcionalidades nuevas y sin abrir otras tareas con lo que se encuentre. Se trabaja en `dev/sit-work`. Cada bloque lleva su commit, sus pruebas, lint, build, capturas y CI; al cerrar el bloque 4 la tarea se archiva entera en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
-
-| Bloque | Qué | Estado |
-|---|---|---|
-| 1 | Ejecución de guías | Hecho (AD-060) |
-| 2 | Resolver y resultados | Hecho |
-| 3 | Equipos y ficha | Hecho (AD-061) |
-| 4 | Más, coherencia y QA | Pendiente |
-
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.
