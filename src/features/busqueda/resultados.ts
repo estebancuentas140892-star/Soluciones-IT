@@ -60,8 +60,13 @@ export const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
 // categoría (antes, "Problema, equipo o comando"). Lo comparten el campo de
 // Resolver y la capa de la lupa, que es el mismo buscador.
 export const MARCADOR_BUSCADOR = 'Describe qué necesitas resolver…'
-/** La ayuda bajo el campo vacío: tres maneras reales de escribir. */
-export const AYUDA_BUSCADOR = 'Ej.: no imprime el PDF, usuario bloqueado, impresora mercadeo'
+/**
+ * La ayuda bajo el campo vacío: tres maneras reales de escribir, en UNA
+ * línea. Medido en la QA a 390 px (Inter a 12,5 px, 350 px útiles): este
+ * texto ocupa 334 px; el primero, "no imprime el PDF, …", 375, y se partía
+ * en dos. Un texto más largo vuelve a partirse.
+ */
+export const AYUDA_BUSCADOR = 'Ej.: no imprime, usuario bloqueado, impresora mercadeo'
 
 // Los resultados se agrupan por fuente (los modulos con contenido
 // buscable), no por los tipos internos: el tecnico piensa en "donde

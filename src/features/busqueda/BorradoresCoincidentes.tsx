@@ -123,7 +123,12 @@ function FilaBorrador({
         <PencilSimple size={17} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-medium leading-[1.3]">
+        {/* El título entero, en las líneas que necesite (regla 23): es
+            lo que dice qué guía es, y la fila crece. */}
+        <span
+          data-nombre-principal
+          className="block min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+        >
           {pre}
           {match && <mark className="bg-transparent text-noct-accent-300">{match}</mark>}
           {post}
@@ -202,7 +207,10 @@ function FilaBorradorDestacado({
         <PencilSimple size={17} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-medium leading-[1.3] [text-wrap:pretty]">
+        <span
+          data-nombre-principal
+          className="block min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+        >
           {pre}
           {match && <mark className="bg-transparent text-noct-accent-300">{match}</mark>}
           {post}

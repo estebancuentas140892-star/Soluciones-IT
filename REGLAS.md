@@ -41,6 +41,12 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
     - Si es nullable y su valor no se limpia nunca desde la interfaz, declararla también en `camposOpcionales`: así se omite del payload cuando vale null y el despliegue no depende de que el usuario aplique el SQL a tiempo. Si el usuario SÍ puede vaciarla (desasignar una persona o una ubicación), NO va ahí: necesita viajar como null.
     - Avisar al usuario, al entregar, que debe ejecutar `supabase/schema.sql` completo en el SQL Editor de Supabase, y que el archivo es idempotente.
 
+24. **Orden de despliegue de las formas de búsqueda de las guías** (regla operativa acordada con el usuario el 2026-10-02, tarea 288). `formasBusqueda` vive en el JSON `procedimiento` (sin columna ni migración) y una versión anterior de la app que **edite y guarde** una guía que ya lo tenga lo descarta, porque no lo conoce. No se migra Supabase ni se agrega lógica de servidor para evitarlo; se evita con el orden:
+    1. Primero se despliega la versión de la tarea 288.
+    2. Después se actualizan o se reabren las apps en los dispositivos de los técnicos (aceptar "Actualización disponible"; en escritorio, recargar).
+    3. Solo después se empiezan a rellenar formas de búsqueda en las guías reales.
+    - Las guías que no tienen formas de búsqueda siguen siendo compatibles: la clave ni siquiera se escribe. Rellenarlas es trabajo editorial posterior, basado en la auditoría de contenido; no se generan automáticamente ni en masa (regla 20 d). Detalle en [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-059.
+
 ## Diseño
 
 15. Alcance de un handoff de diseño (regla acordada 2026-07-18): cuando se autoriza implementar un handoff de Claude Design, no se implementa solo el archivo `.dc.html` que señala el README, sino TODAS las pantallas (`.dc.html`) que estén dentro de la carpeta del proyecto del handoff (por ejemplo `.../project/`). El README apunta a la pantalla que el usuario tenía abierta, pero el encargo es dejar re-autorizada toda la carpeta. Cada pantalla se implementa como su propia tarea (una "En proceso" a la vez, regla 4), verificada y archivada, hasta agotar la carpeta. Antes de empezar se revisa qué pantallas de la carpeta ya están hechas (para no repetirlas) y se listan las que faltan.
@@ -52,6 +58,12 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
     - Donde hay que elegir entre varios (asignar un equipo, conectar dos), callar nunca vuelve iguales dos filas que no lo son.
     - Una línea que queda vacía no se dibuja: la fila se compacta.
     - Primera aplicación: el subtítulo de los equipos, con `src/lib/contextoEquipo.ts`; el criterio técnico está en [DECISIONES.md](DECISIONES.md) AD-057.
+
+23. **El nombre principal de un resultado no se recorta si el recorte puede ocultar qué entidad o procedimiento se está mostrando** (regla acordada con el usuario el 2026-10-02, tarea 288). Con un tope de dos líneas, "Agregar una impresora al computador mediante su dirección IP" se leía "Agregar una impresora al computador mediante su…" a 390 px: justo sin la parte que dice de qué guía se trata.
+    - **Solo la identidad principal:** el título de una guía, una guía con preguntas, un equipo, una persona, una ubicación, una herramienta, un comando o cualquier otro resultado. Ocupa las líneas que necesite y la fila crece; la altura variable es correcta.
+    - **Lo secundario sí puede recortarse:** el tipo, la categoría, el subtítulo, la razón de un asunto de la agenda. Y esto NO convierte en ilimitado todo el texto de la aplicación: cada otra línea conserva su propia regla.
+    - **Cómo:** la misma estrategia que `FilaArticulo`: `min-w-0` en la columna y en el título, `overflow-wrap:anywhere` (una ruta o una IP sin espacios parte la línea en vez de salirse) y `text-wrap:pretty`. Nunca `line-clamp-*`, `truncate` ni una altura fija en el nombre.
+    - **Dónde rige hoy:** las filas de Resolver: los resultados (`FilaResultado`, en todas sus formas: "Mejor coincidencia", "Otras coincidencias", "Mejores resultados", los grupos y el modo consulta), los borradores que coinciden, Recientes y Atención (`FilaAgenda`). La prueba `nombresSinRecorte.test.tsx` lo vigila, con un título largo de verdad. Criterio técnico en [DECISIONES.md](DECISIONES.md) AD-062.
 
 ## Navegación
 

@@ -19,6 +19,7 @@ import {
   tocar,
   ubicacionActual,
 } from '../../pruebas/montaje'
+import { AYUDA_BUSCADOR } from '../busqueda/resultados'
 import { fechaDeHoy } from './agenda'
 import { AgendaPage } from './AgendaPage'
 import { ResolverPage } from './ResolverPage'
@@ -342,7 +343,12 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
 
   it('con el campo vacío hay una ayuda de una línea, y se va al escribir (tarea 288)', async () => {
     await montar(RUTAS, '/')
-    const ayuda = 'Ej.: no imprime el PDF, usuario bloqueado, impresora mercadeo'
+    const ayuda = 'Ej.: no imprime, usuario bloqueado, impresora mercadeo'
+    // UNA línea a 390 px: happy-dom no mide texto, así que se vigila el
+    // largo. Con Inter a 12,5 px caben 350 px; este texto mide 334 y el
+    // anterior ("no imprime el PDF, …", 61 caracteres), 375: se partía.
+    expect(AYUDA_BUSCADOR).toBe(ayuda)
+    expect(ayuda.length).toBeLessThanOrEqual(55)
     await esperarTexto(ayuda)
     const parrafo = () =>
       Array.from(document.body.querySelectorAll('p')).find((p) => p.textContent === ayuda) ?? null

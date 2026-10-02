@@ -434,7 +434,7 @@ function BloqueRecientes({ recientes }: { recientes: GuiaReciente[] }) {
 }
 
 // LA FILA DE RECIENTES (propuesta final de Claude Design, 2026-10-01). El
-// título manda, hasta en dos líneas. La guía a medias es la que se retoma:
+// título manda, entero. La guía a medias es la que se retoma:
 // su avance va en acento ("paso 3 de 8") y lleva "Continuar" con forma de
 // botón; las demás no repiten "Abrir" (toda la fila se abre). El icono
 // dice qué clase de guía es: con pasos o con preguntas.
@@ -462,9 +462,16 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
         <Icono size={17} aria-hidden />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        {/* HASTA DOS LÍNEAS, NO UNA CORTADA (tarea 263): a 360 px el
-            título de una guía se quedaba en "La impresora de ejemplo...". */}
-        <span className="line-clamp-2 text-[15px] font-medium leading-[1.3] text-pretty">{guia.titulo}</span>
+        {/* EL TÍTULO ENTERO, NO CORTADO (tarea 263, y sin el tope de
+            dos líneas desde la regla 23): a 360 px el título de una guía
+            se quedaba en "La impresora de ejemplo...", y con dos líneas
+            seguía perdiendo el final, que suele ser lo que la distingue. */}
+        <span
+          data-nombre-principal
+          className="min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] text-pretty"
+        >
+          {guia.titulo}
+        </span>
         <span className="flex min-w-0 items-center gap-1 text-[12.5px] leading-[1.4] text-noct-neutral-400">
           {guia.borrador && (
             <span className="inline-flex shrink-0 items-center gap-1">

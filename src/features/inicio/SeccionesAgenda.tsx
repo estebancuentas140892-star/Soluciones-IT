@@ -291,7 +291,8 @@ function CabeceraAgenda({ titulo, total, estado }: { titulo: string; total: numb
   )
 }
 
-// FILA DE LA AGENDA (M-R6, fila de ACCIÓN). 56 px, título de 15 px y,
+// FILA DE LA AGENDA (M-R6, fila de ACCIÓN). 56 px como mínimo (crece con
+// un título largo, que nunca se corta), título de 15 px y,
 // debajo, LA RAZÓN en el color de su estado ("Venció hace 3 días" en
 // rojo) y de dónde sale ("Bóveda", o el nombre del equipo). El origen
 // solo aparece cuando el ítem tiene fecha. A la derecha, la acción en un
@@ -313,7 +314,14 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
         <Icono size={17} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-medium leading-[1.3]">{item.titulo}</span>
+        {/* El nombre entero (regla 23): es lo que dice QUÉ vence o qué
+            hay que revisar. La razón de debajo sí se recorta. */}
+        <span
+          data-nombre-principal
+          className="block min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+        >
+          {item.titulo}
+        </span>
         <span className="block truncate text-[12.5px]">
           <span className={COLOR_RAZON[item.tono]}>{item.detalle}</span>
           {item.fecha !== null && item.origen && <span className="text-noct-neutral-400"> · {item.origen}</span>}

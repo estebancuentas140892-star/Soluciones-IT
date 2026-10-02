@@ -124,10 +124,19 @@ export function FilaResultado({
     cerrarVista()
   }
 
-  // El título manda, hasta en dos líneas (propuesta final). En una lista
-  // homogénea, lo buscado en gris con subrayado punteado (sigue siendo la
-  // coincidencia) y lo que distingue a la fila en claro; si no, la
-  // coincidencia resaltada en acento. El título real no cambia.
+  // El título manda. En una lista homogénea, lo buscado en gris con
+  // subrayado punteado (sigue siendo la coincidencia) y lo que distingue a
+  // la fila en claro; si no, la coincidencia resaltada en acento. El
+  // título real no cambia.
+  //
+  // EL TÍTULO NUNCA SE RECORTA (regla 23, tarea 288): ocupa las líneas que
+  // necesite y la fila crece. Con el tope de dos líneas de la propuesta
+  // final, "Agregar una impresora al computador mediante su dirección IP"
+  // se quedaba en "…mediante su…" a 390 px, justo sin la parte que dice de
+  // qué guía se trata. Misma estrategia que `FilaArticulo`: `min-w-0` y
+  // `overflow-wrap:anywhere` (una palabra o una IP sin espacios parte la
+  // línea en vez de salirse) y `text-wrap:pretty`. El subtítulo y el tipo
+  // sí se recortan: son contexto, no la identidad del resultado.
   const cuerpo = (
     <>
       <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md ${tono}`}>
@@ -135,14 +144,20 @@ export function FilaResultado({
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {conPrefijo ? (
-          <span className="line-clamp-2 text-[15px] leading-[1.3] [text-wrap:pretty]">
+          <span
+            data-nombre-principal
+            className="min-w-0 text-[15px] leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+          >
             <span className="text-noct-neutral-400 underline decoration-noct-accent-600 decoration-dotted underline-offset-4">
               {conPrefijo.prefijo}
             </span>
             <span className="font-medium text-noct-neutral-100">{conPrefijo.resto}</span>
           </span>
         ) : (
-          <span className="line-clamp-2 text-[15px] font-medium leading-[1.3] [text-wrap:pretty]">
+          <span
+            data-nombre-principal
+            className="min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+          >
             {pre}
             {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
             {post}
