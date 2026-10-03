@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type BloquePaso, type PasoProcedimiento } from '../../lib/db'
+import { guardarModoEjecucion } from '../../lib/preferenciasEjecucion'
 import {
+  anclarMaestra,
   control,
   desmontarTodo,
   esperar,
@@ -9,20 +11,22 @@ import {
   limpiarBase,
   montar,
   pasoPrueba,
+  sembrarCredencial,
   sembrarGuia,
   sembrarPerfil,
   textoPantalla,
   tocar,
 } from '../../pruebas/montaje'
+import { bloquear } from '../boveda/sesionBoveda'
 import { ArticuloPage } from './ArticuloPage'
+import { TERMINOS_INTERNOS } from './flujoContinuo'
 import { GuiaPage } from './GuiaPage'
 
-// LAS GUÍAS COMO UN SOLO FLUJO (tarea 289, fase 1): EL COMPORTAMIENTO DE
-// HOY, ANTES DE CAMBIARLO.
+// LAS GUÍAS COMO UN SOLO FLUJO (tarea 289).
 //
-// Estas pruebas fijan cómo se recorre hoy una guía en los casos que la
-// auditoría eligió como representativos, con datos INVENTADOS que copian
-// la ESTRUCTURA de las guías reales (ninguna IP, credencial ni texto real):
+// Estas pruebas recorren una guía en los casos que la auditoría eligió
+// como representativos, con datos INVENTADOS que copian la ESTRUCTURA de
+// las guías reales (ninguna IP, credencial ni texto real):
 //
 //   - la de alimentación: el paso 1 es otra guía entera (entrar al
 //     programa por escritorio remoto, con dos credenciales) y después
@@ -32,15 +36,18 @@ import { GuiaPage } from './GuiaPage'
 //   - una guía de diagnóstico con guías de consulta en una tarea;
 //   - una decisión cuyo "No" abre otra guía.
 //
-// Lo que hoy se ve y la tarea 289 cambia queda escrito como tal: la
-// tarjeta "Guía necesaria" con "Abrir guía", la cabecera "Estás
-// realizando «X» para continuar con «Y»", "Volver a la guía principal", el
-// "Paso 1 de 3" y los requisitos propios de la guía de dentro.
+// La fase 1 fijó aquí lo que se veía antes: los requisitos junto a la
+// primera acción, la tarjeta "Guía necesaria" con "Abrir guía", la
+// cabecera "Estás realizando «X» para continuar con «Y»", "Volver a la
+// guía principal", el "Paso 1 de 3" y los requisitos de la guía de dentro.
+// Las fases siguientes las cambiaron a propósito:
 //
-// FASE 2: antes de la primera acción, la guía orienta (qué vas a hacer,
-// cuándo usarla, objetivo) y prepara (los requisitos, juntos, en su propia
-// pantalla). Las pruebas de los vínculos atraviesan esa preparación con
-// `empezarGuia` y siguen fijando lo de hoy hasta la fase 3.
+//   - FASE 2: antes de la primera acción, la guía orienta (qué vas a
+//     hacer, cuándo usarla, objetivo) y prepara (los requisitos, juntos,
+//     en su propia pantalla). `empezarGuia` atraviesa esa preparación.
+//   - FASE 3: lo que un paso reutiliza se hace en el sitio, como acciones
+//     de ese paso, y nada de lo que se ve habla de cómo está construida la
+//     guía (`sinArquitectura`).
 
 const RUTAS = [
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> },
@@ -253,6 +260,23 @@ async function completarHasta(texto: string, intentos = 12): Promise<void> {
   await esperar(() => textoPantalla().includes(texto), `aparece «${texto}»`)
 }
 
+/** Lo que se ve no habla de cómo está construida la guía (tarea 289, fase 3). */
+function sinArquitectura(): void {
+  const texto = textoPantalla()
+  expect(texto).not.toMatch(TERMINOS_INTERNOS)
+  for (const frase of [
+    'Estás realizando',
+    'Abrir guía',
+    'Continuar guía',
+    'Guía necesaria',
+    'Consulta opcional',
+    'Primero, completa esta guía',
+    'Guía completada',
+  ]) {
+    expect(texto).not.toContain(frase)
+  }
+}
+
 /** Atraviesa la orientación y los requisitos de una ejecución nueva hasta la primera acción. */
 async function empezarGuia(): Promise<void> {
   const boton = await esperar(
@@ -433,7 +457,10 @@ describe('lo que hace falta antes de una guía que reutiliza otras (fase 2)', ()
         'los requisitos, leídos de la base local',
       )
       await tocar(await esperarControl('Todo listo, empezar'))
-      await esperar(() => textoPantalla().includes('Primero, completa esta guía'), 'la primera acción')
+      await esperar(
+        () => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'),
+        'la primera acción, reutilizada y leída de la base local',
+      )
       expect(red).not.toHaveBeenCalled()
     } finally {
       vi.unstubAllGlobals()
@@ -441,75 +468,248 @@ describe('lo que hace falta antes de una guía que reutiliza otras (fase 2)', ()
   })
 })
 
-describe('hoy: una guía que reutiliza otra en su paso 1 (el caso de alimentación)', () => {
-  it('el paso 1 es una tarjeta que hay que abrir, y dentro se ve otra guía con su numeración y sus requisitos', async () => {
+describe('un solo flujo: el caso de alimentación (fase 3)', () => {
+  it('el paso 1 hace aquí lo que reutiliza: sin tarjeta, sin cabecera y sin numeración propias', async () => {
     await sembrarCasoAlimentacion()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
     await empezarGuia()
-    await esperar(() => textoPantalla().includes('Primero, completa esta guía'), 'la guía del paso 1')
-    await esperar(() => textoPantalla().includes('Guía necesaria'), 'la tarjeta de la guía')
-    expect(textoPantalla()).toContain('Acceder al programa de caja por escritorio remoto')
-
-    await tocar(await esperarControl('Abrir guía: Acceder al programa de caja por escritorio remoto'))
-    await esperar(() => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'), 'la guía de dentro')
-    const dentro = textoPantalla()
-    expect(dentro).toContain(
-      'Estás realizando «Acceder al programa de caja por escritorio remoto» para continuar con «Crear un trabajador para almuerzo en el programa de caja»',
-    )
-    expect(control('Volver a la guía principal')).not.toBeNull()
-    expect(dentro).toContain('Paso 1 de 3')
-    // Los requisitos de la guía de dentro, a mitad de la ejecución.
-    expect(dentro).toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
+    await esperar(() => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'), 'la primera acción reutilizada')
+    const texto = textoPantalla()
+    // La identidad es la de la guía que se abrió: su contador y su paso.
+    expect(control('Paso 1 de 7. Abrir el índice de pasos')).not.toBeNull()
+    expect(texto).toContain('Ingresar al programa de caja')
+    // Lo de dentro no se nombra ni se numera aparte.
+    expect(texto).not.toContain('Acceder al programa de caja por escritorio remoto')
+    expect(texto).not.toContain('Paso 1 de 3')
+    // El título de la parte, en voz baja, y el "Dónde" del paso que la reutiliza.
+    expect(texto).toContain('Conectarse al servidor por escritorio remoto')
+    expect(texto).toContain('Escritorio remoto · programa de caja')
+    // Sus requisitos ya se pidieron antes de empezar: no vuelven.
+    expect(texto).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
+    expect(texto).not.toContain('Ten esto listo')
+    sinArquitectura()
+    // El lector de pantalla y el teclado empiezan en la acción.
+    expect(document.activeElement?.textContent).toBe('Busca y abre Conexión a Escritorio remoto')
+    expect(control('Completar y seguir')).not.toBeNull()
   })
 
-  it('terminarla pide "terminar" y sus comprobaciones a mitad del recorrido, y después sigue el paso 2', async () => {
+  it('lo reutilizado trae su credencial, sigue con "Completar y seguir", comprueba sin "terminar" y continúa en el paso 2', async () => {
     await sembrarCasoAlimentacion()
+    await anclarMaestra()
+    await sembrarCredencial({
+      id: 'cred-programa',
+      titulo: 'Acceso de prueba al programa de caja',
+      tipo: 'cuenta',
+      usuario: 'caja.prueba',
+      contrasena: 'Clave-De-Prueba-7',
+    })
+    bloquear()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
     await empezarGuia()
-    await tocar(await esperarControl('Abrir guía: Acceder al programa de caja por escritorio remoto'))
     await completarHasta('Abre el programa de caja e ingresa su contraseña')
-    expect(control('Completar y terminar')).not.toBeNull()
-    await tocar(await esperarControl('Completar y terminar'))
-    await esperar(() => textoPantalla().includes('Antes de terminar, comprueba'), 'las comprobaciones de la guía de dentro')
+    // La credencial va con la acción que la usa, sin salir del flujo.
+    await esperar(() => textoPantalla().includes('Credencial necesaria'), 'la credencial de la acción')
+    expect(textoPantalla()).toContain('Acceso de prueba al programa de caja')
+    // Lo que debe verse al terminar el paso, aunque la acción sea de lo reutilizado.
+    expect(textoPantalla()).toContain('El programa de caja queda abierto y listo para trabajar.')
+    expect(control('Completar y terminar')).toBeNull()
+    sinArquitectura()
+
+    await tocar(await esperarControl('Completar y seguir'))
+    await esperar(() => textoPantalla().includes('Comprueba antes de seguir'), 'la comprobación de lo reutilizado')
+    expect(textoPantalla()).not.toContain('Antes de terminar')
+    sinArquitectura()
     await tocar(await esperar(() => document.body.querySelector<HTMLElement>('[role="checkbox"]'), 'la comprobación'))
-    await esperar(() => textoPantalla().includes('Si aparece el aviso inicial, selecciona Salir'), 'el paso 2 de la guía')
+
+    await esperar(() => textoPantalla().includes('Si aparece el aviso inicial, selecciona Salir'), 'el paso 2')
+    expect(control('Paso 2 de 7. Abrir el índice de pasos')).not.toBeNull()
     const progreso = await db.progresoPasos.get('guia-alimentacion')
     expect(progreso?.pasosHechos).toEqual(['ali-p1'])
     expect(progreso?.vinculos?.['acceso-programa']?.pasosHechos).toEqual(['acc-p1', 'acc-p2', 'acc-p3'])
+    // Nada se copió dentro de la guía que la reutiliza: sigue siendo una referencia.
+    const guia = await db.articulos.get('guia-alimentacion')
+    expect(guia?.procedimiento?.pasos[0].subArticuloId).toBe('acceso-programa')
+    expect(guia?.procedimiento?.pasos).toHaveLength(7)
+  })
+
+  it('desde el paso 2, "Anterior" revisa el paso 1 ya hecho: se lee lo que se hizo, sin abrir nada', async () => {
+    await sembrarCasoAlimentacion()
+    await db.progresoPasos.put({
+      articuloId: 'guia-alimentacion',
+      pasosHechos: ['ali-p1'],
+      instruccionesHechas: [],
+      verificacionHecha: [],
+      actualizadoEn: '2026-10-02T12:00:00.000Z',
+      vinculos: {
+        'acceso-programa': {
+          pasosHechos: ['acc-p1', 'acc-p2', 'acc-p3'],
+          instruccionesHechas: ['acc-p1-t1', 'acc-p1-t2', 'acc-p1-t3', 'acc-p2-t1', 'acc-p3-t1'],
+          verificacionHecha: [0],
+          actualizadoEn: '2026-10-02T12:00:00.000Z',
+        },
+      },
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+    await esperar(() => textoPantalla().includes('Si aparece el aviso inicial, selecciona Salir'), 'el paso 2')
+    await tocar(await esperarControl(/^Anterior/))
+    await esperar(() => textoPantalla().includes('Conectarse al servidor por escritorio remoto'), 'el paso 1, para leerlo')
+    const texto = textoPantalla()
+    expect(texto).toContain('Hecha')
+    expect(texto).toContain('Ingresar al programa de caja')
+    expect(texto).toContain('Abre el programa de caja e ingresa su contraseña')
+    expect(control(/^Abrir:/)).toBeNull()
+    sinArquitectura()
+    expect(control('Ir al paso 2')).not.toBeNull()
+  })
+
+  it('retomar a mitad de lo reutilizado sigue en la acción exacta, sin volver a prepararse', async () => {
+    await sembrarCasoAlimentacion()
+    await db.progresoPasos.put({
+      articuloId: 'guia-alimentacion',
+      pasosHechos: [],
+      instruccionesHechas: [],
+      verificacionHecha: [],
+      actualizadoEn: '2026-10-02T12:00:00.000Z',
+      vinculos: {
+        'acceso-programa': {
+          pasosHechos: ['acc-p1'],
+          instruccionesHechas: ['acc-p1-t1', 'acc-p1-t2', 'acc-p1-t3'],
+          verificacionHecha: [],
+          actualizadoEn: '2026-10-02T12:00:00.000Z',
+        },
+      },
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+    await esperar(
+      () => textoPantalla().includes('Ingresa el usuario y la contraseña del escritorio remoto'),
+      'la acción en que iba',
+    )
+    expect(textoPantalla()).toContain('Retomando · paso 1 de 7')
+    expect(textoPantalla()).not.toContain('Cuándo usarla')
+    expect(textoPantalla()).not.toContain('Antes de empezar')
+    sinArquitectura()
+    // Actuar dentro ya es haber elegido seguir: la línea de "Retomando" se va.
+    await tocar(await esperarControl('Completar y seguir'))
+    await esperar(() => textoPantalla().includes('Abre el programa de caja e ingresa su contraseña'), 'la acción siguiente')
+    expect(textoPantalla()).not.toContain('Retomando ·')
+  })
+
+  it('"Tengo un problema" dentro de lo reutilizado habla del paso de la guía que se abrió', async () => {
+    await sembrarCasoAlimentacion()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+    await empezarGuia()
+    await esperar(() => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'), 'la primera acción reutilizada')
+    await tocar(await esperarControl('Tengo un problema con esta acción: ver las salidas'))
+    await esperar(() => textoPantalla().includes('Algo va mal en el paso 1'), 'las salidas del paso')
+    // Saltar lleva al paso siguiente de la guía que se abrió.
+    await tocar(await esperarControl(/^Seguir con el paso siguiente/))
+    await esperar(() => textoPantalla().includes('Si aparece el aviso inicial, selecciona Salir'), 'el paso 2')
+    expect((await db.progresoPasos.get('guia-alimentacion'))?.pasosSaltados).toEqual(['ali-p1'])
   })
 })
 
-describe('hoy: una guía hecha de otras guías (el computador nuevo)', () => {
-  it('cada paso es una tarjeta distinta que hay que abrir y de la que hay que volver', async () => {
+describe('un solo flujo: varias guías seguidas (el computador nuevo, fase 3)', () => {
+  it('cada paso hace aquí lo que reutiliza, uno detrás de otro, y solo el último termina', async () => {
     await sembrarCasoComputador()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-computador')
     await empezarGuia()
-    await tocar(await esperarControl('Abrir guía: Configurar el correo de prueba'))
-    await esperar(() => textoPantalla().includes('Abre el correo de prueba e inicia sesión'), 'la primera guía')
-    // Su única acción "termina" aunque la guía de fuera siga.
+    const vistos: string[] = []
+
+    await esperar(() => textoPantalla().includes('Abre el correo de prueba e inicia sesión'), 'el paso 1')
+    vistos.push(textoPantalla())
+    sinArquitectura()
+    await tocar(await esperarControl('Completar y seguir'))
+
+    await esperar(() => textoPantalla().includes('Crea la firma de prueba en el correo'), 'el paso 2, sin tarjeta que abrir')
+    expect(control('Paso 2 de 3. Abrir el índice de pasos')).not.toBeNull()
+    vistos.push(textoPantalla())
+    sinArquitectura()
+    await tocar(await esperarControl('Completar y seguir'))
+
+    await esperar(() => textoPantalla().includes('Selecciona Conectar en la impresora de prueba'), 'el paso 3')
+    vistos.push(textoPantalla())
+    sinArquitectura()
+    // Con esto termina de verdad la guía que se abrió.
     await tocar(await esperarControl('Completar y terminar'))
-    // Al terminarla, el paso 2 vuelve a ser una tarjeta cerrada.
-    await esperar(() => control('Abrir guía: Configurar la firma de prueba'), 'la tarjeta del paso 2')
-    expect(textoPantalla()).toContain('Primero, completa esta guía')
+    await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía terminada')
+
+    // Por el camino no apareció ningún requisito de dentro ni su numeración.
+    for (const texto of vistos) {
+      expect(texto).not.toContain('Correo de prueba configurado.')
+      expect(texto).not.toContain('Impresora de prueba encendida.')
+      expect(texto).not.toContain('Paso 1 de 1')
+    }
+  })
+
+  it('un paso de más adelante se consulta leyendo lo que pide, sin abrir ni marcar nada', async () => {
+    await sembrarCasoComputador()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-computador')
+    await empezarGuia()
+    await esperar(() => textoPantalla().includes('Abre el correo de prueba e inicia sesión'), 'el paso 1')
+    await tocar(await esperarControl(/^Paso 3 de 3: Instalar la impresora de la persona/))
+    await esperar(() => textoPantalla().includes('Solo consulta'), 'la consulta del paso 3')
+    const texto = textoPantalla()
+    expect(texto).toContain('Instalar la impresora de la persona')
+    expect(texto).toContain('Selecciona Conectar en la impresora de prueba')
+    expect(control(/^Abrir:/)).toBeNull()
+    sinArquitectura()
+    await tocar(await esperarControl('Ir al paso 1'))
+    await esperar(() => textoPantalla().includes('Abre el correo de prueba e inicia sesión'), 'de vuelta al paso 1')
+    expect((await db.progresoPasos.get('guia-computador'))?.vinculos?.['impresora-prueba']).toBeUndefined()
   })
 })
 
-describe('hoy: guías de consulta y decisiones', () => {
-  it('una guía de consulta se ofrece como "Consulta opcional" con "Abrir guía"', async () => {
+describe('lo opcional sigue siendo un desvío, dicho sin vocabulario interno (fase 3)', () => {
+  it('una consulta se ofrece "Si lo necesitas", se abre en el sitio y vuelve al paso exacto', async () => {
     await sembrarDiagnosticoConConsultas()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-diagnostico')
     await esperar(() => textoPantalla().includes('Confirma cómo estaba instalada la impresora'), 'la tarea')
-    await esperar(() => textoPantalla().includes('Consulta opcional'), 'la tarjeta de consulta')
-    expect(control('Abrir guía: Agregar una impresora de prueba por su dirección')).not.toBeNull()
+    await esperar(() => textoPantalla().includes('Si lo necesitas'), 'lo que se ofrece')
+    expect(textoPantalla()).toContain('Sin empezar')
+    sinArquitectura()
+    await tocar(await esperarControl('Abrir: Agregar una impresora de prueba por su dirección'))
+    await esperar(() => textoPantalla().includes('Abre Impresoras y escáneres'), 'la consulta abierta')
+    expect(control('Volver al paso 1')).not.toBeNull()
+    sinArquitectura()
+    await tocar(await esperarControl('Volver al paso 1'))
+    await esperar(() => textoPantalla().includes('Confirma cómo estaba instalada la impresora'), 'de vuelta en la acción')
   })
 
-  it('responder "No" abre la otra guía con su cabecera y su regreso', async () => {
+  it('el "No" de una decisión sigue en el flujo: sus acciones en el sitio y, al terminar, lo que venía después', async () => {
     await sembrarDecisionConDestino()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-envio')
     await completarHasta('¿La persona solo necesita ver el archivo?')
-    await tocar(await esperarControl(/^No: abrir/))
-    await esperar(() => textoPantalla().includes('Selecciona Puede editar'), 'el destino del no')
-    expect(textoPantalla()).toContain('Estás realizando «Crear un vínculo de prueba con permiso de edición»')
-    expect(control('Volver a la guía principal')).not.toBeNull()
+    expect(textoPantalla()).toContain('Si respondes que no, sigues con «Crear un vínculo de prueba con permiso de edición»')
+    await tocar(await esperarControl(/^No: seguir con/))
+    await esperar(() => textoPantalla().includes('Selecciona Puede editar'), 'el camino del no')
+    expect(control('Paso 1 de 2. Abrir el índice de pasos')).not.toBeNull()
+    sinArquitectura()
+    // "Anterior" desde su primera acción deshace la respuesta.
+    await tocar(await esperarControl(/^Anterior/))
+    await esperar(() => control(/^No: seguir con/), 'de vuelta en la decisión, sin responder')
+    await tocar(await esperarControl(/^No: seguir con/))
+    await esperar(() => textoPantalla().includes('Selecciona Puede editar'), 'otra vez el camino del no')
+    await tocar(await esperarControl('Completar y seguir'))
+    await esperar(() => textoPantalla().includes('Pega el vínculo y envía el correo'), 'lo que venía después')
+    sinArquitectura()
+  })
+})
+
+describe('el paso entero también es un solo flujo (fase 3)', () => {
+  it('lo reutilizado se ve como parte del paso, sin fila propia ni sus requisitos', async () => {
+    await sembrarCasoAlimentacion()
+    await guardarModoEjecucion('pasoEntero')
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+    await empezarGuia()
+    await esperar(
+      () => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'),
+      'lo reutilizado dentro del paso entero',
+    )
+    const texto = textoPantalla()
+    expect(texto).toContain('Ingresar al programa de caja')
+    expect(texto).not.toContain('Acceder al programa de caja por escritorio remoto')
+    expect(texto).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
+    expect(texto).not.toContain('Esta guía')
+    sinArquitectura()
   })
 })

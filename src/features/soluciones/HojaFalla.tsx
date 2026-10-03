@@ -157,7 +157,7 @@ export function HojaFalla({
           <Salida
             Icono={Wrench}
             tono="riesgo"
-            titulo="Abrir la contingencia vinculada"
+            titulo="Abrir la contingencia"
             detalle={
               <>
                 «{contingencia.titulo}»
@@ -172,8 +172,8 @@ export function HojaFalla({
 
         {contingencia === 'rota' && (
           <p className="rounded-[10px] border border-noct-divider bg-noct-text/[.04] px-3 py-2.5 text-[13px] leading-normal text-noct-neutral-200">
-            La contingencia vinculada{solucionArticuloTitulo ? ` "${solucionArticuloTitulo}"` : ''} ya no está
-            disponible. Edita la guía para vincular otra.
+            La contingencia{solucionArticuloTitulo ? ` «${solucionArticuloTitulo}»` : ''} ya no está disponible
+            en este dispositivo. Avisa a quien mantiene la guía.
           </p>
         )}
 
@@ -185,9 +185,8 @@ export function HojaFalla({
           <p className="flex items-start gap-2 rounded-[10px] border border-noct-divider px-3 py-2.5 text-[12.5px] leading-normal text-noct-neutral-300">
             <Info size={15} className="mt-px shrink-0 text-noct-neutral-400" aria-hidden />
             <span>
-              Este paso no tiene una guía de contingencia vinculada, así que aquí no hay una reparación
-              documentada que ofrecerte. Puedes detenerte y dejarlo anotado, o seguir con el resto del
-              procedimiento.
+              Este paso no tiene una contingencia documentada, así que aquí no hay una reparación que
+              ofrecerte. Puedes detenerte y dejarlo anotado, o seguir con el resto del procedimiento.
             </span>
           </p>
         )}

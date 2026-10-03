@@ -159,6 +159,6 @@ describe('guiasObligatoriasPendientes y su motivo', () => {
 
   it('una guía sin título no deja el mensaje cojo', () => {
     const anonima = [guia('g9', 't1', 'art-x', '', 'necesario')]
-    expect(motivoGuiasPendientes(anonima)).toBe('Completa «la guía vinculada» para marcar esta tarea')
+    expect(motivoGuiasPendientes(anonima)).toBe('Completa lo que falta para marcar esta tarea')
   })
 })

@@ -243,9 +243,12 @@ describe('la guía vinculada del paso dentro del recorrido', () => {
     ],
   })
 
-  it('entra como PRIMERA tarea, con el título de la guía', () => {
+  // Por el título del PASO desde la tarea 289: es lo que el técnico ve y
+  // lo que nombra "Tengo un problema". La guía sigue en `guiaTitulo`.
+  it('entra como PRIMERA tarea, con el título del paso', () => {
     const tareas = tareasParaFoco(conGuia, 'Entrar al gestor')
-    expect(tareas.map((t) => t.texto)).toEqual(['Acceder al gestor', 'Crear la ficha', 'Comprobar que aparece'])
+    expect(tareas.map((t) => t.texto)).toEqual(['Entrar al gestor', 'Crear la ficha', 'Comprobar que aparece'])
+    expect(tareas[0].guiaTitulo).toBe('Acceder al gestor')
     expect(tareas[0].clase).toBe('guia-del-paso')
     expect(tareas[0].guiaId).toBe('art-gestor')
     expect(tareas[0].id).toBe(idTareaGuiaDelPaso('p1'))

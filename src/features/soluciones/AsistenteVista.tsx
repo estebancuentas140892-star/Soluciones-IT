@@ -78,6 +78,8 @@ import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { RutaProcedimiento } from './RutaProcedimiento'
 import { HojaFalla } from './HojaFalla'
 import { PantallaPreparacion } from './PantallaPreparacion'
+import { PasosEnLectura } from './PasosEnLectura'
+import { ROTULO_CONTINGENCIA, type IntegracionEnFlujo } from './flujoContinuo'
 import { orientacionDe, pantallasDePreparacion } from './preparacionGuia'
 import { useRequisitosEfectivos } from './useRequisitosEfectivos'
 import { destinoAlSaltar } from './salidasFalla'
@@ -115,6 +117,11 @@ interface Props {
   // eligieron sus respuestas y el "cuándo usarla" no añade nada. Con
   // preparación, los requisitos ya no van junto a la primera acción.
   preparacion?: 'completa' | 'requisitos'
+  // PARTE DEL FLUJO DE LA GUÍA QUE SE ABRIÓ (tarea 289, fase 3): esta es
+  // una guía reutilizada por un paso, y se recorre como acciones de ese
+  // paso. Sin requisitos, sin numeración, sin barra de avance propia y sin
+  // "terminar" a mitad del recorrido. Ver `flujoContinuo.ts`.
+  integracion?: IntegracionEnFlujo
 }
 
 // Modo ejecucion (asistente): en vez del "mapa" completo
@@ -136,6 +143,7 @@ export function AsistenteVista({
   onCompletado,
   salida,
   preparacion,
+  integracion,
 }: Props) {
   // Donde vive el avance de ESTE documento (tarea 2 del encargo): la
   // fila del articulo en el nivel 0, la entrada del vinculo dentro de
@@ -217,6 +225,7 @@ export function AsistenteVista({
   const [pasoPreparacion, setPasoPreparacion] = useState<number | null>(null)
   // Solo la ejecución principal se prepara: lo de dentro forma parte de ella.
   const conPreparacion = preparacion !== undefined && nivel === 0
+  const integrada = integracion !== undefined && nivel >= 1
   const orientacion = useMemo(
     () => (conPreparacion && preparacion === 'completa' ? orientacionDe(procedimiento) : null),
     [conPreparacion, preparacion, procedimiento],
@@ -329,6 +338,8 @@ export function AsistenteVista({
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
+    guiaDelPasoIntegrable,
+    vinculosCargados,
     guiasPendientesDeTarea,
     alternarTarea,
     alternarVerificacion,
@@ -358,7 +369,11 @@ export function AsistenteVista({
 
   // Se espera también a la lectura EN VIVO del avance: la acción en la que
   // arranca la vista se decide al montarse, con lo que ya esté marcado.
-  if (!listo || !avanceCargado) return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+  // Y a las guías que reutiliza: sin ellas no se sabe si un paso las hace
+  // aquí o las ofrece aparte (tarea 289, fase 3).
+  if (!listo || !avanceCargado || !vinculosCargados) {
+    return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+  }
 
   // ORIENTAR Y PREPARAR ANTES DE LA PRIMERA ACCIÓN (tarea 289, fase 2). Se
   // espera a los requisitos de la guía del paso 1: decidir qué pantalla
@@ -396,21 +411,34 @@ export function AsistenteVista({
   // comprobaciones desaparecia al cerrar su ultimo paso y nadie llegaba
   // a verlas nunca: el unico sitio donde se marcan es la pantalla que
   // este return borraba. Ahora se va cuando esta terminada de verdad.
-  if (indiceActual === null && nivel >= 1 && verificacionCompleta) return null
+  if (indiceActual === null && nivel >= 1 && verificacionCompleta) {
+    // Abierta a propósito ya hecha (una consulta que se vuelve a mirar):
+    // se lee lo que tiene, en vez de una pantalla vacía (tarea 289).
+    if (!sustituye || integrada) return null
+    return (
+      <div className="flex flex-col gap-3 pt-3">
+        <p className="text-[15px] leading-snug text-noct-neutral-300">Ya se hizo en este caso. Esto es lo que tiene:</p>
+        <PasosEnLectura guiaId={articuloId} />
+      </div>
+    )
+  }
 
   const porcentaje = pasos.length === 0 ? 0 : Math.round((completados / pasos.length) * 100)
 
   if (indiceActual === null && pasosCompletados && verificacionFinal.length > 0 && !verificacionCompleta) {
     return (
       <div className="flex flex-col gap-4 pt-3">
-        <Encabezado porcentaje={porcentaje} completado={false} />
+        {/* En el flujo de otra guía, su avance es el de esa guía: una barra
+            de esta mediría otra cosa (tarea 289). */}
+        {!integrada && <Encabezado porcentaje={porcentaje} completado={false} />}
         {/* LA COMPROBACIÓN FINAL NO ES UNA ADVERTENCIA (G-23, regla
             M-R11): iba en ámbar, el color de los riesgos. Es el último
             vistazo antes de dar el trabajo por hecho. */}
         <div className="rounded-xl border border-noct-divider bg-noct-surface px-4 py-3.5">
           <h2 className="flex items-center gap-2 text-[16px] font-medium text-noct-text">
             <SealCheck size={18} className="shrink-0 text-noct-accent-300" aria-hidden />
-            Antes de terminar, comprueba
+            {/* A mitad del flujo no se termina nada: se comprueba y se sigue. */}
+            {integrada ? 'Comprueba antes de seguir' : 'Antes de terminar, comprueba'}
           </h2>
           <ul className="mt-2 flex flex-col gap-0.5">
             {verificacionFinal.map((item, indice) => {
@@ -531,6 +559,16 @@ export function AsistenteVista({
 
   const tituloPaso = paso.titulo || paso.subArticuloTitulo || `Paso ${indiceActual + 1}`
 
+  // ¿Cerrar este paso TERMINA de verdad? En el flujo de otra guía, solo si
+  // con esto termina también la guía que se abrió (y no quedan
+  // comprobaciones de esta por delante): a mitad del recorrido nada dice
+  // "terminar" (tarea 289, fase 3).
+  const terminaDeVerdad =
+    destinoTrasEste === null &&
+    (!integrada || (integracion.terminaLaGuia && verificacionFinal.length === 0))
+  // El número que ve el técnico es el de la guía que abrió.
+  const numeroPasoVisible = integrada ? integracion.numeroPaso : indiceActual + 1
+
   // Etiqueta de la acción dominante (M-R3: una acción fija abajo que
   // dice qué va a pasar) y, cuando no se puede avanzar, la razón escrita
   // encima. Antes el botón se apagaba al 30 % de opacidad sin decir por
@@ -545,8 +583,9 @@ export function AsistenteVista({
     totalTareas: idsTareas.length,
     tareasMarcadas: marcadas,
     guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho),
-    hayPasoSiguiente: destinoTrasEste !== null,
-    numeroPasoSiguiente: (destinoTrasEste ?? indiceActual) + 1,
+    hayPasoSiguiente: !terminaDeVerdad,
+    // En el flujo de otra guía no se nombra la numeración de dentro.
+    numeroPasoSiguiente: integrada ? null : (destinoTrasEste ?? indiceActual) + 1,
   })
 
   // Estado de cada paso para el índice (tablero 6c). Se recalcula en
@@ -591,11 +630,48 @@ export function AsistenteVista({
   // que ya existía desde el 6d, y el nuevo de la barra de acción. Lo
   // único que cambia entre los dos es que el foco sabe en qué tarea
   // estaba el técnico.
+  // Saltar el paso y seguir (ver `onSaltar`, abajo), o null si no hay a
+  // dónde. Lo usa también lo reutilizado en este paso: saltar desde dentro
+  // es saltar ESTE paso, que es el que el técnico ve (tarea 289).
+  const saltarPaso =
+    destinoSalto === null
+      ? null
+      : () => {
+          // Saltar no deja aviso puesto: el aviso es de este paso
+          // y el técnico se va a otro. Y no cambia de vista: saltar
+          // es seguir trabajando, así que el técnico sigue en el
+          // modo que eligió.
+          //
+          // Lo que SÍ hace ahora es dejarlo anotado (H07): antes el
+          // índice lo deducía de la posición, así que un paso que
+          // solo se miró salía marcado como saltado y uno que se
+          // saltó de verdad, al volver atrás, dejaba de estarlo.
+          void marcarPasoSaltado(clave, paso.id)
+          setHojaFalla(null)
+          irAPaso(destinoSalto)
+        }
+
+  // Lo que la guía reutilizada en este paso necesita saber para recorrerse
+  // como parte de él: el número del paso, qué hacer al actuar dentro (la
+  // línea de "Retomando" se va y el trabajo está aquí) y cómo saltarlo.
+  const indicePaso = indiceActual
+  const integracionDelPaso = (
+    base: Pick<IntegracionEnFlujo, 'lugar' | 'resultado' | 'terminaLaGuia' | 'alRetroceder'>,
+  ): IntegracionEnFlujo => ({
+    ...base,
+    numeroPaso: indicePaso + 1,
+    alActuar: () => {
+      setRetomadaEn(null)
+      setIndiceTrabajo(indicePaso)
+    },
+    alSaltar: saltarPaso,
+  })
+
   const hojaDeFalla = (
     <HojaFalla
       abierto={hojaFalla !== null}
       onCerrar={() => setHojaFalla(null)}
-      numeroPaso={indiceActual + 1}
+      numeroPaso={numeroPasoVisible}
       pasosHechos={completados}
       tarea={hojaFalla?.tarea ?? null}
       solucionArticuloId={paso.solucionArticuloId || null}
@@ -605,24 +681,8 @@ export function AsistenteVista({
         setContingenciaPasoId(paso.id)
       }}
       onFotografiar={dispositivoEvidencia ? () => elegirSalida(true) : null}
-      onSaltar={
-        destinoSalto === null
-          ? null
-          : () => {
-              // Saltar no deja aviso puesto: el aviso es de este paso
-              // y el técnico se va a otro. Y no cambia de vista: saltar
-              // es seguir trabajando, así que el técnico sigue en el
-              // modo que eligió.
-              //
-              // Lo que SÍ hace ahora es dejarlo anotado (H07): antes el
-              // índice lo deducía de la posición, así que un paso que
-              // solo se miró salía marcado como saltado y uno que se
-              // saltó de verdad, al volver atrás, dejaba de estarlo.
-              void marcarPasoSaltado(clave, paso.id)
-              setHojaFalla(null)
-              irAPaso(destinoSalto)
-            }
-      }
+      // En el flujo de otra guía, saltar es saltar el paso de esa guía.
+      onSaltar={integrada ? (integracion.alSaltar ?? null) : saltarPaso}
       // Detenerse sin resolver ni saltar: deja la falla anotada en el
       // paso y devuelve al técnico donde estaba. Es la salida que
       // faltaba cuando el paso no tiene contingencia vinculada
@@ -657,7 +717,9 @@ export function AsistenteVista({
   // su propia pantalla, antes de empezar, así que aquí no vuelven: los
   // requisitos no se mezclan con la primera acción ni reaparecen después.
   const sinAvance = !hayAvanceEnEjecucion(progreso)
-  const requisitosVisibles = !conPreparacion && indiceActual === 0 && sinAvance ? requisitos : []
+  // Y lo reutilizado dentro del flujo tampoco los enseña: los que hacían
+  // falta ya se pidieron antes de empezar (tarea 289).
+  const requisitosVisibles = !conPreparacion && !integrada && indiceActual === 0 && sinAvance ? requisitos : []
 
   // CONSULTAR OTRO PASO NO MARCA NADA (propuesta final de Claude Design,
   // 2026-10-01). Un paso pendiente de MÁS ADELANTE que el de trabajo,
@@ -774,10 +836,12 @@ export function AsistenteVista({
           tituloPaso={tituloPaso}
           numeroPaso={indiceActual + 1}
           totalPasos={pasos.length}
-          cierraLaGuia={!pasoActualHecho && destinoTrasEste === null}
+          cierraLaGuia={!pasoActualHecho && terminaDeVerdad}
           requisitos={requisitosVisibles}
           entrarPorElFinal={entradaPorElFinal === paso.id}
-          onPasoAnterior={indiceActual > 0 ? () => verPaso(indiceActual - 1, true) : undefined}
+          // Desde la primera acción de lo reutilizado, "Anterior" vuelve a
+          // la guía que se abrió (su paso anterior, o deshace el "No").
+          onPasoAnterior={indiceActual > 0 ? () => verPaso(indiceActual - 1, true) : integracion?.alRetroceder}
           // EL PASO SE CONSULTA: el botón principal devuelve al de trabajo.
           consulta={
             consultando && trabajo !== null
@@ -787,8 +851,16 @@ export function AsistenteVista({
           instruccionesHechas={instruccionesHechas}
           subSatisfecho={subSatisfecho}
           guiaDelPasoDisponible={guiaDelPasoDisponible(paso)}
+          guiaDelPasoIntegrada={guiaDelPasoIntegrable(paso)}
+          enFlujo={
+            integrada
+              ? {
+                  lugar: indiceActual === 0 ? integracion.lugar : '',
+                  resultado: indiceActual === pasos.length - 1 ? integracion.resultado : '',
+                }
+              : null
+          }
           anidado={nivel >= 1 && !sustituye}
-          tituloGuiaPrincipal={articulo?.titulo ?? ''}
           // Al volver del vínculo se revisa si el paso ya se puede
           // cerrar. No marca ninguna tarea: una guía necesaria solo
           // queda satisfecha al completarla de verdad, y marcarla sigue
@@ -801,6 +873,7 @@ export function AsistenteVista({
           onAlternarTarea={(tareaId) => {
             setRetomadaEn(null)
             setIndiceTrabajo(indiceActual)
+            integracion?.alActuar?.()
             void alternarTarea(indiceActual, paso, tareaId)
           }}
           onCompletarPaso={avanzar}
@@ -843,10 +916,11 @@ export function AsistenteVista({
           // vistas ejecutan exactamente lo mismo (criterio A08) y el
           // regreso al origen es automático: el técnico nunca sale de
           // esta pantalla, así que no hay a dónde volver.
-          renderGuia={({ guiaId, alCompletar }) => (
+          renderGuia={({ guiaId, alCompletar, enFlujo }) => (
             <EjecucionVinculada
               guiaId={guiaId}
               nivel={nivel}
+              integracion={enFlujo ? integracionDelPaso(enFlujo) : undefined}
               onCompletado={alCompletar ?? (() => void intentarCompletarPaso(indiceActual, paso))}
             />
           )}
@@ -999,6 +1073,17 @@ export function AsistenteVista({
             nivel={nivel}
             rutaOrigen={rutaOrigen}
             etiquetaOrigen={articulo?.titulo ?? 'la guía'}
+            // En el flujo (tarea 289): lo reutilizado se recorre como parte
+            // del paso. El "Dónde" y el "Debes ver" del paso ya se leen aquí.
+            integracion={
+              guiaDelPasoIntegrable(paso)
+                ? integracionDelPaso({
+                    lugar: '',
+                    resultado: '',
+                    terminaLaGuia: !pasoActualHecho && destinoTrasEste === null && marcadas === idsTareas.length,
+                  })
+                : undefined
+            }
             onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
           />
         )}
@@ -1128,7 +1213,7 @@ export function AsistenteVista({
               type="button"
               onClick={() => setHojaFalla({ tarea: null })}
               aria-haspopup="dialog"
-              aria-label={`Algo va mal en el paso ${indiceActual + 1}`}
+              aria-label={`Algo va mal en el paso ${numeroPasoVisible}`}
               className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07]"
             >
               <Warning size={18} aria-hidden />
@@ -1158,7 +1243,7 @@ export function AsistenteVista({
             type="button"
             onClick={() => setHojaFalla({ tarea: null })}
             aria-haspopup="dialog"
-            aria-label={`Algo va mal en el paso ${indiceActual + 1}`}
+            aria-label={`Algo va mal en el paso ${numeroPasoVisible}`}
             className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-noct-divider px-3 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.07]"
           >
             <Warning size={15} className="shrink-0" aria-hidden />
@@ -1371,14 +1456,11 @@ function VinculoEnFoco({
 
   const kicker = kickerPropio ?? kickerVinculo(obligatoria)
 
-  // VÍNCULO ROTO CON SALIDA ÚTIL (criterio A12).
+  // VÍNCULO ROTO CON SALIDA ÚTIL (criterio A12), sin hablar de vínculos.
   if (articulo === null || articulo.eliminadoEn) {
     return (
       <div className="flex flex-col gap-2 rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5">
-        <p className="text-[13px] leading-snug text-noct-neutral-200">
-          La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
-          dispositivo. Puede haberse eliminado, o no haber llegado todavía por sincronización.
-        </p>
+        <p className="text-[13px] leading-snug text-noct-neutral-200">{noDisponible(tituloReferencia)}</p>
         <p className="text-[12.5px] leading-snug text-noct-neutral-300">
           {obligatoria
             ? 'No impide cerrar el paso: sigue con el resto y avisa a quien mantiene la guía para que la reponga.'
@@ -1410,7 +1492,7 @@ function VinculoEnFoco({
     return (
       <EnlaceVinculo
         Icono={LinkSimple}
-        kicker={`${kicker} · consultar aparte`}
+        kicker={`${kicker} · se abre aparte`}
         titulo={articulo.titulo}
         nota={obligatoria ? NOTA_CONSULTA : NOTA_REFERENCIA}
         to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
@@ -1440,10 +1522,13 @@ function VinculoEnFoco({
 function EjecucionVinculada({
   guiaId,
   nivel,
+  integracion,
   onCompletado,
 }: {
   guiaId: string
   nivel: number
+  // Se recorre como parte del paso que la reutiliza (tarea 289, fase 3).
+  integracion?: IntegracionEnFlujo
   onCompletado: () => void
 }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(guiaId)) ?? null, [guiaId])
@@ -1457,8 +1542,8 @@ function EjecucionVinculada({
   if (articulo === null || articulo.eliminadoEn || procedimiento === null) {
     return (
       <p className="rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5 text-[13px] leading-snug text-noct-neutral-200">
-        Esta guía ya no está disponible en este dispositivo. Vuelve a la guía principal y sigue con el
-        resto del paso.
+        Esto ya no está disponible en este dispositivo. Sigue con el resto del paso y avisa a quien
+        mantiene la guía.
       </p>
     )
   }
@@ -1469,9 +1554,17 @@ function EjecucionVinculada({
       procedimiento={procedimiento}
       nivel={nivel + 1}
       sustituye
+      integracion={integracion}
       onCompletado={onCompletado}
     />
   )
+}
+
+// Lo que se dice cuando algo que el paso necesita no está en este
+// dispositivo: qué es y por qué puede pasar, sin hablar de vínculos.
+function noDisponible(titulo: string): string {
+  const que = titulo.trim() ? `«${titulo.trim()}»` : 'Esta parte del procedimiento'
+  return `${que} no está disponible en este dispositivo. Puede haberse eliminado, o no haber llegado todavía por sincronización.`
 }
 
 // Subprocedimiento vinculado, en la vista de PASO ENTERO: en vez de la
@@ -1492,6 +1585,7 @@ function SubProcedimientoEnAsistente({
   abierta,
   rutaOrigen,
   etiquetaOrigen,
+  integracion,
   onCompletado,
 }: {
   guiaId: string
@@ -1511,6 +1605,8 @@ function SubProcedimientoEnAsistente({
   // A donde vuelve el tecnico si la guia se abre en su propia pantalla.
   rutaOrigen?: string
   etiquetaOrigen?: string
+  // Se recorre como parte del paso, sin fila propia (tarea 289, fase 3).
+  integracion?: IntegracionEnFlujo
   onCompletado: () => void
 }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(guiaId)) ?? null, [guiaId])
@@ -1535,10 +1631,7 @@ function SubProcedimientoEnAsistente({
   if (articulo === null || articulo.eliminadoEn) {
     return (
       <div className="flex flex-col gap-2 rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5">
-        <p className="text-[13px] leading-snug text-noct-neutral-200">
-          La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
-          dispositivo. Puede haberse eliminado, o no haber llegado todavía por sincronización.
-        </p>
+        <p className="text-[13px] leading-snug text-noct-neutral-200">{noDisponible(tituloReferencia)}</p>
         {/* SIN CONTRADECIR A LA PANTALLA (encargo del 2026-09-09,
             sección 5). Aquí decía "el cierre del paso queda pendiente de
             este vínculo" mientras el pie de la misma pantalla decía
@@ -1594,12 +1687,32 @@ function SubProcedimientoEnAsistente({
     return (
       <EnlaceVinculo
         Icono={LinkSimple}
-        kicker={`${kicker} · consultar aparte`}
+        kicker={`${kicker} · se abre aparte`}
         titulo={articulo.titulo}
         nota={obligatoria ? NOTA_CONSULTA : NOTA_REFERENCIA}
         to={ruta}
         state={rutaOrigen ? conOrigen(rutaOrigen, etiquetaOrigen ?? 'la guía anterior') : undefined}
       />
+    )
+  }
+
+  // EN EL FLUJO (tarea 289, fase 3): sin fila propia ni "guía necesaria".
+  // Lo reutilizado se recorre como el resto del paso, con la línea de
+  // profundidad como única marca; ya hecho, se lee.
+  if (integracion) {
+    if (guiaTerminada(procedimiento, progreso?.pasosHechos, progreso?.verificacionHecha)) {
+      return <PasosEnLectura guiaId={articulo.id} />
+    }
+    return (
+      <div className={`my-1 ${ZONA_ANIDADA}`}>
+        <AsistenteVista
+          articuloId={articulo.id}
+          procedimiento={procedimiento}
+          nivel={nivel + 1}
+          integracion={integracion}
+          onCompletado={onCompletado}
+        />
+      </div>
     )
   }
 
@@ -1698,8 +1811,8 @@ function SolucionEnAsistente({
     return (
       <div className="rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2">
         <p className="text-xs text-noct-neutral-200">
-          La contingencia vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
-          disponible. Edita el artículo para quitar el vínculo o vincular otra.
+          La contingencia{tituloReferencia ? ` «${tituloReferencia}»` : ''} ya no está disponible en este
+          dispositivo. Avisa a quien mantiene la guía.
         </p>
       </div>
     )
@@ -1724,7 +1837,7 @@ function SolucionEnAsistente({
           ) : (
             <EnlaceVinculo
               Icono={Wrench}
-              kicker="Si esto falla · consultar aparte"
+              kicker={`${ROTULO_CONTINGENCIA} · se abre aparte`}
               titulo={articulo.titulo}
               nota={NOTA_REFERENCIA}
               to={ruta}

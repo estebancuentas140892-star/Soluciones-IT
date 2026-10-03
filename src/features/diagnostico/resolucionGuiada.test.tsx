@@ -482,23 +482,21 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('¿Encontraste el número de resolución?'), 'la decisión')
 
-    await tocar(await esperarControl('No: abrir «Localizar la resolución de prueba»'))
+    await tocar(await esperarControl('No: seguir con «Localizar la resolución de prueba»'))
     await esperar(() => textoPantalla().includes('Buscar el PDF de la resolución de prueba'), 'la rama')
-    expect(textoPantalla()).toContain(
-      'Estás realizando «Localizar la resolución de prueba» para continuar con «Actualizar la resolución de prueba en el POS»',
-    )
-    await tocar(await esperar(() => principal('Completar y terminar'), 'Completar y terminar la rama'))
+    // UN SOLO FLUJO (tarea 289): la rama sigue en el sitio de la decisión,
+    // sin cabecera de otra guía, y no dice "terminar" a mitad del camino.
+    expect(textoPantalla()).not.toContain('Estás realizando')
+    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir la rama'))
 
-    // De vuelta en la principal, en el punto exacto: la decisión, ya
-    // respondida, y de ahí a la acción que la seguía.
-    await esperar(
-      () => !textoPantalla().includes('Estás realizando') && textoPantalla().includes('¿Encontraste el número de resolución?'),
-      'de vuelta en la decisión',
-    )
-    expect(textoPantalla()).toContain('Hecha')
-    expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-dian')
-    await tocar(await esperar(() => principal('Ir a la acción 3'), 'Ir a la acción 3 tras la decisión'))
+    // Terminada la rama, lo que venía después de la decisión, en el punto
+    // exacto de la guía que se abrió.
     await esperar(() => textoPantalla().includes('Escribir el número en el POS de prueba'), 'la acción siguiente')
+    expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-dian')
+    // Y la decisión quedó respondida: "Anterior" la enseña hecha.
+    await tocar(await esperarControl(/^Anterior/))
+    await esperar(() => textoPantalla().includes('¿Encontraste el número de resolución?'), 'la decisión respondida')
+    expect(textoPantalla()).toContain('Hecha')
     const avance = await db.progresoPasos.get('guia-dian')
     expect(avance?.instruccionesHechas).toEqual(expect.arrayContaining(['dian-p1-t1', 'dian-p1-t2']))
     expect((await db.progresoPasos.get('guia-localizar'))?.instruccionesHechas).toEqual(['loc-p1-t1'])

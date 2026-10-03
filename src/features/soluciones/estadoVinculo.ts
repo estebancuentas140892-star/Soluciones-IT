@@ -12,12 +12,21 @@
 // Aquí vive la traducción a texto, fuera de los componentes, porque es
 // la misma en la tarjeta y en cualquier sitio que la reutilice.
 
+//
+// Desde la tarea 289 (fase 3) sin "guía" en las palabras: lo que queda
+// como tarjeta es lo opcional (una consulta, una contingencia) o lo que
+// una tarea exige, y la tarjeta dice para qué sirve y en qué va, no cómo
+// está construido el procedimiento. Tampoco nombra su numeración ("Paso 2
+// de 5"): al lado del contador de la guía que se abrió, eran dos
+// numeraciones distintas en la misma pantalla.
+import { ROTULO_CONSULTA, ROTULO_NECESARIO } from './flujoContinuo'
+
 export type ClaseEstadoVinculo = 'sin-iniciar' | 'en-curso' | 'completada'
 
 export interface EstadoVinculo {
-  /** "Sin iniciar", "Paso 2 de 5" o "Completada". */
+  /** "Sin empezar", "A medias" o "Hecha". */
   texto: string
-  /** "Abrir guía", "Continuar guía" o "Ver guía completada". */
+  /** "Abrir", "Seguir donde ibas" o "Ver de nuevo". */
   accion: string
   clase: ClaseEstadoVinculo
 }
@@ -31,20 +40,16 @@ export interface EstadoVinculo {
  */
 export function estadoVinculo(hechos: number, total: number, completada: boolean): EstadoVinculo {
   if (completada) {
-    return { texto: 'Completada', accion: 'Ver guía completada', clase: 'completada' }
+    return { texto: 'Hecha', accion: 'Ver de nuevo', clase: 'completada' }
   }
-  // Sin pasos que recorrer no hay "paso X de Y" que decir; y con el
-  // avance en cero tampoco se ha empezado.
+  // Sin pasos que recorrer, o con el avance en cero, no se ha empezado.
   if (total <= 0 || hechos <= 0) {
-    return { texto: 'Sin iniciar', accion: 'Abrir guía', clase: 'sin-iniciar' }
+    return { texto: 'Sin empezar', accion: 'Abrir', clase: 'sin-iniciar' }
   }
-  // El número que se nombra es el paso al que se VUELVE, no el último
-  // cerrado: es lo que el técnico va a ver al tocar el botón.
-  const siguiente = Math.min(hechos + 1, total)
-  return { texto: `Paso ${siguiente} de ${total}`, accion: 'Continuar guía', clase: 'en-curso' }
+  return { texto: 'A medias', accion: 'Seguir donde ibas', clase: 'en-curso' }
 }
 
-/** El rótulo que dice qué papel juega el vínculo. */
+/** El rótulo que dice qué papel juega lo que se ofrece. */
 export function kickerVinculo(obligatoria: boolean): string {
-  return obligatoria ? 'Guía necesaria' : 'Consulta opcional'
+  return obligatoria ? ROTULO_NECESARIO : ROTULO_CONSULTA
 }

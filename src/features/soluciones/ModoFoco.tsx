@@ -32,6 +32,8 @@ import { motivoGuiasPendientes } from './guiasObligatorias'
 import { accionFoco, avisosDeTareaFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
 import { tonoInfo } from './tonos'
 import { subirElContenedor } from './subirElContenedor'
+import { ROTULO_DEL_PASO, ROTULO_NECESARIO, rotuloDeIntencion, type EnFlujo } from './flujoContinuo'
+import { PasosEnLectura } from './PasosEnLectura'
 
 // MODO FOCO: una acción a la vez (handoff "Diseño móvil", tablero 6d).
 // Desde la tarea 217 es LA ejecución de una guía, no un modo opcional.
@@ -102,6 +104,18 @@ interface Props {
   // empezaba directamente en la tarea siguiente y el técnico nunca leía
   // el motivo (criterio A12).
   guiaDelPasoDisponible?: boolean
+  // ¿La guía que reutiliza el paso se hace AQUÍ, como acciones de este
+  // paso (tarea 289, fase 3)? Lo resuelve `AsistenteVista` (ejecución
+  // principal, guía en el dispositivo y con pasos). Si no, el paso la
+  // ofrece para leerla aparte o explica que no está.
+  guiaDelPasoIntegrada?: boolean
+  // ESTE FOCO ES PARTE DEL FLUJO DE OTRA GUÍA (tarea 289, fase 3): las
+  // acciones de una guía reutilizada, hechas en el sitio del paso que la
+  // reutiliza. No dice su propia numeración ("Paso 1 de 3"), porque la del
+  // paso es la de la guía que se abrió; y el "Dónde" y el "Debes ver" de
+  // ese paso acompañan a esta acción cuando el paso de dentro no trae los
+  // suyos (solo llegan para la primera y la última acción reutilizada).
+  enFlujo?: { lugar: string; resultado: string } | null
   // Este foco es el de una guía vinculada, dibujada DENTRO del paso de
   // otra. Solo cambia el encuadre: el pie deja de sangrar hacia los
   // lados, porque ahí ya no llega al borde de la pantalla sino al de la
@@ -151,9 +165,6 @@ interface Props {
   // pasos. Cuando llega, ES la cabecera del paso: dice dónde se está
   // ("Paso 3 de 7" y el título), así que esta vista no lo repite.
   ruta?: ReactNode
-  // Nombre de la guía que se está ejecutando, para la cabecera compacta
-  // del vínculo ("Estás realizando X para continuar con Y").
-  tituloGuiaPrincipal?: string
   // La guía vinculada terminó de verdad. Cerrar el vínculo lo hace esta
   // vista; lo que hay que revisar arriba (si con eso el paso ya se
   // puede cerrar) lo decide `AsistenteVista`, que es quien escribe.
@@ -186,6 +197,9 @@ interface Props {
     // del paso. Una DECISIÓN respondida con "No" necesita lo otro: al
     // terminar el destino, lo que queda respondido es la decisión.
     alCompletar?: () => void
+    // Se ejecuta COMO PARTE DE ESTE FLUJO (tarea 289, fase 3): sin
+    // cabecera ni numeración propias. Ver `flujoContinuo.ts`.
+    enFlujo?: EnFlujo
   }) => ReactNode
   // ASISTENCIA REMOTA (tarea 258): con un computador conectado, la franja
   // "Equipo 482 731 · Enviar a este equipo" sobre los botones del pie. La
@@ -200,6 +214,12 @@ interface VinculoAbierto {
   titulo: string
   obligatoria: boolean
   alCompletar?: () => void
+  // Qué papel tiene lo abierto, dicho en la cabecera del desvío ("Si lo
+  // necesitas", "Si esto falla"). Sin uso cuando va en el flujo.
+  rotulo: string
+  // El destino de un "No": es el camino que toca, así que sigue en el
+  // flujo, sin cabecera ni regreso propios (tarea 289, fase 3).
+  enFlujo?: boolean
 }
 
 function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
@@ -278,6 +298,8 @@ export function ModoFoco({
   instruccionesHechas,
   subSatisfecho,
   guiaDelPasoDisponible = true,
+  guiaDelPasoIntegrada = false,
+  enFlujo = null,
   anidado = false,
   requisitos = [],
   entrarPorElFinal = false,
@@ -290,7 +312,6 @@ export function ModoFoco({
   onDecisionResuelta,
   guiasPendientes,
   ruta,
-  tituloGuiaPrincipal = '',
   onVinculoCompletado,
   renderTarjetaGuia,
   renderGuia,
@@ -435,8 +456,10 @@ export function ModoFoco({
   // (es lo que confirma que el paso salió). Los dos salen del paso, no de
   // la tarea: son sus campos `lugar` y `resultado`.
   const esUltimaDelPaso = indice === tareas.length - 1
-  const lugarDelPaso = esPrimeraDelPaso ? paso.lugar.trim() : ''
-  const debesVer = esUltimaDelPaso ? paso.resultado.trim() : ''
+  // Dentro del flujo de otra guía, el paso que la reutiliza presta los
+  // suyos a la primera y a la última acción reutilizada (tarea 289).
+  const lugarDelPaso = esPrimeraDelPaso ? paso.lugar.trim() || (enFlujo?.lugar.trim() ?? '') : ''
+  const debesVer = esUltimaDelPaso ? paso.resultado.trim() || (enFlujo?.resultado.trim() ?? '') : ''
   // Para qué sirve el paso: explica, no ordena, así que va plegado y solo
   // con la primera acción del paso.
   const objetivoPlegado = esPrimeraDelPaso ? paso.objetivo.trim() : ''
@@ -446,18 +469,25 @@ export function ModoFoco({
     archivosPlegados.length > 0 ||
     objetivoPlegado !== ''
 
-  // La guía vinculada de ESTA tarea. En la entrada 'guia-del-paso' es el
-  // trabajo entero de la tarea, así que se despliega sin pedir permiso:
-  // es lo que el técnico vino a hacer. En una tarea normal pueden ser
-  // VARIAS, y se muestran todas en el orden del editor.
-  const guiasDeLaTarea =
-    tarea.clase === 'guia-del-paso' && tarea.guiaId
-      ? [{ id: tarea.guiaId, titulo: tarea.guiaTitulo, clave: 'guia-del-paso' }]
-      : tarea.guiasObligatorias.map((g) => ({
-          id: g.guiaArticuloId ?? '',
-          titulo: g.guiaArticuloTitulo,
-          clave: g.id,
-        }))
+  // LA GUÍA QUE REUTILIZA EL PASO NO ES UNA TARJETA QUE ABRIR (tarea 289,
+  // fase 3): se hace en el sitio, como acciones de este paso (más abajo),
+  // y se LEE cuando el paso se consulta o se revisa ya hecho. Solo cuando
+  // aquí no se puede hacer (otro nivel, una guía sin pasos o que no está)
+  // se ofrece aparte o se explica.
+  const guiaDelPasoAparte =
+    tarea.clase === 'guia-del-paso' && tarea.guiaId && !guiaDelPasoIntegrada
+      ? [{ id: tarea.guiaId, titulo: tarea.guiaTitulo }]
+      : []
+  const guiaDelPasoParaLeer =
+    tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada ? tarea.guiaId : null
+  // Las guías que una TAREA exige antes de marcarla (pueden ser varias, en
+  // el orden del editor). Siguen siendo un desvío: se abren desde su
+  // tarjeta y se vuelve a la acción.
+  const guiasDeLaTarea = tarea.guiasObligatorias.map((g) => ({
+    id: g.guiaArticuloId ?? '',
+    titulo: g.guiaArticuloTitulo,
+    clave: g.id,
+  }))
   // Cuáles de ellas siguen sin terminar. Mientras quede una, la tarea
   // no se puede marcar.
   const pendientes = tarea.clase === 'tarea' ? guiasPendientes(tarea.id) : []
@@ -486,27 +516,17 @@ export function ModoFoco({
     .filter((r) => r.tipo === 'atajo' || r.tipo === 'comando')
     .map((r) => r.bloque)
 
-  // El motivo de la guía vinculada, en las palabras del autor. Se omite
-  // cuando el paso no tiene título propio: la frase se volvería un
-  // espejo ("completa X porque X").
-  const motivoGuiaDelPaso =
-    tarea.clase === 'guia-del-paso'
-      ? [paso.titulo ? `El paso «${paso.titulo}» depende de ella.` : null, paso.objetivo || null]
-          .filter(Boolean)
-          .join(' ')
-      : ''
-
   // DÓNDE ESTOY: "Paso 3 de 12", y el título del paso cuando dice algo
   // que la instrucción no dice ya. En un paso de una sola acción con el
   // mismo texto sería la misma frase dos veces.
   const tituloPropio = paso.titulo.trim()
+  // El paso que reutiliza otra guía se nombra por SU título, como
+  // cualquier paso: lo que se lee es qué se hace, no de dónde sale.
   const textoInstruccion =
     tarea.clase === 'guia-del-paso'
       ? !guiaDelPasoDisponible
-        ? 'Esta guía no está disponible'
-        : hecha
-          ? 'Guía completada'
-          : 'Primero, completa esta guía'
+        ? 'Las instrucciones de este paso no están en este dispositivo'
+        : tituloPropio || tarea.texto || tarea.guiaTitulo
       : tarea.texto || 'Tarea sin texto'
   const tituloEnContexto =
     tituloPropio !== '' && normalizarTexto(tituloPropio) !== normalizarTexto(textoInstruccion) ? tituloPropio : ''
@@ -585,52 +605,75 @@ export function ModoFoco({
       return
     }
     const tareaId = tarea.id
+    const indiceDecision = indice
     setDecisionAbierta(tareaId)
     setVinculoAbierto({
       guiaId: destinoDelNo,
       titulo: tarea.decisionGuiaTitulo || 'la salida',
       obligatoria: false,
+      rotulo: '',
+      enFlujo: true,
       alCompletar: () => {
         setDecisionAbierta(null)
         setVinculoAbierto(null)
         onDecisionResuelta(tareaId, destinoDelNo)
+        // EL RECORRIDO SIGUE (tarea 289, fase 3): terminado el camino del
+        // "No", lo siguiente es la acción que venía después de la
+        // decisión, no volver a mirarla ya respondida.
+        const siguiente = siguientePendiente(indiceDecision)
+        if (siguiente >= 0) setIndiceTarea(siguiente)
       },
     })
   }
 
-  // LA GUÍA VINCULADA SUSTITUYE EL CONTENIDO DE LA TAREA (encargo del
-  // 2026-09-10, tarea 4): el mismo sitio, con una cabecera compacta que
-  // dice qué se está haciendo y para qué, y una salida que devuelve al
-  // punto exacto.
+  // EL CAMINO DEL "NO" SIGUE EN EL FLUJO (tarea 289, fase 3): sus acciones
+  // ocupan el sitio de la decisión sin cabecera ni regreso propios.
+  // "Anterior" desde su primera acción deshace la respuesta.
+  if (vinculoAbierto?.enFlujo) {
+    return (
+      <div className="flex flex-1 flex-col">
+        {renderGuia({
+          guiaId: vinculoAbierto.guiaId,
+          tituloReferencia: vinculoAbierto.titulo,
+          obligatoria: vinculoAbierto.obligatoria,
+          alCompletar: vinculoAbierto.alCompletar,
+          enFlujo: { lugar: '', resultado: '', terminaLaGuia: esUltimoTrabajo, alRetroceder: cerrarVinculo },
+        })}
+      </div>
+    )
+  }
+
+  // LO OPCIONAL SIGUE SIENDO UN DESVÍO (encargo del 2026-09-10, tarea 4;
+  // palabras de la tarea 289): una consulta o una contingencia ocupan el
+  // sitio de la tarea con una cabecera que dice qué se abrió y para qué, y
+  // una salida que devuelve a la acción exacta. Sin "guía vinculada" ni
+  // "guía principal": el rótulo dice el papel y el regreso, el paso.
   if (vinculoAbierto) {
     return (
       <div className="flex flex-1 flex-col">
-        <div className="flex flex-none flex-col gap-2.5 border-b border-noct-divider pb-3 pt-1">
+        <div className="flex flex-none flex-col gap-2 border-b border-noct-divider pb-3 pt-1">
+          {vinculoAbierto.rotulo && (
+            <p className="text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
+              {vinculoAbierto.rotulo}
+            </p>
+          )}
           <h2
             ref={encabezado}
             tabIndex={-1}
             data-foco-lectura
-            className="text-[15px] leading-snug text-pretty text-noct-neutral-200 outline-none"
+            className="text-[17px] font-medium leading-snug text-pretty text-noct-text outline-none [overflow-wrap:anywhere]"
           >
-            Estás realizando <span className="font-semibold text-noct-text">«{vinculoAbierto.titulo}»</span>
-            {tituloGuiaPrincipal ? (
-              <>
-                {' '}para continuar con{' '}
-                <span className="font-semibold text-noct-text">«{tituloGuiaPrincipal}»</span>
-              </>
-            ) : (
-              ' para continuar con esta guía'
-            )}
+            {vinculoAbierto.titulo}
           </h2>
-          {/* SALIR SIN TERMINAR NO CUMPLE NADA: se vuelve a la guía
-              principal con el vínculo todavía pendiente. */}
+          {/* SALIR SIN TERMINAR NO CUMPLE NADA: se vuelve a la acción con
+              lo abierto como estaba. */}
           <button
             type="button"
             onClick={cerrarVinculo}
             className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg border border-noct-divider px-3 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.07]"
           >
             <CaretLeft size={15} className="shrink-0" aria-hidden />
-            Volver a la guía principal
+            Volver al paso {numeroPaso}
           </button>
         </div>
         <div className="flex flex-1 flex-col pt-3">
@@ -646,6 +689,30 @@ export function ModoFoco({
               }),
           })}
         </div>
+      </div>
+    )
+  }
+
+  // EL PASO QUE REUTILIZA OTRA GUÍA SE HACE AQUÍ (tarea 289, fase 3): sus
+  // acciones ocupan el sitio del paso, con el pie de cada una, y al
+  // terminar la última el paso se cierra solo (o sigue con sus propias
+  // tareas, si tiene). La cabecera, el contador y la ruta siguen siendo
+  // los de la guía que se abrió. Ver `flujoContinuo.ts`.
+  if (tarea.clase === 'guia-del-paso' && tarea.guiaId && guiaDelPasoIntegrada && !hecha && !consulta) {
+    return (
+      <div className="flex flex-1 flex-col">
+        {ruta && <div className="hidden md:block md:pt-2.5">{ruta}</div>}
+        {renderGuia({
+          guiaId: tarea.guiaId,
+          tituloReferencia: tarea.guiaTitulo,
+          obligatoria: true,
+          enFlujo: {
+            lugar: paso.lugar,
+            resultado: paso.resultado,
+            terminaLaGuia: esUltimoTrabajo,
+            alRetroceder: onPasoAnterior,
+          },
+        })}
       </div>
     )
   }
@@ -698,7 +765,7 @@ export function ModoFoco({
     // los bloqueos. Se puede seguir cuando la tarjeta no ofrece nada que
     // hacer: la guía ya está completa, o no está en este dispositivo y no
     // bloquea (A12).
-    const rotulo = rotuloCompletaGuia(tarea.guiaTitulo || tarea.texto)
+    const rotulo = rotuloCompletaGuia(tarea.texto)
     principal =
       hecha || !guiaDelPasoDisponible ? (
         botonSinMarcar
@@ -727,7 +794,7 @@ export function ModoFoco({
           onClick={responderNo}
           aria-label={
             destinoDelNo
-              ? `No: abrir «${tarea.decisionGuiaTitulo || 'la salida'}»`
+              ? `No: seguir con «${tarea.decisionGuiaTitulo || 'la salida'}»`
               : 'No: registrar la respuesta y seguir'
           }
           className="flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-neutral-600 px-3 text-[18px] font-semibold text-noct-neutral-200 active:bg-noct-text/10"
@@ -743,7 +810,7 @@ export function ModoFoco({
   } else if (pendientes.length > 0) {
     // UNA GUÍA NECESARIA DE ESTA TAREA SIN TERMINAR: el control dice cuál
     // y queda inactivo. Su tarjeta, arriba, es la que se abre.
-    const rotulo = rotuloCompletaGuia(pendientes[0].guiaArticuloTitulo || 'la guía vinculada')
+    const rotulo = rotuloCompletaGuia(pendientes[0].guiaArticuloTitulo)
     principal = <BotonPrincipal etiqueta={rotulo.visible} etiquetaCompleta={rotulo.completo} disabled />
   } else {
     // COMPLETAR Y AVANZAR SON UN SOLO GESTO: marca la acción y trae la
@@ -764,7 +831,7 @@ export function ModoFoco({
   // título), porque ahí no hay contador que lo diga. Entre esto y la
   // acción, aire: lo que orienta no se lee como parte de lo que se hace.
   const contextoEnTelefono = tareas.length > 1 || tituloEnContexto !== ''
-  const separacionAccion = ruta ? (contextoEnTelefono ? 'mt-7' : 'md:mt-7') : 'mt-4'
+  const separacionAccion = ruta || enFlujo ? (contextoEnTelefono ? 'mt-7' : ruta ? 'md:mt-7' : '') : 'mt-4'
 
   return (
     <div className="flex flex-1 flex-col">
@@ -785,6 +852,12 @@ export function ModoFoco({
                 <p className="text-[15px] leading-snug text-noct-neutral-300 text-pretty md:hidden">{tituloEnContexto}</p>
               )}
             </>
+          ) : enFlujo ? (
+            // En el flujo de la guía que se abrió, la numeración es la suya
+            // (el contador de la cabecera): aquí solo el título, en voz baja.
+            tituloEnContexto && (
+              <p className="text-[15px] leading-snug text-noct-neutral-300 text-pretty">{tituloEnContexto}</p>
+            )
           ) : (
             <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px] leading-snug text-noct-neutral-400">
               <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
@@ -809,10 +882,10 @@ export function ModoFoco({
         {lugarDelPaso && <DondeSeHacePaso lugar={lugarDelPaso} />}
 
         <div className="flex flex-col gap-1">
-          {/* Sin etiqueta cuando lo que se lee es un ESTADO de la guía del
-              paso ("Esta guía no está disponible", "Guía completada"), no
-              una instrucción: "Qué hacer" encima lo contradiría. */}
-          {!(tarea.clase === 'guia-del-paso' && (!guiaDelPasoDisponible || hecha)) && (
+          {/* Sin etiqueta cuando el paso que reutiliza otra guía no se
+              puede hacer aquí (no está, o se lee aparte): "Hecha" o "Qué
+              hacer" encima dirían lo que no es. */}
+          {(tarea.clase !== 'guia-del-paso' || (guiaDelPasoDisponible && guiaDelPasoIntegrada)) && (
             <EtiquetaDeAccion tipoTarea={tarea.tipoTarea} hecha={hecha} />
           )}
           <h2
@@ -826,10 +899,6 @@ export function ModoFoco({
             {textoInstruccion}
           </h2>
         </div>
-
-        {motivoGuiaDelPaso && (
-          <p className="-mt-2 text-[15px] leading-snug text-noct-neutral-300 text-pretty">{motivoGuiaDelPaso}</p>
-        )}
 
         {avisos.datos.map((aviso) => (
           <DatoTecnico key={aviso.id} aviso={aviso} />
@@ -855,19 +924,33 @@ export function ModoFoco({
 
         {archivosALaVista.length > 0 && <AdjuntosPaso adjuntos={archivosALaVista} titulo={paso.titulo} />}
 
-        {/* LA GUÍA VINCULADA, COMO TARJETA COMPACTA: abrirla sustituye
-            esta pantalla (encargo del 2026-09-10, tarea 4). */}
-        {/* En la consulta se leen, pero no se abren: abrir una guía es
-            empezar su trabajo, y en un paso consultado no se trabaja. */}
+        {/* LO QUE PIDE EL PASO QUE REUTILIZA OTRA GUÍA, PARA LEERLO: al
+            consultarlo o al revisarlo ya hecho (tarea 289, fase 3). */}
+        {guiaDelPasoParaLeer && <PasosEnLectura guiaId={guiaDelPasoParaLeer} />}
+
+        {/* Y cuando aquí no se puede hacer: se ofrece aparte, o se explica
+            que no está. Nunca se abre en el sitio. */}
+        {guiaDelPasoAparte.map((g) => (
+          <div key={g.id}>
+            {renderTarjetaGuia({ guiaId: g.id, tituloReferencia: g.titulo, obligatoria: true, kicker: ROTULO_DEL_PASO })}
+          </div>
+        ))}
+
+        {/* LO QUE UNA TAREA EXIGE O OFRECE, COMO TARJETA COMPACTA: abrirla
+            sustituye esta pantalla (encargo del 2026-09-10, tarea 4). En la
+            consulta se leen, pero no se abren: abrir es empezar su trabajo,
+            y en un paso consultado no se trabaja. */}
         {guiasDeLaTarea.map((g) => (
           <div key={g.clave}>
             {renderTarjetaGuia({
               guiaId: g.id,
               tituloReferencia: g.titulo,
               obligatoria: true,
+              kicker: ROTULO_NECESARIO,
               onAbrir: consulta
                 ? undefined
-                : () => setVinculoAbierto({ guiaId: g.id, titulo: g.titulo, obligatoria: true }),
+                : () =>
+                    setVinculoAbierto({ guiaId: g.id, titulo: g.titulo, obligatoria: true, rotulo: ROTULO_NECESARIO }),
             })}
           </div>
         ))}
@@ -878,6 +961,7 @@ export function ModoFoco({
               guiaId: g.guiaArticuloId ?? '',
               tituloReferencia: g.guiaArticuloTitulo,
               obligatoria: false,
+              kicker: rotuloDeIntencion(g.intencionGuia),
               onAbrir: consulta
                 ? undefined
                 : () =>
@@ -885,6 +969,7 @@ export function ModoFoco({
                       guiaId: g.guiaArticuloId ?? '',
                       titulo: g.guiaArticuloTitulo,
                       obligatoria: false,
+                      rotulo: rotuloDeIntencion(g.intencionGuia),
                     }),
             })}
           </div>
@@ -962,7 +1047,7 @@ export function ModoFoco({
           )}
           {!consulta && esDecision && !hecha && !noAbierto && destinoDelNo && (
             <p className="text-center text-[13px] leading-snug text-noct-neutral-300 text-pretty">
-              Si respondes que no, se abre «{tarea.decisionGuiaTitulo || 'la salida'}»
+              Si respondes que no, sigues con «{tarea.decisionGuiaTitulo || 'la salida'}»
             </p>
           )}
           {!consulta && !anidado && renderEnvioAEquipo?.(tarea.clase === 'tarea' ? tarea.id : null)}

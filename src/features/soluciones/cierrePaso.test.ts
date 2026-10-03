@@ -154,8 +154,8 @@ describe('rotuloCompletaGuia', () => {
     expect(rotulo.completo).toBe(`Completa «${largo}»`)
   })
 
-  it('sin nombre nombra la guia de forma generica', () => {
-    expect(rotuloCompletaGuia('  ').visible).toBe('Completa «la guía vinculada»')
+  it('sin nombre no inventa uno ni habla de vinculos (tarea 289)', () => {
+    expect(rotuloCompletaGuia('  ')).toEqual({ visible: 'Completa lo que falta', completo: 'Completa lo que falta' })
   })
 })
 
@@ -165,15 +165,34 @@ describe('guiaPendienteDelPaso', () => {
     expect(guiaPendienteDelPaso(paso(), false)).toBeNull()
   })
 
-  it('nombra la guia mientras siga pendiente', () => {
-    const p = paso({ subArticuloId: 'guia-1', subArticuloTitulo: 'Reiniciar el router' })
-    expect(guiaPendienteDelPaso(p, false)).toBe('Reiniciar el router')
+  // Un solo flujo (tarea 289): lo que falta se nombra por el PASO, que es
+  // lo que el tecnico ve, no por la guia que reutiliza.
+  it('nombra el paso mientras la guia que reutiliza siga pendiente', () => {
+    const p = paso({ titulo: 'Ingresar al router', subArticuloId: 'guia-1', subArticuloTitulo: 'Reiniciar el router' })
+    expect(guiaPendienteDelPaso(p, false)).toBe('Ingresar al router')
     expect(guiaPendienteDelPaso(p, true)).toBeNull()
   })
 
-  it('sin titulo de referencia la nombra de forma generica', () => {
-    const p = paso({ subArticuloId: 'guia-1', subArticuloTitulo: '' })
-    expect(guiaPendienteDelPaso(p, false)).toBe('la guía vinculada')
+  it('sin titulo del paso usa el de la guia, y sin ninguno no inventa nada', () => {
+    const conGuia = paso({ titulo: '', subArticuloId: 'guia-1', subArticuloTitulo: 'Reiniciar el router' })
+    expect(guiaPendienteDelPaso(conGuia, false)).toBe('Reiniciar el router')
+    const sinNada = paso({ titulo: '', subArticuloId: 'guia-1', subArticuloTitulo: '' })
+    expect(guiaPendienteDelPaso(sinNada, false)).toBe('')
+    expect(cierreDelPaso(datos({ guiaPendiente: '' })).etiqueta).toBe('Completa lo que falta')
+  })
+})
+
+describe('cierreDelPaso dentro del flujo de otra guia (tarea 289)', () => {
+  it('desde un paso hecho no nombra la numeracion de dentro: "Seguir"', () => {
+    const cierre = cierreDelPaso(datos({ pasoHecho: true, numeroPasoSiguiente: null }))
+    expect(cierre).toMatchObject({ accion: 'navegar', etiqueta: 'Seguir' })
+  })
+
+  it('sin a donde ir sigue diciendo "Continuar", y fuera del flujo "Ir al paso N"', () => {
+    expect(cierreDelPaso(datos({ pasoHecho: true, hayPasoSiguiente: false, numeroPasoSiguiente: null })).etiqueta).toBe(
+      'Continuar',
+    )
+    expect(cierreDelPaso(datos({ pasoHecho: true, numeroPasoSiguiente: 4 })).etiqueta).toBe('Ir al paso 4')
   })
 })
 

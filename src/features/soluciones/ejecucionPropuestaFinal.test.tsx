@@ -25,8 +25,9 @@ import { GuiaPage } from './GuiaPage'
 //     se marca y "Ir al paso N" devuelve al paso de trabajo;
 //   - un paso hecho solo navega ("Ir al paso N"), una acción hecha lleva
 //     a la siguiente ("Ir a la acción N");
-//   - una guía vinculada pendiente bloquea con su nombre ("Completa «X»"),
-//     acortado dentro de las comillas si es largo y entero para el lector;
+//   - una guía que una tarea exige, pendiente, bloquea con su nombre
+//     ("Completa «X»"), acortado dentro de las comillas si es largo y
+//     entero para el lector;
 //   - "Completar y terminar" solo cuando de verdad no queda otro paso.
 //
 // Todo lo sembrado es inventado.
@@ -166,25 +167,35 @@ describe('consultar otro paso no marca nada', () => {
 })
 
 describe('el botón dice la consecuencia', () => {
-  it('una guía vinculada pendiente bloquea con su nombre, acortado y entero para el lector', async () => {
+  // Desde la tarea 289 el paso que reutiliza otra guía la HACE en el sitio,
+  // así que el bloqueo con nombre es el de una guía que exige una TAREA.
+  it('una guía que una tarea exige y sigue pendiente bloquea con su nombre, acortado y entero para el lector', async () => {
     const nombreLargo = 'Configurar las páginas que abre el navegador de prueba al iniciar en la caja'
     await sembrarGuia({
       id: 'guia-apoyo',
       titulo: nombreLargo,
       pasos: [pasoPrueba('apoyo-p1', 'Abrir el navegador de prueba', ['Pulsar el icono del navegador'])],
     })
-    const conVinculo: PasoProcedimiento = {
-      ...pasoPrueba('pf-p1', 'Preparar el navegador', ['Revisar la página de inicio']),
-      subArticuloId: 'guia-apoyo',
-      subArticuloTitulo: nombreLargo,
-    }
+    const conGuia: PasoProcedimiento = pasoPrueba('pf-p1', 'Preparar el navegador', ['Revisar la página de inicio'])
+    conGuia.bloques.push({
+      ...conGuia.bloques[0],
+      id: 'pf-p1-g1',
+      tipo: 'guia',
+      texto: '',
+      tipoTarea: null,
+      tareaId: 'pf-p1-t1',
+      alcance: 'tarea',
+      guiaArticuloId: 'guia-apoyo',
+      guiaArticuloTitulo: nombreLargo,
+      intencionGuia: 'necesario',
+    })
     await sembrarGuia({
       id: 'guia-propuesta',
       titulo: 'Guía de prueba de la propuesta final',
-      pasos: [conVinculo, pasoPrueba('pf-p2', 'Terminar la prueba', ['Cerrar el navegador'])],
+      pasos: [conGuia, pasoPrueba('pf-p2', 'Terminar la prueba', ['Cerrar el navegador'])],
     })
     await montar(RUTAS, RUTA)
-    await esperar(() => textoPantalla().includes('Primero, completa esta guía'), 'la guía del paso')
+    await esperar(() => textoPantalla().includes('Revisar la página de inicio'), 'la tarea que exige la guía')
 
     const boton = await esperarControl(`Completa «${nombreLargo}»`)
     expect(boton.hasAttribute('disabled')).toBe(true)

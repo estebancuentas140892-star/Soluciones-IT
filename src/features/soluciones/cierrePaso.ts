@@ -80,7 +80,9 @@ export function acortarNombreGuia(nombre: string, maximo = LARGO_MAXIMO_NOMBRE_G
 
 /** "Completa «nombre»", con el nombre acortado para la vista y entero para el nombre accesible. */
 export function rotuloCompletaGuia(nombre: string): { visible: string; completo: string } {
-  const limpio = nombre.trim() || 'la guía vinculada'
+  const limpio = nombre.trim()
+  // Sin nombre no se inventa uno ni se habla de vínculos (tarea 289).
+  if (limpio === '') return { visible: 'Completa lo que falta', completo: 'Completa lo que falta' }
   return { visible: `Completa «${acortarNombreGuia(limpio)}»`, completo: `Completa «${limpio}»` }
 }
 
@@ -101,21 +103,27 @@ export interface DatosCierrePaso {
    * guia). En un paso ya hecho: si navegar lleva a otro paso.
    */
   hayPasoSiguiente: boolean
-  /** Numero (1..n) del paso al que se ira desde este. */
-  numeroPasoSiguiente: number
+  /**
+   * Numero (1..n) del paso al que se ira desde este, o null cuando esa
+   * numeracion no es la que ve el tecnico: dentro del flujo de otra guia
+   * (tarea 289), donde el contador es el de la guia que se abrio.
+   */
+  numeroPasoSiguiente: number | null
 }
 
 /**
- * El titulo de la guia vinculada del paso mientras siga pendiente.
- * `subSatisfecho` lo resuelve la ejecucion con lectura en vivo y ya
- * cuenta como satisfecho el vinculo roto.
+ * Lo que falta del paso que reutiliza otra guia, mientras siga pendiente,
+ * nombrado por EL PASO: "Completa «Ingresar al programa de caja»". El
+ * tecnico recorre un solo flujo (tarea 289), asi que el boton no nombra
+ * la guia de dentro. `subSatisfecho` lo resuelve la ejecucion con lectura
+ * en vivo y ya cuenta como satisfecho el vinculo roto.
  */
 export function guiaPendienteDelPaso(
   paso: PasoProcedimiento,
   subSatisfecho: boolean,
 ): string | null {
   if (!paso.subArticuloId || subSatisfecho) return null
-  return paso.subArticuloTitulo || 'la guía vinculada'
+  return paso.titulo.trim() || paso.subArticuloTitulo || ''
 }
 
 /**
@@ -137,7 +145,11 @@ export function cierreDelPaso({
   const tareasPendientes = Math.max(0, totalTareas - tareasMarcadas)
 
   if (pasoHecho) {
-    const etiqueta = hayPasoSiguiente ? `Ir al paso ${numeroPasoSiguiente}` : 'Continuar'
+    const etiqueta = !hayPasoSiguiente
+      ? 'Continuar'
+      : numeroPasoSiguiente === null
+        ? 'Seguir'
+        : `Ir al paso ${numeroPasoSiguiente}`
     return {
       accion: 'navegar',
       etiqueta,

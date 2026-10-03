@@ -8,6 +8,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-02
 
+### Cambiado (guías, tarea 289, fase 3): lo que un paso reutiliza se hace en el sitio, como un solo flujo
+
+**Área modificada:** `src/features/soluciones/` (`flujoContinuo.ts` y `PasosEnLectura.tsx`, nuevos; `AsistenteVista.tsx`, `ModoFoco.tsx`, `useProcedimientoEjecucion.ts`, `cierrePaso.ts`, `estadoVinculo.ts`, `guiasObligatorias.ts`, `tareasFoco.ts`, `HojaFalla.tsx` y `ProcedimientoVista.tsx`); pruebas (`guiasFlujoNatural.test.tsx`, `ejecucionPropuestaFinal.test.tsx`, `resolucionGuiada.test.tsx`, `cierrePaso.test.ts`, `estadoVinculo.test.ts`, `guiasObligatorias.test.ts` y `tareasFoco.test.ts`) y `TAREAS.md`.
+**Tipo:** Cambiado (ejecución de las guías que reutilizan otras, textos de lo opcional).
+**Motivo:** encargo "las guías como un solo flujo natural": la complejidad pertenece al sistema, no al técnico. Un procedimiento puede reutilizar otros procedimientos internamente, pero el técnico experimenta un único flujo continuo.
+**Qué cambia:**
+- **El paso que reutiliza otra guía ya no es una tarjeta que abrir.** Sus acciones ocupan el sitio del paso, una a una, con el pie de siempre. Sin "Guía necesaria", sin "Abrir guía", sin "Estás realizando «X» para continuar con «Y»", sin "Volver a la guía principal", sin "Paso 1 de 3" y sin los requisitos de dentro (los necesarios se piden antes de empezar, fase 2).
+- La identidad visible sigue siendo la guía que se abrió: su nombre y su contador en la cabecera, su ruta en escritorio. Cada acción reutilizada lleva el título de su parte en voz baja; el "Dónde" y el "Debes ver" del paso acompañan a la primera y a la última si no traen los suyos.
+- Nada dice "terminar" a mitad del recorrido: "Completar y seguir", y "Comprueba antes de seguir" para las comprobaciones de lo reutilizado. Solo termina lo que de verdad cierra la guía.
+- "Anterior" desde la primera acción reutilizada vuelve al paso anterior; "Tengo un problema" habla del paso de la guía que se abrió y saltar lleva a su paso siguiente.
+- Un paso así, ya hecho o consultado desde el índice, se LEE: el título del paso y lo que pide, sin abrir ni marcar nada.
+- **El "No" de una decisión** sigue en el flujo: su camino ocupa el sitio de la decisión, "Anterior" deshace la respuesta y, al terminar, el recorrido continúa con la acción que venía después. El aviso dice "Si respondes que no, sigues con «X»".
+- **Lo opcional sigue siendo un desvío**, dicho sin vocabulario interno: "Si lo necesitas" (consulta), "Si esto falla" (contingencia), "Necesario para seguir" (lo que exige una tarea); estados "Sin empezar", "A medias", "Hecha"; acciones "Abrir", "Seguir donde ibas", "Ver de nuevo"; la cabecera dice qué se abrió y "Volver al paso N". Una consulta ya hecha que se vuelve a abrir se lee en vez de quedar vacía.
+- Los avisos de algo que no está en el dispositivo ya no hablan de vínculos ni de editar el artículo.
+- La vista de paso entero recorre lo reutilizado como parte del paso, sin su fila propia.
+**Impacto esperado:** quien sigue "Crear un trabajador para almuerzo" o "Configurar el computador para un usuario nuevo" recorre un solo procedimiento. El avance se guarda igual que antes (`vinculos` de la ejecución), así que retomar sigue en la acción exacta y las ejecuciones a medias siguen valiendo. Nada se copia dentro de la guía que reutiliza: la reutilización sigue intacta para el editor. Sin datos nuevos ni migración.
+
 ### Cambiado (guías, tarea 289, fase 2): orientar y preparar antes de la primera acción
 
 **Área modificada:** `src/features/soluciones/` (`preparacionGuia.ts`, `useRequisitosEfectivos.ts`, `PantallaPreparacion.tsx` y `subirElContenedor.ts`, nuevos; `AsistenteVista.tsx`, `AsistentePage.tsx`, `IntroduccionGuia.tsx` y `ModoFoco.tsx`), `src/features/diagnostico/DiagnosticoRunPage.tsx`, `src/lib/progresoPasos.ts` (`hayAvanceEnEjecucion`); pruebas (`preparacionGuia.test.ts`, nueva; `guiasFlujoNatural.test.tsx`, `guiaDirecta.test.tsx`, `resolucionGuiada.test.tsx` y `progresoPasos.test.ts`) y `TAREAS.md`.

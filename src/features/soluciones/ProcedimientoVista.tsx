@@ -32,6 +32,7 @@ import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
 import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { presenciaDeAviso, tonoInfo } from './tonos'
+import { ROTULO_CONTINGENCIA, ROTULO_DEL_PASO, rotuloDeIntencion } from './flujoContinuo'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import {
   fraseAvanceDocumento,
@@ -630,8 +631,8 @@ function SubProcedimientoEnPaso({
   if (articulo === null || articulo.eliminadoEn) {
     return (
       <div className={PANEL_NO_DISPONIBLE}>
-        El procedimiento vinculado{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
-        disponible. Edita el artículo para quitar el vínculo o vincular otro.
+        {tituloReferencia ? `«${tituloReferencia}»` : 'Esta parte del procedimiento'} ya no está disponible en
+        este dispositivo. Avisa a quien mantiene la guía.
       </div>
     )
   }
@@ -658,7 +659,7 @@ function SubProcedimientoEnPaso({
       return (
         <VinculoInerte
           Icono={LinkSimple}
-          kicker="Otra guía"
+          kicker={ROTULO_DEL_PASO}
           titulo={articulo.titulo}
           nota="Durante la prueba no se sale del editor"
         />
@@ -667,7 +668,7 @@ function SubProcedimientoEnPaso({
     return (
       <EnlaceVinculo
         Icono={LinkSimple}
-        kicker="Otra guía · consultar aparte"
+        kicker={`${ROTULO_DEL_PASO} · se abre aparte`}
         titulo={articulo.titulo}
         nota={NOTA_CONSULTA}
         to={ruta}
@@ -681,7 +682,7 @@ function SubProcedimientoEnPaso({
     <div>
       <FilaVinculo
         Icono={LinkSimple}
-        kicker="Otra guía"
+        kicker={ROTULO_DEL_PASO}
         titulo={articulo.titulo}
         nota={fraseAvanceDocumento(hechos, total, 'guía')}
         abierto={abierto}
@@ -754,8 +755,8 @@ function ContingenciaEnPaso({
   if (articulo === null || articulo.eliminadoEn) {
     return (
       <div className={PANEL_NO_DISPONIBLE}>
-        La contingencia vinculada{tituloReferencia ? ` "${tituloReferencia}"` : ''} ya no está
-        disponible. Edita el artículo para quitar el vínculo o vincular otra.
+        La contingencia{tituloReferencia ? ` «${tituloReferencia}»` : ''} ya no está disponible en este
+        dispositivo. Avisa a quien mantiene la guía.
       </div>
     )
   }
@@ -785,7 +786,7 @@ function ContingenciaEnPaso({
     return (
       <EnlaceVinculo
         Icono={Wrench}
-        kicker="Si esto falla · consultar aparte"
+        kicker={`${ROTULO_CONTINGENCIA} · se abre aparte`}
         titulo={articulo.titulo}
         nota={NOTA_REFERENCIA}
         to={ruta}
@@ -1269,9 +1270,8 @@ function DecisionEnTarea({
     return (
       <div className={PANEL_NO_DISPONIBLE}>
         <p className="m-0">
-          El artículo vinculado a esta decisión
-          {bloque.decisionArticuloTitulo ? ` "${bloque.decisionArticuloTitulo}"` : ''} ya no está
-          disponible. Edita el artículo para quitar el vínculo o vincular otro.
+          {bloque.decisionArticuloTitulo ? `«${bloque.decisionArticuloTitulo}»` : 'Lo que sigue a esta respuesta'} ya
+          no está disponible en este dispositivo. Avisa a quien mantiene la guía.
         </p>
         <button type="button" onClick={onAlternar} className={`mt-2.5 ${BTN_ACENTO}`}>
           Marcar la decisión y continuar
@@ -1298,7 +1298,7 @@ function DecisionEnTarea({
         ) : (
           <EnlaceVinculo
             Icono={Wrench}
-            kicker="Si esto falla · consultar aparte"
+            kicker={`${ROTULO_CONTINGENCIA} · se abre aparte`}
             titulo={articulo.titulo}
             nota={NOTA_REFERENCIA}
             to={ruta}
@@ -1430,14 +1430,12 @@ function GuiaVinculadaEnBloque({
   const enVistaPrevia = useEnVistaPrevia()
   if (articulo === undefined) return null
 
-  const kicker =
-    intencion === 'consulta' ? 'Consulta opcional' : intencion === 'contingencia' ? 'Si esto falla' : 'Otra guía'
+  const kicker = rotuloDeIntencion(intencion)
 
   if (articulo === null || articulo.eliminadoEn) {
     return (
       <p className="rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2 text-xs text-noct-neutral-200">
-        La guía vinculada{tituloReferencia ? ` «${tituloReferencia}»` : ''} no está disponible en este
-        dispositivo.
+        {tituloReferencia ? `«${tituloReferencia}»` : 'Esto'} no está disponible en este dispositivo.
       </p>
     )
   }
@@ -1460,7 +1458,7 @@ function GuiaVinculadaEnBloque({
   return (
     <EnlaceVinculo
       Icono={BookOpen}
-      kicker={`${kicker} · consultar aparte`}
+      kicker={`${kicker} · se abre aparte`}
       titulo={articulo.titulo}
       nota={intencion === 'necesario' ? NOTA_CONSULTA : NOTA_REFERENCIA}
       to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}

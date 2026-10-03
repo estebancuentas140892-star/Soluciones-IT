@@ -4,6 +4,7 @@ import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
   normalizarProcedimiento,
   pasoTrabajoPrevioCompleto,
+  procedimientoEjecutable,
   siguientePasoPendiente,
   tareasDe,
 } from '../../lib/procedimiento'
@@ -317,8 +318,25 @@ export function useProcedimientoEjecucion({
     return Boolean(articulo && !articulo.eliminadoEn)
   }
 
+  // ¿La guía que reutiliza el paso se HACE AQUÍ, como parte de este flujo
+  // (tarea 289, fase 3)? Solo en la ejecución principal, con la guía en el
+  // dispositivo y con pasos que ejecutar: es la misma condición que
+  // `modoVinculo` llama "expandible". Si no, el paso la ofrece para
+  // consultarla aparte, o explica que no está.
+  function guiaDelPasoIntegrable(paso: PasoProcedimiento): boolean {
+    if (!paso.subArticuloId || nivel >= 1 || subArticulos === undefined) return false
+    const idx = subIds.indexOf(paso.subArticuloId)
+    const articulo = idx >= 0 ? subArticulos[idx] : undefined
+    if (!articulo || articulo.eliminadoEn) return false
+    return procedimientoEjecutable(normalizarProcedimiento(articulo.procedimiento))
+  }
+
   return {
     avanceCargado,
+    // Las guías que reutiliza esta ejecución ya se leyeron: hasta entonces
+    // no se sabe si un paso las hace aquí o las ofrece aparte, y decidirlo
+    // a medias haría saltar la pantalla de una forma a la otra.
+    vinculosCargados: subArticulos !== undefined,
     progreso,
     hechos,
     instruccionesHechas,
@@ -328,6 +346,7 @@ export function useProcedimientoEjecucion({
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
+    guiaDelPasoIntegrable,
     guiasPendientesDeTarea,
     desmarcarPaso,
     alternarTarea,

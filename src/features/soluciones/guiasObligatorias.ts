@@ -68,8 +68,9 @@ export function guiasObligatoriasPendientes(
  */
 export function motivoGuiasPendientes(pendientes: BloquePaso[]): string | null {
   if (pendientes.length === 0) return null
-  const primera = pendientes[0].guiaArticuloTitulo || 'la guía vinculada'
-  if (pendientes.length === 1) return `Completa «${primera}» para marcar esta tarea`
+  const titulo = pendientes[0].guiaArticuloTitulo.trim()
+  const primera = titulo ? `«${titulo}»` : 'lo que falta'
+  if (pendientes.length === 1) return `Completa ${primera} para marcar esta tarea`
   const restantes = pendientes.length - 1
-  return `Completa «${primera}» y ${restantes} ${restantes === 1 ? 'guía más' : 'guías más'} para marcar esta tarea`
+  return `Completa ${primera} y ${restantes} ${restantes === 1 ? 'guía más' : 'guías más'} para marcar esta tarea`
 }

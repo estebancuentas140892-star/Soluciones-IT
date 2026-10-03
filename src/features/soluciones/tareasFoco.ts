@@ -139,7 +139,9 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
     trabajo.push({
       ...camposVacios(),
       id: idTareaGuiaDelPaso(paso.id),
-      texto: paso.subArticuloTitulo || 'Completar la guía vinculada',
+      // Por el paso, no por la guía de dentro: es lo que el técnico ve y lo
+      // que nombra "Tengo un problema" (tarea 289).
+      texto: tituloPaso || paso.subArticuloTitulo,
       clase: 'guia-del-paso',
       esPasoEntero: false,
       vinculoProtegido: paso.vinculoProtegido,
