@@ -72,6 +72,17 @@ export interface DatosCompletitud {
   requisitosQueSonAcciones?: number
   tareasEncadenadas?: number
   alertasQueRecuerdan?: number
+  // Lo que separa requisito, acción, verificación y la forma de hablarle a
+  // quien ejecuta (tarea 289, fase 4, ver revisionGuia.ts): tareas que son
+  // condiciones previas, comprobaciones escritas como acción, líneas de la
+  // verificación final que son acciones, requisitos que hablan de cómo está
+  // hecha la guía y un "cuándo usar" que no dice la situación o habla de
+  // la guía.
+  tareasQueSonRequisitos?: number
+  tareasQueSonComprobaciones?: number
+  comprobacionesQueSonAcciones?: number
+  requisitosQueHablanDeLaGuia?: number
+  cuandoUsarPorRevisar?: boolean
 }
 
 // Concordancia de las sugerencias con número ("1 tarea", "3 tareas").
@@ -144,6 +155,51 @@ export function senalesDeArticulo(datos: DatosCompletitud): SenalCompletitud[] {
                 cumplida: false,
                 pestana: 'pasos' as const,
                 sugerencia: `Revisar ${contar(datos.alertasQueRecuerdan ?? 0, 'alerta que solo recuerda', 'alertas que solo recuerdan')} algo`,
+              },
+            ]
+          : []),
+        ...((datos.tareasQueSonRequisitos ?? 0) > 0
+          ? [
+              {
+                cumplida: false,
+                pestana: 'pasos' as const,
+                sugerencia: `Revisar ${contar(datos.tareasQueSonRequisitos ?? 0, 'tarea que parece un requisito previo', 'tareas que parecen requisitos previos')}`,
+              },
+            ]
+          : []),
+        ...((datos.tareasQueSonComprobaciones ?? 0) > 0
+          ? [
+              {
+                cumplida: false,
+                pestana: 'pasos' as const,
+                sugerencia: `Marcar como verificación ${contar(datos.tareasQueSonComprobaciones ?? 0, 'tarea que comprueba', 'tareas que comprueban')} algo`,
+              },
+            ]
+          : []),
+        ...((datos.comprobacionesQueSonAcciones ?? 0) > 0
+          ? [
+              {
+                cumplida: false,
+                pestana: 'pasos' as const,
+                sugerencia: `Sacar de la verificación final ${contar(datos.comprobacionesQueSonAcciones ?? 0, 'acción', 'acciones')}`,
+              },
+            ]
+          : []),
+        ...((datos.requisitosQueHablanDeLaGuia ?? 0) > 0
+          ? [
+              {
+                cumplida: false,
+                pestana: 'pasos' as const,
+                sugerencia: `Decir qué hace falta en ${contar(datos.requisitosQueHablanDeLaGuia ?? 0, 'requisito que habla', 'requisitos que hablan')} de cómo está hecha la guía`,
+              },
+            ]
+          : []),
+        ...(datos.cuandoUsarPorRevisar
+          ? [
+              {
+                cumplida: false,
+                pestana: 'general' as const,
+                sugerencia: 'Decir en «Cuándo usar» la situación en que sirve',
               },
             ]
           : []),

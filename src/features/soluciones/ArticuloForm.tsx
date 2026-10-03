@@ -61,7 +61,8 @@ import {
 } from './borradorArticulo'
 import { etiquetasFrecuentes, normalizarEtiquetas, type GrafiaEtiqueta } from './etiquetas'
 import { apoyosSinAsignar } from './apoyosTarea'
-import { revisarGuia } from './revisionGuia'
+import { revisarCuandoUsar, revisarGuia } from './revisionGuia'
+import { requisitosPorRevisar } from './preparacionGuia'
 import {
   apoyosPendientes,
   bloqueaPublicacion,
@@ -590,7 +591,114 @@ export function ArticuloForm() {
   // encadenan varias y alertas que solo recuerdan. Son pistas: se
   // cuentan en la completitud y se señalan en su línea, nunca impiden
   // guardar.
-  const revision = useMemo(() => revisarGuia(requisitos.split('\n'), pasos), [requisitos, pasos])
+  //
+  // Desde la tarea 289 (fase 4) también lo inverso y lo que mezcla papeles:
+  // tareas que son condiciones previas, comprobaciones escritas como
+  // acción, acciones en la verificación final, requisitos y "cuándo usar"
+  // que hablan de cómo está hecha la guía.
+  const revision = useMemo(
+    () => revisarGuia(requisitos.split('\n'), pasos, verificacionFinal.split('\n')),
+    [requisitos, pasos, verificacionFinal],
+  )
+  const revisionCuando = useMemo(() => revisarCuandoUsar(descripcion), [descripcion])
+
+  // LO QUE PIDEN LAS GUÍAS QUE ESTA REUTILIZA Y NO SE SUMAN SOLAS (tarea
+  // 289, fase 4): las de los pasos 2 en adelante y las que exige una tarea.
+  // Un paso anterior puede dejar hecho lo que piden, así que no se piden
+  // solas antes de empezar: decide el autor, con la lista delante. La guía
+  // del paso 1 sí se suma sola, y se dice.
+  const requisitosDeGuias = useMemo(() => {
+    const porId = new Map(todosArticulos.map((a) => [a.id, a]))
+    const requisitosDe = (guiaId: string) => {
+      const guia = porId.get(guiaId)
+      if (!guia) return null
+      return { titulo: guia.titulo, requisitos: normalizarProcedimiento(guia.procedimiento)?.requisitos ?? [] }
+    }
+    const propios = requisitos.split('\n')
+    const primerPaso = pasos[0]?.subArticuloId ? requisitosDe(pasos[0].subArticuloId) : null
+    return {
+      porRevisar: requisitosPorRevisar({ pasos, requisitos: propios }, requisitosDe),
+      delPrimerPaso: primerPaso && primerPaso.requisitos.length > 0 ? primerPaso.titulo : null,
+    }
+  }, [todosArticulos, requisitos, pasos])
+
+  // Añade una línea a los requisitos, a petición del autor (nunca sola).
+  function anadirRequisito(texto: string) {
+    setRequisitos((actuales) => (actuales.trim() === '' ? texto : `${actuales.replace(/\s+$/, '')}\n${texto}`))
+  }
+
+  // Lo que se señala bajo "Requisitos", fuera de su etiqueta (ver `Campo`).
+  const pistasRequisitos = (
+    <>
+      {/* LA LÍNEA CONCRETA QUE ES UNA ACCIÓN, y dónde está ya en los pasos
+          si lo está: así se decide sin buscar si se borra de aquí (está
+          repetida) o se lleva a un paso. */}
+      {(revision.requisitosQueSonAcciones.length > 0 || revision.requisitosQueHablanDeLaGuia.length > 0) && (
+        <ul className="mt-2 flex flex-col gap-1">
+          {revision.requisitosQueSonAcciones.map((r, i) => (
+            <PistaDeRevision key={`${r.texto}-${i}`}>
+              «{r.texto}» parece una acción del procedimiento.{' '}
+              {r.enPaso !== null
+                ? `Ya está en el paso ${r.enPaso}: bórrala de aquí.`
+                : 'Si se hace durante el procedimiento, llévala a un paso.'}
+            </PistaDeRevision>
+          ))}
+          {/* LO QUE HACE FALTA, NO DE DÓNDE SALE (tarea 289, fase 4):
+              "mediante el procedimiento relacionado" o "acceso a la
+              información protegida" obligan a entender cómo está hecha la
+              guía. La credencial ya aparece sola en la acción que la usa. */}
+          {revision.requisitosQueHablanDeLaGuia.map((r, i) => (
+            <PistaDeRevision key={`arq-${r}-${i}`}>
+              «{r}» habla de cómo está hecha la guía. Di qué hace falta: un acceso, un dato, una conexión.
+            </PistaDeRevision>
+          ))}
+        </ul>
+      )}
+      {/* LO QUE PIDEN LAS GUÍAS QUE NO SE SUMAN SOLAS (tarea 289, fase 4),
+          para decidirlo aquí, con un toque por línea. */}
+      {requisitosDeGuias.delPrimerPaso && (
+        <p className="mt-2 text-[12px] leading-snug text-noct-neutral-400">
+          Lo que pide «{requisitosDeGuias.delPrimerPaso}» (paso 1) se pide solo antes de empezar.
+        </p>
+      )}
+      {requisitosDeGuias.porRevisar.length > 0 && (
+        <div className="mt-2 flex flex-col gap-2.5 rounded-lg border border-dashed border-noct-neutral-700 px-3 py-2.5">
+          <p className="flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-neutral-200">
+            <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+            <span className="min-w-0">
+              Lo que piden las guías que este procedimiento reutiliza más adelante. No se piden solas antes de
+              empezar, porque un paso anterior puede dejarlo hecho: añade las que hagan falta.
+            </span>
+          </p>
+          {requisitosDeGuias.porRevisar.map((g) => (
+            <div key={g.guiaId} className="flex flex-col gap-1 pl-5">
+              <p className="text-[12px] font-medium leading-snug text-noct-neutral-300">
+                «{g.guiaTitulo}» (paso {g.pasoNumero})
+              </p>
+              <ul className="flex flex-col gap-1">
+                {g.requisitos.map((r) => (
+                  <li
+                    key={r}
+                    className="flex items-center justify-between gap-2 text-[12.5px] leading-snug text-noct-neutral-200"
+                  >
+                    <span className="min-w-0 [overflow-wrap:anywhere]">{r}</span>
+                    <button
+                      type="button"
+                      onClick={() => anadirRequisito(r)}
+                      aria-label={`Añadir a los requisitos: ${r}`}
+                      className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-dashed border-noct-accent/50 px-3 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.08]"
+                    >
+                      Añadir
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
 
   // Completitud como en el handoff "Editor de Artículo": las señales
   // tomadas de lo escrito, con la pestaña donde se resuelve cada una
@@ -614,6 +722,11 @@ export function ArticuloForm() {
           requisitosQueSonAcciones: revision.requisitosQueSonAcciones.length,
           tareasEncadenadas: revision.tareasEncadenadas.length,
           alertasQueRecuerdan: revision.alertasQueRecuerdan.length,
+          tareasQueSonRequisitos: revision.tareasQueSonRequisitos.length,
+          tareasQueSonComprobaciones: revision.tareasQueSonComprobaciones.length,
+          comprobacionesQueSonAcciones: revision.comprobacionesQueSonAcciones.length,
+          requisitosQueHablanDeLaGuia: revision.requisitosQueHablanDeLaGuia.length,
+          cuandoUsarPorRevisar: revisionCuando.hablaDeLaGuia || revisionCuando.sinSituacion,
         }),
       ),
     [
@@ -628,6 +741,7 @@ export function ArticuloForm() {
       objetivoGeneral,
       contenido,
       revision,
+      revisionCuando,
     ],
   )
 
@@ -1064,7 +1178,24 @@ export function ArticuloForm() {
               </div>
             )}
 
-            <Campo etiqueta="¿Cuándo usar este procedimiento?">
+            <Campo
+              etiqueta="¿Cuándo usar este procedimiento?"
+              pistas={
+                (revisionCuando.sinSituacion || revisionCuando.hablaDeLaGuia) && (
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {revisionCuando.sinSituacion && (
+                      <PistaDeRevision>Dice lo que hace la guía, no cuándo sirve: «Usa esta guía cuando…».</PistaDeRevision>
+                    )}
+                    {revisionCuando.hablaDeLaGuia && (
+                      <PistaDeRevision>
+                        Habla de cómo está hecha la guía. Quien la ejecuta solo necesita saber en qué situación le
+                        sirve.
+                      </PistaDeRevision>
+                    )}
+                  </ul>
+                )
+              }
+            >
               <textarea
                 rows={2}
                 value={descripcion}
@@ -1072,6 +1203,14 @@ export function ArticuloForm() {
                 placeholder="Usar cuando llega una impresora nueva a bodega o pierde su configuración"
                 className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
               />
+              {/* LA SITUACIÓN, NO LOS PASOS (tarea 289, fase 4). Este texto
+                  se lee al abrir la guía, bajo "Cuándo usarla", y ayuda a
+                  Resolver a encontrarla: sirve si dice en qué situación se
+                  usa, con las palabras de quien la necesita. */}
+              <p className="mt-1.5 text-[12px] leading-snug text-noct-neutral-400">
+                La situación en que sirve, en una frase: qué le pasa a la persona o al equipo. No repitas el
+                título ni describas los pasos. Se lee al abrir la guía y ayuda a encontrarla.
+              </p>
             </Campo>
 
             <Campo etiqueta="Objetivo general (1 línea)">
@@ -1134,7 +1273,7 @@ export function ArticuloForm() {
             fin (requisitos previos, pasos y verificación final). */}
         {pestana === 'pasos' && (
           <>
-            <Campo etiqueta="Requisitos (uno por línea)">
+            <Campo etiqueta="Requisitos (uno por línea)" pistas={pistasRequisitos}>
               <textarea
                 rows={3}
                 value={requisitos}
@@ -1152,24 +1291,6 @@ export function ArticuloForm() {
                 herramienta. Si es algo que se hace («entra», «abre», «selecciona»), es un paso. Si no hace
                 falta nada, déjalo vacío.
               </p>
-              {/* LA LÍNEA CONCRETA QUE ES UNA ACCIÓN, y dónde está ya en
-                  los pasos si lo está: así se decide sin buscar si se
-                  borra de aquí (está repetida) o se lleva a un paso. */}
-              {revision.requisitosQueSonAcciones.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-1">
-                  {revision.requisitosQueSonAcciones.map((r, i) => (
-                    <li key={`${r.texto}-${i}`} className="flex items-start gap-2 text-[12.5px] leading-snug text-noct-neutral-200">
-                      <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
-                      <span className="min-w-0">
-                        «{r.texto}» es una acción.{' '}
-                        {r.enPaso !== null
-                          ? `Ya está en el paso ${r.enPaso}: bórrala de aquí.`
-                          : 'Llévala a un paso.'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </Campo>
 
             <section>
@@ -1189,7 +1310,21 @@ export function ArticuloForm() {
               />
             </section>
 
-            <Campo etiqueta="Verificación final (una comprobación por línea)">
+            <Campo
+              etiqueta="Verificación final (una comprobación por línea)"
+              pistas={
+                revision.comprobacionesQueSonAcciones.length > 0 && (
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {revision.comprobacionesQueSonAcciones.map((v, i) => (
+                      <PistaDeRevision key={`${v}-${i}`}>
+                        «{v}» parece una acción del procedimiento. Aquí va lo que debe quedar comprobado, por
+                        ejemplo «La impresora aparece instalada».
+                      </PistaDeRevision>
+                    ))}
+                  </ul>
+                )
+              }
+            >
               <textarea
                 rows={3}
                 value={verificacionFinal}
@@ -1197,6 +1332,12 @@ export function ArticuloForm() {
                 placeholder={'La impresora aparece instalada\nLa impresión de prueba fue exitosa'}
                 className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
               />
+              {/* LO QUE QUEDÓ, NO LO QUE SE HIZO (tarea 289, fase 4): al
+                  terminar se comprueba que el objetivo se cumplió, sin
+                  volver a enumerar las acciones. */}
+              <p className="mt-1.5 text-[12px] leading-snug text-noct-neutral-400">
+                Lo que debe quedar comprobado al terminar, no las acciones que ya se hicieron.
+              </p>
             </Campo>
           </>
         )}
@@ -1648,13 +1789,42 @@ function AplicaACriterios({
   )
 }
 
-// Campo etiquetado (etiqueta arriba, control debajo).
-function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
-  return (
+// Campo etiquetado (etiqueta arriba, control debajo). Las PISTAS de la
+// revisión (tarea 289, fase 4) van debajo pero FUERA de la etiqueta: dentro,
+// su texto y sus botones se volvían parte del nombre del campo para el
+// lector de pantalla.
+function Campo({
+  etiqueta,
+  children,
+  pistas,
+}: {
+  etiqueta: string
+  children: React.ReactNode
+  pistas?: React.ReactNode
+}) {
+  const campo = (
     <label className="flex flex-col gap-1.5">
       <span className={CLASE_ETIQUETA}>{etiqueta}</span>
       {children}
     </label>
+  )
+  if (pistas === undefined) return campo
+  return (
+    <div className="flex flex-col">
+      {campo}
+      {pistas}
+    </div>
+  )
+}
+
+// Una pista de la revisión de contenido: dice qué parece la línea y qué
+// hacer, sin tocar nada (las decisiones son del autor).
+function PistaDeRevision({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2 text-[12.5px] leading-snug text-noct-neutral-200">
+      <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
+    </li>
   )
 }
 

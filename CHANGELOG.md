@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-02
 
+### Agregado (editor de guías, tarea 289, fase 4): pistas para no mezclar requisito, acción, verificación y arquitectura
+
+**Área modificada:** `src/features/soluciones/` (`revisionGuia.ts`: `esCondicionPrevia`, `esComprobacion`, `hablaDeLaArquitectura`, `cuandoUsarSinSituacion`, `revisarCuandoUsar` y cuatro listas nuevas en `revisarGuia`; `preparacionGuia.ts`: `requisitosPorRevisar`; `completitudArticulo.ts`; `ArticuloForm.tsx`; `PasosEditor.tsx`); pruebas (`revisionGuia.test.ts`, `preparacionGuia.test.ts`, `completitudArticulo.test.ts` y `revisionEditor.test.tsx`) y `TAREAS.md`.
+**Tipo:** Agregado (pistas del editor) y Cambiado (texto de la pista del requisito que es una acción).
+**Motivo:** encargo de la tarea 289: que las guías nuevas no vuelvan a mezclar requisitos, acciones, avisos y verificaciones, ni le hablen al técnico de cómo están construidas. Sin servicios externos ni IA: reglas deterministas y comprobables, como las de la regla 20.
+**Qué cambia:**
+- **En una tarea:** "Esto parece un requisito previo, no una acción" cuando empieza como una condición ("Tener…", "Contar con…", "Estar conectado…", "Debes tener…", "Se requiere…"); "Esto parece una comprobación" con "Marcar como verificación" cuando empieza como una ("Comprueba…", "Verifica…", "Confirma que…"). Solo en las tareas de tipo acción: una verificación o una decisión ya son la forma correcta de lo que se sabe durante el trabajo.
+- **En "Requisitos":** la pista que ya existía dice ahora «X» parece una acción del procedimiento; se suma la del requisito que habla de cómo está hecha la guía ("mediante el procedimiento relacionado", "información protegida"); y, debajo, lo que piden las guías que se reutilizan del paso 2 en adelante o que exige una tarea, sin lo que ya se pide, con "Añadir" a un toque. Lo de la guía del paso 1 se dice que se pide solo.
+- **En "Verificación final":** una ayuda fija (lo que debe quedar comprobado, no las acciones hechas) y la pista de la línea que es una acción ("Abrir ICG Manager"), salvo si confirma algo ("Confirmar que…").
+- **En "¿Cuándo usar este procedimiento?":** una ayuda fija (la situación, en una frase, sin repetir el título ni describir pasos) y las pistas del texto que dice lo que hace la guía en vez de cuándo sirve, o que habla de la guía.
+- **Completitud:** cada pista suma una sugerencia solo cuando existe ("Revisar 1 tarea que parece un requisito previo", "Decir en «Cuándo usar» la situación en que sirve"…), en la pestaña donde se resuelve.
+- **Accesibilidad:** las pistas van debajo del campo pero fuera de su etiqueta; dentro, su texto (y ahora sus botones) se volvía parte del nombre del campo para el lector de pantalla.
+**Impacto esperado:** quien escribe o revisa una guía ve, en su línea, lo que el técnico leería mal. Nada se mueve solo, nada impide guardar y las guías existentes no cambian: es la base de la revisión de contenido que sigue.
+
 ### Cambiado (guías, tarea 289, cierre de la fase 3): nada del paso se pierde y toda reutilización obligatoria va en el flujo
 
 **Área modificada:** `src/features/soluciones/` (`flujoContinuo.ts`: `ApoyosDelFlujo` y `ROTULO_SI_NO`; `tareasFoco.ts`: entrada `guia-de-tarea`; `ModoFoco.tsx`, `AsistenteVista.tsx`, `useProcedimientoEjecucion.ts` (`guiaIntegrable`), `apoyosTarea.ts` (`sinApoyos`) y `ProcedimientoVista.tsx`); pruebas (`guiasFlujoNatural.test.tsx`, `ejecucionPropuestaFinal.test.tsx` y `tareasFoco.test.ts`) y `TAREAS.md`.

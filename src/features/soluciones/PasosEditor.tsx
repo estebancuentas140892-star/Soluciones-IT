@@ -48,7 +48,7 @@ import {
   reasignarApoyo,
   type DestinoApoyo,
 } from './bloquesEditor'
-import { accionesEncadenadas, esRecordatorio } from './revisionGuia'
+import { accionesEncadenadas, esComprobacion, esCondicionPrevia, esRecordatorio } from './revisionGuia'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
@@ -1727,6 +1727,16 @@ function BloqueEditor({
           <DivisionSugerida texto={bloque.texto} onDividir={onDividir} />
         )}
 
+        {/* LO QUE NO ES UNA ACCIÓN (tarea 289, fase 4). Una condición que
+            debe existir antes ("Tener acceso administrativo") no se hace
+            frente al equipo: va en "Requisitos" (o es el "Dónde" del
+            paso). Una comprobación escrita como acción se ejecutaría como
+            algo que hacer: marcada como verificación, se presenta como
+            tal. Se dice aquí, sin tocar nada; decide el autor. */}
+        {(bloque.tipoTarea ?? 'accion') === 'accion' && (
+          <PistasDeTarea texto={bloque.texto} onMarcarVerificacion={() => onCambiar({ tipoTarea: 'verificacion' })} />
+        )}
+
         <div className="flex items-center gap-1.5 pl-1">
           <BotonLinea Icono={Plus} onClick={onAnadirATarea} etiqueta="Añadir contenido a esta tarea">
             Añadir
@@ -2099,6 +2109,48 @@ function DivisionSugerida({ texto, onDividir }: { texto: string; onDividir: (acc
       </button>
     </div>
   )
+}
+
+// LO QUE PARECE UNA TAREA Y NO ES UNA ACCIÓN (tarea 289, fase 4): una
+// condición previa o una comprobación. Nada se mueve solo: la condición se
+// lleva a mano (puede ser un requisito o el "Dónde" del paso) y la
+// comprobación se marca con un toque.
+function PistasDeTarea({ texto, onMarcarVerificacion }: { texto: string; onMarcarVerificacion: () => void }) {
+  const condicion = useMemo(() => esCondicionPrevia(texto), [texto])
+  const comprobacion = useMemo(() => !condicion && esComprobacion(texto), [condicion, texto])
+
+  if (condicion) {
+    return (
+      <p className="ml-1 flex items-start gap-1.5 rounded-lg border border-dashed border-noct-neutral-700 px-3 py-2.5 text-[12.5px] leading-snug text-noct-neutral-200">
+        <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+        <span className="min-w-0">
+          Esto parece un requisito previo, no una acción. Si hay que tenerlo antes de empezar, va en
+          «Requisitos»; si es dónde se hace el paso, en «Dónde se hace».
+        </span>
+      </p>
+    )
+  }
+  if (comprobacion) {
+    return (
+      <div className="ml-1 flex flex-col gap-1.5 rounded-lg border border-dashed border-noct-neutral-700 px-3 py-2.5">
+        <p className="flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-neutral-200">
+          <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+          <span className="min-w-0">
+            Esto parece una comprobación. Marcada como verificación, al ejecutar se presenta como algo que
+            comprobar, con su salida si no se cumple.
+          </span>
+        </p>
+        <button
+          type="button"
+          onClick={onMarcarVerificacion}
+          className="inline-flex min-h-11 w-fit items-center rounded-lg border border-noct-accent/50 px-3 text-[13px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.08]"
+        >
+          Marcar como verificación
+        </button>
+      </div>
+    )
+  }
+  return null
 }
 
 // La fila de sugerencias de una tarea. Vacía (y sin dibujar nada) en

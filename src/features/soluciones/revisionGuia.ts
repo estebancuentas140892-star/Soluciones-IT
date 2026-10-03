@@ -304,6 +304,116 @@ export function esRecordatorio(texto: string): boolean {
   return INICIO_DE_RECORDATORIO.test(normalizado)
 }
 
+// LO QUE DEBE EXISTIR ANTES, LO QUE SE COMPRUEBA Y CÓMO ESTÁ HECHA LA GUÍA
+// (tarea 289, fase 4).
+//
+// La regla 20 (b) ya señalaba el requisito que es una acción. Faltaba lo
+// inverso: una TAREA que es una condición previa ("Tener acceso
+// administrativo", "Estar conectado a la VPN"). Dentro de un paso se lee
+// como algo que hacer y no lo es: o se tiene antes de empezar (va en
+// "Requisitos") o se descubre durante el trabajo (es una comprobación o una
+// decisión). Y tres mezclas más: una comprobación escrita como acción
+// ("Comprueba que aparece la impresora", sin marcarla como verificación),
+// una línea de la verificación final que es una acción ("Abrir ICG
+// Manager"), y un requisito o un "cuándo usar" que habla de cómo está
+// construida la guía ("mediante el procedimiento relacionado"), que
+// obliga a quien ejecuta a entender la arquitectura.
+//
+// Igual que las demás, son pistas deterministas: nunca impiden guardar ni
+// mueven nada, y miran solo el COMIENZO del texto (o palabras que casi
+// nunca significan otra cosa), para equivocarse poco.
+
+// Limpio para comparar: sin viñetas, tildes ni signos de apertura.
+function comienzo(texto: string): string {
+  return normalizarTexto(texto).replace(VINETA_INICIAL, '').replace(/^[¡!¿\s]+/, '').trim()
+}
+
+// "Tener…", "Contar con…", "Disponer de…", "Estar conectado…", "Haber
+// creado…": el infinitivo con que se escribe algo que ya debe ser cierto.
+// "Tienes que abrir" (obligación de HACER algo) no entra: "tienes" no está.
+const VERBO_DE_CONDICION = /^(?:tener|contar con|disponer de|estar|haber)\b/
+// Lo que puede ir delante y sigue siendo una condición: "Debes tener…",
+// "Hay que estar…", "Asegúrate de tener…". Sin el verbo de condición
+// detrás ("Debes abrir…") es un paso.
+const PREVIO_A_CONDICION =
+  /^(?:debes|debe|deberas|debera|hay que|es necesario|es indispensable|es obligatorio|asegurate de|asegurese de|asegurarse de)\s+/
+// "Ten a mano…", "Ten listo…": el imperativo que pide tener algo preparado.
+const TEN_PREPARADO = /^ten\s+(?:a mano|listos?|listas?|disponibles?|preparados?|preparadas?)\b/
+// "Se requiere…", "Necesitas…", "Cuenta con…": piden algo. Si lo que
+// sigue es una acción ("Necesitas abrir…"), es un paso.
+const PIDE_ALGO =
+  /^(?:se requieren?|requieres?|se necesitan?|necesitas|necesita|es requisito(?: tener)?|cuenta con|cuente con)\s+/
+// Empieza igual y NO es una condición: atención o cuidado, que son avisos.
+const NO_ES_CONDICION = /^(?:tener|ten|estar)\s+(?:en cuenta|presente|cuidado|atentos?|atentas?|pendientes?)\b/
+
+/**
+ * ¿Esta tarea es en realidad algo que debe existir antes de empezar? "Tener
+ * acceso administrativo" no se hace frente al equipo: se tiene.
+ */
+export function esCondicionPrevia(texto: string): boolean {
+  const limpio = comienzo(texto)
+  if (!limpio || NO_ES_CONDICION.test(limpio)) return false
+  if (VERBO_DE_CONDICION.test(limpio) || TEN_PREPARADO.test(limpio)) return true
+  const previo = PREVIO_A_CONDICION.exec(limpio)
+  if (previo) {
+    const resto = limpio.slice(previo[0].length)
+    return VERBO_DE_CONDICION.test(resto) && !NO_ES_CONDICION.test(resto)
+  }
+  const pide = PIDE_ALGO.exec(limpio)
+  if (pide) {
+    const siguiente = palabras(limpio.slice(pide[0].length))[0] ?? ''
+    return siguiente !== '' && !esVerbo(siguiente, DE_ACCION)
+  }
+  return false
+}
+
+// "Comprueba…", "Verifica…" o "Confirma que…", "Revisa que…": una
+// comprobación. Con un "que" detrás para los verbos que también son un
+// gesto ("Confirma el cambio" es pulsar un botón).
+const INICIO_DE_COMPROBACION =
+  /^(?:(?:comprueba|compruebe|comprobar|verifica|verifique|verificar)\b|(?:confirma|confirme|confirmar|revisa|revise|revisar|valida|valide|validar|observa|observe|observar|asegurate de|asegurese de|asegurarse de)\s+que\b)/
+
+/**
+ * ¿El texto se escribe como una comprobación? Una tarea así, marcada como
+ * verificación, se ejecuta como tal ("Comprueba", en verde, y "No se
+ * cumple" en el paso entero); escrita como acción, se lee como algo que
+ * hacer.
+ */
+export function esComprobacion(texto: string): boolean {
+  return INICIO_DE_COMPROBACION.test(comienzo(texto))
+}
+
+// Lo que nombra el MECANISMO de la aplicación en vez de lo que hace falta.
+// Los nueve casos reales de la auditoría de la tarea 289 (3.2 y 3.3):
+// "mediante el procedimiento relacionado", "acceso a la información
+// protegida", "otra guía requiera", "abre las guías específicas"…
+const VOCABULARIO_INTERNO =
+  /\b(?:sub-?guias?|guias? vinculadas?|guia principal|procedimientos? (?:vinculados?|relacionados?)|sub-?articulos?|informacion protegida|accesos? protegidos?|datos? protegidos?|boveda|otras? guias?|guias? especificas?)\b/
+
+/**
+ * ¿El texto habla de cómo está construida la guía? La complejidad
+ * pertenece al sistema, no al técnico: un requisito dice qué necesita
+ * ("Acceso autorizado a ICG Manager") y un "cuándo usar", en qué
+ * situación sirve, sin nombrar guías, vínculos ni la Bóveda.
+ */
+export function hablaDeLaArquitectura(texto: string): boolean {
+  return VOCABULARIO_INTERNO.test(normalizarTexto(texto))
+}
+
+/**
+ * ¿El "cuándo usar" describe lo que hace la guía en vez de la situación en
+ * que sirve? "Configurar Outlook en el computador de la persona" dice qué
+ * se hace; "Cuando una persona nueva necesita su correo en el computador"
+ * dice cuándo. Se lee al abrir la guía, bajo "Cuándo usarla", y ayuda a
+ * Resolver a encontrarla: lo útil es la situación. Solo se señala si
+ * empieza con una acción y no dice "cuando" ni "si" en ninguna parte.
+ */
+export function cuandoUsarSinSituacion(texto: string): boolean {
+  const limpio = comienzo(texto)
+  if (!limpio || /\b(?:cuando|si)\b/.test(limpio)) return false
+  return inicioDeAccion(texto, DE_ACCION) !== null
+}
+
 // Artículos y preposiciones que quedan entre el verbo y su objeto: "al
 // administrador", "en Administrador" y "el administrador" nombran lo
 // mismo.
@@ -348,14 +458,33 @@ export interface AlertaRecordatorio {
   texto: string
 }
 
+/** Una tarea señalada por lo que parece ser (tarea 289, fase 4). */
+export interface TareaSenalada {
+  pasoIndice: number
+  tareaId: string
+  texto: string
+}
+
 export interface RevisionGuia {
   requisitosQueSonAcciones: RequisitoQueEsAccion[]
   tareasEncadenadas: TareaEncadenada[]
   alertasQueRecuerdan: AlertaRecordatorio[]
+  /** Acciones que se escribieron como condición previa ("Tener acceso…"). */
+  tareasQueSonRequisitos: TareaSenalada[]
+  /** Acciones que se escribieron como comprobación sin marcarlas como verificación. */
+  tareasQueSonComprobaciones: TareaSenalada[]
+  /** Líneas de la verificación final que son una acción, no algo que comprobar. */
+  comprobacionesQueSonAcciones: string[]
+  /** Requisitos que nombran cómo está hecha la guía en vez de qué hace falta. */
+  requisitosQueHablanDeLaGuia: string[]
 }
 
-/** Lo que conviene revisar en una guía, según la regla 20. */
-export function revisarGuia(requisitos: string[], pasos: PasoProcedimiento[]): RevisionGuia {
+/** Lo que conviene revisar en una guía, según la regla 20 (y la tarea 289). */
+export function revisarGuia(
+  requisitos: string[],
+  pasos: PasoProcedimiento[],
+  verificacionFinal: string[] = [],
+): RevisionGuia {
   const tareas = pasos.flatMap((paso, pasoIndice) =>
     paso.bloques
       .filter((b) => b.tipo === 'tarea')
@@ -397,5 +526,42 @@ export function revisarGuia(requisitos: string[], pasos: PasoProcedimiento[]): R
       .map((b) => ({ pasoIndice, bloqueId: b.id, texto: b.texto })),
   )
 
-  return { requisitosQueSonAcciones, tareasEncadenadas, alertasQueRecuerdan }
+  // Solo las ACCIONES: una comprobación ("¿Tienes acceso?" como
+  // verificación) o una decisión ya son la forma correcta de algo que solo
+  // se sabe durante el trabajo.
+  const acciones = tareas.filter(({ bloque }) => (bloque.tipoTarea ?? 'accion') === 'accion')
+  const tareasQueSonRequisitos = acciones
+    .filter(({ bloque }) => esCondicionPrevia(bloque.texto))
+    .map(({ pasoIndice, bloque }) => ({ pasoIndice, tareaId: bloque.id, texto: bloque.texto }))
+  const tareasQueSonComprobaciones = acciones
+    .filter(({ bloque }) => !esCondicionPrevia(bloque.texto) && esComprobacion(bloque.texto))
+    .map(({ pasoIndice, bloque }) => ({ pasoIndice, tareaId: bloque.id, texto: bloque.texto }))
+
+  // "Confirmar que…" es una comprobación aunque "confirmar" sea también un
+  // gesto: solo se señala la línea que es una acción y nada más.
+  const comprobacionesQueSonAcciones = verificacionFinal
+    .map((v) => v.trim())
+    .filter((v) => v !== '' && esAccionDePantalla(v) && !esComprobacion(v))
+
+  const requisitosQueHablanDeLaGuia = requisitos.map((r) => r.trim()).filter((r) => r !== '' && hablaDeLaArquitectura(r))
+
+  return {
+    requisitosQueSonAcciones,
+    tareasEncadenadas,
+    alertasQueRecuerdan,
+    tareasQueSonRequisitos,
+    tareasQueSonComprobaciones,
+    comprobacionesQueSonAcciones,
+    requisitosQueHablanDeLaGuia,
+  }
+}
+
+/** Lo que conviene revisar en el "¿Cuándo usar este procedimiento?" (tarea 289, fase 4). */
+export interface RevisionCuandoUsar {
+  hablaDeLaGuia: boolean
+  sinSituacion: boolean
+}
+
+export function revisarCuandoUsar(texto: string): RevisionCuandoUsar {
+  return { hablaDeLaGuia: hablaDeLaArquitectura(texto), sinSituacion: cuandoUsarSinSituacion(texto) }
 }

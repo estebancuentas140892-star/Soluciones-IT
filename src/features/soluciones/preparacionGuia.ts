@@ -75,7 +75,7 @@ function claveRequisito(texto: string): string {
  * cuando el paso 1 reutiliza otra guía. Es la única cuyos requisitos se
  * pueden sumar sin riesgo (ver `requisitosEfectivos`).
  */
-export function guiaDelPrimerPaso(procedimiento: Procedimiento): string | null {
+export function guiaDelPrimerPaso(procedimiento: Pick<Procedimiento, 'pasos'>): string | null {
   return procedimiento.pasos[0]?.subArticuloId || null
 }
 
@@ -111,6 +111,61 @@ export function requisitosEfectivos(propios: string[], delPrimerPaso: string[] |
     vistos.add(clave)
     resultado.push(texto)
   }
+  return resultado
+}
+
+/** Lo que pide una guía que el procedimiento reutiliza y que no se suma solo. */
+export interface RequisitosPorRevisar {
+  /** Paso (1, 2, 3...) que la reutiliza. */
+  pasoNumero: number
+  guiaId: string
+  guiaTitulo: string
+  /** Sus requisitos que la guía todavía no pide, sin repetidos. */
+  requisitos: string[]
+}
+
+/**
+ * LO QUE PIDEN LAS GUÍAS QUE NO SE SUMAN SOLAS (tarea 289, fase 4): las que
+ * el procedimiento reutiliza del paso 2 en adelante y las que exige una
+ * tarea. `requisitosEfectivos` no las suma porque un paso anterior puede
+ * producir lo que piden, y eso no se decide sin entender el texto: lo
+ * decide el autor, en el editor, con esta lista delante.
+ *
+ * De cada guía (una sola vez, en el orden en que se usa) quedan solo los
+ * requisitos que este procedimiento todavía no pide, ni por sí mismo ni
+ * por la guía del paso 1. Una guía que no está en el dispositivo
+ * (`requisitosDe` devuelve null) o que no pide nada nuevo no aparece.
+ */
+export function requisitosPorRevisar(
+  procedimiento: Pick<Procedimiento, 'pasos' | 'requisitos'>,
+  requisitosDe: (guiaId: string) => { titulo: string; requisitos: string[] } | null,
+): RequisitosPorRevisar[] {
+  const primerPaso = guiaDelPrimerPaso(procedimiento)
+  const yaPedidos = new Set(
+    requisitosEfectivos(procedimiento.requisitos, primerPaso ? (requisitosDe(primerPaso)?.requisitos ?? null) : null).map(
+      claveRequisito,
+    ),
+  )
+  const vistas = new Set<string>(primerPaso ? [primerPaso] : [])
+  const resultado: RequisitosPorRevisar[] = []
+  procedimiento.pasos.forEach((paso, indice) => {
+    const deTareas = paso.bloques
+      .filter((b) => b.tipo === 'guia' && b.intencionGuia === 'necesario' && b.guiaArticuloId)
+      .map((b) => b.guiaArticuloId as string)
+    const guias = [...(paso.subArticuloId ? [paso.subArticuloId] : []), ...deTareas]
+    for (const guiaId of guias) {
+      if (vistas.has(guiaId)) continue
+      vistas.add(guiaId)
+      const guia = requisitosDe(guiaId)
+      if (!guia) continue
+      const nuevos = requisitosEfectivos(
+        [],
+        guia.requisitos.filter((r) => !yaPedidos.has(claveRequisito(r))),
+      )
+      if (nuevos.length === 0) continue
+      resultado.push({ pasoNumero: indice + 1, guiaId, guiaTitulo: guia.titulo, requisitos: nuevos })
+    }
+  })
   return resultado
 }
 

@@ -218,6 +218,41 @@ describe('requisitos y revisión del contenido', () => {
     ])
   })
 
+  // Tarea 289, fase 4: lo que mezcla requisito, acción y verificación, y lo
+  // que le habla a quien ejecuta de cómo está hecha la guía.
+  it('las señales de la tarea 289 solo existen cuando hay algo que revisar, cada una en su pestaña', () => {
+    const sinNada = calcularCompletitud(
+      senalesDeArticulo({
+        ...COMPLETO,
+        tareasQueSonRequisitos: 0,
+        tareasQueSonComprobaciones: 0,
+        comprobacionesQueSonAcciones: 0,
+        requisitosQueHablanDeLaGuia: 0,
+        cuandoUsarPorRevisar: false,
+      }),
+    )
+    expect(sinNada.porcentaje).toBe(100)
+
+    const conTodo = calcularCompletitud(
+      senalesDeArticulo({
+        ...COMPLETO,
+        tareasQueSonRequisitos: 1,
+        tareasQueSonComprobaciones: 2,
+        comprobacionesQueSonAcciones: 1,
+        requisitosQueHablanDeLaGuia: 2,
+        cuandoUsarPorRevisar: true,
+      }),
+    )
+    expect(conTodo.sugerencias).toEqual([
+      { texto: 'Revisar 1 tarea que parece un requisito previo', pestana: 'pasos' },
+      { texto: 'Marcar como verificación 2 tareas que comprueban algo', pestana: 'pasos' },
+      { texto: 'Sacar de la verificación final 1 acción', pestana: 'pasos' },
+      { texto: 'Decir qué hace falta en 2 requisitos que hablan de cómo está hecha la guía', pestana: 'pasos' },
+      { texto: 'Decir en «Cuándo usar» la situación en que sirve', pestana: 'general' },
+    ])
+    expect(conTodo.pestanasPendientes.has('general')).toBe(true)
+  })
+
   it('un manual no tiene pasos que revisar', () => {
     const manual = calcularCompletitud(
       senalesDeArticulo({ ...COMPLETO, tipo: 'manual', contenido: 'x', tareasEncadenadas: 2 }),

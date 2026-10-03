@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { BloquePaso, PasoProcedimiento } from '../../lib/db'
 import { crearBloqueAviso, crearBloqueTarea, crearPaso } from '../../lib/procedimiento'
-import { accionesEncadenadas, esAccionDePantalla, esRecordatorio, revisarGuia } from './revisionGuia'
+import {
+  accionesEncadenadas,
+  cuandoUsarSinSituacion,
+  esAccionDePantalla,
+  esComprobacion,
+  esCondicionPrevia,
+  esRecordatorio,
+  hablaDeLaArquitectura,
+  revisarCuandoUsar,
+  revisarGuia,
+} from './revisionGuia'
 
 function tarea(texto: string, extra: Partial<BloquePaso> = {}): BloquePaso {
   return { ...crearBloqueTarea(), texto, ...extra }
@@ -175,7 +185,15 @@ describe('revisarGuia', () => {
 
   it('una guía sin requisitos no genera nada', () => {
     const revision = revisarGuia([], [paso(tarea('Abre FrontRest'))])
-    expect(revision).toEqual({ requisitosQueSonAcciones: [], tareasEncadenadas: [], alertasQueRecuerdan: [] })
+    expect(revision).toEqual({
+      requisitosQueSonAcciones: [],
+      tareasEncadenadas: [],
+      alertasQueRecuerdan: [],
+      tareasQueSonRequisitos: [],
+      tareasQueSonComprobaciones: [],
+      comprobacionesQueSonAcciones: [],
+      requisitosQueHablanDeLaGuia: [],
+    })
   })
 
   it('encuentra las tareas encadenadas, pero no parte comprobaciones ni decisiones', () => {
@@ -207,6 +225,134 @@ describe('revisarGuia', () => {
     expect(revision.alertasQueRecuerdan).toEqual([
       { pasoIndice: 0, bloqueId: recordatorio.id, texto: 'Recuerda cerrar la caja' },
     ])
+  })
+})
+
+// TAREA 289, FASE 4: requisito, acción, verificación y la forma de hablarle
+// a quien ejecuta. Los ejemplos positivos son los del encargo y los de la
+// auditoría de las guías reales (sin datos protegidos).
+describe('esCondicionPrevia: una tarea que es un requisito previo (tarea 289)', () => {
+  it('reconoce lo que debe existir antes de empezar', () => {
+    expect(esCondicionPrevia('Tener acceso administrativo.')).toBe(true)
+    expect(esCondicionPrevia('Tener a mano la resolución DIAN')).toBe(true)
+    expect(esCondicionPrevia('Ten a mano la cédula de la persona')).toBe(true)
+    expect(esCondicionPrevia('Contar con el número de cédula')).toBe(true)
+    expect(esCondicionPrevia('Estar conectado a la VPN')).toBe(true)
+    expect(esCondicionPrevia('Haber creado el usuario en Active Directory')).toBe(true)
+    expect(esCondicionPrevia('Debes tener permisos de administrador')).toBe(true)
+    expect(esCondicionPrevia('Hay que estar en la red de la sede')).toBe(true)
+    expect(esCondicionPrevia('Asegúrate de tener la contraseña del POS')).toBe(true)
+    expect(esCondicionPrevia('Se requiere usuario con permisos de administrador')).toBe(true)
+    expect(esCondicionPrevia('Necesitas la autorización de la coordinación')).toBe(true)
+    expect(esCondicionPrevia('- Disponer de la impresora encendida')).toBe(true)
+  })
+
+  it('no confunde una acción, una obligación de hacer ni un aviso con una condición', () => {
+    expect(esCondicionPrevia('Abre ICG Manager')).toBe(false)
+    expect(esCondicionPrevia('Presiona Windows + R')).toBe(false)
+    expect(esCondicionPrevia('Escribe la cédula en NIF')).toBe(false)
+    expect(esCondicionPrevia('Debes seleccionar la impresora')).toBe(false)
+    expect(esCondicionPrevia('Hay que abrir el menú Fichero')).toBe(false)
+    expect(esCondicionPrevia('Tienes que guardar los cambios')).toBe(false)
+    expect(esCondicionPrevia('Necesitas abrir ICG Manager')).toBe(false)
+    expect(esCondicionPrevia('Ten en cuenta que tarda unos minutos')).toBe(false)
+    expect(esCondicionPrevia('Tener cuidado con el cable de red')).toBe(false)
+    expect(esCondicionPrevia('Estar atento al mensaje de error')).toBe(false)
+    expect(esCondicionPrevia('Verifica que tengas acceso')).toBe(false)
+    expect(esCondicionPrevia('')).toBe(false)
+  })
+})
+
+describe('esComprobacion: algo que se comprueba (tarea 289)', () => {
+  it('reconoce una comprobación por cómo empieza', () => {
+    expect(esComprobacion('Comprueba que la impresora aparece en la lista')).toBe(true)
+    expect(esComprobacion('Verifica la dirección IP del equipo')).toBe(true)
+    expect(esComprobacion('Confirma que el usuario quedó creado')).toBe(true)
+    expect(esComprobacion('Revisa que el trabajo salga por la bandeja')).toBe(true)
+    expect(esComprobacion('Asegúrate de que la luz quede en verde')).toBe(true)
+  })
+
+  it('"Confirma el cambio" y "Revisa la bandeja" son gestos, no comprobaciones', () => {
+    expect(esComprobacion('Confirma el cambio')).toBe(false)
+    expect(esComprobacion('Revisa la bandeja de entrada')).toBe(false)
+    expect(esComprobacion('Selecciona Guardar')).toBe(false)
+  })
+})
+
+describe('hablaDeLaArquitectura: la complejidad pertenece al sistema (tarea 289)', () => {
+  it('reconoce lo que nombra cómo está hecha la guía', () => {
+    expect(hablaDeLaArquitectura('Acceso autorizado al programa mediante el procedimiento relacionado')).toBe(true)
+    expect(hablaDeLaArquitectura('Tener acceso a la información protegida del servidor')).toBe(true)
+    expect(hablaDeLaArquitectura('Acceso protegido de la caja disponible')).toBe(true)
+    expect(hablaDeLaArquitectura('Usa esta guía cuando otra guía requiera abrir el programa')).toBe(true)
+    expect(hablaDeLaArquitectura('Centraliza el recorrido y abre las guías específicas')).toBe(true)
+    expect(hablaDeLaArquitectura('Completar primero la subguía de acceso')).toBe(true)
+    expect(hablaDeLaArquitectura('La clave está en la Bóveda')).toBe(true)
+  })
+
+  it('lo que dice qué hace falta no se señala', () => {
+    expect(hablaDeLaArquitectura('Acceso autorizado a ICG Manager')).toBe(false)
+    expect(hablaDeLaArquitectura('Usa esta guía cuando la impresora no imprime')).toBe(false)
+    expect(hablaDeLaArquitectura('Número de cédula de la persona')).toBe(false)
+  })
+})
+
+describe('cuandoUsarSinSituacion: un "cuándo usar" que no dice cuándo (tarea 289)', () => {
+  it('señala el que describe lo que hace la guía', () => {
+    expect(cuandoUsarSinSituacion('Configurar Microsoft 365 en el computador de la persona')).toBe(true)
+    expect(cuandoUsarSinSituacion('Crear la firma corporativa en Outlook')).toBe(true)
+  })
+
+  it('no señala el que dice la situación, ni uno vacío', () => {
+    expect(cuandoUsarSinSituacion('Usa esta guía cuando la impresora no imprime')).toBe(false)
+    expect(cuandoUsarSinSituacion('Configurar la firma si la persona es nueva')).toBe(false)
+    expect(cuandoUsarSinSituacion('La impresora ya está instalada pero no imprime')).toBe(false)
+    expect(cuandoUsarSinSituacion('')).toBe(false)
+  })
+
+  it('revisarCuandoUsar junta las dos preguntas', () => {
+    expect(revisarCuandoUsar('Usa esta guía cuando otra guía lo pida')).toEqual({ hablaDeLaGuia: true, sinSituacion: false })
+    expect(revisarCuandoUsar('Configurar Outlook')).toEqual({ hablaDeLaGuia: false, sinSituacion: true })
+  })
+})
+
+describe('revisarGuia: lo que mezcla papeles (tarea 289)', () => {
+  it('señala la acción que es un requisito y la comprobación sin marcar, nunca una verificación ni una decisión', () => {
+    const condicion = tarea('Tener acceso administrativo')
+    const comprobacion = tarea('Comprueba que aparece la impresora')
+    const pasos = [
+      paso(
+        condicion,
+        comprobacion,
+        tarea('Abre el panel'),
+        tarea('Tener acceso administrativo', { tipoTarea: 'verificacion' }),
+        tarea('¿Tienes acceso administrativo?', { tipoTarea: 'decision' }),
+        tarea('Comprueba que aparece la impresora', { tipoTarea: 'verificacion' }),
+      ),
+    ]
+    const revision = revisarGuia([], pasos)
+    expect(revision.tareasQueSonRequisitos).toEqual([{ pasoIndice: 0, tareaId: condicion.id, texto: condicion.texto }])
+    expect(revision.tareasQueSonComprobaciones).toEqual([
+      { pasoIndice: 0, tareaId: comprobacion.id, texto: comprobacion.texto },
+    ])
+  })
+
+  it('señala la verificación final que es una acción, pero no la que confirma algo', () => {
+    const revision = revisarGuia([], [], [
+      'Abrir ICG Manager',
+      'Confirmar que el trabajador quedó creado',
+      'La persona aparece registrada',
+      '',
+    ])
+    expect(revision.comprobacionesQueSonAcciones).toEqual(['Abrir ICG Manager'])
+  })
+
+  it('señala el requisito que habla de cómo está hecha la guía', () => {
+    const revision = revisarGuia(
+      ['Acceso autorizado mediante el procedimiento relacionado', 'Número de cédula de la persona'],
+      [],
+    )
+    expect(revision.requisitosQueHablanDeLaGuia).toEqual(['Acceso autorizado mediante el procedimiento relacionado'])
   })
 })
 

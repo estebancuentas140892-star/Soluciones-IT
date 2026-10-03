@@ -7,6 +7,7 @@ import {
   orientacionDe,
   pantallasDePreparacion,
   requisitosEfectivos,
+  requisitosPorRevisar,
 } from './preparacionGuia'
 
 // La preparación de una guía (tarea 289, fase 2): reglas puras. El
@@ -124,5 +125,59 @@ describe('pantallasDePreparacion', () => {
 
   it('una guía sin nada que orientar ni preparar abre en su primera acción', () => {
     expect(pantallasDePreparacion(null, [])).toEqual([])
+  })
+})
+
+// Tarea 289, fase 4: lo que piden las guías que NO se suman solas, para que
+// el autor lo decida en el editor.
+describe('requisitosPorRevisar', () => {
+  const guias: Record<string, { titulo: string; requisitos: string[] }> = {
+    'g-acceso': { titulo: 'Acceder al programa', requisitos: ['Red interna.', 'Autorización para el programa.'] },
+    'g-correo': { titulo: 'Configurar el correo', requisitos: ['Correo de la persona.', 'red interna'] },
+    'g-firma': { titulo: 'Configurar la firma', requisitos: ['Correo configurado.'] },
+    'g-sin-nada': { titulo: 'Sin requisitos', requisitos: [] },
+  }
+  const requisitosDe = (id: string) => guias[id] ?? null
+
+  function conGuias(subArticulos: (string | null)[], requisitos: string[] = []) {
+    return procedimiento({
+      requisitos,
+      pasos: subArticulos.map((sub, i) => ({ id: `p${i + 1}`, titulo: `Paso ${i + 1}`, subArticuloId: sub })),
+    })
+  }
+
+  it('ofrece las de los pasos 2 en adelante, sin lo que ya se pide (la guía o el paso 1)', () => {
+    const resultado = requisitosPorRevisar(conGuias(['g-acceso', 'g-correo', null, 'g-firma']), requisitosDe)
+    expect(resultado).toEqual([
+      { pasoNumero: 2, guiaId: 'g-correo', guiaTitulo: 'Configurar el correo', requisitos: ['Correo de la persona.'] },
+      { pasoNumero: 4, guiaId: 'g-firma', guiaTitulo: 'Configurar la firma', requisitos: ['Correo configurado.'] },
+    ])
+  })
+
+  it('lo que la guía ya pide por sí misma tampoco se ofrece', () => {
+    const resultado = requisitosPorRevisar(conGuias([null, 'g-firma'], ['Correo configurado']), requisitosDe)
+    expect(resultado).toEqual([])
+  })
+
+  it('una guía que no está en el dispositivo, que no pide nada o que se repite no aparece', () => {
+    expect(requisitosPorRevisar(conGuias([null, 'g-borrada', 'g-sin-nada']), requisitosDe)).toEqual([])
+    const repetida = requisitosPorRevisar(conGuias([null, 'g-firma', 'g-firma']), requisitosDe)
+    expect(repetida.map((r) => r.pasoNumero)).toEqual([2])
+  })
+
+  it('cuenta también la guía que exige una tarea', () => {
+    const conTarea = procedimiento({
+      pasos: [
+        {
+          id: 'p1',
+          titulo: 'Probar',
+          bloques: [
+            { id: 't1', tipo: 'tarea', texto: 'Imprime la página de prueba' },
+            { id: 'g1', tipo: 'guia', alcance: 'tarea', tareaId: 't1', guiaArticuloId: 'g-firma', intencionGuia: 'necesario' },
+          ],
+        },
+      ],
+    })
+    expect(requisitosPorRevisar(conTarea, requisitosDe).map((r) => r.guiaId)).toEqual(['g-firma'])
   })
 })
