@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-02
 
+### Corregido y Documentación (guías, tarea 289, fase 5): QA móvil, foco en el paso entero y documentación del flujo continuo
+
+**Área modificada:** `src/features/soluciones/AsistenteVista.tsx` y `guiasFlujoNatural.test.tsx`; [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (13.2, el editor y los detalles), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-036 y RN-039 revisadas; RN-060, RN-061 y RN-062 nuevas), [ARQUITECTURA.md](ARQUITECTURA.md), [DECISIONES.md](DECISIONES.md) (AD-063), [COMPONENTES_UI.md](COMPONENTES_UI.md) (3.8i, 3.8q, 3.8o-bis; 3.8za y 3.8zb nuevas), [REGLAS.md](REGLAS.md) (regla 25) y [TAREAS.md](TAREAS.md).
+**Tipo:** Corregido (accesibilidad y orden en la vista de paso entero) y Documentación.
+**Motivo:** cierre de la tarea 289. QA con Chrome sin cabeza a 390x844 (y 1366x768, y 390x480 con el teclado abierto) sobre guías inventadas con la estructura de los casos representativos: orientación, requisitos, primera acción reutilizada, credencial, advertencia, retomar, ruta, consulta, verificación final, terminada, la guía que exige una tarea, el "No" de una decisión, el paso entero y el editor. Sin desborde horizontal, sin vocabulario interno en ninguna pantalla de la ejecución y con el foco en cada acción. Dos ajustes en la vista de paso entero.
+**Qué cambia:**
+- En la vista de paso entero, el título del paso recibe el foco al entrar en él (en escritorio queda solo para el lector de pantalla, porque la ruta ya lo dice a la vista). Al empezar desde "Todo listo, empezar" el foco caía en la página.
+- En esa misma vista, el "Debes ver" de un paso que se hace con lo que reutiliza va después de esas acciones, que es lo que confirma.
+- La documentación recoge, con las dos frases del encargo, que **la complejidad pertenece al sistema, no al técnico** y que **un procedimiento puede reutilizar otros procedimientos internamente, pero el técnico experimenta un único flujo continuo** (AD-063, regla 25).
+**Impacto esperado:** quien usa teclado o lector de pantalla empieza cada paso donde corresponde también en la vista de paso entero. Sin cambios de datos.
+
 ### Agregado (editor de guías, tarea 289, fase 4): pistas para no mezclar requisito, acción, verificación y arquitectura
 
 **Área modificada:** `src/features/soluciones/` (`revisionGuia.ts`: `esCondicionPrevia`, `esComprobacion`, `hablaDeLaArquitectura`, `cuandoUsarSinSituacion`, `revisarCuandoUsar` y cuatro listas nuevas en `revisarGuia`; `preparacionGuia.ts`: `requisitosPorRevisar`; `completitudArticulo.ts`; `ArticuloForm.tsx`; `PasosEditor.tsx`); pruebas (`revisionGuia.test.ts`, `preparacionGuia.test.ts`, `completitudArticulo.test.ts` y `revisionEditor.test.tsx`) y `TAREAS.md`.
