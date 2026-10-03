@@ -293,6 +293,14 @@ No es un umbral mágico: es la unidad de la propia escala del ranking (sección 
 
 Si las primeras están cerca, sigue siendo **"Mejores resultados"**, como siempre. Son los mismos resultados, en el mismo orden y con las mismas acciones: **solo cambia lo que se afirma**. Con un solo resultado no hay sección (sección 7.1). El puente a la Bóveda va detrás del bloque ENTERO, nunca entre "Mejor" y "Otras", y en modo consulta rige igual: la mejor coincidencia tampoco navega. El título de cada fila se lee entero (regla 23). Pruebas: `mejores.test.ts` (la regla y su frontera), `resultadosIntencion.test.tsx` (la pantalla) y el benchmark (sección 14), que fija la certeza esperada de cada caso.
 
+### 7.10 El equipo de la consulta llega a la guía (2026-10-03, tarea 290)
+
+"La impresora de mercadeo no imprime" pide una solución sobre UN equipo. Si el técnico abre una guía desde esos resultados, la guía se abre con ese equipo (`?equipo=<id>`), para que una acción que pide "la credencial del equipo actual" sepa de cuál se trata (AD-064).
+
+- **Qué se lee:** `equipoDeLaConsulta` (`mejores.ts`) usa lo mismo que ya usa el ranking: las palabras que identifican un equipo concreto (`objetoDeLaConsulta`) y la clase que nombra la consulta. Devuelve un equipo solo si es **el único** resultado de equipo que coincide, en su nombre o su identidad, con todo lo que lo identifica y con su clase. Dos equipos posibles ("mercadeo" a secas: la impresora y el switch), o nada que identifique uno ("impresora"), devuelven null y la guía se abre sin equipo.
+- **Qué NO cambia:** el orden, las intenciones, los pesos, los sinónimos, el índice, `formasBusqueda` y la confianza. Solo cambia a dónde lleva el enlace de una guía (`ResultadosBusqueda`, `rutaGuiaConEquipo`).
+- **Pruebas:** `equipoDeLaConsulta.test.ts` (con el índice de verdad y los datos sintéticos del benchmark) y `credencialDelEquipoFlujo.test.tsx` (de Resolver a la guía).
+
 ## 8. Sugerencias anti duplicados
 
 `buscarSimilares` / `buscarArticulosSimilares` (`useIndiceBusqueda.ts`) reutilizan el mismo índice y la misma expansión de sinónimos, pero además:

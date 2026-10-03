@@ -280,6 +280,40 @@ const SEMBRAR_GUIAS_PRUEBA = `
   base.close()
   return true
 `
+// Tarea 290: la credencial del equipo con el que se trabaja, sin red. Dos
+// equipos, una credencial relacionada con uno de ellos y una guía que pide
+// "la credencial del equipo actual", inventados y escritos directo en la
+// base local; el perfil con permiso de Bóveda, como lo deja la app al
+// iniciar sesión. Lo "cifrado" es un texto falso: sin la contraseña
+// maestra nada se descifra, y eso es justo lo que se comprueba.
+const PERFIL_SIN_RED = { id: '00000000-0000-4000-8000-0000000000aa', nombre: 'Técnica sin red', correo: 'sin-red@local', puedeVerBoveda: true }
+function equipoDePrueba(id, nombre) {
+  return { id, categoriaId: 'cat-sin-conexion', nombre, marca: '', modelo: '', serial: '', placaInventario: '', ubicacion: '', ubicacionId: null, responsable: '', responsableId: null, reemplazaA: null, ip: '', estado: '', observaciones: '', detalles: {}, foto: null, updatedAt: AHORA, updatedBy: null, eliminadoEn: null }
+}
+const EQUIPOS_SIN_RED = [equipoDePrueba('eq-sin-red-a', 'Impresora de prueba sin red A'), equipoDePrueba('eq-sin-red-b', 'Impresora de prueba sin red B')]
+const CIFRADO_FALSO = 'cifrado-falso-que-no-se-descifra-sin-red'
+const CREDENCIAL_SIN_RED = { id: 'cred-sin-red', titulo: 'Acceso de prueba sin red', categoria: 'Pruebas', tipo: 'cuenta', datosCifrados: CIFRADO_FALSO, venceEn: null, dispositivos: [{ id: 'eq-sin-red-a', nombre: 'Impresora de prueba sin red A' }], archivo: null, updatedAt: AHORA, updatedBy: null, eliminadoEn: null }
+const GUIA_DEL_EQUIPO = guiaDePrueba('guia-equipo-sin-red', 'Revisar la impresora de prueba sin red', {
+  pasos: [{ id: 'ges-p1', titulo: 'Entrar al panel', bloques: [{ id: 'ges-p1-t1', tipo: 'tarea', texto: 'Entra al panel de la impresora sin red', vinculoProtegido: { tipo: 'equipo', finalidad: '' } }] }],
+})
+const SEMBRAR_EQUIPO_PRUEBA = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  await new Promise((ok, mal) => {
+    const t = base.transaction(['perfiles', 'dispositivos', 'credenciales', 'articulos'], 'readwrite')
+    t.objectStore('perfiles').put(${JSON.stringify(PERFIL_SIN_RED)})
+    for (const equipo of ${JSON.stringify(EQUIPOS_SIN_RED)}) t.objectStore('dispositivos').put(equipo)
+    t.objectStore('credenciales').put(${JSON.stringify(CREDENCIAL_SIN_RED)})
+    t.objectStore('articulos').put(${JSON.stringify(GUIA_DEL_EQUIPO)})
+    t.oncomplete = () => ok()
+    t.onerror = () => mal(t.error)
+  })
+  base.close()
+  return true
+`
 const AVISO_DISPOSITIVO = 'No se pudo usar el desbloqueo del dispositivo.'
 
 async function main() {
@@ -392,6 +426,38 @@ async function main() {
     comprobar(
       !(await s.evaluar(`return /Guía necesaria|Estás realizando|Abrir guía|Volver a la guía principal|No se pudo cargar/.test(document.body.innerText)`)),
       'sin tarjeta ni cabecera de otra guía, y sin pantalla de error',
+    )
+
+    // Tarea 290: la relación equipo y credencial se lee del teléfono, sin
+    // red; los datos siguen detrás de la contraseña maestra.
+    paso('4c. La credencial del equipo actual, sin red: se resuelve y sigue protegida (tarea 290)')
+    comprobar(Boolean(await s.evaluar(SEMBRAR_EQUIPO_PRUEBA)), 'equipos, credencial y guía inventados escritos en la base local, con la red cortada')
+    await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-equipo-sin-red?equipo=eq-sin-red-a' })
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Acceso de prueba sin red') && document.body.innerText.includes('Impresora de prueba sin red A')`,
+          'la credencial del equipo',
+          45000,
+        ),
+      ),
+      'la acción resuelve la credencial de ese equipo sin red',
+    )
+    await s.tocar('Acceso de prueba sin red')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('La bóveda está bloqueada')`, 'el desbloqueo')),
+      'para ver sus datos sigue pidiendo la contraseña maestra',
+    )
+    comprobar(
+      !(await s.evaluar(`return document.documentElement.outerHTML.includes(${JSON.stringify(CIFRADO_FALSO)})`)),
+      'nada de la Bóveda en la página',
+    )
+    await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-equipo-sin-red?equipo=eq-sin-red-b' })
+    await s.hasta(`document.body.innerText.includes('Impresora de prueba sin red B')`, 'el otro equipo', 45000)
+    await s.tocar('Credencial del equipo')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('No hay una credencial configurada para este equipo.')`, 'sin credencial')),
+      'un equipo sin credencial no recibe la de otro',
     )
 
     // Un autenticador de plataforma VIRTUAL de Chromium (DevTools

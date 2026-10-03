@@ -42,6 +42,12 @@ interface Props {
    * la hoja antes de ejecutarse, como elegir una opción.
    */
   accion?: { etiqueta: string; onAccion: () => void }
+  /**
+   * Las opciones ocupan las líneas que necesiten en vez de recortarse
+   * (regla 23): cuando el nombre ES lo que se elige y el recorte podría
+   * esconder cuál es (el equipo con el que se trabaja, tarea 290).
+   */
+  sinRecortar?: boolean
 }
 
 const ID_TITULO = 'hoja-vinculo-titulo'
@@ -54,6 +60,7 @@ export function HojaVinculo({
   grupos,
   onElegir,
   accion,
+  sinRecortar = false,
 }: Props) {
   const [consulta, setConsulta] = useState('')
 
@@ -132,7 +139,11 @@ export function HojaVinculo({
                 }}
                 className="flex min-h-14 w-full items-center rounded-[10px] px-3 text-left text-[14.5px] text-noct-text hover:bg-noct-text/[.06] active:bg-noct-text/[.1]"
               >
-                <span className="min-w-0 flex-1 truncate">{opcion.titulo}</span>
+                <span
+                  className={`min-w-0 flex-1 ${sinRecortar ? 'py-2 leading-snug [overflow-wrap:anywhere]' : 'truncate'}`}
+                >
+                  {opcion.titulo}
+                </span>
               </button>
             ))}
           </div>

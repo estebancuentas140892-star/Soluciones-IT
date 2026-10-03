@@ -381,6 +381,8 @@ function SelectorEquipo({
       placeholderBuscar={`Buscar en ${opciones.length} ${opciones.length === 1 ? 'equipo' : 'equipos'}`}
       grupos={[{ opciones }]}
       onElegir={onElegir}
+      // El nombre del equipo es lo que se elige: no se recorta (regla 23).
+      sinRecortar
     />
   )
 }

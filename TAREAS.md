@@ -40,7 +40,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 2 | Resolución por equipo exacto en la capa de dominio, con pruebas unitarias | Hecha: `credencialDelEquipo.ts` (casos A a D, finalidad por la categoría de la Bóveda, solo accesos), `equipoDeLaConsulta` (Resolver, sin tocar el orden) y `fijarEquipoDeEjecucion` (el equipo en la fila local de avance) |
 | 3 | Integración con la consulta de la Bóveda en la guía y el contexto del equipo en la ejecución | Hecha: vínculo `{ tipo: 'equipo', finalidad }` junto al fijo, `CredencialEnPaso` con la misma consulta sobre la credencial resuelta y estados neutros, el equipo en `ProveedorEjecucion` (dirección, fila al retomar, elegido en la acción) y llegando desde la ficha del equipo y Resolver; 16 pruebas de flujo |
 | 4 | Editor: credencial específica o credencial del equipo actual | Hecha: en la hoja de "Información protegida" del paso y de la tarea, "Credencial del equipo actual" antes que las credenciales concretas (con permiso de Bóveda) y "Finalidad (opcional)" con las categorías que ya usa la Bóveda; 4 pruebas del editor |
-| 5 | QA, documentación, sin conexión, build, CI, despliegue y archivo | Pendiente |
+| 5 | QA, documentación, sin conexión, build, CI, despliegue y archivo | Hecha en la rama: QA a 390×844, 390×480 con teclado y 1366×768 (17 paradas), paso 4c de la prueba sin conexión, AD-064, RN-063 y documentación; falta CI, despliegue y archivo |
 
 ### 290. La credencial del equipo en una guía
 

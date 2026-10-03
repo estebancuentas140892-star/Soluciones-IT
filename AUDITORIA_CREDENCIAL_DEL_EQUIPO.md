@@ -103,7 +103,24 @@ Entrada: el identificador del equipo en contexto, la finalidad pedida, los equip
 
 Datos reales de la Bóveda (`credenciales.dispositivos`, cifrados, campos protegidos, usuarios, contraseñas, PIN), equipos, guías reales (tampoco el borrador de la guía de impresión bloqueada), Supabase, el ranking y la búsqueda de Resolver, `formasBusqueda`, la navegación y el diseño de la Bóveda y de la ejecución.
 
-## 6. Pendiente para otros (preliminar; se cierra en la fase 5)
+## 6. Pendiente para otros (cerrado en la fase 5)
 
-- **ChatGPT** (contenido de las guías): cuando esta versión esté desplegada y los teléfonos actualizados, cambiar en las guías que sirven para varios equipos el vínculo fijo por "Credencial del equipo actual", con finalidad solo donde el equipo tenga varios accesos.
-- **ChatGPT Work** (Bóveda): para los equipos con más de una credencial de acceso, que la categoría de cada una distinga su finalidad; y las impresoras sin credencial demostrada siguen sin relación (la aplicación lo dirá así).
+Esta tarea no tocó datos reales ni leyó la Bóveda real: no puede afirmar si falta alguna relación, solo que el código usa las que existan.
+
+- **ChatGPT** (contenido de las guías), **después** de que esta versión esté desplegada y los teléfonos del equipo actualizados (un teléfono sin actualizar que guarde una guía con un vínculo del equipo lo perdería, AD-064):
+  - en las guías que sirven para varios equipos, empezando por el borrador de la guía de impresión bloqueada, cambiar el vínculo fijo por **"Credencial del equipo actual"** (editor, "Información protegida" o "Dato protegido de esta tarea", grupo "Según el equipo con el que se trabaje");
+  - indicar **finalidad** solo donde el equipo tenga más de un acceso, con el mismo texto que la categoría que use la Bóveda;
+  - que la guía diga cómo identificar el equipo cuando no se llega desde su ficha (la acción ofrece "Elegir equipo"; abrirla desde la ficha del equipo, su código QR o Resolver ya lo trae).
+- **ChatGPT Work** (Bóveda):
+  - mantener al día la relación credencial y equipos (`Equipos relacionados` en la ficha de la credencial): es lo único que usa la resolución;
+  - en los equipos con más de una credencial de acceso (un servidor con escritorio remoto y un programa), dar a cada credencial una **categoría** que distinga su finalidad y que coincida con la que pida la guía;
+  - las impresoras sin credencial demostrada siguen sin relación: la aplicación dice "No hay una credencial configurada para este equipo." y no les asigna otra. Si se confirma una, basta con relacionarla;
+  - una licencia, un archivo seguro o una nota segura relacionados con un equipo no cuentan como su acceso.
+
+## 7. Cómo quedó (fases 2 a 5)
+
+- **Dominio:** `resolverCredencialDelEquipo`, `finalidadesConocidas` y `credencialesDeAccesoDelEquipo` (`src/features/boveda/credencialDelEquipo.ts`); `equipoDeLaConsulta` (`mejores.ts`); `fijarEquipoDeEjecucion` y `equipoId` en el avance (`progresoPasos.ts`); el vínculo y su comparación (`lib/db.ts`, `lib/procedimiento.ts`, `lib/vinculoProtegido.ts`).
+- **Ejecución:** `CredencialEnPaso` reparte entre el fijo (sin cambios) y el del equipo (misma consulta sobre la credencial resuelta, estados neutros, "Equipo" y "Cambiar" debajo de la fila); `ProveedorEjecucion` conserva el equipo; `AsistentePage` lo lee y lo deja en `?equipo=`; la ficha del equipo y Resolver lo pasan.
+- **Editor:** "Credencial del equipo actual" y "Finalidad (opcional)" en la hoja de información protegida del paso y de la tarea.
+- **Un ajuste sobre el diseño de la fase 1:** el selector de equipos de la acción (`HojaVinculo`) no recorta los nombres (`sinRecortar`, regla 23), porque el nombre es lo que se elige.
+- **Sin migración:** ni columnas, ni tablas, ni versión de Dexie nuevas.

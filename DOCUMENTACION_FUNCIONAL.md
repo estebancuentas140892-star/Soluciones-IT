@@ -241,7 +241,7 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 | `/soluciones` | SolucionesPage | Sección | Catálogo de guías: lista, chips de categoría, buscador, hoja de tipo. Desde el 2026-09-22 no es pestaña: se abre desde Resolver y su cabecera lleva un regreso a Resolver |
 | `/soluciones/:categoriaId` | CategoriaPage | Documento | Ficha 360° de una categoría |
 | `/soluciones/:categoriaId/nuevo` | ArticuloForm | Tarea | Crear artículo (editor con 4 pestañas) |
-| `/soluciones/:categoriaId/:articuloId` | GuiaPage > AsistentePage o ArticuloPage | Tarea (guía con pasos) / Documento (artículo sin pasos) | **La guía**: con pasos se abre ejecutándose, en su primer paso pendiente; sin pasos, se lee (desde el 2026-09-17) |
+| `/soluciones/:categoriaId/:articuloId` | GuiaPage > AsistentePage o ArticuloPage | Tarea (guía con pasos) / Documento (artículo sin pasos) | **La guía**: con pasos se abre ejecutándose, en su primer paso pendiente; sin pasos, se lee (desde el 2026-09-17). Acepta `?equipo=<id>`: el equipo con el que se trabaja (tarea 290), que ponen la ficha del equipo, Resolver y la propia guía al elegirlo |
 | `/soluciones/:categoriaId/:articuloId/detalles` | ArticuloPage (`comoDetalles`) | Documento | Detalles de la guía: descripción, versión, objetivo, requisitos, términos, relacionados, etiquetas e historial |
 | `/soluciones/:categoriaId/:articuloId/editar` | ArticuloForm | Tarea | Editar artículo (al guardar o salir vuelve a los detalles) |
 | `/soluciones/:categoriaId/:articuloId/ejecutar` | RedireccionAGuia | - | Dirección antigua de la ejecución: redirige a la guía conservando el origen |
@@ -1149,7 +1149,7 @@ Cada **paso** es una tarjeta con: **asa de arrastre**, número, **Título** ("Qu
 - **Quitar una línea**: la X mide **48x56** (antes 32).
 - **Archivos del paso completo**: "Adjuntar archivo del paso: manual, PDF o planilla" (distinto de las imágenes ancladas a una tarea).
 - **Vínculos del paso** (bloque plegable "Vínculos: dato protegido, procedimiento o solución"), cada uno abre `HojaVinculo` (tarea 212: hoja con buscador, en vez del `<select>` nativo que abría la rueda del sistema y no se podía filtrar):
-  - **"Vincular información protegida"**: datos protegidos de los equipos del artículo, y secretos de la bóveda, en dos grupos con encabezado.
+  - **"Vincular información protegida"**: datos protegidos de los equipos del artículo, y secretos de la bóveda, en dos grupos con encabezado. **Desde la tarea 290**, con permiso de Bóveda, antes de esos dos grupos va **"Según el equipo con el que se trabaje" › "Credencial del equipo actual"**: la guía no elige la credencial de ningún equipo. Elegida, la fila dice "Información protegida: Credencial del equipo" y debajo aparece **"Finalidad (opcional)"**: la categoría de la Bóveda que distingue el acceso cuando el equipo tiene varios (por ejemplo «Escritorio remoto»), con las categorías que ya usa la Bóveda como sugerencia; vacía, se usa la única credencial de acceso del equipo. La misma opción y el mismo campo están en el dato protegido de cada tarea ("Dato protegido de esta tarea").
   - **"Procedimiento relacionado"** (subprocedimiento que se ejecuta en este paso).
   - **"Solución si el paso falla"**.
 
@@ -1480,6 +1480,13 @@ Equipos > Crear
 - **"Dónde"** (amarillo, con la chincheta) acompaña a la **primera** acción del paso y **"Debes ver"** (verde, con el ojo) a la **última**, cuando el paso los declara (campos "Dónde se hace" y "Debes ver" del editor). **"Para qué"** (el objetivo del paso) sigue plegado en "Más información".
 - **"Requisitos"** (antes "Antes de empezar, ten a mano"), con la línea "Ten esto listo antes de empezar.": solo en el paso 1 y solo si la guía los tiene.
 - **"Credencial necesaria":** el dato protegido del paso o de la acción se presenta en un bloque con ese rótulo y el nombre del acceso. Los controles no cambian: sigue contraído, exige permiso, contraseña maestra y autobloqueo, y cada consulta se registra.
+- **"Credencial del equipo" (desde la tarea 290, AD-064).** Una acción puede pedir la credencial **del equipo con el que se trabaja** en lugar de una credencial concreta. El bloque es el mismo "Credencial necesaria", con una línea más debajo de la fila: **"Equipo: «nombre»"** y **"Cambiar"** (o **"Sin equipo elegido."** y **"Elegir equipo"**), que se tocan sin abrir la consulta. Cambiar el equipo recoge lo que estuviera abierto. Lo que se ve al abrirla:
+  - **Una credencial** de acceso relacionada con ese equipo en la Bóveda (y con la finalidad que pida la acción): su nombre en la fila y la consulta de siempre (desbloqueo en línea, usuario, contraseña tras el ojo, copiar, "Ver ficha completa en Bóveda"; cada consulta registrada).
+  - **Ninguna**: "No hay una credencial configurada para este equipo." (con finalidad: "…para este equipo con la finalidad «X»."). No se ofrece otra.
+  - **Varias** sin poder distinguirlas: "Este equipo tiene varias credenciales y no se puede saber cuál corresponde a esta acción." Sin nombrarlas.
+  - **Sin equipo**, o uno que ya no existe: "Elige el equipo con el que trabajas para ver su credencial." / "El equipo elegido ya no está disponible…".
+  - **Sin permiso de Bóveda**: el título del vínculo y "Solo los usuarios autorizados…", como siempre, sin la línea del equipo.
+  - **El equipo** llega en la dirección (`?equipo=`) desde la ficha del equipo y desde Resolver (si la consulta identifica uno solo), se recupera al retomar y se elige en la propia acción con la hoja **"¿Con qué equipo trabajas?"** (buscador, equipos por nombre y lugar, sin recortar). Es uno para toda la ejecución, también para lo que la guía reutiliza.
 - **El "No"** de una decisión es neutro (con una X) y el botón de falla también; **"Marcaste una falla"**, "Fotografiar y anotar la falla" y la hoja "Algo va mal en el paso N" van en rojo. El aviso de borrador es neutro.
 - **La vista de paso entero** lleva la misma ruta arriba, el objetivo bajo la cabecera, "Dónde" antes del cuerpo del paso, "Credencial necesaria" después y "Debes ver" al final. **La lectura** (Detalles de la guía y la vista previa del editor) enseña "Requisitos", "Dónde", "Credencial necesaria" y "Debes ver" con los mismos bloques.
 
@@ -1607,6 +1614,8 @@ Bóveda > Crear > (tipo)  [o desde la ficha de un equipo: "Guardar secreto"]
  → Ficha del secreto: revelar (auditoría), copiar (auditoría), descargar archivo
  → El secreto se puede vincular a un paso de un procedimiento (aparece como "Datos" del paso,
     contraído, pide bóveda abierta) y aparece en "Usada en"
+ → Relacionado con un equipo ("Equipos relacionados"), una guía que pide la
+    "Credencial del equipo actual" lo usa cuando se trabaja con ese equipo (tarea 290)
  → Nudge anti duplicidad: si en realidad es de un equipo, migrar a su ficha (/boveda/migrar)
 ```
 

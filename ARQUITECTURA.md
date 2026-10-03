@@ -201,7 +201,7 @@ src/
     red/          sección Red: lista de infraestructura (RedPage), topología en árbol (TopologiaPage + arbol.ts) y bloque de conexiones de la ficha (ConexionesFicha.tsx)
     diagnostico/  Modo Diagnóstico Inteligente (todo en Nocturne desde las tareas 81 y 83): lista de problemas por categoría (DiagnosticosPage), editor del árbol de preguntas (DiagnosticoForm, con su modo prueba PruebaDiagnostico) y asistente de ejecución (DiagnosticoRunPage)
     escaner/      escaneo de códigos QR y de barras con la cámara para abrir fichas
-    boveda/       sección "Bóveda": credenciales cifradas (se llamó "Notas" en la interfaz hasta el 2026-07-09)
+    boveda/       sección "Bóveda": credenciales cifradas (se llamó "Notas" en la interfaz hasta el 2026-07-09). Desde la tarea 290 (AD-064), `credencialDelEquipo.ts` resuelve "la credencial del equipo con el que se trabaja" con la relación `credenciales.dispositivos` (por el id del equipo; una, ninguna o varias sin elegir) y `CredencialEnPaso` la consulta con los controles de siempre. El equipo de la ejecución vive en `progresoPasos.equipoId` y en `ContextoEjecucion` (`ProveedorEjecucion`), llega con `?equipo=` desde la ficha del equipo y desde Resolver (`equipoDeLaConsulta`) y se puede elegir en la propia acción
     historial/    registro y visor de cambios
     mas/          la pantalla Más y sus filas índice (`FilasMas.tsx`, compartidas con Herramientas de inventario)
     inventario/   Herramientas de inventario (tarea 268): la puerta de Importar, Etiquetas QR y los datos por ordenar, y la unificación de los estados escritos a mano
