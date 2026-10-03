@@ -17,6 +17,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 - En la vista de paso entero, el título del paso recibe el foco al entrar en él (en escritorio queda solo para el lector de pantalla, porque la ruta ya lo dice a la vista). Al empezar desde "Todo listo, empezar" el foco caía en la página.
 - En esa misma vista, el "Debes ver" de un paso que se hace con lo que reutiliza va después de esas acciones, que es lo que confirma.
 - La documentación recoge, con las dos frases del encargo, que **la complejidad pertenece al sistema, no al técnico** y que **un procedimiento puede reutilizar otros procedimientos internamente, pero el técnico experimenta un único flujo continuo** (AD-063, regla 25).
+- `scripts/prueba-sin-conexion.mjs` suma el paso **4b**: con el build de producción, el service worker y la red cortada, una guía inventada que reutiliza otra en su paso 1 se orienta, enseña los requisitos (también los de la guía del paso 1) y abre su primera acción reutilizada en el sitio, sin tarjeta ni cabecera de otra guía.
 **Impacto esperado:** quien usa teclado o lector de pantalla empieza cada paso donde corresponde también en la vista de paso entero. Sin cambios de datos.
 
 ### Agregado (editor de guías, tarea 289, fase 4): pistas para no mezclar requisito, acción, verificación y arquitectura

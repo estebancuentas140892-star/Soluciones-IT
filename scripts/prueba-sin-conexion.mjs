@@ -243,6 +243,43 @@ const FILA_BLOQUEO = `
   return fila
 `
 const HAY_APP = `document.querySelector('nav[aria-label="Navegación principal"]') != null`
+// Tarea 289: una guía que reutiliza otra en su paso 1, inventada y escrita
+// directo en la base local (IndexedDB) con la red ya cortada.
+const AHORA = new Date(0).toISOString()
+const CATEGORIA_PRUEBA = { id: 'cat-sin-conexion', nombre: 'Sin conexión', icono: '', orden: 99, esRed: false, color: null, updatedAt: AHORA, updatedBy: null, eliminadoEn: null }
+function guiaDePrueba(id, titulo, procedimiento) {
+  return { id, categoriaId: 'cat-sin-conexion', titulo, tipo: 'configuracion', contenido: '', etiquetas: [], procedimiento, sintomas: [], causas: [], dispositivosAfectados: [], esRutaInicio: false, estado: 'publicado', version: '1.0', relacionados: [], ordenRutaInicio: 0, origenSugerenciaId: null, aplicaA: null, updatedAt: AHORA, updatedBy: null, eliminadoEn: null }
+}
+const GUIAS_PRUEBA = [
+  guiaDePrueba('acceso-sin-conexion', 'Entrar al programa de prueba sin red', {
+    requisitos: ['Red de prueba sin conexión.'],
+    pasos: [{ id: 'acs-p1', titulo: 'Abrir el programa', bloques: [{ id: 'acs-p1-t1', tipo: 'tarea', texto: 'Abre el programa de prueba sin red' }] }],
+  }),
+  guiaDePrueba('guia-sin-conexion', 'Registrar a una persona de prueba sin red', {
+    descripcion: 'Usa esta guía cuando necesites registrar a una persona sin red.',
+    requisitos: ['Datos de la persona de prueba.'],
+    pasos: [
+      { id: 'gsc-p1', titulo: 'Entrar al programa', subArticuloId: 'acceso-sin-conexion', subArticuloTitulo: 'Entrar al programa de prueba sin red' },
+      { id: 'gsc-p2', titulo: 'Guardar', bloques: [{ id: 'gsc-p2-t1', tipo: 'tarea', texto: 'Selecciona Guardar' }] },
+    ],
+  }),
+]
+const SEMBRAR_GUIAS_PRUEBA = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  await new Promise((ok, mal) => {
+    const t = base.transaction(['articulos', 'categorias'], 'readwrite')
+    t.objectStore('categorias').put(${JSON.stringify(CATEGORIA_PRUEBA)})
+    for (const guia of ${JSON.stringify(GUIAS_PRUEBA)}) t.objectStore('articulos').put(guia)
+    t.oncomplete = () => ok()
+    t.onerror = () => mal(t.error)
+  })
+  base.close()
+  return true
+`
 const AVISO_DISPOSITIVO = 'No se pudo usar el desbloqueo del dispositivo.'
 
 async function main() {
@@ -325,6 +362,32 @@ async function main() {
       pagina = await s.ir(ruta)
       comprobar(pagina.app && pagina.ruta === ruta && !PANTALLA_ROTA.test(pagina.texto), `${ruta} (${pagina.ruta}, ${pagina.ms} ms)`)
     }
+
+    // Tarea 289: la ejecución de una guía no pide nada a la red. Orientar,
+    // preparar (con los requisitos de la guía que reutiliza su paso 1) y
+    // hacer en el sitio lo reutilizado sale todo de la base local.
+    paso('4b. Una guía que reutiliza otra, sin red: orientar, preparar y la primera acción reutilizada (tarea 289)')
+    comprobar(Boolean(await s.evaluar(SEMBRAR_GUIAS_PRUEBA)), 'guías inventadas escritas en la base local, con la red cortada')
+    await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-sin-conexion' })
+    comprobar(
+      // `innerText` devuelve los rótulos como los pinta el CSS (en mayúsculas).
+      Boolean(await s.hasta(`/qué vas a hacer/i.test(document.body.innerText) && document.body.innerText.includes('Cuando necesites registrar a una persona sin red.')`, 'la orientación', 45000)),
+      'la orientación se ve sin red',
+    )
+    await s.tocar('Ver lo que necesitas')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Datos de la persona de prueba.') && document.body.innerText.includes('Red de prueba sin conexión.')`, 'los requisitos')),
+      'los requisitos, también los de la guía del paso 1',
+    )
+    await s.tocar('Todo listo, empezar')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Abre el programa de prueba sin red')`, 'la primera acción')),
+      'la primera acción reutilizada, en el sitio',
+    )
+    comprobar(
+      !(await s.evaluar(`return /Guía necesaria|Estás realizando|Abrir guía|Volver a la guía principal|No se pudo cargar/.test(document.body.innerText)`)),
+      'sin tarjeta ni cabecera de otra guía, y sin pantalla de error',
+    )
 
     // Un autenticador de plataforma VIRTUAL de Chromium (DevTools
     // Protocol, dominio WebAuthn): crea credenciales y firma de verdad, con
