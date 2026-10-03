@@ -37,7 +37,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | Fase | Qué | Estado |
 |---|---|---|
 | 1 | Auditoría del modelo actual, pruebas del vínculo fijo de hoy y diseño técnico mínimo | Hecha: [AUDITORIA_CREDENCIAL_DEL_EQUIPO.md](AUDITORIA_CREDENCIAL_DEL_EQUIPO.md) y `vinculoFijo.test.tsx` |
-| 2 | Resolución por equipo exacto en la capa de dominio, con pruebas unitarias | Pendiente |
+| 2 | Resolución por equipo exacto en la capa de dominio, con pruebas unitarias | Hecha: `credencialDelEquipo.ts` (casos A a D, finalidad por la categoría de la Bóveda, solo accesos), `equipoDeLaConsulta` (Resolver, sin tocar el orden) y `fijarEquipoDeEjecucion` (el equipo en la fila local de avance) |
 | 3 | Integración con la consulta de la Bóveda en la guía y el contexto del equipo en la ejecución | Pendiente |
 | 4 | Editor: credencial específica o credencial del equipo actual | Pendiente |
 | 5 | QA, documentación, sin conexión, build, CI, despliegue y archivo | Pendiente |

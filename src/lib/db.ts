@@ -1107,6 +1107,13 @@ export interface ProgresoPasos {
   // entonces no hay ningun paso saltado, que es lo correcto. Como el
   // resto de este registro, es local y no se sincroniza.
   pasosSaltados?: string[]
+  // EL EQUIPO CON EL QUE SE TRABAJA en esta ejecucion (tarea 290): el id
+  // del dispositivo, o null/ausente si no se conoce. Lo comparten la guia
+  // y las que reutiliza (viven en esta misma fila), y es lo que permite a
+  // una accion pedir "la credencial del equipo actual". No es un secreto:
+  // es la referencia a un equipo, local como el resto del avance. Nunca
+  // crea la fila por si solo (ver `fijarEquipoDeEjecucion`).
+  equipoId?: string | null
   actualizadoEn: string
 }
 

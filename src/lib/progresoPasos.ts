@@ -106,6 +106,7 @@ async function guardarProgreso(
       verificacionHecha: actual?.verificacionHecha ?? [],
       evidenciasPorPaso: actual?.evidenciasPorPaso,
       pasosSaltados: actual?.pasosSaltados,
+      equipoId: actual?.equipoId,
       vinculos: { ...actual?.vinculos, [vinculoId]: vinculo },
       actualizadoEn: ahora,
     })
@@ -123,8 +124,29 @@ async function guardarProgreso(
     verificacionHecha: actual?.verificacionHecha ?? [],
     evidenciasPorPaso: actual?.evidenciasPorPaso,
     pasosSaltados: actual?.pasosSaltados,
+    // El equipo de la ejecucion (tarea 290): marcar avance no lo toca.
+    equipoId: actual?.equipoId,
     ...cambios,
     actualizadoEn: ahora,
+  })
+}
+
+/**
+ * EL EQUIPO DE LA EJECUCION (tarea 290). Lo guarda en la fila de la
+ * ejecucion SOLO si la fila existe: elegir un equipo no es avanzar, y
+ * crear la fila haria que la guia se ofreciera como "en curso" sin nada
+ * hecho. Mientras no hay fila, el equipo vive en `ProveedorEjecucion` (y
+ * en la direccion), que lo escribe aqui en cuanto la fila aparece.
+ * Devuelve si quedo guardado.
+ */
+export async function fijarEquipoDeEjecucion(raizId: string, equipoId: string | null): Promise<boolean> {
+  return db.transaction('rw', db.progresoPasos, async () => {
+    const actual = await db.progresoPasos.get(raizId)
+    if (!actual) return false
+    if ((actual.equipoId ?? null) !== equipoId) {
+      await db.progresoPasos.put({ ...actual, equipoId, actualizadoEn: new Date().toISOString() })
+    }
+    return true
   })
 }
 

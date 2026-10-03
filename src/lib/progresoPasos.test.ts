@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { db } from './db'
+import { db, type ProgresoPasos } from './db'
 import {
   alternarInstruccionHecha,
   alternarVerificacionFinal,
@@ -11,6 +11,7 @@ import {
   empezarEjecucion,
   limpiarProgresoVistaPrevia,
   establecerPasoHecho,
+  fijarEquipoDeEjecucion,
   hayAvanceEnEjecucion,
   leerAvance,
   marcarPasoSaltado,
@@ -424,5 +425,65 @@ describe('hayAvanceEnEjecucion', () => {
 
   it('cuenta lo hecho dentro de una guia reutilizada: a mitad del paso 1 se retoma', () => {
     expect(hayAvanceEnEjecucion({ ...vacio, vinculos: { acceso: { ...vacio, instruccionesHechas: ['a1'] } } })).toBe(true)
+  })
+})
+
+// EL EQUIPO DE LA EJECUCION (tarea 290): vive en la fila de la ejecucion,
+// lo comparten la guia y las que reutiliza, y marcar avance no lo borra.
+describe('el equipo de la ejecucion', () => {
+  it('se guarda en la fila de la ejecucion cuando la fila existe', async () => {
+    await establecerPasoHecho('guia-1', 'paso-a', true)
+    expect(await fijarEquipoDeEjecucion('guia-1', 'equipo-a')).toBe(true)
+    expect((await db.progresoPasos.get('guia-1'))?.equipoId).toBe('equipo-a')
+    // Cambiarlo es cambiarlo; quitarlo, dejarlo en null.
+    await fijarEquipoDeEjecucion('guia-1', 'equipo-b')
+    expect((await db.progresoPasos.get('guia-1'))?.equipoId).toBe('equipo-b')
+    await fijarEquipoDeEjecucion('guia-1', null)
+    expect((await db.progresoPasos.get('guia-1'))?.equipoId).toBeNull()
+  })
+
+  it('sin fila no crea una: elegir un equipo no es avanzar', async () => {
+    expect(await fijarEquipoDeEjecucion('guia-sin-avance', 'equipo-a')).toBe(false)
+    expect(await db.progresoPasos.get('guia-sin-avance')).toBeUndefined()
+  })
+
+  it('marcar avance, saltar, la verificacion y la evidencia lo conservan', async () => {
+    await establecerPasoHecho('guia-1', 'paso-a', true)
+    await fijarEquipoDeEjecucion('guia-1', 'equipo-a')
+    await alternarInstruccionHecha('guia-1', 'paso-b', 't1', ['t1', 't2'])
+    await marcarPasoSaltado('guia-1', 'paso-c')
+    await alternarVerificacionFinal('guia-1', 0)
+    await registrarEvidenciaPaso('guia-1', 'paso-a', 'entrada-1')
+    expect((await db.progresoPasos.get('guia-1'))?.equipoId).toBe('equipo-a')
+  })
+
+  it('el avance de una guia reutilizada tampoco lo borra: es el mismo equipo para todo el flujo', async () => {
+    await establecerPasoHecho('guia-1', 'paso-a', true)
+    await fijarEquipoDeEjecucion('guia-1', 'equipo-a')
+    await establecerPasoHecho({ raizId: 'guia-1', vinculoId: 'acceso' }, 'acc-p1', true)
+    await reiniciarProgreso({ raizId: 'guia-1', vinculoId: 'acceso' })
+    expect((await db.progresoPasos.get('guia-1'))?.equipoId).toBe('equipo-a')
+  })
+
+  it('empezar de nuevo estrena una fila sin equipo, y reiniciar la borra con el', async () => {
+    await establecerPasoHecho('guia-1', 'paso-a', true)
+    await fijarEquipoDeEjecucion('guia-1', 'equipo-a')
+    await empezarEjecucion('guia-1')
+    expect((await db.progresoPasos.get('guia-1'))?.equipoId).toBeUndefined()
+    await fijarEquipoDeEjecucion('guia-1', 'equipo-a')
+    await reiniciarProgreso('guia-1')
+    expect(await db.progresoPasos.get('guia-1')).toBeUndefined()
+  })
+
+  it('no cuenta como avance', () => {
+    const fila: ProgresoPasos = {
+      articuloId: 'guia-1',
+      pasosHechos: [],
+      instruccionesHechas: [],
+      verificacionHecha: [],
+      equipoId: 'equipo-a',
+      actualizadoEn: '2026-10-03T00:00:00.000Z',
+    }
+    expect(hayAvanceEnEjecucion(fila)).toBe(false)
   })
 })

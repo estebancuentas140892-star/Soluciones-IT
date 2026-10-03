@@ -440,6 +440,39 @@ export function intencionesDeConsulta(consulta: string, resultados: readonly Res
   return analizarConsulta(consulta, resultados).intenciones
 }
 
+/**
+ * EL EQUIPO QUE LA CONSULTA IDENTIFICA, PARA LLEVARLO A LA GUÍA (tarea 290).
+ *
+ * "La impresora de mercadeo no imprime" pide una solución sobre UN equipo.
+ * Si el técnico abre una guía desde esos resultados, la guía tiene que
+ * poder saber con qué equipo trabaja (para darle, por ejemplo, la
+ * credencial de ESE equipo). Esto lee lo mismo que ya lee el ranking, sin
+ * cambiarlo: las palabras que identifican un equipo concreto
+ * (`objetoDeLaConsulta`) y la clase que nombra la consulta ("impresora").
+ *
+ * Devuelve el identificador del equipo solo si es EL ÚNICO resultado de
+ * equipo que coincide con todo lo que lo identifica y con su clase (en su
+ * nombre o su identidad). Dos impresoras en Mercadeo, o ninguna palabra
+ * que identifique un equipo: null, y la guía se abre sin equipo, como
+ * siempre. Nunca adivina.
+ */
+export function equipoDeLaConsulta(consulta: string, resultados: readonly ResultadoBusqueda[]): string | null {
+  const { palabras, objeto } = analizarConsulta(consulta, resultados)
+  if (objeto.size === 0) return null
+  const clases = palabras.flatMap((palabra, indice) => (esTipoDeEquipo(palabra) ? [indice] : []))
+  const nombraOIdentifica = (campos: CampoIndice[]): boolean => campos.includes('titulo') || campos.includes('identidad')
+  const ids = new Set<string>()
+  for (const resultado of resultados) {
+    if (resultado.tipo !== 'dispositivo' || !resultado.id.startsWith('dispositivo:')) continue
+    const campos = resultado.camposPorPalabra
+    if (!campos || campos.length !== palabras.length) continue
+    if (![...objeto].every((indice) => nombraOIdentifica(campos[indice]))) continue
+    if (!clases.every((indice) => nombraOIdentifica(campos[indice]))) continue
+    ids.add(resultado.id.slice('dispositivo:'.length))
+  }
+  return ids.size === 1 ? [...ids][0] : null
+}
+
 // ----------------------------------------------------------------
 // EL RANKING (tarea 288, fases 6 y 7)
 // ----------------------------------------------------------------
