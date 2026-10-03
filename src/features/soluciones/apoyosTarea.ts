@@ -48,6 +48,11 @@ const VACIOS: Apoyos = {
   vinculoProtegido: null,
 }
 
+/** Ningún apoyo: para una entrada del recorrido que no lleva los suyos. */
+export function sinApoyos(): Apoyos {
+  return { ...VACIOS }
+}
+
 function repartir(bloques: BloquePaso[]): Omit<Apoyos, 'adjuntosPaso' | 'vinculoProtegido'> {
   return {
     avisos: bloques.filter((b) => b.tipo === 'aviso'),

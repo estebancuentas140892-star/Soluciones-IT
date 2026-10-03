@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db, type PasoProcedimiento } from '../../lib/db'
+import { guardarModoEjecucion } from '../../lib/preferenciasEjecucion'
 import {
   control,
   desmontarTodo,
@@ -25,7 +26,7 @@ import { GuiaPage } from './GuiaPage'
 //     se marca y "Ir al paso N" devuelve al paso de trabajo;
 //   - un paso hecho solo navega ("Ir al paso N"), una acción hecha lleva
 //     a la siguiente ("Ir a la acción N");
-//   - una guía que una tarea exige, pendiente, bloquea con su nombre
+//   - lo que falta por hacer, pendiente, bloquea con su nombre
 //     ("Completa «X»"), acortado dentro de las comillas si es largo y
 //     entero para el lector;
 //   - "Completar y terminar" solo cuando de verdad no queda otro paso.
@@ -167,13 +168,44 @@ describe('consultar otro paso no marca nada', () => {
 })
 
 describe('el botón dice la consecuencia', () => {
-  // Desde la tarea 289 el paso que reutiliza otra guía la HACE en el sitio,
-  // así que el bloqueo con nombre es el de una guía que exige una TAREA.
-  it('una guía que una tarea exige y sigue pendiente bloquea con su nombre, acortado y entero para el lector', async () => {
+  // Desde la tarea 289 lo que un paso o una tarea reutiliza se HACE en el
+  // sitio, una acción detrás de otra. El bloqueo con nombre queda donde lo
+  // reutilizado se ve junto al resto del paso: la vista de paso entero,
+  // cuyo control dice qué paso falta completar.
+  it('lo que falta del paso bloquea con su nombre, acortado y entero para el lector', async () => {
     const nombreLargo = 'Configurar las páginas que abre el navegador de prueba al iniciar en la caja'
     await sembrarGuia({
       id: 'guia-apoyo',
-      titulo: nombreLargo,
+      titulo: 'Abrir el navegador de prueba',
+      pasos: [pasoPrueba('apoyo-p1', 'Abrir el navegador de prueba', ['Pulsar el icono del navegador'])],
+    })
+    const conGuia: PasoProcedimiento = {
+      ...pasoPrueba('pf-p1', nombreLargo, []),
+      subArticuloId: 'guia-apoyo',
+      subArticuloTitulo: 'Abrir el navegador de prueba',
+    }
+    await sembrarGuia({
+      id: 'guia-propuesta',
+      titulo: 'Guía de prueba de la propuesta final',
+      pasos: [conGuia, pasoPrueba('pf-p2', 'Terminar la prueba', ['Cerrar el navegador'])],
+    })
+    await guardarModoEjecucion('pasoEntero')
+    await montar(RUTAS, RUTA)
+    await esperar(() => textoPantalla().includes('Pulsar el icono del navegador'), 'lo reutilizado dentro del paso')
+
+    const boton = await esperarControl(`Completa «${nombreLargo}»`)
+    expect(boton.hasAttribute('disabled')).toBe(true)
+    // A la vista: el verbo entero y el nombre acortado DENTRO de las comillas.
+    const visible = (boton.textContent ?? '').trim()
+    expect(visible.startsWith('Completa «')).toBe(true)
+    expect(visible.endsWith('…»')).toBe(true)
+    expect(visible.length).toBeLessThan(`Completa «${nombreLargo}»`.length)
+  })
+
+  it('una guía que una tarea exige se hace en el sitio, justo antes de esa tarea, sin tarjeta que abrir', async () => {
+    await sembrarGuia({
+      id: 'guia-apoyo',
+      titulo: 'Configurar las páginas del navegador de prueba',
       pasos: [pasoPrueba('apoyo-p1', 'Abrir el navegador de prueba', ['Pulsar el icono del navegador'])],
     })
     const conGuia: PasoProcedimiento = pasoPrueba('pf-p1', 'Preparar el navegador', ['Revisar la página de inicio'])
@@ -186,7 +218,7 @@ describe('el botón dice la consecuencia', () => {
       tareaId: 'pf-p1-t1',
       alcance: 'tarea',
       guiaArticuloId: 'guia-apoyo',
-      guiaArticuloTitulo: nombreLargo,
+      guiaArticuloTitulo: 'Configurar las páginas del navegador de prueba',
       intencionGuia: 'necesario',
     })
     await sembrarGuia({
@@ -195,15 +227,24 @@ describe('el botón dice la consecuencia', () => {
       pasos: [conGuia, pasoPrueba('pf-p2', 'Terminar la prueba', ['Cerrar el navegador'])],
     })
     await montar(RUTAS, RUTA)
-    await esperar(() => textoPantalla().includes('Revisar la página de inicio'), 'la tarea que exige la guía')
+    // Primero lo que la tarea exige, en el sitio: ni tarjeta ni "Necesario".
+    await esperar(() => textoPantalla().includes('Pulsar el icono del navegador'), 'lo que la tarea exige')
+    expect(textoPantalla()).not.toContain('Revisar la página de inicio')
+    expect(textoPantalla()).not.toContain('Necesario para seguir')
+    expect(control(/^Abrir:/)).toBeNull()
+    expect(control('Paso 1 de 2. Abrir el índice de pasos')).not.toBeNull()
 
-    const boton = await esperarControl(`Completa «${nombreLargo}»`)
-    expect(boton.hasAttribute('disabled')).toBe(true)
-    // A la vista: el verbo entero y el nombre acortado DENTRO de las comillas.
-    const visible = (boton.textContent ?? '').trim()
-    expect(visible.startsWith('Completa «')).toBe(true)
-    expect(visible.endsWith('…»')).toBe(true)
-    expect(visible.length).toBeLessThan(`Completa «${nombreLargo}»`.length)
+    // Hecho, sigue con la tarea, que ya se puede marcar.
+    await tocar(await esperarControl('Completar y seguir'))
+    await esperar(() => textoPantalla().includes('Revisar la página de inicio'), 'la tarea que lo exigía')
+    expect(control('Completar y seguir')).not.toBeNull()
+    expect((await db.progresoPasos.get('guia-propuesta'))?.vinculos?.['guia-apoyo']?.pasosHechos).toEqual(['apoyo-p1'])
+
+    // "Anterior" la vuelve a leer, ya hecha, sin abrir nada.
+    await tocar(await esperarControl(/^Anterior/))
+    await esperar(() => textoPantalla().includes('Hecha'), 'lo exigido, para leerlo')
+    expect(textoPantalla()).toContain('Pulsar el icono del navegador')
+    expect(control('Ir a la acción 2')).not.toBeNull()
   })
 
   it('"Completar y terminar" solo cuando no queda otro paso por hacer', async () => {

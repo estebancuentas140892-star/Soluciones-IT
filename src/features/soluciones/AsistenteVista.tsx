@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
@@ -79,8 +79,9 @@ import { RutaProcedimiento } from './RutaProcedimiento'
 import { HojaFalla } from './HojaFalla'
 import { PantallaPreparacion } from './PantallaPreparacion'
 import { PasosEnLectura } from './PasosEnLectura'
-import { ROTULO_CONTINGENCIA, type IntegracionEnFlujo } from './flujoContinuo'
+import { ROTULO_CONTINGENCIA, type EnFlujo, type IntegracionEnFlujo } from './flujoContinuo'
 import { orientacionDe, pantallasDePreparacion } from './preparacionGuia'
+import { subirElContenedor } from './subirElContenedor'
 import { useRequisitosEfectivos } from './useRequisitosEfectivos'
 import { destinoAlSaltar } from './salidasFalla'
 import { LineaDeEstado, SegmentosDePasos, type EstadoLinea } from './EstadoEjecucion'
@@ -338,6 +339,7 @@ export function AsistenteVista({
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
+    guiaIntegrable,
     guiaDelPasoIntegrable,
     vinculosCargados,
     guiasPendientesDeTarea,
@@ -435,11 +437,11 @@ export function AsistenteVista({
             M-R11): iba en ámbar, el color de los riesgos. Es el último
             vistazo antes de dar el trabajo por hecho. */}
         <div className="rounded-xl border border-noct-divider bg-noct-surface px-4 py-3.5">
-          <h2 className="flex items-center gap-2 text-[16px] font-medium text-noct-text">
+          <EncabezadoConFoco className="flex items-center gap-2 text-[16px] font-medium text-noct-text">
             <SealCheck size={18} className="shrink-0 text-noct-accent-300" aria-hidden />
             {/* A mitad del flujo no se termina nada: se comprueba y se sigue. */}
             {integrada ? 'Comprueba antes de seguir' : 'Antes de terminar, comprueba'}
-          </h2>
+          </EncabezadoConFoco>
           <ul className="mt-2 flex flex-col gap-0.5">
             {verificacionFinal.map((item, indice) => {
               const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
@@ -483,7 +485,7 @@ export function AsistenteVista({
           <span aria-hidden className="flex h-12 w-12 items-center justify-center rounded-full border border-noct-exito/60 text-noct-exito">
             <Check size={26} />
           </span>
-          <p className="text-[17px] font-medium text-noct-exito">Guía terminada</p>
+          <EncabezadoConFoco className="text-[17px] font-medium text-noct-exito">Guía terminada</EncabezadoConFoco>
           <p className="text-[13px] text-noct-neutral-400">
             {pasos.length} {pasos.length === 1 ? 'paso' : 'pasos'}
           </p>
@@ -655,9 +657,7 @@ export function AsistenteVista({
   // como parte de él: el número del paso, qué hacer al actuar dentro (la
   // línea de "Retomando" se va y el trabajo está aquí) y cómo saltarlo.
   const indicePaso = indiceActual
-  const integracionDelPaso = (
-    base: Pick<IntegracionEnFlujo, 'lugar' | 'resultado' | 'terminaLaGuia' | 'alRetroceder'>,
-  ): IntegracionEnFlujo => ({
+  const integracionDelPaso = (base: EnFlujo): IntegracionEnFlujo => ({
     ...base,
     numeroPaso: indicePaso + 1,
     alActuar: () => {
@@ -852,11 +852,15 @@ export function AsistenteVista({
           subSatisfecho={subSatisfecho}
           guiaDelPasoDisponible={guiaDelPasoDisponible(paso)}
           guiaDelPasoIntegrada={guiaDelPasoIntegrable(paso)}
+          guiaIntegrable={guiaIntegrable}
           enFlujo={
             integrada
               ? {
                   lugar: indiceActual === 0 ? integracion.lugar : '',
                   resultado: indiceActual === pasos.length - 1 ? integracion.resultado : '',
+                  // Lo que el paso de fuera traía para su primera acción, con
+                  // la primera de aquí dentro.
+                  apoyos: indiceActual === 0 ? (integracion.apoyos ?? null) : null,
                 }
               : null
           }
@@ -1011,41 +1015,76 @@ export function AsistenteVista({
 
       {paso.bloques.length > 0 && (
         <ul className="flex flex-col gap-2">
-          {paso.bloques.map((bloque) => (
-            <li key={bloque.id}>
-              <BloqueVista
-                bloque={bloque}
-                referencias={referenciasVivas}
-                fichasEnlazadas={fichasEnlazadasDelPaso(paso.bloques)}
-                marcada={instruccionesHechas.has(bloque.id)}
-                onAlternar={() => {
-                  setRetomadaEn(null)
-                  setIndiceTrabajo(indiceActual)
-                  void alternarTarea(indiceActual, paso, bloque.id)
-                }}
-                nivel={nivel}
-                // "No se cumple" de una comprobación abre la MISMA hoja
-                // de salidas que el "Falla" del paso, con la
-                // comprobación nombrada. Es lo único que le faltaba a
-                // esta vista para tratar una verificación distinto de
-                // una instrucción (cambio 2 del encargo).
-                onNoSeCumple={(texto) => setHojaFalla({ tarea: texto })}
-                // LA MISMA REGLA EN LA VISTA DE PASO ENTERO (encargo del
-                // 2026-09-09, tarea 1). Sin esto la validación existía
-                // solo en el modo de una tarea a la vez, y cambiar de
-                // vista era la ruta alternativa que la omitía.
-                bloqueadaPor={motivoGuiasPendientes(guiasPendientesDeTarea(paso, bloque.id))}
-                ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
-                  <AsistenteVista
-                    articuloId={vinculadoId}
-                    procedimiento={vinculado}
-                    nivel={nivel + 1}
-                    onCompletado={onCompletado}
+          {paso.bloques.map((bloque, posicion) => {
+            // LA GUÍA QUE EXIGE UNA TAREA, EN EL FLUJO (tarea 289, fase 3):
+            // sus acciones aquí mismo, como parte del paso. Antes era un
+            // enlace que sacaba de la ejecución y que, terminado allá, no
+            // cumplía el requisito. Una sola vez por paso: si ya la hace el
+            // paso entero u otra tarea anterior, aquí no se repite.
+            const guiaNecesaria =
+              bloque.tipo === 'guia' &&
+              bloque.intencionGuia === 'necesario' &&
+              bloque.alcance === 'tarea' &&
+              bloque.guiaArticuloId !== null &&
+              guiaIntegrable(bloque.guiaArticuloId)
+                ? bloque.guiaArticuloId
+                : null
+            const yaEnElPaso =
+              guiaNecesaria !== null &&
+              (paso.subArticuloId === guiaNecesaria ||
+                paso.bloques
+                  .slice(0, posicion)
+                  .some((b) => b.tipo === 'guia' && b.intencionGuia === 'necesario' && b.guiaArticuloId === guiaNecesaria))
+            if (yaEnElPaso) return null
+            return (
+              <li key={bloque.id}>
+                {guiaNecesaria !== null ? (
+                  <SubProcedimientoEnAsistente
+                    guiaId={guiaNecesaria}
+                    tituloReferencia={bloque.guiaArticuloTitulo}
+                    nivel={nivel}
+                    integracion={integracionDelPaso({ lugar: '', resultado: '', terminaLaGuia: false })}
+                    onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
+                  />
+                ) : (
+                  <BloqueVista
+                    bloque={bloque}
+                    referencias={referenciasVivas}
+                    fichasEnlazadas={fichasEnlazadasDelPaso(paso.bloques)}
+                    marcada={instruccionesHechas.has(bloque.id)}
+                    onAlternar={() => {
+                      setRetomadaEn(null)
+                      setIndiceTrabajo(indiceActual)
+                      void alternarTarea(indiceActual, paso, bloque.id)
+                    }}
+                    nivel={nivel}
+                    // "No se cumple" de una comprobación abre la MISMA hoja
+                    // de salidas que el "Falla" del paso, con la
+                    // comprobación nombrada. Es lo único que le faltaba a
+                    // esta vista para tratar una verificación distinto de
+                    // una instrucción (cambio 2 del encargo).
+                    onNoSeCumple={(texto) => setHojaFalla({ tarea: texto })}
+                    // LA MISMA REGLA EN LA VISTA DE PASO ENTERO (encargo del
+                    // 2026-09-09, tarea 1). Sin esto la validación existía
+                    // solo en el modo de una tarea a la vez, y cambiar de
+                    // vista era la ruta alternativa que la omitía.
+                    bloqueadaPor={motivoGuiasPendientes(guiasPendientesDeTarea(paso, bloque.id))}
+                    // El camino del "No" de una decisión también es parte del
+                    // flujo (tarea 289): sin sus requisitos ni su numeración.
+                    ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
+                      <AsistenteVista
+                        articuloId={vinculadoId}
+                        procedimiento={vinculado}
+                        nivel={nivel + 1}
+                        integracion={integracionDelPaso({ lugar: '', resultado: '', terminaLaGuia: false })}
+                        onCompletado={onCompletado}
+                      />
+                    )}
                   />
                 )}
-              />
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ul>
       )}
 
@@ -1303,6 +1342,25 @@ function ContadorPaso({
       <span className="text-[12px] font-normal text-noct-neutral-400">/{total}</span>
       <CaretDown size={12} className="text-noct-neutral-400" aria-hidden />
     </button>
+  )
+}
+
+// EL ENCABEZADO DE UNA PANTALLA DE CIERRE RECIBE EL FOCO AL APARECER
+// (tarea 289, fase 3). "Comprueba antes de seguir", "Antes de terminar,
+// comprueba" y "Guía terminada" sustituyen a la última acción, y el foco se
+// quedaba en nada: el lector de pantalla no anunciaba lo nuevo y el teclado
+// volvía a empezar desde arriba. Es el mismo gesto que el encabezado de
+// cada acción (`ModoFoco`) y de la preparación (`PantallaPreparacion`).
+function EncabezadoConFoco({ className, children }: { className: string; children: ReactNode }) {
+  const encabezado = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    subirElContenedor(encabezado.current)
+    encabezado.current?.focus({ preventScroll: true })
+  }, [])
+  return (
+    <h2 ref={encabezado} tabIndex={-1} data-foco-lectura className={`${className} outline-none`}>
+      {children}
+    </h2>
   )
 }
 

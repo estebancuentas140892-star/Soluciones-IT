@@ -26,13 +26,27 @@ import { TarjetaComando } from '../referencia/TarjetaComando'
 import { bloquesUnicos, tipoEfectivo } from '../referencia/referencias'
 import { useReferencias } from '../referencia/useReferencias'
 import { AdjuntosPaso, BloqueVista } from './ProcedimientoVista'
-import { apoyosDelPaso, apoyosDeTarea, type Apoyos } from './apoyosTarea'
+import { apoyosDelPaso, apoyosDeTarea, sinApoyos, type Apoyos } from './apoyosTarea'
 import { rotuloCompletaGuia, type CierrePaso } from './cierrePaso'
 import { motivoGuiasPendientes } from './guiasObligatorias'
-import { accionFoco, avisosDeTareaFoco, tareaFocoHecha, tareasParaFoco, type TareaFoco } from './tareasFoco'
+import {
+  accionFoco,
+  avisosDeTareaFoco,
+  esGuiaDelRecorrido,
+  tareaFocoHecha,
+  tareasParaFoco,
+  type TareaFoco,
+} from './tareasFoco'
 import { tonoInfo } from './tonos'
 import { subirElContenedor } from './subirElContenedor'
-import { ROTULO_DEL_PASO, ROTULO_NECESARIO, rotuloDeIntencion, type EnFlujo } from './flujoContinuo'
+import {
+  hayApoyosDelFlujo,
+  ROTULO_DEL_PASO,
+  ROTULO_NECESARIO,
+  rotuloDeIntencion,
+  type ApoyosDelFlujo,
+  type EnFlujo,
+} from './flujoContinuo'
 import { PasosEnLectura } from './PasosEnLectura'
 
 // MODO FOCO: una acción a la vez (handoff "Diseño móvil", tablero 6d).
@@ -109,13 +123,20 @@ interface Props {
   // principal, guía en el dispositivo y con pasos). Si no, el paso la
   // ofrece para leerla aparte o explica que no está.
   guiaDelPasoIntegrada?: boolean
+  // ¿Una guía que exige una TAREA de este paso se hace aquí, justo antes
+  // de esa tarea (tarea 289, fase 3)? La misma pregunta que la anterior,
+  // por guía. Sin ella (lo de dentro de otra guía), ninguna se hace aquí:
+  // la tarea la sigue ofreciendo aparte.
+  guiaIntegrable?: (guiaId: string) => boolean
   // ESTE FOCO ES PARTE DEL FLUJO DE OTRA GUÍA (tarea 289, fase 3): las
   // acciones de una guía reutilizada, hechas en el sitio del paso que la
   // reutiliza. No dice su propia numeración ("Paso 1 de 3"), porque la del
   // paso es la de la guía que se abrió; y el "Dónde" y el "Debes ver" de
   // ese paso acompañan a esta acción cuando el paso de dentro no trae los
   // suyos (solo llegan para la primera y la última acción reutilizada).
-  enFlujo?: { lugar: string; resultado: string } | null
+  // `apoyos` es lo que ese paso traía para su primera acción (su "para
+  // qué", avisos, imágenes, credencial): llega solo con la primera.
+  enFlujo?: { lugar: string; resultado: string; apoyos?: ApoyosDelFlujo | null } | null
   // Este foco es el de una guía vinculada, dibujada DENTRO del paso de
   // otra. Solo cambia el encuadre: el pie deja de sangrar hacia los
   // lados, porque ahí ya no llega al borde de la pantalla sino al de la
@@ -299,6 +320,7 @@ export function ModoFoco({
   subSatisfecho,
   guiaDelPasoDisponible = true,
   guiaDelPasoIntegrada = false,
+  guiaIntegrable,
   enFlujo = null,
   anidado = false,
   requisitos = [],
@@ -317,10 +339,23 @@ export function ModoFoco({
   renderGuia,
   renderEnvioAEquipo,
 }: Props) {
-  const tareas = tareasParaFoco(paso, tituloPaso)
+  const tareas = tareasParaFoco(paso, tituloPaso, guiaIntegrable)
+
+  // LAS GUÍAS QUE EXIGE ALGUNA TAREA DE ESTE PASO Y SIGUEN SIN TERMINAR,
+  // con la misma lectura en vivo que decide si la tarea se puede marcar.
+  // Una entrada 'guia-de-tarea' está cumplida cuando su guía ya no está
+  // aquí: el avance es por guía, no por tarea.
+  const guiasSinTerminar = new Set(
+    tareas
+      .filter((t) => t.clase === 'tarea')
+      .flatMap((t) => guiasPendientes(t.id).flatMap((g) => (g.guiaArticuloId ? [g.guiaArticuloId] : []))),
+  )
+  function guiaCumplida(guiaId: string): boolean {
+    return !guiasSinTerminar.has(guiaId)
+  }
 
   function cumplida(tarea: TareaFoco): boolean {
-    return tareaFocoHecha(tarea, instruccionesHechas, subSatisfecho)
+    return tareaFocoHecha(tarea, instruccionesHechas, subSatisfecho, guiaCumplida)
   }
 
   // La guía que no está disponible se lee ANTES de seguir: cuenta como
@@ -366,26 +401,33 @@ export function ModoFoco({
   // lector de pantalla anuncie lo que toca y la vista arranque arriba.
   const encabezado = useRef<HTMLHeadingElement>(null)
 
-  // TERMINAR LA GUÍA VINCULADA ADELANTA SOLO, como marcar una tarea.
+  const indice = Math.min(indiceTarea, tareas.length - 1)
+
+  // TERMINAR LA GUÍA QUE SE HACE EN EL SITIO ADELANTA SOLO, como marcar una
+  // tarea: la del paso y, desde la tarea 289, la que exige una tarea, que
+  // da paso a esa tarea.
   //
   // Sin esto el técnico completaba la guía de arriba y se quedaba
   // mirando "Guía completada" con la tarea siguiente escondida. Solo se
-  // avanza en la TRANSICIÓN de pendiente a cumplida, así que volver
-  // luego a mirarla no expulsa a nadie de su sitio.
-  const guiaCumplidaAntes = useRef(subSatisfecho)
+  // avanza en la TRANSICIÓN de pendiente a cumplida DE LA MISMA ENTRADA,
+  // así que volver luego a mirarla, o moverse a otra ya cumplida, no
+  // expulsa a nadie de su sitio.
+  const entradaVista = tareas[indice] as TareaFoco | undefined
+  const idGuiaVista = entradaVista && esGuiaDelRecorrido(entradaVista) ? entradaVista.id : null
+  const guiaVistaCumplida = entradaVista && idGuiaVista !== null ? cumplida(entradaVista) : null
+  // Una guía del paso que no está en el dispositivo cuenta como cumplida
+  // para no bloquear, pero su explicación se lee antes de seguir (A12).
+  const guiaVistaSeLee = entradaVista?.clase === 'guia-del-paso' && !guiaDelPasoDisponible
+  const destinoTrasGuia = guiaVistaCumplida === true ? siguientePendiente(indice) : -1
+  const guiaVistaAntes = useRef<{ id: string; cumplida: boolean } | null>(null)
   useEffect(() => {
-    const eraPendiente = !guiaCumplidaAntes.current
-    guiaCumplidaAntes.current = subSatisfecho
-    if (!subSatisfecho || !eraPendiente || !guiaDelPasoDisponible) return
-    const actual = Math.min(indiceTarea, tareas.length - 1)
-    if (tareas[actual]?.clase !== 'guia-del-paso') return
-    const siguiente = tareas.findIndex(
-      (t, i) => i !== actual && !tareaFocoHecha(t, instruccionesHechas, subSatisfecho),
-    )
-    if (siguiente >= 0) setIndiceTarea(siguiente)
-  }, [subSatisfecho, guiaDelPasoDisponible, indiceTarea, tareas, instruccionesHechas])
-
-  const indice = Math.min(indiceTarea, tareas.length - 1)
+    const antes = guiaVistaAntes.current
+    guiaVistaAntes.current =
+      idGuiaVista !== null && guiaVistaCumplida !== null ? { id: idGuiaVista, cumplida: guiaVistaCumplida } : null
+    if (idGuiaVista === null || guiaVistaCumplida !== true || guiaVistaSeLee) return
+    if (!antes || antes.id !== idGuiaVista || antes.cumplida) return
+    if (destinoTrasGuia >= 0) setIndiceTarea(destinoTrasGuia)
+  }, [idGuiaVista, guiaVistaCumplida, guiaVistaSeLee, destinoTrasGuia])
 
   // LO DESPLEGADO ES DE LA ACCIÓN QUE SE ESTÁ MIRANDO, no del paso.
   // Cambiar de acción (con "Anterior", al marcar o al terminar la guía
@@ -413,7 +455,7 @@ export function ModoFoco({
 
   const hecha = cumplida(tarea)
   const esPrimeraDelPaso = indice === 0
-  const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho)
+  const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho, guiaCumplida)
   const cierraPaso = accion === 'completar'
   // UNA DECISIÓN NO ES UNA ACCIÓN (encargo del 2026-09-09, secciones 5
   // y 6): se responde con sus dos salidas, nunca con "Completar".
@@ -424,10 +466,22 @@ export function ModoFoco({
   const destinoDelNo = esDecision ? tarea.decisionGuiaId : null
   const noAbierto = esDecision && decisionAbierta === tarea.id
 
+  // LO QUE EL PASO QUE REUTILIZA ESTA GUÍA TRAÍA PARA SU PRIMERA ACCIÓN
+  // (tarea 289, fase 3): dentro del flujo de otra guía, la primera acción
+  // reutilizada lo enseña junto a lo suyo, para que no se pierda. Solo
+  // llega con la primera acción.
+  const prestados = esPrimeraDelPaso ? (enFlujo?.apoyos ?? null) : null
+
   // LOS AVISOS DE ESTA ACCIÓN, repartidos por cómo se ven (ver
   // `avisosDeTareaFoco`): las alertas antes de la instrucción, los
-  // datos a la vista y el resto plegado.
-  const avisos = avisosDeTareaFoco(paso, tareas, indice)
+  // datos a la vista y el resto plegado. Los prestados, primero: son las
+  // condiciones de todo lo que sigue.
+  const avisosPropios = avisosDeTareaFoco(paso, tareas, indice)
+  const avisos = {
+    alertas: [...(prestados?.alertas ?? []), ...avisosPropios.alertas],
+    datos: [...(prestados?.datos ?? []), ...avisosPropios.datos],
+    plegados: [...(prestados?.plegados ?? []), ...avisosPropios.plegados],
+  }
 
   // LOS APOYOS DE ESTA ACCIÓN. Los de la tarea van siempre con ella. Los
   // del paso completo (imágenes y archivos que el autor dejó para todo
@@ -436,20 +490,32 @@ export function ModoFoco({
   // dentro de "Más información": nunca se repiten a la vista.
   const delPaso = apoyosDelPaso(paso)
   // La guía del paso y la tarea única no tienen apoyos propios: los
-  // suyos son los del paso, como hasta ahora.
-  const propios: Apoyos = tarea.clase === 'tarea' ? apoyosDeTarea(paso, tarea.id) : delPaso
+  // suyos son los del paso, como hasta ahora. La guía que exige una tarea
+  // lleva los del paso solo si es la primera entrada; los de su tarea van
+  // con la tarea, justo después.
+  const llevaLosDelPaso = tarea.clase !== 'tarea' && (tarea.clase !== 'guia-de-tarea' || esPrimeraDelPaso)
+  const propios: Apoyos =
+    tarea.clase === 'tarea' ? apoyosDeTarea(paso, tarea.id) : llevaLosDelPaso ? delPaso : sinApoyos()
   const imagenesALaVista = [
+    ...(prestados?.imagenes ?? []),
     ...(tarea.clase === 'tarea' && esPrimeraDelPaso ? delPaso.imagenes : []),
     ...propios.imagenes,
   ]
   const archivosALaVista = [
+    ...(prestados?.archivos ?? []),
     ...(tarea.clase === 'tarea' && esPrimeraDelPaso ? [...adjuntosDe(delPaso.archivos), ...delPaso.adjuntosPaso] : []),
     ...adjuntosDe(propios.archivos),
-    ...(tarea.clase === 'tarea' ? [] : delPaso.adjuntosPaso),
+    ...(llevaLosDelPaso ? delPaso.adjuntosPaso : []),
   ]
   const imagenesPlegadas = esPrimeraDelPaso ? [] : delPaso.imagenes
   const archivosPlegados = esPrimeraDelPaso ? [] : [...adjuntosDe(delPaso.archivos), ...delPaso.adjuntosPaso]
   const vinculoProtegido = propios.vinculoProtegido ?? tarea.vinculoProtegido
+  // La credencial del paso que reutiliza esta guía, cuando no es la misma
+  // que pide esta acción: la necesita alguien que está a punto de empezar.
+  const credencialPrestada =
+    prestados?.vinculoProtegido && prestados.vinculoProtegido.id !== vinculoProtegido?.id
+      ? prestados.vinculoProtegido
+      : null
   // QUÉ HACER, DÓNDE Y QUÉ DEBO VER DESPUÉS (encargo del 2026-09-22,
   // sección 6). El lugar acompaña a la PRIMERA acción del paso (es donde
   // hay que situarse antes de empezar) y lo que debe verse, a la ÚLTIMA
@@ -461,33 +527,43 @@ export function ModoFoco({
   const lugarDelPaso = esPrimeraDelPaso ? paso.lugar.trim() || (enFlujo?.lugar.trim() ?? '') : ''
   const debesVer = esUltimaDelPaso ? paso.resultado.trim() || (enFlujo?.resultado.trim() ?? '') : ''
   // Para qué sirve el paso: explica, no ordena, así que va plegado y solo
-  // con la primera acción del paso.
+  // con la primera acción del paso. El del paso que reutiliza esta guía,
+  // primero.
   const objetivoPlegado = esPrimeraDelPaso ? paso.objetivo.trim() : ''
+  const objetivoPrestado = prestados?.objetivo.trim() ?? ''
   const hayMasInformacion =
     avisos.plegados.length > 0 ||
     imagenesPlegadas.length > 0 ||
     archivosPlegados.length > 0 ||
-    objetivoPlegado !== ''
+    objetivoPlegado !== '' ||
+    objetivoPrestado !== ''
 
   // LA GUÍA QUE REUTILIZA EL PASO NO ES UNA TARJETA QUE ABRIR (tarea 289,
   // fase 3): se hace en el sitio, como acciones de este paso (más abajo),
   // y se LEE cuando el paso se consulta o se revisa ya hecho. Solo cuando
   // aquí no se puede hacer (otro nivel, una guía sin pasos o que no está)
-  // se ofrece aparte o se explica.
+  // se ofrece aparte o se explica. Lo mismo la que exige una tarea, que
+  // solo es entrada del recorrido cuando se puede hacer aquí.
   const guiaDelPasoAparte =
     tarea.clase === 'guia-del-paso' && tarea.guiaId && !guiaDelPasoIntegrada
       ? [{ id: tarea.guiaId, titulo: tarea.guiaTitulo }]
       : []
-  const guiaDelPasoParaLeer =
-    tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada ? tarea.guiaId : null
+  const guiaParaLeer =
+    (tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada) || tarea.clase === 'guia-de-tarea'
+      ? tarea.guiaId
+      : null
   // Las guías que una TAREA exige antes de marcarla (pueden ser varias, en
-  // el orden del editor). Siguen siendo un desvío: se abren desde su
-  // tarjeta y se vuelve a la acción.
-  const guiasDeLaTarea = tarea.guiasObligatorias.map((g) => ({
-    id: g.guiaArticuloId ?? '',
-    titulo: g.guiaArticuloTitulo,
-    clave: g.id,
-  }))
+  // el orden del editor) y que AQUÍ NO SE PUEDEN HACER (no están en el
+  // dispositivo, o esta ejecución ya es parte de otra guía): se ofrecen en
+  // su tarjeta. Las que sí se pueden hacer son entradas del recorrido,
+  // justo antes de la tarea (tarea 289, fase 3).
+  const guiasDeLaTarea = tarea.guiasObligatorias
+    .filter((g) => !tareas.some((e) => e.clase === 'guia-de-tarea' && e.guiaId === g.guiaArticuloId))
+    .map((g) => ({
+      id: g.guiaArticuloId ?? '',
+      titulo: g.guiaArticuloTitulo,
+      clave: g.id,
+    }))
   // Cuáles de ellas siguen sin terminar. Mientras quede una, la tarea
   // no se puede marcar.
   const pendientes = tarea.clase === 'tarea' ? guiasPendientes(tarea.id) : []
@@ -495,8 +571,9 @@ export function ModoFoco({
   // Guías de consulta y contingencia asignadas a esta tarea: apoyo, no
   // prerrequisito, así que nunca bloquean.
   const guiasDeApoyo = propios.guias.filter((g) => g.intencionGuia !== 'necesario')
-  // Los TÉRMINOS del glosario y los ATAJOS o COMANDOS de esta acción.
-  const referenciasDeLaTarea = bloquesUnicos(propios.referencias).map((bloque) => ({
+  // Los TÉRMINOS del glosario y los ATAJOS o COMANDOS de esta acción (y
+  // los del paso que reutiliza esta guía, si son prestados).
+  const referenciasDeLaTarea = bloquesUnicos([...(prestados?.referencias ?? []), ...propios.referencias]).map((bloque) => ({
     bloque,
     tipo: tipoEfectivo(
       {
@@ -693,12 +770,34 @@ export function ModoFoco({
     )
   }
 
-  // EL PASO QUE REUTILIZA OTRA GUÍA SE HACE AQUÍ (tarea 289, fase 3): sus
-  // acciones ocupan el sitio del paso, con el pie de cada una, y al
-  // terminar la última el paso se cierra solo (o sigue con sus propias
-  // tareas, si tiene). La cabecera, el contador y la ruta siguen siendo
+  // LO QUE ESTE PASO REUTILIZA SE HACE AQUÍ (tarea 289, fase 3): la guía
+  // del paso, o la que exige una tarea, ocupa el sitio de la acción con sus
+  // propias acciones, cada una con su pie; al terminar la última, el paso
+  // se cierra solo o el recorrido sigue con lo siguiente (la tarea que la
+  // exigía, si es eso). La cabecera, el contador y la ruta siguen siendo
   // los de la guía que se abrió. Ver `flujoContinuo.ts`.
-  if (tarea.clase === 'guia-del-paso' && tarea.guiaId && guiaDelPasoIntegrada && !hecha && !consulta) {
+  const guiaEnElSitio =
+    !hecha &&
+    !consulta &&
+    tarea.guiaId !== null &&
+    ((tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada) || tarea.clase === 'guia-de-tarea')
+  if (guiaEnElSitio && tarea.guiaId) {
+    // Lo que esta entrada enseñaría con la primera acción del paso viaja a
+    // la primera acción reutilizada: el "Dónde", sus avisos, sus imágenes,
+    // su credencial y su "para qué". Y el "Debes ver", a la última, solo si
+    // con ella se acaba el paso.
+    const apoyos: ApoyosDelFlujo | null = esPrimeraDelPaso
+      ? {
+          alertas: avisos.alertas,
+          datos: avisos.datos,
+          plegados: avisos.plegados,
+          imagenes: imagenesALaVista,
+          archivos: archivosALaVista,
+          referencias: propios.referencias,
+          vinculoProtegido,
+          objetivo: objetivoPlegado,
+        }
+      : null
     return (
       <div className="flex flex-1 flex-col">
         {ruta && <div className="hidden md:block md:pt-2.5">{ruta}</div>}
@@ -707,10 +806,11 @@ export function ModoFoco({
           tituloReferencia: tarea.guiaTitulo,
           obligatoria: true,
           enFlujo: {
-            lugar: paso.lugar,
-            resultado: paso.resultado,
+            lugar: lugarDelPaso,
+            resultado: debesVer,
+            apoyos: apoyos && hayApoyosDelFlujo(apoyos) ? apoyos : null,
             terminaLaGuia: esUltimoTrabajo,
-            alRetroceder: onPasoAnterior,
+            alRetroceder: puedeRetroceder ? retroceder : undefined,
           },
         })}
       </div>
@@ -808,10 +908,26 @@ export function ModoFoco({
     // YA CUMPLIDA: se llegó aquí con "Anterior". Seguir no registra nada.
     principal = botonSinMarcar
   } else if (pendientes.length > 0) {
-    // UNA GUÍA NECESARIA DE ESTA TAREA SIN TERMINAR: el control dice cuál
-    // y queda inactivo. Su tarjeta, arriba, es la que se abre.
-    const rotulo = rotuloCompletaGuia(pendientes[0].guiaArticuloTitulo)
-    principal = <BotonPrincipal etiqueta={rotulo.visible} etiquetaCompleta={rotulo.completo} disabled />
+    // UNA GUÍA NECESARIA DE ESTA TAREA SIN TERMINAR. Si se hace en el sitio
+    // (es una acción de este paso, justo antes), el control lleva a ella:
+    // se llega aquí sin pasar por ella solo entrando por el final del paso.
+    // Si no, el control dice cuál y queda inactivo; su tarjeta, arriba, es
+    // la que se abre.
+    const entradaDeLaGuia = tareas.findIndex(
+      (e) => e.clase === 'guia-de-tarea' && e.guiaId === pendientes[0].guiaArticuloId,
+    )
+    if (entradaDeLaGuia >= 0) {
+      principal = (
+        <BotonPrincipal
+          etiqueta={`Ir a la acción ${entradaDeLaGuia + 1}`}
+          icono="flecha"
+          onClick={() => setIndiceTarea(entradaDeLaGuia)}
+        />
+      )
+    } else {
+      const rotulo = rotuloCompletaGuia(pendientes[0].guiaArticuloTitulo)
+      principal = <BotonPrincipal etiqueta={rotulo.visible} etiquetaCompleta={rotulo.completo} disabled />
+    }
   } else {
     // COMPLETAR Y AVANZAR SON UN SOLO GESTO: marca la acción y trae la
     // siguiente. Una comprobación usa el mismo rótulo: "Comprueba", sobre
@@ -920,13 +1036,15 @@ export function ModoFoco({
           <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
         ))}
 
+        {credencialPrestada && <CredencialEnPaso vinculo={credencialPrestada} variante="bloque" />}
         {vinculoProtegido && <CredencialEnPaso vinculo={vinculoProtegido} variante="bloque" />}
 
         {archivosALaVista.length > 0 && <AdjuntosPaso adjuntos={archivosALaVista} titulo={paso.titulo} />}
 
-        {/* LO QUE PIDE EL PASO QUE REUTILIZA OTRA GUÍA, PARA LEERLO: al
-            consultarlo o al revisarlo ya hecho (tarea 289, fase 3). */}
-        {guiaDelPasoParaLeer && <PasosEnLectura guiaId={guiaDelPasoParaLeer} />}
+        {/* LO QUE SE HACE EN EL SITIO (la guía del paso, o la que exige una
+            tarea), PARA LEERLO: al consultarlo o al revisarlo ya hecho
+            (tarea 289, fase 3). */}
+        {guiaParaLeer && <PasosEnLectura guiaId={guiaParaLeer} />}
 
         {/* Y cuando aquí no se puede hacer: se ofrece aparte, o se explica
             que no está. Nunca se abre en el sitio. */}
@@ -1009,6 +1127,12 @@ export function ModoFoco({
             encargo): plegado y a un toque. */}
         {hayMasInformacion && (
           <MasInformacion abierta={masInformacion} onAlternar={() => setMasInformacion((v) => !v)}>
+            {objetivoPrestado && (
+              <p className="text-[14px] leading-normal text-noct-neutral-200">
+                <span className="font-medium text-noct-neutral-400">Para qué: </span>
+                {objetivoPrestado}
+              </p>
+            )}
             {objetivoPlegado && (
               <p className="text-[14px] leading-normal text-noct-neutral-200">
                 <span className="font-medium text-noct-neutral-400">Para qué: </span>

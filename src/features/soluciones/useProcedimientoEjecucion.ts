@@ -318,17 +318,22 @@ export function useProcedimientoEjecucion({
     return Boolean(articulo && !articulo.eliminadoEn)
   }
 
-  // ¿La guía que reutiliza el paso se HACE AQUÍ, como parte de este flujo
-  // (tarea 289, fase 3)? Solo en la ejecución principal, con la guía en el
-  // dispositivo y con pasos que ejecutar: es la misma condición que
-  // `modoVinculo` llama "expandible". Si no, el paso la ofrece para
-  // consultarla aparte, o explica que no está.
-  function guiaDelPasoIntegrable(paso: PasoProcedimiento): boolean {
-    if (!paso.subArticuloId || nivel >= 1 || subArticulos === undefined) return false
-    const idx = subIds.indexOf(paso.subArticuloId)
+  // ¿Una guía que esta ejecución reutiliza se HACE AQUÍ, como parte de este
+  // flujo (tarea 289, fase 3)? Solo en la ejecución principal, con la guía
+  // en el dispositivo y con pasos que ejecutar: es la misma condición que
+  // `modoVinculo` llama "expandible". Vale para la guía de un paso y para
+  // la que una tarea exige ('necesario'). Si no, se ofrece para consultarla
+  // aparte, o se explica que no está.
+  function guiaIntegrable(guiaId: string): boolean {
+    if (nivel >= 1 || subArticulos === undefined) return false
+    const idx = subIds.indexOf(guiaId)
     const articulo = idx >= 0 ? subArticulos[idx] : undefined
     if (!articulo || articulo.eliminadoEn) return false
     return procedimientoEjecutable(normalizarProcedimiento(articulo.procedimiento))
+  }
+
+  function guiaDelPasoIntegrable(paso: PasoProcedimiento): boolean {
+    return paso.subArticuloId ? guiaIntegrable(paso.subArticuloId) : false
   }
 
   return {
@@ -346,6 +351,7 @@ export function useProcedimientoEjecucion({
     todoCompletado,
     subSatisfechoReactivo,
     guiaDelPasoDisponible,
+    guiaIntegrable,
     guiaDelPasoIntegrable,
     guiasPendientesDeTarea,
     desmarcarPaso,

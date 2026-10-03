@@ -20,7 +20,18 @@ import {
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { ImagenAmpliable } from '../../components/VisorImagen'
-import { ArrowSquareOut, BookOpen, CaretRight, Check, CheckCircleFill, Circle, LinkSimple, SealCheck, Wrench } from '../../components/iconos'
+import {
+  ArrowElbowDownRight,
+  ArrowSquareOut,
+  BookOpen,
+  CaretRight,
+  Check,
+  CheckCircleFill,
+  Circle,
+  LinkSimple,
+  SealCheck,
+  Wrench,
+} from '../../components/iconos'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
@@ -32,7 +43,7 @@ import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
 import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { presenciaDeAviso, tonoInfo } from './tonos'
-import { ROTULO_CONTINGENCIA, ROTULO_DEL_PASO, rotuloDeIntencion } from './flujoContinuo'
+import { ROTULO_CONTINGENCIA, ROTULO_DEL_PASO, ROTULO_SI_NO, rotuloDeIntencion } from './flujoContinuo'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import {
   fraseAvanceDocumento,
@@ -1252,12 +1263,14 @@ function DecisionEnTarea({
           <button type="button" onClick={onAlternar} className={BTN_ACENTO}>
             Sí, continuar
           </button>
+          {/* El "No" sigue con su camino, no "abre" otra cosa (tarea 289):
+              es parte del mismo procedimiento. */}
           <button
             type="button"
             onClick={() => (vinculoId ? setMostrarVinculo(true) : onAlternar())}
             className={BTN_OTRA_VIA}
           >
-            {vinculoId ? `No, abrir "${bloque.decisionArticuloTitulo || 'la solución'}"` : 'No, continuar'}
+            {vinculoId ? `No, seguir con «${bloque.decisionArticuloTitulo || 'lo que sigue'}»` : 'No, continuar'}
           </button>
         </div>
       </div>
@@ -1288,17 +1301,19 @@ function DecisionEnTarea({
   if (procedimiento === null || modoVinculo(nivel, procedimiento) === 'enlazado' || !ejecutarInline) {
     return (
       <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
+        {/* Es la otra vía de la decisión, no una falla: se nombra así
+            (tarea 289). */}
         {enVistaPrevia ? (
           <VinculoInerte
-            Icono={Wrench}
-            kicker="Si esto falla"
+            Icono={ArrowElbowDownRight}
+            kicker={ROTULO_SI_NO}
             titulo={articulo.titulo}
             nota="Durante la prueba no se sale del editor"
           />
         ) : (
           <EnlaceVinculo
-            Icono={Wrench}
-            kicker={`${ROTULO_CONTINGENCIA} · se abre aparte`}
+            Icono={ArrowElbowDownRight}
+            kicker={`${ROTULO_SI_NO} · se abre aparte`}
             titulo={articulo.titulo}
             nota={NOTA_REFERENCIA}
             to={ruta}
@@ -1321,20 +1336,19 @@ function DecisionEnTarea({
     onAlternar()
   }
 
+  // EL CAMINO DEL "NO", COMO PARTE DEL FLUJO (tarea 289): la fila dice qué
+  // se respondió y qué se hace ahora, sin avance ni numeración propios (lo
+  // de dentro no es una contingencia ni otra guía para quien ejecuta).
+  // Tocarla deshace la respuesta.
   return (
     <div>
       <FilaVinculo
-        Icono={Wrench}
-        kicker="Si esto falla"
+        Icono={ArrowElbowDownRight}
+        kicker={ROTULO_SI_NO}
         titulo={articulo.titulo}
-        nota={fraseAvanceDocumento(hechos, total, 'contingencia')}
-        extra={
-          total > 0 ? (
-            <IndicadorAvance hechos={hechos} total={total} size={22} className="shrink-0" />
-          ) : undefined
-        }
         abierto
         onAlternar={() => setMostrarVinculo(false)}
+        ariaLabel={`Deshacer la respuesta: ${bloque.texto}`}
       />
       <div className={`my-1 ${ZONA_ANIDADA}`}>
         {ejecutarInline({

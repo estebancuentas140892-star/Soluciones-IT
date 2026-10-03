@@ -366,3 +366,85 @@ describe('guías obligatorias en el recorrido (encargo 2026-09-09, tarea 1)', ()
     expect(t.guiasObligatorias.some((g) => g.guiaArticuloId === 'art-c')).toBe(false)
   })
 })
+
+// TAREA 289, FASE 3: la guía que exige una tarea, si se puede hacer aquí,
+// es una entrada del recorrido JUSTO ANTES de su tarea. El técnico hace sus
+// acciones en el sitio, sin tarjeta que abrir.
+describe('la guía que exige una tarea, en el flujo (tarea 289)', () => {
+  function guia(id: string, tareaId: string, articuloId: string, titulo: string) {
+    return bloque({
+      id,
+      tipo: 'guia',
+      alcance: 'tarea',
+      tareaId,
+      guiaArticuloId: articuloId,
+      guiaArticuloTitulo: titulo,
+      intencionGuia: 'necesario',
+    })
+  }
+
+  const p = paso({
+    bloques: [
+      bloque({ id: 't1', tipo: 'tarea', texto: 'Abrir la consola' }),
+      bloque({ id: 't2', tipo: 'tarea', texto: 'Imprimir la página' }),
+      guia('g1', 't2', 'art-controlador', 'Instalar el controlador'),
+      bloque({ id: 't3', tipo: 'tarea', texto: 'Imprimir otra vez' }),
+      // La misma guía otra vez: ya se hizo antes en este paso.
+      guia('g2', 't3', 'art-controlador', 'Instalar el controlador'),
+    ],
+  })
+  const todas = () => true
+
+  it('sin poder hacerse aquí, nada cambia: la tarea la sigue llevando aparte', () => {
+    expect(tareasParaFoco(p, 'Paso').map((t) => t.clase)).toEqual(['tarea', 'tarea', 'tarea'])
+    expect(tareasParaFoco(p, 'Paso', () => false).map((t) => t.clase)).toEqual(['tarea', 'tarea', 'tarea'])
+  })
+
+  it('pudiendo hacerse aquí, va justo antes de su tarea y una sola vez por paso', () => {
+    const recorrido = tareasParaFoco(p, 'Paso', todas)
+    expect(recorrido.map((t) => [t.clase, t.texto])).toEqual([
+      ['tarea', 'Abrir la consola'],
+      ['guia-de-tarea', 'Instalar el controlador'],
+      ['tarea', 'Imprimir la página'],
+      ['tarea', 'Imprimir otra vez'],
+    ])
+    expect(recorrido[1].guiaId).toBe('art-controlador')
+    expect(recorrido[1].tareaDeLaGuia).toBe('t2')
+    expect(recorrido[1].vinculoProtegido).toBeNull()
+  })
+
+  it('si el paso entero ya la reutiliza, no se repite', () => {
+    const conLaMisma = paso({ ...p, subArticuloId: 'art-controlador', subArticuloTitulo: 'Instalar el controlador' })
+    const clases = tareasParaFoco(conLaMisma, 'Paso', todas).map((t) => t.clase)
+    expect(clases.filter((c) => c === 'guia-de-tarea')).toHaveLength(0)
+    expect(clases[0]).toBe('guia-del-paso')
+  })
+
+  it('se cumple cuando su guía está hecha, nunca marcándola', () => {
+    const entrada = tareasParaFoco(p, 'Paso', todas)[1]
+    expect(tareaFocoHecha(entrada, new Set([entrada.id]), true)).toBe(false)
+    expect(tareaFocoHecha(entrada, new Set(), true, () => false)).toBe(false)
+    expect(tareaFocoHecha(entrada, new Set(), true, (id) => id === 'art-controlador')).toBe(true)
+  })
+
+  it('el paso no se cierra mientras la guía que exige una tarea siga pendiente', () => {
+    const recorrido = tareasParaFoco(p, 'Paso', todas)
+    const marcadas = new Set(['t1', 't2', 't3'])
+    expect(accionFoco(recorrido, marcadas, true, () => false)).toBe('marcar')
+    expect(accionFoco(recorrido, marcadas, true, () => true)).toBe('completar')
+  })
+
+  it('los avisos del paso siguen yendo con la primera entrada, sea cual sea', () => {
+    const conAviso = paso({
+      bloques: [
+        bloque({ id: 'a1', tipo: 'aviso', alcance: 'paso', tono: 'precaucion', texto: 'Cuidado de prueba' }),
+        bloque({ id: 't1', tipo: 'tarea', texto: 'Imprimir la página' }),
+        guia('g1', 't1', 'art-controlador', 'Instalar el controlador'),
+      ],
+    })
+    const recorrido = tareasParaFoco(conAviso, 'Paso', todas)
+    expect(recorrido[0].clase).toBe('guia-de-tarea')
+    expect(avisosDeTareaFoco(conAviso, recorrido, 0).alertas.map((a) => a.id)).toEqual(['a1'])
+    expect(avisosDeTareaFoco(conAviso, recorrido, 1).alertas).toEqual([])
+  })
+})

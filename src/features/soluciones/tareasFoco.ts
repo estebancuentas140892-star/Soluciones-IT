@@ -59,6 +59,10 @@ export type ClaseTareaFoco =
   | 'paso-entero'
   // La guia vinculada del paso (`subArticuloId`), como primera tarea.
   | 'guia-del-paso'
+  // Una guia que una TAREA exige ('necesario') y que se puede hacer aqui,
+  // justo antes de esa tarea (tarea 289, fase 3): sus acciones son parte
+  // del flujo, no una tarjeta que abrir.
+  | 'guia-de-tarea'
 
 export interface TareaFoco {
   id: string
@@ -73,8 +77,9 @@ export interface TareaFoco {
   // (hallazgo H08). null en las entradas sinteticas.
   tipoTarea: TipoTarea | null
   // Guia que hay que completar en esta tarea, o null. En
-  // 'guia-del-paso' es la del paso; en una tarea normal, la del bloque
-  // 'guia' con intencion 'necesario' que le pertenezca.
+  // 'guia-del-paso' es la del paso; en 'guia-de-tarea', la que exige su
+  // tarea; en una tarea normal, la del bloque 'guia' con intencion
+  // 'necesario' que le pertenezca.
   guiaId: string | null
   guiaTitulo: string
   intencionGuia: IntencionGuia | null
@@ -91,6 +96,9 @@ export interface TareaFoco {
   // tomaba solo la primera con `.find`, asi que una tarea con dos guias
   // necesarias enseñaba una y exigia ninguna.
   guiasObligatorias: BloquePaso[]
+  // En 'guia-de-tarea', la tarea que la exige (la entrada que va justo
+  // despues). null en el resto.
+  tareaDeLaGuia: string | null
 }
 
 // Campos que no aplican a una entrada sintetica, para no repetirlos en
@@ -104,6 +112,7 @@ type CamposVacios = Pick<
   | 'decisionGuiaId'
   | 'decisionGuiaTitulo'
   | 'guiasObligatorias'
+  | 'tareaDeLaGuia'
 >
 
 // Es una funcion y no una constante para que cada entrada reciba su
@@ -118,6 +127,7 @@ function camposVacios(): CamposVacios {
     decisionGuiaId: null,
     decisionGuiaTitulo: '',
     guiasObligatorias: [],
+    tareaDeLaGuia: null,
   }
 }
 
@@ -126,16 +136,37 @@ export function idTareaGuiaDelPaso(pasoId: string): string {
   return `guia:${pasoId}`
 }
 
+/** Id sintetico de la guia que exige una tarea, por el bloque que la cuelga. */
+export function idTareaGuiaDeTarea(pasoId: string, bloqueId: string): string {
+  return `guia:${pasoId}:${bloqueId}`
+}
+
 // El titulo llega ya resuelto por quien llama (`paso.titulo` puede
 // estar vacio y caer en el del subarticulo o en "Paso N"), para no
 // duplicar aqui esa cadena de respaldos.
-export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): TareaFoco[] {
+//
+// `sePuedeHacerAqui` dice si una guia que exige una tarea se ejecuta en
+// este flujo (tarea 289, fase 3): en la ejecucion principal, con la guia en
+// el dispositivo y con pasos. Solo entonces se vuelve una entrada del
+// recorrido, justo antes de su tarea; si no, la tarea la sigue ofreciendo
+// aparte (o explicando que no esta), como hasta ahora. Sin el predicado,
+// ninguna se vuelve entrada.
+export function tareasParaFoco(
+  paso: PasoProcedimiento,
+  tituloPaso: string,
+  sePuedeHacerAqui: (guiaId: string) => boolean = () => false,
+): TareaFoco[] {
   const trabajo: TareaFoco[] = []
+  // Una guia se hace una sola vez por paso: si la reutiliza el paso entero
+  // o ya la exigio una tarea anterior, la siguiente que la pida la
+  // encuentra hecha (el avance es por guia, `vinculos[guiaId]`).
+  const guiasEnElRecorrido = new Set<string>()
 
   // La guia vinculada del paso va PRIMERA: es lo que hay que tener
   // hecho para que el resto del paso tenga sentido, y es justo lo que
   // antes bloqueaba sin dejarse abrir.
   if (paso.subArticuloId) {
+    guiasEnElRecorrido.add(paso.subArticuloId)
     trabajo.push({
       ...camposVacios(),
       id: idTareaGuiaDelPaso(paso.id),
@@ -153,6 +184,26 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
 
   for (const t of tareasDe(paso.bloques)) {
     const obligatorias = guiasObligatoriasDeTarea(paso, t.id)
+    // Lo que la tarea exige y se puede hacer aqui va JUSTO ANTES de ella,
+    // en el orden del editor: es lo que hay que tener hecho para poder
+    // hacerla, como la guia del paso va antes que sus tareas.
+    for (const g of obligatorias) {
+      const guiaId = g.guiaArticuloId
+      if (!guiaId || guiasEnElRecorrido.has(guiaId) || !sePuedeHacerAqui(guiaId)) continue
+      guiasEnElRecorrido.add(guiaId)
+      trabajo.push({
+        ...camposVacios(),
+        id: idTareaGuiaDeTarea(paso.id, g.id),
+        texto: g.guiaArticuloTitulo,
+        clase: 'guia-de-tarea',
+        esPasoEntero: false,
+        vinculoProtegido: null,
+        guiaId,
+        guiaTitulo: g.guiaArticuloTitulo,
+        intencionGuia: 'necesario',
+        tareaDeLaGuia: t.id,
+      })
+    }
     trabajo.push({
       id: t.id,
       texto: t.texto,
@@ -166,6 +217,7 @@ export function tareasParaFoco(paso: PasoProcedimiento, tituloPaso: string): Tar
       guiasObligatorias: obligatorias,
       decisionGuiaId: t.tipoTarea === 'decision' ? t.decisionArticuloId : null,
       decisionGuiaTitulo: t.tipoTarea === 'decision' ? t.decisionArticuloTitulo : '',
+      tareaDeLaGuia: null,
     })
   }
 
@@ -228,10 +280,22 @@ export function avisosDeTareaFoco(paso: PasoProcedimiento, tareas: TareaFoco[], 
  * ese dato lo resuelve quien llama (`subSatisfecho`). Asi no existe
  * forma de dar por hecha una guia que no se hizo, que es el criterio
  * A10: volver de ella sin terminarla no la registra como completada.
+ * La guia que exige una tarea, igual: la resuelve `guiaCumplida`.
  */
-export function tareaFocoHecha(tarea: TareaFoco, hechas: ReadonlySet<string>, subSatisfecho: boolean): boolean {
+export function tareaFocoHecha(
+  tarea: TareaFoco,
+  hechas: ReadonlySet<string>,
+  subSatisfecho: boolean,
+  guiaCumplida: (guiaId: string) => boolean = () => false,
+): boolean {
   if (tarea.clase === 'guia-del-paso') return subSatisfecho
+  if (tarea.clase === 'guia-de-tarea') return tarea.guiaId !== null && guiaCumplida(tarea.guiaId)
   return hechas.has(tarea.id)
+}
+
+/** ¿La entrada es una guia que se hace en el sitio (la del paso o la que exige una tarea)? */
+export function esGuiaDelRecorrido(tarea: TareaFoco): boolean {
+  return tarea.clase === 'guia-del-paso' || tarea.clase === 'guia-de-tarea'
 }
 
 // Que hace el boton grande del foco. `marcar` mientras queden tareas
@@ -241,7 +305,12 @@ export function tareaFocoHecha(tarea: TareaFoco, hechas: ReadonlySet<string>, su
 // intermedio que marcar.
 export type AccionFoco = 'marcar' | 'completar'
 
-export function accionFoco(tareas: TareaFoco[], hechas: ReadonlySet<string>, subSatisfecho = true): AccionFoco {
+export function accionFoco(
+  tareas: TareaFoco[],
+  hechas: ReadonlySet<string>,
+  subSatisfecho = true,
+  guiaCumplida?: (guiaId: string) => boolean,
+): AccionFoco {
   if (tareas.length === 1 && tareas[0].esPasoEntero) return 'completar'
-  return tareas.every((t) => tareaFocoHecha(t, hechas, subSatisfecho)) ? 'completar' : 'marcar'
+  return tareas.every((t) => tareaFocoHecha(t, hechas, subSatisfecho, guiaCumplida)) ? 'completar' : 'marcar'
 }

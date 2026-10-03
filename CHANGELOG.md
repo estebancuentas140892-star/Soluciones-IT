@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-02
 
+### Cambiado (guías, tarea 289, cierre de la fase 3): nada del paso se pierde y toda reutilización obligatoria va en el flujo
+
+**Área modificada:** `src/features/soluciones/` (`flujoContinuo.ts`: `ApoyosDelFlujo` y `ROTULO_SI_NO`; `tareasFoco.ts`: entrada `guia-de-tarea`; `ModoFoco.tsx`, `AsistenteVista.tsx`, `useProcedimientoEjecucion.ts` (`guiaIntegrable`), `apoyosTarea.ts` (`sinApoyos`) y `ProcedimientoVista.tsx`); pruebas (`guiasFlujoNatural.test.tsx`, `ejecucionPropuestaFinal.test.tsx` y `tareasFoco.test.ts`) y `TAREAS.md`.
+**Tipo:** Cambiado (ejecución de las guías) y Corregido (lo que la fase 3 dejaba de enseñar).
+**Motivo:** al revisar la fase 3 contra las guías reales (lectura agregada, sin textos), los 13 pasos que reutilizan otra guía tienen su propio "para qué", y el flujo en el sitio lo ocultaba: la pantalla de la tarjeta, donde se leía, ya no existe. Además quedaban dos formas de reutilización obligatoria fuera del flujo.
+**Qué cambia:**
+- **Lo que el paso traía para su primera acción** (su "para qué", sus avisos, imágenes, archivos, términos y comandos, y su credencial) acompaña a la primera acción reutilizada, como ya hacía el "Dónde". Solo con la primera; el "Debes ver" del paso, con la última solo si con ella se acaba el paso.
+- **La guía que exige una TAREA** ("necesario") se hace en el sitio, justo antes de esa tarea, como una acción más del paso: sin tarjeta, sin "Necesario para seguir" y sin "Volver al paso N". Una sola vez por paso. Hecha o consultada, se lee. Si aquí no se puede hacer (no está en el dispositivo, o esto ya es parte de otra guía), la tarea la sigue ofreciendo aparte. Ninguna guía real lo usa hoy (0 de 3 guías colgadas de tareas); queda listo para las que se escriban.
+- **En la vista de paso entero**, esa misma guía se recorre dentro del paso; antes era un enlace "se abre aparte" que, terminado allá, no cumplía el requisito. El "No" de una decisión dice "No, seguir con «X»" y su fila "Si la respuesta es no", sin "Si esto falla", sin avance ni requisitos de dentro.
+- **Lector de pantalla y teclado:** "Comprueba antes de seguir", "Antes de terminar, comprueba" y "Guía terminada" reciben el foco al aparecer, como el encabezado de cada acción.
+**Impacto esperado:** quien hace "Configurar el computador para un usuario nuevo" vuelve a leer, en cada parte, para qué sirve. Ninguna reutilización obligatoria saca al técnico del procedimiento que abrió. Sin datos nuevos ni migración; el avance se guarda igual (`vinculos`).
+
 ### Cambiado (guías, tarea 289, fase 3): lo que un paso reutiliza se hace en el sitio, como un solo flujo
 
 **Área modificada:** `src/features/soluciones/` (`flujoContinuo.ts` y `PasosEnLectura.tsx`, nuevos; `AsistenteVista.tsx`, `ModoFoco.tsx`, `useProcedimientoEjecucion.ts`, `cierrePaso.ts`, `estadoVinculo.ts`, `guiasObligatorias.ts`, `tareasFoco.ts`, `HojaFalla.tsx` y `ProcedimientoVista.tsx`); pruebas (`guiasFlujoNatural.test.tsx`, `ejecucionPropuestaFinal.test.tsx`, `resolucionGuiada.test.tsx`, `cierrePaso.test.ts`, `estadoVinculo.test.ts`, `guiasObligatorias.test.ts` y `tareasFoco.test.ts`) y `TAREAS.md`.

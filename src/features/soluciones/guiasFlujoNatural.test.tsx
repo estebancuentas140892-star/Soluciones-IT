@@ -518,6 +518,11 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     await tocar(await esperarControl('Completar y seguir'))
     await esperar(() => textoPantalla().includes('Comprueba antes de seguir'), 'la comprobación de lo reutilizado')
     expect(textoPantalla()).not.toContain('Antes de terminar')
+    // El lector de pantalla y el teclado siguen en lo que acaba de aparecer.
+    await esperar(
+      () => document.activeElement?.textContent?.includes('Comprueba antes de seguir'),
+      'el foco en la comprobación',
+    )
     sinArquitectura()
     await tocar(await esperar(() => document.body.querySelector<HTMLElement>('[role="checkbox"]'), 'la comprobación'))
 
@@ -632,6 +637,7 @@ describe('un solo flujo: varias guías seguidas (el computador nuevo, fase 3)', 
     // Con esto termina de verdad la guía que se abrió.
     await tocar(await esperarControl('Completar y terminar'))
     await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía terminada')
+    await esperar(() => document.activeElement?.textContent === 'Guía terminada', 'el foco en el cierre')
 
     // Por el camino no apareció ningún requisito de dentro ni su numeración.
     for (const texto of vistos) {
@@ -695,6 +701,50 @@ describe('lo opcional sigue siendo un desvío, dicho sin vocabulario interno (fa
   })
 })
 
+describe('lo que el paso traía no se pierde en el flujo (fase 3)', () => {
+  it('el "para qué" y el aviso del paso que reutiliza van con la primera acción reutilizada, y solo con ella', async () => {
+    await sembrarAccesoAlPrograma()
+    const aviso: BloquePaso = {
+      ...pasoPrueba('aux', 'aux', ['aux']).bloques[0],
+      id: 'reg-p1-aviso',
+      tipo: 'aviso',
+      texto: 'Si hay ventas abiertas en la caja de prueba, entrar las cierra.',
+      tono: 'precaucion',
+      tipoTarea: null,
+      alcance: 'paso',
+    }
+    await sembrarGuia({
+      id: 'guia-registro',
+      titulo: 'Registrar a una persona de prueba en el programa de caja',
+      pasos: [
+        {
+          ...contenedor('reg-p1', 'Ingresar al programa de caja', 'acceso-programa', 'Acceder al programa de caja por escritorio remoto'),
+          objetivo: 'Tener el programa de caja abierto para registrar a la persona.',
+          bloques: [aviso],
+        },
+        pasoPrueba('reg-p2', 'Guardar el registro', ['Selecciona Guardar']),
+      ],
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-registro')
+    await empezarGuia()
+    await esperar(() => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'), 'la primera acción reutilizada')
+    // El riesgo del paso, antes de actuar.
+    expect(textoPantalla()).toContain('Si hay ventas abiertas en la caja de prueba, entrar las cierra.')
+    // Su "para qué", a un toque, como el de cualquier paso.
+    await tocar(await esperarControl(/^Más información/))
+    await esperar(
+      () => textoPantalla().includes('Tener el programa de caja abierto para registrar a la persona.'),
+      'el "para qué" del paso que reutiliza',
+    )
+    sinArquitectura()
+    // Solo con la primera acción: la siguiente ya no lo repite.
+    await tocar(await esperarControl('Completar y seguir'))
+    await esperar(() => textoPantalla().includes('Escribe la dirección del servidor de prueba'), 'la segunda acción')
+    expect(textoPantalla()).not.toContain('Si hay ventas abiertas en la caja de prueba, entrar las cierra.')
+    expect(textoPantalla()).not.toContain('Tener el programa de caja abierto para registrar a la persona.')
+  })
+})
+
 describe('el paso entero también es un solo flujo (fase 3)', () => {
   it('lo reutilizado se ve como parte del paso, sin fila propia ni sus requisitos', async () => {
     await sembrarCasoAlimentacion()
@@ -710,6 +760,52 @@ describe('el paso entero también es un solo flujo (fase 3)', () => {
     expect(texto).not.toContain('Acceder al programa de caja por escritorio remoto')
     expect(texto).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
     expect(texto).not.toContain('Esta guía')
+    sinArquitectura()
+  })
+
+  it('la guía que exige una tarea se hace dentro del paso, sin un enlace que saque de la ejecución', async () => {
+    await sembrarGuia({
+      id: 'guia-controlador',
+      titulo: 'Instalar el controlador de la impresora de prueba',
+      pasos: [pasoPrueba('con-p1', 'Instalar el controlador', ['Ejecuta el instalador del controlador de prueba'])],
+    })
+    const paso = pasoPrueba('imp-p1', 'Probar la impresora', ['Imprime una página de prueba'])
+    paso.bloques.push({
+      ...paso.bloques[0],
+      id: 'imp-p1-g1',
+      tipo: 'guia',
+      texto: '',
+      tipoTarea: null,
+      tareaId: 'imp-p1-t1',
+      alcance: 'tarea',
+      guiaArticuloId: 'guia-controlador',
+      guiaArticuloTitulo: 'Instalar el controlador de la impresora de prueba',
+      intencionGuia: 'necesario',
+    })
+    await sembrarGuia({ id: 'guia-imprimir', titulo: 'Imprimir la primera página de prueba', pasos: [paso] })
+    await guardarModoEjecucion('pasoEntero')
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-imprimir')
+    await esperar(
+      () => textoPantalla().includes('Ejecuta el instalador del controlador de prueba'),
+      'lo que la tarea exige, dentro del paso',
+    )
+    expect(textoPantalla()).toContain('Imprime una página de prueba')
+    expect(textoPantalla()).not.toContain('se abre aparte')
+    expect(textoPantalla()).not.toContain('terminarla ahí no cierra este paso')
+    sinArquitectura()
+  })
+
+  it('el "No" de una decisión sigue con su camino, sin presentarlo como una falla', async () => {
+    await sembrarDecisionConDestino()
+    await guardarModoEjecucion('pasoEntero')
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-envio')
+    await tocar(await esperarControl('No, seguir con «Crear un vínculo de prueba con permiso de edición»'))
+    await esperar(() => textoPantalla().includes('Selecciona Puede editar'), 'el camino del no, en el sitio')
+    const texto = textoPantalla()
+    expect(texto).toContain('Si la respuesta es no')
+    expect(texto).not.toContain('Si esto falla')
+    expect(texto).not.toContain('contingencia')
+    expect(texto).not.toContain('Paso 1 de 1')
     sinArquitectura()
   })
 })
