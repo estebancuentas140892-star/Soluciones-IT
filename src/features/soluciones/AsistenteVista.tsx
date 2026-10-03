@@ -720,6 +720,9 @@ export function AsistenteVista({
   // Y lo reutilizado dentro del flujo tampoco los enseña: los que hacían
   // falta ya se pidieron antes de empezar (tarea 289).
   const requisitosVisibles = !conPreparacion && !integrada && indiceActual === 0 && sinAvance ? requisitos : []
+  // En la vista de paso entero, el "Debes ver" de un paso que se hace con lo
+  // que reutiliza va tras esas acciones, no antes (tarea 289).
+  const resultadoTrasLoReutilizado = paso.resultado.trim() !== '' && guiaDelPasoIntegrable(paso)
 
   // CONSULTAR OTRO PASO NO MARCA NADA (propuesta final de Claude Design,
   // 2026-10-01). Un paso pendiente de MÁS ADELANTE que el de trabajo,
@@ -967,7 +970,23 @@ export function AsistenteVista({
           paso entero se lee todo. */}
       <div className="flex flex-col gap-1">
         {rutaUI}
-        <h2 className={`text-lg font-semibold text-noct-text ${rutaUI ? 'md:hidden' : ''}`}>{tituloPaso}</h2>
+        {/* En la guía que se abrió, el título del paso recibe el foco al
+            entrar en él (tarea 289): como el encabezado de cada acción en
+            la vista de una a la vez, para el lector de pantalla y el
+            teclado. Lo de dentro no se lo quita. */}
+        {/* En escritorio la ruta ya lo dice a la vista: aquí queda solo
+            para el lector de pantalla (oculto con `display:none` no podría
+            recibir el foco). */}
+        {nivel === 0 ? (
+          <EncabezadoConFoco
+            key={paso.id}
+            className={`text-lg font-semibold text-noct-text ${rutaUI ? 'md:sr-only' : ''}`}
+          >
+            {tituloPaso}
+          </EncabezadoConFoco>
+        ) : (
+          <h2 className={`text-lg font-semibold text-noct-text ${rutaUI ? 'md:hidden' : ''}`}>{tituloPaso}</h2>
+        )}
         {paso.objetivo.trim() !== '' && <p className="text-sm text-noct-neutral-400">{paso.objetivo}</p>}
       </div>
 
@@ -1093,8 +1112,10 @@ export function AsistenteVista({
           la vista de una acción a la vez. */}
       {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} variante="bloque" />}
 
-      {/* QUÉ DEBO VER DESPUÉS: el resultado del paso, tras su cuerpo. */}
-      {paso.resultado.trim() !== '' && <DebesVerPaso texto={paso.resultado.trim()} />}
+      {/* QUÉ DEBO VER DESPUÉS: el resultado del paso, tras su cuerpo. Si el
+          paso se hace con lo que reutiliza, tras esas acciones (más abajo):
+          es lo que confirma que salieron (tarea 289). */}
+      {paso.resultado.trim() !== '' && !resultadoTrasLoReutilizado && <DebesVerPaso texto={paso.resultado.trim()} />}
 
       {/* LO QUE CUELGA DEL PASO, en filas y sin marcos de color (M-012,
           regla M-R11, tableros `3b` y `12b`). El dato protegido y la guía
@@ -1125,6 +1146,11 @@ export function AsistenteVista({
             }
             onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
           />
+        )}
+        {resultadoTrasLoReutilizado && (
+          <div className="mt-3">
+            <DebesVerPaso texto={paso.resultado.trim()} />
+          </div>
         )}
 
       {/* La contingencia ya no depende de `trabajoPrevio` (tablero 3d):

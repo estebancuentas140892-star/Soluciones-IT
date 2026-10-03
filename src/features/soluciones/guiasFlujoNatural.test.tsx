@@ -760,6 +760,12 @@ describe('el paso entero también es un solo flujo (fase 3)', () => {
     expect(texto).not.toContain('Acceder al programa de caja por escritorio remoto')
     expect(texto).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
     expect(texto).not.toContain('Esta guía')
+    // Lo que debe verse confirma esas acciones: va después de ellas.
+    expect(texto.indexOf('El programa de caja queda abierto y listo para trabajar.')).toBeGreaterThan(
+      texto.indexOf('Busca y abre Conexión a Escritorio remoto'),
+    )
+    // El lector de pantalla y el teclado empiezan en el paso.
+    await esperar(() => document.activeElement?.textContent === 'Ingresar al programa de caja', 'el foco en el paso')
     sinArquitectura()
   })
 
