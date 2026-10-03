@@ -1,5 +1,6 @@
 import type { Credencial, Dispositivo, TipoSecreto } from '../../lib/db'
 import { claveDeFinalidad } from '../../lib/vinculoProtegido'
+import { valoresUnicos } from '../../lib/vocabulario'
 
 export { claveDeFinalidad }
 
@@ -128,4 +129,24 @@ export function resolverCredencialDelEquipo(
   if (candidatas.length === 0) return { estado: 'ninguna' }
   if (candidatas.length > 1) return { estado: 'varias', cuantas: candidatas.length }
   return { estado: 'resuelta', credencial: candidatas[0] }
+}
+
+/**
+ * Las finalidades que ya existen, para sugerirlas en el editor: las
+ * categorías de las credenciales de acceso vivas que la Bóveda relaciona
+ * con algún equipo, sin repetir y en orden. Solo nombres de categoría:
+ * nada de lo que identifica a una credencial ni de lo que guarda.
+ */
+export function finalidadesConocidas(credenciales: readonly Credencial[]): string[] {
+  return valoresUnicos(
+    credenciales
+      .filter(
+        (credencial) =>
+          !credencial.eliminadoEn &&
+          esDeAcceso(credencial) &&
+          Array.isArray(credencial.dispositivos) &&
+          credencial.dispositivos.length > 0,
+      )
+      .map((credencial) => credencial.categoria ?? ''),
+  )
 }

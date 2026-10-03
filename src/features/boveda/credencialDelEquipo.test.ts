@@ -4,6 +4,7 @@ import {
   claveDeFinalidad,
   credencialesDeAccesoDelEquipo,
   esIdDeEquipo,
+  finalidadesConocidas,
   resolverCredencialDelEquipo,
   TIPOS_DE_ACCESO,
 } from './credencialDelEquipo'
@@ -271,5 +272,20 @@ describe('sin efectos', () => {
   it('un equipo sin nada no lanza: ninguna regla tira errores con datos dentro', () => {
     expect(() => resolver('eq', [], [])).not.toThrow()
     expect(resolver('eq', [], [])).toEqual({ estado: 'equipo-no-disponible' })
+  })
+})
+
+describe('finalidadesConocidas', () => {
+  it('sugiere las categorías de los accesos vivos relacionados con algún equipo, sin repetir', () => {
+    const credenciales = [
+      credencial('c1', ['srv'], { categoria: 'Escritorio remoto' }),
+      credencial('c2', ['srv2'], { categoria: 'escritorio remoto' }),
+      credencial('c3', ['srv'], { categoria: 'Programa de caja' }),
+      credencial('sin-equipo', [], { categoria: 'Correo' }),
+      credencial('licencia', ['srv'], { categoria: 'Licencias', tipo: 'llave' }),
+      credencial('borrada', ['srv'], { categoria: 'Antigua', eliminadoEn: '2026-01-01T00:00:00.000Z' }),
+      credencial('sin-categoria', ['srv']),
+    ]
+    expect(finalidadesConocidas(credenciales)).toEqual(['Escritorio remoto', 'Programa de caja'])
   })
 })

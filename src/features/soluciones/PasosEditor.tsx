@@ -83,7 +83,9 @@ import {
   X,
 } from '../../components/iconos'
 import { TONOS_AVISO, type TonoInfo } from './tonos'
-import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
+import { Campo, CampoConSugerencias, CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
+import { tituloVinculoDelEquipo } from '../../lib/vinculoProtegido'
+import { finalidadesConocidas } from '../boveda/credencialDelEquipo'
 import { HojaTipoBloque, type OpcionTipoBloque } from './HojaTipoBloque'
 import { HojaVinculo, type GrupoVinculo } from './HojaVinculo'
 import { CrearAccesoRapido } from '../boveda/CrearAccesoRapido'
@@ -340,6 +342,9 @@ export function PasosEditor({
     [],
   )
   const credenciales = useLiveQuery(() => db.credenciales.filter((c) => !c.eliminadoEn).toArray(), [], [])
+  // Las finalidades que ya usa la Bóveda (sus categorías), para sugerirlas
+  // en "Credencial del equipo actual" (tarea 290). Sin permiso llega vacía.
+  const finalidadesDelEquipo = useMemo(() => finalidadesConocidas(credenciales), [credenciales])
   // Permiso de bóveda (puede_ver_boveda): sin él, la tarea no ofrece
   // "Crear acceso y vincular" (ni se insinúa que exista la Bóveda).
   const perfil = usePerfilVivo()
@@ -1008,6 +1013,7 @@ export function PasosEditor({
                   { etiqueta: 'Secretos de la bóveda', opciones: opcionesCredenciales },
                 ]}
                 puedeVerBoveda={puedeVerBoveda}
+                finalidadesDelEquipo={finalidadesDelEquipo}
                 abrirDatoProtegido={datoDeTareaId === bloque.id}
                 onDatoProtegidoAbierto={() => setDatoDeTareaId(null)}
                 onSeleccionar={() => bloque.tipo === 'tarea' && setTareaActivaId(bloque.id)}
@@ -1059,12 +1065,9 @@ export function PasosEditor({
                     { etiqueta: 'Datos protegidos del equipo', opciones: opcionesCampos },
                     { etiqueta: 'Secretos de la bóveda', opciones: opcionesCredenciales },
                   ]}
-                  onElegir={(opcion) =>
-                    actualizarPaso(indice, {
-                      vinculoProtegido: { tipo: opcion.tipo, id: opcion.id, titulo: opcion.titulo },
-                    })
-                  }
-                  onQuitar={() => actualizarPaso(indice, { vinculoProtegido: null })}
+                  ofrecerDelEquipo={puedeVerBoveda}
+                  finalidades={finalidadesDelEquipo}
+                  onCambiar={(vinculo) => actualizarPaso(indice, { vinculoProtegido: vinculo })}
                 />
                 <VinculoDelPaso
                   Icono={BookOpen}
@@ -1443,44 +1446,66 @@ function VinculoDelPaso({
 // grupo (tarea 212, antes un <optgroup> nativo). El id de cada opción
 // se codifica "tipo:id" porque el id por si solo no basta para saber a
 // que tabla apuntar; se decodifica al elegir.
+//
+// Desde la tarea 290, con permiso de Bóveda, la hoja ofrece primero la
+// "Credencial del equipo actual" (`GRUPO_DEL_EQUIPO`): la guía no elige
+// una credencial concreta, la ejecución usa la que la Bóveda relaciona
+// con el equipo con el que se trabaje. Elegida, debajo se indica su
+// finalidad si hace falta (`FinalidadDelEquipo`).
 function VinculoProtegidoDelPaso({
   vinculo,
   gruposOpciones,
-  onElegir,
-  onQuitar,
+  ofrecerDelEquipo,
+  finalidades,
+  onCambiar,
 }: {
   vinculo: VinculoProtegido | null
   gruposOpciones: { etiqueta: string; opciones: OpcionVinculoProtegido[] }[]
-  onElegir: (opcion: OpcionVinculoProtegido) => void
-  onQuitar: () => void
+  ofrecerDelEquipo: boolean
+  finalidades: string[]
+  // El vínculo nuevo, o null para quitarlo.
+  onCambiar: (vinculo: VinculoProtegido | null) => void
 }) {
   const [abierta, setAbierta] = useState(false)
 
   if (vinculo) {
     return (
-      <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-noct-divider bg-noct-surface px-3">
-        <p className="flex min-w-0 items-center gap-2.5 truncate text-[13px] text-noct-text">
-          <LockSimple size={15} className="shrink-0 text-noct-neutral-400" />
-          <span className="min-w-0 truncate">Información protegida: {vinculo.titulo}</span>
-        </p>
-        <button
-          type="button"
-          onClick={onQuitar}
-          className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
-        >
-          Quitar
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-noct-divider bg-noct-surface px-3">
+          <p className="flex min-w-0 items-center gap-2.5 truncate text-[13px] text-noct-text">
+            <LockSimple size={15} className="shrink-0 text-noct-neutral-400" />
+            <span className="min-w-0 truncate">Información protegida: {vinculo.titulo}</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => onCambiar(null)}
+            className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
+          >
+            Quitar
+          </button>
+        </div>
+        {vinculo.tipo === 'equipo' && (
+          <FinalidadDelEquipo
+            finalidad={vinculo.finalidad}
+            sugerencias={finalidades}
+            onCambiar={(finalidad) => onCambiar(vinculoDelEquipoEnEdicion(finalidad))}
+          />
+        )}
       </div>
     )
   }
 
-  const totalOpciones = gruposOpciones.reduce((total, g) => total + g.opciones.length, 0)
+  const totalOpciones =
+    gruposOpciones.reduce((total, g) => total + g.opciones.length, 0) + (ofrecerDelEquipo ? 1 : 0)
   if (totalOpciones === 0) return null
 
-  const grupos: GrupoVinculo[] = gruposOpciones.map((g) => ({
-    etiqueta: g.etiqueta,
-    opciones: g.opciones.map((o) => ({ id: `${o.tipo}:${o.id}`, titulo: o.titulo })),
-  }))
+  const grupos: GrupoVinculo[] = [
+    ...(ofrecerDelEquipo ? [GRUPO_DEL_EQUIPO] : []),
+    ...gruposOpciones.map((g) => ({
+      etiqueta: g.etiqueta,
+      opciones: g.opciones.map((o) => ({ id: `${o.tipo}:${o.id}`, titulo: o.titulo })),
+    })),
+  ]
 
   return (
     <>
@@ -1499,14 +1524,66 @@ function VinculoProtegidoDelPaso({
         placeholderBuscar={`Buscar en ${totalOpciones} ${totalOpciones === 1 ? 'dato' : 'datos'}`}
         grupos={grupos}
         onElegir={(idCompuesto) => {
+          if (idCompuesto === ID_OPCION_DEL_EQUIPO) {
+            onCambiar(vinculoDelEquipoEnEdicion(''))
+            return
+          }
           const separador = idCompuesto.indexOf(':')
           const tipo = idCompuesto.slice(0, separador) as TipoVinculoProtegido
           const id = idCompuesto.slice(separador + 1)
           const opcion = gruposOpciones.flatMap((g) => g.opciones).find((o) => o.tipo === tipo && o.id === id)
-          if (opcion) onElegir(opcion)
+          if (opcion) onCambiar({ tipo: opcion.tipo, id: opcion.id, titulo: opcion.titulo })
         }}
       />
     </>
+  )
+}
+
+// LA CREDENCIAL DEL EQUIPO ACTUAL EN EL EDITOR (tarea 290). Una opción
+// más de la hoja de "Información protegida", en su propio grupo y antes
+// que las credenciales concretas: para una guía que sirve a varios
+// equipos, el autor no elige la credencial de ninguno. Su id no puede
+// confundirse con el de una credencial (las del paso van como "tipo:id";
+// las de la tarea, con su id).
+const ID_OPCION_DEL_EQUIPO = 'equipo:actual'
+const GRUPO_DEL_EQUIPO: GrupoVinculo = {
+  etiqueta: 'Según el equipo con el que se trabaje',
+  opciones: [{ id: ID_OPCION_DEL_EQUIPO, titulo: 'Credencial del equipo actual' }],
+}
+
+// Mientras se escribe la finalidad no se recorta (si no, no podría
+// escribirse "Escritorio remoto": el espacio desaparecería al teclearlo);
+// se recorta al guardar (`prepararProcedimientoParaGuardar`).
+function vinculoDelEquipoEnEdicion(finalidad: string): VinculoProtegido {
+  return { tipo: 'equipo', finalidad, titulo: tituloVinculoDelEquipo(finalidad) }
+}
+
+// La finalidad de la credencial del equipo: opcional. Solo hace falta si
+// el equipo puede tener más de un acceso (al escritorio remoto y a un
+// programa); es la categoría con la que la Bóveda los distingue, y se
+// sugieren las que ya usa. Nunca se pide elegir una credencial concreta.
+function FinalidadDelEquipo({
+  finalidad,
+  sugerencias,
+  onCambiar,
+}: {
+  finalidad: string
+  sugerencias: string[]
+  onCambiar: (finalidad: string) => void
+}) {
+  return (
+    <Campo
+      etiqueta="Finalidad (opcional)"
+      ayuda="En la guía se usa la credencial que la Bóveda relaciona con el equipo con el que se trabaje. Indica la finalidad solo si ese equipo tiene más de un acceso: la categoría que los distingue en la Bóveda (por ejemplo, «Escritorio remoto»)."
+    >
+      <CampoConSugerencias
+        valor={finalidad}
+        onChange={onCambiar}
+        sugerencias={sugerencias}
+        placeholder="Cualquiera de acceso"
+        className="min-h-11"
+      />
+    </Campo>
   )
 }
 
@@ -1532,6 +1609,7 @@ function BloqueEditor({
   onVincularTermino,
   gruposProtegidos,
   puedeVerBoveda,
+  finalidadesDelEquipo,
   abrirDatoProtegido,
   onDatoProtegidoAbierto,
   onSeleccionar,
@@ -1564,6 +1642,9 @@ function BloqueEditor({
   onVincularTermino: (referencia: Referencia) => void
   gruposProtegidos: { etiqueta?: string; opciones: OpcionVinculoProtegido[] }[]
   puedeVerBoveda: boolean
+  // Las categorías de la Bóveda que se sugieren como finalidad de la
+  // credencial del equipo actual (tarea 290).
+  finalidadesDelEquipo: string[]
   abrirDatoProtegido: boolean
   onDatoProtegidoAbierto: () => void
   onSeleccionar: () => void
@@ -1771,14 +1852,29 @@ function BloqueEditor({
             </button>
           </div>
         )}
+        {bloque.vinculoProtegido?.tipo === 'equipo' && (
+          <div className="ml-1">
+            <FinalidadDelEquipo
+              finalidad={bloque.vinculoProtegido.finalidad}
+              sugerencias={finalidadesDelEquipo}
+              onCambiar={(finalidad) => onCambiar({ vinculoProtegido: vinculoDelEquipoEnEdicion(finalidad) })}
+            />
+          </div>
+        )}
 
         <HojaVinculo
           abierto={hojaProtegidaAbierta}
           onCerrar={() => setHojaProtegidaAbierta(false)}
           titulo="Dato protegido de esta tarea"
           placeholderBuscar="Buscar un secreto o un campo protegido"
-          grupos={gruposProtegidos}
+          // La credencial del equipo actual (tarea 290), primero y solo
+          // con permiso de Bóveda, como el resto de esta hoja.
+          grupos={puedeVerBoveda ? [GRUPO_DEL_EQUIPO, ...gruposProtegidos] : gruposProtegidos}
           onElegir={(id) => {
+            if (id === ID_OPCION_DEL_EQUIPO) {
+              onCambiar({ vinculoProtegido: vinculoDelEquipoEnEdicion('') })
+              return
+            }
             const opcion = gruposProtegidos.flatMap((g) => g.opciones).find((o) => o.id === id)
             if (opcion) {
               onCambiar({ vinculoProtegido: { tipo: opcion.tipo, id: opcion.id, titulo: opcion.titulo } })
