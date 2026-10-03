@@ -32,6 +32,26 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso.
 
+**LA CREDENCIAL DEL EQUIPO EN UNA GUÍA (2026-10-03, tarea 290).** Encargo aparte del usuario: que una acción de una guía pueda pedir "la credencial del equipo con el que se trabaja" y Soluciones IT la resuelva con las relaciones que la Bóveda ya tiene, sin que el técnico elija entre credenciales ni las pruebe. Principio: **la complejidad pertenece al sistema, no al técnico**. Sin tocar datos reales (Bóveda, equipos, guías, Supabase) y sin rediseño. Rama `feat/credencial-del-equipo` desde `7b76df0`, worktree `dev/sit-290`.
+
+| Fase | Qué | Estado |
+|---|---|---|
+| 1 | Auditoría del modelo actual, pruebas del vínculo fijo de hoy y diseño técnico mínimo | Hecha: [AUDITORIA_CREDENCIAL_DEL_EQUIPO.md](AUDITORIA_CREDENCIAL_DEL_EQUIPO.md) y `vinculoFijo.test.tsx` |
+| 2 | Resolución por equipo exacto en la capa de dominio, con pruebas unitarias | Pendiente |
+| 3 | Integración con la consulta de la Bóveda en la guía y el contexto del equipo en la ejecución | Pendiente |
+| 4 | Editor: credencial específica o credencial del equipo actual | Pendiente |
+| 5 | QA, documentación, sin conexión, build, CI, despliegue y archivo | Pendiente |
+
+### 290. La credencial del equipo en una guía
+
+- **Título:** resolver la credencial protegida según el equipo exacto con el que se ejecuta una guía.
+- **Descripción:** un vínculo protegido nuevo, contextual, que convive con el fijo: "la credencial del equipo actual", con una finalidad opcional para distinguir accesos distintos del mismo equipo. La ejecución conserva el equipo (desde la ficha del equipo, desde Resolver cuando la consulta lo identifica, o elegido en la propia acción) y la consulta de la Bóveda de siempre muestra la credencial que corresponde: una, ninguna o "no se puede saber cuál", sin inventar ni elegir al azar.
+- **Motivo:** encargo del usuario del 2026-10-03. Caso representativo: una guía de impresoras que hoy obliga a fijar una credencial aunque sirva para varias impresoras con credenciales distintas.
+- **Impacto:** alto en seguridad (Bóveda) y medio en la ejecución de guías.
+- **Prioridad:** Alta. **Estado:** En progreso.
+- **Área afectada:** `src/lib/db.ts` y `src/lib/procedimiento.ts` (el vínculo), `src/features/boveda/` (`CredencialEnPaso.tsx` y un módulo nuevo de resolución), `src/features/soluciones/` (`ProveedorEjecucion.tsx`, `contextoEjecucion.ts`, `AsistentePage.tsx`, `PasosEditor.tsx`, `ModoFoco.tsx`), `src/lib/progresoPasos.ts`, `src/lib/grafo.ts`, la ficha del equipo y el enlace de una guía en Resolver (sin tocar su orden).
+- **Dependencias:** ninguna. Sin migración: el vínculo vive en el JSON del procedimiento y el equipo de la ejecución en la fila local de avance.
+
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.
