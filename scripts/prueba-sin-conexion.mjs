@@ -364,8 +364,9 @@ async function main() {
     }
 
     // Tarea 289: la ejecución de una guía no pide nada a la red. Orientar,
-    // preparar (con los requisitos de la guía que reutiliza su paso 1) y
-    // hacer en el sitio lo reutilizado sale todo de la base local.
+    // preparar (solo con los requisitos que escribió su autor: los de la
+    // guía que reutiliza su paso 1 no pasan solos) y hacer en el sitio lo
+    // reutilizado sale todo de la base local.
     paso('4b. Una guía que reutiliza otra, sin red: orientar, preparar y la primera acción reutilizada (tarea 289)')
     comprobar(Boolean(await s.evaluar(SEMBRAR_GUIAS_PRUEBA)), 'guías inventadas escritas en la base local, con la red cortada')
     await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-sin-conexion' })
@@ -376,8 +377,12 @@ async function main() {
     )
     await s.tocar('Ver lo que necesitas')
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes('Datos de la persona de prueba.') && document.body.innerText.includes('Red de prueba sin conexión.')`, 'los requisitos')),
-      'los requisitos, también los de la guía del paso 1',
+      Boolean(await s.hasta(`document.body.innerText.includes('Datos de la persona de prueba.')`, 'los requisitos')),
+      'los requisitos de la guía',
+    )
+    comprobar(
+      !(await s.evaluar(`return document.body.innerText.includes('Red de prueba sin conexión.')`)),
+      'sin los de la guía del paso 1: no pasan solos',
     )
     await s.tocar('Todo listo, empezar')
     comprobar(

@@ -260,6 +260,9 @@ export function ArticuloForm() {
   const [similaresDescartados, setSimilaresDescartados] = useState(false)
   const [plantillasDescartadas, setPlantillasDescartadas] = useState<ReadonlySet<TipoArticulo>>(new Set())
   const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState(false)
+  // Lo que piden las guías reutilizadas, bajo "Requisitos": plegado hasta
+  // que el autor lo abre (tarea 289, criterio adicional de la fase 4).
+  const [referenciaRequisitosAbierta, setReferenciaRequisitosAbierta] = useState(false)
   const [pestana, setPestana] = useState<PestanaEditor>('general')
   // Error de validacion del envio (hoy solo el titulo obligatorio).
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
@@ -602,11 +605,14 @@ export function ArticuloForm() {
   )
   const revisionCuando = useMemo(() => revisarCuandoUsar(descripcion), [descripcion])
 
-  // LO QUE PIDEN LAS GUÍAS QUE ESTA REUTILIZA Y NO SE SUMAN SOLAS (tarea
-  // 289, fase 4): las de los pasos 2 en adelante y las que exige una tarea.
-  // Un paso anterior puede dejar hecho lo que piden, así que no se piden
-  // solas antes de empezar: decide el autor, con la lista delante. La guía
-  // del paso 1 sí se suma sola, y se dice.
+  // LO QUE PIDEN LAS GUÍAS QUE ESTA REUTILIZA, SOLO COMO REFERENCIA (tarea
+  // 289, fase 4, con su criterio adicional). REGLA DEFINITIVA: un requisito
+  // de una guía reutilizada NO se convierte automáticamente en requisito de
+  // esta, tampoco el de la guía del paso 1. Puede que Soluciones IT ya lo dé
+  // donde se usa, que sea una acción del procedimiento, que sea lo básico
+  // del equipo de Sistemas o que solo aplique a la otra guía en otros casos.
+  // Por eso va plegado, con el criterio delante, y "Añadir" es de uno en
+  // uno: lo decide el autor, nunca la aplicación.
   const requisitosDeGuias = useMemo(() => {
     const porId = new Map(todosArticulos.map((a) => [a.id, a]))
     const requisitosDe = (guiaId: string) => {
@@ -614,13 +620,9 @@ export function ArticuloForm() {
       if (!guia) return null
       return { titulo: guia.titulo, requisitos: normalizarProcedimiento(guia.procedimiento)?.requisitos ?? [] }
     }
-    const propios = requisitos.split('\n')
-    const primerPaso = pasos[0]?.subArticuloId ? requisitosDe(pasos[0].subArticuloId) : null
-    return {
-      porRevisar: requisitosPorRevisar({ pasos, requisitos: propios }, requisitosDe),
-      delPrimerPaso: primerPaso && primerPaso.requisitos.length > 0 ? primerPaso.titulo : null,
-    }
+    return requisitosPorRevisar({ pasos, requisitos: requisitos.split('\n') }, requisitosDe)
   }, [todosArticulos, requisitos, pasos])
+  const totalRequisitosDeGuias = requisitosDeGuias.reduce((total, guia) => total + guia.requisitos.length, 0)
 
   // Añade una línea a los requisitos, a petición del autor (nunca sola).
   function anadirRequisito(texto: string) {
@@ -654,47 +656,76 @@ export function ArticuloForm() {
           ))}
         </ul>
       )}
-      {/* LO QUE PIDEN LAS GUÍAS QUE NO SE SUMAN SOLAS (tarea 289, fase 4),
-          para decidirlo aquí, con un toque por línea. */}
-      {requisitosDeGuias.delPrimerPaso && (
-        <p className="mt-2 text-[12px] leading-snug text-noct-neutral-400">
-          Lo que pide «{requisitosDeGuias.delPrimerPaso}» (paso 1) se pide solo antes de empezar.
-        </p>
-      )}
-      {requisitosDeGuias.porRevisar.length > 0 && (
-        <div className="mt-2 flex flex-col gap-2.5 rounded-lg border border-dashed border-noct-neutral-700 px-3 py-2.5">
-          <p className="flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-neutral-200">
-            <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
-            <span className="min-w-0">
-              Lo que piden las guías que este procedimiento reutiliza más adelante. No se piden solas antes de
-              empezar, porque un paso anterior puede dejarlo hecho: añade las que hagan falta.
+      {/* LO QUE PIDEN LAS GUÍAS REUTILIZADAS, SOLO COMO REFERENCIA (tarea
+          289, fase 4). Plegado: no es una tarea pendiente ni cuenta en la
+          completitud. Abierto, primero el criterio y después la lista. */}
+      {totalRequisitosDeGuias > 0 && (
+        <div className="mt-2 rounded-lg border border-dashed border-noct-neutral-700">
+          <button
+            type="button"
+            onClick={() => setReferenciaRequisitosAbierta((abierta) => !abierta)}
+            aria-expanded={referenciaRequisitosAbierta}
+            className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left"
+          >
+            <Info size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+            <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-noct-neutral-300">
+              Lo que piden las guías que reutiliza ({totalRequisitosDeGuias}), solo como referencia
             </span>
-          </p>
-          {requisitosDeGuias.porRevisar.map((g) => (
-            <div key={g.guiaId} className="flex flex-col gap-1 pl-5">
-              <p className="text-[12px] font-medium leading-snug text-noct-neutral-300">
-                «{g.guiaTitulo}» (paso {g.pasoNumero})
-              </p>
-              <ul className="flex flex-col gap-1">
-                {g.requisitos.map((r) => (
-                  <li
-                    key={r}
-                    className="flex items-center justify-between gap-2 text-[12.5px] leading-snug text-noct-neutral-200"
-                  >
-                    <span className="min-w-0 [overflow-wrap:anywhere]">{r}</span>
-                    <button
-                      type="button"
-                      onClick={() => anadirRequisito(r)}
-                      aria-label={`Añadir a los requisitos: ${r}`}
-                      className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-dashed border-noct-accent/50 px-3 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.08]"
-                    >
-                      Añadir
-                    </button>
+            <CaretDown
+              size={13}
+              className={`shrink-0 text-noct-neutral-500 transition-transform ${referenciaRequisitosAbierta ? 'rotate-180' : ''}`}
+              aria-hidden
+            />
+          </button>
+          {referenciaRequisitosAbierta && (
+            <div className="flex flex-col gap-2.5 border-t border-dashed border-noct-neutral-700 px-3 pb-2.5 pt-2">
+              <div className="flex flex-col gap-1 text-[12px] leading-snug text-noct-neutral-400">
+                <p className="text-noct-neutral-200">
+                  Ninguno pasa solo a «Antes de empezar». Añade uno solo si hay que tenerlo listo antes de la
+                  primera acción de esta guía.
+                </p>
+                <p>Déjalo fuera si:</p>
+                <ul className="flex list-disc flex-col gap-0.5 pl-4">
+                  <li>Soluciones IT ya lo da donde se usa, como una credencial o una IP.</li>
+                  <li>Es algo que se hace durante el procedimiento: es un paso.</li>
+                  <li>
+                    Lo tiene o lo sabe cualquiera del equipo de Sistemas: acceso al computador, Windows, la
+                    contraseña maestra de Soluciones IT.
                   </li>
-                ))}
-              </ul>
+                  <li>
+                    Solo aplica a esa guía en otros casos, como tener Internet en una guía que revisa por qué no
+                    hay Internet.
+                  </li>
+                </ul>
+                <p>Sí suele hacer falta lo que solo la persona o el caso pueden dar: nombre, cédula, celular, correo.</p>
+              </div>
+              {requisitosDeGuias.map((g) => (
+                <div key={g.guiaId} className="flex flex-col gap-1">
+                  <p className="text-[12px] font-medium leading-snug text-noct-neutral-300">
+                    «{g.guiaTitulo}» (paso {g.pasoNumero})
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {g.requisitos.map((r) => (
+                      <li
+                        key={r}
+                        className="flex items-center justify-between gap-2 text-[12.5px] leading-snug text-noct-neutral-200"
+                      >
+                        <span className="min-w-0 [overflow-wrap:anywhere]">{r}</span>
+                        <button
+                          type="button"
+                          onClick={() => anadirRequisito(r)}
+                          aria-label={`Añadir a los requisitos de esta guía: ${r}`}
+                          className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-dashed border-noct-neutral-600 px-3 text-[12.5px] font-medium text-noct-neutral-300 hover:bg-noct-neutral-900"
+                        >
+                          Añadir
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
     </>

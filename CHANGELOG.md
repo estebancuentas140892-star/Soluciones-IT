@@ -6,6 +6,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-03
+
+### Cambiado (guías y editor, tarea 289, criterio adicional de la fase 4): ningún requisito de una guía reutilizada pasa solo a la guía padre
+
+**Área modificada:** `src/features/soluciones/` (`preparacionGuia.ts`: `requisitosEfectivos` solo con los de la guía, `requisitosPorRevisar` con todas las guías reutilizadas, sin `guiaDelPrimerPaso`; `useRequisitosEfectivos.ts`, retirado; `AsistenteVista.tsx`, `IntroduccionGuia.tsx`, `ArticuloForm.tsx` y `flujoContinuo.ts`); pruebas (`preparacionGuia.test.ts`, `guiasFlujoNatural.test.tsx` y `revisionEditor.test.tsx`), `scripts/prueba-sin-conexion.mjs` (paso 4b); [REGLAS.md](REGLAS.md) (regla 25 f y regla 26, nuevas), [DECISIONES.md](DECISIONES.md) (AD-063, decisiones 2 y 6), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-060, RN-062 y sección 15: Modo visual), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md), [ARQUITECTURA.md](ARQUITECTURA.md), [COMPONENTES_UI.md](COMPONENTES_UI.md) y [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Tipo:** Cambiado (lo que pide "Antes de empezar" y la ayuda del editor) y Documentación.
+**Motivo:** criterio adicional del usuario, después del primer despliegue de la tarea 289. **Regla definitiva: un requisito de una guía reutilizada NO se convierte automáticamente en requisito de la guía padre.** La implementación anterior no lo cumplía en dos puntos: la ejecución sumaba sola a "Antes de empezar" los requisitos de la guía del paso 1, y el editor presentaba los de las demás con "añade las que hagan falta", que invita a copiar sin criterio.
+**Qué cambia:**
+- **"Antes de empezar"** (y los detalles y la vista previa) enseña solo los requisitos que escribió el autor de la guía. Una guía sin requisitos propios ya no tiene esa pantalla, aunque la guía de su paso 1 pida cosas: abre en su orientación o en su primera acción.
+- **En el editor**, bajo "Requisitos", lo que piden las guías reutilizadas (todas, la del paso 1 incluida) llega plegado en una línea, "Lo que piden las guías que reutiliza (N), solo como referencia", y no cuenta en la completitud. Al abrirlo, primero el criterio ("Ninguno pasa solo a «Antes de empezar». Añade uno solo si hay que tenerlo listo antes de la primera acción de esta guía.", cuándo dejarlo fuera y qué sí suele hacer falta) y después la lista, con "Añadir" de uno en uno y sin "Añadir todos". Desaparece la línea "Lo que pide «…» (paso 1) se pide solo antes de empezar.".
+- **Documentación:** el criterio con sus cinco preguntas y los ejemplos del usuario (regla 25 f), la división de responsabilidades entre Claude Code, ChatGPT, ChatGPT Work y Claude Design (regla 26) y el Modo visual como evolución futura documentada, sin implementar.
+**Impacto esperado:** "Antes de empezar" pide solo lo que el autor decidió que hace falta, y la ayuda del editor deja de empujar a copiar requisitos ajenos. Sin cambios de datos ni de Supabase; ninguna guía real se modificó (la revisión del contenido la hará ChatGPT).
+
 ## 2026-10-02
 
 ### Corregido y Documentación (guías, tarea 289, fase 5): QA móvil, foco en el paso entero y documentación del flujo continuo

@@ -405,8 +405,12 @@ describe('antes del primer paso: orientar y preparar (fase 2)', () => {
   })
 })
 
+// REGLA DEFINITIVA (criterio adicional de la fase 4): un requisito de una
+// guía reutilizada NO se convierte automáticamente en requisito de la guía
+// que la reutiliza, tampoco el de la guía del paso 1. "Antes de empezar"
+// enseña solo lo que escribió el autor de la guía que se abrió.
 describe('lo que hace falta antes de una guía que reutiliza otras (fase 2)', () => {
-  it('suma los requisitos de la guía del paso 1, que se hace antes que nada', async () => {
+  it('pide solo lo que escribió su autor: lo que pide la guía del paso 1 no pasa solo', async () => {
     await sembrarCasoAlimentacion()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
     await tocar(await esperarControl('Ver lo que necesitas'))
@@ -414,11 +418,11 @@ describe('lo que hace falta antes de una guía que reutiliza otras (fase 2)', ()
     const texto = textoPantalla()
     expect(texto).toContain('Autorización para crear al trabajador.')
     expect(texto).toContain('Nombre completo, cédula y celular de la persona.')
-    expect(texto).toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
-    expect(texto).toContain('Tener autorización para entrar al programa de caja.')
+    expect(texto).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
+    expect(texto).not.toContain('Tener autorización para entrar al programa de caja.')
   })
 
-  it('no suma los de las guías de más adelante: un paso anterior puede producirlos', async () => {
+  it('tampoco suma los de ninguna otra guía que reutilice, en ningún paso', async () => {
     await sembrarCasoComputador()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-computador')
     await tocar(await esperarControl('Ver lo que necesitas'))
@@ -426,21 +430,42 @@ describe('lo que hace falta antes de una guía que reutiliza otras (fase 2)', ()
     const texto = textoPantalla()
     expect(texto).toContain('Cuenta de la persona creada.')
     expect(texto).toContain('Impresora que usará la persona identificada.')
-    // El paso 1 es otra guía: lo que ella pide hace falta antes de empezar.
-    expect(texto).toContain('Correo de la persona y contraseña vigente.')
-    // Lo deja hecho el paso 1 de esta misma guía: no es un requisito previo.
+    expect(texto).not.toContain('Correo de la persona y contraseña vigente.')
     expect(texto).not.toContain('Correo de prueba configurado.')
     expect(texto).not.toContain('Impresora de prueba encendida.')
+  })
+
+  it('sin requisitos propios no hay "Antes de empezar", aunque la guía del paso 1 pida cosas', async () => {
+    await sembrarAccesoAlPrograma()
+    await sembrarGuia({
+      id: 'guia-cierre',
+      titulo: 'Cerrar la caja de prueba al final del día',
+      pasos: [
+        contenedor('cie-p1', 'Ingresar al programa de caja', 'acceso-programa', 'Acceder al programa de caja por escritorio remoto'),
+        pasoPrueba('cie-p2', 'Cerrar la caja', ['Selecciona Cierre de caja']),
+      ],
+      procedimiento: { descripcion: 'Usa esta guía cuando termine el turno de la caja de prueba.' },
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-cierre')
+    await esperar(() => textoPantalla().includes('Cuando termine el turno de la caja de prueba.'), 'la orientación')
+    // Sin nada que preparar, la orientación lleva directo a la primera acción.
+    expect(control('Ver lo que necesitas')).toBeNull()
+    await tocar(await esperarControl('Empezar'))
+    await esperar(() => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'), 'la primera acción')
+    const texto = textoPantalla()
+    expect(texto).not.toContain('Antes de empezar')
+    expect(texto).not.toContain('Tener autorización para entrar al programa de caja.')
+    expect(texto).not.toContain('Ten esto listo')
   })
 
   it('los detalles de la guía enseñan la misma lista: una sola verdad para "qué hace falta"', async () => {
     await sembrarCasoAlimentacion()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion/detalles')
     await esperar(
-      () => textoPantalla().includes('Estar conectado a la red desde la que se permite el escritorio remoto.'),
-      'los requisitos de la guía del paso 1 en los detalles',
+      () => textoPantalla().includes('Autorización para crear al trabajador.'),
+      'los requisitos de la guía en los detalles',
     )
-    expect(textoPantalla()).toContain('Autorización para crear al trabajador.')
+    expect(textoPantalla()).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
   })
 
   it('sin conexión: orientar y preparar salen de lo guardado en el dispositivo, sin pedir nada a la red', async () => {
@@ -453,7 +478,7 @@ describe('lo que hace falta antes de una guía que reutiliza otras (fase 2)', ()
       await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
       await tocar(await esperarControl('Ver lo que necesitas'))
       await esperar(
-        () => textoPantalla().includes('Tener autorización para entrar al programa de caja.'),
+        () => textoPantalla().includes('Nombre completo, cédula y celular de la persona.'),
         'los requisitos, leídos de la base local',
       )
       await tocar(await esperarControl('Todo listo, empezar'))
@@ -484,7 +509,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     // El título de la parte, en voz baja, y el "Dónde" del paso que la reutiliza.
     expect(texto).toContain('Conectarse al servidor por escritorio remoto')
     expect(texto).toContain('Escritorio remoto · programa de caja')
-    // Sus requisitos ya se pidieron antes de empezar: no vuelven.
+    // Sus requisitos no se piden: ni antes de empezar ni junto a la acción.
     expect(texto).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
     expect(texto).not.toContain('Ten esto listo')
     sinArquitectura()
@@ -726,8 +751,10 @@ describe('lo que el paso traía no se pierde en el flujo (fase 3)', () => {
       ],
     })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-registro')
-    await empezarGuia()
+    // Sin orientación ni requisitos propios abre en su primera acción: lo que
+    // pide la guía reutilizada no crea un "Antes de empezar".
     await esperar(() => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'), 'la primera acción reutilizada')
+    expect(textoPantalla()).not.toContain('Antes de empezar')
     // El riesgo del paso, antes de actuar.
     expect(textoPantalla()).toContain('Si hay ventas abiertas en la caja de prueba, entrar las cierra.')
     // Su "para qué", a un toque, como el de cualquier paso.

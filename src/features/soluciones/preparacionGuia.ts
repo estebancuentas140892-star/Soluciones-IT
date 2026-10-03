@@ -71,40 +71,29 @@ function claveRequisito(texto: string): string {
 }
 
 /**
- * La guía que se ejecuta ANTES QUE NADA dentro de esta: la del paso 1,
- * cuando el paso 1 reutiliza otra guía. Es la única cuyos requisitos se
- * pueden sumar sin riesgo (ver `requisitosEfectivos`).
- */
-export function guiaDelPrimerPaso(procedimiento: Pick<Procedimiento, 'pasos'>): string | null {
-  return procedimiento.pasos[0]?.subArticuloId || null
-}
-
-/**
- * LO QUE HAY QUE TENER ANTES DE EMPEZAR LA GUÍA ENTERA, sin repetir.
+ * LO QUE HAY QUE TENER ANTES DE EMPEZAR: los requisitos que escribió el
+ * autor de ESTA guía, sin repetidos ni líneas vacías.
  *
- * Los de la propia guía mandan: el autor de una guía que reutiliza otras
- * escribe lo que hace falta para el procedimiento completo (así está
- * escrita "Configurar el computador para un usuario nuevo"). A ellos se
- * suman los de la guía que se ejecuta en el PASO 1, porque nada de este
- * procedimiento corre antes que ella: lo que pide no puede haberlo
- * producido un paso anterior, así que de verdad hay que tenerlo antes.
- *
- * Los de las guías que se reutilizan MÁS ADELANTE no se suman solos, a
- * propósito: un paso anterior puede producirlos ("Outlook configurado"
- * lo deja hecho el paso que configura Outlook) y sumarlos pediría como
- * requisito lo que el propio procedimiento hace. Eso no se puede decidir
- * sin entender el texto, así que lo decide el autor: el editor le enseña
- * esos requisitos para que añada a los suyos los que apliquen (tarea 289,
- * fase 4).
+ * REGLA DEFINITIVA (tarea 289, criterio adicional de la fase 4): un
+ * requisito de una guía reutilizada NO se convierte automáticamente en
+ * requisito de la guía que la reutiliza, tampoco el de la guía del paso 1.
+ * Que algo tenga que estar listo antes de empezar depende del contexto:
+ * puede que Soluciones IT ya lo dé donde se necesita (una credencial, una
+ * IP), que sea una acción del propio procedimiento, que sea lo básico que el
+ * equipo de Sistemas ya tiene (acceso al computador, Windows, la contraseña
+ * de Soluciones IT) o que solo aplique a la otra guía en otros casos (tener
+ * Internet, en una guía que diagnostica que no hay Internet). Eso lo decide
+ * el autor de esta guía, con lo que piden las otras delante en el editor
+ * (`requisitosPorRevisar`), y lo que decide queda escrito aquí: una sola
+ * verdad. Hasta este criterio, los de la guía del paso 1 se sumaban solos.
  *
  * Se quitan los repetidos (mismo texto salvo mayúsculas, tildes, espacios
- * y punto final), conservando la primera forma y el orden: primero los de
- * la guía, después los del paso 1.
+ * y punto final), conservando la primera forma y el orden.
  */
-export function requisitosEfectivos(propios: string[], delPrimerPaso: string[] | null): string[] {
+export function requisitosEfectivos(propios: string[]): string[] {
   const vistos = new Set<string>()
   const resultado: string[] = []
-  for (const requisito of [...propios, ...(delPrimerPaso ?? [])]) {
+  for (const requisito of propios) {
     const texto = requisito.trim()
     const clave = claveRequisito(texto)
     if (clave === '' || vistos.has(clave)) continue
@@ -114,39 +103,34 @@ export function requisitosEfectivos(propios: string[], delPrimerPaso: string[] |
   return resultado
 }
 
-/** Lo que pide una guía que el procedimiento reutiliza y que no se suma solo. */
+/** Lo que pide una guía que el procedimiento reutiliza: referencia para el autor, nunca un requisito solo. */
 export interface RequisitosPorRevisar {
   /** Paso (1, 2, 3...) que la reutiliza. */
   pasoNumero: number
   guiaId: string
   guiaTitulo: string
-  /** Sus requisitos que la guía todavía no pide, sin repetidos. */
+  /** Sus requisitos que esta guía todavía no pide, sin repetidos. */
   requisitos: string[]
 }
 
 /**
- * LO QUE PIDEN LAS GUÍAS QUE NO SE SUMAN SOLAS (tarea 289, fase 4): las que
- * el procedimiento reutiliza del paso 2 en adelante y las que exige una
- * tarea. `requisitosEfectivos` no las suma porque un paso anterior puede
- * producir lo que piden, y eso no se decide sin entender el texto: lo
- * decide el autor, en el editor, con esta lista delante.
+ * LO QUE PIDEN LAS GUÍAS QUE ESTA REUTILIZA, COMO REFERENCIA PARA EL AUTOR
+ * (tarea 289): todas, la del paso 1 incluida, y las que exige una tarea.
+ * Nada de esto pasa solo a "Antes de empezar" (`requisitosEfectivos`): el
+ * editor lo enseña plegado y con el criterio para decidir, y solo lo que el
+ * autor elige, de uno en uno, se añade a los requisitos de esta guía.
  *
- * De cada guía (una sola vez, en el orden en que se usa) quedan solo los
- * requisitos que este procedimiento todavía no pide, ni por sí mismo ni
- * por la guía del paso 1. Una guía que no está en el dispositivo
+ * De cada guía (una sola vez, en el orden en que se usa) quedan los
+ * requisitos que esta guía todavía no pide, y cada uno una sola vez aunque
+ * lo pidan dos guías. Una guía que no está en el dispositivo
  * (`requisitosDe` devuelve null) o que no pide nada nuevo no aparece.
  */
 export function requisitosPorRevisar(
   procedimiento: Pick<Procedimiento, 'pasos' | 'requisitos'>,
   requisitosDe: (guiaId: string) => { titulo: string; requisitos: string[] } | null,
 ): RequisitosPorRevisar[] {
-  const primerPaso = guiaDelPrimerPaso(procedimiento)
-  const yaPedidos = new Set(
-    requisitosEfectivos(procedimiento.requisitos, primerPaso ? (requisitosDe(primerPaso)?.requisitos ?? null) : null).map(
-      claveRequisito,
-    ),
-  )
-  const vistas = new Set<string>(primerPaso ? [primerPaso] : [])
+  const yaVistos = new Set(requisitosEfectivos(procedimiento.requisitos).map(claveRequisito))
+  const guiasVistas = new Set<string>()
   const resultado: RequisitosPorRevisar[] = []
   procedimiento.pasos.forEach((paso, indice) => {
     const deTareas = paso.bloques
@@ -154,15 +138,13 @@ export function requisitosPorRevisar(
       .map((b) => b.guiaArticuloId as string)
     const guias = [...(paso.subArticuloId ? [paso.subArticuloId] : []), ...deTareas]
     for (const guiaId of guias) {
-      if (vistas.has(guiaId)) continue
-      vistas.add(guiaId)
+      if (guiasVistas.has(guiaId)) continue
+      guiasVistas.add(guiaId)
       const guia = requisitosDe(guiaId)
       if (!guia) continue
-      const nuevos = requisitosEfectivos(
-        [],
-        guia.requisitos.filter((r) => !yaPedidos.has(claveRequisito(r))),
-      )
+      const nuevos = requisitosEfectivos(guia.requisitos).filter((r) => !yaVistos.has(claveRequisito(r)))
       if (nuevos.length === 0) continue
+      for (const r of nuevos) yaVistos.add(claveRequisito(r))
       resultado.push({ pasoNumero: indice + 1, guiaId, guiaTitulo: guia.titulo, requisitos: nuevos })
     }
   })

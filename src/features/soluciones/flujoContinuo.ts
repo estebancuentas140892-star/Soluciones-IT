@@ -21,8 +21,9 @@ import type { BloquePaso, PasoAdjunto, VinculoProtegido } from '../../lib/db'
 //     su contador "1/7" en la cabecera, su ruta en escritorio;
 //   - sin tarjeta, sin cabecera propia y sin numeración propia: cada
 //     acción dice su título en voz baja, como cualquier otra;
-//   - sin requisitos a mitad del recorrido: los que hacen falta se piden
-//     antes de empezar (`requisitosEfectivos`, fase 2);
+//   - sin requisitos a mitad del recorrido: lo que hace falta se pide
+//     antes de empezar, y es lo que escribió el autor de la guía que se
+//     abrió; lo que pide la reutilizada no pasa solo (`requisitosEfectivos`);
 //   - el "Dónde" y el "Debes ver" del paso acompañan a la primera y a la
 //     última acción reutilizada cuando estas no traen los suyos;
 //   - "Anterior" desde la primera acción vuelve al paso anterior, y

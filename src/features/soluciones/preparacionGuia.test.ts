@@ -3,7 +3,6 @@ import type { Procedimiento } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import {
   cuandoUsarParaMostrar,
-  guiaDelPrimerPaso,
   orientacionDe,
   pantallasDePreparacion,
   requisitosEfectivos,
@@ -65,52 +64,25 @@ describe('orientacionDe', () => {
   })
 })
 
-describe('guiaDelPrimerPaso', () => {
-  it('es la guía que reutiliza el paso 1, o ninguna', () => {
-    expect(guiaDelPrimerPaso(procedimiento({ pasos: [{ id: 'p1', titulo: 'Entrar', subArticuloId: 'acceso' }] }))).toBe(
-      'acceso',
-    )
-    expect(guiaDelPrimerPaso(procedimiento({}))).toBeNull()
-    // La de un paso posterior no cuenta: algo se hace antes que ella.
-    expect(
-      guiaDelPrimerPaso(
-        procedimiento({
-          pasos: [
-            { id: 'p1', titulo: 'Abrir' },
-            { id: 'p2', titulo: 'Firma', subArticuloId: 'firma' },
-          ],
-        }),
-      ),
-    ).toBeNull()
-  })
-})
-
 describe('requisitosEfectivos', () => {
-  it('primero los de la guía, después los de la guía del paso 1', () => {
-    expect(requisitosEfectivos(['Autorización.', 'Cédula.'], ['Red interna.', 'Acceso al programa.'])).toEqual([
-      'Autorización.',
-      'Cédula.',
-      'Red interna.',
-      'Acceso al programa.',
-    ])
+  it('son los que escribió el autor de la guía, en su orden', () => {
+    expect(requisitosEfectivos(['Uno.', 'Dos.'])).toEqual(['Uno.', 'Dos.'])
+    expect(requisitosEfectivos([])).toEqual([])
   })
 
   it('no repite: mismo texto salvo mayúsculas, tildes, espacios o punto final', () => {
     expect(
-      requisitosEfectivos(
-        ['Acceso autorizado al programa de caja.', 'Cédula de la persona'],
-        ['acceso  autorizado al programa de caja', 'CEDULA DE LA PERSONA.', 'Red interna.'],
-      ),
-    ).toEqual(['Acceso autorizado al programa de caja.', 'Cédula de la persona', 'Red interna.'])
+      requisitosEfectivos([
+        'Acceso autorizado al programa de caja.',
+        'Cédula de la persona',
+        'acceso  autorizado al programa de caja',
+        'CEDULA DE LA PERSONA.',
+      ]),
+    ).toEqual(['Acceso autorizado al programa de caja.', 'Cédula de la persona'])
   })
 
-  it('tampoco repite dentro de una misma lista, y descarta los vacíos', () => {
-    expect(requisitosEfectivos(['Red.', ' red ', '  '], null)).toEqual(['Red.'])
-  })
-
-  it('sin guía en el paso 1, son los de la guía tal cual', () => {
-    expect(requisitosEfectivos(['Uno.', 'Dos.'], null)).toEqual(['Uno.', 'Dos.'])
-    expect(requisitosEfectivos([], null)).toEqual([])
+  it('descarta las líneas vacías', () => {
+    expect(requisitosEfectivos(['Red.', ' red ', '  '])).toEqual(['Red.'])
   })
 })
 
@@ -128,8 +100,8 @@ describe('pantallasDePreparacion', () => {
   })
 })
 
-// Tarea 289, fase 4: lo que piden las guías que NO se suman solas, para que
-// el autor lo decida en el editor.
+// Tarea 289, fase 4: lo que piden las guías reutilizadas, que nunca se suma
+// solo, como referencia para que el autor decida en el editor.
 describe('requisitosPorRevisar', () => {
   const guias: Record<string, { titulo: string; requisitos: string[] }> = {
     'g-acceso': { titulo: 'Acceder al programa', requisitos: ['Red interna.', 'Autorización para el programa.'] },
@@ -146,9 +118,16 @@ describe('requisitosPorRevisar', () => {
     })
   }
 
-  it('ofrece las de los pasos 2 en adelante, sin lo que ya se pide (la guía o el paso 1)', () => {
+  it('enseña las de todos los pasos, la del paso 1 incluida, cada requisito una sola vez', () => {
     const resultado = requisitosPorRevisar(conGuias(['g-acceso', 'g-correo', null, 'g-firma']), requisitosDe)
     expect(resultado).toEqual([
+      {
+        pasoNumero: 1,
+        guiaId: 'g-acceso',
+        guiaTitulo: 'Acceder al programa',
+        requisitos: ['Red interna.', 'Autorización para el programa.'],
+      },
+      // "red interna" ya salió con la guía del paso 1: no se repite.
       { pasoNumero: 2, guiaId: 'g-correo', guiaTitulo: 'Configurar el correo', requisitos: ['Correo de la persona.'] },
       { pasoNumero: 4, guiaId: 'g-firma', guiaTitulo: 'Configurar la firma', requisitos: ['Correo configurado.'] },
     ])

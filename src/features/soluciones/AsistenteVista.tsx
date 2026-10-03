@@ -80,9 +80,8 @@ import { HojaFalla } from './HojaFalla'
 import { PantallaPreparacion } from './PantallaPreparacion'
 import { PasosEnLectura } from './PasosEnLectura'
 import { ROTULO_CONTINGENCIA, type EnFlujo, type IntegracionEnFlujo } from './flujoContinuo'
-import { orientacionDe, pantallasDePreparacion } from './preparacionGuia'
+import { orientacionDe, pantallasDePreparacion, requisitosEfectivos } from './preparacionGuia'
 import { subirElContenedor } from './subirElContenedor'
-import { useRequisitosEfectivos } from './useRequisitosEfectivos'
 import { destinoAlSaltar } from './salidasFalla'
 import { LineaDeEstado, SegmentosDePasos, type EstadoLinea } from './EstadoEjecucion'
 import {
@@ -231,7 +230,12 @@ export function AsistenteVista({
     () => (conPreparacion && preparacion === 'completa' ? orientacionDe(procedimiento) : null),
     [conPreparacion, preparacion, procedimiento],
   )
-  const requisitosPrevios = useRequisitosEfectivos(conPreparacion ? procedimiento : null)
+  // Los que escribió el autor de esta guía: lo que piden las que reutiliza
+  // no pasa solo a "Antes de empezar" (regla definitiva de la tarea 289).
+  const requisitosPrevios = useMemo(
+    () => (conPreparacion ? requisitosEfectivos(requisitos) : []),
+    [conPreparacion, requisitos],
+  )
   // Mover la VISTA a un paso: consultar, revisar, volver atrás. No toca
   // ni el avance ni el paso de trabajo.
   function verPaso(indice: number | null, porElFinal = false) {
@@ -378,10 +382,9 @@ export function AsistenteVista({
   }
 
   // ORIENTAR Y PREPARAR ANTES DE LA PRIMERA ACCIÓN (tarea 289, fase 2). Se
-  // espera a los requisitos de la guía del paso 1: decidir qué pantalla
-  // enseñar con la mitad de los datos haría saltar de una a otra.
+  // espera al artículo (su título es "qué vas a hacer").
   if (pasoPreparacion !== null) {
-    if (requisitosPrevios === undefined || articulo === undefined) {
+    if (articulo === undefined) {
       return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
     }
     const pantallas = pantallasDePreparacion(orientacion, requisitosPrevios)
@@ -717,8 +720,9 @@ export function AsistenteVista({
   // su propia pantalla, antes de empezar, así que aquí no vuelven: los
   // requisitos no se mezclan con la primera acción ni reaparecen después.
   const sinAvance = !hayAvanceEnEjecucion(progreso)
-  // Y lo reutilizado dentro del flujo tampoco los enseña: los que hacían
-  // falta ya se pidieron antes de empezar (tarea 289).
+  // Y lo reutilizado dentro del flujo tampoco los enseña: lo que hace falta
+  // antes de empezar lo decide y lo escribe el autor de la guía que se abrió
+  // (tarea 289, regla definitiva del criterio adicional de la fase 4).
   const requisitosVisibles = !conPreparacion && !integrada && indiceActual === 0 && sinAvance ? requisitos : []
   // En la vista de paso entero, el "Debes ver" de un paso que se hace con lo
   // que reutiliza va tras esas acciones, no antes (tarea 289).

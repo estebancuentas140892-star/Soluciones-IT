@@ -188,30 +188,63 @@ describe('el editor separa requisito, acción y verificación (tarea 289)', () =
     )
   })
 
-  it('ofrece lo que piden las guías de más adelante, y añadirlo es un toque del autor', async () => {
+  // CRITERIO ADICIONAL DE LA FASE 4. Regla definitiva: un requisito de una
+  // guía reutilizada NO se convierte automáticamente en requisito de la guía
+  // padre. El editor lo enseña solo como referencia: plegado, sin contar en
+  // la completitud, con el criterio para decidir antes que la lista, y nada
+  // se añade si el autor no lo elige, de uno en uno.
+  it('lo que piden las guías reutilizadas es solo referencia: plegado, con el criterio delante, y nada pasa solo', async () => {
     await sembrarMezclas()
     await montar(RUTAS, RUTA)
     await tocar(await esperarControl(/^Pasos/))
-    await esperar(() => textoPantalla().includes('Lo que piden las guías que este procedimiento reutiliza'), 'la lista')
-    // La del paso 1 se pide sola: no se ofrece.
-    expect(textoPantalla()).toContain('Lo que pide «Entrar al programa de prueba» (paso 1) se pide solo antes de empezar.')
-    expect(textoPantalla()).toContain('«Configurar el correo de prueba» (paso 2)')
-    // Lo que ya se pide (por el paso 1) no se repite.
-    expect(control('Añadir a los requisitos: Red de prueba disponible.')).toBeNull()
+    const referencia = await esperarControl('Lo que piden las guías que reutiliza (2), solo como referencia')
+    const campoRequisitos = () =>
+      Array.from(document.body.querySelectorAll('textarea')).find((t) =>
+        t.value.includes('Acceso autorizado mediante el procedimiento relacionado'),
+      )
 
-    await tocar(await esperarControl('Añadir a los requisitos: Correo de prueba de la persona.'))
-    const requisitos = await esperar(
-      () =>
-        Array.from(document.body.querySelectorAll('textarea')).find((t) =>
-          t.value.includes('Correo de prueba de la persona.'),
-        ),
-      'el requisito añadido',
-    )
-    expect(requisitos.value.split('\n')).toEqual([
+    // Plegado: ni la lista ni un solo "Añadir" a la vista.
+    expect(referencia.getAttribute('aria-expanded')).toBe('false')
+    expect(textoPantalla()).not.toContain('«Entrar al programa de prueba» (paso 1)')
+    expect(control(/^Añadir a los requisitos/)).toBeNull()
+    // Nada se suma solo, tampoco lo de la guía del paso 1, ni se presenta como algo que hacer.
+    expect(campoRequisitos()?.value.split('\n')).toEqual(['Acceso autorizado mediante el procedimiento relacionado'])
+    expect(textoPantalla()).not.toContain('se pide solo antes de empezar')
+    expect(textoPantalla()).not.toContain('añade las que hagan falta')
+
+    await tocar(referencia)
+    expect(referencia.getAttribute('aria-expanded')).toBe('true')
+    const abierto = textoPantalla()
+    // Primero el criterio, después la lista.
+    expect(abierto).toContain('Ninguno pasa solo a «Antes de empezar». Añade uno solo si hay que tenerlo listo antes')
+    expect(abierto).toContain('Déjalo fuera si:')
+    expect(abierto).toContain('Soluciones IT ya lo da donde se usa, como una credencial o una IP.')
+    expect(abierto).toContain('Es algo que se hace durante el procedimiento: es un paso.')
+    expect(abierto).toContain('Lo tiene o lo sabe cualquiera del equipo de Sistemas')
+    expect(abierto).toContain('Solo aplica a esa guía en otros casos')
+    expect(abierto).toContain('Sí suele hacer falta lo que solo la persona o el caso pueden dar')
+    expect(abierto.indexOf('Déjalo fuera si:')).toBeLessThan(abierto.indexOf('«Entrar al programa de prueba» (paso 1)'))
+    // Todas las guías, la del paso 1 incluida, y cada requisito una sola vez.
+    expect(abierto).toContain('«Entrar al programa de prueba» (paso 1)')
+    expect(abierto).toContain('«Configurar el correo de prueba» (paso 2)')
+    expect(
+      Array.from(document.body.querySelectorAll('button')).filter(
+        (b) => b.getAttribute('aria-label') === 'Añadir a los requisitos de esta guía: Red de prueba disponible.',
+      ),
+    ).toHaveLength(1)
+    // Abrirlo tampoco añade nada.
+    expect(campoRequisitos()?.value.split('\n')).toEqual(['Acceso autorizado mediante el procedimiento relacionado'])
+
+    // Solo lo que el autor elige, y solo eso.
+    await tocar(await esperarControl('Añadir a los requisitos de esta guía: Correo de prueba de la persona.'))
+    await esperar(() => campoRequisitos()?.value.includes('Correo de prueba de la persona.'), 'el requisito elegido')
+    expect(campoRequisitos()?.value.split('\n')).toEqual([
       'Acceso autorizado mediante el procedimiento relacionado',
       'Correo de prueba de la persona.',
     ])
-    await esperar(() => !textoPantalla().includes('«Configurar el correo de prueba» (paso 2)'), 'ya no queda nada que ofrecer')
+    await esperar(() => !textoPantalla().includes('«Configurar el correo de prueba» (paso 2)'), 'ya no se ofrece')
+    expect(control('Lo que piden las guías que reutiliza (1), solo como referencia')).not.toBeNull()
+    expect(control('Añadir a los requisitos de esta guía: Red de prueba disponible.')).not.toBeNull()
   })
 
   it('el "cuándo usar" que dice lo que hace la guía se señala en General', async () => {
