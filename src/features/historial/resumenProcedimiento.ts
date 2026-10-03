@@ -1,5 +1,6 @@
 import type { PasoAdjunto, PasoProcedimiento, Procedimiento, TipoBloque } from '../../lib/db'
 import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
+import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
 
 // Convierte el cambio de un procedimiento (guardado en el historial
 // como el JSON de antes y despues) en un resumen legible: que cambio,
@@ -189,10 +190,11 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
   agregarLineasAdjuntos(cambios, imagenesDe(previo), imagenesDe(actual), etiqueta)
 
   // El vinculo protegido (grupo P2) puede apuntar a una credencial o a
-  // un campo protegido de un equipo; se compara por id, no por
+  // un campo protegido de un equipo, o pedir la credencial del equipo con
+  // el que se trabaja (tarea 290); se compara por lo que pide, no por
   // identidad de objeto, y el texto no distingue el tipo (para el
-  // historial, ambos son "informacion protegida").
-  if ((previo.vinculoProtegido?.id ?? null) !== (actual.vinculoProtegido?.id ?? null)) {
+  // historial, todos son "informacion protegida").
+  if (!mismoVinculoProtegido(previo.vinculoProtegido, actual.vinculoProtegido)) {
     if (!previo.vinculoProtegido) cambios.push(`Se vinculó información protegida al ${etiqueta}.`)
     else if (!actual.vinculoProtegido) cambios.push(`Se quitó la información protegida del ${etiqueta}.`)
     else cambios.push(`Se cambió la información protegida del ${etiqueta}.`)

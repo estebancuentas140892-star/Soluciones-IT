@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
+import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
 import { normalizarTexto } from './iconosSoluciones'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
@@ -513,7 +514,7 @@ export function ModoFoco({
   // La credencial del paso que reutiliza esta guía, cuando no es la misma
   // que pide esta acción: la necesita alguien que está a punto de empezar.
   const credencialPrestada =
-    prestados?.vinculoProtegido && prestados.vinculoProtegido.id !== vinculoProtegido?.id
+    prestados?.vinculoProtegido && !mismoVinculoProtegido(prestados.vinculoProtegido, vinculoProtegido)
       ? prestados.vinculoProtegido
       : null
   // QUÉ HACER, DÓNDE Y QUÉ DEBO VER DESPUÉS (encargo del 2026-09-22,

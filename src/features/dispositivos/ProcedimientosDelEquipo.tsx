@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import type { Articulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { BookOpen, CaretRight } from '../../components/iconos'
+import { rutaGuiaConEquipo } from '../soluciones/contextoEjecucion'
 import { claseTonoDeTipo } from '../soluciones/iconosSoluciones'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { procedimientosDeCategoria, procedimientosDeDispositivo } from './procedimientosDeDispositivo'
@@ -53,7 +54,7 @@ export function ProcedimientosDelEquipo({
   return (
     <>
       {especificos.map((articulo) => (
-        <FilaProcedimiento key={articulo.id} articulo={articulo} />
+        <FilaProcedimiento key={articulo.id} articulo={articulo} dispositivoId={dispositivoId} />
       ))}
 
       {deCategoria.length > 0 && (
@@ -63,7 +64,7 @@ export function ProcedimientosDelEquipo({
             {categoriaNombre ? ` ${categoriaNombre}` : ''}
           </p>
           {visiblesCategoria.map((articulo) => (
-            <FilaProcedimiento key={articulo.id} articulo={articulo} />
+            <FilaProcedimiento key={articulo.id} articulo={articulo} dispositivoId={dispositivoId} />
           ))}
           {deCategoria.length > visiblesCategoria.length && (
             <Link
@@ -84,10 +85,13 @@ export function ProcedimientosDelEquipo({
 // 2026-10-01): el título a 15 px y HASTA EN DOS LÍNEAS (cortado en una se
 // quedaba en "Conectar la impresora compartida de ej..."), y el icono con
 // el tinte de su tipo, que es lo que la segunda línea nombra.
-function FilaProcedimiento({ articulo }: { articulo: Articulo }) {
+//
+// La guía se abre CON ESTE EQUIPO (tarea 290): si una acción pide la
+// credencial del equipo actual, es la de este.
+function FilaProcedimiento({ articulo, dispositivoId }: { articulo: Articulo; dispositivoId: string }) {
   return (
     <Link
-      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+      to={rutaGuiaConEquipo(`/soluciones/${articulo.categoriaId}/${articulo.id}`, dispositivoId)}
       className="flex min-h-[54px] items-center gap-3 rounded-lg px-2 py-1.5 text-noct-text transition-colors hover:bg-noct-text/[.05]"
     >
       <span

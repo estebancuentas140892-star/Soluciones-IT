@@ -268,8 +268,10 @@ describe('normalizarProcedimiento', () => {
   })
 
   it('descarta un vínculo protegido con tipo o id inválido', () => {
+    // Hasta la tarea 290 el ejemplo de tipo inválido era 'equipo', que hoy
+    // es el vínculo de la credencial del equipo (prueba siguiente).
     const sinTipo = normalizarProcedimiento({
-      pasos: [pasoCompleto({ vinculoProtegido: { tipo: 'equipo', id: 'x', titulo: 'Y' } as never })],
+      pasos: [pasoCompleto({ vinculoProtegido: { tipo: 'dispositivo', id: 'x', titulo: 'Y' } as never })],
     })
     expect(sinTipo?.pasos[0].vinculoProtegido).toBeNull()
 
@@ -277,6 +279,43 @@ describe('normalizarProcedimiento', () => {
       pasos: [pasoCompleto({ vinculoProtegido: { tipo: 'campo', id: 42, titulo: 'Y' } as never })],
     })
     expect(sinId?.pasos[0].vinculoProtegido).toBeNull()
+  })
+
+  // TAREA 290: el vínculo contextual convive con el fijo. No guarda id y
+  // su título sale siempre de la finalidad: lo que traiga se ignora.
+  it('conserva el vínculo de la credencial del equipo, con la finalidad recortada y su título', () => {
+    const conFinalidad = normalizarProcedimiento({
+      pasos: [
+        pasoCompleto({
+          vinculoProtegido: { tipo: 'equipo', finalidad: '  Escritorio remoto ', titulo: 'Otro', id: 'x' } as never,
+        }),
+      ],
+    })
+    expect(conFinalidad?.pasos[0].vinculoProtegido).toEqual({
+      tipo: 'equipo',
+      finalidad: 'Escritorio remoto',
+      titulo: 'Credencial del equipo · Escritorio remoto',
+    })
+
+    const sinFinalidad = normalizarProcedimiento({
+      pasos: [pasoCompleto({ vinculoProtegido: { tipo: 'equipo', finalidad: 7 } as never })],
+    })
+    expect(sinFinalidad?.pasos[0].vinculoProtegido).toEqual({ tipo: 'equipo', finalidad: '', titulo: 'Credencial del equipo' })
+
+    // En una tarea, igual que en el paso.
+    const enTarea = normalizarProcedimiento({
+      pasos: [
+        {
+          titulo: 'Entrar al panel',
+          bloques: [{ id: 't1', tipo: 'tarea', texto: 'Ingresa con el administrador', vinculoProtegido: { tipo: 'equipo' } }],
+        },
+      ],
+    })
+    expect(enTarea?.pasos[0].bloques[0].vinculoProtegido).toEqual({
+      tipo: 'equipo',
+      finalidad: '',
+      titulo: 'Credencial del equipo',
+    })
   })
 
   it('migra las viejas instrucciones a bloques de tarea, descartando las vacías', () => {
@@ -905,6 +944,18 @@ describe('prepararProcedimientoParaGuardar', () => {
     const resultado = preparar([paso])
     expect(resultado?.pasos).toHaveLength(1)
     expect(resultado?.pasos[0].vinculoProtegido).toEqual({ tipo: 'credencial', id: 'cred-1', titulo: 'SQL Server' })
+  })
+
+  it('al guardar, el vínculo del equipo conserva su finalidad recortada y el título que le corresponde', () => {
+    const paso = crearPaso()
+    paso.vinculoProtegido = { tipo: 'equipo', finalidad: '  ICG Manager ', titulo: 'Título viejo' }
+    const resultado = preparar([paso])
+    expect(resultado?.pasos).toHaveLength(1)
+    expect(resultado?.pasos[0].vinculoProtegido).toEqual({
+      tipo: 'equipo',
+      finalidad: 'ICG Manager',
+      titulo: 'Credencial del equipo · ICG Manager',
+    })
   })
 
   it('conserva un paso que solo tiene subprocedimiento y limpia su título de referencia', () => {

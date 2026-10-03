@@ -1,4 +1,7 @@
 import type { Credencial, Dispositivo, TipoSecreto } from '../../lib/db'
+import { claveDeFinalidad } from '../../lib/vinculoProtegido'
+
+export { claveDeFinalidad }
 
 // LA CREDENCIAL DEL EQUIPO CON EL QUE SE TRABAJA (tarea 290).
 //
@@ -59,16 +62,6 @@ export type ResolucionCredencialDelEquipo =
   | { estado: 'varias'; cuantas: number }
   /** Exactamente una. */
   | { estado: 'resuelta'; credencial: Credencial }
-
-/** La forma de una finalidad con la que se compara: sin mayúsculas, tildes ni espacios de más. */
-export function claveDeFinalidad(finalidad: string): string {
-  return finalidad
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-}
 
 /** ¿Es un identificador de equipo utilizable? Un texto con algo más que espacios. */
 export function esIdDeEquipo(valor: unknown): valor is string {

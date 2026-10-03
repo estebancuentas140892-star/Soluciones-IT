@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo } from 'react'
-import { Navigate, useLocation, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo } from 'react'
+import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { padreDe } from '../../lib/navegacion'
 import { estadoDeRegreso } from '../../lib/origenNavegacion'
@@ -25,8 +25,28 @@ export function AsistentePage() {
   // A dónde lleva "Salir de la guía" al terminar: el mismo sitio que la X
   // de la cabecera, que deshace el último salto si lo hay (M-R2) y si no
   // sube al padre declarado.
-  const { pathname } = useLocation()
+  const { pathname, state } = useLocation()
   const origen = useOrigen()
+
+  // EL EQUIPO CON EL QUE SE TRABAJA (tarea 290). Llega en la dirección
+  // (`?equipo=`) desde la ficha del equipo o desde Resolver, y el que elige
+  // el técnico dentro de la guía se queda en ella: recargar no lo pierde.
+  // Reemplaza la entrada (no apila otra) y conserva el origen del salto.
+  const [parametros, setParametros] = useSearchParams()
+  const equipoInicial = parametros.get('equipo')
+  const recordarEquipo = useCallback(
+    (equipoId: string) => {
+      setParametros(
+        (actuales) => {
+          const siguientes = new URLSearchParams(actuales)
+          siguientes.set('equipo', equipoId)
+          return siguientes
+        },
+        { replace: true, state },
+      )
+    },
+    [setParametros, state],
+  )
   const salida = {
     to: origen?.to ?? padreDe(pathname)?.to ?? '/soluciones',
     estado: estadoDeRegreso(origen),
@@ -100,7 +120,7 @@ export function AsistentePage() {
         {/* La ejecucion en curso: su fila de progreso es la raiz donde
             se guarda tambien el avance de sus guias vinculadas (tarea 2
             del encargo). */}
-        <ProveedorEjecucion raizId={articuloId}>
+        <ProveedorEjecucion raizId={articuloId} equipoInicial={equipoInicial} onEquipoElegido={recordarEquipo}>
           <AsistenteVista
             articuloId={articuloId}
             procedimiento={procedimiento}

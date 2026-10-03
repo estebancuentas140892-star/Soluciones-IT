@@ -14,6 +14,7 @@ import type {
   VinculoProtegido,
 } from './db'
 import { texto } from './texto'
+import { vinculoDelEquipo } from './vinculoProtegido'
 
 // Logica pura de los procedimientos paso a paso, separada de los
 // componentes para poder probarla sin navegador. El dato viaja como
@@ -254,9 +255,15 @@ const TIPOS_VINCULO_PROTEGIDO: TipoVinculoProtegido[] = ['credencial', 'campo']
 // `instrucciones` a bloques e `imagen` a adjuntos. Comparte logica
 // entre paso y bloque porque ambos guardan el vinculo con el mismo par
 // de campos.
+//
+// Desde la tarea 290 tambien el vinculo DEL EQUIPO: `{ tipo: 'equipo',
+// finalidad }`, sin id, que se resuelve en la ejecucion. Su titulo se
+// deriva siempre de la finalidad (`vinculoDelEquipo`): una sola verdad.
+// Cualquier otra forma se sigue descartando.
 function normalizarVinculoProtegido(origen: Record<string, unknown>): VinculoProtegido | null {
   if (origen.vinculoProtegido && typeof origen.vinculoProtegido === 'object') {
     const v = origen.vinculoProtegido as Record<string, unknown>
+    if (v.tipo === 'equipo') return vinculoDelEquipo(texto(v.finalidad))
     const tipo = (TIPOS_VINCULO_PROTEGIDO as string[]).includes(v.tipo as string)
       ? (v.tipo as TipoVinculoProtegido)
       : null
@@ -728,9 +735,7 @@ export function prepararProcedimientoParaGuardar({
       lugar: paso.lugar.trim(),
       resultado: paso.resultado.trim(),
       bloques: limpiarBloques(paso.bloques),
-      vinculoProtegido: paso.vinculoProtegido
-        ? { ...paso.vinculoProtegido, titulo: paso.vinculoProtegido.titulo.trim() }
-        : null,
+      vinculoProtegido: limpiarVinculoProtegido(paso.vinculoProtegido),
       subArticuloTitulo: paso.subArticuloId ? paso.subArticuloTitulo.trim() : '',
       solucionArticuloTitulo: paso.solucionArticuloId ? paso.solucionArticuloTitulo.trim() : '',
     }))
@@ -772,6 +777,14 @@ export function prepararProcedimientoParaGuardar({
   }
 }
 
+// El vinculo protegido al guardar: el fijo con su titulo recortado; el del
+// equipo, con su finalidad recortada y el titulo que le corresponde.
+function limpiarVinculoProtegido(vinculo: VinculoProtegido | null): VinculoProtegido | null {
+  if (!vinculo) return null
+  if (vinculo.tipo === 'equipo') return vinculoDelEquipo(vinculo.finalidad)
+  return { ...vinculo, titulo: vinculo.titulo.trim() }
+}
+
 // Limpia los bloques de un paso al guardar: recorta el texto y descarta
 // tareas y avisos vacios (una imagen sin texto es valida, es el pie que
 // es opcional). Una imagen sin adjunto no deberia existir, pero se
@@ -786,9 +799,7 @@ function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
       decisionArticuloTitulo: bloque.decisionArticuloId ? bloque.decisionArticuloTitulo.trim() : '',
       guiaArticuloTitulo: bloque.guiaArticuloId ? bloque.guiaArticuloTitulo.trim() : '',
       referenciaTitulo: bloque.referenciaId ? bloque.referenciaTitulo.trim() : '',
-      vinculoProtegido: bloque.vinculoProtegido
-        ? { ...bloque.vinculoProtegido, titulo: bloque.vinculoProtegido.titulo.trim() }
-        : null,
+      vinculoProtegido: limpiarVinculoProtegido(bloque.vinculoProtegido),
     }))
     .filter((bloque) => {
       // Una imagen o un archivo a medio subir (sin adjunto) se

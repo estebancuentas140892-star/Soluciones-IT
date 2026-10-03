@@ -1,16 +1,25 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type CampoProtegido, type VinculoProtegido } from '../../lib/db'
+import {
+  db,
+  type CampoProtegido,
+  type VinculoProtegido,
+  type VinculoProtegidoDelEquipo,
+  type VinculoProtegidoFijo,
+} from '../../lib/db'
 import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { CaretRight, Key, LockSimple } from '../../components/iconos'
 import { BTN_PRIMARIO } from '../../components/nocturne'
 import { FilaVinculo } from '../soluciones/FilaVinculo'
+import { HojaVinculo } from '../soluciones/HojaVinculo'
+import { useEjecucion } from '../soluciones/contextoEjecucion'
 import { ZONA_ANIDADA } from '../soluciones/vinculoAnidado'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { esOcultoPorDefecto, etiquetaTipo } from '../dispositivos/camposProtegidos'
 import { CampoSecreto } from './CampoSecreto'
+import { esIdDeEquipo, resolverCredencialDelEquipo, type ResolucionCredencialDelEquipo } from './credencialDelEquipo'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
 import { desbloquear, descifrarCredencial, descifrarValor, type DatosCredencial } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
@@ -57,6 +66,37 @@ interface Props {
 // nombra la CATEGORÍA del dato; el título del secreto nombra lo que el
 // técnico va a obtener, que es lo que estaba buscando.
 export function CredencialEnPaso({ vinculo, variante = 'fila' }: Props) {
+  // LA CREDENCIAL DEL EQUIPO (tarea 290): la misma consulta, con la
+  // credencial que corresponde al equipo de la ejecución.
+  if (vinculo.tipo === 'equipo') return <CredencialDelEquipoEnPaso vinculo={vinculo} variante={variante} />
+  return <CredencialFijaEnPaso vinculo={vinculo} variante={variante} />
+}
+
+// El marco del bloque protegido: en la ejecución, "Credencial necesaria"
+// encima de la fila (sección 8 del encargo del 2026-09-22).
+function MarcoProtegido({ variante, children }: { variante: 'fila' | 'bloque'; children: ReactNode }) {
+  return (
+    <div
+      className={
+        variante === 'bloque'
+          ? 'rounded-[10px] border border-noct-divider bg-noct-surface px-3 py-1.5'
+          : undefined
+      }
+    >
+      {variante === 'bloque' && (
+        <p className="flex items-center gap-1.5 pt-1 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
+          <Key size={13} className="shrink-0 text-noct-neutral-400" aria-hidden />
+          Credencial necesaria
+        </p>
+      )}
+      {children}
+    </div>
+  )
+}
+
+// EL VÍNCULO FIJO: la acción sabe exactamente qué dato necesita. Es el
+// comportamiento de siempre, sin cambios (vinculoFijo.test.tsx).
+function CredencialFijaEnPaso({ vinculo, variante }: { vinculo: VinculoProtegidoFijo; variante: 'fila' | 'bloque' }) {
   const desbloqueada = useBovedaDesbloqueada()
   // Contraido por defecto: los secretos no entran a la pantalla hasta
   // que el tecnico los pide, aunque la boveda ya este desbloqueada.
@@ -86,19 +126,7 @@ export function CredencialEnPaso({ vinculo, variante = 'fila' }: Props) {
   const nombre = titulo || 'Secreto'
 
   return (
-    <div
-      className={
-        variante === 'bloque'
-          ? 'rounded-[10px] border border-noct-divider bg-noct-surface px-3 py-1.5'
-          : undefined
-      }
-    >
-      {variante === 'bloque' && (
-        <p className="flex items-center gap-1.5 pt-1 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
-          <Key size={13} className="shrink-0 text-noct-neutral-400" aria-hidden />
-          Credencial necesaria
-        </p>
-      )}
+    <MarcoProtegido variante={variante}>
       <FilaVinculo
         Icono={LockSimple}
         titulo={nombre}
@@ -155,7 +183,205 @@ export function CredencialEnPaso({ vinculo, variante = 'fila' }: Props) {
           ) : null}
         </div>
       )}
-    </div>
+    </MarcoProtegido>
+  )
+}
+
+// LA CREDENCIAL DEL EQUIPO CON EL QUE SE TRABAJA (tarea 290).
+//
+// La acción no nombra una credencial: pide la del equipo de la ejecución
+// (`ContextoEjecucion.equipoId`), y `resolverCredencialDelEquipo` la busca
+// en la relación que la Bóveda ya tiene. Resuelta, es EXACTAMENTE la
+// consulta del vínculo fijo sobre esa credencial: contraída, con permiso,
+// desbloqueo en línea, la contraseña tras el ojo y cada consulta
+// registrada. Sin resolver, un estado neutro: ni valores, ni títulos de
+// otras credenciales, ni una "parecida".
+//
+// Debajo de la fila, de qué equipo es y cómo cambiarlo, SIN abrir la
+// consulta (abrirla registra un acceso). Quien no tiene permiso de Bóveda
+// no tiene ninguna credencial en el teléfono: ve el título del vínculo y
+// el aviso de siempre, sin que nada le insinúe si el equipo tiene una.
+function CredencialDelEquipoEnPaso({
+  vinculo,
+  variante,
+}: {
+  vinculo: VinculoProtegidoDelEquipo
+  variante: 'fila' | 'bloque'
+}) {
+  const desbloqueada = useBovedaDesbloqueada()
+  const perfil = usePerfilVivo()
+  const autorizado = Boolean(perfil?.puedeVerBoveda)
+
+  // El equipo es el de la ejecución: uno para la guía y lo que reutiliza.
+  // Fuera de una ejecución, el que se elija aquí.
+  const ejecucion = useEjecucion()
+  const [equipoLocal, setEquipoLocal] = useState<string | null>(null)
+  const equipoId = ejecucion ? ejecucion.equipoId : equipoLocal
+  const fijarEquipo = ejecucion ? ejecucion.fijarEquipo : setEquipoLocal
+
+  const [abierto, setAbierto] = useState(false)
+  const [eligiendo, setEligiendo] = useState(false)
+  // CAMBIAR DE EQUIPO RECOGE LA CONSULTA: lo descifrado del equipo
+  // anterior no se queda en pantalla, y ver el nuevo es otro gesto (y otro
+  // registro).
+  const [equipoVisto, setEquipoVisto] = useState(equipoId)
+  if (equipoVisto !== equipoId) {
+    setEquipoVisto(equipoId)
+    setAbierto(false)
+  }
+
+  const equipo = useLiveQuery(
+    async () => (esIdDeEquipo(equipoId) ? ((await db.dispositivos.get(equipoId)) ?? null) : null),
+    [equipoId],
+  )
+  // Sin permiso no se lee nada de la Bóveda (y RLS tampoco lo habría bajado).
+  const credenciales = useLiveQuery(async () => (autorizado ? db.credenciales.toArray() : []), [autorizado])
+
+  const resolucion = useMemo(
+    () =>
+      resolverCredencialDelEquipo(
+        { equipoId, finalidad: vinculo.finalidad },
+        { equipos: equipo ? [equipo] : [], credenciales: credenciales ?? [] },
+      ),
+    [equipoId, vinculo.finalidad, equipo, credenciales],
+  )
+
+  if (perfil === undefined || equipo === undefined || credenciales === undefined) return null
+
+  const resuelta = autorizado && resolucion.estado === 'resuelta' ? resolucion.credencial : null
+  const nombre = resuelta?.titulo || vinculo.titulo || 'Credencial del equipo'
+  const equipoVivo = equipo && !equipo.eliminadoEn ? equipo : null
+
+  return (
+    <MarcoProtegido variante={variante}>
+      <FilaVinculo
+        Icono={LockSimple}
+        titulo={nombre}
+        abierto={abierto}
+        accion={abierto ? 'Ocultar' : 'Mostrar'}
+        ariaLabel={`Dato protegido: ${nombre}`}
+        extra={resuelta ? <IndicadorVencimiento venceEn={resuelta.venceEn ?? null} /> : undefined}
+        onAlternar={() => {
+          // Fuera del actualizador de estado, como en el vínculo fijo.
+          if (!abierto && resuelta) {
+            void registrarAccesoBoveda({ credencialId: resuelta.id, credencialTitulo: resuelta.titulo, accion: 'consulto' })
+          }
+          setAbierto((v) => !v)
+        }}
+      />
+
+      {autorizado && (
+        <div className="flex min-h-11 items-center gap-2 pl-[26px]">
+          <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-noct-neutral-400 [overflow-wrap:anywhere]">
+            {equipoVivo ? (
+              <>
+                Equipo: <span className="text-noct-neutral-200">{equipoVivo.nombre}</span>
+              </>
+            ) : equipoId ? (
+              'El equipo elegido ya no está disponible.'
+            ) : (
+              'Sin equipo elegido.'
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={() => setEligiendo(true)}
+            aria-label={equipoVivo ? `Cambiar el equipo (ahora ${equipoVivo.nombre})` : 'Elegir el equipo'}
+            className="min-h-11 shrink-0 px-1 text-[12.5px] font-medium text-noct-accent-300 outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
+          >
+            {equipoVivo ? 'Cambiar' : 'Elegir equipo'}
+          </button>
+        </div>
+      )}
+
+      {abierto && (
+        <div className={`my-1 flex flex-col gap-2.5 ${ZONA_ANIDADA}`}>
+          {!autorizado ? (
+            <p className="text-[13px] leading-normal text-noct-neutral-400">
+              Solo los usuarios autorizados pueden consultar los datos de este paso.
+            </p>
+          ) : resuelta ? (
+            !desbloqueada ? (
+              <FormularioDesbloqueo />
+            ) : (
+              <>
+                <DatosDescifrados
+                  key={resuelta.id}
+                  datosCifrados={resuelta.datosCifrados}
+                  credencialId={resuelta.id}
+                  credencialTitulo={resuelta.titulo}
+                />
+                <Link to={`/boveda/${resuelta.id}`} className={ACCION_BLOQUE}>
+                  Ver ficha completa en Bóveda
+                  <CaretRight size={13} aria-hidden />
+                </Link>
+              </>
+            )
+          ) : (
+            <p className="text-[13px] leading-normal text-noct-neutral-200">
+              {mensajeSinResolver(resolucion.estado, vinculo.finalidad)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {autorizado && <SelectorEquipo abierto={eligiendo} onCerrar={() => setEligiendo(false)} onElegir={fijarEquipo} />}
+    </MarcoProtegido>
+  )
+}
+
+// Lo que se dice cuando no hay UNA credencial: neutro, sin valores, sin
+// nombrar otras credenciales y sin ofrecer probar ninguna.
+function mensajeSinResolver(estado: ResolucionCredencialDelEquipo['estado'], finalidad: string): string {
+  switch (estado) {
+    case 'sin-equipo':
+      return 'Elige el equipo con el que trabajas para ver su credencial.'
+    case 'equipo-no-disponible':
+      return 'El equipo elegido ya no está disponible. Elige el equipo con el que trabajas.'
+    case 'varias':
+      return 'Este equipo tiene varias credenciales y no se puede saber cuál corresponde a esta acción.'
+    case 'ninguna':
+    case 'resuelta':
+      return finalidad.trim()
+        ? `No hay una credencial configurada para este equipo con la finalidad «${finalidad.trim()}».`
+        : 'No hay una credencial configurada para este equipo.'
+  }
+}
+
+// ELEGIR EL EQUIPO SIN SALIR DE LA GUÍA (tarea 290). La misma hoja con
+// buscador que eligen los vínculos en el editor (`HojaVinculo`), con los
+// equipos vivos del inventario por su nombre y su lugar. Solo nombres:
+// ningún dato protegido del equipo.
+function SelectorEquipo({
+  abierto,
+  onCerrar,
+  onElegir,
+}: {
+  abierto: boolean
+  onCerrar: () => void
+  onElegir: (equipoId: string) => void
+}) {
+  const equipos = useLiveQuery(
+    async () => (abierto ? db.dispositivos.filter((d) => !d.eliminadoEn).toArray() : []),
+    [abierto],
+    [],
+  )
+  const opciones = useMemo(
+    () =>
+      [...equipos]
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true }))
+        .map((d) => ({ id: d.id, titulo: d.ubicacion ? `${d.nombre} · ${d.ubicacion}` : d.nombre })),
+    [equipos],
+  )
+  return (
+    <HojaVinculo
+      abierto={abierto}
+      onCerrar={onCerrar}
+      titulo="¿Con qué equipo trabajas?"
+      placeholderBuscar={`Buscar en ${opciones.length} ${opciones.length === 1 ? 'equipo' : 'equipos'}`}
+      grupos={[{ opciones }]}
+      onElegir={onElegir}
+    />
   )
 }
 

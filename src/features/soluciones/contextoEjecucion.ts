@@ -29,6 +29,12 @@ export interface Ejecucion {
   // de la guia principal; en la vista previa del editor es el id
   // efimero, para que probar no toque el progreso real.
   raizId: string
+  // EL EQUIPO CON EL QUE SE TRABAJA (tarea 290), o null. Uno para todo el
+  // flujo: la guia y las que reutiliza lo comparten, igual que la fila.
+  // Lo usa la accion que pide "la credencial del equipo actual".
+  equipoId: string | null
+  // El tecnico identifica (o cambia) el equipo sin salir de la guia.
+  fijarEquipo: (equipoId: string) => void
 }
 
 export const ContextoEjecucion = createContext<Ejecucion | null>(null)
@@ -103,4 +109,16 @@ export function useAvanceProgreso(clave: ClaveProgreso | null): AvanceProcedimie
 export function useEnVistaPrevia(): boolean {
   const ejecucion = useEjecucion()
   return ejecucion !== null && esVistaPrevia(ejecucion.raizId)
+}
+
+/**
+ * LA DIRECCION DE UNA GUIA CON EL EQUIPO CON EL QUE SE VA A TRABAJAR
+ * (tarea 290): la ficha del equipo y Resolver la usan para que la guia
+ * sepa de que equipo se trata (`?equipo=`, que lee `AsistentePage`). Sin
+ * equipo, la direccion de siempre.
+ */
+export function rutaGuiaConEquipo(rutaGuia: string, equipoId: string | null | undefined): string {
+  if (!equipoId) return rutaGuia
+  const separador = rutaGuia.includes('?') ? '&' : '?'
+  return `${rutaGuia}${separador}equipo=${encodeURIComponent(equipoId)}`
 }

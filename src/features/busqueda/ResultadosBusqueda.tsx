@@ -7,7 +7,8 @@ import { useAccionesDeGuia } from '../soluciones/useAccionesDeGuia'
 import { AccionesDeResultado } from './AccionesResultado'
 import { useAnotarBusqueda } from './busquedaEnHistorial'
 import { ContextoResultados, idDeEntidad, useContextoResultados } from './contextoResultados'
-import { hayQueSepararMejores, leerResultados, sinLosMejores } from './mejores'
+import { equipoDeLaConsulta, hayQueSepararMejores, leerResultados, sinLosMejores } from './mejores'
+import { rutaGuiaConEquipo } from '../soluciones/contextoEjecucion'
 import { eventoDeResolucion, registrarResolucion } from './medicion'
 import { filaNavega, vistaRapidaDe, type ModoBuscador } from './modoConsulta'
 import { PuenteBoveda } from './PuenteBoveda'
@@ -98,6 +99,7 @@ export function FilaResultado({
     alternarVista,
     estadoDeSalto,
     alSaltar,
+    equipoDeLaConsulta: equipoConsultado,
   } = useContextoResultados()
   const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
   const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
@@ -186,7 +188,9 @@ export function FilaResultado({
         ref={(nodo) => {
           fila.current = nodo
         }}
-        to={resultado.ruta}
+        // Una guía se abre con el equipo que la consulta identifica, si
+        // es uno solo (tarea 290): "la impresora de mercadeo no imprime".
+        to={resultado.tipo === 'articulo' ? rutaGuiaConEquipo(resultado.ruta, equipoConsultado) : resultado.ruta}
         // DE DONDE VENGO, PARA PODER VOLVER (seccion 7 del encargo).
         // Se reutiliza el sistema de origen que ya existe: abrir una
         // credencial desde aqui y volver devuelve a esta pantalla, no a
@@ -344,6 +348,9 @@ export function ResultadosBusqueda({
 }) {
   const accionesGuia = useAccionesDeGuia()
   const lectura = useMemo(() => leerResultados(resultados, consulta), [resultados, consulta])
+  // Lo que Resolver ya sabe del equipo de la consulta, leído sin tocar el
+  // orden (tarea 290): solo cambia a dónde lleva una guía.
+  const equipoConsultado = useMemo(() => equipoDeLaConsulta(consulta, resultados), [consulta, resultados])
   const mejores = lectura.mejores
   const separar = hayQueSepararMejores(resultados, mejores)
   const mejorCoincidencia = separar && lectura.confianza === 'alta'
@@ -391,8 +398,20 @@ export function ResultadosBusqueda({
       alternarVista,
       estadoDeSalto,
       alSaltar,
+      equipoDeLaConsulta: equipoConsultado,
     }),
-    [accionesGuia, consultaCruda, onNavegar, huboDesbloqueo, modo, vistaAbierta, alternarVista, estadoDeSalto, alSaltar],
+    [
+      accionesGuia,
+      consultaCruda,
+      onNavegar,
+      huboDesbloqueo,
+      modo,
+      vistaAbierta,
+      alternarVista,
+      estadoDeSalto,
+      alSaltar,
+      equipoConsultado,
+    ],
   )
 
   // Cuánto pesa el puente a la Bóveda (sección 14): cede ante una

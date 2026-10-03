@@ -24,6 +24,7 @@ import {
   type TipoTarea,
   type TipoVinculoProtegido,
   type TonoAviso,
+  type VinculoProtegido,
 } from '../../lib/db'
 import {
   crearBloqueArchivo,
@@ -1448,7 +1449,7 @@ function VinculoProtegidoDelPaso({
   onElegir,
   onQuitar,
 }: {
-  vinculo: { tipo: TipoVinculoProtegido; id: string; titulo: string } | null
+  vinculo: VinculoProtegido | null
   gruposOpciones: { etiqueta: string; opciones: OpcionVinculoProtegido[] }[]
   onElegir: (opcion: OpcionVinculoProtegido) => void
   onQuitar: () => void

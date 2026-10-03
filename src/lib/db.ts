@@ -176,11 +176,30 @@ export type TipoVinculoProtegido = 'credencial' | 'campo'
 // patron que el resto de vinculos del sistema: permite mostrar "Datos
 // protegidos: X" incluso a quien no tiene permiso de boveda (RLS no le
 // descarga ni la credencial ni el campo protegido).
-export interface VinculoProtegido {
+//
+// Es el vinculo FIJO: la accion sabe exactamente que dato necesita.
+export interface VinculoProtegidoFijo {
   tipo: TipoVinculoProtegido
   id: string
   titulo: string
 }
+
+// Vinculo CONTEXTUAL (tarea 290): la accion necesita "la credencial del
+// equipo con el que se trabaja", no una credencial concreta. No guarda
+// ningun id: se resuelve en la ejecucion con la relacion que la Boveda ya
+// tiene (`Credencial.dispositivos`) y el equipo de esa ejecucion (ver
+// `src/features/boveda/credencialDelEquipo.ts`). `finalidad` es la
+// categoria de la Boveda que distingue accesos distintos del mismo equipo
+// ("Escritorio remoto"), o '' si basta con su unica credencial de acceso.
+// `titulo` es lo que se lee mientras no se resuelve.
+export interface VinculoProtegidoDelEquipo {
+  tipo: 'equipo'
+  finalidad: string
+  titulo: string
+}
+
+// Los dos conviven: los vinculos fijos de siempre no cambian.
+export type VinculoProtegido = VinculoProtegidoFijo | VinculoProtegidoDelEquipo
 
 // Un bloque del contenido de un paso. Reemplaza a las viejas
 // `instrucciones: string[]`: ahora el cuerpo del paso es una lista

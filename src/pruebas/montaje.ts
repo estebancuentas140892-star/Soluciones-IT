@@ -19,6 +19,7 @@ import {
   type Articulo,
   type Credencial,
   type Dispositivo,
+  type DispositivoAfectado,
   type PasoProcedimiento,
   type Procedimiento,
   type Referencia,
@@ -290,11 +291,15 @@ export async function sembrarCredencial(datos: {
   usuario?: string
   contrasena?: string
   notas?: string
+  /** Categoría de la Bóveda (la finalidad de la tarea 290). Por defecto, "Pruebas". */
+  categoria?: string
+  /** Equipos a los que da acceso: la relación de la Bóveda (tarea 290). */
+  dispositivos?: DispositivoAfectado[]
 }): Promise<Credencial> {
   const credencial: Credencial = {
     id: datos.id,
     titulo: datos.titulo,
-    categoria: 'Pruebas',
+    categoria: datos.categoria ?? 'Pruebas',
     tipo: datos.tipo,
     datosCifrados: await cifrarCredencial({
       usuario: datos.usuario ?? '',
@@ -305,7 +310,7 @@ export async function sembrarCredencial(datos: {
       extras: {},
     }),
     venceEn: null,
-    dispositivos: [],
+    dispositivos: datos.dispositivos ?? [],
     archivo: datos.tipo === 'archivo' ? { referencia: 'pruebas/archivo', nombre: 'licencia-de-prueba.pdf', tipo: 'application/pdf', tamano: 2048 } : null,
     updatedAt: AHORA,
     updatedBy: null,

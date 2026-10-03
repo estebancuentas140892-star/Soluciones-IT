@@ -94,7 +94,10 @@ export function construirGrafo(datos: DatosGrafo): Arista[] {
       for (const paso of procedimiento.pasos) {
         if (paso.subArticuloId) agregar('articulo', paso.subArticuloId, 'subprocedimiento')
         if (paso.solucionArticuloId) agregar('articulo', paso.solucionArticuloId, 'solucion')
-        if (paso.vinculoProtegido) {
+        // El vinculo DEL EQUIPO (tarea 290) no apunta a ningun dato fijo:
+        // se resuelve en la ejecucion, asi que no es una referencia que
+        // borrar una credencial pueda romper. No produce arista.
+        if (paso.vinculoProtegido && paso.vinculoProtegido.tipo !== 'equipo') {
           agregar(
             paso.vinculoProtegido.tipo === 'campo' ? 'campo_protegido' : 'credencial',
             paso.vinculoProtegido.id,
@@ -103,7 +106,7 @@ export function construirGrafo(datos: DatosGrafo): Arista[] {
         }
         for (const bloque of paso.bloques) {
           if (bloque.decisionArticuloId) agregar('articulo', bloque.decisionArticuloId, 'decision')
-          if (bloque.vinculoProtegido) {
+          if (bloque.vinculoProtegido && bloque.vinculoProtegido.tipo !== 'equipo') {
             agregar(
               bloque.vinculoProtegido.tipo === 'campo' ? 'campo_protegido' : 'credencial',
               bloque.vinculoProtegido.id,

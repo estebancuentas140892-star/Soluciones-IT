@@ -5,6 +5,7 @@ import type { Articulo } from '../../lib/db'
 import { db } from '../../lib/db'
 import { CaretRight, WarningCircle } from '../../components/iconos'
 import { problemasDeCategoria, problemasDeDispositivo } from './problemasDeDispositivo'
+import { rutaGuiaConEquipo } from '../soluciones/contextoEjecucion'
 
 // Cuantas incidencias de categoria se muestran antes de "Ver todos".
 const MAX_CATEGORIA = 5
@@ -48,7 +49,7 @@ export function ProblemasDelEquipo({
   return (
     <>
       {especificos.map((articulo) => (
-        <FilaProblema key={articulo.id} articulo={articulo} />
+        <FilaProblema key={articulo.id} articulo={articulo} dispositivoId={dispositivoId} />
       ))}
 
       {deCategoria.length > 0 && (
@@ -58,7 +59,7 @@ export function ProblemasDelEquipo({
             {categoriaNombre ? ` ${categoriaNombre}` : ''}
           </p>
           {visiblesCategoria.map((articulo) => (
-            <FilaProblema key={articulo.id} articulo={articulo} />
+            <FilaProblema key={articulo.id} articulo={articulo} dispositivoId={dispositivoId} />
           ))}
           {deCategoria.length > visiblesCategoria.length && (
             <Link
@@ -75,10 +76,11 @@ export function ProblemasDelEquipo({
   )
 }
 
-function FilaProblema({ articulo }: { articulo: Articulo }) {
+// La guía se abre con este equipo (tarea 290), como en `ProcedimientosDelEquipo`.
+function FilaProblema({ articulo, dispositivoId }: { articulo: Articulo; dispositivoId: string }) {
   return (
     <Link
-      to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+      to={rutaGuiaConEquipo(`/soluciones/${articulo.categoriaId}/${articulo.id}`, dispositivoId)}
       className="flex min-h-[50px] items-center gap-[13px] rounded-md px-2 py-2.5 text-noct-text transition-colors hover:bg-noct-text/[.05]"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-noct-precaucion/[.12] text-noct-precaucion">

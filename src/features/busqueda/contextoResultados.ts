@@ -49,6 +49,12 @@ export interface ValorContextoResultados {
    * para que tambien el boton atras del telefono la encuentre.
    */
   alSaltar: () => void
+  /**
+   * El equipo que la consulta identifica, si es uno solo (tarea 290,
+   * `equipoDeLaConsulta`): una guía abierta desde estos resultados se abre
+   * con él, para que una acción pueda pedir la credencial de ESE equipo.
+   */
+  equipoDeLaConsulta: string | null
 }
 
 const VALOR_POR_DEFECTO: ValorContextoResultados = {
@@ -61,6 +67,7 @@ const VALOR_POR_DEFECTO: ValorContextoResultados = {
   alternarVista: () => undefined,
   estadoDeSalto: {},
   alSaltar: () => undefined,
+  equipoDeLaConsulta: null,
 }
 
 export const ContextoResultados = createContext<ValorContextoResultados>(VALOR_POR_DEFECTO)
