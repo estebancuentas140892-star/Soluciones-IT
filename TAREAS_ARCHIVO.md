@@ -1,5 +1,35 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-03: la credencial del equipo en una guía
+
+### 290. La credencial del equipo en una guía
+
+**Estado:** Completada (2026-10-03). Encargo aparte del usuario: que una acción de una guía pueda pedir "la credencial del equipo con el que se trabaja" y Soluciones IT la resuelva con las relaciones que la Bóveda ya tiene, sin que el técnico elija entre credenciales, las pruebe, salga de la guía ni recuerde qué contraseña es de qué equipo. Principio: **la complejidad pertenece al sistema, no al técnico** ([DECISIONES.md](DECISIONES.md) AD-064, [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-063). Sin tocar datos reales (Bóveda, equipos, guías, Supabase), sin migración y sin rediseño. Rama `feat/credencial-del-equipo`, creada desde `7b76df0` (worktree `dev/sit-290`) y llevada a `main` por avance rápido. Commits: `1d274c9` (fase 1), `cdfa47d` (fase 2), `2b72ed7` (fase 3), `05d3f71` (fase 4) y `9d4ca87` (fase 5), más el de este archivo.
+
+**Qué cambió:**
+
+- **Fase 1, auditoría y vínculo fijo de hoy** ([AUDITORIA_CREDENCIAL_DEL_EQUIPO.md](AUDITORIA_CREDENCIAL_DEL_EQUIPO.md), `vinculoFijo.test.tsx`): la ruta del dato (credencial y su relación `credenciales.dispositivos`, vínculo protegido, consulta en la guía con permiso, desbloqueo y auditoría, avance local y el equipo en Resolver y en la ejecución), ocho hallazgos y el diseño mínimo. Tres pruebas fijan el vínculo fijo que no debía cambiar.
+- **Fase 2, dominio** (`credencialDelEquipo.ts`, `equipoDeLaConsulta`, `fijarEquipoDeEjecucion`): resolución pura por el identificador del equipo (una, ninguna o varias sin elegir; solo accesos; finalidad exacta por la categoría de la Bóveda; nunca por nombre, modelo, IP ni título), el equipo que Resolver identifica (solo si es uno) y el equipo en la fila local de avance, sin crearla.
+- **Fase 3, ejecución** (`CredencialEnPaso.tsx`, `ProveedorEjecucion.tsx`, `AsistentePage.tsx`, la ficha del equipo y `ResultadosBusqueda`): vínculo `{ tipo: 'equipo', finalidad }` junto al fijo; resuelto, la misma consulta de la Bóveda; sin resolver, estados neutros; "Equipo" y "Cambiar" debajo de la fila; el equipo llega con `?equipo=`, se conserva al retomar y para lo reutilizado, y se elige en la propia acción.
+- **Fase 4, editor** (`PasosEditor.tsx`): "Credencial del equipo actual" y "Finalidad (opcional)" en la información protegida del paso y de la tarea, con permiso de Bóveda.
+- **Fase 5, QA, sin conexión y documentación:** `HojaVinculo` con `sinRecortar` para el selector de equipos (regla 23); paso 4c de `prueba-sin-conexion.mjs`; AD-064, RN-063, DOCUMENTACION_FUNCIONAL, COMPONENTES_UI, ARQUITECTURA, BUSCADOR (7.10) y CHANGELOG.
+
+**No se hizo, a propósito:**
+
+- No se tocó la Bóveda real, ningún equipo, ninguna guía (tampoco el borrador de la guía de impresión bloqueada) ni Supabase, y no se leyeron datos reales: la auditoría de la información protegida es de ChatGPT Work.
+- No se convirtió ningún vínculo fijo ni se escribió en el código ninguna impresora, IP, modelo o credencial.
+- Sin campo nuevo de finalidad ni migración: la finalidad es la categoría que ya tiene cada credencial.
+- Los campos protegidos propios de un equipo no cuentan como "credencial del equipo" (otra tabla y otra semántica; posible extensión).
+- Ni el orden de Resolver, ni `formasBusqueda`, ni la navegación, ni el diseño de la Bóveda o de la ejecución.
+
+**Verificación:** suite completa: 174 archivos y 2651 pruebas (2589 en `main` antes de la tarea: 62 nuevas, entre ellas 27 de la resolución, 16 de flujo y 4 del editor). `tsc -b`, lint y `npm run build` en verde; `npm run prueba:sin-conexion` OK (49 comprobaciones; 5 nuevas en el paso 4c, con el service worker y la red cortada). QA con Chrome sin cabeza sobre datos inventados (credenciales cifradas con una maestra de prueba) a 390×844, 390×480 con el teclado abierto y 1366×768, en 17 paradas (resuelta bloqueada y abierta, desbloqueo, sin equipo, la hoja de equipos, sin credencial, varias, sin permiso y el editor): sin desplazamiento horizontal, sin secretos en el DOM ni en la consola, foco en el campo correcto con el teclado. Lo único que señaló ya existía: el título de la cabecera recortado, los botones de copiar y del ojo de `CampoSecreto` a 23 px y "Quitar" del dato de una tarea a 24 px (tarea 285), y la barra de completitud del editor. CI en verde para `9d4ca87` (run 37143554489, 75 s). **Producción (regla 14):** `/version.json` respondió `9d4ca87` (compilado 2026-10-03T18:16:48Z) y, por contenido, los trozos servidos llevan "Credencial del equipo actual", "Según el equipo con el que se trabaje" y "Finalidad (opcional)" (`ArticuloForm`) y "¿Con qué equipo trabajas?", "No hay una credencial configurada para este equipo." y "no se puede saber cuál corresponde a esta acción" (`ProveedorEjecucion`), que no estaban en `7b76df0`.
+
+**Límites conocidos:** la auditoría registra la credencial consultada, no el equipo (la tabla de hoy); una guía con preguntas y la prueba del editor no reciben `?equipo=` (el equipo se elige en la acción); una versión anterior de la app descarta el vínculo del equipo al guardar la guía.
+
+**Pendiente para otros** (detalle en la sección 6 de la auditoría): **ChatGPT**, después de actualizar los teléfonos, cambia en las guías que sirven para varios equipos el vínculo fijo por "Credencial del equipo actual" (empezando por el borrador de la guía de impresión bloqueada), con finalidad solo donde el equipo tenga varios accesos. **ChatGPT Work** mantiene la relación credencial y equipos y, en los equipos con varios accesos, da a cada credencial una categoría que distinga su finalidad; las impresoras sin credencial demostrada siguen sin relación.
+
+**Paso del usuario:** la PWA no se actualiza sola en un teléfono que ya la tiene: aceptar "Actualización disponible" (en escritorio, recargar) **antes** de que ChatGPT añada vínculos del equipo a las guías reales.
+
 ## Encargo del 2026-10-02: las guías como un solo flujo natural
 
 ### 289. Las guías como un solo flujo natural
