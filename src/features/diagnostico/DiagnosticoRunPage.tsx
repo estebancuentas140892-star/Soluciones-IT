@@ -21,7 +21,6 @@ import {
   terminarEjecucionArticulo,
   volverAtras,
 } from '../../lib/progresoDiagnostico'
-import { contarHechos, verificacionFinalCompleta } from '../../lib/progresoPasos'
 import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
@@ -45,6 +44,7 @@ import {
 } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import { AsistenteVista } from '../soluciones/AsistenteVista'
+import { guiaTerminada } from '../soluciones/cierrePaso'
 import { ProveedorEjecucion } from '../soluciones/ProveedorEjecucion'
 import { ETIQUETA_MOTIVO, MOTIVOS_ORDEN, type MotivoConcreto } from './motivos'
 
@@ -435,18 +435,21 @@ function ProcedimientoEnRecorrido({
     [articulo],
   )
 
-  const completo = useMemo(() => {
-    if (!procedimiento) return false
-    const hechos = contarHechos(
-      progresoPasos?.pasosHechos ?? [],
-      procedimiento.pasos.map((p) => p.id),
-    )
-    return (
+  // La misma regla que la ejecución (`guiaTerminada`): los pasos de su ruta
+  // (tarea 302: con decisiones con opciones, los del camino elegido) y las
+  // comprobaciones finales.
+  const completo = useMemo(
+    () =>
+      procedimiento !== null &&
       procedimiento.pasos.length > 0 &&
-      hechos === procedimiento.pasos.length &&
-      verificacionFinalCompleta(progresoPasos?.verificacionHecha, procedimiento.verificacionFinal.length)
-    )
-  }, [procedimiento, progresoPasos])
+      guiaTerminada(
+        procedimiento,
+        progresoPasos?.pasosHechos,
+        progresoPasos?.verificacionHecha,
+        progresoPasos?.elecciones,
+      ),
+    [procedimiento, progresoPasos],
+  )
 
   // Aviso una sola vez: al completarse, el recorrido avanza y este
   // componente se desmonta; el guardia evita un doble disparo mientras

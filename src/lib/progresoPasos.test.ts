@@ -16,6 +16,7 @@ import {
   leerAvance,
   marcarPasoSaltado,
   quitarPasoSaltado,
+  registrarEleccion,
   registrarEvidenciaPaso,
   reiniciarProgreso,
   verificacionFinalCompleta,
@@ -485,5 +486,55 @@ describe('el equipo de la ejecucion', () => {
       actualizadoEn: '2026-10-03T00:00:00.000Z',
     }
     expect(hayAvanceEnEjecucion(fila)).toBe(false)
+  })
+})
+
+// LAS RESPUESTAS DE LAS DECISIONES CON OPCIONES (tarea 302): son parte del
+// avance de la ejecución, así que sobreviven a las demás escrituras y se
+// borran con ella.
+describe('las respuestas de la ejecucion', () => {
+  const aplicada = (elecciones: Record<string, string>, guiasFuera: string[] = []) => ({
+    avance: { pasosHechos: ['p1'], instruccionesHechas: ['d'], pasosSaltados: [], elecciones },
+    guiasFuera,
+    cambio: guiasFuera.length > 0,
+  })
+
+  it('registrarEleccion guarda la respuesta y lo que cambió del avance', async () => {
+    await registrarEleccion('articulo-1', aplicada({ d: 'nuevo' }))
+    expect(await leerAvance('articulo-1')).toMatchObject({
+      pasosHechos: ['p1'],
+      instruccionesHechas: ['d'],
+      elecciones: { d: 'nuevo' },
+    })
+  })
+
+  it('marcar una tarea, cerrar un paso o saltar uno no borra las respuestas', async () => {
+    await registrarEleccion('articulo-1', aplicada({ d: 'nuevo' }))
+    await alternarInstruccionHecha('articulo-1', 'p2', 't2', ['t2'])
+    await establecerPasoHecho('articulo-1', 'p2', true)
+    await marcarPasoSaltado('articulo-1', 'p3')
+    expect((await leerAvance('articulo-1'))?.elecciones).toEqual({ d: 'nuevo' })
+  })
+
+  it('al cambiar la respuesta borra el avance de las guías que quedaron fuera de la ruta', async () => {
+    await alternarInstruccionHecha({ raizId: 'articulo-1', vinculoId: 'g-rama' }, 'x', 'tx', ['tx', 'ty'])
+    await alternarInstruccionHecha({ raizId: 'articulo-1', vinculoId: 'g-comun' }, 'y', 'ty', ['ty', 'tz'])
+    await registrarEleccion('articulo-1', aplicada({ d: 'clasico' }, ['g-rama']))
+    const fila = await db.progresoPasos.get('articulo-1')
+    expect(Object.keys(fila?.vinculos ?? {})).toEqual(['g-comun'])
+    expect(fila?.elecciones).toEqual({ d: 'clasico' })
+  })
+
+  it('una guía reutilizada guarda sus propias respuestas, aparte de las de la principal', async () => {
+    await registrarEleccion('articulo-1', aplicada({ d: 'nuevo' }))
+    await registrarEleccion({ raizId: 'articulo-1', vinculoId: 'g' }, aplicada({ dg: 'a' }, ['nada']))
+    expect((await leerAvance('articulo-1'))?.elecciones).toEqual({ d: 'nuevo' })
+    expect((await leerAvance({ raizId: 'articulo-1', vinculoId: 'g' }))?.elecciones).toEqual({ dg: 'a' })
+  })
+
+  it('empezar de nuevo las borra con el resto de la ejecución', async () => {
+    await registrarEleccion('articulo-1', aplicada({ d: 'nuevo' }))
+    await reiniciarProgreso('articulo-1')
+    expect(await leerAvance('articulo-1')).toBeUndefined()
   })
 })

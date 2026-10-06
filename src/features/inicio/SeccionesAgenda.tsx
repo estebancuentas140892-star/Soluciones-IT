@@ -184,6 +184,7 @@ export function SeccionesAgenda({
                 articulo={reanudar.actual.articulo}
                 hechos={reanudar.actual.hechos}
                 total={reanudar.actual.total}
+                rutaAbierta={reanudar.actual.rutaAbierta}
                 minutosRestantes={reanudar.actual.minutosRestantes}
                 onDescartar={reanudar.descartar}
               />

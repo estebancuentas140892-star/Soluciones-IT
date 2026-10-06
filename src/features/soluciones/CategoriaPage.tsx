@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import { db, type Articulo } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
-import { contarHechos } from '../../lib/progresoPasos'
+import { avanceDeLaRuta } from '../../lib/rutaProcedimiento'
 import { Chasis } from '../../app/Chasis'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { CaretRight, Plus, WarningCircle } from '../../components/iconos'
@@ -227,19 +227,22 @@ function AvanceArticulo({ articulo }: { articulo: Articulo }) {
   const progreso = useLiveQuery(() => db.progresoPasos.get(articulo.id), [articulo.id])
 
   if (!procedimiento) return null
-  const total = procedimiento.pasos.length
-  const hechos = contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((p) => p.id))
+  // Sobre la ruta de la ejecución (tarea 302): con decisiones con opciones,
+  // los pasos del camino elegido. Si la ruta espera una respuesta, el total
+  // todavía no se sabe y no se afirma.
+  const { ruta, hechos, total, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
   if (hechos === 0) return null
+  const totalVisible = ruta.pendiente ? '…' : String(total)
 
   return (
     <span
       className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${
-        hechos === total
+        pasosListos
           ? 'border-noct-exito/40 bg-noct-exito/10 text-noct-exito'
           : 'border-noct-precaucion/40 bg-noct-precaucion/10 text-noct-precaucion'
       }`}
     >
-      {hechos}/{total}
+      {hechos}/{totalVisible}
     </span>
   )
 }

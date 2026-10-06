@@ -1,8 +1,11 @@
 import type {
   AlcanceApoyo,
   BloquePaso,
+  DestinoOpcion,
+  DestinoPaso,
   IntencionGuia,
   NivelDificultad,
+  OpcionDecision,
   PasoAdjunto,
   PasoProcedimiento,
   Procedimiento,
@@ -61,6 +64,26 @@ export const CAMPOS_BLOQUE_VACIOS = {
 
 export function crearBloqueTarea(tipoTarea: TipoTarea = 'accion'): BloquePaso {
   return { ...CAMPOS_BLOQUE_VACIOS, id: crypto.randomUUID(), tipo: 'tarea', tipoTarea }
+}
+
+// Una respuesta nueva de una decisión: sin título todavía y siguiendo la
+// ruta de siempre, que es lo único que no inventa un destino.
+export function crearOpcion(): OpcionDecision {
+  return { id: crypto.randomUUID(), titulo: '', descripcion: '', destino: { tipo: 'continuar' } }
+}
+
+// UNA DECISIÓN NUEVA NACE CON DOS OPCIONES VACÍAS (tarea 302): es el
+// mínimo que pide una pregunta, y el autor las nombra en el sitio. Las
+// decisiones de Sí/No de antes (sin `opciones`) se siguen leyendo y
+// ejecutando igual, pero el editor ya no crea más.
+export function crearBloqueDecision(): BloquePaso {
+  return { ...crearBloqueTarea('decision'), opciones: [crearOpcion(), crearOpcion()] }
+}
+
+// ¿Esta tarea es una decisión con opciones (tarea 302)? Las de Sí/No de
+// antes no lo son: no cambian la ruta, solo desvían por su "No".
+export function esDecisionConOpciones(bloque: BloquePaso): boolean {
+  return bloque.tipo === 'tarea' && bloque.tipoTarea === 'decision' && (bloque.opciones?.length ?? 0) > 0
 }
 
 // Alcance por defecto de un apoyo nuevo: la tarea que el autor tiene
@@ -301,7 +324,75 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     subArticuloTitulo: subArticuloId ? texto(origen.subArticuloTitulo) : '',
     solucionArticuloId,
     solucionArticuloTitulo: solucionArticuloId ? texto(origen.solucionArticuloTitulo) : '',
+    ...conAlTerminar(normalizarAlTerminar(origen.alTerminar)),
   }
+}
+
+// Un id de verdad (texto no vacío) o null.
+function idValido(valor: unknown): string | null {
+  return typeof valor === 'string' && valor !== '' ? valor : null
+}
+
+// Dónde sigue la ruta al terminar un paso (tarea 302). Un salto sin paso
+// de destino no lleva a ninguna parte: se descarta y el paso sigue en el
+// de abajo, como todos. Que el destino exista y sea posterior lo decide la
+// ruta al recorrerla (y el editor al guardar), no este normalizador: aquí
+// no se conocen los demás pasos.
+function normalizarAlTerminar(valor: unknown): DestinoPaso | null {
+  if (!valor || typeof valor !== 'object') return null
+  const origen = valor as Record<string, unknown>
+  if (origen.tipo === 'fin') return { tipo: 'fin' }
+  const pasoId = origen.tipo === 'paso' ? idValido(origen.pasoId) : null
+  return pasoId ? { tipo: 'paso', pasoId } : null
+}
+
+// La clave solo se escribe cuando el paso la usa: el JSON de los pasos que
+// siguen en el de abajo (casi todos) queda exactamente como antes.
+function conAlTerminar(alTerminar: DestinoPaso | null | undefined): Pick<PasoProcedimiento, 'alTerminar'> {
+  return alTerminar ? { alTerminar } : {}
+}
+
+// A dónde lleva una respuesta, tolerando datos incompletos: un salto o
+// una guía sin destino no llevan a ninguna parte, así que vuelven a
+// 'continuar' (la ruta de siempre), nunca a un sitio inventado.
+function normalizarDestinoOpcion(valor: unknown): DestinoOpcion {
+  if (!valor || typeof valor !== 'object') return { tipo: 'continuar' }
+  const origen = valor as Record<string, unknown>
+  if (origen.tipo === 'fin') return { tipo: 'fin' }
+  if (origen.tipo === 'paso') {
+    const pasoId = idValido(origen.pasoId)
+    return pasoId ? { tipo: 'paso', pasoId } : { tipo: 'continuar' }
+  }
+  if (origen.tipo === 'guia') {
+    const articuloId = idValido(origen.articuloId)
+    return articuloId ? { tipo: 'guia', articuloId, titulo: texto(origen.titulo) } : { tipo: 'continuar' }
+  }
+  return { tipo: 'continuar' }
+}
+
+// Las respuestas de una decisión (tarea 302), en su orden. Una opción sin
+// título se conserva (el editor la señala y no deja guardar así): borrarla
+// al leer destruiría trabajo del autor. Un id repetido, en cambio, se
+// renueva: el avance recuerda la opción elegida por su id, y dos iguales
+// harían de dos respuestas una sola.
+function normalizarOpciones(valor: unknown): OpcionDecision[] {
+  if (!Array.isArray(valor)) return []
+  const vistos = new Set<string>()
+  return valor.flatMap((elemento): OpcionDecision[] => {
+    if (!elemento || typeof elemento !== 'object') return []
+    const origen = elemento as Record<string, unknown>
+    const declarado = idValido(origen.id)
+    const id = declarado && !vistos.has(declarado) ? declarado : crypto.randomUUID()
+    vistos.add(id)
+    return [
+      {
+        id,
+        titulo: texto(origen.titulo),
+        descripcion: texto(origen.descripcion),
+        destino: normalizarDestinoOpcion(origen.destino),
+      },
+    ]
+  })
 }
 
 // Bloques del cuerpo del paso, tolerando datos de tres epocas:
@@ -449,12 +540,13 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
   const tipoTarea = (TIPOS_TAREA_VALIDOS as string[]).includes(origen.tipoTarea as string)
     ? (origen.tipoTarea as TipoTarea)
     : 'accion'
+  // LAS DOS FORMAS DE UNA DECISIÓN (tarea 302). Con `opciones` es una
+  // decisión con respuestas propias y su destino va en cada una; sin ellas
+  // es la de Sí/No de siempre, con su `decisionArticuloId`. Las dos se
+  // leen; ninguna se convierte sola en la otra.
+  const opciones = tipoTarea === 'decision' ? normalizarOpciones(origen.opciones) : []
   const decisionArticuloId =
-    tipoTarea === 'decision' &&
-    typeof origen.decisionArticuloId === 'string' &&
-    origen.decisionArticuloId !== ''
-      ? origen.decisionArticuloId
-      : null
+    tipoTarea === 'decision' && opciones.length === 0 ? idValido(origen.decisionArticuloId) : null
   // Vinculo protegido (tarea 40, generalizado en P2): opcional en
   // cualquier tarea, sin depender del tipoTarea.
   return {
@@ -465,6 +557,7 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     tipoTarea,
     decisionArticuloId,
     decisionArticuloTitulo: decisionArticuloId ? texto(origen.decisionArticuloTitulo) : '',
+    ...(opciones.length > 0 ? { opciones } : {}),
     vinculoProtegido: normalizarVinculoProtegido(origen),
   }
 }
@@ -558,14 +651,23 @@ function tipoDeReferencia(referencia: string): string {
 // articulos o a informacion protegida (subprocedimiento, solucion,
 // decision, vinculoProtegido) siguen apuntando a los mismos, que es lo
 // correcto en una copia.
+//
+// Los caminos de las decisiones (tarea 302) apuntan a pasos POR SU ID, así
+// que se traducen a los ids nuevos: sin esto, la copia saltaría a pasos
+// que solo existen en el original.
 export function duplicarProcedimiento(procedimiento: Procedimiento): Procedimiento {
+  const nuevosIdsPaso = new Map(procedimiento.pasos.map((paso) => [paso.id, crypto.randomUUID()]))
+  const traducirPaso = (pasoId: string) => nuevosIdsPaso.get(pasoId) ?? pasoId
   return {
     ...procedimiento,
     pasos: procedimiento.pasos.map((paso) => ({
       ...paso,
-      id: crypto.randomUUID(),
+      id: traducirPaso(paso.id),
       adjuntos: paso.adjuntos.map((adjunto) => ({ ...adjunto })),
-      bloques: duplicarBloques(paso.bloques),
+      bloques: duplicarBloques(paso.bloques, traducirPaso),
+      ...conAlTerminar(
+        paso.alTerminar?.tipo === 'paso' ? { tipo: 'paso', pasoId: traducirPaso(paso.alTerminar.pasoId) } : paso.alTerminar,
+      ),
     })),
     requisitos: [...procedimiento.requisitos],
     verificacionFinal: [...procedimiento.verificacionFinal],
@@ -581,12 +683,23 @@ export function duplicarProcedimiento(procedimiento: Procedimiento): Procedimien
 // guia dejaba cada apoyo apuntando a la tarea del ORIGINAL: en la
 // copia esa tarea no existe, asi que los apoyos habrian quedado todos
 // 'sin-asignar' y el autor tendria que reasignarlos uno por uno.
-function duplicarBloques(bloques: BloquePaso[]): BloquePaso[] {
+function duplicarBloques(bloques: BloquePaso[], traducirPaso: (pasoId: string) => string): BloquePaso[] {
   const nuevosIds = new Map(bloques.map((bloque) => [bloque.id, crypto.randomUUID()]))
   return bloques.map((bloque) => ({
     ...bloque,
     id: nuevosIds.get(bloque.id) ?? crypto.randomUUID(),
     tareaId: bloque.tareaId ? (nuevosIds.get(bloque.tareaId) ?? null) : null,
+    ...(bloque.opciones
+      ? {
+          opciones: bloque.opciones.map((opcion) => ({
+            ...opcion,
+            destino:
+              opcion.destino.tipo === 'paso'
+                ? { tipo: 'paso' as const, pasoId: traducirPaso(opcion.destino.pasoId) }
+                : { ...opcion.destino },
+          })),
+        }
+      : {}),
   }))
 }
 
@@ -624,6 +737,15 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
     // procedimientos que incluyen esa tarea.
     partes.push(paso.subArticuloTitulo, paso.solucionArticuloTitulo)
     partes.push(...paso.bloques.map((b) => b.decisionArticuloTitulo))
+    // Las respuestas de una decisión con opciones (tarea 302) y la guía a
+    // la que lleva cada una: buscar "nuevo outlook" encuentra la guía que
+    // pregunta por la versión.
+    for (const bloque of paso.bloques) {
+      for (const opcion of bloque.opciones ?? []) {
+        partes.push(opcion.titulo, opcion.descripcion)
+        if (opcion.destino.tipo === 'guia') partes.push(opcion.destino.titulo)
+      }
+    }
     // Titulo de las guias vinculadas desde una tarea: mismo criterio
     // que los vinculos del paso, no son informacion protegida.
     partes.push(...paso.bloques.map((b) => b.guiaArticuloTitulo))
@@ -728,7 +850,7 @@ export function prepararProcedimientoParaGuardar({
   const formasBusqueda = frasesDeBusqueda(formasBusquedaTexto.split('\n'))
 
   const pasosLimpios = pasos
-    .map((paso) => ({
+    .map(({ alTerminar, ...paso }) => ({
       ...paso,
       titulo: paso.titulo.trim(),
       objetivo: paso.objetivo.trim(),
@@ -738,16 +860,11 @@ export function prepararProcedimientoParaGuardar({
       vinculoProtegido: limpiarVinculoProtegido(paso.vinculoProtegido),
       subArticuloTitulo: paso.subArticuloId ? paso.subArticuloTitulo.trim() : '',
       solucionArticuloTitulo: paso.solucionArticuloId ? paso.solucionArticuloTitulo.trim() : '',
+      // A dónde sigue al terminar (tarea 302): un salto a medio elegir no
+      // se guarda. Que el destino exista lo exige el editor antes.
+      ...conAlTerminar(normalizarAlTerminar(alTerminar)),
     }))
-    .filter(
-      (paso) =>
-        paso.titulo !== '' ||
-        paso.bloques.length > 0 ||
-        paso.adjuntos.length > 0 ||
-        paso.vinculoProtegido !== null ||
-        paso.subArticuloId !== null ||
-        paso.solucionArticuloId !== null,
-    )
+    .filter(pasoTieneContenido)
 
   const descripcionLimpia = descripcion.trim()
   const objetivoGeneralLimpio = objetivoGeneral.trim()
@@ -777,6 +894,21 @@ export function prepararProcedimientoParaGuardar({
   }
 }
 
+// ¿Le queda algo a este paso al guardarlo? Un paso sin título ni nada
+// dentro se descarta al guardar (`prepararProcedimientoParaGuardar`), y el
+// editor no deja que un camino lleve a uno así (`problemasDeRutas`): las
+// dos preguntas tienen que ser la misma, por eso viven aquí una sola vez.
+export function pasoTieneContenido(paso: PasoProcedimiento): boolean {
+  return (
+    paso.titulo.trim() !== '' ||
+    limpiarBloques(paso.bloques).length > 0 ||
+    paso.adjuntos.length > 0 ||
+    paso.vinculoProtegido !== null ||
+    paso.subArticuloId !== null ||
+    paso.solucionArticuloId !== null
+  )
+}
+
 // El vinculo protegido al guardar: el fijo con su titulo recortado; el del
 // equipo, con su finalidad recortada y el titulo que le corresponde.
 function limpiarVinculoProtegido(vinculo: VinculoProtegido | null): VinculoProtegido | null {
@@ -793,14 +925,22 @@ function limpiarVinculoProtegido(vinculo: VinculoProtegido | null): VinculoProte
 // a su id.
 function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
   const limpios = bloques
-    .map((bloque) => ({
-      ...bloque,
-      texto: bloque.texto.trim(),
-      decisionArticuloTitulo: bloque.decisionArticuloId ? bloque.decisionArticuloTitulo.trim() : '',
-      guiaArticuloTitulo: bloque.guiaArticuloId ? bloque.guiaArticuloTitulo.trim() : '',
-      referenciaTitulo: bloque.referenciaId ? bloque.referenciaTitulo.trim() : '',
-      vinculoProtegido: limpiarVinculoProtegido(bloque.vinculoProtegido),
-    }))
+    .map((bloque) => {
+      const opciones = opcionesParaGuardar(bloque)
+      const limpio: BloquePaso = {
+        ...bloque,
+        texto: bloque.texto.trim(),
+        // Con opciones, el destino va en cada una: el del "No" de antes ya
+        // no se usa y no se guarda.
+        decisionArticuloId: opciones ? null : bloque.decisionArticuloId,
+        decisionArticuloTitulo: !opciones && bloque.decisionArticuloId ? bloque.decisionArticuloTitulo.trim() : '',
+        guiaArticuloTitulo: bloque.guiaArticuloId ? bloque.guiaArticuloTitulo.trim() : '',
+        referenciaTitulo: bloque.referenciaId ? bloque.referenciaTitulo.trim() : '',
+        vinculoProtegido: limpiarVinculoProtegido(bloque.vinculoProtegido),
+      }
+      delete limpio.opciones
+      return opciones ? { ...limpio, opciones } : limpio
+    })
     .filter((bloque) => {
       // Una imagen o un archivo a medio subir (sin adjunto) se
       // descartan; una guia vinculada sin destino, tambien. En los dos
@@ -818,4 +958,18 @@ function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
   // la tarea a la que colgaba una foto, la foto se queda 'sin-asignar'
   // en vez de guardar un vinculo roto.
   return sanearReferenciasDeTarea(limpios)
+}
+
+// Las respuestas de una decisión con opciones, recortadas para guardar, o
+// null si el bloque no las lleva (no es una decisión, o es una de Sí/No).
+// Que estén completas (título, destino válido) lo exige el editor antes
+// de guardar (`problemasDeRutas`); aquí solo se limpia.
+function opcionesParaGuardar(bloque: BloquePaso): OpcionDecision[] | null {
+  if (bloque.tipo !== 'tarea' || bloque.tipoTarea !== 'decision' || !bloque.opciones?.length) return null
+  return bloque.opciones.map((opcion) => ({
+    ...opcion,
+    titulo: opcion.titulo.trim(),
+    descripcion: opcion.descripcion.trim(),
+    destino: opcion.destino.tipo === 'guia' ? { ...opcion.destino, titulo: opcion.destino.titulo.trim() } : opcion.destino,
+  }))
 }

@@ -106,6 +106,11 @@ export function construirGrafo(datos: DatosGrafo): Arista[] {
         }
         for (const bloque of paso.bloques) {
           if (bloque.decisionArticuloId) agregar('articulo', bloque.decisionArticuloId, 'decision')
+          // La guía que abre una respuesta de una decisión con opciones
+          // (tarea 302) es la misma relación que el "No" de una de Sí/No.
+          for (const opcion of bloque.opciones ?? []) {
+            if (opcion.destino.tipo === 'guia') agregar('articulo', opcion.destino.articuloId, 'decision')
+          }
           if (bloque.vinculoProtegido && bloque.vinculoProtegido.tipo !== 'equipo') {
             agregar(
               bloque.vinculoProtegido.tipo === 'campo' ? 'campo_protegido' : 'credencial',

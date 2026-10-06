@@ -33,7 +33,7 @@ import {
 } from '../busqueda/borradoresEnBusqueda'
 import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
 import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
-import { articulosSinTerminar } from '../soluciones/sinTerminar'
+import { articulosSinTerminar, pasoDeTotal } from '../soluciones/sinTerminar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { obtenerActividadReciente } from '../historial/actividadEquipo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
@@ -163,7 +163,12 @@ export function ResolverPage() {
   const progresos = useLiveQuery(() => db.progresoPasos.toArray(), [], [])
   const avances = useMemo(
     () =>
-      new Map(articulosSinTerminar(articulos, progresos).map((s) => [s.articulo.id, { hechos: s.hechos, total: s.total }])),
+      new Map(
+        articulosSinTerminar(articulos, progresos).map((s) => [
+          s.articulo.id,
+          { hechos: s.hechos, total: s.total, rutaAbierta: s.rutaAbierta },
+        ]),
+      ),
     [articulos, progresos],
   )
   // Las guías con preguntas (diagnósticos) entran en la misma lista (tarea
@@ -448,7 +453,11 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
   const detalle =
     guia.enCurso ??
     (guia.avance
-      ? `paso ${Math.min(guia.avance.hechos + 1, guia.avance.total)} de ${guia.avance.total}`
+      ? pasoDeTotal(
+          Math.min(guia.avance.hechos + 1, guia.avance.total),
+          guia.avance.total,
+          guia.avance.rutaAbierta ?? false,
+        )
       : [conPreguntas ? ROTULO_RECORRIDO : guia.categoriaNombre, cuando].filter(Boolean).join(' · '))
   const Icono = conPreguntas ? TreeStructure : BookOpen
   return (

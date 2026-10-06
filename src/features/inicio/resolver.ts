@@ -119,6 +119,13 @@ function haceMenosDe(fechaIso: string, dias: number, hoy: Date): boolean {
   return hoy.getTime() - cuando <= dias * MS_DIA
 }
 
+/** El avance de una guía a medias, contado sobre su ruta. */
+export interface AvanceReciente {
+  hechos: number
+  total: number
+  rutaAbierta?: boolean
+}
+
 export interface GuiaReciente {
   id: string
   /** Guía con pasos o guía con preguntas (un diagnóstico, tarea 263). */
@@ -129,8 +136,12 @@ export interface GuiaReciente {
   visitadoEn: string
   /** Un borrador se puede usar, pero se dice (encargo del 2026-09-20). */
   borrador: boolean
-  /** El avance a medias en este teléfono, o null si no hay nada empezado. */
-  avance: { hechos: number; total: number } | null
+  /**
+   * El avance a medias en este teléfono, o null si no hay nada empezado.
+   * `rutaAbierta`: la ruta se detiene en una decisión sin responder (tarea
+   * 302) y el total todavía no se sabe.
+   */
+  avance: AvanceReciente | null
   /** Dónde va una guía con preguntas a medias, con palabras; null si no hay nada empezado. */
   enCurso: string | null
 }
@@ -145,7 +156,7 @@ export function guiasRecientes(
   visitas: Reciente[],
   articulos: Articulo[],
   categorias: Categoria[],
-  avances: ReadonlyMap<string, { hechos: number; total: number }>,
+  avances: ReadonlyMap<string, AvanceReciente>,
   hoy: Date = new Date(),
   opciones: { dias?: number; limite?: number } = {},
 ): GuiaReciente[] {

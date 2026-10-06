@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { BloquePaso, PasoProcedimiento, Procedimiento } from './db'
 import {
+  crearBloqueDecision,
   crearPaso,
   duplicarProcedimiento,
+  esDecisionConOpciones,
   normalizarProcedimiento,
   pasoTrabajoPrevioCompleto,
   prepararProcedimientoParaGuardar,
@@ -1354,5 +1356,211 @@ describe('formas de búsqueda de una guía', () => {
   it('no entran al contenido general del índice: tienen su propio campo', () => {
     const texto = textoDeProcedimiento(procedimientoCompleto({ formasBusqueda: ['impresora atascada'] }))
     expect(texto).not.toContain('impresora atascada')
+  })
+})
+
+// DECISIONES CON OPCIONES (tarea 302): viven en el JSON del procedimiento,
+// así que el normalizador, el guardado, el duplicado y el índice tienen que
+// conocerlas, y las decisiones de Sí/No de antes tienen que seguir igual.
+describe('decisiones con opciones', () => {
+  const opcionesCrudas = [
+    { id: 'clasico', titulo: 'Outlook clásico', descripcion: 'Veo la pestaña Archivo.', destino: { tipo: 'paso', pasoId: 'paso-2' } },
+    { id: 'nuevo', titulo: 'Nuevo Outlook', descripcion: '', destino: { tipo: 'guia', articuloId: 'guia-n', titulo: 'Exportar en el nuevo' } },
+  ]
+
+  function pasoConDecision(bloque: Record<string, unknown>, extra: Record<string, unknown> = {}) {
+    return normalizarProcedimiento({ pasos: [{ id: 'paso-1', titulo: 'Identificar', bloques: [bloque], ...extra }] })?.pasos[0]
+  }
+
+  it('lee las opciones de una decisión, con su destino', () => {
+    const [bloque] = pasoConDecision({
+      id: 'd',
+      tipo: 'tarea',
+      tipoTarea: 'decision',
+      texto: '¿Qué versión de Outlook estás utilizando?',
+      opciones: opcionesCrudas,
+    })?.bloques ?? []
+    expect(bloque.opciones).toEqual([
+      { id: 'clasico', titulo: 'Outlook clásico', descripcion: 'Veo la pestaña Archivo.', destino: { tipo: 'paso', pasoId: 'paso-2' } },
+      { id: 'nuevo', titulo: 'Nuevo Outlook', descripcion: '', destino: { tipo: 'guia', articuloId: 'guia-n', titulo: 'Exportar en el nuevo' } },
+    ])
+  })
+
+  it('un destino incompleto o desconocido vuelve a "continuar"; nunca se inventa uno', () => {
+    const [bloque] = pasoConDecision({
+      id: 'd',
+      tipo: 'tarea',
+      tipoTarea: 'decision',
+      texto: '¿?',
+      opciones: [
+        { id: 'a', titulo: 'A', destino: { tipo: 'paso', pasoId: '' } },
+        { id: 'b', titulo: 'B', destino: { tipo: 'guia' } },
+        { id: 'c', titulo: 'C', destino: { tipo: 'teletransporte' } },
+        { id: 'd', titulo: 'D' },
+        { id: 'e', titulo: 'E', destino: { tipo: 'fin' } },
+        'basura',
+      ],
+    })?.bloques ?? []
+    expect(bloque.opciones?.map((o) => o.destino)).toEqual([
+      { tipo: 'continuar' },
+      { tipo: 'continuar' },
+      { tipo: 'continuar' },
+      { tipo: 'continuar' },
+      { tipo: 'fin' },
+    ])
+  })
+
+  it('conserva una opción sin título (el editor la señala) y renueva un id repetido', () => {
+    const [bloque] = pasoConDecision({
+      id: 'd',
+      tipo: 'tarea',
+      tipoTarea: 'decision',
+      texto: '¿?',
+      opciones: [{ id: 'x', titulo: '' }, { id: 'x', titulo: 'Otra' }],
+    })?.bloques ?? []
+    expect(bloque.opciones).toHaveLength(2)
+    expect(bloque.opciones?.[0].titulo).toBe('')
+    expect(new Set(bloque.opciones?.map((o) => o.id)).size).toBe(2)
+  })
+
+  it('con opciones, el destino del "No" de antes no se usa', () => {
+    const [bloque] = pasoConDecision({
+      id: 'd',
+      tipo: 'tarea',
+      tipoTarea: 'decision',
+      texto: '¿?',
+      decisionArticuloId: 'guia-vieja',
+      decisionArticuloTitulo: 'Guía vieja',
+      opciones: opcionesCrudas,
+    })?.bloques ?? []
+    expect(bloque.decisionArticuloId).toBeNull()
+    expect(bloque.decisionArticuloTitulo).toBe('')
+  })
+
+  it('una decisión de Sí/No de antes se lee exactamente igual, sin la clave nueva', () => {
+    const [bloque] = pasoConDecision({
+      id: 'archivo-pesado-02-d1',
+      tipo: 'tarea',
+      tipoTarea: 'decision',
+      texto: '¿La persona solo necesita ver el archivo?',
+      decisionArticuloId: 'onedrive-editar',
+      decisionArticuloTitulo: 'Crear un vínculo de OneDrive con permiso de edición',
+    })?.bloques ?? []
+    expect(bloque.decisionArticuloId).toBe('onedrive-editar')
+    expect(bloque.decisionArticuloTitulo).toBe('Crear un vínculo de OneDrive con permiso de edición')
+    expect(bloque).not.toHaveProperty('opciones')
+    expect(esDecisionConOpciones(bloque)).toBe(false)
+  })
+
+  it('las opciones solo valen en una decisión: en otra tarea se descartan', () => {
+    const [bloque] =
+      pasoConDecision({ id: 't', tipo: 'tarea', tipoTarea: 'accion', texto: 'Abrir', opciones: opcionesCrudas })?.bloques ?? []
+    expect(bloque).not.toHaveProperty('opciones')
+  })
+
+  it('lee dónde sigue un paso al terminar, y descarta un salto sin destino', () => {
+    const tareaSimple = { id: 't', tipo: 'tarea', texto: 'x' }
+    expect(pasoConDecision(tareaSimple, { alTerminar: { tipo: 'paso', pasoId: 'paso-4' } })?.alTerminar).toEqual({
+      tipo: 'paso',
+      pasoId: 'paso-4',
+    })
+    expect(pasoConDecision(tareaSimple, { alTerminar: { tipo: 'fin' } })?.alTerminar).toEqual({ tipo: 'fin' })
+    expect(pasoConDecision(tareaSimple, { alTerminar: { tipo: 'paso' } })).not.toHaveProperty('alTerminar')
+    expect(pasoConDecision(tareaSimple)).not.toHaveProperty('alTerminar')
+  })
+
+  it('una decisión nueva nace con dos opciones vacías que siguen la ruta de siempre', () => {
+    const bloque = crearBloqueDecision()
+    expect(bloque.tipoTarea).toBe('decision')
+    expect(bloque.opciones).toHaveLength(2)
+    expect(bloque.opciones?.every((o) => o.titulo === '' && o.destino.tipo === 'continuar')).toBe(true)
+    expect(esDecisionConOpciones(bloque)).toBe(true)
+  })
+
+  it('al guardar recorta títulos y ayudas, y el JSON de un paso sin salto queda como antes', () => {
+    const decisionBloque: BloquePaso = {
+      ...crearBloqueDecision(),
+      id: 'd',
+      texto: '  ¿Qué versión?  ',
+      decisionArticuloId: 'resto-de-antes',
+      opciones: [
+        { id: 'a', titulo: '  Clásico ', descripcion: ' Veo Archivo ', destino: { tipo: 'guia', articuloId: 'g', titulo: ' G ' } },
+        { id: 'b', titulo: 'Nuevo', descripcion: '', destino: { tipo: 'fin' } },
+      ],
+    }
+    const resultado = preparar([
+      pasoCompleto({ id: 'p1', bloques: [decisionBloque], alTerminar: { tipo: 'paso', pasoId: '' } }),
+      pasoCompleto({ id: 'p2', alTerminar: { tipo: 'paso', pasoId: 'p1' } }),
+    ])
+    const [guardado] = resultado?.pasos[0].bloques ?? []
+    expect(guardado.texto).toBe('¿Qué versión?')
+    expect(guardado.decisionArticuloId).toBeNull()
+    expect(guardado.opciones).toEqual([
+      { id: 'a', titulo: 'Clásico', descripcion: 'Veo Archivo', destino: { tipo: 'guia', articuloId: 'g', titulo: 'G' } },
+      { id: 'b', titulo: 'Nuevo', descripcion: '', destino: { tipo: 'fin' } },
+    ])
+    // Un salto a medio elegir no se guarda; uno elegido sí (que sea válido lo exige el editor).
+    expect(resultado?.pasos[0]).not.toHaveProperty('alTerminar')
+    expect(resultado?.pasos[1].alTerminar).toEqual({ tipo: 'paso', pasoId: 'p1' })
+  })
+
+  it('al guardar, una tarea que dejó de ser decisión no conserva opciones', () => {
+    const resultado = preparar([pasoCompleto({ bloques: [{ ...crearBloqueDecision(), texto: 'Abrir', tipoTarea: 'accion' }] })])
+    expect(resultado?.pasos[0].bloques[0]).not.toHaveProperty('opciones')
+  })
+
+  it('duplicar traduce los pasos a los que llevan las opciones y los saltos', () => {
+    const original = procedimientoCompleto({
+      pasos: [
+        pasoCompleto({
+          id: 'p1',
+          bloques: [
+            {
+              ...crearBloqueDecision(),
+              id: 'd',
+              texto: '¿?',
+              opciones: [
+                { id: 'a', titulo: 'A', descripcion: '', destino: { tipo: 'paso', pasoId: 'p3' } },
+                { id: 'b', titulo: 'B', descripcion: '', destino: { tipo: 'guia', articuloId: 'g', titulo: 'G' } },
+              ],
+            },
+          ],
+        }),
+        pasoCompleto({ id: 'p2', alTerminar: { tipo: 'paso', pasoId: 'p3' } }),
+        pasoCompleto({ id: 'p3' }),
+      ],
+    })
+    const copia = duplicarProcedimiento(original)
+    const [c1, c2, c3] = copia.pasos
+    expect(c3.id).not.toBe('p3')
+    expect(c1.bloques[0].opciones?.[0].destino).toEqual({ tipo: 'paso', pasoId: c3.id })
+    // La guía a la que lleva una opción es la misma en la copia.
+    expect(c1.bloques[0].opciones?.[1].destino).toEqual({ tipo: 'guia', articuloId: 'g', titulo: 'G' })
+    expect(c2.alTerminar).toEqual({ tipo: 'paso', pasoId: c3.id })
+    expect(original.pasos[1].alTerminar).toEqual({ tipo: 'paso', pasoId: 'p3' })
+  })
+
+  it('el índice de búsqueda encuentra la guía por sus opciones y por la guía que abre una', () => {
+    const texto = textoDeProcedimiento(
+      procedimientoCompleto({
+        pasos: [
+          pasoCompleto({
+            bloques: [
+              {
+                ...crearBloqueDecision(),
+                texto: '¿Qué versión?',
+                opciones: [
+                  { id: 'a', titulo: 'Nuevo Outlook', descripcion: 'Utilizo la versión nueva', destino: { tipo: 'continuar' } },
+                  { id: 'b', titulo: 'Clásico', descripcion: '', destino: { tipo: 'guia', articuloId: 'g', titulo: 'Exportar PST' } },
+                ],
+              },
+            ],
+          }),
+        ],
+      }),
+    )
+    expect(texto).toContain('Nuevo Outlook')
+    expect(texto).toContain('Utilizo la versión nueva')
+    expect(texto).toContain('Exportar PST')
   })
 })

@@ -1,7 +1,8 @@
 import type { Procedimiento } from '../../lib/db'
 import { siguientePasoPendiente } from '../../lib/procedimiento'
-import { contarHechos } from '../../lib/progresoPasos'
+import { avanceDeLaRuta, hechosDeRuta } from '../../lib/rutaProcedimiento'
 import { guiaTerminada } from './cierrePaso'
+import { pasoDeTotal } from './sinTerminar'
 
 // QUE OFRECE LA FICHA DE UNA GUIA (encargo del 2026-09-09, tarea 5;
 // ampliado el mismo dia con las comprobaciones finales).
@@ -48,13 +49,20 @@ export type PendienteGuia =
 export interface AccionGuia {
   estado: EstadoAccionGuia
   pendiente: PendienteGuia
+  // Pasos hechos y pasos de la RUTA (tarea 302): con decisiones con
+  // opciones, los del camino elegido. El numero del paso pendiente es su
+  // posicion en esa ruta.
   pasosHechos: number
   total: number
+  // La ruta se detiene en una decision sin responder: `total` son los
+  // pasos que ya se conocen.
+  rutaAbierta: boolean
 }
 
 export interface AvanceGuia {
   pasosHechos?: string[]
   verificacionHecha?: number[]
+  elecciones?: Record<string, string>
 }
 
 /**
@@ -68,34 +76,34 @@ export function accionDeGuia(
   avance: AvanceGuia | null | undefined,
   hayEjecucionAbierta: boolean,
 ): AccionGuia {
-  const idsPasos = procedimiento.pasos.map((paso) => paso.id)
-  const total = idsPasos.length
-  const cuenta = contarHechos(avance?.pasosHechos ?? [], idsPasos)
+  const { ruta, hechos: cuenta, total } = avanceDeLaRuta(procedimiento, avance)
+  const idsPasos = ruta.pasos.map((paso) => paso.id)
+  const rutaAbierta = ruta.pendiente !== null
   const estadoAbierto: EstadoAccionGuia = hayEjecucionAbierta ? 'continuar' : 'empezar'
+  const cuentas = { pasosHechos: cuenta, total, rutaAbierta }
 
   // Sin pasos que ejecutar no hay recorrido que ofrecer (caso K1).
   if (total === 0) {
-    return { estado: estadoAbierto, pendiente: { tipo: 'ninguno' }, pasosHechos: cuenta, total }
+    return { estado: estadoAbierto, pendiente: { tipo: 'ninguno' }, ...cuentas }
   }
 
-  if (guiaTerminada(procedimiento, avance?.pasosHechos, avance?.verificacionHecha)) {
-    return { estado: 'repetir', pendiente: { tipo: 'ninguno' }, pasosHechos: cuenta, total }
+  if (guiaTerminada(procedimiento, avance?.pasosHechos, avance?.verificacionHecha, avance?.elecciones)) {
+    return { estado: 'repetir', pendiente: { tipo: 'ninguno' }, ...cuentas }
   }
 
-  const destino = siguientePasoPendiente(idsPasos, new Set(avance?.pasosHechos ?? []), -1)
+  const destino = siguientePasoPendiente(idsPasos, hechosDeRuta(ruta, avance?.pasosHechos), -1)
   if (destino !== null) {
     return {
       estado: estadoAbierto,
       pendiente: { tipo: 'paso', indice: destino, numero: destino + 1 },
-      pasosHechos: cuenta,
-      total,
+      ...cuentas,
     }
   }
 
   // Pasos cerrados y comprobaciones sin marcar: la ejecucion sigue
   // abierta aunque la fila todavia no existiera (los pasos se cerraron
   // en algun momento, asi que existe).
-  return { estado: 'continuar', pendiente: { tipo: 'verificacion' }, pasosHechos: cuenta, total }
+  return { estado: 'continuar', pendiente: { tipo: 'verificacion' }, ...cuentas }
 }
 
 /**
@@ -115,7 +123,7 @@ export function lineaAvanceGuia(accion: AccionGuia | null | undefined): string |
   if (!accion || accion.estado !== 'continuar') return null
   if (accion.pendiente.tipo === 'verificacion') return 'Faltan las comprobaciones finales'
   if (accion.pendiente.tipo === 'paso' && accion.pasosHechos > 0) {
-    return `Vas en el paso ${accion.pendiente.numero} de ${accion.total}`
+    return `Vas en el ${pasoDeTotal(accion.pendiente.numero, accion.total, accion.rutaAbierta)}`
   }
   return null
 }

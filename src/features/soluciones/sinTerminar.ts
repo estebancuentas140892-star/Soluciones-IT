@@ -1,6 +1,6 @@
 import type { Articulo, ProgresoPasos } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
-import { contarHechos } from '../../lib/progresoPasos'
+import { avanceDeLaRuta } from '../../lib/rutaProcedimiento'
 
 // Los procedimientos que este técnico dejó a medias, para el bloque
 // "Sin terminar" de la lista de Soluciones.
@@ -16,8 +16,15 @@ import { contarHechos } from '../../lib/progresoPasos'
 
 export interface ArticuloSinTerminar {
   articulo: Articulo
+  // Pasos hechos y pasos de la RUTA de esta ejecución (tarea 302): con
+  // decisiones con opciones, los del camino elegido, nunca los de los
+  // otros caminos.
   hechos: number
   total: number
+  // La ruta se detiene en una decisión sin responder: `total` son los
+  // pasos que ya se conocen, y lo que viene después todavía no se sabe.
+  // Quien lo pinta no dice "de M" (sería afirmar un total que no existe).
+  rutaAbierta: boolean
   // Minutos que quedarían según el estimado del procedimiento, repartido
   // por pasos. Es una estimación grosera y se muestra con "~": el dato
   // fino no existe, pero "te quedan ~14 min" decide si vale la pena
@@ -43,26 +50,36 @@ export function articulosSinTerminar(
       const procedimiento = normalizarProcedimiento(articulo.procedimiento)
       if (!procedimiento) return []
 
-      const ids = procedimiento.pasos.map((p) => p.id)
-      const total = ids.length
+      // Se cuenta sobre la ruta y contra los ids vigentes: el
+      // procedimiento pudo editarse después de marcar avance (los pasos
+      // eliminados no cuentan) y los caminos no elegidos no existen.
+      const { ruta, hechos, total, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
       if (total === 0) return []
+      if (hechos === 0 || pasosListos) return []
+      const rutaAbierta = ruta.pendiente !== null
 
-      // Se cruza contra los ids vigentes porque el procedimiento pudo
-      // editarse después de marcar avance: los pasos eliminados no cuentan.
-      const hechos = contarHechos(progreso.pasosHechos, ids)
-      if (hechos === 0 || hechos >= total) return []
-
+      // Con la ruta abierta no se sabe cuánto falta: no se inventa.
       const estimado = procedimiento.tiempoEstimadoMin
       const minutosRestantes =
-        estimado == null ? null : Math.max(1, Math.round((estimado * (total - hechos)) / total))
+        estimado == null || rutaAbierta ? null : Math.max(1, Math.round((estimado * (total - hechos)) / total))
 
-      return [{ articulo, hechos, total, minutosRestantes, actualizadoEn: progreso.actualizadoEn }]
+      return [{ articulo, hechos, total, rutaAbierta, minutosRestantes, actualizadoEn: progreso.actualizadoEn }]
     })
     .sort((a, b) => b.actualizadoEn.localeCompare(a.actualizadoEn))
-    .map(({ articulo, hechos, total, minutosRestantes }) => ({
+    .map(({ articulo, hechos, total, rutaAbierta, minutosRestantes }) => ({
       articulo,
       hechos,
       total,
+      rutaAbierta,
       minutosRestantes,
     }))
+}
+
+/**
+ * "paso 3 de 5", o solo "paso 3" cuando la ruta se detiene en una decisión
+ * sin responder (tarea 302) y el total todavía no se sabe. En minúscula: lo
+ * usan frases que lo llevan en medio; quien empieza por él lo capitaliza.
+ */
+export function pasoDeTotal(numero: number, total: number, rutaAbierta: boolean): string {
+  return rutaAbierta ? `paso ${numero}` : `paso ${numero} de ${total}`
 }

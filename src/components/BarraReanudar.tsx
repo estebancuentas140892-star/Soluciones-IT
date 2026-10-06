@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { Link } from 'react-router-dom'
 import type { Articulo } from '../lib/db'
 import { colorIconoDeTipo, iconoDeTipo } from '../features/soluciones/iconosSoluciones'
+import { pasoDeTotal } from '../features/soluciones/sinTerminar'
 import { decidirContraida, type EstadoContraible } from './contraerAlBajar'
 import { IndicadorAvance } from './IndicadorAvance'
 import { Play, X } from './iconos'
@@ -10,6 +11,9 @@ interface Props {
   articulo: Articulo
   hechos: number
   total: number
+  // La ruta de la guía se detiene en una decisión sin responder (tarea
+  // 302): el total todavía no se sabe, así que no se dice "de M".
+  rutaAbierta?: boolean
   minutosRestantes: number | null
   onDescartar: () => void
   /**
@@ -79,10 +83,14 @@ export function BarraReanudar({
   articulo,
   hechos,
   total,
+  rutaAbierta = false,
   minutosRestantes,
   onDescartar,
   variante = 'flotante',
 }: Props) {
+  // "paso 3 de 5" (o "paso 3" con la ruta abierta), para todas las variantes.
+  const paso = pasoDeTotal(hechos + 1, total, rutaAbierta)
+  const Paso = paso.charAt(0).toUpperCase() + paso.slice(1)
   const [dx, setDx] = useState(0)
   const [arrastrando, setArrastrando] = useState(false)
   const inicioX = useRef(0)
@@ -156,7 +164,7 @@ export function BarraReanudar({
         // la agenda esta tarjeta es la fila "En curso", y su nombre
         // accesible decía "Sigues en el paso 2 de 5 …", que describe
         // el estado, no lo que pasa al tocarla.
-        aria-label={`Continuar ${articulo.titulo} · paso ${hechos + 1} de ${total}`}
+        aria-label={`Continuar ${articulo.titulo} · ${paso}`}
         className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text hover:bg-noct-accent/[.13]"
       >
         <span className="flex items-center gap-[11px]">
@@ -169,7 +177,7 @@ export function BarraReanudar({
                 si vale la pena retomarlo ahora, y en el rótulo se lee
                 antes que en la línea del progreso. */}
             <span className="block text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
-              Sigues en el paso {hechos + 1} de {total}
+              Sigues en el {paso}
             </span>
             <span className="mt-[3px] block text-[15px] font-medium leading-[1.3] [text-wrap:pretty]">
               {articulo.titulo}
@@ -196,7 +204,7 @@ export function BarraReanudar({
       <div className="flex flex-col items-center gap-1 rounded-xl border border-noct-accent/40 bg-noct-bg/60 p-1.5 xl:flex-row xl:items-center xl:gap-1.5 xl:p-2">
         <Link
           to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
-          title={`Seguir "${articulo.titulo}", paso ${hechos + 1} de ${total}`}
+          title={`Seguir "${articulo.titulo}", ${paso}`}
           className="flex min-w-0 items-center gap-2 text-noct-text xl:flex-1"
         >
           <IndicadorAvance hechos={hechos} total={total} size={26} className="shrink-0" />
@@ -204,7 +212,7 @@ export function BarraReanudar({
             <span className="block truncate text-[12.5px] font-medium leading-[1.25]">{articulo.titulo}</span>
             <span className="mt-0.5 block truncate text-[11px] text-noct-neutral-400">
               <Icono size={11} className={`mr-1 inline-block align-[-1px] ${colorIconoDeTipo(articulo.tipo)}`} aria-hidden />
-              Paso {hechos + 1} de {total}
+              {Paso}
               {minutosRestantes != null && ` · ~${minutosRestantes} min`}
             </span>
           </span>
@@ -251,7 +259,7 @@ export function BarraReanudar({
               {articulo.titulo}
             </span>
             <span className="shrink-0 text-[11.5px] tabular-nums text-noct-neutral-400">
-              Paso {hechos + 1} de {total}
+              {Paso}
             </span>
           </Link>
         ) : (
@@ -265,7 +273,7 @@ export function BarraReanudar({
                 <span className="block truncate text-[13px] font-medium leading-[1.25]">{articulo.titulo}</span>
                 <span className="mt-0.5 block truncate text-[11.5px] text-noct-neutral-400">
                   <Icono size={11} className={`mr-1 inline-block align-[-1px] ${colorIconoDeTipo(articulo.tipo)}`} aria-hidden />
-                  Paso {hechos + 1} de {total}
+                  {Paso}
                   {minutosRestantes != null && ` · ~${minutosRestantes} min`}
                 </span>
               </span>

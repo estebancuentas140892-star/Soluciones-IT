@@ -1,5 +1,6 @@
 import type { PasoProcedimiento, Procedimiento } from '../../lib/db'
-import { contarHechos, verificacionFinalCompleta } from '../../lib/progresoPasos'
+import { verificacionFinalCompleta } from '../../lib/progresoPasos'
+import { avanceDeLaRuta, type Elecciones } from '../../lib/rutaProcedimiento'
 
 // COMO SE CIERRA UN PASO, DICHO UNA SOLA VEZ (encargo del 2026-09-09,
 // tarea 3).
@@ -203,18 +204,22 @@ export function cierreDelPaso({
  * comprobaciones finales daba por cerrado el paso que la exigia sin que
  * nadie las hiciera. Una guia SIN comprobaciones termina al cerrar su
  * ultimo paso, como siempre.
+ *
+ * "Sus pasos" son los de su RUTA (tarea 302): con decisiones con
+ * opciones, los del camino elegido, y nunca con una decision sin
+ * responder. Los pasos de los caminos no elegidos no cuentan. Sin
+ * `elecciones` (una guia sin decisiones), la ruta son todos sus pasos.
+ * Sin pasos que ejecutar no hay nada que cerrar (caso K1: una guia que
+ * es solo metadata): no bloquea, como no bloqueaba antes.
  */
 export function guiaTerminada(
   procedimiento: Procedimiento,
   pasosHechos: string[] | undefined,
   verificacionHecha: number[] | undefined,
+  elecciones?: Elecciones,
 ): boolean {
-  const ids = procedimiento.pasos.map((paso) => paso.id)
-  // Sin pasos que ejecutar no hay nada que cerrar (caso K1: una guia
-  // que es solo metadata). No bloquea, como no bloqueaba antes.
-  const pasosListos = contarHechos(pasosHechos ?? [], ids) === ids.length
   return (
-    pasosListos &&
+    avanceDeLaRuta(procedimiento, { pasosHechos, elecciones }).pasosListos &&
     verificacionFinalCompleta(verificacionHecha, procedimiento.verificacionFinal.length)
   )
 }

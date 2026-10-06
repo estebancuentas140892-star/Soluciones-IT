@@ -6,6 +6,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-06
+
+### Agregado (guías, tarea 302, fase 1): el modelo de las decisiones con opciones y la ruta de una guía
+
+**Área modificada:** `src/lib/` (`db.ts`: `DestinoOpcion`, `OpcionDecision`, `DestinoPaso`, `BloquePaso.opciones`, `PasoProcedimiento.alTerminar` y `elecciones` en el avance; `procedimiento.ts`: normalizar, guardar, duplicar e indexar las opciones y `alTerminar`, `crearBloqueDecision`, `esDecisionConOpciones`, `pasoTieneContenido`; `rutaProcedimiento.ts`, nuevo; `progresoPasos.ts`: `registrarEleccion` y las respuestas conservadas en cada escritura; `grafo.ts`), `src/features/soluciones/` (`cierrePaso.ts`, `accionGuia.ts`, `sinTerminar.ts`, `validacionVinculos.ts`, `CategoriaPage.tsx`), `src/components/BarraReanudar.tsx`, `src/features/inicio/` (`resolver.ts`, `ResolverPage.tsx`, `SeccionesAgenda.tsx`), `src/features/diagnostico/DiagnosticoRunPage.tsx`; pruebas (`rutaProcedimiento.test.ts` y `avanceEnRuta.test.ts`, nuevas; `procedimiento.test.ts` y `progresoPasos.test.ts`); [ARQUITECTURA.md](ARQUITECTURA.md), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-064), [DECISIONES.md](DECISIONES.md) (AD-065) y [TAREAS.md](TAREAS.md).
+**Tipo:** Agregado (estructura de datos y reglas puras) y Documentación.
+**Motivo:** encargo del usuario del 2026-10-06: que una guía pregunte con varias opciones ("¿Qué versión de Outlook estás utilizando?") y lleve al técnico solo por lo que corresponde a su respuesta, juntando los caminos en los pasos comunes.
+**Qué cambia:**
+- **Estructura de datos (JSON `procedimiento`, sin columnas ni migración):** una tarea `decision` puede llevar `opciones` (`id`, `titulo`, `descripcion` opcional y `destino`: `continuar`, `paso` con `pasoId`, `guia` con `articuloId` y copia del `titulo`, o `fin`); un paso puede llevar `alTerminar` (`paso` con `pasoId`, o `fin`) cuando no sigue en el de abajo. Las claves solo se escriben cuando se usan. Las respuestas de cada ejecución viven en `progresoPasos.elecciones` (local, como el resto del avance).
+- **La ruta:** con las respuestas dadas, qué pasos se recorren (solo saltos hacia adelante: un destino hacia atrás o que no existe se ignora, así que la ruta siempre termina); se detiene en una decisión sin responder. Terminar, "Sin terminar", "Vas en el paso N de M", el chip de avance de la categoría y el diagnóstico que ejecuta una guía cuentan sobre la ruta, y con la ruta detenida no afirman el total.
+- **Cambiar una respuesta** reinicia lo que venía después de la decisión (pasos, tareas, saltos, respuestas y el avance de las guías que solo se usaban ahí): no quedan pasos "fantasma".
+- **Compatibilidad:** las decisiones de Sí/No (con `decisionArticuloId`) se leen, se recorren y se guardan igual que siempre; ninguna guía actual cambia. El grafo de referencias y la revisión de ciclos cuentan la guía que abre una opción; el buscador encuentra la guía por sus opciones.
+**Impacto esperado:** ninguno visible todavía: el editor (fase 2) y la ejecución (fase 3) usarán este modelo. Sin cambios de datos ni de Supabase.
+
 ## 2026-10-03
 
 ### Agregado (guías y Bóveda, tarea 290): la credencial del equipo con el que se trabaja

@@ -1,4 +1,5 @@
 import { db, type ProgresoPasos, type ProgresoVinculo } from './db'
+import type { EleccionAplicada } from './rutaProcedimiento'
 
 // Avance local de un tecnico dentro de un procedimiento: que pasos
 // marco como hechos y que instrucciones marco dentro de cada paso.
@@ -47,6 +48,9 @@ export interface AvanceProcedimiento {
   verificacionHecha?: number[]
   evidenciasPorPaso?: Record<string, string>
   pasosSaltados?: string[]
+  // Las respuestas de las decisiones con opciones (tarea 302): deciden la
+  // ruta de esta ejecución.
+  elecciones?: Record<string, string>
 }
 
 /**
@@ -95,6 +99,7 @@ async function guardarProgreso(
       verificacionHecha: previo?.verificacionHecha,
       evidenciasPorPaso: previo?.evidenciasPorPaso,
       pasosSaltados: previo?.pasosSaltados,
+      elecciones: previo?.elecciones,
       ...cambios,
       actualizadoEn: ahora,
     }
@@ -106,6 +111,7 @@ async function guardarProgreso(
       verificacionHecha: actual?.verificacionHecha ?? [],
       evidenciasPorPaso: actual?.evidenciasPorPaso,
       pasosSaltados: actual?.pasosSaltados,
+      elecciones: actual?.elecciones,
       equipoId: actual?.equipoId,
       vinculos: { ...actual?.vinculos, [vinculoId]: vinculo },
       actualizadoEn: ahora,
@@ -124,6 +130,8 @@ async function guardarProgreso(
     verificacionHecha: actual?.verificacionHecha ?? [],
     evidenciasPorPaso: actual?.evidenciasPorPaso,
     pasosSaltados: actual?.pasosSaltados,
+    // Las respuestas de la ejecucion (tarea 302): marcar avance no las toca.
+    elecciones: actual?.elecciones,
     // El equipo de la ejecucion (tarea 290): marcar avance no lo toca.
     equipoId: actual?.equipoId,
     ...cambios,
@@ -332,6 +340,30 @@ export async function alternarInstruccionHecha(
     pasosSaltados: saltados,
   })
   return completo
+}
+
+/**
+ * RESPONDER UNA DECISIÓN CON OPCIONES (tarea 302). Guarda lo que calculó
+ * `aplicarEleccion` (rutaProcedimiento.ts): la respuesta, la decisión
+ * hecha y, si la respuesta cambió, lo de después reiniciado. Y borra el
+ * avance, dentro de esta ejecución, de las guías reutilizadas que
+ * quedaron fuera de la ruta. Todo en una transacción: la ruta nunca se
+ * lee a medio cambiar.
+ *
+ * Esas guías viven en la fila de la guía principal. Una guía reutilizada
+ * con sus propias decisiones no ejecuta otras en el flujo (un solo nivel),
+ * así que en su avance no hay guías que borrar.
+ */
+export async function registrarEleccion(clave: ClaveProgreso, aplicada: EleccionAplicada): Promise<void> {
+  await db.transaction('rw', db.progresoPasos, async () => {
+    await guardarProgreso(clave, aplicada.avance)
+    if (vinculoDe(clave) !== null || aplicada.guiasFuera.length === 0) return
+    const actual = await db.progresoPasos.get(raizDe(clave))
+    if (!actual?.vinculos) return
+    const vinculos = { ...actual.vinculos }
+    for (const guiaId of aplicada.guiasFuera) delete vinculos[guiaId]
+    await db.progresoPasos.put({ ...actual, vinculos })
+  })
 }
 
 /**

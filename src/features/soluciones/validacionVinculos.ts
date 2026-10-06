@@ -27,6 +27,10 @@ export function destinosDe(articulo: Articulo | undefined | null): Set<string> {
     for (const bloque of paso.bloques) {
       if (bloque.decisionArticuloId) destinos.add(bloque.decisionArticuloId)
       if (bloque.guiaArticuloId) destinos.add(bloque.guiaArticuloId)
+      // Las guías que abren las respuestas de una decisión (tarea 302).
+      for (const opcion of bloque.opciones ?? []) {
+        if (opcion.destino.tipo === 'guia') destinos.add(opcion.destino.articuloId)
+      }
     }
   }
   return destinos

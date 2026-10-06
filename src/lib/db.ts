@@ -163,6 +163,46 @@ export type IntencionGuia = 'necesario' | 'consulta' | 'contingencia'
 //   procedimiento ejecutado desde un diagnostico.
 export type TipoTarea = 'accion' | 'verificacion' | 'decision'
 
+// DECISIONES CON OPCIONES (tarea 302). Una decisión puede ofrecer varias
+// respuestas con nombre ("Outlook clásico", "Nuevo Outlook") en vez del
+// Sí/No de siempre, y cada una lleva al técnico por su propio camino. Es la
+// misma tarea 'decision': lo que cambia es que trae `opciones`. Una
+// decisión sin `opciones` es la de Sí/No de antes y funciona igual que
+// siempre (con `decisionArticuloId` como destino del "No").
+//
+// A dónde lleva una opción:
+// - 'continuar': sigue la ruta como si no hubiera pregunta (el paso de
+//   abajo, o el que diga `alTerminar` del paso de la decisión);
+// - 'paso': salta a otro paso de la misma guía. Solo a uno POSTERIOR: un
+//   salto hacia atrás repetiría el recorrido sin fin (ver
+//   `src/lib/rutaProcedimiento.ts`);
+// - 'guia': hace otra guía en el flujo, como el "No" de una decisión de
+//   Sí/No, y al terminarla sigue como 'continuar'. Id y copia del título,
+//   el mismo patrón que el resto de vínculos;
+// - 'fin': con esta respuesta no queda nada más que hacer en la guía.
+export type DestinoOpcion =
+  | { tipo: 'continuar' }
+  | { tipo: 'paso'; pasoId: string }
+  | { tipo: 'guia'; articuloId: string; titulo: string }
+  | { tipo: 'fin' }
+
+// Una respuesta posible de una decisión. `id` es estable: el avance local
+// recuerda la opción elegida por él (`AvanceProcedimiento.elecciones`).
+// `descripcion` es la ayuda corta para reconocerla ("Veo la pestaña
+// Archivo"); opcional, vacía si el autor no la escribió.
+export interface OpcionDecision {
+  id: string
+  titulo: string
+  descripcion: string
+  destino: DestinoOpcion
+}
+
+// Dónde sigue la ruta al terminar un paso cuando NO es el de abajo (tarea
+// 302): otro paso posterior o el final de la guía. Es lo que deja que dos
+// caminos vuelvan a juntarse en un paso común sin duplicarlo: el último
+// paso de un camino dice "sigue en el paso 4".
+export type DestinoPaso = { tipo: 'paso'; pasoId: string } | { tipo: 'fin' }
+
 // A que apunta un vinculo protegido (grupo P2): un secreto INDEPENDIENTE
 // de la boveda ('credencial', `Credencial`) o un dato PROPIO de un
 // equipo ('campo', `CampoProtegido`). El mismo vinculo sirve para los
@@ -226,6 +266,12 @@ export interface BloquePaso {
   tipoTarea: TipoTarea | null
   decisionArticuloId: string | null
   decisionArticuloTitulo: string
+  // Las respuestas de una decisión CON OPCIONES (tarea 302), en el orden
+  // en que se ofrecen. Solo en tareas 'decision' y solo cuando el autor
+  // las definió: ausente en todo lo demás, incluidas las decisiones de
+  // Sí/No de antes, así que el JSON de las guías que no las usan no cambia.
+  // Con opciones, el `decisionArticuloId` de arriba no se usa.
+  opciones?: OpcionDecision[]
   vinculoProtegido: VinculoProtegido | null
   // A QUE PERTENECE ESTE APOYO. Solo aplica a los bloques que NO son
   // 'tarea' (una tarea no es apoyo de nadie: es el trabajo). null en
@@ -320,6 +366,11 @@ export interface PasoProcedimiento {
   // Mismo patron de referencia que subArticuloId.
   solucionArticuloId: string | null
   solucionArticuloTitulo: string
+  // Dónde sigue la ruta al terminar este paso, si no es el de abajo (tarea
+  // 302, ver `DestinoPaso`). Ausente en casi todos los pasos: solo lo
+  // llevan los que cierran un camino de una decisión. Vive en el JSON, así
+  // que no necesita columna ni versión de Dexie.
+  alTerminar?: DestinoPaso
 }
 
 // Nivel de dificultad del procedimiento completo: ayuda al tecnico a
@@ -1073,6 +1124,9 @@ export interface ProgresoVinculo {
   verificacionHecha?: number[]
   evidenciasPorPaso?: Record<string, string>
   pasosSaltados?: string[]
+  // Lo mismo que `ProgresoPasos.elecciones`, para una guía reutilizada que
+  // tenga sus propias decisiones con opciones.
+  elecciones?: Record<string, string>
   actualizadoEn: string
 }
 
@@ -1126,6 +1180,15 @@ export interface ProgresoPasos {
   // entonces no hay ningun paso saltado, que es lo correcto. Como el
   // resto de este registro, es local y no se sincroniza.
   pasosSaltados?: string[]
+  // LAS RESPUESTAS DE ESTA EJECUCIÓN (tarea 302): por cada decisión con
+  // opciones que se respondió, el id de la opción elegida (id de la tarea
+  // de decisión -> id de la opción). Es lo que decide la ruta: qué pasos se
+  // recorren y cuáles no existen para este caso (ver
+  // `src/lib/rutaProcedimiento.ts`). Dura lo que dura la ejecución, como el
+  // resto de este registro: empezar de nuevo la borra, y recargar la
+  // conserva. Opcional: las filas de antes no la traen y no hay ninguna
+  // decisión respondida, que es lo correcto.
+  elecciones?: Record<string, string>
   // EL EQUIPO CON EL QUE SE TRABAJA en esta ejecucion (tarea 290): el id
   // del dispositivo, o null/ausente si no se conoce. Lo comparten la guia
   // y las que reutiliza (viven en esta misma fila), y es lo que permite a
