@@ -11,12 +11,10 @@ import {
   CheckCircle,
   Circle,
   ClockCountdown,
-  FloppyDisk,
   Plus,
   X,
   type IconoProps,
 } from '../../components/iconos'
-import { BTN_GHOST_ACENTO, BTN_PRIMARIO } from '../../components/nocturne'
 import {
   db,
   type ArticuloRelacionado,
@@ -39,6 +37,7 @@ import {
   TIPOS_REFERENCIA,
   tituloConAbreviatura,
 } from './referencias'
+import { Boton } from '../../components/Boton'
 
 // CREAR O EDITAR UNA FICHA DEL CENTRO DE CONSULTA.
 //
@@ -603,14 +602,14 @@ export function ReferenciaForm() {
               <div className="flex items-center justify-between gap-2">
                 <span className={CLASE_ETIQUETA}>Guías relacionadas (opcional)</span>
                 {gruposGuias.length > 0 && (
-                  <button
-                    type="button"
+                  <Boton
+                    papel="texto"
+                    className="-mr-2 whitespace-nowrap"
+                    icono={<Plus size={13} aria-hidden />}
                     onClick={() => setHojaGuia(true)}
-                    className={`${BTN_GHOST_ACENTO} whitespace-nowrap`}
                   >
-                    <Plus size={13} aria-hidden />
-                    Vincular
-                  </button>
+                    Añadir
+                  </Boton>
                 )}
               </div>
               <span className="-mt-1 text-[12px] leading-[1.5] text-noct-neutral-600">
@@ -647,14 +646,14 @@ export function ReferenciaForm() {
             <div className="flex items-center justify-between gap-2">
               <span className={CLASE_ETIQUETA}>Relacionado (opcional)</span>
               {gruposRelacionables.length > 0 && (
-                <button
-                  type="button"
+                <Boton
+                  papel="texto"
+                  className="-mr-2 whitespace-nowrap"
+                  icono={<Plus size={13} aria-hidden />}
                   onClick={() => setHojaRelacionada(true)}
-                  className={`${BTN_GHOST_ACENTO} whitespace-nowrap`}
                 >
-                  <Plus size={13} aria-hidden />
-                  Vincular
-                </button>
+                  Añadir
+                </Boton>
               )}
             </div>
             {relacionadas.map((relacionada) => {
@@ -698,14 +697,17 @@ export function ReferenciaForm() {
               coste. Nunca impide guardar. */}
           <AvisosConsistencia avisos={avisos} />
 
-          <button
+          <Boton
             type="submit"
-            disabled={guardando || titulo.trim() === ''}
-            className={`mt-1 ${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}
+            papel="principal"
+            tamano={52}
+            className="mt-1"
+            disabled={titulo.trim() === ''}
+            cargando={guardando}
+            textoCargando="Guardando…"
           >
-            <FloppyDisk size={15} aria-hidden />
-            {guardando ? 'Guardando...' : 'Guardar ficha'}
-          </button>
+            Guardar ficha
+          </Boton>
         </form>
       )}
 

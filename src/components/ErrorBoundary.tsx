@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { esErrorDeChunk, recargarUnaVezPorChunk, reinstalarYRecargar, sinConexion } from '../lib/recargaChunk'
-import { BTN_PRIMARIO } from './nocturne'
+import { claseBoton } from './claseBoton'
 
 interface Props {
   children: ReactNode
@@ -22,8 +22,8 @@ interface State {
 // muestra una pantalla con boton de reintento en vez de la blanca.
 //
 // Esta pantalla se dibuja con las clases de Nocturne escritas a mano y
-// solo toma BTN_PRIMARIO de components/nocturne.tsx, que son constantes
-// de texto (1.5 kB en su propio trozo). En particular NO usa un icono de
+// solo toma `claseBoton` de components/claseBoton.ts, que son constantes
+// de texto sin importaciones (tarea 291). En particular NO usa un icono de
 // components/iconos.tsx a proposito, aunque el resto de las pantallas a
 // pantalla completa (BloqueoAppGuard, BovedaGuard) lo lleven en un
 // circulo: main.tsx importa este componente de forma ESTATICA, asi que
@@ -131,7 +131,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={this.irAResolver}
-              className={`${BTN_PRIMARIO} min-h-12 w-full max-w-[300px]`}
+              className={`${claseBoton({ papel: 'principal', tamano: 52, anchoCompleto: true })} max-w-[300px]`}
             >
               Ir a Resolver
             </button>
@@ -150,7 +150,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={this.reintentar}
-              className={`${BTN_PRIMARIO} min-h-12 w-full max-w-[300px]`}
+              className={`${claseBoton({ papel: 'principal', tamano: 52, anchoCompleto: true })} max-w-[300px]`}
             >
               Reinstalar la aplicación
             </button>

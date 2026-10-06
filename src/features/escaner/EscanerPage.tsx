@@ -3,15 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
 import { BarraTarea } from '../../components/BarraTarea'
-import {
-  CameraSlash,
-  Check,
-  Flashlight,
-  FlashlightFill,
-  Monitor,
-  Question,
-} from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { CameraSlash, Check, Flashlight, FlashlightFill, Monitor, Question } from '../../components/iconos'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { useOrigen } from '../../app/useOrigen'
 import { resolverCodigo } from './resolverCodigo'
@@ -23,6 +15,8 @@ import {
   reiniciarConteo,
   ultimoAbierto,
 } from './sesionEscaneo'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Pantalla de escaneo a pantalla completa (sin la barra inferior),
 // re-autorizada en Nocturne (handoff "Rediseño de aplicación
@@ -413,9 +407,9 @@ export function EscanerPage() {
               aria-label="Buscar por placa o serial"
               className="min-h-[46px] min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-surface px-3.5 text-[14px] text-noct-text outline-none placeholder:text-noct-neutral-600 focus:border-noct-accent"
             />
-            <button type="submit" className={`min-h-[46px] px-4 ${BTN_PRIMARIO}`}>
+            <Boton type="submit" papel="principal" className="shrink-0">
               Buscar
-            </button>
+            </Boton>
           </form>
         )}
 
@@ -431,18 +425,10 @@ export function EscanerPage() {
               </div>
             </div>
             <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => setAviso(null)}
-                className={`min-h-11 flex-1 justify-center ${BTN_PRIMARIO}`}
-              >
+              <Boton papel="principal" className="flex-1" onClick={() => setAviso(null)}>
                 {fallo ? 'Cerrar' : 'Seguir escaneando'}
-              </button>
-              <Link
-                to={rutaRegistrarEquipo}
-                state={origenEscaner}
-                className={`min-h-11 ${BTN_SECUNDARIO}`}
-              >
+              </Boton>
+              <Link to={rutaRegistrarEquipo} state={origenEscaner} className={claseBoton({ papel: 'secundario' })}>
                 Registrar equipo
               </Link>
             </div>
@@ -474,13 +460,9 @@ export function EscanerPage() {
                 </Link>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => setAviso(null)}
-              className={`min-h-11 justify-center ${BTN_PRIMARIO}`}
-            >
+            <Boton papel="principal" onClick={() => setAviso(null)}>
               Seguir escaneando
-            </button>
+            </Boton>
           </div>
         )}
 

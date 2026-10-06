@@ -2,8 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
-import { Camera, CaretDown, CaretUp, FloppyDisk, TrashSimple, Warning } from '../../components/iconos'
-import { BTN_PRIMARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
+import { Camera, CaretDown, CaretUp, TrashSimple, Warning } from '../../components/iconos'
+import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import {
   Campo,
   CampoConSugerencias,
@@ -25,6 +25,7 @@ import { claseActivaDeCategoria, claseTextoDeCategoria } from '../soluciones/col
 import { SelectorUbicacion } from '../ubicaciones/SelectorUbicacion'
 import { SelectorPersona } from '../personas/SelectorPersona'
 import { ESTADOS_SUGERIDOS, estadoCanonico } from './estados'
+import { Boton } from '../../components/Boton'
 
 // Punto de color de cada estado sugerido (08_ESTILO: operativo verde,
 // mantenimiento ámbar, fuera de servicio rojo, de baja neutro). Se
@@ -598,19 +599,21 @@ export function DispositivoForm() {
       </main>
 
       {/* Barra inferior fija: aviso de validación + Guardar. */}
-      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
+      <div data-borde-inferior className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
         <div className="flex items-center gap-2.5">
           <span className="min-w-0 flex-1 truncate text-[12px] text-noct-precaucion">{aviso}</span>
-          <button
-            type="button"
-            disabled={guardando}
+          {/* Siempre activo: si falta algo lo dice el aviso de al lado (T4;
+              antes se atenuaba al 55 % sin decir por qué). */}
+          <Boton
+            papel="principal"
+            tamano={52}
+            className="shrink-0"
             onClick={() => void guardar()}
-            className={`${BTN_PRIMARIO} min-h-[46px] px-4 disabled:opacity-50`}
-            style={{ opacity: valido ? undefined : 0.55 }}
+            cargando={guardando}
+            textoCargando="Guardando…"
           >
-            <FloppyDisk size={15} aria-hidden />
-            {guardando ? 'Guardando...' : 'Guardar equipo'}
-          </button>
+            Guardar equipo
+          </Boton>
         </div>
       </div>
     </Chasis>

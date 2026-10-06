@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { estadoInicialBoveda, verificarContrasenaMaestra } from '../features/boveda/sesionBoveda'
 import { CampoContrasena } from './CampoContrasena'
-import { CLASE_CAMPO_SOBRE_SUPERFICIE, CLASE_ETIQUETA } from './campos'
-import { Modal } from './Modal'
-import { BTN_PRIMARIO_PELIGRO, BTN_SECUNDARIO } from './nocturne'
+import { CLASE_ETIQUETA } from './campos'
+import { Dialogo } from './Dialogo'
+import { Warning } from './iconos'
+import { MensajeError } from './MensajeError'
 
 interface Props {
   abierto: boolean
@@ -17,7 +18,10 @@ interface Props {
   // para que eliminar no rompa vínculos a ciegas. null u omitido: sin
   // referencias, no se muestra nada.
   advertencia?: ReactNode
-  textoConfirmar?: string
+  // El nombre completo de la acción, con su objeto: "Eliminar el equipo",
+  // "Eliminar el acceso" (tarea 291, F2: "Eliminar" solo no decía qué
+  // eliminaba).
+  textoConfirmar: string
   onCerrar: () => void
   // Ejecuta la eliminacion. Suele navegar; si no, el padre cierra el
   // dialogo tras completarse.
@@ -32,22 +36,27 @@ interface Props {
 //   eliminacion sensible se niega hasta poder comprobar.
 type Modo = 'cargando' | 'simple' | 'contrasena' | 'sin-comprobar'
 
-// Dialogo moderno para confirmar una eliminacion. En las acciones
-// sensibles agrega una capa de seguridad: pide la contrasena maestra
-// (la misma de la boveda) y solo elimina si es correcta. Cualquier
-// tecnico autenticado puede autorizarla (decision del 2026-07-17: ya
-// no se exige el permiso puede_ver_boveda, que ademas bloqueaba al
-// resto del equipo); ver credenciales de la boveda sigue exigiendo el
-// permiso, eso no cambia. Si el equipo aun no definio la contrasena
-// maestra, se cae a confirmacion normal (no se puede exigir algo que
-// no existe).
+// Confirmar una eliminacion. En las acciones sensibles agrega una capa de
+// seguridad: pide la contrasena maestra (la misma de la boveda) y solo
+// elimina si es correcta. Cualquier tecnico autenticado puede autorizarla
+// (decision del 2026-07-17: ya no se exige el permiso puede_ver_boveda,
+// que ademas bloqueaba al resto del equipo); ver credenciales de la boveda
+// sigue exigiendo el permiso, eso no cambia. Si el equipo aun no definio
+// la contrasena maestra, se cae a confirmacion normal (no se puede exigir
+// algo que no existe).
+//
+// Desde la tarea 291 (auditoría UX, F2) se apoya en el `Dialogo` común: en
+// el teléfono, la acción a todo el ancho con su nombre y "Cancelar"
+// debajo, sobre el teclado si se escribe la contraseña maestra; en
+// escritorio, centrado a 440 px. La contraseña maestra, el aviso de
+// impacto y la negativa cuando no se puede comprobar se quedan igual.
 export function DialogoEliminar({
   abierto,
   titulo,
   descripcion,
   sensible = false,
   advertencia,
-  textoConfirmar = 'Eliminar',
+  textoConfirmar,
   onCerrar,
   onConfirmar,
 }: Props) {
@@ -87,9 +96,14 @@ export function DialogoEliminar({
 
   async function confirmar(evento?: FormEvent) {
     evento?.preventDefault()
+    if (ocupado) return
     setError(null)
 
     if (modo === 'contrasena') {
+      if (contrasena === '') {
+        setError('Escribe la contraseña maestra.')
+        return
+      }
       setOcupado(true)
       const resultado = await verificarContrasenaMaestra(contrasena)
       if (resultado !== 'correcta') {
@@ -107,67 +121,69 @@ export function DialogoEliminar({
     await onConfirmar()
   }
 
-  const tituloId = 'dialogo-eliminar-titulo'
+  const puedeConfirmar = modo === 'simple' || modo === 'contrasena'
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={tituloId}>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <h2 id={tituloId} className="text-base font-semibold text-noct-text">
-            {titulo}
-          </h2>
-          <p className="text-sm text-noct-neutral-400">{descripcion}</p>
+    <Dialogo
+      abierto={abierto}
+      onCerrar={onCerrar}
+      titulo={titulo}
+      descripcion={descripcion}
+      accion={
+        puedeConfirmar
+          ? {
+              texto: textoConfirmar,
+              onConfirmar: () => void confirmar(),
+              cargando: ocupado,
+              textoCargando: 'Eliminando…',
+            }
+          : undefined
+      }
+    >
+      {advertencia && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-noct-precaucion/40 bg-noct-precaucion/[.08] px-3 py-2.5">
+          <Warning size={16} className="mt-0.5 shrink-0 text-noct-precaucion" aria-hidden />
+          <p className="text-pretty text-sm leading-[1.45] text-noct-text">{advertencia}</p>
         </div>
+      )}
 
-        {advertencia && (
-          <div className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2 text-sm text-noct-precaucion">
-            {advertencia}
-          </div>
-        )}
+      {modo === 'cargando' && <p className="text-sm text-noct-neutral-400">Comprobando…</p>}
 
-        {modo === 'cargando' && <p className="text-sm text-noct-neutral-500">Comprobando...</p>}
+      {modo === 'sin-comprobar' && (
+        <MensajeError
+          tono="bloqueo"
+          titulo="No se pudo comprobar la contraseña maestra"
+          conserva="No se ha borrado nada. Conéctate a internet, espera a que la aplicación sincronice y vuelve a intentarlo."
+        />
+      )}
 
-        {modo === 'sin-comprobar' && (
-          <p className="rounded-lg border border-noct-precaucion/35 bg-noct-precaucion/[.09] px-3 py-2 text-sm text-noct-precaucion">
-            No se pudo comprobar la contraseña maestra del equipo. Conéctate a internet, espera a
-            que la aplicación sincronice y vuelve a intentarlo.
-          </p>
-        )}
-
-        {modo === 'contrasena' && (
-          <form onSubmit={confirmar} className="flex flex-col gap-2">
-            <label htmlFor="contrasena-eliminar" className={CLASE_ETIQUETA}>
-              Para continuar, ingresa la contraseña maestra.
-            </label>
-            <CampoContrasena
-              id="contrasena-eliminar"
-              autoFocus
-              value={contrasena}
-              onChange={(e) => setContrasena(e.target.value)}
-              placeholder="Contraseña maestra"
-              className={CLASE_CAMPO_SOBRE_SUPERFICIE}
-            />
-          </form>
-        )}
-
-        {error && <p className="text-sm text-noct-error">{error}</p>}
-
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onCerrar} className={BTN_SECUNDARIO}>
-            {modo === 'sin-comprobar' ? 'Cerrar' : 'Cancelar'}
-          </button>
-          {modo !== 'sin-comprobar' && modo !== 'cargando' && (
-            <button
-              type="button"
-              onClick={() => void confirmar()}
-              disabled={ocupado || (modo === 'contrasena' && contrasena === '')}
-              className={`${BTN_PRIMARIO_PELIGRO} disabled:opacity-50`}
-            >
-              {ocupado ? 'Eliminando...' : textoConfirmar}
-            </button>
+      {modo === 'contrasena' && (
+        // Enter en el campo confirma, igual que el botón.
+        <form onSubmit={(evento) => void confirmar(evento)} className="flex flex-col gap-1">
+          <label htmlFor="contrasena-eliminar" className={CLASE_ETIQUETA}>
+            Contraseña maestra
+          </label>
+          <CampoContrasena
+            id="contrasena-eliminar"
+            autoFocus
+            value={contrasena}
+            onChange={(e) => {
+              setContrasena(e.target.value)
+              setError(null)
+            }}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'contrasena-eliminar-error' : undefined}
+            className={`box-border min-h-[46px] w-full rounded-lg border bg-noct-bg px-3 text-[15px] text-noct-text outline-none focus:border-noct-accent focus:ring-1 focus:ring-noct-accent ${
+              error ? 'border-noct-error' : 'border-noct-divider'
+            }`}
+          />
+          {error && (
+            <p id="contrasena-eliminar-error" className="text-[13px] text-noct-error">
+              {error}
+            </p>
           )}
-        </div>
-      </div>
-    </Modal>
+        </form>
+      )}
+    </Dialogo>
   )
 }

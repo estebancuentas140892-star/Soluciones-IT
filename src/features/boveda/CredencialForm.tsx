@@ -4,7 +4,6 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { ArrowsClockwise, CaretDown, Eye, EyeSlash, LockSimple, Paperclip, Plus, X } from '../../components/iconos'
-import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import {
   Campo,
   CampoConSugerencias,
@@ -26,6 +25,7 @@ import { equipoPorIpOUrl } from './sugerenciaEquipoPorIp'
 import { tituloAccesoSugerido } from './tituloAcceso'
 import { faltantesDeAcceso, type CampoFaltante } from './validacionAcceso'
 import { cifrarArchivo, cifrarCredencial, descifrarCredencial } from './sesionBoveda'
+import { Boton } from '../../components/Boton'
 
 // Cinco tipos de secreto (fase P3 de PROPUESTA_SEGURIDAD_DISPOSITIVO.md,
 // sección 3.2): el `tipo` ya no es solo un preset de URL que precarga
@@ -605,25 +605,25 @@ export function CredencialForm() {
                     onChange={(e) => setContrasena(e.target.value)}
                     className={`min-h-11 flex-1 ${CLASE_CAMPO_MONO}`}
                   />
-                  <button
-                    type="button"
+                  <Boton
+                    papel="secundario"
+                    soloIcono
                     onClick={() => setVerContrasena((v) => !v)}
-                    aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
-                  >
-                    {verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                  </button>
-                  <button
-                    type="button"
+                    aria-label={verContrasena ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                    title={verContrasena ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                    icono={verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+                  />
+                  <Boton
+                    papel="secundario"
+                    className="shrink-0 whitespace-nowrap"
+                    icono={<ArrowsClockwise size={14} aria-hidden />}
                     onClick={() => {
                       setContrasena(generarContrasena())
                       setVerContrasena(true)
                     }}
-                    className={`${BTN_SECUNDARIO} h-11 shrink-0 whitespace-nowrap`}
                   >
-                    <ArrowsClockwise size={14} aria-hidden />
                     Generar
-                  </button>
+                  </Boton>
                 </div>
                 {errorDe('contrasena') && (
                   <span className="text-[12px] text-noct-error">{errorDe('contrasena')}</span>
@@ -791,14 +791,14 @@ export function CredencialForm() {
                         onChange={(e) => setContrasena(e.target.value)}
                         className={`min-h-11 flex-1 ${CLASE_CAMPO_MONO}`}
                       />
-                      <button
-                        type="button"
+                      <Boton
+                        papel="secundario"
+                        soloIcono
                         onClick={() => setVerContrasena((v) => !v)}
-                        aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                        className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
-                      >
-                        {verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                      </button>
+                        aria-label={verContrasena ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                        title={verContrasena ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                        icono={verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+                      />
                     </div>
                     <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
                       Este tipo no suele usar contraseña. Se conserva tal cual hasta que la quites.
@@ -933,22 +933,22 @@ export function CredencialForm() {
         </main>
 
         {/* Barra inferior fija: aviso + Guardar. */}
-        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
+        <div
+          data-borde-inferior
+          className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]"
+        >
           <div className="flex items-center gap-2.5">
             <span
               className={`min-w-0 flex-1 truncate text-[12px] ${avisoEsError ? 'text-noct-precaucion' : 'text-noct-neutral-500'}`}
             >
               {aviso}
             </span>
-            <button
-              type="submit"
-              disabled={guardando}
-              className={`${BTN_PRIMARIO} min-h-[46px] px-4 disabled:opacity-50`}
-              style={{ opacity: valido ? undefined : 0.55 }}
-            >
-              <LockSimple size={15} aria-hidden />
-              {guardando ? 'Guardando...' : 'Guardar acceso'}
-            </button>
+            {/* Siempre activo: si falta algo, lo dice el aviso de al lado y su
+                campo al pulsar (T4; antes se atenuaba al 55 % sin decir por
+                qué). */}
+            <Boton type="submit" papel="principal" tamano={52} className="shrink-0" cargando={guardando} textoCargando="Guardando…">
+              Guardar acceso
+            </Boton>
           </div>
         </div>
       </form>

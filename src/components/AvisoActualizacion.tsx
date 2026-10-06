@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { BTN_PRIMARIO } from './nocturne'
+import { Boton } from './Boton'
 import { useHuecoAvisoActualizacion } from './ranuraAvisoActualizacion'
 
 // El aviso "Versión nueva disponible", separado de `useRegisterSW` para
@@ -32,19 +32,18 @@ export function AvisoActualizacion({
   const contenido = (
     <>
       <p className="text-sm text-noct-text">Versión nueva disponible</p>
-      <button
-        type="button"
+      <Boton
+        papel="principal"
+        className="shrink-0"
         onClick={() => void actualizar()}
-        // Deshabilitado mientras recarga para que el toque tenga una
-        // respuesta visible: parte del reporte original era justamente
-        // que el boton no daba ninguna señal de haberse pulsado.
-        disabled={actualizando}
-        // 44 px de alto (tarea 262, regla R6) solo aquí: `BTN_PRIMARIO`
-        // no cambia para el resto de la app.
-        className={`min-h-11 shrink-0 disabled:opacity-60 ${BTN_PRIMARIO}`}
+        // Inactivo y con su gerundio mientras recarga para que el toque
+        // tenga una respuesta visible: parte del reporte original era
+        // justamente que el boton no daba ninguna señal de haberse pulsado.
+        cargando={actualizando}
+        textoCargando="Actualizando…"
       >
-        {actualizando ? 'Actualizando...' : 'Actualizar'}
-      </button>
+        Actualizar
+      </Boton>
     </>
   )
 

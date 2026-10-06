@@ -2,13 +2,14 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState } from 'react'
 import { Chasis } from '../../app/Chasis'
 import { CaretDown, CaretUp, LinkSimple, Monitor, Wrench } from '../../components/iconos'
-import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { type CampoProtegido, db } from '../../lib/db'
 import { eliminarRegistro, guardarRegistro, nuevoId, registrarAccesoBoveda } from '../../lib/repositorio'
 import { camposDeDispositivo, esOcultoPorDefecto, siguienteOrden } from '../dispositivos/camposProtegidos'
 import { CampoSecreto } from './CampoSecreto'
 import { camposAMigrar, detectarCandidatos, type CandidatoMigracion } from './migracionSecretos'
 import { cifrarValor, descifrarCredencial, type DatosCredencial } from './sesionBoveda'
+import { Boton } from '../../components/Boton'
 
 // Migracion asistida de secretos de equipo (fase P4 de
 // PROPUESTA_SEGURIDAD_DISPOSITIVO.md), mismo espiritu que
@@ -283,14 +284,16 @@ export function MigracionCredenciales() {
                       Al migrar, este secreto se elimina de la Bóveda: el contenido pasa a la sección
                       "Seguridad" del equipo.
                     </p>
-                    <button
-                      type="button"
+                    <Boton
+                      papel="principal"
+                      className="self-start"
                       onClick={() => void migrar(candidato)}
-                      disabled={noLegible || migrandoId === candidato.credencialId}
-                      className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+                      disabled={noLegible}
+                      cargando={migrandoId === candidato.credencialId}
+                      textoCargando="Migrando…"
                     >
-                      {migrandoId === candidato.credencialId ? 'Migrando...' : 'Migrar a este equipo'}
-                    </button>
+                      Migrar a este equipo
+                    </Boton>
                   </div>
                 )}
               </div>

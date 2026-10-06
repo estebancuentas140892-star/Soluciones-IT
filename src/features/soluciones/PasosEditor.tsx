@@ -1254,8 +1254,8 @@ export function PasosEditor({
       <DialogoEliminar
         abierto={pasoAEliminar !== null}
         titulo={`¿Eliminar el paso ${(pasoAEliminar ?? 0) + 1}?`}
-        descripcion="Se quitará el paso del procedimiento. El cambio se aplica al guardar el artículo."
-        textoConfirmar="Eliminar paso"
+        descripcion="Se quitará el paso de la guía. El cambio se aplica al guardar la guía."
+        textoConfirmar="Eliminar el paso"
         onCerrar={() => setPasoAEliminar(null)}
         onConfirmar={confirmarEliminarPaso}
       />

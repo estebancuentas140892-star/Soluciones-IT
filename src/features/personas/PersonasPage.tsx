@@ -4,7 +4,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { ArrowElbowDownRight, CaretDown, CaretRight, CaretUp, Monitor, Plus, User } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { PastillaEstado } from '../../components/PastillaEstado'
 import { db } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
@@ -12,6 +11,7 @@ import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { candidatosPersona } from './migracion'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 import { equiposPorValidar, esDeBaja, esFechaValida, estadoDePersona } from './cicloPersona'
+import { Boton } from '../../components/Boton'
 
 // Minusculas sin acentos, para que la busqueda encuentre "Perez" al
 // escribir "perez".
@@ -124,10 +124,9 @@ export function PersonasPage() {
     <Chasis
       modo="documento"
       acciones={
-        <button type="button" onClick={alternarCrear} className={`shrink-0 ${BTN_SECUNDARIO}`}>
-          <Plus size={15} aria-hidden />
+        <Boton papel="texto" className="shrink-0" icono={<Plus size={15} aria-hidden />} onClick={alternarCrear}>
           Crear
-        </button>
+        </Boton>
       }
       barra={
         <>
@@ -192,17 +191,18 @@ export function PersonasPage() {
               />
             </label>
             <div className="flex gap-2">
-              <button
-                type="button"
+              <Boton
+                papel="principal"
                 onClick={() => void crear()}
-                disabled={guardando || nuevoNombre.trim() === '' || ingresoInvalido}
-                className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
+                disabled={nuevoNombre.trim() === '' || ingresoInvalido}
+                cargando={guardando}
+                textoCargando="Creando…"
               >
-                {guardando ? 'Creando...' : 'Crear persona'}
-              </button>
-              <button type="button" onClick={alternarCrear} className={`${BTN_GHOST} min-h-11 px-4`}>
+                Crear persona
+              </Boton>
+              <Boton papel="texto" tono="descarte" onClick={alternarCrear}>
                 Cancelar
-              </button>
+              </Boton>
             </div>
             <p className="text-[12px] text-noct-neutral-500">Después se le asigna un equipo desde su ficha.</p>
           </div>

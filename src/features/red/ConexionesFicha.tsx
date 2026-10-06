@@ -6,8 +6,10 @@ import { eliminarRegistro, guardarRegistro } from '../../lib/repositorio'
 import { agruparConexiones, extremosInvertidos, type ExtremoConexion } from '../../lib/conexiones'
 import { mapaDeTextos, nombreVivo } from '../../lib/referencia'
 import { ArrowsLeftRight, CaretRight, Plus, X } from '../../components/iconos'
-import { BTN_GHOST_ACENTO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { FormularioConexion } from './FormularioConexion'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Seccion Conexiones de la ficha de un dispositivo: lista sus enlaces
 // e instalaciones (navegables a la ficha del otro extremo) y permite
@@ -133,10 +135,9 @@ export function ConexionesFicha({
           onCerrar={() => setAgregando(false)}
         />
       ) : (
-        <button type="button" onClick={() => setAgregando(true)} className={`${BTN_GHOST_ACENTO} self-start`}>
-          <Plus size={13} aria-hidden />
+        <Boton papel="texto" className="-ml-2 self-start" icono={<Plus size={13} aria-hidden />} onClick={() => setAgregando(true)}>
           Agregar conexión
-        </button>
+        </Boton>
       )}
     </section>
   )
@@ -151,12 +152,10 @@ function GrupoConexiones({ titulo, children }: { titulo: string; children: React
   )
 }
 
-// Acciones de la fila. 44 px es el minimo de toque que ya aplica el
-// resto de la app (M-005 de la auditoria movil); el boton de quitar
-// media 32 y aqui pasa a tener un vecino, asi que dos objetivos
-// pequeños y pegados se volvian un error de puntería.
-const BTN_FILA =
-  'flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-noct-neutral-500 hover:bg-noct-text/[.05] hover:text-noct-text'
+// Acciones de la fila: botones de solo icono de 44 (M-005 de la auditoria
+// movil y T3 de la auditoría UX); el boton de quitar media 32 y aqui pasa
+// a tener un vecino, asi que dos objetivos pequeños y pegados se volvian
+// un error de puntería.
 
 function FilaConexion({
   extremo,
@@ -211,7 +210,7 @@ function FilaConexion({
           onClick={() => void onInvertir(conexion)}
           aria-label={`Invertir la dirección: ${trasInvertir}`}
           title={`Invertir la dirección: ${trasInvertir}`}
-          className={BTN_FILA}
+          className={claseBoton({ papel: 'texto', tono: 'descarte', soloIcono: true })}
         >
           <ArrowsLeftRight size={15} aria-hidden />
         </button>
@@ -220,7 +219,8 @@ function FilaConexion({
         type="button"
         onClick={() => void onQuitar(conexion)}
         aria-label="Quitar conexión"
-        className={BTN_FILA}
+        title="Quitar conexión"
+        className={claseBoton({ papel: 'texto', tono: 'descarte', soloIcono: true })}
       >
         <X size={14} aria-hidden />
       </button>

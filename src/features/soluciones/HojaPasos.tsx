@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Modal } from '../../components/Modal'
-import { ArrowsClockwise, Check, Circle, Crosshair, Eye, Info, PlugsConnected, SealCheck, Warning, X } from '../../components/iconos'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
+import { Hoja } from '../../components/Hoja'
+import { ArrowsClockwise, Check, Circle, Crosshair, Eye, Info, PlugsConnected, SealCheck, Warning } from '../../components/iconos'
+import { MarcaEstado } from '../../components/MarcaEstado'
 import type { ModoEjecucion } from '../../lib/preferenciasEjecucion'
 import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 
@@ -19,8 +22,8 @@ import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 // cuidado). Filas de 60 px, que es lo que se toca de pie frente a un
 // rack.
 //
-// Se apoya en `Modal`, como `HojaFiltro` y `HojaTipoBloque`: portal a
-// <body>, Escape, toque fuera y bloqueo del scroll del fondo.
+// Es la hoja estándar (`Hoja`, tarea 291, auditoría UX F1), como
+// `HojaFiltro` y `HojaTipoBloque`.
 //
 // "RUTA DE LA GUÍA" (propuesta final de Claude Design, 2026-10-01). En el
 // teléfono es el único sitio donde se ven todos los pasos: la ruta dejó de
@@ -96,7 +99,6 @@ interface Props {
   estadoConectar?: unknown
 }
 
-const ID_TITULO = 'hoja-pasos-titulo'
 
 // Marca de estado (dos canales, forma y color, regla R16): el hecho
 // lleva check, el de trabajo y los pendientes su número, y el saltado el
@@ -169,38 +171,28 @@ export function HojaPasos({
   const enFoco = modoEjecucion === 'foco'
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
-      <div className="mb-1.5 flex items-start gap-2">
-        <span className="min-w-0 flex-1 pt-2.5">
-          <span className="flex flex-wrap items-center gap-2">
-            <span id={ID_TITULO} className="text-[16px] font-medium leading-tight text-noct-text">
-              Ruta de la guía
-            </span>
-            {borrador && (
-              <span className="inline-flex h-6 items-center rounded-full bg-noct-neutral-800 px-2 text-[12px] text-noct-neutral-300">
-                Borrador
-              </span>
-            )}
-          </span>
+    <Hoja
+      abierta={abierto}
+      onCerrar={onCerrar}
+      textoCerrar="Cerrar el índice de pasos"
+      titulo="Ruta de la guía"
+      descripcion={
+        <>
           {/* El nombre entero de la guía, sin truncar y con permiso
               para ocupar varias líneas: es lo que la cabecera de 44 px
               recorta y aquí se recupera. */}
-          {tituloGuia && (
-            <span className="mt-1 block text-[12.5px] leading-snug text-noct-neutral-300 text-pretty">
-              {tituloGuia}
+          {tituloGuia && <span className="block text-pretty text-noct-neutral-300">{tituloGuia}</span>}
+          <span className="block">{subtitulo}</span>
+          {/* El borrador, con la marca de estado común (S5): ámbar, hay
+              que tener cuidado al usarlo. */}
+          {borrador && (
+            <span className="mt-1 block">
+              <MarcaEstado tono="atencion">Borrador</MarcaEstado>
             </span>
           )}
-          <span className="mt-0.5 block text-[12.5px] text-noct-neutral-400">{subtitulo}</span>
-        </span>
-        <button
-          type="button"
-          onClick={onCerrar}
-          aria-label="Cerrar el índice de pasos"
-          className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.08] hover:text-noct-text"
-        >
-          <X size={19} aria-hidden />
-        </button>
-      </div>
+        </>
+      }
+    >
 
       <ol className="flex flex-col">
         {resumenes.map((resumen) => (
@@ -264,34 +256,36 @@ export function HojaPasos({
       {/* El cambio entre Foco y el paso entero (tarea 218): ver el
           comentario de `modoEjecucion` en Props. Un solo control de 44
           px cuyo rótulo dice a dónde lleva, no dónde está. */}
-      <button
-        type="button"
+      <Boton
+        papel="secundario"
+        anchoCompleto
+        className="mt-2"
+        icono={enFoco ? <Eye size={17} aria-hidden /> : <Crosshair size={17} aria-hidden />}
         onClick={() => {
           onCambiarModo(enFoco ? 'pasoEntero' : 'foco')
           onCerrar()
         }}
-        className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
       >
-        {enFoco ? <Eye size={17} aria-hidden /> : <Crosshair size={17} aria-hidden />}
         {enFoco ? 'Ver el paso entero' : 'Volver a una acción a la vez'}
-      </button>
+      </Boton>
 
       {/* LO QUE SALIÓ DE LA PANTALLA DE LA GUÍA (encargo del 2026-09-17):
           la ficha y empezar de nuevo. Existen, pero no se interponen entre
           abrir la guía y hacer el paso 1. */}
       {(rutaDetalles || onEmpezarDeNuevo || rutaConectar) && (
         // Uno debajo del otro: lado a lado, en 360 px los dos rótulos se
-        // recortaban ("Detalles de la g…", "Empezar de nu…").
+        // recortaban ("Detalles de la g…", "Empezar de nu…"). Y sin
+        // recortar: a dos líneas antes que cortados (U3).
         <div className="mt-2 flex flex-col gap-2">
           {rutaDetalles && (
             <Link
               to={rutaDetalles}
               state={estadoDetalles}
               onClick={onCerrar}
-              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+              className={claseBoton({ papel: 'secundario', anchoCompleto: true })}
             >
               <Info size={17} className="shrink-0" aria-hidden />
-              <span className="truncate">Detalles de la guía</span>
+              Detalles de la guía
             </Link>
           )}
           {rutaConectar && (
@@ -299,27 +293,27 @@ export function HojaPasos({
               to={rutaConectar}
               state={estadoConectar}
               onClick={onCerrar}
-              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+              className={claseBoton({ papel: 'secundario', anchoCompleto: true })}
             >
               <PlugsConnected size={17} className="shrink-0" aria-hidden />
-              <span className="truncate">Conectar un equipo</span>
+              Conectar un equipo
             </Link>
           )}
           {onEmpezarDeNuevo && (
-            <button
-              type="button"
+            <Boton
+              papel="secundario"
+              anchoCompleto
+              icono={<ArrowsClockwise size={17} className="shrink-0" aria-hidden />}
               onClick={() => {
                 onEmpezarDeNuevo()
                 onCerrar()
               }}
-              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
             >
-              <ArrowsClockwise size={17} className="shrink-0" aria-hidden />
-              <span className="truncate">Empezar de nuevo</span>
-            </button>
+              Empezar de nuevo
+            </Boton>
           )}
         </div>
       )}
-    </Modal>
+    </Hoja>
   )
 }

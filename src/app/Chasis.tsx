@@ -590,6 +590,9 @@ export function Chasis(props: Props) {
           enlace: una guía ilumina Resolver y Red ilumina Más. */}
       <nav
         aria-label="Navegación principal"
+        // Lo que ocupa el borde inferior: el aviso breve se pinta encima
+        // (tarea 291, AvisoBreve.tsx).
+        data-borde-inferior
         className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden"
       >
         {DESTINOS.map(({ to, label, icono: Icono, iconoActivo: IconoActivo }) => {

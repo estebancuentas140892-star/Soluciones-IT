@@ -18,7 +18,6 @@ import {
   Warning,
   X,
 } from '../../components/iconos'
-import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { db, type Referencia, type TipoReferencia } from '../../lib/db'
 import { conOrigen, type EstadoConOrigen } from '../../lib/origenNavegacion'
 import { useAuth } from '../autenticacion/authContext'
@@ -37,6 +36,9 @@ import {
   TIPOS_REFERENCIA,
   tipoDePestana,
 } from './referencias'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
+import { SinContenido } from '../../components/SinContenido'
 
 // CENTRO DE CONSULTA: LO QUE UN TECNICO NECESITA SABER, EN UN SOLO SITIO.
 //
@@ -223,7 +225,7 @@ export function ReferenciaPage() {
       volverA="/mas"
       volverEtiqueta="Más"
       acciones={
-        <Link to={`/referencia/nueva?tipo=${tipo}`} className={`shrink-0 ${BTN_SECUNDARIO}`}>
+        <Link to={`/referencia/nueva?tipo=${tipo}`} className={`shrink-0 ${claseBoton({ papel: 'texto' })}`}>
           <Plus size={15} aria-hidden />
           Crear
         </Link>
@@ -596,31 +598,36 @@ function Vacio({
   // en Herramientas, sin volver a escribirlo en cada pestaña.
   const enOtras = buscando ? TIPOS_REFERENCIA.filter((otro) => otro !== tipo && coincidencias[otro] > 0) : []
 
+  // Sin contenido con su patrón (tarea 291, auditoría UX S4): sin
+  // resultados dice dónde sí hay ("Sí hay coincidencias en"), vacío ofrece
+  // crear.
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
-      <Icono size={30} className="text-noct-neutral-600" aria-hidden />
-      <p className="text-[13px] leading-[1.5] text-noct-neutral-400">
-        {hayFiltro ? 'Nada coincide aquí con la búsqueda o el filtro.' : VACIO[tipo]}
-      </p>
+    <SinContenido
+      tipo={hayFiltro ? 'sin-resultados' : 'vacio'}
+      Icono={hayFiltro ? undefined : Icono}
+      titulo={hayFiltro ? 'Nada coincide aquí con la búsqueda o el filtro' : VACIO[tipo]}
+      accion={
+        hayFiltro ? undefined : (
+          <Link to={`/referencia/nueva?tipo=${tipo}`} className={`-ml-2 ${claseBoton({ papel: 'texto' })}`}>
+            <Plus size={15} aria-hidden />
+            {CREAR[tipo]}
+          </Link>
+        )
+      }
+    >
       {enOtras.length > 0 && (
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col gap-2">
           <p className="text-[13px] leading-[1.5] text-noct-neutral-300">Sí hay coincidencias en:</p>
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex flex-wrap gap-2">
             {enOtras.map((otro) => (
-              <button key={otro} type="button" onClick={() => onIrA(otro)} className={BTN_SECUNDARIO}>
+              <Boton key={otro} papel="secundario" onClick={() => onIrA(otro)}>
                 {INFO_TIPO[otro].pestana}
                 <span className="font-mono tabular-nums text-noct-neutral-400">{coincidencias[otro]}</span>
-              </button>
+              </Boton>
             ))}
           </div>
         </div>
       )}
-      {!hayFiltro && (
-        <Link to={`/referencia/nueva?tipo=${tipo}`} className={BTN_SECUNDARIO}>
-          <Plus size={15} aria-hidden />
-          {CREAR[tipo]}
-        </Link>
-      )}
-    </div>
+    </SinContenido>
   )
 }

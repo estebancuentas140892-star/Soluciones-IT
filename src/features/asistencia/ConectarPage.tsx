@@ -4,7 +4,6 @@ import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
 import { CloudSlash, Monitor, PlugsConnected, QrCode } from '../../components/iconos'
 import { CLASE_CAMPO_MONO, CLASE_ETIQUETA } from '../../components/campos'
-import { BTN_GHOST_PELIGRO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { useAuth } from '../autenticacion/authContext'
 import { TEXTO_CIERRE, TEXTO_ERROR, type ErrorAsistencia } from './apiTecnico'
@@ -17,6 +16,7 @@ import {
   useLatidoAsistencia,
   useSesionAsistencia,
 } from './sesionAsistencia'
+import { Boton } from '../../components/Boton'
 
 // CONECTAR EQUIPO (tarea 258, sección 10 del encargo).
 //
@@ -81,15 +81,13 @@ export function ConectarPage() {
   }
 
   const volver = origen ? (
-    <button type="button" onClick={() => navigate(origen.to)} className={`min-h-11 justify-center ${BTN_PRIMARIO}`}>
-      <span className="truncate">
-        {origen.to.startsWith('/soluciones/') ? 'Seguir con la guía' : `Volver a ${origen.etiqueta}`}
-      </span>
-    </button>
+    <Boton papel="principal" onClick={() => navigate(origen.to)}>
+      {origen.to.startsWith('/soluciones/') ? 'Seguir con la guía' : `Volver a ${origen.etiqueta}`}
+    </Boton>
   ) : (
-    <button type="button" onClick={() => navigate('/')} className={`min-h-11 justify-center ${BTN_PRIMARIO}`}>
+    <Boton papel="principal" onClick={() => navigate('/')}>
       Ir a Resolver para abrir una guía
-    </button>
+    </Boton>
   )
 
   return (
@@ -108,13 +106,11 @@ export function ConectarPage() {
               solo ve lo que envíes, nunca la Bóveda ni ninguna clave.
             </p>
             {volver}
-            <button
-              type="button"
-              onClick={() => usuario && void desconectarEquipo(usuario)}
-              className={`min-h-11 justify-center ${BTN_GHOST_PELIGRO}`}
-            >
+            {/* Desconectar no destruye nada: es un texto en gris, no en rojo
+                (el rojo solo destruye, auditoría UX T2). */}
+            <Boton papel="texto" tono="descarte" onClick={() => usuario && void desconectarEquipo(usuario)}>
               Desconectar equipo
-            </button>
+            </Boton>
           </section>
         ) : (
           <>
@@ -176,23 +172,25 @@ export function ConectarPage() {
                 </p>
               )}
 
-              <button
+              <Boton
                 type="submit"
-                disabled={codigo.length !== 6 || !enLinea || conectando || !usuario}
-                className={`min-h-12 justify-center text-[15px] ${BTN_PRIMARIO} disabled:opacity-40`}
+                papel="principal"
+                tamano={52}
+                disabled={codigo.length !== 6 || !enLinea || !usuario}
+                cargando={conectando}
+                textoCargando="Conectando…"
               >
-                {conectando ? 'Conectando…' : desdeQr ? `Conectar con ${formatoCodigo(codigo)}` : 'Conectar'}
-              </button>
+                {desdeQr ? `Conectar con ${formatoCodigo(codigo)}` : 'Conectar'}
+              </Boton>
             </form>
 
-            <button
-              type="button"
+            <Boton
+              papel="secundario"
+              icono={<QrCode size={17} aria-hidden />}
               onClick={() => navigate('/escaner', { state: origen ? conOrigen(origen.to, origen.etiqueta) : undefined })}
-              className={`min-h-11 justify-center gap-2 ${BTN_SECUNDARIO}`}
             >
-              <QrCode size={17} aria-hidden />
               Escanear el QR de la pantalla
-            </button>
+            </Boton>
           </>
         )}
       </div>

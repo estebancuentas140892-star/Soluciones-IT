@@ -13,6 +13,8 @@ import { iniciarCoordinador } from './lib/actualizacionApp'
 // de inicio). Todos los trozos los precachea el service worker, por
 // lo que siguen disponibles sin conexion. Los componentes usan
 // exportaciones con nombre, de ahi el mapeo a `default`.
+// El dibujo del aviso breve (tarea 291), fuera del arranque: ver abajo.
+const AvisosBreves = lazy(() => import('./components/AvisoBreve').then((m) => ({ default: m.AvisosBreves })))
 const LoginPage = lazy(() =>
   import('./features/autenticacion/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
@@ -182,6 +184,14 @@ function App() {
   return (
     <AuthProvider>
       <ActualizacionDisponible />
+      {/* El aviso breve de éxito (tarea 291, auditoría UX S6): uno a la
+          vez, abajo, encima de las pestañas o de la barra de la pantalla.
+          Diferido: su dibujo trae los iconos, que no van en el arranque
+          (el almacén, `almacenAvisoBreve.ts`, sí está desde el principio,
+          así que un aviso pedido antes de que cargue no se pierde). */}
+      <Suspense fallback={null}>
+        <AvisosBreves />
+      </Suspense>
       <BrowserRouter>
         <Routes>
           <Route

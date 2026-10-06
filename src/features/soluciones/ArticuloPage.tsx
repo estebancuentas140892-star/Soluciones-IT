@@ -29,13 +29,14 @@ import {
   WarningOctagon,
 } from '../../components/iconos'
 import { BotonFavorito } from '../../components/BotonFavorito'
-import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
+import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
 import { IntroduccionGuia, ListaIntro, ResumenGuia, SeccionIntro } from './IntroduccionGuia'
 import { TerminosDeLaGuia } from '../referencia/TerminosDeLaGuia'
 import { colorIconoDeTipo } from './iconosSoluciones'
 import { etiquetaDeTipo } from './tiposArticulo'
 import { describirAplicaA } from './aplicaA'
+import { claseBoton } from '../../components/claseBoton'
 
 // Fecha corta al estilo del diseño ("12 jul"); con el año solo cuando
 // no es el actual, para no perder informacion en articulos viejos.
@@ -154,9 +155,9 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
           <BotonFavorito tipo="articulo" entidadId={articuloId} />
           <Link
             to={`/soluciones/${categoriaId}/${articuloId}/editar`}
-            aria-label="Editar este artículo"
+            aria-label="Editar esta guía"
             title="Editar"
-            className={BTN_ICONO_SECUNDARIO}
+            className={claseBoton({ papel: 'texto', soloIcono: true })}
           >
             <PencilSimple size={17} aria-hidden />
           </Link>
@@ -232,17 +233,14 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
         <DialogoEliminar
           abierto={mostrarEliminar}
           sensible
-          titulo={
-            tieneProcedimiento
-              ? `¿Eliminar procedimiento "${articulo.titulo}"?`
-              : `¿Eliminar artículo "${articulo.titulo}"?`
-          }
+          titulo={`¿Eliminar ${articulo.titulo}?`}
           descripcion={
             tieneProcedimiento
-              ? 'Esta acción eliminará todo el procedimiento y sus pasos asociados.'
-              : 'Esta acción eliminará el artículo por completo.'
+              ? 'Se eliminan la guía y todos sus pasos para todo el equipo.'
+              : 'Se elimina la guía para todo el equipo.'
           }
-          advertencia={impacto ? `${impacto} Al eliminarlo, esos vínculos quedarán rotos.` : null}
+          advertencia={impacto ? `${impacto} Se quedarán sin esta guía.` : null}
+          textoConfirmar="Eliminar la guía"
           onCerrar={() => setMostrarEliminar(false)}
           onConfirmar={eliminar}
         />
@@ -389,8 +387,9 @@ function MenuAcciones({
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-label="Más acciones: compartir, duplicar, eliminar"
+        title="Más acciones"
         aria-expanded={abierto}
-        className={BTN_ICONO_SECUNDARIO}
+        className={claseBoton({ papel: 'texto', soloIcono: true })}
       >
         <DotsThreeBold size={18} aria-hidden />
       </button>

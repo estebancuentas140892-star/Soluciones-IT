@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CaretRight, LinkSimple, MagnifyingGlass, Plus, TreeStructure } from '../../components/iconos'
 import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
-import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { IconoNodo } from './IconoNodo'
 import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
@@ -11,6 +10,7 @@ import { NodoRed } from './NodoRed'
 import { nodoInicial } from './nodoDeRed'
 import { tipoDeNodoVisual } from './topologiaVisual'
 import { useNodoRed, useRedCargada } from './useNodoRed'
+import { claseBoton } from '../../components/claseBoton'
 
 // La pestaña Red abre con el NODO, no con la lista (hallazgo M-018 de
 // la auditoría móvil, mockup `10c`, tarea 204).
@@ -72,7 +72,7 @@ export function RedPage() {
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
             Cómo está conectada la infraestructura
           </p>
-          <Link to="/dispositivos/nuevo?red=1" className={`shrink-0 ${BTN_SECUNDARIO}`}>
+          <Link to="/dispositivos/nuevo?red=1" className={`shrink-0 ${claseBoton({ papel: 'texto' })}`}>
             <Plus size={15} aria-hidden />
             Crear
           </Link>
@@ -148,7 +148,7 @@ export function RedPage() {
                   Este equipo todavía no tiene conexiones registradas, así que no hay nada que recorrer desde
                   aquí.
                 </p>
-                <Link to={`/red/topologia/${equipo.id}`} className={BTN_SECUNDARIO}>
+                <Link to={`/red/topologia/${equipo.id}`} className={claseBoton({ papel: 'secundario' })}>
                   <LinkSimple size={15} aria-hidden />
                   Registrar sus conexiones
                 </Link>

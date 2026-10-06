@@ -2,12 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { Key, LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { desbloquear, estadoInicialBoveda, type EstadoInicialBoveda } from '../boveda/sesionBoveda'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import type { ModoBuscador } from './modoConsulta'
 import { debeOfrecerPuenteBoveda, etiquetaPuenteBoveda, type ProminenciaPuente } from './reglasPuenteBoveda'
+import { Boton } from '../../components/Boton'
 
 // EL PUENTE HACIA LA BOVEDA BLOQUEADA (encargo del 2026-09-15, tarea
 // 241, secciones 5, 6, 10 y 19).
@@ -250,23 +250,21 @@ function FormularioDesbloqueo({
           placeholder="Contraseña maestra"
           className={CAMPO}
         />
-        <button
+        <Boton
           type="submit"
-          disabled={abriendo}
-          className={`${BTN_PRIMARIO} min-h-11 shrink-0 px-3 disabled:opacity-50`}
+          papel="principal"
+          className="shrink-0"
+          icono={<Key size={15} aria-hidden />}
+          cargando={abriendo}
+          textoCargando="Abriendo…"
         >
-          <Key size={15} aria-hidden />
-          {abriendo ? 'Abriendo...' : 'Desbloquear'}
-        </button>
+          Desbloquear
+        </Boton>
       </div>
       {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
-      <button
-        type="button"
-        onClick={onCerrar}
-        className="min-h-11 self-start px-1 text-[12.5px] font-medium text-noct-neutral-400 hover:text-noct-text"
-      >
+      <Boton papel="texto" tono="descarte" className="-ml-2 self-start" onClick={onCerrar}>
         Cancelar
-      </button>
+      </Boton>
     </form>
   )
 }

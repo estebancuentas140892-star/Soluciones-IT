@@ -32,6 +32,34 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso.
 
+**ENCARGO DEL 2026-10-06: AUDITORÍA UX 01–13 DE CLAUDE DESIGN, APROBADA PARA IMPLEMENTACIÓN.** Handoff del proyecto de Claude Design `App form connection request` ("Seis pantallas mobile app"), carpeta `design_handoff_auditoria_ux_soluciones_it/`, con la sección 13 ("Consistencia global") abierta al exportar. Se leyó del zip local `G:\Descargas_PC\Diseño Soluciones IT\Seis pantallas mobile app-handoff.zip` (el conector `claude_design` no estaba disponible en la sesión); trae las 13 páginas y su README de entrega. Objetivo del handoff: que lo que Soluciones IT ya tiene sea más claro, más rápido de encontrar, más fácil de tocar, más coherente y menos cargado, **sin añadir funciones**. Reglas del handoff que valen para todas las tareas del encargo: no rediseñar (toda limitación técnica que obligue a cambiar una decisión se reporta antes de modificarla), no tocar Supabase, el esquema, la arquitectura ni el contenido real, la seguridad de la Bóveda igual o mejor (sus pruebas siguen pasando), textos en español tal como aparecen y precedencia sección 13 › sección posterior › sección anterior. Regla 15: toda la carpeta, una tarea por fase o por sección, una "En proceso" a la vez; el orden es el de la sección 13 (cada fase se entrega y se prueba sola). Rama `feat/auditoria-ux` desde `058762e`, worktree `dev/sit-291`, a `main` por avance rápido al cerrar cada bloque verificado.
+
+| Fase | Qué | Tarea | Estado |
+|---|---|---|---|
+| 1 | Fundamentos y componentes globales: botón (T1–T4, P1), áreas táctiles (T3), hoja y diálogo únicos con un velo (F1, F2, F9), marca de estado, aviso breve, mensaje de error, sin contenido y cargando (S2–S6), glosario, plurales y "…" (S7, sección B de la 13) | 291 | **En proceso** |
+| 2 | Componentes compartidos y chasis: cabecera de tres niveles y estado del dato (N, N7, S1, N4), barra de acción (P2–P6, N1), filas de lista, dato y acceso, bloque de valor, aviso en contenido y lista de guías, chasis (N2, N3, N5, N6, U1, U2, U6) y formularios (F3–F5, U7) | 292 | Pendiente |
+| 3.1 | Bóveda (B1–B8) | 293 | Pendiente |
+| 3.2 | Resolver (R1–R10) | 294 | Pendiente |
+| 3.3 | Ejecución de una guía (G1–G9) y pantalla encendida (U5) | 295 | Pendiente |
+| 3.4 | Equipos (E1–E7) | 296 | Pendiente |
+| 3.5 | Más y Centro de consulta (M1–M8) | 297 | Pendiente |
+| 3.6 | Formularios concretos y Asignar persona (F6, F7) | 298 | Pendiente |
+| 3.7 | Editor de guías (D1–D10) | 299 | Pendiente |
+| 4 | Pruebas en móvil y escritorio (U3, teclado, zonas seguras, lector de pantalla, sin señal) | 300 | Pendiente |
+| 5 | Regresión final: los siete recorridos de la sección 13 | 301 | Pendiente |
+
+**Absorbe** la **285** (áreas táctiles por debajo de 44 px: T3 pide 44 × 44 en todo lo tocable) y la **261** (la línea de completitud del editor a 25 px), que se cierran con la 291. La 279 sigue esperando la decisión del usuario, sin código.
+
+### 291. Auditoría UX, fase 1: fundamentos y componentes globales
+
+- **Título:** el botón, la hoja inferior, el diálogo, los cinco estados globales y los textos como piezas únicas, sin cambiar ningún recorrido.
+- **Descripción:** (1) Botón con cuatro papeles (Principal, Secundario, Texto, Destructivo) y tres tamaños (64 solo el pie de la guía, 52 barras y hojas en el teléfono, 44 cabeceras, contenido y escritorio), con los estados comunes (encima solo con ratón, pulsado, foco de 2 px a 2 px, desactivado al 45 %, carga dentro del botón con el mismo ancho); reemplaza las nueve constantes de `nocturne.tsx` y los botones sueltos. (2) Todo lo tocable a 44 × 44 como mínimo (T3, absorbe la 285 y la 261). (3) Una hoja inferior estándar (asa, título de 17 px a la izquierda, × de 44 px, desplazamiento propio, acciones al pie, Escape, tocar fuera y deslizar hacia abajo cierran) y un diálogo de confirmación (en el teléfono la misma hoja con la acción destructiva a todo el ancho y "Cancelar" debajo; en escritorio, centrado a 440 px), con un solo velo del tono del fondo; reemplazan `Modal` y las hojas propias. (4) Marca de estado (punto + texto, ámbar atención, gris información), aviso breve (una línea, 4 s, sin ×), mensaje de error (qué pasó · qué se conserva · qué hacer), sin contenido (vacío, sin resultados, sin permiso, no disponible sin conexión) y cargando (400 ms sin nada, luego "Cargando…" en el sitio del contenido). (5) Glosario visible de la sección B de la 13, plurales reales y "…" como único carácter.
+- **Motivo:** encargo del 2026-10-06, fase 1 de la sección 13 ("No depende de nada. Desbloquea todo lo demás").
+- **Impacto:** alto: toca casi todas las pantallas (66 archivos con botones de `nocturne.tsx`, 17 con `Modal`), sin cambiar flujos.
+- **Prioridad:** Alta. **Estado:** En progreso.
+- **Área afectada:** `src/components/nocturne.tsx` y componentes nuevos en `src/components/` (botón, hoja, diálogo, estados), `src/components/Modal.tsx`, `DialogoEliminar.tsx`, `HojaFiltro.tsx`, `Cargando.tsx`, `BotonFavorito.tsx`, `BarraReanudar.tsx`, `PanelSync.tsx`, `DescargarOffline.tsx`, `Adjuntos.tsx`, las hojas de `src/features/**/Hoja*.tsx` y cada pantalla que use las constantes de botón; textos visibles de toda la app.
+- **Dependencias:** ninguna.
+
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.
@@ -438,6 +466,99 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
+Las tareas 292 a 301 son las fases 2 a 5 del encargo del 2026-10-06 (auditoría UX 01–13, ver "En proceso"), en el orden de la sección 13. Todas dependen de la anterior; cada una cumple el bloque "Aprobado para implementación" de su sección del handoff y conserva su lista "Se mantiene".
+
+### 292. Auditoría UX, fase 2: componentes compartidos y chasis
+
+- **Título:** las piezas que usan varias pantallas a la vez.
+- **Descripción:** cabecera de tres niveles (sección, documento, tarea) con el contexto de origen a 12 px (N, N7) y el estado del dato en un solo sitio con prioridad error › sin conexión › subiendo › datos antiguos (S1, N4, "cambios por subir"); barra de acción con una principal, secundaria solo con decisión real, una línea de estado, reglas de teclado y zona segura (P2–P6, N1); fila de lista, fila de dato, fila de acceso (la misma en ejecución, ficha de equipo, Bóveda y vista previa del editor), bloque de valor, aviso en contenido y lista de guías (sección C de la 13); chasis: la pestaña sigue el recorrido (N2), sin avatar en el teléfono (N3), rail con nombres de 768 a 1279 (N5), anchos de tarea (N6), segundo toque en la pestaña enfoca el buscador (U2), cabecera de lista contraída (U1) y transiciones (U6); formularios: validación al pulsar Guardar (F3), barra de guardado sin "Cancelar" (F4 con P4), "· obligatorio" (F5) y borrador local con su condición de seguridad (U7).
+- **Motivo:** encargo del 2026-10-06, fase 2.
+- **Impacto:** alto: desbloquea las secciones de la fase 3 (la fila de acceso desbloquea Bóveda, Ejecución, Equipos y Editor).
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/app/Chasis.tsx`, `src/app/memoriaPestana.ts`, `src/app/useOrigen.ts`, `src/components/BarraSuperior.tsx`, `BarraTarea.tsx`, `CabeceraColapsable.tsx`, `PastillaSync.tsx`, `PastillaFrescura.tsx`, `FilaDato.tsx`, `campos.tsx`, `src/features/boveda/CredencialEnPaso.tsx`, `src/features/referencia/TarjetaComando.tsx` y los formularios de equipo, acceso, persona y ubicación.
+- **Dependencias:** 291.
+
+### 293. Auditoría UX, fase 3.1: Bóveda (B1–B8)
+
+- **Título:** la Bóveda estrena la fila de acceso y "Mostrar antes de copiar".
+- **Descripción:** bloque "Aprobado para implementación" de `Auditoria 04 Boveda.dc.html`: fila con "Mostrar" como única acción, abierta en el sitio con Copiar y "Copiado" (B1); sin frase de cabecera, candado en la barra, "Nuevo acceso" y migración al final, chips de 44 (B2); título entero y "categoría · equipo" (B3); ficha con "⋮" (B4); "Acceso" en toda la interfaz (B5); sin permiso, solo "No tienes acceso a la Bóveda. Pídeselo a un administrador de Soluciones IT." (B6); "Se bloquea tras 5 min sin uso · Cambiar" (B7); lista y ficha lado a lado en escritorio ancho (B8). Contraseña maestra, autobloqueo, permisos y registro de cada consulta y copia, igual.
+- **Motivo:** encargo del 2026-10-06, fase 3, sección 1.
+- **Impacto:** alto (seguridad y uso diario). **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/boveda/BovedaPage.tsx`, `CredencialPage.tsx`, `BovedaGuard.tsx`, `CampoSecreto.tsx`, `accionesCredencial.ts`.
+- **Dependencias:** 292 (fila de acceso).
+
+### 294. Auditoría UX, fase 3.2: Resolver (R1–R10)
+
+- **Título:** Resolver según `Auditoria 01 Resolver.dc.html`.
+- **Descripción:** barra contraída a 14 px (R1), tarjeta de respuesta con su verbo (R2), síntoma que coincidió en la segunda línea (R3), "Para «equipo» · ubicación" (R4), puente a la Bóveda solo con intención o sin resultados (R5), Enter confirma la búsqueda sin abrir nada (R6), "Continuar donde estabas" solo en reposo (R7), sin coincidencias en dos líneas (R8), borradores en una línea plegable (R9), color del tipo en el glifo (R10). Prepara la capa con equipo puesto que usa E1.
+- **Motivo:** encargo del 2026-10-06, fase 3, sección 2.
+- **Impacto:** alto (la puerta de entrada). **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/inicio/ResolverPage.tsx`, `src/features/busqueda/` (`ResultadosBusqueda.tsx`, `AccionesResultado.tsx`, `PuenteBoveda.tsx`, `reglasPuenteBoveda.ts`, `BorradoresCoincidentes.tsx`, `resultados.ts`, `presentacionResultados.ts`, `BuscadorGlobal.tsx`), `src/components/CampoBusqueda.tsx`.
+- **Dependencias:** 292.
+
+### 295. Auditoría UX, fase 3.3: ejecución de una guía (G1–G9) y pantalla encendida (U5)
+
+- **Título:** la ejecución según `Auditoria 02 Ejecucion de guia.dc.html`.
+- **Descripción:** presupuesto de pantalla con "Debes ver" sobre el pie (G1), acceso en una fila (G2), "Copiar" con texto en el dato técnico (G3), comando compacto (G4), la otra guía que hay que hacer antes la empieza el pie (G5), preparación en una pantalla (G6), sin barra de segmentos en el teléfono (G7), cierre en el mismo pie (G8), dos columnas desde 1280 (G9); pantalla encendida solo durante la ejecución activa, si la plataforma lo permite (U5).
+- **Motivo:** encargo del 2026-10-06, fase 3, sección 3.
+- **Impacto:** alto. **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/ModoFoco.tsx`, `AsistenteVista.tsx`, `PantallaPreparacion.tsx`, `SenalesDePaso.tsx`, `RutaProcedimiento.tsx`, `EstadoEjecucion.tsx`, `TarjetaGuiaVinculada.tsx`, `HojaFalla.tsx`, `tonos.ts`, `src/features/boveda/CredencialEnPaso.tsx`, `src/features/referencia/TarjetaComando.tsx`, `src/components/BarraTarea.tsx`.
+- **Dependencias:** 292.
+
+### 296. Auditoría UX, fase 3.4: Equipos (E1–E7)
+
+- **Título:** Equipos según `Auditoria 03 Equipos.dc.html`.
+- **Descripción:** orden de la ficha; "Resolver un problema con este equipo" abre Resolver en capa sobre la ficha (E1); "Accesos" con la fila de acceso (E2); "Para resolver con este equipo" (E3); cabecera con Favorito y "⋮" y hoja de acciones (E4); lista sin "Qué se sabe de cada equipo" (E5); "Más del equipo" que nombra su contenido (E6); dos columnas solo con ancho que mejore la lectura (E7).
+- **Motivo:** encargo del 2026-10-06, fase 3, sección 4.
+- **Impacto:** alto. **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/dispositivos/` (`DispositivosPage.tsx`, `DispositivoPage.tsx`, `ProblemasDelEquipo.tsx`, `ProcedimientosDelEquipo.tsx`, `CredencialesDelEquipo.tsx`, `IniciarDiagnosticoBoton.tsx`, `SeguridadDelEquipo.tsx`), `src/components/FilaDispositivo.tsx`, `FilaDato.tsx`.
+- **Dependencias:** 292 y la capa de Resolver de la 294.
+
+### 297. Auditoría UX, fase 3.5: Más y Centro de consulta (M1–M8)
+
+- **Título:** Más y el Centro de consulta según `Auditoria 05 Mas y Referencias.dc.html`.
+- **Descripción:** título en la barra, pestañas de 44 y filtro junto al buscador (M1); filas sin caja y valor en su bloque (M2); ficha con "⋮" (M3); advertencias antes de actuar y una sola sección "Guías" (M4); "Crear…" y "N fichas por revisar" al final (M5); Más en Consultar · Personas y lugares · Infraestructura e inventario · Ajustes (M6); sin conteos en Más (M7); lista y ficha lado a lado en escritorio ancho (M8).
+- **Motivo:** encargo del 2026-10-06, fase 3, sección 5.
+- **Impacto:** medio. **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/mas/PantallaMas.tsx`, `FilasMas.tsx`, `src/features/referencia/ReferenciaPage.tsx`, `ReferenciaFicha.tsx`.
+- **Dependencias:** 292.
+
+### 298. Auditoría UX, fase 3.6: formularios concretos y Asignar persona (F6, F7)
+
+- **Título:** lo necesario primero y asignar con un toque.
+- **Descripción:** primero lo necesario, el resto en "Más datos", lo ocasional solo cuando la situación lo pide ("La contraseña cambió. ¿Por qué?") (F6); Asignar persona: tocar asigna, sin botón ni confirmación, aviso "Asignado a… · Cambiar", hojas con buscador casi a pantalla completa (F7).
+- **Motivo:** encargo del 2026-10-06, fase 3, sección 6.
+- **Impacto:** medio. **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/personas/HojaAsignarPersona.tsx`, `PersonaForm.tsx`, `src/features/dispositivos/DispositivoForm.tsx`, `src/features/boveda/CredencialForm.tsx`.
+- **Dependencias:** 292.
+
+### 299. Auditoría UX, fase 3.7: editor de guías (D1–D10)
+
+- **Título:** el editor según `Auditoria 06 Editor de guias.dc.html`, el último porque "Así lo verá el técnico" reutiliza la ejecución terminada.
+- **Descripción:** tres zonas en escritorio ancho (D1); Dónde y Debes ver con rótulo fijo, Dónde en neutro (D2 corregida por la 13); lo añadido queda debajo de la acción elegida (D3, "Acción" en todo el editor); barra inferior Acción · Verificación · Aviso · Imagen · Más, Probar y Guardar en la cabecera (D4); avisos Información o Advertencia (D5); acceso "El del equipo con que se trabaje" o "Siempre el mismo" (D6); "Otra guía" con "¿Cuándo se usa?" (D7); "Antes de empezar" arriba (D8); sin pestaña Publicación y "Guardar" en hoja (D9); menú del paso en hoja (D10). El editor sale con × (sección 13).
+- **Motivo:** encargo del 2026-10-06, fase 3, sección 7.
+- **Impacto:** alto para quien escribe guías. **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/ArticuloForm.tsx`, `PasosEditor.tsx`, `HojaTipoBloque.tsx`, `bloquesEditor.ts`, `HojaVinculo.tsx`.
+- **Dependencias:** 292 y 295.
+
+### 300. Auditoría UX, fase 4: pruebas en móvil y escritorio
+
+- **Título:** la sección "QA" del README de entrega.
+- **Descripción:** 390 × 844, 375 × 667 y texto al 130 % (U3); iPhone y Android reales con teclado (N1, P2, F7), pantalla encendida (U5) y zonas seguras; escritorio a 1024 y 1280+ (N5, N6, G9, D1, P6); teclado físico y lector de pantalla (foco, nombres de iconos, "Contraseña copiada"); movimiento reducido, sin señal, error de subida y usuario sin permiso de Bóveda. Prueba automática de áreas táctiles, foco y textos prohibidos.
+- **Motivo:** encargo del 2026-10-06, fase 4.
+- **Impacto:** alto (cierra la calidad del encargo). **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `scripts/capturas-moviles.mjs`, pruebas de UI.
+- **Dependencias:** 293 a 299. Los dispositivos reales los prueba el equipo.
+
+### 301. Auditoría UX, fase 5: regresión final
+
+- **Título:** los siete recorridos de la sección 13, de principio a fin.
+- **Descripción:** síntoma → Resolver → guía → terminar → volver al origen; equipo → Resolver con el equipo puesto → guía → volver a la ficha; guía con acceso → Mostrar → Copiar → autobloqueo → registro; crear un equipo sin señal → "cambios por subir" → recuperar señal → subido; editar una guía publicada → cambio mayor → Guardar cambios; eliminar un equipo con contraseña maestra y aviso de impacto; usuario sin permiso de Bóveda: nada revela que existan accesos.
+- **Motivo:** encargo del 2026-10-06, fase 5 ("Cierra la auditoría").
+- **Impacto:** alto. **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** pruebas de recorrido (`src/**/*.test.tsx`, `scripts/prueba-sin-conexion.mjs`).
+- **Dependencias:** 300.
+
 ### 286. Restablecer la maestra: el procedimiento no dice qué pasa con los campos protegidos ni los archivos seguros
 
 - **Título:** completar `supabase/INSTRUCCIONES.md` § 5 (restablecer la contraseña maestra).
@@ -464,7 +585,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
   - Ya tenía tarea: "Completitud" del editor de guías, 25 px (tarea 261).
 - **Motivo:** regla R6. La 262 cerró los cuatro controles que el usuario eligió; estos son el resto que midió la batería.
 - **Impacto:** medio: los dos primeros están en casi todas las pantallas de sección y de documento.
-- **Prioridad:** Media. **Estado:** Pendiente; el alcance lo decide el usuario, como en la 262.
+- **Prioridad:** Media. **Estado:** Pendiente; **absorbida por la 291** (2026-10-06): la auditoría UX aprobada decide el alcance (T3, todo lo tocable a 44 × 44) y se cierra con ella.
 - **Área afectada:** a inventariar al tomarla; los dos primeros son estilos compartidos del chasis y de `src/components/nocturne.tsx`.
 - **Dependencias:** ninguna (la 278 ya dejó "Patrón" y "Contraseña" en 44 px).
 
@@ -474,7 +595,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Descripción:** en `src/features/soluciones/ArticuloForm.tsx` (~1373, `onClick={() => setSugerenciasAbiertas(...)}`) el botón solo lleva `pb-[9px]` y texto de 12 px: en 390×844 mide 358×25 (auditoría de capturas del 2026-09-22, parada `editor-pasos`). Llevarlo a 44 px de alto sin engordar el pie (por ejemplo, con el área táctil ampliada hacia arriba), o fundirlo con la hoja de sugerencias.
 - **Motivo:** regla R6 (44 px de dedo por debajo de 768). Detectado al verificar la tarea 255; ya existía antes.
 - **Impacto:** bajo; el editor se usa sobre todo en escritorio, pero se escribe también desde el teléfono.
-- **Prioridad:** Baja. **Estado:** Pendiente.
+- **Prioridad:** Baja. **Estado:** Pendiente; **absorbida por la 291** (2026-10-06, T3) y se cierra con ella.
 - **Área afectada:** `src/features/soluciones/ArticuloForm.tsx` (pie fijo del editor).
 - **Dependencias:** ninguna (conviene junto a la 227, que toca la completitud).
 - **Modelo/esfuerzo:** Sonnet 5 / Bajo.

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Modal } from '../../components/Modal'
+import { Boton } from '../../components/Boton'
+import { Hoja } from '../../components/Hoja'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE, CLASE_ETIQUETA } from '../../components/campos'
-import { MagnifyingGlass, Plus, X } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
+import { MagnifyingGlass, Plus } from '../../components/iconos'
 import type { Referencia, TipoReferencia } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { ICONO_POR_TIPO } from './iconosReferencia'
@@ -26,7 +26,6 @@ import { coincide, INFO_TIPO, ordenarPorTitulo } from './referencias'
 // aqui convertiria "vincular una palabra" en un formulario de diez
 // campos en mitad de la escritura de un paso.
 
-const ID_TITULO = 'selector-referencia-titulo'
 
 interface Props {
   abierto: boolean
@@ -110,21 +109,8 @@ export function SelectorReferencia({ abierto, onCerrar, tipo, referencias, onEle
   }
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <span id={ID_TITULO} className="min-w-0 text-[17px] font-medium leading-tight text-noct-text">
-          {tipo === 'termino' ? 'Término del glosario' : info.etiqueta}
-        </span>
-        <button
-          type="button"
-          onClick={onCerrar}
-          aria-label="Cerrar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.08] text-noct-text hover:bg-noct-text/[.14]"
-        >
-          <X size={20} aria-hidden />
-        </button>
-      </div>
-
+    // Hoja con buscador: casi a pantalla completa (F1 y F7).
+    <Hoja abierta={abierto} onCerrar={onCerrar} alta titulo={tipo === 'termino' ? 'Término del glosario' : info.etiqueta}>
       <label className="mb-2 flex h-12 items-center gap-2.5 rounded-[10px] border border-noct-divider bg-noct-bg px-3.5 focus-within:border-noct-accent">
         <MagnifyingGlass size={17} className="shrink-0 text-noct-neutral-400" aria-hidden />
         <input
@@ -138,7 +124,7 @@ export function SelectorReferencia({ abierto, onCerrar, tipo, referencias, onEle
         />
       </label>
 
-      <div className="flex max-h-[46vh] flex-col overflow-y-auto">
+      <div className="flex flex-col">
         {visibles.map((referencia) => (
           <button
             key={referencia.id}
@@ -193,26 +179,26 @@ export function SelectorReferencia({ abierto, onCerrar, tipo, referencias, onEle
             </p>
           )}
           {error && <p className="text-[12px] text-noct-error">{error}</p>}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => void crear()}
-              disabled={!puedeCrear || creando}
-              className={`${BTN_PRIMARIO} min-h-11 px-3.5 disabled:opacity-40`}
-            >
-              <Plus size={14} aria-hidden />
-              {creando ? 'Creando...' : 'Crear y vincular'}
-            </button>
-            <button type="button" onClick={onCerrar} className={`${BTN_GHOST} min-h-11 px-3.5`}>
-              Cancelar
-            </button>
-          </div>
+          {/* Desactivado solo mientras el nombre está vacío o ya existe, y
+              las dos razones están a la vista: el campo vacío y el aviso de
+              arriba (T4). Salir sin crear es la × de la hoja (P4). */}
+          <Boton
+            papel="principal"
+            className="self-start"
+            icono={<Plus size={14} aria-hidden />}
+            onClick={() => void crear()}
+            disabled={!puedeCrear}
+            cargando={creando}
+            textoCargando="Creando…"
+          >
+            Crear y vincular
+          </Boton>
           <p className="text-[12px] leading-[1.5] text-noct-neutral-500">
             Se crea en el Centro de consulta con este nombre. La definición y el resto se completan luego en
             su ficha, sin perder lo que llevas escrito aquí.
           </p>
         </div>
       </div>
-    </Modal>
+    </Hoja>
   )
 }

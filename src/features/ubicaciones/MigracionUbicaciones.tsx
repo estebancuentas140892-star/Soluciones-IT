@@ -4,7 +4,6 @@ import { Navigate } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
 import { ArrowElbowDownRight, CheckCircle, MapPin, Warning } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { CLASE_CAMPO } from '../../components/campos'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -21,6 +20,7 @@ import {
   type PosibleCoincidencia,
   type TextoUbicacion,
 } from './migracion'
+import { Boton } from '../../components/Boton'
 
 // Migracion asistida de ubicaciones (grupo N3; revisada en la tarea 267,
 // seccion 11 del encargo del 2026-09-23). Convierte los textos de
@@ -258,12 +258,12 @@ export function MigracionUbicaciones() {
                         </span>
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => mismoLugar(c)} className={`${BTN_SECUNDARIO} min-h-11 px-3`}>
+                        <Boton papel="secundario" onClick={() => mismoLugar(c)}>
                           Es el mismo lugar
-                        </button>
-                        <button type="button" onClick={() => sonDistintos(c)} className={`${BTN_GHOST} min-h-11 px-3`}>
+                        </Boton>
+                        <Boton papel="secundario" onClick={() => sonDistintos(c)}>
                           Son distintos
-                        </button>
+                        </Boton>
                       </div>
                       <p className="text-[11.5px] text-noct-neutral-500">Mientras no lo decidas, este texto no se migra.</p>
                     </div>
@@ -315,16 +315,16 @@ export function MigracionUbicaciones() {
                 : `${cuantosPendientes} textos esperan que decidas su posible coincidencia.`}
             </p>
           )}
-          <button
-            type="button"
+          <Boton
+            papel="principal"
+            className="self-start"
             onClick={() => void aplicar()}
-            disabled={aplicando !== null || resultado.asignaciones.length === 0}
-            className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+            disabled={resultado.asignaciones.length === 0}
+            cargando={aplicando !== null}
+            textoCargando={aplicando ? `Vinculando ${aplicando.hechos} de ${aplicando.total}…` : 'Vinculando…'}
           >
-            {aplicando
-              ? `Vinculando ${aplicando.hechos} de ${aplicando.total}…`
-              : 'Crear ubicaciones y vincular equipos'}
-          </button>
+            Crear ubicaciones y vincular equipos
+          </Boton>
           <p className="text-xs leading-[1.5] text-noct-neutral-500">
             Las ubicaciones nuevas nacen sin ubicación superior: colgarlas de otra se hace desde su ficha. El texto que
             tenía cada equipo queda en su historial. Se puede volver aquí más tarde con lo que quede pendiente.

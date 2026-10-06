@@ -5,7 +5,7 @@ import { Chasis } from '../../app/Chasis'
 import { Cargando } from '../../components/Cargando'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { Check, Monitor, Warning } from '../../components/iconos'
-import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { db, type Dispositivo } from '../../lib/db'
@@ -23,6 +23,7 @@ import {
   type GrupoCandidato,
 } from './cicloPersona'
 import { asignarEquipo, liberarEquipo } from './operaciones'
+import { Boton } from '../../components/Boton'
 
 // ASIGNAR UN EQUIPO A UNA PERSONA (tarea 266, sección 7 del encargo).
 //
@@ -195,7 +196,7 @@ export function AsignarEquipoPage() {
 
       {/* Confirmación fija al pie: el equipo elegido, a quién se quita si
           era de otra persona, y el equipo actual que se puede soltar. */}
-      <div className="sticky bottom-0 z-10 border-t border-noct-divider bg-noct-bg/95 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm">
+      <div data-borde-inferior className="sticky bottom-0 z-10 border-t border-noct-divider bg-noct-bg/95 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm">
         {/* El aviso de versión nueva va aquí, encima de la confirmación, y
             no flotando sobre ella (tarea 275). Vacío no ocupa nada. */}
         <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
@@ -239,14 +240,16 @@ export function AsignarEquipoPage() {
                 </button>
               )
             })}
-            <button
-              type="button"
+            <Boton
+              papel="principal"
+              tamano={52}
+              className="self-start"
               onClick={() => void confirmar()}
-              disabled={guardando}
-              className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+              cargando={guardando}
+              textoCargando="Asignando…"
             >
-              {guardando ? 'Asignando…' : 'Asignar equipo'}
-            </button>
+              Asignar equipo
+            </Boton>
           </div>
         ) : (
           <p className="min-h-11 py-3 text-[13px] text-noct-neutral-500">Elige el equipo que recibe {persona.nombre}.</p>

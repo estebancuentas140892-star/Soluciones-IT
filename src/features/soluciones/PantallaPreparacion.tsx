@@ -1,7 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { CaretLeft } from '../../components/iconos'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
-import { BOTON_ANTERIOR, BotonPrincipal } from './ModoFoco'
+import { claseBoton } from '../../components/claseBoton'
+import { BotonPrincipal } from './ModoFoco'
 import type { Orientacion, PantallaPreparacion } from './preparacionGuia'
 import { subirElContenedor } from './subirElContenedor'
 
@@ -135,7 +136,7 @@ export function PantallaPreparacion({
               onClick={onAnterior}
               aria-label="Anterior"
               title="Anterior"
-              className={BOTON_ANTERIOR}
+              className={claseBoton({ papel: 'secundario', tamano: 64, soloIcono: true })}
             >
               <CaretLeft size={22} aria-hidden />
             </button>

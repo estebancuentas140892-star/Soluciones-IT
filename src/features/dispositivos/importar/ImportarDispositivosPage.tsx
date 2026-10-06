@@ -14,11 +14,12 @@ import {
   Warning,
   WarningOctagon,
 } from '../../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../../components/nocturne'
+import { TituloSeccion } from '../../../components/nocturne'
 import { leerArchivoTabular, precargarLectorExcel } from './leerArchivo'
 import { CLASE_CAMPO } from '../../../components/campos'
 import { esErrorDeChunk } from '../../../lib/recargaChunk'
 import { ETIQUETA_CAMPO, generarPlantillaCsv, mapearFilas } from './mapearFilas'
+import { Boton } from '../../../components/Boton'
 
 type Fase =
   | { paso: 'elegir'; error: string | null }
@@ -371,43 +372,32 @@ export function ImportarDispositivosPage() {
                 solos con el resto del equipo.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/dispositivos')}
-              className={`${BTN_PRIMARIO} min-h-12 justify-center`}
-            >
+            <Boton papel="principal" tamano={52} onClick={() => navigate('/dispositivos')}>
               Ver equipos
-            </button>
-            <button
-              type="button"
-              onClick={() => setFase({ paso: 'elegir', error: null })}
-              className={`${BTN_GHOST} self-center`}
-            >
+            </Boton>
+            <Boton papel="texto" className="self-center" onClick={() => setFase({ paso: 'elegir', error: null })}>
               Importar otro archivo
-            </button>
+            </Boton>
           </>
         )}
       </main>
 
       {fase.paso === 'revisar' && mapeo && !mapeo.errorGeneral && (
-        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
+        <div data-borde-inferior className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
           <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={() => setFase({ paso: 'elegir', error: null })}
-              className={`${BTN_SECUNDARIO} px-4 py-[11px]`}
-            >
+            <Boton papel="texto" tono="descarte" tamano={52} onClick={() => setFase({ paso: 'elegir', error: null })}>
               Cancelar
-            </button>
-            <button
-              type="button"
+            </Boton>
+            <Boton
+              papel="principal"
+              tamano={52}
+              className="flex-1"
+              icono={<DownloadSimple size={15} aria-hidden />}
               disabled={mapeo.importables.length === 0}
               onClick={importar}
-              className={`flex-1 ${BTN_PRIMARIO} justify-center py-[11px] disabled:opacity-50`}
             >
-              <DownloadSimple size={15} aria-hidden />
               Importar {mapeo.importables.length} {mapeo.importables.length === 1 ? 'equipo' : 'equipos'}
-            </button>
+            </Boton>
           </div>
         </div>
       )}

@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Modal } from '../../components/Modal'
+import { Boton } from '../../components/Boton'
 import { CampoContrasena } from '../../components/CampoContrasena'
-import { ArrowsClockwise, Eye, EyeSlash, Key, LockSimple, X } from '../../components/iconos'
-import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { Hoja } from '../../components/Hoja'
+import { ArrowsClockwise, Eye, EyeSlash, Key, LockSimple } from '../../components/iconos'
 import { Campo, CampoConSugerencias, CLASE_CAMPO, CLASE_CAMPO_MONO, CLASE_ETIQUETA } from '../../components/campos'
 import { db } from '../../lib/db'
 import { generarContrasena } from '../../lib/generarContrasena'
@@ -37,7 +37,7 @@ import { useBovedaDesbloqueada } from './useSesionBoveda'
 // CredencialEnPaso), sin salir del editor, y el autobloqueo por
 // inactividad sigue aplicando igual.
 
-const ID_TITULO = 'crear-acceso-rapido-titulo'
+const ID_FORMULARIO = 'crear-acceso-rapido'
 
 interface Props {
   abierto: boolean
@@ -131,25 +131,42 @@ export function CrearAccesoRapido({ abierto, onCerrar, tituloInicial = '', onCre
   const aviso = error ?? (intentoGuardar && faltaTitulo ? 'Falta el nombre del acceso' : intentoGuardar && faltaClave ? 'Falta la contraseña o clave' : '')
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <span id={ID_TITULO} className="min-w-0 truncate text-[17px] font-medium leading-tight text-noct-text">
-          Crear acceso y vincular
-        </span>
-        <button
-          type="button"
-          onClick={onCerrar}
-          aria-label="Cerrar sin crear nada"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.08] text-noct-text hover:bg-noct-text/[.14]"
-        >
-          <X size={20} aria-hidden />
-        </button>
-      </div>
-
+    <Hoja
+      abierta={abierto}
+      onCerrar={onCerrar}
+      textoCerrar="Cerrar sin crear nada"
+      titulo="Crear acceso y vincular"
+      // "Crear y vincular" queda siempre activo y, si falta algo, lo dice
+      // junto a su campo y en esta línea (T4: nada desactivado sin la
+      // razón a la vista). Es un botón del formulario de arriba aunque
+      // viva al pie de la hoja (`form`).
+      pie={
+        desbloqueada ? (
+          <div className="flex items-center gap-3">
+            <span
+              className={`min-w-0 flex-1 text-[12.5px] leading-snug ${aviso ? 'text-noct-precaucion' : 'text-noct-neutral-400'}`}
+            >
+              {aviso || 'El resto de datos se completan luego desde su ficha'}
+            </span>
+            <Boton
+              type="submit"
+              form={ID_FORMULARIO}
+              papel="principal"
+              tamano={52}
+              className="shrink-0"
+              cargando={guardando}
+              textoCargando="Guardando…"
+            >
+              Crear y vincular
+            </Boton>
+          </div>
+        ) : undefined
+      }
+    >
       {!desbloqueada ? (
         <DesbloqueoEnLinea />
       ) : (
-        <form onSubmit={manejarEnvio} className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-0.5 pb-0.5">
+        <form id={ID_FORMULARIO} onSubmit={manejarEnvio} className="flex flex-col gap-3 px-0.5 pb-0.5">
           <p className="inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
             <LockSimple size={12} aria-hidden />
             Se guarda cifrada y queda vinculada a esta tarea
@@ -164,7 +181,7 @@ export function CrearAccesoRapido({ abierto, onCerrar, tituloInicial = '', onCre
               autoFocus
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Panel del router, correo de soporte..."
+              placeholder="Panel del router, correo de soporte…"
               className={`min-h-11 ${CLASE_CAMPO} ${intentoGuardar && faltaTitulo ? 'border-noct-error' : ''}`}
             />
             {intentoGuardar && faltaTitulo && (
@@ -194,25 +211,25 @@ export function CrearAccesoRapido({ abierto, onCerrar, tituloInicial = '', onCre
                 onChange={(e) => setContrasena(e.target.value)}
                 className={`min-h-11 flex-1 ${CLASE_CAMPO_MONO}`}
               />
-              <button
-                type="button"
+              <Boton
+                papel="secundario"
+                soloIcono
                 onClick={() => setVerContrasena((v) => !v)}
-                aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
-              >
-                {verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-              </button>
-              <button
-                type="button"
+                aria-label={verContrasena ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                title={verContrasena ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                icono={verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+              />
+              <Boton
+                papel="secundario"
+                className="shrink-0 whitespace-nowrap"
+                icono={<ArrowsClockwise size={14} aria-hidden />}
                 onClick={() => {
                   setContrasena(generarContrasena())
                   setVerContrasena(true)
                 }}
-                className={`${BTN_SECUNDARIO} h-11 shrink-0 whitespace-nowrap`}
               >
-                <ArrowsClockwise size={14} aria-hidden />
                 Generar
-              </button>
+              </Boton>
             </div>
             {intentoGuardar && faltaClave && (
               <span className="text-[12px] text-noct-error">Falta la contraseña o clave</span>
@@ -224,7 +241,7 @@ export function CrearAccesoRapido({ abierto, onCerrar, tituloInicial = '', onCre
               valor={categoria}
               onChange={setCategoria}
               sugerencias={categorias}
-              placeholder="Redes, Servidores, CCTV..."
+              placeholder="Redes, Servidores, CCTV…"
               className="min-h-11"
             />
           </Campo>
@@ -240,25 +257,9 @@ export function CrearAccesoRapido({ abierto, onCerrar, tituloInicial = '', onCre
             />
           </label>
 
-          <div className="flex items-center gap-2.5 pt-0.5">
-            <span
-              className={`min-w-0 flex-1 text-[12px] ${aviso ? 'text-noct-precaucion' : 'text-noct-neutral-500'}`}
-            >
-              {aviso || 'El resto de datos se completan luego desde su ficha'}
-            </span>
-            <button
-              type="submit"
-              disabled={guardando}
-              className={`${BTN_PRIMARIO} min-h-[46px] shrink-0 px-4 disabled:opacity-50`}
-              style={{ opacity: valido ? undefined : 0.55 }}
-            >
-              <LockSimple size={15} aria-hidden />
-              {guardando ? 'Guardando...' : 'Crear y vincular'}
-            </button>
-          </div>
         </form>
       )}
-    </Modal>
+    </Hoja>
   )
 }
 
@@ -293,12 +294,18 @@ function DesbloqueoEnLinea() {
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
           placeholder="Contraseña maestra"
-          className="min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
-        <button type="submit" disabled={abriendo} className={`shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
-          <Key size={14} aria-hidden />
-          {abriendo ? 'Abriendo...' : 'Desbloquear'}
-        </button>
+        <Boton
+          type="submit"
+          papel="principal"
+          className="shrink-0"
+          icono={<Key size={14} aria-hidden />}
+          cargando={abriendo}
+          textoCargando="Abriendo…"
+        >
+          Desbloquear
+        </Boton>
       </div>
       {error && <p className="text-xs text-noct-error">{error}</p>}
     </form>

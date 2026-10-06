@@ -3,11 +3,11 @@ import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CheckCircle, Warning } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { guardarRegistro } from '../../lib/repositorio'
 import { ESTADOS_SUGERIDOS } from '../dispositivos/estados'
 import { cambiosDeEstado, estadosPorUnificar, type TextoEstado } from '../dispositivos/estadosEscritos'
+import { Boton } from '../../components/Boton'
 
 // ESTADOS ESCRITOS A MANO (tarea 268, sección 9 del encargo del
 // 2026-09-23): lleva los estados de texto libre a la lista de cinco, con
@@ -156,14 +156,16 @@ export function EstadosPorUnificarPage() {
               </>
             )}
           </p>
-          <button
-            type="button"
+          <Boton
+            papel="principal"
+            className="self-start"
             onClick={() => void aplicar()}
-            disabled={aplicando !== null || plan.length === 0}
-            className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+            disabled={plan.length === 0}
+            cargando={aplicando !== null}
+            textoCargando={aplicando ? `Unificando ${aplicando.hechos} de ${aplicando.total}…` : 'Unificando…'}
           >
-            {aplicando ? `Unificando ${aplicando.hechos} de ${aplicando.total}…` : 'Unificar estados'}
-          </button>
+            Unificar estados
+          </Boton>
         </div>
       </main>
     </Chasis>

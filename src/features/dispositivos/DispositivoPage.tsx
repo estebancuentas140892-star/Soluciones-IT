@@ -48,13 +48,7 @@ import {
   WarningOctagon,
   XCircle,
 } from '../../components/iconos'
-import {
-  BTN_GHOST_PELIGRO,
-  BTN_ICONO_SECUNDARIO,
-  BTN_SECUNDARIO,
-  PEGADA_SOBRE_PESTANAS,
-  TituloSeccion,
-} from '../../components/nocturne'
+import { PEGADA_SOBRE_PESTANAS, TituloSeccion } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { useImpactoEquipo } from '../red/useImpactoEquipo'
@@ -75,6 +69,8 @@ import { ResponsableDelEquipo, ResponsablesAnteriores } from '../personas/Respon
 import { HojaAsignarPersona } from '../personas/HojaAsignarPersona'
 import { esDeBaja, responsablePorValidar } from '../personas/cicloPersona'
 import { useResponsablesAnteriores } from '../personas/useAsignaciones'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Las anclas que viven dentro de "Más del equipo": llegar a una abre el
 // pliegue (si no, el salto no encontraría su destino).
@@ -415,15 +411,15 @@ export function DispositivoPage() {
         <>
           <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} />
           <BotonCompartir titulo={dispositivo.nombre} />
-          <button
-            type="button"
+          <Boton
+            papel="texto"
+            soloIcono
             onClick={() => setMenuAbierto((v) => !v)}
             aria-label="Más acciones: duplicar, editar, etiqueta QR, reemplazar, dar de baja o eliminar"
+            title="Más acciones"
             aria-expanded={menuAbierto}
-            className={BTN_ICONO_SECUNDARIO}
-          >
-            <DotsThreeOutline size={17} aria-hidden />
-          </button>
+            icono={<DotsThreeOutline size={18} aria-hidden />}
+          />
         </>
       }
       barra={menuAbierto && (
@@ -431,7 +427,7 @@ export function DispositivoPage() {
           <Link
             to={`/dispositivos/nuevo?copiarDe=${dispositivoId}`}
             onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
+            className={claseBoton({ papel: 'secundario' })}
           >
             <Copy size={14} aria-hidden />
             Duplicar
@@ -439,7 +435,7 @@ export function DispositivoPage() {
           <Link
             to={`/dispositivos/${dispositivoId}/editar`}
             onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
+            className={claseBoton({ papel: 'secundario' })}
           >
             <PencilSimple size={14} aria-hidden />
             Editar
@@ -449,7 +445,7 @@ export function DispositivoPage() {
             // Etiquetas vuelve a este equipo, no a su puerta de inventario.
             state={origenEsteEquipo}
             onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
+            className={claseBoton({ papel: 'secundario' })}
           >
             <QrCode size={14} aria-hidden />
             Etiqueta QR
@@ -457,7 +453,7 @@ export function DispositivoPage() {
           <Link
             to={`/dispositivos/nuevo?reemplazaA=${dispositivoId}`}
             onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
+            className={claseBoton({ papel: 'secundario' })}
           >
             <ArrowsClockwise size={14} aria-hidden />
             Reemplazar
@@ -465,22 +461,22 @@ export function DispositivoPage() {
           <Link
             to={`/dispositivos/${dispositivoId}/baja`}
             onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
+            className={claseBoton({ papel: 'secundario' })}
           >
             <XCircle size={14} aria-hidden />
             Dar de baja
           </Link>
-          <button
-            type="button"
+          <Boton
+            papel="texto"
+            tono="peligro"
+            icono={<TrashSimple size={14} aria-hidden />}
             onClick={() => {
               setMenuAbierto(false)
               setMostrarEliminar(true)
             }}
-            className={BTN_GHOST_PELIGRO}
           >
-            <TrashSimple size={14} aria-hidden />
             Eliminar
-          </button>
+          </Boton>
         </div>
       )}
     >
@@ -909,9 +905,10 @@ export function DispositivoPage() {
       <DialogoEliminar
         abierto={mostrarEliminar}
         sensible
-        titulo={`¿Eliminar el equipo "${dispositivo.nombre}"?`}
-        descripcion="Esta acción eliminará la ficha del equipo, sus campos y sus conexiones registradas."
-        advertencia={impacto ? `${impacto} Esas referencias quedarán rotas.` : null}
+        titulo={`¿Eliminar ${dispositivo.nombre}?`}
+        descripcion="Se quita del inventario de todo el equipo, con sus datos y sus conexiones."
+        advertencia={impacto ? `${impacto} Se quedarán sin este equipo.` : null}
+        textoConfirmar="Eliminar el equipo"
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
@@ -1035,6 +1032,7 @@ function AccionDominanteEquipo({
 
   return (
     <div
+      data-borde-inferior
       className={`sticky ${PEGADA_SOBRE_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-4 pb-3 pt-2.5 backdrop-blur-[12px] lg:px-10`}
     >
       {/* El aviso de versión nueva va aquí, encima del botón (tarea 274):
@@ -1044,7 +1042,9 @@ function AccionDominanteEquipo({
       <Link
         to={`/diagnostico?categoria=${categoriaId}`}
         state={estado}
-        className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+        // La acción fija de la ficha: el principal de 52 de la familia común
+        // (P1), a peso 500 (el 600 queda solo para el pie de la guía).
+        className={claseBoton({ papel: 'principal', tamano: 52, anchoCompleto: true })}
       >
         <TreeStructure size={18} aria-hidden />
         Resolver un problema con este equipo
@@ -1118,7 +1118,7 @@ function PuertaDocumentar({
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <Link to={`/dispositivos/${dispositivo.id}/editar`} className={BTN_SECUNDARIO}>
+            <Link to={`/dispositivos/${dispositivo.id}/editar`} className={claseBoton({ papel: 'secundario' })}>
               <PencilSimple size={13} aria-hidden />
               Editar la ficha
             </Link>
@@ -1131,14 +1131,14 @@ function PuertaDocumentar({
                 tipo=problema_frecuente. */}
             <Link
               to={`/soluciones/${dispositivo.categoriaId}/nuevo?tipo=problema_frecuente&dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${nombreCodificado}`}
-              className={BTN_SECUNDARIO}
+              className={claseBoton({ papel: 'secundario' })}
             >
               <Plus size={13} aria-hidden />
               Reportar incidencia
             </Link>
             <Link
               to={`/soluciones/${dispositivo.categoriaId}/nuevo?dispositivoAfectado=${dispositivo.id}&dispositivoNombre=${nombreCodificado}`}
-              className={BTN_SECUNDARIO}
+              className={claseBoton({ papel: 'secundario' })}
             >
               <BookOpen size={13} aria-hidden />
               Documentar procedimiento
@@ -1146,10 +1146,10 @@ function PuertaDocumentar({
             {puedeVerBoveda && (
               <Link
                 to={`/boveda/nueva?titulo=${encodeURIComponent(`Acceso ${dispositivo.nombre}`)}&categoria=${encodeURIComponent(categoriaNombre)}&dispositivoId=${dispositivo.id}&dispositivoNombre=${nombreCodificado}`}
-                className={BTN_SECUNDARIO}
+                className={claseBoton({ papel: 'secundario' })}
               >
                 <LockSimple size={13} aria-hidden />
-                Guardar secreto
+                Guardar un acceso
               </Link>
             )}
           </div>
@@ -1172,14 +1172,14 @@ function BotonCompartir({ titulo }: { titulo: string }) {
   }
 
   return (
-    <button
-      type="button"
+    <Boton
+      papel="texto"
+      soloIcono
       onClick={() => void compartir()}
       aria-label={copiado ? 'Enlace copiado' : 'Compartir la ficha'}
-      className={BTN_ICONO_SECUNDARIO}
-    >
-      {copiado ? <Check size={16} className="text-noct-exito" aria-hidden /> : <ShareNetwork size={17} aria-hidden />}
-    </button>
+      title="Compartir la ficha"
+      icono={copiado ? <Check size={16} className="text-noct-exito" aria-hidden /> : <ShareNetwork size={18} aria-hidden />}
+    />
   )
 }
 

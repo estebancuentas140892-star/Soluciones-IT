@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Modal } from '../../components/Modal'
-import { ArrowLeft, WarningCircle, X } from '../../components/iconos'
+import { Hoja } from '../../components/Hoja'
+import { ArrowLeft, WarningCircle } from '../../components/iconos'
 import type { Referencia } from '../../lib/db'
 import { nombreVivo } from '../../lib/referencia'
 import { ContenidoReferencia } from './ContenidoReferencia'
@@ -30,7 +30,6 @@ import { esTipoConocido, INFO_TIPO } from './referencias'
 // se lee primero en su ficha: para que sirve y como se usa en
 // Metroparques, con lo que se sabe de ese uso.
 
-const ID_TITULO = 'hoja-referencia-titulo'
 
 interface Props {
   abierto: boolean
@@ -58,14 +57,18 @@ export function HojaReferencia({ abierto, onCerrar, referenciaId, tituloRespaldo
   const volvioDeUnaRelacionada = actualId !== referenciaId
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
+    <Hoja
+      abierta={abierto}
+      onCerrar={onCerrar}
+      textoCerrar="Cerrar y volver a la tarea"
+      rotulo={
+        <>
           {volvioDeUnaRelacionada && (
+            // 44 px de toque (T3) con margen negativo: no empuja el título.
             <button
               type="button"
               onClick={() => setActualId(referenciaId)}
-              className="-ml-1 mb-1 flex min-h-9 items-center gap-1.5 rounded-md px-1 text-[12px] font-medium text-noct-neutral-400 hover:text-noct-text"
+              className="-my-1.5 -ml-1 mb-0 flex min-h-11 items-center gap-1.5 self-start rounded-md px-1 text-[12px] font-medium text-noct-neutral-400 hover:text-noct-text"
             >
               <ArrowLeft size={13} aria-hidden />
               Volver a «{nombreVivo(mapaTitulos(referencias), referenciaId, tituloRespaldo)}»
@@ -75,25 +78,15 @@ export function HojaReferencia({ abierto, onCerrar, referenciaId, tituloRespaldo
             <Icono size={13} aria-hidden />
             {tipo ? INFO_TIPO[tipo].etiqueta : 'Centro de consulta'}
           </p>
-          <h2
-            id={ID_TITULO}
-            className="mt-0.5 text-pretty text-[19px] font-medium leading-[1.25] text-noct-text"
-          >
-            {referencia?.titulo || tituloRespaldo || 'Ficha'}
-            {referencia?.abreviatura && (
-              <span className="text-noct-neutral-400"> ({referencia.abreviatura})</span>
-            )}
-          </h2>
-        </div>
-        <button
-          type="button"
-          onClick={onCerrar}
-          aria-label="Cerrar y volver a la tarea"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.08] text-noct-text hover:bg-noct-text/[.14]"
-        >
-          <X size={20} aria-hidden />
-        </button>
-      </div>
+        </>
+      }
+      titulo={
+        <>
+          {referencia?.titulo || tituloRespaldo || 'Ficha'}
+          {referencia?.abreviatura && <span className="text-noct-neutral-400"> ({referencia.abreviatura})</span>}
+        </>
+      }
+    >
 
       {!referencia ? (
         // NO DISPONIBLE, NO ROTO. El bloque conserva el vínculo y la
@@ -116,7 +109,7 @@ export function HojaReferencia({ abierto, onCerrar, referenciaId, tituloRespaldo
         // consulta (2026-09-16): la misma ficha se lee igual en los dos.
         <ContenidoReferencia referencia={referencia} referencias={referencias} onAbrirRelacionada={setActualId} />
       )}
-    </Modal>
+    </Hoja>
   )
 }
 

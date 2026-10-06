@@ -3,20 +3,14 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import {
-  ArrowElbowDownRight,
-  CaretRight,
-  House,
-  MapPin,
-  Plus,
-} from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { ArrowElbowDownRight, CaretRight, House, MapPin, Plus } from '../../components/iconos'
 import { db, type Ubicacion } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { hijosDirectos } from './arbol'
 import { totalConSububicaciones } from './contenido'
 import { textosSinUbicacion } from './migracion'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
+import { Boton } from '../../components/Boton'
 
 // Minusculas sin acentos, para que la busqueda encuentre "Area" al
 // escribir "area".
@@ -102,10 +96,9 @@ export function UbicacionesPage() {
     <Chasis
       modo="documento"
       acciones={
-        <button type="button" onClick={alternarCrear} className={`shrink-0 ${BTN_SECUNDARIO}`}>
-          <Plus size={15} aria-hidden />
+        <Boton papel="texto" className="shrink-0" icono={<Plus size={15} aria-hidden />} onClick={alternarCrear}>
           Crear
-        </button>
+        </Boton>
       }
       barra={
         <>
@@ -159,17 +152,18 @@ export function UbicacionesPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                type="button"
+              <Boton
+                papel="principal"
                 onClick={() => void crear()}
-                disabled={guardando || nuevoNombre.trim() === ''}
-                className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
+                disabled={nuevoNombre.trim() === ''}
+                cargando={guardando}
+                textoCargando="Creando…"
               >
-                {guardando ? 'Creando...' : 'Crear ubicación'}
-              </button>
-              <button type="button" onClick={alternarCrear} className={`${BTN_GHOST} min-h-11 px-4`}>
+                Crear ubicación
+              </Boton>
+              <Boton papel="texto" tono="descarte" onClick={alternarCrear}>
                 Cancelar
-              </button>
+              </Boton>
             </div>
           </div>
         )}

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { db, ID_BLOQUEO_APP, type ConfigBloqueoApp, type MetodoBloqueoApp } from '../../lib/db'
 import type { CredencialRegistrada } from '../../lib/webauthn'
 import {
@@ -26,6 +25,8 @@ import { useDesbloqueoDispositivoDisponible } from './useBloqueoApp'
 import { serializarPatron } from './patron'
 import { PatronInput } from './PatronInput'
 import { CLASE_CAMPO as CLASE_CAMPO_BASE } from '../../components/campos'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Contraseña de desbloqueo centrada: `text-center` es alineación, no
 // tamaño, así que no compite con el `text-sm` del campo compartido.
@@ -103,9 +104,9 @@ function PanelSinConfigurar() {
 
   return (
     <div className="flex flex-col gap-4">
-      <button type="button" onClick={() => setMetodo(null)} className={`${BTN_GHOST} self-start`}>
+      <Boton papel="texto" className="-ml-2 self-start" onClick={() => setMetodo(null)}>
         Cambiar método
-      </button>
+      </Boton>
       <CrearSecreto metodo={metodo} onCreado={crear} error={error} onError={setError} procesando={procesando} />
     </div>
   )
@@ -164,9 +165,9 @@ function PanelConfigurado({ config }: { config: ConfigBloqueoApp }) {
             Método: {metodo === 'patron' ? 'patrón' : 'contraseña'}
           </p>
         </div>
-        <button type="button" onClick={bloquearApp} className={`shrink-0 ${BTN_SECUNDARIO}`}>
+        <Boton papel="secundario" className="shrink-0" onClick={bloquearApp}>
           Bloquear ahora
-        </button>
+        </Boton>
       </div>
 
       <SeccionDispositivo config={config} onActivar={() => setAccion('dispositivo')} />
@@ -187,16 +188,14 @@ function PanelConfigurado({ config }: { config: ConfigBloqueoApp }) {
       </label>
 
       <div className="flex gap-2">
-        <button type="button" onClick={() => setAccion('cambiar')} className={`flex-1 justify-center ${BTN_SECUNDARIO}`}>
+        <Boton papel="secundario" className="flex-1" onClick={() => setAccion('cambiar')}>
           Cambiar
-        </button>
-        <button
-          type="button"
-          onClick={() => setAccion('quitar')}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-noct-error/45 px-2.5 py-[7px] text-[13px] font-medium text-noct-error hover:bg-noct-error/10"
-        >
+        </Boton>
+        {/* Abre la confirmación con el bloqueo actual: texto en rojo, sin
+            borde, como todo lo que lleva a quitar algo (T2). */}
+        <Boton papel="texto" tono="peligro" className="flex-1" onClick={() => setAccion('quitar')}>
           Quitar bloqueo
-        </button>
+        </Boton>
       </div>
     </div>
   )
@@ -221,9 +220,9 @@ function FlujoCambiar({ metodoActual, onListo }: { metodoActual: MetodoBloqueoAp
 
   return (
     <div className="flex flex-col gap-4">
-      <button type="button" onClick={onListo} className={`${BTN_GHOST} self-start`}>
+      <Boton papel="texto" tono="descarte" className="-ml-2 self-start" onClick={onListo}>
         Cancelar
-      </button>
+      </Boton>
       <h2 className="text-sm font-medium text-noct-text">Cambiar el bloqueo</h2>
 
       {actual === null ? (
@@ -274,9 +273,9 @@ function FlujoQuitar({
 
   return (
     <div className="flex flex-col gap-4">
-      <button type="button" onClick={onListo} className={`${BTN_GHOST} self-start`}>
+      <Boton papel="texto" tono="descarte" className="-ml-2 self-start" onClick={onListo}>
         Cancelar
-      </button>
+      </Boton>
       <h2 className="text-sm font-medium text-noct-text">Quitar el bloqueo</h2>
       <p className="text-[12.5px] text-noct-neutral-500">
         Confirma con tu {metodoActual === 'patron' ? 'patrón' : 'contraseña'} actual. La app dejará
@@ -303,16 +302,12 @@ function FlujoQuitar({
 function SelectorMetodo({ onElegir }: { onElegir: (metodo: MetodoBloqueoApp) => void }) {
   return (
     <div className="flex gap-2">
-      <button type="button" onClick={() => onElegir('patron')} className={`min-h-11 flex-1 justify-center ${BTN_SECUNDARIO}`}>
+      <Boton papel="secundario" className="flex-1" onClick={() => onElegir('patron')}>
         Patrón
-      </button>
-      <button
-        type="button"
-        onClick={() => onElegir('contrasena')}
-        className={`min-h-11 flex-1 justify-center ${BTN_SECUNDARIO}`}
-      >
+      </Boton>
+      <Boton papel="secundario" className="flex-1" onClick={() => onElegir('contrasena')}>
         Contraseña
-      </button>
+      </Boton>
     </div>
   )
 }
@@ -372,34 +367,31 @@ function SeccionDispositivo({ config, onActivar }: { config: ConfigBloqueoApp; o
       )}
 
       {disponible && !activo && (
-        <button type="button" onClick={onActivar} className={`min-h-11 justify-center ${BTN_SECUNDARIO}`}>
+        <Boton papel="secundario" onClick={onActivar}>
           Activar
-        </button>
+        </Boton>
       )}
       {activo && (
         <div className="flex flex-wrap gap-2">
           {disponible && (
-            <button
-              type="button"
+            <Boton
+              papel="secundario"
+              className="flex-1"
               onClick={() => void probar()}
-              disabled={probando}
-              className={`min-h-11 flex-1 justify-center ${BTN_SECUNDARIO} disabled:opacity-50`}
+              cargando={probando}
+              textoCargando="Esperando al dispositivo…"
             >
-              {probando ? 'Esperando al dispositivo...' : 'Probar'}
-            </button>
+              Probar
+            </Boton>
           )}
           {disponible && prueba === 'fallo' && (
-            <button type="button" onClick={onActivar} className={`min-h-11 flex-1 justify-center ${BTN_SECUNDARIO}`}>
+            <Boton papel="secundario" className="flex-1" onClick={onActivar}>
               Registrar de nuevo
-            </button>
+            </Boton>
           )}
-          <button
-            type="button"
-            onClick={() => void desactivarDesbloqueoDispositivo()}
-            className={`min-h-11 flex-1 justify-center ${BTN_GHOST}`}
-          >
+          <Boton papel="texto" tono="descarte" className="flex-1" onClick={() => void desactivarDesbloqueoDispositivo()}>
             Desactivar
-          </button>
+          </Boton>
         </div>
       )}
     </div>
@@ -501,9 +493,9 @@ function FlujoActivarDispositivo({
 
   return (
     <div className="flex flex-col gap-4">
-      <button type="button" onClick={onListo} className={`${BTN_GHOST} self-start`}>
+      <Boton papel="texto" tono="descarte" className="-ml-2 self-start" onClick={onListo}>
         Cancelar
-      </button>
+      </Boton>
       <h2 className="text-sm font-medium text-noct-text">
         {reemplazo ? 'Registrar de nuevo el desbloqueo del dispositivo' : 'Activar el desbloqueo del dispositivo'}
       </h2>
@@ -519,28 +511,18 @@ function FlujoActivarDispositivo({
       ) : paso === 'crear' ? (
         <div className="flex flex-col gap-3">
           <p className="text-[12.5px] leading-relaxed text-noct-neutral-400">{EXPLICACION_DISPOSITIVO}</p>
-          <button
-            type="button"
-            onClick={() => void crear()}
-            disabled={procesando}
-            className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}
-          >
-            {procesando ? 'Esperando al dispositivo...' : 'Activar en este dispositivo'}
-          </button>
+          <Boton papel="principal" onClick={() => void crear()} cargando={procesando} textoCargando="Esperando al dispositivo…">
+            Activar en este dispositivo
+          </Boton>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-[12.5px] leading-relaxed text-noct-neutral-400">
             Último paso: comprueba que funciona. El dispositivo te lo pedirá una vez más.
           </p>
-          <button
-            type="button"
-            onClick={() => void comprobar()}
-            disabled={procesando}
-            className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}
-          >
-            {procesando ? 'Esperando al dispositivo...' : 'Comprobar'}
-          </button>
+          <Boton papel="principal" onClick={() => void comprobar()} cargando={procesando} textoCargando="Esperando al dispositivo…">
+            Comprobar
+          </Boton>
         </div>
       )}
 
@@ -598,9 +580,9 @@ function EntradaSecreto({
         placeholder="Contraseña"
         className={`min-h-11 ${CLASE_CAMPO}`}
       />
-      <button type="submit" disabled={deshabilitado} className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}>
+      <Boton type="submit" papel="principal" cargando={deshabilitado} textoCargando="Comprobando…">
         {textoBoton}
-      </button>
+      </Boton>
     </form>
   )
 }
@@ -674,7 +656,7 @@ function CrearSecreto({
             onError(null)
             setReinicio((n) => n + 1)
           }}
-          className={BTN_GHOST}
+          className={claseBoton({ papel: 'texto', tono: 'descarte' })}
         >
           Empezar de nuevo
         </button>

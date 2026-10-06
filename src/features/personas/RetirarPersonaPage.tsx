@@ -5,7 +5,7 @@ import { Chasis } from '../../app/Chasis'
 import { Cargando } from '../../components/Cargando'
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 import { CaretRight, CheckCircle, Monitor, Warning } from '../../components/iconos'
-import { BTN_PRIMARIO_PELIGRO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { db, type Dispositivo } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
@@ -13,6 +13,7 @@ import { equiposActuales, esFechaValida, estaActiva, fechaDeHoy, fechaLegible } 
 import { DecisionSobreEquipo } from './DecisionEquipo'
 import { aDecision, eleccionInicial, type Eleccion } from './eleccionEquipo'
 import { retirarPersona, type DecisionEquipo } from './operaciones'
+import { Boton } from '../../components/Boton'
 
 // RETIRAR PERSONA (tarea 266, sección 4 del encargo del 2026-09-23).
 //
@@ -224,14 +225,18 @@ export function RetirarPersonaPage() {
               Falta elegir a quién pasa algún equipo.
             </p>
           )}
-          <button
-            type="button"
+          {/* Retirar no se pierde nada (se puede reactivar, lo dice la frase
+              de arriba): principal, no destructivo (auditoría UX T2). */}
+          <Boton
+            papel="principal"
+            className="self-start"
             onClick={() => void confirmar()}
-            disabled={!listo || guardando}
-            className={`${BTN_PRIMARIO_PELIGRO} min-h-11 self-start px-4 disabled:opacity-50`}
+            disabled={!listo}
+            cargando={guardando}
+            textoCargando="Retirando…"
           >
-            {guardando ? 'Retirando…' : 'Confirmar retiro'}
-          </button>
+            Confirmar retiro
+          </Boton>
         </div>
       </main>
     </Chasis>

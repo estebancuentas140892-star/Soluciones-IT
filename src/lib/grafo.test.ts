@@ -435,7 +435,7 @@ describe('resumenImpacto', () => {
     const grafo = construirGrafo(
       datos({ articulos: [articulo({ id: 'art-1', titulo: 'P', procedimiento: proc })] }),
     )
-    expect(resumenImpacto(grafo, 'credencial', 'cred-1')).toBe('Se usa en 1 procedimiento.')
+    expect(resumenImpacto(grafo, 'credencial', 'cred-1')).toBe('Se usa en 1 guía.')
   })
 
   it('resume en una frase quién usa un campo protegido', () => {
@@ -443,7 +443,7 @@ describe('resumenImpacto', () => {
     const grafo = construirGrafo(
       datos({ articulos: [articulo({ id: 'art-1', titulo: 'P', procedimiento: proc })] }),
     )
-    expect(resumenImpacto(grafo, 'campo_protegido', 'cp-1')).toBe('Se usa en 1 procedimiento.')
+    expect(resumenImpacto(grafo, 'campo_protegido', 'cp-1')).toBe('Se usa en 1 guía.')
   })
 
   it('avisa antes de eliminar un dispositivo con campos protegidos (cierra el hueco de huérfanos de P1)', () => {
@@ -455,10 +455,12 @@ describe('resumenImpacto', () => {
         ],
       }),
     )
-    expect(resumenImpacto(grafo, 'dispositivo', 'd1')).toBe('Se usa en 2 datos protegidos.')
+    // Una credencial de la Bóveda y un dato protegido del equipo son, para
+    // el técnico, los dos "accesos" (glosario de la tarea 291).
+    expect(resumenImpacto(grafo, 'dispositivo', 'd1')).toBe('Se usa en 2 accesos.')
   })
 
-  it('combina categorías con "y"', () => {
+  it('cuenta como guías los procedimientos y las guías con preguntas, una vez cada una', () => {
     const proc = procedimiento([paso({ subArticuloId: 'art-hijo', subArticuloTitulo: 'Hijo' })])
     const grafo = construirGrafo(
       datos({
@@ -483,7 +485,20 @@ describe('resumenImpacto', () => {
         ],
       }),
     )
-    expect(resumenImpacto(grafo, 'articulo', 'art-hijo')).toBe('Se usa en 1 procedimiento y 1 diagnóstico.')
+    expect(resumenImpacto(grafo, 'articulo', 'art-hijo')).toBe('Se usa en 2 guías.')
+  })
+
+  it('combina categorías con "y"', () => {
+    const grafo = construirGrafo(
+      datos({
+        dispositivos: [
+          dispositivo({ id: 'sw-nuevo', nombre: 'Switch nuevo', reemplazaA: 'sw-viejo' }),
+          dispositivo({ id: 'sw-viejo', nombre: 'Switch viejo' }),
+        ],
+        camposProtegidos: [campoProtegido({ id: 'cp-1', nombre: 'Usuario', dispositivoId: 'sw-viejo' })],
+      }),
+    )
+    expect(resumenImpacto(grafo, 'dispositivo', 'sw-viejo')).toBe('Se usa en 1 acceso y 1 reemplazo.')
   })
 
   it('devuelve null cuando nada la referencia', () => {

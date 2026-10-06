@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { Adjuntos } from '../../components/Adjuntos'
 import { Plus } from '../../components/iconos'
-import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO } from '../../components/nocturne'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
+import { Boton } from '../../components/Boton'
 
 interface Props {
   dispositivoId: string
@@ -45,10 +45,9 @@ export function RegistrarIntervencion({ dispositivoId }: Props) {
 
   if (!abierto) {
     return (
-      <button type="button" onClick={() => setAbierto(true)} className={`${BTN_GHOST_ACENTO} self-start`}>
-        <Plus size={13} aria-hidden />
+      <Boton papel="texto" className="-ml-2 self-start" icono={<Plus size={13} aria-hidden />} onClick={() => setAbierto(true)}>
         Registrar
-      </button>
+      </Boton>
     )
   }
 
@@ -57,9 +56,9 @@ export function RegistrarIntervencion({ dispositivoId }: Props) {
       <div className="flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-surface px-3 py-3">
         <p className="text-sm text-noct-text">Intervención registrada.</p>
         <Adjuntos entidadTipo="historial" entidadId={entradaId} />
-        <button type="button" onClick={cerrar} className={`${BTN_GHOST} self-start`}>
+        <Boton papel="texto" tono="descarte" className="-ml-2 self-start" onClick={cerrar}>
           Listo
-        </button>
+        </Boton>
       </div>
     )
   }
@@ -88,16 +87,20 @@ export function RegistrarIntervencion({ dispositivoId }: Props) {
         />
       </label>
       <div className="flex gap-2">
-        <button
+        {/* Desactivado mientras la descripción, que está a la vista, siga
+            vacía (T4). */}
+        <Boton
           type="submit"
-          disabled={guardando || !descripcion.trim()}
-          className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
+          papel="principal"
+          disabled={!descripcion.trim()}
+          cargando={guardando}
+          textoCargando="Guardando…"
         >
-          {guardando ? 'Guardando...' : 'Guardar intervención'}
-        </button>
-        <button type="button" onClick={cerrar} className={`${BTN_GHOST} min-h-11 px-4`}>
+          Guardar intervención
+        </Boton>
+        <Boton papel="texto" tono="descarte" onClick={cerrar}>
           Cancelar
-        </button>
+        </Boton>
       </div>
     </form>
   )

@@ -1,7 +1,7 @@
 import { useMemo, useState, useSyncExternalStore } from 'react'
-import { Modal } from '../../components/Modal'
-import { CloudSlash, PlugsConnected, WarningCircle, X } from '../../components/iconos'
-import { BTN_GHOST_PELIGRO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { Boton } from '../../components/Boton'
+import { Hoja } from '../../components/Hoja'
+import { CloudSlash, PlugsConnected, WarningCircle } from '../../components/iconos'
 import type { PasoProcedimiento, Referencia } from '../../lib/db'
 import { TEXTO_ERROR, type ErrorAsistencia } from './apiTecnico'
 import { construirContenidoDePaso, type Apartado } from './contenidoPaso'
@@ -18,7 +18,6 @@ import { VistaContenidoAsistencia } from './VistaContenidoAsistencia'
 // envia nada y la guia sigue igual: el portal es una ayuda, no una
 // dependencia.
 
-const ID_TITULO = 'hoja-enviar-equipo-titulo'
 
 function suscribirRed(avisar: () => void) {
   window.addEventListener('online', avisar)
@@ -105,26 +104,47 @@ export function HojaEnviarAEquipo({
   }
 
   return (
-    <Modal abierto={abierto} onCerrar={cerrar} tituloId={ID_TITULO}>
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <span className="min-w-0">
-          <span id={ID_TITULO} className="block text-[17px] font-medium leading-tight text-noct-text">
-            Enviar a este equipo
-          </span>
-          <span className="mt-1 flex items-center gap-1.5 text-[12.5px] text-noct-neutral-300">
-            <PlugsConnected size={14} className="shrink-0 text-noct-exito" aria-hidden />
-            Conectado al equipo <span className="font-mono tracking-[.08em]">{formatoCodigo(sesion.codigo)}</span>
-          </span>
+    <Hoja
+      abierta={abierto}
+      onCerrar={cerrar}
+      textoCerrar="Cerrar sin enviar"
+      titulo="Enviar a este equipo"
+      descripcion={
+        <span className="flex items-center gap-1.5 text-noct-neutral-300">
+          <PlugsConnected size={14} className="shrink-0 text-noct-exito" aria-hidden />
+          Conectado al equipo <span className="font-mono tracking-[.08em]">{formatoCodigo(sesion.codigo)}</span>
         </span>
-        <button
-          type="button"
-          onClick={cerrar}
-          aria-label="Cerrar sin enviar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.08] text-noct-text hover:bg-noct-text/[.14]"
-        >
-          <X size={20} aria-hidden />
-        </button>
-      </div>
+      }
+      // Las acciones, siempre a la vista al pie de la hoja: la vista
+      // previa de un paso largo ocupa más que la pantalla y "Enviar" no
+      // puede quedar debajo. Salir sin enviar es la × (P4).
+      pie={
+        <div className="flex flex-col gap-1.5">
+          <Boton
+            papel="principal"
+            tamano={52}
+            anchoCompleto
+            onClick={() => void enviar()}
+            disabled={!contenido || !enLinea}
+            cargando={enviando}
+            textoCargando="Enviando…"
+          >
+            Enviar
+          </Boton>
+          <Boton
+            papel="texto"
+            tono="descarte"
+            anchoCompleto
+            onClick={() => {
+              void desconectarEquipo(sesion.usuario)
+              cerrar()
+            }}
+          >
+            Desconectar equipo
+          </Boton>
+        </div>
+      }
+    >
 
       {/* Todo el paso o solo la acción a la vista. Solo cuando hay una. */}
       {tareaId && (
@@ -186,32 +206,6 @@ export function HojaEnviarAEquipo({
           {TEXTO_ERROR[error]}
         </p>
       )}
-
-      {/* Las acciones, siempre a la vista: la vista previa de un paso largo
-          ocupa más que la pantalla y "Enviar" no puede quedar debajo. */}
-      <div className="sticky -bottom-5 -mx-5 -mb-5 mt-4 flex flex-col gap-2 border-t border-noct-divider bg-noct-surface px-5 pb-5 pt-3">
-        <button
-          type="button"
-          onClick={() => void enviar()}
-          disabled={!contenido || !enLinea || enviando}
-          className={`min-h-11 justify-center ${BTN_PRIMARIO} disabled:opacity-40`}
-        >
-          {enviando ? 'Enviando…' : 'Enviar'}
-        </button>
-        <button type="button" onClick={cerrar} className={`min-h-11 justify-center ${BTN_SECUNDARIO}`}>
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            void desconectarEquipo(sesion.usuario)
-            cerrar()
-          }}
-          className={`min-h-11 justify-center ${BTN_GHOST_PELIGRO}`}
-        >
-          Desconectar equipo
-        </button>
-      </div>
-    </Modal>
+    </Hoja>
   )
 }

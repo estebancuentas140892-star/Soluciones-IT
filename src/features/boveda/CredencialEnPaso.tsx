@@ -11,7 +11,6 @@ import {
 import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { CaretRight, Key, LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { FilaVinculo } from '../soluciones/FilaVinculo'
 import { HojaVinculo } from '../soluciones/HojaVinculo'
 import { useEjecucion } from '../soluciones/contextoEjecucion'
@@ -23,6 +22,7 @@ import { esIdDeEquipo, resolverCredencialDelEquipo, type ResolucionCredencialDel
 import { IndicadorVencimiento } from './IndicadorVencimiento'
 import { desbloquear, descifrarCredencial, descifrarValor, type DatosCredencial } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
+import { Boton } from '../../components/Boton'
 
 // Salida del bloque protegido hacia la ficha completa (decisión 10 de la
 // tarea 172): una acción de ancho completo, no una fila de texto con una
@@ -421,10 +421,16 @@ function FormularioDesbloqueo() {
           className="min-h-11 min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
         {/* De dedo, 44 px (R6): se desbloquea de pie, en medio de una guía. */}
-        <button type="submit" disabled={abriendo} className={`min-h-11 shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
-          <Key size={14} aria-hidden />
-          {abriendo ? 'Abriendo...' : 'Desbloquear'}
-        </button>
+        <Boton
+          type="submit"
+          papel="principal"
+          className="shrink-0"
+          icono={<Key size={14} aria-hidden />}
+          cargando={abriendo}
+          textoCargando="Abriendo…"
+        >
+          Desbloquear
+        </Boton>
       </div>
       {error && <p className="text-xs text-noct-error">{error}</p>}
     </form>

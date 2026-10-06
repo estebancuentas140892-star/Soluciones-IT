@@ -6,10 +6,10 @@ import { Chasis } from '../../app/Chasis'
 import { idsDeRed } from '../../lib/categorias'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { CaretDown, CaretRight, TreeStructure } from '../../components/iconos'
-import { BTN_GHOST } from '../../components/nocturne'
 import { construirBosque, contarDescendientes, type NodoTopologia } from './arbol'
 import { IconoNodo } from './IconoNodo'
 import { claseEstado, detalleDeNodo, estadoConEtiqueta, tipoDeNodoVisual } from './topologiaVisual'
+import { Boton } from '../../components/Boton'
 
 // Mapa general de la topología re-autorizado en el sistema Nocturne
 // (handoff "Rediseño de aplicación empresarial", Topología.dc.html,
@@ -114,12 +114,12 @@ export function TopologiaPage() {
       acciones={
         hayContenido && (
           <>
-            <button type="button" onClick={expandirTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>
+            <Boton papel="texto" className="whitespace-nowrap" onClick={expandirTodo}>
               Expandir todo
-            </button>
-            <button type="button" onClick={contraerTodo} className={`whitespace-nowrap ${BTN_GHOST}`}>
+            </Boton>
+            <Boton papel="texto" className="whitespace-nowrap" onClick={contraerTodo}>
               Contraer
-            </button>
+            </Boton>
           </>
         )
       }

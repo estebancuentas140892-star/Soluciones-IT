@@ -274,10 +274,16 @@ export function origenesDistintos(aristas: Arista[]): NodoRef[] {
   )
 }
 
-// Frase corta para el aviso antes de eliminar: "Se usa en 3
-// procedimientos, 1 diagnóstico y 2 conexiones." Devuelve null si nada la
-// referencia (no se muestra aviso). Cuenta orígenes distintos agrupados
-// en categorías legibles según el tipo de relación, no aristas crudas.
+// Frase corta para el aviso antes de eliminar: "Se usa en 3 guías y 2
+// conexiones." Devuelve null si nada la referencia (no se muestra aviso).
+// Cuenta orígenes distintos agrupados en categorías legibles según el tipo
+// de relación, no aristas crudas.
+//
+// Con las palabras del glosario visible (tarea 291, auditoría UX, sección
+// B de la 13): un procedimiento, un artículo y una guía con preguntas son
+// todos "guías" para el técnico, y una credencial de la Bóveda y un dato
+// protegido del equipo son los dos "accesos" (el técnico no debe notar de
+// qué estructura interna viene un acceso).
 export function resumenImpacto(aristas: Arista[], tipo: TipoEntidad, id: string): string | null {
   const entrantes = referenciasHacia(aristas, tipo, id)
   if (entrantes.length === 0) return null
@@ -285,11 +291,8 @@ export function resumenImpacto(aristas: Arista[], tipo: TipoEntidad, id: string)
   // Un mismo origen puede aparecer con varias relaciones (un artículo que
   // usa la credencial en dos pasos): se cuenta una vez por categoría.
   const grupos: { clave: string; singular: string; plural: string; ids: Set<string> }[] = [
-    { clave: 'procedimiento', singular: 'procedimiento', plural: 'procedimientos', ids: new Set() },
-    { clave: 'diagnostico', singular: 'diagnóstico', plural: 'diagnósticos', ids: new Set() },
-    { clave: 'articulo', singular: 'artículo', plural: 'artículos', ids: new Set() },
-    { clave: 'credencial', singular: 'credencial', plural: 'credenciales', ids: new Set() },
-    { clave: 'campo_protegido', singular: 'dato protegido', plural: 'datos protegidos', ids: new Set() },
+    { clave: 'guia', singular: 'guía', plural: 'guías', ids: new Set() },
+    { clave: 'acceso', singular: 'acceso', plural: 'accesos', ids: new Set() },
     { clave: 'conexion', singular: 'conexión', plural: 'conexiones', ids: new Set() },
     { clave: 'reemplazo', singular: 'reemplazo', plural: 'reemplazos', ids: new Set() },
   ]
@@ -312,13 +315,12 @@ export function resumenImpacto(aristas: Arista[], tipo: TipoEntidad, id: string)
 function categoriaImpacto(relacion: TipoRelacion): string {
   switch (relacion) {
     case 'diagnostico_articulo':
-      return 'diagnostico'
+      return 'guia'
     case 'conexion':
       return 'conexion'
     case 'credencial_dispositivo':
-      return 'credencial'
     case 'campo_dispositivo':
-      return 'campo_protegido'
+      return 'acceso'
     case 'reemplaza':
       return 'reemplazo'
     case 'subprocedimiento':
@@ -328,10 +330,9 @@ function categoriaImpacto(relacion: TipoRelacion): string {
     case 'credencial_tarea':
     case 'campo_paso':
     case 'campo_tarea':
-      return 'procedimiento'
     case 'relacionado':
     case 'dispositivo_afectado':
-      return 'articulo'
+      return 'guia'
   }
 }
 

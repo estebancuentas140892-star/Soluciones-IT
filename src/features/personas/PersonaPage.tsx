@@ -14,13 +14,7 @@ import {
   Warning,
   XCircle,
 } from '../../components/iconos'
-import {
-  BTN_GHOST_PELIGRO,
-  BTN_GHOST_TENUE,
-  BTN_PRIMARIO,
-  BTN_SECUNDARIO,
-  TituloSeccion,
-} from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { PastillaEstado, PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { db, type Dispositivo } from '../../lib/db'
 import { anotarBusqueda, conOrigen } from '../../lib/origenNavegacion'
@@ -38,6 +32,8 @@ import {
   type PeriodoAsignacion,
 } from './historialAsignaciones'
 import { reactivarPersona } from './operaciones'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // FICHA DE UNA PERSONA (hallazgo T1; ciclo de vida desde la tarea 266,
 // sección 6 del encargo del 2026-09-23). Responde, en este orden:
@@ -175,26 +171,29 @@ export function PersonaPage() {
       <main className="flex flex-1 flex-col gap-[22px] px-4 pb-12 pt-3.5">
         <div className="flex flex-wrap gap-2">
           {activa ? (
-            <Link to={`/personas/${personaId}/asignar`} className={`min-h-11 shrink-0 ${BTN_PRIMARIO}`}>
+            <Link to={`/personas/${personaId}/asignar`} className={`shrink-0 ${claseBoton({ papel: 'principal' })}`}>
               <Plus size={14} aria-hidden />
               Asignar equipo
             </Link>
           ) : (
-            <button
-              type="button"
+            <Boton
+              papel="principal"
+              className="shrink-0"
               onClick={() => void reactivar()}
-              disabled={reactivando}
-              className={`min-h-11 shrink-0 ${BTN_PRIMARIO} disabled:opacity-50`}
+              cargando={reactivando}
+              textoCargando="Reactivando…"
             >
-              {reactivando ? 'Reactivando…' : 'Reactivar'}
-            </button>
+              Reactivar
+            </Boton>
           )}
-          <Link to={`/personas/${personaId}/editar`} className={`min-h-11 shrink-0 ${BTN_SECUNDARIO}`}>
+          <Link to={`/personas/${personaId}/editar`} className={`shrink-0 ${claseBoton({ papel: 'secundario' })}`}>
             <PencilSimple size={14} aria-hidden />
             Editar
           </Link>
           {activa && (
-            <Link to={`/personas/${personaId}/retirar`} className={`min-h-11 shrink-0 ${BTN_GHOST_PELIGRO}`}>
+            // Retirar no destruye (la persona se puede reactivar): en gris,
+            // no en rojo (auditoría UX T2, el rojo solo destruye).
+            <Link to={`/personas/${personaId}/retirar`} className={`shrink-0 ${claseBoton({ papel: 'texto', tono: 'descarte' })}`}>
               <XCircle size={14} aria-hidden />
               Retirar persona
             </Link>
@@ -250,7 +249,7 @@ export function PersonaPage() {
                       type="button"
                       onClick={() => setLiberando(d)}
                       aria-label={`Liberar ${d.nombre}`}
-                      className={`shrink-0 ${BTN_GHOST_TENUE} min-h-11`}
+                      className={`shrink-0 ${claseBoton({ papel: 'texto', tono: 'descarte' })}`}
                     >
                       Liberar
                     </button>
@@ -305,10 +304,15 @@ export function PersonaPage() {
 
         {/* Eliminar, al final y sin peso: la salida normal es "Retirar". */}
         <div className="border-t border-noct-divider pt-3">
-          <button type="button" onClick={() => setMostrarEliminar(true)} className={`${BTN_GHOST_TENUE} min-h-11`}>
-            <TrashSimple size={14} aria-hidden />
+          <Boton
+            papel="texto"
+            tono="descarte"
+            className="-ml-2"
+            icono={<TrashSimple size={14} aria-hidden />}
+            onClick={() => setMostrarEliminar(true)}
+          >
             Eliminar (registro creado por error)
-          </button>
+          </Boton>
         </div>
       </main>
 
@@ -321,7 +325,8 @@ export function PersonaPage() {
 
       <DialogoEliminar
         abierto={mostrarEliminar}
-        titulo={`¿Eliminar a "${persona.nombre}"?`}
+        titulo={`¿Eliminar a ${persona.nombre}?`}
+        textoConfirmar="Eliminar a la persona"
         descripcion={
           activa
             ? 'Eliminar es solo para un registro creado por error o duplicado. Si la persona dejó la organización, usa "Retirar persona": conserva su ficha y su historial.'

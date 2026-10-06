@@ -42,7 +42,6 @@ import {
   Wrench,
   X,
 } from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
@@ -91,6 +90,8 @@ import {
   resumirPasos,
   type ResumenPaso,
 } from './estadoPasos'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 interface Props {
   articuloId: string
@@ -499,19 +500,19 @@ export function AsistenteVista({
             <Link
               to={salida.to}
               state={salida.estado}
-              className="mt-2 flex h-14 w-full max-w-xs items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-[16px] font-semibold text-noct-accent-300 active:bg-noct-accent/[.3]"
+              className={`mt-2 max-w-xs ${claseBoton({ papel: 'principal', tamano: 52, anchoCompleto: true })}`}
             >
               Salir de la guía
             </Link>
           )}
-          <button
-            type="button"
+          <Boton
+            papel="secundario"
+            className="mt-1"
+            icono={<ArrowsClockwise size={15} aria-hidden />}
             onClick={() => void reiniciarYVolver()}
-            className={`mt-1 ${BTN_SECUNDARIO} min-h-11`}
           >
-            <ArrowsClockwise size={15} aria-hidden />
             Empezar de nuevo
-          </button>
+          </Boton>
         </div>
       </div>
     )
@@ -1244,7 +1245,8 @@ export function AsistenteVista({
             onClick={avanzar}
             aria-label={cierre.etiquetaCompleta !== cierre.etiqueta ? cierre.etiquetaCompleta : undefined}
             title={cierre.etiquetaCompleta !== cierre.etiqueta ? cierre.etiquetaCompleta : undefined}
-            className="flex h-[76px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-4 text-[17px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.22] active:bg-noct-accent/[.3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent disabled:border-noct-neutral-700 disabled:bg-noct-text/[.04] disabled:text-noct-neutral-400"
+            // El pie de la guía: el botón común de 64 (P1; medía 76).
+            className={claseBoton({ papel: 'principal', tamano: 64, anchoCompleto: true })}
           >
             {cierre.accion === 'completar' && <Check size={19} className="shrink-0" aria-hidden />}
             <span className="line-clamp-2 min-w-0 text-center leading-tight">{cierre.etiqueta}</span>
@@ -1263,7 +1265,7 @@ export function AsistenteVista({
               // flechas del modo de una tarea a la vez.
               aria-label="Ver el paso anterior. Solo mueve la vista, no cambia lo marcado"
               title="Ver el anterior"
-              className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
+              className={claseBoton({ papel: 'secundario', tamano: 52, soloIcono: true })}
             >
               <CaretLeft size={18} aria-hidden />
             </button>
@@ -1272,18 +1274,19 @@ export function AsistenteVista({
               onClick={() => setIndiceAbierto(true)}
               aria-haspopup="dialog"
               aria-label={`Paso ${indiceActual + 1} de ${pasos.length}. Abrir el índice de pasos`}
-              className="flex h-[52px] flex-1 items-center justify-center gap-1 rounded-xl border border-noct-divider font-mono text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-text/[.07]"
+              className={`flex-1 ${claseBoton({ papel: 'secundario', tamano: 52 })}`}
             >
-              {indiceActual + 1}
-              <span className="text-[13px] font-normal text-noct-neutral-400">/{pasos.length}</span>
-              <CaretDown size={13} className="text-noct-neutral-400" aria-hidden />
+              <span className="font-mono text-[15px] font-semibold text-noct-accent-300">{indiceActual + 1}</span>
+              <span className="-ml-1.5 font-mono text-[13px] font-normal text-noct-neutral-400">/{pasos.length}</span>
+              <CaretDown size={13} className="-ml-1 text-noct-neutral-400" aria-hidden />
             </button>
             <button
               type="button"
               onClick={() => setHojaFalla({ tarea: null })}
               aria-haspopup="dialog"
               aria-label={`Algo va mal en el paso ${numeroPasoVisible}`}
-              className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07]"
+              title="Algo va mal"
+              className={claseBoton({ papel: 'secundario', tamano: 52, soloIcono: true })}
             >
               <Warning size={18} aria-hidden />
             </button>
@@ -1293,7 +1296,7 @@ export function AsistenteVista({
               onClick={() => verPaso(Math.min(pasos.length - 1, indiceActual + 1))}
               aria-label="Ver el paso siguiente. Solo mueve la vista, no lo da por hecho"
               title="Ver el siguiente"
-              className="flex h-[52px] w-12 shrink-0 items-center justify-center rounded-xl border border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.07] disabled:opacity-30"
+              className={claseBoton({ papel: 'secundario', tamano: 52, soloIcono: true })}
             >
               <CaretRight size={18} aria-hidden />
             </button>
@@ -1313,7 +1316,7 @@ export function AsistenteVista({
             onClick={() => setHojaFalla({ tarea: null })}
             aria-haspopup="dialog"
             aria-label={`Algo va mal en el paso ${numeroPasoVisible}`}
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-noct-divider px-3 text-[13px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.07]"
+            className={`shrink-0 ${claseBoton({ papel: 'secundario' })}`}
           >
             <Warning size={15} className="shrink-0" aria-hidden />
             Falla
@@ -1326,7 +1329,7 @@ export function AsistenteVista({
             disabled={cierre.accion === 'bloqueado'}
             onClick={avanzar}
             aria-label={cierre.etiquetaCompleta !== cierre.etiqueta ? cierre.etiquetaCompleta : undefined}
-            className={`${BTN_PRIMARIO} min-h-11 flex-1 text-sm disabled:opacity-30`}
+            className={`flex-1 ${claseBoton({ papel: 'principal' })}`}
           >
             <span className="truncate">{cierre.etiqueta}</span>
             <CaretRight size={15} aria-hidden />

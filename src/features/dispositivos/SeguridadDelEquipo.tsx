@@ -19,7 +19,7 @@ import {
   TrashSimple,
   X,
 } from '../../components/iconos'
-import { BTN_GHOST_ACENTO, BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { useGrafo } from '../../components/useGrafo'
 import { db, type CampoProtegido, type TipoCampoProtegido } from '../../lib/db'
 import { generarContrasena } from '../../lib/generarContrasena'
@@ -39,6 +39,7 @@ import {
   TIPOS_CAMPO_PROTEGIDO,
   validarNombre,
 } from './camposProtegidos'
+import { Boton } from '../../components/Boton'
 
 // Seccion "Seguridad" de la ficha del dispositivo (grupo P1): los datos
 // sensibles PROPIOS del equipo (usuario administrador, contraseña, PIN
@@ -157,23 +158,24 @@ export function SeguridadDelEquipo({
             />
           </div>
         ) : (
-          <button
-            type="button"
+          <Boton
+            papel="texto"
+            className="-ml-2 mt-2 self-start"
+            icono={<Plus size={13} aria-hidden />}
             onClick={() => setEditando('nuevo')}
-            className={`mt-2 ${BTN_GHOST_ACENTO}`}
           >
-            <Plus size={13} aria-hidden />
-            Agregar dato protegido
-          </button>
+            Agregar un acceso
+          </Boton>
         )}
       </div>
 
       <DialogoEliminar
         abierto={Boolean(aEliminar)}
         sensible
-        titulo={`¿Eliminar "${aEliminar?.nombre ?? ''}"?`}
-        descripcion="Se elimina este dato protegido del equipo para todo el equipo de trabajo."
-        advertencia={impactoEliminar ? `${impactoEliminar} Esos pasos quedarán sin el dato vinculado.` : null}
+        titulo={`¿Eliminar ${aEliminar?.nombre ?? ''}?`}
+        descripcion="Se quita de este equipo para todo el equipo de trabajo."
+        advertencia={impactoEliminar ? `${impactoEliminar} Esos pasos se quedarán sin este acceso.` : null}
+        textoConfirmar="Eliminar el acceso"
         onCerrar={() => setAEliminar(null)}
         onConfirmar={async () => {
           if (!aEliminar) return
@@ -274,14 +276,12 @@ function FilaCampoProtegido({
             <FormularioDesbloqueo />
           )}
           <div className="flex gap-1.5">
-            <button type="button" onClick={onEditar} className={BTN_SECUNDARIO}>
-              <PencilSimple size={13} aria-hidden />
+            <Boton papel="secundario" icono={<PencilSimple size={13} aria-hidden />} onClick={onEditar}>
               Editar
-            </button>
-            <button type="button" onClick={onEliminar} className={BTN_GHOST_PELIGRO}>
-              <TrashSimple size={13} aria-hidden />
+            </Boton>
+            <Boton papel="texto" tono="peligro" icono={<TrashSimple size={13} aria-hidden />} onClick={onEliminar}>
               Eliminar
-            </button>
+            </Boton>
           </div>
           {usadoEn.length > 0 && (
             <div className="flex flex-col gap-1">
@@ -438,9 +438,9 @@ function EditorCampo({
     return (
       <div className="rounded-md border border-noct-divider bg-noct-bg/40 p-3">
         <FormularioDesbloqueo />
-        <button type="button" onClick={onCerrar} className={`mt-2 ${BTN_SECUNDARIO}`}>
+        <Boton papel="texto" tono="descarte" className="-ml-2 mt-2" onClick={onCerrar}>
           Cancelar
-        </button>
+        </Boton>
       </div>
     )
   }
@@ -539,30 +539,32 @@ function EditorCampo({
             onChange={(e) => setValor(e.target.value)}
             className="min-h-11 min-w-0 flex-1 box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 font-mono text-sm text-noct-text outline-none focus:border-noct-accent"
           />
-          <button
-            type="button"
+          {/* El ojo dentro de un campo se nombra con el dato (T5): "Mostrar
+              PIN", nunca "Mostrar valor". */}
+          <Boton
+            papel="secundario"
+            soloIcono
             onClick={() => setVerValor((v) => !v)}
-            aria-label={verValor ? 'Ocultar valor' : 'Mostrar valor'}
-            className={`${BTN_ICONO_SECUNDARIO} min-h-11 min-w-11`}
-          >
-            {verValor ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-          </button>
+            aria-label={`${verValor ? 'Ocultar' : 'Mostrar'} ${nombre.trim() || 'el dato'}`}
+            title={`${verValor ? 'Ocultar' : 'Mostrar'} ${nombre.trim() || 'el dato'}`}
+            icono={verValor ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+          />
           {esOcultoPorDefecto(tipo) && (
-            <button
-              type="button"
+            <Boton
+              papel="secundario"
+              className="shrink-0 whitespace-nowrap"
+              icono={<ArrowsClockwise size={14} aria-hidden />}
               onClick={() => {
                 setValor(generarContrasena())
                 setVerValor(true)
               }}
-              className={`${BTN_SECUNDARIO} h-11 shrink-0 whitespace-nowrap`}
             >
-              <ArrowsClockwise size={14} aria-hidden />
               Generar
-            </button>
+            </Boton>
           )}
         </div>
         {!cargado && (
-          <p className="text-[11.5px] text-noct-neutral-500">Cargando el valor actual...</p>
+          <p className="text-[11.5px] text-noct-neutral-500">Cargando el valor actual…</p>
         )}
       </div>
 
@@ -592,13 +594,12 @@ function EditorCampo({
       {error && <p className="text-[12px] text-noct-error">{error}</p>}
 
       <div className="flex gap-1.5">
-        <button type="submit" disabled={guardando} className={`${BTN_PRIMARIO} disabled:opacity-50`}>
-          <LockSimple size={13} aria-hidden />
-          {guardando ? 'Guardando...' : 'Guardar'}
-        </button>
-        <button type="button" onClick={onCerrar} className={BTN_SECUNDARIO}>
+        <Boton type="submit" papel="principal" cargando={guardando} textoCargando="Guardando…">
+          Guardar
+        </Boton>
+        <Boton papel="texto" tono="descarte" onClick={onCerrar}>
           Cancelar
-        </button>
+        </Boton>
       </div>
     </form>
   )
@@ -634,12 +635,18 @@ function FormularioDesbloqueo() {
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
           placeholder="Contraseña maestra"
-          className="min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
-        <button type="submit" disabled={abriendo} className={`shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
-          <Key size={14} aria-hidden />
-          {abriendo ? 'Abriendo...' : 'Desbloquear'}
-        </button>
+        <Boton
+          type="submit"
+          papel="principal"
+          className="shrink-0"
+          icono={<Key size={14} aria-hidden />}
+          cargando={abriendo}
+          textoCargando="Abriendo…"
+        >
+          Desbloquear
+        </Boton>
       </div>
       {error && <p className="text-xs text-noct-error">{error}</p>}
     </form>

@@ -1,5 +1,4 @@
-import { Modal } from '../components/Modal'
-import { X } from '../components/iconos'
+import { Hoja } from '../components/Hoja'
 import { atajosVisibles, type AtajoApp } from './atajosApp'
 
 // LA LISTA COMPLETA DE ATAJOS, tal como la pide el encargo: el dialogo
@@ -9,8 +8,6 @@ import { atajosVisibles, type AtajoApp } from './atajosApp'
 // entrada visible "Atajos de la aplicacion": los atajos propios de esta
 // app son parte del vocabulario del equipo, igual que Windows + R, y
 // tienen que poder consultarse sin saber de antemano que existe "?".
-
-const ID_TITULO = 'ayuda-atajos-titulo'
 
 export function AyudaAtajos({
   abierto,
@@ -25,21 +22,7 @@ export function AyudaAtajos({
   const grupos = [...new Set(atajos.map((a) => a.grupo))]
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 id={ID_TITULO} className="text-[17px] font-medium leading-tight text-noct-text">
-          Atajos de la aplicación
-        </h2>
-        <button
-          type="button"
-          onClick={onCerrar}
-          aria-label="Cerrar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.08] text-noct-text hover:bg-noct-text/[.14]"
-        >
-          <X size={20} aria-hidden />
-        </button>
-      </div>
-
+    <Hoja abierta={abierto} onCerrar={onCerrar} titulo="Atajos de la aplicación">
       <div className="flex flex-col gap-3.5">
         {grupos.map((grupo) => (
           <div key={grupo}>
@@ -62,7 +45,7 @@ export function AyudaAtajos({
         <Tecla>G</Tecla> se cancela sola si la segunda tecla tarda. Las teclas de ir a una sección
         tampoco actúan mientras editas o ejecutas una guía, para no sacarte de un trabajo a medias.
       </p>
-    </Modal>
+    </Hoja>
   )
 }
 

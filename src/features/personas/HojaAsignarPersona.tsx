@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useId, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Boton } from '../../components/Boton'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { Hoja } from '../../components/Hoja'
 import { Check, Plus, User } from '../../components/iconos'
-import { Modal } from '../../components/Modal'
-import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import { db, type Dispositivo } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
@@ -27,7 +27,6 @@ export function HojaAsignarPersona({
   abierto: boolean
   onCerrar: () => void
 }) {
-  const idTitulo = useId()
   const personas = useLiveQuery(() => db.personas.filter((p) => !p.eliminadoEn).toArray(), [], [])
   const [consulta, setConsulta] = useState('')
   const [elegidaId, setElegidaId] = useState<string | null>(null)
@@ -77,13 +76,30 @@ export function HojaAsignarPersona({
   }
 
   return (
-    <Modal abierto={abierto} onCerrar={cerrar} tituloId={idTitulo}>
+    // Hoja con buscador: casi a pantalla completa, con el campo arriba y
+    // la lista hasta el teclado (auditoría UX, F1 y F7).
+    <Hoja
+      abierta={abierto}
+      onCerrar={cerrar}
+      alta
+      titulo={`¿A quién se asigna ${dispositivo.nombre}?`}
+      pie={
+        <Boton
+          papel="principal"
+          tamano={52}
+          anchoCompleto
+          onClick={() => elegidaId && void asignar(elegidaId)}
+          disabled={!elegidaId}
+          cargando={guardando}
+          textoCargando="Asignando…"
+        >
+          Asignar
+        </Boton>
+      }
+    >
       <div className="flex flex-col gap-3">
-        <h2 id={idTitulo} className="text-[16px] font-medium leading-[1.3]">
-          ¿A quién se asigna {dispositivo.nombre}?
-        </h2>
         <CampoBusqueda valor={consulta} onCambiar={setConsulta} alcance="Personas" />
-        <div role="radiogroup" aria-label="Personas activas" className="flex max-h-[45dvh] flex-col overflow-y-auto">
+        <div role="radiogroup" aria-label="Personas activas" className="flex flex-col">
           {visibles.map((p) => {
             const activa = p.id === elegidaId
             return (
@@ -120,20 +136,7 @@ export function HojaAsignarPersona({
             Crear a «{nombreNuevo}» y asignarle el equipo
           </button>
         )}
-        <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" onClick={cerrar} className={`${BTN_GHOST} min-h-11 px-4`}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => elegidaId && void asignar(elegidaId)}
-            disabled={!elegidaId || guardando}
-            className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
-          >
-            {guardando ? 'Asignando…' : 'Asignar'}
-          </button>
-        </div>
       </div>
-    </Modal>
+    </Hoja>
   )
 }

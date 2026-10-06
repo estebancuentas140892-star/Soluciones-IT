@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { CaretDown, CaretRight, CaretUp, MapPin, PencilSimple, Plus, TrashSimple } from '../../components/iconos'
-import { BTN_GHOST_TENUE, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { db, type Dispositivo } from '../../lib/db'
 import { conOrigen, type EstadoConOrigen } from '../../lib/origenNavegacion'
@@ -14,6 +14,8 @@ import { IconoNodo } from '../red/IconoNodo'
 import { tipoDeNodoVisual } from '../red/topologiaVisual'
 import { cadenaUbicaciones, hijosDirectos, mapaPorId } from './arbol'
 import { contenidoDeUbicacion, totalConSububicaciones } from './contenido'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Ficha 360 de una ubicacion (grupo N3) re-autorizada al sistema
 // Nocturne (handoff "Rediseño de aplicación empresarial", derivada del
@@ -144,11 +146,11 @@ export function UbicacionPage() {
     >
       <main className="flex flex-1 flex-col gap-[22px] px-4 pb-12 pt-3.5">
         <div className="flex flex-wrap gap-2">
-          <Link to={`/ubicaciones/nueva?padre=${ubicacionId}`} className={`min-h-11 shrink-0 ${BTN_SECUNDARIO}`}>
+          <Link to={`/ubicaciones/nueva?padre=${ubicacionId}`} className={`shrink-0 ${claseBoton({ papel: 'secundario' })}`}>
             <Plus size={14} aria-hidden />
             Sub-ubicación
           </Link>
-          <Link to={`/ubicaciones/${ubicacionId}/editar`} className={`min-h-11 shrink-0 ${BTN_SECUNDARIO}`}>
+          <Link to={`/ubicaciones/${ubicacionId}/editar`} className={`shrink-0 ${claseBoton({ papel: 'secundario' })}`}>
             <PencilSimple size={14} aria-hidden />
             Editar
           </Link>
@@ -229,16 +231,22 @@ export function UbicacionPage() {
         <Historial entidadTipo="ubicacion" entidadId={ubicacionId} />
 
         <div className="border-t border-noct-divider pt-3">
-          <button type="button" onClick={() => setMostrarEliminar(true)} className={`${BTN_GHOST_TENUE} min-h-11`}>
-            <TrashSimple size={14} aria-hidden />
+          <Boton
+            papel="texto"
+            tono="peligro"
+            className="-ml-2"
+            icono={<TrashSimple size={14} aria-hidden />}
+            onClick={() => setMostrarEliminar(true)}
+          >
             Eliminar ubicación
-          </button>
+          </Boton>
         </div>
       </main>
 
       <DialogoEliminar
         abierto={mostrarEliminar}
-        titulo={`¿Eliminar la ubicación "${ubicacion.nombre}"?`}
+        titulo={`¿Eliminar ${ubicacion.nombre}?`}
+        textoConfirmar="Eliminar la ubicación"
         descripcion="Los equipos conservarán el nombre del lugar como texto, pero perderán el enlace a esta ficha."
         advertencia={advertencia}
         onCerrar={() => setMostrarEliminar(false)}

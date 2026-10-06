@@ -17,7 +17,7 @@ import {
   Warning,
 } from '../../components/iconos'
 import { ROTULO_RECORRIDO } from '../../lib/diagnostico'
-import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
@@ -50,6 +50,8 @@ import {
 } from './resolver'
 import { FilaAgenda } from './SeccionesAgenda'
 import { usePendientes } from './usePendientes'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // RESOLVER (encargo del 2026-09-22, secciones 1 y 2).
 //
@@ -309,20 +311,20 @@ export function ResolverPage() {
 
             {resultados.length === 0 && (
               <div className="flex flex-wrap justify-center gap-2">
-                <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
+                <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={claseBoton({ papel: 'secundario' })}>
                   <MagnifyingGlass size={15} aria-hidden />
                   Buscar solo en Guías
                 </Link>
                 <Link
                   to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
-                  className={BTN_SECUNDARIO}
+                  className={claseBoton({ papel: 'secundario' })}
                 >
                   <Plus size={15} aria-hidden />
                   Crear equipo
                 </Link>
-                <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
+                <Boton papel="secundario" onClick={() => setQuery('')}>
                   Limpiar búsqueda
-                </button>
+                </Boton>
               </div>
             )}
           </div>

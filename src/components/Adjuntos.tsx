@@ -169,8 +169,9 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
 
       <DialogoEliminar
         abierto={aEliminar !== null}
-        titulo={`¿Eliminar "${aEliminar?.nombre ?? ''}"?`}
+        titulo={`¿Eliminar ${aEliminar?.nombre ?? ''}?`}
         descripcion="El archivo se quitará de esta ficha."
+        textoConfirmar="Eliminar el archivo"
         onCerrar={() => setAEliminar(null)}
         onConfirmar={confirmarEliminar}
       />

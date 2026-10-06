@@ -8,8 +8,8 @@ import {
   sincronizar,
   suscribirSync,
 } from '../lib/sync'
-import { Modal } from './Modal'
-import { BTN_PRIMARIO, BTN_SECUNDARIO } from './nocturne'
+import { Boton } from './Boton'
+import { Hoja } from './Hoja'
 
 interface Props {
   abierto: boolean
@@ -22,6 +22,11 @@ interface Props {
 // cuando un cambio queda atascado, sin consola de desarrollador ni
 // reinstalar nada. Descartar un cambio es la salida de emergencia:
 // pide confirmacion y restaura la version del servidor de esa ficha.
+//
+// Desde la tarea 291 es la hoja estándar (auditoría UX, F1): la × cierra
+// (sin un "Cerrar" repetido, P4), "Reintentar ahora" va al pie y todos sus
+// botones tocan en 44 px como mínimo (T3: "Reintentar" medía 26 y
+// "Descartar" era un enlace de 11 px).
 export function PanelSync({ abierto, onCerrar }: Props) {
   const estado = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
   const pendientes = useLiveQuery(() => db.cambiosPendientes.orderBy('creadoEn').toArray(), [], [])
@@ -41,18 +46,30 @@ export function PanelSync({ abierto, onCerrar }: Props) {
   }
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId="panel-sync-titulo">
+    <Hoja
+      abierta={abierto}
+      onCerrar={onCerrar}
+      titulo="Sincronización"
+      pie={
+        <Boton
+          papel="principal"
+          tamano={52}
+          anchoCompleto
+          onClick={() => void sincronizar()}
+          cargando={estado.enCurso}
+          textoCargando="Sincronizando…"
+        >
+          Reintentar ahora
+        </Boton>
+      }
+    >
       <div className="flex flex-col gap-4">
-        <h2 id="panel-sync-titulo" className="text-base font-semibold text-noct-text">
-          Sincronización
-        </h2>
-
         <dl className="flex flex-col gap-1.5 text-sm text-noct-neutral-200">
           <div className="flex justify-between gap-3">
             <dt className="text-noct-neutral-400">Estado</dt>
             <dd>
               {estado.enCurso
-                ? 'Sincronizando...'
+                ? 'Sincronizando…'
                 : estado.tiempoReal
                   ? 'Conectado en tiempo real'
                   : 'Conectado (revisa cada 2 minutos)'}
@@ -133,32 +150,29 @@ export function PanelSync({ abierto, onCerrar }: Props) {
                             ¿Descartar este cambio? Se perderá y la ficha volverá a como está en el
                             servidor.
                           </p>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              disabled={ocupado}
+                          <div className="flex flex-wrap gap-2">
+                            <Boton
+                              papel="destructivo"
                               onClick={() => void descartar(cambio.id)}
-                              className="rounded-lg border border-noct-error/45 px-2.5 py-1 text-xs text-noct-error hover:bg-noct-error/10 disabled:opacity-50"
+                              cargando={ocupado}
+                              textoCargando="Descartando…"
                             >
-                              {ocupado ? 'Descartando...' : 'Sí, descartar'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDescartando(null)}
-                              className="rounded-lg border border-noct-divider px-2.5 py-1 text-xs text-noct-text hover:bg-noct-text/[.07]"
-                            >
+                              Descartar el cambio
+                            </Boton>
+                            <Boton papel="texto" tono="descarte" onClick={() => setDescartando(null)}>
                               Cancelar
-                            </button>
+                            </Boton>
                           </div>
                         </div>
                       ) : (
-                        <button
-                          type="button"
+                        <Boton
+                          papel="texto"
+                          tono="descarte"
+                          className="-ml-2 self-start"
                           onClick={() => setDescartando(cambio.id)}
-                          className="self-start text-[11px] text-noct-neutral-500 underline underline-offset-2"
                         >
-                          Descartar ({descripcion.intentos} intentos)
-                        </button>
+                          Descartar ({descripcion.intentos === 1 ? '1 intento' : `${descripcion.intentos} intentos`})
+                        </Boton>
                       )}
                     </li>
                   ))}
@@ -172,15 +186,7 @@ export function PanelSync({ abierto, onCerrar }: Props) {
           </div>
         )}
 
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => void sincronizar()} className={BTN_PRIMARIO}>
-            Reintentar ahora
-          </button>
-          <button type="button" onClick={onCerrar} className={BTN_SECUNDARIO}>
-            Cerrar
-          </button>
-        </div>
       </div>
-    </Modal>
+    </Hoja>
   )
 }

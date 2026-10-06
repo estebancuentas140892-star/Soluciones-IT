@@ -19,7 +19,7 @@ import {
   TrashSimple,
   type IconoProps,
 } from '../../components/iconos'
-import { BTN_ICONO_PELIGRO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { useGrafo } from '../../components/useGrafo'
 import { obtenerBlobParaVer } from '../../lib/adjuntosOffline'
 import { db, type AccesoBoveda, type Dispositivo } from '../../lib/db'
@@ -33,6 +33,8 @@ import { descripcionEntrada } from '../historial/textoHistorial'
 import { BUCKET_ARCHIVOS_BOVEDA, DURACION_URL_ARCHIVO_SEGURO_SEGUNDOS } from './archivoSeguro'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
 import { descifrarArchivo, descifrarCredencial, type DatosCredencial } from './sesionBoveda'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Ficha de una credencial re-autorizada al sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Ficha de Credencial.dc.html,
@@ -319,18 +321,19 @@ export function CredencialPage() {
       contexto={['Bóveda', credencial.categoria].filter(Boolean).join(' · ')}
       acciones={
         <>
-          <Link to={`/boveda/${credencialId}/editar`} className={BTN_SECUNDARIO}>
+          <Link to={`/boveda/${credencialId}/editar`} className={claseBoton({ papel: 'secundario' })}>
             <PencilSimple size={14} aria-hidden />
             Editar
           </Link>
-          <button
-            type="button"
+          <Boton
+            papel="texto"
+            tono="peligro"
+            soloIcono
             onClick={() => setMostrarEliminar(true)}
-            aria-label="Eliminar el secreto"
-            className={BTN_ICONO_PELIGRO}
-          >
-            <TrashSimple size={16} aria-hidden />
-          </button>
+            aria-label="Eliminar el acceso"
+            title="Eliminar el acceso"
+            icono={<TrashSimple size={16} aria-hidden />}
+          />
         </>
       }
     >
@@ -492,9 +495,10 @@ export function CredencialPage() {
       <DialogoEliminar
         abierto={mostrarEliminar}
         sensible
-        titulo={`¿Eliminar "${credencial.titulo}"?`}
-        descripcion="Se elimina de la bóveda de todo el equipo."
-        advertencia={impacto ? `${impacto} Esos pasos quedarán sin el secreto vinculado.` : null}
+        titulo={`¿Eliminar ${credencial.titulo}?`}
+        descripcion="Se elimina de la Bóveda de todo el equipo."
+        advertencia={impacto ? `${impacto} Esos pasos se quedarán sin este acceso.` : null}
+        textoConfirmar="Eliminar el acceso"
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />

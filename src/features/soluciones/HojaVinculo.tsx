@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Modal } from '../../components/Modal'
-import { MagnifyingGlass, Plus, X } from '../../components/iconos'
+import { Hoja } from '../../components/Hoja'
+import { MagnifyingGlass, Plus } from '../../components/iconos'
 import { normalizarTexto } from './iconosSoluciones'
 
 // Hoja inferior que ELIGE un vínculo del paso, con buscador (tarea 212,
@@ -14,7 +14,8 @@ import { normalizarTexto } from './iconosSoluciones'
 // cortado. Con la biblioteca de guías creciendo, la lista de
 // vinculables ya no cabe en una rueda.
 //
-// Se apoya en `Modal`, como el resto de hojas del editor.
+// Es la hoja estándar con buscador (`Hoja` alta, tarea 291, auditoría UX
+// F1 y F7), como el resto de hojas del editor.
 
 export interface OpcionVinculo {
   id: string
@@ -50,8 +51,6 @@ interface Props {
   sinRecortar?: boolean
 }
 
-const ID_TITULO = 'hoja-vinculo-titulo'
-
 export function HojaVinculo({
   abierto,
   onCerrar,
@@ -80,20 +79,7 @@ export function HojaVinculo({
   const sinResultados = filtro !== '' && gruposFiltrados.length === 0
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <span id={ID_TITULO} className="min-w-0 truncate text-[17px] font-medium leading-tight text-noct-text">
-          {titulo}
-        </span>
-        <button
-          type="button"
-          onClick={onCerrar}
-          aria-label="Cerrar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.08] text-noct-text hover:bg-noct-text/[.14]"
-        >
-          <X size={20} aria-hidden />
-        </button>
-      </div>
+    <Hoja abierta={abierto} onCerrar={onCerrar} alta titulo={titulo}>
 
       <label className="mb-2 flex h-12 items-center gap-2.5 rounded-[10px] border border-noct-divider bg-noct-bg px-3.5 focus-within:border-noct-accent">
         <MagnifyingGlass size={17} className="shrink-0 text-noct-neutral-400" aria-hidden />
@@ -121,7 +107,7 @@ export function HojaVinculo({
         </button>
       )}
 
-      <div className="flex max-h-[50vh] flex-col overflow-y-auto">
+      <div className="flex flex-col">
         {gruposFiltrados.map((grupo, indice) => (
           <div key={grupo.etiqueta ?? indice}>
             {grupo.etiqueta && (
@@ -154,6 +140,6 @@ export function HojaVinculo({
           </p>
         )}
       </div>
-    </Modal>
+    </Hoja>
   )
 }

@@ -6,19 +6,13 @@ import { db } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { BotonFavorito } from '../../components/BotonFavorito'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import {
-  CaretRight,
-  ChartBar,
-  Play,
-  Plus,
-  PencilSimple,
-  TreeStructure,
-  WarningCircle,
-} from '../../components/iconos'
-import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { CaretRight, ChartBar, Play, Plus, PencilSimple, TreeStructure, WarningCircle } from '../../components/iconos'
+import { TituloSeccion } from '../../components/nocturne'
 import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
 import { problemasFrecuentesInicio } from '../inicio/problemasFrecuentes'
 import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
+import { claseBoton } from '../../components/claseBoton'
+import { SinContenido } from '../../components/SinContenido'
 
 // Modo Diagnóstico Inteligente re-autorizado en Nocturne (handoff
 // "Rediseño de aplicación empresarial", Diagnóstico.dc.html; tarea 81).
@@ -122,7 +116,7 @@ export function DiagnosticosPage() {
       acciones={
         <Link
           to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
-          className={`shrink-0 ${BTN_GHOST}`}
+          className={`shrink-0 ${claseBoton({ papel: 'texto' })}`}
         >
           <Plus size={14} aria-hidden />
           Crear
@@ -303,33 +297,36 @@ export function DiagnosticosPage() {
           </section>
         ))}
 
+        {/* Sin contenido con su patrón (tarea 291, auditoría UX S4). */}
         {sinContenido && (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
-            <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
-            <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-              Todavía no hay diagnósticos. Crea el primero con "Crear": un problema frecuente y las
-              preguntas que llevan a su solución.
-            </p>
-            <Link
-              to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
-              className={`mt-0.5 ${BTN_SECUNDARIO}`}
-            >
-              <Plus size={14} aria-hidden />
-              Crear diagnóstico
-            </Link>
-          </div>
+          <SinContenido
+            tipo="vacio"
+            Icono={TreeStructure}
+            titulo="Todavía no hay guías con preguntas"
+            texto="Cada una parte de un problema frecuente y lleva, pregunta a pregunta, a su solución."
+            accion={
+              <Link
+                to={categoriaFiltro ? `/diagnostico/nuevo?categoria=${categoriaFiltro}` : '/diagnostico/nuevo'}
+                className={`-ml-2 ${claseBoton({ papel: 'texto' })}`}
+              >
+                <Plus size={14} aria-hidden />
+                Crear una guía con preguntas
+              </Link>
+            }
+          />
         )}
 
         {sinCoincidencias && (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-10 text-center">
-            <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
-            <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-              Ningún problema coincide. Prueba con otra palabra o busca directo en Guías.
-            </p>
-            <Link to="/soluciones" className={`mt-0.5 ${BTN_SECUNDARIO}`}>
-              Ir a Guías
-            </Link>
-          </div>
+          <SinContenido
+            tipo="sin-resultados"
+            titulo="Ningún problema coincide"
+            texto="Prueba con otra palabra o busca directo en Guías."
+            accion={
+              <Link to="/soluciones" className={claseBoton({ papel: 'secundario' })}>
+                Ir a Guías
+              </Link>
+            }
+          />
         )}
       </main>
     </Chasis>

@@ -5,7 +5,7 @@ import { Chasis } from '../../app/Chasis'
 import { Cargando } from '../../components/Cargando'
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 import { type IconoProps, LockSimple, PlugsConnected } from '../../components/iconos'
-import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { guardarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
 import { resumenConexion } from '../../lib/conexiones'
@@ -13,6 +13,7 @@ import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { dependenciasDeBaja } from './baja'
 import { migrarCampoProtegido, migrarConexion, migrarCredencial } from './reemplazo'
 import { darDeBajaEquipo } from '../personas/operaciones'
+import { Boton } from '../../components/Boton'
 
 // Migracion de "Reemplazar equipo" (hallazgos L2 y L3 de
 // AUDITORIA_FLUJOS_TI.md): tras crear el equipo entrante con
@@ -162,14 +163,15 @@ export function ReemplazoPage() {
             className={`min-h-11 ${CLASE_CAMPO}`}
           />
         </label>
-        <button
-          type="button"
+        <Boton
+          papel="principal"
+          className="self-start"
           onClick={() => void migrar()}
-          disabled={migrando}
-          className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+          cargando={migrando}
+          textoCargando="Migrando…"
         >
-          {migrando ? 'Migrando...' : 'Migrar todo y dar de baja'}
-        </button>
+          Migrar todo y dar de baja
+        </Boton>
       </div>
     </Pantalla>
   )

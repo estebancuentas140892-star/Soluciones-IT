@@ -8,12 +8,13 @@ import { nombreVivo } from '../../lib/referencia'
 import { Monitor, Plus, TreeStructure, X } from '../../components/iconos'
 import { VALOR_TECNICO_COMPACTO } from '../../components/FilaDato'
 import { conOrigen, type EstadoConOrigen } from '../../lib/origenNavegacion'
-import { BTN_GHOST, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { FormularioConexion } from './FormularioConexion'
 import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { NodoRed } from './NodoRed'
-
 import { useNodoRed, useRedCargada } from './useNodoRed'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Topología de un equipo re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Topología de Equipo.dc.html).
@@ -52,14 +53,13 @@ export function TopologiaEquipoPage() {
         <main className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
           <p className="text-[14.5px] font-medium">No se encontró el equipo</p>
-          <Link to="/red" className={BTN_SECUNDARIO}>
+          <Link to="/red" className={claseBoton({ papel: 'secundario' })}>
             Volver a Red
           </Link>
         </main>
       </Chasis>
     )
   }
-
 
   // Seguir una conexión rompía el hilo en cada salto: el equipo abierto
   // desde aquí volvía a la LISTA de Red, no a esta topología (hallazgo
@@ -74,7 +74,11 @@ export function TopologiaEquipoPage() {
     <Chasis
       modo="documento"
       acciones={
-        <Link to={`/dispositivos/${equipo.id}`} state={origenTopologia} className={`shrink-0 ${BTN_GHOST}`}>
+        <Link
+          to={`/dispositivos/${equipo.id}`}
+          state={origenTopologia}
+          className={`shrink-0 ${claseBoton({ papel: 'texto' })}`}
+        >
           <Monitor size={14} aria-hidden />
           Abrir la ficha
         </Link>
@@ -162,10 +166,9 @@ function ConexionesSeccion({
     <section>
       <div className="mb-2 flex items-center justify-between">
         <TituloSeccion>Conexiones</TituloSeccion>
-        <button type="button" onClick={onToggleAgregar} className={BTN_GHOST}>
-          <Plus size={13} aria-hidden />
+        <Boton papel="texto" className="-mr-2" icono={<Plus size={13} aria-hidden />} onClick={onToggleAgregar}>
           Agregar
-        </button>
+        </Boton>
       </div>
 
       {agregando && (

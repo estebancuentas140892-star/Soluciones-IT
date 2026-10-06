@@ -5,7 +5,6 @@ import { db, ID_VERIFICADOR } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import {
   desbloquear,
@@ -14,6 +13,7 @@ import {
   type EstadoInicialBoveda,
 } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
+import { Boton } from '../../components/Boton'
 
 // Envuelve todas las rutas de la bóveda: exige el permiso
 // puedeVerBoveda del perfil y que la bóveda esté desbloqueada. Es la
@@ -138,13 +138,9 @@ function PantallaDesbloqueo() {
             No se pudo comprobar la configuración de esta sección. Conéctate a internet, espera a que
             la aplicación sincronice y vuelve a intentar.
           </p>
-          <button
-            type="button"
-            onClick={() => setIntento((n) => n + 1)}
-            className={`${BTN_PRIMARIO} min-h-12 justify-center`}
-          >
+          <Boton papel="principal" tamano={52} onClick={() => setIntento((n) => n + 1)}>
             Reintentar
-          </button>
+          </Boton>
         </div>
       )}
 
@@ -181,13 +177,9 @@ function PantallaDesbloqueo() {
 
           {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={abriendo}
-            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
-          >
-            {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
-          </button>
+          <Boton type="submit" papel="principal" tamano={52} cargando={abriendo} textoCargando="Desbloqueando…">
+            Desbloquear
+          </Boton>
 
           {modo === 'verificar' && (
             <p className="mt-0.5 text-[11.5px] leading-relaxed text-noct-neutral-600">

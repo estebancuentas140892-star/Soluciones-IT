@@ -5,15 +5,8 @@ import { Chasis } from '../../app/Chasis'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { FilaDato } from '../../components/FilaDato'
 import { PastillaEstadoArticulo } from '../../components/PastillaEstado'
-import {
-  BookOpen,
-  CaretRight,
-  LockSimple,
-  PencilSimple,
-  TrashSimple,
-  Warning,
-} from '../../components/iconos'
-import { BTN_GHOST_PELIGRO, BTN_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
+import { BookOpen, CaretRight, LockSimple, PencilSimple, TrashSimple, Warning } from '../../components/iconos'
+import { TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { db, type Referencia } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { nombreVivo, mapaDeTextos } from '../../lib/referencia'
@@ -29,6 +22,8 @@ import {
   resolverGuiasRelacionadas,
   rutaDeCatalogo,
 } from './referencias'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // FICHA DE UNA ENTRADA DEL CENTRO DE CONSULTA.
 //
@@ -149,14 +144,13 @@ export function ReferenciaFicha() {
     >
       <main className="@container flex flex-1 flex-col gap-[22px] px-4 pb-12 pt-3.5">
         <div className="flex flex-wrap gap-2">
-          <Link to={`/referencia/${referenciaId}/editar`} className={`shrink-0 ${BTN_SECUNDARIO}`}>
+          <Link to={`/referencia/${referenciaId}/editar`} className={`shrink-0 ${claseBoton({ papel: 'secundario' })}`}>
             <PencilSimple size={14} aria-hidden />
             Editar
           </Link>
-          <button type="button" onClick={() => setMostrarEliminar(true)} className={BTN_GHOST_PELIGRO}>
-            <TrashSimple size={14} aria-hidden />
+          <Boton papel="texto" tono="peligro" icono={<TrashSimple size={14} aria-hidden />} onClick={() => setMostrarEliminar(true)}>
             Eliminar
-          </button>
+          </Boton>
         </div>
 
         {tipo === 'herramienta' ? (
@@ -278,8 +272,9 @@ export function ReferenciaFicha() {
 
       <DialogoEliminar
         abierto={mostrarEliminar}
-        titulo={`¿Eliminar "${referencia.titulo}"?`}
+        titulo={`¿Eliminar ${referencia.titulo}?`}
         descripcion="Dejará de aparecer en el Centro de consulta y en el buscador."
+        textoConfirmar="Eliminar la ficha"
         advertencia={advertenciaBorrado}
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}

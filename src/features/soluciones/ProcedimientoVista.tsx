@@ -52,6 +52,7 @@ import {
   NOTA_REFERENCIA,
   ZONA_ANIDADA,
 } from './vinculoAnidado'
+import { claseBoton, claseFormaBoton } from '../../components/claseBoton'
 
 // Botones con tono de estado (respuestas Sí/No de las contingencias y
 // de las decisiones): delineados como todo botón Nocturne, en el color
@@ -60,9 +61,9 @@ import {
 // Medían 28 px de alto con texto de 12: eran el control más pequeño de
 // la pantalla de ejecución, y uno de ellos era la única salida cuando
 // algo salía mal (tablero 3d). Ahora 44, el mínimo de toque de la regla
-// R6, con texto de 14.
-const BTN_ESTADO_BASE =
-  'inline-flex min-h-11 cursor-pointer items-center rounded-lg border px-3.5 text-[14px] font-medium'
+// R6, con texto de 14. Desde la tarea 291 tienen la forma y los estados
+// del botón común (`claseFormaBoton`): solo el color es el de la guía.
+const BTN_ESTADO_BASE = claseFormaBoton()
 const BTN_EXITO =
   `${BTN_ESTADO_BASE} border-noct-exito/50 text-noct-exito hover:bg-noct-exito/10 active:bg-noct-exito/20`
 // LOS COLORES DE LA GUÍA (encargo del 2026-09-22, sección 4): el rojo es
@@ -72,16 +73,15 @@ const BTN_EXITO =
 // significa "lugar".
 const BTN_RIESGO =
   `${BTN_ESTADO_BASE} border-noct-error/55 text-noct-error hover:bg-noct-error/10 active:bg-noct-error/20`
-const BTN_OTRA_VIA =
-  `${BTN_ESTADO_BASE} border-noct-neutral-600 text-noct-neutral-200 hover:bg-noct-text/[.07] active:bg-noct-text/[.12]`
+// La otra vía es el papel secundario y la que sigue, el principal (T2).
+const BTN_OTRA_VIA = claseBoton({ papel: 'secundario' })
 // El verde deja de servir para ELEGIR (regla R60 del turno 12): el
 // significado del éxito se invertía de un bloque al de al lado, porque
 // en la pregunta de error el verde era "No, no falló nada" y en una
 // decisión Sí/No era "Sí, continuar". Ahora el acento marca siempre la
 // vía que sigue y el neutro (antes el ámbar) la que se desvía, igual en
 // los dos sitios. El verde queda solo para decir "completado".
-const BTN_ACENTO =
-  `${BTN_ESTADO_BASE} border-noct-accent/50 text-noct-accent-300 hover:bg-noct-accent/10 active:bg-noct-accent/20`
+const BTN_ACENTO = claseBoton({ papel: 'principal' })
 
 // Panel de aviso reutilizado para vinculos rotos o no disponibles.
 // Neutro desde el 2026-09-22 (tarea 255): un vinculo roto no es un
@@ -469,7 +469,7 @@ export function ProcedimientoVista({
                           type="button"
                           disabled={cierre.accion === 'bloqueado'}
                           onClick={() => void intentarCompletarPaso(indice, paso)}
-                          className={`w-fit ${BTN_ACENTO} disabled:cursor-default disabled:opacity-45`}
+                          className={`w-fit ${BTN_ACENTO}`}
                         >
                           {cierre.etiqueta}
                         </button>
@@ -1124,7 +1124,7 @@ export function BloqueVista({
               type="button"
               onClick={onAlternar}
               disabled={bloqueo !== null}
-              className={`${BTN_ACENTO} disabled:opacity-40`}
+              className={BTN_ACENTO}
             >
               Sí, lo comprobé
             </button>

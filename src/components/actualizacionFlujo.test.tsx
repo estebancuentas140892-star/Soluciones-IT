@@ -197,13 +197,13 @@ describe('el aviso y el botón "Actualizar"', () => {
     expect(control('Actualizar')).not.toBeNull()
   })
 
-  it('al tocarlo responde: se pone en "Actualizando..." y llama a la activación', async () => {
+  it('al tocarlo responde: se pone en "Actualizando…" y llama a la activación', async () => {
     const activar = vi.fn(async () => {})
     await montar([{ ruta: '/', elemento: <AvisoActualizacion visible onActualizar={activar} /> }], '/')
 
     await tocar(await esperar(() => control('Actualizar'), 'el botón de actualizar'))
     expect(activar).toHaveBeenCalledTimes(1)
-    expect(textoPantalla()).toContain('Actualizando...')
+    expect(textoPantalla()).toContain('Actualizando…')
   })
 })
 
@@ -303,7 +303,7 @@ describe('con una guía en curso, el aviso no tapa sus controles', () => {
 
     await tocar(await esperar(() => control('Actualizar'), 'el botón de actualizar'))
     expect(activar).toHaveBeenCalledTimes(1)
-    expect(textoPantalla()).toContain('Actualizando...')
+    expect(textoPantalla()).toContain('Actualizando…')
   })
 
   it('sin aviso, el hueco no pinta nada y la barra queda como siempre', async () => {

@@ -8,9 +8,11 @@ import { incluyeTexto } from '../../lib/texto'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { MapPin, Plus, TreeStructure } from '../../components/iconos'
-import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { lineasDeContexto } from '../../lib/contextoEquipo'
 import { agruparPorUbicacion } from './grupoUbicacion'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
+import { SinContenido } from '../../components/SinContenido'
 
 // Todos los equipos de red, agrupados por ubicación.
 //
@@ -101,7 +103,7 @@ export function EquiposRedPage() {
         <>
           <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
             <h1 className="min-w-0 truncate text-[18px] font-medium leading-[1.3]">Equipos de red</h1>
-            <Link to="/dispositivos/nuevo?red=1" className={`shrink-0 ${BTN_SECUNDARIO}`}>
+            <Link to="/dispositivos/nuevo?red=1" className={`shrink-0 ${claseBoton({ papel: 'texto' })}`}>
               <Plus size={15} aria-hidden />
               Crear
             </Link>
@@ -143,24 +145,26 @@ export function EquiposRedPage() {
               </section>
             ))
           ) : (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-11 text-center">
-              <TreeStructure size={30} className="text-noct-neutral-600" aria-hidden />
-              <div>
-                <p className="text-[14.5px] font-medium">
-                  {buscando ? 'Ningún equipo de red coincide' : 'Aún no hay equipos de red registrados'}
-                </p>
-                <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                  {buscando
-                    ? 'Probar con otra palabra o revisar la ortografía.'
-                    : 'Marcar una categoría como de red o agregar equipos desde "Crear".'}
-                </p>
-              </div>
-              {buscando && (
-                <button type="button" onClick={() => setTexto('')} className={`mt-0.5 ${BTN_SECUNDARIO}`}>
-                  Quitar búsqueda
-                </button>
-              )}
-            </div>
+            // Sin contenido con su patrón (tarea 291, auditoría UX S4).
+            buscando ? (
+              <SinContenido
+                tipo="sin-resultados"
+                titulo="Ningún equipo de red coincide"
+                texto="Prueba con otra palabra o revisa la ortografía."
+                accion={
+                  <Boton papel="secundario" onClick={() => setTexto('')}>
+                    Quitar la búsqueda
+                  </Boton>
+                }
+              />
+            ) : (
+              <SinContenido
+                tipo="vacio"
+                Icono={TreeStructure}
+                titulo="Aún no hay equipos de red registrados"
+                texto="Marca una categoría como de red o agrega equipos desde «Crear»."
+              />
+            )
           )}
         </div>
       </main>

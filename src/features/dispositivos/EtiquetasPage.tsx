@@ -4,8 +4,8 @@ import QRCode from 'qrcode'
 import { useOrigen } from '../../app/useOrigen'
 import { BarraTarea } from '../../components/BarraTarea'
 import { Check, Printer, QrCode } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db, type Dispositivo } from '../../lib/db'
+import { Boton } from '../../components/Boton'
 
 // Etiquetas QR imprimibles para pegar en los equipos, re-autorizadas al
 // sistema Nocturne (handoff "Rediseño de aplicación empresarial",
@@ -142,18 +142,22 @@ export function EtiquetasPage() {
           )}
         </main>
 
-        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
+        <div
+          data-borde-inferior
+          className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]"
+        >
           <div className="flex items-center gap-2.5">
             <span className="flex-1 text-[12px] text-noct-neutral-500">Formato: 3 por fila en hoja carta</span>
-            <button
-              type="button"
+            <Boton
+              papel="principal"
+              tamano={52}
+              className="shrink-0 whitespace-nowrap"
+              icono={<Printer size={15} aria-hidden />}
               onClick={() => window.print()}
               disabled={n === 0}
-              className={`${BTN_PRIMARIO} min-h-[46px] whitespace-nowrap px-4 disabled:opacity-50`}
             >
-              <Printer size={15} aria-hidden />
               {n > 0 ? `Imprimir ${n}` : 'Imprimir'}
-            </button>
+            </Boton>
           </div>
         </div>
       </div>

@@ -7,8 +7,8 @@ import {
 import { obtenerEstadoInstalacion, suscribirEstadoInstalacion } from '../../lib/instalacionPwa'
 import { BotonInstalarApp } from '../../components/BotonInstalarApp'
 import { Check } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { bienvenidaCompleta, debeMostrarBienvenida, pasosBienvenida, type PasoBienvenida } from './bienvenida'
+import { Boton } from '../../components/Boton'
 
 // Una vez completada, no vuelve (encargo del 2026-09-11, tarea 5). El
 // estado real del dispositivo puede "descumplir" un paso —abrir la app
@@ -100,16 +100,15 @@ export function BienvenidaPrimerDia({
             {paso.clave === 'instalar' && !paso.hecho && <BotonInstalarApp />}
 
             {paso.clave === 'offline' && !paso.hecho && (
-              <button
-                type="button"
+              <Boton
+                papel="principal"
+                className="shrink-0"
                 onClick={() => void descargarTodoOffline()}
-                disabled={descarga.enCurso}
-                className={`${BTN_PRIMARIO} min-h-11 shrink-0 px-3 disabled:opacity-50`}
+                cargando={descarga.enCurso}
+                textoCargando={`${descarga.completados + descarga.fallidos} de ${descarga.total}`}
               >
-                {descarga.enCurso
-                  ? `${descarga.completados + descarga.fallidos} de ${descarga.total}`
-                  : 'Descargar'}
-              </button>
+                Descargar
+              </Boton>
             )}
           </li>
         ))}

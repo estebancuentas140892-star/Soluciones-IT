@@ -7,7 +7,7 @@ import { contarHechos } from '../../lib/progresoPasos'
 import { Chasis } from '../../app/Chasis'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { CaretRight, Plus, WarningCircle } from '../../components/iconos'
-import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { PastillaEstadoDispositivo } from '../../components/PastillaEstado'
 import { tipoDeNodoVisual } from '../red/topologiaVisual'
 import { IconoNodo } from '../red/IconoNodo'
@@ -15,6 +15,7 @@ import { Historial } from '../historial/Historial'
 import { claseTonoDeTipo, iconoDeCategoria, iconoDeTipo } from './iconosSoluciones'
 import { claseTonoDeCategoria } from './coloresCategoria'
 import { TIPOS_ARTICULO } from './tiposArticulo'
+import { claseBoton } from '../../components/claseBoton'
 
 // Ficha de categoria en el sistema Nocturne (fase N4, sin esquema;
 // re-autoria tarea 77): esqueleto estandar aplicado a una entidad que
@@ -58,9 +59,9 @@ export function CategoriaPage() {
     <Chasis
       modo="documento"
       acciones={
-        <Link to={`/soluciones/${categoriaId}/nuevo`} className={`shrink-0 ${BTN_SECUNDARIO}`}>
+        <Link to={`/soluciones/${categoriaId}/nuevo`} className={`shrink-0 ${claseBoton({ papel: 'texto' })}`}>
           <Plus size={15} aria-hidden />
-          Artículo
+          Guía
         </Link>
       }
       barra={

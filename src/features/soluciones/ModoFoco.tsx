@@ -49,6 +49,7 @@ import {
   type EnFlujo,
 } from './flujoContinuo'
 import { PasosEnLectura } from './PasosEnLectura'
+import { claseBoton } from '../../components/claseBoton'
 
 // MODO FOCO: una acción a la vez (handoff "Diseño móvil", tablero 6d).
 // Desde la tarea 217 es LA ejecución de una guía, no un modo opcional.
@@ -249,12 +250,14 @@ function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
 }
 
 // Clases compartidas de los controles del pie. 64 px de alto: es lo que
-// se toca sin mirar, de pie frente al equipo. Inactivo NO es transparente:
-// el rótulo dice qué falta y tiene que leerse (borde y texto neutros).
-const BOTON_PRINCIPAL =
-  'flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3.5 text-[17px] font-semibold text-noct-accent-200 active:bg-noct-accent/[.3] disabled:border-noct-neutral-700 disabled:bg-noct-text/[.04] disabled:text-noct-neutral-400'
-export const BOTON_ANTERIOR =
-  'flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-30'
+// se toca sin mirar, de pie frente al equipo. Desde la tarea 291 son el
+// botón común de 64 (auditoría UX, P1): la misma familia que el resto de
+// la app (borde de 1 px, radio 12, fondo tenue y los mismos estados), con
+// el peso 600 que solo tiene este pie. Antes llevaba un borde especial de
+// 2 px y radio 16. Inactivo queda al 45 %, como todo botón, y su rótulo
+// dice qué falta: es la razón a la vista que pide T4.
+const BOTON_PRINCIPAL = `${claseBoton({ papel: 'principal', tamano: 64 })} min-w-0 flex-1`
+const BOTON_ANTERIOR = claseBoton({ papel: 'secundario', tamano: 64, soloIcono: true })
 
 // EL CONTROL GRANDE DEL PIE, con la gramática de la propuesta final: el
 // icono y el rótulo dicen la consecuencia (la marca cierra, la flecha solo
@@ -898,7 +901,7 @@ export function ModoFoco({
               ? `No: seguir con «${tarea.decisionGuiaTitulo || 'la salida'}»`
               : 'No: registrar la respuesta y seguir'
           }
-          className="flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-neutral-600 px-3 text-[18px] font-semibold text-noct-neutral-200 active:bg-noct-text/10"
+          className={`${claseBoton({ papel: 'secundario', tamano: 64 })} min-w-0 flex-1`}
         >
           <X size={20} className="shrink-0" aria-hidden />
           No

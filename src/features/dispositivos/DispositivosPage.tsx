@@ -10,9 +10,11 @@ import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { FilaDeslizable } from '../../components/FilaDeslizable'
 import { Monitor, Plus, QrCode } from '../../components/iconos'
-import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { buscarEquipos, conteosDeChips } from './busquedaEquipos'
+import { Boton } from '../../components/Boton'
+import { SinContenido } from '../../components/SinContenido'
 
 // Pantalla Dispositivos re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Dispositivos.dc.html, entrada
@@ -274,24 +276,26 @@ export function DispositivosPage() {
             )}
           </>
         ) : (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-11 text-center">
-            <Monitor size={30} className="text-noct-neutral-600" aria-hidden />
-            <div>
-              <p className="text-[14.5px] font-medium">
-                {hayFiltrosActivos ? 'Ningún equipo coincide' : 'Aún no hay equipos registrados'}
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                {hayFiltrosActivos
-                  ? 'Probar con otra palabra o quitar el filtro de categoría.'
-                  : 'Agregarlos desde "Crear equipo".'}
-              </p>
-            </div>
-            {hayFiltrosActivos && (
-              <button type="button" onClick={quitarFiltros} className={`mt-0.5 min-h-11 ${BTN_SECUNDARIO}`}>
-                Quitar filtros
-              </button>
-            )}
-          </div>
+          // Sin contenido con su patrón (tarea 291, auditoría UX S4).
+          hayFiltrosActivos ? (
+            <SinContenido
+              tipo="sin-resultados"
+              titulo="Ningún equipo coincide"
+              texto="Prueba con otra palabra o quita el filtro de categoría."
+              accion={
+                <Boton papel="secundario" onClick={quitarFiltros}>
+                  Quitar los filtros
+                </Boton>
+              }
+            />
+          ) : (
+            <SinContenido
+              tipo="vacio"
+              Icono={Monitor}
+              titulo="Aún no hay equipos registrados"
+              texto="Agrégalos desde «Crear equipo»."
+            />
+          )
         )}
       </main>
     </Chasis>

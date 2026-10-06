@@ -4,7 +4,6 @@ import { Navigate } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
 import { ArrowElbowDownRight } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -15,6 +14,7 @@ import {
   textosSinPersona,
   type GrupoMigracion,
 } from './migracion'
+import { Boton } from '../../components/Boton'
 
 // Sin ancho propio: cada fila del informe le fija el suyo (`w-2/5`).
 const CLASE_CAMPO = CLASE_CAMPO_SIN_ANCHO
@@ -162,14 +162,16 @@ export function MigracionPersonas() {
               <strong className="text-noct-text">{resultado.asignaciones.length}</strong>{' '}
               {resultado.asignaciones.length === 1 ? 'equipo' : 'equipos'}.
             </p>
-            <button
-              type="button"
+            <Boton
+              papel="principal"
+              className="self-start"
               onClick={() => void aplicar()}
-              disabled={aplicando || resultado.personas.length === 0}
-              className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+              disabled={resultado.personas.length === 0}
+              cargando={aplicando}
+              textoCargando="Aplicando…"
             >
-              {aplicando ? 'Aplicando...' : 'Crear personas y vincular equipos'}
-            </button>
+              Crear personas y vincular equipos
+            </Boton>
             <p className="text-xs text-noct-neutral-500">
               Cada equipo conserva el nombre como respaldo. Se puede volver a ejecutar esto más tarde con los
               que se dejen pendientes.

@@ -1,8 +1,8 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Modal } from '../../components/Modal'
+import { Boton } from '../../components/Boton'
+import { Hoja } from '../../components/Hoja'
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
-import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import type { Dispositivo, Persona } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { DecisionSobreEquipo } from './DecisionEquipo'
@@ -34,7 +34,6 @@ export function HojaLiberarEquipo({
    */
   desdeElEquipo?: boolean
 }) {
-  const idTitulo = useId()
   const navigate = useNavigate()
   const [eleccion, setEleccion] = useState<Eleccion | null>(null)
   const [motivo, setMotivo] = useState('')
@@ -71,16 +70,26 @@ export function HojaLiberarEquipo({
   }
 
   return (
-    <Modal abierto onCerrar={cerrar} tituloId={idTitulo}>
+    <Hoja
+      abierta
+      onCerrar={cerrar}
+      titulo={`¿Qué pasa con ${dispositivo.nombre}?`}
+      descripcion={`${persona.nombre} deja de tenerlo. Su paso por este equipo queda en el historial.`}
+      pie={
+        <Boton
+          papel="principal"
+          tamano={52}
+          anchoCompleto
+          onClick={() => void confirmar()}
+          disabled={!decision}
+          cargando={guardando}
+          textoCargando="Guardando…"
+        >
+          {actual.tipo === 'baja' ? 'Ir a dar de baja' : 'Confirmar'}
+        </Boton>
+      }
+    >
       <div className="flex flex-col gap-3.5">
-        <div>
-          <h2 id={idTitulo} className="text-[16px] font-medium leading-[1.3]">
-            ¿Qué pasa con {dispositivo.nombre}?
-          </h2>
-          <p className="mt-1 text-[12.5px] leading-[1.5] text-noct-neutral-400">
-            {persona.nombre} deja de tenerlo. Su paso por este equipo queda en el historial.
-          </p>
-        </div>
         <DecisionSobreEquipo dispositivo={dispositivo} eleccion={actual} onCambiar={setEleccion} personas={otrasPersonas} />
         {actual.tipo !== 'baja' && (
           <label className="flex flex-col gap-1.5">
@@ -94,20 +103,7 @@ export function HojaLiberarEquipo({
             />
           </label>
         )}
-        <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" onClick={cerrar} className={`${BTN_GHOST} min-h-11 px-4`}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void confirmar()}
-            disabled={!decision || guardando}
-            className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
-          >
-            {actual.tipo === 'baja' ? 'Ir a dar de baja' : guardando ? 'Guardando…' : 'Confirmar'}
-          </button>
-        </div>
       </div>
-    </Modal>
+    </Hoja>
   )
 }

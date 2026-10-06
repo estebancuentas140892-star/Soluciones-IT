@@ -14,8 +14,8 @@ import {
 import { idsDeRed } from '../../lib/categorias'
 import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { Monitor, Plus } from '../../components/iconos'
-import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CLASE_CAMPO, CLASE_CAMPO_SOBRE_SUPERFICIE, CLASE_ETIQUETA as CLASE_ETIQUETA_BASE } from '../../components/campos'
+import { Boton } from '../../components/Boton'
 
 // Aquí el rótulo se aplica al propio `<label>`, que además apila el
 // texto sobre el control, así que suma el flex al rótulo compartido.
@@ -411,39 +411,40 @@ export function FormularioConexion({
                   ))}
                 </select>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
+                  <Boton
+                    papel="principal"
                     onClick={() => void crearEquipo()}
-                    disabled={guardandoEquipo || nombreEquipoNuevo.trim() === '' || categoriaEquipoNuevo === ''}
-                    className={`${BTN_PRIMARIO} disabled:opacity-50`}
+                    disabled={nombreEquipoNuevo.trim() === '' || categoriaEquipoNuevo === ''}
+                    cargando={guardandoEquipo}
+                    textoCargando="Creando…"
                   >
-                    {guardandoEquipo ? 'Creando...' : 'Crear y usar'}
-                  </button>
-                  <button
-                    type="button"
+                    Crear y usar
+                  </Boton>
+                  <Boton
+                    papel="texto"
+                    tono="descarte"
                     onClick={() => {
                       setCreandoEquipo(false)
                       setNombreEquipoNuevo('')
                       setCategoriaEquipoNuevo('')
                     }}
-                    className={BTN_SECUNDARIO}
                   >
                     Cancelar
-                  </button>
+                  </Boton>
                 </div>
               </div>
             ) : (
-              <button
-                type="button"
+              <Boton
+                papel="texto"
+                className="-ml-2 self-start"
+                icono={<Plus size={13} aria-hidden />}
                 onClick={() => {
                   setCreandoEquipo(true)
                   setNombreEquipoNuevo(busqueda.trim())
                 }}
-                className={`self-start ${BTN_GHOST_ACENTO}`}
               >
-                <Plus size={13} aria-hidden />
                 Crear equipo nuevo
-              </button>
+              </Boton>
             ))}
         </div>
       )}
@@ -534,35 +535,29 @@ export function FormularioConexion({
       )}
 
       <div className={variante === 'ficha' ? 'flex flex-wrap gap-2' : 'flex gap-2'}>
-        <button
-          type="button"
+        {/* Desactivado mientras no haya otro equipo elegido, que es el
+            campo de arriba (T4). */}
+        <Boton
+          papel="principal"
           onClick={() => void guardar(true)}
-          disabled={!otro || guardando}
-          className={
-            variante === 'ficha'
-              ? `${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`
-              : `${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-55`
-          }
+          disabled={!otro}
+          cargando={guardando}
+          textoCargando="Guardando…"
         >
-          {guardando ? 'Guardando...' : 'Guardar conexión'}
-        </button>
+          Guardar conexión
+        </Boton>
         {variante === 'ficha' ? (
           // "Guardar y agregar otra" (hallazgo O2): un equipo suele tener
           // varias conexiones del MISMO tipo (un switch con 20 uplinks a
           // puntos de red, por ejemplo); conserva el tipo de relación
           // elegido y deja el formulario abierto para la siguiente.
-          <button
-            type="button"
-            onClick={() => void guardar(false)}
-            disabled={!otro || guardando}
-            className={`${BTN_SECUNDARIO} min-h-11 px-4 disabled:opacity-50`}
-          >
+          <Boton papel="secundario" onClick={() => void guardar(false)} disabled={!otro || guardando}>
             Guardar y agregar otra
-          </button>
+          </Boton>
         ) : (
-          <button type="button" onClick={onCerrar} className={`${BTN_GHOST} min-h-11 px-3`}>
+          <Boton papel="texto" tono="descarte" onClick={onCerrar}>
             Cancelar
-          </button>
+          </Boton>
         )}
       </div>
     </div>

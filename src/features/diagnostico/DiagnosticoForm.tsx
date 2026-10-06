@@ -27,7 +27,6 @@ import {
   Copy,
   DotsThreeOutline,
   FlagCheckered,
-  FloppyDisk,
   Info,
   Play,
   Plus,
@@ -37,20 +36,14 @@ import {
   WarningOctagon,
   X,
 } from '../../components/iconos'
-import {
-  BTN_GHOST_ACENTO,
-  BTN_GHOST_PELIGRO,
-  BTN_PRIMARIO,
-  BTN_SECUNDARIO,
-  TituloSeccion,
-} from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { Historial } from '../historial/Historial'
 import { PruebaDiagnostico } from './PruebaDiagnostico'
 import { buscarSimilares, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
-
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
+import { Boton } from '../../components/Boton'
 
 // Editor de un diagnóstico guiado, rediseñado al sistema Nocturne
 // (handoff "Rediseño de aplicación empresarial", Editor de
@@ -210,14 +203,15 @@ export function DiagnosticoForm() {
             Preguntas que llevan del problema a la solución
           </p>
           {esEdicion && (
-            <button
-              type="button"
+            <Boton
+              papel="texto"
+              tono="peligro"
+              className="-mr-2 shrink-0"
+              icono={<TrashSimple size={15} aria-hidden />}
               onClick={() => setMostrarEliminar(true)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-2 text-[12.5px] text-noct-neutral-500 hover:text-noct-error"
             >
-              <TrashSimple size={15} aria-hidden />
               Eliminar
-            </button>
+            </Boton>
           )}
         </div>
       }
@@ -258,13 +252,9 @@ export function DiagnosticoForm() {
                         {similar.tipo === 'diagnostico' ? 'Diagnóstico' : 'Artículo'}
                       </span>
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => setSimilaresDescartados(true)}
-                      className="shrink-0 p-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
-                    >
+                    <Boton papel="texto" tono="descarte" className="shrink-0" onClick={() => setSimilaresDescartados(true)}>
                       Descartar
-                    </button>
+                    </Boton>
                   </div>
                 ))}
               </div>
@@ -285,7 +275,8 @@ export function DiagnosticoForm() {
                     type="button"
                     aria-pressed={activa}
                     onClick={() => setCategoriaId(c.id)}
-                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                    // 44 px de alto (T3): medían 38.
+                    className={`inline-flex min-h-11 items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
                       activa
                         ? claseActivaDeCategoria(c)
                         : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
@@ -366,29 +357,30 @@ export function DiagnosticoForm() {
       </main>
 
       {/* Barra inferior fija: Probar y Guardar. */}
-      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
+      <div data-borde-inferior className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
         <div className="flex gap-2.5">
-          <button type="button" onClick={() => setMostrarPrueba(true)} className={`${BTN_SECUNDARIO} px-4 py-[11px]`}>
-            <Play size={15} aria-hidden />
+          <Boton papel="secundario" tamano={52} icono={<Play size={15} aria-hidden />} onClick={() => setMostrarPrueba(true)}>
             Probar
-          </button>
-          <button
-            type="button"
-            disabled={guardando}
+          </Boton>
+          <Boton
+            papel="principal"
+            tamano={52}
+            className="flex-1"
             onClick={() => void guardar()}
-            className={`flex-1 ${BTN_PRIMARIO} py-[11px] text-sm disabled:opacity-50`}
+            cargando={guardando}
+            textoCargando="Guardando…"
           >
-            <FloppyDisk size={15} aria-hidden />
-            {guardando ? 'Guardando...' : 'Guardar diagnóstico'}
-          </button>
+            Guardar la guía
+          </Boton>
         </div>
       </div>
 
       <DialogoEliminar
         abierto={mostrarEliminar}
         sensible
-        titulo={`¿Eliminar este diagnóstico?`}
-        descripcion="Se eliminan todas sus preguntas. Las guías vinculadas no se tocan."
+        titulo="¿Eliminar esta guía con preguntas?"
+        descripcion="Se eliminan todas sus preguntas. Las guías a las que lleva no se tocan."
+        textoConfirmar="Eliminar la guía con preguntas"
         onCerrar={() => setMostrarEliminar(false)}
         onConfirmar={eliminar}
       />
@@ -497,50 +489,49 @@ function NodosEditor({
               <span className="min-w-0 flex-1 truncate text-xs text-noct-neutral-500">
                 {indice === 0 ? 'Primera pregunta' : `Pregunta ${indice + 1}`}
               </span>
-              <button
-                type="button"
+              <Boton
+                papel="texto"
+                soloIcono
                 onClick={() => setMenuId((actual) => (actual === nodo.id ? null : nodo.id))}
                 aria-label={`Opciones de la pregunta ${indice + 1}: mover, duplicar o eliminar`}
+                title={`Opciones de la pregunta ${indice + 1}`}
                 aria-expanded={menuId === nodo.id}
-                className="flex min-h-11 w-10 shrink-0 items-center justify-center rounded-md text-noct-neutral-500 hover:bg-noct-text/5 hover:text-noct-text"
-              >
-                <DotsThreeOutline size={18} aria-hidden />
-              </button>
+                icono={<DotsThreeOutline size={18} aria-hidden />}
+              />
             </div>
 
             {menuId === nodo.id && (
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
+                {/* Desactivados solo donde la razón se ve: la primera no sube,
+                    la última no baja y la única no se elimina (T4). */}
+                <Boton
+                  papel="secundario"
+                  icono={<ArrowUp size={14} aria-hidden />}
                   disabled={indice === 0}
                   onClick={() => moverNodo(indice, -1)}
-                  className={`${BTN_SECUNDARIO} disabled:opacity-30`}
                 >
-                  <ArrowUp size={14} aria-hidden />
                   Subir
-                </button>
-                <button
-                  type="button"
+                </Boton>
+                <Boton
+                  papel="secundario"
+                  icono={<ArrowDown size={14} aria-hidden />}
                   disabled={indice === nodos.length - 1}
                   onClick={() => moverNodo(indice, 1)}
-                  className={`${BTN_SECUNDARIO} disabled:opacity-30`}
                 >
-                  <ArrowDown size={14} aria-hidden />
                   Bajar
-                </button>
-                <button type="button" onClick={() => duplicarNodoEn(indice)} className={BTN_SECUNDARIO}>
-                  <Copy size={14} aria-hidden />
+                </Boton>
+                <Boton papel="secundario" icono={<Copy size={14} aria-hidden />} onClick={() => duplicarNodoEn(indice)}>
                   Duplicar
-                </button>
-                <button
-                  type="button"
+                </Boton>
+                <Boton
+                  papel="texto"
+                  tono="peligro"
+                  icono={<TrashSimple size={14} aria-hidden />}
                   disabled={nodos.length === 1}
                   onClick={() => eliminarNodo(indice)}
-                  className={`${BTN_GHOST_PELIGRO} disabled:opacity-30`}
                 >
-                  <TrashSimple size={14} aria-hidden />
                   Eliminar
-                </button>
+                </Boton>
               </div>
             )}
 
@@ -577,21 +568,22 @@ function NodosEditor({
                         type="text"
                         value={opcion.etiqueta}
                         onChange={(e) => actualizarOpcion(indice, indiceOpcion, { etiqueta: e.target.value })}
-                        placeholder="Respuesta: Sí, No, otra..."
-                        className="box-border min-h-10 min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
+                        placeholder="Respuesta: Sí, No, otra…"
+                        className="box-border min-h-11 min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
                       />
-                      <button
-                        type="button"
+                      <Boton
+                        papel="texto"
+                        tono="descarte"
+                        soloIcono
                         onClick={() =>
                           actualizarNodo(indice, {
                             opciones: nodo.opciones.filter((_, m) => m !== indiceOpcion),
                           })
                         }
                         aria-label="Quitar esta respuesta"
-                        className="flex min-h-11 w-8 shrink-0 items-center justify-center rounded-md text-noct-neutral-600 hover:text-noct-text"
-                      >
-                        <X size={14} aria-hidden />
-                      </button>
+                        title="Quitar esta respuesta"
+                        icono={<X size={14} aria-hidden />}
+                      />
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -680,22 +672,23 @@ function NodosEditor({
                       <div className="ml-[26px] flex items-center justify-between gap-2 rounded-md border border-noct-accent/30 bg-noct-accent/10 px-2.5 py-[7px]">
                         <p className="inline-flex min-w-0 items-center gap-1.5 truncate text-[12.5px] text-noct-accent-300">
                           <BookOpen size={13} aria-hidden />
-                          Ejecuta: {opcion.articuloTitulo || 'un procedimiento'}
+                          Ejecuta: {opcion.articuloTitulo || 'una guía'}
                         </p>
-                        <button
-                          type="button"
+                        <Boton
+                          papel="texto"
+                          tono="descarte"
+                          className="-my-2 -mr-2 shrink-0"
                           onClick={() =>
                             actualizarOpcion(indice, indiceOpcion, { articuloId: null, articuloTitulo: '' })
                           }
-                          className="shrink-0 p-1 text-xs text-noct-neutral-500 hover:text-noct-text"
                         >
                           Quitar
-                        </button>
+                        </Boton>
                       </div>
                     ) : eligiendoId === opcion.id ? (
                       <div className="ml-[26px] flex flex-col gap-1">
                         {articulos.length === 0 && (
-                          <p className="text-xs text-noct-neutral-500">No hay procedimientos publicados para vincular.</p>
+                          <p className="text-xs text-noct-neutral-500">No hay guías publicadas para elegir.</p>
                         )}
                         {articulos.map((a) => (
                           <button
@@ -705,42 +698,40 @@ function NodosEditor({
                               actualizarOpcion(indice, indiceOpcion, { articuloId: a.id, articuloTitulo: a.titulo })
                               setEligiendoId(null)
                             }}
-                            className="flex min-h-[42px] w-full items-center gap-[9px] rounded-md border border-noct-divider bg-noct-surface px-2.5 text-left text-[13px] text-noct-text hover:border-noct-accent"
+                            className="flex min-h-11 w-full items-center gap-[9px] rounded-md border border-noct-divider bg-noct-surface px-2.5 text-left text-[13px] text-noct-text hover:border-noct-accent"
                           >
                             <BookOpen size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
                             <span className="min-w-0 truncate">{a.titulo}</span>
                           </button>
                         ))}
-                        <button
-                          type="button"
-                          onClick={() => setEligiendoId(null)}
-                          className="self-start px-0.5 py-1.5 text-xs text-noct-neutral-500 hover:text-noct-text"
-                        >
+                        <Boton papel="texto" tono="descarte" className="-ml-2 self-start" onClick={() => setEligiendoId(null)}>
                           Cancelar
-                        </button>
+                        </Boton>
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setEligiendoId(opcion.id)}
-                        className="ml-[26px] inline-flex min-h-[34px] items-center gap-[7px] self-start whitespace-nowrap rounded-md border border-dashed border-noct-neutral-700 px-2.5 text-xs text-noct-neutral-500 hover:border-noct-accent hover:text-noct-accent-300"
+                        // 44 px (T3): medía 34. "Elegir la guía" y no "Vincular
+                        // procedimiento": glosario de la auditoría UX (sección B).
+                        className="ml-[26px] inline-flex min-h-11 items-center gap-[7px] self-start whitespace-nowrap rounded-md border border-dashed border-noct-neutral-700 px-2.5 text-xs text-noct-neutral-500 hover:border-noct-accent hover:text-noct-accent-300"
                       >
                         <BookOpen size={13} aria-hidden />
-                        Vincular procedimiento
+                        Elegir la guía
                       </button>
                     )}
                   </div>
                 )
               })}
 
-              <button
-                type="button"
+              <Boton
+                papel="texto"
+                className="-ml-2 self-start"
+                icono={<Plus size={13} aria-hidden />}
                 onClick={() => actualizarNodo(indice, { opciones: [...nodo.opciones, crearOpcion()] })}
-                className={`${BTN_GHOST_ACENTO} self-start`}
               >
-                <Plus size={13} aria-hidden />
                 Respuesta
-              </button>
+              </Boton>
             </div>
           </div>
         ))}

@@ -1,6 +1,6 @@
 import { useId, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { Boton } from './Boton'
 import { Plus, X } from './iconos'
-import { BTN_GHOST_ACENTO } from './nocturne'
 
 // Primitivas de formulario del sistema Nocturne (Fase 0 de
 // PROPUESTA_REVISION_ARQUITECTURA.md): la fuente UNICA de como se ve un
@@ -175,14 +175,14 @@ export function CamposClaveValor({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className={CLASE_ETIQUETA}>{titulo}</span>
-        <button
-          type="button"
+        <Boton
+          papel="texto"
+          className="-mr-2 whitespace-nowrap"
+          icono={<Plus size={13} aria-hidden />}
           onClick={() => onChange((actuales) => [...actuales, { clave: '', valor: '' }])}
-          className={`${BTN_GHOST_ACENTO} whitespace-nowrap`}
         >
-          <Plus size={13} aria-hidden />
           Campo
-        </button>
+        </Boton>
       </div>
       {ayuda && <p className="text-[12px] leading-[1.5] text-noct-neutral-600">{ayuda}</p>}
 
@@ -221,14 +221,16 @@ export function CamposClaveValor({
             autoComplete={valorAutoComplete}
             className={`min-h-[42px] min-w-0 flex-1 ${valorMono ? CLASE_CAMPO_MONO_SIN_ANCHO : CLASE_CAMPO_SIN_ANCHO}`}
           />
-          <button
-            type="button"
+          {/* 44 x 44 (T3): medía 32 de ancho. */}
+          <Boton
+            papel="texto"
+            tono="descarte"
+            soloIcono
             onClick={() => quitar(indice)}
             aria-label={`Quitar ${campo.clave.trim() || 'este campo'}`}
-            className="flex min-h-11 w-8 shrink-0 items-center justify-center text-noct-neutral-600 hover:text-noct-text"
-          >
-            <X size={14} aria-hidden />
-          </button>
+            title={`Quitar ${campo.clave.trim() || 'este campo'}`}
+            icono={<X size={14} aria-hidden />}
+          />
         </div>
       ))}
     </div>

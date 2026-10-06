@@ -2,13 +2,11 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
-import { FloppyDisk } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { idsDescendientes, mapaPorId, ordenarPorRuta, rutaUbicacion } from './arbol'
-
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
+import { Boton } from '../../components/Boton'
 
 // Crear o editar una ubicacion (grupo N3) re-autorizada al sistema
 // Nocturne: nombre, ubicacion superior (jerarquia opcional) y notas. La
@@ -135,14 +133,17 @@ export function UbicacionForm() {
             </label>
           )}
 
-          <button
+          <Boton
             type="submit"
-            disabled={guardando || nombre.trim() === ''}
-            className={`mt-1 ${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}
+            papel="principal"
+            tamano={52}
+            className="mt-1"
+            disabled={nombre.trim() === ''}
+            cargando={guardando}
+            textoCargando="Guardando…"
           >
-            <FloppyDisk size={15} aria-hidden />
-            {guardando ? 'Guardando...' : 'Guardar ubicación'}
-          </button>
+            Guardar ubicación
+          </Boton>
         </form>
       )}
     </Chasis>

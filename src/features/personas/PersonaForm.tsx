@@ -2,13 +2,11 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
-import { FloppyDisk } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { esFechaValida, estadoDePersona } from './cicloPersona'
-
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
+import { Boton } from '../../components/Boton'
 
 // Crear o editar una persona (hallazgo T1 de AUDITORIA_FLUJOS_TI.md):
 // nombre y notas, sin jerarquía (no aplica a personas, a diferencia de
@@ -174,14 +172,17 @@ export function PersonaForm() {
             </label>
           )}
 
-          <button
+          <Boton
             type="submit"
-            disabled={guardando || !valido}
-            className={`mt-1 ${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}
+            papel="principal"
+            tamano={52}
+            className="mt-1"
+            disabled={!valido}
+            cargando={guardando}
+            textoCargando="Guardando…"
           >
-            <FloppyDisk size={15} aria-hidden />
-            {guardando ? 'Guardando...' : 'Guardar persona'}
-          </button>
+            Guardar persona
+          </Boton>
         </form>
       )}
     </Chasis>

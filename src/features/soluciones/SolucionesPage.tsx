@@ -6,7 +6,7 @@ import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { CaretDown, FlagBanner, Info, Plus, Sliders, TreeStructure } from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
 import { PastillaFrescura } from '../../components/PastillaFrescura'
 import { TIPOS_ARTICULO, etiquetaDeTipo } from './tiposArticulo'
@@ -18,6 +18,9 @@ import { coincidenciaArticulo } from './coincidencia'
 import { sugerenciaBusqueda } from './sugerenciaBusqueda'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { FilaMas } from '../mas/FilasMas'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
+import { SinContenido } from '../../components/SinContenido'
 
 // Pantalla Soluciones en el sistema Nocturne. Rediseñada a partir de la
 // auditoría de la sección (handoff "Auditoría de Soluciones TI",
@@ -412,21 +415,18 @@ export function SolucionesPage() {
   }
 
   // "Crear" nunca está muerto (R3): con categoría elegida va directo a su
-  // editor; sin ella, pregunta en qué categoría nace el artículo.
+  // editor; sin ella, pregunta en qué categoría nace la guía. Es una acción
+  // en línea de la cabecera (texto en acento, T2), como en las demás
+  // secciones.
   const botonCrear = categoriaSel ? (
-    <Link to={`/soluciones/${categoriaSel}/nuevo`} className={`shrink-0 ${BTN_PRIMARIO}`}>
+    <Link to={`/soluciones/${categoriaSel}/nuevo`} className={`shrink-0 ${claseBoton({ papel: 'texto' })}`}>
       <Plus size={15} aria-hidden />
       Crear
     </Link>
   ) : (
-    <button
-      type="button"
-      onClick={() => setHojaCrearAbierta(true)}
-      className={`shrink-0 ${BTN_PRIMARIO}`}
-    >
-      <Plus size={15} aria-hidden />
+    <Boton papel="texto" className="shrink-0" icono={<Plus size={15} aria-hidden />} onClick={() => setHojaCrearAbierta(true)}>
       Crear
-    </button>
+    </Boton>
   )
 
   // Rejilla de resultados de un grupo. El separador se omite en la última
@@ -750,30 +750,22 @@ export function SolucionesPage() {
               // Todo estado vacío nombra qué falta y ofrece la acción que
               // lo llena (R5), en vez de describir el vacío y dejar al
               // técnico buscando el botón.
-              <div className="rounded-lg border border-dashed border-noct-neutral-700 px-5 py-6">
-                <p className="text-[14.5px] font-medium leading-snug">
-                  Aquí va a vivir lo que el equipo sabe
-                </p>
-                <p className="mb-3 mt-1.5 text-[13px] leading-relaxed text-noct-neutral-300">
-                  Nada todavía. El primer artículo suele ser el procedimiento que más repites en la
-                  semana.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setHojaCrearAbierta(true)}
-                  className={BTN_PRIMARIO}
-                >
-                  <Plus size={15} aria-hidden />
-                  Crear el primero
-                </button>
-              </div>
+              <SinContenido
+                tipo="vacio"
+                titulo="Aquí va a vivir lo que el equipo sabe"
+                texto="Nada todavía. La primera guía suele ser el procedimiento que más repites en la semana."
+                accion={
+                  <Boton papel="texto" className="-ml-2" icono={<Plus size={15} aria-hidden />} onClick={() => setHojaCrearAbierta(true)}>
+                    Crear la primera guía
+                  </Boton>
+                }
+              />
             ) : buscando ? (
-              <div className="rounded-lg border border-dashed border-noct-neutral-700 px-5 py-6">
-                <p className="text-[14.5px] font-medium leading-snug">
-                  Nada coincide con «{consultaCruda}»
-                </p>
-                <p className="mb-3 mt-1.5 text-[13px] leading-relaxed text-noct-neutral-300">
-                  {sugerencia ? (
+              <SinContenido
+                tipo="sin-resultados"
+                titulo={<>Nada coincide con «{consultaCruda}»</>}
+                texto={
+                  sugerencia ? (
                     <>
                       Quizá quisiste decir{' '}
                       <button
@@ -787,37 +779,37 @@ export function SolucionesPage() {
                     </>
                   ) : (
                     'Prueba con el nombre del equipo, el síntoma o la sede.'
-                  )}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={limpiarTodo} className={BTN_SECUNDARIO}>
-                    Limpiar la búsqueda
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHojaCrearAbierta(true)}
-                    className={BTN_PRIMARIO}
-                  >
-                    <Plus size={14} aria-hidden />
-                    Documentarlo
-                  </button>
-                </div>
-              </div>
+                  )
+                }
+                accion={
+                  <>
+                    <Boton papel="secundario" onClick={limpiarTodo}>
+                      Limpiar la búsqueda
+                    </Boton>
+                    <Boton papel="texto" icono={<Plus size={14} aria-hidden />} onClick={() => setHojaCrearAbierta(true)}>
+                      Documentarlo
+                    </Boton>
+                  </>
+                }
+              />
             ) : (
-              <div className="rounded-lg border border-dashed border-noct-neutral-700 px-5 py-6">
-                <p className="text-[14.5px] font-medium leading-snug">No hay artículos con estos filtros</p>
-                <p className="mb-3 mt-1.5 text-[13px] leading-relaxed text-noct-neutral-300">
-                  {tipoSel
-                    ? `Ninguno es del tipo «${etiquetaDeTipo(tipoSel)}» aquí.`
-                    : 'Esta categoría todavía no tiene nada documentado.'}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={limpiarTodo} className={BTN_SECUNDARIO}>
-                    Quitar los filtros
-                  </button>
-                  {botonCrear}
-                </div>
-              </div>
+              <SinContenido
+                tipo="sin-resultados"
+                titulo="No hay guías con estos filtros"
+                texto={
+                  tipoSel
+                    ? `Ninguna es del tipo «${etiquetaDeTipo(tipoSel)}» aquí.`
+                    : 'Esta categoría todavía no tiene nada documentado.'
+                }
+                accion={
+                  <>
+                    <Boton papel="secundario" onClick={limpiarTodo}>
+                      Quitar los filtros
+                    </Boton>
+                    {botonCrear}
+                  </>
+                }
+              />
             )}
           </div>
         </div>

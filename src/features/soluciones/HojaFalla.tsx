@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import type { ReactNode } from 'react'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
-import { Modal } from '../../components/Modal'
+import { Hoja } from '../../components/Hoja'
 import { ArrowRight, Camera, CaretRight, Info, Warning, Wrench, X } from '../../components/iconos'
 import { fraseAvanceConservado } from './salidasFalla'
 
@@ -62,7 +62,6 @@ interface Props {
   onDetenerse: () => void
 }
 
-const ID_TITULO = 'hoja-falla-titulo'
 
 // Salida de la hoja: 56 px de alto (60 la primera, que lleva segunda
 // línea), texto de 16 y toda la fila como objetivo.
@@ -133,13 +132,18 @@ export function HojaFalla({
   )
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
-      <div className="flex flex-col gap-2">
-        <span id={ID_TITULO} className="flex items-center gap-2 text-[18px] font-medium leading-tight text-noct-text">
+    // Salir sin elegir es la × de la hoja (sin un "Cancelar" repetido, P4).
+    <Hoja
+      abierta={abierto}
+      onCerrar={onCerrar}
+      titulo={
+        <span className="flex items-center gap-2">
           <Warning size={20} className="shrink-0 text-noct-error" aria-hidden />
           Algo va mal en el paso {numeroPaso}
         </span>
-
+      }
+    >
+      <div className="flex flex-col gap-2">
         {/* La tarea señalada, cuando la falla se declaró desde el modo
             foco: es el dato que el técnico acaba de dar y que la hoja
             no debe hacerle repetir. */}
@@ -213,15 +217,7 @@ export function HojaFalla({
             onClick={onSaltar}
           />
         )}
-
-        <button
-          type="button"
-          onClick={onCerrar}
-          className="mt-1 flex min-h-12 w-full items-center justify-center rounded-[11px] text-[15px] font-medium text-noct-neutral-400 active:bg-noct-text/[.08]"
-        >
-          Cancelar
-        </button>
       </div>
-    </Modal>
+    </Hoja>
   )
 }

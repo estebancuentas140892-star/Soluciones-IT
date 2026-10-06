@@ -7,13 +7,13 @@ import { DescargarOffline } from '../../components/DescargarOffline'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { CaretDown, CaretRight, CaretUp, DownloadSimple, LockSimple, SignOut } from '../../components/iconos'
-import { BTN_PRIMARIO, TituloSeccion } from '../../components/nocturne'
+import { TituloSeccion } from '../../components/nocturne'
 import { db, ID_BLOQUEO_APP } from '../../lib/db'
 import { obtenerEstadoInstalacion, suscribirEstadoInstalacion } from '../../lib/instalacionPwa'
 import { useAuth } from './authContext'
 import { validarCambioContrasena } from './erroresAuth'
-
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
+import { Boton } from '../../components/Boton'
 
 // Cuenta del técnico con sesión activa, re-autorizada al sistema
 // Nocturne (tarea 97, sin mockup: se traduce el diseño heredado
@@ -160,13 +160,9 @@ export function CuentaPage() {
                 </p>
               )}
 
-              <button
-                type="submit"
-                disabled={guardando}
-                className={`${BTN_PRIMARIO} min-h-11 justify-center disabled:opacity-50`}
-              >
-                {guardando ? 'Cambiando...' : 'Cambiar contraseña'}
-              </button>
+              <Boton type="submit" papel="principal" cargando={guardando} textoCargando="Cambiando…">
+                Cambiar contraseña
+              </Boton>
             </form>
           )}
         </section>

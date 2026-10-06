@@ -43,10 +43,10 @@ import {
   XCircle,
   type IconoProps,
 } from '../../components/iconos'
-import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import { AsistenteVista } from '../soluciones/AsistenteVista'
 import { ProveedorEjecucion } from '../soluciones/ProveedorEjecucion'
 import { ETIQUETA_MOTIVO, MOTIVOS_ORDEN, type MotivoConcreto } from './motivos'
+import { Boton } from '../../components/Boton'
 
 // Asistente del Modo Diagnóstico Inteligente re-autorizado en Nocturne
 // (handoff "Rediseño de aplicación empresarial", Diagnóstico.dc.html;
@@ -384,17 +384,28 @@ function Sesion({
               El avance se borra y queda registrado como abandonado.
             </p>
           </div>
-          <div className="flex gap-2.5">
-            <button
-              type="button"
+          {/* Como toda confirmación destructiva (auditoría UX, F2): la
+              acción con su nombre a todo el ancho y la otra respuesta
+              debajo. */}
+          <div className="flex flex-col gap-1.5 md:flex-row-reverse md:justify-start md:gap-2">
+            <Boton
+              papel="destructivo"
+              tamano={52}
+              anchoCompleto
+              className="md:w-auto"
               onClick={() => onCerrar('abandonado')}
-              className="min-h-11 rounded-lg border border-noct-error/45 px-3.5 text-[13px] font-medium text-noct-error hover:bg-noct-error/10"
             >
-              Sí, descartar
-            </button>
-            <button type="button" onClick={() => onConfirmarCancelar(false)} className={`min-h-11 ${BTN_GHOST}`}>
+              Descartar el recorrido
+            </Boton>
+            <Boton
+              papel="texto"
+              tono="descarte"
+              anchoCompleto
+              className="md:w-auto"
+              onClick={() => onConfirmarCancelar(false)}
+            >
               Seguir con el recorrido
-            </button>
+            </Boton>
           </div>
         </div>
       )}
@@ -616,31 +627,25 @@ function Resultado({
           <p className="text-[13px] leading-snug text-noct-neutral-300">
             Queda registrado como no resuelto, con el camino recorrido.
           </p>
-          <button type="button" onClick={() => onCerrar('no')} className={`min-h-12 flex-1 ${BTN_PRIMARIO}`}>
+          <Boton papel="principal" tamano={52} anchoCompleto onClick={() => onCerrar('no')}>
             Terminar
-          </button>
+          </Boton>
         </div>
       ) : (
         <div className="flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-surface p-3.5">
           <p className="text-[14.5px] font-medium">¿Quedó resuelto el problema?</p>
 
           {!pidiendoMotivo ? (
+            // Sí y No con la familia común (auditoría UX, T2): "Sí, resuelto"
+            // avanza y termina (principal); "No" es la otra vía real
+            // (secundario), no un riesgo (tarea 255).
             <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => onCerrar('si')}
-                className="min-h-12 flex-1 rounded-lg border border-noct-exito/45 text-[14px] font-medium text-noct-exito hover:bg-noct-exito/10"
-              >
+              <Boton papel="principal" tamano={52} className="flex-1" onClick={() => onCerrar('si')}>
                 Sí, resuelto
-              </button>
-              {/* "No" neutro (tarea 255): no es un riesgo, es la otra vía. */}
-              <button
-                type="button"
-                onClick={() => setPidiendoMotivo(true)}
-                className="min-h-12 flex-1 rounded-lg border border-noct-neutral-600 text-[14px] font-medium text-noct-neutral-200 hover:bg-noct-text/[.07]"
-              >
+              </Boton>
+              <Boton papel="secundario" tamano={52} className="flex-1" onClick={() => setPidiendoMotivo(true)}>
                 No
-              </button>
+              </Boton>
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
@@ -684,8 +689,10 @@ function Resultado({
               )}
 
               <div className="flex gap-2.5">
-                <button
-                  type="button"
+                <Boton
+                  papel="principal"
+                  tamano={52}
+                  className="flex-1"
                   onClick={() =>
                     onCerrar(
                       'no',
@@ -693,13 +700,12 @@ function Resultado({
                       motivo === 'encontro_otra_solucion' ? solucionPropuesta.trim() : '',
                     )
                   }
-                  className={`min-h-11 flex-1 ${BTN_PRIMARIO}`}
                 >
                   Confirmar
-                </button>
-                <button type="button" onClick={() => setPidiendoMotivo(false)} className={`min-h-11 ${BTN_GHOST}`}>
+                </Boton>
+                <Boton papel="texto" tono="descarte" tamano={52} onClick={() => setPidiendoMotivo(false)}>
                   Volver
-                </button>
+                </Boton>
               </div>
             </div>
           )}

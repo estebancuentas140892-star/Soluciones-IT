@@ -3,8 +3,15 @@ import { useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
-import { CheckCircle, type IconoProps, LinkSimple, LockSimple, PlugsConnected, TrashSimple } from '../../components/iconos'
-import { BTN_GHOST_PELIGRO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import {
+  CheckCircle,
+  type IconoProps,
+  LinkSimple,
+  LockSimple,
+  PlugsConnected,
+  TrashSimple,
+} from '../../components/iconos'
+import { TituloSeccion } from '../../components/nocturne'
 import { db, type CampoProtegido, type Conexion, type Credencial } from '../../lib/db'
 import { eliminarRegistro, guardarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
 import { useOrigen } from '../../app/useOrigen'
@@ -13,6 +20,7 @@ import { esDeBaja } from '../personas/cicloPersona'
 import { resumenConexion } from '../../lib/conexiones'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { dependenciasDeBaja, sinDependencias, sinDispositivo } from './baja'
+import { Boton } from '../../components/Boton'
 
 // "Dar de baja" con cascada (hallazgo L1 de AUDITORIA_FLUJOS_TI.md): hoy
 // "De baja" solo fija un color en el estado, y eliminar un equipo hace
@@ -149,14 +157,17 @@ export function DarDeBajaPage() {
               className={`min-h-11 ${CLASE_CAMPO}`}
             />
           </label>
-          <button
-            type="button"
+          {/* Desactivado solo con la razón escrita justo debajo (T4). */}
+          <Boton
+            papel="principal"
+            className="self-start"
             onClick={() => void confirmarBaja()}
-            disabled={!listo || confirmando}
-            className={`${BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+            disabled={!listo}
+            cargando={confirmando}
+            textoCargando="Confirmando…"
           >
-            {confirmando ? 'Confirmando...' : 'Confirmar baja'}
-          </button>
+            Confirmar baja
+          </Boton>
           {!listo && (
             <p className="text-[12px] text-noct-neutral-500">
               Resuelve las dependencias de arriba para habilitar este botón.
@@ -200,15 +211,17 @@ function FilaConexion({ conexion }: { conexion: Conexion }) {
   return (
     <div className="flex items-center gap-2.5 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
       <span className="min-w-0 flex-1 truncate text-[13px] text-noct-text">{resumenConexion(conexion)}</span>
-      <button
-        type="button"
+      <Boton
+        papel="texto"
+        tono="peligro"
+        className="shrink-0"
+        icono={<TrashSimple size={13} aria-hidden />}
         onClick={() => void quitar()}
-        disabled={quitando}
-        className={`shrink-0 ${BTN_GHOST_PELIGRO} disabled:opacity-50`}
+        cargando={quitando}
+        textoCargando="Eliminando…"
       >
-        <TrashSimple size={13} aria-hidden />
         Eliminar
-      </button>
+      </Boton>
     </div>
   )
 }
@@ -238,24 +251,27 @@ function FilaCredencial({ credencial, dispositivoId }: { credencial: Credencial;
     <div className="flex flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
       <span className="truncate text-[13px] font-medium text-noct-text">{credencial.titulo}</span>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
+        <Boton
+          papel="secundario"
+          icono={<LinkSimple size={13} aria-hidden />}
           onClick={() => void desvincular()}
           disabled={ocupado !== null}
-          className={`${BTN_SECUNDARIO} disabled:opacity-50`}
+          cargando={ocupado === 'desvincular'}
+          textoCargando="Desvinculando…"
         >
-          <LinkSimple size={13} aria-hidden />
-          {ocupado === 'desvincular' ? 'Desvinculando...' : 'Desvincular de este equipo'}
-        </button>
-        <button
-          type="button"
+          Desvincular de este equipo
+        </Boton>
+        <Boton
+          papel="texto"
+          tono="peligro"
+          icono={<TrashSimple size={13} aria-hidden />}
           onClick={() => void eliminar()}
           disabled={ocupado !== null}
-          className={`${BTN_GHOST_PELIGRO} disabled:opacity-50`}
+          cargando={ocupado === 'eliminar'}
+          textoCargando="Eliminando…"
         >
-          <TrashSimple size={13} aria-hidden />
-          {ocupado === 'eliminar' ? 'Eliminando...' : 'Eliminar credencial'}
-        </button>
+          Eliminar el acceso
+        </Boton>
       </div>
     </div>
   )
@@ -292,23 +308,26 @@ function FilaCampoProtegido({ campo }: { campo: CampoProtegido }) {
     <div className="flex flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
       <span className="truncate text-[13px] font-medium text-noct-text">{campo.nombre}</span>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
+        <Boton
+          papel="secundario"
           onClick={() => void conservarSinEquipo()}
           disabled={ocupado !== null}
-          className={`${BTN_SECUNDARIO} disabled:opacity-50`}
+          cargando={ocupado === 'conservar'}
+          textoCargando="Guardando…"
         >
-          {ocupado === 'conservar' ? 'Guardando...' : 'Conservar sin equipo'}
-        </button>
-        <button
-          type="button"
+          Conservar sin equipo
+        </Boton>
+        <Boton
+          papel="texto"
+          tono="peligro"
+          icono={<TrashSimple size={13} aria-hidden />}
           onClick={() => void eliminar()}
           disabled={ocupado !== null}
-          className={`${BTN_GHOST_PELIGRO} disabled:opacity-50`}
+          cargando={ocupado === 'eliminar'}
+          textoCargando="Eliminando…"
         >
-          <TrashSimple size={13} aria-hidden />
-          {ocupado === 'eliminar' ? 'Eliminando...' : 'Eliminar'}
-        </button>
+          Eliminar
+        </Boton>
       </div>
     </div>
   )

@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { MagnifyingGlass, Plus, X } from '../../components/iconos'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import type { ModoBuscador } from './modoConsulta'
 import { PuenteBoveda } from './PuenteBoveda'
 import { AYUDA_BUSCADOR, MARCADOR_BUSCADOR } from './resultados'
 import { ResultadosBusqueda } from './ResultadosBusqueda'
 import { buscar, useIndiceBusqueda } from './useIndiceBusqueda'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Buscador global en capa (tarea 181, mockup 3d del handoff). Hasta
 // ahora buscar era global pero vivia DENTRO de Inicio: desde cualquier
@@ -212,15 +213,15 @@ export function BuscadorGlobal({
                   <Link
                     to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
                     onClick={onNavegar ?? onCerrar}
-                    className={BTN_SECUNDARIO}
+                    className={claseBoton({ papel: 'secundario' })}
                   >
                     <Plus size={15} aria-hidden />
                     Crear equipo
                   </Link>
                 )}
-                <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
+                <Boton papel="secundario" onClick={() => setQuery('')}>
                   Limpiar búsqueda
-                </button>
+                </Boton>
               </div>
             </div>
           </div>

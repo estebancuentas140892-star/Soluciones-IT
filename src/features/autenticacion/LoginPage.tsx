@@ -4,10 +4,9 @@ import { useAuth } from './authContext'
 import { supabaseConfigured } from '../../lib/supabase'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { Campo, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
+import { Boton } from '../../components/Boton'
+import { Hoja } from '../../components/Hoja'
 import { Marca } from '../../components/Marca'
-import { Modal } from '../../components/Modal'
-import { X } from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 
 // Login re-autorizado en la tarea 184 (mockup 3b del handoff, turno 3).
 // Antes decia el nombre de la app y "Inicia sesión para continuar", y
@@ -122,13 +121,20 @@ export function LoginPage() {
           </p>
         )}
 
-        <button
+        {/* Desactivado solo sin servidor, y la razón está escrita justo
+            encima (T4). */}
+        <Boton
           type="submit"
-          disabled={enviando || !supabaseConfigured}
-          className={`${BTN_PRIMARIO} mt-1 min-h-[52px] justify-center text-[15px] disabled:opacity-50`}
+          papel="principal"
+          tamano={52}
+          anchoCompleto
+          className="mt-1"
+          disabled={!supabaseConfigured}
+          cargando={enviando}
+          textoCargando="Ingresando…"
         >
-          {enviando ? 'Ingresando...' : 'Ingresar'}
-        </button>
+          Ingresar
+        </Boton>
 
         <p className="text-center text-[12px] leading-normal text-noct-neutral-400">
           ¿Sin cuenta? Pídesela al administrador de la app. Todo queda guardado en este teléfono, así
@@ -141,25 +147,10 @@ export function LoginPage() {
           inicial la asigna el administrador en el panel de Supabase, y
           restablecerla es el mismo camino. Este panel lo dice en vez de
           dejar el enlace prometiendo algo que la app no hace. */}
-      <Modal
-        abierto={ayudaAbierta}
-        onCerrar={() => setAyudaAbierta(false)}
-        tituloId="titulo-olvide-contrasena"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <h2 id="titulo-olvide-contrasena" className="text-[17px] font-medium leading-[1.3]">
-            Olvidé mi contraseña
-          </h2>
-          <button
-            type="button"
-            onClick={() => setAyudaAbierta(false)}
-            aria-label="Cerrar"
-            className="-m-1 flex shrink-0 p-1 text-noct-neutral-400 hover:text-noct-text"
-          >
-            <X size={18} aria-hidden />
-          </button>
-        </div>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-noct-neutral-200">
+      {/* Sin "Entendido": una explicación no hace falta cerrarla con un
+          botón propio (auditoría UX, sección 10); la × de la hoja basta. */}
+      <Hoja abierta={ayudaAbierta} onCerrar={() => setAyudaAbierta(false)} titulo="Olvidé mi contraseña">
+        <p className="text-[13.5px] leading-relaxed text-noct-neutral-200">
           La app no envía correos de recuperación. Pídele al administrador que te asigne una nueva
           desde el panel de Supabase, igual que hizo con la primera.
         </p>
@@ -168,14 +159,7 @@ export function LoginPage() {
           este teléfono (el patrón o la clave que pide la app al abrirla), eso se resuelve desde la
           propia pantalla de bloqueo.
         </p>
-        <button
-          type="button"
-          onClick={() => setAyudaAbierta(false)}
-          className={`${BTN_SECUNDARIO} mt-4 min-h-11 w-full justify-center`}
-        >
-          Entendido
-        </button>
-      </Modal>
+      </Hoja>
     </div>
   )
 }

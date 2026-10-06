@@ -5,7 +5,6 @@ import { db, ID_BLOQUEO_APP, type ConfigBloqueoApp } from '../../lib/db'
 import { Cargando } from '../../components/Cargando'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_GHOST_TENUE } from '../../components/nocturne'
 import { useAuth } from '../autenticacion/authContext'
 import {
   desbloquearApp,
@@ -16,6 +15,8 @@ import {
 import { serializarPatron } from './patron'
 import { PatronInput } from './PatronInput'
 import { useBloqueoAppDesbloqueado, useDesbloqueoDispositivoDisponible } from './useBloqueoApp'
+import { Boton } from '../../components/Boton'
+import { claseBoton } from '../../components/claseBoton'
 
 // Envuelve TODAS las rutas autenticadas: si el dispositivo tiene un
 // bloqueo configurado y aun no se ha desbloqueado en esta apertura de
@@ -129,22 +130,18 @@ function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
 
       {decidiendo ? null : vistaDispositivo ? (
         <div className="flex w-full max-w-[300px] flex-col gap-2.5">
-          <button
-            type="button"
+          <Boton
+            papel="principal"
+            tamano={52}
             onClick={() => void usarDispositivo()}
-            disabled={esperandoDispositivo}
-            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
+            cargando={esperandoDispositivo}
+            textoCargando="Esperando al dispositivo…"
           >
-            {esperandoDispositivo ? 'Esperando al dispositivo...' : 'Desbloquear'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setUsarCodigo(true)}
-            disabled={esperandoDispositivo}
-            className={`${BTN_GHOST_TENUE} min-h-11 justify-center`}
-          >
+            Desbloquear
+          </Boton>
+          <Boton papel="texto" tono="descarte" onClick={() => setUsarCodigo(true)} disabled={esperandoDispositivo}>
             {metodo === 'patron' ? 'Usar patrón' : 'Usar contraseña'}
-          </button>
+          </Boton>
         </div>
       ) : metodo === 'patron' ? (
         <div className="flex flex-col items-center gap-3">
@@ -166,13 +163,9 @@ function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
             className={`min-h-12 w-full rounded-md border bg-noct-surface px-3.5 py-3 text-center text-[15px] text-noct-text outline-none transition-colors placeholder:text-noct-neutral-600 focus:border-noct-accent ${error ? 'border-noct-error/55' : 'border-noct-divider'}`}
           />
           {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
-          <button
-            type="submit"
-            disabled={abriendo}
-            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
-          >
-            {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
-          </button>
+          <Boton type="submit" papel="principal" tamano={52} cargando={abriendo} textoCargando="Desbloqueando…">
+            Desbloquear
+          </Boton>
         </form>
       )}
 
@@ -184,7 +177,7 @@ function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
             setError(null)
             setUsarCodigo(false)
           }}
-          className={`${BTN_GHOST_TENUE} min-h-11 justify-center`}
+          className={claseBoton({ papel: 'texto', tono: 'descarte' })}
         >
           Usar el desbloqueo del dispositivo
         </button>
@@ -194,7 +187,8 @@ function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
         <button
           type="button"
           onClick={() => setMostrarAyuda((v) => !v)}
-          className="text-[12.5px] text-noct-neutral-500 underline decoration-dotted underline-offset-2"
+          // 44 px de alto (T3): medía 19.
+          className="min-h-11 px-2 text-[12.5px] text-noct-neutral-500 underline decoration-dotted underline-offset-2"
         >
           ¿Olvidaste tu código de desbloqueo?
         </button>
@@ -208,7 +202,7 @@ function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
             <button
               type="button"
               onClick={() => void restablecerYCerrar()}
-              className={`${BTN_GHOST_TENUE} min-h-9 justify-center`}
+              className={claseBoton({ papel: 'texto', tono: 'descarte' })}
             >
               Cerrar sesión y quitar el bloqueo
             </button>

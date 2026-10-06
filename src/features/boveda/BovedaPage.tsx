@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
 import { db, type TipoSecreto } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
@@ -30,11 +30,10 @@ import {
   VideoCamera,
   Warning,
   WifiHigh,
-  X,
   type IconoProps,
 } from '../../components/iconos'
-import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { Hoja } from '../../components/Hoja'
 import { useGrafo } from '../../components/useGrafo'
 import { resumenImpacto } from '../../lib/grafo'
 import { iconoPorPalabraClave } from '../../lib/iconoPorPalabraClave'
@@ -48,6 +47,8 @@ import {
   obtenerMinutosAutobloqueo,
   OPCIONES_AUTOBLOQUEO_MIN,
 } from './sesionBoveda'
+import { Boton } from '../../components/Boton'
+import { SinContenido } from '../../components/SinContenido'
 
 // Pantalla Bóveda re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Bóveda.dc.html, tarea 97):
@@ -181,51 +182,6 @@ const ICONO_ABRIR: Record<TipoSecreto, (props: IconoProps) => React.JSX.Element>
   llave: ArrowSquareOut,
   archivo: Paperclip,
   nota: Note,
-}
-
-// Hoja inferior del sistema Nocturne (mockup Bóveda.dc.html): panel
-// pegado al borde inferior sobre un velo, con esquinas superiores
-// redondeadas y elevación de menú. Cierra al tocar fuera o con Escape y
-// bloquea el desplazamiento del fondo mientras está abierta, igual que
-// el `Modal` heredado pero con los tokens Nocturne.
-function HojaInferior({
-  etiqueta,
-  onCerrar,
-  children,
-}: {
-  etiqueta: string
-  onCerrar: () => void
-  children: ReactNode
-}) {
-  useEffect(() => {
-    function alTeclado(evento: KeyboardEvent) {
-      if (evento.key === 'Escape') onCerrar()
-    }
-    document.addEventListener('keydown', alTeclado)
-    const overflowPrevio = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', alTeclado)
-      document.body.style.overflow = overflowPrevio
-    }
-  }, [onCerrar])
-
-  return (
-    <div
-      onClick={onCerrar}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-noct-neutral-900/50"
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={etiqueta}
-        onClick={(evento) => evento.stopPropagation()}
-        className="box-border flex w-full max-w-[448px] flex-col gap-0.5 rounded-t-[14px] bg-noct-surface px-3 pb-[calc(14px+env(safe-area-inset-bottom))] pt-4 shadow-[0_0_0_1px_#9397ab,0_16px_40px_rgba(0,0,0,0.65)]"
-      >
-        {children}
-      </div>
-    </div>
-  )
 }
 
 // Una opción de la hoja "Nuevo acceso". Mismo icono y mismo alto táctil
@@ -454,26 +410,25 @@ export function BovedaPage() {
             Accesos compartidos, cuentas y claves de servicios
           </p>
           <div className="flex shrink-0 gap-2">
-            <button
-              type="button"
+            <Boton
+              papel="texto"
+              soloIcono
               onClick={bloquear}
-              aria-label="Bloquear la bóveda ahora"
+              aria-label="Bloquear la Bóveda ahora"
               title="Bloquear ahora"
-              className={BTN_ICONO_SECUNDARIO}
-            >
-              <LockSimple size={17} aria-hidden />
-            </button>
-            <button
-              type="button"
+              icono={<LockSimple size={18} aria-hidden />}
+            />
+            <Boton
+              papel="texto"
+              className="shrink-0"
+              icono={<Plus size={15} aria-hidden />}
               onClick={() => {
                 setOtrosTiposAbierto(false)
                 setCrearAbierto(true)
               }}
-              className={`shrink-0 ${BTN_SECUNDARIO}`}
             >
-              <Plus size={15} aria-hidden />
               Crear
-            </button>
+            </Boton>
           </div>
         </header>
 
@@ -663,17 +618,27 @@ export function BovedaPage() {
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-noct-neutral-700 px-6 py-11 text-center">
-            <Vault size={30} className="text-noct-neutral-600" aria-hidden />
-            <p className="text-[13px] leading-relaxed text-noct-neutral-400">
-              {hayFiltrosActivos ? 'Ningún secreto coincide.' : 'Aún no hay secretos guardados.'}
-            </p>
-            {hayFiltrosActivos && (
-              <button type="button" onClick={quitarFiltros} className={BTN_SECUNDARIO}>
-                Quitar filtros
-              </button>
-            )}
-          </div>
+          // Sin contenido con su patrón (tarea 291, auditoría UX S4): sin
+          // resultados da la salida, vacío dice qué va aquí.
+          hayFiltrosActivos ? (
+            <SinContenido
+              tipo="sin-resultados"
+              titulo="Ningún acceso coincide"
+              texto="Busca por nombre, categoría o equipo."
+              accion={
+                <Boton papel="secundario" onClick={quitarFiltros}>
+                  Quitar los filtros
+                </Boton>
+              }
+            />
+          ) : (
+            <SinContenido
+              tipo="vacio"
+              Icono={Vault}
+              titulo="Aún no hay accesos guardados"
+              texto="Los accesos que guardes aquí se usan en las guías y en la ficha de su equipo."
+            />
+          )
         )}
 
         {/* Autobloqueo por inactividad: mismo ajuste local que ya existía,
@@ -708,18 +673,9 @@ export function BovedaPage() {
           otros tres tipos siguen existiendo, plegados, para cuando de
           verdad hagan falta. */}
       {crearAbierto && (
-        <HojaInferior etiqueta="Nuevo acceso" onCerrar={() => setCrearAbierto(false)}>
-          <div className="flex items-center justify-between gap-2.5 px-1.5 pb-2.5">
-            <p className="text-[15px] font-medium">Nuevo acceso</p>
-            <button
-              type="button"
-              onClick={() => setCrearAbierto(false)}
-              aria-label="Cerrar"
-              className="flex p-1.5 text-noct-neutral-400 hover:text-noct-text"
-            >
-              <X size={18} aria-hidden />
-            </button>
-          </div>
+        // La hoja estándar (tarea 291, auditoría UX F1): hasta aquí la
+        // Bóveda tenía la suya, con otro velo y un aro claro.
+        <Hoja abierta onCerrar={() => setCrearAbierto(false)} titulo="Nuevo acceso" claseCuerpo="flex flex-col gap-0.5">
           {PRESETS_PRINCIPALES.map((preset) => (
             <OpcionPreset key={preset.tipo} {...preset} />
           ))}
@@ -751,39 +707,25 @@ export function BovedaPage() {
           <p className="mx-1.5 mt-1.5 text-[11.5px] leading-relaxed text-noct-neutral-600">
             Las opciones especiales están ahí solo cuando las necesites.
           </p>
-        </HojaInferior>
+        </Hoja>
       )}
 
       {/* Menú de acciones de una fila: copiar sin abrir la ficha (con
           auditoría), abrir, editar o eliminar (con contraseña maestra). */}
       {credencialMenu && (
-        <HojaInferior
-          etiqueta={`Acciones de ${credencialMenu.titulo}`}
+        <Hoja
+          abierta
           onCerrar={cerrarMenu}
+          titulo={credencialMenu.titulo}
+          descripcion={
+            <span className={avisoCopia ? 'text-noct-precaucion' : undefined}>
+              {avisoCopia ??
+                (ETIQUETA_COPIA[tipoDe(credencialMenu)]
+                  ? 'Copiar registra quién y cuándo'
+                  : 'Se abre y se descifra desde su ficha')}
+            </span>
+          }
         >
-          <div className="flex items-center justify-between gap-2.5 px-1.5 pb-1.5">
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-medium leading-[1.3]">
-                {credencialMenu.titulo}
-              </p>
-              <p
-                className={`mt-0.5 text-[11.5px] ${avisoCopia ? 'text-noct-precaucion' : 'text-noct-neutral-600'}`}
-              >
-                {avisoCopia ??
-                  (ETIQUETA_COPIA[tipoDe(credencialMenu)]
-                    ? 'Copiar registra quién y cuándo'
-                    : 'Se abre y se descifra desde su ficha')}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={cerrarMenu}
-              aria-label="Cerrar"
-              className="flex shrink-0 p-1.5 text-noct-neutral-400 hover:text-noct-text"
-            >
-              <X size={18} aria-hidden />
-            </button>
-          </div>
 
           {/* "Copiar usuario" solo donde el tipo usa usuario: una red,
               una llave, un archivo o una nota no tienen uno. */}
@@ -843,17 +785,16 @@ export function BovedaPage() {
             <span className="flex-1 text-sm font-medium">Eliminar</span>
             <span className="text-[11.5px] text-noct-neutral-600">pide la contraseña maestra</span>
           </button>
-        </HojaInferior>
+        </Hoja>
       )}
 
       <DialogoEliminar
         abierto={Boolean(credencialEliminar)}
         sensible
-        titulo={`¿Eliminar "${credencialEliminar?.titulo ?? ''}"?`}
-        descripcion="Esta acción eliminará este secreto de la bóveda."
-        advertencia={
-          impactoEliminar ? `${impactoEliminar} Esos pasos quedarán sin el secreto vinculado.` : null
-        }
+        titulo={`¿Eliminar ${credencialEliminar?.titulo ?? ''}?`}
+        descripcion="Se elimina de la Bóveda de todo el equipo."
+        advertencia={impactoEliminar ? `${impactoEliminar} Esos pasos se quedarán sin este acceso.` : null}
+        textoConfirmar="Eliminar el acceso"
         onCerrar={() => setEliminarId(null)}
         onConfirmar={confirmarEliminar}
       />

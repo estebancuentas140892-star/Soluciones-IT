@@ -5,9 +5,9 @@ import {
   PASOS_INSTALACION_MANUAL,
   suscribirEstadoInstalacion,
 } from '../lib/instalacionPwa'
-import { DownloadSimple, X } from './iconos'
-import { Modal } from './Modal'
-import { BTN_PRIMARIO, BTN_SECUNDARIO } from './nocturne'
+import { Boton } from './Boton'
+import { Hoja } from './Hoja'
+import { DownloadSimple } from './iconos'
 
 // Boton que instala la app en el dispositivo, con las instrucciones
 // manuales dentro. Compartido por los dos unicos sitios donde la app
@@ -22,6 +22,8 @@ import { BTN_PRIMARIO, BTN_SECUNDARIO } from './nocturne'
 // decide el paso 2; en Mi cuenta, la tarjeta que lo contiene). Quien lo
 // use mira `obtenerEstadoInstalacion().instalada`.
 export function BotonInstalarApp({ className = '' }: { className?: string }) {
+  // `className` es solo colocación (márgenes, `self-*`): el aspecto es el
+  // del botón común (tarea 291).
   const instalacion = useSyncExternalStore(suscribirEstadoInstalacion, obtenerEstadoInstalacion)
   const [instruccionesAbiertas, setInstruccionesAbiertas] = useState(false)
 
@@ -39,38 +41,23 @@ export function BotonInstalarApp({ className = '' }: { className?: string }) {
 
   return (
     <>
-      <button
-        type="button"
+      <Boton
+        papel="principal"
+        className={`shrink-0 ${className}`}
+        icono={<DownloadSimple size={14} aria-hidden />}
         onClick={() => void manejarInstalar()}
-        className={`${BTN_PRIMARIO} min-h-11 shrink-0 px-3 ${className}`}
       >
-        <DownloadSimple size={14} aria-hidden />
         {instalacion.puedeInstalar ? 'Instalar' : 'Cómo instalar'}
-      </button>
+      </Boton>
 
-      <Modal
-        abierto={instruccionesAbiertas}
+      {/* Sin "Entendido": las instrucciones no hace falta cerrarlas con un
+          botón propio (auditoría UX, sección 10); la × de la hoja basta. */}
+      <Hoja
+        abierta={instruccionesAbiertas}
         onCerrar={() => setInstruccionesAbiertas(false)}
-        tituloId="titulo-instalar-app"
+        titulo="Instalar la app en el teléfono"
       >
-        <div className="flex items-start justify-between gap-3">
-          <h2 id="titulo-instalar-app" className="text-[17px] font-medium leading-[1.3]">
-            Instalar la app en el teléfono
-          </h2>
-          {/* 44 x 44 de toque con la X de 18 (tarea 262, regla R6). El
-              margen negativo devuelve la huella de 18 de antes, así que
-              el título no se mueve; la caja crece sobre el relleno del
-              modal, que es de 20. */}
-          <button
-            type="button"
-            onClick={() => setInstruccionesAbiertas(false)}
-            aria-label="Cerrar"
-            className="-m-[13px] flex h-11 w-11 shrink-0 items-center justify-center text-noct-neutral-400 hover:text-noct-text"
-          >
-            <X size={18} aria-hidden />
-          </button>
-        </div>
-        <p className="mt-2 text-[13px] leading-relaxed text-noct-neutral-300">
+        <p className="text-[13px] leading-relaxed text-noct-neutral-300">
           Este navegador no ofrece el botón de instalación, así que se hace desde su propio menú. Con
           la app instalada, abre con su icono y funciona sin señal.
         </p>
@@ -84,14 +71,7 @@ export function BotonInstalarApp({ className = '' }: { className?: string }) {
             </li>
           ))}
         </ol>
-        <button
-          type="button"
-          onClick={() => setInstruccionesAbiertas(false)}
-          className={`${BTN_SECUNDARIO} mt-4 min-h-11 w-full justify-center`}
-        >
-          Entendido
-        </button>
-      </Modal>
+      </Hoja>
     </>
   )
 }
