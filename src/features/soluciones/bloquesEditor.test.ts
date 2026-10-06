@@ -4,12 +4,14 @@ import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import { apoyosDeTarea } from './apoyosTarea'
 import {
   cambiarTipoTarea,
+  decisionConOpcionesDesdeSiNo,
   DESTINO_PASO,
   dividirTarea,
   destinoTarea,
   etiquetaDestino,
   insertarApoyo,
-  moverBloque,
+  insertarTarea,
+  moverPorId,
   moverTareaConApoyos,
   opcionesDestino,
   reasignarApoyo,
@@ -88,7 +90,7 @@ describe('reordenar', () => {
   })
 
   it('mover un bloque suelto no cambia a quién pertenece', () => {
-    const resultado = moverBloque(pasoDePrueba(), 'a1', 1)
+    const resultado = moverPorId(pasoDePrueba(), 'a1', 1)
     expect(resultado.map((b) => b.id)).toEqual(['t1', 't2', 'a1', 't3'])
     expect(resultado.find((b) => b.id === 'a1')?.tareaId).toBe('t1')
   })
@@ -235,5 +237,75 @@ describe('dividirTarea', () => {
     expect(dividirTarea(bloques, 't1', ['Solo una'], crear)).toBe(bloques)
     // Un apoyo no es una tarea que dividir.
     expect(dividirTarea(bloques, 'a1', ['A', 'B'], crear)).toBe(bloques)
+  })
+})
+
+// DECISIONES CON OPCIONES EN EL EDITOR (tarea 302).
+describe('decisiones con opciones en el editor', () => {
+  const decisionSiNo = bloque({
+    id: 'sn',
+    tipo: 'tarea',
+    texto: '¿La persona solo necesita ver el archivo?',
+    tipoTarea: 'decision',
+    decisionArticuloId: 'onedrive-editar',
+    decisionArticuloTitulo: 'Crear un vínculo con permiso de edición',
+  })
+
+  it('pasar una tarea a decisión la deja con dos opciones vacías', () => {
+    const { bloque: nuevo, perdido } = cambiarTipoTarea(pasoDePrueba()[0], 'decision')
+    expect(nuevo.tipoTarea).toBe('decision')
+    expect(nuevo.opciones).toHaveLength(2)
+    expect(perdido).toEqual([])
+  })
+
+  it('elegir "Decisión" en una de Sí/No no la convierte sola', () => {
+    const { bloque: igual } = cambiarTipoTarea(decisionSiNo, 'decision')
+    expect(igual).toBe(decisionSiNo)
+    expect(igual.opciones).toBeUndefined()
+  })
+
+  it('salir de una decisión con opciones escritas avisa de lo que se suelta; las vacías no cuentan', () => {
+    const conOpciones = {
+      ...decisionSiNo,
+      decisionArticuloId: null,
+      decisionArticuloTitulo: '',
+      opciones: [
+        { id: 'a', titulo: 'Clásico', descripcion: '', destino: { tipo: 'continuar' as const } },
+        { id: 'b', titulo: '', descripcion: '', destino: { tipo: 'continuar' as const } },
+      ],
+    }
+    const { bloque: nuevo, perdido } = cambiarTipoTarea(conOpciones, 'accion')
+    expect(perdido).toEqual(['una opción de la decisión'])
+    expect(nuevo.opciones).toBeUndefined()
+  })
+
+  it('una de Sí/No pasa a opciones sin perder nada: "Sí" sigue y "No" hace su guía', () => {
+    const convertida = decisionConOpcionesDesdeSiNo(decisionSiNo)
+    expect(convertida.decisionArticuloId).toBeNull()
+    expect(convertida.opciones?.map((o) => [o.titulo, o.destino])).toEqual([
+      ['Sí', { tipo: 'continuar' }],
+      ['No', { tipo: 'guia', articuloId: 'onedrive-editar', titulo: 'Crear un vínculo con permiso de edición' }],
+    ])
+    // Sin guía en el "No", las dos siguen la ruta.
+    const sinGuia = decisionConOpcionesDesdeSiNo({ ...decisionSiNo, decisionArticuloId: null, decisionArticuloTitulo: '' })
+    expect(sinGuia.opciones?.[1].destino).toEqual({ tipo: 'continuar' })
+  })
+
+  it('una tarea nueva cae antes de la decisión con la que termina el paso', () => {
+    const decision = { ...decisionSiNo, id: 'd', opciones: [{ id: 'a', titulo: 'A', descripcion: '', destino: { tipo: 'continuar' as const } }] }
+    const nueva = bloque({ id: 'nueva', tipo: 'tarea', texto: '', tipoTarea: 'accion' })
+    expect(insertarTarea([...pasoDePrueba(), decision], nueva).map((b) => b.id)).toEqual(['t1', 'a1', 't2', 't3', 'nueva', 'd'])
+    // Sin decisión con opciones al final, al final.
+    expect(insertarTarea(pasoDePrueba(), nueva).at(-1)?.id).toBe('nueva')
+    expect(insertarTarea([...pasoDePrueba(), decisionSiNo], nueva).at(-1)?.id).toBe('nueva')
+  })
+
+  it('mueve las opciones por su id, como los bloques', () => {
+    const opciones = [
+      { id: 'a', titulo: 'A', descripcion: '', destino: { tipo: 'continuar' as const } },
+      { id: 'b', titulo: 'B', descripcion: '', destino: { tipo: 'fin' as const } },
+    ]
+    expect(moverPorId(opciones, 'b', -1).map((o) => o.id)).toEqual(['b', 'a'])
+    expect(moverPorId(opciones, 'a', -1)).toBe(opciones)
   })
 })

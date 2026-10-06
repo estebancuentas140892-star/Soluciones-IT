@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-06
 
+### Agregado (editor de guías, tarea 302, fase 2): la decisión con opciones, sus destinos y "Al terminar" del paso
+
+**Área modificada:** `src/features/soluciones/` (`EditorDecision.tsx`, `rutasEditor.ts` y `controlesEditor.tsx`, nuevos; `PasosEditor.tsx`: el tipo "Decisión", la decisión con opciones, "Pasar a opciones con nombre", "Al terminar" y el aviso de paso sin ruta; `bloquesEditor.ts`: `cambiarTipoTarea` con opciones, `decisionConOpcionesDesdeSiNo`, `insertarTarea` y `moverPorId`; `ArticuloForm.tsx`: no guarda una decisión inválida); pruebas (`decisionesEditor.test.tsx` y `rutasEditor.test.ts`, nuevas; `bloquesEditor.test.ts`); [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (7.2 y 7.2.1), [COMPONENTES_UI.md](COMPONENTES_UI.md) (3.8zc, nueva; 3.8j y 3.8e), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-064), [DECISIONES.md](DECISIONES.md) (AD-065, decisión 7) y [TAREAS.md](TAREAS.md).
+**Tipo:** Agregado (editor) y Documentación.
+**Motivo:** encargo del usuario del 2026-10-06: crear decisiones con opciones sin editar JSON y no poder guardarlas inválidas.
+**Qué cambia:**
+- **"Decisión"** (en la hoja del tipo y en "Añadir") es ahora "Una pregunta con opciones; cada una lleva por su camino" y nace con dos opciones vacías. Cada opción: **título**, **ayuda opcional**, **a dónde lleva** (Continuar, Ir a un paso posterior, Abrir una guía o Terminar la guía, en las hojas del editor) y subir, bajar y quitar. Debajo de cada una, **el camino que recorre** ("Después: 2 → 4 → 5 → 6.").
+- **"Al terminar" del paso**, solo en una guía con caminos: seguir con el de abajo, ir a un paso posterior o terminar la guía. Es lo que junta los caminos en un paso común sin duplicarlo. Un paso por el que no pasa ninguna ruta se avisa en ámbar.
+- **No se guarda una decisión inválida** (sin pregunta, con menos de dos opciones, sin título, con títulos repetidos, sin destino, con un destino que no existe, vacío o anterior, o que no es la última acción del paso): "Guardar" lleva a Pasos, abre el paso y lista lo que falta; cada problema se dice también en su sitio mientras se escribe.
+- Una tarea nueva cae **antes** de la decisión con la que termina el paso, y en su pregunta Enter no inserta otra detrás.
+- **Las decisiones de Sí/No de antes** se editan y se guardan igual que siempre, sin las reglas nuevas, y se pueden **pasar a opciones con nombre** ("Sí" continúa, "No" abre la guía que tenía) sin perder nada.
+**Impacto esperado:** las decisiones con opciones se escriben desde el teléfono o el PC sin JSON. La ejecución que las recorre llega en la fase 3; hasta entonces, esta rama no se lleva a `main`. Sin cambios de datos ni de Supabase.
+
 ### Agregado (guías, tarea 302, fase 1): el modelo de las decisiones con opciones y la ruta de una guía
 
 **Área modificada:** `src/lib/` (`db.ts`: `DestinoOpcion`, `OpcionDecision`, `DestinoPaso`, `BloquePaso.opciones`, `PasoProcedimiento.alTerminar` y `elecciones` en el avance; `procedimiento.ts`: normalizar, guardar, duplicar e indexar las opciones y `alTerminar`, `crearBloqueDecision`, `esDecisionConOpciones`, `pasoTieneContenido`; `rutaProcedimiento.ts`, nuevo; `progresoPasos.ts`: `registrarEleccion` y las respuestas conservadas en cada escritura; `grafo.ts`), `src/features/soluciones/` (`cierrePaso.ts`, `accionGuia.ts`, `sinTerminar.ts`, `validacionVinculos.ts`, `CategoriaPage.tsx`), `src/components/BarraReanudar.tsx`, `src/features/inicio/` (`resolver.ts`, `ResolverPage.tsx`, `SeccionesAgenda.tsx`), `src/features/diagnostico/DiagnosticoRunPage.tsx`; pruebas (`rutaProcedimiento.test.ts` y `avanceEnRuta.test.ts`, nuevas; `procedimiento.test.ts` y `progresoPasos.test.ts`); [ARQUITECTURA.md](ARQUITECTURA.md), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) (RN-064), [DECISIONES.md](DECISIONES.md) (AD-065) y [TAREAS.md](TAREAS.md).

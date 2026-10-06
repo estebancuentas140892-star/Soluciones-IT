@@ -1,4 +1,5 @@
-import type { AlcanceApoyo, BloquePaso, TipoTarea } from '../../lib/db'
+import type { AlcanceApoyo, BloquePaso, OpcionDecision, TipoTarea } from '../../lib/db'
+import { crearOpcion, esDecisionConOpciones, tareasDe } from '../../lib/procedimiento'
 
 // OPERACIONES DEL EDITOR SOBRE LOS BLOQUES DE UN PASO.
 //
@@ -49,21 +50,39 @@ export function insertarApoyo(
 }
 
 /**
- * Mueve un bloque una posicion arriba o abajo.
+ * Mueve un elemento de una lista (por su id) una posicion arriba o abajo.
+ * Sirve para cualquier lista con ids estables: los bloques de un paso y
+ * las opciones de una decision (tarea 302).
  *
  * Los apoyos NO se reasignan al moverse: `tareaId` es un id estable, no
  * una posicion, asi que una imagen sigue perteneciendo a su tarea
  * aunque las dos cambien de sitio (requisito 6 del editor, criterio
- * A06). Esta funcion existe sobre todo para poder demostrarlo: antes
- * del 2026-09-09 no habia forma de reordenar dentro de un paso.
+ * A06). Antes del 2026-09-09 no habia forma de reordenar dentro de un
+ * paso.
  */
-export function moverBloque(bloques: BloquePaso[], bloqueId: string, direccion: -1 | 1): BloquePaso[] {
-  const desde = bloques.findIndex((b) => b.id === bloqueId)
+export function moverPorId<T extends { id: string }>(elementos: T[], id: string, direccion: -1 | 1): T[] {
+  const desde = elementos.findIndex((elemento) => elemento.id === id)
   const hasta = desde + direccion
-  if (desde < 0 || hasta < 0 || hasta >= bloques.length) return bloques
-  const copia = [...bloques]
+  if (desde < 0 || hasta < 0 || hasta >= elementos.length) return elementos
+  const copia = [...elementos]
   const [movido] = copia.splice(desde, 1)
   copia.splice(hasta, 0, movido)
+  return copia
+}
+
+/**
+ * DÓNDE CAE UNA TAREA NUEVA: al final del paso, salvo que el paso termine
+ * en una decisión con opciones (tarea 302). Esa decisión tiene que ser la
+ * última acción, porque lo que viene después depende de la respuesta; una
+ * tarea añadida detrás rompería el paso sin que el autor lo pidiera, así
+ * que va justo antes de la decisión.
+ */
+export function insertarTarea(bloques: BloquePaso[], tarea: BloquePaso): BloquePaso[] {
+  const ultima = tareasDe(bloques).at(-1)
+  if (!ultima || !esDecisionConOpciones(ultima)) return [...bloques, tarea]
+  const pos = bloques.findIndex((b) => b.id === ultima.id)
+  const copia = [...bloques]
+  copia.splice(pos, 0, tarea)
   return copia
 }
 
@@ -132,16 +151,49 @@ export interface CambioDeTipo {
 }
 
 export function cambiarTipoTarea(bloque: BloquePaso, tipoTarea: TipoTarea): CambioDeTipo {
+  // Elegir el tipo que ya tiene no cambia nada: una decision de Si/No no
+  // se convierte sola en una con opciones (para eso esta
+  // `decisionConOpcionesDesdeSiNo`, que el autor pide a proposito).
+  if ((bloque.tipoTarea ?? 'accion') === tipoTarea) return { bloque, perdido: [] }
+  // UNA DECISION NUEVA NACE CON DOS OPCIONES VACIAS (tarea 302): la de
+  // Si/No ya no se crea, la sustituye una con opciones "Si" y "No".
   if (tipoTarea === 'decision') {
-    return { bloque: { ...bloque, tipoTarea }, perdido: [] }
+    return { bloque: { ...bloque, tipoTarea, opciones: [crearOpcion(), crearOpcion()] }, perdido: [] }
   }
-  // Fuera de "decision" el vinculo del "No" no tiene donde vivir.
+  // Fuera de "decision" ni el vinculo del "No" ni las opciones tienen
+  // donde vivir. Una opcion todavia vacia no es nada que perder.
   const perdido = bloque.decisionArticuloId
     ? [`el vínculo «${bloque.decisionArticuloTitulo || 'guía vinculada'}» de la respuesta No`]
     : []
+  const escritas = (bloque.opciones ?? []).filter(
+    (opcion) => opcion.titulo.trim() !== '' || opcion.descripcion.trim() !== '' || opcion.destino.tipo !== 'continuar',
+  ).length
+  if (escritas > 0) perdido.push(escritas === 1 ? 'una opción de la decisión' : `las ${escritas} opciones de la decisión`)
   return {
-    bloque: { ...bloque, tipoTarea, decisionArticuloId: null, decisionArticuloTitulo: '' },
+    bloque: { ...bloque, tipoTarea, decisionArticuloId: null, decisionArticuloTitulo: '', opciones: undefined },
     perdido,
+  }
+}
+
+/**
+ * PASAR UNA DECISION DE SI/NO A OPCIONES (tarea 302), a peticion del
+ * autor. Queda igual que estaba: "Si" sigue la ruta y "No" hace la guia
+ * que tenia su "No" (o sigue, si no tenia ninguna). Solo cambia la forma,
+ * para poder nombrar las respuestas, añadir otras o llevar a un paso.
+ */
+export function decisionConOpcionesDesdeSiNo(bloque: BloquePaso): BloquePaso {
+  const no: OpcionDecision = {
+    ...crearOpcion(),
+    titulo: 'No',
+    destino: bloque.decisionArticuloId
+      ? { tipo: 'guia', articuloId: bloque.decisionArticuloId, titulo: bloque.decisionArticuloTitulo }
+      : { tipo: 'continuar' },
+  }
+  return {
+    ...bloque,
+    decisionArticuloId: null,
+    decisionArticuloTitulo: '',
+    opciones: [{ ...crearOpcion(), titulo: 'Sí' }, no],
   }
 }
 

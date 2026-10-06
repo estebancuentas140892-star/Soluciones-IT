@@ -8,7 +8,6 @@ import {
   type ComponentType,
   type KeyboardEvent as EventoTeclado,
   type PointerEvent as EventoPuntero,
-  type ReactNode,
 } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import {
@@ -29,26 +28,33 @@ import {
 import {
   crearBloqueArchivo,
   crearBloqueAviso,
+  crearBloqueDecision,
   crearBloqueGuia,
   crearBloqueImagen,
   crearBloqueReferencia,
   crearBloqueTarea,
   crearPaso,
+  esDecisionConOpciones,
   normalizarProcedimiento,
   procedimientoEjecutable,
 } from '../../lib/procedimiento'
+import type { ProblemaRuta } from '../../lib/rutaProcedimiento'
 import {
   cambiarTipoTarea,
+  decisionConOpcionesDesdeSiNo,
   DESTINO_PASO,
   destinoTarea,
   dividirTarea,
   etiquetaDestino,
   insertarApoyo,
+  insertarTarea,
   moverTareaConApoyos,
   opcionesDestino,
   reasignarApoyo,
   type DestinoApoyo,
 } from './bloquesEditor'
+import { AlTerminarDelPaso, OpcionesDeDecision } from './EditorDecision'
+import { guiaConCaminos, usaAlTerminar } from './rutasEditor'
 import { accionesEncadenadas, esComprobacion, esCondicionPrevia, esRecordatorio } from './revisionGuia'
 import { comprimirImagen } from '../../lib/comprimirImagen'
 import { subirOEncolarArchivo } from '../../lib/archivosPendientes'
@@ -87,6 +93,7 @@ import { Campo, CampoConSugerencias, CLASE_CAMPO_SIN_ANCHO } from '../../compone
 import { tituloVinculoDelEquipo } from '../../lib/vinculoProtegido'
 import { finalidadesConocidas } from '../boveda/credencialDelEquipo'
 import { HojaTipoBloque, type OpcionTipoBloque } from './HojaTipoBloque'
+import { BotonIconoLinea, BotonLinea } from './controlesEditor'
 import { HojaVinculo, type GrupoVinculo } from './HojaVinculo'
 import { CrearAccesoRapido } from '../boveda/CrearAccesoRapido'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
@@ -100,6 +107,10 @@ interface Props {
   articuloId: string
   pasos: PasoProcedimiento[]
   onPasosChange: (pasos: PasoProcedimiento[]) => void
+  // Lo que no deja guardar (o avisa) en las decisiones y los caminos de la
+  // guía (tarea 302, `problemasDeRutas`). Lo calcula el formulario, que es
+  // quien decide el guardado; aquí se enseña cada uno en su sitio.
+  problemasRutas: ProblemaRuta[]
   // Equipos donde aplica este artículo (grupo P2): sus campos
   // protegidos aparecen primero al vincular información protegida a un
   // paso, antes que los secretos globales de la bóveda (ejemplo del
@@ -178,10 +189,13 @@ const TIPOS_TAREA: TipoTareaInfo[] = [
     Icono: Question,
     claseIcono: 'text-noct-precaucion',
     corto: 'Decisión',
-    etiqueta: 'Decisión Sí / No',
-    descripcion: '«No» abre otra guía y vuelve aquí',
+    // Desde la tarea 302 una decisión tiene opciones con nombre, y cada
+    // una lleva por su camino. Las de Sí/No que ya existían se siguen
+    // editando como antes (ver `DecisionSiNo`), pero ya no se crean.
+    etiqueta: 'Decisión',
+    descripcion: 'Una pregunta con opciones; cada una lleva por su camino',
     clasePastilla: 'border-noct-precaucion/45 bg-noct-precaucion/[.12]',
-    placeholder: 'Pregunta de Sí/No',
+    placeholder: 'Pregunta (por ejemplo: ¿Qué versión de Outlook estás utilizando?)',
   },
 ]
 
@@ -210,7 +224,7 @@ type ClaveContenido =
 const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
   { valor: 'accion', etiqueta: 'Acción', descripcion: 'Algo que el técnico ejecuta', Icono: Square, claseIcono: 'text-noct-accent-300' },
   { valor: 'verificacion', etiqueta: 'Verificación', descripcion: 'Comprobar antes de continuar', Icono: SealCheck, claseIcono: 'text-noct-exito' },
-  { valor: 'decision', etiqueta: 'Decisión Sí / No', descripcion: '«No» abre otra guía y vuelve aquí', Icono: Question, claseIcono: 'text-noct-precaucion' },
+  { valor: 'decision', etiqueta: 'Decisión', descripcion: 'Una pregunta con opciones; cada una lleva por su camino', Icono: Question, claseIcono: 'text-noct-precaucion' },
   { valor: 'imagen', etiqueta: 'Imagen', descripcion: 'Una captura en este punto', Icono: Camera, claseIcono: 'text-noct-accent-300' },
   // Nace como Información (plegada al ejecutar): la alerta se elige en
   // su tono, solo para un riesgo real (regla 20c).
@@ -292,6 +306,7 @@ export function PasosEditor({
   articuloId,
   pasos,
   onPasosChange,
+  problemasRutas: problemas,
   dispositivosAfectados,
   pasoActivoId,
   onPasoActivoChange,
@@ -446,7 +461,9 @@ export function PasosEditor({
   function agregarBloque(indice: number, bloque: BloquePaso, destino?: DestinoApoyo) {
     const bloques = pasos[indice].bloques
     if (bloque.tipo === 'tarea') {
-      actualizarPaso(indice, { bloques: [...bloques, bloque] })
+      // Al final, salvo que el paso termine en una decisión con opciones,
+      // que tiene que seguir siendo la última (ver `insertarTarea`).
+      actualizarPaso(indice, { bloques: insertarTarea(bloques, bloque) })
       setTareaActivaId(bloque.id)
       setFocoBloqueId(bloque.id)
       return
@@ -472,8 +489,13 @@ export function PasosEditor({
   // existia (no se duplica el concepto, punto 3 de la seccion 4).
   function agregarContenido(indice: number, clave: ClaveContenido) {
     const tareaId = destinoPorDefecto(indice).tareaId
-    if (clave === 'accion' || clave === 'verificacion' || clave === 'decision') {
+    if (clave === 'accion' || clave === 'verificacion') {
       agregarBloque(indice, crearBloqueTarea(clave))
+      return
+    }
+    // Una decisión nueva nace con sus dos opciones vacías (tarea 302).
+    if (clave === 'decision') {
+      agregarBloque(indice, crearBloqueDecision())
       return
     }
     const tipoReferencia = REFERENCIA_POR_CLAVE[clave]
@@ -810,6 +832,10 @@ export function PasosEditor({
   const indiceActivo = indiceEncontrado >= 0 ? indiceEncontrado : pasos.length - 1
   const idPasoActivo = indiceActivo >= 0 ? pasos[indiceActivo].id : null
 
+  // LOS CAMINOS DE LA GUÍA (tarea 302): lo que no deja guardar (o avisa)
+  // se dice en su sitio, en la decisión o en el paso, mientras se escribe.
+  const conCaminos = guiaConCaminos(pasos)
+
   return (
     <div ref={contenedorRef} className="flex flex-col gap-3.5">
       {pasos.length === 0 && (
@@ -830,6 +856,10 @@ export function PasosEditor({
         // pantallas más abajo.
         const desplegado = paso.id === idPasoActivo
         const tareas = paso.bloques.filter((b) => b.tipo === 'tarea').length
+        // Lo que es del paso y no de una de sus decisiones: su "al terminar"
+        // (bloquea) y que ninguna ruta pase por él (avisa).
+        const problemasDelPaso = problemas.filter((p) => p.pasoId === paso.id && p.decisionId === null)
+        const fueraDeRuta = problemasDelPaso.find((p) => !p.bloquea)
         return (
         <div
           key={paso.id}
@@ -910,6 +940,18 @@ export function PasosEditor({
                 >
                   {paso.titulo.trim() === '' ? 'Paso sin título' : paso.titulo}
                 </span>
+                {/* Plegado, el aviso de que nadie llega a este paso no se
+                    vería: queda su marca, con la palabra para el lector de
+                    pantalla. */}
+                {fueraDeRuta && (
+                  <Warning
+                    size={14}
+                    className="shrink-0 text-noct-precaucion"
+                    role="img"
+                    aria-hidden={false}
+                    aria-label="Ninguna ruta pasa por este paso"
+                  />
+                )}
                 {tareas > 0 && (
                   <span className="shrink-0 text-[12.5px] text-noct-neutral-400">
                     {tareas} {tareas === 1 ? 'tarea' : 'tareas'}
@@ -1028,6 +1070,9 @@ export function PasosEditor({
                 destinoAbierto={destinoDeBloqueId === bloque.id}
                 onCerrarDestino={() => setDestinoDeBloqueId(null)}
                 onElegirDestino={(destino) => cambiarDestino(indice, bloque.id, destino)}
+                pasos={pasos}
+                indicePaso={indice}
+                problemasDecision={problemas.filter((p) => p.decisionId === bloque.id)}
               />
             ))}
             {paso.bloques.length === 0 && (
@@ -1036,6 +1081,26 @@ export function PasosEditor({
               </p>
             )}
           </div>
+
+          {/* POR DÓNDE SIGUE AL TERMINAR (tarea 302), solo en una guía con
+              caminos: es lo que junta dos caminos en un paso común. En las
+              demás, todos siguen en el de abajo y decirlo sería ruido; y
+              tampoco en el paso de una decisión cuyas respuestas llevan todas
+              a otro sitio (salvo que ya tenga uno, para poder quitarlo). */}
+          {conCaminos && (usaAlTerminar(paso) || paso.alTerminar) && (
+            <AlTerminarDelPaso
+              pasos={pasos}
+              indice={indice}
+              problemas={problemasDelPaso.filter((p) => p.bloquea)}
+              onCambiar={(alTerminar) => actualizarPaso(indice, { alTerminar })}
+            />
+          )}
+          {fueraDeRuta && (
+            <p className="mt-1.5 flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-precaucion">
+              <Warning size={13} className="mt-0.5 shrink-0" aria-hidden />
+              <span className="min-w-0">{fueraDeRuta.mensaje}</span>
+            </p>
+          )}
 
           {/* Archivos del paso completo (manual, PDF, planilla). */}
           <AdjuntosDelPaso
@@ -1621,6 +1686,9 @@ function BloqueEditor({
   destinoAbierto,
   onCerrarDestino,
   onElegirDestino,
+  pasos,
+  indicePaso,
+  problemasDecision,
 }: {
   bloque: BloquePaso
   // Todo el paso: hace falta para numerar las tareas en el selector de
@@ -1656,6 +1724,12 @@ function BloqueEditor({
   destinoAbierto: boolean
   onCerrarDestino: () => void
   onElegirDestino: (destino: DestinoApoyo) => void
+  // Toda la guía y el paso de este bloque (tarea 302): una decisión con
+  // opciones elige a qué paso lleva cada respuesta y enseña su camino.
+  pasos: PasoProcedimiento[]
+  indicePaso: number
+  // Lo que impide guardar en esta decisión, si lo es.
+  problemasDecision: ProblemaRuta[]
 }) {
   // Una sola bandera para las dos hojas de TIPO (tarea o tono): un
   // bloque es de un tipo o del otro, nunca de los dos, así que no
@@ -1713,6 +1787,9 @@ function BloqueEditor({
 
   if (bloque.tipo === 'tarea') {
     const info = infoTipoTarea(bloque.tipoTarea)
+    // Una decisión con opciones (tarea 302) y una de Sí/No de las de antes
+    // son el mismo tipo de línea; cambia lo que se edita debajo.
+    const conOpciones = esDecisionConOpciones(bloque)
     return (
       <div
         onPointerDownCapture={onSeleccionar}
@@ -1743,11 +1820,18 @@ function BloqueEditor({
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault()
-                onEnter()
+                // Detrás de una decisión con opciones no va otra tarea: lo
+                // que sigue depende de la respuesta.
+                if (!conOpciones) onEnter()
               }
             }}
-            onPaste={(e) => onPegar(e.clipboardData.getData('text'), e)}
+            // Pegar varias líneas en una pregunta no las reparte en tareas
+            // detrás de ella, por la misma razón.
+            onPaste={(e) => {
+              if (!conOpciones) onPegar(e.clipboardData.getData('text'), e)
+            }}
             placeholder={info.placeholder}
+            aria-label={conOpciones ? 'Pregunta de la decisión' : undefined}
             className={`min-h-14 min-w-0 flex-1 text-[15.5px] ${CLASE_CAMPO_SIN_ANCHO}`}
           />
           <BotonQuitar onClick={onQuitar} etiqueta="Quitar esta línea" />
@@ -1767,6 +1851,7 @@ function BloqueEditor({
                 tipoTarea: nuevo.tipoTarea,
                 decisionArticuloId: nuevo.decisionArticuloId,
                 decisionArticuloTitulo: nuevo.decisionArticuloTitulo,
+                opciones: nuevo.opciones,
               })
               if (perdido.length > 0) {
                 onAvisoCambioTipo(`Al pasar a «${infoTipoTarea(tipoTarea).etiqueta}» se soltó ${perdido.join(' y ')}.`)
@@ -1907,7 +1992,36 @@ function BloqueEditor({
           />
         )}
 
+        {/* LAS OPCIONES DE LA DECISIÓN (tarea 302): título, ayuda opcional y
+            a dónde lleva cada una, con el camino que recorre. */}
+        {conOpciones && (
+          <OpcionesDeDecision
+            decision={bloque}
+            pasos={pasos}
+            indicePaso={indicePaso}
+            vinculables={vinculables}
+            problemas={problemasDecision}
+            onCambiar={(opciones) => onCambiar({ opciones })}
+            onRevisarVinculo={onRevisarVinculo}
+          />
+        )}
+
+        {/* UNA DECISIÓN DE SÍ/NO DE LAS DE ANTES se sigue editando como
+            siempre (su "No" puede abrir otra guía) y, si el autor quiere
+            nombrar las respuestas o llevar a un paso, se pasa a opciones
+            sin perder nada: "Sí" sigue y "No" hace lo que hacía. */}
+        {bloque.tipoTarea === 'decision' && !conOpciones && (
+          <button
+            type="button"
+            onClick={() => onCambiar(decisionConOpcionesDesdeSiNo(bloque))}
+            className="ml-1 inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg border border-dashed border-noct-accent/50 px-3 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.08]"
+          >
+            <Plus size={14} className="shrink-0" aria-hidden />
+            Pasar a opciones con nombre
+          </button>
+        )}
         {bloque.tipoTarea === 'decision' &&
+          !conOpciones &&
           (bloque.decisionArticuloId ? (
             <div className="ml-1 flex items-center justify-between gap-2 rounded-md border border-noct-precaucion/30 bg-noct-precaucion/10 px-2.5 py-2">
               <p className="min-w-0 truncate text-[12.5px] leading-[1.45]">
@@ -2356,60 +2470,6 @@ function CabeceraApoyo({
         </p>
       )}
     </div>
-  )
-}
-
-// Botón pequeño de la fila de acciones de una tarea. 44 px de alto
-// (regla R6): son controles que se tocan de pie y con una mano.
-function BotonLinea({
-  Icono,
-  onClick,
-  activo,
-  etiqueta,
-  children,
-}: {
-  Icono: ComponentType<IconoProps>
-  onClick: () => void
-  activo?: boolean
-  etiqueta?: string
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={etiqueta}
-      className={`inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-md border px-2.5 text-[12.5px] font-medium ${
-        activo
-          ? 'border-noct-accent/45 bg-noct-accent/[.1] text-noct-accent-300'
-          : 'border-noct-divider text-noct-neutral-300 hover:text-noct-text'
-      }`}
-    >
-      <Icono size={14} className="shrink-0" />
-      <span className="min-w-0 truncate">{children}</span>
-    </button>
-  )
-}
-
-function BotonIconoLinea({
-  Icono,
-  etiqueta,
-  onClick,
-}: {
-  Icono: ComponentType<IconoProps>
-  etiqueta: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={etiqueta}
-      title={etiqueta}
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-noct-divider text-noct-neutral-400 hover:text-noct-text"
-    >
-      <Icono size={15} />
-    </button>
   )
 }
 

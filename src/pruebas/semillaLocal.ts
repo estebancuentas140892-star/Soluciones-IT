@@ -879,6 +879,84 @@ const GUIA_COMPROBAR_RED = articulo({
   },
 })
 
+// Caso de la tarea 302: una decision con opciones al principio, un camino
+// por version y los pasos comunes donde los dos se juntan, con la FORMA de
+// la guia real de la copia de seguridad del correo (todo inventado).
+const GUIA_CAMINOS = articulo({
+  id: 'art-caminos',
+  categoriaId: 'cat-software',
+  titulo: 'Copia de seguridad del correo de ejemplo',
+  tipo: 'mantenimiento',
+  estado: 'borrador',
+  procedimiento: {
+    descripcion: 'Usa esta guia cuando haya que guardar el correo de ejemplo de una persona.',
+    portada: null,
+    objetivoGeneral: 'Dejar una copia del correo de ejemplo en el servidor de ejemplo.',
+    requisitos: [],
+    verificacionFinal: ['La copia de ejemplo esta en la carpeta de la persona'],
+    tiempoEstimadoMin: 15,
+    dificultad: 'intermedio',
+    pasos: [
+      paso({
+        id: 'cam-p1',
+        titulo: 'Identificar la version del programa de correo',
+        bloques: [
+          tarea('cam-p1-t1', 'Confirmar el buzon de la persona de ejemplo'),
+          {
+            ...tarea('cam-p1-d1', '¿Que version del programa de correo de ejemplo usas?', 'decision'),
+            opciones: [
+              {
+                id: 'cam-clasica',
+                titulo: 'Version clasica',
+                descripcion: 'Veo el menu Archivo arriba.',
+                destino: { tipo: 'paso', pasoId: 'cam-p2' },
+              },
+              {
+                id: 'cam-nueva',
+                titulo: 'Version nueva',
+                descripcion: 'Uso la version nueva del programa.',
+                destino: { tipo: 'paso', pasoId: 'cam-p3' },
+              },
+            ],
+          },
+        ],
+      }),
+      {
+        ...paso({
+          id: 'cam-p2',
+          titulo: 'Exportar desde la version clasica',
+          bloques: [
+            tarea('cam-p2-t1', 'Abrir Archivo y elegir Exportar de ejemplo'),
+            tarea('cam-p2-t2', 'Marcar la cuenta completa con sus subcarpetas'),
+          ],
+        }),
+        alTerminar: { tipo: 'paso', pasoId: 'cam-p4' },
+      },
+      paso({
+        id: 'cam-p3',
+        titulo: 'Exportar desde la version nueva',
+        bloques: [
+          tarea('cam-p3-t1', 'Abrir Configuracion y elegir Exportar de ejemplo'),
+          tarea('cam-p3-t2', 'Seleccionar el buzon completo en el asistente'),
+        ],
+      }),
+      paso({
+        id: 'cam-p4',
+        titulo: 'Guardar y comprobar el archivo de ejemplo',
+        bloques: [
+          tarea('cam-p4-t1', 'Guardar el archivo en una carpeta local de ejemplo'),
+          tarea('cam-p4-t2', 'Comprobar que el archivo existe y no esta vacio', 'verificacion'),
+        ],
+      }),
+      paso({
+        id: 'cam-p5',
+        titulo: 'Copiar el archivo al servidor de ejemplo',
+        bloques: [tarea('cam-p5-t1', 'Copiar el archivo a la carpeta de la persona en el servidor de ejemplo')],
+      }),
+    ],
+  },
+})
+
 const ARTICULOS: Articulo[] = [
   GUIA_COMPROBAR_RED,
   GUIA_LOCALIZAR_RESOLUCION,
@@ -896,6 +974,7 @@ const ARTICULOS: Articulo[] = [
   GUIA_TITULO_LARGO,
   GUIA_TITULO_LARGO_BORRADOR,
   GUIA_CON_DECISION,
+  GUIA_CAMINOS,
   GUIA_SEGUNDA,
   GUIA_VARIAS_OBLIGATORIAS,
   ...RELLENO,

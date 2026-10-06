@@ -15,6 +15,7 @@ import {
   normalizarProcedimiento,
   prepararProcedimientoParaGuardar,
 } from '../../lib/procedimiento'
+import { problemasDeRutas } from '../../lib/rutaProcedimiento'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { padreDe } from '../../lib/navegacion'
 import { siguienteVersion } from '../../lib/version'
@@ -266,6 +267,9 @@ export function ArticuloForm() {
   const [pestana, setPestana] = useState<PestanaEditor>('general')
   // Error de validacion del envio (hoy solo el titulo obligatorio).
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
+  // Se intentó guardar con una decisión inválida (tarea 302): desde ahí, y
+  // mientras quede algo por corregir, "Pasos" lo lista arriba.
+  const [revisarRutas, setRevisarRutas] = useState(false)
 
   // A donde lleva la X. Se deriva igual que en `BarraTarea` para que
   // cancelar acabe exactamente donde acababa antes; lo unico que se
@@ -605,6 +609,12 @@ export function ArticuloForm() {
   )
   const revisionCuando = useMemo(() => revisarCuandoUsar(descripcion), [descripcion])
 
+  // LAS DECISIONES Y LOS CAMINOS DE LA GUÍA (tarea 302). Lo que bloquea no
+  // deja guardar; lo demás avisa. El editor de pasos lo enseña en su sitio
+  // y aquí decide el guardado: la misma lista para los dos.
+  const problemasRutas = useMemo(() => problemasDeRutas({ pasos }), [pasos])
+  const rutasPorCorregir = problemasRutas.filter((problema) => problema.bloquea)
+
   // LO QUE PIDEN LAS GUÍAS QUE ESTA REUTILIZA, SOLO COMO REFERENCIA (tarea
   // 289, fase 4, con su criterio adicional). REGLA DEFINITIVA: un requisito
   // de una guía reutilizada NO se convierte automáticamente en requisito de
@@ -850,6 +860,17 @@ export function ArticuloForm() {
       irA('general')
       return
     }
+    // UNA DECISIÓN NO SE GUARDA INVÁLIDA (tarea 302): sin pregunta, con una
+    // sola opción, sin título o sin destino válido. Se lleva al autor al
+    // paso del primer problema, donde ya está señalado. Las decisiones de
+    // Sí/No de antes no pasan por estas reglas.
+    if (rutasPorCorregir.length > 0) {
+      setRevisarRutas(true)
+      irA('pasos')
+      setPasoActivoId(rutasPorCorregir[0].pasoId)
+      return
+    }
+    setRevisarRutas(false)
     // NO SE PUBLICA UNA GUIA NUEVA CON DEBERES PENDIENTES (tarea 7 del
     // encargo): el contenido heredado es una decision que el autor
     // puede tomar ahora, y publicarlo sin tomarla la convierte en deuda
@@ -1329,10 +1350,41 @@ export function ArticuloForm() {
                 <TituloSeccion>Pasos</TituloSeccion>
                 <span className="text-[11px] text-noct-neutral-600">{resumenPasos}</span>
               </div>
+              {revisarRutas && rutasPorCorregir.length > 0 && (
+                <div role="alert" className="mb-3 rounded-xl border border-noct-error/45 bg-noct-error/[.08] px-3.5 py-3">
+                  <p className="flex items-center gap-2 text-[13.5px] font-medium text-noct-error">
+                    <Warning size={15} className="shrink-0" aria-hidden />
+                    Antes de guardar, corrige {rutasPorCorregir.length === 1 ? 'esto' : 'estas cosas'}:
+                  </p>
+                  <ul className="mt-1.5 flex flex-col">
+                    {rutasPorCorregir.map((problema) => {
+                      const numero = pasos.findIndex((paso) => paso.id === problema.pasoId) + 1
+                      return (
+                        <li key={`${problema.pasoId}-${problema.decisionId}-${problema.opcionId}-${problema.mensaje}`}>
+                          <button
+                            type="button"
+                            onClick={() => setPasoActivoId(problema.pasoId)}
+                            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-1.5 text-left hover:bg-noct-error/10"
+                          >
+                            <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-noct-error/85">
+                              Paso {numero}
+                            </span>
+                            <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-noct-neutral-200">
+                              {problema.mensaje}
+                            </span>
+                            <CaretRight size={12} className="shrink-0 text-noct-error/80" aria-hidden />
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
               <PasosEditor
                 articuloId={id}
                 pasos={pasos}
                 onPasosChange={setPasos}
+                problemasRutas={problemasRutas}
                 dispositivosAfectados={dispositivosAfectados}
                 pasoActivoId={pasoActivoId}
                 onPasoActivoChange={setPasoActivoId}
