@@ -39,7 +39,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 1 | Modelo: tipos, normalización, la ruta, las respuestas en el avance y el conteo sobre la ruta | Hecha |
 | 2 | Editor: la decisión con opciones, sus destinos, "al terminar" del paso y lo que no deja guardar | Hecha |
 | 3 | Ejecución: la pantalla de la decisión, la navegación por la ruta, "Anterior" y el progreso | Hecha |
-| 4 | La guía real: Backup de Outlook por versión, en Supabase y después del despliegue | Pendiente |
+| 4 | La guía real: Backup de Outlook por versión, en Supabase y después del despliegue | Hecha (código en producción `c164282` con CI en verde; guía actualizada el 2026-10-06 con su versión anterior en el historial) |
 | 5 | Pruebas, compatibilidad, revisión de código, CI, despliegue y archivo | Pendiente |
 
 ### 302. Decisiones con opciones y rutas en las guías
@@ -48,7 +48,8 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Descripción:** la tarea `decision` admite `opciones` (título, ayuda opcional y destino: continuar, otro paso posterior, otra guía en el flujo o terminar) y un paso puede decir dónde sigue al terminar, que es lo que deja juntar los caminos. La ruta se calcula con las respuestas de la ejecución (guardadas en el avance local) y todo lo que cuenta pasos (terminar, "Sin terminar", "Vas en el paso N de M", el progreso) cuenta sobre ella; cambiar una respuesta reinicia lo que venía después. El editor permite crearlas sin JSON y no deja guardarlas inválidas. Caso real: la guía "Crear y almacenar una copia de seguridad (Backup) del correo de Outlook (.pst)".
 - **Motivo:** encargo del usuario del 2026-10-06. La guía de Outlook mezcla las instrucciones de las dos versiones en las mismas tareas.
 - **Impacto:** alto en la ejecución y en el editor de guías; ninguna guía actual cambia de comportamiento.
-- **Prioridad:** Alta. **Estado:** En progreso (fases 1, 2 y 3 hechas; falta la guía real y el cierre).
+- **Prioridad:** Alta. **Estado:** En progreso (fases 1 a 4 hechas; falta el cierre: revisión final, pruebas en dispositivo y archivo).
+- **Paso del usuario pendiente:** aceptar "Actualización disponible" en cada teléfono y PC del equipo antes de abrir o editar la guía de Outlook (regla 24); después, abrirla y comprobar la pregunta y los dos caminos.
 - **Área afectada:** `src/lib/db.ts`, `src/lib/procedimiento.ts`, `src/lib/rutaProcedimiento.ts` (nuevo), `src/lib/progresoPasos.ts`, `src/lib/grafo.ts`, `src/features/soluciones/` (`cierrePaso.ts`, `accionGuia.ts`, `sinTerminar.ts`, `validacionVinculos.ts`, `CategoriaPage.tsx`; en la fase 2, `EditorDecision.tsx`, `rutasEditor.ts`, `controlesEditor.tsx`, `PasosEditor.tsx`, `bloquesEditor.ts`, `ArticuloForm.tsx`; en la fase 3, `RespuestasDecision.tsx` (nuevo), `useProcedimientoEjecucion.ts`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `tareasFoco.ts`, `ProcedimientoVista.tsx`, `HojaPasos.tsx`, `RutaProcedimiento.tsx`, `rutaVisual.ts`, `EstadoEjecucion.tsx`, `estadoPasos.ts`, `PantallaPreparacion.tsx`, `IntroduccionGuia.tsx`, `ArticuloPage.tsx`, `VistaPreviaArticulo.tsx`, `flujoContinuo.ts`), `src/components/BarraReanudar.tsx`, `src/features/inicio/` (`resolver.ts`, `ResolverPage.tsx`, `SeccionesAgenda.tsx`) y `src/features/diagnostico/DiagnosticoRunPage.tsx`. La guía real vive solo en Supabase (el repositorio es público: su contenido no se sube).
 - **Dependencias:** ninguna. Sin migración: todo vive en el JSON `procedimiento` y en el avance local. Orden de despliegue de la regla 24: primero el código, después los teléfonos y solo entonces la guía real.
 

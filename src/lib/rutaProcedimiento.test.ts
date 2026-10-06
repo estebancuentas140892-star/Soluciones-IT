@@ -518,6 +518,58 @@ describe('aplicarEleccion', () => {
   })
 })
 
+// LA FORMA DE LA GUÍA REAL (tarea 302, fase 4), con textos inventados: el
+// contenido real vive solo en Supabase. Seis pasos: la pregunta al final del
+// primero (tras confirmar el buzón), un paso por versión (el clásico sigue
+// en el común con "al terminar"; el nuevo, por el orden) y tres comunes.
+describe('la forma de la copia de seguridad de Outlook', () => {
+  function copiaReal(): { pasos: PasoProcedimiento[] } {
+    return {
+      pasos: [
+        paso('identificar', [
+          tarea('confirmar-correo'),
+          decision('version', [
+            opcion('clasico', 'Outlook clásico', { tipo: 'paso', pasoId: 'exportar-clasico' }),
+            opcion('nuevo', 'Nuevo Outlook', { tipo: 'paso', pasoId: 'exportar-nuevo' }),
+          ]),
+        ]),
+        paso(
+          'exportar-clasico',
+          [tarea('comprobar-descarga'), tarea('iniciar-clasico'), tarea('cuenta-raiz')],
+          { tipo: 'paso', pasoId: 'guardar' },
+        ),
+        paso('exportar-nuevo', [tarea('iniciar-nuevo'), tarea('buzon-completo')]),
+        paso('guardar'),
+        paso('conectar'),
+        paso('copiar'),
+      ],
+    }
+  }
+
+  it('los dos caminos tienen cinco pasos y se juntan en los tres comunes, sin duplicarlos', () => {
+    expect(largoDeLaRuta(copiaReal())).toEqual({ minimo: 5, maximo: 5 })
+    expect(idsDeRuta(copiaReal(), { version: 'clasico' })).toEqual([
+      'identificar',
+      'exportar-clasico',
+      'guardar',
+      'conectar',
+      'copiar',
+    ])
+    expect(idsDeRuta(copiaReal(), { version: 'nuevo' })).toEqual([
+      'identificar',
+      'exportar-nuevo',
+      'guardar',
+      'conectar',
+      'copiar',
+    ])
+  })
+
+  it('el editor la deja guardar y todos sus pasos tienen camino', () => {
+    expect(problemasDeRutas(copiaReal())).toEqual([])
+    expect(pasosAlcanzables(copiaReal()).size).toBe(6)
+  })
+})
+
 describe('guiasDePaso', () => {
   it('reúne las guías del paso, de sus tareas, de su contingencia y de sus decisiones', () => {
     const p = {
