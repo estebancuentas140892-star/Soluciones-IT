@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-06
 
+### Corregido (guías, tarea 302, fase 5): la lectura de una guía reutilizada enseña solo el camino elegido
+
+**Área modificada:** `src/features/soluciones/PasosEnLectura.tsx`; pruebas (`decisionesRamificadas.test.tsx`: una guía reutilizada con su propia pregunta, respondida dentro del flujo).
+**Tipo:** Corregido y Documentación (COMPONENTES_UI 3.8zb, TAREAS, TAREAS_ARCHIVO).
+**Motivo:** revisión final de la tarea 302. Un paso que reutiliza una guía con decisiones con opciones se leía, al revisarlo o consultarlo, con los pasos de los dos caminos: justo lo que el encargo pide evitar.
+**Qué cambia:** `PasosEnLectura` lee la ruta de esa guía con sus respuestas en esta ejecución (sin respuesta, hasta la pregunta). La prueba nueva recorre además una pregunta con opciones dentro de lo reutilizado (nivel 1): se responde en el flujo, sigue por su camino y la guía que se abrió continúa.
+**Impacto esperado:** ninguna guía actual cambia (las que no tienen opciones se leen enteras, como siempre).
+
 ### Cambiado (contenido en Supabase, tarea 302, fase 4): la copia de seguridad del correo de Outlook pregunta la versión
 
 **Área modificada:** Supabase, tabla `articulos` (una fila: la guía «Crear y almacenar una copia de seguridad (Backup) del correo de Outlook (.pst)», en borrador; solo su JSON `procedimiento`) y tabla `historial` (una entrada `procedimiento` con el JSON anterior completo y el nuevo, motivo "Tarea 302…"). En el repositorio, solo una prueba con la forma de la guía (`rutaProcedimiento.test.ts`, textos inventados): el contenido real no se sube (el repositorio es público).

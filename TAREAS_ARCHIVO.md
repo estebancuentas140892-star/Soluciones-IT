@@ -1,5 +1,31 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-06: decisiones con opciones y rutas en las guías
+
+### 302. Decisiones con opciones y rutas en las guías
+
+**Estado:** Completada (2026-10-06). Encargo del usuario: que una guía pueda preguntar con varias opciones ("¿Qué versión de Outlook estás utilizando?") y llevar al técnico solo por el procedimiento de su respuesta, juntando los caminos en los pasos comunes sin duplicarlos. Sin rediseño general; "Resolver → encontrar → ejecutar → solucionar" y "una pantalla, una acción clara" se conservan. Rama `feat/decisiones-ramificadas` desde `058762e`, un commit por fase, a `main` por avance rápido. Detalle de fondo en AD-065 y RN-064.
+
+**Qué cambió:**
+
+- **Fase 1, modelo** (`f2599cc`, `rutaProcedimiento.ts`): `opciones` en la tarea `decision` (título, ayuda opcional y destino: continuar, otro paso posterior, otra guía en el flujo o terminar) y `alTerminar` en el paso, en el JSON `procedimiento` sin migración; la ruta con las respuestas (solo saltos hacia adelante), las respuestas en el avance local (`elecciones`) y todo lo que cuenta pasos sobre la ruta. Las decisiones de Sí/No siguen igual.
+- **Fase 2, editor** (`203023b`, `EditorDecision.tsx`, `rutasEditor.ts`): "Decisión" con dos opciones; cada una con título, ayuda opcional, destino elegido en hojas, subir, bajar y quitar, y el camino que recorre; "Al terminar" del paso para juntar caminos; no se guarda una decisión inválida.
+- **Fase 3, ejecución** (`c164282`, `RespuestasDecision.tsx`, `useProcedimientoEjecucion.ts`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `ProcedimientoVista.tsx` y los indicadores): la pregunta como pantalla propia con una tarjeta por respuesta (tocar es responder); la ejecución recorre la ruta (contador, índice, "Anterior", retomar, terminar) y sigue cuando la respuesta llega a ella; cambiar la respuesta recalcula sin pasos fantasma; la guía de una respuesta se hace en el flujo; el total se sabe si los caminos miden lo mismo.
+- **Fase 4, la guía real** (`77a4fed`, en Supabase): la copia de seguridad del correo de Outlook pregunta la versión en el paso 1; un paso por versión (Outlook clásico, que sigue en el común con "al terminar", y Nuevo Outlook) y los tres pasos comunes sin duplicar. Solo se separó el contenido que ya existía; el JSON anterior queda en el historial de la guía.
+- **Fase 5, cierre:** `PasosEnLectura` lee solo la ruta de lo reutilizado; prueba de una pregunta dentro de una guía reutilizada; revisión del diff (sin `any`, sin claves inestables nuevas, saltos solo hacia adelante); documentación.
+
+**No se hizo, a propósito:**
+
+- Ni el Home, ni el buscador general, ni la navegación global, ni Equipos, Bóveda, Personas, inventarios, autenticación o el esquema de Supabase: todo vive en el JSON `procedimiento` y en el avance local.
+- No se convirtió ninguna decisión de Sí/No ni se creó persistencia nueva: las respuestas viven en el avance local, como el resto de la ejecución (recargar las conserva; empezar de nuevo las borra).
+- En la guía real no se inventó ningún recorrido. La nota del cuadro de contraseña del .pst (solo de Outlook clásico) sigue en el paso común, ahora junto a "Finaliza la exportación…", porque ese cuadro aparece al finalizar; ocultarla en Nuevo Outlook exigiría partir "Guardar y comprobar" por versión (decisión de contenido para ChatGPT, regla 26).
+
+**Verificación:** suite completa 179 archivos y 2756 pruebas (178 y 2734 al empezar la fase 3, ya con las fases 1 y 2): 9 de flujo en `decisionesRamificadas.test.tsx` (dos caminos, otra guía, cambio de respuesta, "Anterior", recarga, paso entero, lectura, caminos desiguales y una pregunta dentro de lo reutilizado) y las puras de la ruta, entre ellas la forma de la guía real (dos caminos de cinco pasos, sin problemas para el editor). `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` en verde. En el navegador (banco de pruebas local): la pregunta con foco de teclado visible y Enter, las tarjetas apiladas a 375 px (344 px de ancho, 74 a 99 px de alto, sin recortes) y de dos en dos en escritorio, el índice solo con la ruta, el cambio de respuesta sin pasos fantasma y la vista de paso entero. CI en verde y despliegue de `c164282` confirmados (`version.json` y las cadenas nuevas en los chunks).
+
+**Límites conocidos:** una respuesta que abre una guía que no está en el dispositivo, o dentro de una guía reutilizada (un solo nivel), no bloquea y la ruta sigue; una versión anterior de la app ejecuta de corrido una guía con opciones y, si la guarda, las pierde (por eso el orden de despliegue de la regla 24).
+
+**Paso del usuario:** aceptar "Actualización disponible" en cada teléfono y PC antes de abrir o editar la guía de Outlook; después, abrirla y comprobar la pregunta y los dos caminos.
+
 ## Encargo del 2026-10-03: la credencial del equipo en una guía
 
 ### 290. La credencial del equipo en una guía

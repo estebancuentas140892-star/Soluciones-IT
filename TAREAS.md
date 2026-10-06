@@ -30,28 +30,9 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **PASO DEL USUARIO PENDIENTE (urgente desde la 271):** desactivar el registro público de Auth (`supabase/INSTRUCCIONES.md` sección 4): Supabase > Authentication > Sign In / Providers > Email > apagar "Allow new users to sign up". Última lectura: `disable_signup: false` el 2026-09-25. (La red del entorno "Soluciones IT - NUBE" está en **Full** desde el 2026-09-25: las sesiones ya llegan a producción, a Supabase y a `cdn.sheetjs.com`.)
 
-**En proceso: la 302** (2026-10-06, decisiones con opciones y rutas en las guías). La 279 sigue analizada y a la espera de la decisión del usuario, sin código.
+**PASO DEL USUARIO PENDIENTE (tarea 302, 2026-10-06):** aceptar "Actualización disponible" en cada teléfono y PC del equipo (en escritorio, recargar) **antes** de abrir o editar la guía "Crear y almacenar una copia de seguridad (Backup) del correo de Outlook (.pst)", que ya pregunta la versión de Outlook. Una versión anterior la enseña de corrido y, si la guardara, perdería las opciones (el JSON anterior y el nuevo están en "Ver historial" de la guía). Después, abrirla en un teléfono y comprobar la pregunta y los dos caminos.
 
-**DECISIONES CON OPCIONES Y RUTAS EN LAS GUÍAS (2026-10-06, tarea 302).** Encargo del usuario: que una guía pueda preguntar con varias opciones ("¿Qué versión de Outlook estás utilizando?": "Outlook clásico" o "Nuevo Outlook") y llevar al técnico solo por el procedimiento que corresponde a su respuesta, para que los caminos vuelvan a juntarse en los pasos comunes sin duplicarlos. Sin rediseño general; se conservan "Resolver → encontrar → ejecutar → solucionar" y "una pantalla, una acción clara". Las decisiones de Sí/No que ya existen siguen igual. Rama `feat/decisiones-ramificadas` desde `058762e`, un commit y un push por fase, a `main` por avance rápido con CI en verde. El número es el 302 porque del 291 al 301 son de la auditoría UX que avanza en la rama `feat/auditoria-ux` (las fases 3.3 y 3.7 de esa auditoría, ejecución y editor de guías, tocan los mismos componentes: quien llegue segundo a `main` integra).
-
-| Fase | Qué | Estado |
-|---|---|---|
-| 1 | Modelo: tipos, normalización, la ruta, las respuestas en el avance y el conteo sobre la ruta | Hecha |
-| 2 | Editor: la decisión con opciones, sus destinos, "al terminar" del paso y lo que no deja guardar | Hecha |
-| 3 | Ejecución: la pantalla de la decisión, la navegación por la ruta, "Anterior" y el progreso | Hecha |
-| 4 | La guía real: Backup de Outlook por versión, en Supabase y después del despliegue | Hecha (código en producción `c164282` con CI en verde; guía actualizada el 2026-10-06 con su versión anterior en el historial) |
-| 5 | Pruebas, compatibilidad, revisión de código, CI, despliegue y archivo | Pendiente |
-
-### 302. Decisiones con opciones y rutas en las guías
-
-- **Título:** una decisión con varias opciones con nombre, cada una con su destino, y la ejecución que recorre solo la ruta elegida.
-- **Descripción:** la tarea `decision` admite `opciones` (título, ayuda opcional y destino: continuar, otro paso posterior, otra guía en el flujo o terminar) y un paso puede decir dónde sigue al terminar, que es lo que deja juntar los caminos. La ruta se calcula con las respuestas de la ejecución (guardadas en el avance local) y todo lo que cuenta pasos (terminar, "Sin terminar", "Vas en el paso N de M", el progreso) cuenta sobre ella; cambiar una respuesta reinicia lo que venía después. El editor permite crearlas sin JSON y no deja guardarlas inválidas. Caso real: la guía "Crear y almacenar una copia de seguridad (Backup) del correo de Outlook (.pst)".
-- **Motivo:** encargo del usuario del 2026-10-06. La guía de Outlook mezcla las instrucciones de las dos versiones en las mismas tareas.
-- **Impacto:** alto en la ejecución y en el editor de guías; ninguna guía actual cambia de comportamiento.
-- **Prioridad:** Alta. **Estado:** En progreso (fases 1 a 4 hechas; falta el cierre: revisión final, pruebas en dispositivo y archivo).
-- **Paso del usuario pendiente:** aceptar "Actualización disponible" en cada teléfono y PC del equipo antes de abrir o editar la guía de Outlook (regla 24); después, abrirla y comprobar la pregunta y los dos caminos.
-- **Área afectada:** `src/lib/db.ts`, `src/lib/procedimiento.ts`, `src/lib/rutaProcedimiento.ts` (nuevo), `src/lib/progresoPasos.ts`, `src/lib/grafo.ts`, `src/features/soluciones/` (`cierrePaso.ts`, `accionGuia.ts`, `sinTerminar.ts`, `validacionVinculos.ts`, `CategoriaPage.tsx`; en la fase 2, `EditorDecision.tsx`, `rutasEditor.ts`, `controlesEditor.tsx`, `PasosEditor.tsx`, `bloquesEditor.ts`, `ArticuloForm.tsx`; en la fase 3, `RespuestasDecision.tsx` (nuevo), `useProcedimientoEjecucion.ts`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `tareasFoco.ts`, `ProcedimientoVista.tsx`, `HojaPasos.tsx`, `RutaProcedimiento.tsx`, `rutaVisual.ts`, `EstadoEjecucion.tsx`, `estadoPasos.ts`, `PantallaPreparacion.tsx`, `IntroduccionGuia.tsx`, `ArticuloPage.tsx`, `VistaPreviaArticulo.tsx`, `flujoContinuo.ts`), `src/components/BarraReanudar.tsx`, `src/features/inicio/` (`resolver.ts`, `ResolverPage.tsx`, `SeccionesAgenda.tsx`) y `src/features/diagnostico/DiagnosticoRunPage.tsx`. La guía real vive solo en Supabase (el repositorio es público: su contenido no se sube).
-- **Dependencias:** ninguna. Sin migración: todo vive en el JSON `procedimiento` y en el avance local. Orden de despliegue de la regla 24: primero el código, después los teléfonos y solo entonces la guía real.
+**En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso: la 302 (decisiones con opciones y rutas en las guías) se cerró el 2026-10-06 y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 

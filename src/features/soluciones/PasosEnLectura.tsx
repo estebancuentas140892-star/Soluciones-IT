@@ -2,6 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
+import { rutaDe } from '../../lib/rutaProcedimiento'
+import { useAvanceProgreso, useClaveVinculo } from './contextoEjecucion'
 
 // LO QUE HACE UN PASO QUE REUTILIZA OTRA GUÍA, PARA LEERLO (tarea 289,
 // fase 3).
@@ -11,18 +13,25 @@ import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
 // nada: se lee lo que el paso pide, con los títulos y las acciones de la
 // guía reutilizada, sin casillas, sin numeración propia (la del paso es
 // la de la guía que se abrió) y sin decir de dónde salen.
+//
+// Solo los pasos de SU RUTA (tarea 302): si la guía reutilizada tiene
+// decisiones con opciones, los del camino que se eligió en esta ejecución,
+// y sin respuesta, hasta la pregunta. Los del otro camino no se leen aquí
+// como no se recorren allí.
 
 export function PasosEnLectura({ guiaId }: { guiaId: string }) {
   const articulo = useLiveQuery(async () => (await db.articulos.get(guiaId)) ?? null, [guiaId])
+  const progreso = useAvanceProgreso(useClaveVinculo(guiaId))
   const procedimiento = useMemo(
     () => normalizarProcedimiento(articulo && !articulo.eliminadoEn ? articulo.procedimiento : null),
     [articulo],
   )
   if (!procedimiento || procedimiento.pasos.length === 0) return null
+  const ruta = rutaDe(procedimiento, progreso?.elecciones)
 
   return (
     <ul aria-label="Lo que se hace en este paso" className="flex flex-col gap-3 rounded-xl border border-noct-divider bg-noct-surface px-4 py-3.5">
-      {procedimiento.pasos.map((paso) => {
+      {ruta.pasos.map((paso) => {
         const tareas = tareasDe(paso.bloques).filter((t) => t.texto.trim() !== '')
         return (
           <li key={paso.id} className="flex flex-col gap-1">

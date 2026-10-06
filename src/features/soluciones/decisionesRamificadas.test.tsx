@@ -293,6 +293,51 @@ describe('una respuesta que abre otra guía', () => {
   })
 })
 
+describe('una guía reutilizada con su propia pregunta', () => {
+  it('se responde dentro del flujo, sigue por su camino y al revisarla se lee solo ese camino', async () => {
+    const elegir = pasoPrueba('ver-p1', 'Elegir la versión', [])
+    elegir.bloques = [
+      decision('ver-d', '¿Qué versión del programa de prueba tienes?', [
+        { id: 'ver-clasica', titulo: 'La clásica', descripcion: '', destino: { tipo: 'paso', pasoId: 'ver-p2' } },
+        { id: 'ver-nueva', titulo: 'La nueva', descripcion: '', destino: { tipo: 'paso', pasoId: 'ver-p3' } },
+      ]),
+    ]
+    await sembrarGuia({
+      id: 'guia-version',
+      titulo: 'Exportar según la versión de prueba',
+      pasos: [
+        elegir,
+        { ...pasoPrueba('ver-p2', 'Exportar en la clásica', ['Hacer lo de la clásica']), alTerminar: { tipo: 'fin' } },
+        pasoPrueba('ver-p3', 'Exportar en la nueva', ['Hacer lo de la nueva']),
+      ],
+    })
+    await sembrarGuia({
+      id: 'guia-principal',
+      titulo: 'Guía que reutiliza la exportación',
+      pasos: [
+        {
+          ...pasoPrueba('pri-p1', 'Exportar el correo de prueba', []),
+          subArticuloId: 'guia-version',
+          subArticuloTitulo: 'Exportar según la versión de prueba',
+        },
+        pasoPrueba('pri-p2', 'Terminar la prueba', ['Cerrar todo']),
+      ],
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-principal')
+
+    await tocar(await esperar(() => opcion('La nueva'), 'la pregunta de la guía reutilizada'))
+    await esperar(() => textoPantalla().includes('Hacer lo de la nueva'), 'el camino elegido, en el flujo')
+    expect(textoPantalla()).not.toContain('Hacer lo de la clásica')
+    await tocar(await esperar(() => principal('Completar y seguir'), 'terminar lo reutilizado'))
+    await esperar(() => textoPantalla().includes('Cerrar todo'), 'el paso siguiente de la guía que se abrió')
+
+    // Revisado con "Anterior", el paso se lee: solo el camino que se recorrió.
+    await tocar(await esperarControl(/^Anterior/))
+    await esperar(() => textoPantalla().includes('Hacer lo de la nueva'), 'el paso hecho, para leerlo')
+    expect(textoPantalla()).not.toContain('Hacer lo de la clásica')
+  })
+})
+
 describe('la decisión con opciones en la vista del paso entero', () => {
   it('se responde tocando la opción y lleva a su paso', async () => {
     await sembrarCopia()
