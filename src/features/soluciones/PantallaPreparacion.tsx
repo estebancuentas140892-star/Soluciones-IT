@@ -2,6 +2,8 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { CaretLeft } from '../../components/iconos'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { BOTON_ANTERIOR, BotonPrincipal } from './ModoFoco'
+import type { LargoDeRuta } from '../../lib/rutaProcedimiento'
+import { cantidadDePasos } from './estadoPasos'
 import type { Orientacion, PantallaPreparacion } from './preparacionGuia'
 import { subirElContenedor } from './subirElContenedor'
 
@@ -29,9 +31,10 @@ function Seccion({ rotulo, children }: { rotulo: string; children: ReactNode }) 
   )
 }
 
-// "7 pasos · unos 15 min": cuánto cuesta, en una línea y en voz baja.
-function resumen(totalPasos: number, tiempoMin: number | null): string {
-  const pasos = totalPasos === 1 ? '1 paso' : `${totalPasos} pasos`
+// "7 pasos · unos 15 min": cuánto cuesta, en una línea y en voz baja. Con
+// caminos que no miden lo mismo (tarea 302), "Entre 4 y 6 pasos".
+function resumen(largo: LargoDeRuta, tiempoMin: number | null): string {
+  const pasos = cantidadDePasos(largo)
   return tiempoMin ? `${pasos} · unos ${tiempoMin} min` : pasos
 }
 
@@ -40,7 +43,7 @@ export function PantallaPreparacion({
   titulo,
   orientacion,
   requisitos,
-  totalPasos,
+  largo,
   tiempoMin,
   siguienteEsRequisitos,
   onSeguir,
@@ -51,7 +54,8 @@ export function PantallaPreparacion({
   titulo: string
   orientacion: Orientacion | null
   requisitos: string[]
-  totalPasos: number
+  /** Los pasos que recorre la guía: con decisiones con opciones, los del camino más corto y los del más largo. */
+  largo: LargoDeRuta
   tiempoMin: number | null
   /** Desde la orientación, ¿lo siguiente son los requisitos o ya la primera acción? */
   siguienteEsRequisitos: boolean
@@ -85,7 +89,7 @@ export function PantallaPreparacion({
               >
                 {titulo}
               </h2>
-              {totalPasos > 0 && <p className="text-[13.5px] text-noct-neutral-400">{resumen(totalPasos, tiempoMin)}</p>}
+              {largo.maximo > 0 && <p className="text-[13.5px] text-noct-neutral-400">{resumen(largo, tiempoMin)}</p>}
             </div>
             {orientacion?.cuandoUsar && (
               <Seccion rotulo="Cuándo usarla">

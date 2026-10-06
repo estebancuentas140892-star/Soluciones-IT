@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import type { NivelDificultad, Procedimiento } from '../../lib/db'
+import type { LargoDeRuta } from '../../lib/rutaProcedimiento'
 import { ChartBar, Circle, Clock, ListPlus, type IconoProps } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
+import { cantidadDePasos } from './estadoPasos'
 import { requisitosEfectivos } from './preparacionGuia'
 
 // LA FICHA PRESENTA, LA EJECUCIÓN EJECUTA (encargo del 2026-09-10,
@@ -79,21 +81,23 @@ export function ListaIntro({ titulo, items }: { titulo: string; items: string[] 
 export function ResumenGuia({
   tiempoMin,
   dificultad,
-  totalPasos,
+  largo,
 }: {
   tiempoMin: number | null
   dificultad: NivelDificultad | null
-  totalPasos: number
+  // Los pasos que recorre la guía (tarea 302): con decisiones con opciones,
+  // los de su camino más corto y los del más largo ("Entre 4 y 6 pasos").
+  largo: LargoDeRuta
 }) {
   const datos: { Icono: (props: IconoProps) => ReactNode; rotulo: string; valor: string }[] = []
   if (tiempoMin) datos.push({ Icono: Clock, rotulo: 'Tiempo', valor: `${tiempoMin} min` })
   if (dificultad)
     datos.push({ Icono: ChartBar, rotulo: 'Dificultad', valor: ETIQUETA_DIFICULTAD[dificultad] })
-  if (totalPasos > 0)
+  if (largo.maximo > 0)
     datos.push({
       Icono: ListPlus,
       rotulo: 'Pasos',
-      valor: totalPasos === 1 ? '1 paso' : `${totalPasos} pasos`,
+      valor: cantidadDePasos(largo),
     })
 
   if (datos.length === 0) return null

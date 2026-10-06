@@ -166,7 +166,7 @@ export function ResolverPage() {
       new Map(
         articulosSinTerminar(articulos, progresos).map((s) => [
           s.articulo.id,
-          { hechos: s.hechos, total: s.total, rutaAbierta: s.rutaAbierta },
+          { hechos: s.hechos, total: s.total, totalAbierto: s.totalAbierto },
         ]),
       ),
     [articulos, progresos],
@@ -456,7 +456,7 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
       ? pasoDeTotal(
           Math.min(guia.avance.hechos + 1, guia.avance.total),
           guia.avance.total,
-          guia.avance.rutaAbierta ?? false,
+          guia.avance.totalAbierto ?? false,
         )
       : [conPreguntas ? ROTULO_RECORRIDO : guia.categoriaNombre, cuando].filter(Boolean).join(' · '))
   const Icono = conPreguntas ? TreeStructure : BookOpen

@@ -6,9 +6,12 @@ import {
   avanceDeLaRuta,
   caminoDeOpcion,
   decisionDeRuta,
+  guiaDeLaRespuesta,
+  guiasDeLasOpciones,
   guiasDePaso,
   hechosDeRuta,
   idsDeRuta,
+  largoDeLaRuta,
   opcionElegida,
   pasosAlcanzables,
   problemasDeRutas,
@@ -352,6 +355,89 @@ describe('hechosDeRuta y avanceDeLaRuta', () => {
 
   it('con la ruta abierta nunca está lista', () => {
     expect(avanceDeLaRuta(guiaOutlook(), { pasosHechos: ['identificar'] }).pasosListos).toBe(false)
+  })
+
+  it('sin responder, el total se sabe si todos los caminos miden lo mismo', () => {
+    // Clásico: identificar, clasico, guardar, servidor. Nuevo: identificar, nuevo, guardar, servidor.
+    expect(avanceDeLaRuta(guiaOutlook(), { pasosHechos: [] })).toMatchObject({ hechos: 0, total: 4, totalAbierto: false })
+  })
+
+  it('sin responder y con caminos de distinto largo, el total queda abierto', () => {
+    const guia = {
+      pasos: [
+        paso('a', [decision('d', [opcion('corto', 'Corto', { tipo: 'paso', pasoId: 'c' }), opcion('largo', 'Largo')])]),
+        paso('b'),
+        paso('c'),
+      ],
+    }
+    expect(avanceDeLaRuta(guia, { pasosHechos: [] })).toMatchObject({ total: 1, totalAbierto: true })
+    expect(avanceDeLaRuta(guia, { elecciones: { d: 'largo' } })).toMatchObject({ total: 3, totalAbierto: false })
+  })
+})
+
+describe('largoDeLaRuta', () => {
+  it('sin decisiones, son todos los pasos', () => {
+    expect(largoDeLaRuta({ pasos: [paso('a'), paso('b'), paso('c')] })).toEqual({ minimo: 3, maximo: 3 })
+    expect(largoDeLaRuta({ pasos: [] })).toEqual({ minimo: 0, maximo: 0 })
+  })
+
+  it('con los dos caminos de Outlook, cuatro pasos se elija lo que se elija', () => {
+    expect(largoDeLaRuta(guiaOutlook())).toEqual({ minimo: 4, maximo: 4 })
+    expect(largoDeLaRuta(guiaOutlook(), { version: 'clasico' })).toEqual({ minimo: 4, maximo: 4 })
+  })
+
+  it('da el camino más corto y el más largo, y una respuesta dada cierra el suyo', () => {
+    const guia = {
+      pasos: [
+        paso('a', [
+          decision('d', [
+            opcion('fin', 'Nada más', { tipo: 'fin' }),
+            opcion('salto', 'Saltar', { tipo: 'paso', pasoId: 'c' }),
+            opcion('todo', 'Todo'),
+          ]),
+        ]),
+        paso('b'),
+        paso('c'),
+      ],
+    }
+    expect(largoDeLaRuta(guia)).toEqual({ minimo: 1, maximo: 3 })
+    expect(largoDeLaRuta(guia, { d: 'salto' })).toEqual({ minimo: 2, maximo: 2 })
+  })
+
+  it('mira también las decisiones anidadas dentro de un camino', () => {
+    const guia = {
+      pasos: [
+        paso('a', [decision('d1', [opcion('x', 'X', { tipo: 'paso', pasoId: 'c' }), opcion('y', 'Y')])]),
+        paso('b', [decision('d2', [opcion('fin', 'Fin', { tipo: 'fin' }), opcion('sigue', 'Sigue')])]),
+        paso('c'),
+      ],
+    }
+    // a, c | a, b | a, b, c
+    expect(largoDeLaRuta(guia)).toEqual({ minimo: 2, maximo: 3 })
+    expect(largoDeLaRuta(guia, { d1: 'y', d2: 'fin' })).toEqual({ minimo: 2, maximo: 2 })
+  })
+
+  it('una respuesta que ya no existe vuelve a abrir la decisión', () => {
+    expect(largoDeLaRuta(guiaOutlook(), { version: 'borrada' })).toEqual({ minimo: 4, maximo: 4 })
+  })
+})
+
+describe('guiaDeLaRespuesta y guiasDeLasOpciones', () => {
+  const conGuia = paso('a', [
+    tarea('t'),
+    decision('d', [opcion('x', 'X', { tipo: 'guia', articuloId: 'g-x', titulo: 'Guía X' }), opcion('y', 'Y')]),
+  ])
+
+  it('la guía que abre la respuesta elegida, o null', () => {
+    expect(guiaDeLaRespuesta(conGuia, { d: 'x' })).toEqual({ articuloId: 'g-x', titulo: 'Guía X' })
+    expect(guiaDeLaRespuesta(conGuia, { d: 'y' })).toBeNull()
+    expect(guiaDeLaRespuesta(conGuia, undefined)).toBeNull()
+    expect(guiaDeLaRespuesta(paso('b'), { d: 'x' })).toBeNull()
+  })
+
+  it('las guías que puede abrir alguna respuesta del paso', () => {
+    expect(guiasDeLasOpciones(conGuia)).toEqual(['g-x'])
+    expect(guiasDeLasOpciones(paso('b', [decisionSiNo('sn', 'g-no')]))).toEqual([])
   })
 })
 

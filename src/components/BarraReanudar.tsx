@@ -11,9 +11,10 @@ interface Props {
   articulo: Articulo
   hechos: number
   total: number
-  // La ruta de la guía se detiene en una decisión sin responder (tarea
-  // 302): el total todavía no se sabe, así que no se dice "de M".
-  rutaAbierta?: boolean
+  // El total todavía no se sabe (tarea 302: la ruta se detiene en una
+  // decisión sin responder cuyos caminos no miden lo mismo), así que no se
+  // dice "de M".
+  totalAbierto?: boolean
   minutosRestantes: number | null
   onDescartar: () => void
   /**
@@ -83,13 +84,13 @@ export function BarraReanudar({
   articulo,
   hechos,
   total,
-  rutaAbierta = false,
+  totalAbierto = false,
   minutosRestantes,
   onDescartar,
   variante = 'flotante',
 }: Props) {
   // "paso 3 de 5" (o "paso 3" con la ruta abierta), para todas las variantes.
-  const paso = pasoDeTotal(hechos + 1, total, rutaAbierta)
+  const paso = pasoDeTotal(hechos + 1, total, totalAbierto)
   const Paso = paso.charAt(0).toUpperCase() + paso.slice(1)
   const [dx, setDx] = useState(0)
   const [arrastrando, setArrastrando] = useState(false)

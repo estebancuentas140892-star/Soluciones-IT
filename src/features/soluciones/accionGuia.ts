@@ -54,9 +54,10 @@ export interface AccionGuia {
   // posicion en esa ruta.
   pasosHechos: number
   total: number
-  // La ruta se detiene en una decision sin responder: `total` son los
-  // pasos que ya se conocen.
-  rutaAbierta: boolean
+  // El total todavia no se sabe: la ruta se detiene en una decision sin
+  // responder cuyos caminos no miden lo mismo, y `total` son los pasos que
+  // ya se conocen.
+  totalAbierto: boolean
 }
 
 export interface AvanceGuia {
@@ -76,11 +77,10 @@ export function accionDeGuia(
   avance: AvanceGuia | null | undefined,
   hayEjecucionAbierta: boolean,
 ): AccionGuia {
-  const { ruta, hechos: cuenta, total } = avanceDeLaRuta(procedimiento, avance)
+  const { ruta, hechos: cuenta, total, totalAbierto } = avanceDeLaRuta(procedimiento, avance)
   const idsPasos = ruta.pasos.map((paso) => paso.id)
-  const rutaAbierta = ruta.pendiente !== null
   const estadoAbierto: EstadoAccionGuia = hayEjecucionAbierta ? 'continuar' : 'empezar'
-  const cuentas = { pasosHechos: cuenta, total, rutaAbierta }
+  const cuentas = { pasosHechos: cuenta, total, totalAbierto }
 
   // Sin pasos que ejecutar no hay recorrido que ofrecer (caso K1).
   if (total === 0) {
@@ -123,7 +123,7 @@ export function lineaAvanceGuia(accion: AccionGuia | null | undefined): string |
   if (!accion || accion.estado !== 'continuar') return null
   if (accion.pendiente.tipo === 'verificacion') return 'Faltan las comprobaciones finales'
   if (accion.pendiente.tipo === 'paso' && accion.pasosHechos > 0) {
-    return `Vas en el ${pasoDeTotal(accion.pendiente.numero, accion.total, accion.rutaAbierta)}`
+    return `Vas en el ${pasoDeTotal(accion.pendiente.numero, accion.total, accion.totalAbierto)}`
   }
   return null
 }

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   db,
   type BloquePaso,
@@ -9,7 +9,8 @@ import {
   type TipoReferencia,
 } from '../../lib/db'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
-import { contarHechos, contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
+import { contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
+import { avanceDeLaRuta, decisionDeRuta, guiaDeLaRespuesta, opcionElegida } from '../../lib/rutaProcedimiento'
 import { cierreDelPaso, guiaPendienteDelPaso } from './cierrePaso'
 import {
   useAvanceProgreso,
@@ -43,7 +44,14 @@ import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
 import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { presenciaDeAviso, tonoInfo } from './tonos'
-import { ROTULO_CONTINGENCIA, ROTULO_DEL_PASO, ROTULO_SI_NO, rotuloDeIntencion } from './flujoContinuo'
+import {
+  ROTULO_CONTINGENCIA,
+  ROTULO_DE_LA_RESPUESTA,
+  ROTULO_DEL_PASO,
+  ROTULO_SI_NO,
+  rotuloDeIntencion,
+} from './flujoContinuo'
+import { RespuestasDecision } from './RespuestasDecision'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import {
   fraseAvanceDocumento,
@@ -137,22 +145,31 @@ export function ProcedimientoVista({
   // tenga ficha ("¿Qué hace?", tarea 270).
   const referenciasVivas = useReferencias()
 
-  const { objetivoGeneral, requisitos, pasos, verificacionFinal } = procedimiento
+  const { objetivoGeneral, requisitos, verificacionFinal } = procedimiento
 
+  // Los pasos que se listan son los de la RUTA (tarea 302): con decisiones
+  // con opciones, los del camino elegido, y hasta la primera pregunta sin
+  // responder. Los de los otros caminos no se enseñan ni cuentan.
   const {
     progreso,
+    pasos,
+    totalPasos,
+    elecciones,
     hechos,
     instruccionesHechas,
     completados,
     pasosCompletados,
     todoCompletado,
     subSatisfechoReactivo,
+    respuestaSatisfechaReactiva,
+    guiaPendienteDeLaRespuesta,
     guiasPendientesDeTarea,
     desmarcarPaso,
     alternarTarea,
     alternarVerificacion,
     intentarCompletarPaso,
     completarPasoYAvanzar,
+    elegirOpcion,
   } = useProcedimientoEjecucion({
     articuloId,
     procedimiento,
@@ -190,6 +207,14 @@ export function ProcedimientoVista({
   function alternarAbierto(id: string, estaAbierto: boolean) {
     setAbiertoPorUsuario((previo) => ({ ...previo, [id]: !estaAbierto }))
   }
+
+  // "PROBAR" UN PASO QUE VA POR EL CAMINO DE UNA RESPUESTA (tarea 302): no
+  // está en la ruta hasta responder la pregunta que lleva a él. Se dice, en
+  // vez de no enseñar nada.
+  const destacadoFueraDeRuta =
+    pasoDestacadoId !== null && !pasos.some((p) => p.id === pasoDestacadoId)
+      ? (procedimiento.pasos.find((p) => p.id === pasoDestacadoId) ?? null)
+      : null
 
   // EL NUMERO DEL PASO SITUA, NO COMPLETA (tarea 3 del encargo). Antes
   // la insignia numerada marcaba el paso hecho de un toque y arrastraba
@@ -242,10 +267,16 @@ export function ProcedimientoVista({
             <div className="mb-3 flex items-center justify-between gap-3">
               <TituloSeccion>Pasos</TituloSeccion>
               <div className="flex shrink-0 items-center gap-2">
-                <IndicadorAvance hechos={completados} total={pasos.length} variante="segmentos" />
-                <IndicadorAvance hechos={completados} total={pasos.length} variante="texto" />
+                <IndicadorAvance hechos={completados} total={totalPasos ?? pasos.length} variante="segmentos" />
+                <IndicadorAvance hechos={completados} total={totalPasos ?? pasos.length} variante="texto" />
               </div>
             </div>
+          )}
+          {destacadoFueraDeRuta && (
+            <p className="mb-3 rounded-lg bg-noct-text/[.05] px-3 py-2 text-[13px] leading-snug text-noct-neutral-300">
+              «{destacadoFueraDeRuta.titulo || 'Este paso'}» va por el camino de una respuesta: responde la pregunta
+              para llegar a él.
+            </p>
           )}
           <ol>
             {pasos.map((paso, indice) => {
@@ -253,7 +284,15 @@ export function ProcedimientoVista({
               const idsTareas = tareasDe(paso.bloques).map((t) => t.id)
               const marcadas = contarInstruccionesHechas(progreso?.instruccionesHechas, idsTareas)
               const subSatisfecho = subSatisfechoReactivo(paso)
-              const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
+              // La guía que abrió la respuesta de su decisión (tarea 302)
+              // también es trabajo del paso.
+              const trabajoPrevio = pasoTrabajoPrevioCompleto(
+                idsTareas.length,
+                marcadas,
+                subSatisfecho && respuestaSatisfechaReactiva(paso),
+              )
+              const decision = decisionDeRuta(paso)
+              const guiaDeLaRespuestaElegida = guiaDeLaRespuesta(paso, elecciones)
               // La MISMA regla y el MISMO rotulo que el asistente
               // (tarea 3 del encargo): si falta trabajo, el control lo
               // nombra en vez de prometer "Paso hecho".
@@ -261,7 +300,8 @@ export function ProcedimientoVista({
                 pasoHecho: hecho,
                 totalTareas: idsTareas.length,
                 tareasMarcadas: marcadas,
-                guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho),
+                guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho) ?? guiaPendienteDeLaRespuesta(paso),
+                respuestaPendiente: decision !== null && opcionElegida(decision, elecciones) === null,
                 hayPasoSiguiente: indice + 1 < pasos.length,
                 numeroPasoSiguiente: indice + 2,
               })
@@ -358,28 +398,46 @@ export function ProcedimientoVista({
                       {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
                       {paso.bloques.map((bloque) => (
-                        <BloqueVista
-                          key={bloque.id}
-                          bloque={bloque}
-                          marcada={instruccionesHechas.has(bloque.id)}
-                          onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
-                          nivel={nivel}
-                          referencias={referenciasVivas}
-                          fichasEnlazadas={fichasEnlazadasDelPaso(paso.bloques)}
-                          // La misma validación que la ejecución: el
-                          // mapa del artículo también marca tareas, así
-                          // que también tiene que respetar las guías
-                          // obligatorias (encargo 2026-09-09, tarea 1).
-                          bloqueadaPor={motivoGuiasPendientes(guiasPendientesDeTarea(paso, bloque.id))}
-                          ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
-                            <ProcedimientoVista
-                              articuloId={vinculadoId}
-                              procedimiento={vinculado}
-                              nivel={nivel + 1}
-                              onCompletado={onCompletado}
+                        <Fragment key={bloque.id}>
+                          <BloqueVista
+                            bloque={bloque}
+                            marcada={instruccionesHechas.has(bloque.id)}
+                            onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
+                            nivel={nivel}
+                            referencias={referenciasVivas}
+                            fichasEnlazadas={fichasEnlazadasDelPaso(paso.bloques)}
+                            // La misma validación que la ejecución: el
+                            // mapa del artículo también marca tareas, así
+                            // que también tiene que respetar las guías
+                            // obligatorias (encargo 2026-09-09, tarea 1).
+                            bloqueadaPor={motivoGuiasPendientes(guiasPendientesDeTarea(paso, bloque.id))}
+                            ejecutarInline={({ articuloId: vinculadoId, procedimiento: vinculado, onCompletado }) => (
+                              <ProcedimientoVista
+                                articuloId={vinculadoId}
+                                procedimiento={vinculado}
+                                nivel={nivel + 1}
+                                onCompletado={onCompletado}
+                              />
+                            )}
+                            // La decisión con opciones (tarea 302) se responde
+                            // aquí también: la ruta sigue por la respuesta.
+                            respuesta={elecciones[bloque.id] ?? null}
+                            onElegirOpcion={(opcionId) => void elegirOpcion(paso, bloque.id, opcionId)}
+                          />
+                          {/* La guía que abre la respuesta elegida, justo
+                              después de su pregunta: es el camino de esa
+                              respuesta (tarea 302). */}
+                          {guiaDeLaRespuestaElegida && bloque.id === decision?.id && (
+                            <SubProcedimientoEnPaso
+                              key={guiaDeLaRespuestaElegida.articuloId}
+                              subArticuloId={guiaDeLaRespuestaElegida.articuloId}
+                              tituloReferencia={guiaDeLaRespuestaElegida.titulo}
+                              kicker={ROTULO_DE_LA_RESPUESTA}
+                              nivel={nivel}
+                              onCompletado={() => void intentarCompletarPaso(indice, paso)}
                             />
                           )}
-                        />
+                        </Fragment>
                       ))}
 
                       {/* CREDENCIAL NECESARIA (encargo del 2026-09-22,
@@ -520,7 +578,9 @@ export function ProcedimientoVista({
           </ul>
           <p className="mt-2 text-[12px] leading-normal text-noct-neutral-500">
             Puedes leerlas ahora. Marcarlas como cumplidas se hace al terminar{' '}
-            {pasos.length === 1 ? 'el paso' : `el paso ${pasos.length}`}.
+            {/* Sobre la ruta (tarea 302): mientras dependa de una respuesta
+                cuyos caminos no miden lo mismo, no se sabe qué número tiene. */}
+            {totalPasos === null ? 'el último paso' : totalPasos === 1 ? 'el paso' : `el paso ${totalPasos}`}.
           </p>
         </section>
       )}
@@ -610,11 +670,15 @@ export function ProcedimientoVista({
 function SubProcedimientoEnPaso({
   subArticuloId,
   tituloReferencia,
+  kicker = ROTULO_DEL_PASO,
   nivel,
   onCompletado,
 }: {
   subArticuloId: string
   tituloReferencia: string
+  // Qué papel tiene: la guía del paso ("Para este paso") o la que abre la
+  // respuesta de una decisión ("Para esta respuesta", tarea 302).
+  kicker?: string
   nivel: number
   onCompletado: () => void
 }) {
@@ -649,10 +713,9 @@ function SubProcedimientoEnPaso({
   }
 
   const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
-  const total = procedimiento?.pasos.length ?? 0
-  const hechos = procedimiento
-    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
-    : 0
+  // Sobre su ruta (tarea 302): una guía reutilizada también puede tener
+  // decisiones con opciones.
+  const { hechos, total } = procedimiento ? avanceDeLaRuta(procedimiento, progreso) : { hechos: 0, total: 0 }
   // SIN ANILLO DE AVANCE (encargo del 2026-09-10, tarea 4): lo que va
   // junto al nombre es el estado escrito, que es lo que un anillo de 22
   // px no llega a decir. El nombre deja de recortarse para hacerle
@@ -670,7 +733,7 @@ function SubProcedimientoEnPaso({
       return (
         <VinculoInerte
           Icono={LinkSimple}
-          kicker={ROTULO_DEL_PASO}
+          kicker={kicker}
           titulo={articulo.titulo}
           nota="Durante la prueba no se sale del editor"
         />
@@ -679,7 +742,7 @@ function SubProcedimientoEnPaso({
     return (
       <EnlaceVinculo
         Icono={LinkSimple}
-        kicker={`${ROTULO_DEL_PASO} · se abre aparte`}
+        kicker={`${kicker} · se abre aparte`}
         titulo={articulo.titulo}
         nota={NOTA_CONSULTA}
         to={ruta}
@@ -693,7 +756,7 @@ function SubProcedimientoEnPaso({
     <div>
       <FilaVinculo
         Icono={LinkSimple}
-        kicker={ROTULO_DEL_PASO}
+        kicker={kicker}
         titulo={articulo.titulo}
         nota={fraseAvanceDocumento(hechos, total, 'guía')}
         abierto={abierto}
@@ -773,10 +836,9 @@ function ContingenciaEnPaso({
   }
 
   const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
-  const total = procedimiento?.pasos.length ?? 0
-  const hechos = procedimiento
-    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
-    : 0
+  // Sobre su ruta (tarea 302): una guía reutilizada también puede tener
+  // decisiones con opciones.
+  const { hechos, total } = procedimiento ? avanceDeLaRuta(procedimiento, progreso) : { hechos: 0, total: 0 }
   const aMedias = hechos > 0 && hechos < total
   const abierta = mostrar ?? aMedias
 
@@ -937,6 +999,8 @@ export function BloqueVista({
   bloqueadaPor,
   referencias,
   fichasEnlazadas,
+  respuesta = null,
+  onElegirOpcion,
 }: {
   bloque: BloquePaso
   marcada: boolean
@@ -962,6 +1026,10 @@ export function BloqueVista({
    * llega, la fila se ve pero no se puede marcar y dice que falta.
    */
   bloqueadaPor?: string | null
+  /** La respuesta elegida en esta decisión con opciones (tarea 302), o null. */
+  respuesta?: string | null
+  /** Responder la decisión con opciones. Sin él, sus respuestas se leen pero no se tocan. */
+  onElegirOpcion?: (opcionId: string) => void
 }) {
   if (bloque.tipo === 'aviso') {
     const tono = tonoInfo(bloque.tono)
@@ -1082,6 +1150,17 @@ export function BloqueVista({
     </div>
   )
 
+  // UNA DECISIÓN CON OPCIONES (tarea 302): la pregunta con sus respuestas,
+  // y tocar una es responder. La de Sí/No sigue como siempre, abajo.
+  if (bloque.tipoTarea === 'decision' && (bloque.opciones?.length ?? 0) > 0) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <DecisionConOpciones bloque={bloque} respuesta={respuesta} onElegir={onElegirOpcion} />
+        {credencialInline}
+      </div>
+    )
+  }
+
   if (bloque.tipoTarea === 'decision') {
     return (
       <div className="flex flex-col gap-1.5">
@@ -1196,6 +1275,49 @@ function ReferenciaEnBloque({
   )
 }
 
+// UNA DECISIÓN CON OPCIONES EN LA VISTA DEL PASO ENTERO Y EN LA LECTURA
+// (tarea 302): la pregunta y sus respuestas, compactas, dentro de la misma
+// tarjeta que la de Sí/No. Tocar una responde; con la respuesta dada, se ve
+// cuál fue y tocar otra la cambia (lo hecho después se reinicia). Mientras
+// la respuesta se guarda, la tocada se ve elegida y no se puede tocar otra.
+function DecisionConOpciones({
+  bloque,
+  respuesta,
+  onElegir,
+}: {
+  bloque: BloquePaso
+  respuesta: string | null
+  onElegir?: (opcionId: string) => void
+}) {
+  const idPregunta = useId()
+  const opciones = bloque.opciones ?? []
+  const [tocada, setTocada] = useState<string | null>(null)
+  // La respuesta ya llegó: deja de estar "guardándose".
+  if (tocada !== null && tocada === respuesta) setTocada(null)
+  const elegida = tocada ?? (opciones.some((opcion) => opcion.id === respuesta) ? respuesta : null)
+  return (
+    <div className="rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5">
+      <p id={idPregunta} className="text-[13.5px] font-medium leading-normal">
+        {bloque.texto}
+      </p>
+      <div className="mt-2.5">
+        <RespuestasDecision
+          variante="paso"
+          opciones={opciones}
+          elegida={elegida}
+          inactivas={!onElegir || tocada !== null}
+          onElegir={(opcionId) => {
+            if (!onElegir) return
+            setTocada(opcionId)
+            onElegir(opcionId)
+          }}
+          idPregunta={idPregunta}
+        />
+      </div>
+    </div>
+  )
+}
+
 // Tarea de decision en la vista de lectura: una pregunta de Si/No.
 // "Si" marca la tarea y el flujo continua. "No" despliega en linea la
 // solucion o el procedimiento vinculado (si lo hay) y, al completarlo,
@@ -1245,10 +1367,9 @@ function DecisionEnTarea({
     )
   }
 
-  const total = procedimiento?.pasos.length ?? 0
-  const hechos = procedimiento
-    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((p) => p.id))
-    : 0
+  // Sobre su ruta (tarea 302): una guía reutilizada también puede tener
+  // decisiones con opciones.
+  const { hechos, total } = procedimiento ? avanceDeLaRuta(procedimiento, progreso) : { hechos: 0, total: 0 }
   const aMedias = hechos > 0 && hechos < total
   const abierta = mostrarVinculo ?? aMedias
 

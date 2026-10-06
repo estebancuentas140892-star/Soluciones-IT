@@ -1,6 +1,18 @@
 import { Link } from 'react-router-dom'
 import { Modal } from '../../components/Modal'
-import { ArrowsClockwise, Check, Circle, Crosshair, Eye, Info, PlugsConnected, SealCheck, Warning, X } from '../../components/iconos'
+import {
+  ArrowsClockwise,
+  Check,
+  Circle,
+  Crosshair,
+  Eye,
+  Info,
+  PlugsConnected,
+  Question,
+  SealCheck,
+  Warning,
+  X,
+} from '../../components/iconos'
 import type { ModoEjecucion } from '../../lib/preferenciasEjecucion'
 import type { EstadoPaso, ResumenPaso } from './estadoPasos'
 
@@ -76,6 +88,13 @@ interface Props {
    * ocurriendo al cerrar el procedimiento.
    */
   verificacionFinal?: string[]
+  /**
+   * El número del paso cuya pregunta todavía no tiene respuesta (tarea
+   * 302), o null. Los pasos que siguen dependen de ella y aún no se
+   * enseñan: el índice lo dice, para que una ruta corta no parezca la
+   * guía entera.
+   */
+  pasoDeLaPregunta?: number | null
   /**
    * La ficha de la guía (descripción, objetivo, requisitos, versión,
    * historial), que desde el 2026-09-17 ya no es la puerta de entrada:
@@ -160,6 +179,7 @@ export function HojaPasos({
   modoEjecucion,
   onCambiarModo,
   verificacionFinal = [],
+  pasoDeLaPregunta = null,
   rutaDetalles,
   estadoDetalles,
   onEmpezarDeNuevo,
@@ -233,6 +253,13 @@ export function HojaPasos({
           </li>
         ))}
       </ol>
+
+      {pasoDeLaPregunta !== null && (
+        <p className="flex items-start gap-2 pt-2 text-[13px] leading-snug text-noct-neutral-300">
+          <Question size={15} className="mt-px shrink-0 text-noct-neutral-400" aria-hidden />
+          <span className="min-w-0">Los pasos que siguen dependen de tu respuesta en el paso {pasoDeLaPregunta}.</span>
+        </p>
+      )}
 
       <p className="pt-2 text-[12.5px] leading-snug text-noct-neutral-400">
         Abrir un paso solo lo muestra. No marca nada como hecho.

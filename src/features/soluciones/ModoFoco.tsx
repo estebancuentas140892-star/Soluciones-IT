@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
+import type { Elecciones } from '../../lib/rutaProcedimiento'
 import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
 import { normalizarTexto } from './iconosSoluciones'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
@@ -33,11 +34,13 @@ import { motivoGuiasPendientes } from './guiasObligatorias'
 import {
   accionFoco,
   avisosDeTareaFoco,
+  esDecisionConOpcionesFoco,
   esGuiaDelRecorrido,
   tareaFocoHecha,
   tareasParaFoco,
   type TareaFoco,
 } from './tareasFoco'
+import { RespuestasDecision } from './RespuestasDecision'
 import { tonoInfo } from './tonos'
 import { subirElContenedor } from './subirElContenedor'
 import {
@@ -102,7 +105,9 @@ interface Props {
   // esto la acción de la pantalla no tenía contexto: el título del paso
   // solo vivía en el índice.
   numeroPaso: number
-  totalPasos: number
+  // El total de pasos de la RUTA (tarea 302), o null mientras dependa de una
+  // respuesta cuyos caminos no miden lo mismo: entonces no se dice "de M".
+  totalPasos: number | null
   // ¿Cerrar este paso TERMINA la guía? Lo decide `AsistenteVista` con el
   // mismo cálculo que el avance (`avanzarDespuesDe`, que vuelve también a
   // un paso saltado): sin otro paso por hacer, la última acción dice
@@ -182,6 +187,22 @@ interface Props {
   // lectura en vivo; aqui deciden si la tarea se puede marcar y que se
   // escribe debajo del boton (encargo del 2026-09-09, tarea 1).
   guiasPendientes: (tareaId: string) => BloquePaso[]
+  // ¿Esta guía que se hace en el sitio ya terminó en esta ejecución? La
+  // misma lectura en vivo que la anterior, por guía: decide si la entrada
+  // de una guía del recorrido (la que exige una tarea o la que abre una
+  // respuesta) está cumplida.
+  guiaCumplida: (guiaId: string) => boolean
+  // LAS RESPUESTAS DE ESTA EJECUCIÓN (tarea 302): qué opción se eligió en
+  // cada decisión con opciones. Dicen qué respuesta se ve elegida y si la
+  // elegida abre una guía que se hace aquí, justo después.
+  elecciones?: Elecciones
+  // Responder (o cambiar) una decisión con opciones. Lo escribe
+  // `AsistenteVista` (esta vista no toca datos): guarda la respuesta y,
+  // cuando la ruta la recoge, sigue por ella.
+  onElegirOpcion: (decisionId: string, opcionId: string) => void
+  // Hay algo hecho DESPUÉS de la decisión de este paso: cambiar la
+  // respuesta lo reinicia, y se dice antes de tocar otra opción.
+  avanceTrasLaDecision?: boolean
   // LA RUTA DEL PROCEDIMIENTO (encargo del 2026-09-22, sección 5). La
   // aporta `AsistenteVista`, que es quien tiene los estados de todos los
   // pasos. Cuando llega, ES la cabecera del paso: dice dónde se está
@@ -334,27 +355,21 @@ export function ModoFoco({
   onFalla,
   onDecisionResuelta,
   guiasPendientes,
+  guiaCumplida,
+  elecciones,
+  onElegirOpcion,
+  avanceTrasLaDecision = false,
   ruta,
   onVinculoCompletado,
   renderTarjetaGuia,
   renderGuia,
   renderEnvioAEquipo,
 }: Props) {
-  const tareas = tareasParaFoco(paso, tituloPaso, guiaIntegrable)
+  const tareas = tareasParaFoco(paso, tituloPaso, guiaIntegrable, elecciones)
 
-  // LAS GUÍAS QUE EXIGE ALGUNA TAREA DE ESTE PASO Y SIGUEN SIN TERMINAR,
-  // con la misma lectura en vivo que decide si la tarea se puede marcar.
-  // Una entrada 'guia-de-tarea' está cumplida cuando su guía ya no está
-  // aquí: el avance es por guía, no por tarea.
-  const guiasSinTerminar = new Set(
-    tareas
-      .filter((t) => t.clase === 'tarea')
-      .flatMap((t) => guiasPendientes(t.id).flatMap((g) => (g.guiaArticuloId ? [g.guiaArticuloId] : []))),
-  )
-  function guiaCumplida(guiaId: string): boolean {
-    return !guiasSinTerminar.has(guiaId)
-  }
-
+  // Una entrada de guía ('guia-de-tarea', 'guia-de-respuesta') está
+  // cumplida cuando su guía terminó en esta ejecución: el avance es por
+  // guía, no por tarea.
   function cumplida(tarea: TareaFoco): boolean {
     return tareaFocoHecha(tarea, instruccionesHechas, subSatisfecho, guiaCumplida)
   }
@@ -389,6 +404,14 @@ export function ModoFoco({
   // y no un booleano porque un paso puede tener más de una decisión, y
   // un booleano las abriría todas a la vez.
   const [decisionAbierta, setDecisionAbierta] = useState<string | null>(null)
+  // LA RESPUESTA QUE SE ACABA DE TOCAR (tarea 302), mientras la ruta la
+  // recoge: se ve elegida en el acto y las opciones no se pueden tocar dos
+  // veces. Cuando llega, el recorrido sigue dentro del paso si le queda algo
+  // (la guía de esa respuesta o una acción sin hacer); si no, la ejecución
+  // cierra el paso y lleva al destino.
+  const [respondiendo, setRespondiendo] = useState<{ decisionId: string; opcionId: string } | null>(null)
+  // El encabezado con la pregunta da nombre al grupo de sus respuestas.
+  const idPregunta = useId()
   // LA GUÍA VINCULADA QUE OCUPA AHORA EL SITIO DE LA TAREA (encargo del
   // 2026-09-10, tarea 4). Sustituye el contenido de la tarea mientras
   // dure, y salir devuelve al mismo punto con el vínculo como estaba.
@@ -403,6 +426,16 @@ export function ModoFoco({
   const encabezado = useRef<HTMLHeadingElement>(null)
 
   const indice = Math.min(indiceTarea, tareas.length - 1)
+
+  // LA RESPUESTA YA ESTÁ EN LA RUTA: lo siguiente es lo que quede por hacer
+  // en este paso después de la decisión. Se decide aquí, en el mismo
+  // render, como el resto de lo que cambia al moverse de acción.
+  if (respondiendo !== null && elecciones?.[respondiendo.decisionId] === respondiendo.opcionId) {
+    setRespondiendo(null)
+    const desde = tareas.findIndex((t) => t.id === respondiendo.decisionId)
+    const siguiente = desde >= 0 ? siguientePendiente(desde) : -1
+    if (siguiente >= 0) setIndiceTarea(siguiente)
+  }
 
   // TERMINAR LA GUÍA QUE SE HACE EN EL SITIO ADELANTA SOLO, como marcar una
   // tarea: la del paso y, desde la tarea 289, la que exige una tarea, que
@@ -459,8 +492,16 @@ export function ModoFoco({
   const accion = accionFoco(tareas, instruccionesHechas, subSatisfecho, guiaCumplida)
   const cierraPaso = accion === 'completar'
   // UNA DECISIÓN NO ES UNA ACCIÓN (encargo del 2026-09-09, secciones 5
-  // y 6): se responde con sus dos salidas, nunca con "Completar".
-  const esDecision = tarea.tipoTarea === 'decision'
+  // y 6): se responde con sus dos salidas, nunca con "Completar". La de
+  // Sí/No, en el pie; la que tiene opciones con nombre (tarea 302), con sus
+  // respuestas bajo la pregunta.
+  const conOpciones = esDecisionConOpcionesFoco(tarea)
+  const esDecision = tarea.tipoTarea === 'decision' && !conOpciones
+  // La respuesta elegida: la que se está guardando, o la que ya se dio.
+  const respuestaElegida =
+    respondiendo?.decisionId === tarea.id
+      ? respondiendo.opcionId
+      : (tarea.opciones.find((opcion) => opcion.id === elecciones?.[tarea.id])?.id ?? null)
   // UNA SOLA ZONA DE ACCIONES DOMINANTE. Mientras la guía vinculada
   // ocupa la pantalla, la suya es la que manda y este pie desaparece.
   const pieCedidoAlVinculo = vinculoAbierto !== null
@@ -494,7 +535,12 @@ export function ModoFoco({
   // suyos son los del paso, como hasta ahora. La guía que exige una tarea
   // lleva los del paso solo si es la primera entrada; los de su tarea van
   // con la tarea, justo después.
-  const llevaLosDelPaso = tarea.clase !== 'tarea' && (tarea.clase !== 'guia-de-tarea' || esPrimeraDelPaso)
+  // La guía de una respuesta va siempre detrás de su decisión: nunca lleva
+  // los del paso.
+  const llevaLosDelPaso =
+    tarea.clase !== 'tarea' &&
+    tarea.clase !== 'guia-de-respuesta' &&
+    (tarea.clase !== 'guia-de-tarea' || esPrimeraDelPaso)
   const propios: Apoyos =
     tarea.clase === 'tarea' ? apoyosDeTarea(paso, tarea.id) : llevaLosDelPaso ? delPaso : sinApoyos()
   const imagenesALaVista = [
@@ -526,7 +572,10 @@ export function ModoFoco({
   // Dentro del flujo de otra guía, el paso que la reutiliza presta los
   // suyos a la primera y a la última acción reutilizada (tarea 289).
   const lugarDelPaso = esPrimeraDelPaso ? paso.lugar.trim() || (enFlujo?.lugar.trim() ?? '') : ''
-  const debesVer = esUltimaDelPaso ? paso.resultado.trim() || (enFlujo?.resultado.trim() ?? '') : ''
+  // La pregunta no lo lleva: es la acción de su pantalla, y lo que confirma
+  // el paso llega después, con el camino de la respuesta.
+  const debesVer =
+    esUltimaDelPaso && !conOpciones ? paso.resultado.trim() || (enFlujo?.resultado.trim() ?? '') : ''
   // Para qué sirve el paso: explica, no ordena, así que va plegado y solo
   // con la primera acción del paso. El del paso que reutiliza esta guía,
   // primero.
@@ -550,7 +599,9 @@ export function ModoFoco({
       ? [{ id: tarea.guiaId, titulo: tarea.guiaTitulo }]
       : []
   const guiaParaLeer =
-    (tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada) || tarea.clase === 'guia-de-tarea'
+    (tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada) ||
+    tarea.clase === 'guia-de-tarea' ||
+    tarea.clase === 'guia-de-respuesta'
       ? tarea.guiaId
       : null
   // Las guías que una TAREA exige antes de marcarla (pueden ser varias, en
@@ -643,6 +694,14 @@ export function ModoFoco({
   // porque quien desmarca quiere quedarse donde está.
   function desmarcar() {
     onAlternarTarea(tarea.id)
+  }
+
+  // RESPONDER ES TOCAR LA OPCIÓN (tarea 302): no hay un "Continuar" aparte.
+  // Volver a la pregunta y tocar otra cambia la respuesta.
+  function elegirOpcion(opcionId: string) {
+    if (respondiendo !== null || consulta) return
+    setRespondiendo({ decisionId: tarea.id, opcionId })
+    onElegirOpcion(tarea.id, opcionId)
   }
 
   // Seguir SIN tocar nada, desde una acción que ya estaba cumplida (se
@@ -781,7 +840,9 @@ export function ModoFoco({
     !hecha &&
     !consulta &&
     tarea.guiaId !== null &&
-    ((tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada) || tarea.clase === 'guia-de-tarea')
+    ((tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada) ||
+      tarea.clase === 'guia-de-tarea' ||
+      tarea.clase === 'guia-de-respuesta')
   if (guiaEnElSitio && tarea.guiaId) {
     // Lo que esta entrada enseñaría con la primera acción del paso viaja a
     // la primera acción reutilizada: el "Dónde", sus avisos, sus imágenes,
@@ -873,6 +934,11 @@ export function ModoFoco({
       ) : (
         <BotonPrincipal etiqueta={rotulo.visible} etiquetaCompleta={rotulo.completo} disabled />
       )
+  } else if (conOpciones && !hecha) {
+    // UNA DECISIÓN CON OPCIONES SE RESPONDE ARRIBA, tocando una respuesta:
+    // el control del pie dice lo que falta, inactivo y legible, como todo
+    // lo que bloquea.
+    principal = <BotonPrincipal etiqueta="Elige una opción" disabled />
   } else if (esDecision && !hecha && !noAbierto) {
     // UNA DECISIÓN SE RESPONDE, NO SE MARCA. Acento la vía que sigue,
     // ámbar la que se desvía (regla R60).
@@ -978,7 +1044,8 @@ export function ModoFoco({
           ) : (
             <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px] leading-snug text-noct-neutral-400">
               <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
-                Paso {numeroPaso} de {totalPasos}
+                Paso {numeroPaso}
+                {totalPasos !== null && ` de ${totalPasos}`}
               </span>
               {tituloEnContexto && <span className="min-w-0 text-pretty text-noct-neutral-300">{tituloEnContexto}</span>}
             </p>
@@ -1003,10 +1070,11 @@ export function ModoFoco({
               puede hacer aquí (no está, o se lee aparte): "Hecha" o "Qué
               hacer" encima dirían lo que no es. */}
           {(tarea.clase !== 'guia-del-paso' || (guiaDelPasoDisponible && guiaDelPasoIntegrada)) && (
-            <EtiquetaDeAccion tipoTarea={tarea.tipoTarea} hecha={hecha} />
+            <EtiquetaDeAccion tipoTarea={tarea.tipoTarea} hecha={hecha} conOpciones={conOpciones} />
           )}
           <h2
             ref={encabezado}
+            id={conOpciones ? idPregunta : undefined}
             tabIndex={-1}
             data-foco-lectura
             className={`text-[26px] font-medium leading-[1.3] tracking-[-.01em] text-pretty outline-none ${
@@ -1016,6 +1084,28 @@ export function ModoFoco({
             {textoInstruccion}
           </h2>
         </div>
+
+        {/* LAS RESPUESTAS, JUSTO BAJO LA PREGUNTA (tarea 302): son la acción
+            de esta pantalla. En la consulta se leen, pero no se tocan. */}
+        {conOpciones && (
+          <div className="flex flex-col gap-2.5">
+            <RespuestasDecision
+              variante="foco"
+              opciones={tarea.opciones}
+              elegida={respuestaElegida}
+              inactivas={consulta !== null || respondiendo !== null}
+              onElegir={elegirOpcion}
+              idPregunta={idPregunta}
+            />
+            {/* Cambiar la respuesta reinicia lo hecho después: se dice antes
+                de tocar, no después. */}
+            {hecha && avanceTrasLaDecision && !consulta && (
+              <p className="text-[13px] leading-snug text-pretty text-noct-neutral-400">
+                Si eliges otra respuesta, se reinicia lo que hiciste después de esta pregunta.
+              </p>
+            )}
+          </div>
+        )}
 
         {avisos.datos.map((aviso) => (
           <DatoTecnico key={aviso.id} aviso={aviso} />
@@ -1235,7 +1325,7 @@ export function ModoFoco({
               <Warning size={15} className="shrink-0" aria-hidden />
               Tengo un problema
             </button>
-            {hecha && tarea.clase === 'tarea' && (
+            {hecha && tarea.clase === 'tarea' && !conOpciones && (
               <button
                 type="button"
                 onClick={desmarcar}
@@ -1282,12 +1372,21 @@ export function AntesDeEmpezar({ requisitos }: { requisitos: string[] }) {
 // 4). Una palabra y un icono, siempre los dos: azul para la acción
 // (entrar, abrir, seleccionar), verde para la comprobación y neutro para
 // la decisión. Una acción ya hecha lo dice en verde, con su marca.
-function EtiquetaDeAccion({ tipoTarea, hecha }: { tipoTarea: string | null; hecha: boolean }) {
+function EtiquetaDeAccion({
+  tipoTarea,
+  hecha,
+  conOpciones = false,
+}: {
+  tipoTarea: string | null
+  hecha: boolean
+  // Una decisión con opciones (tarea 302) no se hace: se responde.
+  conOpciones?: boolean
+}) {
   if (hecha) {
     return (
       <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-exito">
         <Check size={13} className="shrink-0" aria-hidden />
-        Hecha
+        {conOpciones ? 'Respondida' : 'Hecha'}
       </p>
     )
   }

@@ -121,8 +121,11 @@ export function vecinosDeRuta(
   }
 }
 
-/** Lo que dice el nombre accesible de un nodo: posición, nombre y estado. */
-export function descripcionDeNodo(resumen: ResumenPaso, total: number): string {
+/**
+ * Lo que dice el nombre accesible de un nodo: posición, nombre y estado. Sin
+ * total (null: todavía depende de una respuesta, tarea 302), solo la posición.
+ */
+export function descripcionDeNodo(resumen: ResumenPaso, total: number | null): string {
   const estado =
     resumen.estado === 'hecho'
       ? 'hecho'
@@ -132,5 +135,6 @@ export function descripcionDeNodo(resumen: ResumenPaso, total: number): string {
           ? 'saltado'
           : 'pendiente'
   const riesgo = resumen.tieneCuidado ? ', con un riesgo que atender' : ''
-  return `Paso ${resumen.indice + 1} de ${total}: ${resumen.titulo} (${estado}${riesgo})`
+  const posicion = total === null ? `Paso ${resumen.indice + 1}` : `Paso ${resumen.indice + 1} de ${total}`
+  return `${posicion}: ${resumen.titulo} (${estado}${riesgo})`
 }

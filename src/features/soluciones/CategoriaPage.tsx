@@ -228,11 +228,11 @@ function AvanceArticulo({ articulo }: { articulo: Articulo }) {
 
   if (!procedimiento) return null
   // Sobre la ruta de la ejecución (tarea 302): con decisiones con opciones,
-  // los pasos del camino elegido. Si la ruta espera una respuesta, el total
-  // todavía no se sabe y no se afirma.
-  const { ruta, hechos, total, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
+  // los pasos del camino elegido. Si la ruta espera una respuesta cuyos
+  // caminos no miden lo mismo, el total todavía no se sabe y no se afirma.
+  const { hechos, total, totalAbierto, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
   if (hechos === 0) return null
-  const totalVisible = ruta.pendiente ? '…' : String(total)
+  const totalVisible = totalAbierto ? '…' : String(total)
 
   return (
     <span

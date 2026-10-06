@@ -21,10 +21,11 @@ export interface ArticuloSinTerminar {
   // otros caminos.
   hechos: number
   total: number
-  // La ruta se detiene en una decisión sin responder: `total` son los
-  // pasos que ya se conocen, y lo que viene después todavía no se sabe.
-  // Quien lo pinta no dice "de M" (sería afirmar un total que no existe).
-  rutaAbierta: boolean
+  // El total todavía no se sabe: la ruta se detiene en una decisión sin
+  // responder cuyos caminos no miden lo mismo, y `total` son los pasos que
+  // ya se conocen. Quien lo pinta no dice "de M" (sería afirmar un total
+  // que no existe). Si todos los caminos miden lo mismo, el total se sabe.
+  totalAbierto: boolean
   // Minutos que quedarían según el estimado del procedimiento, repartido
   // por pasos. Es una estimación grosera y se muestra con "~": el dato
   // fino no existe, pero "te quedan ~14 min" decide si vale la pena
@@ -53,33 +54,33 @@ export function articulosSinTerminar(
       // Se cuenta sobre la ruta y contra los ids vigentes: el
       // procedimiento pudo editarse después de marcar avance (los pasos
       // eliminados no cuentan) y los caminos no elegidos no existen.
-      const { ruta, hechos, total, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
+      const { hechos, total, totalAbierto, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
       if (total === 0) return []
       if (hechos === 0 || pasosListos) return []
-      const rutaAbierta = ruta.pendiente !== null
 
-      // Con la ruta abierta no se sabe cuánto falta: no se inventa.
+      // Sin el total no se sabe cuánto falta: no se inventa.
       const estimado = procedimiento.tiempoEstimadoMin
       const minutosRestantes =
-        estimado == null || rutaAbierta ? null : Math.max(1, Math.round((estimado * (total - hechos)) / total))
+        estimado == null || totalAbierto ? null : Math.max(1, Math.round((estimado * (total - hechos)) / total))
 
-      return [{ articulo, hechos, total, rutaAbierta, minutosRestantes, actualizadoEn: progreso.actualizadoEn }]
+      return [{ articulo, hechos, total, totalAbierto, minutosRestantes, actualizadoEn: progreso.actualizadoEn }]
     })
     .sort((a, b) => b.actualizadoEn.localeCompare(a.actualizadoEn))
-    .map(({ articulo, hechos, total, rutaAbierta, minutosRestantes }) => ({
+    .map(({ articulo, hechos, total, totalAbierto, minutosRestantes }) => ({
       articulo,
       hechos,
       total,
-      rutaAbierta,
+      totalAbierto,
       minutosRestantes,
     }))
 }
 
 /**
- * "paso 3 de 5", o solo "paso 3" cuando la ruta se detiene en una decisión
- * sin responder (tarea 302) y el total todavía no se sabe. En minúscula: lo
- * usan frases que lo llevan en medio; quien empieza por él lo capitaliza.
+ * "paso 3 de 5", o solo "paso 3" cuando el total todavía no se sabe (tarea
+ * 302: una decisión sin responder cuyos caminos no miden lo mismo). En
+ * minúscula: lo usan frases que lo llevan en medio; quien empieza por él lo
+ * capitaliza.
  */
-export function pasoDeTotal(numero: number, total: number, rutaAbierta: boolean): string {
-  return rutaAbierta ? `paso ${numero}` : `paso ${numero} de ${total}`
+export function pasoDeTotal(numero: number, total: number, totalAbierto: boolean): string {
+  return totalAbierto ? `paso ${numero}` : `paso ${numero} de ${total}`
 }

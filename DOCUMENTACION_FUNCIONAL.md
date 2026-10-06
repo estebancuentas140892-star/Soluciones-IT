@@ -1421,6 +1421,33 @@ Equipos > Crear
 
 ### 13.2 Ejecutar un procedimiento (modo asistente)
 
+**LAS DECISIONES CON OPCIONES Y LA RUTA ELEGIDA (desde el 2026-10-06, tarea 302, [DECISIONES.md](DECISIONES.md) AD-065, [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-064).** Una guía puede preguntar con varias respuestas con nombre y llevar al técnico solo por el camino de la que elija; los caminos vuelven a juntarse en los pasos comunes. Manda sobre todo lo que sigue en esta sección donde choquen:
+
+```
+ Paso 1/5 ▾
+   DECIDE
+   ¿Qué versión de Outlook estás utilizando?        ← la pregunta es la acción de la pantalla
+   [ Outlook clásico                         › ]    ← tocar la respuesta ES responder
+   [ Veo la pestaña Archivo en la parte superior.]
+   [ Nuevo Outlook                           › ]
+   [ Utilizo la versión nueva de Outlook.       ]
+   [‹] [ Elige una opción ]   (inactivo y legible: dice lo que falta)
+     ↓ Outlook clásico            ↓ Nuevo Outlook
+   2 Pasos de Outlook clásico     2 Pasos de Nuevo Outlook
+     ↘                            ↙
+   3 Guardar y comprobar el .pst · 4 … · 5 …   (pasos comunes, una sola vez)
+```
+
+- **La pantalla de la pregunta:** "Decide", la pregunta como encabezado y, debajo, una tarjeta por respuesta con su título y, si el autor la escribió, su ayuda corta. En el teléfono se apilan (64 px como mínimo cada una); desde 768 px van de dos en dos. Cada tarjeta es un botón: se recorre con el teclado (contorno de acento al enfocarla) y se elige con Enter o con un toque; el grupo lleva por nombre la pregunta para el lector de pantalla. No hay "Continuar" aparte, ni "Debes ver" del paso en esta pantalla: lo que confirma el paso llega con el camino de la respuesta. El pie dice **"Elige una opción"**, inactivo.
+- **Responder lleva en el acto** por el camino de la respuesta: al paso que dice (otro paso posterior de la guía), al de abajo ("Continuar"), a ninguno ("Terminar la guía") o a **otra guía**, que se hace en el sitio, como la acción siguiente del paso (sin tarjeta ni cabecera propia), y al terminarla sigue el paso siguiente. Mientras la respuesta se guarda, la tocada ya se ve elegida y las demás no se pueden tocar dos veces.
+- **Solo existe la ruta elegida:** el contador ("2/5"), los segmentos del teléfono, la ruta de escritorio, el índice ("Ruta de la guía"), "Retomando · paso N de M", "quedan ~N min", "Guía terminada · N pasos", terminar y "Sin terminar" cuentan los pasos del camino elegido; los del otro camino no aparecen. Si todos los caminos de una pregunta sin responder miden lo mismo, el total se sabe desde el principio ("1/5"); si no, se escribe **"1/…"** (y "paso 1", sin "de M") hasta responder, la ruta de escritorio termina en un nodo **"…"** y el índice dice **"Los pasos que siguen dependen de tu respuesta en el paso N."**
+- **"Anterior" vuelve por donde se vino:** desde el primer paso común lleva al último paso del camino recorrido (no al del otro camino), y de ahí a la pregunta. Respondida, la pregunta dice **"Respondida"**, la respuesta elegida lleva borde y fondo de acento, una marca y **"Tu respuesta"** (nunca solo el color), y el pie lleva a lo siguiente ("Ir al paso 2"). Si hay algo hecho después de la pregunta, debajo de las respuestas: **"Si eliges otra respuesta, se reinicia lo que hiciste después de esta pregunta."**
+- **Cambiar la respuesta** recalcula la ruta y lleva al camino nuevo: lo hecho con la respuesta anterior (sus pasos, sus acciones, sus respuestas y la guía que abría) se borra, así que no quedan pasos "fantasma"; lo de antes de la pregunta se conserva. Volver a tocar la misma respuesta solo lleva a lo siguiente pendiente.
+- **Recargar** conserva las respuestas como el resto del avance: se retoma en el camino elegido. **Empezar de nuevo** las borra.
+- **Antes de empezar**, "Qué vas a hacer" y la ficha dicen los pasos del camino: "5 pasos" si todos miden lo mismo, **"Entre 4 y 6 pasos"** si no.
+- **Vista de paso entero y lectura (también "Probar" en el editor):** la pregunta va en una tarjeta con sus respuestas compactas, y tocar una responde; la guía que abre la respuesta elegida va justo debajo ("Para esta respuesta" en la lectura). El paso sin responder dice **"Elige una opción"** en su control de cierre. La lectura enseña la ruta: hasta la pregunta sin responder, y después el camino elegido; "Probar" un paso de un camino todavía no elegido dice "«Título» va por el camino de una respuesta: responde la pregunta para llegar a él."
+- **Las decisiones de Sí/No de siempre** (sin opciones) se ejecutan exactamente igual: "Sí" y "No" en el pie, el "No" con su camino, y "Hecha" al revisarlas.
+
 **LAS GUÍAS COMO UN SOLO FLUJO NATURAL (desde el 2026-10-02, tarea 289, [DECISIONES.md](DECISIONES.md) AD-063).** **La complejidad pertenece al sistema, no al técnico.** **Un procedimiento puede reutilizar otros procedimientos internamente, pero el técnico experimenta un único flujo continuo.** Manda sobre todo lo que sigue en esta sección donde choquen (en particular, sobre "abrir la guía es estar en el paso", los requisitos sobre la primera acción y la tarjeta "Guía necesaria" con su cabecera "Estás realizando…"):
 
 ```

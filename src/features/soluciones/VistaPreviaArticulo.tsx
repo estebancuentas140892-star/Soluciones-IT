@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import type { DispositivoAfectado, Procedimiento, TipoArticulo } from '../../lib/db'
 import { claveVistaPrevia, limpiarProgresoVistaPrevia, reiniciarProgreso } from '../../lib/progresoPasos'
 import { procedimientoEjecutable } from '../../lib/procedimiento'
+import { largoDeLaRuta } from '../../lib/rutaProcedimiento'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { ArrowLeft, Play } from '../../components/iconos'
 import { ImagenAmpliable } from '../../components/VisorImagen'
@@ -206,7 +207,7 @@ export function VistaPreviaArticulo({
               <ResumenGuia
                 tiempoMin={procedimiento.tiempoEstimadoMin}
                 dificultad={procedimiento.dificultad}
-                totalPasos={procedimiento.pasos.length}
+                largo={largoDeLaRuta(procedimiento)}
               />
             )}
 

@@ -9,7 +9,6 @@ import {
   tareasDe,
 } from '../../lib/procedimiento'
 import {
-  contarHechos,
   contarInstruccionesHechas,
   hayAvanceEnEjecucion,
   leerAvance,
@@ -18,6 +17,15 @@ import {
   reiniciarProgreso,
   type ClaveProgreso,
 } from '../../lib/progresoPasos'
+import {
+  avanceDeLaRuta,
+  decisionDeRuta,
+  guiaDeLaRespuesta,
+  hechosDeRuta,
+  largoDeLaRuta,
+  opcionElegida,
+  rutaDe,
+} from '../../lib/rutaProcedimiento'
 import {
   guardarModoEjecucion,
   leerModoEjecucion,
@@ -149,8 +157,7 @@ export function AsistenteVista({
   // fila del articulo en el nivel 0, la entrada del vinculo dentro de
   // la ejecucion en curso en un nivel anidado.
   const clave = useClaveProgreso(articuloId, nivel)
-  const { pasos, verificacionFinal, tiempoEstimadoMin, requisitos } = procedimiento
-  const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
+  const { verificacionFinal, tiempoEstimadoMin, requisitos } = procedimiento
   // Las fichas del Centro de consulta, para el "¿Qué hace?" de las
   // tareas del paso entero (tarea 270): una consulta, no una por tarea.
   const referenciasVivas = useReferencias()
@@ -302,18 +309,26 @@ export function AsistenteVista({
       // 1, que es lo que vino a hacer quien abre una guía que ya usó.
       // Solo en la guía principal: dentro de una ejecución, una guía
       // vinculada terminada está terminada para ESTE caso.
-      if (nivel === 0 && prog && guiaTerminada(procedimiento, prog.pasosHechos, prog.verificacionHecha)) {
+      if (
+        nivel === 0 &&
+        prog &&
+        guiaTerminada(procedimiento, prog.pasosHechos, prog.verificacionHecha, prog.elecciones)
+      ) {
         await reiniciarProgreso(clave)
         prog = undefined
       }
       if (!vigente) return
-      const hechosIniciales = new Set(prog?.pasosHechos ?? [])
-      const inicial = siguientePasoPendiente(idsPasos, hechosIniciales, -1)
+      // Sobre la ruta de las respuestas guardadas (tarea 302): se retoma en
+      // el primer paso pendiente del camino elegido.
+      const rutaInicial = rutaDe(procedimiento, prog?.elecciones)
+      const idsRuta = rutaInicial.pasos.map((p) => p.id)
+      const hechosIniciales = hechosDeRuta(rutaInicial, prog?.pasosHechos)
+      const inicial = siguientePasoPendiente(idsRuta, hechosIniciales, -1)
       setIndiceActual(inicial)
       // El trabajo sigue por el primer paso pendiente que no se saltó: si
       // se entra en uno saltado (el primer pendiente), se puede retomar
       // ahí mismo, y el recorrido continúa donde iba.
-      setIndiceTrabajo(pasoDeTrabajo(idsPasos, hechosIniciales, new Set(prog?.pasosSaltados ?? [])))
+      setIndiceTrabajo(pasoDeTrabajo(idsRuta, hechosIniciales, new Set(prog?.pasosSaltados ?? [])))
       // Cuenta también lo hecho dentro de las guías que esta reutiliza: a
       // mitad del acceso del paso 1 se retoma, no se vuelve a preparar.
       const habiaAvance = hayAvanceEnEjecucion(prog)
@@ -326,7 +341,7 @@ export function AsistenteVista({
     return () => {
       vigente = false
     }
-    // Solo al entrar a este articulo: idsPasos cambiaria si se edita el
+    // Solo al entrar a este articulo: la ruta cambiaria si se edita el
     // procedimiento a mitad de ejecucion, un caso raro que no amerita
     // recalcular la posicion (podria saltar el avance del tecnico).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -335,6 +350,10 @@ export function AsistenteVista({
   const {
     avanceCargado,
     progreso,
+    ruta,
+    pasos,
+    totalPasos,
+    elecciones,
     hechos,
     instruccionesHechas,
     completados,
@@ -342,6 +361,10 @@ export function AsistenteVista({
     verificacionCompleta,
     todoCompletado,
     subSatisfechoReactivo,
+    respuestaSatisfechaReactiva,
+    guiaPendienteDeLaRespuesta,
+    hayAvanceTrasLaDecision,
+    guiaCumplida,
     guiaDelPasoDisponible,
     guiaIntegrable,
     guiaDelPasoIntegrable,
@@ -351,6 +374,7 @@ export function AsistenteVista({
     alternarVerificacion,
     intentarCompletarPaso,
     completarPasoYAvanzar,
+    elegirOpcion,
   } = useProcedimientoEjecucion({
     articuloId,
     procedimiento,
@@ -358,6 +382,15 @@ export function AsistenteVista({
     onCompletado,
     onAvanzar: (destino) => irAPaso(destino),
   })
+  // LOS PASOS QUE SE RECORREN SON LOS DE LA RUTA (tarea 302): con
+  // decisiones con opciones, los del camino elegido. Todos los índices de
+  // esta vista (el paso que se ve, el de trabajo, "Anterior", el índice,
+  // saltar) son posiciones en ella, así que los pasos de los otros caminos
+  // no aparecen ni cuentan.
+  const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
+  // Cuántos pasos tiene la guía antes de responder nada: lo que dice la
+  // preparación ("5 pasos", o "Entre 4 y 6 pasos" si depende).
+  const largoDeLaGuia = useMemo(() => largoDeLaRuta(procedimiento), [procedimiento])
 
   // Empezar de nuevo (desde la pantalla de terminada, desde la línea de
   // "retomas donde lo dejaste" o desde el índice): borra el progreso
@@ -397,7 +430,7 @@ export function AsistenteVista({
           titulo={articulo?.titulo ?? ''}
           orientacion={orientacion}
           requisitos={requisitosPrevios}
-          totalPasos={pasos.length}
+          largo={largoDeLaGuia}
           tiempoMin={tiempoEstimadoMin}
           siguienteEsRequisitos={pantallas[pasoPreparacion + 1] === 'requisitos'}
           onSeguir={() => setPasoPreparacion(pasoPreparacion + 1 < pantallas.length ? pasoPreparacion + 1 : null)}
@@ -517,12 +550,28 @@ export function AsistenteVista({
     )
   }
 
-  const paso = pasos[indiceActual]
+  const pasoVisto = pasos[indiceActual] as PasoProcedimiento | undefined
+  // Una posición que ya no está en la ruta (la guía se editó a mitad de la
+  // ejecución y tiene menos pasos) vuelve al primer paso pendiente, en vez
+  // de romper la pantalla.
+  if (!pasoVisto) {
+    irAPaso(siguientePasoPendiente(idsPasos, hechos, -1))
+    return null
+  }
+  const paso = pasoVisto
   const idsTareas = tareasDe(paso.bloques).map((t) => t.id)
   const marcadas = contarInstruccionesHechas(progreso?.instruccionesHechas, idsTareas)
   const subSatisfecho = subSatisfechoReactivo(paso)
-  const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho)
+  // La guía que abrió la respuesta de la decisión de este paso (tarea 302)
+  // también es trabajo del paso, como la guía que reutiliza.
+  const respuestaSatisfecha = respuestaSatisfechaReactiva(paso)
+  const trabajoPrevio = pasoTrabajoPrevioCompleto(idsTareas.length, marcadas, subSatisfecho && respuestaSatisfecha)
   const pasoActualHecho = hechos.has(paso.id)
+  // La decisión con opciones que decide por dónde se sigue tras este paso,
+  // y si todavía espera respuesta (tarea 302).
+  const decisionDelPaso = decisionDeRuta(paso)
+  const respuestaPendiente = decisionDelPaso !== null && opcionElegida(decisionDelPaso, elecciones) === null
+  const guiaDeEstaRespuesta = guiaDeLaRespuesta(paso, elecciones)
   // La falla y la contingencia son de ESTE paso: al cambiar de paso no
   // se arrastran.
   const fallaDelPaso = falla?.pasoId === paso.id ? falla : null
@@ -567,9 +616,11 @@ export function AsistenteVista({
   // ¿Cerrar este paso TERMINA de verdad? En el flujo de otra guía, solo si
   // con esto termina también la guía que se abrió (y no quedan
   // comprobaciones de esta por delante): a mitad del recorrido nada dice
-  // "terminar" (tarea 289, fase 3).
+  // "terminar" (tarea 289, fase 3). Con una decisión sin responder tampoco:
+  // lo que sigue depende de la respuesta (tarea 302).
   const terminaDeVerdad =
     destinoTrasEste === null &&
+    ruta.pendiente === null &&
     (!integrada || (integracion.terminaLaGuia && verificacionFinal.length === 0))
   // El número que ve el técnico es el de la guía que abrió.
   const numeroPasoVisible = integrada ? integracion.numeroPaso : indiceActual + 1
@@ -587,7 +638,8 @@ export function AsistenteVista({
     pasoHecho: pasoActualHecho,
     totalTareas: idsTareas.length,
     tareasMarcadas: marcadas,
-    guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho),
+    guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho) ?? guiaPendienteDeLaRespuesta(paso),
+    respuestaPendiente,
     hayPasoSiguiente: !terminaDeVerdad,
     // En el flujo de otra guía no se nombra la numeración de dentro.
     numeroPasoSiguiente: integrada ? null : (destinoTrasEste ?? indiceActual) + 1,
@@ -608,7 +660,10 @@ export function AsistenteVista({
   const resumenes: ResumenPaso[] = resumirPasos(pasos, hechos, instruccionesHechas, indiceActual, saltados)
   const resumenesIndice: ResumenPaso[] =
     trabajo === indiceActual ? resumenes : resumirPasos(pasos, hechos, instruccionesHechas, trabajo, saltados)
-  const subtituloIndice = resumenDeAvance(resumenes, minutosRestantes(tiempoEstimadoMin, resumenes))
+  const subtituloIndice = resumenDeAvance(resumenes, minutosRestantes(tiempoEstimadoMin, resumenes, totalPasos))
+  // EL ÍNDICE AVISA DE LO QUE TODAVÍA NO SE VE (tarea 302): con una decisión
+  // sin responder, los pasos que siguen dependen de la respuesta.
+  const pasoDeLaPregunta = ruta.pendiente ? idsPasos.indexOf(ruta.pendiente.paso.id) + 1 : null
   const esBorrador = nivel === 0 && (articulo?.estado ?? 'publicado') === 'borrador'
 
   // MODO FOCO (tablero 6d): sustituye el cuerpo del paso, no lo
@@ -759,7 +814,7 @@ export function AsistenteVista({
           ? {
               tipo: 'retomada',
               numeroPaso: indiceActual + 1,
-              totalPasos: pasos.length,
+              totalPasos,
               onEmpezarDeNuevo: () => void reiniciarYVolver(),
             }
           : esBorrador
@@ -773,6 +828,7 @@ export function AsistenteVista({
       <div className="flex flex-none flex-col">
         <SegmentosDePasos
           resumenes={resumenes}
+          total={totalPasos}
           indiceVisto={indiceActual}
           indiceTrabajo={trabajo}
           consultando={consultando}
@@ -788,7 +844,12 @@ export function AsistenteVista({
   // la orientan el contador "3/8" (que abre el índice) y los segmentos.
   const rutaUI =
     nivel === 0 ? (
-      <RutaProcedimiento resumenes={resumenes} indiceActual={indiceActual} onIrAPaso={(indice: number) => verPaso(indice)} />
+      <RutaProcedimiento
+        resumenes={resumenes}
+        total={totalPasos}
+        indiceActual={indiceActual}
+        onIrAPaso={(indice: number) => verPaso(indice)}
+      />
     ) : null
 
   // El índice de pasos y su disparador (tarea 218, G-09, G-10, G-14):
@@ -802,7 +863,7 @@ export function AsistenteVista({
     nivel === 0 ? (
       <>
         <BandaTarea>
-          <ContadorPaso indice={indiceActual} total={pasos.length} onAbrirIndice={() => setIndiceAbierto(true)} />
+          <ContadorPaso indice={indiceActual} total={totalPasos} onAbrirIndice={() => setIndiceAbierto(true)} />
         </BandaTarea>
         <HojaPasos
           abierto={indiceAbierto}
@@ -819,6 +880,7 @@ export function AsistenteVista({
           // H11 / A15: se leen desde el primer paso, sin tener que
           // marcar tareas que nadie hizo para llegar a ellas.
           verificacionFinal={verificacionFinal}
+          pasoDeLaPregunta={pasoDeLaPregunta}
           // LO QUE YA NO OCUPA LA PANTALLA DE LA GUÍA (encargo del
           // 2026-09-17): la ficha con la descripción, la versión y el
           // historial, y empezar de nuevo. A un toque, desde el índice.
@@ -842,7 +904,7 @@ export function AsistenteVista({
           ruta={rutaUI}
           tituloPaso={tituloPaso}
           numeroPaso={indiceActual + 1}
-          totalPasos={pasos.length}
+          totalPasos={totalPasos}
           cierraLaGuia={!pasoActualHecho && terminaDeVerdad}
           requisitos={requisitosVisibles}
           entrarPorElFinal={entradaPorElFinal === paso.id}
@@ -891,6 +953,18 @@ export function AsistenteVista({
           cierre={cierre}
           onFalla={(texto) => setHojaFalla({ tarea: texto })}
           guiasPendientes={(tareaId) => guiasPendientesDeTarea(paso, tareaId)}
+          guiaCumplida={guiaCumplida}
+          // RESPONDER UNA DECISIÓN CON OPCIONES (tarea 302) es actuar, como
+          // marcar una acción: la línea de "Retomando" se va y el trabajo
+          // está aquí. El hook guarda la respuesta y sigue por su camino.
+          elecciones={elecciones}
+          onElegirOpcion={(decisionId, opcionId) => {
+            setRetomadaEn(null)
+            setIndiceTrabajo(indiceActual)
+            integracion?.alActuar?.()
+            void elegirOpcion(paso, decisionId, opcionId)
+          }}
+          avanceTrasLaDecision={hayAvanceTrasLaDecision(paso)}
           // TERMINAR EL DESTINO DE UN "NO" RESPONDE LA DECISIÓN, no
           // cierra el paso (encargo del 2026-09-09, secciones 5 y 6).
           // Es el mismo trato que la vista completa: se marca la
@@ -1103,8 +1177,38 @@ export function AsistenteVista({
                         onCompletado={onCompletado}
                       />
                     )}
+                    // Una decisión con opciones (tarea 302) se responde tocando
+                    // una de sus respuestas, igual que en la de una acción a la
+                    // vez: responder es actuar.
+                    respuesta={elecciones[bloque.id] ?? null}
+                    onElegirOpcion={(opcionId) => {
+                      setRetomadaEn(null)
+                      setIndiceTrabajo(indiceActual)
+                      void elegirOpcion(paso, bloque.id, opcionId)
+                    }}
                   />
                 )}
+                {/* EL CAMINO DE LA RESPUESTA, JUSTO DESPUÉS DE SU PREGUNTA
+                    (tarea 302): la guía que abre la respuesta elegida se hace
+                    aquí, como parte del paso. */}
+                {guiaDeEstaRespuesta &&
+                  bloque.id === decisionDelPaso?.id &&
+                  guiaIntegrable(guiaDeEstaRespuesta.articuloId) && (
+                    <div className="mt-2">
+                      <SubProcedimientoEnAsistente
+                        key={guiaDeEstaRespuesta.articuloId}
+                        guiaId={guiaDeEstaRespuesta.articuloId}
+                        tituloReferencia={guiaDeEstaRespuesta.titulo}
+                        nivel={nivel}
+                        integracion={integracionDelPaso({
+                          lugar: '',
+                          resultado: '',
+                          terminaLaGuia: !pasoActualHecho && destinoTrasEste === null && ruta.pendiente === null,
+                        })}
+                        onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
+                      />
+                    </div>
+                  )}
               </li>
             )
           })}
@@ -1144,7 +1248,11 @@ export function AsistenteVista({
                 ? integracionDelPaso({
                     lugar: '',
                     resultado: '',
-                    terminaLaGuia: !pasoActualHecho && destinoTrasEste === null && marcadas === idsTareas.length,
+                    terminaLaGuia:
+                      !pasoActualHecho &&
+                      destinoTrasEste === null &&
+                      ruta.pendiente === null &&
+                      marcadas === idsTareas.length,
                   })
                 : undefined
             }
@@ -1271,11 +1379,11 @@ export function AsistenteVista({
               type="button"
               onClick={() => setIndiceAbierto(true)}
               aria-haspopup="dialog"
-              aria-label={`Paso ${indiceActual + 1} de ${pasos.length}. Abrir el índice de pasos`}
+              aria-label={nombreDelContador(indiceActual, totalPasos)}
               className="flex h-[52px] flex-1 items-center justify-center gap-1 rounded-xl border border-noct-divider font-mono text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-text/[.07]"
             >
               {indiceActual + 1}
-              <span className="text-[13px] font-normal text-noct-neutral-400">/{pasos.length}</span>
+              <span className="text-[13px] font-normal text-noct-neutral-400">/{totalPasos ?? '…'}</span>
               <CaretDown size={13} className="text-noct-neutral-400" aria-hidden />
             </button>
             <button
@@ -1351,13 +1459,17 @@ export function AsistenteVista({
 // pasos ("3/7 ▾"), portado junto al título y la X mediante
 // `BandaTarea`; el título ya lo dice esa misma línea, y el estado de
 // cada paso vive en el propio índice (`HojaPasos`), no repetido aquí.
+//
+// El total es el de la RUTA (tarea 302). Mientras dependa de una respuesta
+// cuyos caminos no miden lo mismo se escribe "3/…": hay más, pero todavía
+// no se sabe cuántos.
 function ContadorPaso({
   indice,
   total,
   onAbrirIndice,
 }: {
   indice: number
-  total: number
+  total: number | null
   onAbrirIndice: () => void
 }) {
   return (
@@ -1365,14 +1477,20 @@ function ContadorPaso({
       type="button"
       onClick={onAbrirIndice}
       aria-haspopup="dialog"
-      aria-label={`Paso ${indice + 1} de ${total}. Abrir el índice de pasos`}
+      aria-label={nombreDelContador(indice, total)}
       className="flex h-11 shrink-0 items-center gap-1 rounded-lg px-2 font-mono text-[14px] font-semibold text-noct-accent-300 hover:bg-noct-text/[.07]"
     >
       {indice + 1}
-      <span className="text-[12px] font-normal text-noct-neutral-400">/{total}</span>
+      <span className="text-[12px] font-normal text-noct-neutral-400">/{total ?? '…'}</span>
       <CaretDown size={12} className="text-noct-neutral-400" aria-hidden />
     </button>
   )
+}
+
+// El nombre accesible de los contadores: "Paso 3 de 7", o "Paso 3" cuando el
+// total todavía depende de una respuesta.
+function nombreDelContador(indice: number, total: number | null): string {
+  return `Paso ${indice + 1}${total === null ? '' : ` de ${total}`}. Abrir el índice de pasos`
 }
 
 // EL ENCABEZADO DE UNA PANTALLA DE CIERRE RECIBE EL FOCO AL APARECER
@@ -1558,10 +1676,9 @@ function VinculoEnFoco({
     )
   }
 
-  const total = procedimiento?.pasos.length ?? 0
-  const hechos = procedimiento
-    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
-    : 0
+  // Sobre su ruta (tarea 302): una guía reutilizada también puede tener
+  // decisiones con opciones.
+  const { hechos, total } = procedimiento ? avanceDeLaRuta(procedimiento, progreso) : { hechos: 0, total: 0 }
 
   // Mas alla del primer nivel, o sin pasos que ejecutar (K1), la guia
   // solo se puede CONSULTAR: terminarla en su ficha escribe en su
@@ -1591,7 +1708,7 @@ function VinculoEnFoco({
 
   // "Completada" con la MISMA regla que usa la ejecucion para dar el
   // vinculo por cumplido: pasos cerrados Y comprobaciones finales.
-  const completada = guiaTerminada(procedimiento, progreso?.pasosHechos, progreso?.verificacionHecha)
+  const completada = guiaTerminada(procedimiento, progreso?.pasosHechos, progreso?.verificacionHecha, progreso?.elecciones)
 
   return (
     <TarjetaGuiaVinculada
@@ -1738,10 +1855,9 @@ function SubProcedimientoEnAsistente({
   }
 
   const ruta = `/soluciones/${articulo.categoriaId}/${articulo.id}`
-  const total = procedimiento?.pasos.length ?? 0
-  const hechos = procedimiento
-    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((paso) => paso.id))
-    : 0
+  // Sobre su ruta (tarea 302): una guía reutilizada también puede tener
+  // decisiones con opciones.
+  const { hechos, total } = procedimiento ? avanceDeLaRuta(procedimiento, progreso) : { hechos: 0, total: 0 }
   // SIN ANILLO DE AVANCE (encargo del 2026-09-10, tarea 4): un anillo
   // de 22 px no dice ni cuantos pasos hay ni en cual va, y encima
   // obligaba a recortar el nombre. Lo dice la nota, con palabras.
@@ -1788,7 +1904,7 @@ function SubProcedimientoEnAsistente({
   // Lo reutilizado se recorre como el resto del paso, con la línea de
   // profundidad como única marca; ya hecho, se lee.
   if (integracion) {
-    if (guiaTerminada(procedimiento, progreso?.pasosHechos, progreso?.verificacionHecha)) {
+    if (guiaTerminada(procedimiento, progreso?.pasosHechos, progreso?.verificacionHecha, progreso?.elecciones)) {
       return <PasosEnLectura guiaId={articulo.id} />
     }
     return (
@@ -1883,10 +1999,9 @@ function SolucionEnAsistente({
 
   if (articulo === undefined) return null
 
-  const total = procedimiento?.pasos.length ?? 0
-  const hechos = procedimiento
-    ? contarHechos(progreso?.pasosHechos ?? [], procedimiento.pasos.map((p) => p.id))
-    : 0
+  // Sobre su ruta (tarea 302): una guía reutilizada también puede tener
+  // decisiones con opciones.
+  const { hechos, total } = procedimiento ? avanceDeLaRuta(procedimiento, progreso) : { hechos: 0, total: 0 }
   const aMedias = hechos > 0 && hechos < total
   if (cerradaAMano || (!abrirDirecto && !aMedias)) return null
 

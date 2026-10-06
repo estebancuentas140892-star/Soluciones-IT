@@ -99,6 +99,13 @@ export interface DatosCierrePaso {
    */
   guiaPendiente: string | null
   /**
+   * El paso termina en una decision con opciones que todavia no tiene
+   * respuesta (tarea 302): lo que sigue depende de ella, asi que el paso no
+   * se cierra hasta responderla. Si es lo unico que falta, el rotulo lo
+   * dice ("Elige una opción").
+   */
+  respuestaPendiente?: boolean
+  /**
    * ¿Queda a donde ir despues de este paso? En un paso pendiente: si al
    * cerrarlo queda otro paso por hacer (si no, cerrarlo termina la
    * guia). En un paso ya hecho: si navegar lleva a otro paso.
@@ -140,6 +147,7 @@ export function cierreDelPaso({
   totalTareas,
   tareasMarcadas,
   guiaPendiente,
+  respuestaPendiente = false,
   hayPasoSiguiente,
   numeroPasoSiguiente,
 }: DatosCierrePaso): CierrePaso {
@@ -169,6 +177,13 @@ export function cierreDelPaso({
       guiaPendiente,
       tareasPendientes,
     }
+  }
+
+  // Sin respuesta no se cierra, aunque un dato viejo tenga la pregunta
+  // marcada: quedaria "Completar y seguir" sin a donde seguir.
+  if (respuestaPendiente) {
+    const etiqueta = tareasPendientes > 1 ? `Faltan ${tareasPendientes} tareas` : 'Elige una opción'
+    return { accion: 'bloqueado', etiqueta, etiquetaCompleta: etiqueta, guiaPendiente: null, tareasPendientes }
   }
 
   if (tareasPendientes > 0) {

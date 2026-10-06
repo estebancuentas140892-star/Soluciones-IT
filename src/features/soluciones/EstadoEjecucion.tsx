@@ -27,16 +27,24 @@ import type { ResumenPaso } from './estadoPasos'
  */
 export function SegmentosDePasos({
   resumenes,
+  total = resumenes.length,
   indiceVisto,
   indiceTrabajo,
   consultando,
 }: {
   resumenes: ResumenPaso[]
+  /**
+   * Los pasos de la ruta entera (tarea 302). Con una pregunta sin
+   * responder pueden ser más que los que ya se conocen: los que faltan van
+   * como segmentos pendientes, sin nombre. null si todavía no se sabe.
+   */
+  total?: number | null
   indiceVisto: number
   indiceTrabajo: number | null
   consultando: boolean
 }) {
-  if (resumenes.length < 2) return null
+  const porConocer = Math.max(0, (total ?? resumenes.length) - resumenes.length)
+  if (resumenes.length + porConocer < 2) return null
   return (
     <div aria-hidden data-segmentos-pasos className="flex gap-[3px] pt-1.5 md:hidden">
       {resumenes.map((resumen) => {
@@ -45,13 +53,17 @@ export function SegmentosDePasos({
         if (resumen.indice === indiceVisto) clase = consultando ? 'bg-noct-precaucion' : 'bg-noct-accent-700'
         return <span key={resumen.id} className={`h-[3px] min-w-0 flex-1 rounded-sm ${clase}`} />
       })}
+      {Array.from({ length: porConocer }, (_, i) => (
+        <span key={`por-conocer-${i}`} className="h-[3px] min-w-0 flex-1 rounded-sm bg-noct-neutral-800" />
+      ))}
     </div>
   )
 }
 
 export type EstadoLinea =
   | { tipo: 'consulta' }
-  | { tipo: 'retomada'; numeroPaso: number; totalPasos: number; onEmpezarDeNuevo: () => void }
+  // `totalPasos` es null mientras el total dependa de una respuesta (tarea 302).
+  | { tipo: 'retomada'; numeroPaso: number; totalPasos: number | null; onEmpezarDeNuevo: () => void }
   | { tipo: 'borrador' }
 
 /** La línea de estado de la ejecución, o nada si no hay nada que decir. */
@@ -73,7 +85,8 @@ export function LineaDeEstado({ estado }: { estado: EstadoLinea | null }) {
         <p className="flex min-w-0 flex-1 items-center gap-2 text-[13px] leading-snug text-noct-neutral-400">
           <ClockCounterClockwise size={14} className="shrink-0" aria-hidden />
           <span className="min-w-0">
-            Retomando · paso {estado.numeroPaso} de {estado.totalPasos}
+            Retomando · paso {estado.numeroPaso}
+            {estado.totalPasos !== null && ` de ${estado.totalPasos}`}
           </span>
         </p>
         <button

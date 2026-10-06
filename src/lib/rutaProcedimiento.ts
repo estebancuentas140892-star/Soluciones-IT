@@ -145,13 +145,62 @@ export function hechosDeRuta(ruta: Ruta, pasosHechos: readonly string[] | undefi
   return hechos
 }
 
+/** Cuántos pasos recorre la ruta entera: el camino más corto y el más largo de los que siguen abiertos. */
+export interface LargoDeRuta {
+  minimo: number
+  maximo: number
+}
+
+/**
+ * EL LARGO DE LA RUTA, AUNQUE FALTE RESPONDER. Con las respuestas dadas,
+ * cuántos pasos recorre la guía entera; si en el camino queda una decisión
+ * sin responder, se miran todas sus opciones y se da el camino más corto y
+ * el más largo. Cuando coinciden, el total se sabe antes de responder: en la
+ * copia de seguridad de Outlook los dos caminos tienen cinco pasos, así que
+ * la guía es de cinco pasos se elija lo que se elija.
+ */
+export function largoDeLaRuta(procedimiento: Pick<Procedimiento, 'pasos'>, elecciones?: Elecciones): LargoDeRuta {
+  const { pasos } = procedimiento
+  if (pasos.length === 0) return { minimo: 0, maximo: 0 }
+  const posicion = new Map(pasos.map((paso, i) => [paso.id, i]))
+  // De atrás hacia adelante: todo salto va hacia adelante, así que lo que
+  // sigue a un paso ya está medido cuando se llega a él.
+  const largos: LargoDeRuta[] = []
+  for (let i = pasos.length - 1; i >= 0; i--) {
+    const decision = decisionDeRuta(pasos[i])
+    const abierta = decision !== null && opcionElegida(decision, elecciones) === null
+    // Una decisión sin responder abre un camino por opción.
+    const respuestas = abierta
+      ? (decision.opciones ?? []).map((opcion) => ({ ...elecciones, [decision.id]: opcion.id }))
+      : [elecciones]
+    const restos = respuestas.map((respuesta) => {
+      const siguiente = siguienteDesde(pasos, i, posicion, respuesta)
+      return typeof siguiente === 'number' ? largos[siguiente] : { minimo: 0, maximo: 0 }
+    })
+    largos[i] = {
+      minimo: 1 + Math.min(...restos.map((resto) => resto.minimo)),
+      maximo: 1 + Math.max(...restos.map((resto) => resto.maximo)),
+    }
+  }
+  return largos[0]
+}
+
 /** El avance de una ejecución contado sobre su ruta. */
 export interface AvanceDeLaRuta {
   ruta: Ruta
   /** Pasos de la ruta hechos. */
   hechos: number
-  /** Pasos de la ruta que se conocen. Con una decisión pendiente, lo de después todavía no se sabe. */
+  /**
+   * Los pasos de la ruta entera. Con una decisión sin responder, el total
+   * se sabe si todos sus caminos miden lo mismo; si no, son los pasos que
+   * ya se conocen (y `totalAbierto`).
+   */
   total: number
+  /**
+   * ¿El total todavía no se sabe? Solo con una decisión sin responder cuyos
+   * caminos no miden lo mismo: quien lo pinta no dice "de M".
+   */
+  totalAbierto: boolean
   /** ¿Todos los pasos de la ruta hechos y ninguna decisión pendiente? (Las comprobaciones finales van aparte.) */
   pasosListos: boolean
 }
@@ -163,12 +212,37 @@ export function avanceDeLaRuta(
   const ruta = rutaDe(procedimiento, avance?.elecciones)
   const hechosSet = hechosDeRuta(ruta, avance?.pasosHechos)
   const hechos = ruta.pasos.filter((paso) => hechosSet.has(paso.id)).length
+  const largo = ruta.pendiente ? largoDeLaRuta(procedimiento, avance?.elecciones) : null
+  const totalAbierto = largo !== null && largo.minimo !== largo.maximo
   return {
     ruta,
     hechos,
-    total: ruta.pasos.length,
+    total: largo !== null && !totalAbierto ? largo.minimo : ruta.pasos.length,
+    totalAbierto,
     pasosListos: ruta.pendiente === null && hechos === ruta.pasos.length,
   }
+}
+
+/**
+ * La guía que abre la respuesta elegida en la decisión de este paso, o
+ * null: sin decisión con opciones, sin responder o con otro destino. Se
+ * hace en el flujo, justo después de la decisión, y el paso no se cierra
+ * hasta terminarla.
+ */
+export function guiaDeLaRespuesta(
+  paso: PasoProcedimiento,
+  elecciones: Elecciones | undefined,
+): { articuloId: string; titulo: string } | null {
+  const decision = decisionDeRuta(paso)
+  const opcion = decision ? opcionElegida(decision, elecciones) : null
+  return opcion?.destino.tipo === 'guia' ? { articuloId: opcion.destino.articuloId, titulo: opcion.destino.titulo } : null
+}
+
+/** Las guías que puede abrir alguna respuesta de las decisiones de este paso. */
+export function guiasDeLasOpciones(paso: PasoProcedimiento): string[] {
+  return paso.bloques.flatMap((bloque) =>
+    (bloque.opciones ?? []).flatMap((opcion) => (opcion.destino.tipo === 'guia' ? [opcion.destino.articuloId] : [])),
+  )
 }
 
 /**
@@ -375,11 +449,8 @@ export function guiasDePaso(paso: PasoProcedimiento, conOpciones = true): string
   for (const bloque of paso.bloques) {
     if (bloque.guiaArticuloId) guias.add(bloque.guiaArticuloId)
     if (bloque.decisionArticuloId) guias.add(bloque.decisionArticuloId)
-    if (!conOpciones) continue
-    for (const opcion of bloque.opciones ?? []) {
-      if (opcion.destino.tipo === 'guia') guias.add(opcion.destino.articuloId)
-    }
   }
+  if (conOpciones) for (const guia of guiasDeLasOpciones(paso)) guias.add(guia)
   return [...guias]
 }
 

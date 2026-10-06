@@ -1,5 +1,6 @@
-import type { BloquePaso, IntencionGuia, PasoProcedimiento, TipoTarea, VinculoProtegido } from '../../lib/db'
+import type { BloquePaso, IntencionGuia, OpcionDecision, PasoProcedimiento, TipoTarea, VinculoProtegido } from '../../lib/db'
 import { tareasDe } from '../../lib/procedimiento'
+import { decisionDeRuta, guiaDeLaRespuesta, type Elecciones } from '../../lib/rutaProcedimiento'
 import { apoyosDelPaso, apoyosDeTarea } from './apoyosTarea'
 import { guiasObligatoriasDeTarea } from './guiasObligatorias'
 import { presenciaDeAviso } from './tonos'
@@ -63,6 +64,10 @@ export type ClaseTareaFoco =
   // justo antes de esa tarea (tarea 289, fase 3): sus acciones son parte
   // del flujo, no una tarjeta que abrir.
   | 'guia-de-tarea'
+  // La guia que abre la respuesta elegida en una decision con opciones
+  // (tarea 302), justo DESPUES de la decision: es el camino de esa
+  // respuesta, y se hace en el flujo antes de cerrar el paso.
+  | 'guia-de-respuesta'
 
 export interface TareaFoco {
   id: string
@@ -91,6 +96,9 @@ export interface TareaFoco {
   // eran el mismo gesto y el destino del "no" no existia.
   decisionGuiaId: string | null
   decisionGuiaTitulo: string
+  // Las respuestas de una decision CON OPCIONES (tarea 302), en su orden;
+  // vacio en todo lo demas, incluidas las decisiones de Si/No.
+  opciones: OpcionDecision[]
   // TODAS las guias con intencion 'necesario' colgadas de esta tarea,
   // en el orden del editor (encargo del 2026-09-09, tarea 1). Antes se
   // tomaba solo la primera con `.find`, asi que una tarea con dos guias
@@ -111,6 +119,7 @@ type CamposVacios = Pick<
   | 'intencionGuia'
   | 'decisionGuiaId'
   | 'decisionGuiaTitulo'
+  | 'opciones'
   | 'guiasObligatorias'
   | 'tareaDeLaGuia'
 >
@@ -126,6 +135,7 @@ function camposVacios(): CamposVacios {
     intencionGuia: null,
     decisionGuiaId: null,
     decisionGuiaTitulo: '',
+    opciones: [],
     guiasObligatorias: [],
     tareaDeLaGuia: null,
   }
@@ -141,6 +151,11 @@ export function idTareaGuiaDeTarea(pasoId: string, bloqueId: string): string {
   return `guia:${pasoId}:${bloqueId}`
 }
 
+/** Id sintetico de la guia que abre la respuesta de la decision del paso. */
+export function idTareaGuiaDeRespuesta(pasoId: string): string {
+  return `guia:${pasoId}:respuesta`
+}
+
 // El titulo llega ya resuelto por quien llama (`paso.titulo` puede
 // estar vacio y caer en el del subarticulo o en "Paso N"), para no
 // duplicar aqui esa cadena de respaldos.
@@ -151,10 +166,16 @@ export function idTareaGuiaDeTarea(pasoId: string, bloqueId: string): string {
 // recorrido, justo antes de su tarea; si no, la tarea la sigue ofreciendo
 // aparte (o explicando que no esta), como hasta ahora. Sin el predicado,
 // ninguna se vuelve entrada.
+//
+// Con `elecciones` (tarea 302), la respuesta elegida en la decision del
+// paso que abre otra guia suma esa guia justo despues de la decision, si
+// se puede hacer aqui: es el camino de la respuesta. Las demas respuestas
+// no suman nada: su destino es otro paso, y eso lo decide la ruta.
 export function tareasParaFoco(
   paso: PasoProcedimiento,
   tituloPaso: string,
   sePuedeHacerAqui: (guiaId: string) => boolean = () => false,
+  elecciones?: Elecciones,
 ): TareaFoco[] {
   const trabajo: TareaFoco[] = []
   // Una guia se hace una sola vez por paso: si la reutiliza el paso entero
@@ -217,8 +238,24 @@ export function tareasParaFoco(
       guiasObligatorias: obligatorias,
       decisionGuiaId: t.tipoTarea === 'decision' ? t.decisionArticuloId : null,
       decisionGuiaTitulo: t.tipoTarea === 'decision' ? t.decisionArticuloTitulo : '',
+      opciones: t.tipoTarea === 'decision' ? (t.opciones ?? []) : [],
       tareaDeLaGuia: null,
     })
+    const respuesta = decisionDeRuta(paso)?.id === t.id ? guiaDeLaRespuesta(paso, elecciones) : null
+    if (respuesta && !guiasEnElRecorrido.has(respuesta.articuloId) && sePuedeHacerAqui(respuesta.articuloId)) {
+      guiasEnElRecorrido.add(respuesta.articuloId)
+      trabajo.push({
+        ...camposVacios(),
+        id: idTareaGuiaDeRespuesta(paso.id),
+        texto: respuesta.titulo,
+        clase: 'guia-de-respuesta',
+        esPasoEntero: false,
+        vinculoProtegido: null,
+        guiaId: respuesta.articuloId,
+        guiaTitulo: respuesta.titulo,
+        intencionGuia: 'necesario',
+      })
+    }
   }
 
   // Un paso sin tareas (y sin guia) no se queda sin forma de cerrarse:
@@ -289,13 +326,20 @@ export function tareaFocoHecha(
   guiaCumplida: (guiaId: string) => boolean = () => false,
 ): boolean {
   if (tarea.clase === 'guia-del-paso') return subSatisfecho
-  if (tarea.clase === 'guia-de-tarea') return tarea.guiaId !== null && guiaCumplida(tarea.guiaId)
+  if (tarea.clase === 'guia-de-tarea' || tarea.clase === 'guia-de-respuesta') {
+    return tarea.guiaId !== null && guiaCumplida(tarea.guiaId)
+  }
   return hechas.has(tarea.id)
 }
 
-/** ¿La entrada es una guia que se hace en el sitio (la del paso o la que exige una tarea)? */
+/** ¿La entrada es una guia que se hace en el sitio (la del paso, la que exige una tarea o la de una respuesta)? */
 export function esGuiaDelRecorrido(tarea: TareaFoco): boolean {
-  return tarea.clase === 'guia-del-paso' || tarea.clase === 'guia-de-tarea'
+  return tarea.clase === 'guia-del-paso' || tarea.clase === 'guia-de-tarea' || tarea.clase === 'guia-de-respuesta'
+}
+
+/** ¿La entrada es una decision con opciones con nombre (tarea 302)? */
+export function esDecisionConOpcionesFoco(tarea: TareaFoco): boolean {
+  return tarea.clase === 'tarea' && tarea.tipoTarea === 'decision' && tarea.opciones.length > 0
 }
 
 // Que hace el boton grande del foco. `marcar` mientras queden tareas

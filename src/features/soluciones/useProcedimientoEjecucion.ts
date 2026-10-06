@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
   normalizarProcedimiento,
@@ -12,13 +12,26 @@ import {
   alternarInstruccionHecha,
   alternarVerificacionFinal,
   avanceDe,
-  contarHechos,
   contarInstruccionesHechas,
   establecerPasoHecho,
+  hayAvanceEnEjecucion,
   leerAvance,
   raizDe,
+  registrarEleccion,
   verificacionFinalCompleta,
 } from '../../lib/progresoPasos'
+import {
+  aplicarEleccion,
+  avanceDeLaRuta,
+  decisionDeRuta,
+  guiaDeLaRespuesta,
+  guiasDeLasOpciones,
+  hechosDeRuta,
+  largoDeLaRuta,
+  opcionElegida,
+  rutaDe,
+  type Elecciones,
+} from '../../lib/rutaProcedimiento'
 import { guiaTerminada } from './cierrePaso'
 import { useClaveProgreso } from './contextoEjecucion'
 import {
@@ -39,9 +52,10 @@ interface Opciones {
   // asi un subprocedimiento o una solucion que terminan completan
   // tambien el paso del nivel anterior que los vincula.
   onCompletado?: () => void
-  // A que paso ir (o null si el procedimiento ya no tiene pendientes).
-  // Quien use el hook decide que significa eso en su interfaz: la
-  // lista lo expande y hace scroll, el asistente cambia de pantalla.
+  // A que paso ir (o null si el procedimiento ya no tiene pendientes),
+  // por su posicion en la RUTA (tarea 302), que es lo que las vistas
+  // recorren. Quien use el hook decide que significa eso en su interfaz:
+  // la lista lo expande y hace scroll, el asistente cambia de pantalla.
   onAvanzar: (destino: number | null) => void
 }
 
@@ -51,6 +65,13 @@ interface Opciones {
 // contenedor de tareas: no se da por completado ni avanza hasta
 // terminar TODO su contenido (sus tareas propias, su subprocedimiento
 // vinculado y, si aplica, responder la pregunta de error).
+//
+// LA EJECUCIÓN RECORRE LA RUTA (tarea 302). Con decisiones con opciones,
+// los pasos que se ejecutan son los de la ruta que marcan las respuestas
+// dadas (`rutaDe`), no todos los de la guía: los índices, el avance, el
+// paso siguiente y terminar se cuentan sobre ella, así que los pasos de los
+// caminos no elegidos no existen para quien ejecuta. Sin decisiones con
+// opciones, la ruta son todos los pasos en su orden, como siempre.
 export function useProcedimientoEjecucion({
   articuloId,
   procedimiento,
@@ -73,13 +94,29 @@ export function useProcedimientoEjecucion({
   const avanceCargado = filaLeida !== undefined
   const filaRaiz = filaLeida ?? undefined
   const progreso = avanceDe(filaRaiz, clave)
-  const { pasos, verificacionFinal } = procedimiento
-  const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
+  const { verificacionFinal } = procedimiento
 
-  const hechos = new Set(progreso?.pasosHechos ?? [])
+  // LAS RESPUESTAS DE ESTA EJECUCIÓN Y SU RUTA. La consulta viva entrega un
+  // objeto nuevo en cada lectura; la firma hace que la ruta (y con ella la
+  // lista de pasos que reciben las vistas) solo cambie cuando cambia una
+  // respuesta, no cada vez que se marca una tarea.
+  const firmaElecciones = JSON.stringify(progreso?.elecciones ?? {})
+  const elecciones = useMemo(() => JSON.parse(firmaElecciones) as Elecciones, [firmaElecciones])
+  const ruta = useMemo(() => rutaDe(procedimiento, elecciones), [procedimiento, elecciones])
+  const pasos = ruta.pasos
+  const idsPasos = useMemo(() => pasos.map((p) => p.id), [pasos])
+  // El total de la ruta entera, o null si todavía depende de una respuesta
+  // cuyos caminos no miden lo mismo (entonces no se afirma).
+  const largo = useMemo(() => largoDeLaRuta(procedimiento, elecciones), [procedimiento, elecciones])
+  const totalPasos = largo.minimo === largo.maximo ? largo.minimo : null
+
+  // El paso de una decisión sin responder no cuenta como hecho aunque un
+  // dato viejo lo tenga marcado: su respuesta es la que dice por dónde se
+  // sigue (`hechosDeRuta`).
+  const hechos = hechosDeRuta(ruta, progreso?.pasosHechos)
   const instruccionesHechas = new Set(progreso?.instruccionesHechas ?? [])
-  const completados = contarHechos(progreso?.pasosHechos ?? [], idsPasos)
-  const pasosCompletados = pasos.length > 0 && completados === pasos.length
+  const completados = pasos.filter((p) => hechos.has(p.id)).length
+  const pasosCompletados = pasos.length > 0 && ruta.pendiente === null && completados === pasos.length
   const verificacionCompleta = verificacionFinalCompleta(progreso?.verificacionHecha, verificacionFinal.length)
   const todoCompletado = pasosCompletados && verificacionCompleta
 
@@ -92,18 +129,21 @@ export function useProcedimientoEjecucion({
   // Desde el 2026-09-09 la lista incluye tambien las guias con
   // intencion 'necesario' colgadas de una TAREA: se mostraban pero no
   // condicionaban nada, asi que "Marcar hecha" funcionaba con la guia
-  // sin empezar (encargo, tarea 1).
+  // sin empezar (encargo, tarea 1). Y desde la tarea 302, las que abren
+  // las respuestas de las decisiones. Se miran todos los pasos, no solo los
+  // de la ruta: cambiar una respuesta no obliga a volver a leer nada.
   const subIds = useMemo(
     () =>
       nivel === 0
         ? [
             ...new Set([
-              ...pasos.map((p) => p.subArticuloId).filter((id): id is string => Boolean(id)),
-              ...pasos.flatMap((p) => idsGuiasObligatoriasDelPaso(p)),
+              ...procedimiento.pasos.map((p) => p.subArticuloId).filter((id): id is string => Boolean(id)),
+              ...procedimiento.pasos.flatMap((p) => idsGuiasObligatoriasDelPaso(p)),
+              ...procedimiento.pasos.flatMap(guiasDeLasOpciones),
             ]),
           ]
         : [],
-    [pasos, nivel],
+    [procedimiento.pasos, nivel],
   )
   const subArticulos = useLiveQuery(() => db.articulos.bulkGet(subIds), [subIds])
   // El avance de cada vinculo se lee de ESTA ejecucion, no de la fila
@@ -120,7 +160,8 @@ export function useProcedimientoEjecucion({
   // ¿Esta guia vinculada ya no impone trabajo? Una guia que no esta en
   // el dispositivo, o que no tiene pasos, cuenta como cumplida: no se
   // puede exigir lo que no se puede abrir, y bloquear ahi dejaria la
-  // tarea sin salida (criterio A12).
+  // tarea sin salida (criterio A12). "Terminada" sobre su propia ruta: una
+  // guía reutilizada también puede tener decisiones con opciones.
   function guiaCumplidaReactiva(guiaId: string): boolean {
     if (nivel >= 1) return true
     // Solo se espera al ARTICULO: sin el no se sabe si el vinculo
@@ -134,7 +175,7 @@ export function useProcedimientoEjecucion({
     const proc = normalizarProcedimiento(articulo.procedimiento)
     if (!proc) return true
     const prog = vinculos?.[guiaId]
-    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha)
+    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha, prog?.elecciones)
   }
 
   // La misma pregunta con lectura fresca, para decidir una escritura
@@ -146,7 +187,7 @@ export function useProcedimientoEjecucion({
     const proc = normalizarProcedimiento(articulo.procedimiento)
     if (!proc) return true
     const prog = (await db.progresoPasos.get(raizId))?.vinculos?.[guiaId]
-    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha)
+    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha, prog?.elecciones)
   }
 
   /**
@@ -173,6 +214,41 @@ export function useProcedimientoEjecucion({
     return guiaCumplidaFresca(paso.subArticuloId)
   }
 
+  // LA GUÍA QUE ABRE LA RESPUESTA ELEGIDA (tarea 302): se hace en el flujo,
+  // justo después de la decisión, y el paso no se cierra hasta terminarla,
+  // igual que la guía del paso. Solo se exige la que se puede hacer aquí
+  // (`guiaIntegrable`): la que no está en el dispositivo no bloquea (A12).
+  function respuestaSatisfechaReactiva(paso: PasoProcedimiento): boolean {
+    const guia = guiaDeLaRespuesta(paso, elecciones)
+    return !guia || !guiaIntegrable(guia.articuloId) || guiaCumplidaReactiva(guia.articuloId)
+  }
+
+  async function respuestaSatisfechaFresca(paso: PasoProcedimiento, actuales: Elecciones | undefined): Promise<boolean> {
+    const guia = guiaDeLaRespuesta(paso, actuales)
+    return !guia || !guiaIntegrable(guia.articuloId) || guiaCumplidaFresca(guia.articuloId)
+  }
+
+  /** El nombre de la guía de la respuesta mientras siga sin terminar, o null: es lo que nombra el control del paso. */
+  function guiaPendienteDeLaRespuesta(paso: PasoProcedimiento): string | null {
+    const guia = guiaDeLaRespuesta(paso, elecciones)
+    return guia && !respuestaSatisfechaReactiva(paso) ? guia.titulo : null
+  }
+
+  /**
+   * ¿Hay algo hecho DESPUÉS de la decisión de este paso, en su ruta o en la
+   * guía que abrió su respuesta? Cambiar la respuesta lo reinicia
+   * (`aplicarEleccion`), así que se avisa antes de tocar otra opción.
+   */
+  function hayAvanceTrasLaDecision(paso: PasoProcedimiento): boolean {
+    const desde = idsPasos.indexOf(paso.id)
+    if (desde < 0) return false
+    const enLaRuta = pasos
+      .slice(desde + 1)
+      .some((p) => hechos.has(p.id) || tareasDe(p.bloques).some((t) => instruccionesHechas.has(t.id)))
+    const guia = guiaDeLaRespuesta(paso, elecciones)
+    return enLaRuta || (guia !== null && hayAvanceEnEjecucion(vinculos?.[guia.articuloId]))
+  }
+
   // ¿Se puede MARCAR esta tarea ahora mismo? Con lectura fresca, y con
   // una sola respuesta para las dos vistas: si la regla viviera en cada
   // pantalla, una podria validar y la otra no.
@@ -194,8 +270,18 @@ export function useProcedimientoEjecucion({
   // tecnico volvia al procedimiento principal sin haberlas visto. El
   // aviso hacia arriba espera ahora a que esten hechas; mientras tanto
   // `onAvanzar(null)` lleva a la pantalla que las pide.
-  async function avanzarDespuesDe(indice: number, hechosNuevos: ReadonlySet<string>) {
-    const destino = siguientePasoPendiente(idsPasos, hechosNuevos, indice)
+  //
+  // Sobre la ruta con las respuestas de AHORA (tarea 302), leídas de la
+  // base y no de la última pintura: el índice del paso cerrado es el mismo
+  // en las dos, porque una respuesta solo cambia lo que viene después de su
+  // decisión.
+  async function avanzarDespuesDe(indice: number, hechosNuevos: ReadonlySet<string>, actuales: Elecciones | undefined) {
+    const rutaActual = rutaDe(procedimiento, actuales)
+    const destino = siguientePasoPendiente(
+      rutaActual.pasos.map((p) => p.id),
+      hechosDeRuta(rutaActual, [...hechosNuevos]),
+      indice,
+    )
     if (destino !== null) {
       onAvanzar(destino)
       return
@@ -217,9 +303,10 @@ export function useProcedimientoEjecucion({
   async function alternarVerificacion(indice: number) {
     await alternarVerificacionFinal(clave, indice)
     const prog = await leerAvance(clave)
-    const pasosListos =
-      pasos.length > 0 && contarHechos(prog?.pasosHechos ?? [], idsPasos) === pasos.length
-    if (pasosListos && verificacionFinalCompleta(prog?.verificacionHecha, verificacionFinal.length)) {
+    if (
+      avanceDeLaRuta(procedimiento, prog).pasosListos &&
+      verificacionFinalCompleta(prog?.verificacionHecha, verificacionFinal.length)
+    ) {
       onCompletado?.()
     }
   }
@@ -266,29 +353,29 @@ export function useProcedimientoEjecucion({
 
   // Intenta completar el paso tratandolo como un contenedor de tareas:
   // solo lo marca hecho y avanza cuando su trabajo previo (tareas
-  // propias + subprocedimiento vinculado) esta completo y no tiene una
-  // solucion de error vinculada. Si tiene solucion, no avanza aqui:
-  // aparece la pregunta "¿Ocurrio algun error?" y el paso se completa
-  // al responderla. Usa lecturas frescas de la base.
+  // propias, subprocedimiento vinculado y la guía que abre la respuesta de
+  // su decisión) esta completo. Una decisión con opciones sin responder
+  // tampoco lo deja cerrar: lo que sigue depende de ella. Usa lecturas
+  // frescas de la base.
   async function intentarCompletarPaso(indice: number, paso: PasoProcedimiento) {
     const progActual = await leerAvance(clave)
     const hechosActuales = progActual?.pasosHechos ?? []
     if (hechosActuales.includes(paso.id)) return
 
+    const decision = decisionDeRuta(paso)
+    if (decision && opcionElegida(decision, progActual?.elecciones) === null) return
+
     const idsTareas = tareasDe(paso.bloques).map((t) => t.id)
     const tareasMarcadas = contarInstruccionesHechas(progActual?.instruccionesHechas, idsTareas)
-    const trabajoPrevio = pasoTrabajoPrevioCompleto(
-      idsTareas.length,
-      tareasMarcadas,
-      await subSatisfechoFresco(paso),
-    )
-    if (!trabajoPrevio) return
+    const reutilizadoHecho =
+      (await subSatisfechoFresco(paso)) && (await respuestaSatisfechaFresca(paso, progActual?.elecciones))
+    if (!pasoTrabajoPrevioCompleto(idsTareas.length, tareasMarcadas, reutilizadoHecho)) return
 
     // Sin arrastrar tareas: llegado aqui ya estan todas marcadas, y
     // pasarlas seria conservar la unica via que completaba trabajo sin
     // hacerlo (tarea 3 del encargo).
     await establecerPasoHecho(clave, paso.id, true)
-    await avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]))
+    await avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]), progActual?.elecciones)
   }
 
   // Completa el paso y sigue de largo, sin la validacion previa: lo usa
@@ -297,8 +384,43 @@ export function useProcedimientoEjecucion({
   async function completarPasoYAvanzar(indice: number, paso: PasoProcedimiento) {
     if (hechos.has(paso.id)) return
     await establecerPasoHecho(clave, paso.id, true)
-    await avanzarDespuesDe(indice, new Set([...hechos, paso.id]))
+    await avanzarDespuesDe(indice, new Set([...hechos, paso.id]), elecciones)
   }
+
+  // RESPONDER UNA DECISIÓN CON OPCIONES (tarea 302). Se guarda la respuesta
+  // (`aplicarEleccion`: cambiar una ya dada reinicia lo de después) y,
+  // cuando la ruta viva ya la refleja, la ejecución sigue por ella: cierra
+  // el paso y lleva al destino o, si el paso ya estaba cerrado, lleva al
+  // siguiente pendiente de la ruta nueva. Esperar a la ruta viva evita
+  // pintar un instante, con la ruta de antes, el paso de otro camino.
+  const [trasResponder, setTrasResponder] = useState<{ pasoId: string; decisionId: string; opcionId: string } | null>(
+    null,
+  )
+
+  async function elegirOpcion(paso: PasoProcedimiento, decisionId: string, opcionId: string) {
+    const aplicada = aplicarEleccion(procedimiento, await leerAvance(clave), { decisionId, opcionId })
+    await registrarEleccion(clave, aplicada)
+    setTrasResponder({ pasoId: paso.id, decisionId, opcionId })
+  }
+
+  async function seguirTrasResponder(indice: number, paso: PasoProcedimiento) {
+    const prog = await leerAvance(clave)
+    if (!(prog?.pasosHechos ?? []).includes(paso.id)) {
+      await intentarCompletarPaso(indice, paso)
+      return
+    }
+    await avanzarDespuesDe(indice, new Set(prog?.pasosHechos), prog?.elecciones)
+  }
+
+  const respuestaEnRuta = trasResponder !== null && elecciones[trasResponder.decisionId] === trasResponder.opcionId
+  useEffect(() => {
+    if (!trasResponder || !respuestaEnRuta) return
+    setTrasResponder(null)
+    const indice = idsPasos.indexOf(trasResponder.pasoId)
+    if (indice >= 0) void seguirTrasResponder(indice, pasos[indice])
+    // Solo cuando la respuesta llega a la ruta: el resto se lee fresco.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trasResponder, respuestaEnRuta])
 
   // `guiaDelPasoEnLinea` se retiro el 2026-09-10 (encargo, tarea 4):
   // existia para saber si la guia vinculada traia su propia zona de
@@ -321,9 +443,9 @@ export function useProcedimientoEjecucion({
   // ¿Una guía que esta ejecución reutiliza se HACE AQUÍ, como parte de este
   // flujo (tarea 289, fase 3)? Solo en la ejecución principal, con la guía
   // en el dispositivo y con pasos que ejecutar: es la misma condición que
-  // `modoVinculo` llama "expandible". Vale para la guía de un paso y para
-  // la que una tarea exige ('necesario'). Si no, se ofrece para consultarla
-  // aparte, o se explica que no está.
+  // `modoVinculo` llama "expandible". Vale para la guía de un paso, para la
+  // que una tarea exige ('necesario') y para la que abre una respuesta. Si
+  // no, se ofrece para consultarla aparte, o se explica que no está.
   function guiaIntegrable(guiaId: string): boolean {
     if (nivel >= 1 || subArticulos === undefined) return false
     const idx = subIds.indexOf(guiaId)
@@ -343,6 +465,13 @@ export function useProcedimientoEjecucion({
     // a medias haría saltar la pantalla de una forma a la otra.
     vinculosCargados: subArticulos !== undefined,
     progreso,
+    // La ruta de esta ejecución (tarea 302): sus pasos son los que las
+    // vistas recorren y numeran, y `totalPasos` el total que se puede
+    // afirmar (null mientras dependa de una respuesta).
+    ruta,
+    pasos,
+    totalPasos,
+    elecciones,
     hechos,
     instruccionesHechas,
     completados,
@@ -350,6 +479,10 @@ export function useProcedimientoEjecucion({
     verificacionCompleta,
     todoCompletado,
     subSatisfechoReactivo,
+    respuestaSatisfechaReactiva,
+    guiaPendienteDeLaRespuesta,
+    hayAvanceTrasLaDecision,
+    guiaCumplida: guiaCumplidaReactiva,
     guiaDelPasoDisponible,
     guiaIntegrable,
     guiaDelPasoIntegrable,
@@ -359,5 +492,6 @@ export function useProcedimientoEjecucion({
     alternarVerificacion,
     intentarCompletarPaso,
     completarPasoYAvanzar,
+    elegirOpcion,
   }
 }

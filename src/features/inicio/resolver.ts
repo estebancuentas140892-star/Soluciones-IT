@@ -123,7 +123,7 @@ function haceMenosDe(fechaIso: string, dias: number, hoy: Date): boolean {
 export interface AvanceReciente {
   hechos: number
   total: number
-  rutaAbierta?: boolean
+  totalAbierto?: boolean
 }
 
 export interface GuiaReciente {
@@ -138,8 +138,8 @@ export interface GuiaReciente {
   borrador: boolean
   /**
    * El avance a medias en este teléfono, o null si no hay nada empezado.
-   * `rutaAbierta`: la ruta se detiene en una decisión sin responder (tarea
-   * 302) y el total todavía no se sabe.
+   * `totalAbierto`: el total todavía no se sabe (tarea 302: la ruta se
+   * detiene en una decisión sin responder cuyos caminos no miden lo mismo).
    */
   avance: AvanceReciente | null
   /** Dónde va una guía con preguntas a medias, con palabras; null si no hay nada empezado. */

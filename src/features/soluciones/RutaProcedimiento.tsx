@@ -24,6 +24,12 @@ import { descripcionDeNodo, etiquetaDeRuta, vecinosDeRuta } from './rutaVisual'
 
 interface Props {
   resumenes: ResumenPaso[]
+  /**
+   * Los pasos de la ruta entera (tarea 302): con una pregunta sin responder,
+   * más que los nodos que ya se conocen, o null si todavía no se sabe. Lo
+   * que falta por conocer se dibuja como un último nodo "…".
+   */
+  total?: number | null
   indiceActual: number
   /** Mover la vista a un paso. No marca ni completa nada. */
   onIrAPaso: (indice: number) => void
@@ -52,11 +58,13 @@ function MarcaNodo({ resumen }: { resumen: ResumenPaso }) {
   )
 }
 
-export function RutaProcedimiento({ resumenes, indiceActual, onIrAPaso }: Props) {
-  const total = resumenes.length
-  if (total === 0) return null
+export function RutaProcedimiento({ resumenes, total: totalRuta = resumenes.length, indiceActual, onIrAPaso }: Props) {
+  if (resumenes.length === 0) return null
   const { actual } = vecinosDeRuta(resumenes, indiceActual)
   if (!actual) return null
+  // Con una pregunta sin responder, lo que viene después todavía no tiene
+  // nombre: se enseña que hay más, sin inventarlo.
+  const hayMasPorConocer = totalRuta === null || totalRuta > resumenes.length
 
   return (
     <nav aria-label="Ruta del procedimiento" className="hidden flex-none md:block">
@@ -68,7 +76,7 @@ export function RutaProcedimiento({ resumenes, indiceActual, onIrAPaso }: Props)
               type="button"
               onClick={() => onIrAPaso(resumen.indice)}
               aria-current={resumen.estado === 'actual' ? 'step' : undefined}
-              aria-label={descripcionDeNodo(resumen, total)}
+              aria-label={descripcionDeNodo(resumen, totalRuta)}
               title={resumen.titulo}
               // Tope de ancho para que la ruta siga siendo compacta; más
               // holgado desde `lg`, donde sobra sitio. Lo que no quepa se
@@ -82,10 +90,19 @@ export function RutaProcedimiento({ resumenes, indiceActual, onIrAPaso }: Props)
             </button>
           </li>
         ))}
+        {hayMasPorConocer && (
+          <li aria-hidden className="flex items-center gap-1">
+            <ArrowRight size={13} className="shrink-0 text-noct-neutral-600" />
+            <span className="inline-flex min-h-8 items-center rounded-full border border-dashed border-noct-divider px-2.5 text-[13px] text-noct-neutral-500">
+              …
+            </span>
+          </li>
+        )}
       </ol>
       <p className="mt-2.5 flex flex-wrap items-baseline gap-x-2 text-[13.5px] leading-snug">
         <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
-          Paso {actual.indice + 1} de {total}
+          Paso {actual.indice + 1}
+          {totalRuta !== null && ` de ${totalRuta}`}
         </span>
         <span className="text-[17px] font-medium text-noct-text">{actual.titulo}</span>
         {actual.estado === 'hecho' && (

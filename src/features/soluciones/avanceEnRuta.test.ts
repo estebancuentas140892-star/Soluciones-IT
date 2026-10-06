@@ -55,6 +55,19 @@ function guia(verificacionFinal: string[] = []): Procedimiento {
   }
 }
 
+// 1 decide (corto -> 3, largo -> continúa en 2); 2 y 3. Corto: 1, 3. Largo: 1, 2, 3.
+function guiaDesigual(): Procedimiento {
+  const decision: BloquePaso = {
+    ...CAMPOS_BLOQUE_VACIOS,
+    id: 'camino',
+    tipo: 'tarea',
+    texto: '¿Qué camino?',
+    tipoTarea: 'decision',
+    opciones: [opcion('corto', 'p3'), { id: 'largo', titulo: 'largo', descripcion: '', destino: { tipo: 'continuar' } }],
+  }
+  return { ...guia(), pasos: [paso('p1', [decision]), paso('p2'), paso('p3')] }
+}
+
 describe('guiaTerminada sobre la ruta', () => {
   it('termina con los pasos del camino elegido, sin los del otro', () => {
     expect(guiaTerminada(guia(), ['p1', 'p3', 'p4'], [], { version: 'nuevo' })).toBe(true)
@@ -82,28 +95,39 @@ describe('articulosSinTerminar sobre la ruta', () => {
 
   it('cuenta el total del camino elegido', () => {
     const [sinTerminar] = articulosSinTerminar([articulo], [progreso(['p1', 'p3'], { version: 'nuevo' })])
-    expect(sinTerminar).toMatchObject({ hechos: 2, total: 3, rutaAbierta: false, minutosRestantes: 10 })
+    expect(sinTerminar).toMatchObject({ hechos: 2, total: 3, totalAbierto: false, minutosRestantes: 10 })
   })
 
   it('una guía con su camino terminado ya no está "sin terminar"', () => {
     expect(articulosSinTerminar([articulo], [progreso(['p1', 'p2', 'p4'], { version: 'clasico' })])).toEqual([])
   })
 
-  it('con la ruta esperando una respuesta no afirma total ni tiempo', () => {
+  it('con la ruta esperando una respuesta cuyos caminos miden lo mismo, el total ya se sabe', () => {
     const conPasoPrevio = {
       ...articulo,
       procedimiento: { ...guia(), pasos: [paso('p0'), ...guia().pasos] },
     } as unknown as Articulo
     const [sinTerminar] = articulosSinTerminar([conPasoPrevio], [progreso(['p0'])])
-    expect(sinTerminar).toMatchObject({ hechos: 1, total: 2, rutaAbierta: true, minutosRestantes: null })
-    expect(pasoDeTotal(sinTerminar.hechos + 1, sinTerminar.total, sinTerminar.rutaAbierta)).toBe('paso 2')
+    // Clásico: p0, p1, p2, p4. Nuevo: p0, p1, p3, p4. Los dos, cuatro pasos.
+    expect(sinTerminar).toMatchObject({ hechos: 1, total: 4, totalAbierto: false, minutosRestantes: 23 })
+    expect(pasoDeTotal(sinTerminar.hechos + 1, sinTerminar.total, sinTerminar.totalAbierto)).toBe('paso 2 de 4')
+  })
+
+  it('con caminos que no miden lo mismo no afirma total ni tiempo', () => {
+    const conPasoPrevio = {
+      ...articulo,
+      procedimiento: { ...guiaDesigual(), pasos: [paso('p0'), ...guiaDesigual().pasos] },
+    } as unknown as Articulo
+    const [sinTerminar] = articulosSinTerminar([conPasoPrevio], [progreso(['p0'])])
+    expect(sinTerminar).toMatchObject({ hechos: 1, total: 2, totalAbierto: true, minutosRestantes: null })
+    expect(pasoDeTotal(sinTerminar.hechos + 1, sinTerminar.total, sinTerminar.totalAbierto)).toBe('paso 2')
   })
 })
 
 describe('accionDeGuia sobre la ruta', () => {
   it('"Vas en el paso N de M" con los números del camino elegido', () => {
     const accion = accionDeGuia(guia(), { pasosHechos: ['p1', 'p3'], elecciones: { version: 'nuevo' } }, true)
-    expect(accion).toMatchObject({ estado: 'continuar', pasosHechos: 2, total: 3, rutaAbierta: false })
+    expect(accion).toMatchObject({ estado: 'continuar', pasosHechos: 2, total: 3, totalAbierto: false })
     expect(accion.pendiente).toEqual({ tipo: 'paso', indice: 2, numero: 3 })
     expect(lineaAvanceGuia(accion)).toBe('Vas en el paso 3 de 3')
   })
@@ -114,11 +138,19 @@ describe('accionDeGuia sobre la ruta', () => {
     )
   })
 
-  it('con la decisión sin responder, el pendiente es el paso de la decisión y no se dice el total', () => {
+  it('con la decisión sin responder, el pendiente es el paso de la decisión', () => {
     const conPasoPrevio: Procedimiento = { ...guia(), pasos: [paso('p0'), ...guia().pasos] }
     const accion = accionDeGuia(conPasoPrevio, { pasosHechos: ['p0', 'p1'] }, true)
     expect(accion.pendiente).toEqual({ tipo: 'paso', indice: 1, numero: 2 })
-    expect(accion.rutaAbierta).toBe(true)
+    // Los dos caminos miden lo mismo: el total se sabe sin responder.
+    expect(accion.totalAbierto).toBe(false)
+    expect(lineaAvanceGuia(accion)).toBe('Vas en el paso 2 de 4')
+  })
+
+  it('con caminos que no miden lo mismo no se dice el total', () => {
+    const conPasoPrevio: Procedimiento = { ...guiaDesigual(), pasos: [paso('p0'), ...guiaDesigual().pasos] }
+    const accion = accionDeGuia(conPasoPrevio, { pasosHechos: ['p0', 'p1'] }, true)
+    expect(accion.totalAbierto).toBe(true)
     expect(lineaAvanceGuia(accion)).toBe('Vas en el paso 2')
   })
 })

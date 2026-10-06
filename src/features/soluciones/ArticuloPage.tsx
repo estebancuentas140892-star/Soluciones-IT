@@ -6,6 +6,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { db, type Articulo, type ArticuloRelacionado } from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
 import { reiniciarProgreso } from '../../lib/progresoPasos'
+import { largoDeLaRuta } from '../../lib/rutaProcedimiento'
 import { compartirOCopiar } from '../../lib/portapapeles'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { registrarVisita } from '../../lib/recientes'
@@ -225,7 +226,7 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
           <ResumenGuia
             tiempoMin={procedimiento.tiempoEstimadoMin}
             dificultad={procedimiento.dificultad}
-            totalPasos={procedimiento.pasos.length}
+            largo={largoDeLaRuta(procedimiento)}
           />
         )}
 

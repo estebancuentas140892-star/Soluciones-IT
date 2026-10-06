@@ -125,6 +125,9 @@ export const ROTULO_DEL_PASO = 'Para este paso'
 // El camino del "No" de una decisión, donde hace falta nombrarlo (la vista
 // de paso entero): es la otra vía, no una falla.
 export const ROTULO_SI_NO = 'Si la respuesta es no'
+// La guía que abre la respuesta elegida en una decisión con opciones (tarea
+// 302), donde hace falta nombrarla (la lectura del procedimiento).
+export const ROTULO_DE_LA_RESPUESTA = 'Para esta respuesta'
 
 export function rotuloDeIntencion(intencion: BloquePaso['intencionGuia'] | 'necesario'): string {
   if (intencion === 'consulta') return ROTULO_CONSULTA

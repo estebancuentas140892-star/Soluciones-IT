@@ -1,5 +1,6 @@
 import type { PasoProcedimiento } from '../../lib/db'
 import { tareasDe } from '../../lib/procedimiento'
+import type { LargoDeRuta } from '../../lib/rutaProcedimiento'
 
 // Estado de cada paso para el índice del modo ejecución (handoff
 // "Diseño móvil", tablero 6c). Lógica pura, aparte del componente, para
@@ -121,14 +122,25 @@ export function pasoDeTrabajo(
 // medida: por eso quien lo pinta escribe "~". Devuelve null cuando el
 // artículo no declara tiempo estimado, y 0 no se muestra como "quedan
 // 0 min" sino que no se muestra.
+//
+// `total` son los pasos de la ruta entera (tarea 302), que con una decisión
+// sin responder pueden ser más que los que ya se conocen; null cuando
+// todavía no se sabe, y entonces no se inventa cuánto falta.
 export function minutosRestantes(
   tiempoEstimadoMin: number | null,
   resumenes: ResumenPaso[],
+  total: number | null = resumenes.length,
 ): number | null {
-  if (!tiempoEstimadoMin || tiempoEstimadoMin <= 0 || resumenes.length === 0) return null
-  const porHacer = resumenes.filter((r) => r.estado !== 'hecho').length
-  if (porHacer === 0) return null
-  return Math.max(1, Math.round((tiempoEstimadoMin * porHacer) / resumenes.length))
+  if (!tiempoEstimadoMin || tiempoEstimadoMin <= 0 || !total) return null
+  const porHacer = total - resumenes.filter((r) => r.estado === 'hecho').length
+  if (porHacer <= 0) return null
+  return Math.max(1, Math.round((tiempoEstimadoMin * porHacer) / total))
+}
+
+/** "1 paso", "5 pasos" o, si depende de las respuestas (tarea 302), "Entre 4 y 6 pasos". */
+export function cantidadDePasos({ minimo, maximo }: LargoDeRuta): string {
+  if (minimo !== maximo) return `Entre ${minimo} y ${maximo} pasos`
+  return minimo === 1 ? '1 paso' : `${minimo} pasos`
 }
 
 // Línea de resumen del índice: "2 hechos · 1 saltado · quedan ~14 min".
