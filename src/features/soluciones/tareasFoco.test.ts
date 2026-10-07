@@ -35,6 +35,38 @@ describe('tareasParaFoco', () => {
     expect(tareasParaFoco(p, 'Cargar el rollo').every((t) => !t.esPasoEntero)).toBe(true)
   })
 
+  it('cada acción lleva sus microacciones de "Cómo hacerlo" ya limpias; lo demás, ninguna (tarea 303)', () => {
+    const microPasos = [
+      { id: 'm1', accion: ' Abre ', elemento: 'Fichero', ubicacion: 'Barra superior' },
+      { id: 'm2', accion: 'Selecciona', elemento: ' Nuevo ' },
+      { id: 'm3', accion: '', elemento: '' },
+    ]
+    const p = paso({
+      subArticuloId: 'g1',
+      subArticuloTitulo: 'Guía de prueba',
+      bloques: [
+        bloque({ id: 'b1', tipo: 'tarea', texto: 'Abre un registro nuevo', comoHacer: microPasos }),
+        bloque({ id: 'b2', tipo: 'tarea', texto: 'Comprueba la ventana', tipoTarea: 'verificacion', comoHacer: microPasos }),
+        bloque({ id: 'b3', tipo: 'tarea', texto: 'Abre la herramienta' }),
+      ],
+    })
+    const tareas = tareasParaFoco(p, 'Abrir la configuración')
+    // La guía del paso (entrada sintética) no tiene; una comprobación,
+    // tampoco; una acción sin microacciones, tampoco.
+    expect(tareas.map((t) => [t.clase, t.comoHacer])).toEqual([
+      ['guia-del-paso', []],
+      [
+        'tarea',
+        [
+          { id: 'm1', accion: 'Abre', elemento: 'Fichero', ubicacion: 'Barra superior' },
+          { id: 'm2', accion: 'Selecciona', elemento: 'Nuevo' },
+        ],
+      ],
+      ['tarea', []],
+      ['tarea', []],
+    ])
+  })
+
   it('un paso SIN tareas se presenta como una sola tarea con el titulo (G-18)', () => {
     const tareas = tareasParaFoco(paso({ bloques: [] }), 'Desembalar y ubicar')
     expect(tareas).toHaveLength(1)

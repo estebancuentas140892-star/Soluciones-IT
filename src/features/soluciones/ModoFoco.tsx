@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { fraseDeMicroPaso } from '../../lib/comoHacer'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
 import type { Elecciones } from '../../lib/rutaProcedimiento'
 import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
 import { normalizarTexto } from './iconosSoluciones'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
-import { DatoTecnico, DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
+import { ComoHacerlo, DatoTecnico, DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import {
   ArrowRight,
   CaretDown,
@@ -103,14 +104,22 @@ import { PasosEnLectura } from './PasosEnLectura'
 //
 //   1. Qué hacer: la instrucción, a 26 px. Es lo único que domina.
 //   2. Dónde: orienta, neutro y en voz baja, separado de la acción.
-//   3. El dato técnico que la acción necesita, pegado a la instrucción y
+//   3. Cómo hacerlo: las microacciones de la acción (el `comoHacer` de la
+//      tarea), justo debajo de la instrucción y en voz más baja: la ruta
+//      rápida a la vista y "Ver paso a paso", plegado, para quien llega
+//      nuevo (`ComoHacerlo`).
+//   4. El dato técnico que la acción necesita, pegado a la instrucción y
 //      subordinado a ella: rótulo y monoespaciada, nunca otra orden.
-//   4. Debes ver: la comprobación, en verde, después del trabajo.
-//   5. Más información: lo que ayuda a entender sin hacer falta para
+//   5. Debes ver: la comprobación, en verde, después del trabajo.
+//   6. Más información: lo que ayuda a entender sin hacer falta para
 //      actuar, plegado. Si alguien nuevo tuviera que abrirlo para saber
 //      cómo hacer la acción, ese contenido está mal clasificado.
-//   6. La advertencia: solo un riesgo real, antes de actuar, en rojo. Es
+//   7. La advertencia: solo un riesgo real, antes de actuar, en rojo. Es
 //      el único bloque con fondo de color.
+//
+// En pantalla, de arriba abajo: la advertencia, Dónde, Qué hacer, la ruta
+// rápida, "Ver paso a paso", el dato técnico, los demás apoyos de la
+// acción, Debes ver y Más información.
 
 interface Props {
   paso: PasoProcedimiento
@@ -1103,6 +1112,10 @@ export function ModoFoco({
             >
               {textoInstruccion}
             </h2>
+            {/* CÓMO HACERLO (tarea 303): las microacciones de ESTA acción,
+                pegadas a su instrucción y en voz más baja. La `key` hace
+                que cada acción llegue con su paso a paso plegado. */}
+            <ComoHacerlo key={tarea.id} microPasos={tarea.comoHacer} className="mt-1" />
           </div>
           {avisos.datos.map((aviso) => (
             <DatoTecnico key={aviso.id} texto={aviso.texto} />
@@ -1227,9 +1240,12 @@ export function ModoFoco({
         {/* "¿QUÉ HACE?" (tarea 270): la instrucción escribe un comando o
             un atajo que tiene ficha en el Centro de consulta, sin que el
             autor la enlazara. Se abre en la misma hoja que un término. */}
+        {/* También en su "Cómo hacerlo" (tarea 303): un comando escrito
+            como elemento de una microacción es el mismo comando, con el
+            tratamiento de siempre. */}
         {tarea.clase === 'tarea' && (
           <QueHaceEnTexto
-            texto={tarea.texto}
+            texto={[tarea.texto, ...tarea.comoHacer.map(fraseDeMicroPaso)].join('\n')}
             referencias={referenciasVivas}
             excluir={fichasEnlazadasDelPaso(paso.bloques)}
           />

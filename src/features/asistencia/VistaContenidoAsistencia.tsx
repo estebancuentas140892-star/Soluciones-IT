@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  ArrowElbowDownRight,
   ArrowSquareOut,
   Check,
   Copy,
@@ -10,6 +11,7 @@ import {
   TerminalWindow,
   Code,
 } from '../../components/iconos'
+import { ROTULO_COMO_HACERLO } from '../../lib/comoHacer'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { DebesVerPaso, DondeSeHacePaso } from '../soluciones/SenalesDePaso'
 import { TONOS_AVISO } from '../soluciones/tonos'
@@ -95,6 +97,9 @@ function Bloque({ bloque, numero }: { bloque: BloqueAsistencia; numero: number |
       )
     }
     case 'nota': {
+      // El "Cómo hacerlo" de la acción de arriba (tarea 303): no es una nota
+      // ni un aviso, es cómo se hace. Sin caja ni color.
+      if (bloque.etiqueta === ROTULO_COMO_HACERLO) return <ComoHacerloEnTexto texto={bloque.texto} />
       const tono = TONOS_AVISO.find((t) => t.etiqueta === bloque.etiqueta) ?? TONOS_AVISO[0]
       const Icono = tono.Icono
       return (
@@ -132,6 +137,22 @@ function Bloque({ bloque, numero }: { bloque: BloqueAsistencia; numero: number |
       // interpreta algo que no se validó.
       return null
   }
+}
+
+// EL "CÓMO HACERLO" DE UNA ACCIÓN, TAL COMO LLEGA (tarea 303): el paso a
+// paso ya numerado, una línea por microacción (`textoPasoAPaso`). Aquí solo
+// puede llegar texto, así que se dibuja como texto: cada línea en la suya,
+// alineado con el texto de la acción y sin salirse nunca del ancho.
+function ComoHacerloEnTexto({ texto }: { texto: string }) {
+  return (
+    <div className="flex items-start gap-2 pl-8 text-[15px] leading-snug text-noct-neutral-200">
+      <ArrowElbowDownRight size={16} className="mt-[3px] shrink-0 text-noct-neutral-400" aria-hidden />
+      <div className="min-w-0">
+        <p className="font-medium text-noct-neutral-400">{ROTULO_COMO_HACERLO}</p>
+        <p className="whitespace-pre-line text-pretty [overflow-wrap:anywhere]">{texto}</p>
+      </div>
+    </div>
+  )
 }
 
 function Copiable({

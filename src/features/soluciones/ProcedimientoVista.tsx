@@ -8,6 +8,7 @@ import {
   type Referencia,
   type TipoReferencia,
 } from '../../lib/db'
+import { comoHacerDe, fraseDeMicroPaso } from '../../lib/comoHacer'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { avanceDeLaRuta, decisionDeRuta, guiaDeLaRespuesta, opcionElegida } from '../../lib/rutaProcedimiento'
@@ -42,7 +43,7 @@ import { QueHaceEnTexto } from '../referencia/QueHaceEnTexto'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
-import { DatoTecnico, DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
+import { ComoHacerlo, DatoTecnico, DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { presenciaDeAviso, tonoInfo } from './tonos'
 import {
   ROTULO_CONTINGENCIA,
@@ -1182,6 +1183,10 @@ export function BloqueVista({
   // Una tarea ya marcada se puede DESMARCAR aunque le falte una guia:
   // quien desmarca se esta corrigiendo, y dejarlo encerrado seria peor.
   const bloqueo = marcada ? null : (bloqueadaPor ?? null)
+  // "Cómo hacerlo" (tarea 303): las microacciones de una acción, las mismas
+  // que en la acción a la vez, bajo el texto de la tarea. Una comprobación
+  // no las tiene (`comoHacerDe` da una lista vacía).
+  const comoHacer = comoHacerDe(bloque)
 
   // UNA COMPROBACIÓN NO SE "MARCA HECHA" (2026-09-09, cambio 2 del
   // encargo). Aquí una verificación era la MISMA casilla que una
@@ -1235,10 +1240,18 @@ export function BloqueVista({
             : `Tarea: ${bloque.texto}`
         }
       />
-      {/* "¿Qué hace?" (tarea 270): alineado con el texto de la tarea,
-          no con la casilla. */}
+      {/* "Cómo hacerlo" (tarea 303) y "¿Qué hace?" (tarea 270),
+          alineados con el texto de la tarea, no con la casilla. Un comando
+          escrito como elemento de una microacción también tiene su "¿Qué
+          hace?". */}
+      <ComoHacerlo microPasos={comoHacer} variante="fila" className="pl-10" />
       {referencias && (
-        <QueHaceEnTexto texto={bloque.texto} referencias={referencias} excluir={fichasEnlazadas} className="pl-10" />
+        <QueHaceEnTexto
+          texto={[bloque.texto, ...comoHacer.map(fraseDeMicroPaso)].join('\n')}
+          referencias={referencias}
+          excluir={fichasEnlazadas}
+          className="pl-10"
+        />
       )}
       {credencialInline}
     </div>

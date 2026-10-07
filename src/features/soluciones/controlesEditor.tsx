@@ -1,9 +1,10 @@
-import type { ComponentType, ReactNode } from 'react'
+import type { ComponentType, ReactNode, Ref } from 'react'
 import type { IconoProps } from '../../components/iconos'
 
 // Botones pequeños de las filas del editor de pasos: los de la fila de
-// acciones de una tarea y los de cada opción de una decisión (tarea 302).
-// Viven aparte para que los dos editores usen los mismos.
+// acciones de una tarea, los de cada opción de una decisión (tarea 302) y
+// los de cada microacción de "Cómo hacerlo" (tarea 303). Viven aparte para
+// que todos los editores usen los mismos.
 
 // Botón pequeño de la fila de acciones de una tarea. 44 px de alto
 // (regla R6): son controles que se tocan de pie y con una mano.
@@ -45,14 +46,19 @@ export function BotonIconoLinea({
   etiqueta,
   onClick,
   disabled = false,
+  ref,
 }: {
   Icono: ComponentType<IconoProps>
   etiqueta: string
   onClick: () => void
   disabled?: boolean
+  // Para devolverle el foco después de mover o quitar una fila (las
+  // microacciones de "Cómo hacerlo", tarea 303).
+  ref?: Ref<HTMLButtonElement>
 }) {
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       disabled={disabled}

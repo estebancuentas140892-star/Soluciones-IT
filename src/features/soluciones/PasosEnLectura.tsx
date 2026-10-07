@@ -1,9 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
+import { comoHacerDe } from '../../lib/comoHacer'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
 import { rutaDe } from '../../lib/rutaProcedimiento'
 import { useAvanceProgreso, useClaveVinculo } from './contextoEjecucion'
+import { ComoHacerlo } from './SenalesDePaso'
 
 // LO QUE HACE UN PASO QUE REUTILIZA OTRA GUÍA, PARA LEERLO (tarea 289,
 // fase 3).
@@ -45,7 +47,13 @@ export function PasosEnLectura({ guiaId }: { guiaId: string }) {
                 {tareas.map((tarea) => (
                   <li key={tarea.id} className="flex items-start gap-2.5 text-[14px] leading-snug text-noct-neutral-300">
                     <span aria-hidden className="mt-[8px] h-1 w-1 shrink-0 rounded-full bg-noct-neutral-500" />
-                    <span className="min-w-0 text-pretty [overflow-wrap:anywhere]">{tarea.texto}</span>
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-pretty [overflow-wrap:anywhere]">{tarea.texto}</span>
+                      {/* Su "Cómo hacerlo" (tarea 303), bajo la acción: la
+                          misma ruta rápida y el mismo paso a paso que en el
+                          flujo. */}
+                      <ComoHacerlo microPasos={comoHacerDe(tarea)} variante="lectura" />
+                    </div>
                   </li>
                 ))}
               </ul>

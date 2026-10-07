@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { BloquePaso, PasoProcedimiento, Procedimiento } from '../../lib/db'
+import type { BloquePaso, MicroPasoComoHacer, PasoProcedimiento, Procedimiento } from '../../lib/db'
 import { resumenProcedimiento, textoContexto } from './resumenProcedimiento'
 
 function tarea(texto: string): BloquePaso {
@@ -433,5 +433,51 @@ describe('resumenProcedimiento: formas de búsqueda', () => {
 
   it('una versión de antes del campo no cuenta como cambio', () => {
     expect(resumenProcedimiento(json(base), json(base)).cambios).toEqual(['Se actualizó el procedimiento.'])
+  })
+})
+
+describe('resumenProcedimiento: "Cómo hacerlo" de una instrucción (tarea 303)', () => {
+  const FICHERO = { id: 'm1', accion: 'Abre', elemento: 'Fichero', ubicacion: 'Barra superior' }
+  const CLIENTE = { id: 'm2', accion: 'Selecciona', elemento: 'Cliente' }
+  const sin = tarea('Abre un registro nuevo')
+  const con = (comoHacer: MicroPasoComoHacer[]) => ({ ...sin, comoHacer })
+  const pasoCon = (bloques: BloquePaso[]) => proc([paso({ id: 'p1', bloques })])
+
+  it('dice dónde se definió, se cambió o se quitó, con el nombre que ve el técnico', () => {
+    expect(resumenProcedimiento(json(pasoCon([sin])), json(pasoCon([con([FICHERO])]))).cambios).toEqual([
+      'Se definió «Cómo hacerlo» en una instrucción del Paso 1.',
+    ])
+    expect(resumenProcedimiento(json(pasoCon([con([FICHERO])])), json(pasoCon([con([FICHERO, CLIENTE])]))).cambios).toEqual([
+      'Se cambió «Cómo hacerlo» en una instrucción del Paso 1.',
+    ])
+    expect(resumenProcedimiento(json(pasoCon([con([FICHERO])])), json(pasoCon([sin]))).cambios).toEqual([
+      'Se quitó «Cómo hacerlo» de una instrucción del Paso 1.',
+    ])
+  })
+
+  it('editar, reordenar o quitar la ubicación de una microacción también es cambiarlo', () => {
+    const antes = json(pasoCon([con([FICHERO, CLIENTE])]))
+    const cambio = ['Se cambió «Cómo hacerlo» en una instrucción del Paso 1.']
+    expect(resumenProcedimiento(antes, json(pasoCon([con([{ ...FICHERO, elemento: 'Archivo' }, CLIENTE])]))).cambios).toEqual(cambio)
+    expect(resumenProcedimiento(antes, json(pasoCon([con([CLIENTE, FICHERO])]))).cambios).toEqual(cambio)
+    expect(resumenProcedimiento(antes, json(pasoCon([con([{ id: 'm1', accion: 'Abre', elemento: 'Fichero' }, CLIENTE])]))).cambios).toEqual(cambio)
+  })
+
+  it('cuenta varias instrucciones a la vez, en plural', () => {
+    const otra = tarea('Abre la herramienta de ejemplo')
+    expect(
+      resumenProcedimiento(json(pasoCon([sin, otra])), json(pasoCon([con([FICHERO]), { ...otra, comoHacer: [CLIENTE] }]))).cambios,
+    ).toEqual(['Se definió «Cómo hacerlo» en 2 instrucciones del Paso 1.'])
+  })
+
+  it('corregir solo el texto de la instrucción no cuenta como cambio de su "Cómo hacerlo"', () => {
+    const corregida = { ...con([FICHERO]), texto: 'Abre un registro nuevo de ejemplo' }
+    expect(resumenProcedimiento(json(pasoCon([con([FICHERO])])), json(pasoCon([corregida]))).cambios).toEqual([
+      'Se editó una instrucción del Paso 1.',
+    ])
+  })
+
+  it('una guía de antes del campo, sin cambios, sigue sin cambios', () => {
+    expect(resumenProcedimiento(json(pasoCon([sin])), json(pasoCon([sin]))).cambios).toEqual(['Se actualizó el procedimiento.'])
   })
 })

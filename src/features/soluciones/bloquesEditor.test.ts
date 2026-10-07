@@ -143,6 +143,63 @@ describe('cambiarTipoTarea', () => {
   it('volver a decisión no pierde nada', () => {
     expect(cambiarTipoTarea(decision, 'decision').bloque.decisionArticuloId).toBe('art-9')
   })
+
+  // "Cómo hacerlo" es de la acción (tarea 303): fuera de ella se suelta, y
+  // se dice, como todo lo que se suelta.
+  const conComo = bloque({
+    id: 't1',
+    tipo: 'tarea',
+    texto: 'Abre un registro nuevo',
+    tipoTarea: 'accion',
+    comoHacer: [
+      { id: 'm1', accion: 'Abre', elemento: 'Fichero' },
+      { id: 'm2', accion: 'Selecciona', elemento: 'Nuevo' },
+      { id: 'm3', accion: '', elemento: '  ' },
+    ],
+  })
+
+  it('al pasar a comprobación o a decisión se suelta el "Cómo hacerlo" y se nombra lo escrito (tarea 303)', () => {
+    for (const tipo of ['verificacion', 'decision'] as const) {
+      const { bloque: nuevo, perdido } = cambiarTipoTarea(conComo, tipo)
+      expect(nuevo.comoHacer).toBeUndefined()
+      // La fila vacía no cuenta: solo las dos que dicen algo.
+      expect(perdido).toEqual(['«Cómo hacerlo» (2 microacciones)'])
+      expect(nuevo.texto).toBe('Abre un registro nuevo')
+    }
+    const una = bloque({ ...conComo, comoHacer: [{ id: 'm1', accion: '', elemento: '', ubicacion: 'Barra superior' }] })
+    expect(cambiarTipoTarea(una, 'verificacion').perdido).toEqual(['«Cómo hacerlo» (una microacción)'])
+  })
+
+  it('una acción con todas sus microacciones vacías no avisa de nada al cambiar de tipo', () => {
+    const vacia = bloque({ ...conComo, comoHacer: [{ id: 'm1', accion: ' ', elemento: '' }] })
+    expect(cambiarTipoTarea(vacia, 'verificacion').perdido).toEqual([])
+  })
+
+  it('elegir "Acción" en una acción no toca sus microacciones', () => {
+    expect(cambiarTipoTarea(conComo, 'accion').bloque.comoHacer).toBe(conComo.comoHacer)
+  })
+})
+
+describe('las microacciones de "Cómo hacerlo" en el editor (tarea 303)', () => {
+  const lista = [
+    { id: 'm1', accion: 'Abre', elemento: 'Fichero' },
+    { id: 'm2', accion: 'Selecciona', elemento: 'Cliente' },
+    { id: 'm3', accion: 'Abre', elemento: 'Fichero' },
+    { id: 'm4', accion: 'Selecciona', elemento: 'Nuevo' },
+  ]
+
+  it('reordenar las mueve con sus ids, sin regenerar ninguno', () => {
+    const movida = moverPorId(lista, 'm4', -1)
+    expect(movida.map((m) => m.id)).toEqual(['m1', 'm2', 'm4', 'm3'])
+    expect(movida.find((m) => m.id === 'm4')).toBe(lista[3])
+    // En los extremos no hay a dónde: la lista es la misma.
+    expect(moverPorId(lista, 'm1', -1)).toBe(lista)
+    expect(moverPorId(lista, 'm4', 1)).toBe(lista)
+  })
+
+  it('quitar una deja las demás con sus ids y en su orden', () => {
+    expect(lista.filter((m) => m.id !== 'm2').map((m) => m.id)).toEqual(['m1', 'm3', 'm4'])
+  })
 })
 
 describe('etiquetas del selector de destino', () => {
@@ -229,6 +286,15 @@ describe('dividirTarea', () => {
     // El aviso sigue perteneciendo a la tarea original: no se adivina.
     expect(resultado[1].tareaId).toBe('t1')
     expect(resultado[2].tipo).toBe('tarea')
+  })
+
+  it('el "Cómo hacerlo" se queda con la original, como sus apoyos; las nuevas nacen sin él (tarea 303)', () => {
+    contador = 0
+    const microPasos = [{ id: 'm1', accion: 'Abre', elemento: 'Menú de prueba' }]
+    const bloques = pasoDePrueba().map((b) => (b.id === 't1' ? { ...b, comoHacer: microPasos } : b))
+    const resultado = dividirTarea(bloques, 't1', ['Abre el programa', 'Entra en Opciones'], crear)
+    expect(resultado.find((b) => b.id === 't1')?.comoHacer).toBe(microPasos)
+    expect(resultado.find((b) => b.id === 'n1')?.comoHacer).toBeUndefined()
   })
 
   it('sin tarea o con una sola acción no cambia nada', () => {

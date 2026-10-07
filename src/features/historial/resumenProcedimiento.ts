@@ -1,4 +1,5 @@
-import type { PasoAdjunto, PasoProcedimiento, Procedimiento, TipoBloque } from '../../lib/db'
+import { comoHacerDe } from '../../lib/comoHacer'
+import type { BloquePaso, PasoAdjunto, PasoProcedimiento, Procedimiento, TipoBloque } from '../../lib/db'
 import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
 import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
 
@@ -181,6 +182,11 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
   const tareas = diffLista(textosDeBloque(previo, 'tarea'), textosDeBloque(actual, 'tarea'))
   agregarLineasInstrucciones(cambios, tareas, etiqueta)
 
+  // "Cómo hacerlo" de cada instrucción (tarea 303), con el nombre con que
+  // lo lee el técnico. Sin esto, cambiar solo el recorrido de una acción
+  // quedaba como "Se actualizó el procedimiento.", sin decir dónde.
+  agregarLineasComoHacer(cambios, previo, actual, etiqueta)
+
   const avisos = diffLista(textosDeBloque(previo, 'aviso'), textosDeBloque(actual, 'aviso'))
   agregarLineasAvisos(cambios, avisos, etiqueta)
 
@@ -250,6 +256,45 @@ function agregarLineasInstrucciones(cambios: string[], diff: DiffLista, etiqueta
   else if (diff.agregadas > 1) cambios.push(`Se agregaron ${diff.agregadas} instrucciones al ${etiqueta}.`)
   if (diff.eliminadas === 1) cambios.push(`Se eliminó una instrucción del ${etiqueta}.`)
   else if (diff.eliminadas > 1) cambios.push(`Se eliminaron ${diff.eliminadas} instrucciones del ${etiqueta}.`)
+}
+
+// Se compara por el id de la tarea, no por su texto: corregir la
+// instrucción no convierte su "Cómo hacerlo" en otro. Una instrucción
+// nueva que ya lo trae cuenta como definido (su alta se dice aparte); el de
+// una que se eliminó se va con ella. Dentro, cuenta lo que se lee: editar,
+// añadir, quitar o reordenar microacciones es cambiarlo; los ids no.
+function agregarLineasComoHacer(
+  cambios: string[],
+  previo: PasoProcedimiento,
+  actual: PasoProcedimiento,
+  etiqueta: string,
+): void {
+  const antes = new Map(tareasDe(previo.bloques).map((tarea) => [tarea.id, firmaComoHacer(tarea)]))
+  let definidos = 0
+  let cambiados = 0
+  let quitados = 0
+  for (const tarea of tareasDe(actual.bloques)) {
+    const ahora = firmaComoHacer(tarea)
+    const anterior = antes.get(tarea.id) ?? ''
+    if (anterior === ahora) continue
+    if (anterior === '') definidos++
+    else if (ahora === '') quitados++
+    else cambiados++
+  }
+  if (definidos === 1) cambios.push(`Se definió «Cómo hacerlo» en una instrucción del ${etiqueta}.`)
+  else if (definidos > 1) cambios.push(`Se definió «Cómo hacerlo» en ${definidos} instrucciones del ${etiqueta}.`)
+  if (cambiados === 1) cambios.push(`Se cambió «Cómo hacerlo» en una instrucción del ${etiqueta}.`)
+  else if (cambiados > 1) cambios.push(`Se cambió «Cómo hacerlo» en ${cambiados} instrucciones del ${etiqueta}.`)
+  if (quitados === 1) cambios.push(`Se quitó «Cómo hacerlo» de una instrucción del ${etiqueta}.`)
+  else if (quitados > 1) cambios.push(`Se quitó «Cómo hacerlo» de ${quitados} instrucciones del ${etiqueta}.`)
+}
+
+// Lo que se lee del "Cómo hacerlo" de una tarea, en orden y sin los ids,
+// para compararlo: '' si no tiene.
+function firmaComoHacer(tarea: BloquePaso): string {
+  const microPasos = comoHacerDe(tarea)
+  if (microPasos.length === 0) return ''
+  return JSON.stringify(microPasos.map((micro) => [micro.accion, micro.elemento, micro.ubicacion ?? '']))
 }
 
 function agregarLineasAvisos(cambios: string[], diff: DiffLista, etiqueta: string): void {

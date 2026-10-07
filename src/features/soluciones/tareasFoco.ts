@@ -1,4 +1,13 @@
-import type { BloquePaso, IntencionGuia, OpcionDecision, PasoProcedimiento, TipoTarea, VinculoProtegido } from '../../lib/db'
+import { comoHacerDe } from '../../lib/comoHacer'
+import type {
+  BloquePaso,
+  IntencionGuia,
+  MicroPasoComoHacer,
+  OpcionDecision,
+  PasoProcedimiento,
+  TipoTarea,
+  VinculoProtegido,
+} from '../../lib/db'
 import { tareasDe } from '../../lib/procedimiento'
 import { decisionDeRuta, guiaDeLaRespuesta, type Elecciones } from '../../lib/rutaProcedimiento'
 import { apoyosDelPaso, apoyosDeTarea } from './apoyosTarea'
@@ -99,6 +108,11 @@ export interface TareaFoco {
   // Las respuestas de una decision CON OPCIONES (tarea 302), en su orden;
   // vacio en todo lo demas, incluidas las decisiones de Si/No.
   opciones: OpcionDecision[]
+  // "Como hacerlo" de la tarea (tarea 303): las microacciones que hacen
+  // esta accion, ya limpias (`comoHacerDe`). Vacio en las entradas
+  // sinteticas, en las comprobaciones y decisiones y en las acciones que
+  // no lo tienen.
+  comoHacer: MicroPasoComoHacer[]
   // TODAS las guias con intencion 'necesario' colgadas de esta tarea,
   // en el orden del editor (encargo del 2026-09-09, tarea 1). Antes se
   // tomaba solo la primera con `.find`, asi que una tarea con dos guias
@@ -120,6 +134,7 @@ type CamposVacios = Pick<
   | 'decisionGuiaId'
   | 'decisionGuiaTitulo'
   | 'opciones'
+  | 'comoHacer'
   | 'guiasObligatorias'
   | 'tareaDeLaGuia'
 >
@@ -136,6 +151,7 @@ function camposVacios(): CamposVacios {
     decisionGuiaId: null,
     decisionGuiaTitulo: '',
     opciones: [],
+    comoHacer: [],
     guiasObligatorias: [],
     tareaDeLaGuia: null,
   }
@@ -239,6 +255,7 @@ export function tareasParaFoco(
       decisionGuiaId: t.tipoTarea === 'decision' ? t.decisionArticuloId : null,
       decisionGuiaTitulo: t.tipoTarea === 'decision' ? t.decisionArticuloTitulo : '',
       opciones: t.tipoTarea === 'decision' ? (t.opciones ?? []) : [],
+      comoHacer: comoHacerDe(t),
       tareaDeLaGuia: null,
     })
     const respuesta = decisionDeRuta(paso)?.id === t.id ? guiaDeLaRespuesta(paso, elecciones) : null

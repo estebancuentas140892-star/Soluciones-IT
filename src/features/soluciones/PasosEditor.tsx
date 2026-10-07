@@ -10,6 +10,7 @@ import {
   type PointerEvent as EventoPuntero,
 } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
+import { crearMicroPaso } from '../../lib/comoHacer'
 import {
   db,
   type Articulo,
@@ -53,6 +54,7 @@ import {
   reasignarApoyo,
   type DestinoApoyo,
 } from './bloquesEditor'
+import { EditorComoHacer } from './EditorComoHacer'
 import { AlTerminarDelPaso, OpcionesDeDecision } from './EditorDecision'
 import { guiaConCaminos, usaAlTerminar } from './rutasEditor'
 import { accionesEncadenadas, esComprobacion, esCondicionPrevia, esRecordatorio } from './revisionGuia'
@@ -1746,6 +1748,11 @@ function BloqueEditor({
   const [hojaGuiaAbierta, setHojaGuiaAbierta] = useState(false)
   const [hojaIntencionAbierta, setHojaIntencionAbierta] = useState(false)
   const [hojaReferenciaAbierta, setHojaReferenciaAbierta] = useState(false)
+  // "Cómo hacerlo" de esta tarea (tarea 303): la microacción que se acaba
+  // de crear con "+ Cómo hacerlo" (recibe el foco para escribir su acción)
+  // y, si se quitan todas, el foco de vuelta en ese mismo control.
+  const [microPasoNuevoId, setMicroPasoNuevoId] = useState<string | null>(null)
+  const [enfocarAnadirComo, setEnfocarAnadirComo] = useState(false)
 
   // El catálogo del pie puede pedir que se abra el selector de dato
   // protegido de ESTA tarea ("Añadir · Dato protegido").
@@ -1790,6 +1797,11 @@ function BloqueEditor({
     // Una decisión con opciones (tarea 302) y una de Sí/No de las de antes
     // son el mismo tipo de línea; cambia lo que se edita debajo.
     const conOpciones = esDecisionConOpciones(bloque)
+    // CÓMO HACERLO (tarea 303): las microacciones de una acción. Solo una
+    // tarea de acción lo tiene (una comprobación o una decisión no; cambiar
+    // el tipo lo suelta y lo dice, `cambiarTipoTarea`).
+    const esAccion = (bloque.tipoTarea ?? 'accion') === 'accion'
+    const microPasos = esAccion ? (bloque.comoHacer ?? []) : []
     return (
       <div
         onPointerDownCapture={onSeleccionar}
@@ -1852,6 +1864,7 @@ function BloqueEditor({
                 decisionArticuloId: nuevo.decisionArticuloId,
                 decisionArticuloTitulo: nuevo.decisionArticuloTitulo,
                 opciones: nuevo.opciones,
+                comoHacer: nuevo.comoHacer,
               })
               if (perdido.length > 0) {
                 onAvisoCambioTipo(`Al pasar a «${infoTipoTarea(tipoTarea).etiqueta}» se soltó ${perdido.join(' y ')}.`)
@@ -1859,6 +1872,49 @@ function BloqueEditor({
             }}
           />
         </div>
+
+        {/* CÓMO HACERLO, JUSTO DEBAJO DE LA ACCIÓN (tarea 303): el mismo
+            orden en que lo leerá el técnico. Sin microacciones, un solo
+            control en la acción que se está escribiendo, para no alargar el
+            editor con un bloque vacío por cada tarea; con alguna, siempre a
+            la vista: nada queda escondido en el dato. Quitar la última quita
+            la clave: nunca se guarda una lista vacía. */}
+        {microPasos.length > 0 ? (
+          <EditorComoHacer
+            microPasos={microPasos}
+            enfocarId={microPasoNuevoId}
+            onCambiar={(lista) => onCambiar({ comoHacer: lista.length > 0 ? lista : undefined })}
+            onVaciado={() => {
+              setMicroPasoNuevoId(null)
+              // Solo en la tarea que se está escribiendo: es la que enseña
+              // "+ Cómo hacerlo". En otra, el foco saltaría más tarde.
+              if (activa) setEnfocarAnadirComo(true)
+            }}
+          />
+        ) : (
+          esAccion &&
+          activa && (
+            <button
+              type="button"
+              ref={(el) => {
+                if (el && enfocarAnadirComo) {
+                  el.focus()
+                  setEnfocarAnadirComo(false)
+                }
+              }}
+              onClick={() => {
+                const nuevo = crearMicroPaso()
+                setMicroPasoNuevoId(nuevo.id)
+                onCambiar({ comoHacer: [nuevo] })
+              }}
+              className="ml-1 inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.08]"
+            >
+              <Plus size={14} className="shrink-0" aria-hidden />
+              Cómo hacerlo{' '}
+              <span className="font-normal text-noct-neutral-500">· opcional</span>
+            </button>
+          )
+        )}
 
         {/* AÑADIR CONTENIDO A ESTA TAREA (requisito 2 del editor). Es
             el control que el informe pedía: los apoyos se cuelgan de la

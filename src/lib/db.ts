@@ -197,6 +197,25 @@ export interface OpcionDecision {
   destino: DestinoOpcion
 }
 
+// UNA MICROACCIÓN DE "CÓMO HACERLO" (tarea 303). Una acción de la guía es
+// un momento de trabajo con un solo objetivo inmediato ("Abre un registro
+// nuevo"), y dentro de la misma ventana o contexto puede pedir varios
+// gestos seguidos: cada uno es una microacción.
+// - `accion`: qué hace la persona, en pocas palabras ("Abre", "Pulsa").
+// - `elemento`: con qué lo hace ("Fichero", "Nuevo", "Enter"). Es lo que
+//   forma la ruta rápida del técnico.
+// - `ubicacion`: dónde está el elemento, solo cuando puede costar
+//   encontrarlo ("Barra superior"). Ausente si no se escribió.
+// `id` es estable: reordenar o editar no lo cambia (el editor mueve y
+// quita por él). Una misma lista alimenta las dos lecturas de la
+// ejecución, la ruta rápida y el paso a paso: nunca hay dos textos.
+export interface MicroPasoComoHacer {
+  id: string
+  accion: string
+  elemento: string
+  ubicacion?: string
+}
+
 // Dónde sigue la ruta al terminar un paso cuando NO es el de abajo (tarea
 // 302): otro paso posterior o el final de la guía. Es lo que deja que dos
 // caminos vuelvan a juntarse en un paso común sin duplicarlo: el último
@@ -272,6 +291,17 @@ export interface BloquePaso {
   // Sí/No de antes, así que el JSON de las guías que no las usan no cambia.
   // Con opciones, el `decisionArticuloId` de arriba no se usa.
   opciones?: OpcionDecision[]
+  // CÓMO HACERLO (tarea 303): las microacciones que hacen ESTA acción, en
+  // orden (ver `MicroPasoComoHacer` y `src/lib/comoHacer.ts`). Es parte de
+  // la tarea, no un aviso: la ejecución enseña su ruta rápida justo debajo
+  // de la instrucción y, a petición, el paso a paso. Solo en tareas de tipo
+  // 'accion', opcional y ausente cuando no hay ninguna (nunca se guarda
+  // `[]`), así que el JSON de las guías que no lo usan no cambia. Vive en
+  // el JSON `procedimiento`: sin columna ni versión de Dexie. Una copia de
+  // la app anterior a este campo que edite y guarde la guía lo descarta (su
+  // normalizador no lo conoce): orden de despliegue de la regla 24 antes de
+  // escribirlo en guías reales.
+  comoHacer?: MicroPasoComoHacer[]
   vinculoProtegido: VinculoProtegido | null
   // A QUE PERTENECE ESTE APOYO. Solo aplica a los bloques que NO son
   // 'tarea' (una tarea no es apoyo de nadie: es el trabajo). null en

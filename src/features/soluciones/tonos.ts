@@ -100,7 +100,7 @@ export const TONOS_AVISO: TonoInfo[] = [
     etiqueta: 'Dato técnico',
     corto: 'Dato',
     descripcion:
-      'Un valor exacto que la acción necesita (IP, puerto, ruta, comando, nombre de archivo), no una explicación de pasos. Se ve bajo la acción, sin color de alerta',
+      'Un valor exacto que la acción necesita (IP, puerto, ruta, comando, nombre de archivo), no los pasos para hacerla: esos van en «Cómo hacerlo» de la acción. Se ve bajo la acción, sin color de alerta',
     Icono: Code,
     clasesPanel: 'border-noct-neutral-500/30 bg-noct-neutral-500/10',
     claseIcono: 'text-noct-neutral-400',

@@ -1,3 +1,4 @@
+import { comoHacerDe, fraseDeMicroPaso, ROTULO_COMO_HACERLO, textoPasoAPaso } from '../../lib/comoHacer'
 import type { BloquePaso, PasoProcedimiento, Referencia } from '../../lib/db'
 import { comandosEnTexto } from '../referencia/comandosEnTexto'
 import { tonoInfo } from '../soluciones/tonos'
@@ -146,8 +147,21 @@ export function construirContenidoDePaso({
     switch (bloque.tipo) {
       case 'tarea': {
         const tipo = bloque.tipoTarea === 'verificacion' || bloque.tipoTarea === 'decision' ? 'comprobacion' : 'accion'
+        // Su "Cómo hacerlo" (tarea 303) viaja justo después, como una nota
+        // con esa etiqueta y el paso a paso numerado de texto
+        // (`textoPasoAPaso`): el servidor ya admite notas con cualquier
+        // etiqueta, así que no hace falta otro tipo de bloque ni tocarlo.
+        // Sus comandos y enlaces salen como los de la acción. Sin esto, un
+        // recorrido que pasara de un dato técnico a su sitio dejaría de
+        // llegar al equipo.
+        const comoHacer = comoHacerDe(bloque)
         agregar({ tipo, texto: bloque.texto })
+        if (comoHacer.length > 0) agregar({ tipo: 'nota', texto: textoPasoAPaso(comoHacer), etiqueta: ROTULO_COMO_HACERLO })
         agregarDesdeTexto(bloque.texto)
+        for (const micro of comoHacer) {
+          agregarDesdeTexto(fraseDeMicroPaso(micro))
+          if (micro.ubicacion) agregarDesdeTexto(micro.ubicacion)
+        }
         break
       }
       case 'aviso': {

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { BloquePaso, PasoProcedimiento } from '../../lib/db'
+import type { BloquePaso, MicroPasoComoHacer, PasoProcedimiento } from '../../lib/db'
 import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import {
   control,
@@ -26,14 +26,15 @@ import { GuiaPage } from './GuiaPage'
 //
 //   Dónde            Aplicación de correo
 //   Qué hacer        Abre la opción de exportación
+//   Cómo hacerlo     Ruta rápida: Archivo › Herramientas › Exportar
+//                    (y, plegado, "Ver paso a paso")
 //   Dato técnico     Backup_2026-10-07.pst
 //   Debes ver        El asistente de exportación queda abierto
 //   Más información  una explicación opcional
 //   Advertencia      un riesgo real e independiente
 //
-// «Cómo hacerlo» (Archivo → Herramientas → Exportar) todavía no tiene sitio
-// en el modelo: necesita un tono nuevo, que cambia el contrato de datos, y
-// espera la decisión del usuario (TAREAS.md, tarea 303).
+// «Cómo hacerlo» son las microacciones de la tarea (`comoHacer`; el
+// detalle de sus vistas y de su editor, en `comoHacerlo.test.tsx`).
 //
 // happy-dom no aplica Tailwind, así que lo visual se comprueba por las
 // CLASES, como en `nombresSinRecorte.test.tsx`. La medida real a 390 × 844 y
@@ -48,6 +49,12 @@ const RUTAS = [
 
 const DONDE = 'Aplicación de correo'
 const ACCION = 'Abre la opción de exportación'
+const COMO: MicroPasoComoHacer[] = [
+  { id: 'jer-m1', accion: 'Abre', elemento: 'Archivo', ubicacion: 'Barra superior' },
+  { id: 'jer-m2', accion: 'Selecciona', elemento: 'Herramientas' },
+  { id: 'jer-m3', accion: 'Pulsa', elemento: 'Exportar' },
+]
+const RUTA_RAPIDA = 'Ruta rápida: Archivo › Herramientas › Exportar'
 const DATO = 'Backup_2026-10-07.pst'
 const DEBES_VER = 'El asistente de exportación queda abierto'
 const EXPLICACION = 'El archivo conserva carpetas, contactos y calendario de prueba'
@@ -66,7 +73,7 @@ async function sembrarCaso() {
     resultado: DEBES_VER,
     bloques: [
       aviso('jer-riesgo', 'precaucion', RIESGO),
-      ...base.bloques,
+      { ...base.bloques[0], comoHacer: COMO },
       aviso('jer-dato', 'dato', DATO),
       aviso('jer-info', 'info', EXPLICACION),
     ],
@@ -157,14 +164,16 @@ describe('una acción con todos sus papeles', () => {
       texto.indexOf(`Dónde: ${DONDE}`),
       texto.indexOf('Qué hacer'),
       texto.indexOf(ACCION),
+      texto.indexOf(RUTA_RAPIDA),
+      texto.indexOf('Ver paso a paso'),
       texto.indexOf('Dato técnico'),
       texto.indexOf(DATO),
       texto.indexOf(`Debes ver: ${DEBES_VER}`),
       texto.indexOf('Más información'),
     ]
     // Todos están, y en ese orden: el riesgo antes de actuar, dónde estar,
-    // qué hacer con el valor que necesita, qué comprobar y, al final, lo
-    // opcional.
+    // qué hacer, la ruta rápida y el paso a paso para hacerlo, el valor que
+    // necesita, qué comprobar y, al final, lo opcional.
     expect(posiciones.every((p) => p >= 0)).toBe(true)
     expect([...posiciones].sort((a, b) => a - b)).toEqual(posiciones)
   })
@@ -235,6 +244,7 @@ describe('una acción con todos sus papeles', () => {
     // Lo necesario para hacer la acción está a la vista sin abrir nada.
     expect(textoPantalla()).toContain(DATO)
     expect(textoPantalla()).toContain(DONDE)
+    expect(textoPantalla()).toContain(RUTA_RAPIDA)
 
     await tocar(boton)
     await esperar(() => textoPantalla().includes(EXPLICACION), 'la explicación opcional')

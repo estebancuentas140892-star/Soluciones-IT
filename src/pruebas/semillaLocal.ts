@@ -9,6 +9,7 @@ import {
   type Diagnostico,
   type Dispositivo,
   type HistorialEntrada,
+  type MicroPasoComoHacer,
   type NodoDiagnostico,
   type OpcionDiagnostico,
   type PasoProcedimiento,
@@ -100,6 +101,11 @@ function tarea(id: string, texto: string, tipoTarea: 'accion' | 'verificacion' |
     referenciaTitulo: '',
     referenciaTipo: null,
   }
+}
+
+// Una microaccion de "Como hacerlo" (tarea 303), inventada.
+function micro(id: string, accion: string, elemento: string, ubicacion?: string): MicroPasoComoHacer {
+  return { id, accion, elemento, ...(ubicacion ? { ubicacion } : {}) }
 }
 
 // Decision CON destino para el "No", que es lo que ejercita la seccion
@@ -241,7 +247,18 @@ const GUIA_VINCULADA = articulo({
       paso({
         id: 'gestor-p1',
         titulo: 'Abrir el gestor de ejemplo',
-        bloques: [tarea('gestor-p1-t1', 'Abrir el programa de ejemplo')],
+        // "Como hacerlo" inventado (tarea 303): se lee tambien cuando esta
+        // guia se hace dentro del paso de otra.
+        bloques: [
+          {
+            ...tarea('gestor-p1-t1', 'Abrir el programa de ejemplo'),
+            comoHacer: [
+              micro('gestor-m1', 'Abre', 'Menú de inicio'),
+              micro('gestor-m2', 'Selecciona', 'Programas de ejemplo'),
+              micro('gestor-m3', 'Pulsa', 'Gestor'),
+            ],
+          },
+        ],
       }),
       paso({
         id: 'gestor-p2',
@@ -687,11 +704,12 @@ const GUIA_APUNTE = articulo({
 
 // JERARQUIA DE UNA ACCION (tarea 303). El caso de referencia de la copia
 // de seguridad del correo, inventado: el paso 1 es UNA accion con todos
-// sus papeles a la vez (riesgo, donde, que hacer, dato tecnico, debes ver
-// y mas informacion), que es la pantalla mas cargada posible; el paso 2
-// trae una instruccion larga y un dato sin espacios, para comprobar que
-// nada se corta a 375 px ni con el texto al 130 %. "Como hacerlo" no esta:
-// todavia no tiene sitio en el modelo (TAREAS.md, tarea 303).
+// sus papeles a la vez (riesgo, donde, que hacer, la ruta rapida y el paso
+// a paso de "como hacerlo", dato tecnico, debes ver y mas informacion),
+// que es la pantalla mas cargada posible; el paso 2 trae una instruccion
+// larga, cinco microacciones (una con ubicacion y otra con un nombre sin
+// espacios) y un dato sin espacios, para comprobar que nada se corta a
+// 375 px ni con el texto al 130 %.
 const GUIA_JERARQUIA = articulo({
   id: 'art-jerarquia',
   categoriaId: 'cat-software',
@@ -718,7 +736,14 @@ const GUIA_JERARQUIA = articulo({
             'precaucion',
             'Si el disco de destino se llena, la exportación se corta y el archivo queda incompleto',
           ),
-          tarea('jer-p1-t1', 'Abre la opción de exportación'),
+          {
+            ...tarea('jer-p1-t1', 'Abre la opción de exportación'),
+            comoHacer: [
+              micro('jer-m1', 'Abre', 'Archivo', 'Barra superior'),
+              micro('jer-m2', 'Selecciona', 'Herramientas'),
+              micro('jer-m3', 'Pulsa', 'Exportar'),
+            ],
+          },
           avisoConTono('jer-a-dato', 'jer-p1-t1', 'dato', 'Backup_2026-10-07.pst'),
           avisoConTono(
             'jer-a-info',
@@ -734,8 +759,74 @@ const GUIA_JERARQUIA = articulo({
         lugar: 'Asistente de exportación · Archivo de destino',
         resultado: 'La ruta del archivo aparece en el campo de destino',
         bloques: [
-          tarea('jer-p2-t1', 'Elige la carpeta compartida de respaldos de ejemplo como destino del archivo de datos'),
+          {
+            ...tarea('jer-p2-t1', 'Elige la carpeta compartida de respaldos de ejemplo como destino del archivo de datos'),
+            comoHacer: [
+              micro('jer-m4', 'Pulsa', 'Examinar', 'A la derecha del campo Archivo de destino'),
+              micro('jer-m5', 'Abre', 'Red'),
+              micro('jer-m6', 'Abre', 'SRV-EJEMPLO-RESPALDOS-CORREO-2026'),
+              micro('jer-m7', 'Selecciona', 'Respaldos'),
+              micro('jer-m8', 'Pulsa', 'Aceptar'),
+            ],
+          },
           avisoConTono('jer-a-ruta', 'jer-p2-t1', 'dato', '\\\\SRV-EJEMPLO\\Respaldos\\Correo\\2026\\Buzon-de-ejemplo-con-nombre-largo.pst'),
+        ],
+      }),
+    ],
+  },
+})
+
+// "COMO HACERLO" CON MICROACCIONES (tarea 303), el caso del encargo,
+// inventado: una pantalla es un momento de trabajo con un solo objetivo
+// ("Abre un registro nuevo") y, en la misma ventana, cuatro gestos
+// seguidos. La ruta rapida debe leerse "Fichero › Cliente › Fichero ›
+// Nuevo" y el paso a paso "1. Abre Fichero." (con "Barra superior" debajo)
+// hasta "4. Selecciona Nuevo.". El paso 2 es el atajo de ejemplo
+// permitido en las pruebas ("Windows + R › comando-ejemplo › Enter").
+const GUIA_REGISTRO = articulo({
+  id: 'art-registro-ejemplo',
+  categoriaId: 'cat-software',
+  titulo: 'Crear un registro en la aplicación de ejemplo',
+  tipo: 'configuracion',
+  procedimiento: {
+    descripcion: '',
+    portada: null,
+    objetivoGeneral: '',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 5,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'reg-p1',
+        titulo: 'Abrir el registro',
+        lugar: 'Aplicación de ejemplo',
+        resultado: 'El formulario del registro nuevo queda abierto',
+        bloques: [
+          {
+            ...tarea('reg-p1-t1', 'Abre un registro nuevo'),
+            comoHacer: [
+              micro('reg-m1', 'Abre', 'Fichero', 'Barra superior'),
+              micro('reg-m2', 'Selecciona', 'Cliente'),
+              micro('reg-m3', 'Abre', 'Fichero'),
+              micro('reg-m4', 'Selecciona', 'Nuevo'),
+            ],
+          },
+        ],
+      }),
+      paso({
+        id: 'reg-p2',
+        titulo: 'Abrir la herramienta de ejemplo',
+        bloques: [
+          {
+            ...tarea('reg-p2-t1', 'Abre la herramienta de ejemplo'),
+            comoHacer: [
+              micro('reg-m5', 'Pulsa', 'Windows + R'),
+              micro('reg-m6', 'Escribe', 'comando-ejemplo'),
+              micro('reg-m7', 'Pulsa', 'Enter'),
+            ],
+          },
+          tarea('reg-p2-t2', 'Comprueba que la herramienta de ejemplo queda abierta', 'verificacion'),
         ],
       }),
     ],
@@ -1024,6 +1115,7 @@ const ARTICULOS: Articulo[] = [
   GUIA_TONOS,
   GUIA_APUNTE,
   GUIA_JERARQUIA,
+  GUIA_REGISTRO,
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
   GUIA_TRES_TAREAS,

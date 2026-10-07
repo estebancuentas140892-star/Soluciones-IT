@@ -89,6 +89,69 @@ const FICHAS = new Map<string, Referencia>([
   ['ref-term', referencia({ id: 'ref-term', tipo: 'termino', titulo: 'DNS', definicion: 'Traduce nombres' })],
 ])
 
+describe('construirContenidoDePaso: el "Cómo hacerlo" de una acción (tarea 303)', () => {
+  function pasoConComo(): PasoProcedimiento {
+    return {
+      ...pasoCompleto(),
+      lugar: 'Panel de configuración',
+      resultado: '',
+      vinculoProtegido: null,
+      bloques: [
+        bloque({
+          id: 't1',
+          tipo: 'tarea',
+          texto: 'Vacía la caché de prueba',
+          tipoTarea: 'accion',
+          comoHacer: [
+            { id: 'm1', accion: 'Abre', elemento: 'Consola de prueba', ubicacion: 'Menú de inicio' },
+            { id: 'm2', accion: 'Escribe', elemento: 'ipconfig /flushdns' },
+          ],
+        }),
+        bloque({ id: 't2', tipo: 'tarea', texto: 'Comprueba la ventana', tipoTarea: 'verificacion' }),
+      ],
+    }
+  }
+
+  it('viaja justo después de su acción, como una nota con su nombre y el paso a paso numerado, y sus comandos también', () => {
+    const { contenido } = construirContenidoDePaso({ paso: pasoConComo(), numeroPaso: 1, tituloGuia: 'Guía de prueba', referencias: FICHAS })
+    expect(contenido?.bloques).toEqual([
+      { tipo: 'donde', texto: 'Panel de configuración' },
+      { tipo: 'accion', texto: 'Vacía la caché de prueba' },
+      {
+        tipo: 'nota',
+        texto: '1. Abre Consola de prueba (Menú de inicio).\n2. Escribe ipconfig /flushdns.',
+        etiqueta: 'Cómo hacerlo',
+      },
+      // El comando escrito como elemento de una microacción, con su ficha y Copiar.
+      { tipo: 'comando', texto: 'ipconfig /flushdns', titulo: 'Limpiar la caché DNS', plataforma: 'Windows' },
+      { tipo: 'comprobacion', texto: 'Comprueba la ventana' },
+    ])
+    // El servidor lo acepta tal cual: una nota con cualquier etiqueta.
+    expect(validarContenido(contenido)).toBeNull()
+  })
+
+  it('"Solo esta acción" también lo lleva', () => {
+    const { contenido } = construirContenidoDePaso({
+      paso: pasoConComo(),
+      numeroPaso: 1,
+      tituloGuia: 'Guía de prueba',
+      referencias: FICHAS,
+      tareaId: 't1',
+    })
+    expect(contenido?.bloques.map((b) => [b.tipo, b.etiqueta ?? null])).toEqual([
+      ['donde', null],
+      ['accion', null],
+      ['nota', 'Cómo hacerlo'],
+      ['comando', null],
+    ])
+  })
+
+  it('una acción sin "Cómo hacerlo" no suma nada', () => {
+    const { contenido } = construirContenidoDePaso({ paso: pasoCompleto(), numeroPaso: 3, tituloGuia: 'Guía de prueba DNS', referencias: FICHAS })
+    expect(contenido?.bloques.some((b) => b.etiqueta === 'Cómo hacerlo')).toBe(false)
+  })
+})
+
 describe('construirContenidoDePaso', () => {
   it('arma el paso entero con lo permitido y en su orden', () => {
     const { contenido, apartados } = construirContenidoDePaso({

@@ -253,7 +253,26 @@ function guiaDePrueba(id, titulo, procedimiento) {
 const GUIAS_PRUEBA = [
   guiaDePrueba('acceso-sin-conexion', 'Entrar al programa de prueba sin red', {
     requisitos: ['Red de prueba sin conexión.'],
-    pasos: [{ id: 'acs-p1', titulo: 'Abrir el programa', bloques: [{ id: 'acs-p1-t1', tipo: 'tarea', texto: 'Abre el programa de prueba sin red' }] }],
+    // Con "Cómo hacerlo" (tarea 303), dos microacciones inventadas: su ruta
+    // rápida y su paso a paso se leen en el flujo de la guía que la
+    // reutiliza, sin red.
+    pasos: [
+      {
+        id: 'acs-p1',
+        titulo: 'Abrir el programa',
+        bloques: [
+          {
+            id: 'acs-p1-t1',
+            tipo: 'tarea',
+            texto: 'Abre el programa de prueba sin red',
+            comoHacer: [
+              { id: 'acs-m1', accion: 'Abre', elemento: 'Acceso rápido de prueba' },
+              { id: 'acs-m2', accion: 'Pulsa', elemento: 'Programa', ubicacion: 'Barra lateral de prueba' },
+            ],
+          },
+        ],
+      },
+    ],
   }),
   guiaDePrueba('guia-sin-conexion', 'Registrar a una persona de prueba sin red', {
     descripcion: 'Usa esta guía cuando necesites registrar a una persona sin red.',
@@ -422,6 +441,24 @@ async function main() {
     comprobar(
       Boolean(await s.hasta(`document.body.innerText.includes('Abre el programa de prueba sin red')`, 'la primera acción')),
       'la primera acción reutilizada, en el sitio',
+    )
+    comprobar(
+      Boolean(await s.evaluar(`return /Ruta rápida:\\s*Acceso rápido de prueba\\s*›\\s*Programa/.test(document.body.innerText)`)),
+      'con la ruta rápida de su "Cómo hacerlo", sin red (tarea 303)',
+    )
+    comprobar(
+      !(await s.evaluar(`return document.body.innerText.includes('Barra lateral de prueba')`)),
+      'el paso a paso llega plegado',
+    )
+    await s.tocar('Ver paso a paso')
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Pulsa Programa.') && document.body.innerText.includes('Barra lateral de prueba')`,
+          'el paso a paso',
+        ),
+      ),
+      'y "Ver paso a paso" lo despliega, con la ubicación, sin red',
     )
     comprobar(
       !(await s.evaluar(`return /Guía necesaria|Estás realizando|Abrir guía|Volver a la guía principal|No se pudo cargar/.test(document.body.innerText)`)),

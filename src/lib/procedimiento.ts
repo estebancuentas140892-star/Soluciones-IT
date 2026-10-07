@@ -16,6 +16,7 @@ import type {
   TonoAviso,
   VinculoProtegido,
 } from './db'
+import { comoHacerDe, normalizarComoHacer } from './comoHacer'
 import { texto } from './texto'
 import { vinculoDelEquipo } from './vinculoProtegido'
 
@@ -547,6 +548,11 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
   const opciones = tipoTarea === 'decision' ? normalizarOpciones(origen.opciones) : []
   const decisionArticuloId =
     tipoTarea === 'decision' && opciones.length === 0 ? idValido(origen.decisionArticuloId) : null
+  // "CÓMO HACERLO" (tarea 303): las microacciones de una tarea de acción,
+  // toleradas (`normalizarComoHacer`). Sin ninguna, o en otro tipo de tarea,
+  // la clave no aparece: una guía de antes del campo se lee exactamente
+  // igual, y un texto suelto donde iría la lista no se convierte en nada.
+  const comoHacer = tipoTarea === 'accion' ? normalizarComoHacer(origen.comoHacer) : []
   // Vinculo protegido (tarea 40, generalizado en P2): opcional en
   // cualquier tarea, sin depender del tipoTarea.
   return {
@@ -558,6 +564,7 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     decisionArticuloId,
     decisionArticuloTitulo: decisionArticuloId ? texto(origen.decisionArticuloTitulo) : '',
     ...(opciones.length > 0 ? { opciones } : {}),
+    ...(comoHacer.length > 0 ? { comoHacer } : {}),
     vinculoProtegido: normalizarVinculoProtegido(origen),
   }
 }
@@ -700,6 +707,10 @@ function duplicarBloques(bloques: BloquePaso[], traducirPaso: (pasoId: string) =
           })),
         }
       : {}),
+    // Las microacciones de "Cómo hacerlo" (tarea 303) se copian enteras, con
+    // sus ids: solo tienen que ser únicos dentro de su tarea, y la tarea ya
+    // es otra. Copiadas, no compartidas: editar la copia no toca el original.
+    ...(bloque.comoHacer ? { comoHacer: bloque.comoHacer.map((micro) => ({ ...micro })) } : {}),
   }))
 }
 
@@ -731,6 +742,13 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
     // Textos de tareas, avisos y pies de imagen (todo el cuerpo del
     // paso entra al indice para que "back up" encuentre el articulo).
     partes.push(...paso.bloques.map((b) => b.texto))
+    // Las microacciones de "Cómo hacerlo" de cada acción (tarea 303), con
+    // el mismo criterio: el nombre de una opción de menú, un acceso
+    // directo o un comando escrito ahí encuentra la guía que lo usa, como
+    // lo encontraba cuando vivía en un dato técnico o en la instrucción.
+    for (const bloque of paso.bloques) {
+      for (const micro of comoHacerDe(bloque)) partes.push(micro.accion, micro.elemento, micro.ubicacion ?? '')
+    }
     // Los titulos del subprocedimiento, de la solucion y de los
     // vinculos de decision si se indexan (no son informacion
     // protegida): buscar "impresora" encuentra tambien los
@@ -927,6 +945,10 @@ function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
   const limpios = bloques
     .map((bloque) => {
       const opciones = opcionesParaGuardar(bloque)
+      // "Cómo hacerlo" (tarea 303): las microacciones recortadas, sin las
+      // vacías y solo en una tarea de acción (`comoHacerDe`). Quitarlas
+      // todas en el editor quita la clave: nunca se guarda una lista vacía.
+      const comoHacer = comoHacerDe(bloque)
       const limpio: BloquePaso = {
         ...bloque,
         texto: bloque.texto.trim(),
@@ -939,7 +961,12 @@ function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
         vinculoProtegido: limpiarVinculoProtegido(bloque.vinculoProtegido),
       }
       delete limpio.opciones
-      return opciones ? { ...limpio, opciones } : limpio
+      delete limpio.comoHacer
+      return {
+        ...limpio,
+        ...(opciones ? { opciones } : {}),
+        ...(comoHacer.length > 0 ? { comoHacer } : {}),
+      }
     })
     .filter((bloque) => {
       // Una imagen o un archivo a medio subir (sin adjunto) se

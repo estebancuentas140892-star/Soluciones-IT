@@ -155,10 +155,18 @@ export function cambiarTipoTarea(bloque: BloquePaso, tipoTarea: TipoTarea): Camb
   // se convierte sola en una con opciones (para eso esta
   // `decisionConOpcionesDesdeSiNo`, que el autor pide a proposito).
   if ((bloque.tipoTarea ?? 'accion') === tipoTarea) return { bloque, perdido: [] }
+  // "COMO HACERLO" ES DE LA ACCION (tarea 303): en una comprobacion o en
+  // una decision no tiene donde vivir, asi que se suelta y se nombra, como
+  // todo lo que se suelta. Una microaccion vacia no es nada que perder.
+  const comoHacer = tipoTarea === 'accion' ? {} : { comoHacer: undefined }
+  const perdidoComoHacer = tipoTarea === 'accion' ? [] : microaccionesEscritas(bloque)
   // UNA DECISION NUEVA NACE CON DOS OPCIONES VACIAS (tarea 302): la de
   // Si/No ya no se crea, la sustituye una con opciones "Si" y "No".
   if (tipoTarea === 'decision') {
-    return { bloque: { ...bloque, tipoTarea, opciones: [crearOpcion(), crearOpcion()] }, perdido: [] }
+    return {
+      bloque: { ...bloque, tipoTarea, opciones: [crearOpcion(), crearOpcion()], ...comoHacer },
+      perdido: perdidoComoHacer,
+    }
   }
   // Fuera de "decision" ni el vinculo del "No" ni las opciones tienen
   // donde vivir. Una opcion todavia vacia no es nada que perder.
@@ -170,9 +178,19 @@ export function cambiarTipoTarea(bloque: BloquePaso, tipoTarea: TipoTarea): Camb
   ).length
   if (escritas > 0) perdido.push(escritas === 1 ? 'una opción de la decisión' : `las ${escritas} opciones de la decisión`)
   return {
-    bloque: { ...bloque, tipoTarea, decisionArticuloId: null, decisionArticuloTitulo: '', opciones: undefined },
-    perdido,
+    bloque: { ...bloque, tipoTarea, decisionArticuloId: null, decisionArticuloTitulo: '', opciones: undefined, ...comoHacer },
+    perdido: [...perdido, ...perdidoComoHacer],
   }
+}
+
+// Las microacciones de "Como hacerlo" que dicen algo, para nombrarlas al
+// soltarlas: «Cómo hacerlo» (2 microacciones). Sin ninguna escrita, nada.
+function microaccionesEscritas(bloque: BloquePaso): string[] {
+  const escritas = (bloque.comoHacer ?? []).filter(
+    (micro) => micro.accion.trim() !== '' || micro.elemento.trim() !== '' || (micro.ubicacion ?? '').trim() !== '',
+  ).length
+  if (escritas === 0) return []
+  return [`«Cómo hacerlo» (${escritas === 1 ? 'una microacción' : `${escritas} microacciones`})`]
 }
 
 /**
@@ -221,9 +239,10 @@ export function opcionesDestino(bloques: BloquePaso[]): { id: string; numero: nu
  * REGLAS.md). Recibe las acciones ya separadas (`accionesEncadenadas`
  * en revisionGuia.ts) y la tarea se convierte en una por acción:
  *
- * - la original CONSERVA su id, su tipo, su dato protegido y sus apoyos,
- *   con el texto de la primera acción. Lo que el técnico ya marcó en
- *   una ejecución a medias sigue apuntando a ella;
+ * - la original CONSERVA su id, su tipo, su dato protegido, sus apoyos y
+ *   su "Cómo hacerlo" (tarea 303), con el texto de la primera acción. Lo
+ *   que el técnico ya marcó en una ejecución a medias sigue apuntando a
+ *   ella;
  * - cada acción siguiente nace como tarea nueva, detrás del grupo de la
  *   original (la tarea y los apoyos que la siguen) y en el orden en que
  *   estaban escritas.
