@@ -185,8 +185,9 @@ describe('una acción a la vez (Modo Foco)', () => {
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
     expect(textoPantalla()).not.toContain('Ruta rápida')
     expect(botonPasoAPaso()).toBeNull()
-    expect(textoPantalla()).toContain(`Dónde: ${DONDE}`)
     expect(textoPantalla()).toContain(DATO)
+    // Su "Dónde" heredado ya no se enseña (tarea 307), pero la guía carga.
+    expect(textoPantalla()).not.toContain(DONDE)
   })
 
   it('la ruta rápida del encargo va justo debajo de la instrucción y cada papel queda en su sitio', async () => {
@@ -194,34 +195,34 @@ describe('una acción a la vez (Modo Foco)', () => {
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
     await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la ruta rápida')
 
-    // El orden del encargo: advertencia, Dónde, Qué hacer, ruta rápida, Ver
-    // paso a paso, dato técnico, Debes ver y Más información.
+    // El orden de la ejecución mínima (tarea 307): Qué hacer, el riesgo,
+    // ruta rápida, Ver paso a paso y dato técnico. Ni "Dónde", ni el "Debes
+    // ver" de texto, ni "Más información".
     const texto = textoPantalla()
     const posiciones = [
-      texto.indexOf(RIESGO),
-      texto.indexOf(`Dónde: ${DONDE}`),
       texto.indexOf('Qué hacer'),
       texto.indexOf(ACCION),
+      texto.indexOf(RIESGO),
       texto.indexOf(RUTA_RAPIDA),
       texto.indexOf('Ver paso a paso'),
       texto.indexOf('Dato técnico'),
       texto.indexOf(DATO),
-      texto.indexOf(`Debes ver: ${DEBES_VER}`),
-      texto.indexOf('Más información'),
     ]
     expect(posiciones.every((p) => p >= 0)).toBe(true)
     expect([...posiciones].sort((a, b) => a - b)).toEqual(posiciones)
+    expect(texto).not.toContain(DONDE)
+    expect(texto).not.toContain(DEBES_VER)
+    expect(texto).not.toContain('Más información')
 
     // Una lista de verdad, con los elementos en orden.
     const [ruta] = rutasRapidas()
     expect(Array.from(ruta.children).map((li) => textoDe(li).replace(/\s*›$/, ''))).toEqual(['Fichero', 'Cliente', 'Fichero', 'Nuevo'])
 
     // En el grupo de la instrucción: lo más cercano que contiene a las dos
-    // no contiene también el "Dónde" ni el "Debes ver".
+    // es de la acción, no de la pantalla entera (el pie no está dentro).
     expect(instruccion().textContent).toBe(ACCION)
     const grupo = ancestroComun(instruccion(), ruta)
-    expect(grupo.contains(elementoCon(`Dónde: ${DONDE}`))).toBe(false)
-    expect(grupo.contains(elementoCon(`Debes ver: ${DEBES_VER}`))).toBe(false)
+    expect(grupo.querySelector('.sticky')).toBeNull()
   })
 
   it('el paso a paso llega plegado, se despliega con su botón, enseña la ubicación debajo y se vuelve a plegar', async () => {

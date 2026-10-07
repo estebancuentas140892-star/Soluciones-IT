@@ -325,9 +325,6 @@ export function pasoPrueba(id: string, titulo: string, tareas: string[]): PasoPr
   return {
     id,
     titulo,
-    objetivo: '',
-    lugar: '',
-    resultado: '',
     bloques: tareas.map((texto, indice) => ({
       id: `${id}-t${indice + 1}`,
       tipo: 'tarea',

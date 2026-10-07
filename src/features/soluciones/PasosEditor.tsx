@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import { crearMicroPaso } from '../../lib/comoHacer'
+import { admiteResultadoVisual, ROTULO_DEBES_VER } from '../../lib/resultadoVisual'
 import {
   db,
   type Articulo,
@@ -20,6 +21,7 @@ import {
   type PasoAdjunto,
   type PasoProcedimiento,
   type Referencia,
+  type ResultadoVisual,
   type TipoReferencia,
   type TipoTarea,
   type TipoVinculoProtegido,
@@ -72,8 +74,10 @@ import {
   Camera,
   CaretDown,
   CaretUp,
+  Code,
   DotsSixVertical,
   DotsThreeOutline,
+  Eye,
   Info,
   type IconoProps,
   LinkSimple,
@@ -90,7 +94,7 @@ import {
   Wrench,
   X,
 } from '../../components/iconos'
-import { TONOS_AVISO, type TonoInfo } from './tonos'
+import { TONOS_AVISO, tonoDelEditor, tonoVigente } from './tonos'
 import { Campo, CampoConSugerencias, CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
 import { tituloVinculoDelEquipo } from '../../lib/vinculoProtegido'
 import { finalidadesConocidas } from '../boveda/credencialDelEquipo'
@@ -220,7 +224,8 @@ type ClaveContenido =
   | 'verificacion'
   | 'decision'
   | 'imagen'
-  | 'aviso'
+  | 'advertencia'
+  | 'datoTecnico'
   | 'archivo'
   | 'guia'
   | 'dato'
@@ -233,9 +238,10 @@ const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
   { valor: 'verificacion', etiqueta: 'Verificación', descripcion: 'Comprobar antes de continuar', Icono: SealCheck, claseIcono: 'text-noct-exito' },
   { valor: 'decision', etiqueta: 'Decisión', descripcion: 'Una pregunta con opciones; cada una lleva por su camino', Icono: Question, claseIcono: 'text-noct-precaucion' },
   { valor: 'imagen', etiqueta: 'Imagen', descripcion: 'Una captura en este punto', Icono: Camera, claseIcono: 'text-noct-accent-300' },
-  // Nace como Información (plegada al ejecutar): la alerta se elige en
-  // su tono, solo para un riesgo real (regla 20c).
-  { valor: 'aviso', etiqueta: 'Aviso', descripcion: 'Información, dato o riesgo: el tono decide cómo se ve', Icono: Info, claseIcono: 'text-noct-neutral-300' },
+  // UN AVISO ES UN RIESGO O UN DATO (tarea 307): se elige por lo que es.
+  // Información y Consejo ya no se crean (la ejecución no los muestra).
+  { valor: 'advertencia', etiqueta: 'Advertencia', descripcion: 'Un riesgo real de esta acción; se ve en rojo, bajo la instrucción', Icono: Warning, claseIcono: 'text-noct-error' },
+  { valor: 'datoTecnico', etiqueta: 'Dato técnico', descripcion: 'Un valor exacto: IP, puerto, ruta, comando o nombre de archivo', Icono: Code, claseIcono: 'text-noct-neutral-300' },
   { valor: 'archivo', etiqueta: 'Archivo', descripcion: 'Manual, PDF o planilla', Icono: Paperclip, claseIcono: 'text-noct-neutral-300' },
   { valor: 'guia', etiqueta: 'Guía vinculada', descripcion: 'Otra guía que se hace aquí', Icono: BookOpen, claseIcono: 'text-noct-accent-300' },
   { valor: 'dato', etiqueta: 'Dato protegido', descripcion: 'Clave o campo de la bóveda', Icono: LockSimple, claseIcono: 'text-noct-neutral-300' },
@@ -284,9 +290,6 @@ function infoTipoTarea(tipo: TipoTarea | null): TipoTareaInfo {
   return TIPOS_TAREA.find((t) => t.valor === (tipo ?? 'accion')) ?? TIPOS_TAREA[0]
 }
 
-function infoTono(tono: TonoAviso | null): TonoInfo {
-  return TONOS_AVISO.find((t) => t.valor === (tono ?? 'info')) ?? TONOS_AVISO[0]
-}
 
 // Como se nombra, en el titulo de la hoja de contenido, la tarea a la
 // que va a caer lo que el autor elija. El alcance por defecto es la
@@ -305,7 +308,7 @@ const HUECO_ENTRE_PASOS = 14
 
 // Editor del procedimiento paso a paso (handoff "Editor de Artículo",
 // sistema Nocturne). Componente controlado: el estado vive en el
-// formulario. Cada paso es una tarjeta con numero, titulo, objetivo y un
+// formulario. Cada paso es una tarjeta con numero, titulo y un
 // cuerpo de bloques (tareas con casilla, advertencias e imagenes), mas un
 // menu de reordenar/eliminar y los vinculos del paso (bóveda,
 // procedimiento y solución).
@@ -516,7 +519,8 @@ export function PasosEditor({
       return
     }
     if (clave === 'imagen') return agregarBloque(indice, crearBloqueImagen(tareaId))
-    if (clave === 'aviso') return agregarBloque(indice, crearBloqueAviso(tareaId))
+    if (clave === 'advertencia') return agregarBloque(indice, crearBloqueAviso(tareaId, 'precaucion'))
+    if (clave === 'datoTecnico') return agregarBloque(indice, crearBloqueAviso(tareaId, 'dato'))
     if (clave === 'archivo') return agregarBloque(indice, crearBloqueArchivo(tareaId))
     if (clave === 'guia') return agregarBloque(indice, crearBloqueGuia(tareaId))
     // DATO PROTEGIDO. No nace un bloque nuevo: se usa el vinculo que ya
@@ -720,18 +724,32 @@ export function PasosEditor({
     setMenuPasoId(null)
   }
 
-  // Sube (o encola sin conexion) una imagen y la deja como adjunto del
-  // bloque. Las fotos pesadas se recomprimen en el telefono antes de subir.
-  async function subirImagen(indice: number, bloqueId: string, evento: ChangeEvent<HTMLInputElement>) {
+  // SUBE (O ENCOLA SIN CONEXIÓN) EL ARCHIVO ELEGIDO PARA UN BLOQUE y
+  // devuelve su adjunto, o null si no se pudo. Las fotos pesadas se
+  // recomprimen en el teléfono; los PDF y documentos pasan intactos
+  // (`comprimirImagen`). La comparten la imagen intercalada, el archivo
+  // anclado y, desde la tarea 307, la imagen de "Debes ver": una sola
+  // subida, la de siempre, para todo lo que vive como adjunto en el JSON.
+  async function subirParaBloque(
+    bloqueId: string,
+    evento: ChangeEvent<HTMLInputElement>,
+    textos: { encolado: string; error: string; soloImagen?: string },
+  ): Promise<PasoAdjunto | null> {
     const archivo = evento.target.files?.[0]
     evento.target.value = ''
-    if (!archivo) return
+    if (!archivo) return null
 
     setError(null)
     setAviso(null)
     if (!supabase || !supabaseConfigured) {
       setError('La aplicación aún no está conectada al servidor.')
-      return
+      return null
+    }
+    // Lo que tiene que mirarse como imagen no puede ser otra cosa: guardarlo
+    // igual lo descartaría el guardado sin decir nada.
+    if (textos.soloImagen && !archivo.type.startsWith('image/')) {
+      setError(textos.soloImagen)
+      return null
     }
 
     setSubiendoBloqueId(bloqueId)
@@ -740,49 +758,45 @@ export function PasosEditor({
       const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
       const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
       const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
-      if (resultado === 'encolado') {
-        setAviso('Sin conexión: la imagen quedó guardada en este dispositivo y se subirá sola al recuperar señal.')
-      }
-      const adjunto: PasoAdjunto = { referencia, nombre: archivoFinal.name, tipo: archivoFinal.type }
-      actualizarBloque(indice, bloqueId, { adjunto })
+      if (resultado === 'encolado') setAviso(textos.encolado)
+      return { referencia, nombre: archivoFinal.name, tipo: archivoFinal.type }
     } catch {
-      setError(`No se pudo subir la imagen: ${archivo.name}`)
+      setError(`${textos.error}: ${archivo.name}`)
+      return null
+    } finally {
+      setSubiendoBloqueId(null)
     }
-    setSubiendoBloqueId(null)
+  }
+
+  // La imagen de un bloque 'imagen'.
+  async function subirImagen(indice: number, bloqueId: string, evento: ChangeEvent<HTMLInputElement>) {
+    const adjunto = await subirParaBloque(bloqueId, evento, {
+      encolado: 'Sin conexión: la imagen quedó guardada en este dispositivo y se subirá sola al recuperar señal.',
+      error: 'No se pudo subir la imagen',
+    })
+    if (adjunto) actualizarBloque(indice, bloqueId, { adjunto })
   }
 
   // Archivo de un bloque 'archivo': el manual o la planilla que hace
   // falta EN ESTE PUNTO, a diferencia de la galeria del paso completo.
-  // Comparte la subida con la imagen (comprimirImagen deja pasar
-  // intactos los PDF y documentos), solo cambia el bloque destino.
   async function subirArchivoBloque(indice: number, bloqueId: string, evento: ChangeEvent<HTMLInputElement>) {
-    const archivo = evento.target.files?.[0]
-    evento.target.value = ''
-    if (!archivo) return
+    const adjunto = await subirParaBloque(bloqueId, evento, {
+      encolado: 'Sin conexión: el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal.',
+      error: 'No se pudo subir el archivo',
+    })
+    if (adjunto) actualizarBloque(indice, bloqueId, { adjunto })
+  }
 
-    setError(null)
-    setAviso(null)
-    if (!supabase || !supabaseConfigured) {
-      setError('La aplicación aún no está conectada al servidor.')
-      return
-    }
-
-    setSubiendoBloqueId(bloqueId)
-    try {
-      const archivoFinal = await comprimirImagen(archivo)
-      const nombreLimpio = archivoFinal.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
-      const referencia = `articulos/${articuloId}/pasos/${Date.now()}-${nombreLimpio}`
-      const resultado = await subirOEncolarArchivo(referencia, archivoFinal, archivoFinal.name)
-      if (resultado === 'encolado') {
-        setAviso('Sin conexión: el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal.')
-      }
-      actualizarBloque(indice, bloqueId, {
-        adjunto: { referencia, nombre: archivoFinal.name, tipo: archivoFinal.type },
-      })
-    } catch {
-      setError(`No se pudo subir el archivo: ${archivo.name}`)
-    }
-    setSubiendoBloqueId(null)
+  // LA IMAGEN DE "DEBES VER" DE UNA ACCIÓN (tarea 307): cómo debe quedar la
+  // pantalla cuando salió bien. Cambiarla conserva la descripción escrita.
+  async function subirResultadoVisual(indice: number, bloqueId: string, evento: ChangeEvent<HTMLInputElement>) {
+    const descripcion = pasos[indice]?.bloques.find((b) => b.id === bloqueId)?.resultadoVisual?.descripcion
+    const adjunto = await subirParaBloque(bloqueId, evento, {
+      encolado: 'Sin conexión: la imagen quedó guardada en este dispositivo y se subirá sola al recuperar señal.',
+      error: 'No se pudo subir la imagen',
+      soloImagen: '«Debes ver» necesita una imagen de la pantalla o del resultado.',
+    })
+    if (adjunto) actualizarBloque(indice, bloqueId, { resultadoVisual: { adjunto, ...(descripcion ? { descripcion } : {}) } })
   }
 
   // Adjuntos del paso completo (un manual, un PDF, una planilla), a
@@ -1000,39 +1014,13 @@ export function PasosEditor({
               que se viera uno. */}
           {desplegado && (
           <>
-          {/* TRES LÍNEAS BAJO EL TÍTULO, todas opcionales. Para qué sirve
-              el paso (`objetivo`, plegado en la ejecución) y las dos
-              preguntas que faltaban (encargo del 2026-09-22, sección 6):
-              dónde se hace (`lugar`, neutro, con la primera acción; tarea
-              303) y qué tiene que verse al terminar (`resultado`, en verde
-              con la última). "Para qué" y "Debes ver" son campos distintos:
-              uno explica el propósito ("Dejar la impresora compartida"),
-              el otro describe lo que aparece en la pantalla ("La
-              impresora en la lista, con la marca verde"). AD-043. */}
-          <input
-            type="text"
-            value={paso.objetivo}
-            onChange={(e) => actualizarPaso(indice, { objetivo: e.target.value })}
-            placeholder="Para qué: qué se logra con este paso"
-            aria-label={`Para qué sirve el paso ${indice + 1}`}
-            className="ml-[38px] mt-1 min-h-11 max-w-[calc(100%-38px)] border-none bg-transparent px-2 py-1 text-[13.5px] text-noct-neutral-400 outline-none"
-          />
-          <input
-            type="text"
-            value={paso.lugar}
-            onChange={(e) => actualizarPaso(indice, { lugar: e.target.value })}
-            placeholder="Dónde se hace: menú, ventana o sección"
-            aria-label={`Dónde se hace el paso ${indice + 1}`}
-            className="ml-[38px] min-h-11 max-w-[calc(100%-38px)] border-none bg-transparent px-2 py-1 text-[13.5px] text-noct-neutral-400 outline-none"
-          />
-          <input
-            type="text"
-            value={paso.resultado}
-            onChange={(e) => actualizarPaso(indice, { resultado: e.target.value })}
-            placeholder="Debes ver: qué aparece al terminar"
-            aria-label={`Qué debe verse al terminar el paso ${indice + 1}`}
-            className="mb-2.5 ml-[38px] min-h-11 max-w-[calc(100%-38px)] border-none bg-transparent px-2 py-1 text-[13.5px] text-noct-neutral-400 outline-none"
-          />
+          {/* Bajo el título ya no van "Para qué", "Dónde se hace" ni
+              "Debes ver" de texto (tarea 307): la ejecución mínima no los
+              muestra, así que el editor no los ofrece. Lo que una guía
+              anterior tenga en ellos se conserva al guardar (no se borra
+              nada) y lo decide quien escribe el contenido. "Debes ver" es
+              ahora la imagen de cada acción, en su tarjeta. */}
+          <div className="mb-2.5" />
 
           {/* Cuerpo del paso: tareas, advertencias e imagenes. Los cuatro
               botones de añadir ya no viven aquí: se fueron a la barra
@@ -1056,6 +1044,7 @@ export function PasosEditor({
                 onDividir={(acciones) => dividir(indice, bloque.id, acciones)}
                 onSubirImagen={(evento) => void subirImagen(indice, bloque.id, evento)}
                 onSubirArchivo={(evento) => void subirArchivoBloque(indice, bloque.id, evento)}
+                onSubirResultado={(evento) => void subirResultadoVisual(indice, bloque.id, evento)}
                 vinculables={vinculablesOrdenados}
                 referenciasDisponibles={referenciasDisponibles}
                 onVincularTermino={(referencia) => vincularTermino(indice, bloque.id, referencia)}
@@ -1236,12 +1225,15 @@ export function PasosEditor({
             >
               Tarea
             </BotonAnadir>
+            {/* UNA ADVERTENCIA, NO UNA NOTA (tarea 307): el aviso que se
+                añade de un toque es un riesgo real, en su tono más suave. El
+                dato técnico se elige en "Más". */}
             <BotonAnadir
-              Icono={Info}
-              onClick={() => agregarBloque(indiceActivo, crearBloqueAviso())}
-              descripcion={`Añadir un aviso al paso ${indiceActivo + 1}`}
+              Icono={Warning}
+              onClick={() => agregarBloque(indiceActivo, crearBloqueAviso(null, 'precaucion'))}
+              descripcion={`Añadir una advertencia al paso ${indiceActivo + 1}`}
             >
-              Aviso
+              Advertencia
             </BotonAnadir>
             <BotonAnadir
               Icono={Camera}
@@ -1680,6 +1672,7 @@ function BloqueEditor({
   onDividir,
   onSubirImagen,
   onSubirArchivo,
+  onSubirResultado,
   vinculables,
   referenciasDisponibles,
   onVincularTermino,
@@ -1718,6 +1711,8 @@ function BloqueEditor({
   onDividir: (acciones: string[]) => void
   onSubirImagen: (evento: ChangeEvent<HTMLInputElement>) => void
   onSubirArchivo: (evento: ChangeEvent<HTMLInputElement>) => void
+  // La imagen de "Debes ver" de esta acción (tarea 307).
+  onSubirResultado: (evento: ChangeEvent<HTMLInputElement>) => void
   vinculables: Articulo[]
   referenciasDisponibles: Referencia[]
   onVincularTermino: (referencia: Referencia) => void
@@ -1880,6 +1875,7 @@ function BloqueEditor({
                 decisionArticuloTitulo: nuevo.decisionArticuloTitulo,
                 opciones: nuevo.opciones,
                 comoHacer: nuevo.comoHacer,
+                resultadoVisual: nuevo.resultadoVisual,
               })
               if (perdido.length > 0) {
                 onAvisoCambioTipo(`Al pasar a «${infoTipoTarea(tipoTarea).etiqueta}» se soltó ${perdido.join(' y ')}.`)
@@ -1932,6 +1928,40 @@ function BloqueEditor({
             </button>
           )
         )}
+
+        {/* DEBES VER, LA IMAGEN DEL RESULTADO (tarea 307): cómo debe quedar
+            la pantalla cuando esta acción (o comprobación) salió bien. Como
+            "Cómo hacerlo": sin imagen, un solo control en la tarea que se
+            está escribiendo; con ella, siempre a la vista. Al ejecutar se ve
+            plegada, al final de la acción. */}
+        {admiteResultadoVisual(bloque) &&
+          (bloque.resultadoVisual ? (
+            <EditorDebesVer
+              resultado={bloque.resultadoVisual}
+              subiendo={subiendoImagen}
+              onSubir={onSubirResultado}
+              onCambiarDescripcion={(descripcion) =>
+                bloque.resultadoVisual && onCambiar({ resultadoVisual: { ...bloque.resultadoVisual, descripcion } })
+              }
+              onQuitar={() => onCambiar({ resultadoVisual: undefined })}
+            />
+          ) : (
+            activa && (
+              <label className="ml-1 inline-flex min-h-11 w-fit cursor-pointer items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-noct-accent-300 focus-within:outline-2 focus-within:outline-noct-accent hover:bg-noct-accent/[.08]">
+                <Plus size={14} className="shrink-0" aria-hidden />
+                {subiendoImagen ? 'Subiendo la imagen…' : ROTULO_DEBES_VER}{' '}
+                {!subiendoImagen && <span className="font-normal text-noct-neutral-500">· imagen · opcional</span>}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  aria-label={`Añadir la imagen de «${ROTULO_DEBES_VER}» de esta tarea`}
+                  disabled={subiendoImagen}
+                  onChange={onSubirResultado}
+                />
+              </label>
+            )
+          ))}
 
         {/* AÑADIR CONTENIDO A ESTA TAREA (requisito 2 del editor). Es
             el control que el informe pedía: los apoyos se cuelgan de la
@@ -2158,7 +2188,10 @@ function BloqueEditor({
   )
 
   if (bloque.tipo === 'aviso') {
-    const tono = infoTono(bloque.tono)
+    const tono = tonoDelEditor(bloque.tono)
+    // Información y Consejo heredados (tarea 307): se ven como son, con lo
+    // que pasa con ellos, para que el autor decida. Nada cambia solo.
+    const heredado = tonoVigente(bloque.tono) === null
     return (
       <div className="ml-1 flex flex-col gap-1.5">
         {cabeceraApoyo}
@@ -2187,34 +2220,39 @@ function BloqueEditor({
             />
           </div>
         </div>
+        {/* UN TONO HEREDADO (tarea 307): Información y Consejo ya no se
+            muestran al ejecutar. Se dice aquí, junto al aviso; el texto se
+            conserva hasta que el autor lo cambie de tono o lo quite. */}
+        {heredado && (
+          <p className="flex min-w-0 items-start gap-1.5 pl-1 text-[12px] leading-snug text-noct-neutral-300">
+            <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+            <span className="min-w-0">
+              «{tono.etiqueta}» ya no se muestra al ejecutar. Si avisa de un riesgo real, pásalo a Precaución; si es
+              un valor exacto, a Dato técnico; si explica cómo hacer la acción, escríbelo en su «Cómo hacerlo». Si no,
+              quítalo.
+            </span>
+          </p>
+        )}
         {/* LA ALERTA ES PARA UN RIESGO (regla 20c). Una precaución o un
             "importante" que empieza con "Recuerda…" o "No olvides…" no
-            avisa de nada que pueda salir mal: interrumpe. Se dice aquí,
-            con el cambio a un toque; decide el autor. */}
+            avisa de nada que pueda salir mal: interrumpe. Se dice aquí;
+            decide el autor. Desde la tarea 307 no hay a dónde "pasarla":
+            Información ya no se muestra al ejecutar. */}
         {(bloque.tono === 'precaucion' || bloque.tono === 'importante') && esRecordatorio(bloque.texto) && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pl-1">
-            <p className="flex min-w-0 items-start gap-1.5 text-[12px] leading-snug text-noct-neutral-300">
-              <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
-              <span className="min-w-0">
-                Empieza como un recordatorio. Si no avisa de un riesgo real, va en Información y al ejecutar
-                queda plegada.
-              </span>
-            </p>
-            <button
-              type="button"
-              onClick={() => onCambiar({ tono: 'info' })}
-              className="inline-flex min-h-11 items-center rounded-lg border border-dashed border-noct-accent/50 px-3 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.08]"
-            >
-              Pasar a Información
-            </button>
-          </div>
+          <p className="flex min-w-0 items-start gap-1.5 pl-1 text-[12px] leading-snug text-noct-neutral-300">
+            <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
+            <span className="min-w-0">
+              Empieza como un recordatorio. Una advertencia es para un riesgo real: si no avisa de algo que pueda
+              salir mal, quítala o escríbelo en la acción.
+            </span>
+          </p>
         )}
         <HojaTipoBloque
           abierto={hojaAbierta}
           onCerrar={() => setHojaAbierta(false)}
           titulo="Tono del aviso"
           opciones={OPCIONES_TONO}
-          seleccionado={bloque.tono ?? 'info'}
+          seleccionado={bloque.tono ?? 'precaucion'}
           onElegir={(tono) => onCambiar({ tono })}
         />
         {selectorDestino}
@@ -2397,8 +2435,8 @@ function DivisionSugerida({ texto, onDividir }: { texto: string; onDividir: (acc
 
 // LO QUE PARECE UNA TAREA Y NO ES UNA ACCIÓN (tarea 289, fase 4): una
 // condición previa o una comprobación. Nada se mueve solo: la condición se
-// lleva a mano (puede ser un requisito o el "Dónde" del paso) y la
-// comprobación se marca con un toque.
+// lleva a mano (puede ser un requisito) y la comprobación se marca con un
+// toque.
 function PistasDeTarea({ texto, onMarcarVerificacion }: { texto: string; onMarcarVerificacion: () => void }) {
   const condicion = useMemo(() => esCondicionPrevia(texto), [texto])
   const comprobacion = useMemo(() => !condicion && esComprobacion(texto), [condicion, texto])
@@ -2409,7 +2447,7 @@ function PistasDeTarea({ texto, onMarcarVerificacion }: { texto: string; onMarca
         <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />
         <span className="min-w-0">
           Esto parece un requisito previo, no una acción. Si hay que tenerlo antes de empezar, va en
-          «Requisitos»; si es dónde se hace el paso, en «Dónde se hace».
+          «Requisitos»; si es llegar a un sitio, escríbelo como la acción que lleva hasta ahí.
         </span>
       </p>
     )
@@ -2598,6 +2636,61 @@ function BotonQuitar({ onClick, etiqueta }: { onClick: () => void; etiqueta: str
     >
       <X size={17} />
     </button>
+  )
+}
+
+// "DEBES VER" EN EL EDITOR (tarea 307): la imagen de cómo debe quedar la
+// pantalla cuando esta acción salió bien, con lo que se ve dicho en una
+// línea para quien no ve la imagen. Tocar la imagen la cambia (la
+// descripción se conserva) y "Quitar" la suelta.
+function EditorDebesVer({
+  resultado,
+  subiendo,
+  onSubir,
+  onCambiarDescripcion,
+  onQuitar,
+}: {
+  resultado: ResultadoVisual
+  subiendo: boolean
+  onSubir: (evento: ChangeEvent<HTMLInputElement>) => void
+  onCambiarDescripcion: (descripcion: string) => void
+  onQuitar: () => void
+}) {
+  const url = useUrlAdjunto(resultado.adjunto.referencia)
+  return (
+    <div className="ml-1 flex flex-col gap-1.5 rounded-lg border border-noct-divider px-2.5 py-2">
+      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-exito">
+        <Eye size={13} className="shrink-0" aria-hidden />
+        {ROTULO_DEBES_VER}
+        <span className="font-normal normal-case tracking-normal text-noct-neutral-500">· plegada al ejecutar</span>
+      </p>
+      <label className="flex h-[140px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-noct-neutral-700 text-center text-[12.5px] text-noct-neutral-400 focus-within:outline-2 focus-within:outline-noct-accent hover:border-noct-neutral-500">
+        {url ? (
+          <img src={url} alt={resultado.descripcion || resultado.adjunto.nombre} className="h-full w-full object-contain" />
+        ) : (
+          <span className="px-4">{subiendo ? 'Subiendo…' : 'La imagen no está en este dispositivo'}</span>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          aria-label={`Cambiar la imagen de «${ROTULO_DEBES_VER}»`}
+          disabled={subiendo}
+          onChange={onSubir}
+        />
+      </label>
+      <div className="flex items-center gap-1">
+        <input
+          type="text"
+          value={resultado.descripcion ?? ''}
+          onChange={(e) => onCambiarDescripcion(e.target.value)}
+          placeholder="Qué se ve (opcional, para quien no ve la imagen)"
+          aria-label={`Descripción de la imagen de «${ROTULO_DEBES_VER}»`}
+          className="min-h-11 min-w-0 flex-1 border-none bg-transparent px-0.5 py-1 text-[12.5px] text-noct-neutral-300 outline-none"
+        />
+        <BotonQuitar onClick={onQuitar} etiqueta={`Quitar la imagen de «${ROTULO_DEBES_VER}»`} />
+      </div>
+    </div>
   )
 }
 

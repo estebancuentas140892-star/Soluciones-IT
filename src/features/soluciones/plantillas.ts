@@ -7,9 +7,10 @@ import { crearBloqueTarea, crearPaso } from '../../lib/procedimiento'
 // textos en vez de organizar la estructura desde cero. Son datos, no
 // componentes: ajustar una plantilla es editar este archivo.
 
+// Desde la tarea 307 un paso de plantilla no trae "Para qué" (`objetivo`):
+// la ejecución mínima no lo muestra, así que una plantilla no lo crea.
 interface PlantillaPaso {
   titulo: string
-  objetivo: string
   tareas: string[]
 }
 
@@ -34,17 +35,14 @@ const PLANTILLAS: Record<TipoArticulo, Plantilla> = {
         // ven en el paso 1 ("Antes de empezar"), y repetirlos como tarea
         // es la duplicación que la regla 20b de REGLAS.md prohíbe.
         titulo: 'Preparar el equipo',
-        objetivo: 'El equipo queda listo para la instalación',
         tareas: ['Respaldar la información si aplica'],
       },
       {
         titulo: 'Instalar',
-        objetivo: 'El software o equipo queda instalado',
         tareas: ['Ejecutar la instalación', 'Seguir el asistente hasta finalizar'],
       },
       {
         titulo: 'Configurar y probar',
-        objetivo: 'Queda funcionando y listo para usar',
         tareas: ['Aplicar la configuración inicial', 'Hacer una prueba de funcionamiento'],
       },
     ],
@@ -56,17 +54,14 @@ const PLANTILLAS: Record<TipoArticulo, Plantilla> = {
     pasos: [
       {
         titulo: 'Respaldar la configuración actual',
-        objetivo: 'Se puede volver atrás si algo falla',
         tareas: ['Anotar o exportar los valores actuales'],
       },
       {
         titulo: 'Aplicar los cambios',
-        objetivo: 'La nueva configuración queda aplicada',
         tareas: ['Modificar los parámetros necesarios'],
       },
       {
         titulo: 'Validar',
-        objetivo: 'El cambio quedó funcionando',
         tareas: ['Comprobar que el cambio quedó aplicado', 'Probar el funcionamiento'],
       },
     ],
@@ -77,17 +72,14 @@ const PLANTILLAS: Record<TipoArticulo, Plantilla> = {
     pasos: [
       {
         titulo: 'Identificar los puntos de conexión',
-        objetivo: 'Se sabe qué va conectado a qué',
         tareas: ['Ubicar el equipo y el punto de red o puerto'],
       },
       {
         titulo: 'Conectar',
-        objetivo: 'La conexión queda establecida',
         tareas: ['Realizar la conexión física o lógica'],
       },
       {
         titulo: 'Probar la conexión',
-        objetivo: 'La conexión responde',
         tareas: ['Verificar que el equipo responde (ping o prueba de uso)'],
       },
     ],
@@ -98,17 +90,14 @@ const PLANTILLAS: Record<TipoArticulo, Plantilla> = {
     pasos: [
       {
         titulo: 'Diagnosticar',
-        objetivo: 'Se identifica la causa del problema',
         tareas: ['Confirmar los síntomas del problema', 'Identificar la causa'],
       },
       {
         titulo: 'Aplicar la solución',
-        objetivo: 'El problema queda corregido',
         tareas: ['Ejecutar la corrección'],
       },
       {
         titulo: 'Validar',
-        objetivo: 'Se confirma que el problema no se repite',
         tareas: ['Probar el funcionamiento con el usuario'],
       },
     ],
@@ -120,17 +109,14 @@ const PLANTILLAS: Record<TipoArticulo, Plantilla> = {
     pasos: [
       {
         titulo: 'Preparar',
-        objetivo: 'Todo listo para intervenir sin sorpresas',
         tareas: ['Avisar a los usuarios afectados', 'Respaldar la información si aplica'],
       },
       {
         titulo: 'Ejecutar el mantenimiento',
-        objetivo: 'Las tareas de mantenimiento quedan hechas',
         tareas: ['Realizar las tareas de mantenimiento'],
       },
       {
         titulo: 'Pruebas y cierre',
-        objetivo: 'Todo queda operativo y documentado',
         tareas: ['Probar el funcionamiento', 'Registrar la intervención en la ficha del equipo'],
       },
     ],
@@ -159,7 +145,6 @@ export function pasosDePlantilla(plantilla: Plantilla): PasoProcedimiento[] {
   return plantilla.pasos.map((pasoPlantilla) => {
     const paso = crearPaso()
     paso.titulo = pasoPlantilla.titulo
-    paso.objetivo = pasoPlantilla.objetivo
     paso.bloques = pasoPlantilla.tareas.map((textoTarea) => {
       const bloque = crearBloqueTarea()
       bloque.texto = textoTarea

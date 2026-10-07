@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db, type Articulo } from '../../lib/db'
+import { crearBloqueTarea, prepararProcedimientoParaGuardar } from '../../lib/procedimiento'
 import {
   borradorDifiere,
   borradorTieneContenido,
@@ -112,23 +113,44 @@ describe('normalizarDatosBorrador', () => {
     expect(datos.estado).toBe('borrador')
   })
 
-  it('completa `lugar` y `resultado` en los pasos de un borrador anterior a esos campos', () => {
+  it('un borrador sin `lugar` ni `resultado` se recupera y se guarda; lo que traía se conserva (tarea 307)', () => {
     // Como lo dejaba el editor antes del 2026-09-22: sin los dos campos, y
     // con una imagen a medio subir que el borrador tiene que conservar.
     const pasoViejo = {
       id: 'p1',
       titulo: 'Abrir la consola',
       objetivo: 'Dejarla lista',
-      bloques: [{ id: 'b1', tipo: 'imagen', texto: '', adjunto: null }],
+      bloques: [
+        { ...crearBloqueTarea(), id: 't1', texto: 'Pulsar Inicio' },
+        { id: 'b1', tipo: 'imagen', texto: '', adjunto: null },
+      ],
       adjuntos: [],
       vinculoProtegido: null,
+      subArticuloId: null,
+      subArticuloTitulo: '',
+      solucionArticuloId: null,
+      solucionArticuloTitulo: '',
     }
     const datos = normalizarDatosBorrador({ titulo: 'Viejo', pasos: [pasoViejo] })
-    expect(datos.pasos[0]).toMatchObject({ titulo: 'Abrir la consola', objetivo: 'Dejarla lista', lugar: '', resultado: '' })
-    expect(datos.pasos[0].bloques).toHaveLength(1)
+    expect(datos.pasos[0]).toMatchObject({ id: 'p1', titulo: 'Abrir la consola', objetivo: 'Dejarla lista' })
+    expect(datos.pasos[0].bloques).toHaveLength(2)
+    // Guardarlo ya no revienta por los campos que faltan: el guardado los
+    // tolera ausentes y conserva el que dice algo.
+    const guardado = prepararProcedimientoParaGuardar({
+      descripcion: '',
+      portada: null,
+      objetivoGeneral: '',
+      requisitosTexto: '',
+      pasos: datos.pasos,
+      verificacionFinalTexto: '',
+      tiempoEstimadoMin: null,
+      dificultad: null,
+    })
+    expect(guardado?.pasos[0]).toMatchObject({ titulo: 'Abrir la consola', objetivo: 'Dejarla lista' })
+    expect(guardado?.pasos[0]).not.toHaveProperty('lugar')
+    expect(guardado?.pasos[0]).not.toHaveProperty('resultado')
     // Lo que ya traía se respeta.
     const actual = normalizarDatosBorrador({ pasos: [{ ...pasoViejo, lugar: 'Escritorio', resultado: 'La consola' }] })
-    expect(datos.pasos[0].id).toBe('p1')
     expect(actual.pasos[0]).toMatchObject({ lugar: 'Escritorio', resultado: 'La consola' })
   })
 

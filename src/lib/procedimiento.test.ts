@@ -59,9 +59,6 @@ function pasoCompleto(cambios: Partial<PasoProcedimiento> = {}): PasoProcedimien
   return {
     id: 'paso-1',
     titulo: 'Abrir SQL Server Management Studio',
-    objetivo: '',
-    lugar: '',
-    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,
@@ -165,9 +162,6 @@ describe('normalizarProcedimiento', () => {
     const resultado = normalizarProcedimiento({ pasos: [{ titulo: 'Solo título' }] })
     expect(resultado?.pasos[0]).toMatchObject({
       titulo: 'Solo título',
-      objetivo: '',
-      lugar: '',
-      resultado: '',
       bloques: [],
       adjuntos: [],
       vinculoProtegido: null,
@@ -177,11 +171,25 @@ describe('normalizarProcedimiento', () => {
       solucionArticuloTitulo: '',
     })
     expect(resultado?.pasos[0].id).not.toBe('')
+    // Los textos heredados del paso (tarea 307) no se inventan vacíos: un
+    // paso que no los trae tampoco los tiene al leerlo.
+    expect(resultado?.pasos[0]).not.toHaveProperty('objetivo')
+    expect(resultado?.pasos[0]).not.toHaveProperty('lugar')
+    expect(resultado?.pasos[0]).not.toHaveProperty('resultado')
     expect(resultado?.objetivoGeneral).toBe('')
     expect(resultado?.requisitos).toEqual([])
     expect(resultado?.verificacionFinal).toEqual([])
     expect(resultado?.tiempoEstimadoMin).toBeNull()
     expect(resultado?.dificultad).toBeNull()
+  })
+
+  it('conserva los textos heredados del paso que dicen algo y suelta los vacíos (tarea 307)', () => {
+    const resultado = normalizarProcedimiento({
+      pasos: [pasoCompleto({ objetivo: 'Dejar el servicio de prueba listo', lugar: '', resultado: 'La consola de prueba abierta' })],
+    })
+    expect(resultado?.pasos[0].objetivo).toBe('Dejar el servicio de prueba listo')
+    expect(resultado?.pasos[0]).not.toHaveProperty('lugar')
+    expect(resultado?.pasos[0].resultado).toBe('La consola de prueba abierta')
   })
 
   it('descarta tiempoEstimadoMin y dificultad invalidos', () => {

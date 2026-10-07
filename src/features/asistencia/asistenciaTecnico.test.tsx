@@ -180,7 +180,8 @@ describe('Enviar a este equipo desde la guía', () => {
     const [id, contenido] = enviar.mock.calls[0]
     expect(id).toBe('sesion-prueba-1')
     expect(JSON.stringify(contenido)).not.toContain('Prueba-2026')
-    expect(contenido.bloques.map((b) => b.tipo)).toEqual(['donde', 'accion', 'comando'])
+    // Sin el "Dónde" heredado del paso: la ejecución mínima ya no lo muestra (tarea 307).
+    expect(contenido.bloques.map((b) => b.tipo)).toEqual(['accion', 'comando'])
   })
 
   it('si el servidor rechaza el contenido, lo dice y no da nada por enviado', async () => {

@@ -171,7 +171,9 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
     // Y desde ahí, a la pregunta ya respondida.
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('¿Qué versión del programa de prueba usas?'), 'la pregunta respondida')
-    expect(textoPantalla()).toContain('Respondida')
+    // "Decide" sigue siendo el rótulo; "respondida" se dice aparte (tarea 307).
+    expect(textoPantalla()).toContain('Decide')
+    expect(textoPantalla()).toContain('respondida')
     expect(opcion('Versión clásica')?.textContent).toContain('Tu respuesta')
     expect(opcion('Versión nueva')?.textContent).not.toContain('Tu respuesta')
     expect(textoPantalla()).toContain('Si eliges otra respuesta, se reinicia lo que hiciste después de esta pregunta.')

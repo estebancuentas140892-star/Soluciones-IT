@@ -9,7 +9,9 @@
 //   2. sin red y sin sesion, abre desde el precache (el inicio de sesion);
 //   3. sin red y con una sesion cuyo token ya vencio (lo normal tras mas de
 //      una hora sin abrir la app), abre la app y no el inicio de sesion;
-//   4. las pantallas principales abren sin red;
+//   4. las pantallas principales abren sin red, y una guia se ejecuta sin
+//      red: lo reutilizado en el sitio, su "Como hacerlo" (tarea 303) y la
+//      imagen de "Debes ver" desde la copia sin conexion (tarea 307);
 //   5. desbloqueo del dispositivo (tarea 278) con el autenticador virtual
 //      de Chromium: se activa sobre la contrasena, abre la app sin red con
 //      una credencial y una firma reales, y sin verificar al usuario o con
@@ -250,6 +252,12 @@ const CATEGORIA_PRUEBA = { id: 'cat-sin-conexion', nombre: 'Sin conexión', icon
 function guiaDePrueba(id, titulo, procedimiento) {
   return { id, categoriaId: 'cat-sin-conexion', titulo, tipo: 'configuracion', contenido: '', etiquetas: [], procedimiento, sintomas: [], causas: [], dispositivosAfectados: [], esRutaInicio: false, estado: 'publicado', version: '1.0', relacionados: [], ordenRutaInicio: 0, origenSugerenciaId: null, aplicaA: null, updatedAt: AHORA, updatedBy: null, eliminadoEn: null }
 }
+// La imagen de "Debes ver" de la guía sin red (tarea 307): una ventana
+// dibujada, sin ningún dato real.
+const IMAGEN_SIN_RED = { referencia: 'pruebas/sin-red-ventana.svg', nombre: 'sin-red-ventana.svg', tipo: 'image/svg+xml' }
+const DESCRIPCION_SIN_RED = 'La ventana de prueba sin red, abierta'
+const SVG_SIN_RED =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect width="320" height="200" fill="#eef"/><rect width="320" height="28" fill="#2b5797"/><text x="10" y="19" font-size="13" fill="#fff">Programa de prueba sin red</text></svg>'
 const GUIAS_PRUEBA = [
   guiaDePrueba('acceso-sin-conexion', 'Entrar al programa de prueba sin red', {
     requisitos: ['Red de prueba sin conexión.'],
@@ -269,6 +277,10 @@ const GUIAS_PRUEBA = [
               { id: 'acs-m1', accion: 'Abre', elemento: 'Acceso rápido de prueba' },
               { id: 'acs-m2', accion: 'Pulsa', elemento: 'Programa', ubicacion: 'Barra lateral de prueba' },
             ],
+            // "Debes ver" (tarea 307): la imagen del resultado, que se lee de
+            // la copia sin conexión (la deja ahí SEMBRAR_GUIAS_PRUEBA, como
+            // "Descargar todo para offline").
+            resultadoVisual: { adjunto: IMAGEN_SIN_RED, descripcion: DESCRIPCION_SIN_RED },
           },
         ],
       },
@@ -297,6 +309,13 @@ const SEMBRAR_GUIAS_PRUEBA = `
     t.onerror = () => mal(t.error)
   })
   base.close()
+  // La imagen de "Debes ver", en la copia sin conexión de los adjuntos, con
+  // la misma clave que usa la app (src/lib/adjuntosOffline.ts, claveDe).
+  const copia = await caches.open('adjuntos-offline-v1')
+  await copia.put(
+    'https://adjuntos-offline.local/' + encodeURIComponent(${JSON.stringify(IMAGEN_SIN_RED.referencia)}),
+    new Response(new Blob([${JSON.stringify(SVG_SIN_RED)}], { type: 'image/svg+xml' }), { headers: { 'Content-Type': 'image/svg+xml' } }),
+  )
   return true
 `
 // Tarea 290: la credencial del equipo con el que se trabaja, sin red. Dos
@@ -459,6 +478,24 @@ async function main() {
         ),
       ),
       'y "Ver paso a paso" lo despliega, con la ubicación, sin red',
+    )
+    const IMAGEN_DEBES_VER = `document.querySelector('img[alt="${DESCRIPCION_SIN_RED}"]')`
+    comprobar(
+      Boolean(
+        await s.evaluar(
+          `return [...document.querySelectorAll('button[aria-expanded="false"]')].some((b) => b.textContent.trim() === 'Debes ver') && ${IMAGEN_DEBES_VER} == null`,
+        ),
+      ),
+      '"Debes ver" llega plegado y sin cargar la imagen (tarea 307)',
+    )
+    await s.tocar('Debes ver')
+    comprobar(
+      Boolean(await s.hasta(`(() => { const i = ${IMAGEN_DEBES_VER}; return i != null && i.complete && i.naturalWidth > 0 })()`, 'la imagen de Debes ver')),
+      'y al abrirlo, la imagen sale de la copia sin conexión, sin red',
+    )
+    comprobar(
+      !(await s.evaluar(`return /Dónde:|Más información|Para qué:/.test(document.body.innerText)`)),
+      'sin "Dónde", "Más información" ni "Para qué" (tarea 307)',
     )
     comprobar(
       !(await s.evaluar(`return /Guía necesaria|Estás realizando|Abrir guía|Volver a la guía principal|No se pudo cargar/.test(document.body.innerText)`)),

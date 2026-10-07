@@ -177,10 +177,10 @@ describe('guías guardadas antes del editor actual', () => {
   // Campos nuevos del 2026-09-22 (tarea 255): un paso guardado antes no
   // los trae, y la app no puede romperse ni inventarle un lugar o un
   // resultado.
-  it('un paso anterior a `lugar` y `resultado` se lee con los dos vacíos', () => {
+  it('un paso anterior a `lugar` y `resultado` se lee sin ellos (obsoletos desde la tarea 307)', () => {
     const procedimiento = normalizarProcedimiento(guiaVieja('a1', ['p1']).procedimiento)!
-    expect(procedimiento.pasos[0].lugar).toBe('')
-    expect(procedimiento.pasos[0].resultado).toBe('')
+    expect(procedimiento.pasos[0].lugar).toBeUndefined()
+    expect(procedimiento.pasos[0].resultado).toBeUndefined()
   })
 
   it('el `lugar` y el `resultado` de un paso entran al índice cuando existen', () => {

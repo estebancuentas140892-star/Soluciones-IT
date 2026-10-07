@@ -1,7 +1,7 @@
 import { comoHacerDe, fraseDeMicroPaso, ROTULO_COMO_HACERLO, textoPasoAPaso } from '../../lib/comoHacer'
 import type { BloquePaso, PasoProcedimiento, Referencia } from '../../lib/db'
 import { comandosEnTexto } from '../referencia/comandosEnTexto'
-import { tonoInfo } from '../soluciones/tonos'
+import { tonoVigente } from '../soluciones/tonos'
 import {
   MAXIMO_BLOQUES,
   MAXIMO_BYTES,
@@ -24,16 +24,21 @@ import {
 // lee aqui en ningun caso: el computador atendido jamas recibe una clave.
 //
 // Lo que sale, en el orden del paso:
-//   - "Donde" (`lugar`) y "Debes ver" (`resultado`);
 //   - cada tarea como accion o comprobacion (verificacion y decision);
 //   - las URL escritas en el texto, como enlaces aparte con Copiar;
 //   - los comandos y atajos que la tarea escribe o enlaza y tienen ficha
 //     en el Centro de consulta (el valor de la ficha, que no es secreto:
 //     esa tabla no puede contener secretos, RN de referencias);
-//   - los avisos (el dato tecnico como dato; el resto como nota con su
-//     tono) y los nombres de archivo.
-// Imagenes, guias vinculadas y terminos del glosario no salen: el
-// computador no puede abrirlos y no ayudan a hacer el paso alli.
+//   - los avisos (el dato tecnico como dato; la precaucion y lo importante
+//     como nota con su tono) y los nombres de archivo.
+// Imagenes (tambien la de "Debes ver"), guias vinculadas y terminos del
+// glosario no salen: el computador no puede abrirlos y no ayudan a hacer
+// el paso alli. Lo que la ejecucion minima ya no muestra (tarea 307) no
+// sale tampoco: el "Donde" (`lugar`), el "Debes ver" de texto
+// (`resultado`) y la informacion y los consejos heredados. Los tipos
+// 'donde' y 'debes_ver' siguen en `modelo.ts` solo porque el servidor los
+// acepta (una version anterior de la app los manda); el portal no los
+// dibuja.
 //
 // Lo que tiene forma de secreto, lo que no cabe y lo que sobra NO se
 // envia y queda anotado en `apartados` para que la vista previa lo diga.
@@ -140,8 +145,6 @@ export function construirContenidoDePaso({
     })
   }
 
-  if (paso.lugar) agregar({ tipo: 'donde', texto: paso.lugar })
-
   const bloques = tareaId ? paso.bloques.filter((b) => perteneceA(b, tareaId)) : paso.bloques
   for (const bloque of bloques) {
     switch (bloque.tipo) {
@@ -165,8 +168,11 @@ export function construirContenidoDePaso({
         break
       }
       case 'aviso': {
-        if (bloque.tono === 'dato') agregar({ tipo: 'dato', texto: bloque.texto })
-        else agregar({ tipo: 'nota', texto: bloque.texto, etiqueta: tonoInfo(bloque.tono).etiqueta })
+        // Solo lo que la ejecución enseña: el dato técnico y el riesgo real.
+        const tono = tonoVigente(bloque.tono)
+        if (!tono) break
+        if (tono.valor === 'dato') agregar({ tipo: 'dato', texto: bloque.texto })
+        else agregar({ tipo: 'nota', texto: bloque.texto, etiqueta: tono.etiqueta })
         agregarDesdeTexto(bloque.texto)
         break
       }
@@ -186,7 +192,6 @@ export function construirContenidoDePaso({
     for (const adjunto of paso.adjuntos) {
       if (adjunto.nombre && !adjunto.tipo.startsWith('image/')) agregar({ tipo: 'archivo', texto: adjunto.nombre })
     }
-    if (paso.resultado) agregar({ tipo: 'debes_ver', texto: paso.resultado })
   }
 
   // Lo que no se envia, con su motivo.

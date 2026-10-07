@@ -3,9 +3,10 @@ import { useMemo } from 'react'
 import { comoHacerDe } from '../../lib/comoHacer'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
+import { resultadoVisualDe } from '../../lib/resultadoVisual'
 import { rutaDe } from '../../lib/rutaProcedimiento'
 import { useAvanceProgreso, useClaveVinculo } from './contextoEjecucion'
-import { ComoHacerlo } from './SenalesDePaso'
+import { ComoHacerlo, DebesVer } from './SenalesDePaso'
 
 // LO QUE HACE UN PASO QUE REUTILIZA OTRA GUÍA, PARA LEERLO (tarea 289,
 // fase 3).
@@ -49,10 +50,12 @@ export function PasosEnLectura({ guiaId }: { guiaId: string }) {
                     <span aria-hidden className="mt-[8px] h-1 w-1 shrink-0 rounded-full bg-noct-neutral-500" />
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <span className="text-pretty [overflow-wrap:anywhere]">{tarea.texto}</span>
-                      {/* Su "Cómo hacerlo" (tarea 303), bajo la acción: la
-                          misma ruta rápida y el mismo paso a paso que en el
+                      {/* Su "Cómo hacerlo" (tarea 303) y su "Debes ver" (tarea
+                          307), bajo la acción: la misma ruta rápida, el mismo
+                          paso a paso y la misma imagen plegada que en el
                           flujo. */}
                       <ComoHacerlo microPasos={comoHacerDe(tarea)} variante="lectura" />
+                      <DebesVer resultado={resultadoVisualDe(tarea)} variante="lectura" />
                     </div>
                   </li>
                 ))}

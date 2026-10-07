@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
+import { guardarEnCacheOffline } from '../lib/adjuntosOffline'
 import {
   db,
   type Articulo,
@@ -188,12 +189,12 @@ function guiaDeTarea(
   }
 }
 
+// La forma que guarda el editor desde la tarea 307: sin los textos
+// heredados del paso (objetivo, lugar y resultado). Las guias que los
+// traen los declaran a proposito, para ver que cargan y no se muestran.
 function paso(parcial: Partial<PasoProcedimiento> & { id: string }): PasoProcedimiento {
   return {
     titulo: '',
-    objetivo: '',
-    lugar: '',
-    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,
@@ -613,8 +614,8 @@ const GUIA_VARIAS_OBLIGATORIAS = articulo({
 // Caso del encargo del 2026-09-17 (secciones 4 a 8): una guía con
 // requisitos reales y un aviso de cada tono, para comprobar que solo los
 // riesgos se ven como alerta, que el dato va a la vista, que la
-// información y el consejo quedan plegados y que "Antes de empezar" sale
-// en el paso 1. Todo inventado.
+// información y el consejo (plegados hasta la tarea 307) ya no se muestran
+// y que "Antes de empezar" sale en el paso 1. Todo inventado.
 function avisoConTono(
   id: string,
   tareaId: string,
@@ -704,9 +705,10 @@ const GUIA_APUNTE = articulo({
 
 // JERARQUIA DE UNA ACCION (tarea 303). El caso de referencia de la copia
 // de seguridad del correo, inventado: el paso 1 es UNA accion con todos
-// sus papeles a la vez (riesgo, donde, que hacer, la ruta rapida y el paso
-// a paso de "como hacerlo", dato tecnico, debes ver y mas informacion),
-// que es la pantalla mas cargada posible; el paso 2 trae una instruccion
+// sus papeles a la vez (riesgo, que hacer, la ruta rapida y el paso a paso
+// de "como hacerlo" y dato tecnico) y, desde la tarea 307, tambien lo
+// HEREDADO (donde, debes ver de texto e informacion), que carga y ya no se
+// muestra; el paso 2 trae una instruccion
 // larga, cinco microacciones (una con ubicacion y otra con un nombre sin
 // espacios) y un dato sin espacios, para comprobar que nada se corta a
 // 375 px ni con el texto al 130 %.
@@ -832,6 +834,111 @@ const GUIA_REGISTRO = articulo({
     ],
   },
 })
+
+// LA EJECUCION MINIMA (tarea 307). Los seis casos del encargo, inventados,
+// para mirar cada pantalla un segundo y saber que hay que hacer:
+//   1. una accion simple (paso 1, accion 1);
+//   2. una accion con microacciones (paso 1, accion 2);
+//   3. una accion con imagen de resultado, "Debes ver" (paso 1, accion 3);
+//   4. una accion con dato tecnico (paso 2, accion 1);
+//   5. una accion peligrosa (paso 2, accion 2);
+//   6. una accion ya completada: cualquiera de las anteriores, despues de
+//      completarla y volver con "Anterior".
+// El paso 1 trae ademas lo HEREDADO (donde, para que, debes ver de texto e
+// informacion), que carga sin romper nada y no se muestra. La imagen de
+// "Debes ver" se guarda en la copia sin conexion al sembrar
+// (`IMAGEN_DEBES_VER`), asi que se ve sin servidor.
+const REFERENCIA_DEBES_VER = 'pruebas/1700000010-ventana-importar-exportar.svg'
+
+const GUIA_EJECUCION_MINIMA = articulo({
+  id: 'art-ejecucion-minima',
+  categoriaId: 'cat-software',
+  titulo: 'Exportar el correo de ejemplo a un archivo PST',
+  tipo: 'mantenimiento',
+  procedimiento: {
+    descripcion: 'Cuando hay que guardar una copia del buzón de ejemplo antes de cambiar de equipo.',
+    portada: null,
+    objetivoGeneral: 'Tener el buzón de ejemplo guardado en un archivo PST.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 10,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'min-p1',
+        titulo: 'Abrir la exportación de ejemplo',
+        lugar: 'Programa de correo de ejemplo',
+        objetivo: 'Llegar al asistente que exporta el buzón',
+        resultado: 'Se abre la ventana Importar y exportar',
+        bloques: [
+          tarea('min-p1-t1', 'Abre el programa de correo de ejemplo'),
+          {
+            ...tarea('min-p1-t2', 'Abre la exportación de archivos PST'),
+            comoHacer: [
+              micro('min-m1', 'Abre', 'Configuración', 'Parte superior izquierda'),
+              micro('min-m2', 'Entra en', 'Archivos'),
+              micro('min-m3', 'Selecciona', 'Exportar'),
+              micro('min-m4', 'Selecciona', 'Introducción'),
+            ],
+          },
+          avisoConTono('min-a-info', 'min-p1-t2', 'info', 'El archivo PST de ejemplo guarda carpetas, contactos y calendario'),
+          {
+            ...tarea('min-p1-t3', 'Elige exportar a un archivo de datos'),
+            comoHacer: [micro('min-m5', 'Selecciona', 'Exportar a un archivo'), micro('min-m6', 'Pulsa', 'Siguiente')],
+            resultadoVisual: {
+              adjunto: { referencia: REFERENCIA_DEBES_VER, nombre: 'ventana-importar-exportar.svg', tipo: 'image/svg+xml' },
+              descripcion: 'La ventana Importar y exportar de ejemplo, con Exportar a un archivo elegido',
+            },
+          },
+        ],
+      }),
+      paso({
+        id: 'min-p2',
+        titulo: 'Preparar el destino de ejemplo',
+        bloques: [
+          {
+            ...tarea('min-p2-t1', 'Configura el puerto de la impresora de ejemplo'),
+            comoHacer: [micro('min-m7', 'Abre', 'Propiedades de la impresora'), micro('min-m8', 'Entra en', 'Puertos')],
+          },
+          avisoConTono('min-a-dato', 'min-p2-t1', 'dato', '9100'),
+          {
+            ...tarea('min-p2-t2', 'Elimina el PST anterior'),
+            comoHacer: [micro('min-m9', 'Abre', 'Documentos'), micro('min-m10', 'Pulsa', 'Eliminar')],
+          },
+          avisoConTono(
+            'min-a-riesgo',
+            'min-p2-t2',
+            'importante',
+            'Antes de eliminar, comprueba que sea el PST anterior. No elimines el respaldo que acabas de crear.',
+          ),
+        ],
+      }),
+      paso({
+        id: 'min-p3',
+        titulo: 'Comprobar el archivo de ejemplo',
+        bloques: [tarea('min-p3-t1', 'Comprueba que el archivo PST de ejemplo está en la carpeta', 'verificacion')],
+      }),
+    ],
+  },
+})
+
+// La pantalla que "Debes ver" enseña en el banco de pruebas: una ventana
+// dibujada, sin ningún dato real.
+const IMAGEN_DEBES_VER = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+<rect width="640" height="420" fill="#f3f4f6"/>
+<rect x="0" y="0" width="640" height="40" fill="#2b5797"/>
+<text x="16" y="26" font-family="Segoe UI, Arial" font-size="16" fill="#fff">Importar y exportar (ejemplo)</text>
+<text x="24" y="80" font-family="Segoe UI, Arial" font-size="15" fill="#111">Elija la acción que desea realizar:</text>
+<rect x="24" y="96" width="592" height="200" fill="#fff" stroke="#9ca3af"/>
+<text x="40" y="126" font-family="Segoe UI, Arial" font-size="14" fill="#111">Importar de otro programa o archivo</text>
+<rect x="28" y="140" width="584" height="28" fill="#cfe3ff"/>
+<text x="40" y="160" font-family="Segoe UI, Arial" font-size="14" fill="#111">Exportar a un archivo</text>
+<text x="40" y="194" font-family="Segoe UI, Arial" font-size="14" fill="#111">Importar una fuente RSS de ejemplo</text>
+<rect x="420" y="360" width="90" height="32" fill="#fff" stroke="#6b7280"/>
+<text x="440" y="381" font-family="Segoe UI, Arial" font-size="14" fill="#111">Siguiente</text>
+<rect x="526" y="360" width="90" height="32" fill="#fff" stroke="#6b7280"/>
+<text x="544" y="381" font-family="Segoe UI, Arial" font-size="14" fill="#111">Cancelar</text>
+</svg>`
 
 // RESOLUCION GUIADA (tarea 263). Los cinco ejemplos del encargo, en
 // version de ejemplo: A y B son procedimientos directos (se abren en su
@@ -1116,6 +1223,7 @@ const ARTICULOS: Articulo[] = [
   GUIA_APUNTE,
   GUIA_JERARQUIA,
   GUIA_REGISTRO,
+  GUIA_EJECUCION_MINIMA,
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
   GUIA_TRES_TAREAS,
@@ -1748,6 +1856,9 @@ export async function sembrarBancoDePruebas({ conProgreso = true } = {}): Promis
     if (recorridosFaltantes.length > 0) await db.diagnosticos.bulkAdd(recorridosFaltantes)
   })
   await sembrarAgendaYEquipos()
+  // La imagen de "Debes ver" de la ejecucion minima (tarea 307), en la copia
+  // sin conexion: el banco no tiene servidor del que descargarla.
+  await guardarEnCacheOffline(REFERENCIA_DEBES_VER, new Blob([IMAGEN_DEBES_VER], { type: 'image/svg+xml' }))
   if (conProgreso && (await db.progresoPasos.count()) === 0) {
     await db.progresoPasos.put({
       articuloId: GUIA_TRES_TAREAS.id,

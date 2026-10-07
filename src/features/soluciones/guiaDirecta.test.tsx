@@ -116,7 +116,7 @@ describe('abrir una guía', () => {
 })
 
 describe('los avisos acompañan, no detienen', () => {
-  it('el riesgo se ve junto a su acción, sin "Entendido", y la información queda plegada', async () => {
+  it('el riesgo se ve junto a su acción, sin "Entendido", y la información heredada no se muestra', async () => {
     await sembrarCaja()
     await montar(RUTAS, RUTA)
 
@@ -131,10 +131,10 @@ describe('los avisos acompañan, no detienen', () => {
     expect(textoPantalla()).toContain('Paso 2 de 2')
     expect(textoPantalla()).toContain('Guardar reemplaza la configuración anterior')
     expect(control(/Entendido/)).toBeNull()
-    // La explicación no está a la vista hasta que se pide.
+    // La explicación (un aviso de Información, heredado) no se muestra ni
+    // se pliega en "Más información": la ejecución mínima lo retiró (tarea 307).
     expect(textoPantalla()).not.toContain('Explicación de por qué se guarda aquí')
-    await tocar(await esperarControl('Más información'))
-    expect(textoPantalla()).toContain('Explicación de por qué se guarda aquí')
+    expect(control(/Más información/)).toBeNull()
 
     // Y la acción se hace sin confirmar nada antes: es la última, así que termina.
     await tocar((await esperar(() => principal('Completar y terminar'), 'Completar y terminar en la última acción')) as HTMLElement)

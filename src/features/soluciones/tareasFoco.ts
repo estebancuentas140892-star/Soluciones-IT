@@ -5,9 +5,11 @@ import type {
   MicroPasoComoHacer,
   OpcionDecision,
   PasoProcedimiento,
+  ResultadoVisual,
   TipoTarea,
   VinculoProtegido,
 } from '../../lib/db'
+import { resultadoVisualDe } from '../../lib/resultadoVisual'
 import { tareasDe } from '../../lib/procedimiento'
 import { decisionDeRuta, guiaDeLaRespuesta, type Elecciones } from '../../lib/rutaProcedimiento'
 import { apoyosDelPaso, apoyosDeTarea } from './apoyosTarea'
@@ -57,8 +59,8 @@ import { presenciaDeAviso } from './tonos'
 //     entrada del paso, una sola vez: son las condiciones del paso
 //     entero, asi que se leen al entrar y no vuelven a repetirse;
 //   - como se ve lo decide el tono (`presenciaDeAviso`): los riesgos
-//     como alerta antes de la instruccion, los datos a la vista y la
-//     informacion y los consejos plegados.
+//     como alerta, a la vista bajo la instruccion, y los datos a la vista.
+//     La informacion y los consejos heredados no se muestran (tarea 307).
 //
 // Ninguno se deduplica por texto y ninguno retiene el avance.
 
@@ -113,6 +115,10 @@ export interface TareaFoco {
   // sinteticas, en las comprobaciones y decisiones y en las acciones que
   // no lo tienen.
   comoHacer: MicroPasoComoHacer[]
+  // "Debes ver" de la tarea (tarea 307): la imagen de como debe quedar la
+  // pantalla cuando esta accion salio bien (`resultadoVisualDe`). null en
+  // las entradas sinteticas, en las decisiones y en las tareas sin imagen.
+  resultadoVisual: ResultadoVisual | null
   // TODAS las guias con intencion 'necesario' colgadas de esta tarea,
   // en el orden del editor (encargo del 2026-09-09, tarea 1). Antes se
   // tomaba solo la primera con `.find`, asi que una tarea con dos guias
@@ -135,6 +141,7 @@ type CamposVacios = Pick<
   | 'decisionGuiaTitulo'
   | 'opciones'
   | 'comoHacer'
+  | 'resultadoVisual'
   | 'guiasObligatorias'
   | 'tareaDeLaGuia'
 >
@@ -152,6 +159,7 @@ function camposVacios(): CamposVacios {
     decisionGuiaTitulo: '',
     opciones: [],
     comoHacer: [],
+    resultadoVisual: null,
     guiasObligatorias: [],
     tareaDeLaGuia: null,
   }
@@ -256,6 +264,7 @@ export function tareasParaFoco(
       decisionGuiaTitulo: t.tipoTarea === 'decision' ? t.decisionArticuloTitulo : '',
       opciones: t.tipoTarea === 'decision' ? (t.opciones ?? []) : [],
       comoHacer: comoHacerDe(t),
+      resultadoVisual: resultadoVisualDe(t),
       tareaDeLaGuia: null,
     })
     const respuesta = decisionDeRuta(paso)?.id === t.id ? guiaDeLaRespuesta(paso, elecciones) : null
@@ -293,12 +302,10 @@ export function tareasParaFoco(
 
 /** Los avisos que acompañan a una entrada del recorrido, ya repartidos por cómo se ven. */
 export interface AvisosDeTarea {
-  /** Precaución e importante: antes de la instrucción, con su color. */
+  /** Precaución e importante: a la vista, bajo la instrucción, con su color. */
   alertas: BloquePaso[]
   /** Datos técnicos: a la vista, sin color de alerta. */
   datos: BloquePaso[]
-  /** Información y consejos: plegados en "Más información". */
-  plegados: BloquePaso[]
 }
 
 /**
@@ -316,12 +323,13 @@ export function avisosDeTareaFoco(paso: PasoProcedimiento, tareas: TareaFoco[], 
   if (indice === 0) avisos.push(...apoyosDelPaso(paso).avisos)
   if (tarea?.clase === 'tarea') avisos.push(...apoyosDeTarea(paso, tarea.id).avisos)
 
-  const repartidos: AvisosDeTarea = { alertas: [], datos: [], plegados: [] }
+  // La información y los consejos heredados no van a ningún sitio: la
+  // ejecución mínima no los muestra (tarea 307).
+  const repartidos: AvisosDeTarea = { alertas: [], datos: [] }
   for (const aviso of avisos) {
     const presencia = presenciaDeAviso(aviso.tono)
     if (presencia === 'alerta') repartidos.alertas.push(aviso)
     else if (presencia === 'dato') repartidos.datos.push(aviso)
-    else repartidos.plegados.push(aviso)
   }
   return repartidos
 }

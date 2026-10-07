@@ -3,17 +3,14 @@ import { fraseDeMicroPaso } from '../../lib/comoHacer'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
 import type { Elecciones } from '../../lib/rutaProcedimiento'
 import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
-import { normalizarTexto } from './iconosSoluciones'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
-import { ComoHacerlo, DatoTecnico, DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
+import { ComoHacerlo, DatoTecnico, DebesVer } from './SenalesDePaso'
 import {
   ArrowRight,
-  CaretDown,
   CaretLeft,
   CaretRight,
   Check,
   CursorClick,
-  Info,
   ListChecks,
   Question,
   SealCheck,
@@ -41,7 +38,7 @@ import {
   type TareaFoco,
 } from './tareasFoco'
 import { RespuestasDecision } from './RespuestasDecision'
-import { tonoInfo } from './tonos'
+import { tonoVigente } from './tonos'
 import { subirElContenedor } from './subirElContenedor'
 import {
   hayApoyosDelFlujo,
@@ -68,9 +65,8 @@ import { PasosEnLectura } from './PasosEnLectura'
 //     ser pantallas con "Entendido · continuar": van con su acción y el
 //     tono decide cómo (ver `presenciaDeAviso` en tonos.ts). Solo los
 //     riesgos reales se ven como alerta.
-//   - La pantalla se lee de arriba abajo en el orden en que se usa:
-//     dónde estoy (paso y título), qué riesgo hay, qué hago, con qué lo
-//     hago (dato, comando, imagen, clave, archivo) y, plegado, por qué.
+//   - La pantalla se lee de arriba abajo en el orden en que se usa (desde
+//     la tarea 307, el de la ejecución mínima, más abajo).
 //   - Las imágenes y la clave de la acción se ven sin abrir nada. Antes
 //     estaban detrás de chips de 52 px ("Foto", "Clave") y la
 //     información del paso llegaba desplegada sobre la primera tarea.
@@ -85,10 +81,10 @@ import { PasosEnLectura } from './PasosEnLectura'
 // PROPUESTA FINAL DE CLAUDE DESIGN (2026-10-01). La pantalla responde
 // "¿qué tengo que hacer ahora?" y la acción manda:
 //
-//   - Lo que orienta va en voz baja: "acción 2 de 2" y el título del
-//     paso en una línea gris. Fuera el rótulo "PASO 3 DE 8" (lo dice el
-//     contador "3/8" de la cabecera) y la ruta con el paso de antes y el
-//     de después (en el teléfono; en escritorio sigue la horizontal).
+//   - Lo que orienta va en voz baja: "acción 2 de 2". Fuera el rótulo
+//     "PASO 3 DE 8" (lo dice el contador "3/8" de la cabecera) y la ruta
+//     con el paso de antes y el de después (en el teléfono; en escritorio
+//     sigue la horizontal).
 //   - El botón dice la CONSECUENCIA: "Completar y seguir", "Completar y
 //     terminar", "Ir al paso N", "Ir a la acción N"; si falta trabajo,
 //     cuánto ("Falta 1 tarea") o qué guía ("Completa «X»"), inactivo y
@@ -98,28 +94,33 @@ import { PasosEnLectura } from './PasosEnLectura'
 //     CONSULTA: se lee entero, nada se marca y el botón devuelve al paso
 //     de trabajo.
 //
-// JERARQUÍA DE UNA ACCIÓN (tarea 303, regla 27, AD-066). Una pantalla es
-// una acción clara, y eso no significa meterlo todo en una caja: cada
-// papel conserva su sitio y la pantalla hace evidente cuál manda.
+// LA EJECUCIÓN MÍNIMA (tarea 307, regla 27, AD-068; parte de la jerarquía
+// de la tarea 303, AD-066). La aplicación sabe mucho, pero la pantalla
+// enseña solo lo necesario para resolver lo que hay enfrente, y responde
+// "¿qué hago ahora y cómo lo hago?":
 //
-//   1. Qué hacer: la instrucción, a 26 px. Es lo único que domina.
-//   2. Dónde: orienta, neutro y en voz baja, separado de la acción.
-//   3. Cómo hacerlo: las microacciones de la acción (el `comoHacer` de la
-//      tarea), justo debajo de la instrucción y en voz más baja: la ruta
-//      rápida a la vista y "Ver paso a paso", plegado, para quien llega
-//      nuevo (`ComoHacerlo`).
-//   4. El dato técnico que la acción necesita, pegado a la instrucción y
-//      subordinado a ella: rótulo y monoespaciada, nunca otra orden.
-//   5. Debes ver: la comprobación, en verde, después del trabajo.
-//   6. Más información: lo que ayuda a entender sin hacer falta para
-//      actuar, plegado. Si alguien nuevo tuviera que abrirlo para saber
-//      cómo hacer la acción, ese contenido está mal clasificado.
-//   7. La advertencia: solo un riesgo real, antes de actuar, en rojo. Es
-//      el único bloque con fondo de color.
+//   1. Qué hacer: la instrucción, a 26 px. Es la ÚNICA instrucción de la
+//      pantalla: el título del paso no se repite encima (es dato de
+//      estructura: el índice, la ruta de escritorio, el editor y el
+//      historial lo usan). Así nunca se lee la misma orden dos veces, sin
+//      comparar textos para adivinarlo.
+//   2. El riesgo real, si existe: la advertencia, justo bajo la
+//      instrucción y antes de "Cómo hacerlo", a la vista y en rojo. Es el
+//      único bloque con fondo de color y nunca va plegada.
+//   3. La ruta rápida y 4. "Ver paso a paso", plegado (`ComoHacerlo`).
+//   5. El dato técnico indispensable: rótulo y monoespaciada.
+//   6. Lo que hace falta para hacerla: la respuesta de una pregunta, un
+//      comando, una imagen anclada a la acción, la credencial, un archivo,
+//      una guía.
+//   7. Debes ver: la imagen del resultado, plegada, solo si existe.
 //
-// En pantalla, de arriba abajo: la advertencia, Dónde, Qué hacer, la ruta
-// rápida, "Ver paso a paso", el dato técnico, los demás apoyos de la
-// acción, Debes ver y Más información.
+// Lo demás tiene que justificar su sitio, y lo que no lo hacía se retiró de
+// verdad (no se esconde): "Dónde" (`lugar`), "Más información" con el "Para
+// qué" del paso (`objetivo`), la información y los consejos plegados y el
+// "Debes ver" de texto (`resultado`). Un campo del JSON no obliga a
+// enseñarlo, y un hueco vacío es mejor que información irrelevante.
+// "Hecha" ya no sustituye a "Qué hacer": el estado se dice aparte, en voz
+// baja (`EtiquetaDeAccion`).
 
 interface Props {
   paso: PasoProcedimiento
@@ -160,12 +161,10 @@ interface Props {
   // ESTE FOCO ES PARTE DEL FLUJO DE OTRA GUÍA (tarea 289, fase 3): las
   // acciones de una guía reutilizada, hechas en el sitio del paso que la
   // reutiliza. No dice su propia numeración ("Paso 1 de 3"), porque la del
-  // paso es la de la guía que se abrió; y el "Dónde" y el "Debes ver" de
-  // ese paso acompañan a esta acción cuando el paso de dentro no trae los
-  // suyos (solo llegan para la primera y la última acción reutilizada).
-  // `apoyos` es lo que ese paso traía para su primera acción (su "para
-  // qué", avisos, imágenes, credencial): llega solo con la primera.
-  enFlujo?: { lugar: string; resultado: string; apoyos?: ApoyosDelFlujo | null } | null
+  // paso es la de la guía que se abrió. `apoyos` es lo que ese paso traía
+  // para su primera acción (avisos, imágenes, credencial): llega solo con
+  // la primera.
+  enFlujo?: { apoyos?: ApoyosDelFlujo | null } | null
   // Este foco es el de una guía vinculada, dibujada DENTRO del paso de
   // otra. Solo cambia el encuadre: el pie deja de sangrar hacia los
   // lados, porque ahí ya no llega al borde de la pantalla sino al de la
@@ -420,9 +419,6 @@ export function ModoFoco({
   const [indiceTarea, setIndiceTarea] = useState(() =>
     entrarPorElFinal ? tareas.length - 1 : primeraPendiente(),
   )
-  // "Más información" de la acción que se está mirando. Cerrado por
-  // defecto: lo que se lee de brazo estirado es la instrucción.
-  const [masInformacion, setMasInformacion] = useState(false)
   // Id de la tarea de decisión cuyo "No" está abierto. Se guarda el id
   // y no un booleano porque un paso puede tener más de una decisión, y
   // un booleano las abriría todas a la vez.
@@ -488,13 +484,13 @@ export function ModoFoco({
 
   // LO DESPLEGADO ES DE LA ACCIÓN QUE SE ESTÁ MIRANDO, no del paso.
   // Cambiar de acción (con "Anterior", al marcar o al terminar la guía
-  // vinculada) cierra "Más información", el vínculo y la decisión. Se
-  // cierra AQUÍ, en el mismo render, y no en un efecto: un efecto corre
-  // después de pintar y el contenido anterior alcanzaría a verse.
+  // vinculada) cierra el vínculo y la decisión. Se cierra AQUÍ, en el mismo
+  // render, y no en un efecto: un efecto corre después de pintar y el
+  // contenido anterior alcanzaría a verse. Lo plegado de cada acción ("Ver
+  // paso a paso", "Debes ver") vuelve plegado por su `key`.
   const tareaMostrada = useRef(indice)
   if (tareaMostrada.current !== indice) {
     tareaMostrada.current = indice
-    if (masInformacion) setMasInformacion(false)
     if (vinculoAbierto !== null) setVinculoAbierto(null)
     if (decisionAbierta !== null) setDecisionAbierta(null)
   }
@@ -538,21 +534,21 @@ export function ModoFoco({
   const prestados = esPrimeraDelPaso ? (enFlujo?.apoyos ?? null) : null
 
   // LOS AVISOS DE ESTA ACCIÓN, repartidos por cómo se ven (ver
-  // `avisosDeTareaFoco`): las alertas antes de la instrucción, los
-  // datos a la vista y el resto plegado. Los prestados, primero: son las
-  // condiciones de todo lo que sigue.
+  // `avisosDeTareaFoco`): las alertas bajo la instrucción y los datos a la
+  // vista. Los prestados, primero: son las condiciones de todo lo que
+  // sigue.
   const avisosPropios = avisosDeTareaFoco(paso, tareas, indice)
   const avisos = {
     alertas: [...(prestados?.alertas ?? []), ...avisosPropios.alertas],
     datos: [...(prestados?.datos ?? []), ...avisosPropios.datos],
-    plegados: [...(prestados?.plegados ?? []), ...avisosPropios.plegados],
   }
 
   // LOS APOYOS DE ESTA ACCIÓN. Los de la tarea van siempre con ella. Los
   // del paso completo (imágenes y archivos que el autor dejó para todo
   // el paso, o heredados sin asignar) se ven a la vista UNA vez, con la
-  // primera acción del paso, y en las siguientes quedan consultables
-  // dentro de "Más información": nunca se repiten a la vista.
+  // primera acción del paso, y no se repiten en las siguientes (desde la
+  // tarea 307 tampoco se pliegan en "Más información", que se retiró: el
+  // paso entero los sigue enseñando todos).
   const delPaso = apoyosDelPaso(paso)
   // La guía del paso y la tarea única no tienen apoyos propios: los
   // suyos son los del paso, como hasta ahora. La guía que exige una tarea
@@ -577,8 +573,6 @@ export function ModoFoco({
     ...adjuntosDe(propios.archivos),
     ...(llevaLosDelPaso ? delPaso.adjuntosPaso : []),
   ]
-  const imagenesPlegadas = esPrimeraDelPaso ? [] : delPaso.imagenes
-  const archivosPlegados = esPrimeraDelPaso ? [] : [...adjuntosDe(delPaso.archivos), ...delPaso.adjuntosPaso]
   const vinculoProtegido = propios.vinculoProtegido ?? tarea.vinculoProtegido
   // La credencial del paso que reutiliza esta guía, cuando no es la misma
   // que pide esta acción: la necesita alguien que está a punto de empezar.
@@ -586,31 +580,6 @@ export function ModoFoco({
     prestados?.vinculoProtegido && !mismoVinculoProtegido(prestados.vinculoProtegido, vinculoProtegido)
       ? prestados.vinculoProtegido
       : null
-  // QUÉ HACER, DÓNDE Y QUÉ DEBO VER DESPUÉS (encargo del 2026-09-22,
-  // sección 6). El lugar acompaña a la PRIMERA acción del paso (es donde
-  // hay que situarse antes de empezar) y lo que debe verse, a la ÚLTIMA
-  // (es lo que confirma que el paso salió). Los dos salen del paso, no de
-  // la tarea: son sus campos `lugar` y `resultado`.
-  const esUltimaDelPaso = indice === tareas.length - 1
-  // Dentro del flujo de otra guía, el paso que la reutiliza presta los
-  // suyos a la primera y a la última acción reutilizada (tarea 289).
-  const lugarDelPaso = esPrimeraDelPaso ? paso.lugar.trim() || (enFlujo?.lugar.trim() ?? '') : ''
-  // La pregunta no lo lleva: es la acción de su pantalla, y lo que confirma
-  // el paso llega después, con el camino de la respuesta.
-  const debesVer =
-    esUltimaDelPaso && !conOpciones ? paso.resultado.trim() || (enFlujo?.resultado.trim() ?? '') : ''
-  // Para qué sirve el paso: explica, no ordena, así que va plegado y solo
-  // con la primera acción del paso. El del paso que reutiliza esta guía,
-  // primero.
-  const objetivoPlegado = esPrimeraDelPaso ? paso.objetivo.trim() : ''
-  const objetivoPrestado = prestados?.objetivo.trim() ?? ''
-  const hayMasInformacion =
-    avisos.plegados.length > 0 ||
-    imagenesPlegadas.length > 0 ||
-    archivosPlegados.length > 0 ||
-    objetivoPlegado !== '' ||
-    objetivoPrestado !== ''
-
   // LA GUÍA QUE REUTILIZA EL PASO NO ES UNA TARJETA QUE ABRIR (tarea 289,
   // fase 3): se hace en el sitio, como acciones de este paso (más abajo),
   // y se LEE cuando el paso se consulta o se revisa ya hecho. Solo cuando
@@ -668,20 +637,18 @@ export function ModoFoco({
     .filter((r) => r.tipo === 'atajo' || r.tipo === 'comando')
     .map((r) => r.bloque)
 
-  // DÓNDE ESTOY: "Paso 3 de 12", y el título del paso cuando dice algo
-  // que la instrucción no dice ya. En un paso de una sola acción con el
-  // mismo texto sería la misma frase dos veces.
-  const tituloPropio = paso.titulo.trim()
-  // El paso que reutiliza otra guía se nombra por SU título, como
-  // cualquier paso: lo que se lee es qué se hace, no de dónde sale.
+  // QUÉ HACER: la única instrucción de la pantalla (tarea 307). El título
+  // del paso NO se dibuja aparte: solo es la instrucción cuando el paso no
+  // tiene acciones propias (el paso sin tareas y el que reutiliza otra
+  // guía, que se nombra por SU título: lo que se lee es qué se hace, no de
+  // dónde sale). Así no hay dos frases que compitan ni hace falta comparar
+  // textos para adivinar si dicen lo mismo.
   const textoInstruccion =
     tarea.clase === 'guia-del-paso'
       ? !guiaDelPasoDisponible
         ? 'Las instrucciones de este paso no están en este dispositivo'
-        : tituloPropio || tarea.texto || tarea.guiaTitulo
+        : paso.titulo.trim() || tarea.texto || tarea.guiaTitulo
       : tarea.texto || 'Tarea sin texto'
-  const tituloEnContexto =
-    tituloPropio !== '' && normalizarTexto(tituloPropio) !== normalizarTexto(textoInstruccion) ? tituloPropio : ''
 
   // ¿Esta es la última acción pendiente de TODO el procedimiento? Solo
   // cambia el rótulo: "Completar y terminar" en vez de "Completar y
@@ -797,7 +764,7 @@ export function ModoFoco({
           tituloReferencia: vinculoAbierto.titulo,
           obligatoria: vinculoAbierto.obligatoria,
           alCompletar: vinculoAbierto.alCompletar,
-          enFlujo: { lugar: '', resultado: '', terminaLaGuia: esUltimoTrabajo, alRetroceder: cerrarVinculo },
+          enFlujo: { terminaLaGuia: esUltimoTrabajo, alRetroceder: cerrarVinculo },
         })}
       </div>
     )
@@ -868,19 +835,16 @@ export function ModoFoco({
       tarea.clase === 'guia-de-respuesta')
   if (guiaEnElSitio && tarea.guiaId) {
     // Lo que esta entrada enseñaría con la primera acción del paso viaja a
-    // la primera acción reutilizada: el "Dónde", sus avisos, sus imágenes,
-    // su credencial y su "para qué". Y el "Debes ver", a la última, solo si
-    // con ella se acaba el paso.
+    // la primera acción reutilizada: sus avisos, sus imágenes y su
+    // credencial.
     const apoyos: ApoyosDelFlujo | null = esPrimeraDelPaso
       ? {
           alertas: avisos.alertas,
           datos: avisos.datos,
-          plegados: avisos.plegados,
           imagenes: imagenesALaVista,
           archivos: archivosALaVista,
           referencias: propios.referencias,
           vinculoProtegido,
-          objetivo: objetivoPlegado,
         }
       : null
     return (
@@ -891,8 +855,6 @@ export function ModoFoco({
           tituloReferencia: tarea.guiaTitulo,
           obligatoria: true,
           enFlujo: {
-            lugar: lugarDelPaso,
-            resultado: debesVer,
             apoyos: apoyos && hayApoyosDelFlujo(apoyos) ? apoyos : null,
             terminaLaGuia: esUltimoTrabajo,
             alRetroceder: puedeRetroceder ? retroceder : undefined,
@@ -1031,12 +993,13 @@ export function ModoFoco({
     )
   }
 
-  // DÓNDE ESTOY, EN VOZ BAJA (propuesta final). En el teléfono, "acción 2
-  // de 2" y el título del paso; en escritorio, la ruta horizontal. Dentro
-  // de una guía vinculada, la línea de siempre ("Paso 1 de 3" y el
-  // título), porque ahí no hay contador que lo diga. Entre esto y la
+  // DÓNDE ESTOY, EN VOZ BAJA (propuesta final; tarea 307). En el teléfono,
+  // "acción 2 de 2" si el paso tiene más de una; en escritorio, además, la
+  // ruta horizontal. Dentro de una guía vinculada, "Paso 1 de 3", porque
+  // ahí no hay contador que lo diga. Nunca el título del paso: la
+  // instrucción es la única frase que dice qué hacer. Entre esto y la
   // acción, aire: lo que orienta no se lee como parte de lo que se hace.
-  const contextoEnTelefono = tareas.length > 1 || tituloEnContexto !== ''
+  const contextoEnTelefono = tareas.length > 1
   const separacionAccion = ruta || enFlujo ? (contextoEnTelefono ? 'mt-7' : ruta ? 'md:mt-7' : '') : 'mt-4'
 
   return (
@@ -1051,51 +1014,32 @@ export function ModoFoco({
         <div className="flex flex-col gap-1.5">
           {/* Un trazo por acción del paso, solo si tiene más de una. */}
           {tareas.length > 1 && <AccionesDelPaso hechas={tareas.map(cumplida)} actual={indice} />}
-          {ruta ? (
-            <>
-              {ruta}
-              {tituloEnContexto && (
-                <p className="text-[15px] leading-snug text-noct-neutral-300 text-pretty md:hidden">{tituloEnContexto}</p>
+          {/* En escritorio, la ruta; en el teléfono no se ve (ahí orientan
+              el contador "3/8" y los segmentos). Dentro de una guía
+              vinculada sin ruta, su número de paso; en el flujo de la guía
+              que se abrió, nada: la numeración es la de su cabecera. */}
+          {ruta
+            ? ruta
+            : !enFlujo && (
+                <p className="text-[13.5px] font-semibold uppercase leading-snug tracking-[.06em] text-noct-accion">
+                  Paso {numeroPaso}
+                  {totalPasos !== null && ` de ${totalPasos}`}
+                </p>
               )}
-            </>
-          ) : enFlujo ? (
-            // En el flujo de la guía que se abrió, la numeración es la suya
-            // (el contador de la cabecera): aquí solo el título, en voz baja.
-            tituloEnContexto && (
-              <p className="text-[15px] leading-snug text-noct-neutral-300 text-pretty">{tituloEnContexto}</p>
-            )
-          ) : (
-            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13.5px] leading-snug text-noct-neutral-400">
-              <span className="font-semibold uppercase tracking-[.06em] text-noct-accion">
-                Paso {numeroPaso}
-                {totalPasos !== null && ` de ${totalPasos}`}
-              </span>
-              {tituloEnContexto && <span className="min-w-0 text-pretty text-noct-neutral-300">{tituloEnContexto}</span>}
-            </p>
-          )}
         </div>
 
         <div className={`flex flex-col gap-4 ${separacionAccion}`}>
-        {/* LAS ALERTAS, ANTES DE LA INSTRUCCIÓN: un riesgo se lee antes
-            de actuar, no después. Solo precaución e importante, y desde
-            el 2026-09-22 en rojo: en una guía el rojo es el riesgo. */}
-        {avisos.alertas.map((aviso) => (
-          <AlertaDeRiesgo key={aviso.id} aviso={aviso} />
-        ))}
-
-        {/* DÓNDE SE HACE: dónde hay que estar para hacer la acción. Con la
-            primera acción del paso. Solo orienta: neutro, con su chincheta
-            y su palabra, y a 16 px de la acción (tarea 303). */}
-        {lugarDelPaso && <DondeSeHacePaso lugar={lugarDelPaso} />}
-
-        {/* LA ACCIÓN Y LO QUE HACE FALTA PARA HACERLA. El dato técnico va
-            pegado a la instrucción (más cerca que el resto de la pantalla)
-            porque es SU valor, y con menos peso porque no es otra orden. */}
+        {/* LA ACCIÓN, SU RIESGO Y CÓMO HACERLA (tarea 307). Primero la
+            instrucción; justo debajo, el riesgo real si lo hay (a la vista,
+            en rojo, antes de "Cómo hacerlo": se lee antes de hacerla); y
+            después la ruta rápida, el paso a paso y el dato técnico, pegados
+            a la instrucción porque son SUYOS, con menos peso porque no son
+            otra orden. */}
         <div className="flex flex-col gap-2.5">
           <div className="flex flex-col gap-1">
             {/* Sin etiqueta cuando el paso que reutiliza otra guía no se
-                puede hacer aquí (no está, o se lee aparte): "Hecha" o "Qué
-                hacer" encima dirían lo que no es. */}
+                puede hacer aquí (no está, o se lee aparte): "Qué hacer"
+                encima diría lo que no es. */}
             {(tarea.clase !== 'guia-del-paso' || (guiaDelPasoDisponible && guiaDelPasoIntegrada)) && (
               <EtiquetaDeAccion tipoTarea={tarea.tipoTarea} hecha={hecha} conOpciones={conOpciones} />
             )}
@@ -1112,6 +1056,16 @@ export function ModoFoco({
             >
               {textoInstruccion}
             </h2>
+            {/* EL RIESGO REAL, BAJO SU ACCIÓN Y ANTES DE HACERLA. Solo
+                precaución e importante, en rojo (en una guía el rojo es el
+                riesgo), nunca plegado ni convertido en otro paso. */}
+            {avisos.alertas.length > 0 && (
+              <div className="my-1.5 flex flex-col gap-2">
+                {avisos.alertas.map((aviso) => (
+                  <AlertaDeRiesgo key={aviso.id} aviso={aviso} />
+                ))}
+              </div>
+            )}
             {/* CÓMO HACERLO (tarea 303): las microacciones de ESTA acción,
                 pegadas a su instrucción y en voz más baja. La `key` hace
                 que cada acción llegue con su paso a paso plegado. */}
@@ -1217,11 +1171,6 @@ export function ModoFoco({
           </div>
         ))}
 
-        {/* QUÉ DEBO VER DESPUÉS: con la última acción del paso (el
-            `resultado` del paso), después de todo lo que se usa para
-            hacerla. Verde en su icono y su palabra: comprueba, no manda. */}
-        {debesVer && <DebesVerPaso texto={debesVer} />}
-
         {/* LOS TÉRMINOS, COMO ETIQUETAS DISCRETAS: se tocan para leer la
             definición sin salir de la guía ni tocar el avance. */}
         {terminos.length > 0 && (
@@ -1251,34 +1200,11 @@ export function ModoFoco({
           />
         )}
 
-        {/* LO QUE SIRVE PARA ENTENDER, NO PARA HACER (sección 8 del
-            encargo): plegado y a un toque, cerrado al llegar a cada
-            acción. Lo necesario para ejecutarla nunca vive aquí (regla
-            27): si hiciera falta abrirlo para saber qué hacer, el
-            contenido está mal clasificado. */}
-        {hayMasInformacion && (
-          <MasInformacion abierta={masInformacion} onAlternar={() => setMasInformacion((v) => !v)}>
-            {objetivoPrestado && (
-              <p className="text-[14px] leading-normal text-noct-neutral-200">
-                <span className="font-medium text-noct-neutral-400">Para qué: </span>
-                {objetivoPrestado}
-              </p>
-            )}
-            {objetivoPlegado && (
-              <p className="text-[14px] leading-normal text-noct-neutral-200">
-                <span className="font-medium text-noct-neutral-400">Para qué: </span>
-                {objetivoPlegado}
-              </p>
-            )}
-            {avisos.plegados.map((aviso) => (
-              <NotaPlegada key={aviso.id} aviso={aviso} />
-            ))}
-            {imagenesPlegadas.map((imagen) => (
-              <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
-            ))}
-            {archivosPlegados.length > 0 && <AdjuntosPaso adjuntos={archivosPlegados} titulo={paso.titulo} />}
-          </MasInformacion>
-        )}
+        {/* DEBES VER, AL FINAL (tarea 307): la imagen de cómo debe quedar la
+            pantalla cuando esta acción salió bien, plegada y después de todo
+            lo que se usa para hacerla. Sin imagen no se dibuja nada. La
+            `key` hace que cada acción llegue con ella plegada. */}
+        <DebesVer key={tarea.id} resultado={tarea.resultadoVisual} />
         </div>
       </div>
 
@@ -1411,7 +1337,16 @@ export function AntesDeEmpezar({ requisitos }: { requisitos: string[] }) {
 // QUÉ CLASE DE TRABAJO ES ESTA ACCIÓN (encargo del 2026-09-22, sección
 // 4). Una palabra y un icono, siempre los dos: azul para la acción
 // (entrar, abrir, seleccionar), verde para la comprobación y neutro para
-// la decisión. Una acción ya hecha lo dice en verde, con su marca.
+// la decisión.
+//
+// EL ESTADO NO SUSTITUYE A LA FUNCIÓN (tarea 307). Hasta ahora una acción
+// ya hecha cambiaba "Qué hacer" por "Hecha": el rótulo dejaba de decir qué
+// es la pantalla y pasaba a decir solo un estado. Ahora el rótulo es
+// siempre el mismo y lo hecho se dice aparte, en voz baja: la marca y la
+// palabra en verde a su lado ("hecha", "comprobada" o "respondida"), la
+// instrucción atenuada y el trazo de la acción en el progreso del paso.
+const ESTADO_HECHO = { accion: 'hecha', verificacion: 'comprobada', decision: 'respondida' } as const
+
 function EtiquetaDeAccion({
   tipoTarea,
   hecha,
@@ -1422,43 +1357,36 @@ function EtiquetaDeAccion({
   // Una decisión con opciones (tarea 302) no se hace: se responde.
   conOpciones?: boolean
 }) {
-  if (hecha) {
-    return (
-      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-exito">
-        <Check size={13} className="shrink-0" aria-hidden />
-        {conOpciones ? 'Respondida' : 'Hecha'}
-      </p>
-    )
-  }
-  if (tipoTarea === 'verificacion') {
-    return (
-      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-exito">
-        <SealCheck size={13} className="shrink-0" aria-hidden />
-        Comprueba
-      </p>
-    )
-  }
-  if (tipoTarea === 'decision') {
-    return (
-      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">
-        <Question size={13} className="shrink-0" aria-hidden />
-        Decide
-      </p>
-    )
-  }
+  const clase =
+    conOpciones || tipoTarea === 'decision' ? 'decision' : tipoTarea === 'verificacion' ? 'verificacion' : 'accion'
+  const { Icono, palabra, color } =
+    clase === 'verificacion'
+      ? { Icono: SealCheck, palabra: 'Comprueba', color: 'text-noct-exito' }
+      : clase === 'decision'
+        ? { Icono: Question, palabra: 'Decide', color: 'text-noct-neutral-300' }
+        : { Icono: CursorClick, palabra: 'Qué hacer', color: 'text-noct-accion' }
   return (
-    <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-accion">
-      <CursorClick size={13} className="shrink-0" aria-hidden />
-      Qué hacer
+    <p className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] leading-snug">
+      <span className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-[.06em] ${color}`}>
+        <Icono size={13} className="shrink-0" aria-hidden />
+        {palabra}
+      </span>
+      {hecha && (
+        <span className="inline-flex items-center gap-1 text-[12.5px] font-medium text-noct-exito">
+          <Check size={13} className="shrink-0" aria-hidden />
+          {ESTADO_HECHO[clase]}
+        </span>
+      )}
     </p>
   )
 }
 
-// UN RIESGO REAL (precaución o importante), antes de la instrucción. Con
-// sus cuatro señales, ninguna solo de color (regla R16): icono, palabra,
-// barra lateral y fondo.
+// UN RIESGO REAL (precaución o importante), bajo la instrucción y antes de
+// "Cómo hacerlo". Con sus cuatro señales, ninguna solo de color (regla
+// R16): icono, palabra, barra lateral y fondo.
 function AlertaDeRiesgo({ aviso }: { aviso: BloquePaso }) {
-  const tono = tonoInfo(aviso.tono)
+  const tono = tonoVigente(aviso.tono)
+  if (!tono) return null
   return (
     <div
       role="note"
@@ -1472,47 +1400,10 @@ function AlertaDeRiesgo({ aviso }: { aviso: BloquePaso }) {
   )
 }
 
-// Una información o un consejo, ya dentro de "Más información": con su
-// palabra, sin fondo de color.
-function NotaPlegada({ aviso }: { aviso: BloquePaso }) {
-  const tono = tonoInfo(aviso.tono)
-  return (
-    <p className="flex items-start gap-2 text-[14px] leading-normal text-noct-neutral-200">
-      <tono.Icono size={15} className="mt-[3px] shrink-0 text-noct-neutral-400" aria-hidden />
-      <span className="min-w-0">
-        <span className="font-medium text-noct-neutral-400">{tono.etiqueta}. </span>
-        {aviso.texto}
-      </span>
-    </p>
-  )
-}
-
-// "MÁS INFORMACIÓN": el sitio de lo que ayuda a entender la acción sin
-// ser necesario para hacerla. Cerrado por defecto.
-function MasInformacion({
-  abierta,
-  onAlternar,
-  children,
-}: {
-  abierta: boolean
-  onAlternar: () => void
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <button
-        type="button"
-        aria-expanded={abierta}
-        onClick={onAlternar}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-1 text-[14px] font-medium text-noct-neutral-300 hover:text-noct-text"
-      >
-        <Info size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
-        {abierta ? 'Menos información' : 'Más información'}
-        <CaretDown size={13} className={`shrink-0 transition-transform ${abierta ? 'rotate-180' : ''}`} aria-hidden />
-      </button>
-      {abierta && <div className="mt-1.5 flex flex-col gap-3 border-l-2 border-noct-divider pl-3">{children}</div>}
-    </div>
-  )
-}
+// "Más información" y su nota plegada se retiraron en la tarea 307: durante
+// la ejecución se trabaja, y lo que hay que leer para hacer bien la acción
+// es una advertencia, un dato, "Cómo hacerlo" o un recurso, nunca algo
+// plegado. Lo que la guía explica (cuándo usarla, qué se consigue, sus
+// requisitos) se lee antes de empezar.
 
 export type { TareaFoco }

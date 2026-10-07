@@ -502,13 +502,14 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     const texto = textoPantalla()
     // La identidad es la de la guía que se abrió: su contador y su paso.
     expect(control('Paso 1 de 7. Abrir el índice de pasos')).not.toBeNull()
-    expect(texto).toContain('Ingresar al programa de caja')
     // Lo de dentro no se nombra ni se numera aparte.
     expect(texto).not.toContain('Acceder al programa de caja por escritorio remoto')
     expect(texto).not.toContain('Paso 1 de 3')
-    // El título de la parte, en voz baja, y el "Dónde" del paso que la reutiliza.
-    expect(texto).toContain('Conectarse al servidor por escritorio remoto')
-    expect(texto).toContain('Escritorio remoto · programa de caja')
+    // La acción es la única instrucción (tarea 307): ni el título de la parte
+    // encima ni el "Dónde" heredado del paso que la reutiliza.
+    expect(texto).toContain('acción 1 de 3')
+    expect(texto).not.toContain('Conectarse al servidor por escritorio remoto')
+    expect(texto).not.toContain('Escritorio remoto · programa de caja')
     // Sus requisitos no se piden: ni antes de empezar ni junto a la acción.
     expect(texto).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
     expect(texto).not.toContain('Ten esto listo')
@@ -535,8 +536,8 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     // La credencial va con la acción que la usa, sin salir del flujo.
     await esperar(() => textoPantalla().includes('Credencial necesaria'), 'la credencial de la acción')
     expect(textoPantalla()).toContain('Acceso de prueba al programa de caja')
-    // Lo que debe verse al terminar el paso, aunque la acción sea de lo reutilizado.
-    expect(textoPantalla()).toContain('El programa de caja queda abierto y listo para trabajar.')
+    // El "Debes ver" de texto heredado del paso ya no se enseña (tarea 307).
+    expect(textoPantalla()).not.toContain('El programa de caja queda abierto y listo para trabajar.')
     expect(control('Completar y terminar')).toBeNull()
     sinArquitectura()
 
@@ -584,7 +585,9 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('Conectarse al servidor por escritorio remoto'), 'el paso 1, para leerlo')
     const texto = textoPantalla()
-    expect(texto).toContain('Hecha')
+    // "Qué hacer" sigue diciendo qué es la pantalla; lo hecho va aparte (tarea 307).
+    expect(texto).toContain('Qué hacer')
+    expect(texto).toContain('hecha')
     expect(texto).toContain('Ingresar al programa de caja')
     expect(texto).toContain('Abre el programa de caja e ingresa su contraseña')
     expect(control(/^Abrir:/)).toBeNull()
@@ -727,7 +730,7 @@ describe('lo opcional sigue siendo un desvío, dicho sin vocabulario interno (fa
 })
 
 describe('lo que el paso traía no se pierde en el flujo (fase 3)', () => {
-  it('el "para qué" y el aviso del paso que reutiliza van con la primera acción reutilizada, y solo con ella', async () => {
+  it('el aviso del paso que reutiliza va con la primera acción reutilizada, y solo con ella; su "para qué" ya no se muestra', async () => {
     await sembrarAccesoAlPrograma()
     const aviso: BloquePaso = {
       ...pasoPrueba('aux', 'aux', ['aux']).bloques[0],
@@ -757,12 +760,9 @@ describe('lo que el paso traía no se pierde en el flujo (fase 3)', () => {
     expect(textoPantalla()).not.toContain('Antes de empezar')
     // El riesgo del paso, antes de actuar.
     expect(textoPantalla()).toContain('Si hay ventas abiertas en la caja de prueba, entrar las cierra.')
-    // Su "para qué", a un toque, como el de cualquier paso.
-    await tocar(await esperarControl(/^Más información/))
-    await esperar(
-      () => textoPantalla().includes('Tener el programa de caja abierto para registrar a la persona.'),
-      'el "para qué" del paso que reutiliza',
-    )
+    // Su "para qué" heredado ya no viaja ni se pliega (tarea 307).
+    expect(textoPantalla()).not.toContain('Tener el programa de caja abierto para registrar a la persona.')
+    expect(control(/^Más información/)).toBeNull()
     sinArquitectura()
     // Solo con la primera acción: la siguiente ya no lo repite.
     await tocar(await esperarControl('Completar y seguir'))
@@ -787,10 +787,8 @@ describe('el paso entero también es un solo flujo (fase 3)', () => {
     expect(texto).not.toContain('Acceder al programa de caja por escritorio remoto')
     expect(texto).not.toContain('Estar conectado a la red desde la que se permite el escritorio remoto.')
     expect(texto).not.toContain('Esta guía')
-    // Lo que debe verse confirma esas acciones: va después de ellas.
-    expect(texto.indexOf('El programa de caja queda abierto y listo para trabajar.')).toBeGreaterThan(
-      texto.indexOf('Busca y abre Conexión a Escritorio remoto'),
-    )
+    // El "Debes ver" de texto heredado del paso ya no se enseña (tarea 307).
+    expect(texto).not.toContain('El programa de caja queda abierto y listo para trabajar.')
     // El lector de pantalla y el teclado empiezan en el paso.
     await esperar(() => document.activeElement?.textContent === 'Ingresar al programa de caja', 'el foco en el paso')
     sinArquitectura()

@@ -163,9 +163,12 @@ export function cambiarTipoTarea(bloque: BloquePaso, tipoTarea: TipoTarea): Camb
   // UNA DECISION NUEVA NACE CON DOS OPCIONES VACIAS (tarea 302): la de
   // Si/No ya no se crea, la sustituye una con opciones "Si" y "No".
   if (tipoTarea === 'decision') {
+    // "DEBES VER" ES DE LA ACCIÓN O LA COMPROBACIÓN (tarea 307): una
+    // decisión se responde y no deja un resultado que mirar, así que su
+    // imagen se suelta y se nombra.
     return {
-      bloque: { ...bloque, tipoTarea, opciones: [crearOpcion(), crearOpcion()], ...comoHacer },
-      perdido: perdidoComoHacer,
+      bloque: { ...bloque, tipoTarea, opciones: [crearOpcion(), crearOpcion()], ...comoHacer, resultadoVisual: undefined },
+      perdido: [...perdidoComoHacer, ...(bloque.resultadoVisual ? ['la imagen de «Debes ver»'] : [])],
     }
   }
   // Fuera de "decision" ni el vinculo del "No" ni las opciones tienen

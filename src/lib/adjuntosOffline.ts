@@ -117,7 +117,8 @@ async function descargarUno(referencia: string): Promise<void> {
 // Todo lo que debe quedar disponible sin conexion: los adjuntos de
 // las fichas, todo lo que vive como referencia dentro del JSON del
 // procedimiento (archivos del paso, imagenes intercaladas en los
-// bloques y la imagen de portada) y la foto principal de cada
+// bloques, la imagen de "Debes ver" de cada accion, tarea 307, y la
+// imagen de portada) y la foto principal de cada
 // dispositivo (fase Dis2). Exportada para poder probarla sin depender
 // de Cache Storage (hallazgo tarea 114: hasta aqui faltaba la foto del
 // dispositivo, asi que nunca entraba a este cache offline).
@@ -136,6 +137,7 @@ export async function referenciasParaOffline(): Promise<string[]> {
       for (const adjunto of paso.adjuntos) referencias.add(adjunto.referencia)
       for (const bloque of paso.bloques) {
         if (bloque.adjunto) referencias.add(bloque.adjunto.referencia)
+        if (bloque.resultadoVisual) referencias.add(bloque.resultadoVisual.adjunto.referencia)
       }
     }
   }

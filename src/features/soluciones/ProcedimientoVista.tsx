@@ -43,8 +43,9 @@ import { QueHaceEnTexto } from '../referencia/QueHaceEnTexto'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
-import { ComoHacerlo, DatoTecnico, DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
-import { presenciaDeAviso, tonoInfo } from './tonos'
+import { resultadoVisualDe } from '../../lib/resultadoVisual'
+import { ComoHacerlo, DatoTecnico, DebesVer } from './SenalesDePaso'
+import { presenciaDeAviso, tonoVigente } from './tonos'
 import {
   ROTULO_CONTINGENCIA,
   ROTULO_DE_LA_RESPUESTA,
@@ -367,11 +368,6 @@ export function ProcedimientoVista({
                           >
                             {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
                           </span>
-                          {paso.objetivo && abierto && (
-                            <span className="mt-0.5 block text-[12.5px] text-noct-neutral-500">
-                              {paso.objetivo}
-                            </span>
-                          )}
                         </span>
                         <CaretRight
                           size={13}
@@ -386,17 +382,13 @@ export function ProcedimientoVista({
                         <p className="text-sm font-medium">
                           {paso.titulo || paso.subArticuloTitulo || `Paso ${indice + 1}`}
                         </p>
-                        {paso.objetivo && (
-                          <p className="mt-0.5 text-[12.5px] text-noct-neutral-500">{paso.objetivo}</p>
-                        )}
                       </div>
                     )}
 
                     <div className={`flex flex-col gap-2.5 ${plegable ? 'mt-2' : ''} ${abierto ? '' : 'hidden'}`}>
-                      {/* DÓNDE SE HACE (encargo del 2026-09-22, sección 6):
-                          el mismo bloque que la ejecución, para que leer y
-                          hacer enseñen lo mismo (criterio A08). */}
-                      {paso.lugar.trim() !== '' && <DondeSeHacePaso lugar={paso.lugar.trim()} />}
+                      {/* Ni el "para qué" ni el "Dónde" del paso (tarea
+                          307): leer y hacer enseñan lo mismo (criterio A08),
+                          y la ejecución ya no los muestra. */}
                       {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
                       {paso.bloques.map((bloque) => (
@@ -447,10 +439,6 @@ export function ProcedimientoVista({
                           ser una fila más y se presenta con su rótulo, en
                           un bloque neutro, igual que en la ejecución. */}
                       {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} variante="bloque" />}
-
-                      {/* QUÉ DEBO VER DESPUÉS, tras el cuerpo del paso: el
-                          mismo bloque que la ejecución. */}
-                      {paso.resultado.trim() !== '' && <DebesVerPaso texto={paso.resultado.trim()} />}
 
                       {/* LO QUE CUELGA DEL PASO, en filas y sin marcos
                           de color (M-012, regla M-R11, tableros `3b` y
@@ -1034,28 +1022,21 @@ export function BloqueVista({
   onElegirOpcion?: (opcionId: string) => void
 }) {
   if (bloque.tipo === 'aviso') {
-    const tono = tonoInfo(bloque.tono)
     const presencia = presenciaDeAviso(bloque.tono)
+    const tono = tonoVigente(bloque.tono)
     // SOLO LOS RIESGOS SE VEN COMO ALERTA (encargo del 2026-09-17,
     // secciones 6 y 7): la misma regla que la ejecución de una acción a
-    // la vez. Una información o un consejo es una nota, y un dato técnico
-    // se lee a la vista pero sin el color de una advertencia; si todo va
-    // con fondo de color, la precaución real deja de destacar.
+    // la vez. Un dato técnico se lee a la vista pero sin el color de una
+    // advertencia; si todo va con fondo de color, la precaución real deja
+    // de destacar.
     //
     // El dato técnico es el MISMO bloque que en la acción a la vez (tarea
     // 303): su rótulo y su valor en monoespaciada, para que leer y hacer
     // enseñen lo mismo y nunca parezca otra instrucción.
     if (presencia === 'dato') return <DatoTecnico texto={bloque.texto} />
-    if (presencia !== 'alerta') {
-      return (
-        <p className="flex items-start gap-2.5 px-1 py-1 text-[13px] leading-normal text-noct-neutral-300">
-          <tono.Icono size={15} className="mt-[2px] shrink-0 text-noct-neutral-400" aria-hidden />
-          <span className="min-w-0">
-            <span className="font-medium text-noct-neutral-400">{tono.etiqueta}.</span> {bloque.texto}
-          </span>
-        </p>
-      )
-    }
+    // La información y los consejos heredados no se muestran (tarea 307),
+    // tampoco aquí: leer y hacer enseñan lo mismo.
+    if (presencia !== 'alerta' || !tono) return null
     // Decisión 9 de P2: el aviso dice SU PALABRA además del color. Un
     // ámbar no significa nada por sí solo para quien no conoce el
     // sistema, y a pleno sol puede no distinguirse (R16: estado en dos
@@ -1187,6 +1168,9 @@ export function BloqueVista({
   // que en la acción a la vez, bajo el texto de la tarea. Una comprobación
   // no las tiene (`comoHacerDe` da una lista vacía).
   const comoHacer = comoHacerDe(bloque)
+  // "Debes ver" (tarea 307): la imagen del resultado de esta acción o
+  // comprobación, plegada, la misma que en la acción a la vez.
+  const resultadoVisual = resultadoVisualDe(bloque)
 
   // UNA COMPROBACIÓN NO SE "MARCA HECHA" (2026-09-09, cambio 2 del
   // encargo). Aquí una verificación era la MISMA casilla que una
@@ -1205,6 +1189,7 @@ export function BloqueVista({
             <TagNeutral className="shrink-0">Verificación</TagNeutral>
           </div>
           {bloqueo && <p className="mt-1.5 text-[12px] leading-snug text-noct-neutral-300">{bloqueo}</p>}
+          <DebesVer resultado={resultadoVisual} variante="fila" className="mt-1" />
           <div className="mt-2.5 flex flex-wrap gap-2">
             <button
               type="button"
@@ -1253,6 +1238,7 @@ export function BloqueVista({
           className="pl-10"
         />
       )}
+      <DebesVer resultado={resultadoVisual} variante="fila" className="pl-10" />
       {credencialInline}
     </div>
   )

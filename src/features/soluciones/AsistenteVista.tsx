@@ -82,8 +82,8 @@ import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
 import { AntesDeEmpezar, ModoFoco } from './ModoFoco'
-import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { RutaProcedimiento } from './RutaProcedimiento'
+import { presenciaDeAviso } from './tonos'
 import { HojaFalla } from './HojaFalla'
 import { PantallaPreparacion } from './PantallaPreparacion'
 import { PasosEnLectura } from './PasosEnLectura'
@@ -779,9 +779,6 @@ export function AsistenteVista({
   // antes de empezar lo decide y lo escribe el autor de la guía que se abrió
   // (tarea 289, regla definitiva del criterio adicional de la fase 4).
   const requisitosVisibles = !conPreparacion && !integrada && indiceActual === 0 && sinAvance ? requisitos : []
-  // En la vista de paso entero, el "Debes ver" de un paso que se hace con lo
-  // que reutiliza va tras esas acciones, no antes (tarea 289).
-  const resultadoTrasLoReutilizado = paso.resultado.trim() !== '' && guiaDelPasoIntegrable(paso)
 
   // CONSULTAR OTRO PASO NO MARCA NADA (propuesta final de Claude Design,
   // 2026-10-01). Un paso pendiente de MÁS ADELANTE que el de trabajo,
@@ -849,6 +846,10 @@ export function AsistenteVista({
         total={totalPasos}
         indiceActual={indiceActual}
         onIrAPaso={(indice: number) => verPaso(indice)}
+        // En la acción a la vez, la instrucción es la única frase que dice
+        // qué hacer: el título del paso no se repite encima (tarea 307). En
+        // el paso entero sí, porque es el encabezado de su lista.
+        conTituloDelPaso={!enFoco}
       />
     ) : null
 
@@ -925,8 +926,6 @@ export function AsistenteVista({
           enFlujo={
             integrada
               ? {
-                  lugar: indiceActual === 0 ? integracion.lugar : '',
-                  resultado: indiceActual === pasos.length - 1 ? integracion.resultado : '',
                   // Lo que el paso de fuera traía para su primera acción, con
                   // la primera de aquí dentro.
                   apoyos: indiceActual === 0 ? (integracion.apoyos ?? null) : null,
@@ -1044,8 +1043,9 @@ export function AsistenteVista({
 
       {/* DÓNDE ESTOY. En escritorio, la ruta de la guía principal (que ya
           dice "Paso N de M" y el título); en el teléfono y dentro de un
-          vínculo, el título a secas. Debajo, para qué sirve el paso: en el
-          paso entero se lee todo. */}
+          vínculo, el título a secas. En el paso entero el título del paso
+          es su encabezado: lo que sigue es la lista de sus acciones. Ni su
+          "para qué" ni su "Dónde" (tarea 307). */}
       <div className="flex flex-col gap-1">
         {rutaUI}
         {/* En la guía que se abrió, el título del paso recibe el foco al
@@ -1065,12 +1065,7 @@ export function AsistenteVista({
         ) : (
           <h2 className={`text-lg font-semibold text-noct-text ${rutaUI ? 'md:hidden' : ''}`}>{tituloPaso}</h2>
         )}
-        {paso.objetivo.trim() !== '' && <p className="text-sm text-noct-neutral-400">{paso.objetivo}</p>}
       </div>
-
-      {/* DÓNDE SE HACE el paso, antes de su cuerpo (encargo del
-          2026-09-22, sección 6). */}
-      {paso.lugar.trim() !== '' && <DondeSeHacePaso lugar={paso.lugar.trim()} />}
 
       {/* Lo que el técnico declaró al elegir una salida (tablero 3d).
           No toca el progreso ni completa nada: deja dicho que este paso
@@ -1113,6 +1108,9 @@ export function AsistenteVista({
       {paso.bloques.length > 0 && (
         <ul className="flex flex-col gap-2">
           {paso.bloques.map((bloque, posicion) => {
+            // La información y los consejos heredados no se muestran (tarea
+            // 307): ni su fila, para no dejar un hueco en la lista.
+            if (bloque.tipo === 'aviso' && presenciaDeAviso(bloque.tono) === null) return null
             // LA GUÍA QUE EXIGE UNA TAREA, EN EL FLUJO (tarea 289, fase 3):
             // sus acciones aquí mismo, como parte del paso. Antes era un
             // enlace que sacaba de la ejecución y que, terminado allá, no
@@ -1140,7 +1138,7 @@ export function AsistenteVista({
                     guiaId={guiaNecesaria}
                     tituloReferencia={bloque.guiaArticuloTitulo}
                     nivel={nivel}
-                    integracion={integracionDelPaso({ lugar: '', resultado: '', terminaLaGuia: false })}
+                    integracion={integracionDelPaso({ terminaLaGuia: false })}
                     onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
                   />
                 ) : (
@@ -1173,7 +1171,7 @@ export function AsistenteVista({
                         articuloId={vinculadoId}
                         procedimiento={vinculado}
                         nivel={nivel + 1}
-                        integracion={integracionDelPaso({ lugar: '', resultado: '', terminaLaGuia: false })}
+                        integracion={integracionDelPaso({ terminaLaGuia: false })}
                         onCompletado={onCompletado}
                       />
                     )}
@@ -1201,8 +1199,6 @@ export function AsistenteVista({
                         tituloReferencia={guiaDeEstaRespuesta.titulo}
                         nivel={nivel}
                         integracion={integracionDelPaso({
-                          lugar: '',
-                          resultado: '',
                           terminaLaGuia: !pasoActualHecho && destinoTrasEste === null && ruta.pendiente === null,
                         })}
                         onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
@@ -1219,11 +1215,6 @@ export function AsistenteVista({
           protegido del paso, con su rótulo y en un bloque neutro, como en
           la vista de una acción a la vez. */}
       {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} variante="bloque" />}
-
-      {/* QUÉ DEBO VER DESPUÉS: el resultado del paso, tras su cuerpo. Si el
-          paso se hace con lo que reutiliza, tras esas acciones (más abajo):
-          es lo que confirma que salieron (tarea 289). */}
-      {paso.resultado.trim() !== '' && !resultadoTrasLoReutilizado && <DebesVerPaso texto={paso.resultado.trim()} />}
 
       {/* LO QUE CUELGA DEL PASO, en filas y sin marcos de color (M-012,
           regla M-R11, tableros `3b` y `12b`). El dato protegido y la guía
@@ -1242,12 +1233,10 @@ export function AsistenteVista({
             rutaOrigen={rutaOrigen}
             etiquetaOrigen={articulo?.titulo ?? 'la guía'}
             // En el flujo (tarea 289): lo reutilizado se recorre como parte
-            // del paso. El "Dónde" y el "Debes ver" del paso ya se leen aquí.
+            // del paso.
             integracion={
               guiaDelPasoIntegrable(paso)
                 ? integracionDelPaso({
-                    lugar: '',
-                    resultado: '',
                     terminaLaGuia:
                       !pasoActualHecho &&
                       destinoTrasEste === null &&
@@ -1258,11 +1247,6 @@ export function AsistenteVista({
             }
             onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
           />
-        )}
-        {resultadoTrasLoReutilizado && (
-          <div className="mt-3">
-            <DebesVerPaso texto={paso.resultado.trim()} />
-          </div>
         )}
 
       {/* La contingencia ya no depende de `trabajoPrevio` (tablero 3d):

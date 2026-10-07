@@ -242,7 +242,8 @@ describe('el botón dice la consecuencia', () => {
 
     // "Anterior" la vuelve a leer, ya hecha, sin abrir nada.
     await tocar(await esperarControl(/^Anterior/))
-    await esperar(() => textoPantalla().includes('Hecha'), 'lo exigido, para leerlo')
+    await esperar(() => textoPantalla().includes('hecha'), 'lo exigido, para leerlo')
+    expect(textoPantalla()).toContain('Qué hacer')
     expect(textoPantalla()).toContain('Pulsar el icono del navegador')
     expect(control('Ir a la acción 2')).not.toBeNull()
   })

@@ -109,15 +109,16 @@ describe('el editor revisa la guía contra la regla 20', () => {
     expect(textoPantalla()).not.toContain('Encadena 4 acciones')
   })
 
-  it('pasa a Información la alerta que solo recuerda algo', async () => {
+  it('señala la alerta que solo recuerda algo, sin ofrecer Información (tarea 307)', async () => {
     await sembrarParaEditar()
     await montar(RUTAS, RUTA)
     await tocar(await esperarControl(/^Pasos/))
 
     await esperar(() => textoPantalla().includes('Empieza como un recordatorio'), 'la pista de la alerta')
-    await tocar(await esperarControl('Pasar a Información'))
-    await esperar(() => !textoPantalla().includes('Empieza como un recordatorio'), 'la pista se va')
-    expect(control(/^Tono del aviso: Información/)).not.toBeNull()
+    expect(textoPantalla()).toContain('Una advertencia es para un riesgo real')
+    // Información ya no se muestra al ejecutar: no hay a dónde "pasarla".
+    expect(control('Pasar a Información')).toBeNull()
+    expect(control(/^Tono del aviso: Precaución/)).not.toBeNull()
   })
 })
 

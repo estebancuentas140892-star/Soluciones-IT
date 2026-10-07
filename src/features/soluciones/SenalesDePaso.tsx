@@ -1,27 +1,26 @@
 import { useId, useState } from 'react'
-import { ArrowElbowDownRight, CaretDown, Code, Eye, MapPin } from '../../components/iconos'
+import { ArrowElbowDownRight, CaretDown, Code, Eye } from '../../components/iconos'
+import { useUrlAdjunto } from '../../components/useUrlAdjunto'
+import { ImagenAmpliable } from '../../components/VisorImagen'
 import { llevaPuntoFinal, ROTULO_RUTA_RAPIDA } from '../../lib/comoHacer'
-import type { MicroPasoComoHacer } from '../../lib/db'
+import type { MicroPasoComoHacer, ResultadoVisual } from '../../lib/db'
+import { ROTULO_DEBES_VER } from '../../lib/resultadoVisual'
 
-// LAS SEÑALES DE UN PASO (encargo del 2026-09-22, secciones 4 y 6).
+// LAS SEÑALES DE UNA ACCIÓN (encargo del 2026-09-22; tareas 303 y 307).
 //
-// Bloques que responden las preguntas de un paso que no son la acción:
-// DÓNDE se hace, CÓMO HACERLO, QUÉ DEBO VER después y el DATO TÉCNICO que
-// la acción necesita. Viven aparte porque los usan las tres vistas de una
-// guía (una acción a la vez, el paso entero y la lectura), la lectura de
-// una guía reutilizada y el portal de asistencia, y ModoFoco ya importa de
+// Lo que acompaña a la instrucción para hacerla: CÓMO HACERLO, el DATO
+// TÉCNICO que necesita y, al final, cómo DEBES VER la pantalla cuando
+// salió bien. Viven aparte porque los usan las tres vistas de una guía (una
+// acción a la vez, el paso entero y la lectura, también "Probar") y la
+// lectura de una guía reutilizada, y ModoFoco ya importa de
 // ProcedimientoVista: tenerlos en cualquiera de los dos cerraría un ciclo
 // de importaciones.
 //
-// JERARQUÍA DE UNA ACCIÓN (tarea 303, regla 27, AD-066). La pantalla
-// responde "¿qué tengo que hacer ahora?" y solo la instrucción manda (26
-// px). Estas señales conservan su papel y su sitio, pero pesan menos que
-// ella, y se distinguen por icono, palabra, tipografía y espacio antes que
-// por fondos y bordes:
+// LA EJECUCIÓN MÍNIMA (tarea 307, AD-068). La pantalla responde "¿qué hago
+// ahora y cómo lo hago?" y solo la instrucción manda (26 px). Estas señales
+// pesan menos que ella y se distinguen por icono, palabra, tipografía y
+// espacio antes que por fondos y bordes:
 //
-//   - Dónde orienta: neutro, con su chincheta y su palabra. Sin el
-//     amarillo ni la barra que lo hacían parecer una advertencia (sección
-//     13 de la auditoría UX: el ámbar con texto es "requiere atención").
 //   - Cómo hacerlo: las microacciones que hacen la acción, pegadas a la
 //     instrucción y en voz más baja que ella. Primero la ruta rápida
 //     (los elementos en orden, para quien ya conoce el sitio) y, plegado,
@@ -29,24 +28,14 @@ import type { MicroPasoComoHacer } from '../../lib/db'
 //     caja ni color de estado: es apoyo operativo, no un aviso ni un valor.
 //   - Dato técnico: un valor exacto que la acción necesita, con su rótulo
 //     y en monoespaciada, subordinado a la instrucción.
-//   - Debes ver comprueba, después del trabajo: el verde va en su icono y
-//     su palabra, sin caja, para no competir con la acción antes de hacerla.
+//   - Debes ver: la IMAGEN del resultado, plegada. No ocupa sitio hasta que
+//     se pide, y sin imagen no existe.
 //
-// El único bloque del cuerpo de un paso con fondo de color sigue siendo el
-// riesgo real (Precaución e Importante, en tonos.ts).
-
-// DÓNDE HACERLO: dónde hay que estar para hacer la acción. Solo orienta.
-export function DondeSeHacePaso({ lugar }: { lugar: string }) {
-  return (
-    <p className="flex items-start gap-2 text-[14px] leading-snug text-noct-neutral-300">
-      <MapPin size={16} className="mt-[2px] shrink-0 text-noct-neutral-400" aria-hidden />
-      <span className="min-w-0 text-pretty [overflow-wrap:anywhere]">
-        <span className="font-medium text-noct-neutral-400">Dónde: </span>
-        {lugar}
-      </span>
-    </p>
-  )
-}
+// "Dónde" y el "Debes ver" de texto se retiraron (tarea 307): la guía ya
+// lleva al sitio, lo que cuesta encontrar es la ubicación de una
+// microacción, y una frase sobre una ventana que nunca se ha visto no la
+// enseña. El único bloque con fondo de color sigue siendo el riesgo real
+// (Precaución e Importante, en tonos.ts).
 
 // Tamaños según dónde se lee: bajo la instrucción de 26 px (una acción a
 // la vez), bajo la fila de una tarea (paso entero, lectura y "Probar") o
@@ -172,15 +161,84 @@ export function DatoTecnico({ texto }: { texto: string }) {
   )
 }
 
-// QUÉ DEBO VER DESPUÉS: el resultado que confirma que el paso salió.
-export function DebesVerPaso({ texto }: { texto: string }) {
+// Tamaños según dónde se lee, los mismos tres sitios que "Cómo hacerlo".
+const TAMANOS_DEBES_VER = {
+  accion: { boton: 'text-[14px]', icono: 16 },
+  fila: { boton: 'text-[13px]', icono: 15 },
+  lectura: { boton: 'text-[13px]', icono: 14 },
+} as const
+
+// DEBES VER (tarea 307): cómo debe quedar la pantalla cuando la acción
+// salió bien, para quien nunca la ha visto. Es una IMAGEN, no un párrafo:
+//
+//   - Plegada al llegar. No ocupa sitio hasta que se pide, y se pide con un
+//     control de 44 px con su ojo y su palabra en el verde de lo que
+//     confirma, después de todo lo que se usa para hacer la acción.
+//   - Al abrirla, la imagen a todo el ancho; tocarla la amplía en el visor
+//     de siempre (zoom con dos dedos, cerrar con Escape). La descripción,
+//     si el autor la escribió, es su texto alternativo y el pie del visor.
+//   - Sin imagen, nada: no se rellena el hueco con texto (`resultado`).
+//
+// La imagen se pide solo al abrir (el componente de dentro se monta
+// entonces): una pantalla que no la necesita no la descarga. Lo desplegado
+// es de esta acción: quien la cambia por otra le da otra `key`, y vuelve
+// plegada.
+export function DebesVer({
+  resultado,
+  variante = 'accion',
+  className = '',
+}: {
+  resultado: ResultadoVisual | null
+  variante?: keyof typeof TAMANOS_DEBES_VER
+  className?: string
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const idImagen = useId()
+  if (!resultado) return null
+  const tamano = TAMANOS_DEBES_VER[variante]
   return (
-    <p className="flex items-start gap-2 text-[15px] leading-snug text-noct-neutral-200">
-      <Eye size={17} className="mt-[2px] shrink-0 text-noct-exito" aria-hidden />
-      <span className="min-w-0 text-pretty [overflow-wrap:anywhere]">
-        <span className="font-semibold text-noct-exito">Debes ver: </span>
-        {texto}
-      </span>
-    </p>
+    <div className={`flex min-w-0 flex-col gap-1.5 ${className}`}>
+      <button
+        type="button"
+        aria-expanded={abierto}
+        aria-controls={abierto ? idImagen : undefined}
+        onClick={() => setAbierto((valor) => !valor)}
+        className={`-ml-1 inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-1 font-medium text-noct-exito hover:bg-noct-text/[.05] ${tamano.boton}`}
+      >
+        <Eye size={tamano.icono} className="shrink-0" aria-hidden />
+        {ROTULO_DEBES_VER}
+        <CaretDown
+          size={13}
+          className={`shrink-0 text-noct-neutral-400 transition-transform ${abierto ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </button>
+      {abierto && (
+        <div id={idImagen}>
+          <ImagenDelResultado resultado={resultado} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ImagenDelResultado({ resultado }: { resultado: ResultadoVisual }) {
+  const url = useUrlAdjunto(resultado.adjunto.referencia)
+  const descripcion = resultado.descripcion ?? null
+  if (!url) {
+    return (
+      <p className="rounded-lg border border-dashed border-noct-neutral-700 px-3 py-4 text-center text-[12.5px] leading-snug text-noct-neutral-400">
+        La imagen no está en este dispositivo. Si estás sin conexión, usa "Descargar todo para offline" con señal.
+      </p>
+    )
+  }
+  return (
+    <ImagenAmpliable
+      url={url}
+      alt={descripcion ?? 'Cómo debe verse la pantalla al terminar esta acción'}
+      pie={descripcion}
+      claseBoton="border border-noct-divider bg-noct-surface"
+      className="max-h-80 w-full object-contain"
+    />
   )
 }

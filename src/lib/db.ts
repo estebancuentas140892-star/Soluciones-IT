@@ -91,10 +91,16 @@ export interface PasoAdjunto {
   tipo: string
 }
 
-// Tono visual de un bloque de aviso: cada uno se pinta con su icono y
-// color propios para que el tecnico distinga de un vistazo un dato
-// util (info, consejo) de un riesgo (precaucion, importante).
+// Tono de un bloque de aviso. Desde la tarea 307 un aviso es un riesgo
+// real (precaucion, importante) o un valor exacto que la accion necesita
+// (dato). 'info' y 'consejo' son HEREDADOS: iban plegados en "Mas
+// informacion", que la ejecucion minima retiro. Se siguen leyendo y
+// guardando (y el editor los enseña como tales para que el autor decida),
+// pero la ejecucion no los muestra y el editor ya no los crea. Ver tonos.ts.
 export type TonoAviso = 'info' | 'precaucion' | 'importante' | 'consejo' | 'dato'
+
+/** Los tonos que el editor ofrece y la ejecución enseña (tarea 307). */
+export type TonoAvisoVigente = Exclude<TonoAviso, 'info' | 'consejo'>
 
 // Tipo de un bloque dentro de un paso:
 // - 'tarea': un elemento del checklist con casilla. Solo los bloques
@@ -216,6 +222,17 @@ export interface MicroPasoComoHacer {
   ubicacion?: string
 }
 
+// LA IMAGEN DE "DEBES VER" DE UNA ACCIÓN (tarea 307). Reutiliza el adjunto
+// de siempre (`PasoAdjunto`: referencia de Storage, nombre y tipo), así que
+// se sube, se encola sin conexión, se guarda para usar sin red y se amplía
+// igual que cualquier imagen de un paso. `descripcion` es el texto breve de
+// lo que se ve, para quien no ve la imagen (texto alternativo y pie del
+// visor); ausente si no se escribió. Nunca se enseña como un párrafo.
+export interface ResultadoVisual {
+  adjunto: PasoAdjunto
+  descripcion?: string
+}
+
 // Dónde sigue la ruta al terminar un paso cuando NO es el de abajo (tarea
 // 302): otro paso posterior o el final de la guía. Es lo que deja que dos
 // caminos vuelvan a juntarse en un paso común sin duplicarlo: el último
@@ -302,6 +319,16 @@ export interface BloquePaso {
   // normalizador no lo conoce): orden de despliegue de la regla 24 antes de
   // escribirlo en guías reales.
   comoHacer?: MicroPasoComoHacer[]
+  // DEBES VER (tarea 307): la imagen de cómo debe verse la pantalla o el
+  // resultado cuando ESTA acción salió bien. Solo en tareas de acción o de
+  // comprobación (una decisión se responde, no deja un resultado que mirar),
+  // opcional y ausente cuando no hay imagen. Es una relación explícita: la
+  // imagen no se deduce por su posición entre los bloques. Ver
+  // `ResultadoVisual` y `src/lib/resultadoVisual.ts`. Vive en el JSON
+  // `procedimiento` (sin columna ni versión de Dexie) y una copia de la app
+  // anterior al campo que edite y guarde la guía lo descarta: orden de
+  // despliegue de la regla 24 antes de añadirlo a guías reales.
+  resultadoVisual?: ResultadoVisual
   vinculoProtegido: VinculoProtegido | null
   // A QUE PERTENECE ESTE APOYO. Solo aplica a los bloques que NO son
   // 'tarea' (una tarea no es apoyo de nadie: es el trabajo). null en
@@ -336,33 +363,26 @@ export interface BloquePaso {
 export interface PasoProcedimiento {
   id: string
   titulo: string
-  // Descripcion muy corta (1 linea) de para que sirve el paso. Ayuda a
-  // entender el proposito antes de empezar; opcional, no se muestra si
-  // esta vacio. En la ejecucion va plegado como "Para qué" (explica, no
-  // ordena). NO es lo que se ve al terminar: eso es `resultado`.
-  objetivo: string
-  // DÓNDE SE HACE (encargo del 2026-09-22, sección 6): el lugar, menú,
-  // ventana o sección que hay que localizar para hacer el paso ("Panel de
-  // control > Dispositivos e impresoras", "Menú lateral de SGC").
-  // Opcional; vacío en todo lo escrito antes de que existiera. La
-  // ejecución lo enseña con la primera acción del paso, neutro y con su
-  // chincheta: solo orienta (tarea 303).
-  //
-  // `lugar` y `resultado` viven en el JSON del procedimiento, así que no
-  // necesitan columna en Supabase ni versión nueva de Dexie. Una copia de
-  // la app anterior a estos campos que edite y guarde la guía los
-  // descarta (su normalizador no los conoce): conviene actualizar los
-  // teléfonos antes de rellenarlos.
-  lugar: string
-  // QUÉ DEBO VER DESPUÉS (encargo del 2026-09-22, sección 6): lo que
-  // aparece o queda al terminar el paso y confirma que salió ("La ventana
-  // Ejecutar", "La impresora en la lista con la marca verde"). Opcional;
-  // vacío en todo lo escrito antes. La ejecución lo enseña como "Debes
-  // ver", en verde, con la última acción del paso. Es un campo aparte y no
-  // se reutiliza `objetivo`: un objetivo dice para qué sirve el paso
-  // ("Dejar la impresora compartida") y pintado como "Debes ver"
-  // convertiría objetivos correctos en frases sin sentido (AD-043).
-  resultado: string
+  // TRES TEXTOS HEREDADOS DEL PASO (obsoletos desde la tarea 307, AD-068).
+  // La ejecución mínima ya no los enseña y el editor ya no los ofrece:
+  //   - `objetivo`: el "Para qué" del paso, que iba plegado en "Más
+  //     información". Lo que la guía consigue lo dice su objetivo general.
+  //   - `lugar`: el "Dónde" del paso ("Nuevo Outlook"). La guía ya lleva
+  //     hasta ahí, y lo que cuesta encontrar es la ubicación de una
+  //     microacción de "Cómo hacerlo" (`MicroPasoComoHacer.ubicacion`).
+  //   - `resultado`: el "Debes ver" de texto. "Debes ver" es ahora una
+  //     imagen por acción (`BloquePaso.resultadoVisual`).
+  // Se siguen LEYENDO y GUARDANDO tal cual (una guía que los tenga no se
+  // rompe ni pierde nada al editarse; el buscador y el historial los
+  // siguen viendo), pero ausentes cuando están vacíos: un paso nuevo no los
+  // trae. Ningún dato se convierte solo: qué hacer con los textos reales lo
+  // decide quien escribe el contenido (regla 26).
+  /** @deprecated Tarea 307: ya no se muestra ni se ofrece; se conserva al leer y guardar. */
+  objetivo?: string
+  /** @deprecated Tarea 307: ya no se muestra ni se ofrece; se conserva al leer y guardar. */
+  lugar?: string
+  /** @deprecated Tarea 307: ya no se muestra ni se ofrece; se conserva al leer y guardar. */
+  resultado?: string
   // Cuerpo del paso: tareas con casilla, avisos e imagenes en el orden
   // que definio el autor. Antes era `instrucciones: string[]`; al
   // normalizar, cada instruccion vieja se migra a un bloque 'tarea'.

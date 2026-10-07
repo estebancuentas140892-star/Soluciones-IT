@@ -14,9 +14,11 @@ import type {
   TipoTarea,
   TipoVinculoProtegido,
   TonoAviso,
+  TonoAvisoVigente,
   VinculoProtegido,
 } from './db'
 import { comoHacerDe, normalizarComoHacer } from './comoHacer'
+import { normalizarResultadoVisual, resultadoVisualDe } from './resultadoVisual'
 import { texto } from './texto'
 import { vinculoDelEquipo } from './vinculoProtegido'
 
@@ -29,9 +31,6 @@ export function crearPaso(): PasoProcedimiento {
   return {
     id: crypto.randomUUID(),
     titulo: '',
-    objetivo: '',
-    lugar: '',
-    resultado: '',
     bloques: [],
     adjuntos: [],
     vinculoProtegido: null,
@@ -96,19 +95,19 @@ function alcanceNuevo(tareaId: string | null): { alcance: AlcanceApoyo; tareaId:
   return tareaId ? { alcance: 'tarea', tareaId } : { alcance: 'paso', tareaId: null }
 }
 
-// UN AVISO NUEVO NACE COMO INFORMACIÓN, no como alerta (regla 20c de
-// REGLAS.md). Nacía en 'precaucion', de cuando el botón se llamaba
-// "+ Advertencia": cualquier nota que el autor no se acordara de
-// suavizar salía en la ejecución como alerta de color, y con cinco o
-// seis por guía las alertas dejaban de destacar. Ahora la alerta
-// (precaución o importante) es una decisión del autor, tomada con el
-// selector de tono, para un riesgo real.
-export function crearBloqueAviso(tareaId: string | null = null): BloquePaso {
+// UN AVISO NUEVO ES UN RIESGO O UN DATO (tarea 307). Desde el
+// 2026-09-17 nacía como Información, plegada al ejecutar, para que una
+// nota cualquiera no saliera como alerta; la ejecución mínima retiró "Más
+// información", así que una nota ya no tiene dónde verse y el editor deja
+// de crearlas. Quien añade un aviso dice qué es: una advertencia (un
+// riesgo real, regla 20 c) o un dato técnico (un valor exacto). Por
+// defecto, la advertencia más suave.
+export function crearBloqueAviso(tareaId: string | null = null, tono: TonoAvisoVigente = 'precaucion'): BloquePaso {
   return {
     ...CAMPOS_BLOQUE_VACIOS,
     id: crypto.randomUUID(),
     tipo: 'aviso',
-    tono: 'info',
+    tono,
     ...alcanceNuevo(tareaId),
   }
 }
@@ -313,11 +312,7 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
   return {
     id: typeof origen.id === 'string' && origen.id !== '' ? origen.id : crypto.randomUUID(),
     titulo: texto(origen.titulo),
-    objetivo: texto(origen.objetivo),
-    // Opcionales desde el 2026-09-22: lo anterior no los trae y quedan
-    // vacíos.
-    lugar: texto(origen.lugar),
-    resultado: texto(origen.resultado),
+    ...textosHeredados(origen),
     bloques: sanearReferenciasDeTarea(normalizarBloques(origen)),
     adjuntos: normalizarAdjuntos(origen),
     vinculoProtegido: normalizarVinculoProtegido(origen),
@@ -327,6 +322,23 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
     solucionArticuloTitulo: solucionArticuloId ? texto(origen.solucionArticuloTitulo) : '',
     ...conAlTerminar(normalizarAlTerminar(origen.alTerminar)),
   }
+}
+
+// LOS TEXTOS HEREDADOS DEL PASO (`objetivo`, `lugar` y `resultado`,
+// obsoletos desde la tarea 307): se conservan tal como llegaron cuando
+// dicen algo, para que ninguna guía pierda su contenido al leerse o al
+// guardarse, y no se escriben cuando están vacíos. Nadie los muestra ni los
+// crea; recortarlos es lo único que hace el guardado (`recortar`).
+const CLAVES_HEREDADAS = ['objetivo', 'lugar', 'resultado'] as const
+type TextosHeredados = Pick<PasoProcedimiento, (typeof CLAVES_HEREDADAS)[number]>
+
+function textosHeredados(origen: Partial<Record<keyof TextosHeredados, unknown>>, recortar = false): TextosHeredados {
+  const salida: TextosHeredados = {}
+  for (const clave of CLAVES_HEREDADAS) {
+    const valor = texto(origen[clave])
+    if (valor.trim() !== '') salida[clave] = recortar ? valor.trim() : valor
+  }
+  return salida
 }
 
 // Un id de verdad (texto no vacío) o null.
@@ -553,6 +565,10 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
   // la clave no aparece: una guía de antes del campo se lee exactamente
   // igual, y un texto suelto donde iría la lista no se convierte en nada.
   const comoHacer = tipoTarea === 'accion' ? normalizarComoHacer(origen.comoHacer) : []
+  // "DEBES VER" (tarea 307): la imagen del resultado de una acción o de una
+  // comprobación, tolerada (`normalizarResultadoVisual`). Sin ella, o en
+  // una decisión, la clave no aparece.
+  const resultadoVisual = tipoTarea === 'decision' ? null : normalizarResultadoVisual(origen.resultadoVisual)
   // Vinculo protegido (tarea 40, generalizado en P2): opcional en
   // cualquier tarea, sin depender del tipoTarea.
   return {
@@ -565,6 +581,7 @@ function normalizarBloque(valor: unknown): BloquePaso | null {
     decisionArticuloTitulo: decisionArticuloId ? texto(origen.decisionArticuloTitulo) : '',
     ...(opciones.length > 0 ? { opciones } : {}),
     ...(comoHacer.length > 0 ? { comoHacer } : {}),
+    ...(resultadoVisual ? { resultadoVisual } : {}),
     vinculoProtegido: normalizarVinculoProtegido(origen),
   }
 }
@@ -711,6 +728,11 @@ function duplicarBloques(bloques: BloquePaso[], traducirPaso: (pasoId: string) =
     // sus ids: solo tienen que ser únicos dentro de su tarea, y la tarea ya
     // es otra. Copiadas, no compartidas: editar la copia no toca el original.
     ...(bloque.comoHacer ? { comoHacer: bloque.comoHacer.map((micro) => ({ ...micro })) } : {}),
+    // La imagen de "Debes ver" (tarea 307) conserva su referencia de
+    // Storage, como el resto de adjuntos: el archivo se comparte, no se copia.
+    ...(bloque.resultadoVisual
+      ? { resultadoVisual: { ...bloque.resultadoVisual, adjunto: { ...bloque.resultadoVisual.adjunto } } }
+      : {}),
   }))
 }
 
@@ -734,11 +756,11 @@ export function textoDeProcedimiento(procedimiento: Procedimiento | null): strin
   ]
   for (const paso of procedimiento.pasos) {
     partes.push(paso.titulo)
-    partes.push(paso.objetivo)
-    // El lugar y el resultado del paso (2026-09-22): buscar "dispositivos
-    // e impresoras" encuentra la guía que se hace ahí, y buscar lo que
-    // aparece en la pantalla ("ventana ejecutar"), la que lo enseña.
-    partes.push(paso.lugar, paso.resultado)
+    // Los textos heredados del paso (objetivo, lugar y resultado) siguen
+    // en el índice mientras existan: ya no se muestran al ejecutar (tarea
+    // 307), pero quitarlos cambiaría lo que encuentra el buscador, que esta
+    // tarea no toca. Una guía que no los tiene no aporta nada.
+    partes.push(paso.objetivo ?? '', paso.lugar ?? '', paso.resultado ?? '')
     // Textos de tareas, avisos y pies de imagen (todo el cuerpo del
     // paso entra al indice para que "back up" encuentre el articulo).
     partes.push(...paso.bloques.map((b) => b.texto))
@@ -868,12 +890,12 @@ export function prepararProcedimientoParaGuardar({
   const formasBusqueda = frasesDeBusqueda(formasBusquedaTexto.split('\n'))
 
   const pasosLimpios = pasos
-    .map(({ alTerminar, ...paso }) => ({
+    .map(({ alTerminar, objetivo, lugar, resultado, ...paso }) => ({
       ...paso,
       titulo: paso.titulo.trim(),
-      objetivo: paso.objetivo.trim(),
-      lugar: paso.lugar.trim(),
-      resultado: paso.resultado.trim(),
+      // Los textos heredados se guardan como llegaron (recortados), y
+      // ausentes si están vacíos: el editor ya no los ofrece (tarea 307).
+      ...textosHeredados({ objetivo, lugar, resultado }, true),
       bloques: limpiarBloques(paso.bloques),
       vinculoProtegido: limpiarVinculoProtegido(paso.vinculoProtegido),
       subArticuloTitulo: paso.subArticuloId ? paso.subArticuloTitulo.trim() : '',
@@ -949,6 +971,9 @@ function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
       // vacías y solo en una tarea de acción (`comoHacerDe`). Quitarlas
       // todas en el editor quita la clave: nunca se guarda una lista vacía.
       const comoHacer = comoHacerDe(bloque)
+      // La imagen de "Debes ver" (tarea 307), solo donde se admite y con su
+      // descripción recortada (`resultadoVisualDe`).
+      const resultadoVisual = resultadoVisualDe(bloque)
       const limpio: BloquePaso = {
         ...bloque,
         texto: bloque.texto.trim(),
@@ -962,10 +987,12 @@ function limpiarBloques(bloques: BloquePaso[]): BloquePaso[] {
       }
       delete limpio.opciones
       delete limpio.comoHacer
+      delete limpio.resultadoVisual
       return {
         ...limpio,
         ...(opciones ? { opciones } : {}),
         ...(comoHacer.length > 0 ? { comoHacer } : {}),
+        ...(resultadoVisual ? { resultadoVisual } : {}),
       }
     })
     .filter((bloque) => {

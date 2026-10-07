@@ -121,48 +121,31 @@ describe('la ruta del procedimiento', () => {
   })
 })
 
-describe('qué hacer, dónde y qué debo ver', () => {
-  it('el lugar acompaña a la primera acción y lo que debe verse, a la última', async () => {
+// LA EJECUCIÓN MÍNIMA (tarea 307): la guía de la ruta trae los textos
+// heredados del paso ("Dónde", "Para qué" y el "Debes ver" de texto). Se
+// leen sin romper nada, pero ya no se muestran en ningún sitio de la
+// ejecución.
+describe('qué hacer, sin los textos heredados del paso (tarea 307)', () => {
+  it('una guía con dónde, para qué y debes ver de texto carga y no los enseña en ninguna acción', async () => {
     await sembrarRuta()
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes('Presiona Windows + R'), 'la primera acción')
 
-    // Primera acción: dónde sí, debes ver todavía no.
-    expect(textoPantalla()).toContain('Dónde:')
-    expect(textoPantalla()).toContain('Escritorio de Windows')
     expect(textoPantalla()).toContain('Qué hacer')
-    expect(textoPantalla()).not.toContain('Debes ver:')
     expect(textoPantalla()).toContain('Credencial necesaria')
     expect(textoPantalla()).toContain('Acceso de prueba al equipo')
+    for (const retirado of ['Dónde', 'Escritorio de Windows', 'Más información', 'Para qué', 'Llegar a la lista de impresoras de prueba']) {
+      expect(textoPantalla()).not.toContain(retirado)
+    }
 
-    // Última acción del paso: al revés.
+    // La última acción del paso tampoco: sin imagen, no hay "Debes ver".
     await tocar(await esperar(() => control(/^Completar y seguir$/), 'completar y seguir'))
     await esperar(() => textoPantalla().includes('Escribe control printers'), 'la segunda acción')
-    expect(textoPantalla()).toContain('Debes ver:')
-    expect(textoPantalla()).toContain('La ventana Dispositivos e impresoras')
-    expect(textoPantalla()).not.toContain('Dónde:')
+    expect(textoPantalla()).not.toContain('Debes ver')
+    expect(textoPantalla()).not.toContain('La ventana Dispositivos e impresoras')
   })
 
-  it('el objetivo no se pinta como "Debes ver": queda plegado como "Para qué"', async () => {
-    await sembrarRuta()
-    await montar(RUTAS, RUTA)
-    await esperar(() => textoPantalla().includes('Presiona Windows + R'), 'la primera acción')
-
-    // Plegado: no está a la vista hasta que se pide.
-    expect(textoPantalla()).not.toContain('Llegar a la lista de impresoras de prueba')
-    await tocar(await esperar(() => control(/^Más información$/), 'más información'))
-    await esperar(() => textoPantalla().includes('Para qué:'), 'el para qué')
-    expect(textoPantalla()).toContain('Llegar a la lista de impresoras de prueba')
-
-    // Y en la última acción, "Debes ver" dice el resultado, no el objetivo.
-    await tocar(await esperar(() => control(/^Completar y seguir$/), 'completar y seguir'))
-    await esperar(() => textoPantalla().includes('Debes ver:'), 'debes ver')
-    const texto = textoPantalla()
-    expect(texto).toContain('Debes ver: La ventana Dispositivos e impresoras')
-    expect(texto).not.toContain('Debes ver: Llegar a la lista')
-  })
-
-  it('el paso entero enseña dónde, para qué, la credencial y lo que debe verse, en ese orden', async () => {
+  it('el paso entero enseña su título, sus acciones y la credencial, sin dónde, para qué ni debes ver de texto', async () => {
     await sembrarRuta()
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes('Paso 1 de 3'), 'el paso 1')
@@ -175,17 +158,10 @@ describe('qué hacer, dónde y qué debo ver', () => {
     )
 
     const texto = textoPantalla()
-    // El objetivo se lee entero bajo la cabecera, sin rótulo de color.
-    expect(texto).toContain('Llegar a la lista de impresoras de prueba')
-    expect(texto).not.toContain('Debes ver: Llegar a la lista')
-    const donde = texto.indexOf('Dónde:')
-    const primeraAccion = texto.indexOf('Presiona Windows + R')
-    const credencial = texto.indexOf('Credencial necesaria')
-    const debesVer = texto.indexOf('Debes ver: La ventana Dispositivos e impresoras')
-    expect(donde).toBeGreaterThan(-1)
-    expect(donde).toBeLessThan(primeraAccion)
-    expect(primeraAccion).toBeLessThan(credencial)
-    expect(credencial).toBeLessThan(debesVer)
+    for (const retirado of ['Dónde', 'Escritorio de Windows', 'Llegar a la lista de impresoras de prueba', 'Debes ver', 'La ventana Dispositivos e impresoras']) {
+      expect(texto).not.toContain(retirado)
+    }
+    expect(texto.indexOf('Presiona Windows + R')).toBeLessThan(texto.indexOf('Credencial necesaria'))
   })
 
   it('una comprobación se anuncia con su palabra, no solo con un color', async () => {
@@ -208,7 +184,7 @@ describe('qué hacer, dónde y qué debo ver', () => {
     expect(control(/^Comprobado/)).toBeNull()
   })
 
-  it('un riesgo real se lee antes de la instrucción, con su palabra', async () => {
+  it('un riesgo real se lee con su palabra, justo bajo la instrucción y antes de hacerla (tarea 307)', async () => {
     await sembrarRuta()
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes('Paso 1 de 3'), 'el paso 1')
@@ -217,6 +193,7 @@ describe('qué hacer, dónde y qué debo ver', () => {
     await esperar(() => textoPantalla().includes('Escribe la dirección'), 'la acción del paso 2')
     const texto = textoPantalla()
     expect(texto).toContain('Precaución.')
-    expect(texto.indexOf('Precaución.')).toBeLessThan(texto.indexOf('Escribe la dirección'))
+    // Qué hacer primero; el riesgo, en la misma pantalla y a la vista.
+    expect(texto.indexOf('Escribe la dirección')).toBeLessThan(texto.indexOf('Precaución.'))
   })
 })

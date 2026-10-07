@@ -8,7 +8,11 @@ import { descripcionDeNodo, etiquetaDeRuta, vecinosDeRuta } from './rutaVisual'
 // contenido de ningún paso; debajo sigue mandando el paso actual.
 //
 //   Escritorio y tableta: horizontal, con flechas, partiendo línea si
-//   hace falta, y debajo "PASO 3 DE 7" con el título del paso.
+//   hace falta, y debajo "PASO 3 DE 7" con el título del paso. En la
+//   ejecución de una acción a la vez, sin el título (tarea 307): allí la
+//   instrucción es la única frase que dice qué hacer, y el título del paso
+//   a 17 px justo encima competía con ella. Sigue en el nodo actual de la
+//   ruta, en su `title` y en su nombre accesible.
 //   Teléfono: NADA desde la propuesta final de Claude Design
 //   (2026-10-01). La versión vertical (paso anterior, actual y siguiente,
 //   con "Ver la ruta completa") ocupaba un tercio de la pantalla y
@@ -33,6 +37,8 @@ interface Props {
   indiceActual: number
   /** Mover la vista a un paso. No marca ni completa nada. */
   onIrAPaso: (indice: number) => void
+  /** ¿Se repite el título del paso actual bajo la ruta? No en la ejecución de una acción a la vez. */
+  conTituloDelPaso?: boolean
 }
 
 function clasesNodo(estado: EstadoPaso): string {
@@ -58,7 +64,13 @@ function MarcaNodo({ resumen }: { resumen: ResumenPaso }) {
   )
 }
 
-export function RutaProcedimiento({ resumenes, total: totalRuta = resumenes.length, indiceActual, onIrAPaso }: Props) {
+export function RutaProcedimiento({
+  resumenes,
+  total: totalRuta = resumenes.length,
+  indiceActual,
+  onIrAPaso,
+  conTituloDelPaso = true,
+}: Props) {
   if (resumenes.length === 0) return null
   const { actual } = vecinosDeRuta(resumenes, indiceActual)
   if (!actual) return null
@@ -80,8 +92,8 @@ export function RutaProcedimiento({ resumenes, total: totalRuta = resumenes.leng
               title={resumen.titulo}
               // Tope de ancho para que la ruta siga siendo compacta; más
               // holgado desde `lg`, donde sobra sitio. Lo que no quepa se
-              // lee entero en `title`, en el nombre accesible y, para el
-              // paso actual, justo debajo.
+              // lee entero en `title` y en el nombre accesible (y, fuera de
+              // la acción a la vez, el del paso actual, justo debajo).
               className={`inline-flex min-h-8 max-w-[24ch] items-center gap-1.5 rounded-full border px-2.5 text-[13px] hover:bg-noct-text/[.06] lg:max-w-[34ch] ${clasesNodo(resumen.estado)}`}
             >
               <MarcaNodo resumen={resumen} />
@@ -104,7 +116,7 @@ export function RutaProcedimiento({ resumenes, total: totalRuta = resumenes.leng
           Paso {actual.indice + 1}
           {totalRuta !== null && ` de ${totalRuta}`}
         </span>
-        <span className="text-[17px] font-medium text-noct-text">{actual.titulo}</span>
+        {conTituloDelPaso && <span className="text-[17px] font-medium text-noct-text">{actual.titulo}</span>}
         {actual.estado === 'hecho' && (
           <span className="inline-flex items-center gap-1 text-noct-exito">
             <Check size={13} aria-hidden />

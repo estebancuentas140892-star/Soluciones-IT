@@ -1,6 +1,7 @@
 import { comoHacerDe } from '../../lib/comoHacer'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento, Procedimiento, TipoBloque } from '../../lib/db'
 import { normalizarProcedimiento, tareasDe } from '../../lib/procedimiento'
+import { resultadoVisualDe } from '../../lib/resultadoVisual'
 import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
 
 // Convierte el cambio de un procedimiento (guardado en el historial
@@ -158,22 +159,21 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
     else cambios.push(`Se modificó el título del Paso ${numero}: "${previo.titulo}" → "${actual.titulo}".`)
   }
 
-  if (previo.objetivo !== actual.objetivo) {
+  // Los textos heredados del paso (objetivo, lugar y resultado; obsoletos
+  // desde la tarea 307) ya no se editan en la app, pero siguen en el JSON y
+  // quien escribe el contenido puede cambiarlos o quitarlos: el historial
+  // lo sigue diciendo. Ausente o vacío es lo mismo: no es un cambio.
+  if ((previo.objetivo ?? '') !== (actual.objetivo ?? '')) {
     if (!previo.objetivo) cambios.push(`Se definió el objetivo del ${etiqueta}.`)
     else if (!actual.objetivo) cambios.push(`Se quitó el objetivo del ${etiqueta}.`)
     else cambios.push(`Se actualizó el objetivo del ${etiqueta}.`)
   }
-
-  // Dónde se hace y qué debe verse al terminar (2026-09-22), con las
-  // palabras con que los lee el técnico. Una guía guardada antes no los
-  // trae y el normalizador los deja vacíos: vacío contra vacío no es un
-  // cambio.
-  if (previo.lugar !== actual.lugar) {
+  if ((previo.lugar ?? '') !== (actual.lugar ?? '')) {
     if (!previo.lugar) cambios.push(`Se definió dónde se hace el ${etiqueta}: "${actual.lugar}".`)
     else if (!actual.lugar) cambios.push(`Se quitó dónde se hace el ${etiqueta}.`)
     else cambios.push(`Se cambió dónde se hace el ${etiqueta}: "${previo.lugar}" → "${actual.lugar}".`)
   }
-  if (previo.resultado !== actual.resultado) {
+  if ((previo.resultado ?? '') !== (actual.resultado ?? '')) {
     if (!previo.resultado) cambios.push(`Se definió qué debe verse al terminar el ${etiqueta}: "${actual.resultado}".`)
     else if (!actual.resultado) cambios.push(`Se quitó qué debe verse al terminar el ${etiqueta}.`)
     else cambios.push(`Se cambió qué debe verse al terminar el ${etiqueta}: "${previo.resultado}" → "${actual.resultado}".`)
@@ -186,6 +186,9 @@ function diffPaso(previo: PasoProcedimiento, actual: PasoProcedimiento, indice: 
   // lo lee el técnico. Sin esto, cambiar solo el recorrido de una acción
   // quedaba como "Se actualizó el procedimiento.", sin decir dónde.
   agregarLineasComoHacer(cambios, previo, actual, etiqueta)
+
+  // La imagen de "Debes ver" de cada instrucción (tarea 307).
+  agregarLineasDebesVer(cambios, previo, actual, etiqueta)
 
   const avisos = diffLista(textosDeBloque(previo, 'aviso'), textosDeBloque(actual, 'aviso'))
   agregarLineasAvisos(cambios, avisos, etiqueta)
@@ -295,6 +298,39 @@ function firmaComoHacer(tarea: BloquePaso): string {
   const microPasos = comoHacerDe(tarea)
   if (microPasos.length === 0) return ''
   return JSON.stringify(microPasos.map((micro) => [micro.accion, micro.elemento, micro.ubicacion ?? '']))
+}
+
+// "Debes ver" de cada tarea (tarea 307), por tarea y con lo que cambió:
+// la imagen o su descripción.
+function agregarLineasDebesVer(
+  cambios: string[],
+  previo: PasoProcedimiento,
+  actual: PasoProcedimiento,
+  etiqueta: string,
+): void {
+  const antes = new Map(tareasDe(previo.bloques).map((tarea) => [tarea.id, firmaDebesVer(tarea)]))
+  let anadidas = 0
+  let cambiadas = 0
+  let quitadas = 0
+  for (const tarea of tareasDe(actual.bloques)) {
+    const ahora = firmaDebesVer(tarea)
+    const anterior = antes.get(tarea.id) ?? ''
+    if (anterior === ahora) continue
+    if (anterior === '') anadidas++
+    else if (ahora === '') quitadas++
+    else cambiadas++
+  }
+  const una = (n: number) => (n === 1 ? 'una instrucción' : `${n} instrucciones`)
+  if (anadidas > 0) cambios.push(`Se añadió la imagen de «Debes ver» en ${una(anadidas)} del ${etiqueta}.`)
+  if (cambiadas > 0) cambios.push(`Se cambió la imagen de «Debes ver» en ${una(cambiadas)} del ${etiqueta}.`)
+  if (quitadas > 0) cambios.push(`Se quitó la imagen de «Debes ver» de ${una(quitadas)} del ${etiqueta}.`)
+}
+
+// Lo que se ve de la imagen de "Debes ver" de una tarea, para compararla:
+// '' si no tiene.
+function firmaDebesVer(tarea: BloquePaso): string {
+  const resultado = resultadoVisualDe(tarea)
+  return resultado ? JSON.stringify([resultado.adjunto.referencia, resultado.descripcion ?? '']) : ''
 }
 
 function agregarLineasAvisos(cambios: string[], diff: DiffLista, etiqueta: string): void {

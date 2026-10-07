@@ -83,10 +83,9 @@
        verde  (exito)   inicio, accion completada, "Debes ver"
        azul   (accion)  la accion en curso: entrar, abrir, seleccionar
        rojo   (error)   riesgo real, detenerse ("Cuidado", "Importante")
-     "Donde" no tiene color: solo orienta, asi que va neutro, con su
-     chincheta y su palabra (tarea 303, seccion 13 de la auditoria UX).
-     Hasta entonces usaba un amarillo propio, `noct-lugar`, que se retiro:
-     se leia como una advertencia y competia con la accion. El ambar de
+     "Donde" ya no forma parte de la ejecucion (tarea 307); su amarillo
+     propio, `noct-lugar`, se habia retirado en la tarea 303 porque se leia
+     como una advertencia y competia con la accion. El ambar de
      precaucion sigue significando "requiere atencion" fuera de las guias
      (vencimientos, equipos en mantenimiento), y dentro de una guia la
      precaucion no lo usa: es un riesgo, asi que va en rojo.

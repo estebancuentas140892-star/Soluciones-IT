@@ -24,8 +24,6 @@ import type { BloquePaso, PasoAdjunto, VinculoProtegido } from '../../lib/db'
 //   - sin requisitos a mitad del recorrido: lo que hace falta se pide
 //     antes de empezar, y es lo que escribió el autor de la guía que se
 //     abrió; lo que pide la reutilizada no pasa solo (`requisitosEfectivos`);
-//   - el "Dónde" y el "Debes ver" del paso acompañan a la primera y a la
-//     última acción reutilizada cuando estas no traen los suyos;
 //   - "Anterior" desde la primera acción vuelve al paso anterior, y
 //     terminar la última sigue con lo que venga ("Completar y seguir"),
 //     salvo que con eso termine de verdad la guía que se abrió;
@@ -44,11 +42,11 @@ import type { BloquePaso, PasoAdjunto, VinculoProtegido } from '../../lib/db'
 // se hacen justo antes de la de esa tarea, en el mismo flujo.
 //
 // LO QUE EL PASO TRAÍA PARA SU PRIMERA ACCIÓN NO SE PIERDE. Un paso que
-// reutiliza otra guía puede llevar su propio "para qué" (lo llevan los 13
-// pasos así de las guías reales), un aviso, una imagen o una credencial.
+// reutiliza otra guía puede llevar un aviso, una imagen o una credencial.
 // Antes se leían en la pantalla de la tarjeta, antes de abrirla; ahora esa
-// pantalla no existe, así que acompañan a la primera acción reutilizada,
-// igual que el "Dónde" (`ApoyosDelFlujo`).
+// pantalla no existe, así que acompañan a la primera acción reutilizada
+// (`ApoyosDelFlujo`). Su "para qué", su "Dónde" y su "Debes ver" de texto
+// ya no viajan: la ejecución mínima no los muestra (tarea 307).
 //
 // Lo que SÍ sigue siendo un desvío es lo opcional: una consulta ("Si lo
 // necesitas") o una contingencia ("Si esto falla"). El técnico la abre
@@ -57,23 +55,19 @@ import type { BloquePaso, PasoAdjunto, VinculoProtegido } from '../../lib/db'
 
 /**
  * Lo que el paso que reutiliza otra guía enseñaría con su primera acción
- * (sus avisos, imágenes, archivos, credencial y "para qué"), prestado a la
- * primera acción reutilizada para que no se pierda en el flujo.
+ * (sus avisos, imágenes, archivos y credencial), prestado a la primera
+ * acción reutilizada para que no se pierda en el flujo.
  */
 export interface ApoyosDelFlujo {
-  /** Precaución e importante: antes de la instrucción. */
+  /** Precaución e importante: a la vista, bajo la instrucción. */
   alertas: BloquePaso[]
   /** Datos técnicos: a la vista. */
   datos: BloquePaso[]
-  /** Información y consejos: en "Más información". */
-  plegados: BloquePaso[]
   imagenes: BloquePaso[]
   archivos: PasoAdjunto[]
   /** Términos, atajos y comandos del Centro de consulta enlazados al paso. */
   referencias: BloquePaso[]
   vinculoProtegido: VinculoProtegido | null
-  /** El "para qué" del paso, en "Más información". */
-  objetivo: string
 }
 
 /** ¿Hay algo que prestar? Sin nada, no se pasa nada. */
@@ -81,12 +75,10 @@ export function hayApoyosDelFlujo(apoyos: ApoyosDelFlujo): boolean {
   return (
     apoyos.alertas.length > 0 ||
     apoyos.datos.length > 0 ||
-    apoyos.plegados.length > 0 ||
     apoyos.imagenes.length > 0 ||
     apoyos.archivos.length > 0 ||
     apoyos.referencias.length > 0 ||
-    apoyos.vinculoProtegido !== null ||
-    apoyos.objetivo.trim() !== ''
+    apoyos.vinculoProtegido !== null
   )
 }
 
@@ -94,10 +86,6 @@ export function hayApoyosDelFlujo(apoyos: ApoyosDelFlujo): boolean {
 export interface IntegracionEnFlujo {
   /** Número del paso de la guía que se abrió: el que dice "Tengo un problema". */
   numeroPaso: number
-  /** "Dónde" del paso que reutiliza la guía, para la primera acción si no trae el suyo. */
-  lugar: string
-  /** "Debes ver" del paso, para la última acción si no trae el suyo. */
-  resultado: string
   /** Lo que el paso traía para su primera acción, para la primera acción reutilizada. */
   apoyos?: ApoyosDelFlujo | null
   /** ¿Terminar lo reutilizado termina también la guía que se abrió? Solo entonces se dice "terminar". */
@@ -111,7 +99,7 @@ export interface IntegracionEnFlujo {
 }
 
 /** Lo que la ejecución principal tiene que decir de lo que reutiliza, al pedir que se ejecute en el sitio. */
-export type EnFlujo = Pick<IntegracionEnFlujo, 'lugar' | 'resultado' | 'apoyos' | 'terminaLaGuia' | 'alRetroceder'>
+export type EnFlujo = Pick<IntegracionEnFlujo, 'apoyos' | 'terminaLaGuia' | 'alRetroceder'>
 
 // Los rótulos de lo que se ofrece desde una acción, por su papel. Nunca
 // "guía vinculada", "subguía" ni "procedimiento relacionado": dicen para

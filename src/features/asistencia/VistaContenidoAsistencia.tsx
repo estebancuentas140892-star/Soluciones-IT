@@ -13,7 +13,6 @@ import {
 } from '../../components/iconos'
 import { ROTULO_COMO_HACERLO } from '../../lib/comoHacer'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
-import { DebesVerPaso, DondeSeHacePaso } from '../soluciones/SenalesDePaso'
 import { TONOS_AVISO } from '../soluciones/tonos'
 import type { BloqueAsistencia, ContenidoAsistencia } from './modelo'
 import { esUrlWeb } from './modelo'
@@ -71,10 +70,9 @@ export function VistaContenidoAsistencia({ contenido, recibido, destacado = true
 
 function Bloque({ bloque, numero }: { bloque: BloqueAsistencia; numero: number | null }) {
   switch (bloque.tipo) {
-    case 'donde':
-      return <DondeSeHacePaso lugar={bloque.texto} />
-    case 'debes_ver':
-      return <DebesVerPaso texto={bloque.texto} />
+    // 'donde' y 'debes_ver' solo llegan de una versión anterior de la app:
+    // la ejecución mínima ya no los muestra (tarea 307), así que el portal
+    // tampoco. Caen en el `default` y no se dibujan.
     case 'accion':
     case 'comprobacion': {
       const Icono = bloque.tipo === 'accion' ? CursorClick : SealCheck
@@ -100,7 +98,11 @@ function Bloque({ bloque, numero }: { bloque: BloqueAsistencia; numero: number |
       // El "Cómo hacerlo" de la acción de arriba (tarea 303): no es una nota
       // ni un aviso, es cómo se hace. Sin caja ni color.
       if (bloque.etiqueta === ROTULO_COMO_HACERLO) return <ComoHacerloEnTexto texto={bloque.texto} />
-      const tono = TONOS_AVISO.find((t) => t.etiqueta === bloque.etiqueta) ?? TONOS_AVISO[0]
+      // Una nota es el riesgo de la acción (Precaución o Importante). Una de
+      // Información o Consejo solo llega de una versión anterior de la app,
+      // y como la ejecución ya no las muestra (tarea 307), no se dibuja.
+      const tono = TONOS_AVISO.find((t) => t.etiqueta === bloque.etiqueta && t.valor !== 'dato')
+      if (!tono) return null
       const Icono = tono.Icono
       return (
         <p className={`flex items-start gap-2.5 rounded-r-[10px] border-l-[3px] px-3.5 py-2.5 text-[14.5px] leading-snug ${tono.claseBarra} ${tono.claseFondo}`}>

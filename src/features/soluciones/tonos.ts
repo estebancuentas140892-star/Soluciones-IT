@@ -1,15 +1,15 @@
 import type { ComponentType } from 'react'
 import { Code, Info, Lightbulb, Warning, WarningOctagon, type IconoProps } from '../../components/iconos'
-import type { TonoAviso } from '../../lib/db'
+import type { TonoAviso, TonoAvisoVigente } from '../../lib/db'
 
 // Metadatos visuales de cada tono de un bloque de aviso: etiqueta para
 // el editor, icono Phosphor y clases de color para la vista. Compartido
-// entre PasosEditor (selector) y ProcedimientoVista (render) para que
-// ambos usen exactamente los mismos tonos, iconos y colores. Los
+// entre PasosEditor (selector) y las vistas de la ejecución para que
+// todos usen exactamente los mismos tonos, iconos y colores. Los
 // colores son los estados del sistema Nocturne (08_ESTILO.md): panel
 // con fondo al 10% y borde al 30% del color del estado, icono en el
 // color pleno y texto normal.
-export interface TonoInfo {
+interface TonoBase {
   valor: TonoAviso
   etiqueta: string
   // Etiqueta de una palabra corta para la pastilla del editor (tarea
@@ -23,44 +23,33 @@ export interface TonoInfo {
   // para ver los cinco y ninguno decia para que servia.
   descripcion: string
   Icono: ComponentType<IconoProps>
+  // La pastilla y el campo del aviso en el editor.
   clasesPanel: string
   claseIcono: string
-  // Barra lateral del aviso en la vista de ejecución (M-012, regla
-  // M-R11, tablero `3b`). El aviso es LO ÚNICO del cuerpo de un paso
-  // que conserva color de fondo, así que su borde va a color pleno y
-  // solo a la izquierda: se lee como una advertencia y no como otro
-  // marco más entre los marcos de los vínculos, que ya no existen.
+}
+
+export interface TonoInfo extends TonoBase {
+  valor: TonoAvisoVigente
+  // Barra lateral y fondo del aviso en la vista de ejecución (M-012,
+  // regla M-R11, tablero `3b`). La advertencia es LO ÚNICO del cuerpo de
+  // un paso que conserva color de fondo, así que su borde va a color pleno
+  // y solo a la izquierda: se lee como una advertencia y no como otro
+  // marco más.
   claseBarra: string
   claseFondo: string
 }
 
-// Las descripciones dicen también CÓMO se verá el aviso al ejecutar
+// LOS TONOS QUE SE OFRECEN (tarea 307). Un aviso es un riesgo real o un
+// valor exacto; nada más. Las descripciones dicen CÓMO se verá al ejecutar
 // (encargo del 2026-09-17): quien escribe la guía decide si algo
-// interrumpe o no eligiendo el tono, así que tiene que saberlo al elegir.
-// Desde la tarea 303 dicen además qué NO va en cada uno (regla 27): lo
-// que hace falta para hacer la acción nunca va plegado, y un dato técnico
-// es un valor, no una explicación.
+// interrumpe eligiendo el tono, así que tiene que saberlo al elegir, y qué
+// NO va en cada uno (regla 27).
 export const TONOS_AVISO: TonoInfo[] = [
-  // Información y consejo NO llevan color (encargo del 2026-09-22,
-  // sección 4): en una guía los colores significan, y ni una explicación
-  // ni un consejo son un lugar, una acción, un resultado o un riesgo. Se
-  // distinguen por su icono y su palabra.
-  {
-    valor: 'info',
-    etiqueta: 'Información',
-    corto: 'Info',
-    descripcion: 'Ayuda a entender, pero no hace falta para hacer la acción. Al ejecutar queda plegado en «Más información»',
-    Icono: Info,
-    clasesPanel: 'border-noct-divider bg-noct-text/[.04]',
-    claseIcono: 'text-noct-neutral-300',
-    claseBarra: 'border-noct-neutral-500',
-    claseFondo: 'bg-noct-text/[.04]',
-  },
   {
     valor: 'precaucion',
     etiqueta: 'Precaución',
     corto: 'Cuidado',
-    descripcion: 'Un riesgo real de esta acción. Se ve en rojo, antes de la instrucción',
+    descripcion: 'Un riesgo real de esta acción. Se ve en rojo, a la vista, justo bajo la instrucción',
     Icono: Warning,
     // UN RIESGO VA EN ROJO (encargo del 2026-09-22, sección 4). Era
     // ámbar, y en una guía el ámbar no dice "riesgo" (con texto, desde la
@@ -85,17 +74,6 @@ export const TONOS_AVISO: TonoInfo[] = [
     claseFondo: 'bg-noct-error/[.16]',
   },
   {
-    valor: 'consejo',
-    etiqueta: 'Consejo',
-    corto: 'Consejo',
-    descripcion: 'Atajo o buena práctica que no hace falta para hacer la acción. Al ejecutar queda plegado en «Más información»',
-    Icono: Lightbulb,
-    clasesPanel: 'border-noct-divider bg-noct-text/[.04]',
-    claseIcono: 'text-noct-neutral-300',
-    claseBarra: 'border-noct-neutral-500',
-    claseFondo: 'bg-noct-text/[.04]',
-  },
-  {
     valor: 'dato',
     etiqueta: 'Dato técnico',
     corto: 'Dato',
@@ -109,35 +87,66 @@ export const TONOS_AVISO: TonoInfo[] = [
   },
 ]
 
-export function tonoInfo(tono: TonoAviso | null): TonoInfo {
-  return TONOS_AVISO.find((t) => t.valor === tono) ?? TONOS_AVISO[0]
+// LOS TONOS HEREDADOS (obsoletos desde la tarea 307, AD-068). Información
+// y Consejo explicaban sin hacer falta para actuar, y su único sitio en la
+// ejecución era "Más información", que se retiró: durante la ejecución se
+// trabaja, y lo que hay que leer para hacer bien la acción no es "más
+// información" (es una advertencia, un dato o "Cómo hacerlo"). Los avisos
+// que ya los tienen se siguen leyendo y guardando, y el editor los enseña
+// con su palabra y lo que pasa con ellos para que el autor decida; ni la
+// ejecución los muestra ni el editor los ofrece para un aviso nuevo.
+export const TONOS_RETIRADOS: TonoBase[] = [
+  {
+    valor: 'info',
+    etiqueta: 'Información',
+    corto: 'Info',
+    descripcion: 'Ya no se muestra al ejecutar',
+    Icono: Info,
+    clasesPanel: 'border-noct-divider bg-noct-text/[.04]',
+    claseIcono: 'text-noct-neutral-300',
+  },
+  {
+    valor: 'consejo',
+    etiqueta: 'Consejo',
+    corto: 'Consejo',
+    descripcion: 'Ya no se muestra al ejecutar',
+    Icono: Lightbulb,
+    clasesPanel: 'border-noct-divider bg-noct-text/[.04]',
+    claseIcono: 'text-noct-neutral-300',
+  },
+]
+
+/** El tono vigente de un aviso, o null si es uno heredado (o no tiene). */
+export function tonoVigente(tono: TonoAviso | null): TonoInfo | null {
+  return TONOS_AVISO.find((t) => t.valor === tono) ?? null
+}
+
+/**
+ * Cómo se presenta un aviso en el editor, sea cual sea su tono: los
+ * heredados también tienen que poder verse y cambiarse. Un tono que no se
+ * reconoce se trata como Información, igual que lo lee el normalizador.
+ */
+export function tonoDelEditor(tono: TonoAviso | null): TonoBase {
+  return tonoVigente(tono) ?? TONOS_RETIRADOS.find((t) => t.valor === tono) ?? TONOS_RETIRADOS[0]
 }
 
 // CÓMO APARECE CADA AVISO MIENTRAS SE EJECUTA (encargo del 2026-09-17,
-// secciones 6 a 8).
+// secciones 6 a 8; tarea 307).
 //
-// Hasta hoy todo aviso era una alerta: con fondo de color y, en la
-// ejecución, con su propia pantalla y un "Entendido · continuar" que
-// había que tocar antes de seguir, fuera una precaución o un consejo.
-// Con cinco o seis por guía el técnico aprendía a tocar sin leer, que
-// es justo lo contrario de lo que un aviso quiere.
+// Nada detiene el recorrido: el tono decide el trato.
 //
-// Ahora el tono decide el trato, y nada detiene el recorrido:
-//
-//   - 'alerta': precaución e importante. Riesgos reales. Se ven junto a
-//     la acción a la que pertenecen, antes de la instrucción y con su
-//     color, y como son pocos, destacan.
+//   - 'alerta': precaución e importante. Riesgos reales. Se ven a la vista,
+//     con la acción a la que pertenecen, justo bajo su instrucción y antes
+//     de "Cómo hacerlo": se leen antes de hacerla. Nunca plegados.
 //   - 'dato': un valor que hace falta para ejecutar la acción. A la
-//     vista, pegado a la instrucción y subordinado a ella (su rótulo y
-//     monoespaciada, tarea 303), sin color de alerta.
-//   - 'plegado': información y consejo. Sirven para entender, no para
-//     hacer: quedan bajo "Más información", cerrado por defecto. Lo que
-//     una persona nueva necesite para hacer la acción no puede estar
-//     aquí (regla 27).
-export type PresenciaAviso = 'alerta' | 'dato' | 'plegado'
+//     vista, subordinado a la instrucción (su rótulo y monoespaciada,
+//     tarea 303), sin color de alerta.
+//   - null: información y consejo, heredados. No se muestran (tarea 307):
+//     no se pliegan en ningún sitio ni dejan un hueco.
+export type PresenciaAviso = 'alerta' | 'dato'
 
-export function presenciaDeAviso(tono: TonoAviso | null): PresenciaAviso {
+export function presenciaDeAviso(tono: TonoAviso | null): PresenciaAviso | null {
   if (tono === 'precaucion' || tono === 'importante') return 'alerta'
   if (tono === 'dato') return 'dato'
-  return 'plegado'
+  return null
 }

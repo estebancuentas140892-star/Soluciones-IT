@@ -313,13 +313,13 @@ describe('abrir el borrador desde Inicio es hacerlo', () => {
     )
     expect(texto).toContain('Borrador · algunos datos todavía están por confirmar.')
     // No es un paso ni una confirmación: el trabajo del paso 1 está a la vista.
-    expect(texto).toContain('Abrir la configuración de resoluciones')
+    expect(texto).toContain('Entrar al módulo de ejemplo')
     await montaje.desmontar()
 
     await db.articulos.update(ID_DIAN, { estado: 'publicado' })
     await montar(RUTAS, `/soluciones/cat-pos/${ID_DIAN}`)
     await esperar(
-      () => textoPantalla().includes('Abrir la configuración de resoluciones'),
+      () => textoPantalla().includes('Entrar al módulo de ejemplo'),
       'la guía publicada en ejecución',
     )
     expect(textoPantalla()).not.toContain('Borrador · algunos datos')
@@ -331,7 +331,7 @@ describe('abrir el borrador desde Inicio es hacerlo', () => {
     await montar(RUTAS, '/')
     await buscarEnInicio('DIAN')
     await tocar(await esperar(() => control(/^Abrir borrador/), 'la fila del borrador'))
-    await esperar(() => textoPantalla().includes('Abrir la configuración de resoluciones'), 'la ejecución')
+    await esperar(() => textoPantalla().includes('Entrar al módulo de ejemplo'), 'la ejecución')
 
     await tocar(await esperar(() => control('Salir de la guía'), 'la salida de la guía'))
     expect(ubicacionActual().pathname).toBe('/')

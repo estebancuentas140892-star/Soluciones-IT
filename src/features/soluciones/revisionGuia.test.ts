@@ -356,8 +356,11 @@ describe('revisarGuia: lo que mezcla papeles (tarea 289)', () => {
   })
 })
 
-describe('un aviso nuevo no nace como alerta', () => {
-  it('crearBloqueAviso arranca en Información: la alerta la elige el autor', () => {
-    expect(crearBloqueAviso().tono).toBe('info')
+describe('un aviso nuevo es un riesgo o un dato (tarea 307)', () => {
+  it('crearBloqueAviso arranca como la advertencia más suave, o como dato si se pide', () => {
+    expect(crearBloqueAviso().tono).toBe('precaucion')
+    expect(crearBloqueAviso('t1', 'dato').tono).toBe('dato')
+    // Información y Consejo ya no se crean: la ejecución no los muestra.
+    expect(['info', 'consejo']).not.toContain(crearBloqueAviso().tono)
   })
 })

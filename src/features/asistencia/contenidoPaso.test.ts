@@ -115,7 +115,6 @@ describe('construirContenidoDePaso: el "Cómo hacerlo" de una acción (tarea 303
   it('viaja justo después de su acción, como una nota con su nombre y el paso a paso numerado, y sus comandos también', () => {
     const { contenido } = construirContenidoDePaso({ paso: pasoConComo(), numeroPaso: 1, tituloGuia: 'Guía de prueba', referencias: FICHAS })
     expect(contenido?.bloques).toEqual([
-      { tipo: 'donde', texto: 'Panel de configuración' },
       { tipo: 'accion', texto: 'Vacía la caché de prueba' },
       {
         tipo: 'nota',
@@ -139,7 +138,6 @@ describe('construirContenidoDePaso: el "Cómo hacerlo" de una acción (tarea 303
       tareaId: 't1',
     })
     expect(contenido?.bloques.map((b) => [b.tipo, b.etiqueta ?? null])).toEqual([
-      ['donde', null],
       ['accion', null],
       ['nota', 'Cómo hacerlo'],
       ['comando', null],
@@ -164,8 +162,9 @@ describe('construirContenidoDePaso', () => {
     expect(contenido).not.toBeNull()
     expect(contenido?.titulo).toBe('Paso 3 · Vaciar la caché DNS')
     expect(contenido?.subtitulo).toBe('Guía de prueba DNS')
+    // Ni el "Dónde" ni el "Debes ver" de texto heredados del paso: la
+    // ejecución mínima ya no los muestra (tarea 307), y el equipo tampoco.
     expect(contenido?.bloques).toEqual([
-      { tipo: 'donde', texto: 'Símbolo del sistema como administrador' },
       { tipo: 'accion', texto: 'Ejecuta ipconfig /flushdns' },
       // El comando que la instrucción escribe y tiene ficha, con Copiar.
       { tipo: 'comando', texto: 'ipconfig /flushdns', titulo: 'Limpiar la caché DNS', plataforma: 'Windows' },
@@ -177,9 +176,22 @@ describe('construirContenidoDePaso', () => {
       { tipo: 'comando', texto: 'ping [dirección]', titulo: 'Comprobar la conexión' },
       { tipo: 'comprobacion', texto: '¿Responde el servidor?' },
       { tipo: 'archivo', texto: 'manual-dns.pdf' },
-      { tipo: 'debes_ver', texto: 'Se vació correctamente la caché de resolución de DNS' },
     ])
     expect(validarContenido(contenido)).toBeNull()
+  })
+
+  it('la información y los consejos heredados no viajan; la advertencia y el dato sí (tarea 307)', () => {
+    const paso = pasoCompleto()
+    paso.bloques.push(
+      bloque({ id: 'n1', tipo: 'aviso', texto: 'Explicación de prueba', tono: 'info', alcance: 'tarea', tareaId: 't1' }),
+      bloque({ id: 'n2', tipo: 'aviso', texto: 'Consejo de prueba', tono: 'consejo', alcance: 'tarea', tareaId: 't1' }),
+    )
+    const { contenido } = construirContenidoDePaso({ paso, numeroPaso: 1, tituloGuia: 'Guía', referencias: FICHAS })
+    const texto = JSON.stringify(contenido)
+    expect(texto).not.toContain('Explicación de prueba')
+    expect(texto).not.toContain('Consejo de prueba')
+    expect(contenido?.bloques).toContainEqual({ tipo: 'nota', texto: 'Cierra el navegador antes', etiqueta: 'Precaución' })
+    expect(contenido?.bloques.some((b) => b.tipo === 'dato')).toBe(true)
   })
 
   it('NUNCA incluye el vínculo protegido del paso ni el de una tarea', () => {
@@ -205,7 +217,7 @@ describe('construirContenidoDePaso', () => {
       referencias: FICHAS,
       tareaId: 't2',
     })
-    expect(contenido?.bloques.map((b) => b.tipo)).toEqual(['donde', 'accion', 'url', 'dato', 'comando'])
+    expect(contenido?.bloques.map((b) => b.tipo)).toEqual(['accion', 'url', 'dato', 'comando'])
     expect(contenido?.bloques.some((b) => b.tipo === 'debes_ver')).toBe(false)
   })
 

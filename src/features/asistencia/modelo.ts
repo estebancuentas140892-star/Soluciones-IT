@@ -19,6 +19,10 @@
 /** Version del formato. El servidor solo acepta esta. */
 export const VERSION_CONTENIDO = 1
 
+// 'donde' y 'debes_ver' son HEREDADOS (tarea 307): el servidor los sigue
+// aceptando (su lista vive en supabase/schema.sql y no se toca) y una
+// version anterior de la app aun los manda, asi que se validan como
+// siempre; pero esta version no los envia y el portal no los dibuja.
 export type TipoBloqueAsistencia =
   | 'donde'
   | 'accion'
