@@ -1,5 +1,39 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-07: la ejecución mínima
+
+### 307. La ejecución mínima
+
+**Estado:** Completada (2026-10-07). Encargo del usuario: la ejecución de las guías había acumulado elementos de varias etapas y una sola pantalla podía enseñar el título del paso, "Dónde", "Hecha" en lugar de "Qué hacer", otra vez la instrucción, la ruta rápida, el paso a paso, el dato técnico, un "Debes ver" de texto y "Más información". La aplicación sabe mucho, pero la pantalla enseña solo lo necesario para resolver lo que hay enfrente: "¿qué hago ahora y cómo lo hago?". Auditoría primero y, después, retirar de verdad (no esconder) lo que había quedado sin función. Rama `feat/ejecucion-minima` desde `b0effe3` (worktree `C:\Users\ecardona\Soluciones-IT-303`), revisada y aprobada por el usuario y llevada a `main` por avance rápido (`b0effe3..b10befc`, sin commit de merge). Commits: `81a0431` (la ejecución mínima) y `b10befc` (el estado completado solo con la marca, ajuste de la revisión), más el de este archivo. Detalle de fondo en la regla 27, AD-068 y RN-066; el detalle de cada cambio, en el CHANGELOG del 2026-10-07.
+
+**Qué cambió:**
+
+- **Una sola instrucción, por estructura:** el título del paso ya no se dibuja sobre la acción ni a 17 px bajo la ruta de escritorio (`RutaProcedimiento conTituloDelPaso`); fuera la comparación de textos con `normalizarTexto`.
+- **El estado no sustituye a la función:** "Qué hacer", "Comprueba" y "Decide" siempre; lo cumplido, solo con la marca ✓ a su lado (sin "hecha", "comprobada" ni "respondida"; nombre accesible "Completada"), la instrucción atenuada y el progreso de la acción.
+- **Retirado de la ejecución** (acción a la vez, paso entero, lectura, "Probar", lo reutilizado y el portal de asistencia), con su código: "Dónde" (`DondeSeHacePaso`), "Más información" (`MasInformacion`, `NotaPlegada`, su estado y sus cálculos) con el "Para qué" de cada paso, la información y los consejos, y el "Debes ver" de texto (`DebesVerPaso`).
+- **La advertencia,** a la vista, bajo la instrucción y antes de "Cómo hacerlo", en rojo y nunca plegada.
+- **"Debes ver" es una imagen por acción o comprobación** (`BloquePaso.resultadoVisual`, `src/lib/resultadoVisual.ts`, `DebesVer`), plegada al final de la acción, que se pide solo al abrirla y se amplía en el visor de siempre; sin imagen no aparece. Reutiliza la subida, la cola sin conexión, la copia offline y el visor de los adjuntos. Sin columna, migración ni cambio en Supabase.
+- **El editor solo ofrece lo que tiene salida:** sin los campos Para qué, Dónde y Debes ver de texto; "Advertencia" y "Dato técnico" en lugar de "Aviso"; sin Información, Consejo ni "Pasar a Información"; "+ Debes ver · imagen · opcional" con `EditorDebesVer`; las tres subidas de un bloque en `subirParaBloque`.
+- **Lo heredado** (`objetivo`, `lugar`, `resultado`, avisos de Información y Consejo) se lee y se conserva al guardar, sin mostrarse ni convertirse solo.
+
+**No se hizo, a propósito:**
+
+- Ningún contenido real ni Supabase (regla 26): ninguna guía tiene todavía imagen de "Debes ver", y los textos heredados siguen en las guías hasta que ChatGPT decida qué hacer con ellos.
+- Ni Resolver, ni Inicio, ni la búsqueda (sigue indexando los textos heredados), ni Equipos, Bóveda, autenticación o navegación general; ni el modelo `comoHacer` de la 303 ni las decisiones de la 302.
+- No se ocultó nada con CSS: lo retirado se quitó del código, y lo que se conservó tiene su motivo (AD-068 y el informe de la tarea).
+
+**Verificación:** local, sobre `b10befc`: 184 archivos y 2877 pruebas (182 y 2843 antes), `tsc -b`, lint y `npm run build` en verde; `npm run prueba:sin-conexion` sobre `81a0431` con 55 comprobaciones (3 nuevas de "Debes ver" sin red). En el navegador, con la guía del banco de pruebas y sus seis casos, a 390 × 844, 375 × 667, 1280 × 800 y al 130 %, sin desplazamiento horizontal ni desbordes y con controles de al menos 44 px; tras el ajuste, a 390 × 844 la marca queda centrada con el rótulo. **CI** en verde para `b10befc` (run 37688314468, 71 s: pruebas, lint y build). **Producción (regla 14):** despliegue de Vercel "Production" en `success` para `b10befc`; `/version.json` respondió `b10befc` (compilado 2026-10-07T21:17:49Z); por contenido, los recursos que lista `/sw.js` llevan "Ver paso a paso", "Debes ver", "Completada", "Añadir una advertencia al paso" y "«Debes ver» necesita una imagen"; **en negativo**, ninguno lleva ya "Dónde: ", "Para qué: ", "Menos información", "Pasar a Información", "Respondida" ni "Debes ver: " (el "Más información" que queda es el del formulario de equipos, fuera de las guías).
+
+**Límites conocidos:** una versión anterior de la app lee una guía con imagen de "Debes ver" sin romperse (no la enseña), pero si la edita y la guarda, la pierde (por eso el orden de despliegue de la regla 24). La descripción de la imagen no entra al buscador.
+
+**Pendiente para otros:** **ChatGPT**, la 304 (reclasificar el contenido real, ahora sin "Información" ni "Consejo" como destino) y añadir imágenes de "Debes ver" en guías reales, solo después del paso del usuario. **El usuario**, decidir la 305.
+
+**Paso del usuario:** aceptar "Actualización disponible" en cada teléfono y PC (en escritorio, recargar) y comprobar en Más > Ajustes > Buscar actualización que la versión es `b10befc` o posterior **antes** de que ChatGPT añada imágenes de "Debes ver" a guías reales.
+
+### 306. "Debes ver" con una imagen del resultado del contexto
+
+**Estado:** Completada dentro de la 307 (2026-10-07). La 306 registraba una sola capacidad: fortalecer "Debes ver" con una imagen de la ventana o el contexto resultante, como mucho una por contexto y nunca una por microacción, sin implementar y a la espera de una propuesta de Claude Design. El encargo de la ejecución mínima (307) la pidió ya, con su diseño escrito por el usuario (plegada al final de la acción, imagen ampliable, sin imagen no aparece), así que la propuesta de diseño dejó de hacer falta. Quedó implementada entera en la 307: `resultadoVisual` por acción o comprobación, en el JSON `procedimiento`, junto a la tarea y no a `paso.resultado` (un paso con varias acciones puede tener varios contextos). **No queda nada de código.** Lo que queda es contenido: añadir imágenes reales, trabajo de ChatGPT (regla 26) después del paso del usuario de la 307.
+
 ## Encargo del 2026-10-07: la jerarquía de una acción durante la ejecución
 
 ### 303. La jerarquía de una acción durante la ejecución
