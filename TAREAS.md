@@ -32,7 +32,23 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **PASO DEL USUARIO PENDIENTE (tarea 302, 2026-10-06):** aceptar "Actualización disponible" en cada teléfono y PC del equipo (en escritorio, recargar) **antes** de abrir o editar la guía "Crear y almacenar una copia de seguridad (Backup) del correo de Outlook (.pst)", que ya pregunta la versión de Outlook. Una versión anterior la enseña de corrido y, si la guardara, perdería las opciones (el JSON anterior y el nuevo están en "Ver historial" de la guía). Después, abrirla en un teléfono y comprobar la pregunta y los dos caminos.
 
-**En proceso: la 279** (2026-09-30), analizada y a la espera de la decisión del usuario. No hay otra en curso: la 302 (decisiones con opciones y rutas en las guías) se cerró el 2026-10-06 y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**En proceso: la 303** (2026-10-07, la jerarquía de una acción durante la ejecución), **lista para revisión del usuario** en la rama `feat/jerarquia-accion`, sin llevar a `main`. La 279 sigue analizada y a la espera de la decisión del usuario, sin código. La 302 (decisiones con opciones y rutas en las guías) se cerró el 2026-10-06 y está en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
+**LA JERARQUÍA DE UNA ACCIÓN (2026-10-07, tarea 303).** Encargo del usuario: en la ejecución de una guía, "Dónde", "Qué hacer", el dato técnico, "Debes ver", "Más información" y las advertencias competían por la vista, y el técnico tenía que interpretar cuál de todas era lo que tenía que hacer. Una pantalla sigue siendo una acción clara, pero cada papel conserva su función y su sitio y la pantalla hace evidente la jerarquía. Solo la jerarquía visual y semántica de la ejecución: sin rediseñar Resolver, Equipos, Bóveda, la navegación, el Centro de consulta ni los formularios, sin seguir la auditoría UX completa, sin tocar Supabase ni ninguna guía real (regla 26: ChatGPT reclasificará el contenido después). Rama `feat/jerarquia-accion` desde `main` en `5b3f238`, en el worktree `C:\Users\ecardona\Soluciones-IT-303` (la copia de `OneDrive` tiene cambios sin commit de una versión anterior de la 302 en `feat/decisiones-ramificadas`, que no se tocan). La rama `feat/auditoria-ux` no se mezcló: nació antes de la 302 y toca los mismos componentes; de ella solo se tomó, a conciencia, la decisión de la sección 13 de su handoff ("Dónde" en neutro).
+
+### 303. La jerarquía de una acción durante la ejecución
+
+- **Título:** que la instrucción mande y cada papel (Dónde, Cómo hacerlo, Dato técnico, Debes ver, Más información, Advertencia) conserve su sitio con menos peso.
+- **Descripción:** auditoría de `ModoFoco.tsx`, `SenalesDePaso.tsx`, `tonos.ts`, `apoyosTarea.ts`, `ProcedimientoVista.tsx` y el editor (cómo explica cada tipo al autor), y corrección de la presentación: "Dónde" neutro (sin el amarillo `noct-lugar`, retirado); el dato técnico con su rótulo y en monoespaciada, pegado a la instrucción (`DatoTecnico`, compartido por el Modo Foco, el paso entero, la lectura y "Probar"); "Debes ver" verde solo en su icono y su palabra; la instrucción que nunca se sale de la pantalla; las descripciones de los tonos en el editor con lo que NO va en cada uno. Regla 27 y AD-066. Prueba con todos los papeles a la vez (`jerarquiaAccion.test.tsx`, contenido inventado) y la misma guía en el banco de pruebas ("Exportar un buzón de correo de ejemplo").
+- **Hecho (2026-10-07):** todo lo anterior, sin cambiar ningún contrato de datos. Suite 180 archivos y 2764 pruebas (179 y 2756 al empezar), `tsc -b`, lint, build y prueba sin conexión en verde; medido en el navegador a 390 × 844, 375 × 667, texto al 130 % y 1280 × 800 (CHANGELOG del 2026-10-07).
+- **Falta:**
+  1. **Decisión del usuario sobre "Cómo hacerlo"** (las instrucciones para hacer la acción actual: "Archivo → Abrir y exportar → Importar o exportar"). Hoy no tiene dónde vivir, y no se implementó porque cambia el contrato de datos. **Propuesta mínima:** un tono de aviso nuevo, `'como'` ("Cómo hacerlo"), anclado a su tarea (`alcance: 'tarea'`), dentro del JSON `procedimiento`: sin Supabase, columnas, migración ni versión de Dexie; compatible hacia atrás (ninguna guía lo tiene). En la ejecución iría justo bajo la instrucción, antes del dato técnico, con su rótulo y en gris claro (presencia nueva en `presenciaDeAviso`), y en el editor, como un tono más con su descripción. **Por qué cambia el contrato:** el normalizador de una versión anterior (`TONOS_AVISO_VALIDOS`, `src/lib/procedimiento.ts`) convierte un tono desconocido en `'info'`: lo enseñaría plegado en "Más información" y, si edita y guarda la guía, lo reescribiría como Información (el texto se conserva; su papel, no). Exige el orden de despliegue de la regla 24 (desplegar, actualizar los dispositivos y solo entonces reclasificar). **Alternativa descartada:** un campo nuevo en la tarea (`como`), porque una versión anterior lo borraría entero al guardar. Área si se aprueba: `src/lib/db.ts` (`TonoAviso`), `src/lib/procedimiento.ts`, `tonos.ts`, `tareasFoco.ts` (`avisosDeTareaFoco`), `ModoFoco.tsx`, `ProcedimientoVista.tsx` (`BloqueVista`), `SenalesDePaso.tsx`, `src/features/asistencia/contenidoPaso.ts`, sus pruebas y la documentación (RN nueva, AD-066 y regla 24).
+  2. Revisión del usuario de la rama; después, a `main` por avance rápido, CI en verde y despliegue verificado (reglas 14 y 21), y archivo de la tarea.
+- **Motivo:** encargo del usuario del 2026-10-07; decisión "El ámbar significa tres cosas" de la sección 13 de la auditoría UX (aprobada el 2026-10-05).
+- **Impacto:** alto en la ejecución de todas las guías; ningún dato cambia.
+- **Prioridad:** Alta. **Estado:** En progreso: hecha la parte sin cambio de contrato, lista para revisión; espera la decisión sobre "Cómo hacerlo".
+- **Área afectada:** `src/features/soluciones/SenalesDePaso.tsx`, `ModoFoco.tsx` (grupo de la instrucción, hacia la línea 1082), `ProcedimientoVista.tsx` (`BloqueVista`, hacia la línea 1047), `tonos.ts`, `src/index.css`, `src/pruebas/semillaLocal.ts`, `src/features/soluciones/jerarquiaAccion.test.tsx` y comentarios en `PasosEditor.tsx`, `ArticuloPage.tsx`, `DiagnosticoRunPage.tsx` y `src/lib/db.ts`.
+- **Dependencias:** ninguna. La 304 (reclasificar el contenido real) depende de esta.
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
@@ -440,6 +456,21 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
+### 304. Reclasificar el contenido real de las guías según la regla 27 (ChatGPT)
+
+- **Título:** que cada bloque de las guías reales cumpla su papel: "Dato técnico" solo para valores, lo necesario para actuar nunca plegado y las alertas solo para riesgos reales.
+- **Descripción:** inventario de **solo lectura** del 2026-10-07 sobre las 39 guías con pasos. Nada se escribió, y ni los títulos ni los textos de las guías se copian aquí porque el repositorio es público: la lista guía por guía y paso por paso se le entregó al usuario en el informe de la tarea 303, y se rehace con la consulta de abajo.
+  - **21 "Dato técnico" en 11 guías, y solo 5 son valores exactos.** 7 son secuencias para hacer la acción (irían a "Cómo hacerlo" cuando exista), entre ellas el caso de referencia: en "Crear y almacenar una copia de seguridad (Backup) del correo de Outlook (.pst)", la ruta de menús de "Inicia la exportación…" de los pasos 2 y 3 y la nota del cuadro de contraseña del paso 4. Las otras 9 son explicaciones (irían a Información); una mezcla un formato, que sí es un dato, con su explicación.
+  - **38 acciones en 23 guías llevan la secuencia de menús dentro de su propio texto** (con "→"): candidatas a separar "Qué hacer" de "Cómo hacerlo" cuando exista. Las flechas solo sirvieron para encontrar candidatas en este inventario; la aplicación nunca deduce el papel de un bloque por su texto (regla 27 h).
+  - **31 "Información" en 19 guías:** comprobar con la regla 27 f que ninguna haga falta para hacer la acción.
+  - **43 alertas (29 Precaución y 14 Importante) en 20 guías:** comprobar con la regla 27 g que todas sean riesgos reales.
+  - **Cómo rehacerlo:** una consulta de solo lectura sobre `articulos` (sin eliminar) que recorra `procedimiento->'pasos'` y sus `bloques`: los avisos agrupados por `tono` (con el texto de la tarea a la que pertenecen, por `tareaId`) y las tareas cuyo texto contiene "→".
+- **Motivo:** regla 27 (tarea 303). La interfaz ya representa bien cada papel, pero el contenido real todavía usa "Dato técnico" para explicaciones y secuencias.
+- **Impacto:** alto en la claridad de la ejecución; ningún cambio de código.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** el JSON `procedimiento` de las guías en Supabase (contenido: por la regla 26 lo hace ChatGPT, no Claude Code). El inventario se rehace con una consulta de solo lectura sobre `articulos` (los avisos por `tono` y las tareas con "→" en su texto).
+- **Dependencias:** la 303. Mover algo a "Cómo hacerlo" exige antes la decisión del punto 1 de su "Falta" y el orden de despliegue de la regla 24; pasar explicaciones a Información y revisar alertas no espera a nada.
+
 ### 286. Restablecer la maestra: el procedimiento no dice qué pasa con los campos protegidos ni los archivos seguros
 
 - **Título:** completar `supabase/INSTRUCCIONES.md` § 5 (restablecer la contraseña maestra).
@@ -464,6 +495,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
   - El editor de guías con preguntas: "Respuesta" 32, "Vincular procedimiento" 34, "Eliminar" 35, "Probar" y "Guardar diagnóstico" 40, y sus campos de 38 y 40.
   - La fila de un equipo en Red, 36 px, y un enlace dentro del paso que recibe el portal de asistencia, 21 px.
   - Ya tenía tarea: "Completitud" del editor de guías, 25 px (tarea 261).
+  - Medidos en la 303 (2026-10-07, 390x844), que no los tocó por estar fuera de su alcance: las insignias numeradas de los pasos en la lectura de una guía y en "Probar" del editor ("Abrir el paso N", 28×28, `ProcedimientoVista.tsx`) y "Cerrar" de esa vista previa (62×30, `VistaPreviaArticulo.tsx`).
 - **Motivo:** regla R6. La 262 cerró los cuatro controles que el usuario eligió; estos son el resto que midió la batería.
 - **Impacto:** medio: los dos primeros están en casi todas las pantallas de sección y de documento.
 - **Prioridad:** Media. **Estado:** Pendiente; el alcance lo decide el usuario, como en la 262.

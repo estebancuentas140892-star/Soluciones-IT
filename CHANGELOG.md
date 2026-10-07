@@ -6,6 +6,25 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-07
+
+### Cambiado (ejecución de guías, tarea 303): la jerarquía de una acción
+
+**Área modificada:** `src/features/soluciones/SenalesDePaso.tsx` (`DondeSeHacePaso` neutro, `DatoTecnico` nuevo y compartido, `DebesVerPaso` sin caja); `ModoFoco.tsx` (el dato técnico dentro del grupo de la instrucción, la instrucción con `min-w-0` y `overflow-wrap:anywhere`, fuera su caja interna `DatoTecnico`); `ProcedimientoVista.tsx` (`BloqueVista`: el dato técnico con el bloque compartido); `tonos.ts` (las descripciones de Información, Consejo, Dato técnico y Precaución que lee el autor en el editor); `src/index.css` (fuera el token `noct-lugar`); comentarios que decían "el amarillo significa lugar" en `PasosEditor.tsx`, `ArticuloPage.tsx`, `DiagnosticoRunPage.tsx` y `src/lib/db.ts`; banco de pruebas local (`semillaLocal.ts`: la guía inventada "Exportar un buzón de correo de ejemplo"); prueba nueva `jerarquiaAccion.test.tsx` (8).
+**Tipo:** Cambiado (interfaz) y Documentación (REGLAS regla 27; DECISIONES AD-066 y la nota en AD-043; DOCUMENTACION_FUNCIONAL 2.3, el bloque Aviso del editor y 13.2; ARQUITECTURA_FUNCIONAL 11.1-bis y RN-038; COMPONENTES_UI 3.8y, 3.8i y 3.8b-bis; TAREAS).
+**Motivo:** encargo del usuario del 2026-10-07. Aunque el Modo Foco ya enseñaba una acción por pantalla, "Dónde" (barra, fondo y rótulo amarillos), el dato técnico (una caja con texto blanco y sin rótulo) y "Debes ver" (una caja verde) competían con la instrucción, y el técnico tenía que decidir cuál de todos era lo que había que hacer. Se aplica además la decisión final de la sección 13 de la auditoría UX: "Dónde" no usa ámbar.
+**Qué cambia:**
+- **Qué hacer** sigue a 26 px y es lo único grande; ya no se sale de la pantalla con una ruta o un nombre sin espacios.
+- **Dónde** es una línea neutra de 14 px con su chincheta y su palabra, separada de la acción, sin barra ni fondo.
+- **Dato técnico:** rótulo "Dato técnico" y el valor en monoespaciada, a 10 px de la instrucción (el resto, a 16), igual en el Modo Foco, el paso entero, la lectura y "Probar".
+- **Debes ver:** verde solo en el ojo y en la palabra, sin caja, después de todo lo que se usa para hacer la acción.
+- **Más información** sigue cerrado al llegar a cada acción; la regla de qué cabe ahí queda escrita (regla 27 f) y la hoja de tonos del editor la dice.
+- **Advertencia:** sin cambios; vuelve a ser el único bloque con fondo de color.
+**Lo que no cambia:** ningún dato, ni Supabase, ni el contrato del JSON `procedimiento`, ni ninguna guía real; tampoco el recorrido, el pie, el reparto de los avisos por tono ni nada de la tarea 302 (decisiones con opciones, rutas, "Anterior", cambiar la respuesta, guías reutilizadas, paso entero, "Probar").
+**Pendiente (decisión del usuario):** "Cómo hacerlo" (las instrucciones para hacer la acción, como "Archivo → Abrir y exportar → Importar o exportar") se reconoce como papel propio, pero no se implementó: la solución mínima, un tono nuevo `'como'` en el JSON, cambia el contrato de datos (una versión anterior lo reescribiría como Información al guardar). Propuesta completa en TAREAS.md (tarea 303) y AD-066, decisión 6.
+**Verificación:** 180 archivos y 2764 pruebas (179 y 2756 antes: +1 archivo, +8 pruebas, ninguna menos); la prueba nueva falla en 7 de sus 8 casos con los componentes de antes. `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` en verde. En el navegador, con el banco de pruebas: a 390 × 844 y 375 × 667 la acción entera, "Debes ver" incluido, cabe sobre el pie, sin desplazamiento horizontal ni controles por debajo de 44 × 44; con el texto al 130 % la instrucción (33,8 px) sigue entera y a la vista, y en la pantalla más cargada "Debes ver" se alcanza desplazando. Escritorio (1280 × 800), paso entero y "Probar" con la misma jerarquía.
+**Impacto esperado:** la instrucción se reconoce en uno o dos segundos. El contenido real mal clasificado (un "Dato técnico" que es una explicación o una secuencia de menús) se ve ahora como lo que dice ser, y queda para que ChatGPT lo reclasifique.
+
 ## 2026-10-06
 
 ### Corregido (guías, tarea 302, fase 5): la lectura de una guía reutilizada enseña solo el camino elegido

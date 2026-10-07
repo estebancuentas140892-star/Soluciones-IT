@@ -175,7 +175,7 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
       <main className="flex flex-1 flex-col gap-[22px] px-4 pb-16 pt-1 lg:px-10">
         {estado === 'borrador' && (
           // Neutro desde el 2026-09-22 (tarea 255): un borrador no es un
-          // riesgo, y dentro de una guía el amarillo significa "lugar".
+          // riesgo, y dentro de una guía no hay ámbar.
           <div className="flex items-start gap-2.5 rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5">
             <PencilSimple size={16} className="mt-px shrink-0 text-noct-neutral-400" aria-hidden />
             <p className="text-[13px] leading-normal">

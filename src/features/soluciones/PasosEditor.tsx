@@ -994,9 +994,9 @@ export function PasosEditor({
           {/* TRES LÍNEAS BAJO EL TÍTULO, todas opcionales. Para qué sirve
               el paso (`objetivo`, plegado en la ejecución) y las dos
               preguntas que faltaban (encargo del 2026-09-22, sección 6):
-              dónde se hace (`lugar`, en amarillo con la primera acción)
-              y qué tiene que verse al terminar (`resultado`, en verde con
-              la última). "Para qué" y "Debes ver" son campos distintos:
+              dónde se hace (`lugar`, neutro, con la primera acción; tarea
+              303) y qué tiene que verse al terminar (`resultado`, en verde
+              con la última). "Para qué" y "Debes ver" son campos distintos:
               uno explica el propósito ("Dejar la impresora compartida"),
               el otro describe lo que aparece en la pantalla ("La
               impresora en la lista, con la marca verde"). AD-043. */}

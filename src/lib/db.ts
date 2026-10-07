@@ -315,8 +315,8 @@ export interface PasoProcedimiento {
   // ventana o sección que hay que localizar para hacer el paso ("Panel de
   // control > Dispositivos e impresoras", "Menú lateral de SGC").
   // Opcional; vacío en todo lo escrito antes de que existiera. La
-  // ejecución lo enseña con la primera acción del paso, en el amarillo
-  // de "lugar".
+  // ejecución lo enseña con la primera acción del paso, neutro y con su
+  // chincheta: solo orienta (tarea 303).
   //
   // `lugar` y `resultado` viven en el JSON del procedimiento, así que no
   // necesitan columna en Supabase ni versión nueva de Dexie. Una copia de

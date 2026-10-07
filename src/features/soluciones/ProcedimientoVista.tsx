@@ -42,7 +42,7 @@ import { QueHaceEnTexto } from '../referencia/QueHaceEnTexto'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { useReferencias } from '../referencia/useReferencias'
 import { EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
-import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
+import { DatoTecnico, DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import { presenciaDeAviso, tonoInfo } from './tonos'
 import {
   ROTULO_CONTINGENCIA,
@@ -76,8 +76,9 @@ const BTN_EXITO =
 // LOS COLORES DE LA GUÍA (encargo del 2026-09-22, sección 4): el rojo es
 // el riesgo y el "detenerse" (una comprobación que no se cumple); la vía
 // que se desvía (el "No" de una decisión) es neutra, porque no es un
-// riesgo. El ámbar sale de las guías: dentro de una, el amarillo
-// significa "lugar".
+// riesgo. El ámbar sale de las guías: con texto significa "requiere
+// atención" (sección 13 de la auditoría UX), y ni el "Dónde" lo usa
+// desde la tarea 303.
 const BTN_RIESGO =
   `${BTN_ESTADO_BASE} border-noct-error/55 text-noct-error hover:bg-noct-error/10 active:bg-noct-error/20`
 const BTN_OTRA_VIA =
@@ -93,8 +94,8 @@ const BTN_ACENTO =
 
 // Panel de aviso reutilizado para vinculos rotos o no disponibles.
 // Neutro desde el 2026-09-22 (tarea 255): un vinculo roto no es un
-// riesgo del procedimiento, y dentro de una guia el amarillo significa
-// "lugar". Lo dice su texto.
+// riesgo del procedimiento, y dentro de una guia no hay ambar. Lo dice
+// su texto.
 const PANEL_NO_DISPONIBLE =
   'rounded-lg border border-noct-divider bg-noct-text/[.04] px-3 py-2.5 text-[13px] leading-normal text-noct-neutral-200'
 
@@ -447,7 +448,7 @@ export function ProcedimientoVista({
                       {paso.vinculoProtegido && <CredencialEnPaso vinculo={paso.vinculoProtegido} variante="bloque" />}
 
                       {/* QUÉ DEBO VER DESPUÉS, tras el cuerpo del paso: el
-                          mismo bloque verde que la ejecución. */}
+                          mismo bloque que la ejecución. */}
                       {paso.resultado.trim() !== '' && <DebesVerPaso texto={paso.resultado.trim()} />}
 
                       {/* LO QUE CUELGA DEL PASO, en filas y sin marcos
@@ -1039,13 +1040,14 @@ export function BloqueVista({
     // la vez. Una información o un consejo es una nota, y un dato técnico
     // se lee a la vista pero sin el color de una advertencia; si todo va
     // con fondo de color, la precaución real deja de destacar.
+    //
+    // El dato técnico es el MISMO bloque que en la acción a la vez (tarea
+    // 303): su rótulo y su valor en monoespaciada, para que leer y hacer
+    // enseñen lo mismo y nunca parezca otra instrucción.
+    if (presencia === 'dato') return <DatoTecnico texto={bloque.texto} />
     if (presencia !== 'alerta') {
       return (
-        <p
-          className={`flex items-start gap-2.5 px-1 py-1 text-[13px] leading-normal ${
-            presencia === 'dato' ? 'rounded-lg bg-noct-text/[.05] px-3 py-2 text-noct-text' : 'text-noct-neutral-300'
-          }`}
-        >
+        <p className="flex items-start gap-2.5 px-1 py-1 text-[13px] leading-normal text-noct-neutral-300">
           <tono.Icono size={15} className="mt-[2px] shrink-0 text-noct-neutral-400" aria-hidden />
           <span className="min-w-0">
             <span className="font-medium text-noct-neutral-400">{tono.etiqueta}.</span> {bloque.texto}

@@ -81,16 +81,17 @@
      la ejecucion de una guia cada color tiene UN significado, y ninguno
      va sin su icono y su palabra:
        verde  (exito)   inicio, accion completada, "Debes ver"
-       amarillo (lugar) lugar, menu o seccion que hay que localizar
        azul   (accion)  la accion en curso: entrar, abrir, seleccionar
        rojo   (error)   riesgo real, detenerse ("Cuidado", "Importante")
-     El amarillo de lugar es mas claro y mas saturado que el ambar de
-     precaucion (que sigue significando "atencion" fuera de las guias:
-     vencimientos, equipos en mantenimiento), y dentro de una guia la
-     precaucion ya no usa el ambar: es un riesgo, asi que va en rojo.
+     "Donde" no tiene color: solo orienta, asi que va neutro, con su
+     chincheta y su palabra (tarea 303, seccion 13 de la auditoria UX).
+     Hasta entonces usaba un amarillo propio, `noct-lugar`, que se retiro:
+     se leia como una advertencia y competia con la accion. El ambar de
+     precaucion sigue significando "requiere atencion" fuera de las guias
+     (vencimientos, equipos en mantenimiento), y dentro de una guia la
+     precaucion no lo usa: es un riesgo, asi que va en rojo.
      El azul de accion (matiz 245) se separa del acento lavanda (el de los
      controles de la app), que queda para botones y enlaces. */
-  --color-noct-lugar: oklch(0.87 0.14 96);
   --color-noct-accion: oklch(0.76 0.12 240);
 
   /* Color de identidad de cada tipo de documento (Soluciones): antes

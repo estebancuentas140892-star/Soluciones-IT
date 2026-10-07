@@ -685,6 +685,63 @@ const GUIA_APUNTE = articulo({
   },
 })
 
+// JERARQUIA DE UNA ACCION (tarea 303). El caso de referencia de la copia
+// de seguridad del correo, inventado: el paso 1 es UNA accion con todos
+// sus papeles a la vez (riesgo, donde, que hacer, dato tecnico, debes ver
+// y mas informacion), que es la pantalla mas cargada posible; el paso 2
+// trae una instruccion larga y un dato sin espacios, para comprobar que
+// nada se corta a 375 px ni con el texto al 130 %. "Como hacerlo" no esta:
+// todavia no tiene sitio en el modelo (TAREAS.md, tarea 303).
+const GUIA_JERARQUIA = articulo({
+  id: 'art-jerarquia',
+  categoriaId: 'cat-software',
+  titulo: 'Exportar un buzón de correo de ejemplo',
+  tipo: 'mantenimiento',
+  procedimiento: {
+    descripcion: '',
+    portada: null,
+    objetivoGeneral: '',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 10,
+    dificultad: 'principiante',
+    pasos: [
+      paso({
+        id: 'jer-p1',
+        titulo: 'Exportar el buzón de ejemplo',
+        lugar: 'Aplicación de correo',
+        resultado: 'El asistente de exportación queda abierto',
+        bloques: [
+          avisoConTono(
+            'jer-a-riesgo',
+            'jer-p1-t1',
+            'precaucion',
+            'Si el disco de destino se llena, la exportación se corta y el archivo queda incompleto',
+          ),
+          tarea('jer-p1-t1', 'Abre la opción de exportación'),
+          avisoConTono('jer-a-dato', 'jer-p1-t1', 'dato', 'Backup_2026-10-07.pst'),
+          avisoConTono(
+            'jer-a-info',
+            'jer-p1-t1',
+            'info',
+            'El archivo de ejemplo conserva carpetas, contactos y calendario, y se puede abrir en otro equipo',
+          ),
+        ],
+      }),
+      paso({
+        id: 'jer-p2',
+        titulo: 'Guardar el archivo de ejemplo',
+        lugar: 'Asistente de exportación · Archivo de destino',
+        resultado: 'La ruta del archivo aparece en el campo de destino',
+        bloques: [
+          tarea('jer-p2-t1', 'Elige la carpeta compartida de respaldos de ejemplo como destino del archivo de datos'),
+          avisoConTono('jer-a-ruta', 'jer-p2-t1', 'dato', '\\\\SRV-EJEMPLO\\Respaldos\\Correo\\2026\\Buzon-de-ejemplo-con-nombre-largo.pst'),
+        ],
+      }),
+    ],
+  },
+})
+
 // RESOLUCION GUIADA (tarea 263). Los cinco ejemplos del encargo, en
 // version de ejemplo: A y B son procedimientos directos (se abren en su
 // paso 1, sin preguntas); C y D son guias con preguntas que llevan al
@@ -966,6 +1023,7 @@ const ARTICULOS: Articulo[] = [
   GUIA_CONECTAR_IMPRESORA,
   GUIA_TONOS,
   GUIA_APUNTE,
+  GUIA_JERARQUIA,
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
   GUIA_TRES_TAREAS,

@@ -4,14 +4,13 @@ import type { Elecciones } from '../../lib/rutaProcedimiento'
 import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
 import { normalizarTexto } from './iconosSoluciones'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
-import { DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
+import { DatoTecnico, DebesVerPaso, DondeSeHacePaso } from './SenalesDePaso'
 import {
   ArrowRight,
   CaretDown,
   CaretLeft,
   CaretRight,
   Check,
-  Code,
   CursorClick,
   Info,
   ListChecks,
@@ -97,6 +96,21 @@ import { PasosEnLectura } from './PasosEnLectura'
 //   - Un paso que no es el de trabajo, abierto desde el índice, se
 //     CONSULTA: se lee entero, nada se marca y el botón devuelve al paso
 //     de trabajo.
+//
+// JERARQUÍA DE UNA ACCIÓN (tarea 303, regla 27, AD-066). Una pantalla es
+// una acción clara, y eso no significa meterlo todo en una caja: cada
+// papel conserva su sitio y la pantalla hace evidente cuál manda.
+//
+//   1. Qué hacer: la instrucción, a 26 px. Es lo único que domina.
+//   2. Dónde: orienta, neutro y en voz baja, separado de la acción.
+//   3. El dato técnico que la acción necesita, pegado a la instrucción y
+//      subordinado a ella: rótulo y monoespaciada, nunca otra orden.
+//   4. Debes ver: la comprobación, en verde, después del trabajo.
+//   5. Más información: lo que ayuda a entender sin hacer falta para
+//      actuar, plegado. Si alguien nuevo tuviera que abrirlo para saber
+//      cómo hacer la acción, ese contenido está mal clasificado.
+//   6. La advertencia: solo un riesgo real, antes de actuar, en rojo. Es
+//      el único bloque con fondo de color.
 
 interface Props {
   paso: PasoProcedimiento
@@ -1060,29 +1074,39 @@ export function ModoFoco({
           <AlertaDeRiesgo key={aviso.id} aviso={aviso} />
         ))}
 
-        {/* DÓNDE SE HACE: el lugar, menú o sección que hay que localizar.
-            Con la primera acción del paso, en amarillo, con su icono y su
-            palabra (el color nunca va solo). */}
+        {/* DÓNDE SE HACE: dónde hay que estar para hacer la acción. Con la
+            primera acción del paso. Solo orienta: neutro, con su chincheta
+            y su palabra, y a 16 px de la acción (tarea 303). */}
         {lugarDelPaso && <DondeSeHacePaso lugar={lugarDelPaso} />}
 
-        <div className="flex flex-col gap-1">
-          {/* Sin etiqueta cuando el paso que reutiliza otra guía no se
-              puede hacer aquí (no está, o se lee aparte): "Hecha" o "Qué
-              hacer" encima dirían lo que no es. */}
-          {(tarea.clase !== 'guia-del-paso' || (guiaDelPasoDisponible && guiaDelPasoIntegrada)) && (
-            <EtiquetaDeAccion tipoTarea={tarea.tipoTarea} hecha={hecha} conOpciones={conOpciones} />
-          )}
-          <h2
-            ref={encabezado}
-            id={conOpciones ? idPregunta : undefined}
-            tabIndex={-1}
-            data-foco-lectura
-            className={`text-[26px] font-medium leading-[1.3] tracking-[-.01em] text-pretty outline-none ${
-              hecha ? 'text-noct-neutral-400' : 'text-noct-text'
-            }`}
-          >
-            {textoInstruccion}
-          </h2>
+        {/* LA ACCIÓN Y LO QUE HACE FALTA PARA HACERLA. El dato técnico va
+            pegado a la instrucción (más cerca que el resto de la pantalla)
+            porque es SU valor, y con menos peso porque no es otra orden. */}
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-1">
+            {/* Sin etiqueta cuando el paso que reutiliza otra guía no se
+                puede hacer aquí (no está, o se lee aparte): "Hecha" o "Qué
+                hacer" encima dirían lo que no es. */}
+            {(tarea.clase !== 'guia-del-paso' || (guiaDelPasoDisponible && guiaDelPasoIntegrada)) && (
+              <EtiquetaDeAccion tipoTarea={tarea.tipoTarea} hecha={hecha} conOpciones={conOpciones} />
+            )}
+            {/* La instrucción nunca se recorta (regla 23): una ruta o un
+                nombre sin espacios parte la línea en vez de salirse. */}
+            <h2
+              ref={encabezado}
+              id={conOpciones ? idPregunta : undefined}
+              tabIndex={-1}
+              data-foco-lectura
+              className={`min-w-0 text-[26px] font-medium leading-[1.3] tracking-[-.01em] text-pretty outline-none [overflow-wrap:anywhere] ${
+                hecha ? 'text-noct-neutral-400' : 'text-noct-text'
+              }`}
+            >
+              {textoInstruccion}
+            </h2>
+          </div>
+          {avisos.datos.map((aviso) => (
+            <DatoTecnico key={aviso.id} texto={aviso.texto} />
+          ))}
         </div>
 
         {/* LAS RESPUESTAS, JUSTO BAJO LA PREGUNTA (tarea 302): son la acción
@@ -1106,10 +1130,6 @@ export function ModoFoco({
             )}
           </div>
         )}
-
-        {avisos.datos.map((aviso) => (
-          <DatoTecnico key={aviso.id} aviso={aviso} />
-        ))}
 
         {/* ATAJOS Y COMANDOS DE ESTA ACCIÓN. No marcan la tarea ni
             cuentan para cerrar el paso. */}
@@ -1184,8 +1204,9 @@ export function ModoFoco({
           </div>
         ))}
 
-        {/* QUÉ DEBO VER DESPUÉS: con la última acción del paso, en verde
-            (el `resultado` del paso). */}
+        {/* QUÉ DEBO VER DESPUÉS: con la última acción del paso (el
+            `resultado` del paso), después de todo lo que se usa para
+            hacerla. Verde en su icono y su palabra: comprueba, no manda. */}
         {debesVer && <DebesVerPaso texto={debesVer} />}
 
         {/* LOS TÉRMINOS, COMO ETIQUETAS DISCRETAS: se tocan para leer la
@@ -1215,7 +1236,10 @@ export function ModoFoco({
         )}
 
         {/* LO QUE SIRVE PARA ENTENDER, NO PARA HACER (sección 8 del
-            encargo): plegado y a un toque. */}
+            encargo): plegado y a un toque, cerrado al llegar a cada
+            acción. Lo necesario para ejecutarla nunca vive aquí (regla
+            27): si hiciera falta abrirlo para saber qué hacer, el
+            contenido está mal clasificado. */}
         {hayMasInformacion && (
           <MasInformacion abierta={masInformacion} onAlternar={() => setMasInformacion((v) => !v)}>
             {objetivoPrestado && (
@@ -1429,17 +1453,6 @@ function AlertaDeRiesgo({ aviso }: { aviso: BloquePaso }) {
         <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span> {aviso.texto || 'Aviso sin texto'}
       </p>
     </div>
-  )
-}
-
-// UN DATO TÉCNICO que hace falta para la acción: a la vista, sin color de
-// alerta, para que no compita con los riesgos.
-function DatoTecnico({ aviso }: { aviso: BloquePaso }) {
-  return (
-    <p className="flex items-start gap-2.5 rounded-lg bg-noct-text/[.05] px-3 py-2.5 text-[15px] leading-snug text-noct-text">
-      <Code size={17} className="mt-0.5 shrink-0 text-noct-neutral-400" aria-hidden />
-      <span className="min-w-0 [overflow-wrap:anywhere]">{aviso.texto || 'Dato sin texto'}</span>
-    </p>
   )
 }
 

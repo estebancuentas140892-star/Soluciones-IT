@@ -37,6 +37,9 @@ export interface TonoInfo {
 // Las descripciones dicen también CÓMO se verá el aviso al ejecutar
 // (encargo del 2026-09-17): quien escribe la guía decide si algo
 // interrumpe o no eligiendo el tono, así que tiene que saberlo al elegir.
+// Desde la tarea 303 dicen además qué NO va en cada uno (regla 27): lo
+// que hace falta para hacer la acción nunca va plegado, y un dato técnico
+// es un valor, no una explicación.
 export const TONOS_AVISO: TonoInfo[] = [
   // Información y consejo NO llevan color (encargo del 2026-09-22,
   // sección 4): en una guía los colores significan, y ni una explicación
@@ -46,7 +49,7 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'info',
     etiqueta: 'Información',
     corto: 'Info',
-    descripcion: 'Explicación o contexto. Al ejecutar queda plegado en «Más información»',
+    descripcion: 'Ayuda a entender, pero no hace falta para hacer la acción. Al ejecutar queda plegado en «Más información»',
     Icono: Info,
     clasesPanel: 'border-noct-divider bg-noct-text/[.04]',
     claseIcono: 'text-noct-neutral-300',
@@ -57,14 +60,14 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'precaucion',
     etiqueta: 'Precaución',
     corto: 'Cuidado',
-    descripcion: 'Algo que puede salir mal en esta acción. Se ve como alerta junto a ella',
+    descripcion: 'Un riesgo real de esta acción. Se ve en rojo, antes de la instrucción',
     Icono: Warning,
     // UN RIESGO VA EN ROJO (encargo del 2026-09-22, sección 4). Era
-    // ámbar, y dentro de una guía el amarillo pasa a significar "lugar
-    // que hay que localizar". Precaución e Importante son los dos riesgos
-    // reales: la precaución lleva el rojo con borde y fondo suave; lo
-    // importante, el rojo pleno. Los distingue además su icono y su
-    // palabra, nunca solo el color.
+    // ámbar, y en una guía el ámbar no dice "riesgo" (con texto, desde la
+    // sección 13 de la auditoría UX, es "requiere atención"). Precaución e
+    // Importante son los dos riesgos reales: la precaución lleva el rojo
+    // con borde y fondo suave; lo importante, el rojo pleno. Los distingue
+    // además su icono y su palabra, nunca solo el color.
     clasesPanel: 'border-noct-error/35 bg-noct-error/[.07]',
     claseIcono: 'text-noct-error',
     claseBarra: 'border-noct-error/70',
@@ -85,7 +88,7 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'consejo',
     etiqueta: 'Consejo',
     corto: 'Consejo',
-    descripcion: 'Atajo o buena práctica. Al ejecutar queda plegado en «Más información»',
+    descripcion: 'Atajo o buena práctica que no hace falta para hacer la acción. Al ejecutar queda plegado en «Más información»',
     Icono: Lightbulb,
     clasesPanel: 'border-noct-divider bg-noct-text/[.04]',
     claseIcono: 'text-noct-neutral-300',
@@ -96,7 +99,8 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'dato',
     etiqueta: 'Dato técnico',
     corto: 'Dato',
-    descripcion: 'Un valor exacto que hace falta para la acción. Se ve a la vista, sin color de alerta',
+    descripcion:
+      'Un valor exacto que la acción necesita (IP, puerto, ruta, comando, nombre de archivo), no una explicación de pasos. Se ve bajo la acción, sin color de alerta',
     Icono: Code,
     clasesPanel: 'border-noct-neutral-500/30 bg-noct-neutral-500/10',
     claseIcono: 'text-noct-neutral-400',
@@ -124,9 +128,12 @@ export function tonoInfo(tono: TonoAviso | null): TonoInfo {
 //     la acción a la que pertenecen, antes de la instrucción y con su
 //     color, y como son pocos, destacan.
 //   - 'dato': un valor que hace falta para ejecutar la acción. A la
-//     vista, pero sin color de alerta.
+//     vista, pegado a la instrucción y subordinado a ella (su rótulo y
+//     monoespaciada, tarea 303), sin color de alerta.
 //   - 'plegado': información y consejo. Sirven para entender, no para
-//     hacer: quedan bajo "Más información", cerrado por defecto.
+//     hacer: quedan bajo "Más información", cerrado por defecto. Lo que
+//     una persona nueva necesite para hacer la acción no puede estar
+//     aquí (regla 27).
 export type PresenciaAviso = 'alerta' | 'dato' | 'plegado'
 
 export function presenciaDeAviso(tono: TonoAviso | null): PresenciaAviso {

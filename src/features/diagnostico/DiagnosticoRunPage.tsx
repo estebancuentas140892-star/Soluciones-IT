@@ -291,7 +291,7 @@ function Sesion({
       {estado.tipo === 'pregunta' && !nodoActual && (
         // La guía se editó a mitad de una sesión y la pregunta actual ya
         // no existe: no hay forma segura de continuar. Neutro: no es un
-        // riesgo, y dentro de una guía el amarillo significa "lugar".
+        // riesgo, y dentro de una guía no hay ámbar.
         <div className="flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-text/[.04] px-4 py-3.5">
           <p className="text-[13.5px] leading-relaxed text-noct-neutral-200">
             Esta guía cambió y la pregunta en la que ibas ya no existe. Hay que empezar de nuevo.
