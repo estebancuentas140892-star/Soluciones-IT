@@ -224,23 +224,103 @@ describe('una sola instrucción principal', () => {
   })
 })
 
+// EL ESTADO NO SUSTITUYE A LA FUNCIÓN (tarea 307): el rótulo dice siempre
+// qué es la pantalla, y lo hecho se dice solo con la marca a su lado, sin
+// palabras ("hecha", "comprobada" o "respondida" se retiraron en la revisión
+// de la tarea).
+const PALABRAS_DE_ESTADO = /\b(hecha|Hecha|comprobada|Comprobada|respondida|Respondida)\b/
+
+/** El rótulo de la acción: el párrafo que dice qué es la pantalla. */
+function rotuloDe(palabra: string): HTMLElement {
+  const rotulo = elementoCon(palabra).closest('p')
+  if (!rotulo) throw new Error(`Sin rótulo «${palabra}»`)
+  return rotulo
+}
+
+/** La marca de cumplida del rótulo, o null. */
+function marcaDeCumplida(rotulo: HTMLElement): HTMLElement | null {
+  return rotulo.querySelector<HTMLElement>('[role="img"][aria-label="Completada"]')
+}
+
+/** Comprueba que el rótulo dice su palabra y lleva la marca, discreta y sin texto. */
+function conMarcaSinPalabra(palabra: string): void {
+  const rotulo = rotuloDe(palabra)
+  expect(rotulo.textContent).toBe(palabra)
+  const marca = marcaDeCumplida(rotulo)
+  expect(marca).not.toBeNull()
+  // Secundaria: solo el icono, en verde y del tamaño del rótulo, sin texto.
+  expect(marca?.textContent).toBe('')
+  expect(marca?.classList.contains('text-noct-exito')).toBe(true)
+  expect(marca?.querySelector('svg')?.getAttribute('width')).toBe('13')
+  expect(textoPantalla()).not.toMatch(PALABRAS_DE_ESTADO)
+}
+
 describe('el estado no sustituye a la función', () => {
-  it('una acción hecha sigue diciendo "Qué hacer"; lo hecho se dice aparte, con su marca y en voz baja', async () => {
+  it('una acción pendiente: "Qué hacer", sin marca', async () => {
+    await abrir()
+    const rotulo = rotuloDe('Qué hacer')
+    expect(rotulo.textContent).toBe('Qué hacer')
+    expect(marcaDeCumplida(rotulo)).toBeNull()
+    expect(instrucciones()[0].classList.contains('text-noct-text')).toBe(true)
+  })
+
+  it('una acción hecha: "Qué hacer" y la marca, sin la palabra "hecha"; la instrucción, atenuada', async () => {
     await abrir()
     await completarYSeguir()
     await esperar(() => instrucciones()[0]?.textContent === ACCION_2, 'la segunda acción')
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => instrucciones()[0]?.textContent === ACCION_1, 'de vuelta en la primera, ya hecha')
 
-    const rotulo = elementoCon('Qué hacer').closest('p') as HTMLElement
-    expect(rotulo.textContent).toContain('Qué hacer')
-    // "hecha" va a su lado, en verde y con su marca, no en su lugar.
-    const estado = Array.from(rotulo.querySelectorAll('span')).find((s) => s.textContent === 'hecha')
-    expect(estado?.classList.contains('text-noct-exito')).toBe(true)
-    expect(estado?.querySelector('svg')).not.toBeNull()
-    expect(textoPantalla()).not.toContain('Hecha')
-    // La instrucción, atenuada; el progreso del paso la marca.
+    conMarcaSinPalabra('Qué hacer')
     expect(instrucciones()[0].classList.contains('text-noct-neutral-400')).toBe(true)
+  })
+
+  it('una comprobación hecha: "Comprueba" y la marca, sin "comprobada"', async () => {
+    await abrir()
+    await completarYSeguir()
+    await esperar(() => instrucciones()[0]?.textContent === ACCION_2, 'la comprobación')
+    expect(marcaDeCumplida(rotuloDe('Comprueba'))).toBeNull()
+    // Cumplida, el paso se cierra y sigue en el 2; "Anterior" vuelve a ella.
+    await completarYSeguir()
+    await esperar(() => instrucciones()[0]?.textContent === TITULO_PASO_2, 'el paso 2')
+    await tocar(await esperarControl(/^Anterior/))
+    await esperar(() => instrucciones()[0]?.textContent === ACCION_2, 'de vuelta en la comprobación, ya hecha')
+
+    conMarcaSinPalabra('Comprueba')
+  })
+
+  it('una decisión respondida (con opciones, tarea 302): "Decide" y la marca, sin "respondida"', async () => {
+    const decision: BloquePaso = {
+      ...CAMPOS_BLOQUE_VACIOS,
+      id: 'dec-t1',
+      tipo: 'tarea',
+      texto: '¿Qué versión de prueba usas?',
+      tipoTarea: 'decision',
+      opciones: [
+        { id: 'op-a', titulo: 'Versión de prueba A', descripcion: '', destino: { tipo: 'continuar' } },
+        { id: 'op-b', titulo: 'Versión de prueba B', descripcion: '', destino: { tipo: 'continuar' } },
+      ],
+    }
+    await sembrarGuia({
+      id: 'guia-decide',
+      titulo: 'Guía de prueba con una pregunta',
+      pasos: [
+        { ...pasoPrueba('dec-p1', 'Elegir la versión de prueba', []), bloques: [decision] },
+        pasoPrueba('dec-p2', 'Seguir con la prueba', ['Abre la versión de prueba elegida']),
+      ],
+    })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-decide')
+    await esperar(() => instrucciones()[0]?.textContent === '¿Qué versión de prueba usas?', 'la pregunta')
+    expect(marcaDeCumplida(rotuloDe('Decide'))).toBeNull()
+
+    await tocar(await esperar(() => control(/^Versión de prueba A/), 'la respuesta A'))
+    await esperar(() => instrucciones()[0]?.textContent === 'Abre la versión de prueba elegida', 'el camino de la respuesta')
+    await tocar(await esperarControl(/^Anterior/))
+    await esperar(() => instrucciones()[0]?.textContent === '¿Qué versión de prueba usas?', 'la pregunta, ya respondida')
+
+    conMarcaSinPalabra('Decide')
+    // La respuesta elegida se sigue diciendo en su tarjeta (tarea 302).
+    expect(control(/^Versión de prueba A/)?.textContent).toContain('Tu respuesta')
   })
 })
 

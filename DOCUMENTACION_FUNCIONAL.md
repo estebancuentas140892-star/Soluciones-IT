@@ -186,7 +186,7 @@ La Bóveda **solo aparece a quien tiene el permiso**; el resto ni sabe que exist
 
 | Color | Significa | Dónde se ve |
 |---|---|---|
-| **Verde** | acción completada y resultado correcto | paso hecho en la ruta, "hecha" junto a "Qué hacer" (desde la tarea 307), "Comprueba" y **"Debes ver"** |
+| **Verde** | acción completada y resultado correcto | paso hecho en la ruta, la marca ✓ junto a "Qué hacer" (desde la tarea 307), "Comprueba" y **"Debes ver"** |
 | **Azul** | la acción: entrar, abrir, seleccionar | "Paso N de M", "Qué hacer" y el nodo actual de la ruta |
 | **Rojo** | riesgo real, detenerse | **Precaución** e **Importante**, "No se cumple" y la falla declarada |
 
@@ -1431,7 +1431,7 @@ Equipos > Crear
 ```
  ━━ ━━ ── acción 2 de 3                  ← solo si el paso tiene varias acciones
                                            (en escritorio, la ruta: nodos y "PASO 1 DE 3", sin repetir el título)
- ⌖ QUÉ HACER  ✓ hecha                     ← el rótulo dice qué es la pantalla; lo hecho, aparte y en voz baja
+ ⌖ QUÉ HACER  ✓                          ← el rótulo dice qué es la pantalla; lo hecho, solo con la marca
  Elimina el PST anterior                  ← la ÚNICA instrucción, 26 px, nunca recortada
  [⚠ Importante. Antes de eliminar, …]    ← el riesgo real, a la vista, rojo, bajo la instrucción
  ↳ Ruta rápida: Documentos › Eliminar
@@ -1442,7 +1442,7 @@ Equipos > Crear
 ```
 
 - **Una sola instrucción.** El título del paso no se repite encima de la acción (ni en el teléfono ni bajo la ruta de escritorio): solo ES la instrucción cuando el paso no tiene acciones propias (un paso sin tareas o uno que reutiliza otra guía). Sigue en el índice, en los nodos de la ruta, en la vista de paso entero (como encabezado de su lista), en el editor y en el historial.
-- **El estado no sustituye a la función.** Una acción ya hecha sigue diciendo **"Qué hacer"** ("Comprueba", "Decide"); a su lado, en verde y en voz baja, la marca y **"hecha"** ("comprobada", "respondida"). La instrucción se atenúa y su trazo en "acción N de M" se colorea.
+- **El estado no sustituye a la función.** Una acción ya hecha sigue diciendo **"Qué hacer"** ("Comprueba", "Decide"); a su lado, solo la marca **✓** en verde, pequeña y sin palabra (el lector de pantalla dice "Completada"). La instrucción se atenúa y su trazo en "acción N de M" se colorea.
 - **La advertencia** (Precaución o Importante) va en la misma pantalla que su acción, **justo bajo la instrucción y antes de la ruta rápida**: se lee después de saber qué se va a hacer y antes de hacerlo. Nunca plegada ni como otro paso, y es el único bloque con fondo de color.
 - **"Cómo hacerlo"** no cambia: la ruta rápida a la vista y "Ver paso a paso" plegado, con la ubicación de cada microacción debajo.
 - **"Debes ver" es una imagen.** Plegado al final de la acción ("Debes ver ▾", 44 px, el ojo y la palabra en verde). Al abrirlo, la imagen de cómo debe quedar la pantalla, a todo el ancho y con "Toca para ampliar": se abre en el visor de siempre (zoom con dos dedos, "Volver"), con la descripción como pie. La imagen se pide solo al abrirlo; sin conexión sale de la copia del teléfono ("Descargar todo para offline"), y si no está: "La imagen no está en este dispositivo. Si estás sin conexión, usa "Descargar todo para offline" con señal." **Sin imagen, no hay "Debes ver".** Cada acción llega con el suyo plegado.

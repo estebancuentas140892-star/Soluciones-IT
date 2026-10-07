@@ -1342,11 +1342,10 @@ export function AntesDeEmpezar({ requisitos }: { requisitos: string[] }) {
 // EL ESTADO NO SUSTITUYE A LA FUNCIÓN (tarea 307). Hasta ahora una acción
 // ya hecha cambiaba "Qué hacer" por "Hecha": el rótulo dejaba de decir qué
 // es la pantalla y pasaba a decir solo un estado. Ahora el rótulo es
-// siempre el mismo y lo hecho se dice aparte, en voz baja: la marca y la
-// palabra en verde a su lado ("hecha", "comprobada" o "respondida"), la
+// siempre el mismo y lo hecho se dice sin palabras: la marca en verde a su
+// lado, pequeña y sin texto (para el lector de pantalla, "Completada"), la
 // instrucción atenuada y el trazo de la acción en el progreso del paso.
-const ESTADO_HECHO = { accion: 'hecha', verificacion: 'comprobada', decision: 'respondida' } as const
-
+// Escribir además "hecha" era leer algo que no ayuda a ejecutar.
 function EtiquetaDeAccion({
   tipoTarea,
   hecha,
@@ -1366,15 +1365,14 @@ function EtiquetaDeAccion({
         ? { Icono: Question, palabra: 'Decide', color: 'text-noct-neutral-300' }
         : { Icono: CursorClick, palabra: 'Qué hacer', color: 'text-noct-accion' }
   return (
-    <p className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] leading-snug">
+    <p className="flex items-center gap-2 text-[12px] leading-snug">
       <span className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-[.06em] ${color}`}>
         <Icono size={13} className="shrink-0" aria-hidden />
         {palabra}
       </span>
       {hecha && (
-        <span className="inline-flex items-center gap-1 text-[12.5px] font-medium text-noct-exito">
-          <Check size={13} className="shrink-0" aria-hidden />
-          {ESTADO_HECHO[clase]}
+        <span role="img" aria-label="Completada" className="inline-flex shrink-0 text-noct-exito">
+          <Check size={13} aria-hidden />
         </span>
       )}
     </p>

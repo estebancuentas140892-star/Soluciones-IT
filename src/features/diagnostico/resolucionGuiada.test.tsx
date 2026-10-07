@@ -493,13 +493,14 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     // exacto de la guía que se abrió.
     await esperar(() => textoPantalla().includes('Escribir el número en el POS de prueba'), 'la acción siguiente')
     expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-dian')
-    // Y la decisión quedó respondida: "Anterior" la enseña hecha.
+    // Y la decisión quedó respondida: "Anterior" la enseña cumplida.
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('¿Encontraste el número de resolución?'), 'la decisión respondida')
-    // Su rótulo sigue diciendo qué es ("Decide"); lo hecho va aparte, en voz
-    // baja (tarea 307).
+    // Su rótulo sigue diciendo qué es ("Decide"); lo hecho, solo con la marca
+    // a su lado, sin palabras (tarea 307).
     expect(textoPantalla()).toContain('Decide')
-    expect(textoPantalla()).toContain('respondida')
+    expect(document.body.querySelector('[role="img"][aria-label="Completada"]')).not.toBeNull()
+    expect(textoPantalla()).not.toContain('respondida')
     const avance = await db.progresoPasos.get('guia-dian')
     expect(avance?.instruccionesHechas).toEqual(expect.arrayContaining(['dian-p1-t1', 'dian-p1-t2']))
     expect((await db.progresoPasos.get('guia-localizar'))?.instruccionesHechas).toEqual(['loc-p1-t1'])

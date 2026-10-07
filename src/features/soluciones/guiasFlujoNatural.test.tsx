@@ -585,9 +585,10 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('Conectarse al servidor por escritorio remoto'), 'el paso 1, para leerlo')
     const texto = textoPantalla()
-    // "Qué hacer" sigue diciendo qué es la pantalla; lo hecho va aparte (tarea 307).
+    // "Qué hacer" sigue diciendo qué es la pantalla; lo hecho, solo con la
+    // marca a su lado (tarea 307).
     expect(texto).toContain('Qué hacer')
-    expect(texto).toContain('hecha')
+    expect(document.body.querySelector('[role="img"][aria-label="Completada"]')).not.toBeNull()
     expect(texto).toContain('Ingresar al programa de caja')
     expect(texto).toContain('Abre el programa de caja e ingresa su contraseña')
     expect(control(/^Abrir:/)).toBeNull()
