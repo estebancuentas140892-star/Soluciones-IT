@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { ArrowElbowDownRight, CaretDown, Code, Eye, MapPin } from '../../components/iconos'
-import { llevaPuntoFinal, ROTULO_RUTA_RAPIDA, segmentoDeRuta } from '../../lib/comoHacer'
+import { llevaPuntoFinal, ROTULO_RUTA_RAPIDA } from '../../lib/comoHacer'
 import type { MicroPasoComoHacer } from '../../lib/db'
 
 // LAS SEÑALES DE UN PASO (encargo del 2026-09-22, secciones 4 y 6).
@@ -59,17 +59,21 @@ const TAMANOS_COMO_HACERLO = {
 } as const
 
 // CÓMO HACERLO (tarea 303): las microacciones de la acción, con UN solo
-// contenido y dos niveles de lectura (ver `src/lib/comoHacer.ts`).
+// contenido y dos niveles de lectura (ver `src/lib/comoHacer.ts`). Recibe
+// solo microacciones completas (`comoHacerDe`): cada una tiene acción y
+// elemento, así que aquí no hay sustitutos.
 //
-//   - RUTA RÁPIDA, siempre a la vista: los elementos en orden, separados
-//     por "›" ("Fichero › Cliente › Fichero › Nuevo"). Es lo que lee de un
-//     vistazo el técnico que ya conoce el sitio. Envuelve en varias líneas
-//     cuando no cabe y nunca recorta ni abrevia un nombre: el separador va
-//     pegado al elemento anterior, así que ninguna línea empieza por él.
+//   - RUTA RÁPIDA, siempre a la vista: solo los elementos, en orden y
+//     separados por "›" ("Fichero › Cliente › Fichero › Nuevo"). Es lo que
+//     lee de un vistazo el técnico que ya conoce el sitio. Envuelve en
+//     varias líneas cuando no cabe y nunca recorta ni abrevia un nombre: el
+//     separador va pegado al elemento anterior, así que ninguna línea
+//     empieza por él.
 //   - VER PASO A PASO, plegado: las mismas microacciones numeradas, como
-//     frases ("Abre Fichero."), con la ubicación debajo cuando la hay. Es
-//     para quien llega nuevo; ligero, sin tarjetas, y subordinado a la
-//     instrucción por la sangría y la raya, no por una caja.
+//     frases de acción más elemento ("Abre Fichero."), con la ubicación
+//     debajo cuando la hay. Es para quien llega nuevo; ligero, sin
+//     tarjetas, y subordinado a la instrucción por la sangría y la raya, no
+//     por una caja.
 //
 // Cuelga de la instrucción (la flecha en ángulo). Lo desplegado es de esta
 // acción: quien la cambia por otra le da otra `key`, y vuelve plegado.
@@ -102,7 +106,7 @@ export function ComoHacerlo({
           <ol role="list" aria-labelledby={idRuta} className="inline">
             {microPasos.map((micro, indice) => (
               <li key={micro.id} className="inline font-medium text-noct-neutral-200">
-                {segmentoDeRuta(micro)}
+                {micro.elemento}
                 {indice < microPasos.length - 1 && (
                   <span aria-hidden className="font-normal text-noct-neutral-500">
                     {' ›'}{' '}
@@ -132,10 +136,8 @@ export function ComoHacerlo({
             {microPasos.map((micro) => (
               <li key={micro.id} className="pl-0.5">
                 <span className="text-pretty [overflow-wrap:anywhere]">
-                  {micro.accion}
-                  {micro.accion && micro.elemento && ' '}
-                  {micro.elemento && <span className="font-medium text-noct-text">{micro.elemento}</span>}
-                  {llevaPuntoFinal(micro.elemento || micro.accion) && '.'}
+                  {micro.accion} <span className="font-medium text-noct-text">{micro.elemento}</span>
+                  {llevaPuntoFinal(micro.elemento) && '.'}
                 </span>
                 {micro.ubicacion && (
                   <span className={`mt-0.5 block text-pretty text-noct-neutral-400 [overflow-wrap:anywhere] ${tamano.ubicacion}`}>

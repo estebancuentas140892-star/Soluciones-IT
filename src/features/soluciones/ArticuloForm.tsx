@@ -16,6 +16,7 @@ import {
   prepararProcedimientoParaGuardar,
 } from '../../lib/procedimiento'
 import { problemasDeRutas } from '../../lib/rutaProcedimiento'
+import { mensajeMicroaccionIncompleta, microaccionesIncompletas } from '../../lib/comoHacer'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { padreDe } from '../../lib/navegacion'
 import { siguienteVersion } from '../../lib/version'
@@ -71,6 +72,7 @@ import {
   resumenApoyosPendientes,
 } from './apoyosPendientes'
 import { PasosEditor } from './PasosEditor'
+import type { FocoMicroPaso } from './EditorComoHacer'
 import { ProveedorAccionesPaso } from './ranuraAccionesPaso'
 import { DialogoProbarPaso } from './DialogoProbarPaso'
 import { hayPlantilla, pasosDePlantilla, plantillaDe } from './plantillas'
@@ -267,9 +269,13 @@ export function ArticuloForm() {
   const [pestana, setPestana] = useState<PestanaEditor>('general')
   // Error de validacion del envio (hoy solo el titulo obligatorio).
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
-  // Se intentó guardar con una decisión inválida (tarea 302): desde ahí, y
-  // mientras quede algo por corregir, "Pasos" lo lista arriba.
+  // Se intentó guardar con una decisión inválida (tarea 302) o con una
+  // microacción a medias (tarea 303): desde ahí, y mientras quede algo por
+  // corregir, "Pasos" lo lista arriba.
   const [revisarRutas, setRevisarRutas] = useState(false)
+  // El campo vacío de la primera microacción a medias, para llevar el foco
+  // allí al no dejar guardar (tarea 303). El editor lo olvida al enfocarlo.
+  const [focoMicroPaso, setFocoMicroPaso] = useState<FocoMicroPaso | null>(null)
 
   // A donde lleva la X. Se deriva igual que en `BarraTarea` para que
   // cancelar acabe exactamente donde acababa antes; lo unico que se
@@ -614,6 +620,24 @@ export function ArticuloForm() {
   // y aquí decide el guardado: la misma lista para los dos.
   const problemasRutas = useMemo(() => problemasDeRutas({ pasos }), [pasos])
   const rutasPorCorregir = problemasRutas.filter((problema) => problema.bloquea)
+  // UNA MICROACCIÓN A MEDIAS NO SE GUARDA (tarea 303): acción y elemento son
+  // obligatorios. El editor lo dice en su fila; aquí decide el guardado.
+  const microaccionesPorCorregir = useMemo(() => microaccionesIncompletas(pasos), [pasos])
+  // Lo que no deja guardar, en una sola lista para el aviso de "Pasos".
+  const porCorregir = [
+    ...rutasPorCorregir.map((problema) => ({
+      clave: `${problema.pasoId}-${problema.decisionId}-${problema.opcionId}-${problema.mensaje}`,
+      pasoId: problema.pasoId,
+      mensaje: problema.mensaje,
+      foco: null,
+    })),
+    ...microaccionesPorCorregir.map((problema) => ({
+      clave: `como-${problema.microPasoId}`,
+      pasoId: problema.pasoId,
+      mensaje: mensajeMicroaccionIncompleta(problema),
+      foco: { microPasoId: problema.microPasoId, campo: problema.faltan[0] },
+    })),
+  ]
 
   // LO QUE PIDEN LAS GUÍAS QUE ESTA REUTILIZA, SOLO COMO REFERENCIA (tarea
   // 289, fase 4, con su criterio adicional). REGLA DEFINITIVA: un requisito
@@ -868,6 +892,17 @@ export function ArticuloForm() {
       setRevisarRutas(true)
       irA('pasos')
       setPasoActivoId(rutasPorCorregir[0].pasoId)
+      return
+    }
+    // NI UNA MICROACCIÓN A MEDIAS (tarea 303): a la que le falta la acción o
+    // el elemento no se guarda como si valiera, ni se borra lo escrito. Se
+    // lleva al autor a su paso y el foco, a su primer campo vacío.
+    if (microaccionesPorCorregir.length > 0) {
+      const primera = microaccionesPorCorregir[0]
+      setRevisarRutas(true)
+      irA('pasos')
+      setPasoActivoId(primera.pasoId)
+      setFocoMicroPaso({ microPasoId: primera.microPasoId, campo: primera.faltan[0] })
       return
     }
     setRevisarRutas(false)
@@ -1350,20 +1385,24 @@ export function ArticuloForm() {
                 <TituloSeccion>Pasos</TituloSeccion>
                 <span className="text-[11px] text-noct-neutral-600">{resumenPasos}</span>
               </div>
-              {revisarRutas && rutasPorCorregir.length > 0 && (
+              {revisarRutas && porCorregir.length > 0 && (
                 <div role="alert" className="mb-3 rounded-xl border border-noct-error/45 bg-noct-error/[.08] px-3.5 py-3">
                   <p className="flex items-center gap-2 text-[13.5px] font-medium text-noct-error">
                     <Warning size={15} className="shrink-0" aria-hidden />
-                    Antes de guardar, corrige {rutasPorCorregir.length === 1 ? 'esto' : 'estas cosas'}:
+                    Antes de guardar, corrige {porCorregir.length === 1 ? 'esto' : 'estas cosas'}:
                   </p>
                   <ul className="mt-1.5 flex flex-col">
-                    {rutasPorCorregir.map((problema) => {
+                    {porCorregir.map((problema) => {
                       const numero = pasos.findIndex((paso) => paso.id === problema.pasoId) + 1
                       return (
-                        <li key={`${problema.pasoId}-${problema.decisionId}-${problema.opcionId}-${problema.mensaje}`}>
+                        <li key={problema.clave}>
                           <button
                             type="button"
-                            onClick={() => setPasoActivoId(problema.pasoId)}
+                            onClick={() => {
+                              setPasoActivoId(problema.pasoId)
+                              // Una microacción a medias: además, a su campo vacío.
+                              if (problema.foco) setFocoMicroPaso(problema.foco)
+                            }}
                             className="flex min-h-11 w-full items-center gap-2 rounded-lg px-1.5 text-left hover:bg-noct-error/10"
                           >
                             <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-noct-error/85">
@@ -1390,6 +1429,8 @@ export function ArticuloForm() {
                 onPasoActivoChange={setPasoActivoId}
                 apoyoDestacadoId={apoyoDestacadoId}
                 onApoyoDestacadoAbierto={() => setApoyoDestacadoId(null)}
+                focoMicroPaso={focoMicroPaso}
+                onFocoMicroPasoAplicado={() => setFocoMicroPaso(null)}
               />
             </section>
 

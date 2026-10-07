@@ -1,7 +1,13 @@
-import { useId, useState, type Ref } from 'react'
+import { useId, useState, type ReactNode, type Ref } from 'react'
 import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
-import { ArrowDown, ArrowElbowDownRight, ArrowUp, Plus, TrashSimple } from '../../components/iconos'
-import { crearMicroPaso, ROTULO_COMO_HACERLO } from '../../lib/comoHacer'
+import { ArrowDown, ArrowElbowDownRight, ArrowUp, Plus, TrashSimple, Warning } from '../../components/iconos'
+import {
+  camposQueFaltan,
+  crearMicroPaso,
+  ROTULO_COMO_HACERLO,
+  textoDeLoQueFalta,
+  type CampoObligatorio,
+} from '../../lib/comoHacer'
 import type { MicroPasoComoHacer } from '../../lib/db'
 import { moverPorId } from './bloquesEditor'
 import { BotonIconoLinea } from './controlesEditor'
@@ -16,21 +22,40 @@ import { BotonIconoLinea } from './controlesEditor'
 // mismo, con las flechas de 44 px de siempre, y cada una conserva su id al
 // moverla o editarla.
 //
+// ACCIÓN Y ELEMENTO SON OBLIGATORIOS; la ubicación, no. Una fila a medio
+// escribir lo dice en su sitio ("Falta el elemento.") y marca el campo, sin
+// borrar nada de lo escrito; el formulario no deja guardar mientras quede
+// una (`microaccionesIncompletas`) y trae el foco a su primer campo vacío
+// (`focoPedido`). Una fila del todo vacía no es una microacción: no se
+// guarda y no impide guardar.
+//
 // Rótulos fijos a la vista, sin ejemplos dentro de los campos: qué gestos
 // lleva una guía real lo decide quien escribe su contenido (regla 26). La
-// ayuda solo dice para qué sirven. Una fila vacía no se guarda.
+// ayuda solo dice para qué sirven.
 
 type ControlConFoco = 'accion' | 'subir' | 'bajar' | 'quitar'
+
+/** El campo de una microacción al que hay que llevar el foco (el primero que le falta). */
+export interface FocoMicroPaso {
+  microPasoId: string
+  campo: CampoObligatorio
+}
 
 export function EditorComoHacer({
   microPasos,
   enfocarId = null,
+  focoPedido = null,
+  onFocoAplicado,
   onCambiar,
   onVaciado,
 }: {
   microPasos: MicroPasoComoHacer[]
   /** La microacción recién creada desde fuera, para escribir su acción sin buscarla. */
   enfocarId?: string | null
+  /** El campo vacío que el formulario pide enfocar al no dejar guardar. */
+  focoPedido?: FocoMicroPaso | null
+  /** Ya tiene el foco: el formulario olvida el pedido. */
+  onFocoAplicado?: () => void
   /** La lista nueva, ya en su orden. Vacía, la tarea se queda sin "Cómo hacerlo". */
   onCambiar: (microPasos: MicroPasoComoHacer[]) => void
   /** Se quitó la última: el foco vuelve a quien abrió "Cómo hacerlo". */
@@ -51,6 +76,21 @@ export function EditorComoHacer({
       if (elemento && foco?.id === id && foco.control === control) {
         elemento.focus()
         setFoco(null)
+      }
+    }
+  }
+
+  // La acción o el elemento: además del foco de siempre (la acción de una
+  // fila nueva), el que pide el formulario cuando no deja guardar. Ese va
+  // al centro de la pantalla para que la barra fija del pie no lo tape.
+  function refDeCampo(id: string, campo: CampoObligatorio) {
+    const propio = campo === 'accion' ? conFoco(id, 'accion') : null
+    return (elemento: HTMLInputElement | null) => {
+      propio?.(elemento)
+      if (elemento && focoPedido?.microPasoId === id && focoPedido.campo === campo) {
+        elemento.focus({ preventScroll: true })
+        elemento.scrollIntoView({ block: 'center' })
+        onFocoAplicado?.()
       }
     }
   }
@@ -103,60 +143,39 @@ export function EditorComoHacer({
         {microPasos.map((micro, indice) => {
           const numero = indice + 1
           return (
-            <li key={micro.id} className="flex flex-col gap-2 rounded-lg border border-noct-divider px-2.5 py-2">
-              <div className="flex items-center gap-1.5">
-                <span
-                  aria-hidden
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-noct-neutral-600 font-mono text-[12px] text-noct-neutral-300"
-                >
-                  {numero}
-                </span>
-                <span className="min-w-0 flex-1" />
-                <BotonIconoLinea
-                  ref={conFoco(micro.id, 'subir')}
-                  Icono={ArrowUp}
-                  etiqueta={`Subir la microacción ${numero}`}
-                  onClick={() => mover(micro.id, -1)}
-                  disabled={indice === 0}
-                />
-                <BotonIconoLinea
-                  ref={conFoco(micro.id, 'bajar')}
-                  Icono={ArrowDown}
-                  etiqueta={`Bajar la microacción ${numero}`}
-                  onClick={() => mover(micro.id, 1)}
-                  disabled={indice === microPasos.length - 1}
-                />
-                <BotonIconoLinea
-                  ref={conFoco(micro.id, 'quitar')}
-                  Icono={TrashSimple}
-                  etiqueta={`Quitar la microacción ${numero}`}
-                  onClick={() => quitar(micro.id)}
-                />
-              </div>
-              {/* La acción es un verbo corto; el elemento, lo que más se
-                  lee (forma la ruta rápida), se lleva más ancho. */}
-              <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2">
-                <CampoMicro
-                  etiqueta="Acción"
-                  numero={numero}
-                  valor={micro.accion}
-                  campoRef={conFoco(micro.id, 'accion')}
-                  onCambiar={(accion) => cambiar(micro.id, { accion })}
-                />
-                <CampoMicro
-                  etiqueta="Elemento"
-                  numero={numero}
-                  valor={micro.elemento}
-                  onCambiar={(elemento) => cambiar(micro.id, { elemento })}
-                />
-              </div>
-              <CampoMicro
-                etiqueta="Ubicación (opcional)"
-                numero={numero}
-                valor={micro.ubicacion ?? ''}
-                onCambiar={(ubicacion) => cambiar(micro.id, { ubicacion })}
-              />
-            </li>
+            <FilaMicro
+              key={micro.id}
+              micro={micro}
+              numero={numero}
+              faltan={camposQueFaltan(micro)}
+              controles={
+                <>
+                  <BotonIconoLinea
+                    ref={conFoco(micro.id, 'subir')}
+                    Icono={ArrowUp}
+                    etiqueta={`Subir la microacción ${numero}`}
+                    onClick={() => mover(micro.id, -1)}
+                    disabled={indice === 0}
+                  />
+                  <BotonIconoLinea
+                    ref={conFoco(micro.id, 'bajar')}
+                    Icono={ArrowDown}
+                    etiqueta={`Bajar la microacción ${numero}`}
+                    onClick={() => mover(micro.id, 1)}
+                    disabled={indice === microPasos.length - 1}
+                  />
+                  <BotonIconoLinea
+                    ref={conFoco(micro.id, 'quitar')}
+                    Icono={TrashSimple}
+                    etiqueta={`Quitar la microacción ${numero}`}
+                    onClick={() => quitar(micro.id)}
+                  />
+                </>
+              }
+              refAccion={refDeCampo(micro.id, 'accion')}
+              refElemento={refDeCampo(micro.id, 'elemento')}
+              onCambiar={(cambios) => cambiar(micro.id, cambios)}
+            />
           )
         })}
       </ol>
@@ -173,20 +192,99 @@ export function EditorComoHacer({
   )
 }
 
+// Una microacción: su número y sus controles arriba; acción y elemento lado
+// a lado (el elemento, más ancho: forma la ruta rápida); lo que le falta,
+// justo debajo de los dos; y la ubicación, opcional, al final.
+function FilaMicro({
+  micro,
+  numero,
+  faltan,
+  controles,
+  refAccion,
+  refElemento,
+  onCambiar,
+}: {
+  micro: MicroPasoComoHacer
+  numero: number
+  faltan: CampoObligatorio[]
+  controles: ReactNode
+  refAccion: Ref<HTMLInputElement>
+  refElemento: Ref<HTMLInputElement>
+  onCambiar: (cambios: Partial<MicroPasoComoHacer>) => void
+}) {
+  const idFalta = useId()
+  const falta = (campo: CampoObligatorio) => faltan.includes(campo)
+  return (
+    <li className="flex flex-col gap-2 rounded-lg border border-noct-divider px-2.5 py-2">
+      <div className="flex items-center gap-1.5">
+        <span
+          aria-hidden
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-noct-neutral-600 font-mono text-[12px] text-noct-neutral-300"
+        >
+          {numero}
+        </span>
+        <span className="min-w-0 flex-1" />
+        {controles}
+      </div>
+      <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2">
+        <CampoMicro
+          etiqueta="Acción"
+          numero={numero}
+          valor={micro.accion}
+          obligatorio
+          invalido={falta('accion')}
+          idError={falta('accion') ? idFalta : undefined}
+          campoRef={refAccion}
+          onCambiar={(accion) => onCambiar({ accion })}
+        />
+        <CampoMicro
+          etiqueta="Elemento"
+          numero={numero}
+          valor={micro.elemento}
+          obligatorio
+          invalido={falta('elemento')}
+          idError={falta('elemento') ? idFalta : undefined}
+          campoRef={refElemento}
+          onCambiar={(elemento) => onCambiar({ elemento })}
+        />
+      </div>
+      {faltan.length > 0 && (
+        <p id={idFalta} className="-mt-0.5 flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-error">
+          <Warning size={13} className="mt-0.5 shrink-0" aria-hidden />
+          <span className="min-w-0">{textoDeLoQueFalta(faltan)}</span>
+        </p>
+      )}
+      <CampoMicro
+        etiqueta="Ubicación (opcional)"
+        numero={numero}
+        valor={micro.ubicacion ?? ''}
+        onCambiar={(ubicacion) => onCambiar({ ubicacion })}
+      />
+    </li>
+  )
+}
+
 // Un campo de una microacción: su rótulo a la vista y, para quien no lo ve,
-// de qué microacción es ("Acción de la microacción 2").
+// de qué microacción es ("Acción de la microacción 2"). Si le falta lo
+// obligatorio, el borde lo marca y el aviso de la fila lo describe.
 function CampoMicro({
   etiqueta,
   numero,
   valor,
   onCambiar,
   campoRef,
+  obligatorio = false,
+  invalido = false,
+  idError,
 }: {
   etiqueta: string
   numero: number
   valor: string
   onCambiar: (valor: string) => void
   campoRef?: Ref<HTMLInputElement>
+  obligatorio?: boolean
+  invalido?: boolean
+  idError?: string
 }) {
   const id = useId()
   return (
@@ -201,7 +299,10 @@ function CampoMicro({
         type="text"
         value={valor}
         onChange={(e) => onCambiar(e.target.value)}
-        className={`min-h-11 w-full text-[14.5px] ${CLASE_CAMPO_SIN_ANCHO}`}
+        aria-required={obligatorio || undefined}
+        aria-invalid={invalido || undefined}
+        aria-describedby={idError}
+        className={`min-h-11 w-full text-[14.5px] ${CLASE_CAMPO_SIN_ANCHO} ${invalido ? 'border-noct-error' : ''}`}
       />
     </div>
   )

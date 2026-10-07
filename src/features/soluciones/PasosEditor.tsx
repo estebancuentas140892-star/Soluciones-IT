@@ -54,7 +54,7 @@ import {
   reasignarApoyo,
   type DestinoApoyo,
 } from './bloquesEditor'
-import { EditorComoHacer } from './EditorComoHacer'
+import { EditorComoHacer, type FocoMicroPaso } from './EditorComoHacer'
 import { AlTerminarDelPaso, OpcionesDeDecision } from './EditorDecision'
 import { guiaConCaminos, usaAlTerminar } from './rutasEditor'
 import { accionesEncadenadas, esComprobacion, esCondicionPrevia, esRecordatorio } from './revisionGuia'
@@ -133,6 +133,11 @@ interface Props {
   // se pueda volver a pedir mas tarde.
   apoyoDestacadoId?: string | null
   onApoyoDestacadoAbierto?: () => void
+  // El campo de una microacción a medias que hay que enfocar (tarea 303):
+  // lo pide el formulario cuando no deja guardar, después de activar su
+  // paso. `onFocoMicroPasoAplicado` avisa de vuelta para olvidarlo.
+  focoMicroPaso?: FocoMicroPaso | null
+  onFocoMicroPasoAplicado?: () => void
 }
 
 // Una opcion del selector polimorfico "Vincular informacion
@@ -314,6 +319,8 @@ export function PasosEditor({
   onPasoActivoChange,
   apoyoDestacadoId = null,
   onApoyoDestacadoAbierto,
+  focoMicroPaso = null,
+  onFocoMicroPasoAplicado,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -1075,6 +1082,8 @@ export function PasosEditor({
                 pasos={pasos}
                 indicePaso={indice}
                 problemasDecision={problemas.filter((p) => p.decisionId === bloque.id)}
+                focoMicroPaso={focoMicroPaso}
+                onFocoMicroPasoAplicado={onFocoMicroPasoAplicado}
               />
             ))}
             {paso.bloques.length === 0 && (
@@ -1691,6 +1700,8 @@ function BloqueEditor({
   pasos,
   indicePaso,
   problemasDecision,
+  focoMicroPaso,
+  onFocoMicroPasoAplicado,
 }: {
   bloque: BloquePaso
   // Todo el paso: hace falta para numerar las tareas en el selector de
@@ -1732,6 +1743,10 @@ function BloqueEditor({
   indicePaso: number
   // Lo que impide guardar en esta decisión, si lo es.
   problemasDecision: ProblemaRuta[]
+  // El campo de una microacción a medias que el formulario pide enfocar
+  // (tarea 303). Solo lo usa la tarea que la tiene.
+  focoMicroPaso: FocoMicroPaso | null
+  onFocoMicroPasoAplicado?: () => void
 }) {
   // Una sola bandera para las dos hojas de TIPO (tarea o tono): un
   // bloque es de un tipo o del otro, nunca de los dos, así que no
@@ -1883,6 +1898,8 @@ function BloqueEditor({
           <EditorComoHacer
             microPasos={microPasos}
             enfocarId={microPasoNuevoId}
+            focoPedido={focoMicroPaso}
+            onFocoAplicado={onFocoMicroPasoAplicado}
             onCambiar={(lista) => onCambiar({ comoHacer: lista.length > 0 ? lista : undefined })}
             onVaciado={() => {
               setMicroPasoNuevoId(null)

@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   admiteComoHacer,
+  camposQueFaltan,
   comoHacerDe,
   crearMicroPaso,
   fraseDeMicroPaso,
   llevaPuntoFinal,
+  mensajeMicroaccionIncompleta,
+  microaccionesIncompletas,
   normalizarComoHacer,
-  segmentoDeRuta,
+  textoDeLoQueFalta,
   textoPasoAPaso,
 } from './comoHacer'
 import type { BloquePaso, MicroPasoComoHacer, PasoProcedimiento } from './db'
@@ -22,8 +25,10 @@ import {
 // (`MicroPasoComoHacer`) en el bloque 'tarea' de tipo 'accion', dentro del
 // JSON `procedimiento`. Opcional, ausente cuando no hay ninguna (nunca se
 // guarda `[]`), con ids estables, conservada al normalizar, guardar y volver
-// a leer, y sin tocar nada de una guía que no la usa. Nada se deduce del
-// texto. Todo lo sembrado es inventado: el caso del encargo.
+// a leer, y sin tocar nada de una guía que no la usa. Cada microacción
+// necesita acción Y elemento (la ubicación es opcional): una a medias no se
+// lee ni se guarda como válida, y nada inventa el campo que falta. Nada se
+// deduce del texto. Todo lo sembrado es inventado: el caso del encargo.
 
 const FICHERO: MicroPasoComoHacer = { id: 'm1', accion: 'Abre', elemento: 'Fichero', ubicacion: 'Barra superior' }
 const CLIENTE: MicroPasoComoHacer = { id: 'm2', accion: 'Selecciona', elemento: 'Cliente' }
@@ -110,6 +115,29 @@ describe('normalizar las microacciones', () => {
     expect(bloque.comoHacer).toEqual([{ id: 'm1', accion: 'Abre', elemento: 'Fichero' }])
   })
 
+  it('acción, elemento y ubicación: válida, con su ubicación', () => {
+    const [bloque] = bloquesNormalizados([tareaCruda([{ id: 'm1', accion: 'Abre', elemento: 'Fichero', ubicacion: 'Barra superior' }])])
+    expect(bloque.comoHacer).toEqual([{ id: 'm1', accion: 'Abre', elemento: 'Fichero', ubicacion: 'Barra superior' }])
+  })
+
+  it('sin acción, sin elemento o sin los dos, la microacción no vale y se descarta; nada se inventa', () => {
+    for (const aMedias of [
+      { id: 'x', accion: '', elemento: 'Fichero' },
+      { id: 'x', accion: '   ', elemento: 'Fichero', ubicacion: 'Barra superior' },
+      { id: 'x', elemento: 'Fichero' },
+      { id: 'x', accion: 'Abre', elemento: '' },
+      { id: 'x', accion: 'Abre', elemento: '  ', ubicacion: 'Barra superior' },
+      { id: 'x', accion: 'Abre' },
+      { id: 'x', accion: '', elemento: '' },
+      { id: 'x', accion: '', elemento: '', ubicacion: 'Barra superior' },
+    ]) {
+      const [bloque] = bloquesNormalizados([tareaCruda([aMedias])])
+      // Sin ninguna válida, la clave ni aparece.
+      expect('comoHacer' in bloque).toBe(false)
+      expect(bloque.texto).toBe('Abre un registro nuevo')
+    }
+  })
+
   it('conserva varias, en su orden y con sus ids', () => {
     const [bloque] = bloquesNormalizados([tareaCruda(CASO_DEL_ENCARGO)])
     expect(bloque.comoHacer).toEqual(CASO_DEL_ENCARGO)
@@ -153,13 +181,14 @@ describe('normalizar las microacciones', () => {
         { id: 'm1', accion: 'Abre', elemento: 'Fichero' },
         { id: 'solo-accion', accion: 'Reinicia', elemento: null },
         { id: 'solo-elemento', elemento: 'Enter' },
+        { id: 'm2', accion: 'Selecciona', elemento: 'Nuevo' },
       ]),
     ])
     expect(bloque.texto).toBe('Abre un registro nuevo')
+    // Solo las completas, en su orden y con sus ids de siempre.
     expect(bloque.comoHacer).toEqual([
       { id: 'm1', accion: 'Abre', elemento: 'Fichero' },
-      { id: 'solo-accion', accion: 'Reinicia', elemento: '' },
-      { id: 'solo-elemento', accion: '', elemento: 'Enter' },
+      { id: 'm2', accion: 'Selecciona', elemento: 'Nuevo' },
     ])
   })
 
@@ -222,6 +251,11 @@ describe('ids estables', () => {
     expect(ids.slice(1).every((id) => id !== '' && id !== 'm1')).toBe(true)
   })
 
+  it('descartar una a medias no toca los ids de las demás', () => {
+    const lista = normalizarComoHacer([FICHERO, { id: 'a-medias', accion: 'Abre', elemento: '' }, CLIENTE, NUEVO])
+    expect(lista.map((m) => m.id)).toEqual(['m1', 'm2', 'm4'])
+  })
+
   it('una microacción nueva nace vacía y con su propio id', () => {
     const una = crearMicroPaso()
     const otra = crearMicroPaso()
@@ -266,6 +300,17 @@ describe('guardar y volver a abrir', () => {
     }
   })
 
+  it('una microacción a medias nunca se guarda como válida (el editor no deja llegar hasta aquí)', () => {
+    const guardado = preparar([
+      paso([
+        tarea('t1', 'Abre un registro nuevo', {
+          comoHacer: [CLIENTE, { id: 'sin-elemento', accion: 'Abre', elemento: '' }, { id: 'sin-accion', accion: '', elemento: 'Nuevo' }],
+        }),
+      ]),
+    ])
+    expect(guardado?.pasos[0].bloques[0].comoHacer).toEqual([CLIENTE])
+  })
+
   it('una tarea que no es de acción no lo guarda', () => {
     const guardado = preparar([
       paso([
@@ -299,6 +344,17 @@ describe('comoHacerDe: lo que se enseña', () => {
     expect(comoHacerDe(bloque)).toEqual([{ id: 'm1', accion: 'Abre', elemento: 'Fichero' }])
   })
 
+  it('solo las completas: una fila a medias del editor no se enseña (tampoco en "Probar")', () => {
+    const bloque = tarea('t1', 'Abre un registro nuevo', {
+      comoHacer: [
+        { id: 'sin-elemento', accion: 'Reinicia', elemento: '' },
+        FICHERO,
+        { id: 'sin-accion', accion: '', elemento: 'Ayuda', ubicacion: 'Barra superior' },
+      ],
+    })
+    expect(comoHacerDe(bloque)).toEqual([FICHERO])
+  })
+
   it('vacío en todo lo demás', () => {
     expect(comoHacerDe(tarea('t1', 'Abre un registro nuevo'))).toEqual([])
     expect(comoHacerDe(tarea('t1', 'Comprueba', { tipoTarea: 'verificacion', comoHacer: CASO_DEL_ENCARGO }))).toEqual([])
@@ -314,8 +370,14 @@ describe('comoHacerDe: lo que se enseña', () => {
 })
 
 describe('un contenido, dos lecturas', () => {
+  /** La ruta rápida de una acción: los elementos de sus microacciones, en orden. */
+  const rutaDe = (comoHacer: MicroPasoComoHacer[]) =>
+    comoHacerDe(tarea('t1', 'Abre un registro nuevo', { comoHacer }))
+      .map((micro) => micro.elemento)
+      .join(' › ')
+
   it('la ruta rápida del encargo: los elementos en orden', () => {
-    expect(CASO_DEL_ENCARGO.map(segmentoDeRuta).join(' › ')).toBe('Fichero › Cliente › Fichero › Nuevo')
+    expect(rutaDe(CASO_DEL_ENCARGO)).toBe('Fichero › Cliente › Fichero › Nuevo')
   })
 
   it('el atajo de ejemplo también es una ruta', () => {
@@ -324,17 +386,18 @@ describe('un contenido, dos lecturas', () => {
       { id: 'b', accion: 'Escribe', elemento: 'comando-ejemplo' },
       { id: 'c', accion: 'Pulsa', elemento: 'Enter' },
     ]
-    expect(atajo.map(segmentoDeRuta).join(' › ')).toBe('Windows + R › comando-ejemplo › Enter')
+    expect(rutaDe(atajo)).toBe('Windows + R › comando-ejemplo › Enter')
   })
 
-  it('sin elemento, la ruta dice la acción: nunca un hueco', () => {
-    expect(segmentoDeRuta({ id: 'x', accion: 'Reinicia', elemento: '' })).toBe('Reinicia')
-    expect(segmentoDeRuta({ id: 'x', accion: 'Abre', elemento: ' Fichero ' })).toBe('Fichero')
+  it('la ruta nunca usa la acción en lugar del elemento: una microacción sin elemento no llega a ella', () => {
+    const ruta = rutaDe([FICHERO, { id: 'sin-elemento', accion: 'Reinicia', elemento: '' }, NUEVO])
+    expect(ruta).toBe('Fichero › Nuevo')
+    expect(ruta).not.toContain('Reinicia')
   })
 
-  it('el paso a paso del encargo, como frases', () => {
+  it('el paso a paso del encargo, como frases de acción más elemento', () => {
     expect(CASO_DEL_ENCARGO.map(fraseDeMicroPaso)).toEqual(['Abre Fichero', 'Selecciona Cliente', 'Abre Fichero', 'Selecciona Nuevo'])
-    expect(fraseDeMicroPaso({ id: 'x', accion: '', elemento: 'Enter' })).toBe('Enter')
+    expect(fraseDeMicroPaso({ id: 'x', accion: ' Pulsa ', elemento: ' Enter ' })).toBe('Pulsa Enter')
   })
 
   it('el paso a paso como texto, numerado y con la ubicación (para el computador atendido)', () => {
@@ -364,5 +427,65 @@ describe('el resto del sistema lo conserva', () => {
     const procedimiento = normalizarProcedimiento(preparar([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: CASO_DEL_ENCARGO })])]))
     const texto = textoDeProcedimiento(procedimiento)
     for (const palabra of ['Selecciona', 'Cliente', 'Nuevo', 'Barra superior']) expect(texto).toContain(palabra)
+  })
+})
+
+describe('lo que el editor no deja guardar: acción y elemento, siempre', () => {
+  const fila = (accion: string, elemento: string, ubicacion?: string): MicroPasoComoHacer => ({
+    id: 'x',
+    accion,
+    elemento,
+    ...(ubicacion === undefined ? {} : { ubicacion }),
+  })
+
+  it('una completa no tiene nada que corregir, con ubicación o sin ella', () => {
+    expect(camposQueFaltan(fila('Abre', 'Fichero'))).toEqual([])
+    expect(camposQueFaltan(fila('Abre', 'Fichero', 'Barra superior'))).toEqual([])
+    expect(camposQueFaltan(fila('Selecciona', 'Cliente', ''))).toEqual([])
+  })
+
+  it('dice qué falta: la acción, el elemento o los dos (los espacios no cuentan)', () => {
+    expect(camposQueFaltan(fila('', 'Fichero'))).toEqual(['accion'])
+    expect(camposQueFaltan(fila('   ', 'Fichero', 'Barra superior'))).toEqual(['accion'])
+    expect(camposQueFaltan(fila('Abre', ''))).toEqual(['elemento'])
+    expect(camposQueFaltan(fila('Abre', '  '))).toEqual(['elemento'])
+    expect(camposQueFaltan(fila('', '', 'Barra superior'))).toEqual(['accion', 'elemento'])
+    expect(textoDeLoQueFalta(['accion'])).toBe('Falta la acción.')
+    expect(textoDeLoQueFalta(['elemento'])).toBe('Falta el elemento.')
+    expect(textoDeLoQueFalta(['accion', 'elemento'])).toBe('Faltan la acción y el elemento.')
+  })
+
+  it('una fila del todo vacía todavía no es una microacción: no le falta nada (no se guarda)', () => {
+    expect(camposQueFaltan(fila('', ''))).toEqual([])
+    expect(camposQueFaltan(fila(' ', '', '  '))).toEqual([])
+  })
+
+  it('las microacciones a medias de la guía, con el número que ve el autor y en el orden de los pasos', () => {
+    const pasos = [
+      paso([
+        tarea('t1', 'Abre un registro nuevo', {
+          comoHacer: [FICHERO, { id: 'vacia', accion: '', elemento: '' }, { id: 'sin-elemento', accion: 'Selecciona', elemento: '' }],
+        }),
+        // Una comprobación no tiene "Cómo hacerlo": nada que revisar aquí.
+        tarea('t2', 'Comprueba el registro', { tipoTarea: 'verificacion', comoHacer: [{ id: 'z', accion: 'Abre', elemento: '' }] }),
+      ]),
+      paso([tarea('t3', '  Abre la herramienta  ', { comoHacer: [{ id: 'sin-nada-obligatorio', accion: '', elemento: '', ubicacion: 'Menú' }] })], 'p2'),
+    ]
+    const incompletas = microaccionesIncompletas(pasos)
+    expect(incompletas).toEqual([
+      { pasoId: 'p1', tareaId: 't1', tareaTexto: 'Abre un registro nuevo', microPasoId: 'sin-elemento', numero: 3, faltan: ['elemento'] },
+      { pasoId: 'p2', tareaId: 't3', tareaTexto: 'Abre la herramienta', microPasoId: 'sin-nada-obligatorio', numero: 1, faltan: ['accion', 'elemento'] },
+    ])
+    expect(incompletas.map(mensajeMicroaccionIncompleta)).toEqual([
+      'A la microacción 3 de «Abre un registro nuevo» le falta el elemento.',
+      'A la microacción 1 de «Abre la herramienta» le faltan la acción y el elemento.',
+    ])
+    expect(mensajeMicroaccionIncompleta({ ...incompletas[0], tareaTexto: '', faltan: ['accion'] })).toBe(
+      'A la microacción 3 le falta la acción.',
+    )
+  })
+
+  it('una guía con todas sus microacciones completas no tiene nada que corregir', () => {
+    expect(microaccionesIncompletas([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: CASO_DEL_ENCARGO })])])).toEqual([])
   })
 })

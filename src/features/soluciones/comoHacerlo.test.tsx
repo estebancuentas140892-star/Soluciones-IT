@@ -320,6 +320,27 @@ describe('una acción a la vez (Modo Foco)', () => {
     await esperar(() => textoPantalla().includes('Ruta rápida: Windows + R › comando-ejemplo › Enter'), 'la ruta del atajo')
     await esperarControl('¿Qué hace «comando-ejemplo»?')
   })
+
+  it('la ruta rápida nunca usa la acción en lugar del elemento: una microacción a medias del dato no se enseña', async () => {
+    // Un dato externo con dos microacciones a medias entre dos completas: no
+    // rompe la guía, no se completa inventando nada y no aparece.
+    const conAMedias = [
+      MICRO[0],
+      { id: 'sin-elemento', accion: 'Reinicia', elemento: '' },
+      { id: 'sin-accion', accion: '', elemento: 'Ayuda', ubicacion: 'Menú de ejemplo' },
+      MICRO[3],
+    ]
+    await sembrarGuia({ id: 'guia-a-medias', titulo: 'Guía de prueba con datos a medias', pasos: [pasoCompleto('med-p1', conAMedias)] })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-a-medias')
+    await esperar(() => textoPantalla().includes('Ruta rápida: Fichero › Nuevo'), 'la ruta rápida de las completas')
+    await tocar(botonPasoAPaso() as HTMLButtonElement)
+    const lista = await esperar(() => pasoAPaso(), 'el paso a paso')
+    expect(frases(lista)).toEqual(['Abre Fichero.', 'Selecciona Nuevo.'])
+    for (const ausente of ['Reinicia', 'Ayuda', 'Menú de ejemplo']) expect(textoPantalla()).not.toContain(ausente)
+    // El resto de la acción, como siempre.
+    expect(textoPantalla()).toContain(ACCION)
+    expect(textoPantalla()).toContain(DATO)
+  })
 })
 
 describe('las demás vistas enseñan lo mismo', () => {
@@ -563,6 +584,90 @@ describe('en el editor', () => {
     expect(new Set(guardada?.comoHacer?.map((m) => m.id)).size).toBe(4)
     // Lo demás de la tarea no cambió.
     expect(guardada?.texto).toBe(ACCION)
+  })
+
+  /** El aviso de lo que le falta a la fila N ("Falta el elemento."), o null. */
+  function avisoDeFila(numero: number): string | null {
+    const fila = campo(`Acción de la microacción ${numero}`)?.closest('li')
+    const aviso = fila ? Array.from(fila.querySelectorAll('p')).find((p) => /^Faltan? /.test(textoDe(p))) : undefined
+    return aviso ? textoDe(aviso) : null
+  }
+
+  it('acción y elemento son obligatorios: la fila dice cuál falta, marca el campo y corregirlo quita el aviso', async () => {
+    await sembrarEditor()
+    await abrirElEditor()
+    await seleccionar(ACCION)
+    await tocar(await esperarControl(/^Cómo hacerlo · opcional$/))
+    // Recién creada y vacía todavía no es una microacción: no le falta nada.
+    expect(avisoDeFila(1)).toBeNull()
+    expect(campo('Acción de la microacción 1')?.getAttribute('aria-required')).toBe('true')
+    expect(campo('Elemento de la microacción 1')?.getAttribute('aria-required')).toBe('true')
+
+    // Solo el elemento: falta la acción, y su campo lo dice.
+    await escribir(await esperar(() => campo('Elemento de la microacción 1'), 'el elemento'), 'Fichero')
+    const accion = campo('Acción de la microacción 1') as HTMLInputElement
+    expect(avisoDeFila(1)).toBe('Falta la acción.')
+    expect(accion.getAttribute('aria-invalid')).toBe('true')
+    expect(accion.classList.contains('border-noct-error')).toBe(true)
+    expect(document.getElementById(accion.getAttribute('aria-describedby') ?? '')?.textContent).toBe('Falta la acción.')
+    expect(campo('Elemento de la microacción 1')?.hasAttribute('aria-invalid')).toBe(false)
+
+    // Con la acción, completa: el aviso y la marca se van.
+    await escribir(accion, 'Abre')
+    expect(avisoDeFila(1)).toBeNull()
+    expect(accion.hasAttribute('aria-invalid')).toBe(false)
+
+    // Sin el elemento (los espacios no cuentan): falta el elemento.
+    await escribir(campo('Elemento de la microacción 1') as HTMLInputElement, '   ')
+    expect(avisoDeFila(1)).toBe('Falta el elemento.')
+    expect(campo('Elemento de la microacción 1')?.getAttribute('aria-invalid')).toBe('true')
+    expect(accion.hasAttribute('aria-invalid')).toBe(false)
+
+    // Solo la ubicación: faltan los dos.
+    await escribir(accion, '')
+    await escribir(campo('Ubicación (opcional) de la microacción 1') as HTMLInputElement, 'Barra superior')
+    expect(avisoDeFila(1)).toBe('Faltan la acción y el elemento.')
+
+    // Completa y sin ubicación: válida. La ubicación vacía nunca es un error.
+    await rellenar(1, 'Abre', 'Fichero')
+    await escribir(campo('Ubicación (opcional) de la microacción 1') as HTMLInputElement, '')
+    expect(avisoDeFila(1)).toBeNull()
+    expect(campo('Ubicación (opcional) de la microacción 1')?.hasAttribute('aria-invalid')).toBe(false)
+    expect(campo('Ubicación (opcional) de la microacción 1')?.hasAttribute('aria-required')).toBe(false)
+  })
+
+  it('con una microacción a medias no se guarda: lo dice arriba, conserva lo escrito y lleva el foco al campo vacío', async () => {
+    await sembrarEditor([MICRO[0]])
+    await abrirElEditor()
+    const antes = await db.articulos.get('guia-editor')
+    // Una segunda, solo con la acción.
+    await tocar(await esperarControl('Añadir microacción'))
+    await escribir(await esperar(() => campo('Acción de la microacción 2'), 'la acción 2'), 'Selecciona')
+    expect(avisoDeFila(2)).toBe('Falta el elemento.')
+
+    await tocar(await esperarControl('Guardar procedimiento'))
+    await esperar(() => textoPantalla().includes('Antes de guardar, corrige esto:'), 'el aviso de lo que falta')
+    expect(textoPantalla()).toContain('A la microacción 2 de «Abre un registro nuevo» le falta el elemento.')
+    // El foco, en el campo que falta; lo escrito sigue ahí.
+    await esperar(() => document.activeElement === campo('Elemento de la microacción 2'), 'el foco en el elemento vacío')
+    expect(campo('Acción de la microacción 2')?.value).toBe('Selecciona')
+    // Nada se guardó: ni la microacción a medias como válida, ni nada más.
+    await pausa(150)
+    const despues = await db.articulos.get('guia-editor')
+    expect(despues?.updatedAt).toBe(antes?.updatedAt)
+    expect(despues?.procedimiento?.pasos[0].bloques[0].comoHacer).toEqual([MICRO[0]])
+
+    // El aviso de arriba también lleva a ese campo.
+    ;(campo('Acción de la microacción 1') as HTMLInputElement).focus()
+    await tocar(await esperarControl(/^Paso 1A la microacción 2 de «Abre un registro nuevo» le falta el elemento\./))
+    await esperar(() => document.activeElement === campo('Elemento de la microacción 2'), 'el foco de vuelta en el elemento')
+
+    // Corregido, se guarda entero y el aviso se va.
+    await escribir(campo('Elemento de la microacción 2') as HTMLInputElement, 'Cliente')
+    expect(textoPantalla()).not.toContain('Antes de guardar, corrige')
+    await tocar(await esperarControl('Guardar procedimiento'))
+    await esperarQue(async () => (await tareaGuardada())?.comoHacer?.length === 2, 'las dos guardadas')
+    expect((await tareaGuardada())?.comoHacer?.[1]).toMatchObject({ accion: 'Selecciona', elemento: 'Cliente' })
   })
 
   it('al volver a abrir la guía aparecen como se guardaron; reordenar y quitar conservan los ids', async () => {
