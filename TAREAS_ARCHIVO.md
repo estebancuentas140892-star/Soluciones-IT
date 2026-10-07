@@ -1,5 +1,34 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-07: la jerarquía de una acción durante la ejecución
+
+### 303. La jerarquía de una acción durante la ejecución
+
+**Estado:** Completada (2026-10-07). Encargo del usuario: en la ejecución de una guía, "Dónde", "Qué hacer", el dato técnico, "Debes ver", "Más información" y las advertencias competían por la vista, y el técnico tenía que interpretar cuál de todas era lo que tenía que hacer. Una pantalla sigue siendo una acción clara, pero cada papel conserva su función y su sitio y la pantalla hace evidente cuál manda. Solo la jerarquía visual y semántica de la ejecución. Rama `feat/jerarquia-accion` desde `5b3f238` (worktree `C:\Users\ecardona\Soluciones-IT-303`), revisada y aprobada por el usuario y llevada a `main` por avance rápido (`5b3f238..2ab8621`, sin commit de merge). Commits: `6244337` (parte 1), `7ff2a75` (parte 2) y `2ab8621` (acción y elemento obligatorios), más el de este archivo. Detalle de fondo en la regla 27, AD-066, AD-067 y RN-065; el detalle de cada entrega, en el CHANGELOG del 2026-10-07.
+
+**Qué cambió:**
+
+- **Parte 1, la jerarquía** (`6244337`, `SenalesDePaso.tsx`, `ModoFoco.tsx`, `ProcedimientoVista.tsx`, `tonos.ts`, `src/index.css`): la instrucción es lo único que domina (26 px) y nunca se recorta; "Dónde" neutro, sin el amarillo `noct-lugar` (retirado; decisión de la sección 13 del handoff de la auditoría UX); el dato técnico con su rótulo y en monoespaciada, pegado a la instrucción (`DatoTecnico`, compartido por el Modo Foco, el paso entero, la lectura y "Probar"); "Debes ver" verde solo en su icono y su palabra; las descripciones de los tonos en el editor dicen lo que NO va en cada uno. Prueba con todos los papeles a la vez (`jerarquiaAccion.test.tsx`).
+- **Parte 2, "Cómo hacerlo"** (`7ff2a75`, `src/lib/comoHacer.ts`, `EditorComoHacer.tsx`, `procedimiento.ts` y las vistas de ejecución): una lista estructurada de microacciones de la tarea de acción, `comoHacer?: { id, accion, elemento, ubicacion? }[]`, dentro del JSON `procedimiento` (sin columnas, migración ni versión de Dexie). Un solo contenido y dos lecturas: la ruta rápida a la vista ("Fichero › Cliente › Fichero › Nuevo") y "Ver paso a paso" plegado ("1. Abre Fichero."). En el Modo Foco, el paso entero, la lectura, "Probar", las guías reutilizadas, la asistencia, el historial, el índice de búsqueda y duplicar una guía; normalización defensiva (ids estables, contenido inválido descartado, clave ausente si no hay microacciones); el editor para añadir, editar, quitar y reordenar, y el cambio de tipo que lo suelta con aviso.
+- **Acción y elemento obligatorios** (`2ab8621`): una microacción válida tiene siempre acción y elemento (la ubicación, opcional). El normalizador descarta la que llega a medias; la ruta rápida pinta solo elementos; el editor señala la fila incompleta y no deja guardar mientras quede una, con el foco en su primer campo vacío.
+
+**No se hizo, a propósito:**
+
+- Ningún contenido real ni Supabase (regla 26): la clave `comoHacer` no existe en ninguna guía actual. Reclasificar el contenido real es la 304 (ChatGPT).
+- La aplicación no deduce microacciones de ningún texto (ni `→` ni `>`), no divide textos y no decide si una guía usa ruta gráfica, comando o acceso directo (regla 27 h).
+- Ni Resolver, ni Equipos, ni la Bóveda, ni la navegación, ni el Centro de consulta, ni los formularios; nada de las decisiones con opciones de la 302.
+- La rama `feat/auditoria-ux` no se mezcló (nació antes de la 302 y toca los mismos componentes); de ella solo se tomó la decisión de "Dónde" en neutro.
+- La imagen en "Debes ver" no se implementó: es la 306, espera la propuesta de Claude Design.
+- La copia de `OneDrive` (`feat/decisiones-ramificadas`, cambios sin commit del 2026-10-06 en `tareasFoco.ts`, `useProcedimientoEjecucion.ts`, `rutaProcedimiento.ts` y `RespuestasDeDecision.tsx`) no se tocó: es un borrador anterior de la fase 3 de la 302 (`largosDeRuta`, `RespuestasDeDecision`) que `main` ya reemplazó con `largoDeLaRuta` y `RespuestasDecision` (`c164282`).
+
+**Verificación:** local, sobre `2ab8621`: 182 archivos y 2843 pruebas (180 y 2764 al cerrar la parte 1), `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` en verde; en el navegador a 390 × 844, 375 × 667, texto al 130 % y 1280 × 800. **CI** en verde para `2ab8621` (run 37670906754, 83 s: pruebas, lint y build). **Producción (regla 14):** despliegue de Vercel "Production" en `success` para `2ab8621`; `/version.json` respondió `2ab8621` (compilado 2026-10-07T18:58:47Z); por contenido, `SenalesDePaso-*.js` lleva "Ver paso a paso" y "Ocultar paso a paso" y `comoHacer-*.js`, "Ruta rápida"; **en negativo**, ninguno de los 156 recursos que lista `/sw.js` contiene ya `noct-lugar`.
+
+**Límites conocidos:** una versión anterior de la app lee una guía con microacciones sin romperse, pero si la edita y la guarda pierde el "Cómo hacerlo" (por eso el orden de despliegue de la regla 24, AD-067).
+
+**Pendiente para otros:** **ChatGPT**, la 304 (reclasificar el contenido real y escribir "Cómo hacerlo"), solo después del paso del usuario. **Claude Design**, la propuesta de la 306. **El usuario**, decidir la 305.
+
+**Paso del usuario:** la PWA no se actualiza sola en un teléfono que ya la tiene: aceptar "Actualización disponible" en cada teléfono y PC (en escritorio, recargar) y comprobar en Más > Ajustes > Buscar actualización que la versión es `2ab8621` o posterior **antes** de que ChatGPT escriba "Cómo hacerlo" en guías reales.
+
 ## Encargo del 2026-10-06: decisiones con opciones y rutas en las guías
 
 ### 302. Decisiones con opciones y rutas en las guías
