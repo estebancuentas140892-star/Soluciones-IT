@@ -59,7 +59,10 @@ import type { BloquePaso, PasoAdjunto, VinculoProtegido } from '../../lib/db'
  * acción reutilizada para que no se pierda en el flujo.
  */
 export interface ApoyosDelFlujo {
-  /** Precaución e importante: a la vista, bajo la instrucción. */
+  /**
+   * Precaución e importante: la advertencia previa de la primera acción
+   * reutilizada, que se lee antes que nada (tarea 311).
+   */
   alertas: BloquePaso[]
   /** Datos técnicos: a la vista. */
   datos: BloquePaso[]

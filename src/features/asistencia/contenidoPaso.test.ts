@@ -175,10 +175,12 @@ describe('construirContenidoDePaso', () => {
     // Ni el "Dónde" ni el "Debes ver" de texto heredados del paso: la
     // ejecución mínima ya no los muestra (tarea 307), y el equipo tampoco.
     expect(contenido?.bloques).toEqual([
+      // El riesgo de la acción llega ANTES de ella, como se lee en la app
+      // (tarea 311): con la misma nota y la misma etiqueta.
+      { tipo: 'nota', texto: 'Cierra el navegador antes', etiqueta: 'Precaución' },
       { tipo: 'accion', texto: 'Ejecuta ipconfig /flushdns' },
       // El comando que la instrucción escribe y tiene ficha, con Copiar.
       { tipo: 'comando', texto: 'ipconfig /flushdns', titulo: 'Limpiar la caché DNS', plataforma: 'Windows' },
-      { tipo: 'nota', texto: 'Cierra el navegador antes', etiqueta: 'Precaución' },
       { tipo: 'accion', texto: 'Abre https://soporte.test/ayuda-dns. y revisa' },
       // La URL del texto, sin el punto que cierra la frase.
       { tipo: 'url', texto: 'https://soporte.test/ayuda-dns' },
@@ -188,6 +190,29 @@ describe('construirContenidoDePaso', () => {
       { tipo: 'archivo', texto: 'manual-dns.pdf' },
     ])
     expect(validarContenido(contenido)).toBeNull()
+  })
+
+  it('el riesgo va antes de su acción también con "Solo esta acción", y los del paso antes de la primera (tarea 311)', () => {
+    const paso = pasoCompleto()
+    // El autor dejó el riesgo DESPUÉS de su acción en la lista, y uno del paso al final.
+    paso.bloques.push(
+      bloque({ id: 'a2', tipo: 'aviso', texto: 'Esto borra la caché de prueba', tono: 'importante', alcance: 'tarea', tareaId: 't2' }),
+      bloque({ id: 'a3', tipo: 'aviso', texto: 'Riesgo de prueba de todo el paso', tono: 'precaucion', alcance: 'paso', tareaId: null }),
+    )
+    const solo = construirContenidoDePaso({ paso, numeroPaso: 1, tituloGuia: 'Guía', referencias: FICHAS, tareaId: 't2' })
+    expect(solo.contenido?.bloques.slice(0, 2)).toEqual([
+      { tipo: 'nota', texto: 'Esto borra la caché de prueba', etiqueta: 'Importante' },
+      { tipo: 'accion', texto: 'Abre https://soporte.test/ayuda-dns. y revisa' },
+    ])
+    // "Solo esta acción" sigue sin llevar lo del paso.
+    expect(JSON.stringify(solo.contenido)).not.toContain('Riesgo de prueba de todo el paso')
+
+    const entero = construirContenidoDePaso({ paso, numeroPaso: 1, tituloGuia: 'Guía', referencias: FICHAS })
+    const textos = entero.contenido?.bloques.map((b) => b.texto) ?? []
+    expect(textos.slice(0, 3)).toEqual(['Riesgo de prueba de todo el paso', 'Cierra el navegador antes', 'Ejecuta ipconfig /flushdns'])
+    expect(textos.indexOf('Esto borra la caché de prueba')).toBe(textos.indexOf('Abre https://soporte.test/ayuda-dns. y revisa') - 1)
+    // Cada nota una sola vez: no se repite donde el autor la dejó.
+    expect(textos.filter((t) => t === 'Esto borra la caché de prueba')).toHaveLength(1)
   })
 
   it('la información y los consejos heredados no viajan; la advertencia y el dato sí (tarea 307)', () => {

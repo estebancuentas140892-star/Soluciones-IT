@@ -153,8 +153,15 @@ function principal(texto: string): HTMLElement | null {
   return control(new RegExp(`^${texto}$`))
 }
 
+/** Una acción de riesgo pendiente llega por su advertencia previa (tarea 311): se lee y se sigue. */
+async function pasarLaAdvertencia(): Promise<void> {
+  const boton = principal('Entiendo, continuar')
+  if (boton) await tocar(boton)
+}
+
 async function completar(texto: string): Promise<void> {
   await esperar(() => textoPantalla().includes(texto), `la acción «${texto}»`)
+  await pasarLaAdvertencia()
   await tocar(await esperar(() => principal('Completar y seguir'), `"Completar y seguir" en «${texto}»`))
 }
 
@@ -253,8 +260,10 @@ describe('guía lineal: A → B → C → comprobación final', () => {
     expect(textoPantalla()).toContain('acción 2 de 2')
     // C sigue hecha: la marca discreta, sin palabra (tarea 307).
     expect(document.body.querySelector('[role="img"][aria-label="Completada"]')).not.toBeNull()
-    // Se puede revisar todo lo de la acción: el riesgo, cómo hacerla, el dato y la imagen.
-    expect(textoPantalla()).toContain(RIESGO)
+    // Se puede revisar todo lo de la acción: cómo hacerla, el dato y la imagen.
+    // Su riesgo ya no va bajo la instrucción (tarea 311): está un "Anterior"
+    // más atrás, en su advertencia previa, sin bloquear la revisión.
+    expect(textoPantalla()).not.toContain(RIESGO)
     expect(textoPantalla()).toContain('Cómo hacerlo')
     expect(textoPantalla()).toContain('Pulsa Examinar.')
     expect(textoPantalla()).toContain('Panel izquierdo')
@@ -262,6 +271,15 @@ describe('guía lineal: A → B → C → comprobación final', () => {
     expect(textoPantalla()).toContain(DATO)
     expect(textoPantalla()).toContain('Debes ver')
     // Volver solo movió la vista: el avance guardado es exactamente el mismo.
+    expect(await fila('guia-lineal')).toEqual(antes)
+
+    // Y su riesgo sigue a mano: "Anterior" enseña su advertencia, y "Entiendo,
+    // continuar" vuelve a la acción hecha sin tocar nada.
+    await tocar(await anterior())
+    await esperar(() => textoPantalla().includes('Precaución. Antes de continuar'), 'la advertencia de C2')
+    expect(textoPantalla()).toContain(RIESGO)
+    await tocar(await esperar(() => principal('Entiendo, continuar'), '"Entiendo, continuar"'))
+    await esperar(() => textoPantalla().includes(ACCION_C2) && principal('Seguir') !== null, 'C2 otra vez')
     expect(await fila('guia-lineal')).toEqual(antes)
 
     // El control de la acción ya hecha no la vuelve a cerrar: lleva a la comprobación.
@@ -278,6 +296,10 @@ describe('guía lineal: A → B → C → comprobación final', () => {
 
     await tocar(await anterior())
     await esperar(() => textoPantalla().includes(ACCION_C2), 'C, acción 2')
+    // Entre C2 y C1, la advertencia de C2 (tarea 311): la navegación refleja
+    // lo que se leyó antes de hacerla.
+    await tocar(await anterior())
+    await esperar(() => textoPantalla().includes('Precaución. Antes de continuar'), 'la advertencia de C2')
     await tocar(await anterior())
     await esperar(() => textoPantalla().includes(ACCION_C1) && textoPantalla().includes('acción 1 de 2'), 'C, acción 1')
     await tocar(await anterior())

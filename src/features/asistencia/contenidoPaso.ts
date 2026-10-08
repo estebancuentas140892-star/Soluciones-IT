@@ -7,6 +7,7 @@ import {
 } from '../../lib/comoHacer'
 import type { BloquePaso, PasoProcedimiento, Referencia } from '../../lib/db'
 import { comandosEnTexto } from '../referencia/comandosEnTexto'
+import { advertenciasDeLista } from '../soluciones/advertenciaPrevia'
 import { tonoVigente } from '../soluciones/tonos'
 import {
   MAXIMO_BLOQUES,
@@ -151,10 +152,25 @@ export function construirContenidoDePaso({
     })
   }
 
+  // Solo lo que la ejecución enseña: el dato técnico y el riesgo real.
+  function agregarAviso(bloque: BloquePaso) {
+    const tono = tonoVigente(bloque.tono)
+    if (!tono) return
+    if (tono.valor === 'dato') agregar({ tipo: 'dato', texto: bloque.texto })
+    else agregar({ tipo: 'nota', texto: bloque.texto, etiqueta: tono.etiqueta })
+    agregarDesdeTexto(bloque.texto)
+  }
+
   const bloques = tareaId ? paso.bloques.filter((b) => perteneceA(b, tareaId)) : paso.bloques
+  // EL RIESGO VIAJA ANTES DE SU ACCIÓN (tarea 311), como se lee en la app: la
+  // nota de Precaución o Importante llega justo antes de la acción a la que
+  // pertenece (los del paso, antes de la primera), y no donde el autor la
+  // dejó en la lista. Mismo bloque y misma etiqueta: el protocolo no cambia.
+  const advertencias = advertenciasDeLista({ ...paso, bloques })
   for (const bloque of bloques) {
     switch (bloque.tipo) {
       case 'tarea': {
+        for (const riesgo of advertencias.antesDe.get(bloque.id) ?? []) agregarAviso(riesgo)
         const tipo = bloque.tipoTarea === 'verificacion' || bloque.tipoTarea === 'decision' ? 'comprobacion' : 'accion'
         // Su "Cómo hacerlo" (tarea 303) viaja justo después, como una nota
         // con esa etiqueta y el paso a paso numerado de texto
@@ -174,15 +190,10 @@ export function construirContenidoDePaso({
         }
         break
       }
-      case 'aviso': {
-        // Solo lo que la ejecución enseña: el dato técnico y el riesgo real.
-        const tono = tonoVigente(bloque.tono)
-        if (!tono) break
-        if (tono.valor === 'dato') agregar({ tipo: 'dato', texto: bloque.texto })
-        else agregar({ tipo: 'nota', texto: bloque.texto, etiqueta: tono.etiqueta })
-        agregarDesdeTexto(bloque.texto)
+      case 'aviso':
+        // El que va antes de su acción ya salió con ella.
+        if (!advertencias.reubicados.has(bloque.id)) agregarAviso(bloque)
         break
-      }
       case 'referencia':
         agregarFicha(bloque.referenciaId ? referencias.get(bloque.referenciaId) : undefined)
         break

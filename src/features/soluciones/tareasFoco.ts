@@ -58,11 +58,16 @@ import { presenciaDeAviso } from './tonos'
 //   - el aviso del PASO (o heredado sin asignar) va con la PRIMERA
 //     entrada del paso, una sola vez: son las condiciones del paso
 //     entero, asi que se leen al entrar y no vuelven a repetirse;
-//   - como se ve lo decide el tono (`presenciaDeAviso`): los riesgos
-//     como alerta, a la vista bajo la instruccion, y los datos a la vista.
-//     La informacion y los consejos heredados no se muestran (tarea 307).
+//   - como se ve lo decide el tono (`presenciaDeAviso`): los datos, a la
+//     vista con su accion, y los riesgos reales, ANTES de ella, en su propia
+//     pantalla (tarea 311, la advertencia previa: advertenciaPrevia.ts). Hasta
+//     la 311 iban bajo la instruccion. La informacion y los consejos
+//     heredados no se muestran (tarea 307).
 //
-// Ninguno se deduplica por texto y ninguno retiene el avance.
+// La advertencia previa NO es volver a lo del 10 de septiembre: solo los
+// riesgos reales la tienen, los de una misma accion van juntos en una sola,
+// y no es una entrada de este recorrido (no cuenta, no se marca). Ninguno
+// se deduplica por texto y ninguno retiene el avance.
 
 export type ClaseTareaFoco =
   // Un bloque 'tarea' del paso.
@@ -302,7 +307,7 @@ export function tareasParaFoco(
 
 /** Los avisos que acompañan a una entrada del recorrido, ya repartidos por cómo se ven. */
 export interface AvisosDeTarea {
-  /** Precaución e importante: a la vista, bajo la instrucción, con su color. */
+  /** Precaución e importante: su advertencia previa, antes de la acción (tarea 311). */
   alertas: BloquePaso[]
   /** Datos técnicos: a la vista, sin color de alerta. */
   datos: BloquePaso[]

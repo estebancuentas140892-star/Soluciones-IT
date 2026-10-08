@@ -774,7 +774,7 @@ describe('lo opcional sigue siendo un desvío, dicho sin vocabulario interno (fa
 })
 
 describe('lo que el paso traía no se pierde en el flujo (fase 3)', () => {
-  it('el aviso del paso que reutiliza va con la primera acción reutilizada, y solo con ella; su "para qué" ya no se muestra', async () => {
+  it('el riesgo del paso que reutiliza es la advertencia previa de la primera acción reutilizada, y solo de ella; su "para qué" ya no se muestra', async () => {
     await sembrarAccesoAlPrograma()
     const aviso: BloquePaso = {
       ...pasoPrueba('aux', 'aux', ['aux']).bloques[0],
@@ -800,14 +800,22 @@ describe('lo que el paso traía no se pierde en el flujo (fase 3)', () => {
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-registro')
     // Sin orientación ni requisitos propios abre en su primera acción: lo que
     // pide la guía reutilizada no crea un "Antes de empezar".
-    await esperar(() => textoPantalla().includes('Busca y abre Conexión a Escritorio remoto'), 'la primera acción reutilizada')
+    // El riesgo del paso, ANTES de actuar y en su propia pantalla (tarea 311):
+    // ejecutarse dentro de otra guía no le quita su advertencia previa.
+    await esperar(() => textoPantalla().includes('Antes de continuar'), 'la advertencia de la primera acción reutilizada')
     expect(textoPantalla()).not.toContain('Antes de empezar')
-    // El riesgo del paso, antes de actuar.
     expect(textoPantalla()).toContain('Si hay ventas abiertas en la caja de prueba, entrar las cierra.')
+    expect(textoPantalla()).toContain('Lo que sigue')
+    expect(textoPantalla()).toContain('Busca y abre Conexión a Escritorio remoto')
     // Su "para qué" heredado ya no viaja ni se pliega (tarea 307).
     expect(textoPantalla()).not.toContain('Tener el programa de caja abierto para registrar a la persona.')
     expect(control(/^Más información/)).toBeNull()
     sinArquitectura()
+    await tocar(await esperarControl(/^Entiendo, continuar$/))
+    await esperar(() => control('Completar y seguir') !== null, 'la primera acción reutilizada')
+    expect(textoPantalla()).toContain('Busca y abre Conexión a Escritorio remoto')
+    // La acción ya no lo repite.
+    expect(textoPantalla()).not.toContain('Si hay ventas abiertas en la caja de prueba, entrar las cierra.')
     // Solo con la primera acción: la siguiente ya no lo repite.
     await tocar(await esperarControl('Completar y seguir'))
     await esperar(() => textoPantalla().includes('Escribe la dirección del servidor de prueba'), 'la segunda acción')

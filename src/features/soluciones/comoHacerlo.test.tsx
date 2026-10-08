@@ -160,6 +160,14 @@ function instruccion(): HTMLElement {
   return h2
 }
 
+/**
+ * El caso del encargo lleva un riesgo real en su acción: llega por su
+ * advertencia previa (tarea 311). Se lee y se sigue a la acción.
+ */
+async function pasarLaAdvertencia(): Promise<void> {
+  await tocar(await esperarControl(/^Entiendo, continuar$/))
+}
+
 beforeEach(async () => {
   await limpiarBase()
   await sembrarPerfil(false)
@@ -173,7 +181,8 @@ describe('una acción a la vez (Modo Foco)', () => {
   it('una guía de antes, sin "Cómo hacerlo", se ve como siempre', async () => {
     await sembrarGuia({ id: 'guia-vieja', titulo: 'Guía de prueba sin el campo', pasos: [pasoCompleto('vieja-p1')] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-vieja')
-    await esperar(() => textoPantalla().includes(ACCION), 'la acción')
+    await pasarLaAdvertencia()
+    await esperar(() => textoPantalla().includes(DATO), 'la acción')
     expect(listasComoHacerlo()).toEqual([])
     expect(textoPantalla()).not.toContain('Cómo hacerlo')
     expect(textoPantalla()).toContain(DATO)
@@ -184,16 +193,27 @@ describe('una acción a la vez (Modo Foco)', () => {
   it('la lista del encargo va justo debajo de la instrucción y cada papel queda en su sitio', async () => {
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
+
+    // Primero el riesgo, en su propia pantalla, y la acción a la que se
+    // refiere (tarea 311). Ni "Cómo hacerlo" ni el dato técnico: son de la
+    // acción, que viene después.
+    await esperar(() => textoPantalla().includes('Antes de continuar'), 'la advertencia previa')
+    const antes = textoPantalla()
+    expect(antes.indexOf(RIESGO)).toBeGreaterThan(-1)
+    expect(antes.indexOf(RIESGO)).toBeLessThan(antes.indexOf(ACCION))
+    expect(listasComoHacerlo()).toEqual([])
+    expect(antes).not.toContain(DATO)
+    await pasarLaAdvertencia()
     await esperar(() => listasComoHacerlo()[0], 'la lista de "Cómo hacerlo"')
 
-    // El orden de la ejecución mínima (tarea 307): Qué hacer, el riesgo,
-    // "Cómo hacerlo" con su lista y el dato técnico. Ni "Dónde", ni el
-    // "Debes ver" de texto, ni "Más información".
+    // El orden de la ejecución mínima (tarea 307): Qué hacer, "Cómo hacerlo"
+    // con su lista y el dato técnico; el riesgo ya se leyó y no se repite.
+    // Ni "Dónde", ni el "Debes ver" de texto, ni "Más información".
     const texto = textoPantalla()
+    expect(texto).not.toContain(RIESGO)
     const posiciones = [
       texto.indexOf('Qué hacer'),
       texto.indexOf(ACCION),
-      texto.indexOf(RIESGO),
       texto.indexOf('Cómo hacerlo'),
       texto.indexOf('Abre Fichero.'),
       texto.indexOf('Selecciona Nuevo.'),
@@ -219,6 +239,7 @@ describe('una acción a la vez (Modo Foco)', () => {
   it('la lista llega a la vista, sin nada que pulsar, numerada y con la ubicación bajo su número', async () => {
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
+    await pasarLaAdvertencia()
     const lista = await esperar(() => listasComoHacerlo()[0], 'la lista de "Cómo hacerlo"')
     // A la vista sin tocar nada: la ubicación ya se lee.
     expect(textoPantalla()).toContain('Barra superior')
@@ -243,7 +264,8 @@ describe('una acción a la vez (Modo Foco)', () => {
   it('una sola microacción no es "Cómo hacerlo": ni lista ni rótulo, y el dato sigue ahí (tarea 309)', async () => {
     await sembrarGuia({ id: 'guia-una', titulo: 'Guía de prueba con una microacción', pasos: [pasoCompleto('una-p1', [MICRO[0]])] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-una')
-    await esperar(() => textoPantalla().includes(ACCION), 'la acción')
+    await pasarLaAdvertencia()
+    await esperar(() => instruccion().textContent === ACCION, 'la acción')
     expect(listasComoHacerlo()).toEqual([])
     expect(textoPantalla()).not.toContain('Cómo hacerlo')
     expect(textoPantalla()).not.toContain('Barra superior')
@@ -257,6 +279,7 @@ describe('una acción a la vez (Modo Foco)', () => {
   it('es apoyo operativo y la instrucción sigue mandando', async () => {
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
+    await pasarLaAdvertencia()
     await esperar(() => listasComoHacerlo()[0], 'la lista de "Cómo hacerlo"')
 
     const como = bloqueComoHacerlo()
@@ -339,6 +362,7 @@ describe('una acción a la vez (Modo Foco)', () => {
     ]
     await sembrarGuia({ id: 'guia-a-medias', titulo: 'Guía de prueba con datos a medias', pasos: [pasoCompleto('med-p1', conAMedias)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-a-medias')
+    await pasarLaAdvertencia()
     const lista = await esperar(() => listasComoHacerlo()[0], 'la lista de las completas')
     expect(frases(lista)).toEqual(['Abre Fichero.', 'Selecciona Nuevo.'])
     for (const ausente of ['Reinicia', 'Ayuda', 'Menú de ejemplo']) expect(textoPantalla()).not.toContain(ausente)
@@ -358,6 +382,8 @@ describe('las demás vistas enseñan lo mismo', () => {
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
     await tocar(await esperarControl(/^Paso 1 de 1\. Abrir el índice de pasos$/))
     await tocar(await esperarControl(/^Ver el paso entero$/))
+    // En la lista, el riesgo ocupa el sitio de su acción hasta leerlo (tarea 311).
+    await pasarLaAdvertencia()
     await esperar(() => document.body.querySelector('button[role="checkbox"]'), 'la vista de paso entero')
 
     const lista = comprobarLista()
@@ -374,6 +400,7 @@ describe('las demás vistas enseñan lo mismo', () => {
     // 2026-09-10): la lectura de todos los pasos es la vista previa.
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como/editar')
     await tocar(await esperarControl(/^Vista previa$/))
+    await pasarLaAdvertencia()
     await esperar(() => listasComoHacerlo()[0], 'la lista en la lectura')
     expect(textoPantalla().indexOf(ACCION)).toBeLessThan(textoPantalla().indexOf('Abre Fichero.'))
     comprobarLista()
@@ -386,7 +413,9 @@ describe('las demás vistas enseñan lo mismo', () => {
     if (plegado && !control(/^Añadir una tarea al paso/)) await tocar(plegado)
     await tocar(await esperarControl(/^Probar$/))
     await tocar(await esperarControl(/^Ver como técnico$/))
-    await esperar(() => textoPantalla().includes('Como lo ve el técnico') && listasComoHacerlo()[0], 'la prueba del paso')
+    await esperar(() => textoPantalla().includes('Como lo ve el técnico'), 'la prueba del paso')
+    await pasarLaAdvertencia()
+    await esperar(() => listasComoHacerlo()[0], 'la lista en la prueba')
     comprobarLista()
   })
 })
@@ -494,6 +523,7 @@ describe('sin conexión', () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
+    await pasarLaAdvertencia()
     await esperar(() => listasComoHacerlo()[0], 'la lista sin red')
     comprobarLista()
     expect(red).not.toHaveBeenCalled()

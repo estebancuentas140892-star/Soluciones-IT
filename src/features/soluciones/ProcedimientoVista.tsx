@@ -55,6 +55,8 @@ import {
 } from './flujoContinuo'
 import { RespuestasDecision } from './RespuestasDecision'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
+import { accionesEnEspera, advertenciasDeLista, esApoyoEnEspera } from './advertenciaPrevia'
+import { TarjetaAdvertencia } from './PantallaAdvertencia'
 import {
   fraseAvanceDocumento,
   modoVinculo,
@@ -196,6 +198,10 @@ export function ProcedimientoVista({
   // siguiente, sin que nadie toque nada.
   // El paso destacado entra abierto aunque no sea el actual: es el que
   // se ha pedido ver.
+  // LAS ADVERTENCIAS PREVIAS YA LEÍDAS (tarea 311), por el id de su tarea: la
+  // lectura y "Probar" enseñan el riesgo antes de su acción, como la
+  // ejecución. Solo en memoria: al volver a abrir, se leen otra vez.
+  const [advertenciasLeidas, setAdvertenciasLeidas] = useState<ReadonlySet<string>>(() => new Set())
   const [abiertoPorUsuario, setAbiertoPorUsuario] = useState<Record<string, boolean>>(() =>
     pasoDestacadoId ? { [pasoDestacadoId]: true } : {},
   )
@@ -309,6 +315,9 @@ export function ProcedimientoVista({
                 numeroPasoSiguiente: indice + 2,
               })
               const esUltimo = indice === pasos.length - 1
+              // Dónde va cada riesgo de este paso en la lista (tarea 311).
+              const advertencias = advertenciasDeLista(paso)
+              const enEspera = accionesEnEspera(advertencias, instruccionesHechas, advertenciasLeidas)
               // Solo el procedimiento principal plega. `abiertoPorUsuario`
               // guarda la elección explícita del técnico y, si no la hay,
               // manda el estado por defecto: abierto si es el paso actual.
@@ -391,12 +400,40 @@ export function ProcedimientoVista({
                           y la ejecución ya no los muestra. */}
                       {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
-                      {paso.bloques.map((bloque) => (
+                      {/* CADA RIESGO, ANTES DE SU ACCIÓN (tarea 311): mientras
+                          la acción está pendiente y su advertencia sin leer,
+                          la advertencia ocupa su sitio; leída, o con la acción
+                          hecha, la acción aparece sola. Desmarcarla devuelve
+                          la advertencia. */}
+                      {paso.bloques.map((bloque) => {
+                        if (advertencias.reubicados.has(bloque.id) || esApoyoEnEspera(bloque, enEspera)) return null
+                        const previas = bloque.tipo === 'tarea' ? advertencias.antesDe.get(bloque.id) : undefined
+                        const marcada = instruccionesHechas.has(bloque.id)
+                        if (previas && enEspera.has(bloque.id)) {
+                          return (
+                            <TarjetaAdvertencia
+                              key={bloque.id}
+                              alertas={previas}
+                              loQueSigue={bloque.texto || 'Tarea sin texto'}
+                              onContinuar={() => setAdvertenciasLeidas((leidas) => new Set(leidas).add(bloque.id))}
+                            />
+                          )
+                        }
+                        return (
                         <Fragment key={bloque.id}>
                           <BloqueVista
                             bloque={bloque}
-                            marcada={instruccionesHechas.has(bloque.id)}
-                            onAlternar={() => void alternarTarea(indice, paso, bloque.id)}
+                            marcada={marcada}
+                            onAlternar={() => {
+                              if (previas && marcada) {
+                                setAdvertenciasLeidas((leidas) => {
+                                  const quedan = new Set(leidas)
+                                  quedan.delete(bloque.id)
+                                  return quedan
+                                })
+                              }
+                              void alternarTarea(indice, paso, bloque.id)
+                            }}
                             nivel={nivel}
                             referencias={referenciasVivas}
                             fichasEnlazadas={fichasEnlazadasDelPaso(paso.bloques)}
@@ -432,7 +469,8 @@ export function ProcedimientoVista({
                             />
                           )}
                         </Fragment>
-                      ))}
+                        )
+                      })}
 
                       {/* CREDENCIAL NECESARIA (encargo del 2026-09-22,
                           sección 8): el dato protegido del paso deja de

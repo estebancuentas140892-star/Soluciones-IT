@@ -994,6 +994,62 @@ const IMAGEN_DEBES_VER = `<svg xmlns="http://www.w3.org/2000/svg" width="640" he
 // decision abre una rama y vuelve). El caso E de siempre sigue siendo
 // GUIA_CON_DECISION; aqui va el de la resolucion DIAN, que es el del
 // encargo.
+// LA ADVERTENCIA PREVIA (tarea 311), con el caso del encargo y lo demás
+// inventado. Paso 1: una acción simple; la de riesgo (una Precaución), con
+// su "Cómo hacerlo" y un dato técnico que se quedan en la acción; y la
+// siguiente. Paso 2: una acción con dos riesgos (manda el Importante) y una
+// sin ninguno.
+const GUIA_ADVERTENCIA_PREVIA = articulo({
+  id: 'art-advertencia-previa',
+  categoriaId: 'cat-software',
+  titulo: 'Quitar el acceso remoto de ejemplo',
+  tipo: 'mantenimiento',
+  procedimiento: {
+    descripcion: 'Cuando el programa de acceso remoto de ejemplo deja de conectar y hay que reinstalarlo.',
+    portada: null,
+    objetivoGeneral: 'Dejar el equipo de ejemplo sin restos del programa.',
+    requisitos: [],
+    verificacionFinal: [],
+    tiempoEstimadoMin: 5,
+    dificultad: 'intermedio',
+    pasos: [
+      paso({
+        id: 'adv-p1',
+        titulo: 'Borrar la configuración de ejemplo',
+        bloques: [
+          tarea('adv-p1-t1', 'Cierra el programa de acceso remoto de ejemplo'),
+          {
+            ...tarea('adv-p1-t2', 'Elimina la carpeta AnyDesk.'),
+            comoHacer: [
+              micro('adv-m1', 'Pulsa', 'Windows + R'),
+              micro('adv-m2', 'Escribe', '%APPDATA%'),
+              micro('adv-m3', 'Elimina', 'la carpeta AnyDesk', 'Lista de carpetas de AppData'),
+            ],
+          },
+          avisoConTono(
+            'adv-a1',
+            'adv-p1-t2',
+            'precaucion',
+            'Asegúrate de que AnyDesk esté completamente cerrado antes de eliminar sus archivos.',
+          ),
+          avisoConTono('adv-d1', 'adv-p1-t2', 'dato', '%APPDATA%\\AnyDesk'),
+          tarea('adv-p1-t3', 'Vacía la papelera de ejemplo'),
+        ],
+      }),
+      paso({
+        id: 'adv-p2',
+        titulo: 'Reinstalar el programa de ejemplo',
+        bloques: [
+          tarea('adv-p2-t1', 'Desinstala la versión anterior de ejemplo'),
+          avisoConTono('adv-a2', 'adv-p2-t1', 'importante', 'Esto elimina los archivos locales del programa de ejemplo.'),
+          avisoConTono('adv-a3', 'adv-p2-t1', 'precaucion', 'La aplicación debe estar completamente cerrada.'),
+          tarea('adv-p2-t2', 'Instala la versión nueva de ejemplo'),
+        ],
+      }),
+    ],
+  },
+})
+
 const GUIA_LOCALIZAR_RESOLUCION = articulo({
   id: 'art-localizar-resolucion',
   categoriaId: 'cat-pos',
@@ -1271,6 +1327,7 @@ const ARTICULOS: Articulo[] = [
   GUIA_JERARQUIA,
   GUIA_REGISTRO,
   GUIA_EJECUCION_MINIMA,
+  GUIA_ADVERTENCIA_PREVIA,
   GUIA_VINCULADA,
   GUIA_CON_VINCULO,
   GUIA_TRES_TAREAS,

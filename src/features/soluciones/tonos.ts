@@ -49,7 +49,9 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'precaucion',
     etiqueta: 'Precaución',
     corto: 'Cuidado',
-    descripcion: 'Un riesgo real de esta acción. Se ve en rojo, a la vista, justo bajo la instrucción',
+    // Desde la tarea 311 un riesgo se lee ANTES de su acción, en su propia
+    // pantalla: lo dice al elegirlo.
+    descripcion: 'Un riesgo real. Al ejecutar se mostrará antes de la acción.',
     Icono: Warning,
     // UN RIESGO VA EN ROJO (encargo del 2026-09-22, sección 4). Era
     // ámbar, y en una guía el ámbar no dice "riesgo" (con texto, desde la
@@ -66,7 +68,7 @@ export const TONOS_AVISO: TonoInfo[] = [
     valor: 'importante',
     etiqueta: 'Importante',
     corto: 'Alerta',
-    descripcion: 'Riesgo real: pérdida de datos, ventas o facturación, o algo irreversible. Alerta destacada',
+    descripcion: 'Riesgo grave o irreversible. Se mostrará como alerta antes de la acción.',
     Icono: WarningOctagon,
     clasesPanel: 'border-noct-error/60 bg-noct-error/[.16]',
     claseIcono: 'text-noct-error',
@@ -133,11 +135,13 @@ export function tonoDelEditor(tono: TonoAviso | null): TonoBase {
 // CÓMO APARECE CADA AVISO MIENTRAS SE EJECUTA (encargo del 2026-09-17,
 // secciones 6 a 8; tarea 307).
 //
-// Nada detiene el recorrido: el tono decide el trato.
+// El tono decide el trato:
 //
-//   - 'alerta': precaución e importante. Riesgos reales. Se ven a la vista,
-//     con la acción a la que pertenecen, justo bajo su instrucción y antes
-//     de "Cómo hacerlo": se leen antes de hacerla. Nunca plegados.
+//   - 'alerta': precaución e importante. Riesgos reales. Son lo único que
+//     detiene el recorrido: se leen ANTES de la acción a la que pertenecen,
+//     en su propia pantalla, con "Entiendo, continuar" (tarea 311, la
+//     advertencia previa de advertenciaPrevia.ts). Hasta la 311 iban a la
+//     vista bajo la instrucción. Nunca plegados.
 //   - 'dato': un valor que hace falta para ejecutar la acción. A la
 //     vista, subordinado a la instrucción (su rótulo y monoespaciada,
 //     tarea 303), sin color de alerta.

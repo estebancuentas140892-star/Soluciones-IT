@@ -116,7 +116,7 @@ describe('abrir una guía', () => {
 })
 
 describe('los avisos acompañan, no detienen', () => {
-  it('el riesgo se ve junto a su acción, sin "Entendido", y la información heredada no se muestra', async () => {
+  it('el riesgo se lee antes de su acción, en su propia pantalla; un paso sin riesgos no se detiene (tarea 311)', async () => {
     await sembrarCaja()
     await montar(RUTAS, RUTA)
 
@@ -126,17 +126,26 @@ describe('los avisos acompañan, no detienen', () => {
     expect(textoPantalla()).not.toContain('Guardar reemplaza')
     await tocar((await esperar(() => principal('Completar y seguir'), 'Completar y seguir en la acción 2')) as HTMLElement)
 
-    // Paso 2: la alerta y la instrucción en la MISMA pantalla.
-    await esperar(() => textoPantalla().includes('Pulsar Guardar'), 'la acción del paso 2')
+    // Paso 2: el riesgo ANTES de la acción, en su propia pantalla (tarea 311),
+    // con la acción a la que se refiere. Ni la acción ni su control todavía.
+    await esperar(() => textoPantalla().includes('Antes de continuar'), 'la advertencia del paso 2')
     expect(textoPantalla()).toContain('Paso 2 de 2')
     expect(textoPantalla()).toContain('Guardar reemplaza la configuración anterior')
-    expect(control(/Entendido/)).toBeNull()
-    // La explicación (un aviso de Información, heredado) no se muestra ni
-    // se pliega en "Más información": la ejecución mínima lo retiró (tarea 307).
+    expect(textoPantalla()).toContain('Lo que sigue')
+    expect(textoPantalla()).toContain('Pulsar Guardar')
+    expect(principal('Completar y terminar')).toBeNull()
+    // La explicación (un aviso de Información, heredado) no interrumpe ni se
+    // muestra: la ejecución mínima lo retiró (tarea 307), y no es un riesgo.
     expect(textoPantalla()).not.toContain('Explicación de por qué se guarda aquí')
     expect(control(/Más información/)).toBeNull()
 
-    // Y la acción se hace sin confirmar nada antes: es la última, así que termina.
+    // "Entiendo, continuar" lleva a la acción, que ya no repite el riesgo.
+    await tocar((await esperar(() => principal('Entiendo, continuar'), '"Entiendo, continuar"')) as HTMLElement)
+    await esperar(() => principal('Completar y terminar') !== null, 'la acción del paso 2')
+    expect(textoPantalla()).not.toContain('Guardar reemplaza la configuración anterior')
+    expect(textoPantalla()).not.toContain('Explicación de por qué se guarda aquí')
+
+    // Y la acción se hace como siempre: es la última, así que termina.
     await tocar((await esperar(() => principal('Completar y terminar'), 'Completar y terminar en la última acción')) as HTMLElement)
     await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía queda terminada')
     expect(control('Salir de la guía')).not.toBeNull()

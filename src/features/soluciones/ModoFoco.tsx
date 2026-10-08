@@ -38,7 +38,7 @@ import {
   type TareaFoco,
 } from './tareasFoco'
 import { RespuestasDecision } from './RespuestasDecision'
-import { tonoVigente } from './tonos'
+import { PantallaAdvertencia } from './PantallaAdvertencia'
 import { subirElContenedor } from './subirElContenedor'
 import {
   hayApoyosDelFlujo,
@@ -64,7 +64,9 @@ import { PasosEnLectura } from './PasosEnLectura'
 //   - Nada detiene el recorrido salvo el trabajo. Los avisos dejaron de
 //     ser pantallas con "Entendido · continuar": van con su acción y el
 //     tono decide cómo (ver `presenciaDeAviso` en tonos.ts). Solo los
-//     riesgos reales se ven como alerta.
+//     riesgos reales se ven como alerta. Desde la tarea 311 esos riesgos,
+//     y solo ellos, vuelven a tener su momento: la advertencia previa, antes
+//     de su acción (más abajo, punto 2).
 //   - La pantalla se lee de arriba abajo en el orden en que se usa (desde
 //     la tarea 307, el de la ejecución mínima, más abajo).
 //   - Las imágenes y la clave de la acción se ven sin abrir nada. Antes
@@ -104,9 +106,11 @@ import { PasosEnLectura } from './PasosEnLectura'
 //      estructura: el índice, la ruta de escritorio, el editor y el
 //      historial lo usan). Así nunca se lee la misma orden dos veces, sin
 //      comparar textos para adivinarlo.
-//   2. El riesgo real, si existe: la advertencia, justo bajo la
-//      instrucción y antes de "Cómo hacerlo", a la vista y en rojo. Es el
-//      único bloque con fondo de color y nunca va plegada.
+//   2. El riesgo real, si existe, ANTES de la acción y en su propio momento
+//      (tarea 311, AD-072): la advertencia previa ocupa la pantalla con
+//      "Entiendo, continuar", y la acción llega después sin repetirla. Hasta
+//      la 311 iba bajo la instrucción, en rojo, y aun así podía pasarse por
+//      alto compartiendo pantalla con todo lo demás.
 //   3. Cómo hacerlo: la lista numerada de sus microacciones, a la vista
 //      (`ComoHacerlo`, tarea 310).
 //   4. El dato técnico indispensable: rótulo y monoespaciada.
@@ -288,6 +292,14 @@ interface VinculoAbierto {
   enFlujo?: boolean
 }
 
+// DÓNDE ESTÁ LA VISTA DENTRO DEL PASO (tarea 311): una entrada del recorrido
+// y, si tiene advertencia previa, si se está leyendo esa advertencia antes de
+// la acción.
+interface PosicionFoco {
+  indice: number
+  advertencia: boolean
+}
+
 function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
   return bloques.flatMap((b) => (b.adjunto ? [b.adjunto] : []))
 }
@@ -417,9 +429,53 @@ export function ModoFoco({
     return tareas.findIndex((t, i) => i !== desde && !cumplida(t))
   }
 
-  const [indiceTarea, setIndiceTarea] = useState(() =>
-    entrarPorElFinal ? tareas.length - 1 : primeraPendiente(),
+  // LOS RIESGOS DE CADA ENTRADA (tarea 311): los suyos y, con la primera, los
+  // que le prestó el paso que reutiliza esta guía, que son las condiciones de
+  // todo lo que sigue. Los mismos que antes iban bajo la instrucción.
+  function alertasDe(i: number): BloquePaso[] {
+    return [...(i === 0 ? (enFlujo?.apoyos?.alertas ?? []) : []), ...avisosDeTareaFoco(paso, tareas, i).alertas]
+  }
+
+  // ¿Esta entrada es una guía que se HACE aquí, con sus propias acciones
+  // (tarea 289, fase 3)? Entonces no tiene pantalla propia: sus riesgos
+  // viajan a la primera acción de esa guía, que los lee antes que nada.
+  function seHaceEnElSitio(t: TareaFoco): boolean {
+    return (
+      !cumplida(t) &&
+      !consulta &&
+      t.guiaId !== null &&
+      ((t.clase === 'guia-del-paso' && guiaDelPasoIntegrada) || t.clase === 'guia-de-tarea' || t.clase === 'guia-de-respuesta')
+    )
+  }
+
+  // ¿La pantalla de esta entrada tiene una advertencia previa?
+  function llevaAdvertencia(i: number): boolean {
+    const t = tareas[i]
+    return t !== undefined && !seHaceEnElSitio(t) && alertasDe(i).length > 0
+  }
+
+  // LLEGAR A UNA ENTRADA (tarea 311). Una acción de riesgo PENDIENTE nunca
+  // aparece saltándose su advertencia, se llegue como se llegue: al abrir o
+  // recargar la guía, al retomarla, al completar la anterior, desde otra guía
+  // o con "Anterior". Una ya hecha se revisa directamente: no se vuelve a
+  // pedir confirmación para algo que no se va a ejecutar otra vez, y su
+  // advertencia queda a un "Anterior" de distancia.
+  function llegadaA(i: number): PosicionFoco {
+    const t = tareas[i]
+    return { indice: i, advertencia: t !== undefined && llevaAdvertencia(i) && !cumplida(t) }
+  }
+
+  // DÓNDE ESTÁ LA VISTA: una entrada del recorrido y, si la tiene, si se está
+  // leyendo su advertencia previa. La advertencia es un estado ANTES de su
+  // acción, no otra acción: no cuenta, no se marca y no tiene número. No se
+  // guarda en ningún sitio: al recargar, una acción de riesgo pendiente
+  // vuelve a llegar por su advertencia, que es justo lo que se quiere.
+  const [posicion, setPosicion] = useState<PosicionFoco>(() =>
+    llegadaA(entrarPorElFinal ? tareas.length - 1 : primeraPendiente()),
   )
+  function irA(i: number) {
+    setPosicion(llegadaA(i))
+  }
   // Id de la tarea de decisión cuyo "No" está abierto. Se guarda el id
   // y no un booleano porque un paso puede tener más de una decisión, y
   // un booleano las abriría todas a la vez.
@@ -445,7 +501,9 @@ export function ModoFoco({
   // lector de pantalla anuncie lo que toca y la vista arranque arriba.
   const encabezado = useRef<HTMLHeadingElement>(null)
 
-  const indice = Math.min(indiceTarea, tareas.length - 1)
+  const indice = Math.min(posicion.indice, tareas.length - 1)
+  // ¿Se está leyendo la advertencia previa de esta entrada?
+  const enAdvertencia = posicion.advertencia && llevaAdvertencia(indice)
 
   // LA RESPUESTA YA ESTÁ EN LA RUTA: lo siguiente es lo que quede por hacer
   // en este paso después de la decisión. Se decide aquí, en el mismo
@@ -454,7 +512,7 @@ export function ModoFoco({
     setRespondiendo(null)
     const desde = tareas.findIndex((t) => t.id === respondiendo.decisionId)
     const siguiente = desde >= 0 ? siguientePendiente(desde) : -1
-    if (siguiente >= 0) setIndiceTarea(siguiente)
+    if (siguiente >= 0) irA(siguiente)
   }
 
   // TERMINAR LA GUÍA QUE SE HACE EN EL SITIO ADELANTA SOLO, como marcar una
@@ -473,6 +531,8 @@ export function ModoFoco({
   // para no bloquear, pero su explicación se lee antes de seguir (A12).
   const guiaVistaSeLee = entradaVista?.clase === 'guia-del-paso' && !guiaDelPasoDisponible
   const destinoTrasGuia = guiaVistaCumplida === true ? siguientePendiente(indice) : -1
+  // Y si lo que sigue es una acción de riesgo, se llega por su advertencia.
+  const destinoTrasGuiaConAviso = destinoTrasGuia >= 0 && llegadaA(destinoTrasGuia).advertencia
   const guiaVistaAntes = useRef<{ id: string; cumplida: boolean } | null>(null)
   useEffect(() => {
     const antes = guiaVistaAntes.current
@@ -480,8 +540,8 @@ export function ModoFoco({
       idGuiaVista !== null && guiaVistaCumplida !== null ? { id: idGuiaVista, cumplida: guiaVistaCumplida } : null
     if (idGuiaVista === null || guiaVistaCumplida !== true || guiaVistaSeLee) return
     if (!antes || antes.id !== idGuiaVista || antes.cumplida) return
-    if (destinoTrasGuia >= 0) setIndiceTarea(destinoTrasGuia)
-  }, [idGuiaVista, guiaVistaCumplida, guiaVistaSeLee, destinoTrasGuia])
+    if (destinoTrasGuia >= 0) setPosicion({ indice: destinoTrasGuia, advertencia: destinoTrasGuiaConAviso })
+  }, [idGuiaVista, guiaVistaCumplida, guiaVistaSeLee, destinoTrasGuia, destinoTrasGuiaConAviso])
 
   // LO DESPLEGADO ES DE LA ACCIÓN QUE SE ESTÁ MIRANDO, no del paso.
   // Cambiar de acción (con "Anterior", al marcar o al terminar la guía
@@ -497,12 +557,13 @@ export function ModoFoco({
   }
 
   // ARRIBA DEL TODO Y CON EL FOCO EN EL ENCABEZADO, cada vez que cambia
-  // lo que está en pantalla: al pasar de acción, al completar una y al
-  // volver de un vínculo (encargo del 2026-09-10, tarea 4).
+  // lo que está en pantalla: al pasar de acción, al completar una, al
+  // volver de un vínculo (encargo del 2026-09-10, tarea 4) y al pasar de la
+  // advertencia previa a su acción, o al revés (tarea 311).
   useEffect(() => {
     subirElContenedor(encabezado.current)
     encabezado.current?.focus({ preventScroll: true })
-  }, [indice, vinculoAbierto])
+  }, [indice, vinculoAbierto, enAdvertencia])
 
   const tarea = tareas[indice]
   if (!tarea) return null
@@ -657,7 +718,10 @@ export function ModoFoco({
   const quedaTrabajoEnElPaso = tareas.some((t) => t.id !== tarea.id && !cumplida(t))
   const esUltimoTrabajo = cierraLaGuia && !quedaTrabajoEnElPaso
 
-  const puedeRetroceder = indice > 0 || onPasoAnterior !== undefined
+  // Desde una acción con advertencia previa, "Anterior" vuelve a ella: la
+  // navegación refleja exactamente lo que se acaba de leer (tarea 311).
+  const vuelveASuAdvertencia = !enAdvertencia && llevaAdvertencia(indice)
+  const puedeRetroceder = vuelveASuAdvertencia || indice > 0 || onPasoAnterior !== undefined
 
   // A qué acción lleva seguir SIN marcar (desde una ya cumplida): la
   // siguiente pendiente mirando hacia adelante, si no la de al lado, y si
@@ -678,13 +742,22 @@ export function ModoFoco({
     if (motivoGuias) return
     onAlternarTarea(tarea.id)
     const siguiente = siguientePendiente(indice)
-    if (siguiente >= 0) setIndiceTarea(siguiente)
+    if (siguiente >= 0) irA(siguiente)
   }
 
   // Corregirse es un gesto aparte y secundario: no mueve el recorrido,
-  // porque quien desmarca quiere quedarse donde está.
+  // porque quien desmarca quiere quedarse donde está. Salvo en una acción de
+  // riesgo (tarea 311): desmarcarla la vuelve pendiente, y una acción de
+  // riesgo pendiente se vuelve a leer por su advertencia antes de hacerla.
   function desmarcar() {
     onAlternarTarea(tarea.id)
+    if (llevaAdvertencia(indice)) setPosicion({ indice, advertencia: true })
+  }
+
+  // "ENTIENDO, CONTINUAR" (tarea 311): reconoce que el riesgo se leyó y lleva
+  // a la acción. No la completa, no cambia su marca, no toca el avance.
+  function continuarTrasAdvertencia() {
+    setPosicion({ indice, advertencia: false })
   }
 
   // RESPONDER ES TOCAR LA OPCIÓN (tarea 302): no hay un "Continuar" aparte.
@@ -699,15 +772,32 @@ export function ModoFoco({
   // llegó a ella con "Anterior"). No registra nada.
   function continuarSinMarcar() {
     const destino = destinoSinMarcar()
-    if (destino !== null) setIndiceTarea(destino)
+    if (destino !== null) irA(destino)
     else onCompletarPaso()
   }
 
-  // "ANTERIOR" CONSULTA, NO DESHACE: mueve la vista a la acción de antes,
-  // y desde la primera del paso, a la última del paso anterior.
+  // "ANTERIOR" CONSULTA, NO DESHACE: mueve la vista a lo de antes. Desde una
+  // acción con advertencia previa, a esa advertencia (tarea 311); desde una
+  // advertencia o una acción sin ella, a la acción de antes, y desde la
+  // primera del paso, a la última del paso anterior.
   function retroceder() {
-    if (indice > 0) setIndiceTarea(indice - 1)
+    if (vuelveASuAdvertencia) setPosicion({ indice, advertencia: true })
+    else if (indice > 0) irA(indice - 1)
     else onPasoAnterior?.()
+  }
+
+  // EN LA CONSULTA se lee el paso entero, también sus advertencias: "Acción
+  // siguiente" pasa de una advertencia a su acción, y "Acción anterior" de
+  // una acción a su advertencia, sin salir del paso consultado.
+  const consultaPuedeVolver = vuelveASuAdvertencia || indice > 0
+  const consultaPuedeSeguir = enAdvertencia || indice + 1 < tareas.length
+  function consultaAnterior() {
+    if (vuelveASuAdvertencia) setPosicion({ indice, advertencia: true })
+    else if (indice > 0) irA(indice - 1)
+  }
+  function consultaSiguiente() {
+    if (enAdvertencia) continuarTrasAdvertencia()
+    else if (indice + 1 < tareas.length) irA(indice + 1)
   }
 
   // TERMINAR EL VÍNCULO DEVUELVE AL PUNTO EXACTO.
@@ -749,7 +839,7 @@ export function ModoFoco({
         // "No", lo siguiente es la acción que venía después de la
         // decisión, no volver a mirarla ya respondida.
         const siguiente = siguientePendiente(indiceDecision)
-        if (siguiente >= 0) setIndiceTarea(siguiente)
+        if (siguiente >= 0) irA(siguiente)
       },
     })
   }
@@ -827,13 +917,7 @@ export function ModoFoco({
   // se cierra solo o el recorrido sigue con lo siguiente (la tarea que la
   // exigía, si es eso). La cabecera, el contador y la ruta siguen siendo
   // los de la guía que se abrió. Ver `flujoContinuo.ts`.
-  const guiaEnElSitio =
-    !hecha &&
-    !consulta &&
-    tarea.guiaId !== null &&
-    ((tarea.clase === 'guia-del-paso' && guiaDelPasoIntegrada) ||
-      tarea.clase === 'guia-de-tarea' ||
-      tarea.clase === 'guia-de-respuesta')
+  const guiaEnElSitio = seHaceEnElSitio(tarea)
   if (guiaEnElSitio && tarea.guiaId) {
     // Lo que esta entrada enseñaría con la primera acción del paso viaja a
     // la primera acción reutilizada: sus avisos, sus imágenes y su
@@ -888,6 +972,11 @@ export function ModoFoco({
     principal = (
       <BotonPrincipal etiqueta={`Ir al paso ${consulta.numeroPasoTrabajo}`} icono="flecha" onClick={consulta.onVolver} />
     )
+  } else if (enAdvertencia) {
+    // LA ADVERTENCIA PREVIA (tarea 311): el control grande solo lleva a la
+    // acción. Con el lenguaje del botón principal de siempre, nunca en rojo:
+    // no se puede confundir con la acción peligrosa, que aún no se hace.
+    principal = <BotonPrincipal etiqueta="Entiendo, continuar" icono="flecha" onClick={continuarTrasAdvertencia} />
   } else if (cierraPaso) {
     // Con todo el paso hecho, el control recorre primero las acciones que
     // quedan delante en este mismo paso (se volvió a revisar con
@@ -896,7 +985,7 @@ export function ModoFoco({
     // hecho.
     const quedaDelante = indice + 1 < tareas.length
     principal = quedaDelante ? (
-      <BotonPrincipal etiqueta={`Ir a la acción ${indice + 2}`} icono="flecha" onClick={() => setIndiceTarea(indice + 1)} />
+      <BotonPrincipal etiqueta={`Ir a la acción ${indice + 2}`} icono="flecha" onClick={() => irA(indice + 1)} />
     ) : (
       <BotonPrincipal
         etiqueta={cierre.etiqueta}
@@ -974,7 +1063,7 @@ export function ModoFoco({
         <BotonPrincipal
           etiqueta={`Ir a la acción ${entradaDeLaGuia + 1}`}
           icono="flecha"
-          onClick={() => setIndiceTarea(entradaDeLaGuia)}
+          onClick={() => irA(entradaDeLaGuia)}
         />
       )
     } else {
@@ -1006,7 +1095,7 @@ export function ModoFoco({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col pb-6 pt-2.5">
-        {requisitos.length > 0 && esPrimeraDelPaso && (
+        {requisitos.length > 0 && esPrimeraDelPaso && !enAdvertencia && (
           <div className="mb-4">
             <AntesDeEmpezar requisitos={requisitos} />
           </div>
@@ -1029,13 +1118,20 @@ export function ModoFoco({
               )}
         </div>
 
+        {enAdvertencia ? (
+          // LA ADVERTENCIA PREVIA, EN SU PROPIA PANTALLA (tarea 311): el
+          // riesgo y la acción a la que se refiere. Nada más: ni el dato
+          // técnico ni la credencial, que son herramientas de la acción.
+          <div className={separacionAccion}>
+            <PantallaAdvertencia alertas={alertasDe(indice)} loQueSigue={textoInstruccion} refTitulo={encabezado} />
+          </div>
+        ) : (
         <div className={`flex flex-col gap-4 ${separacionAccion}`}>
-        {/* LA ACCIÓN, SU RIESGO Y CÓMO HACERLA (tarea 307). Primero la
-            instrucción; justo debajo, el riesgo real si lo hay (a la vista,
-            en rojo, antes de "Cómo hacerlo": se lee antes de hacerla); y
-            después "Cómo hacerlo" y el dato técnico, pegados
-            a la instrucción porque son SUYOS, con menos peso porque no son
-            otra orden. */}
+        {/* LA ACCIÓN Y CÓMO HACERLA (tarea 307). Primero la instrucción y,
+            pegados a ella porque son SUYOS, "Cómo hacerlo" y el dato
+            técnico, con menos peso porque no son otra orden. El riesgo ya
+            se leyó antes, en su advertencia previa (tarea 311): aquí no se
+            repite. */}
         <div className="flex flex-col gap-2.5">
           <div className="flex flex-col gap-1">
             {/* Sin etiqueta cuando el paso que reutiliza otra guía no se
@@ -1057,16 +1153,6 @@ export function ModoFoco({
             >
               {textoInstruccion}
             </h2>
-            {/* EL RIESGO REAL, BAJO SU ACCIÓN Y ANTES DE HACERLA. Solo
-                precaución e importante, en rojo (en una guía el rojo es el
-                riesgo), nunca plegado ni convertido en otro paso. */}
-            {avisos.alertas.length > 0 && (
-              <div className="my-1.5 flex flex-col gap-2">
-                {avisos.alertas.map((aviso) => (
-                  <AlertaDeRiesgo key={aviso.id} aviso={aviso} />
-                ))}
-              </div>
-            )}
             {/* CÓMO HACERLO (tarea 303; lista numerada a la vista desde la
                 310): las microacciones de ESTA acción, pegadas a su
                 instrucción y en voz más baja. */}
@@ -1208,6 +1294,7 @@ export function ModoFoco({
             `key` hace que cada acción llegue con ella plegada. */}
         <DebesVer key={tarea.id} resultado={tarea.resultadoVisual} />
         </div>
+        )}
       </div>
 
       {!pieCedidoAlVinculo && (
@@ -1225,15 +1312,17 @@ export function ModoFoco({
           {!anidado && <div ref={huecoAvisoActualizacion} className="mx-auto w-full max-w-xl empty:hidden" />}
           {/* QUÉ GUÍAS FALTAN, cuando son más de una. Con una sola, el
               botón ya la nombra ("Completa «X»"). */}
-          {!consulta && !cierraPaso && !hecha && pendientes.length > 1 && motivoGuias && (
+          {!consulta && !enAdvertencia && !cierraPaso && !hecha && pendientes.length > 1 && motivoGuias && (
             <p className="text-center text-[12px] text-noct-neutral-300">{motivoGuias}</p>
           )}
-          {!consulta && esDecision && !hecha && !noAbierto && destinoDelNo && (
+          {!consulta && !enAdvertencia && esDecision && !hecha && !noAbierto && destinoDelNo && (
             <p className="text-center text-[13px] leading-snug text-noct-neutral-300 text-pretty">
               Si respondes que no, sigues con «{tarea.decisionGuiaTitulo || 'la salida'}»
             </p>
           )}
-          {!consulta && !anidado && renderEnvioAEquipo?.(tarea.clase === 'tarea' ? tarea.id : null)}
+          {/* La advertencia previa tiene una sola finalidad: ni la franja del
+              equipo atendido ni "Desmarcar" van con ella (tarea 311). */}
+          {!consulta && !enAdvertencia && !anidado && renderEnvioAEquipo?.(tarea.clase === 'tarea' ? tarea.id : null)}
           {/* En escritorio la ejecución tiene más ancho (tarea 255), pero
               los controles no se estiran: un botón de 700 px no se toca
               mejor que uno de 600. En la consulta no hay "Anterior": el
@@ -1259,12 +1348,12 @@ export function ModoFoco({
               del paso (contingencia, evidencia, saltar) sin completar
               nada. */}
           {consulta ? (
-            tareas.length > 1 && (
+            (tareas.length > 1 || llevaAdvertencia(indice)) && (
               <div className="mx-auto flex w-full max-w-xl items-center justify-center gap-1">
                 <button
                   type="button"
-                  disabled={indice === 0}
-                  onClick={() => setIndiceTarea(indice - 1)}
+                  disabled={!consultaPuedeVolver}
+                  onClick={consultaAnterior}
                   className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text disabled:opacity-40"
                 >
                   <CaretLeft size={14} className="shrink-0" aria-hidden />
@@ -1272,8 +1361,8 @@ export function ModoFoco({
                 </button>
                 <button
                   type="button"
-                  disabled={indice + 1 >= tareas.length}
-                  onClick={() => setIndiceTarea(indice + 1)}
+                  disabled={!consultaPuedeSeguir}
+                  onClick={consultaSiguiente}
                   className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text disabled:opacity-40"
                 >
                   Acción siguiente
@@ -1293,7 +1382,7 @@ export function ModoFoco({
               <Warning size={15} className="shrink-0" aria-hidden />
               Tengo un problema
             </button>
-            {hecha && tarea.clase === 'tarea' && !conOpciones && (
+            {hecha && !enAdvertencia && tarea.clase === 'tarea' && !conOpciones && (
               <button
                 type="button"
                 onClick={desmarcar}
@@ -1381,24 +1470,9 @@ function EtiquetaDeAccion({
   )
 }
 
-// UN RIESGO REAL (precaución o importante), bajo la instrucción y antes de
-// "Cómo hacerlo". Con sus cuatro señales, ninguna solo de color (regla
-// R16): icono, palabra, barra lateral y fondo.
-function AlertaDeRiesgo({ aviso }: { aviso: BloquePaso }) {
-  const tono = tonoVigente(aviso.tono)
-  if (!tono) return null
-  return (
-    <div
-      role="note"
-      className={`flex items-start gap-3 rounded-r-[10px] border-l-[3px] px-3.5 py-3 ${tono.claseBarra} ${tono.claseFondo}`}
-    >
-      <tono.Icono size={19} className={`mt-0.5 shrink-0 ${tono.claseIcono}`} aria-hidden />
-      <p className="min-w-0 text-[14.5px] leading-[1.45] text-pretty">
-        <span className={`font-semibold ${tono.claseIcono}`}>{tono.etiqueta}.</span> {aviso.texto || 'Aviso sin texto'}
-      </p>
-    </div>
-  )
-}
+// UN RIESGO REAL YA NO VA BAJO LA INSTRUCCIÓN (tarea 311): `AlertaDeRiesgo`
+// se retiró. Se lee antes de la acción, en su propia pantalla
+// (`PantallaAdvertencia`, PantallaAdvertencia.tsx).
 
 // "Más información" y su nota plegada se retiraron en la tarea 307: durante
 // la ejecución se trabaja, y lo que hay que leer para hacer bien la acción

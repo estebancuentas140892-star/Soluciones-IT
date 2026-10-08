@@ -293,7 +293,15 @@ const GUIAS_PRUEBA = [
     verificacionFinal: ['La persona de prueba aparece registrada sin red.'],
     pasos: [
       { id: 'gsc-p1', titulo: 'Entrar al programa', subArticuloId: 'acceso-sin-conexion', subArticuloTitulo: 'Entrar al programa de prueba sin red' },
-      { id: 'gsc-p2', titulo: 'Guardar', bloques: [{ id: 'gsc-p2-t1', tipo: 'tarea', texto: 'Selecciona Guardar' }] },
+      // Tarea 311: con un riesgo real, que se lee antes de la acción, sin red.
+      {
+        id: 'gsc-p2',
+        titulo: 'Guardar',
+        bloques: [
+          { id: 'gsc-p2-t1', tipo: 'tarea', texto: 'Selecciona Guardar' },
+          { id: 'gsc-p2-r', tipo: 'aviso', texto: 'Guardar reemplaza el registro de prueba anterior.', tono: 'precaucion', alcance: 'tarea', tareaId: 'gsc-p2-t1' },
+        ],
+      },
     ],
   }),
 ]
@@ -516,6 +524,31 @@ async function main() {
     comprobar(
       Boolean(await s.hasta(`document.body.innerText.includes('Selecciona Guardar')`, 'el paso 2')),
       'lo reutilizado se completa y sigue en el paso 2',
+    )
+    // Tarea 311: "Selecciona Guardar" tiene un riesgo real, que se lee antes
+    // de la acción, en su propia pantalla, y sale de la base local.
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Antes de continuar') && document.body.innerText.includes('Guardar reemplaza el registro de prueba anterior.')`,
+          'la advertencia previa',
+        ),
+      ),
+      'la acción de riesgo llega por su advertencia previa, sin red (tarea 311)',
+    )
+    comprobar(
+      !(await s.evaluar(`return [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Completar y seguir')`)),
+      'la advertencia no se completa: solo lleva a la acción',
+    )
+    await s.tocar('Entiendo, continuar')
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Completar y seguir') && !document.body.innerText.includes('Guardar reemplaza el registro de prueba anterior.')`,
+          'la acción',
+        ),
+      ),
+      'y "Entiendo, continuar" lleva a la acción, que no repite el riesgo',
     )
     await s.tocar('Completar y seguir')
     comprobar(

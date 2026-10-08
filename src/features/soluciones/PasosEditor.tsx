@@ -240,7 +240,7 @@ const CONTENIDOS: OpcionTipoBloque<ClaveContenido>[] = [
   { valor: 'imagen', etiqueta: 'Imagen', descripcion: 'Una captura en este punto', Icono: Camera, claseIcono: 'text-noct-accent-300' },
   // UN AVISO ES UN RIESGO O UN DATO (tarea 307): se elige por lo que es.
   // Información y Consejo ya no se crean (la ejecución no los muestra).
-  { valor: 'advertencia', etiqueta: 'Advertencia', descripcion: 'Un riesgo real de esta acción; se ve en rojo, bajo la instrucción', Icono: Warning, claseIcono: 'text-noct-error' },
+  { valor: 'advertencia', etiqueta: 'Advertencia', descripcion: 'Un riesgo real de esta acción; al ejecutar se mostrará antes de ella', Icono: Warning, claseIcono: 'text-noct-error' },
   { valor: 'datoTecnico', etiqueta: 'Dato técnico', descripcion: 'Un valor exacto: IP, puerto, ruta, comando o nombre de archivo', Icono: Code, claseIcono: 'text-noct-neutral-300' },
   { valor: 'archivo', etiqueta: 'Archivo', descripcion: 'Manual, PDF o planilla', Icono: Paperclip, claseIcono: 'text-noct-neutral-300' },
   { valor: 'guia', etiqueta: 'Guía vinculada', descripcion: 'Otra guía que se hace aquí', Icono: BookOpen, claseIcono: 'text-noct-accent-300' },
@@ -2238,6 +2238,19 @@ function BloqueEditor({
             avisa de nada que pueda salir mal: interrumpe. Se dice aquí;
             decide el autor. Desde la tarea 307 no hay a dónde "pasarla":
             Información ya no se muestra al ejecutar. */}
+        {/* DÓNDE SE LEERÁ (tarea 311): el riesgo sigue escrito aquí, junto a
+            su acción, pero al ejecutar se lee ANTES de ella, en su propia
+            pantalla. Se dice para que nadie lo busque bajo la instrucción. */}
+        {(bloque.tono === 'precaucion' || bloque.tono === 'importante') && (
+          <p className="flex min-w-0 items-start gap-1.5 pl-1 text-[12px] leading-snug text-noct-neutral-400">
+            <ArrowUp size={14} className="mt-px shrink-0 text-noct-neutral-400" aria-hidden />
+            <span className="min-w-0">
+              {bloque.alcance === 'tarea'
+                ? 'Al ejecutar, se mostrará antes de esta acción.'
+                : 'Al ejecutar, se mostrará antes de la primera acción del paso.'}
+            </span>
+          </p>
+        )}
         {(bloque.tono === 'precaucion' || bloque.tono === 'importante') && esRecordatorio(bloque.texto) && (
           <p className="flex min-w-0 items-start gap-1.5 pl-1 text-[12px] leading-snug text-noct-neutral-300">
             <Info size={14} className="mt-px shrink-0 text-noct-accent-300" aria-hidden />

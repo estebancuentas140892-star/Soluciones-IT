@@ -6,6 +6,7 @@ import {
   control,
   desmontarTodo,
   esperar,
+  esperarControl,
   limpiarBase,
   montar,
   pasoPrueba,
@@ -184,16 +185,23 @@ describe('qué hacer, sin los textos heredados del paso (tarea 307)', () => {
     expect(control(/^Comprobado/)).toBeNull()
   })
 
-  it('un riesgo real se lee con su palabra, justo bajo la instrucción y antes de hacerla (tarea 307)', async () => {
+  it('un riesgo real se lee con su palabra, ANTES de su acción y en su propia pantalla (tarea 311)', async () => {
     await sembrarRuta()
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes('Paso 1 de 3'), 'el paso 1')
 
+    // También al consultar un paso: la acción de riesgo pendiente llega por su advertencia.
     await tocar(await esperar(() => control(/^Paso 2 de 3: Entrar a la intranet/), 'el nodo del paso 2'))
-    await esperar(() => textoPantalla().includes('Escribe la dirección'), 'la acción del paso 2')
+    await esperar(() => textoPantalla().includes('Antes de continuar'), 'la advertencia del paso 2')
     const texto = textoPantalla()
-    expect(texto).toContain('Precaución.')
-    // Qué hacer primero; el riesgo, en la misma pantalla y a la vista.
-    expect(texto.indexOf('Escribe la dirección')).toBeLessThan(texto.indexOf('Precaución.'))
+    expect(texto).toContain('Precaución. Antes de continuar')
+    // El riesgo primero; la acción, como lo que sigue.
+    expect(texto.indexOf('Precaución.')).toBeLessThan(texto.indexOf('Escribe la dirección'))
+    expect(texto).toContain('Lo que sigue')
+    // En la consulta, "Acción siguiente" pasa de la advertencia a su acción, que no la repite.
+    await tocar(await esperarControl(/^Acción siguiente/))
+    await esperar(() => textoPantalla().includes('Qué hacer'), 'la acción del paso 2')
+    expect(textoPantalla()).not.toContain('Antes de continuar')
+    expect(textoPantalla()).not.toContain('Precaución.')
   })
 })

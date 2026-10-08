@@ -91,6 +91,8 @@ import { ROTULO_CONTINGENCIA, type EnFlujo, type IntegracionEnFlujo } from './fl
 import { orientacionDe, pantallasDePreparacion, requisitosEfectivos } from './preparacionGuia'
 import { subirElContenedor } from './subirElContenedor'
 import { destinoAlSaltar } from './salidasFalla'
+import { accionesEnEspera, advertenciasDeLista, esApoyoEnEspera } from './advertenciaPrevia'
+import { TarjetaAdvertencia } from './PantallaAdvertencia'
 import { LineaDeEstado, SegmentosDePasos, type EstadoLinea } from './EstadoEjecucion'
 import {
   minutosRestantes,
@@ -273,6 +275,10 @@ export function AsistenteVista({
   // mirar una falla no es cambiar de forma de trabajar. Al cambiar de
   // paso deja de aplicar sola, igual que `falla`.
   const [pasoEnteroPorFalla, setPasoEnteroPorFalla] = useState<string | null>(null)
+  // LAS ADVERTENCIAS PREVIAS YA LEÍDAS EN LA VISTA DE PASO ENTERO (tarea 311),
+  // por el id de su tarea. Solo en memoria: al recargar, una acción de riesgo
+  // pendiente vuelve a llegar por su advertencia.
+  const [advertenciasLeidas, setAdvertenciasLeidas] = useState<ReadonlySet<string>>(() => new Set())
   // FALLA DEL PASO (tablero 3d). Tres estados distintos a propósito:
   //
   // - `falla`: qué paso falló y qué se pidió al declararlo. Va ATADO AL
@@ -1087,6 +1093,14 @@ export function AsistenteVista({
     )
   }
 
+  // EN LA LISTA, CADA RIESGO VA ANTES DE SU ACCIÓN (tarea 311): mientras la
+  // acción está pendiente y su advertencia sin leer, la advertencia ocupa su
+  // sitio con su "Entiendo, continuar"; leída, o con la acción hecha, la
+  // acción aparece sola y el riesgo no se repite. Desmarcarla la vuelve
+  // pendiente, y su advertencia vuelve.
+  const advertenciasDelPaso = advertenciasDeLista(paso)
+  const enEspera = accionesEnEspera(advertenciasDelPaso, instruccionesHechas, advertenciasLeidas)
+
   return (
     <div className={`flex flex-col ${nivel === 0 ? 'flex-1' : ''}`}>
     {indiceUI}
@@ -1171,6 +1185,22 @@ export function AsistenteVista({
             // La información y los consejos heredados no se muestran (tarea
             // 307): ni su fila, para no dejar un hueco en la lista.
             if (bloque.tipo === 'aviso' && presenciaDeAviso(bloque.tono) === null) return null
+            // Un riesgo que se lee antes de su acción no se dibuja donde está.
+            if (advertenciasDelPaso.reubicados.has(bloque.id)) return null
+            // Ni los apoyos de una acción que espera tras su advertencia.
+            if (esApoyoEnEspera(bloque, enEspera)) return null
+            const previas = bloque.tipo === 'tarea' ? advertenciasDelPaso.antesDe.get(bloque.id) : undefined
+            if (previas && enEspera.has(bloque.id)) {
+              return (
+                <li key={bloque.id}>
+                  <TarjetaAdvertencia
+                    alertas={previas}
+                    loQueSigue={bloque.texto || 'Tarea sin texto'}
+                    onContinuar={() => setAdvertenciasLeidas((leidas) => new Set(leidas).add(bloque.id))}
+                  />
+                </li>
+              )
+            }
             // LA GUÍA QUE EXIGE UNA TAREA, EN EL FLUJO (tarea 289, fase 3):
             // sus acciones aquí mismo, como parte del paso. Antes era un
             // enlace que sacaba de la ejecución y que, terminado allá, no
@@ -1210,6 +1240,15 @@ export function AsistenteVista({
                     onAlternar={() => {
                       setRetomadaEn(null)
                       setIndiceTrabajo(indiceActual)
+                      // Desmarcar una acción de riesgo la vuelve pendiente: su
+                      // advertencia vuelve antes de ella (tarea 311).
+                      if (previas && instruccionesHechas.has(bloque.id)) {
+                        setAdvertenciasLeidas((leidas) => {
+                          const quedan = new Set(leidas)
+                          quedan.delete(bloque.id)
+                          return quedan
+                        })
+                      }
                       void alternarTarea(indiceActual, paso, bloque.id)
                     }}
                     nivel={nivel}

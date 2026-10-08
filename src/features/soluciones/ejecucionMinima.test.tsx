@@ -98,10 +98,18 @@ async function sembrarCaso() {
   await sembrarGuia({ id: 'guia-minima', titulo: 'Exportar un buzón de prueba', pasos: [paso1, paso2] })
 }
 
-async function abrir() {
+/** La guía abierta en su primera acción, que tiene un riesgo: llega por su advertencia previa (tarea 311). */
+async function abrirEnLaAdvertencia() {
   await sembrarCaso()
   await montar(RUTAS, RUTA)
-  await esperar(() => textoPantalla().includes(ACCION_1), 'la primera acción')
+  await esperar(() => instrucciones()[0]?.textContent === 'Precaución. Antes de continuar', 'la advertencia previa')
+}
+
+/** La guía abierta en su primera acción, ya leída su advertencia. */
+async function abrir() {
+  await abrirEnLaAdvertencia()
+  await tocar(await esperarControl(/^Entiendo, continuar$/))
+  await esperar(() => instrucciones()[0]?.textContent === ACCION_1, 'la primera acción')
 }
 
 /** La instrucción de la acción: el encabezado que recibe el foco. */
@@ -157,7 +165,14 @@ async function completarYSeguir() {
 async function verElPasoEntero() {
   await tocar(await esperarControl(/^Paso 1 de 2\. Abrir el índice de pasos$/))
   await tocar(await esperarControl(/^Ver el paso entero$/))
+  // En la lista, el riesgo de la primera acción ocupa su sitio hasta leerlo (tarea 311).
+  await leerLaTarjeta()
   await esperar(() => document.body.querySelector('button[role="checkbox"]'), 'la vista de paso entero')
+}
+
+/** La advertencia previa de una lista: se lee y deja ver su acción. */
+async function leerLaTarjeta() {
+  await tocar(await esperarControl(/^Entiendo, continuar$/))
 }
 
 beforeEach(async () => {
@@ -350,14 +365,34 @@ describe('lo heredado carga sin romper nada y no se muestra', () => {
   })
 })
 
-describe('la advertencia, a la vista y en la misma acción', () => {
-  it('va bajo la instrucción y antes de "Cómo hacerlo": se lee antes de hacerla', async () => {
-    await abrir()
+describe('la advertencia, antes de su acción y en su propia pantalla (tarea 311)', () => {
+  it('se lee antes de la acción, con la acción a la que se refiere; la acción después no la repite', async () => {
+    await abrirEnLaAdvertencia()
+    // La advertencia previa: el tono, "Antes de continuar", el texto del
+    // autor y lo que sigue. Nada de la acción todavía.
+    const enLaAdvertencia = textoPantalla()
+    const orden = [
+      enLaAdvertencia.indexOf('acción 1 de 2'),
+      enLaAdvertencia.indexOf('Precaución. Antes de continuar'),
+      enLaAdvertencia.indexOf(RIESGO),
+      enLaAdvertencia.indexOf('Lo que sigue'),
+      enLaAdvertencia.indexOf(ACCION_1),
+    ]
+    expect(orden.every((p) => p >= 0)).toBe(true)
+    expect([...orden].sort((a, b) => a - b)).toEqual(orden)
+    for (const deLaAccion of ['Qué hacer', 'Cómo hacerlo', 'Dato técnico', DATO, 'Debes ver']) {
+      expect(enLaAdvertencia).not.toContain(deLaAccion)
+    }
+    expect(control(/^Entiendo, continuar$/)).not.toBeNull()
+
+    await tocar(await esperarControl(/^Entiendo, continuar$/))
+    await esperar(() => instrucciones()[0]?.textContent === ACCION_1, 'la acción')
     const texto = textoPantalla()
+    // El riesgo ya se leyó: no se repite bajo la instrucción.
+    expect(texto).not.toContain(RIESGO)
     const posiciones = [
       texto.indexOf('Qué hacer'),
       texto.indexOf(ACCION_1),
-      texto.indexOf(`Precaución. ${RIESGO}`),
       texto.indexOf('Cómo hacerlo'),
       texto.indexOf(LISTA_COMO[0]),
       texto.indexOf(LISTA_COMO[2]),
@@ -369,20 +404,22 @@ describe('la advertencia, a la vista y en la misma acción', () => {
     expect([...posiciones].sort((a, b) => a - b)).toEqual(posiciones)
   })
 
-  it('nunca plegada, imposible de confundir: el único bloque con fondo de color', async () => {
-    await abrir()
-    const alerta = elementoCon(RIESGO).closest<HTMLElement>('[role="note"]')
-    expect(alerta).not.toBeNull()
-    // A la vista sin tocar nada, y fuera de todo lo que se pliega.
-    const plegables = Array.from(document.body.querySelectorAll('button[aria-controls]')).map((b) =>
-      document.getElementById(b.getAttribute('aria-controls') ?? ''),
-    )
-    expect(plegables.some((zona) => zona?.contains(alerta as HTMLElement))).toBe(false)
-    expect(clasesDe(alerta as HTMLElement).some((c) => /^bg-noct-error/.test(c))).toBe(true)
+  it('nunca plegada, imposible de confundir: el único bloque con fondo de color, y la acción sin él', async () => {
+    await abrirEnLaAdvertencia()
+    const panel = elementoCon(RIESGO).closest<HTMLElement>('section')
+    expect(panel).not.toBeNull()
+    // Nada que desplegar: a la vista, y fuera de todo lo que se pliega.
+    expect(document.body.querySelectorAll('button[aria-controls]')).toHaveLength(0)
+    expect(clasesDe(panel as HTMLElement).some((c) => /^bg-noct-error/.test(c))).toBe(true)
     const conFondoDeEstado = contenidoDeLaAccion().filter(
-      (e) => !(alerta as HTMLElement).contains(e) && Array.from(e.classList).some((c) => /^bg-noct-(error|exito|precaucion|accion)/.test(c)),
+      (e) => !(panel as HTMLElement).contains(e) && Array.from(e.classList).some((c) => /^bg-noct-(error|exito|precaucion|accion)/.test(c)),
     )
     expect(conFondoDeEstado).toEqual([])
+
+    await tocar(await esperarControl(/^Entiendo, continuar$/))
+    await esperar(() => instrucciones()[0]?.textContent === ACCION_1, 'la acción')
+    // En la acción ya no hay ningún bloque con el fondo del riesgo.
+    expect(contenidoDeLaAccion().filter((e) => Array.from(e.classList).some((c) => /^bg-noct-error/.test(c)))).toEqual([])
   })
 })
 
@@ -472,7 +509,10 @@ describe('"Debes ver" es la imagen del resultado', () => {
     if (plegado && !control(/^Añadir una tarea al paso/)) await tocar(plegado)
     await tocar(await esperarControl(/^Probar$/))
     await tocar(await esperarControl(/^Ver como técnico$/))
-    await esperar(() => textoPantalla().includes('Como lo ve el técnico') && botonDebesVer() !== null, 'la prueba del paso')
+    await esperar(() => textoPantalla().includes('Como lo ve el técnico'), 'la prueba del paso')
+    // "Probar" enseña el riesgo antes de su acción, como la ejecución (tarea 311).
+    await leerLaTarjeta()
+    await esperar(() => botonDebesVer() !== null, 'la acción en la prueba')
     await tocar(botonDebesVer() as HTMLButtonElement)
     await esperar(imagenDelResultado, 'la imagen en "Probar"')
     // "Probar" enseña lo mismo que la ejecución: nada de lo heredado.
