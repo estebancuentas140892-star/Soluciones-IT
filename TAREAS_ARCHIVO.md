@@ -1,5 +1,37 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-07: la ruta rápida ejecutable
+
+### 309. La ruta rápida es ejecutable y "Ver paso a paso" solo si aporta algo
+
+**Estado:** Completada (2026-10-08). **Cerrada por confirmación real del usuario**, que la comprobó a mano en producción con guías reales. Encargo del usuario del 2026-10-07, tras probar las guías corregidas en la 304: la ruta rápida debe ser ejecutable, no una sucesión de sustantivos; la misma información no se muestra dos veces; y una sola microacción pertenece a la instrucción principal (regla 27 c, AD-070, RN-068).
+
+**Causa:** la ruta rápida de `SenalesDePaso.tsx` pintaba solo el elemento de cada microacción: en el respaldo del correo quedaba "carpeta de la persona › archivo .pst › archivo .pst", sin los verbos que dicen qué hacer. "Ver paso a paso" repetía luego las mismas frases, compuestas a mano, y una sola microacción salía como ruta y como paso a paso. Además, el editor dejaba guardar una única microacción, que la ejecución ya no enseña.
+
+**Qué cambió:**
+
+- **La ruta rápida conserva acción más elemento:** cada microacción se dice con `fraseDeMicroPaso`, la única forma de generar la frase visible (la misma que el paso a paso, el portal y "¿Qué hace?"), en orden y separadas por "›". Envuelve en varias líneas sin recortar ni salirse del ancho.
+- **Una única microacción no genera "Cómo hacerlo":** con cero o una no aparece ni "Ruta rápida" ni "Ver paso a paso" (`comoHacerQueSeEnsena`); el dato se conserva tal cual.
+- **"Ver paso a paso" solo aparece cuando añade información:** solo si alguna microacción tiene ubicación (`pasoAPasoAportaAlgo`), lo único que la ruta no dice. Se decide por estructura, sin comparar textos.
+- **El editor impide guardar exactamente una microacción completa:** junto al rótulo se lee "Cómo hacerlo necesita al menos 2 acciones. Si solo hay una, escríbela directamente en la instrucción principal." y "Guardar procedimiento" no guarda (`tieneUnaSolaMicroaccion`). Es la misma validación ampliada, `problemasDeComoHacer`, con los tipos `'incompleta'` y `'unaSola'`: si hay una fila a medias, primero se dice qué campo le falta. Nada se borra, se mueve ni se interpreta solo.
+- **Igual en todas partes:** la acción a la vez, el paso entero, la lectura, "Probar", lo reutilizado, sin conexión, "¿Qué hace?" y el computador atendido.
+
+**Integración:** la rama `fix/ruta-rapida-ejecutable` (aprobada en `57ee000`) se rebasó sobre `main` (`343be74`). Su único conflicto, en `TAREAS.md`, se resolvió sin reintroducir la 308; `TAREAS_ARCHIVO.md` y la estabilización de `asistenciaTecnico.test.tsx` quedaron como en `main`, y el código, idéntico al aprobado. Entró por avance rápido, sin commit de merge (`343be74..265696a`: `23d7793` y `265696a`). **SHA funcional: `265696a`.** CI en verde (run 37778883681), Vercel con el despliegue completado y producción sirviendo `265696a` (`version.json`); el bundle publicado contiene el aviso y las ayudas nuevas del editor y ya no la ayuda antigua.
+
+**Comprobación publicada, hecha a mano por el usuario en producción (`265696a`), satisfactoria:**
+
+- **Acción simple:** "Crear y almacenar una copia de seguridad (Backup) del correo de Outlook (.pst)", acción "Seleccionar el buzón": solo la instrucción principal y su precaución, sin "Ruta rápida" ni "Ver paso a paso".
+- **Varias microacciones sin ubicación:** la misma guía, acción "Guardar el backup en la carpeta de la persona": la ruta rápida conserva los verbos y se lee como una secuencia ejecutable ("Abre o crea… › Copia… › Pega…"), sin "Ver paso a paso".
+- **Varias microacciones con ubicación:** "Configurar impresión bloqueada y perfiles Carta y Oficio", acción "Configurar Impresión bloqueada": "Ruta rápida" y "Ver paso a paso", que al abrirse enseña las ubicaciones adicionales (por ejemplo "Tipo de trabajo" e "ID usuario").
+
+**Verificación técnica tras el rebase:** 186 archivos y 2927 pruebas, `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` (62 comprobaciones, entre ellas la ruta con sus verbos y "Ver paso a paso" con la ubicación, sin red) en verde.
+
+**No se hizo, a propósito:**
+
+- Ningún contenido real, ni Supabase, ni la Bóveda. El modelo `comoHacer` (`accion`, `elemento`, `ubicacion`) y el JSON de los procedimientos no cambian: sin migración.
+- Una guía antigua con una sola microacción sigue cargando y ejecutándose (sin enseñarla); se resuelve al editarla, trabajo de contenido (regla 26).
+- El servidor de respaldos sin credencial protegida asociada es un asunto de contenido y Bóveda, no de esta tarea.
+
 ## Encargo del 2026-10-07: volver desde la comprobación final
 
 ### 308. Volver desde la comprobación final
