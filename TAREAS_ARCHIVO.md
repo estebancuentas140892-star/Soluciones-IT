@@ -1,5 +1,25 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-08: "Cómo hacerlo" numerado
+
+### 310. Cómo hacerlo numerado como única representación
+
+**Estado:** Completada (2026-10-08). **Cerrada por confirmación real del usuario**, que la probó en producción con guías reales y confirmó que la lista numerada es más clara. Decisión del usuario tras probar la 309 en producción: la lista numerada de "Ver paso a paso" se seguía mucho mejor que la "Ruta rápida" en una línea, que con varios gestos se volvía un párrafo largo (regla 27 c, AD-071, RN-069).
+
+**Qué cambió:**
+
+- **Una sola representación:** con dos o más microacciones, el rótulo "Cómo hacerlo" y una lista ordenada (`ol` con sus `li`) a la vista, sin nada que pulsar; cada número es una frase con su verbo (`fraseDeMicroPaso`) y su punto solo si hace falta (`llevaPuntoFinal`). Con cero o una, solo la instrucción.
+- **La ubicación** va debajo de su microacción, más pequeña y en gris (la palabra "Ubicación" solo para el lector de pantalla); ya no decide si hay lista.
+- **Retirado de verdad:** la "Ruta rápida" en una línea con "›", "Ver paso a paso" / "Ocultar paso a paso", su estado y sus ids ARIA, `ROTULO_RUTA_RAPIDA`, `pasoAPasoAportaAlgo` y la `key` de Modo Foco que reponía el plegado.
+- **Tamaños por variante:** 16 px bajo la instrucción, 14 px bajo la fila y 13 px en la lectura compacta de una guía reutilizada.
+- **Editor:** solo sus dos ayudas hablan de la lista numerada; la validación (cero o al menos dos) no cambió.
+
+**Integración:** la rama `feat/como-hacerlo-numerado` entró en `main` por avance rápido, sin commit de merge (`55dcde6..43f0460`). **SHA funcional: `43f0460`.** CI en verde (run 37809483016), Vercel Production con el despliegue completado y producción sirviendo `43f0460` (`version.json`); el bundle publicado ya no contenía "Ruta rápida", "Ver paso a paso" ni "Ocultar paso a paso". El estado "integrada, pendiente de confirmación" se registró en `8324d92`.
+
+**Verificación:** 186 archivos y 2932 pruebas, `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` (62 comprobaciones) en verde. En el navegador, con el banco local, a 390 × 844, 375 × 667 y 1280 × 800: sin desplazamiento horizontal y con frases y ubicaciones alineadas. **Comprobación publicada, hecha a mano por el usuario en producción, satisfactoria.**
+
+**No se hizo, a propósito:** ningún contenido real, Supabase, Bóveda ni imágenes de las guías; el modelo `comoHacer` no cambió (sin migración). "Debes ver" (`resultadoVisual`), la asistencia (ya recibía la lista numerada como texto) y la navegación de la 308 quedaron intactos. La historia de la 309 se conserva tal como existió.
+
 ## Encargo del 2026-10-07: la ruta rápida ejecutable
 
 ### 309. La ruta rápida es ejecutable y "Ver paso a paso" solo si aporta algo
