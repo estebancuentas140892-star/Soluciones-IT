@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from 'react'
+import type { ComponentType, ReactNode, Ref } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowSquareOut, CaretDown, CaretRight, type IconoProps } from '../../components/iconos'
 
@@ -43,6 +43,7 @@ export function FilaVinculo({
   onAlternar,
   accion,
   ariaLabel,
+  ref,
 }: Comun & {
   abierto: boolean
   onAlternar: () => void
@@ -50,9 +51,13 @@ export function FilaVinculo({
   // protegido: "Mostrar" / "Ocultar").
   accion?: string
   ariaLabel?: string
+  // Para devolverle el foco (tarea 312: tras bloquear la Bóveda desde el
+  // dato protegido, el foco vuelve a su "Mostrar").
+  ref?: Ref<HTMLButtonElement>
 }) {
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onAlternar}
       aria-expanded={abierto}

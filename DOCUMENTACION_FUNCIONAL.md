@@ -1674,6 +1674,18 @@ Equipos > Crear
 - **"Dónde"** (con la chincheta; amarillo hasta la tarea 303, hoy neutro) acompaña a la **primera** acción del paso y **"Debes ver"** (verde, con el ojo) a la **última**, cuando el paso los declara (campos "Dónde se hace" y "Debes ver" del editor). **"Para qué"** (el objetivo del paso) sigue plegado en "Más información".
 - **"Requisitos"** (antes "Antes de empezar, ten a mano"), con la línea "Ten esto listo antes de empezar.": solo en el paso 1 y solo si la guía los tiene.
 - **"Credencial necesaria":** el dato protegido del paso o de la acción se presenta en un bloque con ese rótulo y el nombre del acceso. Los controles no cambian: sigue contraído, exige permiso, contraseña maestra y autobloqueo, y cada consulta se registra.
+- **"Bloquear Bóveda" desde la credencial (desde el 2026-10-08, tarea 312, [DECISIONES.md](DECISIONES.md) AD-073, regla 29).** Con la Bóveda abierta, el bloque termina en una línea **"Bóveda abierta en este dispositivo"** con **"🔒 Bloquear Bóveda"** a la derecha (44 px), aunque la credencial esté plegada. Tocarlo cierra **toda** la Bóveda del dispositivo, igual que el candado de la sección Bóveda: lo descifrado desaparece al momento de este bloque y de cualquier otro, el bloque se pliega y el foco vuelve a su "Mostrar". La guía sigue en la misma pantalla, la acción no se completa y el avance no cambia. Volver a "Mostrar" pide otra vez la contraseña maestra. **"Ocultar" solo pliega ese dato** y deja la Bóveda abierta. Con la Bóveda bloqueada, o sin permiso de Bóveda, no aparece. No se registra como una consulta, y funciona sin red.
+
+```
+ CREDENCIAL NECESARIA
+ 🔒 Acceso a escritorio remoto                    Ocultar   ← pliega solo este dato
+ ┃ Usuario      (el usuario, a la vista)
+ ┃ Contraseña   ••••••••   👁  ⧉
+ ┃ [ Ver ficha completa en Bóveda › ]
+ ─────────────────────────────────────────────
+ Bóveda abierta en       🔒 Bloquear Bóveda              ← cierra TODA la Bóveda
+ este dispositivo
+```
 - **"Credencial del equipo" (desde la tarea 290, AD-064).** Una acción puede pedir la credencial **del equipo con el que se trabaja** en lugar de una credencial concreta. El bloque es el mismo "Credencial necesaria", con una línea más debajo de la fila: **"Equipo: «nombre»"** y **"Cambiar"** (o **"Sin equipo elegido."** y **"Elegir equipo"**), que se tocan sin abrir la consulta. Cambiar el equipo recoge lo que estuviera abierto. Lo que se ve al abrirla:
   - **Una credencial** de acceso relacionada con ese equipo en la Bóveda (y con la finalidad que pida la acción): su nombre en la fila y la consulta de siempre (desbloqueo en línea, usuario, contraseña tras el ojo, copiar, "Ver ficha completa en Bóveda"; cada consulta registrada).
   - **Ninguna**: "No hay una credencial configurada para este equipo." (con finalidad: "…para este equipo con la finalidad «X»."). No se ofrece otra.

@@ -8,6 +8,24 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-08
 
+### Agregado (Bóveda en las guías, tarea 312): "Bloquear Bóveda" desde la credencial de una guía
+
+**Área modificada:** `src/features/boveda/CredencialEnPaso.tsx` (nuevo `BloqueoDeLaBoveda`, interno, en `CredencialFijaEnPaso` y `CredencialDelEquipoEnPaso`), `src/features/soluciones/FilaVinculo.tsx` (prop `ref`, para devolver el foco).
+**Tipo:** Agregado y Documentación (REGLAS regla 29, sección nueva "Bóveda"; DECISIONES AD-073; ARQUITECTURA_FUNCIONAL RN-071; DOCUMENTACION_FUNCIONAL, el bloque "Credencial necesaria"; COMPONENTES_UI 3.3 y 3.8n; TAREAS 312).
+**Motivo:** encargo del usuario. Una credencial protegida se desbloquea y consulta dentro de la guía, pero para volver a bloquear la Bóveda había que salir del flujo hasta su sección: rompía el mismo principio de acceso en contexto. La Bóveda no obliga al técnico a abandonar el contexto ni para consultar un secreto ni para volver a protegerlo.
+**Antes:** la única forma de bloquear a mano era el candado de la sección Bóveda (o esperar al autobloqueo).
+**Qué cambia:**
+- Con la Bóveda abierta y permiso de Bóveda, todo bloque "Credencial necesaria" termina en una línea **"Bóveda abierta en este dispositivo"** con **"🔒 Bloquear Bóveda"** (44 px, a la derecha), aunque el dato esté plegado.
+- Tocarlo llama a `bloquear()`, el **mismo** bloqueo central de la sección Bóveda: sesión cerrada, clave principal y `clavesPorSal` fuera de memoria, autobloqueo quitado y todos avisados. No hay una segunda implementación ni un "ocultar visual".
+- Todo lo descifrado desaparece al momento, de este bloque y de cualquier otro abierto; el bloque se pliega y el foco vuelve a su "Mostrar". La guía no cambia de pantalla, la acción no se completa, el avance no cambia y no se navega a la Bóveda. Volver a "Mostrar" pide otra vez la contraseña maestra.
+- **"Ocultar" solo pliega ese dato**; "Bloquear Bóveda" cierra toda la sesión, y se dicen distinto (el texto de la izquierda y una descripción para el lector de pantalla).
+- Con la Bóveda bloqueada no aparece (sigue el desbloqueo de siempre); sin permiso de Bóveda, nunca. No se registra como una consulta. Funciona sin red.
+- Igual en la credencial fija y en la del equipo, y en todas las vistas que la usan: Modo Foco, el paso entero, la lectura, "Probar", las guías reutilizadas y el camino de una decisión.
+**Estructura de datos:** ninguna. Ni `VinculoProtegido`, ni el modelo de guías, ni Supabase cambian.
+**Lo que no cambia:** el cifrado (PBKDF2, AES, el verificador, la contraseña maestra, la derivación de claves), los campos cifrados, la sincronización de credenciales, RLS, los permisos, el autobloqueo, la auditoría de accesos, la advertencia previa (311), "Cómo hacerlo" (310) y "Debes ver".
+**Verificación:** 189 archivos y 2979 pruebas (2963 antes: +16). Nueva `src/features/boveda/bloqueoContextual.test.tsx` (16: bloqueada sin el control; desbloquear y verlo; visible con el dato plegado; sin permiso; el bloqueo real con los secretos fuera del DOM y la guía en su sitio; "Mostrar" pide otra vez la contraseña; no registra acceso; "Ocultar" no bloquea; dos credenciales; sin conexión; el autobloqueo se quita y se vuelve a programar; accesibilidad y foco; la credencial del equipo; el paso entero; "Probar"; la guía reutilizada). Sin el `bloquear()`, fallan 8 de las 15 primeras. `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` (65) en verde. En el navegador, con una maestra y una credencial inventadas en la base local (retiradas al terminar): a 390 × 844 y 375 × 667 sin desplazamiento horizontal, el botón de 44 px a la derecha y el texto en dos líneas; a 1280 × 800, en una; tras el clic, ni el usuario ni la contraseña quedan en el documento y el foco vuelve a "Mostrar".
+**Impacto esperado:** el técnico vuelve a proteger la Bóveda en el mismo sitio donde la abrió, sin salir de la guía.
+
 ### Cambiado (guías, tarea 311): un riesgo real se lee antes de su acción, en su propia pantalla (la advertencia previa)
 
 **Área modificada:** nuevos `src/features/soluciones/advertenciaPrevia.ts` (la regla) y `PantallaAdvertencia.tsx` (`PantallaAdvertencia`, `TarjetaAdvertencia`); `ModoFoco.tsx` (la posición `PosicionFoco` con `llegadaA`, la pantalla de la advertencia, "Anterior" que pasa por ella, la consulta; fuera `AlertaDeRiesgo`), `AsistenteVista.tsx` (el paso entero) y `ProcedimientoVista.tsx` (la lectura, "Probar"), `src/features/asistencia/contenidoPaso.ts` (el riesgo viaja antes de su acción), `tonos.ts` y `PasosEditor.tsx` (ayudas del editor); comentarios en `tareasFoco.ts` y `flujoContinuo.ts`; el banco local (`src/pruebas/semillaLocal.ts`, guía nueva "Quitar el acceso remoto de ejemplo") y `scripts/prueba-sin-conexion.mjs` (paso 4b2).

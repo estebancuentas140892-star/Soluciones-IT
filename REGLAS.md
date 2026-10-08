@@ -81,6 +81,14 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
     - **Volver no deshace nada:** ni acciones hechas, ni respuestas, ni el camino elegido, ni lo reutilizado, ni lo marcado en la comprobación. Una acción ya hecha se revisa con su marca.
     - **Entrar, volver y terminar son tres gestos distintos.** "Siguiente" en la última acción entra a la comprobación final; "Anterior" vuelve; solo "Finalizar" termina la guía. Llegar a la comprobación, o marcarla entera, no la termina.
 
+## Bóveda
+
+29. **La Bóveda no obliga al técnico a abandonar el contexto ni para consultar un secreto ni para volver a protegerlo** (regla acordada con el usuario el 2026-10-08, tarea 312; el porqué técnico en [DECISIONES.md](DECISIONES.md) AD-073):
+    - **Si se puede desbloquear y consultar desde donde se trabaja, también se puede bloquear ahí.** Con la Bóveda abierta, el bloque "Credencial necesaria" de una guía ofrece **"Bloquear Bóveda"** (candado cerrado y su palabra), sin salir a la sección Bóveda.
+    - **Es el bloqueo central de siempre** (`bloquear()`, el del candado de la sección Bóveda): cierra **toda** la sesión protegida del dispositivo, no solo ese dato, y todo lo descifrado desaparece al momento de cualquier pantalla. **"Ocultar" solo pliega ese dato**; la interfaz los dice distinto ("Bóveda abierta en este dispositivo" junto a "Bloquear Bóveda").
+    - **Bloquear no mueve nada:** la guía sigue en la misma pantalla, la acción no se completa, el avance no cambia y no se navega a ninguna parte. Volver a "Mostrar" pide otra vez la contraseña maestra. No se registra como una consulta.
+    - Solo lo ve quien tiene permiso de Bóveda y con la Bóveda abierta; bloqueada, sigue el desbloqueo en línea de siempre. No cambia el cifrado, la contraseña maestra, el autobloqueo ni los permisos.
+
 ## Recomendación de modelo y esfuerzo
 
 16. Guía Maestra para recomendar modelo y nivel de razonamiento (acordada con el usuario el 2026-07-20, trasladada a su propio archivo el 2026-07-23). Es la referencia principal para cumplir la regla 3. La prioridad, en tareas de programación/arquitectura/proyectos técnicos, es siempre la calidad sobre el ahorro de tokens; y no recomendar por defecto el modelo más potente, sino la mejor relación calidad/tiempo/costo tras analizar la complejidad real.
