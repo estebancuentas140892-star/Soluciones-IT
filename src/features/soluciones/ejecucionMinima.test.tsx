@@ -24,7 +24,7 @@ import { GuiaPage } from './GuiaPage'
 // valiendo de ella).
 //
 // Una pantalla responde "¿qué hago ahora y cómo lo hago?": la acción, el
-// riesgo real, la ruta rápida, el paso a paso, el dato técnico, lo que hace
+// riesgo real, "Cómo hacerlo" numerado, el dato técnico, lo que hace
 // falta para hacerla y, plegada, la imagen del resultado. Lo heredado
 // ("Dónde", "Para qué", el "Debes ver" de texto, la información y los
 // consejos) carga sin romper nada, pero no se muestra.
@@ -57,8 +57,8 @@ const COMO: MicroPasoComoHacer[] = [
   { id: 'min-m2', accion: 'Selecciona', elemento: 'Herramientas' },
   { id: 'min-m3', accion: 'Pulsa', elemento: 'Exportar' },
 ]
-// La ruta rápida dice cada microacción con su verbo (tarea 309).
-const RUTA_RAPIDA = 'Ruta rápida: Abre Archivo › Selecciona Herramientas › Pulsa Exportar'
+// "Cómo hacerlo" es una lista numerada, cada microacción con su verbo (tareas 309 y 310).
+const LISTA_COMO = ['Abre Archivo.', 'Selecciona Herramientas.', 'Pulsa Exportar.']
 const DATO = 'Backup_2026-10-07.pst'
 const RIESGO = 'Si el disco de destino se llena, la exportación se corta y el archivo queda incompleto'
 const DESCRIPCION = 'La ventana Importar y exportar de prueba, abierta'
@@ -358,8 +358,9 @@ describe('la advertencia, a la vista y en la misma acción', () => {
       texto.indexOf('Qué hacer'),
       texto.indexOf(ACCION_1),
       texto.indexOf(`Precaución. ${RIESGO}`),
-      texto.indexOf(RUTA_RAPIDA),
-      texto.indexOf('Ver paso a paso'),
+      texto.indexOf('Cómo hacerlo'),
+      texto.indexOf(LISTA_COMO[0]),
+      texto.indexOf(LISTA_COMO[2]),
       texto.indexOf('Dato técnico'),
       texto.indexOf(DATO),
       texto.indexOf('Debes ver'),
@@ -386,15 +387,16 @@ describe('la advertencia, a la vista y en la misma acción', () => {
 })
 
 describe('"Cómo hacerlo" queda intacto', () => {
-  it('la ruta rápida a la vista y el paso a paso plegado, con la ubicación dentro de su microacción', async () => {
+  it('la lista numerada a la vista, sin nada que pulsar, con la ubicación dentro de su microacción', async () => {
     await abrir()
-    expect(textoPantalla()).toContain(RUTA_RAPIDA)
-    await tocar(await esperarControl(/^Ver paso a paso$/))
-    const primera = await esperar(
-      () => Array.from(document.body.querySelectorAll('ol > li')).find((li) => li.textContent?.startsWith('Abre Archivo.')),
-      'la primera microacción',
+    const lista = await esperar(
+      () => Array.from(document.body.querySelectorAll('ol')).find((ol) => ol.firstElementChild?.textContent?.startsWith('Abre Archivo.')),
+      'la lista de "Cómo hacerlo"',
     )
-    expect(primera.textContent).toContain('Barra superior')
+    expect(Array.from(lista.children).map((li) => li.firstElementChild?.textContent)).toEqual(LISTA_COMO)
+    expect(lista.children[0].textContent).toContain('Barra superior')
+    expect(textoPantalla()).not.toContain('Ruta rápida')
+    expect(textoPantalla()).not.toContain('Ver paso a paso')
   })
 
   it('el dato técnico va con su instrucción, con su rótulo y en monoespaciada', async () => {

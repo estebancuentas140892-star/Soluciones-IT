@@ -705,8 +705,8 @@ const GUIA_APUNTE = articulo({
 
 // JERARQUIA DE UNA ACCION (tarea 303). El caso de referencia de la copia
 // de seguridad del correo, inventado: el paso 1 es UNA accion con todos
-// sus papeles a la vez (riesgo, que hacer, la ruta rapida y el paso a paso
-// de "como hacerlo" y dato tecnico) y, desde la tarea 307, tambien lo
+// sus papeles a la vez (riesgo, que hacer, la lista numerada de "como
+// hacerlo" y dato tecnico) y, desde la tarea 307, tambien lo
 // HEREDADO (donde, debes ver de texto e informacion), que carga y ya no se
 // muestra; el paso 2 trae una instruccion
 // larga, cinco microacciones (una con ubicacion y otra con un nombre sin
@@ -781,10 +781,10 @@ const GUIA_JERARQUIA = articulo({
 // "COMO HACERLO" CON MICROACCIONES (tarea 303), el caso del encargo,
 // inventado: una pantalla es un momento de trabajo con un solo objetivo
 // ("Abre un registro nuevo") y, en la misma ventana, cuatro gestos
-// seguidos. La ruta rapida debe leerse "Fichero › Cliente › Fichero ›
-// Nuevo" y el paso a paso "1. Abre Fichero." (con "Barra superior" debajo)
-// hasta "4. Selecciona Nuevo.". El paso 2 es el atajo de ejemplo
-// permitido en las pruebas ("Windows + R › comando-ejemplo › Enter").
+// seguidos. Desde la tarea 310 se leen como lista numerada: "1. Abre
+// Fichero." (con "Barra superior" debajo) hasta "4. Selecciona Nuevo.". El
+// paso 2 es el atajo de ejemplo permitido en las pruebas ("Windows + R",
+// "comando-ejemplo", "Enter").
 const GUIA_REGISTRO = articulo({
   id: 'art-registro-ejemplo',
   categoriaId: 'cat-software',
@@ -913,9 +913,9 @@ const GUIA_EJECUCION_MINIMA = articulo({
           ),
         ],
       }),
-      // La RUTA EJECUTABLE (tarea 309): el caso del respaldo, tres
-      // microacciones sin ubicación (ruta con sus verbos y sin paso a paso),
-      // y una acción con una sola microacción (solo la instrucción).
+      // El caso del respaldo (tareas 309 y 310): tres microacciones sin
+      // ubicación (la lista numerada, cada una con su verbo y sin huecos), y
+      // una acción con una sola microacción (solo la instrucción).
       paso({
         id: 'min-p25',
         titulo: 'Guardar el respaldo de ejemplo en el servidor',
@@ -931,6 +931,32 @@ const GUIA_EJECUCION_MINIMA = articulo({
           {
             ...tarea('min-p25-t2', 'Cierra el programa de correo de ejemplo'),
             comoHacer: [micro('min-m14', 'Selecciona', 'Cerrar')],
+          },
+        ],
+      }),
+      // UNA ACCIÓN LARGA CON UBICACIONES (tarea 310), con la forma de una
+      // configuración de impresora real e inventada de punta a punta: seis
+      // microacciones, dos con su ubicación debajo y frases largas, para
+      // medir la lista numerada a 375 px.
+      paso({
+        id: 'min-p26',
+        titulo: 'Configurar la impresión retenida de ejemplo',
+        bloques: [
+          {
+            ...tarea('min-p26-t1', 'Configura la impresión retenida en la impresora de ejemplo'),
+            comoHacer: [
+              micro('min-m15', 'Abre', 'Preferencias de impresión de ejemplo'),
+              micro('min-m16', 'Abre', 'la pestaña Ajustes más frecuentes de ejemplo'),
+              micro('min-m17', 'Selecciona', 'Impresión retenida', 'Tipo de trabajo de ejemplo'),
+              micro('min-m18', 'Abre', 'Detalles de la impresión retenida'),
+              micro(
+                'min-m19',
+                'Selecciona',
+                'la opción que usa el nombre de inicio de sesión de la persona de ejemplo',
+                'Identificador de usuario de ejemplo',
+              ),
+              micro('min-m20', 'Pulsa', 'Aceptar'),
+            ],
           },
         ],
       }),

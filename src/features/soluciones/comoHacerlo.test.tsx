@@ -27,14 +27,14 @@ import { GuiaPage } from './GuiaPage'
 
 // "CÓMO HACERLO" DE UNA ACCIÓN (tarea 303), con las pantallas de verdad.
 //
-// Las microacciones de una tarea de acción (`comoHacer`) se leen de dos
-// formas a partir de UN solo contenido: la ruta rápida, a la vista justo
-// debajo de la instrucción, con sus verbos ("Abre Fichero › Selecciona
-// Cliente › …", tarea 309), y "Ver paso a paso", plegado, con las mismas
-// frases numeradas y la ubicación (solo si alguna la tiene). Igual en la acción a la vez, en el paso entero, en la
-// lectura, en "Probar" y dentro de una guía reutilizada; junto a las
-// decisiones de la tarea 302; sin red; se escriben en el editor y viajan al
-// computador atendido.
+// Las microacciones de una tarea de acción (`comoHacer`) se enseñan de UNA
+// sola forma desde la tarea 310: una lista numerada, a la vista justo
+// debajo de la instrucción y sin nada que pulsar, cada una con su frase
+// ("1. Abre Fichero.") y, si la tiene, su ubicación debajo. Sin "Ruta
+// rápida" en una línea ni "Ver paso a paso" plegado (tarea 309). Igual en la
+// acción a la vez, en el paso entero, en la lectura, en "Probar" y dentro
+// de una guía reutilizada; junto a las decisiones de la tarea 302; sin red;
+// se escriben en el editor y viajan al computador atendido.
 //
 // Todo lo sembrado es inventado: el caso del encargo.
 
@@ -46,8 +46,7 @@ const MICRO: MicroPasoComoHacer[] = [
   { id: 'm3', accion: 'Abre', elemento: 'Fichero' },
   { id: 'm4', accion: 'Selecciona', elemento: 'Nuevo' },
 ]
-const RUTA_RAPIDA = 'Ruta rápida: Abre Fichero › Selecciona Cliente › Abre Fichero › Selecciona Nuevo'
-const PASO_A_PASO = ['Abre Fichero.', 'Selecciona Cliente.', 'Abre Fichero.', 'Selecciona Nuevo.']
+const LISTA = ['Abre Fichero.', 'Selecciona Cliente.', 'Abre Fichero.', 'Selecciona Nuevo.']
 const DATO = 'REG-EJEMPLO-001'
 const DEBES_VER = 'El formulario del registro nuevo queda abierto'
 const EXPLICACION = 'Texto inventado que ayuda a entender el registro'
@@ -100,43 +99,47 @@ function elementoCon(texto: string): HTMLElement {
   return masInterno
 }
 
-/** Las rutas rápidas en pantalla: las listas que nombra su rótulo "Ruta rápida". */
-function rutasRapidas(dentro: ParentNode = document.body): HTMLElement[] {
-  return Array.from(dentro.querySelectorAll<HTMLElement>('ol[aria-labelledby]')).filter((ol) =>
-    document.getElementById(ol.getAttribute('aria-labelledby') ?? '')?.textContent?.startsWith('Ruta rápida'),
-  )
-}
-
-/** Lo que dice una ruta rápida, como lo lee la persona. */
 function textoDe(elemento: Element): string {
   return (elemento.textContent ?? '').replace(/\s+/g, ' ').trim()
 }
 
-/** El botón que pliega y despliega el paso a paso. */
-function botonPasoAPaso(dentro: ParentNode = document.body): HTMLButtonElement | null {
-  return (
-    Array.from(dentro.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')).find((b) =>
-      /^(Ver|Ocultar) paso a paso$/.test(textoDe(b)),
-    ) ?? null
+/** Las listas de "Cómo hacerlo" en pantalla: las listas ordenadas que nombra su rótulo. */
+function listasComoHacerlo(dentro: ParentNode = document.body): HTMLOListElement[] {
+  return Array.from(dentro.querySelectorAll<HTMLOListElement>('ol[aria-labelledby]')).filter(
+    (ol) => document.getElementById(ol.getAttribute('aria-labelledby') ?? '')?.textContent === 'Cómo hacerlo',
   )
 }
 
-/** El paso a paso desplegado (el que controla su botón), o null si está plegado. */
-function pasoAPaso(dentro: ParentNode = document.body): HTMLOListElement | null {
-  const id = botonPasoAPaso(dentro)?.getAttribute('aria-controls')
-  return id ? (document.getElementById(id) as HTMLOListElement | null) : null
-}
-
-/** Las frases del paso a paso, sin la ubicación de debajo. */
+/** Las frases de la lista, sin la ubicación de debajo. */
 function frases(lista: HTMLOListElement): string[] {
   return Array.from(lista.children).map((li) => textoDe(li.firstElementChild as Element))
 }
 
-/** "Cómo hacerlo" entero: la ruta rápida y su paso a paso. */
-function bloqueComoHacerlo(): HTMLElement {
-  const raiz = botonPasoAPaso()?.parentElement?.parentElement
-  if (!raiz || !raiz.contains(rutasRapidas()[0] ?? null)) throw new Error('Sin "Cómo hacerlo" en pantalla')
-  return raiz
+/** "Cómo hacerlo" entero: su rótulo y su lista. */
+function bloqueComoHacerlo(dentro: ParentNode = document.body): HTMLElement {
+  const lista = listasComoHacerlo(dentro)[0]
+  if (!lista?.parentElement) throw new Error('Sin "Cómo hacerlo" en pantalla')
+  return lista.parentElement
+}
+
+/** Nada de la tarea 309: ni la ruta en una línea ni el desplegable. */
+function sinRutaNiDesplegable(dentro: ParentNode = document.body): void {
+  const texto = textoDe(dentro as Element)
+  expect(texto).not.toContain('Ruta rápida')
+  expect(texto).not.toMatch(/(Ver|Ocultar) paso a paso/)
+  for (const lista of listasComoHacerlo(dentro)) expect(textoDe(lista.parentElement as Element)).not.toContain('›')
+}
+
+/** La lista del encargo, a la vista y entera: frases en orden y la ubicación bajo la primera. */
+function comprobarLista(dentro: ParentNode = document.body): HTMLOListElement {
+  const listas = listasComoHacerlo(dentro)
+  expect(listas).toHaveLength(1)
+  const [lista] = listas
+  expect(frases(lista)).toEqual(LISTA)
+  expect(textoDe(lista.children[0].children[1])).toBe('Ubicación: Barra superior')
+  expect(Array.from(lista.children).slice(1).every((li) => li.children.length === 1)).toBe(true)
+  sinRutaNiDesplegable(dentro)
+  return lista
 }
 
 function clasesDe(elemento: Element): string[] {
@@ -157,18 +160,6 @@ function instruccion(): HTMLElement {
   return h2
 }
 
-/** Despliega el paso a paso y comprueba que dice lo del encargo. */
-async function desplegarYComprobar(dentro: ParentNode = document.body): Promise<void> {
-  const boton = botonPasoAPaso(dentro)
-  if (!boton) throw new Error('Sin "Ver paso a paso"')
-  expect(boton.getAttribute('aria-expanded')).toBe('false')
-  expect(pasoAPaso(dentro)).toBeNull()
-  await tocar(boton)
-  const lista = await esperar(() => pasoAPaso(dentro), 'el paso a paso desplegado')
-  expect(botonPasoAPaso(dentro)?.getAttribute('aria-expanded')).toBe('true')
-  expect(frases(lista)).toEqual(PASO_A_PASO)
-}
-
 beforeEach(async () => {
   await limpiarBase()
   await sembrarPerfil(false)
@@ -183,28 +174,29 @@ describe('una acción a la vez (Modo Foco)', () => {
     await sembrarGuia({ id: 'guia-vieja', titulo: 'Guía de prueba sin el campo', pasos: [pasoCompleto('vieja-p1')] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-vieja')
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
-    expect(textoPantalla()).not.toContain('Ruta rápida')
-    expect(botonPasoAPaso()).toBeNull()
+    expect(listasComoHacerlo()).toEqual([])
+    expect(textoPantalla()).not.toContain('Cómo hacerlo')
     expect(textoPantalla()).toContain(DATO)
     // Su "Dónde" heredado ya no se enseña (tarea 307), pero la guía carga.
     expect(textoPantalla()).not.toContain(DONDE)
   })
 
-  it('la ruta rápida del encargo va justo debajo de la instrucción y cada papel queda en su sitio', async () => {
+  it('la lista del encargo va justo debajo de la instrucción y cada papel queda en su sitio', async () => {
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
-    await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la ruta rápida')
+    await esperar(() => listasComoHacerlo()[0], 'la lista de "Cómo hacerlo"')
 
     // El orden de la ejecución mínima (tarea 307): Qué hacer, el riesgo,
-    // ruta rápida, Ver paso a paso y dato técnico. Ni "Dónde", ni el "Debes
-    // ver" de texto, ni "Más información".
+    // "Cómo hacerlo" con su lista y el dato técnico. Ni "Dónde", ni el
+    // "Debes ver" de texto, ni "Más información".
     const texto = textoPantalla()
     const posiciones = [
       texto.indexOf('Qué hacer'),
       texto.indexOf(ACCION),
       texto.indexOf(RIESGO),
-      texto.indexOf(RUTA_RAPIDA),
-      texto.indexOf('Ver paso a paso'),
+      texto.indexOf('Cómo hacerlo'),
+      texto.indexOf('Abre Fichero.'),
+      texto.indexOf('Selecciona Nuevo.'),
       texto.indexOf('Dato técnico'),
       texto.indexOf(DATO),
     ]
@@ -215,53 +207,47 @@ describe('una acción a la vez (Modo Foco)', () => {
     expect(texto).not.toContain('Más información')
 
     // Una lista de verdad, con las frases en orden: cada una con su verbo.
-    const [ruta] = rutasRapidas()
-    expect(Array.from(ruta.children).map((li) => textoDe(li).replace(/\s*›$/, ''))).toEqual([
-      'Abre Fichero',
-      'Selecciona Cliente',
-      'Abre Fichero',
-      'Selecciona Nuevo',
-    ])
+    const lista = comprobarLista()
 
     // En el grupo de la instrucción: lo más cercano que contiene a las dos
     // es de la acción, no de la pantalla entera (el pie no está dentro).
     expect(instruccion().textContent).toBe(ACCION)
-    const grupo = ancestroComun(instruccion(), ruta)
+    const grupo = ancestroComun(instruccion(), lista)
     expect(grupo.querySelector('.sticky')).toBeNull()
   })
 
-  it('el paso a paso llega plegado, se despliega con su botón, enseña la ubicación debajo y se vuelve a plegar', async () => {
+  it('la lista llega a la vista, sin nada que pulsar, numerada y con la ubicación bajo su número', async () => {
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
-    await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la ruta rápida')
-    // La ubicación es del paso a paso: plegado, no se lee.
-    expect(textoPantalla()).not.toContain('Barra superior')
+    const lista = await esperar(() => listasComoHacerlo()[0], 'la lista de "Cómo hacerlo"')
+    // A la vista sin tocar nada: la ubicación ya se lee.
+    expect(textoPantalla()).toContain('Barra superior')
+    const como = bloqueComoHacerlo()
+    expect(como.querySelector('button')).toBeNull()
+    expect(como.querySelector('[aria-expanded]')).toBeNull()
 
-    await desplegarYComprobar()
-    const lista = pasoAPaso() as HTMLOListElement
-    // Numerado, sin tarjetas: una lista ordenada con su número.
+    // Numerada, sin tarjetas: una lista ordenada con sus elementos.
     expect(lista.tagName).toBe('OL')
+    expect(Array.from(lista.children).every((li) => li.tagName === 'LI')).toBe(true)
     expect(lista.classList.contains('list-decimal')).toBe(true)
-    expect(clasesDe(lista).filter((c) => /^bg-|^rounded|^shadow/.test(c))).toEqual([])
-    // La ubicación, solo en la primera y debajo de su frase.
-    const primera = lista.children[0]
-    expect(primera.children[1]?.textContent).toBe('Ubicación: Barra superior')
-    expect(Array.from(lista.children).slice(1).every((li) => li.children.length === 1)).toBe(true)
-
-    await tocar(botonPasoAPaso() as HTMLButtonElement)
-    await esperar(() => pasoAPaso() === null, 'el paso a paso plegado otra vez')
-    expect(botonPasoAPaso()?.getAttribute('aria-expanded')).toBe('false')
-    expect(textoDe(botonPasoAPaso() as HTMLButtonElement)).toBe('Ver paso a paso')
-    expect(textoPantalla()).not.toContain('Barra superior')
+    expect(clasesDe(lista).filter((c) => /^bg-|^rounded|^shadow|^border/.test(c))).toEqual([])
+    // La ubicación vive DENTRO de su número, en una línea propia, más
+    // pequeña y en gris; la palabra solo la oye el lector de pantalla.
+    const ubicacion = lista.children[0].children[1] as HTMLElement
+    expect(ubicacion.classList.contains('block')).toBe(true)
+    expect(ubicacion.classList.contains('text-noct-neutral-400')).toBe(true)
+    expect(ubicacion.classList.contains('text-[13px]')).toBe(true)
+    expect(ubicacion.querySelector('.sr-only')?.textContent).toBe('Ubicación: ')
   })
 
-  it('una sola microacción no es "Cómo hacerlo": ni ruta ni paso a paso, y el dato sigue ahí (tarea 309)', async () => {
+  it('una sola microacción no es "Cómo hacerlo": ni lista ni rótulo, y el dato sigue ahí (tarea 309)', async () => {
     await sembrarGuia({ id: 'guia-una', titulo: 'Guía de prueba con una microacción', pasos: [pasoCompleto('una-p1', [MICRO[0]])] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-una')
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
-    expect(textoPantalla()).not.toContain('Ruta rápida')
-    expect(botonPasoAPaso()).toBeNull()
+    expect(listasComoHacerlo()).toEqual([])
+    expect(textoPantalla()).not.toContain('Cómo hacerlo')
     expect(textoPantalla()).not.toContain('Barra superior')
+    sinRutaNiDesplegable()
     // La instrucción sigue mandando, y el dato no se tocó.
     expect(instruccion().textContent).toBe(ACCION)
     const guardada = (await db.articulos.get('guia-una'))?.procedimiento?.pasos[0].bloques.find((b) => b.tipo === 'tarea')
@@ -271,14 +257,12 @@ describe('una acción a la vez (Modo Foco)', () => {
   it('es apoyo operativo y la instrucción sigue mandando', async () => {
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
-    await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la ruta rápida')
-    await tocar(botonPasoAPaso() as HTMLButtonElement)
-    await esperar(() => pasoAPaso(), 'el paso a paso')
+    await esperar(() => listasComoHacerlo()[0], 'la lista de "Cómo hacerlo"')
 
     const como = bloqueComoHacerlo()
     const clases = clasesDe(como)
     // Sin rojo, ámbar ni verde, sin fondo ni monoespaciada: no es un aviso
-    // ni un valor. La única raya es la que cuelga el paso a paso.
+    // ni un valor.
     expect(clases.filter((c) => /noct-(error|precaucion|exito|lugar|accion)/.test(c))).toEqual([])
     expect(clases.filter((c) => /^bg-/.test(c))).toEqual([])
     expect(clases).not.toContain('font-mono')
@@ -286,15 +270,18 @@ describe('una acción a la vez (Modo Foco)', () => {
     // Nunca se recorta ni se abrevia: parte la línea dentro de su columna.
     expect(clases.filter((c) => /^line-clamp-|^truncate$/.test(c))).toEqual([])
     expect(clases).toContain('[overflow-wrap:anywhere]')
-    // Más pequeña que la instrucción (16 px frente a 26 px).
+    // Más pequeña que la instrucción (16 px frente a 26 px), con un rótulo
+    // pequeño como el de "Dato técnico".
     expect(clases).toContain('text-[16px]')
     expect(clases.filter((c) => /^text-\[(2[0-9]|[3-9][0-9])px\]$|^text-(xl|[2-9]xl)$/.test(c))).toEqual([])
     expect(instruccion().classList.contains('text-[26px]')).toBe(true)
-    // Su control mide 44 px de alto, como todo lo que se toca.
-    expect(botonPasoAPaso()?.classList.contains('min-h-11')).toBe(true)
+    const rotulo = como.firstElementChild as HTMLElement
+    expect(rotulo.textContent).toBe('Cómo hacerlo')
+    expect(rotulo.classList.contains('uppercase')).toBe(true)
+    expect(rotulo.classList.contains('text-[12px]')).toBe(true)
   })
 
-  it('lo desplegado es de la acción: la siguiente llega con su paso a paso plegado', async () => {
+  it('la acción siguiente enseña su propia lista, con su ubicación, sin pulsar nada', async () => {
     const base = pasoPrueba('dos-p1', 'Crear dos registros de ejemplo', [ACCION, 'Abre otro registro de ejemplo'])
     await sembrarGuia({
       id: 'guia-dos',
@@ -313,13 +300,17 @@ describe('una acción a la vez (Modo Foco)', () => {
       ],
     })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos')
-    await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la ruta rápida')
-    await desplegarYComprobar()
+    await esperar(() => listasComoHacerlo()[0], 'la lista de la primera acción')
+    comprobarLista()
 
     await tocar(await esperarControl(/^Completar y seguir$/))
-    await esperar(() => textoPantalla().includes('Ruta rápida: Pulsa Otro › Selecciona Guardar'), 'la acción siguiente')
-    expect(botonPasoAPaso()?.getAttribute('aria-expanded')).toBe('false')
-    expect(pasoAPaso()).toBeNull()
+    const siguiente = await esperar(
+      () => listasComoHacerlo().find((ol) => frases(ol)[0] === 'Pulsa Otro.'),
+      'la lista de la acción siguiente',
+    )
+    expect(frases(siguiente)).toEqual(['Pulsa Otro.', 'Selecciona Guardar.'])
+    expect(textoDe(siguiente.children[0].children[1])).toBe('Ubicación: Menú de ejemplo')
+    expect(listasComoHacerlo()).toHaveLength(1)
   })
 
   it('un comando escrito como elemento conserva su "¿Qué hace?" del Centro de consulta', async () => {
@@ -332,7 +323,8 @@ describe('una acción a la vez (Modo Foco)', () => {
     const base = pasoPrueba('cmd-p1', 'Abrir la herramienta de ejemplo', ['Abre la herramienta de ejemplo'])
     await sembrarGuia({ id: 'guia-cmd', titulo: 'Guía de prueba con atajo', pasos: [{ ...base, bloques: [conComo(base.bloques[0], atajo)] }] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-cmd')
-    await esperar(() => textoPantalla().includes('Ruta rápida: Pulsa Windows + R › Escribe comando-ejemplo › Pulsa Enter'), 'la ruta del atajo')
+    const lista = await esperar(() => listasComoHacerlo()[0], 'la lista del atajo')
+    expect(frases(lista)).toEqual(['Pulsa Windows + R.', 'Escribe comando-ejemplo.', 'Pulsa Enter.'])
     await esperarControl('¿Qué hace «comando-ejemplo»?')
   })
 
@@ -347,9 +339,7 @@ describe('una acción a la vez (Modo Foco)', () => {
     ]
     await sembrarGuia({ id: 'guia-a-medias', titulo: 'Guía de prueba con datos a medias', pasos: [pasoCompleto('med-p1', conAMedias)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-a-medias')
-    await esperar(() => textoPantalla().includes('Ruta rápida: Abre Fichero › Selecciona Nuevo'), 'la ruta rápida de las completas')
-    await tocar(botonPasoAPaso() as HTMLButtonElement)
-    const lista = await esperar(() => pasoAPaso(), 'el paso a paso')
+    const lista = await esperar(() => listasComoHacerlo()[0], 'la lista de las completas')
     expect(frases(lista)).toEqual(['Abre Fichero.', 'Selecciona Nuevo.'])
     for (const ausente of ['Reinicia', 'Ayuda', 'Menú de ejemplo']) expect(textoPantalla()).not.toContain(ausente)
     // El resto de la acción, como siempre.
@@ -363,18 +353,20 @@ describe('las demás vistas enseñan lo mismo', () => {
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
   })
 
-  it('el paso entero, bajo la tarea y antes del dato, con su paso a paso', async () => {
+  it('el paso entero, bajo la tarea y antes del dato, en el tamaño de su fila', async () => {
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
     await tocar(await esperarControl(/^Paso 1 de 1\. Abrir el índice de pasos$/))
     await tocar(await esperarControl(/^Ver el paso entero$/))
     await esperar(() => document.body.querySelector('button[role="checkbox"]'), 'la vista de paso entero')
 
+    const lista = comprobarLista()
     const texto = textoPantalla()
-    expect(texto.indexOf(ACCION)).toBeLessThan(texto.indexOf(RUTA_RAPIDA))
-    expect(texto.indexOf(RUTA_RAPIDA)).toBeLessThan(texto.indexOf(DATO))
+    expect(texto.indexOf(ACCION)).toBeLessThan(texto.indexOf('Abre Fichero.'))
+    expect(texto.indexOf('Selecciona Nuevo.')).toBeLessThan(texto.indexOf(DATO))
     expect(clasesDe(bloqueComoHacerlo()).filter((c) => /^bg-|font-mono|noct-(error|precaucion|exito)/.test(c))).toEqual([])
-    await desplegarYComprobar()
+    // La variante de la fila: la lista (14 px) por debajo de su tarea (16 px).
+    expect(lista.classList.contains('text-[14px]')).toBe(true)
   })
 
   it('la lectura de la guía entera (la vista previa del editor)', async () => {
@@ -382,9 +374,9 @@ describe('las demás vistas enseñan lo mismo', () => {
     // 2026-09-10): la lectura de todos los pasos es la vista previa.
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como/editar')
     await tocar(await esperarControl(/^Vista previa$/))
-    await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la ruta rápida en la lectura')
-    expect(textoPantalla().indexOf(ACCION)).toBeLessThan(textoPantalla().indexOf(RUTA_RAPIDA))
-    await desplegarYComprobar()
+    await esperar(() => listasComoHacerlo()[0], 'la lista en la lectura')
+    expect(textoPantalla().indexOf(ACCION)).toBeLessThan(textoPantalla().indexOf('Abre Fichero.'))
+    comprobarLista()
   })
 
   it('"Probar" desde el editor', async () => {
@@ -394,8 +386,8 @@ describe('las demás vistas enseñan lo mismo', () => {
     if (plegado && !control(/^Añadir una tarea al paso/)) await tocar(plegado)
     await tocar(await esperarControl(/^Probar$/))
     await tocar(await esperarControl(/^Ver como técnico$/))
-    await esperar(() => textoPantalla().includes('Como lo ve el técnico') && textoPantalla().includes(RUTA_RAPIDA), 'la prueba del paso')
-    await desplegarYComprobar()
+    await esperar(() => textoPantalla().includes('Como lo ve el técnico') && listasComoHacerlo()[0], 'la prueba del paso')
+    comprobarLista()
   })
 })
 
@@ -409,7 +401,7 @@ describe('dentro de una guía reutilizada', () => {
     })
   })
 
-  it('se ve y se despliega en el flujo de la guía que la reutiliza', async () => {
+  it('se ve en el flujo de la guía que la reutiliza', async () => {
     await sembrarGuia({
       id: 'guia-que-reutiliza',
       titulo: 'Registrar un cliente de ejemplo',
@@ -420,11 +412,10 @@ describe('dentro de una guía reutilizada', () => {
     })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-que-reutiliza')
     await esperar(() => textoPantalla().includes(ACCION), 'la acción reutilizada, en el sitio')
-    expect(textoPantalla()).toContain(RUTA_RAPIDA)
-    await desplegarYComprobar()
+    comprobarLista()
   })
 
-  it('y al leer el paso que la reutiliza (consulta)', async () => {
+  it('y al leer el paso que la reutiliza (consulta), en el tamaño de la lectura compacta', async () => {
     await sembrarGuia({
       id: 'guia-que-consulta',
       titulo: 'Registrar un cliente de ejemplo más tarde',
@@ -442,10 +433,9 @@ describe('dentro de una guía reutilizada', () => {
       'la lectura de lo reutilizado',
     )
     expect(lectura.textContent).toContain(ACCION)
-    expect(rutasRapidas(lectura).map((ruta) => textoDe(ruta))).toEqual([
-      'Abre Fichero › Selecciona Cliente › Abre Fichero › Selecciona Nuevo',
-    ])
-    await desplegarYComprobar(lectura)
+    const lista = comprobarLista(lectura)
+    // La variante de la lectura: la lista (13 px) por debajo de su tarea (14 px).
+    expect(lista.classList.contains('text-[13px]')).toBe(true)
   })
 })
 
@@ -467,15 +457,15 @@ describe('con las decisiones de la tarea 302', () => {
     })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-decision')
     await esperar(() => textoPantalla().includes('¿Qué versión de prueba usas?'), 'la pregunta')
-    expect(textoPantalla()).not.toContain('Ruta rápida')
+    expect(listasComoHacerlo()).toEqual([])
 
     await tocar(await esperarControl(/^Versión de prueba A/))
-    await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la acción del camino A con su ruta')
+    await esperar(() => listasComoHacerlo()[0], 'la acción del camino A con su lista')
     expect(textoPantalla()).not.toContain('Sigue con la versión B')
-    await desplegarYComprobar()
+    comprobarLista()
   })
 
-  it('una decisión de Sí/No de las de antes se responde como siempre y la acción siguiente enseña su ruta', async () => {
+  it('una decisión de Sí/No de las de antes se responde como siempre y la acción siguiente enseña su lista', async () => {
     const p1 = pasoPrueba('sn-p1', 'Comprobar el registro', ['¿Existe ya el registro de ejemplo?'])
     p1.bloques[0] = { ...p1.bloques[0], tipoTarea: 'decision', comoHacer: [{ id: 'x', accion: 'Abre', elemento: 'Lista' }] }
     const p2 = pasoPrueba('sn-p2', 'Crear el registro', [ACCION])
@@ -483,10 +473,10 @@ describe('con las decisiones de la tarea 302', () => {
     await sembrarGuia({ id: 'guia-si-no', titulo: 'Guía de prueba con Sí y No', pasos: [p1, p2] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-si-no')
     await esperar(() => textoPantalla().includes('¿Existe ya el registro de ejemplo?'), 'la pregunta')
-    expect(textoPantalla()).not.toContain('Ruta rápida')
+    expect(listasComoHacerlo()).toEqual([])
     await tocar(await esperarControl('Sí: seguir con la guía'))
-    await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la acción siguiente con su ruta')
-    await desplegarYComprobar()
+    await esperar(() => listasComoHacerlo()[0], 'la acción siguiente con su lista')
+    comprobarLista()
   })
 })
 
@@ -496,7 +486,7 @@ describe('sin conexión', () => {
     vi.restoreAllMocks()
   })
 
-  it('la ruta rápida y el paso a paso salen de la base local, sin pedir nada a la red', async () => {
+  it('la lista sale de la base local, sin pedir nada a la red', async () => {
     const red = vi.fn(async () => {
       throw new TypeError('Failed to fetch')
     })
@@ -504,8 +494,8 @@ describe('sin conexión', () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
     await sembrarGuia({ id: 'guia-como', titulo: 'Guía de prueba con microacciones', pasos: [pasoCompleto('como-p1', MICRO)] })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
-    await esperar(() => textoPantalla().includes(RUTA_RAPIDA), 'la ruta rápida sin red')
-    await desplegarYComprobar()
+    await esperar(() => listasComoHacerlo()[0], 'la lista sin red')
+    comprobarLista()
     expect(red).not.toHaveBeenCalled()
   })
 })
@@ -571,12 +561,14 @@ describe('en el editor', () => {
     // La primera microacción nace con el foco en su acción.
     const primera = await esperar(() => campo('Acción de la microacción 1'), 'la primera microacción')
     expect(document.activeElement).toBe(primera)
-    // La ayuda dice cuándo hay ruta rápida y cuándo paso a paso (tarea 309):
-    // no promete siempre "Ver paso a paso".
-    expect(textoPantalla()).toContain('Divide aquí una acción cuando requiere varios gestos. Con dos o más se mostrará una Ruta rápida.')
+    // La ayuda dice cómo se verá (tarea 310): una lista numerada, con la
+    // ubicación debajo de su acción. Nada de "Ruta rápida" ni "Ver paso a paso".
     expect(textoPantalla()).toContain(
-      'Añade Ubicación solo cuando ayude a encontrar un elemento; en ese caso también estará disponible Ver paso a paso.',
+      'Divide aquí una acción cuando requiere varios gestos. Con dos o más se mostrará Cómo hacerlo como una lista numerada.',
     )
+    expect(textoPantalla()).toContain('Añade Ubicación solo cuando ayude a encontrar un elemento. Se mostrará debajo de esa acción.')
+    expect(textoPantalla()).not.toContain('Ruta rápida')
+    expect(textoPantalla()).not.toContain('Ver paso a paso')
     expect(textoPantalla()).not.toContain('Se usarán para mostrar una ruta rápida y un paso a paso.')
     // Sin ejemplos dentro de los campos: el contenido lo decide quien escribe.
     expect(primera.placeholder).toBe('')

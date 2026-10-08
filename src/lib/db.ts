@@ -209,13 +209,13 @@ export interface OpcionDecision {
 // gestos seguidos: cada uno es una microacción.
 // - `accion`: qué hace la persona, en pocas palabras ("Abre", "Pulsa").
 // - `elemento`: con qué lo hace ("Fichero", "Nuevo", "Enter"). Con la
-//   acción forma la frase que dicen la ruta rápida y el paso a paso
-//   (`fraseDeMicroPaso`, tarea 309).
+//   acción forma la frase de su número en la lista de la ejecución
+//   (`fraseDeMicroPaso`, tareas 309 y 310).
 // - `ubicacion`: dónde está el elemento, solo cuando puede costar
 //   encontrarlo ("Barra superior"). Ausente si no se escribió.
 // `id` es estable: reordenar o editar no lo cambia (el editor mueve y
-// quita por él). Una misma lista alimenta las dos lecturas de la
-// ejecución, la ruta rápida y el paso a paso: nunca hay dos textos.
+// quita por él). La misma lista, en el mismo orden, es la lista numerada
+// que enseña la ejecución: nunca hay dos textos.
 export interface MicroPasoComoHacer {
   id: string
   accion: string
@@ -311,8 +311,8 @@ export interface BloquePaso {
   opciones?: OpcionDecision[]
   // CÓMO HACERLO (tarea 303): las microacciones que hacen ESTA acción, en
   // orden (ver `MicroPasoComoHacer` y `src/lib/comoHacer.ts`). Es parte de
-  // la tarea, no un aviso: la ejecución enseña su ruta rápida justo debajo
-  // de la instrucción y, a petición, el paso a paso. Solo en tareas de tipo
+  // la tarea, no un aviso: la ejecución la enseña numerada justo debajo de
+  // la instrucción (tarea 310). Solo en tareas de tipo
   // 'accion', opcional y ausente cuando no hay ninguna (nunca se guarda
   // `[]`), así que el JSON de las guías que no lo usan no cambia. Vive en
   // el JSON `procedimiento`: sin columna ni versión de Dexie. Una copia de

@@ -6,6 +6,25 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-08
+
+### Cambiado (guías, tarea 310): "Cómo hacerlo" es una lista numerada, única y siempre a la vista
+
+**Área modificada:** `src/features/soluciones/SenalesDePaso.tsx` (`ComoHacerlo` y `TAMANOS_COMO_HACERLO`), `src/lib/comoHacer.ts` (fuera `ROTULO_RUTA_RAPIDA` y `pasoAPasoAportaAlgo`; cabecera y comentarios), `src/features/soluciones/EditorComoHacer.tsx` (las dos ayudas), `ModoFoco.tsx` (sin la `key` que reponía el plegado; comentarios), comentarios en `PasosEnLectura.tsx` y `src/lib/db.ts`; el banco local (`src/pruebas/semillaLocal.ts`, paso nuevo "Configurar la impresión retenida de ejemplo") y `scripts/prueba-sin-conexion.mjs` (paso 4b).
+**Tipo:** Modificado y Documentación (REGLAS regla 27 c; DECISIONES AD-071 y notas en AD-067 y AD-070; ARQUITECTURA_FUNCIONAL RN-069 y notas en RN-065 y RN-068; ARQUITECTURA; DOCUMENTACION_FUNCIONAL 13.2, el editor y los colores; COMPONENTES_UI 3.8y y 3.8zc-bis; TAREAS 310).
+**Motivo:** prueba real del usuario en producción con la tarea 309: la lista numerada de "Ver paso a paso" se seguía mucho mejor que la "Ruta rápida", que con varios gestos ("Abre Preferencias de impresión › Abre Ajustes más frecuentes › Selecciona Impresión bloqueada › …") se volvía un párrafo largo difícil de recorrer. Una pantalla, una acción clara; la complejidad pertenece al sistema, no al técnico.
+**Antes:** con dos o más microacciones, la "Ruta rápida" a la vista (las frases en una línea separadas por "›") y, solo si alguna tenía ubicación, "Ver paso a paso" plegado con las mismas frases numeradas y la ubicación debajo.
+**Qué cambia:**
+- **Una sola representación:** con dos o más microacciones, el rótulo "Cómo hacerlo" y una lista ordenada (`ol` con sus `li`) a la vista, sin nada que pulsar. Cada número es una frase completa con su verbo (`fraseDeMicroPaso`) y su punto solo si hace falta (`llevaPuntoFinal`).
+- **La ubicación** va debajo de su microacción, más pequeña y en gris, con "Ubicación" solo para el lector de pantalla; ya no decide si hay lista.
+- **Retirado de verdad:** el rótulo "Ruta rápida", la secuencia con "›", el botón "Ver paso a paso" / "Ocultar paso a paso", su estado, sus ids ARIA, el `CaretDown` del desplegable, `ROTULO_RUTA_RAPIDA`, `pasoAPasoAportaAlgo` y la `key` de Modo Foco que lo volvía a plegar.
+- **Tamaños por debajo de lo que la sostiene:** 16 px bajo la instrucción de 26 px, 14 px bajo la fila de 16 px y 13 px bajo la tarea de 14 px de la lectura compacta.
+- **El editor:** solo sus dos ayudas, "Divide aquí una acción cuando requiere varios gestos. Con dos o más se mostrará Cómo hacerlo como una lista numerada." y "Añade Ubicación solo cuando ayude a encontrar un elemento. Se mostrará debajo de esa acción.".
+**Estructura de datos:** ninguna. `comoHacer` (`accion`, `elemento`, `ubicacion`), el JSON de los procedimientos y Supabase no cambian.
+**Lo que no cambia:** cero o una microacción (solo la instrucción), la validación del editor (`tieneUnaSolaMicroaccion`, `problemasDeComoHacer` y su aviso), las guías antiguas con una sola (cargan, no la enseñan, la conservan y piden resolverla al guardar), la asistencia (ya recibía la lista numerada como texto, `textoPasoAPaso`), "¿Qué hace?", "Debes ver" (`resultadoVisual`, plegado, imagen bajo demanda, visor, descripción y sin conexión), Dato técnico, Precaución e Importante, credenciales, decisiones, comprobaciones, la navegación de la 308, el contenido real, Supabase y la Bóveda.
+**Verificación:** 186 archivos y 2932 pruebas (2927 antes: +5). `rutaRapidaEjecutable.test.tsx` pasa a `comoHacerloNumerado.test.tsx` (23: cero, una, dos, tres, seis en orden, con ubicación bajo la suya, sin ubicación sin huecos, puntuación, accesibilidad, texto largo, las tres variantes y las demás vistas, más las del editor); reescritas las de `comoHacerlo.test.tsx` (24), `ejecucionMinima.test.tsx`, `volverDesdeComprobacion.test.tsx` y las unitarias de `comoHacer.test.ts` (50). `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` en verde (la lista numerada con su ubicación, sin red). En el navegador, con el banco local: a 390 × 844 y 375 × 667 sin desplazamiento horizontal (`scrollWidth` igual a `clientWidth`), frases y ubicaciones en la misma columna (x = 44), las largas en dos y tres líneas dentro del margen de 16 px; a 1280 × 800, una línea por frase; en el paso entero, la lista de 14 px bajo la tarea de 16 px; la acción con una sola microacción enseña solo su instrucción.
+**Impacto esperado:** quien ejecuta ve de un vistazo dónde está, qué acaba de hacer y qué sigue, sin abrir nada; quien escribe ya no elige entre dos lecturas.
+
 ## 2026-10-07
 
 ### Corregido (editor, tarea 309): "Cómo hacerlo" se guarda con cero microacciones o con al menos dos

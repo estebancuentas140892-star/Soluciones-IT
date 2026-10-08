@@ -107,12 +107,13 @@ import { PasosEnLectura } from './PasosEnLectura'
 //   2. El riesgo real, si existe: la advertencia, justo bajo la
 //      instrucción y antes de "Cómo hacerlo", a la vista y en rojo. Es el
 //      único bloque con fondo de color y nunca va plegada.
-//   3. La ruta rápida y 4. "Ver paso a paso", plegado (`ComoHacerlo`).
-//   5. El dato técnico indispensable: rótulo y monoespaciada.
-//   6. Lo que hace falta para hacerla: la respuesta de una pregunta, un
+//   3. Cómo hacerlo: la lista numerada de sus microacciones, a la vista
+//      (`ComoHacerlo`, tarea 310).
+//   4. El dato técnico indispensable: rótulo y monoespaciada.
+//   5. Lo que hace falta para hacerla: la respuesta de una pregunta, un
 //      comando, una imagen anclada a la acción, la credencial, un archivo,
 //      una guía.
-//   7. Debes ver: la imagen del resultado, plegada, solo si existe.
+//   6. Debes ver: la imagen del resultado, plegada, solo si existe.
 //
 // Lo demás tiene que justificar su sitio, y lo que no lo hacía se retiró de
 // verdad (no se esconde): "Dónde" (`lugar`), "Más información" con el "Para
@@ -486,8 +487,8 @@ export function ModoFoco({
   // Cambiar de acción (con "Anterior", al marcar o al terminar la guía
   // vinculada) cierra el vínculo y la decisión. Se cierra AQUÍ, en el mismo
   // render, y no en un efecto: un efecto corre después de pintar y el
-  // contenido anterior alcanzaría a verse. Lo plegado de cada acción ("Ver
-  // paso a paso", "Debes ver") vuelve plegado por su `key`.
+  // contenido anterior alcanzaría a verse. Lo plegado de cada acción ("Debes
+  // ver") vuelve plegado por su `key`.
   const tareaMostrada = useRef(indice)
   if (tareaMostrada.current !== indice) {
     tareaMostrada.current = indice
@@ -1032,7 +1033,7 @@ export function ModoFoco({
         {/* LA ACCIÓN, SU RIESGO Y CÓMO HACERLA (tarea 307). Primero la
             instrucción; justo debajo, el riesgo real si lo hay (a la vista,
             en rojo, antes de "Cómo hacerlo": se lee antes de hacerla); y
-            después la ruta rápida, el paso a paso y el dato técnico, pegados
+            después "Cómo hacerlo" y el dato técnico, pegados
             a la instrucción porque son SUYOS, con menos peso porque no son
             otra orden. */}
         <div className="flex flex-col gap-2.5">
@@ -1066,10 +1067,10 @@ export function ModoFoco({
                 ))}
               </div>
             )}
-            {/* CÓMO HACERLO (tarea 303): las microacciones de ESTA acción,
-                pegadas a su instrucción y en voz más baja. La `key` hace
-                que cada acción llegue con su paso a paso plegado. */}
-            <ComoHacerlo key={tarea.id} microPasos={tarea.comoHacer} className="mt-1" />
+            {/* CÓMO HACERLO (tarea 303; lista numerada a la vista desde la
+                310): las microacciones de ESTA acción, pegadas a su
+                instrucción y en voz más baja. */}
+            <ComoHacerlo microPasos={tarea.comoHacer} className="mt-1" />
           </div>
           {avisos.datos.map((aviso) => (
             <DatoTecnico key={aviso.id} texto={aviso.texto} />

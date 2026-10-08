@@ -61,7 +61,7 @@ const RUTAS = [
 const COMPROBACION = 'Antes de terminar, comprueba'
 
 // LA GUÍA LINEAL: A → B → C, con C de dos acciones; la segunda trae todo lo
-// que la ejecución enseña (riesgo, ruta rápida, paso a paso, dato técnico y
+// que la ejecución enseña (riesgo, "Cómo hacerlo" numerado, dato técnico y
 // "Debes ver"), para comprobar que al volver sigue ahí.
 const RUTA_LINEAL = '/soluciones/cat-pruebas/guia-lineal'
 const ACCION_A = 'Abre el programa de correo de prueba'
@@ -255,9 +255,8 @@ describe('guía lineal: A → B → C → comprobación final', () => {
     expect(document.body.querySelector('[role="img"][aria-label="Completada"]')).not.toBeNull()
     // Se puede revisar todo lo de la acción: el riesgo, cómo hacerla, el dato y la imagen.
     expect(textoPantalla()).toContain(RIESGO)
-    expect(textoPantalla()).toContain('Ruta rápida')
-    expect(textoPantalla()).toContain('Examinar')
-    await tocar(await esperarControl('Ver paso a paso'))
+    expect(textoPantalla()).toContain('Cómo hacerlo')
+    expect(textoPantalla()).toContain('Pulsa Examinar.')
     expect(textoPantalla()).toContain('Panel izquierdo')
     expect(textoPantalla()).toContain('Dato técnico')
     expect(textoPantalla()).toContain(DATO)

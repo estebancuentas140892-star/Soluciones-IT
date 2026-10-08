@@ -18,11 +18,11 @@ import { BotonIconoLinea } from './controlesEditor'
 //
 // Bajo la línea de una tarea de acción, en el orden en que lo leerá el
 // técnico: una fila por microacción, con su acción, su elemento y, solo si
-// hace falta, su ubicación. Las mismas filas dan la ruta rápida y el paso a
-// paso de la ejecución (las dos con la frase acción más elemento, desde la
-// tarea 309): no hay un segundo texto que escribir. Se añaden, se quitan y se reordenan aquí
-// mismo, con las flechas de 44 px de siempre, y cada una conserva su id al
-// moverla o editarla.
+// hace falta, su ubicación. Las mismas filas, con el mismo número, son la
+// lista numerada que enseña la ejecución (cada una con su frase acción más
+// elemento y la ubicación debajo, tarea 310): no hay un segundo texto que
+// escribir. Se añaden, se quitan y se reordenan aquí mismo, con las flechas
+// de 44 px de siempre, y cada una conserva su id al moverla o editarla.
 //
 // ACCIÓN Y ELEMENTO SON OBLIGATORIOS; la ubicación, no. Una fila a medio
 // escribir lo dice en su sitio ("Falta el elemento.") y marca el campo, sin
@@ -168,11 +168,11 @@ export function EditorComoHacer({
           {ROTULO_COMO_HACERLO}
         </p>
         <div id={idAyuda} className="flex flex-col gap-0.5 text-[12px] leading-snug text-noct-neutral-400">
-          <p>Divide aquí una acción cuando requiere varios gestos. Con dos o más se mostrará una Ruta rápida.</p>
           <p>
-            Añade Ubicación solo cuando ayude a encontrar un elemento; en ese caso también estará disponible Ver paso a
-            paso.
+            Divide aquí una acción cuando requiere varios gestos. Con dos o más se mostrará Cómo hacerlo como una lista
+            numerada.
           </p>
+          <p>Añade Ubicación solo cuando ayude a encontrar un elemento. Se mostrará debajo de esa acción.</p>
         </div>
         {/* UNA SOLA MICROACCIÓN NO SE GUARDA (tarea 309): la ejecución no la
             enseñaría. Se dice aquí, a la vista mientras escribe, con el

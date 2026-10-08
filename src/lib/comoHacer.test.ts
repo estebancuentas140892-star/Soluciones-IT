@@ -10,7 +10,6 @@ import {
   llevaPuntoFinal,
   mensajeProblemaComoHacer,
   normalizarComoHacer,
-  pasoAPasoAportaAlgo,
   problemasDeComoHacer,
   textoDeLoQueFalta,
   textoPasoAPaso,
@@ -373,27 +372,25 @@ describe('comoHacerDe: lo que se enseña', () => {
   })
 })
 
-describe('un contenido, dos lecturas', () => {
+describe('una sola lectura: la lista numerada (tarea 310)', () => {
   /**
-   * La ruta rápida de una acción tal como la enseña `ComoHacerlo` (tarea 309):
+   * Las frases de la lista de una acción tal como la enseña `ComoHacerlo`:
    * lo que se enseña, cada microacción con su frase, en orden.
    */
-  const rutaDe = (comoHacer: MicroPasoComoHacer[]) =>
-    comoHacerQueSeEnsena(comoHacerDe(tarea('t1', 'Abre un registro nuevo', { comoHacer })))
-      .map(fraseDeMicroPaso)
-      .join(' › ')
+  const listaDe = (comoHacer: MicroPasoComoHacer[]) =>
+    comoHacerQueSeEnsena(comoHacerDe(tarea('t1', 'Abre un registro nuevo', { comoHacer }))).map(fraseDeMicroPaso)
 
-  it('la ruta rápida del encargo: cada microacción con su verbo, en orden', () => {
-    expect(rutaDe(CASO_DEL_ENCARGO)).toBe('Abre Fichero › Selecciona Cliente › Abre Fichero › Selecciona Nuevo')
+  it('la lista del encargo: cada microacción con su verbo, en orden', () => {
+    expect(listaDe(CASO_DEL_ENCARGO)).toEqual(['Abre Fichero', 'Selecciona Cliente', 'Abre Fichero', 'Selecciona Nuevo'])
   })
 
-  it('el atajo de ejemplo también es una ruta ejecutable', () => {
+  it('el atajo de ejemplo, un gesto por número', () => {
     const atajo = [
       { id: 'a', accion: 'Pulsa', elemento: 'Windows + R' },
       { id: 'b', accion: 'Escribe', elemento: 'comando-ejemplo' },
       { id: 'c', accion: 'Pulsa', elemento: 'Enter' },
     ]
-    expect(rutaDe(atajo)).toBe('Pulsa Windows + R › Escribe comando-ejemplo › Pulsa Enter')
+    expect(listaDe(atajo)).toEqual(['Pulsa Windows + R', 'Escribe comando-ejemplo', 'Pulsa Enter'])
   })
 
   it('el caso del respaldo conserva los verbos: no es una lista de sustantivos', () => {
@@ -402,38 +399,44 @@ describe('un contenido, dos lecturas', () => {
       { id: 'r2', accion: 'Copia', elemento: 'el archivo .pst desde el equipo local' },
       { id: 'r3', accion: 'Pega', elemento: 'el archivo .pst en la carpeta del servidor' },
     ]
-    const ruta = rutaDe(respaldo)
-    expect(ruta).toBe(
-      'Abre o crea la carpeta de la persona › Copia el archivo .pst desde el equipo local › Pega el archivo .pst en la carpeta del servidor',
-    )
-    expect(ruta).not.toBe('la carpeta de la persona › el archivo .pst desde el equipo local › el archivo .pst en la carpeta del servidor')
+    expect(listaDe(respaldo)).toEqual([
+      'Abre o crea la carpeta de la persona',
+      'Copia el archivo .pst desde el equipo local',
+      'Pega el archivo .pst en la carpeta del servidor',
+    ])
   })
 
-  it('una microacción sin elemento no llega a la ruta, ni su acción sola', () => {
-    const ruta = rutaDe([FICHERO, { id: 'sin-elemento', accion: 'Reinicia', elemento: '' }, NUEVO])
-    expect(ruta).toBe('Abre Fichero › Selecciona Nuevo')
-    expect(ruta).not.toContain('Reinicia')
+  it('una microacción sin elemento no llega a la lista, ni su acción sola', () => {
+    const lista = listaDe([FICHERO, { id: 'sin-elemento', accion: 'Reinicia', elemento: '' }, NUEVO])
+    expect(lista).toEqual(['Abre Fichero', 'Selecciona Nuevo'])
+    expect(lista.join(' ')).not.toContain('Reinicia')
   })
 
-  it('el paso a paso del encargo, como frases de acción más elemento', () => {
+  it('cada frase es acción más elemento, sin espacios de más', () => {
     expect(CASO_DEL_ENCARGO.map(fraseDeMicroPaso)).toEqual(['Abre Fichero', 'Selecciona Cliente', 'Abre Fichero', 'Selecciona Nuevo'])
     expect(fraseDeMicroPaso({ id: 'x', accion: ' Pulsa ', elemento: ' Enter ' })).toBe('Pulsa Enter')
   })
 
-  it('el paso a paso como texto, numerado y con la ubicación (para el computador atendido)', () => {
+  it('la misma lista como texto, numerada y con la ubicación (para el computador atendido)', () => {
     expect(textoPasoAPaso(CASO_DEL_ENCARGO)).toBe(
       ['1. Abre Fichero (Barra superior).', '2. Selecciona Cliente.', '3. Abre Fichero.', '4. Selecciona Nuevo.'].join('\n'),
     )
+    // Nunca la secuencia en una línea de la tarea 309.
+    expect(textoPasoAPaso(CASO_DEL_ENCARGO)).not.toContain('›')
   })
 
   it('no repite el signo con que el autor ya cerró la frase', () => {
     expect(llevaPuntoFinal('Abre Fichero')).toBe(true)
     expect(llevaPuntoFinal('Pulsa ¿Guardar cambios?')).toBe(false)
+    expect(llevaPuntoFinal('Pulsa Aceptar.')).toBe(false)
+    expect(llevaPuntoFinal('Espera a que termine…')).toBe(false)
+    expect(llevaPuntoFinal('Pulsa «Aceptar»')).toBe(true)
     expect(textoPasoAPaso([{ id: 'x', accion: 'Pulsa', elemento: '¿Guardar cambios?' }])).toBe('1. Pulsa ¿Guardar cambios?')
+    expect(textoPasoAPaso([{ id: 'x', accion: 'Pulsa', elemento: 'Aceptar.' }])).toBe('1. Pulsa Aceptar.')
   })
 })
 
-describe('qué se enseña y cuándo el paso a paso aporta algo (tarea 309)', () => {
+describe('qué se enseña (tarea 309)', () => {
   const COPIA = { id: 'c1', accion: 'Copia', elemento: 'el archivo' }
   const PEGA = { id: 'c2', accion: 'Pega', elemento: 'el archivo en la carpeta' }
 
@@ -451,19 +454,10 @@ describe('qué se enseña y cuándo el paso a paso aporta algo (tarea 309)', () 
     expect(guardado?.pasos[0].bloques[0].comoHacer).toEqual([FICHERO])
   })
 
-  it('el paso a paso solo aporta algo con alguna ubicación: es lo único que la ruta no dice', () => {
-    expect(pasoAPasoAportaAlgo([COPIA, PEGA])).toBe(false)
-    expect(pasoAPasoAportaAlgo([COPIA, { ...PEGA, ubicacion: '   ' }])).toBe(false)
-    expect(pasoAPasoAportaAlgo([COPIA, { ...PEGA, ubicacion: 'Panel izquierdo' }])).toBe(true)
-    expect(pasoAPasoAportaAlgo(CASO_DEL_ENCARGO)).toBe(true)
-  })
-
-  it('se decide por estructura: dos frases distintas sin ubicación no lo abren, aunque digan cosas diferentes', () => {
-    const distintas = [
-      { id: 'd1', accion: 'Abre', elemento: 'el panel de prueba' },
-      { id: 'd2', accion: 'Selecciona', elemento: 'una opción larga que no se parece en nada a la primera' },
-    ]
-    expect(pasoAPasoAportaAlgo(distintas)).toBe(false)
+  it('la ubicación no decide si se enseña (tarea 310): con o sin ella, dos o más sí y una no', () => {
+    expect(comoHacerQueSeEnsena([COPIA, PEGA])).toEqual([COPIA, PEGA])
+    expect(comoHacerQueSeEnsena([COPIA, { ...PEGA, ubicacion: 'Panel izquierdo' }])).toHaveLength(2)
+    expect(comoHacerQueSeEnsena([{ ...COPIA, ubicacion: 'Panel izquierdo' }])).toEqual([])
   })
 })
 

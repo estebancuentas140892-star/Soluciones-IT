@@ -8,26 +8,24 @@ import { texto } from './texto'
 // la misma ventana o contexto, hacerla puede pedir varios gestos seguidos,
 // y cada uno es una MICROACCIÓN (`MicroPasoComoHacer`: acción, elemento y,
 // si hace falta, ubicación). La lista pertenece al bloque 'tarea' de tipo
-// 'accion' (`BloquePaso.comoHacer`) y alimenta las dos lecturas de la
-// ejecución:
+// 'accion' (`BloquePaso.comoHacer`) y la ejecución la enseña de UNA sola
+// forma (tarea 310, AD-071): una LISTA NUMERADA, a la vista y sin nada que
+// pulsar, una microacción por número con su frase ("1. Abre Fichero.") y,
+// si la tiene, su ubicación debajo. Los números dicen dónde se está, qué se
+// acaba de hacer y qué sigue.
 //
-//   - la RUTA RÁPIDA, para el técnico que ya sabe orientarse: la secuencia
-//     ejecutable condensada, cada microacción con su verbo ("Abre Fichero ›
-//     Selecciona Cliente › Selecciona Nuevo"). Desde la tarea 309 no es una
-//     lista de nombres: "carpeta de la persona › archivo .pst › archivo .pst"
-//     perdía justo lo que dice qué hacer (abrir, copiar, pegar);
-//   - el PASO A PASO, plegado, para quien llega nuevo: las mismas frases,
-//     numeradas, con la ubicación debajo. Solo existe cuando dice algo que la
-//     ruta no dice (`pasoAPasoAportaAlgo`).
-//
-// Un solo contenido y dos niveles de lectura: nunca dos textos que
-// mantener, y las dos dicen cada microacción con la misma frase
-// (`fraseDeMicroPaso`). Aquí vive todo lo que no es dibujar: crear,
-// normalizar, leer y validar la lista, qué se enseña y cómo se dice.
+// Antes hubo dos lecturas del mismo contenido: la "Ruta rápida" en una
+// línea separada por "›" y "Ver paso a paso", plegado (tareas 303 y 309).
+// La prueba real en producción mostró que la línea se volvía un párrafo
+// largo difícil de recorrer y que la lista numerada se seguía mejor: quedó
+// solo la lista. Cada microacción se dice siempre con la misma frase
+// (`fraseDeMicroPaso`), aquí, en el computador atendido y en "¿Qué hace?".
+// Aquí vive todo lo que no es dibujar: crear, normalizar, leer y validar la
+// lista, qué se enseña y cómo se dice.
 //
 // UNA MICROACCIÓN VÁLIDA TIENE SIEMPRE ACCIÓN Y ELEMENTO; la ubicación es
-// opcional. Las dos lecturas los necesitan: cada una dice acción más
-// elemento. Por eso no hay sustituto: nada inventa el campo que falta. Una a
+// opcional. Su frase los necesita a los dos: dice acción más elemento. Por
+// eso no hay sustituto: nada inventa el campo que falta. Una a
 // medias no se lee (el normalizador la descarta y las vistas no la ven) y el
 // editor no la deja guardar.
 //
@@ -46,9 +44,6 @@ import { texto } from './texto'
 /** El nombre visible del campo, en el editor, en las vistas y en la asistencia. */
 export const ROTULO_COMO_HACERLO = 'Cómo hacerlo'
 
-/** El nombre de la lectura compacta de las microacciones. */
-export const ROTULO_RUTA_RAPIDA = 'Ruta rápida'
-
 /** Una microacción nueva, vacía, con el id que conservará siempre. */
 export function crearMicroPaso(): MicroPasoComoHacer {
   return { id: crypto.randomUUID(), accion: '', elemento: '' }
@@ -64,8 +59,8 @@ export function admiteComoHacer(bloque: Pick<BloquePaso, 'tipo' | 'tipoTarea'>):
 }
 
 // ¿Vale esta microacción? Con acción Y elemento. Sin uno de los dos no hay
-// gesto completo que enseñar: ni la ruta (elementos) ni el paso a paso
-// (acción más elemento) pueden decirla.
+// gesto completo que enseñar: su frase (acción más elemento) no se puede
+// decir.
 function estaCompleta(accion: string, elemento: string): boolean {
   return accion.trim() !== '' && elemento.trim() !== ''
 }
@@ -119,7 +114,7 @@ export function comoHacerDe(bloque: BloquePaso): MicroPasoComoHacer[] {
 
 /**
  * Una microacción dicha como frase, sin el punto final: "Abre Fichero". Es la
- * única forma de decirla: la ruta rápida, el paso a paso, el computador
+ * única forma de decirla: la lista numerada de la ejecución, el computador
  * atendido y "¿Qué hace?" la leen de aquí.
  */
 export function fraseDeMicroPaso(micro: MicroPasoComoHacer): string {
@@ -130,25 +125,13 @@ export function fraseDeMicroPaso(micro: MicroPasoComoHacer): string {
  * LO QUE "CÓMO HACERLO" ENSEÑA (tarea 309): las microacciones si son dos o
  * más; si no, ninguna. "Cómo hacerlo" descompone una acción en sus gestos, y
  * una sola microacción no descompone nada: es la instrucción principal dicha
- * otra vez (y antes, dos veces más: como ruta y como paso a paso). Las vistas
- * de la ejecución, la lectura, "Probar" y el computador atendido pasan por
- * aquí. No toca el dato: una guía antigua con una sola la conserva tal cual,
- * solo no la enseña (y el editor no deja volver a guardarla así).
+ * otra vez. Las vistas de la ejecución, la lectura, "Probar" y el computador
+ * atendido pasan por aquí. No toca el dato: una guía antigua con una sola la
+ * conserva tal cual, solo no la enseña (y el editor no deja volver a
+ * guardarla así).
  */
 export function comoHacerQueSeEnsena(microPasos: MicroPasoComoHacer[]): MicroPasoComoHacer[] {
   return microPasos.length >= 2 ? microPasos : []
-}
-
-/**
- * ¿"Ver paso a paso" dice algo que la ruta rápida no dice? (tarea 309) Las
- * dos lecturas dicen cada microacción con la misma frase (`fraseDeMicroPaso`),
- * así que lo único que el paso a paso añade es la UBICACIÓN, el único campo
- * de una microacción que la ruta no enseña. Sin ninguna, desplegarlo
- * repetiría la ruta con números: no se ofrece. Se decide por estructura,
- * nunca comparando textos.
- */
-export function pasoAPasoAportaAlgo(microPasos: MicroPasoComoHacer[]): boolean {
-  return microPasos.some((micro) => (micro.ubicacion ?? '').trim() !== '')
 }
 
 /**
@@ -160,9 +143,9 @@ export function llevaPuntoFinal(frase: string): boolean {
 }
 
 /**
- * El paso a paso como texto, una línea por microacción ("1. Abre Fichero
- * (Barra superior)."), para lo que solo puede llevar texto: el computador
- * atendido recibe así el "Cómo hacerlo" de una acción.
+ * "Cómo hacerlo" como texto numerado, una línea por microacción ("1. Abre
+ * Fichero (Barra superior)."), para lo que solo puede llevar texto: el
+ * computador atendido recibe así la misma lista que enseña la ejecución.
  */
 export function textoPasoAPaso(microPasos: MicroPasoComoHacer[]): string {
   return microPasos

@@ -463,23 +463,28 @@ async function main() {
       Boolean(await s.hasta(`document.body.innerText.includes('Abre el programa de prueba sin red')`, 'la primera acción')),
       'la primera acción reutilizada, en el sitio',
     )
-    comprobar(
-      Boolean(await s.evaluar(`return /Ruta rápida:\\s*Abre Acceso rápido de prueba\\s*›\\s*Pulsa Programa/.test(document.body.innerText)`)),
-      'con la ruta rápida de su "Cómo hacerlo", con sus verbos, sin red (tareas 303 y 309)',
-    )
-    comprobar(
-      !(await s.evaluar(`return document.body.innerText.includes('Barra lateral de prueba')`)),
-      'el paso a paso llega plegado',
-    )
-    await s.tocar('Ver paso a paso')
+    // Tarea 310: "Cómo hacerlo" es una lista numerada a la vista, sin nada
+    // que desplegar; la ubicación va bajo su microacción.
+    const LISTA_COMO_HACERLO = `[...document.querySelectorAll('ol[aria-labelledby]')].find((ol) => document.getElementById(ol.getAttribute('aria-labelledby'))?.textContent === 'Cómo hacerlo')`
     comprobar(
       Boolean(
-        await s.hasta(
-          `document.body.innerText.includes('Pulsa Programa.') && document.body.innerText.includes('Barra lateral de prueba')`,
-          'el paso a paso',
+        await s.evaluar(
+          `const ol = ${LISTA_COMO_HACERLO}; return Boolean(ol) && [...ol.children].map((li) => li.firstElementChild.textContent).join('|') === 'Abre Acceso rápido de prueba.|Pulsa Programa.'`,
         ),
       ),
-      'y "Ver paso a paso" lo despliega, con la ubicación, sin red',
+      'con su "Cómo hacerlo" numerado, cada microacción con su verbo, sin red (tareas 303, 309 y 310)',
+    )
+    comprobar(
+      Boolean(
+        await s.evaluar(
+          `const ol = ${LISTA_COMO_HACERLO}; return getComputedStyle(ol).listStyleType === 'decimal' && [...ol.children].some((li) => li.innerText.includes('Barra lateral de prueba'))`,
+        ),
+      ),
+      'numerada de verdad y con la ubicación a la vista bajo su microacción',
+    )
+    comprobar(
+      !(await s.evaluar(`return /Ruta rápida|Ver paso a paso/.test(document.body.innerText)`)),
+      'sin "Ruta rápida" ni "Ver paso a paso"',
     )
     const IMAGEN_DEBES_VER = `document.querySelector('img[alt="${DESCRIPCION_SIN_RED}"]')`
     comprobar(

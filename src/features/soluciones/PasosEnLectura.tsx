@@ -51,9 +51,8 @@ export function PasosEnLectura({ guiaId }: { guiaId: string }) {
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <span className="text-pretty [overflow-wrap:anywhere]">{tarea.texto}</span>
                       {/* Su "Cómo hacerlo" (tarea 303) y su "Debes ver" (tarea
-                          307), bajo la acción: la misma ruta rápida, el mismo
-                          paso a paso y la misma imagen plegada que en el
-                          flujo. */}
+                          307), bajo la acción: la misma lista numerada y la
+                          misma imagen plegada que en el flujo. */}
                       <ComoHacerlo microPasos={comoHacerDe(tarea)} variante="lectura" />
                       <DebesVer resultado={resultadoVisualDe(tarea)} variante="lectura" />
                     </div>
