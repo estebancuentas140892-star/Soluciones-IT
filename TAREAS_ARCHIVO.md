@@ -1,5 +1,32 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-07: volver desde la comprobación final
+
+### 308. Volver desde la comprobación final
+
+**Estado:** Completada (2026-10-07). **Cerrada por confirmación real del usuario**, que la verificó a mano en producción. Encargo del usuario: al pulsar "Siguiente" en la última acción se pasaba a "Antes de terminar, comprueba" y ya no se podía volver; quien lo pulsaba por error quedaba atrapado entre marcar o salir. El usuario debe poder corregir un error de navegación sin perder su progreso: entrar a la comprobación, volver y finalizar son tres conceptos distintos (regla 28, AD-069, RN-067).
+
+**Causa:** la comprobación final no era una posición de la ejecución sino la vista sin paso (`indiceActual` null en `AsistenteVista`, el mismo centinela que "Guía terminada"), pintada sin pie y sin saber de qué paso se llegó; y marcar la última casilla terminaba la guía en el acto, así que con todo marcado no quedaba ni una pantalla a la que volver.
+
+**Qué cambió:**
+
+- **"Anterior" en la comprobación final** (`PieDeComprobacion`, el mismo botón de 64 px de cada acción): vuelve a la última acción del paso desde el que se llegó (`origenComprobacion`) o, si se retomó ya en la comprobación, a la del último paso de la ruta elegida. Solo mueve la vista: nada se desmarca ni cambia de respuesta. Desde ahí, "Seguir" regresa a la comprobación.
+- **Solo "Finalizar" termina:** marcar casillas deja la comprobación abierta (`cierrePendiente`, en el avance local) y "Finalizar" (`finalizarEjecucion`) la cierra; mientras falte alguna, el control dice "Falta 1 comprobación" o "Faltan N comprobaciones".
+- **La última acción ya no promete terminar:** con comprobaciones dice "Completar y seguir" y, ya hecha, "Seguir"; sin comprobaciones, "Completar y terminar" sigue terminando.
+- **"Terminada" es una sola regla en toda la app** (`guiaTerminada`): retomar, la tarjeta de la guía y el recorrido de un diagnóstico respetan la comprobación abierta.
+- **Lo de dentro de otra guía** ("Comprueba antes de seguir") recibe "Anterior" y sigue continuando al marcar su última comprobación.
+
+**No se hizo, a propósito:**
+
+- Ningún contenido real ni Supabase: `cierrePendiente` es opcional, local y sin versión de Dexie; una fila de antes, con todo marcado, sigue terminada como lo estaba.
+- Ni `comoHacer`, ni "Debes ver", ni las decisiones de la 302, ni la ejecución mínima de la 307. "Probar" (la vista de lista del editor) sigue completándose al marcar la última comprobación.
+
+**Integración y despliegue:** la rama `fix/volver-desde-comprobacion-final` entró en `main` por avance rápido (`9f6c29e..3e72da6`, sin commit de merge). **La integración funcional es `3e72da6`.** CI en verde para `3e72da6` (run 37711036239), Vercel "Deployment has completed" para ese commit y producción sirviendo `3e72da6` (`/version.json`, compilado el 2026-10-08T01:04:34Z).
+
+**Verificación:** local, sobre la rama: 185 archivos y 2898 pruebas (12 nuevas en `volverDesdeComprobacion.test.tsx`), `tsc -b`, lint, `npm run build` y `npm run prueba:sin-conexion` en verde (7 comprobaciones nuevas en el paso 4b2). **En producción, el usuario la verificó a mano y confirmó: "Está funcionando."** "Anterior" desde la comprobación final funciona, y la navegación hacia atrás conserva la acción y permite volver a la comprobación.
+
+**Límites conocidos:** el estado abierto de la comprobación vive en el avance local de cada dispositivo (como todo `progresoPasos`): no viaja entre teléfono y PC.
+
 ## Encargo del 2026-10-07: la ejecución mínima
 
 ### 307. La ejecución mínima
