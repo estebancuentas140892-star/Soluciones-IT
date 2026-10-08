@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import {
   admiteComoHacer,
+  AVISO_UNA_SOLA_MICROACCION,
   camposQueFaltan,
   comoHacerDe,
   comoHacerQueSeEnsena,
   crearMicroPaso,
   fraseDeMicroPaso,
   llevaPuntoFinal,
-  mensajeMicroaccionIncompleta,
-  microaccionesIncompletas,
+  mensajeProblemaComoHacer,
   normalizarComoHacer,
   pasoAPasoAportaAlgo,
+  problemasDeComoHacer,
   textoDeLoQueFalta,
   textoPasoAPaso,
+  tieneUnaSolaMicroaccion,
 } from './comoHacer'
 import type { BloquePaso, MicroPasoComoHacer, PasoProcedimiento } from './db'
 import {
@@ -523,21 +525,98 @@ describe('lo que el editor no deja guardar: acción y elemento, siempre', () => 
       ]),
       paso([tarea('t3', '  Abre la herramienta  ', { comoHacer: [{ id: 'sin-nada-obligatorio', accion: '', elemento: '', ubicacion: 'Menú' }] })], 'p2'),
     ]
-    const incompletas = microaccionesIncompletas(pasos)
-    expect(incompletas).toEqual([
-      { pasoId: 'p1', tareaId: 't1', tareaTexto: 'Abre un registro nuevo', microPasoId: 'sin-elemento', numero: 3, faltan: ['elemento'] },
-      { pasoId: 'p2', tareaId: 't3', tareaTexto: 'Abre la herramienta', microPasoId: 'sin-nada-obligatorio', numero: 1, faltan: ['accion', 'elemento'] },
+    const problemas = problemasDeComoHacer(pasos)
+    expect(problemas).toEqual([
+      { tipo: 'incompleta', pasoId: 'p1', tareaId: 't1', tareaTexto: 'Abre un registro nuevo', microPasoId: 'sin-elemento', numero: 3, faltan: ['elemento'] },
+      { tipo: 'incompleta', pasoId: 'p2', tareaId: 't3', tareaTexto: 'Abre la herramienta', microPasoId: 'sin-nada-obligatorio', numero: 1, faltan: ['accion', 'elemento'] },
     ])
-    expect(incompletas.map(mensajeMicroaccionIncompleta)).toEqual([
+    expect(problemas.map(mensajeProblemaComoHacer)).toEqual([
       'A la microacción 3 de «Abre un registro nuevo» le falta el elemento.',
       'A la microacción 1 de «Abre la herramienta» le faltan la acción y el elemento.',
     ])
-    expect(mensajeMicroaccionIncompleta({ ...incompletas[0], tareaTexto: '', faltan: ['accion'] })).toBe(
+    expect(mensajeProblemaComoHacer({ ...problemas[0], tipo: 'incompleta', tareaTexto: '', faltan: ['accion'] })).toBe(
       'A la microacción 3 le falta la acción.',
     )
   })
 
   it('una guía con todas sus microacciones completas no tiene nada que corregir', () => {
-    expect(microaccionesIncompletas([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: CASO_DEL_ENCARGO })])])).toEqual([])
+    expect(problemasDeComoHacer([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: CASO_DEL_ENCARGO })])])).toEqual([])
+  })
+})
+
+describe('cero o al menos dos: una sola microacción no se guarda (tarea 309)', () => {
+  const VACIA: MicroPasoComoHacer = { id: 'vacia', accion: '', elemento: '' }
+  const A_MEDIAS: MicroPasoComoHacer = { id: 'a-medias', accion: 'Selecciona', elemento: '' }
+
+  it('cero: nada que corregir (sin la clave, con la lista vacía o solo con filas en blanco)', () => {
+    expect(tieneUnaSolaMicroaccion([])).toBe(false)
+    expect(tieneUnaSolaMicroaccion([VACIA])).toBe(false)
+    expect(problemasDeComoHacer([paso([tarea('t1', 'Abre un registro nuevo')])])).toEqual([])
+    expect(problemasDeComoHacer([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: [VACIA] })])])).toEqual([])
+  })
+
+  it('una completa: no se guarda, con su número y el aviso que dice qué hacer', () => {
+    expect(tieneUnaSolaMicroaccion([CLIENTE])).toBe(true)
+    // Con o sin ubicación, y aunque haya filas en blanco alrededor (no se guardan).
+    expect(tieneUnaSolaMicroaccion([FICHERO])).toBe(true)
+    expect(tieneUnaSolaMicroaccion([VACIA, CLIENTE, { ...VACIA, id: 'vacia-2' }])).toBe(true)
+
+    const pasos = [
+      paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: CASO_DEL_ENCARGO })]),
+      paso([tarea('t2', '  Configura correctamente la cuenta  ', { comoHacer: [VACIA, CLIENTE] })], 'p2'),
+    ]
+    const problemas = problemasDeComoHacer(pasos)
+    expect(problemas).toEqual([
+      { tipo: 'unaSola', pasoId: 'p2', tareaId: 't2', tareaTexto: 'Configura correctamente la cuenta', microPasoId: 'm2', numero: 2 },
+    ])
+    expect(mensajeProblemaComoHacer(problemas[0])).toBe(
+      '«Configura correctamente la cuenta» tiene una sola microacción en Cómo hacerlo: escríbela en la instrucción principal o añade otra.',
+    )
+    expect(mensajeProblemaComoHacer({ ...problemas[0], tareaTexto: '' })).toBe(
+      'Una acción tiene una sola microacción en Cómo hacerlo: escríbela en la instrucción principal o añade otra.',
+    )
+    expect(AVISO_UNA_SOLA_MICROACCION).toBe(
+      'Cómo hacerlo necesita al menos 2 acciones. Si solo hay una, escríbela directamente en la instrucción principal.',
+    )
+  })
+
+  it('dos o más completas: se guardan', () => {
+    expect(tieneUnaSolaMicroaccion([FICHERO, CLIENTE])).toBe(false)
+    expect(tieneUnaSolaMicroaccion(CASO_DEL_ENCARGO)).toBe(false)
+    expect(problemasDeComoHacer([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: [FICHERO, CLIENTE, VACIA] })])])).toEqual([])
+  })
+
+  it('con una a medias manda lo que le falta: nunca un segundo aviso que lo tape', () => {
+    // La única escrita, a medias: falta el elemento, no "necesita dos".
+    expect(tieneUnaSolaMicroaccion([A_MEDIAS])).toBe(false)
+    expect(problemasDeComoHacer([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: [A_MEDIAS] })])])).toEqual([
+      { tipo: 'incompleta', pasoId: 'p1', tareaId: 't1', tareaTexto: 'Abre un registro nuevo', microPasoId: 'a-medias', numero: 1, faltan: ['elemento'] },
+    ])
+    // Una completa y otra a medias: la segunda se está escribiendo.
+    expect(tieneUnaSolaMicroaccion([CLIENTE, A_MEDIAS])).toBe(false)
+    expect(
+      problemasDeComoHacer([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: [CLIENTE, A_MEDIAS] })])]).map((p) => p.tipo),
+    ).toEqual(['incompleta'])
+  })
+
+  it('solo en una tarea de acción: una comprobación o una decisión no guardan "Cómo hacerlo"', () => {
+    const pasos = [
+      paso([
+        tarea('t1', 'Comprueba el registro', { tipoTarea: 'verificacion', comoHacer: [CLIENTE] }),
+        tarea('t2', '¿Existe el registro?', { tipoTarea: 'decision', comoHacer: [CLIENTE] }),
+      ]),
+    ]
+    expect(problemasDeComoHacer(pasos)).toEqual([])
+  })
+
+  it('una guía antigua con una sola se lee y se conserva tal cual: la regla es del editor, no de la lectura', () => {
+    const procedimiento = normalizarProcedimiento({
+      pasos: [{ id: 'p1', titulo: 'Configurar', bloques: [{ id: 't1', tipo: 'tarea', texto: 'Configura correctamente la cuenta', comoHacer: [CLIENTE] }] }],
+    })
+    const tareaLeida = procedimiento?.pasos[0].bloques[0] as BloquePaso
+    expect(tareaLeida.comoHacer).toEqual([CLIENTE])
+    expect(comoHacerQueSeEnsena(comoHacerDe(tareaLeida))).toEqual([])
+    // Al editarla, el editor pide resolverla.
+    expect(problemasDeComoHacer(procedimiento?.pasos ?? []).map((p) => p.tipo)).toEqual(['unaSola'])
   })
 })

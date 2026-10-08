@@ -2,10 +2,12 @@ import { useId, useState, type ReactNode, type Ref } from 'react'
 import { CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
 import { ArrowDown, ArrowElbowDownRight, ArrowUp, Plus, TrashSimple, Warning } from '../../components/iconos'
 import {
+  AVISO_UNA_SOLA_MICROACCION,
   camposQueFaltan,
   crearMicroPaso,
   ROTULO_COMO_HACERLO,
   textoDeLoQueFalta,
+  tieneUnaSolaMicroaccion,
   type CampoObligatorio,
 } from '../../lib/comoHacer'
 import type { MicroPasoComoHacer } from '../../lib/db'
@@ -25,9 +27,16 @@ import { BotonIconoLinea } from './controlesEditor'
 // ACCIÓN Y ELEMENTO SON OBLIGATORIOS; la ubicación, no. Una fila a medio
 // escribir lo dice en su sitio ("Falta el elemento.") y marca el campo, sin
 // borrar nada de lo escrito; el formulario no deja guardar mientras quede
-// una (`microaccionesIncompletas`) y trae el foco a su primer campo vacío
+// una (`problemasDeComoHacer`) y trae el foco a su primer campo vacío
 // (`focoPedido`). Una fila del todo vacía no es una microacción: no se
 // guarda y no impide guardar.
+//
+// CERO O AL MENOS DOS (tarea 309). Con una sola microacción la ejecución no
+// enseña "Cómo hacerlo" (`comoHacerQueSeEnsena`): guardada así, el técnico
+// perdería esa instrucción. Mientras quede una, junto al rótulo se dice qué
+// hacer (`AVISO_UNA_SOLA_MICROACCION`) y el formulario no deja guardar; el
+// foco que pide entonces es ese aviso. Nada se borra ni se mueve solo a la
+// instrucción: lo decide quien escribe.
 //
 // Rótulos fijos a la vista, sin ejemplos dentro de los campos: qué gestos
 // lleva una guía real lo decide quien escribe su contenido (regla 26). La
@@ -35,10 +44,14 @@ import { BotonIconoLinea } from './controlesEditor'
 
 type ControlConFoco = 'accion' | 'subir' | 'bajar' | 'quitar'
 
-/** El campo de una microacción al que hay que llevar el foco (el primero que le falta). */
+/**
+ * A dónde lleva el formulario el foco al no dejar guardar: el primer campo
+ * vacío de una microacción a medias o, si es la única de su acción
+ * ('aviso'), el aviso que dice qué hacer con ella.
+ */
 export interface FocoMicroPaso {
   microPasoId: string
-  campo: CampoObligatorio
+  campo: CampoObligatorio | 'aviso'
 }
 
 export function EditorComoHacer({
@@ -63,6 +76,8 @@ export function EditorComoHacer({
 }) {
   const idRotulo = useId()
   const idAyuda = useId()
+  const idUnaSola = useId()
+  const unaSola = tieneUnaSolaMicroaccion(microPasos)
   // El control que recibe el foco en cuanto existe: la acción de una fila
   // nueva, la flecha que se acaba de usar (en su sitio nuevo) o el "Quitar"
   // de la fila que ocupa el sitio de la que se quitó. Sin esto, mover o
@@ -92,6 +107,20 @@ export function EditorComoHacer({
         elemento.scrollIntoView({ block: 'center' })
         onFocoAplicado?.()
       }
+    }
+  }
+
+  // El aviso de una sola microacción, cuando el formulario no deja guardar
+  // por él: al centro, como un campo vacío, para leerlo antes de decidir.
+  function refAvisoUnaSola(elemento: HTMLParagraphElement | null) {
+    if (
+      elemento &&
+      focoPedido?.campo === 'aviso' &&
+      microPasos.some((micro) => micro.id === focoPedido.microPasoId)
+    ) {
+      elemento.focus({ preventScroll: true })
+      elemento.scrollIntoView({ block: 'center' })
+      onFocoAplicado?.()
     }
   }
 
@@ -127,16 +156,38 @@ export function EditorComoHacer({
   }
 
   return (
-    <div role="group" aria-labelledby={idRotulo} aria-describedby={idAyuda} className="ml-1 flex flex-col gap-2">
+    <div
+      role="group"
+      aria-labelledby={idRotulo}
+      aria-describedby={unaSola ? `${idAyuda} ${idUnaSola}` : idAyuda}
+      className="ml-1 flex flex-col gap-2"
+    >
       <div className="flex flex-col gap-0.5">
         <p id={idRotulo} className="flex items-center gap-1.5 text-[13px] font-medium text-noct-neutral-200">
           <ArrowElbowDownRight size={14} className="shrink-0 text-noct-neutral-400" aria-hidden />
           {ROTULO_COMO_HACERLO}
         </p>
         <div id={idAyuda} className="flex flex-col gap-0.5 text-[12px] leading-snug text-noct-neutral-400">
-          <p>Pasos necesarios para realizar esta acción. Se usarán para mostrar una ruta rápida y un paso a paso.</p>
-          <p>La ubicación solo hace falta cuando el elemento puede ser difícil de encontrar.</p>
+          <p>Divide aquí una acción cuando requiere varios gestos. Con dos o más se mostrará una Ruta rápida.</p>
+          <p>
+            Añade Ubicación solo cuando ayude a encontrar un elemento; en ese caso también estará disponible Ver paso a
+            paso.
+          </p>
         </div>
+        {/* UNA SOLA MICROACCIÓN NO SE GUARDA (tarea 309): la ejecución no la
+            enseñaría. Se dice aquí, a la vista mientras escribe, con el
+            mismo rojo que lo que le falta a una fila. */}
+        {unaSola && (
+          <p
+            id={idUnaSola}
+            ref={refAvisoUnaSola}
+            tabIndex={-1}
+            className="mt-1 flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-error outline-none"
+          >
+            <Warning size={13} className="mt-0.5 shrink-0" aria-hidden />
+            <span className="min-w-0">{AVISO_UNA_SOLA_MICROACCION}</span>
+          </p>
+        )}
       </div>
 
       <ol className="flex flex-col gap-2">

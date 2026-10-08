@@ -16,7 +16,7 @@ import {
   prepararProcedimientoParaGuardar,
 } from '../../lib/procedimiento'
 import { problemasDeRutas } from '../../lib/rutaProcedimiento'
-import { mensajeMicroaccionIncompleta, microaccionesIncompletas } from '../../lib/comoHacer'
+import { mensajeProblemaComoHacer, problemasDeComoHacer, type ProblemaComoHacer } from '../../lib/comoHacer'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { padreDe } from '../../lib/navegacion'
 import { siguienteVersion } from '../../lib/version'
@@ -122,6 +122,12 @@ function enLineas(texto: string): string[] {
     .split('\n')
     .map((linea) => linea.trim())
     .filter(Boolean)
+}
+
+// A dónde lleva el foco un "Cómo hacerlo" que no se puede guardar: el primer
+// campo vacío de la microacción a medias o el aviso de la que es la única.
+function focoDelProblema(problema: ProblemaComoHacer): FocoMicroPaso {
+  return { microPasoId: problema.microPasoId, campo: problema.tipo === 'unaSola' ? 'aviso' : problema.faltan[0] }
 }
 
 // Editor de articulos en el sistema Nocturne (handoff "Editor de
@@ -620,9 +626,11 @@ export function ArticuloForm() {
   // y aquí decide el guardado: la misma lista para los dos.
   const problemasRutas = useMemo(() => problemasDeRutas({ pasos }), [pasos])
   const rutasPorCorregir = problemasRutas.filter((problema) => problema.bloquea)
-  // UNA MICROACCIÓN A MEDIAS NO SE GUARDA (tarea 303): acción y elemento son
-  // obligatorios. El editor lo dice en su fila; aquí decide el guardado.
-  const microaccionesPorCorregir = useMemo(() => microaccionesIncompletas(pasos), [pasos])
+  // "CÓMO HACERLO" QUE NO SE PUEDE GUARDAR: una microacción a medias (tarea
+  // 303: acción y elemento son obligatorios) o una sola en su acción (tarea
+  // 309: la ejecución no la enseñaría). El editor lo dice en su sitio; aquí
+  // decide el guardado.
+  const comoHacerPorCorregir = useMemo(() => problemasDeComoHacer(pasos), [pasos])
   // Lo que no deja guardar, en una sola lista para el aviso de "Pasos".
   const porCorregir = [
     ...rutasPorCorregir.map((problema) => ({
@@ -631,11 +639,11 @@ export function ArticuloForm() {
       mensaje: problema.mensaje,
       foco: null,
     })),
-    ...microaccionesPorCorregir.map((problema) => ({
-      clave: `como-${problema.microPasoId}`,
+    ...comoHacerPorCorregir.map((problema) => ({
+      clave: `como-${problema.tipo}-${problema.microPasoId}`,
       pasoId: problema.pasoId,
-      mensaje: mensajeMicroaccionIncompleta(problema),
-      foco: { microPasoId: problema.microPasoId, campo: problema.faltan[0] },
+      mensaje: mensajeProblemaComoHacer(problema),
+      foco: focoDelProblema(problema),
     })),
   ]
 
@@ -894,15 +902,17 @@ export function ArticuloForm() {
       setPasoActivoId(rutasPorCorregir[0].pasoId)
       return
     }
-    // NI UNA MICROACCIÓN A MEDIAS (tarea 303): a la que le falta la acción o
-    // el elemento no se guarda como si valiera, ni se borra lo escrito. Se
-    // lleva al autor a su paso y el foco, a su primer campo vacío.
-    if (microaccionesPorCorregir.length > 0) {
-      const primera = microaccionesPorCorregir[0]
+    // NI UNA MICROACCIÓN A MEDIAS (tarea 303) NI UNA SOLA (tarea 309): a la
+    // que le falta la acción o el elemento no se guarda como si valiera, y
+    // una sola no se guarda para que la ejecución la esconda. No se borra ni
+    // se mueve nada. Se lleva al autor a su paso y el foco, a su primer campo
+    // vacío o al aviso que dice qué hacer con la única.
+    if (comoHacerPorCorregir.length > 0) {
+      const primero = comoHacerPorCorregir[0]
       setRevisarRutas(true)
       irA('pasos')
-      setPasoActivoId(primera.pasoId)
-      setFocoMicroPaso({ microPasoId: primera.microPasoId, campo: primera.faltan[0] })
+      setPasoActivoId(primero.pasoId)
+      setFocoMicroPaso(focoDelProblema(primero))
       return
     }
     setRevisarRutas(false)
@@ -1400,7 +1410,7 @@ export function ArticuloForm() {
                             type="button"
                             onClick={() => {
                               setPasoActivoId(problema.pasoId)
-                              // Una microacción a medias: además, a su campo vacío.
+                              // "Cómo hacerlo": además, al campo vacío o al aviso.
                               if (problema.foco) setFocoMicroPaso(problema.foco)
                             }}
                             className="flex min-h-11 w-full items-center gap-2 rounded-lg px-1.5 text-left hover:bg-noct-error/10"

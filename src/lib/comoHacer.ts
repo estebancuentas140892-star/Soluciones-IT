@@ -34,7 +34,9 @@ import { texto } from './texto'
 // "CÓMO HACERLO" ES UNA DESCOMPOSICIÓN (tarea 309): con una sola microacción
 // no hay nada que descomponer, y esa microacción pertenece a la instrucción
 // principal. No se enseña (`comoHacerQueSeEnsena`), pero el dato se conserva
-// tal cual: ni se borra ni se convierte.
+// tal cual: ni se borra ni se convierte. Por eso el editor tampoco la deja
+// guardar (`tieneUnaSolaMicroaccion`): cero o al menos dos. Decide quien
+// escribe, nunca la aplicación: llevarla a la instrucción o añadir otra.
 //
 // NADA SE DEDUCE DEL TEXTO. Ni flechas, ni ">", ni frases que "parecen una
 // ruta": una microacción existe porque alguien la escribió como tal. Un
@@ -102,7 +104,7 @@ export function normalizarComoHacer(valor: unknown): MicroPasoComoHacer[] {
  * es una tarea de acción. Toda vista lo lee de aquí (también "Probar", que
  * enseña lo que está a medio escribir: una fila a medias no aparece) y el
  * guardado guarda exactamente esto. El editor no deja llegar hasta aquí una
- * microacción a medias (`microaccionesIncompletas`).
+ * microacción a medias ni una sola (`problemasDeComoHacer`).
  */
 export function comoHacerDe(bloque: BloquePaso): MicroPasoComoHacer[] {
   if (!admiteComoHacer(bloque) || !bloque.comoHacer) return []
@@ -130,8 +132,8 @@ export function fraseDeMicroPaso(micro: MicroPasoComoHacer): string {
  * una sola microacción no descompone nada: es la instrucción principal dicha
  * otra vez (y antes, dos veces más: como ruta y como paso a paso). Las vistas
  * de la ejecución, la lectura, "Probar" y el computador atendido pasan por
- * aquí. No toca el dato: una guía antigua o recién editada con una sola la
- * conserva tal cual, solo no la enseña.
+ * aquí. No toca el dato: una guía antigua con una sola la conserva tal cual,
+ * solo no la enseña (y el editor no deja volver a guardarla así).
  */
 export function comoHacerQueSeEnsena(microPasos: MicroPasoComoHacer[]): MicroPasoComoHacer[] {
   return microPasos.length >= 2 ? microPasos : []
@@ -179,6 +181,12 @@ export function textoPasoAPaso(microPasos: MicroPasoComoHacer[]): string {
 /** Un campo sin el que una microacción no vale. La ubicación no lo es. */
 export type CampoObligatorio = 'accion' | 'elemento'
 
+// Una fila del editor sin nada escrito (ni acción, ni elemento, ni
+// ubicación) todavía no es una microacción: no se guarda y no cuenta.
+function estaEnBlanco(micro: MicroPasoComoHacer): boolean {
+  return micro.accion.trim() === '' && micro.elemento.trim() === '' && (micro.ubicacion ?? '').trim() === ''
+}
+
 /**
  * Lo que le falta a una microacción del editor para valer: sus campos
  * obligatorios vacíos, en el orden del formulario. Una fila del todo vacía
@@ -186,13 +194,10 @@ export type CampoObligatorio = 'accion' | 'elemento'
  * falta nada, no se guarda y no impide guardar.
  */
 export function camposQueFaltan(micro: MicroPasoComoHacer): CampoObligatorio[] {
-  const conAccion = micro.accion.trim() !== ''
-  const conElemento = micro.elemento.trim() !== ''
-  const conUbicacion = (micro.ubicacion ?? '').trim() !== ''
-  if (!conAccion && !conElemento && !conUbicacion) return []
+  if (estaEnBlanco(micro)) return []
   const faltan: CampoObligatorio[] = []
-  if (!conAccion) faltan.push('accion')
-  if (!conElemento) faltan.push('elemento')
+  if (micro.accion.trim() === '') faltan.push('accion')
+  if (micro.elemento.trim() === '') faltan.push('elemento')
   return faltan
 }
 
@@ -202,48 +207,78 @@ export function textoDeLoQueFalta(faltan: CampoObligatorio[]): string {
   return faltan[0] === 'accion' ? 'Falta la acción.' : 'Falta el elemento.'
 }
 
-/** Una microacción a medias, con lo que hace falta para llevar al autor a ella. */
-export interface MicroaccionIncompleta {
+/**
+ * ¿Se guardaría "Cómo hacerlo" con UNA sola microacción? (tarea 309) Es lo
+ * que la ejecución no enseña (`comoHacerQueSeEnsena`): guardarla sería
+ * escribir una instrucción que el técnico nunca verá. Cuenta lo que el
+ * autor escribió, tal como está en el editor: una fila del todo vacía no
+ * cuenta (no se guarda), y si la única escrita está a medias, lo que hay que
+ * corregir primero es lo que le falta (`camposQueFaltan`), no esto. Con una
+ * completa y otra a medias tampoco: esa otra es la segunda que se está
+ * escribiendo.
+ */
+export function tieneUnaSolaMicroaccion(microPasos: MicroPasoComoHacer[]): boolean {
+  const escritas = microPasos.filter((micro) => !estaEnBlanco(micro))
+  return escritas.length === 1 && camposQueFaltan(escritas[0]).length === 0
+}
+
+/** Lo que dice el editor, junto a "Cómo hacerlo", mientras tenga una sola microacción. */
+export const AVISO_UNA_SOLA_MICROACCION = `${ROTULO_COMO_HACERLO} necesita al menos 2 acciones. Si solo hay una, escríbela directamente en la instrucción principal.`
+
+/**
+ * Lo que no deja guardar el "Cómo hacerlo" de una acción, con lo que hace
+ * falta para llevar al autor a ello:
+ *   - 'incompleta': una microacción con algo escrito pero sin acción o sin
+ *     elemento (tarea 303);
+ *   - 'unaSola': la acción tiene una sola microacción, completa (tarea 309).
+ * En una misma acción nunca coinciden: si hay una a medias, eso es lo que se
+ * corrige primero (`tieneUnaSolaMicroaccion`).
+ */
+export type ProblemaComoHacer = {
   pasoId: string
   tareaId: string
   /** El texto de la acción a la que pertenece, para nombrarla. */
   tareaTexto: string
+  /** La microacción a medias o la única. */
   microPasoId: string
   /** Su número en la lista del editor, empezando en 1. */
   numero: number
-  faltan: CampoObligatorio[]
-}
+} & ({ tipo: 'incompleta'; faltan: CampoObligatorio[] } | { tipo: 'unaSola' })
 
 /**
- * Las microacciones a medias de una guía, tal como están en el editor (sin
- * limpiar, para que los números sean los que ve el autor), en el orden de
- * los pasos. Solo las de tareas de acción: las demás no se guardan.
+ * Lo que no deja guardar el "Cómo hacerlo" de una guía, tal como está en el
+ * editor (sin limpiar, para que los números sean los que ve el autor), en el
+ * orden de los pasos. Solo las tareas de acción: las demás no lo guardan.
  */
-export function microaccionesIncompletas(pasos: PasoProcedimiento[]): MicroaccionIncompleta[] {
+export function problemasDeComoHacer(pasos: PasoProcedimiento[]): ProblemaComoHacer[] {
   return pasos.flatMap((paso) =>
     paso.bloques
       .filter((bloque) => admiteComoHacer(bloque))
-      .flatMap((tarea) =>
-        (tarea.comoHacer ?? []).flatMap((micro, indice): MicroaccionIncompleta[] => {
+      .flatMap((tarea): ProblemaComoHacer[] => {
+        const microPasos = tarea.comoHacer ?? []
+        const deLaTarea = { pasoId: paso.id, tareaId: tarea.id, tareaTexto: tarea.texto.trim() }
+        if (tieneUnaSolaMicroaccion(microPasos)) {
+          const indice = microPasos.findIndex((micro) => !estaEnBlanco(micro))
+          return [{ ...deLaTarea, tipo: 'unaSola', microPasoId: microPasos[indice].id, numero: indice + 1 }]
+        }
+        return microPasos.flatMap((micro, indice): ProblemaComoHacer[] => {
           const faltan = camposQueFaltan(micro)
           if (faltan.length === 0) return []
-          return [
-            {
-              pasoId: paso.id,
-              tareaId: tarea.id,
-              tareaTexto: tarea.texto.trim(),
-              microPasoId: micro.id,
-              numero: indice + 1,
-              faltan,
-            },
-          ]
-        }),
-      ),
+          return [{ ...deLaTarea, tipo: 'incompleta', microPasoId: micro.id, numero: indice + 1, faltan }]
+        })
+      }),
   )
 }
 
-/** El aviso de "Antes de guardar": "A la microacción 2 de «Abre…» le falta el elemento." */
-export function mensajeMicroaccionIncompleta(problema: MicroaccionIncompleta): string {
+/**
+ * El aviso de "Antes de guardar": "A la microacción 2 de «Abre…» le falta el
+ * elemento." o "«Abre…» tiene una sola microacción en Cómo hacerlo: …".
+ */
+export function mensajeProblemaComoHacer(problema: ProblemaComoHacer): string {
+  if (problema.tipo === 'unaSola') {
+    const quien = problema.tareaTexto ? `«${problema.tareaTexto}»` : 'Una acción'
+    return `${quien} tiene una sola microacción en ${ROTULO_COMO_HACERLO}: escríbela en la instrucción principal o añade otra.`
+  }
   const deQue = problema.tareaTexto ? ` de «${problema.tareaTexto}»` : ''
   const loQueFalta =
     problema.faltan.length > 1

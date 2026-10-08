@@ -571,8 +571,13 @@ describe('en el editor', () => {
     // La primera microacción nace con el foco en su acción.
     const primera = await esperar(() => campo('Acción de la microacción 1'), 'la primera microacción')
     expect(document.activeElement).toBe(primera)
-    expect(textoPantalla()).toContain('Pasos necesarios para realizar esta acción. Se usarán para mostrar una ruta rápida y un paso a paso.')
-    expect(textoPantalla()).toContain('La ubicación solo hace falta cuando el elemento puede ser difícil de encontrar.')
+    // La ayuda dice cuándo hay ruta rápida y cuándo paso a paso (tarea 309):
+    // no promete siempre "Ver paso a paso".
+    expect(textoPantalla()).toContain('Divide aquí una acción cuando requiere varios gestos. Con dos o más se mostrará una Ruta rápida.')
+    expect(textoPantalla()).toContain(
+      'Añade Ubicación solo cuando ayude a encontrar un elemento; en ese caso también estará disponible Ver paso a paso.',
+    )
+    expect(textoPantalla()).not.toContain('Se usarán para mostrar una ruta rápida y un paso a paso.')
     // Sin ejemplos dentro de los campos: el contenido lo decide quien escribe.
     expect(primera.placeholder).toBe('')
 

@@ -1,14 +1,17 @@
 // @vitest-environment happy-dom
+import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type MicroPasoComoHacer, type PasoProcedimiento } from '../../lib/db'
 import {
   control,
   desmontarTodo,
+  escribir,
   esperar,
   esperarControl,
   limpiarBase,
   montar,
   pasoPrueba,
+  pausa,
   sembrarGuia,
   sembrarPerfil,
   textoPantalla,
@@ -29,7 +32,10 @@ import { GuiaPage } from './GuiaPage'
 //   - una sola microacción no es "Cómo hacerlo": la pantalla enseña solo la
 //     instrucción;
 //   - "Ver paso a paso" solo existe cuando dice algo que la ruta no dice (hoy,
-//     una ubicación), decidido por estructura.
+//     una ubicación), decidido por estructura;
+//   - por eso el editor no deja guardar "Cómo hacerlo" con una sola: cero o
+//     al menos dos. La guía antigua que ya tiene una sigue cargando y
+//     ejecutándose; al editarla, hay que resolverla.
 //
 // Todo lo sembrado es inventado; el caso del respaldo copia la FORMA del
 // caso real (tres microacciones: abrir la carpeta, copiar, pegar).
@@ -37,6 +43,7 @@ import { GuiaPage } from './GuiaPage'
 const RUTAS = [
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> },
   { ruta: '/soluciones/:categoriaId/:articuloId/editar', elemento: <ArticuloForm /> },
+  { ruta: '/soluciones/:categoriaId/:articuloId/detalles', elemento: <p>DETALLES DE LA GUÍA</p> },
   { ruta: '/soluciones', elemento: <p>LISTA DE GUÍAS</p> },
 ]
 
@@ -258,5 +265,260 @@ describe('las demás vistas, con el caso del respaldo', () => {
       vi.unstubAllGlobals()
       vi.restoreAllMocks()
     }
+  })
+})
+
+describe('en el editor: cero microacciones o al menos dos', () => {
+  // El caso del encargo: una instrucción que no dice el gesto y una única
+  // microacción que sí lo dice. La ejecución la escondería.
+  const INSTRUCCION = 'Configura correctamente la cuenta'
+  const TITULO_PASO_CUENTA = 'Configurar la cuenta de prueba'
+  const UNICA: MicroPasoComoHacer = { id: 'unica', accion: 'Selecciona', elemento: 'No, solo esta aplicación' }
+  const AVISO =
+    'Cómo hacerlo necesita al menos 2 acciones. Si solo hay una, escríbela directamente en la instrucción principal.'
+  const AL_GUARDAR = `«${INSTRUCCION}» tiene una sola microacción en Cómo hacerlo: escríbela en la instrucción principal o añade otra.`
+
+  async function sembrarCuenta(comoHacer?: MicroPasoComoHacer[]): Promise<void> {
+    const base = pasoPrueba('cu-p1', TITULO_PASO_CUENTA, [INSTRUCCION])
+    const paso = comoHacer === undefined ? base : { ...base, bloques: [{ ...base.bloques[0], comoHacer }] }
+    await sembrarGuia({ id: 'guia-cuenta', titulo: 'Guía de prueba de la cuenta', pasos: [paso] })
+  }
+
+  /** El editor, en "Pasos" y con el paso abierto; o, con `enPasos` false, en la pestaña con la que abre. */
+  async function abrirEditor(enPasos = true): Promise<void> {
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-cuenta/editar')
+    await esperarControl('Guardar procedimiento')
+    if (!enPasos) return
+    await tocar(await esperarControl(/^Pasos/))
+    const plegado = control(new RegExp(`^${TITULO_PASO_CUENTA}`))
+    if (plegado && !control(/^Añadir una tarea al paso/)) await tocar(plegado)
+  }
+
+  function campoInstruccion(): HTMLInputElement | undefined {
+    return Array.from(document.body.querySelectorAll<HTMLInputElement>('input')).find((i) => i.value === INSTRUCCION)
+  }
+
+  /** Selecciona la instrucción como lo hace el autor: tocándola. */
+  async function seleccionarInstruccion(): Promise<void> {
+    const entrada = await esperar(campoInstruccion, 'el campo de la instrucción')
+    await act(async () => {
+      entrada.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    })
+    await pausa()
+  }
+
+  /** El campo de una microacción por su rótulo completo ("Acción de la microacción 1"). */
+  function campo(etiqueta: string): HTMLInputElement | null {
+    const rotulo = Array.from(document.body.querySelectorAll('label')).find((l) => textoDe(l) === etiqueta)
+    const id = rotulo?.getAttribute('for')
+    return id ? (document.getElementById(id) as HTMLInputElement | null) : null
+  }
+
+  async function rellenar(numero: number, accion: string, elemento: string, ubicacion = ''): Promise<void> {
+    await escribir(await esperar(() => campo(`Acción de la microacción ${numero}`), `la acción ${numero}`), accion)
+    await escribir(campo(`Elemento de la microacción ${numero}`) as HTMLInputElement, elemento)
+    if (ubicacion) await escribir(campo(`Ubicación (opcional) de la microacción ${numero}`) as HTMLInputElement, ubicacion)
+  }
+
+  /** El aviso de una sola microacción junto a "Cómo hacerlo", o null. */
+  function avisoUnaSola(): HTMLElement | null {
+    return Array.from(document.body.querySelectorAll<HTMLElement>('p')).find((p) => textoDe(p) === AVISO) ?? null
+  }
+
+  /** Lo que dice el aviso de una fila ("Falta el elemento."), o null. */
+  function avisoDeFila(numero: number): string | null {
+    const fila = campo(`Acción de la microacción ${numero}`)?.closest('li')
+    const aviso = fila ? Array.from(fila.querySelectorAll('p')).find((p) => /^Faltan? /.test(textoDe(p))) : undefined
+    return aviso ? textoDe(aviso) : null
+  }
+
+  async function guardada() {
+    return db.articulos.get('guia-cuenta')
+  }
+
+  async function tareaGuardada() {
+    return (await guardada())?.procedimiento?.pasos[0]?.bloques.find((b) => b.tipo === 'tarea')
+  }
+
+  async function guardar(): Promise<void> {
+    await tocar(await esperarControl('Guardar procedimiento'))
+  }
+
+  /** Guardó: el editor lleva a los detalles de la guía. */
+  async function esperarGuardado(): Promise<void> {
+    await esperar(() => textoPantalla().includes('DETALLES DE LA GUÍA'), 'la guía guardada')
+  }
+
+  /** No guardó: sigue en el editor y la base no cambió. */
+  async function comprobarQueNoGuardo(antes: Awaited<ReturnType<typeof guardada>>): Promise<void> {
+    await pausa(150)
+    expect(textoPantalla()).not.toContain('DETALLES DE LA GUÍA')
+    expect((await guardada())?.updatedAt).toBe(antes?.updatedAt)
+  }
+
+  it('cero: sin "Cómo hacerlo" no hay aviso y se guarda', async () => {
+    await sembrarCuenta()
+    await abrirEditor()
+    expect(avisoUnaSola()).toBeNull()
+    const antes = await guardada()
+
+    await guardar()
+    await esperarGuardado()
+    expect((await guardada())?.updatedAt).not.toBe(antes?.updatedAt)
+    expect('comoHacer' in ((await tareaGuardada()) ?? {})).toBe(false)
+  })
+
+  it('una completa: el aviso se ve junto a "Cómo hacerlo" antes de guardar, y no deja guardar', async () => {
+    await sembrarCuenta()
+    await abrirEditor()
+    await seleccionarInstruccion()
+    await tocar(await esperarControl(/^Cómo hacerlo · opcional$/))
+    // Recién creada y vacía, todavía no es ninguna: no hay aviso.
+    expect(avisoUnaSola()).toBeNull()
+
+    await rellenar(1, UNICA.accion, UNICA.elemento)
+    const aviso = await esperar(avisoUnaSola, 'el aviso de una sola microacción')
+    // A la vista, en el bloque "Cómo hacerlo", encima de las filas: ni
+    // ventana ni tooltip, y quien usa lector de pantalla lo oye al entrar.
+    const grupo = aviso.closest<HTMLElement>('[role="group"]')
+    expect(document.getElementById(grupo?.getAttribute('aria-labelledby') ?? '')?.textContent).toBe('Cómo hacerlo')
+    expect(grupo?.getAttribute('aria-describedby')?.split(' ')).toContain(aviso.id)
+    expect(aviso.closest('[role="dialog"]')).toBeNull()
+    expect(aviso.hasAttribute('title')).toBe(false)
+    const primeraAccion = campo('Acción de la microacción 1') as HTMLInputElement
+    expect(aviso.compareDocumentPosition(primeraAccion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // No es un campo a medias: la fila no dice que le falte nada.
+    expect(avisoDeFila(1)).toBeNull()
+
+    const antes = await guardada()
+    await guardar()
+    await esperar(() => textoPantalla().includes('Antes de guardar, corrige esto:'), 'el aviso de arriba')
+    expect(textoPantalla()).toContain(AL_GUARDAR)
+    await esperar(() => document.activeElement === avisoUnaSola(), 'el foco en el aviso')
+    await comprobarQueNoGuardo(antes)
+    expect('comoHacer' in ((await tareaGuardada()) ?? {})).toBe(false)
+    // Nada se borró ni se movió solo a la instrucción.
+    expect(campo('Acción de la microacción 1')?.value).toBe(UNICA.accion)
+    expect(campo('Elemento de la microacción 1')?.value).toBe(UNICA.elemento)
+    expect(campoInstruccion()).toBeDefined()
+
+    // Lo resuelve quien escribe: la quita y lo lleva a la instrucción.
+    await tocar(await esperarControl('Quitar la microacción 1'))
+    expect(avisoUnaSola()).toBeNull()
+    expect(textoPantalla()).not.toContain('Antes de guardar, corrige')
+    await escribir(campoInstruccion() as HTMLInputElement, 'Selecciona «No, solo esta aplicación» al configurar la cuenta')
+    await guardar()
+    await esperarGuardado()
+    const tarea = await tareaGuardada()
+    expect(tarea?.texto).toBe('Selecciona «No, solo esta aplicación» al configurar la cuenta')
+    expect('comoHacer' in (tarea ?? {})).toBe(false)
+  })
+
+  it('dos completas: sin aviso, y se guardan las dos', async () => {
+    await sembrarCuenta()
+    await abrirEditor()
+    await seleccionarInstruccion()
+    await tocar(await esperarControl(/^Cómo hacerlo · opcional$/))
+    await rellenar(1, 'Abre', 'Configuración de la cuenta')
+    expect(avisoUnaSola()).not.toBeNull()
+    await tocar(await esperarControl('Añadir microacción'))
+    // La segunda, vacía, todavía no cuenta: el aviso sigue.
+    expect(avisoUnaSola()).not.toBeNull()
+    await rellenar(2, UNICA.accion, UNICA.elemento)
+    expect(avisoUnaSola()).toBeNull()
+
+    await guardar()
+    await esperarGuardado()
+    expect((await tareaGuardada())?.comoHacer?.map(({ accion, elemento }) => `${accion} ${elemento}`)).toEqual([
+      'Abre Configuración de la cuenta',
+      'Selecciona No, solo esta aplicación',
+    ])
+  })
+
+  it('una a medias: manda lo que le falta, sin un aviso de "al menos 2" que lo tape', async () => {
+    await sembrarCuenta()
+    await abrirEditor()
+    await seleccionarInstruccion()
+    await tocar(await esperarControl(/^Cómo hacerlo · opcional$/))
+    await escribir(await esperar(() => campo('Acción de la microacción 1'), 'la acción 1'), UNICA.accion)
+    expect(avisoDeFila(1)).toBe('Falta el elemento.')
+    expect(avisoUnaSola()).toBeNull()
+
+    const antes = await guardada()
+    await guardar()
+    await esperar(() => textoPantalla().includes('Antes de guardar, corrige esto:'), 'el aviso de arriba')
+    expect(textoPantalla()).toContain(`A la microacción 1 de «${INSTRUCCION}» le falta el elemento.`)
+    expect(textoPantalla()).not.toContain(AL_GUARDAR)
+    expect(avisoUnaSola()).toBeNull()
+    await esperar(() => document.activeElement === campo('Elemento de la microacción 1'), 'el foco en el elemento vacío')
+    await comprobarQueNoGuardo(antes)
+
+    // Completa, es una sola: ahora sí lo dice, y sigue sin guardar.
+    await escribir(campo('Elemento de la microacción 1') as HTMLInputElement, UNICA.elemento)
+    expect(avisoDeFila(1)).toBeNull()
+    expect(avisoUnaSola()).not.toBeNull()
+    expect(textoPantalla()).toContain(AL_GUARDAR)
+    expect(textoPantalla()).not.toContain('le falta el elemento')
+    await guardar()
+    await esperar(() => document.activeElement === avisoUnaSola(), 'el foco en el aviso')
+    await comprobarQueNoGuardo(antes)
+  })
+
+  it('una guía antigua con una sola: carga y se ejecuta sin ruta; al editarla, guardar obliga a resolverla', async () => {
+    await sembrarCuenta([UNICA])
+    // La ejecución no se rompe y no enseña la microacción.
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-cuenta')
+    await esperar(() => textoPantalla().includes(INSTRUCCION), 'la instrucción')
+    expect(textoPantalla()).not.toContain('Ruta rápida')
+    expect(botonPasoAPaso()).toBeNull()
+    expect(textoPantalla()).not.toContain(UNICA.elemento)
+    await desmontarTodo()
+
+    // El editor la carga tal cual. Guardar desde otra pestaña lleva al
+    // bloque: "Pasos", su paso abierto y el foco en el aviso.
+    await abrirEditor(false)
+    expect(avisoUnaSola()).toBeNull()
+    const antes = await guardada()
+    await guardar()
+    await esperar(() => document.activeElement === avisoUnaSola(), 'el foco en el aviso de la guía antigua')
+    expect(textoPantalla()).toContain(AL_GUARDAR)
+    expect(campo('Elemento de la microacción 1')?.value).toBe(UNICA.elemento)
+    await comprobarQueNoGuardo(antes)
+    expect((await tareaGuardada())?.comoHacer).toEqual([UNICA])
+
+    // Lo resuelve quien escribe: añade la que faltaba y se guardan las dos.
+    await tocar(await esperarControl('Añadir microacción'))
+    await rellenar(2, 'Pulsa', 'Siguiente')
+    expect(avisoUnaSola()).toBeNull()
+    expect(textoPantalla()).not.toContain('Antes de guardar, corrige')
+    await guardar()
+    await esperarGuardado()
+    const guardadas = (await tareaGuardada())?.comoHacer
+    expect(guardadas).toHaveLength(2)
+    expect(guardadas?.[0]).toEqual(UNICA)
+  })
+
+  it('dos o más con ubicación: se guardan y la ejecución sigue ofreciendo "Ver paso a paso"', async () => {
+    await sembrarCuenta()
+    await abrirEditor()
+    await seleccionarInstruccion()
+    await tocar(await esperarControl(/^Cómo hacerlo · opcional$/))
+    await rellenar(1, 'Abre', 'Archivo', 'Esquina superior izquierda')
+    await tocar(await esperarControl('Añadir microacción'))
+    await rellenar(2, 'Selecciona', 'Configuración de la cuenta')
+    expect(avisoUnaSola()).toBeNull()
+    await guardar()
+    await esperarGuardado()
+    expect((await tareaGuardada())?.comoHacer).toHaveLength(2)
+    await desmontarTodo()
+
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-cuenta')
+    await esperar(
+      () => textoPantalla().includes('Ruta rápida: Abre Archivo › Selecciona Configuración de la cuenta'),
+      'la ruta rápida de lo guardado',
+    )
+    expect(botonPasoAPaso()).not.toBeNull()
+    await tocar(botonPasoAPaso() as HTMLButtonElement)
+    await esperar(() => textoPantalla().includes('Ubicación: Esquina superior izquierda'), 'la ubicación en el paso a paso')
   })
 })
