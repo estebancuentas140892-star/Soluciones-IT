@@ -362,6 +362,13 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Procedimiento (`pasos[].bloques[]` de tipo `aviso`, sin cambios). Dura en el código: `src/features/soluciones/advertenciaPrevia.ts` (`esRiesgoReal`, `tonoDeLaAdvertencia`, `advertenciasDeLista`, `accionesEnEspera`, `esApoyoEnEspera`), `PantallaAdvertencia.tsx` (`PantallaAdvertencia`, `TarjetaAdvertencia`), `ModoFoco.tsx` (`PosicionFoco`, `llegadaA`, `alertasDe`, `llevaAdvertencia`), `AsistenteVista.tsx` y `ProcedimientoVista.tsx` (las listas), `src/features/asistencia/contenidoPaso.ts`, `tonos.ts` y `PasosEditor.tsx` (ayudas).
 - Impacto: ninguna guía real, advertencia real ni Supabase cambian; funciona con el contenido que ya existe. Toda acción con un riesgo real se lee antes de hacerla.
 
+**RN-071. La Bóveda se bloquea desde donde se desbloqueó: la credencial de una guía ofrece "Bloquear Bóveda", que cierra toda la sesión del dispositivo.**
+- Motivo: tarea 312 ([DECISIONES.md](DECISIONES.md) AD-073, [REGLAS.md](REGLAS.md) regla 29): la credencial se consultaba en la guía, pero volver a bloquear la Bóveda obligaba a salir del flujo hasta su sección.
+- Reglas: con la sesión de la Bóveda abierta (`bovedaDesbloqueada()`, `useBovedaDesbloqueada()`) y permiso de Bóveda (`puedeVerBoveda`), todo `CredencialEnPaso` muestra "Bloquear Bóveda". Tocarlo llama a `bloquear()`, la misma función central de la sección Bóveda: sesión cerrada, clave principal y `clavesPorSal` fuera de memoria, autobloqueo quitado y suscriptores avisados. Todo lo descifrado de cualquier bloque deja de estar montado. El bloque se pliega y el foco vuelve a su "Mostrar"; volver a abrirlo pide la contraseña maestra. Con la Bóveda bloqueada o sin permiso, no aparece. "Ocultar" solo pliega ese dato: no toca la sesión.
+- Efectos que NO tiene: no navega, no completa la acción, no cambia el avance ni el historial, y no escribe en `accesos_boveda` (no es una consulta). Funciona sin red.
+- Entidades: la sesión de la Bóveda en memoria (`sesionBoveda.ts`), sin cambios. Dura en el código: `src/features/boveda/CredencialEnPaso.tsx` (`BloqueoDeLaBoveda`, en `CredencialFijaEnPaso` y `CredencialDelEquipoEnPaso`) y `src/features/soluciones/FilaVinculo.tsx` (`ref` para devolver el foco).
+- Impacto: ninguna credencial, guía real ni Supabase cambian; el cifrado, el autobloqueo y los permisos tampoco.
+
 ---
 
 **RN-042. El buscador prioriza la intención de resolver: una guía que coincide en el título va primero, publicada o no.**

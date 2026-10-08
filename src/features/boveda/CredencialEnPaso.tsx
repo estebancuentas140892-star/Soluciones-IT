@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   db,
@@ -21,7 +21,7 @@ import { esOcultoPorDefecto, etiquetaTipo } from '../dispositivos/camposProtegid
 import { CampoSecreto } from './CampoSecreto'
 import { esIdDeEquipo, resolverCredencialDelEquipo, type ResolucionCredencialDelEquipo } from './credencialDelEquipo'
 import { IndicadorVencimiento } from './IndicadorVencimiento'
-import { desbloquear, descifrarCredencial, descifrarValor, type DatosCredencial } from './sesionBoveda'
+import { bloquear, desbloquear, descifrarCredencial, descifrarValor, type DatosCredencial } from './sesionBoveda'
 import { useBovedaDesbloqueada } from './useSesionBoveda'
 
 // Salida del bloque protegido hacia la ficha completa (decisión 10 de la
@@ -65,6 +65,13 @@ interface Props {
 // desbloquear. El rótulo también cambia (turno 12): "Datos protegidos"
 // nombra la CATEGORÍA del dato; el título del secreto nombra lo que el
 // técnico va a obtener, que es lo que estaba buscando.
+//
+// SE BLOQUEA DONDE SE DESBLOQUEÓ (tarea 312, regla 29, AD-073). La Bóveda no
+// obliga al técnico a abandonar el contexto ni para consultar un secreto ni
+// para volver a protegerlo: con la Bóveda abierta, el bloque ofrece
+// "Bloquear Bóveda" (`BloqueoDeLaBoveda`), que llama al `bloquear()` de
+// siempre y cierra TODA la sesión del dispositivo. "Ocultar" solo pliega
+// este dato.
 export function CredencialEnPaso({ vinculo, variante = 'fila' }: Props) {
   // LA CREDENCIAL DEL EQUIPO (tarea 290): la misma consulta, con la
   // credencial que corresponde al equipo de la ejecución.
@@ -101,6 +108,8 @@ function CredencialFijaEnPaso({ vinculo, variante }: { vinculo: VinculoProtegido
   // Contraido por defecto: los secretos no entran a la pantalla hasta
   // que el tecnico los pide, aunque la boveda ya este desbloqueada.
   const [abierto, setAbierto] = useState(false)
+  // Su "Mostrar": a donde vuelve el foco tras bloquear la Bóveda (tarea 312).
+  const fila = useRef<HTMLButtonElement>(null)
 
   const perfil = usePerfilVivo()
   const credencial = useLiveQuery(
@@ -128,6 +137,7 @@ function CredencialFijaEnPaso({ vinculo, variante }: { vinculo: VinculoProtegido
   return (
     <MarcoProtegido variante={variante}>
       <FilaVinculo
+        ref={fila}
         Icono={LockSimple}
         titulo={nombre}
         abierto={abierto}
@@ -183,6 +193,15 @@ function CredencialFijaEnPaso({ vinculo, variante }: { vinculo: VinculoProtegido
           ) : null}
         </div>
       )}
+
+      {autorizado && desbloqueada && (
+        <BloqueoDeLaBoveda
+          alBloquear={() => {
+            setAbierto(false)
+            fila.current?.focus()
+          }}
+        />
+      )}
     </MarcoProtegido>
   )
 }
@@ -221,6 +240,8 @@ function CredencialDelEquipoEnPaso({
 
   const [abierto, setAbierto] = useState(false)
   const [eligiendo, setEligiendo] = useState(false)
+  // Su "Mostrar": a donde vuelve el foco tras bloquear la Bóveda (tarea 312).
+  const fila = useRef<HTMLButtonElement>(null)
   // CAMBIAR DE EQUIPO RECOGE LA CONSULTA: lo descifrado del equipo
   // anterior no se queda en pantalla, y ver el nuevo es otro gesto (y otro
   // registro).
@@ -255,6 +276,7 @@ function CredencialDelEquipoEnPaso({
   return (
     <MarcoProtegido variante={variante}>
       <FilaVinculo
+        ref={fila}
         Icono={LockSimple}
         titulo={nombre}
         abierto={abierto}
@@ -325,8 +347,66 @@ function CredencialDelEquipoEnPaso({
         </div>
       )}
 
+      {autorizado && desbloqueada && (
+        <BloqueoDeLaBoveda
+          alBloquear={() => {
+            setAbierto(false)
+            fila.current?.focus()
+          }}
+        />
+      )}
+
       {autorizado && <SelectorEquipo abierto={eligiendo} onCerrar={() => setEligiendo(false)} onElegir={fijarEquipo} />}
     </MarcoProtegido>
+  )
+}
+
+// BLOQUEAR LA BÓVEDA SIN SALIR DE LA GUÍA (tarea 312, AD-073, RN-071).
+//
+// Si se puede desbloquear y consultar la Bóveda desde el punto donde se
+// trabaja, también se puede volver a bloquear desde ahí. Solo aparece con la
+// Bóveda ABIERTA y para quien tiene permiso de Bóveda (quien lo pinta lo
+// decide); con la Bóveda bloqueada sigue el desbloqueo de siempre.
+//
+// Es la MISMA función central de la Bóveda (`bloquear()` de sesionBoveda.ts,
+// la del candado de la sección Bóveda): marca la sesión como bloqueada,
+// borra de memoria la clave principal y las claves por sal, quita el
+// autobloqueo y avisa a todos. Así, todo lo descifrado que haya en pantalla,
+// en este bloque y en cualquier otro, desaparece en el acto: cada bloque
+// deja de montar sus datos al saberse bloqueado. Es una operación local,
+// sin red, y no es una consulta: no se registra ningún acceso.
+//
+// Dos gestos distintos, dichos distinto: "Ocultar" (en la fila) solo pliega
+// ESTE dato; "Bloquear Bóveda" cierra TODA la sesión protegida del
+// dispositivo, por eso va junto a "Bóveda abierta en este dispositivo". Quien
+// lo pinta pliega su bloque y devuelve el foco a su "Mostrar" (`alBloquear`):
+// la guía no cambia de pantalla, la acción no se completa y el avance no se
+// toca.
+function BloqueoDeLaBoveda({ alBloquear }: { alBloquear: () => void }) {
+  const idDescripcion = useId()
+  return (
+    // Como la fila de arriba: lo que dice a la izquierda (parte la línea si
+    // hace falta) y la acción a la derecha, sin apretar ninguno de los dos.
+    <div className="flex min-h-11 items-center gap-3 border-t border-noct-divider/70 pl-[26px]">
+      <p className="min-w-0 flex-1 py-1 text-[12.5px] leading-snug text-pretty text-noct-neutral-400">
+        Bóveda abierta en este dispositivo
+      </p>
+      <span id={idDescripcion} className="sr-only">
+        Cierra toda la Bóveda en este dispositivo. Para plegar solo este dato, usa Ocultar.
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          bloquear()
+          alBloquear()
+        }}
+        aria-describedby={idDescripcion}
+        className="-mr-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-noct-neutral-200 hover:bg-noct-text/[.07] hover:text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-noct-accent"
+      >
+        <LockSimple size={15} className="shrink-0" aria-hidden />
+        Bloquear Bóveda
+      </button>
+    </div>
   )
 }
 
