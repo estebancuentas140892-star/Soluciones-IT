@@ -196,9 +196,17 @@ describe('Enviar a este equipo desde la guía', () => {
 
   it('si el computador terminó la sesión, el latido lo detecta y la franja desaparece', async () => {
     await conectarPorPantalla()
+    // Parte con la sesión guardada: si no, la prueba pasaría por accidente.
+    expect(localStorage.getItem('asistencia:sesion')).not.toBeNull()
     estado.mockResolvedValue({ ok: true, estado: 'cerrada', motivo: 'portal', codigo: '482731' })
     await montar(RUTAS, RUTA_GUIA)
-    await esperar(() => !textoPantalla().includes('Equipo 482 731'), 'que la franja desaparezca')
-    expect(localStorage.getItem('asistencia:sesion')).toBeNull()
+    // Se espera el estado final, no solo que la franja no esté: recién
+    // montada, la guía puede seguir en "Cargando..." (la franja y su latido
+    // todavía no existen), y entonces su ausencia no probaría nada.
+    await esperar(
+      () => localStorage.getItem('asistencia:sesion') === null && !textoPantalla().includes('Equipo 482 731'),
+      'que la sesión cerrada desaparezca del almacenamiento y de la pantalla',
+    )
+    expect(estado).toHaveBeenCalledWith('sesion-prueba-1')
   })
 })
