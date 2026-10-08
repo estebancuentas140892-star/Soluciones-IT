@@ -464,8 +464,8 @@ async function main() {
       'la primera acción reutilizada, en el sitio',
     )
     comprobar(
-      Boolean(await s.evaluar(`return /Ruta rápida:\\s*Acceso rápido de prueba\\s*›\\s*Programa/.test(document.body.innerText)`)),
-      'con la ruta rápida de su "Cómo hacerlo", sin red (tarea 303)',
+      Boolean(await s.evaluar(`return /Ruta rápida:\\s*Abre Acceso rápido de prueba\\s*›\\s*Pulsa Programa/.test(document.body.innerText)`)),
+      'con la ruta rápida de su "Cómo hacerlo", con sus verbos, sin red (tareas 303 y 309)',
     )
     comprobar(
       !(await s.evaluar(`return document.body.innerText.includes('Barra lateral de prueba')`)),

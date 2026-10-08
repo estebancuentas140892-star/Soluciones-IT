@@ -144,6 +144,16 @@ describe('construirContenidoDePaso: el "Cómo hacerlo" de una acción (tarea 303
     ])
   })
 
+  it('una sola microacción no viaja: es la acción dicha otra vez (tarea 309)', () => {
+    const paso = pasoConComo()
+    paso.bloques[0] = { ...paso.bloques[0], comoHacer: [{ id: 'm1', accion: 'Abre', elemento: 'Consola de prueba', ubicacion: 'Menú de inicio' }] }
+    const { contenido } = construirContenidoDePaso({ paso, numeroPaso: 1, tituloGuia: 'Guía de prueba', referencias: FICHAS })
+    expect(contenido?.bloques).toEqual([
+      { tipo: 'accion', texto: 'Vacía la caché de prueba' },
+      { tipo: 'comprobacion', texto: 'Comprueba la ventana' },
+    ])
+  })
+
   it('una acción sin "Cómo hacerlo" no suma nada', () => {
     const { contenido } = construirContenidoDePaso({ paso: pasoCompleto(), numeroPaso: 3, tituloGuia: 'Guía de prueba DNS', referencias: FICHAS })
     expect(contenido?.bloques.some((b) => b.etiqueta === 'Cómo hacerlo')).toBe(false)

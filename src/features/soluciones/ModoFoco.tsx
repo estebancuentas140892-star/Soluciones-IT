@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { fraseDeMicroPaso } from '../../lib/comoHacer'
+import { comoHacerQueSeEnsena, fraseDeMicroPaso } from '../../lib/comoHacer'
 import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
 import type { Elecciones } from '../../lib/rutaProcedimiento'
 import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
@@ -1191,10 +1191,11 @@ export function ModoFoco({
             autor la enlazara. Se abre en la misma hoja que un término. */}
         {/* También en su "Cómo hacerlo" (tarea 303): un comando escrito
             como elemento de una microacción es el mismo comando, con el
-            tratamiento de siempre. */}
+            tratamiento de siempre. Solo el de lo que se enseña: una sola
+            microacción no se enseña (tarea 309). */}
         {tarea.clase === 'tarea' && (
           <QueHaceEnTexto
-            texto={[tarea.texto, ...tarea.comoHacer.map(fraseDeMicroPaso)].join('\n')}
+            texto={[tarea.texto, ...comoHacerQueSeEnsena(tarea.comoHacer).map(fraseDeMicroPaso)].join('\n')}
             referencias={referenciasVivas}
             excluir={fichasEnlazadasDelPaso(paso.bloques)}
           />

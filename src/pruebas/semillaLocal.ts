@@ -913,6 +913,27 @@ const GUIA_EJECUCION_MINIMA = articulo({
           ),
         ],
       }),
+      // La RUTA EJECUTABLE (tarea 309): el caso del respaldo, tres
+      // microacciones sin ubicación (ruta con sus verbos y sin paso a paso),
+      // y una acción con una sola microacción (solo la instrucción).
+      paso({
+        id: 'min-p25',
+        titulo: 'Guardar el respaldo de ejemplo en el servidor',
+        bloques: [
+          {
+            ...tarea('min-p25-t1', 'Guarda el PST en el servidor de respaldos de ejemplo'),
+            comoHacer: [
+              micro('min-m11', 'Abre o crea', 'la carpeta de la persona'),
+              micro('min-m12', 'Copia', 'el archivo .pst desde el equipo local'),
+              micro('min-m13', 'Pega', 'el archivo .pst en la carpeta del servidor'),
+            ],
+          },
+          {
+            ...tarea('min-p25-t2', 'Cierra el programa de correo de ejemplo'),
+            comoHacer: [micro('min-m14', 'Selecciona', 'Cerrar')],
+          },
+        ],
+      }),
       paso({
         id: 'min-p3',
         titulo: 'Comprobar el archivo de ejemplo',

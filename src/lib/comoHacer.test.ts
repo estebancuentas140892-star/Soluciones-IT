@@ -3,12 +3,14 @@ import {
   admiteComoHacer,
   camposQueFaltan,
   comoHacerDe,
+  comoHacerQueSeEnsena,
   crearMicroPaso,
   fraseDeMicroPaso,
   llevaPuntoFinal,
   mensajeMicroaccionIncompleta,
   microaccionesIncompletas,
   normalizarComoHacer,
+  pasoAPasoAportaAlgo,
   textoDeLoQueFalta,
   textoPasoAPaso,
 } from './comoHacer'
@@ -370,28 +372,44 @@ describe('comoHacerDe: lo que se enseña', () => {
 })
 
 describe('un contenido, dos lecturas', () => {
-  /** La ruta rápida de una acción: los elementos de sus microacciones, en orden. */
+  /**
+   * La ruta rápida de una acción tal como la enseña `ComoHacerlo` (tarea 309):
+   * lo que se enseña, cada microacción con su frase, en orden.
+   */
   const rutaDe = (comoHacer: MicroPasoComoHacer[]) =>
-    comoHacerDe(tarea('t1', 'Abre un registro nuevo', { comoHacer }))
-      .map((micro) => micro.elemento)
+    comoHacerQueSeEnsena(comoHacerDe(tarea('t1', 'Abre un registro nuevo', { comoHacer })))
+      .map(fraseDeMicroPaso)
       .join(' › ')
 
-  it('la ruta rápida del encargo: los elementos en orden', () => {
-    expect(rutaDe(CASO_DEL_ENCARGO)).toBe('Fichero › Cliente › Fichero › Nuevo')
+  it('la ruta rápida del encargo: cada microacción con su verbo, en orden', () => {
+    expect(rutaDe(CASO_DEL_ENCARGO)).toBe('Abre Fichero › Selecciona Cliente › Abre Fichero › Selecciona Nuevo')
   })
 
-  it('el atajo de ejemplo también es una ruta', () => {
+  it('el atajo de ejemplo también es una ruta ejecutable', () => {
     const atajo = [
       { id: 'a', accion: 'Pulsa', elemento: 'Windows + R' },
       { id: 'b', accion: 'Escribe', elemento: 'comando-ejemplo' },
       { id: 'c', accion: 'Pulsa', elemento: 'Enter' },
     ]
-    expect(rutaDe(atajo)).toBe('Windows + R › comando-ejemplo › Enter')
+    expect(rutaDe(atajo)).toBe('Pulsa Windows + R › Escribe comando-ejemplo › Pulsa Enter')
   })
 
-  it('la ruta nunca usa la acción en lugar del elemento: una microacción sin elemento no llega a ella', () => {
+  it('el caso del respaldo conserva los verbos: no es una lista de sustantivos', () => {
+    const respaldo = [
+      { id: 'r1', accion: 'Abre o crea', elemento: 'la carpeta de la persona' },
+      { id: 'r2', accion: 'Copia', elemento: 'el archivo .pst desde el equipo local' },
+      { id: 'r3', accion: 'Pega', elemento: 'el archivo .pst en la carpeta del servidor' },
+    ]
+    const ruta = rutaDe(respaldo)
+    expect(ruta).toBe(
+      'Abre o crea la carpeta de la persona › Copia el archivo .pst desde el equipo local › Pega el archivo .pst en la carpeta del servidor',
+    )
+    expect(ruta).not.toBe('la carpeta de la persona › el archivo .pst desde el equipo local › el archivo .pst en la carpeta del servidor')
+  })
+
+  it('una microacción sin elemento no llega a la ruta, ni su acción sola', () => {
     const ruta = rutaDe([FICHERO, { id: 'sin-elemento', accion: 'Reinicia', elemento: '' }, NUEVO])
-    expect(ruta).toBe('Fichero › Nuevo')
+    expect(ruta).toBe('Abre Fichero › Selecciona Nuevo')
     expect(ruta).not.toContain('Reinicia')
   })
 
@@ -410,6 +428,40 @@ describe('un contenido, dos lecturas', () => {
     expect(llevaPuntoFinal('Abre Fichero')).toBe(true)
     expect(llevaPuntoFinal('Pulsa ¿Guardar cambios?')).toBe(false)
     expect(textoPasoAPaso([{ id: 'x', accion: 'Pulsa', elemento: '¿Guardar cambios?' }])).toBe('1. Pulsa ¿Guardar cambios?')
+  })
+})
+
+describe('qué se enseña y cuándo el paso a paso aporta algo (tarea 309)', () => {
+  const COPIA = { id: 'c1', accion: 'Copia', elemento: 'el archivo' }
+  const PEGA = { id: 'c2', accion: 'Pega', elemento: 'el archivo en la carpeta' }
+
+  it('"Cómo hacerlo" es una descomposición: con menos de dos microacciones no se enseña nada', () => {
+    expect(comoHacerQueSeEnsena([])).toEqual([])
+    expect(comoHacerQueSeEnsena([FICHERO])).toEqual([])
+    expect(comoHacerQueSeEnsena([COPIA, PEGA])).toEqual([COPIA, PEGA])
+    expect(comoHacerQueSeEnsena(CASO_DEL_ENCARGO)).toEqual(CASO_DEL_ENCARGO)
+  })
+
+  it('no toca el dato: la microacción única se conserva al leer y al guardar', () => {
+    const [bloque] = bloquesNormalizados([tareaCruda([FICHERO])])
+    expect(bloque.comoHacer).toEqual([FICHERO])
+    const guardado = preparar([paso([tarea('t1', 'Abre un registro nuevo', { comoHacer: [FICHERO] })])])
+    expect(guardado?.pasos[0].bloques[0].comoHacer).toEqual([FICHERO])
+  })
+
+  it('el paso a paso solo aporta algo con alguna ubicación: es lo único que la ruta no dice', () => {
+    expect(pasoAPasoAportaAlgo([COPIA, PEGA])).toBe(false)
+    expect(pasoAPasoAportaAlgo([COPIA, { ...PEGA, ubicacion: '   ' }])).toBe(false)
+    expect(pasoAPasoAportaAlgo([COPIA, { ...PEGA, ubicacion: 'Panel izquierdo' }])).toBe(true)
+    expect(pasoAPasoAportaAlgo(CASO_DEL_ENCARGO)).toBe(true)
+  })
+
+  it('se decide por estructura: dos frases distintas sin ubicación no lo abren, aunque digan cosas diferentes', () => {
+    const distintas = [
+      { id: 'd1', accion: 'Abre', elemento: 'el panel de prueba' },
+      { id: 'd2', accion: 'Selecciona', elemento: 'una opción larga que no se parece en nada a la primera' },
+    ]
+    expect(pasoAPasoAportaAlgo(distintas)).toBe(false)
   })
 })
 

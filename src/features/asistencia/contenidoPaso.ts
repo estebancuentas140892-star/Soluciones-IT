@@ -1,4 +1,10 @@
-import { comoHacerDe, fraseDeMicroPaso, ROTULO_COMO_HACERLO, textoPasoAPaso } from '../../lib/comoHacer'
+import {
+  comoHacerDe,
+  comoHacerQueSeEnsena,
+  fraseDeMicroPaso,
+  ROTULO_COMO_HACERLO,
+  textoPasoAPaso,
+} from '../../lib/comoHacer'
 import type { BloquePaso, PasoProcedimiento, Referencia } from '../../lib/db'
 import { comandosEnTexto } from '../referencia/comandosEnTexto'
 import { tonoVigente } from '../soluciones/tonos'
@@ -156,8 +162,9 @@ export function construirContenidoDePaso({
         // etiqueta, así que no hace falta otro tipo de bloque ni tocarlo.
         // Sus comandos y enlaces salen como los de la acción. Sin esto, un
         // recorrido que pasara de un dato técnico a su sitio dejaría de
-        // llegar al equipo.
-        const comoHacer = comoHacerDe(bloque)
+        // llegar al equipo. Solo con dos o más microacciones, como en la app
+        // (tarea 309): una sola es la acción dicha otra vez.
+        const comoHacer = comoHacerQueSeEnsena(comoHacerDe(bloque))
         agregar({ tipo, texto: bloque.texto })
         if (comoHacer.length > 0) agregar({ tipo: 'nota', texto: textoPasoAPaso(comoHacer), etiqueta: ROTULO_COMO_HACERLO })
         agregarDesdeTexto(bloque.texto)

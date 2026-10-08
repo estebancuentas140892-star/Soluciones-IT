@@ -2,7 +2,13 @@ import { useId, useState } from 'react'
 import { ArrowElbowDownRight, CaretDown, Code, Eye } from '../../components/iconos'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import { ImagenAmpliable } from '../../components/VisorImagen'
-import { llevaPuntoFinal, ROTULO_RUTA_RAPIDA } from '../../lib/comoHacer'
+import {
+  comoHacerQueSeEnsena,
+  fraseDeMicroPaso,
+  llevaPuntoFinal,
+  pasoAPasoAportaAlgo,
+  ROTULO_RUTA_RAPIDA,
+} from '../../lib/comoHacer'
 import type { MicroPasoComoHacer, ResultadoVisual } from '../../lib/db'
 import { ROTULO_DEBES_VER } from '../../lib/resultadoVisual'
 
@@ -22,10 +28,11 @@ import { ROTULO_DEBES_VER } from '../../lib/resultadoVisual'
 // espacio antes que por fondos y bordes:
 //
 //   - Cómo hacerlo: las microacciones que hacen la acción, pegadas a la
-//     instrucción y en voz más baja que ella. Primero la ruta rápida
-//     (los elementos en orden, para quien ya conoce el sitio) y, plegado,
-//     el paso a paso numerado (para quien llega nuevo). Texto normal, sin
-//     caja ni color de estado: es apoyo operativo, no un aviso ni un valor.
+//     instrucción y en voz más baja que ella. Primero la ruta rápida (la
+//     secuencia ejecutable, con sus verbos, para quien ya sabe orientarse)
+//     y, plegado y solo si añade algo, el paso a paso numerado (para quien
+//     llega nuevo). Texto normal, sin caja ni color de estado: es apoyo
+//     operativo, no un aviso ni un valor.
 //   - Dato técnico: un valor exacto que la acción necesita, con su rótulo
 //     y en monoespaciada, subordinado a la instrucción.
 //   - Debes ver: la IMAGEN del resultado, plegada. No ocupa sitio hasta que
@@ -47,22 +54,27 @@ const TAMANOS_COMO_HACERLO = {
   lectura: { ruta: 'text-[13px]', icono: 14, margen: 'mt-[2px]', sangria: 'pl-[22px]', paso: 'text-[13px]', ubicacion: 'text-[12px]', boton: 'text-[13px]' },
 } as const
 
-// CÓMO HACERLO (tarea 303): las microacciones de la acción, con UN solo
-// contenido y dos niveles de lectura (ver `src/lib/comoHacer.ts`). Recibe
-// solo microacciones completas (`comoHacerDe`): cada una tiene acción y
-// elemento, así que aquí no hay sustitutos.
+// CÓMO HACERLO (tarea 303; ruta ejecutable desde la tarea 309): las
+// microacciones de la acción, con UN solo contenido y dos niveles de lectura
+// (ver `src/lib/comoHacer.ts`). Recibe solo microacciones completas
+// (`comoHacerDe`): cada una tiene acción y elemento, así que aquí no hay
+// sustitutos. Cada microacción se dice siempre con `fraseDeMicroPaso`.
 //
-//   - RUTA RÁPIDA, siempre a la vista: solo los elementos, en orden y
-//     separados por "›" ("Fichero › Cliente › Fichero › Nuevo"). Es lo que
-//     lee de un vistazo el técnico que ya conoce el sitio. Envuelve en
-//     varias líneas cuando no cabe y nunca recorta ni abrevia un nombre: el
-//     separador va pegado al elemento anterior, así que ninguna línea
-//     empieza por él.
-//   - VER PASO A PASO, plegado: las mismas microacciones numeradas, como
-//     frases de acción más elemento ("Abre Fichero."), con la ubicación
-//     debajo cuando la hay. Es para quien llega nuevo; ligero, sin
-//     tarjetas, y subordinado a la instrucción por la sangría y la raya, no
-//     por una caja.
+//   - NADA CON MENOS DE DOS (`comoHacerQueSeEnsena`): una sola microacción
+//     pertenece a la instrucción principal, que ya la dice.
+//   - RUTA RÁPIDA, siempre a la vista: la secuencia ejecutable condensada,
+//     cada microacción con su verbo, en orden y separadas por "›" ("Abre o
+//     crea la carpeta de la persona › Copia el archivo .pst › Pega el archivo
+//     .pst en la carpeta del servidor"). Es lo que lee de un vistazo quien ya
+//     sabe orientarse. Antes eran solo los elementos, y un nombre suelto no
+//     dice qué hacer con él. Envuelve en varias líneas cuando no cabe y nunca
+//     recorta ni abrevia: el separador va pegado a la frase anterior, así que
+//     ninguna línea empieza por él.
+//   - VER PASO A PASO, plegado y SOLO SI DICE ALGO NUEVO
+//     (`pasoAPasoAportaAlgo`): las mismas frases numeradas, con la ubicación
+//     debajo. Sin ninguna ubicación serían la ruta otra vez, con números, y
+//     no se ofrece. Ligero, sin tarjetas, y subordinado a la instrucción por
+//     la sangría y la raya, no por una caja.
 //
 // Cuelga de la instrucción (la flecha en ángulo). Lo desplegado es de esta
 // acción: quien la cambia por otra le da otra `key`, y vuelve plegado.
@@ -80,8 +92,10 @@ export function ComoHacerlo({
   const [abierto, setAbierto] = useState(false)
   const idRuta = useId()
   const idPasoAPaso = useId()
-  if (microPasos.length === 0) return null
+  const microacciones = comoHacerQueSeEnsena(microPasos)
+  if (microacciones.length === 0) return null
   const tamano = TAMANOS_COMO_HACERLO[variante]
+  const frases = microacciones.map((micro) => ({ id: micro.id, frase: fraseDeMicroPaso(micro), ubicacion: micro.ubicacion }))
   return (
     <div className={`flex min-w-0 flex-col ${className}`}>
       <div className={`flex items-start gap-2 leading-snug ${tamano.ruta}`}>
@@ -93,11 +107,11 @@ export function ComoHacerlo({
           {/* Una lista de verdad (el orden importa) que se lee como una
               línea: `role` la conserva aunque se dibuje en línea. */}
           <ol role="list" aria-labelledby={idRuta} className="inline">
-            {microPasos.map((micro, indice) => (
-              <li key={micro.id} className="inline font-medium text-noct-neutral-200">
-                {micro.elemento}
-                {indice < microPasos.length - 1 && (
-                  <span aria-hidden className="font-normal text-noct-neutral-500">
+            {frases.map(({ id, frase }, indice) => (
+              <li key={id} className="inline text-noct-neutral-200">
+                {frase}
+                {indice < frases.length - 1 && (
+                  <span aria-hidden className="text-noct-neutral-500">
                     {' ›'}{' '}
                   </span>
                 )}
@@ -106,39 +120,41 @@ export function ComoHacerlo({
           </ol>
         </div>
       </div>
-      <div className={`flex flex-col ${tamano.sangria}`}>
-        <button
-          type="button"
-          aria-expanded={abierto}
-          aria-controls={abierto ? idPasoAPaso : undefined}
-          onClick={() => setAbierto((valor) => !valor)}
-          className={`-ml-1 inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-1 font-medium text-noct-neutral-300 hover:text-noct-text ${tamano.boton}`}
-        >
-          {abierto ? 'Ocultar paso a paso' : 'Ver paso a paso'}
-          <CaretDown size={13} className={`shrink-0 transition-transform ${abierto ? 'rotate-180' : ''}`} aria-hidden />
-        </button>
-        {abierto && (
-          <ol
-            id={idPasoAPaso}
-            className={`mb-1 list-decimal space-y-1.5 border-l-2 border-noct-divider pl-7 leading-snug text-noct-neutral-200 marker:text-noct-neutral-400 ${tamano.paso}`}
+      {pasoAPasoAportaAlgo(microacciones) && (
+        <div className={`flex flex-col ${tamano.sangria}`}>
+          <button
+            type="button"
+            aria-expanded={abierto}
+            aria-controls={abierto ? idPasoAPaso : undefined}
+            onClick={() => setAbierto((valor) => !valor)}
+            className={`-ml-1 inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-1 font-medium text-noct-neutral-300 hover:text-noct-text ${tamano.boton}`}
           >
-            {microPasos.map((micro) => (
-              <li key={micro.id} className="pl-0.5">
-                <span className="text-pretty [overflow-wrap:anywhere]">
-                  {micro.accion} <span className="font-medium text-noct-text">{micro.elemento}</span>
-                  {llevaPuntoFinal(micro.elemento) && '.'}
-                </span>
-                {micro.ubicacion && (
-                  <span className={`mt-0.5 block text-pretty text-noct-neutral-400 [overflow-wrap:anywhere] ${tamano.ubicacion}`}>
-                    <span className="sr-only">Ubicación: </span>
-                    {micro.ubicacion}
+            {abierto ? 'Ocultar paso a paso' : 'Ver paso a paso'}
+            <CaretDown size={13} className={`shrink-0 transition-transform ${abierto ? 'rotate-180' : ''}`} aria-hidden />
+          </button>
+          {abierto && (
+            <ol
+              id={idPasoAPaso}
+              className={`mb-1 list-decimal space-y-1.5 border-l-2 border-noct-divider pl-7 leading-snug text-noct-neutral-200 marker:text-noct-neutral-400 ${tamano.paso}`}
+            >
+              {frases.map(({ id, frase, ubicacion }) => (
+                <li key={id} className="pl-0.5">
+                  <span className="text-pretty [overflow-wrap:anywhere]">
+                    {frase}
+                    {llevaPuntoFinal(frase) && '.'}
                   </span>
-                )}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
+                  {ubicacion && (
+                    <span className={`mt-0.5 block text-pretty text-noct-neutral-400 [overflow-wrap:anywhere] ${tamano.ubicacion}`}>
+                      <span className="sr-only">Ubicación: </span>
+                      {ubicacion}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
     </div>
   )
 }

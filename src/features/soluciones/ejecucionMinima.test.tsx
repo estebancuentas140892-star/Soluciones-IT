@@ -57,7 +57,8 @@ const COMO: MicroPasoComoHacer[] = [
   { id: 'min-m2', accion: 'Selecciona', elemento: 'Herramientas' },
   { id: 'min-m3', accion: 'Pulsa', elemento: 'Exportar' },
 ]
-const RUTA_RAPIDA = 'Ruta rápida: Archivo › Herramientas › Exportar'
+// La ruta rápida dice cada microacción con su verbo (tarea 309).
+const RUTA_RAPIDA = 'Ruta rápida: Abre Archivo › Selecciona Herramientas › Pulsa Exportar'
 const DATO = 'Backup_2026-10-07.pst'
 const RIESGO = 'Si el disco de destino se llena, la exportación se corta y el archivo queda incompleto'
 const DESCRIPCION = 'La ventana Importar y exportar de prueba, abierta'

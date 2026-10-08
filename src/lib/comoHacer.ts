@@ -11,21 +11,30 @@ import { texto } from './texto'
 // 'accion' (`BloquePaso.comoHacer`) y alimenta las dos lecturas de la
 // ejecución:
 //
-//   - la RUTA RÁPIDA, para el técnico que ya conoce el sitio: los
-//     elementos en orden ("Fichero › Cliente › Fichero › Nuevo");
-//   - el PASO A PASO, plegado, para quien llega nuevo: cada microacción
-//     como una frase numerada ("Abre Fichero."), con su ubicación debajo.
+//   - la RUTA RÁPIDA, para el técnico que ya sabe orientarse: la secuencia
+//     ejecutable condensada, cada microacción con su verbo ("Abre Fichero ›
+//     Selecciona Cliente › Selecciona Nuevo"). Desde la tarea 309 no es una
+//     lista de nombres: "carpeta de la persona › archivo .pst › archivo .pst"
+//     perdía justo lo que dice qué hacer (abrir, copiar, pegar);
+//   - el PASO A PASO, plegado, para quien llega nuevo: las mismas frases,
+//     numeradas, con la ubicación debajo. Solo existe cuando dice algo que la
+//     ruta no dice (`pasoAPasoAportaAlgo`).
 //
 // Un solo contenido y dos niveles de lectura: nunca dos textos que
-// mantener. Aquí vive todo lo que no es dibujar: crear, normalizar, leer y
-// validar la lista, y las dos formas de decirla.
+// mantener, y las dos dicen cada microacción con la misma frase
+// (`fraseDeMicroPaso`). Aquí vive todo lo que no es dibujar: crear,
+// normalizar, leer y validar la lista, qué se enseña y cómo se dice.
 //
 // UNA MICROACCIÓN VÁLIDA TIENE SIEMPRE ACCIÓN Y ELEMENTO; la ubicación es
-// opcional. Las dos lecturas los necesitan: la ruta rápida está hecha de
-// elementos, y el paso a paso, de acción más elemento. Por eso no hay
-// sustituto: la ruta nunca enseña una acción en lugar de un elemento, y
-// nada inventa el campo que falta. Una a medias no se lee (el normalizador
-// la descarta y las vistas no la ven) y el editor no la deja guardar.
+// opcional. Las dos lecturas los necesitan: cada una dice acción más
+// elemento. Por eso no hay sustituto: nada inventa el campo que falta. Una a
+// medias no se lee (el normalizador la descarta y las vistas no la ven) y el
+// editor no la deja guardar.
+//
+// "CÓMO HACERLO" ES UNA DESCOMPOSICIÓN (tarea 309): con una sola microacción
+// no hay nada que descomponer, y esa microacción pertenece a la instrucción
+// principal. No se enseña (`comoHacerQueSeEnsena`), pero el dato se conserva
+// tal cual: ni se borra ni se convierte.
 //
 // NADA SE DEDUCE DEL TEXTO. Ni flechas, ni ">", ni frases que "parecen una
 // ruta": una microacción existe porque alguien la escribió como tal. Un
@@ -106,9 +115,38 @@ export function comoHacerDe(bloque: BloquePaso): MicroPasoComoHacer[] {
   })
 }
 
-/** Una microacción dicha como frase, sin el punto final: "Abre Fichero". */
+/**
+ * Una microacción dicha como frase, sin el punto final: "Abre Fichero". Es la
+ * única forma de decirla: la ruta rápida, el paso a paso, el computador
+ * atendido y "¿Qué hace?" la leen de aquí.
+ */
 export function fraseDeMicroPaso(micro: MicroPasoComoHacer): string {
   return `${micro.accion.trim()} ${micro.elemento.trim()}`
+}
+
+/**
+ * LO QUE "CÓMO HACERLO" ENSEÑA (tarea 309): las microacciones si son dos o
+ * más; si no, ninguna. "Cómo hacerlo" descompone una acción en sus gestos, y
+ * una sola microacción no descompone nada: es la instrucción principal dicha
+ * otra vez (y antes, dos veces más: como ruta y como paso a paso). Las vistas
+ * de la ejecución, la lectura, "Probar" y el computador atendido pasan por
+ * aquí. No toca el dato: una guía antigua o recién editada con una sola la
+ * conserva tal cual, solo no la enseña.
+ */
+export function comoHacerQueSeEnsena(microPasos: MicroPasoComoHacer[]): MicroPasoComoHacer[] {
+  return microPasos.length >= 2 ? microPasos : []
+}
+
+/**
+ * ¿"Ver paso a paso" dice algo que la ruta rápida no dice? (tarea 309) Las
+ * dos lecturas dicen cada microacción con la misma frase (`fraseDeMicroPaso`),
+ * así que lo único que el paso a paso añade es la UBICACIÓN, el único campo
+ * de una microacción que la ruta no enseña. Sin ninguna, desplegarlo
+ * repetiría la ruta con números: no se ofrece. Se decide por estructura,
+ * nunca comparando textos.
+ */
+export function pasoAPasoAportaAlgo(microPasos: MicroPasoComoHacer[]): boolean {
+  return microPasos.some((micro) => (micro.ubicacion ?? '').trim() !== '')
 }
 
 /**

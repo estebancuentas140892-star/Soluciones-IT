@@ -8,7 +8,7 @@ import {
   type Referencia,
   type TipoReferencia,
 } from '../../lib/db'
-import { comoHacerDe, fraseDeMicroPaso } from '../../lib/comoHacer'
+import { comoHacerDe, comoHacerQueSeEnsena, fraseDeMicroPaso } from '../../lib/comoHacer'
 import { normalizarProcedimiento, pasoTrabajoPrevioCompleto, tareasDe } from '../../lib/procedimiento'
 import { contarInstruccionesHechas, reiniciarProgreso } from '../../lib/progresoPasos'
 import { avanceDeLaRuta, decisionDeRuta, guiaDeLaRespuesta, opcionElegida } from '../../lib/rutaProcedimiento'
@@ -1232,7 +1232,7 @@ export function BloqueVista({
       <ComoHacerlo microPasos={comoHacer} variante="fila" className="pl-10" />
       {referencias && (
         <QueHaceEnTexto
-          texto={[bloque.texto, ...comoHacer.map(fraseDeMicroPaso)].join('\n')}
+          texto={[bloque.texto, ...comoHacerQueSeEnsena(comoHacer).map(fraseDeMicroPaso)].join('\n')}
           referencias={referencias}
           excluir={fichasEnlazadas}
           className="pl-10"

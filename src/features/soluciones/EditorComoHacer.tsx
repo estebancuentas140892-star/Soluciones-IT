@@ -16,9 +16,9 @@ import { BotonIconoLinea } from './controlesEditor'
 //
 // Bajo la línea de una tarea de acción, en el orden en que lo leerá el
 // técnico: una fila por microacción, con su acción, su elemento y, solo si
-// hace falta, su ubicación. Las mismas filas dan la ruta rápida (los
-// elementos) y el paso a paso (las frases) de la ejecución: no hay un
-// segundo texto que escribir. Se añaden, se quitan y se reordenan aquí
+// hace falta, su ubicación. Las mismas filas dan la ruta rápida y el paso a
+// paso de la ejecución (las dos con la frase acción más elemento, desde la
+// tarea 309): no hay un segundo texto que escribir. Se añaden, se quitan y se reordenan aquí
 // mismo, con las flechas de 44 px de siempre, y cada una conserva su id al
 // moverla o editarla.
 //
@@ -193,7 +193,7 @@ export function EditorComoHacer({
 }
 
 // Una microacción: su número y sus controles arriba; acción y elemento lado
-// a lado (el elemento, más ancho: forma la ruta rápida); lo que le falta,
+// a lado (el elemento, más ancho: suele ser lo más largo); lo que le falta,
 // justo debajo de los dos; y la ubicación, opcional, al final.
 function FilaMicro({
   micro,

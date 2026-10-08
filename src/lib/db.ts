@@ -208,8 +208,9 @@ export interface OpcionDecision {
 // nuevo"), y dentro de la misma ventana o contexto puede pedir varios
 // gestos seguidos: cada uno es una microacción.
 // - `accion`: qué hace la persona, en pocas palabras ("Abre", "Pulsa").
-// - `elemento`: con qué lo hace ("Fichero", "Nuevo", "Enter"). Es lo que
-//   forma la ruta rápida del técnico.
+// - `elemento`: con qué lo hace ("Fichero", "Nuevo", "Enter"). Con la
+//   acción forma la frase que dicen la ruta rápida y el paso a paso
+//   (`fraseDeMicroPaso`, tarea 309).
 // - `ubicacion`: dónde está el elemento, solo cuando puede costar
 //   encontrarlo ("Barra superior"). Ausente si no se escribió.
 // `id` es estable: reordenar o editar no lo cambia (el editor mueve y
