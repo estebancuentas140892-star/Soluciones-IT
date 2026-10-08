@@ -12,6 +12,7 @@ import {
   limpiarProgresoVistaPrevia,
   establecerPasoHecho,
   fijarEquipoDeEjecucion,
+  finalizarEjecucion,
   hayAvanceEnEjecucion,
   leerAvance,
   marcarPasoSaltado,
@@ -172,6 +173,38 @@ describe('verificación final', () => {
 
     await alternarVerificacionFinal('articulo-1', 1)
     expect(verificacionFinalCompleta((await db.progresoPasos.get('articulo-1'))?.verificacionHecha, 2)).toBe(false)
+  })
+
+  // Tarea 308: con "Finalizar", marcar deja la comprobacion abierta.
+  it('sin "Finalizar" marcar no deja nada abierto, como siempre', async () => {
+    await alternarVerificacionFinal('articulo-1', 0)
+    expect((await db.progresoPasos.get('articulo-1'))?.cierrePendiente).toBeUndefined()
+  })
+
+  it('con "Finalizar" marcar deja la comprobacion abierta, y solo finalizarEjecucion la cierra', async () => {
+    await establecerPasoHecho('articulo-1', 'paso-a', true)
+    await alternarVerificacionFinal('articulo-1', 0, true)
+    await alternarVerificacionFinal('articulo-1', 1, true)
+    expect((await db.progresoPasos.get('articulo-1'))?.cierrePendiente).toBe(true)
+
+    // Lo que se escribe despues (otra marca, una evidencia) no la cierra.
+    await registrarEvidenciaPaso('articulo-1', 'paso-a', 'entrada-1')
+    await alternarInstruccionHecha('articulo-1', 'paso-a', 't1', ['t1'])
+    const abierta = await db.progresoPasos.get('articulo-1')
+    expect(abierta?.cierrePendiente).toBe(true)
+    expect(new Set(abierta?.verificacionHecha)).toEqual(new Set([0, 1]))
+
+    await finalizarEjecucion('articulo-1')
+    const cerrada = await db.progresoPasos.get('articulo-1')
+    expect(cerrada?.cierrePendiente).toBe(false)
+    expect(new Set(cerrada?.verificacionHecha)).toEqual(new Set([0, 1]))
+    expect(cerrada?.evidenciasPorPaso).toEqual({ 'paso-a': 'entrada-1' })
+  })
+
+  it('empezar de nuevo borra la comprobacion abierta con el resto del avance', async () => {
+    await alternarVerificacionFinal('articulo-1', 0, true)
+    await reiniciarProgreso('articulo-1')
+    expect(await db.progresoPasos.get('articulo-1')).toBeUndefined()
   })
 })
 

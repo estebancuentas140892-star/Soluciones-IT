@@ -447,6 +447,9 @@ function ProcedimientoEnRecorrido({
         progresoPasos?.pasosHechos,
         progresoPasos?.verificacionHecha,
         progresoPasos?.elecciones,
+        // Con la comprobación final abierta, el recorrido espera a
+        // "Finalizar" (tarea 308).
+        progresoPasos?.cierrePendiente,
       ),
     [procedimiento, progresoPasos],
   )

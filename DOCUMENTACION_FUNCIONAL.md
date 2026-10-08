@@ -1426,6 +1426,26 @@ Equipos > Crear
 
 ### 13.2 Ejecutar un procedimiento (modo asistente)
 
+**ANTES DE TERMINAR, COMPRUEBA: SE PUEDE VOLVER (desde el 2026-10-07, tarea 308, [DECISIONES.md](DECISIONES.md) AD-069, [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-067, [REGLAS.md](REGLAS.md) regla 28).** Llegar a la comprobación final no termina la guía, y quien pulsó "Siguiente" por error puede volver a revisar sin perder nada. Manda sobre lo que se describe más abajo donde choque (en particular, sobre "Terminar" en la última acción y sobre marcar la última comprobación como cierre):
+
+```
+ última acción ............ [‹] [✓ Completar y seguir]     ← con comprobaciones ya no dice "terminar"
+   → Antes de terminar, comprueba
+      ☐ comprobación 1
+      ☐ comprobación 2
+      [‹] [Faltan 2 comprobaciones]   → con todo marcado: [‹] [✓ Finalizar]
+        ‹  vuelve a la última acción recorrida (con su ✓): [‹] [→ Seguir] devuelve aquí
+   → Finalizar → Guía terminada · Salir de la guía · Empezar de nuevo
+```
+
+- **Tres gestos distintos:** "Siguiente" en la última acción ("Completar y seguir") **entra** a la comprobación; **"Anterior"** **vuelve** a la ejecución; solo **"Finalizar"** **termina**. Entrar no cierra nada, y marcar todas las casillas tampoco: la pantalla sigue ahí hasta "Finalizar".
+- **"Anterior"** es el mismo botón de cada acción (64 × 64, abajo a la izquierda, junto al control grande). Lleva a **la última acción del paso desde el que se llegó**: el último que se recorrió de verdad, por el camino de las respuestas (en una guía con decisión, el último paso del camino elegido, nunca uno del otro camino). La acción se ve como quedó: con su ✓, su advertencia, su ruta rápida, "Ver paso a paso", su dato técnico, su credencial (protegida como siempre) y su "Debes ver". Desde ahí **"Seguir"** devuelve a la comprobación, y "Anterior" sigue hacia atrás por la guía como siempre, sin límite. Volver **no desmarca nada** ni cambia ninguna respuesta.
+- **El control grande** dice **"Falta 1 comprobación"** o **"Faltan N comprobaciones"**, inactivo y legible, mientras quede alguna sin marcar, y **"Finalizar"** con todas marcadas. "Finalizar" lleva a "Guía terminada".
+- **Salir sin finalizar** (con casillas marcadas) no da la guía por terminada: al volver se retoma en la comprobación, con lo marcado, y la tarjeta de la guía sigue diciendo "Faltan las comprobaciones finales". En una guía con preguntas, el recorrido sigue con la pregunta siguiente solo después de "Finalizar".
+- **Lo reutilizado dentro de otra guía** ("Comprueba antes de seguir") tiene el mismo pie con "Anterior", que vuelve a su última acción; al marcar su última comprobación el recorrido sigue solo, como antes, así que su control dice lo que falta.
+- **Sin comprobaciones finales** nada cambia: la última acción dice "Completar y terminar" y termina la guía.
+- **Igual en la vista de paso entero** ("Anterior" vuelve al último paso; su control, "Seguir", devuelve a la comprobación), en escritorio y sin conexión. "Probar" del editor no cambia.
+
 **LA EJECUCIÓN MÍNIMA (desde el 2026-10-07, tarea 307, [DECISIONES.md](DECISIONES.md) AD-068, [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-066, [REGLAS.md](REGLAS.md) regla 27).** La aplicación sabe mucho, pero la pantalla enseña solo lo necesario para resolver lo que hay enfrente: "¿qué hago ahora y cómo lo hago?". **Esto manda sobre lo que se describe más abajo** (la jerarquía de la tarea 303 y las etapas anteriores, que se conservan como historia): donde dicen "Dónde", "Más información", "Para qué", "Hecha" como rótulo, un "Debes ver" de texto o la advertencia encima de la instrucción, ya no es así.
 
 ```

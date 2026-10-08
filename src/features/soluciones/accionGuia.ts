@@ -64,6 +64,9 @@ export interface AvanceGuia {
   pasosHechos?: string[]
   verificacionHecha?: number[]
   elecciones?: Record<string, string>
+  // La comprobación final sigue abierta, sin "Finalizar" (tarea 308): la
+  // ejecución continúa aunque estén todas las casillas marcadas.
+  cierrePendiente?: boolean
 }
 
 /**
@@ -87,7 +90,15 @@ export function accionDeGuia(
     return { estado: estadoAbierto, pendiente: { tipo: 'ninguno' }, ...cuentas }
   }
 
-  if (guiaTerminada(procedimiento, avance?.pasosHechos, avance?.verificacionHecha, avance?.elecciones)) {
+  if (
+    guiaTerminada(
+      procedimiento,
+      avance?.pasosHechos,
+      avance?.verificacionHecha,
+      avance?.elecciones,
+      avance?.cierrePendiente,
+    )
+  ) {
     return { estado: 'repetir', pendiente: { tipo: 'ninguno' }, ...cuentas }
   }
 

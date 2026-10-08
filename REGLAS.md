@@ -75,6 +75,12 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
     - Regla de la jerarquía: CREACIÓN y las fichas de contenido suben a la pantalla-lista de su sección; EDICIÓN y el asistente suben a la ficha de la entidad. Nunca a una pantalla intermedia o derivada por la que el flujo no pasó.
     - Estado por URL: cuando la pantalla de origen tenía un filtro que importa reponer, viaja en la URL (`/soluciones?categoria=<id>` repone el chip) para volver "exactamente como estaba". En Soluciones la categoría es un FILTRO de la lista, no una pantalla propia (decisión del usuario, 2026-07-18).
 
+28. **Durante la ejecución de una guía, un error de navegación se corrige sin perder nada** (regla acordada con el usuario el 2026-10-07, tarea 308; el porqué técnico en [DECISIONES.md](DECISIONES.md) AD-069):
+    - **Ninguna pantalla de la ejecución deja al técnico sin volver atrás.** "Antes de terminar, comprueba" lleva "Anterior" en su pie, como cada acción: una navegación principal, nunca un gesto del navegador, un menú, un enlace pequeño ni el encabezado.
+    - **Volver es por el camino recorrido**, nunca "el anterior de la lista de la guía": con decisiones, por la ruta de las respuestas dadas; desde la comprobación final, a la última acción que se recorrió de verdad.
+    - **Volver no deshace nada:** ni acciones hechas, ni respuestas, ni el camino elegido, ni lo reutilizado, ni lo marcado en la comprobación. Una acción ya hecha se revisa con su marca.
+    - **Entrar, volver y terminar son tres gestos distintos.** "Siguiente" en la última acción entra a la comprobación final; "Anterior" vuelve; solo "Finalizar" termina la guía. Llegar a la comprobación, o marcarla entera, no la termina.
+
 ## Recomendación de modelo y esfuerzo
 
 16. Guía Maestra para recomendar modelo y nivel de razonamiento (acordada con el usuario el 2026-07-20, trasladada a su propio archivo el 2026-07-23). Es la referencia principal para cumplir la regla 3. La prioridad, en tareas de programación/arquitectura/proyectos técnicos, es siempre la calidad sobre el ahorro de tokens; y no recomendar por defecto el modelo más potente, sino la mejor relación calidad/tiempo/costo tras analizar la complejidad real.

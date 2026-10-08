@@ -68,7 +68,7 @@ import { useReferencias } from '../referencia/useReferencias'
 import { FranjaEquipoConectado } from '../asistencia/FranjaEquipoConectado'
 import { useSesionAsistencia } from '../asistencia/sesionAsistencia'
 import { useAuth } from '../autenticacion/authContext'
-import { cierreDelPaso, guiaPendienteDelPaso, guiaTerminada } from './cierrePaso'
+import { cierreDeLaComprobacion, cierreDelPaso, guiaPendienteDelPaso, guiaTerminada } from './cierrePaso'
 import {
   claveDeVinculo,
   useAvanceProgreso,
@@ -81,7 +81,7 @@ import { estadoVinculo, kickerVinculo } from './estadoVinculo'
 import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
-import { AntesDeEmpezar, ModoFoco } from './ModoFoco'
+import { AntesDeEmpezar, BOTON_ANTERIOR, BotonPrincipal, ModoFoco } from './ModoFoco'
 import { RutaProcedimiento } from './RutaProcedimiento'
 import { presenciaDeAviso } from './tonos'
 import { HojaFalla } from './HojaFalla'
@@ -218,6 +218,16 @@ export function AsistenteVista({
   // guarda el id del paso para que no se aplique a otro, y cualquier
   // otra forma de moverse lo borra.
   const [entradaPorElFinal, setEntradaPorElFinal] = useState<string | null>(null)
+  // DESDE QUÉ PASO SE LLEGÓ A LA COMPROBACIÓN FINAL (tarea 308). "Antes de
+  // terminar, comprueba" no es un paso de la ruta: es la vista sin paso
+  // (`indiceActual` null), así que "Anterior" no tenía a dónde volver y quien
+  // pulsaba "Siguiente" por error quedaba atrapado ahí. Se anota el id del
+  // paso que se estaba viendo al salir hacia ella (el último que el técnico
+  // recorrió de verdad, que no siempre es el último de la ruta: puede venir
+  // de retomar un paso saltado), y "Anterior" vuelve a su última acción. Sin
+  // anotación (se retomó la ejecución ya en la comprobación), vuelve al
+  // último paso de la ruta, que es el del camino elegido.
+  const [origenComprobacion, setOrigenComprobacion] = useState<string | null>(null)
   // SE RETOMÓ UNA EJECUCIÓN A MEDIAS (encargo del 2026-09-17, sección
   // 3). Abrir la guía lleva directo al primer paso pendiente; si había
   // avance, una línea lo dice y ofrece empezar de nuevo, sin pedir nada
@@ -247,6 +257,9 @@ export function AsistenteVista({
   // ni el avance ni el paso de trabajo.
   function verPaso(indice: number | null, porElFinal = false) {
     setEntradaPorElFinal(porElFinal && indice !== null ? (pasos[indice]?.id ?? null) : null)
+    // Salir de un paso hacia la vista sin paso (la comprobación final) deja
+    // anotado de cuál se salió: es a donde vuelve "Anterior" (tarea 308).
+    if (indice === null) setOrigenComprobacion(indiceActual !== null ? (pasos[indiceActual]?.id ?? null) : null)
     setIndiceActual(indice)
   }
   // Mover el TRABAJO a un paso (y la vista con él).
@@ -309,10 +322,12 @@ export function AsistenteVista({
       // 1, que es lo que vino a hacer quien abre una guía que ya usó.
       // Solo en la guía principal: dentro de una ejecución, una guía
       // vinculada terminada está terminada para ESTE caso.
+      // Con la comprobación final abierta (tarea 308) NO está terminada: se
+      // retoma en ella, con lo marcado, y sin "Finalizar" nada se cerró.
       if (
         nivel === 0 &&
         prog &&
-        guiaTerminada(procedimiento, prog.pasosHechos, prog.verificacionHecha, prog.elecciones)
+        guiaTerminada(procedimiento, prog.pasosHechos, prog.verificacionHecha, prog.elecciones, prog.cierrePendiente)
       ) {
         await reiniciarProgreso(clave)
         prog = undefined
@@ -372,6 +387,7 @@ export function AsistenteVista({
     guiasPendientesDeTarea,
     alternarTarea,
     alternarVerificacion,
+    finalizar,
     intentarCompletarPaso,
     completarPasoYAvanzar,
     elegirOpcion,
@@ -381,6 +397,10 @@ export function AsistenteVista({
     nivel,
     onCompletado,
     onAvanzar: (destino) => irAPaso(destino),
+    // La guía que se abrió se termina con "Finalizar" (tarea 308). Lo de
+    // dentro de ella sigue al marcar su última comprobación: es parte de un
+    // flujo que continúa, no el cierre de la ejecución.
+    cierreConFinalizar: nivel === 0,
   })
   // LOS PASOS QUE SE RECORREN SON LOS DE LA RUTA (tarea 302): con
   // decisiones con opciones, los del camino elegido. Todos los índices de
@@ -463,52 +483,86 @@ export function AsistenteVista({
 
   const porcentaje = pasos.length === 0 ? 0 : Math.round((completados / pasos.length) * 100)
 
-  if (indiceActual === null && pasosCompletados && verificacionFinal.length > 0 && !verificacionCompleta) {
+  // LA COMPROBACIÓN FINAL ES UN ESTADO DE LA EJECUCIÓN, NO SU FIN (tarea
+  // 308). Se llega con "Siguiente" desde la última acción, "Anterior" vuelve
+  // a ella y solo "Finalizar" termina. Por eso la condición es `todoCompletado`
+  // (que ya cuenta la comprobación abierta) y no las casillas marcadas.
+  if (indiceActual === null && pasosCompletados && verificacionFinal.length > 0 && !todoCompletado) {
+    const marcadasComprobacion = new Set(progreso?.verificacionHecha ?? [])
+    const cierreComprobacion = cierreDeLaComprobacion(
+      verificacionFinal.length,
+      verificacionFinal.filter((_, indice) => marcadasComprobacion.has(indice)).length,
+    )
+    // Con su propio pie: la ejecución principal y la guía que ocupa la
+    // pantalla en lugar de una acción. Desplegada dentro del paso entero, la
+    // barra de ese paso sigue debajo.
+    const conPie = nivel === 0 || sustituye
+    // "ANTERIOR" VUELVE POR EL CAMINO RECORRIDO: al paso desde el que se llegó
+    // aquí, o al último de la ruta, que es el del camino elegido (nunca el
+    // anterior en la lista de la guía). Entra por su última acción y solo
+    // mueve la vista: nada se desmarca, ninguna respuesta cambia y el
+    // trabajo sigue donde estaba.
+    const volverALaUltimaAccion = () => {
+      const desde = origenComprobacion === null ? -1 : idsPasos.indexOf(origenComprobacion)
+      verPaso(desde >= 0 ? desde : pasos.length - 1, true)
+    }
     return (
-      <div className="flex flex-col gap-4 pt-3">
-        {/* En el flujo de otra guía, su avance es el de esa guía: una barra
-            de esta mediría otra cosa (tarea 289). */}
-        {!integrada && <Encabezado porcentaje={porcentaje} completado={false} />}
-        {/* LA COMPROBACIÓN FINAL NO ES UNA ADVERTENCIA (G-23, regla
-            M-R11): iba en ámbar, el color de los riesgos. Es el último
-            vistazo antes de dar el trabajo por hecho. */}
-        <div className="rounded-xl border border-noct-divider bg-noct-surface px-4 py-3.5">
-          <EncabezadoConFoco className="flex items-center gap-2 text-[16px] font-medium text-noct-text">
-            <SealCheck size={18} className="shrink-0 text-noct-accent-300" aria-hidden />
-            {/* A mitad del flujo no se termina nada: se comprueba y se sigue. */}
-            {integrada ? 'Comprueba antes de seguir' : 'Antes de terminar, comprueba'}
-          </EncabezadoConFoco>
-          <ul className="mt-2 flex flex-col gap-0.5">
-            {verificacionFinal.map((item, indice) => {
-              const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
-              return (
-                <li key={indice}>
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={marcada}
-                    onClick={() => void alternarVerificacion(indice)}
-                    className="flex min-h-12 w-full items-start gap-3 rounded-lg px-1 py-2 text-left"
-                  >
-                    <span
-                      aria-hidden
-                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-[1.5px] ${
-                        marcada
-                          ? 'border-noct-exito bg-noct-exito/15 text-noct-exito'
-                          : 'border-noct-neutral-500 text-transparent'
-                      }`}
+      <div className={`flex flex-col ${conPie ? 'flex-1' : ''}`}>
+        <div className={`flex flex-col gap-4 pt-3 ${conPie ? 'pb-6' : ''}`}>
+          {/* En el flujo de otra guía, su avance es el de esa guía: una barra
+              de esta mediría otra cosa (tarea 289). */}
+          {!integrada && <Encabezado porcentaje={porcentaje} completado={false} />}
+          {/* LA COMPROBACIÓN FINAL NO ES UNA ADVERTENCIA (G-23, regla
+              M-R11): iba en ámbar, el color de los riesgos. Es el último
+              vistazo antes de dar el trabajo por hecho. */}
+          <div className="rounded-xl border border-noct-divider bg-noct-surface px-4 py-3.5">
+            <EncabezadoConFoco className="flex items-center gap-2 text-[16px] font-medium text-noct-text">
+              <SealCheck size={18} className="shrink-0 text-noct-accent-300" aria-hidden />
+              {/* A mitad del flujo no se termina nada: se comprueba y se sigue. */}
+              {integrada ? 'Comprueba antes de seguir' : 'Antes de terminar, comprueba'}
+            </EncabezadoConFoco>
+            <ul className="mt-2 flex flex-col gap-0.5">
+              {verificacionFinal.map((item, indice) => {
+                const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
+                return (
+                  <li key={indice}>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={marcada}
+                      onClick={() => void alternarVerificacion(indice)}
+                      className="flex min-h-12 w-full items-start gap-3 rounded-lg px-1 py-2 text-left"
                     >
-                      <Check size={14} />
-                    </span>
-                    <span className={`text-[15px] leading-snug ${marcada ? 'text-noct-neutral-400' : 'text-noct-text'}`}>
-                      {item}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+                      <span
+                        aria-hidden
+                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-[1.5px] ${
+                          marcada
+                            ? 'border-noct-exito bg-noct-exito/15 text-noct-exito'
+                            : 'border-noct-neutral-500 text-transparent'
+                        }`}
+                      >
+                        <Check size={14} />
+                      </span>
+                      <span className={`text-[15px] leading-snug ${marcada ? 'text-noct-neutral-400' : 'text-noct-text'}`}>
+                        {item}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         </div>
+        {conPie && (
+          <PieDeComprobacion
+            onAnterior={volverALaUltimaAccion}
+            etiqueta={cierreComprobacion.etiqueta}
+            // Solo la ejecución principal se finaliza; lo de dentro de otra
+            // guía sigue solo al marcar su última comprobación, así que su
+            // control dice lo que falta.
+            onFinalizar={nivel === 0 && cierreComprobacion.listo ? () => void finalizar() : null}
+          />
+        )}
       </div>
     )
   }
@@ -617,11 +671,15 @@ export function AsistenteVista({
   // con esto termina también la guía que se abrió (y no quedan
   // comprobaciones de esta por delante): a mitad del recorrido nada dice
   // "terminar" (tarea 289, fase 3). Con una decisión sin responder tampoco:
-  // lo que sigue depende de la respuesta (tarea 302).
+  // lo que sigue depende de la respuesta (tarea 302). Y con comprobaciones
+  // finales tampoco (tarea 308): cerrar el último paso lleva a "Antes de
+  // terminar, comprueba" y lo que termina es "Finalizar", así que el botón
+  // dice "Completar y seguir" y no promete terminar.
   const terminaDeVerdad =
     destinoTrasEste === null &&
     ruta.pendiente === null &&
-    (!integrada || (integracion.terminaLaGuia && verificacionFinal.length === 0))
+    verificacionFinal.length === 0 &&
+    (!integrada || integracion.terminaLaGuia)
   // El número que ve el técnico es el de la guía que abrió.
   const numeroPasoVisible = integrada ? integracion.numeroPaso : indiceActual + 1
 
@@ -641,8 +699,10 @@ export function AsistenteVista({
     guiaPendiente: guiaPendienteDelPaso(paso, subSatisfecho) ?? guiaPendienteDeLaRespuesta(paso),
     respuestaPendiente,
     hayPasoSiguiente: !terminaDeVerdad,
-    // En el flujo de otra guía no se nombra la numeración de dentro.
-    numeroPasoSiguiente: integrada ? null : (destinoTrasEste ?? indiceActual) + 1,
+    // En el flujo de otra guía no se nombra la numeración de dentro. Sin
+    // paso después (lo que sigue es la comprobación final) tampoco hay
+    // número que dar: el control dice "Seguir".
+    numeroPasoSiguiente: integrada || destinoTrasEste === null ? null : destinoTrasEste + 1,
   })
 
   // Estado de cada paso para el índice (tablero 6c). Se recalcula en
@@ -1199,7 +1259,7 @@ export function AsistenteVista({
                         tituloReferencia={guiaDeEstaRespuesta.titulo}
                         nivel={nivel}
                         integracion={integracionDelPaso({
-                          terminaLaGuia: !pasoActualHecho && destinoTrasEste === null && ruta.pendiente === null,
+                          terminaLaGuia: !pasoActualHecho && terminaDeVerdad,
                         })}
                         onCompletado={() => void intentarCompletarPaso(indiceActual, paso)}
                       />
@@ -1237,11 +1297,7 @@ export function AsistenteVista({
             integracion={
               guiaDelPasoIntegrable(paso)
                 ? integracionDelPaso({
-                    terminaLaGuia:
-                      !pasoActualHecho &&
-                      destinoTrasEste === null &&
-                      ruta.pendiente === null &&
-                      marcadas === idsTareas.length,
+                    terminaLaGuia: !pasoActualHecho && terminaDeVerdad && marcadas === idsTareas.length,
                   })
                 : undefined
             }
@@ -1496,6 +1552,49 @@ function EncabezadoConFoco({ className, children }: { className: string; childre
   )
 }
 
+// EL PIE DE LA COMPROBACIÓN FINAL (tarea 308). Es el mismo de cada acción
+// del modo foco ("Anterior" a la izquierda, el control grande a la derecha,
+// 64 px), así que quien pulsó "Siguiente" por error encuentra la vuelta donde
+// la encuentra siempre. Antes esta pantalla no tenía pie: solo se podía
+// marcar o salir. "Anterior" solo mueve la vista. El control grande dice
+// "Finalizar" cuando todo está marcado y, si falta algo, cuánto, inactivo y
+// legible (`cierreDeLaComprobacion`). Pegajoso como los demás pies, con el
+// hueco del aviso de versión nueva encima (tarea 273).
+function PieDeComprobacion({
+  onAnterior,
+  etiqueta,
+  onFinalizar,
+}: {
+  onAnterior: () => void
+  etiqueta: string
+  // null: no se puede finalizar desde aquí (falta marcar algo, o es lo de
+  // dentro de otra guía, que sigue solo al marcar la última).
+  onFinalizar: (() => void) | null
+}) {
+  return (
+    <div className="sticky bottom-0 z-10 -mx-4 mt-auto flex flex-none flex-col gap-1.5 border-t border-noct-divider bg-noct-bg px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3">
+      <div ref={huecoAvisoActualizacion} className="mx-auto w-full max-w-xl empty:hidden" />
+      <div className="mx-auto flex w-full max-w-xl gap-2.5">
+        <button
+          type="button"
+          onClick={onAnterior}
+          aria-label="Anterior. Vuelve a la última acción, sin cambiar lo marcado"
+          title="Anterior"
+          className={BOTON_ANTERIOR}
+        >
+          <CaretLeft size={22} aria-hidden />
+        </button>
+        <BotonPrincipal
+          etiqueta={etiqueta}
+          icono={onFinalizar ? 'marca' : null}
+          disabled={onFinalizar === null}
+          onClick={onFinalizar ?? undefined}
+        />
+      </div>
+    </div>
+  )
+}
+
 // Encabezado de las pantallas de cierre: la barra de avance del
 // procedimiento. (El cronómetro de sesión que llevaba se retiró el
 // 2026-09-17: ver la nota donde vivía, más arriba.)
@@ -1692,7 +1791,13 @@ function VinculoEnFoco({
 
   // "Completada" con la MISMA regla que usa la ejecucion para dar el
   // vinculo por cumplido: pasos cerrados Y comprobaciones finales.
-  const completada = guiaTerminada(procedimiento, progreso?.pasosHechos, progreso?.verificacionHecha, progreso?.elecciones)
+  const completada = guiaTerminada(
+    procedimiento,
+    progreso?.pasosHechos,
+    progreso?.verificacionHecha,
+    progreso?.elecciones,
+    progreso?.cierrePendiente,
+  )
 
   return (
     <TarjetaGuiaVinculada
@@ -1888,7 +1993,15 @@ function SubProcedimientoEnAsistente({
   // Lo reutilizado se recorre como el resto del paso, con la línea de
   // profundidad como única marca; ya hecho, se lee.
   if (integracion) {
-    if (guiaTerminada(procedimiento, progreso?.pasosHechos, progreso?.verificacionHecha, progreso?.elecciones)) {
+    if (
+      guiaTerminada(
+        procedimiento,
+        progreso?.pasosHechos,
+        progreso?.verificacionHecha,
+        progreso?.elecciones,
+        progreso?.cierrePendiente,
+      )
+    ) {
       return <PasosEnLectura guiaId={articulo.id} />
     }
     return (

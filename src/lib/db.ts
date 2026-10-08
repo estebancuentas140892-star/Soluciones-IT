@@ -1177,6 +1177,9 @@ export interface ProgresoVinculo {
   // Lo mismo que `ProgresoPasos.elecciones`, para una guía reutilizada que
   // tenga sus propias decisiones con opciones.
   elecciones?: Record<string, string>
+  // Lo mismo que `ProgresoPasos.cierrePendiente`. Hoy solo lo escribe la
+  // guía principal; aquí está para que el avance tenga una sola forma.
+  cierrePendiente?: boolean
   actualizadoEn: string
 }
 
@@ -1239,6 +1242,14 @@ export interface ProgresoPasos {
   // conserva. Opcional: las filas de antes no la traen y no hay ninguna
   // decisión respondida, que es lo correcto.
   elecciones?: Record<string, string>
+  // LA COMPROBACIÓN FINAL SIGUE ABIERTA (tarea 308): se marcaron casillas
+  // de "Antes de terminar, comprueba" y todavía no se pulsó "Finalizar".
+  // Mientras valga true la ejecución NO está terminada, aunque estén todas
+  // marcadas: entrar a la comprobación, marcarla o volver atrás desde ella
+  // no cierran nada; solo "Finalizar" la cierra (y lo pone en false).
+  // Opcional: en las filas de antes no existe, y ahí terminar era marcar
+  // la última comprobación, que se respeta. Local como el resto.
+  cierrePendiente?: boolean
   // EL EQUIPO CON EL QUE SE TRABAJA en esta ejecucion (tarea 290): el id
   // del dispositivo, o null/ausente si no se conoce. Lo comparten la guia
   // y las que reutiliza (viven en esta misma fila), y es lo que permite a

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { PasoProcedimiento, Procedimiento } from '../../lib/db'
 import {
   acortarNombreGuia,
+  cierreDeLaComprobacion,
   cierreDelPaso,
   guiaPendienteDelPaso,
   guiaTerminada,
@@ -232,5 +233,27 @@ describe('guiaTerminada', () => {
 
   it('una guia sin pasos que ejecutar no bloquea (caso K1)', () => {
     expect(guiaTerminada(guia([]), undefined, undefined)).toBe(true)
+  })
+
+  // Tarea 308: la comprobacion final se cierra con "Finalizar".
+  it('con la comprobacion final abierta no termina aunque esten todas marcadas', () => {
+    const g = guia(['p1'], ['Comprobar A', 'Comprobar B'])
+    expect(guiaTerminada(g, ['p1'], [0, 1], undefined, true)).toBe(false)
+    expect(guiaTerminada(g, ['p1'], [0, 1], undefined, false)).toBe(true)
+    // Una fila de antes de la 308 no trae la marca: ahi terminar era marcar la ultima.
+    expect(guiaTerminada(g, ['p1'], [0, 1], undefined, undefined)).toBe(true)
+  })
+
+  it('sin comprobaciones finales la marca no significa nada', () => {
+    expect(guiaTerminada(guia(['p1']), ['p1'], undefined, undefined, true)).toBe(true)
+  })
+})
+
+describe('cierreDeLaComprobacion (tarea 308)', () => {
+  it('dice "Finalizar" solo con todo marcado; si no, cuantas faltan', () => {
+    expect(cierreDeLaComprobacion(2, 0)).toEqual({ listo: false, etiqueta: 'Faltan 2 comprobaciones' })
+    expect(cierreDeLaComprobacion(2, 1)).toEqual({ listo: false, etiqueta: 'Falta 1 comprobación' })
+    expect(cierreDeLaComprobacion(2, 2)).toEqual({ listo: true, etiqueta: 'Finalizar' })
+    expect(cierreDeLaComprobacion(1, 0)).toEqual({ listo: false, etiqueta: 'Falta 1 comprobación' })
   })
 })

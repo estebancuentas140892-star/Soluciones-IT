@@ -289,6 +289,8 @@ const GUIAS_PRUEBA = [
   guiaDePrueba('guia-sin-conexion', 'Registrar a una persona de prueba sin red', {
     descripcion: 'Usa esta guía cuando necesites registrar a una persona sin red.',
     requisitos: ['Datos de la persona de prueba.'],
+    // Tarea 308: con comprobación final, para volver desde ella sin red.
+    verificacionFinal: ['La persona de prueba aparece registrada sin red.'],
     pasos: [
       { id: 'gsc-p1', titulo: 'Entrar al programa', subArticuloId: 'acceso-sin-conexion', subArticuloTitulo: 'Entrar al programa de prueba sin red' },
       { id: 'gsc-p2', titulo: 'Guardar', bloques: [{ id: 'gsc-p2-t1', tipo: 'tarea', texto: 'Selecciona Guardar' }] },
@@ -500,6 +502,52 @@ async function main() {
     comprobar(
       !(await s.evaluar(`return /Guía necesaria|Estás realizando|Abrir guía|Volver a la guía principal|No se pudo cargar/.test(document.body.innerText)`)),
       'sin tarjeta ni cabecera de otra guía, y sin pantalla de error',
+    )
+
+    // Tarea 308: la comprobación final es un estado de la ejecución, no su
+    // fin. Todo sale de la base local: volver, seguir y finalizar sin red.
+    paso('4b2. La comprobación final sin red: "Anterior" vuelve a la última acción y solo "Finalizar" termina (tarea 308)')
+    await s.tocar('Completar y seguir')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Selecciona Guardar')`, 'el paso 2')),
+      'lo reutilizado se completa y sigue en el paso 2',
+    )
+    await s.tocar('Completar y seguir')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Antes de terminar, comprueba')`, 'la comprobación final')),
+      'la última acción lleva a la comprobación final',
+    )
+    const TOCAR_ANTERIOR = `
+      const b = [...document.querySelectorAll('button')].find((e) => (e.getAttribute('aria-label') || '').startsWith('Anterior'))
+      if (!b || b.disabled) return false
+      b.click()
+      await new Promise((r) => setTimeout(r, 600))
+      return true
+    `
+    comprobar(Boolean(await s.evaluar(TOCAR_ANTERIOR)), '"Anterior" está en la comprobación, activo')
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Selecciona Guardar') && !document.body.innerText.includes('Antes de terminar, comprueba')`,
+          'la última acción',
+        ),
+      ),
+      'y vuelve a la última acción, sin red',
+    )
+    await s.tocar('Seguir')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Antes de terminar, comprueba')`, 'otra vez la comprobación')),
+      '"Seguir" vuelve a la comprobación',
+    )
+    await s.evaluar(`document.querySelector('[role="checkbox"]').click(); await new Promise((r) => setTimeout(r, 600)); return true`)
+    comprobar(
+      !(await s.evaluar(`return document.body.innerText.includes('Guía terminada')`)),
+      'marcar la última comprobación no termina la guía',
+    )
+    await s.tocar('Finalizar')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Guía terminada')`, 'la guía terminada')),
+      'solo "Finalizar" la termina, sin red',
     )
 
     // Tarea 290: la relación equipo y credencial se lee del teléfono, sin

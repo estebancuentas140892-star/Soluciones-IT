@@ -14,6 +14,7 @@ import {
   avanceDe,
   contarInstruccionesHechas,
   establecerPasoHecho,
+  finalizarEjecucion,
   hayAvanceEnEjecucion,
   leerAvance,
   raizDe,
@@ -57,6 +58,12 @@ interface Opciones {
   // recorren. Quien use el hook decide que significa eso en su interfaz:
   // la lista lo expande y hace scroll, el asistente cambia de pantalla.
   onAvanzar: (destino: number | null) => void
+  // LA COMPROBACIÓN FINAL SE CIERRA CON "FINALIZAR" (tarea 308). Lo pide la
+  // ejecución principal del asistente: marcar la última casilla ya no
+  // termina la guía, la deja abierta (`cierrePendiente`) hasta `finalizar`.
+  // Sin esto (lo de dentro de otra guía, la vista de lista de "Probar")
+  // marcar la última casilla termina, como siempre.
+  cierreConFinalizar?: boolean
 }
 
 // Logica de ejecucion de un procedimiento, compartida entre la vista
@@ -78,6 +85,7 @@ export function useProcedimientoEjecucion({
   nivel,
   onCompletado,
   onAvanzar,
+  cierreConFinalizar = false,
 }: Opciones) {
   // DONDE VIVE ESTE AVANCE (tarea 2 del encargo). En el nivel 0 es la
   // fila del articulo; en un nivel anidado, la entrada de ESTA
@@ -118,7 +126,10 @@ export function useProcedimientoEjecucion({
   const completados = pasos.filter((p) => hechos.has(p.id)).length
   const pasosCompletados = pasos.length > 0 && ruta.pendiente === null && completados === pasos.length
   const verificacionCompleta = verificacionFinalCompleta(progreso?.verificacionHecha, verificacionFinal.length)
-  const todoCompletado = pasosCompletados && verificacionCompleta
+  // Las casillas marcadas no bastan mientras la comprobación siga abierta:
+  // solo "Finalizar" termina (tarea 308, la misma regla que `guiaTerminada`).
+  const comprobacionAbierta = verificacionFinal.length > 0 && progreso?.cierrePendiente === true
+  const todoCompletado = pasosCompletados && verificacionCompleta && !comprobacionAbierta
 
   // Ids de los subprocedimientos vinculados de este nivel: se
   // consultan en vivo para saber cuales estan completos, porque un
@@ -175,7 +186,7 @@ export function useProcedimientoEjecucion({
     const proc = normalizarProcedimiento(articulo.procedimiento)
     if (!proc) return true
     const prog = vinculos?.[guiaId]
-    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha, prog?.elecciones)
+    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha, prog?.elecciones, prog?.cierrePendiente)
   }
 
   // La misma pregunta con lectura fresca, para decidir una escritura
@@ -187,7 +198,7 @@ export function useProcedimientoEjecucion({
     const proc = normalizarProcedimiento(articulo.procedimiento)
     if (!proc) return true
     const prog = (await db.progresoPasos.get(raizId))?.vinculos?.[guiaId]
-    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha, prog?.elecciones)
+    return guiaTerminada(proc, prog?.pasosHechos, prog?.verificacionHecha, prog?.elecciones, prog?.cierrePendiente)
   }
 
   /**
@@ -287,7 +298,12 @@ export function useProcedimientoEjecucion({
       return
     }
     const prog = await leerAvance(clave)
-    if (verificacionFinalCompleta(prog?.verificacionHecha, verificacionFinal.length)) {
+    // Con la comprobación final abierta (tarea 308), volver a cerrar el
+    // último paso lleva a ella, no la cierra: eso es de "Finalizar".
+    if (
+      verificacionFinalCompleta(prog?.verificacionHecha, verificacionFinal.length) &&
+      !(verificacionFinal.length > 0 && prog?.cierrePendiente === true)
+    ) {
       onCompletado?.()
     }
     onAvanzar(null)
@@ -299,9 +315,13 @@ export function useProcedimientoEjecucion({
    * que lo vincula. Es el ultimo tramo de la tarea 4: sin esto, hacer
    * la ultima comprobacion de una guia vinculada no devolvia el control
    * a la guia principal.
+   *
+   * Con `cierreConFinalizar` (tarea 308) marcar solo marca: la comprobacion
+   * queda abierta y la cierra `finalizar`.
    */
   async function alternarVerificacion(indice: number) {
-    await alternarVerificacionFinal(clave, indice)
+    await alternarVerificacionFinal(clave, indice, cierreConFinalizar)
+    if (cierreConFinalizar) return
     const prog = await leerAvance(clave)
     if (
       avanceDeLaRuta(procedimiento, prog).pasosListos &&
@@ -309,6 +329,18 @@ export function useProcedimientoEjecucion({
     ) {
       onCompletado?.()
     }
+  }
+
+  /**
+   * "FINALIZAR" (tarea 308): lo unico que cierra una ejecucion con la
+   * comprobacion final abierta. Con lectura fresca, y solo si de verdad
+   * esta todo: los pasos de la ruta y todas las casillas.
+   */
+  async function finalizar() {
+    const prog = await leerAvance(clave)
+    if (!guiaTerminada(procedimiento, prog?.pasosHechos, prog?.verificacionHecha, prog?.elecciones)) return
+    await finalizarEjecucion(clave)
+    onCompletado?.()
   }
 
   /**
@@ -490,6 +522,7 @@ export function useProcedimientoEjecucion({
     desmarcarPaso,
     alternarTarea,
     alternarVerificacion,
+    finalizar,
     intentarCompletarPaso,
     completarPasoYAvanzar,
     elegirOpcion,

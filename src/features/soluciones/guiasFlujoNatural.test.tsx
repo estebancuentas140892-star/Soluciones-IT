@@ -563,6 +563,49 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     expect(guia?.procedimiento?.pasos).toHaveLength(7)
   })
 
+  it('desde "Comprueba antes de seguir", "Anterior" vuelve a la última acción reutilizada, sin perder nada ni enseñar la credencial (tarea 308)', async () => {
+    await sembrarCasoAlimentacion()
+    await anclarMaestra()
+    await sembrarCredencial({
+      id: 'cred-programa',
+      titulo: 'Acceso de prueba al programa de caja',
+      tipo: 'cuenta',
+      usuario: 'caja.prueba',
+      contrasena: 'Clave-De-Prueba-7',
+    })
+    bloquear()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
+    await empezarGuia()
+    await completarHasta('Abre el programa de caja e ingresa su contraseña')
+    await tocar(await esperarControl('Completar y seguir'))
+    await esperar(() => textoPantalla().includes('Comprueba antes de seguir'), 'la comprobación de lo reutilizado')
+    // Su pie: "Anterior" y lo que falta, inactivo. Lo de dentro no se
+    // "finaliza": sigue solo al marcar su última comprobación.
+    expect(control('Falta 1 comprobación')?.hasAttribute('disabled')).toBe(true)
+    expect(control('Finalizar')).toBeNull()
+    const antes = await db.progresoPasos.get('guia-alimentacion')
+
+    await tocar(await esperarControl(/^Anterior/))
+    await esperar(
+      () => textoPantalla().includes('Abre el programa de caja e ingresa su contraseña'),
+      'la última acción reutilizada',
+    )
+    expect(textoPantalla()).not.toContain('Comprueba antes de seguir')
+    // La credencial sigue con su acción, sin enseñar su valor.
+    expect(textoPantalla()).toContain('Acceso de prueba al programa de caja')
+    expect(textoPantalla()).not.toContain('Clave-De-Prueba-7')
+    // Sigue siendo el paso 1 de la guía que se abrió, sin hablar de cómo está hecha.
+    expect(control('Paso 1 de 7. Abrir el índice de pasos')).not.toBeNull()
+    sinArquitectura()
+    expect(await db.progresoPasos.get('guia-alimentacion')).toEqual(antes)
+
+    await tocar(await esperarControl('Seguir'))
+    await esperar(() => textoPantalla().includes('Comprueba antes de seguir'), 'de vuelta en la comprobación')
+    await tocar(await esperar(() => document.body.querySelector<HTMLElement>('[role="checkbox"]'), 'la comprobación'))
+    await esperar(() => textoPantalla().includes('Si aparece el aviso inicial, selecciona Salir'), 'el paso 2')
+    expect((await db.progresoPasos.get('guia-alimentacion'))?.pasosHechos).toEqual(['ali-p1'])
+  })
+
   it('desde el paso 2, "Anterior" revisa el paso 1 ya hecho: se lee lo que se hizo, sin abrir nada', async () => {
     await sembrarCasoAlimentacion()
     await db.progresoPasos.put({

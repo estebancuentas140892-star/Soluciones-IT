@@ -51,6 +51,9 @@ export interface AvanceProcedimiento {
   // Las respuestas de las decisiones con opciones (tarea 302): deciden la
   // ruta de esta ejecución.
   elecciones?: Record<string, string>
+  // La comprobación final se está marcando y todavía no se pulsó
+  // "Finalizar" (tarea 308): ver `ProgresoPasos.cierrePendiente`.
+  cierrePendiente?: boolean
 }
 
 /**
@@ -100,6 +103,7 @@ async function guardarProgreso(
       evidenciasPorPaso: previo?.evidenciasPorPaso,
       pasosSaltados: previo?.pasosSaltados,
       elecciones: previo?.elecciones,
+      cierrePendiente: previo?.cierrePendiente,
       ...cambios,
       actualizadoEn: ahora,
     }
@@ -132,6 +136,8 @@ async function guardarProgreso(
     pasosSaltados: actual?.pasosSaltados,
     // Las respuestas de la ejecucion (tarea 302): marcar avance no las toca.
     elecciones: actual?.elecciones,
+    // La comprobacion final abierta (tarea 308): solo la cierra "Finalizar".
+    cierrePendiente: actual?.cierrePendiente,
     // El equipo de la ejecucion (tarea 290): marcar avance no lo toca.
     equipoId: actual?.equipoId,
     ...cambios,
@@ -437,9 +443,15 @@ export function contarInstruccionesHechas(
 
 // Alterna una casilla de "Verificacion final" (por indice, igual que
 // las instrucciones de un paso: no tienen id propio).
+//
+// `conFinalizar` (tarea 308): la ejecucion se cierra con "Finalizar", no
+// al marcar la ultima casilla. Marcar deja la comprobacion ABIERTA
+// (`cierrePendiente`), asi que tenerlas todas marcadas todavia no termina
+// la guia: se puede volver atras a revisar sin que nada se de por cerrado.
 export async function alternarVerificacionFinal(
   clave: ClaveProgreso,
   indice: number,
+  conFinalizar = false,
 ): Promise<void> {
   const actual = await leerAvance(clave)
   const marcadas = new Set(actual?.verificacionHecha ?? [])
@@ -448,7 +460,20 @@ export async function alternarVerificacionFinal(
   } else {
     marcadas.add(indice)
   }
-  await guardarProgreso(clave, { verificacionHecha: [...marcadas] })
+  await guardarProgreso(clave, {
+    verificacionHecha: [...marcadas],
+    ...(conFinalizar ? { cierrePendiente: true } : {}),
+  })
+}
+
+/**
+ * "FINALIZAR" (tarea 308): cierra la comprobacion final que dejo abierta
+ * `alternarVerificacionFinal`. Es lo unico que da por terminada una
+ * ejecucion que la tiene abierta; quien llama comprueba antes que los
+ * pasos y las casillas esten hechos (`guiaTerminada`).
+ */
+export async function finalizarEjecucion(clave: ClaveProgreso): Promise<void> {
+  await guardarProgreso(clave, { cierrePendiente: false })
 }
 
 // La verificacion final cuenta como completa cuando no hay items (no

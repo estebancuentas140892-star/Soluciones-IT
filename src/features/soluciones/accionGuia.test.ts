@@ -112,6 +112,16 @@ describe('accionDeGuia con comprobaciones finales', () => {
     expect(accion.estado).toBe('repetir')
   })
 
+  it('con todas marcadas pero la comprobacion abierta, sin "Finalizar", sigue siendo continuar (tarea 308)', () => {
+    const accion = accionDeGuia(
+      CON_COMPROBACIONES,
+      { pasosHechos: ['p1', 'p2'], verificacionHecha: [0, 1], cierrePendiente: true },
+      true,
+    )
+    expect(accion.estado).toBe('continuar')
+    expect(accion.pendiente).toEqual({ tipo: 'verificacion' })
+  })
+
   it('con pasos pendientes manda el paso, no las comprobaciones', () => {
     const accion = accionDeGuia(CON_COMPROBACIONES, { pasosHechos: ['p1'] }, true)
     expect(accion.pendiente).toEqual({ tipo: 'paso', indice: 1, numero: 2 })
