@@ -65,11 +65,19 @@ afterEach(async () => {
   await desmontarTodo()
 })
 
+// La migración lee los equipos y las ubicaciones que ya existen con dos
+// consultas en vivo distintas: los textos pueden verse antes de que lleguen
+// las ubicaciones, y mientras tanto el resumen cuenta "Sistemas de prueba"
+// como nueva (y aplicar la duplicaría). Por eso cada caso espera el resumen
+// que ya dice "que ya existe", no solo los textos.
 describe('migración asistida de ubicaciones', () => {
   it('une las variantes de mayúsculas, señala la abreviatura y reutiliza la ubicación existente', async () => {
     await sembrar()
     await montar(RUTAS, '/ubicaciones/migrar')
-    await esperar(() => textoPantalla().includes('ADMINISTRACION PP'), 'la lista de textos')
+    await esperar(
+      () => textoPantalla().includes('se usará 1 que ya existe y se vincularán 5 equipos'),
+      'la lista de textos con las ubicaciones existentes',
+    )
 
     const texto = textoPantalla()
     expect(texto).toContain('incluye «Logistica de prueba» y «LOGISTICA DE PRUEBA»')
@@ -86,7 +94,7 @@ describe('migración asistida de ubicaciones', () => {
     await montar(RUTAS, '/ubicaciones/migrar')
     await tocar(await esperar(() => control('Es el mismo lugar'), 'la coincidencia'))
     await esperar(
-      () => textoPantalla().includes('se vincularán 6 equipos'),
+      () => textoPantalla().includes('se usará 1 que ya existe y se vincularán 6 equipos'),
       'el texto se suma a la ubicación elegida',
     )
     await tocar(await esperar(() => control('Crear ubicaciones y vincular equipos'), 'aplicar'))
@@ -105,7 +113,10 @@ describe('migración asistida de ubicaciones', () => {
     await sembrar()
     await montar(RUTAS, '/ubicaciones/migrar')
     await tocar(await esperar(() => control('Son distintos'), 'la coincidencia'))
-    await esperar(() => textoPantalla().includes('se vincularán 6 equipos'), 'el texto entra por separado')
+    await esperar(
+      () => textoPantalla().includes('se usará 1 que ya existe y se vincularán 6 equipos'),
+      'el texto entra por separado',
+    )
     expect(textoPantalla()).toContain('Se crearán 3 ubicaciones')
   })
 })
@@ -118,7 +129,12 @@ describe('la ficha de una ubicación', () => {
     )
     await montar(RUTAS, '/ubicaciones/u-sistemas')
     await esperar(() => textoPantalla().includes('Qué hay aquí'), 'la ficha')
-    await esperar(() => textoPantalla().includes('IMP-PRUEBA-1'), 'los equipos')
+    // Equipos y categorías llegan por consultas en vivo distintas: sin las
+    // categorías, los grupos todavía se titulan "Sin categoría".
+    await esperar(
+      () => textoPantalla().includes('IMP-PRUEBA-1') && textoPantalla().includes('Impresoras'),
+      'los equipos agrupados por categoría',
+    )
 
     const texto = textoPantalla()
     expect(texto).toContain('6 equipos')
@@ -131,11 +147,14 @@ describe('la ficha de una ubicación', () => {
     await db.ubicaciones.bulkPut([ubicacion('u-sede', 'Sede de prueba'), ubicacion('u-area', 'Área de prueba', 'u-sede')])
     await db.dispositivos.update('pc-1', { ubicacionId: 'u-area' })
     await montar(RUTAS, '/ubicaciones/u-sede')
-    await esperar(() => textoPantalla().includes('Contiene'), 'la ficha')
-
-    const texto = textoPantalla()
-    expect(texto).toContain('1 equipo (0 aquí, el resto en sus sub-ubicaciones)')
-    expect(texto).toContain('Sus equipos están en las sub-ubicaciones de arriba.')
+    // Se espera el recuento real, no solo "Contiene": esa sección sale en
+    // cuanto llegan las ubicaciones, y los equipos (otra consulta en vivo)
+    // pueden llegar después; mientras tanto la ficha dice "Sin equipos".
+    await esperar(
+      () => textoPantalla().includes('1 equipo (0 aquí, el resto en sus sub-ubicaciones)'),
+      'el recuento de la sede con los equipos de sus áreas',
+    )
+    expect(textoPantalla()).toContain('Sus equipos están en las sub-ubicaciones de arriba.')
   })
 
   it('la lista cuenta equipos (no textos) en el aviso de migración', async () => {
