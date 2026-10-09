@@ -86,10 +86,9 @@ async function sembrar() {
   })
 }
 
-/** La línea bajo el nombre de un equipo, tal como la dibuja `FilaDispositivo`. */
+/** La línea bajo el nombre de un equipo: el segundo párrafo de su fila. */
 function subtituloDe(id: string): HTMLElement | null {
-  const nombre = document.body.querySelector<HTMLElement>(`a[href="/dispositivos/${id}"] p`)
-  return (nombre?.nextElementSibling as HTMLElement | null) ?? null
+  return document.body.querySelectorAll<HTMLElement>(`a[href="/dispositivos/${id}"] p`)[1] ?? null
 }
 
 function campoEquipos(): HTMLInputElement | null {
@@ -153,10 +152,42 @@ describe('la lista de Equipos con persona y área (tarea 317)', () => {
       expect(parte.classList.contains('line-clamp-2')).toBe(true)
       expect(parte.classList.contains('break-words')).toBe(true)
     }
-    expect(linea.classList.contains('flex-wrap')).toBe(true)
+    // El párrafo no dibuja caja: sus partes fluyen en la franja de abajo.
+    expect(linea.classList.contains('contents')).toBe(true)
+    expect(linea.parentElement?.classList.contains('flex-wrap')).toBe(true)
     // Sin persona, la línea de siempre: un solo texto de hasta dos líneas.
     expect(subtituloDe('metro-libre')?.children).toHaveLength(0)
     expect(subtituloDe('metro-libre')?.classList.contains('line-clamp-2')).toBe(true)
+  })
+
+  it('el estado y la IP no le quitan ancho a la persona: el estado va arriba y la IP al final de su línea', async () => {
+    await sembrarEquipo({
+      id: 'metro-mant',
+      nombre: 'metro-mant',
+      categoriaId: 'cat-equipos',
+      estado: 'En mantenimiento',
+      ip: '10.31.7.29',
+      responsable: 'María Fernanda Restrepo Echeverri',
+      responsableId: 'maria',
+    })
+    await montar(RUTAS, '/dispositivos')
+    const linea = await esperar(() => subtituloDe('metro-mant'), 'la fila en mantenimiento')
+    const fila = document.body.querySelector<HTMLElement>('a[href="/dispositivos/metro-mant"]')!
+    const nombre = fila.querySelector('p')!
+    const estado = Array.from(fila.querySelectorAll('span')).find((s) => s.textContent === 'En mantenimiento')!
+    const ip = Array.from(fila.querySelectorAll('span')).find((s) => s.textContent === '10.31.7.29')!
+
+    // Arriba: el nombre y el estado, en la misma franja.
+    expect(estado.parentElement).toBe(nombre.parentElement)
+    // Abajo: la persona, el área y la IP, en una franja de todo el ancho.
+    const abajo = linea.parentElement!
+    expect(abajo.classList.contains('col-span-2')).toBe(true)
+    expect(abajo.contains(ip)).toBe(true)
+    expect(abajo.contains(estado)).toBe(false)
+    // La IP va después del texto, empujada a la derecha.
+    expect(abajo.lastElementChild).toBe(ip)
+    expect(ip.classList.contains('ml-auto')).toBe(true)
+    expect(linea.textContent).toBe('María Fernanda Restrepo Echeverri · Gestión Administrativa y Financiera')
   })
 
   it('el área se lee de la persona: si cambia, la lista lo dice sin reescribir el equipo', async () => {
