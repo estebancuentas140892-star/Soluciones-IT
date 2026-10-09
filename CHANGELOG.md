@@ -8,6 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-09
 
+### Corregido (ficha del equipo, tarea 316): el responsable se lee entero en el teléfono
+
+**Área modificada:** `src/features/personas/ResponsableDelEquipo.tsx` (la persona activa o retirada y "Último responsable").
+**Tipo:** Corregido y Documentación (REGLAS regla 23, punto nuevo sobre el dato principal de una fila de la ficha; DOCUMENTACION_FUNCIONAL, la ficha de Equipos; COMPONENTES_UI 3.7d; TAREAS 316).
+**Motivo:** hallazgo en la revisión móvil de producción. El nombre del responsable vivía en `block truncate`, en la misma fila que el icono, la flecha y "Cambiar" (`shrink-0`): a 320 o 375 px se leía "Responsable: Daniela…" y no se sabía quién era. "Último responsable" tenía el mismo `truncate`, y con una persona retirada la pastilla "Retirada", también al lado, le quitaba unos 75 px más.
+**Antes:** "Responsable: Nombre" en una sola línea recortada; "Desde el …" y el aviso de retirada, también en una línea recortada; "Retirada" a la derecha del texto.
+**Qué cambia:**
+- El rótulo ("Responsable:" o "Último responsable:") va en su propia línea, como el de la IP de encima, y el nombre debajo puede ocupar **hasta dos líneas** antes de recortarse (`line-clamp-2 break-words`). La fila crece en altura.
+- "Desde el …" sigue bajo el nombre. Con una persona retirada, "Retirada" y "Se retiró: reasignar o liberar este equipo" van juntos bajo el nombre y el aviso puede partir línea.
+- Sin cambios: el tamaño de letra (13,5 px), "Cambiar" (44 px), la flecha, el enlace a la persona, "Anotado: «…» · por validar" y "sin responsable" con su "Asignar".
+**Medido** (banco local con datos inventados, retirados al terminar), con "Daniela Gómez", "Daniela Andrea González Pérez" y "María Fernanda Restrepo Echeverri": a 320, 375 y 390 px el nombre corto ocupa una línea y los largos dos, enteros, sin recorte ni desplazamiento horizontal; a 1280, una línea. "Cambiar" mide 70 × 44 y la flecha queda visible en todos los anchos.
+**Estructura de datos:** ninguna. Ni la búsqueda (tarea 314), ni la normalización de tildes (tarea 315), ni el modelo de personas cambian.
+**Verificación:** 190 archivos y 2993 pruebas (2983 antes: +10), `tsc -b`, lint y build en verde. Nueva `src/features/personas/responsableDelEquipo.test.tsx` (10 pruebas: la regla de la prueba; nombre corto, largo y con varios apellidos, con "Desde el"; retirada; último responsable; anotado; sin responsable; "Cambiar"; el enlace a la persona). Con el componente anterior fallan 6, y si se vuelve a poner `truncate` al nombre, fallan 5 diciendo dónde.
+**Impacto esperado:** saber de quién es el equipo al abrir su ficha en el teléfono.
+
 ### Corregido (Equipos, tarea 314): el buscador encuentra un equipo por su persona responsable
 
 **Área modificada:** `src/features/dispositivos/busquedaEquipos.ts` (`camposDeBusqueda` suma `responsable`), `src/features/dispositivos/DispositivosPage.tsx` (el marcador del buscador).

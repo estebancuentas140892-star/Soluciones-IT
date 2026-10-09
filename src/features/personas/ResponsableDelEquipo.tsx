@@ -27,6 +27,13 @@ import { useEntradasDeAsignacion } from './useAsignaciones'
 //     lo está). "Asignar" abre la lista de personas activas.
 // Un equipo de baja sin vínculo no lleva fila: no se entrega a nadie.
 
+// EL NOMBRE ES EL DATO PRINCIPAL DE LA FILA (tarea 316). En un teléfono
+// comparte el ancho con el icono, la flecha y "Cambiar", y con `truncate`
+// se leía "Responsable: Daniela…". El rótulo va en su línea, como el de
+// la IP de encima, y el nombre debajo puede ocupar hasta dos líneas antes
+// de recortarse: la fila crece en altura antes que perder a quién nombra.
+const NOMBRE_RESPONSABLE = 'line-clamp-2 break-words'
+
 export function ResponsableDelEquipo({
   dispositivo,
   origen,
@@ -71,9 +78,9 @@ export function ResponsableDelEquipo({
         className="flex min-h-12 items-center gap-2.5 px-3.5 py-1.5 text-[13.5px] text-noct-accent-300 hover:bg-noct-text/[.04]"
       >
         <User size={15} className="shrink-0" aria-hidden />
-        <span className="min-w-0 flex-1 truncate">
-          <span className="text-noct-neutral-500">Último responsable: </span>
-          {textoVivo(personaViva.nombre, dispositivo.responsable)}
+        <span className="min-w-0 flex-1">
+          <span className="block text-noct-neutral-500">Último responsable: </span>
+          <span className={NOMBRE_RESPONSABLE}>{textoVivo(personaViva.nombre, dispositivo.responsable)}</span>
         </span>
         <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
       </Link>
@@ -92,17 +99,21 @@ export function ResponsableDelEquipo({
         >
           <User size={15} className="shrink-0" aria-hidden />
           <span className="min-w-0 flex-1">
-            <span className="block truncate">
-              <span className="text-noct-neutral-500">Responsable: </span>
-              {textoVivo(personaViva.nombre, dispositivo.responsable)}
-            </span>
+            <span className="block text-noct-neutral-500">Responsable: </span>
+            <span className={NOMBRE_RESPONSABLE}>{textoVivo(personaViva.nombre, dispositivo.responsable)}</span>
+            {/* "Retirada" va con su aviso, dentro de la columna: al lado
+                del nombre le quitaba al teléfono el ancho que le falta. */}
             {(desde || retirada) && (
-              <span className={`block truncate text-[12px] ${retirada ? 'text-noct-precaucion' : 'text-noct-neutral-500'}`}>
-                {retirada ? 'Se retiró: reasignar o liberar este equipo' : `Desde el ${fechaLegible(desde as string)}`}
+              <span
+                className={`flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] ${retirada ? 'text-noct-precaucion' : 'text-noct-neutral-500'}`}
+              >
+                {retirada && <PastillaEstado tono="neutro">Retirada</PastillaEstado>}
+                <span className="min-w-0 break-words">
+                  {retirada ? 'Se retiró: reasignar o liberar este equipo' : `Desde el ${fechaLegible(desde as string)}`}
+                </span>
               </span>
             )}
           </span>
-          {retirada && <PastillaEstado tono="neutro">Retirada</PastillaEstado>}
           <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
         </Link>
         <button
