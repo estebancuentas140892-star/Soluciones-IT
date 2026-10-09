@@ -77,7 +77,7 @@ select fecha, tipo, detalle, sesion_id, tecnico from public.asistencia_eventos o
 
 ### Actualización del 2026-10-09 (tarea 317: el área de la persona)
 
-**Pendiente de aplicar, ANTES de desplegar la versión que la usa.** Vuelve a ejecutar `schema.sql` completo (idempotente). Agrega a `personas` la columna `area` (texto, por defecto vacía), bloque 1.v. No cambia ningún dato: las personas existentes quedan con el área vacía y nada se copia desde `notas`. Hasta aplicarla, el guardado de una persona desde la versión nueva espera en la cola de sincronización (no se pierde); el resto sigue igual.
+**Ya aplicada en Production** (por ChatGPT, el 2026-10-09, antes de desplegar la versión que la usa; verificado: la columna existe, `text`, `NOT NULL`, default `''`, y las personas existentes quedaron con el área vacía). No hay que volver a ejecutar nada por esta tarea; `schema.sql` la conserva como declaración del esquema real. Agrega a `personas` la columna `area` (texto, por defecto vacía), bloque 1.v. No cambia ningún dato: las personas existentes quedan con el área vacía y nada se copia desde `notas`. Hasta aplicarla, el guardado de una persona desde la versión nueva espera en la cola de sincronización (no se pierde); el resto sigue igual.
 
 Para verificar:
 
