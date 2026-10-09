@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type Conexion, type Dispositivo, type Persona } from '../../lib/db'
 import { equiposActuales } from './cicloPersona'
 import { equiposAnteriores, periodosDeAsignacion } from './historialAsignaciones'
@@ -47,6 +47,10 @@ async function historialDe(dispositivoId: string) {
 beforeEach(async () => {
   await Promise.all(db.tables.map((tabla) => tabla.clear()))
   await db.personas.bulkPut([persona('ana', 'Ana Pérez'), persona('luis', 'Luis Gómez')])
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('asignar y liberar un equipo', () => {
@@ -174,8 +178,17 @@ describe('retirar a una persona', () => {
   })
 
   it('después del retiro, la ficha responde qué equipos tuvo', async () => {
+    // Asignar y retirar son dos momentos distintos. Los periodos se arman
+    // ordenando el historial por su hora, y dos operaciones seguidas pueden
+    // caer en el mismo milisegundo en una máquina rápida (pasó en CI): con
+    // la hora empatada, el orden lo decidía el id aleatorio de la entrada y
+    // la liberación podía quedar antes de la asignación. El reloj de la
+    // prueba fija cuándo pasa cada cosa, sin depender de la velocidad.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-01T09:00:00.000Z'))
     await db.dispositivos.put(equipo('jp99'))
     await asignarEquipo('jp99', 'ana')
+    vi.setSystemTime(new Date('2026-09-23T09:00:00.000Z'))
     await retirarPersona('ana', { fechaRetiro: '2026-09-23', motivoRetiro: '' }, [
       { dispositivoId: 'jp99', tipo: 'liberar', marcarDisponible: true },
       { dispositivoId: 'jp62', tipo: 'liberar', marcarDisponible: true },
