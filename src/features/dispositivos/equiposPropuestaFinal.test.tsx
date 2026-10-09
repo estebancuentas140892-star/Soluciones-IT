@@ -82,7 +82,7 @@ describe('la lista de Equipos', () => {
       () => document.body.querySelector<HTMLInputElement>('input[aria-label="Buscar en Equipos"]'),
       'el buscador de Equipos',
     )
-    expect(campo.placeholder).toBe('Nombre, IP, lugar o serial')
+    expect(campo.placeholder).toBe('Nombre, persona, IP, lugar o serial')
 
     await escribir(campo, 'prueba 3')
     await esperar(() => !filaDe('caja-1'), 'la lista filtrada')

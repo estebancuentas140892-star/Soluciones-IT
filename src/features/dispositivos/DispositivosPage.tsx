@@ -173,13 +173,14 @@ export function DispositivosPage() {
         <div className="flex items-center gap-2 px-4 pb-2.5">
           {/* El marcador dice qué se puede buscar (propuesta final de
               Claude Design), solo con lo que este buscador busca de verdad
-              (`camposDeBusqueda`): nombre, IP, lugar, serial, placa, marca y
-              modelo. La etiqueta accesible sigue siendo "Buscar en Equipos". */}
+              (`camposDeBusqueda`): nombre, persona, IP, lugar, serial, placa,
+              marca y modelo. La etiqueta accesible sigue siendo "Buscar en
+              Equipos". */}
           <CampoBusqueda
             valor={texto}
             onCambiar={setTexto}
             alcance="Equipos"
-            textoAlternativo="Nombre, IP, lugar o serial"
+            textoAlternativo="Nombre, persona, IP, lugar o serial"
             className="min-w-0 flex-1"
           />
           {/* Cuadrado de 46 px con el mismo peso que el campo (propuesta

@@ -16,9 +16,12 @@ import { incluyeTexto } from '../../lib/texto'
 // Lógica pura, sin React ni base de datos, para probarla sola.
 
 /**
- * Dónde se busca: nombre, IP, ubicación, serial, placa, marca y modelo.
- * La placa y el serial son lo que se lee en la etiqueta del equipo; la
- * marca y el modelo, lo que se dice de él ("la Zebra de caja").
+ * Dónde se busca: nombre, IP, ubicación, serial, placa, marca, modelo y
+ * responsable. La placa y el serial son lo que se lee en la etiqueta del
+ * equipo; la marca y el modelo, lo que se dice de él ("la Zebra de
+ * caja"); el responsable, de quién es, porque se conoce a la persona
+ * antes que el nombre de su equipo. Es la copia legible de su nombre, la
+ * misma que indexa Resolver en la identidad del equipo.
  */
 export function camposDeBusqueda(dispositivo: Dispositivo): string[] {
   return [
@@ -29,6 +32,7 @@ export function camposDeBusqueda(dispositivo: Dispositivo): string[] {
     dispositivo.placaInventario,
     dispositivo.marca,
     dispositivo.modelo,
+    dispositivo.responsable,
   ]
 }
 

@@ -72,6 +72,67 @@ describe('buscarEquipos', () => {
   })
 })
 
+describe('buscarEquipos por la persona responsable', () => {
+  // Se conoce a la persona antes que el nombre de su equipo. Se busca por
+  // la copia legible `responsable`, con la misma regla que los demás campos.
+  const CON_PERSONAS = [
+    equipo('PC Contabilidad', 'cat-pc', {
+      responsable: 'Johana Carolina Pérez',
+      responsableId: 'persona-1',
+      ip: '10.0.1.15',
+      serial: 'SN-4821',
+    }),
+    equipo('Portátil de prueba', 'cat-portatiles', {
+      responsable: 'Esteban Ríos',
+      responsableId: 'persona-2',
+      marca: 'Lenovo',
+      modelo: 'T14',
+      placaInventario: 'INV-90',
+    }),
+    equipo('SW-PISO-3', 'cat-switches', { responsable: 'Carolina Gómez', responsableId: 'persona-3' }),
+    equipo('PC retirada', 'cat-pc', {
+      responsable: 'Johana Carolina Pérez',
+      responsableId: 'persona-1',
+      eliminadoEn: '2026-09-01T00:00:00.000Z',
+    }),
+  ]
+  const nombres = (texto: string, categoriaId = '') =>
+    buscarEquipos(CON_PERSONAS, RED, { texto, categoriaId }).generales.map((d) => d.nombre)
+
+  it('lo encuentra por un nombre, un apellido, el nombre completo o una parte', () => {
+    for (const texto of ['johana', 'carolina', 'pérez', 'Johana Carolina Pérez', 'JOHANA', 'caro']) {
+      expect(nombres(texto)).toEqual(['PC Contabilidad'])
+    }
+    expect(nombres('esteban')).toEqual(['Portátil de prueba'])
+  })
+
+  it('un equipo eliminado no aparece aunque la persona coincida', () => {
+    const { generales, deRed } = buscarEquipos(CON_PERSONAS, RED, { texto: 'johana', categoriaId: '' })
+    expect([...generales, ...deRed].map((d) => d.nombre)).not.toContain('PC retirada')
+  })
+
+  it('un equipo de red de esa persona sale aparte, y con un chip no sale', () => {
+    const { generales, deRed } = buscarEquipos(CON_PERSONAS, RED, { texto: 'carolina', categoriaId: '' })
+    expect(generales.map((d) => d.nombre)).toEqual(['PC Contabilidad'])
+    expect(deRed.map((d) => d.nombre)).toEqual(['SW-PISO-3'])
+    expect(conteosDeChips(CON_PERSONAS, RED, 'carolina').todos).toBe(2)
+
+    const conChip = buscarEquipos(CON_PERSONAS, RED, { texto: 'carolina', categoriaId: 'cat-pc' })
+    expect(conChip.generales.map((d) => d.nombre)).toEqual(['PC Contabilidad'])
+    expect(conChip.deRed).toEqual([])
+    expect(nombres('carolina', 'cat-portatiles')).toEqual([])
+  })
+
+  it('sigue encontrando por nombre, IP, serial, placa, marca y modelo', () => {
+    expect(nombres('contabilidad')).toEqual(['PC Contabilidad'])
+    expect(nombres('10.0.1.15')).toEqual(['PC Contabilidad'])
+    expect(nombres('sn-4821')).toEqual(['PC Contabilidad'])
+    expect(nombres('inv-90')).toEqual(['Portátil de prueba'])
+    expect(nombres('lenovo')).toEqual(['Portátil de prueba'])
+    expect(nombres('t14')).toEqual(['Portátil de prueba'])
+  })
+})
+
 describe('conteosDeChips', () => {
   it('"Todos" promete también los de red que salen al escribir; cada categoría, los suyos', () => {
     const { todos, porCategoria } = conteosDeChips(EQUIPOS, RED, '10.0.0.2')
