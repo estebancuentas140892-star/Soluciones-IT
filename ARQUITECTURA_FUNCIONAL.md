@@ -388,7 +388,7 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 ---
 
 **RN-044. Buscar en Equipos incluye los equipos de red, aparte; "Conectado a" es el enlace de subida.**
-- Sin texto, Equipos es el inventario general (sin las categorías `es_red`). Con texto y sin chip de categoría, además, los equipos de red que coinciden, en el bloque "Equipos de red" (`buscarEquipos`). Campos: nombre, IP, ubicación, serial, placa, marca y modelo; orden natural por nombre. El chip "Todos" cuenta también los de red (`conteosDeChips`). Dura en el código: `src/features/dispositivos/busquedaEquipos.ts`.
+- Sin texto, Equipos es el inventario general (sin las categorías `es_red`). Con texto y sin chip de categoría, además, los equipos de red que coinciden, en el bloque "Equipos de red" (`buscarEquipos`). Campos: nombre, IP, ubicación, serial, placa, marca, modelo y responsable (desde la tarea 314: la copia legible `responsable`, la misma que indexa Resolver, sin relación nueva); orden natural por nombre. El chip "Todos" cuenta también los de red (`conteosDeChips`). Dura en el código: `src/features/dispositivos/busquedaEquipos.ts`.
 - La búsqueda sobrevive al salto a una ficha (estado de navegación, el mismo mecanismo que Resolver) y el chip va en la URL (`?categoria=`); un equipo de red abierto desde Equipos vuelve a Equipos.
 - "Conectado a" en la ficha: el primer enlace (`tipo = 'enlace'`, no eliminado) en el que el equipo es el DESTINO, porque el origen es su padre en la topología (`arbol.ts`), ordenado por puerto; se enseñan el nombre vivo del otro equipo y SU puerto (`conectadoA`, `textoConectadoA` en `src/lib/conexiones.ts`), y "y N más" si hay más subidas. `instalacion` y `relacionado` no cuentan.
 

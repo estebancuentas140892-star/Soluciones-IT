@@ -6,6 +6,24 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-09
+
+### Corregido (Equipos, tarea 314): el buscador encuentra un equipo por su persona responsable
+
+**Área modificada:** `src/features/dispositivos/busquedaEquipos.ts` (`camposDeBusqueda` suma `responsable`), `src/features/dispositivos/DispositivosPage.tsx` (el marcador del buscador).
+**Tipo:** Corregido y Documentación (DECISIONES AD-061, decisión 3; ARQUITECTURA_FUNCIONAL RN-044; DOCUMENTACION_FUNCIONAL, Equipos; BUSCADOR sección 10; COMPONENTES_UI 3.8z; TAREAS 314 y 315).
+**Motivo:** el equipo de TI conoce el nombre de la persona antes que el del computador o dispositivo que tiene asignado. Resolver ya encontraba un equipo por su responsable; el buscador de Equipos no.
+**Antes:** Equipos buscaba por nombre, IP, ubicación, serial, placa, marca y modelo, y el marcador decía "Nombre, IP, lugar o serial".
+**Qué cambia:**
+- El buscador de Equipos también busca en `responsable`: "johana", "carolina", "pérez", el nombre completo o una parte encuentran el equipo de Johana Carolina Pérez.
+- Es el mismo dato que ya usa Resolver: la copia legible del nombre que el equipo guarda junto a `responsableId`. No se creó una relación paralela ni se duplicó información.
+- La misma regla que los demás campos (`incluyeTexto`): parcial y sin distinguir mayúsculas. Los equipos eliminados siguen fuera; un equipo de red de esa persona sale aparte, en "Equipos de red"; el chip de categoría y el conteo de "Todos" siguen igual.
+- El marcador pasa a **"Nombre, persona, IP, lugar o serial"**. El diseño del buscador no cambia.
+**Estructura de datos:** ninguna. Ni Supabase, ni el modelo de personas, ni la relación entre persona y equipo cambian.
+**Lo que no cambia:** Resolver; `incluyeTexto`, que sigue distinguiendo tildes ("perez" no encuentra "Pérez" en ningún campo; registrado como tarea 315, sin implementar); las categorías y la separación de los equipos de red.
+**Verificación:** 189 archivos y 2983 pruebas (2979 antes: +4). Bloque nuevo "buscarEquipos por la persona responsable" en `busquedaEquipos.test.ts`: un nombre, un apellido, el nombre completo y una parte; un equipo eliminado no aparece; uno de red sale aparte y con un chip no sale; "Todos" lo cuenta; nombre del equipo, IP, serial, placa, marca y modelo siguen encontrando. `equiposPropuestaFinal.test.tsx` comprueba el marcador nuevo. Sin el campo, las dos pruebas que buscan por persona fallan. `tsc -b`, lint y build en verde.
+**Impacto esperado:** encontrar el equipo de alguien escribiendo su nombre, sin saber cómo se llama el computador.
+
 ## 2026-10-08
 
 ### Agregado (Bóveda en las guías, tarea 312): "Bloquear Bóveda" desde la credencial de una guía
