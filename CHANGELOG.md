@@ -8,6 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-09
 
+### Cambiado (Equipos, tarea 317, ampliación): la línea dice también dónde está el equipo
+
+**Área modificada:** `src/features/dispositivos/responsableEnLista.ts` (`partesDelSubtitulo` recibe la categoría y la ubicación por separado; nuevo `anotadoEnLista`), `src/features/dispositivos/DispositivosPage.tsx` (pasa la ubicación de `ubicacionDeEquipo` y pinta en partes también las filas anotadas).
+**Tipo:** Modificado y Documentación (DECISIONES AD-074, ampliación de la decisión 3; ARQUITECTURA_FUNCIONAL RN-072; DOCUMENTACION_FUNCIONAL, Equipos; COMPONENTES_UI, `responsableEnLista.ts`; TAREAS 317).
+**Motivo:** encargo del usuario. Con una persona, la ubicación desaparecía del subtítulo; la lista debe decir qué equipo es, quién lo tiene, de qué área es y dónde está.
+**Antes:** con una persona, "Persona · Área"; con un nombre anotado, solo "Anotado: «X» · por validar".
+**Qué cambia:**
+- Con una persona: persona · área · ubicación. Sin área, persona · ubicación; sin ubicación, persona · área; solo la persona, su nombre.
+- Si el área y la ubicación son la misma sin contar mayúsculas ni tildes ("Sistemas"), se lee una vez (la deduplicación de siempre de `contextoVisible`).
+- Con un nombre anotado: "Anotado: «X» · por validar" y la ubicación, en partes como las de persona.
+- La ubicación sale solo de `ubicacionDeEquipo`: la ficha de Ubicación vinculada y, si no la hay, el texto del equipo.
+**Lo que no cambia:** las filas sin responsable (categoría y ubicación), el bloque "Equipos de red", la sección Red, el buscador, las fichas, el modelo de datos, Supabase y ningún dato real.
+**Verificación:** 194 archivos y 3041 pruebas (3032 antes: +9). `responsableEnLista.test.ts` (25: los siete casos pedidos y los de siempre con la ubicación) y `listaResponsableArea.test.tsx` (13: la ficha vinculada como fuente de verdad, "Sistemas" una vez, sin área, anotado con ubicación, sin responsable y Red sin cambios). `tsc -b`, lint, build y la prueba sin conexión (65) en verde. Medida en el navegador a 320, 375, 390 y 1280 px con datos inventados, retirados al terminar: persona, área y ubicación enteras, con el estado y la IP visibles y sin desplazamiento horizontal.
+**Impacto esperado:** saber de un vistazo, además de quién tiene el equipo, dónde está.
+
 ### Agregado (Equipos y personas, tarea 317): la lista de Equipos dice quién tiene el equipo y de qué área es
 
 **Área modificada:** `src/lib/db.ts` (`Persona.area`, versión 20 de la base local), `src/lib/tablas.ts` (`personas.area` con su default), `supabase/schema.sql` (bloque 1.v), `src/features/personas/PersonaForm.tsx` (campo Área), `PersonaPage.tsx` (el área bajo el nombre), los cuatro sitios que crean personas (`area: ''`), `src/features/historial/textoHistorial.ts` (rótulo "Área"), nuevo `src/features/dispositivos/responsableEnLista.ts`, `DispositivosPage.tsx`, `busquedaEquipos.ts`, `src/components/FilaDispositivo.tsx` (dos franjas y subtítulo en partes) y `src/lib/contextoEquipo.ts` (`partesDeContexto`).

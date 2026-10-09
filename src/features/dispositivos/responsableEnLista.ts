@@ -45,24 +45,44 @@ export function areaDeQuienLoTiene(
 }
 
 /**
+ * El nombre escrito como responsable que no es una ficha de persona (por
+ * validar), o ''. Un equipo de baja no lo tiene nadie: tampoco anotado.
+ */
+export function anotadoEnLista(
+  dispositivo: Pick<Dispositivo, 'responsable' | 'responsableId' | 'estado' | 'eliminadoEn'>,
+): string {
+  return esDeBaja(dispositivo) ? '' : responsablePorValidar(dispositivo)
+}
+
+/** Lo que la lista sabe del equipo además de quién lo tiene. */
+export interface ContextoDeEquipo {
+  categoria?: string | null
+  /** La de `ubicacionDeEquipo`: la ficha vinculada y, si no, el texto heredado. */
+  ubicacion?: string | null
+}
+
+/**
  * Las partes del subtítulo de un equipo en la lista de Equipos, por
  * prioridad. Se unen con " · " y, como el resto, callan lo que el nombre
- * del equipo ya dice (`lineasDeContexto`, regla 22):
- *   1. Una persona lo tiene: su nombre y su área. Sin área, solo el
- *      nombre: nunca "· Sin área".
+ * del equipo ya dice y no repiten una parte igual a otra sin contar
+ * mayúsculas ni tildes (`lineasDeContexto`, regla 22):
+ *   1. Una persona lo tiene: su nombre, su área y dónde está el equipo
+ *      (ampliación de la tarea 317). Sin área, nombre y ubicación (nunca
+ *      "· Sin área"); si el área y la ubicación son la misma ("Sistemas"),
+ *      se dice una vez.
  *   2. Un nombre escrito que no es una ficha de persona: "Anotado: «X» ·
- *      por validar", como en la ficha (AD-061). Sin área: no se inventa,
- *      y no se presenta como una persona vinculada.
- *   3. Nadie: el contexto de siempre que recibe (categoría y ubicación).
+ *      por validar", como en la ficha (AD-061), y la ubicación. Sin área:
+ *      no se inventa, y no se presenta como una persona vinculada.
+ *   3. Nadie: categoría y ubicación, como siempre.
  */
 export function partesDelSubtitulo(
   dispositivo: Pick<Dispositivo, 'responsable' | 'responsableId' | 'estado' | 'eliminadoEn'>,
-  contexto: ReadonlyArray<string | null | undefined>,
+  { categoria, ubicacion }: ContextoDeEquipo,
   personas: PersonasPorId,
 ): ReadonlyArray<string | null | undefined> {
   const persona = personaQueLoTiene(dispositivo, personas)
-  if (persona) return [textoVivo(persona.nombre, dispositivo.responsable), persona.area?.trim()]
-  const anotado = esDeBaja(dispositivo) ? '' : responsablePorValidar(dispositivo)
-  if (anotado) return [`Anotado: «${anotado}» · por validar`]
-  return contexto
+  if (persona) return [textoVivo(persona.nombre, dispositivo.responsable), persona.area?.trim(), ubicacion]
+  const anotado = anotadoEnLista(dispositivo)
+  if (anotado) return [`Anotado: «${anotado}» · por validar`, ubicacion]
+  return [categoria, ubicacion]
 }

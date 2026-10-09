@@ -13,7 +13,7 @@ import { Monitor, Plus, QrCode } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { buscarEquipos, conteosDeChips } from './busquedaEquipos'
-import { partesDelSubtitulo, personaQueLoTiene, type PersonasPorId } from './responsableEnLista'
+import { anotadoEnLista, partesDelSubtitulo, personaQueLoTiene, type PersonasPorId } from './responsableEnLista'
 
 // Pantalla Dispositivos re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Dispositivos.dc.html, entrada
@@ -104,23 +104,25 @@ export function DispositivosPage() {
   // dejara iguales dos equipos distintos, esos dos lo dicen todo.
   //
   // En el inventario general, si alguien tiene el equipo, la línea dice
-  // quién y de qué área es en vez de la categoría, que ya dice el icono
-  // (tarea 317, `partesDelSubtitulo`). Esas dos van como partes separadas
-  // para que la fila no parta el área por la mitad en un teléfono. Los
-  // equipos de red conservan su categoría: en ese bloque es lo que los
-  // distingue.
+  // quién, de qué área es y dónde está el equipo en vez de la categoría,
+  // que ya dice el icono (tarea 317, `partesDelSubtitulo`). Van como
+  // partes separadas, también con un nombre anotado, para que la fila no
+  // las parta por la mitad en un teléfono. Los equipos de red conservan
+  // su categoría: en ese bloque es lo que los distingue.
   const subtitulos = useMemo(() => {
     const lineas = new Map<string, string | string[]>()
-    const contexto = (d: Dispositivo) => [
-      nombreCategoria.get(d.categoriaId),
-      ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? '')),
-    ]
+    const ubicacion = (d: Dispositivo) => ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? ''))
+    const contexto = (d: Dispositivo) => [nombreCategoria.get(d.categoriaId), ubicacion(d)]
     const listas: [
       Dispositivo[],
       (d: Dispositivo) => ReadonlyArray<string | null | undefined>,
       (d: Dispositivo) => boolean,
     ][] = [
-      [generales, (d) => partesDelSubtitulo(d, contexto(d), personaPorId), (d) => personaQueLoTiene(d, personaPorId) !== null],
+      [
+        generales,
+        (d) => partesDelSubtitulo(d, { categoria: nombreCategoria.get(d.categoriaId), ubicacion: ubicacion(d) }, personaPorId),
+        (d) => personaQueLoTiene(d, personaPorId) !== null || anotadoEnLista(d) !== '',
+      ],
       [deRed, contexto, () => false],
     ]
     for (const [lista, partes, porPartes] of listas) {

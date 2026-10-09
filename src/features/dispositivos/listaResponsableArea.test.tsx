@@ -81,9 +81,27 @@ async function sembrar() {
     nombre: 'SW-PISO-4',
     categoriaId: 'cat-red',
     ip: '10.31.7.2',
+    ubicacion: 'Rack de prueba',
     responsable: 'Esteban Cardona Rendón',
     responsableId: 'esteban',
   })
+
+  // Con ubicación (ampliación de la 317). Una ficha de Ubicación vinculada
+  // manda sobre el texto heredado del equipo, que aquí quedó viejo.
+  await db.ubicaciones.put({ id: 'u-caja', nombre: 'Caja Parque de Prueba', padreId: null, notas: '', updatedAt: AHORA, updatedBy: null, eliminadoEn: null })
+  await db.personas.put(persona('sis', 'Esteban Cardona Rendón', { area: 'Sistemas' }))
+  await sembrarEquipo({
+    id: 'metro-ubicada',
+    nombre: 'metro-ubicada',
+    ...enUso,
+    ubicacionId: 'u-caja',
+    ubicacion: 'Texto viejo de prueba',
+    responsable: 'Esteban Cardona Rendón',
+    responsableId: 'esteban',
+  })
+  await sembrarEquipo({ id: 'metro-sistemas', nombre: 'metro-62', ...enUso, ubicacion: 'Sistemas', responsable: 'Esteban', responsableId: 'sis' })
+  await sembrarEquipo({ id: 'metro-luis-lugar', nombre: 'metro-luis-lugar', ...enUso, ubicacion: 'Bodega de prueba', responsable: 'Luis', responsableId: 'luis' })
+  await sembrarEquipo({ id: 'metro-archivo-lugar', nombre: 'metro-archivo-lugar', ...enUso, ubicacion: 'Bodega de prueba', responsable: 'Archivo' })
 }
 
 /** La línea bajo el nombre de un equipo: el segundo párrafo de su fila. */
@@ -210,9 +228,11 @@ describe('la lista de Equipos con persona y área (tarea 317)', () => {
     await esperar(() => !subtituloDe('metro-ana'), 'la lista filtrada')
 
     expect(subtituloDe('metrojp19')?.textContent).toBe('Esteban Cardona Rendón · Control Interno')
-    // El equipo de red conserva su categoría en su bloque (no cambia).
+    // El equipo de red conserva su categoría y su lugar en su bloque, aunque
+    // alguien lo tenga: ahí no cambia nada.
     expect(textoPantalla()).toContain('Equipos de red')
-    expect(subtituloDe('sw-piso')?.textContent).toBe('Switches')
+    expect(subtituloDe('sw-piso')?.textContent).toBe('Switches · Rack de prueba')
+    expect(subtituloDe('sw-piso')?.children).toHaveLength(0)
     // La persona eliminada no aporta su área.
     expect(subtituloDe('metro-eliminada')).toBeNull()
   })
@@ -224,5 +244,56 @@ describe('la lista de Equipos con persona y área (tarea 317)', () => {
     await esperar(() => !subtituloDe('metro-ana'), 'la lista filtrada')
 
     expect(subtituloDe('metrojp19')).not.toBeNull()
+  })
+})
+
+describe('la lista de Equipos dice también dónde está el equipo (ampliación de la 317)', () => {
+  it('persona, área y ubicación, con la ficha de Ubicación vinculada como fuente de verdad', async () => {
+    await montar(RUTAS, '/dispositivos')
+    const linea = await esperar(() => subtituloDe('metro-ubicada'), 'la fila con ubicación')
+
+    expect(linea.textContent).toBe('Esteban Cardona Rendón · Control Interno · Caja Parque de Prueba')
+    expect(linea.textContent).not.toContain('Texto viejo de prueba')
+    // Tres partes: cada una entera en su línea si cabe, en el teléfono.
+    expect(Array.from(linea.children).map((p) => p.textContent)).toEqual([
+      'Esteban Cardona Rendón ·',
+      'Control Interno ·',
+      'Caja Parque de Prueba',
+    ])
+  })
+
+  it('si el área y la ubicación son la misma, se dice una vez', async () => {
+    await montar(RUTAS, '/dispositivos')
+    await esperar(() => subtituloDe('metro-sistemas'), 'la fila de Sistemas')
+
+    expect(subtituloDe('metro-sistemas')?.textContent).toBe('Esteban Cardona Rendón · Sistemas')
+  })
+
+  it('una persona sin área dice su nombre y la ubicación; sin ubicación, nombre y área como antes', async () => {
+    await montar(RUTAS, '/dispositivos')
+    await esperar(() => subtituloDe('metro-luis-lugar'), 'la fila sin área')
+
+    expect(subtituloDe('metro-luis-lugar')?.textContent).toBe('Luis Pérez de Prueba · Bodega de prueba')
+    expect(subtituloDe('metrojp19')?.textContent).toBe('Esteban Cardona Rendón · Control Interno')
+    expect(subtituloDe('metro-luis')?.textContent).toBe('Luis Pérez de Prueba')
+  })
+
+  it('un responsable por validar conserva su aviso y suma la ubicación, en partes', async () => {
+    await montar(RUTAS, '/dispositivos')
+    const linea = await esperar(() => subtituloDe('metro-archivo-lugar'), 'la fila anotada')
+
+    expect(linea.textContent).toBe('Anotado: «Archivo» · por validar · Bodega de prueba')
+    expect(Array.from(linea.children).map((p) => p.textContent)).toEqual([
+      'Anotado: «Archivo» · por validar ·',
+      'Bodega de prueba',
+    ])
+  })
+
+  it('sin responsable conserva categoría y ubicación en un solo texto, como antes', async () => {
+    await montar(RUTAS, '/dispositivos')
+    const linea = await esperar(() => subtituloDe('metro-libre'), 'la fila libre')
+
+    expect(linea.textContent).toBe('Computadores · Administración de prueba')
+    expect(linea.children).toHaveLength(0)
   })
 })
