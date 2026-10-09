@@ -77,6 +77,7 @@ export function MigracionPersonas() {
       await guardarRegistro('personas', {
         id: p.id,
         nombre: p.nombre,
+        area: '',
         notas: '',
         estado: 'activa',
         // Sin fecha de ingreso: la migración no la conoce y no la inventa.

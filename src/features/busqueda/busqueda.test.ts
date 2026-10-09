@@ -567,6 +567,7 @@ describe('lo que el buscador global reúne', () => {
   const persona: Persona = {
     id: 'p1',
     nombre: 'Zafiro Gómez',
+    area: '',
     notas: '',
     estado: 'activa',
     fechaIngreso: null,

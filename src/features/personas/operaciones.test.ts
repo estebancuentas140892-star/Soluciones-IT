@@ -13,7 +13,7 @@ import {
 const MARCA = { updatedAt: '2026-01-01T00:00:00.000Z', updatedBy: null, eliminadoEn: null }
 
 function persona(id: string, nombre: string): Persona {
-  return { id, nombre, notas: '', estado: 'activa', fechaIngreso: null, fechaRetiro: null, motivoRetiro: '', ...MARCA }
+  return { id, nombre, area: '', notas: '', estado: 'activa', fechaIngreso: null, fechaRetiro: null, motivoRetiro: '', ...MARCA }
 }
 
 function equipo(id: string, datos: Partial<Dispositivo> = {}): Dispositivo {

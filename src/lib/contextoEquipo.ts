@@ -79,24 +79,32 @@ function comparable(texto: string): string {
 }
 
 /**
- * `lineaDeContexto` para cada fila de una LISTA donde hay que elegir, con
+ * `contextoVisible` para cada fila de una LISTA donde hay que elegir, con
  * una salvedad: si callar lo repetido deja dos filas con el mismo nombre y
  * la misma línea, pero su contexto completo es distinto, esas filas
  * muestran el contexto completo. Se quita redundancia, nunca lo que
- * distingue un equipo de otro.
+ * distingue un equipo de otro. Devuelve las partes sin unir, para quien
+ * las pinta por separado (la persona y su área, tarea 317).
  */
-export function lineasDeContexto(filas: ReadonlyArray<FilaConContexto>): string[] {
-  const cortas = filas.map((fila) => lineaDeContexto(fila.nombre, fila.partes))
+export function partesDeContexto(filas: ReadonlyArray<FilaConContexto>): string[][] {
+  const cortas = filas.map((fila) => contextoVisible(fila.nombre, fila.partes))
   // Con el nombre vacío nada se calla: es el contexto entero, sin repetidos.
-  const completas = filas.map((fila) => lineaDeContexto('', fila.partes))
-  const clave = (i: number) => `${comparable(filas[i].nombre)}|${comparable(cortas[i])}`
+  const completas = filas.map((fila) => contextoVisible('', fila.partes))
+  const clave = (i: number) => `${comparable(filas[i].nombre)}|${comparable(cortas[i].join(' '))}`
   const porClave = new Map<string, number[]>()
   filas.forEach((_, i) => porClave.set(clave(i), [...(porClave.get(clave(i)) ?? []), i]))
   return filas.map((_, i) => {
     const iguales = porClave.get(clave(i)) ?? []
-    const ambigua = iguales.some((j) => j !== i && comparable(completas[j]) !== comparable(completas[i]))
+    const ambigua = iguales.some(
+      (j) => j !== i && comparable(completas[j].join(' ')) !== comparable(completas[i].join(' ')),
+    )
     return ambigua ? completas[i] : cortas[i]
   })
+}
+
+/** `partesDeContexto` con cada fila unida en una línea con " · ". */
+export function lineasDeContexto(filas: ReadonlyArray<FilaConContexto>): string[] {
+  return partesDeContexto(filas).map((partes) => partes.join(' · '))
 }
 
 /**

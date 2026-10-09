@@ -133,6 +133,48 @@ describe('buscarEquipos por la persona responsable', () => {
   })
 })
 
+describe('buscarEquipos por el área de quien lo tiene (tarea 317)', () => {
+  // El área es de la persona: el equipo no la guarda. La pantalla pasa las
+  // personas cargadas una vez y el área se lee por `responsableId`.
+  const CON_AREAS = [
+    equipo('metrojp19', 'cat-pc', { responsable: 'Esteban Cardona Rendón', responsableId: 'esteban' }),
+    equipo('PC Tesorería de prueba', 'cat-pc', { responsable: 'Ana Gil', responsableId: 'ana' }),
+    equipo('SW-PISO-4', 'cat-switches', { responsable: 'Esteban Cardona Rendón', responsableId: 'esteban' }),
+    equipo('PC de una eliminada', 'cat-pc', { responsable: 'Persona eliminada', responsableId: 'eliminada' }),
+    equipo('PC de baja con área', 'cat-pc', { estado: 'De baja', responsable: 'Ana Gil', responsableId: 'ana' }),
+  ]
+  const PERSONAS = new Map([
+    ['esteban', { nombre: 'Esteban Cardona Rendón', area: 'Control Interno', eliminadoEn: null }],
+    ['ana', { nombre: 'Ana Gil', area: 'TI', eliminadoEn: null }],
+    ['eliminada', { nombre: 'Persona eliminada', area: 'Control Interno', eliminadoEn: '2026-09-01T00:00:00.000Z' }],
+  ])
+  const nombres = (texto: string, categoriaId = '') =>
+    buscarEquipos(CON_AREAS, RED, { texto, categoriaId }, PERSONAS).generales.map((d) => d.nombre)
+
+  it('"Control Interno", una parte o en minúsculas encuentra los equipos de las personas de esa área', () => {
+    for (const texto of ['Control Interno', 'control interno', 'interno']) {
+      expect(nombres(texto)).toEqual(['metrojp19'])
+    }
+  })
+
+  it('un equipo de red de esa área sale aparte, como cualquier otro', () => {
+    const { deRed } = buscarEquipos(CON_AREAS, RED, { texto: 'control interno', categoriaId: '' }, PERSONAS)
+    expect(deRed.map((d) => d.nombre)).toEqual(['SW-PISO-4'])
+    expect(conteosDeChips(CON_AREAS, RED, 'control interno', PERSONAS).todos).toBe(2)
+  })
+
+  it('ni una persona eliminada ni un equipo de baja aportan su área', () => {
+    expect(nombres('control interno')).not.toContain('PC de una eliminada')
+    expect(nombres('ti')).not.toContain('PC de baja con área')
+  })
+
+  it('sin personas cargadas no hay área que buscar, y la búsqueda por persona de la 314 sigue igual', () => {
+    expect(buscarEquipos(CON_AREAS, RED, { texto: 'control interno', categoriaId: '' }).generales).toEqual([])
+    expect(nombres('esteban')).toEqual(['metrojp19'])
+    expect(nombres('cardona')).toEqual(['metrojp19'])
+  })
+})
+
 describe('conteosDeChips', () => {
   it('"Todos" promete también los de red que salen al escribir; cada categoría, los suyos', () => {
     const { todos, porCategoria } = conteosDeChips(EQUIPOS, RED, '10.0.0.2')

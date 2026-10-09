@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import type { Dispositivo } from '../lib/db'
 import { VALOR_TECNICO_COMPACTO } from './FilaDato'
@@ -53,7 +54,14 @@ export function FilaDispositivo({
   // marca/modelo (ahi la ubicacion ya es el titulo del grupo). Solo con
   // lo que el nombre no dice (tarea 277, `lineasDeContexto`): puede
   // quedar vacia, y entonces la fila no reserva la linea.
-  subtitulo: string
+  //
+  // Tambien puede llegar en PARTES (tarea 317: quien tiene el equipo y su
+  // area). Cada parte se queda entera en su linea si cabe, hasta dos
+  // lineas cada una, y la siguiente baja si no: en un telefono de 320 px
+  // "Esteban Cardona Rendón · Control Interno" en un solo texto de dos
+  // lineas perdia el area, y junto a un estado, el propio nombre. Con
+  // ancho de sobra se leen seguidas, con " · ". La fila no sabe que son.
+  subtitulo: string | readonly string[]
   // Solo Dispositivos muestra la fotografia del equipo. En Red el
   // avatar es siempre el icono del tipo de nodo, que es lo que
   // distingue un switch de un access point de un vistazo.
@@ -106,9 +114,24 @@ export function FilaDispositivo({
           {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
           {post}
         </p>
-        {subtitulo && (
-          <p className="line-clamp-2 break-words text-[12.5px] leading-[1.4] text-noct-neutral-500">{subtitulo}</p>
-        )}
+        {typeof subtitulo === 'string'
+          ? subtitulo && (
+              <p className="line-clamp-2 break-words text-[12.5px] leading-[1.4] text-noct-neutral-500">{subtitulo}</p>
+            )
+          : subtitulo.length > 0 && (
+              <p className="flex flex-wrap gap-x-[0.3em] text-[12.5px] leading-[1.4] text-noct-neutral-500">
+                {subtitulo.map((parte, i) => (
+                  <Fragment key={i}>
+                    {/* El espacio no se dibuja (lo pone el hueco), pero
+                        deja el texto leíble entero: "A · B". */}
+                    {i > 0 && ' '}
+                    <span className="line-clamp-2 min-w-0 break-words">
+                      {i < subtitulo.length - 1 ? `${parte} ·` : parte}
+                    </span>
+                  </Fragment>
+                ))}
+              </p>
+            )}
       </div>
       {(estadoVisible || dispositivo.ip) && (
         <div className="flex shrink-0 flex-col items-end gap-[3px]">

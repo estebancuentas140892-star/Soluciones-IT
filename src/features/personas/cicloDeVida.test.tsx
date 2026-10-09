@@ -45,6 +45,7 @@ function persona(id: string, nombre: string, datos: Partial<Persona> = {}): Pers
   return {
     id,
     nombre,
+    area: '',
     notas: '',
     estado: 'activa',
     fechaIngreso: null,

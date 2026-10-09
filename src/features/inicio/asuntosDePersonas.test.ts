@@ -18,6 +18,7 @@ function persona(id: string, datos: Partial<Persona> = {}): Persona {
   return {
     id,
     nombre: `Persona ${id}`,
+    area: '',
     notas: '',
     estado: 'activa',
     fechaIngreso: null,

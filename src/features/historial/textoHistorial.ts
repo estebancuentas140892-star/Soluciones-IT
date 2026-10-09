@@ -39,6 +39,8 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
   fechaIngreso: 'Fecha de ingreso',
   fechaRetiro: 'Fecha de retiro',
   motivoRetiro: 'Motivo del retiro',
+  // Área de la persona (tarea 317).
+  area: 'Área',
 }
 
 export function etiquetaDeCampo(campo: string): string {

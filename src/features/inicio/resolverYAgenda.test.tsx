@@ -260,6 +260,7 @@ describe('La agenda completa (/agenda)', () => {
     await db.personas.put({
       id: 'per-nora',
       nombre: 'Nora de Prueba',
+      area: '',
       notas: '',
       estado: 'activa',
       fechaIngreso: fechaRelativa(1),

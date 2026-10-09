@@ -53,6 +53,7 @@ async function sembrarInventario() {
   await db.personas.put({
     id: 'per-prueba',
     nombre: 'Persona de prueba',
+    area: '',
     notas: '',
     estado: 'activa',
     fechaIngreso: null,

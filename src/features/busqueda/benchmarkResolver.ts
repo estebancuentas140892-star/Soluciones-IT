@@ -71,6 +71,7 @@ function persona(id: string, nombre: string, notas: string): Persona {
   return {
     id,
     nombre,
+    area: '',
     notas,
     estado: 'activa',
     fechaIngreso: null,

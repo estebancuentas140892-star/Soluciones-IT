@@ -65,6 +65,7 @@ export function HojaAsignarPersona({
     await guardarRegistro('personas', {
       id,
       nombre: nombreNuevo,
+      area: '',
       notas: '',
       estado: 'activa',
       fechaIngreso: null,

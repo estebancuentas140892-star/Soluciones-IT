@@ -103,6 +103,7 @@ export function PersonasPage() {
     await guardarRegistro('personas', {
       id,
       nombre,
+      area: '',
       notas: '',
       estado: 'activa',
       fechaIngreso: nuevoIngreso || null,

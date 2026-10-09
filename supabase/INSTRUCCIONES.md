@@ -75,6 +75,20 @@ select fecha, tipo, detalle, sesion_id, tecnico from public.asistencia_eventos o
 
 - Para probar las funciones contra la base sin dejar rastro, ejecutar `supabase/pruebas/asistencia.sql`: termina siempre con un error `RESULTADO_PRUEBA fallos=0 [...]` que revierte todo.
 
+### Actualización del 2026-10-09 (tarea 317: el área de la persona)
+
+**Pendiente de aplicar, ANTES de desplegar la versión que la usa.** Vuelve a ejecutar `schema.sql` completo (idempotente). Agrega a `personas` la columna `area` (texto, por defecto vacía), bloque 1.v. No cambia ningún dato: las personas existentes quedan con el área vacía y nada se copia desde `notas`. Hasta aplicarla, el guardado de una persona desde la versión nueva espera en la cola de sincronización (no se pierde); el resto sigue igual.
+
+Para verificar:
+
+```sql
+select column_name, data_type, is_nullable, column_default
+from information_schema.columns
+where table_schema = 'public' and table_name = 'personas' and column_name = 'area';
+```
+
+Debe devolver una fila: `area`, `text`, `NO`, `''::text`.
+
 ## 2. Crear los 5 usuarios del equipo
 
 1. En el menú lateral, abrir **Authentication**, pestaña **Users**.

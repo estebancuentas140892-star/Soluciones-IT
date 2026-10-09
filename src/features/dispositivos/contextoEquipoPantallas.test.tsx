@@ -42,6 +42,7 @@ async function sembrarPersonas() {
   const persona = (id: string, nombre: string) => ({
     id,
     nombre,
+    area: '',
     notas: '',
     estado: 'activa' as const,
     fechaIngreso: null,

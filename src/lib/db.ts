@@ -55,10 +55,17 @@ export type EstadoPersona = 'activa' | 'retirada'
 // Sin jerarquia (no aplica a personas, a diferencia de ubicaciones).
 //
 // Solo lo que usa la operacion de TI (tarea 266): no es una ficha de
-// Recursos Humanos. Cargo, area, correo o extension van en `notas`.
+// Recursos Humanos. El area es un dato propio desde la tarea 317; cargo,
+// correo o extension siguen en `notas`.
 export interface Persona {
   id: string
   nombre: string
+  // Area de la organizacion ("Control Interno"), o '' si no se sabe
+  // (tarea 317). Un texto, no una entidad: sin tabla de areas ni
+  // relaciones. Es de la PERSONA: un equipo la lee por `responsableId`,
+  // nunca la copia. Puede llegar undefined de una fila guardada antes de
+  // la version 20 de la base local; se lee siempre con `?? ''`.
+  area: string
   notas: string
   // Puede llegar undefined de una fila guardada antes de la version 19
   // de la base local; se lee siempre con `?? 'activa'`.
@@ -1650,6 +1657,21 @@ class SolucionesItDatabase extends Dexie {
     // inventa fechas (quedan en null), no encola cambios y termina antes
     // de que ninguna pantalla lea la base.
     this.version(19).upgrade(async (tx) => {
+      await tx
+        .table('personas')
+        .toCollection()
+        .modify((fila: Record<string, unknown>) => {
+          normalizarEntidad('personas', fila)
+        })
+    })
+
+    // Version 20 (2026-10-09, tarea 317): NO cambia el esquema, solo
+    // completa las personas ya guardadas con `area` vacia. Mismo motivo
+    // que la 19: la columna nueva del servidor no cambia el `updated_at`
+    // de las personas que ya viven en cada telefono. Solo rellena el
+    // hueco con '', nunca deduce un area (y menos de `notas`), no encola
+    // cambios y termina antes de que ninguna pantalla lea la base.
+    this.version(20).upgrade(async (tx) => {
       await tx
         .table('personas')
         .toCollection()

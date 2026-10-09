@@ -21,6 +21,10 @@ import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 // cambia aquí: retirar y reactivar son acciones de la ficha, porque
 // retirar decide además qué pasa con cada equipo. Al editar se conserva
 // todo lo que el formulario no toca.
+//
+// Desde la tarea 317 el área es un campo propio, separado de las notas:
+// es lo que la lista de Equipos dice junto a la persona. Las notas
+// siguen para lo realmente libre, y nada de ellas se mueve al área.
 export function PersonaForm() {
   const { personaId } = useParams()
   const navigate = useNavigate()
@@ -33,6 +37,7 @@ export function PersonaForm() {
   )
 
   const [nombre, setNombre] = useState('')
+  const [area, setArea] = useState('')
   const [notas, setNotas] = useState('')
   const [fechaIngreso, setFechaIngreso] = useState('')
   const [fechaRetiro, setFechaRetiro] = useState('')
@@ -44,6 +49,7 @@ export function PersonaForm() {
   useEffect(() => {
     if (!persona || cargadoInicial) return
     setNombre(persona.nombre)
+    setArea(persona.area ?? '')
     setNotas(persona.notas)
     setFechaIngreso(persona.fechaIngreso ?? '')
     setFechaRetiro(persona.fechaRetiro ?? '')
@@ -73,6 +79,7 @@ export function PersonaForm() {
         ...base,
         id,
         nombre: nombre.trim(),
+        area: area.trim(),
         notas: notas.trim(),
         fechaIngreso: fechaIngreso || null,
         ...(retirada ? { fechaRetiro: fechaRetiro || null, motivoRetiro: motivoRetiro.trim() } : {}),
@@ -114,6 +121,17 @@ export function PersonaForm() {
           </label>
 
           <label className="flex flex-col gap-1.5">
+            <span className={CLASE_ETIQUETA}>Área (opcional)</span>
+            <input
+              type="text"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              placeholder="Control Interno"
+              className={`min-h-11 ${CLASE_CAMPO}`}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
             <span className={CLASE_ETIQUETA}>Fecha de ingreso (opcional)</span>
             <input
               type="date"
@@ -132,7 +150,7 @@ export function PersonaForm() {
               rows={3}
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
-              placeholder="Cargo, área, extensión..."
+              placeholder="Cargo, extensión, observaciones..."
               className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
             />
           </label>

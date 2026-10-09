@@ -413,13 +413,16 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
     campos: {
       ...camposComunes,
       nombre: 'nombre',
+      // Tarea 317: el area de la persona. Lleva default y no va en
+      // `camposOpcionales`: se puede vaciar desde el formulario.
+      area: 'area',
       notas: 'notas',
       estado: 'estado',
       fechaIngreso: 'fecha_ingreso',
       fechaRetiro: 'fecha_retiro',
       motivoRetiro: 'motivo_retiro',
     },
-    porDefecto: { notas: '', estado: 'activa', motivoRetiro: '' },
+    porDefecto: { area: '', notas: '', estado: 'activa', motivoRetiro: '' },
   },
   // Referencia (2026-09-10): glosario, atajos y comandos, y desde el
   // 2026-09-14 tambien herramientas (el "Centro de consulta"). Va al final

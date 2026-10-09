@@ -369,6 +369,14 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: la sesión de la Bóveda en memoria (`sesionBoveda.ts`), sin cambios. Dura en el código: `src/features/boveda/CredencialEnPaso.tsx` (`BloqueoDeLaBoveda`, en `CredencialFijaEnPaso` y `CredencialDelEquipoEnPaso`) y `src/features/soluciones/FilaVinculo.tsx` (`ref` para devolver el foco).
 - Impacto: ninguna credencial, guía real ni Supabase cambian; el cifrado, el autobloqueo y los permisos tampoco.
 
+**RN-072. En la lista de Equipos, el subtítulo dice quién tiene el equipo y de qué área es antes que la categoría; el área es de la persona y no se copia al equipo.**
+- Motivo: tarea 317 ([DECISIONES.md](DECISIONES.md) AD-074). El icono ya dice el tipo; el técnico necesita saber quién tiene el equipo y de qué área es.
+- Regla: en el inventario general, si una persona tiene el equipo (vinculada por `responsable_id`, con la ficha viva, en un equipo que no está de baja), la línea es su nombre y su área ("Esteban Cardona Rendón · Control Interno"); sin área, solo el nombre. Un responsable escrito sin ficha dice "Anotado: «X» · por validar", sin área. Sin responsable, categoría y ubicación como hasta ahora. El bloque "Equipos de red" conserva su categoría. Se calla lo que el nombre del equipo ya dice (AD-057). En el teléfono la persona y el área van como partes: si no caben juntas, el área baja entera a su línea.
+- Dato: `personas.area`, texto, `''` si no se sabe (default del servidor y de `porDefecto`). Se lee siempre de la persona: `dispositivos` no tiene área. Una fila guardada antes de la versión 20 de la base local se completa con `''`; nunca se deduce de `notas`.
+- Búsqueda: el área de quien tiene el equipo también se busca en Equipos (RN-044).
+- Entidades: Persona, Dispositivo. Dura en el código: `src/features/dispositivos/responsableEnLista.ts`, `DispositivosPage.tsx`, `busquedaEquipos.ts`, `src/components/FilaDispositivo.tsx` (subtítulo en partes) y `src/features/personas/PersonaForm.tsx`.
+- Impacto: una columna nueva (`personas.area`, bloque 1.v de `schema.sql`, que se aplica antes de desplegar, regla 17); ningún dato real cambia.
+
 ---
 
 **RN-042. El buscador prioriza la intención de resolver: una guía que coincide en el título va primero, publicada o no.**
@@ -388,7 +396,7 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 ---
 
 **RN-044. Buscar en Equipos incluye los equipos de red, aparte; "Conectado a" es el enlace de subida.**
-- Sin texto, Equipos es el inventario general (sin las categorías `es_red`). Con texto y sin chip de categoría, además, los equipos de red que coinciden, en el bloque "Equipos de red" (`buscarEquipos`). Campos: nombre, IP, ubicación, serial, placa, marca, modelo y responsable (desde la tarea 314: la copia legible `responsable`, la misma que indexa Resolver, sin relación nueva); orden natural por nombre. El chip "Todos" cuenta también los de red (`conteosDeChips`). Dura en el código: `src/features/dispositivos/busquedaEquipos.ts`.
+- Sin texto, Equipos es el inventario general (sin las categorías `es_red`). Con texto y sin chip de categoría, además, los equipos de red que coinciden, en el bloque "Equipos de red" (`buscarEquipos`). Campos: nombre, IP, ubicación, serial, placa, marca, modelo y responsable (desde la tarea 314: la copia legible `responsable`, la misma que indexa Resolver, sin relación nueva) y, desde la tarea 317, el área de quien lo tiene, leída de su ficha de persona (RN-072); orden natural por nombre. El chip "Todos" cuenta también los de red (`conteosDeChips`). Dura en el código: `src/features/dispositivos/busquedaEquipos.ts`.
 - La búsqueda sobrevive al salto a una ficha (estado de navegación, el mismo mecanismo que Resolver) y el chip va en la URL (`?categoria=`); un equipo de red abierto desde Equipos vuelve a Equipos.
 - "Conectado a" en la ficha: el primer enlace (`tipo = 'enlace'`, no eliminado) en el que el equipo es el DESTINO, porque el origen es su padre en la topología (`arbol.ts`), ordenado por puerto; se enseñan el nombre vivo del otro equipo y SU puerto (`conectadoA`, `textoConectadoA` en `src/lib/conexiones.ts`), y "y N más" si hay más subidas. `instalacion` y `relacionado` no cuentan.
 

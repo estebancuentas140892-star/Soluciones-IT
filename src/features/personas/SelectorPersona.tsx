@@ -89,6 +89,7 @@ export function SelectorPersona({
     await guardarRegistro('personas', {
       id,
       nombre,
+      area: '',
       notas: '',
       estado: 'activa',
       fechaIngreso: null,

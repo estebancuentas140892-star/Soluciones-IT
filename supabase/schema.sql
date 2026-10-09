@@ -741,6 +741,34 @@ alter table public.personas add column if not exists fecha_retiro date;
 alter table public.personas add column if not exists motivo_retiro text not null default '';
 
 -- ----------------------------------------------------------------
+-- 1.v Area de la persona (2026-10-09, tarea 317).
+--
+--     La lista de Equipos dice quien tiene cada equipo y de que area
+--     es. El area pasa de `notas` (texto libre) a un dato propio y
+--     explicito de la persona: un texto, no una entidad. Sin tabla de
+--     areas, sin relaciones ni jerarquia: eso seria otra decision.
+--
+--     Es de la PERSONA y no se copia al equipo: la lista la lee por
+--     `dispositivos.responsable_id -> personas.id -> personas.area`, asi
+--     que si alguien cambia de area sus equipos lo reflejan sin
+--     reescribir ningun dispositivo.
+--
+--     No toca los datos existentes: las filas actuales quedan con ''. No
+--     se deduce ni se migra nada desde `notas`; las areas reales las
+--     anota despues quien administra el contenido.
+--
+--     Del lado de la app, `area` lleva su default en `porDefecto` de
+--     src/lib/tablas.ts y NO va en `camposOpcionales` porque se puede
+--     vaciar desde el formulario. Advertencia de despliegue (regla 17 de
+--     REGLAS.md): hasta aplicar este bloque, el guardado de una persona
+--     espera en la cola de sincronizacion (no se pierde); el resto de
+--     tablas sigue igual. Aplicarlo ANTES de desplegar la version que lo
+--     usa.
+-- ----------------------------------------------------------------
+
+alter table public.personas add column if not exists area text not null default '';
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 

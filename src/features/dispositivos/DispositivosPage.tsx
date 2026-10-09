@@ -1,11 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { db } from '../../lib/db'
+import { db, type Dispositivo } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { idsDeRed, esDeRed } from '../../lib/categorias'
 import { conOrigen } from '../../lib/origenNavegacion'
-import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
+import { partesDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { FilaDeslizable } from '../../components/FilaDeslizable'
@@ -13,6 +13,7 @@ import { Monitor, Plus, QrCode } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { buscarEquipos, conteosDeChips } from './busquedaEquipos'
+import { partesDelSubtitulo, personaQueLoTiene, type PersonasPorId } from './responsableEnLista'
 
 // Pantalla Dispositivos re-autorizada en el sistema Nocturne (handoff
 // "Rediseño de aplicación empresarial", Dispositivos.dc.html, entrada
@@ -47,6 +48,10 @@ export function DispositivosPage() {
     [],
   )
   const ubicaciones = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
+  // Quién tiene cada equipo y de qué área es (tarea 317): las personas se
+  // cargan UNA vez y se leen por `responsableId`, nunca una consulta por
+  // fila. Es reactivo: si una persona cambia de área, la lista lo dice.
+  const personas = useLiveQuery(() => db.personas.filter((p) => !p.eliminadoEn).toArray(), [], [])
 
   // El chip de categoría, en la URL: volver de una ficha lo repone.
   const [parametros, setParametros] = useSearchParams()
@@ -85,33 +90,50 @@ export function DispositivosPage() {
     [categorias],
   )
   const ubicacionPorId = useMemo(() => new Map(ubicaciones.map((u) => [u.id, u])), [ubicaciones])
+  const personaPorId: PersonasPorId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas])
 
+  // Desde la tarea 317 también se busca por el área de quien tiene el
+  // equipo, leída de su ficha de persona.
   const { generales, deRed } = useMemo(
-    () => buscarEquipos(dispositivos ?? [], idsRed, { texto, categoriaId }),
-    [dispositivos, idsRed, texto, categoriaId],
+    () => buscarEquipos(dispositivos ?? [], idsRed, { texto, categoriaId }, personaPorId),
+    [dispositivos, idsRed, texto, categoriaId, personaPorId],
   )
   // Bajo el nombre, solo lo que el nombre no dice ya (tarea 277):
   // "Impresora Taquilla" no repite "Impresoras · Taquilla". La ubicación,
   // la de su ficha si está vinculada. Se calcula por lista: si callar
   // dejara iguales dos equipos distintos, esos dos lo dicen todo.
+  //
+  // En el inventario general, si alguien tiene el equipo, la línea dice
+  // quién y de qué área es en vez de la categoría, que ya dice el icono
+  // (tarea 317, `partesDelSubtitulo`). Esas dos van como partes separadas
+  // para que la fila no parta el área por la mitad en un teléfono. Los
+  // equipos de red conservan su categoría: en ese bloque es lo que los
+  // distingue.
   const subtitulos = useMemo(() => {
-    const lineas = new Map<string, string>()
-    for (const lista of [generales, deRed]) {
-      const textos = lineasDeContexto(
-        lista.map((d) => ({
-          nombre: d.nombre,
-          partes: [nombreCategoria.get(d.categoriaId), ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? ''))],
-        })),
-      )
-      lista.forEach((d, i) => lineas.set(d.id, textos[i]))
+    const lineas = new Map<string, string | string[]>()
+    const contexto = (d: Dispositivo) => [
+      nombreCategoria.get(d.categoriaId),
+      ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? '')),
+    ]
+    const listas: [
+      Dispositivo[],
+      (d: Dispositivo) => ReadonlyArray<string | null | undefined>,
+      (d: Dispositivo) => boolean,
+    ][] = [
+      [generales, (d) => partesDelSubtitulo(d, contexto(d), personaPorId), (d) => personaQueLoTiene(d, personaPorId) !== null],
+      [deRed, contexto, () => false],
+    ]
+    for (const [lista, partes, porPartes] of listas) {
+      const visibles = partesDeContexto(lista.map((d) => ({ nombre: d.nombre, partes: partes(d) })))
+      lista.forEach((d, i) => lineas.set(d.id, porPartes(d) ? visibles[i] : visibles[i].join(' · ')))
     }
     return lineas
-  }, [generales, deRed, nombreCategoria, ubicacionPorId])
+  }, [generales, deRed, nombreCategoria, ubicacionPorId, personaPorId])
   // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022): sobre lo
   // que deja la búsqueda, sin aplicar el propio eje de categoría.
   const conteos = useMemo(
-    () => conteosDeChips(dispositivos ?? [], idsRed, texto),
-    [dispositivos, idsRed, texto],
+    () => conteosDeChips(dispositivos ?? [], idsRed, texto, personaPorId),
+    [dispositivos, idsRed, texto, personaPorId],
   )
 
   const consulta = texto.trim()

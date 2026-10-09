@@ -1,6 +1,7 @@
 import type { Dispositivo } from '../../lib/db'
 import { compararNatural } from '../../lib/conexiones'
 import { incluyeTexto } from '../../lib/texto'
+import { areaDeQuienLoTiene, SIN_PERSONAS, type PersonasPorId } from './responsableEnLista'
 
 // LO QUE ENCUENTRA EL BUSCADOR DE EQUIPOS (encargo del 2026-09-22,
 // sección 17, tarea 256).
@@ -22,8 +23,12 @@ import { incluyeTexto } from '../../lib/texto'
  * caja"); el responsable, de quién es, porque se conoce a la persona
  * antes que el nombre de su equipo. Es la copia legible de su nombre, la
  * misma que indexa Resolver en la identidad del equipo.
+ *
+ * Desde la tarea 317, también el área de quien lo tiene ("Control
+ * Interno"), que quien llama lee de la ficha de la persona: el equipo no
+ * la guarda.
  */
-export function camposDeBusqueda(dispositivo: Dispositivo): string[] {
+export function camposDeBusqueda(dispositivo: Dispositivo, area = ''): string[] {
   return [
     dispositivo.nombre,
     dispositivo.ip,
@@ -33,6 +38,7 @@ export function camposDeBusqueda(dispositivo: Dispositivo): string[] {
     dispositivo.marca,
     dispositivo.modelo,
     dispositivo.responsable,
+    area,
   ]
 }
 
@@ -51,9 +57,10 @@ export function buscarEquipos(
   dispositivos: Dispositivo[],
   idsRed: ReadonlySet<string>,
   { texto, categoriaId }: { texto: string; categoriaId: string },
+  personas: PersonasPorId = SIN_PERSONAS,
 ): EquiposEncontrados {
   const vivos = dispositivos.filter((d) => !d.eliminadoEn)
-  const coincide = (d: Dispositivo) => incluyeTexto(camposDeBusqueda(d), texto)
+  const coincide = (d: Dispositivo) => incluyeTexto(camposDeBusqueda(d, areaDeQuienLoTiene(d, personas)), texto)
   const generales = vivos
     .filter((d) => !idsRed.has(d.categoriaId) && (!categoriaId || d.categoriaId === categoriaId) && coincide(d))
     .sort(porNombre)
@@ -71,8 +78,9 @@ export function conteosDeChips(
   dispositivos: Dispositivo[],
   idsRed: ReadonlySet<string>,
   texto: string,
+  personas: PersonasPorId = SIN_PERSONAS,
 ): { todos: number; porCategoria: Map<string, number> } {
-  const { generales, deRed } = buscarEquipos(dispositivos, idsRed, { texto, categoriaId: '' })
+  const { generales, deRed } = buscarEquipos(dispositivos, idsRed, { texto, categoriaId: '' }, personas)
   const porCategoria = new Map<string, number>()
   for (const d of generales) porCategoria.set(d.categoriaId, (porCategoria.get(d.categoriaId) ?? 0) + 1)
   return { todos: generales.length + deRed.length, porCategoria }

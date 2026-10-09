@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aEntidadLocal, configTablas, normalizarEntidad, TABLAS_SINCRONIZADAS } from './tablas'
+import { aEntidadLocal, aFilaRemota, configTablas, normalizarEntidad, TABLAS_SINCRONIZADAS } from './tablas'
 
 // `normalizarEntidad` repara filas YA guardadas en IndexedDB por
 // versiones anteriores de la app (tarea 137). El caso que la motivo es
@@ -131,5 +131,40 @@ describe('normalizarEntidad', () => {
         })
       }
     }
+  })
+})
+
+// El area de la persona (tarea 317) viaja como cualquier columna con
+// default: baja vacia si el servidor todavia no la tiene y sube siempre,
+// tambien vacia (se puede borrar desde el formulario).
+describe('personas.area', () => {
+  const fila = {
+    id: 'p1',
+    nombre: 'Persona de prueba',
+    notas: 'Control Interno, ext. 000',
+    estado: 'activa',
+    fecha_ingreso: null,
+    fecha_retiro: null,
+    motivo_retiro: '',
+    updated_at: '2026-10-09T00:00:00.000Z',
+    updated_by: null,
+    eliminado_en: null,
+  }
+
+  it('una fila del servidor sin la columna baja con el area vacia, sin leer las notas', () => {
+    const local = aEntidadLocal('personas', fila)
+    expect(local.area).toBe('')
+    expect(local.notas).toBe('Control Interno, ext. 000')
+  })
+
+  it('una fila con area la baja tal cual', () => {
+    expect(aEntidadLocal('personas', { ...fila, area: 'Control Interno' }).area).toBe('Control Interno')
+  })
+
+  it('sube con su columna, tambien cuando esta vacia', () => {
+    const local = aEntidadLocal('personas', { ...fila, area: 'Control Interno' })
+    expect(aFilaRemota('personas', local).area).toBe('Control Interno')
+    expect(aFilaRemota('personas', { ...local, area: '' }).area).toBe('')
+    expect(configTablas.personas.camposOpcionales ?? []).not.toContain('area')
   })
 })

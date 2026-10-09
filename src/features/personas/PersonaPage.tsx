@@ -143,7 +143,10 @@ export function PersonaPage() {
     navigate('/', { state: anotarBusqueda(null, { consulta: BUSQUEDA_GUIA_CONFIGURACION, capa: false }) })
   }
 
-  const lineaFechas = [
+  // Bajo el nombre: su área (tarea 317), cuándo ingresó y, si se retiró,
+  // cuándo y por qué. Lo que no se sabe no se dibuja.
+  const lineaDatos = [
+    persona.area?.trim(),
     persona.fechaIngreso && `Ingresó el ${fechaLegible(persona.fechaIngreso)}`,
     !activa && persona.fechaRetiro && `Se retiró el ${fechaLegible(persona.fechaRetiro)}`,
     !activa && persona.motivoRetiro,
@@ -168,7 +171,7 @@ export function PersonaPage() {
             <p className="m-0 min-w-0 text-[19px] font-medium leading-[1.25]">{persona.nombre}</p>
             <PastillaEstado tono={activa ? 'exito' : 'neutro'}>{activa ? 'Activa' : 'Retirada'}</PastillaEstado>
           </div>
-          {lineaFechas && <p className="mt-1 text-[12.5px] text-noct-neutral-400">{lineaFechas}</p>}
+          {lineaDatos && <p className="mt-1 text-[12.5px] text-noct-neutral-400">{lineaDatos}</p>}
         </div>
       }
     >

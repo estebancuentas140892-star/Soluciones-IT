@@ -81,6 +81,7 @@ function persona(id: string, nombre: string, cambios: Partial<Persona> = {}): Pe
   return {
     id,
     nombre,
+    area: '',
     notas: '',
     estado: 'activa',
     fechaIngreso: null,
