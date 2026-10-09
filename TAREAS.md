@@ -454,6 +454,16 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
+### 313. Evitar duplicados al migrar ubicaciones mientras cargan los datos existentes
+
+- **Título:** la migración asistida de ubicaciones no deja crear ni vincular nada hasta conocer las ubicaciones que ya existen.
+- **Descripción:** `MigracionUbicaciones` lee los equipos y las ubicaciones existentes con dos consultas en vivo distintas. La de las ubicaciones usa temporalmente `[]` mientras carga (tercer argumento de `useLiveQuery`), y la pantalla solo espera a los equipos para dibujarse. En esa ventana el resumen cuenta como nueva una ubicación que ya existe y el botón "Crear ubicaciones y vincular equipos" puede quedar habilitado antes de que termine la consulta: su `disabled` solo mira si ya se está aplicando y si hay equipos que vincular. Si el técnico lo toca antes de que lleguen las ubicaciones existentes, `aplicar()` crea una ubicación nueva con el mismo nombre en lugar de reutilizar la que existe (un duplicado, que además se sincroniza al equipo) y vincula los equipos a la copia. **Reproducido** el 2026-10-08 durante la estabilización de `ubicacionesVinculadas.test.tsx` (en `main`, `cb597d6`): con la consulta de ubicaciones de la migración retrasada 300 ms, aplicar dejó más ubicaciones de las que debían existir. **Lo que pide:** bloquear la acción hasta que los datos necesarios estén resueltos (distinguir "todavía cargando" de "no hay ubicaciones", y no presentar el resumen como definitivo mientras tanto), con una prueba que lo demuestre con la consulta retrasada. **No se ha corregido todavía:** la estabilización de la prueba solo espera el resumen que ya dice "que ya existe", sin tocar el código de producción.
+- **Motivo:** riesgo real de producción descubierto durante la verificación de la 311 al reproducir la prueba intermitente de ubicaciones.
+- **Impacto:** medio en frecuencia (la migración se usa pocas veces y hace falta pulsar antes de que termine la consulta, más probable en un dispositivo lento), alto en sus efectos: ubicaciones duplicadas en los datos reales del equipo y equipos vinculados a la copia, que luego hay que deshacer a mano.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/ubicaciones/MigracionUbicaciones.tsx` (`existentes` con `[]` por defecto, ~línea 54; la espera de carga, que solo mira `dispositivos`, ~115-121; `aplicar()`, ~128-158; el `disabled` del botón, ~318-327). La prueba de regresión, en `src/features/ubicaciones/ubicacionesVinculadas.test.tsx` (bloque "migración asistida de ubicaciones").
+- **Dependencias:** ninguna. No toca la 311 ni la 312.
+
 ### 304. Reclasificar el contenido real de las guías según la regla 27 (ChatGPT)
 
 - **Título:** que cada bloque de las guías reales cumpla su papel: "Dato técnico" solo para valores, lo necesario para actuar nunca plegado y las alertas solo para riesgos reales.
