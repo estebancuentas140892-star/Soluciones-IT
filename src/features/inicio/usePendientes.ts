@@ -1,11 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { db } from '../../lib/db'
+import { estaAbierto } from '../../lib/mantenimientos'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { DIAS_LIBERADO_RECIENTE } from './asuntosDePersonas'
 import { calcularPendientes, type ItemPendiente } from './pendientes'
 
-// Las seis consultas que alimentan la agenda (antes solo vivían en
+// Las consultas que alimentan la agenda (antes solo vivían en
 // InicioPage), extraídas para que también las use el chasis (tarea 187,
 // `AvisoPestana`): el número de la pestaña necesita el conteo REAL de
 // pendientes, no solo los que una pantalla decide mostrar. `limite:
@@ -66,6 +67,13 @@ export function usePendientes(): EstadoPendientes {
     () => db.articulos.filter((a) => !a.eliminadoEn && Boolean(a.origenSugerenciaId)).toArray(),
     [],
   )
+  // Tarea 320: solo los mantenimientos abiertos; `calcularPendientes`
+  // decide cuáles se pueden fechar (confirmados, con fecha, de un equipo
+  // que existe).
+  const mantenimientosAbiertos = useLiveQuery(
+    () => db.mantenimientos.filter((m) => !m.eliminadoEn && estaAbierto(m)).toArray(),
+    [],
+  )
 
   // `perfil` es `undefined` mientras carga y `null` sin sesión: solo lo
   // primero es cargar. Sin perfil no hay agenda (no se sabe de quién son
@@ -79,7 +87,8 @@ export function usePendientes(): EstadoPendientes {
     personas === undefined ||
     liberaciones === undefined ||
     ejecucionesConSugerencia === undefined ||
-    articulosDeSugerencia === undefined
+    articulosDeSugerencia === undefined ||
+    mantenimientosAbiertos === undefined
 
   const items = useMemo(
     () =>
@@ -94,6 +103,7 @@ export function usePendientes(): EstadoPendientes {
             personas: personas ?? [],
             dispositivos: dispositivos ?? [],
             liberaciones: liberaciones ?? [],
+            mantenimientos: mantenimientosAbiertos ?? [],
             usuarioId: perfil.id,
             puedeVerBoveda: perfil.puedeVerBoveda,
             limite: Infinity,
@@ -110,6 +120,7 @@ export function usePendientes(): EstadoPendientes {
       liberaciones,
       ejecucionesConSugerencia,
       articulosDeSugerencia,
+      mantenimientosAbiertos,
     ],
   )
 

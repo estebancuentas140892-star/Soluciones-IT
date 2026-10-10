@@ -8,6 +8,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-10
 
+### Agregado (Equipos y Agenda, tarea 320): programar y cerrar mantenimientos de un equipo
+
+**Área modificada:** `src/lib/db.ts` (versión 21), `src/lib/tablas.ts`, `supabase/schema.sql` (bloque 1.u), `src/lib/mantenimientos.ts` (nuevo), `src/lib/repositorio.ts` (`cerrarMantenimiento`), `src/features/mantenimientos/` (nuevo), `src/components/OpcionRadio.tsx` (nuevo, extraído de `DecisionEquipo.tsx`), la Agenda (`pendientes.ts`, `usePendientes.ts`, `SeccionesAgenda.tsx`), la ficha del equipo (`DispositivoPage.tsx`), `textoHistorial.ts`, la ruta (`App.tsx`, `navegacion.ts`), el respaldo (`scripts/respaldo-supabase.sh`, `supabase/RESPALDO.md`) y la prueba sin conexión.
+**Tipo:** Agregado y Documentación (ARQUITECTURA_FUNCIONAL RN-073, sección 4.4b, modelo E-R y 8.2; DECISIONES AD-075; ARQUITECTURA, modelo de datos; DOCUMENTACION_FUNCIONAL, rutas, Agenda y ficha; COMPONENTES_UI 2.18 y 3.7f; `supabase/INSTRUCCIONES.md`; CONCILIACION_DATOS sección 6; TAREAS 320).
+**Motivo:** encargo del usuario del 2026-10-10, fase B: programar y cerrar mantenimientos sin convertir la Agenda en un gestor de tareas y sin usar el historial como programación futura.
+**Qué cambia:**
+- "Más del equipo" suma la fila **"Mantenimiento"** (el abierto más cercano: "Atrasado", "Hoy", "20 oct" o "Ninguno"): "Programar" (tipo, fecha de hoy en adelante, observaciones), la lista de los abiertos y, aparte, los antecedentes por validar con su fuente.
+- La **Agenda** deriva los mantenimientos abiertos y confirmados por su fecha: vencidos ("Atrasado 3 días"), hoy ("Toca hoy") y próximos en 30 días, con el equipo como nombre y el icono de la llave.
+- **La pantalla de un mantenimiento** (`/dispositivos/:id/mantenimientos/:mid`) pregunta cómo terminó: **Se hizo** (fecha real, quién y qué; "Cerrar y registrar en el equipo"), **Se pospone** (fecha nueva) o **Se cancela** (con motivo). Cerrado, enseña lo que quedó y la evidencia.
+- Cerrar escribe la intervención real en el historial del equipo y el mantenimiento con su `historial_id`; la evidencia se adjunta a esa intervención. Programar, posponer y cancelar dejan una entrada en el historial del equipo.
+- Antecedentes históricos: `documentado_por_validar`, con fuente, fuera de la Agenda y sin cerrarse; una marca de cronograma no da fecha si el título de su hoja nombra otro mes.
+**Estructura de datos:** tabla nueva `public.mantenimientos` (id, dispositivo_id sin FK, tipo, fecha_programada, estado, tecnico, fecha_realizada, resultado, observaciones, historial_id, fuente, validacion, updated_at, updated_by, eliminado_en), con checks de tipo, estado y validación y tres reglas (abierto confirmado con fecha; realizado con fecha real; antecedente con fuente y sin `historial_id`), trigger, RLS de contenido general, índices y tiempo real. Base local: versión 21 (solo la tabla nueva). **Hay que aplicar el bloque 1.u en Supabase antes de desplegar** (regla 17). Ningún dato real cambia; ni `historial` ni `adjuntos` cambian de esquema.
+**Verificación:** 201 archivos y 3095 pruebas (3041 en `main`: +54, contando las 4 de la tarea 326). `tsc -b`, lint, build y la prueba sin conexión real (73 de 73, paso 4d nuevo) en verde. Medida en el navegador a 320, 375, 390 y 1280 px con datos inventados, retirados al terminar.
+**Impacto esperado:** saber qué mantenimiento toca, cuál está atrasado y dejar constancia real al hacerlo, sin un segundo gestor de tareas.
+
 ### Corregido (sincronización, tarea 326): guardar sin red con el token vencido ya no espera 25 segundos ni pierde el autor
 
 **Área modificada:** `src/lib/repositorio.ts` (`obtenerUsuarioActual` y la nueva `usuarioDeLaSesionGuardada`).

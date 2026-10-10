@@ -1,5 +1,6 @@
-import { useId, type ReactNode } from 'react'
+import { useId } from 'react'
 import { CLASE_CAMPO } from '../../components/campos'
+import { OpcionRadio } from '../../components/OpcionRadio'
 import { Check } from '../../components/iconos'
 import type { Dispositivo, Persona } from '../../lib/db'
 import { sugerirDisponible } from './cicloPersona'
@@ -18,35 +19,6 @@ import type { Eleccion } from './eleccionEquipo'
 //   - Asignar a otra persona: solo personas activas.
 //   - Dar de baja: el flujo de baja existente (el que obliga a resolver
 //     conexiones, credenciales y datos protegidos).
-
-const OPCION =
-  'flex min-h-11 w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[13.5px] transition-colors'
-const OPCION_ACTIVA = 'border-noct-accent bg-noct-accent/[.12] text-noct-text'
-const OPCION_INACTIVA = 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
-
-// Fuera del componente a propósito: declarada dentro, cada render
-// crearía un tipo nuevo y React remontaría el botón (se pierde el foco).
-function Opcion({ activa, onClick, children }: { activa: boolean; onClick: () => void; children: ReactNode }) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={activa}
-      onClick={onClick}
-      className={`${OPCION} ${activa ? OPCION_ACTIVA : OPCION_INACTIVA}`}
-    >
-      <span
-        aria-hidden
-        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-          activa ? 'border-noct-accent' : 'border-noct-neutral-600'
-        }`}
-      >
-        {activa && <span className="h-2 w-2 rounded-full bg-noct-accent" />}
-      </span>
-      <span className="min-w-0 flex-1">{children}</span>
-    </button>
-  )
-}
 
 export function DecisionSobreEquipo({
   dispositivo,
@@ -67,12 +39,12 @@ export function DecisionSobreEquipo({
 
   return (
     <div role="radiogroup" aria-label={`Qué pasa con ${dispositivo.nombre}`} className="flex flex-col gap-1.5">
-      <Opcion
+      <OpcionRadio
         activa={eleccion.tipo === 'liberar'}
         onClick={() => onCambiar({ tipo: 'liberar', marcarDisponible: sugerencia === 'si' })}
       >
         Dejar sin responsable
-      </Opcion>
+      </OpcionRadio>
       {eleccion.tipo === 'liberar' && sugerencia !== 'no' && (
         // Casilla con la misma forma que las de las guías (botón con
         // role="checkbox"): la app no usa la casilla nativa del navegador.
@@ -106,12 +78,12 @@ export function DecisionSobreEquipo({
         </p>
       )}
 
-      <Opcion
+      <OpcionRadio
         activa={eleccion.tipo === 'reasignar'}
         onClick={() => onCambiar({ tipo: 'reasignar', personaId: eleccion.tipo === 'reasignar' ? eleccion.personaId : '' })}
       >
         Asignar a otra persona
-      </Opcion>
+      </OpcionRadio>
       {eleccion.tipo === 'reasignar' && (
         <div className="ml-[26px] flex flex-col gap-1">
           <label htmlFor={`${idGrupo}-persona`} className="sr-only">
@@ -137,9 +109,9 @@ export function DecisionSobreEquipo({
       )}
 
       {permitirBaja && (
-        <Opcion activa={eleccion.tipo === 'baja'} onClick={() => onCambiar({ tipo: 'baja' })}>
+        <OpcionRadio activa={eleccion.tipo === 'baja'} onClick={() => onCambiar({ tipo: 'baja' })}>
           Dar de baja
-        </Opcion>
+        </OpcionRadio>
       )}
       {eleccion.tipo === 'baja' && (
         <p className="ml-[26px] text-[12px] leading-[1.5] text-noct-neutral-500">

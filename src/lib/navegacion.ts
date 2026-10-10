@@ -171,12 +171,13 @@ export function padreDe(pathname: string): Padre | null {
       return { to: `/soluciones/${a}/${b}/detalles`, etiqueta: 'Volver' } // editar -> ficha
     }
     case 'dispositivos': {
-      // /dispositivos/:id/editar, /dispositivos/:id/baja y
-      // /dispositivos/:id/reemplazo -> ficha; el resto (nuevo, importar,
-      // etiquetas, :id) -> lista. La ficha de un equipo de red vuelve a
-      // Red: eso depende de datos en runtime (es_red), la pantalla lo
-      // resuelve con un override.
-      if (b === 'editar' || b === 'baja' || b === 'reemplazo') {
+      // /dispositivos/:id/editar, /dispositivos/:id/baja,
+      // /dispositivos/:id/reemplazo y, desde la tarea 320,
+      // /dispositivos/:id/mantenimientos/:mid -> ficha; el resto (nuevo,
+      // importar, etiquetas, :id) -> lista. La ficha de un equipo de red
+      // vuelve a Red: eso depende de datos en runtime (es_red), la
+      // pantalla lo resuelve con un override.
+      if (b === 'editar' || b === 'baja' || b === 'reemplazo' || b === 'mantenimientos') {
         return { to: `/dispositivos/${a}`, etiqueta: 'Volver' }
       }
       if (HERRAMIENTAS_DE_INVENTARIO.has(ruta)) return PUERTA_INVENTARIO

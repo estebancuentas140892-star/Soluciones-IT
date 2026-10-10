@@ -662,6 +662,53 @@ export interface Conexion {
   eliminadoEn: string | null
 }
 
+// MANTENIMIENTO DE UN EQUIPO (tarea 320, encargo del 2026-10-10, fase B).
+//
+// Lo minimo para programar un mantenimiento, verlo en la Agenda y
+// cerrarlo. No es un gestor de tareas: solo existe atado a UN equipo, y
+// la Agenda lo deriva de la fecha programada de los abiertos (como hace
+// con un acceso que vence). El historial sigue siendo la evidencia de lo
+// ocurrido: al cerrar como realizado se escribe la intervencion real en
+// el historial del equipo y `historialId` apunta a ella; la evidencia
+// (fotos, actas) cuelga de esa entrada (`adjuntos` con entidadTipo
+// 'historial'), igual que la de una intervencion manual.
+//
+// Abierto = 'programado' o 'pospuesto' (este ultimo ya con su fecha
+// nueva). 'realizado' y 'cancelado' lo cierran. La validacion separa lo
+// confirmado de un antecedente sacado de documentacion historica
+// ('documentado_por_validar'), que nunca entra en la Agenda ni afirma un
+// tecnico, un resultado o una evidencia que su fuente no tiene.
+export type TipoMantenimiento = 'preventivo' | 'correctivo'
+export type EstadoMantenimiento = 'programado' | 'realizado' | 'pospuesto' | 'cancelado'
+export type ValidacionMantenimiento = 'confirmado' | 'documentado_por_validar'
+
+export interface Mantenimiento {
+  id: string
+  // Referencia blanda al equipo (uuid sin FK, como campos_protegidos):
+  // el nombre se lee vivo de `dispositivos`.
+  dispositivoId: string
+  tipo: TipoMantenimiento
+  // "YYYY-MM-DD" o null. Obligatoria en uno abierto y confirmado; un
+  // antecedente por validar puede no tenerla (la fuente no la da).
+  fechaProgramada: string | null
+  estado: EstadoMantenimiento
+  // Quien lo hizo, cuando esta confirmado. '' si no se sabe.
+  tecnico: string
+  // "YYYY-MM-DD" en que se hizo de verdad, o null.
+  fechaRealizada: string | null
+  resultado: string
+  observaciones: string
+  // La intervencion del historial que lo cerro, o null.
+  historialId: string | null
+  // De donde sale un antecedente historico ("Cronograma 2025, hoja
+  // Marzo"). '' en lo programado desde la app.
+  fuente: string
+  validacion: ValidacionMantenimiento
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
 // Clase de secreto INDEPENDIENTE de la boveda (grupo P1, se usa en la
 // interfaz desde la fase P3). No existe un tipo "equipo" a proposito:
 // un equipo es un dispositivo, y sus datos sensibles son campos
@@ -1439,6 +1486,7 @@ class SolucionesItDatabase extends Dexie {
   ubicaciones!: EntityTable<Ubicacion, 'id'>
   personas!: EntityTable<Persona, 'id'>
   conexiones!: EntityTable<Conexion, 'id'>
+  mantenimientos!: EntityTable<Mantenimiento, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
   // Nombre con guion bajo a proposito, como ejecuciones_diagnostico y
   // accesos_boveda: el motor de sincronizacion usa el MISMO nombre en
@@ -1678,6 +1726,15 @@ class SolucionesItDatabase extends Dexie {
         .modify((fila: Record<string, unknown>) => {
           normalizarEntidad('personas', fila)
         })
+    })
+
+    // Version 21 (2026-10-10, tarea 320): mantenimientos de un equipo,
+    // tabla sincronizada nueva. Solo `.stores()` de la tabla nueva: Dexie
+    // conserva el esquema de las anteriores y ninguna fila guardada se
+    // toca. Se indexa `dispositivoId` para listar los de un equipo sin
+    // recorrer la tabla, y `updatedAt` como el resto de sincronizadas.
+    this.version(21).stores({
+      mantenimientos: 'id, dispositivoId, updatedAt',
     })
   }
 }

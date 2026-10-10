@@ -11,6 +11,7 @@ import {
   Monitor,
   PencilSimple,
   User,
+  Wrench,
 } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
 import { tarjetaReanudarVisible, useReanudar } from '../soluciones/useReanudar'
@@ -351,6 +352,8 @@ const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) =>
   persona_ingreso: User,
   persona_retirada: User,
   equipo_liberado: Monitor,
+  // Tarea 320: un mantenimiento programado de un equipo.
+  mantenimiento: Wrench,
 }
 const TONO_PENDIENTE: Record<ItemPendiente['tono'], string> = {
   neutro: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]',

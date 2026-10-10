@@ -12,6 +12,8 @@
 //   4. las pantallas principales abren sin red, y una guia se ejecuta sin
 //      red: lo reutilizado en el sitio, su "Como hacerlo" (tarea 303) y la
 //      imagen de "Debes ver" desde la copia sin conexion (tarea 307);
+//      y un mantenimiento atrasado sale en la Agenda y se cierra sin red,
+//      dejando la intervencion y el cambio en la cola (tarea 320);
 //   5. desbloqueo del dispositivo (tarea 278) con el autenticador virtual
 //      de Chromium: se activa sobre la contrasena, abre la app sin red con
 //      una credencial y una firma reales, y sin verificar al usuario o con
@@ -362,6 +364,52 @@ const SEMBRAR_EQUIPO_PRUEBA = `
   base.close()
   return true
 `
+// Tarea 320: un mantenimiento atrasado del equipo A, inventado. La fecha
+// es relativa al dia de la maquina, que es el que mira la Agenda.
+function fechaRelativa(dias) {
+  const fecha = new Date()
+  fecha.setDate(fecha.getDate() + dias)
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+}
+const MANTENIMIENTO_SIN_RED = { id: 'mant-sin-red', dispositivoId: 'eq-sin-red-a', tipo: 'preventivo', fechaProgramada: fechaRelativa(-2), estado: 'programado', tecnico: '', fechaRealizada: null, resultado: '', observaciones: '', historialId: null, fuente: '', validacion: 'confirmado', updatedAt: AHORA, updatedBy: null, eliminadoEn: null }
+const SEMBRAR_MANTENIMIENTO = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  await new Promise((ok, mal) => {
+    const t = base.transaction(['mantenimientos'], 'readwrite')
+    t.objectStore('mantenimientos').put(${JSON.stringify(MANTENIMIENTO_SIN_RED)})
+    t.oncomplete = () => ok()
+    t.onerror = () => mal(t.error)
+  })
+  base.close()
+  return true
+`
+const LEER_CIERRE_SIN_RED = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  const leer = (tabla, consulta) =>
+    new Promise((ok, mal) => {
+      const r = base.transaction([tabla], 'readonly').objectStore(tabla)[consulta.tipo](consulta.clave)
+      r.onsuccess = () => ok(r.result)
+      r.onerror = () => mal(r.error)
+    })
+  const mantenimiento = await leer('mantenimientos', { tipo: 'get', clave: 'mant-sin-red' })
+  const cola = await leer('cambiosPendientes', { tipo: 'getAll' })
+  const intervencion = mantenimiento?.historialId ? await leer('historial', { tipo: 'get', clave: mantenimiento.historialId }) : null
+  base.close()
+  return {
+    estado: mantenimiento?.estado,
+    tecnico: mantenimiento?.tecnico,
+    intervencion: intervencion?.campo,
+    enCola: cola.filter((c) => c.entidadId === 'mant-sin-red' || c.entidadId === mantenimiento?.historialId).map((c) => c.tabla).sort(),
+  }
+`
 const AVISO_DISPOSITIVO = 'No se pudo usar el desbloqueo del dispositivo.'
 
 async function main() {
@@ -618,6 +666,57 @@ async function main() {
     comprobar(
       Boolean(await s.hasta(`document.body.innerText.includes('No hay una credencial configurada para este equipo.')`, 'sin credencial')),
       'un equipo sin credencial no recibe la de otro',
+    )
+
+    // Tarea 320: la Agenda deriva el mantenimiento de la base local y se
+    // cierra sin red; la intervencion y el cambio esperan en la cola.
+    paso('4d. Un mantenimiento atrasado, sin red: sale en la Agenda y se cierra (tarea 320)')
+    comprobar(Boolean(await s.evaluar(SEMBRAR_MANTENIMIENTO)), 'mantenimiento inventado escrito en la base local, con la red cortada')
+    await s.enviar('Page.navigate', { url: BASE + '/agenda' })
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Impresora de prueba sin red A') && document.body.innerText.includes('Atrasado 2 días')`,
+          'el mantenimiento en la Agenda',
+          45000,
+        ),
+      ),
+      'la Agenda lo enseña atrasado, sin red',
+    )
+    await s.tocar('Impresora de prueba sin red A')
+    comprobar(
+      Boolean(await s.hasta(`location.pathname === '/dispositivos/eq-sin-red-a/mantenimientos/mant-sin-red'`, 'su pantalla')),
+      'lleva a la pantalla del mantenimiento',
+    )
+    comprobar(
+      Boolean(
+        await s.evaluar(`
+          const t = document.querySelector('textarea')
+          if (!t) return false
+          Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(t, 'Limpieza sin red')
+          t.dispatchEvent(new Event('input', { bubbles: true }))
+          await new Promise((r) => setTimeout(r, 200))
+          return true
+        `),
+      ),
+      'se escribe qué se hizo',
+    )
+    await s.tocar('Cerrar y registrar en el equipo')
+    const cerrado = Boolean(
+      await s.hasta(`document.body.innerText.includes('Realizado y registrado en el historial del equipo.')`, 'el cierre'),
+    )
+    const aviso = cerrado
+      ? ''
+      : await s.evaluar(
+          `return (document.querySelector('[role=alert]')?.textContent ?? '') + ' | ' + [...document.querySelectorAll('input, textarea')].map((c) => c.value).join(' / ')`,
+        )
+    comprobar(cerrado, `se cierra sin red${aviso ? ` (${aviso})` : ''}`)
+    const cierre = await s.evaluar(LEER_CIERRE_SIN_RED)
+    comprobar(cierre?.estado === 'realizado' && cierre?.tecnico === PERFIL_SIN_RED.nombre, 'queda realizado, con quien tiene la sesión como técnico propuesto')
+    comprobar(cierre?.intervencion === 'intervencion', 'la intervención queda en el historial del equipo')
+    comprobar(
+      JSON.stringify(cierre?.enCola) === JSON.stringify(['historial', 'mantenimientos']),
+      `el mantenimiento y la intervención esperan en la cola para subir (${JSON.stringify(cierre?.enCola)})`,
     )
 
     // Un autenticador de plataforma VIRTUAL de Chromium (DevTools

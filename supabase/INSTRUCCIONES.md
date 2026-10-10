@@ -75,6 +75,10 @@ select fecha, tipo, detalle, sesion_id, tecnico from public.asistencia_eventos o
 
 - Para probar las funciones contra la base sin dejar rastro, ejecutar `supabase/pruebas/asistencia.sql`: termina siempre con un error `RESULTADO_PRUEBA fallos=0 [...]` que revierte todo.
 
+### Actualización del 2026-10-10 (tarea 320: mantenimientos de un equipo)
+
+**PENDIENTE de aplicar en Production, y solo cuando el usuario apruebe integrar la tarea 320** (rama `feat/mantenimiento-operativo`): antes de desplegar la versión que la usa. Crea la tabla `mantenimientos` (bloque 1.u) con su trigger de modificación, su RLS (cualquier técnico autenticado, como `dispositivos`), sus índices, sus tres checks y su entrada en la publicación de tiempo real. **No carga ningún dato** y no toca ninguna otra tabla. Es idempotente: se puede ejecutar el `schema.sql` completo o solo el bloque 1.u más las líneas de `mantenimientos` de las secciones 2, 3 y 6. Hasta aplicarla, programar o cerrar un mantenimiento desde la versión nueva espera en la cola de sincronización (no se pierde), el panel de sincronización dice que la tabla no se pudo descargar y el respaldo semanal falla al exportarla; el resto sigue igual. Los antecedentes históricos del cronograma NO se cargan con este bloque: son trabajo de datos (regla 26), con el contrato de RN-073.
+
 ### Actualización del 2026-10-09 (tarea 317: el área de la persona)
 
 **Ya aplicada en Production** (por ChatGPT, el 2026-10-09, antes de desplegar la versión que la usa; verificado: la columna existe, `text`, `NOT NULL`, default `''`, y las personas existentes quedaron con el área vacía). No hay que volver a ejecutar nada por esta tarea; `schema.sql` la conserva como declaración del esquema real. Agrega a `personas` la columna `area` (texto, por defecto vacía), bloque 1.v. No cambia ningún dato: las personas existentes quedan con el área vacía y nada se copia desde `notas`. Hasta aplicarla, el guardado de una persona desde la versión nueva espera en la cola de sincronización (no se pierde); el resto sigue igual.

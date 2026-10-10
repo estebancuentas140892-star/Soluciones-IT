@@ -396,6 +396,11 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Firma:** `useUrlAdjunto(referencia: string | null): string | null`.
 - **Dónde:** `MiniaturaPortada`, `Adjuntos`, `ProcedimientoVista`.
 
+### 2.18 `OpcionRadio` (2026-10-10, tarea 320)
+- **Propósito:** una respuesta de una pregunta cerrada: botón con `role="radio"` y `aria-checked`, 44 px de alto, el círculo de selección a la izquierda, el borde y el fondo en acento cuando está elegida. Botón y no `<input type="radio">`: la app no usa los controles nativos del navegador.
+- **Props:** `{ activa: boolean, onClick: () => void, children }`. Quien la usa pone el contenedor `role="radiogroup"` con su nombre accesible (`aria-labelledby` con `useId`).
+- **Dónde:** `DecisionSobreEquipo` (de donde se extrajo; era su `Opcion` interna, sin cambiar su aspecto), `SelectorTipoMantenimiento` y la pregunta "¿Cómo terminó?" de `MantenimientoPage`.
+
 ## 3. Componentes compartidos de features
 
 ### 3.1 `historial/Historial`
@@ -461,6 +466,14 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** "¿Qué pasa con este equipo?" en un solo control, porque la misma pregunta aparece al retirar a una persona (una por equipo) y al liberar un equipo. Tres opciones de radio (`role="radio"`, 44 px): **Dejar sin responsable** (con la casilla "Marcar como Disponible", `role="checkbox"` con la forma de las casillas de las guías; marcada si el equipo funcionaba, desmarcada y con aviso si su estado no lo dice, oculta si está en mantenimiento o fuera de servicio, ver `sugerirDisponible`), **Asignar a otra persona** (un `select` de personas activas) y **Dar de baja** (con la explicación de que la baja se completa en su pantalla si hay dependencias).
 - **Props:** `{ dispositivo, eleccion: Eleccion, onCambiar, personas, permitirBaja? = true }` (controlado). `Eleccion`, `eleccionInicial` y `aDecision` (traduce a la `DecisionEquipo` que ejecuta `retirarPersona`, o null si falta la persona) viven en `eleccionEquipo.ts`, aparte, para que el archivo del componente solo exporte componentes.
 - **Dónde:** `RetirarPersonaPage` y `HojaLiberarEquipo`.
+- **Desde la tarea 320** cada respuesta es `OpcionRadio` (sección 2.18), el mismo botón que tenía dentro.
+
+### 3.7f `mantenimientos/*` (2026-10-10, tarea 320)
+- **`MantenimientosDelEquipo`** (`{ dispositivoId }`): el contenido de la fila "Mantenimiento" de "Más del equipo". "Programar" despliega en el sitio el formulario (tipo, fecha de hoy en adelante, observaciones) y guarda con `guardarRegistro('mantenimientos', …)`; lista los abiertos y confirmados (cada fila lleva a su pantalla) y, aparte, los antecedentes por validar con su fuente.
+- **`MantenimientoPage`** (ruta `/dispositivos/:dispositivoId/mantenimientos/:mantenimientoId`, nivel tarea): "¿Cómo terminó?" con tres respuestas (se hizo, se pospone, se cancela). Se hizo llama a `cerrarMantenimiento`; posponer y cancelar, a `guardarRegistro` con el motivo. Cerrado, enseña lo que quedó y los adjuntos de la intervención (`Adjuntos` con `entidadTipo="historial"`); un antecedente por validar solo se consulta.
+- **`SelectorTipoMantenimiento`** (`{ valor, alCambiar }`): Preventivo o Correctivo, dos `OpcionRadio` lado a lado.
+- **Lógica pura:** `mantenimiento.ts` (`entraEnAgenda`, `mantenimientosEnAgenda`, `textoProgramado`, `conteoDeMantenimientos`, los `errorDe…` de cada gesto y `hoyIso`) y `antecedentes.ts` (`mesDeTexto`, `fechaDeMarca`, `antecedenteDesdeCronograma`); en `src/lib/mantenimientos.ts`, lo que también usa el repositorio (`estaAbierto`, `esPorValidar`, `nombreMantenimiento`, `fechaConAnio`, `resumenMantenimiento`, `textoIntervencionDeMantenimiento`).
+- **Reglas:** [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-073.
 
 ### 3.7c `personas/HojaLiberarEquipo` y `personas/HojaAsignarPersona` (2026-09-23, tarea 266)
 - **`HojaLiberarEquipo`:** `Modal` con `DecisionSobreEquipo` y un motivo opcional. "Confirmar" libera o reasigna (`liberarEquipo`, `asignarEquipo`); con "Dar de baja", "Ir a dar de baja" abre la pantalla de baja de siempre. Props: `{ dispositivo: Dispositivo | null (null = cerrada), persona, otrasPersonas, onCerrar, desdeElEquipo? }`; con `desdeElEquipo` la pantalla de baja vuelve al equipo en vez de a la persona. Dónde: "Liberar" en `PersonaPage` y "Cambiar" en `ResponsableDelEquipo`.

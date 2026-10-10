@@ -222,7 +222,7 @@ describe('la ficha del equipo', () => {
     // final de Claude Design); abierta, sus secciones siguen plegadas.
     const mas = await esperar(() => control(/^Más del equipo/), 'la fila Más del equipo')
     // Lo dice de corrido, con lo que este equipo tiene (aquí, su impacto).
-    expect(mas.textContent).toContain('Datos, impacto, conexiones, adjuntos e intervenciones')
+    expect(mas.textContent).toContain('Datos, impacto, conexiones, adjuntos, mantenimiento e intervenciones')
     expect(control(/^Más datos del equipo/)).toBeNull()
     await tocar(mas)
     const plegado = await esperar(() => control(/^Más datos del equipo/), 'la sección plegada')

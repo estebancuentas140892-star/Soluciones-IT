@@ -46,6 +46,7 @@ import {
   TrashSimple,
   TreeStructure,
   WarningOctagon,
+  Wrench,
   XCircle,
 } from '../../components/iconos'
 import {
@@ -75,6 +76,8 @@ import { ResponsableDelEquipo, ResponsablesAnteriores } from '../personas/Respon
 import { HojaAsignarPersona } from '../personas/HojaAsignarPersona'
 import { esDeBaja, responsablePorValidar } from '../personas/cicloPersona'
 import { useResponsablesAnteriores } from '../personas/useAsignaciones'
+import { conteoDeMantenimientos } from '../mantenimientos/mantenimiento'
+import { MantenimientosDelEquipo } from '../mantenimientos/MantenimientosDelEquipo'
 
 // Las anclas que viven dentro de "Más del equipo": llegar a una abre el
 // pliegue (si no, el salto no encontraría su destino).
@@ -217,6 +220,18 @@ export function DispositivoPage() {
         .count(),
     [dispositivoId],
     0,
+  )
+  // "Mantenimiento" (tarea 320) dice en su fila plegada el abierto más
+  // cercano ("Atrasado", "Hoy", "20 oct") o "Ninguno".
+  const mantenimientos = useLiveQuery(
+    () =>
+      db.mantenimientos
+        .where('dispositivoId')
+        .equals(dispositivoId)
+        .filter((m) => !m.eliminadoEn)
+        .toArray(),
+    [dispositivoId],
+    [],
   )
   // "Intervenciones" cuenta el trabajo ESCRITO A MANO sobre el equipo
   // (`campo: 'intervencion'`), no cada cambio de campo: la cabecera
@@ -741,6 +756,7 @@ export function DispositivoPage() {
                       'conexiones',
                       perfil?.puedeVerBoveda ? 'datos protegidos' : null,
                       'adjuntos',
+                      'mantenimiento',
                       'intervenciones',
                     ].filter((parte): parte is string => parte !== null),
                   ).replace(/^./, (letra) => letra.toUpperCase())}
@@ -860,6 +876,18 @@ export function DispositivoPage() {
                 <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />
               )}
               <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} sinCabecera />
+            </SeccionPlegable>
+
+            {/* Lo que toca hacerle al equipo (tarea 320), junto a lo que
+                ya se le hizo: programar aquí; cerrar, en la pantalla de
+                cada mantenimiento, que deja la intervención abajo. */}
+            <SeccionPlegable
+              id="mantenimiento"
+              titulo="Mantenimiento"
+              Icono={Wrench}
+              conteo={conteoDeMantenimientos(mantenimientos)}
+            >
+              <MantenimientosDelEquipo dispositivoId={dispositivoId} />
             </SeccionPlegable>
 
             <SeccionPlegable

@@ -1,4 +1,5 @@
 import type { HistorialEntrada } from '../../lib/db'
+import { SUFIJO_POR_VALIDAR } from '../../lib/mantenimientos'
 
 // Traduccion de los nombres de campo (identificadores en ingles del
 // modelo de datos) a etiquetas en espanol para mostrar en el visor.
@@ -82,6 +83,20 @@ export function descripcionEntrada(entrada: EntradaDescriptible): string {
   // El procedimiento y los campos adicionales tienen su propia vista de
   // resumen (ver Historial.tsx); estos textos son solo un respaldo para
   // no volcar nunca el JSON crudo.
+  // Tarea 320: programar, posponer o cancelar un mantenimiento queda en
+  // el historial de su equipo con el resumen de antes y el de ahora
+  // (src/lib/mantenimientos.ts). El cierre como realizado no pasa por
+  // aquí: es una intervención.
+  if (entrada.campo === 'mantenimiento') {
+    if (!entrada.valorAnterior) {
+      // Un antecedente sacado de documentación no se programó en la app.
+      return entrada.valorNuevo.endsWith(SUFIJO_POR_VALIDAR)
+        ? `Se registró un antecedente de mantenimiento: ${entrada.valorNuevo}`
+        : `Se programó el mantenimiento: ${entrada.valorNuevo}`
+    }
+    if (!entrada.valorNuevo) return `Se quitó el mantenimiento: ${entrada.valorAnterior}`
+    return `Mantenimiento: ${entrada.valorAnterior} → ${entrada.valorNuevo}`
+  }
   if (entrada.campo === 'procedimiento') return 'Se actualizó el procedimiento'
   if (entrada.campo === 'detalles') return 'Se actualizaron los campos adicionales'
   if (entrada.campo === 'conexion') {

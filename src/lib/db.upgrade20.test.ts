@@ -85,7 +85,7 @@ describe('upgrade a la version 20', () => {
     expect(await db.cambiosPendientes.count()).toBe(0)
   })
 
-  it('deja la base en la version 20', () => {
-    expect(db.verno).toBe(20)
+  it('deja la base en la version 20 o posterior', () => {
+    expect(db.verno).toBeGreaterThanOrEqual(20)
   })
 })

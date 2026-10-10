@@ -83,6 +83,9 @@ const DarDeBajaPage = lazy(() =>
 const ReemplazoPage = lazy(() =>
   import('./features/dispositivos/ReemplazoPage').then((m) => ({ default: m.ReemplazoPage })),
 )
+const MantenimientoPage = lazy(() =>
+  import('./features/mantenimientos/MantenimientoPage').then((m) => ({ default: m.MantenimientoPage })),
+)
 const BovedaGuard = lazy(() =>
   import('./features/boveda/BovedaGuard').then((m) => ({ default: m.BovedaGuard })),
 )
@@ -540,6 +543,16 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <ReemplazoPage />
+                  </Suspense>
+                }
+              />
+              {/* Un mantenimiento del equipo (tarea 320): decir cómo
+                  terminó. Nivel tarea, con salida a la ficha del equipo. */}
+              <Route
+                path="dispositivos/:dispositivoId/mantenimientos/:mantenimientoId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <MantenimientoPage />
                   </Suspense>
                 }
               />

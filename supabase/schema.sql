@@ -769,6 +769,85 @@ alter table public.personas add column if not exists motivo_retiro text not null
 alter table public.personas add column if not exists area text not null default '';
 
 -- ----------------------------------------------------------------
+-- 1.u Mantenimientos de un equipo (2026-10-10, tarea 320).
+--
+--     Programar un mantenimiento, verlo en la Agenda y cerrarlo dejando
+--     la intervencion real en el historial del equipo. No es un gestor
+--     de tareas: cada fila pertenece a UN equipo, y la Agenda la deriva
+--     de `fecha_programada` mientras esta abierta ('programado' o
+--     'pospuesto', ya con su fecha nueva). 'realizado' y 'cancelado' la
+--     cierran.
+--
+--     El historial sigue siendo la evidencia de lo ocurrido, no una
+--     programacion futura: al cerrar como realizado la app escribe la
+--     intervencion en `historial` (entidad 'dispositivo', campo
+--     'intervencion') y guarda su id en `historial_id`; las fotos o actas
+--     cuelgan de esa entrada (`adjuntos` con entidad_tipo 'historial'),
+--     igual que las de una intervencion manual. Por eso no hay columna de
+--     evidencia ni cambia `adjuntos`.
+--
+--     ANTECEDENTES HISTORICOS. `validacion` separa lo confirmado de lo
+--     sacado de documentacion antigua ('documentado_por_validar'): un
+--     antecedente lleva su `fuente`, nunca entra en la Agenda y no se
+--     cierra desde la app (no tiene `historial_id`). Solo copia lo que su
+--     fuente dice: si la fuente no nombra tecnico, resultado o fecha
+--     real, quedan vacios (src/features/mantenimientos/antecedentes.ts).
+--     Las 87 marcas del cronograma NO se cargan como mantenimientos
+--     confirmados, y en las hojas con titulo mensual inconsistente no se
+--     escribe una `fecha_programada` sin conciliar antes el mes
+--     (CONCILIACION_DATOS.md, seccion 6).
+--
+--     `dispositivo_id` es una referencia blanda (uuid sin FK), como
+--     campos_protegidos.dispositivo_id: por el modelo offline primero, la
+--     fila no se rechaza por el estado de otra tabla.
+--
+--     Del lado de la app, los NOT NULL con default llevan el suyo en
+--     `porDefecto` de src/lib/tablas.ts; las fechas y `historial_id` son
+--     nullables y no van en `camposOpcionales` (posponer cambia la fecha).
+--     Advertencia de despliegue (regla 17 de REGLAS.md): aplicar este
+--     bloque ANTES de desplegar la version que lo usa; hasta entonces un
+--     mantenimiento espera en la cola de sincronizacion (no se pierde) y
+--     el resto de tablas sigue igual. No carga ningun dato.
+-- ----------------------------------------------------------------
+
+create table if not exists public.mantenimientos (
+  id uuid primary key default gen_random_uuid(),
+  dispositivo_id uuid not null,
+  tipo text not null default 'preventivo' check (tipo in ('preventivo', 'correctivo')),
+  fecha_programada date,
+  estado text not null default 'programado'
+    check (estado in ('programado', 'realizado', 'pospuesto', 'cancelado')),
+  tecnico text not null default '',
+  fecha_realizada date,
+  resultado text not null default '',
+  observaciones text not null default '',
+  historial_id uuid,
+  fuente text not null default '',
+  validacion text not null default 'confirmado'
+    check (validacion in ('confirmado', 'documentado_por_validar')),
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+-- Reglas del dato, tambien desde el SQL (una carga directa no puede
+-- saltarselas): uno abierto y confirmado tiene fecha programada; uno
+-- realizado tiene fecha real; un antecedente por validar dice de donde
+-- sale y no apunta a una intervencion registrada en la app.
+alter table public.mantenimientos drop constraint if exists mantenimientos_abierto_con_fecha;
+alter table public.mantenimientos add constraint mantenimientos_abierto_con_fecha
+  check (validacion <> 'confirmado' or estado not in ('programado', 'pospuesto') or fecha_programada is not null);
+alter table public.mantenimientos drop constraint if exists mantenimientos_realizado_con_fecha;
+alter table public.mantenimientos add constraint mantenimientos_realizado_con_fecha
+  check (estado <> 'realizado' or fecha_realizada is not null);
+alter table public.mantenimientos drop constraint if exists mantenimientos_antecedente_sin_afirmar;
+alter table public.mantenimientos add constraint mantenimientos_antecedente_sin_afirmar
+  check (validacion <> 'documentado_por_validar' or (fuente <> '' and historial_id is null));
+
+create index if not exists idx_mantenimientos_updated on public.mantenimientos (updated_at);
+create index if not exists idx_mantenimientos_dispositivo on public.mantenimientos (dispositivo_id);
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 
@@ -858,6 +937,11 @@ create trigger trg_personas_modificacion
 drop trigger if exists trg_referencias_modificacion on public.referencias;
 create trigger trg_referencias_modificacion
   before insert or update on public.referencias
+  for each row execute function public.registrar_modificacion();
+
+drop trigger if exists trg_mantenimientos_modificacion on public.mantenimientos;
+create trigger trg_mantenimientos_modificacion
+  before insert or update on public.mantenimientos
   for each row execute function public.registrar_modificacion();
 
 -- Crea el perfil automaticamente cuando se da de alta un usuario
@@ -978,6 +1062,7 @@ alter table public.ubicaciones enable row level security;
 alter table public.campos_protegidos enable row level security;
 alter table public.personas enable row level security;
 alter table public.referencias enable row level security;
+alter table public.mantenimientos enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -1094,6 +1179,13 @@ create policy personas_acceso on public.personas
 -- campos protegidos del equipo, que si exigen puede_ver_boveda().
 drop policy if exists referencias_acceso on public.referencias;
 create policy referencias_acceso on public.referencias
+  for all to authenticated using (true) with check (true);
+
+-- Mantenimientos (tarea 320): acceso completo para cualquier tecnico
+-- autenticado, mismo criterio que dispositivos (contenido general, no
+-- boveda). No guarda secretos: un acceso protegido sigue en la Boveda.
+drop policy if exists mantenimientos_acceso on public.mantenimientos;
+create policy mantenimientos_acceso on public.mantenimientos
   for all to authenticated using (true) with check (true);
 
 -- Ejecuciones de diagnostico: se pueden leer y agregar, nunca editar
@@ -1633,7 +1725,7 @@ declare
     'categorias', 'articulos', 'dispositivos', 'credenciales', 'adjuntos',
     'historial', 'conexiones', 'diagnosticos', 'ejecuciones_diagnostico',
     'accesos_boveda', 'perfiles', 'boveda_meta', 'ubicaciones',
-    'campos_protegidos', 'personas', 'referencias'
+    'campos_protegidos', 'personas', 'referencias', 'mantenimientos'
   ];
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then

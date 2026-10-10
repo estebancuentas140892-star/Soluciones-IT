@@ -5,10 +5,12 @@ import type {
   Dispositivo,
   EjecucionDiagnostico,
   HistorialEntrada,
+  Mantenimiento,
   Persona,
 } from '../../lib/db'
 import { diasDeCalendario, estadoVencimiento, textoVencimiento } from '../../lib/vencimiento'
 import { tiempoRelativo } from '../historial/actividadEquipo'
+import { mantenimientosEnAgenda } from '../mantenimientos/mantenimiento'
 import { equiposLiberadosRecientes, personasPorRecibir, personasRetiradasConEquipos } from './asuntosDePersonas'
 
 // Bloque "Pendientes" de Inicio (decisión D5 de PROPUESTA_JORNADA_TECNICO.md,
@@ -47,6 +49,9 @@ export interface ItemPendiente {
     | 'persona_ingreso'
     | 'persona_retirada'
     | 'equipo_liberado'
+    // Desde la tarea 320: un mantenimiento abierto con fecha programada
+    // (ver src/features/mantenimientos/mantenimiento.ts).
+    | 'mantenimiento'
   /** Fecha de vencimiento "YYYY-MM-DD", o null si el ítem no tiene una. */
   fecha: string | null
   /**
@@ -193,9 +198,10 @@ export function sugerenciasSinRevisar(
 
 // Combina las fuentes en un solo bloque. Primero TODO lo que tiene
 // fecha, ordenado globalmente por esa fecha (venga de la Bóveda, de los
-// Datos protegidos de un equipo o, desde la tarea 270, del ingreso o el
-// retiro de una persona: para quien lo tiene que atender son la misma
-// clase de obligación); después el trabajo sin plazo (borradores
+// Datos protegidos de un equipo, desde la tarea 270 del ingreso o el
+// retiro de una persona y desde la tarea 320 de un mantenimiento
+// programado: para quien lo tiene que atender son la misma clase de
+// obligación); después el trabajo sin plazo (borradores
 // propios) y lo que el equipo tiene por revisar (una persona retirada
 // sin fecha que aún tiene equipos, un equipo liberado que espera dueño y
 // las sugerencias del equipo).
@@ -218,6 +224,11 @@ export function calcularPendientes(datos: {
     HistorialEntrada,
     'entidadTipo' | 'entidadId' | 'campo' | 'valorAnterior' | 'valorNuevo' | 'fechaHora'
   >[]
+  /** Tarea 320: los mantenimientos (la agenda se queda con los abiertos, confirmados y con fecha). */
+  mantenimientos?: Pick<
+    Mantenimiento,
+    'id' | 'dispositivoId' | 'tipo' | 'fechaProgramada' | 'estado' | 'validacion' | 'eliminadoEn'
+  >[]
   usuarioId: string
   puedeVerBoveda: boolean
   limite?: number
@@ -233,6 +244,7 @@ export function calcularPendientes(datos: {
     personas = [],
     dispositivos = [],
     liberaciones = [],
+    mantenimientos = [],
     usuarioId,
     puedeVerBoveda,
     limite = 6,
@@ -246,6 +258,7 @@ export function calcularPendientes(datos: {
     ...camposProtegidosPorVencer(puedeVerBoveda ? camposProtegidos : [], nombresDispositivosPorId, hoy),
     ...personasPorRecibir(personas, dispositivos, hoy),
     ...retiradas.filter((item) => item.fecha !== null),
+    ...mantenimientosEnAgenda(mantenimientos, dispositivos, hoy),
   ].sort(porFecha)
 
   const items = [

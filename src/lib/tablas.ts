@@ -15,6 +15,7 @@ import type {
   Dispositivo,
   EjecucionDiagnostico,
   HistorialEntrada,
+  Mantenimiento,
   Persona,
   Referencia,
   Ubicacion,
@@ -39,6 +40,7 @@ export const TABLAS_SINCRONIZADAS = [
   'campos_protegidos',
   'personas',
   'referencias',
+  'mantenimientos',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
@@ -66,6 +68,7 @@ export interface EntidadPorTabla {
   campos_protegidos: CampoProtegido
   personas: Persona
   referencias: Referencia
+  mantenimientos: Mantenimiento
 }
 
 interface ConfigTabla {
@@ -486,6 +489,40 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       estadoUso: '',
       notas: '',
       guiasRelacionadas: [],
+    },
+  },
+  // Mantenimientos de un equipo (tarea 320). Va al final de la lista de
+  // tablas sincronizadas, mismo criterio que las anteriores: si el bloque
+  // 1.u de schema.sql aun no se aplico en el servidor, su fallo no impide
+  // descargar las demas. Las dos fechas y `historialId` son nullables y
+  // NO van en `camposOpcionales`: posponer cambia la fecha programada y
+  // un antecedente por validar puede no tenerla, asi que el null tiene
+  // que poder viajar.
+  mantenimientos: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: {
+      ...camposComunes,
+      dispositivoId: 'dispositivo_id',
+      tipo: 'tipo',
+      fechaProgramada: 'fecha_programada',
+      estado: 'estado',
+      tecnico: 'tecnico',
+      fechaRealizada: 'fecha_realizada',
+      resultado: 'resultado',
+      observaciones: 'observaciones',
+      historialId: 'historial_id',
+      fuente: 'fuente',
+      validacion: 'validacion',
+    },
+    porDefecto: {
+      tipo: 'preventivo',
+      estado: 'programado',
+      tecnico: '',
+      resultado: '',
+      observaciones: '',
+      fuente: '',
+      validacion: 'confirmado',
     },
   },
 }

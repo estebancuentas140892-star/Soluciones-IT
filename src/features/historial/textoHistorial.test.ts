@@ -47,6 +47,30 @@ describe('descripcionEntrada', () => {
     ).toBe('Se quitó la conexión: Switch D32 → Punto D80')
   })
 
+  // Tarea 320: programar, posponer, cancelar y quitar un mantenimiento.
+  it('describe un mantenimiento programado, movido, quitado y un antecedente', () => {
+    expect(
+      descripcionEntrada({ campo: 'mantenimiento', valorAnterior: '', valorNuevo: 'Preventivo para el 20 oct 2026' }),
+    ).toBe('Se programó el mantenimiento: Preventivo para el 20 oct 2026')
+    expect(
+      descripcionEntrada({
+        campo: 'mantenimiento',
+        valorAnterior: 'Preventivo para el 20 oct 2026',
+        valorNuevo: 'Preventivo, pospuesto al 3 nov 2026',
+      }),
+    ).toBe('Mantenimiento: Preventivo para el 20 oct 2026 → Preventivo, pospuesto al 3 nov 2026')
+    expect(
+      descripcionEntrada({ campo: 'mantenimiento', valorAnterior: 'Preventivo para el 20 oct 2026', valorNuevo: '' }),
+    ).toBe('Se quitó el mantenimiento: Preventivo para el 20 oct 2026')
+    expect(
+      descripcionEntrada({
+        campo: 'mantenimiento',
+        valorAnterior: '',
+        valorNuevo: 'Preventivo para el 12 mar 2025 (documentado, por validar)',
+      }),
+    ).toBe('Se registró un antecedente de mantenimiento: Preventivo para el 12 mar 2025 (documentado, por validar)')
+  })
+
   it('con los dos valores describe la inversión, no un alta', () => {
     expect(
       descripcionEntrada({

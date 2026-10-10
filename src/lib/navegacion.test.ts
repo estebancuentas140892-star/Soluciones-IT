@@ -112,6 +112,13 @@ describe('padreDe', () => {
         etiqueta: 'Volver',
       })
     })
+
+    it('un mantenimiento (tarea 320) vuelve a la ficha del dispositivo', () => {
+      expect(padreDe('/dispositivos/cam-1/mantenimientos/m-1')).toEqual({
+        to: '/dispositivos/cam-1',
+        etiqueta: 'Volver',
+      })
+    })
   })
 
   describe('Ubicaciones (se alcanza desde "Más", tarea 182)', () => {

@@ -378,6 +378,17 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Persona, Dispositivo. Dura en el código: `src/features/dispositivos/responsableEnLista.ts`, `DispositivosPage.tsx`, `busquedaEquipos.ts`, `src/components/FilaDispositivo.tsx` (dos franjas y subtítulo en partes) y `src/features/personas/PersonaForm.tsx`.
 - Impacto: una columna nueva (`personas.area`, bloque 1.v de `schema.sql`, que se aplica antes de desplegar, regla 17); ningún dato real cambia.
 
+**RN-073. Un mantenimiento se programa sobre un equipo, la Agenda lo deriva por su fecha mientras está abierto y se cierra dejando la intervención real en el historial del equipo. Un antecedente histórico está por validar y nunca es trabajo pendiente.**
+- Motivo: tarea 320 (encargo del 2026-10-10, fase B; [DECISIONES.md](DECISIONES.md) AD-075). Programar y cerrar mantenimientos sin convertir la Agenda en un gestor de tareas ni usar el historial como programación futura.
+- Estados: `programado` y `pospuesto` (ya con su fecha nueva) están abiertos; `realizado` y `cancelado` lo cierran. Ciclo en la sección 4.4.
+- Agenda: entra un mantenimiento abierto, confirmado, sin eliminar, con fecha programada legible y de un equipo que existe y no se eliminó. Vencidos sin límite, hoy, y próximos dentro del aviso de 30 días (`DIAS_AVISO_VENCIMIENTO`, el de los accesos). El título es el equipo, la razón cuándo toca ("Atrasado 3 días", "Toca hoy", "Toca el 20 oct") y el origen qué mantenimiento es. Lleva a la pantalla del mantenimiento. Al cerrarlo o cancelarlo, sale.
+- Programar: una fecha de hoy en adelante; tipo preventivo o correctivo; observaciones opcionales. Posponer: una fecha nueva, de hoy en adelante y distinta. Cancelar: siempre con motivo, que queda en el historial del equipo.
+- Cerrar como realizado: fecha real (hasta hoy), quién lo hizo y qué se hizo, obligatorios. Se propone el día de hoy y el nombre de quien tiene la sesión, visibles y editables. En una sola transacción se escribe la intervención en el historial del equipo (campo `intervencion`, como una nota manual) y el mantenimiento queda `realizado` con su `historial_id`; no se escribe además una entrada `mantenimiento`. La evidencia se adjunta a esa intervención.
+- Antecedentes (`validacion = 'documentado_por_validar'`): llevan su fuente, se enseñan aparte en la ficha ("Antecedentes por validar"), no entran en la Agenda, no cuentan en la fila plegada y no se cierran desde la app. Solo copian lo que su fuente dice. Una marca de cronograma solo da fecha si el mes de su hoja y el de su título coinciden o una persona concilió el mes (`fechaDeMarca`); si no, se registra sin fecha y con la marca tal cual en las observaciones (`antecedenteDesdeCronograma`). Las 87 marcas del cronograma conciliado el 2026-10-10 no se cargan como mantenimientos confirmados.
+- Historial: programar, posponer, cancelar o quitar dejan UNA entrada `mantenimiento` en el historial del equipo (resumen de antes y de ahora); un guardado que no cambia el resumen no la deja. La lectura: "Se programó el mantenimiento: …", "Mantenimiento: … → …", "Se registró un antecedente de mantenimiento: …".
+- Entidades: Mantenimiento, Dispositivo, HistorialEntrada, Adjunto. Dura en el código: `src/lib/mantenimientos.ts`, `src/lib/repositorio.ts` (`cerrarMantenimiento` y la rama `mantenimientos` del historial), `src/features/mantenimientos/` (`mantenimiento.ts`, `antecedentes.ts`, `MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`), `src/features/inicio/pendientes.ts`.
+- Impacto: una tabla nueva sincronizada (`mantenimientos`, bloque 1.u de `schema.sql`, que se aplica antes de desplegar, regla 17); ningún dato real cambia.
+
 ---
 
 **RN-042. El buscador prioriza la intención de resolver: una guía que coincide en el título va primero, publicada o no.**
@@ -535,6 +546,8 @@ erDiagram
   ARTICULOS }o--o{ CAMPOS_PROTEGIDOS : "vínculo protegido (JSON)"
   EJECUCIONES_DIAGNOSTICO ||--o| ARTICULOS : "origina borrador"
   HISTORIAL }o--|| DISPOSITIVOS : "registra (polimórfico)"
+  DISPOSITIVOS ||--o{ MANTENIMIENTOS : "se le programan"
+  MANTENIMIENTOS |o--o| HISTORIAL : "se cierra con (intervención)"
   ACCESOS_BOVEDA }o--|| CREDENCIALES : "audita (polimórfico)"
   REFERENCIAS }o--o{ REFERENCIAS : "relacionadas (JSON)"
   REFERENCIAS }o--o{ ARTICULOS : "guías relacionadas (JSON)"
@@ -551,6 +564,7 @@ erDiagram
 | Persona | responsable | Dispositivo | 1 : N | FK `responsable_id` (nullable) + copia `responsable`. Los periodos pasados se derivan de `historial` (campo `responsableId`, RN-049), sin tabla propia |
 | Dispositivo | reemplaza | Dispositivo | 1 : 0..1 | FK `reemplaza_a` (autorreferencia, fija una vez) |
 | Dispositivo | contiene | Campo protegido | 1 : N | `dispositivo_id` (nullable, sin FK) |
+| Dispositivo | se le programa | Mantenimiento | 1 : N | `mantenimientos.dispositivo_id` (sin FK). Cerrado como realizado, `historial_id` apunta a la intervención del historial del equipo (0..1), de la que cuelga la evidencia (RN-073) |
 | Dispositivo | conexión | Dispositivo | N : M | tabla puente `conexiones` (dos FK duras) con atributos |
 | Credencial | da acceso | Dispositivo | N : M | JSON `credenciales.dispositivos` `{id,nombre}[]` |
 | Artículo | afecta a | Dispositivo | N : M | JSON `dispositivos_afectados` `{id,nombre}[]` |
@@ -569,7 +583,7 @@ Notas:
 
 ### 3.3 Referencias sin FK (a propósito)
 
-Por el modelo offline primero, varias referencias son "blandas" (uuid sin FK, para que una fila no se rechace por el estado de otra tabla que quizá aún no sincronizó): `campos_protegidos.dispositivo_id`, `historial.entidad_id` (polimórfico), `ejecuciones_diagnostico.diagnostico_id`, `accesos_boveda.credencial_id` (polimórfico), `articulos.origen_sugerencia_id`, `adjuntos.entidad_id` (polimórfico).
+Por el modelo offline primero, varias referencias son "blandas" (uuid sin FK, para que una fila no se rechace por el estado de otra tabla que quizá aún no sincronizó): `campos_protegidos.dispositivo_id`, `historial.entidad_id` (polimórfico), `ejecuciones_diagnostico.diagnostico_id`, `accesos_boveda.credencial_id` (polimórfico), `articulos.origen_sugerencia_id`, `adjuntos.entidad_id` (polimórfico), `mantenimientos.dispositivo_id` y `mantenimientos.historial_id` (tarea 320).
 
 Catálogo de campos entidad por entidad (tipos, nulabilidad, defaults): [ARQUITECTURA.md](ARQUITECTURA.md), sección 5.
 
@@ -577,7 +591,7 @@ Catálogo de campos entidad por entidad (tipos, nulabilidad, defaults): [ARQUITE
 
 ## 4. Ciclos de vida y máquinas de estado
 
-Distinción importante: solo tres entidades tienen un campo de estado persistido (`Articulo.estado`, enum real; `Persona.estado`, enum real desde el 2026-09-23; `Dispositivo.estado`, texto libre). Las demás tienen un ciclo de vida simple (alta, edición, borrado lógico). Además existen dos máquinas de estado de **ejecución** (diagnóstico y procedimiento) que viven en tablas locales.
+Distinción importante: solo cuatro entidades tienen un campo de estado persistido (`Articulo.estado`, enum real; `Persona.estado`, enum real desde el 2026-09-23; `Mantenimiento.estado`, enum real desde el 2026-10-10, sección 4.4b; `Dispositivo.estado`, texto libre). Las demás tienen un ciclo de vida simple (alta, edición, borrado lógico). Además existen dos máquinas de estado de **ejecución** (diagnóstico y procedimiento) que viven en tablas locales.
 
 ### 4.1 Dispositivo
 
@@ -640,6 +654,23 @@ stateDiagram-v2
   Activa --> Eliminada : eliminar (registro creado por error)
   Retirada --> Eliminada : eliminar (registro creado por error)
   Eliminada --> [*]
+```
+
+### 4.4b Mantenimiento (tarea 320, RN-073)
+
+`estado` es un enum real con check en la base. Abiertos: `programado` y `pospuesto`. Un antecedente por validar no se mueve desde la app.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Programado : programar (fecha de hoy en adelante)
+  Programado --> Pospuesto : posponer (fecha nueva)
+  Pospuesto --> Pospuesto : posponer otra vez
+  Programado --> Realizado : cerrar (fecha real, quién y qué; escribe la intervención)
+  Pospuesto --> Realizado : cerrar
+  Programado --> Cancelado : cancelar (con motivo)
+  Pospuesto --> Cancelado : cancelar
+  Realizado --> [*]
+  Cancelado --> [*]
 ```
 
 ### 4.5 Máquina de estado: ejecución de un diagnóstico
@@ -868,7 +899,7 @@ Vista funcional; el mecanismo técnico (motor de sync, canal de Realtime, cursor
 
 ### 8.2 Qué es local y qué se sincroniza
 
-- **Sincronizadas (14 tablas, `referencias` incluida)** por el motor genérico, más `perfiles` y `boveda_meta` con un mecanismo propio de un solo sentido.
+- **Sincronizadas (15 tablas, `referencias` y, desde la tarea 320, `mantenimientos` incluidas)** por el motor genérico, más `perfiles` y `boveda_meta` con un mecanismo propio de un solo sentido.
 - **Locales puras (8):** `syncMeta` (cursores), `cambiosPendientes` (cola), `archivosPendientes` (cola de archivos), `seguridadApp` (bloqueo del dispositivo), `progresoDiagnostico`, `progresoPasos`, `recientes`, `favoritos`.
 
 ---

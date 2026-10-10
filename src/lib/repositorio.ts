@@ -6,9 +6,11 @@ import {
   type Conexion,
   type EjecucionDiagnostico,
   type HistorialEntrada,
+  type Mantenimiento,
   type TipoEntidadHistorial,
 } from './db'
 import { resumenConexion } from './conexiones'
+import { estaAbierto, resumenMantenimiento, textoIntervencionDeMantenimiento } from './mantenimientos'
 import { leerSesionGuardada } from './sesionGuardada'
 import { CLAVE_SESION, supabase } from './supabase'
 import { programarSync } from './sync'
@@ -122,6 +124,65 @@ export async function registrarIntervencion(
 
   sincronizarPronto()
   return entrada.id
+}
+
+// Cierra un mantenimiento abierto como REALIZADO (tarea 320): escribe la
+// intervencion real en el historial del equipo (campo 'intervencion',
+// como una nota manual, asi que sale en "Intervenciones" y en "Ver
+// historial") y deja el mantenimiento con su fecha real, quien lo hizo,
+// el resultado y el id de esa entrada. La evidencia (fotos, actas) se
+// adjunta despues a la entrada (`adjuntos` con entidadTipo 'historial').
+//
+// Todo en una transaccion: o quedan las dos cosas o ninguna. El cambio
+// del mantenimiento NO genera ademas su propia entrada 'mantenimiento':
+// la intervencion ya cuenta lo que paso, y dos entradas del mismo
+// cierre serian ruido. Devuelve el id de la entrada, o null si el
+// mantenimiento no existe, ya no esta abierto o es un antecedente por
+// validar (eso no se cierra desde la app).
+export async function cerrarMantenimiento(
+  mantenimientoId: string,
+  datos: { fechaRealizada: string; tecnico: string; resultado: string },
+): Promise<string | null> {
+  const usuario = await obtenerUsuarioActual()
+  const ahora = new Date().toISOString()
+  let entradaId: string | null = null
+
+  await db.transaction('rw', [db.mantenimientos, db.historial, db.cambiosPendientes], async () => {
+    const anterior = await db.mantenimientos.get(mantenimientoId)
+    if (!anterior || anterior.eliminadoEn || !estaAbierto(anterior) || anterior.validacion !== 'confirmado') return
+
+    const tecnico = datos.tecnico.trim()
+    const resultado = datos.resultado.trim()
+    const entrada = crearEntrada({ tipo: 'dispositivo', id: anterior.dispositivoId }, usuario, ahora, '', {
+      campo: 'intervencion',
+      valorAnterior: '',
+      valorNuevo: textoIntervencionDeMantenimiento({
+        tipo: anterior.tipo,
+        fechaRealizada: datos.fechaRealizada,
+        tecnico,
+        resultado,
+      }),
+    })
+    const cerrado: Mantenimiento = {
+      ...anterior,
+      estado: 'realizado',
+      fechaRealizada: datos.fechaRealizada,
+      tecnico,
+      resultado,
+      historialId: entrada.id,
+      updatedAt: ahora,
+      updatedBy: usuario.id,
+    }
+
+    await db.mantenimientos.put(cerrado)
+    await db.historial.add(entrada)
+    await encolarCambioDeEntidad('mantenimientos', cerrado, ahora, anterior.updatedAt ?? null)
+    await encolarEntradasDeHistorial([entrada])
+    entradaId = entrada.id
+  })
+
+  sincronizarPronto()
+  return entradaId
 }
 
 // Registro inmutable de un diagnostico terminado o abandonado (Modo
@@ -280,6 +341,26 @@ function construirHistorial(
     )
   }
 
+  // Un mantenimiento (tarea 320) se registra en el historial de SU
+  // EQUIPO, como una conexion: al abrir la ficha se ve que se programo,
+  // se pospuso o se cancelo. Una sola entrada por guardado, con el
+  // resumen de antes y el de ahora (no una por campo), y ninguna si el
+  // resumen no cambia. Es la constancia de que alguien lo programo o lo
+  // movio, no la programacion: esa vive en la tabla `mantenimientos`.
+  if (tabla === 'mantenimientos') {
+    const mantenimiento = nueva as unknown as Mantenimiento
+    const resumen = resumenMantenimiento(mantenimiento)
+    const resumenAnterior = anterior ? resumenMantenimiento(anterior as unknown as Mantenimiento) : ''
+    if (resumenAnterior === resumen) return []
+    return [
+      crearEntrada({ tipo: 'dispositivo', id: mantenimiento.dispositivoId }, usuario, ahora, motivo, {
+        campo: 'mantenimiento',
+        valorAnterior: resumenAnterior,
+        valorNuevo: resumen,
+      }),
+    ]
+  }
+
   // Los adjuntos se registran sobre la ficha a la que pertenecen,
   // como una sola entrada (se agregan o se quitan, no se editan). Una
   // foto colgada de una intervencion manual (entidadTipo 'historial')
@@ -357,7 +438,10 @@ function crearEntrada(
 // de 'dispositivo' las lee cualquier tecnico. Colgarlas del equipo
 // filtraria el nombre del dato protegido y quien lo cambio en el "Ver
 // historial" normal de la ficha, que es publico para el equipo.
-const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, TipoEntidadHistorial> =
+const TIPO_POR_TABLA: Record<
+  Exclude<TablaEditable, 'adjuntos' | 'conexiones' | 'mantenimientos'>,
+  TipoEntidadHistorial
+> =
   {
     categorias: 'categoria',
     articulos: 'articulo',
@@ -374,7 +458,7 @@ const TIPO_POR_TABLA: Record<Exclude<TablaEditable, 'adjuntos' | 'conexiones'>, 
 // (ver ambas llamadas) porque puede apuntar a 'historial', que no es
 // un TipoEntidadHistorial valido y ahi no genera entrada propia.
 function destinoHistorial(
-  tabla: Exclude<TablaEditable, 'conexiones' | 'adjuntos'>,
+  tabla: Exclude<TablaEditable, 'conexiones' | 'adjuntos' | 'mantenimientos'>,
   entidad: EntidadPorTabla[TablaEditable],
 ): { tipo: TipoEntidadHistorial; id: string } {
   return { tipo: TIPO_POR_TABLA[tabla], id: entidad.id }
@@ -407,6 +491,16 @@ function entradasEliminacion(
         valorNuevo: '',
       }),
     )
+  }
+  if (tabla === 'mantenimientos') {
+    const mantenimiento = eliminada as unknown as Mantenimiento
+    return [
+      crearEntrada({ tipo: 'dispositivo', id: mantenimiento.dispositivoId }, usuario, ahora, motivo, {
+        campo: 'mantenimiento',
+        valorAnterior: resumenMantenimiento(mantenimiento),
+        valorNuevo: '',
+      }),
+    ]
   }
   // Mismo criterio que al crear: una foto colgada de una intervencion
   // (entidadTipo 'historial') no deja su propia entrada al borrarse.
