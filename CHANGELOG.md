@@ -6,6 +6,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-10
+
+### Documentación (datos reales, tarea 318): el cierre de la conciliación del inventario
+
+**Área modificada:** [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) (nuevo), [TAREAS.md](TAREAS.md) (encargo del 2026-10-10 y tareas 318 a 325), [CLAUDE.md](CLAUDE.md) (documentos clave).
+**Tipo:** Agregado (documentación).
+**Motivo:** encargo del usuario del 2026-10-10, fase A. ChatGPT concilió el inventario real y lo aplicó en Supabase Production; el proyecto no decía en ningún sitio qué quedó cargado, qué cifras hay ni qué sigue en conflicto, y las fases siguientes (mantenimiento, facturación, documentos, compromisos, publicaciones y datáfonos) dependen de ello.
+**Qué cambia:**
+- `CONCILIACION_DATOS.md`: las cargas ya aplicadas, que no se repiten ni se convierten en migraciones; las cifras al cierre, comprobadas con consultas de solo lectura (210 dispositivos activos, 94 personas activas y 0 sin área, 13 datáfonos y 13 relaciones con su POS, 15 POS con fecha documental de facturación y 11 con PDF DIAN conciliado, 54 sin ubicación estructurada, 8 responsables textuales por validar, 17 portátiles por comprobar, 0 adjuntos y 2 intervenciones manuales); cómo se leen vigente, histórico y por validar; los conflictos pendientes sin marcarlos como resueltos, y las fuentes históricas que no se importan automáticamente.
+- Sin datos sensibles: ninguna IP, serial, código Redeban, número o rango DIAN, credencial ni nombre de persona (el repositorio es público).
+- El tablero registra el encargo, la 319 (casos de datos que no son de desarrollo, del usuario y ChatGPT) y las fases B a G como tareas 320 a 325.
+**Estructura de datos:** ninguna. Ningún dato real cambió.
+**Impacto esperado:** que ninguna fase siguiente repita una carga, invente un dato o dé por resuelto un conflicto.
+
 ## 2026-10-09
 
 ### Cambiado (Equipos, tarea 317, ampliación): la línea dice también dónde está el equipo

@@ -38,6 +38,29 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **En proceso:** la 279 sigue analizada y a la espera de la decisión del usuario, sin código. La 317 (responsable y área en la lista de Equipos) está integrada en `main` (`d598e1a`) y desplegada, **pendiente de la confirmación del usuario en producción**; no se archiva hasta entonces. Su ampliación (la ubicación en la misma línea) también está integrada en `main` (`2498d92`) y desplegada; la 317 entera sigue pendiente de la confirmación del usuario en producción. La 316 (el responsable se lee entero en el teléfono) está integrada en `main` (`1156997`) y desplegada, **pendiente de la confirmación del usuario en producción**; no se archiva hasta entonces. La 314 (buscar equipos por la persona responsable) se integra en `main` con su registro (SHA funcional `d3fa365`), **pendiente de la confirmación del usuario en producción**; no se archiva hasta entonces. La 315 (tildes en las búsquedas), observada durante la 314, está registrada en "Por hacer", sin implementar. La 312 (bloquear la Bóveda desde una credencial contextual) está integrada en `main` (`0d5191d`) y desplegada, **pendiente de la confirmación del usuario en producción**; no se archiva hasta entonces. La 311 (la advertencia previa antes de una acción de riesgo) está integrada en `main` (`1787fe2`) y desplegada, **pendiente de la confirmación del usuario en producción** con advertencias reales; no se archiva hasta entonces. La 313 (duplicados al migrar ubicaciones mientras cargan los datos existentes) está registrada en "Por hacer", sin corregir. La 310 ("Cómo hacerlo" numerado como única representación) se cerró el 2026-10-08, integrada en `main` (`43f0460`) y confirmada por el usuario en producción. La 309 (la ruta rápida ejecutable) se cerró el 2026-10-08, integrada en `main` (`265696a`) y comprobada a mano por el usuario en producción. La 308 (volver desde la comprobación final) se cerró el 2026-10-07 con la verificación manual del usuario en producción; la 307 (la ejecución mínima, que absorbió la 306) y la 303 se cerraron el mismo día y la 302 el 2026-10-06; todas están en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). La 304 (contenido real) es de ChatGPT y la 305 la decide el usuario.
 
+**ENCARGO DEL 2026-10-10: SIGUIENTE FASE DESPUÉS DE LA CONCILIACIÓN DE DATOS.** ChatGPT concilió el inventario real y lo aplicó en Supabase Production; el estado al cierre, lo que no se repite y los conflictos abiertos están en [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md). Siete fases, una tarea por fase y **una a la vez**: cada una en su propia rama, con su análisis, sus pruebas, la suite completa, `tsc -b`, lint, build, la prueba sin conexión cuando toque la sincronización, la medida a 320, 375, 390 y 1280 px cuando cambie la interfaz, su commit (nunca todas en uno) y su informe. **Ninguna se integra a `main` sin la aprobación del usuario.** Principios del encargo: una pantalla, una acción clara; ni un segundo gestor de tareas ni duplicar GLPI; la Agenda sigue siendo una vista derivada; Área pertenece a Persona y Ubicación al Equipo; los accesos protegidos siguen en la Bóveda; vigente, histórico y por validar se distinguen; no se inventan fechas, técnico, responsable, resultado, vigencia ni consecutivo consumido; los cambios de esquema van con su migración declarada y su sincronización sin conexión; no se tocan credenciales ni datos reales salvo autorización explícita.
+
+| Fase | Tarea del encargo | Tarea del tablero | Estado |
+|---|---|---|---|
+| A | Documentar el cierre de la conciliación | 318 | Hecha en la rama `docs/cierre-conciliacion`, pendiente de revisión |
+| (fuera de desarrollo) | Casos de datos y conflictos que no se resuelven por código | 319 | Pendiente (usuario y ChatGPT) |
+| B | Mantenimiento operativo | 320 | Pendiente |
+| C | Autorizaciones de facturación | 321 | Pendiente |
+| D | Actas y documentos de equipos | 322 | Pendiente |
+| E | Compromisos operativos en Agenda | 323 | Pendiente |
+| F | Publicaciones institucionales | 324 | Pendiente |
+| G | Presentación de Datáfonos | 325 | Pendiente |
+
+### 318. Documentar el cierre de la conciliación de datos del 2026-10-10
+
+- **Título:** dejar en el proyecto el estado de los datos reales al cierre de la conciliación, sin datos sensibles, para que ninguna fase siguiente repita cargas ni dé por resuelto un conflicto.
+- **Descripción:** documento nuevo [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md): las cargas que ChatGPT ya aplicó (no se repiten ni se convierten en migraciones), las cifras al cierre (210 dispositivos activos; 94 personas activas y 0 sin área; 13 datáfonos y 13 relaciones con su POS; 15 POS con fecha documental de facturación y 11 con PDF DIAN conciliado; 54 dispositivos sin `ubicacion_id`; 8 responsables textuales por validar; MP01 a MP17 por comprobar; 0 adjuntos; 2 intervenciones manuales), cómo se leen (vigente, histórico, por validar), los conflictos pendientes (PNT9, PNTE, PN10 a PN13, consecutivos, Redeban, la cámara con conflicto de IP, APLICACIONES y los videos de ICG) sin marcarlos como resueltos, y las fuentes históricas que no se importan automáticamente. Sin IP, seriales, códigos Redeban, números o rangos DIAN, credenciales ni nombres de personas: el repositorio es público.
+- **Motivo:** encargo del usuario del 2026-10-10, fase A.
+- **Impacto:** bajo en el código (ninguno); alto como línea base de las fases B a G.
+- **Prioridad:** Alta. **Estado:** Hecha en la rama `docs/cierre-conciliacion` (sobre `8bb82a6`), pendiente de revisión del usuario; no se integra a `main` sin su aprobación. Commit exclusivamente documental. Las cifras se comprobaron el 2026-10-10 con consultas de solo lectura en Supabase Production y coinciden con el cierre de ChatGPT; ningún dato se escribió.
+- **Área afectada:** [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) (nuevo), [TAREAS.md](TAREAS.md) (este encargo y las tareas 318 a 325), [CHANGELOG.md](CHANGELOG.md), [CLAUDE.md](CLAUDE.md) (documentos clave).
+- **Dependencias:** ninguna.
+
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.
@@ -494,6 +517,76 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 319. Casos de datos y conflictos de la conciliación que no se resuelven por código (usuario y ChatGPT)
+
+- **Título:** cerrar con una fuente actual los casos que la conciliación del 2026-10-10 dejó abiertos.
+- **Descripción:** detalle en [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md), secciones 4 y 5. Conflictos: PNT9 (la fecha del PDF y la de Equipos POS no coinciden), PNTE (autorización sin POS; no se asocia automáticamente), PN10 a PN13 (fecha documental sin PDF revisado), los consecutivos actuales (ninguno de fuente confiable), los cuatro conflictos Redeban, la cámara con conflicto de IP, las dos direcciones de APLICACIONES y los dos videos de ICG sin recuperar. Casos de comprobación: MP01 a MP17 (comprobación física y de estado actual antes del alta), 8 responsables textuales por validar y 54 dispositivos sin ubicación estructurada. **Ninguno se resuelve por código ni migración:** la interfaz puede señalar "por validar", pero no decide el dato.
+- **Motivo:** encargo del usuario del 2026-10-10 ("casos que NO son de desarrollo automático").
+- **Impacto:** alto en la fiabilidad del inventario, la facturación y las alertas que derivan de ellos (tareas 320, 321 y 325).
+- **Prioridad:** Alta. **Estado:** Pendiente; lo hacen el usuario y ChatGPT (regla 26), no Claude Code.
+- **Área afectada:** datos reales en Supabase (`dispositivos`, `personas`, `ubicaciones`, `conexiones`); ningún archivo del repositorio salvo actualizar [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) cuando se cierre un caso.
+- **Dependencias:** ninguna. La 321 no genera alertas de agotamiento mientras falten consecutivos actuales confiables.
+
+### 320. Mantenimiento operativo: programar y cerrar mantenimientos de un equipo (fase B)
+
+- **Título:** programar un mantenimiento de un equipo, verlo en la Agenda y cerrarlo dejando la intervención real en su historial.
+- **Descripción:** la mínima entidad de dominio que soporte programación, estado y cierre: equipo, tipo, fecha programada, estado (programado, realizado, pospuesto, cancelado), técnico o responsable cuando esté confirmado, fecha real, resultado, observaciones, evidencia, y fuente y estado de validación cuando el registro venga de documentación histórica. Reutiliza la ficha del equipo, `historial`, `RegistrarIntervencion`, `Adjuntos`, el cierre de la tarea 220 y la Agenda derivada. El historial es evidencia de lo ocurrido, no una programación futura. La Agenda deriva vencidos, hoy y próximos de la fecha programada de los mantenimientos abiertos. Al cerrar: intervención real en el historial, técnico y resultado conservados, evidencia relacionada y fuera de la Agenda. Importación histórica: una vía para registrar antecedentes como "documentado por validar" sin afirmar técnico, resultado ni evidencia que la fuente no tiene; las 87 marcas del cronograma no se convierten automáticamente y los 10 títulos mensuales inconsistentes impiden convertir día más hoja en fecha sin conciliar.
+- **Motivo:** encargo del usuario del 2026-10-10, fase B.
+- **Impacto:** alto: la Agenda gana su primer asunto programado por el equipo; tabla nueva sincronizada.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** por concretar en su análisis: `src/lib/db.ts`, `src/lib/tablas.ts`, `supabase/schema.sql`, `src/features/inicio/pendientes.ts` y `agenda.ts`, `src/features/dispositivos/` (ficha del equipo) y `src/lib/repositorio.ts`.
+- **Dependencias:** la 318.
+
+### 321. Autorizaciones de facturación de los POS (fase C)
+
+- **Título:** llevar la facturación de campos sueltos de `detalles` a un modelo de autorizaciones con estado y alertas fiables.
+- **Descripción:** documento o formulario, POS, prefijo, rango desde y hasta, fecha de formalización, vigencia reportada, vencimiento confirmado cuando exista, consecutivo usado solo de una fuente confiable actual, estado (documentada, confirmada, conflicto, reemplazada o equivalente), evidencia y observaciones. No se borran las claves `DIAN - ...` de `detalles`. La Agenda avisa del vencimiento confirmado y del agotamiento de rango **solo** con consecutivo actual confiable, nunca por estimación. PNT9 conserva su conflicto, PNTE no se asocia a ningún POS y PN10 a PN13 quedan con fecha documental sin PDF revisado. La 245 (contenido de la guía DIAN) sigue aparte.
+- **Motivo:** encargo del usuario del 2026-10-10, fase C.
+- **Impacto:** alto: alertas de facturación, que afecta ventas.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** por concretar en su análisis (entidad nueva, Agenda, ficha del POS).
+- **Dependencias:** la 320 (patrón de entidad sincronizada derivada en la Agenda).
+
+### 322. Actas y documentos de equipos: un documento, varios equipos (fase D)
+
+- **Título:** que un documento exista una sola vez en Storage y se vincule a uno o varios equipos, con su página o nota de relación.
+- **Descripción:** hoy `Adjuntos` es por entidad y varias actas en PDF tienen páginas de distintos equipos. Evaluar la solución mínima compatible con `Adjuntos` y la sincronización sin conexión; si hace falta una relación muchos a muchos, implementarla en lugar de copiar bytes. Nombre, tipo, referencia, página o nota opcional, origen y fecha solo si están confirmados. Ninguna fila documental apunta a un archivo que no se subió. La ficha del equipo los muestra dentro de "Más del equipo".
+- **Motivo:** encargo del usuario del 2026-10-10, fase D.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/components/Adjuntos.tsx`, `src/lib/adjuntosOffline.ts`, `src/lib/archivosPendientes.ts`, `supabase/schema.sql` (`adjuntos`), la ficha del equipo.
+- **Dependencias:** ninguna; puede servir de evidencia a la 320 y la 321.
+
+### 323. Compromisos operativos del área en la Agenda (fase E)
+
+- **Título:** la entidad mínima para un compromiso del área (asunto, responsable, origen, fecha límite si está confirmada, estado, enlace externo opcional y nota o evidencia de cierre), derivado en la Agenda cuando está abierto y tiene fecha.
+- **Descripción:** la Agenda no se convierte en un gestor genérico de tareas ni duplica GLPI. Sin fecha no se inventa vencimiento. Los compromisos agrupados de marzo y agosto no se importan; los de septiembre pueden quedar para conciliación, no como pendientes actuales hasta confirmar su vigencia.
+- **Motivo:** encargo del usuario del 2026-10-10, fase E.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** por concretar (entidad nueva, Agenda).
+- **Dependencias:** la 320.
+
+### 324. Publicaciones institucionales: obligaciones de publicación con revisión (fase F)
+
+- **Título:** el registro mínimo de una obligación de publicación: contenido, área que lo produce, responsable de publicar, periodicidad, enlace de consulta, próxima revisión solo si se puede determinar de forma fiable, estado de revisión y evidencia.
+- **Descripción:** no se importan a ciegas las 241 filas del esquema documental: describe obligaciones, no demuestra que estén cumplidas. La Agenda muestra solo las revisiones que de verdad se pueden calcular o están confirmadas.
+- **Motivo:** encargo del usuario del 2026-10-10, fase F.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** por concretar (entidad nueva, Agenda).
+- **Dependencias:** la 320.
+
+### 325. Presentación de los Datáfonos con el modelo genérico (fase G)
+
+- **Título:** comprobar que la categoría `Datáfonos` funciona como cualquier categoría de equipos.
+- **Descripción:** aparece en Equipos, abre su ficha, muestra su ubicación y la relación con su POS, no se trata como infraestructura de Red, se ve bien a 320, 375, 390 y 1280 px, los cuatro datáfonos en conflicto dicen claramente que requieren verificación y no se expone ningún secreto. No se eliminan los campos heredados de datáfono o pinpad de los POS.
+- **Motivo:** encargo del usuario del 2026-10-10, fase G.
+- **Impacto:** medio: 13 equipos nuevos del día a día de las taquillas.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/dispositivos/` (lista y ficha), `src/lib/contextoEquipo.ts`; ningún dato.
+- **Dependencias:** ninguna.
 
 ### 315. Normalizar tildes/diacríticos en las búsquedas de Soluciones IT
 

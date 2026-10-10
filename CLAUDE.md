@@ -16,6 +16,7 @@ Aplicación móvil (PWA) para el equipo de soporte y mantenimiento de TI: base d
 - [REGLAS.md](REGLAS.md): reglas de trabajo acordadas. Leerlas y aplicarlas siempre.
 - [SELECCION_MODELO.md](SELECCION_MODELO.md): qué modelo de Claude y qué nivel de esfuerzo usar antes de empezar cada tarea.
 - [INSTALACION.md](INSTALACION.md): guía para el equipo, cómo instalar la app en el teléfono o la PC.
+- [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md): estado de los datos reales al cierre de la conciliación del 2026-10-10 (lo ya cargado, que no se repite, y los conflictos abiertos).
 
 ## Metodología obligatoria en cada sesión
 
