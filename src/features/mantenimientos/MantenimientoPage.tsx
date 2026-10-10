@@ -17,6 +17,7 @@ import {
 import { cerrarMantenimiento, guardarRegistro } from '../../lib/repositorio'
 import { diasDeCalendario } from '../../lib/vencimiento'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
+import { datosDocumentados } from './antecedentes'
 import {
   errorDeCancelacion,
   errorDeCierre,
@@ -117,13 +118,46 @@ function Resumen({ mantenimiento }: { mantenimiento: Mantenimiento }) {
   )
 }
 
+// UN ANTECEDENTE ENSEÑA LO QUE SU FUENTE DICE, SIN CONFIRMARLO (revisión
+// del 2026-10-10). Hasta ahora solo enseñaba la fuente, aunque la fila
+// guardara fecha real, técnico o resultado sacados de ella. Ahora esos
+// datos se ven, pero dentro de un recuadro discontinuo rotulado
+// "Documentado en la fuente · por validar" y con etiquetas propias, para
+// que nunca se confundan con el desenlace de un mantenimiento cerrado en
+// la app (banda verde, "Se hizo el", "Lo hizo"). Solo lo que trae texto:
+// un campo vacío no se rellena con nada. Y sigue sin controles: no se
+// cierra ni se edita desde aquí.
 function AntecedentePorValidar({ mantenimiento }: { mantenimiento: Mantenimiento }) {
+  const datos = datosDocumentados(mantenimiento)
   return (
-    <section className="flex flex-col gap-1.5 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
+    <section className="flex flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
       <p className="text-[13.5px] font-medium">Antecedente por validar</p>
       <p className="text-[12.5px] leading-[1.5] text-noct-neutral-300">
-        Sale de documentación histórica. No dice que siga pendiente ni que se hiciera, y no se cierra desde aquí.
+        {datos.length > 0
+          ? 'Sale de documentación histórica. Lo que esa fuente dice está abajo, sin confirmar, y no se cierra desde aquí.'
+          : 'Sale de documentación histórica. No dice que siga pendiente ni que se hiciera, y no se cierra desde aquí.'}
       </p>
+      {datos.length > 0 && (
+        <div
+          role="group"
+          aria-label="Documentado en la fuente, por validar"
+          className="flex flex-col rounded-md border border-dashed border-noct-neutral-700 px-3 py-1.5"
+        >
+          <p className="pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
+            Documentado en la fuente · por validar
+          </p>
+          <dl className="divide-y divide-noct-divider">
+            {datos.map((dato) => (
+              <div key={dato.etiqueta} className="flex flex-col gap-0.5 py-2">
+                <dt className={CLASE_ETIQUETA}>{dato.etiqueta}</dt>
+                <dd className="whitespace-pre-wrap text-[13.5px] text-noct-neutral-200 [overflow-wrap:anywhere]">
+                  {dato.valor}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
       <p className="text-[12.5px] text-noct-neutral-400 [overflow-wrap:anywhere]">Fuente: {mantenimiento.fuente}</p>
     </section>
   )

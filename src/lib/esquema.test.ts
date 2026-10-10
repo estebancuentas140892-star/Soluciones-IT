@@ -299,3 +299,73 @@ describe('el portal de asistencia no abre sus tablas', () => {
     expect(esquema).not.toMatch(new RegExp(`grant execute on function public\\.${firma.replace(/[()]/g, '\\$&')}`))
   })
 })
+
+// CONTRATO DE `mantenimientos` (revisión del 2026-10-10 de la tarea 320).
+//
+// La base ya exigía fecha real a uno realizado, pero dejaba pasar un
+// mantenimiento CONFIRMADO y REALIZADO con técnico o resultado vacíos o
+// en blanco desde una carga directa. Un antecedente
+// 'documentado_por_validar' queda exento: su fuente puede no traerlos.
+//
+// No se ejecuta nada contra Supabase. Se lee el CHECK del SQL real y se
+// evalúa su expresión sobre filas de prueba, traducida a JavaScript con
+// la semántica de Postgres que usa: `btrim(x)` sin segundo argumento
+// recorta solo espacios.
+describe('mantenimientos: integridad de lo confirmado y realizado', () => {
+  const NOMBRE = 'mantenimientos_realizado_confirmado_completo'
+
+  function expresionDe(constraint: string): string {
+    const encontrada = new RegExp(
+      `add constraint ${constraint}\\s+check \\(([\\s\\S]*?)\\);\\n`,
+    ).exec(esquema)
+    if (!encontrada) throw new Error(`No está el constraint ${constraint}.`)
+    return encontrada[1]
+  }
+
+  type Fila = { validacion: string; estado: string; tecnico: string; resultado: string }
+
+  function cumple(fila: Fila): boolean {
+    const js = expresionDe(NOMBRE)
+      .replace(/\b(validacion|estado|tecnico|resultado)\b/g, 'fila.$1')
+      .replace(/<>/g, '!==')
+      .replace(/\bor\b/g, '||')
+      .replace(/\band\b/g, '&&')
+    const btrim = (texto: string) => texto.replace(/^ +| +$/g, '')
+    return new Function('fila', 'btrim', `return ${js}`)(fila, btrim) as boolean
+  }
+
+  const BASE: Fila = { validacion: 'confirmado', estado: 'realizado', tecnico: 'Técnico de prueba', resultado: 'Queda operativo' }
+
+  it('se declara idempotente: se borra si existe antes de crearse', () => {
+    const borra = esquema.indexOf(`alter table public.mantenimientos drop constraint if exists ${NOMBRE};`)
+    const crea = esquema.indexOf(`alter table public.mantenimientos add constraint ${NOMBRE}`)
+    expect(borra).toBeGreaterThan(-1)
+    expect(crea).toBeGreaterThan(borra)
+  })
+
+  it('la fecha real sigue siendo obligatoria para uno realizado', () => {
+    expect(expresionDe('mantenimientos_realizado_con_fecha')).toBe("estado <> 'realizado' or fecha_realizada is not null")
+  })
+
+  it('confirmado y realizado con técnico y resultado: se acepta', () => {
+    expect(cumple(BASE)).toBe(true)
+  })
+
+  it.each([
+    ['técnico vacío', { tecnico: '' }],
+    ['técnico en blanco', { tecnico: '   ' }],
+    ['resultado vacío', { resultado: '' }],
+    ['resultado en blanco', { resultado: '  ' }],
+    ['los dos vacíos', { tecnico: '', resultado: '' }],
+  ])('confirmado y realizado con %s: se rechaza', (_caso, cambios) => {
+    expect(cumple({ ...BASE, ...cambios })).toBe(false)
+  })
+
+  it('un antecedente documentado_por_validar realizado queda exento', () => {
+    expect(cumple({ ...BASE, validacion: 'documentado_por_validar', tecnico: '', resultado: '' })).toBe(true)
+  })
+
+  it.each(['programado', 'pospuesto', 'cancelado'])('uno confirmado y %s no exige técnico ni resultado', (estado) => {
+    expect(cumple({ ...BASE, estado, tecnico: '', resultado: '' })).toBe(true)
+  })
+})

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { antecedenteDesdeCronograma, fechaDeMarca, mesDeTexto, type MarcaDeCronograma } from './antecedentes'
+import {
+  antecedenteDesdeCronograma,
+  datosDocumentados,
+  fechaDeMarca,
+  mesDeTexto,
+  type MarcaDeCronograma,
+} from './antecedentes'
 import { entraEnAgenda } from './mantenimiento'
 
 // La vía para registrar lo que dice un cronograma antiguo (tarea 320,
@@ -99,5 +105,48 @@ describe('antecedenteDesdeCronograma', () => {
 
   it('sin fuente no hay antecedente', () => {
     expect(() => antecedenteDesdeCronograma('a3', marca({ fuente: '  ' }))).toThrow('Un antecedente necesita su fuente.')
+  })
+})
+
+describe('datosDocumentados (revisión del 2026-10-10)', () => {
+  // Lo que la pantalla del antecedente enseña además de la fuente. Solo
+  // lo que trae texto, con etiquetas que dicen "documentado".
+  const vacio = { fechaRealizada: null, tecnico: '', resultado: '' }
+
+  it('un antecedente solo con fuente no inventa fecha, técnico ni resultado', () => {
+    expect(datosDocumentados(vacio)).toEqual([])
+  })
+
+  it('espacios en blanco no cuentan como dato', () => {
+    expect(datosDocumentados({ fechaRealizada: '  ', tecnico: '   ', resultado: ' '.repeat(4) })).toEqual([])
+  })
+
+  it('con fecha real, técnico y resultado los da los tres, en ese orden', () => {
+    expect(
+      datosDocumentados({ fechaRealizada: '2025-03-14', tecnico: 'Técnico de prueba', resultado: 'Limpieza de prueba' }),
+    ).toEqual([
+      { etiqueta: 'Fecha real documentada', valor: expect.stringContaining('2025') },
+      { etiqueta: 'Técnico documentado', valor: 'Técnico de prueba' },
+      { etiqueta: 'Resultado documentado', valor: 'Limpieza de prueba' },
+    ])
+  })
+
+  it('con uno solo da solo ese', () => {
+    expect(datosDocumentados({ ...vacio, resultado: 'Cambio de prueba' })).toEqual([
+      { etiqueta: 'Resultado documentado', valor: 'Cambio de prueba' },
+    ])
+  })
+
+  it('un antecedente con datos documentados sigue sin entrar en la Agenda', () => {
+    const conDatos = {
+      ...antecedenteDesdeCronograma('a9', marca()),
+      estado: 'realizado' as const,
+      fechaRealizada: '2025-03-14',
+      tecnico: 'Técnico de prueba',
+      resultado: 'Limpieza de prueba',
+      eliminadoEn: null,
+    }
+    expect(entraEnAgenda(conDatos)).toBe(false)
+    expect(entraEnAgenda({ ...conDatos, estado: 'programado' })).toBe(false)
   })
 })

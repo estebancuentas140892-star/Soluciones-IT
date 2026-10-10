@@ -8,6 +8,24 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-10
 
+### Agregado (esquema, tarea 320, revisión): uno confirmado y realizado necesita técnico y resultado también en la base
+
+**Área modificada:** `supabase/schema.sql` (bloque 1.u, `mantenimientos_realizado_confirmado_completo`), `src/lib/esquema.test.ts` (+11), [ARQUITECTURA.md](ARQUITECTURA.md), [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-073.
+**Tipo:** Agregado (integridad del esquema).
+**Motivo:** revisión de la rama. La base exigía fecha real a uno realizado, pero dejaba pasar un mantenimiento confirmado y realizado con técnico o resultado vacíos o en blanco desde una carga directa.
+**Qué cambia:** CHECK idempotente (`drop constraint if exists` y `add constraint`): si `validacion = 'confirmado'` y `estado = 'realizado'`, `btrim(tecnico) <> ''` y `btrim(resultado) <> ''`. Un antecedente `documentado_por_validar` queda exento, porque su fuente histórica puede no traerlos. El comentario del bloque deja la consulta que comprueba, antes de aplicarlo, que ninguna fila existente lo incumple.
+**Estructura de datos:** un constraint nuevo en `mantenimientos`. **No se ha aplicado en Supabase.**
+**Verificación:** `esquema.test.ts` lee el CHECK del SQL real y evalúa su expresión sobre filas de prueba (aceptada, técnico o resultado vacíos o en blanco, antecedente exento, abiertos y cancelados); las 11 fallan sin el constraint.
+
+### Corregido (mantenimiento, tarea 320, revisión): el antecedente por validar enseña lo que su fuente documenta
+
+**Área modificada:** `src/features/mantenimientos/antecedentes.ts` (nuevo `datosDocumentados`), `src/features/mantenimientos/MantenimientoPage.tsx` (`AntecedentePorValidar`), pruebas en `antecedentes.test.ts` (+5) y `mantenimientoFlujo.test.tsx` (+4).
+**Tipo:** Corregido.
+**Motivo:** revisión de la rama `feat/mantenimiento-operativo`. Un antecedente `documentado_por_validar` puede traer fecha real, técnico y resultado si la fuente histórica los aporta, pero su pantalla solo enseñaba la fuente: el dato estaba guardado y no se veía.
+**Qué cambia:** la fecha real, el técnico y el resultado documentados se enseñan, solo los que traen texto, dentro de un recuadro discontinuo rotulado "Documentado en la fuente · por validar" y con etiquetas propias ("Fecha real documentada", "Técnico documentado", "Resultado documentado"), nunca con la banda verde ni las etiquetas de un mantenimiento cerrado en la app. La fuente sigue a la vista y la pantalla sigue sin controles para cerrarlo o editarlo. Sigue fuera de la Agenda.
+**Estructura de datos:** ninguna.
+**Verificación:** dos de las pruebas de pantalla fallan sin la corrección y pasan con ella; suite completa, `tsc -b`, lint, build y vista a 320, 375, 390 y 1280 px.
+
 ### Agregado (Equipos y Agenda, tarea 320): programar y cerrar mantenimientos de un equipo
 
 **Área modificada:** `src/lib/db.ts` (versión 21), `src/lib/tablas.ts`, `supabase/schema.sql` (bloque 1.u), `src/lib/mantenimientos.ts` (nuevo), `src/lib/repositorio.ts` (`cerrarMantenimiento`), `src/features/mantenimientos/` (nuevo), `src/components/OpcionRadio.tsx` (nuevo, extraído de `DecisionEquipo.tsx`), la Agenda (`pendientes.ts`, `usePendientes.ts`, `SeccionesAgenda.tsx`), la ficha del equipo (`DispositivoPage.tsx`), `textoHistorial.ts`, la ruta (`App.tsx`, `navegacion.ts`), el respaldo (`scripts/respaldo-supabase.sh`, `supabase/RESPALDO.md`) y la prueba sin conexión.

@@ -1,4 +1,5 @@
 import type { Mantenimiento, TipoMantenimiento } from '../../lib/db'
+import { fechaConAnio } from '../../lib/mantenimientos'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 
 // ANTECEDENTES DE MANTENIMIENTO SACADOS DE DOCUMENTACION HISTORICA
@@ -149,4 +150,34 @@ export function antecedenteDesdeCronograma(id: string, marca: MarcaDeCronograma)
     fuente,
     validacion: 'documentado_por_validar',
   }
+}
+
+/** Un dato que la fuente de un antecedente aporta, ya redactado para leerlo. */
+export interface DatoDocumentado {
+  etiqueta: string
+  valor: string
+}
+
+/**
+ * Lo que la fuente de un antecedente dice ADEMÁS de sí misma: fecha real,
+ * técnico y resultado, en ese orden y solo los que traen texto.
+ *
+ * Una marca de cronograma no aporta ninguno (`antecedenteDesdeCronograma`
+ * los deja vacíos), pero un acta o un informe antiguo sí puede, y hasta la
+ * revisión del 2026-10-10 la pantalla del antecedente solo enseñaba la
+ * fuente: el dato estaba guardado y no se veía. Las etiquetas dicen
+ * "documentado" a propósito, para que nunca se lean como lo confirmado de
+ * un mantenimiento cerrado en la app ("Se hizo el", "Lo hizo").
+ */
+export function datosDocumentados(
+  antecedente: Pick<Mantenimiento, 'fechaRealizada' | 'tecnico' | 'resultado'>,
+): DatoDocumentado[] {
+  const datos: DatoDocumentado[] = []
+  const fecha = antecedente.fechaRealizada?.trim() ?? ''
+  if (fecha) datos.push({ etiqueta: 'Fecha real documentada', valor: fechaConAnio(fecha) })
+  const tecnico = antecedente.tecnico.trim()
+  if (tecnico) datos.push({ etiqueta: 'Técnico documentado', valor: tecnico })
+  const resultado = antecedente.resultado.trim()
+  if (resultado) datos.push({ etiqueta: 'Resultado documentado', valor: resultado })
+  return datos
 }

@@ -185,6 +185,108 @@ describe('programar desde la ficha del equipo', () => {
   })
 })
 
+// LO QUE LA FUENTE DE UN ANTECEDENTE DICE (revisión del 2026-10-10). La
+// pantalla del antecedente solo enseñaba la fuente aunque la fila trajera
+// fecha real, técnico o resultado sacados de ella. Ahora los enseña, como
+// documentados y por validar, nunca como un desenlace confirmado.
+describe('la pantalla de un antecedente por validar', () => {
+  const RUTA = '/dispositivos/pc/mantenimientos/ant'
+
+  async function sembrarAntecedente(datos: Partial<Mantenimiento> = {}): Promise<void> {
+    await sembrarBase()
+    await sembrarMantenimiento({
+      id: 'ant',
+      fechaProgramada: '2025-03-12',
+      validacion: 'documentado_por_validar',
+      fuente: 'Acta de prueba 2025',
+      ...datos,
+    })
+  }
+
+  /** El recuadro de lo documentado en la fuente, si está. */
+  function recuadroDocumentado(): HTMLElement | null {
+    return document.body.querySelector<HTMLElement>('[aria-label="Documentado en la fuente, por validar"]')
+  }
+
+  it('solo con fuente: no inventa fecha real, técnico ni resultado', async () => {
+    await sembrarAntecedente()
+    await montar(RUTAS, RUTA)
+    await esperar(() => textoPantalla().includes('Antecedente por validar'), 'su pantalla')
+
+    expect(textoPantalla()).toContain('Fuente: Acta de prueba 2025')
+    expect(recuadroDocumentado()).toBeNull()
+    for (const etiqueta of ['Fecha real documentada', 'Técnico documentado', 'Resultado documentado', 'Lo hizo', 'Se hizo el']) {
+      expect(textoPantalla()).not.toContain(etiqueta)
+    }
+  })
+
+  it('con fecha real, técnico y resultado documentados: los enseña dentro de "documentado en la fuente · por validar"', async () => {
+    await sembrarAntecedente({
+      estado: 'realizado',
+      fechaRealizada: '2025-03-14',
+      tecnico: 'Técnico de prueba',
+      resultado: 'Limpieza de prueba según el acta',
+    })
+    await montar(RUTAS, RUTA)
+    await esperar(() => recuadroDocumentado(), 'el recuadro documentado')
+
+    const recuadro = recuadroDocumentado() as HTMLElement
+    const texto = recuadro.textContent ?? ''
+    expect(texto).toMatch(/Documentado en la fuente · por validar/i)
+    expect(texto).toContain('Fecha real documentada')
+    expect(texto).toContain('2025')
+    expect(texto).toContain('Técnico documentado')
+    expect(texto).toContain('Técnico de prueba')
+    expect(texto).toContain('Resultado documentado')
+    expect(texto).toContain('Limpieza de prueba según el acta')
+    // La fuente sigue a la vista.
+    expect(textoPantalla()).toContain('Fuente: Acta de prueba 2025')
+  })
+
+  it('con datos documentados sigue siendo "por validar": ni banda de confirmado ni controles de cierre', async () => {
+    await sembrarAntecedente({
+      estado: 'realizado',
+      fechaRealizada: '2025-03-14',
+      tecnico: 'Técnico de prueba',
+      resultado: 'Limpieza de prueba según el acta',
+    })
+    await montar(RUTAS, RUTA)
+    await esperar(() => recuadroDocumentado(), 'el recuadro documentado')
+
+    expect(textoPantalla()).toContain('Antecedente por validar')
+    expect(textoPantalla()).not.toContain('Realizado y registrado en el historial del equipo.')
+    expect(control('Cerrar y registrar en el equipo')).toBeNull()
+    expect(document.body.querySelector('[role="radio"]')).toBeNull()
+    expect(document.body.querySelector('input, textarea, select')).toBeNull()
+    // Nada se escribió al mirarlo.
+    expect(await db.cambiosPendientes.count()).toBe(0)
+    expect((await db.mantenimientos.get('ant'))?.validacion).toBe('documentado_por_validar')
+
+    // Y en la lista del equipo sigue en su bloque aparte.
+    await montar(RUTAS, '/dispositivos/pc')
+    await tocar(await esperar(() => control(/^Más del equipo/), 'Más del equipo'))
+    await tocar(await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento'))
+    await esperar(() => textoPantalla().includes('Antecedentes por validar'), 'el bloque aparte')
+    expect(textoPantalla()).toContain('Por validar · Acta de prueba 2025')
+  })
+
+  it('nunca entra en la Agenda, aunque traiga fecha, técnico y resultado', async () => {
+    await sembrarAntecedente({
+      fechaProgramada: fechaRelativa(-2),
+      fechaRealizada: fechaRelativa(-1),
+      tecnico: 'Técnico de prueba',
+      resultado: 'Limpieza de prueba según el acta',
+    })
+    // Uno confirmado al lado, para saber que la Agenda sí está pintando.
+    await sembrarMantenimiento({ id: 'm-confirmado', tipo: 'correctivo' })
+    await montar(RUTAS, '/agenda')
+
+    await esperar(() => textoPantalla().includes('Mantenimiento correctivo'), 'el confirmado en la Agenda')
+    expect(textoPantalla()).not.toContain('Mantenimiento preventivo')
+    expect(textoPantalla()).not.toContain('Acta de prueba 2025')
+  })
+})
+
 describe('desde la Agenda hasta cerrarlo', () => {
   it('la Agenda lo deriva por su fecha; "Se hizo" lo cierra, lo registra en el equipo y lo saca de la Agenda', async () => {
     await sembrarBase()

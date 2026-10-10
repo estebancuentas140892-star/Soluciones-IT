@@ -843,6 +843,18 @@ alter table public.mantenimientos add constraint mantenimientos_realizado_con_fe
 alter table public.mantenimientos drop constraint if exists mantenimientos_antecedente_sin_afirmar;
 alter table public.mantenimientos add constraint mantenimientos_antecedente_sin_afirmar
   check (validacion <> 'documentado_por_validar' or (fuente <> '' and historial_id is null));
+-- Uno CONFIRMADO y REALIZADO dice quien lo hizo y que se hizo, con texto
+-- real (revision del 2026-10-10). La regla de arriba ya exigia la fecha
+-- real, pero dejaba pasar tecnico y resultado vacios o en blanco en una
+-- carga directa. Un antecedente 'documentado_por_validar' queda exento:
+-- su fuente historica puede no traerlos. Antes de aplicarlo en una base
+-- con datos, comprobar que ninguna fila lo incumple:
+--   select id from public.mantenimientos
+--   where validacion = 'confirmado' and estado = 'realizado'
+--     and (btrim(tecnico) = '' or btrim(resultado) = '');
+alter table public.mantenimientos drop constraint if exists mantenimientos_realizado_confirmado_completo;
+alter table public.mantenimientos add constraint mantenimientos_realizado_confirmado_completo
+  check (validacion <> 'confirmado' or estado <> 'realizado' or (btrim(tecnico) <> '' and btrim(resultado) <> ''));
 
 create index if not exists idx_mantenimientos_updated on public.mantenimientos (updated_at);
 create index if not exists idx_mantenimientos_dispositivo on public.mantenimientos (dispositivo_id);
