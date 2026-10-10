@@ -9,7 +9,8 @@ import {
   type TipoEntidadHistorial,
 } from './db'
 import { resumenConexion } from './conexiones'
-import { supabase } from './supabase'
+import { leerSesionGuardada } from './sesionGuardada'
+import { CLAVE_SESION, supabase } from './supabase'
 import { programarSync } from './sync'
 import { type EntidadPorTabla, type TablaEditable } from './tablas'
 
@@ -550,10 +551,32 @@ async function encolarEntradasDeHistorial(entradas: HistorialEntrada[]): Promise
 // Usuario actual
 // ----------------------------------------------------------------
 
+// QUIÉN ESCRIBE SE LEE DE LA SESIÓN GUARDADA EN EL TELÉFONO (tarea 326).
+//
+// Saber quién guarda algo no necesita un token válido: basta con la
+// sesión que supabase-js dejó en localStorage, la misma que abre la app
+// sin red desde la tarea 284. Antes se pedía a `getSession()`, que con el
+// token vencido (más de una hora sin abrir la app) y sin red reintenta la
+// renovación unos 25 segundos y después contesta "no hay sesión": cada
+// guardado esperaba eso (24,4 s medidos en el build real al cerrar un
+// mantenimiento sin red) y quedaba sin autor en el historial. Solo si no
+// hay sesión guardada legible se pregunta a supabase-js como antes. El
+// autor del servidor (`updated_by`) lo sigue poniendo el trigger con el
+// token real al sincronizar, así que nada de esto da permisos.
+function usuarioDeLaSesionGuardada(): { id: string; email?: string } | null {
+  if (!CLAVE_SESION) return null
+  try {
+    // Con el almacenamiento bloqueado, el solo acceso a `localStorage` lanza.
+    if (typeof localStorage === 'undefined') return null
+    return leerSesionGuardada(localStorage, CLAVE_SESION)?.user ?? null
+  } catch {
+    return null
+  }
+}
+
 async function obtenerUsuarioActual(): Promise<UsuarioActual> {
   if (!supabase) return { id: null, nombre: '' }
-  const { data } = await supabase.auth.getSession()
-  const usuario = data.session?.user
+  const usuario = usuarioDeLaSesionGuardada() ?? (await supabase.auth.getSession()).data.session?.user
   if (!usuario) return { id: null, nombre: '' }
   const perfil = await db.perfiles.get(usuario.id)
   const nombre = perfil?.nombre || usuario.email?.split('@')[0] || ''

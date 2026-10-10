@@ -859,6 +859,7 @@ Vista funcional; el mecanismo técnico (motor de sync, canal de Realtime, cursor
 ### 8.1 Garantías funcionales
 
 - **Offline primero:** lecturas y escrituras van siempre primero a la base local (Dexie); la app nunca espera a la red.
+- **El autor de un guardado no espera a la red** (tarea 326, 2026-10-10): quién escribe se lee de la sesión guardada en el teléfono (la misma que abre la app sin red, tarea 284), no de `getSession()`, que con el token vencido y sin red reintenta unos 25 s y contesta "sin sesión". Solo sin sesión guardada legible se pregunta a supabase-js. No da permisos: `updated_by` lo sigue poniendo el servidor con el token real al sincronizar.
 - **Cola de salida (outbox):** cada edición sin conexión se guarda y se envía sola al reconectar. Los archivos suben antes que las filas que los referencian.
 - **Sincronización bidireccional:** se suben los cambios pendientes y se descargan las novedades del equipo por cursor de tiempo.
 - **Tiempo real como señal:** un canal de Supabase Realtime avisa que algo cambió y dispara una descarga que respeta la RLS por consulta; nunca aplica el dato del evento (así nadie recibe un secreto que no debe ver). El sondeo cada 2 minutos es la red de seguridad.

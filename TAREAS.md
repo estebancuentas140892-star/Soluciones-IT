@@ -50,6 +50,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | E | Compromisos operativos en Agenda | 323 | Pendiente |
 | F | Publicaciones institucionales | 324 | Pendiente |
 | G | Presentación de Datáfonos | 325 | Pendiente |
+| (hallazgo de la B) | El autor de un guardado sin red no espera 25 s | 326 | Hecha en la rama de la fase B, en su propio commit, pendiente de revisión |
 
 ### 318. Documentar el cierre de la conciliación de datos del 2026-10-10
 
@@ -60,6 +61,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Alta. **Estado:** Hecha en la rama `docs/cierre-conciliacion` (sobre `8bb82a6`), pendiente de revisión del usuario; no se integra a `main` sin su aprobación. Commit exclusivamente documental. Las cifras se comprobaron el 2026-10-10 con consultas de solo lectura en Supabase Production y coinciden con el cierre de ChatGPT; ningún dato se escribió.
 - **Área afectada:** [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) (nuevo), [TAREAS.md](TAREAS.md) (este encargo y las tareas 318 a 325), [CHANGELOG.md](CHANGELOG.md), [CLAUDE.md](CLAUDE.md) (documentos clave).
 - **Dependencias:** ninguna.
+
+### 326. Guardar sin red con el token vencido no espera 25 segundos ni pierde el autor
+
+- **Título:** que quién guarda algo se lea de la sesión guardada en el teléfono, sin preguntar a la red.
+- **Descripción:** hallazgo de la prueba sin conexión real de la fase B (tarea 320). `obtenerUsuarioActual` (`src/lib/repositorio.ts`) pedía el usuario a `supabase.auth.getSession()`. Con el token vencido (más de una hora sin abrir la app) y sin red, supabase-js reintenta la renovación unos 25 segundos y después contesta "no hay sesión" (lo que ya documentó la tarea 284 para la apertura). Medido en el build real, sin red: cerrar un mantenimiento tardó **24,4 s** en guardarse, y toda escritura (guardar una ficha, una intervención, un acceso a la Bóveda) quedaba sin autor en el historial. **Hecho:** el autor se lee primero de la sesión que supabase-js dejó en `localStorage` (`leerSesionGuardada`, la misma de la 284); solo sin sesión guardada legible se pregunta a `getSession()` como antes. No da permisos ni cambia la RLS: `updated_by` lo sigue poniendo el trigger del servidor con el token real al sincronizar.
+- **Motivo:** el encargo del 2026-10-10 pide la prueba sin conexión en cada fase que toca la sincronización; la de la fase B lo destapó.
+- **Impacto:** alto en el uso sin red tras más de una hora: cada guardado era instantáneo de nuevo y conserva su autor. Ningún dato cambia.
+- **Prioridad:** Alta. **Estado:** Hecha en la rama `feat/mantenimiento-operativo`, en un commit propio y anterior al de la fase B (se puede revisar o descartar aparte), pendiente de revisión del usuario. En verde: la prueba nueva `src/lib/autorSinRed.test.ts` (4; sin la corrección, las dos que leen la sesión guardada se quedan colgadas), la suite completa, `tsc -b`, lint y build.
+- **Área afectada:** `src/lib/repositorio.ts` (`usuarioDeLaSesionGuardada` y `obtenerUsuarioActual`, al final del archivo); prueba nueva `src/lib/autorSinRed.test.ts`.
+- **Dependencias:** ninguna. Reutiliza `leerSesionGuardada` (tarea 284).
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 

@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-10
 
+### Corregido (sincronización, tarea 326): guardar sin red con el token vencido ya no espera 25 segundos ni pierde el autor
+
+**Área modificada:** `src/lib/repositorio.ts` (`obtenerUsuarioActual` y la nueva `usuarioDeLaSesionGuardada`).
+**Tipo:** Corregido y Documentación (ARQUITECTURA_FUNCIONAL 8.1; TAREAS 326).
+**Motivo:** hallazgo de la prueba sin conexión real de la fase B. Con el token vencido y sin red, `getSession()` reintenta la renovación unos 25 segundos y contesta "sin sesión": cada guardado esperaba eso (24,4 s medidos al cerrar un mantenimiento) y quedaba sin autor.
+**Qué cambia:** el autor se lee de la sesión guardada en el teléfono (`leerSesionGuardada`, tarea 284); solo sin sesión guardada legible se pregunta a supabase-js como antes. `updated_by` lo sigue poniendo el servidor al sincronizar.
+**Estructura de datos:** ninguna.
+**Verificación:** `src/lib/autorSinRed.test.ts` (4: sin la corrección, las dos que leen la sesión guardada se quedan colgadas), suite completa, `tsc -b`, lint y build.
+**Impacto esperado:** sin red, guardar vuelve a ser inmediato y el historial conserva quién lo hizo.
+
 ### Corregido (documentación, tarea 318): precisión de los conflictos de la conciliación
 
 **Área modificada:** [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) (sección 4), [TAREAS.md](TAREAS.md) (descripciones de las tareas 319 y 321).
