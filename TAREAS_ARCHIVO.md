@@ -1,5 +1,57 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-10: siguiente fase después de la conciliación de datos
+
+### 326. Guardar sin red con el token vencido no espera 25 segundos ni pierde el autor
+
+**Estado:** Completada (2026-10-10). **Cerrada por confirmación real del usuario**, que validó en producción la versión publicada de la fase B, en la que entró ("se ve bien"). Hallazgo de la prueba sin conexión real de la fase B (tarea 320).
+
+**Causa:** `obtenerUsuarioActual` (`src/lib/repositorio.ts`) pedía el usuario a `supabase.auth.getSession()`. Con el token vencido (más de una hora sin abrir la app) y sin red, supabase-js reintenta la renovación unos 25 segundos y después contesta "no hay sesión" (lo que ya documentó la tarea 284 para la apertura). Medido en el build real, sin red: cerrar un mantenimiento tardó **24,4 s** en guardarse, y toda escritura (guardar una ficha, una intervención, un acceso a la Bóveda) quedaba sin autor en el historial.
+
+**Qué cambió:** lectura local segura del autor para los guardados sin red. El autor se lee primero de la sesión que supabase-js dejó en `localStorage` (`usuarioDeLaSesionGuardada`, con `leerSesionGuardada` de la 284); solo sin sesión guardada legible se pregunta a `getSession()` como antes. No da permisos ni cambia la RLS: `updated_by` lo sigue poniendo el trigger del servidor con el token real al sincronizar. Ningún dato cambia.
+
+**Integración:** en su propio commit, `0b2275d`, anterior a los de la fase B. Entró en `main` con la fase B en el mismo avance rápido, sin rebase, squash ni commit de merge (`daa4fd7..f30d78f`). CI en verde (run 38094197589), Vercel Production con el despliegue completado (6988183608) y `/version.json` sirviendo `f30d78f`. El estado "integrada, pendiente de confirmación" se registró en `f344e42`.
+
+**Verificación:** la prueba nueva `src/lib/autorSinRed.test.ts` (4; sin la corrección, las dos que leen la sesión guardada se quedan colgadas), la suite completa, `tsc -b`, lint, build y la prueba sin conexión real de la fase B, con ella incluida, 73 de 73. **Confirmada por el usuario al validar producción.**
+
+**Área afectada:** `src/lib/repositorio.ts` (`usuarioDeLaSesionGuardada` y `obtenerUsuarioActual`, al final del archivo); prueba nueva `src/lib/autorSinRed.test.ts`. Reutiliza `leerSesionGuardada` (tarea 284).
+
+### 320. Mantenimiento operativo: programar y cerrar mantenimientos de un equipo (fase B)
+
+**Estado:** Completada (2026-10-10). **Confirmada visualmente por el usuario en Production el 2026-10-10** ("se ve bien"): la ficha del equipo muestra "Mantenimiento" correctamente y la Agenda funciona con normalidad. Encargo del usuario del 2026-10-10, fase B: programar y cerrar mantenimientos sin convertir la Agenda en un gestor de tareas y sin usar el historial como programación futura (RN-073, AD-075).
+
+**Qué cambió:**
+
+- **Tabla sincronizada `mantenimientos`** (bloque 1.u de `schema.sql`, versión 21 de la base local) atada a un equipo: tipo, fecha programada, estado (programado, realizado, pospuesto, cancelado), técnico, fecha real, resultado, observaciones, `historial_id`, fuente y validación.
+- **La Agenda la deriva:** vencidos, hoy y próximos de los abiertos y confirmados con fecha.
+- **"Más del equipo" > "Mantenimiento"** programa y lista; la pantalla de cada mantenimiento registra cómo terminó (se hizo, se pospone, se cancela).
+- **Cerrar como realizado** escribe en una transacción la intervención en el historial del equipo y el mantenimiento con su `historial_id`; la evidencia se adjunta a esa intervención. Programar, posponer y cancelar dejan una entrada `mantenimiento` en el historial del equipo.
+- **Antecedentes históricos** `documentado_por_validar`, con fuente, fuera de la Agenda y sin cerrarse desde la app. `fechaDeMarca` no convierte día y hoja en fecha si el título de la hoja nombra otro mes. `OpcionRadio` sale de `DecisionSobreEquipo` a `src/components`.
+- **Primera revisión:** la pantalla del antecedente enseña la fecha real, el técnico y el resultado documentados, solo los que traen texto, en un recuadro "Documentado en la fuente · por validar" y sin controles de cierre (`datosDocumentados`); `schema.sql` exige técnico y resultado con texto real a uno confirmado y realizado (`mantenimientos_realizado_confirmado_completo`).
+- **Segunda revisión:** `MarcaDeCronograma` recibe `estadoMarcado` (solo PROGRAMADO, REALIZADO o POSPUESTO) y el antecedente lo conserva en las observaciones como dato documental, sin convertir una marca REALIZADO en un cierre confirmado; `schema.sql` exige `historial_id` a uno confirmado y realizado (`mantenimientos_realizado_confirmado_con_intervencion`), sin FK a `historial.id` (offline primero).
+
+**Migración:** **`mantenimiento_operativo_tarea_320`**, versión `20261010231148`, aplicada en Supabase Production con la aprobación del usuario **antes del despliegue**. Creó `public.mantenimientos` con solo el DDL declarado en `f30d78f` (no se ejecutó el `schema.sql` completo): sus cinco CHECK de integridad (`mantenimientos_abierto_con_fecha`, `mantenimientos_realizado_con_fecha`, `mantenimientos_antecedente_sin_afirmar`, `mantenimientos_realizado_confirmado_completo` y `mantenimientos_realizado_confirmado_con_intervencion`), los índices `idx_mantenimientos_updated` e `idx_mantenimientos_dispositivo`, el trigger `trg_mantenimientos_modificacion` con `registrar_modificacion()`, la RLS, la política `mantenimientos_acceso` para `authenticated` y su entrada en `supabase_realtime`. Verificada con consultas de solo lectura: las 15 columnas con sus tipos, las cinco expresiones iguales a las del esquema, los índices, el trigger, la RLS, la política, el tiempo real, 0 filas y 0 inserciones, los conteos de las demás tablas sin cambios y la API REST exponiéndola. **0 antecedentes importados** y ningún otro dato cambió.
+
+**Integración:** `main` avanzó por avance rápido, sin rebase, squash ni commit de merge (`daa4fd7..f30d78f`), con los commits separados de la 326 (`0b2275d`), la 320 (`6b02191`) y sus dos correcciones (`efbcf13` y `f30d78f`). **SHA funcional: `f30d78f`.** CI en verde (run 38094197589), Vercel Production con el despliegue completado (6988183608) y `/version.json` sirviendo `{"version":"f30d78f","compiladoEn":"2026-10-10T23:13:18.959Z"}`; el bundle publicado lleva `MantenimientoPage` con el texto del antecedente corregido. El estado "integrada, pendiente de confirmación" se registró en `f344e42` (CI 38094481709, Vercel 6988224685).
+
+**Verificación:** validación técnica final: la suite completa (**201 archivos y 3136 pruebas**), `tsc -b`, lint, build y la prueba sin conexión real (**73 de 73**, con el paso 4d: la Agenda enseña el mantenimiento atrasado sin red y se cierra, con la intervención y el cambio en la cola). Pruebas propias: `mantenimientos.test.ts`, `repositorioMantenimientos.test.ts`, `mantenimiento.test.ts`, `antecedentes.test.ts` (25), `mantenimientoFlujo.test.tsx` (9), `db.upgrade21.test.ts` y el contrato del esquema en `esquema.test.ts`. Validación responsive en el navegador a 320 × 568, 375 × 667, 390 × 844 y 1280 × 800 con datos inventados en la base local, retirados al terminar: Agenda, ficha (sección abierta y formulario), la pantalla de un mantenimiento abierto, pospuesto y por validar, y el antecedente con marca REALIZADO, POSPUESTO sin fecha conciliada y con datos documentados; sin desplazamiento horizontal ni texto recortado y con los controles de 44 px o más. **Comprobación publicada, hecha por el usuario en producción, satisfactoria.**
+
+**No se hizo, a propósito:** las 87 marcas del cronograma no se cargaron (trabajo de datos, regla 26); ni `historial` ni `adjuntos` cambiaron de esquema; ningún dato real se escribió al desarrollarla.
+
+**Área afectada:** `src/lib/db.ts` (`Mantenimiento` y la versión 21), `src/lib/tablas.ts` (`mantenimientos`), `supabase/schema.sql` (bloque 1.u, trigger, RLS y tiempo real), `supabase/RESPALDO.md` y `scripts/respaldo-supabase.sh`, `src/lib/mantenimientos.ts`, `src/lib/repositorio.ts` (`cerrarMantenimiento`, historial de `mantenimientos`), `src/features/mantenimientos/` (`mantenimiento.ts`, `antecedentes.ts`, `MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`, `SelectorTipoMantenimiento.tsx`), `src/components/OpcionRadio.tsx` y `src/features/personas/DecisionEquipo.tsx`, `src/features/inicio/pendientes.ts`, `usePendientes.ts` y `SeccionesAgenda.tsx`, `src/features/dispositivos/DispositivoPage.tsx` (la fila "Mantenimiento"), `src/features/historial/textoHistorial.ts`, `src/App.tsx` y `src/lib/navegacion.ts` (la ruta), `scripts/prueba-sin-conexion.mjs` (paso 4d).
+
+### 318. Documentar el cierre de la conciliación de datos del 2026-10-10
+
+**Estado:** Completada (2026-10-10). Exclusivamente documental, **sin cambio funcional**: cerrada al integrarse y desplegarse, con el visto bueno del usuario sobre la versión publicada. Encargo del usuario del 2026-10-10, fase A.
+
+**Qué cambió:** la conciliación quedó documentada en [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) (nuevo): las cargas que ChatGPT ya aplicó (no se repiten ni se convierten en migraciones), las cifras al cierre (210 dispositivos activos; 94 personas activas y 0 sin área; 13 datáfonos y 13 relaciones con su POS; 15 POS con fecha documental de facturación y 11 con PDF DIAN conciliado; 54 dispositivos sin `ubicacion_id`; 8 responsables textuales por validar; MP01 a MP17 por comprobar; 0 adjuntos; 2 intervenciones manuales), cómo se leen (vigente, histórico, por validar), los conflictos pendientes (PNT9, PNTE, PN10 a PN13, consecutivos, Redeban, la cámara con conflicto de IP, APLICACIONES y los videos de ICG) sin marcarlos como resueltos, y las fuentes históricas que no se importan automáticamente. Sin IP, seriales, códigos Redeban, números o rangos DIAN, credenciales ni nombres de personas: el repositorio es público. La precisión posterior (`daa4fd7`) corrigió lo que se decía de PNTE, PN10 a PN13 y las cámaras.
+
+**Integración:** `main` avanzó por avance rápido, sin rebase ni commit de merge (`8bb82a6..daa4fd7`, commits `1892525` y `daa4fd7`). **SHA: `daa4fd7`.** CI en verde (run 38082218850), Vercel Production con el despliegue completado (6986180296) y `/version.json` sirviendo `{"version":"daa4fd7","compiladoEn":"2026-10-10T20:03:36.164Z"}`.
+
+**Verificación:** las cifras se comprobaron el 2026-10-10 con consultas de solo lectura en Supabase Production y coinciden con el cierre de ChatGPT; ningún dato se escribió.
+
+**Área afectada:** [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) (nuevo), [TAREAS.md](TAREAS.md) (el encargo y las tareas 318 a 325), [CHANGELOG.md](CHANGELOG.md), [CLAUDE.md](CLAUDE.md) (documentos clave).
+
 ## Encargo del 2026-10-08: "Cómo hacerlo" numerado
 
 ### 310. Cómo hacerlo numerado como única representación
