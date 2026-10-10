@@ -50,11 +50,12 @@ Comprobadas por Claude Code el 2026-10-10 con consultas de solo lectura en Supab
 | Caso | Qué se sabe | Qué falta |
 |---|---|---|
 | PNT9 | La fecha del PDF de autorización y la fecha registrada en Equipos POS no coinciden. | Decidir cuál es la vigente con una fuente actual. Mientras tanto se conserva el conflicto, sin elegir. |
-| PNTE | Hay una autorización documentada sin POS que la use. | Saber a qué POS pertenece, si a alguno. No se asocia automáticamente. |
-| PN10, PN11, PN12 y PN13 | Tienen fecha documental de facturación. | El PDF de la autorización no se revisó. |
+| PNTE | Equipos POS documenta el prefijo PNTE con una fecha, pero esa fila no identifica ningún equipo. Entre los PDF DIAN revisados no quedó conciliado un documento correspondiente a PNTE. | Confirmar qué autorización y qué punto representa, si fue reemplazada y qué está configurado realmente. No se asocia automáticamente a ningún POS. |
+| PN10, PN11, PN12 y PN13 | Tienen fecha documental en Equipos POS. Entre las fuentes DIAN revisadas no quedó conciliado un PDF correspondiente a ninguno de los cuatro. | Confirmar la resolución y la configuración actuales en ICG/HKA. |
 | Consecutivos actuales | Ningún POS tiene un consecutivo consumido de fuente confiable actual. | Sin él no se calcula ni se avisa agotamiento de rango. |
 | Redeban | Cuatro conflictos: 4 datáfonos con `Estado de conciliación` y 2 POS con `Conflicto Redeban` en `detalles`. | Confirmar en sitio qué equipo es cuál. |
-| Cámara con conflicto de IP | Su ficha lleva `Conflicto IP histórico`: dos fuentes dan direcciones distintas. | Confirmar la dirección vigente. |
+| Cámara Caja Principal: direccionamiento | Su ficha lleva `Conflicto IP histórico`: dos fuentes dan direcciones distintas. Comprobado de nuevo el 2026-10-10 en los datos actuales. | Confirmar la dirección vigente. |
+| Cámara Restaurante: identidad | La app la identifica como Restaurante; otra fuente la identifica como Alimentos y aporta NVR. Nombre, ubicación e identidad no están conciliados. | Confirmación física antes de renombrarla o completar sus datos. |
 | APLICACIONES | Dos fuentes dan direcciones distintas, que difieren en un octeto. | Confirmar la dirección vigente. |
 | Videos de ICG | Dos videos del procedimiento no se recuperaron. | Recuperarlos. Siguen bloqueando parte de la tarea 245 (contenido de la guía DIAN). |
 

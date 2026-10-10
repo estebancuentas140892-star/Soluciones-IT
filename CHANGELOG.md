@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-10
 
+### Corregido (documentación, tarea 318): precisión de los conflictos de la conciliación
+
+**Área modificada:** [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) (sección 4), [TAREAS.md](TAREAS.md) (descripciones de las tareas 319 y 321).
+**Tipo:** Corregido (documentación).
+**Motivo:** revisión de la rama `docs/cierre-conciliacion`: tres filas afirmaban más de lo que se sabe.
+**Qué cambia:**
+- **PNTE:** ya no dice que haya "una autorización documentada sin POS". Dice lo que consta: Equipos POS documenta el prefijo con una fecha, esa fila no identifica ningún equipo y entre los PDF DIAN revisados no quedó conciliado un documento de PNTE. Falta confirmar qué autorización y qué punto representa, si fue reemplazada y qué está configurado; no se asocia automáticamente a ningún POS.
+- **PN10 a PN13:** ya no dice que "el PDF no se revisó", que suponía un PDF pendiente de lectura. Tienen fecha documental en Equipos POS y entre las fuentes DIAN revisadas no quedó conciliado un PDF suyo; falta confirmar resolución y configuración en ICG/HKA.
+- **Cámaras:** se conserva el conflicto histórico de direccionamiento, ahora nombrado (Cámara Caja Principal) y comprobado de nuevo en los datos actuales con una consulta de solo lectura. Se registra aparte la **identidad de la Cámara Restaurante**: otra fuente la identifica como Alimentos y aporta NVR, y nombre, ubicación e identidad no están conciliados; requiere confirmación física antes de renombrarla o completarla.
+- Sin IP, claves, seriales ni nombres de personas.
+**Estructura de datos:** ninguna. Ningún dato real cambió.
+
 ### Documentación (datos reales, tarea 318): el cierre de la conciliación del inventario
 
 **Área modificada:** [CONCILIACION_DATOS.md](CONCILIACION_DATOS.md) (nuevo), [TAREAS.md](TAREAS.md) (encargo del 2026-10-10 y tareas 318 a 325), [CLAUDE.md](CLAUDE.md) (documentos clave).
