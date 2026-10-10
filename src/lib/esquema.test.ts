@@ -310,29 +310,48 @@ describe('el portal de asistencia no abre sus tablas', () => {
 // No se ejecuta nada contra Supabase. Se lee el CHECK del SQL real y se
 // evalúa su expresión sobre filas de prueba, traducida a JavaScript con
 // la semántica de Postgres que usa: `btrim(x)` sin segundo argumento
-// recorta solo espacios.
+// recorta solo espacios, y `is [not] null` compara con null.
+function expresionDe(constraint: string): string {
+  const encontrada = new RegExp(
+    `add constraint ${constraint}\\s+check \\(([\\s\\S]*?)\\);\\n`,
+  ).exec(esquema)
+  if (!encontrada) throw new Error(`No está el constraint ${constraint}.`)
+  return encontrada[1]
+}
+
+type FilaMantenimiento = {
+  validacion: string
+  estado: string
+  tecnico: string
+  resultado: string
+  historial_id: string | null
+}
+
+function cumpleCheck(constraint: string, fila: FilaMantenimiento): boolean {
+  const js = expresionDe(constraint)
+    .replace(/\b(validacion|estado|tecnico|resultado|historial_id)\b/g, 'fila.$1')
+    .replace(/\bis not null\b/g, '!== null')
+    .replace(/\bis null\b/g, '=== null')
+    .replace(/<>/g, '!==')
+    .replace(/\bor\b/g, '||')
+    .replace(/\band\b/g, '&&')
+  const btrim = (texto: string) => texto.replace(/^ +| +$/g, '')
+  return new Function('fila', 'btrim', `return ${js}`)(fila, btrim) as boolean
+}
+
+/** Uno confirmado y realizado como lo deja `cerrarMantenimiento`. */
+const CERRADO_EN_LA_APP: FilaMantenimiento = {
+  validacion: 'confirmado',
+  estado: 'realizado',
+  tecnico: 'Técnico de prueba',
+  resultado: 'Queda operativo',
+  historial_id: '00000000-0000-4000-8000-000000000001',
+}
+
 describe('mantenimientos: integridad de lo confirmado y realizado', () => {
   const NOMBRE = 'mantenimientos_realizado_confirmado_completo'
-
-  function expresionDe(constraint: string): string {
-    const encontrada = new RegExp(
-      `add constraint ${constraint}\\s+check \\(([\\s\\S]*?)\\);\\n`,
-    ).exec(esquema)
-    if (!encontrada) throw new Error(`No está el constraint ${constraint}.`)
-    return encontrada[1]
-  }
-
-  type Fila = { validacion: string; estado: string; tecnico: string; resultado: string }
-
-  function cumple(fila: Fila): boolean {
-    const js = expresionDe(NOMBRE)
-      .replace(/\b(validacion|estado|tecnico|resultado)\b/g, 'fila.$1')
-      .replace(/<>/g, '!==')
-      .replace(/\bor\b/g, '||')
-      .replace(/\band\b/g, '&&')
-    const btrim = (texto: string) => texto.replace(/^ +| +$/g, '')
-    return new Function('fila', 'btrim', `return ${js}`)(fila, btrim) as boolean
-  }
+  type Fila = Omit<FilaMantenimiento, 'historial_id'>
+  const cumple = (fila: Fila) => cumpleCheck(NOMBRE, { ...fila, historial_id: CERRADO_EN_LA_APP.historial_id })
 
   const BASE: Fila = { validacion: 'confirmado', estado: 'realizado', tecnico: 'Técnico de prueba', resultado: 'Queda operativo' }
 
@@ -367,5 +386,50 @@ describe('mantenimientos: integridad de lo confirmado y realizado', () => {
 
   it.each(['programado', 'pospuesto', 'cancelado'])('uno confirmado y %s no exige técnico ni resultado', (estado) => {
     expect(cumple({ ...BASE, estado, tecnico: '', resultado: '' })).toBe(true)
+  })
+})
+
+// UNO CONFIRMADO Y REALIZADO LLEVA SU INTERVENCIÓN (segunda revisión del
+// 2026-10-10). La app, al cerrarlo, siempre escribe la intervención y
+// guarda su id en `historialId`; la base exige lo mismo a una carga
+// directa. Sin FK a `historial.id`: por el modelo offline primero, la
+// intervención puede sincronizarse después que el mantenimiento.
+describe('mantenimientos: uno confirmado y realizado lleva el id de su intervención', () => {
+  const NOMBRE = 'mantenimientos_realizado_confirmado_con_intervencion'
+  const cumple = (cambios: Partial<FilaMantenimiento> = {}) => cumpleCheck(NOMBRE, { ...CERRADO_EN_LA_APP, ...cambios })
+
+  it('se declara idempotente: se borra si existe antes de crearse', () => {
+    const borra = esquema.indexOf(`alter table public.mantenimientos drop constraint if exists ${NOMBRE};`)
+    const crea = esquema.indexOf(`alter table public.mantenimientos add constraint ${NOMBRE}`)
+    expect(borra).toBeGreaterThan(-1)
+    expect(crea).toBeGreaterThan(borra)
+  })
+
+  it('no crea una FK de historial_id a historial', () => {
+    const create = bloqueCreateTable('mantenimientos') ?? ''
+    expect(create).toMatch(/^\s+historial_id uuid,$/m)
+    expect(esquema).not.toMatch(/historial_id[^\n;]*references/i)
+    expect(esquema).not.toMatch(/foreign key\s*\(\s*historial_id\s*\)/i)
+  })
+
+  it('confirmado + realizado + historial_id: se acepta', () => {
+    expect(cumple()).toBe(true)
+  })
+
+  it('confirmado + realizado sin historial_id: se rechaza', () => {
+    expect(cumple({ historial_id: null })).toBe(false)
+  })
+
+  it('un antecedente documentado_por_validar sin historial queda exento', () => {
+    expect(cumple({ validacion: 'documentado_por_validar', historial_id: null })).toBe(true)
+    expect(cumple({ validacion: 'documentado_por_validar', estado: 'programado', historial_id: null })).toBe(true)
+    // Y la regla de los antecedentes, que les prohíbe llevarlo, no cambia.
+    expect(expresionDe('mantenimientos_antecedente_sin_afirmar')).toBe(
+      "validacion <> 'documentado_por_validar' or (fuente <> '' and historial_id is null)",
+    )
+  })
+
+  it.each(['programado', 'pospuesto', 'cancelado'])('uno confirmado y %s no queda afectado', (estado) => {
+    expect(cumple({ estado, historial_id: null })).toBe(true)
   })
 })

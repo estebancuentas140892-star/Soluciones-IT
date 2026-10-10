@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { esPorValidar, estaAbierto } from '../../lib/mantenimientos'
 import {
   antecedenteDesdeCronograma,
   datosDocumentados,
+  ESTADOS_MARCADOS,
   fechaDeMarca,
   mesDeTexto,
+  type EstadoMarcado,
   type MarcaDeCronograma,
 } from './antecedentes'
 import { entraEnAgenda } from './mantenimiento'
@@ -17,6 +20,7 @@ function marca(cambios: Partial<MarcaDeCronograma> = {}): MarcaDeCronograma {
   return {
     dispositivoId: 'equipo-1',
     tipo: 'preventivo',
+    estadoMarcado: 'PROGRAMADO',
     anio: 2025,
     hoja: 'Marzo',
     tituloHoja: 'Cronograma de mantenimiento marzo 2025',
@@ -106,6 +110,68 @@ describe('antecedenteDesdeCronograma', () => {
   it('sin fuente no hay antecedente', () => {
     expect(() => antecedenteDesdeCronograma('a3', marca({ fuente: '  ' }))).toThrow('Un antecedente necesita su fuente.')
   })
+})
+
+// EL ESTADO QUE MARCA EL CRONOGRAMA (segunda revisión del 2026-10-10).
+// Los datos reales marcan PROGRAMADO, REALIZADO o POSPUESTO, y cada
+// registro aclara que es una marca del cronograma, no un acta firmada ni
+// un cierre verificado. Antes todas las marcas quedaban como
+// 'programado' y el estado de la fuente se perdía. Ahora se conserva tal
+// cual en las observaciones, como dato documental, sin tocar el estado
+// operativo ni la validación.
+describe('antecedenteDesdeCronograma: el estado marcado en la fuente', () => {
+  it('conoce solo los tres estados que usa el cronograma', () => {
+    expect([...ESTADOS_MARCADOS]).toEqual(['PROGRAMADO', 'REALIZADO', 'POSPUESTO'])
+  })
+
+  it.each(ESTADOS_MARCADOS)('%s se conserva como dato documental y no se convierte en confirmado', (estadoMarcado) => {
+    const fila = antecedenteDesdeCronograma('e1', marca({ estadoMarcado }))
+    expect(fila.observaciones).toContain(`Estado marcado en la fuente: ${estadoMarcado}.`)
+    // La marca tal cual sigue entera junto al estado.
+    expect(fila.observaciones).toContain('hoja «Marzo»')
+    expect(fila.observaciones).toContain('día 12')
+    // Documental: ni confirmado ni un estado operativo sacado de la marca.
+    expect(fila.validacion).toBe('documentado_por_validar')
+    expect(esPorValidar(fila)).toBe(true)
+    expect(fila.estado).toBe('programado')
+    expect(fila.fuente).toBe('Cronograma de prueba 2025, hoja Marzo')
+    // No inventa técnico, resultado, fecha real ni evidencia.
+    expect(fila).toMatchObject({ tecnico: '', resultado: '', fechaRealizada: null, historialId: null })
+    expect(datosDocumentados(fila)).toEqual([])
+    // Nunca entra en la Agenda.
+    expect(entraEnAgenda({ ...fila, eliminadoEn: null })).toBe(false)
+  })
+
+  it('REALIZADO no queda como un mantenimiento realizado ni cerrado', () => {
+    const fila = antecedenteDesdeCronograma('e2', marca({ estadoMarcado: 'REALIZADO' }))
+    expect(fila.estado).not.toBe('realizado')
+    expect(fila.validacion).not.toBe('confirmado')
+    expect(fila.historialId).toBeNull()
+    expect(fila.fechaRealizada).toBeNull()
+    // Sigue sin poder cerrarse como uno confirmado: la app solo cierra
+    // los confirmados, y este no lo es.
+    expect(estaAbierto(fila) && !esPorValidar(fila)).toBe(false)
+  })
+
+  it('el estado marcado convive con el mes sin conciliar: sin fecha, con los dos datos', () => {
+    const fila = antecedenteDesdeCronograma(
+      'e3',
+      marca({ estadoMarcado: 'POSPUESTO', tituloHoja: 'Cronograma abril 2025' }),
+    )
+    expect(fila.fechaProgramada).toBeNull()
+    expect(fila.estado).toBe('programado')
+    expect(fila.observaciones).toContain('Estado marcado en la fuente: POSPUESTO.')
+    expect(fila.observaciones).toContain('falta conciliarlo')
+  })
+
+  it.each(['realizado', 'HECHO', 'CANCELADO', '', ' REALIZADO '])(
+    'un estado que el cronograma no usa (%j) se rechaza en vez de adivinarlo',
+    (estadoMarcado) => {
+      expect(() =>
+        antecedenteDesdeCronograma('e4', marca({ estadoMarcado: estadoMarcado as EstadoMarcado })),
+      ).toThrow('Estado marcado desconocido')
+    },
+  )
 })
 
 describe('datosDocumentados (revisión del 2026-10-10)', () => {

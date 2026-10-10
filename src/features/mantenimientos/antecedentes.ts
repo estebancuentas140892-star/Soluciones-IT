@@ -10,9 +10,16 @@ import { normalizarTexto } from '../soluciones/iconosSoluciones'
 //   - todo antecedente queda 'documentado_por_validar', con su fuente, y
 //     la Agenda nunca lo muestra (mantenimiento.ts, `entraEnAgenda`);
 //   - solo copia lo que la fuente dice: una marca de cronograma da un
-//     equipo, un dia y una hoja, no quien lo hizo, si se hizo ni como
-//     quedo, asi que tecnico, resultado, fecha real e intervencion quedan
-//     vacios;
+//     equipo, un dia, una hoja y el estado que marca, no quien lo hizo ni
+//     como quedo, asi que tecnico, resultado, fecha real e intervencion
+//     quedan vacios;
+//   - el estado marcado se conserva tal cual en las observaciones ("Estado
+//     marcado en la fuente: REALIZADO."). El cronograma puede marcar
+//     PROGRAMADO, POSPUESTO o REALIZADO, pero esa marca por si sola no
+//     equivale a un mantenimiento confirmado, acta firmada ni cierre
+//     verificado: es un dato DOCUMENTAL, no el `estado` operativo de la
+//     app, que en un antecedente queda siempre 'programado' (segunda
+//     revision del 2026-10-10);
 //   - una marca solo se vuelve fecha cuando el mes de su hoja y el de su
 //     titulo coinciden, o cuando una persona concilio el mes. En las
 //     hojas con titulo mensual inconsistente (10 en el cronograma
@@ -61,9 +68,22 @@ export function mesDeTexto(texto: string): number | null {
   return encontrados.size === 1 ? [...encontrados][0] : null
 }
 
+/**
+ * Lo que el cronograma marca, tal como lo escribe. Documental: no es el
+ * estado de un mantenimiento en la app ni dice que se confirmara.
+ */
+export const ESTADOS_MARCADOS = ['PROGRAMADO', 'REALIZADO', 'POSPUESTO'] as const
+
+export type EstadoMarcado = (typeof ESTADOS_MARCADOS)[number]
+
 export interface MarcaDeCronograma {
   dispositivoId: string
   tipo: TipoMantenimiento
+  /**
+   * El estado que la marca lleva en la fuente. Solo los que el cronograma
+   * usa: otro valor no se adivina, se rechaza.
+   */
+  estadoMarcado: EstadoMarcado
   /** El año del cronograma. */
   anio: number
   /** El nombre de la hoja ("Marzo"). */
@@ -120,17 +140,26 @@ export type AntecedenteNuevo = Omit<Mantenimiento, 'updatedAt' | 'updatedBy' | '
 
 /**
  * La fila de un antecedente sacado de una marca del cronograma: siempre
- * 'documentado_por_validar' y 'programado' (el cronograma planificaba;
- * no dice si se hizo), con la fecha solo si la marca la da y la marca tal
- * cual en las observaciones. Nunca afirma técnico, resultado, fecha real
- * ni intervención. Lanza si falta la fuente: un antecedente sin fuente no
- * se puede volver a comprobar.
+ * 'documentado_por_validar' y 'programado', con la fecha solo si la marca
+ * la da y la marca tal cual en las observaciones, su estado marcado
+ * incluido. El cronograma puede marcar PROGRAMADO, POSPUESTO o REALIZADO,
+ * pero esa marca por sí sola no equivale a un mantenimiento confirmado,
+ * acta firmada ni cierre verificado: por eso el estado marcado va en las
+ * observaciones y no en `estado`, que en un antecedente no se lee como
+ * desenlace. Nunca afirma técnico, resultado, fecha real ni intervención.
+ * Lanza si falta la fuente (un antecedente sin fuente no se puede volver
+ * a comprobar) o si el estado marcado no es uno de los conocidos.
  */
 export function antecedenteDesdeCronograma(id: string, marca: MarcaDeCronograma): AntecedenteNuevo {
   const fuente = marca.fuente.trim()
   if (!fuente) throw new Error('Un antecedente necesita su fuente.')
+  if (!(ESTADOS_MARCADOS as readonly string[]).includes(marca.estadoMarcado)) {
+    throw new Error(`Estado marcado desconocido: «${marca.estadoMarcado}». Solo PROGRAMADO, REALIZADO o POSPUESTO.`)
+  }
   const fecha = fechaDeMarca(marca)
-  const marcaTalCual = `Marca del cronograma ${marca.anio}: hoja «${marca.hoja.trim()}», título «${marca.tituloHoja.trim()}», día ${marca.dia}.`
+  const marcaTalCual =
+    `Marca del cronograma ${marca.anio}: hoja «${marca.hoja.trim()}», título «${marca.tituloHoja.trim()}», día ${marca.dia}.` +
+    ` Estado marcado en la fuente: ${marca.estadoMarcado}.`
   const aviso = fecha.ok
     ? ''
     : fecha.motivo === 'mes_sin_conciliar'

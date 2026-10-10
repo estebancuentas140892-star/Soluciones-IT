@@ -855,6 +855,20 @@ alter table public.mantenimientos add constraint mantenimientos_antecedente_sin_
 alter table public.mantenimientos drop constraint if exists mantenimientos_realizado_confirmado_completo;
 alter table public.mantenimientos add constraint mantenimientos_realizado_confirmado_completo
   check (validacion <> 'confirmado' or estado <> 'realizado' or (btrim(tecnico) <> '' and btrim(resultado) <> ''));
+-- Uno CONFIRMADO y REALIZADO lleva el id de la intervencion que la app
+-- escribio al cerrarlo (`cerrarMantenimiento` siempre la crea en la misma
+-- transaccion). Segunda revision del 2026-10-10. Solo se exige que el id
+-- este: NO hay FK a `historial.id`, porque por el modelo offline primero
+-- las dos filas pueden sincronizarse en momentos distintos y el
+-- mantenimiento no debe rechazarse por llegar antes que su intervencion.
+-- Un antecedente 'documentado_por_validar' queda exento (de hecho no
+-- puede llevarlo: mantenimientos_antecedente_sin_afirmar). Antes de
+-- aplicarlo en una base con datos, comprobar que ninguna fila lo incumple:
+--   select id from public.mantenimientos
+--   where validacion = 'confirmado' and estado = 'realizado' and historial_id is null;
+alter table public.mantenimientos drop constraint if exists mantenimientos_realizado_confirmado_con_intervencion;
+alter table public.mantenimientos add constraint mantenimientos_realizado_confirmado_con_intervencion
+  check (validacion <> 'confirmado' or estado <> 'realizado' or historial_id is not null);
 
 create index if not exists idx_mantenimientos_updated on public.mantenimientos (updated_at);
 create index if not exists idx_mantenimientos_dispositivo on public.mantenimientos (dispositivo_id);

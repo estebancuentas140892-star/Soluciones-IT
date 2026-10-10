@@ -135,7 +135,7 @@ function AntecedentePorValidar({ mantenimiento }: { mantenimiento: Mantenimiento
       <p className="text-[12.5px] leading-[1.5] text-noct-neutral-300">
         {datos.length > 0
           ? 'Sale de documentación histórica. Lo que esa fuente dice está abajo, sin confirmar, y no se cierra desde aquí.'
-          : 'Sale de documentación histórica. No dice que siga pendiente ni que se hiciera, y no se cierra desde aquí.'}
+          : 'Sale de documentación histórica. No confirma que siga pendiente ni que se hiciera, y no se cierra desde aquí.'}
       </p>
       {datos.length > 0 && (
         <div

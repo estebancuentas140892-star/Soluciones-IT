@@ -20,6 +20,7 @@ import {
 } from '../../pruebas/montaje'
 import { DispositivoPage } from '../dispositivos/DispositivoPage'
 import { AgendaPage } from '../inicio/AgendaPage'
+import { antecedenteDesdeCronograma } from './antecedentes'
 import { MantenimientoPage } from './MantenimientoPage'
 
 // MANTENIMIENTO OPERATIVO, DE PUNTA A PUNTA (tarea 320, encargo del
@@ -218,6 +219,39 @@ describe('la pantalla de un antecedente por validar', () => {
     for (const etiqueta of ['Fecha real documentada', 'Técnico documentado', 'Resultado documentado', 'Lo hizo', 'Se hizo el']) {
       expect(textoPantalla()).not.toContain(etiqueta)
     }
+  })
+
+  // Segunda revisión del 2026-10-10: la marca REALIZADO del cronograma se
+  // ve como lo que la fuente marca, nunca como un cierre confirmado.
+  it('una marca REALIZADO del cronograma enseña el estado marcado, sin banda de realizado ni evidencia', async () => {
+    await sembrarBase()
+    await db.mantenimientos.put({
+      ...antecedenteDesdeCronograma('ant', {
+        dispositivoId: 'pc',
+        tipo: 'preventivo',
+        estadoMarcado: 'REALIZADO',
+        anio: 2025,
+        hoja: 'Marzo',
+        tituloHoja: 'Cronograma de mantenimiento marzo 2025',
+        dia: 12,
+        fuente: 'Cronograma de prueba 2025, hoja Marzo',
+      }),
+      updatedAt: AHORA,
+      updatedBy: null,
+      eliminadoEn: null,
+    })
+    await montar(RUTAS, RUTA)
+    await esperar(() => textoPantalla().includes('Antecedente por validar'), 'su pantalla')
+
+    expect(textoPantalla()).toContain('Estado marcado en la fuente: REALIZADO.')
+    expect(textoPantalla()).toContain('No confirma que siga pendiente ni que se hiciera')
+    expect(textoPantalla()).not.toContain('Realizado y registrado en el historial del equipo.')
+    for (const etiqueta of ['Se hizo el', 'Lo hizo', 'Qué se hizo', 'Evidencia', 'Técnico documentado', 'Resultado documentado']) {
+      expect(textoPantalla()).not.toContain(etiqueta)
+    }
+    expect(recuadroDocumentado()).toBeNull()
+    expect(control('Cerrar y registrar en el equipo')).toBeNull()
+    expect(document.body.querySelector('[role="radio"]')).toBeNull()
   })
 
   it('con fecha real, técnico y resultado documentados: los enseña dentro de "documentado en la fuente · por validar"', async () => {
